@@ -136,6 +136,7 @@ static QString exampleDocumentPath(const char *name) {
 class ViewportInteractionTest {
 public:
 #include "test_sketch_interaction.h"
+#include "test_sketch_linked_refs.h"
 #include "test_sketch_slot_point.h"
 #include "test_helix_start_angle.h"
 #include "test_sketch_menu_cancel.h"
@@ -145,8 +146,11 @@ public:
 #include "test_surface_tools_gui.h"
 #include "test_document_units.h"
 #include "test_function_panels.h"
+#include "test_advanced_fillets.h"
+#include "test_fillet_refinements.h"
 #include "test_lazy_mesh.h"
 #include "test_display_mesh.h"
+#include "test_thread_edges.h"
 #include "test_mesh_memory.h"
 #include "test_history_preview_mesh.h"
 #include "test_pattern_history_repair.h"
@@ -10636,6 +10640,18 @@ int main(int argc, char **argv) {
         std::cout << "handle constraints PASS" << std::endl;
         return 0;
     }
+    if (app.arguments().contains(QStringLiteral("--thread-edges"))) {
+        try { ViewportInteractionTest::threadEdges(app.arguments().contains(QStringLiteral("--gl"))); return 0; }
+        catch(const std::exception &error) { std::cerr<<error.what()<<std::endl;return 1; }
+    }
+    if (app.arguments().contains(QStringLiteral("--linked-reference-visibility"))) {
+        try { ViewportInteractionTest::linkedReferenceVisibility(app.arguments().contains(QStringLiteral("--gl"))); return 0; }
+        catch(const std::exception &error) { std::cerr<<error.what()<<std::endl;return 1; }
+    }
+    if (app.arguments().contains(QStringLiteral("--linked-sketch-references"))) {
+        try { ViewportInteractionTest::linkedSketchReferences(); return 0; }
+        catch (const std::exception &e) { std::cerr<<e.what()<<std::endl; return 1; }
+    }
     if (app.arguments().contains(QStringLiteral("--sketch-reference-workflow"))) {
         try { ViewportInteractionTest::sketchReferenceWorkflow(); ViewportInteractionTest::derivedCurveEntity(); ViewportInteractionTest::associativeOffset(); ViewportInteractionTest::inwardOffsetAndProjection(); }
         catch(const std::exception &e) { std::cerr<<e.what()<<std::endl;return 1; }
@@ -10718,6 +10734,16 @@ int main(int argc, char **argv) {
         try { ViewportInteractionTest::blendPreviewReload(); }
         catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
         std::cout << "PASS blend preview reload" << std::endl;
+        return 0;
+    }
+    if (app.arguments().contains(QStringLiteral("--fillet-refinements"))) {
+        try { ViewportInteractionTest::filletRefinements(); }
+        catch (const std::exception &error) { std::cerr << error.what() << std::endl; return 1; }
+        return 0;
+    }
+    if (app.arguments().contains(QStringLiteral("--advanced-fillets"))) {
+        try { ViewportInteractionTest::advancedFillets(); }
+        catch (const std::exception &error) { std::cerr << error.what() << std::endl; return 1; }
         return 0;
     }
     if (app.arguments().contains(QStringLiteral("--function-panels-review"))) {

@@ -486,6 +486,7 @@ public:
     void clearBlendPreview();
     // Errore dell'anteprima (vuoto se riuscita o in calcolo), anche a ogni risultato nuovo.
     QString previewError() const;
+    bool previewPending() const;
     void setPreviewCallback(std::function<void(const QString &)> callback);
     const QString &previewNotice() const;
 
@@ -495,7 +496,7 @@ public:
     QString startEdgePick(bool chamfer, bool extend = false, bool helix = false, bool deferPreview = false);
     // Di nuovo alla scelta degli spigoli, con quelli dati gia' scelti (dalla
     // finestra della misura, per cambiarli dopo un raccordo non riuscito).
-    void resumeEdgePick(int body, const QVector<EdgePoint> &edges, bool chamfer);
+    void resumeEdgePick(int body, const QVector<EdgePoint> &edges, bool chamfer, bool deferPreview = false);
     void setEdgePickCallbacks(std::function<void(const QString &)> status,
                               std::function<void(int, QVector<EdgePoint>, bool)> finished);
     void setEdgePickChangedCallback(std::function<void(int, QVector<EdgePoint>)> callback);
@@ -726,6 +727,13 @@ public:
     // Trascinamento del piano di sezione nella vista: `callback(spostamento)`
     // lungo la normale della sezione (nullptr: il piano non si trascina).
     // Manipolatore temporaneo: modifica i parametri del pannello, mai il documento.
+    void setFilletRadiusHandles(const QVector<FilletRadiusHandle> &handles,
+                                std::function<void(int,int,double,bool)> changed);
+    void clearFilletRadiusHandles();
+    int filletRadiusHandleAt(const QPointF &position) const;
+    bool beginFilletRadiusDrag(const QPointF &position);
+    void dragFilletRadius(const QPointF &position, bool finished = false);
+    void drawFilletRadiusHandles(QPainter &painter);
     void clearFeatureHandle();
     void setFeatureHandle(const ExtrusionObject &definition, std::function<void(double)> changed);
     double featureHandleValue() const;
@@ -1056,6 +1064,13 @@ private:
 
     bool hasSurfacePierceSource(int index) const;
     void refreshSurfacePierceSketches(int sourceIndex,QSet<int> &changed,int targetSketch=-1);
+    bool allowedSketchReference(const GeometryRef &ref) const;
+    const SketchObject &sketchReferenceCache();
+    bool attachSketchReferenceAt(SketchObject &work, const QPointF &point, double tolerance);
+    SketchObject sketchReferenceCache_;
+    int sketchReferenceCacheOwner_ = -1;
+    bool sketchReferenceCacheValid_ = false;
+    bool lastSnapExternal_ = false;
     // Rigenera da `from` in poi i corpi che dipendono da corpi `dirty` o da
     // schizzi `dirtySketches` (tutti con `all`). Un piano di costruzione
     // rigenerato porta con se' gli schizzi che vi stanno sopra (followDatum),
@@ -1836,6 +1851,11 @@ private:
     mutable std::map<const void *, std::pair<std::weak_ptr<const ForgeCad::Kernel::Body>, QPair<int, int>>> componentCache_;
     bool referencesConstruction_ = true;
     std::function<void()> sectionRefresh_;
+    QVector<FilletRadiusHandle> filletRadiusHandles_;
+    std::function<void(int,int,double,bool)> filletRadiusChanged_;
+    int filletRadiusDrag_ = -1;
+    double filletRadiusInitial_ = 0.0;
+    QPointF filletRadiusPress_, filletRadiusScreenDirection_;
     ExtrusionObject featureHandleDefinition_;
     std::function<void(double)> featureHandleChanged_;
     ForgeCad::ExpressionSpinBox *featureHandleBox_ = nullptr;

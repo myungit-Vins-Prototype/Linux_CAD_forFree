@@ -1,4 +1,5 @@
 #include "forgeCad2026_dialogs.h"
+#include "forgeCad2026_operation_illustration.h"
 #include "cad_drawing_browser.h"
 #include "cad_drawing_window.h"
 #include "cad_toolbar.h"
@@ -79,6 +80,7 @@ BlendDialogResult blendDialog(QWidget *parent, CadViewport *viewport, const QStr
                                      const QVector<EdgePoint> &edges, double size, bool chamfer, bool allowKindChange, const ChamferSpec &initialSpec,
                                      const std::function<QString(int, const QVector<EdgePoint> &, double, bool, const ChamferSpec &)> &apply,
                                      bool pickInView ) {
+    if (!chamfer) return filletDialog(parent, viewport, title, base, hidden, edges, size, initialSpec, apply);
     BlendDialogResult result;
     int selectedBase = base;
     QVector<EdgePoint> selectedEdges = edges;
@@ -156,6 +158,7 @@ BlendDialogResult blendDialog(QWidget *parent, CadViewport *viewport, const QStr
     form->addRow(QStringLiteral("Spigoli:"), edgesLabel);
     auto *previewLabel = new FunctionMessage(pickInView ? QStringLiteral("seleziona almeno uno spigolo nella vista")
                                                : QStringLiteral("Anteprima in calcolo..."), &dialog);
+    previewLabel->setObjectName(QStringLiteral("functionPreviewMessage"));
     form->addRow(QStringLiteral("Anteprima:"), previewLabel);
     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
     QPushButton *edgesButton = buttons->addButton(QStringLiteral("Spigoli..."), QDialogButtonBox::ActionRole);
@@ -169,6 +172,14 @@ BlendDialogResult blendDialog(QWidget *parent, CadViewport *viewport, const QStr
     QObject::connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
     form->addRow(buttons);
     const auto refresh = [&] {
+        const QString operation = currentChamfer() ? QStringLiteral("chamfer") : QStringLiteral("fillet");
+        dialog.setProperty("operationIllustrationId", operation);
+        for (QWidget *widget : dialog.findChildren<QWidget *>())
+            if (auto *image = dynamic_cast<ForgeCad::Gui::OperationIllustration *>(widget)) image->setOperation(operation);
+        if (auto *tabs = dialog.findChild<QTabWidget *>(QStringLiteral("functionPanelTabs"))) {
+            tabs->setTabText(0, currentChamfer() ? QStringLiteral("Smusso") : QStringLiteral("Costante"));
+            tabs->setTabIcon(0, ForgeCad::Gui::operationPanelIcon(operation));
+        }
         edgesLabel->setEdges(selectedBase, selectedEdges);
         if (!previewStarted || selectedBase < 0 || selectedEdges.isEmpty()) {
             previewLabel->setText(QStringLiteral("seleziona almeno uno spigolo nella vista"));

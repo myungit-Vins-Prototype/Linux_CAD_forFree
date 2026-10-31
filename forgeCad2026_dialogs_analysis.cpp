@@ -233,12 +233,13 @@ QVector<GeometryRef> microFeatureMarks(const ExtrusionObject &body, int index, Q
 }
 
 void shapeAnalysisDialog(QMainWindow *window, CadViewport *viewport) {
-    QDialog dialog(window);
+    FunctionDialogPanel dialog(window, false);
+    dialog.setSizeIdentity(QStringLiteral("shape-analysis"));
     ForgeCad::setDisplayLengthUnit(viewport->lengthUnit(), &dialog);
     dialog.setWindowTitle(QStringLiteral("Curvatura, zebra e continuità"));
     dialog.resize(660, 600);
-    auto *layout = new QVBoxLayout(&dialog);
-    auto *form = new QFormLayout;
+    auto *form = dialog.createScrollableForm();
+    auto *layout = static_cast<QVBoxLayout *>(dialog.layout());
     auto *body = new QComboBox(&dialog);
     body->setObjectName(QStringLiteral("shapeAnalysisBody"));
     const auto &objects = viewport->extrusions();
@@ -315,10 +316,9 @@ void shapeAnalysisDialog(QMainWindow *window, CadViewport *viewport) {
     form->addRow(QStringLiteral("Curvatura normale"),normalOnly);
     form->addRow(QStringLiteral("Pettini sempre visibili"),through);
     form->addRow(QStringLiteral("Soglia tangenza (°)"),angleTol); form->addRow(QStringLiteral("Soglia curvatura (mm⁻¹)"),curvTol);
-    layout->addLayout(form);
-    auto *help = new QLabel(&dialog); help->setWordWrap(true); layout->addWidget(help);
-    auto *report = new QTextBrowser(&dialog); layout->addWidget(report,1);
-    auto *apply = new QPushButton(QStringLiteral("Aggiorna analisi"), &dialog); layout->addWidget(apply);
+    auto *help = new QLabel(&dialog); help->setWordWrap(true); form->addRow(help);
+    auto *report = new QTextBrowser(&dialog); report->setMinimumHeight(160); form->addRow(report);
+    auto *apply = new QPushButton(QStringLiteral("Aggiorna analisi"), &dialog); form->addRow(apply);
     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Close,&dialog); layout->addWidget(buttons);
     QObject::connect(buttons,&QDialogButtonBox::rejected,&dialog,&QDialog::reject);
     const QStringList guides = {
@@ -484,8 +484,8 @@ void massPropertiesDialog(QWidget *parent, CadViewport *viewport) {
     if (viewport) ForgeCad::setDisplayLengthUnit(viewport->lengthUnit(), &dialog);
     dialog.setWindowTitle(QStringLiteral("Proprieta' di massa"));
     dialog.resize(620, 640);
-    auto *layout = new QVBoxLayout(&dialog);
-    auto *form = new QFormLayout;
+    auto *form = dialog.createScrollableForm();
+    auto *layout = static_cast<QVBoxLayout *>(dialog.layout());
     auto *bodyBox = new QComboBox(&dialog);
     bodyBox->addItem(QStringLiteral("Tutti i solidi visibili"));
     for (int index : candidates)
@@ -514,10 +514,10 @@ void massPropertiesDialog(QWidget *parent, CadViewport *viewport) {
     form->addRow(QStringLiteral("Corpo:"), bodyBox);
     form->addRow(QStringLiteral("Materiale:"), materialBox);
     form->addRow(QStringLiteral("Densita':"), densityBox);
-    layout->addLayout(form);
     auto *text = new QTextBrowser(&dialog);
     text->setOpenLinks(false);
-    layout->addWidget(text, 1);
+    text->setMinimumHeight(200);
+    form->addRow(text);
     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Close, &dialog);
     auto *copy = buttons->addButton(QStringLiteral("Copia"), QDialogButtonBox::ActionRole);
     QObject::connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);

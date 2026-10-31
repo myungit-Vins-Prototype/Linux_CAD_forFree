@@ -689,14 +689,14 @@ EdgeId nearestEdge(const Body &body, const Vec3 &point, double tolerance) {
 
 namespace {
 
-Body blendEdgesWith(const Body &body, const std::vector<EdgeId> &edges, double size, bool chamfer, const std::vector<ChamferSides> *sides, BodyHistory *history);
+Body blendEdgesWith(const Body &body, const std::vector<EdgeId> &edges, double size, bool chamfer, const std::vector<ChamferSides> *sides, BodyHistory *history, bool propagate = true);
 Body analyticBlend(const Body &body, const std::vector<EdgeId> &edges, double size, bool chamfer, const std::vector<ChamferSides> *sides, BodyHistory *history);
 
 }
 
-Body blendEdges(const Body &body, const std::vector<EdgeId> &edges, double size, bool chamfer, BodyHistory *history) {
+Body blendEdges(const Body &body, const std::vector<EdgeId> &edges, double size, bool chamfer, BodyHistory *history, bool propagate) {
     if (history) *history = BodyHistory();
-    return blendEdgesWith(body, edges, size, chamfer, nullptr, history);
+    return blendEdgesWith(body, edges, size, chamfer, nullptr, history, propagate);
 }
 
 Body chamferEdges(const Body &body, const std::vector<EdgeId> &edges, const std::vector<ChamferSides> &sides, BodyHistory *history) {
@@ -769,7 +769,7 @@ void propagateTangent(const Body &body, std::vector<EdgeId> &edges, std::vector<
     }
 }
 
-Body blendEdgesWith(const Body &body, const std::vector<EdgeId> &selected, double size, bool chamfer, const std::vector<ChamferSides> *selectedSides, BodyHistory *history) {
+Body blendEdgesWith(const Body &body, const std::vector<EdgeId> &selected, double size, bool chamfer, const std::vector<ChamferSides> *selectedSides, BodyHistory *history, bool propagate) {
     for (EdgeId edge : selected)
         if (!body.contains(edge) || body.isLaminar(edge))
             throw std::domain_error("blendEdges: scegli uno spigolo condiviso da due facce cucite, non un bordo libero");
@@ -777,8 +777,12 @@ Body blendEdgesWith(const Body &body, const std::vector<EdgeId> &selected, doubl
     std::vector<EdgeId> edges = selected;
     std::vector<ChamferSides> propagatedSides;
     if (selectedSides) propagatedSides = *selectedSides;
-    propagateTangent(body, edges, selectedSides ? &propagatedSides : nullptr);
+    if (propagate) propagateTangent(body, edges, selectedSides ? &propagatedSides : nullptr);
     const std::vector<ChamferSides> *sides = selectedSides ? &propagatedSides : nullptr;
+    if (!propagate) {
+        try { return analyticBlend(body, edges, size, chamfer, sides, history); }
+        catch (const std::domain_error &) { return blendSurfaceChains(body, edges, size, chamfer, sides, history, nullptr, false); }
+    }
     Box box;
     for (VertexId v : body.vertices()) box.add(body.vertex(v).point);
     for (FaceId f : body.faces()) box.add(faceBox(body, f));
@@ -1637,5 +1641,41 @@ Body analyticBlend(const Body &body, const std::vector<EdgeId> &edges, double si
 }
 
 }  // namespace
+
+Body blendProfileEdges(const Body &body, const std::vector<EdgeId> &selected, double size,
+                       const BlendProfileSpec &profile, bool propagate, BodyHistory *history) {
+    if (selected.empty()) throw std::domain_error("raccordo: nessun bordo selezionato");
+    for (EdgeId e : selected)
+        if (!body.contains(e) || body.isLaminar(e)) throw std::domain_error("raccordo: occorre un bordo tra due facce cucite");
+    if (!std::isfinite(profile.rho) || profile.rho < 0.0 || profile.rho >= 1.0
+        || !std::isfinite(profile.conicRadius) || profile.conicRadius < 0.0)
+        throw std::domain_error("raccordo conico: parametri non validi");
+    std::vector<EdgeId> edges = selected;
+    if (propagate && profile.radii.empty() && profile.paths.empty()) propagateTangent(body, edges, nullptr);
+    BlendProfileSpec resolved = profile;
+    if (resolved.paths.empty() && !resolved.radii.empty()) {
+        for (const auto &path : blendPaths(body, edges)) {
+            BlendRadiusPath law; law.radii=resolved.radii; law.smooth=resolved.smooth; law.reverse=resolved.reverse;
+            for (const auto &piece:path.edges) law.edges.push_back(piece.edge);
+            resolved.paths.push_back(std::move(law));
+        }
+    }
+    std::set<int> covered;
+    for (const auto &law:resolved.paths) {
+        const auto paths=blendPaths(body,law.edges);
+        if(paths.size()!=1)throw std::domain_error("raggio variabile: ogni tabella deve descrivere un unico percorso tangente");
+        if(law.radii.size()<2||law.radii.size()>64)throw std::domain_error("raggio variabile: occorrono da 2 a 64 punti per percorso");
+        for(double value:law.radii)if(!std::isfinite(value)||value<=kLinearResolution)
+            throw std::domain_error("raggio variabile: raggi non validi");
+        if(paths[0].closed && std::fabs(law.radii.front()-law.radii.back())>1e-9*std::max(law.radii.front(),law.radii.back()))
+            throw std::domain_error("raggio variabile: su un percorso chiuso il primo e l'ultimo raggio devono coincidere");
+        for(EdgeId e:law.edges) {
+            if(std::find(edges.begin(),edges.end(),e)==edges.end()||!covered.insert(e.index).second)
+                throw std::domain_error("raggio variabile: associazione tra bordi e tabelle non valida");
+        }
+    }
+    if(!resolved.paths.empty()&&covered.size()!=edges.size())throw std::domain_error("raggio variabile: manca la tabella di un percorso");
+    return blendSurfaceChains(body, edges, size, false, nullptr, history, &resolved, resolved.paths.empty() && propagate);
+}
 
 }

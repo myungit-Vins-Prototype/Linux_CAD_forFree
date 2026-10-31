@@ -60,7 +60,7 @@ void visitGeometryRefs(Feature &feature, Visit &&visit) {
         visitGeometryRefs(feature, GeometryRefFamily(family), visit);
 }
 
-enum class SketchGeometryRefFamily { Support, Pierce };
+enum class SketchGeometryRefFamily { Support, Pierce, Linked };
 
 // La variante mutabile distacca i riferimenti condivisi prima del callback:
 // le copie del documento conservate dall'Undo non vengono modificate.
@@ -73,6 +73,17 @@ void visitSketchGeometryRefs(Sketch &sketch, Visit &&visit) {
             auto ref = std::make_shared<GeometryRef>(*sketch.support);
             visit(*ref, SketchGeometryRefFamily::Support, 0);
             sketch.support = std::move(ref);
+        }
+    }
+    for (int i = 0; i < sketch.linkedReferences.size(); ++i) {
+        auto &link = sketch.linkedReferences[i];
+        if (!link) continue;
+        if constexpr (std::is_const_v<Sketch>) {
+            visit(std::as_const(link->source), SketchGeometryRefFamily::Linked, i);
+        } else {
+            auto data = std::make_shared<SketchLinkedReference>(*link);
+            visit(data->source, SketchGeometryRefFamily::Linked, i);
+            link = std::move(data);
         }
     }
     for (int i = 0; i < sketch.geometricConstraints.size(); ++i) {

@@ -51,6 +51,10 @@ BlendDialogResult blendDialog(QWidget *parent, CadViewport *viewport, const QStr
                                      const std::function<QString(int, const QVector<EdgePoint> &, double, bool, const ChamferSpec &)> &apply,
                                      bool pickInView = false);
 
+BlendDialogResult filletDialog(QWidget *parent, CadViewport *viewport, const QString &title, int base, int hidden,
+                              const QVector<EdgePoint> &edges, double size, const ChamferSpec &spec,
+                              const std::function<QString(int,const QVector<EdgePoint>&,double,bool,const ChamferSpec&)> &apply);
+
 bool scaleDialog(QWidget *parent, CadViewport *viewport, const QString &title, int replaced, const ExtrusionObject &definition,
                         const std::function<QString(const ExtrusionObject &)> &apply);
 

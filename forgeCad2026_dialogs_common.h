@@ -84,16 +84,24 @@ public:
     void updateEmbeddedMove(const QPoint &globalPosition);
     void endEmbeddedMove();
     void placeAtLeft();
+    // Preferenza condivisa per i pannelli aperti successivamente: 0 libero, 1 sinistra, 2 destra.
+    int dockSide() const { return dockSide_; }
+    bool fullHeight() const { return fullHeight_; }
+    void setDockSide(int side);
+    void setFullHeight(bool enabled);
+    QToolButton *createDockButton(QWidget *parent);
     void setPanelOpacity(int percent);
     void setBackdropBlur(int pixels);
     void setCornerRadius(int pixels);
     void reloadAppearance();
 protected:
     void mousePressEvent(QMouseEvent *event) override;
+    void mouseMoveEvent(QMouseEvent *event) override;
     void mouseReleaseEvent(QMouseEvent *event) override;
     void mouseDoubleClickEvent(QMouseEvent *event) override;
     void wheelEvent(QWheelEvent *event) override;
     void contextMenuEvent(QContextMenuEvent *event) override;
+    void keepInsideViewport();
     void showEvent(QShowEvent *event) override;
     void hideEvent(QHideEvent *event) override;
     void changeEvent(QEvent *event) override;
@@ -108,7 +116,7 @@ private:
     bool exclusive_ = true;
     std::unique_ptr<WindowLock> windowLock_;
     static QWidget *overlayParent(QWidget *requested);
-    void keepInsideViewport();
+    void applyDockLayout();
     void updateRoundedMask();
     static QColor readableText(const QColor &background);
     void applyTransparentStyle();
@@ -135,8 +143,11 @@ private:
     quint64 capturedFrameSerial_ = std::numeric_limits<quint64>::max();
     QFormLayout *form_ = nullptr;
     QSizeGrip *resizeGrip_ = nullptr;
-    static constexpr int kHeaderHeight = 30;
-    QToolButton *headerClose_ = nullptr;
+    static constexpr int kHeaderHeight = 36;
+    QToolButton *headerClose_ = nullptr, *headerDock_ = nullptr;
+    int dockSide_ = 0;
+    bool fullHeight_ = false, applyingDock_ = false, movedPanel_ = false;
+    QPoint moveStartGlobal_;
     bool headerVisible_ = true;
     QPoint dragOffset_;
     QPoint resizeStartGlobal_;

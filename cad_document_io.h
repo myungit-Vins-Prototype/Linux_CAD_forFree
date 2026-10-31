@@ -43,7 +43,7 @@
 namespace ForgeCad {
 
 inline constexpr const char *kDocumentSuffix = "prt";
-inline constexpr quint16 kDocumentFormatVersion = 56;
+inline constexpr quint16 kDocumentFormatVersion = 59;
 
 // Budget in byte, indipendenti dal numero di feature. I chiamanti che devono
 // aprire documenti piu' grandi possono passarne di espliciti agli overload.

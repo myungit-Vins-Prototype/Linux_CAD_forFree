@@ -5,6 +5,8 @@
 #include <exception>
 
 #include "cad_constraints.h"
+#include "cad_datum.h"
+#include "cad_feature_dependencies.h"
 #include "cad_curve_solver.h"
 #include "cad_kernel.h"
 #include "fk_boolean.h"
@@ -541,4 +543,192 @@ int appendFixedReferenceLine(SketchObject &sketch, const QPointF &point, const Q
     sketch.geometricConstraints.append(makeConstraint(sketch, ConstraintType::Fix, {{0, index, -1}}));
     return index;
 }
+int sketchReferenceSourceIndex(const GeometryRef &ref, const QVector<SketchObject> &sketches,
+                              const QVector<ExtrusionObject> &bodies) {
+    if (isSketchRef(ref)) {
+        if (ref.featureId) {
+            for (int i = 0; i < sketches.size(); ++i) if (sketches[i].storyId == ref.featureId) return i;
+            return -1;
+        }
+        return ref.index >= 0 && ref.index < sketches.size() ? ref.index : -1;
+    }
+    if (isBodyRef(ref)) {
+        if (ref.featureId) {
+            for (int i = 0; i < bodies.size(); ++i) if (bodies[i].featureId == ref.featureId) return i;
+            return -1;
+        }
+        return ref.index >= 0 && ref.index < bodies.size() ? ref.index : -1;
+    }
+    return ref.index;
+}
+
+namespace {
+bool sameSketchSource(const GeometryRef &a, const GeometryRef &b) {
+    return a.kind == b.kind && (a.featureId || b.featureId ? a.featureId == b.featureId : a.index == b.index)
+        && a.element == b.element && a.point.subshape == b.point.subshape && a.point.name == b.point.name
+        && (a.kind != 9 || (a.point.x == b.point.x && a.point.y == b.point.y && a.point.z == b.point.z));
+}
+
+QString projectLinkedReference(SketchObject &target, GeometryRef ref, bool contact, bool construction, double halfLength,
+                               const QVector<SketchObject> &sketches, const QVector<ExtrusionObject> &bodies) {
+    try {
+    if (isSketchRef(ref) || isBodyRef(ref)) {
+        ref.index = sketchReferenceSourceIndex(ref, sketches, bodies);
+        if (ref.index < 0) return QStringLiteral("La sorgente del riferimento associativo e' stata eliminata.");
+        if (isBodyRef(ref) && (bodies[ref.index].suppressed || !bodies[ref.index].error.isEmpty()))
+            return QStringLiteral("La sorgente del riferimento associativo non e' disponibile.");
+        if (isSketchRef(ref) && (!sketches[ref.index].referenceError.isEmpty() || !sketches[ref.index].supportError.isEmpty()))
+            return QStringLiteral("Lo schizzo sorgente ha riferimenti non risolti.");
+    }
+    if (ref.kind == 11) {
+        if (ref.index < 0 || !bodies[ref.index].forgeBody) return QStringLiteral("Il corpo della sezione associativa non e' disponibile.");
+        return appendSectionCurves(target, *bodies[ref.index].forgeBody, construction, false);
+    }
+    ResolvedRef resolved;
+    QString error;
+    if (!resolveGeometryRef(ref, bodies.size(), sketches, bodies, resolved, &error))
+        return error.isEmpty() ? QStringLiteral("Riferimento associativo non risolto.") : error;
+    if (ref.kind == 5 && contact) {
+        if (ref.index < 0 || !bodies[ref.index].forgeBody || resolved.face < 0)
+            return QStringLiteral("La faccia della sezione associativa non e' disponibile.");
+        const Body sheet = facesAsSheet(*bodies[ref.index].forgeBody, {FaceId(resolved.face)});
+        return appendSectionCurves(target, sheet, construction, false);
+    }
+    const auto appendPoint = [&](const Vec3 &point) {
+        const auto p = worldToSketch(point, target);
+        for (const auto &segment : target.segments)
+            if (segment.first == segment.second && std::hypot(p.x()-segment.first.x(),p.y()-segment.first.y()) <= kSketchConnectionTolerance) return;
+        appendSegment(target, p, p, construction);
+    };
+    if (ref.kind == 0 || ref.kind == 3 || ref.kind == 6 || ref.kind == 10) {
+        if (!resolved.hasPoint) return QStringLiteral("Il riferimento non definisce un punto.");
+        appendPoint(resolved.point); return {};
+    }
+    if (ref.kind == 1 || ref.kind == 8 || ref.kind == 2 || (ref.kind == 5 && resolved.hasPlane)) {
+        QPointF point, direction;
+        if (resolved.hasPlane) {
+            SketchFrame plane;
+            for (int i = 0; i < 3; ++i) { plane.origin[i] = resolved.point[i]; plane.normal[i] = resolved.direction[i]; }
+            error = sketchPlaneReference(target, plane, point, direction);
+        } else if (resolved.hasLine) {
+            error = sketchAxisReference(target, resolved.point, resolved.direction, point, direction);
+            if (!error.isEmpty()) { appendPoint(resolved.point); return {}; }
+        } else return QStringLiteral("Il riferimento non definisce un piano o un asse.");
+        if (!error.isEmpty()) return error;
+        appendSegment(target, point - halfLength * direction, point + halfLength * direction, construction);
+        return {};
+    }
+    std::vector<PathSegment> path;
+    if (!geometryRefPath(ref, bodies.size(), sketches, bodies, path, &error)) return error;
+    const Frame3 frame = sketchAxes(target);
+    for (const auto &piece : path) {
+        if (contact) {
+            const auto roots = planeRoots<3>(*piece.curve, piece.range, frame.zDir(), dot(frame.zDir(), frame.origin()), 1e-9);
+            for (double t : roots.parameters) appendPoint(piece.curve->point(t));
+        } else {
+            error = appendProjectedCurve(target, piece.curve, piece.range, construction, false);
+            if (!error.isEmpty()) {
+                // Una retta normale al piano si proietta in un punto esatto.
+                const Vec3 a = piece.curve->point(piece.range.lo), b = piece.curve->point(piece.range.hi);
+                if (basisOf(piece.curve.get())->type() == CurveType::Line
+                    && norm(cross(b - a, frame.zDir())) <= 1e-10 * std::max(1.0, norm(b - a))) appendPoint(a);
+                else return error;
+            }
+        }
+    }
+    if (target.segments.isEmpty() && target.curves.isEmpty())
+        return QStringLiteral("La curva non attraversa il piano dello schizzo.");
+    return {};
+    } catch (const std::exception &error) {
+        return QStringLiteral("Riferimento associativo non risolto: %1").arg(QString::fromUtf8(error.what()));
+    }
+}
+}
+
+QString appendLinkedSketchReference(SketchObject &sketch, GeometryRef source,
+                                   const QVector<SketchObject> &sketches, const QVector<ExtrusionObject> &bodies,
+                                   bool contact, bool construction, double halfLength, QVector<SketchEntity> *created) {
+    if (isSketchRef(source) || isBodyRef(source)) {
+        source.index = sketchReferenceSourceIndex(source, sketches, bodies);
+        if (source.index < 0) return QStringLiteral("Sorgente del riferimento mancante.");
+        source.featureId = isSketchRef(source) ? sketches[source.index].storyId : bodies[source.index].featureId;
+    }
+    for (const auto &link : sketch.linkedReferences)
+        if (link && link->contact == contact && sameSketchSource(link->source, source)) {
+            if (created) for (const auto &entity : link->entities) created->append({entity.kind, entity.element});
+            return link->error;
+        }
+    SketchObject projected;
+    projected.plane = sketch.plane; projected.frame = sketch.frame; projected.customFrame = sketch.customFrame;
+    const QString error = projectLinkedReference(projected, source, contact, construction, halfLength, sketches, bodies);
+    if (!error.isEmpty()) return error;
+    if ((source.kind == 1 || source.kind == 2) && projected.segments.size() == 1 && projected.curves.isEmpty()) {
+        const auto &next = projected.segments.front();
+        const QPointF d = next.second - next.first;
+        for (const auto &link : sketch.linkedReferences) if (link && (link->source.kind == 1 || link->source.kind == 2))
+            for (const auto &entity : link->entities) if (entity.kind == 0) {
+                const auto &old = sketch.segments[entity.element];
+                const QPointF e = old.second - old.first, gap = old.first - next.first;
+                const auto cross2 = [](const QPointF &a, const QPointF &b) { return a.x() * b.y() - a.y() * b.x(); };
+                if (std::hypot(d.x(), d.y()) > 1e-10 && std::hypot(e.x(), e.y()) > 1e-10
+                    && std::abs(cross2(d, e)) <= 1e-12 * std::hypot(d.x(), d.y()) * std::hypot(e.x(), e.y())
+                    && std::abs(cross2(d, gap)) <= 1e-10 * std::hypot(d.x(), d.y())) {
+                    if (created) created->append({0, entity.element});
+                    return {};
+                }
+            }
+    }
+    auto data = std::make_shared<SketchLinkedReference>();
+    data->source = source; data->contact = contact; data->construction = construction; data->halfLength = halfLength;
+    for (const auto &segment : projected.segments) {
+        const int index = sketch.segments.size();
+        appendSegment(sketch, segment.first, segment.second, construction);
+        data->entities.append({0, index, -1});
+        if (created) created->append({0, index});
+    }
+    for (const auto &curve : projected.curves) {
+        const int index = sketch.curves.size(); sketch.curves.append(curve);
+        data->entities.append({1, index, -1});
+        if (created) created->append({1, index});
+    }
+    sketch.linkedReferences.append(data);
+    return {};
+}
+
+QString refreshLinkedSketchReferences(SketchObject &sketch, const QVector<SketchObject> &sketches,
+                                     const QVector<ExtrusionObject> &bodies) {
+    sketch.referenceError.clear();
+    for (auto &link : sketch.linkedReferences) {
+        if (!link) { sketch.referenceError = QStringLiteral("Riferimento associativo mancante."); continue; }
+        auto data = std::make_shared<SketchLinkedReference>(*link);
+        SketchObject projected;
+        projected.plane = sketch.plane; projected.frame = sketch.frame; projected.customFrame = sketch.customFrame;
+        data->error = projectLinkedReference(projected, data->source, data->contact, data->construction, data->halfLength, sketches, bodies);
+        int s = 0, c = 0;
+        for (const auto &entity : data->entities) {
+            if (entity.kind == 0) {
+                if (entity.element < 0 || entity.element >= sketch.segments.size() || s >= projected.segments.size()) break;
+                ++s;
+            } else {
+                if (entity.element < 0 || entity.element >= sketch.curves.size() || c >= projected.curves.size()) break;
+                const auto &old = sketch.curves[entity.element], &next = projected.curves[c];
+                if (old.tool != next.tool || old.controlPoints.size() != next.controlPoints.size()) break;
+                ++c;
+            }
+        }
+        if (data->error.isEmpty() && (s + c != data->entities.size() || s != projected.segments.size() || c != projected.curves.size()))
+            data->error = QStringLiteral("La topologia del riferimento e' cambiata: selezionare nuovamente la sorgente.");
+        if (data->error.isEmpty()) {
+            s = c = 0;
+            for (const auto &entity : data->entities) {
+                if (entity.kind == 0) sketch.segments[entity.element] = projected.segments[s++];
+                else sketch.curves[entity.element] = projected.curves[c++];
+            }
+            data->source.index = sketchReferenceSourceIndex(data->source, sketches, bodies);
+        } else sketch.referenceError = data->error;
+        link = std::move(data);
+    }
+    return sketch.referenceError;
+}
+
 }

@@ -914,7 +914,8 @@ void HistoryGraphDialog::rebuild() {
                 QStringLiteral("Datum: %1").arg(sketch.datumPlane),
                 QStringLiteral("ID schizzo: %1 • posizione storia: %2").arg(sketch.storyId).arg(sketchPositions.at(index)),
                 sketch.support ? geometryRefText(*sketch.support, sketches, features) : QString(),
-                sketch.supportError
+                sketch.supportError,
+                sketch.referenceError
             };
             if (!sketch.geometricConstraints.isEmpty()) {
                 details << QStringLiteral("\nVincoli:");
@@ -997,6 +998,27 @@ void HistoryGraphDialog::rebuild() {
         scene_->addItem(edge); edge->updateGeometry();
         ++edgeCount_; if (!valid) ++invalidDependencies_;
     }
+    if (showSketches_->isChecked()) for (int s = 0; s < sketches.size(); ++s)
+        for (const auto &link : sketches[s].linkedReferences) if (link) {
+            const auto &ref = link->source;
+            const bool sourceSketch = isSketchRef(ref);
+            if (!sourceSketch && !isBodyRef(ref)) continue;
+            int index = ref.index;
+            if (ref.featureId) {
+                index = -1;
+                if (sourceSketch) { for (int i = 0; i < sketches.size(); ++i) if (sketches[i].storyId == ref.featureId) { index = i; break; } }
+                else { for (int i = 0; i < features.size(); ++i) if (features[i].featureId == ref.featureId) { index = i; break; } }
+            }
+            auto *source = nodes.value(QStringLiteral("%1:%2").arg(sourceSketch ? "s" : "f").arg(index), nullptr);
+            auto *target = nodes.value(QStringLiteral("s:%1").arg(s), nullptr);
+            if (!source || !target) continue;
+            const bool valid = link->error.isEmpty() && sketches[s].referenceError.isEmpty()
+                && (sourceSketch ? sketchPositions[index] : featurePositions[index]) < sketchPositions[s];
+            auto *edge = new HistoryGraphEdge(source, target, QStringLiteral("riferimento associativo"),
+                valid ? QColor(90,190,205) : QColor(255,76,76), valid, showLabels_->isChecked());
+            edge->setToolTip(geometryRefText(ref, sketches, features) + QChar(u'\n') + link->error);
+            scene_->addItem(edge); edge->updateGeometry(); ++edgeCount_; if (!valid) ++invalidDependencies_;
+        }
     int failures = 0, suppressed = 0;
     for (const ExtrusionObject &feature : features) {
         failures += feature.error.isEmpty() ? 0 : 1;

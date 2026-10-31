@@ -102,7 +102,7 @@ void CadViewport::requestPreview(const ExtrusionObject &definition, int index ) 
     }
     // Durante il drag lascia finire il fotogramma in corso: cancellarlo
     // a ogni movimento impedirebbe di vedere qualunque risultato.
-    if (featureHandleDragging_ && previewRunning_) {
+    if ((featureHandleDragging_ || filletRadiusDrag_ >= 0) && previewRunning_) {
         previewHandlePending_ = true;
         previewHandleDefinition_ = definition;
         previewHandleIndex_ = index;
@@ -182,7 +182,7 @@ void CadViewport::requestPreview(const ExtrusionObject &definition, int index ) 
         previewTimer_->callOnTimeout([this] { startPreviewJob(); });
     }
     // Il timer scandisce il movimento: non rimandarlo a ogni evento mouse.
-    if (!featureHandleDragging_ || !previewTimer_->isActive()) previewTimer_->start(firstRequest?0:120);
+    if ((!featureHandleDragging_ && filletRadiusDrag_ < 0) || !previewTimer_->isActive()) previewTimer_->start(firstRequest?0:120);
     update();
 }
 
@@ -248,6 +248,7 @@ void CadViewport::clearPreview() {
 void CadViewport::clearBlendPreview() { clearPreview(); }
 
 QString CadViewport::previewError() const { return preview_.error; }
+bool CadViewport::previewPending() const { return !preview_.key.isEmpty() && !preview_.valid && preview_.error.isEmpty(); }
 
 void CadViewport::setPreviewCallback(std::function<void(const QString &)> callback) { previewCallback_ = std::move(callback); }
 

@@ -459,7 +459,14 @@ void CadViewport::selectSketchReference(int kind, int index) {
     }
     if (!error.isEmpty()) { showStatus(error); return; }
     const int before = int(work.segments.size());
-    const int segment = ForgeCad::appendFixedReferenceLine(work, point, direction, std::max(1e-4, double(camera_.zoom_) * 0.35));
+    GeometryRef source; source.kind = kind; source.index = index;
+    if (kind == 8) source.featureId = extrusions_[index].featureId;
+    if (!allowedSketchReference(source)) { showStatus(QStringLiteral("Il piano deve precedere lo schizzo nella storia.")); return; }
+    QVector<ForgeCad::SketchEntity> created;
+    error = ForgeCad::appendLinkedSketchReference(work, source, sketches_, extrusions_, false, true,
+                                                std::max(1e-4, double(camera_.zoom_) * 0.35), &created);
+    if (!error.isEmpty() || created.isEmpty()) { showStatus(error); return; }
+    const int segment = created.first().index;
     if (work.segments.size() != before) {
         recordUndo();
         sketches_[activeSketch_] = work;
@@ -475,7 +482,7 @@ void CadViewport::selectSketchReference(int kind, int index) {
     selectedConstraints_.clear();
     refreshDimensionPreview(cursorSketchPoint_);
     selectionChanged();
-    showStatus(name + QStringLiteral(": riferimento di costruzione fisso; scegli il vincolo nella finestra Vincoli."));
+    showStatus(name + QStringLiteral(": riferimento associativo; scegli il vincolo nella finestra Vincoli."));
     update();
 }
 
@@ -561,35 +568,29 @@ bool CadViewport::pickSketchReference(const QPoint &position, SketchReferenceHit
 QString CadViewport::appendReferenceAt(const QPoint &position, SketchObject &work, bool construction) {
     SketchReferenceHit hit;
     if (!pickSketchReference(position, hit)) return QStringLiteral("Clicca uno spigolo del modello o una curva visibile.");
+    GeometryRef ref;
     if (hit.sketch >= 0) {
-        const SketchObject &source = sketches_.at(hit.sketch);
-        const auto targetAxes = ForgeCad::sketchAxes(work), sourceAxes = ForgeCad::sketchAxes(source);
-        if (ForgeCad::Kernel::norm(ForgeCad::Kernel::cross(targetAxes.zDir(), sourceAxes.zDir())) > 1e-10)
-            return ForgeCad::appendSketchContactReference(work, source, {hit.entityKind, hit.entity});
-        return ForgeCad::appendProjectedSketchEntity(work, source, {hit.entityKind, hit.entity}, construction);
+        ref.kind = 7; ref.index = hit.sketch; ref.featureId = sketches_[hit.sketch].storyId;
+        ref.element = {hit.entityKind, hit.entity, -1};
+    } else {
+        const auto &body = extrusions_[hit.body];
+        ref.index = hit.body; ref.featureId = body.featureId;
+        const ForgeCad::Kernel::Vec3 point(hit.point.x(), hit.point.y(), hit.point.z());
+        if (ForgeCad::isCurveBody(body)) {
+            ref.kind = 9; ref.point.x = point.x(); ref.point.y = point.y(); ref.point.z = point.z();
+        } else if (body.forgeBody) {
+            ref.kind = 4;
+            const int id = body.display.edgeIds.value(hit.polyline, -1);
+            ForgeCad::Kernel::EdgeId edge;
+            for (auto candidate : body.forgeBody->edges()) if (candidate.index == id) { edge = candidate; break; }
+            if (!edge.valid()) return QStringLiteral("Identita' dello spigolo non disponibile.");
+            ref.point = ForgeCad::edgeReference(*body.forgeBody, edge, point);
+        } else return QStringLiteral("La geometria sorgente non e' disponibile.");
     }
-    const ExtrusionObject &body = extrusions_.at(hit.body);
-    ForgeCad::Kernel::CurvePtr<3> curve;
-    ForgeCad::Kernel::Interval range;
-    if (ForgeCad::isCurveBody(body)) {
-        EdgePoint near; near.x = hit.point.x(); near.y = hit.point.y(); near.z = hit.point.z();
-        curve = ForgeCad::bodyCurveNear(body, near); range = curve->domain();
-    }
-    else {
-        if(body.forgeBody) {
-            // La polilinea serve al picking; la copia usa lo spigolo
-            // esatto identificato dalla tessellazione, anche su curve
-            // molto incurvate con corde lontane dalla geometria vera.
-            const int pickedId=body.display.edgeIds.value(hit.polyline,-1);
-            for(const auto id:body.forgeBody->edges()) if(id.index==pickedId) {
-                const auto &edge=body.forgeBody->edge(id);curve=edge.curve;range=edge.range;break;
-            }
-        }
-        if(!curve && (!body.forgeBody || !ForgeCad::nearestBodyEdge(*body.forgeBody,
-                ForgeCad::Kernel::Vec3(hit.point.x(), hit.point.y(), hit.point.z()), curve, range)))
-            return QStringLiteral("Lo spigolo non si trova sul corpo.");
-    }
-    return ForgeCad::appendProjectedCurve(work,curve,range,construction,true);
+    if (!allowedSketchReference(ref)) return QStringLiteral("Il riferimento deve precedere lo schizzo nella storia (dipendenza circolare).");
+    const bool contact = ref.kind == 7 && ForgeCad::Kernel::norm(ForgeCad::Kernel::cross(
+        ForgeCad::sketchAxes(work).zDir(), ForgeCad::sketchAxes(sketches_[ref.index]).zDir())) > 1e-10;
+    return ForgeCad::appendLinkedSketchReference(work, ref, sketches_, extrusions_, contact, construction);
 }
 
 QString CadViewport::convertReferenceAt(const QPoint &position) {
@@ -633,7 +634,10 @@ QString CadViewport::addSectionReferences(int *added ) {
         const auto &body=extrusions_.at(index);
         if (!isBodyDrawn(index, false) || !ForgeCad::isShapeBody(body)) continue;
         SketchObject attempt = work;
-        const QString error = ForgeCad::appendSectionCurves(attempt, *body.forgeBody, referencesConstruction_, true);
+        GeometryRef source; source.kind = 11; source.index = index; source.featureId = body.featureId;
+        const QString error = allowedSketchReference(source)
+            ? ForgeCad::appendLinkedSketchReference(attempt,source,sketches_,extrusions_,true,referencesConstruction_)
+            : QStringLiteral("Il corpo deve precedere lo schizzo nella storia.");
         if (error.isEmpty()) {
             work = attempt;
             ++cut;
@@ -854,7 +858,9 @@ QVector<ConstraintRef> CadViewport::constraintSelection() const {
         if (isValidSelectedPoint(point)) refs.append({point.kind, point.element, point.kind == 2 ? -1 : point.point});
     for (const SketchElementSelection &element : sketchSelections_) {
         const auto *sketch=activeSketchObject();
-        const bool point=sketch && element.kind==1 && sketch->curves.value(element.index).tool==DrawingTool::Point;
+        const bool point=sketch && ((element.kind==1 && sketch->curves.value(element.index).tool==DrawingTool::Point)
+            || (element.kind==0 && isLinkedSketchEntity(*sketch, 0, element.index)
+                && sketch->segments.value(element.index).first == sketch->segments.value(element.index).second));
         refs.append({element.kind, element.index, point?0:-1});
     }
     return refs;
@@ -1386,13 +1392,16 @@ bool CadViewport::segmentEndpointAt(const QPointF &point, QPointF &endpoint) con
     if (activeSketch_ < 0 || activeSketch_ >= sketches_.size()) return false;
     double best = pickTolerance();
     bool found = false;
-    for (const SketchSegment &segment : sketches_.at(activeSketch_).segments)
+    for (int index = 0; index < sketches_[activeSketch_].segments.size(); ++index) {
+        if (isLinkedSketchEntity(sketches_[activeSketch_], 0, index)) continue;
+        const auto &segment = sketches_[activeSketch_].segments[index];
         for (const QPointF &candidate : {segment.first, segment.second})
             if (pointDistance(point, candidate) < best) {
                 best = pointDistance(point, candidate);
                 endpoint = candidate;
                 found = true;
             }
+    }
     return found;
 }
 
@@ -1408,7 +1417,24 @@ QPointF CadViewport::dragSnapPoint(const QPointF &raw) {
     for (const QPointF &p : snapCandidates(sketch))
         if (pointDistance(p, pointDragPosition_) > tolerance) points.append(p);
     if (originSnap_ && pointLength(pointDragPosition_) > tolerance) points.append(QPointF(0.0, 0.0));
-    const ForgeCad::SnapResult result = ForgeCad::snapSegments(raw, segments, points, geometrySnap_, gridSnap_, snapSpacing_, pickTolerance(10.0));
+    lastSnapExternal_ = false; lastSnapNote_.clear(); lastSnapCurve_ = -1;
+    const auto &cache = sketchReferenceCache();
+    if (geometrySnap_) { segments += cache.segments; points += snapCandidates(cache); }
+    auto result = ForgeCad::snapSegments(raw, segments, points, geometrySnap_, gridSnap_, snapSpacing_, pickTolerance(10.0));
+    if (geometrySnap_) {
+        if (result.kind == SnapKind::None || result.kind == SnapKind::Nearest) {
+            QPointF onCurve;
+            if (nearestQuadrant(cache, raw, pickTolerance(10.0), onCurve)) result = {SnapKind::Endpoint,onCurve};
+            else if (nearestCurvePoint(cache, raw, result.kind==SnapKind::Nearest ? pointDistance(raw,result.point) : pickTolerance(10.0), onCurve) >= 0)
+                result = {SnapKind::Nearest,onCurve};
+        }
+        if (result.kind != SnapKind::None) {
+            for (const auto &segment : cache.segments)
+                if (distanceToSegment(result.point,segment.first,segment.second) <= 1e-9) lastSnapExternal_ = true;
+            for (const auto &curve : cache.curves) for (const auto &piece : ForgeCad::curveGeometry(curve))
+                if (ForgeCad::Kernel::projectPoint(*piece.curve,{result.point.x(),result.point.y()},piece.range).distance <= 1e-9) lastSnapExternal_ = true;
+        }
+    }
     lastSnapKind_ = result.kind;
     lastSnapPoint_ = result.point;
     return result.point;
@@ -1434,7 +1460,7 @@ void CadViewport::dragSketchPoint(const QPointF &target) {
 void CadViewport::dragSketchSegment(const QPointF &raw) {
     if (activeSketch_ < 0 || activeSketch_ >= sketches_.size()) return;
     SketchObject &sketch = sketches_[activeSketch_];
-    if (bodyDragSegment_ >= sketch.segments.size()) return;
+    if (bodyDragSegment_ >= sketch.segments.size() || isLinkedSketchEntity(sketch, 0, bodyDragSegment_)) return;
     QPointF delta = raw - bodyDragLast_;
     if (!bodyDragMoved_ && pointLength(delta) < pickTolerance(3.0)) return;
     bodyDragMoved_ = true;
@@ -1498,6 +1524,9 @@ void CadViewport::applyEditTool(const QPointF &point) {
         }
     } else {
         if (hit.kind < 0) return;
+        if (isLinkedSketchEntity(edited, hit.kind, hit.index)) {
+            showStatus(QStringLiteral("Il riferimento associativo si modifica dalla geometria sorgente.")); return;
+        }
         const ForgeCad::SketchEntity entity{hit.kind, hit.index};
         if (drawingTool_ == DrawingTool::Trim) result = ForgeCad::trimSketchEntity(edited, entity, point);
         else if (drawingTool_ == DrawingTool::Extend) result = ForgeCad::extendSketchEntity(edited, entity, point);
@@ -1540,6 +1569,9 @@ void CadViewport::remapSketchReferences(int sketchIndex, const QVector<int> &seg
         if ((ref.element.kind != 0 && ref.element.kind != 1) || map.isEmpty()) return;
         ref.element.element = map.value(ref.element.element, -1);
     };
+    for (auto &sketch : sketches_) for (auto &link : sketch.linkedReferences) if (link) {
+        auto data = std::make_shared<SketchLinkedReference>(*link); remap(data->source); link = std::move(data);
+    }
     for (ExtrusionObject &body : extrusions_) {
         for (QVector<GeometryRef> *refs : {&body.datum.refs, &body.pattern.refs, &body.surfaceTool.targets, &body.ruledFirst, &body.ruledSecond, &body.planarRefs, &body.loftStartFaces, &body.loftEndFaces, &body.loftSections, &body.loftEdgeGuides})
             for (GeometryRef &ref : *refs) remap(ref);
@@ -1602,7 +1634,7 @@ CadViewport::LineInference CadViewport::inferLinePoint(const QPointF &raw) {
         // (punto comune esatto); su una spline il punto resta quello.
         const bool circleCurve = snap == SnapKind::Nearest && snapCurve >= 0 && snapCurve < sketch.curves.size()
             && (sketch.curves.at(snapCurve).tool == DrawingTool::Circle || sketch.curves.at(snapCurve).tool == DrawingTool::Arc);
-        const bool pointSnap = snap == SnapKind::Endpoint || snap == SnapKind::Midpoint
+        const bool pointSnap = lastSnapExternal_ || snap == SnapKind::Endpoint || snap == SnapKind::Midpoint
             || (snap == SnapKind::Nearest && snapCurve >= 0 && !circleCurve);
         if (length > 0.0) {
             // Direzioni candidate con il loro vincolo e segmento di riferimento.
@@ -1616,6 +1648,17 @@ CadViewport::LineInference CadViewport::inferLinePoint(const QPointF &raw) {
                 const QPointF u = d / l;
                 if (index == attached) candidates.append({QPointF(-u.y(), u.x()), 3, index});
                 candidates.append({u, 4, index});
+            }
+            if (geometrySnap_) {
+                const auto &cache = sketchReferenceCache();
+                for (int index = 0; index < cache.segments.size(); ++index) {
+                    const auto &segment = cache.segments[index]; const QPointF d = segment.second - segment.first;
+                    const double l = pointLength(d); if (l <= ForgeCad::kSketchConnectionTolerance) continue;
+                    const QPointF u = d / l;
+                    if (distanceToSegment(start, segment.first, segment.second) <= 1e-9)
+                        candidates.append({QPointF(-u.y(), u.x()), 3, -2-index});
+                    candidates.append({u, 4, -2-index});
+                }
             }
             const QPointF u = delta / length;
             const double threshold = std::sin(4.0 * M_PI / 180.0);
@@ -1710,8 +1753,19 @@ void CadViewport::recordCoincidences(SketchObject &sketch, int segment) {
     recordPointCoincidences(sketch, {0, segment, 1}, sketch.segments.at(segment).second);
 }
 
-void CadViewport::recordPointCoincidences(SketchObject &sketch, const ConstraintRef &here, const QPointF &point) {
+void CadViewport::recordPointCoincidences(SketchObject &sketch, const ConstraintRef &here, const QPointF &snappedPoint) {
+    const QPointF point = snappedPoint; // append dei riferimenti puo' riallocare segments/curves
     const double tolerance = ForgeCad::kSketchConnectionTolerance;
+    if (geometrySnap_) attachSketchReferenceAt(sketch, point, tolerance);
+    bool modelReferenceAtPoint = false;
+    for (const auto &link : sketch.linkedReferences) if (link && (ForgeCad::isBodyRef(link->source) || ForgeCad::isSketchRef(link->source)))
+        for (const auto &entity : link->entities) {
+            if (entity.kind == 0) {
+                const auto &segment = sketch.segments[entity.element];
+                if (distanceToSegment(point,segment.first,segment.second) <= tolerance) modelReferenceAtPoint = true;
+            } else for (const auto &piece : ForgeCad::curveGeometry(sketch.curves[entity.element]))
+                if (ForgeCad::Kernel::projectPoint(*piece.curve,{point.x(),point.y()},piece.range).distance <= tolerance) modelReferenceAtPoint = true;
+        }
     const auto add = [&](ConstraintType type, const ConstraintRef &b, double value = 0.0) {
         SketchConstraint c;
         c.type = type;
@@ -1725,7 +1779,7 @@ void CadViewport::recordPointCoincidences(SketchObject &sketch, const Constraint
     const auto self = [&](int kind, int element) { return here.kind == kind && here.element == element; };
     bool onPoint = false;
     QSet<int> quadrantCurves;
-    if (originSnap_ && geometrySnap_ && pointDistance(point, QPointF()) <= tolerance) {
+    if (originSnap_ && geometrySnap_ && !modelReferenceAtPoint && pointDistance(point, QPointF()) <= tolerance) {
         add(ConstraintType::Coincident, {2, 0, -1});
         onPoint = true;
     }
@@ -2063,6 +2117,8 @@ QString CadViewport::editEllipseDimension(int index) {
 }
 
 QString CadViewport::editCurveDimension(int index) {
+    if (activeSketchObject() && isLinkedSketchEntity(*activeSketchObject(), 1, index))
+        return QStringLiteral("Modifica la curva nella geometria sorgente del riferimento associativo.");
     if (!sketchMode_ || activeSketch_ < 0 || activeSketch_ >= sketches_.size()) return QStringLiteral("Entra in modalita' schizzo.");
     const SketchObject &before = sketches_.at(activeSketch_);
     if (index < 0 || index >= before.curves.size()) return QStringLiteral("Seleziona prima un cerchio, un arco o un poligono.");
@@ -2146,6 +2202,7 @@ QString CadViewport::editCurveDimension(int index) {
 bool CadViewport::solveActive(const QVector<ForgeCad::PointTarget> &targets, const SketchObject &before, QString *error ) {
     if (activeSketch_ < 0 || activeSketch_ >= sketches_.size()) return false;
     SketchObject &sketch = sketches_[activeSketch_];
+    ForgeCad::refreshLinkedSketchReferences(sketch, sketches_, extrusions_);
     const ForgeCad::SolveResult result = ForgeCad::solveSketch(sketch, targets);
     analysisDirty_ = true;
     if (!result.ok) {
@@ -2157,7 +2214,9 @@ bool CadViewport::solveActive(const QVector<ForgeCad::PointTarget> &targets, con
 }
 
 bool CadViewport::solveActiveDrag(const QVector<ForgeCad::PointTarget> &targets,const SketchObject &before,const QVector<ForgeCad::PointTarget> &anchors) {
-    auto &sketch=sketches_[activeSketch_];const auto seed=sketch;auto work=seed;
+    auto &sketch=sketches_[activeSketch_];
+    ForgeCad::refreshLinkedSketchReferences(sketch, sketches_, extrusions_);
+    const auto seed=sketch;auto work=seed;
     auto exact=targets;exact+=anchors;auto result=ForgeCad::solveSketch(work,exact);
     if(!result.ok){work=seed;result=ForgeCad::solveSketch(work,anchors);}
     analysisDirty_=true;
@@ -2625,7 +2684,7 @@ bool CadViewport::findCurveEditPoint(const QPointF &point, int &curveIndex,
     const QVector<CurveObject> &curves = sketches_.at(activeSketch_).curves;
     for (int curve = 0; curve < curves.size(); ++curve) {
         const CurveObject &candidate = curves.at(curve);
-        if (candidate.tool == DrawingTool::Converted) continue;
+        if (candidate.tool == DrawingTool::Converted || isLinkedSketchEntity(sketches_[activeSketch_], 1, curve)) continue;
         const bool hasHandles = candidate.tangentHandles.size() == candidate.controlPoints.size();
         for (int control = 0; control < candidate.controlPoints.size(); ++control) {
             if(!isPickableCurvePoint(candidate,control))continue;
@@ -2765,6 +2824,9 @@ const QVector<ForgeCad::OverlayVertex> &CadViewport::sketchCurveComb(int index, 
 }
 
 void CadViewport::editFreeCurve(int curveIndex, int initialPoint ) {
+    if (activeSketchObject() && isLinkedSketchEntity(*activeSketchObject(), 1, curveIndex)) {
+        showStatus(QStringLiteral("Modifica la curva nella geometria sorgente del riferimento associativo.")); return;
+    }
     if (activeSketch_ < 0 || activeSketch_ >= sketches_.size()) return;
     const CurveObject &source = sketches_.at(activeSketch_).curves.value(curveIndex);
     if (source.tool != DrawingTool::Spline && source.tool != DrawingTool::Nurbs) return;
@@ -3116,4 +3178,114 @@ void CadViewport::normalizeEllipse(CurveObject &curve, int moved, const QPointF 
         const double side = w.x() * oldPerpendicular.x() + w.y() * oldPerpendicular.y() < 0.0 ? -1.0 : 1.0;
         p[2] = p.at(0) + side * b * perpendicular;
     }
+}
+
+
+bool CadViewport::allowedSketchReference(const GeometryRef &ref) const {
+    const bool body = ForgeCad::isBodyRef(ref), sourceSketch = ForgeCad::isSketchRef(ref);
+    if (!body && !sourceSketch) return true;
+    const int source = ForgeCad::sketchReferenceSourceIndex(ref, sketches_, extrusions_);
+    if (source < 0 || (sourceSketch && source == activeSketch_)) return false;
+    for (const auto &step : ForgeCad::modelStory(sketches_, extrusions_)) {
+        if (step.sketch && step.index == activeSketch_) return false;
+        if (step.sketch == sourceSketch && step.index == source) return true;
+    }
+    return false;
+}
+
+const SketchObject &CadViewport::sketchReferenceCache() {
+    if (sketchReferenceCacheValid_ && sketchReferenceCacheOwner_ == activeSketch_) return sketchReferenceCache_;
+    sketchReferenceCache_ = {};
+    sketchReferenceCacheOwner_ = activeSketch_;
+    sketchReferenceCacheValid_ = true;
+    const auto *active = activeSketchObject();
+    if (!active) return sketchReferenceCache_;
+    auto &cache = sketchReferenceCache_;
+    cache.plane = active->plane; cache.frame = active->frame; cache.customFrame = active->customFrame;
+    const double extent = std::max(100.0, double(camera_.zoom_) * 4.0);
+    const auto add = [&](GeometryRef ref, bool contact = false) {
+        if (allowedSketchReference(ref))
+            ForgeCad::appendLinkedSketchReference(cache, ref, sketches_, extrusions_, contact, true, extent);
+    };
+    if (originSnap_) { GeometryRef ref; ref.kind = 0; add(ref); }
+    for (int i = 0; i < 3; ++i) {
+        GeometryRef ref; ref.index = i;
+        if (axesVisible_) { ref.kind = 2; add(ref); }
+        if (isPlaneShown(i)) { ref.kind = 1; add(ref); }
+    }
+    for (int i = 0; i < extrusions_.size(); ++i) {
+        if (!isBodyDrawn(i, false)) continue;
+        const auto &body = extrusions_[i];
+        GeometryRef ref; ref.index = i; ref.featureId = body.featureId;
+        if (ForgeCad::isDatumBody(body)) { ref.kind = 8; add(ref); }
+        else if (ForgeCad::isCurveBody(body) && body.curve) {
+            ref.kind = 9; add(ref, true); add(ref);
+        } else if (body.forgeBody) {
+            ref.kind = 4;
+            for (const auto edge : body.forgeBody->edges()) {
+                const auto &geometry = body.forgeBody->edge(edge);
+                if (!geometry.curve) continue;
+                ref.point = ForgeCad::edgeReference(*body.forgeBody, edge, geometry.curve->point(0.5 * (geometry.range.lo + geometry.range.hi)));
+                add(ref, true); add(ref);
+            }
+            ref.kind = 3;
+            for (const auto vertex : body.forgeBody->vertices()) {
+                ref.point = ForgeCad::vertexReference(*body.forgeBody, vertex);
+                add(ref);
+            }
+        }
+    }
+    for (int i = 0; i < sketches_.size(); ++i) {
+        if (i == activeSketch_ || !isSketchDrawn(i)) continue;
+        const auto &source = sketches_[i];
+        GeometryRef ref; ref.kind = 7; ref.index = i; ref.featureId = source.storyId;
+        for (int j = 0; j < source.segments.size(); ++j) {
+            ref.element = {0, j, -1}; add(ref, true); add(ref);
+        }
+        for (int j = 0; j < source.curves.size(); ++j) {
+            ref.element = {1, j, -1};
+            if (source.curves[j].tool == DrawingTool::Point) {
+                ref.kind = 6; ref.element.point = 0; add(ref); ref.kind = 7;
+            } else { add(ref, true); add(ref); }
+        }
+    }
+    return cache;
+}
+
+bool CadViewport::attachSketchReferenceAt(SketchObject &work, const QPointF &point, double tolerance) {
+    const auto &cache = sketchReferenceCache();
+    int chosen = -1, bestPriority = 6;
+    double best = tolerance;
+    for (int i = 0; i < cache.linkedReferences.size(); ++i) {
+        const auto &link = cache.linkedReferences[i];
+        const auto consider = [&](double distance, int priority) {
+            if (distance > tolerance) return;
+            priority = 2*priority + ((ForgeCad::isBodyRef(link->source) || ForgeCad::isSketchRef(link->source)) ? 0 : 1);
+            if (priority < bestPriority || (priority == bestPriority && distance < best)) {
+                bestPriority = priority; best = distance; chosen = i;
+            }
+        };
+        for (const auto &entity : link->entities) {
+            if (entity.kind == 0) {
+                const auto &segment = cache.segments[entity.element];
+                consider(pointDistance(point, segment.first), 0); consider(pointDistance(point, segment.second), 0);
+                consider(pointDistance(point, 0.5 * (segment.first + segment.second)), 0);
+                consider(distanceToSegment(point, segment.first, segment.second), 1);
+            } else {
+                const auto &curve = cache.curves[entity.element];
+                SketchObject curveSketch; curveSketch.curves.append(curve);
+                for (const auto &candidate : snapCandidates(curveSketch)) consider(pointDistance(point, candidate), 0);
+                for (const auto &quadrant : ForgeCad::curveQuadrants(curve)) consider(pointDistance(point, quadrant.second), 0);
+                for (const auto &piece : ForgeCad::curveGeometry(curve))
+                    consider(ForgeCad::Kernel::projectPoint(*piece.curve, {point.x(), point.y()}, piece.range).distance, 1);
+            }
+        }
+    }
+    if (chosen < 0) return false;
+    const auto link = cache.linkedReferences[chosen];
+    if (link->source.kind == 0 && originSnap_ && pointDistance(point,QPointF()) <= tolerance) return false;
+    const int before = work.linkedReferences.size();
+    const auto error = ForgeCad::appendLinkedSketchReference(work, link->source, sketches_, extrusions_, link->contact,
+                                                            link->construction, link->halfLength);
+    return error.isEmpty() && work.linkedReferences.size() != before;
 }

@@ -17,6 +17,17 @@
 // nodi: la stessa curva proiettata; le eliche passano per la B-spline entro 1e-9).
 namespace ForgeCad {
 
+// Crea/riusa un riferimento vivo. I dati geometrici sono cache governate
+// dalla sorgente, senza Fix; il refresh conserva gli indici dei vincoli.
+int sketchReferenceSourceIndex(const GeometryRef &source, const QVector<SketchObject> &sketches,
+                              const QVector<ExtrusionObject> &bodies);
+QString appendLinkedSketchReference(SketchObject &sketch, GeometryRef source,
+                                   const QVector<SketchObject> &sketches, const QVector<ExtrusionObject> &bodies,
+                                   bool contact = false, bool construction = true, double halfLength = 100.0,
+                                   QVector<SketchEntity> *created = nullptr);
+QString refreshLinkedSketchReferences(SketchObject &sketch, const QVector<SketchObject> &sketches,
+                                     const QVector<ExtrusionObject> &bodies);
+
 // Proietta l'entita' scelta di un altro schizzo lungo la normale del piano
 // destinazione, anche quando i due piani non si intersecano.
 QString appendProjectedSketchEntity(SketchObject &sketch, const SketchObject &source, SketchEntity entity,

@@ -507,6 +507,8 @@ QString geometryRefText(const GeometryRef &ref, const QVector<SketchObject> &ske
         return i >= 0 && i < bodies.size() ? bodies.at(i).name : QStringLiteral("?");
     };
     const auto sketchName = [&](int i) { return i >= 0 && i < sketches.size() ? sketches.at(i).name : QStringLiteral("?"); };
+    if (ref.kind == 11) return QStringLiteral("Sezione di %1").arg(
+        ref.index >= 0 && ref.index < bodies.size() ? bodies[ref.index].name : QStringLiteral("corpo eliminato"));
     switch (ref.kind) {
     case 0: return QStringLiteral("Origine");
     case 1: return ref.index >= 0 && ref.index < 3 ? QStringLiteral("Piano %1").arg(QLatin1String(planes[ref.index])) : QStringLiteral("Piano");

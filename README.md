@@ -116,6 +116,10 @@ Screenshots from the application. Click the images to view them at full resoluti
 
 Loft accepts sections and guides from sketches and exact edges, including spatial geometry, with reorderable lists and associative references. Available G0/G1/G2 conditions depend on the command and geometry: contact, tangency, and curvature require compatible references.
 
+The **Raggio** command has four illustrated tabs: **Costante** (constant), **Conico** (conic), **Variabile** (variable), and **Tra facce** (between faces). Conics support elliptical (ρ < 0.5), parabolic (ρ = 0.5), and hyperbolic (ρ > 0.5) sections, controlled by ρ or the curvature radius at the section midpoint. Variable fillets accept multiple selected edges: tangent edges form one path with 2–64 stations equally spaced by total arc length. Disconnected paths have independent tables; select an edge in the list to display its path’s table, interpolation and reverse direction controls. Drag the R markers in the 3D view to change radii and update the preview. Closed paths keep their first and last radii equal. Face fillets require two adjacent faces of the same body and round their shared edges. Tangent propagation can be disabled and stays off in variable mode. The panel can close while its preview is computing. Native format 59 stores these parameters and reads older documents.
+
+Panels have a compact header and a **⋮** menu for left/right anchoring and **Usa tutta l’altezza disponibile** (use the full available height). Subsequent panels inherit these preferences; dragging detaches a panel and snaps it to either side. Illustrations use a white background in the light theme.
+
 ### Surface modeling
 
 - Extrusion of open profiles, surface Loft, and surface Sweep.

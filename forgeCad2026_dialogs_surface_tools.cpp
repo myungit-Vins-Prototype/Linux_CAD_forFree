@@ -182,7 +182,6 @@ bool surfaceToolDialog(QMainWindow *window, CadViewport *viewport, const QString
     poles->setSelectionMode(QAbstractItemView::ExtendedSelection);
     poles->setMinimumHeight(210);
     poles->verticalHeader()->hide();
-    poles->horizontalHeader()->setStyleSheet(QStringLiteral("QHeaderView::section { background: #324251; color: #f2f6fa; padding: 3px; }"));
     for (int c = 0; c < 6; ++c) {
         poles->horizontalHeader()->setSectionResizeMode(c, c >= 2 && c <= 4 ? QHeaderView::Stretch : QHeaderView::Fixed);
         poles->setColumnWidth(c, c < 2 ? 32 : 72);

@@ -80,6 +80,8 @@ add_library(forgekernel STATIC
     fk_curve_surface.cpp
     fk_revolve.h
     fk_revolve.cpp
+    fk_blend_paths.h
+    fk_blend_paths.cpp
     fk_blend.h
     fk_blend.cpp
     fk_blend_loop.h
@@ -264,3 +266,11 @@ target_compile_options(forgekernel_surface_tools_tests PRIVATE -Wall -Wextra -Wp
 set_target_properties(forgekernel_surface_tools_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
 add_test(NAME forgekernel_surface_tools_tests COMMAND forgekernel_surface_tools_tests)
 set_tests_properties(forgekernel_surface_tools_tests PROPERTIES TIMEOUT 180)
+
+# Raccordi conici e variabili: geometria e stazioni in lunghezza d'arco.
+add_executable(forgekernel_blend_profile_tests tests/fk_test_main.cpp tests/test_blend_profiles.cpp)
+target_link_libraries(forgekernel_blend_profile_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_blend_profile_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_blend_profile_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_blend_profile_tests COMMAND forgekernel_blend_profile_tests)
+set_tests_properties(forgekernel_blend_profile_tests PROPERTIES TIMEOUT 60)

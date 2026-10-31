@@ -188,6 +188,79 @@ Vec3 sectionPoint(const HPoint *rows, bool chamfer, double v) {
     return h.p / h.w;
 }
 
+// Legge dei raggi su stazioni equidistanti in lunghezza d'arco, non nel
+// parametro della curva. Hermite monotona: raggi positivi senza overshoot.
+class RadiusLaw {
+public:
+    RadiusLaw(CurvePtr<3> curve, Interval range, const BlendProfileSpec &spec,
+              double offset=0.0, double total=0.0, bool reversed=false, bool closed=false)
+        : curve_(std::move(curve)), range_(range), spec_(spec), offset_(offset), reversed_(reversed) {
+        if (spec.radii.empty()) return;
+        if (spec.radii.size() < 2 || spec.radii.size() > 64)
+            throw std::domain_error("raccordo variabile: occorrono da 2 a 64 punti");
+        for (double r : spec.radii)
+            if (!std::isfinite(r) || r <= kLinearResolution)
+                throw std::domain_error("raccordo variabile: tutti i raggi devono essere positivi");
+        length_ = arcLength(*curve_, range_);
+        if (!(length_ > kLinearResolution)) throw std::domain_error("raccordo variabile: bordo troppo corto");
+        edgeLength_ = length_;
+        if (total > 0.0) length_ = total;
+        values_ = spec.radii;
+        if (spec.reverse) std::reverse(values_.begin(), values_.end());
+        const std::size_t n = values_.size();
+        std::vector<double> delta(n - 1);
+        for (std::size_t i = 0; i + 1 < n; ++i) delta[i] = (values_[i + 1] - values_[i]) * double(n - 1);
+        slopes_.assign(n, 0.0); slopes_.front() = delta.front(); slopes_.back() = delta.back();
+        for (std::size_t i = 1; i + 1 < n; ++i)
+            if (delta[i - 1] * delta[i] > 0.0) slopes_[i] = 2.0 * delta[i - 1] * delta[i] / (delta[i - 1] + delta[i]);
+        if (closed) slopes_.front() = slopes_.back() = delta.front()*delta.back()>0.0
+            ? 2.0*delta.front()*delta.back()/(delta.front()+delta.back()) : 0.0;
+        for (std::size_t i = 1; i + 1 < n; ++i) {
+            double target = length_ * double(i) / double(n - 1) - offset_;
+            if (reversed_) target = edgeLength_ - target;
+            if (target <= 1e-12 || target >= edgeLength_-1e-12) continue;
+            double lo = range_.lo, hi = range_.hi;
+            for (int k = 0; k < 45; ++k) {
+                const double mid = 0.5 * (lo + hi);
+                if (arcLength(*curve_, {range_.lo, mid}) < target) lo = mid; else hi = mid;
+            }
+            knots_.push_back(0.5 * (lo + hi));
+        }
+    }
+    std::pair<double,double> at(double t, bool left, double fallback) const {
+        if (values_.empty()) return {fallback, 0.0};
+        double along;
+        if (t < range_.lo) along = -arcLength(*curve_, {t, range_.lo});
+        else if (t > range_.hi) along = edgeLength_ + arcLength(*curve_, {range_.hi, t});
+        else along = arcLength(*curve_, {range_.lo, t});
+        const double u = (offset_ + (reversed_ ? edgeLength_-along : along)) / length_;
+        Vec3 derivatives[2];
+        if (left) curve_->evaluateLeft(t, 1, derivatives); else curve_->evaluate(t, 1, derivatives);
+        const double speed = (reversed_ ? -1.0 : 1.0) * norm(derivatives[1]) / length_;
+        left = left != reversed_;
+        if (u < 0.0) return {values_.front() + u * slopes_.front(), speed * slopes_.front()};
+        if (u > 1.0) return {values_.back() + (u - 1.0) * slopes_.back(), speed * slopes_.back()};
+        const int count = int(values_.size()) - 1;
+        double station = u * count;
+        if (std::fabs(station - std::round(station)) < 1e-8) station = std::round(station);
+        const int i = std::clamp(int(std::floor(station)) - (left && station == std::floor(station) ? 1 : 0), 0, count - 1);
+        const double a = station - i, h = 1.0 / count;
+        if (!spec_.smooth) return {values_[i] + a * (values_[i + 1] - values_[i]), speed * count * (values_[i + 1] - values_[i])};
+        const double a2 = a*a, a3 = a2*a;
+        const double value = (2*a3-3*a2+1)*values_[i] + (a3-2*a2+a)*h*slopes_[i]
+            + (-2*a3+3*a2)*values_[i+1] + (a3-a2)*h*slopes_[i+1];
+        const double du = ((6*a2-6*a)*values_[i] + (3*a2-4*a+1)*h*slopes_[i]
+            + (-6*a2+6*a)*values_[i+1] + (3*a2-2*a)*h*slopes_[i+1]) / h;
+        return {value, speed * du};
+    }
+    const std::vector<double> &knots() const { return knots_; }
+private:
+    CurvePtr<3> curve_; Interval range_; BlendProfileSpec spec_;
+    double length_ = 0.0, edgeLength_ = 0.0, offset_ = 0.0;
+    bool reversed_ = false;
+    std::vector<double> values_, slopes_, knots_;
+};
+
 // Le sezioni lungo uno spigolo tra le facce A e B.
 class SectionSolver {
 public:
@@ -215,6 +288,12 @@ public:
       }
   }
 
+    void setProfile(const BlendProfileSpec &profile, CurvePtr<3> curve, Interval range,
+                    double offset=0.0,double total=0.0,bool reversed=false,bool closed=false) {
+        profile_ = profile;
+        law_ = std::make_unique<RadiusLaw>(std::move(curve), range, profile,offset,total,reversed,closed);
+    }
+    std::vector<double> profileBreaks() const { return law_ ? law_->knots() : std::vector<double>(); }
     bool chamfer() const { return chamfer_; }
     double size() const { return size_; }
     bool intrinsicGuide() const { return bool(guide_); }
@@ -222,7 +301,10 @@ public:
     // Sezione in t a partire dalla stima in s.x (le altre voci si ricalcolano). `left`:
     // derivate dello spigolo da sinistra (nei suoi nodi). Falso se Newton non converge.
     bool solve(double t, bool left, Section &s, double radius = -1.0) const {
-        if (radius < 0.0) radius = size_;
+        const double factor = radius < 0.0 ? 1.0 : radius / size_;
+        const auto value = law_ ? law_->at(t, left, size_) : std::make_pair(size_, 0.0);
+        radius = value.first * factor;
+        if (!(radius > kLinearResolution)) return false;
         s.t = t;
         Vec3 e[3];
         if (left) edge_->evaluateLeft(t, 2, e);
@@ -231,7 +313,7 @@ public:
         if (!(speed > 0.0)) return false;
         const Vec3 T = e[1] / speed, dT = (e[2] - dot(T, e[2]) * T) / speed;
         const double tolerance = 1e-14 * scale_;
-        return chamfer_ ? solveChamfer(e, T, dT, radius, tolerance, s) : solveFillet(e, T, dT, radius, tolerance, s);
+        return chamfer_ ? solveChamfer(e, T, dT, radius, tolerance, s) : solveFillet(e, T, dT, radius, tolerance, s, value.second * factor);
     }
 
     // Sezione in t continuando da quella vicina (predittore lungo le derivate);
@@ -258,6 +340,8 @@ public:
     }
 
 private:
+    BlendProfileSpec profile_;
+    std::unique_ptr<RadiusLaw> law_;
     // La soluzione non salta su un altro ramo: i contatti restano vicini a quelli
     // previsti dalle derivate (l'errore del predittore e' del secondo ordine).
     bool coherent(const Section &from, const Section &to) const {
@@ -266,7 +350,7 @@ private:
         return jump <= 0.1 * size_;
     }
 
-    bool solveFillet(const Vec3 *e, const Vec3 &T, const Vec3 &dT, double radius, double tolerance, Section &s) const {
+    bool solveFillet(const Vec3 *e, const Vec3 &T, const Vec3 &dT, double radius, double tolerance, Section &s, double dr) const {
         const double k = convex_ ? -radius : radius;
         double x[4] = {s.x[0], s.x[1], s.x[2], s.x[3]};
         auto residual = [&](const double *y, FacePoint &pa, FacePoint &pb, double *f) {
@@ -360,7 +444,7 @@ private:
             };
             if (!regular(pa) || !regular(pb)) return false;
         }
-        // Derivate rispetto a t: J dx = -dF/dt, solo la quarta equazione dipende da t.
+        // Derivate rispetto a t: J dx = -dF/dt. Il raggio variabile muove anche le superfici offset.
         jacobian();
         // Quanto il residuo sposta i contatti: con le facce quasi tangenti (il
         // raccordo che svanisce dove l'angolo tra le facce va a zero) le due
@@ -375,24 +459,40 @@ private:
             amplification = std::max({amplification, norm(pa.su * unit[0] + pa.sv * unit[1]), norm(pb.su * unit[2] + pb.sv * unit[3])});
         }
         const Vec3 ca = pa.p + k * pa.n, cb = pb.p + k * pb.n, center = 0.5 * (ca + cb);
-        double rhs[4] = {0.0, 0.0, 0.0, guide_ ? guideMetric_ * guide_->derivative(s.t)[guideAxis_] : dot(e[1], T) - dot(center - e[0], dT)};
+        const double dk = convex_ ? -dr : dr;
+        const Vec3 moving = -dk * (pa.n - pb.n);
+        double rhs[4] = {moving.x(), moving.y(), moving.z(), guide_ ? guideMetric_ * guide_->derivative(s.t)[guideAxis_]
+            : dot(e[1], T) - dot(center - e[0], dT) - dk * dot(pa.n, T)};
         if (!solveLinear<4>(J, rhs)) return false;
         std::copy(x, x + 4, s.x);
         std::copy(rhs, rhs + 4, s.dx);
         s.residual = error;
         s.noise = error * amplification;
         const Vec3 dpA = pa.su * rhs[0] + pa.sv * rhs[1], dpB = pb.su * rhs[2] + pb.sv * rhs[3];
-        const Vec3 dc = (pa.su + k * pa.nu) * rhs[0] + (pa.sv + k * pa.nv) * rhs[1];
+        const Vec3 dc = (pa.su + k * pa.nu) * rhs[0] + (pa.sv + k * pa.nv) * rhs[1] + dk * pa.n;
         s.center = center;
         s.dcenter = dc;
         // Arco dal contatto su A a quello su B: punto di mezzo e peso.
         const Vec3 av = pa.p - center, bv = pb.p - center, dav = dpA - dc, dbv = dpB - dc;
         const double r2 = radius * radius;
-        const double cosine = dot(av, bv) / r2, dcosine = (dot(dav, bv) + dot(av, dbv)) / r2;
+        const double cosine = dot(av, bv) / r2, dcosine = (dot(dav, bv) + dot(av, dbv)) / r2 - 2.0 * dot(av, bv) * dr / (r2 * radius);
         if (!(1.0 + cosine > 1e-3)) throw std::domain_error("blendEdges: le facce si ripiegano (arco del raccordo vicino a 180 gradi)");
         const Vec3 mid = center + (av + bv) / (1.0 + cosine);
         const Vec3 dmid = dc + (dav + dbv) / (1.0 + cosine) - (av + bv) * (dcosine / ((1.0 + cosine) * (1.0 + cosine)));
-        const double w = std::sqrt(0.5 * (1.0 + cosine)), dw = dcosine / (4.0 * w);
+        double w = std::sqrt(0.5 * (1.0 + cosine)), dw = dcosine / (4.0 * w);
+        if (profile_.rho > 0.0) { w = profile_.rho / (1.0 - profile_.rho); dw = 0.0; }
+        if (profile_.conicRadius > 0.0) {
+            const Vec3 chord = pb.p - pa.p, dchord = dpB - dpA;
+            const Vec3 height = mid - 0.5 * (pa.p + pb.p), dheight = dmid - 0.5 * (dpA + dpB);
+            const double h = norm(height), l2 = 0.25 * dot(chord, chord);
+            if (!(h > kLinearResolution)) throw std::domain_error("raccordo conico: sezione degenere");
+            w = l2 / (h * profile_.conicRadius);
+            dw = (0.5 * dot(chord, dchord) / h - l2 * dot(height, dheight) / (h*h*h)) / profile_.conicRadius;
+            const int family = w < 1.0 - 1e-7 ? 0 : w > 1.0 + 1e-7 ? 2 : 1;
+            if (std::fabs(radius - size_) < 1e-7 * size_ && profile_.conicFamily >= 0 && family != profile_.conicFamily)
+                throw std::domain_error("raccordo conico: il raggio al centro non corrisponde al tipo di conica scelto; modifica raggio o controllo rho");
+            if (profile_.conicFamily == 1 && std::fabs(w - 1.0) <= 1e-7) { w = 1.0; dw = 0.0; }
+        }
         s.row[0] = {pa.p, 1.0};
         s.drow[0] = {dpA, 0.0};
         s.row[1] = {w * mid, w};
@@ -543,6 +643,9 @@ public:
         const bool chamfer = solver_.chamfer();
         const std::vector<int> rows = chamfer ? std::vector<int>{0, 2} : std::vector<int>{0, 1, 2};
         std::vector<double> breaks = curve_->breakpoints(range_);
+        for (double t : solver_.profileBreaks()) if (t > range_.lo && t < range_.hi) breaks.push_back(t);
+        std::sort(breaks.begin(), breaks.end());
+        breaks.erase(std::unique(breaks.begin(), breaks.end()), breaks.end());
         // Un nodo a meno della risoluzione da un altro (lo spigolo di una
         // booleana rifilato appena prima di un nodo della curva tracciata)
         // darebbe un tratto di lunghezza nulla, con le sezioni dei due
@@ -865,7 +968,7 @@ FinId splitAContinuation(const Body &body, FinId f, bool forward, EdgeId &third)
 }
 
 // La catena lungo il loop della faccia della fin `seed` (A), con le fin i cui edge sono scelti.
-LoopChain chainAlong(const Body &body, FinId seed, const std::set<int> &selected) {
+LoopChain chainAlong(const Body &body, FinId seed, const std::set<int> &selected, bool propagate) {
     LoopChain chain;
     chain.a = body.finFace(seed);
     if (body.finFace(body.otherFin(seed)) == chain.a) throw std::domain_error("blendEdges: spigolo interno a una faccia");
@@ -876,6 +979,7 @@ LoopChain chainAlong(const Body &body, FinId seed, const std::set<int> &selected
         // Scelto, o tangente (propagazione: un raccordo non puo' finire in un vertice liscio).
         if (!body.otherFin(to).valid()) return false;
         if (selected.count(body.fin(to).edge.index)) return true;
+        if (!propagate) return false;
         const Vec3 a = forward ? finTangent(body, from, true) : finTangent(body, to, true);
         const Vec3 b = forward ? finTangent(body, to, false) : finTangent(body, from, false);
         return dot(a, b) >= 1.0 - kSmooth && body.finFace(body.otherFin(to)) != body.finFace(to);
@@ -898,6 +1002,7 @@ LoopChain chainAlong(const Body &body, FinId seed, const std::set<int> &selected
                 j = Joint::Cross;
             }
         }
+        if (!propagate && !selected.count(body.fin(g).edge.index)) break;
         joints.push_back(j);
         thirds.push_back(third);
         fourths.push_back(fourth);
@@ -929,6 +1034,7 @@ LoopChain chainAlong(const Body &body, FinId seed, const std::set<int> &selected
                 if (!g.valid() || g == fins.back()) break;
             }
             if (std::find(fins.begin(), fins.end(), g) != fins.end()) break;
+            if (!propagate && !selected.count(body.fin(g).edge.index)) break;
             fins.insert(fins.begin(), g);
             joints.insert(joints.begin(), j);
             thirds.insert(thirds.begin(), third);
@@ -944,7 +1050,7 @@ LoopChain chainAlong(const Body &body, FinId seed, const std::set<int> &selected
 }
 
 // Catena dello spigolo `seed`: dalla parte di una delle sue facce (la piu' lunga; a parita' la faccia piana).
-LoopChain chainOf(const Body &body, EdgeId seed, const std::set<int> &selected) {
+LoopChain chainOf(const Body &body, EdgeId seed, const std::set<int> &selected, bool propagate = true) {
     const Edge &edge = body.edge(seed);
     if (!edge.curve || body.isLaminar(seed)) throw std::domain_error("blendEdges: spigolo non valido");
     std::string failure;
@@ -953,7 +1059,7 @@ LoopChain chainOf(const Body &body, EdgeId seed, const std::set<int> &selected) 
     int bestSelected = -1;
     for (FinId f : {edge.forward, edge.backward}) {
         try {
-            LoopChain chain = chainAlong(body, f, selected);
+            LoopChain chain = chainAlong(body, f, selected, propagate);
             int selectedCount = 0;
             for (const ChainFin &fin : chain.fins)
                 if (selected.count(fin.edge.index)) ++selectedCount;
@@ -1816,12 +1922,19 @@ void checkGuidedCap(const Body &body, FaceId cap, double scale) {
 }
 
 Body blendSurfaceChainsWithGuide(const Body &input, const std::vector<EdgeId> &selected, double size, bool chamfer, const std::vector<ChamferSides> *sides,
-                                 BodyHistory *history, bool useGuide, bool boundaryMode = false) {
+                                 BodyHistory *history, bool useGuide, bool boundaryMode = false, const BlendProfileSpec *profile = nullptr, bool propagate = true) {
 
     if (history) *history = BodyHistory();
     if (!(size > kLinearResolution)) throw std::domain_error("blendEdges: raggio o distanza non validi");
     Body body = input;
     std::map<int, int> edgeSources;
+    struct EdgeLaw { const BlendRadiusPath *law; BlendPathEdge piece; double total; bool closed; };
+    std::map<int,EdgeLaw> edgeLaws;
+    if(profile)for(const auto &law:profile->paths) {
+        const auto paths=blendPaths(input,law.edges);
+        if(paths.size()!=1)throw std::domain_error("raggio variabile: percorso non valido");
+        for(const auto &piece:paths[0].edges)edgeLaws.emplace(piece.edge.index,EdgeLaw{&law,piece,paths[0].length,paths[0].closed});
+    }
     std::vector<EdgeId> edges = selected;
     std::map<int, ChamferSides> sideOf;
     if (sides)
@@ -1833,7 +1946,7 @@ Body blendSurfaceChainsWithGuide(const Body &input, const std::vector<EdgeId> &s
         const Edge &edge = body.edge(e);
         const double middle = 0.5 * (edge.range.lo + edge.range.hi);
         const EdgeId half = body.semv(e, edge.curve->point(middle), middle).edge;
-        if (history) edgeSources[half.index] = e.index;
+        if (history || profile) edgeSources[half.index] = e.index;
         edges.push_back(half);
         if (sides) sideOf[half.index] = sideOf.at(e.index);
     }
@@ -1847,7 +1960,7 @@ Body blendSurfaceChainsWithGuide(const Body &input, const std::vector<EdgeId> &s
     for (EdgeId e : edges) pending.insert(e.index);
     std::vector<LoopChain> chains;
     while (!pending.empty()) {
-        LoopChain chain = chainOf(body, EdgeId(*pending.begin()), pending);
+        LoopChain chain = chainOf(body, EdgeId(*pending.begin()), pending, propagate);
         for (const ChainFin &f : chain.fins) pending.erase(f.edge.index);
         chains.push_back(std::move(chain));
     }
@@ -1928,6 +2041,19 @@ Body blendSurfaceChainsWithGuide(const Body &input, const std::vector<EdgeId> &s
                     ? body.fin(body.otherFin(chain.fins[std::size_t(f)].fin)).pcurve
                     : CurvePtr<2>(),
                 0.5 * (edge.range.lo + edge.range.hi), edge.range, boundaryMode);
+            if (profile) {
+                const int index = chain.fins[std::size_t(f)].edge.index;
+                const EdgeId source(edgeSources.count(index) ? edgeSources.at(index) : index);
+                const Edge &original = input.edge(source);
+                const auto found=edgeLaws.find(source.index);
+                if(found==edgeLaws.end()) piece.solver->setProfile(*profile, original.curve, original.range);
+                else {
+                    const auto &location=found->second;
+                    BlendProfileSpec local=*profile; local.paths.clear();
+                    local.radii=location.law->radii; local.smooth=location.law->smooth; local.reverse=location.law->reverse;
+                    piece.solver->setProfile(local,original.curve,original.range,location.piece.offset,location.total,location.piece.reversed,location.closed);
+                }
+            }
             piece.blend = std::make_unique<EdgeBlend>(*piece.solver, curve, piece.rangeOf());
             return piece;
         };
@@ -3490,9 +3616,9 @@ Body blendSurfaceChainsWithGuide(const Body &input, const std::vector<EdgeId> &s
 }  // namespace
 
 Body blendSurfaceChains(const Body &input, const std::vector<EdgeId> &selected, double size, bool chamfer,
-                        const std::vector<ChamferSides> *sides, BodyHistory *history) {
+                        const std::vector<ChamferSides> *sides, BodyHistory *history, const BlendProfileSpec *profile, bool propagate) {
     try {
-        return blendSurfaceChainsWithGuide(input, selected, size, chamfer, sides, history, false);
+        return blendSurfaceChainsWithGuide(input, selected, size, chamfer, sides, history, false, false, profile, propagate);
     } catch (const std::domain_error &) {
         std::exception_ptr failure = std::current_exception();
         bool guided = false, boundary = false;
@@ -3505,14 +3631,14 @@ Body blendSurfaceChains(const Body &input, const std::vector<EdgeId> &selected, 
         }
         if (guided) {
             try {
-                return blendSurfaceChainsWithGuide(input, selected, size, chamfer, sides, history, true);
+                return blendSurfaceChainsWithGuide(input, selected, size, chamfer, sides, history, true, false, profile, propagate);
             } catch (const std::domain_error &) {
                 failure = std::current_exception();
             }
         }
         // Cuciture tangenti e bordi terminali oltre il vecchio trim:
         // tentativo separato, mantenendo invariati i risultati precedenti.
-        if (boundary) return blendSurfaceChainsWithGuide(input, selected, size, chamfer, sides, history, false, true);
+        if (boundary) return blendSurfaceChainsWithGuide(input, selected, size, chamfer, sides, history, false, true, profile, propagate);
         std::rethrow_exception(failure);
     }
 }

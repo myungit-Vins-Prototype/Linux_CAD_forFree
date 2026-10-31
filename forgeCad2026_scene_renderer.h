@@ -11,11 +11,13 @@
 #include <array>
 #include <functional>
 #include <memory>
+#include <vector>
 
 struct BodyDisplay;
 struct BackgroundSettings;
 struct AxesOrientation;
 namespace ForgeCad {
+namespace Kernel { class Body; }
 class DisplayCache;
 class OverlayRenderer;
 struct OverlayVertex;
@@ -45,6 +47,7 @@ public:
         bool spatial = false, thread = false;
         float devicePixelRatio = 1.0f;
         QColor retainedColor;
+        std::shared_ptr<const Kernel::Body> threadGeometry;
     };
     // Disegno immediato di anteprime gia' calcolate, senza stato del documento.
     void drawFeaturePreview(DisplayCache &cache, OverlayRenderer &overlay,
@@ -52,9 +55,10 @@ public:
                             const PreviewStyle &style);
     void drawTrimPreview(DisplayCache &cache, const BodyDisplay &display, int displayMode);
     void drawExportMeshPreview(DisplayCache &cache, const BodyDisplay &display, bool quadrangular);
-    // Nel filetto le polilinee campionate sono bordi elicoidali; i segmenti
-    // di due punti sono cuciture fra domini B-spline e vengono esclusi.
-    void drawThreadProfileEdges(OverlayRenderer &overlay, const BodyDisplay &display, const QVector4D &color);
+    // Nasconde solo le giunzioni lisce fra pezze B-spline del filetto.
+    // Senza topologia disponibile conserva tutti i bordi.
+    void drawThreadProfileEdges(OverlayRenderer &overlay, const BodyDisplay &display, const QVector4D &color,
+                                const std::shared_ptr<const Kernel::Body> &geometry = {});
     struct BodyFaceStyle {
         QColor color, hoverColor;
         bool hovered = false, seeThrough = false, analyzing = false, faceOnly = false;
@@ -64,6 +68,7 @@ public:
     };
     struct BodyEdgeStyle {
         bool curve = false, spatial = false, hovered = false, hiddenEdgesVisible = false, thread = false;
+        std::shared_ptr<const Kernel::Body> threadGeometry;
         QColor hoverColor;
         int displayMode = 0;
         float devicePixelRatio = 1.0f;
@@ -111,6 +116,16 @@ public:
     void drawPlanePass(const std::function<void()> &drawPlanes);
 private:
     friend class ::ViewportInteractionTest;
+    struct ThreadEdgeCache {
+        std::weak_ptr<const Kernel::Body> geometry;
+        QVector<QVector<QVector3D>> edges;
+        QVector<int> edgeIds, seams;
+        unsigned long used = 0;
+    };
+    const QVector<int> &threadSeamEdges(const BodyDisplay &display,
+                                       const std::shared_ptr<const Kernel::Body> &geometry);
+    std::vector<ThreadEdgeCache> threadEdgeCache_;
+    unsigned long threadEdgeFrame_ = 0;
     QOpenGLFramebufferObject *sceneBuffer(const QSize &size);
     void makeOpaque();
     int antialiasing_ = 4, maxSamples_ = 0, bufferSamples_ = 0;

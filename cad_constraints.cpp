@@ -1119,6 +1119,9 @@ QString describeConstraint(const SketchObject &sketch, const SketchConstraint &c
 
 QVector<ConstraintType> applicableConstraints(const SketchObject &sketch, const QVector<ConstraintRef> &input) {
     using T = ConstraintType;
+    if (!input.isEmpty() && std::all_of(input.begin(), input.end(), [&](const auto &ref) {
+        return ref.kind == 2 || isLinkedSketchEntity(sketch, ref.kind, ref.element);
+    })) return {};
     const QVector<ConstraintRef> refs = ordered(sketch, input);
     if (refs.size() == 3) {
         ConstraintRef a, b, axis;
@@ -1925,6 +1928,11 @@ SketchAnalysis analyzeSketch(const SketchObject &sketch) {
             for (int dependency : dependencies) fixedPoints.insert(dependency);
         }
     }
+    for (const auto &link : sketch.linkedReferences) if (link)
+        for (const auto &entity : link->entities) {
+            QVector<int> points; system.dependencies(entity, points);
+            for (int point : points) fixedPoints.insert(point);
+        }
     fixedPoints.unite(rigidCurvePoints(system, sketch));
     const QVector<Block> blocks = buildBlocks(system, sketch, {}, true, true);
     QVector<double> r;
@@ -1994,6 +2002,11 @@ SketchAnalysis analyzeSketch(const SketchObject &sketch) {
 }
 
 SolveResult solveSketch(SketchObject &sketch, const QVector<PointTarget> &targets) {
+    for (const auto &link : sketch.linkedReferences) if (!link || !link->error.isEmpty()) {
+        SolveResult result; result.ok = false;
+        result.error = link ? link->error : QStringLiteral("Riferimento associativo mancante.");
+        return result;
+    }
     for (const auto &constraint : sketch.geometricConstraints)
         if (constraint.type==ConstraintType::Pierce && !wellFormed(sketch,constraint)) {
             SolveResult result; result.ok=false;
@@ -2066,6 +2079,13 @@ SolveResult solveSketch(SketchObject &sketch, const QVector<PointTarget> &target
             }
         }
     }
+    // Le cache associative sono dati della sorgente: nessuna incognita libera
+    // e nessuna equazione Fix salvata nel documento.
+    for (const auto &link : sketch.linkedReferences) if (link)
+        for (const auto &entity : link->entities) {
+            QVector<int> points; system.dependencies(entity, points);
+            for (int point : points) fixed.insert(point);
+        }
     // Le curve derivate restano nella posizione attuale (rigide).
     QSet<int> rigid;
     for (int point : rigidCurvePoints(system, sketch))
@@ -2328,6 +2348,15 @@ void remapConstraints(SketchObject &sketch, const QVector<int> &segmentMap, cons
         kept.append(c);
     }
     sketch.geometricConstraints = kept;
+    QVector<std::shared_ptr<const SketchLinkedReference>> links;
+    for (const auto &link : sketch.linkedReferences) if (link) {
+        auto data = std::make_shared<SketchLinkedReference>(*link);
+        QVector<ConstraintRef> entities;
+        for (auto entity : data->entities) if (remap(entity)) entities.append(entity);
+        if (!entities.isEmpty()) { data->entities = entities; links.append(data); }
+    }
+    sketch.linkedReferences = links;
+    if (links.isEmpty()) sketch.referenceError.clear();
 }
 
 }

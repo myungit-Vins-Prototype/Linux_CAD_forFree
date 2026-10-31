@@ -301,11 +301,11 @@ QString CadViewport::startEdgePick(bool chamfer, bool extend , bool helix , bool
     return {};
 }
 
-void CadViewport::resumeEdgePick(int body, const QVector<EdgePoint> &edges, bool chamfer) {
+void CadViewport::resumeEdgePick(int body, const QVector<EdgePoint> &edges, bool chamfer, bool deferPreview) {
     if (body < 0 || body >= extrusions_.size()) return;
     selection_ = {SceneObjectKind::Extrusion, body, -1};
     selectedFace_ = {};
-    if (!beginEdgePick(chamfer).isEmpty()) return;
+    if (!beginEdgePick(chamfer, deferPreview).isEmpty()) return;
     pickReferences(body, edges);
     edgePicked();
 }
@@ -814,9 +814,16 @@ QVector<QPointF> CadViewport::snapCandidates(const SketchObject &sketch) const {
 QPointF CadViewport::snapPoint(const QPointF &point, bool snapToGrid ) {
     QVector<SketchSegment> segments;
     QVector<QPointF> points;
+    SketchObject combined;
+    lastSnapExternal_ = false;
     if (activeSketch_ >= 0 && activeSketch_ < sketches_.size()) {
-        segments = sketches_.at(activeSketch_).segments;
-        points = snapCandidates(sketches_.at(activeSketch_));
+        combined = sketches_.at(activeSketch_);
+        if (geometrySnap_) {
+            const auto &cache = sketchReferenceCache();
+            combined.segments += cache.segments; combined.curves += cache.curves;
+        }
+        segments = combined.segments;
+        points = snapCandidates(combined);
         if (drawingTool_ == DrawingTool::Spline && curveControlPoints_.size() > 1)
             points.append(curveControlPoints_.first());
         if (originSnap_) points.append(QPointF(0.0, 0.0));  // origine del piano (dove passano gli assi)
@@ -830,7 +837,7 @@ QPointF CadViewport::snapPoint(const QPointF &point, bool snapToGrid ) {
     // e' piu' vicino del punto trovato su un segmento. I punti vincono.
     if (geometrySnap_ && activeSketch_ >= 0 && activeSketch_ < sketches_.size()
         && (result.kind == SnapKind::None || result.kind == SnapKind::Nearest)) {
-        const SketchObject &sketch = sketches_.at(activeSketch_);
+        const SketchObject &sketch = combined;
         QPointF quadrant;
         if (nearestQuadrant(sketch, point, tolerance, quadrant)) {
             result = {SnapKind::Endpoint, quadrant};
@@ -847,6 +854,15 @@ QPointF CadViewport::snapPoint(const QPointF &point, bool snapToGrid ) {
         }
     }
     if (result.kind == SnapKind::Endpoint && originSnap_ && result.point == QPointF(0.0, 0.0)) lastSnapNote_ = QStringLiteral("✚ Origine");
+    if (geometrySnap_ && activeSketchObject() && result.kind != SnapKind::None) {
+        const auto &local = *activeSketchObject();
+        // Un punto della cache resta esatto durante le inferenze di direzione.
+        const auto &cache = sketchReferenceCache();
+        for (const auto &segment : cache.segments)
+            if (distanceToSegment(result.point, segment.first, segment.second) <= 1e-9) lastSnapExternal_ = true;
+        if (lastSnapCurve_ >= local.curves.size()) { lastSnapCurve_ = -1; lastSnapExternal_ = true; }
+        if (lastSnapExternal_ && lastSnapNote_.isEmpty()) lastSnapNote_ = QStringLiteral("Riferimento associativo");
+    }
     lastSnapKind_ = result.kind;
     lastSnapPoint_ = result.point;
     return result.point;

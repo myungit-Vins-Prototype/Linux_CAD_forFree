@@ -2,6 +2,8 @@
 #include "cad_display_cache.h"
 #include "cad_overlay_renderer.h"
 #include <cmath>
+#include <algorithm>
+#include "fk_topology.h"
 
 namespace ForgeCad::Gui {
 void SceneRenderer::initialize() {
@@ -19,6 +21,7 @@ void SceneRenderer::initialize() {
 }
 
 void SceneRenderer::clearResources() {
+    threadEdgeCache_.clear();
     msaaBuffer_.reset();
     resolveBuffer_.reset();
 }
@@ -40,7 +43,10 @@ QSize SceneRenderer::render(const QSize &logicalSize, const std::function<void()
         glEnable(GL_MULTISAMPLE);
     }
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+    ++threadEdgeFrame_;
     drawScene();
+    threadEdgeCache_.erase(std::remove_if(threadEdgeCache_.begin(), threadEdgeCache_.end(),
+        [this](const ThreadEdgeCache &entry) { return entry.used != threadEdgeFrame_; }), threadEdgeCache_.end());
     makeOpaque();
     if (scene) {
         scene->release();
@@ -145,9 +151,64 @@ void SceneRenderer::drawSectionPlane(OverlayRenderer &overlay, const QVector<QVe
     glDepthMask(GL_TRUE);
 }
 
-void SceneRenderer::drawThreadProfileEdges(OverlayRenderer &overlay, const BodyDisplay &display, const QVector4D &color) {
-    for (const QVector<QVector3D> &edge : display.edges)
-        if (edge.size() > 2) overlay.draw(GL_LINE_STRIP, edge, color);
+const QVector<int> &SceneRenderer::threadSeamEdges(const BodyDisplay &display,
+                                                  const std::shared_ptr<const Kernel::Body> &geometry) {
+    static const QVector<int> none;
+    if (!geometry || display.edgeIds.size() != display.edges.size()) return none;
+    for (auto &entry : threadEdgeCache_)
+        if (entry.geometry.lock() == geometry && entry.edges.constData() == display.edges.constData()
+            && entry.edgeIds.constData() == display.edgeIds.constData()) {
+            entry.used = threadEdgeFrame_;
+            return entry.seams;
+        }
+    using namespace Kernel;
+    ThreadEdgeCache entry;
+    entry.geometry = geometry;
+    entry.edges = display.edges;
+    entry.edgeIds = display.edgeIds;
+    entry.used = threadEdgeFrame_;
+    for (int index = 0; index < display.edges.size(); ++index) {
+        // Il numero di campioni dipende dalla tassellazione: una cucitura
+        // si riconosce dalla continuita' delle facce, non dalla polilinea.
+        const EdgeId id(display.edgeIds.at(index));
+        if (!geometry->contains(id)) continue;
+        const Edge &edge = geometry->edge(id);
+        if (!geometry->contains(edge.forward) || !geometry->contains(edge.backward)) continue;
+        const Fin &a = geometry->fin(edge.forward), &b = geometry->fin(edge.backward);
+        const FaceId fa = geometry->finFace(edge.forward), fb = geometry->finFace(edge.backward);
+        if (fa == fb || !a.pcurve || !b.pcurve) continue;
+        const Face &first = geometry->face(fa), &second = geometry->face(fb);
+        if (!first.surface || !second.surface || first.surface->type() != SurfaceType::BSpline
+            || second.surface->type() != SurfaceType::BSpline) continue;
+        bool smooth = true;
+        try {
+            // Le pezze di un quarto di giro sono G1. Controllare piu'
+            // punti e i versi delle facce conserva creste, fondi e terminali.
+            for (double fraction : {0.2, 0.5, 0.8}) {
+                const double t = edge.range.lo + fraction * edge.range.length();
+                const Vec2 uvA = a.pcurve->point(t), uvB = b.pcurve->point(t);
+                const Vec3 nA = (first.sense ? 1.0 : -1.0) * first.surface->normal(uvA.x(), uvA.y());
+                const Vec3 nB = (second.sense ? 1.0 : -1.0) * second.surface->normal(uvB.x(), uvB.y());
+                const double agreement = dot(nA, nB);
+                if (!std::isfinite(agreement) || agreement < 1.0 - 5.0e-7) { smooth = false; break; }
+            }
+        } catch (const std::exception &) {
+            smooth = false; // Topologia incompleta/singolare: conserva il bordo.
+        }
+        if (smooth) entry.seams.append(index);
+    }
+    threadEdgeCache_.push_back(std::move(entry));
+    return threadEdgeCache_.back().seams;
+}
+
+void SceneRenderer::drawThreadProfileEdges(OverlayRenderer &overlay, const BodyDisplay &display, const QVector4D &color,
+                                          const std::shared_ptr<const Kernel::Body> &geometry) {
+    const auto &seams = threadSeamEdges(display, geometry);
+    int next = 0;
+    for (int index = 0; index < display.edges.size(); ++index) {
+        if (next < seams.size() && seams.at(next) == index) { ++next; continue; }
+        overlay.draw(GL_LINE_STRIP, display.edges.at(index), color);
+    }
 }
 
 void SceneRenderer::drawTrimPreview(DisplayCache &cache, const BodyDisplay &display, int displayMode) {
@@ -233,7 +294,7 @@ void SceneRenderer::drawFeaturePreview(DisplayCache &cache, OverlayRenderer &ove
     if(style.spatial) {
         for(const auto &line:display.edges)overlay.drawWideLineStrip(line,QVector4D(1,.88f,.62f,1),3.5f*style.devicePixelRatio);
     } else if (style.thread && style.displayMode != 0)
-        drawThreadProfileEdges(overlay, display, QVector4D(1.0f, 0.88f, 0.62f, 1.0f));
+        drawThreadProfileEdges(overlay, display, QVector4D(1.0f, 0.88f, 0.62f, 1.0f), style.threadGeometry);
     else
         cache.edges(display);
     if (style.transparent && !display.constructionCurves.isEmpty()) {
@@ -358,7 +419,7 @@ void SceneRenderer::drawBodyEdges(DisplayCache &cache, OverlayRenderer &overlay,
         // profilo elicoidale. Il wireframe conserva invece l'intera
         // topologia, utile per l'ispezione.
         if (style.thread && style.displayMode != 0)
-            drawThreadProfileEdges(overlay, display, QVector4D(0.82f, 0.91f, 0.96f, 1.0f));
+            drawThreadProfileEdges(overlay, display, QVector4D(0.82f, 0.91f, 0.96f, 1.0f), style.threadGeometry);
         else
             cache.displayEdges(display);
         glLineWidth(1.0f);

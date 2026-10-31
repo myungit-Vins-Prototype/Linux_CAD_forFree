@@ -504,12 +504,32 @@ ForgeBody forgeBlend(const ForgeBody &base, const QVector<EdgePoint> &points, do
     }
     std::vector<EdgeId> edges;
     try {
+        if (!chamfer) {
+            const auto &f = spec.fillet;
+            if (f.mode < 0 || f.mode > 3 || (f.mode == 2 && f.paths.isEmpty() && (f.radii.size() < 2 || f.radii.size() > 64)))
+                throw std::domain_error("raccordo: parametri o numero di punti non validi");
+            if (f.mode == 1 && f.conicControl == 0) {
+                const int family = f.rho < .5 ? 0 : f.rho > .5 ? 2 : 1;
+                if (family != f.conicType) throw std::domain_error("raccordo: coefficiente rho incompatibile con il tipo di conica");
+            }
+        }
         Box box;
         for (VertexId v : base->vertices()) box.add(base->vertex(v).point);
         for (FaceId f : base->faces()) box.add(faceBox(*base, f));
         const double reach = 1e-3 * std::max(1.0, box.diagonal());
         // Spigoli scelti e bordi delle facce scelte, nello stato attuale della base.
-        if (!resolveBlendEdges(*base, points, reach, edges, sameState ? ReferenceState::Same : ReferenceState::Other)) {
+        if (!chamfer && spec.fillet.mode == 3) {
+            if (points.size() != 2) {setError(error,QStringLiteral("Seleziona due facce dello stesso corpo."));return nullptr;}
+            const auto state = sameState ? ReferenceState::Same : ReferenceState::Other;
+            const FaceId a = resolveFaceReference(*base, points[0], reach, state), b = resolveFaceReference(*base, points[1], reach, state);
+            if (!a.valid() || !b.valid() || a == b) {setError(error,QStringLiteral("Seleziona due facce diverse e valide."));return nullptr;}
+            for (EdgeId e : base->edges()) {
+                const auto &edge = base->edge(e); if (base->isLaminar(e)) continue;
+                const FaceId x = base->finFace(edge.forward), y = base->finFace(edge.backward);
+                if ((x == a && y == b) || (x == b && y == a)) edges.push_back(e);
+            }
+            if (edges.empty()) {setError(error,QStringLiteral("Le due facce devono condividere un bordo: seleziona due facce adiacenti dello stesso corpo cucito."));return nullptr;}
+        } else if (!resolveBlendEdges(*base, points, reach, edges, sameState ? ReferenceState::Same : ReferenceState::Other)) {
             setError(error, QStringLiteral("Uno degli spigoli o delle facce scelti non esiste in questo punto della storia: sceglili di nuovo."));
             return nullptr;
         }
@@ -522,8 +542,35 @@ ForgeBody forgeBlend(const ForgeBody &base, const QVector<EdgePoint> &points, do
         }
         Body result;
         BodyHistory declared;
-        if (!chamfer || spec.mode == 0) {
-            result = blendEdges(*base, edges, size, chamfer, &declared);
+        if (!chamfer && (spec.fillet.mode == 1 || spec.fillet.mode == 2)) {
+            const auto &f = spec.fillet;
+            if (f.mode == 1 && (!(f.rho > 0 && f.rho < 1) || !std::isfinite(f.rho)))
+                throw std::domain_error("coefficiente rho non valido");
+            BlendProfileSpec profile;
+            if (f.mode == 1) {
+                profile.rho = f.rho;
+                if (f.conicControl == 1) {profile.conicRadius = f.conicRadius;profile.conicFamily = f.conicType;}
+            } else {
+                profile.radii.assign(f.radii.begin(), f.radii.end());profile.smooth=f.smooth;profile.reverse=f.reverse;
+                for(const auto &path:f.paths) {
+                    BlendRadiusPath law; law.radii.assign(path.radii.begin(),path.radii.end());law.smooth=path.smooth;law.reverse=path.reverse;
+                    for(int index:path.edges) {
+                        if(index<0||index>=points.size()||points[index].role!=kEdgePointEdge)throw std::domain_error("raggio variabile: riferimento al bordo non valido");
+                        const auto edge=resolveEdgeReference(*base,points[index],reach,sameState?ReferenceState::Same:ReferenceState::Other);
+                        if(!edge.valid())throw std::domain_error("raggio variabile: bordo non piu disponibile");
+                        law.edges.push_back(edge);
+                    }
+                    profile.paths.push_back(std::move(law));
+                }
+            }
+            double reference = size;
+            if(f.mode==2) {
+                for(double radius:f.radii) reference=std::max(reference,radius);
+                for(const auto &path:f.paths) for(double radius:path.radii) reference=std::max(reference,radius);
+            }
+            result = blendProfileEdges(*base, edges, reference, profile, f.propagate, &declared);
+        } else if (!chamfer || spec.mode == 0) {
+            result = blendEdges(*base, edges, size, chamfer, &declared, chamfer || spec.fillet.propagate);
         } else {
             // Smusso asimmetrico: le distanze di ogni spigolo con la stessa regola di buildBlend.
             std::vector<ChamferSides> sides;

@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "fk_topology.h"
+#include "fk_blend_paths.h"
 
 // Raccordi (fillet) e smussi (chamfer) sugli spigoli condivisi di solidi o superfici cucite.
 //
@@ -56,7 +57,21 @@ class BodyHistory;
 // `size`: raggio del raccordo o distanza dello smusso dallo spigolo su
 // ciascuna faccia. history facoltativa: facce ereditate e facce generate
 // dagli spigoli/vertici, registrate durante la costruzione.
-Body blendEdges(const Body &body, const std::vector<EdgeId> &edges, double size, bool chamfer, BodyHistory *history = nullptr);
+Body blendEdges(const Body &body, const std::vector<EdgeId> &edges, double size, bool chamfer, BodyHistory *history = nullptr,
+                bool propagate = true);
+
+// Sezione conica razionale: peso centrale rho/(1-rho); rho=0 conserva il
+// cerchio. conicRadius>0 controlla il raggio di curvatura al centro della
+// sezione. Raggi variabili: valori su stazioni equidistanti lungo ogni edge.
+struct BlendProfileSpec {
+    double rho = 0.0, conicRadius = 0.0;
+    int conicFamily = -1; // -1 automatico, 0 ellisse, 1 parabola, 2 iperbole
+    std::vector<double> radii;
+    std::vector<BlendRadiusPath> paths;
+    bool smooth = true, reverse = false;
+};
+Body blendProfileEdges(const Body &body, const std::vector<EdgeId> &edges, double size,
+                       const BlendProfileSpec &profile, bool propagate = true, BodyHistory *history = nullptr);
 
 // Smusso asimmetrico di un edge: `onReference` sulla faccia la cui normale
 // uscente (nel punto medio dello spigolo) e' piu' vicina a `referenceNormal`,

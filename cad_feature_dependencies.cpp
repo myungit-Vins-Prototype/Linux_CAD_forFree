@@ -113,7 +113,7 @@ QVector<int> bodyOperands(const ExtrusionObject &body) {
 }
 // Riferimento a un corpo (vertice, spigolo, faccia, piano di costruzione, curva) o a uno schizzo (punto, entita').
 bool isBodyRef(const GeometryRef &ref) {
-    return ref.kind == 3 || ref.kind == 4 || ref.kind == 5 || ref.kind == 8 || ref.kind == 9 || ref.kind == 10;
+    return ref.kind == 3 || ref.kind == 4 || ref.kind == 5 || ref.kind == 8 || ref.kind == 9 || ref.kind == 10 || ref.kind == 11;
 }
 bool isSketchRef(const GeometryRef &ref) { return ref.kind == 6 || ref.kind == 7; }
 // Schizzi da cui nasce il corpo: estrusione, rivoluzione, base dell'elica,

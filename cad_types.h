@@ -210,6 +210,7 @@ struct SketchConstraint {
 };
 
 struct GeometryRef;
+struct SketchLinkedReference;
 // Posizione operativa in una sequenza che comprende schizzi e feature.
 struct StoryStep { bool sketch = false; int index = -1; };
 
@@ -219,6 +220,8 @@ struct SketchObject {
     int storyOrder = 0;         // ordine fra schizzi nello stesso intervallo
     std::shared_ptr<GeometryRef> support; // appoggio associativo su faccia; dati immutabili per Undo
     QString supportError;      // diagnostica runtime, non serializzata
+    QVector<std::shared_ptr<const SketchLinkedReference>> linkedReferences;
+    QString referenceError; // diagnostica della rigenerazione associativa, non serializzata
 
     QString name;
     int plane = 0;  // 0 XY, 1 XZ, 2 YZ, kFacePlane: su una faccia (frame)
@@ -427,6 +430,7 @@ struct HelixParameters {
 //  - 10 estremo della curva del corpo `index` (`element.point`: 0 inizio,
 //    1 fine). Il punto salvato serve solo al picking; la risoluzione usa il
 //    dominio esatto della curva corrente.
+//  - 11 sezione dell'intero corpo `index` nel piano dello schizzo (riferimenti associativi).
 struct GeometryRef {
     int kind = -1;
     int index = -1;
@@ -434,6 +438,25 @@ struct GeometryRef {
     EdgePoint point;
     quint64 featureId = 0;  // proprietario persistente; index e' la cache operativa
 };
+
+// Geometria esterna associativa: le entita' sono cache di costruzione in
+// coordinate dello schizzo, governate dalla sorgente e costanti per il solver.
+// Nessun vincolo Fix; copie immutabili per le istantanee Undo.
+struct SketchLinkedReference {
+    GeometryRef source;
+    QVector<ConstraintRef> entities;
+    bool contact = false; // intersezioni esatte curva/piano (Pierce)
+    bool construction = true;
+    double halfLength = 100.0; // estensione grafica delle rette infinite
+    QString error;
+};
+
+inline bool isLinkedSketchEntity(const SketchObject &sketch, int kind, int element) {
+    for (const auto &link : sketch.linkedReferences)
+        if (link) for (const auto &entity : link->entities)
+            if (entity.kind == kind && entity.element == element) return true;
+    return false;
+}
 
 // Pierce: punto dello schizzo sulla sezione della faccia esterna.
 // Cache immutabile condivisa con Undo; viene sostituita alla rigenerazione.
@@ -559,10 +582,31 @@ struct ThreadParameters {
 // smusso e la faccia della distanza). La prima distanza sta sulla faccia di
 // riferimento: quella con la normale uscente piu' verso +Z (a parita' +X,
 // poi +Y) nel punto medio dello spigolo; con `flip` sull'altra.
+struct FilletPathSpec {
+    QVector<int> edges; // indici nell'elenco blendEdges, non ID topologici transitori
+    QVector<double> radii;
+    bool smooth = true, reverse = false;
+};
+struct FilletRadiusHandle {
+    QVector3D point, direction;
+    double radius = 1.0;
+    int path = 0, station = 0;
+};
+struct FilletSpec {
+    int mode = 0; // 0 costante, 1 conico, 2 variabile, 3 tra due facce
+    int conicType = 0, conicControl = 0; // ellisse/parabola/iperbole; rho/raggio al centro
+    double rho = 0.4, conicRadius = 1.0;
+    QVector<double> radii; // compatibilita con i documenti 58 a legge singola
+    QVector<FilletPathSpec> paths;
+    bool smooth = true, reverse = false, propagate = true;
+};
+
+// Parametri trasportati insieme per compatibilita' con i comandi smusso.
 struct ChamferSpec {
     int mode = 0;
     double second = 1.0;
     bool flip = false;
+    FilletSpec fillet;
 };
 
 // Parte gia' calcolata di una superficie divisa: geometria e mesh vengono

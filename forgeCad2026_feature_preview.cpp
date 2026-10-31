@@ -20,6 +20,18 @@ QString FeaturePreviewBuilder::previewKey(const ExtrusionObject &d, int index) {
                       QString::number(d.blendChamfer && d.chamferSpec.mode != 0 ? d.chamferSpec.mode : 0),
                       n(d.blendChamfer && d.chamferSpec.mode != 0 ? d.chamferSpec.second : 0.0),
                       QString::number(d.blendChamfer && d.chamferSpec.mode != 0 && d.chamferSpec.flip)};
+    if (!d.blendChamfer) {
+        const auto &f = d.chamferSpec.fillet;
+        parts << QString::number(f.mode) << QString::number(f.propagate);
+        if (f.mode == 1) parts << QString::number(f.conicType) << QString::number(f.conicControl) << n(f.rho) << n(f.conicRadius);
+        if (f.mode == 2) { parts << QString::number(f.smooth) << QString::number(f.reverse); for (double r : f.radii) parts << n(r); }
+        if (f.mode == 2) for(const auto &path:f.paths) {
+            parts << QStringLiteral("path") << QString::number(path.smooth) << QString::number(path.reverse);
+            for(int edge:path.edges)parts << QString::number(edge);
+            parts << QStringLiteral("radii"); for(double radius:path.radii)parts << n(radius);
+        }
+        parts << QStringLiteral("fillet-end");
+    }
     const PrimitiveParameters &p = d.primitive;
     parts << QString::number(int(p.kind)) << QString::number(p.plane);
     for (int k = 0; k < 3; ++k) parts << n(p.origin[k]) << n(p.size[k]);

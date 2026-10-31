@@ -1,3 +1,5 @@
+#include <QStyleHints>
+
 static void functionPanelsReview() {
     using namespace ForgeCad;
     // Un dialogo inatteso non deve lasciare il runner nel suo event loop.
@@ -20,6 +22,62 @@ static void functionPanelsReview() {
         ~SettingsCleanup() { QSettings settings; for (const auto &key : keys) settings.remove(key); }
     } cleanup;
     const auto key = [&](const QString &id) { const auto result = QStringLiteral("view/functionPanelSizes/v2/") + token + id; cleanup.keys.append(result); return result; };
+    // Il cambio tema deve aggiornare anche un pannello gia' aperto e i suoi
+    // editor; la nuova presentazione non deve duplicare contenuti o bloccare
+    // conferma/annullamento quando lo spazio disponibile diminuisce.
+    {
+        struct RestorePalette {
+            QPalette saved = QApplication::palette();
+            ~RestorePalette() {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
+                QMetaObject::invokeMethod(qApp->styleHints(), "colorSchemeChanged", Qt::DirectConnection,
+                                         Q_ARG(Qt::ColorScheme, scheme));
+#endif
+                QApplication::setPalette(saved);
+                for (int i=0; i<3; ++i) QApplication::processEvents();
+            }
+#if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
+            Qt::ColorScheme scheme = qApp->styleHints()->colorScheme();
+#endif
+        } restore;
+        QWidget owner;
+        FunctionDialogPanel panel(&owner, false);
+        panel.setSizeIdentity(token + "-style");
+        auto *fields = panel.createScrollableForm();
+        auto *amount = new QDoubleSpinBox(&panel);
+        auto *disabled = new QDoubleSpinBox(&panel); disabled->setEnabled(false);
+        auto *enabled = new QCheckBox(QStringLiteral("Opzione"), &panel);
+        fields->addRow(QStringLiteral("Valore"), amount); fields->addRow(disabled); fields->addRow(enabled);
+        auto *actions = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &panel);
+        fields->addRow(actions);
+        panel.setPanelOpacity(100);
+        owner.show(); panel.show(); QApplication::processEvents();
+        for (bool dark : {true, false, true}) {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
+            // Segnale simulato: non cambia le preferenze del desktop. Una
+            // setPalette manuale sarebbe corretta dal controller del tema.
+            require(QMetaObject::invokeMethod(qApp->styleHints(), "colorSchemeChanged", Qt::DirectConnection,
+                    Q_ARG(Qt::ColorScheme, dark ? Qt::ColorScheme::Dark : Qt::ColorScheme::Light)),
+                    "segnale del tema disponibile");
+#else
+            QApplication::setPalette(QPalette(QColor(dark ? "#111820" : "#f0f0f0")));
+#endif
+            for (int i=0; i<3; ++i) QApplication::processEvents();
+            require((panel.panelColor().lightness() < 128) == dark
+                    && (amount->palette().color(QPalette::Base).lightness() < 128) == dark,
+                    "pannello ed editor aperti seguono entrambe le transizioni del tema");
+            require(std::abs(amount->palette().color(QPalette::Text).lightness()
+                             - amount->palette().color(QPalette::Base).lightness()) > 100,
+                    "testo dei campi leggibile nei due temi");
+            require(disabled->palette().color(QPalette::Disabled, QPalette::Text)
+                    != amount->palette().color(QPalette::Active, QPalette::Text), "campi disabilitati distinguibili");
+        }
+        enabled->click(); require(enabled->isChecked(), "spunte funzionanti nel contenitore a schede");
+        panel.resize(380, 260); QApplication::processEvents();
+        require(panel.rect().contains(QRect(actions->mapTo(&panel, QPoint()), actions->size())),
+                "azioni raggiungibili nel nuovo layout compatto");
+        panel.hide();
+    }
     const QString firstKey = key("-extend"), secondKey = key("-network"), thirdKey = key("-poles");
     QSettings settings;
     settings.setValue(firstKey, QSize(430, 320)); settings.setValue(secondKey, QSize(510, 380)); settings.setValue(thirdKey, QSize(600, 440));

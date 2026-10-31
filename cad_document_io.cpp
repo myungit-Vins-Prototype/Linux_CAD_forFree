@@ -76,6 +76,7 @@ constexpr char kMagic[4] = {'F', 'C', 'A', 'D'};
 // 52 punti autonomi nello schizzo (DrawingTool::Point).
 // 53 strumenti sulle superfici e relative estensioni opzionali SRF1.
 // 54 nomi topologici di appoggi schizzo e superfici dei vincoli Pierce.
+// 57 riferimenti associativi dello schizzo (sorgente persistente e cache).
 constexpr quint16 kVersion = kDocumentFormatVersion;
 constexpr quint8 kZlib = 1;
 constexpr quint8 kZstd = 2;
@@ -203,6 +204,16 @@ void write(QDataStream &out, const SketchObject &sketch, quint16 version) {
     out << sketch.storyId << sketch.beforeFeatureId << qint32(sketch.storyOrder); // formato 51
     writeRefs(out, sketch.support ? QVector<GeometryRef>{*sketch.support} : QVector<GeometryRef>{});
     if (version >= 54 && sketch.support) out << sketch.support->point.name;
+    if (version >= 57) {
+        out << quint32(sketch.linkedReferences.size());
+        for (const auto &link : sketch.linkedReferences) {
+            const SketchLinkedReference data = link ? *link : SketchLinkedReference{};
+            writeRefs(out, {data.source});
+            out << data.source.point.name << data.contact << data.construction << data.halfLength << data.error;
+            out << quint32(data.entities.size());
+            for (const auto &entity : data.entities) writeRef(out, entity);
+        }
+    }
 }
 
 // Dimensione minima serializzata, mai sizeof dell'oggetto in memoria.
@@ -303,6 +314,30 @@ bool read(ReadStream &in, SketchObject &sketch, quint16 version) {
         if (!support.isEmpty()) {
             if (version >= 54) in >> support.front().point.name;
             sketch.support = std::make_shared<GeometryRef>(support.front());
+        }
+    }
+    if (version >= 57) {
+        quint32 links = 0;
+        if (!readCount(in, links, 36)) return false;
+        for (quint32 i = 0; i < links; ++i) {
+            auto data = std::make_shared<SketchLinkedReference>();
+            QVector<GeometryRef> refs;
+            if (!readRefs(in, refs, version) || refs.size() != 1) return false;
+            data->source = refs.front();
+            in >> data->source.point.name >> data->contact >> data->construction >> data->halfLength >> data->error;
+            if (!std::isfinite(data->halfLength) || data->halfLength <= 0.0) return false;
+            quint32 entities = 0;
+            if (!readCount(in, entities, 12) || !entities) return false;
+            for (quint32 j = 0; j < entities; ++j) {
+                ConstraintRef entity; readRef(in, entity);
+                if (entity.point != -1 || entity.element < 0
+                    || (entity.kind != 0 && entity.kind != 1)
+                    || (entity.kind == 0 && entity.element >= sketch.segments.size())
+                    || (entity.kind == 1 && entity.element >= sketch.curves.size())
+                    || isLinkedSketchEntity(sketch, entity.kind, entity.element)) return false;
+                data->entities.append(entity);
+            }
+            sketch.linkedReferences.append(data);
         }
     }
     if (sketch.plane < 0 || sketch.plane > kFacePlane) return false;
@@ -494,6 +529,15 @@ void write(QDataStream &out, const ExtrusionObject &body, quint16 version) {
     forEachEdgePoint(body, [&](const EdgePoint &e) { names.append(e.name); });
     out << names;
     if (version >= 55) out << qint32(body.patternComponent) << body.pattern.excluded;
+    if (version >= 58) {
+        const auto &f = body.chamferSpec.fillet;
+        out << qint32(f.mode) << qint32(f.conicType) << qint32(f.conicControl) << f.rho << f.conicRadius
+            << f.radii << f.smooth << f.reverse << f.propagate;
+        if (version >= 59) {
+            out << quint32(f.paths.size());
+            for (const auto &path : f.paths) out << path.edges << path.radii << path.smooth << path.reverse;
+        }
+    }
 }
 
 // `extras` (solo formato 5): i file scritti durante lo sviluppo del formato 5
@@ -811,6 +855,30 @@ bool read(ReadStream &in, ExtrusionObject &body, quint16 version, int extras) {
             if (excluded < 0 || excluded > 500 || body.pattern.excluded.contains(excluded)) return false;
             body.pattern.excluded.append(excluded);
         }
+    }
+    if (version >= 58) {
+        auto &f = body.chamferSpec.fillet; qint32 mode, type, control; quint32 count;
+        in >> mode >> type >> control >> f.rho >> f.conicRadius;
+        if (mode < 0 || mode > 3 || type < 0 || type > 2 || control < 0 || control > 1
+            || !std::isfinite(f.rho) || f.rho <= 0 || f.rho >= 1
+            || !std::isfinite(f.conicRadius) || f.conicRadius <= 0 || !readCount(in,count,8) || count > 64) return false;
+        f.mode=mode; f.conicType=type; f.conicControl=control;
+        for (quint32 k=0;k<count;++k) {double value;in>>value;if(!std::isfinite(value)||value<=0)return false;f.radii.append(value);}
+        in >> f.smooth >> f.reverse >> f.propagate;
+        if (version >= 59) {
+            quint32 paths; if(!readCount(in,paths,4)||paths>512) return false;
+            QSet<int> used;
+            for(quint32 i=0;i<paths;++i) {
+                FilletPathSpec path; quint32 n;
+                if(!readCount(in,n,4)||n==0||n>4096) return false;
+                for(quint32 j=0;j<n;++j) {qint32 edge;in>>edge;if(edge<0||edge>=body.blendEdges.size()||used.contains(edge))return false;used.insert(edge);path.edges.append(edge);}
+                if(!readCount(in,n,8)||n<2||n>64)return false;
+                for(quint32 j=0;j<n;++j) {double radius;in>>radius;if(!std::isfinite(radius)||radius<=0)return false;path.radii.append(radius);}
+                in >> path.smooth >> path.reverse; f.paths.append(path);
+            }
+            if(f.mode==2&&!f.paths.isEmpty()&&used.size()!=body.blendEdges.size())return false;
+        }
+        if (f.mode==2 && f.paths.isEmpty() && f.radii.size()<2) return false;
     }
     const BodyFeature last = version >= 53 ? BodyFeature::SurfaceTools : version >= 45 ? BodyFeature::SpatialSketch : version >= 44 ? BodyFeature::ExtractedCurve : version >= 39 ? BodyFeature::Thicken : version >= 38 ? BodyFeature::ProjectedCurve : version >= 36 ? BodyFeature::Draft : version >= 35 ? BodyFeature::FillSurface : version >= 27 ? BodyFeature::Thread : version >= 25 ? BodyFeature::Shell : BodyFeature::PlanarSurface;
     if (int(body.feature) < 0 || int(body.feature) > int(last)) return false;
@@ -1203,6 +1271,22 @@ QString encodeDocumentVersion(const DocumentState &state, QByteArray &bytes, boo
     try {
         if (state.version.documentId.isNull() || (!state.version.checkinId.isNull() && state.version.checkinId == state.baseCheckinId))
             return QStringLiteral("Identita' del documento non valida.");
+        for (const auto &body : state.extrusions) {
+            const auto &f=body.chamferSpec.fillet;
+            if(f.mode<0||f.mode>3||f.conicType<0||f.conicType>2||f.conicControl<0||f.conicControl>1
+                ||!std::isfinite(f.rho)||f.rho<=0||f.rho>=1||!std::isfinite(f.conicRadius)||f.conicRadius<=0
+                ||f.radii.size()>64||(f.mode==2&&f.paths.isEmpty()&&f.radii.size()<2))
+                return QStringLiteral("Parametri del raccordo non validi: impossibile salvare il documento.");
+            for(double value:f.radii)if(!std::isfinite(value)||value<=0)return QStringLiteral("Raggi variabili non validi: impossibile salvare il documento.");
+            if(f.paths.size()>512)return QStringLiteral("Troppi percorsi di raggio variabile.");
+            QSet<int> used;
+            for(const auto &path:f.paths) {
+                if(path.edges.isEmpty()||path.edges.size()>4096||path.radii.size()<2||path.radii.size()>64)return QStringLiteral("Tabella del raggio variabile non valida.");
+                for(int edge:path.edges){if(edge<0||edge>=body.blendEdges.size()||used.contains(edge))return QStringLiteral("Associazione bordo/percorso non valida.");used.insert(edge);}
+                for(double radius:path.radii)if(!std::isfinite(radius)||radius<=0)return QStringLiteral("Raggio del percorso non valido.");
+            }
+            if(f.mode==2&&!f.paths.isEmpty()&&used.size()!=body.blendEdges.size())return QStringLiteral("Manca una tabella del raggio variabile.");
+        }
         DocumentState normalized = state;
         normalizeModelHistory(normalized);
         upgradeTopologyReferences(normalized.extrusions);
@@ -1255,9 +1339,13 @@ QString encodeDocument(const DocumentState &state, QByteArray &bytes, bool bodie
 
 QString encodeDocumentDefinition53ForHash(const DocumentState &state, QByteArray &bytes) {
     for (const auto &body : state.extrusions)
-        if (body.patternComponent >= 0 || !body.pattern.excluded.isEmpty())
+        if (body.chamferSpec.fillet.mode != 0 || !body.chamferSpec.fillet.propagate)
+            return QStringLiteral("I nuovi raccordi non sono rappresentabili nel formato 53.");
+        else if (body.patternComponent >= 0 || !body.pattern.excluded.isEmpty())
             return QStringLiteral("La ripetizione non e' rappresentabile nel formato 53.");
     for (const auto &sketch : state.sketches) {
+        if (!sketch.linkedReferences.isEmpty())
+            return QStringLiteral("I riferimenti associativi dello schizzo non sono rappresentabili nel formato 53.");
         if (sketch.support && !sketch.support->point.name.isEmpty())
             return QStringLiteral("L'appoggio nominato dello schizzo non e' rappresentabile nel formato 53.");
         for (const auto &constraint : sketch.geometricConstraints)

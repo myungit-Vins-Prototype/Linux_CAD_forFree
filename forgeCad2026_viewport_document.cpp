@@ -285,6 +285,7 @@ void CadViewport::ensureBodyDisplays(const QVector<int> &indices) const {
 }
 
 void CadViewport::refreshSketchContext() {
+    sketchReferenceCacheValid_ = false;
     sketchContextEnd_=-1;sketchContextBodies_.clear();sketchContextSketches_.clear();sketchDisplayBodies_.clear();
     if(!sketchMode_ || activeSketch_<0 || activeSketch_>=sketches_.size())return;
     const auto steps = storyboard();
@@ -1798,6 +1799,7 @@ void CadViewport::recordUndo() {
 }
 
 void CadViewport::documentChanged() {
+    sketchReferenceCacheValid_ = false;
     const int insertionPosition = storyPosition_;
     const int addedFeatures = insertionSourceSize_ < 0 ? 0 : int(extrusions_.size()) - insertionSourceSize_;
     const int addedSketches = insertionSketchSourceSize_ < 0 ? 0 : int(sketches_.size()) - insertionSketchSourceSize_;
@@ -1921,16 +1923,30 @@ void CadViewport::regenerateDependents(int sketchIndex) {
 }
 
 bool CadViewport::hasSurfacePierceSource(int index) const {
+    for (const auto &sketch : sketches_) for (const auto &link : sketch.linkedReferences)
+        if (link && ForgeCad::isBodyRef(link->source)
+            && ForgeCad::sketchReferenceSourceIndex(link->source, sketches_, extrusions_) == index) return true;
     for (const auto &sketch : sketches_) for (const auto &c : sketch.geometricConstraints)
         if (c.type==ConstraintType::Pierce && c.pierce && pierceSourceIndex(c.pierce->surface)==index) return true;
     return false;
 }
 
 void CadViewport::refreshSurfacePierceSketches(int sourceIndex,QSet<int> &changed,int targetSketch) {
-    for (int index=0;index<sketches_.size();++index) {
+    for (const auto &step : ForgeCad::modelStory(sketches_, extrusions_)) {
+        if (!step.sketch) continue;
+        const int index = step.index;
         if (targetSketch>=0 && index!=targetSketch) continue;
         SketchObject work=sketches_.at(index);
         bool touched=false;
+        for (const auto &link : work.linkedReferences) if (link) {
+            const int owner = ForgeCad::isBodyRef(link->source)
+                ? ForgeCad::sketchReferenceSourceIndex(link->source, sketches_, extrusions_) : -1;
+            if ((sourceIndex >= 0 && owner == sourceIndex) || sourceIndex == -1 || (sourceIndex == -2 && (ForgeCad::isBodyRef(link->source) || ForgeCad::isSketchRef(link->source))
+                    && ForgeCad::sketchReferenceSourceIndex(link->source, sketches_, extrusions_) < 0)
+                || (ForgeCad::isSketchRef(link->source)
+                    && changed.contains(ForgeCad::sketchReferenceSourceIndex(link->source, sketches_, extrusions_)))) touched = true;
+        }
+        if (touched) ForgeCad::refreshLinkedSketchReferences(work, sketches_, extrusions_);
         for (auto &c : work.geometricConstraints) {
             if (c.type!=ConstraintType::Pierce || !c.pierce) continue;
             const int owner=pierceSourceIndex(c.pierce->surface);
@@ -1949,7 +1965,10 @@ void CadViewport::refreshSurfacePierceSketches(int sourceIndex,QSet<int> &change
         }
         if (!touched) continue;
         const auto solved=ForgeCad::solveSketch(work);
-        if (!solved.ok) showStatus(solved.error);
+        if (!solved.ok) {
+            showStatus(solved.error);
+            if (!work.linkedReferences.isEmpty()) work.referenceError = solved.error;
+        }
         sketches_[index]=std::move(work);
         changed.insert(index);
         analysisDirty_=true;
@@ -1970,8 +1989,13 @@ void CadViewport::regenerateFrom(int from, QVector<bool> dirty, QSet<int> dirtyS
         }
     }
     refreshSurfacePierceSketches(-2,dirtySketches);
-    const QSet<int> targets=dirtySketches;
-    for (int sketch : targets) refreshSurfacePierceSketches(-1,dirtySketches,sketch);
+    for (const auto &step : ForgeCad::modelStory(sketches_, extrusions_)) if (step.sketch) {
+        bool refresh = all || dirtySketches.contains(step.index);
+        for (const auto &link : sketches_[step.index].linkedReferences)
+            if (link && ForgeCad::isSketchRef(link->source)
+                && dirtySketches.contains(ForgeCad::sketchReferenceSourceIndex(link->source, sketches_, extrusions_))) refresh = true;
+        if (refresh) refreshSurfacePierceSketches(-1, dirtySketches, step.index);
+    }
     int completed = 0;
     const int total = all ? qMax(1, int(extrusions_.size())) : 0;
     const auto advanced = [&](int count, const QString &name) {
@@ -2005,6 +2029,7 @@ void CadViewport::regenerateFrom(int from, QVector<bool> dirty, QSet<int> dirtyS
         rebuildBody(extrusions_[index], index);
         advanced(1, extrusions_.at(index).name);
         followDatum(index, dirtySketches);
+        refreshSurfacePierceSketches(index, dirtySketches);
         const QSet<int> moved=dirtySketches;
         for (int s : moved) if (s>=0 && s<sketches_.size() && sketches_.at(s).datumPlane==index)
             refreshSurfacePierceSketches(-1,dirtySketches,s);

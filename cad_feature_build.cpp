@@ -56,7 +56,10 @@ void buildBody(ExtrusionObject &body, int index, const QVector<SketchObject> &sk
     // La madre ricrea anche i risultati condivisi dai corpi derivati.
     if (body.feature == BodyFeature::Pattern && (body.patternComponent == 0
         || (body.patternComponent < 0 && hasDerivedPatternResults(index, bodies)))) usedSnapshot = false;
-    for (int sketch : sketchesOf(body)) if (sketch >= 0 && sketch < sketches.size() && !sketches.at(sketch).supportError.isEmpty()) usedSnapshot = false;
+    for (int sketch : sketchesOf(body)) if (sketch >= 0 && sketch < sketches.size()
+        && (!sketches.at(sketch).supportError.isEmpty() || !sketches.at(sketch).referenceError.isEmpty()
+            || std::any_of(sketches.at(sketch).linkedReferences.begin(), sketches.at(sketch).linkedReferences.end(),
+                [](const auto &link) { return !link || !link->error.isEmpty(); }))) usedSnapshot = false;
     // Le versioni precedenti potevano salvare come raccordo riuscito una
     // booleana no-op, identica alla base. Non perpetuare quel falso
     // risultato dalla cache: rigenerandolo il kernel restituisce l'errore
@@ -165,6 +168,16 @@ void buildGeometryImpl(ExtrusionObject &body, int index, const QVector<SketchObj
                     c.pierce ? (c.pierce->error.isEmpty() ? QStringLiteral("punto fuori dalla superficie") : c.pierce->error) : QStringLiteral("riferimento mancante"));
                 return;
             }
+    for (int index : sketchesOf(body)) if (index >= 0 && index < sketches.size()) {
+        const auto &sketch = sketches.at(index);
+        QString error = sketch.referenceError;
+        for (const auto &link : sketch.linkedReferences)
+            if (!link || !link->error.isEmpty()) error = link ? link->error : QStringLiteral("riferimento mancante");
+        if (!error.isEmpty()) {
+            body.error = QStringLiteral("Riferimento associativo non risolto nello schizzo %1: %2").arg(sketch.name, error);
+            return;
+        }
+    }
     for (int sketch : sketchesOf(body)) if (sketch >= 0 && sketch < sketches.size() && !sketches.at(sketch).supportError.isEmpty()) {
         body.error = QStringLiteral("Appoggio non risolto nello schizzo %1: %2").arg(sketches.at(sketch).name, sketches.at(sketch).supportError);
         return;
@@ -397,6 +410,7 @@ void buildGeometryImpl(ExtrusionObject &body, int index, const QVector<SketchObj
             // lavorazione grande consuma la zona d'intersezione e quella
             // piccola viene rifatta sugli spigoli rimasti.
             if (!body.forgeBody && base->feature == BodyFeature::Blend
+                && body.chamferSpec.fillet.mode == 0 && base->chamferSpec.fillet.mode == 0
                 && body.blendSize > base->blendSize + 1e-12 * qMax(body.blendSize, base->blendSize)) {
                 const ExtrusionObject *source = operand(base->firstBody);
                 if (source && source->forgeBody) {

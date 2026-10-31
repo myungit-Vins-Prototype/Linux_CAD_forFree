@@ -139,6 +139,9 @@ void CadViewport::mousePressEvent(QMouseEvent *event) {
         setCursor(Qt::ClosedHandCursor);
         return;
     }
+    if (event->button() == Qt::LeftButton && beginFilletRadiusDrag(event->position())) {
+        event->accept(); return;
+    }
     if (event->button() == Qt::LeftButton && featureHandleAt(event->position())) {
         featureHandleDragging_ = true;
         featureHandleDragValue_ = featureHandleValue();
@@ -368,6 +371,12 @@ void CadViewport::mousePressEvent(QMouseEvent *event) {
                 selectSketchReference(kind, index);
                 return;
             }
+            if (!dimensionRefAt(rawPoint, ref)) {
+                auto work = *activeSketchObject();
+                if (attachSketchReferenceAt(work, rawPoint, pickTolerance())) {
+                    recordUndo(); sketches_[activeSketch_] = std::move(work); documentChanged();
+                }
+            }
             dimensionToolClick(rawPoint);
             return;
         }
@@ -381,6 +390,12 @@ void CadViewport::mousePressEvent(QMouseEvent *event) {
             return;
         }
         if (drawingTool_ == DrawingTool::Select) {
+            if (findSketchElement(rawPoint).kind < 0) {
+                auto work = *activeSketchObject();
+                if (attachSketchReferenceAt(work, rawPoint, pickTolerance())) {
+                    recordUndo(); sketches_[activeSketch_] = std::move(work); documentChanged();
+                }
+            }
             if (sketchOffsetSelectionCallback_) {
                 // Nel pannello Offset si scelgono entita', senza muovere
                 // poli, estremi o simboli dei vincoli.
@@ -444,7 +459,8 @@ void CadViewport::mousePressEvent(QMouseEvent *event) {
                 const SketchElementSelection hit = findSketchElement(rawPoint);
                 // Dal vuoto il trascinamento e' un riquadro di selezione.
                 if (hit.kind < 0) armBoxSelection(lastMousePosition_, event->modifiers() & Qt::ShiftModifier);
-                if(hit.kind==1&&sketches_[activeSketch_].curves[hit.index].tool==DrawingTool::Circle){
+                if(hit.kind==1 && !isLinkedSketchEntity(sketches_[activeSketch_], 1, hit.index)
+                    && sketches_[activeSketch_].curves[hit.index].tool==DrawingTool::Circle){
                     const auto &circle=sketches_[activeSketch_].curves[hit.index];
                     circleRadiusDrag_=hit.index;circleInitialRadius_=pointDistance(circle.controlPoints[0],circle.controlPoints[1]);circlePointerRadius_=pointDistance(rawPoint,circle.controlPoints[0]);dragSnapshot_=documentState();dragRecorded_=false;
                 }
@@ -566,8 +582,21 @@ void CadViewport::mousePressEvent(QMouseEvent *event) {
             };
             if (appliedConstraint == 1) add(ConstraintType::Horizontal);
             else if (appliedConstraint == 2) add(ConstraintType::Vertical);
-            else if ((appliedConstraint == 3 || appliedConstraint == 4) && inference.reference >= 0 && inference.reference < created)
-                add(appliedConstraint == 3 ? ConstraintType::Perpendicular : ConstraintType::Parallel, {0, inference.reference, -1});
+            else if (appliedConstraint == 3 || appliedConstraint == 4) {
+                int reference = inference.reference;
+                if (reference <= -2) {
+                    const int cachedSegment = -2-reference;
+                    const auto &cache = sketchReferenceCache();
+                    for (const auto &link : cache.linkedReferences) if (link)
+                        for (int k = 0; k < link->entities.size(); ++k) if (link->entities[k] == ConstraintRef{0,cachedSegment,-1}) {
+                            QVector<ForgeCad::SketchEntity> entities;
+                            if (ForgeCad::appendLinkedSketchReference(sketch,link->source,sketches_,extrusions_,link->contact,
+                                link->construction,link->halfLength,&entities).isEmpty() && k < entities.size()) reference = entities[k].index;
+                        }
+                }
+                if (reference >= 0 && reference != created)
+                    add(appliedConstraint == 3 ? ConstraintType::Perpendicular : ConstraintType::Parallel, {0, reference, -1});
+            }
             if (lineLength_ > 0.0) add(ConstraintType::Distance);
             if (lineAngle_ >= 0.0 && appliedConstraint != 1 && appliedConstraint != 2) add(ConstraintType::Angle, {2, 1, -1});
             const int count = sketch.geometricConstraints.size();
@@ -576,7 +605,7 @@ void CadViewport::mousePressEvent(QMouseEvent *event) {
             for (int k = count; k < sketch.geometricConstraints.size(); ++k)
                 closedOnPoint = closedOnPoint || (sketch.geometricConstraints.at(k).type == ConstraintType::Coincident
                                                   && sketch.geometricConstraints.at(k).first.point == 1);
-            startReference_ = sketches_[activeSketch_].segments.size() - 1;  // la polilinea prosegue da qui
+            startReference_ = created;  // la polilinea prosegue dal segmento, anche se sono state aggiunte cache esterne
             sketchEdited();
         }
         pendingPoint_ = constrainedPoint;
@@ -851,6 +880,11 @@ void CadViewport::contextMenuEvent(QContextMenuEvent *event) {
 }
 
 void CadViewport::mouseMoveEvent(QMouseEvent *event) {
+    if (filletRadiusDrag_ >= 0) {
+        dragFilletRadius(event->position(), !(event->buttons() & Qt::LeftButton));
+        event->accept(); return;
+    }
+    if (!event->buttons() && filletRadiusHandleAt(event->position()) >= 0) {setCursor(Qt::OpenHandCursor);return;}
     if (featureHandleDragging_) {
         if (!(event->buttons() & Qt::LeftButton)) { featureHandleDragging_ = false; unsetCursor(); update(); return; }
         dragFeatureHandle(event->position());
@@ -1171,6 +1205,9 @@ void CadViewport::focusOutEvent(QFocusEvent *event) {
 }
 
 void CadViewport::mouseReleaseEvent(QMouseEvent *event) {
+    if (filletRadiusDrag_ >= 0 && event->button() == Qt::LeftButton) {
+        dragFilletRadius(event->position(), true);event->accept();return;
+    }
     if (featureHandleDragging_ && event->button() == Qt::LeftButton) {
         featureHandleDragging_ = false;
         dragFeatureHandle(event->position());
@@ -1254,6 +1291,17 @@ void CadViewport::mouseReleaseEvent(QMouseEvent *event) {
             documentChanged();
         }
         dimensionDrag_ = -1;
+        if (dragRecorded_ && lastSnapExternal_ && geometrySnap_ && activeSketchObject()) {
+            auto &sketch = sketches_[activeSketch_]; const auto before = sketch;
+            QVector<ForgeCad::PointTarget> snapped;
+            if (pointDragActive_) snapped = targetsAt(sketch,pointDragPosition_);
+            else if (draggingControlPoint_ && draggingPointKind_ == EditablePointKind::Control
+                && draggingCurveIndex_ >= 0 && draggingControlIndex_ >= 0)
+                snapped.append({{1,draggingCurveIndex_,draggingControlIndex_},sketch.curves[draggingCurveIndex_].controlPoints[draggingControlIndex_]});
+            for (const auto &target : snapped) if (!isLinkedSketchEntity(sketch,target.point.kind,target.point.element))
+                recordPointCoincidences(sketch,target.point,target.position);
+            if (!ForgeCad::solveSketch(sketch).ok) sketch = before;
+        }
         pointDragActive_ = false;
         circleRadiusDrag_=-1;
         bodyDragSegment_ = -1;

@@ -116,6 +116,10 @@ Tavola 2D con viste proiettate, sezione, dettaglio quotato e vista isometrica.
 
 Il Loft accetta sezioni e guide da schizzi e bordi esatti, anche spaziali, con elenchi ordinabili e riferimenti associativi. Le condizioni G0/G1/G2 disponibili dipendono dal comando e dalla geometria: contatto, tangenza e curvatura richiedono riferimenti compatibili.
 
+Il comando **Raggio** comprende quattro schede con illustrazioni: **Costante**, **Conico**, **Variabile** e **Tra facce**. I conici offrono sezioni ellittiche (ρ < 0,5), paraboliche (ρ = 0,5) e iperboliche (ρ > 0,5), controllabili tramite ρ oppure raggio di curvatura al centro della sezione. Il raggio variabile accetta più bordi: quelli tangenti formano un percorso unico con 2–64 punti equidistanti lungo la lunghezza totale. I percorsi disgiunti hanno tabelle indipendenti, visibili selezionando un bordo nell’elenco; ogni percorso ha interpolazione morbida o lineare e inversione del verso. I punti con etichetta R si trascinano nella vista 3D per cambiare i raggi e aggiornare l’anteprima; sui percorsi chiusi i raggi iniziale e finale restano uguali. Il raccordo tra facce richiede due facce adiacenti dello stesso corpo e raccorda i loro bordi condivisi. La propagazione tangente è disattivabile; nel modo variabile resta disattivata. Il pannello si può chiudere anche durante il calcolo dell'anteprima. I parametri sono salvati nel formato nativo 59, con lettura dei documenti precedenti.
+
+I pannelli hanno un’intestazione compatta e un menu **⋮** per l’aggancio a sinistra/destra e l’opzione **Usa tutta l’altezza disponibile**. La preferenza vale per i pannelli aperti successivamente; trascinare il pannello permette di sganciarlo e riagganciarlo. Le illustrazioni usano uno sfondo bianco nel tema chiaro.
+
 ### Modellazione di superfici
 
 - Estrusione di profili aperti, Loft di superfici e Sweep di superfici.

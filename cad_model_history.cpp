@@ -313,6 +313,17 @@ void normalizeSketchHistory(QVector<SketchObject> &sketches, const QVector<Extru
             break;
         }
     }
+    for (auto &sketch : sketches) visitSketchGeometryRefs(sketch, [&](GeometryRef &ref, SketchGeometryRefFamily, int) {
+        if (isBodyRef(ref)) {
+            if (!ref.featureId && ref.index >= 0 && ref.index < features.size()) ref.featureId = features[ref.index].featureId;
+            return;
+        }
+        if (!isSketchRef(ref)) return;
+        if (!ref.featureId && ref.index >= 0 && ref.index < sketches.size()) ref.featureId = sketches[ref.index].storyId;
+        if (!ref.featureId) return;
+        ref.index = -1;
+        for (int i = 0; i < sketches.size(); ++i) if (sketches[i].storyId == ref.featureId) { ref.index = i; break; }
+    });
 }
 
 QString storySketchDependencyError(const QVector<SketchObject> &sketches, const QVector<ExtrusionObject> &features,
@@ -336,9 +347,13 @@ QString storySketchDependencyError(const QVector<SketchObject> &sketches, const 
         if (!body && !sketch) return {};
         const auto &positions = body ? fp : sp;
         int index = ref.index;
-        if (body && ref.featureId) {
+        if (ref.featureId) {
             index = -1;
-            for (int f = 0; f < features.size(); ++f) if (features.at(f).featureId == ref.featureId) { index = f; break; }
+            if (body) {
+                for (int f = 0; f < features.size(); ++f) if (features.at(f).featureId == ref.featureId) { index = f; break; }
+            } else {
+                for (int i = 0; i < sketches.size(); ++i) if (sketches.at(i).storyId == ref.featureId) { index = i; break; }
+            }
         }
         if (index < 0 || index >= positions.size() || positions.at(index) >= sp.at(s))
             return QStringLiteral("\"%1\" deve restare dopo il riferimento che utilizza.").arg(sketches.at(s).name);

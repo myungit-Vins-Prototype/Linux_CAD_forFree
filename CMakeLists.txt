@@ -156,6 +156,10 @@ add_executable(forgecad
     forgeCad2026_dialogs.h
     forgeCad2026_dialogs_common.cpp
     forgeCad2026_dialogs_common.h
+    forgeCad2026_operation_illustration.cpp
+    forgeCad2026_operation_illustration.h
+    forgeCad2026_fillet_handles.cpp
+    forgeCad2026_dialogs_fillet.cpp
     forgeCad2026_dialogs_solids.cpp
     forgeCad2026_dialogs_surfaces.cpp
     forgeCad2026_dialogs_surface_tools.cpp
@@ -274,6 +278,8 @@ add_executable(forgecad
     cad_measure.h
     cad_measure.cpp
     cad_datum.h
+    cad_fillet_paths.cpp
+    cad_fillet_paths.h
     cad_datum.cpp
     cad_import.h
     cad_import.cpp
@@ -521,7 +527,7 @@ if(FORGECAD_BUILD_VIEW_TESTS)
     # Finestra, viewport, storyboard e dialoghi sono unita' separate anche nei test.
     list(REMOVE_ITEM FORGECAD_VIEW_TEST_SOURCES forgeCad2026.cpp ${FORGE_CAD_CUDA_SOURCE} ${FORGECAD_HASH_HEADER})
     list(REMOVE_ITEM FORGECAD_VIEW_TEST_SOURCES cad_macos_menu.h cad_macos_menu.mm)
-    add_executable(forgecad_view_tests tests/test_viewport.cpp tests/test_declared_history_cache.h tests/test_boolean_history.h tests/test_blend_history.h tests/test_extrusion_history.h tests/test_revolution_history.h tests/test_all_history.h tests/test_native_revisions.h tests/test_workspace_revisions.h tests/test_linked_drawing.h tests/test_drawing_workflow.h tests/test_drawing_revisions.h tests/test_projected_drawing_file.h tests/test_drawing_multisheet.h tests/test_drawing_revision_restore.h tests/test_drawing_release.h tests/test_catalog_recovery_gui.h tests/test_surface_tools_gui.h tests/test_document_units.h tests/test_history_suppression.h tests/test_function_panels.h tests/test_drawing_mouse.h tests/test_drawing_section_model.h tests/test_drawing_performance.h cuda_support_cpu.cpp ${FORGECAD_VIEW_TEST_SOURCES})
+    add_executable(forgecad_view_tests tests/test_viewport.cpp tests/test_declared_history_cache.h tests/test_boolean_history.h tests/test_blend_history.h tests/test_extrusion_history.h tests/test_revolution_history.h tests/test_all_history.h tests/test_native_revisions.h tests/test_workspace_revisions.h tests/test_linked_drawing.h tests/test_drawing_workflow.h tests/test_drawing_revisions.h tests/test_projected_drawing_file.h tests/test_drawing_multisheet.h tests/test_drawing_revision_restore.h tests/test_drawing_release.h tests/test_catalog_recovery_gui.h tests/test_surface_tools_gui.h tests/test_document_units.h tests/test_history_suppression.h tests/test_function_panels.h tests/test_advanced_fillets.h tests/test_fillet_refinements.h tests/test_drawing_mouse.h tests/test_drawing_section_model.h tests/test_drawing_performance.h cuda_support_cpu.cpp ${FORGECAD_VIEW_TEST_SOURCES})
     add_dependencies(forgecad_view_tests forgecad) # genera l'impronta una sola volta, prima dei test
     target_include_directories(forgecad_view_tests PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/generated)
     target_link_libraries(forgecad_view_tests PRIVATE forgecad_compute Qt6::Widgets Qt6::OpenGL Qt6::OpenGLWidgets OpenGL::GL forgekernel ZLIB::ZLIB ${FORGECAD_ZSTD_TARGET})
@@ -539,6 +545,10 @@ if(FORGECAD_BUILD_VIEW_TESTS)
     forgecad_add_view_test(forgecad_topology_label_tests --topology-labels)
     forgecad_add_view_test(forgecad_document_read_tests --document-read)
     forgecad_add_view_test(forgecad_document_units_tests --document-units)
+    forgecad_add_view_test(forgecad_fillet_refinement_tests --fillet-refinements)
+    set_tests_properties(forgecad_fillet_refinement_tests PROPERTIES TIMEOUT 60)
+    forgecad_add_view_test(forgecad_advanced_fillet_tests --advanced-fillets)
+    set_tests_properties(forgecad_advanced_fillet_tests PROPERTIES TIMEOUT 60)
     forgecad_add_view_test(forgecad_function_panels_tests --function-panels-review)
     set_tests_properties(forgecad_function_panels_tests PROPERTIES TIMEOUT 60)
     forgecad_add_view_test(forgecad_history_suppression_tests --history-suppression)
@@ -592,6 +602,9 @@ if(FORGECAD_BUILD_VIEW_TESTS)
     set_tests_properties(forgecad_genealogy_tests PROPERTIES TIMEOUT 60)
     forgecad_add_view_test(forgecad_mouse_snapshot_tests --mouse-snapshot)
     set_tests_properties(forgecad_mouse_snapshot_tests PROPERTIES TIMEOUT 120)
+    forgecad_add_view_test(forgecad_linked_reference_visibility_tests --linked-reference-visibility)
+    forgecad_add_view_test(forgecad_linked_sketch_reference_tests --linked-sketch-references)
+    set_tests_properties(forgecad_linked_sketch_reference_tests PROPERTIES TIMEOUT 60)
     forgecad_add_view_test(forgecad_sketch_reference_workflow_tests --sketch-reference-workflow)
     set_tests_properties(forgecad_sketch_reference_workflow_tests PROPERTIES TIMEOUT 30)
     forgecad_add_view_test(forgecad_document_access_tests --document-access)
@@ -608,6 +621,8 @@ if(FORGECAD_BUILD_VIEW_TESTS)
     forgecad_add_view_test(forgecad_solver_partition_tests --solver-partition)
     forgecad_add_view_test(forgecad_connected_solver_tests --connected-solver-benchmark)
     forgecad_add_view_test(forgecad_display_mesh_tests --display-mesh)
+    forgecad_add_view_test(forgecad_thread_edge_tests --thread-edges)
+    set_tests_properties(forgecad_thread_edge_tests PROPERTIES TIMEOUT 60)
     forgecad_add_view_test(forgecad_lazy_mesh_tests --lazy-mesh)
     set_tests_properties(forgecad_lazy_mesh_tests PROPERTIES TIMEOUT 120)
     set_tests_properties(forgecad_solver_partition_tests PROPERTIES TIMEOUT 120)
