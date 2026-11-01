@@ -1,11 +1,13 @@
 # CLAUDE.md
 
-### 2026-11-01 — Commit e push di tutte le modifiche presenti (in preparazione)
+### 2026-11-01 — Commit e push di tutte le modifiche presenti (completati)
 
 - Richiesta: commit e push; l'utente precisa di includere tutto, comprese le modifiche delle altre chat. La precisazione supera la prima intenzione di separare i soli interventi su schizzo, Estendi e booleane. Incluse anche le correzioni STEP/IGES e raccordi con regressioni, documentazione, descrizioni architetturali e voci condivise del registro.
 - Preflight: branch main, remoto origin https://github.com/myungit-Vins-Prototype/Linux_CAD_forFree.git, repository pubblico e permesso ADMIN verificati tramite GitHub. Fetch riuscito; HEAD e origin/main allineati prima del commit. Pubblicazione autorizzata dall'utente, senza riscrittura della storia remota.
 - Payload previsto: tutte le 34 modifiche a file versionati; rimossa soltanto la cache Python temporanea creata dal generatore. Nessun modello CAD personale, eseguibile o artefatto architetturale ignorato aggiunto a Git. Nessuna modifica produttiva ulteriore in questa fase.
 - Verifiche gia concluse e registrate nelle rispettive voci: build applicativa completa; 28/28 CTest, 38/38 Boolean, 4/4 CurveCurve, regressioni STEP/Exchange/IGES/PCurve e raccordi delle altre chat; controlli GUI nativi e mappa --check. Riletti i log finali di CTest/Boolean/CurveCurve, git diff --check PASS. Nessuna nuova esecuzione integrale delle suite o verifica macOS dichiarata. Commit e push ancora da eseguire.
+- Esito verificato: creato commit 8121ed75c5d269463f0bc2bed48b8af52cca11a3, «Corregge schizzi, superfici, unioni, raccordi e scambio STEP/IGES», 34 file/763 inserimenti/108 rimozioni. Push ordinario origin main riuscito, d3bfdc5→8121ed7; tutte le modifiche presenti incluse, nessuna riscrittura della storia. Prima del commit ripetuti git diff --cached --check, controllo di assenza di modifiche escluse/non tracciate e mappa --check (522 file/7145 relazioni), tutti PASS. Dopo il push albero pulito. Questo aggiornamento conclusivo del registro viene versionato con commit documentale separato [skip ci]. Nessuna modifica a CAD personali o al processo dell'app, nessuna nuova build/test o verifica macOS in questa fase.
+
 
 ### 2026-11-01 — Unione tra Corpo 4 e Corpo 1 del Flacone3 (corretta e verificata)
 
