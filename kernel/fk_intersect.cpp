@@ -534,7 +534,12 @@ void subdivide(const Curve<2> &a, const Interval &ra, const Curve<2> &b, const I
                const BSplineCurve<2> &pb, int depth, double scale, double tolerance, CurveCurveIntersection &out, int &leaves) {
     const Box2 boxA = polesBox(pa), boxB = polesBox(pb);
     if (!boxA.overlaps(boxB, tolerance)) return;
-    if ((boxA.diagonal() <= 1e-6 * scale && boxB.diagonal() <= 1e-6 * scale) || depth >= 60) {
+    // Intorno a un estremo comune, box piccoli rispetto alla tolleranza
+    // restano sovrapposti per il margine anche senza un tratto comune.
+    // Non suddividerli oltre un quarto del budget: Newton conserva lo
+    // stesso controllo del residuo e non si cambia la tolleranza accettata.
+    const double terminalSize = std::max(1e-6 * scale, 0.25 * tolerance);
+    if ((boxA.diagonal() <= terminalSize && boxB.diagonal() <= terminalSize) || depth >= 60) {
         if (++leaves > 4000) throw std::domain_error("intersectCurves: curve sovrapposte non gestite");
         double s = 0.5 * (pa.domain().lo + pa.domain().hi), t = 0.5 * (pb.domain().lo + pb.domain().hi);
         if (newtonIntersection(a, ra, b, rb, s, t, tolerance)) addPoint(out, {s, t, a.point(s)}, tolerance);

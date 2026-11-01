@@ -1,14 +1,5 @@
 #include "forgeCad2026_viewport_internal.h"
 
-namespace {
-// Le proiezioni di supporto ai vincoli sono cache interne, non nuove entita' visibili.
-bool hiddenSketchReference(const SketchObject &sketch, int kind, int index) {
-    const bool construction = kind == 0 ? sketch.isConstructionSegment(index)
-        : kind == 1 && index >= 0 && index < sketch.curves.size() && sketch.curves[index].construction;
-    return construction && isLinkedSketchEntity(sketch, kind, index);
-}
-}
-
 
 void CadViewport::drawSelectionBox(QPainter &painter) const {
     if (!boxSelecting_) return;
@@ -244,7 +235,7 @@ void CadViewport::drawInferenceTags(QPainter &painter) const {
     }
     const SketchObject &sketch = sketches_.at(activeSketch_);
     if (lineTool && currentInference_.reference >= 0 && currentInference_.reference < sketch.segments.size()
-        && !hiddenSketchReference(sketch, 0, currentInference_.reference)) {
+        && !isHiddenSketchReference(sketch, 0, currentInference_.reference)) {
         const SketchSegment &segment = sketch.segments.at(currentInference_.reference);
         QPen pen(QColor(120, 255, 170), 2.0, Qt::DashLine);
         painter.setPen(pen);
@@ -373,7 +364,7 @@ void CadViewport::drawSketchCurvature() {
     sketchCombCache_.resize(sketch.curves.size());
     glDisable(GL_DEPTH_TEST);
     for (int i=0; i<sketch.curves.size(); ++i) {
-        if (hiddenSketchReference(sketch, 1, i)) continue;
+        if (isHiddenSketchReference(sketch, 1, i)) continue;
         const auto &curve = i==sketchCombPreviewIndex_ ? sketchCombPreview_ : sketch.curves[i];
         if (curve.tool!=DrawingTool::Spline && curve.tool!=DrawingTool::Nurbs) continue;
         QVector<ForgeCad::OverlayVertex> lines = sketchCurveComb(i,curve);
@@ -495,7 +486,7 @@ void CadViewport::drawSketchDimensions(QPainter &painter) const {
     const SketchObject &sketch = sketches_.at(activeSketch_);
     painter.setFont(uiFont(9, QFont::DemiBold));
     for (int index = 0; index < sketch.segments.size(); ++index) {
-        if (hiddenSketchReference(sketch, 0, index)) continue;
+        if (isHiddenSketchReference(sketch, 0, index)) continue;
         const auto &segment = sketch.segments.at(index);
         const QVector3D first = mapSketchPoint(segment.first, sketch);
         const QVector3D second = mapSketchPoint(segment.second, sketch);
@@ -532,7 +523,7 @@ void CadViewport::drawSnapMarkers() {
         points.push_back({position, QVector4D(r, g, b, 1.0f)});
     };
     for (int curveIndex = 0; curveIndex < sketch.curves.size(); ++curveIndex) {
-        if (hiddenSketchReference(sketch, 1, curveIndex)) continue;
+        if (isHiddenSketchReference(sketch, 1, curveIndex)) continue;
         const auto &curve = sketch.curves[curveIndex];
         const float red = curve.tool == DrawingTool::Nurbs ? 0.95f : 1.0f;
         if (curve.tool == DrawingTool::Converted) {
@@ -560,7 +551,7 @@ void CadViewport::drawSnapMarkers() {
         point(world, 1.0f, 0.45f, 0.25f);
     }
     for (int segmentIndex = 0; segmentIndex < sketch.segments.size(); ++segmentIndex) {
-        if (hiddenSketchReference(sketch, 0, segmentIndex)) continue;
+        if (isHiddenSketchReference(sketch, 0, segmentIndex)) continue;
         const auto &segment = sketch.segments[segmentIndex];
         for (const QPointF &endpoint : {segment.first, segment.second}) {
             const QVector3D world = mapSketchPoint(endpoint, sketch);
@@ -582,7 +573,7 @@ void CadViewport::drawSnapMarkers() {
     QVector<ForgeCad::OverlayVertex> tangentLines;
     const QVector4D handleColor(0.35f, 0.55f, 0.65f, 1.0f);
     for (int curveIndex = 0; curveIndex < sketch.curves.size(); ++curveIndex) {
-        if (hiddenSketchReference(sketch, 1, curveIndex)) continue;
+        if (isHiddenSketchReference(sketch, 1, curveIndex)) continue;
         const auto &curve = sketch.curves[curveIndex];
         for (int index = 0; index < curve.tangentHandles.size(); ++index) {
             const QVector3D control = mapSketchPoint(curve.controlPoints.at(index), sketch);
@@ -619,7 +610,7 @@ void CadViewport::strokeHighlight(QPainter &painter, const QVector<QPointF> &poi
 
 void CadViewport::highlightSketchElement(QPainter &painter, const SketchObject &sketch,
                                 const SketchElementSelection &element, const QColor &color) const {
-    if (hiddenSketchReference(sketch, element.kind, element.index)) return;
+    if (isHiddenSketchReference(sketch, element.kind, element.index)) return;
     if (element.kind == 0 && element.index >= 0 && element.index < sketch.segments.size()) {
         const auto &segment = sketch.segments.at(element.index);
         const QVector<QPointF> points = projectSketchPolyline({segment.first, segment.second}, sketch);
@@ -698,7 +689,7 @@ void CadViewport::drawSelectionHighlight() {
         if (drawingTool_ == DrawingTool::Select) {
             const int midpoint = segmentMidpointAt(screenToSketchPoint(lastMousePosition_));
             for (int i = 0; i < sketch.segments.size(); ++i) {
-                if (hiddenSketchReference(sketch, 0, i)) continue;
+                if (isHiddenSketchReference(sketch, 0, i)) continue;
                 if (i != midpoint && !sketchSelections_.contains({0, i})) continue;
                 const QPointF center = projectWorldPoint(mapSketchPoint(
                     0.5 * (sketch.segments.at(i).first + sketch.segments.at(i).second), sketch));
@@ -1045,7 +1036,7 @@ void CadViewport::drawSketch() {
         const SketchObject &sketch = sketches_.at(sketchIndex);
         const bool active = analysis && sketchIndex == activeSketch_;
         for (int index = 0; index < sketch.segments.size(); ++index) {
-            if (hiddenSketchReference(sketch, 0, index)) continue;
+            if (isHiddenSketchReference(sketch, 0, index)) continue;
             const auto &segment = sketch.segments.at(index);
             const bool construction = sketch.isConstructionSegment(index);
             const QVector3D first = mapSketchPoint(segment.first, sketch);
@@ -1085,7 +1076,7 @@ void CadViewport::drawSketch() {
         const SketchObject &sketch = sketches_.at(sketchIndex);
         const bool active = analysis && sketchIndex == activeSketch_;
         for (int curveIndex = 0; curveIndex < sketch.curves.size(); ++curveIndex) {
-            if (hiddenSketchReference(sketch, 1, curveIndex)) continue;
+            if (isHiddenSketchReference(sketch, 1, curveIndex)) continue;
             const CurveObject &curve = sketch.curves.at(curveIndex);
             QVector4D color(0.55f, 0.78f, 0.92f, 1.0f);
             if (!curve.construction) {
@@ -1128,13 +1119,13 @@ void CadViewport::drawSketch() {
         overlayRenderer_.setStipple(false);
         glLineWidth(6.0f);
         for (int index = 0; index < failed.segments.size(); ++index) {
-            if (hiddenSketchReference(failed, 0, index)) continue;
+            if (isHiddenSketchReference(failed, 0, index)) continue;
             const auto &segment = failed.segments[index];
             const QVector3D a = mapSketchPoint(segment.first, failed), b = mapSketchPoint(segment.second, failed);
             overlayRenderer_.draw(GL_LINES, QVector<QVector3D>{a, b}, QVector4D(1.0f, 0.16f, 0.12f, 1.0f));
         }
         for (int index = 0; index < failed.curves.size(); ++index) {
-            if (hiddenSketchReference(failed, 1, index)) continue;
+            if (isHiddenSketchReference(failed, 1, index)) continue;
             const auto &curve = failed.curves[index];
             QVector<QVector3D> samples;
             for (const QPointF &sample : curve.samples) {
@@ -1144,13 +1135,13 @@ void CadViewport::drawSketch() {
         }
         glLineWidth(2.0f);
         for (int index = 0; index < failed.segments.size(); ++index) {
-            if (hiddenSketchReference(failed, 0, index)) continue;
+            if (isHiddenSketchReference(failed, 0, index)) continue;
             const auto &segment = failed.segments[index];
             const QVector3D a = mapSketchPoint(segment.first, failed), b = mapSketchPoint(segment.second, failed);
             overlayRenderer_.draw(GL_LINES, QVector<QVector3D>{a, b}, QVector4D(1.0f, 0.85f, 0.20f, 1.0f));
         }
         for (int index = 0; index < failed.curves.size(); ++index) {
-            if (hiddenSketchReference(failed, 1, index)) continue;
+            if (isHiddenSketchReference(failed, 1, index)) continue;
             const auto &curve = failed.curves[index];
             QVector<QVector3D> samples;
             for (const QPointF &sample : curve.samples) {

@@ -97,7 +97,13 @@ public:
         for (std::size_t k = 0; k < ids.size(); ++k) s += (k ? "," : "") + ref(ids[k]);
         return s + ")";
     }
-    int point(const Vec3 &p) { return add("CARTESIAN_POINT(''," + triple(p) + ")"); }
+    int point(const Vec3 &p) {
+        const std::string coordinates = triple(p);  // valida anche i valori non finiti
+        const std::array<double, 3> key{p.x(), p.y(), p.z()};
+        const auto found = points_.find(key);
+        if (found != points_.end()) return found->second;
+        return points_[key] = add("CARTESIAN_POINT(''," + coordinates + ")");
+    }
     int direction(const Vec3 &d) { return add("DIRECTION(''," + triple(normalized(d)) + ")"); }
     int placement(const Vec3 &origin, const Vec3 &z, const Vec3 &x) {
         const int o = point(origin), a = direction(z), r = direction(x - dot(x, normalized(z)) * normalized(z));
@@ -109,6 +115,7 @@ public:
     static std::string triple(const Vec3 &p) { return "(" + real(p.x()) + "," + real(p.y()) + "," + real(p.z()) + ")"; }
 
 private:
+    std::map<std::array<double, 3>, int> points_;
     int next_ = 0;
     std::ostringstream data_;
 };
@@ -190,7 +197,7 @@ int writeCurve(StepWriter &w, const CurvePtr<3> &input, const Interval &range) {
         }
         break;
     case CurveType::BSpline: {
-        const auto &b = static_cast<const BSplineCurve<3> &>(*curve);
+        const auto b = detail::boundedExchangeSpline(static_cast<const BSplineCurve<3> &>(*curve), range);
         if (!transformed) return writeBSplineCurve(w, b);
         std::vector<Vec3> poles;
         for (const Vec3 &p : b.poles()) poles.push_back(P(p));

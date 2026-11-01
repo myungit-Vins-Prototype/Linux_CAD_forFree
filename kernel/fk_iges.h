@@ -13,7 +13,9 @@
 // limitate (144 con i bordi 142, curve nello spazio del modello). Superfici:
 // piani, cilindri, coni, sfere e tori analitici (190-198), le altre B-spline
 // razionali esatte (128); curve: segmenti (110) e B-spline razionali esatte
-// (126; le eliche entro 1e-9). Nome (406 forma 15) e colore (314) per body; mm.
+// (126; le eliche entro 1e-9). Le B-spline conservano nodi e parametro
+// originali, limitati al tratto del bordo. Nome (406 forma 15) e colore
+// (314) per body; mm.
 //
 // Lettura (readIges): MSBO (186) e superfici limitate (144, 143) con le loro
 // curve (100, 102, 104, 106, 110, 112, 126) e superfici (108, 114, 118, 120,

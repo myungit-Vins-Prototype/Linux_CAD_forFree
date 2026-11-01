@@ -2377,62 +2377,99 @@ QVector<EdgePoint> completeExtensionContours(const ForgeCad::ForgeBody &body, co
 }
 
 ExtendDialogResult extendDialog(QWidget *parent, CadViewport *viewport, const QString &title, int base, int hidden, const QVector<EdgePoint> &edges,
-                                       double distance, bool linear, bool allowReselect, const std::function<QString(const QVector<EdgePoint> &, double, bool)> &apply) {
+                               double distance, bool linear, bool pickInView, const std::function<QString(int, const QVector<EdgePoint> &, double, bool)> &apply) {
     ExtendDialogResult result;
+    int selectedBase = base;
+    QVector<EdgePoint> picked = edges, complete;
+    bool previewStarted = !pickInView;
     FunctionDialogPanel dialog(parent);
     dialog.setSizeIdentity(QStringLiteral("surface-extend"));
     if (viewport) ForgeCad::setDisplayLengthUnit(viewport->lengthUnit(), &dialog);
     dialog.setWindowTitle(title);
     auto *form = dialog.createScrollableForm();
     auto *distanceBox = new ForgeCad::ExpressionSpinBox(&dialog);
+    distanceBox->setObjectName(QStringLiteral("extendDistance"));
     distanceBox->setDecimals(6);
     distanceBox->setRange(0.000001, 100000.0);
+    distanceBox->setKeyboardTracking(false);
     distanceBox->setValue(distance);
     auto *typeBox = new QComboBox(&dialog);
+    typeBox->setObjectName(QStringLiteral("extendType"));
     typeBox->addItems({QStringLiteral("Stessa superficie (prolungata)"), QStringLiteral("Lineare (tangente)")});
     typeBox->setCurrentIndex(linear ? 1 : 0);
     typeBox->setToolTip(QStringLiteral("Stessa superficie: la superficie prosegue oltre il bordo (piani, cilindri, superfici estruse con la curva prolungata).\n"
                                        "Lineare: una striscia tangente alla superficie lungo il bordo."));
     form->addRow(QStringLiteral("Distanza lungo la superficie:"), distanceBox);
     form->addRow(QStringLiteral("Tipo:"), typeBox);
-    const QVector<EdgePoint> complete = completeExtensionContours(viewport->extrusions().value(base).forgeBody, edges);
     auto *completeBox = new QCheckBox(QStringLiteral("Estendi i contorni completi"), &dialog);
-    completeBox->setEnabled(!complete.isEmpty());
+    completeBox->setObjectName(QStringLiteral("extendCompleteContours"));
     completeBox->setToolTip(QStringLiteral("Include tutti i bordi collegati ai bordi scelti, anche quelli delle facce molto sottili."));
     form->addRow(QString(), completeBox);
     auto *edgeCount = new GeometryReferenceList(dialog, viewport, QStringLiteral("extendEdges"));
+    edgeCount->setToolTip(QStringLiteral("Clicca i bordi nella vista per aggiungerli o rimuoverli. Seleziona una voce per evidenziarla."));
     form->addRow(QStringLiteral("Bordi:"), edgeCount);
-    const auto selectedEdges = [&] { return completeBox->isChecked() ? complete : edges; };
-    auto *previewLabel = new FunctionMessage(QStringLiteral("in calcolo..."), &dialog);
+    if (pickInView) form->addRow(wrappedNote(QStringLiteral("Seleziona nella vista i bordi da estendere, poi imposta distanza e tipo e premi Conferma. Un altro clic su un bordo lo rimuove."), &dialog));
+    const auto selectedEdges = [&] { return completeBox->isChecked() ? complete : picked; };
+    auto *previewLabel = new FunctionMessage(&dialog);
+    previewLabel->setObjectName(QStringLiteral("functionPreviewMessage"));
     form->addRow(QStringLiteral("Anteprima:"), previewLabel);
     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
-    if (allowReselect) {
-        QPushButton *edgesButton = buttons->addButton(QStringLiteral("Bordi..."), QDialogButtonBox::ActionRole);
-        edgesButton->setToolTip(QStringLiteral("Torna alla scelta dei bordi (quelli di adesso restano scelti)"));
-        QObject::connect(edgesButton, &QPushButton::clicked, &dialog, [&dialog, &result] {
-            result.reselect = true;
-            dialog.reject();
-        });
-    }
     QObject::connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
     QObject::connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
     form->addRow(buttons);
     const auto refresh = [&] {
+        complete = completeExtensionContours(viewport->extrusions().value(selectedBase).forgeBody, picked);
+        {
+            const QSignalBlocker blocker(completeBox);
+            completeBox->setEnabled(!complete.isEmpty());
+            if (complete.isEmpty()) completeBox->setChecked(false);
+        }
         const auto selected = selectedEdges();
-        edgeCount->setEdges(base, selected);
+        edgeCount->setEdges(selectedBase, selected);
+        if (!previewStarted || selectedBase < 0 || selected.isEmpty()) {
+            viewport->clearPreview();
+            previewLabel->setText(QStringLiteral("seleziona almeno un bordo nella vista"));
+            return;
+        }
         previewLabel->setText(QStringLiteral("in calcolo..."));
-        viewport->requestExtendPreview(base, selected, distanceBox->value(), typeBox->currentIndex() == 1, hidden);
+        viewport->requestExtendPreview(selectedBase, selected, distanceBox->value(), typeBox->currentIndex() == 1, hidden);
     };
     viewport->setPreviewCallback([previewLabel](const QString &error) {
         previewLabel->setText(error.isEmpty() ? QStringLiteral("pronta (in ambra nella vista)") : QStringLiteral("non riuscita: ") + error);
     });
     QObject::connect(distanceBox, &QDoubleSpinBox::valueChanged, &dialog, refresh);
     QObject::connect(typeBox, &QComboBox::currentIndexChanged, &dialog, refresh);
+    QObject::connect(completeBox, &QCheckBox::toggled, &dialog, refresh);
+    if (pickInView) {
+        viewport->setEdgePickPanelKeyCallbacks(
+            [buttons] { buttons->button(QDialogButtonBox::Ok)->click(); },
+            [&dialog] { dialog.reject(); });
+        viewport->setEdgePickChangedCallback([&](int body, QVector<EdgePoint> changed) {
+            selectedBase = body;
+            picked = std::move(changed);
+            refresh();
+        });
+        QTimer::singleShot(0, &dialog, [&] {
+            previewStarted = true;
+            refresh();
+        });
+    }
     refresh();
     distanceBox->selectAll();
-    QObject::connect(completeBox, &QCheckBox::toggled, &dialog, refresh);
-    result.applied = runUntilApplied(dialog, form, buttons, [&] { return apply(selectedEdges(), distanceBox->value(), typeBox->currentIndex() == 1); });
+    const auto commit = [&] {
+        const auto selected = selectedEdges();
+        if (selectedBase < 0 || selected.isEmpty()) return QStringLiteral("Seleziona almeno un bordo nella vista.");
+        return apply(selectedBase, selected, distanceBox->value(), typeBox->currentIndex() == 1);
+    };
+    if (auto *window = qobject_cast<QMainWindow *>(parent))
+        result.applied = runUntilAppliedModeless(window, viewport, dialog, form, buttons, commit);
+    else result.applied = runUntilApplied(dialog, form, buttons, commit);
     result.edges = selectedEdges();
+    if (pickInView) {
+        viewport->setEdgePickPanelKeyCallbacks({}, {});
+        viewport->setEdgePickChangedCallback({});
+        viewport->endEdgePick(true);
+    }
     viewport->setPreviewCallback({});
     viewport->clearPreview();
     result.distance = distanceBox->value();

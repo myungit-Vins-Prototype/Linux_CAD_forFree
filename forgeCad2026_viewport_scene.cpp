@@ -196,14 +196,14 @@ QVector<QVector3D> CadViewport::datumCorners(const SketchFrame &f, double size) 
 QVector<QVector3D> CadViewport::sketchGeometryPoints(const SketchObject &sketch) const {
     QVector<QVector3D> points;
     for (int index = 0; index < sketch.segments.size(); ++index) {
-        if (sketch.isConstructionSegment(index) && isLinkedSketchEntity(sketch, 0, index)) continue;
+        if (isHiddenSketchReference(sketch, 0, index)) continue;
         const auto &segment = sketch.segments[index];
         points.append(mapSketchPoint(segment.first, sketch));
         points.append(mapSketchPoint(segment.second, sketch));
     }
     for (int index = 0; index < sketch.curves.size(); ++index) {
         const auto &curve = sketch.curves[index];
-        if (curve.construction && isLinkedSketchEntity(sketch, 1, index)) continue;
+        if (isHiddenSketchReference(sketch, 1, index)) continue;
         for (const QPointF &p : curve.samples) points.append(mapSketchPoint(p, sketch));
         if (curve.samples.isEmpty())
             for (const QPointF &p : curve.controlPoints) points.append(mapSketchPoint(p, sketch));

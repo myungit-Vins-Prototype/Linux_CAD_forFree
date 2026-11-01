@@ -546,7 +546,7 @@ void PdfWindow::initializeSceneAndTree(WindowSetup &setup) {
             sewDialog(this, viewport, QStringLiteral("Modifica cucitura"), index, original, [&](const ExtrusionObject &values) { return update(values); });
         } else if (original.feature == BodyFeature::SheetExtend) {
             extendDialog(this, viewport, QStringLiteral("Modifica estensione"), original.firstBody, index, original.blendEdges, original.blendSize,
-                         original.extendLinear, false, [&](const QVector<EdgePoint> &selected, double distance, bool linear) {
+                         original.extendLinear, false, [&](int, const QVector<EdgePoint> &selected, double distance, bool linear) {
                              ExtrusionObject body = original;
                              body.blendEdges = selected;
                              body.blendSize = distance;
@@ -1466,7 +1466,7 @@ void PdfWindow::initializeActionsAndView(WindowSetup &setup) {
     trimSurfaceAction = surfaceMenu->addAction(QStringLiteral("Taglia superficie..."));
     trimSurfaceAction->setToolTip(QStringLiteral("Taglia una superficie con un corpo (superficie o solido) o un piano e ne tiene una parte"));
     extendSurfaceAction = surfaceMenu->addAction(QStringLiteral("Estendi superficie..."));
-    extendSurfaceAction->setToolTip(QStringLiteral("Estende i bordi scelti di una superficie: clic sui bordi, Invio, poi la distanza"));
+    extendSurfaceAction->setToolTip(QStringLiteral("Apre il pannello: seleziona nella vista i bordi da estendere e imposta la distanza"));
     copyFacesAction = surfaceMenu->addAction(QStringLiteral("Copia facce..."));
     copyFacesAction->setToolTip(QStringLiteral("Copia una faccia, piu' facce o tutta una superficie cucita, mantenendo il corpo originale"));
     offsetSurfaceAction = surfaceMenu->addAction(QStringLiteral("Offset superficie..."));
@@ -2289,20 +2289,22 @@ void PdfWindow::initializeFeatureCommands(WindowSetup &setup) {
     });
     auto extendLinear = std::make_shared<bool>(false);
     connect(extendSurfaceAction, &QAction::triggered, this, [this, viewport, extendLinear] {
+        if (viewport->sketchModeActive()) viewport->endSketchMode();
         viewport->setEdgePickSize(pickSizeBox_->value());
-        const QString error = viewport->beginExtendPick(*extendLinear);
-        if (!error.isEmpty()) QMessageBox::information(this, QStringLiteral("Estendi superficie"), error);
-    });
-    viewport->setExtendPickCallback([this, viewport, extendLinear](int body, QVector<EdgePoint> edges) {
+        const QString error = viewport->beginExtendPick(*extendLinear, true);
+        if (!error.isEmpty()) {
+            QMessageBox::information(this, QStringLiteral("Estendi superficie"), error);
+            return;
+        }
         const QString name = QStringLiteral("Estensione %1").arg(viewport->extrusions().size() + 1);
-        const ExtendDialogResult result = extendDialog(this, viewport, QStringLiteral("Estendi superficie"), body, -1, edges, viewport->edgePickSize(),
-                                                       *extendLinear, true, [&](const QVector<EdgePoint> &selected, double distance, bool linear) {
-                                                           return viewport->createSheetExtend(body, selected, distance, linear, name);
-                                                       });
+        const ExtendDialogResult result = extendDialog(this, viewport, QStringLiteral("Estendi superficie"), viewport->edgePickBody(), -1,
+            viewport->edgePickPoints(), viewport->edgePickSize(), *extendLinear, true,
+            [viewport, name](int body, const QVector<EdgePoint> &selected, double distance, bool linear) {
+                return viewport->createSheetExtend(body, selected, distance, linear, name);
+            });
         *extendLinear = result.linear;
         viewport->setEdgePickSize(result.distance);
         if (pickSizeBox_) pickSizeBox_->setValue(result.distance);
-        if (result.reselect) viewport->resumeExtendPick(body, result.edges, result.linear);
     });
     for (QAction *action : {copyFacesAction, offsetSurfaceAction}) {
         connect(action, &QAction::triggered, this, [this, viewport, action, copyFacesAction] {

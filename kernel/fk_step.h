@@ -13,7 +13,8 @@
 // stessa definizione in STEP (piani, cilindri, coni, sfere, tori, estrusioni,
 // rivoluzioni, rette, cerchi, ellissi, B-spline anche razionali) si scrivono
 // come sono; le curve trasformate come cerchi o ellissi (similitudini) o
-// B-spline esatte, le altre (eliche) come B-spline entro 1e-9. Le facce
+// B-spline esatte ristrette ai tratti degli edge, le altre (eliche) come
+// B-spline entro 1e-9. I punti geometrici identici vengono condivisi. Le facce
 // periodiche non hanno cuciture (come in Parasolid); le facce senza bordo
 // (sfera, toro interi) hanno un VERTEX_LOOP.
 //

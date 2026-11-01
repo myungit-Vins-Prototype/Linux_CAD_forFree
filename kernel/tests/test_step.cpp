@@ -20,6 +20,7 @@
 #include "fk_helix.h"
 #include "fk_loft.h"
 #include "fk_mass.h"
+#include "fk_pcurve.h"
 #include "fk_nurbs.h"
 #include "fk_primitives.h"
 #include "fk_revolve.h"
@@ -754,4 +755,104 @@ FK_TEST(StepParallelBodiesAndEntityOrder) {
     const auto failed = readStep(broken, {1});
     FK_CHECK(failed.bodies.size() == bodies.size() - 1 && !failed.notes.empty());
     compare(failed, readStep(broken, {4}));
+}
+
+namespace {
+
+// Triangolo il cui primo lato usa soltanto la coda di una spline chiusa.
+// I molti nodi sul resto della curva simulano i bordi delle ripetizioni CT0578.
+Body closedSplineEndSheet(bool rational, bool wrapped) {
+    BSplineCurve<3> spline(1, {0, 0, 1, 2, 3, 4, 4},
+                            {Vec3(0, 0, 0), Vec3(5, 0, 0), Vec3(5, 5, 0), Vec3(0, 5, 0), Vec3(0, 0, 0)},
+                            rational ? std::vector<double>{1, 2, 1, 3, 1} : std::vector<double>{});
+    for (int i = 1; i < 192; ++i) if (i % 64) spline = spline.insertKnot(double(i) / 64.0);
+    CurvePtr<3> curve = std::make_shared<BSplineCurve<3>>(spline);
+    const Vec3 offset = wrapped ? Vec3(10, -3, 7) : Vec3();
+    if (wrapped) curve = std::make_shared<TrimmedCurve<3>>(
+        std::make_shared<TransformedCurve>(curve, Transform3::translation(offset)), 3.2, 4);
+    const Vec3 a = curve->point(3.2), b = curve->point(4), c = Vec3(1, 2, 0) + offset;
+    const double bc = distance(b, c), ca = distance(c, a);
+    Body body = Body::buildSheet({a, b, c},
+        {{0, 1, curve, {3.2, 4}}, {1, 2, std::make_shared<Line<3>>(b, c - b), {0, bc}},
+         {2, 0, std::make_shared<Line<3>>(c, a - c), {0, ca}}},
+        {{std::make_shared<Plane>(Frame3(offset, Vec3(0, 0, 1), Vec3(1, 0, 0))), true,
+          {{{0, true, nullptr}, {1, true, nullptr}, {2, true, nullptr}}}}});
+    FK_CHECK(computePCurves(body) == 0);
+    return body;
+}
+
+}
+
+FK_TEST(StepWritesRestrictedSplineEdges) {
+    for (bool rational : {false, true}) for (bool wrapped : {false, true}) {
+        const Body body = closedSplineEndSheet(rational, wrapped);
+        const double expectedArea = faceArea(body, body.faces().front());
+        for (StepSchema schema : {StepSchema::AP203, StepSchema::AP214, StepSchema::AP242}) {
+            ExchangeBody exchange; exchange.name = "tratto finale"; exchange.body = body;
+            StepWriteOptions options; options.schema = schema;
+            const std::string content = writeStep({exchange}, options);
+            FK_CHECK(content.size() < 6000); // il resto della spline non deve gonfiare ogni bordo
+            const auto read = readStep(content);
+            FK_CHECK(read.bodies.size() == 1);
+            if (read.bodies.empty()) continue;
+            const Body &restored = read.bodies.front().body;
+            FK_CHECK(checkBody(restored).empty());
+            FK_CHECK_NEAR(faceArea(restored, restored.faces().front()), expectedArea, 1e-9);
+            const Edge &edge = restored.edge(restored.edges().front());
+            for (int k = 0; k <= 20; ++k) {
+                const double t = 3.2 + 0.8 * k / 20.0;
+                FK_CHECK(near(edge.curve->point(t), body.edge(body.edges().front()).curve->point(t), 1e-11));
+            }
+            const TopoDS_Shape shape = readWithOcct(content);
+            FK_CHECK(!shape.IsNull() && BRepCheck_Analyzer(shape).IsValid());
+            GProp_GProps area; BRepGProp::SurfaceProperties(shape, area);
+            FK_CHECK_NEAR(area.Mass(), expectedArea, 1e-9);
+        }
+    }
+}
+
+FK_TEST(ExchangeClosedSplineKeepsEndSpan) {
+    // Riproduce i vecchi STEP con la spline intera: i vertici indicano la
+    // coda [3.2,4], ma la proiezione della chiusura sceglie t=0.
+    for (bool rational : {false, true}) {
+        Body source = closedSplineEndSheet(rational, false);
+        detail::RawModel model;
+        for (auto v : source.vertices()) model.points.push_back(source.vertex(v).point);
+        for (auto id : source.edges()) {
+            const auto &edge = source.edge(id);
+            detail::RawEdge raw; raw.start = source.edgeStart(id).index; raw.end = source.edgeEnd(id).index;
+            raw.curve = edge.curve; model.edges.push_back(raw);
+        }
+        detail::RawFace face; face.surface = source.face(source.faces().front()).surface;
+        face.loops = {{{0, true}, {1, true}, {2, true}}}; model.faces.push_back(face);
+        const Body read = detail::assembleBody(model, false);
+        FK_CHECK(checkBody(read).empty());
+        const Edge &edge = read.edge(read.edges().front());
+        FK_CHECK_NEAR(edge.range.lo, 3.2, 1e-11);
+        FK_CHECK_NEAR(edge.range.hi, 4.0, 1e-11);
+        FK_CHECK_NEAR(faceArea(read, read.faces().front()), faceArea(source, source.faces().front()), 1e-9);
+    }
+}
+
+FK_TEST(ExchangeSplineRestrictionPreservesGeometry) {
+    for (int degree : {1, 2, 3, 5}) for (bool rational : {false, true}) {
+        std::vector<double> knots(degree + 1, 0.0), weights;
+        knots.insert(knots.end(), {1, 2, 3}); knots.insert(knots.end(), degree + 1, 4.0);
+        std::vector<Vec3> poles;
+        for (int i = 0; i < degree + 4; ++i) {
+            poles.push_back(Vec3(i, std::sin(double(i)), std::cos(2.0 * i)));
+            if (rational) weights.push_back(1.0 + 0.1 * i);
+        }
+        const BSplineCurve<3> source(degree, knots, poles, weights);
+        for (const Interval &range : {Interval{0, 4}, Interval{0, 0.75}, Interval{0.25, 4}, Interval{1, 3}, Interval{0.25, 2.75}}) {
+            const auto restricted = detail::boundedExchangeSpline(source, range);
+            FK_CHECK(restricted.domain().lo == range.lo && restricted.domain().hi == range.hi);
+            FK_CHECK(restricted.isRational() == rational);
+            for (int k = 0; k <= 20; ++k) {
+                const double t = range.lo + range.length() * k / 20.0;
+                FK_CHECK(near(restricted.point(t), source.point(t), 1e-11));
+                if (k && k < 20) FK_CHECK(near(restricted.derivative(t), source.derivative(t), 1e-10));
+            }
+        }
+    }
 }

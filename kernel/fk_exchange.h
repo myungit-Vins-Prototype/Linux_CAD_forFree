@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "fk_topology.h"
+#include "fk_bspline.h"
 
 // Interno ai formati di scambio (fk_step, fk_iges): il B-rep letto da un file
 // (vertici, edge con la curva e gli estremi, facce con la superficie, il verso
@@ -21,6 +22,10 @@
 //    per la distanza dagli estremi delle curve.
 //  - Poi computePCurves e checkBody (eccezione std::domain_error con il motivo).
 namespace ForgeCad::Kernel::detail {
+
+// Restrizione esatta ai soli nodi e poli usati dal tratto di un bordo.
+// Conserva pesi, parametro e continuita'; fuori dominio lascia la base intera.
+BSplineCurve<3> boundedExchangeSpline(const BSplineCurve<3> &spline, const Interval &range);
 
 struct RawEdge {
     int start = -1, end = -1;  // la curva va da start a end nel verso del parametro

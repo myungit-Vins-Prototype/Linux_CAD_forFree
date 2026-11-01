@@ -964,6 +964,16 @@ Body blendEdgesWith(const Body &body, const std::vector<EdgeId> &selected, doubl
             for (EdgeId e : edges) allSides.push_back(sidesOf(e));
         if (planar) {
             try {
+                // Una faccia puo' avere archi sul contorno esterno e solo segmenti
+                // nei fori: la faccia comune deve includere tutti i loop scelti.
+                FaceId common;
+                for (FinId fin : {body.edge(edges.front()).forward, body.edge(edges.front()).backward}) {
+                    const FaceId f = body.finFace(fin);
+                    bool everywhere = body.face(f).surface->type() == SurfaceType::Plane;
+                    for (EdgeId e : edges) everywhere = everywhere && (body.finFace(body.edge(e).forward) == f || body.finFace(body.edge(e).backward) == f);
+                    if (everywhere) common = f;
+                }
+                if (common.valid()) return blendPlanarChains(body, edges, size, chamfer, sides ? &allSides : nullptr, common, history);
                 // Semi: gli spigoli curvi (hanno una sola faccia piana possibile); le catene proseguono sui segmenti.
                 std::vector<EdgeId> seeds;
                 for (EdgeId e : edges)
@@ -974,16 +984,6 @@ Body blendEdgesWith(const Body &body, const std::vector<EdgeId> &selected, doubl
                     if (sides)
                         for (EdgeId e : runs) runSides.push_back(sidesOf(e));
                     if (runs.size() == edges.size()) return blendPlanarChains(body, runs, size, chamfer, sides ? &runSides : nullptr, FaceId(), history);
-                } else {
-                    // Solo segmenti (i bordi di una tasca poligonale): T e' la faccia piana comune a tutti.
-                    FaceId common;
-                    for (FinId fin : {body.edge(edges.front()).forward, body.edge(edges.front()).backward}) {
-                        const FaceId f = body.finFace(fin);
-                        bool everywhere = body.face(f).surface->type() == SurfaceType::Plane;
-                        for (EdgeId e : edges) everywhere = everywhere && (body.finFace(body.edge(e).forward) == f || body.finFace(body.edge(e).backward) == f);
-                        if (everywhere) common = f;
-                    }
-                    if (common.valid()) return blendPlanarChains(body, edges, size, chamfer, sides ? &allSides : nullptr, common, history);
                 }
             } catch (const std::domain_error &failure) {
                 note(failure);

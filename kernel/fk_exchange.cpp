@@ -305,6 +305,30 @@ static int repairFaceSenses(Body &body) {
     return flipped;
 }
 
+// Limita la spline al tratto effettivamente usato, mediante inserimento
+// esatto dei nodi: conserva parametro, pesi e continuita' dei nodi interni.
+BSplineCurve<3> boundedExchangeSpline(const BSplineCurve<3> &spline, const Interval &range) {
+    const Interval domain = spline.domain();
+    if (!range.isFinite() || !(range.hi > range.lo) || range.lo < domain.lo || range.hi > domain.hi
+        || (range.lo == domain.lo && range.hi == domain.hi)) return spline;
+    const int p = spline.degree();
+    const auto refined = spline.insertKnot(range.lo, p).insertKnot(range.hi, p);
+    const auto &knots = refined.knots();
+    const int first = int(std::lower_bound(knots.begin(), knots.end(), range.lo) - knots.begin());
+    const int last = int(std::upper_bound(knots.begin(), knots.end(), range.hi) - knots.begin());
+    const int missingFirst = p + 1 - refined.multiplicity(range.lo);
+    const int missingLast = p + 1 - refined.multiplicity(range.hi);
+    std::vector<double> boundedKnots(missingFirst, range.lo);
+    boundedKnots.insert(boundedKnots.end(), knots.begin() + first, knots.begin() + last);
+    boundedKnots.insert(boundedKnots.end(), missingLast, range.hi);
+    const int start = first - missingFirst;
+    const int count = int(boundedKnots.size()) - p - 1;
+    std::vector<Vec3> poles(refined.poles().begin() + start, refined.poles().begin() + start + count);
+    std::vector<double> weights;
+    if (refined.isRational()) weights.assign(refined.weights().begin() + start, refined.weights().begin() + start + count);
+    return BSplineCurve<3>(p, std::move(boundedKnots), std::move(poles), std::move(weights));
+}
+
 Body assembleBody(const RawModel &input, bool solid, std::vector<std::string> *notes, AssemblyMap *map) {
     if(map)*map={};
     RawModel model = input;
@@ -333,7 +357,17 @@ Body assembleBody(const RawModel &input, bool solid, std::vector<std::string> *n
         } else if (e.start == e.end) {
             if (!domain.isFinite()) throw std::domain_error("edge chiuso su una curva illimitata");
             ts = domain.lo, te = domain.hi;
-        } else if (te < ts) {
+        } else if (te < ts && domain.isFinite()
+                   && distance(curve.point(domain.lo), curve.point(domain.hi)) <= kLinearResolution) {
+            // Una B-spline chiusa non e' necessariamente periodica: la
+            // proiezione del vertice sulla chiusura puo' scegliere l'altro
+            // estremo del dominio. Conserva il tratto nel verso dell'edge,
+            // prima di decidere se la curva e' davvero percorsa al contrario.
+            const Vec3 &start = model.points[std::size_t(e.start)], &end = model.points[std::size_t(e.end)];
+            if (distance(curve.point(domain.hi), end) <= kLinearResolution) te = domain.hi;
+            else if (distance(curve.point(domain.lo), start) <= kLinearResolution) ts = domain.lo;
+        }
+        if (te < ts) {
             // La curva va dall'altra parte: si gira l'edge (e le sue fin).
             std::swap(e.start, e.end);
             std::swap(ts, te);

@@ -442,9 +442,9 @@ public:
     // setHelixPickCallback riceve il corpo, il tipo e un punto dello spigolo o della faccia.
     QString beginHelixPick();
     void setHelixPickCallback(std::function<void(int, int, EdgePoint)> callback);
-    // Estensione di una superficie: si scelgono i suoi bordi (come gli spigoli
-    // dei raccordi), poi setExtendPickCallback chiede la distanza.
-    QString beginExtendPick(bool linear);
+    // Estensione: attiva la scelta dei bordi; deferPreview permette al pannello
+    // di apparire prima del calcolo e gestire selezione e anteprima insieme.
+    QString beginExtendPick(bool linear, bool deferPreview = false);
     void setExtendPickCallback(std::function<void(int, QVector<EdgePoint>)> callback);
     // Tipo dell'estensione per l'anteprima durante la scelta dei bordi.
     void setEdgePickLinear(bool linear);

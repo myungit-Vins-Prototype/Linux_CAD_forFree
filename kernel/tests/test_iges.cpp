@@ -26,6 +26,8 @@
 #include <random>
 
 #include "fk_blend.h"
+#include "fk_bspline.h"
+#include "fk_pcurve.h"
 #include "fk_body_check.h"
 #include "fk_body_io.h"
 #include "fk_exchange.h"
@@ -330,5 +332,38 @@ FK_TEST(IgesSewSpatialRepresentatives) {
         }
         detail::sewModel(model, tolerance);
         for (std::size_t i = 0; i < expected.size(); ++i) FK_CHECK(model.edges[i].start == expected[i]);
+    }
+}
+
+FK_TEST(IgesPreservesNonUniformSplineEdgeParameters) {
+    const Frame3 frame(Vec3(), Vec3(0, 0, 1), Vec3(1, 0, 0));
+    Body body = makeBox(frame, 4, 3, 2);
+    for (auto id : body.edges()) {
+        Edge &edge = body.edge(id);
+        const double a = edge.range.lo, b = edge.range.hi;
+        BSplineCurve<3> spline(1, {a, a, b, b}, {edge.curve->point(a), edge.curve->point(b)});
+        for (double fraction : {1e-6, 1e-4, 0.01, 0.3, 0.7, 0.999})
+            spline = spline.insertKnot(a + (b - a) * fraction);
+        edge.curve = std::make_shared<BSplineCurve<3>>(spline);
+    }
+    ExchangeBody exchange; exchange.name = "nodi non uniformi"; exchange.body = body;
+    for (IgesMode mode : {IgesMode::Solids, IgesMode::Surfaces}) {
+        IgesWriteOptions options; options.mode = mode;
+        const auto read = readIges(writeIges({exchange}, options));
+        FK_CHECK(read.bodies.size() == 1);
+        if (read.bodies.empty()) continue;
+        const Body &restored = read.bodies.front().body;
+        FK_CHECK(checkBody(restored).empty());
+        FK_CHECK_NEAR(massProperties(restored).volume, 24.0, 1e-9);
+        for (auto id : restored.edges()) {
+            const Edge &edge = restored.edge(id);
+            // Il parametro resta una lunghezza: la giunzione dei Bezier non
+            // deve assegnare una unita' a ogni tratto, qualunque sia la sua lunghezza.
+            const double length = distance(restored.vertex(restored.edgeStart(id)).point,
+                                           restored.vertex(restored.edgeEnd(id)).point);
+            FK_CHECK_NEAR(edge.range.length(), length, 1e-10);
+            for (double fraction : {0.001, 0.2, 0.8})
+                FK_CHECK_NEAR(norm(edge.curve->derivative(edge.range.lo + fraction * edge.range.length())), 1.0, 1e-10);
+        }
     }
 }

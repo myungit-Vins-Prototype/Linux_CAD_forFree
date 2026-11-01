@@ -5865,13 +5865,107 @@ public:
             dialog->findChild<QDialogButtonBox *>()->button(QDialogButtonBox::Ok)->click();
         });
         const auto result = extendDialog(&parent, &viewport, QStringLiteral("Test contorni estensione"), 0, -1,
-            selected, 1.0, false, true, [&](const QVector<EdgePoint> &edges, double, bool) {
+            selected, 1.0, false, false, [&](int, const QVector<EdgePoint> &edges, double, bool) {
                 appliedEdges = edges.size();
                 return QString();
             });
         require(result.applied && appliedEdges == 4 && result.edges.size() == 4,
                 "conferma e riselezione usano il contorno completo");
+        extensionPanelPicking();
         std::cout << "Estensione: scelta del contorno completo OK" << std::endl;
+    }
+    static void extensionPanelPicking() {
+        using namespace ForgeCad;
+        using namespace Kernel;
+        PdfWindow window;
+        auto &view=*window.viewport_;
+        window.resize(1400,950);
+        const Body plate=makePlaneSheet(Frame3(),10);
+        ExtrusionObject source;source.name="Lastra";source.feature=BodyFeature::Imported;source.solid=false;source.featureId=10001;
+        source.importData=QByteArray::fromStdString(writeStep({{"Lastra",plate,false,{0,0,0},nullptr,{}}}));
+        source.forgeBody=std::make_shared<const Body>(plate);forgeTessellate(plate,0,source.display);
+        view.extrusions_={source};view.documentChanged();view.history_.clear();
+        view.setReferencePlanesVisible(false);view.setGridVisible(false);view.setAxesVisible(false);view.setViewNormal(0);
+        for(auto *dock:window.findChildren<QDockWidget *>())dock->hide();
+        window.show();
+        QElapsedTimer settling;settling.start();
+        do{QApplication::processEvents();QThread::msleep(2);}while(settling.elapsed()<200);
+        view.camera_.zoom_=14;
+        QAction *command=nullptr;
+        for(auto *action:window.findChildren<QAction *>())if(action->text()==QStringLiteral("Estendi superficie...")){command=action;break;}
+        require(command && command->isEnabled(),"comando reale Estendi superficie disponibile");
+        const auto waitPreview=[&] {
+            QElapsedTimer timer;timer.start();
+            do {QApplication::processEvents();QThread::msleep(1);}while(view.previewPending()&&timer.elapsed()<5000);
+            require(!view.previewPending()&&view.previewError().isEmpty()&&view.preview_.valid,"anteprima estensione pronta");
+        };
+        for(int mode=0;mode<3;++mode) {
+            view.selection_=mode==1?SceneSelection{SceneObjectKind::Extrusion,0,-1}:SceneSelection{};
+            view.selectedFace_={};
+            bool inspected=false;std::exception_ptr failure;
+            QTimer::singleShot(0,&window,[&] {
+                QDialog *panel=nullptr;
+                for(auto *candidate:window.findChildren<QDialog *>())if(candidate->isVisible()&&candidate->windowTitle()==QStringLiteral("Estendi superficie")){panel=candidate;break;}
+                try {
+                    require(panel&&view.edgePicking_&&view.edgePickPanelActive(),"pannello visibile prima di selezionare i bordi");
+                    require(!panel->isModal(),"pannello estensione lascia interattiva la vista");
+                    auto *edges=panel->findChild<QListWidget *>("extendEdges");
+                    auto *complete=panel->findChild<QCheckBox *>("extendCompleteContours");
+                    auto *distance=panel->findChild<QDoubleSpinBox *>("extendDistance");
+                    auto *type=panel->findChild<QComboBox *>("extendType");
+                    require(edges&&complete&&distance&&type&&edges->count()==0&&!view.previewPending(),"avvio senza bordi e senza calcolo anticipato");
+                    QKeyEvent enter(QEvent::KeyPress,Qt::Key_Return,Qt::NoModifier);view.keyPressEvent(&enter);
+                    require(panel->isVisible()&&panel->findChild<QWidget *>("functionApplyError")->isVisible()&&view.extrusions_.size()==1,
+                        "Invio senza bordi mantiene il pannello aperto e informa");
+                    QApplication::processEvents();
+                    QPoint at;double best=-1e9;
+                    for(const auto &edge:source.display.edges)if(edge.size()>=2){
+                        const auto point=view.projectWorldPoint(.5f*(edge.front()+edge.back()));
+                        if(point.x()>best){best=point.x();at=point.toPoint();}
+                    }
+                    const auto click=[&] {
+                        QMouseEvent press(QEvent::MouseButtonPress,at,view.mapToGlobal(at),Qt::LeftButton,Qt::LeftButton,Qt::NoModifier);
+                        view.mousePressEvent(&press);
+                        QMouseEvent release(QEvent::MouseButtonRelease,at,view.mapToGlobal(at),Qt::LeftButton,Qt::NoButton,Qt::NoModifier);
+                        view.mouseReleaseEvent(&release);
+                    };
+                    click();require(edges->count()==1&&view.edgePickBody()==0&&complete->isEnabled(),"clic nel viewport aggiorna bordi nel pannello aperto");
+                    complete->setChecked(true);require(edges->count()==4,"contorno completo aggiornato dopo il primo clic");
+                    click();require(edges->count()==0&&!complete->isEnabled()&&!complete->isChecked(),"rimozione dell'ultimo bordo azzera anche il contorno completo");
+                    click();require(edges->count()==1&&complete->isEnabled(),"nuova selezione nello stesso pannello dopo rimozione");
+                    distance->setValue(2);type->setCurrentIndex(mode==1?1:0);
+                    waitPreview();
+                    auto *scroll=panel->findChild<QScrollArea *>("functionDialogScroll");
+                    require(scroll&&distance->isVisibleTo(panel)&&type->isVisibleTo(panel)&&edges->isVisibleTo(panel),
+                        "controlli del pannello visibili nel form scorrevole");
+                    scroll->ensureWidgetVisible(distance);QApplication::processEvents();
+                    require(scroll->viewport()->rect().intersects(QRect(distance->mapTo(scroll->viewport(),QPoint()),distance->size())),
+                        "distanza raggiungibile scorrendo anche con pannello compatto");
+                    const auto qa=qEnvironmentVariable("FORGECAD_EXTEND_QA_DIR");
+                    if(!qa.isEmpty()){
+                        QDir().mkpath(qa);require(window.grab().save(qa+QStringLiteral("/estendi-%1.png").arg(mode)),"cattura pannello estensione reale");
+                    }
+                    inspected=true;
+                    if(mode==1){QKeyEvent accept(QEvent::KeyPress,Qt::Key_Return,Qt::NoModifier);view.keyPressEvent(&accept);}
+                    else if(mode==0){QKeyEvent cancel(QEvent::KeyPress,Qt::Key_Escape,Qt::NoModifier);view.keyPressEvent(&cancel);}
+                    else panel->close();
+                } catch(...) {failure=std::current_exception();if(panel)panel->reject();}
+            });
+            command->trigger();
+            if(failure)std::rethrow_exception(failure);
+            require(inspected&&!view.edgePicking_&&!view.edgePickPanelActive()&&!view.edgePickPanelAccept_&&!view.edgePickPanelCancel_
+                &&!view.previewPending()&&!view.preview_.valid,"chiusura ripulisce selezione, callback e anteprima");
+            if(mode==1){
+                require(view.extrusions_.size()==2&&view.extrusions_[1].feature==BodyFeature::SheetExtend
+                    &&view.extrusions_[1].blendEdges.size()==1&&view.extrusions_[1].blendSize==2&&view.extrusions_[1].extendLinear
+                    &&view.extrusions_[1].forgeBody&&!view.extrusions_[0].visible,"Invio crea l'estensione con i valori del pannello");
+                view.undo();require(view.extrusions_.size()==1&&view.extrusions_[0].visible,"Undo estensione ripristina la superficie sorgente");
+                view.redo();require(view.extrusions_.size()==2&&view.extrusions_[1].forgeBody,"Redo estensione conserva il risultato");view.undo();
+            }else require(view.extrusions_.size()==1&&view.extrusions_[0].visible,"Esc/chiusura senza modificare la superficie");
+        }
+        window.documentModified_=false;
+        window.hide();
+        std::cout<<"PASS Estendi: comando reale, pannello prima dei bordi, mouse, contorni, anteprima, Invio/Esc/chiusura e Undo/Redo"<<std::endl;
     }
     static void trimPartPicking() {
         using namespace ForgeCad;

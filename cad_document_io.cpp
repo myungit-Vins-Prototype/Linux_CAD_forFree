@@ -77,6 +77,7 @@ constexpr char kMagic[4] = {'F', 'C', 'A', 'D'};
 // 53 strumenti sulle superfici e relative estensioni opzionali SRF1.
 // 54 nomi topologici di appoggi schizzo e superfici dei vincoli Pierce.
 // 57 riferimenti associativi dello schizzo (sorgente persistente e cache).
+// 60 visibilita delle conversioni esplicite, distinta dalle cache automatiche.
 constexpr quint16 kVersion = kDocumentFormatVersion;
 constexpr quint8 kZlib = 1;
 constexpr quint8 kZstd = 2;
@@ -210,6 +211,7 @@ void write(QDataStream &out, const SketchObject &sketch, quint16 version) {
             const SketchLinkedReference data = link ? *link : SketchLinkedReference{};
             writeRefs(out, {data.source});
             out << data.source.point.name << data.contact << data.construction << data.halfLength << data.error;
+            if (version >= 60) out << data.visible;
             out << quint32(data.entities.size());
             for (const auto &entity : data.entities) writeRef(out, entity);
         }
@@ -325,6 +327,7 @@ bool read(ReadStream &in, SketchObject &sketch, quint16 version) {
             if (!readRefs(in, refs, version) || refs.size() != 1) return false;
             data->source = refs.front();
             in >> data->source.point.name >> data->contact >> data->construction >> data->halfLength >> data->error;
+            if (version >= 60) in >> data->visible;
             if (!std::isfinite(data->halfLength) || data->halfLength <= 0.0) return false;
             quint32 entities = 0;
             if (!readCount(in, entities, 12) || !entities) return false;

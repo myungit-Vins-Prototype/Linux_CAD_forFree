@@ -127,6 +127,7 @@ I pannelli hanno un’intestazione compatta e un menu **⋮** per l’aggancio a
 - Selezione di bordi e curve per definire contorni, sezioni e guide.
 - Copia e rimozione di facce.
 - Offset, estensione e taglio delle superfici.
+- **Estendi superficie** apre subito il pannello: i bordi si aggiungono o rimuovono nella vista, con distanza, tipo, contorno completo e anteprima nello stesso pannello.
 - **Estendi fino a riferimento**: un bordo libero prosegue fino a un piano o a una faccia, anche curva, entro una distanza massima di ricerca.
 - **Superficie da rete di curve**: due famiglie ordinate U/V, con un solo incrocio 3D per coppia, generano celle di Coons cucite con continuità interna G0.
 - Riempimenti con continuità **G0/G1/G2 per singola faccia adiacente**, ereditabile dall'impostazione comune; influenza e guida della forma restano associate alla faccia.

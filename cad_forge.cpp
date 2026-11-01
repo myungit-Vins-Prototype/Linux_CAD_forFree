@@ -1161,14 +1161,24 @@ ForgeBody forgeBoolean(const ForgeBody &first, const ForgeBody &second, ::Boolea
     // Lamina con solido: il kernel tiene la parte della lamina dentro
     // (intersezione) o fuori (differenza) e rifiuta gli altri casi.
     try {
-        BodyHistory declared;
-        Body result = booleanOperation(*first, *second, Kernel::BooleanOperation(int(operation)), {}, &declared);
-        if (result.faces().empty()) {
+        const auto kind = Kernel::BooleanOperation(int(operation));
+        ForgeBody geometry;
+        try {
+            geometry = forgeBooleanWithHistory(first, second, kind);
+        } catch (const std::domain_error &) {
+            if (operation != ::BooleanOperation::Union) throw;
+            // L'unione e' commutativa, ma nei contatti tolleranti la scelta
+            // della geometria condivisa puo' dipendere dall'ordine. Un solo
+            // nuovo tentativo, con gli stessi budget e gli stessi controlli.
+            // La genealogia registra l'ordine effettivo dei B-rep e viene
+            // poi ricondotta agli operandi della feature tramite identita'.
+            // OperationCancelled non e' intercettata da questo recupero.
+            geometry = forgeBooleanWithHistory(second, first, kind);
+        }
+        if (geometry->faces().empty()) {
             setError(error, QStringLiteral("Il risultato dell'operazione e' vuoto: i due solidi non si sovrappongono."));
             return nullptr;
         }
-        const ForgeBody geometry = std::make_shared<const Body>(std::move(result));
-        registerDeclaredHistory(geometry, {first, second}, std::move(declared));
         return geometry;
     } catch (const std::exception &failure) {
         setError(error, QStringLiteral("L'operazione booleana non e' riuscita: %1").arg(QString::fromUtf8(failure.what())));

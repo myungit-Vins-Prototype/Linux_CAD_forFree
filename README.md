@@ -127,6 +127,7 @@ Panels have a compact header and a **⋮** menu for left/right anchoring and **U
 - Selection of edges and curves to define boundaries, sections, and guides.
 - Copying and deleting faces.
 - Offsetting, extending, and trimming surfaces.
+- **Extend surface** opens its panel immediately: add or remove edges in the viewport while adjusting distance, extension type, complete contours, and preview in the same panel.
 - Sewing multiple surfaces; creating a solid when they enclose a valid volume.
 - Adding thickness to turn surfaces into solids.
 - Linear and circular patterns and mirroring of surfaces.

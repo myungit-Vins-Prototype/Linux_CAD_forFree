@@ -196,9 +196,18 @@ int writeIgesCurve(IgesWriter &w, const Curve<3> &curve, const Interval &range, 
     }
     BSplineCurve<3> spline(1, {0, 0, 1, 1}, {Vec3(), Vec3(1, 0, 0)});
     try {
-        const std::vector<BSplineCurve<3>> pieces = rationalBezierPieces(curve, range);
-        if (pieces.empty()) throw std::domain_error("vuota");
-        spline = joinBezierPieces(pieces);
+        if (basis->type() == CurveType::BSpline) {
+            // I nodi originali evitano salti artificiali della velocita' e
+            // migliaia di tratti nelle SP-curve e nella mesh al ritorno.
+            spline = detail::boundedExchangeSpline(static_cast<const BSplineCurve<3> &>(*basis), range);
+        } else {
+            const std::vector<BSplineCurve<3>> pieces = rationalBezierPieces(curve, range);
+            if (pieces.empty()) throw std::domain_error("vuota");
+            std::vector<double> breaks;
+            for (const auto &piece : pieces) breaks.push_back(piece.domain().lo);
+            breaks.push_back(pieces.back().domain().hi);
+            spline = joinBezierPieces(pieces, breaks);
+        }
     } catch (const std::exception &) {
         const detail::RowSpline fit = detail::fitQuinticRows([&](double t, bool left, Vec3 *out) {
             if (left) curve.evaluateLeft(t, 2, out);

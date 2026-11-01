@@ -323,6 +323,32 @@ FK_TEST(CurveCurveManySpansAnalytic) {
             }
 }
 
+// Tratti piccoli, collineari e contigui: la fascia di tolleranza dei box
+// non deve essere confusa con un intervallo geometrico sovrapposto.
+FK_TEST(CurveCurveSmallEndpointContacts) {
+    for(double length:{1e-4,5e-3,.1}) for(bool rational:{false,true}) for(bool swapped:{false,true}) {
+        const std::vector<double> weights=rational?std::vector<double>{1,.75,1.5,1}:std::vector<double>{};
+        const BSplineCurve<2> a(3,{0,0,0,0,1,1,1,1},
+            {{0,1},{length/3,1},{2*length/3,1},{length,1}},weights);
+        for(double offset:{0.,2e-6}) {
+            const BSplineCurve<2> b(3,{-3,-3,-3,-3,7,7,7,7},
+                {{-length/5,1+offset},{-2*length/15,1+offset},{-length/15,1+offset},{0,1+offset}},weights);
+            const auto hit=swapped?intersectCurves(b,b.domain(),a,a.domain(),1e-6)
+                                  :intersectCurves(a,a.domain(),b,b.domain(),1e-6);
+            FK_CHECK(!hit.overlap);
+            if(offset==0){
+                FK_CHECK(hit.points.size()==1);
+                if(!hit.points.empty()){
+                    const auto &p=hit.points.front();
+                    FK_CHECK(distance(p.point,Vec2(0,1))<=1e-6);
+                    FK_CHECK(distance((swapped?b:a).point(p.s),p.point)<=1e-6);
+                    FK_CHECK(distance((swapped?a:b).point(p.t),p.point)<=1e-6);
+                }
+            }else FK_CHECK(hit.points.empty());
+        }
+    }
+}
+
 FK_TEST(CurveCurveManySpansContactsAndConcurrency) {
     const auto a = manySpanPolyline(64, true, 0, 2);
     const auto b = manySpanPolyline(128, false, 0, 1);

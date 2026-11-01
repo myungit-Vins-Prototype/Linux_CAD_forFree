@@ -590,7 +590,7 @@ QString CadViewport::appendReferenceAt(const QPoint &position, SketchObject &wor
     if (!allowedSketchReference(ref)) return QStringLiteral("Il riferimento deve precedere lo schizzo nella storia (dipendenza circolare).");
     const bool contact = ref.kind == 7 && ForgeCad::Kernel::norm(ForgeCad::Kernel::cross(
         ForgeCad::sketchAxes(work).zDir(), ForgeCad::sketchAxes(sketches_[ref.index]).zDir())) > 1e-10;
-    return ForgeCad::appendLinkedSketchReference(work, ref, sketches_, extrusions_, contact, construction);
+    return ForgeCad::appendLinkedSketchReference(work, ref, sketches_, extrusions_, contact, construction, 100.0, nullptr, true);
 }
 
 QString CadViewport::convertReferenceAt(const QPoint &position) {
@@ -636,7 +636,7 @@ QString CadViewport::addSectionReferences(int *added ) {
         SketchObject attempt = work;
         GeometryRef source; source.kind = 11; source.index = index; source.featureId = body.featureId;
         const QString error = allowedSketchReference(source)
-            ? ForgeCad::appendLinkedSketchReference(attempt,source,sketches_,extrusions_,true,referencesConstruction_)
+            ? ForgeCad::appendLinkedSketchReference(attempt,source,sketches_,extrusions_,true,referencesConstruction_,100.0,nullptr,true)
             : QStringLiteral("Il corpo deve precedere lo schizzo nella storia.");
         if (error.isEmpty()) {
             work = attempt;

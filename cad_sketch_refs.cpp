@@ -647,14 +647,27 @@ QString projectLinkedReference(SketchObject &target, GeometryRef ref, bool conta
 
 QString appendLinkedSketchReference(SketchObject &sketch, GeometryRef source,
                                    const QVector<SketchObject> &sketches, const QVector<ExtrusionObject> &bodies,
-                                   bool contact, bool construction, double halfLength, QVector<SketchEntity> *created) {
+                                   bool contact, bool construction, double halfLength, QVector<SketchEntity> *created, bool visible) {
     if (isSketchRef(source) || isBodyRef(source)) {
         source.index = sketchReferenceSourceIndex(source, sketches, bodies);
         if (source.index < 0) return QStringLiteral("Sorgente del riferimento mancante.");
         source.featureId = isSketchRef(source) ? sketches[source.index].storyId : bodies[source.index].featureId;
     }
-    for (const auto &link : sketch.linkedReferences)
+    for (auto &link : sketch.linkedReferences)
         if (link && link->contact == contact && sameSketchSource(link->source, source)) {
+            if (visible && link->error.isEmpty()) {
+                auto data = std::make_shared<SketchLinkedReference>(*link);
+                data->visible = true;
+                data->construction = construction;
+                for (const auto &entity : data->entities) {
+                    if (entity.kind == 0) {
+                        sketch.constructionSegments.removeAll(entity.element);
+                        if (construction) sketch.constructionSegments.append(entity.element);
+                        else sketch.symmetryAxes.removeAll(entity.element);
+                    } else sketch.curves[entity.element].construction = construction;
+                }
+                link = std::move(data);
+            }
             if (created) for (const auto &entity : link->entities) created->append({entity.kind, entity.element});
             return link->error;
         }
@@ -679,7 +692,7 @@ QString appendLinkedSketchReference(SketchObject &sketch, GeometryRef source,
             }
     }
     auto data = std::make_shared<SketchLinkedReference>();
-    data->source = source; data->contact = contact; data->construction = construction; data->halfLength = halfLength;
+    data->source = source; data->contact = contact; data->construction = construction; data->visible = visible; data->halfLength = halfLength;
     for (const auto &segment : projected.segments) {
         const int index = sketch.segments.size();
         appendSegment(sketch, segment.first, segment.second, construction);

@@ -210,10 +210,10 @@ QString CadViewport::beginHelixPick() {
 
 void CadViewport::setHelixPickCallback(std::function<void(int, int, EdgePoint)> callback) { helixPickFinished_ = std::move(callback); }
 
-QString CadViewport::beginExtendPick(bool linear) {
+QString CadViewport::beginExtendPick(bool linear, bool deferPreview) {
     edgePickEdit_ = -1;
     edgePickLinear_ = linear;
-    return startEdgePick(false, true);
+    return startEdgePick(false, true, false, deferPreview);
 }
 
 void CadViewport::setExtendPickCallback(std::function<void(int, QVector<EdgePoint>)> callback) { extendPickFinished_ = std::move(callback); }

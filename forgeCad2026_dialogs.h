@@ -31,7 +31,7 @@ struct ThreadChoice { const char *name; double diameter; double pitch; };
 
 struct ExtendDialogResult {
     QVector<EdgePoint> edges;
-    bool applied = false, reselect = false;
+    bool applied = false;
     double distance = 0.0;
     bool linear = false;
 };
@@ -262,13 +262,12 @@ void massPropertiesDialog(QWidget *parent, CadViewport *viewport);
 bool trimDialog(QWidget *parent, CadViewport *viewport, const QString &title, int replaced, ExtrusionObject definition,
                        const std::function<QString(const ExtrusionObject &)> &apply);
 
-// Finestra dell'estensione di una superficie: distanza e tipo (stessa
-// superficie o lineare), con l'anteprima; "Bordi..." (se `allowReselect`)
-// torna alla scelta dei bordi.
+// Pannello dell'estensione: distanza, tipo e contorni completi. pickInView
+// aggiorna corpo e bordi dal picking gia attivo senza chiudere il pannello.
 QVector<EdgePoint> completeExtensionContours(const ForgeCad::ForgeBody &body, const QVector<EdgePoint> &edges);
 
 ExtendDialogResult extendDialog(QWidget *parent, CadViewport *viewport, const QString &title, int base, int hidden, const QVector<EdgePoint> &edges,
-                                       double distance, bool linear, bool allowReselect, const std::function<QString(const QVector<EdgePoint> &, double, bool)> &apply);
+                                       double distance, bool linear, bool pickInView, const std::function<QString(int, const QVector<EdgePoint> &, double, bool)> &apply);
 
 // Finestra della rivoluzione (anche per modificarne una: lo schizzo resta
 // quello, `fixedSketch`): schizzo, asse (dall'elenco o scelto nella vista: un

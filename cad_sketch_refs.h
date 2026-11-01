@@ -19,12 +19,14 @@ namespace ForgeCad {
 
 // Crea/riusa un riferimento vivo. I dati geometrici sono cache governate
 // dalla sorgente, senza Fix; il refresh conserva gli indici dei vincoli.
+// visible distingue le conversioni esplicite dalle cache automatiche; rende
+// visibile anche un riferimento gia presente senza duplicarlo o mutare Undo.
 int sketchReferenceSourceIndex(const GeometryRef &source, const QVector<SketchObject> &sketches,
                               const QVector<ExtrusionObject> &bodies);
 QString appendLinkedSketchReference(SketchObject &sketch, GeometryRef source,
                                    const QVector<SketchObject> &sketches, const QVector<ExtrusionObject> &bodies,
                                    bool contact = false, bool construction = true, double halfLength = 100.0,
-                                   QVector<SketchEntity> *created = nullptr);
+                                   QVector<SketchEntity> *created = nullptr, bool visible = false);
 QString refreshLinkedSketchReferences(SketchObject &sketch, const QVector<SketchObject> &sketches,
                                      const QVector<ExtrusionObject> &bodies);
 

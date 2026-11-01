@@ -389,6 +389,60 @@ FK_TEST(BlendTangentChains) {
     blended(pocket, floor, r, false, vPocket + waste * straight + ringVolume(R, r, true));
 }
 
+FK_TEST(BlendRoundedPlateWithPolygonalHoles) {
+    // Bordo esterno misto archi/segmenti e 18 fori rettangolari nella stessa
+    // faccia: il recupero a catene piane deve includere anche i loop senza archi.
+    const double w = 120.0, d = 80.0, corner = 8.0, h = 4.0, r = 2.0;
+    std::vector<ProfileSegment> segments = roundedRectangle(Vec2(0, 0), w, d, corner);
+    for (int row = 0; row < 3; ++row) for (int column = 0; column < 6; ++column) {
+        const double x = 18.0 + 16.0 * column, y = 12.0 + 22.0 * row;
+        const auto hole = polygon({Vec2(x, y), Vec2(x + 6.0, y), Vec2(x + 6.0, y + 14.0), Vec2(x, y + 14.0)});
+        segments.insert(segments.end(), hole.begin(), hole.end());
+    }
+    const auto profile = buildProfile(segments, 1e-9);
+    FK_CHECK(profile.regions.size() == 1 && profile.regions.front().holes.size() == 18);
+    const Body base = makeExtrusion(Frame3(), profile.regions.front(), h);
+    std::vector<EdgeId> selected;
+    for (const Vec3 &p : edgesAtHeight(base, h)) selected.push_back(nearestEdge(base, p, 1e-7));
+    FK_CHECK(selected.size() == 80);
+    const std::string original = writeBodyBinary(base);
+    const Body rounded = blendEdges(base, selected, r, false);
+    FK_CHECK(writeBodyBinary(base) == original);
+    FK_CHECK(checkBody(rounded, {true, true}).empty());
+    for (EdgeId e : rounded.edges()) FK_CHECK(!rounded.isLaminar(e));
+    // 80 raccordi, senza perdere fori o raccordare involontariamente il fondo.
+    FK_CHECK(rounded.faces().size() == base.faces().size() + selected.size());
+    FaceId cap;
+    for (FaceId f : rounded.faces()) {
+        const auto *plane = dynamic_cast<const Plane *>(rounded.face(f).surface.get());
+        if (plane && std::fabs(plane->frame().origin().z() - h) < 1e-9) cap = f;
+    }
+    FK_CHECK(cap.valid());
+    if (cap.valid()) FK_CHECK(rounded.face(cap).loops.size() == 19);
+    // Volume indipendente: sezione orizzontale con esterno contratto e fori
+    // rettangolari allargati di inset; Simpson sulla fascia del quarto di cerchio.
+    const auto sectionArea = [&](double inset) {
+        return (w - 2.0 * inset) * (d - 2.0 * inset)
+            - (4.0 - kPi) * (corner - inset) * (corner - inset)
+            - 18.0 * (6.0 + 2.0 * inset) * (14.0 + 2.0 * inset);
+    };
+    const int intervals = 2048;
+    const double step = kHalfPi / intervals;
+    double sum = 0.0;
+    for (int i = 0; i <= intervals; ++i) {
+        const double theta = i * step;
+        sum += (i == 0 || i == intervals ? 1 : i % 2 ? 4 : 2)
+            * sectionArea(r * (1.0 - std::cos(theta))) * r * std::cos(theta);
+    }
+    const double expected = sectionArea(0.0) * (h - r) + sum * step / 3.0;
+    FK_CHECK_NEAR(massProperties(rounded).volume, expected, 1e-8 * expected);
+    const auto mesh = tessellate(rounded, {});
+    FK_CHECK(mesh.failedFaces == 0 && mesh.faces.size() == rounded.faces().size());
+    const Body reopened = readBodyBinary(writeBodyBinary(rounded));
+    FK_CHECK(checkBody(reopened, {true, true}).empty());
+    FK_CHECK_NEAR(massProperties(reopened).volume, expected, 1e-8 * expected);
+}
+
 FK_TEST(BlendRadiusEqualsCornerRadius) {
     // Raggio del raccordo uguale a quello degli angoli arrotondati: negli
     // angoli il toro degenera in una sfera (centro sull'asse dell'arco) e le

@@ -261,11 +261,93 @@
             QPainter painter(&manualHighlight);view.highlightSketchElement(painter,manual,{0,0},Qt::yellow);
         }
         require(manualHighlight!=empty,"linee di costruzione disegnate dall'utente restano visibili");
+        // Il comando reale con il default "di costruzione" deve promuovere
+        // anche una cache automatica gia presente, senza duplicarla.
+        view.sketches_[1]=linked;view.history_.clear();view.setReferencesConstruction(true);
+        const auto lineAt=view.projectWorldPoint(view.mapSketchPoint({-2.5,3},source)).toPoint();
+        require(view.convertReferenceAt(lineAt).isEmpty(),"conversione reale di un segmento con costruzione attiva");
+        auto explicitConstruction=view.sketches_[1];
+        const auto entity=explicitConstruction.linkedReferences[1]->entities.front();
+        require(explicitConstruction.linkedReferences.size()==linked.linkedReferences.size()
+            && explicitConstruction.linkedReferences[1]->visible && !linked.linkedReferences[1]->visible
+            && explicitConstruction.isConstructionSegment(entity.element)
+            && !isHiddenSketchReference(explicitConstruction,entity.kind,entity.element),
+            "conversione esplicita visibile, costruzione conservata e metadata precedenti immutabili");
+        require(isHiddenSketchReference(explicitConstruction,0,linked.linkedReferences[0]->entities.front().element),
+            "la conversione non rende visibili gli altri riferimenti automatici");
+        QImage constructionHighlight=blank();{
+            QPainter painter(&constructionHighlight);view.highlightSketchElement(painter,explicitConstruction,{entity.kind,entity.element},Qt::yellow);
+        }
+        require(constructionHighlight!=empty && view.sketchGeometryPoints(explicitConstruction).size()>bounds.size(),
+            "conversioni di costruzione incluse in highlight e inquadratura");
+        view.undo();require(!view.sketches_[1].linkedReferences[1]->visible,"Undo ripristina il riferimento automatico nascosto");
+        view.redo();require(view.sketches_[1].linkedReferences[1]->visible,"Redo ripristina la conversione visibile");
+        const auto circleAt=view.projectWorldPoint(view.mapSketchPoint({3,4},source)).toPoint();
+        require(view.convertReferenceAt(circleAt).isEmpty() && view.sketches_[1].linkedReferences[2]->visible
+            && view.sketches_[1].curves.front().construction && !isHiddenSketchReference(view.sketches_[1],1,0),
+            "conversione reale di curva con costruzione attiva");
+        explicitConstruction=view.sketches_[1];
+        for(bool cache:{false,true}) {
+            DocumentState state,loaded;state.sketches={source,explicitConstruction};state.extrusions={body};QByteArray bytes;
+            require(encodeDocument(state,bytes,cache).isEmpty() && decodeDocument(bytes,loaded).isEmpty(),
+                "salvataggio e riapertura visibilita conversioni con e senza cache");
+            require(loaded.sketches[1].linkedReferences[1]->visible && loaded.sketches[1].linkedReferences[2]->visible
+                && !loaded.sketches[1].linkedReferences[0]->visible,"distinzione esplicito/automatico persistente");
+            require(refreshLinkedSketchReferences(loaded.sketches[1],loaded.sketches,state.extrusions).isEmpty()
+                && !isHiddenSketchReference(loaded.sketches[1],entity.kind,entity.element)
+                && loaded.sketches[1].curves.front().construction,"visibilita conservata rigenerando i riferimenti");
+        }
+        // Fixture storica effettiva: individua il byte della sola visibilita
+        // confrontando due definizioni identiche e rimuovilo dal formato 60.
+        DocumentState legacyState;legacyState.sketches={source,original};GeometryRef legacyRef;
+        legacyRef.kind=7;legacyRef.index=0;legacyRef.featureId=source.storyId;legacyRef.element={0,0,-1};
+        require(appendLinkedSketchReference(legacyState.sketches[1],legacyRef,legacyState.sketches,{}).isEmpty(),"riferimento fixture storica");
+        QByteArray hiddenBytes,visibleBytes;
+        require(encodeDocument(legacyState,hiddenBytes,false).isEmpty(),"fixture nascosta corrente");
+        require(appendLinkedSketchReference(legacyState.sketches[1],legacyRef,legacyState.sketches,{},false,true,100,nullptr,true).isEmpty(),"fixture visibile corrente");
+        require(encodeDocument(legacyState,visibleBytes,false).isEmpty(),"fixture visibile corrente salvata");
+        auto hiddenPayload=testDocumentUncompress(hiddenBytes,11),visiblePayload=testDocumentUncompress(visibleBytes,11);
+        require(hiddenPayload.size()==visiblePayload.size(),"visibilita senza variazioni del payload");
+        int visibilityOffset=-1,differences=0;
+        for(int i=0;i<hiddenPayload.size();++i)if(hiddenPayload[i]!=visiblePayload[i]){visibilityOffset=i;++differences;}
+        require(differences==1,"unico byte di visibilita nella fixture");hiddenPayload.remove(visibilityOffset,1);
+        for(quint16 version:{57,58,59}) {
+            DocumentState loaded;require(decodeDocument(documentReadFixture(hiddenPayload,version),loaded).isEmpty(),"riferimenti storici 57/58/59 leggibili");
+            require(!loaded.sketches[1].linkedReferences.front()->visible,"riferimenti automatici storici restano nascosti");
+            require(appendLinkedSketchReference(loaded.sketches[1],legacyRef,loaded.sketches,{},false,true,100,nullptr,true).isEmpty()
+                && loaded.sketches[1].linkedReferences.size()==1 && loaded.sketches[1].linkedReferences.front()->visible,
+                "conversioni storiche recuperabili senza duplicare geometria o perdere vincoli");
+        }
+        CadViewport bodyView;bodyView.resize(640,480);bodyView.setViewNormal(0);
+        bodyView.sketches_={original};bodyView.extrusions_={body};bodyView.extrusions_[0].visible=true;
+        forgeTessellate(*body.forgeBody,0,bodyView.extrusions_[0].display);
+        bodyView.activeSketch_=0;bodyView.sketchMode_=true;bodyView.camera_.zoom_=14;
+        QPoint edgeAt;double longest=-1;
+        for(const auto &points:bodyView.extrusions_[0].display.edges)if(points.size()>=2) {
+            const auto a=bodyView.projectWorldPoint(points.front()),b=bodyView.projectWorldPoint(points.back());
+            const double length=pointDistance(a,b);
+            if(length>longest){longest=length;edgeAt=((a+b)*.5).toPoint();}
+        }
+        const auto bodyConversionError=bodyView.convertReferenceAt(edgeAt);
+        require(bodyConversionError.isEmpty(),qPrintable(bodyConversionError));
+        require(bodyView.sketches_[0].linkedReferences.size()==1 && bodyView.sketches_[0].linkedReferences.front()->source.kind==4
+            && bodyView.sketches_[0].linkedReferences.front()->visible,"conversione reale di un bordo del corpo visibile con costruzione attiva");
+        const auto explicitBodyGeometry=bodyView.sketches_[0];
+        const auto bodyEntity=explicitBodyGeometry.linkedReferences.front()->entities.front();
+        require(!isHiddenSketchReference(explicitBodyGeometry,bodyEntity.kind,bodyEntity.element),"bordo convertito utilizzabile nello schizzo");
         if(gl) {
             view.sketches_[1]=original;view.analysisDirty_=true;view.geometrySnap_=false;view.lastSnapKind_=SnapKind::None;
             view.drawingTool_=DrawingTool::Select;view.sketchSelections_.clear();view.selectedPoints_.clear();view.selectedConstraints_.clear();
             view.sketchHover_={};view.constraintHover_=-1;view.lastMousePosition_={-1000,-1000};
-            view.show();for(int i=0;i<8;++i)QApplication::processEvents();require(view.isValid(),"contesto OpenGL per visibilita' riferimenti");
+            view.show();
+            // Wayland applica la dimensione scelta dal compositor dopo show:
+            // confronta framebuffer solo quando la geometria della finestra e stabile.
+            QElapsedTimer settling,stable;settling.start();stable.start();QSize previous=view.size();
+            do {
+                QApplication::processEvents();QThread::msleep(2);
+                if(view.size()!=previous){previous=view.size();stable.restart();}
+            }while(settling.elapsed()<2000&&(settling.elapsed()<150||stable.elapsed()<100));
+            require(stable.elapsed()>=100&&view.isValid(),"dimensione stabile e contesto OpenGL per visibilita' riferimenti");
             const auto capture=[&](const SketchObject &sketch) {
                 view.sketches_[1]=sketch;view.analysisDirty_=true;view.update();QApplication::processEvents();
                 const auto frame=view.grabFramebuffer();require(!frame.isNull(),"framebuffer riferimenti disponibile");return frame;
@@ -284,10 +366,16 @@
             view.sketches_[0].visible=false;
             const auto clean=capture(original),converted=capture(explicitGeometry);
             require(clean!=converted,"conversione esplicita del profilo visibile nel framebuffer");
+            view.sketchMode_=true;
+            const auto cleanConstruction=capture(original),convertedConstruction=capture(explicitConstruction);
+            require(cleanConstruction!=convertedConstruction,"conversione reale di costruzione visibile nello schizzo attivo");
+            require(cleanConstruction!=capture(explicitBodyGeometry),"bordo convertito visibile con il corpo sorgente nascosto");
+            view.sketchMode_=false;
+            require(capture(original)!=capture(explicitConstruction),"conversione di costruzione visibile anche fuori dallo schizzo");
             const auto path=qEnvironmentVariable("FORGECAD_REFERENCE_QA_DIR");
             if(!path.isEmpty()){
                 QDir().mkpath(path);require(baseline.save(path+"/schizzo.png") && withReferences.save(path+"/con-riferimenti.png")
-                    && converted.save(path+"/profilo-convertito.png"),"salvataggio immagini QA riferimenti");
+                    && converted.save(path+"/profilo-convertito.png") && convertedConstruction.save(path+"/costruzione-convertita.png"),"salvataggio immagini QA riferimenti");
             }
             view.close();
         }

@@ -447,6 +447,7 @@ struct SketchLinkedReference {
     QVector<ConstraintRef> entities;
     bool contact = false; // intersezioni esatte curva/piano (Pierce)
     bool construction = true;
+    bool visible = false; // conversione esplicita: visibile anche se di costruzione
     double halfLength = 100.0; // estensione grafica delle rette infinite
     QString error;
 };
@@ -455,6 +456,18 @@ inline bool isLinkedSketchEntity(const SketchObject &sketch, int kind, int eleme
     for (const auto &link : sketch.linkedReferences)
         if (link) for (const auto &entity : link->entities)
             if (entity.kind == kind && entity.element == element) return true;
+    return false;
+}
+
+// Le cache automatiche di costruzione restano nascoste; le conversioni
+// esplicite conservano la propria visibilita indipendentemente dal profilo.
+inline bool isHiddenSketchReference(const SketchObject &sketch, int kind, int element) {
+    const bool construction = kind == 0 ? sketch.isConstructionSegment(element)
+        : kind == 1 && element >= 0 && element < sketch.curves.size() && sketch.curves[element].construction;
+    if (!construction) return false;
+    for (const auto &link : sketch.linkedReferences)
+        if (link) for (const auto &entity : link->entities)
+            if (entity.kind == kind && entity.element == element) return !link->visible;
     return false;
 }
 

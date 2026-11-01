@@ -61,9 +61,14 @@ ausiliari visibili nello schizzo, anche quando riguardano piani, assi e origine.
 La geometria originale resta visibile secondo le sue impostazioni. I riferimenti
 seguono le modifiche della sorgente e del piano dello schizzo, rimangono costanti
 per il risolutore e conservano quote e vincoli locali, senza un vincolo **Fisso**.
-La costruzione disegnata dall'utente e la geometria convertita esplicitamente
-in un profilo restano visibili. Si modificano dalla sorgente. Salvataggio, riapertura e Undo/Redo
-conservano il collegamento. Un vertice coincidente inizialmente con l'origine
+La costruzione disegnata dall'utente e le geometrie ottenute con **Converti
+spigoli e curve** e **Sezione** restano visibili, anche con l'opzione **Di
+costruzione** attiva. La visibilità delle conversioni è distinta dai riferimenti
+automatici ed è salvata nel formato nativo 60. Si modificano dalla sorgente;
+salvataggio, riapertura e Undo/Redo conservano collegamento e visibilità.
+Per recuperare una conversione di costruzione nascosta salvata nei formati
+57–59, selezionare nuovamente la stessa sorgente con **Converti**: il riferimento
+esistente torna visibile senza duplicare la geometria o perdere i vincoli. Un vertice coincidente inizialmente con l'origine
 conserva il collegamento alla parte, evitando un secondo blocco sull'origine.
 
 Un riferimento deve precedere lo schizzo nella storia. La cancellazione
