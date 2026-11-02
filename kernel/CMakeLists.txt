@@ -1,5 +1,5 @@
 # Kernel geometrico ForgeCAD: C++17 puro, senza Qt e senza OpenCASCADE.
-# OpenCASCADE serve solo ai test, come riferimento.
+# OpenCASCADE serve solo ai test di confronto (vedi occt_tests/).
 include(CheckCXXSourceCompiles)
 check_cxx_source_compiles("
     #include <charconv>
@@ -147,91 +147,14 @@ target_compile_options(forgekernel PUBLIC
 )
 set_target_properties(forgekernel PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
 
-# Ponte da OpenCASCADE al kernel proprio: solo per i test (confronti con le
-# forme OCCT); a parte, perche' forgekernel resta senza OCCT.
-add_library(forgekernel_occt STATIC
-    occt/fk_occt_import.h
-    occt/fk_occt_import.cpp
-)
-target_include_directories(forgekernel_occt PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/occt)
-target_include_directories(forgekernel_occt SYSTEM PUBLIC ${OpenCASCADE_INCLUDE_DIR})
-target_link_libraries(forgekernel_occt PUBLIC forgekernel TKernel TKMath TKG2d TKG3d TKGeomBase TKBRep)
-target_compile_options(forgekernel_occt PRIVATE -Wall -Wextra -Wpedantic -O2 -g)
-set_target_properties(forgekernel_occt PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
-
-add_executable(forgekernel_tests
-    tests/fk_test.h
-    tests/fk_test_main.cpp
-    tests/fk_test_util.h
-    tests/fk_test_profiles.h
-    tests/test_cancel.cpp
-    tests/test_math.cpp
-    tests/test_predicates.cpp
-    tests/test_bernstein.cpp
-    tests/test_curves.cpp
-    tests/test_bspline.cpp
-    tests/test_curve_algo.cpp
-    tests/test_surfaces.cpp
-    tests/test_bspline_surface.cpp
-    tests/test_surface_algo.cpp
-    tests/test_tolerance.cpp
-    tests/test_topology.cpp
-    tests/test_primitives.cpp
-    tests/test_extrude.cpp
-    tests/test_pcurve.cpp
-    tests/test_mass.cpp
-    tests/test_intersect.cpp
-    tests/test_marching.cpp
-    tests/test_boolean.cpp
-    tests/test_unify.cpp
-    tests/test_tessellate.cpp
-    tests/test_nurbs.cpp
-    tests/test_curve_surface.cpp
-    tests/test_revolve.cpp
-    tests/test_blend.cpp
-    tests/test_sheet.cpp
-    tests/test_transform.cpp
-    tests/test_draft.cpp
-    tests/test_body_io.cpp
-    tests/test_helix.cpp
-    tests/test_sweep.cpp
-    tests/test_loft.cpp
-    tests/test_occt_import.cpp
-    tests/test_blend_features.cpp
-    tests/test_step.cpp
-    tests/test_iges.cpp
-    tests/test_offset.cpp
-    tests/test_planar.cpp
-    tests/test_boundary.cpp
-    tests/test_fill.cpp
-    tests/test_surface_tools.cpp
-    tests/test_project.cpp
-    tests/test_thicken.cpp
-    tests/test_shell.cpp
-    tests/test_loft_surfaces.cpp
-    tests/test_sweep_surfaces.cpp
-    tests/test_history.cpp
-)
-# OCCT 7.8 ha riunito lo scambio STEP/IGES nei toolkit TKDE*; le versioni
-# precedenti (per esempio 7.6 di Ubuntu 24.04 e Debian 12) usano i nomi storici.
-if("${OpenCASCADE_MAJOR_VERSION}.${OpenCASCADE_MINOR_VERSION}" VERSION_GREATER_EQUAL 7.8)
-    set(FORGEKERNEL_OCCT_EXCHANGE TKDESTEP TKDEIGES TKDE)
-else()
-    set(FORGEKERNEL_OCCT_EXCHANGE TKSTEP TKIGES TKXDESTEP TKXDEIGES)
+# Test di confronto con OpenCASCADE (OCCT): OCCT e' solo un riferimento per i
+# test e non entra mai in forgekernel ne' nell'applicazione. Sta in una cartella
+# CMake separata perche' la configurazione di OCCT aggiunge definizioni a livello
+# di cartella (HAVE_TK, OCC_CONVERT_SIGNALS, ...) che cosi' non raggiungono gli
+# altri target. Si escludono con -DFORGECAD_BUILD_OCCT_TESTS=OFF.
+if(FORGECAD_BUILD_OCCT_TESTS)
+    add_subdirectory(occt_tests)
 endif()
-target_link_libraries(forgekernel_tests PRIVATE
-    forgekernel
-    forgekernel_occt
-    TKXSBase ${FORGEKERNEL_OCCT_EXCHANGE} TKXCAF TKLCAF TKCAF
-    TKernel TKMath TKG2d TKG3d TKGeomBase TKGeomAlgo TKBRep TKTopAlgo TKPrim TKBO TKMesh TKShHealing TKFillet TKBool TKOffset
-)
-target_include_directories(forgekernel_tests SYSTEM PRIVATE ${OpenCASCADE_INCLUDE_DIR})
-target_compile_options(forgekernel_tests PRIVATE -Wall -Wextra -Wpedantic -O2 -g)
-# File di prova facoltativi nella radice del progetto (per esempio STEP di altri CAD).
-target_compile_definitions(forgekernel_tests PRIVATE FORGECAD_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
-set_target_properties(forgekernel_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
-
-add_test(NAME forgekernel_tests COMMAND forgekernel_tests)
 
 # Genealogia delle operazioni: solo il kernel, senza OCCT (eseguibile anche
 # dove le librerie di riferimento non ci sono).

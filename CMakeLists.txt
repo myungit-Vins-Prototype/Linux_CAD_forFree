@@ -70,9 +70,10 @@ else()
     set(FORGECAD_ZSTD_TARGET forgecad_zstd)
 endif()
 find_package(Threads REQUIRED)
-# OpenCASCADE serve solo ai test del kernel (riferimento per i confronti):
-# l'applicazione usa soltanto il kernel proprio.
-find_package(OpenCASCADE REQUIRED)
+# OpenCASCADE (OCCT) serve solo ai test di confronto del kernel
+# (kernel/occt_tests): l'applicazione usa soltanto il kernel proprio, non
+# collega OCCT e si configura e compila anche senza.
+option(FORGECAD_BUILD_OCCT_TESTS "Compila forgekernel_tests, confrontato con OpenCASCADE (OCCT) se installato" ON)
 
 # Kernel geometrico proprio (kernel/), validato contro OpenCASCADE nei test.
 enable_testing()

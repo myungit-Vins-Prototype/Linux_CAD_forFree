@@ -198,10 +198,10 @@ ForgeCAD `.prt` documents have an internal `FCAD` signature: the extension does 
 | CMake | 3.21 or newer |
 | Qt | Qt 6 with Widgets, OpenGL, and OpenGLWidgets, including development files |
 | Graphics | Drivers and a desktop OpenGL 3.3 Core context |
-| OpenCASCADE / OCCT | Development files and CMake configuration, required by the current build for tests |
+| OpenCASCADE / OCCT | Optional: only to build `forgekernel_tests`, which compares the kernel with OCCT; not needed for the application |
 | CUDA | Optional, for tessellation on NVIDIA GPUs |
 
-The application and custom kernel do not link OpenCASCADE for modeling or STEP/IGES exchange. However, the current `CMakeLists.txt` files require OCCT and configure comparison tests even when building only the `forgecad` target.
+The application and the custom kernel never use OpenCASCADE: the `forgecad` executable does not link it and OCCT is not distributed with ForgeCAD. It serves only as an independent reference in the kernel comparison tests (`kernel/occt_tests`). If OCCT is not installed, CMake skips those tests with a warning; to exclude them explicitly, configure with `-DFORGECAD_BUILD_OCCT_TESTS=OFF`.
 
 The instructions below describe building from source. Use a fresh build directory on each machine, avoiding CMake caches and binaries from another system.
 
@@ -220,12 +220,14 @@ If the repository is renamed or transferred, use the URL from the **Code** butto
 
 ### 1. Dependencies
 
-**Ubuntu / Debian**, with Qt 6 and OCCT available in the package repositories:
+**Ubuntu / Debian**, with Qt 6 available in the package repositories:
 
 ```sh
 sudo apt update
 sudo apt install build-essential cmake git qt6-base-dev libqt6opengl6-dev zlib1g-dev libzstd-dev \
-  libgl1-mesa-dev libocct-foundation-dev libocct-modeling-data-dev \
+  libgl1-mesa-dev
+# Optional, only for the OCCT comparison tests (forgekernel_tests):
+sudo apt install libocct-foundation-dev libocct-modeling-data-dev \
   libocct-modeling-algorithms-dev libocct-data-exchange-dev \
   libocct-visualization-dev
 ```
@@ -235,10 +237,12 @@ On Ubuntu, some packages are in the **Universe** repository. On Wayland, also in
 **Arch Linux / pacman-compatible distributions:**
 
 ```sh
-sudo pacman -S --needed base-devel cmake git qt6-base opencascade mesa zlib zstd
+sudo pacman -S --needed base-devel cmake git qt6-base mesa zlib zstd
+# Optional, only for the OCCT comparison tests:
+sudo pacman -S --needed opencascade
 ```
 
-On Wayland, also install `qt6-wayland`. For other distributions, install the equivalent C++ compiler, CMake, Qt 6, OpenGL, zlib, Zstandard, and OCCT packages with their development files. zlib supports incremental document decompression with memory limits.
+On Wayland, also install `qt6-wayland`. For other distributions, install the equivalent C++ compiler, CMake, Qt 6, OpenGL, zlib, and Zstandard packages with their development files (OCCT only for the comparison tests). zlib supports incremental document decompression with memory limits.
 
 References: [Qt/OpenGL on Ubuntu](https://packages.ubuntu.com/jammy/libqt6opengl6-dev), [OCCT on Ubuntu](https://packages.ubuntu.com/search?keywords=libocct-data-exchange-dev&suite=noble), [Qt on Arch](https://archlinux.org/packages/extra/x86_64/qt6-base/), and [OCCT on Arch](https://archlinux.org/packages/extra/x86_64/opencascade/).
 
@@ -302,7 +306,9 @@ xcode-select --install
 Install [Homebrew](https://brew.sh/) following its official instructions, then run:
 
 ```sh
-brew install cmake qt opencascade zstd
+brew install cmake qt zstd
+# Optional, only for the OCCT comparison tests:
+brew install opencascade
 ```
 
 The official formulas are [Qt](https://formulae.brew.sh/formula/qt) and [OpenCASCADE](https://formulae.brew.sh/formula/opencascade). Use a compiler and libraries with the same architecture: arm64 on Apple Silicon or x86_64 on Intel.
@@ -465,4 +471,4 @@ When reporting a problem on GitHub, include your operating system, architecture,
 
 Geometry operations and STEP/IGES exchange depend on the entities supported by the custom kernel; compatibility with every file or geometric configuration is not guaranteed. Installation instructions are based on the project configuration and do not certify operation on every Linux or macOS version.
 
-The project is distributed under the **GNU General Public License v3 (GPLv3)**. The full text is in [LICENSE](LICENSE), identical to the copy on the `main` branch. Dependencies retain their respective licenses.
+The project is distributed under the **GNU General Public License v3 (GPLv3)**. The full text is in [LICENSE](LICENSE), identical to the copy on the `main` branch. Dependencies retain their respective licenses. OpenCASCADE Technology (OCCT), used only by the kernel comparison tests and not linked to or distributed with the application, is licensed under the GNU LGPL 2.1 with the Open CASCADE Exception.

@@ -13,9 +13,10 @@ manualmente, dopo che il file è stato pubblicato sul branch predefinito.
   esportazione CPU e runner autonomi delle tavole 2D.
 
 L'ambiente è **Ubuntu 26.04 x86-64**, con Qt 6, OpenGL, zlib, Zstandard e
-OpenCASCADE dai pacchetti della distribuzione. Ubuntu 26.04 fornisce OCCT 7.9;
-i nomi delle librerie OCCT usati attualmente dai confronti del kernel richiedono
-OCCT 7.8 o successivo. I runner GitHub standard non forniscono una GPU NVIDIA
+OpenCASCADE dai pacchetti della distribuzione. Ubuntu 26.04 fornisce OCCT 7.9.
+OCCT serve solo a `forgekernel_tests` (`kernel/occt_tests`, opzione
+`FORGECAD_BUILD_OCCT_TESTS`): l'applicazione non lo collega. I toolkit di scambio
+si scelgono secondo la versione (`TKDE*` da OCCT 7.8, nomi storici prima). I runner GitHub standard non forniscono una GPU NVIDIA
 e questa build usa il backend CPU senza installare CUDA.
 
 `FORGECAD_BUILD_VIEW_TESTS` e `FORGECAD_BUILD_RIBBON_PREVIEW` sono esplicitamente
