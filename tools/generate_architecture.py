@@ -165,7 +165,7 @@ DESCRIPTIONS.update({'tools/open_architecture.py': ('build', 'Avvio locale della
  'kernel/tests/test_curve_algo.cpp': ('tests', 'Proiezioni contro OCCT, filtro esaustivo e linea analitica4096tratti: range inclusivi/ristretti, estremi e concorrenza; quadratura e cache delle lunghezze.'),
  'kernel/fk_exchange.cpp': ('kernel', 'Scambio STEP/IGES: restrizione esatta delle spline conservando nodi e pesi; scelta coerente della chiusura durante la ricostruzione dei bordi, cucitura e proiezioni certificate; numeri indipendenti dal locale con fallback libc++ Apple.'),
  'kernel/fk_shell.cpp': ('kernel', 'Svuotamento: offset interno, giunzioni tolleranti, gusci annidati con aperture planari e chiusura tramite piano di appoggio; controlli geometrici e genealogia.'),
- 'kernel/fk_offset.cpp': ('kernel', 'Superfici e bordi a distanza; intersezioni stabilizzate sui budget locali delle connessioni tolleranti, rifilatura e provenienza delle facce.'),
+ 'kernel/fk_offset.cpp': ('kernel', 'Superfici e bordi a distanza; intersezioni stabilizzate sui budget locali, sezioni circolari analitiche e vertici di cucitura conservati nei supporti sostitutivi dello sformo, rifilatura e provenienza.'),
  'kernel/fk_boolean.cpp': ('kernel', 'Booleane B-rep e unione con interni disgiunti gia dimostrati dal chiamante: classificazione e verifica comuni, carrier con parametrizzazione identica e SP-curve distinte per coppia.'),
  'kernel/tests/test_shell.cpp': ('tests', 'Svuotamento analitico e da superfici cucite quasi tangenti: aperto/chiuso a due spessori, misura esatta delle pareti, topologia, mesh, volumi, storia e input immutato.'),
  'kernel/tests/test_offset.cpp': ('tests', 'Offset e cuciture: parametrizzazioni/versi diversi, curve chiuse, confine della tolleranza, pcurve e orientamento dei solidi; input immutato.'),
@@ -317,7 +317,7 @@ DESCRIPTIONS.update({'tools/open_architecture.py': ('build', 'Avvio locale della
  'cad_revision_client_internal.h': ('documents',
                                     'Helper privati del protocollo revisioni: identità, percorsi, lock e '
                                     'file di sessione.'),
- 'cad_revision_store': ('documents', 'Archivio check-in/rilasci e checkpoint: pubblicazione transazionale, letture coerenti con retry sotto lock e contesa distinta dalla corruzione; verifica di catene/payload e recupero esplicito senza perdita delle prenotazioni.'),
+ 'cad_revision_store': ('documents', 'Archivio check-in/rilasci e checkpoint: pubblicazione transazionale, letture ottimistiche validate tra due head senza acquisire il lock del writer, pubblicazione in corso distinta dalla corruzione; verifica di catene/payload e recupero esplicito senza perdita delle prenotazioni.'),
  'cad_revision_recovery_ui': ('documents', 'Dialogo condiviso 3D/2D per verificare archivio/checkpoint, attivare la protezione legacy e recuperare l ultimo catalogo registrato conservando il file danneggiato.'),
  'tests/test_catalog_recovery.cpp': ('tests', 'Checkpoint/proiezione, interruzioni, recupero atomico/idempotente, concorrenza, token, rilasci, conflitti, corruzione e migrazione legacy.'),
  'tests/test_catalog_recovery_gui.h': ('tests', 'Recupero nativo dai menu3D/2D: annulla, catalogo corrotto/assente, legacy, sessioni/pendenti conservati e consegna storica multipagina.'),

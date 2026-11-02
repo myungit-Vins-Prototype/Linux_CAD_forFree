@@ -670,6 +670,30 @@ CurvePtr<3> offsetCurve(const CurvePtr<3> &curve, const Interval &range, const s
     return fitCurve(f, range, breaks, tolerance);
 }
 
+// Sezione circolare analitica dei supporti sostitutivi. Conserva il parametro
+// angolare della sorgente: la ricostruzione numerica della cucitura non deve
+// trasformare un cerchio in una spline che accumula errore a ogni sformo.
+CurvePtr<3> replacementSectionCircle(const CurvePtr<3> &source, const Surface &a, const Surface &b) {
+    const Curve<3> *basis = source.get();
+    while (basis->type() == CurveType::Trimmed) basis = static_cast<const TrimmedCurve<3> *>(basis)->basis().get();
+    if (basis->type() != CurveType::Circle) return {};
+    const Surface *plane = &a, *round = &b;
+    if (plane->type() != SurfaceType::Plane) std::swap(plane, round);
+    if (plane->type() != SurfaceType::Plane || (round->type() != SurfaceType::Cone && round->type() != SurfaceType::Cylinder)) return {};
+    const auto &circle = static_cast<const Circle<3> &>(*basis);
+    const auto &cap = static_cast<const Plane &>(*plane).frame();
+    const auto &axis = round->type() == SurfaceType::Cone ? static_cast<const ConicalSurface &>(*round).frame()
+                                                         : static_cast<const CylindricalSurface &>(*round).frame();
+    if (norm(cross(cap.zDir(), axis.zDir())) > kAngularResolution
+        || norm(cross(cross(circle.xAxis(), circle.yAxis()), axis.zDir())) > kAngularResolution) return {};
+    const double height = dot(cap.origin() - axis.origin(), cap.zDir()) / dot(axis.zDir(), cap.zDir());
+    const double radius = round->type() == SurfaceType::Cone
+        ? static_cast<const ConicalSurface &>(*round).referenceRadius() + height * std::tan(static_cast<const ConicalSurface &>(*round).semiAngle())
+        : static_cast<const CylindricalSurface &>(*round).radius();
+    if (!(radius > kLinearResolution)) return {};
+    return std::make_shared<Circle<3>>(axis.origin() + height * axis.zDir(), circle.xAxis(), circle.yAxis(), radius);
+}
+
 // Parametro appena fuori dal dominio di una direzione periodica (le SP-curve
 // arrivano a -1e-17): riportato sul bordo. Altrimenti la superficie lo porta
 // dall'altra parte del periodo, e dove la superficie chiusa ha un angolo (la
@@ -1883,8 +1907,32 @@ OffsetResult offsetJoinedFaces(const Body &input, const std::vector<FaceOffset> 
                 }
             }
     }
+    // Una cucitura chiusa circolare con soli due appoggi non richiede un
+    // solve regolarizzato: il vertice appartiene alla sezione analitica del
+    // bordo stesso. Cosi' il budget UV ereditato non sposta il punto esatto.
+    std::map<int, Vec3> circularVertices;
+    if (replacing) for (const auto &[index, uses] : edgeUses) {
+        const EdgeId e{index};
+        if (uses.size() != 2 || body.edgeStart(e) != body.edgeEnd(e)) continue;
+        const int v = root(body.edgeStart(e).index);
+        if (vertexConstraints.at(v).size() != 2) continue;
+        const auto first = body.finFace(uses[0]), second = body.finFace(uses[1]);
+        if (specs.at(first.index).distance != 0.0 || specs.at(second.index).distance != 0.0) continue;
+        const auto &edge = body.edge(e);
+        const auto circle = replacementSectionCircle(edge.curve, *support(first), *support(second));
+        if (!circle) continue;
+        const auto point = circle->point(edge.range.lo);
+        const double budget = std::max(seamTolerance, vertexBudgets.at(v));
+        if (distance(point, circle->point(edge.range.hi)) <= budget
+            && distance(point, vertexSeed.at(v) / double(vertexCount.at(v))) <= seamReach) circularVertices.emplace(v, point);
+    }
     for (const auto &[v, constraints] : vertexConstraints) {
         pointOf[v] = int(model.points.size());
+        const auto circular = circularVertices.find(v);
+        if (circular != circularVertices.end()) {
+            model.points.push_back(circular->second);
+            continue;
+        }
         const Vec3 seed = vertexSeed.at(v) / double(vertexCount.at(v));
         const double localTolerance = std::max(seamTolerance, vertexBudgets.at(v));
         model.points.push_back(localTolerance > seamTolerance
@@ -1957,7 +2005,17 @@ OffsetResult offsetJoinedFaces(const Body &input, const std::vector<FaceOffset> 
             && specs.at(body.finFace(uses[1]).index).distance == 0.0
             && distance(model.points[std::size_t(raw.start)], body.vertex(body.edgeStart(e)).point) < 1e-12
             && distance(model.points[std::size_t(raw.end)], body.vertex(body.edgeEnd(e)).point) < 1e-12;
-        raw.curve = unchanged ? edge.curve : offsetCurve(edge.curve, edge.range, at, edge.curve->breakpoints(edge.range), scale, tolerance);
+        if (unchanged) raw.curve = edge.curve;
+        else {
+            const auto first = body.finFace(uses[0]), second = body.finFace(uses[1]);
+            if (replacing && specs.at(first.index).distance == 0.0 && specs.at(second.index).distance == 0.0)
+                raw.curve = replacementSectionCircle(edge.curve, *support(first), *support(second));
+            // Un supporto spostato puo' cambiare la posizione angolare dei
+            // vertici: in quel caso resta il percorso generale parametrico.
+            if (raw.curve && (distance(raw.curve->point(edge.range.lo), model.points[std::size_t(raw.start)]) > localTolerance
+                || distance(raw.curve->point(edge.range.hi), model.points[std::size_t(raw.end)]) > localTolerance)) raw.curve.reset();
+            if (!raw.curve) raw.curve = offsetCurve(edge.curve, edge.range, at, edge.curve->breakpoints(edge.range), scale, tolerance);
+        }
         // Un bordo che inverte il proprio verso segnala una cavita' che ha
         // superato le pareti opposte: non accettare un volume ripiegato.
         for (int k = 0; k <= 16; ++k) {

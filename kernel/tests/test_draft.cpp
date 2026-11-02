@@ -160,3 +160,38 @@ FK_TEST(DraftCurvedAndConcaveSolids) {
     FK_CHECK(checkBody(rotated, {true,true}).empty());
     FK_CHECK_NEAR(massProperties(rotated).volume, massProperties(out).volume, 1e-6);
 }
+
+// Le ripetizioni dello sformo devono conservare la sezione analitica; un fit
+// entro il budget locale del bordo non basta a controllare l'errore di volume.
+FK_TEST(DraftCircularSectionsStayAnalytic) {
+    for(double scale:{0.1,1.0,20.0}) {
+        const Frame3 frame(Vec3(1000,-2000,500),Vec3(1,1,1),Vec3(1,-1,0));
+        const double radius=4*scale,height=5*scale;
+        Body current=makeCylinder(frame,radius,height);
+        for(double degrees:{0.2,-0.4,1.2,-0.1,0.8,-0.6}) {
+            FaceId selected;
+            for(FaceId f:current.faces())if(current.face(f).surface->type()==SurfaceType::Cylinder
+                ||current.face(f).surface->type()==SurfaceType::Cone)selected=f;
+            FK_CHECK(selected.valid());
+            const double angle=degrees*kPi/180.;
+            const Body next=draftFaces(current,{selected},frame.origin(),frame.zDir(),angle);
+            FK_CHECK(checkBody(next,{true,true}).empty());
+            const double top=radius-height*std::tan(angle);
+            const double expected=kPi*height*(radius*radius+radius*top+top*top)/3.;
+            FK_CHECK_NEAR(massProperties(next).volume,expected,1e-10*expected);
+            FK_CHECK(next.edges().size()==2);
+            for(EdgeId e:next.edges()) {
+                const auto &edge=next.edge(e);
+                FK_CHECK(edge.curve->type()==CurveType::Circle);
+                for(int k=0;k<=8;++k) {
+                    const auto p=frame.toLocal(edge.curve->point(edge.range.lo+edge.range.length()*k/8.));
+                    const double z=std::fabs(p.z())<std::fabs(p.z()-height)?0.0:height;
+                    FK_CHECK_NEAR(p.z(),z,1e-9*scale);
+                    FK_CHECK_NEAR(std::hypot(p.x(),p.y()),z==0?radius:top,1e-9*scale);
+                }
+            }
+            current=readBodyBinary(writeBodyBinary(next));
+        }
+        FK_CHECK(tessellate(current,{}).failedFaces==0);
+    }
+}

@@ -4,6 +4,7 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QSaveFile>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -202,6 +203,8 @@ int main(int argc, char **argv) {
                 ++reads;
             }
             const bool terminated=writer->wait(5000);
+            if(!terminated||writerErrors||readErrors)
+                std::cerr<<"Concorrenza: writerErrors="<<writerErrors<<", readErrors="<<readErrors<<", reads="<<reads<<"\n";
             require(terminated&&writerErrors==0&&readErrors==0,"letture concorrenti coerenti durante checkout/cancel");
             std::cout<<"PASS catalogo concorrente: "<<reads<<" letture senza falsi danni\n";
         }
@@ -215,9 +218,16 @@ int main(int argc, char **argv) {
             QSemaphore entered;QString readError;QVector<RevisionDocumentInfo> result;
             auto reader=std::unique_ptr<QThread>(QThread::create([&]{entered.release();readError=torn.documents(result);}));
             reader->start();entered.acquire();QThread::msleep(20);
-            writeFile(catalogPath,committed);lock.unlock();
-            require(reader->wait(5000)&&readError.isEmpty()&&result.size()==1&&result[0].checkedOut,
-                    "lettura nella finestra head/catalog attende pubblicazione coerente");
+            // Pubblicazione atomica come nel writer reale. Il lock rimane
+            // occupato: un lettore deve usare la fotografia completa senza
+            // prenotare a sua volta il lock di scrittura.
+            QSaveFile projection(catalogPath);
+            require(projection.open(QIODevice::WriteOnly)&&projection.write(committed)==committed.size()&&projection.commit(),
+                    "pubblicazione atomica della proiezione fixture");
+            const bool readWhileLocked=reader->wait(5000);
+            lock.unlock();
+            require(readWhileLocked&&readError.isEmpty()&&result.size()==1&&result[0].checkedOut,
+                    "lettura coerente riuscita mentre il writer conserva il lock");
             require(lock.tryLock(0),"lock pubblicazione prolungata");writeFile(catalogPath,previous);
             bool busy=false;const auto retained=result;
             require(!torn.documents(result,&busy).isEmpty()&&busy&&result.size()==retained.size()&&result[0].checkedOut,

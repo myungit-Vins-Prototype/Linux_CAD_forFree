@@ -103,19 +103,18 @@ ctest --test-dir forgecad-release --output-on-failure
 
 ## Ultimi interventi — esiti consolidati
 
-0. **02/11 — Unione fino al corpo e riferimenti proiettati (verificato).**
-   extent4 Unione auto/manuale usa contatti B-rep soltanto con prova fresca di interni disgiunti dagli
-   stessi limiti; booleana generale invariata, SP-curve/UV esatti, cache vecchie ricalcolate alla conferma.
-   Riferimenti impliciti associativi senza fit: quote, PointOnCurve e Pierce, chiavi di ramo, formato60.
-   QA scopreva perdita PointOnCurve al decode: migrazione strutturale corretta, entrambi i vincoli
-   preservati; geometria/solver restano in errore finche la cache non e' risolta. Nuovi7CTest PASS.
-   App/runner PASS. Suite completa161PASS/1SKIP/1FAIL; dopo ultimo codec tutti151test app
-   ripetuti150PASS/1SKIP/0FAIL, kernel invariato. UnicoFAIL sformo preesistente (kernel457/458).
-   GUI unione12/12 (4offscreen+8native), riferimenti2/2 Wayland/XCB; UndoRedo/codec e sanitizer mirati PASS.
-   Superfici corrente:23facce/1shell,23653,78484397822mm³; target16 fuso.5copie e5originali verificati intatti.
-   Mappa548file/7571relazioni/258AST,0errori,check/HTML e8confini in/out PASS; generati ignorati.
-   [Rapporto e archivio](docs/estrusione-unione-riferimenti-proiettati-2026-11-02.md) conservano fasi, hash,
-   limiti; base317b8cb. Pubblicato `dbed027` su main.
+0. **02/11 — Fix unione/curve pubblicati; riparazione CI integrata.** `dbed027`/`cc26a27`:
+   extent4 Unione auto/manuale e riferimenti impliciti associativi/quote/Pierce, formato60.
+   [Rapporto precedente](docs/estrusione-unione-riferimenti-proiettati-2026-11-02.md): app/runner,
+   7nuoviCTest/14GUI PASS; storico161PASS/1SKIP/1FAIL e kernel457/458; originali intatti.
+   CI41503734941: build Linux/macOS PASS, falliscono sformo e revision_store su entrambi.
+   Cause corrette: cerchio degradato in spline al redraft (scarto volume1,794e-6) e lettore che
+   prende catalog.lock causando writerErrors (2/8 riproduzioni Linux). Sezioni/vertici circolari
+   analitici e letture head/catalogo/head senza lock writer; soglie e workflow invariati.
+   Build completa app/target PASS, Draft6/6, revisioni32/32; regressione deterministica FAIL prima/
+   PASS dopo. Clang4C++ e ASan/UBSan mirati PASS; suite163CTest in corso. Mappa548/7572/258AST,
+   zeroerrori/check PASS. [Rapporto CI](docs/ci-riparazione-2026-11-02.md); push/verifica remota aperti.
+   Limiti delle curve implicite per sweep/STEP/IGES invariati.
 
 1. **02/11 — Correzioni review, storyboard e nuova estrusione (`d4f15fc`, pubblicato).** R1–R5 corretti:
    parser/scambio STEP-B-rep robusti, occorrenze distinte e catalogo concorrente senza perdita dei lock.

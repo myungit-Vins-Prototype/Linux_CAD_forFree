@@ -101,3 +101,14 @@ Il raccordo che svanisce alla tangenza dei due appoggi raffina il fit in base
 all'incertezza dei campioni interni: la stima singolare di un estremo non deve
 autorizzare uno scarto grande su tutto l'intervallo. La regressione verifica
 anche la distanza dei bordi dagli appoggi cilindrici, oltre al volume rimosso.
+
+
+### Sezioni circolari dello sformo e letture concorrenti del catalogo
+
+I fallimenti del 2 novembre 2026 avvenivano durante i test, dopo la compilazione
+riuscita su Linux e macOS. Lo sformo conserva ora analiticamente le sezioni
+circolari dei supporti sostitutivi; le letture coerenti del catalogo revisioni
+non prenotano il lock del writer. Le regressioni verificano sformi ripetuti e
+pubblicazioni concorrenti senza allargare tolleranze o disattivare prove.
+Diagnosi, riproduttori e risultati sono nel
+[rapporto di riparazione](ci-riparazione-2026-11-02.md).

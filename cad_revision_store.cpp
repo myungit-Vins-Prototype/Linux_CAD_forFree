@@ -9,6 +9,8 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QLockFile>
+#include <QElapsedTimer>
+#include <QThread>
 #include <QSaveFile>
 #include <QSet>
 #include <algorithm>
@@ -191,17 +193,29 @@ RecoveryHead readRecoveryHead(const QString &directory){
 }
 QString checkpointPath(const QString &directory,const QByteArray &hash){return QDir(recoveryDirectory(directory)).filePath(QString::fromLatin1(hash.toHex())+".json");}
 Catalog loadCatalog(const QString &directory,bool transactionLocked=false){
-    require(!directory.isEmpty(),QStringLiteral("Cartella dell'archivio non specificata."));const auto bytes=recoveryRead(QDir(directory).filePath("catalog.json"),kMaxCatalogBytes);auto catalog=parseCatalog(bytes);const auto head=readRecoveryHead(directory);
-    if(head.hash.isEmpty()||(head.archiveId==catalog.archiveId&&head.hash==digest(bytes)))return catalog;
-    if(!transactionLocked){
-        // Fra head.json e catalog.json un writer puo' aver pubblicato una nuova
-        // generazione. Rileggere sotto il suo lock prima di dichiarare un danno.
-        QLockFile lock(QDir(directory).filePath("catalog.lock"));lock.setStaleLockTime(0);
-        if(!lock.tryLock(1000))throw CatalogBusy();
-        return loadCatalog(directory,true);
+    require(!directory.isEmpty(),QStringLiteral("Cartella dell'archivio non specificata."));
+    const auto lockPath=QDir(directory).filePath("catalog.lock");
+    // Stesso limite della precedente attesa del lock; la lettura non deve
+    // prenotare catalog.lock e far fallire un writer non bloccante.
+    constexpr qint64 waitMilliseconds=1000;
+    QElapsedTimer elapsed;elapsed.start();
+    for(;;){
+        const auto before=readRecoveryHead(directory);
+        const bool publishing=QFileInfo::exists(lockPath);
+        const auto bytes=recoveryRead(QDir(directory).filePath("catalog.json"),kMaxCatalogBytes);
+        auto catalog=parseCatalog(bytes);
+        const auto after=readRecoveryHead(directory);
+        if(after.hash.isEmpty()||(after.archiveId==catalog.archiveId&&after.hash==digest(bytes)))return catalog;
+        // Il writer, che possiede gia' il lock, non deve proseguire da uno
+        // stato incoerente. Per i lettori una generazione in movimento o
+        // ancora in pubblicazione richiede invece una nuova fotografia.
+        if(transactionLocked || (before.bytes==after.bytes && !publishing && !QFileInfo::exists(lockPath)))
+            throw std::runtime_error("Il catalogo non corrisponde all'ultimo stato pubblicato. Usare Verifica e recupero catalogo.");
+        if(elapsed.elapsed()>=waitMilliseconds)throw CatalogBusy();
+        QThread::msleep(1);
     }
-    throw std::runtime_error("Il catalogo non corrisponde all'ultimo stato pubblicato. Usare Verifica e recupero catalogo.");
 }
+
 void publishCatalogCheckpoint(const QString &directory,const QByteArray &bytes,const QUuid &archive,const QByteArray &previous){
     recoveryDirectory(directory,true);const auto hash=digest(bytes);const auto path=checkpointPath(directory,hash);
     if(QFileInfo::exists(path))require(recoveryRead(path,kMaxCatalogBytes)==bytes,QStringLiteral("Checkpoint esistente danneggiato: recupero necessario."));else recoveryWrite(path,bytes);
