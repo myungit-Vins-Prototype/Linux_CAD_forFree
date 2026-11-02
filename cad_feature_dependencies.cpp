@@ -77,8 +77,8 @@ QVector<int> bodyOperands(const ExtrusionObject &body) {
     case BodyFeature::DeleteFace:
     case BodyFeature::Shell:
     case BodyFeature::Thread:
-    case BodyFeature::ProjectedCurve:
     case BodyFeature::Scale: return {body.firstBody};
+    case BodyFeature::ProjectedCurve: return body.projectionMode == 1 ? QVector<int>{} : QVector<int>{body.firstBody};
     case BodyFeature::Sew: return QVector<int>{body.firstBody} + body.booleanTools;
     case BodyFeature::SheetTrim: return body.secondBody >= 0 ? QVector<int>{body.firstBody, body.secondBody} : QVector<int>{body.firstBody};
     case BodyFeature::Helix: return body.helix.source != 0 ? QVector<int>{body.firstBody} : QVector<int>{};
@@ -161,7 +161,10 @@ QVector<int> sketchesOf(const ExtrusionObject &body) {
     }
     case BodyFeature::Helix: return body.helix.source == 0 ? QVector<int>{body.sketchIndex} : QVector<int>{};
     case BodyFeature::SheetTrim: return body.sketchIndex >= 0 ? QVector<int>{body.sketchIndex} : QVector<int>{};
-    case BodyFeature::ProjectedCurve: return {body.sketchIndex};
+    case BodyFeature::ProjectedCurve: {
+        if (body.projectionMode != 1) return {body.sketchIndex};
+        QVector<int> result; appendRefs(result, {Family::RuledFirst, Family::RuledSecond}); return result;
+    }
     case BodyFeature::Sweep: {
         QVector<int> result;
         if (body.sweepProfileRef.kind < 0) result.append(body.sketchIndex);

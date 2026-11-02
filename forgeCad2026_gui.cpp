@@ -1490,7 +1490,7 @@ void PdfWindow::initializeActionsAndView(WindowSetup &setup) {
     trimCurve3DAction = surfaceMenu->addAction(QStringLiteral("Taglia curva 3D..."));
     trimCurve3DAction->setToolTip(QStringLiteral("Taglia una curva con un segmento mantenendo il legame con la sorgente"));
     projectedCurveAction = surfaceMenu->addAction(QStringLiteral("Curva proiettata..."));
-    projectedCurveAction->setToolTip(QStringLiteral("Curve 3D: lo schizzo proiettato lungo la normale del suo piano sulla prima faccia del corpo"));
+    projectedCurveAction->setToolTip(QStringLiteral("Curve 3D: proiezione su corpo oppure intersezione delle proiezioni di due schizzi su piani diversi"));
     planarSurfaceAction = surfaceMenu->addAction(QStringLiteral("Superficie planare..."));
     planarSurfaceAction->setToolTip(QStringLiteral("Superficie piana delimitata dai contorni chiusi di uno schizzo o da bordi complanari"));
     loftSurfaceAction = surfaceMenu->addAction(QStringLiteral("Loft di superfici..."));
@@ -2414,16 +2414,29 @@ void PdfWindow::initializeFeatureCommands(WindowSetup &setup) {
         // Di partenza il corpo e lo schizzo selezionati.
         QVector<SceneSelection> selected = viewport->selectedObjects();
         selected.prepend(viewport->selection());
+        QVector<int> selectedSketches;
         for (const SceneSelection &object : selected) {
             if (object.kind == SceneObjectKind::Extrusion) definition.firstBody = object.index;
-            if (object.kind == SceneObjectKind::Sketch) definition.sketchIndex = object.index;
+            if (object.kind == SceneObjectKind::Sketch) {
+                definition.sketchIndex = object.index;
+                if (!selectedSketches.contains(object.index)) selectedSketches.append(object.index);
+            }
+        }
+        if (selectedSketches.size() == 2) {
+            definition.projectionMode = 1;
+            GeometryRef first; first.kind = 7; first.index = selectedSketches[0];
+            GeometryRef second; second.kind = 7; second.index = selectedSketches[1];
+            definition.ruledFirst = {first}; definition.ruledSecond = {second};
+            definition.firstBody = -1; definition.sketchIndex = -1;
         }
         projectionDialog(this, viewport, QStringLiteral("Curva proiettata"), -1, definition, [viewport](const ExtrusionObject &d) {
             ExtrusionObject result = d;
             int count = 1;
             for (const ExtrusionObject &other : viewport->extrusions()) count += other.feature == BodyFeature::ProjectedCurve ? 1 : 0;
             result.name = QStringLiteral("Curva proiettata %1").arg(count);
-            result.plane = viewport->extrusions().value(d.firstBody).plane;
+            result.plane = d.projectionMode == 1 && !d.ruledFirst.isEmpty()
+                ? viewport->sketches().value(d.ruledFirst.first().index).plane
+                : viewport->extrusions().value(d.firstBody).plane;
             return viewport->createBody(result);
         });
     });
@@ -4768,8 +4781,12 @@ void PdfWindow::rebuildModelTree() {
                     ForgeCad::geometryRefText(body.curveExtraction.source, sketches, extrusions),
                     body.curveExtraction.trimmed ? QStringLiteral("; taglio tramite segmento") : QString()));
             } else if (body.feature == BodyFeature::ProjectedCurve) {
-                item->setToolTip(0, QStringLiteral("Proiezione di %1 su %2%3").arg(sketches.value(body.sketchIndex).name, extrusions.value(body.firstBody).name,
-                                                                                    body.notice.isEmpty() ? QString() : QStringLiteral("\n") + body.notice));
+                const QString description = body.projectionMode == 1
+                    ? QStringLiteral("Proiezione schizzo su schizzo: %1 / %2").arg(
+                        body.ruledFirst.isEmpty() ? QStringLiteral("mancante") : sketches.value(body.ruledFirst.first().index).name,
+                        body.ruledSecond.isEmpty() ? QStringLiteral("mancante") : sketches.value(body.ruledSecond.first().index).name)
+                    : QStringLiteral("Proiezione di %1 su %2").arg(sketches.value(body.sketchIndex).name, extrusions.value(body.firstBody).name);
+                item->setToolTip(0, description + (body.notice.isEmpty() ? QString() : QStringLiteral("\n") + body.notice));
             } else if (body.feature == BodyFeature::Shell) {
                 item->setToolTip(0, QStringLiteral("Guscio di spessore %1, %2").arg(ForgeCad::formatLength(body.distance, 6, true, this))
                     .arg(body.offsetFaces.isEmpty() ? QStringLiteral("chiuso") : QStringLiteral("%1 facce aperte").arg(body.offsetFaces.size())));
@@ -4914,10 +4931,16 @@ void PdfWindow::rebuildModelTree() {
                     children.append(body.curveExtraction.keepStart ? QStringLiteral("Parte: inizio") : QStringLiteral("Parte: fine"));
                 }
             } else if (body.feature == BodyFeature::ProjectedCurve) {
-                children.append(QStringLiteral("Corpo: ") + extrusions.value(body.firstBody).name);
-                children.append(QStringLiteral("Schizzo: ") + sketches.value(body.sketchIndex).name);
+                if (body.projectionMode == 1) {
+                    children.append(QStringLiteral("Modo: schizzo su schizzo"));
+                    for (const auto &ref : body.ruledFirst) children.append(QStringLiteral("Primo input: ") + ForgeCad::geometryRefText(ref, sketches, extrusions));
+                    for (const auto &ref : body.ruledSecond) children.append(QStringLiteral("Secondo input: ") + ForgeCad::geometryRefText(ref, sketches, extrusions));
+                } else {
+                    children.append(QStringLiteral("Corpo: ") + extrusions.value(body.firstBody).name);
+                    children.append(QStringLiteral("Schizzo: ") + sketches.value(body.sketchIndex).name);
+                    if (body.projectionReverse) children.append(QStringLiteral("Verso: invertito"));
+                }
                 children.append(QStringLiteral("Curve: %1").arg(body.curves.size()));
-                if (body.projectionReverse) children.append(QStringLiteral("Verso: invertito"));
             } else if (body.feature == BodyFeature::Draft) {
                 children.append(QStringLiteral("Angolo: %1°").arg(body.draftAngle));
                 children.append(QStringLiteral("Facce: %1").arg(body.offsetFaces.size()));

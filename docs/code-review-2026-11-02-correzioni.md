@@ -1,6 +1,8 @@
 # Correzioni della review, storyboard e nuova estrusione
 
 Intervento del 2 novembre 2026, sulla base `ab6fc71` del ramo `main`.
+
+**Aggiornamento successivo:** questa review è pubblicata con `d4f15fc`. La correzione del caso reale `Superfici.prt` e le verifiche sulla nuova build sono nel [rapporto estrusione](superfici-estrusione-2026-11-02.md); la nuova proiezione da due schizzi è nel [rapporto curva 3D](curva-proiettata-due-schizzi-2026-11-02.md). Gli esiti sotto restano quelli del checkpoint della review.
 La richiesta comprende la correzione dei cinque rilievi confermati, due verifiche
 indipendenti con agenti su GUI/3D e storyboard, e l'estrusione fino alle prime
 superfici del corpo successivo. I sintomi precisati dall'utente sono rigenerazioni

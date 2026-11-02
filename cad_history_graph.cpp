@@ -418,8 +418,13 @@ QVector<Dependency> dependencies(int index, const DocumentState &document) {
             addRefs(Family::ExtractedTool, QStringLiteral("segmento di taglio"));
         break;
     case BodyFeature::ProjectedCurve:
-        addBodyDependency(result, features, index, feature.firstBody, QStringLiteral("corpo"));
-        addSketchDependency(result, sketches, index, feature.sketchIndex, QStringLiteral("schizzo proiettato"));
+        if (feature.projectionMode == 1) {
+            addRefs(Family::RuledFirst, QStringLiteral("primo schizzo / curva"));
+            addRefs(Family::RuledSecond, QStringLiteral("secondo schizzo / curva"));
+        } else {
+            addBodyDependency(result, features, index, feature.firstBody, QStringLiteral("corpo"));
+            addSketchDependency(result, sketches, index, feature.sketchIndex, QStringLiteral("schizzo proiettato"));
+        }
         break;
     case BodyFeature::Shell:
         addBodyDependency(result, features, index, feature.firstBody,

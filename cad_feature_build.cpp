@@ -3,6 +3,8 @@
 #include "cad_element_names.h"
 #include "cad_topology_ref.h"
 #include "cad_curve_extract.h"
+#include "cad_projected_curve.h"
+#include "fk_sketch_projection.h"
 #include "cad_spatial_sketch.h"
 #include "cad_feature_dependencies.h"
 #include "cad_constraints.h"
@@ -278,6 +280,15 @@ void buildGeometryImpl(ExtrusionObject &body, int index, const QVector<SketchObj
             return;
         }
         case BodyFeature::ProjectedCurve: {
+            if (body.projectionMode == 1) {
+                body.curves = forgeSketchProjectedCurves(body, index, sketches, bodies, &body.error, &body.notice);
+                if (!body.curves.isEmpty()) body.curve = body.curves.first();
+                return;
+            }
+            if (body.projectionMode != 0) {
+                body.error = QStringLiteral("Modalita' di curva proiettata non riconosciuta.");
+                return;
+            }
             const ExtrusionObject *base = operand(body.firstBody);
             const SketchObject *profile = sketch(body.sketchIndex);
             if (!base || !isShapeBody(*base)) {
@@ -478,6 +489,10 @@ void buildGeometryImpl(ExtrusionObject &body, int index, const QVector<SketchObj
                     return;
                 }
                 path = ForgeCad::curvePath(curve->curve);
+            }
+            if (std::any_of(path.begin(), path.end(), [](const auto &piece) { return piece.curve && Kernel::isImplicitSketchProjection(*piece.curve); })) {
+                body.error = QStringLiteral("Lo sweep lungo una curva proiettata implicita richiederebbe un'approssimazione NURBS non autorizzata.");
+                return;
             }
             if (body.sweepProfileRef.kind >= 0) {
                 std::vector<ForgeCad::Kernel::PathSegment> section;

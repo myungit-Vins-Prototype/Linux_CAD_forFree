@@ -1,4 +1,5 @@
 #include "cad_sketch_refs.h"
+#include "fk_sketch_projection.h"
 
 #include <algorithm>
 #include <cmath>
@@ -144,6 +145,8 @@ bool nearestBodyEdge(const Body &body, const Vec3 &point, CurvePtr<3> &curve, In
 QString appendProjectedCurve(SketchObject &sketch, const CurvePtr<3> &curve, const Interval &range, bool construction, bool fixed,
                              QVector<SketchEntity> *created) {
     if (!curve || !(range.hi > range.lo)) return QStringLiteral("Curva non valida.");
+    if (isImplicitSketchProjection(*curve))
+        return QStringLiteral("La curva proiettata implicita non puo' essere convertita in schizzo senza un'approssimazione NURBS esplicita.");
     const Frame3 frame = sketchAxes(sketch);
     const auto local = [&](const Vec3 &p) {
         const Vec3 q = frame.toLocal(p);

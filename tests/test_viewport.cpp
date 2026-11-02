@@ -66,6 +66,7 @@ using ForgeCad::Gui::wrappedNote;
 #include "fk_sew.h"
 #include "fk_helix.h"
 #include "fk_mass.h"
+#include "fk_sketch_projection.h"
 #include "fk_pcurve.h"
 #include "fk_primitives.h"
 #include "fk_revolve.h"
@@ -227,6 +228,7 @@ public:
 #include "test_pattern_history_repair.h"
 #include "test_gui_3d_review.h"
 #include "test_fillet_selection_review.h"
+#include "test_sketch_projection_gui.h"
 #include "test_revision_access_gui.h"
 #include "test_extrusion_next_body_gui.h"
 #include "test_extrusion_next_body.h"
@@ -10670,6 +10672,11 @@ int main(int argc, char **argv) {
     }
     if (app.arguments().contains(QStringLiteral("--extrusion-next-body-gui"))) {
         try { ViewportInteractionTest::extrusionNextBodyGuiRegressions(app.arguments().contains(QStringLiteral("--gl"))); }
+        catch (const std::exception &error) { std::cerr << error.what() << std::endl; return 1; }
+        return 0;
+    }
+    if (app.arguments().contains(QStringLiteral("--sketch-projection"))) {
+        try { ViewportInteractionTest::sketchProjection(); }
         catch (const std::exception &error) { std::cerr << error.what() << std::endl; return 1; }
         return 0;
     }

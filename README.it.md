@@ -116,11 +116,19 @@ Tavola 2D con viste proiettate, sezione, dettaglio quotato e vista isometrica.
 
 In **Estrusione**, la fine **Fino al prossimo corpo** arresta il profilo sulle prime superfici esatte incontrate nel verso **Positivo** o **Invertito**, anche quando appartengono a più corpi. Richiede contorni chiusi solidi e un solo verso. Considera i solidi precedenti attivi e non consumati, anche nascosti manualmente; i corpi limite restano disponibili e si aggiornano con la storia. Se manca la copertura del profilo o la geometria presenta sottosquadri, ostacoli interni o superfici non certificabili, il comando segnala un errore. Non è disponibile con simmetrica, due versi o sola superficie.
 
+La fine **Fino a una faccia o a un piano** accetta anche riferimenti a facce libere valide. Il caso Schizzo 3 / Corpo 1 di `Superfici.prt`, incluse entrambe le modalità e il verso Invertito, è documentato nel [rapporto di correzione](docs/superfici-estrusione-2026-11-02.md).
+
 Il Loft accetta sezioni e guide da schizzi e bordi esatti, anche spaziali, con elenchi ordinabili e riferimenti associativi. Le condizioni G0/G1/G2 disponibili dipendono dal comando e dalla geometria: contatto, tangenza e curvatura richiedono riferimenti compatibili.
 
 Il comando **Raggio** comprende quattro schede con illustrazioni: **Costante**, **Conico**, **Variabile** e **Tra facce**. I conici offrono sezioni ellittiche (ρ < 0,5), paraboliche (ρ = 0,5) e iperboliche (ρ > 0,5), controllabili tramite ρ oppure raggio di curvatura al centro della sezione. Il raggio variabile accetta più bordi: quelli tangenti formano un percorso unico con 2–64 punti equidistanti lungo la lunghezza totale. I percorsi disgiunti hanno tabelle indipendenti, visibili selezionando un bordo nell’elenco; ogni percorso ha interpolazione morbida o lineare e inversione del verso. I punti con etichetta R si trascinano nella vista 3D per cambiare i raggi e aggiornare l’anteprima; sui percorsi chiusi i raggi iniziale e finale restano uguali. Il raccordo tra facce richiede due facce adiacenti dello stesso corpo e raccorda i loro bordi condivisi. La propagazione tangente è disattivabile; nel modo variabile resta disattivata. Il pannello si può chiudere anche durante il calcolo dell'anteprima. I parametri sono salvati nel formato nativo 59, con lettura dei documenti precedenti.
 
 I pannelli hanno un’intestazione compatta e un menu **⋮** per l’aggancio a sinistra/destra e l’opzione **Usa tutta l’altezza disponibile**. La preferenza vale per i pannelli aperti successivamente; trascinare il pannello permette di sganciarlo e riagganciarlo. Le illustrazioni usano uno sfondo bianco nel tema chiaro.
+
+### Curva 3D da due schizzi
+
+In **Curva proiettata** scegliere **Schizzo su schizzo (curva 3D)**, i due schizzi su piani non paralleli e le singole curve da usare. Gli elenchi e il pulsante **Scegli curva nella vista** permettono di escludere le altre entità. L’anteprima mostra la curva spaziale ottenuta dall’intersezione delle due proiezioni normali; la feature dipende da entrambi gli schizzi e si rigenera dopo le modifiche.
+
+Il risultato usa NURBS esatte quando possibile e una curva implicita esatta negli altri casi, conservata tramite gli input nel documento nativo. Per i rami impliciti non sono disponibili sweep, conversione in schizzo e STEP/IGES; piani paralleli e degenerazioni non risolvibili danno errore. [Uso, geometria e verifiche](docs/curva-proiettata-due-schizzi-2026-11-02.md).
 
 ### Modellazione di superfici
 

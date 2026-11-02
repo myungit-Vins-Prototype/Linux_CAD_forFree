@@ -806,6 +806,8 @@ struct ExtrusionObject {
     // prima faccia (trimProject), modo del taglio e verso (di default verso il
     // corpo; vero: il verso opposto).
     bool trimProject = false;
+    // ProjectedCurve: 0 sul corpo; 1 schizzo su schizzo, input kind 7
+    // in ruledFirst/ruledSecond (liste persistenti gia' compatibili).
     int projectionMode = 0;
     bool projectionReverse = false;
     // Thicken: lato dello spessore e direzione (kind < 0: la normale delle facce).

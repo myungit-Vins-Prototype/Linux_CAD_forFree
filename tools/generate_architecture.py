@@ -40,6 +40,11 @@ GROUPS = [
  ('build', 'Build e strumenti', 'Configurazione, generazione e confezionamento del software.')]
 # Descrizioni curate: aggiornare queste voci quando cambia il confine di un modulo.
 DESCRIPTIONS = {
+ 'cad_projected_curve': ('features', 'Curva 3D da due schizzi: selezione precisa delle entita, proiezioni lungo le normali dei piani e rami esatti; riferimenti persistenti e limiti espliciti per le componenti implicite.'),
+ 'forgeCad2026_dialogs_projection.cpp': ('dialogs', 'Pannello della curva proiettata: schizzo su corpo oppure due schizzi, scelta indipendente delle singole curve, anteprima, ripristino selezione e messaggi sui rami.'),
+ 'tests/test_sketch_projection_gui.h': ('tests', 'Doppia proiezione nel pannello: input individuali, preview, rigenerazione da entrambi gli schizzi, Undo/Redo, codec e rifiuto delle approssimazioni implicite.'),
+ 'kernel/tests/test_face_normal_bounds.cpp': ('tests', 'Normali su facce rifilate: hull UV sui range reali, ripiegamenti fuori/dentro trim, fori, complementi, pesi, estrusioni e cancellazione.'),
+ 'kernel/tests/test_sketch_projection.cpp': ('tests', 'Curve da due proiezioni su piani generali: intervalli comuni e rami, NURBS esatte e intersezioni implicite, derivate e casi degeneri.'),
  'tests/test_fillet_selection_review.h': ('tests', 'Raccordi: scelta con eventi reali e occlusione tra corpi, base forzata durante modifica e cancellazione delle evidenziazioni quando la lista dei bordi viene nascosta.'),
  'kernel/tests/test_exchange_robustness.cpp': ('tests', 'Robustezza STEP/B-rep senza OCCT: annidamento sintattico, conteggi/nodi prima delle allocazioni con guardia nel runner, occorrenze coincidenti e MAPPED_ITEM distinti senza duplicare percorsi di visita.'),
  'tests/test_gui_3d_review.h': ('tests', 'Palette e pan; picking GPU prima del repaint dopo cambi camera/visibilita/filtro/istanze, visibilita effettiva condivisa con la scena, rendering e risorse vetro dopo reale ricreazione del contesto OpenGL.'),
@@ -199,14 +204,14 @@ DESCRIPTIONS.update({'tools/open_architecture.py': ('build', 'Avvio locale della
                        'feature.'),
  'cad_curve_solver': ('sketch',
                       'Costruisce e ricalcola le curve esatte a partire dalle entità dello sketch.'),
- 'cad_datum': ('features', 'Risoluzione dei piani e dei riferimenti geometrici di costruzione.'),
+ 'cad_datum': ('features', 'Risoluzione di piani, assi e riferimenti; le facce libere mantengono identita B-rep senza diventare piani o assi fittizi.'),
  'cad_display_cache': ('render', 'Cache CPU/VBO dei display: riuso nel frame e rilascio delle risorse non usate a fine frame, statistiche di storage referenziato; facce, spigoli e istanze.'),
  'cad_memory': ('render', 'Rilascio best effort delle pagine libere glibc dopo grandi riduzioni delle mesh; nessun oggetto vivo o stato Undo modificato, no-op sugli altri allocatori.'),
  'tests/test_mesh_memory.h': ('tests', 'Sonda RAM bassa/massima/bassa su documenti: RSS, arene, storage mesh e cache GL, frame reali e trim solo diagnostico; nessun salvataggio CAD.'),
  'tests/test_thread_edges.h': ('tests', 'Regressioni bordi dopo filettatura: base rettangolare, cuciture G1, spigoli B-spline, riapertura e invalidazione cache; framebuffer corpo/anteprima e wireframe opzionali.'),
  'tests/test_display_cache_memory.cpp': ('tests', 'Durata cache CPU/VBO: rilascio nel primo frame sostitutivo o vuoto, riuso senza crescita, risorse condivise e variante nativa OpenGL.'),
  'cad_document_io': ('documents',
-                     'Codec nativo 56 con Zstandard per definizione e cache geometrica: lettura legacy zlib 1–55, mesh/B-rep e genealogia invariati e impronte storiche delle tavole conservate.'),
+                     'Codec nativo 60 con Zstandard e lettura legacy; definizione, mesh/B-rep e genealogia, tipo solido ripristinato dalla cache e impronte storiche delle tavole conservate.'),
  'cad_document_read': ('documents', 'Compressione Zstandard con checksum e finestra limitata; decompressione streaming zlib/Zstd con budget/output atomico e decodifica mesh/indici a blocchi con endian e precisione Qt preservati.'),
  'cad_document_recovery': ('documents',
                            'Checkpoint di recupero e ripristino dei documenti dopo interruzioni.'),
@@ -276,7 +281,7 @@ DESCRIPTIONS.update({'tools/open_architecture.py': ('build', 'Avvio locale della
                     'prodotto implicito solo davanti a nomi o parentesi e profondita di annidamento limitata.'),
  'cad_extrude': ('features',
                  'Estrusione a distanza, a riferimento e fino ai primi corpi precedenti: trim B-rep esatto, '
-                 'copertura e primo incontro certificati conservativamente; genealogia dei limiti distinta dalla fusione.'),
+                 'copertura e primo incontro certificati sulle facce rifilate, cavita controllate con volumi orientati; genealogia dei limiti distinta dalla fusione.'),
  'cad_feature_build': ('features',
                        'Costruisce feature dagli operandi con genealogia; geometria e mesh opzionale, risultati delle ripetizioni separati per corpo, aggregati legacy e derivati gia presenti conservati, ripetizione dello strumento sweep prima della fusione/sottrazione, errori specifici conservati.'),
  'cad_feature_dependencies': ('features', 'Dipendenze e consumo dei risultati, compresi aggregati legacy; candidati dinamici dei limiti di estrusione distinti dagli strumenti di fusione e dalla visibilita manuale.'),

@@ -13,9 +13,10 @@
 #include "cad_kernel.h"
 #include "fk_boolean.h"
 #include "fk_bspline.h"
-#include "fk_bspline_surface.h"
 #include "fk_classify.h"
 #include "fk_intersect.h"
+#include "fk_face_normal_bounds.h"
+#include "fk_mass.h"
 #include "fk_primitives.h"
 #include "fk_surface.h"
 
@@ -269,31 +270,6 @@ Interval faceProjection(const Body &body, FaceId face, const Vec3 &origin, const
     return range;
 }
 
-// Per una pezza polinomiale Su e Sv sono combinazioni convesse dei loro
-// poli derivati. Il prodotto vettoriale e' bilineare: controllare tutte le
-// coppie certifica il segno sull'intera pezza, senza campionarla.
-bool polynomialEnvelope(const BSplineSurface &surface, const Vec3 &outwardDirection) {
-    if (surface.isRational()) {
-        const double weight = surface.weight(0,0);
-        for (int i=0;i<surface.uPoleCount();++i) for (int j=0;j<surface.vPoleCount();++j)
-            if (surface.weight(i,j) != weight) return false;
-    }
-    const auto patches = surface.cachedBezierPatches();
-    for (const auto &patch : *patches) {
-        cancellationPoint();
-        std::vector<Vec3> du, dv;
-        for (int i=0;i<patch.uPoleCount()-1;++i) for (int j=0;j<patch.vPoleCount();++j)
-            du.push_back((patch.pole(i+1,j)-patch.pole(i,j)) * (double(patch.uDegree())/patch.uDomain().length()));
-        for (int i=0;i<patch.uPoleCount();++i) for (int j=0;j<patch.vPoleCount()-1;++j)
-            dv.push_back((patch.pole(i,j+1)-patch.pole(i,j)) * (double(patch.vDegree())/patch.vDomain().length()));
-        for (const auto &u : du) for (const auto &v : dv) {
-            const double value = dot(cross(u,v),outwardDirection), scale = norm(u)*norm(v);
-            if (!std::isfinite(value) || !std::isfinite(scale) || value < -kAngularResolution*scale) return false;
-        }
-    }
-    return true;
-}
-
 // Tutte le facce diverse dalla base devono uscire nel verso scelto oppure
 // essergli tangenti. Altrimenti il pezzo ha oltrepassato un primo ostacolo
 // passando di lato: la sola connessione al piano iniziale non basta.
@@ -343,10 +319,8 @@ bool firstSurfaceEnvelope(const Body &body, const Vec3 &origin, const Vec3 &dire
             if (lower >= -kAngularResolution) continue;
             return false;
         }
-        if (const auto *extrusion = dynamic_cast<const ExtrusionSurface *>(face.surface.get()))
-            if (norm(cross(extrusion->direction(), direction)) <= kAngularResolution) continue;
-        if (const auto *spline = dynamic_cast<const BSplineSurface *>(face.surface.get()))
-            if (polynomialEnvelope(*spline,sense*direction)) continue;
+        if (face.surface->type() == SurfaceType::Extrusion || face.surface->type() == SurfaceType::BSpline)
+            if (faceHasNonnegativeNormalProjection(body, id, direction)) continue;
         return false;
     }
     return true;
@@ -410,7 +384,20 @@ ForgeBody extrusionUntilNext(ExtrusionObject &body, int index, const SketchObjec
         for (ShellId shell : overlap->shells()) if (base(*overlap, shell)) {
             setError(error, QStringLiteral("Un corpo limite attraversa il piano iniziale del profilo.")); return nullptr;
         }
-        result = forgeKeepShells(forgeBooleanWithHistory(result, tool, Kernel::BooleanOperation::Subtract), base);
+        const ForgeBody cut = forgeBooleanWithHistory(result, tool, Kernel::BooleanOperation::Subtract);
+        // La selezione delle sole shell iniziali non deve riempire una
+        // cavita': una shell interna ha volume orientato negativo. Rifiutarla
+        // prima del filtro conserva il controllo degli ostacoli interni,
+        // senza una seconda booleana su facce di taglio coincidenti.
+        for (ShellId shell : cut->shells()) {
+            if (base(*cut, shell)) continue;
+            const ForgeBody component = forgeKeepShells(cut, [&](const Body &, ShellId candidate) { return candidate == shell; });
+            if (!component || !(massProperties(*component).volume > 0.0)) {
+                setError(error, QStringLiteral("Un ostacolo interno al profilo impedisce di certificare il limite alle prime superfici incontrate."));
+                return nullptr;
+            }
+        }
+        result = forgeKeepShells(cut, base);
         if (!result) {
             setError(error, QStringLiteral("L'estrusione fino al prossimo corpo non ha una parte che parte dal profilo.")); return nullptr;
         }
@@ -424,17 +411,6 @@ ForgeBody extrusionUntilNext(ExtrusionObject &body, int index, const SketchObjec
     }
     if (!firstSurfaceEnvelope(*result, origin, direction)) {
         setError(error, QStringLiteral("Le superfici incontrate hanno sottosquadri o una forma non certificabile fino al primo incontro.")); return nullptr;
-    }
-    // Se un ostacolo era interamente interno al prisma, la selezione delle
-    // shell attaccate alla base puo' aver scartato la sua cavita'. Nessun
-    // risultato accettato puo' riempire materiale di un corpo limite, anche
-    // dopo che un altro taglio piu' lontano ha eliminato il cap artificiale.
-    for (const auto &candidate : candidates) {
-        const auto overlap = forgeBooleanWithHistory(result, bodies.at(candidate.index).forgeBody, Kernel::BooleanOperation::Intersect);
-        if (!overlap->faces().empty()) {
-            setError(error, QStringLiteral("Un ostacolo interno al profilo impedisce di certificare il limite alle prime superfici incontrate."));
-            return nullptr;
-        }
     }
     return result;
 }

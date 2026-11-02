@@ -163,6 +163,7 @@ add_executable(forgecad
     forgeCad2026_dialogs_fillet.cpp
     forgeCad2026_dialogs_solids.cpp
     forgeCad2026_dialogs_surfaces.cpp
+    forgeCad2026_dialogs_projection.cpp
     forgeCad2026_dialogs_surface_tools.cpp
     forgeCad2026_dialogs_sketch.cpp
     forgeCad2026_dialogs_analysis.cpp
@@ -288,6 +289,8 @@ add_executable(forgecad
     cad_pattern.cpp
     cad_extrude.h
     cad_extrude.cpp
+    cad_projected_curve.h
+    cad_projected_curve.cpp
     cad_sketch_refs.h
     cad_sketch_refs.cpp
     cad_cuda_tessellation.h
@@ -548,6 +551,8 @@ if(FORGECAD_BUILD_VIEW_TESTS)
     set_tests_properties(forgecad_gui_3d_review_tests forgecad_storyboard_review_tests PROPERTIES TIMEOUT 120)
     forgecad_add_view_test(forgecad_revision_access_gui_tests --revision-access-gui)
     forgecad_add_view_test(forgecad_extrusion_next_body_tests --extrusion-next-body)
+    forgecad_add_view_test(forgecad_sketch_projection_tests --sketch-projection)
+    set_tests_properties(forgecad_sketch_projection_tests PROPERTIES TIMEOUT 60)
     forgecad_add_view_test(forgecad_extrusion_next_body_gui_tests --extrusion-next-body-gui)
     forgecad_add_view_test(forgecad_fillet_selection_review_tests --fillet-selection-review)
     set_tests_properties(forgecad_revision_access_gui_tests forgecad_extrusion_next_body_tests

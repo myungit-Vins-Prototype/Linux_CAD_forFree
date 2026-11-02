@@ -21,6 +21,7 @@
 
 #include "cad_cuda_tessellation.h"
 #include "fk_curve.h"
+#include "fk_sketch_projection.h"
 #include "fk_iges.h"
 #include "fk_intersect.h"
 #include "fk_step.h"
@@ -234,6 +235,8 @@ QString exportBodies(const QString &path, const QVector<ExportBody> &bodies, Exp
     std::vector<Kernel::ExchangeBody> exchange;
     for (const ExportBody &body : bodies) {
         if (!body.body && !body.curve) continue;
+        if (body.curve && Kernel::isImplicitSketchProjection(*body.curve))
+            return QStringLiteral("La curva %1 ha una rappresentazione implicita esatta: esportarla in STEP/IGES richiederebbe un'approssimazione NURBS non autorizzata.").arg(body.name);
         Kernel::ExchangeBody e;
         // IGES e le stringhe STEP senza codifica sono ASCII: lettere accentate
         // senza accento (è -> e), il resto '_' (fk_step codifica comunque il resto).

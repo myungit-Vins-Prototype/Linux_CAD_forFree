@@ -38,6 +38,10 @@ add_library(forgekernel STATIC
     fk_curve_algo.cpp
     fk_surface_algo.h
     fk_surface_algo.cpp
+    fk_face_normal_bounds.h
+    fk_face_normal_bounds.cpp
+    fk_sketch_projection.h
+    fk_sketch_projection.cpp
     fk_surface_distance.h
     fk_surface_distance.cpp
     fk_topology.h
@@ -213,3 +217,18 @@ target_compile_options(forgekernel_blend_profile_tests PRIVATE -Wall -Wextra -Wp
 set_target_properties(forgekernel_blend_profile_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
 add_test(NAME forgekernel_blend_profile_tests COMMAND forgekernel_blend_profile_tests)
 set_tests_properties(forgekernel_blend_profile_tests PROPERTIES TIMEOUT 60)
+
+# Orientamento delle facce rifilate e curva da doppia proiezione: solo kernel proprio.
+add_executable(forgekernel_face_normal_bounds_tests tests/fk_test_main.cpp tests/test_face_normal_bounds.cpp)
+target_link_libraries(forgekernel_face_normal_bounds_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_face_normal_bounds_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_face_normal_bounds_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_face_normal_bounds_tests COMMAND forgekernel_face_normal_bounds_tests)
+set_tests_properties(forgekernel_face_normal_bounds_tests PROPERTIES TIMEOUT 30)
+
+add_executable(forgekernel_sketch_projection_tests tests/test_sketch_projection.cpp)
+target_link_libraries(forgekernel_sketch_projection_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_sketch_projection_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_sketch_projection_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_sketch_projection_tests COMMAND forgekernel_sketch_projection_tests)
+set_tests_properties(forgekernel_sketch_projection_tests PROPERTIES TIMEOUT 60)

@@ -178,7 +178,8 @@ bool booleanDialog(QMainWindow *parent, CadViewport *viewport, const QString &ti
 bool draftDialog(QMainWindow *window, CadViewport *viewport, const QString &title, int replaced,
                         const ExtrusionObject &initial, const std::function<QString(const ExtrusionObject &)> &apply);
 
-// Curve proiettate (ProjectedCurve): corpo, schizzo e verso. Il taglio con
+// Curve proiettate (ProjectedCurve): schizzo su corpo oppure due schizzi
+// con selezione esplicita delle entita' e anteprima. Il taglio con
 // la proiezione di uno schizzo e' un metodo di Taglia superficie (trimDialog).
 bool projectionDialog(QMainWindow *window, CadViewport *viewport, const QString &title, int replaced,
                              const ExtrusionObject &initial, const std::function<QString(const ExtrusionObject &)> &apply);

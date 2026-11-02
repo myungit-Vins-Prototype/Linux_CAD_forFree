@@ -100,8 +100,27 @@ static void extrusionNextBodyTests() {
         freeform.face(bottom).sense = false;
         for (FinId fin : freeform.fins()) freeform.fin(fin).pcurve.reset();
         require(computePCurves(freeform) == 0, "SP-curve esatte del limite bilineare");
-        const auto limited = build(small,{target(freeform,1104)});
+        const auto limit = target(freeform,1104);
+        const auto limited = build(small,{limit});
         volume(limited,4);
+        GeometryRef reference; reference.kind = 5; reference.index = 0;
+        reference.featureId = limit.featureId; reference.point = faceReference(freeform,bottom,Vec3(0,0,4));
+        ResolvedRef resolved; QString referenceError;
+        require(resolveGeometryRef(reference,1,{small},{limit},resolved,&referenceError),
+                "una faccia B-spline resta un riferimento di faccia valido");
+        require(!resolved.hasPlane && !resolved.hasLine,
+                "una faccia libera non inventa piano o asse per i consumer datum");
+        ExtrusionObject toFace; toFace.feature = BodyFeature::Extrusion; toFace.sketchIndex = 0;
+        toFace.extent = 3; toFace.extentRef = reference; toFace.distance = 1;
+        buildGeometry(toFace,1,{small},{limit});
+        volume(toFace,4);
+        DocumentState snapshot; snapshot.sketches = {small}; snapshot.extrusions = {limit};
+        QByteArray encoded; DocumentState decoded;
+        require(encodeDocument(snapshot,encoded,true).isEmpty() && decodeDocument(encoded,decoded,true).isEmpty(),
+                "codec con snapshot del limite libero");
+        require(decoded.extrusions[0].forgeBody && decoded.extrusions[0].solid,
+                "la cache ripristina anche il tipo solido usato dalla ricerca dei limiti");
+        volume(build(small,decoded.extrusions),4);
         bool splineCap = false;
         for (FaceId face : limited.forgeBody->faces()) splineCap = splineCap || limited.forgeBody->face(face).surface->type() == SurfaceType::BSpline;
         require(splineCap, "la superficie libera resta B-spline nel risultato limitato");

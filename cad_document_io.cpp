@@ -1202,6 +1202,7 @@ void applyBodyCache(const QByteArray &compressed, const QByteArray &payload, Doc
         ExtrusionObject &body = state.extrusions[int(i)];
         if (!bodies[i]) continue;
         body.forgeBody = std::move(bodies[i]);
+        body.solid = !body.forgeBody->isSheet();
         body.error = records[i].error;
         if (records[i].hasDisplay) {
             body.display = std::move(records[i].display);

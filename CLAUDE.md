@@ -103,53 +103,61 @@ ctest --test-dir forgecad-release --output-on-failure
 
 ## Ultimi interventi — esiti consolidati
 
-0. **02/11 — Correzioni review, storyboard e nuova estrusione.** R1–R5 corretti: parser STEP limitato,
-   spline/B-rep validati prima delle allocazioni, occorrenze distinte e catalogo concorrente senza perdita dei lock.
-   Due agenti autorizzati: corretti picking obsoleto/occlusione, pan e highlight raccordi; rimappature estrazioni,
-   identità copie/Pierce, featureOnly, componenti DeleteFace e visibilità dopo consumo/recupero del tip.
-   B8 irrobustito con copie e ID, verificato solo con reingresso iniettato. «Fino al prossimo corpo» implementato:
-   trim B-rep esatto, limiti dinamici, versi positivo/invertito, GUI/preview/genealogia; formato 60 invariato.
-   Build completa app/runner PASS. CTest consolidato **151 PASS/1 SKIP/1 FAIL**: ultimi 152 test senza fallimenti;
-   kernel completo invariato, 457/458, resta lo scarto preesistente di sformo `test_draft.cpp:134` (1,794e-6>1e-6).
-   Robustezza 5/5 anche ASan/UBSan mirato; STEP 20/20, IGES 9/9, BodyIO 2/2. GUI finale 6/6 Wayland/XCB PASS.
-   Mappa 531 file/7305 relazioni/249 TU senza errori, check e HTML PASS. Originali CAD intatti; commit/push richiesti dall’utente e in corso.
-   [Rapporto, limiti ed evidenze](docs/code-review-2026-11-02-correzioni.md). Riaprire l'app per caricare la build.
-1. **02/11 — Memoria di progetto compatta (questo intervento).** Su richiesta dell'utente, sostituito il registro cumulativo
-   con stato implementato, regole, limiti e otto esiti recenti; originale conservato integralmente in
-   `docs/history/claude-2026-11-02.md` e introdotto un limite di dimensione anche in `AGENTS.md`. Da 2.279.833 byte a circa
-   14 KiB, riduzione oltre il 99%. Verificati: archivio identico byte per byte al precedente `CLAUDE.md` di HEAD,
-   collegamenti locali, struttura e limite di dimensione, `git diff --check` PASS. Solo documentazione: nessuna modifica
-   strutturale del codice, nuova build o prova funzionale necessaria; nessun commit/push in questo intervento.
-2. **02/11 — OCCT soltanto nei test (`ab6fc71`).** Ricerca OCCT spostata in `kernel/occt_tests`, opzione facoltativa e
+0. **02/11 — Estrusione Superfici e curva da due schizzi.** Review `d4f15fc` già pubblicata.
+   Schizzo 3/Corpo 1: corretti facce libere, certificazione sul trim, controllo shell e solid del decoder.
+   Entrambi i modi, Invertito: GUI9/9 PASS su copia iniziale `Superfici.prt`, volume2348,733.
+   Nuova curva 3D da entità precise di due schizzi, dipendenze/codec60; kernel21gruppi e sanitizer mirati
+   PASS, GUI2/2 Wayland/XCB. Implicite esatte salvabili: sweep/conversione/STEP/IGES rifiutati;
+   NURBS esatte compatibili. App/runner definitivi compilati; CTest156: **154 PASS/1 SKIP/1 FAIL**,
+   unico scarto di sformo preesistente invariato (kernel457/458). Mappa541file/7437relazioni/255TU,
+   zero errori, check/HTML PASS. Cinque copie congelate intatte; originale Superfici salvato in seguito,
+   autore non attribuito: Schizzo3 cambiato e nuova Estrusione18 extent4 rigenerata PASS, volume2347,969.
+   Nessun ripristino/scrittura degli originali dalle sonde. Riaprire l’app per caricare la build.
+   [Estrusione e prove](docs/superfici-estrusione-2026-11-02.md),
+   [curva 3D e limiti](docs/curva-proiettata-due-schizzi-2026-11-02.md), evidenze archiviate.
+
+1. **02/11 — Correzioni review, storyboard e nuova estrusione (`d4f15fc`, pubblicato).** R1–R5 corretti:
+   parser/scambio STEP-B-rep robusti, occorrenze distinte e catalogo concorrente senza perdita dei lock.
+   Agenti GUI/storyboard: picking, pan, highlight, rimappature, identità copie/Pierce/featureOnly,
+   componenti DeleteFace e visibilità consumo/recupero tip. B8 solo con reingresso iniettato.
+   «Fino al prossimo corpo» B-rep, dipendenze, versi, preview/genealogia; formato 60 invariato.
+   App/runner PASS; CTest consolidato 151 PASS/1 SKIP/1 FAIL, kernel 457/458: sformo preesistente
+   `test_draft.cpp:134`, scarto1,794e-6>1e-6. Robustezza5/5 anche sanitizer mirati, STEP20/20,
+   IGES9/9, BodyIO2/2; GUI6/6 Wayland/XCB. Mappa531file/7305relazioni/249TU, check/HTML PASS.
+   [Dettagli, prove e limiti](docs/code-review-2026-11-02-correzioni.md); originali intatti.
+2. **02/11 — Memoria compatta.** Registro cumulativo conservato in `docs/history/claude-2026-11-02.md`,
+   identico al precedente HEAD: 2.279.833 byte. Sintesi ridotta oltre il 99%, link/struttura/diff verificati;
+   regole di dimensione anche in AGENTS. Solo documentazione, senza build funzionale.
+3. **02/11 — OCCT soltanto nei test (`ab6fc71`).** Ricerca OCCT spostata in `kernel/occt_tests`, opzione facoltativa e
    README/CI aggiornati; app e kernel senza dipendenze OCCT. Configurazione minima senza OCCT verificata; l'utente conferma
    zero `HAVE_TK` nei flag dell'app dopo riconfigurazione. Test comparativi e CI successivi allo spostamento non confermati
    nel registro.
-3. **02/11 — Bug della review (`9321643`).** Corretti cicli/ricorsioni STEP, conteggi e spline IGES, espressioni numeriche
+4. **02/11 — Bug della review (`9321643`).** Corretti cicli/ricorsioni STEP, conteggi e spline IGES, espressioni numeriche
    ambigue/profonde, rilascio GlassCompositor, compatibilità Qt 6.4, normale degenere nello specchio e catture C++17;
    aggiunte regressioni. Nel cloud: app/runner compilati, Expression e gruppi
    Reflection/Transform/Mirror/Step/Iges/Exchange/Offset/Shell/Thicken PASS; ASan/UBSan e fuzzing mirati senza i crash
    riprodotti sul vecchio codice. L'utente riferisce build/test locali riusciti, log non riletto. Mappa cloud verificata,
    vista locale da aggiornare con la propria build.
-4. **02/11 — Quote costruzione, normali e svuotamento (`de1448a`, registro `7651724`).** Push completato con tutte le 16
+5. **02/11 — Quote costruzione, normali e svuotamento (`de1448a`, registro `7651724`).** Push completato con tutte le 16
    modifiche allora presenti. Quotatura diretta della costruzione coincidente con piani/assi; normale solo in
    definizione/hover, disattivabile da Visualizza e persistente; svuotamento delle giunzioni tolleranti con budget locali e
    SP-curve conservate. App completa compilata; Shell 18/18, Boolean 38/38, Offset 25/25 e CTest pertinenti 16/16 PASS.
    Quattro gusci reali verificati da pannello, anteprima, Undo/Redo e salvataggio/riapertura; limite trasformato distinto
    sopra.
-5. **01/11 — Schizzi, Estendi e unione (`8121ed7`, registro `45d0ab1`).** Conversioni/sezioni esplicite visibili senza
+6. **01/11 — Schizzi, Estendi e unione (`8121ed7`, registro `45d0ab1`).** Conversioni/sezioni esplicite visibili senza
    mostrare cache automatiche; formato 60 e promozione delle conversioni storiche. Estendi apre subito il pannello. Unione
    Corpo 1/4 di Flacone3 corretta nell'app in entrambi gli ordini. App compilata, regressioni e QA XCB/Wayland PASS; storia,
    persistenza e genealogia verificate. Incluse anche correzioni a raccordi e scambio STEP/IGES, preservando spline e
    intervalli esatti.
-6. **31/10 — Raccordi avanzati e pannelli (`a485349`).** Quattro modalità Raggio, coniche con parametro ρ, variabili con 2–64
+7. **31/10 — Raccordi avanzati e pannelli (`a485349`).** Quattro modalità Raggio, coniche con parametro ρ, variabili con 2–64
    stazioni, percorsi tangenti multipli con tabelle indipendenti e maniglie trascinabili. Pannelli compatti agganciabili,
    immagini adattate al tema, riferimenti schizzo associativi diretti. Build, regressioni e QA native documentate; limiti
    geometrici specifici conservati nei rapporti/archivio.
-7. **30/10 — Tavole e portabilità.** Snap delle quote nel primo posizionamento e trascinamento, allineamento H/V, punte
+8. **30/10 — Tavole e portabilità.** Snap delle quote nel primo posizionamento e trascinamento, allineamento H/V, punte
    coincidenti, Alt/Esc e Undo unico; rugosità strutturate Ra/Rz, sezioni composte con mouse/snap. Portabilità CT0578 migrata
    con nomi/testimoni esatti: 48/48 quote, asse e nota verificati dopo salvataggio senza cache e trasferimento. Interventi
    implementati e collaudati, con limiti di migrazione indicati sopra.
-8. **30/10 — Unificazione su main e CI.** Integrato e archiviato il ramo solver/GPU preservando il fallback CPU. Al
+9. **30/10 — Unificazione su main e CI.** Integrato e archiviato il ramo solver/GPU preservando il fallback CPU. Al
    checkpoint di unificazione: Linux 47 PASS/2 SKIP e macOS 51 PASS/1 SKIP, CUDA locale 7/7 e Metal in CI PASS; modelli reali
    confrontati senza attribuire tempi a benchmark. Questi esiti sono storici, non verifiche dell'ultimo HEAD. Rapporti
    `docs/unificazione-main-2026-10-30.json` e `docs/ci.md`.

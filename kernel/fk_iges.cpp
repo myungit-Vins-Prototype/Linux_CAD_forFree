@@ -1,4 +1,5 @@
 #include "fk_iges.h"
+#include "fk_sketch_projection.h"
 
 #include <algorithm>
 #include <array>
@@ -184,6 +185,8 @@ private:
 
 // Curva di un edge come 110 o 126 (sul tratto dell'edge, nel verso dato).
 int writeIgesCurve(IgesWriter &w, const Curve<3> &curve, const Interval &range, bool forward) {
+    if (isImplicitSketchProjection(curve))
+        throw std::domain_error("IGES: curva proiettata implicita non esportabile senza approssimazione NURBS esplicita");
     const Curve<3> *basis = &curve;
     while (basis->type() == CurveType::Trimmed) basis = static_cast<const TrimmedCurve<3> *>(basis)->basis().get();
     if (basis->type() == CurveType::Line) {

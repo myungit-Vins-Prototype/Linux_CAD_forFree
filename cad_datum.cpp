@@ -89,7 +89,11 @@ bool resolveForgeBody(const Body &body, int kind, const EdgePoint &reference, Re
         setLine(r, f.origin(), f.zDir());
         return true;
     }
-    return setError(error, QStringLiteral("la faccia scelta non e' piana ne' cilindrica o conica")), false;
+    // La faccia e' gia' risolta nella B-rep. Anche una superficie libera
+    // puo' limitare un'estrusione o essere sezionata: non implica pero'
+    // un piano, un asse, un punto o una curva per gli altri consumer.
+    // I loro controlli hasPlane/hasLine/... restano intenzionalmente falsi.
+    return true;
 }
 
 // Punto dello schizzo (coordinate del piano) indicato da un ConstraintRef.

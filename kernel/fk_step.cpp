@@ -1,4 +1,5 @@
 #include "fk_step.h"
+#include "fk_sketch_projection.h"
 
 #include "fk_precision.h"
 #include "fk_parallel.h"
@@ -158,6 +159,8 @@ int writeBSplineCurve(StepWriter &w, const BSplineCurve<3> &c) {
 
 // Curva di un edge (il tratto serve solo alle curve senza forma STEP propria).
 int writeCurve(StepWriter &w, const CurvePtr<3> &input, const Interval &range) {
+    if (input && isImplicitSketchProjection(*input))
+        throw std::domain_error("STEP: curva proiettata implicita non esportabile senza approssimazione NURBS esplicita");
     const Curve<3> *curve = input.get();
     while (curve->type() == CurveType::Trimmed) curve = static_cast<const TrimmedCurve<3> *>(curve)->basis().get();
     // Trasformate: le coniche restano coniche nelle similitudini, le B-spline si trasformano nei poli.
