@@ -115,7 +115,7 @@ ctest --test-dir forgecad-release --output-on-failure
    Superfici corrente:23facce/1shell,23653,78484397822mm³; target16 fuso.5copie e5originali verificati intatti.
    Mappa548file/7571relazioni/258AST,0errori,check/HTML e8confini in/out PASS; generati ignorati.
    [Rapporto e archivio](docs/estrusione-unione-riferimenti-proiettati-2026-11-02.md) conservano fasi, hash,
-   limiti; base317b8cb. Commit/push richiesti in preparazione.
+   limiti; base317b8cb. Pubblicato `dbed027` su main.
 
 1. **02/11 — Correzioni review, storyboard e nuova estrusione (`d4f15fc`, pubblicato).** R1–R5 corretti:
    parser/scambio STEP-B-rep robusti, occorrenze distinte e catalogo concorrente senza perdita dei lock.
