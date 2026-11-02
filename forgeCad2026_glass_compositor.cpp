@@ -12,6 +12,9 @@ void GlassCompositor::initialize() {
 }
 
 void GlassCompositor::clearResources() {
+    // Il prossimo initialize() (nuovo contesto GL) ricrea shader e buffer:
+    // fino ad allora niente vetro GPU con oggetti del contesto distrutto.
+    gpuGlassReady_ = false;
     glassShader_.reset();
     glassSource_.reset(); glassPing_.reset(); glassBlur_.reset();
 }

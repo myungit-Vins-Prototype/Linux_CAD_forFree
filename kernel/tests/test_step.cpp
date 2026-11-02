@@ -856,3 +856,116 @@ FK_TEST(ExchangeSplineRestrictionPreservesGeometry) {
         }
     }
 }
+
+namespace {
+
+// File STEP di un cilindro scritto dal kernel: base valida per costruire
+// riferimenti malformati con una sola modifica.
+std::string cylinderStep() {
+    return writeStep({{"cilindro", makeCylinder(Frame3(Vec3(0, 0, 0), Vec3(0, 0, 1), Vec3(1, 0, 0)), 5.0, 12.0)}});
+}
+
+int largestId(const std::string &text) {
+    int largest = 0;
+    for (std::size_t at = text.find('#'); at != std::string::npos; at = text.find('#', at + 1))
+        largest = std::max(largest, std::atoi(text.c_str() + at + 1));
+    return largest;
+}
+
+// Sostituisce il k-esimo argomento (da 0) dell'istanza `id`.
+std::string withArgument(const std::string &text, int id, int k, const std::string &value) {
+    const std::string head = "#" + std::to_string(id) + "=";
+    const std::size_t start = text.find(head);
+    FK_CHECK(start != std::string::npos);
+    if (start == std::string::npos) return text;
+    std::size_t open = text.find('(', start), at = open + 1;
+    for (int i = 0, depth = 0; i < k; ++at) {
+        if (text[at] == '(') ++depth;
+        else if (text[at] == ')') --depth;
+        else if (text[at] == ',' && depth == 0) ++i;
+    }
+    std::size_t end = at;
+    for (int depth = 0; depth > 0 || (text[end] != ',' && text[end] != ')'); ++end) {
+        if (text[end] == '(') ++depth;
+        else if (text[end] == ')') --depth;
+    }
+    return text.substr(0, at) + value + text.substr(end);
+}
+
+int firstOfType(const std::string &text, const std::string &type) {
+    const std::size_t at = text.find("=" + type + "(");
+    FK_CHECK(at != std::string::npos);
+    if (at == std::string::npos) return -1;
+    const std::size_t hash = text.rfind('#', at);
+    return std::atoi(text.c_str() + hash + 1);
+}
+
+std::string appendEntities(const std::string &text, const std::string &entities) {
+    const std::size_t end = text.rfind("ENDSEC;");
+    return text.substr(0, end) + entities + text.substr(end);
+}
+
+bool notesMention(const StepReadResult &result, const std::string &fragment) {
+    for (const auto &note : result.notes)
+        if (note.find(fragment) != std::string::npos) return true;
+    return false;
+}
+
+}  // namespace
+
+// Un ORIENTED_EDGE che rimanda a se stesso (o due che si rimandano a
+// vicenda) bloccava readStep in un ciclo infinito.
+FK_TEST(StepRejectsCyclicOrientedEdges) {
+    const std::string valid = cylinderStep();
+    FK_CHECK(readStep(valid).bodies.size() == 1);
+    const int oriented = firstOfType(valid, "ORIENTED_EDGE");
+    const std::string self = withArgument(valid, oriented, 3, "#" + std::to_string(oriented));
+    const StepReadResult a = readStep(self);
+    FK_CHECK(a.bodies.empty());
+    FK_CHECK(notesMention(a, "ORIENTED_EDGE ciclico"));
+    // Coppia che si rimanda a vicenda.
+    const int other = largestId(valid) + 1;
+    const std::string pair = appendEntities(withArgument(valid, oriented, 3, "#" + std::to_string(other)),
+                                            "#" + std::to_string(other) + "=ORIENTED_EDGE('',*,*,#" + std::to_string(oriented) + ",.T.);\n");
+    const StepReadResult b = readStep(pair);
+    FK_CHECK(b.bodies.empty());
+    FK_CHECK(notesMention(b, "ORIENTED_EDGE ciclico"));
+}
+
+// Curve e superfici autoreferenziate (anche in ciclo o in catene molto
+// profonde) portavano a ricorsione infinita e stack overflow.
+FK_TEST(StepRejectsSelfReferencingGeometry) {
+    const std::string valid = cylinderStep();
+    const int edge = firstOfType(valid, "EDGE_CURVE"), next = largestId(valid) + 1;
+    const std::string id = "#" + std::to_string(next);
+    // TRIMMED_CURVE con base se stessa.
+    const std::string trimmed = appendEntities(withArgument(valid, edge, 3, id),
+                                               id + "=TRIMMED_CURVE(''," + id + ",(PARAMETER_VALUE(0.)),(PARAMETER_VALUE(1.)),.T.,.PARAMETER.);\n");
+    const StepReadResult a = readStep(trimmed);
+    FK_CHECK(a.bodies.empty());
+    FK_CHECK(notesMention(a, "riferimento ciclico"));
+    // Due SURFACE_CURVE in ciclo.
+    const std::string other = "#" + std::to_string(next + 1);
+    const std::string cycle = appendEntities(withArgument(valid, edge, 3, id),
+                                             id + "=SURFACE_CURVE(''," + other + ",(),.CURVE_3D.);\n" + other + "=SURFACE_CURVE(''," + id + ",(),.CURVE_3D.);\n");
+    const StepReadResult b = readStep(cycle);
+    FK_CHECK(b.bodies.empty());
+    FK_CHECK(notesMention(b, "riferimento ciclico"));
+    // OFFSET_SURFACE con base se stessa.
+    const int face = firstOfType(valid, "ADVANCED_FACE");
+    const std::string offset = appendEntities(withArgument(valid, face, 2, id), id + "=OFFSET_SURFACE(''," + id + ",1.,.F.);\n");
+    const StepReadResult c = readStep(offset);
+    FK_CHECK(c.bodies.empty());
+    FK_CHECK(notesMention(c, "riferimento ciclico"));
+    // Catena lecita ma troppo profonda: errore esplicito, non stack overflow.
+    std::string chain;
+    const int depth = 2000;
+    for (int k = 0; k < depth; ++k)
+        chain += "#" + std::to_string(next + k) + "=TRIMMED_CURVE('',#" + std::to_string(next + k + 1)
+                 + ",(PARAMETER_VALUE(0.)),(PARAMETER_VALUE(1.)),.T.,.PARAMETER.);\n";
+    chain += "#" + std::to_string(next + depth) + "=TRIMMED_CURVE('',#" + std::to_string(next + depth)
+             + ",(PARAMETER_VALUE(0.)),(PARAMETER_VALUE(1.)),.T.,.PARAMETER.);\n";
+    const StepReadResult d = readStep(appendEntities(withArgument(valid, edge, 3, id), chain));
+    FK_CHECK(d.bodies.empty());
+    FK_CHECK(notesMention(d, "annidamento troppo profondo"));
+}

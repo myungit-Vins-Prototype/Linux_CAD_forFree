@@ -120,7 +120,9 @@ namespace {
 
 // Analisi a discesa ricorsiva:
 //   somma    = prodotto (('+' | '-') prodotto)*
-//   prodotto = unario (('*' | '/') unario)*   (anche "2pi", "3(4+1)": prodotto implicito)
+//   prodotto = unario (('*' | '/') unario)*   (anche "2pi", "3(4+1)": prodotto
+//              implicito, solo davanti a un nome o a una parentesi: "12 5" o
+//              "1.2.3" sono errori, non 60 o 0.36)
 //   unario   = ('+' | '-') unario | potenza
 //   potenza  = primario ('^' unario)?
 //   primario = numero | nome | nome '(' somma ')' | '(' somma ')'
@@ -137,6 +139,7 @@ public:
 private:
     const QString &text_;
     int position_ = 0;
+    int depth_ = 0;
 
     void skipSpaces() {
         while (position_ < text_.size() && text_.at(position_).isSpace()) ++position_;
@@ -145,9 +148,12 @@ private:
         skipSpaces();
         return position_ < text_.size() ? text_.at(position_) : QChar();
     }
-    bool startsPrimary() {
+    // Prodotto implicito ammesso solo davanti a un nome o a "(": davanti a una
+    // cifra o a un separatore un numero malformato ("1,000.5", "1.000,5")
+    // verrebbe spezzato e moltiplicato senza avviso.
+    bool startsImplicitFactor() {
         const QChar c = peek();
-        return c.isDigit() || c == QLatin1Char('.') || c == QLatin1Char(',') || c.isLetter() || c == QLatin1Char('(');
+        return c.isLetter() || c == QLatin1Char('(');
     }
 
     bool sum(double &value) {
@@ -172,7 +178,7 @@ private:
                 if (c == QLatin1Char('*') || c == QChar(0x00D7)) value *= rhs;
                 else if (rhs == 0.0) return false;
                 else value /= rhs;
-            } else if (startsPrimary()) {
+            } else if (startsImplicitFactor()) {
                 if (!power(rhs)) return false;
                 value *= rhs;
             } else {
@@ -180,7 +186,17 @@ private:
             }
         }
     }
+    // Ogni ciclo della discesa ricorsiva passa da qui: il limite evita lo stack
+    // overflow con testi incollati pieni di parentesi o di segni.
+    static constexpr int kMaxDepth = 256;
+    struct DepthGuard {
+        int &depth;
+        explicit DepthGuard(int &d) : depth(++d) {}
+        ~DepthGuard() { --depth; }
+    };
     bool unary(double &value) {
+        const DepthGuard guard(depth_);
+        if (depth_ > kMaxDepth) return false;
         const QChar c = peek();
         if (c == QLatin1Char('+') || c == QLatin1Char('-')) {
             ++position_;

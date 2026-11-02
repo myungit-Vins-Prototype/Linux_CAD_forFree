@@ -367,3 +367,84 @@ FK_TEST(IgesPreservesNonUniformSplineEdgeParameters) {
         }
     }
 }
+
+namespace {
+
+// Sostituisce `from` con `to` nella prima riga P che lo contiene, entro le 64
+// colonne dei dati: la larghezza si conserva togliendo o aggiungendo spazi.
+std::string editParameterLine(const std::string &igs, const std::string &from, const std::string &to) {
+    std::size_t start = 0;
+    while (start < igs.size()) {
+        const std::size_t end = igs.find('\n', start);
+        const std::size_t length = (end == std::string::npos ? igs.size() : end) - start;
+        std::string line = igs.substr(start, length);
+        if (line.size() >= 73 && line[72] == 'P') {
+            std::string data = line.substr(0, 64);
+            const std::size_t at = data.find(from);
+            if (at != std::string::npos) {
+                data.replace(at, from.size(), to);
+                while (data.size() > 64 && data.back() == ' ') data.pop_back();
+                FK_CHECK(data.size() <= 64);
+                data.resize(64, ' ');
+                return igs.substr(0, start) + data + line.substr(64) + igs.substr(start + length);
+            }
+        }
+        if (end == std::string::npos) break;
+        start = end + 1;
+    }
+    FK_CHECK(false);
+    return igs;
+}
+
+// Un file malformato deve dare un errore esplicito o nessun corpo, mai un
+// crash, una lettura fuori dai buffer o un'attesa senza fine.
+// Per un pezzo letto per facce, l'entita' guasta puo' lasciare gli altri
+// corpi: basta che sia stata scartata con una nota.
+bool rejected(const std::string &igs) {
+    try {
+        const IgesReadResult result = readIges(igs);
+        return result.bodies.empty() || !result.notes.empty();
+    } catch (const std::domain_error &) {
+        return true;
+    }
+}
+
+}  // namespace
+
+// Conteggi e gradi della B-spline 126 vengono dal file: M negativo, M > K o
+// K enorme leggevano fuori dai nodi o allocavano senza limite.
+FK_TEST(IgesRejectsInvalidSplineParameters) {
+    const Body cylinder = makeCylinder(Frame3(Vec3(0, 0, 0), Vec3(0, 0, 1), Vec3(1, 0, 0)), 5.0, 12.0);
+    IgesWriteOptions options;
+    options.timeStamp = "20261102.120000";
+    const std::string valid = writeIges({{"cilindro", cylinder}}, options);
+    const IgesReadResult reference = readIges(valid);
+    FK_CHECK(reference.bodies.size() == 1 && reference.notes.empty());
+    FK_CHECK(valid.find("126,8,2,") != std::string::npos);
+    // Le varianti piu' larghe accorciano un nodo della stessa riga per restare
+    // nelle 64 colonne: l'entita' va comunque scartata.
+    const std::string rest = "0,0,0,0,0.,0.,0.,1.5707963267948966,", shortRest = "0,0,0,0,0.,0.,0.,1.5707963,";
+    for (const std::string bad : {"126,8,-1,", "126,8,0,", "126,8,9,", "126,9999999,2,", "126,8,1E300,", "126,-3,2,"})
+        FK_CHECK(rejected(editParameterLine(valid, "126,8,2," + rest, bad + shortRest)));
+}
+
+// Una curva composta 102 che rimanda a se stessa ricorreva fino allo stack
+// overflow; un conteggio enorme scorreva milioni di parametri inesistenti.
+FK_TEST(IgesRejectsCyclicCompositeCurves) {
+    const Body cylinder = makeCylinder(Frame3(Vec3(0, 0, 0), Vec3(0, 0, 1), Vec3(1, 0, 0)), 5.0, 12.0);
+    IgesWriteOptions options;
+    options.mode = IgesMode::Surfaces;
+    options.timeStamp = "20261102.120000";
+    const std::string valid = writeIges({{"cilindro", cylinder}}, options);
+    const IgesReadResult reference = readIges(valid);
+    FK_CHECK(!reference.bodies.empty() && reference.notes.empty());
+    // Il puntatore DE della riga P (colonne 65-72) e' quello della composta stessa.
+    const std::size_t at = valid.find("\n102,1,");
+    FK_CHECK(at != std::string::npos);
+    if (at == std::string::npos) return;
+    const std::string line = valid.substr(at + 1, 80);
+    const std::string self = std::to_string(std::atoi(line.substr(64, 8).c_str()));
+    const std::string target = line.substr(6, line.find(';') - 6);
+    FK_CHECK(rejected(editParameterLine(valid, "102,1," + target + ";", "102,1," + self + ";")));
+    FK_CHECK(rejected(editParameterLine(valid, "102,1," + target + ";", "102,99999999," + target + ";")));
+}

@@ -125,6 +125,9 @@ void CadViewport::initializeGL() {
         overlayRenderer_.clear();
         sceneRenderer_.clearResources();
         gpuPicker_.clearResources();
+        // Anche shader e framebuffer del vetro appartengono al contesto che
+        // sta per sparire: riusarli dopo la ricreazione sarebbe un errore GL.
+        glassCompositor_.clearResources();
         doneCurrent();
     }, Qt::DirectConnection);
     const QString renderer = QString::fromLatin1(reinterpret_cast<const char *>(glGetString(GL_RENDERER)));

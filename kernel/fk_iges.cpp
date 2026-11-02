@@ -525,7 +525,20 @@ public:
     }
     static int integer(const Directory &d, std::size_t index, int fallback = 0) {
         if (index >= d.params.size() || d.params[index].empty()) return fallback;
-        return int(std::lround(toNumber(d.params[index])));
+        const double value = std::round(toNumber(d.params[index]));
+        // Conteggi, gradi e puntatori: oltre questo limite il file e' corrotto
+        // e conversioni o espressioni come 3 + 2 n andrebbero in overflow.
+        if (!(std::fabs(value) <= 1e8)) throw std::domain_error("IGES: intero fuori intervallo nell'entita' " + std::to_string(d.type));
+        return int(value);
+    }
+    // Numero di elementi da `perItem` parametri ciascuno a partire da `first`:
+    // almeno `minimum` e tutti presenti nel record. Cicli e allocazioni restano
+    // limitati ai dati realmente contenuti nel file.
+    static int count(const Directory &d, std::size_t index, int minimum, std::size_t first, std::size_t perItem) {
+        const int n = integer(d, index);
+        if (n < minimum || first > d.params.size() || (perItem > 0 && std::size_t(n) > (d.params.size() - first) / perItem))
+            throw std::domain_error("IGES: conteggio non valido nell'entita' " + std::to_string(d.type));
+        return n;
     }
 
 private:
@@ -575,7 +588,9 @@ public:
         Interval range;
     };
     // Una curva (anche composta: piu' tratti) nello spazio del modello.
-    std::vector<Piece> curve(int de) const {
+    std::vector<Piece> curve(int de, int depth = 0) const {
+        // Una composta (102) che rimanda a se stessa non deve ricorrere all'infinito.
+        if (depth > 64) throw std::domain_error("IGES: curva composta ciclica o annidata troppo a fondo");
         const Directory &d = f_.at(de);
         const Transform3 t = transform(d.transform);
         const auto transformed = [&](CurvePtr<3> c) -> CurvePtr<3> {
@@ -596,9 +611,9 @@ public:
         }
         case 102: {
             std::vector<Piece> all;
-            const int n = IgesFile::integer(d, 0);
+            const int n = IgesFile::count(d, 0, 0, 1, 1);
             for (int k = 0; k < n; ++k) {
-                const std::vector<Piece> p = curve(IgesFile::integer(d, std::size_t(1 + k)));
+                const std::vector<Piece> p = curve(IgesFile::integer(d, std::size_t(1 + k)), depth + 1);
                 all.insert(all.end(), p.begin(), p.end());
             }
             // La composta dentro una trasformazione propria.
@@ -629,9 +644,11 @@ public:
             return {{transformed(std::make_shared<Ellipse<3>>(center, x, y, rx, ry)), {t0, t1}}};
         }
         case 106: {
-            const int ip = IgesFile::integer(d, 0), n = IgesFile::integer(d, 1);
+            const int ip = IgesFile::integer(d, 0);
+            const bool planar = d.form == 1 || d.form == 11 || d.form == 63;
+            const int n = IgesFile::count(d, 1, 0, planar ? 3 : 2, planar ? 2 : ip == 3 ? 6 : 3);
             std::vector<Vec3> points;
-            if (d.form == 1 || d.form == 11 || d.form == 63) {
+            if (planar) {
                 const double z = IgesFile::number(d, 2) * s_;
                 for (int k = 0; k < n; ++k) points.push_back(Vec3(IgesFile::number(d, std::size_t(3 + 2 * k)) * s_, IgesFile::number(d, std::size_t(4 + 2 * k)) * s_, z));
             } else {
@@ -653,7 +670,8 @@ public:
         }
         case 112: {
             // Spline parametrica: N tratti cubici in potenze di s = t - T(i), poi Bezier esatte.
-            const int n = IgesFile::integer(d, 3);
+            // N >= 1 tratti: N + 1 parametri da 4 e 12 coefficienti per tratto da 5 + N.
+            const int n = IgesFile::count(d, 3, 1, 5, 13);
             std::vector<double> T;
             for (int k = 0; k <= n; ++k) T.push_back(IgesFile::number(d, std::size_t(4 + k)));
             std::vector<Vec3> poles;
@@ -678,6 +696,10 @@ public:
         }
         case 126: {
             const int K = IgesFile::integer(d, 0), M = IgesFile::integer(d, 1);
+            // Grado M >= 1, K + 1 >= M + 1 poli; nodi, pesi e poli devono essere
+            // tutti nel record (gli estremi del tratto che seguono sono facoltativi).
+            if (M < 1 || K < M || std::size_t(6) + std::size_t(K + M + 2) + std::size_t(4) * std::size_t(K + 1) > d.params.size())
+                throw std::domain_error("IGES: B-spline (126) con grado o numero di poli non validi");
             const int nk = K + M + 2;
             std::vector<double> knots, weights;
             std::vector<Vec3> poles;
@@ -754,15 +776,20 @@ public:
         }
         case 128: {
             const int K1 = IgesFile::integer(d, 0), K2 = IgesFile::integer(d, 1), M1 = IgesFile::integer(d, 2), M2 = IgesFile::integer(d, 3);
+            // Gradi >= 1, poli sufficienti; nodi, pesi e poli tutti nel record.
+            const std::size_t available = d.params.size();
+            if (M1 < 1 || M2 < 1 || K1 < M1 || K2 < M2 || std::size_t(K1) >= available || std::size_t(K2) >= available
+                || std::size_t(9) + std::size_t(K1 + M1 + 2) + std::size_t(K2 + M2 + 2) + std::size_t(4) * std::size_t(K1 + 1) * std::size_t(K2 + 1) > available)
+                throw std::domain_error("IGES: superficie B-spline (128) con gradi o numero di poli non validi");
             const int n1 = K1 + M1 + 2, n2 = K2 + M2 + 2;
             std::size_t at = 9;
             std::vector<double> uk, vk, weights;
             for (int k = 0; k < n1; ++k) uk.push_back(IgesFile::number(d, at++));
             for (int k = 0; k < n2; ++k) vk.push_back(IgesFile::number(d, at++));
-            std::vector<double> w((K1 + 1) * (K2 + 1));
+            std::vector<double> w(std::size_t(K1 + 1) * std::size_t(K2 + 1));
             for (int j = 0; j <= K2; ++j)
                 for (int i = 0; i <= K1; ++i) w[std::size_t(i * (K2 + 1) + j)] = IgesFile::number(d, at++, 1.0);
-            std::vector<Vec3> poles((K1 + 1) * (K2 + 1));
+            std::vector<Vec3> poles(std::size_t(K1 + 1) * std::size_t(K2 + 1));
             for (int j = 0; j <= K2; ++j)
                 for (int i = 0; i <= K1; ++i) {
                     Vec3 p = point(d, at);
@@ -777,6 +804,11 @@ public:
         case 114: {
             // Superficie spline parametrica: pezze bicubiche in potenze -> Bezier esatte.
             const int M = IgesFile::integer(d, 2), N = IgesFile::integer(d, 3);
+            // M x N pezze: M + 1 e N + 1 parametri, 48 coefficienti per pezza.
+            const std::size_t available = d.params.size();
+            if (M < 1 || N < 1 || std::size_t(M) >= available || std::size_t(N) >= available
+                || std::size_t(6) + std::size_t(M) + std::size_t(N) + std::size_t(48) * std::size_t(M) * std::size_t(N) > available)
+                throw std::domain_error("IGES: superficie spline (114) con numero di pezze non valido");
             std::vector<double> TU, TV;
             for (int k = 0; k <= M; ++k) TU.push_back(IgesFile::number(d, std::size_t(4 + k)));
             for (int k = 0; k <= N; ++k) TV.push_back(IgesFile::number(d, std::size_t(5 + M + k)));
@@ -828,7 +860,7 @@ std::string propertyName(const IgesFile &file, const Directory &d, std::size_t a
     const int nv = IgesFile::integer(d, after);
     const std::size_t npAt = after + 1 + std::size_t(std::max(0, nv));
     const int np = IgesFile::integer(d, npAt);
-    for (int k = 0; k < np; ++k) {
+    for (int k = 0; k < np && npAt + 1 + std::size_t(k) < d.params.size(); ++k) {
         const Directory *p = file.find(IgesFile::integer(d, npAt + 1 + std::size_t(k)));
         if (p && p->type == 406 && p->form == 15 && p->params.size() >= 2) return p->params[1];
     }
@@ -1289,7 +1321,7 @@ IgesReadResult readIges(const std::string &content, const IgesReadOptions &optio
                 };
                 const auto shell = [&](int shellDe, bool sense) {
                     const Directory &s = file.at(shellDe);
-                    const int n = IgesFile::integer(s, 0);
+                    const int n = IgesFile::count(s, 0, 0, 1, 2);
                     for (int k = 0; k < n; ++k) {
                         const Directory &faceEntity = file.at(IgesFile::integer(s, std::size_t(1 + 2 * k)));
                         const bool faceOrientation = IgesFile::integer(s, std::size_t(2 + 2 * k), 1) != 0;
@@ -1297,13 +1329,14 @@ IgesReadResult readIges(const std::string &content, const IgesReadOptions &optio
                         bool flipped = false;
                         face.surface = geometry.surface(IgesFile::integer(faceEntity, 0), flipped);
                         face.sense = (faceOrientation != flipped) == sense;
-                        const int loops = IgesFile::integer(faceEntity, 1);
+                        const int loops = IgesFile::count(faceEntity, 1, 0, 3, 1);
                         for (int l = 0; l < loops; ++l) {
                             const Directory &loop = file.at(IgesFile::integer(faceEntity, std::size_t(3 + l)));
                             std::vector<RawFin> fins;
-                            const int count = IgesFile::integer(loop, 0);
+                            const int count = IgesFile::count(loop, 0, 0, 1, 5);
                             std::size_t at = 1;
                             for (int k2 = 0; k2 < count; ++k2) {
+                                if (at + 5 > loop.params.size()) throw std::domain_error("IGES: loop (508) incompleto");
                                 const int type = IgesFile::integer(loop, at), list = IgesFile::integer(loop, at + 1), index = IgesFile::integer(loop, at + 2);
                                 const bool orientation = IgesFile::integer(loop, at + 3, 1) != 0;
                                 const int curves = IgesFile::integer(loop, at + 4);
@@ -1322,7 +1355,7 @@ IgesReadResult readIges(const std::string &content, const IgesReadOptions &optio
                     }
                 };
                 shell(IgesFile::integer(msbo, 0), IgesFile::integer(msbo, 1, 1) != 0);
-                const int voids = IgesFile::integer(msbo, 2);
+                const int voids = IgesFile::count(msbo, 2, 0, 3, 2);
                 for (int k = 0; k < voids; ++k) shell(IgesFile::integer(msbo, std::size_t(3 + 2 * k)), IgesFile::integer(msbo, std::size_t(4 + 2 * k), 1) != 0);
                 ExchangeBody body;
                 body.name = name;
@@ -1383,7 +1416,7 @@ IgesReadResult readIges(const std::string &content, const IgesReadOptions &optio
                 bool flipped = false;
                 if (type == 144) {
                     face.surface = geometry.surface(IgesFile::integer(d, 0), flipped);
-                    const int n1 = IgesFile::integer(d, 1), n2 = IgesFile::integer(d, 2);
+                    const int n1 = IgesFile::integer(d, 1), n2 = IgesFile::count(d, 2, 0, 4, 1);
                     if (n1 != 0) {
                         addBoundary(group.model, face, boundaryCurve(IgesFile::integer(d, 3)));
                     } else if (face.surface->type() == SurfaceType::Sphere || face.surface->type() == SurfaceType::Torus) {
@@ -1401,14 +1434,15 @@ IgesReadResult readIges(const std::string &content, const IgesReadOptions &optio
                     for (int k = 0; k < n2; ++k) addBoundary(group.model, face, boundaryCurve(IgesFile::integer(d, std::size_t(4 + k))));
                 } else {
                     face.surface = geometry.surface(IgesFile::integer(d, 1), flipped);
-                    const int n = IgesFile::integer(d, 2);
+                    const int n = IgesFile::count(d, 2, 0, 3, 1);
                     for (int k = 0; k < n; ++k) {
                         const Directory &b = file.at(IgesFile::integer(d, std::size_t(3 + k)));
                         // 141: tipo, preferenza, superficie, N curve, (curva, verso, K, parametri...)
-                        const int curves = IgesFile::integer(b, 3);
+                        const int curves = IgesFile::count(b, 3, 0, 4, 3);
                         std::vector<IgesGeometry::Piece> pieces;
                         std::size_t at = 4;
                         for (int c = 0; c < curves; ++c) {
+                            if (at + 3 > b.params.size()) throw std::domain_error("IGES: contorno (141) incompleto");
                             const std::vector<IgesGeometry::Piece> p = geometry.curve(IgesFile::integer(b, at));
                             const bool sense = IgesFile::integer(b, at + 1, 1) != 2;
                             const int k2 = IgesFile::integer(b, at + 2);

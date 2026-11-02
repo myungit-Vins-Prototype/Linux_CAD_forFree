@@ -62,3 +62,19 @@ FK_TEST(TransformMatchesGpTrsf) {
         FK_CHECK(near(composed.inverted().applyToPoint(composed.applyToPoint(p)), p, 1e-12));
     }
 }
+
+// La normale nulla o non finita della simmetria deve dare il messaggio
+// dedicato: prima normalized() lanciava prima con un errore generico.
+FK_TEST(ReflectionRejectsDegenerateNormal) {
+    for (const Vec3 &normal : {Vec3(0, 0, 0), Vec3(std::nan(""), 0, 0), Vec3(1e-320, 0, 0)}) {
+        bool dedicated = false;
+        try {
+            (void)Transform3::reflection(Vec3(1, 2, 3), normal);
+        } catch (const std::domain_error &error) {
+            dedicated = std::string(error.what()).find("piano di simmetria") != std::string::npos;
+        }
+        FK_CHECK(dedicated);
+    }
+    const Transform3 mirror = Transform3::reflection(Vec3(1, 0, 0), Vec3(2, 0, 0));
+    FK_CHECK(near(mirror.applyToPoint(Vec3(3, 4, 5)), Vec3(-1, 4, 5), 1e-12));
+}

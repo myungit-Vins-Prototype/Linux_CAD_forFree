@@ -86,8 +86,12 @@ Transform3 Transform3::scaling(const Vec3 &center, double factor) {
 }
 
 Transform3 Transform3::reflection(const Vec3 &point, const Vec3 &normal) {
-    const Vec3 n = normalized(normal);
-    if (!isFinite(n)) throw std::invalid_argument("Transform3: normale del piano di simmetria nulla");
+    // Controllo prima di normalized(), che altrimenti lancerebbe con un
+    // messaggio generico; stesso tipo di eccezione per i chiamanti.
+    const double length = norm(normal);
+    if (!(length >= std::numeric_limits<double>::min()) || !std::isfinite(length))
+        throw std::domain_error("Transform3: normale del piano di simmetria nulla o non finita");
+    const Vec3 n = normal / length;
     Transform3 result;
     for (int i = 0; i < 3; ++i)
         for (int j = 0; j < 3; ++j) result.m_[i][j] = (i == j ? 1.0 : 0.0) - 2.0 * n[i] * n[j];

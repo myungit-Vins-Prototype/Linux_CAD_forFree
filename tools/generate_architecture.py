@@ -185,6 +185,7 @@ DESCRIPTIONS.update({'tools/open_architecture.py': ('build', 'Avvio locale della
  'metal_surface_kernel.h': ('analysis', 'Shader Metal incorporato per basi B-spline, derivate e quoziente NURBS in precisione hi/lo float; produce punti e normali del display, senza modificare il B-rep.'),
  'tests/test_metal_tessellation.cpp': ('tests', 'Confronti Metal reale/CPU su B-spline e NURBS, gradi 1–15, nodi multipli/estremi, condizionamento, concorrenza, budget e benchmark alternati.'),
  'tests/test_tessellation_availability.cpp': ('tests', 'Backend simulato senza GPU: disponibilità dinamica dopo inizializzazione/errore e ritorno CPU coerente con l’interruttore utente.'),
+ 'tests/test_expression.cpp': ('tests', 'Parser delle espressioni dei campi numerici: prodotto implicito solo davanti a nomi o parentesi, numeri malformati rifiutati, annidamento limitato senza stack overflow.'),
  'tests/test_document_compression.cpp': ('tests', 'Codec zlib/Zstandard senza perdita: checksum, limiti di espansione e lunghezze false, troncamenti/code/frame extra e destinazione atomica.'),
  'cad_curve_extract': ('features',
                        'Estrae curve 3D associative dalla geometria sorgente e dai riferimenti della '
@@ -264,7 +265,8 @@ DESCRIPTIONS.update({'tools/open_architecture.py': ('build', 'Avvio locale della
                        'riferimenti; ricostruisce i nomi legacy delle tavole sul medesimo B-rep per la migrazione.'),
  'cad_export': ('io', 'Esporta B-rep e mesh STL/OBJ; saldatura vertici, rifiuto degli indici ripetuti nei poligoni OBJ, orientamento e convessità sui punti effettivamente esportati, anteprime e raffinamento controllato.'),
  'cad_expression': ('model',
-                    'Espressioni e conversioni per documento: contesto unita ereditato dai widget e passato ai formatter, senza stato globale condiviso fra finestre.'),
+                    'Espressioni e conversioni per documento: contesto unita ereditato dai widget e passato ai formatter, senza stato globale condiviso fra finestre; '
+                    'prodotto implicito solo davanti a nomi o parentesi e profondita di annidamento limitata.'),
  'cad_extrude': ('features',
                  'Costruisce estrusioni con condizioni di fine e applica la fusione con i corpi '
                  'selezionati.'),

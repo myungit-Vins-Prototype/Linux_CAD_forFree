@@ -2717,7 +2717,15 @@ void PdfWindow::initializeOptions(WindowSetup &setup) {
         form->addRow(wrappedNote(QStringLiteral("Tieni premuto il tasto e trascina con il tasto sinistro per spostare la vista\n"
                                                "(anche con il tasto centrale del mouse). Attuale: %1").arg(panKeyName(viewport->panKey())), &dialog));
         auto *edit = new QKeySequenceEdit(&dialog);
+#if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
         edit->setMaximumSequenceLength(1);
+#else
+        // Qt < 6.5 (Ubuntu 24.04, Debian 12) non ha il limite nativo: si
+        // conserva solo il primo tasto, l'unico usato alla conferma.
+        connect(edit, &QKeySequenceEdit::keySequenceChanged, edit, [edit](const QKeySequence &sequence) {
+            if (sequence.count() > 1) edit->setKeySequence(QKeySequence(sequence[0]));
+        });
+#endif
         form->addRow(QStringLiteral("Nuovo tasto:"), edit);
         auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel | QDialogButtonBox::RestoreDefaults, &dialog);
         connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);

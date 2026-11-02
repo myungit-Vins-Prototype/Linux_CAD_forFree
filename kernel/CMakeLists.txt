@@ -212,10 +212,17 @@ add_executable(forgekernel_tests
     tests/test_sweep_surfaces.cpp
     tests/test_history.cpp
 )
+# OCCT 7.8 ha riunito lo scambio STEP/IGES nei toolkit TKDE*; le versioni
+# precedenti (per esempio 7.6 di Ubuntu 24.04 e Debian 12) usano i nomi storici.
+if("${OpenCASCADE_MAJOR_VERSION}.${OpenCASCADE_MINOR_VERSION}" VERSION_GREATER_EQUAL 7.8)
+    set(FORGEKERNEL_OCCT_EXCHANGE TKDESTEP TKDEIGES TKDE)
+else()
+    set(FORGEKERNEL_OCCT_EXCHANGE TKSTEP TKIGES TKXDESTEP TKXDEIGES)
+endif()
 target_link_libraries(forgekernel_tests PRIVATE
     forgekernel
     forgekernel_occt
-    TKXSBase TKDESTEP TKDEIGES TKXCAF TKLCAF TKCAF TKDE
+    TKXSBase ${FORGEKERNEL_OCCT_EXCHANGE} TKXCAF TKLCAF TKCAF
     TKernel TKMath TKG2d TKG3d TKGeomBase TKGeomAlgo TKBRep TKTopAlgo TKPrim TKBO TKMesh TKShHealing TKFillet TKBool TKOffset
 )
 target_include_directories(forgekernel_tests SYSTEM PRIVATE ${OpenCASCADE_INCLUDE_DIR})

@@ -813,6 +813,7 @@ public:
     CurvePtr<3> curve(int id) const {
         const auto found = curves_.find(id);
         if (found != curves_.end()) return found->second;
+        const Building guard(building_, id);
         CurvePtr<3> c = makeCurve(id);
         curves_[id] = c;
         return c;
@@ -824,6 +825,7 @@ public:
             return found->second.first;
         }
         flipped = false;
+        const Building guard(building_, id);
         SurfacePtr s = makeSurface(id, flipped);
         surfaces_[id] = {s, flipped};
         return s;
@@ -1055,10 +1057,32 @@ private:
         throw std::domain_error("STEP: superficie non gestita (" + t + ")");
     }
 
+    // Le cache si riempiono solo a costruzione finita: una curva base o una
+    // superficie che rimanda (anche indirettamente) a se stessa, o una catena
+    // troppo profonda, porterebbe a ricorsione infinita e stack overflow.
+    static constexpr std::size_t kMaxNesting = 256;
+    class Building {
+    public:
+        Building(std::set<int> &active, int id) : active_(active), id_(id) {
+            if (active_.size() >= kMaxNesting)
+                throw std::domain_error("STEP: annidamento troppo profondo di curve o superfici (istanza #" + std::to_string(id) + ")");
+            if (!active_.insert(id).second)
+                throw std::domain_error("STEP: riferimento ciclico nella geometria (istanza #" + std::to_string(id) + ")");
+        }
+        ~Building() { active_.erase(id_); }
+        Building(const Building &) = delete;
+        Building &operator=(const Building &) = delete;
+
+    private:
+        std::set<int> &active_;
+        int id_;
+    };
+
     const StepFile &f_;
     double length_, angle_;
     mutable std::map<int, CurvePtr<3>> curves_;
     mutable std::map<int, std::pair<SurfacePtr, bool>> surfaces_;
+    mutable std::set<int> building_;
 };
 
 // Fattori di conversione delle unita' di un contesto di rappresentazione (lunghezze in mm, angoli in radianti).
@@ -1204,8 +1228,11 @@ StepReadResult readStep(const std::string &content, const StepReadOptions &optio
                         for (const Param &orientedRef : items(loop.args().at(1))) {
                             int edgeId = reference(orientedRef);
                             bool sense = true;
-                            // ORIENTED_EDGE, anche annidati.
-                            while (file.at(edgeId).type() == "ORIENTED_EDGE") {
+                            // ORIENTED_EDGE, anche annidati; un ciclo non deve bloccare la lettura.
+                            for (int nested = 0; file.at(edgeId).type() == "ORIENTED_EDGE"; ++nested) {
+                                if (nested >= 64)
+                                    throw std::domain_error("STEP: ORIENTED_EDGE ciclico o annidato troppo a fondo (istanza #"
+                                                            + std::to_string(reference(orientedRef)) + ")");
                                 const Entity &oriented = file.at(edgeId);
                                 sense = sense == logical(oriented.args().at(4));
                                 edgeId = reference(oriented.args().at(3));

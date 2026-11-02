@@ -691,6 +691,13 @@ target_compile_options(forgecad_application_theme_tests PRIVATE -Wall -Wextra -W
 add_test(NAME forgecad_application_theme_tests COMMAND forgecad_application_theme_tests)
 set_tests_properties(forgecad_application_theme_tests PROPERTIES TIMEOUT 15 ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 
+add_executable(forgecad_expression_tests tests/test_expression.cpp cad_expression.cpp)
+target_include_directories(forgecad_expression_tests PRIVATE ${PROJECT_SOURCE_DIR} ${PROJECT_SOURCE_DIR}/kernel)
+target_link_libraries(forgecad_expression_tests PRIVATE Qt6::Widgets)
+target_compile_options(forgecad_expression_tests PRIVATE -Wall -Wextra -Wpedantic)
+add_test(NAME forgecad_expression_tests COMMAND forgecad_expression_tests)
+set_tests_properties(forgecad_expression_tests PROPERTIES TIMEOUT 15 ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
 add_executable(forgecad_shape_analysis_tests tests/test_shape_analysis.cpp cad_shape_analysis.cpp)
 target_include_directories(forgecad_shape_analysis_tests PRIVATE ${PROJECT_SOURCE_DIR})
 target_link_libraries(forgecad_shape_analysis_tests PRIVATE Qt6::Widgets Qt6::OpenGL forgekernel)

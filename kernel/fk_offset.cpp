@@ -1893,7 +1893,11 @@ OffsetResult offsetJoinedFaces(const Body &input, const std::vector<FaceOffset> 
     }
     std::map<int, double> edgeBudgets;
     std::map<int, int> rawEdgeOf;
-    for (const auto &[index, uses] : edgeUses) {
+    for (const auto &entry : edgeUses) {
+        // Variabili ordinarie, non binding strutturati: le lambda sotto le
+        // catturano, cosa che C++17 non ammette per i binding.
+        const int index = entry.first;
+        const std::vector<FinId> &uses = entry.second;
         const EdgeId e{index};
         const auto &edge = body.edge(e);
         if (uses.size() != 2)
