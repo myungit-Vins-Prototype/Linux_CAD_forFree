@@ -14,8 +14,10 @@
 #include <cstdio>
 #include <ctime>
 #include <map>
+#include <limits>
 #include <sstream>
 #include <stdexcept>
+#include <tuple>
 
 #include "fk_bspline.h"
 #include "fk_bspline_surface.h"
@@ -686,6 +688,14 @@ private:
         return p;
     }
     std::vector<Param> list() {
+        // La profondita' sintattica precede le guardie delle entita' geometriche.
+        // Limitarla protegge anche i distruttori ricorsivi dei Param.
+        if (listDepth_ >= 256) fail("parametri annidati troppo a fondo");
+        struct DepthGuard {
+            std::size_t &depth;
+            explicit DepthGuard(std::size_t &value) : depth(value) { ++depth; }
+            ~DepthGuard() { --depth; }
+        } guard(listDepth_);
         std::vector<Param> items;
         ++pos_;  // (
         skipSpace();
@@ -753,6 +763,7 @@ private:
 
     const std::string &s_;
     std::size_t pos_ = 0;
+    std::size_t listDepth_ = 0;
     std::vector<Entity> entities_;
     std::unordered_map<int, std::size_t> index_;
     std::unordered_map<std::string, std::vector<int>> types_;
@@ -762,6 +773,35 @@ double number(const Param &p) {
     if (p.kind == Param::Number) return p.number;
     if (p.kind == Param::Typed && !p.items.empty()) return number(p.items.front());
     throw std::domain_error("STEP: numero atteso");
+}
+int integer(const Param &p) {
+    const double value = number(p);
+    if (!std::isfinite(value) || std::trunc(value) != value
+        || value < std::numeric_limits<int>::min() || value > std::numeric_limits<int>::max())
+        throw std::domain_error("STEP: intero fuori intervallo o non integrale");
+    return int(value);
+}
+
+int splinePoleCount(std::size_t count, int degree) {
+    if (degree < 1 || degree >= std::numeric_limits<int>::max() - 1 || count <= std::size_t(degree)
+        || count > std::size_t(std::numeric_limits<int>::max()) - std::size_t(degree) - 1)
+        throw std::domain_error("STEP: grado o numero di poli B-spline non valido");
+    return int(count);
+}
+
+std::vector<double> splineKnots(const std::vector<double> &distinct, const std::vector<int> &mults, int poles, int degree) {
+    const std::size_t expected = std::size_t(poles) + std::size_t(degree) + 1;
+    if (distinct.size() != mults.size() || distinct.size() < 2)
+        throw std::domain_error("STEP: nodi B-spline non validi");
+    std::size_t total = 0;
+    for (std::size_t i = 0; i < distinct.size(); ++i) {
+        if (!std::isfinite(distinct[i]) || (i && !(distinct[i] > distinct[i - 1]))
+            || mults[i] <= 0 || mults[i] > degree + 1 || std::size_t(mults[i]) > expected - total)
+            throw std::domain_error("STEP: nodi o molteplicita' B-spline non validi");
+        total += std::size_t(mults[i]);
+    }
+    if (total != expected) throw std::domain_error("STEP: numero di nodi B-spline incompatibile con i poli");
+    return expandKnots(distinct, mults);
 }
 int reference(const Param &p) {
     if (p.kind != Param::Ref) throw std::domain_error("STEP: riferimento atteso");
@@ -845,23 +885,23 @@ private:
         std::vector<int> mults;
         if (!curve) {
             const std::vector<Param> &a = e.args();
-            degree = int(number(a.at(1)));
+            degree = integer(a.at(1));
             polesList = &items(a.at(2));
             if (e.type() == "B_SPLINE_CURVE_WITH_KNOTS") {
-                for (const Param &m : items(a.at(6))) mults.push_back(int(number(m)));
+                for (const Param &m : items(a.at(6))) mults.push_back(integer(m));
                 for (const Param &k : items(a.at(7))) distinct.push_back(number(k));
             }
         } else {
-            degree = int(number(curve->at(0)));
+            degree = integer(curve->at(0));
             polesList = &items(curve->at(1));
             if (knots) {
-                for (const Param &m : items(knots->at(0))) mults.push_back(int(number(m)));
+                for (const Param &m : items(knots->at(0))) mults.push_back(integer(m));
                 for (const Param &k : items(knots->at(1))) distinct.push_back(number(k));
             }
         }
         std::vector<Vec3> poles;
         for (const Param &p : *polesList) poles.push_back(point(reference(p)));
-        const int n = int(poles.size());
+        const int n = splinePoleCount(poles.size(), degree);
         if (distinct.empty()) {
             // Bezier, uniforme o quasi uniforme: nodi impliciti.
             const bool bezier = e.is("BEZIER_CURVE"), uniform = e.is("UNIFORM_CURVE");
@@ -882,7 +922,7 @@ private:
         std::vector<double> weights;
         if (rational)
             for (const Param &w : items(rational->at(0))) weights.push_back(number(w));
-        return std::make_shared<BSplineCurve<3>>(degree, expandKnots(distinct, mults), std::move(poles), std::move(weights));
+        return std::make_shared<BSplineCurve<3>>(degree, splineKnots(distinct, mults, n, degree), std::move(poles), std::move(weights));
     }
 
     CurvePtr<3> makeCurve(int id) const {
@@ -925,27 +965,33 @@ private:
         std::vector<int> um, vm;
         if (!surface) {
             const std::vector<Param> &a = e.args();
-            ud = int(number(a.at(1)));
-            vd = int(number(a.at(2)));
+            ud = integer(a.at(1));
+            vd = integer(a.at(2));
             rows = &items(a.at(3));
             if (e.type() == "B_SPLINE_SURFACE_WITH_KNOTS") {
-                for (const Param &m : items(a.at(8))) um.push_back(int(number(m)));
-                for (const Param &m : items(a.at(9))) vm.push_back(int(number(m)));
+                for (const Param &m : items(a.at(8))) um.push_back(integer(m));
+                for (const Param &m : items(a.at(9))) vm.push_back(integer(m));
                 for (const Param &k : items(a.at(10))) uk.push_back(number(k));
                 for (const Param &k : items(a.at(11))) vk.push_back(number(k));
             }
         } else {
-            ud = int(number(surface->at(0)));
-            vd = int(number(surface->at(1)));
+            ud = integer(surface->at(0));
+            vd = integer(surface->at(1));
             rows = &items(surface->at(2));
             if (knots) {
-                for (const Param &m : items(knots->at(0))) um.push_back(int(number(m)));
-                for (const Param &m : items(knots->at(1))) vm.push_back(int(number(m)));
+                for (const Param &m : items(knots->at(0))) um.push_back(integer(m));
+                for (const Param &m : items(knots->at(1))) vm.push_back(integer(m));
                 for (const Param &k : items(knots->at(2))) uk.push_back(number(k));
                 for (const Param &k : items(knots->at(3))) vk.push_back(number(k));
             }
         }
-        const int nu = int(rows->size()), nv = nu ? int(items(rows->front()).size()) : 0;
+        const int nu = splinePoleCount(rows->size(), ud);
+        const int nv = splinePoleCount(items(rows->front()).size(), vd);
+        if (nu > std::numeric_limits<int>::max() / nv)
+            throw std::domain_error("STEP: numero di poli superficie B-spline fuori intervallo");
+        for (const Param &row : *rows)
+            if (items(row).size() != std::size_t(nv))
+                throw std::domain_error("STEP: righe di poli B-spline non rettangolari");
         std::vector<Vec3> poles;
         for (const Param &row : *rows)
             for (const Param &p : items(row)) poles.push_back(point(reference(p)));
@@ -963,7 +1009,7 @@ private:
         if (rational)
             for (const Param &row : items(rational->at(0)))
                 for (const Param &w : items(row)) weights.push_back(number(w));
-        return std::make_shared<BSplineSurface>(ud, vd, expandKnots(uk, um), expandKnots(vk, vm), nu, nv, std::move(poles), std::move(weights));
+        return std::make_shared<BSplineSurface>(ud, vd, splineKnots(uk, um, nu, ud), splineKnots(vk, vm, nv, vd), nu, nv, std::move(poles), std::move(weights));
     }
 
     SurfacePtr makeSurface(int id, bool &flipped) const {
@@ -1296,6 +1342,7 @@ StepReadResult readStep(const std::string &content, const StepReadOptions &optio
         int item;
         Transform3 transform;
         int context;
+        std::vector<int> instancePath;
     };
     std::map<int, std::vector<int>> relatedReps;
     for (int id : file.ofType("SHAPE_REPRESENTATION_RELATIONSHIP")) {
@@ -1307,7 +1354,7 @@ StepReadResult readStep(const std::string &content, const StepReadOptions &optio
         const Entity *source = file.find(a[2].ref);
         if (!source || source->type() != "SHAPE_REPRESENTATION") relatedReps[a[3].ref].push_back(a[2].ref);
     }
-    std::function<void(int, const Transform3 &, std::vector<Placed> &, int)> collect = [&](int rep, const Transform3 &transform, std::vector<Placed> &out, int depth) {
+    std::function<void(int, const Transform3 &, std::vector<Placed> &, const std::vector<int> &, int)> collect = [&](int rep, const Transform3 &transform, std::vector<Placed> &out, const std::vector<int> &path, int depth) {
         if (depth > 32) return;
         const Entity &r = file.at(rep);
         const std::vector<Param> *args = r.part(r.type());
@@ -1319,7 +1366,7 @@ StepReadResult readStep(const std::string &content, const StepReadOptions &optio
             const std::string &t = item.type();
             if (t == "MANIFOLD_SOLID_BREP" || t == "BREP_WITH_VOIDS" || t == "FACETED_BREP" || t == "SHELL_BASED_SURFACE_MODEL"
                 || t == "FACETED_BREP_AND_BREP_WITH_VOIDS") {
-                out.push_back({itemRef.ref, transform, context});
+                out.push_back({itemRef.ref, transform, context, path});
             } else if (t == "MAPPED_ITEM") {
                 const Entity &map = file.at(reference(item.args().at(1)));
                 double length = 1.0, angle = 1.0;
@@ -1327,14 +1374,16 @@ StepReadResult readStep(const std::string &content, const StepReadOptions &optio
                 const StepGeometry g(file, length, angle);
                 const Frame3 origin = g.placement(reference(map.args().at(0)));
                 const Frame3 target = g.placement(reference(item.args().at(2)));
-                collect(reference(map.args().at(1)), transform * Transform3::fromFrame(target) * Transform3::fromFrame(origin).inverted(), out, depth + 1);
+                auto mappedPath = path;
+                mappedPath.push_back(itemRef.ref);
+                collect(reference(map.args().at(1)), transform * Transform3::fromFrame(target) * Transform3::fromFrame(origin).inverted(), out, mappedPath, depth + 1);
             }
         }
         // Stesso ordine e verso delle relazioni del file, senza una scansione
         // globale per ogni rappresentazione visitata.
         const auto related = relatedReps.find(rep);
         if (related != relatedReps.end())
-            for (int other : related->second) collect(other, transform, out, depth + 1);
+            for (int other : related->second) collect(other, transform, out, path, depth + 1);
     };
 
     // Prodotti: nome di una definizione di prodotto.
@@ -1361,6 +1410,7 @@ StepReadResult readStep(const std::string &content, const StepReadOptions &optio
     }
     // Assiemi: occorrenze (padre -> figli) con la trasformazione.
     struct Occurrence {
+        int id;
         int child;
         std::string name;
         Transform3 transform;
@@ -1396,28 +1446,36 @@ StepReadResult readStep(const std::string &content, const StepReadOptions &optio
         const Entity &e = file.at(id);
         const int parent = reference(e.args().at(3)), child = reference(e.args().at(4));
         const auto t = occurrenceTransform.find(id);
-        children[parent].push_back({child, stringOf(e.args().at(1)), t == occurrenceTransform.end() ? Transform3() : t->second});
+        children[parent].push_back({id, child, stringOf(e.args().at(1)), t == occurrenceTransform.end() ? Transform3() : t->second});
         used.insert(child);
     }
     // Istanziazione dalle radici.
     std::vector<std::pair<std::string, Placed>> placed;
-    std::function<void(int, const Transform3 &, int)> instantiate = [&](int definition, const Transform3 &transform, int depth) {
+    std::function<void(int, const Transform3 &, const std::vector<int> &, int)> instantiate = [&](int definition, const Transform3 &transform, const std::vector<int> &path, int depth) {
         if (depth > 32) return;
         std::vector<Placed> items;
-        for (int rep : repsOf[definition]) collect(rep, transform, items, 0);
+        for (int rep : repsOf[definition]) collect(rep, transform, items, {}, 0);
         const std::string name = productName(definition);
-        for (const Placed &p : items) placed.push_back({name, p});
-        for (const Occurrence &o : children[definition]) instantiate(o.child, transform * o.transform, depth + 1);
+        for (Placed &p : items) {
+            p.instancePath.insert(p.instancePath.begin(), path.begin(), path.end());
+            placed.push_back({name, std::move(p)});
+        }
+        for (const Occurrence &o : children[definition]) {
+            auto childPath = path;
+            childPath.push_back(o.id);
+            instantiate(o.child, transform * o.transform, childPath, depth + 1);
+        }
     };
     const std::vector<int> definitions = file.ofType("PRODUCT_DEFINITION");
     for (int d : definitions)
-        if (!used.count(d)) instantiate(d, Transform3(), 0);
+        if (!used.count(d)) instantiate(d, Transform3(), {d}, 0);
     // Senza prodotti: tutti i solidi del file.
     if (placed.empty())
         for (const char *type : {"MANIFOLD_SOLID_BREP", "BREP_WITH_VOIDS", "FACETED_BREP", "SHELL_BASED_SURFACE_MODEL"})
-            for (int id : file.ofType(type)) placed.push_back({std::string(), {id, Transform3(), 0}});
-    // Doppioni (stessa istanza trovata per due strade con la stessa trasformazione).
-    std::set<std::pair<int, std::string>> seen;
+            for (int id : file.ofType(type)) placed.push_back({std::string(), {id, Transform3(), 0, {}}});
+    // Deduplica percorsi di visita della stessa istanza, conservando l'identita'
+    // di NAUO e MAPPED_ITEM anche con trasformazioni coincidenti o molto vicine.
+    std::set<std::tuple<int, int, std::vector<int>>> seen;
 
     struct Pending {
         Placed placed;
@@ -1429,11 +1487,7 @@ StepReadResult readStep(const std::string &content, const StepReadOptions &optio
     for (const auto &[name, p] : placed) ++nameCount[name];
     std::map<std::string, int> nameIndex;
     for (const auto &[productNameValue, p] : placed) {
-        std::string key;
-        for (int r = 0; r < 3; ++r)
-            for (int c = 0; c < 3; ++c) key += std::to_string(p.transform.matrix(r, c)) + ",";
-        key += std::to_string(p.transform.translationPart().x()) + std::to_string(p.transform.translationPart().y()) + std::to_string(p.transform.translationPart().z());
-        if (!seen.insert({p.item, key}).second) continue;
+        if (!seen.insert({p.item, p.context, p.instancePath}).second) continue;
         double length = 1.0, angle = 1.0;
         contextUnits(file, p.context, length, angle);
         if (p.context == 0 || !file.find(p.context)) {

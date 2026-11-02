@@ -8,9 +8,12 @@
 
 #include "cad_datum.h"
 #include "cad_element_names.h"
+#include "cad_feature_dependencies.h"
 #include "cad_forge.h"
 #include "cad_kernel.h"
 #include "fk_boolean.h"
+#include "fk_bspline.h"
+#include "fk_bspline_surface.h"
 #include "fk_classify.h"
 #include "fk_intersect.h"
 #include "fk_primitives.h"
@@ -192,6 +195,252 @@ bool forgeSharesMaterial(const ForgeBody &tool, const ForgeBody &body, bool subt
     }
 }
 
+namespace {
+
+Interval curveProjection(const Curve<3> &curve, const Interval &range, const Vec3 &origin, const Vec3 &direction) {
+    if (direction.x() == 0 && direction.y() == 0 && direction.z() == 0) return {0,0};
+    Interval result{std::numeric_limits<double>::max(), -std::numeric_limits<double>::max()};
+    const auto add = [&](double value) { result.lo = std::min(result.lo,value); result.hi = std::max(result.hi,value); };
+    const auto point = [&](const Vec3 &p) { add(dot(p-origin,direction)); };
+    const auto conic = [&](const Vec3 &center, const Vec3 &x, const Vec3 &y) {
+        const double c = dot(center-origin,direction), a = dot(x,direction), b = dot(y,direction);
+        const auto value = [&](double t) { return c + a*std::cos(t) + b*std::sin(t); };
+        const double amplitude = std::hypot(a,b);
+        if (!range.isFinite() || range.length() >= kTwoPi) { add(c-amplitude); add(c+amplitude); return; }
+        add(value(range.lo)); add(value(range.hi));
+        const double phase = std::atan2(b,a);
+        const double first = std::ceil((range.lo-phase)/kPi), last = std::floor((range.hi-phase)/kPi);
+        for (int step = 0; step < 3 && first+step <= last; ++step) add(value(phase+(first+step)*kPi));
+    };
+    switch (curve.type()) {
+    case CurveType::Line: point(curve.point(range.lo)); point(curve.point(range.hi)); break;
+    case CurveType::Circle: {
+        const auto &c = static_cast<const Circle<3> &>(curve);
+        conic(c.center(), c.radius()*c.xAxis(), c.radius()*c.yAxis()); break;
+    }
+    case CurveType::Ellipse: {
+        const auto &c = static_cast<const Ellipse<3> &>(curve);
+        conic(c.center(), c.xRadius()*c.xAxis(), c.yRadius()*c.yAxis()); break;
+    }
+    case CurveType::BSpline:
+        for (const auto &pole : static_cast<const BSplineCurve<3> &>(curve).poles()) point(pole);
+        break;
+    case CurveType::Trimmed:
+        return curveProjection(*static_cast<const TrimmedCurve<3> &>(curve).basis(),range,origin,direction);
+    case CurveType::Transformed: {
+        const auto &transformed = static_cast<const TransformedCurve &>(curve);
+        const auto &transform = transformed.transform();
+        Vec3 local;
+        for (int j=0;j<3;++j) for (int i=0;i<3;++i) local[j] += transform.matrix(i,j)*direction[i];
+        const auto projected = curveProjection(*transformed.basis(),range,Vec3(),local);
+        const double offset = dot(transform.applyToPoint(Vec3())-origin,direction);
+        return {projected.lo+offset,projected.hi+offset};
+    }
+    default: return {-std::numeric_limits<double>::infinity(),std::numeric_limits<double>::infinity()};
+    }
+    return result;
+}
+
+// Bounds conservativi di una funzione lineare su una faccia analitica.
+// Sui cilindri e sui coni gli estremi raggiungono il bordo lungo una
+// generatrice. Sulla sfera si aggiungono i due punti stazionari interni.
+Interval faceProjection(const Body &body, FaceId face, const Vec3 &origin, const Vec3 &direction) {
+    Interval range{std::numeric_limits<double>::max(), -std::numeric_limits<double>::max()};
+    const auto add = [&](const Vec3 &p) {
+        const double value = dot(p - origin, direction);
+        range.lo = std::min(range.lo, value); range.hi = std::max(range.hi, value);
+    };
+    for (LoopId loop : body.face(face).loops) {
+        for (FinId fin : body.loopFins(loop)) {
+            const auto &edge = body.edge(body.fin(fin).edge);
+            const auto projected = curveProjection(*edge.curve,edge.range,origin,direction);
+            range.lo = std::min(range.lo,projected.lo); range.hi = std::max(range.hi,projected.hi);
+        }
+        if (body.loop(loop).isolatedVertex.valid()) add(body.vertex(body.loop(loop).isolatedVertex).point);
+    }
+    const auto *sphere = dynamic_cast<const SphericalSurface *>(body.face(face).surface.get());
+    if (sphere && norm(direction) > kAngularResolution) {
+        for (double sign : {-1.0, 1.0}) {
+            const Vec3 point = sphere->frame().origin() + sign * sphere->radius() * normalized(direction);
+            if (classifyPointOnFace(body, face, point, kLinearResolution) != PointLocation::Outside) add(point);
+        }
+    }
+    if (range.lo > range.hi) for (const auto &point : corners(faceBox(body, face))) add(point);
+    return range;
+}
+
+// Per una pezza polinomiale Su e Sv sono combinazioni convesse dei loro
+// poli derivati. Il prodotto vettoriale e' bilineare: controllare tutte le
+// coppie certifica il segno sull'intera pezza, senza campionarla.
+bool polynomialEnvelope(const BSplineSurface &surface, const Vec3 &outwardDirection) {
+    if (surface.isRational()) {
+        const double weight = surface.weight(0,0);
+        for (int i=0;i<surface.uPoleCount();++i) for (int j=0;j<surface.vPoleCount();++j)
+            if (surface.weight(i,j) != weight) return false;
+    }
+    const auto patches = surface.cachedBezierPatches();
+    for (const auto &patch : *patches) {
+        cancellationPoint();
+        std::vector<Vec3> du, dv;
+        for (int i=0;i<patch.uPoleCount()-1;++i) for (int j=0;j<patch.vPoleCount();++j)
+            du.push_back((patch.pole(i+1,j)-patch.pole(i,j)) * (double(patch.uDegree())/patch.uDomain().length()));
+        for (int i=0;i<patch.uPoleCount();++i) for (int j=0;j<patch.vPoleCount()-1;++j)
+            dv.push_back((patch.pole(i,j+1)-patch.pole(i,j)) * (double(patch.vDegree())/patch.vDomain().length()));
+        for (const auto &u : du) for (const auto &v : dv) {
+            const double value = dot(cross(u,v),outwardDirection), scale = norm(u)*norm(v);
+            if (!std::isfinite(value) || !std::isfinite(scale) || value < -kAngularResolution*scale) return false;
+        }
+    }
+    return true;
+}
+
+// Tutte le facce diverse dalla base devono uscire nel verso scelto oppure
+// essergli tangenti. Altrimenti il pezzo ha oltrepassato un primo ostacolo
+// passando di lato: la sola connessione al piano iniziale non basta.
+bool firstSurfaceEnvelope(const Body &body, const Vec3 &origin, const Vec3 &direction) {
+    for (FaceId id : body.faces()) {
+        const auto &face = body.face(id);
+        const double sense = face.sense ? 1.0 : -1.0;
+        if (const auto *plane = dynamic_cast<const Plane *>(face.surface.get())) {
+            const double normal = sense * dot(plane->frame().zDir(), direction);
+            if (normal >= -kAngularResolution) continue;
+            if (std::fabs(normal + 1.0) <= kAngularResolution
+                && std::fabs(dot(plane->frame().origin() - origin, direction)) <= kLinearResolution) continue;
+            return false;
+        }
+        if (const auto *cylinder = dynamic_cast<const CylindricalSurface *>(face.surface.get())) {
+            const auto &frame = cylinder->frame();
+            const Vec3 radial = direction - dot(direction, frame.zDir()) * frame.zDir();
+            const Interval projected = faceProjection(body, id, frame.origin(), sense * radial);
+            if (projected.lo / cylinder->radius() >= -kAngularResolution) continue;
+            return false;
+        }
+        if (const auto *sphere = dynamic_cast<const SphericalSurface *>(face.surface.get())) {
+            if (faceProjection(body, id, sphere->frame().origin(), sense * direction).lo / sphere->radius() >= -kAngularResolution) continue;
+            return false;
+        }
+        if (const auto *cone = dynamic_cast<const ConicalSurface *>(face.surface.get())) {
+            const auto &frame = cone->frame();
+            const double sine = std::sin(cone->semiAngle()), cosine = std::cos(cone->semiAngle());
+            const Interval axial = faceProjection(body, id, frame.origin(), frame.zDir());
+            const double r0 = cone->referenceRadius() + axial.lo * sine / cosine;
+            const double r1 = cone->referenceRadius() + axial.hi * sine / cosine;
+            if (std::min(r0, r1) < -kLinearResolution && std::max(r0, r1) > kLinearResolution) return false;
+            const double branch = std::max(r0, r1) > kLinearResolution ? 1.0 : -1.0;
+            const Vec3 radial = direction - dot(direction, frame.zDir()) * frame.zDir();
+            const double minimumRadius = std::min(std::fabs(r0), std::fabs(r1));
+            const double maximumRadius = std::max(std::fabs(r0), std::fabs(r1));
+            double minimum = -norm(radial), maximum = norm(radial);
+            if (minimumRadius > kLinearResolution) {
+                const Interval numerator = faceProjection(body, id, frame.origin(), radial);
+                const double values[] = {numerator.lo / minimumRadius, numerator.lo / maximumRadius,
+                                         numerator.hi / minimumRadius, numerator.hi / maximumRadius};
+                minimum = std::max(minimum, *std::min_element(std::begin(values), std::end(values)));
+                maximum = std::min(maximum, *std::max_element(std::begin(values), std::end(values)));
+            }
+            const double axialNormal = branch * sine * dot(frame.zDir(), direction);
+            const double lower = sense > 0 ? cosine * minimum - axialNormal : axialNormal - cosine * maximum;
+            if (lower >= -kAngularResolution) continue;
+            return false;
+        }
+        if (const auto *extrusion = dynamic_cast<const ExtrusionSurface *>(face.surface.get()))
+            if (norm(cross(extrusion->direction(), direction)) <= kAngularResolution) continue;
+        if (const auto *spline = dynamic_cast<const BSplineSurface *>(face.surface.get()))
+            if (polynomialEnvelope(*spline,sense*direction)) continue;
+        return false;
+    }
+    return true;
+}
+
+ForgeBody extrusionUntilNext(ExtrusionObject &body, int index, const SketchObject &sketch,
+                             const QVector<ExtrusionObject> &bodies, QString *error) {
+    if (body.extrudeSides != 0 || body.extrudeSurface) {
+        setError(error, QStringLiteral("Fino al prossimo corpo richiede un profilo chiuso solido e un solo verso."));
+        return nullptr;
+    }
+    if (!std::isfinite(body.distance)) {
+        setError(error, QStringLiteral("Il verso dell'estrusione non e' valido.")); return nullptr;
+    }
+    const double side = body.distance < 0 ? -1.0 : 1.0;
+    const Profile profile = buildProfile(forgeSketchSegments(sketch), kSketchConnectionTolerance);
+    if (profile.regions.empty() || profile.openChains > 0) {
+        setError(error, QStringLiteral("Fino al prossimo corpo richiede solo contorni chiusi del profilo.")); return nullptr;
+    }
+    const Vec3 origin = sketchAxes(sketch).origin();
+    const Vec3 direction = side * normalized(extrusionVector(sketch, 1.0));
+    const ForgeBody unit = forgeExtrusion(sketch, side, error);
+    if (!unit) return nullptr;
+    if (unit->isSheet()) {
+        setError(error, QStringLiteral("Fino al prossimo corpo richiede un profilo chiuso solido.")); return nullptr;
+    }
+    if (body.booleanTools.isEmpty()) body.booleanTools = nextExtrusionCandidates(index, bodies);
+    struct Candidate { int index; double start; };
+    QVector<Candidate> candidates;
+    double reach = 0;
+    for (int target : body.booleanTools) {
+        if (target < 0 || target >= index || target >= bodies.size() || !bodies.at(target).forgeBody || !bodies.at(target).error.isEmpty()) {
+            setError(error, QStringLiteral("Un corpo limite precedente non ha geometria valida.")); return nullptr;
+        }
+        const auto &shape = *bodies.at(target).forgeBody;
+        if (shape.isSheet()) continue;
+        double lo = std::numeric_limits<double>::max(), hi = -lo;
+        for (const auto &point : corners(bodyBox(shape))) {
+            const double projected = dot(point - origin, direction);
+            lo = std::min(lo, projected); hi = std::max(hi, projected);
+        }
+        if (hi <= kLinearResolution) continue;
+        candidates.append({target, lo}); reach = std::max(reach, hi);
+    }
+    if (candidates.isEmpty()) {
+        setError(error, QStringLiteral("Nessun corpo solido precedente nel verso dell'estrusione.")); return nullptr;
+    }
+    std::stable_sort(candidates.begin(), candidates.end(), [](const Candidate &a, const Candidate &b) { return a.start < b.start; });
+    // La bbox serve solo a dimensionare il prisma di ricerca. Tutti i limiti
+    // effettivi e la copertura sono decisi dalle booleane sulle superfici esatte.
+    const double length = reach + std::max(1.0, bodyBox(*unit).diagonal() + reach) * 0.01;
+    ForgeBody result = forgeExtrusion(sketch, side * length, error);
+    if (!result) return nullptr;
+    const auto base = [&](const Body &shape, ShellId shell) { return touchesPlane(shape, shell, origin, direction, kLinearResolution); };
+    bool encountered = false;
+    for (const auto &candidate : candidates) {
+        const ForgeBody tool = extrusionEndTool(*bodies.at(candidate.index).forgeBody, bodies.at(candidate.index).forgeBody);
+        const ForgeBody overlap = forgeBooleanWithHistory(result, tool, Kernel::BooleanOperation::Intersect);
+        if (overlap->faces().empty()) continue;
+        encountered = true;
+        for (ShellId shell : overlap->shells()) if (base(*overlap, shell)) {
+            setError(error, QStringLiteral("Un corpo limite attraversa il piano iniziale del profilo.")); return nullptr;
+        }
+        result = forgeKeepShells(forgeBooleanWithHistory(result, tool, Kernel::BooleanOperation::Subtract), base);
+        if (!result) {
+            setError(error, QStringLiteral("L'estrusione fino al prossimo corpo non ha una parte che parte dal profilo.")); return nullptr;
+        }
+    }
+    if (!encountered) {
+        setError(error, QStringLiteral("Nessun corpo incontra il profilo nel verso dell'estrusione.")); return nullptr;
+    }
+    const Vec3 far = origin + length * direction;
+    for (ShellId shell : result->shells()) if (touchesPlane(*result, shell, far, direction, kLinearResolution)) {
+        setError(error, QStringLiteral("Il profilo non e' interamente coperto dai corpi incontrati nel verso scelto.")); return nullptr;
+    }
+    if (!firstSurfaceEnvelope(*result, origin, direction)) {
+        setError(error, QStringLiteral("Le superfici incontrate hanno sottosquadri o una forma non certificabile fino al primo incontro.")); return nullptr;
+    }
+    // Se un ostacolo era interamente interno al prisma, la selezione delle
+    // shell attaccate alla base puo' aver scartato la sua cavita'. Nessun
+    // risultato accettato puo' riempire materiale di un corpo limite, anche
+    // dopo che un altro taglio piu' lontano ha eliminato il cap artificiale.
+    for (const auto &candidate : candidates) {
+        const auto overlap = forgeBooleanWithHistory(result, bodies.at(candidate.index).forgeBody, Kernel::BooleanOperation::Intersect);
+        if (!overlap->faces().empty()) {
+            setError(error, QStringLiteral("Un ostacolo interno al profilo impedisce di certificare il limite alle prime superfici incontrate."));
+            return nullptr;
+        }
+    }
+    return result;
+}
+
+}
+
 ForgeBody forgeExtrusionFeature(ExtrusionObject &body, int index, const QVector<SketchObject> &sketches, const QVector<ExtrusionObject> &bodies,
                                 QString *error) {
     if (body.sketchIndex < 0 || body.sketchIndex >= sketches.size()) {
@@ -205,7 +454,9 @@ ForgeBody forgeExtrusionFeature(ExtrusionObject &body, int index, const QVector<
     };
     ForgeBody result;
     try {
-        if (body.extent == 0) {
+        if (body.extent == 4) {
+            result = extrusionUntilNext(body, index, sketch, bodies, error);
+        } else if (body.extent == 0) {
             const double d = body.distance;
             if (body.extrudeSides == 1) {
                 // Simmetrica: meta' per parte del piano dello schizzo.

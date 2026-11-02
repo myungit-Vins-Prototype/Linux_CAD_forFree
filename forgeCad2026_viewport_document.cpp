@@ -630,8 +630,16 @@ QString CadViewport::setFeaturesSuppressed(const QVector<int> &indices, bool sup
         }
     }
     if (list.size() == 1) {
-        rebuildBody(extrusions_[list.first()], list.first());
-        regenerateAfter(list.first());
+        const int index = list.first();
+        auto result = extrusions_.at(index);
+        const quint64 featureId = result.featureId;
+        // Il loop responsivo puo' distaccare il QVector: non conservare un
+        // riferimento al suo buffer mentre gli eventi accodati vengono eseguiti.
+        rebuildBody(result, index);
+        if (index >= extrusions_.size() || extrusions_.at(index).featureId != featureId)
+            return QStringLiteral("La storia e' cambiata durante il calcolo; rigenerazione interrotta.");
+        extrusions_[index] = std::move(result);
+        regenerateAfter(index);
     } else {
         regenerateAll();
     }
@@ -682,7 +690,13 @@ void CadViewport::deleteFeatures(const QVector<int> &indices) {
         for (int candidate = index + 1; candidate < extrusions_.size(); ++candidate) {
             ExtrusionObject &dependent = extrusions_[candidate];
             if (dependent.modelBodyId != bodyId) continue;
-            if (dependent.firstBody == index) dependent.firstBody = previous;
+            if (dependent.operation < 0 && dependent.feature == BodyFeature::Pattern && dependent.pattern.featureOnly
+                && dependent.patternComponent <= 0) {
+                // La funzione da ripetere e' un riferimento esplicito. Solo
+                // il corpo su cui applicarla segue la base implicita.
+                if (dependent.secondBody == index)
+                    dependent.secondBody = previous > dependent.firstBody ? previous : -1;
+            } else if (dependent.firstBody == index) dependent.firstBody = previous;
             for (int &merged : dependent.mergeBodies)
                 if (merged == index) merged = previous;
         }
@@ -771,7 +785,10 @@ QString CadViewport::reorderFeatureTo(int index, int target, const QVector<Story
         ExtrusionObject &feature = reordered[current];
         if (!bodyId || feature.modelBodyId != bodyId) continue;
         if (previous >= 0) {
-            if (feature.operation >= 0 || feature.feature == BodyFeature::Blend || feature.feature == BodyFeature::SheetTrim
+            if (feature.operation < 0 && feature.feature == BodyFeature::Pattern && feature.pattern.featureOnly
+                && feature.patternComponent <= 0) {
+                feature.secondBody = previous > feature.firstBody ? previous : -1;
+            } else if (feature.operation >= 0 || feature.feature == BodyFeature::Blend || feature.feature == BodyFeature::SheetTrim
                 || feature.feature == BodyFeature::SheetExtend || (feature.feature==BodyFeature::SurfaceTools&&feature.surfaceTool.mode!=1) || feature.feature == BodyFeature::Scale
                 || (feature.feature == BodyFeature::Transform && !feature.move.copy) || feature.feature == BodyFeature::Pattern
                 || feature.feature == BodyFeature::Sew || feature.feature == BodyFeature::DeleteFace
@@ -938,6 +955,8 @@ QVector<int> CadViewport::mergeCandidates(int index) const {
 
 ExtrusionObject CadViewport::withMergeCandidates(ExtrusionObject definition, int index) const {
     definition.mergeProbe = false;
+    if (definition.operation < 0 && definition.feature == BodyFeature::Extrusion && definition.extent == 4)
+        definition.booleanTools = ForgeCad::nextExtrusionCandidates(index, extrusions_);
     if (ForgeCad::mergingFeature(definition) && definition.mergeOperation != 0 && definition.mergeAuto) {
         definition.mergeBodies = mergeCandidates(index);
         definition.mergeProbe = true;
@@ -1192,18 +1211,9 @@ void CadViewport::removeSketchAt(int index) {
         for (int &section : body.loftSketches) renumber(section);
         for (int &guide : body.loftGuides) renumber(guide);
         for (SketchPathRef &guide : body.loftGuidePaths) renumber(guide.sketch);
-        for (QVector<GeometryRef> *refs : {&body.datum.refs, &body.pattern.refs, &body.surfaceTool.targets, &body.ruledFirst, &body.ruledSecond, &body.planarRefs, &body.loftStartFaces, &body.loftEndFaces, &body.loftSections, &body.loftEdgeGuides})
-            for (GeometryRef &ref : *refs)
-                if (ForgeCad::isSketchRef(ref)) renumber(ref.index);
-        if (ForgeCad::isSketchRef(body.extentRef)) renumber(body.extentRef.index);
-        if (ForgeCad::isSketchRef(body.move.axis)) renumber(body.move.axis.index);
-        if (ForgeCad::isSketchRef(body.revolveAxisRef)) renumber(body.revolveAxisRef.index);
-        if (ForgeCad::isSketchRef(body.draftNeutral)) renumber(body.draftNeutral.index);
-        if (ForgeCad::isSketchRef(body.thickenDirection)) renumber(body.thickenDirection.index);
-        for (GeometryRef *ref : {&body.sweepProfileRef, &body.sweepPathRef})
-            if (ForgeCad::isSketchRef(*ref)) renumber(ref->index);
-        if (ForgeCad::isSketchRef(body.curveExtraction.source)) renumber(body.curveExtraction.source.index);
-        if (ForgeCad::isSketchRef(body.curveExtraction.tool)) renumber(body.curveExtraction.tool.index);
+        ForgeCad::visitGeometryRefs(body, [&](GeometryRef &ref, ForgeCad::GeometryRefFamily, int) {
+            if (ForgeCad::isSketchRef(ref)) renumber(ref.index);
+        });
     }
     if (activeSketch_ == index) activeSketch_ = -1;
     else if (activeSketch_ > index) --activeSketch_;
@@ -1523,8 +1533,13 @@ void CadViewport::synchronizePatternResults() {
             bool referenced = false;
             for (int j = i + 1; j < extrusions_.size(); ++j)
                 if (ForgeCad::bodyOperands(extrusions_.at(j)).contains(i)) referenced = true;
-            for (const auto &sketch : sketches_)
-                if (sketch.datumPlane == i || (sketch.support && (sketch.support->featureId == part.featureId || sketch.support->index == i))) referenced = true;
+            for (const auto &sketch : sketches_) {
+                if (sketch.datumPlane == i) referenced = true;
+                ForgeCad::visitSketchGeometryRefs(sketch, [&](const GeometryRef &ref, ForgeCad::SketchGeometryRefFamily, int) {
+                    if (ForgeCad::isBodyRef(ref)
+                        && (ref.featureId ? ref.featureId == part.featureId : ref.index == i)) referenced = true;
+                });
+            }
             // Mantiene un errore esplicito se una lavorazione usa una componente
             // scomparsa; nessun riferimento viene riassegnato a un'altra copia.
             if (!referenced) removed.insert(i);
@@ -1841,7 +1856,10 @@ void CadViewport::documentChanged() {
                 ExtrusionObject &feature = reordered[current];
                 if (feature.modelBodyId != bodyId) continue;
                 if (previous >= 0) {
-                    if (feature.operation >= 0 || feature.feature == BodyFeature::Blend || feature.feature == BodyFeature::SheetTrim
+                    if (feature.operation < 0 && feature.feature == BodyFeature::Pattern && feature.pattern.featureOnly
+                        && feature.patternComponent <= 0) {
+                        feature.secondBody = previous > feature.firstBody ? previous : -1;
+                    } else if (feature.operation >= 0 || feature.feature == BodyFeature::Blend || feature.feature == BodyFeature::SheetTrim
                         || feature.feature == BodyFeature::SheetExtend || (feature.feature==BodyFeature::SurfaceTools&&feature.surfaceTool.mode!=1) || feature.feature == BodyFeature::Scale
                         || (feature.feature == BodyFeature::Transform && !feature.move.copy) || feature.feature == BodyFeature::Pattern
                         || feature.feature == BodyFeature::Sew || feature.feature == BodyFeature::DeleteFace
@@ -2008,8 +2026,16 @@ void CadViewport::regenerateFrom(int from, QVector<bool> dirty, QSet<int> dirtyS
         pending.clear();
     };
     for (int index = qMax(0, from); index < extrusions_.size(); ++index) {
+        bool candidatesChanged = false;
+        if (extrusions_.at(index).operation < 0 && extrusions_.at(index).feature == BodyFeature::Extrusion
+            && extrusions_.at(index).extent == 4) {
+            flush();
+            const auto candidates = ForgeCad::nextExtrusionCandidates(index, extrusions_);
+            candidatesChanged = candidates != extrusions_.at(index).booleanTools;
+            extrusions_[index].booleanTools = candidates;
+        }
         const ExtrusionObject &body = extrusions_.at(index);
-        bool depends = all;
+        bool depends = all || candidatesChanged;
         for (int sketch : ForgeCad::sketchesOf(body)) depends = depends || dirtySketches.contains(sketch);
         for (int operand : ForgeCad::bodyOperands(body)) depends = depends || (operand >= 0 && operand < index && dirty.at(operand));
         if (!depends) continue;
@@ -2025,8 +2051,13 @@ void CadViewport::regenerateFrom(int from, QVector<bool> dirty, QSet<int> dirtyS
             }
             continue;
         }
+        const quint64 featureId = body.featureId;
         flush();
-        rebuildBody(extrusions_[index], index);
+        if (index >= extrusions_.size() || extrusions_.at(index).featureId != featureId) return;
+        auto result = extrusions_.at(index);
+        rebuildBody(result, index);
+        if (index >= extrusions_.size() || extrusions_.at(index).featureId != featureId) return;
+        extrusions_[index] = std::move(result);
         advanced(1, extrusions_.at(index).name);
         followDatum(index, dirtySketches);
         refreshSurfacePierceSketches(index, dirtySketches);
@@ -2185,7 +2216,7 @@ void CadViewport::removeBodies(const QSet<int> &removed) {
         if (removed.contains(index)) {
             const ExtrusionObject &body = extrusions_.at(index);
             QVector<int> hidden{body.firstBody, body.secondBody};
-            hidden += body.booleanTools;
+            if (!(body.operation < 0 && body.feature == BodyFeature::Extrusion && body.extent == 4)) hidden += body.booleanTools;
             hidden += ForgeCad::hiddenOperands(body, extrusions_);
             for (int operand : hidden)
                 if (operand >= 0 && operand < extrusions_.size() && !removed.contains(operand)) extrusions_[operand].visible = true;
@@ -2197,18 +2228,11 @@ void CadViewport::removeBodies(const QSet<int> &removed) {
     for (ExtrusionObject &body : kept) {
         if (body.firstBody >= 0) body.firstBody = map.value(body.firstBody, -1);
         if (body.secondBody >= 0) body.secondBody = map.value(body.secondBody, -1);
-        for (QVector<GeometryRef> *refs : {&body.datum.refs, &body.pattern.refs, &body.surfaceTool.targets, &body.ruledFirst, &body.ruledSecond, &body.planarRefs, &body.loftStartFaces, &body.loftEndFaces, &body.loftSections, &body.loftEdgeGuides})
-            for (GeometryRef &ref : *refs)
-                if (ForgeCad::isBodyRef(ref)) ref.index = map.value(ref.index, -1);
-        if (ForgeCad::isBodyRef(body.extentRef)) body.extentRef.index = map.value(body.extentRef.index, -1);
-        if (ForgeCad::isBodyRef(body.move.axis)) body.move.axis.index = map.value(body.move.axis.index, -1);
-        if (ForgeCad::isBodyRef(body.revolveAxisRef)) body.revolveAxisRef.index = map.value(body.revolveAxisRef.index, -1);
-        if (ForgeCad::isBodyRef(body.draftNeutral)) body.draftNeutral.index = map.value(body.draftNeutral.index, -1);
-        for (GeometryRef *ref : {&body.sweepProfileRef, &body.sweepPathRef})
-            if (ForgeCad::isBodyRef(*ref)) ref->index = map.value(ref->index, -1);
-        if (ForgeCad::isBodyRef(body.thickenDirection)) body.thickenDirection.index = map.value(body.thickenDirection.index, -1);
-        if (ForgeCad::isBodyRef(body.curveExtraction.source)) body.curveExtraction.source.index = map.value(body.curveExtraction.source.index, -1);
-        if (ForgeCad::isBodyRef(body.curveExtraction.tool)) body.curveExtraction.tool.index = map.value(body.curveExtraction.tool.index, -1);
+        // La stessa enumerazione di riordino e dipendenze comprende anche
+        // le sorgenti multiple delle curve estratte e le famiglie future.
+        ForgeCad::visitGeometryRefs(body, [&](GeometryRef &ref, ForgeCad::GeometryRefFamily, int) {
+            if (ForgeCad::isBodyRef(ref)) ref.index = map.value(ref.index, -1);
+        });
         // Strumenti e corpi fusi eliminati: escono dall'elenco.
         for (QVector<int> *list : {&body.booleanTools, &body.mergeBodies}) {
             QVector<int> kept2;

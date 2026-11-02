@@ -101,7 +101,7 @@ Tavola 2D con viste proiettate, sezione, dettaglio quotato e vista isometrica.
 | Operazione | Descrizione |
 |---|---|
 | Primitive | Parallelepipedo, cilindro, sfera, cono e toro |
-| Estrusione | Costruzione da schizzo, estrusione in un verso, simmetrica o in due versi e taglio del corpo |
+| Estrusione | Costruzione da schizzo, estrusione in un verso, simmetrica o in due versi, fino al prossimo corpo e taglio del corpo |
 | Rivoluzione | Geometria ottenuta ruotando un profilo attorno a un asse |
 | Booleane | Unione, intersezione e differenza A − B |
 | Sweep | Profilo lungo un percorso, con riferimenti a schizzi e curve/bordi 3D |
@@ -113,6 +113,8 @@ Tavola 2D con viste proiettate, sezione, dettaglio quotato e vista isometrica.
 | Ripetizioni e specchio | Copie lineari, circolari e speculari di corpi solidi o di superficie |
 | Trasformazioni | Spostamento, rotazione e scala dei corpi |
 | Piani di costruzione | Riferimenti per nuovi schizzi e operazioni |
+
+In **Estrusione**, la fine **Fino al prossimo corpo** arresta il profilo sulle prime superfici esatte incontrate nel verso **Positivo** o **Invertito**, anche quando appartengono a più corpi. Richiede contorni chiusi solidi e un solo verso. Considera i solidi precedenti attivi e non consumati, anche nascosti manualmente; i corpi limite restano disponibili e si aggiornano con la storia. Se manca la copertura del profilo o la geometria presenta sottosquadri, ostacoli interni o superfici non certificabili, il comando segnala un errore. Non è disponibile con simmetrica, due versi o sola superficie.
 
 Il Loft accetta sezioni e guide da schizzi e bordi esatti, anche spaziali, con elenchi ordinabili e riferimenti associativi. Le condizioni G0/G1/G2 disponibili dipendono dal comando e dalla geometria: contatto, tangenza e curvatura richiedono riferimenti compatibili.
 

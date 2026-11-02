@@ -225,6 +225,12 @@ public:
 #include "test_mesh_memory.h"
 #include "test_history_preview_mesh.h"
 #include "test_pattern_history_repair.h"
+#include "test_gui_3d_review.h"
+#include "test_fillet_selection_review.h"
+#include "test_revision_access_gui.h"
+#include "test_extrusion_next_body_gui.h"
+#include "test_extrusion_next_body.h"
+#include "test_storyboard_review.h"
     static void extrusionActionPreconditions() {
         using namespace ForgeCad;
         PdfWindow window;
@@ -2291,6 +2297,9 @@ public:
         box.origin[0] = 40;
         require(original.createPrimitive(box, QStringLiteral("Corpo indipendente")).isEmpty(), "base indipendente");
         original.setObjectVisible(SceneObjectKind::Extrusion, 2, false);
+        // Il successivo cambio proprietario deve rispettare un Nascondi
+        // esplicito: il solo consumo conserva la preferenza visibile.
+        original.setObjectVisible(SceneObjectKind::Extrusion, 0, false);
         require(original.createBoolean(::BooleanOperation::Union, 1, {0}, QStringLiteral("Fusione")).isEmpty(), "fusione con prima base consumata");
         const auto base = original.extrusions_[3].forgeBody;
         const Vec3 point(15, 5, 10);
@@ -2604,7 +2613,7 @@ public:
                 "albero espone lo schizzo come passo autonomo");
         require(root->child(3)->data(0,Qt::UserRole+4).toInt() == 3 && (root->child(3)->flags() & Qt::ItemIsDragEnabled),
                 "schizzo trascinabile alla propria posizione della storia");
-        require(tree->grab().save(QStringLiteral("/tmp/sketch-story/tree.png")), "cattura storyboard con schizzo autonomo");
+        require(dir.isValid() && tree->grab().save(dir.filePath(QStringLiteral("tree.png"))), "cattura storyboard con schizzo autonomo");
         bool menuSeen = false, dialogSeen = false;
         QElapsedTimer menuClock; menuClock.start();
         QTimer chooseSupport; chooseSupport.setInterval(1);
@@ -2624,7 +2633,7 @@ public:
                 if (auto *choice = dialog->findChild<QComboBox *>(QStringLiteral("sketchSupportChoice"))) {
                     dialogSeen = true;
                     require(choice->count() > 3, "dialogo offre gli appoggi precedenti");
-                    dialog->grab().save(QStringLiteral("/tmp/sketch-story/change-plane.png"));
+                    dialog->grab().save(dir.filePath(QStringLiteral("change-plane.png")));
                     choice->setCurrentIndex(0); chooseSupport.stop(); dialog->accept();
                 }
         });
@@ -8489,8 +8498,7 @@ public:
                 "testo leggibile nel campo e nella tendina dei pannelli funzione");
         const QColor selectionText = panelPalette.color(QPalette::HighlightedText);
         const QColor selectionBackground = panelPalette.color(QPalette::Highlight);
-        require(selectionBackground.red() > 230 && selectionBackground.green() > 120
-                    && selectionText.lightness() < 80,
+        require(std::abs(selectionText.lightness() - selectionBackground.lightness()) > 100,
                 "testo leggibile nella selezione dei menu a discesa");
         require(!ForgeCad::commandIcon(QStringLiteral("panelOpacity")).isNull()
                     && !ForgeCad::commandIcon(QStringLiteral("panelBlur")).isNull()
@@ -10645,6 +10653,36 @@ int main(int argc, char **argv) {
     QSettings::setDefaultFormat(QSettings::IniFormat);
     QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, settings.path());
     qputenv("FORGECAD_RECOVERY_DIR",settings.filePath(QStringLiteral("recovery")).toUtf8());
+    if (app.arguments().contains(QStringLiteral("--gui-3d-review"))) {
+        try { ViewportInteractionTest::gui3dReviewRegressions(app.arguments().contains(QStringLiteral("--gl"))); }
+        catch (const std::exception &error) { std::cerr << error.what() << std::endl; return 1; }
+        return 0;
+    }
+    if (app.arguments().contains(QStringLiteral("--fillet-selection-review"))) {
+        try { ViewportInteractionTest::filletSelectionReviewRegressions(app.arguments().contains(QStringLiteral("--gl"))); }
+        catch (const std::exception &error) { std::cerr << error.what() << std::endl; return 1; }
+        return 0;
+    }
+    if (app.arguments().contains(QStringLiteral("--revision-access-gui"))) {
+        try { ViewportInteractionTest::revisionAccessGuiRegressions(); }
+        catch (const std::exception &error) { std::cerr << error.what() << std::endl; return 1; }
+        return 0;
+    }
+    if (app.arguments().contains(QStringLiteral("--extrusion-next-body-gui"))) {
+        try { ViewportInteractionTest::extrusionNextBodyGuiRegressions(app.arguments().contains(QStringLiteral("--gl"))); }
+        catch (const std::exception &error) { std::cerr << error.what() << std::endl; return 1; }
+        return 0;
+    }
+    if (app.arguments().contains(QStringLiteral("--extrusion-next-body"))) {
+        try { ViewportInteractionTest::extrusionNextBodyTests(); }
+        catch (const std::exception &error) { std::cerr << error.what() << std::endl; return 1; }
+        return 0;
+    }
+    if (app.arguments().contains(QStringLiteral("--storyboard-review"))) {
+        try { ViewportInteractionTest::storyboardReviewRegressions(); }
+        catch (const std::exception &error) { std::cerr << error.what() << std::endl; return 1; }
+        return 0;
+    }
     if(app.arguments().contains(QStringLiteral("--recovery-crash-worker")))return ViewportInteractionTest::recoveryCrashWorker(app.arguments().last());
     if(app.arguments().contains(QStringLiteral("--document-recovery"))){
         try{ViewportInteractionTest::documentRecoveryRegressions();}

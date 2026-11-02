@@ -60,7 +60,10 @@ DrawingWindow::~DrawingWindow(){delete toolbarController_;}
 void DrawingWindow::report(const QString &error){if(!error.isEmpty())QMessageBox::warning(this,QStringLiteral("Tavola 2D"),error);}
 void DrawingWindow::refreshEditAccess(){
     if(!editor_||busy_||editor_->isComputing())return;
-    workspaceDocumentEditAccess(path_,drawing_.sheet.drawing.version,drawing_.baseCheckinId,editAccess_);
+    WorkspaceEditAccess access;
+    workspaceDocumentEditAccess(path_,drawing_.sheet.drawing.version,drawing_.baseCheckinId,access);
+    if(access.temporarilyUnavailable)return;
+    editAccess_=std::move(access);
     if(editAccess_.readOnly)lock_.reset();
     if(!path_.isEmpty()&&!editAccess_.readOnly&&(!lock_||!lock_->owns(path_))){
         lock_.reset();editAccess_.readOnly=true;

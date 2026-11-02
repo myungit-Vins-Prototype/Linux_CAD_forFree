@@ -1,6 +1,10 @@
 #include "cad_feature_dependencies.h"
 #include "cad_geometry_refs.h"
 
+#include <QHash>
+#include <QSet>
+#include <algorithm>
+
 namespace ForgeCad {
 
 bool hasGeometry(const ExtrusionObject &body) {
@@ -34,7 +38,9 @@ QVector<int> bodyOperands(const ExtrusionObject &body) {
     switch (body.feature) {
     case BodyFeature::Extrusion: {
         QVector<int> bodies = body.mergeOperation != 0 ? body.mergeBodies : QVector<int>();
-        if (body.extent != 0) appendRefs(bodies, {Family::Extent}, false);
+        if (body.extent == 4) {
+            for (int target : body.booleanTools) if (!bodies.contains(target)) bodies.append(target);
+        } else if (body.extent != 0) appendRefs(bodies, {Family::Extent}, false);
         return bodies;
     }
     case BodyFeature::Revolution: {
@@ -129,7 +135,7 @@ QVector<int> sketchesOf(const ExtrusionObject &body) {
     switch (body.feature) {
     case BodyFeature::Extrusion: {
         QVector<int> refs{body.sketchIndex};
-        if (body.extent != 0) appendRefs(refs, {Family::Extent});
+        if (body.extent != 0 && body.extent != 4) appendRefs(refs, {Family::Extent});
         return refs;
     }
     case BodyFeature::Revolution: {
@@ -194,6 +200,37 @@ QVector<int> sketchesOf(const ExtrusionObject &body) {
     }
 }
 bool usesSketch(const ExtrusionObject &body) { return !sketchesOf(body).isEmpty(); }
+
+QVector<int> nextExtrusionCandidates(int index, const QVector<ExtrusionObject> &bodies) {
+    const int end = index < 0 ? int(bodies.size()) : std::min(index, int(bodies.size()));
+    QHash<quint64, int> last;
+    QSet<quint64> consumed;
+    QSet<int> consumedIndices;
+    QVector<int> ungrouped;
+    for (int i = 0; i < end; ++i) {
+        const auto &feature = bodies.at(i);
+        if (feature.suppressed || !feature.error.isEmpty() || !feature.forgeBody || !feature.solid
+            || isCurveBody(feature) || isDatumBody(feature)) continue;
+        for (int operand : hiddenOperands(feature, bodies)) if (operand >= 0 && operand < i) {
+            if (bodies.at(operand).modelBodyId && bodies.at(operand).modelBodyId != feature.modelBodyId)
+                consumed.insert(bodies.at(operand).modelBodyId);
+            else if (!bodies.at(operand).modelBodyId) consumedIndices.insert(operand);
+        }
+        if (feature.modelBodyId) last.insert(feature.modelBodyId, i);
+        else ungrouped.append(i);
+    }
+    QVector<int> result;
+    for (auto it = last.cbegin(); it != last.cend(); ++it)
+        if (!consumed.contains(it.key())) result.append(it.value());
+    for (int i : ungrouped) if (!consumedIndices.contains(i)) result.append(i);
+    result.erase(std::remove_if(result.begin(), result.end(), [&](int i) {
+        const auto &feature = bodies.at(i);
+        return feature.feature == BodyFeature::Pattern && feature.patternComponent < 0
+            && hasDerivedPatternResults(i, bodies);
+    }), result.end());
+    std::sort(result.begin(), result.end());
+    return result;
+}
 
 // Corpi che la funzione nasconde (operandi delle booleane, corpi in cui si fonde l'estrusione).
 QVector<int> hiddenOperands(const ExtrusionObject &body) {

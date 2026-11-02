@@ -1,6 +1,10 @@
 # Code review ForgeCAD (aggiornata) — bug, funzioni orfane, semplificazioni
 
-> **Aggiornamento, stesso giorno: correzioni applicate (non ancora committate).** Corretti N1, N2, N3, N4, B1, B2, B3, B3b, B4, B5, B6, B7, B10, con regressioni (`StepRejectsCyclicOrientedEdges`, `StepRejectsSelfReferencingGeometry`, `IgesRejectsInvalidSplineParameters`, `IgesRejectsCyclicCompositeCurves`, `ReflectionRejectsDegenerateNormal`, `forgecad_expression_tests`) che falliscono sul codice precedente e passano su quello nuovo. B8 (plausibile), funzioni orfane e semplificazioni restano aperti. Dettagli e verifiche nella voce di `CLAUDE.md` «Correzione dei bug della code review».
+> **Aggiornamento:** le correzioni e la nuova estrusione sono descritte nel
+> [rapporto conclusivo](code-review-2026-11-02-correzioni.md). I rilievi e gli stati
+> aperti riportati sotto documentano la review prima di queste correzioni.
+
+> **Aggiornamento, stesso giorno: correzioni applicate e committate in `9321643`.** Corretti N1, N2, N3, N4, B1, B2, B3, B3b, B4, B5, B6, B7, B10, con regressioni (`StepRejectsCyclicOrientedEdges`, `StepRejectsSelfReferencingGeometry`, `IgesRejectsInvalidSplineParameters`, `IgesRejectsCyclicCompositeCurves`, `ReflectionRejectsDegenerateNormal`, `forgecad_expression_tests`) che falliscono sul codice precedente e passano su quello nuovo. B8 (plausibile), funzioni orfane e semplificazioni restano aperti. Il corpo di questo rapporto documenta la base precedente alle correzioni; stato attuale, nuovi rilievi e verifiche locali nella [review di prosecuzione](code-review-2026-11-02-integrazione.md). La memoria compatta in `CLAUDE.md` e l'archivio conservano gli esiti degli interventi.
 
 Base analizzata: `origin/main` al commit **`7651724`** (2 novembre 2026, 07:22), identico al checkout locale. I numeri di riga si riferiscono a questo commit.
 

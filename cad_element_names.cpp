@@ -200,7 +200,9 @@ QVector<int> historyOperands(const ExtrusionObject &body) {
     }
     switch (body.feature) {
     case BodyFeature::Extrusion:
-        if (body.extent != 0 && body.extentRef.kind == 5) add(body.extentRef.index);
+        if (body.extent == 4) {
+            for (int tool : body.booleanTools) add(tool);
+        } else if (body.extent != 0 && body.extentRef.kind == 5) add(body.extentRef.index);
         if (mergingFeature(body) && body.mergeOperation != 0)
             for (int merged : body.mergeBodies) add(merged);
         return operands;

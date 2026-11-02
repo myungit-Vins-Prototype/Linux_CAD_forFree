@@ -14,6 +14,7 @@ struct WorkspaceRevisionStatus {
 struct WorkspaceEditAccess {
     bool readOnly = true;
     QString reason;
+    bool temporarilyUnavailable = false;
 };
 QString workspaceDocumentEditAccess(const QString &path,const DocumentVersion &version,
                                    const QUuid &baseCheckinId,WorkspaceEditAccess &access);

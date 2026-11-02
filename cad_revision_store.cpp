@@ -28,6 +28,11 @@ struct Catalog {
     QVector<StoredRevision> revisions;
 };
 
+class CatalogBusy final : public std::runtime_error {
+public:
+    CatalogBusy() : std::runtime_error("Archivio temporaneamente occupato; riprovare la lettura.") {}
+};
+
 void require(bool ok, const QString &message) {
     if (!ok) throw std::runtime_error(message.toStdString());
 }
@@ -185,9 +190,17 @@ RecoveryHead readRecoveryHead(const QString &directory){
     head.archiveId=uuid(o["archiveId"]);head.hash=hashValue(o["sha256"]);require(o["previous"].isString(),QStringLiteral("Base del puntatore di recupero assente."));head.previous=o["previous"].toString().isEmpty()?QByteArray():hashValue(o["previous"]);head.created=date(o["createdUtc"]);return head;
 }
 QString checkpointPath(const QString &directory,const QByteArray &hash){return QDir(recoveryDirectory(directory)).filePath(QString::fromLatin1(hash.toHex())+".json");}
-Catalog loadCatalog(const QString &directory){
+Catalog loadCatalog(const QString &directory,bool transactionLocked=false){
     require(!directory.isEmpty(),QStringLiteral("Cartella dell'archivio non specificata."));const auto bytes=recoveryRead(QDir(directory).filePath("catalog.json"),kMaxCatalogBytes);auto catalog=parseCatalog(bytes);const auto head=readRecoveryHead(directory);
-    require(head.hash.isEmpty()||(head.archiveId==catalog.archiveId&&head.hash==digest(bytes)),QStringLiteral("Il catalogo non corrisponde all'ultimo stato pubblicato. Usare Verifica e recupero catalogo."));return catalog;
+    if(head.hash.isEmpty()||(head.archiveId==catalog.archiveId&&head.hash==digest(bytes)))return catalog;
+    if(!transactionLocked){
+        // Fra head.json e catalog.json un writer puo' aver pubblicato una nuova
+        // generazione. Rileggere sotto il suo lock prima di dichiarare un danno.
+        QLockFile lock(QDir(directory).filePath("catalog.lock"));lock.setStaleLockTime(0);
+        if(!lock.tryLock(1000))throw CatalogBusy();
+        return loadCatalog(directory,true);
+    }
+    throw std::runtime_error("Il catalogo non corrisponde all'ultimo stato pubblicato. Usare Verifica e recupero catalogo.");
 }
 void publishCatalogCheckpoint(const QString &directory,const QByteArray &bytes,const QUuid &archive,const QByteArray &previous){
     recoveryDirectory(directory,true);const auto hash=digest(bytes);const auto path=checkpointPath(directory,hash);
@@ -216,7 +229,7 @@ QString transaction(const QString &directory, const std::function<bool(Catalog &
         require(!directory.isEmpty(), QStringLiteral("Cartella dell'archivio non specificata."));
         QLockFile lock(QDir(directory).filePath("catalog.lock")); lock.setStaleLockTime(0);
         require(lock.tryLock(0), QStringLiteral("Archivio occupato o non scrivibile; riprovare."));
-        auto catalog = loadCatalog(directory);
+        auto catalog = loadCatalog(directory,true);
         if (operation(catalog)) saveCatalog(directory, catalog);
         return {};
     } catch (const std::exception &error) { return QString::fromUtf8(error.what()); }
@@ -277,7 +290,7 @@ QString RevisionStore::initialize() const {
         QLockFile lock(QDir(directory_).filePath("catalog.lock")); lock.setStaleLockTime(0);
         require(lock.tryLock(0), QStringLiteral("Archivio occupato o non scrivibile; riprovare."));
         if (QFileInfo::exists(QDir(directory_).filePath("catalog.json"))) {
-            loadCatalog(directory_);
+            loadCatalog(directory_,true);
             require(QDir(QDir(directory_).filePath("objects")).exists(), QStringLiteral("Cartella dei contenuti dell'archivio mancante."));
             return {};
         }
@@ -318,17 +331,21 @@ QString RevisionStore::registerDocument(const QUuid &documentId, const QString &
     });
 }
 
-QString RevisionStore::archiveIdentity(QUuid &archiveId) const {
+QString RevisionStore::archiveIdentity(QUuid &archiveId,bool *temporarilyBusy) const {
+    if(temporarilyBusy)*temporarilyBusy=false;
     try { const auto catalog = loadCatalog(directory_); archiveId = catalog.archiveId; return {}; }
+    catch (const CatalogBusy &error) { if(temporarilyBusy)*temporarilyBusy=true;return QString::fromUtf8(error.what()); }
     catch (const std::exception &error) { return QString::fromUtf8(error.what()); }
 }
 
-QString RevisionStore::documents(QVector<RevisionDocumentInfo> &result) const {
+QString RevisionStore::documents(QVector<RevisionDocumentInfo> &result,bool *temporarilyBusy) const {
+    if(temporarilyBusy)*temporarilyBusy=false;
     try {
         const auto catalog = loadCatalog(directory_); QVector<RevisionDocumentInfo> prepared;
         for (const auto &d : catalog.documents) prepared.append(d.info);
         result = std::move(prepared); return {};
-    } catch (const std::exception &error) { return QString::fromUtf8(error.what()); }
+    } catch (const CatalogBusy &error) { if(temporarilyBusy)*temporarilyBusy=true;return QString::fromUtf8(error.what()); }
+    catch (const std::exception &error) { return QString::fromUtf8(error.what()); }
 }
 
 QString RevisionStore::history(const QUuid &documentId, QVector<RevisionRecord> &result) const {
@@ -385,12 +402,14 @@ QString RevisionStore::checkoutWithToken(const RevisionCheckout &request, Revisi
     return error;
 }
 
-QString RevisionStore::resumeCheckout(const QUuid &documentId, const QUuid &token, RevisionCheckout &result) const {
+QString RevisionStore::resumeCheckout(const QUuid &documentId, const QUuid &token, RevisionCheckout &result,bool *temporarilyBusy) const {
+    if(temporarilyBusy)*temporarilyBusy=false;
     try {
         auto catalog = loadCatalog(directory_); const auto &d = findDocument(catalog, documentId);
         require(!token.isNull() && d.checkout.token == token, QStringLiteral("Prenotazione non piu' valida."));
         result = d.checkout; return {};
-    } catch (const std::exception &error) { return QString::fromUtf8(error.what()); }
+    } catch (const CatalogBusy &error) { if(temporarilyBusy)*temporarilyBusy=true;return QString::fromUtf8(error.what()); }
+    catch (const std::exception &error) { return QString::fromUtf8(error.what()); }
 }
 
 QString RevisionStore::cancelCheckout(const RevisionCheckout &checkout) const {
@@ -574,7 +593,7 @@ QString RevisionStore::inspectCatalogRecovery(RevisionCatalogRecovery &result)co
 }
 QString RevisionStore::protectCatalog(RevisionCatalogRecovery &result)const{
     try{QLockFile lock(QDir(directory_).filePath("catalog.lock"));lock.setStaleLockTime(0);require(lock.tryLock(0),QStringLiteral("Archivio occupato o non scrivibile; riprovare."));
-        auto prepared=inspectRecovery(directory_);require(prepared.catalogMatches,QStringLiteral("Recuperare prima la proiezione del catalogo."));if(!prepared.protectedCatalog){const auto catalog=loadCatalog(directory_);saveCatalog(directory_,catalog);prepared=inspectRecovery(directory_);}result=std::move(prepared);return {};
+        auto prepared=inspectRecovery(directory_);require(prepared.catalogMatches,QStringLiteral("Recuperare prima la proiezione del catalogo."));if(!prepared.protectedCatalog){const auto catalog=loadCatalog(directory_,true);saveCatalog(directory_,catalog);prepared=inspectRecovery(directory_);}result=std::move(prepared);return {};
     }catch(const std::exception &e){return QString::fromUtf8(e.what());}
 }
 QString RevisionStore::recoverCatalog(const RevisionCatalogRecovery &expected,RevisionCatalogRecovery &result)const{

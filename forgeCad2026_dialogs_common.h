@@ -194,6 +194,7 @@ public:
     void setEdges(int body, const QVector<EdgePoint> &edges);
 protected:
     void changeEvent(QEvent *event) override;
+    void hideEvent(QHideEvent *event) override;
 private:
     static bool sameReference(const GeometryRef &a, const GeometryRef &b);
     CadViewport *viewport_;

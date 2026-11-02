@@ -7,6 +7,7 @@
 #include <stdexcept>
 
 #include "fk_bspline.h"
+#include "fk_bspline_basis.h"
 #include "fk_bspline_surface.h"
 #include "fk_helix.h"
 
@@ -84,9 +85,13 @@ public:
         return v;
     }
     // Numero di elementi di `size` byte ciascuno: non oltre i dati rimasti.
+    void requireElements(std::size_t count, std::size_t size) const {
+        if (count > (data_.size() - pos_) / size)
+            throw std::invalid_argument("readBodyBinary: lunghezza non valida");
+    }
     std::size_t count(std::size_t size) {
         const std::uint32_t n = u32();
-        if (std::size_t(n) * size > data_.size() - pos_) throw std::invalid_argument("readBodyBinary: lunghezza non valida");
+        requireElements(n, size);
         return n;
     }
     std::vector<double> doubles() {
@@ -414,10 +419,17 @@ private:
             const std::int32_t uCount = in_.i32(), vCount = in_.i32();
             if (uCount <= 0 || vCount <= 0 || std::int64_t(uCount) * vCount > 100000000)
                 throw std::invalid_argument("readBodyBinary: numero di poli non valido");
-            std::vector<Vec3> poles(std::size_t(uCount) * std::size_t(vCount));
+            if (uDegree < 1 || uDegree >= uCount || vDegree < 1 || vDegree >= vCount)
+                throw std::invalid_argument("readBodyBinary: grado B-spline non valido");
+            detail::validateKnotVector(uKnots, uDegree, uCount, "readBodyBinary (u)");
+            detail::validateKnotVector(vKnots, vDegree, vCount, "readBodyBinary (v)");
+            const std::size_t poleCount = std::size_t(uCount) * std::size_t(vCount);
+            in_.requireElements(poleCount, 3 * sizeof(double));
+            std::vector<Vec3> poles(poleCount);
             for (Vec3 &p : poles) p = in_.vec<3>();
             std::vector<double> weights;
             if (in_.flag()) {
+                in_.requireElements(poles.size(), sizeof(double));
                 weights.resize(poles.size());
                 for (double &w : weights) w = in_.f64();
             }

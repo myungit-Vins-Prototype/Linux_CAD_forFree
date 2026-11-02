@@ -6,19 +6,19 @@ namespace ForgeCad::Gui {
 void GpuPicker::clearResources() { pickingBuffer_.reset(); }
 
 int GpuPicker::pick(const QPoint &position, const QSize &pixels, qreal ratio,
-                    quint64 renderedFrameSerial_, const std::function<void()> &renderIdentifiers) {
+                    quint64 sceneKey, const std::function<void()> &renderIdentifiers) {
     auto *gl = QOpenGLContext::currentContext()->functions();
     if (!pickingBuffer_ || pickingBuffer_->size() != pixels) {
         QOpenGLFramebufferObjectFormat format;
         format.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
         format.setInternalTextureFormat(GL_RGBA8);
         pickingBuffer_ = std::make_unique<QOpenGLFramebufferObject>(pixels, format);
-        pickingBufferSerial_ = std::numeric_limits<quint64>::max();
+        pickingBufferKey_ = std::numeric_limits<quint64>::max();
     }
     if (!pickingBuffer_ || !pickingBuffer_->isValid()) {
         return -2;
     }
-    if (pickingBufferSerial_ != renderedFrameSerial_) {
+    if (pickingBufferKey_ != sceneKey) {
         GLint viewport[4] = {};
         GLfloat clearColor[4] = {};
         gl->glGetIntegerv(GL_VIEWPORT, viewport);
@@ -37,7 +37,7 @@ int GpuPicker::pick(const QPoint &position, const QSize &pixels, qreal ratio,
         gl->glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
         renderIdentifiers();
         gl->glFlush();
-        pickingBufferSerial_ = renderedFrameSerial_;
+        pickingBufferKey_ = sceneKey;
         gl->glEnable(GL_DITHER);
         gl->glEnable(GL_MULTISAMPLE);
         gl->glClearColor(clearColor[0], clearColor[1], clearColor[2], clearColor[3]);

@@ -40,6 +40,13 @@ GROUPS = [
  ('build', 'Build e strumenti', 'Configurazione, generazione e confezionamento del software.')]
 # Descrizioni curate: aggiornare queste voci quando cambia il confine di un modulo.
 DESCRIPTIONS = {
+ 'tests/test_fillet_selection_review.h': ('tests', 'Raccordi: scelta con eventi reali e occlusione tra corpi, base forzata durante modifica e cancellazione delle evidenziazioni quando la lista dei bordi viene nascosta.'),
+ 'kernel/tests/test_exchange_robustness.cpp': ('tests', 'Robustezza STEP/B-rep senza OCCT: annidamento sintattico, conteggi/nodi prima delle allocazioni con guardia nel runner, occorrenze coincidenti e MAPPED_ITEM distinti senza duplicare percorsi di visita.'),
+ 'tests/test_gui_3d_review.h': ('tests', 'Palette e pan; picking GPU prima del repaint dopo cambi camera/visibilita/filtro/istanze, visibilita effettiva condivisa con la scena, rendering e risorse vetro dopo reale ricreazione del contesto OpenGL.'),
+ 'tests/test_storyboard_review.h': ('tests', 'Dipendenze storyboard: rimappatura estrazioni multiple, componenti pattern referenziate dagli schizzi, sorgente featureOnly dopo inserimenti/riordino, visibilita al recupero del tip e dopo consumo, Undo/Redo e codec; detach iniettato durante rebuild responsivo.'),
+ 'tests/test_revision_access_gui.h': ('tests', 'Modelli e tavole: refresh revisioni transitorio conserva accesso e lock della sessione proprietaria; consultazione resta in sola lettura e corruzione persistente blocca le modifiche.'),
+ 'tests/test_extrusion_next_body.h': ('tests', 'Estrusione fino al prossimo corpo con booleane B-rep: versi, limiti analitici e copertura da piu strumenti, dipendenze dinamiche, genealogia, rollback, Undo/Redo e persistenza.'),
+ 'tests/test_extrusion_next_body_gui.h': ('tests', 'Pannello reale Fino al prossimo corpo, direzione visibile, anteprime nei due versi, conferma, Undo/Redo ed errori senza candidati; QA grafica opzionale.'),
  '.github/workflows/ci.yml': ('build', 'GitHub Actions su Ubuntu26.04 e macOS15: compilazione Release completa senza CUDA e CTest autosufficienti CPU/offscreen, Metal su Apple; log e JUnit conservati, GPU assente distinta tramite SKIP.'),
  'cad_surface_tools': ('features', 'Estensione fino a riferimenti multipli: raggruppamento delle facce e cucitura del target; rete U/V e poli NURBS, storia e codec opzionale dei target nel formato53.'),
  'fk_surface_tools': ('kernel', 'Reti a celle Coons cucite, prolungamento e selezione dai pezzi gia intersecati senza secondo split, modifica relativa di poli/pesi con ricostruzione dei bordi e trim UV conservati.'),
@@ -75,7 +82,7 @@ DESCRIPTIONS = {
  'forgeCad2026_ribbon_editor': ('dialogs', 'Editor modale della ribbon: sezioni, comandi, separatori e ripristino su copia confermabile.'),
  'forgeCad2026_ribbon_preview_main.cpp': ('startup', 'Avvio separato della prova ribbon, preferenze isolate, cattura e regressione apertura documento/Blocco.'),
  'forgeCad2026_zoom': ('viewport', 'Normalizzazione input per backend, preferenze condivise e animazione temporale dello zoom per vista 3D e tavole.'),
- 'forgeCad2026_viewport_scene.cpp': ('viewport', 'Coordinate scena/schermo, raggi e bounds senza cache associative invisibili; zoom uniforme al cursore, adattamento vista e piani di riferimento.'),
+ 'forgeCad2026_viewport_scene.cpp': ('viewport', 'Coordinate scena/schermo, raggi e bounds; visibilita effettiva condivisa da rendering e picking durante anteprime/modifica, zoom al cursore e piani di riferimento.'),
  'forgeCad2026_feature_preview': ('features', 'FeaturePreviewBuilder: chiave e calcolo delle anteprime da snapshot; riusa il B-rep e prepara sul worker la mesh mancante o di qualita diversa degli stadi nascosti, senza possedere widget.'),
  'forgeCad2026_sketch_curvature': ('sketch', 'SketchCurvatureCache: possiede e invalida i pettini di curvatura al cambio di curva o scala.'),
  'forgeCad2026_camera': ('render', 'Stato e trasformazioni della camera 3D.'),
@@ -268,11 +275,11 @@ DESCRIPTIONS.update({'tools/open_architecture.py': ('build', 'Avvio locale della
                     'Espressioni e conversioni per documento: contesto unita ereditato dai widget e passato ai formatter, senza stato globale condiviso fra finestre; '
                     'prodotto implicito solo davanti a nomi o parentesi e profondita di annidamento limitata.'),
  'cad_extrude': ('features',
-                 'Costruisce estrusioni con condizioni di fine e applica la fusione con i corpi '
-                 'selezionati.'),
+                 'Estrusione a distanza, a riferimento e fino ai primi corpi precedenti: trim B-rep esatto, '
+                 'copertura e primo incontro certificati conservativamente; genealogia dei limiti distinta dalla fusione.'),
  'cad_feature_build': ('features',
                        'Costruisce feature dagli operandi con genealogia; geometria e mesh opzionale, risultati delle ripetizioni separati per corpo, aggregati legacy e derivati gia presenti conservati, ripetizione dello strumento sweep prima della fusione/sottrazione, errori specifici conservati.'),
- 'cad_feature_dependencies': ('features', 'Dipendenze e consumo dei risultati derivati gia presenti negli aggregati legacy; preserva i consumatori storici e distingue definizioni da risultati visibili.'),
+ 'cad_feature_dependencies': ('features', 'Dipendenze e consumo dei risultati, compresi aggregati legacy; candidati dinamici dei limiti di estrusione distinti dagli strumenti di fusione e dalla visibilita manuale.'),
  'cad_features': ('features', 'Tipi e regole comuni delle operazioni parametriche del modello.'),
  'cad_forge': ('features',
                'Adatta sketch e parametri al kernel; booleane con genealogia ricondotta agli operandi e recupero dell’unione commutativa nell’ordine inverso dopo un errore geometrico; conversione mesh float con filtro comune dei triangoli degeneri per scena e anteprime, ID topologici coerenti.'),
@@ -289,7 +296,7 @@ DESCRIPTIONS.update({'tools/open_architecture.py': ('build', 'Avvio locale della
  'forgeCad2026_ui_glass': ('startup', 'Aspetto condiviso di vetro UI: impostazioni, palette, sfocatura CPU e ombre arrotondate memorizzate.'),
  'cad_menu.h': ('startup', 'Popup comuni: palette della finestra, angoli antialias e padding dal raggio dei pannelli, spunte separate dalle icone.'),
  'cad_model_history': ('features',
-                       'Gestisce corpi logici riallineati alle basi dopo modifiche e riordini e sequenza di schizzi e lavorazioni: ripetizione come singolo evento con corpi distinti, ordine dei risultati, rimappatura completa dei riferimenti, cursore e dipendenze degli appoggi.'),
+                       'Corpi logici e storia di schizzi/lavorazioni: identita distinte di copie e componenti, basi riallineate dopo modifiche/riordini, preferenza visibile conservata attraverso consumo e recupero del tip, rimappature e cursore.'),
  'cad_native_revisions': ('documents', 'Persistenza delle revisioni native; snapshot tavole con registrazione ordinata di tutti gli operandi; confronto delle definizioni normalizzato al codec corrente anche per check-in pendenti in formato53.'),
  'cad_numeric_input.h': ('startup', 'Gestione comune dell’input numerico nei controlli dell’interfaccia.'),
  'cad_overlay_renderer': ('render', 'Disegno OpenGL degli overlay e delle loro istanze.'),
@@ -299,7 +306,7 @@ DESCRIPTIONS.update({'tools/open_architecture.py': ('build', 'Avvio locale della
  'cad_revision_client_internal.h': ('documents',
                                     'Helper privati del protocollo revisioni: identità, percorsi, lock e '
                                     'file di sessione.'),
- 'cad_revision_store': ('documents', 'Archivio dei check-in, rilasci e checkpoint del catalogo: pubblicazione transazionale, puntatore all ultimo stato, verifica di catene/payload/rilasci e recupero esplicito senza rollback o perdita delle prenotazioni.'),
+ 'cad_revision_store': ('documents', 'Archivio check-in/rilasci e checkpoint: pubblicazione transazionale, letture coerenti con retry sotto lock e contesa distinta dalla corruzione; verifica di catene/payload e recupero esplicito senza perdita delle prenotazioni.'),
  'cad_revision_recovery_ui': ('documents', 'Dialogo condiviso 3D/2D per verificare archivio/checkpoint, attivare la protezione legacy e recuperare l ultimo catalogo registrato conservando il file danneggiato.'),
  'tests/test_catalog_recovery.cpp': ('tests', 'Checkpoint/proiezione, interruzioni, recupero atomico/idempotente, concorrenza, token, rilasci, conflitti, corruzione e migrazione legacy.'),
  'tests/test_catalog_recovery_gui.h': ('tests', 'Recupero nativo dai menu3D/2D: annulla, catalogo corrotto/assente, legacy, sessioni/pendenti conservati e consegna storica multipagina.'),

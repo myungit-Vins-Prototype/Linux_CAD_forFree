@@ -36,7 +36,6 @@ quint64 inheritedBody(const QVector<ExtrusionObject> &features, const ExtrusionO
     case BodyFeature::SheetExtend:
     case BodyFeature::Scale:
     case BodyFeature::Sew:
-    case BodyFeature::DeleteFace:
     case BodyFeature::Draft:
     case BodyFeature::Shell:
     case BodyFeature::Thread:
@@ -45,6 +44,10 @@ quint64 inheritedBody(const QVector<ExtrusionObject> &features, const ExtrusionO
         return feature.move.copy ? 0 : owner(feature.firstBody);
     case BodyFeature::Pattern:
         return feature.patternComponent > 0 ? 0 : owner(feature.firstBody);
+    case BodyFeature::DeleteFace:
+        // La prima componente prosegue la base; le altre sono corpi
+        // distinti, con identita' assegnata da createDeleteFaces.
+        return feature.deleteComponent > 0 ? 0 : owner(feature.firstBody);
     case BodyFeature::Thicken:
         // Tutta la superficie diventa un solido: lo stesso corpo; facce scelte: un corpo nuovo.
         return feature.offsetFaces.isEmpty() ? owner(feature.firstBody) : 0;
@@ -121,6 +124,18 @@ void normalizeModelHistory(QVector<ExtrusionObject> &features, QVector<ModelBody
     for (ExtrusionObject &feature : features)
         visitGeometryRefs(feature, [&](GeometryRef &ref, GeometryRefFamily, int) { bindOwner(ref); });
 
+    // I flag dei risultati vengono spenti dai comandi che consumano un
+    // operando. Non sono una nuova preferenza Nascondi del corpo logico.
+    QSet<quint64> consumed;
+    for (const auto &feature : features) {
+        if (feature.suppressed || !feature.error.isEmpty()) continue;
+        for (int operand : hiddenOperands(feature, features)) {
+            if (operand < 0 || operand >= features.size()) continue;
+            const quint64 id = features.at(operand).modelBodyId;
+            if (id && id != feature.modelBodyId) consumed.insert(id);
+        }
+    }
+
     QHash<quint64, ModelBody> existing;
     for (const ModelBody &body : modelBodies)
         if (body.id && bodyIds.contains(body.id)) existing.insert(body.id, body);
@@ -174,7 +189,12 @@ void normalizeModelHistory(QVector<ExtrusionObject> &features, QVector<ModelBody
         // riesce (riattivata, o corretta in "Modifica parametri") ha il flag
         // spento, perche' finche' falliva si mostrava lo stadio precedente.
         const bool tipMoved = hadBody && previousTip && tip >= 0 && features.at(tip).featureId != previousTip;
-        if ((!hadBody || (!failedTail && !tipMoved)) && tip >= 0) body.visible = features.at(tip).visible;
+        // Se tutti gli stadi erano soppressi o falliti, il corpo non aveva
+        // tip e ogni feature era nascosta. Il recupero della geometria deve
+        // riprendere la preferenza del corpo, anche quando era nascosto a mano.
+        const bool tipRecovered = hadBody && !previousTip && tip >= 0;
+        if ((!hadBody || (!failedTail && !tipMoved && !tipRecovered && !consumed.contains(id))) && tip >= 0)
+            body.visible = features.at(tip).visible;
         for (int index : indices) features[index].visible = index == tip && body.visible;
         bodies.append(body);
         ++number;

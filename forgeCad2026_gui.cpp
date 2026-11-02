@@ -3976,7 +3976,10 @@ bool PdfWindow::event(QEvent *event) {
 
 void PdfWindow::refreshDocumentEditAccess(){
     if(!viewport_||foregroundProgressDepth_||viewport_->interactionLocked())return;
-    ForgeCad::workspaceDocumentEditAccess(documentPath_,viewport_->documentVersion(),viewport_->documentBaseCheckinId(),documentEditAccess_);
+    ForgeCad::WorkspaceEditAccess access;
+    ForgeCad::workspaceDocumentEditAccess(documentPath_,viewport_->documentVersion(),viewport_->documentBaseCheckinId(),access);
+    if(access.temporarilyUnavailable)return;
+    documentEditAccess_=std::move(access);
     if(documentEditAccess_.readOnly)documentLock_.reset();
     if(!documentPath_.isEmpty()&&!documentEditAccess_.readOnly&&(!documentLock_||!documentLock_->owns(documentPath_))){
         documentLock_.reset();documentEditAccess_.readOnly=true;

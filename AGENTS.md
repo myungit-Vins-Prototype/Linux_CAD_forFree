@@ -7,7 +7,8 @@
 - Per istruzione esplicita dell'utente, aggiornare sempre `CLAUDE.md` prima della risposta finale di ogni intervento, in tutte le chat del progetto, comprese indagini, correzioni e modifiche alla documentazione.
 - Aggiornare `CLAUDE.md` anche a ogni obiettivo raggiunto durante un intervento, senza attendere un promemoria dell'utente o la fine della chat.
 - Registrare richiesta, decisioni, cause individuate, file modificati, verifiche realmente eseguite, risultati, limiti e lavoro ancora aperto. Distinguere implementato, verificato, sperimentale e proposto; non dichiarare aggiornato l'eseguibile se è stato compilato soltanto il kernel o il runner dei test.
-- Preservare le voci delle altre chat. Rileggere la parte da modificare prima di scrivere per non sovrascrivere aggiornamenti concorrenti; aggiornare la voce pertinente o aggiungere una voce datata senza duplicare il registro. Non inserire credenziali o segreti.
+- Preservare le informazioni delle altre chat, rileggendo prima di scrivere per non sovrascrivere aggiornamenti concorrenti. Sintetizzare le voci superate senza perdere esiti, limiti e riferimenti; conservare la cronologia estesa negli archivi. Non inserire credenziali o segreti.
+- Per richiesta dell’utente del 2 novembre 2026, `CLAUDE.md` è una memoria operativa compatta: circa 200 righe, massimo 16 KiB e non più di 10 interventi recenti sintetici. Mantenere regole permanenti, stato implementato e limiti aperti; aggiornare le voci tematiche invece di accodare ogni tentativo. Dettagli e cronologia vanno in rapporti dedicati o `docs/history/`. Leggere gli archivi solo su argomenti/date pertinenti, mai caricarli integralmente nel contesto all’avvio.
 
 ## Vista architetturale — istruzione permanente dell’utente
 

@@ -633,6 +633,7 @@ bool read(ReadStream &in, ExtrusionObject &body, quint16 version, int extras) {
         qint32 extent = 0, merge = 0;
         QVector<GeometryRef> refs;
         in >> extent;
+        if (extent < 0 || extent > 4) return false;
         if (!readRefs(in, refs, version) || refs.size() != 1) return false;
         in >> merge >> body.mergeAuto >> body.mergeBodies >> body.booleanTools;
         body.extent = extent;

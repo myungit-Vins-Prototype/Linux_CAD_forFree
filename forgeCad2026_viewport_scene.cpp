@@ -1,4 +1,18 @@
 #include "forgeCad2026_viewport_internal.h"
+
+bool CadViewport::isBodyVisibleInScene(int index) const {
+    if (index < 0 || index >= extrusions_.size()) return false;
+    const bool previewing = (!sketchMode_ || sketchViewUnlocked_) && !preview_.key.isEmpty();
+    const bool replaced = previewing && preview_.replaced.contains(index);
+    if (previewing && (index == preview_.index || preview_.later.contains(index)
+        || (replaced && (preview_.valid || previewDragVisible_)))) return false;
+    if (!pickBodies_.isEmpty() && !pickBodies_.contains(index)) return false;
+    const bool blendBase = previewing && preview_.definition.operation < 0
+        && preview_.definition.feature == BodyFeature::Blend && preview_.definition.firstBody == index;
+    const bool forced = replaced || blendBase || index == edgePickBody_
+        || (previewing && preview_.restored.contains(index)) || pickBodies_.contains(index);
+    return isBodyDrawn(index) || (!sketchMode_ && forced);
+}
 #include <QDebug>
 
 

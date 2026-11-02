@@ -82,8 +82,8 @@ public:
     // Adotta l'identita' gia' contenuta nel file, senza creare un duplicato.
     // Se esiste, conserva nome/storico e verifica il tipo di documento.
     QString registerDocument(const QUuid &documentId, const QString &name, const QString &kind) const;
-    QString archiveIdentity(QUuid &archiveId) const;
-    QString documents(QVector<RevisionDocumentInfo> &result) const;
+    QString archiveIdentity(QUuid &archiveId, bool *temporarilyBusy = nullptr) const;
+    QString documents(QVector<RevisionDocumentInfo> &result, bool *temporarilyBusy = nullptr) const;
     QString history(const QUuid &documentId, QVector<RevisionRecord> &result) const;
     QString checkout(const QUuid &documentId, const QString &owner, RevisionCheckout &result) const;
     // Confronta la base sotto lock prima di creare la prenotazione.
@@ -91,7 +91,7 @@ public:
     // Token scelto e conservato dal client prima della richiesta: ritentativi
     // identici riprendono la prenotazione senza crearne una seconda.
     QString checkoutWithToken(const RevisionCheckout &request, RevisionCheckout &result) const;
-    QString resumeCheckout(const QUuid &documentId, const QUuid &token, RevisionCheckout &result) const;
+    QString resumeCheckout(const QUuid &documentId, const QUuid &token, RevisionCheckout &result, bool *temporarilyBusy = nullptr) const;
     QString cancelCheckout(const RevisionCheckout &checkout) const;
     // Pubblica contenuto + record e rilascia la prenotazione soltanto al
     // successo. I ritentativi identici restituiscono il medesimo record.

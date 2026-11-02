@@ -1290,6 +1290,7 @@ private:
     // del viewport; viene ridisegnato una sola volta per fotogramma della
     // scena, non a ogni movimento del mouse. -2 chiede il fallback CPU.
     int gpuPickBody(const QPoint &position) const;
+    bool isBodyVisibleInScene(int index) const;
 
     // `exact` falso: i corpi si provano sulla tassellazione (evidenziazione al
     // passaggio, che deve restare fluida anche su modelli con molte facce).

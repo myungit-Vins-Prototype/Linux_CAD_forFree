@@ -968,12 +968,32 @@ int CadViewport::gpuPickBody(const QPoint &position) const {
     self->makeCurrent();
     const qreal ratio = devicePixelRatioF();
     const QSize pixels(qMax(1, qRound(width() * ratio)), qMax(1, qRound(height() * ratio)));
-    const int index = gpuPicker_.pick(position, pixels, ratio, renderedFrameSerial_, [this] {
-        displayCache_.setMatrices(sceneProjectionMatrix(), sceneModelViewMatrix());
-        for (int index = 0; index < extrusions_.size(); ++index) {
+    const QMatrix4x4 projection = sceneProjectionMatrix(), modelView = sceneModelViewMatrix();
+    // Un evento puo' spostare la camera o nascondere un corpo prima che Qt
+    // esegua il repaint richiesto. Il solo seriale dell'ultimo frame lascerebbe
+    // selezionare gli identificativi della vista precedente in quell'intervallo.
+    size_t pickingKey = qHashBits(projection.constData(), 16 * sizeof(float), size_t(renderedFrameSerial_));
+    pickingKey = qHashBits(modelView.constData(), 16 * sizeof(float), pickingKey);
+    QVector<int> bodies;
+    for (int index = 0; index < extrusions_.size(); ++index) {
+        const ExtrusionObject &body = extrusions_.at(index);
+        if (!isBodyVisibleInScene(index) || !ForgeCad::isShapeBody(body) || body.display.vertices.isEmpty()) continue;
+        bodies.append(index);
+        const auto &display = body.display.instancedBase && !body.display.instanceTransforms.isEmpty()
+            ? *body.display.instancedBase : body.display;
+        // Come nella cache dei VBO, i vettori Qt condivisi identificano la
+        // geometria immutabile. Le trasformazioni delle istanze sono invece
+        // incluse per valore, anche se cambiano nello stesso vettore.
+        pickingKey = qHashMulti(pickingKey, index, quintptr(display.vertices.constData()), display.vertices.size(),
+                               body.display.instanceTransforms.size());
+        if (body.display.instancedBase)
+            for (const auto &transform : body.display.instanceTransforms)
+                pickingKey = qHashBits(transform.constData(), 16 * sizeof(float), pickingKey);
+    }
+    const int index = gpuPicker_.pick(position, pixels, ratio, quint64(pickingKey), [this, &bodies, &projection, &modelView] {
+        displayCache_.setMatrices(projection, modelView);
+        for (int index : bodies) {
             const ExtrusionObject &body = extrusions_.at(index);
-            if (!isBodyDrawn(index) || !ForgeCad::isShapeBody(body) || body.display.vertices.isEmpty()) continue;
-            if (!pickBodies_.isEmpty() && !pickBodies_.contains(index)) continue;
             const unsigned id = unsigned(index + 1);
             const QVector4D identifier(float(id & 0xFFu) / 255.0f, float((id >> 8) & 0xFFu) / 255.0f,
                                        float((id >> 16) & 0xFFu) / 255.0f, 1.0f);
@@ -1019,7 +1039,7 @@ SceneSelection CadViewport::pickSceneObject(const QPoint &position, bool exact )
     // Curve (eliche): vicinanza alla polilinea in pixel, come gli schizzi.
     for (int index = 0; index < extrusions_.size(); ++index) {
         const ExtrusionObject &body = extrusions_.at(index);
-        if (!isBodyDrawn(index) || !ForgeCad::isCurveBody(body)) continue;
+        if (!isBodyVisibleInScene(index) || !ForgeCad::isCurveBody(body)) continue;
         for (const QVector<QVector3D> &polyline : body.display.edges)
             for (int k = 1; k < polyline.size(); ++k) {
                 const float before = nearestDistance;
@@ -1051,7 +1071,7 @@ SceneSelection CadViewport::pickSceneObject(const QPoint &position, bool exact )
     const bool reaches = sectionRay(origin, direction, skipped);
     for (int index = 0; index < extrusions_.size() && reaches; ++index) {
         const ExtrusionObject &extrusion = extrusions_.at(index);
-        if (!isBodyDrawn(index) || !ForgeCad::isShapeBody(extrusion)) continue;
+        if (!isBodyVisibleInScene(index) || !ForgeCad::isShapeBody(extrusion)) continue;
         FaceHit face;
         bool hit = false;
         double distance = 0.0;
@@ -1641,7 +1661,7 @@ void CadViewport::finishEdgePick() {
 bool CadViewport::edgePickEligible(int index) const {
     if (index < 0 || index >= extrusions_.size() || (sketchMode_ && !isBodyDrawn(index))) return false;
     const ExtrusionObject &body = extrusions_.at(index);
-    if (!ForgeCad::isShapeBody(body) || (!isBodyDrawn(index) && index != edgePickBody_)) return false;
+    if (!ForgeCad::isShapeBody(body) || !isBodyVisibleInScene(index)) return false;
     if (edgePickHelix_) return true;
     return !edgePickExtend_ || !body.solid;
 }
@@ -1727,10 +1747,13 @@ int CadViewport::pickEdge(const QPoint &position, int *body ) const {
 }
 
 int CadViewport::edgePickFaceBody(const QPoint &position) const {
-    if (edgePickBody_ >= 0 && !pickedEdges_.isEmpty()) return edgePickBody_;
+    // Come per gli spigoli, un corpo opaco davanti impedisce di prendere
+    // la faccia di quello gia' in scelta. La base nascosta di una modifica
+    // resta selezionabile perche' il picker usa la stessa scena del renderer.
+    if (hiddenEdgesVisible_ && edgePickBody_ >= 0 && !pickedEdges_.isEmpty()) return edgePickBody_;
     const SceneSelection hit = pickSceneObject(position);
-    if (hit.kind == SceneObjectKind::Extrusion && edgePickEligible(hit.index)) return hit.index;
-    return edgePickBody_;
+    if (hit.kind != SceneObjectKind::Extrusion || !edgePickEligible(hit.index)) return -1;
+    return pickedEdges_.isEmpty() || hit.index == edgePickBody_ ? hit.index : -1;
 }
 
 bool CadViewport::cachedRayFace(int index, const QVector3D &origin, const QVector3D &direction, FaceHit &hit) const {

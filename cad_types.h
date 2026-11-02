@@ -755,8 +755,10 @@ struct ExtrusionObject {
     ThreadParameters thread;
     // Extrusion: condizione di fine (0 la distanza `distance`; 1 fino a un
     // punto; 2 fino a uno spigolo, nel suo punto piu' vicino al riferimento;
-    // 3 fino a una faccia o a un piano) con il riferimento `extentRef`
-    // (GeometryRef come i piani di costruzione).
+    // 3 fino a una faccia o a un piano) con il riferimento `extentRef`;
+    // 4 fino alle prime superfici dei corpi successivi lungo il segno di
+    // distance: gli utensili limite sono in booleanTools, distinti dalle
+    // fusioni in mergeBodies. Valore aggiunto senza cambiare il formato 60.
     int extent = 0;
     GeometryRef extentRef;
     // Extrusion: versi rispetto al piano dello schizzo (0 uno solo; 1

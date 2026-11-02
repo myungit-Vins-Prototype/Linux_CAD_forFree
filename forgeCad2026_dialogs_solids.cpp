@@ -715,18 +715,28 @@ bool extrusionDialog(QMainWindow *window, CadViewport *viewport, const QString &
     dialog.setWindowTitle(title);
     dialog.setModal(false);
     auto *form = dialog.createScrollableForm();
-    form->addRow(new FeatureOperationDiagram(FeatureOperationDiagram::Extrusion, &dialog));
+    auto *diagram = new FeatureOperationDiagram(FeatureOperationDiagram::Extrusion, &dialog);
+    form->addRow(diagram);
     auto *extentBox = new QComboBox(&dialog);
+    extentBox->setObjectName(QStringLiteral("extrusionExtent"));
     extentBox->addItems({QStringLiteral("Distanza"), QStringLiteral("Fino a un punto"), QStringLiteral("Fino a uno spigolo"),
-                         QStringLiteral("Fino a una faccia o a un piano")});
-    extentBox->setCurrentIndex(qBound(0, definition.extent, 3));
+                         QStringLiteral("Fino a una faccia o a un piano"), QStringLiteral("Fino al prossimo corpo")});
+    extentBox->setCurrentIndex(qBound(0, definition.extent, 4));
+    auto *directionBox = new QComboBox(&dialog);
+    directionBox->setObjectName(QStringLiteral("extrusionNextBodyDirection"));
+    directionBox->addItems({QStringLiteral("Positivo (normale dello schizzo)"), QStringLiteral("Invertito")});
+    directionBox->setCurrentIndex(definition.distance < 0 ? 1 : 0);
+    directionBox->setToolTip(QStringLiteral("Arresta il profilo sulle prime superfici incontrate nel verso scelto. "
+                                           "Richiede un profilo chiuso, un solo verso e un risultato solido."));
     auto *distanceBox = new ForgeCad::ExpressionSpinBox(&dialog);
+    distanceBox->setObjectName(QStringLiteral("extrusionDistance"));
     distanceBox->setDecimals(6);
     distanceBox->setRange(-100000.0, 100000.0);
     distanceBox->setValue(definition.distance);
     // Versi: uno solo, simmetrica (meta' per parte del piano dello schizzo) o
     // due versi con la seconda distanza dall'altra parte.
     auto *sidesBox = new QComboBox(&dialog);
+    sidesBox->setObjectName(QStringLiteral("extrusionSides"));
     sidesBox->addItems({QStringLiteral("Un verso"), QStringLiteral("Simmetrica"), QStringLiteral("Due versi")});
     sidesBox->setCurrentIndex(qBound(0, definition.extrudeSides, 2));
     sidesBox->setToolTip(QStringLiteral("Simmetrica: la distanza in tutto, meta' per parte dello schizzo (solo con la fine a distanza).\n"
@@ -744,11 +754,13 @@ bool extrusionDialog(QMainWindow *window, CadViewport *viewport, const QString &
     distanceBox->setKeyboardTracking(false);
     distance2Box->setKeyboardTracking(false);
     auto *refButton = new QPushButton(&dialog);
+    refButton->setObjectName(QStringLiteral("extrusionExtentReference"));
     refButton->setToolTip(QStringLiteral("Scegli nella vista"));
     auto *operationBox = new QComboBox(&dialog);
     operationBox->addItems({QStringLiteral("Corpo nuovo"), QStringLiteral("Unisci ai solidi"), QStringLiteral("Sottrai dai solidi")});
     operationBox->setCurrentIndex(qBound(0, definition.mergeOperation, 2));
     auto *surfaceBox = new QCheckBox(QStringLiteral("Solo superficie (senza base e coperchio)"), &dialog);
+    surfaceBox->setObjectName(QStringLiteral("extrusionSurface"));
     surfaceBox->setChecked(definition.extrudeSurface);
     surfaceBox->setToolTip(QStringLiteral("Una lamina: un contorno chiuso diventa un tubo aperto alle estremita', un profilo aperto una superficie; "
                                           "non si fonde con i solidi"));
@@ -760,6 +772,7 @@ bool extrusionDialog(QMainWindow *window, CadViewport *viewport, const QString &
     QWidget *bodyRow = picker.row(bodyList);
     form->addRow(QStringLiteral("Versi:"), sidesBox);
     form->addRow(QStringLiteral("Fine:"), extentBox);
+    form->addRow(QStringLiteral("Direzione:"), directionBox);
     form->addRow(QStringLiteral("Distanza:"), distanceBox);
     form->addRow(QStringLiteral("Fino a:"), refButton);
     form->addRow(QStringLiteral("Secondo verso:"), distance2Box);
@@ -769,6 +782,7 @@ bool extrusionDialog(QMainWindow *window, CadViewport *viewport, const QString &
     form->addRow(QString(), autoBox);
     form->addRow(QStringLiteral("Solidi:"), bodyRow);
     auto *status = new FunctionMessage(&dialog);
+    status->setObjectName(QStringLiteral("extrusionStatus"));
     status->setMinimumWidth(280);
     form->addRow(status);
     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
@@ -789,6 +803,11 @@ bool extrusionDialog(QMainWindow *window, CadViewport *viewport, const QString &
         ExtrusionObject d = definition;
         d.extent = extentBox->currentIndex();
         d.distance = distanceBox->value();
+        if (d.extent == 4) {
+            const double magnitude = d.distance == 0 ? 1.0 : std::abs(d.distance);
+            d.distance = directionBox->currentIndex() == 1 ? -magnitude : magnitude;
+            d.extentRef = GeometryRef();
+        }
         d.extrudeSides = sidesBox->currentIndex();
         d.distance2 = distance2Box->value();
         // La superficie non si fonde con i solidi.
@@ -803,17 +822,31 @@ bool extrusionDialog(QMainWindow *window, CadViewport *viewport, const QString &
     std::function<void()> refresh;
     refresh = [&] {
         const int extent = extentBox->currentIndex();
+        const bool nextBody = extent == 4, referenceExtent = extent > 0 && extent < 4;
+        // L'illustrazione della distanza non descrive il limite automatico;
+        // lascia visibile subito il verso anche nei pannelli compatti.
+        form->setRowVisible(diagram, !nextBody);
+        if (nextBody) {
+            const QSignalBlocker sidesBlock(sidesBox), surfaceBlock(surfaceBox);
+            sidesBox->setCurrentIndex(0);
+            surfaceBox->setChecked(false);
+        }
         // La simmetrica vale solo con la fine a distanza.
-        if (auto *model = qobject_cast<QStandardItemModel *>(sidesBox->model()))
+        if (auto *model = qobject_cast<QStandardItemModel *>(sidesBox->model())) {
             if (QStandardItem *item = model->item(1)) item->setEnabled(extent == 0);
-        if (extent != 0 && sidesBox->currentIndex() == 1) {
+            if (QStandardItem *item = model->item(2)) item->setEnabled(!nextBody);
+        }
+        if (referenceExtent && sidesBox->currentIndex() == 1) {
             const QSignalBlocker block(sidesBox);
             sidesBox->setCurrentIndex(2);
         }
         const int sides = sidesBox->currentIndex();
         form->setRowVisible(distanceBox, extent == 0);
-        form->setRowVisible(refButton, extent != 0);
+        form->setRowVisible(directionBox, nextBody);
+        form->setRowVisible(refButton, referenceExtent);
         form->setRowVisible(distance2Box, sides == 2);
+        form->setRowVisible(flipButton, !nextBody);
+        surfaceBox->setEnabled(!nextBody);
         if (auto *label = qobject_cast<QLabel *>(form->labelForField(distanceBox)))
             label->setText(sides == 1 ? QStringLiteral("Distanza totale:") : QStringLiteral("Distanza:"));
         // La simmetrica non ha verso; con la fine "fino a" lo decide il riferimento.
@@ -828,10 +861,11 @@ bool extrusionDialog(QMainWindow *window, CadViewport *viewport, const QString &
                                                       : QStringLiteral("(da scegliere)");
         if (picking) text = QStringLiteral("▶ ") + text + QStringLiteral("  - clicca nella vista");
         refButton->setText(text);
-        viewport->setReferenceMarks(extent != 0 && definition.extentRef.kind >= 0 ? QVector<GeometryRef>{definition.extentRef} : QVector<GeometryRef>());
+        viewport->setReferenceMarks(referenceExtent && definition.extentRef.kind >= 0 ? QVector<GeometryRef>{definition.extentRef} : QVector<GeometryRef>());
         if (picking) setStatus(QStringLiteral("Clicca nella vista il riferimento (Esc nella vista: annulla la scelta)."), false);
         else if (picker.active()) setStatus(picker.hint(), false);
-        else if (extent != 0 && definition.extentRef.kind < 0) setStatus(QStringLiteral("Scegli nella vista dove finisce l'estrusione."), false);
+        else if (referenceExtent && definition.extentRef.kind < 0) setStatus(QStringLiteral("Scegli nella vista dove finisce l'estrusione."), false);
+        else if (nextBody) setStatus(QStringLiteral("Arresto sulle prime superfici incontrate nel verso selezionato."), false);
         else setStatus(QString(), false);
         ExtrusionObject d = current();
         if (extent == 0 && !picking && !picker.active()) {
@@ -841,7 +875,7 @@ bool extrusionDialog(QMainWindow *window, CadViewport *viewport, const QString &
                 refresh();
             });
         } else viewport->clearFeatureHandle();
-        if (extent != 0 && d.extentRef.kind < 0) return;
+        if (referenceExtent && d.extentRef.kind < 0) return;
         scope->request(viewport->withMergeCandidates(d, replaced >= 0 ? replaced : int(bodies.size())));
     };
     picker.changed = refresh;
@@ -872,9 +906,18 @@ bool extrusionDialog(QMainWindow *window, CadViewport *viewport, const QString &
         if (picking) viewport->cancelReferencePick();
         picking = false;
         // Il riferimento che non vale per la fine nuova si sceglie di nuovo.
-        if (definition.extentRef.kind >= 0 && !(ForgeCad::geometryRefRoles(definition.extentRef, viewport->sketches()) & roles())) definition.extentRef = GeometryRef();
+        if (extent == 4) {
+            const QSignalBlocker directionBlock(directionBox);
+            directionBox->setCurrentIndex(distanceBox->value() < 0 ? 1 : 0);
+        } else if (definition.extentRef.kind >= 0 && !(ForgeCad::geometryRefRoles(definition.extentRef, viewport->sketches()) & roles())) definition.extentRef = GeometryRef();
         refresh();
-        if (extent != 0 && definition.extentRef.kind < 0) pick();
+        if (extent > 0 && extent < 4 && definition.extentRef.kind < 0) pick();
+    });
+    QObject::connect(directionBox, &QComboBox::currentIndexChanged, &dialog, [&](int direction) {
+        const QSignalBlocker distanceBlock(distanceBox);
+        const double magnitude = distanceBox->value() == 0 ? 1.0 : std::abs(distanceBox->value());
+        distanceBox->setValue(direction == 1 ? -magnitude : magnitude);
+        refresh();
     });
     QObject::connect(operationBox, &QComboBox::currentIndexChanged, &dialog, refresh);
     QObject::connect(surfaceBox, &QCheckBox::toggled, &dialog, refresh);
@@ -910,7 +953,7 @@ bool extrusionDialog(QMainWindow *window, CadViewport *viewport, const QString &
             setStatus(QStringLiteral("La distanza nel secondo verso deve essere positiva."), true);
             return;
         }
-        if (d.extent != 0 && d.extentRef.kind < 0) {
+        if (d.extent > 0 && d.extent < 4 && d.extentRef.kind < 0) {
             setStatus(QStringLiteral("Scegli prima nella vista dove finisce l'estrusione."), true);
             return;
         }

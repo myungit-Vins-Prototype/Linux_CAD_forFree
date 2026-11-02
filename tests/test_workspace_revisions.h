@@ -31,6 +31,19 @@ void workspaceRevisionTests() {
     require(status.hasSession && !status.hasPending && status.phase==WorkspaceCheckoutPhase::Active,"sessione attiva persistente");
     const auto firstCheckout=status.session.checkout;
     clientOk(workspaceDocumentEditAccess(path,working.version,working.baseCheckinId,access));require(!access.readOnly,"check-out verificato sblocca modifica");
+    {
+        RevisionStore archive(workspace.revisions);
+        const auto catalogFile=QDir(workspace.revisions).filePath("catalog.json");
+        const auto before=clientRead(catalogFile);QUuid extra;
+        clientOk(archive.createDocument("Altro","model",extra));const auto committed=clientRead(catalogFile);
+        QLockFile lock(QDir(workspace.revisions).filePath("catalog.lock"));lock.setStaleLockTime(0);
+        require(lock.tryLock(0),"lock di pubblicazione per stato accesso");clientWrite(catalogFile,before);
+        const auto error=workspaceDocumentEditAccess(path,working.version,working.baseCheckinId,access);
+        require(!error.isEmpty()&&access.temporarilyUnavailable,"accesso transitorio distinto da sola lettura definitiva");
+        clientWrite(catalogFile,committed);lock.unlock();
+        clientOk(workspaceDocumentEditAccess(path,working.version,working.baseCheckinId,access));
+        require(!access.readOnly&&!access.temporarilyUnavailable,"check-out conservato dopo pubblicazione transitoria");
+    }
     auto object=QJsonDocument::fromJson(clientRead(sessionPath)).object();
     require(object["workingFile"].toString()=="parte.prt" && !object.contains("directory"),"sessione con percorso relativo portabile");
     DocumentState reopened;clientOk(loadDocumentFile(path,reopened));clientOk(checkoutWorkspaceDocument(path,reopened,"progettista"));

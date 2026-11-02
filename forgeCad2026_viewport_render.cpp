@@ -1372,17 +1372,7 @@ void CadViewport::drawExtrusions() {
         // Con un'anteprima il corpo modificato non si vede. Per raccordi e
         // smussi la base resta invece opaca sotto la sola patch locale,
         // anche quando e' un operando nascosto di una lavorazione esistente.
-        const bool replaced = previewing && preview_.replaced.contains(index);
-        const bool blendBase = previewing && preview_.definition.operation < 0
-            && preview_.definition.feature == BodyFeature::Blend
-            && preview_.definition.firstBody == index;
-        if (previewing && (index == preview_.index || preview_.later.contains(index) || (replaced && (preview_.valid || previewDragVisible_)))) continue;
-        // Scelta dei corpi da una finestra: si vedono solo quelli che si possono scegliere.
-        if (!pickBodies_.isEmpty() && !pickBodies_.contains(index)) continue;
-        const bool forced = replaced || blendBase || index == edgePickBody_ || (previewing && preview_.restored.contains(index))
-                         || pickBodies_.contains(index);
-        if ((sketchMode_ && !isBodyDrawn(index)) || (!isBodyDrawn(index) && !forced)
-            || (extrusion.display.vertices.isEmpty() && extrusion.display.edges.isEmpty())) continue;
+        if (!isBodyVisibleInScene(index) || (extrusion.display.vertices.isEmpty() && extrusion.display.edges.isEmpty())) continue;
         drawn.append(index);
     }
     // Un solo strato trasparente per pixel: prima trova la superficie piu
@@ -1438,7 +1428,7 @@ void CadViewport::drawExtrusions() {
         if (target.kind != SceneObjectKind::Extrusion || target.index < 0
             || target.index >= extrusions_.size()) return;
         const ExtrusionObject &extrusion = extrusions_.at(target.index);
-        if (!isBodyDrawn(target.index) || (extrusion.display.vertices.isEmpty() && extrusion.display.edges.isEmpty())) return;
+        if (!isBodyVisibleInScene(target.index) || (extrusion.display.vertices.isEmpty() && extrusion.display.edges.isEmpty())) return;
         drawExtrusionOutline(extrusion, color, width);
     };
     if (previewing && (preview_.valid || previewDragVisible_)) drawPreview();

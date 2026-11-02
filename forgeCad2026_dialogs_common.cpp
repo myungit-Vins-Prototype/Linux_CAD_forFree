@@ -1263,6 +1263,11 @@ void GeometryReferenceList::changeEvent(QEvent *event) {
     if (event->type() == QEvent::EnabledChange && !isEnabled()) viewport_->clearReferenceListHighlight(this);
 }
 
+void GeometryReferenceList::hideEvent(QHideEvent *event) {
+    viewport_->clearReferenceListHighlight(this);
+    QListWidget::hideEvent(event);
+}
+
 bool GeometryReferenceList::sameReference(const GeometryRef &a, const GeometryRef &b) {
     return a.kind == b.kind && a.index == b.index && a.element == b.element
         && a.point.subshape == b.point.subshape && a.point.geometry == b.point.geometry

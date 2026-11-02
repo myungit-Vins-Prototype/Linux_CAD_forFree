@@ -10,6 +10,10 @@
 #include <QLockFile>
 #include <QProcess>
 #include <QTemporaryDir>
+#include <QSemaphore>
+#include <QThread>
+#include <atomic>
+#include <memory>
 #include <iostream>
 #include <stdexcept>
 
@@ -178,6 +182,57 @@ int main(int argc, char **argv) {
         const auto token = QUuid(QString::fromUtf8(a.exitCode() == 0 ? a.readAllStandardOutput() : b.readAllStandardOutput()));
         ok(store.resumeCheckout(modelId,token,resumed)); ok(store.cancelCheckout(resumed));
         std::cout << "PASS esclusione tra processi\n";
+
+        {
+            RevisionStore concurrent(temp.filePath("letture-concorrenti"));ok(concurrent.initialize());
+            QUuid document;ok(concurrent.createDocument("Concorrente","model",document));
+            std::atomic<bool> finished{false};std::atomic<int> writerErrors{0};
+            auto writer=std::unique_ptr<QThread>(QThread::create([&]{
+                for(int n=0;n<150;++n){
+                    RevisionCheckout checkout;
+                    if(!concurrent.checkout(document,"writer",checkout).isEmpty())++writerErrors;
+                    else if(!concurrent.cancelCheckout(checkout).isEmpty())++writerErrors;
+                }
+                finished=true;
+            }));
+            writer->start();int reads=0,readErrors=0;
+            while(!finished||reads<200){
+                QVector<RevisionDocumentInfo> documents;QVector<RevisionRecord> records;
+                if(!concurrent.documents(documents).isEmpty()||!concurrent.history(document,records).isEmpty())++readErrors;
+                ++reads;
+            }
+            const bool terminated=writer->wait(5000);
+            require(terminated&&writerErrors==0&&readErrors==0,"letture concorrenti coerenti durante checkout/cancel");
+            std::cout<<"PASS catalogo concorrente: "<<reads<<" letture senza falsi danni\n";
+        }
+        {
+            const auto directory=temp.filePath("pubblicazione-interrotta");
+            RevisionStore torn(directory);ok(torn.initialize());QUuid document;ok(torn.createDocument("Pubblicazione","model",document));
+            const auto catalogPath=directory+"/catalog.json";const auto previous=readFile(catalogPath);
+            RevisionCheckout checkout;ok(torn.checkout(document,"writer",checkout));const auto committed=readFile(catalogPath);
+            QLockFile lock(directory+"/catalog.lock");lock.setStaleLockTime(0);require(lock.tryLock(0),"lock pubblicazione fixture");
+            writeFile(catalogPath,previous); // head e' gia' nuovo: finestra reale prima della proiezione.
+            QSemaphore entered;QString readError;QVector<RevisionDocumentInfo> result;
+            auto reader=std::unique_ptr<QThread>(QThread::create([&]{entered.release();readError=torn.documents(result);}));
+            reader->start();entered.acquire();QThread::msleep(20);
+            writeFile(catalogPath,committed);lock.unlock();
+            require(reader->wait(5000)&&readError.isEmpty()&&result.size()==1&&result[0].checkedOut,
+                    "lettura nella finestra head/catalog attende pubblicazione coerente");
+            require(lock.tryLock(0),"lock pubblicazione prolungata");writeFile(catalogPath,previous);
+            bool busy=false;const auto retained=result;
+            require(!torn.documents(result,&busy).isEmpty()&&busy&&result.size()==retained.size()&&result[0].checkedOut,
+                    "pubblicazione occupata distinta da corruzione e output conservato");
+            QUuid retainedId=document;busy=false;
+            require(!torn.archiveIdentity(retainedId,&busy).isEmpty()&&busy&&retainedId==document,"identita' busy esplicita");
+            RevisionCheckout retainedCheckout=checkout;busy=false;
+            require(!torn.resumeCheckout(document,checkout.token,retainedCheckout,&busy).isEmpty()&&busy&&retainedCheckout.token==checkout.token,
+                    "ripresa checkout busy esplicita");
+            writeFile(catalogPath,committed);lock.unlock();
+            ok(torn.documents(result,&busy));require(!busy,"stato busy rimosso dopo pubblicazione");
+            writeFile(catalogPath,previous);
+            require(!torn.documents(result,&busy).isEmpty()&&!busy,"incoerenza persistente senza writer resta corruzione");
+            writeFile(catalogPath,committed);ok(torn.cancelCheckout(checkout));
+        }
 
         // Danni a contenuti/catalogo: rifiuto, senza riparazioni distruttive.
         const auto objectPath = path+"/objects/"+QString::fromLatin1(first.sha256.toHex())+".bin";

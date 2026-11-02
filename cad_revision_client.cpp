@@ -33,6 +33,7 @@ bool finish(const Context &c,DocumentState &working,RevisionStore &store,Revisio
 QString workspaceDocumentEditAccess(const QString &path,const DocumentVersion &version,
                                    const QUuid &baseCheckinId,WorkspaceEditAccess &access) {
     access={};
+    bool temporarilyBusy=false;
     try {
         if(!version.checkinId.isNull()) {
             access.reason=QStringLiteral("Copia storica in sola lettura. Usare Salva con nome per una copia indipendente.");return {};
@@ -48,16 +49,16 @@ QString workspaceDocumentEditAccess(const QString &path,const DocumentVersion &v
         }
         const Identity identity{version,baseCheckinId};const auto c=context(path,identity);
         const auto status=readStatus(c,identity);RevisionStore store(paths.revisions);
-        QVector<RevisionDocumentInfo> documents;ok(store.documents(documents));
+        QVector<RevisionDocumentInfo> documents;ok(store.documents(documents,&temporarilyBusy));
         const RevisionDocumentInfo *registered=nullptr;
         for(const auto &document:documents)if(document.documentId==version.documentId){registered=&document;break;}
         require(!hasBase||(registered&&!registered->headCheckinId.isNull()),QStringLiteral("Documento archiviato non trovato nel workspace."));
         if(status.hasPending) {access.reason=QStringLiteral("Check-in pendente: completare l'operazione prima di modificare il documento.");return {};}
         if(status.hasSession) {
             if(status.phase!=WorkspaceCheckoutPhase::Active) {access.reason=QStringLiteral("Prenotazione da completare prima di modificare il documento.");return {};}
-            validateArchive(store,status.session);
+            validateArchive(store,status.session,&temporarilyBusy);
             const auto &expected=status.session.checkout;RevisionCheckout live;
-            ok(store.resumeCheckout(version.documentId,expected.token,live));
+            ok(store.resumeCheckout(version.documentId,expected.token,live,&temporarilyBusy));
             require(live.documentId==version.documentId&&live.baseCheckinId==baseCheckinId
                     &&live.baseCheckinId==expected.baseCheckinId&&live.owner==expected.owner
                     &&live.createdUtc==expected.createdUtc,QStringLiteral("Prenotazione e copia di lavoro non corrispondono."));
@@ -71,6 +72,7 @@ QString workspaceDocumentEditAccess(const QString &path,const DocumentVersion &v
         }
         access.readOnly=false;return {};
     } catch(const std::exception &error) {
+        access.temporarilyUnavailable=temporarilyBusy;
         access.reason=QStringLiteral("Sola lettura: stato revisioni non verificato. %1").arg(QString::fromUtf8(error.what()));return access.reason;
     }
 }

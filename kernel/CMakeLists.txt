@@ -156,6 +156,15 @@ if(FORGECAD_BUILD_OCCT_TESTS)
     add_subdirectory(occt_tests)
 endif()
 
+# Robustezza dei formati propri, indipendente dalla presenza di OCCT.
+add_executable(forgekernel_exchange_robustness_tests
+    tests/fk_test_main.cpp tests/test_exchange_robustness.cpp)
+target_link_libraries(forgekernel_exchange_robustness_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_exchange_robustness_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_exchange_robustness_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_exchange_robustness_tests COMMAND forgekernel_exchange_robustness_tests)
+set_tests_properties(forgekernel_exchange_robustness_tests PROPERTIES TIMEOUT 30)
+
 # Genealogia delle operazioni: solo il kernel, senza OCCT (eseguibile anche
 # dove le librerie di riferimento non ci sono).
 add_executable(forgekernel_history_tests

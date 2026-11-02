@@ -11,7 +11,7 @@ void CadViewport::keyPressEvent(QKeyEvent *event) {
     if (planeResizing_ && event->key() == Qt::Key_Escape) { finishPlaneResize(true); return; }
     if (event->key() == panKey_) {
         panKeyHeld_ = true;
-        setCursor(Qt::OpenHandCursor);
+        if (!panning_) setCursor(Qt::OpenHandCursor);
         return;
     }
     if (refPicking_ && event->key() == Qt::Key_Escape) {

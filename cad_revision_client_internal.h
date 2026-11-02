@@ -84,8 +84,8 @@ inline WorkspaceRevisionStatus readStatus(const Context &c,const Identity &worki
             && q.createdUtc.isValid() && q.createdUtc.offsetFromUtc()==0,QStringLiteral("Metadati della sessione non validi."));
     result.hasSession=true;return result;
 }
-inline void validateArchive(RevisionStore &store,const NativeRevisionSession &session) {
-    QUuid id;ok(store.archiveIdentity(id));require(id==session.archiveId,QStringLiteral("La sessione appartiene a un altro archivio."));
+inline void validateArchive(RevisionStore &store,const NativeRevisionSession &session,bool *temporarilyBusy=nullptr) {
+    QUuid id;ok(store.archiveIdentity(id,temporarilyBusy));require(id==session.archiveId,QStringLiteral("La sessione appartiene a un altro archivio."));
 }
 inline void reserve(const Context &c,const Identity &working,WorkspaceRevisionStatus &status,RevisionStore &store) {
     require(status.phase!=WorkspaceCheckoutPhase::Canceling,QStringLiteral("Completare prima l'annullamento del check-out."));
