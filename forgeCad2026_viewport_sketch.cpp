@@ -129,22 +129,35 @@ bool CadViewport::dimensionRefAt(const QPointF &point, ConstraintRef &ref) const
             found = true;
         }
     };
-    for (int s = 0; s < sketch->segments.size(); ++s) {
-        consider(sketch->segments.at(s).first, {0, s, 0});
-        consider(sketch->segments.at(s).second, {0, s, 1});
-    }
-    for (int c = 0; c < sketch->curves.size(); ++c) {
-        const CurveObject &curve = sketch->curves.at(c);
-        for (int k = 0; k < curve.controlPoints.size(); ++k) {
-            // Il punto del raggio di un cerchio non e' un punto notevole.
-            if (curve.tool == DrawingTool::Circle && k == 1) continue;
-            if (curve.tool == DrawingTool::Polygon && k > 0) continue;
-            consider(curve.controlPoints.at(k), {1, c, k});
+    const auto considerPoints = [&](bool hidden) {
+        for (int s = 0; s < sketch->segments.size(); ++s) {
+            if (isHiddenSketchReference(*sketch, 0, s) != hidden) continue;
+            consider(sketch->segments.at(s).first, {0, s, 0});
+            consider(sketch->segments.at(s).second, {0, s, 1});
         }
-    }
+        for (int c = 0; c < sketch->curves.size(); ++c) {
+            if (isHiddenSketchReference(*sketch, 1, c) != hidden) continue;
+            const CurveObject &curve = sketch->curves.at(c);
+            for (int k = 0; k < curve.controlPoints.size(); ++k) {
+                // Il punto del raggio di un cerchio non e' un punto notevole.
+                if (curve.tool == DrawingTool::Circle && k == 1) continue;
+                if (curve.tool == DrawingTool::Polygon && k > 0) continue;
+                consider(curve.controlPoints.at(k), {1, c, k});
+            }
+        }
+    };
+    considerPoints(false);
     consider(QPointF(0.0, 0.0), {2, 0, -1});
     if (found) return true;
     const SketchElementSelection hit = findSketchElement(point);
+    if (hit.kind >= 0 && !isHiddenSketchReference(*sketch, hit.kind, hit.index)) {
+        ref = {hit.kind, hit.index, -1};
+        return true;
+    }
+    // Gli estremi delle cache non prevalgono sul tratto visibile; restano
+    // utilizzabili quando si sceglie un riferimento esterno per la quota.
+    considerPoints(true);
+    if (found) return true;
     if (hit.kind < 0) return false;
     ref = {hit.kind, hit.index, -1};
     return true;

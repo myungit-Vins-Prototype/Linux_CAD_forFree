@@ -2389,6 +2389,9 @@ Body BooleanBuilder::assemble(const std::vector<std::pair<SubFace, bool>> &kept,
                     edgeMiddles.push_back(middle);
                     index = int(edges.size()) - 1;
                 }
+                // Il bordo condiviso eredita il budget di entrambi gli usi,
+                // anche quando la prima faccia lo aveva creato esatto.
+                edges[index].tolerance = std::max(edges[index].tolerance, piece.tolerance);
                 // Estremi presi su un edge tollerante: la curva puo' finire appena
                 // oltre il bordo della superficie, l'edge diventa tollerante.
                 for (const auto &[t, snapped] : {std::pair<double, double>{piece.range.lo, piece.loTolerance}, {piece.range.hi, piece.hiTolerance}})
@@ -2403,6 +2406,21 @@ Body BooleanBuilder::assemble(const std::vector<std::pair<SubFace, bool>> &kept,
                 Body::BuildFin fin;
                 fin.edge = index;
                 fin.sense = dot(piece.tangentAt(onPiece.parameter), edgeTangent) > 0.0;
+                // Conserva la SP-curve del tratto sorgente quando la curva
+                // 3D mantiene lo stesso parametro. Riproiettarla puo' scegliere
+                // un altro ramo di una superficie estrusa o di un loft.
+                if (piece.source.valid()) {
+                    const Body &source = bodies_[subFace.body];
+                    const Edge &original = source.edge(piece.source);
+                    if (original.curve == edge.curve && edge.range.lo >= original.range.lo && edge.range.hi <= original.range.hi) {
+                        for (FinId id : {original.forward, original.backward}) {
+                            if (!id.valid() || source.finFace(id) != subFace.face) continue;
+                            fin.pcurve = source.fin(id).pcurve;
+                            fin.pcurveTolerance = source.fin(id).pcurveTolerance;
+                            break;
+                        }
+                    }
+                }
                 loop.push_back(fin);
             }
             if (!loop.empty()) built.loops.push_back(std::move(loop));

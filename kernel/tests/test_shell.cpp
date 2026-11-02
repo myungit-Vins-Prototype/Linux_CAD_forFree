@@ -1,5 +1,9 @@
 #include <cmath>
 #include <limits>
+#include <fstream>
+#include <sstream>
+
+#include "fk_body_io.h"
 
 #include "fk_blend.h"
 #include "fk_body_check.h"
@@ -231,4 +235,78 @@ FK_TEST(ShellRejectsInvalidAndInvertedCavities) {
     const auto top = faceAt(box, kFrame.toGlobal(Vec3(5, 4, 6)));
     const auto repeated = shellBody(box, {top, top}, 1);
     FK_CHECK_NEAR(massProperties(repeated).volume, 240, 1e-6);
+}
+
+// Sei superfici cucite, riempimenti tolleranti e loft con nodi C0: la
+// convergenza delle giunzioni quasi tangenti deve funzionare anche quando
+// tutte le facce, incluso il fondo piano, si spostano verso l'interno.
+FK_TEST(ShellStitchedTolerantTangencies) {
+    std::ifstream input(std::string(FORGECAD_SOURCE_DIR) + "/kernel/tests/data/shell_stitched_tangent.body", std::ios::binary);
+    FK_CHECK(bool(input));
+    if (!input) return;
+    std::stringstream data;
+    data << input.rdbuf();
+    const Body source = readBodyBinary(data.str());
+    const std::string before = writeBodyBinary(source);
+    CheckOptions checks;
+    checks.loopCrossings = true;
+    FK_CHECK(checkBody(source, checks).empty());
+    const double outerVolume = massProperties(source).volume;
+    double volumes[2][2] = {};
+    for (int thicknessIndex = 0; thicknessIndex < 2; ++thicknessIndex) {
+        const double thickness = thicknessIndex == 0 ? 0.5 : 1.0;
+        for (int opened = 0; opened < 2; ++opened) {
+            try {
+                BodyHistory history;
+                const Body result = shellBody(source, opened ? std::vector<FaceId>{FaceId{5}} : std::vector<FaceId>{}, thickness, &history);
+                FK_CHECK(!result.isSheet());
+                FK_CHECK(result.shells().size() == (opened ? 1 : 2));
+                for (EdgeId edge : result.edges()) FK_CHECK(!result.isLaminar(edge));
+                for (const auto &issue : checkBody(result, checks))
+                    fktest::reportFailure(__FILE__, __LINE__, describe(issue.code) + ": " + issue.message);
+                int innerSamples = 0;
+                for (FaceId f : result.faces()) {
+                    FK_CHECK(history.isDeclared(EntityKind::Face, f.index));
+                    const auto &origins = history.origins(EntityKind::Face, f.index);
+                    FK_CHECK(origins.size() == 1);
+                    if (origins.size() != 1) continue;
+                    FK_CHECK(origins.front().operand == 0 && origins.front().kind == EntityKind::Face);
+                    const FaceId parent{origins.front().index};
+                    FK_CHECK(source.contains(parent));
+                    if (!source.contains(parent)) continue;
+                    const auto &original = source.face(parent);
+                    const auto &face = result.face(f);
+                    if (face.surface == original.surface) continue;
+                    Vec3 point;
+                    Vec2 uv;
+                    FK_CHECK(faceInteriorPoint(result, f, point, &uv));
+                    // Il piano del taglio ha un frame UV diverso dal fondo
+                    // sorgente. Misura lo stesso punto sul piano originale;
+                    // per le superfici offset resta la verifica nello stesso UV.
+                    if (original.surface->type() == SurfaceType::Plane) {
+                        const auto foot = projectPoint(*original.surface, point);
+                        uv = Vec2(foot.u, foot.v);
+                    }
+                    const Vec3 n = original.surface->normal(uv.x(), uv.y()) * (original.sense ? 1.0 : -1.0);
+                    // La misura e' sulla superficie esatta, indipendente
+                    // dal solo successo dell'operazione e dalla mesh.
+                    FK_CHECK_NEAR(norm(point - original.surface->point(uv.x(), uv.y()) + thickness * n), 0.0, 2e-5);
+                    ++innerSamples;
+                }
+                FK_CHECK(innerSamples >= 6);
+                TessellationOptions mesh;
+                mesh.deflection = 0.05;
+                mesh.threads = 2;
+                FK_CHECK(tessellate(result, mesh).failedFaces == 0);
+                const double volume = massProperties(result).volume;
+                FK_CHECK(volume > 0 && volume < outerVolume);
+                volumes[thicknessIndex][opened] = volume;
+            } catch (const std::exception &error) {
+                fktest::reportFailure(__FILE__, __LINE__, std::string(opened ? "fondo aperto: " : "guscio chiuso: ") + error.what());
+            }
+            FK_CHECK(writeBodyBinary(source) == before);
+        }
+    }
+    for (int opened = 0; opened < 2; ++opened) FK_CHECK(volumes[1][opened] > volumes[0][opened]);
+    for (int t = 0; t < 2; ++t) FK_CHECK(volumes[t][0] > volumes[t][1]);
 }

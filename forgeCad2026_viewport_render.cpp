@@ -805,15 +805,114 @@ void CadViewport::drawDatumPlanes() {
 }
 
 void CadViewport::drawDatumLabels(QPainter &painter) const {
+    painter.save();
+    painter.setRenderHint(QPainter::Antialiasing);
     painter.setFont(uiFont(9, QFont::DemiBold));
-    painter.setPen(QColor(205, 180, 255));
+    const auto drawNormal = [&](const QVector3D &origin, const QVector3D &normal, double half, const QColor &color, const QVector<QVector3D> &corners) {
+        if (normal.lengthSquared() < 1e-12f) return;
+        const QVector3D direction = normal.normalized();
+        const double unit = double(camera_.zoom_) / qMax(1, height());
+        const float length = float(qBound(36.0 * unit, 0.65 * half, 90.0 * unit));
+        QVector3D anchor = origin;
+        const auto unobscured = [&](const QVector3D &point) {
+            QRectF bounds(projectWorldPoint(point), QSizeF(1, 1));
+            for (float sign : {-1.0f, 1.0f})
+                bounds = bounds.united(QRectF(projectWorldPoint(point + sign * length * direction), QSizeF(1, 1)));
+            bounds.adjust(-18.0, -24.0, 26.0, 18.0);
+            if (!QRectF(rect()).contains(bounds)) return false;
+            for (auto *panel : findChildren<QDialog *>(QStringLiteral("functionDialogPanel")))
+                if (panel->isVisible() && bounds.intersects(QRectF(panel->mapTo(this, QPoint()), panel->size()))) return false;
+            return true;
+        };
+        if (!unobscured(anchor)) {
+            bool placed = false;
+            // L'attacco rimane sul piano; considerare entrambi i versi evita
+            // spostamenti dell'attacco quando si inverte la normale.
+            for (float fraction : {0.5f, 0.75f}) {
+                for (const auto &corner : corners) {
+                    const auto candidate = origin + fraction * (corner - origin);
+                    if (unobscured(candidate)) { anchor = candidate; placed = true; break; }
+                }
+                if (placed) break;
+            }
+        }
+        const QPointF base = projectWorldPoint(anchor), tip = projectWorldPoint(anchor + length * direction);
+        const double pixels = pointDistance(base, tip);
+        const QColor outline(20, 25, 32, 220);
+        QPointF label;
+        if (pixels >= 8.0) {
+            const QPointF along = (tip - base) / pixels, side(-along.y(), along.x());
+            const double head = qMin(10.0, 0.4 * pixels);
+            painter.setPen(QPen(outline, 5.0, Qt::SolidLine, Qt::RoundCap));
+            painter.drawLine(base, tip);
+            painter.setPen(QPen(color, 2.5, Qt::SolidLine, Qt::RoundCap));
+            painter.drawLine(base, tip);
+            painter.setPen(QPen(outline, 1.2));
+            painter.setBrush(color);
+            painter.drawPolygon(QPolygonF{tip, tip - head * along + 0.45 * head * side,
+                                         tip - head * along - 0.45 * head * side});
+            painter.drawEllipse(base, 2.5, 2.5);
+            label = tip + QPointF(7.0, -7.0);
+        } else {
+            // Vista di punta: punto verso l'osservatore, croce nel verso opposto.
+            QVector3D rayOrigin, rayDirection;
+            viewRay(base.toPoint(), rayOrigin, rayDirection);
+            painter.setPen(QPen(outline, 4.0));
+            painter.setBrush(outline);
+            painter.drawEllipse(base, 7.0, 7.0);
+            painter.setPen(QPen(color, 1.8));
+            painter.drawEllipse(base, 7.0, 7.0);
+            if (QVector3D::dotProduct(direction, rayDirection) < 0.0f) {
+                painter.setBrush(color);
+                painter.setPen(Qt::NoPen);
+                painter.drawEllipse(base, 2.5, 2.5);
+            } else {
+                painter.drawLine(base + QPointF(-3, -3), base + QPointF(3, 3));
+                painter.drawLine(base + QPointF(-3, 3), base + QPointF(3, -3));
+            }
+            label = base + QPointF(11.0, -9.0);
+        }
+        const QFontMetricsF metrics(painter.font());
+        const QRectF box(label.x() - 3.0, label.y() - metrics.ascent() - 2.0,
+                         metrics.horizontalAdvance(QStringLiteral("N")) + 6.0, metrics.height() + 4.0);
+        painter.setPen(Qt::NoPen);
+        painter.setBrush(outline);
+        painter.drawRoundedRect(box, 3.0, 3.0);
+        painter.setPen(color);
+        painter.drawText(label, QStringLiteral("N"));
+    };
+    const bool showHoverNormals = property("planeNormalsOnHover").toBool();
+    const std::array<QVector3D, 3> normals{{{0, 0, 1}, {0, 1, 0}, {1, 0, 0}}};
+    const std::array<QColor, 3> colors{{QColor(80, 165, 250), QColor(60, 200, 150), QColor(245, 140, 90)}};
+    for (int plane = 0; plane < 3; ++plane) {
+        const bool hovered = hover_ == SceneSelection{SceneObjectKind::Plane, plane, -1}
+            || (refPicking_ && refHoverValid_ && refHover_.kind == 1 && refHover_.index == plane);
+        if (!showHoverNormals || !isPlaneShown(plane) || !hovered) continue;
+        const auto corners = planeCorners(plane);
+        const auto center = 0.5f * (corners[0] + corners[2]);
+        const auto size = referencePlaneExtents(plane);
+        // L'attacco resta sul piano, distinto dagli assi globali nell'origine.
+        drawNormal(center + 0.22f * (corners[2] - center), normals[plane], qMin(size.width(), size.height()), colors[plane], corners);
+    }
     for (int index = 0; index < extrusions_.size(); ++index) {
         if (!isDatumShown(index)) continue;
         const ExtrusionObject &body = extrusions_.at(index);
         const QVector<QVector3D> corners = datumCorners(body.datumFrame, body.datum.size);
         const QVector3D c(float(body.datumFrame.origin[0]), float(body.datumFrame.origin[1]), float(body.datumFrame.origin[2]));
+        const QVector3D n(float(body.datumFrame.normal[0]), float(body.datumFrame.normal[1]), float(body.datumFrame.normal[2]));
+        const bool hovered = hover_ == SceneSelection{SceneObjectKind::Extrusion, index, -1}
+            || (refPicking_ && refHoverValid_ && refHover_.kind == 8 && refHover_.index == index);
+        if (showHoverNormals && hovered) drawNormal(c, n, datumHalf(body.datum.size), QColor(195, 150, 255), corners);
+        painter.setPen(QColor(205, 180, 255));
         painter.drawText(projectWorldPoint(c + 0.8f * (corners.at(2) - c)), body.name);
     }
+    if (datumPreviewValid_) {
+        const auto &f = datumPreviewFrame_;
+        drawNormal(QVector3D(float(f.origin[0]), float(f.origin[1]), float(f.origin[2])),
+                   QVector3D(float(f.normal[0]), float(f.normal[1]), float(f.normal[2])),
+                   datumHalf(datumPreviewSize_), QColor(255, 185, 90), datumCorners(f, datumPreviewSize_));
+    }
+    painter.restore();
 }
 
 void CadViewport::drawGeometryRef(QPainter &painter, const GeometryRef &ref, const QColor &color, const FaceHit *face , int faceBody ) const {

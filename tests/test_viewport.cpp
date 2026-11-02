@@ -136,6 +136,77 @@ static QString exampleDocumentPath(const char *name) {
 class ViewportInteractionTest {
 public:
 #include "test_sketch_interaction.h"
+
+    static void constructionDimensionRegressions() {
+        using namespace ForgeCad;
+        const auto mouse=[](CadViewport &v,const QPointF &point,bool move=false) {
+            const auto pixel=v.projectWorldPoint(v.mapSketchPoint(point,v.sketches_[0]));
+            QMouseEvent event(move?QEvent::MouseMove:QEvent::MouseButtonPress,pixel,pixel,
+                move?Qt::NoButton:Qt::LeftButton,move?Qt::NoButton:Qt::LeftButton,Qt::NoModifier);
+            if(move)v.mouseMoveEvent(&event);else v.mousePressEvent(&event);
+            if(!move){QMouseEvent release(QEvent::MouseButtonRelease,pixel,pixel,Qt::LeftButton,Qt::NoButton,Qt::NoModifier);v.mouseReleaseEvent(&release);}
+        };
+        int cases=0;
+        for(int sourceKind:{1,2})for(bool referencesFirst:{true,false})for(double halfLength:{100.0,5.0}) {
+            SketchObject sketch;sketch.name=QStringLiteral("Costruzione quotata");
+            int line=-1;
+            const auto appendLine=[&] {
+                line=sketch.segments.size();sketch.segments.append({{0,0},{10,0}});
+                sketch.constraints.append(-1);sketch.segmentLengths.append(0);sketch.segmentAngles.append(-1);
+                sketch.constructionSegments.append(line);
+            };
+            const auto appendAxis=[&] {
+                GeometryRef axis;axis.kind=sourceKind;axis.index=sourceKind==1?1:0;
+                require(appendLinkedSketchReference(sketch,axis,{},{},false,true,halfLength).isEmpty(),"riferimento automatico piano standard o asse X");
+            };
+            if(referencesFirst){appendAxis();appendLine();}else{appendLine();appendAxis();}
+            sketch.geometricConstraints={makeConstraint(sketch,ConstraintType::Fix,{{0,line,0}}),
+                makeConstraint(sketch,ConstraintType::Horizontal,{{0,line,-1}})};
+            CadViewport view;view.resize(1000,700);view.sketches_={sketch};view.selectSketch(0);
+            view.camera_.zoom_=20;view.geometrySnap_=view.gridSnap_=view.originSnap_=false;view.history_.clear();
+            const auto hidden=sketch.linkedReferences.front()->entities.front();
+            const auto cachedAxis=sketch.segments[hidden.element];
+            ConstraintRef ref;
+            require(view.dimensionRefAt({5,0},ref)&&ref==ConstraintRef{0,line,-1},"clic sul tratto sceglie la costruzione visibile invece del riferimento nascosto");
+            require(view.dimensionRefAt({0,0},ref)&&ref==ConstraintRef{0,line,0},"primo estremo della costruzione ancora quotabile");
+            require(view.dimensionRefAt({10,0},ref)&&ref==ConstraintRef{0,line,1},"secondo estremo della costruzione ancora quotabile");
+            view.selectSketchElement({5,0},false);
+            require(view.sketchSelections_==QVector<SketchElementSelection>{{0,line}},"preselezione della costruzione visibile");
+            require(view.beginDimensionTool().isEmpty()&&view.dimensionPreviewValid_,"quota disponibile sulla costruzione preselezionata");
+            view.setDimensionOrientation(1);
+            view.sketchSelections_.clear();view.refreshDimensionPreview({5,0});
+            mouse(view,{5,0},true);
+            require(view.dimensionHover_==ConstraintRef{0,line,-1},"hover quota sulla costruzione visibile");
+            mouse(view,{5,0});
+            require(view.dimensionPreviewValid_&&view.constraintSelection()==QVector<ConstraintRef>{{0,line,-1}},"clic reale seleziona la linea intera e prepara la quota");
+            bool entered=false;
+            QTimer::singleShot(0,&view,[&] {
+                auto *dialog=view.findChild<QDialog*>();if(!dialog)return;
+                auto *value=dialog->findChild<QDoubleSpinBox*>();auto *buttons=dialog->findChild<QDialogButtonBox*>();
+                if(value&&buttons){value->setValue(18);entered=true;buttons->button(QDialogButtonBox::Ok)->click();}
+                else dialog->reject();
+            });
+            mouse(view,{5,3});
+            require(entered&&view.sketches_[0].geometricConstraints.size()==3,"pannello Quota conferma la lunghezza della costruzione");
+            const auto &dimension=view.sketches_[0].geometricConstraints.last();
+            require(dimension.type==ConstraintType::Distance&&dimension.first==ConstraintRef{0,line,-1}
+                &&std::abs(currentMeasure(view.sketches_[0],dimension)-18)<1e-7,"quota guidante sul segmento intero");
+            require(view.sketches_[0].isConstructionSegment(line)&&view.sketches_[0].segments[hidden.element]==cachedAxis
+                &&isHiddenSketchReference(view.sketches_[0],hidden.kind,hidden.element),"costruzione conservata e riferimento automatico immutato/nascosto");
+            view.undo();require(view.sketches_[0].geometricConstraints.size()==2
+                &&pointDistance(view.sketches_[0].segments[line].first,view.sketches_[0].segments[line].second)==10,"Undo quota di costruzione");
+            view.redo();require(view.sketches_[0].geometricConstraints.size()==3
+                &&std::abs(currentMeasure(view.sketches_[0],view.sketches_[0].geometricConstraints.last())-18)<1e-7,"Redo quota di costruzione");
+            QTemporaryDir directory;const auto path=directory.filePath(QStringLiteral("costruzione.prt"));
+            require(saveDocumentFile(path,view.currentDocument(),false).isEmpty(),"salvataggio quota di costruzione");
+            DocumentState loaded;require(loadDocumentFile(path,loaded).isEmpty()&&loaded.sketches[0].isConstructionSegment(line)
+                &&std::abs(currentMeasure(loaded.sketches[0],loaded.sketches[0].geometricConstraints.last())-18)<1e-7,"riapertura conserva quota e ruolo di costruzione");
+            require(view.dimensionRefAt({-halfLength,0},ref)&&ref.kind==hidden.kind&&ref.element==hidden.element,
+                "riferimenti automatici ancora disponibili per le quote verso geometria esterna");
+            ++cases;
+        }
+        std::cout<<"PASS construction dimensions: "<<cases<<" casi, hover/clic/preselezione, pannello, solver, Undo/Redo e persistenza"<<std::endl;
+    }
 #include "test_sketch_linked_refs.h"
 #include "test_sketch_slot_point.h"
 #include "test_helix_start_angle.h"
@@ -10769,6 +10840,11 @@ int main(int argc, char **argv) {
     if (app.arguments().contains(QStringLiteral("--profile-mouse-offset"))) {
         try { ViewportInteractionTest::profileMouseOffset(app.arguments().value(app.arguments().indexOf(QStringLiteral("--profile-mouse-offset"))+1)); }
         catch(const std::exception &e) { std::cerr<<e.what()<<std::endl;return 1; }
+        return 0;
+    }
+    if(app.arguments().contains(QStringLiteral("--construction-dimensions"))){
+        try{ViewportInteractionTest::constructionDimensionRegressions();}
+        catch(const std::exception &e){std::cerr<<e.what()<<std::endl;return 1;}
         return 0;
     }
     if(app.arguments().contains(QStringLiteral("--sketch-editing"))){

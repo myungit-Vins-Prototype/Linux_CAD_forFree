@@ -290,10 +290,13 @@ bool datumDialog(QMainWindow *window, CadViewport *viewport, const QString &titl
     onCurveBox->setChecked(d.onCurve);
     auto *flipBox = new QCheckBox(QStringLiteral("Inverti la normale"), &dialog);
     flipBox->setChecked(d.flip);
+    flipBox->setToolTip(QStringLiteral("Inverte il verso della freccia N e della normale del piano."));
     form->addRow(QStringLiteral("Distanza:"), distanceBox);
     form->addRow(QStringLiteral("Angolo:"), angleBox);
     form->addRow(QString(), onCurveBox);
     form->addRow(QString(), flipBox);
+    form->addRow(wrappedNote(QStringLiteral("La freccia N mostra la normale durante la definizione del piano. "
+                                           "Inverti la normale ne cambia il verso nell'anteprima."), &dialog));
     form->addRow(QStringLiteral("Misura a video (mezzo lato):"), sizeBox);
     auto *status = new FunctionMessage(&dialog);
     status->setMinimumWidth(280);

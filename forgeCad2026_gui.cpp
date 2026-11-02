@@ -269,6 +269,7 @@ struct PdfWindow::WindowSetup {
     QAction * highlightColorReset{};
     QAction * showAllAction{};
     QAction * planesAction{};
+    QAction * planeNormalsOnHoverAction{};
     QAction * gridAction{};
     QMenu * axesMenu{};
     QAction * axesVisibleAction{};
@@ -1303,6 +1304,7 @@ void PdfWindow::initializeActionsAndView(WindowSetup &setup) {
     auto &highlightColorReset = setup.highlightColorReset;
     auto &showAllAction = setup.showAllAction;
     auto &planesAction = setup.planesAction;
+    auto &planeNormalsOnHoverAction = setup.planeNormalsOnHoverAction;
     auto &gridAction = setup.gridAction;
     auto &axesMenu = setup.axesMenu;
     auto &axesVisibleAction = setup.axesVisibleAction;
@@ -1581,6 +1583,19 @@ void PdfWindow::initializeActionsAndView(WindowSetup &setup) {
     planesAction = viewMenu->addAction(QStringLiteral("Piani di riferimento"));
     planesAction->setCheckable(true); planesAction->setChecked(true);
     QSettings viewSettings;
+    planeNormalsOnHoverAction = viewMenu->addAction(QStringLiteral("Normali dei piani al passaggio del mouse"));
+    planeNormalsOnHoverAction->setObjectName(QStringLiteral("planeNormalsOnHoverAction"));
+    planeNormalsOnHoverAction->setCheckable(true);
+    // La preferenza corrente prevale sull'eventuale copia salvata dell'interfaccia.
+    planeNormalsOnHoverAction->setChecked(viewSettings.value(QStringLiteral("view/planeNormalsOnHover"),
+        viewSettings.value(QStringLiteral("interface/planeNormalsOnHover"), true)).toBool());
+    planeNormalsOnHoverAction->setToolTip(QStringLiteral("Mostra la normale quando il mouse passa su un piano. La normale durante la definizione resta visibile."));
+    viewport->setProperty("planeNormalsOnHover", planeNormalsOnHoverAction->isChecked());
+    connect(planeNormalsOnHoverAction, &QAction::toggled, this, [viewport](bool visible) {
+        viewport->setProperty("planeNormalsOnHover", visible);
+        viewport->update();
+        QSettings().setValue(QStringLiteral("view/planeNormalsOnHover"), visible);
+    });
     gridAction = viewMenu->addAction(QStringLiteral("Griglia"));
     gridAction->setCheckable(true); gridAction->setChecked(viewSettings.value(QStringLiteral("view/grid"), true).toBool());
     viewport->setGridVisible(gridAction->isChecked());
@@ -3278,6 +3293,7 @@ void PdfWindow::initializeToolbarsAndStatus(WindowSetup &setup) {
     auto &highlightColorReset = setup.highlightColorReset;
     auto &showAllAction = setup.showAllAction;
     auto &planesAction = setup.planesAction;
+    auto &planeNormalsOnHoverAction = setup.planeNormalsOnHoverAction;
     auto &gridAction = setup.gridAction;
     auto &axesMenu = setup.axesMenu;
     auto &axesVisibleAction = setup.axesVisibleAction;
@@ -3405,7 +3421,7 @@ void PdfWindow::initializeToolbarsAndStatus(WindowSetup &setup) {
         {backgroundAction, "viewBackground"}, {historyGraphAction, "storyboard"},
         {treeColorMenu->menuAction(), "viewColor"}, {treeColorAction, "viewColor"}, {treeColorReset, "viewTheme"},
         {highlightColorMenu->menuAction(), "viewHighlight"}, {highlightColorAction, "viewHighlight"}, {highlightColorReset, "viewTheme"},
-        {showAllAction, "viewOptions"}, {planesAction, "datumPlane"}, {gridAction, "viewGrid"},
+        {showAllAction, "viewOptions"}, {planesAction, "datumPlane"}, {planeNormalsOnHoverAction, "datumPlane"}, {gridAction, "viewGrid"},
         {axesMenu->menuAction(), "viewAxes"}, {axesVisibleAction, "viewAxes"}, {axesOnTopAction, "viewLayers"}, {axisLengthAction, "dimension"},
         {sketchOpacityAction, "panelOpacity"}, {antialiasingMenu->menuAction(), "viewAntialias"},
         {wheelZoomAction, "viewWheel"}, {zoomInAction, "zoomIn"}, {zoomOutAction, "zoomOut"},
@@ -3715,6 +3731,7 @@ void PdfWindow::initializeToolbarsAndStatus(WindowSetup &setup) {
         settings.setValue(QStringLiteral("quality"), viewport->tessellationQuality());
         settings.setValue(QStringLiteral("wheelZoom"), viewport->wheelZoomEnabled());
         settings.setValue(QStringLiteral("planes"), viewport->referencePlanesVisible());
+        settings.setValue(QStringLiteral("planeNormalsOnHover"), viewport->property("planeNormalsOnHover").toBool());
         settings.setValue(QStringLiteral("grid"), viewport->gridVisible());
         settings.setValue(QStringLiteral("axisLength"), viewport->axisLength());
         settings.setValue(QStringLiteral("axes"), viewport->axesVisible());
@@ -3742,6 +3759,7 @@ void PdfWindow::initializeToolbarsAndStatus(WindowSetup &setup) {
         QSettings settings;
         settings.remove(QStringLiteral("interface"));
         for (const QString &key : {QStringLiteral("view/grid"), QStringLiteral("view/axisLength"), QStringLiteral("view/axes"), QStringLiteral("view/axesOnTop"),
+                                   QStringLiteral("view/planeNormalsOnHover"),
                                    QStringLiteral("view/antialiasing"), QStringLiteral("view/panKey"), QStringLiteral("sketch/originSnap"),
                                    QStringLiteral("sketch/geometrySnap"), QStringLiteral("sketch/gridSnap"),
                                    QStringLiteral("view/constraintPanel"), QStringLiteral("document/saveBodies"),

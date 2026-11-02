@@ -758,6 +758,62 @@ Vec2 projectLocal(const Surface &surface, const Vec3 &point, Vec2 uv, double off
 
 struct SeamSurface { SurfacePtr surface; Vec2 uv; double offset = 0.0; };
 
+// Una connessione gia' tollerante non determina una posizione tangenziale
+// precisa. Il termine di regolarizzazione conserva il ramo del bordo
+// sorgente quando le normali sono quasi parallele, senza usare il residuo
+// della connessione come una grande correzione lungo la superficie.
+// Il suo peso e' il quadrato del seno dell'angolo di stabilizzazione (1e-3):
+// e' adimensionale e non modifica il budget geometrico passato dal chiamante.
+Vec3 tolerantSeamPoint(Vec3 point, std::vector<SeamSurface> surfaces, double tolerance, double reach) {
+    const Vec3 start = point;
+    constexpr double angularStabilization = 1e-3;
+    constexpr double regularization = angularStabilization * angularStabilization;
+    for (int iteration = 0; iteration < 40; ++iteration) {
+        double system[3][4]{};
+        double worst = 0.0;
+        for (auto &entry : surfaces) {
+            entry.uv = projectLocal(*entry.surface, point, entry.uv, entry.offset);
+            Vec3 jet[4];
+            seamJet(*entry.surface, entry.offset, entry.uv.x(), entry.uv.y(), jet);
+            const Vec3 n = normalized(cross(jet[Surface::derivativeIndex(1, 0, 1)],
+                                             jet[Surface::derivativeIndex(0, 1, 1)]));
+            const double residual = dot(n, jet[0] - point);
+            worst = std::max(worst, distance(jet[0], point));
+            for (int i = 0; i < 3; ++i) {
+                for (int j = 0; j < 3; ++j) system[i][j] += n[i] * n[j];
+                system[i][3] += n[i] * residual;
+            }
+        }
+        for (int i = 0; i < 3; ++i) {
+            system[i][i] += regularization;
+            system[i][3] -= regularization * (point - start)[i];
+        }
+        // Sistema 3x3 definito positivo; pivot per evitare di dipendere
+        // dall'orientamento del modello rispetto agli assi globali.
+        for (int i = 0; i < 3; ++i) {
+            int pivot = i;
+            for (int k = i + 1; k < 3; ++k)
+                if (std::fabs(system[k][i]) > std::fabs(system[pivot][i])) pivot = k;
+            for (int j = i; j < 4; ++j) std::swap(system[i][j], system[pivot][j]);
+            const double diagonal = system[i][i];
+            for (int j = i; j < 4; ++j) system[i][j] /= diagonal;
+            for (int k = 0; k < 3; ++k) {
+                if (k == i) continue;
+                const double factor = system[k][i];
+                for (int j = i; j < 4; ++j) system[k][j] -= factor * system[i][j];
+            }
+        }
+        const Vec3 correction(system[0][3], system[1][3], system[2][3]);
+        if (norm(correction) < 1e-10) {
+            if (worst <= tolerance) return point;
+            break;
+        }
+        point += correction;
+        if (!isFinite(point) || distance(point, start) > reach) break;
+    }
+    throw std::domain_error("offset cucito: intersezione delle superfici tolleranti non convergente");
+}
+
 // Intersezione locale di due superfici (bordo) o delle facce incidenti a un
 // vertice. Gram-Schmidt risolve le correzioni normali anche con facce tangenti.
 Vec3 seamPoint(Vec3 point, std::vector<SeamSurface> surfaces, double tolerance, double reach) {
@@ -1801,6 +1857,7 @@ OffsetResult offsetJoinedFaces(const Body &input, const std::vector<FaceOffset> 
     std::map<int, std::vector<SeamSurface>> vertexConstraints;
     std::map<int, Vec3> vertexSeed;
     std::map<int, int> vertexCount;
+    std::map<int, double> vertexBudgets;
     std::map<int, std::vector<FinId>> edgeUses;
     for (const auto &[index, spec] : specs) {
         if (spec.collapse)
@@ -1816,6 +1873,8 @@ OffsetResult offsetJoinedFaces(const Body &input, const std::vector<FaceOffset> 
                 const SeamSurface at{support(f), supportUV(finId, fin.sense ? edge.range.lo : edge.range.hi),
                                      face.sense ? spec.distance : -spec.distance};
                 vertexConstraints[v].push_back(at);
+                vertexBudgets[v] = std::max({vertexBudgets[v], body.vertex(fin.vertex).tolerance,
+                                             edge.tolerance, fin.pcurveTolerance});
                 vertexSeed[v] += p + spec.distance * faceNormal(body, f, at.uv);
                 ++vertexCount[v];
                 if (!removedEdges.count(fin.edge.index)) {
@@ -1826,14 +1885,24 @@ OffsetResult offsetJoinedFaces(const Body &input, const std::vector<FaceOffset> 
     }
     for (const auto &[v, constraints] : vertexConstraints) {
         pointOf[v] = int(model.points.size());
-        model.points.push_back(seamPoint(vertexSeed.at(v) / double(vertexCount.at(v)), constraints, seamTolerance, seamReach));
+        const Vec3 seed = vertexSeed.at(v) / double(vertexCount.at(v));
+        const double localTolerance = std::max(seamTolerance, vertexBudgets.at(v));
+        model.points.push_back(localTolerance > seamTolerance
+            ? tolerantSeamPoint(seed, constraints, localTolerance, seamReach)
+            : seamPoint(seed, constraints, seamTolerance, seamReach));
     }
+    std::map<int, double> edgeBudgets;
     std::map<int, int> rawEdgeOf;
     for (const auto &[index, uses] : edgeUses) {
         const EdgeId e{index};
         const auto &edge = body.edge(e);
         if (uses.size() != 2)
             throw std::domain_error("offset cucito: appoggio mancante dopo la rimozione del raccordo");
+        double localTolerance = seamTolerance;
+        for (FinId fin : uses)
+            localTolerance = std::max({localTolerance, body.edge(body.fin(fin).edge).tolerance,
+                                       body.fin(fin).pcurveTolerance});
+        edgeBudgets[index] = localTolerance;
         detail::RawEdge raw;
         raw.start = pointOf.at(root(body.edgeStart(e).index));
         raw.end = pointOf.at(root(body.edgeEnd(e).index));
@@ -1874,7 +1943,9 @@ OffsetResult offsetJoinedFaces(const Body &input, const std::vector<FaceOffset> 
         const auto at = [&](double t) {
             const double fraction = (t - edge.range.lo) / edge.range.length();
             const Vec3 seed = initial(t) + (1.0 - fraction) * delta0 + fraction * delta1;
-            return seamPoint(seed, incident(t, seed), seamTolerance, seamReach);
+            return localTolerance > seamTolerance
+                ? tolerantSeamPoint(seed, incident(t, seed), localTolerance, seamReach)
+                : seamPoint(seed, incident(t, seed), seamTolerance, seamReach);
         };
         const bool unchanged = replacing && !specs.at(body.finFace(uses[0]).index).replacement
             && !specs.at(body.finFace(uses[1]).index).replacement
@@ -1986,7 +2057,7 @@ OffsetResult offsetJoinedFaces(const Body &input, const std::vector<FaceOffset> 
                 for (const auto &p : curve->poles())
                     poles.emplace_back(p.x(), p.y());
                 auto pc = std::make_shared<BSplineCurve<2>>(curve->degree(), curve->knots(), poles);
-                const double budget = fin.pcurveTolerance + 10.0 * tolerance;
+                const double budget = fin.pcurveTolerance + std::max(edgeBudgets.at(e), 10.0 * tolerance);
                 for (int k = 0; k <= 64; ++k) {
                     const double t = targetEdge.range.lo + targetEdge.range.length() * k / 64.0;
                     const auto uv = pc->point(t);

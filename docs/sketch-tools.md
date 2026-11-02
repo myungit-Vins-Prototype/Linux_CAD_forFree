@@ -35,6 +35,26 @@ rifiutano i nuovi file, evitando di perdere i punti. L'asola è salvata come
 segmenti e archi ordinari, senza un nuovo tipo di profilo nel kernel.
 
 
+## Quote della geometria di costruzione
+
+Per quotare la lunghezza di una linea di costruzione, attivare **Quota**,
+cliccare sul tratto e poi nel vuoto per posizionare la quota. Restano
+possibili le quote fra i due estremi e gli orientamenti orizzontale,
+verticale o allineato. Una linea coincidente con un piano standard o un
+asse, anche passante per l'origine, mantiene la precedenza sui riferimenti
+automatici nascosti. Le geometrie convertite associative si modificano
+invece dalla sorgente; possono essere riferimenti per le quote delle
+entità locali.
+
+
+## Normali dei piani
+
+La freccia **N** mostra la normale durante la creazione o modifica del piano.
+**Visualizza → Normali dei piani al passaggio del mouse** abilita o disabilita
+la freccia in hover sui piani esistenti. La scelta viene ricordata; la normale
+nell'anteprima di definizione resta disponibile anche con l'opzione disattivata.
+
+
 ## Riferimenti associativi al modello
 
 Durante il disegno gli snap possono usare direttamente estremi, vertici, punti

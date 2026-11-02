@@ -19,6 +19,8 @@ CadViewport::CadViewport(QWidget *parent ) : QOpenGLWidget(parent) {
     };
     setFocusPolicy(Qt::StrongFocus);
     setMouseTracking(true);
+    setProperty("planeNormalsOnHover", true); // preferenza di visualizzazione, non del documento
+
     setMinimumSize(640, 420);
     // I tre piani standard hanno sempre la stessa misura. Per migrare le
     // impostazioni precedenti usa la scala del piano frontale, che era il

@@ -526,25 +526,31 @@ void CadViewport::warmPickCaches() {
 SketchElementSelection CadViewport::findSketchElement(const QPointF &point) const {
     SketchElementSelection result;
     if (activeSketch_ < 0 || activeSketch_ >= sketches_.size()) return result;
-    double nearestDistance = pickTolerance();
+    const double tolerance = pickTolerance();
+    double nearestDistance = tolerance;
+    bool nearestHidden = true;
     const SketchObject &sketch = sketches_.at(activeSketch_);
-    const auto considerSegment = [&](const QPointF &first, const QPointF &second, int kind, int index) {
+    const auto considerSegment = [&](const QPointF &first, const QPointF &second, int kind, int index, bool hidden) {
         const double distance = distanceToSegment(point, first, second);
-        if (distance < nearestDistance) {
+        // Le cache dei riferimenti restano disponibili per i vincoli, ma
+        // non devono intercettare una geometria visibile sotto il cursore.
+        if (distance < tolerance && ((!hidden && nearestHidden) || (hidden == nearestHidden && distance < nearestDistance))) {
             nearestDistance = distance;
+            nearestHidden = hidden;
             result = {kind, index};
         }
     };
     for (int index = 0; index < sketch.segments.size(); ++index) {
         const auto &segment = sketch.segments.at(index);
-        considerSegment(segment.first, segment.second, 0, index);
+        considerSegment(segment.first, segment.second, 0, index, isHiddenSketchReference(sketch, 0, index));
     }
     for (int index = 0; index < sketch.curves.size(); ++index) {
         const auto &samples = sketch.curves.at(index).samples;
+        const bool hidden = isHiddenSketchReference(sketch, 1, index);
         if(sketch.curves.at(index).tool==DrawingTool::Point && samples.size()==1)
-            considerSegment(samples[0],samples[0],1,index);
+            considerSegment(samples[0],samples[0],1,index,hidden);
         for (int sample = 1; sample < samples.size(); ++sample) {
-            considerSegment(samples.at(sample - 1), samples.at(sample), 1, index);
+            considerSegment(samples.at(sample - 1), samples.at(sample), 1, index, hidden);
         }
     }
     return result;
