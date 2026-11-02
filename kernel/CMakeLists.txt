@@ -254,3 +254,13 @@ target_compile_options(forgekernel_disjoint_union_tests PRIVATE -Wall -Wextra -W
 set_target_properties(forgekernel_disjoint_union_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
 add_test(NAME forgekernel_disjoint_union_tests COMMAND forgekernel_disjoint_union_tests)
 set_tests_properties(forgekernel_disjoint_union_tests PROPERTIES TIMEOUT 60)
+
+
+# Loft con guide implicite esatte e sezioni piane da riferimenti spaziali.
+# Indipendente da OpenCASCADE e dai documenti esterni dell'utente.
+add_executable(forgekernel_loft_projected_guide_tests tests/test_loft_projected_guides.cpp)
+target_link_libraries(forgekernel_loft_projected_guide_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_loft_projected_guide_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_loft_projected_guide_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_loft_projected_guide_tests COMMAND forgekernel_loft_projected_guide_tests)
+set_tests_properties(forgekernel_loft_projected_guide_tests PROPERTIES TIMEOUT 120)

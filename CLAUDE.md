@@ -103,18 +103,17 @@ ctest --test-dir forgecad-release --output-on-failure
 
 ## Ultimi interventi — esiti consolidati
 
-0. **02/11 — Fix unione/curve pubblicati; riparazione CI integrata.** `dbed027`/`cc26a27`:
-   extent4 Unione auto/manuale e riferimenti impliciti associativi/quote/Pierce, formato60.
-   [Rapporto precedente](docs/estrusione-unione-riferimenti-proiettati-2026-11-02.md): app/runner,
-   7nuoviCTest/14GUI PASS; storico161PASS/1SKIP/1FAIL e kernel457/458; originali intatti.
-   CI41503734941: build Linux/macOS PASS, falliscono sformo e revision_store su entrambi.
-   Cause corrette: cerchio degradato in spline al redraft (scarto volume1,794e-6) e lettore che
-   prende catalog.lock causando writerErrors (2/8 riproduzioni Linux). Sezioni/vertici circolari
-   analitici e letture head/catalogo/head senza lock writer; soglie e workflow invariati.
-   Build completa app/target PASS, Draft6/6, revisioni32/32; regressione deterministica FAIL prima/
-   PASS dopo. Clang4C++ e ASan/UBSan mirati PASS; suite163CTest in corso. Mappa548/7572/258AST,
-   zeroerrori/check PASS. [Rapporto CI](docs/ci-riparazione-2026-11-02.md); push/verifica remota aperti.
-   Limiti delle curve implicite per sweep/STEP/IGES invariati.
+0. **02/11 — CI e loft proiettato corretti.** `f75015b` pubblicato:
+   sformo con sezioni/vertici circolari analitici e letture catalogo senza lock writer.
+   162PASS/1SKIP GL/0FAIL, kernel459/459; stress revisioni32/32 e Clang/ASan PASS.
+   CI41509525775: build Linux PASS/test in corso; macOS annullato per capacità runner ARM64, prima della build.
+   [Rapporto CI](docs/ci-riparazione-2026-11-02.md). Nessuna soglia/test indeboliti.
+   Loft SurfaceModellingExample219: sezioni piane via path e guida implicita ora usano piano certificato/
+   planeRoots3; corrette radici quasi parallele entro budget. Guida esatta, NURBS adattiva preesistente; formato60. App completa,10nuovi casi+21/39 precedenti, Clang/ASan PASS; GUI Wayland/XCB
+   pannello/Undo/Redo/cache/no-cache PASS, anche ultima copia. Suite164CTest in corso.
+   Mappa549/7598/259AST,zeroerrori/check/11confini/HTML PASS. [Rapporto loft](docs/loft-guide-proiettate-2026-11-02.md).
+   Sezioni realmente nonplanari/guide complanari restano limitate; nessuna scrittura sui CAD originali.
+   Fix unione/curve `dbed027`/`cc26a27`: [rapporto storico](docs/estrusione-unione-riferimenti-proiettati-2026-11-02.md).
 
 1. **02/11 — Correzioni review, storyboard e nuova estrusione (`d4f15fc`, pubblicato).** R1–R5 corretti:
    parser/scambio STEP-B-rep robusti, occorrenze distinte e catalogo concorrente senza perdita dei lock.

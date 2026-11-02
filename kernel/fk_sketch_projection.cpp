@@ -168,15 +168,28 @@ public:
         const double h0=dot(driver_.curve->point(clipped.lo),axis_), h1=dot(driver_.curve->point(clipped.hi),axis_);
         const double q0=inverse(dependent_,axis_,h0), q1=inverse(dependent_,axis_,h1);
         const Interval dependentRange{std::min(q0,q1),std::max(q0,q1)};
-        if (std::fabs(aDot) <= std::min(roundoff,tolerance/(2*kSizeBox))) return planeRoots<3>(*driver_.curve,clipped,normal,offset,tolerance);
-        if (std::fabs(bDot) <= std::min(roundoff,tolerance/(2*kSizeBox))) {
-            const auto roots=planeRoots<3>(*dependent_.curve,dependentRange,normal,offset,tolerance);
+        // Ogni coordinata di sorgente e intersezione e' nel size box:
+        // la differenza lungo una normale unitaria e' <= 2*sqrt(3)*kSizeBox.
+        // Se il piano e' quasi parallelo, riservare quel contributo dal
+        // budget, evitando proiezioni che dividerebbero per pochi ulp.
+        const double aBudget=std::fabs(aDot)*(2*std::sqrt(3.0)*kSizeBox);
+        const double bBudget=std::fabs(bDot)*(2*std::sqrt(3.0)*kSizeBox);
+        const auto verified=[&](PlaneRoots<3> roots) {
+            for (double t : roots.parameters)
+                if (std::fabs(dot(normal,point(t))-offset)>tolerance)
+                    throw std::domain_error("Intersezione curva proiettata/piano fuori dal budget del residuo in double.");
+            return roots;
+        };
+        if (aBudget<=0.5*tolerance)
+            return verified(planeRoots<3>(*driver_.curve,clipped,normal,offset,tolerance-aBudget));
+        if (bBudget<=0.5*tolerance) {
+            const auto roots=planeRoots<3>(*dependent_.curve,dependentRange,normal,offset,tolerance-bBudget);
             const auto parameter=[&](double t){return inverse(driver_,axis_,dot(dependent_.curve->point(t),axis_));};
             for(double t:roots.parameters) out.parameters.push_back(parameter(t));
             for(const auto &part:roots.coincident) {
                 const double a=parameter(part.lo),b=parameter(part.hi);out.coincident.push_back({std::min(a,b),std::max(a,b)});
             }
-            return out;
+            return verified(std::move(out));
         }
         const Frame3 frame=normalFrame(normal,offset*normal);
         const auto projected=[&](const Branch &branch,const Vec3 &direction,double denominator) {

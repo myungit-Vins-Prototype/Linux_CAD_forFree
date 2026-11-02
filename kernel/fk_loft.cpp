@@ -24,6 +24,7 @@
 #include "fk_surface_algo.h"
 #include "fk_unify.h"
 #include "fk_history_tools.h"
+#include "fk_sketch_projection.h"
 
 namespace ForgeCad::Kernel {
 namespace {
@@ -52,6 +53,46 @@ struct GuideHit {
     double parameter = 0.0;
 };
 
+// Certifica il piano sui poli razionali della sezione, non sui campioni
+// usati per il display o per il baricentro. Il piano passa per tre poli;
+// ogni altro polo deve appartenergli entro il solo arrotondamento double.
+// Una sezione rettilinea e' invece contenuta in due piani indipendenti.
+bool rationalSectionPlane(const Section &section, Frame3 &plane, Vec3 &secondNormal, double tolerance) {
+    std::vector<Vec3> poles;
+    try {
+        for (const Piece &piece : section.pieces) {
+            cancellationPoint();
+            for (const auto &bezier : rationalBezierPieces(*piece.curve,piece.range))
+                poles.insert(poles.end(),bezier.poles().begin(),bezier.poles().end());
+        }
+    } catch (const std::domain_error &) { return false; }
+    if (poles.size()<2) return false;
+    const Vec3 origin=poles.front();Vec3 direction;
+    for (const Vec3 &pole : poles) {
+        cancellationPoint();
+        if (norm(pole-origin)>norm(direction)) direction=pole-origin;
+    }
+    const double length=norm(direction);
+    const double roundoff=128*std::numeric_limits<double>::epsilon()*std::max({1.0,norm(origin),length});
+    // Non certificare se l'incertezza aritmetica supera il budget locale.
+    if (roundoff>std::min(tolerance,kLinearResolution) || !(length>roundoff)) return false;
+    Vec3 normal;
+    for (const Vec3 &pole : poles) {
+        cancellationPoint();
+        if (norm(cross(direction,pole-origin))>norm(normal)) normal=cross(direction,pole-origin);
+    }
+    if (norm(normal)<=roundoff*length) {
+        const auto frame=normalFrame(direction,origin);
+        plane=Frame3(origin,frame.xDir(),direction);secondNormal=frame.yDir();return true;
+    }
+    normal=normalized(normal);
+    for (const Vec3 &pole : poles) {
+        cancellationPoint();
+        if (std::fabs(dot(normal,pole-origin))>roundoff) return false;
+    }
+    plane=Frame3(origin,normal,direction);secondNormal=Vec3();return true;
+}
+
 std::vector<double> spatialGuideParameters(const PathSegment &guide, const Section &section, double tolerance) {
     std::vector<double> result;
     const auto add = [&](double t) {
@@ -62,6 +103,21 @@ std::vector<double> spatialGuideParameters(const PathSegment &guide, const Secti
         if (nearest <= tolerance) result.push_back(t);
     };
     add(guide.range.lo); add(guide.range.hi);
+    if (isImplicitSketchProjection(*guide.curve)) {
+        Frame3 plane;Vec3 secondNormal;
+        if (!rationalSectionPlane(section,plane,secondNormal,tolerance))
+            throw std::domain_error("loft: una guida implicita richiede sezioni piane certificabili dai poli esatti");
+        const auto roots=planeRoots<3>(*guide.curve,guide.range,plane.zDir(),dot(plane.zDir(),plane.origin()),tolerance);
+        for (double t : roots.parameters) add(t);
+        for (const auto &range : roots.coincident) {
+            if (norm(secondNormal)==0.0)
+                throw std::domain_error("loft: una curva guida giace nel piano di una sezione");
+            const auto other=planeRoots<3>(*guide.curve,range,secondNormal,dot(secondNormal,plane.origin()),tolerance);
+            if (!other.coincident.empty()) throw std::domain_error("loft: una curva guida si sovrappone a una sezione");
+            for (double t : other.parameters) add(t);
+        }
+        return result;
+    }
     // Ogni intersezione spaziale compare nelle immagini piane; la verifica
     // 3D scarta le intersezioni apparenti. Tre direzioni evitano immagini
     // degeneri o sovrapposte. Nessuna discretizzazione della curva finale.
