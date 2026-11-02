@@ -7,6 +7,8 @@
 - Esclusi eseguibili, log, copie personali dei modelli e HTML/JSON generati ignorati da Git. La sola nuova fixture e' il B-rep anonimo necessario alla regressione permanente, 156850 byte, SHA256 f266d6fd50ebb5c69b97038dcf05c787fa2ff763426946930d4093b4425af7f9. Nessun file personale o processo utente modificato. Creazione del commit e push ordinario su origin/main in corso; esito da registrare dopo conferma del server.
 
 
+- Pubblicazione completata: commit de1448abfa68027debd02c41994a890e7c6dff6c, «Corregge quote di costruzione, normali dei piani e svuotamento», 16 file/817 inserimenti/48 rimozioni; push ordinario origin main riuscito (45d0ab1→de1448a). Tutte le modifiche presenti incluse, nessun force push. Controllo dell'indice prima del commit PASS; nessun file residuo escluso. Questo esito e' conservato con un successivo commit documentale [skip ci]; codice, test ed eseguibile gia verificati restano invariati.
+
 
 ### 2026-11-01 — Correzione dello svuotamento sulle giunzioni tolleranti quasi tangenti (verificata sul modello originale)
 
