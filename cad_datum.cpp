@@ -305,8 +305,8 @@ bool resolveGeometryRef(const GeometryRef &ref, int owner, const QVector<SketchO
                 setError(error, QStringLiteral("la curva del riferimento non esiste piu'"));
                 return false;
             }
-            const ForgeCurve curve = bodyCurveNear(bodies.at(bodyIndex), ref.point);
-            if(!curve)return setError(error,QStringLiteral("l'entita' dello schizzo 3D non esiste piu'")),false;
+            const ForgeCurve curve = bodyCurveForReference(bodies.at(bodyIndex), ref);
+            if(!curve)return setError(error,QStringLiteral("il ramo della curva di riferimento non esiste piu': verificare le sorgenti")),false;
             r.hasCurve = true;
             r.nearest = [curve](const Vec3 &q, Vec3 &foot, Vec3 &tangent) { return nearestOnForgeCurve(*curve, curve->domain(), q, foot, tangent); };
             return true;
@@ -322,8 +322,8 @@ bool resolveGeometryRef(const GeometryRef &ref, int owner, const QVector<SketchO
                 setError(error, QStringLiteral("la curva del punto di riferimento non esiste piu'"));
                 return false;
             }
-            const ForgeCurve curve = bodyCurveNear(bodies.at(bodyIndex), ref.point);
-            if(!curve)return setError(error,QStringLiteral("l'entita' dello schizzo 3D non esiste piu'")),false;
+            const ForgeCurve curve = bodyCurveForReference(bodies.at(bodyIndex), ref);
+            if(!curve)return setError(error,QStringLiteral("il ramo della curva di riferimento non esiste piu': verificare le sorgenti")),false;
             const Interval domain = curve->domain();
             const double parameter = ref.element.point == 1 ? domain.hi : domain.lo;
             r.hasPoint = true;
@@ -358,6 +358,23 @@ ForgeCurve bodyCurveNear(const ExtrusionObject &body, const EdgePoint &point) {
     return best;
 }
 
+ForgeCurve bodyCurveForReference(const ExtrusionObject &body,const GeometryRef &reference) {
+    if(reference.point.name.startsWith(QStringLiteral("projection-branch-v1/"))) {
+        const int component=body.curveReferenceKeys.indexOf(reference.point.name);
+        return component>=0 ? body.curves.value(component) : ForgeCurve{};
+    }
+    return bodyCurveNear(body,reference.point);
+}
+void setCurveReferenceComponent(GeometryRef &reference,const ExtrusionObject &body,int component) {
+    if(component<0 || component>=body.curves.size())return;
+    if(body.curveReferenceKeys.size()==body.curves.size() && !body.curveReferenceKeys[component].isEmpty()) {
+        reference.point.name=body.curveReferenceKeys[component];
+        reference.element.kind=2;reference.element.element=component;
+    }
+    const auto &curve=body.curves[component];
+    if(curve) {const auto d=curve->domain();const auto p=curve->point(d.lo+.5*d.length());reference.point.x=p.x();reference.point.y=p.y();reference.point.z=p.z();}
+}
+
 bool geometryRefPath(const GeometryRef &ref, int owner, const QVector<SketchObject> &sketches, const QVector<ExtrusionObject> &bodies,
                      std::vector<PathSegment> &segments, QString *error) {
     segments.clear();
@@ -369,8 +386,8 @@ bool geometryRefPath(const GeometryRef &ref, int owner, const QVector<SketchObje
             const ExtrusionObject &body = bodies.at(bodyIndex);
             if (ref.kind == 9) {
                 if (!body.curve) return setError(error, QStringLiteral("la curva \"%1\" non e' valida").arg(body.name)), false;
-                const ForgeCurve curve = bodyCurveNear(body, ref.point);
-                if(!curve)return setError(error,QStringLiteral("l'entita' dello schizzo 3D non esiste piu'")),false;
+                const ForgeCurve curve = bodyCurveForReference(body, ref);
+                if(!curve)return setError(error,QStringLiteral("il ramo della curva di riferimento non esiste piu': verificare le sorgenti")),false;
                 segments.push_back({curve, curve->domain()});
                 return true;
             }

@@ -198,6 +198,12 @@ bool forgeSharesMaterial(const ForgeBody &tool, const ForgeBody &body, bool subt
 
 namespace {
 
+struct DisjointLimit { int index; ForgeBody geometry; };
+using DisjointLimits = QVector<DisjointLimit>;
+ForgeBody mergeFeatureResult(ExtrusionObject &body, const ForgeBody &result, int index,
+                             const QVector<ExtrusionObject> &bodies, QString *error,
+                             const DisjointLimits &disjoint);
+
 Interval curveProjection(const Curve<3> &curve, const Interval &range, const Vec3 &origin, const Vec3 &direction) {
     if (direction.x() == 0 && direction.y() == 0 && direction.z() == 0) return {0,0};
     Interval result{std::numeric_limits<double>::max(), -std::numeric_limits<double>::max()};
@@ -327,7 +333,7 @@ bool firstSurfaceEnvelope(const Body &body, const Vec3 &origin, const Vec3 &dire
 }
 
 ForgeBody extrusionUntilNext(ExtrusionObject &body, int index, const SketchObject &sketch,
-                             const QVector<ExtrusionObject> &bodies, QString *error) {
+                             const QVector<ExtrusionObject> &bodies, QString *error, DisjointLimits &disjoint) {
     if (body.extrudeSides != 0 || body.extrudeSurface) {
         setError(error, QStringLiteral("Fino al prossimo corpo richiede un profilo chiuso solido e un solo verso."));
         return nullptr;
@@ -362,7 +368,12 @@ ForgeBody extrusionUntilNext(ExtrusionObject &body, int index, const SketchObjec
             const double projected = dot(point - origin, direction);
             lo = std::min(lo, projected); hi = std::max(hi, projected);
         }
-        if (hi <= kLinearResolution) continue;
+        if (hi <= kLinearResolution) {
+            // Solo il semispazio davvero dietro il profilo prova che gli
+            // interni non si intersecano. La fascia (0,resolution] non basta.
+            if (hi <= 0.0) disjoint.append({target, bodies.at(target).forgeBody});
+            continue;
+        }
         candidates.append({target, lo}); reach = std::max(reach, hi);
     }
     if (candidates.isEmpty()) {
@@ -379,7 +390,10 @@ ForgeBody extrusionUntilNext(ExtrusionObject &body, int index, const SketchObjec
     for (const auto &candidate : candidates) {
         const ForgeBody tool = extrusionEndTool(*bodies.at(candidate.index).forgeBody, bodies.at(candidate.index).forgeBody);
         const ForgeBody overlap = forgeBooleanWithHistory(result, tool, Kernel::BooleanOperation::Intersect);
-        if (overlap->faces().empty()) continue;
+        if (overlap->faces().empty()) {
+            disjoint.append({candidate.index, bodies.at(candidate.index).forgeBody});
+            continue;
+        }
         encountered = true;
         for (ShellId shell : overlap->shells()) if (base(*overlap, shell)) {
             setError(error, QStringLiteral("Un corpo limite attraversa il piano iniziale del profilo.")); return nullptr;
@@ -398,6 +412,9 @@ ForgeBody extrusionUntilNext(ExtrusionObject &body, int index, const SketchObjec
             }
         }
         result = forgeKeepShells(cut, base);
+        // Il filtro conserva un sottoinsieme della differenza solo dopo
+        // avere escluso shell di cavita': prova valida sugli stessi B-rep.
+        disjoint.append({candidate.index, bodies.at(candidate.index).forgeBody});
         if (!result) {
             setError(error, QStringLiteral("L'estrusione fino al prossimo corpo non ha una parte che parte dal profilo.")); return nullptr;
         }
@@ -429,9 +446,10 @@ ForgeBody forgeExtrusionFeature(ExtrusionObject &body, int index, const QVector<
         return forgeExtrusion(sketch, d, why, start, body.extrudeSurface);
     };
     ForgeBody result;
+    DisjointLimits disjoint;
     try {
         if (body.extent == 4) {
-            result = extrusionUntilNext(body, index, sketch, bodies, error);
+            result = extrusionUntilNext(body, index, sketch, bodies, error, disjoint);
         } else if (body.extent == 0) {
             const double d = body.distance;
             if (body.extrudeSides == 1) {
@@ -586,11 +604,14 @@ ForgeBody forgeExtrusionFeature(ExtrusionObject &body, int index, const QVector<
         setError(error, QStringLiteral("Estrusione non riuscita: %1").arg(QString::fromUtf8(failure.what())));
         return nullptr;
     }
-    return forgeMergeFeatureResult(body, result, index, bodies, error);
+    return mergeFeatureResult(body, result, index, bodies, error, disjoint);
 }
 
-ForgeBody forgeMergeFeatureResult(ExtrusionObject &body, const ForgeBody &result, int index,
-                                  const QVector<ExtrusionObject> &bodies, QString *error) {
+namespace {
+
+ForgeBody mergeFeatureResult(ExtrusionObject &body, const ForgeBody &result, int index,
+                             const QVector<ExtrusionObject> &bodies, QString *error,
+                             const DisjointLimits &disjoint) {
     if (!result) return nullptr;
     if (body.mergeOperation == 0) return result;
 
@@ -600,6 +621,19 @@ ForgeBody forgeMergeFeatureResult(ExtrusionObject &body, const ForgeBody &result
         return nullptr;
     }
     const bool subtract = body.mergeOperation == 2;
+    const auto provenDisjoint = [&](int target) {
+        if (body.operation >= 0 || body.feature != BodyFeature::Extrusion || body.extent != 4) return false;
+        return std::any_of(disjoint.begin(), disjoint.end(), [&](const DisjointLimit &proof) {
+            return proof.index == target && target >= 0 && target < bodies.size()
+                && proof.geometry == bodies.at(target).forgeBody;
+        });
+    };
+    const auto disjointUnite = [&](const ForgeBody &first, const ForgeBody &second) {
+        Kernel::BodyHistory history;
+        auto geometry = std::make_shared<const Body>(uniteDisjointBodies(*first, *second, {}, &history));
+        registerDeclaredHistory(geometry, {first, second}, std::move(history));
+        return geometry;
+    };
     QVector<int> targets;
     for (int target : body.mergeBodies) {
         // I bersagli gia' associati sono dipendenze della storyboard. Se
@@ -613,7 +647,20 @@ ForgeBody forgeMergeFeatureResult(ExtrusionObject &body, const ForgeBody &result
             return nullptr;
         }
         const ExtrusionObject &other = bodies.at(target);
-        if (body.mergeProbe && !forgeSharesMaterial(result, other.forgeBody, subtract)) continue;
+        if (body.mergeProbe) {
+            bool touching = false;
+            if (!subtract && provenDisjoint(target)) {
+                try {
+                    const Body united = uniteDisjointBodies(*result, *other.forgeBody);
+                    touching = united.shells().size() < result->shells().size() + other.forgeBody->shells().size();
+                } catch (const OperationCancelled &) { throw; }
+                catch (const std::exception &failure) {
+                    setError(error, QStringLiteral("Contatto per l'unione automatica non risolto: %1").arg(QString::fromUtf8(failure.what())));
+                    return nullptr;
+                }
+            } else touching = forgeSharesMaterial(result, other.forgeBody, subtract);
+            if (!touching) continue;
+        }
         targets.append(target);
     }
     if (body.mergeProbe) body.mergeBodies = targets;
@@ -626,6 +673,14 @@ ForgeBody forgeMergeFeatureResult(ExtrusionObject &body, const ForgeBody &result
     }
     try {
         if (!subtract) {
+            if (std::all_of(targets.begin(), targets.end(), provenDisjoint)) {
+                // I destinatari possono sovrapporsi tra loro: aggregarli con
+                // la booleana generale, poi saldarli al resto gia' disgiunto.
+                ForgeBody combinedTargets = bodies.at(targets.front()).forgeBody;
+                for (int i = 1; i < targets.size(); ++i)
+                    combinedTargets = forgeBooleanWithHistory(combinedTargets, bodies.at(targets[i]).forgeBody, Kernel::BooleanOperation::Unite);
+                return disjointUnite(result, combinedTargets);
+            }
             ForgeBody united = result;
             for (int target : targets) united = forgeBooleanWithHistory(united, bodies.at(target).forgeBody, Kernel::BooleanOperation::Unite);
             return united;
@@ -657,6 +712,13 @@ ForgeBody forgeMergeFeatureResult(ExtrusionObject &body, const ForgeBody &result
         setError(error, QStringLiteral("Fusione con i corpi non riuscita: %1").arg(QString::fromUtf8(failure.what())));
         return nullptr;
     }
+}
+
+} // namespace
+
+ForgeBody forgeMergeFeatureResult(ExtrusionObject &body, const ForgeBody &result, int index,
+                                  const QVector<ExtrusionObject> &bodies, QString *error) {
+    return mergeFeatureResult(body, result, index, bodies, error, {});
 }
 
 void forgeComponentCounts(const ForgeBody &body, int &solids, int &sheets) {

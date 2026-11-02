@@ -969,6 +969,17 @@ bool CadViewport::unchangedFeature(const ExtrusionObject &definition, int index)
     const ExtrusionObject &existing = extrusions_.at(index);
     if (existing.suppressed || !existing.error.isEmpty() || !existing.forgeBody || ForgeCad::isCurveBody(existing) || ForgeCad::isDatumBody(existing))
         return false;
+    // Le vecchie unioni automatiche fino al prossimo corpo potevano salvare
+    // il solo prisma: il contatto sul cap veniva scartato e mergeBodies
+    // restava vuoto. Se un limite e' ancora candidato alla fusione, la
+    // conferma deve riprovare il calcolo invece di perpetuare quella cache.
+    // Dopo la fusione il target persistito riabilita il normale riuso.
+    if (existing.operation < 0 && existing.feature == BodyFeature::Extrusion && existing.extent == 4
+        && existing.mergeOperation == 1 && existing.mergeAuto && existing.mergeBodies.isEmpty()) {
+        const QVector<int> candidates = definition.mergeProbe ? definition.mergeBodies : mergeCandidates(index);
+        for (int candidate : candidates)
+            if (existing.booleanTools.contains(candidate)) return false;
+    }
     ExtrusionObject normalized = definition;
     if (normalized.mergeProbe) normalized.mergeBodies = existing.mergeBodies;
     normalized.mergeProbe = false;
@@ -1971,7 +1982,7 @@ void CadViewport::refreshSurfacePierceSketches(int sourceIndex,QSet<int> &change
             if (sourceIndex>=0 && owner!=sourceIndex) continue;
             if (sourceIndex==-2 && owner>=0) continue;
             touched=true;
-            if (owner<0 || !extrusions_.at(owner).forgeBody) {
+            if (owner<0 || (c.pierce->surface.kind==9 ? !extrusions_.at(owner).curve : !extrusions_.at(owner).forgeBody)) {
                 auto data=std::make_shared<SketchPierceData>(*c.pierce);
                 data->segments.clear(); data->curves.clear();
                 data->error=QStringLiteral("La superficie del vincolo Pierce non e' disponibile.");
@@ -1979,7 +1990,8 @@ void CadViewport::refreshSurfacePierceSketches(int sourceIndex,QSet<int> &change
                 continue;
             }
             GeometryRef ref=c.pierce->surface; ref.index=owner;
-            ForgeCad::refreshSurfacePierce(work,c,*extrusions_.at(owner).forgeBody,ref,extrusions_.at(owner).name);
+            if(ref.kind==9)ForgeCad::refreshCurvePierce(work,c,ref,sketches_,extrusions_);
+            else ForgeCad::refreshSurfacePierce(work,c,*extrusions_.at(owner).forgeBody,ref,extrusions_.at(owner).name);
         }
         if (!touched) continue;
         const auto solved=ForgeCad::solveSketch(work);

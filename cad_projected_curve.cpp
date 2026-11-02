@@ -6,13 +6,15 @@
 #include "fk_sketch_projection.h"
 
 #include <exception>
+#include <QCryptographicHash>
 #include <stdexcept>
 
 namespace ForgeCad {
 
 QVector<ForgeCurve> forgeSketchProjectedCurves(const ExtrusionObject &definition, int owner,
     const QVector<SketchObject> &sketches, const QVector<ExtrusionObject> &bodies,
-    QString *error, QString *summary) {
+    QString *error, QString *summary, QVector<QString> *keys) {
+    if(keys)keys->clear();
     if (error) error->clear();
     if (summary) summary->clear();
     try {
@@ -43,18 +45,23 @@ QVector<ForgeCurve> forgeSketchProjectedCurves(const ExtrusionObject &definition
                         pieces.push_back({Kernel::embedCurve(piece.curve, frame), piece.range});
                 } else if (!geometryRefPath(ref, owner, sketches, bodies, pieces, &reason))
                     throw std::domain_error(reason.toStdString());
-                for (const auto &piece : pieces) spans[group].push_back({piece.curve, piece.range});
+                int part=0;
+                const quint64 story=ref.featureId ? ref.featureId : sketches[ref.index].storyId;
+                const auto prefix=QStringLiteral("s%1/i%2/e%3/%4").arg(story).arg(story ? -1 : ref.index).arg(ref.element.kind).arg(ref.element.element);
+                for (const auto &piece : pieces) spans[group].push_back({piece.curve,piece.range,(prefix+QStringLiteral("/p%1").arg(part++)).toStdString()});
             }
         }
         if (sourceSketch[0] == sourceSketch[1]) throw std::domain_error("Scegli due schizzi distinti su piani non paralleli.");
+        std::vector<std::string> identities;
         const auto curves = Kernel::projectSketchOnSketch(spans[0], sketchAxes(sketches.at(sourceSketch[0])).zDir(),
-            spans[1], sketchAxes(sketches.at(sourceSketch[1])).zDir());
+            spans[1], sketchAxes(sketches.at(sourceSketch[1])).zDir(), &identities);
+        if(keys)for(const auto &identity:identities)keys->append(QStringLiteral("projection-branch-v1/")+QString::fromLatin1(QCryptographicHash::hash(QByteArray::fromStdString(identity),QCryptographicHash::Sha256).toHex()));
         QVector<ForgeCurve> result;
         bool implicit = false;
         for (const auto &curve : curves) {result.append(curve); implicit |= Kernel::isImplicitSketchProjection(*curve);}
         if (summary) {
             *summary = QStringLiteral("%1 curve 3D dall'intersezione delle proiezioni normali ai due piani.").arg(result.size());
-            if (implicit) *summary += QStringLiteral(" Rappresentazione implicita esatta; sweep, conversione in schizzo ed esportazione STEP/IGES non disponibili per questi rami.");
+            if (implicit) *summary += QStringLiteral(" Rappresentazione implicita esatta, utilizzabile come riferimento associativo negli schizzi. Sweep e STEP/IGES richiedono una rappresentazione NURBS esatta.");
         }
         return result;
     } catch (const std::exception &failure) {

@@ -384,6 +384,32 @@ QString refreshSurfacePierce(const SketchObject &sketch, SketchConstraint &const
     }
 }
 
+QString refreshCurvePierce(const SketchObject &sketch,SketchConstraint &constraint,const GeometryRef &source,
+    const QVector<SketchObject> &sketches,const QVector<ExtrusionObject> &bodies) {
+    auto data=std::make_shared<SketchPierceData>();data->surface=source;
+    const auto fail=[&](const QString &error){data->error=error;constraint.pierce=data;return error;};
+    try {
+        if(source.kind!=9)return fail(QStringLiteral("Scegli una curva 3D per il vincolo Pierce."));
+        GeometryRef resolved=source;resolved.index=sketchReferenceSourceIndex(source,sketches,bodies);
+        if(resolved.index<0 || bodies[resolved.index].suppressed || !bodies[resolved.index].error.isEmpty())
+            return fail(QStringLiteral("La curva sorgente del vincolo Pierce non e' disponibile."));
+        std::vector<PathSegment> pieces;QString error;
+        if(!geometryRefPath(resolved,bodies.size(),sketches,bodies,pieces,&error))return fail(error);
+        const auto frame=sketchAxes(sketch);
+        for(const auto &piece:pieces) {
+            const auto roots=planeRoots<3>(*piece.curve,piece.range,frame.zDir(),dot(frame.zDir(),frame.origin()),1e-9);
+            if(!roots.coincident.empty())return fail(QStringLiteral("La curva e' complanare allo schizzo: Pierce richiede un'intersezione isolata."));
+            for(double t:roots.parameters) {
+                const auto p=frame.toLocal(piece.curve->point(t));const QPointF point(p.x(),p.y());
+                data->segments.append({point,point});
+            }
+        }
+        if(data->segments.isEmpty())return fail(QStringLiteral("La curva 3D non attraversa il piano dello schizzo."));
+        data->name=bodies[resolved.index].name;
+        constraint.pierce=data;return {};
+    } catch(const std::exception &error) {return fail(QStringLiteral("Pierce sulla curva non riuscito: %1").arg(QString::fromUtf8(error.what())));}
+}
+
 QString appendProjectedSketchEntity(SketchObject &sketch, const SketchObject &source, SketchEntity entity,
                                     bool construction, QVector<SketchEntity> *created) {
     try {
@@ -567,6 +593,9 @@ int sketchReferenceSourceIndex(const GeometryRef &ref, const QVector<SketchObjec
 
 namespace {
 bool sameSketchSource(const GeometryRef &a, const GeometryRef &b) {
+    if(a.kind==9 && b.kind==9 && a.point.name.startsWith(QStringLiteral("projection-branch-v1/")) && b.point.name.startsWith(QStringLiteral("projection-branch-v1/")))
+        return (a.featureId || b.featureId ? a.featureId==b.featureId : a.index==b.index) && a.point.name==b.point.name;
+
     return a.kind == b.kind && (a.featureId || b.featureId ? a.featureId == b.featureId : a.index == b.index)
         && a.element == b.element && a.point.subshape == b.point.subshape && a.point.name == b.point.name
         && (a.kind != 9 || (a.point.x == b.point.x && a.point.y == b.point.y && a.point.z == b.point.z));
@@ -629,6 +658,15 @@ QString projectLinkedReference(SketchObject &target, GeometryRef ref, bool conta
             const auto roots = planeRoots<3>(*piece.curve, piece.range, frame.zDir(), dot(frame.zDir(), frame.origin()), 1e-9);
             for (double t : roots.parameters) appendPoint(piece.curve->point(t));
         } else {
+            if(isImplicitSketchProjection(*piece.curve)) {
+                CurveObject exact;exact.tool=DrawingTool::Converted;exact.degree=0;exact.construction=construction;
+                exact.referenceCurve=std::make_shared<SketchProjectionImage>(piece.curve,piece.range,frame);
+                const auto a=exact.referenceCurve->point(piece.range.lo),b=exact.referenceCurve->point(piece.range.hi);
+                exact.controlPoints={QPointF(a.x(),a.y()),QPointF(b.x(),b.y())};
+                recalculateCurve(exact);
+                if(!exact.numericallyValid)return QStringLiteral("La proiezione esatta della curva non e' risolvibile sul piano dello schizzo.");
+                target.curves.append(std::move(exact));continue;
+            }
             error = appendProjectedCurve(target, piece.curve, piece.range, construction, false);
             if (!error.isEmpty()) {
                 // Una retta normale al piano si proietta in un punto esatto.
@@ -741,7 +779,13 @@ QString refreshLinkedSketchReferences(SketchObject &sketch, const QVector<Sketch
                 else sketch.curves[entity.element] = projected.curves[c++];
             }
             data->source.index = sketchReferenceSourceIndex(data->source, sketches, bodies);
-        } else sketch.referenceError = data->error;
+        } else {
+            sketch.referenceError = data->error;
+            for(const auto &entity:data->entities) if(entity.kind==1 && entity.element>=0 && entity.element<sketch.curves.size()) {
+                auto &curve=sketch.curves[entity.element];
+                if(curve.tool==DrawingTool::Converted && curve.degree==0) {curve.referenceCurve.reset();curve.samples.clear();curve.numericallyValid=false;}
+            }
+        }
         link = std::move(data);
     }
     return sketch.referenceError;

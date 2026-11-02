@@ -128,7 +128,7 @@ I pannelli hanno un’intestazione compatta e un menu **⋮** per l’aggancio a
 
 In **Curva proiettata** scegliere **Schizzo su schizzo (curva 3D)**, i due schizzi su piani non paralleli e le singole curve da usare. Gli elenchi e il pulsante **Scegli curva nella vista** permettono di escludere le altre entità. L’anteprima mostra la curva spaziale ottenuta dall’intersezione delle due proiezioni normali; la feature dipende da entrambi gli schizzi e si rigenera dopo le modifiche.
 
-Il risultato usa NURBS esatte quando possibile e una curva implicita esatta negli altri casi, conservata tramite gli input nel documento nativo. Per i rami impliciti non sono disponibili sweep, conversione in schizzo e STEP/IGES; piani paralleli e degenerazioni non risolvibili danno errore. [Uso, geometria e verifiche](docs/curva-proiettata-due-schizzi-2026-11-02.md).
+Il risultato usa NURBS esatte quando possibile e una curva implicita esatta negli altri casi, conservata tramite gli input nel documento nativo. Anche i rami impliciti si possono usare come riferimenti associativi in altri schizzi con **Converti spigoli**, snap, quote, PointOnCurve e Pierce; sweep, conversione libera in NURBS e STEP/IGES restano indisponibili per questi rami; piani paralleli e degenerazioni non risolvibili danno errore. [Uso, geometria e verifiche](docs/curva-proiettata-due-schizzi-2026-11-02.md).
 
 ### Modellazione di superfici
 

@@ -50,6 +50,10 @@ bool resolveGeometryRef(const GeometryRef &ref, int owner, const QVector<SketchO
 // Curva di un corpo curva (eliche, curve proiettate) per un riferimento:
 // con piu' curve (ProjectedCurve) quella piu' vicina al punto del riferimento.
 ForgeCurve bodyCurveNear(const ExtrusionObject &body, const EdgePoint &point);
+// I rami nuovi sono risolti per genealogia persistente, mai per vicinanza.
+ForgeCurve bodyCurveForReference(const ExtrusionObject &body, const GeometryRef &reference);
+void setCurveReferenceComponent(GeometryRef &reference,const ExtrusionObject &body,int component);
+
 
 bool geometryRefPath(const GeometryRef &ref, int owner, const QVector<SketchObject> &sketches, const QVector<ExtrusionObject> &bodies,
                      std::vector<Kernel::PathSegment> &segments, QString *error);

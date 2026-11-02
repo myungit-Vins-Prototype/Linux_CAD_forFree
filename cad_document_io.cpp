@@ -343,6 +343,14 @@ bool read(ReadStream &in, SketchObject &sketch, quint16 version) {
             sketch.linkedReferences.append(data);
         }
     }
+    for(int c=0;c<sketch.curves.size();++c) {
+        const auto &curve=sketch.curves[c];
+        if(curve.tool==DrawingTool::Converted && curve.degree==0) {
+            if(version<60 || curve.controlPoints.size()!=2 || !curve.weights.isEmpty() || !curve.knots.isEmpty()
+                || !curve.tangentHandles.isEmpty() || !isLinkedSketchEntity(sketch,1,c))return false;
+            for(const auto &point:curve.controlPoints)if(!std::isfinite(point.x()) || !std::isfinite(point.y()))return false;
+        }
+    }
     if (sketch.plane < 0 || sketch.plane > kFacePlane) return false;
     // Gli array paralleli dei segmenti devono restare allineati.
     const int segments = sketch.segments.size();

@@ -112,6 +112,10 @@ std::vector<ProfileSegment> curveGeometry(const CurveObject &curve) {
             break;
         }
         case DrawingTool::Converted: {
+            if(curve.degree==0) {
+                if(curve.referenceCurve)result.push_back({curve.referenceCurve,curve.referenceCurve->domain()});
+                break;
+            }
             // Riferimento esterno: la B-spline razionale cosi' com'e'.
             if (count < 2 || curve.degree < 1 || curve.knots.size() != count + curve.degree + 1) break;
             std::vector<Vec2> poles;

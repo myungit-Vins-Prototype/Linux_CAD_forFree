@@ -4,6 +4,8 @@ Intervento del 2 novembre 2026, successivo alla review pubblicata con `d4f15fc` 
 L'utente ha confermato il problema sia con **Fino al prossimo corpo** sia con
 **Fino a una faccia o a un piano**.
 
+Il [successivo fix dell’unione e dei riferimenti](estrusione-unione-riferimenti-proiettati-2026-11-02.md) aggiunge **Unione** all’estrusione fino al corpo. I volumi e le verifiche seguenti riguardano il precedente risultato **Corpo nuovo**: non attestavano la fusione con la scocca.
+
 ## Documento e uso
 
 Nella directory degli esempi esistono due documenti differenti: `superifici.prt`

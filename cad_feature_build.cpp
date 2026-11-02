@@ -146,6 +146,7 @@ void buildGeometryImpl(ExtrusionObject &body, int index, const QVector<SketchObj
     body.patternResults.clear();
     body.curve.reset();
     body.curves.clear();
+    body.curveReferenceKeys.clear();
     body.datumValid = false;
     body.solid = false;
     if (body.suppressed) {
@@ -158,6 +159,7 @@ void buildGeometryImpl(ExtrusionObject &body, int index, const QVector<SketchObj
             body.forgeBody = previous->forgeBody;
             body.curve = previous->curve;
             body.curves = previous->curves;
+            body.curveReferenceKeys = previous->curveReferenceKeys;
             body.solid = previous->solid;
         }
         return;
@@ -281,7 +283,7 @@ void buildGeometryImpl(ExtrusionObject &body, int index, const QVector<SketchObj
         }
         case BodyFeature::ProjectedCurve: {
             if (body.projectionMode == 1) {
-                body.curves = forgeSketchProjectedCurves(body, index, sketches, bodies, &body.error, &body.notice);
+                body.curves = forgeSketchProjectedCurves(body, index, sketches, bodies, &body.error, &body.notice, &body.curveReferenceKeys);
                 if (!body.curves.isEmpty()) body.curve = body.curves.first();
                 return;
             }

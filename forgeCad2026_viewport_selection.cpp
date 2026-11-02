@@ -1434,6 +1434,7 @@ bool CadViewport::pickReference(const QPoint &position, GeometryRef &ref, FaceHi
                 // Il punto sulla polilinea dice quale curva (ProjectedCurve ne ha piu' di una).
                 for(int entity=0;entity<body.display.edges.size();++entity) {
                     auto candidate=r;
+                    ForgeCad::setCurveReferenceComponent(candidate,body,entity);
                     if(body.feature==BodyFeature::SpatialSketch && entity<body.spatialSketch.entities.size()) {
                         candidate.point.geometry=ForgeCad::kSpatialCurveReference;
                         candidate.point.subshape=body.spatialSketch.entities[entity].id;

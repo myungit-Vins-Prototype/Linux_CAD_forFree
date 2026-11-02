@@ -1,4 +1,5 @@
 #include "fk_curve_ops.h"
+#include "fk_sketch_projection.h"
 
 #include <algorithm>
 #include <stdexcept>
@@ -50,6 +51,7 @@ CurvePtr<N> reversedCurve(const CurvePtr<N> &curve) {
 
 CurvePtr<3> embedCurve(const CurvePtr<2> &curve, const Frame3 &frame, double z) {
     if (!curve) throw std::invalid_argument("embedCurve: curva nulla");
+    if (const auto *image=dynamic_cast<const SketchProjectionImage *>(curve.get())) return embedSketchProjectionImage(*image,frame,z);
     auto point = [&](const Vec2 &p) { return frame.toGlobal(Vec3(p.x(), p.y(), z)); };
     auto direction = [&](const Vec2 &d) { return frame.directionToGlobal(Vec3(d.x(), d.y(), 0.0)); };
     switch (curve->type()) {

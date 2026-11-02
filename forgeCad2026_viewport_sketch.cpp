@@ -591,6 +591,7 @@ QString CadViewport::appendReferenceAt(const QPoint &position, SketchObject &wor
         const ForgeCad::Kernel::Vec3 point(hit.point.x(), hit.point.y(), hit.point.z());
         if (ForgeCad::isCurveBody(body)) {
             ref.kind = 9; ref.point.x = point.x(); ref.point.y = point.y(); ref.point.z = point.z();
+            ForgeCad::setCurveReferenceComponent(ref,body,hit.polyline);
         } else if (body.forgeBody) {
             ref.kind = 4;
             const int id = body.display.edgeIds.value(hit.polyline, -1);
@@ -894,8 +895,10 @@ QString CadViewport::addSurfacePierce(const ConstraintRef &point, GeometryRef so
         return QStringLiteral("Seleziona un punto dello schizzo con Ctrl+clic.");
     ForgeCad::normalizeModelHistory(extrusions_,modelBodies_);
     const int owner=pierceSourceIndex(source);
-    if (source.kind!=5 || owner<0 || !extrusions_.at(owner).forgeBody)
-        return QStringLiteral("Scegli una faccia della superficie o del solido.");
+    if (owner<0 || (source.kind!=5 && source.kind!=9)
+        || (source.kind==5 && !extrusions_.at(owner).forgeBody) || (source.kind==9 && !extrusions_.at(owner).curve))
+        return QStringLiteral("Scegli una curva 3D o una faccia della superficie o del solido.");
+    if(!allowedSketchReference(source))return QStringLiteral("La sorgente Pierce deve precedere lo schizzo nella storia.");
     source.index=owner; source.featureId=extrusions_.at(owner).featureId;
     // Un corpo generato da questo schizzo creerebbe un ciclo. Seguire
     // anche le dipendenze Pierce degli schizzi intermedi.
@@ -917,11 +920,13 @@ QString CadViewport::addSurfacePierce(const ConstraintRef &point, GeometryRef so
         return QStringLiteral("La superficie Pierce deve precedere le funzioni che usano questo schizzo.");
     for (const auto &c : active->geometricConstraints)
         if (c.type==ConstraintType::Pierce && c.first==point && c.pierce
-            && c.pierce->surface.featureId==source.featureId && c.pierce->surface.point.subshape==source.point.subshape)
+            && c.pierce->surface.kind==source.kind && c.pierce->surface.featureId==source.featureId
+            && c.pierce->surface.point.subshape==source.point.subshape && c.pierce->surface.point.name==source.point.name)
             return QStringLiteral("Il vincolo Pierce su questa faccia c'e' gia'.");
     SketchObject work=*active;
     SketchConstraint constraint; constraint.type=ConstraintType::Pierce; constraint.first=point;
-    const QString error=ForgeCad::refreshSurfacePierce(work,constraint,*extrusions_.at(owner).forgeBody,source,extrusions_.at(owner).name);
+    const QString error=source.kind==9 ? ForgeCad::refreshCurvePierce(work,constraint,source,sketches_,extrusions_)
+        : ForgeCad::refreshSurfacePierce(work,constraint,*extrusions_.at(owner).forgeBody,source,extrusions_.at(owner).name);
     if (!error.isEmpty()) return error;
     work.geometricConstraints.append(constraint);
     const auto solved=ForgeCad::solveSketch(work);
@@ -937,7 +942,7 @@ QString CadViewport::beginSurfacePierce() {
     const auto refs=constraintSelection();
     if (!activeSketchObject() || refs.size()!=1
         || !ForgeCad::applicableConstraints(*activeSketchObject(),refs).contains(ConstraintType::Pierce))
-        return QStringLiteral("Seleziona un solo punto dello schizzo con Ctrl+clic, poi Pierce su superficie.");
+        return QStringLiteral("Seleziona un solo punto dello schizzo con Ctrl+clic, poi Pierce.");
     if (refPicking_ || edgePicking_ || sketchViewUnlocked_)
         return QStringLiteral("Termina prima la scelta corrente.");
     const ConstraintRef point=refs.first();
@@ -949,11 +954,11 @@ QString CadViewport::beginSurfacePierce() {
         if (!picked) { showStatus(QStringLiteral("Pierce annullato.")); return; }
         if (activeSketch_!=sketch) { showStatus(QStringLiteral("Lo schizzo attivo e' cambiato.")); return; }
         const QString error=addSurfacePierce(point,ref);
-        showStatus(error.isEmpty() ? QStringLiteral("Vincolo Pierce sulla superficie aggiunto.") : error);
+        showStatus(error.isEmpty() ? QStringLiteral("Vincolo Pierce sul riferimento aggiunto.") : error);
     });
-    const QString error=beginReferencePick(ForgeCad::DatumRoleFace,-1);
+    const QString error=beginReferencePick(ForgeCad::DatumRoleFace|ForgeCad::DatumRoleCurve,-1);
     if (!error.isEmpty()) { setReferencePickCallback(nullptr); setSketchViewUnlocked(false); return error; }
-    showStatus(QStringLiteral("Pierce: scegli una faccia; trascina per ruotare la vista, Esc annulla."));
+    showStatus(QStringLiteral("Pierce: scegli una curva 3D o una faccia; trascina per ruotare la vista, Esc annulla."));
     return {};
 }
 
@@ -3232,7 +3237,11 @@ const SketchObject &CadViewport::sketchReferenceCache() {
         GeometryRef ref; ref.index = i; ref.featureId = body.featureId;
         if (ForgeCad::isDatumBody(body)) { ref.kind = 8; add(ref); }
         else if (ForgeCad::isCurveBody(body) && body.curve) {
-            ref.kind = 9; add(ref, true); add(ref);
+            ref.kind = 9;
+            for(int component=0;component<std::max(1,int(body.curves.size()));++component) {
+                auto branch=ref;ForgeCad::setCurveReferenceComponent(branch,body,component);
+                add(branch,true);add(branch);
+            }
         } else if (body.forgeBody) {
             ref.kind = 4;
             for (const auto edge : body.forgeBody->edges()) {

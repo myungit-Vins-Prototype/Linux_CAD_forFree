@@ -62,6 +62,17 @@ struct BooleanOptions {
 Body booleanOperation(const Body &a, const Body &b, BooleanOperation operation, const BooleanOptions &options = {},
                       BodyHistory *history = nullptr);
 
+// Unione di solidi i cui INTERNI sono gia' dimostrati disgiunti dal chiamante.
+// Esempio: A e' un sottoinsieme delle componenti del risultato P\B, senza
+// rimuovere shell interne/cavita'. Non e' una prova generale di disgiunzione:
+// chiamare la booleana ordinaria per operandi arbitrari o sovrapposti.
+// Divide i contatti sui carrier coincidenti, classifica e ricuce con gli
+// stessi budget, checkBody e genealogia della booleana ordinaria. Le
+// osservazioni In/OnSame sono guardie aggiuntive, non la precondizione.
+// Se non c'e' contatto di area i solidi restano componenti separate.
+Body uniteDisjointBodies(const Body &a, const Body &b, const BooleanOptions &options = {},
+                         BodyHistory *history = nullptr);
+
 // Curve comuni alle facce dei due corpi, limitate ai loro bordi.
 // Include sezioni aperte e bordi complanari; non costruisce un solido.
 struct BodySectionCurve {

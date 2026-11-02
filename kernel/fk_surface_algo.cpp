@@ -762,6 +762,68 @@ bool invertPoint(const Surface &surface, const Vec3 &p, Vec2 &uv, double toleran
 
 namespace {
 
+// Confronto di dati, non di vicinanza geometrica: conserva il significato
+// dei parametri e quindi delle SP-curve dell'edge sulla superficie.
+bool sameParameterScalar(double a, double b) { return std::isfinite(a) && a == b; }
+bool sameParameterVector(const Vec3 &a, const Vec3 &b) {
+    return sameParameterScalar(a.x(),b.x()) && sameParameterScalar(a.y(),b.y()) && sameParameterScalar(a.z(),b.z());
+}
+bool sameParameterValues(const std::vector<double> &a, const std::vector<double> &b) {
+    if (a.size() != b.size()) return false;
+    for (std::size_t i=0;i<a.size();++i) if (!sameParameterScalar(a[i],b[i])) return false;
+    return true;
+}
+bool sameParameterFrame(const Frame3 &a, const Frame3 &b) {
+    return sameParameterVector(a.origin(),b.origin()) && sameParameterVector(a.xDir(),b.xDir())
+        && sameParameterVector(a.yDir(),b.yDir()) && sameParameterVector(a.zDir(),b.zDir());
+}
+bool sameParameterCurve(const Curve<3> &a, const Curve<3> &b) {
+    cancellationPoint();
+    if (&a == &b) return true;
+    if (a.type() != b.type()) return false;
+    switch (a.type()) {
+    case CurveType::Line: {
+        const auto &x=static_cast<const Line<3> &>(a), &y=static_cast<const Line<3> &>(b);
+        return sameParameterVector(x.origin(),y.origin()) && sameParameterVector(x.direction(),y.direction());
+    }
+    case CurveType::Circle: {
+        const auto &x=static_cast<const Circle<3> &>(a), &y=static_cast<const Circle<3> &>(b);
+        return sameParameterVector(x.center(),y.center()) && sameParameterVector(x.xAxis(),y.xAxis())
+            && sameParameterVector(x.yAxis(),y.yAxis()) && sameParameterScalar(x.radius(),y.radius());
+    }
+    case CurveType::Ellipse: {
+        const auto &x=static_cast<const Ellipse<3> &>(a), &y=static_cast<const Ellipse<3> &>(b);
+        return sameParameterVector(x.center(),y.center()) && sameParameterVector(x.xAxis(),y.xAxis())
+            && sameParameterVector(x.yAxis(),y.yAxis()) && sameParameterScalar(x.xRadius(),y.xRadius())
+            && sameParameterScalar(x.yRadius(),y.yRadius());
+    }
+    case CurveType::BSpline: {
+        const auto &x=static_cast<const BSplineCurve<3> &>(a), &y=static_cast<const BSplineCurve<3> &>(b);
+        if (x.degree()!=y.degree() || x.poleCount()!=y.poleCount() || !sameParameterValues(x.knots(),y.knots())
+            || !sameParameterValues(x.weights(),y.weights())) return false;
+        for (int i=0;i<x.poleCount();++i) {
+            cancellationPoint();
+            if (!sameParameterVector(x.poles()[i],y.poles()[i])) return false;
+        }
+        return true;
+    }
+    case CurveType::Trimmed: {
+        const auto &x=static_cast<const TrimmedCurve<3> &>(a), &y=static_cast<const TrimmedCurve<3> &>(b);
+        return sameParameterScalar(x.domain().lo,y.domain().lo) && sameParameterScalar(x.domain().hi,y.domain().hi)
+            && sameParameterCurve(*x.basis(),*y.basis());
+    }
+    case CurveType::Transformed: {
+        const auto &x=static_cast<const TransformedCurve &>(a), &y=static_cast<const TransformedCurve &>(b);
+        const auto &tx=x.transform(), &ty=y.transform();
+        if (!sameParameterVector(tx.translationPart(),ty.translationPart())) return false;
+        for (int i=0;i<3;++i) for (int j=0;j<3;++j)
+            if (!sameParameterScalar(tx.matrix(i,j),ty.matrix(i,j))) return false;
+        return sameParameterCurve(*x.basis(),*y.basis());
+    }
+    default:return false;
+    }
+}
+
 bool parallelAxes(const Vec3 &a, const Vec3 &b) { return norm(cross(a, b)) <= 1e-12; }
 
 double distanceToAxis(const Vec3 &p, const Frame3 &frame) {
@@ -840,6 +902,55 @@ bool sameExtrusions(const ExtrusionSurface &a, const ExtrusionSurface &b, double
 
 }
 
+bool sameSurfaceParameterization(const Surface &a, const Surface &b) {
+    cancellationPoint();
+    if (&a == &b) return true;
+    if (a.type() != b.type()) return false;
+    switch (a.type()) {
+    case SurfaceType::Plane:
+        return sameParameterFrame(static_cast<const Plane &>(a).frame(),static_cast<const Plane &>(b).frame());
+    case SurfaceType::Cylinder: {
+        const auto &x=static_cast<const CylindricalSurface &>(a), &y=static_cast<const CylindricalSurface &>(b);
+        return sameParameterFrame(x.frame(),y.frame()) && sameParameterScalar(x.radius(),y.radius());
+    }
+    case SurfaceType::Cone: {
+        const auto &x=static_cast<const ConicalSurface &>(a), &y=static_cast<const ConicalSurface &>(b);
+        return sameParameterFrame(x.frame(),y.frame()) && sameParameterScalar(x.semiAngle(),y.semiAngle())
+            && sameParameterScalar(x.referenceRadius(),y.referenceRadius());
+    }
+    case SurfaceType::Sphere: {
+        const auto &x=static_cast<const SphericalSurface &>(a), &y=static_cast<const SphericalSurface &>(b);
+        return sameParameterFrame(x.frame(),y.frame()) && sameParameterScalar(x.radius(),y.radius());
+    }
+    case SurfaceType::Torus: {
+        const auto &x=static_cast<const ToroidalSurface &>(a), &y=static_cast<const ToroidalSurface &>(b);
+        return sameParameterFrame(x.frame(),y.frame()) && sameParameterScalar(x.majorRadius(),y.majorRadius())
+            && sameParameterScalar(x.minorRadius(),y.minorRadius());
+    }
+    case SurfaceType::BSpline: {
+        const auto &x=static_cast<const BSplineSurface &>(a), &y=static_cast<const BSplineSurface &>(b);
+        if (x.uDegree()!=y.uDegree() || x.vDegree()!=y.vDegree() || x.uPoleCount()!=y.uPoleCount()
+            || x.vPoleCount()!=y.vPoleCount() || x.isRational()!=y.isRational()
+            || !sameParameterValues(x.uKnots(),y.uKnots()) || !sameParameterValues(x.vKnots(),y.vKnots())) return false;
+        for (int i=0;i<x.uPoleCount();++i) for (int j=0;j<x.vPoleCount();++j) {
+            cancellationPoint();
+            if (!sameParameterVector(x.pole(i,j),y.pole(i,j)) || !sameParameterScalar(x.weight(i,j),y.weight(i,j))) return false;
+        }
+        return true;
+    }
+    case SurfaceType::Extrusion: {
+        const auto &x=static_cast<const ExtrusionSurface &>(a), &y=static_cast<const ExtrusionSurface &>(b);
+        return sameParameterVector(x.direction(),y.direction()) && sameParameterCurve(*x.curve(),*y.curve());
+    }
+    case SurfaceType::Revolution: {
+        const auto &x=static_cast<const RevolutionSurface &>(a), &y=static_cast<const RevolutionSurface &>(b);
+        return sameParameterVector(x.axisPoint(),y.axisPoint()) && sameParameterVector(x.axisDirection(),y.axisDirection())
+            && sameParameterCurve(*x.meridian(),*y.meridian());
+    }
+    }
+    return false;
+}
+
 bool sameSurface(const Surface &a, const Surface &b, double tolerance) {
     if (&a == &b) return true;
     if (a.type() != b.type()) return false;
@@ -873,6 +984,7 @@ bool sameSurface(const Surface &a, const Surface &b, double tolerance) {
         const auto &ea = static_cast<const ExtrusionSurface &>(a), &eb = static_cast<const ExtrusionSurface &>(b);
         return sameExtrusions(ea, eb, tolerance);
     }
+    case SurfaceType::BSpline: return sameSurfaceParameterization(a,b);
     default:
         return false;
     }

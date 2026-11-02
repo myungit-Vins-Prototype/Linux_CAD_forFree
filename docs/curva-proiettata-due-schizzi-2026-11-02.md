@@ -20,6 +20,10 @@ gli schizzi. Modificare uno dei due input rigenera il risultato. Se un riferimen
 scompare il comando segnala errore, senza riagganciarlo a una curva vicina.
 Undo/Redo e salvataggio/riapertura conservano gli input selezionati.
 
+Per usare la curva in un altro schizzo, aprire lo schizzo destinazione e scegliere **Converti spigoli** sulla componente desiderata. Il collegamento resta associativo anche per i rami impliciti: la forma segue entrambi gli schizzi sorgenti. Sono disponibili snap, quote e PointOnCurve; Pierce usa i punti esatti di attraversamento del piano dello schizzo. Se un ramo scompare il riferimento diventa non risolto, senza saltare su un ramo vicino.
+
+Il [successivo fix di unione e riferimenti](estrusione-unione-riferimenti-proiettati-2026-11-02.md) descrive le nuove verifiche. Gli esiti di build e GUI riportati più sotto documentano il primo rilascio.
+
 ## Geometria
 
 La curva è l'intersezione delle superfici generate proiettando ciascuna curva
@@ -44,7 +48,7 @@ versione del documento. Moduli dedicati: `cad_projected_curve`,
 - Piani paralleli, regioni coincidenti non univoche e tangenze comuni non regolari
   producono un errore esplicito. Non vengono scelti rami arbitrari.
 - I rami impliciti sono visualizzabili e salvabili nel documento nativo;
-  **sweep, conversione in schizzo ed esportazione STEP/IGES non sono disponibili**
+  **sweep, conversione libera in NURBS ed esportazione STEP/IGES non sono disponibili**
   per questi rami. App e writer kernel rifiutano il fit nascosto, anche sotto
   wrapper Trimmed/Transformed. Le NURBS esatte conservano gli usi compatibili.
 - Le curve razionali devono avere pesi positivi risolvibili in double. Restano

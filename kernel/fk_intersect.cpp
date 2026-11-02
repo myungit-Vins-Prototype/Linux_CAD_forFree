@@ -1,4 +1,5 @@
 #include "fk_intersect.h"
+#include "fk_sketch_projection.h"
 
 #include "fk_curve_surface.h"
 #include "fk_nurbs.h"
@@ -136,6 +137,12 @@ void trigRoots(double c0, double a, double b, const Interval &range, double tole
 
 template <int N>
 void rootsOf(const Curve<N> &curve, const Interval &range, const Vec<N> &n, double offset, double tolerance, PlaneRoots<N> &out) {
+    if constexpr(N==3) {
+        if(isImplicitSketchProjection(curve)) {out=sketchProjectionPlaneRoots(curve,range,n,offset,tolerance);return;}
+    } else if constexpr(N==2) {
+        if(const auto *image=dynamic_cast<const SketchProjectionImage *>(&curve)) {out=sketchProjectionImageRoots(*image,range,n,offset,tolerance);return;}
+    }
+
     switch (curve.type()) {
     case CurveType::Line: {
         const auto &line = static_cast<const Line<N> &>(curve);

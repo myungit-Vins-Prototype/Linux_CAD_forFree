@@ -103,19 +103,19 @@ ctest --test-dir forgecad-release --output-on-failure
 
 ## Ultimi interventi — esiti consolidati
 
-0. **02/11 — Estrusione Superfici e curva da due schizzi.** Review `d4f15fc` già pubblicata.
-   Correzioni `317b8cb` pubblicate su `origin/main`.
-   Schizzo 3/Corpo 1: corretti facce libere, certificazione sul trim, controllo shell e solid del decoder.
-   Entrambi i modi, Invertito: GUI9/9 PASS su copia iniziale `Superfici.prt`, volume2348,733.
-   Nuova curva 3D da entità precise di due schizzi, dipendenze/codec60; kernel21gruppi e sanitizer mirati
-   PASS, GUI2/2 Wayland/XCB. Implicite esatte salvabili: sweep/conversione/STEP/IGES rifiutati;
-   NURBS esatte compatibili. App/runner definitivi compilati; CTest156: **154 PASS/1 SKIP/1 FAIL**,
-   unico scarto di sformo preesistente invariato (kernel457/458). Mappa541file/7437relazioni/255TU,
-   zero errori, check/HTML PASS. Cinque copie congelate intatte; originale Superfici salvato in seguito,
-   autore non attribuito: Schizzo3 cambiato e nuova Estrusione18 extent4 rigenerata PASS, volume2347,969.
-   Nessun ripristino/scrittura degli originali dalle sonde. Riaprire l’app per caricare la build.
-   [Estrusione e prove](docs/superfici-estrusione-2026-11-02.md),
-   [curva 3D e limiti](docs/curva-proiettata-due-schizzi-2026-11-02.md), evidenze archiviate.
+0. **02/11 — Unione fino al corpo e riferimenti proiettati (verificato).**
+   extent4 Unione auto/manuale usa contatti B-rep soltanto con prova fresca di interni disgiunti dagli
+   stessi limiti; booleana generale invariata, SP-curve/UV esatti, cache vecchie ricalcolate alla conferma.
+   Riferimenti impliciti associativi senza fit: quote, PointOnCurve e Pierce, chiavi di ramo, formato60.
+   QA scopreva perdita PointOnCurve al decode: migrazione strutturale corretta, entrambi i vincoli
+   preservati; geometria/solver restano in errore finche la cache non e' risolta. Nuovi7CTest PASS.
+   App/runner PASS. Suite completa161PASS/1SKIP/1FAIL; dopo ultimo codec tutti151test app
+   ripetuti150PASS/1SKIP/0FAIL, kernel invariato. UnicoFAIL sformo preesistente (kernel457/458).
+   GUI unione12/12 (4offscreen+8native), riferimenti2/2 Wayland/XCB; UndoRedo/codec e sanitizer mirati PASS.
+   Superfici corrente:23facce/1shell,23653,78484397822mm³; target16 fuso.5copie e5originali verificati intatti.
+   Mappa548file/7571relazioni/258AST,0errori,check/HTML e8confini in/out PASS; generati ignorati.
+   [Rapporto e archivio](docs/estrusione-unione-riferimenti-proiettati-2026-11-02.md) conservano fasi, hash,
+   limiti; base317b8cb. Commit/push richiesti in preparazione.
 
 1. **02/11 — Correzioni review, storyboard e nuova estrusione (`d4f15fc`, pubblicato).** R1–R5 corretti:
    parser/scambio STEP-B-rep robusti, occorrenze distinte e catalogo concorrente senza perdita dei lock.

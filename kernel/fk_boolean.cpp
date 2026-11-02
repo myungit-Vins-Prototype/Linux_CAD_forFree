@@ -238,6 +238,7 @@ public:
     }
 
     Body run(BodyHistory *history);
+    Body adjacentRun(BodyHistory *history) { adjacentOnly_ = true; return run(history); }
     std::vector<BodySectionCurve> section(bool preserveFacePairs = false);
     // Divisione della lamina (body 0) lungo le curve in cui la attraversa il body 1: un body per regione connessa.
     std::vector<Body> split(std::vector<BodyHistory> *histories);
@@ -247,6 +248,11 @@ public:
                  BodyHistory *history);
 
 private:
+    // Solo per operandi i cui interni sono gia' dimostrati disgiunti dal
+    // chiamante (es. resto di una differenza con lo stesso utensile).
+    // I contatti di area sono su carrier coincidenti: nessun attraversamento
+    // trasversale va ricercato sui supporti estesi fuori dalle facce.
+    bool adjacentOnly_ = false;
     unsigned workers(std::size_t count) const {
         // I piccoli lavori fra piani non ammortizzano il lancio dei thread.
         // Le richieste esplicite e le superfici curve conservano il parallelismo.
@@ -264,7 +270,7 @@ private:
     // delle coppie, come se fossero state calcolate una dopo l'altra.
     struct PairResult {
         std::vector<Arc> arcs;
-        std::map<const Curve<3> *, PCurves> pcurves;
+        std::multimap<const Curve<3> *, PCurves> pcurves;
         // Superfici che coincidono solo in parte e i tagli della loro zona comune.
         std::set<std::pair<const Surface *, const Surface *>> partial;
         std::vector<IntersectionCurve> partialCuts;
@@ -320,7 +326,7 @@ private:
     std::size_t edgeCount_ = 0;
     std::vector<Arc> arcs_;
     std::vector<Vec3> vertexPoints_;
-    std::map<const Curve<3> *, PCurves> pcurves_;
+    std::multimap<const Curve<3> *, PCurves> pcurves_;
     mutable std::map<std::pair<const Surface *, const Surface *>, bool> coincident_;  // sameSurface gia' calcolati
     mutable std::mutex coincidentMutex_;
     // Superfici che coincidono solo in parte (fianchi estrusi in direzioni
@@ -599,7 +605,7 @@ void BooleanBuilder::addArcs(const CurvePtr<3> &curve, const Interval &range, co
         entry.pcurve[0] = source->pcurves[0];
         entry.pcurve[1] = source->pcurves[1];
         entry.deviation = source->deviation;
-        out.pcurves[curve.get()] = entry;
+        out.pcurves.emplace(curve.get(), std::move(entry));
     }
 }
 
@@ -815,9 +821,19 @@ void BooleanBuilder::coincidentArcs(FaceId fa, FaceId fb, PairResult &out, bool 
                     || (distance(edge.curve->point(range.lo), edge.curve->point(range.hi)) <= tolerance_
                         && distance(edge.curve->point(range.lo), edge.curve->point(0.5 * (range.lo + range.hi))) <= tolerance_))
                     continue;
-                CurvePtr<2> pcurve = exactPCurve(surface, edge.curve, edge.range, accept);
+                CurvePtr<2> pcurve;
+                const bool identicalParameters = sameSurfaceParameterization(surface,*by.face(fy).surface);
+                if (identicalParameters) pcurve = by.fin(f).pcurve;
+                if (!pcurve) pcurve = exactPCurve(surface, edge.curve, edge.range, accept);
                 if (!pcurve && !isPlane(surface)) pcurve = fitPCurve(surface, edge.curve, edge.range, std::min(accept, kPCurveTolerance));
                 if (!pcurve) throw std::logic_error("booleanOperation: edge fuori dalla superficie coincidente");
+                if (identicalParameters && by.fin(f).pcurve) {
+                    PCurves entry;
+                    entry.surface[0]=&surface;entry.surface[1]=by.face(fy).surface.get();
+                    entry.pcurve[0]=pcurve;entry.pcurve[1]=pcurve;
+                    entry.deviation=by.fin(f).pcurveTolerance;
+                    out.pcurves.emplace(edge.curve.get(),std::move(entry));
+                }
                 std::vector<CurvePtr<2>> images{pcurve};
                 for (int d = 0; d < 2; ++d) {
                     const bool periodic = d == 0 ? surface.isUPeriodic() : surface.isVPeriodic();
@@ -856,6 +872,7 @@ void BooleanBuilder::coincidentArcs(FaceId fa, FaceId fb, PairResult &out, bool 
                     arc.face[1 - k] = fy;
                     arc.cut[k] = location == PointLocation::Inside;
                     arc.coplanar = true;
+                    arc.tolerance = fullEdge.tolerance;
                     out.arcs.push_back(arc);
                 }
                 }
@@ -1834,6 +1851,7 @@ void BooleanBuilder::computeCuts(std::map<int, std::vector<Piece>> (&cuts)[2]) {
     std::vector<PairResult> results(pairs.size());
     const auto compute = [&](std::size_t i) {
         try {
+            if (adjacentOnly_ && !coincident(*bodies_[0].face(pairs[i].first).surface,*bodies_[1].face(pairs[i].second).surface)) return;
             pairArcs(pairs[i].first, pairs[i].second, results[i]);
         } catch (const OperationCancelled &) { throw; } catch (...) {
             results[i].error = std::current_exception();
@@ -1855,9 +1873,6 @@ void BooleanBuilder::computeCuts(std::map<int, std::vector<Piece>> (&cuts)[2]) {
         if (result.error) std::rethrow_exception(result.error);
         arcs_.insert(arcs_.end(), std::make_move_iterator(result.arcs.begin()), std::make_move_iterator(result.arcs.end()));
         pcurves_.merge(result.pcurves);
-        // Una curva presente in piu' coppie conserva la regola originale:
-        // l'ultima voce nell'ordine delle coppie sostituisce la precedente.
-        for (auto &[curve, entry] : result.pcurves) pcurves_[curve] = std::move(entry);
         partial_.merge(result.partial);
         partialCuts_.insert(partialCuts_.end(), std::make_move_iterator(result.partialCuts.begin()), std::make_move_iterator(result.partialCuts.end()));
         result = PairResult();
@@ -2145,6 +2160,7 @@ Body BooleanBuilder::run(BodyHistory *history) {
             const std::vector<Piece> none;
             for (SubFace &subFace : buildSubFaces(job.body, job.face, found != cuts[job.body].end() ? found->second : none)) {
                 const Location location = classify(subFace, *classifiers[job.body], history ? &subFace.coincidentFaces : nullptr);
+                if (adjacentOnly_ && (location == Location::In || location == Location::OnSame)) throw std::domain_error("uniteDisjointBodies: interni non disgiunti");
                 if (keep(job.body, location))
                     job.kept.emplace_back(std::move(subFace), operation_ == BooleanOperation::Subtract && job.body == 1);
             }
@@ -2455,13 +2471,13 @@ Body BooleanBuilder::assemble(const std::vector<std::pair<SubFace, bool>> &kept,
     for (FinId f : result.fins()) {
         cancellationPoint();
         Fin &fin = result.fin(f);
-        const auto found = pcurves_.find(result.edge(fin.edge).curve.get());
-        if (fin.pcurve || found == pcurves_.end()) continue;
+        if (fin.pcurve) continue;
+        const auto found = pcurves_.equal_range(result.edge(fin.edge).curve.get());
         const Surface *surface = result.face(result.finFace(f)).surface.get();
-        for (int k = 0; k < 2; ++k)
-            if (found->second.surface[k] == surface) {
-                fin.pcurve = found->second.pcurve[k];
-                fin.pcurveTolerance = std::max(found->second.deviation, std::numeric_limits<double>::min());
+        for(auto it=found.first;it!=found.second;++it)for(int k=0;k<2;++k)
+            if(it->second.surface[k]==surface && it->second.pcurve[k]){
+                fin.pcurve=it->second.pcurve[k];
+                fin.pcurveTolerance=std::max(it->second.deviation,std::numeric_limits<double>::min());
             }
     }
     // Estremi che toccano il vertice solo entro la tolleranza della booleana
@@ -2516,6 +2532,11 @@ std::vector<BodySectionCurve> bodySectionCurvesWithOrigins(const Body &a, const 
 Body booleanOperation(const Body &a, const Body &b, BooleanOperation operation, const BooleanOptions &options, BodyHistory *history) {
     if (history) *history = BodyHistory();
     return BooleanBuilder(a, b, operation, options).run(history);
+}
+
+Body uniteDisjointBodies(const Body &a, const Body &b, const BooleanOptions &options, BodyHistory *history) {
+    if (history) *history = BodyHistory();
+    return BooleanBuilder(a, b, BooleanOperation::Unite, options).adjacentRun(history);
 }
 
 std::vector<Body> splitSheet(const Body &sheet, const Body &tool, const BooleanOptions &options, std::vector<BodyHistory> *histories) {

@@ -49,6 +49,8 @@ Shape shapeOf(const SketchObject &sketch, const ConstraintRef &ref) {
             return splineHandles(curve) && (ref.point - kHandlePoint) / 2 < curve.controlPoints.size() ? Shape::Point : Shape::None;
         return ref.point < curve.controlPoints.size() ? Shape::Point : Shape::None;
     }
+    // La forma e' strutturale: la cache associativa si ricostruisce dopo la lettura.
+    // curveGeometry/solveSketch rifiutano comunque un riferimento non risolto.
     switch (curve.tool) {
     case DrawingTool::Circle:
     case DrawingTool::Arc:
@@ -207,6 +209,7 @@ public:
         object.sides = source.sides;
         object.knots = source.knots;
         object.degree = source.degree;
+        object.referenceCurve = source.referenceCurve;
         const int n = source.controlPoints.size();
         for (int k = 0; k < n; ++k) object.controlPoints.append(point(curvePoint(curve, k)));
         if (handleBase_.at(curve) >= 0)
@@ -326,6 +329,11 @@ bool tangentAt(const System &s, const ConstraintRef &entity, const ConstraintRef
             const QPointF in = s.refPoint({1, entity.element, handlePoint(k, 0)}), out = s.refPoint({1, entity.element, handlePoint(k, 1)});
             tangent = k == 0 ? out - p : k == n - 1 ? p - in : out - in;
             return true;
+        }
+        if(curve.tool==DrawingTool::Converted && curve.degree==0 && curve.referenceCurve && (k==0 || k==n-1)) {
+            const auto domain=curve.referenceCurve->domain();
+            const auto d=curve.referenceCurve->derivative(k==0 ? domain.lo : domain.hi);
+            tangent=QPointF(d.x(),d.y());return true;
         }
         if ((curve.tool == DrawingTool::Nurbs || curve.tool == DrawingTool::Converted) && n >= 2) {
             tangent = k == 0 ? s.refPoint({1, entity.element, 1}) - p : p - s.refPoint({1, entity.element, n - 2});
@@ -905,7 +913,7 @@ void equations(const System &s, const SketchConstraint &c, QVector<double> &out,
 bool wellFormed(const SketchObject &sketch, const SketchConstraint &c) {
     if (c.type == ConstraintType::Pierce)
         return shapeOf(sketch,c.first)==Shape::Point && c.first.kind!=2 && c.second.kind<0
-            && c.pierce && c.pierce->surface.kind==5 && c.pierce->error.isEmpty()
+            && c.pierce && (c.pierce->surface.kind==5 || c.pierce->surface.kind==9) && c.pierce->error.isEmpty()
             && (!c.pierce->segments.isEmpty() || !c.pierce->curves.isEmpty());
     if (c.type == ConstraintType::Offset) return validSketchOffset(sketch,c);
     if (c.type == ConstraintType::Pattern) return patternWellFormed(sketch, c.pattern);
@@ -1002,7 +1010,7 @@ QString constraintName(ConstraintType type) {
     case ConstraintType::Concentric: return QStringLiteral("Concentrico");
     case ConstraintType::Quadrant: return QStringLiteral("Quadrante");
     case ConstraintType::Midpoint: return QStringLiteral("Punto medio");
-    case ConstraintType::Pierce: return QStringLiteral("Pierce su superficie");
+    case ConstraintType::Pierce: return QStringLiteral("Pierce su curva o superficie");
     case ConstraintType::PointOnCurve: return QStringLiteral("Punto sull'entita'");
     case ConstraintType::Fix: return QStringLiteral("Fisso");
     case ConstraintType::Distance: return QStringLiteral("Distanza");
@@ -2002,6 +2010,9 @@ SketchAnalysis analyzeSketch(const SketchObject &sketch) {
 }
 
 SolveResult solveSketch(SketchObject &sketch, const QVector<PointTarget> &targets) {
+    for(const auto &curve:sketch.curves) if(curve.tool==DrawingTool::Converted && curve.degree==0 && !curve.referenceCurve) {
+        SolveResult result;result.ok=false;result.error=QStringLiteral("Il riferimento esatto dello schizzo deve essere rigenerato dalla sorgente.");return result;
+    }
     for (const auto &link : sketch.linkedReferences) if (!link || !link->error.isEmpty()) {
         SolveResult result; result.ok = false;
         result.error = link ? link->error : QStringLiteral("Riferimento associativo mancante.");

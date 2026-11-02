@@ -370,8 +370,15 @@ QVector<Dependency> dependencies(int index, const DocumentState &document) {
     switch (feature.feature) {
     case BodyFeature::Extrusion:
         addSketchDependency(result, sketches, index, feature.sketchIndex, QStringLiteral("profilo"));
-        for (int body : feature.mergeBodies) addBodyDependency(result, features, index, body, QStringLiteral("fusione"));
-        if (feature.extent != 0) addRefs(Family::Extent, QStringLiteral("fine estrusione"));
+        if (feature.mergeOperation != 0)
+            for (int body : feature.mergeBodies)
+                addBodyDependency(result, features, index, body, QStringLiteral("destinatario fusione"));
+        if (feature.extent == 4) {
+            // Lo stesso corpo puo' essere sia limite sia destinatario: due
+            // ruoli distinti nel grafo, una sola identita' di feature.
+            for (int body : feature.booleanTools)
+                addBodyDependency(result, features, index, body, QStringLiteral("limite prossimo corpo"));
+        } else if (feature.extent != 0) addRefs(Family::Extent, QStringLiteral("fine estrusione"));
         break;
     case BodyFeature::Revolution:
         addSketchDependency(result, sketches, index, feature.sketchIndex, QStringLiteral("profilo"));

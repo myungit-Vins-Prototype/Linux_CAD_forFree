@@ -32,6 +32,7 @@
 #include "../cad_menu.h"
 #include "../cad_kernel.h"
 #include "../cad_curve_extract.h"
+#include "../cad_projected_curve.h"
 #include "../cad_surface_tools.h"
 #include "../cad_spatial_sketch.h"
 #include "../kernel/tests/surface_tools_fixture.h"
@@ -229,6 +230,10 @@ public:
 #include "test_gui_3d_review.h"
 #include "test_fillet_selection_review.h"
 #include "test_sketch_projection_gui.h"
+#include "test_projected_curve_references.h"
+#include "test_next_body_union_cache.h"
+#include "test_next_body_union.h"
+#include "test_history_graph_next_body.h"
 #include "test_revision_access_gui.h"
 #include "test_extrusion_next_body_gui.h"
 #include "test_extrusion_next_body.h"
@@ -10672,6 +10677,26 @@ int main(int argc, char **argv) {
     }
     if (app.arguments().contains(QStringLiteral("--extrusion-next-body-gui"))) {
         try { ViewportInteractionTest::extrusionNextBodyGuiRegressions(app.arguments().contains(QStringLiteral("--gl"))); }
+        catch (const std::exception &error) { std::cerr << error.what() << std::endl; return 1; }
+        return 0;
+    }
+    if (app.arguments().contains(QStringLiteral("--projected-curve-references"))) {
+        try { ViewportInteractionTest::projectedCurveReferences(); }
+        catch (const std::exception &error) { std::cerr << error.what() << std::endl; return 1; }
+        return 0;
+    }
+    if (app.arguments().contains(QStringLiteral("--next-body-union"))) {
+        try { ViewportInteractionTest::nextBodyUnionRegressions(); }
+        catch (const std::exception &error) { std::cerr << error.what() << std::endl; return 1; }
+        return 0;
+    }
+    if (app.arguments().contains(QStringLiteral("--next-body-union-cache"))) {
+        try { ViewportInteractionTest::nextBodyUnionCacheRegressions(); }
+        catch (const std::exception &error) { std::cerr << error.what() << std::endl; return 1; }
+        return 0;
+    }
+    if (app.arguments().contains(QStringLiteral("--history-graph-next-body"))) {
+        try { ViewportInteractionTest::historyGraphNextBodyRegressions(); }
         catch (const std::exception &error) { std::cerr << error.what() << std::endl; return 1; }
         return 0;
     }

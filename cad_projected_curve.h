@@ -10,7 +10,7 @@ namespace ForgeCad {
 // persistenti dei riferimenti kind 7; le altre feature conservano i loro usi.
 QVector<ForgeCurve> forgeSketchProjectedCurves(const ExtrusionObject &definition, int owner,
     const QVector<SketchObject> &sketches, const QVector<ExtrusionObject> &bodies,
-    QString *error, QString *summary = nullptr);
+    QString *error, QString *summary = nullptr, QVector<QString> *keys = nullptr);
 
 }
 

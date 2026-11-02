@@ -37,6 +37,15 @@ SurfaceProjection projectPoint(const Surface &surface, const Vec3 &p);
 // il criterio di arresto. Falso se il punto dista piu' di `tolerance`.
 bool invertPoint(const Surface &surface, const Vec3 &p, Vec2 &uv, double tolerance, double scale);
 
+// Certificato stretto della stessa parametrizzazione: gli stessi (u,v)
+// producono gli stessi punti e le stesse derivate. Stesso oggetto oppure
+// dati finiti esattamente uguali; nessun campione, fit o tolleranza. Gestisce
+// le superfici analitiche, B-spline ed estrusioni/rivoluzioni di curve note.
+// Wrapper Trimmed/Transformed richiedono anche domini/trasformazioni uguali.
+// Tipi non riconosciuti sono certificati soltanto per identita' del puntatore.
+// Serve a riusare le SP-curve, che sameSurface da solo non autorizza.
+bool sameSurfaceParameterization(const Surface &a, const Surface &b);
+
 // Le due superfici sono lo stesso insieme di punti (entro `tolerance`), con
 // parametrizzazioni anche diverse: piani coincidenti, cilindri coassiali
 // dello stesso raggio, sfere, coni e tori uguali, superfici estruse in
@@ -44,6 +53,7 @@ bool invertPoint(const Surface &surface, const Vec3 &p, Vec2 &uv, double toleran
 // sull'altra). Per le estrusioni il confronto dei profili proiettati usa un
 // certificato sui coefficienti razionali, anche con verso inverso e nodi
 // suddivisi; riparametrizzazioni non certificabili restituiscono false.
+// B-spline: solo stessa rappresentazione esatta (sameSurfaceParameterization).
 // Per le altre superfici solo se sono lo stesso oggetto.
 bool sameSurface(const Surface &a, const Surface &b, double tolerance);
 

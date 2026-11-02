@@ -30,6 +30,11 @@ QString appendLinkedSketchReference(SketchObject &sketch, GeometryRef source,
 QString refreshLinkedSketchReferences(SketchObject &sketch, const QVector<SketchObject> &sketches,
                                      const QVector<ExtrusionObject> &bodies);
 
+// Pierce su curva 3D: intersezioni esatte col piano dello schizzo,
+// come cache di punti governata dal riferimento persistente.
+QString refreshCurvePierce(const SketchObject &sketch,SketchConstraint &constraint,
+    const GeometryRef &source,const QVector<SketchObject> &sketches,const QVector<ExtrusionObject> &bodies);
+
 // Proietta l'entita' scelta di un altro schizzo lungo la normale del piano
 // destinazione, anche quando i due piani non si intersecano.
 QString appendProjectedSketchEntity(SketchObject &sketch, const SketchObject &source, SketchEntity entity,

@@ -81,6 +81,10 @@ struct CurveObject {
     QVector<double> knots;  // Nurbs / Converted: nodi espansi (poli + grado + 1)
     int degree = 3;         // Nurbs con knots / Converted
     QVector<QPointF> samples;
+    // Converted degree0: riferimento procedurale esatto, non una NURBS.
+    // Cache transiente ricostruita dal GeometryRef del collegamento; i due
+    // controlPoints sono soltanto gli estremi, mai poli di una spline fittata.
+    std::shared_ptr<const ForgeCad::Kernel::Curve<2>> referenceCurve;
     bool numericallyValid = false;
     bool construction = false;
 };
@@ -838,6 +842,7 @@ struct ExtrusionObject {
     ForgeCad::ForgeCurve curve;  // funzioni curva (Helix, ProjectedCurve): la curva esatta (la prima)
     // ProjectedCurve: tutte le curve (curves.first() == curve); non si salva.
     QVector<ForgeCad::ForgeCurve> curves;
+    QVector<QString> curveReferenceKeys; // genealogia dei rami, transiente e ricostruita con curves
     // Ripetizione: -1 risultato aggregato storico, 0 primo risultato;
     // >0 risultato derivato, con firstBody che indica la ripetizione madre.
     int patternComponent = -1;

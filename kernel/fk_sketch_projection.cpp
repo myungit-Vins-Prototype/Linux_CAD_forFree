@@ -26,6 +26,7 @@ struct Branch {
     Interval parameter, coordinate;
     double start = 0.0, finish = 0.0;
     bool constant = false;
+    std::string identity;
 };
 
 struct Lifting {
@@ -42,13 +43,18 @@ struct Lifting {
 
 std::vector<Branch> branches(const std::vector<SketchProjectionSpan> &source, const Vec3 &axis) {
     std::vector<Branch> result;
+    int sourceIndex=0;
     for (const auto &span : source) {
+        const std::string sourceKey=span.identity.empty() ? std::to_string(sourceIndex) : span.identity;
+        ++sourceIndex;
+        int pieceIndex=0;
         cancellationPoint();
         if (!span.curve || !span.range.isFinite() || span.range.length() <= 0.0)
             throw std::domain_error("La proiezione richiede curve limitate non degeneri.");
         for (const auto &original : rationalBezierPieces(*span.curve, span.range)) {
             // Un fattore comune dei pesi non cambia curva o parametro.
             // Evita overflow nei prodotti omogenei e nei polinomi critici.
+            const std::string pieceKey=sourceKey+"/b"+std::to_string(pieceIndex++);
             std::vector<double> normalizedWeights;
             double maximumWeight = 0.0;
             for (int i = 0; i < original.poleCount(); ++i) maximumWeight = std::max(maximumWeight, original.weight(i));
@@ -82,6 +88,7 @@ std::vector<Branch> branches(const std::vector<SketchProjectionSpan> &source, co
             for (std::size_t i = 1; i < split.size(); ++i) {
                 Branch branch;
                 branch.curve = curve;
+                branch.identity=pieceKey+"/r"+std::to_string(i-1);
                 branch.parameter = {split[i - 1], split[i]};
                 branch.start = dot(curve->point(branch.parameter.lo), axis);
                 branch.finish = dot(curve->point(branch.parameter.hi), axis);
@@ -140,6 +147,7 @@ double inverse(const Branch &branch, const Vec3 &axis, double coordinate) {
 class ImplicitProjection : public Curve<3> {
 public:
     CurveType type() const override { return CurveType::Other; }
+    virtual PlaneRoots<3> planeIntersections(const Interval &range, const Vec3 &normal, double offset, double tolerance) const = 0;
 };
 
 class IntersectionBranch final : public ImplicitProjection {
@@ -150,6 +158,55 @@ public:
         range_ = {std::min(a, b), std::max(a, b)};
     }
     Interval domain() const override { return range_; }
+    PlaneRoots<3> planeIntersections(const Interval &range, const Vec3 &normal, double offset, double tolerance) const override {
+        const Interval clipped{std::max(range.lo,range_.lo),std::min(range.hi,range_.hi)};
+        PlaneRoots<3> out;
+        if (clipped.hi < clipped.lo) return out;
+        const Vec3 n1 = lift_.firstNormal, n2 = cross(axis_,lift_.transverse);
+        const Vec3 aNormal = swapped_ ? n2 : n1, bNormal = swapped_ ? n1 : n2;
+        const double aDot=dot(normal,aNormal), bDot=dot(normal,bNormal);
+        const double h0=dot(driver_.curve->point(clipped.lo),axis_), h1=dot(driver_.curve->point(clipped.hi),axis_);
+        const double q0=inverse(dependent_,axis_,h0), q1=inverse(dependent_,axis_,h1);
+        const Interval dependentRange{std::min(q0,q1),std::max(q0,q1)};
+        if (std::fabs(aDot) <= std::min(roundoff,tolerance/(2*kSizeBox))) return planeRoots<3>(*driver_.curve,clipped,normal,offset,tolerance);
+        if (std::fabs(bDot) <= std::min(roundoff,tolerance/(2*kSizeBox))) {
+            const auto roots=planeRoots<3>(*dependent_.curve,dependentRange,normal,offset,tolerance);
+            const auto parameter=[&](double t){return inverse(driver_,axis_,dot(dependent_.curve->point(t),axis_));};
+            for(double t:roots.parameters) out.parameters.push_back(parameter(t));
+            for(const auto &part:roots.coincident) {
+                const double a=parameter(part.lo),b=parameter(part.hi);out.coincident.push_back({std::min(a,b),std::max(a,b)});
+            }
+            return out;
+        }
+        const Frame3 frame=normalFrame(normal,offset*normal);
+        const auto projected=[&](const Branch &branch,const Vec3 &direction,double denominator) {
+            const auto &curve=static_cast<const BSplineCurve<3> &>(*branch.curve);
+            std::vector<Vec2> poles;
+            for(const auto &p:curve.poles()) {
+                const Vec3 q=frame.toLocal(p+((offset-dot(normal,p))/denominator)*direction);
+                poles.push_back(Vec2(q.x(),q.y()));
+            }
+            return BSplineCurve<2>(curve.degree(),curve.knots(),poles,curve.weights());
+        };
+        const auto a=projected(driver_,aNormal,aDot), b=projected(dependent_,bNormal,bDot);
+        const auto roots=intersectCurves(a,clipped,b,dependentRange,tolerance,true);
+        if(roots.overlap) {out.coincident.push_back(clipped);return out;}
+        for(const auto &root:roots.points) {
+            double t=std::clamp(root.s,clipped.lo,clipped.hi);
+            for(int iteration=0;iteration<12;++iteration) {
+                Vec3 jet[2];evaluate(t,1,jet);
+                const double residual=dot(normal,jet[0])-offset, slope=dot(normal,jet[1]);
+                if(std::fabs(residual)<=0.1*tolerance || slope==0.0) break;
+                const double next=std::clamp(t-residual/slope,clipped.lo,clipped.hi);
+                if(next==t)break;
+                t=next;
+            }
+            if(std::fabs(dot(normal,point(t))-offset)>tolerance)
+                throw std::domain_error("Intersezione curva proiettata/piano non risolvibile con residuo affidabile in double.");
+            out.parameters.push_back(t);
+        }
+        return out;
+    }
     void evaluate(double t, int order, Vec3 *out) const override {
         if (order < 0 || order > 3) throw std::domain_error("Curva proiettata implicita: derivate disponibili fino all'ordine 3.");
         Vec3 a[4], b[4]; driver_.curve->evaluate(t, order, a);
@@ -193,6 +250,24 @@ public:
     }
     void evaluate(double t, int order, Vec3 *out) const override { evaluateSide(t, order, out, false); }
     void evaluateLeft(double t, int order, Vec3 *out) const override { evaluateSide(t, order, out, true); }
+    PlaneRoots<3> planeIntersections(const Interval &range, const Vec3 &normal, double offset, double tolerance) const override {
+        PlaneRoots<3> result;
+        for(int k=0;k<int(parts_.size());++k) {
+            cancellationPoint();
+            const double lo=std::max(range.lo,double(k)),hi=std::min(range.hi,double(k+1));
+            if(hi<lo)continue;
+            const auto &part=parts_[std::size_t(k)];const auto d=part.curve->domain();
+            const auto source=[&](double t){return part.reverse ? d.hi-(t-k)*d.length() : d.lo+(t-k)*d.length();};
+            const auto parameter=[&](double t){return k+(part.reverse ? (d.hi-t) : (t-d.lo))/d.length();};
+            const double a=source(lo),b=source(hi);
+            const auto roots=planeRoots<3>(*part.curve,{std::min(a,b),std::max(a,b)},normal,offset,tolerance);
+            for(double t:roots.parameters)result.parameters.push_back(parameter(t));
+            for(const auto &interval:roots.coincident) {
+                const double p=parameter(interval.lo),q=parameter(interval.hi);result.coincident.push_back({std::min(p,q),std::max(p,q)});
+            }
+        }
+        return result;
+    }
 private:
     void evaluateSide(double t, int order, Vec3 *out, bool left) const {
         int k = std::clamp(int(std::floor(t)), 0, int(parts_.size()) - 1);
@@ -311,7 +386,7 @@ void certifyEnvelope(const Branch &first, const Branch &second, const Vec3 &axis
     certifyEnvelope(first,second,axis,lift,{middle,common.hi},budget,depth+1);
 }
 
-std::vector<CurvePtr<3>> connect(std::vector<CurvePtr<3>> pieces) {
+std::vector<CurvePtr<3>> connect(std::vector<CurvePtr<3>> pieces, const std::vector<std::string> &pieceKeys, std::vector<std::string> *identities) {
     // Gli input coincidono geometricamente solo entro la risoluzione del
     // kernel. Il grafo connette estremi; non decide mai la geometria da mesh.
     if (pieces.size() > maximumPieces) throw std::domain_error("Troppi tratti risultanti nella proiezione esatta.");
@@ -339,15 +414,22 @@ std::vector<CurvePtr<3>> connect(std::vector<CurvePtr<3>> pieces) {
         if (start < 0) for (int i = 0; i < int(pieces.size()); ++i) if (!used[std::size_t(i)]) {start = i; break;}
         if (start < 0) break;
         std::vector<ChainPart> chain;
+        std::vector<std::string> keys;
         int current = start;
         while (current >= 0) {
             cancellationPoint();
             used[std::size_t(current)] = true;
             chain.push_back({pieces[std::size_t(current)], reverse});
+            keys.push_back(pieceKeys[std::size_t(current)]);
             const auto &adjacent = neighbours[std::size_t(2*current+!reverse)];
             int next = -1;
             if (adjacent.size() == 2) for (int endpoint : adjacent) if (!used[std::size_t(endpoint/2)]) {next = endpoint/2; reverse = (endpoint%2)!=0;}
             current = next;
+        }
+        if(identities) {
+            std::sort(keys.begin(),keys.end());keys.erase(std::unique(keys.begin(),keys.end()),keys.end());
+            std::string identity;for(const auto &key:keys)identity+=std::to_string(key.size())+":"+key;
+            identities->push_back(std::move(identity));
         }
         bool rational = true;
         for (const auto &part : chain) rational &= !isImplicitSketchProjection(*part.curve);
@@ -382,8 +464,58 @@ bool isImplicitSketchProjection(const Curve<3> &curve) {
     return false;
 }
 
+PlaneRoots<3> sketchProjectionPlaneRoots(const Curve<3> &curve,const Interval &range,const Vec3 &normal,double offset,double tolerance) {
+    const double magnitude=norm(normal);
+    if(!std::isfinite(magnitude) || !std::isfinite(offset) || !std::isfinite(tolerance) || tolerance<0)
+        throw std::domain_error("Piano del riferimento non valido.");
+    if(magnitude==0) {PlaneRoots<3> roots;if(std::fabs(offset)<=tolerance)roots.coincident.push_back(range);return roots;}
+    if(const auto *implicit=dynamic_cast<const ImplicitProjection *>(&curve))
+        return implicit->planeIntersections(range,normal/magnitude,offset/magnitude,tolerance/magnitude);
+    if(curve.type()==CurveType::Trimmed)
+        return sketchProjectionPlaneRoots(*static_cast<const TrimmedCurve<3> &>(curve).basis(),range,normal,offset,tolerance);
+    if(curve.type()==CurveType::Transformed) {
+        const auto &mapped=static_cast<const TransformedCurve &>(curve);const auto &transform=mapped.transform();Vec3 local;
+        for(int j=0;j<3;++j)for(int i=0;i<3;++i)local[j]+=transform.matrix(i,j)*normal[i];
+        return sketchProjectionPlaneRoots(*mapped.basis(),range,local,offset-dot(normal,transform.translationPart()),tolerance);
+    }
+    throw std::domain_error("La curva non e' un'intersezione implicita di schizzi.");
+}
+
+SketchProjectionImage::SketchProjectionImage(CurvePtr<3> source,Interval range,Frame3 plane)
+    :source_(std::move(source)),range_(range),plane_(std::move(plane)) {
+    if(!source_ || !range_.isFinite() || range_.length()<=0 || !isImplicitSketchProjection(*source_))
+        throw std::domain_error("Sorgente del riferimento esatto di schizzo non valida.");
+}
+void SketchProjectionImage::evaluate(double t,int order,Vec2 *out) const {
+    std::vector<Vec3> values(std::size_t(order+1));source_->evaluate(t,order,values.data());
+    for(int k=0;k<=order;++k) {
+        const Vec3 p=values[std::size_t(k)]-(k==0 ? plane_.origin() : Vec3());
+        out[k]=Vec2(dot(p,plane_.xDir()),dot(p,plane_.yDir()));
+    }
+}
+void SketchProjectionImage::evaluateLeft(double t,int order,Vec2 *out) const {
+    std::vector<Vec3> values(std::size_t(order+1));source_->evaluateLeft(t,order,values.data());
+    for(int k=0;k<=order;++k) {
+        const Vec3 p=values[std::size_t(k)]-(k==0 ? plane_.origin() : Vec3());
+        out[k]=Vec2(dot(p,plane_.xDir()),dot(p,plane_.yDir()));
+    }
+}
+PlaneRoots<2> sketchProjectionImageRoots(const SketchProjectionImage &curve,const Interval &range,const Vec2 &normal,double offset,double tolerance) {
+    const auto &frame=curve.plane();const Vec3 worldNormal=normal.x()*frame.xDir()+normal.y()*frame.yDir();
+    const auto roots=planeRoots<3>(*curve.source(),range,worldNormal,offset+dot(worldNormal,frame.origin()),tolerance);
+    return {roots.parameters,roots.coincident};
+}
+CurvePtr<3> embedSketchProjectionImage(const SketchProjectionImage &curve,const Frame3 &frame,double z) {
+    const auto &source=curve.plane();double matrix[3][3]{};
+    for(int i=0;i<3;++i)for(int j=0;j<3;++j)matrix[i][j]=frame.xDir()[i]*source.xDir()[j]+frame.yDir()[i]*source.yDir()[j];
+    const Vec3 shift=frame.origin()+z*frame.zDir()-dot(source.origin(),source.xDir())*frame.xDir()-dot(source.origin(),source.yDir())*frame.yDir();
+    auto mapped=std::make_shared<TransformedCurve>(curve.source(),Transform3::fromParts(matrix,shift));
+    return std::make_shared<TrimmedCurve<3>>(mapped,curve.domain().lo,curve.domain().hi);
+}
+
 std::vector<CurvePtr<3>> projectSketchOnSketch(const std::vector<SketchProjectionSpan> &first, const Vec3 &firstNormal,
-    const std::vector<SketchProjectionSpan> &second, const Vec3 &secondNormal) {
+    const std::vector<SketchProjectionSpan> &second, const Vec3 &secondNormal, std::vector<std::string> *identities) {
+    if(identities)identities->clear();
     if (first.empty() || second.empty()) throw std::domain_error("Scegli almeno una curva in ciascuno dei due schizzi.");
     if (!std::isfinite(norm(firstNormal)) || !std::isfinite(norm(secondNormal)) || norm(firstNormal) <= kAngularResolution || norm(secondNormal) <= kAngularResolution)
         throw std::domain_error("Normale del piano di schizzo non valida.");
@@ -397,13 +529,17 @@ std::vector<CurvePtr<3>> projectSketchOnSketch(const std::vector<SketchProjectio
     if (a.size() * b.size() > 1048576) throw std::domain_error("Troppe coppie di rami nella proiezione esatta; seleziona meno entita'.");
     std::vector<CurvePtr<3>> pieces;
     int envelopeBudget = 8192;
+    std::vector<std::string> pieceKeys;
+    std::string currentKey;
     const auto append = [&](CurvePtr<3> curve) {
         if (pieces.size() >= maximumPieces) throw std::domain_error("La proiezione genera piu' di 1024 tratti; seleziona meno entita'.");
-        pieces.push_back(std::move(curve));
+        pieces.push_back(std::move(curve));pieceKeys.push_back(currentKey);
     };
     struct ConstantHit {const Curve<3> *curve; Interval range; Vec3 fixed;};
     std::vector<ConstantHit> constantHits;
     for (const Branch &one : a) for (const Branch &two : b) {
+        const auto key1=std::min(one.identity,two.identity),key2=std::max(one.identity,two.identity);
+        currentKey=std::to_string(key1.size())+":"+key1+std::to_string(key2.size())+":"+key2;
         cancellationPoint();
         if (one.constant || two.constant) {
             if (one.constant && two.constant) {
@@ -457,7 +593,7 @@ std::vector<CurvePtr<3>> projectSketchOnSketch(const std::vector<SketchProjectio
         }
     }
     if (pieces.empty()) throw std::domain_error("Le curve selezionate non hanno un intervallo comune di proiezione; nessuna curva 3D risultante.");
-    return connect(std::move(pieces));
+    return connect(std::move(pieces),pieceKeys,identities);
 }
 
 }
