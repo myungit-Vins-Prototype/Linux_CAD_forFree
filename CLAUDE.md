@@ -104,6 +104,7 @@ ctest --test-dir forgecad-release --output-on-failure
 ## Ultimi interventi — esiti consolidati
 
 0. **02/11 — Estrusione Superfici e curva da due schizzi.** Review `d4f15fc` già pubblicata.
+   Correzioni `317b8cb` pubblicate su `origin/main`.
    Schizzo 3/Corpo 1: corretti facce libere, certificazione sul trim, controllo shell e solid del decoder.
    Entrambi i modi, Invertito: GUI9/9 PASS su copia iniziale `Superfici.prt`, volume2348,733.
    Nuova curva 3D da entità precise di due schizzi, dipendenze/codec60; kernel21gruppi e sanitizer mirati
