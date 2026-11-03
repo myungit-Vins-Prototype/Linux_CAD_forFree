@@ -1,6 +1,6 @@
 # CLAUDE.md — memoria operativa ForgeCAD
 
-Aggiornato il **2 novembre 2026**. Leggere questo file e `AGENTS.md` all'avvio; approfondire solo l'area del lavoro
+Aggiornato il **3 novembre 2026**. Leggere questo file e `AGENTS.md` all'avvio; approfondire solo l'area del lavoro
 richiesto. Questa sintesi descrive ciò che resta implementato, i limiti utili e gli ultimi interventi.
 
 La cronologia precedente è conservata integralmente in [archivio al 2 novembre](docs/history/claude-2026-11-02.md). **Non
@@ -103,14 +103,14 @@ ctest --test-dir forgecad-release --output-on-failure
 
 ## Ultimi interventi — esiti consolidati
 
-0. **02/11 — CI e loft proiettato corretti.** `f75015b` pubblicato:
+0. **02–03/11 — CI e loft proiettato corretti.** `f75015b` CI e `ec08b12` loft pubblicati:
    sformo con sezioni/vertici circolari analitici e letture catalogo senza lock writer.
-   162PASS/1SKIP GL/0FAIL, kernel459/459; stress revisioni32/32 e Clang/ASan PASS.
-   CI41509525775: build Linux PASS/test in corso; macOS annullato per capacità runner ARM64, prima della build.
+   163PASS/1SKIP GL/0FAIL su164, kernel459/459; stress revisioni32/32 e Clang/ASan PASS.
+   CI41513461524 su ec08b12 conclusa verde: Linux56PASS/2SKIP, macOS/Metal60PASS/1SKIP, zeroFAIL.
    [Rapporto CI](docs/ci-riparazione-2026-11-02.md). Nessuna soglia/test indeboliti.
    Loft SurfaceModellingExample219: sezioni piane via path e guida implicita ora usano piano certificato/
    planeRoots3; corrette radici quasi parallele entro budget. Guida esatta, NURBS adattiva preesistente; formato60. App completa,10nuovi casi+21/39 precedenti, Clang/ASan PASS; GUI Wayland/XCB
-   pannello/Undo/Redo/cache/no-cache PASS, anche ultima copia. Suite164CTest in corso.
+   pannello/Undo/Redo/cache/no-cache PASS, anche ultima copia. Suite164CTest conclusa.
    Mappa549/7598/259AST,zeroerrori/check/11confini/HTML PASS. [Rapporto loft](docs/loft-guide-proiettate-2026-11-02.md).
    Sezioni realmente nonplanari/guide complanari restano limitate; nessuna scrittura sui CAD originali.
    Fix unione/curve `dbed027`/`cc26a27`: [rapporto storico](docs/estrusione-unione-riferimenti-proiettati-2026-11-02.md).

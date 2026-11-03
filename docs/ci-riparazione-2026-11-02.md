@@ -28,6 +28,22 @@ La regressione pubblica atomicamente un catalogo coerente e mantiene occupato il
 - ASan/UBSan sui cinque translation unit modificati/di ingresso dei due runner: PASS, senza diagnostiche. Librerie di supporto e Qt non sono strumentati; rilevamento leak disabilitato. Non è una certificazione dell'intera applicazione con sanitizer.
 - Suite CTest completa locale sul codice integrato: **162 PASS / 1 SKIP OpenGL offscreen / 0 FAIL su 163**, in 465,53 s; runner generale kernel **459/459**. Manifesti dei test copiati con la sola sostituzione della cartella esempi con tre documenti congelati; hash delle copie invariati, nessun CAD originale modificato.
 - Mappa architetturale: 548 file, 7572 relazioni, 258 unità AST, zero errori. Aggiornamento, sette confini di chiamata e direzioni entrata/uscita call/include/reference PASS; HTML dei blocchi offset e revisioni ispezionato.
-- Correzioni pubblicate su `main` nel commit `f75015b0bea3428bf92e6cce03f298cfe0323e46`. La [esecuzione GitHub 41509525775](https://github.com/myungit-Vins-Prototype/Linux_CAD_forFree/actions/runs/41509525775) ha compilato Linux e sta eseguendo i test. Il job macOS è stato annullato da GitHub dopo15minuti senza acquisire un runner, con annotazione «The job was not acquired by Runner of type hosted even after multiple attempts» e avviso di capacità ARM64 insufficiente: nessuna build macOS eseguita. È in preparazione il commit del [fix loft aggiuntivo richiesto](loft-guide-proiettate-2026-11-02.md), che rilancerà entrambi i job sullo stesso codice corretto.
+- Correzioni pubblicate su `main` nel commit `f75015b0bea3428bf92e6cce03f298cfe0323e46`. L’[esecuzione GitHub 41509525775](https://github.com/myungit-Vins-Prototype/Linux_CAD_forFree/actions/runs/41509525775) ha compilato Linux; i test erano in corso al push successivo. Il job macOS è stato annullato da GitHub dopo15minuti senza acquisire un runner, con annotazione «The job was not acquired by Runner of type hosted even after multiple attempts» e avviso di capacità ARM64 insufficiente: nessuna build macOS eseguita. Il push del [fix loft aggiuntivo richiesto](loft-guide-proiettate-2026-11-02.md), commit `ec08b12040a30da3b64cfeeeafa66d4f40606143`, ha annullato automaticamente quel run secondo la concorrenza del workflow. La [nuova CI41513461524](https://github.com/myungit-Vins-Prototype/Linux_CAD_forFree/actions/runs/41513461524) include entrambi i fix ed è **conclusa con successo**: job macOS terminato il2novembre alle20:11:56UTC, Linux alle20:18:51UTC; esito e artifact verificati il3novembre2026.
 
 Nessun test disabilitato, nessuna soglia geometrica allargata, nessun cambiamento alle opzioni del workflow. La certificazione del rendering nativo resta separata dalla CI offscreen.
+
+Checkpoint locale finale con il fix loft:163PASS/1SKIP OpenGL offscreen/0FAIL su164CTest e kernel459/459; dettagli e archivio nel [rapporto loft](loft-guide-proiettate-2026-11-02.md).
+
+
+## Esito remoto conclusivo
+
+[CI41513461524 sul commit ec08b12](https://github.com/myungit-Vins-Prototype/Linux_CAD_forFree/actions/runs/41513461524): **compilazione e test riusciti su entrambi i sistemi**.
+
+| Job | PASS | SKIP | FAIL | Test configurati |
+| --- | ---: | ---: | ---: | ---: |
+| Linux CPU |56|2|0|58|
+| macOS CPU e Metal |60|1|0|61|
+
+Su entrambi passano il catalogo revisioni, il kernel generale459/459 e il nuovo runner loft10/10. Su Linux vengono saltati soltanto GPU broad-phase e overlay OpenGL, su macOS soltanto overlay OpenGL; i test Metal previsti passano. Gli skip sono riportati dai JUnit ufficiali, senza modifiche al workflow o disabilitazioni aggiunte.
+
+[Archivio CI verificato](history/ci-riparazione-2026-11-02-verifica.zip):126file, con log/artifact ufficiali prima e dopo, JUnit, hash e confronti causali; nessun CAD, eseguibile o oggetto. Le verifiche locali/GUI del loft sono nell'archivio distinto collegato al suo rapporto. Il commit conclusivo della documentazione usa `[skip ci]` soltanto dopo questa esecuzione verde: nessun sorgente o configurazione di build cambia rispetto al commit verificato.

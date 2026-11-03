@@ -1,5 +1,7 @@
 # Loft con guide proiettate — 2 novembre 2026
 
+Pubblicato su main nel commit `ec08b12040a30da3b64cfeeeafa66d4f40606143`. [CI Linux/macOS41513461524](https://github.com/myungit-Vins-Prototype/Linux_CAD_forFree/actions/runs/41513461524) **conclusa verde** su entrambe le piattaforme, verificata il3novembre2026. Linux56PASS/2SKIP/0FAIL; macOS/Metal60PASS/1SKIP/0FAIL. Kernel459/459 e regressione loft10/10 PASS su entrambi.
+
 ## Caso e causa
 
 Nel pannello «Loft di superfici» di `SurfaceModellingExample219.prt`, sezioni **Curva 3 di Schizzo 8** e **Curva estratta 3D 1**, guide **Curva estratta 3D 3/5**, G1 al100%, la build precedente falliva con `Loft non riuscito: planarImage: tipo di curva non gestito`. Il difetto è riprodotto anche nel pannello di produzione.
@@ -25,7 +27,7 @@ La curva sorgente conserva la sua rappresentazione implicita. La superficie risu
 - Copia CAD iniziale: lamina valida con **1 faccia/4 bordi**, scarto massimo campionato sulle sezioni `3.18e-14mm` e sulle guide `5.10e-10mm`. Sorgente ancora implicita e invariata, BodyIO PASS; i campioni verificano il risultato e non definiscono la geometria.
 - Pannello con oggetti di produzione finali: **Wayland e XCB PASS** per anteprima, Conferma, Undo/Redo, salvataggio/riapertura con cache e senza cache e rigenerazione. Controlli B-rep e tassellazione PASS; contesti GL validi, GL_NO_ERROR; Intel/Mesa su Wayland e Quadro/NVIDIA su XCB. Catture ispezionate: pannello pronto e superficie confermata. Nessun processo utente chiuso.
 - Anche una copia dell'ultima versione sul disco supera gli stessi controlli funzionali del pannello offscreen. Le prove scrivono soltanto in `/tmp`; piani datum nascosti nelle copie QA per la leggibilità delle catture.
-- Suite completa aggiornata **164 CTest in corso**; il checkpoint CI precedente sul codice prima del loft era162PASS/1SKIP GL/0FAIL e kernel459/459.
+- Suite completa aggiornata: **163PASS/1SKIP OpenGL offscreen/0FAIL su164CTest**,478,48s; kernel generale **459/459**, nuovo runner loft **10/10**. Hash delle tre copie CAD esterne, sorgenti committati e binari testati ricontrollati dopo le esecuzioni. Il checkpoint precedente, prima del loft, era162PASS/1SKIP/0FAIL su163.
 - Mappa aggiornata: **549 file/7598 relazioni/259AST**, zero errori; controllo,11confini e direzioni separate call/include/reference PASS. HTML loft e proiezione ispezionato; snapshot generati ignorati da Git.
 
 ## Documenti di prova e limiti
@@ -34,4 +36,4 @@ Prima copia:26918byte, SHA256 `c0f55b07e446682fe4dcf0f6f982a80bc8ff6b87fabded0dc
 
 Una guida implicita con sezioni realmente non planari resta rifiutata esplicitamente. Una guida complanare con una sezione curva o sovrapposta a una retta non determina un attraversamento univoco nel percorso abilitato. Nessuna certificazione globale di auto-intersezioni dichiarata. Questi limiti sono distinti dal caso reale corretto.
 
-Diagnosi CI, commit e verifiche GitHub sono nel [rapporto CI](ci-riparazione-2026-11-02.md). Archivio dei comandi, hash, log e catture: da consolidare al termine della suite.
+Diagnosi CI, commit e verifiche GitHub sono nel [rapporto CI](ci-riparazione-2026-11-02.md). [Archivio di comandi, hash, log e catture](history/loft-guide-proiettate-2026-11-02-verifica.zip), senza CAD, eseguibili o oggetti. Include il rapporto dell’agente, i confronti prima/dopo e la verifica finale degli oggetti di produzione.
