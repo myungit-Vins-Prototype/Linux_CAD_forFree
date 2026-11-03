@@ -911,8 +911,8 @@ namespace {
 // una modifica o una rigenerazione esplicita sostituisce immediatamente lo
 // snapshot. Il tag rende leggibili anche le cache precedenti (solo B-rep).
 constexpr quint32 kBodyCacheTag = 0x46434332;  // "FCC2"
-// 8: loft ricalcolati con campi di derivate e parametri guida regolari.
-constexpr quint32 kBodyCacheVersion = 8;
+// 9: raccordi ricalcolati sui nodi degli appoggi; derivate laterali corrette.
+constexpr quint32 kBodyCacheVersion = 9;
 constexpr qsizetype kMaxDisplayValues = 200000000;
 
 QByteArray definitionHash(const QByteArray &payload) { return QCryptographicHash::hash(payload, QCryptographicHash::Sha256); }
@@ -1143,9 +1143,14 @@ void applyBodyCache(const QByteArray &compressed, const QByteArray &payload, Doc
     // Gli altri documenti conservano la portabilita' delle cache tra kernel.
     // Le revisioni check-in sono snapshot immutabili: la loro lettura e
     // validazione devono conservare la geometria storica, anche dopo il fix.
-    if (cacheVersion < 8 && state.version.checkinId.isNull()
+    // Anche i raccordi precedenti potevano introdurre curvature spurie
+    // attraversando nodi degli appoggi: rigenerare insieme tutti i derivati.
+    if (state.version.checkinId.isNull()
         && std::any_of(state.extrusions.cbegin(), state.extrusions.cend(),
-            [](const ExtrusionObject &body) { return body.feature == BodyFeature::Loft && !body.suppressed; }))
+            [cacheVersion](const ExtrusionObject &body) {
+                return !body.suppressed && ((cacheVersion < 8 && body.feature == BodyFeature::Loft)
+                    || (cacheVersion < 9 && body.feature == BodyFeature::Blend));
+            }))
         return;
 
     struct CachedBody {

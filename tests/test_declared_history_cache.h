@@ -124,8 +124,8 @@ static void declaredHistoryCacheTest() {
     QDataStream cacheIn(cacheData); cacheIn.setVersion(QDataStream::Qt_6_0);
     QByteArray sourceHash, payloadHash; quint32 tag = 0, version = 0, count = 0;
     cacheIn >> sourceHash >> payloadHash >> tag >> version >> count;
-    require(version == 8 && count == 4 && payloadHash == QCryptographicHash::hash(testDocumentUncompress(bytes,11, payloadSize), QCryptographicHash::Sha256),
-        "cache 8 legata alla stessa definizione");
+    require(version == 9 && count == 4 && payloadHash == QCryptographicHash::hash(testDocumentUncompress(bytes,11, payloadSize), QCryptographicHash::Sha256),
+        "cache 9 legata alla stessa definizione");
     struct Record { bool has = false; QString error; QByteArray body, history; };
     std::vector<Record> records(count);
     SnapshotChunkReader chunks(cacheIn);
@@ -209,7 +209,7 @@ static void declaredHistoryCacheTest() {
         if (corruption == 0) { CadViewport regenerated; regenerated.loadDocument(rejected); verify(regenerated.currentDocument()); }
     }
     DocumentState future;
-    require(loadDocumentFile(fixture(QStringLiteral("cache-futura"), 9, records), future).isEmpty(), "cache futura lascia leggibile la definizione");
+    require(loadDocumentFile(fixture(QStringLiteral("cache-futura"), version + 1, records), future).isEmpty(), "cache futura lascia leggibile la definizione");
     for (const auto &body : future.extrusions) require(!body.cachedGeometry, "cache futura ignorata");
     const QString noCache = directory.filePath(QStringLiteral("senza-cache.prt"));
     require(saveDocumentFile(noCache, original, false).isEmpty(), "salvataggio con sola definizione");

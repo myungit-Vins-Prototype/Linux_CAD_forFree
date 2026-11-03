@@ -93,6 +93,8 @@ add_library(forgekernel STATIC
     fk_blend_model.h
     fk_blend_surface.h
     fk_blend_surface.cpp
+    fk_blend_contact_breaks.h
+    fk_blend_contact_breaks.cpp
     fk_sheet.h
     fk_surface_tools.h
     fk_surface_tools.cpp

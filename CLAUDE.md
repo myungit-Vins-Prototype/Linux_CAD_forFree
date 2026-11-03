@@ -1,7 +1,7 @@
 # CLAUDE.md — memoria operativa ForgeCAD
 
 Aggiornato il **3 novembre 2026**. Leggere questo file e `AGENTS.md` all'avvio; approfondire solo l'area del lavoro
-richiesto. Questa sintesi descrive ciò che resta implementato, i limiti utili e gli ultimi interventi.
+richiesto. Stato implementato, limiti e interventi recenti.
 
 La cronologia precedente è conservata integralmente in [archivio al 2 novembre](docs/history/claude-2026-11-02.md). **Non
 caricare l'archivio per intero nel contesto**: cercare un argomento o una data e leggere solo la voce pertinente. Le sue
@@ -103,6 +103,9 @@ ctest --test-dir forgecad-release --output-on-failure
 
 ## Ultimi interventi — esiti consolidati
 
+Shell1mm F0/F14: app/cache9 e QA G1/G2/Undo/roundtrip PASS; Blend60,Shell18,Offset26,CTest7.
+Loft13/15:6,45M poli,STEP745MB; riduzione aperta. [Prove](docs/svuotamento-f0-f14-2026-11-03.md).
+
 0. **03/11 — Schizzi, riferimenti e loft.** Visualizza/Mostra linee di costruzione persistente:
    app/CTest10/10,rendering e persistenza Wayland/XCB PASS; popup automatizzato Wayland non verificato.
    [Opzione](docs/visualizzazione-costruzione-2026-11-03.md). `4fafbaa` pubblicato: clic transitori senza falso
@@ -113,10 +116,8 @@ ctest --test-dir forgecad-release --output-on-failure
    connessione esistente, fit1e-9 mm e sorgenti invariati. App/runner,CTest8/8,forma11/11,Loft42/42,
    4flussi Wayland/XCB PASS;sezioni4,99e-14 mm. Mappa566/7825/268/check/HTML PASS.
    [Prove](docs/loft-tolleranza-incontri-2026-11-03.md).
-   Confronto prima della scelta: SolidCraft138e347,FreeCAD1.1.4/4fd3bf3,analisi statica.
-   Entrambi usano geometria esterna derivata/fissa; FreeCAD separa ExternalGeo e appoggio.
-   Proposti ID locali stabili, storage esterno distinto, identità dei prodotti e mutazioni comuni;
-   migrazione non applicata, suite esterne non eseguite. [Studio](docs/confronto-riferimenti-solidcraft-freecad-2026-11-03.md).
+   Studio statico SolidCraft138e347/FreeCAD1.1.4: base adeguata; proposti ID locali/prodotti e mutazioni
+   comuni; storage esterno/Binder rinviabili. Nessuna migrazione/suite esterna. [Studio](docs/confronto-riferimenti-solidcraft-freecad-2026-11-03.md).
    `cb35a2e`: sezioni implicite fit1e-9,CTest19/19,Loft42/42,4QA. [Sezioni](docs/loft-sezioni-proiettate-2026-11-03.md).
    `1a8c60d`: picker/diagnostica/specchi;[storia](docs/storyboard-diagnostica-loft-2026-11-03.md).
    `2e4366f`: pannelli/ribbon,tre punti,versoG1/G2;[UI](docs/ui-pannelli-verso-loft-2026-11-03.md).

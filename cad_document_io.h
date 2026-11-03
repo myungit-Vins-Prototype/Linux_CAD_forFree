@@ -19,6 +19,9 @@
 // identificati da indice e ID della feature; la definizione resta formato 49.
 // La cache 7 conserva anche le etichette delle facce emesse dalla costruzione
 // (coperchi e tratti dello schizzo), leggendo ancora le cache precedenti.
+// Le cache 8/9 aggiornano la semantica di loft/raccordi senza cambiare il
+// formato 61: gli snapshot precedenti delle copie di lavoro interessate si
+// rigenerano insieme ai derivati. I check-in conservano la geometria storica.
 // Il formato 50 aggiunge identita' del documento, check-in e base della
 // copia di lavoro; la cache geometrica resta 7. Legge i formati precedenti.
 // Il formato 54 conserva anche i nomi topologici degli appoggi degli schizzi

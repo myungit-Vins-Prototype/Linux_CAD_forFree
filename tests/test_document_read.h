@@ -242,12 +242,53 @@ void documentLoftCacheMigrationTests() {
             "cache precedente senza loft conserva lo snapshot portabile");
 }
 
+void documentBlendCacheMigrationTests() {
+    using namespace ForgeCad;
+    DocumentState source;
+    ExtrusionObject primitive;
+    primitive.feature = BodyFeature::Primitive;
+    primitive.primitive.kind = PrimitiveKind::Box;
+    primitive.forgeBody = std::make_shared<const Kernel::Body>(Kernel::makeBox(Kernel::Frame3{}, 8, 9, 10));
+    ExtrusionObject blend;
+    blend.feature = BodyFeature::Blend;
+    blend.firstBody = 0;
+    blend.distance = 1;
+    // Lo snapshot e' opaco al codec: nessuna dipendenza da un rigeneratore.
+    blend.forgeBody = primitive.forgeBody;
+    source.extrusions = {primitive, blend};
+    QByteArray bytes;
+    require(encodeDocument(source, bytes, true).isEmpty(), "codifica cache raccordo corrente");
+    DocumentState read;
+    require(decodeDocument(bytes, read).isEmpty() && read.extrusions[1].cachedGeometry,
+        "cache corrente del raccordo riutilizzata");
+    require(decodeDocument(documentWithCacheVersion(bytes, 8), read).isEmpty()
+        && !read.extrusions[0].forgeBody && !read.extrusions[1].forgeBody
+        && read.extrusions[1].firstBody == 0 && read.extrusions[1].distance == 1,
+        "cache raccordi precedente scartata insieme ai derivati, definizione conservata");
+    source.version.checkinId = QUuid::createUuid();
+    require(encodeDocument(source, bytes, true).isEmpty(), "codifica check-in raccordo");
+    require(decodeDocument(documentWithCacheVersion(bytes, 8), read).isEmpty()
+        && read.version.checkinId == source.version.checkinId && read.extrusions[1].cachedGeometry
+        && Kernel::writeBodyBinary(*read.extrusions[1].forgeBody) == Kernel::writeBodyBinary(*blend.forgeBody),
+        "il check-in storico conserva il B-rep esatto");
+    source.version.checkinId = {};
+    source.extrusions[1].suppressed = true;
+    require(encodeDocument(source, bytes, true).isEmpty()
+        && decodeDocument(documentWithCacheVersion(bytes, 8), read).isEmpty()
+        && read.extrusions[0].cachedGeometry, "un raccordo soppresso non invalida gli snapshot");
+    source.extrusions.removeLast();
+    require(encodeDocument(source, bytes, true).isEmpty()
+        && decodeDocument(documentWithCacheVersion(bytes, 8), read).isEmpty()
+        && read.extrusions[0].cachedGeometry, "documenti senza raccordi conservano la cache portabile");
+}
+
 void documentReadTests() {
     using namespace ForgeCad;
     using DocumentReadDetail::DataStream;
     documentSketchReferenceNameTests();
     documentBulkMeshReadTests();
     documentLoftCacheMigrationTests();
+    documentBlendCacheMigrationTests();
     const auto rejected = [](const QByteArray &bytes, const DocumentReadLimits &limits = {}) {
         DocumentState destination;
         destination.sketches.append(SketchObject{}); destination.sketches[0].name = "da conservare";

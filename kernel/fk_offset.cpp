@@ -33,6 +33,8 @@ namespace ForgeCad::Kernel {
 
 namespace {
 
+constexpr double kSeamAngularStabilization = 1e-3;
+
 // Derivata di f in t, del secondo ordine: centrale (side 0) o da una parte
 // (side +1 verso t crescenti, -1 verso t decrescenti: dentro un tratto liscio
 // quando dall'altra parte c'e' un angolo o il bordo del dominio).
@@ -271,10 +273,24 @@ std::vector<Vec3> clampedCubic(const std::vector<double> &x, const std::vector<d
 // Poli della Hermite oltre i quali si tiene la C2 (circa un terzo per direzione).
 constexpr std::size_t kDenseOffsetPoles = 200000;
 
-SurfacePtr offsetBSplineC2(const Surface &surface, double d, const Interval &uw, const Interval &vw, double tolerance) {
+// Fuori dal dominio naturale continua lo stesso polinomio terminale.
+// L'estremo naturale non e' quindi una discontinuita' nel dominio esteso:
+// inserirlo creerebbe celle microscopiche per il solo rumore delle SP-curve.
+// I nodi interni reali restano tutti presenti.
+std::vector<double> offsetParameterBreaks(const Surface &surface, const Interval &window, bool u, bool preserveEndSections) {
+    auto breaks = u ? surface.uBreakpoints(window) : surface.vBreakpoints(window);
+    if (preserveEndSections) return breaks;
+    const auto domain = u ? surface.uDomain() : surface.vDomain();
+    breaks.erase(std::remove_if(breaks.begin(), breaks.end(), [&](double t) {
+        return (t == domain.lo || t == domain.hi) && t > window.lo && t < window.hi;
+    }), breaks.end());
+    return breaks;
+}
+
+SurfacePtr offsetBSplineC2(const Surface &surface, double d, const Interval &uw, const Interval &vw, double tolerance, bool preserveEndSections) {
     requireContinuousNormals(static_cast<const BSplineSurface &>(surface), d, uw, vw, tolerance);
-    const std::vector<double> uSegments = sortedBreaks(uw, surface.uBreakpoints(uw), 1e-9 * uw.length());
-    const std::vector<double> vSegments = sortedBreaks(vw, surface.vBreakpoints(vw), 1e-9 * vw.length());
+    const std::vector<double> uSegments = sortedBreaks(uw, offsetParameterBreaks(surface, uw, true, preserveEndSections), 1e-9 * uw.length());
+    const std::vector<double> vSegments = sortedBreaks(vw, offsetParameterBreaks(surface, vw, false, preserveEndSections), 1e-9 * vw.length());
     const auto O = [&](double u, double v) { return surface.point(u, v) + d * surface.normal(u, v); };
     std::vector<double> us = uSegments, vs = vSegments;
     // Nodi della griglia per tratto: [inizio, fine) degli indici in us/vs.
@@ -498,11 +514,11 @@ SurfacePtr offsetBSplineC2(const Surface &surface, double d, const Interval &uw,
 // sono della cella. Nodi interni tripli: C0 garantita, C1 dove O lo e'. Le
 // celle si controllano in parallelo; si dividono solo nelle direzioni in cui
 // sbagliano (lo scarto lungo i bordi della cella dice quale).
-SurfacePtr offsetBSpline(const Surface &surface, double d, const Interval &uw, const Interval &vw, double tolerance) {
+SurfacePtr offsetBSpline(const Surface &surface, double d, const Interval &uw, const Interval &vw, double tolerance, bool preserveEndSections) {
     requireContinuousNormals(static_cast<const BSplineSurface &>(surface), d, uw, vw, tolerance);
     const auto O = [&](double u, double v) { return surface.point(u, v) + d * surface.normal(u, v); };
-    std::vector<double> us = sortedBreaks(uw, surface.uBreakpoints(uw), 1e-9 * uw.length());
-    std::vector<double> vs = sortedBreaks(vw, surface.vBreakpoints(vw), 1e-9 * vw.length());
+    std::vector<double> us = sortedBreaks(uw, offsetParameterBreaks(surface, uw, true, preserveEndSections), 1e-9 * uw.length());
+    std::vector<double> vs = sortedBreaks(vw, offsetParameterBreaks(surface, vw, false, preserveEndSections), 1e-9 * vw.length());
     using Cell = std::array<std::array<Vec3, 4>, 4>;
     const auto cellPoles = [&](std::size_t i, std::size_t j) {
         Cell poles;
@@ -790,8 +806,7 @@ struct SeamSurface { SurfacePtr surface; Vec2 uv; double offset = 0.0; };
 // e' adimensionale e non modifica il budget geometrico passato dal chiamante.
 Vec3 tolerantSeamPoint(Vec3 point, std::vector<SeamSurface> surfaces, double tolerance, double reach) {
     const Vec3 start = point;
-    constexpr double angularStabilization = 1e-3;
-    constexpr double regularization = angularStabilization * angularStabilization;
+    constexpr double regularization = kSeamAngularStabilization * kSeamAngularStabilization;
     for (int iteration = 0; iteration < 40; ++iteration) {
         double system[3][4]{};
         double worst = 0.0;
@@ -1186,7 +1201,7 @@ std::shared_ptr<BSplineCurve<3>> fitCurve(const std::function<Vec3(double)> &f, 
     return std::make_shared<BSplineCurve<3>>(3, std::move(knots), std::move(poles));
 }
 
-SurfacePtr offsetSurface(const Surface &surface, double d, const Interval &uw, const Interval &vw, double tolerance) {
+static SurfacePtr offsetSurfaceImpl(const Surface &surface, double d, const Interval &uw, const Interval &vw, double tolerance, bool preserveEndSections) {
     if (!(std::fabs(d) > 0.0)) throw std::domain_error("offset: distanza nulla");
     SurfacePtr result;
     switch (surface.type()) {
@@ -1263,8 +1278,8 @@ SurfacePtr offsetSurface(const Surface &surface, double d, const Interval &uw, c
     case SurfaceType::BSpline:
         if (!uw.isFinite() || !vw.isFinite()) throw std::domain_error("offset: finestra della B-spline non limitata");
         requireOffsetBelowCurvature(surface, d, uw, vw);
-        result = offsetBSplineC2(surface, d, uw, vw, tolerance);
-        if (!result) result = offsetBSpline(surface, d, uw, vw, tolerance);
+        result = offsetBSplineC2(surface, d, uw, vw, tolerance, preserveEndSections);
+        if (!result) result = offsetBSpline(surface, d, uw, vw, tolerance, preserveEndSections);
         break;
     }
     if (!result) throw std::domain_error("offset: superficie non gestita");
@@ -1285,6 +1300,12 @@ SurfacePtr offsetSurface(const Surface &surface, double d, const Interval &uw, c
             }
     }
     return result;
+}
+
+SurfacePtr offsetSurface(const Surface &surface, double d, const Interval &uw, const Interval &vw, double tolerance) {
+    // Estendi superficie riusa le iso terminali come sezioni di giunzione.
+    // Mantenerle nei fit pubblici; il rifilo cucito ha gia' le sue SP-curve.
+    return offsetSurfaceImpl(surface, d, uw, vw, tolerance, true);
 }
 
 OffsetResult offsetFaces(const Body &input, const std::vector<FaceId> &faces, double distanceValue, double tolerance, bool preserveSeams, double joinAngle) {
@@ -1992,10 +2013,20 @@ OffsetResult offsetJoinedFaces(const Body &input, const std::vector<FaceOffset> 
         };
         const Vec3 delta0 = model.points[std::size_t(raw.start)] - initial(edge.range.lo);
         const Vec3 delta1 = model.points[std::size_t(raw.end)] - initial(edge.range.hi);
+        // Una scelta per l'intero bordo: alternare i solutori durante il
+        // fit introdurrebbe una discontinuita' numerica vicino alla tangenza.
+        bool stabilize = localTolerance > seamTolerance;
+        for (int k = 0; k <= 16 && !stabilize; ++k) {
+            const double t = edge.range.lo + edge.range.length() * k / 16.0;
+            const auto constraints = incident(t, initial(t));
+            const Vec3 a = constraints[0].surface->normal(constraints[0].uv.x(), constraints[0].uv.y());
+            const Vec3 b = constraints[1].surface->normal(constraints[1].uv.x(), constraints[1].uv.y());
+            stabilize = norm(cross(a, b)) < kSeamAngularStabilization;
+        }
         const auto at = [&](double t) {
             const double fraction = (t - edge.range.lo) / edge.range.length();
             const Vec3 seed = initial(t) + (1.0 - fraction) * delta0 + fraction * delta1;
-            return localTolerance > seamTolerance
+            return stabilize
                 ? tolerantSeamPoint(seed, incident(t, seed), localTolerance, seamReach)
                 : seamPoint(seed, incident(t, seed), seamTolerance, seamReach);
         };
@@ -2037,52 +2068,11 @@ OffsetResult offsetJoinedFaces(const Body &input, const std::vector<FaceOffset> 
         detail::RawFace raw;
         raw.sense = face.sense;
         Interval ur{1e300, -1e300}, vr{1e300, -1e300};
-        for (LoopId l : face.loops)
-            for (FinId fin : body.loopFins(l)) {
-                const auto &edge = body.edge(body.fin(fin).edge);
-                for (int k = 0; k <= 16; ++k) {
-                    const auto uv = supportUV(fin, edge.range.lo + edge.range.length() * k / 16.0);
-                    ur.lo = std::min(ur.lo, uv.x());
-                    ur.hi = std::max(ur.hi, uv.x());
-                    vr.lo = std::min(vr.lo, uv.y());
-                    vr.hi = std::max(vr.hi, uv.y());
-                }
-            }
-        // Include nella finestra anche i prolungamenti dei bordi rifilati.
+        // Prima le SP-curve sull'offset esatto, poi il supporto approssimato.
+        // I poli contengono tutto il contorno UV (inviluppo convesso), anche
+        // i prolungamenti che la vecchia finestra campionata non comprendeva.
         const double signedDistance = face.sense ? spec.distance : -spec.distance;
-        for (LoopId l : face.loops)
-            for (FinId finId : body.loopFins(l)) {
-                const auto &fin = body.fin(finId);
-                if (removedEdges.count(fin.edge.index))
-                    continue;
-                const int e = railParent.count(fin.edge.index) ? railRoot(fin.edge.index) : fin.edge.index;
-                const auto &edge = model.edges[std::size_t(rawEdgeOf.at(e))];
-                const auto &original = body.edge(fin.edge);
-                const bool aligned = dot(edge.curve->derivative((edge.range.lo + edge.range.hi) * 0.5),
-                                         original.curve->derivative((original.range.lo + original.range.hi) * 0.5)) >= 0.0;
-                for (int k = 0; k <= 16; ++k) {
-                    const double fraction = k / 16.0;
-                    const double t = edge.range.lo + fraction * edge.range.length();
-                    const double source = original.range.lo + (aligned ? fraction : 1.0 - fraction) * original.range.length();
-                    const auto uv = projectLocal(*support(FaceId{index}), edge.curve->point(t), supportUV(finId, source), signedDistance);
-                    ur.lo = std::min(ur.lo, uv.x());
-                    ur.hi = std::max(ur.hi, uv.x());
-                    vr.lo = std::min(vr.lo, uv.y());
-                    vr.hi = std::max(vr.hi, uv.y());
-                }
-            }
-        const double eu = 0.005 * std::max(ur.length(), 1e-9), ev = 0.005 * std::max(vr.length(), 1e-9);
-        ur.lo -= eu;
-        ur.hi += eu;
-        vr.lo -= ev;
-        vr.hi += ev;
-        if (face.surface->isUPeriodic() && ur.length() >= 0.98 * face.surface->uPeriod())
-            ur = face.surface->uDomain();
-        if (face.surface->isVPeriodic() && vr.length() >= 0.98 * face.surface->vPeriod())
-            vr = face.surface->vDomain();
-        raw.surface = spec.distance == 0.0 ? support(FaceId{index}) : offsetSurface(*face.surface, signedDistance, ur, vr, tolerance);
-        if (spec.distance == 0.0 && raw.surface->type() == SurfaceType::BSpline)
-            raw.surface = std::make_shared<BSplineSurface>(extendBSplineSurface(static_cast<const BSplineSurface &>(*raw.surface), ur, vr));
+        const auto targetSupport = support(FaceId{index});
         for (LoopId l : face.loops) {
             std::vector<detail::RawFin> loop;
             for (FinId finId : body.loopFins(l)) {
@@ -2104,14 +2094,14 @@ OffsetResult offsetJoinedFaces(const Body &input, const std::vector<FaceOffset> 
                 const auto uvAt = [&](double t) {
                     const double fraction = (t - targetEdge.range.lo) / targetEdge.range.length();
                     const double source = sourceEdge.range.lo + (aligned ? fraction : 1.0 - fraction) * sourceEdge.range.length();
-                    const Vec2 uv = projectLocal(*raw.surface, targetEdge.curve->point(t), supportUV(finId, source));
+                    const Vec2 uv = projectLocal(*targetSupport, targetEdge.curve->point(t), supportUV(finId, source), signedDistance);
                     return Vec3(uv.x(), uv.y(), 0);
                 };
                 double rate = 1.0;
                 for (int k = 0; k <= 16; ++k) {
                     const auto uv = uvAt(targetEdge.range.lo + targetEdge.range.length() * k / 16.0);
                     Vec3 jet[4];
-                    raw.surface->evaluate(uv.x(), uv.y(), 1, jet);
+                    seamJet(*targetSupport, signedDistance, uv.x(), uv.y(), jet);
                     rate = std::max({rate, norm(jet[Surface::derivativeIndex(1, 0, 1)]), norm(jet[Surface::derivativeIndex(0, 1, 1)])});
                 }
                 const auto curve = fitCurve(uvAt, targetEdge.range, {}, 0.1 * tolerance / rate);
@@ -2120,11 +2110,9 @@ OffsetResult offsetJoinedFaces(const Body &input, const std::vector<FaceOffset> 
                     poles.emplace_back(p.x(), p.y());
                 auto pc = std::make_shared<BSplineCurve<2>>(curve->degree(), curve->knots(), poles);
                 const double budget = fin.pcurveTolerance + std::max(edgeBudgets.at(e), 10.0 * tolerance);
-                for (int k = 0; k <= 64; ++k) {
-                    const double t = targetEdge.range.lo + targetEdge.range.length() * k / 64.0;
-                    const auto uv = pc->point(t);
-                    if (distance(raw.surface->point(uv.x(), uv.y()), targetEdge.curve->point(t)) > budget)
-                        throw std::domain_error("offset cucito: bordo rifilato fuori tolleranza");
+                for (const Vec2 &uv : pc->poles()) {
+                    ur.lo = std::min(ur.lo, uv.x()); ur.hi = std::max(ur.hi, uv.x());
+                    vr.lo = std::min(vr.lo, uv.y()); vr.hi = std::max(vr.hi, uv.y());
                 }
                 loop.push_back({rawEdgeOf.at(e), sense, pc, budget});
             }
@@ -2133,6 +2121,27 @@ OffsetResult offsetJoinedFaces(const Body &input, const std::vector<FaceOffset> 
         }
         if (raw.loops.empty())
             throw std::domain_error("offset cucito: faccia senza contorno dopo la contrazione");
+        const auto pad = [](Interval &range) {
+            const double margin = 64.0 * kMachineEpsilon * std::max({1.0, std::fabs(range.lo), std::fabs(range.hi)});
+            range.lo -= margin; range.hi += margin;
+        };
+        pad(ur); pad(vr);
+        if (face.surface->isUPeriodic() && ur.length() >= 0.98 * face.surface->uPeriod())
+            ur = face.surface->uDomain();
+        if (face.surface->isVPeriodic() && vr.length() >= 0.98 * face.surface->vPeriod())
+            vr = face.surface->vDomain();
+        raw.surface = spec.distance == 0.0 ? targetSupport : offsetSurfaceImpl(*face.surface, signedDistance, ur, vr, tolerance, false);
+        if (spec.distance == 0.0 && raw.surface->type() == SurfaceType::BSpline)
+            raw.surface = std::make_shared<BSplineSurface>(extendBSplineSurface(static_cast<const BSplineSurface &>(*raw.surface), ur, vr));
+        for (const auto &loop : raw.loops) for (const auto &fin : loop) {
+            const auto &edge = model.edges[std::size_t(fin.edge)];
+            for (int k = 0; k <= 64; ++k) {
+                const double t = edge.range.lo + edge.range.length() * k / 64.0;
+                const auto uv = fin.pcurve->point(t);
+                if (distance(raw.surface->point(uv.x(), uv.y()), edge.curve->point(t)) > fin.pcurveTolerance)
+                    throw std::domain_error("offset cucito: bordo rifilato fuori tolleranza");
+            }
+        }
         model.faces.push_back(std::move(raw));
         sources.push_back(FaceId{index});
     }

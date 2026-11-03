@@ -55,6 +55,7 @@ add_executable(forgekernel_tests
     ${FK_KERNEL_DIR}/tests/test_curve_surface.cpp
     ${FK_KERNEL_DIR}/tests/test_revolve.cpp
     ${FK_KERNEL_DIR}/tests/test_blend.cpp
+    ${FK_KERNEL_DIR}/tests/test_blend_contact_breaks.cpp
     ${FK_KERNEL_DIR}/tests/test_sheet.cpp
     ${FK_KERNEL_DIR}/tests/test_transform.cpp
     ${FK_KERNEL_DIR}/tests/test_draft.cpp

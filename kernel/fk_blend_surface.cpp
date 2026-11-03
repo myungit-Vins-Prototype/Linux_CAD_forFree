@@ -11,6 +11,7 @@
 #include <string>
 
 #include "fk_blend_model.h"
+#include "fk_blend_contact_breaks.h"
 #include "fk_body_check.h"
 #include "fk_bspline.h"
 #include "fk_bspline_surface.h"
@@ -297,6 +298,10 @@ public:
     bool chamfer() const { return chamfer_; }
     double size() const { return size_; }
     bool intrinsicGuide() const { return bool(guide_); }
+    std::vector<double> contactBreaks(const Interval &range, const std::vector<double> &breaks,
+        const std::function<detail::BlendContactSample(double)> &sample) const {
+        return detail::blendContactBreaks(*a_, *b_, range, breaks, sample);
+    }
 
     // Sezione in t a partire dalla stima in s.x (le altre voci si ricalcolano). `left`:
     // derivate dello spigolo da sinistra (nei suoi nodi). Falso se Newton non converge.
@@ -614,7 +619,8 @@ struct RowFit {
 // Raccordo di uno spigolo: le sezioni (in cache) e la superficie.
 class EdgeBlend {
 public:
-    EdgeBlend(const SectionSolver &solver, CurvePtr<3> curve, const Interval &range) : solver_(solver), curve_(std::move(curve)), range_(range) {}
+    EdgeBlend(const SectionSolver &solver, CurvePtr<3> curve, const Interval &range, bool trackContacts)
+        : solver_(solver), curve_(std::move(curve)), range_(range), trackContacts_(trackContacts) {}
 
     void seed(const Section &s) { cache_[s.t] = s; }
     const Section &section(double t, bool left = false) {
@@ -639,6 +645,20 @@ public:
 
     RowFit fit() { return fit(range_); }
     RowFit fit(const Interval &range) {
+        if (!trackContacts_) return fitImpl(range, false);
+        const auto savedCache = cache_, savedLeft = leftCache_;
+        try {
+            auto result = fitImpl(range, true);
+            cache_ = savedCache; leftCache_ = savedLeft;
+            return result;
+        } catch (const std::domain_error &) {
+            // I campioni di continuazione influenzano Newton. Ripartire dallo
+            // stesso stato anche per il percorso precedente del fit.
+            cache_ = savedCache; leftCache_ = savedLeft;
+            return fitImpl(range, false);
+        }
+    }
+    RowFit fitImpl(const Interval &range, bool trackContacts) {
         const Interval range_ = range;
         const bool chamfer = solver_.chamfer();
         const std::vector<int> rows = chamfer ? std::vector<int>{0, 2} : std::vector<int>{0, 1, 2};
@@ -657,6 +677,18 @@ public:
                 continue;
             }
             breaks.erase(breaks.begin() + std::ptrdiff_t(k + 1 == breaks.size() && k > 1 ? k - 1 : k));
+        }
+        std::set<double> contactRoots;
+        if (trackContacts) {
+            const auto roots = solver_.contactBreaks(range_, breaks, [&](double t) {
+                const auto &at = section(t);
+                return detail::BlendContactSample{{at.x[0], at.x[1], at.x[2], at.x[3]},
+                    {at.dx[0], at.dx[1], at.dx[2], at.dx[3]}};
+            });
+            contactRoots.insert(roots.begin(), roots.end());
+            breaks.insert(breaks.end(), roots.begin(), roots.end());
+            std::sort(breaks.begin(), breaks.end());
+            breaks.erase(std::unique(breaks.begin(), breaks.end()), breaks.end());
         }
         const std::set<double> knots(breaks.begin(), breaks.end());
         std::vector<double> start;
@@ -684,8 +716,20 @@ public:
             if (++guard > 40000) throw std::domain_error("blendEdges: spigolo troppo complesso da raccordare");
             const auto [a, b, parentError] = pending.back();
             pending.pop_back();
-            const Section sa = section(a), sb = section(b, knots.count(b) > 0);
             const double h = b - a;
+            const auto endpoint = [&](double t, int side) {
+                Section value = contactRoots.count(t) ? section(t) : section(t, side < 0 && knots.count(t) > 0);
+                if (contactRoots.count(t)) {
+                    // Il punto e' condiviso, le derivate provengono dal tratto
+                    // che si sta interpolando. Estrapolazione al secondo ordine
+                    // senza valutare il Jacobiano sul nodo dell'appoggio.
+                    const double delta = 1e-6 * h;
+                    const auto first = section(t + side * delta), second = section(t + side * 2 * delta);
+                    for (int row = 0; row < 3; ++row) value.drow[row] = 2.0 * first.drow[row] - second.drow[row];
+                }
+                return value;
+            };
+            const Section sa = endpoint(a, 1), sb = endpoint(b, -1);
             double error = 0.0;
             // Alla punta di un raccordo che svanisce il Jacobiano puo' essere
             // singolare solo nell'estremo: la sua stima di rumore non limita
@@ -767,6 +811,7 @@ private:
     const SectionSolver &solver_;
     CurvePtr<3> curve_;
     Interval range_;
+    bool trackContacts_;
     std::map<double, Section> cache_, leftCache_;
 };
 
@@ -1922,7 +1967,7 @@ void checkGuidedCap(const Body &body, FaceId cap, double scale) {
 }
 
 Body blendSurfaceChainsWithGuide(const Body &input, const std::vector<EdgeId> &selected, double size, bool chamfer, const std::vector<ChamferSides> *sides,
-                                 BodyHistory *history, bool useGuide, bool boundaryMode = false, const BlendProfileSpec *profile = nullptr, bool propagate = true) {
+                                 BodyHistory *history, bool useGuide, bool boundaryMode = false, const BlendProfileSpec *profile = nullptr, bool propagate = true, bool trackContacts = true) {
 
     if (history) *history = BodyHistory();
     if (!(size > kLinearResolution)) throw std::domain_error("blendEdges: raggio o distanza non validi");
@@ -2054,7 +2099,7 @@ Body blendSurfaceChainsWithGuide(const Body &input, const std::vector<EdgeId> &s
                     piece.solver->setProfile(local,original.curve,original.range,location.piece.offset,location.total,location.piece.reversed,location.closed);
                 }
             }
-            piece.blend = std::make_unique<EdgeBlend>(*piece.solver, curve, piece.rangeOf());
+            piece.blend = std::make_unique<EdgeBlend>(*piece.solver, curve, piece.rangeOf(), trackContacts);
             return piece;
         };
         // Seme di una sezione in t: continuazione nel raggio dalla stima piana.
@@ -3615,10 +3660,10 @@ Body blendSurfaceChainsWithGuide(const Body &input, const std::vector<EdgeId> &s
 
 }  // namespace
 
-Body blendSurfaceChains(const Body &input, const std::vector<EdgeId> &selected, double size, bool chamfer,
-                        const std::vector<ChamferSides> *sides, BodyHistory *history, const BlendProfileSpec *profile, bool propagate) {
+static Body blendSurfaceChainsAttempts(const Body &input, const std::vector<EdgeId> &selected, double size, bool chamfer,
+                        const std::vector<ChamferSides> *sides, BodyHistory *history, const BlendProfileSpec *profile, bool propagate, bool trackContacts) {
     try {
-        return blendSurfaceChainsWithGuide(input, selected, size, chamfer, sides, history, false, false, profile, propagate);
+        return blendSurfaceChainsWithGuide(input, selected, size, chamfer, sides, history, false, false, profile, propagate, trackContacts);
     } catch (const std::domain_error &) {
         std::exception_ptr failure = std::current_exception();
         bool guided = false, boundary = false;
@@ -3631,16 +3676,36 @@ Body blendSurfaceChains(const Body &input, const std::vector<EdgeId> &selected, 
         }
         if (guided) {
             try {
-                return blendSurfaceChainsWithGuide(input, selected, size, chamfer, sides, history, true, false, profile, propagate);
+                return blendSurfaceChainsWithGuide(input, selected, size, chamfer, sides, history, true, false, profile, propagate, trackContacts);
             } catch (const std::domain_error &) {
                 failure = std::current_exception();
             }
         }
         // Cuciture tangenti e bordi terminali oltre il vecchio trim:
         // tentativo separato, mantenendo invariati i risultati precedenti.
-        if (boundary) return blendSurfaceChainsWithGuide(input, selected, size, chamfer, sides, history, false, true, profile, propagate);
+        if (boundary) return blendSurfaceChainsWithGuide(input, selected, size, chamfer, sides, history, false, true, profile, propagate, trackContacts);
         std::rethrow_exception(failure);
     }
+}
+
+Body blendSurfaceChains(const Body &input, const std::vector<EdgeId> &selected, double size, bool chamfer,
+                        const std::vector<ChamferSides> *sides, BodyHistory *history, const BlendProfileSpec *profile, bool propagate) {
+    if (history) *history = BodyHistory();
+    BodyHistory working;
+    BodyHistory *target = history ? &working : nullptr;
+    if (!chamfer) {
+        try {
+            auto result = blendSurfaceChainsAttempts(input, selected, size, chamfer, sides, target, profile, propagate, true);
+            if (history) *history = std::move(working);
+            return result;
+        } catch (const std::domain_error &) {
+            // Il nuovo fit puo' cambiare anche il rifilo a valle. Ritentare
+            // l'intera operazione precedente, non mescolare pezzi dei tentativi.
+        }
+    }
+    auto result = blendSurfaceChainsAttempts(input, selected, size, chamfer, sides, target, profile, propagate, false);
+    if (history) *history = std::move(working);
+    return result;
 }
 
 }

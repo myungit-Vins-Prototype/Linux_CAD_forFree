@@ -203,7 +203,7 @@ void nativeRevisionTests() {
     require(format==kDocumentFormatVersion && compression==2,"formato nativo corrente");
     const auto cache=testDocumentUncompress(encoded,11+payloadSize);QDataStream cacheIn(cache);
     QByteArray sourceHash,payloadHash;quint32 tag=0,cacheVersion=0;cacheIn>>sourceHash>>payloadHash>>tag>>cacheVersion;
-    require(cacheVersion==8,"cache geometrica corrente 8");
+    require(cacheVersion==9,"cache geometrica corrente 9");
     const auto path=temporary.filePath("lavoro.prt");
     WorkspacePaths workspace;nativeOk(locateDocumentWorkspace(path,workspace));
     require(!QFileInfo::exists(workspace.metadata),"nessun workspace prima del primo salvataggio");
