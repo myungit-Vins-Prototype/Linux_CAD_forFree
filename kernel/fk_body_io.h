@@ -10,7 +10,8 @@
 // geometria esatta (curve e superfici condivise restano condivise), double a
 // 64 bit bit per bit. Serve a salvare nei documenti il risultato delle
 // funzioni costose (booleane tra B-spline, sweep) e a rileggerlo senza
-// ricalcolarlo. Non e' un formato di scambio (per quello fk_step, fk_iges).
+// ricalcolarlo. Dal formato 2 le istanze NURBS conservano base e similitudine,
+// senza espandere i poli; il lettore accetta anche il formato 1. Non e' un formato di scambio (per quello fk_step, fk_iges).
 //
 // I costruttori delle curve normalizzano gli assi (cerchi, ellissi, rette,
 // direzioni delle estrusioni e delle rivoluzioni): su vettori gia' unitari

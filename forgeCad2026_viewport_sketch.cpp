@@ -1597,6 +1597,8 @@ void CadViewport::remapSketchReferences(int sketchIndex, const QVector<int> &seg
     for (ExtrusionObject &body : extrusions_) {
         for (QVector<GeometryRef> *refs : {&body.datum.refs, &body.pattern.refs, &body.surfaceTool.targets, &body.ruledFirst, &body.ruledSecond, &body.planarRefs, &body.loftStartFaces, &body.loftEndFaces, &body.loftSections, &body.loftEdgeGuides})
             for (GeometryRef &ref : *refs) remap(ref);
+        for (auto &condition : body.loftGuideCrossConditions)
+            for (GeometryRef &ref : condition.references) remap(ref);
         remap(body.extentRef);
         remap(body.move.axis);
         remap(body.revolveAxisRef);

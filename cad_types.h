@@ -675,6 +675,13 @@ struct SurfaceToolParameters {
     QVector<SurfacePoleEdit> edits;
     QVector<GeometryRef> targets; // mode0: riferimenti finali; vuoto nei file con il solo extentRef
 };
+// Condizione trasversale lungo una guida, distinta da G0/G1/G2 lungo la curva.
+struct LoftGuideCrossCondition {
+    int mode = 0;  // 0 libero, 1 normale al piano del profilo, 2 tangente alle facce
+    bool reverse = false;
+    QVector<GeometryRef> references;  // un piano opzionale / facce adiacenti esplicite
+};
+
 struct ExtrusionObject {
     // Identita' persistente della feature e del corpo logico a cui appartiene.
     // Gli indici nel vettore restano il formato operativo delle dipendenze;
@@ -749,6 +756,7 @@ struct ExtrusionObject {
     // Vettori vuoti: eredita i valori globali dei documenti precedenti.
     QVector<int> loftGuideContinuities;
     QVector<double> loftGuideInfluences;
+    QVector<LoftGuideCrossCondition> loftGuideCrossConditions;
     int loftGuideContinuity = 1;
     double loftGuideInfluence = 1.0;
     double loftStartInfluence = 1.0;

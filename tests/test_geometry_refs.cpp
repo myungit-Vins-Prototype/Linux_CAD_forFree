@@ -139,6 +139,16 @@ int main() {
         require(storyFeatureLimit(features, story, 2) == 3 && storyFeatureLimit(features, story, 3) == 3,
                 "cursore e contesto schizzo includono entrambi i risultati nello stesso passo");
         require(normalizePatternResultOrder(sketches, features).isEmpty(), "normalizzazione idempotente");
+        ExtrusionObject guided; guided.feature=BodyFeature::Loft;
+        LoftGuideCrossCondition support;support.mode=2;support.references={ref(0),ref(1)};
+        guided.loftGuideCrossConditions={support};
+        auto guidedSnapshot=guided;
+        QVector<int> guideRefs;
+        visitGeometryRefs(guided,Family::LoftGuideSupports,[&](GeometryRef &value,Family,int) {
+            guideRefs.append(value.index);value.index+=2;
+        });
+        require(guideRefs==QVector<int>({0,1})&&guided.loftGuideCrossConditions[0].references[0].index==2
+            &&guidedSnapshot.loftGuideCrossConditions[0].references[0].index==0,"appoggi guide visitati e copia Undo indipendente");
         std::cout << "PASS visitatori riferimenti, famiglie, migrazione, supporto/Pierce e Undo\n";
     } catch (const std::exception &error) {
         std::cerr << error.what() << '\n';

@@ -80,6 +80,7 @@ constexpr char kMagic[4] = {'F', 'C', 'A', 'D'};
 // 57 riferimenti associativi dello schizzo (sorgente persistente e cache).
 // 60 visibilita delle conversioni esplicite, distinta dalle cache automatiche.
 // 61 verso normale indipendente per i profili iniziale/finale del loft.
+// 62 condizioni trasversali alle guide e riferimenti ai loro appoggi.
 constexpr quint16 kVersion = kDocumentFormatVersion;
 constexpr quint8 kZlib = 1;
 constexpr quint8 kZstd = 2;
@@ -552,6 +553,14 @@ void write(QDataStream &out, const ExtrusionObject &body, quint16 version) {
         }
     }
     if (version >= 61) out << body.loftStartReverse << body.loftEndReverse;
+    if (version >= 62) {
+        out << quint32(body.loftGuideCrossConditions.size());
+        for (const auto &condition : body.loftGuideCrossConditions) {
+            out << qint32(condition.mode) << condition.reverse;
+            writeRefs(out, condition.references);
+            for (const auto &ref : condition.references) out << ref.point.name;
+        }
+    }
 }
 
 // `extras` (solo formato 5): i file scritti durante lo sviluppo del formato 5
@@ -896,6 +905,20 @@ bool read(ReadStream &in, ExtrusionObject &body, quint16 version, int extras) {
         if (f.mode==2 && f.paths.isEmpty() && f.radii.size()<2) return false;
     }
     if (version >= 61) in >> body.loftStartReverse >> body.loftEndReverse;
+    if (version >= 62) {
+        quint32 count;
+        const int total = body.loftGuides.size() + body.loftGuidePaths.size() + body.loftEdgeGuides.size();
+        if (!readCount(in, count, 9) || (count != 0 && count != quint32(total))) return false;
+        for (quint32 i = 0; i < count; ++i) {
+            LoftGuideCrossCondition condition; qint32 mode;
+            in >> mode >> condition.reverse;
+            if (mode < 0 || mode > 2 || !readRefs(in, condition.references, version)) return false;
+            condition.mode = mode;
+            if ((mode == 0 && !condition.references.isEmpty()) || (mode == 1 && condition.references.size() > 1)) return false;
+            for (auto &ref : condition.references) in >> ref.point.name;
+            body.loftGuideCrossConditions.append(std::move(condition));
+        }
+    }
     const BodyFeature last = version >= 53 ? BodyFeature::SurfaceTools : version >= 45 ? BodyFeature::SpatialSketch : version >= 44 ? BodyFeature::ExtractedCurve : version >= 39 ? BodyFeature::Thicken : version >= 38 ? BodyFeature::ProjectedCurve : version >= 36 ? BodyFeature::Draft : version >= 35 ? BodyFeature::FillSurface : version >= 27 ? BodyFeature::Thread : version >= 25 ? BodyFeature::Shell : BodyFeature::PlanarSurface;
     if (int(body.feature) < 0 || int(body.feature) > int(last)) return false;
     return in.status() == QDataStream::Ok;
@@ -912,7 +935,7 @@ namespace {
 // snapshot. Il tag rende leggibili anche le cache precedenti (solo B-rep).
 constexpr quint32 kBodyCacheTag = 0x46434332;  // "FCC2"
 // 9: raccordi ricalcolati sui nodi degli appoggi; derivate laterali corrette.
-constexpr quint32 kBodyCacheVersion = 9;
+constexpr quint32 kBodyCacheVersion = 10;
 constexpr qsizetype kMaxDisplayValues = 200000000;
 
 QByteArray definitionHash(const QByteArray &payload) { return QCryptographicHash::hash(payload, QCryptographicHash::Sha256); }
@@ -1145,11 +1168,14 @@ void applyBodyCache(const QByteArray &compressed, const QByteArray &payload, Doc
     // validazione devono conservare la geometria storica, anche dopo il fix.
     // Anche i raccordi precedenti potevano introdurre curvature spurie
     // attraversando nodi degli appoggi: rigenerare insieme tutti i derivati.
+    // Rigenerare anche specchi/ripetizioni precedenti alle istanze condivise,
+    // cosi' la prossima cache non conserva le vecchie griglie duplicate.
     if (state.version.checkinId.isNull()
         && std::any_of(state.extrusions.cbegin(), state.extrusions.cend(),
             [cacheVersion](const ExtrusionObject &body) {
                 return !body.suppressed && ((cacheVersion < 8 && body.feature == BodyFeature::Loft)
-                    || (cacheVersion < 9 && body.feature == BodyFeature::Blend));
+                    || (cacheVersion < 9 && body.feature == BodyFeature::Blend)
+                    || (cacheVersion < 10 && (body.feature == BodyFeature::Pattern || body.feature == BodyFeature::Transform)));
             }))
         return;
 
@@ -1371,16 +1397,23 @@ QString encodeDocument(const DocumentState &state, QByteArray &bytes, bool bodie
     return encodeDocumentVersion(state, bytes, bodies, compressionLevel, kVersion);
 }
 
+QString encodeDocumentDefinition61ForHash(const DocumentState &state, QByteArray &bytes) {
+    for (const auto &body : state.extrusions)
+        if (!body.loftGuideCrossConditions.isEmpty())
+            return QStringLiteral("Le condizioni trasversali delle guide non sono rappresentabili nel formato 61.");
+    return encodeDocumentVersion(state, bytes, false, 9, 61);
+}
+
 QString encodeDocumentDefinition60ForHash(const DocumentState &state, QByteArray &bytes) {
     for (const auto &body : state.extrusions)
-        if (body.loftStartReverse || body.loftEndReverse)
+        if (body.loftStartReverse || body.loftEndReverse || !body.loftGuideCrossConditions.isEmpty())
             return QStringLiteral("Il verso del loft non e' rappresentabile nel formato 60.");
     return encodeDocumentVersion(state, bytes, false, 9, 60);
 }
 
 QString encodeDocumentDefinition53ForHash(const DocumentState &state, QByteArray &bytes) {
     for (const auto &body : state.extrusions)
-        if (body.loftStartReverse || body.loftEndReverse)
+        if (body.loftStartReverse || body.loftEndReverse || !body.loftGuideCrossConditions.isEmpty())
             return QStringLiteral("Il verso del loft non e' rappresentabile nel formato 53.");
     for (const auto &body : state.extrusions)
         if (body.chamferSpec.fillet.mode != 0 || !body.chamferSpec.fillet.propagate)

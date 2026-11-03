@@ -1707,6 +1707,82 @@ public:
             && submitted.loftGuidePaths.size()==1 && submitted.loftEdgeGuides.size()==1,"dialog submits mixed visible order and all guide types");
         require(submitted.loftGuideContinuities==QVector<int>({0,2,2})
             && submitted.loftGuideInfluences==QVector<double>({0.15,0.25,0.85}),"editing and reordering one guide keeps other conditions intact");
+        // Le condizioni trasversali appartengono alla guida, anche quando
+        // ordine e tipi di guida sono mescolati e la feature viene riaperta.
+        auto crossDefinition=ordered;
+        crossDefinition.loftGuideCrossConditions.resize(3);
+        crossDefinition.loftGuideContinuities[0]=1;
+        crossDefinition.loftGuideCrossConditions[0].mode=1;
+        crossDefinition.loftGuideCrossConditions[0].reverse=true;
+        auto crossShape=forgeReferencedLoft(crossDefinition,1,orderedView.sketches_,orderedView.extrusions_,&error);
+        if(!crossShape)throw std::runtime_error(error.toStdString());
+        require(checkBody(*crossShape).empty(),"closed loft with normal guide builds");
+        require(CadViewport::previewKey(crossDefinition,1)!=CadViewport::previewKey(ordered,1),"guide transverse mode invalidates preview");
+        auto reverseCross=crossDefinition;reverseCross.loftGuideCrossConditions[0].reverse=false;
+        require(CadViewport::previewKey(crossDefinition,1)!=CadViewport::previewKey(reverseCross,1),"guide transverse reverse invalidates preview");
+        require(orderedView.updateBody(1,crossDefinition).isEmpty(),"apply transverse normal guide");
+        require(orderedView.extrusions()[1].loftGuideCrossConditions[0].reverse,"guide reverse saved in feature");
+        orderedView.undo();require(orderedView.extrusions()[1].loftGuideCrossConditions.isEmpty(),"Undo guide condition");
+        orderedView.redo();require(orderedView.extrusions()[1].loftGuideCrossConditions[0].reverse,"Redo guide condition");
+        QByteArray crossBytes;DocumentState crossLoaded;
+        require(encodeDocument(orderedView.documentState(),crossBytes,false).isEmpty()&&decodeDocument(crossBytes,crossLoaded).isEmpty()
+            &&crossLoaded.extrusions[1].loftGuideCrossConditions.size()==3
+            &&crossLoaded.extrusions[1].loftGuideCrossConditions[0].reverse,"transverse guide modes and reverse persist");
+        // Fixture UI autonoma con piu' facce: non cambiare la superficie
+        // importata del test storico di riapertura dei riferimenti ai bordi.
+        CadViewport controlsView;controlsView.sketches_=orderedView.sketches_;controlsView.tessellationQuality_=0;
+        auto contactBox=std::make_shared<const Body>(makeBox(Frame3({0,2,0},{0,0,1},{1,0,0}),1,1,3));
+        auto contactSource=guideBody;contactSource.forgeBody=contactBox;controlsView.extrusions_={contactSource};
+        auto controlsDefinition=crossDefinition;
+        for(EdgeId id:contactBox->edges())if(projectPoint(*contactBox->edge(id).curve,{0,2,1.5},contactBox->edge(id).range).distance<1e-8)
+            controlsDefinition.loftEdgeGuides[0].point=edgeReference(*contactBox,id,{0,2,1.5});
+        GeometryRef guideContact;guideContact.kind=5;guideContact.index=0;guideContact.featureId=contactSource.featureId;
+        guideContact.point=faceReference(*contactBox,contactBox->faces().front(),{0,2.5,1.5});guideContact.point.name=QStringLiteral("F:guide-control-test");
+        auto secondGuideContact=guideContact;
+        secondGuideContact.point=faceReference(*contactBox,contactBox->faces()[1],{.5,2.5,1.5});
+        secondGuideContact.point.name=QStringLiteral("F:guide-control-test-2");
+        failure={};ExtrusionObject crossSubmitted;
+        QTimer::singleShot(0,&window,[&] {
+            auto *dialog=window.findChild<QDialog *>("loftDialog");
+            try {
+                auto *guideList=dialog->findChild<QListWidget *>("loftGuides");guideList->setCurrentRow(2);
+                auto *crossMode=dialog->findChild<QComboBox *>("loftGuideCrossMode");
+                auto *reverse=dialog->findChild<QPushButton *>("loftGuideCrossReverse");
+                require(crossMode&&reverse&&crossMode->currentIndex()==1&&reverse->isChecked(),"selected guide restores transverse mode and reverse");
+                const auto normalScreenshot=qEnvironmentVariable("FORGECAD_GUIDE_CONTROLS_SCREENSHOT");
+                if(!normalScreenshot.isEmpty()) {
+                    if(auto *scroll=dialog->findChild<QScrollArea *>("functionDialogScroll"))scroll->ensureWidgetVisible(dialog->findChild<QPushButton *>("loftGuideCrossPick"));
+                    QApplication::processEvents();require(dialog->grab().save(normalScreenshot+QStringLiteral("-normal.png")),"normal guide controls screenshot");
+                }
+                crossMode->setCurrentIndex(2);require(!reverse->isEnabled(),"normal reversal only applies to normal mode");
+                dialog->findChild<QPushButton *>("loftGuideCrossPick")->click();
+                auto callback=controlsView.refPickFinished_;callback(true,guideContact);
+                auto *supportLabel=dialog->findChild<QLabel *>("loftGuideCrossReferences");
+                require(supportLabel->text().contains("Superficie guida"),"adjacent face selection displayed");
+                callback=controlsView.refPickFinished_;callback(true,secondGuideContact);
+                QApplication::processEvents();
+                require(supportLabel->text().count("Superficie guida")==2,"multiple faces of same body remain independently selected");
+                require(supportLabel->height()>=supportLabel->heightForWidth(supportLabel->width())
+                    &&supportLabel->height()>=2*supportLabel->fontMetrics().lineSpacing(),"multiline adjacent face names receive full height");
+                callback=controlsView.refPickFinished_;callback(false,{});
+                dialog->findChild<QPushButton *>("loftGuideUp")->click();
+                require(crossMode->currentIndex()==2,"transverse controls follow moved guide");
+                const auto screenshot=qEnvironmentVariable("FORGECAD_GUIDE_CONTROLS_SCREENSHOT");
+                if(!screenshot.isEmpty()) {
+                    if(auto *scroll=dialog->findChild<QScrollArea *>("functionDialogScroll"))scroll->ensureWidgetVisible(dialog->findChild<QPushButton *>("loftGuideCrossPick"));
+                    QApplication::processEvents();require(dialog->grab().save(screenshot),"guide controls screenshot");
+                }
+                dialog->findChild<QDialogButtonBox *>()->button(QDialogButtonBox::Ok)->click();
+            }catch(...){failure=std::current_exception();if(dialog)dialog->reject();}
+        });
+        loftDialog(&window,&controlsView,QStringLiteral("Condizioni guida"),1,controlsDefinition,[&](const ExtrusionObject &d){crossSubmitted=d;return QString();});
+        if(failure)std::rethrow_exception(failure);
+        require(crossSubmitted.loftGuideCrossConditions[0].mode==2&&crossSubmitted.loftGuideCrossConditions[0].references.size()==2
+            &&crossSubmitted.loftGuideCrossConditions[0].references.front().featureId==guideContact.featureId,"face references remain attached to reordered guide");
+        DocumentState supportState;supportState.extrusions={crossSubmitted};supportState.sketches=orderedView.sketches_;
+        require(encodeDocument(supportState,crossBytes,false).isEmpty()&&decodeDocument(crossBytes,crossLoaded).isEmpty()
+            &&crossLoaded.extrusions[0].loftGuideCrossConditions[0].references.front().point.name==guideContact.point.name,
+            "adjacent guide face preserves topological name in codec");
         std::cout<<"PASS exact spatial edge loft, guides, tangency, persistence, dependencies and UI selection"<<std::endl;
     }
     static void individualFillControls() {

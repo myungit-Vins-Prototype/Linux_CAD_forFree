@@ -111,7 +111,7 @@ QVector<int> bodyOperands(const ExtrusionObject &body) {
     case BodyFeature::FillSurface: {
         QVector<int> bodies;
         appendRefs(bodies, {Family::SurfaceTargets, Family::RuledFirst, Family::RuledSecond, Family::Planar,
-                            Family::LoftStartFaces, Family::LoftEndFaces, Family::LoftSections, Family::LoftEdgeGuides});
+                            Family::LoftStartFaces, Family::LoftEndFaces, Family::LoftSections, Family::LoftEdgeGuides, Family::LoftGuideSupports});
         return bodies;
     }
     default: return {};
@@ -174,7 +174,7 @@ QVector<int> sketchesOf(const ExtrusionObject &body) {
     }
     case BodyFeature::Loft: {
         QVector<int> result = body.loftSections.isEmpty() ? body.loftSketches : QVector<int>{};
-        appendRefs(result, {Family::LoftSections, Family::LoftEdgeGuides});
+        appendRefs(result, {Family::LoftSections, Family::LoftEdgeGuides, Family::LoftGuideSupports});
         for (int guide : body.loftGuides)
             if (!result.contains(guide)) result.append(guide);
         for (const SketchPathRef &guide : body.loftGuidePaths)
@@ -196,7 +196,7 @@ QVector<int> sketchesOf(const ExtrusionObject &body) {
         if (body.feature == BodyFeature::PlanarSurface && body.planarRefs.isEmpty()) sketches.append(body.sketchIndex);
         if(body.feature==BodyFeature::SurfaceTools&&body.surfaceTool.mode==0&&body.surfaceTool.targets.isEmpty())appendRefs(sketches, {Family::Extent});
         appendRefs(sketches, {Family::SurfaceTargets, Family::RuledFirst, Family::RuledSecond, Family::Planar,
-                             Family::LoftStartFaces, Family::LoftEndFaces, Family::LoftSections, Family::LoftEdgeGuides});
+                             Family::LoftStartFaces, Family::LoftEndFaces, Family::LoftSections, Family::LoftEdgeGuides, Family::LoftGuideSupports});
         return sketches;
     }
     default: return {};

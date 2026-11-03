@@ -123,6 +123,11 @@ QString FeaturePreviewBuilder::previewKey(const ExtrusionObject &d, int index) {
     for (const GeometryRef &g : d.loftSections) ref(g);
     parts << QStringLiteral("LG");
     for (const GeometryRef &g : d.loftEdgeGuides) ref(g);
+    parts << QStringLiteral("GCS");
+    for (const auto &condition : d.loftGuideCrossConditions) {
+        parts << QString::number(condition.mode) << QString::number(condition.reverse) << QString::number(condition.references.size());
+        for (const auto &support : condition.references) { ref(support); parts << support.point.name; }
+    }
     parts << QStringLiteral("TF1");
     for (const GeometryRef &g : d.loftStartFaces) ref(g);
     parts << QStringLiteral("TF2");

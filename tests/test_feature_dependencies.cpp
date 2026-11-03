@@ -26,6 +26,11 @@ int main() {
         loft.loftGuidePaths = {{4, {0}, {}}, {6, {}, {0}}};
         require(bodyOperands(loft) == QVector<int>({2, 5}), "loft: dipendenze da bordi/curve senza duplicati");
         require(sketchesOf(loft) == QVector<int>({3, 4, 6}), "loft: sezioni e guide complete/parziali senza duplicati");
+        LoftGuideCrossCondition guideContact;guideContact.mode=2;guideContact.references={reference(5,2),reference(5,7)};
+        loft.loftGuideCrossConditions={guideContact};
+        require(bodyOperands(loft)==QVector<int>({2,5,7})&&hiddenOperands(loft).isEmpty(),
+            "loft: facce adiacenti alle guide come dipendenze, senza nascondere i corpi sorgenti");
+        loft.loftGuideCrossConditions.clear();
         loft.loftSections.clear();
         loft.loftSketches = {1, 2};
         require(sketchesOf(loft) == QVector<int>({1, 2, 3, 4, 6}), "loft: sezioni dei documenti precedenti conservate");

@@ -127,6 +127,8 @@ add_library(forgekernel STATIC
     fk_sweep.cpp
     fk_loft.h
     fk_loft.cpp
+    fk_loft_guide_constraints.h
+    fk_loft_guide_constraints.cpp
     fk_loft_profiles.h
     fk_loft_profiles.cpp
     fk_loft_sections.cpp
@@ -164,6 +166,13 @@ set_target_properties(forgekernel PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF
 if(FORGECAD_BUILD_OCCT_TESTS)
     add_subdirectory(occt_tests)
 endif()
+
+# Istanze esatte NURBS, specchi e persistenza senza duplicare i poli.
+add_executable(forgekernel_surface_instances_tests tests/fk_test_main.cpp tests/test_surface_instances.cpp)
+target_link_libraries(forgekernel_surface_instances_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_surface_instances_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_surface_instances_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_surface_instances_tests COMMAND forgekernel_surface_instances_tests)
 
 # Robustezza dei formati propri, indipendente dalla presenza di OCCT.
 add_executable(forgekernel_exchange_robustness_tests
@@ -285,3 +294,11 @@ target_compile_options(forgekernel_loft_projected_section_tests PRIVATE -Wall -W
 set_target_properties(forgekernel_loft_projected_section_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
 add_test(NAME forgekernel_loft_projected_section_tests COMMAND forgekernel_loft_projected_section_tests)
 set_tests_properties(forgekernel_loft_projected_section_tests PROPERTIES TIMEOUT 120)
+
+# Condizioni trasversali alle guide: direzioni, G1, forma e sezioni esatte.
+add_executable(forgekernel_loft_guide_constraint_tests tests/test_loft_guide_constraints.cpp)
+target_link_libraries(forgekernel_loft_guide_constraint_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_loft_guide_constraint_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_loft_guide_constraint_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_loft_guide_constraint_tests COMMAND forgekernel_loft_guide_constraint_tests)
+set_tests_properties(forgekernel_loft_guide_constraint_tests PROPERTIES TIMEOUT 120)

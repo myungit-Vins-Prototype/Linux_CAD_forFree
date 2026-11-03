@@ -1711,13 +1711,56 @@ ForgeBody forgeReferencedLoft(const ExtrusionObject &d, int owner, const QVector
     const auto conditionOrder = loftGuideSequence(d);
     const int guideCount = d.loftGuides.size() + d.loftGuidePaths.size() + d.loftEdgeGuides.size();
     if (conditionOrder.size() != guideCount || (!d.loftGuideContinuities.isEmpty() && d.loftGuideContinuities.size() != guideCount)
-        || (!d.loftGuideInfluences.isEmpty() && d.loftGuideInfluences.size() != guideCount)) {
+        || (!d.loftGuideInfluences.isEmpty() && d.loftGuideInfluences.size() != guideCount)
+        || (!d.loftGuideCrossConditions.isEmpty() && d.loftGuideCrossConditions.size() != guideCount)) {
         setError(error, QStringLiteral("Le condizioni o l'ordine delle guide non sono validi.")); return nullptr;
     }
     std::vector<LoftGuideCondition> guideConditions;
-    for (int index : conditionOrder)
-        guideConditions.push_back({d.loftGuideContinuities.isEmpty() ? d.loftGuideContinuity : d.loftGuideContinuities[index],
-                                   d.loftGuideInfluences.isEmpty() ? d.loftGuideInfluence : d.loftGuideInfluences[index]});
+    for (int index : conditionOrder) {
+        LoftGuideCondition condition;
+        condition.continuity = d.loftGuideContinuities.isEmpty() ? d.loftGuideContinuity : d.loftGuideContinuities[index];
+        condition.influence = d.loftGuideInfluences.isEmpty() ? d.loftGuideInfluence : d.loftGuideInfluences[index];
+        const auto control = d.loftGuideCrossConditions.value(index);
+        condition.crossMode = control.mode; condition.reverse = control.reverse;
+        if (control.mode == 1) {
+            if (control.references.isEmpty()) {
+                int sketch = index < d.loftGuides.size() ? d.loftGuides[index]
+                    : index < d.loftGuides.size() + d.loftGuidePaths.size() ? d.loftGuidePaths[index - d.loftGuides.size()].sketch : -1;
+                if (sketch < 0 && index >= d.loftGuides.size() + d.loftGuidePaths.size()) {
+                    const auto &ref = d.loftEdgeGuides[index - d.loftGuides.size() - d.loftGuidePaths.size()];
+                    if (ref.kind == 7) sketch = ref.index;
+                }
+                const auto *source = getSketch(sketch);
+                if (!source) {
+                    setError(error, QStringLiteral("Guida %1: scegli il piano del profilo per la curva 3D. [[loft-guide=%2]]")
+                        .arg(conditionOrder.indexOf(index) + 1).arg(conditionOrder.indexOf(index))); return nullptr;
+                }
+                Frame3 frame; double height; forgeSketchFrame(*source, 0.0, frame, height);
+                condition.profileNormal = frame.zDir();
+            } else {
+                ResolvedRef plane; QString reason;
+                if (control.references.size() != 1 || !resolveGeometryRef(control.references.front(), owner, sketches, bodies, plane, &reason) || !plane.hasPlane) {
+                    setError(error, QStringLiteral("Guida %1: il riferimento deve essere un piano valido. %2")
+                        .arg(conditionOrder.indexOf(index) + 1).arg(reason)); return nullptr;
+                }
+                condition.profileNormal = plane.direction;
+            }
+        } else if (control.mode == 2) {
+            QVector<QPair<ForgeBody, EdgePoint>> contacts;
+            for (const auto &ref : control.references) {
+                int body = ref.index;
+                if (ref.featureId) { body = -1; for (int j = 0; j < owner && j < bodies.size(); ++j)
+                    if (bodies[j].featureId == ref.featureId) { body = j; break; } }
+                if (ref.kind != 5 || body < 0 || body >= owner || body >= bodies.size() || !bodies[body].forgeBody) {
+                    setError(error, QStringLiteral("Una faccia adiacente alla guida non esiste piu'.")); return nullptr;
+                }
+                contacts.append({bodies[body].forgeBody, ref.point});
+            }
+            condition.faces = loftContacts(contacts);
+            if (condition.faces.empty()) { setError(error, QStringLiteral("Scegli le facce adiacenti alla guida.")); return nullptr; }
+        } else if (control.mode != 0) { setError(error, QStringLiteral("Condizione trasversale della guida non valida.")); return nullptr; }
+        guideConditions.push_back(std::move(condition));
+    }
     if (!d.loftGuideOrder.isEmpty()) {
         const auto order = loftGuideSequence(d);
         if (order.size() != guides.size() + int(edgeGuides.size())) {

@@ -89,6 +89,8 @@ std::string text(const std::string &utf8) {
 
 class StepWriter {
 public:
+    std::map<const BSplineSurface *, int> splineSurfaces;
+
     int add(const std::string &entity) {
         const int id = ++next_;
         data_ << '#' << id << '=' << entity << ";\n";
@@ -267,6 +269,27 @@ int writeSurface(StepWriter &w, const Surface &surface, const Interval &uRange, 
     }
     case SurfaceType::BSpline: {
         const auto &b = static_cast<const BSplineSurface &>(surface);
+        const auto found = w.splineSurfaces.find(&b);
+        if (found != w.splineSurfaces.end()) return found->second;
+        double replicaScale = 1;
+        const auto &placement = b.placement();
+        const bool portableReplica = b.basis() && placement.isSimilarity(&replicaScale) && replicaScale == 1.0 &&
+            dot(cross(placement.applyToVector({1,0,0}), placement.applyToVector({0,1,0})), placement.applyToVector({0,0,1})) > 0;
+        // Alcuni lettori diffusi (OCCT 7.x incluso) ignorano axis2 e scala
+        // nelle repliche, trasformando uno specchio in una rotazione. Per
+        // questi casi scrivere i poli esatti in coordinate mondo.
+        if (portableReplica) {
+            bool ignored = false;
+            const int base = writeSurface(w, *b.basis(), b.uDomain(), b.vDomain(), ignored);
+            const auto &t = b.placement();
+            double scale = 1;
+            if (!t.isSimilarity(&scale)) throw std::domain_error("STEP: replica non uniforme");
+            const int x = w.direction(t.applyToVector({1, 0, 0})), y = w.direction(t.applyToVector({0, 1, 0})),
+                      z = w.direction(t.applyToVector({0, 0, 1})), origin = w.point(t.translationPart());
+            const int transform = w.add("CARTESIAN_TRANSFORMATION_OPERATOR_3D('','',''," + StepWriter::ref(x) + "," +
+                StepWriter::ref(y) + "," + StepWriter::ref(origin) + "," + real(scale) + "," + StepWriter::ref(z) + ")");
+            return w.splineSurfaces[&b] = w.add("SURFACE_REPLICA(''," + StepWriter::ref(base) + "," + StepWriter::ref(transform) + ")");
+        }
         std::string rows = "(";
         for (int i = 0; i < b.uPoleCount(); ++i) {
             std::vector<int> row;
@@ -280,7 +303,7 @@ int writeSurface(StepWriter &w, const Surface &surface, const Interval &uRange, 
         compress(b.vKnots(), vk, vm);
         const std::string common = std::to_string(b.uDegree()) + "," + std::to_string(b.vDegree()) + "," + rows + ",.UNSPECIFIED.,.F.,.F.,.U.";
         const std::string knots = intList(um) + "," + intList(vm) + "," + realList(uk) + "," + realList(vk) + ",.UNSPECIFIED.";
-        if (!b.isRational()) return w.add("B_SPLINE_SURFACE_WITH_KNOTS(''," + common + "," + knots + ")");
+        if (!b.isRational()) return w.splineSurfaces[&b] = w.add("B_SPLINE_SURFACE_WITH_KNOTS(''," + common + "," + knots + ")");
         std::string weights = "(";
         for (int i = 0; i < b.uPoleCount(); ++i) {
             std::vector<double> row;
@@ -288,7 +311,7 @@ int writeSurface(StepWriter &w, const Surface &surface, const Interval &uRange, 
             weights += (i ? "," : "") + realList(row);
         }
         weights += ")";
-        return w.add("(BOUNDED_SURFACE() B_SPLINE_SURFACE(" + common + ") B_SPLINE_SURFACE_WITH_KNOTS(" + knots +
+        return w.splineSurfaces[&b] = w.add("(BOUNDED_SURFACE() B_SPLINE_SURFACE(" + common + ") B_SPLINE_SURFACE_WITH_KNOTS(" + knots +
                      ") GEOMETRIC_REPRESENTATION_ITEM() RATIONAL_B_SPLINE_SURFACE(" + weights + ") REPRESENTATION_ITEM('') SURFACE())");
     }
     }
@@ -1015,12 +1038,47 @@ private:
         return std::make_shared<BSplineSurface>(ud, vd, splineKnots(uk, um, nu, ud), splineKnots(vk, vm, nv, vd), nu, nv, std::move(poles), std::move(weights));
     }
 
+    Transform3 replicaTransform(int id) const {
+        const auto &e = f_.at(id);
+        if (e.type() != "CARTESIAN_TRANSFORMATION_OPERATOR_3D")
+            throw std::domain_error("STEP: trasformazione di replica 3D attesa");
+        const auto &a = e.args();
+        // I protocolli STEP AP203/214/242 includono anche name/description
+        // di functionally_defined_transformation prima del nome geometrico.
+        const std::size_t offset = a.size() == 8 ? 2 : 0;
+        if (a.size() != 6 && a.size() != 8) throw std::domain_error("STEP: attributi di replica 3D non validi");
+        const auto axis = [&](std::size_t k, Vec3 fallback) {
+            return a.at(k + offset).kind == Param::Ref ? direction(reference(a[k + offset])) : fallback;
+        };
+        // ISO 10303-42 base_axis: prima Z, proiezione di X, poi Y col
+        // verso di axis2. Non forzare un sistema destrorso: perderebbe lo specchio.
+        const Vec3 z = axis(5, {0, 0, 1});
+        Vec3 x = axis(1, std::fabs(z.x()) < .9 ? Vec3(1, 0, 0) : Vec3(0, 1, 0));
+        x -= dot(x, z) * z;
+        if (!(norm(x) > 1e-14)) throw std::domain_error("STEP: assi di replica paralleli");
+        x = normalized(x);
+        Vec3 y = normalized(cross(z, x));
+        if (a.at(2 + offset).kind == Param::Ref && dot(y, direction(reference(a[2 + offset]))) < 0) y = -y;
+        const double scale = a.at(4 + offset).kind == Param::Null ? 1 : number(a[4 + offset]);
+        if (!(scale > 0 && std::isfinite(scale))) throw std::domain_error("STEP: scala di replica non valida");
+        double m[3][3];
+        for (int i = 0; i < 3; ++i) { m[i][0] = scale * x[i]; m[i][1] = scale * y[i]; m[i][2] = scale * z[i]; }
+        return Transform3::fromParts(m, point(reference(a.at(3 + offset))));
+    }
+
     SurfacePtr makeSurface(int id, bool &flipped) const {
         const Entity &e = f_.at(id);
         const std::string &t = e.type();
         const std::vector<Param> &a = e.args();
         if (e.is("B_SPLINE_SURFACE") || t.rfind("B_SPLINE_SURFACE", 0) == 0 || t == "BEZIER_SURFACE" || t == "UNIFORM_SURFACE" || t == "QUASI_UNIFORM_SURFACE")
             return bsplineSurface(e);
+        if (t == "SURFACE_REPLICA") {
+            const SurfacePtr base = surface(reference(a.at(1)), flipped);
+            if (base->type() != SurfaceType::BSpline)
+                throw std::domain_error("STEP: replica di superficie non B-spline (non gestita)");
+            return std::make_shared<BSplineSurface>(std::static_pointer_cast<const BSplineSurface>(base),
+                                                    replicaTransform(reference(a.at(2))));
+        }
         if (t == "PLANE") return std::make_shared<Plane>(placement(reference(a.at(1))));
         if (t == "CYLINDRICAL_SURFACE") return std::make_shared<CylindricalSurface>(placement(reference(a.at(1))), number(a.at(2)) * length_);
         if (t == "CONICAL_SURFACE")

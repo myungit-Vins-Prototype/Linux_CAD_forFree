@@ -1,6 +1,6 @@
 # CLAUDE.md — memoria operativa ForgeCAD
 
-Aggiornato il **3 novembre 2026**. Leggere questo file e `AGENTS.md` all'avvio; approfondire solo l'area del lavoro
+Aggiornato il **4 novembre 2026**. Leggere questo file e `AGENTS.md` all'avvio; approfondire solo l'area del lavoro
 richiesto. Stato implementato, limiti e interventi recenti.
 
 La cronologia precedente è conservata integralmente in [archivio al 2 novembre](docs/history/claude-2026-11-02.md). **Non
@@ -44,7 +44,7 @@ storico della finestra principale. `pdfReader.c`, `pdfView.c` e vecchi binari PD
 | Schizzi e vincoli | `cad_types.h`, `cad_constraints*`, `cad_sketch_refs*`, `cad_expression*`: schizzi 2D/3D, asole/punti, quote e solver, snap e riferimenti associativi a piani/assi/bordi/curve. Cache automatiche nascoste; conversioni esplicite conservate; costruzione fuori modifica opzionale. Le entità locali visibili hanno priorità nella quotatura. |
 | Solidi e superfici | `cad_forge*`, `kernel/fk_*`: primitive, estrusione (anche fino al prossimo corpo), rivoluzione, sweep/loft, booleane, sformo, svuotamento/spessore, filettatura, cucitura, taglio/estensione, reti U/V e poli NURBS. Estendi apre il pannello prima della scelta dei bordi. Raccordi costanti, conici, variabili e tra facce; percorsi tangenti con leggi indipendenti e maniglie R. |
 | Storia e genealogia | `cad_history*`, `cad_element_names*`, viewport e storyboard: schizzi/piani come passi autonomi, riordino, rollback, soppressione, riparazione e Undo/Redo. Specchi/ripetizioni sono un evento con corpi separati ed esclusioni; conservano identità e dipendenze. |
-| Documenti e revisioni | `cad_document_io*`, `cad_document_read*`, `cad_native_revisions*`, `cad_workspace*`: `.prt` con firma FCAD, formato corrente 61 (versi G1/G2); Zstandard dal 56 e lettura legacy zlib. Definizione e cache B-rep/mesh distinte, salvataggio atomico, recupero, consultazione concorrente e lock della modifica. Check-out/check-in, ripristino, rilascio coordinato e recupero catalogo. |
+| Documenti e revisioni | `cad_document_io*`, `cad_document_read*`, `cad_native_revisions*`, `cad_workspace*`: `.prt` con firma FCAD, formato corrente 62 (versi G1/G2 e condizioni guida); Zstandard dal 56 e lettura legacy zlib. Definizione e cache B-rep/mesh distinte, salvataggio atomico, recupero, consultazione concorrente e lock della modifica. Check-out/check-in, ripristino, rilascio coordinato e recupero catalogo. |
 | Tavole 2D | `cad_drawing_*`: `.drw`, viste proiettate/ausiliarie, sezioni composte, dettagli e viste interrotte, più fogli, scale foglio/vista, quote e tolleranze, datum/GD&T, badge persistenti, rugosità Ra/Rz e PDF vettoriale. Agganci alle geometrie esatte e nomi genealogici; portabilità senza cache del modello nei casi migrabili. |
 | Scambio e analisi | `kernel/fk_step*`, `fk_iges*`, `fk_exchange*`, `fk_mass*`: STEP/IGES propri, esportazione STL/OBJ, misure/massa, zebra e curvatura. Parsing numerico indipendente dal locale, controlli di cicli/profondità e dimensioni dei dati importati. |
 
@@ -103,8 +103,15 @@ ctest --test-dir forgecad-release --output-on-failure
 
 ## Ultimi interventi — esiti consolidati
 
-Shell1mm F0/F14: f20ee09 locale; push fermato da auto-review. App/cache9,QA G1/G2/roundtrip PASS.
-Blend60,Shell18,Offset26,CTest7; Loft13/15:6,45M poli,STEP745MB, riduzione aperta. [Prove](docs/svuotamento-f0-f14-2026-11-03.md).
+**04/11 — Specchi e guide.** Locale: istanze NURBS condivise, B-rep2/lettura1, cache10.
+Prima shell148,4→74,7MB; corrente26feature190,5→116,9MB; originale intatto, identita' conservate.
+F0/F14 aperte, spessore662campioni errore5,834e-8mm; preview/OK/Undo/Redo/cache/no-cache PASS.
+App/runner aggiornati; istanze8,BSpline7,Transform10,BodyIO2,STEP22,Loft42,Blend60,Shell18 PASS.
+Con shell cache1,083GB oltre1GiB: rigenera; STEP specchi espliciti per compatibilita', griglie loft ancora grandi.
+[Complessita'](docs/riduzione-complessita-specchi-2026-11-03.md). Guide: normale invertibile/tangente a facce,
+appoggi multipli, campo C2, sezioni/jet conservati; formato62,10CTest e XCB/Wayland PASS.
+[Guide](docs/loft-controlli-guide-2026-11-04.md). Shell precedente f20ee09 pubblicato:
+[prove](docs/svuotamento-f0-f14-2026-11-03.md). Nessun nuovo push; dettagli e limiti nei rapporti.
 
 0. **03/11 — Schizzi, riferimenti e loft.** Visualizza/Mostra linee di costruzione persistente:
    app/CTest10/10,rendering e persistenza Wayland/XCB PASS; popup automatizzato Wayland non verificato.
@@ -155,16 +162,10 @@ Blend60,Shell18,Offset26,CTest7; Loft13/15:6,45M poli,STEP745MB, riduzione apert
    Corpo 1/4 di Flacone3 corretta nell'app in entrambi gli ordini. App compilata, regressioni e QA XCB/Wayland PASS; storia,
    persistenza e genealogia verificate. Incluse anche correzioni a raccordi e scambio STEP/IGES, preservando spline e
    intervalli esatti.
-7. **31/10 — Raccordi avanzati e pannelli (`a485349`).** Quattro modalità Raggio, coniche con parametro ρ, variabili con 2–64
-   stazioni, percorsi tangenti multipli con tabelle indipendenti e maniglie trascinabili. Pannelli compatti agganciabili,
-   immagini adattate al tema, riferimenti schizzo associativi diretti. Build, regressioni e QA native documentate; limiti
-   geometrici specifici conservati nei rapporti/archivio.
-8. **30/10 — Tavole e portabilità.** Snap delle quote nel primo posizionamento e trascinamento, allineamento H/V, punte
-   coincidenti, Alt/Esc e Undo unico; rugosità strutturate Ra/Rz, sezioni composte con mouse/snap. Portabilità CT0578 migrata
-   con nomi/testimoni esatti: 48/48 quote, asse e nota verificati dopo salvataggio senza cache e trasferimento. Interventi
-   implementati e collaudati, con limiti di migrazione indicati sopra.
-9. **30/10 — Unificazione su main e CI.** Ramo solver/GPU integrato, fallback CPU conservato. Storico: Linux47PASS/2SKIP,
-   macOS51PASS/1SKIP, CUDA7/7, Metal CI PASS; non verifiche dell'ultimo HEAD. Dettagli nel checkpoint e `docs/ci.md`.
+7. **31/10–30/10 — Raccordi, tavole e unificazione.** Modalita' avanzate e pannelli compatti,
+   quote/rugosita'/sezioni e migrazione CT0578 (48/48 quote), main unificato con GPU facoltative.
+   Esiti storici e limiti nel [checkpoint](docs/history/claude-checkpoint-prima-complessita-2026-11-03.md);
+   non certificano l'ultimo HEAD. [CI](docs/ci.md).
 
 Per riprendere lavori più vecchi, cercare nell'archivio o in Git e poi verificare i sorgenti attuali. Questa memoria non
 sostituisce i rapporti di prova e non richiede di caricarli tutti.

@@ -1,4 +1,5 @@
 #include "fk_loft.h"
+#include "fk_loft_guide_constraints.h"
 #include "fk_loft_profiles.h"
 #include "fk_loft_sections.h"
 
@@ -937,7 +938,11 @@ Body loft(const std::vector<LoftSection> &input, const LoftOptions &options, boo
     if (!options.guideConditions.empty() && options.guideConditions.size() != options.guides.size())
         throw std::domain_error("loft: numero di condizioni diverso dal numero di guide");
     for (const auto &condition : options.guideConditions)
-        if (condition.continuity < 0 || condition.continuity > 2 || !std::isfinite(condition.influence)
+        if (condition.crossMode < 0 || condition.crossMode > 2
+            || (condition.crossMode == 1 && (!std::isfinite(norm(condition.profileNormal)) || norm(condition.profileNormal) <= 1e-12))
+            || (condition.crossMode == 2 && condition.faces.empty())
+            || (condition.crossMode && (options.ruled || condition.continuity == 0 || condition.influence <= 0))
+            || condition.continuity < 0 || condition.continuity > 2 || !std::isfinite(condition.influence)
             || condition.influence < 0.0 || condition.influence > 1.0)
             throw std::domain_error("loft: condizione di una guida non valida");
 
@@ -1587,6 +1592,26 @@ Body loftCore(const std::vector<Section> &sections, const LoftOptions &options, 
                 Body::BuildFace face;
                 face.surface = std::make_shared<BSplineSurface>(c.degree(), q, c.knots(), vKnots, uCount, vCount, poles,
                                                                 rational ? weights : std::vector<double>{});
+                LoftGuideCondition boundaryConditions[2];
+                for (int side=0;side<2;++side) {
+                    const auto *hit=vertexGuide[side?nextVertex(m):m];
+                    if(hit) {
+                        boundaryConditions[side]=guideCondition(options,std::size_t(hit-guideHits.data()));
+                        boundaryConditions[side].sourceIndex=int(hit-guideHits.data());
+                    }
+                }
+                try {
+                    face.surface=detail::constrainLoftGuides(std::static_pointer_cast<const BSplineSurface>(face.surface),
+                        &boundaryConditions[0],&boundaryConditions[1],v,scale,
+                        !options.startFaces.empty()?1:options.startContinuity,
+                        !options.endFaces.empty()?1:options.endContinuity);
+                } catch(const std::exception &failure) {
+                    const int side=boundaryConditions[0].crossMode?0:1;
+                    const auto *hit=vertexGuide[side?nextVertex(m):m];
+                    const std::string message=failure.what();
+                    throw std::domain_error(std::string("loft: ")+message+(message.find("[[loft-guide=")==std::string::npos
+                        ?" [[loft-guide="+std::to_string(std::size_t(hit-guideHits.data()))+"]]":""));
+                }
                 // Verificare la superficie assemblata: inseguimento e
                 // raffinamento delle guide possono alterare la G1 iniziale.
                 for(bool end : {false,true}) {

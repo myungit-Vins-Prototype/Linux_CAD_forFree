@@ -15,6 +15,8 @@
 // come sono; le curve trasformate come cerchi o ellissi (similitudini) o
 // B-spline esatte ristrette ai tratti degli edge, le altre (eliche) come
 // B-spline entro 1e-9. I punti geometrici identici vengono condivisi. Le facce
+// NURBS con moti rigidi diretti condividono la base tramite SURFACE_REPLICA.
+// Specchi e scale scrivono poli espliciti per compatibilita' con i lettori. Le facce
 // periodiche non hanno cuciture (come in Parasolid); le facce senza bordo
 // (sfera, toro interi) hanno un VERTEX_LOOP.
 //

@@ -25,6 +25,7 @@
 #include "fk_primitives.h"
 #include "fk_revolve.h"
 #include "fk_step.h"
+#include "fk_transform.h"
 #include "fk_sweep.h"
 #include "fk_tessellate.h"
 #include "fk_test_profiles.h"
@@ -968,4 +969,43 @@ FK_TEST(StepRejectsSelfReferencingGeometry) {
     const StepReadResult d = readStep(appendEntities(withArgument(valid, edge, 3, id), chain));
     FK_CHECK(d.bodies.empty());
     FK_CHECK(notesMention(d, "annidamento troppo profondo"));
+}
+
+FK_TEST(StepWriteSplineInstancesPortableByOcct) {
+    const auto samples = sampleBodies();
+    const Body &source = samples.back().second;
+    const Body mirror = mirrorBody(source, {4, 0, 0}, normalized(Vec3(1, .3, -.2)));
+    ExchangeBody first, second;
+    first.body = source; second.body = mirror;
+    for (auto schema : {StepSchema::AP203, StepSchema::AP214, StepSchema::AP242}) {
+        StepWriteOptions options; options.schema = schema;
+        const auto content = writeStep({first, second}, options);
+        FK_CHECK(content.find("SURFACE_REPLICA") == std::string::npos);
+        const TopoDS_Shape read = readWithOcct(content);
+        FK_CHECK(!read.IsNull());
+        if (read.IsNull()) continue;
+        FK_CHECK(BRepCheck_Analyzer(read).IsValid());
+        GProp_GProps properties;
+        BRepGProp::VolumeProperties(read, properties, 1e-9);
+        const double expected = 2 * massProperties(source, 1e-9).volume;
+        FK_CHECK_NEAR(properties.Mass(), expected, 1e-7 * expected);
+    }
+}
+
+FK_TEST(StepWriteDirectSplineReplicaByOcct) {
+    const auto samples = sampleBodies();
+    const Body &source = samples.back().second;
+    const Body moved = transformBody(source, Transform3::translation({7, 3, 5}));
+    ExchangeBody first, second;
+    first.body = source; second.body = moved;
+    const auto content = writeStep({first, second});
+    FK_CHECK(content.find("SURFACE_REPLICA") != std::string::npos);
+    const TopoDS_Shape read = readWithOcct(content);
+    FK_CHECK(!read.IsNull());
+    if (read.IsNull()) return;
+    FK_CHECK(BRepCheck_Analyzer(read).IsValid());
+    GProp_GProps properties;
+    BRepGProp::VolumeProperties(read, properties, 1e-9);
+    const double expected = 2 * massProperties(source, 1e-9).volume;
+    FK_CHECK_NEAR(properties.Mass(), expected, 1e-7 * expected);
 }

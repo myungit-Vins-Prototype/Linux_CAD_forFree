@@ -264,3 +264,11 @@ payload. Non è stato tentato un percorso alternativo per pubblicare.
 Serve il consenso al push di sorgenti, rapporto e fixture sintetica di 3957 byte sul
 remote configurato `https://github.com/myungit-Vins-Prototype/Linux_CAD_forFree.git`,
 branch `main`. I CAD originali, lo STEP e gli artefatti della build sono esclusi.
+
+L'utente ha poi autorizzato esplicitamente il push dei tre commit su quel remote e
+branch. Pubblicazione completata: `origin/main` aggiornato da `4e1375c` ad `a5f4104`,
+inclusa la correzione `f20ee09`. Il blocco della pubblicazione della correzione è risolto.
+
+Il controllo automatico ha respinto un ulteriore commit/push dei soli registri perché
+il consenso copriva esattamente i tre commit precedenti. Questo aggiornamento dei
+registri è conservato **solo localmente**, senza ulteriori tentativi di pubblicazione.

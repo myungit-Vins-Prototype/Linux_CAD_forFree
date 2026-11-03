@@ -340,7 +340,8 @@ bool loftDialog(QWidget *parent, CadViewport *viewport, const QString &title, in
     });
     const auto sameRef = [](const GeometryRef &a,const GeometryRef &b) {
         if(a.kind!=b.kind || a.index!=b.index || a.element!=b.element) return false;
-        if(a.kind!=4 && a.kind!=9) return true;
+        if(a.kind!=4 && a.kind!=9 && a.kind!=5) return true;
+        if(a.kind==5 && !a.point.name.isEmpty() && !b.point.name.isEmpty()) return a.point.name==b.point.name;
         if(a.point.subshape>=0 || b.point.subshape>=0) return a.point.subshape==b.point.subshape;
         return std::hypot(a.point.x-b.point.x,std::hypot(a.point.y-b.point.y,a.point.z-b.point.z))<1e-9;
     };
@@ -406,6 +407,7 @@ bool loftDialog(QWidget *parent, CadViewport *viewport, const QString &title, in
         }
         return refs;
     });
+    QVector<LoftGuideCrossCondition> crossConditions;
     const auto appendGuide = [&](int kind, int index, bool checked) {
         const QSignalBlocker block(guides);
         QString text;
@@ -421,6 +423,8 @@ bool loftDialog(QWidget *parent, CadViewport *viewport, const QString &title, in
         item->setData(Qt::UserRole + 3, initial.loftGuideContinuity);
         item->setData(Qt::UserRole + 4, initial.loftGuideInfluence);
         item->setData(Qt::UserRole + 5, text);
+        item->setData(Qt::UserRole + 6, crossConditions.size());
+        crossConditions.append(LoftGuideCrossCondition{});
         item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
         item->setCheckState(checked ? Qt::Checked : Qt::Unchecked);
         item->setText(QStringLiteral("%1 — G%2 / %3 %").arg(text).arg(initial.loftGuideContinuity)
@@ -429,8 +433,11 @@ bool loftDialog(QWidget *parent, CadViewport *viewport, const QString &title, in
     };
     const auto guideLabel = [&](QListWidgetItem *item) {
         const QSignalBlocker blocker(guides);
-        item->setText(QStringLiteral("%1 — G%2 / %3 %").arg(item->data(Qt::UserRole + 5).toString())
-                      .arg(item->data(Qt::UserRole + 3).toInt()).arg(100 * item->data(Qt::UserRole + 4).toDouble(), 0, 'g', 3));
+        const auto &cross = crossConditions.at(item->data(Qt::UserRole + 6).toInt());
+        const QString suffix = cross.mode == 1 ? (cross.reverse ? QStringLiteral(" / normale invertita") : QStringLiteral(" / normale"))
+            : cross.mode == 2 ? QStringLiteral(" / tangente alle facce") : QString();
+        item->setText(QStringLiteral("%1 — G%2 / %3 %%4").arg(item->data(Qt::UserRole + 5).toString())
+                      .arg(item->data(Qt::UserRole + 3).toInt()).arg(100 * item->data(Qt::UserRole + 4).toDouble(), 0, 'g', 3).arg(suffix));
     };
     for (int index : ForgeCad::loftGuideSequence(initial)) {
         QListWidgetItem *item;
@@ -440,6 +447,7 @@ bool loftDialog(QWidget *parent, CadViewport *viewport, const QString &title, in
         else item = appendGuide(2, index - initial.loftGuides.size() - partialSelections.size(), true);
         item->setData(Qt::UserRole + 3, initial.loftGuideContinuities.value(index, initial.loftGuideContinuity));
         item->setData(Qt::UserRole + 4, initial.loftGuideInfluences.value(index, initial.loftGuideInfluence));
+        crossConditions[item->data(Qt::UserRole + 6).toInt()] = initial.loftGuideCrossConditions.value(index);
         guideLabel(item);
     }
     for (int index = 0; index < sketches.size(); ++index)
@@ -473,8 +481,27 @@ bool loftDialog(QWidget *parent, CadViewport *viewport, const QString &title, in
     guideContinuity->addItems({QStringLiteral("G0 — solo attraversamento"), QStringLiteral("G1 — segue la tangente (consigliato)"),
                                QStringLiteral("G2 — segue tangente e curvatura")});
     guideContinuity->setCurrentIndex(qBound(0, initial.loftGuideContinuity, 2));
+    auto *crossMode = new QComboBox(&dialog);
+    crossMode->setObjectName(QStringLiteral("loftGuideCrossMode"));
+    crossMode->addItems({QStringLiteral("Libero"), QStringLiteral("G1 — normale al piano del profilo"),
+                        QStringLiteral("G1 — tangente alle facce adiacenti")});
+    auto *crossReverse = new QPushButton(QStringLiteral("Inverti normale"), &dialog);
+    crossReverse->setObjectName(QStringLiteral("loftGuideCrossReverse")); crossReverse->setCheckable(true);
+    auto *crossRow = new QWidget(&dialog); auto *crossLayout = new QHBoxLayout(crossRow);
+    crossLayout->setContentsMargins(0,0,0,0); crossLayout->addWidget(crossMode,1); crossLayout->addWidget(crossReverse);
+    auto *crossReferences = wrappedNote(QString(), &dialog);
+    crossReferences->setObjectName(QStringLiteral("loftGuideCrossReferences"));
+    auto *crossPick = new QPushButton(QStringLiteral("Scegli appoggio nella vista"), &dialog);
+    crossPick->setObjectName(QStringLiteral("loftGuideCrossPick")); crossPick->setCheckable(true);
+    auto *crossClear = new QPushButton(QStringLiteral("Azzera appoggi"), &dialog);
+    crossClear->setObjectName(QStringLiteral("loftGuideCrossClear"));
+    auto *crossButtons = new QWidget(&dialog); auto *crossButtonsLayout = new QHBoxLayout(crossButtons);
+    crossButtonsLayout->setContentsMargins(0,0,0,0); crossButtonsLayout->addWidget(crossPick); crossButtonsLayout->addWidget(crossClear);
     auto *help = new QLabel(QStringLiteral("Le sezioni vanno ordinate. Ogni guida deve essere una catena aperta e attraversare una sola volta ogni sezione; "
-                                           "non può essere usata anche come sezione. Seleziona una guida nell'elenco per regolarne continuita' e influenza. Per le guide, G1 segue la tangente senza trasferire la curvatura che può creare flessi; G2 la trasferisce."),
+                                           "non può essere usata anche come sezione. Seleziona una guida nell'elenco per regolarne continuita' e influenza. Per le guide, G1 segue la tangente senza trasferire la curvatura che può creare flessi; G2 la trasferisce. "
+                                           "La condizione trasversale regola l'uscita dalla guida: normale al piano dello schizzo, "
+                                           "oppure tangente alle facce scelte. Per una curva 3D scegli un piano esplicito. "
+                                           "Le sezioni devono essere compatibili con la condizione scelta."),
                             &dialog);
     help->setWordWrap(true);
     help->setMaximumWidth(570);
@@ -487,6 +514,9 @@ bool loftDialog(QWidget *parent, CadViewport *viewport, const QString &title, in
     form->addRow(QString(), pickStatus);
     form->addRow(QStringLiteral("Continuita' guida selezionata:"), guideContinuity);
     form->addRow(QStringLiteral("Influenza guida selezionata:"), guideInfluence);
+    form->addRow(QStringLiteral("Condizione trasversale:"), crossRow);
+    form->addRow(QStringLiteral("Appoggi della guida:"), crossReferences);
+    form->addRow(QString(), crossButtons);
     ExtrusionObject endpointDefinition = initial;
     SurfaceEndControls endControls(dialog, *form, viewport, replaced, endpointDefinition);
     form->addRow(QString(), ruledBox);
@@ -513,24 +543,27 @@ bool loftDialog(QWidget *parent, CadViewport *viewport, const QString &title, in
             }
         d.loftEdgeGuides.clear(); d.loftGuides.clear(); d.loftGuidePaths.clear(); d.loftGuideOrder.clear();
         QVector<QPair<int,int>> selected;
-        QVector<int> modes; QVector<double> influences;
+        QVector<int> modes; QVector<double> influences; QVector<LoftGuideCrossCondition> controls;
         for (int row = 0; row < guides->count(); ++row) {
             const auto *item = guides->item(row);
             if (item->checkState() != Qt::Checked) continue;
             modes.append(item->data(Qt::UserRole + 3).toInt());
             influences.append(item->data(Qt::UserRole + 4).toDouble());
+            controls.append(crossConditions.at(item->data(Qt::UserRole + 6).toInt()));
             const int kind = item->data(Qt::UserRole).toInt(), index = item->data(Qt::UserRole+1).toInt();
             if (kind == 0) { selected.append({kind,d.loftGuides.size()}); d.loftGuides.append(index); }
             else if (kind == 1) { selected.append({kind,d.loftGuidePaths.size()}); d.loftGuidePaths.append(partialSelections.at(index)); }
             else { selected.append({kind,d.loftEdgeGuides.size()}); d.loftEdgeGuides.append(edgeGuides.at(index)); }
         }
         d.loftGuideContinuities.resize(selected.size()); d.loftGuideInfluences.resize(selected.size());
+        d.loftGuideCrossConditions.resize(selected.size());
         for (int i = 0; i < selected.size(); ++i) {
             const auto &entry = selected[i];
             const int index = entry.second + (entry.first > 0 ? d.loftGuides.size() : 0)
                 + (entry.first > 1 ? d.loftGuidePaths.size() : 0);
             d.loftGuideOrder.append(index);
             d.loftGuideContinuities[index] = modes[i]; d.loftGuideInfluences[index] = influences[i];
+            d.loftGuideCrossConditions[index] = controls[i];
         }
         d.loftRuled = ruledBox->isChecked();
         d.loftSurface = surfaceBox->isChecked();
@@ -546,11 +579,27 @@ bool loftDialog(QWidget *parent, CadViewport *viewport, const QString &title, in
         if (d.loftSections.size() >= 2) scope.request(d);
         else viewport->clearPreview();
     };
+    int graphicalTarget = 0;  // 1 sezioni, 2 guide, 3 appoggi guida
     const auto syncGuideControls = [&] {
         const auto *item = guides->currentItem();
-        const QSignalBlocker blockMode(guideContinuity), blockInfluence(guideInfluence);
+        const QSignalBlocker blockMode(guideContinuity), blockInfluence(guideInfluence), blockCross(crossMode), blockReverse(crossReverse);
         const bool editable = item && item->checkState() == Qt::Checked && !ruledBox->isChecked();
-        guideContinuity->setEnabled(editable); guideInfluence->setEnabled(editable);
+        guideContinuity->setEnabled(editable); guideInfluence->setEnabled(editable); crossMode->setEnabled(editable);
+        const auto condition = item ? crossConditions.at(item->data(Qt::UserRole + 6).toInt()) : LoftGuideCrossCondition{};
+        crossReverse->setEnabled(editable && condition.mode == 1); crossReverse->setChecked(condition.reverse);
+        crossMode->setCurrentIndex(condition.mode); crossPick->setEnabled(editable && condition.mode > 0);
+        crossPick->setText(condition.mode == 1 ? QStringLiteral("Scegli piano nella vista") : QStringLiteral("Scegli facce adiacenti"));
+        crossClear->setEnabled(editable && !condition.references.isEmpty());
+        QStringList names;
+        for (const auto &ref : condition.references) {
+            QString text=ForgeCad::geometryRefText(ref, sketches, viewport->extrusions());
+            if(ref.kind==5 && ref.point.subshape>=0)text=QStringLiteral("F%1 — %2").arg(ref.point.subshape).arg(text);
+            names.append(text);
+        }
+        crossReferences->setText(names.isEmpty() ? (condition.mode == 1 ? QStringLiteral("Piano dello schizzo; per curve 3D scegli un piano")
+            : condition.mode == 2 ? QStringLiteral("Scegli le facce adiacenti alla guida") : QStringLiteral("Nessuno")) : names.join(QStringLiteral("\n")));
+        crossReferences->setMinimumHeight(qMax(crossReferences->fontMetrics().lineSpacing()*qMax(1,int(names.size())),
+            crossReferences->heightForWidth(qMax(120,crossReferences->width()))));
         if (item) {
             guideContinuity->setCurrentIndex(item->data(Qt::UserRole + 3).toInt());
             guideInfluence->setValue(100 * item->data(Qt::UserRole + 4).toDouble());
@@ -559,11 +608,33 @@ bool loftDialog(QWidget *parent, CadViewport *viewport, const QString &title, in
     const auto changeGuideCondition = [&] {
         if (auto *item = guides->currentItem()) {
             { const QSignalBlocker block(guides);
-              item->setData(Qt::UserRole + 3, guideContinuity->currentIndex());
+              const auto &cross=crossConditions.at(item->data(Qt::UserRole+6).toInt());
+              item->setData(Qt::UserRole + 3, cross.mode ? qMax(1,guideContinuity->currentIndex()) : guideContinuity->currentIndex());
               item->setData(Qt::UserRole + 4, guideInfluence->value() / 100.0); }
-            guideLabel(item); refresh();
+            guideLabel(item); syncGuideControls(); refresh();
         }
     };
+    QObject::connect(crossMode, &QComboBox::currentIndexChanged, &dialog, [&] {
+        if (auto *item = guides->currentItem()) {
+            auto &condition = crossConditions[item->data(Qt::UserRole + 6).toInt()];
+            condition.mode = crossMode->currentIndex(); condition.references.clear(); condition.reverse = false;
+            if(graphicalTarget==3) { viewport->cancelReferencePick(); graphicalTarget=0; crossPick->setChecked(false); }
+            if (condition.mode && item->data(Qt::UserRole + 3).toInt() == 0) item->setData(Qt::UserRole + 3, 1);
+            if (condition.mode && item->data(Qt::UserRole + 4).toDouble() <= 0) item->setData(Qt::UserRole + 4, 1.0);
+            guideLabel(item); syncGuideControls(); refresh();
+        }
+    });
+    QObject::connect(crossReverse, &QPushButton::toggled, &dialog, [&](bool reverse) {
+        if (auto *item = guides->currentItem()) {
+            crossConditions[item->data(Qt::UserRole + 6).toInt()].reverse = reverse;
+            guideLabel(item); refresh();
+        }
+    });
+    QObject::connect(crossClear, &QPushButton::clicked, &dialog, [&] {
+        if (auto *item = guides->currentItem()) {
+            crossConditions[item->data(Qt::UserRole + 6).toInt()].references.clear(); syncGuideControls(); refresh();
+        }
+    });
     QObject::connect(guides, &QListWidget::currentRowChanged, &dialog, syncGuideControls);
     QObject::connect(guides, &QListWidget::itemChanged, &dialog, syncGuideControls);
     QObject::connect(ruledBox, &QCheckBox::toggled, &dialog, syncGuideControls);
@@ -595,14 +666,25 @@ bool loftDialog(QWidget *parent, CadViewport *viewport, const QString &title, in
         if(list->currentRow()<0) return;
         delete list->takeItem(list->currentRow()); refresh();
     });
-    int graphicalTarget = 0;  // 1 sezioni, 2 guide
     const auto armGraphicalPick = [&](int target) {
         endControls.stop();
         graphicalTarget = target;
-        pickSections->setChecked(target == 1); pickGuides->setChecked(target == 2);
+        pickSections->setChecked(target == 1); pickGuides->setChecked(target == 2); crossPick->setChecked(target == 3);
         viewport->cancelReferencePick();
         viewport->setReferencePickCallback([&](bool picked,GeometryRef ref) {
-            if(!picked) {graphicalTarget=0;pickSections->setChecked(false);pickGuides->setChecked(false);return;}
+            if(!picked) {graphicalTarget=0;pickSections->setChecked(false);pickGuides->setChecked(false);crossPick->setChecked(false);return;}
+            if (graphicalTarget == 3) {
+                auto *item = guides->currentItem(); if (!item) return;
+                auto &condition = crossConditions[item->data(Qt::UserRole + 6).toInt()];
+                const int role = condition.mode == 1 ? ForgeCad::DatumRolePlane : ForgeCad::DatumRoleFace;
+                if (!(ForgeCad::geometryRefRoles(ref, sketches) & role)) { pickStatus->setText(QStringLiteral("Scegli un appoggio del tipo richiesto.")); return; }
+                int existing = -1;
+                for (int i=0;i<condition.references.size();++i) if(sameRef(condition.references[i],ref)) existing=i;
+                if (existing >= 0) condition.references.removeAt(existing);
+                else { if(condition.mode==1)condition.references.clear(); condition.references.append(ref); }
+                viewport->setReferenceMarks(condition.references); syncGuideControls(); refresh();
+                viewport->beginReferencePick(role,replaced); return;
+            }
             std::vector<ForgeCad::Kernel::PathSegment> path; QString reason;
             const int owner=replaced<0?viewport->extrusions().size():replaced;
             if(!ForgeCad::geometryRefPath(ref,owner,sketches,viewport->extrusions(),path,&reason)) {
@@ -635,13 +717,18 @@ bool loftDialog(QWidget *parent, CadViewport *viewport, const QString &title, in
             }
             if(graphicalTarget) viewport->beginReferencePick(ForgeCad::DatumRoleCurve|ForgeCad::DatumRoleLine,replaced);
         });
-        const QString reason=viewport->beginReferencePick(ForgeCad::DatumRoleCurve|ForgeCad::DatumRoleLine,replaced);
+        const auto *item=guides->currentItem();
+        const int supportMode=item?crossConditions.at(item->data(Qt::UserRole+6).toInt()).mode:0;
+        const int role=target==3?(supportMode==1?ForgeCad::DatumRolePlane:ForgeCad::DatumRoleFace)
+                                :ForgeCad::DatumRoleCurve|ForgeCad::DatumRoleLine;
+        const QString reason=viewport->beginReferencePick(role,replaced);
         pickStatus->setText(reason.isEmpty()?QStringLiteral("Scegli nella vista o nella storyboard; il clic su uno schizzo sceglie il contorno intero. Espandi per le singole entita'. Esc termina."):reason);
     };
     for(const QString &name : {QStringLiteral("surfaceStartFacesPick"),QStringLiteral("surfaceEndFacesPick")})
         QObject::connect(dialog.findChild<QPushButton *>(name),&QPushButton::clicked,&dialog,[&] {
-            graphicalTarget=0; pickSections->setChecked(false);pickGuides->setChecked(false);
+            graphicalTarget=0; pickSections->setChecked(false);pickGuides->setChecked(false);crossPick->setChecked(false);
         });
+    QObject::connect(crossPick, &QPushButton::clicked, &dialog, [&] { armGraphicalPick(3); });
     pickSections->setCheckable(true); pickGuides->setCheckable(true);
     QObject::connect(pickSections, &QPushButton::clicked, &dialog, [&] { armGraphicalPick(1); });
     QObject::connect(pickGuides, &QPushButton::clicked, &dialog, [&] { armGraphicalPick(2); });

@@ -258,7 +258,7 @@ static void functionPanelsReview() {
     require(viewport.extrusions()[0].loftStartReverse&&!viewport.extrusions()[0].loftEndReverse,"verso salvato nella feature");
     viewport.undo();require(!viewport.extrusions()[0].loftStartReverse,"Undo del verso G1");
     viewport.redo();require(viewport.extrusions()[0].loftStartReverse,"Redo del verso G1");
-    QByteArray bytes;require(encodeDocument(viewport.currentDocument(),bytes,false).isEmpty(),"codifica verso formato61");
+    QByteArray bytes;require(encodeDocument(viewport.currentDocument(),bytes,false).isEmpty(),"codifica verso formato corrente");
     DocumentState reopened;require(decodeDocument(bytes,reopened).isEmpty()&&reopened.extrusions[0].loftStartReverse
         &&!reopened.extrusions[0].loftEndReverse,"riapertura conserva versi indipendenti");
     auto before=viewport.currentDocument();before.extrusions[0].loftStartReverse=false;
@@ -269,6 +269,13 @@ static void functionPanelsReview() {
     require(drawingModelDefinitionMatches(before,oldHash,matches).isEmpty()&&matches,"tavole con firma60 restano compatibili");
     require(drawingModelDefinitionMatches(viewport.currentDocument(),oldHash,matches).isEmpty()&&!matches,"inversione G1 invalida la vecchia firma della tavola");
     require(!encodeDocumentDefinition53ForHash(viewport.currentDocument(),oldBytes).isEmpty(),"hash storico non ignora nuovi versi");
+    auto normalized61=normalized;normalized61.extrusions[0].loftStartReverse=true;
+    require(encodeDocumentDefinition61ForHash(normalized61,oldBytes).isEmpty(),"fixture reale formato61");
+    const auto hash61=QCryptographicHash::hash(oldBytes,QCryptographicHash::Sha256);
+    require(drawingModelDefinitionMatches(viewport.currentDocument(),hash61,matches).isEmpty()&&matches,"tavole con firma61 e verso G1 restano compatibili");
+    auto crossHashState=viewport.currentDocument();crossHashState.extrusions[0].loftGuideCrossConditions.resize(1);
+    crossHashState.extrusions[0].loftGuideCrossConditions[0].mode=1;
+    require(!encodeDocumentDefinition61ForHash(crossHashState,oldBytes).isEmpty(),"firma61 non ignora nuove condizioni delle guide");
     QTimer::singleShot(0,&window,[&] {
         auto *dialog=window.findChild<QDialog *>("loftDialog");require(dialog,"riapertura pannello loft");
         require(dialog->findChild<QPushButton *>("surfaceStartReverse")->isChecked()

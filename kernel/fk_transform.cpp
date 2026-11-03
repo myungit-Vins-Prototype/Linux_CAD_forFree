@@ -115,16 +115,7 @@ public:
             break;
         }
         case SurfaceType::BSpline: {
-            const auto &spline = static_cast<const BSplineSurface &>(*s);
-            std::vector<Vec3> poles;
-            std::vector<double> weights;
-            for (int i = 0; i < spline.uPoleCount(); ++i)
-                for (int j = 0; j < spline.vPoleCount(); ++j) {
-                    poles.push_back(point(spline.pole(i, j)));
-                    if (spline.isRational()) weights.push_back(spline.weight(i, j));
-                }
-            result = std::make_shared<BSplineSurface>(spline.uDegree(), spline.vDegree(), spline.uKnots(), spline.vKnots(), spline.uPoleCount(),
-                                                      spline.vPoleCount(), poles, weights);
+            result = std::make_shared<BSplineSurface>(std::static_pointer_cast<const BSplineSurface>(s), t_);
             break;
         }
         }

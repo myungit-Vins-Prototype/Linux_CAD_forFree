@@ -474,6 +474,7 @@ QVector<Dependency> dependencies(int index, const DocumentState &document) {
         });
         for (int k = 0; feature.loftSections.isEmpty() && k < feature.loftSketches.size(); ++k)
             addSketchDependency(result, sketches, index, feature.loftSketches.at(k), QStringLiteral("sezione %1").arg(k + 1));
+        addRefs(Family::LoftGuideSupports, QStringLiteral("appoggio guida %1"), true);
         const auto order = loftGuideSequence(feature);
         for(int k=0;k<order.size();++k) {
             int guide=order.at(k); const QString role=QStringLiteral("guida %1").arg(k+1);

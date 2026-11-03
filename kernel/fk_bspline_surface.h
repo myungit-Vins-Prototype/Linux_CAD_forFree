@@ -15,6 +15,13 @@ public:
     BSplineSurface(int uDegree, int vDegree, std::vector<double> uKnots, std::vector<double> vKnots,
                    int uPoleCount, int vPoleCount, std::vector<Vec3> poles, std::vector<double> weights = {});
 
+    // Istanza esatta di una superficie immutabile: i poli restano nella base,
+    // le valutazioni e gli accessi restituiscono coordinate trasformate.
+    // Simmetrie e ripetizioni condividono cosi' anche griglie molto grandi.
+    BSplineSurface(std::shared_ptr<const BSplineSurface> basis, const Transform3 &placement);
+    const std::shared_ptr<const BSplineSurface> &basis() const { return basis_; }
+    const Transform3 &placement() const { return placement_; }
+
     SurfaceType type() const override { return SurfaceType::BSpline; }
     Interval uDomain() const override;
     Interval vDomain() const override;
@@ -28,11 +35,11 @@ public:
     int vDegree() const { return vDegree_; }
     int uPoleCount() const { return uPoleCount_; }
     int vPoleCount() const { return vPoleCount_; }
-    const std::vector<double> &uKnots() const { return uKnots_; }
-    const std::vector<double> &vKnots() const { return vKnots_; }
-    const Vec3 &pole(int i, int j) const { return poles_[i * vPoleCount_ + j]; }
-    double weight(int i, int j) const { return weights_.empty() ? 1.0 : weights_[i * vPoleCount_ + j]; }
-    bool isRational() const { return !weights_.empty(); }
+    const std::vector<double> &uKnots() const { return basis_ ? basis_->uKnots() : uKnots_; }
+    const std::vector<double> &vKnots() const { return basis_ ? basis_->vKnots() : vKnots_; }
+    Vec3 pole(int i, int j) const { return basis_ ? placement_.applyToPoint(basis_->pole(i, j)) : poles_[i * vPoleCount_ + j]; }
+    double weight(int i, int j) const { return basis_ ? basis_->weight(i, j) : (weights_.empty() ? 1.0 : weights_[i * vPoleCount_ + j]); }
+    bool isRational() const { return basis_ ? basis_->isRational() : !weights_.empty(); }
 
     // Isoparametriche esatte: a u costante (curva in v) e a v costante (curva in u).
     BSplineCurve<3> uIsoCurve(double u) const;
@@ -74,6 +81,8 @@ private:
     int uPoleCount_, vPoleCount_;
     std::vector<Vec3> poles_;
     std::vector<double> weights_;
+    std::shared_ptr<const BSplineSurface> basis_;
+    Transform3 placement_;
     mutable std::shared_ptr<const std::vector<BSplineSurface>> patchCache_;
     mutable std::shared_ptr<const SharpKnotLines> sharpCache_;
     mutable std::shared_ptr<const PatchTree> treeCache_;

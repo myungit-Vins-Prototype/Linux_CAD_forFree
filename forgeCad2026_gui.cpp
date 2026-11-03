@@ -4844,9 +4844,13 @@ void PdfWindow::rebuildModelTree() {
             } else if (body.feature == BodyFeature::Loft) {
                 const int guideCount = body.loftGuides.size() + body.loftGuidePaths.size() + body.loftEdgeGuides.size();
                 QStringList guideModes;
-                for (int index : ForgeCad::loftGuideSequence(body))
-                    guideModes << QStringLiteral("G%1 (%2 %)").arg(body.loftGuideContinuities.value(index, body.loftGuideContinuity))
-                        .arg(100 * body.loftGuideInfluences.value(index, body.loftGuideInfluence), 0, 'g', 3);
+                for (int index : ForgeCad::loftGuideSequence(body)) {
+                    const auto cross=body.loftGuideCrossConditions.value(index);
+                    const QString crossLabel=cross.mode==1?(cross.reverse?QStringLiteral(" / normale invertita"):QStringLiteral(" / normale"))
+                        :cross.mode==2?QStringLiteral(" / tangente alle facce"):QString();
+                    guideModes << QStringLiteral("G%1 (%2 %)%3").arg(body.loftGuideContinuities.value(index, body.loftGuideContinuity))
+                        .arg(100 * body.loftGuideInfluences.value(index, body.loftGuideInfluence), 0, 'g', 3).arg(crossLabel);
+                }
                 item->setToolTip(0, QStringLiteral("Loft %1: %2 sezioni, %3 guide, estremità G%4/G%5, guide %6")
                                         .arg(body.loftRuled && !body.loftStartContinuity && !body.loftEndContinuity ? QStringLiteral("rigato") : QStringLiteral("liscio"))
                                         .arg(body.loftSections.isEmpty()?body.loftSketches.size():body.loftSections.size()).arg(guideCount)
@@ -5037,9 +5041,12 @@ void PdfWindow::rebuildModelTree() {
                         const auto &path=body.loftGuidePaths.at(index);
                         text=QStringLiteral("%1 (%2 entità)").arg(sketches.value(path.sketch).name).arg(path.segments.size()+path.curves.size());
                     } else text=ForgeCad::geometryRefText(body.loftEdgeGuides.at(index-body.loftGuidePaths.size()),sketches,extrusions);
-                    children.append(QStringLiteral("Guida %1: %2 — G%3 / %4 %").arg(k+1).arg(text)
+                    const auto cross=body.loftGuideCrossConditions.value(guideOrder[k]);
+                    const QString crossLabel=cross.mode==1?(cross.reverse?QStringLiteral(" / normale invertita"):QStringLiteral(" / normale"))
+                        :cross.mode==2?QStringLiteral(" / tangente alle facce"):QString();
+                    children.append(QStringLiteral("Guida %1: %2 — G%3 / %4 %%5").arg(k+1).arg(text)
                         .arg(body.loftGuideContinuities.value(guideOrder[k], body.loftGuideContinuity))
-                        .arg(100 * body.loftGuideInfluences.value(guideOrder[k], body.loftGuideInfluence), 0, 'g', 3));
+                        .arg(100 * body.loftGuideInfluences.value(guideOrder[k], body.loftGuideInfluence), 0, 'g', 3).arg(crossLabel));
                 }
             } else {
                 const QString role = body.feature == BodyFeature::Blend ? QStringLiteral("Base: ") : body.feature == BodyFeature::Scale ? QStringLiteral("Corpo: ")

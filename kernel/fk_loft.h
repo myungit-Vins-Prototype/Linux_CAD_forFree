@@ -60,8 +60,15 @@ struct LoftContact {
 // intermedie miscelano il percorso guidato con quello libero; G0 mantiene
 // il solo attraversamento delle sezioni.
 struct LoftGuideCondition {
+    LoftGuideCondition() = default;
+    LoftGuideCondition(int c, double i) : continuity(c), influence(i) {}
     int continuity = 1;
     double influence = 1.0;
+    int sourceIndex = -1;  // solo diagnostica, indice nell’ordine delle guide
+    int crossMode = 0;  // 0 libero, 1 normale al piano della guida, 2 G1 alle facce
+    bool reverse = false;
+    Vec3 profileNormal;
+    std::vector<LoftContact> faces;
 };
 
 struct LoftOptions {

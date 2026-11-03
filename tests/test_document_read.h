@@ -282,6 +282,40 @@ void documentBlendCacheMigrationTests() {
         && read.extrusions[0].cachedGeometry, "documenti senza raccordi conservano la cache portabile");
 }
 
+void documentInstanceCacheMigrationTests() {
+    using namespace ForgeCad;
+    for (const auto feature : {BodyFeature::Pattern, BodyFeature::Transform}) {
+        DocumentState source;
+        ExtrusionObject root;
+        root.feature = BodyFeature::Primitive;
+        root.primitive.kind = PrimitiveKind::Box;
+        root.forgeBody = std::make_shared<const Kernel::Body>(Kernel::makeBox(Kernel::Frame3{}, 8, 9, 10));
+        ExtrusionObject copy;
+        copy.feature = feature; copy.firstBody = 0;
+        copy.forgeBody = root.forgeBody;  // snapshot opaco al codec
+        source.extrusions = {root, copy};
+        QByteArray bytes;
+        DocumentState read;
+        require(encodeDocument(source, bytes, true).isEmpty() && decodeDocument(bytes, read).isEmpty()
+            && read.extrusions[1].cachedGeometry, "cache corrente delle istanze riutilizzata");
+        require(decodeDocument(documentWithCacheVersion(bytes, 9), read).isEmpty()
+            && !read.extrusions[0].forgeBody && !read.extrusions[1].forgeBody
+            && read.extrusions[1].firstBody == 0 && read.extrusions[1].feature == feature,
+            "vecchie griglie duplicate scartate atomicamente, definizioni conservate");
+        source.version.checkinId = QUuid::createUuid();
+        require(encodeDocument(source, bytes, true).isEmpty()
+            && decodeDocument(documentWithCacheVersion(bytes, 9), read).isEmpty()
+            && read.extrusions[0].cachedGeometry && read.extrusions[1].cachedGeometry
+            && Kernel::writeBodyBinary(*read.extrusions[1].forgeBody) == Kernel::writeBodyBinary(*copy.forgeBody),
+            "le istanze nei check-in storici conservano lo snapshot esatto");
+        source.version.checkinId = {};
+        source.extrusions[1].suppressed = true;
+        require(encodeDocument(source, bytes, true).isEmpty()
+            && decodeDocument(documentWithCacheVersion(bytes, 9), read).isEmpty()
+            && read.extrusions[0].cachedGeometry, "istanze soppresse non invalidano la cache storica");
+    }
+}
+
 void documentReadTests() {
     using namespace ForgeCad;
     using DocumentReadDetail::DataStream;
@@ -289,6 +323,7 @@ void documentReadTests() {
     documentBulkMeshReadTests();
     documentLoftCacheMigrationTests();
     documentBlendCacheMigrationTests();
+    documentInstanceCacheMigrationTests();
     const auto rejected = [](const QByteArray &bytes, const DocumentReadLimits &limits = {}) {
         DocumentState destination;
         destination.sketches.append(SketchObject{}); destination.sketches[0].name = "da conservare";

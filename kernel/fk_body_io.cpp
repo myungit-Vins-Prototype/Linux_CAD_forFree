@@ -15,10 +15,13 @@ namespace ForgeCad::Kernel {
 namespace {
 
 constexpr char kMagic[4] = {'F', 'K', 'B', 'D'};
-constexpr std::uint32_t kVersion = 1;
+constexpr std::uint32_t kVersion = 2;
 constexpr std::uint32_t kByteOrder = 0x01020304;  // letto come e' scritto: stesso ordine dei byte
 
 enum Record : std::uint8_t { Curve2 = 1, Curve3 = 2, SurfaceRecord = 3, EndOfGeometry = 0 };
+// Tag del formato binario, distinto dai valori persistiti di SurfaceType.
+constexpr std::uint8_t kPlacedBSpline = 128;
+
 enum CurveKind : std::uint8_t { LineKind, CircleKind, EllipseKind, BSplineKind, TrimmedKind, TransformedKind, HelixKind };
 
 class Writer {
@@ -138,65 +141,75 @@ public:
         if (found != surfaces_.end()) return found->second;
         Writer record;
         const Surface &s = *surface;
-        record.u8(std::uint8_t(s.type()));
-        switch (s.type()) {
-        case SurfaceType::Plane: record.frame(static_cast<const Plane &>(s).frame()); break;
-        case SurfaceType::Cylinder: {
-            const auto &c = static_cast<const CylindricalSurface &>(s);
-            record.frame(c.frame());
-            record.f64(c.radius());
-            break;
-        }
-        case SurfaceType::Cone: {
-            const auto &c = static_cast<const ConicalSurface &>(s);
-            record.frame(c.frame());
-            record.f64(c.semiAngle());
-            record.f64(c.referenceRadius());
-            break;
-        }
-        case SurfaceType::Sphere: {
-            const auto &c = static_cast<const SphericalSurface &>(s);
-            record.frame(c.frame());
-            record.f64(c.radius());
-            break;
-        }
-        case SurfaceType::Torus: {
-            const auto &c = static_cast<const ToroidalSurface &>(s);
-            record.frame(c.frame());
-            record.f64(c.majorRadius());
-            record.f64(c.minorRadius());
-            break;
-        }
-        case SurfaceType::Extrusion: {
-            const auto &e = static_cast<const ExtrusionSurface &>(s);
-            record.i32(curve<3>(e.curve()));
-            record.vec(e.direction());
-            break;
-        }
-        case SurfaceType::Revolution: {
-            const auto &r = static_cast<const RevolutionSurface &>(s);
-            record.i32(curve<3>(r.meridian()));
-            record.vec(r.axisPoint());
-            record.vec(r.axisDirection());
-            break;
-        }
-        case SurfaceType::BSpline: {
-            const auto &b = static_cast<const BSplineSurface &>(s);
-            record.i32(b.uDegree());
-            record.i32(b.vDegree());
-            record.doubles(b.uKnots());
-            record.doubles(b.vKnots());
-            record.i32(b.uPoleCount());
-            record.i32(b.vPoleCount());
-            for (int i = 0; i < b.uPoleCount(); ++i)
-                for (int j = 0; j < b.vPoleCount(); ++j) record.vec(b.pole(i, j));
-            record.flag(b.isRational());
-            if (b.isRational())
+        const auto *spline = s.type() == SurfaceType::BSpline ? static_cast<const BSplineSurface *>(&s) : nullptr;
+        if (spline && spline->basis()) {
+            record.u8(kPlacedBSpline);
+            record.i32(this->surface(spline->basis()));
+            const auto &t = spline->placement();
+            for (int i = 0; i < 3; ++i)
+                for (int j = 0; j < 3; ++j) record.f64(t.matrix(i, j));
+            record.vec(t.translationPart());
+        } else {
+            record.u8(std::uint8_t(s.type()));
+            switch (s.type()) {
+            case SurfaceType::Plane: record.frame(static_cast<const Plane &>(s).frame()); break;
+            case SurfaceType::Cylinder: {
+                const auto &c = static_cast<const CylindricalSurface &>(s);
+                record.frame(c.frame());
+                record.f64(c.radius());
+                break;
+            }
+            case SurfaceType::Cone: {
+                const auto &c = static_cast<const ConicalSurface &>(s);
+                record.frame(c.frame());
+                record.f64(c.semiAngle());
+                record.f64(c.referenceRadius());
+                break;
+            }
+            case SurfaceType::Sphere: {
+                const auto &c = static_cast<const SphericalSurface &>(s);
+                record.frame(c.frame());
+                record.f64(c.radius());
+                break;
+            }
+            case SurfaceType::Torus: {
+                const auto &c = static_cast<const ToroidalSurface &>(s);
+                record.frame(c.frame());
+                record.f64(c.majorRadius());
+                record.f64(c.minorRadius());
+                break;
+            }
+            case SurfaceType::Extrusion: {
+                const auto &e = static_cast<const ExtrusionSurface &>(s);
+                record.i32(curve<3>(e.curve()));
+                record.vec(e.direction());
+                break;
+            }
+            case SurfaceType::Revolution: {
+                const auto &r = static_cast<const RevolutionSurface &>(s);
+                record.i32(curve<3>(r.meridian()));
+                record.vec(r.axisPoint());
+                record.vec(r.axisDirection());
+                break;
+            }
+            case SurfaceType::BSpline: {
+                const auto &b = static_cast<const BSplineSurface &>(s);
+                record.i32(b.uDegree());
+                record.i32(b.vDegree());
+                record.doubles(b.uKnots());
+                record.doubles(b.vKnots());
+                record.i32(b.uPoleCount());
+                record.i32(b.vPoleCount());
                 for (int i = 0; i < b.uPoleCount(); ++i)
-                    for (int j = 0; j < b.vPoleCount(); ++j) record.f64(b.weight(i, j));
-            break;
-        }
-        default: throw std::domain_error("writeBodyBinary: tipo di superficie non salvabile");
+                    for (int j = 0; j < b.vPoleCount(); ++j) record.vec(b.pole(i, j));
+                record.flag(b.isRational());
+                if (b.isRational())
+                    for (int i = 0; i < b.uPoleCount(); ++i)
+                        for (int j = 0; j < b.vPoleCount(); ++j) record.f64(b.weight(i, j));
+                break;
+            }
+            default: throw std::domain_error("writeBodyBinary: tipo di superficie non salvabile");
+            }
         }
         out_.u8(SurfaceRecord);
         const std::string bytes = record.take();
@@ -296,7 +309,7 @@ private:
 
 class GeometryReader {
 public:
-    explicit GeometryReader(Reader &in) : in_(in) {}
+    explicit GeometryReader(Reader &in, std::uint32_t version) : in_(in), version_(version) {}
 
     void readAll() {
         for (;;) {
@@ -384,6 +397,17 @@ private:
 
     SurfacePtr readSurface() {
         const std::uint8_t type = in_.u8();
+        if (type == kPlacedBSpline && version_ >= 2) {
+            const auto base = surface(in_.i32());
+            if (!base || base->type() != SurfaceType::BSpline)
+                throw std::invalid_argument("readBodyBinary: base B-spline non valida");
+            double m[3][3];
+            for (auto &row : m)
+                for (double &v : row) v = in_.f64();
+            const Vec3 translation = in_.vec<3>();
+            return std::make_shared<BSplineSurface>(std::static_pointer_cast<const BSplineSurface>(base),
+                                                    Transform3::fromParts(m, translation));
+        }
         switch (SurfaceType(type)) {
         case SurfaceType::Plane: return std::make_shared<Plane>(in_.frame());
         case SurfaceType::Cylinder: {
@@ -441,6 +465,7 @@ private:
     }
 
     Reader &in_;
+    std::uint32_t version_;
     std::vector<CurvePtr<2>> curves2_;
     std::vector<CurvePtr<3>> curves3_;
     std::vector<SurfacePtr> surfaces_;
@@ -529,9 +554,10 @@ struct BodyIO {
         char magic[4];
         in.raw(magic, 4);
         if (std::memcmp(magic, kMagic, 4) != 0) throw std::invalid_argument("readBodyBinary: non e' un body di ForgeCAD");
-        if (in.u32() != kVersion) throw std::invalid_argument("readBodyBinary: versione del formato non gestita");
+        const auto version = in.u32();
+        if (version < 1 || version > kVersion) throw std::invalid_argument("readBodyBinary: versione del formato non gestita");
         if (in.u32() != kByteOrder) throw std::invalid_argument("readBodyBinary: ordine dei byte diverso");
-        GeometryReader geometry(in);
+        GeometryReader geometry(in, version);
         geometry.readAll();
 
         Body body;

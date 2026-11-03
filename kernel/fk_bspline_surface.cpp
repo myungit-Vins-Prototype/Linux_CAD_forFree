@@ -25,25 +25,60 @@ BSplineSurface::BSplineSurface(int uDegree, int vDegree, std::vector<double> uKn
     }
 }
 
-Interval BSplineSurface::uDomain() const { return {uKnots_[uDegree_], uKnots_[uPoleCount_]}; }
-Interval BSplineSurface::vDomain() const { return {vKnots_[vDegree_], vKnots_[vPoleCount_]}; }
+BSplineSurface::BSplineSurface(std::shared_ptr<const BSplineSurface> basis, const Transform3 &placement)
+    : uDegree_(0), vDegree_(0), uPoleCount_(0), vPoleCount_(0), basis_(std::move(basis)), placement_(placement) {
+    const auto valid = [](const Transform3 &t) {
+        if (!isFinite(t.translationPart())) return false;
+        for (int i = 0; i < 3; ++i)
+            for (int j = 0; j < 3; ++j)
+                if (!std::isfinite(t.matrix(i, j))) return false;
+        double scale = 0;
+        return t.isSimilarity(&scale) && std::isfinite(scale) && scale > 0;
+    };
+    if (!basis_ || !valid(placement_))
+        throw std::invalid_argument("BSplineSurface: base o similitudine non valida");
+    // Una sola base, anche dopo piu' trasformazioni: niente catene ricorsive
+    // durante valutazione, serializzazione o lettura di dati non fidati.
+    if (basis_->basis_) {
+        placement_ = placement_ * basis_->placement_;
+        basis_ = basis_->basis_;
+        if (!valid(placement_)) throw std::invalid_argument("BSplineSurface: trasformazione composta non valida");
+    }
+    uDegree_ = basis_->uDegree_;
+    vDegree_ = basis_->vDegree_;
+    uPoleCount_ = basis_->uPoleCount_;
+    vPoleCount_ = basis_->vPoleCount_;
+}
+
+Interval BSplineSurface::uDomain() const { return {uKnots()[uDegree_], uKnots()[uPoleCount_]}; }
+Interval BSplineSurface::vDomain() const { return {vKnots()[vDegree_], vKnots()[vPoleCount_]}; }
 
 std::vector<double> BSplineSurface::uBreakpoints(const Interval &range) const {
-    return detail::knotBreakpoints(uKnots_, range);
+    return detail::knotBreakpoints(uKnots(), range);
 }
 
 std::vector<double> BSplineSurface::vBreakpoints(const Interval &range) const {
-    return detail::knotBreakpoints(vKnots_, range);
+    return detail::knotBreakpoints(vKnots(), range);
 }
 
 void BSplineSurface::evaluate(double u, double v, int order, Vec3 *out) const {
+    if (basis_) {
+        basis_->evaluate(u, v, order, out);
+        // Il contratto di Surface scrive soltanto i jet k+l <= order.
+        for (int k = 0; k <= order; ++k)
+            for (int l = 0; l + k <= order; ++l) {
+                Vec3 &jet = out[k * (order + 1) + l];
+                jet = k == 0 && l == 0 ? placement_.applyToPoint(jet) : placement_.applyToVector(jet);
+            }
+        return;
+    }
     const int pu = uDegree_, pv = vDegree_;
     const int du = std::min(order, pu), dv = std::min(order, pv);
-    const int su = detail::findSpan(uKnots_, pu, uPoleCount_, u);
-    const int sv = detail::findSpan(vKnots_, pv, vPoleCount_, v);
+    const int su = detail::findSpan(uKnots(), pu, uPoleCount_, u);
+    const int sv = detail::findSpan(vKnots(), pv, vPoleCount_, v);
     detail::ScratchBuffer<double> nu((du + 1) * (pu + 1)), nv((dv + 1) * (pv + 1));
-    detail::basisFunctionDerivatives(uKnots_, su, u, pu, du, nu.data());
-    detail::basisFunctionDerivatives(vKnots_, sv, v, pv, dv, nv.data());
+    detail::basisFunctionDerivatives(uKnots(), su, u, pu, du, nu.data());
+    detail::basisFunctionDerivatives(vKnots(), sv, v, pv, dv, nv.data());
 
     // Il solo punto usa gli stessi termini e lo stesso ordine di somma,
     // senza preparare i buffer e la ricorrenza delle derivate A4.4.
@@ -114,9 +149,9 @@ void BSplineSurface::evaluate(double u, double v, int order, Vec3 *out) const {
 // Poli della curva a u costante: Q_j = sum_i N_i(u) w_ij P_ij / W_j, W_j = sum_i N_i(u) w_ij.
 BSplineCurve<3> BSplineSurface::uIsoCurve(double u) const {
     const int pu = uDegree_;
-    const int su = detail::findSpan(uKnots_, pu, uPoleCount_, u);
+    const int su = detail::findSpan(uKnots(), pu, uPoleCount_, u);
     detail::ScratchBuffer<double> nu(pu + 1);
-    detail::basisFunctionDerivatives(uKnots_, su, u, pu, 0, nu.data());
+    detail::basisFunctionDerivatives(uKnots(), su, u, pu, 0, nu.data());
     std::vector<Vec3> poles(vPoleCount_);
     std::vector<double> weights(vPoleCount_, 0.0);
     for (int j = 0; j < vPoleCount_; ++j) {
@@ -130,14 +165,14 @@ BSplineCurve<3> BSplineSurface::uIsoCurve(double u) const {
         poles[j] = sum / weights[j];
     }
     if (!isRational()) weights.clear();
-    return BSplineCurve<3>(vDegree_, vKnots_, std::move(poles), std::move(weights));
+    return BSplineCurve<3>(vDegree_, vKnots(), std::move(poles), std::move(weights));
 }
 
 BSplineCurve<3> BSplineSurface::vIsoCurve(double v) const {
     const int pv = vDegree_;
-    const int sv = detail::findSpan(vKnots_, pv, vPoleCount_, v);
+    const int sv = detail::findSpan(vKnots(), pv, vPoleCount_, v);
     detail::ScratchBuffer<double> nv(pv + 1);
-    detail::basisFunctionDerivatives(vKnots_, sv, v, pv, 0, nv.data());
+    detail::basisFunctionDerivatives(vKnots(), sv, v, pv, 0, nv.data());
     std::vector<Vec3> poles(uPoleCount_);
     std::vector<double> weights(uPoleCount_, 0.0);
     for (int i = 0; i < uPoleCount_; ++i) {
@@ -151,7 +186,7 @@ BSplineCurve<3> BSplineSurface::vIsoCurve(double v) const {
         poles[i] = sum / weights[i];
     }
     if (!isRational()) weights.clear();
-    return BSplineCurve<3>(uDegree_, uKnots_, std::move(poles), std::move(weights));
+    return BSplineCurve<3>(uDegree_, uKnots(), std::move(poles), std::move(weights));
 }
 
 // Prima ogni colonna (curva in u) viene divisa nei tratti di Bezier, poi ogni
@@ -288,6 +323,14 @@ std::shared_ptr<const BSplineSurface::SharpKnotLines> BSplineSurface::cachedShar
 }
 
 std::vector<BSplineSurface> BSplineSurface::bezierPatches() const {
+    if (basis_) {
+        const auto source = basis_->cachedBezierPatches();
+        std::vector<BSplineSurface> result;
+        result.reserve(source->size());
+        for (const auto &patch : *source)
+            result.emplace_back(std::shared_ptr<const BSplineSurface>(source, &patch), placement_);
+        return result;
+    }
     const int pu = uDegree_, pv = vDegree_;
     std::vector<std::vector<BSplineCurve<3>>> columns;
     for (int j = 0; j < vPoleCount_; ++j) {
@@ -297,7 +340,7 @@ std::vector<BSplineSurface> BSplineSurface::bezierPatches() const {
             poles[i] = pole(i, j);
             if (isRational()) weights.push_back(weight(i, j));
         }
-        columns.push_back(BSplineCurve<3>(pu, uKnots_, std::move(poles), std::move(weights)).bezierSegments());
+        columns.push_back(BSplineCurve<3>(pu, uKnots(), std::move(poles), std::move(weights)).bezierSegments());
     }
     const std::size_t uSpans = columns.front().size();
 
@@ -312,7 +355,7 @@ std::vector<BSplineSurface> BSplineSurface::bezierPatches() const {
                 poles[j] = columns[j][k].poles()[i];
                 if (isRational()) weights.push_back(columns[j][k].weight(i));
             }
-            rows.push_back(BSplineCurve<3>(pv, vKnots_, std::move(poles), std::move(weights)).bezierSegments());
+            rows.push_back(BSplineCurve<3>(pv, vKnots(), std::move(poles), std::move(weights)).bezierSegments());
         }
         const Interval uSpan = columns.front()[k].domain();
         for (std::size_t m = 0; m < rows.front().size(); ++m) {
@@ -345,7 +388,7 @@ CurvePtr<3> BSplineSurface::knotIso(bool fixedU, double value) const {
         // Un parametro interno a un tratto non usa la cache dei nodi: non
         // costruire tutte le isoparametriche per una curva che non vi compare.
         // A cache pronta il percorso di lookup resta quello originale.
-        const std::vector<double> &knots = fixedU ? uKnots_ : vKnots_;
+        const std::vector<double> &knots = fixedU ? uKnots() : vKnots();
         const auto knot = std::lower_bound(knots.begin(), knots.end(), value);
         const Interval domain = fixedU ? uDomain() : vDomain();
         if (knot == knots.end() || *knot != value || value < domain.lo || value > domain.hi) return nullptr;

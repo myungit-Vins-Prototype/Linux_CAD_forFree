@@ -129,6 +129,11 @@ QString drawingModelDefinitionMatches(const DocumentState &document,const QByteA
     if(current==expected){matches=true;return {};}
     auto normalized=document;normalized.version.checkinId={};normalized.baseCheckinId={};normalized.orientation=AxesOrientation{};
     normalized.lengthUnit=LengthUnit::Millimeter;
+    QByteArray format61;
+    if (encodeDocumentDefinition61ForHash(normalized,format61).isEmpty()
+        && QCryptographicHash::hash(format61,QCryptographicHash::Sha256)==expected) {
+        matches=true; return {};
+    }
     QByteArray format60;
     if (encodeDocumentDefinition60ForHash(normalized,format60).isEmpty()
         && QCryptographicHash::hash(format60,QCryptographicHash::Sha256)==expected) {
@@ -142,7 +147,7 @@ QString drawingModelDefinitionMatches(const DocumentState &document,const QByteA
             if(constraint.pierce&&!constraint.pierce->surface.point.name.isEmpty()){matches=false;return {};}
     }
     for (const auto &body : document.extrusions)
-        if (body.loftStartReverse || body.loftEndReverse) { matches=false; return {}; }
+        if (body.loftStartReverse || body.loftEndReverse || !body.loftGuideCrossConditions.isEmpty()) { matches=false; return {}; }
     QByteArray legacy;
     const auto legacyError=encodeDocumentDefinition53ForHash(normalized,legacy);if(!legacyError.isEmpty())return legacyError;
     matches=QCryptographicHash::hash(legacy,QCryptographicHash::Sha256)==expected;return {};
