@@ -1,0 +1,173 @@
+{
+  "method": "Analisi statica diretta, suite esterne non eseguite",
+  "solidcraft": {
+    "sha": "138e3478e66d9e5b9297a6e3b5431301fa567fbd",
+    "files": [
+      {
+        "path": "crates/sketch/src/model.rs",
+        "sha256": "1a7adc50d7c444a89c8a31c20ef355d4cb9ede864af76862cfd21b85b13b9803",
+        "url": "https://github.com/tangency-labs/solidcraft/blob/138e3478e66d9e5b9297a6e3b5431301fa567fbd/crates/sketch/src/model.rs"
+      },
+      {
+        "path": "crates/sketch/src/link.rs",
+        "sha256": "c7a4e6ca777a5eb9d9e09a55635eeffa561b12f2ffad9a535155ec3a3923c51d",
+        "url": "https://github.com/tangency-labs/solidcraft/blob/138e3478e66d9e5b9297a6e3b5431301fa567fbd/crates/sketch/src/link.rs"
+      },
+      {
+        "path": "crates/sketch/src/link_identity_tests.rs",
+        "sha256": "700b821a9711ab128855d6613530cf4e4711dae34ee6ee282d46524b85ad3862",
+        "url": "https://github.com/tangency-labs/solidcraft/blob/138e3478e66d9e5b9297a6e3b5431301fa567fbd/crates/sketch/src/link_identity_tests.rs"
+      },
+      {
+        "path": "crates/doc/src/project.rs",
+        "sha256": "9683586b3c289fdc3501d66c5ad9840324b9abd56659c1fde6bfe999933baa1e",
+        "url": "https://github.com/tangency-labs/solidcraft/blob/138e3478e66d9e5b9297a6e3b5431301fa567fbd/crates/doc/src/project.rs"
+      },
+      {
+        "path": "crates/doc/src/naming.rs",
+        "sha256": "866dbd08ca4f8af590ec9702d1dcc455013f7b9c123c501e8921bfa15d81e643",
+        "url": "https://github.com/tangency-labs/solidcraft/blob/138e3478e66d9e5b9297a6e3b5431301fa567fbd/crates/doc/src/naming.rs"
+      },
+      {
+        "path": "crates/doc/src/named_projection_tests.rs",
+        "sha256": "1a7e835e4a9f0dced8bb540c2b871b9a346727eed64badd7e51fe7625451d43b",
+        "url": "https://github.com/tangency-labs/solidcraft/blob/138e3478e66d9e5b9297a6e3b5431301fa567fbd/crates/doc/src/named_projection_tests.rs"
+      },
+      {
+        "path": "crates/doc/src/persistent_name.rs",
+        "sha256": "7280f752be77f61691300d425ede05c51d88aa6651da7c463b5f20fef1f0ee12",
+        "url": "https://github.com/tangency-labs/solidcraft/blob/138e3478e66d9e5b9297a6e3b5431301fa567fbd/crates/doc/src/persistent_name.rs"
+      },
+      {
+        "path": "crates/engine/src/cmd/sketch_project.rs",
+        "sha256": "ecdb800ccca0d54f88b7d0025249f77b8fbc5e90eb7ef5bdd7c94bcafa440825",
+        "url": "https://github.com/tangency-labs/solidcraft/blob/138e3478e66d9e5b9297a6e3b5431301fa567fbd/crates/engine/src/cmd/sketch_project.rs"
+      },
+      {
+        "path": "crates/engine/src/cmd/sketch_project_edge_tests.rs",
+        "sha256": "6943df8c9c1f80d4a4713ad48ad4ae4be85a5224fe556e696990db186edd8d05",
+        "url": "https://github.com/tangency-labs/solidcraft/blob/138e3478e66d9e5b9297a6e3b5431301fa567fbd/crates/engine/src/cmd/sketch_project_edge_tests.rs"
+      },
+      {
+        "path": "crates/engine/src/cmd/sketch_store.rs",
+        "sha256": "c46ce064d4e800ada772ca70fd235e64eeff75e979cf70f946a55d0169e950e2",
+        "url": "https://github.com/tangency-labs/solidcraft/blob/138e3478e66d9e5b9297a6e3b5431301fa567fbd/crates/engine/src/cmd/sketch_store.rs"
+      }
+    ]
+  },
+  "freecad": {
+    "metadata": {
+      "tag": "1.1.4",
+      "sha": "4fd3bf320d9566a27e60069fc8387448aaa3a094",
+      "main": "80df03cf5ba501b3a9b80a7b1cc5e0406aa67bc3",
+      "published": "2026-09-28T13:58:35Z"
+    },
+    "files": [
+      {
+        "path": "src/App/PropertyLinks.cpp",
+        "sha256": "8c2ac7ae7ffe32b4dfe282190f0f4ecfe2a9cf4bf7c39926de533eac1020762e",
+        "url": "https://github.com/FreeCAD/FreeCAD/blob/4fd3bf320d9566a27e60069fc8387448aaa3a094/src/App/PropertyLinks.cpp"
+      },
+      {
+        "path": "src/App/PropertyLinks.h",
+        "sha256": "03176b14948d43fcae3ff290711a913ae4fa43f3ba286d66ceb610e074555d1c",
+        "url": "https://github.com/FreeCAD/FreeCAD/blob/4fd3bf320d9566a27e60069fc8387448aaa3a094/src/App/PropertyLinks.h"
+      },
+      {
+        "path": "src/Mod/Part/App/AttachExtension.cpp",
+        "sha256": "9286f0e2ef4df069c5ddc5ceb857c4e54f93707e9284efd69e8567457d6f9966",
+        "url": "https://github.com/FreeCAD/FreeCAD/blob/4fd3bf320d9566a27e60069fc8387448aaa3a094/src/Mod/Part/App/AttachExtension.cpp"
+      },
+      {
+        "path": "src/Mod/Part/App/AttachExtension.h",
+        "sha256": "061857662ef9f8e618bf7695587add38f7645b67d81d5932521abcb54152d8bc",
+        "url": "https://github.com/FreeCAD/FreeCAD/blob/4fd3bf320d9566a27e60069fc8387448aaa3a094/src/Mod/Part/App/AttachExtension.h"
+      },
+      {
+        "path": "src/Mod/Part/App/Geometry.h",
+        "sha256": "02553b0a8e9bcc5f083e4e204eafb65432a4301bb55331c75b05b729d103b6b8",
+        "url": "https://github.com/FreeCAD/FreeCAD/blob/4fd3bf320d9566a27e60069fc8387448aaa3a094/src/Mod/Part/App/Geometry.h"
+      },
+      {
+        "path": "src/Mod/Part/App/TopoShape.h",
+        "sha256": "5942afa0762779dec1799c24d6ac356c2cad3069021aa5428d6ebdec77757709",
+        "url": "https://github.com/FreeCAD/FreeCAD/blob/4fd3bf320d9566a27e60069fc8387448aaa3a094/src/Mod/Part/App/TopoShape.h"
+      },
+      {
+        "path": "src/Mod/PartDesign/App/ShapeBinder.cpp",
+        "sha256": "189fe3b26f122ff93b9c7abfed2ba08988d3e82b143e423497be170997167876",
+        "url": "https://github.com/FreeCAD/FreeCAD/blob/4fd3bf320d9566a27e60069fc8387448aaa3a094/src/Mod/PartDesign/App/ShapeBinder.cpp"
+      },
+      {
+        "path": "src/Mod/PartDesign/App/ShapeBinder.h",
+        "sha256": "471206a4148fbe7008bbb961be3d7ee88da09ef05baef1fa2fe24bb24f765944",
+        "url": "https://github.com/FreeCAD/FreeCAD/blob/4fd3bf320d9566a27e60069fc8387448aaa3a094/src/Mod/PartDesign/App/ShapeBinder.h"
+      },
+      {
+        "path": "src/Mod/PartDesign/PartDesignTests/TestShapeBinder.py",
+        "sha256": "4428684d9d17c1754e703149212cee3d36b0920d2c1d0d7bb15a8f7bbe482658",
+        "url": "https://github.com/FreeCAD/FreeCAD/blob/4fd3bf320d9566a27e60069fc8387448aaa3a094/src/Mod/PartDesign/PartDesignTests/TestShapeBinder.py"
+      },
+      {
+        "path": "src/Mod/Sketcher/App/Constraint.h",
+        "sha256": "56a8c2182485e8bd4408fb509106ad64cb068d7494fc7f61377d6dbeaeeba476",
+        "url": "https://github.com/FreeCAD/FreeCAD/blob/4fd3bf320d9566a27e60069fc8387448aaa3a094/src/Mod/Sketcher/App/Constraint.h"
+      },
+      {
+        "path": "src/Mod/Sketcher/App/ExternalGeometryExtension.h",
+        "sha256": "667ed7e4bfa136979676449b2575519e503337f3c918b582e71ff817202d9ecb",
+        "url": "https://github.com/FreeCAD/FreeCAD/blob/4fd3bf320d9566a27e60069fc8387448aaa3a094/src/Mod/Sketcher/App/ExternalGeometryExtension.h"
+      },
+      {
+        "path": "src/Mod/Sketcher/App/ExternalGeometryFacade.cpp",
+        "sha256": "a07d37bc192a96e58cd48b07b9332bb23c7d4dc8a79b9f34e3d97561f848361e",
+        "url": "https://github.com/FreeCAD/FreeCAD/blob/4fd3bf320d9566a27e60069fc8387448aaa3a094/src/Mod/Sketcher/App/ExternalGeometryFacade.cpp"
+      },
+      {
+        "path": "src/Mod/Sketcher/App/ExternalGeometryFacade.h",
+        "sha256": "4dddd97074e2f927dac4f77d3bae301d6e4376d9b48aaefc5f593fc8c79d06e9",
+        "url": "https://github.com/FreeCAD/FreeCAD/blob/4fd3bf320d9566a27e60069fc8387448aaa3a094/src/Mod/Sketcher/App/ExternalGeometryFacade.h"
+      },
+      {
+        "path": "src/Mod/Sketcher/App/GeometryFacade.cpp",
+        "sha256": "67577a3772344d74c57c53a1e58dcbe3ca32a0f0032d4e189ce6b43892eecc44",
+        "url": "https://github.com/FreeCAD/FreeCAD/blob/4fd3bf320d9566a27e60069fc8387448aaa3a094/src/Mod/Sketcher/App/GeometryFacade.cpp"
+      },
+      {
+        "path": "src/Mod/Sketcher/App/GeometryFacade.h",
+        "sha256": "45b4addd0efae82e4a93257e958bd6daa7c85a84d58d147723028243ea4f2665",
+        "url": "https://github.com/FreeCAD/FreeCAD/blob/4fd3bf320d9566a27e60069fc8387448aaa3a094/src/Mod/Sketcher/App/GeometryFacade.h"
+      },
+      {
+        "path": "src/Mod/Sketcher/App/PropertyConstraintList.cpp",
+        "sha256": "b02da998bc2bf80b153a75ad0b07651979d6757457b6f9bf033b02902a72cf98",
+        "url": "https://github.com/FreeCAD/FreeCAD/blob/4fd3bf320d9566a27e60069fc8387448aaa3a094/src/Mod/Sketcher/App/PropertyConstraintList.cpp"
+      },
+      {
+        "path": "src/Mod/Sketcher/App/Sketch.cpp",
+        "sha256": "65c7853c0d1e9d8d621cc75d001699d45c02d1487a61aaf91a1ac2843b67b81e",
+        "url": "https://github.com/FreeCAD/FreeCAD/blob/4fd3bf320d9566a27e60069fc8387448aaa3a094/src/Mod/Sketcher/App/Sketch.cpp"
+      },
+      {
+        "path": "src/Mod/Sketcher/App/SketchObject.cpp",
+        "sha256": "72f944926b2231c47c7cdc3721f7fb43396820289927a89fa08437ba91077231",
+        "url": "https://github.com/FreeCAD/FreeCAD/blob/4fd3bf320d9566a27e60069fc8387448aaa3a094/src/Mod/Sketcher/App/SketchObject.cpp"
+      },
+      {
+        "path": "src/Mod/Sketcher/App/SketchObject.h",
+        "sha256": "a21018ddcfc2bda32f15eeadc5c63015677b87cd441e829beae575323fd0fea0",
+        "url": "https://github.com/FreeCAD/FreeCAD/blob/4fd3bf320d9566a27e60069fc8387448aaa3a094/src/Mod/Sketcher/App/SketchObject.h"
+      },
+      {
+        "path": "src/Mod/Sketcher/Gui/CommandCreateGeo.cpp",
+        "sha256": "e096abe0d5cb062bcf6689b092be369729c1a61c72267f6be6558ba289c36e34",
+        "url": "https://github.com/FreeCAD/FreeCAD/blob/4fd3bf320d9566a27e60069fc8387448aaa3a094/src/Mod/Sketcher/Gui/CommandCreateGeo.cpp"
+      },
+      {
+        "path": "src/Mod/Sketcher/Gui/CommandSketcherTools.cpp",
+        "sha256": "71a50c99e27ef0f56d676c8590a3c7f41a511fb8064380526ed44ba5c0c45de8",
+        "url": "https://github.com/FreeCAD/FreeCAD/blob/4fd3bf320d9566a27e60069fc8387448aaa3a094/src/Mod/Sketcher/Gui/CommandSketcherTools.cpp"
+      }
+    ]
+  }
+}

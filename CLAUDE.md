@@ -103,18 +103,22 @@ ctest --test-dir forgecad-release --output-on-failure
 
 ## Ultimi interventi — esiti consolidati
 
-0. **03/11 — Schizzi e loft.** Clic esterni transitori senza falso Undo/dirty; cache inutilizzate
-   eliminate conservando vincoli/conversioni/consumatori e rimappando indici. Integrazione Undo approvata
-   dall'utente dopo due rifiuti automatici. Vincoli malformati: pulizia sospesa, diagnostica conservata.
-   Costruzione solo in modifica, picking/bounds coerenti ed esclusione dalle sezioni loft. App/runner
-   completi;6prove native PASS, file reale49→33 riferimenti, vincoli/profili/rebuild/IO invariati.
-   CTest169PASS/1SKIP GL/0FAIL su170;2fixture aggiornate. Ultimo fix sorgenti multiple:17/17 PASS. Mappa566/7824/268AST/check/HTML,
-   11confini/11moduli verificati. [Rapporto](docs/schizzi-riferimenti-costruzione-2026-11-03.md).
-   `cb35a2e`: sezioni implicite, NURBS loft entro1e-9 mm, sorgenti esatte/associative immutate;
-   CTest19/19, Loft42/42 e4flussi nativi PASS. [Prove](docs/loft-sezioni-proiettate-2026-11-03.md).
-   `1a8c60d`: picker storyboard, diagnostica loft e specchi atomici. [Dettagli](docs/storyboard-diagnostica-loft-2026-11-03.md).
-   `2e4366f`: pannelli/ribbon, tre punti e verso G1/G2. [UI](docs/ui-pannelli-verso-loft-2026-11-03.md).
-   [Checkpoint](docs/history/claude-checkpoint-prima-cache-schizzo-2026-11-03.md).
+0. **03/11 — Schizzi, riferimenti e loft.** `4fafbaa` pubblicato: clic transitori senza falso
+   Undo/dirty, pulizia cache con rimappatura e protezione di vincoli/consumatori; costruzione solo
+   in modifica, esclusa dai loft. Undo approvato; dati malformati conservati. App/runner,6QA native,
+   file49→33,CTest169PASS/1SKIP/0FAIL,ultimo17/17 PASS. [Rapporto](docs/schizzi-riferimenti-costruzione-2026-11-03.md).
+   Loft3sezioni/2guide: residuo2,235e-7 mm rendeva discontinuo il fit; raccordo C2 nel budget di
+   connessione esistente, fit1e-9 mm e sorgenti invariati. App/runner,CTest8/8,forma11/11,Loft42/42,
+   4flussi Wayland/XCB PASS;sezioni4,99e-14 mm. Mappa566/7825/268/check/HTML PASS.
+   [Prove](docs/loft-tolleranza-incontri-2026-11-03.md).
+   Confronto prima della scelta: SolidCraft138e347,FreeCAD1.1.4/4fd3bf3,analisi statica.
+   Entrambi usano geometria esterna derivata/fissa; FreeCAD separa ExternalGeo e appoggio.
+   Proposti ID locali stabili, storage esterno distinto, identità dei prodotti e mutazioni comuni;
+   migrazione non applicata, suite esterne non eseguite. [Studio](docs/confronto-riferimenti-solidcraft-freecad-2026-11-03.md).
+   `cb35a2e`: sezioni implicite fit1e-9,CTest19/19,Loft42/42,4QA. [Sezioni](docs/loft-sezioni-proiettate-2026-11-03.md).
+   `1a8c60d`: picker/diagnostica/specchi;[storia](docs/storyboard-diagnostica-loft-2026-11-03.md).
+   `2e4366f`: pannelli/ribbon,tre punti,versoG1/G2;[UI](docs/ui-pannelli-verso-loft-2026-11-03.md).
+   [Checkpoint](docs/history/claude-checkpoint-prima-confronto-riferimenti-2026-11-03.md).
 
 1. **02–03/11 — CI, guide proiettate e Loft9 (`e54a174`, pubblicato).** CI41513461524
    verde su `ec08b12`: Linux56PASS/2SKIP, macOS60PASS/1SKIP; esito storico.
@@ -126,15 +130,13 @@ ctest --test-dir forgecad-release --output-on-failure
    [CI](docs/ci-riparazione-2026-11-02.md), [guide](docs/loft-guide-proiettate-2026-11-02.md).
    Unione/curve `dbed027`/`cc26a27`: [rapporto](docs/estrusione-unione-riferimenti-proiettati-2026-11-02.md).
 
-2. **02/11 — Correzioni review, storyboard e nuova estrusione (`d4f15fc`, pubblicato).** R1–R5 corretti:
-   parser/scambio STEP-B-rep robusti, occorrenze distinte e catalogo concorrente senza perdita dei lock.
-   Agenti GUI/storyboard: picking, pan, highlight, rimappature, identità copie/Pierce/featureOnly,
-   componenti DeleteFace e visibilità consumo/recupero tip. B8 solo con reingresso iniettato.
-   «Fino al prossimo corpo» B-rep, dipendenze, versi, preview/genealogia; formato 60 invariato.
-   App/runner PASS; CTest consolidato 151 PASS/1 SKIP/1 FAIL, kernel 457/458: sformo preesistente
-   `test_draft.cpp:134`, scarto1,794e-6>1e-6. Robustezza5/5 anche sanitizer mirati, STEP20/20,
-   IGES9/9, BodyIO2/2; GUI6/6 Wayland/XCB. Mappa531file/7305relazioni/249TU, check/HTML PASS.
-   [Dettagli, prove e limiti](docs/code-review-2026-11-02-correzioni.md); originali intatti.
+2. **02/11 — Review/storyboard/estrusione (`d4f15fc`).** R1–R5: parser, scambio, occorrenze,
+   catalogo/lock; picking, pan, rimappature, copie/Pierce, consumo/visibilità. B8 solo reingresso
+   iniettato. Estrusione fino al corpo B-rep, dipendenze/preview/genealogia, formato60.
+   App/runner;CTest151PASS/1SKIP/1FAIL,kernel457/458: sformo preesistente1,794e-6>1e-6.
+   Robustezza5/5,sanitizer mirati,STEP20/20,IGES9/9,BodyIO2/2,GUI6/6;Mappa531/7305/249.
+   [Dettagli](docs/code-review-2026-11-02-correzioni.md);originali intatti.
+
 3. **02/11 — OCCT soltanto nei test (`ab6fc71`).** Facoltativo in `kernel/occt_tests`; app/kernel senza OCCT.
    Configurazione minima verificata; utente conferma zero `HAVE_TK` nell'app. Confronti successivi non ricertificati.
 4. **02/11 — Bug review (`9321643`).** Parser STEP/IGES, espressioni, GlassCompositor, Qt6.4, specchio e C++17 corretti.

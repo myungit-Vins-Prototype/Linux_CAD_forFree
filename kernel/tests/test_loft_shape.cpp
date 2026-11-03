@@ -264,6 +264,73 @@ void guideParameterInvariance() {
     std::cout << std::endl;
 }
 
+
+// Una guida vicina entro il budget di connessione deve dare una funzione
+// continua da approssimare: il budget di fit resta 1e-9 mm, distinto dal gap.
+void tolerantGuideAnchors() {
+    for (double scale : {1.0, 10.0}) for (bool interior : {false, true}) for (bool reverse : {false, true}) {
+        const double gap = 2.2351741790771484e-7 * scale;
+        const auto world = [=](Vec3 p) { return scale * p + Vec3(12, -7, 3); };
+        std::vector<LoftSection> sections;
+        for (double z : interior ? std::vector<double>{0, 2, 4} : std::vector<double>{0, 4})
+            sections.push_back(section(bezier({world({0, 0, z}), world({1, 1, z}), world({3, 1, z}), world({4, 0, z})})));
+        auto left = bezier({world({0, 0, 0}) + Vec3(-gap, 0, 0), world({0, 0, 4}) + Vec3(gap, 0, 0)});
+        auto right = bezier({world({4, 0, 0}) + Vec3(gap, 0, 0), world({4, 0, 4}) + Vec3(-gap, 0, 0)});
+        const auto beforeLeft = left->poles(), beforeRight = right->poles();
+        LoftOptions options;
+        for (const auto &guide : {left, right}) {
+            CurvePtr<3> curve = reverse ? reversedCurve<3>(guide) : guide;
+            options.guides.push_back({{curve, curve->domain()}});
+            options.guideConditions.push_back({1, 1});
+        }
+        const auto body = loftSheet(sections, options);
+        const auto &s = surface(body);
+        double guideError = 0, sectionError = 0, fitError = 0;
+        for (const auto &profile : sections)
+            for (int j = 0; j <= 30; ++j)
+                sectionError = std::max(sectionError, projectPoint(s, profile.path.front().curve->point(j / 30.)).distance);
+        for (std::size_t side = 0; side < 2; ++side) {
+            const auto guide = side ? right : left;
+            for (int j = 0; j <= 100; ++j) {
+                const double v = j / 100.;
+                const Vec3 point = s.point(double(side), v);
+                guideError = std::max(guideError, projectPoint(*guide, point, guide->domain()).distance);
+                const double t = interior ? (v < .5 ? 2 * v : 2 * v - 1) : v;
+                const double f = t * t * t * (10 + t * (-15 + 6 * t));
+                const double residual = interior ? (v < .5 ? gap * (1 - f) : -gap * f) : gap * (1 - 2 * f);
+                const double x = -gap + 2 * gap * v + residual;
+                const Vec3 expected = world({side ? 4. : 0., 0, 4 * v}) + Vec3(side ? -x : x, 0, 0);
+                fitError = std::max(fitError, distance(point, expected));
+            }
+            for (double v : interior ? std::vector<double>{0, .5, 1} : std::vector<double>{0, 1}) {
+                Vec3 jet[4]; s.evaluate(double(side), v, 1, jet);
+                require(angle(jet[Surface::derivativeIndex(0, 1, 1)], guide->derivative(.5)) < 1e-8, "raccordo conserva la tangente della guida negli incontri");
+            }
+        }
+        require(fitError < 4e-9, "fit verificato separatamente sul raccordo analitico C2");
+        require(sectionError < 4e-9, "sezioni conservate entro il budget di fit");
+        require(guideError <= gap + 4e-9, "scarto guida limitato ai residui ammessi piu' il fit");
+        require(vJump(s) < 1e-6, "residui raccordati senza cresta alla sezione intermedia");
+        const auto samePoles = [](const auto &a, const auto &b) {
+            return a.size() == b.size() && std::equal(a.begin(), a.end(), b.begin(),
+                [](const Vec3 &p, const Vec3 &q) { return p.x() == q.x() && p.y() == q.y() && p.z() == q.z(); });
+        };
+        require(samePoles(left->poles(), beforeLeft) && samePoles(right->poles(), beforeRight), "guide sorgenti immutate");
+        const auto copy = readBodyBinary(writeBodyBinary(body));
+        sameShape(s, surface(copy), 1e-10);
+        std::cout << " tolerant scale=" << scale << " interior=" << interior << " reverse=" << reverse
+                  << " sectionError=" << sectionError << " guideError=" << guideError << " fitError=" << fitError << std::endl;
+        // Un gap macroscopico resta un errore di intersezione, non un fit accettato.
+        auto invalid = options;
+        const auto far = bezier({world({-.01, 0, 0}), world({-.01, 0, 4})});
+        invalid.guides[0] = {{far, far->domain()}};
+        bool rejected = false;
+        try { (void)loftSheet(sections, invalid); }
+        catch (const std::domain_error &) { rejected = true; }
+        require(rejected, "guida fuori budget rifiutata");
+    }
+}
+
 void reverseProfileNormals() {
     const auto a=bezier({{0,0,0},{2,2,0},{4,0,0}}), b=bezier({{2,0,5},{4,2,5},{6,0,5}});
     LoftOptions options;options.startContinuity=options.endContinuity=1;
@@ -312,6 +379,7 @@ int main() {
     run("source-corner", [] { cornerPreserved(); });
     run("three-guide-continuity", [] { threeGuideContinuity(); });
     run("perpendicular-G1-chord", [] { perpendicularChord(); });
+    run("tolerant-guide-anchors", [] { tolerantGuideAnchors(); });
     run("reverse-profile-normals", [] { reverseProfileNormals(); });
     run("guide-parameter-invariance", [] { guideParameterInvariance(); });
     std::cout << passed << "/" << (passed + failed) << " gruppi di regressione superati" << std::endl;

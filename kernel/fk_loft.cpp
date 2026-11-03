@@ -628,7 +628,8 @@ std::vector<Homogeneous> hermiteRow(const std::vector<Homogeneous> &value, const
 // tangente del loft nei punti di sezione. Il parametro della guida viene
 // rimappato con quintiche; i suoi nodi sono sempre punti di suddivisione.
 BSplineCurve<3> followingGuide(const std::vector<PathSegment> &path, const std::vector<GuideHit> &hits,
-                              const std::vector<double> &v, const BSplineCurve<3> &base, double influence, double tolerance) {
+                              const std::vector<double> &v, const BSplineCurve<3> &base, double influence, double tolerance,
+                              double connectionTolerance) {
     // La coordinata guida e' la lunghezza, non il parametro arbitrario dei
     // tratti. Valori e jet sono sempre valutati sulla curva sorgente esatta.
     LengthCache arcLengths;
@@ -774,6 +775,21 @@ BSplineCurve<3> followingGuide(const std::vector<PathSegment> &path, const std::
         }
     }
     breaks=std::move(stableBreaks);
+    // Le intersezioni sono ammesse entro il budget di connessione, mentre
+    // il fit ha un budget distinto e piu' stretto. Forzare solo il valore
+    // nelle sezioni rendeva discontinua la funzione da approssimare.
+    // Raccordare i residui con una quintica C2: lo spostamento resta nella
+    // combinazione convessa dei residui ammessi, con jet nulli agli incontri.
+    // Le curve sorgenti e le sezioni rimangono immutate.
+    std::vector<Vec3> residuals;
+    for (std::size_t i = 0; i < hits.size(); ++i) {
+        Vec3 source[3];
+        evaluate(coordinate(hits[i]), false, source);
+        const Vec3 residual = base.point(v[i]) - source[0];
+        if (norm(residual) > connectionTolerance)
+            throw std::domain_error("loft: incontro guida/sezione fuori dal budget di connessione");
+        residuals.push_back(residual);
+    }
     const auto sample = [&](double at, bool left, Vec3 *out) {
         std::size_t i=0;
         while(i+1<maps.size() && (at>v[i+1] || (!left && at==v[i+1]))) ++i;
@@ -784,9 +800,15 @@ BSplineCurve<3> followingGuide(const std::vector<PathSegment> &path, const std::
         if(left) base.evaluateLeft(at,2,original); else base.evaluate(at,2,original);
         const Vec3 d1=source[1]*map[1].x();
         const Vec3 d2=source[2]*map[1].x()*map[1].x()+source[1]*map[2].x();
+        const double h = v[i + 1] - v[i], t = (at - v[i]) / h;
+        const double f = t * t * t * (10.0 + t * (-15.0 + 6.0 * t));
+        const double df = 30.0 * t * t * (1.0 - t) * (1.0 - t) / h;
+        const double ddf = 60.0 * t * (1.0 - t) * (1.0 - 2.0 * t) / (h * h);
+        const Vec3 delta = residuals[i + 1] - residuals[i];
+        source[0] += residuals[i] + f * delta;
         out[0]=original[0]+influence*(source[0]-original[0]);
-        out[1]=original[1]+influence*(d1-original[1]);
-        out[2]=original[2]+influence*(d2-original[2]);
+        out[1]=original[1]+influence*(d1+df*delta-original[1]);
+        out[2]=original[2]+influence*(d2+ddf*delta-original[2]);
         // I profili di sezione restano esatti anche se l'incontro guida /
         // sezione e' stato accettato con una tolleranza numerica.
         if(std::find(v.begin(),v.end(),at)!=v.end()) out[0]=original[0];
@@ -1495,7 +1517,7 @@ Body loftCore(const std::vector<Section> &sections, const LoftOptions &options, 
                 else interpolate(M-1,nurbs[M-1][0].poleCount()-1,row,weights);
                 const BSplineCurve<3> base(q,originalVKnots,row,weights);
                 const std::size_t guide=std::size_t(vertexGuide[m]-guideHits.data());
-                auto curve=followingGuide(options.guides[guide],guideHits[guide],v,base,guideCondition(options, guide).influence,1e-9);
+                auto curve=followingGuide(options.guides[guide],guideHits[guide],v,base,guideCondition(options, guide).influence,1e-9,1e-6*scale);
                 for(double knot:curve.knots()) commonBreaks.push_back(knot);
                 followed[m]=std::make_shared<BSplineCurve<3>>(std::move(curve));
             }
