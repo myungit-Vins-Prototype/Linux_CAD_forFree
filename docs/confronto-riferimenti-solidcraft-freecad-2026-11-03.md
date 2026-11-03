@@ -141,3 +141,27 @@ per cancellazione/inserimento prima di un'entità referenziata, riordino dei pro
 riferimento scomparso/ambiguo, recupero dopo Undo, save/reload, proiezioni 3D e cicli vietati.
 L'obiettivo non è sostituire solver o kernel, ma rendere persistente l'identità senza dipendere
 posizionalmente da ogni operazione sui vettori.
+
+## Valutazione rispetto allo stato attuale
+
+Alla domanda se sia necessario cambiare strada, la raccomandazione è di conservare il modello
+associativo e rafforzarlo per passi. Il confronto è stato utile per verificare la direzione;
+non dimostra la necessità di copiare l'architettura di FreeCAD o riscrivere solver e kernel.
+Anche i programmi confrontati usano indici e rimappature: il problema è mantenere identità e
+coerenza in tutte le mutazioni, non la presenza dei vettori in sé.
+
+La pulizia e le rimappature recenti proteggono i percorsi verificati; non sono una migrazione
+agli ID locali persistenti. Dare identità alle entità locali e ai singoli prodotti derivati,
+concentrare le mutazioni e verificare cancellazione/riordino/Undo/save-reload sono miglioramenti
+raccomandati per ridurre la fragilità futura. Un riordino di prodotti con quantità e tipi invariati
+resta un rischio statico da riprodurre, non un guasto già dimostrato nei file segnalati.
+
+Separare fisicamente tutta la geometria esterna e introdurre un Binder sono interventi rinviabili:
+richiedono un beneficio concreto, per esempio collegamenti tra parti/documenti o difficoltà misurate
+nella gestione dei riferimenti, e non devono duplicare i resolver attuali. Il recente errore di fit
+nelle guide loft aveva una causa geometrica nella continuità della funzione da approssimare;
+l'opzione per mostrare la costruzione riguarda la visualizzazione. Questi due problemi non provano
+un difetto del modello associativo e non sarebbero risolti dalla sola migrazione dei riferimenti.
+
+Questa valutazione è un riesame dei sorgenti e delle verifiche già documentate: nessuna nuova
+migrazione, modifica al codice o esecuzione di test è stata effettuata per formularla.
