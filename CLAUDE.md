@@ -103,17 +103,18 @@ ctest --test-dir forgecad-release --output-on-failure
 
 ## Ultimi interventi — esiti consolidati
 
-0. **02–03/11 — CI e loft proiettato corretti.** `f75015b` CI e `ec08b12` loft pubblicati:
-   sformo con sezioni/vertici circolari analitici e letture catalogo senza lock writer.
-   163PASS/1SKIP GL/0FAIL su164, kernel459/459; stress revisioni32/32 e Clang/ASan PASS.
-   CI41513461524 su ec08b12 conclusa verde: Linux56PASS/2SKIP, macOS/Metal60PASS/1SKIP, zeroFAIL.
-   [Rapporto CI](docs/ci-riparazione-2026-11-02.md). Nessuna soglia/test indeboliti.
-   Loft SurfaceModellingExample219: sezioni piane via path e guida implicita ora usano piano certificato/
-   planeRoots3; corrette radici quasi parallele entro budget. Guida esatta, NURBS adattiva preesistente; formato60. App completa,10nuovi casi+21/39 precedenti, Clang/ASan PASS; GUI Wayland/XCB
-   pannello/Undo/Redo/cache/no-cache PASS, anche ultima copia. Suite164CTest conclusa.
-   Mappa549/7598/259AST,zeroerrori/check/11confini/HTML PASS. [Rapporto loft](docs/loft-guide-proiettate-2026-11-02.md).
-   Sezioni realmente nonplanari/guide complanari restano limitate; nessuna scrittura sui CAD originali.
-   Fix unione/curve `dbed027`/`cc26a27`: [rapporto storico](docs/estrusione-unione-riferimenti-proiettati-2026-11-02.md).
+0. **02–03/11 — CI, guide proiettate e Loft9.** `f75015b`/`ec08b12` pubblicati;
+   CI41513461524 verde Linux56PASS/2SKIP, macOS/Metal60PASS/1SKIP; [CI](docs/ci-riparazione-2026-11-02.md)
+   e [guide implicite](docs/loft-guide-proiettate-2026-11-02.md) documentano gli esiti precedenti.
+   **03/11 Loft9 corretto:** profili razionali algebrici/denominatore comune in fk_loft_profiles,
+   modulo Hermite comune, guide curvilinee e correzione cubica pesata. Rimane corner sorgente3,18°.
+   Cache8 rigenera le vecchie copie di lavoro con loft/derivati; revisioni check-in immutabili, formato60.
+   App completa aggiornata; Wayland/XCB pannello1→2→1guide, Undo/Redo, migrazione/cache/no-cache PASS.
+   Consolidati164PASS/1SKIP GL/0FAIL su165, kernel459/459;9nuovi gruppi+10guide implicite, Clang e
+   ASan/UBSan mirati PASS (LSan escluso per ptrace). Cache6/7 leggibili, futura9 ignorata.
+   Mappa552/7635/261AST,zeroerrori/check/7confini/HTML PASS. [Rapporto e archivio](docs/loft-forma-guide-2026-11-03.md).
+   Originali intatti; maggiore grado/poli per algebra esatta, nessuna certificazione globale auto-intersezioni.
+   Unione/curve `dbed027`/`cc26a27`: [rapporto](docs/estrusione-unione-riferimenti-proiettati-2026-11-02.md).
 
 1. **02/11 — Correzioni review, storyboard e nuova estrusione (`d4f15fc`, pubblicato).** R1–R5 corretti:
    parser/scambio STEP-B-rep robusti, occorrenze distinte e catalogo concorrente senza perdita dei lock.

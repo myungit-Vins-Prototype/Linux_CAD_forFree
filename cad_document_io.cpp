@@ -3,6 +3,7 @@
 #include "cad_document_read.h"
 #include "cad_workspace.h"
 
+#include <algorithm>
 #include <cmath>
 #include <exception>
 #include <memory>
@@ -907,7 +908,8 @@ namespace {
 // una modifica o una rigenerazione esplicita sostituisce immediatamente lo
 // snapshot. Il tag rende leggibili anche le cache precedenti (solo B-rep).
 constexpr quint32 kBodyCacheTag = 0x46434332;  // "FCC2"
-constexpr quint32 kBodyCacheVersion = 7;
+// 8: loft ricalcolati con campi di derivate e parametri guida regolari.
+constexpr quint32 kBodyCacheVersion = 8;
 constexpr qsizetype kMaxDisplayValues = 200000000;
 
 QByteArray definitionHash(const QByteArray &payload) { return QCryptographicHash::hash(payload, QCryptographicHash::Sha256); }
@@ -1130,6 +1132,17 @@ void applyBodyCache(const QByteArray &compressed, const QByteArray &payload, Doc
     else count = marker;  // cache storica: il terzo valore era direttamente il numero dei corpi
     if (in.status() != QDataStream::Ok || cacheVersion > kBodyCacheVersion
         || payloadHash != definitionHash(payload) || count != quint32(state.extrusions.size()))
+        return;
+    // I vecchi loft potevano trasformare salti di velocita' parametrica
+    // delle curve G1 in creste della superficie. La definizione resta valida,
+    // ma quel risultato non va riutilizzato. Scartare lo snapshot intero
+    // rigenera anche i derivati senza mescolare B-rep di generazioni diverse.
+    // Gli altri documenti conservano la portabilita' delle cache tra kernel.
+    // Le revisioni check-in sono snapshot immutabili: la loro lettura e
+    // validazione devono conservare la geometria storica, anche dopo il fix.
+    if (cacheVersion < 8 && state.version.checkinId.isNull()
+        && std::any_of(state.extrusions.cbegin(), state.extrusions.cend(),
+            [](const ExtrusionObject &body) { return body.feature == BodyFeature::Loft && !body.suppressed; }))
         return;
 
     struct CachedBody {

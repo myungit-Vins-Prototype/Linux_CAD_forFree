@@ -124,8 +124,8 @@ static void declaredHistoryCacheTest() {
     QDataStream cacheIn(cacheData); cacheIn.setVersion(QDataStream::Qt_6_0);
     QByteArray sourceHash, payloadHash; quint32 tag = 0, version = 0, count = 0;
     cacheIn >> sourceHash >> payloadHash >> tag >> version >> count;
-    require(version == 7 && count == 4 && payloadHash == QCryptographicHash::hash(testDocumentUncompress(bytes,11, payloadSize), QCryptographicHash::Sha256),
-        "cache 7 legata alla stessa definizione");
+    require(version == 8 && count == 4 && payloadHash == QCryptographicHash::hash(testDocumentUncompress(bytes,11, payloadSize), QCryptographicHash::Sha256),
+        "cache 8 legata alla stessa definizione");
     struct Record { bool has = false; QString error; QByteArray body, history; };
     std::vector<Record> records(count);
     SnapshotChunkReader chunks(cacheIn);
@@ -173,10 +173,12 @@ static void declaredHistoryCacheTest() {
                 && writeBodyBinary(*legacy.extrusions[i].forgeBody) == geometry[std::size_t(i)], "cache precedente conserva il B-rep esatto");
         require(!declaredHistorySnapshot(legacy.extrusions[1], 1, legacy.extrusions).history, "cache vecchia non inventa dichiarazioni");
     }
-    DocumentState legacy6;
-    require(loadDocumentFile(fixture(QStringLiteral("cache-6"), 6, records), legacy6).isEmpty()
-        && legacy6.extrusions[1].cachedGeometry && declaredHistorySnapshot(legacy6.extrusions[1], 1, legacy6.extrusions).history,
-        "cache 6 con dichiarazioni ancora leggibile");
+    for (quint32 old : {6u, 7u}) {
+        DocumentState legacy;
+        require(loadDocumentFile(fixture(QStringLiteral("cache-%1").arg(old), old, records), legacy).isEmpty()
+            && legacy.extrusions[1].cachedGeometry && declaredHistorySnapshot(legacy.extrusions[1], 1, legacy.extrusions).history,
+            "cache 6/7 con dichiarazioni e senza loft ancora leggibile");
+    }
     QDataStream metadata(records[1].history);
     quint32 schema = 0, operands = 0; metadata >> schema >> operands;
     require(schema == 1 && operands == 1, "metadati della prima feature offset");
@@ -207,7 +209,7 @@ static void declaredHistoryCacheTest() {
         if (corruption == 0) { CadViewport regenerated; regenerated.loadDocument(rejected); verify(regenerated.currentDocument()); }
     }
     DocumentState future;
-    require(loadDocumentFile(fixture(QStringLiteral("cache-futura"), 8, records), future).isEmpty(), "cache futura lascia leggibile la definizione");
+    require(loadDocumentFile(fixture(QStringLiteral("cache-futura"), 9, records), future).isEmpty(), "cache futura lascia leggibile la definizione");
     for (const auto &body : future.extrusions) require(!body.cachedGeometry, "cache futura ignorata");
     const QString noCache = directory.filePath(QStringLiteral("senza-cache.prt"));
     require(saveDocumentFile(noCache, original, false).isEmpty(), "salvataggio con sola definizione");

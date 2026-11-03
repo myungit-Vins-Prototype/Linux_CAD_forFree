@@ -1,4 +1,5 @@
 #include "fk_loft.h"
+#include "fk_loft_profiles.h"
 
 #include "fk_cancel.h"
 
@@ -533,11 +534,12 @@ std::vector<Homogeneous> contactDerivatives(const std::vector<BSplineCurve<3>> &
 // direzione longitudinale. L'influenza miscela la condizione con la forma
 // libera stimata dalle sezioni vicine.
 std::vector<Homogeneous> hermiteRow(const std::vector<Homogeneous> &value, const std::vector<double> &v,
-                                   const Vec3 &startDirection, const Vec3 &endDirection,
-                                   int startContinuity, int endContinuity, double startInfluence, double endInfluence,
-                                   const std::vector<GuideHit> *guide = nullptr, double guideInfluence = 0.0,
-                                   int guideContinuity = 1, const Homogeneous *startDerivative = nullptr,
-                                   const Homogeneous *endDerivative = nullptr) {
+                                    const Vec3 &startDirection, const Vec3 &endDirection, int startContinuity,
+                                    int endContinuity, double startInfluence, double endInfluence,
+                                    const std::vector<GuideHit> *guide = nullptr, double guideInfluence = 0.0,
+                                    int guideContinuity = 1, const Homogeneous *startDerivative = nullptr,
+                                    const Homogeneous *endDerivative = nullptr,
+                                    const std::vector<double> *commonSpeed = nullptr) {
     const std::size_t n = value.size();
     std::vector<Homogeneous> first(n), second(n);
     for (std::size_t i = 0; i < n; ++i) {
@@ -566,7 +568,7 @@ std::vector<Homogeneous> hermiteRow(const std::vector<Homogeneous> &value, const
             Vec3 tangent = (*guide)[i].tangent;
             if (dot(dp, tangent) < 0.0) tangent = -tangent;
             const double speed = norm(dp);
-            const Vec3 wantedFirst = speed * tangent;
+            const Vec3 wantedFirst = (commonSpeed ? (*commonSpeed)[i] : norm(dp)) * tangent;
             Vec3 ddp((second[i][0] - ddw * p.x() - 2.0 * dw * dp.x()) / w,
                      (second[i][1] - ddw * p.y() - 2.0 * dw * dp.y()) / w,
                      (second[i][2] - ddw * p.z() - 2.0 * dw * dp.z()) / w);
@@ -587,8 +589,9 @@ std::vector<Homogeneous> hermiteRow(const std::vector<Homogeneous> &value, const
         const Vec3 p(value[i][0] / w, value[i][1] / w, value[i][2] / w);
         Vec3 dp((first[i][0] - dw * p.x()) / w, (first[i][1] - dw * p.y()) / w, (first[i][2] - dw * p.z()) / w);
         Vec3 axis = normalized(direction);
-        if (dot(dp, axis) < 0.0) axis = -axis;
-        const Vec3 wanted = norm(dp) * axis;
+        if (!commonSpeed && dot(dp, axis) < 0.0)
+            axis = -axis;
+        const Vec3 wanted = (commonSpeed ? (*commonSpeed)[i] : norm(dp)) * axis;
         dp = (1.0 - influence) * dp + influence * wanted;
         first[i][0] = w * dp.x() + dw * p.x();
         first[i][1] = w * dp.y() + dw * p.y();
@@ -625,49 +628,59 @@ std::vector<Homogeneous> hermiteRow(const std::vector<Homogeneous> &value, const
 // rimappato con quintiche; i suoi nodi sono sempre punti di suddivisione.
 BSplineCurve<3> followingGuide(const std::vector<PathSegment> &path, const std::vector<GuideHit> &hits,
                               const std::vector<double> &v, const BSplineCurve<3> &base, double influence, double tolerance) {
+    // La coordinata guida e' la lunghezza, non il parametro arbitrario dei
+    // tratti. Valori e jet sono sempre valutati sulla curva sorgente esatta.
+    LengthCache arcLengths;
+    std::vector<PathSegment> arcPieces;
     std::vector<double> offsets{0.0};
-    for (const auto &piece : path) offsets.push_back(offsets.back() + piece.range.length());
-    const auto coordinate = [&](const GuideHit &hit) { return offsets[hit.segment] + hit.parameter - path[hit.segment].range.lo; };
-    struct SourceNode {double at; std::size_t piece; double parameter;};
-    std::vector<SourceNode> sourceNodes;
-    for(std::size_t k=0;k<path.size();++k) {
-        auto nodes=path[k].curve->breakpoints(path[k].range);
-        nodes.push_back(path[k].range.lo);nodes.push_back(path[k].range.hi);
-        for(double u:nodes)sourceNodes.push_back({offsets[k]+u-path[k].range.lo,k,u});
+    for (const auto &piece : path) {
+        auto nodes = piece.curve->breakpoints(piece.range);
+        nodes.push_back(piece.range.lo);
+        nodes.push_back(piece.range.hi);
+        std::sort(nodes.begin(), nodes.end());
+        nodes.erase(std::unique(nodes.begin(), nodes.end()), nodes.end());
+        for (std::size_t k = 1; k < nodes.size(); ++k) {
+            if (nodes[k] <= piece.range.lo || nodes[k - 1] >= piece.range.hi)
+                continue;
+            const Interval range{std::max(nodes[k - 1], piece.range.lo), std::min(nodes[k], piece.range.hi)};
+            const double length = arcLengths.get(*piece.curve, range, 1e-13);
+            if (!(length > 0))
+                throw std::domain_error("loft: tratto nullo lungo una guida");
+            arcPieces.push_back({piece.curve, range});
+            offsets.push_back(offsets.back() + length);
+        }
     }
-    std::sort(sourceNodes.begin(),sourceNodes.end(),[](const SourceNode&a,const SourceNode&b){return a.at<b.at;});
-    const auto segmentAt = [&](double t,bool left) {
-        std::size_t k=0;
-        while(k+1<path.size() && (t>offsets[k+1] || (!left && t==offsets[k+1])))++k;
-        return k;
+    const auto coordinate = [&](const GuideHit &hit) {
+        double before = 0;
+        for (std::size_t k = 0; k < hit.segment; ++k)
+            before += arcLengths.get(*path[k].curve, path[k].range, 1e-13);
+        return before + arcLengths.get(*path[hit.segment].curve, {path[hit.segment].range.lo, hit.parameter}, 1e-13);
     };
     const auto evaluate = [&](double t, bool left, Vec3 *out) {
-        std::size_t k=segmentAt(t,left);
-        double u=std::clamp(path[k].range.lo+t-offsets[k],path[k].range.lo,path[k].range.hi);
-        const double eps=64*std::numeric_limits<double>::epsilon()*std::max(1.0,std::fabs(offsets.back()));
-        auto node=std::lower_bound(sourceNodes.begin(),sourceNodes.end(),t,
-            [](const SourceNode&n,double at){return n.at<at;});
-        if(node==sourceNodes.end() || (node!=sourceNodes.begin() && std::fabs(std::prev(node)->at-t)<std::fabs(node->at-t)))
-            if(node!=sourceNodes.begin())--node;
-        // La bisezione puo' finire a pochi ulp dal nodo. Conservare il nodo
-        // originale e il suo lato, senza cancellare dettagli geometrici.
-        if(node!=sourceNodes.end() && std::fabs(node->at-t)<=eps) {
-            const double at=node->at;
-            const std::size_t piece=segmentAt(at,left);
-            auto exact=std::lower_bound(sourceNodes.begin(),sourceNodes.end(),at,
-                [](const SourceNode&n,double value){return n.at<value;});
-            for(;exact!=sourceNodes.end() && exact->at==at;++exact)if(exact->piece==piece) {
-                if(distance(path[k].curve->point(u),path[piece].curve->point(exact->parameter))<=tolerance/16) {
-                    k=piece;u=exact->parameter;
-                }
+        std::size_t k = 0;
+        const double eps = 64 * std::numeric_limits<double>::epsilon() * std::max(1.0, offsets.back());
+        for (double node : offsets)
+            if (std::fabs(t - node) <= eps) {
+                t = node;
                 break;
             }
-        }
-        const auto &piece=path[k];
-        if(left && u>piece.range.lo) {
-            if(piece.curve->type()==CurveType::BSpline)piece.curve->evaluateLeft(u,2,out);
-            else piece.curve->evaluate(std::nextafter(u,piece.range.lo),2,out);
-        } else piece.curve->evaluate(u,2,out);
+        while (k + 1 < arcPieces.size() && (t > offsets[k + 1] || (!left && t == offsets[k + 1])))
+            ++k;
+        const auto &piece = arcPieces[k];
+        const double target = std::clamp(t - offsets[k], 0.0, offsets[k + 1] - offsets[k]);
+        const double u = target == 0 ? piece.range.lo
+                         : target == offsets[k + 1] - offsets[k]
+                             ? piece.range.hi
+                             : parameterAtLength({piece.curve, piece.range, -1}, target, arcLengths);
+        if (left && u > piece.range.lo)
+            piece.curve->evaluateLeft(u, 2, out);
+        else
+            piece.curve->evaluate(u, 2, out);
+        const double speed = norm(out[1]);
+        if (!(speed > 1e-12))
+            throw std::domain_error("loft: tangente nulla lungo una guida");
+        out[1] /= speed;
+        out[2] = (out[2] - dot(out[2], out[1]) * out[1]) / (speed * speed);
     };
     std::vector<BSplineCurve<3>> maps;
     std::vector<double> breaks = v;
@@ -720,21 +733,20 @@ BSplineCurve<3> followingGuide(const std::vector<PathSegment> &path, const std::
         }
         for(double knot:map.knots()) if(knot>v[i] && knot<v[i+1]) breaks.push_back(knot);
         maps.push_back(std::move(map));
-        for (std::size_t k=0;k<path.size();++k) {
-            cancellationPoint();
-            auto nodes=path[k].curve->breakpoints(path[k].range);
-            nodes.push_back(path[k].range.lo);nodes.push_back(path[k].range.hi);
-            for(double node:nodes) {
-                const double t=offsets[k]+node-path[k].range.lo;
-                if (!(t>std::min(a,b) && t<std::max(a,b))) continue;
-                double lo=v[i],hi=v[i+1];
-                for(int step=0;step<60;++step) {
-                    const double mid=(lo+hi)/2, at=maps.back().point(mid).x();
-                    if ((at<t)==(b>a)) lo=mid; else hi=mid;
-                }
-                const double at=(lo+hi)/2;
-                if(at>v[i] && at<v[i+1]) breaks.push_back(at);
+        for (double t : offsets) {
+            if (!(t > std::min(a, b) && t < std::max(a, b)))
+                continue;
+            double lo = v[i], hi = v[i + 1];
+            for (int step = 0; step < 60; ++step) {
+                const double mid = (lo + hi) / 2, at = maps.back().point(mid).x();
+                if ((at < t) == (b > a))
+                    lo = mid;
+                else
+                    hi = mid;
             }
+            const double at = (lo + hi) / 2;
+            if (at > v[i] && at < v[i + 1])
+                breaks.push_back(at);
         }
     }
     // L'inversione del parametro guida puo' lasciare nodi a pochi ulp dalla
@@ -1162,6 +1174,7 @@ Body loftCore(const std::vector<Section> &sections, const LoftOptions &options, 
     // NURBS compatibili per ogni tratto m: stesso grado, stessi nodi.
     // nurbs[m][i]
     std::vector<std::vector<BSplineCurve<3>>> nurbs(M);
+    std::vector<std::vector<double>> leftBlend(M), rightBlend(M);
     for (std::size_t m = 0; m < M; ++m) {
         cancellationPoint();
         const bool spreadGuides=anyActiveGuide(options);
@@ -1172,7 +1185,8 @@ Body loftCore(const std::vector<Section> &sections, const LoftOptions &options, 
         std::vector<std::vector<double>> breaks(n);
         for (std::size_t i = 0; i < n; ++i) {
             cancellationPoint();
-            bezier[i] = standardBezierPieces(*split[i][m].curve, split[i][m].range, degree);
+            bezier[i] = ruled ? standardBezierPieces(*split[i][m].curve, split[i][m].range, degree)
+                              : detail::loftParameterPieces(*split[i][m].curve, split[i][m].range, degree);
             // Il taglio nel punto di una guida puo' lasciare una pezza di
             // pochi ulp con tutti i poli coincidenti alla precisione macchina.
             // Non e' una campata geometrica: rende nulla la tangente al bordo.
@@ -1209,6 +1223,8 @@ Body loftCore(const std::vector<Section> &sections, const LoftOptions &options, 
             for (std::size_t k=breaks[i].size()-2;k>0;--k)
                 breaks[i][k]=std::min(breaks[i][k],std::nextafter(breaks[i][k+1],0.0));
         }
+        if (!ruled)
+            degree = detail::normalizeLoftParameterJoins(bezier, breaks);
         // Allinea gli arrotondamenti fra sezioni diverse, senza mai
         // accorpare due nodi distinti appartenenti alla stessa sezione.
         // L'unione di nodi quasi uguali senza allineamento introdurrebbe
@@ -1240,10 +1256,19 @@ Body loftCore(const std::vector<Section> &sections, const LoftOptions &options, 
             if (!options.startFaces.empty() || !options.endFaces.empty())
                 for (int sample = 1; sample < 16; ++sample) {
                     const double knot = sample / 16.0;
-                    if (curve.multiplicity(knot) == 0) curve = curve.insertKnot(knot);
+                    // Sono ascisse aggiunte per la collocazione, non nodi
+                    // geometrici: non creare una campata di pochi ulp accanto
+                    // a un nodo sorgente. Quelli sorgenti restano tutti distinti.
+                    const bool nearby = std::any_of(curve.knots().begin(), curve.knots().end(), [&](double at) {
+                        return std::fabs(at - knot) <= 128 * std::numeric_limits<double>::epsilon();
+                    });
+                    if (!nearby)
+                        curve = curve.insertKnot(knot);
                 }
             nurbs[m].push_back(std::move(curve));
         }
+        if (!ruled)
+            detail::commonLoftDenominator(nurbs[m], anyActiveGuide(options), leftBlend[m], rightBlend[m]);
         for (std::size_t i = 1; i < n; ++i)
             if (nurbs[m][i].knots() != nurbs[m][0].knots()) throw std::logic_error("loft: nodi delle sezioni non compatibili");
     }
@@ -1333,8 +1358,16 @@ Body loftCore(const std::vector<Section> &sections, const LoftOptions &options, 
         const BSplineCurve<3> &c = nurbs[m][i];
         w = c.weight(j);
         p = c.poles()[std::size_t(j)];
-        if (j == 0) p = vertexPoint[i][m], w = 1.0;
-        if (j + 1 == c.poleCount()) p = vertexPoint[i][nextVertex(m)], w = 1.0;
+        if (j == 0) {
+            p = vertexPoint[i][m];
+            if (ruled)
+                w = 1.0;
+        }
+        if (j + 1 == c.poleCount()) {
+            p = vertexPoint[i][nextVertex(m)];
+            if (ruled)
+                w = 1.0;
+        }
     };
     if (ruled) {
         // Spigoli longitudinali rettilinei, una faccia per campata e tratto.
@@ -1397,6 +1430,13 @@ Body loftCore(const std::vector<Section> &sections, const LoftOptions &options, 
                     endDerivatives[m] = contactDerivatives(nurbs[m], options.endFaces, true, v[n - 1] - v[n - 2], options.endInfluence, scale,
                                                           guideHits, options);
             }
+            // Un solo modulo per sezione: orientare ogni polo secondo il
+            // proprio modulo e' nonlineare e cambia forma inserendo nodi.
+            std::vector<double> commonSpeed(n);
+            for (std::size_t i = 0; i < n; ++i) {
+                const std::size_t first = i ? i - 1 : i, last = i + 1 < n ? i + 1 : i;
+                commonSpeed[i] = distance(sections[last].centroid, sections[first].centroid) / (v[last] - v[first]);
+            }
             const auto interpolate = [&](std::size_t m, int j, std::vector<Vec3> &poles, std::vector<double> &weights, bool useGuide=true) {
                 std::vector<Homogeneous> values(n);
                 for (std::size_t i = 0; i < n; ++i) {
@@ -1407,10 +1447,11 @@ Body loftCore(const std::vector<Section> &sections, const LoftOptions &options, 
                 }
                 const bool lastPole = j + 1 == nurbs[m][0].poleCount();
                 const auto *guide = j == 0 ? vertexGuide[m] : lastPole ? vertexGuide[nextVertex(m)] : nullptr;
-                // Sulle sezioni aperte una guida sola governa la forma anche
-                // tra le righe dei vertici: limitarla alla riga di passaggio
-                // creerebbe una cresta artificiale su un profilo liscio.
-                if (!closed && guideHits.size() == 1) guide = &guideHits.front();
+                // Il campo base e' indipendente dal numero di guide. Le
+                // correzioni geometriche sono distribuite dopo l'inseguimento,
+                // mantenendo la stessa definizione passando da una a piu' guide.
+                if (!closed)
+                    guide = nullptr;
                 if(!useGuide) guide=nullptr;
                 const auto condition = guide ? guideCondition(options, std::size_t(guide - guideHits.data())) : LoftGuideCondition{0, 0.0};
                 if (guide && condition.continuity > 0 && condition.influence > 0.0) {
@@ -1422,13 +1463,13 @@ Body loftCore(const std::vector<Section> &sections, const LoftOptions &options, 
                             throw std::domain_error("loft: tangente della guida incompatibile con la faccia adiacente");
                     }
                 }
-                const std::vector<Homogeneous> row = hermiteRow(values, v, sections.front().normal, sections.back().normal,
-                                                                 options.startFaces.empty() ? options.startContinuity : 0,
-                                                                 options.endFaces.empty() ? options.endContinuity : 0,
-                                                                 options.startInfluence, options.endInfluence,
-                                                                 guide, condition.influence, condition.continuity,
-                                                                 startDerivatives[m].empty() ? nullptr : &startDerivatives[m][j],
-                                                                 endDerivatives[m].empty() ? nullptr : &endDerivatives[m][j]);
+                const std::vector<Homogeneous> row =
+                    hermiteRow(values, v, sections.front().normal, sections.back().normal,
+                               options.startFaces.empty() ? options.startContinuity : 0,
+                               options.endFaces.empty() ? options.endContinuity : 0, options.startInfluence,
+                               options.endInfluence, guide, condition.influence, condition.continuity,
+                               startDerivatives[m].empty() ? nullptr : &startDerivatives[m][j],
+                               endDerivatives[m].empty() ? nullptr : &endDerivatives[m][j], &commonSpeed);
                 poles.clear();
                 weights.clear();
                 for (const Homogeneous &h : row) {
@@ -1484,7 +1525,7 @@ Body loftCore(const std::vector<Section> &sections, const LoftOptions &options, 
                 const int uCount = c.poleCount();
                 const bool spreadGuides=anyActiveGuide(options)
                     && (guideHits.size()>1 || followed[m] || followed[nextVertex(m)]);
-                const bool originalSpread=guideHits.size()>1;
+                const bool originalSpread = true;
                 std::vector<Vec3> baseLeft,baseRight;std::vector<double> weightLeft,weightRight;
                 if(spreadGuides) {
                     interpolate(m,0,baseLeft,weightLeft,!originalSpread);
@@ -1501,22 +1542,14 @@ Body loftCore(const std::vector<Section> &sections, const LoftOptions &options, 
                     else {
                         interpolate(m,j,row,rowWeights,!originalSpread);
                         if(spreadGuides) {
-                            // Coefficienti esatti del raccordo cubico 3*u^2-2*u^3
-                            // nella base B-spline. La correzione ha derivata U
-                            // nulla sulle guide; conserva i profili e distribuisce
-                            // l’influenza su tutta la pezza senza alette locali.
-                            long double sum=0,square=0,cube=0;
-                            for(int k=1;k<=c.degree();++k) {
-                                const long double u=(c.knots()[j+k]-c.domain().lo)/c.domain().length();
-                                sum+=u;square+=u*u;cube+=u*u*u;
-                            }
-                            const long double p=c.degree();
-                            const double right=double(3*(sum*sum-square)/(p*(p-1))
-                                -2*(sum*sum*sum-3*sum*square+2*cube)/(p*(p-1)*(p-2)));
+                            // Prodotti Bernstein esatti W(u)*(1-H(u)), W(u)*H(u),
+                            // H(u)=3u^2-2u^3: derivative U nulle sulle guide interne;
+                            // la correzione euclidea non dipende dai pesi del profilo.
+                            const double leftCoefficient = leftBlend[m][j], rightCoefficient = rightBlend[m][j];
                             for(int i=0;i<vCount;++i) {
                                 const Vec3 left=vertexWeights[m][i]*vertexRows[m][i]-weightLeft[i]*baseLeft[i];
                                 const Vec3 delta=vertexWeights[nextVertex(m)][i]*vertexRows[nextVertex(m)][i]-weightRight[i]*baseRight[i];
-                                row[i]+=((1-right)*left+right*delta)/rowWeights[i];
+                                row[i] += (leftCoefficient * left + rightCoefficient * delta) / rowWeights[i];
                             }
                         }
                     }

@@ -171,11 +171,83 @@ void documentBulkMeshReadTests() {
         }
 }
 
+// Simula la versione della cache, conservando definizione, chunk e hash.
+QByteArray documentWithCacheVersion(const QByteArray &document, quint32 version) {
+    QDataStream header(document);
+    header.setVersion(QDataStream::Qt_6_0);
+    header.skipRawData(7);
+    quint32 length = 0;
+    header >> length;
+    const qsizetype offset = 11 + qsizetype(length);
+    auto cache = testDocumentUncompress(document, offset);
+    QDataStream cacheHeader(cache);
+    cacheHeader.setVersion(QDataStream::Qt_6_0);
+    QByteArray sourceHash, payloadHash;
+    quint32 tag = 0;
+    cacheHeader >> sourceHash >> payloadHash >> tag;
+    require(cacheHeader.status() == QDataStream::Ok && tag == 0x46434332u,
+            "intestazione cache nativa per migrazione loft");
+    const auto at = cacheHeader.device()->pos();
+    require(at + 4 <= cache.size(), "versione cache presente");
+    qToBigEndian(version, cache.data() + at);
+    auto result = document;
+    result.replace(offset, result.size() - offset, testDocumentCompress(cache, document));
+    return result;
+}
+void documentLoftCacheMigrationTests() {
+    using namespace ForgeCad;
+    DocumentState source;
+    SketchObject first;
+    first.segments = {{{0,0},{4,0}}};
+    first.constraints = {-1}; first.segmentLengths = {0}; first.segmentAngles = {-1};
+    auto last = first;
+    last.customFrame = true; last.frame.origin[2] = 5;
+    source.sketches = {first,last};
+    ExtrusionObject primitive;
+    primitive.feature = BodyFeature::Primitive;
+    primitive.primitive.kind = PrimitiveKind::Box;
+    primitive.forgeBody = std::make_shared<const Kernel::Body>(Kernel::makeBox(Kernel::Frame3{},3,4,5));
+    ExtrusionObject loft;
+    loft.feature = BodyFeature::Loft; loft.loftSurface = true; loft.loftSketches = {0,1};
+    loft.loftStartContinuity = loft.loftEndContinuity = 1;
+    QString error;
+    loft.forgeBody = forgeReferencedLoft(loft, 1, source.sketches, {primitive}, &error);
+    require(loft.forgeBody && error.isEmpty(), "loft reale della fixture cache");
+    source.extrusions = {primitive,loft};
+    QByteArray encoded;
+    require(encodeDocument(source,encoded,true).isEmpty(), "cache moderna del loft");
+    DocumentState current, previous;
+    require(decodeDocument(encoded,current).isEmpty() && current.extrusions[0].cachedGeometry
+            && current.extrusions[1].cachedGeometry && current.extrusions[1].forgeBody,
+            "cache moderna conserva il loft e gli altri B-rep");
+    require(decodeDocument(documentWithCacheVersion(encoded,7),previous).isEmpty()
+            && previous.sketches.size() == 2 && previous.extrusions[1].loftSketches == QVector<int>({0,1})
+            && !previous.extrusions[0].forgeBody && !previous.extrusions[1].forgeBody,
+            "cache loft precedente scartata atomicamente, definizione conservata");
+    // Un check-in storico non puo' perdere la geometria: readNativeRevision
+    // richiede tutti i risultati anche senza aprire il viewport per rigenerarli.
+    const auto checkin = QUuid::createUuid();
+    source.version.checkinId = checkin;
+    require(encodeDocument(source,encoded,true).isEmpty(), "cache revisione con loft");
+    require(decodeDocument(documentWithCacheVersion(encoded,7),previous).isEmpty()
+            && previous.version.checkinId == checkin && previous.extrusions[0].cachedGeometry
+            && previous.extrusions[1].cachedGeometry && previous.extrusions[1].forgeBody
+            && Kernel::writeBodyBinary(*previous.extrusions[1].forgeBody) == Kernel::writeBodyBinary(*loft.forgeBody),
+            "revisione storica con loft conserva esattamente lo snapshot e resta validabile");
+    source.version.checkinId = {};
+    source.extrusions.removeLast();
+    require(encodeDocument(source,encoded,true).isEmpty(), "cache documento senza loft");
+    require(decodeDocument(documentWithCacheVersion(encoded,7),previous).isEmpty()
+            && previous.extrusions[0].cachedGeometry && previous.extrusions[0].forgeBody,
+            "cache precedente senza loft conserva lo snapshot portabile");
+}
+
 void documentReadTests() {
     using namespace ForgeCad;
     using DocumentReadDetail::DataStream;
     documentSketchReferenceNameTests();
     documentBulkMeshReadTests();
+    documentLoftCacheMigrationTests();
     const auto rejected = [](const QByteArray &bytes, const DocumentReadLimits &limits = {}) {
         DocumentState destination;
         destination.sketches.append(SketchObject{}); destination.sketches[0].name = "da conservare";
