@@ -212,17 +212,21 @@ bool CadViewport::isEditingSketch(const SketchObject &sketch) const {
     return sketchMode_ && active && (&sketch == active || (sketch.storyId && sketch.storyId == active->storyId));
 }
 
+bool CadViewport::isSketchEntityDisplayed(const SketchObject &sketch, int kind, int element) const {
+    return ::isSketchEntityVisible(sketch, kind, element, isEditingSketch(sketch) || sketchConstructionVisible_);
+}
+
 QVector<QVector3D> CadViewport::sketchGeometryPoints(const SketchObject &sketch) const {
     QVector<QVector3D> points;
     for (int index = 0; index < sketch.segments.size(); ++index) {
-        if (!isSketchEntityVisible(sketch, 0, index, isEditingSketch(sketch))) continue;
+        if (!isSketchEntityDisplayed(sketch, 0, index)) continue;
         const auto &segment = sketch.segments[index];
         points.append(mapSketchPoint(segment.first, sketch));
         points.append(mapSketchPoint(segment.second, sketch));
     }
     for (int index = 0; index < sketch.curves.size(); ++index) {
         const auto &curve = sketch.curves[index];
-        if (!isSketchEntityVisible(sketch, 1, index, isEditingSketch(sketch))) continue;
+        if (!isSketchEntityDisplayed(sketch, 1, index)) continue;
         for (const QPointF &p : curve.samples) points.append(mapSketchPoint(p, sketch));
         if (curve.samples.isEmpty())
             for (const QPointF &p : curve.controlPoints) points.append(mapSketchPoint(p, sketch));

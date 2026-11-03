@@ -9,7 +9,7 @@ diciture «in corso» o «non committato» sono storiche; per lo stato attuale p
 
 ## Regole permanenti e decisioni
 
-- Lavorare e comunicare in italiano. Non usare `codex` nei nomi dei branch. Lo sviluppo è unificato su `main`;
+- Italiano; nessun `codex` nei nomi dei branch. Sviluppo unificato su `main`;
   `solver-mesh-gpu` è stato integrato e archiviato il 30 ottobre. CUDA e Metal restano backend opzionali negli stessi
   sorgenti, con fallback CPU.
 - Aggiornare questa memoria a ogni traguardo e prima della risposta finale, anche per indagini e documentazione. Rileggere
@@ -41,7 +41,7 @@ storico della finestra principale. `pdfReader.c`, `pdfView.c` e vecchi binari PD
 | --- | --- |
 | Finestra e interfaccia | `forgeCad2026_gui*`, `forgeCad2026_dialogs*`, `forgeCad2026_storyboard*`: ribbon, menu, Fusion chiaro/scuro, pannelli incorporati agganciabili sinistra/destra o liberi, altezza piena opzionale e preferenze persistenti. |
 | Vista e anteprime | `forgeCad2026_viewport*`, `cad_display_cache*`: camera, picking, rendering e passate separati; anteprime asincrone cancellabili e riuso del B-rep pronto alla conferma. Cache CPU/GL e rilascio della memoria; backend GPU per carichi specifici, senza sostituire la geometria esatta. |
-| Schizzi e vincoli | `cad_types.h`, `cad_constraints*`, `cad_sketch_refs*`, `cad_expression*`: schizzi 2D/3D, asole/punti, quote e solver, snap e riferimenti associativi a piani/assi/bordi/curve. Cache automatiche nascoste; conversioni e sezioni esplicite visibili anche di costruzione. Le entità locali visibili hanno priorità nella quotatura. |
+| Schizzi e vincoli | `cad_types.h`, `cad_constraints*`, `cad_sketch_refs*`, `cad_expression*`: schizzi 2D/3D, asole/punti, quote e solver, snap e riferimenti associativi a piani/assi/bordi/curve. Cache automatiche nascoste; conversioni esplicite conservate; costruzione fuori modifica opzionale. Le entità locali visibili hanno priorità nella quotatura. |
 | Solidi e superfici | `cad_forge*`, `kernel/fk_*`: primitive, estrusione (anche fino al prossimo corpo), rivoluzione, sweep/loft, booleane, sformo, svuotamento/spessore, filettatura, cucitura, taglio/estensione, reti U/V e poli NURBS. Estendi apre il pannello prima della scelta dei bordi. Raccordi costanti, conici, variabili e tra facce; percorsi tangenti con leggi indipendenti e maniglie R. |
 | Storia e genealogia | `cad_history*`, `cad_element_names*`, viewport e storyboard: schizzi/piani come passi autonomi, riordino, rollback, soppressione, riparazione e Undo/Redo. Specchi/ripetizioni sono un evento con corpi separati ed esclusioni; conservano identità e dipendenze. |
 | Documenti e revisioni | `cad_document_io*`, `cad_document_read*`, `cad_native_revisions*`, `cad_workspace*`: `.prt` con firma FCAD, formato corrente 61 (versi G1/G2); Zstandard dal 56 e lettura legacy zlib. Definizione e cache B-rep/mesh distinte, salvataggio atomico, recupero, consultazione concorrente e lock della modifica. Check-out/check-in, ripristino, rilascio coordinato e recupero catalogo. |
@@ -103,9 +103,11 @@ ctest --test-dir forgecad-release --output-on-failure
 
 ## Ultimi interventi — esiti consolidati
 
-0. **03/11 — Schizzi, riferimenti e loft.** `4fafbaa` pubblicato: clic transitori senza falso
+0. **03/11 — Schizzi, riferimenti e loft.** Visualizza/Mostra linee di costruzione persistente:
+   app/CTest10/10,rendering e persistenza Wayland/XCB PASS; popup automatizzato Wayland non verificato.
+   [Opzione](docs/visualizzazione-costruzione-2026-11-03.md). `4fafbaa` pubblicato: clic transitori senza falso
    Undo/dirty, pulizia cache con rimappatura e protezione di vincoli/consumatori; costruzione solo
-   in modifica, esclusa dai loft. Undo approvato; dati malformati conservati. App/runner,6QA native,
+   in modifica o con Visualizza/Mostra linee di costruzione (persistente), esclusa dai loft. Undo approvato; dati malformati conservati. App/runner,6QA native,
    file49→33,CTest169PASS/1SKIP/0FAIL,ultimo17/17 PASS. [Rapporto](docs/schizzi-riferimenti-costruzione-2026-11-03.md).
    Loft3sezioni/2guide: residuo2,235e-7 mm rendeva discontinuo il fit; raccordo C2 nel budget di
    connessione esistente, fit1e-9 mm e sorgenti invariati. App/runner,CTest8/8,forma11/11,Loft42/42,
@@ -120,15 +122,14 @@ ctest --test-dir forgecad-release --output-on-failure
    `2e4366f`: pannelli/ribbon,tre punti,versoG1/G2;[UI](docs/ui-pannelli-verso-loft-2026-11-03.md).
    [Checkpoint](docs/history/claude-checkpoint-prima-confronto-riferimenti-2026-11-03.md).
 
-1. **02–03/11 — CI, guide proiettate e Loft9 (`e54a174`, pubblicato).** CI41513461524
-   verde su `ec08b12`: Linux56PASS/2SKIP, macOS60PASS/1SKIP; esito storico.
-   Loft9: algebra esatta/denominatore comune, modulo Hermite comune, guide curvilinee e correzione
-   cubica pesata. Corner sorgente3,18° conservato. Cache8 migra le copie di lavoro con loft/derivati;
-   check-in immutabili, formato60. App completa, Wayland/XCB1→2→1guide, Undo/Redo e cache/no-cache PASS.
-   Consolidati164PASS/1SKIP GL/0FAIL su165, kernel459/459; Clang/ASan/UBSan mirati PASS, LSan escluso ptrace.
-   Mappa552/7635/261AST verificata. [Rapporto completo](docs/loft-forma-guide-2026-11-03.md),
-   [CI](docs/ci-riparazione-2026-11-02.md), [guide](docs/loft-guide-proiettate-2026-11-02.md).
-   Unione/curve `dbed027`/`cc26a27`: [rapporto](docs/estrusione-unione-riferimenti-proiettati-2026-11-02.md).
+1. **02–03/11 — Guide/Loft9 (`e54a174`).** CI41513461524 su `ec08b12`:
+   Linux56PASS/2SKIP,macOS60PASS/1SKIP;storico. Profili razionali esatti,Hermite,guide curvilinee;
+   corner sorgente3,18° conservato. Cache8 migra copie loft/derivati;check-in immutabili,formato60.
+   App/QA Wayland-XCB1→2→1,Undo/Redo,cache/no-cache PASS;CTest164PASS/1SKIP/0FAIL,kernel459/459,
+   Clang/ASan/UBSan mirati PASS,LSan escluso ptrace;Mappa552/7635/261.
+   [Forma](docs/loft-forma-guide-2026-11-03.md),[CI](docs/ci-riparazione-2026-11-02.md),
+   [guide](docs/loft-guide-proiettate-2026-11-02.md),
+   [unione/curve](docs/estrusione-unione-riferimenti-proiettati-2026-11-02.md).
 
 2. **02/11 — Review/storyboard/estrusione (`d4f15fc`).** R1–R5: parser, scambio, occorrenze,
    catalogo/lock; picking, pan, rimappature, copie/Pierce, consumo/visibilità. B8 solo reingresso

@@ -1598,6 +1598,17 @@ void PdfWindow::initializeActionsAndView(WindowSetup &setup) {
         viewport->update();
         QSettings().setValue(QStringLiteral("view/planeNormalsOnHover"), visible);
     });
+    auto *constructionVisibilityAction = viewMenu->addAction(QStringLiteral("Mostra linee di costruzione"));
+    constructionVisibilityAction->setObjectName(QStringLiteral("sketchConstructionVisibilityAction"));
+    constructionVisibilityAction->setIcon(ForgeCad::commandIcon(QStringLiteral("toggleConstruction")));
+    constructionVisibilityAction->setCheckable(true);
+    constructionVisibilityAction->setChecked(viewSettings.value(QStringLiteral("view/sketchConstruction"), false).toBool());
+    constructionVisibilityAction->setToolTip(QStringLiteral("Mostra le linee e le curve di costruzione degli schizzi visibili anche fuori modifica. Durante la modifica restano visibili."));
+    viewport->setSketchConstructionVisible(constructionVisibilityAction->isChecked());
+    connect(constructionVisibilityAction, &QAction::toggled, this, [viewport](bool visible) {
+        viewport->setSketchConstructionVisible(visible);
+        QSettings().setValue(QStringLiteral("view/sketchConstruction"), visible);
+    });
     gridAction = viewMenu->addAction(QStringLiteral("Griglia"));
     gridAction->setCheckable(true); gridAction->setChecked(viewSettings.value(QStringLiteral("view/grid"), true).toBool());
     viewport->setGridVisible(gridAction->isChecked());

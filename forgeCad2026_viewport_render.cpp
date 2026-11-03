@@ -614,7 +614,7 @@ void CadViewport::strokeHighlight(QPainter &painter, const QVector<QPointF> &poi
 
 void CadViewport::highlightSketchElement(QPainter &painter, const SketchObject &sketch,
                                 const SketchElementSelection &element, const QColor &color) const {
-    if (!isSketchEntityVisible(sketch, element.kind, element.index, isEditingSketch(sketch))) return;
+    if (!isSketchEntityDisplayed(sketch, element.kind, element.index)) return;
     if (element.kind == 0 && element.index >= 0 && element.index < sketch.segments.size()) {
         const auto &segment = sketch.segments.at(element.index);
         const QVector<QPointF> points = projectSketchPolyline({segment.first, segment.second}, sketch);
@@ -1139,7 +1139,7 @@ void CadViewport::drawSketch() {
         const SketchObject &sketch = sketches_.at(sketchIndex);
         const bool active = analysis && sketchIndex == activeSketch_;
         for (int index = 0; index < sketch.segments.size(); ++index) {
-            if (!isSketchEntityVisible(sketch, 0, index, sketchMode_ && sketchIndex == activeSketch_)) continue;
+            if (!isSketchEntityDisplayed(sketch, 0, index)) continue;
             const auto &segment = sketch.segments.at(index);
             const bool construction = sketch.isConstructionSegment(index);
             const QVector3D first = mapSketchPoint(segment.first, sketch);
@@ -1179,7 +1179,7 @@ void CadViewport::drawSketch() {
         const SketchObject &sketch = sketches_.at(sketchIndex);
         const bool active = analysis && sketchIndex == activeSketch_;
         for (int curveIndex = 0; curveIndex < sketch.curves.size(); ++curveIndex) {
-            if (!isSketchEntityVisible(sketch, 1, curveIndex, sketchMode_ && sketchIndex == activeSketch_)) continue;
+            if (!isSketchEntityDisplayed(sketch, 1, curveIndex)) continue;
             const CurveObject &curve = sketch.curves.at(curveIndex);
             QVector4D color(0.55f, 0.78f, 0.92f, 1.0f);
             if (!curve.construction) {
@@ -1222,13 +1222,13 @@ void CadViewport::drawSketch() {
         overlayRenderer_.setStipple(false);
         glLineWidth(6.0f);
         for (int index = 0; index < failed.segments.size(); ++index) {
-            if (!isSketchEntityVisible(failed, 0, index, isEditingSketch(failed))) continue;
+            if (!isSketchEntityDisplayed(failed, 0, index)) continue;
             const auto &segment = failed.segments[index];
             const QVector3D a = mapSketchPoint(segment.first, failed), b = mapSketchPoint(segment.second, failed);
             overlayRenderer_.draw(GL_LINES, QVector<QVector3D>{a, b}, QVector4D(1.0f, 0.16f, 0.12f, 1.0f));
         }
         for (int index = 0; index < failed.curves.size(); ++index) {
-            if (!isSketchEntityVisible(failed, 1, index, isEditingSketch(failed))) continue;
+            if (!isSketchEntityDisplayed(failed, 1, index)) continue;
             const auto &curve = failed.curves[index];
             QVector<QVector3D> samples;
             for (const QPointF &sample : curve.samples) {
@@ -1238,13 +1238,13 @@ void CadViewport::drawSketch() {
         }
         glLineWidth(2.0f);
         for (int index = 0; index < failed.segments.size(); ++index) {
-            if (!isSketchEntityVisible(failed, 0, index, isEditingSketch(failed))) continue;
+            if (!isSketchEntityDisplayed(failed, 0, index)) continue;
             const auto &segment = failed.segments[index];
             const QVector3D a = mapSketchPoint(segment.first, failed), b = mapSketchPoint(segment.second, failed);
             overlayRenderer_.draw(GL_LINES, QVector<QVector3D>{a, b}, QVector4D(1.0f, 0.85f, 0.20f, 1.0f));
         }
         for (int index = 0; index < failed.curves.size(); ++index) {
-            if (!isSketchEntityVisible(failed, 1, index, isEditingSketch(failed))) continue;
+            if (!isSketchEntityDisplayed(failed, 1, index)) continue;
             const auto &curve = failed.curves[index];
             QVector<QVector3D> samples;
             for (const QPointF &sample : curve.samples) {

@@ -145,6 +145,10 @@ public:
     int antialiasing() const;
     int maxAntialiasing() const;
     void setGridVisible(bool visible);
+    // Mostra la costruzione degli schizzi visibili anche fuori dalla modifica.
+    // Durante la modifica resta visibile; le cache associative restano nascoste.
+    void setSketchConstructionVisible(bool visible);
+    bool sketchConstructionVisible() const;
     // Default: meta' del lato dei piani di riferimento (che vanno da -4 a 4).
     static constexpr double kDefaultAxisLength = 2.0;
     void setAxisLength(double length);
@@ -1505,6 +1509,7 @@ private:
     // Punti della geometria di un schizzo (estremi dei segmenti, campioni
     // delle curve) nello spazio del modello: solo per inquadrare la vista.
     bool isEditingSketch(const SketchObject &sketch) const;
+    bool isSketchEntityDisplayed(const SketchObject &sketch, int kind, int element) const;
     QVector<QVector3D> sketchGeometryPoints(const SketchObject &sketch) const;
 
     // Geometria visibile della scena (schizzi, spigoli o triangoli dei corpi);
@@ -1834,6 +1839,7 @@ private:
     ForgeCad::Gui::SceneRenderer sceneRenderer_;
     ForgeCad::Gui::GlassCompositor glassCompositor_;
     bool gridVisible_ = true;
+    bool sketchConstructionVisible_ = false;
     double referencePlaneScales_[3] = {1.0, 1.0, 1.0};
     mutable QSizeF referencePlaneAuto_[3] = {
         QSizeF(kDefaultPlaneHalf, kDefaultPlaneHalf),

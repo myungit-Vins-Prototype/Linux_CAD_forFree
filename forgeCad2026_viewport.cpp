@@ -201,6 +201,21 @@ int CadViewport::maxAntialiasing() const { return sceneRenderer_.maxAntialiasing
 
 void CadViewport::setGridVisible(bool visible) { gridVisible_ = visible; update(); }
 
+void CadViewport::setSketchConstructionVisible(bool visible) {
+    if (sketchConstructionVisible_ == visible) return;
+    sketchConstructionVisible_ = visible;
+    sceneBoundsDirty_ = true;
+    sketchReferenceCacheValid_ = false;
+    refHoverValid_ = false;
+    hover_ = {};
+    sketchHover_ = {};
+    dimensionHover_ = {};
+    update();
+}
+
+bool CadViewport::sketchConstructionVisible() const { return sketchConstructionVisible_; }
+
+
 void CadViewport::setAxisLength(double length) { axisLength_ = qBound(0.1, length, 100.0); update(); }
 
 double CadViewport::axisLength() const { return axisLength_; }

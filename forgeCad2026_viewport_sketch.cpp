@@ -3268,11 +3268,11 @@ const SketchObject &CadViewport::sketchReferenceCache() {
         const auto &source = sketches_[i];
         GeometryRef ref; ref.kind = 7; ref.index = i; ref.featureId = source.storyId;
         for (int j = 0; j < source.segments.size(); ++j) {
-            if (!isSketchEntityVisible(source, 0, j, false)) continue;
+            if (!isSketchEntityDisplayed(source, 0, j)) continue;
             ref.element = {0, j, -1}; add(ref, true); add(ref);
         }
         for (int j = 0; j < source.curves.size(); ++j) {
-            if (!isSketchEntityVisible(source, 1, j, false)) continue;
+            if (!isSketchEntityDisplayed(source, 1, j)) continue;
             ref.element = {1, j, -1};
             if (source.curves[j].tool == DrawingTool::Point) {
                 ref.kind = 6; ref.element.point = 0; add(ref); ref.kind = 7;

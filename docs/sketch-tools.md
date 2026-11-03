@@ -83,7 +83,11 @@ seguono le modifiche della sorgente e del piano dello schizzo, rimangono costant
 per il risolutore e conservano quote e vincoli locali, senza un vincolo **Fisso**.
 La costruzione disegnata dall'utente e le geometrie ottenute con **Converti
 spigoli e curve** e **Sezione** restano visibili, anche con l'opzione **Di
-costruzione** attiva, mentre lo schizzo è in modifica. Fuori dalla modifica tutta la costruzione è nascosta e non viene selezionata nella vista o dalla storyboard. La costruzione non fa parte delle sezioni loft: selezionando lo schizzo intero viene usato soltanto il profilo. La visibilità delle conversioni è distinta dai riferimenti
+costruzione** attiva, mentre lo schizzo è in modifica. Fuori dalla modifica puoi mostrarla o nasconderla con **Visualizza → Mostra linee di costruzione**.
+La scelta viene ricordata tra le sessioni e riguarda gli schizzi già visibili. Con l'opzione spenta
+la costruzione è esclusa anche da selezione e inquadratura; durante la modifica resta visibile.
+Le cache associative automatiche rimangono nascoste. Il comando cambia soltanto la visualizzazione,
+senza modificare geometria, vincoli, Undo o il documento salvato. La costruzione non fa parte delle sezioni loft: selezionando lo schizzo intero viene usato soltanto il profilo. La visibilità delle conversioni è distinta dai riferimenti
 automatici ed è salvata nel formato nativo 60. Si modificano dalla sorgente;
 salvataggio, riapertura e Undo/Redo conservano collegamento e visibilità.
 Per recuperare una conversione di costruzione nascosta salvata nei formati

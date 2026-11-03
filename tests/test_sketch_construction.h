@@ -5,31 +5,65 @@ static void sketchConstructionVisibility(bool gl) {
     CurveObject circle;circle.tool=DrawingTool::Circle;circle.controlPoints={{0,12},{3,12}};circle.construction=true;recalculateCurve(circle);sketch.curves={circle};
     CadViewport view;view.resize(800,650);view.sketches_={sketch};view.setGridVisible(false);view.setAxesVisible(false);for(int i=0;i<3;++i)view.setPlaneVisible(i,false);
     view.camera_.setFrame({1,0,0},{0,0,1});view.camera_.zoom_=30;
-    const auto linePixel=view.projectWorldPoint(view.mapSketchPoint({0,6},sketch)).toPoint();
+    const auto linePixel=[&]{return view.projectWorldPoint(view.mapSketchPoint({0,6},sketch)).toPoint();};
     require(view.sketchGeometryPoints(view.sketches_[0]).size()==2,"costruzione esclusa dai limiti fuori modifica");
     require(view.sketchScreenPolylines(view.sketches_[0]).size()==1,"costruzione esclusa da selezione rettangolare");
-    require(view.pickSceneObject(linePixel,false).kind!=SceneObjectKind::Sketch,"clic sulla sola costruzione non seleziona lo schizzo");
+    require(view.pickSceneObject(linePixel(),false).kind!=SceneObjectKind::Sketch,"clic sulla sola costruzione non seleziona lo schizzo");
+    view.setReferencePickCallback([](bool,GeometryRef){});
     require(view.beginReferencePick(DatumRoleCurve,-1).isEmpty(),"picker curve attivo");GeometryRef picked;
-    require(!view.pickReference(linePixel,picked),"costruzione non candidata ai picker curve");
+    require(!view.pickReference(linePixel(),picked),"costruzione non candidata ai picker curve");
     const auto candidates=view.storyboardReferences(SceneObjectKind::Sketch,0);
+    require(!candidates.isEmpty(), "candidati storyboard verificati con picker effettivamente collegato");
     for(const auto &r:candidates)require(r.element.kind==-1||r.element!=ConstraintRef{0,1,-1},"storyboard esclude costruzione");
     view.cancelReferencePick();
-    QImage inactive,normal,active;
+    QImage inactive,normal,active,shown;
     if(gl){view.show();QElapsedTimer elapsed,stable;elapsed.start();stable.start();QSize previous=view.size();
         do{QApplication::processEvents();QThread::msleep(2);if(view.size()!=previous){previous=view.size();stable.restart();}}while(elapsed.elapsed()<2000&&(elapsed.elapsed()<150||stable.elapsed()<100));
         require(stable.elapsed()>=100&&view.isValid(),"GL e dimensioni native stabili");inactive=view.grabFramebuffer();auto saved=view.sketches_[0];view.sketches_[0].segments.removeLast();view.sketches_[0].curves.clear();view.sketches_[0].constructionSegments.clear();view.update();QApplication::processEvents();normal=view.grabFramebuffer();require(inactive==normal,"render fuori modifica identico senza costruzione");view.sketches_[0]=saved;}
+    const auto documentBefore = view.currentDocument();
+    int documentChanges = 0;view.setDocumentChangedCallback([&]{++documentChanges;});
+    require(!view.sketchConstructionVisible(), "costruzione fuori modifica nascosta per default");
+    view.updateSceneBounds();
+    view.setSketchConstructionVisible(true);
+    require(view.sketchConstructionVisible()&&view.sceneBoundsDirty_, "opzione aggiorna la geometria da inquadrare");
+    require(view.sketchGeometryPoints(view.sketches_[0]).size()>2&&view.sketchScreenPolylines(view.sketches_[0]).size()==3, "opzione mostra linee e curve fuori modifica");
+    require(view.pickSceneObject(linePixel(),false).kind==SceneObjectKind::Sketch, "costruzione visibile selezionabile");
+    require(view.beginReferencePick(DatumRoleCurve,-1).isEmpty()&&view.pickReference(linePixel(),picked)&&picked.kind==7&&picked.element==ConstraintRef{0,1,-1}, "costruzione visibile utilizzabile come riferimento");
+    bool constructionCandidate=false;for(const auto &r:view.storyboardReferences(SceneObjectKind::Sketch,0))if(r.element==ConstraintRef{0,1,-1})constructionCandidate=true;
+    require(constructionCandidate, "storyboard coerente con l'opzione visiva");view.cancelReferencePick();
+    auto hidden=std::make_shared<SketchLinkedReference>();hidden->entities={{0,1,-1}};view.sketches_[0].linkedReferences={hidden};
+    require(!view.isSketchEntityDisplayed(view.sketches_[0],0,1), "cache automatiche nascoste anche con l'opzione attiva");view.sketches_[0].linkedReferences.clear();
+    if(gl){view.update();QApplication::processEvents();shown=view.grabFramebuffer();require(shown!=inactive,"render costruzione visibile fuori modifica");}
+    view.setSketchConstructionVisible(false);
+    require(view.sketchGeometryPoints(view.sketches_[0]).size()==2&&view.sketchScreenPolylines(view.sketches_[0]).size()==1, "disattivazione nasconde subito costruzione e picking");
+    require(!view.canUndo()&&documentChanges==0, "opzione senza Undo o documento modificato");
+    QByteArray beforeBytes,afterBytes;require(encodeDocument(documentBefore,beforeBytes,false).isEmpty()&&encodeDocument(view.currentDocument(),afterBytes,false).isEmpty()&&beforeBytes==afterBytes, "opzione non modifica il documento salvato");
     view.activeSketch_=0;view.sketchMode_=true;
     require(view.sketchGeometryPoints(view.sketches_[0]).size()>2&&view.sketchScreenPolylines(view.sketches_[0]).size()==3,"costruzione visibile durante modifica");
     if(gl){view.update();QApplication::processEvents();active=view.grabFramebuffer();require(active!=inactive,"render costruzione durante modifica");}
     view.sketchMode_=false;
+    view.setSketchConstructionVisible(true);
     auto last=sketch;last.storyId=9902;last.customFrame=true;last.frame.origin[2]=10;
     QVector<SketchObject> sections{sketch,last};
     const auto check=[&](ExtrusionObject loft){QString error;auto body=forgeReferencedLoft(loft,-1,sections,{},&error);require(body&&checkBody(*body).empty(),qPrintable(error));for(auto v:body->vertices())require(std::abs(body->vertex(v).point.y()+4)<1e-8,"loft non usa costruzione");};
     ExtrusionObject loft;loft.feature=BodyFeature::Loft;loft.loftSurface=true;loft.loftSketches={0,1};check(loft);
     loft.loftSketches.clear();for(int i:{0,1}){GeometryRef r;r.kind=7;r.index=i;r.element={-1,-1,-1};loft.loftSections.append(r);}check(loft);
     for(ConstraintRef entity:QVector<ConstraintRef>{{0,1,-1},{1,0,-1}}){auto invalid=loft;invalid.loftSections[0].element=entity;QString error;require(!forgeReferencedLoft(invalid,-1,sections,{},&error)&&error.contains("costruzione")&&loftFailure(error).section==0,"entita di costruzione rifiutata come sezione nominata");}
-    if(gl){const auto path=QStringLiteral("/tmp/forgecad-reference-cleanup/construction-")+QGuiApplication::platformName();inactive.save(path+"-outside.png");active.save(path+"-editing.png");}
-    std::cout<<"PASS costruzione: visibilita, bounds, picking, storyboard e loft legacy/associativa"<<std::endl;
+    if(gl){const auto path=QStringLiteral("/tmp/forgecad-construction-option/construction-")+QGuiApplication::platformName();inactive.save(path+"-outside-hidden.png");shown.save(path+"-outside-shown.png");active.save(path+"-editing.png");}
+    const auto setting=QStringLiteral("view/sketchConstruction");const auto previous=QSettings().value(setting);QSettings().remove(setting);
+    {
+        PdfWindow window;auto *action=window.findChild<QAction*>("sketchConstructionVisibilityAction");
+        require(action&&action->isCheckable()&&!action->isChecked()&&!window.viewport_->sketchConstructionVisible(), "opzione presente nel menu e spenta per default");
+        const bool dirty=window.documentModified_;action->trigger();
+        require(action->isChecked()&&window.viewport_->sketchConstructionVisible()&&QSettings().value(setting).toBool(), "comando menu aggiorna vista e preferenza");
+        require(window.documentModified_==dirty&&!window.viewport_->canUndo(), "comando menu non sporca il documento");
+        PdfWindow reopened;auto *saved=reopened.findChild<QAction*>("sketchConstructionVisibilityAction");
+        require(saved&&saved->isChecked()&&reopened.viewport_->sketchConstructionVisible(), "nuova finestra ripristina preferenza attiva");
+        saved->trigger();require(!reopened.viewport_->sketchConstructionVisible()&&!QSettings().value(setting).toBool(), "comando menu salva disattivazione");
+        PdfWindow hiddenAgain;require(!hiddenAgain.viewport_->sketchConstructionVisible(), "nuova finestra ripristina preferenza disattivata");
+    }
+    if(previous.isValid())QSettings().setValue(setting,previous);else QSettings().remove(setting);
+    std::cout<<"PASS costruzione: menu persistente, on/off, rendering, bounds, picking, storyboard, cache nascoste, documento e loft invariati"<<std::endl;
 }
 
 static void sketchReferenceUsage() {
