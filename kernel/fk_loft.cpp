@@ -1,5 +1,6 @@
 #include "fk_loft.h"
 #include "fk_loft_profiles.h"
+#include "fk_loft_sections.h"
 
 #include "fk_cancel.h"
 
@@ -1793,8 +1794,9 @@ Body loftSolid(const std::vector<LoftSection> &sections, bool ruled, FaceAliases
     return loftSolid(sections, options, labels);
 }
 
-Body loftSolid(const std::vector<LoftSection> &sections, const LoftOptions &options, FaceAliases *labels) {
+Body loftSolid(const std::vector<LoftSection> &input, const LoftOptions &options, FaceAliases *labels) {
     if(labels)labels->clear();
+    const auto sections = detail::prepareLoftSections(input);
     for (const LoftSection &s : sections) {
         cancellationPoint();
         if (!sectionClosed(s)) throw std::domain_error("loft: una sezione non e' un contorno chiuso");
@@ -1809,8 +1811,9 @@ Body loftSheet(const std::vector<LoftSection> &sections, bool ruled, FaceAliases
     return loftSheet(sections, options, labels);
 }
 
-Body loftSheet(const std::vector<LoftSection> &sections, const LoftOptions &options, FaceAliases *labels) {
+Body loftSheet(const std::vector<LoftSection> &input, const LoftOptions &options, FaceAliases *labels) {
     if(labels)labels->clear();
+    const auto sections = detail::prepareLoftSections(input);
     if (sections.empty()) throw std::domain_error("loft: servono almeno due sezioni");
     const bool closed = sectionClosed(sections.front());
     for (const LoftSection &s : sections)

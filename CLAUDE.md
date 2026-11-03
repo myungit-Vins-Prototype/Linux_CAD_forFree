@@ -103,16 +103,18 @@ ctest --test-dir forgecad-release --output-on-failure
 
 ## Ultimi interventi — esiti consolidati
 
-0. **03/11 — Pannelli, storyboard, diagnostica loft e specchi.** Picker da albero: schizzi interi/nascosti,
-   entita/bordi esatti; guardie storia/visibilita e clic persistente al cambio campo. Errori loft con guida rossa,
-   sezione arancione, nomi/etichette/frecce secondo ordine effettivo. Specchi eliminati in una rimappatura:
-   niente copie ricreate fra rimozioni dagli schizzi associativi; Undo/Redo unico. App completa, CTest18/18,
-   Loft42/42,6prove native Wayland/XCB PASS; riproduttore vecchio FAIL atteso. Mappa559/7731/265AST,
-   10confini/17moduli/check/HTML PASS. [Rapporto e limiti](docs/storyboard-diagnostica-loft-2026-11-03.md).
-   Precedente `2e4366f`: pannelli sotto ribbon, pulizia OK/Annulla, tre punti rimovibili e verso G1/G2 (formato61,
-   firme tavola60). Clic0/120/350ms corretti; CTest15/15, Loft42/42, forma10/10 e prove native mirate PASS.
-   [Rapporto precedente](docs/ui-pannelli-verso-loft-2026-11-03.md). Fixture Qt con due dock al primo resize:
-   crash animazione distinto dal picker; verifica isolata e flussi reali separati. Originali intatti.
+0. **03/11 — Sezioni loft, storyboard e specchi.** Sezioni proiettate/estratte implicite supportate:
+   costruzione NURBS della sola loft entro1e-9 mm; sorgenti esatte/associative immutate, razionali senza fit.
+   PASS15 gruppi kernel, CTest19/19 e Loft42/42; app/runner completi compilati.
+   Due revisioni SurfaceModellingExample219,4flussi nativi Wayland/XCB PASS; mappa563/7785/267AST/check/HTML,
+   9confini/10moduli verificati. [Rapporto](docs/loft-sezioni-proiettate-2026-11-03.md).
+   Ultimo pubblicato `1a8c60d`: picker storyboard schizzi interi/nascosti ed entita/bordi, guardie storia
+   e visibilita; errori loft guida rossa/sezione arancione con nomi/frecce. Eliminazione atomica specchi
+   prima del refresh associativo, Undo/Redo unico. App completa, CTest18/18, Loft42/42,6prove native
+   Wayland/XCB PASS; mappa559/7731/265AST verificata. [Dettagli](docs/storyboard-diagnostica-loft-2026-11-03.md).
+   `2e4366f`: pannelli sotto ribbon, cleanup OK/Annulla, tre punti rimovibili, verso G1/G2 (formato61),
+   clic0/120/350ms corretti. [Prove UI](docs/ui-pannelli-verso-loft-2026-11-03.md).
+   Fixture Qt: crash al primo resize con due dock, distinto dal picker; prove isolate e flussi reali separati.
 
 1. **02–03/11 — CI, guide proiettate e Loft9 (`e54a174`, pubblicato).** CI41513461524
    verde su `ec08b12`: Linux56PASS/2SKIP, macOS60PASS/1SKIP; esito storico.

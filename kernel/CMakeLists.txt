@@ -127,6 +127,7 @@ add_library(forgekernel STATIC
     fk_loft.cpp
     fk_loft_profiles.h
     fk_loft_profiles.cpp
+    fk_loft_sections.cpp
     fk_exchange.h
     fk_exchange.cpp
     fk_step.h
@@ -274,3 +275,11 @@ target_compile_options(forgekernel_loft_shape_tests PRIVATE -Wall -Wextra -Wpeda
 set_target_properties(forgekernel_loft_shape_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
 add_test(NAME forgekernel_loft_shape_tests COMMAND forgekernel_loft_shape_tests)
 set_tests_properties(forgekernel_loft_shape_tests PROPERTIES TIMEOUT 120)
+
+# Sezioni proiettate/estratte implicite: costruzione NURBS entro budget, sorgenti immutate.
+add_executable(forgekernel_loft_projected_section_tests tests/test_loft_projected_sections.cpp)
+target_link_libraries(forgekernel_loft_projected_section_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_loft_projected_section_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_loft_projected_section_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_loft_projected_section_tests COMMAND forgekernel_loft_projected_section_tests)
+set_tests_properties(forgekernel_loft_projected_section_tests PROPERTIES TIMEOUT 120)

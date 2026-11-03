@@ -22,7 +22,7 @@
 //  - le sezioni si dividono agli stessi valori dell'ascissa curvilinea
 //    normalizzata (l'unione di quelli dei vertici di tutte), cosi' hanno lo
 //    stesso numero di tratti (un cerchio verso un quadrato: quattro archi).
-// Ogni tratto diventa una NURBS esatta (tratti di Bezier in forma standard,
+// Per sezioni razionali ogni tratto diventa una NURBS esatta (tratti di Bezier in forma standard,
 // grado comune, nodi comuni); la superficie tra i tratti corrispondenti ha
 // righe (poli omogenei) che interpolano quelli delle sezioni:
 //  - rigata: lineare tra sezioni consecutive (una faccia per campata);
@@ -33,6 +33,10 @@
 // longitudinali le righe dei vertici. La geometria tra le sezioni e' una
 // scelta di definizione (come in ogni CAD): quella rigata coincide con OCCT
 // quando la corrispondenza e' la stessa (tronchi di cono e di piramide).
+// Le sezioni implicite da proiezione schizzo/schizzo (anche estratte, tagliate
+// o riferite in uno schizzo) usano una copia NURBS di costruzione verificata
+// entro 1e-9 mm. Le curve sorgenti restano esatte e associative: in questo caso
+// le isoparametriche della loft rispettano quel budget, non un'identita' algebrica.
 namespace ForgeCad::Kernel {
 
 struct LoftSection {

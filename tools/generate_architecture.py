@@ -145,6 +145,9 @@ DESCRIPTIONS.update({
 })
 
 DESCRIPTIONS.update({
+ 'fk_loft_sections': ('kernel', 'Sezioni proiettate/estratte implicite: rappresentazione NURBS della sola costruzione loft nel budget 1e-9 mm, jet e parametri conservati, verifica indipendente; input associativi immutati e sezioni razionali senza fit.'),
+ 'kernel/tests/test_loft_projected_sections.cpp': ('tests', 'Loft con sezioni implicite, trim/trasformazioni, due/tre sezioni, G1/G2, guide, limiti di errore e BodyIO; sorgenti immutate.'),
+ 'tests/test_loft_projected_sections.h': ('tests', 'Sezioni da proiezioni/estrazioni associative: creazione, forma entro budget, dipendenze, Undo/Redo, salvataggio cache/no-cache e rigenerazione.'),
  'cad_storyboard_selection': ('dialogs', 'Ponte di sola selezione tra storyboard e campo attivo dei pannelli: entita esatte espandibili, schizzi nascosti, guardia di visibilita/storia e compatibilita delle ripetizioni.'),
  'forgeCad2026_viewport_storyboard.cpp': ('viewport', 'Candidati filtrati per ruolo e punto della storia; consegna gli stessi riferimenti genealogici a picker di curve, corpi e bordi dalla storyboard.'),
  'cad_loft_diagnostics': ('features', 'Identita di guida e sezione negli errori del kernel, nomi secondo ordine effettivo e percorsi esatti per la diagnostica visuale.'),
@@ -159,9 +162,9 @@ DESCRIPTIONS.update({
  'tests/test_history_suppression.h': ('tests', 'Soppressione con appoggio/Pierce invalidi, continuita della catena e rifiuto alla riattivazione.'),
  'tests/test_function_panels.h': ('tests', 'Pannelli: tema, messaggi copiabili e dimensioni; modifica dei tre punti con rollback/storia e verso G1/G2 persistente, compatibilita delle firme tavola60.'),
  'fk_surface_algo': ('kernel', 'Algoritmi sulle superfici: coincidenza delle estrusioni certificata e identita stretta della parametrizzazione UV da dati esatti, per riutilizzare SP-curve senza riproiezione.'),
- 'fk_loft': ('kernel', 'Loft con contatti G1/G2: basi e derivate di collocazione in coordinate locali dei nodi, portabili su ARM anche per campate di un ulp.'),
+ 'fk_loft': ('kernel', 'Loft con contatti G1/G2 e sezioni 3D razionali o implicite: adatta soltanto le copie di costruzione delle proiezioni tramite fk_loft_sections; basi e derivate in coordinate locali dei nodi, portabili su ARM.'),
  'kernel/tests/test_surface_algo.cpp': ('tests', 'Algoritmi di superficie e certificato coincidenza delle estrusioni: onde, NURBS, verso inverso e suddivisione dei nodi.'),
- 'kernel/fk_loft.cpp': ('kernel', 'Loft con campi Hermite indipendenti dai poli e guide in coordinata curvilinea; profili razionali compatibili tramite algebra esatta. Guide implicite su sezioni piane certificate; superficie NURBS adattiva nel budget preesistente.'),
+ 'kernel/fk_loft.cpp': ('kernel', 'Loft con campi Hermite e guide curvilinee, algebra esatta dei profili razionali e adattamento delle sezioni implicite tramite fk_loft_sections. Guide implicite su sezioni piane; superficie NURBS nel budget preesistente.'),
  'fk_loft_profiles': ('kernel', 'Algebra esatta dei profili del loft: raccordi dei parametri, composizione e prodotti Bernstein per un denominatore razionale comune e correzioni delle guide con derivata nulla ai bordi.'),
  'kernel/tests/test_loft_shape.cpp': ('tests', 'Regressioni della forma del loft: inserimento di nodi senza cambiare geometria, raccordi G1 nonuniformi, pesi razionali, guide interne, vincoli perpendicolari alla corda e corner originali.'),
  'tests/test_document_read.h': ('tests', 'Lettura nativa robusta e migrazione delle cache dei loft precedenti: invalidazione atomica dello snapshot, conservazione delle definizioni e portabilita delle altre cache.'),

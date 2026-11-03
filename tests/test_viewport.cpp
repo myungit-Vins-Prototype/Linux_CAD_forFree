@@ -225,6 +225,7 @@ public:
 #include "test_document_units.h"
 #include "test_function_panels.h"
 #include "test_storyboard_panel_selection.h"
+#include "test_loft_projected_sections.h"
 #include "test_advanced_fillets.h"
 #include "test_fillet_refinements.h"
 #include "test_lazy_mesh.h"
@@ -10990,6 +10991,11 @@ int main(int argc, char **argv) {
     if (app.arguments().contains(QStringLiteral("--advanced-fillets"))) {
         try { ViewportInteractionTest::advancedFillets(); }
         catch (const std::exception &error) { std::cerr << error.what() << std::endl; return 1; }
+        return 0;
+    }
+    if (app.arguments().contains(QStringLiteral("--loft-projected-sections"))) {
+        try { ViewportInteractionTest::loftProjectedSections(); }
+        catch (const std::exception &error) { std::cerr << error.what() << '\n'; return 1; }
         return 0;
     }
     if (app.arguments().contains(QStringLiteral("--storyboard-panel-selection"))) {
