@@ -94,7 +94,7 @@ DESCRIPTIONS = {
  'forgeCad2026_scene_renderer': ('render', 'Passate grafiche della scena, FBO/MSAA e disegno di corpi, riferimenti e overlay; filtro topologico con cache per le sole cuciture G1 B-spline dei filetti, conserva bordi originali e spigoli vivi.'),
  'forgeCad2026_gpu_picker': ('render', 'Picking tramite identificatori GPU e gestione dei buffer necessari.'),
  'forgeCad2026_glass_compositor': ('render', 'Composizione della trasparenza dei corpi e risorse OpenGL associate.'),
- 'forgeCad2026_storyboard': ('dialogs', 'Albero della storia: presentazione, selezione, riordino e segnali delle feature; modalita di sola scelta della sorgente per le ripetizioni.'),
+ 'forgeCad2026_storyboard': ('dialogs', 'Albero della storia e cursore; selezione sorgenti delle ripetizioni, integrata con il ponte dei picker di pannello senza modifiche a storia o visibilita.'),
  'forgeCad2026_dialogs_solids.cpp': ('dialogs', 'Dialoghi solidi: ripetizioni con un solo blocco della finestra, storyboard selezionabile nel pannello incorporato e tre passaggi visibili (sorgente, riferimento, parametri); funzioni storiche con bersaglio successivo e sformo a piano neutro.'),
  'forgeCad2026_dialogs_surfaces.cpp': ('dialogs', 'Pannelli delle superfici; Estendi si apre prima della selezione e aggiorna bordi, contorni completi e anteprima dalla vista.'),
  'forgeCad2026_dialogs_sketch.cpp': ('dialogs', 'Dialoghi di schizzi e piani: rimozione/riselezione indipendente dei riferimenti in modifica, anteprima e normale invertibile.'),
@@ -144,7 +144,13 @@ DESCRIPTIONS.update({
  'kernel/tests/test_bspline.cpp': ('tests', 'Valutazioni B-spline contro OCCT e formule Bernstein, prefissi derivati bit identici, gradi fino31, nodi ripetuti/limiti, buffer, concorrenza e cancellazione.'),
 })
 
-DESCRIPTIONS.update({'tools/open_architecture.py': ('build', 'Avvio locale della mappa: aggiorna i dati a ogni apertura e li mostra nel browser con avanzamento ed errori.'), 'CMakeLists.txt': ('build',
+DESCRIPTIONS.update({
+ 'cad_storyboard_selection': ('dialogs', 'Ponte di sola selezione tra storyboard e campo attivo dei pannelli: entita esatte espandibili, schizzi nascosti, guardia di visibilita/storia e compatibilita delle ripetizioni.'),
+ 'forgeCad2026_viewport_storyboard.cpp': ('viewport', 'Candidati filtrati per ruolo e punto della storia; consegna gli stessi riferimenti genealogici a picker di curve, corpi e bordi dalla storyboard.'),
+ 'cad_loft_diagnostics': ('features', 'Identita di guida e sezione negli errori del kernel, nomi secondo ordine effettivo e percorsi esatti per la diagnostica visuale.'),
+ 'forgeCad2026_viewport_loft_diagnostics.cpp': ('viewport', 'Overlay temporanei di errore loft: guida rossa, sezione arancione, etichette e frecce ancorate ai percorsi esatti; reset ad aggiornamento e chiusura.'),
+ 'tests/test_storyboard_panel_selection.h': ('tests', 'Storyboard nei picker: schizzi nascosti, punti, bordi esatti, filtri di storia, guardie e ripetizioni; errore loft reale con guide riordinate e due overlay distinti.'),
+ 'tools/open_architecture.py' : ('build', 'Avvio locale della mappa: aggiorna i dati a ogni apertura e li mostra nel browser con avanzamento ed errori.'), 'CMakeLists.txt': ('build',
                     'Definisce eseguibile e suite; libreria interna condivisa dai runner delle tavole e impronta geometrica limitata alla chiusura delle dipendenze del calcolo.'),
  'cmake/geometry_sources.cmake': ('build', 'Raccoglie include locali transitivi e implementazioni per l’impronta geometrica; esclude moduli visuali indipendenti e conserva il kernel completo.'),
  'tests/test_geometry_sources.cmake': ('tests', 'Verifica invalidazione per dipendenze geometriche, stabilita dopo modifiche visuali e manifesto reale della build.'),

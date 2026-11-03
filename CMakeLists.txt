@@ -132,6 +132,10 @@ add_executable(forgecad
     forgeCad2026_viewport_sketch.cpp
     forgeCad2026_viewport_document.cpp
     forgeCad2026_viewport_selection.cpp
+    forgeCad2026_viewport_storyboard.cpp
+    forgeCad2026_viewport_loft_diagnostics.cpp
+    cad_storyboard_selection.cpp
+    cad_loft_diagnostics.cpp
     forgeCad2026_viewport_render.cpp
     forgeCad2026_viewport_preview.cpp
     forgeCad2026_viewport_scene.cpp
@@ -572,6 +576,7 @@ if(FORGECAD_BUILD_VIEW_TESTS)
     forgecad_add_view_test(forgecad_advanced_fillet_tests --advanced-fillets)
     set_tests_properties(forgecad_advanced_fillet_tests PROPERTIES TIMEOUT 60)
     forgecad_add_view_test(forgecad_function_panels_tests --function-panels-review)
+    forgecad_add_view_test(forgecad_storyboard_panel_selection_tests --storyboard-panel-selection)
     set_tests_properties(forgecad_function_panels_tests PROPERTIES TIMEOUT 60)
     forgecad_add_view_test(forgecad_history_suppression_tests --history-suppression)
     set_tests_properties(forgecad_document_read_tests PROPERTIES TIMEOUT 60)

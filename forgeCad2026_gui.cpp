@@ -13,6 +13,7 @@
 #include "forgeCad2026_gui.h"
 #include "forgeCad2026_viewport.h"
 #include "forgeCad2026_storyboard.h"
+#include "cad_storyboard_selection.h"
 #include "forgeCad2026_dialogs.h"
 #include "cuda_support.h"
 #include "cad_cuda_tessellation.h"
@@ -387,6 +388,7 @@ void PdfWindow::initializeSceneAndTree(WindowSetup &setup) {
     modelTree->setCursorMode(static_cast<StoryboardTree::CursorMode>(qBound(0,
         QSettings().value(QStringLiteral("view/storyboardCursorMode"), 0).toInt(), 2)));
     modelDock->setWidget(modelTree);
+    ForgeCad::installStoryboardSelection(this, viewport, modelTree);
     addDockWidget(Qt::LeftDockWidgetArea, modelDock);
     rebuildModelTree();
     createSketchOnPlane = std::make_shared<std::function<void(int)>>();

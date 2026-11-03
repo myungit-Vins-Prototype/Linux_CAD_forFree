@@ -497,6 +497,8 @@ bool loftDialog(QWidget *parent, CadViewport *viewport, const QString &title, in
     auto *footerLayout = new QVBoxLayout(footer);
     footerLayout->setContentsMargins(0, 0, 0, 0);
     const PreviewScope scope(viewport, dialog, form, replaced, footerLayout);
+    // Gli errori della loft nominano guida e sezione: lascia visibili entrambe.
+    scope.label->setMinimumHeight(64);
     const auto current = [&] {
         ExtrusionObject d = initial;
         d.operation = -1;
@@ -613,6 +615,13 @@ bool loftDialog(QWidget *parent, CadViewport *viewport, const QString &title, in
                 else item=appendSection(ref,true);
                 list->setCurrentItem(item);
                 refresh();
+            } else if(graphicalTarget==2 && ref.kind==7 && ref.element.kind==-1) {
+                QListWidgetItem *item=nullptr;
+                for(int row=0;row<guides->count();++row)
+                    if(guides->item(row)->data(Qt::UserRole).toInt()==0 && guides->item(row)->data(Qt::UserRole+1).toInt()==ref.index) {item=guides->item(row);break;}
+                if(item) item->setCheckState(item->checkState()==Qt::Checked?Qt::Unchecked:Qt::Checked);
+                else item=appendGuide(0,ref.index,true);
+                guides->setCurrentItem(item); refresh();
             } else if(graphicalTarget==2) {
                 int existing=-1;
                 for(int k=0;k<edgeGuides.size();++k) if(sameRef(edgeGuides.at(k),ref)) {existing=k;break;}
@@ -627,7 +636,7 @@ bool loftDialog(QWidget *parent, CadViewport *viewport, const QString &title, in
             if(graphicalTarget) viewport->beginReferencePick(ForgeCad::DatumRoleCurve|ForgeCad::DatumRoleLine,replaced);
         });
         const QString reason=viewport->beginReferencePick(ForgeCad::DatumRoleCurve|ForgeCad::DatumRoleLine,replaced);
-        pickStatus->setText(reason.isEmpty()?QStringLiteral("Clicca un bordo o una curva; Esc termina la scelta. Gli schizzi interi si spuntano nell’elenco."):reason);
+        pickStatus->setText(reason.isEmpty()?QStringLiteral("Scegli nella vista o nella storyboard; il clic su uno schizzo sceglie il contorno intero. Espandi per le singole entita'. Esc termina."):reason);
     };
     for(const QString &name : {QStringLiteral("surfaceStartFacesPick"),QStringLiteral("surfaceEndFacesPick")})
         QObject::connect(dialog.findChild<QPushButton *>(name),&QPushButton::clicked,&dialog,[&] {

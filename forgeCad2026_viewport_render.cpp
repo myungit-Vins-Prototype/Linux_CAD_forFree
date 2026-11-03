@@ -187,6 +187,7 @@ void CadViewport::paintGL() {
     drawReferenceLabels();
     drawSelectionHighlight();
     drawPlaneResizeHandles();
+    { QPainter painter(this); drawLoftDiagnostics(painter); }
     // Il vetro copre anche etichette e selezioni: niente overlay della
     // scena viene disegnato sopra il fondale del pannello.
     // QPainter puo' lasciare scissor/stencil attivi dopo gli overlay.
@@ -1215,7 +1216,7 @@ void CadViewport::drawSketch() {
     // Se una guida della loft non attraversa una sezione, la sezione viene
     // ridisegnata sopra il modello in rosso, anche se lo schizzo era
     // nascosto. Scompare appena l'anteprima torna valida o la finestra si chiude.
-    if (previewErrorSketch_ >= 0 && previewErrorSketch_ < sketches_.size()) {
+    if (previewLoftErrors_.isEmpty() && previewErrorSketch_ >= 0 && previewErrorSketch_ < sketches_.size()) {
         const SketchObject &failed = sketches_.at(previewErrorSketch_);
         glDisable(GL_DEPTH_TEST);
         overlayRenderer_.setStipple(false);

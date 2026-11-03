@@ -21,6 +21,11 @@
 #include "../cad_feature_build.h"
 #include "../cad_feature_dependencies.h"
 #include "../cad_datum.h"
+#include "../cad_storyboard_selection.h"
+#include "../cad_loft_diagnostics.h"
+#include "../forgeCad2026_dialogs_common.h"
+#include "fk_curve_ops.h"
+#include "fk_bspline.h"
 #include "../cad_forge.h"
 #include "../cad_pattern.h"
 #include "../cad_extrude.h"
@@ -219,6 +224,7 @@ public:
 #include "test_surface_tools_gui.h"
 #include "test_document_units.h"
 #include "test_function_panels.h"
+#include "test_storyboard_panel_selection.h"
 #include "test_advanced_fillets.h"
 #include "test_fillet_refinements.h"
 #include "test_lazy_mesh.h"
@@ -10984,6 +10990,11 @@ int main(int argc, char **argv) {
     if (app.arguments().contains(QStringLiteral("--advanced-fillets"))) {
         try { ViewportInteractionTest::advancedFillets(); }
         catch (const std::exception &error) { std::cerr << error.what() << std::endl; return 1; }
+        return 0;
+    }
+    if (app.arguments().contains(QStringLiteral("--storyboard-panel-selection"))) {
+        try { ViewportInteractionTest::storyboardPanelSelection(); ViewportInteractionTest::loftFailureDiagnostics(); ViewportInteractionTest::mirrorDeleteOnce(); }
+        catch (const std::exception &error) { std::cerr << error.what() << '\n'; return 1; }
         return 0;
     }
     if (app.arguments().contains(QStringLiteral("--function-panels-review"))) {

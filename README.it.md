@@ -134,7 +134,8 @@ Il risultato usa NURBS esatte quando possibile e una curva implicita esatta negl
 
 - Estrusione di profili aperti, Loft di superfici e Sweep di superfici.
 - Superfici planari, rigate, tra curve e di riempimento.
-- Selezione di bordi e curve per definire contorni, sezioni e guide.
+- Selezione di bordi e curve per definire contorni, sezioni e guide. Attiva il campo di scelta del pannello, poi scegli nella vista o nella storyboard: clic sullo schizzo per il contorno intero, espansione per singole entità e bordi dei corpi. Si possono scegliere anche schizzi nascosti, senza mostrarli nel documento.
+- Gli errori di attraversamento delle Loft identificano guida e sezione: guida rossa, sezione arancione, con nomi, etichette e frecce nella vista. Le segnalazioni si aggiornano correggendo i riferimenti e scompaiono chiudendo il pannello.
 - Copia e rimozione di facce.
 - Offset, estensione e taglio delle superfici.
 - **Estendi superficie** apre subito il pannello: i bordi si aggiungono o rimuovono nella vista, con distanza, tipo, contorno completo e anteprima nello stesso pannello.

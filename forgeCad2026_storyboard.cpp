@@ -261,6 +261,7 @@ void StoryboardTree::updateGeometries() {
 
 void StoryboardTree::setSourcePickCallback(std::function<void(int, bool)> callback) {
     sourcePicked_ = std::move(callback);
+    setProperty("storyboardSourcePicking", bool(sourcePicked_));
     historyRail_->setEnabled(!sourcePicked_);
 }
 

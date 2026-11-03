@@ -964,7 +964,7 @@ Body loft(const std::vector<LoftSection> &input, const LoftOptions &options, boo
         for (std::size_t guideIndex = 0; guideIndex < options.guides.size(); ++guideIndex) {
             cancellationPoint();
             const std::vector<PathSegment> &guide = options.guides[guideIndex];
-            if (guide.empty()) throw std::domain_error("loft: curva guida vuota");
+            if (guide.empty()) throw std::domain_error("loft: curva guida vuota [[loft-guide=" + std::to_string(guideIndex) + "]]");
             std::vector<double> parameters;
             std::vector<GuideHit> hits;
             for (std::size_t sectionIndex = 0; sectionIndex < sections.size(); ++sectionIndex) {
@@ -979,7 +979,8 @@ Body loft(const std::vector<LoftSection> &input, const LoftOptions &options, boo
             const bool increasing = parameters.back() > parameters.front();
             for (std::size_t i = 1; i < parameters.size(); ++i)
                 if ((increasing && parameters[i] <= parameters[i - 1] + 1e-9) || (!increasing && parameters[i] >= parameters[i - 1] - 1e-9))
-                    throw std::domain_error("loft: una curva guida non attraversa le sezioni nel loro ordine");
+                    throw std::domain_error("loft: una curva guida non attraversa le sezioni nel loro ordine [[loft-guide="
+                        + std::to_string(guideIndex) + "]] [[loft-section=" + std::to_string(i) + "]]");
             if (!increasing) {
                 for (double &parameter : parameters) parameter = 1.0 - parameter;
                 for (GuideHit &hit : hits) hit.tangent = -hit.tangent;

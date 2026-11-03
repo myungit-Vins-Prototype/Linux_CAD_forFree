@@ -556,6 +556,10 @@ public:
     // lista non e' vuota si disegnano e si scelgono solo questi, anche se sono
     // stadi nascosti della storia.
     void setPickBodies(const QVector<int> &bodies);
+    // Gli stessi picker dei pannelli accettano riferimenti espliciti dalla storyboard.
+    QString storyboardPickContext() const;
+    QVector<GeometryRef> storyboardReferences(SceneObjectKind kind, int index, bool wholeBody = false) const;
+    QString pickStoryboardReference(GeometryRef reference);
     void cancelReferencePick();
     bool referencePicking() const;
     void setReferencePickCallback(std::function<void(bool, GeometryRef)> callback);
@@ -1750,6 +1754,14 @@ private:
     bool exportMeshPreviewQuadrangular_ = false;
     bool exportMeshPreviewLimited_ = false;
     LengthUnit lengthUnit_ = LengthUnit::Millimeter;
+    struct LoftErrorMark {
+        QString label;
+        QColor color;
+        QVector<QVector<QVector3D>> lines;
+    };
+    QVector<LoftErrorMark> previewLoftErrors_;
+    void prepareLoftDiagnostics(const QString &error);
+    void drawLoftDiagnostics(QPainter &painter) const;
     int previewErrorSketch_ = -1;  // sezione della loft evidenziata quando una guida non la incontra
     QTimer *previewTimer_ = nullptr;
     ForgeCad::Kernel::CancellationToken previewCancellation_;

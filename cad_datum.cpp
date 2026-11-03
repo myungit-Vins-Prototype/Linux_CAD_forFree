@@ -1,4 +1,5 @@
 #include "cad_datum.h"
+#include "cad_features.h"
 #include "cad_spatial_sketch.h"
 
 #include <cmath>
@@ -243,6 +244,21 @@ bool resolveGeometryRef(const GeometryRef &ref, int owner, const QVector<SketchO
                 r.point = sketchToWorld(q, sketch);
                 return true;
             }
+            if (ref.element.kind == -1) {
+                std::vector<PathSegment> path;
+                if (!geometryRefPath(ref, owner, sketches, bodies, path, error)) return false;
+                r.hasCurve = true;
+                r.nearest = [path](const Vec3 &q, Vec3 &foot, Vec3 &tangent) {
+                    double best = std::numeric_limits<double>::max(); bool found = false;
+                    for (const auto &piece : path) {
+                        Vec3 f,t;
+                        if (nearestOnForgeCurve(*piece.curve,piece.range,q,f,t) && distance(f,q)<best)
+                            best=distance(f,q), foot=f, tangent=t, found=true;
+                    }
+                    return found;
+                };
+                return true;
+            }
             const Frame3 plane = sketchAxes(sketch);
             if (ref.element.kind == 0) {
                 if (ref.element.element < 0 || ref.element.element >= sketch.segments.size()) break;
@@ -403,6 +419,7 @@ bool geometryRefPath(const GeometryRef &ref, int owner, const QVector<SketchObje
             const SketchObject &sketch = sketches.at(ref.index);
             if (sketch.datumPlane >= owner && owner >= 0)
                 return setError(error, QStringLiteral("lo schizzo \"%1\" sta su un piano successivo").arg(sketch.name)), false;
+            if (ref.element.kind == -1) return sketchPath(sketch, segments, error);
             if (ref.element.kind == 0) {
                 if (ref.element.element < 0 || ref.element.element >= sketch.segments.size())
                     return setError(error, QStringLiteral("il segmento dello schizzo \"%1\" non esiste piu'").arg(sketch.name)), false;
@@ -541,6 +558,7 @@ QString geometryRefText(const GeometryRef &ref, const QVector<SketchObject> &ske
         if (ref.element.kind == 2) return QStringLiteral("Origine di %1").arg(sketchName(ref.index));
         return QStringLiteral("Punto di %1").arg(sketchName(ref.index));
     case 7:
+        if (ref.element.kind == -1) return QStringLiteral("%1 (schizzo intero)").arg(sketchName(ref.index));
         return (ref.element.kind == 0 ? QStringLiteral("Segmento %1 di %2") : QStringLiteral("Curva %1 di %2")).arg(ref.element.element + 1).arg(sketchName(ref.index));
     case 8: return bodyName(ref.index);
     case 9: return bodyName(ref.index);

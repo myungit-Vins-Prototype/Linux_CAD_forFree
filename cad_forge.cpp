@@ -1,4 +1,5 @@
 #include "cad_forge.h"
+#include "cad_loft_diagnostics.h"
 
 #include <algorithm>
 #include <cmath>
@@ -1626,7 +1627,8 @@ ForgeBody forgeLoft(const QVector<SketchObject> &sketches, const QVector<SketchO
         };
         const int section = marker(QStringLiteral("loft-section"));
         const int guide = marker(QStringLiteral("loft-guide"));
-        const QString sectionMarker = section >= 0 ? QStringLiteral(" [[loft-section=%1]]").arg(section) : QString();
+        const QString sectionMarker = (section >= 0 ? QStringLiteral(" [[loft-section=%1]]").arg(section) : QString())
+            + (guide >= 0 ? QStringLiteral(" [[loft-guide=%1]]").arg(guide) : QString());
         detail.remove(QRegularExpression(QStringLiteral("\\s*\\[\\[loft-(section|guide)=\\d+\\]\\]")));
         if (section >= 0 && section < sketches.size()) {
             const QString sectionName = sketches.at(section).name;
@@ -1636,6 +1638,7 @@ ForgeBody forgeLoft(const QVector<SketchObject> &sketches, const QVector<SketchO
             else
                 detail = QStringLiteral("%1 — sezione \"%2\".%3").arg(detail, sectionName, sectionMarker);
         }
+        if (!(section >= 0 && section < sketches.size())) detail += sectionMarker;
         setError(error, QStringLiteral("Loft non riuscito: %1").arg(detail));
         return nullptr;
     }
@@ -1740,8 +1743,10 @@ ForgeBody forgeReferencedLoft(const ExtrusionObject &d, int owner, const QVector
             faces[side].append({bodies.at(i).forgeBody,ref.point});
         }
     }
-        return forgeLoft(legacySections,guides,d.loftRuled,d.loftStartContinuity,d.loftEndContinuity,d.loftGuideContinuity,
+        const auto result = forgeLoft(legacySections,guides,d.loftRuled,d.loftStartContinuity,d.loftEndContinuity,d.loftGuideContinuity,
                          d.loftGuideInfluence,d.loftStartInfluence,d.loftEndInfluence,error,d.loftSurface,faces[0],faces[1],sections,edgeGuides,guideConditions,d.loftStartReverse,d.loftEndReverse);
+        if (!result && error) *error = namedLoftError(*error,d,sketches,bodies);
+        return result;
     } catch (const std::exception &failure) { setError(error,QString::fromUtf8(failure.what())); return nullptr; }
 }
 

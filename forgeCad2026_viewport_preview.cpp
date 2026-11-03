@@ -1,4 +1,5 @@
 #include "forgeCad2026_viewport_internal.h"
+#include "cad_loft_diagnostics.h"
 
 
 bool CadViewport::preparePreviewCacheContext() {
@@ -162,6 +163,7 @@ void CadViewport::requestPreview(const ExtrusionObject &definition, int index ) 
     if (!previewDragVisible_) preview_.retainedDisplay = {};
     preview_.resultDisplay = {};
     previewErrorSketch_ = -1;
+    previewLoftErrors_.clear();
     ++preview_.generation;
     const auto cached=std::find_if(previewCache_.begin(),previewCache_.end(),
         [&](const Preview &entry){return entry.key==key;});
@@ -239,6 +241,7 @@ void CadViewport::clearPreview() {
     preview_.error.clear();
     preview_.geometry.reset();
     previewErrorSketch_ = -1;
+    previewLoftErrors_.clear();
     preview_.display = {};
     preview_.retainedDisplay = {};
     preview_.resultDisplay = {};
@@ -446,6 +449,7 @@ void CadViewport::startPreviewJob() {
 }
 
 QString CadViewport::preparePreviewError(QString error) {
+    prepareLoftDiagnostics(error);
     previewErrorSketch_ = -1;
     const QRegularExpression marker(QStringLiteral("\\s*\\[\\[loft-section=(\\d+)\\]\\]"));
     const QRegularExpressionMatch match = marker.match(error);
@@ -458,5 +462,5 @@ QString CadViewport::preparePreviewError(QString error) {
             previewErrorSketch_ = preview_.definition.loftSketches.at(section);
         error.remove(marker);
     }
-    return error.trimmed();
+    return ForgeCad::visibleLoftError(error);
 }

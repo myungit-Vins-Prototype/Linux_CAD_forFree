@@ -199,7 +199,7 @@ WindowLock::WindowLock(QMainWindow *window, CadViewport *target, QWidget *keep) 
     for (QDockWidget *dock : window->findChildren<QDockWidget *>()) candidates.append(dock);
     for (QWidget *widget : candidates)
         if (widget && widget->isEnabled()) {
-            widget->setEnabled(false);
+            if (!widget->property("storyboardPanelSelection").toBool()) widget->setEnabled(false);
             widgets.append(widget);
         }
     for (QDialog *dialog : window->findChildren<QDialog *>())
@@ -1142,7 +1142,7 @@ bool ForgeCad::Gui::runUntilApplied(QDialog &dialog, QFormLayout *form, QDialogB
             return;
         }
         QString visible = error;
-        visible.remove(QRegularExpression(QStringLiteral("\\s*\\[\\[loft-section=\\d+\\]\\]")));
+        visible.remove(QRegularExpression(QStringLiteral("\\s*\\[\\[loft-(section|guide)=\\d+\\]\\]")));
         errorLabel->setText(visible + QStringLiteral("\nCorreggi i valori e riprova, oppure Annulla."));
         errorLabel->show();
         if (!dynamic_cast<FunctionDialogPanel *>(&dialog)) dialog.adjustSize();
@@ -1174,7 +1174,7 @@ bool runUntilAppliedModeless(QMainWindow *window, CadViewport *viewport, QDialog
             return;
         }
         QString visible = error;
-        visible.remove(QRegularExpression(QStringLiteral("\\s*\\[\\[loft-section=\\d+\\]\\]")));
+        visible.remove(QRegularExpression(QStringLiteral("\\s*\\[\\[loft-(section|guide)=\\d+\\]\\]")));
         errorLabel->setText(visible + QStringLiteral("\nCorreggi i valori e riprova, oppure Annulla."));
         errorLabel->show();
         if (!dynamic_cast<FunctionDialogPanel *>(&dialog)) dialog.adjustSize();

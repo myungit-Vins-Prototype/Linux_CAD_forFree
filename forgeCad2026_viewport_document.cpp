@@ -669,7 +669,6 @@ void CadViewport::deleteFeatures(const QVector<int> &indices) {
                 && !list.contains(index)) list.append(index);
     }
     if (list.isEmpty()) return;
-    std::sort(list.begin(), list.end(), std::greater<int>());  // dall'ultima: gli indici prima non cambiano
     QHash<quint64, bool> bodyVisible;
     for (int index : list) {
         const quint64 bodyId = extrusions_.at(index).modelBodyId;
@@ -679,29 +678,31 @@ void CadViewport::deleteFeatures(const QVector<int> &indices) {
         bodyVisible.insert(bodyId, visible);
     }
     recordUndo();
-    for (int index : list) {
-        const quint64 bodyId = extrusions_.at(index).modelBodyId;
-        int previous = -1;
-        for (int candidate = index - 1; candidate >= 0; --candidate)
-            if (extrusions_.at(candidate).modelBodyId == bodyId) { previous = candidate; break; }
-        // La base implicita del ramo prosegue dallo stadio precedente. I
-        // riferimenti geometrici espliciti restano invece invalidi e vengono
-        // segnalati dalla rigenerazione, senza cancellare le feature dipendenti.
-        for (int candidate = index + 1; candidate < extrusions_.size(); ++candidate) {
-            ExtrusionObject &dependent = extrusions_[candidate];
-            if (dependent.modelBodyId != bodyId) continue;
-            if (dependent.operation < 0 && dependent.feature == BodyFeature::Pattern && dependent.pattern.featureOnly
-                && dependent.patternComponent <= 0) {
-                // La funzione da ripetere e' un riferimento esplicito. Solo
-                // il corpo su cui applicarla segue la base implicita.
-                if (dependent.secondBody == index)
-                    dependent.secondBody = previous > dependent.firstBody ? previous : -1;
-            } else if (dependent.firstBody == index) dependent.firstBody = previous;
-            for (int &merged : dependent.mergeBodies)
-                if (merged == index) merged = previous;
-        }
-        removeBodies({index});
+    const QSet<int> removed(list.cbegin(),list.cend());
+    // Rimuove il gruppo in un'unica rimappatura. Fra due rimozioni separate
+    // l'aggiornamento degli schizzi associativi potrebbe rigenerare le copie
+    // appena tolte, lasciando un derivato orfano quando si elimina la madre.
+    const auto previousStage = [&](int index, quint64 bodyId) {
+        for (int candidate=index-1; candidate>=0; --candidate)
+            if (!removed.contains(candidate) && extrusions_.at(candidate).modelBodyId==bodyId) return candidate;
+        return -1;
+    };
+    for (int index=0; index<extrusions_.size(); ++index) {
+        if (removed.contains(index)) continue;
+        auto &dependent=extrusions_[index];
+        const quint64 bodyId=dependent.modelBodyId;
+        if (dependent.operation<0 && dependent.feature==BodyFeature::Pattern && dependent.pattern.featureOnly
+            && dependent.patternComponent<=0) {
+            if (removed.contains(dependent.secondBody) && extrusions_.at(dependent.secondBody).modelBodyId==bodyId) {
+                const int previous=previousStage(dependent.secondBody,bodyId);
+                dependent.secondBody=previous>dependent.firstBody?previous:-1;
+            }
+        } else if (removed.contains(dependent.firstBody) && extrusions_.at(dependent.firstBody).modelBodyId==bodyId)
+            dependent.firstBody=previousStage(dependent.firstBody,bodyId);
+        for (int &merged:dependent.mergeBodies)
+            if (removed.contains(merged) && extrusions_.at(merged).modelBodyId==bodyId) merged=previousStage(merged,bodyId);
     }
+    removeBodies(removed);
     for (auto it = bodyVisible.cbegin(); it != bodyVisible.cend(); ++it) {
         int tip = -1;
         for (int candidate = extrusions_.size() - 1; candidate >= 0; --candidate)

@@ -103,13 +103,16 @@ ctest --test-dir forgecad-release --output-on-failure
 
 ## Ultimi interventi — esiti consolidati
 
-0. **03/11 — Pannelli, piani e verso G1/G2.** Area unica sotto il ribbon per aggancio/altezza
-   piena/drag/resize; OK/Annulla puliscono il comando, Rimuovi per ogni riferimento del piano.
-   Clic corretto: niente reset50ms durante la pressione, rebuild rimandato al rilascio; prove0/120/350ms.
-   Inverti normale G1/G2 indipendente, anteprima e formato61; firme tavola60 compatibili.
-   App completa; CTest15/15, Loft42/42, forma10/10, ribbon offscreen e prove mirate Wayland/XCB PASS.
-   Mappa552/7642/261AST,8confini/check/HTML PASS. [Rapporto e prove](docs/ui-pannelli-verso-loft-2026-11-03.md).
-   Suite native complete limitate da cattura popup/vecchio test diagnostico; originali intatti.
+0. **03/11 — Pannelli, storyboard, diagnostica loft e specchi.** Picker da albero: schizzi interi/nascosti,
+   entita/bordi esatti; guardie storia/visibilita e clic persistente al cambio campo. Errori loft con guida rossa,
+   sezione arancione, nomi/etichette/frecce secondo ordine effettivo. Specchi eliminati in una rimappatura:
+   niente copie ricreate fra rimozioni dagli schizzi associativi; Undo/Redo unico. App completa, CTest18/18,
+   Loft42/42,6prove native Wayland/XCB PASS; riproduttore vecchio FAIL atteso. Mappa559/7731/265AST,
+   10confini/17moduli/check/HTML PASS. [Rapporto e limiti](docs/storyboard-diagnostica-loft-2026-11-03.md).
+   Precedente `2e4366f`: pannelli sotto ribbon, pulizia OK/Annulla, tre punti rimovibili e verso G1/G2 (formato61,
+   firme tavola60). Clic0/120/350ms corretti; CTest15/15, Loft42/42, forma10/10 e prove native mirate PASS.
+   [Rapporto precedente](docs/ui-pannelli-verso-loft-2026-11-03.md). Fixture Qt con due dock al primo resize:
+   crash animazione distinto dal picker; verifica isolata e flussi reali separati. Originali intatti.
 
 1. **02–03/11 — CI, guide proiettate e Loft9 (`e54a174`, pubblicato).** CI41513461524
    verde su `ec08b12`: Linux56PASS/2SKIP, macOS60PASS/1SKIP; esito storico.
@@ -130,16 +133,11 @@ ctest --test-dir forgecad-release --output-on-failure
    `test_draft.cpp:134`, scarto1,794e-6>1e-6. Robustezza5/5 anche sanitizer mirati, STEP20/20,
    IGES9/9, BodyIO2/2; GUI6/6 Wayland/XCB. Mappa531file/7305relazioni/249TU, check/HTML PASS.
    [Dettagli, prove e limiti](docs/code-review-2026-11-02-correzioni.md); originali intatti.
-3. **02/11 — OCCT soltanto nei test (`ab6fc71`).** Ricerca OCCT spostata in `kernel/occt_tests`, opzione facoltativa e
-   README/CI aggiornati; app e kernel senza dipendenze OCCT. Configurazione minima senza OCCT verificata; l'utente conferma
-   zero `HAVE_TK` nei flag dell'app dopo riconfigurazione. Test comparativi e CI successivi allo spostamento non confermati
-   nel registro.
-4. **02/11 — Bug della review (`9321643`).** Corretti cicli/ricorsioni STEP, conteggi e spline IGES, espressioni numeriche
-   ambigue/profonde, rilascio GlassCompositor, compatibilità Qt 6.4, normale degenere nello specchio e catture C++17;
-   aggiunte regressioni. Nel cloud: app/runner compilati, Expression e gruppi
-   Reflection/Transform/Mirror/Step/Iges/Exchange/Offset/Shell/Thicken PASS; ASan/UBSan e fuzzing mirati senza i crash
-   riprodotti sul vecchio codice. L'utente riferisce build/test locali riusciti, log non riletto. Mappa cloud verificata,
-   vista locale da aggiornare con la propria build.
+3. **02/11 — OCCT soltanto nei test (`ab6fc71`).** Facoltativo in `kernel/occt_tests`; app/kernel senza OCCT.
+   Configurazione minima verificata; utente conferma zero `HAVE_TK` nell'app. Confronti successivi non ricertificati.
+4. **02/11 — Bug review (`9321643`).** Parser STEP/IGES, espressioni, GlassCompositor, Qt6.4, specchio e C++17 corretti.
+   Build, gruppi pertinenti, sanitizer/fuzz nel cloud PASS; build locale riferita dall'utente. Mappa cloud verificata.
+   Dettagli conservati nel [checkpoint](docs/history/claude-checkpoint-prima-storyboard-2026-11-03.md).
 5. **02/11 — Quote costruzione, normali e svuotamento (`de1448a`, registro `7651724`).** Push completato con tutte le 16
    modifiche allora presenti. Quotatura diretta della costruzione coincidente con piani/assi; normale solo in
    definizione/hover, disattivabile da Visualizza e persistente; svuotamento delle giunzioni tolleranti con budget locali e
@@ -159,10 +157,8 @@ ctest --test-dir forgecad-release --output-on-failure
    coincidenti, Alt/Esc e Undo unico; rugosità strutturate Ra/Rz, sezioni composte con mouse/snap. Portabilità CT0578 migrata
    con nomi/testimoni esatti: 48/48 quote, asse e nota verificati dopo salvataggio senza cache e trasferimento. Interventi
    implementati e collaudati, con limiti di migrazione indicati sopra.
-9. **30/10 — Unificazione su main e CI.** Integrato e archiviato il ramo solver/GPU preservando il fallback CPU. Al
-   checkpoint di unificazione: Linux 47 PASS/2 SKIP e macOS 51 PASS/1 SKIP, CUDA locale 7/7 e Metal in CI PASS; modelli reali
-   confrontati senza attribuire tempi a benchmark. Questi esiti sono storici, non verifiche dell'ultimo HEAD. Rapporti
-   `docs/unificazione-main-2026-10-30.json` e `docs/ci.md`.
+9. **30/10 — Unificazione su main e CI.** Ramo solver/GPU integrato, fallback CPU conservato. Storico: Linux47PASS/2SKIP,
+   macOS51PASS/1SKIP, CUDA7/7, Metal CI PASS; non verifiche dell'ultimo HEAD. Dettagli nel checkpoint e `docs/ci.md`.
 
 Per riprendere lavori più vecchi, cercare nell'archivio o in Git e poi verificare i sorgenti attuali. Questa memoria non
 sostituisce i rapporti di prova e non richiede di caricarli tutti.
