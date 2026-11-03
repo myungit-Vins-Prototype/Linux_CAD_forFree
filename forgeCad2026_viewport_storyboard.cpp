@@ -71,12 +71,12 @@ QVector<GeometryRef> CadViewport::storyboardReferences(SceneObjectKind kind, int
         GeometryRef ref;ref.kind=7;ref.index=index;ref.featureId=sketch.storyId;ref.element={-1,-1,-1};
         if (roles & DatumRoleCurve) result.append(ref);
         for (int i=0;i<sketch.segments.size();++i) {
-            if (isHiddenSketchReference(sketch,0,i)) continue;
+            if (!isSketchEntityVisible(sketch,0,i,sketchMode_ && index==activeSketch_)) continue;
             ref.kind=7;ref.element={0,i,-1};append(ref);
             if (roles & DatumRolePoint) for(int end:{0,1}) {ref.kind=6;ref.element={0,i,end};append(ref);}
         }
         for (int i=0;i<sketch.curves.size();++i) {
-            if (isHiddenSketchReference(sketch,1,i)) continue;
+            if (!isSketchEntityVisible(sketch,1,i,sketchMode_ && index==activeSketch_)) continue;
             ref.kind=7;ref.element={1,i,-1};append(ref);
             if (roles & DatumRolePoint) for(int p=0;p<sketch.curves.at(i).controlPoints.size();++p) {
                 ref.kind=6;ref.element={1,i,p};append(ref);

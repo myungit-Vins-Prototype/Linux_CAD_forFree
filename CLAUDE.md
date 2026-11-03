@@ -103,18 +103,18 @@ ctest --test-dir forgecad-release --output-on-failure
 
 ## Ultimi interventi — esiti consolidati
 
-0. **03/11 — Sezioni loft, storyboard e specchi.** Sezioni proiettate/estratte implicite supportate:
-   costruzione NURBS della sola loft entro1e-9 mm; sorgenti esatte/associative immutate, razionali senza fit.
-   PASS15 gruppi kernel, CTest19/19 e Loft42/42; app/runner completi compilati.
-   Due revisioni SurfaceModellingExample219,4flussi nativi Wayland/XCB PASS; mappa563/7785/267AST/check/HTML,
-   9confini/10moduli verificati. [Rapporto](docs/loft-sezioni-proiettate-2026-11-03.md).
-   Ultimo pubblicato `1a8c60d`: picker storyboard schizzi interi/nascosti ed entita/bordi, guardie storia
-   e visibilita; errori loft guida rossa/sezione arancione con nomi/frecce. Eliminazione atomica specchi
-   prima del refresh associativo, Undo/Redo unico. App completa, CTest18/18, Loft42/42,6prove native
-   Wayland/XCB PASS; mappa559/7731/265AST verificata. [Dettagli](docs/storyboard-diagnostica-loft-2026-11-03.md).
-   `2e4366f`: pannelli sotto ribbon, cleanup OK/Annulla, tre punti rimovibili, verso G1/G2 (formato61),
-   clic0/120/350ms corretti. [Prove UI](docs/ui-pannelli-verso-loft-2026-11-03.md).
-   Fixture Qt: crash al primo resize con due dock, distinto dal picker; prove isolate e flussi reali separati.
+0. **03/11 — Schizzi e loft.** Clic esterni transitori senza falso Undo/dirty; cache inutilizzate
+   eliminate conservando vincoli/conversioni/consumatori e rimappando indici. Integrazione Undo approvata
+   dall'utente dopo due rifiuti automatici. Vincoli malformati: pulizia sospesa, diagnostica conservata.
+   Costruzione solo in modifica, picking/bounds coerenti ed esclusione dalle sezioni loft. App/runner
+   completi;6prove native PASS, file reale49→33 riferimenti, vincoli/profili/rebuild/IO invariati.
+   CTest169PASS/1SKIP GL/0FAIL su170;2fixture aggiornate. Ultimo fix sorgenti multiple:17/17 PASS. Mappa566/7824/268AST/check/HTML,
+   11confini/11moduli verificati. [Rapporto](docs/schizzi-riferimenti-costruzione-2026-11-03.md).
+   `cb35a2e`: sezioni implicite, NURBS loft entro1e-9 mm, sorgenti esatte/associative immutate;
+   CTest19/19, Loft42/42 e4flussi nativi PASS. [Prove](docs/loft-sezioni-proiettate-2026-11-03.md).
+   `1a8c60d`: picker storyboard, diagnostica loft e specchi atomici. [Dettagli](docs/storyboard-diagnostica-loft-2026-11-03.md).
+   `2e4366f`: pannelli/ribbon, tre punti e verso G1/G2. [UI](docs/ui-pannelli-verso-loft-2026-11-03.md).
+   [Checkpoint](docs/history/claude-checkpoint-prima-cache-schizzo-2026-11-03.md).
 
 1. **02–03/11 — CI, guide proiettate e Loft9 (`e54a174`, pubblicato).** CI41513461524
    verde su `ec08b12`: Linux56PASS/2SKIP, macOS60PASS/1SKIP; esito storico.

@@ -1,5 +1,6 @@
 #include "forgeCad2026_viewport_internal.h"
 #include "cad_geometry_refs.h"
+#include "cad_sketch_reference_usage.h"
 
 
 namespace {
@@ -54,6 +55,7 @@ void CadViewport::setLengthUnit(LengthUnit unit) {
 
 void CadViewport::loadDocument(DocumentState state,
                       const std::function<void(int, int, const QString &)> &progress ) {
+    ForgeCad::pruneUnusedSketchReferences(state);
     ScopedWork work(workCallback_, QStringLiteral("Caricamento e rigenerazione del documento..."));
     if (sketchMode_) endSketchMode();
     deferredSketches_.clear();
@@ -1811,10 +1813,12 @@ DocumentState CadViewport::documentState(bool normalizeVisibility ) const {
     state.orientationSet = true;
     state.lengthUnit = lengthUnit_;
     state.lengthUnitSet = true;
+    ForgeCad::pruneUnusedSketchReferences(state);
     return state;
 }
 
 void CadViewport::selectionChanged() {
+    pruneActiveSketchReferences(true);
     if (sketchOffsetSelectionCallback_) sketchOffsetSelectionCallback_();
     if (constraintPanelCallback_) constraintPanelCallback_();
 }

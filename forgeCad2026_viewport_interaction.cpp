@@ -374,7 +374,7 @@ void CadViewport::mousePressEvent(QMouseEvent *event) {
             if (!dimensionRefAt(rawPoint, ref)) {
                 auto work = *activeSketchObject();
                 if (attachSketchReferenceAt(work, rawPoint, pickTolerance())) {
-                    recordUndo(); sketches_[activeSketch_] = std::move(work); documentChanged();
+                    sketches_[activeSketch_] = std::move(work);
                 }
             }
             dimensionToolClick(rawPoint);
@@ -393,7 +393,7 @@ void CadViewport::mousePressEvent(QMouseEvent *event) {
             if (findSketchElement(rawPoint).kind < 0) {
                 auto work = *activeSketchObject();
                 if (attachSketchReferenceAt(work, rawPoint, pickTolerance())) {
-                    recordUndo(); sketches_[activeSketch_] = std::move(work); documentChanged();
+                    sketches_[activeSketch_] = std::move(work);
                 }
             }
             if (sketchOffsetSelectionCallback_) {

@@ -263,7 +263,14 @@
         require(manualHighlight!=empty,"linee di costruzione disegnate dall'utente restano visibili");
         // Il comando reale con il default "di costruzione" deve promuovere
         // anche una cache automatica gia presente, senza duplicarla.
-        view.sketches_[1]=linked;view.history_.clear();view.setReferencesConstruction(true);
+        // Per provare promozione e Undo ogni cache della fixture ha un vero
+        // consumatore: le cache prive di vincoli vengono ora eliminate.
+        auto usedLinked=linked;
+        for(const auto &link:usedLinked.linkedReferences)for(auto entity:link->entities) {
+            entity.point=0;
+            usedLinked.geometricConstraints.append(makeConstraint(usedLinked,ConstraintType::Distance,{{0,0,0},entity}));
+        }
+        view.sketches_[1]=usedLinked;view.history_.clear();view.setReferencesConstruction(true);
         const auto lineAt=view.projectWorldPoint(view.mapSketchPoint({-2.5,3},source)).toPoint();
         require(view.convertReferenceAt(lineAt).isEmpty(),"conversione reale di un segmento con costruzione attiva");
         auto explicitConstruction=view.sketches_[1];
@@ -371,7 +378,7 @@
             require(cleanConstruction!=convertedConstruction,"conversione reale di costruzione visibile nello schizzo attivo");
             require(cleanConstruction!=capture(explicitBodyGeometry),"bordo convertito visibile con il corpo sorgente nascosto");
             view.sketchMode_=false;
-            require(capture(original)!=capture(explicitConstruction),"conversione di costruzione visibile anche fuori dallo schizzo");
+            require(capture(original)==capture(explicitConstruction),"conversione di costruzione nascosta fuori dallo schizzo");
             const auto path=qEnvironmentVariable("FORGECAD_REFERENCE_QA_DIR");
             if(!path.isEmpty()){
                 QDir().mkpath(path);require(baseline.save(path+"/schizzo.png") && withReferences.save(path+"/con-riferimenti.png")

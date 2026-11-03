@@ -297,6 +297,8 @@ add_executable(forgecad
     cad_projected_curve.cpp
     cad_sketch_refs.h
     cad_sketch_refs.cpp
+    cad_sketch_reference_usage.h
+    cad_sketch_reference_usage.cpp
     cad_cuda_tessellation.h
     cad_cuda_tessellation.cpp
     cad_sketch_offset.h
@@ -631,6 +633,8 @@ if(FORGECAD_BUILD_VIEW_TESTS)
     set_tests_properties(forgecad_mouse_snapshot_tests PROPERTIES TIMEOUT 120)
     forgecad_add_view_test(forgecad_extension_panel_tests --extend-contour-pick)
     set_tests_properties(forgecad_extension_panel_tests PROPERTIES TIMEOUT 60)
+    forgecad_add_view_test(forgecad_sketch_reference_usage_tests --sketch-reference-usage)
+    forgecad_add_view_test(forgecad_sketch_construction_tests --sketch-construction)
     forgecad_add_view_test(forgecad_linked_reference_visibility_tests --linked-reference-visibility)
     forgecad_add_view_test(forgecad_linked_sketch_reference_tests --linked-sketch-references)
     set_tests_properties(forgecad_linked_sketch_reference_tests PROPERTIES TIMEOUT 60)

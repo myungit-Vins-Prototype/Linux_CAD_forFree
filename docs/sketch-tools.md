@@ -62,7 +62,7 @@ medi, centri, quadranti e punti sulle curve delle parti e degli schizzi visibili
 che precedono lo schizzo attivo nella storia. Sono disponibili anche le
 inferenze di parallelo e perpendicolare ai bordi esterni. Non occorre avviare
 Converti prima di disegnare: il collegamento si crea alla conferma del punto.
-Il semplice passaggio del mouse non modifica il documento.
+Il passaggio del mouse e la semplice selezione non modificano il documento. I riferimenti scelti restano temporanei finché non sono usati da geometria o vincoli confermati; Escape e annullamento non aggiungono Undo. Quando viene eliminato l’ultimo utilizzo, la cache automatica viene rimossa. Le conversioni esplicite e i riferimenti usati da altre funzioni vengono conservati.
 
 Per una quota scegli il punto o il bordo esterno con lo strumento **Quota**,
 insieme all'entità dello schizzo da quotare, quindi posiziona la quota. Per
@@ -83,7 +83,7 @@ seguono le modifiche della sorgente e del piano dello schizzo, rimangono costant
 per il risolutore e conservano quote e vincoli locali, senza un vincolo **Fisso**.
 La costruzione disegnata dall'utente e le geometrie ottenute con **Converti
 spigoli e curve** e **Sezione** restano visibili, anche con l'opzione **Di
-costruzione** attiva. La visibilità delle conversioni è distinta dai riferimenti
+costruzione** attiva, mentre lo schizzo è in modifica. Fuori dalla modifica tutta la costruzione è nascosta e non viene selezionata nella vista o dalla storyboard. La costruzione non fa parte delle sezioni loft: selezionando lo schizzo intero viene usato soltanto il profilo. La visibilità delle conversioni è distinta dai riferimenti
 automatici ed è salvata nel formato nativo 60. Si modificano dalla sorgente;
 salvataggio, riapertura e Undo/Redo conservano collegamento e visibilità.
 Per recuperare una conversione di costruzione nascosta salvata nei formati

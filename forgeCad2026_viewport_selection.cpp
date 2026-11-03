@@ -113,8 +113,14 @@ QVector<QPointF> CadViewport::projectSketchPoints(const QVector<QPointF> &points
 
 QVector<QVector<QPointF>> CadViewport::sketchScreenPolylines(const SketchObject &sketch) const {
     QVector<QVector<QPointF>> polylines;
-    for (const SketchSegment &segment : sketch.segments) polylines.append(projectSketchPoints({segment.first, segment.second}, sketch));
-    for (const CurveObject &curve : sketch.curves) polylines.append(projectSketchPoints(curve.samples, sketch));
+    for (int i = 0; i < sketch.segments.size(); ++i)
+        if (isSketchEntityVisible(sketch, 0, i, isEditingSketch(sketch))) {
+            const auto &segment = sketch.segments[i];
+            polylines.append(projectSketchPoints({segment.first, segment.second}, sketch));
+        }
+    for (int i = 0; i < sketch.curves.size(); ++i)
+        if (isSketchEntityVisible(sketch, 1, i, isEditingSketch(sketch)))
+            polylines.append(projectSketchPoints(sketch.curves[i].samples, sketch));
     return polylines;
 }
 
@@ -1024,11 +1030,15 @@ SceneSelection CadViewport::pickSceneObject(const QPoint &position, bool exact )
     for (int sketchIndex = 0; sketchIndex < sketches_.size(); ++sketchIndex) {
         const SketchObject &sketch = sketches_.at(sketchIndex);
         if (!isSketchDrawn(sketchIndex)) continue;
-        for (const auto &segment : sketch.segments) {
+        for (int i = 0; i < sketch.segments.size(); ++i) {
+            if (!isSketchEntityVisible(sketch, 0, i, isEditingSketch(sketch))) continue;
+            const auto &segment = sketch.segments[i];
             considerSegment(projectWorldPoint(mapSketchPoint(segment.first, sketch)),
                             projectWorldPoint(mapSketchPoint(segment.second, sketch)), sketchIndex);
         }
-        for (const CurveObject &curve : sketch.curves) {
+        for (int i = 0; i < sketch.curves.size(); ++i) {
+            if (!isSketchEntityVisible(sketch, 1, i, isEditingSketch(sketch))) continue;
+            const auto &curve = sketch.curves[i];
             for (int sample = 1; sample < curve.samples.size(); ++sample) {
                 considerSegment(projectWorldPoint(mapSketchPoint(curve.samples.at(sample - 1), sketch)),
                                 projectWorldPoint(mapSketchPoint(curve.samples.at(sample), sketch)),
@@ -1315,13 +1325,14 @@ bool CadViewport::pickReference(const QPoint &position, GeometryRef &ref, FaceHi
             r.kind = 6;
             r.index = s;
             for (int i = 0; i < sketch.segments.size(); ++i) {
+                if (!isSketchEntityVisible(sketch, 0, i, isEditingSketch(sketch))) continue;
                 r.element = {0, i, 0};
                 consider(mapSketchPoint(sketch.segments.at(i).first, sketch), r);
                 r.element = {0, i, 1};
                 consider(mapSketchPoint(sketch.segments.at(i).second, sketch), r);
             }
             for (int i = 0; i < sketch.curves.size(); ++i)
-                for (int k = 0; k < sketch.curves.at(i).controlPoints.size(); ++k) {
+                if (isSketchEntityVisible(sketch, 1, i, isEditingSketch(sketch))) for (int k = 0; k < sketch.curves.at(i).controlPoints.size(); ++k) {
                     r.element = {1, i, k};
                     consider(mapSketchPoint(sketch.curves.at(i).controlPoints.at(k), sketch), r);
                 }
@@ -1450,10 +1461,12 @@ bool CadViewport::pickReference(const QPoint &position, GeometryRef &ref, FaceHi
             r.kind = 7;
             r.index = s;
             for (int i = 0; i < sketch.segments.size(); ++i) {
+                if (!isSketchEntityVisible(sketch, 0, i, isEditingSketch(sketch))) continue;
                 r.element = {0, i, -1};
                 considerPolyline({mapSketchPoint(sketch.segments.at(i).first, sketch), mapSketchPoint(sketch.segments.at(i).second, sketch)}, r, false);
             }
             for (int i = 0; i < sketch.curves.size(); ++i) {
+                if (!isSketchEntityVisible(sketch, 1, i, isEditingSketch(sketch))) continue;
                 r.element = {1, i, -1};
                 QVector<QVector3D> polyline;
                 for (const QPointF &p : sketch.curves.at(i).samples) polyline.append(mapSketchPoint(p, sketch));

@@ -879,6 +879,7 @@ protected:
     // ripetizioni, fine delle estrusioni, assi degli spostamenti, curve delle
     // rigate e bordi delle planari). Un riferimento a un'entita' eliminata
     // diventa -1: la rigenerazione lo segnala invece di passare a un'altra entita'.
+    void pruneActiveSketchReferences(bool keepSelection);
     void remapSketchReferences(int sketchIndex, const QVector<int> &segmentMap, const QVector<int> &curveMap = {});
 
     // Vincolo che il segmento in costruzione ricevera': dall'aggancio del
@@ -1503,6 +1504,7 @@ private:
 
     // Punti della geometria di un schizzo (estremi dei segmenti, campioni
     // delle curve) nello spazio del modello: solo per inquadrare la vista.
+    bool isEditingSketch(const SketchObject &sketch) const;
     QVector<QVector3D> sketchGeometryPoints(const SketchObject &sketch) const;
 
     // Geometria visibile della scena (schizzi, spigoli o triangoli dei corpi);

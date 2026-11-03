@@ -475,6 +475,15 @@ inline bool isHiddenSketchReference(const SketchObject &sketch, int kind, int el
     return false;
 }
 
+// Costruzione visibile solo nello schizzo in modifica; le cache automatiche
+// restano sempre nascoste. Policy comune per disegno, picking e limiti di vista.
+inline bool isSketchEntityVisible(const SketchObject &sketch, int kind, int element, bool editing) {
+    if (isHiddenSketchReference(sketch, kind, element)) return false;
+    const bool construction = kind == 0 ? sketch.isConstructionSegment(element)
+        : kind == 1 && element >= 0 && element < sketch.curves.size() && sketch.curves[element].construction;
+    return editing || !construction;
+}
+
 // Pierce: punto dello schizzo sulla sezione della faccia esterna.
 // Cache immutabile condivisa con Undo; viene sostituita alla rigenerazione.
 struct SketchPierceData {

@@ -1,10 +1,15 @@
 #include "forgeCad2026_viewport_internal.h"
+#include "cad_sketch_reference_usage.h"
 
 
 void CadViewport::setSplineShapeOptions(const ForgeCad::SplineShapeOptions &options) { splineShapeOptions_ = options; update(); }
 
 void CadViewport::setDrawingTool(DrawingTool tool) {
     const bool changed = drawingTool_ != tool;
+    if (changed && tool == DrawingTool::Select) {
+        sketchSelections_.clear(); selectedPoints_.clear();
+    }
+    pruneActiveSketchReferences(true);
     drawingTool_ = tool;
     if (tool == DrawingTool::Select) lastSnapKind_ = SnapKind::None;
     if (changed && toolChangedCallback_) toolChangedCallback_(tool);
@@ -481,9 +486,7 @@ void CadViewport::selectSketchReference(int kind, int index) {
     if (!error.isEmpty() || created.isEmpty()) { showStatus(error); return; }
     const int segment = created.first().index;
     if (work.segments.size() != before) {
-        recordUndo();
         sketches_[activeSketch_] = work;
-        documentChanged();
     }
     const SketchElementSelection selected{0, segment};
     const auto existing = sketchSelections_.indexOf(selected);
@@ -1374,6 +1377,7 @@ void CadViewport::beginSketchMode(int plane) {
 }
 
 void CadViewport::endSketchMode() {
+    pruneActiveSketchReferences(false);
     circleRadiusDrag_=-1;
     dimensionPlacing_ = -1;
     sketchViewUnlocked_ = false;
@@ -1600,6 +1604,7 @@ void CadViewport::remapSketchReferences(int sketchIndex, const QVector<int> &seg
         remap(body.thickenDirection);
         remap(body.sweepProfileRef); remap(body.sweepPathRef);
         remap(body.curveExtraction.source);
+        for (GeometryRef &ref : body.curveExtraction.sources) remap(ref);
         remap(body.curveExtraction.tool);
     }
 }
@@ -2553,6 +2558,7 @@ int CadViewport::constraintAt(const QPoint &position) const {
 }
 
 void CadViewport::sketchEdited() {
+    pruneActiveSketchReferences(false);
     // I vincoli dello schizzo restano soddisfatti (se l'ultima modifica li
     // ha rotti il risolutore li rimette a posto, se puo').
     if (activeSketch_ >= 0 && activeSketch_ < sketches_.size() && !sketches_.at(activeSketch_).geometricConstraints.isEmpty()) {
@@ -3262,9 +3268,11 @@ const SketchObject &CadViewport::sketchReferenceCache() {
         const auto &source = sketches_[i];
         GeometryRef ref; ref.kind = 7; ref.index = i; ref.featureId = source.storyId;
         for (int j = 0; j < source.segments.size(); ++j) {
+            if (!isSketchEntityVisible(source, 0, j, false)) continue;
             ref.element = {0, j, -1}; add(ref, true); add(ref);
         }
         for (int j = 0; j < source.curves.size(); ++j) {
+            if (!isSketchEntityVisible(source, 1, j, false)) continue;
             ref.element = {1, j, -1};
             if (source.curves[j].tool == DrawingTool::Point) {
                 ref.kind = 6; ref.element.point = 0; add(ref); ref.kind = 7;
@@ -3310,4 +3318,24 @@ bool CadViewport::attachSketchReferenceAt(SketchObject &work, const QPointF &poi
     const auto error = ForgeCad::appendLinkedSketchReference(work, link->source, sketches_, extrusions_, link->contact,
                                                             link->construction, link->halfLength);
     return error.isEmpty() && work.linkedReferences.size() != before;
+}
+
+void CadViewport::pruneActiveSketchReferences(bool keepSelection) {
+    if (!sketchMode_ || activeSketch_ < 0 || activeSketch_ >= sketches_.size()) return;
+    const auto pending = keepSelection ? constraintSelection() : QVector<ConstraintRef>();
+    const auto maps = ForgeCad::pruneUnusedSketchReferences(activeSketch_, sketches_, extrusions_, pending);
+    if (!maps.changed()) return;
+    const auto remap = [&](int kind, int index) { return (kind == 0 ? maps.segments : maps.curves).value(index, -1); };
+    for (int i = sketchSelections_.size() - 1; i >= 0; --i) {
+        auto &e = sketchSelections_[i]; e.index = remap(e.kind, e.index);
+        if (e.index < 0) sketchSelections_.removeAt(i);
+    }
+    for (int i = selectedPoints_.size() - 1; i >= 0; --i) {
+        auto &p = selectedPoints_[i]; if (p.kind != 0 && p.kind != 1) continue;
+        p.element = remap(p.kind, p.element); if (p.element < 0) selectedPoints_.removeAt(i);
+    }
+    startReference_ = maps.segments.value(startReference_, -1);
+    sketchHover_ = {}; dimensionHover_ = {}; dimensionPreviewValid_ = false;
+    selectedConstraints_.clear(); constraintHover_ = -1;
+    sketchReferenceCacheValid_ = false; sceneBoundsDirty_ = true;
 }

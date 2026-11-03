@@ -30,6 +30,7 @@
 #include "../cad_pattern.h"
 #include "../cad_extrude.h"
 #include "../cad_sketch_refs.h"
+#include "../cad_sketch_reference_usage.h"
 #include "../cad_history_graph.h"
 #include "../cad_model_history.h"
 #include "../cad_topology_ref.h"
@@ -167,7 +168,10 @@ public:
                 require(appendLinkedSketchReference(sketch,axis,{},{},false,true,halfLength).isEmpty(),"riferimento automatico piano standard o asse X");
             };
             if(referencesFirst){appendAxis();appendLine();}else{appendLine();appendAxis();}
-            sketch.geometricConstraints={makeConstraint(sketch,ConstraintType::Fix,{{0,line,0}}),
+            const auto anchor=sketch.linkedReferences.front()->entities.front();
+            // La cache ha un vero utilizzo: il punto iniziale e' vincolato al
+            // centro dell'asse, anziche' essere una cache orfana della fixture.
+            sketch.geometricConstraints={makeConstraint(sketch,ConstraintType::Midpoint,{{0,line,0},{anchor.kind,anchor.element,-1}}),
                 makeConstraint(sketch,ConstraintType::Horizontal,{{0,line,-1}})};
             CadViewport view;view.resize(1000,700);view.sketches_={sketch};view.selectSketch(0);
             view.camera_.zoom_=20;view.geometrySnap_=view.gridSnap_=view.originSnap_=false;view.history_.clear();
@@ -212,9 +216,17 @@ public:
                 "riferimenti automatici ancora disponibili per le quote verso geometria esterna");
             ++cases;
         }
+        {
+            CadViewport mapped;SketchObject input;input.storyId=7781;input.segments={{{0,0},{1,0}},{{2,0},{3,0}}};mapped.sketches_={input};
+            GeometryRef remaining;remaining.kind=7;remaining.index=0;remaining.featureId=input.storyId;remaining.element={0,1,-1};
+            ExtrusionObject extracted;extracted.feature=BodyFeature::ExtractedCurve;extracted.curveExtraction.sources={remaining};mapped.extrusions_={extracted};
+            mapped.remapSketchReferences(0,{-1,0},{});
+            require(mapped.extrusions_[0].curveExtraction.sources[0].element==ConstraintRef{0,0,-1},"eliminazione rimappa anche le sorgenti multiple delle curve estratte");
+        }
         std::cout<<"PASS construction dimensions: "<<cases<<" casi, hover/clic/preselezione, pannello, solver, Undo/Redo e persistenza"<<std::endl;
     }
 #include "test_sketch_linked_refs.h"
+#include "test_sketch_construction.h"
 #include "test_sketch_slot_point.h"
 #include "test_helix_start_angle.h"
 #include "test_sketch_menu_cancel.h"
@@ -8705,21 +8717,31 @@ public:
         const int sketch = v.createSketch(0, QStringLiteral("Test riferimenti"));
         require(sketch >= 0, "creazione schizzo");
         v.selectSketch(sketch);
+        v.history_.clear();
         v.selectSketchReference(2, 0);
         require(v.sketches_.at(sketch).segments.size() == 1, "riferimento asse X");
         require(v.constraintSelection().size() == 1, "asse scelto per i vincoli");
         v.selectPlane(1);
-        require(v.sketches_.at(sketch).segments.size() == 1, "riuso di una retta coincidente");
+        require(v.sketches_.at(sketch).segments.isEmpty(), "scelta coincidente deseleziona senza duplicare e libera la cache");
+        require(!v.canUndo(), "selezione/deselezione riferimenti senza Undo");
+        v.selectSketchReference(2, 0);
         v.selectSketchReference(2, 1);
         require(v.sketches_.at(sketch).segments.size() == 2, "riferimento asse Y");
         require(analyzeSketch(v.sketches_.at(sketch)).fullyDefined(), "riferimenti fissi senza liberta' residue");
         v.selectSketchReference(2, 2);
         v.selectPlane(0);
         require(v.sketches_.at(sketch).segments.size() == 2, "riferimenti degeneri non modificano lo schizzo");
+        require(!v.canUndo() && v.currentDocument().sketches[sketch].linkedReferences.isEmpty(), "selezioni di assi senza geometria persistente");
+        v.recordUndo();
+        auto &profile=v.sketches_[sketch];const int drawn=profile.segments.size();
+        profile.segments.append({{1,2},{4,3}});profile.constraints.append(-1);profile.segmentLengths.append(0);profile.segmentAngles.append(-1);
+        profile.geometricConstraints.append(makeConstraint(profile,ConstraintType::Parallel,{{0,drawn,-1},{0,0,-1}}));
+        v.sketchEdited();
+        require(v.sketches_[sketch].linkedReferences.size()==1 && v.sketches_[sketch].segments.size()==2,"solo l'asse usato dalla geometria resta persistente");
         v.undo();
-        require(v.sketches_.at(sketch).segments.size() == 1, "Undo riferimento");
+        require(v.sketches_.at(sketch).segments.isEmpty(), "Undo geometria rimuove anche il riferimento usato");
         v.redo();
-        require(v.sketches_.at(sketch).segments.size() == 2, "Redo riferimento");
+        require(v.sketches_.at(sketch).segments.size() == 2 && v.sketches_[sketch].linkedReferences.size()==1, "Redo geometria ripristina il riferimento usato");
 
         SketchObject work = v.sketches_.at(sketch);
         const int line = int(work.segments.size());
@@ -10885,6 +10907,14 @@ int main(int argc, char **argv) {
     if (app.arguments().contains(QStringLiteral("--thread-edges"))) {
         try { ViewportInteractionTest::threadEdges(app.arguments().contains(QStringLiteral("--gl"))); return 0; }
         catch(const std::exception &error) { std::cerr<<error.what()<<std::endl;return 1; }
+    }
+    if (app.arguments().contains(QStringLiteral("--sketch-reference-usage"))) {
+        try { ViewportInteractionTest::sketchReferenceUsage(); return 0; }
+        catch (const std::exception &error) { std::cerr << error.what() << std::endl; return 1; }
+    }
+    if (app.arguments().contains(QStringLiteral("--sketch-construction"))) {
+        try { ViewportInteractionTest::sketchConstructionVisibility(app.arguments().contains(QStringLiteral("--gl"))); return 0; }
+        catch (const std::exception &error) { std::cerr << error.what() << std::endl; return 1; }
     }
     if (app.arguments().contains(QStringLiteral("--linked-reference-visibility"))) {
         try { ViewportInteractionTest::linkedReferenceVisibility(app.arguments().contains(QStringLiteral("--gl"))); return 0; }

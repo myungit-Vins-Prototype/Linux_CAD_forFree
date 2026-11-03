@@ -1674,6 +1674,11 @@ ForgeBody forgeReferencedLoft(const ExtrusionObject &d, int owner, const QVector
     } else for (int k=0; k<d.loftSections.size(); ++k) {
         const GeometryRef &ref=d.loftSections.at(k);
         LoftSection section;
+        if (ref.kind == 7 && ref.index >= 0 && ref.index < sketches.size() && ref.element.kind >= 0
+            && !isSketchEntityVisible(sketches[ref.index], ref.element.kind, ref.element.element, false)) {
+            setError(error, namedLoftError(QStringLiteral("L'entita' di costruzione non e' una sezione del profilo. [[loft-section=%1]]").arg(k), d, sketches, bodies));
+            return nullptr;
+        }
         if (ref.kind==7 && ref.element.kind==-1) {
             const auto *s=getSketch(ref.index); if (!s) return nullptr;
             if (s->datumPlane >= owner) { setError(error,QStringLiteral("Una sezione sta su un piano successivo.")); return nullptr; }
