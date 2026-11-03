@@ -103,8 +103,8 @@ ctest --test-dir forgecad-release --output-on-failure
 
 ## Ultimi interventi — esiti consolidati
 
-Shell1mm F0/F14: app/cache9 e QA G1/G2/Undo/roundtrip PASS; Blend60,Shell18,Offset26,CTest7.
-Loft13/15:6,45M poli,STEP745MB; riduzione aperta. [Prove](docs/svuotamento-f0-f14-2026-11-03.md).
+Shell1mm F0/F14: f20ee09 locale; push fermato da auto-review. App/cache9,QA G1/G2/roundtrip PASS.
+Blend60,Shell18,Offset26,CTest7; Loft13/15:6,45M poli,STEP745MB, riduzione aperta. [Prove](docs/svuotamento-f0-f14-2026-11-03.md).
 
 0. **03/11 — Schizzi, riferimenti e loft.** Visualizza/Mostra linee di costruzione persistente:
    app/CTest10/10,rendering e persistenza Wayland/XCB PASS; popup automatizzato Wayland non verificato.

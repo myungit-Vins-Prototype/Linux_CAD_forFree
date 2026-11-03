@@ -252,3 +252,15 @@ solo una riduzione sostanziale.
 
 Evidenze persistenti: `source-size-audit.log`, `result-size-audit.log`, `stages-size.log`,
 `step-size-audit.json`, con sorgenti delle sonde nella cartella QA della build.
+
+## Commit e pubblicazione
+
+Correzione e test nel commit locale **f20ee09**; valutazione dei riferimenti e
+checkpoint nel commit **d9c2bbe**. Il comando di push è stato respinto dal controllo
+automatico prima dell'esecuzione: la destinazione GitHub è stata considerata non
+verificata e l'autorizzazione precedente non sufficientemente specifica per questo
+payload. Non è stato tentato un percorso alternativo per pubblicare.
+
+Serve il consenso al push di sorgenti, rapporto e fixture sintetica di 3957 byte sul
+remote configurato `https://github.com/myungit-Vins-Prototype/Linux_CAD_forFree.git`,
+branch `main`. I CAD originali, lo STEP e gli artefatti della build sono esclusi.
