@@ -84,6 +84,8 @@ public:
     void updateEmbeddedMove(const QPoint &globalPosition);
     void endEmbeddedMove();
     void placeAtLeft();
+    // Il ribbon riserva la fascia superiore; ogni pannello usa lo stesso rettangolo.
+    static void setViewportTopInset(QWidget *viewport, int top);
     // Preferenza condivisa per i pannelli aperti successivamente: 0 libero, 1 sinistra, 2 destra.
     int dockSide() const { return dockSide_; }
     bool fullHeight() const { return fullHeight_; }
@@ -113,9 +115,11 @@ private:
     QString sizeIdentity_;
     QStringList legacySizeNames_;
     QSize preferredPanelSize_;
+    QSize preferredMinimumSize_;
     bool exclusive_ = true;
     std::unique_ptr<WindowLock> windowLock_;
     static QWidget *overlayParent(QWidget *requested);
+    QRect availableViewportRect() const;
     void applyDockLayout();
     void updateRoundedMask();
     static QColor readableText(const QColor &background);
@@ -281,6 +285,7 @@ private:
     QLabel *faces_[2]{};
     FunctionMessage *status_ = nullptr;
     QPushButton *picks_[2]{};
+    QPushButton *reverses_[2]{};
 };
 
 // Estrusione o rivoluzione dallo schizzo: finche' la finestra e' aperta la

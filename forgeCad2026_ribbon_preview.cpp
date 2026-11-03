@@ -227,6 +227,7 @@ struct RibbonPreview::Impl {
     QTimer contextTimer;
     QPointer<QAction> running;
     QPointer<QDialog> panel;
+    quint64 commandGeneration=0;
     QHash<QAction *,QString> paths;
     bool compact=false,sketch=false,layingOut=false,scheduled=false;
     QString lastOrdinary=QStringLiteral("model");
@@ -388,17 +389,19 @@ struct RibbonPreview::Impl {
         if(self->geometry()!=desired)self->setGeometry(desired);
         self->raise();
         syncGlass();
-        if(panel && panel->isVisible())placePanel(panel);
+        FunctionDialogPanel::setViewportTopInset(viewport, self->isHidden() ? 8 : self->geometry().bottom() + 9);
     }
-    void placePanel(QDialog *dialog) {
-        if(layingOut||dialog->parentWidget()!=viewport)return;
-        layingOut=true;
-        const int top=self->isHidden()?8:self->geometry().bottom()+9;
-        const int maxHeight=std::max(1,viewport->height()-top-8);
-        // Il pannello resta lo stesso, con selezioni/anteprima e conferma originali.
-        if(dialog->height()>maxHeight && dialog->minimumHeight()<=maxHeight)dialog->resize(dialog->width(),maxHeight);
-        dialog->move(std::clamp(dialog->x(),8,std::max(8,viewport->width()-dialog->width()-8)),std::max(top,dialog->y()));
-        layingOut=false;
+    void setRunning(QAction *action) {
+        running = action;
+        // Aggiorna subito anche il pulsante esistente, prima del prossimo rebuild.
+        for (auto *button : self->findChildren<QToolButton *>()) if (button->defaultAction()) {
+            button->setProperty("ribbonRunning", action && button->defaultAction() == action);
+            button->style()->unpolish(button); button->style()->polish(button); button->update();
+        }
+    }
+    void finishPanel(QDialog *dialog) {
+        if (panel != dialog) return;
+        panel.clear(); ++commandGeneration; setRunning(nullptr); schedule();
     }
     int groupWidth(const Group &group,int count,int buttonWidth,bool collapsed) const {
         int width=8;for(int i=0;i<count;++i)width+=(group.actions[i]?buttonWidth:8)+(i?3:0);
@@ -447,6 +450,12 @@ struct RibbonPreview::Impl {
     }
     void rebuild() {
         if(layingOut)return;
+        for(auto *button:self->findChildren<QToolButton *>()) if(button->isDown()) {
+            // Anche un resize o un aggiornamento di contesto deve attendere
+            // il rilascio: altrimenti sparisce il destinatario del clic.
+            QTimer::singleShot(30,self,[this]{schedule();});
+            return;
+        }
         QLayoutItem *item=nullptr;
         while((item=groupsLayout->takeAt(0))) {if(item->widget()){item->widget()->hide();item->widget()->deleteLater();}delete item;}
         auto &tab=current();int width=0;
@@ -483,20 +492,25 @@ struct RibbonPreview::Impl {
         self->setProperty("ribbonOverflow",overflow!=nullptr);
     }
     void dialogShown(QDialog *dialog) {
-        if(dialog->objectName()!=QStringLiteral("functionDialogPanel")||dialog->parentWidget()!=viewport)return;
+        if(!dynamic_cast<FunctionDialogPanel *>(dialog)||dynamic_cast<FloatingPanel *>(dialog)||dialog->parentWidget()!=viewport)return;
         panel=dialog;
+        const auto generation=++commandGeneration;
+        QObject::connect(dialog,&QObject::destroyed,self,[this,generation] {
+            // La distruzione di un pannello precedente non deve interrompere
+            // il nuovo comando, eventualmente ancora nel mousePress.
+            if(generation==commandGeneration && !panel) {setRunning(nullptr);schedule();}
+        });
         const auto title=dialog->windowTitle().toLower();
         // Ponte sperimentale per riaperture dallo storyboard che non emettono QAction::triggered.
         const QList<QPair<QString,QString>> hints={{"estrusion","model"},{"rivoluz","model"},{"raccord","model"},{"smuss","model"},
             {"svuota","model"},{"sform","model"},{"filett","model"},{"superfic","surface"},{"cucitur","surface"},{"misur","inspect"},{"massa","inspect"}};
         for(const auto &hint:hints)if(title.contains(hint.first)){selectTab(hint.second);break;}
-        for(auto it=paths.cbegin();it!=paths.cend();++it) {
+        if (!running) for(auto it=paths.cbegin();it!=paths.cend();++it) {
             const auto word=caption(it.key()).toLower().split(' ').first();
-            if(word.size()>4 && title.contains(word)){running=it.key();break;}
+            if(word.size()>4 && title.contains(word)){setRunning(it.key());break;}
         }
         schedule();
-        QObject::connect(dialog,&QDialog::finished,self,[this,dialog]{if(panel==dialog){panel.clear();running.clear();schedule();self->syncContext();}});
-        QTimer::singleShot(0,self,[this,p=QPointer<QDialog>(dialog)]{if(p)placePanel(p);});
+        QObject::connect(dialog,&QDialog::finished,self,[this,dialog]{finishPanel(dialog);});
     }
 };
 RibbonPreview::RibbonPreview(QMainWindow *window):QWidget(nullptr),impl_(std::make_unique<Impl>(this,window)) {
@@ -530,7 +544,7 @@ RibbonPreview::RibbonPreview(QMainWindow *window):QWidget(nullptr),impl_(std::ma
     }
     for(auto it=impl_->paths.cbegin();it!=impl_->paths.cend();++it) {
         auto *action=it.key();
-        connect(action,&QAction::triggered,this,[this]{if(!impl_->panel){impl_->running.clear();impl_->schedule();}});
+        connect(action,&QAction::triggered,this,[this]{if(!impl_->panel){impl_->setRunning(nullptr);impl_->schedule();}});
         // I menu dinamici (per esempio File recenti) eliminano le proprie azioni
         // al caricamento di un documento. Non conservare puntatori a oggetti distrutti.
         connect(action,&QObject::destroyed,this,[this,action]{
@@ -545,7 +559,7 @@ RibbonPreview::RibbonPreview(QMainWindow *window):QWidget(nullptr),impl_(std::ma
     impl_->contextTimer.setInterval(50);connect(&impl_->contextTimer,&QTimer::timeout,this,&RibbonPreview::syncContext);impl_->contextTimer.start();
     setCompact(QSettings().value("ribbon/compact",false).toBool());syncContext();setVisible(QSettings().value("ribbon/visible",true).toBool());impl_->schedule();
 }
-RibbonPreview::~RibbonPreview(){impl_->clearGlass();qApp->removeEventFilter(this);delete impl_->shadow.data();}
+RibbonPreview::~RibbonPreview(){FunctionDialogPanel::setViewportTopInset(impl_->viewport,8);impl_->clearGlass();qApp->removeEventFilter(this);delete impl_->shadow.data();}
 QString RibbonPreview::selectedTab() const {return impl_->tabBar->tabData(impl_->tabBar->currentIndex()).toString();}
 bool RibbonPreview::compact() const {return impl_->compact;}
 void RibbonPreview::setCompact(bool value) {
@@ -560,30 +574,29 @@ void RibbonPreview::syncContext() {
         if(active && selectedTab()!=QStringLiteral("sketch"))impl_->lastOrdinary=selectedTab();
         impl_->sketch=active;
         impl_->selectTab(active?QStringLiteral("sketch"):impl_->lastOrdinary);
-        impl_->running.clear();impl_->schedule();
+        impl_->setRunning(nullptr);impl_->schedule();
     }
     impl_->place();
 }
 void RibbonPreview::selectForAction(QAction *action) {
     if(!action||!action->isEnabled())return;
+    ++impl_->commandGeneration;
     const auto contains=[&](const Impl::Tab &t){for(const auto &g:t.groups)if(g.actions.contains(action))return true;return false;};
     if(!contains(impl_->current()))for(const auto &tab:impl_->tabs)if(contains(tab)){impl_->selectTab(tab.id);break;}
-    impl_->running=action;
     // Non ricostruire nel mousePress: il pulsante che ricevera' mouseRelease deve restare vivo.
-    for(auto *button:findChildren<QToolButton *>())if(button->defaultAction()) {
-        button->setProperty("ribbonRunning",button->defaultAction()==action);
-        button->style()->unpolish(button);button->style()->polish(button);button->update();
-    }
+    impl_->setRunning(action);
 }
 bool RibbonPreview::eventFilter(QObject *object,QEvent *event) {
     if(object==this) {
         if(event->type()==QEvent::Hide){impl_->clearGlass();if(impl_->shadow)impl_->shadow->hide();}
+        if(event->type()==QEvent::Hide || event->type()==QEvent::Show || event->type()==QEvent::Move || event->type()==QEvent::Resize)
+            FunctionDialogPanel::setViewportTopInset(impl_->viewport, isHidden() ? 8 : geometry().bottom() + 9);
         if(event->type()==QEvent::Show || event->type()==QEvent::Move || event->type()==QEvent::Resize)impl_->syncGlass();
     }
     if(object==impl_->viewport && event->type()==QEvent::Resize){impl_->place();impl_->schedule();}
     if(auto *dialog=qobject_cast<QDialog *>(object)) {
         if(event->type()==QEvent::Show)impl_->dialogShown(dialog);
-        if(dialog==impl_->panel && (event->type()==QEvent::Move||event->type()==QEvent::Resize))impl_->placePanel(dialog);
+        if(event->type()==QEvent::Hide)impl_->finishPanel(dialog);
     }
     QAction *action=nullptr;
     if(event->type()==QEvent::Shortcut) {
@@ -599,7 +612,7 @@ bool RibbonPreview::eventFilter(QObject *object,QEvent *event) {
     if(auto *button=qobject_cast<QToolButton *>(object)) {
         if(isAncestorOf(button)) {
             if((event->type()==QEvent::MouseButtonPress && static_cast<QMouseEvent *>(event)->button()==Qt::LeftButton)||activateKey())action=button->defaultAction();
-            if(event->type()==QEvent::MouseButtonRelease)QTimer::singleShot(0,this,[this]{if(!impl_->panel){impl_->running.clear();impl_->schedule();}});
+            if(event->type()==QEvent::MouseButtonRelease)QTimer::singleShot(0,this,[this]{if(!impl_->panel){impl_->setRunning(nullptr);impl_->schedule();}});
         }
     }
     if(auto *menu=qobject_cast<QMenu *>(object)) {
@@ -621,6 +634,94 @@ void RibbonPreview::paintEvent(QPaintEvent *) {
 }
 void RibbonPreview::runSelfTest() {
     const auto require=[](bool pass,const char *message){if(!pass)throw std::runtime_error(message);};
+    const auto checkPanels = [&] {
+        impl_->window->show();QApplication::processEvents();
+        if(QGuiApplication::platformName()!=QStringLiteral("offscreen"))
+            require(impl_->viewport->isValid(),"contesto OpenGL reale per i pannelli");
+        const auto savedDock=QSettings().value("view/functionPanelDockSide",0);
+        const auto savedFull=QSettings().value("view/functionPanelFullHeight",false);
+        const QSize savedWindow=impl_->window->size();
+        impl_->window->resize(1280,900);QApplication::processEvents();
+        auto *action=impl_->paths.key(QStringLiteral("Funzioni/Primitive/Parallelepipedo..."));
+        require(action,"azione per la regressione chiusura pannelli");
+        // Un clic umano puo' durare piu' del timer di sincronizzazione (50 ms).
+        // Il widget premuto deve sopravvivere fino al rilascio.
+        QList<QDockWidget *> visibleDocks;
+        for(auto *dock:impl_->window->findChildren<QDockWidget *>()) if(dock->isVisible()) {visibleDocks.append(dock);dock->hide();}
+        impl_->selectTab("model");setCompact(true);QApplication::processEvents();QApplication::processEvents();
+        for(int hold:{120,350,0}) {
+            for(int pass=0;pass<3;++pass)QApplication::processEvents();
+            QCoreApplication::sendPostedEvents(nullptr,QEvent::DeferredDelete);
+            QPointer<QToolButton> pressed;
+            for(auto *candidate:findChildren<QToolButton *>())
+                if(candidate->defaultAction()==action && candidate->isVisible()) {pressed=candidate;break;}
+            if(!pressed)throw std::runtime_error(QStringLiteral("Blocco non visibile: pressione %1 ms, viewport %2, scheda %3")
+                .arg(hold).arg(impl_->viewport->width()).arg(selectedTab()).toStdString());
+            bool opened=false;
+            QTimer closer;
+            QObject::connect(&closer,&QTimer::timeout,this,[&] {
+                for(auto *candidate:impl_->viewport->findChildren<QDialog *>())
+                    if(dynamic_cast<FunctionDialogPanel *>(candidate) && candidate->isVisible()) {
+                        opened=true;closer.stop();candidate->reject();break;
+                    }
+            });
+            closer.start(10);
+            const auto center=pressed->rect().center();
+            QMouseEvent press(QEvent::MouseButtonPress,QPointF(center),QPointF(pressed->mapToGlobal(center)),
+                              Qt::LeftButton,Qt::LeftButton,Qt::NoModifier);
+            QApplication::sendEvent(pressed,&press);
+            if(hold)impl_->schedule(); // aggiornamento concorrente alla pressione
+            if(hold) {QEventLoop wait;QTimer::singleShot(hold,&wait,&QEventLoop::quit);wait.exec();}
+            require(pressed && pressed->isVisible() && pressed->isDown(),"pulsante premuto conservato fino al rilascio del mouse");
+            QMouseEvent release(QEvent::MouseButtonRelease,QPointF(center),QPointF(pressed->mapToGlobal(center)),
+                                Qt::LeftButton,Qt::NoButton,Qt::NoModifier);
+            QApplication::sendEvent(pressed,&release);QApplication::processEvents();
+            require(opened && !impl_->panel && !impl_->running,"un solo clic apre il pannello e Annulla pulisce il comando");
+        }
+        for(auto *dock:visibleDocks)dock->show();
+        QApplication::processEvents();QApplication::processEvents();
+        const auto contained=[&](FunctionDialogPanel &dialog) {
+            const int top=isHidden()?8:geometry().bottom()+9;
+            const QRect available(8,top,impl_->viewport->width()-16,impl_->viewport->height()-top-8);
+            require(available.contains(dialog.geometry()),"pannello interamente sotto il ribbon e dentro il viewport");
+            if(dialog.fullHeight())require(dialog.y()==top && dialog.height()==available.height(),"altezza piena limitata allo spazio sotto il ribbon");
+        };
+        for(const char *name:{"functionDialogPanel","loftDialog","surfaceToolDialog","datumPlaneDialog"})
+            for(bool accept:{false,true}) {
+                FunctionDialogPanel dialog(impl_->viewport,false);dialog.setObjectName(name);
+                dialog.setWindowTitle(QStringLiteral("Modifica funzione"));
+                auto *form=dialog.createScrollableForm();
+                for(int i=0;i<18;++i)form->addRow(QString::number(i),new QLineEdit(&dialog));
+                auto *buttons=new QDialogButtonBox(QDialogButtonBox::Ok|QDialogButtonBox::Cancel,&dialog);form->addRow(buttons);
+                QObject::connect(buttons,&QDialogButtonBox::accepted,&dialog,&QDialog::accept);
+                QObject::connect(buttons,&QDialogButtonBox::rejected,&dialog,&QDialog::reject);
+                selectForAction(action);dialog.show();QApplication::processEvents();
+                require(impl_->panel==&dialog && impl_->running==action,"pannello riconosciuto dal tipo anche con nome specifico");
+                for(bool compact:{false,true})for(int side:{0,1,2})for(bool full:{false,true}) {
+                    setCompact(compact);dialog.setDockSide(side);dialog.setFullHeight(full);QApplication::processEvents();contained(dialog);
+                    dialog.resize(2000,2000);QApplication::processEvents();contained(dialog);
+                    impl_->window->resize(900,620);QApplication::processEvents();contained(dialog);
+                    impl_->window->resize(1280,900);QApplication::processEvents();contained(dialog);
+                    require(dialog.rect().contains(QRect(buttons->mapTo(&dialog,QPoint()),buttons->size())),"OK e Annulla accessibili dopo resize");
+                }
+                dialog.setFullHeight(false);dialog.setDockSide(0);
+                const auto start=dialog.mapToGlobal(QPoint(20,18));
+                dialog.beginEmbeddedMove(start);dialog.updateEmbeddedMove(impl_->viewport->mapToGlobal(QPoint(20,-100)));dialog.endEmbeddedMove();contained(dialog);
+                dialog.setFullHeight(true);hide();QApplication::processEvents();contained(dialog);
+                show();QApplication::processEvents();contained(dialog);
+                const auto capture=qEnvironmentVariable("FORGECAD_UI_PANEL_CAPTURE");
+                if(!capture.isEmpty() && accept && QByteArray(name)=="datumPlaneDialog")impl_->window->grab().save(capture);
+                buttons->button(accept?QDialogButtonBox::Ok:QDialogButtonBox::Cancel)->click();
+                require(!impl_->panel && !impl_->running,"OK e Annulla azzerano subito il comando attivo");
+                for(auto *b:findChildren<QToolButton *>())require(!b->property("ribbonRunning").toBool(),"nessun pulsante evidenziato dopo la chiusura");
+                QApplication::processEvents();
+                dialog.show();QApplication::processEvents();require(impl_->panel==&dialog,"riapertura dello stesso pannello");
+                dialog.hide();require(!impl_->panel && !impl_->running,"Hide pulisce anche senza QDialog::finished");
+            }
+        QSettings().setValue("view/functionPanelDockSide",savedDock);QSettings().setValue("view/functionPanelFullHeight",savedFull);
+        impl_->window->resize(savedWindow);setCompact(false);QApplication::processEvents();
+    };
+    if(qEnvironmentVariableIsSet("FORGECAD_PANEL_UI_ONLY")) { checkPanels(); return; }
     for(qreal dpr:{1.0,1.5})for(int radius:{10,40})for(bool outline:{false,true}) {
         const auto image=rasterizeCards(QSize(96,128),dpr,QRect(0,0,96,128),QRect(),radius,outline);
         int fractional=0;
@@ -860,7 +961,7 @@ void RibbonPreview::runSelfTest() {
         require(QMetaObject::invokeMethod(qApp->styleHints(),"colorSchemeChanged",Qt::DirectConnection,Q_ARG(Qt::ColorScheme,dark?Qt::ColorScheme::Dark:Qt::ColorScheme::Light)),"notifica tema per pannello Vincoli");
         QEventLoop themeLoop;QTimer::singleShot(50,&themeLoop,&QEventLoop::quit);themeLoop.exec();
         const auto color=uiGlassPalette(impl_->window).color(QPalette::Window);
-        require(themeConstraints->panelColor()==color,"Vincoli aggiorna il fondo con la palette della finestra");
+        require((themeConstraints->panelColor().lightness()<128)==(color.lightness()<128),"Vincoli segue lo schema chiaro/scuro della finestra");
         require(qAbs(themeConstraints->palette().color(QPalette::WindowText).lightness()-color.lightness())>100,"testo Vincoli leggibile in entrambi i temi");
         if(QGuiApplication::platformName()!=QStringLiteral("offscreen")) {
             themeConstraints->setPanelOpacity(55);
@@ -926,9 +1027,12 @@ void RibbonPreview::runSelfTest() {
         if(group->objectName().startsWith("ribbonGroup_"))require(group->isEnabled(),"strumenti disponibili nello schizzo aperto");
     impl_->viewport->endSketchMode();syncContext();QApplication::processEvents();
     require(selectedTab()!="sketch","uscita corretta anche entrando da Schizzo");
-    QDialog panel(impl_->viewport);panel.setObjectName("functionDialogPanel");panel.setWindowTitle(QStringLiteral("Modifica raccordo"));panel.resize(400,280);panel.show();QApplication::processEvents();
+    impl_->window->show();QApplication::processEvents();
+    FunctionDialogPanel panel(impl_->viewport,false);panel.setObjectName("functionDialogPanel");panel.setWindowTitle(QStringLiteral("Modifica raccordo"));panel.resize(400,280);panel.show();QApplication::processEvents();
     require(selectedTab()=="model","riapertura feature seleziona contesto");
     require(panel.y()>geometry().bottom(),"pannello sotto la ribbon");panel.reject();QApplication::processEvents();
+
+    checkPanels();
     for(auto *bar:impl_->window->findChildren<QToolBar *>())require(bar->isHidden(),"barre classiche nascoste solo nella prova");
     // Ogni pulsante di comando punta a una QAction della finestra originale.
     int real=0;for(auto *button:findChildren<QToolButton *>())if(auto *a=button->defaultAction()){require(impl_->paths.contains(a),"azione reale e stato condiviso");++real;}
@@ -994,7 +1098,7 @@ void RibbonPreview::runSelfTest() {
         bool opened=false,placed=false;
         QTimer::singleShot(0,this,[&]{
             for(auto *dialog:impl_->viewport->findChildren<QDialog *>())if(dialog->objectName()=="functionDialogPanel" && dialog->isVisible()) {
-                opened=true;impl_->placePanel(dialog);placed=dialog->y()>geometry().bottom();dialog->reject();
+                opened=true;placed=dialog->y()>geometry().bottom();dialog->reject();
             }
         });
         const int bodies=impl_->viewport->extrusions().size();selectForAction(box);box->trigger();

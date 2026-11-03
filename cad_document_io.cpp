@@ -79,6 +79,7 @@ constexpr char kMagic[4] = {'F', 'C', 'A', 'D'};
 // 54 nomi topologici di appoggi schizzo e superfici dei vincoli Pierce.
 // 57 riferimenti associativi dello schizzo (sorgente persistente e cache).
 // 60 visibilita delle conversioni esplicite, distinta dalle cache automatiche.
+// 61 verso normale indipendente per i profili iniziale/finale del loft.
 constexpr quint16 kVersion = kDocumentFormatVersion;
 constexpr quint8 kZlib = 1;
 constexpr quint8 kZstd = 2;
@@ -550,6 +551,7 @@ void write(QDataStream &out, const ExtrusionObject &body, quint16 version) {
             for (const auto &path : f.paths) out << path.edges << path.radii << path.smooth << path.reverse;
         }
     }
+    if (version >= 61) out << body.loftStartReverse << body.loftEndReverse;
 }
 
 // `extras` (solo formato 5): i file scritti durante lo sviluppo del formato 5
@@ -893,6 +895,7 @@ bool read(ReadStream &in, ExtrusionObject &body, quint16 version, int extras) {
         }
         if (f.mode==2 && f.paths.isEmpty() && f.radii.size()<2) return false;
     }
+    if (version >= 61) in >> body.loftStartReverse >> body.loftEndReverse;
     const BodyFeature last = version >= 53 ? BodyFeature::SurfaceTools : version >= 45 ? BodyFeature::SpatialSketch : version >= 44 ? BodyFeature::ExtractedCurve : version >= 39 ? BodyFeature::Thicken : version >= 38 ? BodyFeature::ProjectedCurve : version >= 36 ? BodyFeature::Draft : version >= 35 ? BodyFeature::FillSurface : version >= 27 ? BodyFeature::Thread : version >= 25 ? BodyFeature::Shell : BodyFeature::PlanarSurface;
     if (int(body.feature) < 0 || int(body.feature) > int(last)) return false;
     return in.status() == QDataStream::Ok;
@@ -1363,7 +1366,17 @@ QString encodeDocument(const DocumentState &state, QByteArray &bytes, bool bodie
     return encodeDocumentVersion(state, bytes, bodies, compressionLevel, kVersion);
 }
 
+QString encodeDocumentDefinition60ForHash(const DocumentState &state, QByteArray &bytes) {
+    for (const auto &body : state.extrusions)
+        if (body.loftStartReverse || body.loftEndReverse)
+            return QStringLiteral("Il verso del loft non e' rappresentabile nel formato 60.");
+    return encodeDocumentVersion(state, bytes, false, 9, 60);
+}
+
 QString encodeDocumentDefinition53ForHash(const DocumentState &state, QByteArray &bytes) {
+    for (const auto &body : state.extrusions)
+        if (body.loftStartReverse || body.loftEndReverse)
+            return QStringLiteral("Il verso del loft non e' rappresentabile nel formato 53.");
     for (const auto &body : state.extrusions)
         if (body.chamferSpec.fillet.mode != 0 || !body.chamferSpec.fillet.propagate)
             return QStringLiteral("I nuovi raccordi non sono rappresentabili nel formato 53.");

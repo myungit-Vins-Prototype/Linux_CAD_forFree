@@ -734,6 +734,8 @@ struct ExtrusionObject {
     bool loftRuled = false;
     int loftStartContinuity = 0;
     int loftEndContinuity = 0;
+    // Verso della normale G1/G2, indipendente per primo/ultimo profilo.
+    bool loftStartReverse = false, loftEndReverse = false;
     // Condizioni per guida, nell'ordine canonico: schizzi, percorsi, bordi.
     // Vettori vuoti: eredita i valori globali dei documenti precedenti.
     QVector<int> loftGuideContinuities;

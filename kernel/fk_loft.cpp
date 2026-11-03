@@ -1464,7 +1464,8 @@ Body loftCore(const std::vector<Section> &sections, const LoftOptions &options, 
                     }
                 }
                 const std::vector<Homogeneous> row =
-                    hermiteRow(values, v, sections.front().normal, sections.back().normal,
+                    hermiteRow(values, v, options.startReverse ? -sections.front().normal : sections.front().normal,
+                               options.endReverse ? -sections.back().normal : sections.back().normal,
                                options.startFaces.empty() ? options.startContinuity : 0,
                                options.endFaces.empty() ? options.endContinuity : 0, options.startInfluence,
                                options.endInfluence, guide, condition.influence, condition.continuity,

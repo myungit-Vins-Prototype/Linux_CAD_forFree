@@ -59,7 +59,8 @@ QString FeaturePreviewBuilder::previewKey(const ExtrusionObject &d, int index) {
     for (double value : d.loftGuideInfluences) parts << QStringLiteral("GI") << n(value);
     parts << QString::number(d.loftStartContinuity) << QString::number(d.loftEndContinuity) << QString::number(d.loftGuideContinuity)
           << n(d.loftGuideInfluence)
-          << n(d.loftStartInfluence) << n(d.loftEndInfluence);
+          << n(d.loftStartInfluence) << n(d.loftEndInfluence)
+          << QString::number(d.loftStartReverse) << QString::number(d.loftEndReverse);
     const auto ref = [&](const GeometryRef &r) {
         parts << QString::number(r.kind) << QString::number(r.index) << QString::number(r.element.kind) << QString::number(r.element.element)
               << QString::number(r.element.point) << n(r.point.x) << n(r.point.y) << n(r.point.z) << QString::number(r.featureId)

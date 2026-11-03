@@ -264,6 +264,32 @@ void guideParameterInvariance() {
     std::cout << std::endl;
 }
 
+void reverseProfileNormals() {
+    const auto a=bezier({{0,0,0},{2,2,0},{4,0,0}}), b=bezier({{2,0,5},{4,2,5},{6,0,5}});
+    LoftOptions options;options.startContinuity=options.endContinuity=1;
+    const auto baseline=loftSheet({section(a),section(b)},options);
+    for(int continuity:{1,2})for(bool reverseStart:{false,true})for(bool reverseEnd:{false,true}) {
+        options.startContinuity=options.endContinuity=continuity;
+        options.startReverse=reverseStart;options.endReverse=reverseEnd;
+        const auto body=loftSheet({section(a),section(b)},options);
+        const auto &s=surface(body), &base=surface(baseline);
+        for(double u:{.1,.4,.8})for(double v:{0.,1.}) {
+            Vec3 q[9],original[4];s.evaluate(u,v,2,q);base.evaluate(u,v,1,original);
+            require(distance(q[0],original[0])<1e-9,"inversione mantiene il profilo esatto");
+            const bool reverse=v==0?reverseStart:reverseEnd;
+            require(dot(normalized(q[Surface::derivativeIndex(0,1,2)]), normalized(original[Surface::derivativeIndex(0,1,1)]))*(reverse?-1:1)>.999999,
+                    "direzione G1/G2 invertita soltanto al profilo scelto");
+        }
+        const auto ruled=ruledSurface({{a,a->domain()}},{{b,b->domain()}},options);
+        require(checkBody(ruled).empty(),"inversione disponibile anche sulla superficie tra due profili");
+        options.startContinuity=options.endContinuity=0;
+        const auto free=loftSheet({section(a),section(b)},options);
+        options.startReverse=options.endReverse=false;
+        const auto unchanged=loftSheet({section(a),section(b)},options);
+        sameShape(surface(free),surface(unchanged),1e-10);
+    }
+}
+
 } // namespace
 int main() {
     int passed = 0, failed = 0;
@@ -286,6 +312,7 @@ int main() {
     run("source-corner", [] { cornerPreserved(); });
     run("three-guide-continuity", [] { threeGuideContinuity(); });
     run("perpendicular-G1-chord", [] { perpendicularChord(); });
+    run("reverse-profile-normals", [] { reverseProfileNormals(); });
     run("guide-parameter-invariance", [] { guideParameterInvariance(); });
     std::cout << passed << "/" << (passed + failed) << " gruppi di regressione superati" << std::endl;
     return failed ? 1 : 0;

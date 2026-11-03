@@ -545,7 +545,7 @@ void buildGeometryImpl(ExtrusionObject &body, int index, const QVector<SketchObj
                 }
             body.forgeBody = ForgeCad::forgeRuledSurface(chains[0], chains[1], &body.error, body.loftStartContinuity,
                                                        body.loftEndContinuity, body.loftStartInfluence, body.loftEndInfluence,
-                                                       startFaces, endFaces);
+                                                       startFaces, endFaces, body.loftStartReverse, body.loftEndReverse);
             body.solid = false;
             return;
         }

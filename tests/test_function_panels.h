@@ -153,5 +153,130 @@ static void functionPanelsReview() {
         closePanel.start(10);
         require(!surfaceToolDialog(&window,&viewport,"Titolo identico",-1,definition,[](const auto &){return QString();})&&checked&&!timedOut,"pannelli reali estensione/rete/poli usano identita semantiche distinte senza timeout");
     }
+
+    // Modifica reale di un piano gia definito: rimozione, riselezione e rollback.
+    DocumentState pointsDocument;
+    SketchObject points;points.name=QStringLiteral("Punti per il piano");
+    points.segments={{{0,0},{10,0}},{{10,0},{0,10}},{{2,2},{0,20}}};
+    pointsDocument.sketches.append(points);viewport.loadDocument(pointsDocument);
+    const auto pointRef=[](int segment,int endpoint) {
+        GeometryRef ref;ref.kind=6;ref.index=0;ref.element={0,segment,endpoint};return ref;
+    };
+    ExtrusionObject plane;plane.feature=BodyFeature::DatumPlane;plane.name=QStringLiteral("Piano tre punti");
+    plane.datum.mode=1;plane.datum.refs={pointRef(0,0),pointRef(0,1),pointRef(1,1)};
+    require(viewport.createBody(plane).isEmpty(),"piano per tre punti esistente prima della modifica");
+    const auto original=viewport.extrusions().front();
+    const auto sameRef=[](const GeometryRef &a,const GeometryRef &b) {
+        return a.kind==b.kind&&a.index==b.index&&a.element==b.element&&a.featureId==b.featureId;
+    };
+    const auto runPlaneEdit=[&](bool accept) {
+        bool visited=false,applied=false,valid=false;
+        QTimer::singleShot(0,&window,[&] {
+            auto *dialog=window.findChild<QDialog *>("datumPlaneDialog");
+            require(dialog && dialog->isVisible(),"pannello reale modifica piano aperto");visited=true;
+            auto *buttons=dialog->findChild<QDialogButtonBox *>();
+            auto *status=dialog->findChild<QPlainTextEdit *>("datumStatus");
+            require(viewport.datumPreviewValid_ && viewport.refMarks_.size()==3,"anteprima iniziale e tre punti evidenziati");
+            for(int slot=1;slot<=3;++slot) {
+                auto *clear=dialog->findChild<QToolButton *>(QStringLiteral("datumReferenceClear%1").arg(slot));
+                require(clear && clear->isEnabled(),"punto esistente rimovibile");clear->click();
+                require(!clear->isEnabled() && !viewport.datumPreviewValid_ && viewport.refMarks_.size()==3-slot,"rimuovi toglie riferimento, marchio e anteprima");
+            }
+            buttons->button(QDialogButtonBox::Ok)->click();
+            require(!applied && dialog->isVisible() && viewport.referencePicking(),"OK incompleto avvia scelta senza applicare dati vecchi");
+            // Consegna dal picker: la callback di produzione deve aggiornare gli slot.
+            for(const auto &ref:QVector<GeometryRef>{pointRef(2,0),pointRef(0,1),pointRef(1,1)}) {
+                require(bool(viewport.refPickFinished_),"callback picker disponibile");
+                auto callback=viewport.refPickFinished_;callback(true,ref);
+            }
+            require(viewport.datumPreviewValid_ && viewport.refMarks_.size()==3,"tre punti riselezionati ripristinano anteprima");
+            auto *mode=dialog->findChild<QComboBox *>("datumMode");
+            mode->setCurrentIndex(0);mode->setCurrentIndex(1);
+            require(!viewport.datumPreviewValid_ && viewport.refMarks_.isEmpty(),"cambio tipo non ripristina punti rimossi");
+            for(const auto &ref:QVector<GeometryRef>{pointRef(2,0),pointRef(0,1),pointRef(1,1)}){auto callback=viewport.refPickFinished_;callback(true,ref);}
+            require(status && viewport.datumPreviewValid_,"anteprima valida dopo cambio tipo e completamento");
+            const auto qa=qEnvironmentVariable("FORGECAD_UI_PANEL_QA");
+            if(!qa.isEmpty())require(window.grab().save(qa+QStringLiteral("/piano-tre-punti.png")),"cattura piano");
+            buttons->button(accept?QDialogButtonBox::Ok:QDialogButtonBox::Cancel)->click();
+        });
+        const bool result=datumDialog(&window,&viewport,QStringLiteral("Modifica piano per tre punti"),0,original,[&](const auto &definition) {
+            applied=true;valid=definition.datum.refs.size()==3 && sameRef(definition.datum.refs[0],pointRef(2,0))
+                && sameRef(definition.datum.refs[1],original.datum.refs[1]) && sameRef(definition.datum.refs[2],original.datum.refs[2]);
+            return viewport.updateBody(0,definition);
+        });
+        require(visited && result==accept && applied==accept && (!accept||valid),"modifica usa solo i nuovi riferimenti confermati");
+        require(!viewport.referencePicking() && !viewport.datumPreviewValid_ && viewport.refMarks_.isEmpty(),"chiusura pulisce picker, anteprima e riferimenti");
+    };
+    runPlaneEdit(false);
+    require(sameRef(viewport.extrusions()[0].datum.refs[0],original.datum.refs[0]),"Annulla conserva il piano originale");
+    runPlaneEdit(true);
+    require(std::abs(viewport.extrusions()[0].datumFrame.origin[0]-4)<1e-9
+        &&std::abs(viewport.extrusions()[0].datumFrame.origin[1]-4)<1e-9,"Conferma rigenera il piano sui nuovi punti");
+    viewport.undo();require(sameRef(viewport.extrusions()[0].datum.refs[0],original.datum.refs[0]),"Undo ripristina i punti originali");
+    viewport.redo();require(sameRef(viewport.extrusions()[0].datum.refs[0],pointRef(2,0)),"Redo ripristina il punto sostituito");
+    QTemporaryDir savedPlane;const auto planePath=savedPlane.filePath(QStringLiteral("piano.prt"));
+    require(saveDocumentFile(planePath,viewport.currentDocument(),false).isEmpty(),"salvataggio piano modificato");
+    DocumentState decodedPlane;require(loadDocumentFile(planePath,decodedPlane).isEmpty()
+        && sameRef(decodedPlane.extrusions[0].datum.refs[0],pointRef(2,0)),"riapertura conserva il nuovo punto");
+
+    DocumentState loftDocument;
+    for(double z:{0.,5.}) {
+        SketchObject section;section.name=QStringLiteral("Profilo %1").arg(z);section.customFrame=true;
+        section.frame.origin[2]=z;
+        CurveObject profile;profile.tool=DrawingTool::Nurbs;profile.degree=2;
+        profile.controlPoints={{0,0},{2,2},{4,0}};profile.knots={0,0,0,1,1,1};
+        section.curves.append(profile);loftDocument.sketches.append(section);
+    }
+    viewport.loadDocument(loftDocument);
+    ExtrusionObject loft;loft.feature=BodyFeature::Loft;loft.loftSurface=true;loft.loftSketches={0,1};
+    loft.loftStartContinuity=loft.loftEndContinuity=1;
+    require(viewport.createBody(loft).isEmpty(),"loft di superficie per i controlli di verso");
+    const auto defaultLoft=viewport.extrusions()[0];
+    auto reverseKey=defaultLoft;reverseKey.loftStartReverse=true;
+    require(CadViewport::previewKey(defaultLoft,0)!=CadViewport::previewKey(reverseKey,0),"verso iniziale invalida la cache anteprima");
+    reverseKey=defaultLoft;reverseKey.loftEndReverse=true;
+    require(CadViewport::previewKey(defaultLoft,0)!=CadViewport::previewKey(reverseKey,0),"verso finale invalida la cache anteprima");
+    bool toggled=false;
+    QTimer::singleShot(0,&window,[&] {
+        auto *dialog=window.findChild<QDialog *>("loftDialog");require(dialog,"pannello loft reale");
+        auto *start=dialog->findChild<QPushButton *>("surfaceStartReverse");
+        auto *end=dialog->findChild<QPushButton *>("surfaceEndReverse");
+        require(start&&end&&start->isEnabled()&&end->isEnabled()&&!start->isChecked()&&!end->isChecked(),"due pulsanti G1 indipendenti");
+        start->click();require(start->isChecked()&&!end->isChecked(),"inversione iniziale indipendente");
+        end->click();end->click();toggled=true;
+        const auto qa=qEnvironmentVariable("FORGECAD_UI_PANEL_QA");
+        if(!qa.isEmpty()) {
+            auto *scroll=dialog->findChild<QScrollArea *>("functionDialogScroll");
+            scroll->ensureWidgetVisible(start);QApplication::processEvents();
+            require(window.grab().save(qa+QStringLiteral("/loft-inverti-normale.png")),"cattura controllo verso");
+        }
+        dialog->findChild<QDialogButtonBox *>()->button(QDialogButtonBox::Ok)->click();
+    });
+    require(loftDialog(&window,&viewport,QStringLiteral("Modifica loft"),0,defaultLoft,[&](const auto &definition) {
+        return viewport.updateBody(0,definition);
+    })&&toggled,"Conferma loft con normale iniziale invertita");
+    require(viewport.extrusions()[0].loftStartReverse&&!viewport.extrusions()[0].loftEndReverse,"verso salvato nella feature");
+    viewport.undo();require(!viewport.extrusions()[0].loftStartReverse,"Undo del verso G1");
+    viewport.redo();require(viewport.extrusions()[0].loftStartReverse,"Redo del verso G1");
+    QByteArray bytes;require(encodeDocument(viewport.currentDocument(),bytes,false).isEmpty(),"codifica verso formato61");
+    DocumentState reopened;require(decodeDocument(bytes,reopened).isEmpty()&&reopened.extrusions[0].loftStartReverse
+        &&!reopened.extrusions[0].loftEndReverse,"riapertura conserva versi indipendenti");
+    auto before=viewport.currentDocument();before.extrusions[0].loftStartReverse=false;
+    auto normalized=before;normalized.version.checkinId={};normalized.baseCheckinId={};normalized.orientation=AxesOrientation{};normalized.lengthUnit=LengthUnit::Millimeter;
+    QByteArray oldBytes;require(encodeDocumentDefinition60ForHash(normalized,oldBytes).isEmpty(),"fixture reale formato60");
+    DocumentState legacyLoft;require(decodeDocument(oldBytes,legacyLoft).isEmpty()&&!legacyLoft.extrusions[0].loftStartReverse&&!legacyLoft.extrusions[0].loftEndReverse,"file60 conserva il verso automatico precedente");
+    const auto oldHash=QCryptographicHash::hash(oldBytes,QCryptographicHash::Sha256);bool matches=false;
+    require(drawingModelDefinitionMatches(before,oldHash,matches).isEmpty()&&matches,"tavole con firma60 restano compatibili");
+    require(drawingModelDefinitionMatches(viewport.currentDocument(),oldHash,matches).isEmpty()&&!matches,"inversione G1 invalida la vecchia firma della tavola");
+    require(!encodeDocumentDefinition53ForHash(viewport.currentDocument(),oldBytes).isEmpty(),"hash storico non ignora nuovi versi");
+    QTimer::singleShot(0,&window,[&] {
+        auto *dialog=window.findChild<QDialog *>("loftDialog");require(dialog,"riapertura pannello loft");
+        require(dialog->findChild<QPushButton *>("surfaceStartReverse")->isChecked()
+            &&!dialog->findChild<QPushButton *>("surfaceEndReverse")->isChecked(),"riapertura pannello conserva lo stato dei pulsanti");
+        dialog->findChild<QPushButton *>("surfaceStartReverse")->click();
+        dialog->findChild<QDialogButtonBox *>()->button(QDialogButtonBox::Cancel)->click();
+    });
+    require(!loftDialog(&window,&viewport,QStringLiteral("Modifica loft"),0,viewport.extrusions()[0],[](const auto &){return QString();})
+        &&viewport.extrusions()[0].loftStartReverse,"Annulla non cambia il verso memorizzato");
     require(!timedOut, "pannelli completati senza intervento del watchdog");
 }

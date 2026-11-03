@@ -44,7 +44,7 @@ storico della finestra principale. `pdfReader.c`, `pdfView.c` e vecchi binari PD
 | Schizzi e vincoli | `cad_types.h`, `cad_constraints*`, `cad_sketch_refs*`, `cad_expression*`: schizzi 2D/3D, asole/punti, quote e solver, snap e riferimenti associativi a piani/assi/bordi/curve. Cache automatiche nascoste; conversioni e sezioni esplicite visibili anche di costruzione. Le entità locali visibili hanno priorità nella quotatura. |
 | Solidi e superfici | `cad_forge*`, `kernel/fk_*`: primitive, estrusione (anche fino al prossimo corpo), rivoluzione, sweep/loft, booleane, sformo, svuotamento/spessore, filettatura, cucitura, taglio/estensione, reti U/V e poli NURBS. Estendi apre il pannello prima della scelta dei bordi. Raccordi costanti, conici, variabili e tra facce; percorsi tangenti con leggi indipendenti e maniglie R. |
 | Storia e genealogia | `cad_history*`, `cad_element_names*`, viewport e storyboard: schizzi/piani come passi autonomi, riordino, rollback, soppressione, riparazione e Undo/Redo. Specchi/ripetizioni sono un evento con corpi separati ed esclusioni; conservano identità e dipendenze. |
-| Documenti e revisioni | `cad_document_io*`, `cad_document_read*`, `cad_native_revisions*`, `cad_workspace*`: `.prt` con firma FCAD, formato corrente 60; Zstandard dal 56 e lettura legacy zlib. Definizione e cache B-rep/mesh distinte, salvataggio atomico, recupero, consultazione concorrente e lock della modifica. Check-out/check-in, ripristino, rilascio coordinato e recupero catalogo. |
+| Documenti e revisioni | `cad_document_io*`, `cad_document_read*`, `cad_native_revisions*`, `cad_workspace*`: `.prt` con firma FCAD, formato corrente 61 (versi G1/G2); Zstandard dal 56 e lettura legacy zlib. Definizione e cache B-rep/mesh distinte, salvataggio atomico, recupero, consultazione concorrente e lock della modifica. Check-out/check-in, ripristino, rilascio coordinato e recupero catalogo. |
 | Tavole 2D | `cad_drawing_*`: `.drw`, viste proiettate/ausiliarie, sezioni composte, dettagli e viste interrotte, più fogli, scale foglio/vista, quote e tolleranze, datum/GD&T, badge persistenti, rugosità Ra/Rz e PDF vettoriale. Agganci alle geometrie esatte e nomi genealogici; portabilità senza cache del modello nei casi migrabili. |
 | Scambio e analisi | `kernel/fk_step*`, `fk_iges*`, `fk_exchange*`, `fk_mass*`: STEP/IGES propri, esportazione STL/OBJ, misure/massa, zebra e curvatura. Parsing numerico indipendente dal locale, controlli di cicli/profondità e dimensioni dei dati importati. |
 
@@ -103,20 +103,25 @@ ctest --test-dir forgecad-release --output-on-failure
 
 ## Ultimi interventi — esiti consolidati
 
-0. **02–03/11 — CI, guide proiettate e Loft9.** `f75015b`/`ec08b12` pubblicati;
-   CI41513461524 verde Linux56PASS/2SKIP, macOS/Metal60PASS/1SKIP; [CI](docs/ci-riparazione-2026-11-02.md)
-   e [guide implicite](docs/loft-guide-proiettate-2026-11-02.md) documentano gli esiti precedenti.
-   **03/11 Loft9 corretto:** profili razionali algebrici/denominatore comune in fk_loft_profiles,
-   modulo Hermite comune, guide curvilinee e correzione cubica pesata. Rimane corner sorgente3,18°.
-   Cache8 rigenera le vecchie copie di lavoro con loft/derivati; revisioni check-in immutabili, formato60.
-   App completa aggiornata; Wayland/XCB pannello1→2→1guide, Undo/Redo, migrazione/cache/no-cache PASS.
-   Consolidati164PASS/1SKIP GL/0FAIL su165, kernel459/459;9nuovi gruppi+10guide implicite, Clang e
-   ASan/UBSan mirati PASS (LSan escluso per ptrace). Cache6/7 leggibili, futura9 ignorata.
-   Mappa552/7635/261AST,zeroerrori/check/7confini/HTML PASS. [Rapporto e archivio](docs/loft-forma-guide-2026-11-03.md).
-   Originali intatti; maggiore grado/poli per algebra esatta, nessuna certificazione globale auto-intersezioni.
+0. **03/11 — Pannelli, piani e verso G1/G2.** Area unica sotto il ribbon per aggancio/altezza
+   piena/drag/resize; OK/Annulla puliscono il comando, Rimuovi per ogni riferimento del piano.
+   Clic corretto: niente reset50ms durante la pressione, rebuild rimandato al rilascio; prove0/120/350ms.
+   Inverti normale G1/G2 indipendente, anteprima e formato61; firme tavola60 compatibili.
+   App completa; CTest15/15, Loft42/42, forma10/10, ribbon offscreen e prove mirate Wayland/XCB PASS.
+   Mappa552/7642/261AST,8confini/check/HTML PASS. [Rapporto e prove](docs/ui-pannelli-verso-loft-2026-11-03.md).
+   Suite native complete limitate da cattura popup/vecchio test diagnostico; originali intatti.
+
+1. **02–03/11 — CI, guide proiettate e Loft9 (`e54a174`, pubblicato).** CI41513461524
+   verde su `ec08b12`: Linux56PASS/2SKIP, macOS60PASS/1SKIP; esito storico.
+   Loft9: algebra esatta/denominatore comune, modulo Hermite comune, guide curvilinee e correzione
+   cubica pesata. Corner sorgente3,18° conservato. Cache8 migra le copie di lavoro con loft/derivati;
+   check-in immutabili, formato60. App completa, Wayland/XCB1→2→1guide, Undo/Redo e cache/no-cache PASS.
+   Consolidati164PASS/1SKIP GL/0FAIL su165, kernel459/459; Clang/ASan/UBSan mirati PASS, LSan escluso ptrace.
+   Mappa552/7635/261AST verificata. [Rapporto completo](docs/loft-forma-guide-2026-11-03.md),
+   [CI](docs/ci-riparazione-2026-11-02.md), [guide](docs/loft-guide-proiettate-2026-11-02.md).
    Unione/curve `dbed027`/`cc26a27`: [rapporto](docs/estrusione-unione-riferimenti-proiettati-2026-11-02.md).
 
-1. **02/11 — Correzioni review, storyboard e nuova estrusione (`d4f15fc`, pubblicato).** R1–R5 corretti:
+2. **02/11 — Correzioni review, storyboard e nuova estrusione (`d4f15fc`, pubblicato).** R1–R5 corretti:
    parser/scambio STEP-B-rep robusti, occorrenze distinte e catalogo concorrente senza perdita dei lock.
    Agenti GUI/storyboard: picking, pan, highlight, rimappature, identità copie/Pierce/featureOnly,
    componenti DeleteFace e visibilità consumo/recupero tip. B8 solo con reingresso iniettato.
@@ -125,9 +130,6 @@ ctest --test-dir forgecad-release --output-on-failure
    `test_draft.cpp:134`, scarto1,794e-6>1e-6. Robustezza5/5 anche sanitizer mirati, STEP20/20,
    IGES9/9, BodyIO2/2; GUI6/6 Wayland/XCB. Mappa531file/7305relazioni/249TU, check/HTML PASS.
    [Dettagli, prove e limiti](docs/code-review-2026-11-02-correzioni.md); originali intatti.
-2. **02/11 — Memoria compatta.** Registro cumulativo conservato in `docs/history/claude-2026-11-02.md`,
-   identico al precedente HEAD: 2.279.833 byte. Sintesi ridotta oltre il 99%, link/struttura/diff verificati;
-   regole di dimensione anche in AGENTS. Solo documentazione, senza build funzionale.
 3. **02/11 — OCCT soltanto nei test (`ab6fc71`).** Ricerca OCCT spostata in `kernel/occt_tests`, opzione facoltativa e
    README/CI aggiornati; app e kernel senza dipendenze OCCT. Configurazione minima senza OCCT verificata; l'utente conferma
    zero `HAVE_TK` nei flag dell'app dopo riconfigurazione. Test comparativi e CI successivi allo spostamento non confermati

@@ -256,21 +256,38 @@ bool datumDialog(QMainWindow *window, CadViewport *viewport, const QString &titl
     d.mode = qBound(0, d.mode, int(modes.size()) - 1);
     FunctionDialogPanel dialog(window);
     dialog.setSizeIdentity(QStringLiteral("datum-plane"));
+    dialog.setObjectName(QStringLiteral("datumPlaneDialog"));
     if (viewport) ForgeCad::setDisplayLengthUnit(viewport->lengthUnit(), &dialog);
     dialog.setWindowTitle(title);
     dialog.setModal(false);
     auto *form = dialog.createScrollableForm();
     auto *modeBox = new QComboBox(&dialog);
     for (const ForgeCad::DatumMode &mode : modes) modeBox->addItem(mode.name);
+    modeBox->setObjectName(QStringLiteral("datumMode"));
     modeBox->setCurrentIndex(d.mode);
     form->addRow(QStringLiteral("Tipo:"), modeBox);
     QVector<QLabel *> refLabels;
     QVector<QPushButton *> refButtons;
+    QVector<QToolButton *> clearButtons;
+    QVector<QWidget *> refRows;
     for (int k = 0; k < 3; ++k) {
         auto *label = new QLabel(&dialog);
         auto *button = new QPushButton(&dialog);
+        button->setObjectName(QStringLiteral("datumReferencePick%1").arg(k + 1));
         button->setToolTip(QStringLiteral("Scegli di nuovo nella vista"));
-        form->addRow(label, button);
+        auto *row = new QWidget(&dialog);
+        auto *line = new QHBoxLayout(row);
+        line->setContentsMargins(0, 0, 0, 0);
+        auto *clear = new QToolButton(row);
+        clear->setObjectName(QStringLiteral("datumReferenceClear%1").arg(k + 1));
+        clear->setText(QStringLiteral("×"));
+        clear->setToolTip(QStringLiteral("Rimuovi il riferimento"));
+        clear->setAccessibleName(QStringLiteral("Rimuovi riferimento %1").arg(k + 1));
+        line->addWidget(button, 1);
+        line->addWidget(clear);
+        form->addRow(label, row);
+        clearButtons.append(clear);
+        refRows.append(row);
         refLabels.append(label);
         refButtons.append(button);
     }
@@ -299,6 +316,7 @@ bool datumDialog(QMainWindow *window, CadViewport *viewport, const QString &titl
                                            "Inverti la normale ne cambia il verso nell'anteprima."), &dialog));
     form->addRow(QStringLiteral("Misura a video (mezzo lato):"), sizeBox);
     auto *status = new FunctionMessage(&dialog);
+    status->setObjectName(QStringLiteral("datumStatus"));
     status->setMinimumWidth(280);
     form->addRow(status);
     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
@@ -314,10 +332,11 @@ bool datumDialog(QMainWindow *window, CadViewport *viewport, const QString &titl
         const ForgeCad::DatumMode &mode = modes.at(d.mode);
         for (int k = 0; k < 3; ++k) {
             const bool used = k < mode.roles.size();
-            form->setRowVisible(refButtons.at(k), used);
+            form->setRowVisible(refRows.at(k), used);
             if (!used) continue;
             refLabels.at(k)->setText(mode.labels.at(k));
             const GeometryRef &ref = d.refs.at(k);
+            clearButtons.at(k)->setEnabled(ref.kind >= 0);
             QString text = ref.kind >= 0 ? ForgeCad::geometryRefText(ref, viewport->sketches(), viewport->extrusions()) : QStringLiteral("(da scegliere)");
             if (k == active) text = QStringLiteral("▶ ") + text + QStringLiteral("  - clicca nella vista");
             refButtons.at(k)->setText(text);
@@ -387,8 +406,18 @@ bool datumDialog(QMainWindow *window, CadViewport *viewport, const QString &titl
             refresh();
         }
     });
-    for (int k = 0; k < 3; ++k) QObject::connect(refButtons.at(k), &QPushButton::clicked, &dialog, [&, k] { pick(k); });
+    for (int k = 0; k < 3; ++k) {
+        QObject::connect(refButtons.at(k), &QPushButton::clicked, &dialog, [&, k] { pick(k); });
+        QObject::connect(clearButtons.at(k), &QToolButton::clicked, &dialog, [&, k] {
+            viewport->cancelReferencePick();
+            active = -1;
+            d.refs[k] = GeometryRef();
+            refresh();
+        });
+    }
     QObject::connect(modeBox, &QComboBox::currentIndexChanged, &dialog, [&](int mode) {
+        viewport->cancelReferencePick();
+        active = -1;
         d.mode = mode;
         fitRefs();
         pickMissing();

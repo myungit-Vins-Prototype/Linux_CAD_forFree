@@ -67,6 +67,8 @@ struct LoftOptions {
     std::vector<LoftGuideCondition> guideConditions;
     int startContinuity = 0;  // 0 G0, 1 G1, 2 G2
     int endContinuity = 0;
+    // Inverte la direzione normale dopo l’orientamento automatico delle sezioni.
+    bool startReverse = false, endReverse = false;
     int guideContinuity = 1;  // G0 solo attraversamento, G1 tangente, G2 anche curvatura
     double guideInfluence = 1.0;
     double startInfluence = 1.0;

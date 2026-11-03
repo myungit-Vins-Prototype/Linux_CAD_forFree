@@ -1549,7 +1549,7 @@ ForgeBody forgeLoft(const QVector<SketchObject> &sketches, const QVector<SketchO
                     const QVector<QPair<ForgeBody, EdgePoint>> &endFaces,
                     const std::vector<LoftSection> &exactSections,
                     const std::vector<std::vector<PathSegment>> &exactGuides,
-                    const std::vector<LoftGuideCondition> &guideConditions) {
+                    const std::vector<LoftGuideCondition> &guideConditions, bool startReverse, bool endReverse) {
     if (exactSections.empty() && sketches.size() < 2) {
         setError(error, QStringLiteral("Il loft richiede almeno due sezioni."));
         return nullptr;
@@ -1591,6 +1591,7 @@ ForgeBody forgeLoft(const QVector<SketchObject> &sketches, const QVector<SketchO
         LoftOptions options;
         options.ruled = ruled;
         loftEndConditions(options, startContinuity, endContinuity, startInfluence, endInfluence, startFaces, endFaces);
+        options.startReverse = startReverse; options.endReverse = endReverse;
         options.guideConditions = guideConditions;
         options.guideContinuity = guideContinuity;
         options.guideInfluence = guideInfluence;
@@ -1740,20 +1741,21 @@ ForgeBody forgeReferencedLoft(const ExtrusionObject &d, int owner, const QVector
         }
     }
         return forgeLoft(legacySections,guides,d.loftRuled,d.loftStartContinuity,d.loftEndContinuity,d.loftGuideContinuity,
-                         d.loftGuideInfluence,d.loftStartInfluence,d.loftEndInfluence,error,d.loftSurface,faces[0],faces[1],sections,edgeGuides,guideConditions);
+                         d.loftGuideInfluence,d.loftStartInfluence,d.loftEndInfluence,error,d.loftSurface,faces[0],faces[1],sections,edgeGuides,guideConditions,d.loftStartReverse,d.loftEndReverse);
     } catch (const std::exception &failure) { setError(error,QString::fromUtf8(failure.what())); return nullptr; }
 }
 
 ForgeBody forgeRuledSurface(const std::vector<PathSegment> &first, const std::vector<PathSegment> &second, QString *error,
                            int startContinuity, int endContinuity, double startInfluence, double endInfluence,
                            const QVector<QPair<ForgeBody, EdgePoint>> &startFaces,
-                           const QVector<QPair<ForgeBody, EdgePoint>> &endFaces) {
+                           const QVector<QPair<ForgeBody, EdgePoint>> &endFaces, bool startReverse, bool endReverse) {
     if (first.empty() || second.empty()) {
         setError(error, QStringLiteral("Scegli le due curve della superficie rigata."));
         return nullptr;
     }
     try {
         LoftOptions options;
+        options.startReverse = startReverse; options.endReverse = endReverse;
         loftEndConditions(options, startContinuity, endContinuity, startInfluence, endInfluence, startFaces, endFaces);
         return declaredConstruction([&](FaceAliases &labels){return ruledSurface(first, second, options,&labels);});
     } catch (const std::exception &failure) {

@@ -127,6 +127,13 @@ QString drawingModelDefinitionHash(const DocumentState &document,QByteArray &has
 QString drawingModelDefinitionMatches(const DocumentState &document,const QByteArray &expected,bool &matches){
     QByteArray current;const auto error=drawingModelDefinitionHash(document,current);if(!error.isEmpty())return error;
     if(current==expected){matches=true;return {};}
+    auto normalized=document;normalized.version.checkinId={};normalized.baseCheckinId={};normalized.orientation=AxesOrientation{};
+    normalized.lengthUnit=LengthUnit::Millimeter;
+    QByteArray format60;
+    if (encodeDocumentDefinition60ForHash(normalized,format60).isEmpty()
+        && QCryptographicHash::hash(format60,QCryptographicHash::Sha256)==expected) {
+        matches=true; return {};
+    }
     // I vecchi hash non contenevano questi nomi. Un riferimento nuovo o
     // modificato deve restare una modifica, anche con uguali indici e punti.
     for(const auto &sketch:document.sketches){
@@ -134,8 +141,9 @@ QString drawingModelDefinitionMatches(const DocumentState &document,const QByteA
         for(const auto &constraint:sketch.geometricConstraints)
             if(constraint.pierce&&!constraint.pierce->surface.point.name.isEmpty()){matches=false;return {};}
     }
-    auto normalized=document;normalized.version.checkinId={};normalized.baseCheckinId={};normalized.orientation=AxesOrientation{};
-    normalized.lengthUnit=LengthUnit::Millimeter;QByteArray legacy;
+    for (const auto &body : document.extrusions)
+        if (body.loftStartReverse || body.loftEndReverse) { matches=false; return {}; }
+    QByteArray legacy;
     const auto legacyError=encodeDocumentDefinition53ForHash(normalized,legacy);if(!legacyError.isEmpty())return legacyError;
     matches=QCryptographicHash::hash(legacy,QCryptographicHash::Sha256)==expected;return {};
 }

@@ -1,4 +1,5 @@
 #include "forgeCad2026_dialogs.h"
+#include <QDynamicPropertyChangeEvent>
 #include "cad_drawing_browser.h"
 #include "cad_drawing_window.h"
 #include "cad_toolbar.h"
@@ -426,17 +427,32 @@ void FunctionDialogPanel::setFullHeight(bool enabled) {
     applyDockLayout();
 }
 
+void FunctionDialogPanel::setViewportTopInset(QWidget *viewport, int top) {
+    if (viewport) viewport->setProperty("functionPanelTopInset", qMax(8, top));
+}
+
+QRect FunctionDialogPanel::availableViewportRect() const {
+    if (!parentWidget()) return {};
+    const int top = qMax(8, parentWidget()->property("functionPanelTopInset").toInt());
+    return QRect(8, top, qMax(1, parentWidget()->width() - 16),
+                 qMax(1, parentWidget()->height() - top - 8));
+}
+
 void FunctionDialogPanel::applyDockLayout() {
     if (!embedded_ || !parentWidget() || applyingDock_) return;
     applyingDock_ = true;
-    const int margin = 8;
-    QSize target = size().boundedTo(parentWidget()->size() - QSize(2*margin, 2*margin));
-    if (fullHeight_) target.setHeight(qMax(1, parentWidget()->height() - 2*margin));
+    const QRect available = availableViewportRect();
+    // Le dimensioni preferite restano intatte quando il viewport si restringe.
+    if (preferredMinimumSize_.isValid()) setMinimumSize(preferredMinimumSize_.boundedTo(available.size()));
+    QSize target = size().boundedTo(available.size());
+    if (fullHeight_) target.setHeight(available.height());
     if (target != size()) resize(target);
-    const int px = dockSide_ == 1 ? margin : dockSide_ == 2 ? qMax(margin, parentWidget()->width()-width()-margin)
-                                                        : qBound(0, x(), qMax(0, parentWidget()->width()-width()));
-    const int py = fullHeight_ ? margin : qBound(margin, y(), qMax(margin, parentWidget()->height()-height()-margin));
-    if (pos() != QPoint(px,py)) move(px,py);
+    const int right = qMax(available.left(), available.right() - width() + 1);
+    const int bottom = qMax(available.top(), available.bottom() - height() + 1);
+    const int px = dockSide_ == 1 ? available.left() : dockSide_ == 2 ? right
+                                                                               : qBound(available.left(), x(), right);
+    const int py = fullHeight_ ? available.top() : qBound(available.top(), y(), bottom);
+    if (pos() != QPoint(px, py)) move(px, py);
     applyingDock_ = false;
 }
 
@@ -466,8 +482,9 @@ void FunctionDialogPanel::endEmbeddedMove() {
 void FunctionDialogPanel::placeAtLeft() {
     if (!embedded_ || !parentWidget()) return;
     if (dockSide_ || fullHeight_) { applyDockLayout(); placed_ = true; return; }
-    resize(size().boundedTo(parentWidget()->size() - QSize(32, 32)));
-    move(16, qMax(16, (parentWidget()->height() - height()) / 2));
+    const QRect available = availableViewportRect();
+    resize(size().boundedTo(available.size()));
+    move(16, available.top() + qMax(0, (available.height() - height()) / 2));
     keepInsideViewport();
     placed_ = true;
 }
@@ -601,6 +618,7 @@ void FunctionDialogPanel::changeEvent(QEvent *event) {
 
 void FunctionDialogPanel::moveEvent(QMoveEvent *event) {
     QDialog::moveEvent(event);
+    if (embedded_ && placed_) keepInsideViewport();
     syncGpuGlass();
     scheduleBackdropCapture(0);
 }
@@ -684,7 +702,7 @@ bool FunctionDialogPanel::eventFilter(QObject *watched, QEvent *event) {
             QSize requested = resizeStartSize_ + QSize(delta.x(), delta.y());
             requested = requested.expandedTo(minimumSize());
             if (embedded_ && parentWidget())
-                requested = requested.boundedTo(dockSide_ ? maximumPanelSize() : QSize(parentWidget()->width() - x(), parentWidget()->height() - y()));
+                requested = requested.boundedTo(dockSide_ ? maximumPanelSize() : QSize(qMax(1, availableViewportRect().right() - x() + 1), qMax(1, availableViewportRect().bottom() - y() + 1)));
             if (fullHeight_) requested.setHeight(height());
             resize(requested); applyDockLayout();
             return true;
@@ -708,7 +726,11 @@ bool FunctionDialogPanel::eventFilter(QObject *watched, QEvent *event) {
         }
         if (pointer && geometry().contains(position)) { raise(); event->accept(); return true; }
     }
-    if (embedded_ && watched == parentWidget() && event->type() == QEvent::Resize) {
+    const bool insetChanged = event->type() == QEvent::DynamicPropertyChange
+        && static_cast<QDynamicPropertyChangeEvent *>(event)->propertyName() == "functionPanelTopInset";
+    if (embedded_ && watched == parentWidget() && panelSizeInitialized_
+        && (event->type() == QEvent::Resize || insetChanged)) {
+        applyDockLayout();
         if (!sizeIdentity_.isEmpty() && preferredPanelSize_.isValid() && !resizing_) resize(preferredPanelSize_.boundedTo(maximumPanelSize()));
         keepInsideViewport();
     }
@@ -725,13 +747,7 @@ QWidget *FunctionDialogPanel::overlayParent(QWidget *requested) {
 }
 
 void FunctionDialogPanel::keepInsideViewport() {
-    if (!embedded_ || !parentWidget() || applyingDock_) return;
-    if (dockSide_ || fullHeight_) { applyDockLayout(); return; }
-    const QSize maximum(qMax(1, parentWidget()->width() - 16), qMax(1, parentWidget()->height() - 16));
-    if (size().width() > maximum.width() || size().height() > maximum.height())
-        resize(size().boundedTo(maximum));
-    move(qBound(0, x(), qMax(0, parentWidget()->width() - width())),
-         qBound(0, y(), qMax(0, parentWidget()->height() - height())));
+    applyDockLayout();
 }
 
 void FunctionDialogPanel::updateRoundedMask() {
@@ -827,7 +843,7 @@ QSize FunctionDialogPanel::naturalPanelSize() {
 
 QSize FunctionDialogPanel::maximumPanelSize() const {
     if (embedded_ && parentWidget())
-        return QSize(qMax(1, parentWidget()->width() - 32), qMax(1, parentWidget()->height() - 32));
+        return availableViewportRect().size();
     QScreen *screen = QGuiApplication::screenAt(mapToGlobal(rect().center()));
     if (!screen) screen = QGuiApplication::primaryScreen();
     return screen ? screen->availableGeometry().size() - QSize(32, 32) : QSize(1600, 1000);
@@ -836,6 +852,7 @@ QSize FunctionDialogPanel::maximumPanelSize() const {
 void FunctionDialogPanel::initializePanelSize() {
     if (panelSizeInitialized_) return;
     panelSizeInitialized_ = true;
+    preferredMinimumSize_ = minimumSize();
     QSettings settings;
     const auto key = panelSizeSettingsKey();
     QSize stored = key.isEmpty() ? QSize() : settings.value(key).toSize();
@@ -1464,11 +1481,22 @@ SurfaceEndControls::SurfaceEndControls(QDialog &dialog, QFormLayout &form, CadVi
         layout->setContentsMargins(0, 0, 0, 0);
         layout->addWidget(picks_[side]); layout->addWidget(clear);
         form.addRow(side == 0 ? QStringLiteral("Primo profilo:") : QStringLiteral("Ultimo profilo:"), modes_[side]);
-        form.addRow(QStringLiteral("Influenza:"), influences_[side]);
+        reverses_[side] = new QPushButton(QStringLiteral("Inverti normale"), &dialog);
+        reverses_[side]->setObjectName(side == 0 ? QStringLiteral("surfaceStartReverse") : QStringLiteral("surfaceEndReverse"));
+        reverses_[side]->setCheckable(true);
+        reverses_[side]->setChecked(side == 0 ? definition.loftStartReverse : definition.loftEndReverse);
+        reverses_[side]->setToolTip(QStringLiteral("Inverte il verso di uscita normale al profilo per G1/G2."));
+        auto *conditionRow = new QWidget(&dialog);
+        auto *conditionLayout = new QHBoxLayout(conditionRow);
+        conditionLayout->setContentsMargins(0, 0, 0, 0);
+        conditionLayout->addWidget(influences_[side], 1);
+        conditionLayout->addWidget(reverses_[side]);
+        form.addRow(QStringLiteral("Influenza e verso:"), conditionRow);
         form.addRow(QStringLiteral("Facce adiacenti:"), faces_[side]);
         form.addRow(row);
         QObject::connect(modes_[side], &QComboBox::currentIndexChanged, &dialog, [this] { sync(); });
         QObject::connect(influences_[side], &QDoubleSpinBox::valueChanged, &dialog, [this] { sync(); });
+        QObject::connect(reverses_[side], &QPushButton::toggled, &dialog, [this] { sync(); });
         QObject::connect(picks_[side], &QPushButton::clicked, &dialog, [this, side] {
             if (active_ == side) stop(); else start(side);
             sync();
@@ -1492,6 +1520,7 @@ void SurfaceEndControls::copyTo(ExtrusionObject &d) const {
     d.loftStartContinuity = definition_.loftStartContinuity; d.loftEndContinuity = definition_.loftEndContinuity;
     d.loftStartInfluence = definition_.loftStartInfluence; d.loftEndInfluence = definition_.loftEndInfluence;
     d.loftStartFaces = definition_.loftStartFaces; d.loftEndFaces = definition_.loftEndFaces;
+    d.loftStartReverse = definition_.loftStartReverse; d.loftEndReverse = definition_.loftEndReverse;
 }
 
 QVector<GeometryRef> &SurfaceEndControls::refs(int side) { return side == 0 ? definition_.loftStartFaces : definition_.loftEndFaces; }
@@ -1502,12 +1531,14 @@ void SurfaceEndControls::sync() {
         const bool contact = modes_[side]->currentIndex() == 3;
         influences_[side]->setMinimum(contact ? 1.0 : 0.0);
         influences_[side]->setEnabled(modes_[side]->currentIndex() > 0);
+        reverses_[side]->setEnabled(modes_[side]->currentIndex() == 1 || modes_[side]->currentIndex() == 2);
         picks_[side]->setEnabled(contact); picks_[side]->setChecked(active_ == side);
         QStringList names;
         for (const auto &ref : refs(side)) names.append(ForgeCad::geometryRefText(ref, viewport_->sketches(), viewport_->extrusions()));
         faces_[side]->setText(names.isEmpty() ? QStringLiteral("nessuna faccia") : names.join(QStringLiteral(", ")));
     }
     definition_.loftStartInfluence = influences_[0]->value() / 100.0; definition_.loftEndInfluence = influences_[1]->value() / 100.0;
+    definition_.loftStartReverse = reverses_[0]->isChecked(); definition_.loftEndReverse = reverses_[1]->isChecked();
     if (changed) changed();
 }
 

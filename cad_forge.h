@@ -153,7 +153,8 @@ ForgeBody forgeLoft(const QVector<SketchObject> &sections, const QVector<SketchO
                     const QVector<QPair<ForgeBody, EdgePoint>> &endFaces = {},
                     const std::vector<Kernel::LoftSection> &exactSections = {},
                     const std::vector<std::vector<Kernel::PathSegment>> &exactGuides = {},
-                    const std::vector<Kernel::LoftGuideCondition> &guideConditions = {});
+                    const std::vector<Kernel::LoftGuideCondition> &guideConditions = {},
+                    bool startReverse = false, bool endReverse = false);
 // Risolve sezioni/guide associative e facce di contatto della feature.
 QVector<int> loftGuideSequence(const ExtrusionObject &definition);
 
@@ -165,7 +166,8 @@ ForgeBody forgeReferencedLoft(const ExtrusionObject &definition, int owner, cons
 ForgeBody forgeRuledSurface(const std::vector<Kernel::PathSegment> &first, const std::vector<Kernel::PathSegment> &second, QString *error,
                            int startContinuity = 0, int endContinuity = 0, double startInfluence = 1.0, double endInfluence = 1.0,
                            const QVector<QPair<ForgeBody, EdgePoint>> &startFaces = {},
-                           const QVector<QPair<ForgeBody, EdgePoint>> &endFaces = {});
+                           const QVector<QPair<ForgeBody, EdgePoint>> &endFaces = {},
+                           bool startReverse = false, bool endReverse = false);
 // Superficie planare dei contorni chiusi dello schizzo (come la base di
 // un'estrusione, normale lungo quella dello schizzo; fk_planar planarSheet).
 ForgeBody forgePlanarSketch(const SketchObject &sketch, QString *error);
