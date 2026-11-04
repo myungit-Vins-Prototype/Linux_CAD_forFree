@@ -175,6 +175,7 @@ struct Section {
     double t = 0.0;
     double residual = 0.0;               // scarto numerico delle superfici offset
     double noise = 0.0;                  // incertezza dei contatti dovuta al residuo (condizionamento)
+    double endpointUncertainty = 0.0;    // scarto del limite laterale entro la risoluzione sorgente
     double x[4] = {0.0, 0.0, 0.0, 0.0};   // (uA, vA, uB, vB)
     double dx[4] = {0.0, 0.0, 0.0, 0.0};  // derivate rispetto a t
     Vec3 center, dcenter;                 // centro della palla (raccordo)
@@ -678,14 +679,12 @@ public:
             }
             breaks.erase(breaks.begin() + std::ptrdiff_t(k + 1 == breaks.size() && k > 1 ? k - 1 : k));
         }
-        std::set<double> contactRoots;
         if (trackContacts) {
             const auto roots = solver_.contactBreaks(range_, breaks, [&](double t) {
                 const auto &at = section(t);
                 return detail::BlendContactSample{{at.x[0], at.x[1], at.x[2], at.x[3]},
                     {at.dx[0], at.dx[1], at.dx[2], at.dx[3]}};
             });
-            contactRoots.insert(roots.begin(), roots.end());
             breaks.insert(breaks.end(), roots.begin(), roots.end());
             std::sort(breaks.begin(), breaks.end());
             breaks.erase(std::unique(breaks.begin(), breaks.end()), breaks.end());
@@ -718,14 +717,34 @@ public:
             pending.pop_back();
             const double h = b - a;
             const auto endpoint = [&](double t, int side) {
-                Section value = contactRoots.count(t) ? section(t) : section(t, side < 0 && knots.count(t) > 0);
-                if (contactRoots.count(t)) {
-                    // Il punto e' condiviso, le derivate provengono dal tratto
-                    // che si sta interpolando. Estrapolazione al secondo ordine
-                    // senza valutare il Jacobiano sul nodo dell'appoggio.
-                    const double delta = 1e-6 * h;
-                    const auto first = section(t + side * delta), second = section(t + side * 2 * delta);
-                    for (int row = 0; row < 3; ++row) value.drow[row] = 2.0 * first.drow[row] - second.drow[row];
+                Section value = section(t);
+                if (knots.count(t)) {
+                    // Punto condiviso e jet dal lato interno. Derivare le
+                    // posizioni delle sezioni evita il Jacobiano sul nodo
+                    // e la cancellazione delle derivate degli appoggi.
+                    // La differenza quadratica usa tre punti interni: il
+                    // successivo controllo del fit raffina il suo errore.
+                    const double delta = .01*h;
+                    const auto first = section(t+side*delta), second = section(t+side*2*delta), third = section(t+side*3*delta);
+                    const auto half = section(t+side*.5*delta), threeHalves = section(t+side*1.5*delta);
+                    HPoint limit[3], refinedLimit[3];
+                    for (int row = 0; row < 3; ++row) {
+                        value.drow[row] = (side/(2*delta))*(-5.0*first.row[row]+8.0*second.row[row]-3.0*third.row[row]);
+                        limit[row] = 3.0*first.row[row]-3.0*second.row[row]+third.row[row];
+                        refinedLimit[row] = 3.0*half.row[row]-3.0*first.row[row]+threeHalves.row[row];
+                    }
+                    double uncertainty = 0, change = 0;
+                    for (double v : {0.,.25,.5,.75,1.}) {
+                        const auto refined = sectionPoint(refinedLimit,chamfer,v);
+                        uncertainty = std::max(uncertainty,distance(refined,sectionPoint(value.row,chamfer,v)));
+                        change = std::max(change,distance(refined,sectionPoint(limit,chamfer,v)));
+                    }
+                    // Solo uno scarto stabile dimezzando il passo e sotto
+                    // la risoluzione sorgente e' un limite numerico. Il
+                    // troncamento della differenza finita deve invece
+                    // continuare a raffinarsi fino al budget nominale.
+                    if (change <= .5*uncertainty && uncertainty <= kLinearResolution)
+                        value.endpointUncertainty = uncertainty;
                 }
                 return value;
             };
@@ -736,7 +755,8 @@ public:
             // l'accuratezza dell'intero tratto. Misura il condizionamento nei
             // punti interni confrontati sotto, cosi' il fit raffina fino alla
             // piccola zona effettivamente mal condizionata.
-            double numericalFloor = std::max(sa.residual, sb.residual);
+            const double endpointUncertainty = std::max(sa.endpointUncertainty,sb.endpointUncertainty);
+            double numericalFloor = std::max(sa.residual,sb.residual);
             for (double f : {0.2, 0.5, 0.8}) {
                 const Section &exact = section(a + f * h);
                 numericalFloor = std::max({numericalFloor, exact.residual, exact.noise});
@@ -761,7 +781,7 @@ public:
             // alla soglia numerica, lo scarto e' il rumore delle sezioni (la
             // stima di Section::noise puo' essere ottimista di qualche volta).
             const bool noise = parentError > 0.0 && error >= 0.5 * parentError && error <= 16.0 * numericalFloor;
-            if (error > std::max(kFitTolerance, numericalFloor) && !noise && h > 1e-9 * range_.length()) {
+            if (error > std::max({kFitTolerance,numericalFloor,endpointUncertainty}) && !noise && h > 1e-9 * range_.length()) {
                 const double m = 0.5 * (a + b);
                 pending.push_back({m, b, error});
                 pending.push_back({a, m, error});

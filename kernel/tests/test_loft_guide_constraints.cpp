@@ -85,6 +85,31 @@ void sourceCornerPreserved(){
     const double after=norm(cross(constrained->normal(0,.5-1e-8),constrained->normal(0,.5+1e-8)));
     require(before>.1&&std::fabs(before-after)<1e-10,"true guide corner is retained, not smoothed by correction field");
 }
+void transverseShapeIndependentOfDegree(){
+    auto edge=bezier({{0,0,0},{0,0,10}});
+    auto far=bezier({{10,0,0},{10,4,10./3},{10,4,20./3},{10,0,10}});
+    auto support=std::make_shared<const Body>(ruledSurface({{edge,{0,1}}},{{far,{0,1}}}));
+    LoftGuideCondition condition;condition.crossMode=2;condition.faces={{support,support->faces().front()}};
+    std::vector<BSplineSurfacePtr> results;
+    for(int degree:{3,34}) {
+        std::vector<double> u(degree+1,0),v(6,0);u.insert(u.end(),degree+1,1);v.insert(v.end(),6,1);
+        std::vector<Vec3> poles;
+        // Stesso piano e stessa parametrizzazione, elevazione esatta del grado.
+        for(int i=0;i<=degree;++i)for(int j=0;j<=5;++j)poles.push_back({10.*i/degree,0,2.*j});
+        auto base=std::make_shared<BSplineSurface>(degree,5,u,v,degree+1,6,poles);
+        results.push_back(detail::constrainLoftGuides(base,&condition,nullptr,{0,1},10));
+    }
+    double worst=0;
+    for(int i=0;i<=24;++i)for(int j=0;j<=40;++j) {
+        const double u=i/24.,v=j/40.;
+        worst=std::max(worst,distance(results[0]->point(u,v),results[1]->point(u,v)));
+        Vec3 jet[9];results[1]->evaluate(u,v,2,jet);
+        const auto du=jet[Surface::derivativeIndex(1,0,2)],dv=jet[Surface::derivativeIndex(0,1,2)];
+        require(norm(cross(du,dv))>1,"constrained elevated surface stays regular");
+    }
+    std::cout<<" degreeInvariantError="<<worst<<'\n';
+    require(worst<1e-9,"G1 transverse shape is independent of exact degree elevation");
+}
 void tangentFaces(){
     // La faccia ha un bordo verticale rettilineo ma il piano tangente ruota
     // lungo quel bordo. Una loft libera piana non puo' soddisfare la G1.
@@ -135,4 +160,4 @@ void tangentFaces(){
     try{loftSheet({section(0),section(10)},options);}catch(const std::exception&){rejected=true;}require(rejected,"face not incident to guide rejected");
 }
 }
-int main(){try{normalAndReverse();sourceCornerPreserved();tangentFaces();std::cout<<"PASS loft guide normal, reverse, adjacent-face tangency, sections and invalid inputs\n";return 0;}catch(const std::exception &e){std::cerr<<"FAIL "<<e.what()<<'\n';return 1;}}
+int main(){try{normalAndReverse();sourceCornerPreserved();transverseShapeIndependentOfDegree();tangentFaces();std::cout<<"PASS loft guide normal, reverse, adjacent-face tangency, sections and invalid inputs\n";return 0;}catch(const std::exception &e){std::cerr<<"FAIL "<<e.what()<<'\n';return 1;}}

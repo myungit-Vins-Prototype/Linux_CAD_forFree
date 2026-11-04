@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 #include <stdexcept>
 #include <utility>
 #include "fk_bspline_surface.h"
@@ -74,7 +75,19 @@ std::vector<double> blendContactBreaks(const Surface &a, const Surface &b,
     probes.push_back(range.hi);
     std::vector<double> result;
     const auto add = [&](double t, int coordinate, double knot) {
-        if (!(t > range.lo && t < range.hi)) return;
+        // Anche un evento al limite del fit richiede la derivata dal lato
+        // interno. Non aggiunge una campata (l'estremo e' gia' nei break),
+        // ma evita di usare il Jacobiano del tratto opposto dell'appoggio.
+        if (t < range.lo || t > range.hi) return;
+        // La radice numerica puo' cadere a un ULP da un nodo gia' presente.
+        // Usa quel parametro solo se soddisfa lo stesso residuo della ricerca:
+        // due rappresentazioni del medesimo evento non sono una microcampata.
+        for (double existing : edgeBreaks)
+            if (std::fabs(t-existing) <= 8*std::numeric_limits<double>::epsilon()*(1+std::fabs(t))
+                && std::fabs(sample(existing).uv[std::size_t(coordinate)]-knot) <= 2e-15*(1+std::fabs(knot))) {
+                t = existing;
+                break;
+            }
         if (!continuousContact(coordinate < 2 ? a : b, sample(t), coordinate, knot))
             throw std::domain_error("blendEdges: contatto su una discontinuita' interna della normale");
         result.push_back(t);

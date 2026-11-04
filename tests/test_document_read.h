@@ -220,7 +220,7 @@ void documentLoftCacheMigrationTests() {
     require(decodeDocument(encoded,current).isEmpty() && current.extrusions[0].cachedGeometry
             && current.extrusions[1].cachedGeometry && current.extrusions[1].forgeBody,
             "cache moderna conserva il loft e gli altri B-rep");
-    for (quint32 version : {7u, 10u}) {
+    for (quint32 version : {7u, 10u, 11u}) {
         require(decodeDocument(documentWithCacheVersion(encoded,version),previous).isEmpty()
                 && previous.sketches.size() == 2 && previous.extrusions[1].loftSketches == QVector<int>({0,1})
                 && !previous.extrusions[0].forgeBody && !previous.extrusions[1].forgeBody,
@@ -231,11 +231,13 @@ void documentLoftCacheMigrationTests() {
     const auto checkin = QUuid::createUuid();
     source.version.checkinId = checkin;
     require(encodeDocument(source,encoded,true).isEmpty(), "cache revisione con loft");
-    require(decodeDocument(documentWithCacheVersion(encoded,10),previous).isEmpty()
-            && previous.version.checkinId == checkin && previous.extrusions[0].cachedGeometry
-            && previous.extrusions[1].cachedGeometry && previous.extrusions[1].forgeBody
-            && Kernel::writeBodyBinary(*previous.extrusions[1].forgeBody) == Kernel::writeBodyBinary(*loft.forgeBody),
-            "revisione storica con loft conserva esattamente lo snapshot e resta validabile");
+    for (quint32 oldVersion : {10u,11u}) {
+        require(decodeDocument(documentWithCacheVersion(encoded,oldVersion),previous).isEmpty()
+                && previous.version.checkinId == checkin && previous.extrusions[0].cachedGeometry
+                && previous.extrusions[1].cachedGeometry && previous.extrusions[1].forgeBody
+                && Kernel::writeBodyBinary(*previous.extrusions[1].forgeBody) == Kernel::writeBodyBinary(*loft.forgeBody),
+                "revisione storica con loft conserva esattamente lo snapshot e resta validabile");
+    }
     source.version.checkinId = {};
     source.extrusions.removeLast();
     require(encodeDocument(source,encoded,true).isEmpty(), "cache documento senza loft");
@@ -246,42 +248,44 @@ void documentLoftCacheMigrationTests() {
 
 void documentBlendCacheMigrationTests() {
     using namespace ForgeCad;
-    DocumentState source;
-    ExtrusionObject primitive;
-    primitive.feature = BodyFeature::Primitive;
-    primitive.primitive.kind = PrimitiveKind::Box;
-    primitive.forgeBody = std::make_shared<const Kernel::Body>(Kernel::makeBox(Kernel::Frame3{}, 8, 9, 10));
-    ExtrusionObject blend;
-    blend.feature = BodyFeature::Blend;
-    blend.firstBody = 0;
-    blend.distance = 1;
-    // Lo snapshot e' opaco al codec: nessuna dipendenza da un rigeneratore.
-    blend.forgeBody = primitive.forgeBody;
-    source.extrusions = {primitive, blend};
-    QByteArray bytes;
-    require(encodeDocument(source, bytes, true).isEmpty(), "codifica cache raccordo corrente");
-    DocumentState read;
-    require(decodeDocument(bytes, read).isEmpty() && read.extrusions[1].cachedGeometry,
-        "cache corrente del raccordo riutilizzata");
-    require(decodeDocument(documentWithCacheVersion(bytes, 8), read).isEmpty()
-        && !read.extrusions[0].forgeBody && !read.extrusions[1].forgeBody
-        && read.extrusions[1].firstBody == 0 && read.extrusions[1].distance == 1,
-        "cache raccordi precedente scartata insieme ai derivati, definizione conservata");
-    source.version.checkinId = QUuid::createUuid();
-    require(encodeDocument(source, bytes, true).isEmpty(), "codifica check-in raccordo");
-    require(decodeDocument(documentWithCacheVersion(bytes, 8), read).isEmpty()
-        && read.version.checkinId == source.version.checkinId && read.extrusions[1].cachedGeometry
-        && Kernel::writeBodyBinary(*read.extrusions[1].forgeBody) == Kernel::writeBodyBinary(*blend.forgeBody),
-        "il check-in storico conserva il B-rep esatto");
-    source.version.checkinId = {};
-    source.extrusions[1].suppressed = true;
-    require(encodeDocument(source, bytes, true).isEmpty()
-        && decodeDocument(documentWithCacheVersion(bytes, 8), read).isEmpty()
-        && read.extrusions[0].cachedGeometry, "un raccordo soppresso non invalida gli snapshot");
-    source.extrusions.removeLast();
-    require(encodeDocument(source, bytes, true).isEmpty()
-        && decodeDocument(documentWithCacheVersion(bytes, 8), read).isEmpty()
-        && read.extrusions[0].cachedGeometry, "documenti senza raccordi conservano la cache portabile");
+    for (quint32 oldVersion : {8u,11u}) {
+        DocumentState source;
+        ExtrusionObject primitive;
+        primitive.feature = BodyFeature::Primitive;
+        primitive.primitive.kind = PrimitiveKind::Box;
+        primitive.forgeBody = std::make_shared<const Kernel::Body>(Kernel::makeBox(Kernel::Frame3{}, 8, 9, 10));
+        ExtrusionObject blend;
+        blend.feature = BodyFeature::Blend;
+        blend.firstBody = 0;
+        blend.distance = 1;
+        // Lo snapshot e' opaco al codec: nessuna dipendenza da un rigeneratore.
+        blend.forgeBody = primitive.forgeBody;
+        source.extrusions = {primitive, blend};
+        QByteArray bytes;
+        require(encodeDocument(source, bytes, true).isEmpty(), "codifica cache raccordo corrente");
+        DocumentState read;
+        require(decodeDocument(bytes, read).isEmpty() && read.extrusions[1].cachedGeometry,
+            "cache corrente del raccordo riutilizzata");
+        require(decodeDocument(documentWithCacheVersion(bytes, oldVersion), read).isEmpty()
+            && !read.extrusions[0].forgeBody && !read.extrusions[1].forgeBody
+            && read.extrusions[1].firstBody == 0 && read.extrusions[1].distance == 1,
+            "cache raccordi precedente scartata insieme ai derivati, definizione conservata");
+        source.version.checkinId = QUuid::createUuid();
+        require(encodeDocument(source, bytes, true).isEmpty(), "codifica check-in raccordo");
+        require(decodeDocument(documentWithCacheVersion(bytes, oldVersion), read).isEmpty()
+            && read.version.checkinId == source.version.checkinId && read.extrusions[1].cachedGeometry
+            && Kernel::writeBodyBinary(*read.extrusions[1].forgeBody) == Kernel::writeBodyBinary(*blend.forgeBody),
+            "il check-in storico conserva il B-rep esatto");
+        source.version.checkinId = {};
+        source.extrusions[1].suppressed = true;
+        require(encodeDocument(source, bytes, true).isEmpty()
+            && decodeDocument(documentWithCacheVersion(bytes, oldVersion), read).isEmpty()
+            && read.extrusions[0].cachedGeometry, "un raccordo soppresso non invalida gli snapshot");
+        source.extrusions.removeLast();
+        require(encodeDocument(source, bytes, true).isEmpty()
+            && decodeDocument(documentWithCacheVersion(bytes, oldVersion), read).isEmpty()
+            && read.extrusions[0].cachedGeometry, "documenti senza raccordi conservano la cache portabile");
+    }
 }
 
 void documentInstanceCacheMigrationTests() {

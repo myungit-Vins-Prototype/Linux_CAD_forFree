@@ -798,15 +798,16 @@ Vec2 projectLocal(const Surface &surface, const Vec3 &point, Vec2 uv, double off
 
 struct SeamSurface { SurfacePtr surface; Vec2 uv; double offset = 0.0; };
 
-// Una connessione gia' tollerante non determina una posizione tangenziale
-// precisa. Il termine di regolarizzazione conserva il ramo del bordo
-// sorgente quando le normali sono quasi parallele, senza usare il residuo
-// della connessione come una grande correzione lungo la superficie.
-// Il suo peso e' il quadrato del seno dell'angolo di stabilizzazione (1e-3):
-// e' adimensionale e non modifica il budget geometrico passato dal chiamante.
-Vec3 tolerantSeamPoint(Vec3 point, std::vector<SeamSurface> surfaces, double tolerance, double reach) {
+// Una giunzione quasi tangente non determina una posizione tangenziale
+// precisa: il richiamo fisso al seme conserva il ramo lungo tutto l'edge.
+// Le connessioni con budget maggiore della cucitura conservano il peso originale;
+// per un bordo preciso con piccolo diedro reale il chiamante lo riduce.
+// Il budget geometrico resta distinto e viene verificato sotto.
+Vec3 tolerantSeamPoint(Vec3 point, std::vector<SeamSurface> surfaces, double tolerance, double reach,
+                       double regularization = kSeamAngularStabilization*kSeamAngularStabilization) {
     const Vec3 start = point;
-    constexpr double regularization = kSeamAngularStabilization * kSeamAngularStabilization;
+    Vec3 best = point;
+    double bestResidual = std::numeric_limits<double>::infinity();
     for (int iteration = 0; iteration < 40; ++iteration) {
         double system[3][4]{};
         double worst = 0.0;
@@ -823,9 +824,13 @@ Vec3 tolerantSeamPoint(Vec3 point, std::vector<SeamSurface> surfaces, double tol
                 system[i][3] += n[i] * residual;
             }
         }
+        if (worst < bestResidual) {
+            bestResidual = worst;
+            best = point;
+        }
         for (int i = 0; i < 3; ++i) {
             system[i][i] += regularization;
-            system[i][3] -= regularization * (point - start)[i];
+            system[i][3] -= regularization * (point-start)[i];
         }
         // Sistema 3x3 definito positivo; pivot per evitare di dipendere
         // dall'orientamento del modello rispetto agli assi globali.
@@ -850,6 +855,9 @@ Vec3 tolerantSeamPoint(Vec3 point, std::vector<SeamSurface> surfaces, double tol
         point += correction;
         if (!isFinite(point) || distance(point, start) > reach) break;
     }
+    // Le proiezioni possono oscillare nell'ultimo bit: il residuo 3D
+    // verificato certifica la cucitura anche senza un passo <1e-10 mm.
+    if (bestResidual <= tolerance) return best;
     throw std::domain_error("offset cucito: intersezione delle superfici tolleranti non convergente");
 }
 
@@ -926,16 +934,16 @@ BodyHistory offsetFaceHistory(const Body &source, const Body &result, const std:
     return history;
 }
 
+std::vector<std::pair<Interval, SurfacePtr>> splitAtC0Knots(const BSplineSurface &s, bool fixedU, std::vector<double> cuts);
+
 bool splitOffsetFaces(const Body &body, const std::vector<FaceId> &faces, double d, double tolerance, Body &split, BodyHistory &history) {
-    std::set<int> divided;
+    std::map<int, std::vector<std::pair<bool, double>>> divided;
     for (FaceId f : faces) {
         const auto &surface = body.face(f).surface;
         if (surface->type() != SurfaceType::BSpline || !fullSplineRectangle(body, f)) continue;
-        try {
-            requireContinuousNormals(static_cast<const BSplineSurface &>(*surface), d, surface->uDomain(), surface->vDomain(), tolerance);
-        } catch (const InternalNormalDiscontinuity &) {
-            divided.insert(f.index);
-        }
+        auto creases = creasedKnotLines(static_cast<const BSplineSurface &>(*surface), d,
+                                       surface->uDomain(), surface->vDomain(), tolerance);
+        if (!creases.empty()) divided.emplace(f.index, std::move(creases));
     }
     if (divided.empty()) return false;
     std::vector<Body> sheets;
@@ -945,16 +953,34 @@ bool splitOffsetFaces(const Body &body, const std::vector<FaceId> &faces, double
     for (FaceId f : faces) {
         if (!seen.insert(f.index).second) continue;
         if (!divided.count(f.index)) { unchanged.push_back(f); continue; }
-        const auto &source = static_cast<const BSplineSurface &>(*body.face(f).surface);
-        for (const BSplineSurface &patch : *source.cachedBezierPatches()) {
-            const Interval u = patch.uDomain(), v = patch.vDomain();
+        // Un nodo liscio non e' un bordo topologico. Separare tutte le
+        // pezze Bezier creava strisce anche piu' strette della tolleranza
+        // di cucitura, con vertici collassati e cuciture spurie sui piani.
+        // Il taglio ai soli nodi C0 con salto di normale conserva esattamente
+        // poli, pesi e parametro delle regioni ancora lisce.
+        std::vector<SurfacePtr> patches{body.face(f).surface};
+        for (bool fixedU : {true, false}) {
+            std::vector<double> cuts;
+            for (const auto &crease : divided.at(f.index))
+                if (crease.first == fixedU) cuts.push_back(crease.second);
+            if (cuts.empty()) continue;
+            std::vector<SurfacePtr> next;
+            for (const auto &patch : patches) {
+                auto pieces = splitAtC0Knots(static_cast<const BSplineSurface &>(*patch), fixedU, cuts);
+                if (pieces.empty()) throw std::domain_error("offset: piega interna senza nodo C0 separabile");
+                for (auto &piece : pieces) next.push_back(std::move(piece.second));
+            }
+            patches = std::move(next);
+        }
+        for (const auto &patch : patches) {
+            const Interval u = patch->uDomain(), v = patch->vDomain();
             std::vector<Vec3> points;
             for (Vec2 uv : {Vec2(u.lo,v.lo), Vec2(u.hi,v.lo), Vec2(u.hi,v.hi), Vec2(u.lo,v.hi)})
-                points.push_back(patch.point(uv.x(),uv.y()));
-            const std::vector<Body::BuildEdge> edges{{0,1,patch.vIso(v.lo),u,0}, {1,2,patch.uIso(u.hi),v,0},
-                {3,2,patch.vIso(v.hi),u,0}, {0,3,patch.uIso(u.lo),v,0}};
+                points.push_back(patch->point(uv.x(),uv.y()));
+            const std::vector<Body::BuildEdge> edges{{0,1,patch->vIso(v.lo),u,0}, {1,2,patch->uIso(u.hi),v,0},
+                {3,2,patch->vIso(v.hi),u,0}, {0,3,patch->uIso(u.lo),v,0}};
             Body::BuildFace face;
-            face.surface = std::make_shared<BSplineSurface>(patch);
+            face.surface = patch;
             face.sense = body.face(f).sense;
             face.loops = {{{0,true,std::make_shared<Line<2>>(Vec2(0,v.lo),Vec2(1,0)),0},
                 {1,true,std::make_shared<Line<2>>(Vec2(u.hi,0),Vec2(0,1)),0},
@@ -2023,11 +2049,13 @@ OffsetResult offsetJoinedFaces(const Body &input, const std::vector<FaceOffset> 
             const Vec3 b = constraints[1].surface->normal(constraints[1].uv.x(), constraints[1].uv.y());
             stabilize = norm(cross(a, b)) < kSeamAngularStabilization;
         }
+        const double seamRegularization = (localTolerance>seamTolerance ? 1.0 : .01)
+            * kSeamAngularStabilization*kSeamAngularStabilization;
         const auto at = [&](double t) {
             const double fraction = (t - edge.range.lo) / edge.range.length();
             const Vec3 seed = initial(t) + (1.0 - fraction) * delta0 + fraction * delta1;
             return stabilize
-                ? tolerantSeamPoint(seed, incident(t, seed), localTolerance, seamReach)
+                ? tolerantSeamPoint(seed, incident(t, seed), localTolerance, seamReach, seamRegularization)
                 : seamPoint(seed, incident(t, seed), seamTolerance, seamReach);
         };
         const bool unchanged = replacing && !specs.at(body.finFace(uses[0]).index).replacement

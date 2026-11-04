@@ -114,6 +114,15 @@ rigenerati<0,00225mm entro budget originali. Grado ridotto escluso (errore Racco
 App/runner aggiornati;9CTest,Loft42,Blend60,Shell18,Wayland PASS;originali intatti.
 `9eff99c` su origin/main: appoggi G1/riordino autonomi;11CTest,26feature,XCB/Wayland,G1 PASS. [F7/E25](docs/loft-selezione-facce-storiche-2026-11-04.md).
 
+**04/11 — Svuotamento corrente corretto.** Copia a501f4fd:31facce; taglio sole C0,
+jet laterali dei raccordi, lift G1 cubico indipendente dal grado e valutazione NURBS locale.
+Cache12 migra loft/raccordi di lavoro; check-in immutabili. Shell62facce,1mm,F0/F14;
+662punti errore max5,85e-8mm. Wayland/XCB OK/Undo/Redo/cache,Wayland no-cache PASS.
+11CTest,Blend62/62,Shell18/18,Offset26/26 e negativi PASS; app/runner aggiornati.
+Mappa576/7987/276AST,check e8dettagli HTML PASS. Copia verificata84,29MB/26ID conservati;
+originale intatto/hash riconfermato. Commit/pubblicazione in corso.
+[Diagnosi e prove](docs/svuotamento-poli-non-finiti-2026-11-04.md).
+
 0. **03/11 — Schizzi, riferimenti e loft.** Visualizza/Mostra linee di costruzione persistente:
    app/CTest10/10,rendering e persistenza Wayland/XCB PASS; popup automatizzato Wayland non verificato.
    [Opzione](docs/visualizzazione-costruzione-2026-11-03.md). `4fafbaa` pubblicato: clic transitori senza falso
@@ -139,12 +148,10 @@ App/runner aggiornati;9CTest,Loft42,Blend60,Shell18,Wayland PASS;originali intat
    [guide](docs/loft-guide-proiettate-2026-11-02.md),
    [unione/curve](docs/estrusione-unione-riferimenti-proiettati-2026-11-02.md).
 
-2. **02/11 — Review/storyboard/estrusione (`d4f15fc`).** R1–R5: parser, scambio, occorrenze,
-   catalogo/lock; picking, pan, rimappature, copie/Pierce, consumo/visibilità. B8 solo reingresso
-   iniettato. Estrusione fino al corpo B-rep, dipendenze/preview/genealogia, formato60.
-   App/runner;CTest151PASS/1SKIP/1FAIL,kernel457/458: sformo preesistente1,794e-6>1e-6.
-   Robustezza5/5,sanitizer mirati,STEP20/20,IGES9/9,BodyIO2/2,GUI6/6;Mappa531/7305/249.
-   [Dettagli](docs/code-review-2026-11-02-correzioni.md);originali intatti.
+2. **02/11 — Review/storyboard/estrusione (`d4f15fc`).** R1–R5, picking/pan, riferimenti,
+   consumo/visibilita e fino al corpo B-rep/preview/genealogia, formato60. B8 solo reingresso
+   iniettato. CTest151PASS/1SKIP/1FAIL,kernel457/458: sformo preesistente1,794e-6>1e-6;
+   robustezza/STEP/IGES/BodyIO/GUI/sanitizer PASS. [Prove e dettagli](docs/code-review-2026-11-02-correzioni.md).
 
 3. **02/11 — OCCT soltanto nei test (`ab6fc71`).** Facoltativo in `kernel/occt_tests`; app/kernel senza OCCT.
    Configurazione minima verificata; utente conferma zero `HAVE_TK` nell'app. Confronti successivi non ricertificati.
@@ -157,15 +164,8 @@ App/runner aggiornati;9CTest,Loft42,Blend60,Shell18,Wayland PASS;originali intat
    SP-curve conservate. App completa compilata; Shell 18/18, Boolean 38/38, Offset 25/25 e CTest pertinenti 16/16 PASS.
    Quattro gusci reali verificati da pannello, anteprima, Undo/Redo e salvataggio/riapertura; limite trasformato distinto
    sopra.
-6. **01/11 — Schizzi, Estendi e unione (`8121ed7`, registro `45d0ab1`).** Conversioni/sezioni esplicite visibili senza
-   mostrare cache automatiche; formato 60 e promozione delle conversioni storiche. Estendi apre subito il pannello. Unione
-   Corpo 1/4 di Flacone3 corretta nell'app in entrambi gli ordini. App compilata, regressioni e QA XCB/Wayland PASS; storia,
-   persistenza e genealogia verificate. Incluse anche correzioni a raccordi e scambio STEP/IGES, preservando spline e
-   intervalli esatti.
-7. **31/10–30/10 — Raccordi, tavole e unificazione.** Modalita' avanzate e pannelli compatti,
-   quote/rugosita'/sezioni e migrazione CT0578 (48/48 quote), main unificato con GPU facoltative.
-   Esiti storici e limiti nel [checkpoint](docs/history/claude-checkpoint-prima-complessita-2026-11-03.md);
-   non certificano l'ultimo HEAD. [CI](docs/ci.md).
+6. **01/11 e precedenti.** Schizzi/Estendi/unione (`8121ed7`), raccordi, tavole e unificazione:
+   esiti storici e limiti nel [registro archiviato](docs/history/claude-prima-svuotamento-2026-11-04.md).
 
 Per riprendere lavori più vecchi, cercare nell'archivio o in Git e poi verificare i sorgenti attuali. Questa memoria non
 sostituisce i rapporti di prova e non richiede di caricarli tutti.

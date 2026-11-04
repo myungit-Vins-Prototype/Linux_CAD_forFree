@@ -59,6 +59,26 @@ Vec3 desiredDerivative(const BSplineSurface &surface, bool right, double v,
     return norm(natural) * normalized(projected);
     } catch (const std::exception &error) { throw std::domain_error(std::string(error.what()) + guideTag(condition)); }
 }
+// Lift cubico di Hermite sull'intero dominio U. La sua rappresentazione
+// nella base B-spline usa i momenti simmetrici dei nodi (blossom): resta
+// identica se il grado viene elevato o si inseriscono nodi lisci.
+// Correggere solo la prima riga interna concentra invece la curvatura in
+// una fascia sempre piu' stretta al crescere del grado della loft.
+double transverseLift(const BSplineSurface &surface, int row, bool right) {
+    const int degree = surface.uDegree();
+    const auto domain = surface.uDomain();
+    double e1 = 0, e2 = 0, e3 = 0;
+    for (int j = 1; j <= degree; ++j) {
+        const double x = (surface.uKnots()[row+j] - domain.lo) / domain.length();
+        e3 += x * e2;
+        e2 += x * e1;
+        e1 += x;
+    }
+    const double m1 = e1 / degree;
+    const double m2 = e2 / (double(degree) * (degree-1) / 2);
+    const double m3 = e3 / (double(degree) * (degree-1) * (degree-2) / 6);
+    return domain.length() * (right ? m3-m2 : m1-2*m2+m3);
+}
 std::vector<double> greville(const BSplineSurface &surface) {
     std::vector<double> result(surface.vPoleCount());
     const int degree = surface.vDegree(); const auto &knots = surface.vKnots();
@@ -173,9 +193,7 @@ BSplineSurfacePtr constrainLoftGuides(BSplineSurfacePtr original,
         }
         const auto parameters = greville(*base);
         for (int side = 0; side < 2; ++side) if (conditions[side] && conditions[side]->crossMode) {
-            const int boundary = side ? nu - 1 : 0, neighbor = side ? nu - 2 : 1;
-            const double factor = base->uDegree() / (side ? base->uDomain().hi - base->uKnots()[nu - 1]
-                                                                       : base->uKnots()[base->uDegree() + 1] - base->uDomain().lo);
+            const int boundary = side ? nu - 1 : 0;
             const double u = side ? base->uDomain().hi : base->uDomain().lo;
             std::vector<Vec3> corrections; corrections.reserve(nv);
             for (double v : parameters) {
@@ -188,8 +206,9 @@ BSplineSurfacePtr constrainLoftGuides(BSplineSurfacePtr original,
                 basisFunctionDerivatives(base->vKnots(),span,v,base->vDegree(),0,basis.data());
                 double weight = 0;
                 for (int j=0;j<=base->vDegree();++j) weight += basis[j]*base->weight(boundary,span-base->vDegree()+j);
-                // Alla destra Su = factor*(Hultimo-Hpenultimo), segno opposto.
-                corrections.push_back((side ? -1.0 : 1.0) * weight * delta / factor);
+                // Derivata del numeratore omogeneo; il lift conserva
+                // punti e pesi su entrambi i bordi e il jet opposto.
+                corrections.push_back(weight * delta);
             }
             auto field = interpolateField(*base, parameters, std::move(corrections));
             // Con condizioni sui profili non alterare neppure il jet V gia'
@@ -197,7 +216,10 @@ BSplineSurfacePtr constrainLoftGuides(BSplineSurfacePtr original,
             for (int j=0;j<=startOrder;++j) field[j]=Vec3();
             for (int j=0;j<=endOrder;++j) field[nv-1-j]=Vec3();
             smoothFieldJoins(base->vKnots(),field);
-            for (int v=0;v<nv;++v) poles[std::size_t(neighbor)*nv+v] += field[v]/base->weight(neighbor,v);
+            for (int u=1;u<nu-1;++u) {
+                const double lift = transverseLift(*base,u,side);
+                for (int v=0;v<nv;++v) poles[std::size_t(u)*nv+v] += lift*field[v]/base->weight(u,v);
+            }
         }
         auto candidate = std::make_shared<BSplineSurface>(base->uDegree(),base->vDegree(),base->uKnots(),base->vKnots(),nu,nv,poles,
             base->isRational()?weights:std::vector<double>{});

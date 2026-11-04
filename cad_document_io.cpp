@@ -936,7 +936,8 @@ namespace {
 constexpr quint32 kBodyCacheTag = 0x46434332;  // "FCC2"
 // 9: raccordi ricalcolati sui nodi degli appoggi; derivate laterali corrette.
 // 11: griglie loft senza molteplicita' superflue nei nodi adattivi delle guide.
-constexpr quint32 kBodyCacheVersion = 11;
+// 12: lift G1 cubico indipendente dal grado e raccordi con jet unilaterali.
+constexpr quint32 kBodyCacheVersion = 12;
 constexpr qsizetype kMaxDisplayValues = 200000000;
 
 QByteArray definitionHash(const QByteArray &payload) { return QCryptographicHash::hash(payload, QCryptographicHash::Sha256); }
@@ -1171,12 +1172,13 @@ void applyBodyCache(const QByteArray &compressed, const QByteArray &payload, Doc
     // attraversando nodi degli appoggi: rigenerare insieme tutti i derivati.
     // Rigenerare anche specchi/ripetizioni precedenti alle istanze condivise,
     // cosi' la prossima cache non conserva le vecchie griglie duplicate.
-    // Le loft precedenti alla cache 11 conservavano griglie inutilmente dense.
+    // Le loft precedenti alla cache 12 concentravano la correzione G1
+    // in una riga di poli; i raccordi usavano il jet opposto sui nodi.
     if (state.version.checkinId.isNull()
         && std::any_of(state.extrusions.cbegin(), state.extrusions.cend(),
             [cacheVersion](const ExtrusionObject &body) {
-                return !body.suppressed && ((cacheVersion < 11 && body.feature == BodyFeature::Loft)
-                    || (cacheVersion < 9 && body.feature == BodyFeature::Blend)
+                return !body.suppressed && ((cacheVersion < 12 && body.feature == BodyFeature::Loft)
+                    || (cacheVersion < 12 && body.feature == BodyFeature::Blend)
                     || (cacheVersion < 10 && (body.feature == BodyFeature::Pattern || body.feature == BodyFeature::Transform)));
             }))
         return;

@@ -45,6 +45,39 @@ FK_TEST(BlendContactKnotCrossingsUseContactParameters) {
     }
 }
 
+// Un evento sul limite del fit non aggiunge una campata, ma serve a usare
+// la derivata dal lato interno: quella del tratto opposto crea micro-pezze.
+FK_TEST(BlendContactKnotAtFitEndpoints) {
+    const auto surface = contactSupport();
+    const Plane plane(Frame3{});
+    for (bool atStart : {false, true}) for (bool reverse : {false, true}) {
+        const double endpoint = atStart ? 0.0 : 1.0;
+        const double direction = reverse ? -0.3 : 0.3;
+        const auto sample = [&](double t) {
+            return detail::BlendContactSample{{0.5 + direction * (t-endpoint),0.3,0.3,0.3},
+                                               {direction,0,0,0}};
+        };
+        const auto roots = detail::blendContactBreaks(surface,plane,{0,1},{0,1},sample);
+        FK_CHECK(roots.size()==1);
+        if (!roots.empty()) FK_CHECK_NEAR(roots[0],endpoint,1e-14);
+    }
+}
+
+FK_TEST(BlendContactKnotAtExistingEdgeBreakUsesOneParameter) {
+    const auto surface = contactSupport();
+    const Plane plane(Frame3{});
+    const auto sample=[](double t){return detail::BlendContactSample{{t,0.3,0.3,0.3},{1,0,0,0}};};
+    for(double direction:{0.,1.}) {
+        const double node=std::nextafter(.5,direction);
+        const auto roots=detail::blendContactBreaks(surface,plane,{0,1},{0,node,1},sample);
+        FK_CHECK(roots.size()==1);
+        if(!roots.empty()) FK_CHECK(roots[0]==node);
+    }
+    const auto distinct=detail::blendContactBreaks(surface,plane,{0,1},{0,.5+1e-10,1},sample);
+    FK_CHECK(distinct.size()==1);
+    if(!distinct.empty()) FK_CHECK_NEAR(distinct[0],.5,1e-14);
+}
+
 FK_TEST(BlendContactKnotOnProbeAndRealNormalJump) {
     const Plane plane(Frame3{});
     const auto sample = [](double t) { return detail::BlendContactSample{{t,0.3,0.3,0.3},{1,0,0,0}}; };
@@ -72,7 +105,15 @@ FK_TEST(BlendContactKnotKeepsRadiusAndAllowsOneMillimeterOffset) {
     std::ifstream file(std::string(FORGECAD_SOURCE_DIR) + "/kernel/tests/data/blend_contact_knot.body", std::ios::binary);
     FK_CHECK(bool(file));
     std::stringstream bytes; bytes << file.rdbuf();
-    const Body input = readBodyBinary(bytes.str());
+    for (double perturbation : {0.,1e-7}) {
+    Body input = readBodyBinary(bytes.str());
+    if (perturbation) for (auto f : input.faces()) if (input.face(f).surface->type()==SurfaceType::BSpline) {
+        const auto &s=static_cast<const BSplineSurface &>(*input.face(f).surface);
+        std::vector<Vec3> poles;
+        for(int u=0;u<s.uPoleCount();++u)for(int v=0;v<s.vPoleCount();++v)
+            poles.push_back(s.pole(u,v)+(u==4?Vec3(0,0,perturbation):Vec3()));
+        input.face(f).surface=std::make_shared<BSplineSurface>(s.uDegree(),s.vDegree(),s.uKnots(),s.vKnots(),s.uPoleCount(),s.vPoleCount(),poles);
+    }
     const auto original = writeBodyBinary(input);
     FK_CHECK(checkBody(input, {true,true}).empty());
     std::vector<EdgeId> chosen;
@@ -122,4 +163,5 @@ FK_TEST(BlendContactKnotKeepsRadiusAndAllowsOneMillimeterOffset) {
     }
     FK_CHECK(freeformFillets >= 1);
     FK_CHECK(writeBodyBinary(input) == original);
+    }
 }

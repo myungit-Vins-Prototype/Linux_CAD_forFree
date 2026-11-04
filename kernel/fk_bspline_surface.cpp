@@ -80,6 +80,10 @@ void BSplineSurface::evaluate(double u, double v, int order, Vec3 *out) const {
     detail::basisFunctionDerivatives(uKnots(), su, u, pu, du, nu.data());
     detail::basisFunctionDerivatives(vKnots(), sv, v, pv, dv, nv.data());
 
+    // Coordinate locali del blocco attivo: le somme delle derivate della
+    // base sono nulle, ma sommarle sulle coordinate mondo amplifica la
+    // cancellazione ai nodi stretti e nei gradi elevati.
+    const Vec3 origin = pole(su-pu,sv-pv);
     // Il solo punto usa gli stessi termini e lo stesso ordine di somma,
     // senza preparare i buffer e la ricorrenza delle derivate A4.4.
     if (order == 0) {
@@ -91,11 +95,11 @@ void BSplineSurface::evaluate(double u, double v, int order, Vec3 *out) const {
             for (int j = 0; j <= pv; ++j) {
                 const int row = su - pu + i, column = sv - pv + j;
                 const double b = bu * nv[j] * weight(row, column);
-                sum += b * pole(row, column);
+                sum += b * (pole(row,column)-origin);
                 weightSum += b;
             }
         }
-        out[0] = isRational() ? sum / weightSum : sum;
+        out[0] = origin + (isRational() ? sum / weightSum : sum);
         return;
     }
 
@@ -113,7 +117,7 @@ void BSplineSurface::evaluate(double u, double v, int order, Vec3 *out) const {
                 for (int j = 0; j <= pv; ++j) {
                     const int row = su - pu + i, column = sv - pv + j;
                     const double b = bu * nv[l * (pv + 1) + j] * weight(row, column);
-                    sum += b * pole(row, column);
+                    sum += b * (pole(row,column)-origin);
                     weightSum += b;
                 }
             }
@@ -126,6 +130,7 @@ void BSplineSurface::evaluate(double u, double v, int order, Vec3 *out) const {
     if (!isRational()) {
         for (int k = 0; k <= order; ++k)
             for (int l = 0; k + l <= order; ++l) out[derivativeIndex(k, l, order)] = a[k * size + l];
+        out[0] += origin;
         return;
     }
     // A4.4: S_kl = (A_kl - sum_j C(l,j) w_0j S_k,l-j - sum_i C(k,i) w_i0 S_k-i,l
@@ -144,6 +149,7 @@ void BSplineSurface::evaluate(double u, double v, int order, Vec3 *out) const {
             S(k, l) = value / w[0];
         }
     }
+    out[0] += origin;
 }
 
 // Poli della curva a u costante: Q_j = sum_i N_i(u) w_ij P_ij / W_j, W_j = sum_i N_i(u) w_ij.
