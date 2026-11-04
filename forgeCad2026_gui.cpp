@@ -4736,12 +4736,15 @@ void PdfWindow::rebuildModelTree() {
         QTreeWidgetItem *item = addObject(body.error.isEmpty() ? label : label + QStringLiteral("  \u26A0"),
                                           kTreeExtrusion, index, reference ? body.visible : -1, parent);
         featureItems.insert(index, item);
-        bool hasPreviousStage = false;
-        for (int previous = 0; previous < index; ++previous)
-            if (extrusions.at(previous).modelBodyId == body.modelBodyId) { hasPreviousStage = true; break; }
+        bool hasPreviousStage = false, hasOtherStage = false;
+        for (int stage = 0; stage < extrusions.size(); ++stage)
+            if (stage != index && extrusions.at(stage).modelBodyId == body.modelBodyId) {
+                hasOtherStage = true;
+                if (stage < index) hasPreviousStage = true;
+            }
         if (!reference) {
             item->setFlags(item->flags() | Qt::ItemIsDropEnabled);
-            if (hasPreviousStage) item->setFlags(item->flags() | Qt::ItemIsDragEnabled);
+            if (hasPreviousStage || !hasOtherStage) item->setFlags(item->flags() | Qt::ItemIsDragEnabled);
         }
         const QString icon = featureIconName(body);
         if (!icon.isEmpty()) item->setIcon(0, ForgeCad::commandIcon(icon));

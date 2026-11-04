@@ -722,7 +722,10 @@ bool loftDialog(QWidget *parent, CadViewport *viewport, const QString &title, in
         const int role=target==3?(supportMode==1?ForgeCad::DatumRolePlane:ForgeCad::DatumRoleFace)
                                 :ForgeCad::DatumRoleCurve|ForgeCad::DatumRoleLine;
         const QString reason=viewport->beginReferencePick(role,replaced);
-        pickStatus->setText(reason.isEmpty()?QStringLiteral("Scegli nella vista o nella storyboard; il clic su uno schizzo sceglie il contorno intero. Espandi per le singole entita'. Esc termina."):reason);
+        const QString instruction = target == 3 && supportMode == 2
+            ? QStringLiteral("Scegli le facce adiacenti alla guida nella vista o nella storyboard. In modifica sono disponibili solo le funzioni precedenti alla loft. Per un appoggio successivo, riordina prima la storia rispettando le dipendenze. Esc termina.")
+            : QStringLiteral("Scegli nella vista o nella storyboard; il clic su uno schizzo sceglie il contorno intero. Espandi per le singole entita'. Esc termina.");
+        pickStatus->setText(reason.isEmpty() ? instruction : reason);
     };
     for(const QString &name : {QStringLiteral("surfaceStartFacesPick"),QStringLiteral("surfaceEndFacesPick")})
         QObject::connect(dialog.findChild<QPushButton *>(name),&QPushButton::clicked,&dialog,[&] {

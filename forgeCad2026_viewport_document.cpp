@@ -743,7 +743,13 @@ QString CadViewport::reorderFeatureTo(int index, int target, const QVector<Story
     int first = -1;
     for (int candidate = 0; candidate < extrusions_.size(); ++candidate)
         if (bodyId && extrusions_.at(candidate).modelBodyId == bodyId) { first = candidate; break; }
-    if (bodyId && index == first) return QStringLiteral("La feature che crea il corpo non si sposta: sposta le feature che la seguono.");
+    // Un corpo con un solo stadio puo' cambiare posizione rispetto agli
+    // altri corpi: restano obbligatori gli stessi controlli di dipendenza.
+    // Con piu' stadi il creatore resta ancorato alla propria catena.
+    if (bodyId && index == first)
+        for (int candidate = first + 1; candidate < extrusions_.size(); ++candidate)
+            if (extrusions_.at(candidate).modelBodyId == bodyId)
+                return QStringLiteral("La feature che crea il corpo non si sposta: sposta le feature che la seguono.");
     bool bodyVisible = true;
     for (const ModelBody &body : modelBodies_)
         if (body.id == bodyId) { bodyVisible = body.visible; break; }

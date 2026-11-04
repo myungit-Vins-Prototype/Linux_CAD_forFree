@@ -1432,7 +1432,10 @@ void CadViewport::drawExtrusions() {
         if (!isBodyVisibleInScene(target.index) || (extrusion.display.vertices.isEmpty() && extrusion.display.edges.isEmpty())) return;
         drawExtrusionOutline(extrusion, color, width);
     };
-    if (previewing && (preview_.valid || previewDragVisible_)) drawPreview();
+    // La superficie in costruzione non e' un appoggio: durante la scelta
+    // delle facce storiche lascia scoperte quelle realmente selezionabili.
+    const bool pickingHistoricalFace = refPicking_ && refPickOwner_ >= 0 && (refPickRoles_ & ForgeCad::DatumRoleFace);
+    if (previewing && (preview_.valid || previewDragVisible_) && !pickingHistoricalFace) drawPreview();
     drawTrimPartHover();
     disableSectionClip();
     drawSectionCaps(sectionSolids);

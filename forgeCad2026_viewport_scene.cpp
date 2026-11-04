@@ -2,6 +2,14 @@
 
 bool CadViewport::isBodyVisibleInScene(int index) const {
     if (index < 0 || index >= extrusions_.size()) return false;
+    // In modifica il picker usa la scena precedente alla feature. Gli
+    // operandi ripristinati dall'anteprima possono invece appartenere a
+    // stadi successivi: mostrarli farebbe scegliere la faccia sottostante.
+    // Anche la base sostituita deve restare visibile se e' selezionabile.
+    if (refPicking_ && refPickOwner_ >= 0 && !sketchMode_) {
+        if (index >= refPickOwner_ || (!pickBodies_.isEmpty() && !pickBodies_.contains(index))) return false;
+        return isBodyDrawn(index);
+    }
     const bool previewing = (!sketchMode_ || sketchViewUnlocked_) && !preview_.key.isEmpty();
     const bool replaced = previewing && preview_.replaced.contains(index);
     if (previewing && (index == preview_.index || preview_.later.contains(index)

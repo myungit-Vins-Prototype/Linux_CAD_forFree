@@ -105,14 +105,14 @@ ctest --test-dir forgecad-release --output-on-failure
 
 **04/11 — Griglie, specchi e guide.** Specchi/guide pubblicati in `3c644e2`: B-rep2/cache10,
 PRT148,4→74,7MB prima shell,190,5→116,9MB con shell; identità e Undo/Redo verificati.
-[Specchi](docs/riduzione-complessita-specchi-2026-11-03.md). Guide normale invertibile/tangente a facce,
-appoggi multipli,campo C2;formato62,10CTest e XCB/Wayland PASS.
+[Specchi](docs/riduzione-complessita-specchi-2026-11-03.md). Guide normale invertibile/tangente, appoggi multipli/C2;formato62,10CTest/XCB/Wayland PASS.
 [Guide](docs/loft-controlli-guide-2026-11-04.md),[shell](docs/svuotamento-f0-f14-2026-11-03.md).
 Griglie: nodi V minimi, cache11/686MB accettata; PRT190,5→88,7MB, STEP corpo745,1→458,7MB,
 shell928,5→642,7MB. 26feature, aperture F0/F14 e spessore1mm PASS; STEP rilegge poli esatti.
 [Prove e limiti](docs/riduzione-griglie-loft-step-2026-11-04.md): loft<4,1e-13mm; bordi raccordi
 rigenerati<0,00225mm entro budget originali. Grado ridotto escluso (errore Raccordo25).
-App/runner aggiornati; 9CTest, Loft42, Blend60, Shell18, rendering Wayland PASS; originali intatti.
+App/runner aggiornati; 9CTest, Loft42, Blend60, Shell18, Wayland PASS; originali intatti.
+Appoggi G1/riordino autonomi:11CTest,26feature,XCB/Wayland e G1 reale PASS. [F7/E25](docs/loft-selezione-facce-storiche-2026-11-04.md).
 
 0. **03/11 — Schizzi, riferimenti e loft.** Visualizza/Mostra linee di costruzione persistente:
    app/CTest10/10,rendering e persistenza Wayland/XCB PASS; popup automatizzato Wayland non verificato.
@@ -120,8 +120,7 @@ App/runner aggiornati; 9CTest, Loft42, Blend60, Shell18, rendering Wayland PASS;
    Undo/dirty, pulizia cache con rimappatura e protezione di vincoli/consumatori; costruzione solo
    in modifica o con Visualizza/Mostra linee di costruzione (persistente), esclusa dai loft. Undo approvato; dati malformati conservati. App/runner,6QA native,
    file49→33,CTest169PASS/1SKIP/0FAIL,ultimo17/17 PASS. [Rapporto](docs/schizzi-riferimenti-costruzione-2026-11-03.md).
-   Loft3sezioni/2guide: residuo2,235e-7 mm rendeva discontinuo il fit; raccordo C2 nel budget di
-   connessione esistente, fit1e-9 mm e sorgenti invariati. App/runner,CTest8/8,forma11/11,Loft42/42,
+   Loft3sezioni/2guide: raccordo C2 del residuo2,235e-7mm nel budget esistente; fit1e-9mm, sorgenti invariati. App/runner,CTest8/8,forma11/11,Loft42/42,
    4flussi Wayland/XCB PASS;sezioni4,99e-14 mm. Mappa566/7825/268/check/HTML PASS.
    [Prove](docs/loft-tolleranza-incontri-2026-11-03.md).
    Studio statico SolidCraft138e347/FreeCAD1.1.4: base adeguata; proposti ID locali/prodotti e mutazioni

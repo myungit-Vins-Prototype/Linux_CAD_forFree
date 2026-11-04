@@ -6265,6 +6265,79 @@ public:
         v.refPickRoles_ = DatumRolePlane;
         require(v.pickReference(cursor, picked) && (picked.kind == 8 || picked.kind == 1),
                 "i piani restano selezionabili quando richiesti");
+        // Anteprima e picker devono usare la stessa scena in modifica:
+        // un operando successivo ripristinato dalla preview non e' un
+        // riferimento valido; la base selezionabile non va coperta.
+        CadViewport historical;
+        historical.resize(800, 600); historical.setViewNormal(0);
+        ExtrusionObject base = v.extrusions_.first();
+        base.visible = false; base.modelBodyId = 1; base.featureId = 501;
+        ExtrusionObject edited = base;
+        edited.feature = BodyFeature::Loft; edited.modelBodyId = 2; edited.featureId = 502;
+        ExtrusionObject future = base;
+        future.visible = true; future.modelBodyId = 3; future.featureId = 503;
+        historical.extrusions_ = {base, edited, future};
+        historical.preview_.key = QStringLiteral("historical-face-pick");
+        historical.preview_.definition = edited; historical.preview_.index = 1;
+        historical.preview_.valid = true; historical.preview_.replaced = {0}; historical.preview_.restored = {2};
+        require(historical.beginReferencePick(DatumRoleFace, 1).isEmpty(), "scelta appoggio durante modifica loft");
+        require(historical.referenceBodyEligible(0) && historical.isBodyVisibleInScene(0),
+                "base storica selezionabile resta visibile anche se sostituita dalla preview");
+        require(!historical.isBodyVisibleInScene(1) && !historical.referenceBodyEligible(1)
+                && !historical.isBodyVisibleInScene(2) && !historical.referenceBodyEligible(2),
+                "loft modificata e operandi futuri non coprono le facce selezionabili");
+        const QPoint historicalCursor = historical.projectWorldPoint(QVector3D(0.5f, 0.5f, 0)).toPoint();
+        GeometryRef historicalFace;
+        bool clickedFace = false;
+        historical.setReferencePickCallback([&](bool ok, GeometryRef ref) { clickedFace = ok; historicalFace = ref; });
+        QMouseEvent press(QEvent::MouseButtonPress, historicalCursor, historical.mapToGlobal(historicalCursor),
+                          Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+        QMouseEvent release(QEvent::MouseButtonRelease, historicalCursor, historical.mapToGlobal(historicalCursor),
+                            Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+        QApplication::sendEvent(&historical, &press); QApplication::sendEvent(&historical, &release);
+        require(clickedFace && historicalFace.kind == 5 && historicalFace.index == 0
+                && historicalFace.featureId == base.featureId, "clic reale acquisisce la faccia precedente alla loft");
+        require(!historical.extrusions_[0].visible && historical.extrusions_[2].visible,
+                "scelta storica non cambia le preferenze di visibilita salvate");
+        require(!historical.refPicking_ && historical.isBodyVisibleInScene(2),
+                "dopo la scelta torna il normale contesto dell'anteprima");
+
+        // Un appoggio indipendente puo' essere riordinato prima della loft
+        // anche quando entrambi i risultati creano un corpo autonomo.
+        CadViewport independent;
+        require(independent.createPrimitive(box, QStringLiteral("Primo corpo")).isEmpty()
+                && independent.createPrimitive(box, QStringLiteral("Secondo corpo")).isEmpty(),
+                "corpi autonomi per il riordino degli appoggi");
+        const auto firstId = independent.extrusions_[0].featureId;
+        const auto secondId = independent.extrusions_[1].featureId;
+        require(independent.moveFeatureTo(0, 1).isEmpty()
+                && independent.extrusions_[0].featureId == secondId && independent.extrusions_[1].featureId == firstId,
+                "creatore di corpo autonomo spostabile dopo un altro corpo");
+        independent.undo();
+        require(independent.extrusions_[0].featureId == firstId, "Undo riordino del creatore autonomo");
+        independent.redo();
+        require(independent.extrusions_[0].featureId == secondId, "Redo riordino del creatore autonomo");
+        const auto checkCreatorDrag = [&](bool expected) {
+            PdfWindow treeWindow;
+            treeWindow.viewport_->loadDocument(independent.currentDocument()); treeWindow.rebuildModelTree();
+            bool found = false;
+            for (QTreeWidgetItemIterator it(treeWindow.modelTree_); *it; ++it) {
+                auto *item = *it;
+                if (item->data(0, Qt::UserRole).toInt() != kTreeExtrusion
+                    || item->data(0, Qt::UserRole + 1).toInt() != 0) continue;
+                found = true;
+                require(bool(item->flags() & Qt::ItemIsDragEnabled) == expected,
+                        "albero abilita il trascinamento del creatore solo per corpi a uno stadio");
+            }
+            require(found, "creatore presente nella storyboard reale");
+        };
+        checkCreatorDrag(true);
+        require(independent.createScale(0, 1.1, 0, {}, QStringLiteral("Scala dipendente")).isEmpty(),
+                "stadio dipendente per controllo della catena");
+        checkCreatorDrag(false);
+        require(!independent.moveFeatureTo(0, 1).isEmpty(), "creatore con piu' stadi resta ancorato");
+        require(!independent.moveFeatureTo(2, 0).isEmpty(), "modificatore non puo' precedere il proprio creatore");
+
         ExtrusionObject definition;
         definition.feature = BodyFeature::SurfaceOffset;
         ExtrusionObject separate = definition;
