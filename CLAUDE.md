@@ -103,15 +103,16 @@ ctest --test-dir forgecad-release --output-on-failure
 
 ## Ultimi interventi — esiti consolidati
 
-**04/11 — Specchi e guide.** Locale: istanze NURBS condivise, B-rep2/lettura1, cache10.
-Prima shell148,4→74,7MB; corrente26feature190,5→116,9MB; originale intatto, identita' conservate.
-F0/F14 aperte, spessore662campioni errore5,834e-8mm; preview/OK/Undo/Redo/cache/no-cache PASS.
-App/runner aggiornati; istanze8,BSpline7,Transform10,BodyIO2,STEP22,Loft42,Blend60,Shell18 PASS.
-Con shell cache1,083GB oltre1GiB: rigenera; STEP specchi espliciti per compatibilita', griglie loft ancora grandi.
-[Complessita'](docs/riduzione-complessita-specchi-2026-11-03.md). Guide: normale invertibile/tangente a facce,
-appoggi multipli, campo C2, sezioni/jet conservati; formato62,10CTest e XCB/Wayland PASS.
-[Guide](docs/loft-controlli-guide-2026-11-04.md). Shell precedente f20ee09 pubblicato:
-[prove](docs/svuotamento-f0-f14-2026-11-03.md). Nessun nuovo push; dettagli e limiti nei rapporti.
+**04/11 — Griglie, specchi e guide.** Specchi/guide pubblicati in `3c644e2`: B-rep2/cache10,
+PRT148,4→74,7MB prima shell,190,5→116,9MB con shell; identità e Undo/Redo verificati.
+[Specchi](docs/riduzione-complessita-specchi-2026-11-03.md). Guide normale invertibile/tangente a facce,
+appoggi multipli,campo C2;formato62,10CTest e XCB/Wayland PASS.
+[Guide](docs/loft-controlli-guide-2026-11-04.md),[shell](docs/svuotamento-f0-f14-2026-11-03.md).
+Griglie: nodi V minimi, cache11/686MB accettata; PRT190,5→88,7MB, STEP corpo745,1→458,7MB,
+shell928,5→642,7MB. 26feature, aperture F0/F14 e spessore1mm PASS; STEP rilegge poli esatti.
+[Prove e limiti](docs/riduzione-griglie-loft-step-2026-11-04.md): loft<4,1e-13mm; bordi raccordi
+rigenerati<0,00225mm entro budget originali. Grado ridotto escluso (errore Raccordo25).
+App/runner aggiornati; 9CTest, Loft42, Blend60, Shell18, rendering Wayland PASS; originali intatti.
 
 0. **03/11 — Schizzi, riferimenti e loft.** Visualizza/Mostra linee di costruzione persistente:
    app/CTest10/10,rendering e persistenza Wayland/XCB PASS; popup automatizzato Wayland non verificato.

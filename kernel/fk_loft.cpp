@@ -10,6 +10,7 @@
 #include <cmath>
 #include <map>
 #include <limits>
+#include <iterator>
 #include <stdexcept>
 
 #include "fk_body_check.h"
@@ -840,13 +841,26 @@ BSplineCurve<3> followingGuide(const std::vector<PathSegment> &path, const std::
 }
 
 BSplineCurve<3> refineLoftRow(BSplineCurve<3> curve, const std::vector<double> &knots) {
-    for (double knot : knots) {
+    // Vettore espanso: l'unione conserva la massima molteplicita' richiesta,
+    // senza trasformare in giunti C0 i nodi C2 del fit adattivo.
+    for (auto first = knots.begin(); first != knots.end();) {
         cancellationPoint();
-        if (knot<=curve.domain().lo || knot>=curve.domain().hi) continue;
-        const int have=int(std::count(curve.knots().begin(),curve.knots().end(),knot));
-        if (have<5) curve=curve.insertKnot(knot,5-have);
+        const double knot = *first;
+        const auto last = std::upper_bound(first, knots.end(), knot);
+        const int wanted = int(last - first);
+        first = last;
+        if (knot <= curve.domain().lo || knot >= curve.domain().hi) continue;
+        const int have = curve.multiplicity(knot);
+        if (have < wanted) curve = curve.insertKnot(knot, wanted - have);
     }
     return curve;
+}
+
+std::vector<double> unionLoftKnots(const std::vector<double> &a, const std::vector<double> &b) {
+    std::vector<double> result;
+    result.reserve(a.size() + b.size());
+    std::set_union(a.begin(), a.end(), b.begin(), b.end(), std::back_inserter(result));
+    return result;
 }
 
 Body loftCore(const std::vector<Section> &sections, const LoftOptions &options, bool closed, const std::vector<Frame3> &capPlanes,
@@ -1515,7 +1529,7 @@ Body loftCore(const std::vector<Section> &sections, const LoftOptions &options, 
             std::vector<std::vector<Vec3>> vertexRows(V);
             std::vector<std::vector<double>> vertexWeights(V);
             std::vector<BSplineCurvePtr<3>> followed(V);
-            std::vector<double> commonBreaks = v;
+            std::vector<double> commonKnots = originalVKnots;
             for (std::size_t m=0;m<V;++m) if (vertexGuide[m] && activeGuide(options, std::size_t(vertexGuide[m] - guideHits.data()))) {
                 std::vector<Vec3> row;std::vector<double> weights;
                 if(m<M) interpolate(m,0,row,weights);
@@ -1523,15 +1537,13 @@ Body loftCore(const std::vector<Section> &sections, const LoftOptions &options, 
                 const BSplineCurve<3> base(q,originalVKnots,row,weights);
                 const std::size_t guide=std::size_t(vertexGuide[m]-guideHits.data());
                 auto curve=followingGuide(options.guides[guide],guideHits[guide],v,base,guideCondition(options, guide).influence,1e-9,1e-6*scale);
-                for(double knot:curve.knots()) commonBreaks.push_back(knot);
+                commonKnots = unionLoftKnots(commonKnots, curve.knots());
                 followed[m]=std::make_shared<BSplineCurve<3>>(std::move(curve));
             }
-            std::sort(commonBreaks.begin(),commonBreaks.end());
-            commonBreaks.erase(std::unique(commonBreaks.begin(),commonBreaks.end()),commonBreaks.end());
-            vKnots.assign(6,0.0);
-            for(double knot:commonBreaks) if(knot>0 && knot<1) vKnots.insert(vKnots.end(),5,knot);
-            vKnots.insert(vKnots.end(),6,1.0);vCount=int(vKnots.size())-q-1;
-            for(auto &curve:followed) if(curve) curve=std::make_shared<BSplineCurve<3>>(refineLoftRow(*curve,commonBreaks));
+            vKnots = std::move(commonKnots);
+            vCount = int(vKnots.size()) - q - 1;
+            for (auto &curve : followed)
+                if (curve) curve = std::make_shared<BSplineCurve<3>>(refineLoftRow(*curve, vKnots));
             std::vector<int> longitudinal(V);
             for (std::size_t m = 0; m < V; ++m) {
                 if (m < M) interpolate(m, 0, vertexRows[m], vertexWeights[m]);

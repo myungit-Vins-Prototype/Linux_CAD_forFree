@@ -220,16 +220,18 @@ void documentLoftCacheMigrationTests() {
     require(decodeDocument(encoded,current).isEmpty() && current.extrusions[0].cachedGeometry
             && current.extrusions[1].cachedGeometry && current.extrusions[1].forgeBody,
             "cache moderna conserva il loft e gli altri B-rep");
-    require(decodeDocument(documentWithCacheVersion(encoded,7),previous).isEmpty()
-            && previous.sketches.size() == 2 && previous.extrusions[1].loftSketches == QVector<int>({0,1})
-            && !previous.extrusions[0].forgeBody && !previous.extrusions[1].forgeBody,
-            "cache loft precedente scartata atomicamente, definizione conservata");
+    for (quint32 version : {7u, 10u}) {
+        require(decodeDocument(documentWithCacheVersion(encoded,version),previous).isEmpty()
+                && previous.sketches.size() == 2 && previous.extrusions[1].loftSketches == QVector<int>({0,1})
+                && !previous.extrusions[0].forgeBody && !previous.extrusions[1].forgeBody,
+                "cache loft precedente scartata atomicamente, definizione conservata");
+    }
     // Un check-in storico non puo' perdere la geometria: readNativeRevision
     // richiede tutti i risultati anche senza aprire il viewport per rigenerarli.
     const auto checkin = QUuid::createUuid();
     source.version.checkinId = checkin;
     require(encodeDocument(source,encoded,true).isEmpty(), "cache revisione con loft");
-    require(decodeDocument(documentWithCacheVersion(encoded,7),previous).isEmpty()
+    require(decodeDocument(documentWithCacheVersion(encoded,10),previous).isEmpty()
             && previous.version.checkinId == checkin && previous.extrusions[0].cachedGeometry
             && previous.extrusions[1].cachedGeometry && previous.extrusions[1].forgeBody
             && Kernel::writeBodyBinary(*previous.extrusions[1].forgeBody) == Kernel::writeBodyBinary(*loft.forgeBody),
@@ -237,7 +239,7 @@ void documentLoftCacheMigrationTests() {
     source.version.checkinId = {};
     source.extrusions.removeLast();
     require(encodeDocument(source,encoded,true).isEmpty(), "cache documento senza loft");
-    require(decodeDocument(documentWithCacheVersion(encoded,7),previous).isEmpty()
+    require(decodeDocument(documentWithCacheVersion(encoded,10),previous).isEmpty()
             && previous.extrusions[0].cachedGeometry && previous.extrusions[0].forgeBody,
             "cache precedente senza loft conserva lo snapshot portabile");
 }

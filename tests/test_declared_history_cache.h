@@ -124,8 +124,8 @@ static void declaredHistoryCacheTest() {
     QDataStream cacheIn(cacheData); cacheIn.setVersion(QDataStream::Qt_6_0);
     QByteArray sourceHash, payloadHash; quint32 tag = 0, version = 0, count = 0;
     cacheIn >> sourceHash >> payloadHash >> tag >> version >> count;
-    require(version == 9 && count == 4 && payloadHash == QCryptographicHash::hash(testDocumentUncompress(bytes,11, payloadSize), QCryptographicHash::Sha256),
-        "cache 9 legata alla stessa definizione");
+    require(version == 11 && count == 4 && payloadHash == QCryptographicHash::hash(testDocumentUncompress(bytes,11, payloadSize), QCryptographicHash::Sha256),
+        "cache 11 legata alla stessa definizione");
     struct Record { bool has = false; QString error; QByteArray body, history; };
     std::vector<Record> records(count);
     SnapshotChunkReader chunks(cacheIn);

@@ -1,6 +1,7 @@
 # Riduzione della duplicazione geometrica negli specchi — 3 novembre 2026
 
-Stato: implementato e verificato localmente. App e runner compilati; nessun nuovo push eseguito per questo intervento.
+Stato: implementato, verificato e pubblicato su origin/main in `3c644e2`. App e runner compilati.
+Le misure seguenti precedono la successiva [riduzione delle griglie loft e dello STEP](riduzione-griglie-loft-step-2026-11-04.md).
 Richiesta: continuare la riduzione della complessita', evitando di ricopiare la definizione delle superfici specchiate.
 
 ## Misura iniziale

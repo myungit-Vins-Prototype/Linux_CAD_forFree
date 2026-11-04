@@ -296,6 +296,13 @@ add_test(NAME forgekernel_loft_projected_section_tests COMMAND forgekernel_loft_
 set_tests_properties(forgekernel_loft_projected_section_tests PROPERTIES TIMEOUT 120)
 
 # Condizioni trasversali alle guide: direzioni, G1, forma e sezioni esatte.
+add_executable(forgekernel_loft_complexity_tests tests/fk_test_main.cpp tests/test_loft_complexity.cpp)
+target_link_libraries(forgekernel_loft_complexity_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_loft_complexity_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_loft_complexity_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_loft_complexity_tests COMMAND forgekernel_loft_complexity_tests)
+set_tests_properties(forgekernel_loft_complexity_tests PROPERTIES TIMEOUT 120)
+
 add_executable(forgekernel_loft_guide_constraint_tests tests/test_loft_guide_constraints.cpp)
 target_link_libraries(forgekernel_loft_guide_constraint_tests PRIVATE forgekernel)
 target_compile_options(forgekernel_loft_guide_constraint_tests PRIVATE -Wall -Wextra -Wpedantic)
