@@ -120,7 +120,7 @@ Cache12 migra loft/raccordi di lavoro; check-in immutabili. Shell62facce,1mm,F0/
 662punti errore max5,85e-8mm. Wayland/XCB OK/Undo/Redo/cache,Wayland no-cache PASS.
 11CTest,Blend62/62,Shell18/18,Offset26/26 e negativi PASS; app/runner aggiornati.
 Mappa576/7987/276AST,check e8dettagli HTML PASS. Copia verificata84,29MB/26ID conservati;
-originale intatto/hash riconfermato. Commit/pubblicazione in corso.
+originale intatto/hash riconfermato. `d0594e8` pubblicato su origin/main.
 [Diagnosi e prove](docs/svuotamento-poli-non-finiti-2026-11-04.md).
 
 0. **03/11 — Schizzi, riferimenti e loft.** Visualizza/Mostra linee di costruzione persistente:

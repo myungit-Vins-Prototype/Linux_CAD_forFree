@@ -48,4 +48,4 @@ Esperimenti aggiuntivi con loft sintetici quasi tangenti ruotati e traslati a 20
 
 Sonde, log e immagini sono nella cartella QA ignorata da Git. Vista architetturale aggiornata: **576 file, 7987 relazioni, 276 unità AST, zero unità con diagnostica**. `--check` PASS; otto moduli verificati in entrata/uscita, quattro confini di chiamata controllati, overview e otto dettagli HTML resi e verificati. Chiamate C++ risolte, include e riferimenti restano distinti; non è una certificazione di ogni percorso dinamico. `index.html` e `graph.json` restano generati/ignorati, senza aggiunta forzata.
 
-App completa e runner aggiornati. Tutti i controlli richiesti per questa correzione sono conclusi; codice e documentazione pronti per il commit.
+App completa e runner aggiornati. Codice pubblicato su `origin/main` nel commit `d0594e8` (il primo tentativo di push è stato respinto da un errore interno GitHub; il secondo è riuscito). I risultati sopra sono locali; non certificano il completamento della nuova esecuzione GitHub Actions.
