@@ -107,12 +107,12 @@ ctest --test-dir forgecad-release --output-on-failure
 PRT148,4→74,7MB prima shell,190,5→116,9MB con shell; identità e Undo/Redo verificati.
 [Specchi](docs/riduzione-complessita-specchi-2026-11-03.md). Guide normale invertibile/tangente, appoggi multipli/C2;formato62,10CTest/XCB/Wayland PASS.
 [Guide](docs/loft-controlli-guide-2026-11-04.md),[shell](docs/svuotamento-f0-f14-2026-11-03.md).
-Griglie: nodi V minimi, cache11/686MB accettata; PRT190,5→88,7MB, STEP corpo745,1→458,7MB,
+Griglie: nodi V minimi, cache11/686MB; PRT190,5→88,7MB, STEP corpo745,1→458,7MB,
 shell928,5→642,7MB. 26feature, aperture F0/F14 e spessore1mm PASS; STEP rilegge poli esatti.
 [Prove e limiti](docs/riduzione-griglie-loft-step-2026-11-04.md): loft<4,1e-13mm; bordi raccordi
 rigenerati<0,00225mm entro budget originali. Grado ridotto escluso (errore Raccordo25).
-App/runner aggiornati; 9CTest, Loft42, Blend60, Shell18, Wayland PASS; originali intatti.
-Appoggi G1/riordino autonomi:11CTest,26feature,XCB/Wayland e G1 reale PASS. [F7/E25](docs/loft-selezione-facce-storiche-2026-11-04.md).
+App/runner aggiornati;9CTest,Loft42,Blend60,Shell18,Wayland PASS;originali intatti.
+`9eff99c` su origin/main: appoggi G1/riordino autonomi;11CTest,26feature,XCB/Wayland,G1 PASS. [F7/E25](docs/loft-selezione-facce-storiche-2026-11-04.md).
 
 0. **03/11 — Schizzi, riferimenti e loft.** Visualizza/Mostra linee di costruzione persistente:
    app/CTest10/10,rendering e persistenza Wayland/XCB PASS; popup automatizzato Wayland non verificato.
