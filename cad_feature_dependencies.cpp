@@ -67,7 +67,7 @@ QVector<int> bodyOperands(const ExtrusionObject &body) {
     }
     case BodyFeature::SurfaceTools: {
         QVector<int> refs;if(body.surfaceTool.mode!=1)refs.append(body.firstBody);
-        appendRefs(refs, {Family::SurfaceTargets, Family::RuledFirst, Family::RuledSecond});
+        appendRefs(refs, {Family::SurfaceSources, Family::SurfaceTargets, Family::RuledFirst, Family::RuledSecond});
         if(body.surfaceTool.mode==0&&body.surfaceTool.targets.isEmpty())appendRefs(refs, {Family::Extent});
         return refs;
     }
@@ -247,7 +247,15 @@ QVector<int> hiddenOperands(const ExtrusionObject &body) {
         return replaced;
     }
     if (mergingFeature(body) && body.mergeOperation != 0) return body.mergeBodies;
+    if (body.feature==BodyFeature::SurfaceTools && body.surfaceTool.mode==4 && !body.surfaceTool.mappingCopy) {
+        if (body.surfaceTool.sources.isEmpty()) return {body.firstBody};
+        QVector<int> consumed;
+        for (const auto &ref : body.surfaceTool.sources)
+            if (ref.kind==11&&!consumed.contains(ref.index)) consumed.append(ref.index);
+        return consumed;
+    }
     if (body.feature == BodyFeature::Transform && !body.move.copy) return {body.firstBody};
+    if (body.feature==BodyFeature::Pattern && body.pattern.kind>=3 && !body.pattern.featureOnly) return {body.firstBody};
     if (body.feature == BodyFeature::Pattern && body.pattern.featureOnly && body.secondBody >= 0) return {body.secondBody};
     if (body.feature == BodyFeature::Sew) return QVector<int>{body.firstBody} + body.booleanTools;
     if (body.feature == BodyFeature::SheetTrim)

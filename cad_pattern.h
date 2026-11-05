@@ -23,7 +23,7 @@ bool patternFeatureSupported(const ExtrusionObject &source);
 // Massimo 500 trasformazioni oltre all'originale. Conteggi fuori limite
 // rifiutati prima delle allocazioni; su errore l'output e' vuoto.
 bool patternPlacements(const PatternParameters &pattern, int owner, const QVector<SketchObject> &sketches, const QVector<ExtrusionObject> &bodies,
-                       std::vector<Kernel::Transform3> &placements, QString *error);
+                       std::vector<Kernel::Transform3> &placements, QString *error, int source = -1);
 
 // Il corpo con le sue copie (unione dei solidi, shell separate per le superfici;
 // senza l'originale se !keepOriginal).

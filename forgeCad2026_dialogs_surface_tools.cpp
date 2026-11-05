@@ -122,6 +122,7 @@ class PoleDrag final : public QObject {
 } // namespace
 bool surfaceToolDialog(QMainWindow *window, CadViewport *viewport, const QString &title, int replaced, const ExtrusionObject &initial,
                        const std::function<QString(const ExtrusionObject &)> &apply) {
+    if (initial.surfaceTool.mode >= 3) return surfaceMappingDialog(window,viewport,title,replaced,initial,apply);
     using namespace ForgeCad;
     using namespace Kernel;
     ExtrusionObject definition = initial;

@@ -392,6 +392,10 @@ QVector<Dependency> dependencies(int index, const DocumentState &document) {
         break;
     case BodyFeature::SurfaceTools:
         if(feature.surfaceTool.mode!=1)addBodyDependency(result,features,index,feature.firstBody,QStringLiteral("superficie sorgente"));
+        if(feature.surfaceTool.mode>=3) {
+            addRefs(Family::SurfaceSources, QStringLiteral("sorgente mappatura"));
+            addRefs(Family::SurfaceTargets, QStringLiteral("riferimento mappatura"));
+        }
         if(feature.surfaceTool.mode==0) {
             addRefs(feature.surfaceTool.targets.isEmpty() ? Family::Extent : Family::SurfaceTargets, QStringLiteral("limite estensione"));
         }

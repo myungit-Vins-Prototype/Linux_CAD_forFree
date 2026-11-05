@@ -36,11 +36,12 @@ int main() {
         feature.sweepPathRef = ref(18); feature.curveExtraction.source = ref(19);
         feature.curveExtraction.sources = {ref(20), ref(21)};
         feature.curveExtraction.tool = ref(22);
+        feature.surfaceTool.sources={ref(23)};
         const QVector<Family> families{Family::Datum, Family::Pattern, Family::SurfaceTargets, Family::SurfaceTargets,
             Family::RuledFirst, Family::RuledSecond, Family::Planar, Family::LoftStartFaces, Family::LoftEndFaces,
             Family::LoftSections, Family::LoftEdgeGuides, Family::Extent, Family::MoveAxis, Family::RevolveAxis,
             Family::DraftNeutral, Family::ThickenDirection, Family::SweepProfile, Family::SweepPath,
-            Family::ExtractedSource, Family::ExtractedSources, Family::ExtractedSources, Family::ExtractedTool};
+            Family::ExtractedSource, Family::ExtractedSources, Family::ExtractedSources, Family::ExtractedTool, Family::SurfaceSources};
         int visited = 0;
         visitGeometryRefs(std::as_const(feature), [&](const auto &value, Family family, int position) {
             static_assert(std::is_const_v<std::remove_reference_t<decltype(value)>>);
@@ -50,7 +51,7 @@ int main() {
                     "posizione conservata per target multipli e sorgenti multiple");
             ++visited;
         });
-        require(visited == 22, "numero completo dei riferimenti della fixture");
+        require(visited == 23, "numero completo dei riferimenti della fixture");
         QVector<int> selected;
         visitGeometryRefs(feature, {Family::MoveAxis, Family::SurfaceTargets, Family::Datum},
             [&](const GeometryRef &value, Family, int) { selected.append(value.index); });

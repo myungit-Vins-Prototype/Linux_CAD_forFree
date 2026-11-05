@@ -170,6 +170,7 @@ add_executable(forgecad
     forgeCad2026_dialogs_surfaces.cpp
     forgeCad2026_dialogs_projection.cpp
     forgeCad2026_dialogs_surface_tools.cpp
+    forgeCad2026_dialogs_mapping.cpp
     forgeCad2026_dialogs_sketch.cpp
     forgeCad2026_dialogs_analysis.cpp
     cad_types.h
@@ -187,6 +188,7 @@ add_executable(forgecad
     cad_spatial_sketch.h
     cad_surface_tools.h
     cad_surface_tools.cpp
+    cad_surface_mapping.cpp
     cad_spatial_sketch.cpp
     cad_curve_extract.cpp
     cad_snap.h
@@ -292,6 +294,7 @@ add_executable(forgecad
     cad_import.cpp
     cad_pattern.h
     cad_pattern.cpp
+    cad_fill_pattern.cpp
     cad_loft_correspondence.h
     cad_loft_correspondence.cpp
     cad_loft_correspondence_editor.h
@@ -701,6 +704,8 @@ if(FORGECAD_BUILD_VIEW_TESTS)
     forgecad_add_view_test(forgecad_spline_shape_tests --spline-shape)
     forgecad_add_view_test(forgecad_spline_click_tests --spline-clicks)
     set_tests_properties(forgecad_spline_click_tests PROPERTIES TIMEOUT 60)
+    forgecad_add_view_test(forgecad_surface_mapping_tests --surface-mapping)
+    set_tests_properties(forgecad_surface_mapping_tests PROPERTIES TIMEOUT 120)
     forgecad_add_view_test(forgecad_loft_point_tests --loft-points)
     forgecad_add_view_test(forgecad_edge_loft_tests --edge-loft)
     forgecad_add_view_test(forgecad_loft_projected_section_tests --loft-projected-sections)

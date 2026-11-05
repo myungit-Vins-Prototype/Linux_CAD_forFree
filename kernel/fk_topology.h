@@ -117,6 +117,8 @@ namespace detail {
 struct BodyIO;  // fk_body_io.cpp: scrittura e lettura delle entita' cosi' come sono
 }
 
+class BodyHistory;
+
 class Body {
 public:
     Body();  // solo la region esterna
@@ -214,6 +216,9 @@ public:
     // quelli di bordo ("laminari") una sola.
     static Body buildSheet(const std::vector<Vec3> &vertices, const std::vector<BuildEdge> &edges,
                            const std::vector<BuildFace> &faces);
+    // Collezione disgiunta senza fusione geometrica: mantiene regioni solide,
+    // lamine, geometria condivisa e tolleranze. Storia Same verso ogni input.
+    static Body collect(const std::vector<const Body *> &bodies, BodyHistory *history = nullptr);
     // Il body e' fatto di lamine (nessuna region solida).
     bool isSheet() const;
 

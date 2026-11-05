@@ -335,6 +335,7 @@ bool scaleDialog(QWidget *parent, CadViewport *viewport, const QString &title, i
 
 bool patternDialog(QMainWindow *window, CadViewport *viewport, const QString &title, int replaced, const ExtrusionObject &initial,
                           const std::function<QString(const ExtrusionObject &)> &apply) {
+    if (initial.pattern.kind >= 3) return fillPatternDialog(window,viewport,title,replaced,initial,apply);
     const QVector<ExtrusionObject> &bodies = viewport->extrusions();
     ExtrusionObject patternInitial = initial;
     if (initial.patternComponent > 0 && initial.firstBody >= 0 && initial.firstBody < bodies.size()) {

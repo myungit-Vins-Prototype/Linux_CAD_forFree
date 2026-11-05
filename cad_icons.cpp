@@ -976,6 +976,16 @@ std::map<QString, Draw> &registry() {
         p.setPen(stroke(c.accent, 1.5, Qt::DashLine));
         p.drawPolygon(QPolygonF({{14.5, 6}, {14.5, 18}, {21, 18}}));
     };
+    for(int pattern=0;pattern<4;++pattern) {
+        const QString name=QStringList{"fillRect","fillStaggered","fillHex","fillCircular"}[pattern];
+        icons[name]=[pattern](QPainter &p,const IconPalette &c){
+            p.setPen(stroke(c.construction,1));p.setBrush(Qt::NoBrush);p.drawRoundedRect(QRectF(2,2,20,20),2,2);
+            if(pattern==3){for(int ring=1;ring<=2;++ring)for(int i=0;i<ring*6;++i){double a=2*M_PI*i/(ring*6);dot(p,QPointF(12+ring*4*std::cos(a),12+ring*4*std::sin(a)),c.accent,1.1);}dot(p,{12,12},c.ink,1.2);}
+            else for(int row=0;row<3;++row)for(int col=0;col<3;++col){double x=5+6*col+(pattern&&row%2?2.5:0),y=5+(pattern==2?5.2:6)*row;dot(p,{x,y},row==1&&col==1?c.ink:c.accent,1.5);}
+        };
+    }
+    icons["surfaceUnroll"]=[](QPainter &p,const IconPalette &c){polygon(p,QPolygonF{{2,5},{9,3},{9,15},{2,18}},c.faceMid,stroke(c.ink,1));polygon(p,QPolygonF{{14,9},{22,9},{22,20},{14,20}},c.faceLight,stroke(c.accent,1));line(p,{8,7},{18,6},stroke(c.accent,1.5));arrowHead(p,{20,6},{16,6},c.accent,3);};
+    icons["surfaceWrap"]=[](QPainter &p,const IconPalette &c){QPainterPath path;path.moveTo(2,18);path.cubicTo(8,7,16,22,22,10);p.setPen(stroke(c.accent,2));p.drawPath(path);for(int i=0;i<3;++i)cube(p,c,0,true,true,.3,QPointF(-6+i*6,-1+std::sin(i)*3));};
     icons["patternLinear"] = [](QPainter &p, const IconPalette &c) {
         cube(p, c, -1, true, true, 0.42, QPointF(-6.5, 3));
         cube(p, c, 0, true, true, 0.42, QPointF(0, 3));

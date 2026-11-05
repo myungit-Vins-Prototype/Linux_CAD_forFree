@@ -677,6 +677,7 @@ MassProperties massProperties(const Body &body, double relativeTolerance) {
     const auto accumulate = [&](FaceId f, const FaceValues &values) {
         const double s = body.face(f).sense ? 1.0 : -1.0;
         area += values[0];
+        if (!body.region(body.shell(body.face(f).shell).region).solid) return;
         for (std::size_t k = 1; k < kFaceValues; ++k) flux[k] += s * values[k];
     };
     // Quadrature indipendenti, riduzione nello stesso ordine seriale: nessuna

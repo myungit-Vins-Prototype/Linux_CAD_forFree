@@ -1,0 +1,156 @@
+static void mappingAndFillTools() {
+    using namespace ForgeCad;using namespace Kernel;
+    DocumentState initial;SketchObject boundary;boundary.name="Area";
+    boundary.segments={{{0,0},{20,0}},{{20,0},{20,12}},{{20,12},{0,12}},{{0,12},{0,0}}};initial.sketches={boundary};
+    ExtrusionObject seed;seed.feature=BodyFeature::Primitive;seed.name="Sorgente";seed.primitive.origin[0]=-50;initial.extrusions={seed};
+    CadViewport view;view.loadDocument(initial);GeometryRef contour;contour.kind=7;contour.index=0;
+    for(int kind=3;kind<=6;++kind) {
+        PatternParameters p;p.kind=kind;p.refs={contour};p.spacing=4;p.spacing2=4;p.angle=0;
+        std::vector<Transform3> places;QString error;
+        require(patternPlacements(p,1,view.sketches(),view.extrusions(),places,&error,0),qPrintable(error));
+        require(!places.empty()&&places.size()<=500,"riempimento con numero di copie valido");
+        if(kind==3)require(places.size()==15,"riempimento rettangolare esatto");
+        for(const auto &t:places){const Vec3 p=t.applyToPoint(Vec3(-50,0,0));require(p.x()>=-1e-7&&p.x()+1<=20+1e-7&&p.y()>=-1e-7&&p.y()+1<=12+1e-7,"copia oltre il contorno");}
+    }
+    auto hole=initial;hole.sketches[0].segments.append({{3,3},{7,3}});hole.sketches[0].segments.append({{7,3},{7,7}});hole.sketches[0].segments.append({{7,7},{3,7}});hole.sketches[0].segments.append({{3,7},{3,3}});
+    CadViewport withHole;withHole.loadDocument(hole);PatternParameters p;p.kind=3;p.refs={contour};p.spacing=4;p.spacing2=4;p.angle=0;
+    std::vector<Transform3> places;QString error;require(patternPlacements(p,1,withHole.sketches(),withHole.extrusions(),places,&error,0),qPrintable(error));
+    require(places.size()<15,"copie nel foro escluse");
+    auto touching=initial;touching.extrusions[0].primitive.size[0]=3;touching.extrusions[0].primitive.size[1]=3;
+    touching.sketches[0].segments={{{0,0},{9,0}},{{9,0},{9,9}},{{9,9},{0,9}},{{0,9},{0,0}},{{3,3},{6,3}},{{6,3},{6,6}},{{6,6},{3,6}},{{3,6},{3,3}}};
+    CadViewport coincident;coincident.loadDocument(touching);auto grid=p;grid.spacing=3;grid.spacing2=3;
+    require(patternPlacements(grid,1,coincident.sketches(),coincident.extrusions(),places,&error,0)&&places.size()==8,"foro coincidente con l'ingombro escluso");
+    ExtrusionObject fill;fill.feature=BodyFeature::Pattern;fill.firstBody=0;fill.name="Riempimento";fill.pattern=p;
+    require(view.createBody(fill).isEmpty(),"creazione ripetizione di riempimento");const auto filled=view.currentDocument();
+    require(filled.extrusions.size()>1&&!view.isBodyVisibleInScene(0),"originale fuori contorno consumato");
+    view.undo();require(view.extrusions().size()==1,"undo riempimento");view.redo();require(view.extrusions().size()==filled.extrusions.size(),"redo riempimento");
+    QByteArray bytes;require(encodeDocument(view.currentDocument(),bytes).isEmpty(),"codec riempimento");DocumentState decoded;require(decodeDocument(bytes,decoded).isEmpty(),"lettura riempimento");
+    require(decoded.extrusions[1].pattern.kind==3&&decoded.extrusions[1].pattern.refs.size()==1,"pattern e contorno persistenti");
+    p.spacing=.001;p.spacing2=.001;require(!patternPlacements(p,1,withHole.sketches(),withHole.extrusions(),places,&error,0)&&places.empty(),"limite copie prima della geometria");
+    // Sviluppo associativo di una faccia cilindrica e nuova identita' di corpo.
+    DocumentState cylindrical;ExtrusionObject c;c.feature=BodyFeature::Primitive;c.primitive.kind=PrimitiveKind::Cylinder;c.primitive.size[0]=10;c.primitive.size[1]=20;cylindrical.extrusions={c};CadViewport cylinder;cylinder.loadDocument(cylindrical);
+    const auto carrier=cylinder.extrusions()[0].forgeBody;FaceId side;for(auto f:carrier->faces())if(carrier->face(f).surface->type()==SurfaceType::Cylinder)side=f;
+    GeometryRef face;face.kind=5;face.index=0;face.point.subshape=side.index;face.point.geometry=int(SurfaceType::Cylinder);face.point.x=10;face.point.z=10;
+    GeometryRef plane;plane.kind=1;plane.index=0;ExtrusionObject flat;flat.feature=BodyFeature::SurfaceTools;flat.surfaceTool.mode=3;flat.firstBody=0;flat.surfaceTool.targets={face,plane};
+    require(cylinder.createBody(flat).isEmpty(),"sviluppo associativo");require(cylinder.extrusions()[0].modelBodyId!=cylinder.extrusions()[1].modelBodyId,"sviluppo indipendente dal cilindro");
+    require(cylinder.isBodyVisibleInScene(0)&&cylinder.isBodyVisibleInScene(1),"sorgente sviluppo conservata");
+    require(encodeDocument(cylinder.currentDocument(),bytes).isEmpty()&&decodeDocument(bytes,decoded).isEmpty(),"codec mappatura schema2");
+    require(decoded.extrusions[1].surfaceTool.mode==3&&decoded.extrusions[1].surfaceTool.targets.size()==2,"riferimenti sviluppo persistenti");
+    ExtrusionObject seedBox;seedBox.feature=BodyFeature::Primitive;seedBox.primitive.origin[0]=-2;seedBox.primitive.origin[1]=-1;seedBox.primitive.size[0]=4;seedBox.primitive.size[1]=2;
+    require(cylinder.createBody(seedBox).isEmpty(),"sorgente deformazione");
+    ExtrusionObject wrap;wrap.feature=BodyFeature::SurfaceTools;wrap.firstBody=2;wrap.surfaceTool.mode=4;wrap.surfaceTool.targets={face,plane};wrap.surfaceTool.mappingU=kHalfPi;wrap.surfaceTool.mappingV=10;
+    require(cylinder.createBody(wrap).isEmpty(),"deformazione associativa");
+    require(std::fabs(massProperties(*cylinder.extrusions().last().forgeBody).volume-8.4)<1e-4,"volume deformazione applicativa");
+    require(encodeDocument(cylinder.currentDocument(),bytes).isEmpty()&&decodeDocument(bytes,decoded).isEmpty(),"codec deformazione");
+    require(decoded.extrusions.last().surfaceTool.mode==4&&decoded.extrusions.last().surfaceTool.mappingU==kHalfPi,"ancoraggio deformazione persistente");
+    CadViewport reopened;reopened.loadDocument(decoded);require(reopened.extrusions().last().forgeBody&&reopened.extrusions().last().error.isEmpty(),"rigenerazione deformazione riaperta");
+    cylinder.undo();require(cylinder.extrusions().size()==3,"Undo deformazione");cylinder.redo();require(cylinder.extrusions().size()==4,"Redo deformazione");
+    DocumentState perforated;perforated.sketches={boundary};ExtrusionObject plate;plate.feature=BodyFeature::Primitive;plate.primitive.size[0]=20;plate.primitive.size[1]=12;plate.primitive.size[2]=3;
+    ExtrusionObject tool;tool.feature=BodyFeature::Primitive;tool.primitive.kind=PrimitiveKind::Cylinder;tool.primitive.origin[0]=.5;tool.primitive.origin[1]=.5;tool.primitive.size[0]=.5;tool.primitive.size[1]=3;
+    ExtrusionObject cut;cut.operation=2;cut.firstBody=0;cut.secondBody=1;perforated.extrusions={plate,tool,cut};CadViewport repeatedFeature;repeatedFeature.loadDocument(perforated);
+    ExtrusionObject holes;holes.feature=BodyFeature::Pattern;holes.firstBody=2;holes.pattern.kind=3;holes.pattern.featureOnly=true;holes.pattern.refs={contour};holes.pattern.spacing=4;holes.pattern.spacing2=4;holes.pattern.angle=0;
+    require(repeatedFeature.createBody(holes).isEmpty(),"riempimento di una funzione foro");
+    require(std::fabs(massProperties(*repeatedFeature.extrusions().last().forgeBody).volume-(720-15*.75*kPi))<1e-6,"volume15fori ripetuti");
+    DocumentState multiple;auto a=seedBox;a.name="Solido A";auto b=seedBox;b.name="Solido B";b.primitive.origin[0]=3;
+    auto faceBody=seedBox;faceBody.name="Solo faccia";faceBody.primitive.origin[0]=-7;
+    multiple.extrusions={c,a,b,faceBody};CadViewport multi;multi.loadDocument(multiple);
+    GeometryRef bodyA;bodyA.kind=11;bodyA.index=1;GeometryRef bodyB=bodyA;bodyB.index=2;
+    const auto selectedFace=[&](int body,int slot) {
+        const auto shape=multi.extrusions()[body].forgeBody;const auto id=shape->faces().at(slot);
+        Vec3 point;require(faceInteriorPoint(*shape,id,point),"punto interno della faccia sorgente");
+        GeometryRef r;r.kind=5;r.index=body;r.point.subshape=id.index;r.point.geometry=int(shape->face(id).surface->type());r.point.x=point.x();r.point.y=point.y();r.point.z=point.z();return r;
+    };
+    const auto onlyFace=selectedFace(3,0),firstPlane=selectedFace(1,0),secondPlane=selectedFace(1,1);
+    auto many=wrap;many.firstBody=3;many.surfaceTool.sources={onlyFace,bodyB,bodyA};many.surfaceTool.mappingCopy=false;
+    require(multi.createBody(many).isEmpty(),"deformazione di due solidi e una faccia");
+    const auto combined=multi.extrusions().last().forgeBody;
+    require(combined&&combined->faces().size()==13&&checkBody(*combined,{true,true}).empty(),"due solidi e lamina conservati");
+    require(std::fabs(massProperties(*combined).volume-16.8)<2e-4,"volume dei soli solidi nella selezione mista");
+    const auto ancestry=featureHistoryOf(*combined);require(ancestry&&ancestry->operandCount()==3,"genealogia dichiarata di tutte le sorgenti");
+    std::set<int> parents;for(auto f:combined->faces())for(const auto &link:ancestry->origins(EntityKind::Face,f.index))parents.insert(link.operand);
+    require(parents.size()==3,"le facce deformate conservano tutti e tre i genitori");
+    require(!multi.isBodyVisibleInScene(1)&&!multi.isBodyVisibleInScene(2)&&multi.isBodyVisibleInScene(3),"consumati solo i corpi interi");
+    require(bodyOperands(multi.extrusions().last()).contains(3),"dipendenza della faccia sorgente");
+    require(featureGenealogyOperandIndices(multi.extrusions().last(),4,multi.extrusions()).size()==3,"tutti i genitori della genealogia");
+    require(encodeDocument(multi.currentDocument(),bytes).isEmpty(),"salvataggio sorgenti multiple");DocumentState reread;
+    require(decodeDocument(bytes,reread).isEmpty()&&reread.extrusions.last().surfaceTool.sources.size()==3,"lettura schema3 sorgenti multiple");
+    for(auto &object:reread.extrusions){object.cachedGeometry=false;object.forgeBody.reset();object.display={};}
+    CadViewport remapped;remapped.loadDocument(reread);require(remapped.extrusions().last().error.isEmpty()&&remapped.extrusions().last().forgeBody,"rigenerazione sorgenti multiple senza cache");
+    multi.undo();require(multi.extrusions().size()==4,"Undo multi sorgente");multi.redo();require(multi.extrusions().size()==5,"Redo multi sorgente");
+    auto islands=flat;islands.firstBody=1;islands.surfaceTool.targets={firstPlane,plane};islands.surfaceTool.sources={firstPlane,secondPlane};
+    require(multi.createBody(islands).isEmpty(),"sviluppo facce multiple");
+    const auto developed=multi.extrusions().last().forgeBody;
+    require(developed->faces().size()==2&&checkBody(*developed,{true,true}).empty(),"isole multiple piane valide");
+    const auto left=faceBox(*developed,developed->faces()[0]),right=faceBox(*developed,developed->faces()[1]);
+    require(left.hi.x()<right.lo.x(),"isole sviluppate senza sovrapposizioni");
+    DocumentState supportState;SketchObject supportLeft,supportRight;
+    supportLeft.segments={{{-3,-3},{0,-3}},{{0,-3},{0,3}},{{0,3},{-3,3}},{{-3,3},{-3,-3}}};
+    supportRight.segments={{{0,-3},{3,-3}},{{3,-3},{3,3}},{{3,3},{0,3}},{{0,3},{0,-3}}};supportState.sketches={supportLeft,supportRight};
+    ExtrusionObject supportA;supportA.feature=BodyFeature::PlanarSurface;supportA.sketchIndex=0;supportA.name="Appoggio A";
+    auto supportB=supportA;supportB.sketchIndex=1;supportB.name="Appoggio B";
+    auto bridge=seedBox;bridge.primitive.origin[0]=-1;bridge.primitive.origin[1]=-.5;bridge.primitive.size[0]=2;bridge.primitive.size[1]=1;bridge.primitive.size[2]=.2;
+    supportState.extrusions={supportA,supportB,bridge};CadViewport joined;joined.loadDocument(supportState);
+    const auto supportRef=[&](int index) {const auto body=joined.extrusions()[index].forgeBody;const auto id=body->faces()[0];Vec3 point;require(faceInteriorPoint(*body,id,point),"punto appoggio multiplo");GeometryRef r;r.kind=5;r.index=index;r.point.subshape=id.index;r.point.geometry=int(body->face(id).surface->type());r.point.x=point.x();r.point.y=point.y();r.point.z=point.z();return r;};
+    const auto destinationA=supportRef(0),destinationB=supportRef(1);
+    auto joinedDefinition=wrap;joinedDefinition.firstBody=2;joinedDefinition.surfaceTool.targets={destinationA,plane,destinationB};joinedDefinition.surfaceTool.mappingU=0;joinedDefinition.surfaceTool.mappingV=0;
+    require(joined.createBody(joinedDefinition).isEmpty(),"un unico corpo attraversa due destinazioni");
+    require(joined.extrusions().last().forgeBody->faces().size()==6&&std::fabs(massProperties(*joined.extrusions().last().forgeBody).volume-.4)<1e-7,"nessuna copia per destinazione");
+    require(bodyOperands(joined.extrusions().last()).contains(0)&&bodyOperands(joined.extrusions().last()).contains(1),"dipendenze di tutte le destinazioni");
+    require(encodeDocument(joined.currentDocument(),bytes).isEmpty(),"salvataggio destinazioni multiple");DocumentState joinedRead;
+    require(decodeDocument(bytes,joinedRead).isEmpty()&&joinedRead.extrusions.last().surfaceTool.targets.size()==3,"schema4 conserva tutte le destinazioni");
+    for(auto &object:joinedRead.extrusions){object.cachedGeometry=false;object.forgeBody.reset();object.display={};}
+    CadViewport joinedAgain;joinedAgain.loadDocument(joinedRead);require(joinedAgain.extrusions().last().forgeBody&&joinedAgain.extrusions().last().error.isEmpty(),"rigenerazione multidestinazione senza cache");
+    auto oldSchema=QJsonDocument::fromJson(surfaceToolsExtras(joined.extrusions())).object();oldSchema["schema"]=3;auto oldOutput=joined.extrusions();
+    require(!applySurfaceToolsExtras(QJsonDocument(oldSchema).toJson(),oldOutput).isEmpty()&&oldOutput.last().surfaceTool.targets.size()==3,"destinazioni multiple senza schema4 rifiutate atomicamente");
+    joined.undo();require(joined.extrusions().size()==3,"Undo appoggio multiplo");joined.redo();require(joined.extrusions().size()==4,"Redo appoggio multiplo");
+    auto malformed=surfaceToolsExtras(decoded.extrusions);auto json=QJsonDocument::fromJson(malformed).object();auto records=json["features"].toArray();auto record=records[0].toObject();record["mapping"]=QJsonObject{};records[0]=record;json["features"]=records;
+    auto unchanged=decoded.extrusions;require(!applySurfaceToolsExtras(QJsonDocument(json).toJson(),unchanged).isEmpty()&&unchanged[1].surfaceTool.mode==3,"parametri incompleti rifiutati atomicamente");
+    PdfWindow window;window.resize(1100,800);window.show();QApplication::processEvents();
+    for(const char *name:{"fillPatternAction","surfaceUnrollAction","surfaceWrapAction"})require(window.findChild<QAction*>(name),"comando disponibile nel menu/ribbon");
+    auto *action=window.findChild<QAction*>("fillPatternAction");bool inspected=false;
+    QTimer::singleShot(100,[&]{auto *combo=window.findChild<QComboBox*>("fillPatternKind");require(combo&&combo->count()==4,"quattro pattern selezionabili");for(int i=0;i<4;++i)require(!combo->itemIcon(i).isNull(),"icona di pattern presente");inspected=true;QWidget *parent=combo;while(parent&&!dynamic_cast<FunctionDialogPanel*>(parent))parent=parent->parentWidget();require(parent,"pannello proprietario");auto *buttons=parent->findChild<QDialogButtonBox*>();require(buttons&&buttons->button(QDialogButtonBox::Cancel),"Annulla disponibile");buttons->button(QDialogButtonBox::Cancel)->click();});
+    action->trigger();require(inspected,"pannello riempimento aperto");window.hide();
+    CadViewport *windowView=nullptr;for(auto *gl:window.findChildren<QOpenGLWidget*>())if(auto *v=dynamic_cast<CadViewport*>(gl)){windowView=v;break;}
+    require(windowView,"viewport del pannello multiplo");windowView->loadDocument(multiple);inspected=false;
+    QTimer::singleShot(100,[&] {
+        auto *button=window.findChild<QPushButton*>("mappingFacePick");auto *list=window.findChild<QListWidget*>("mappingSourceFaces");
+        require(button&&list,"lista e pulsante facce multiple");button->click();
+        auto namedA=firstPlane,namedB=secondPlane;namedA.point.name=namedB.point.name=QStringLiteral("origine condivisa");
+        windowView->refPickFinished_(true,namedA);windowView->refPickFinished_(true,namedB);
+        require(list->count()==2,"facce distinte con nome genealogico comune restano selezionate");
+        windowView->refPickFinished_(true,namedA);require(list->count()==1,"secondo clic rimuove una faccia");
+        button->click();inspected=true;QWidget *parent=list;while(parent&&!dynamic_cast<FunctionDialogPanel*>(parent))parent=parent->parentWidget();
+        require(parent,"pannello multiplo proprietario");parent->findChild<QDialogButtonBox*>()->button(QDialogButtonBox::Cancel)->click();
+    });
+    window.findChild<QAction*>("surfaceUnrollAction")->trigger();require(inspected,"pannello sviluppo multiplo verificato");
+    windowView->loadDocument(supportState);inspected=false;
+    QTimer::singleShot(100,[&] {
+        auto *button=window.findChild<QPushButton*>("mappingFacePick");auto *list=window.findChild<QListWidget*>("mappingTargetFaces");
+        require(button&&list,"lista destinazioni multiple");button->click();windowView->refPickFinished_(true,destinationA);windowView->refPickFinished_(true,destinationB);
+        require(list->count()==2,"due destinazioni restano nella selezione");windowView->refPickFinished_(true,destinationA);require(list->count()==1,"secondo clic rimuove solo la destinazione cliccata");
+        windowView->refPickFinished_(true,destinationA);button->click();inspected=true;QWidget *parent=list;while(parent&&!dynamic_cast<FunctionDialogPanel*>(parent))parent=parent->parentWidget();
+        parent->findChild<QDialogButtonBox*>()->button(QDialogButtonBox::Cancel)->click();
+    });
+    window.findChild<QAction*>("surfaceWrapAction")->trigger();require(inspected,"pannello multidestinazione verificato");
+    windowView->loadDocument(joined.currentDocument());inspected=false;
+    QTimer::singleShot(100,[&] {auto *list=window.findChild<QListWidget*>("mappingTargetFaces");require(list&&list->count()==2,"modifica mantiene entrambe le destinazioni");inspected=true;QWidget *parent=list;while(parent&&!dynamic_cast<FunctionDialogPanel*>(parent))parent=parent->parentWidget();parent->findChild<QDialogButtonBox*>()->button(QDialogButtonBox::Cancel)->click();});
+    surfaceMappingDialog(&window,windowView,QStringLiteral("Modifica deformazione"),3,joined.extrusions().last(),[](const ExtrusionObject &){return QString();});require(inspected,"riapertura pannello multidestinazione");
+    windowView->loadDocument(filled);inspected=false;
+    QTimer::singleShot(100,[&] {
+        auto *list=window.findChild<QListWidget*>("mappingBodies");require(list,"elenco corpi riempimento");
+        int rootRow=-1;for(int i=0;i<list->count();++i)if(list->item(i)->data(Qt::UserRole).toInt()==1)rootRow=i;
+        require(rootRow>=0,"radice riempimento selezionabile");list->setCurrentRow(rootRow);
+        window.findChild<QPushButton*>("mappingPatternBodies")->click();int count=0;
+        for(int i=0;i<list->count();++i)if(list->item(i)->checkState()==Qt::Checked){++count;require(list->item(i)->data(Qt::UserRole).toInt()!=0,"sorgente originale esclusa dal gruppo");}
+        require(count==filled.extrusions.size()-1,"tutte le copie e solo quelle selezionate");
+        const auto carrier=windowView->extrusions()[1].forgeBody;const auto f=carrier->faces()[0];Vec3 p;
+        require(faceInteriorPoint(*carrier,f,p),"punto destinazione allineamento");GeometryRef destination;destination.kind=5;destination.index=1;destination.point.subshape=f.index;destination.point.geometry=int(carrier->face(f).surface->type());destination.point.x=p.x();destination.point.y=p.y();destination.point.z=p.z();
+        auto *pick=window.findChild<QPushButton*>("mappingFacePick");pick->click();windowView->refPickFinished_(true,destination);pick->click();
+        window.findChild<QPushButton*>("mappingAlignSource")->click();
+        require(std::isfinite(window.findChild<QDoubleSpinBox*>("mappingU")->value())&&std::isfinite(window.findChild<QDoubleSpinBox*>("mappingV")->value()),"centratura finita");
+        auto *dialog=window.findChild<QPushButton*>("mappingAlignSource")->parentWidget();while(dialog&&!dynamic_cast<FunctionDialogPanel*>(dialog))dialog=dialog->parentWidget();
+        inspected=true;dialog->findChild<QDialogButtonBox*>()->button(QDialogButtonBox::Cancel)->click();
+    });
+    window.findChild<QAction*>("surfaceWrapAction")->trigger();require(inspected,"selezione gruppo e centratura verificate");
+    std::cout<<"PASS riempimento4pattern/fori/limiti, storia, Undo/Redo, codec, sviluppo associativo e icone GUI\n";
+}

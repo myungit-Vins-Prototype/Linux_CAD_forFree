@@ -10,9 +10,8 @@ non l’intero archivio. Gli stati storici sono superati da questa sintesi e dai
 - Italiano; nessun `codex` nei nomi dei branch. Sviluppo unificato su `main`;
   `solver-mesh-gpu` è stato integrato e archiviato il 30 ottobre. CUDA e Metal restano backend opzionali negli stessi
   sorgenti, con fallback CPU.
-- Aggiornare questa memoria a ogni traguardo e prima della risposta finale, anche per indagini e documentazione. Rileggere
-  prima di modificare; preservare le informazioni delle altre chat. Distinguere implementato, verificato, sperimentale e
-  proposto; indicare verifiche effettive, limiti e lavoro aperto.
+- Aggiornare a ogni traguardo e prima della risposta finale. Rileggere e preservare le altre chat; distinguere
+  implementato, verificato, sperimentale e proposto, con prove effettive e limiti.
 - Mantenere **circa 200 righe e al massimo 16 KiB**, con non più di 10 interventi recenti sintetici. Aggiornare la voce
   tematica invece di accumulare diagnosi, tentativi e successivi stati della stessa modifica. Spostare i dettagli in rapporti
   `docs/` o nell'archivio, senza perderli. Non inserire log grezzi, lunghe liste di hash o comandi di ogni passaggio.
@@ -123,11 +122,13 @@ App/5CTest/130kernel/Wayland/Undo/codec/mappa598-8332/check/3HTML PASS.
 App/17CTest/42Loft/11Mass/Wayland PASS; mappa596/8294/check/7HTML PASS.
 [Dettagli](docs/loft-punti-piani-2026-11-05.md).
 
-**05/11 — UI e checkpoint.** `262f067` pubblicato; nuovo checkpoint autorizzato,13CTest PASS.
-ISO M1–M68/62misure, ribbon Conferma/Annulla/Termina, ritorno Schizzo,
-loft440px; nuovi schizzi vuoti scartati, esistenti/usati conservati. App/runner,
-11CTest e ribbon Wayland/offscreen PASS; UI6CTest/1024×720 PASS, mappa594/8255.
-[Dettagli](docs/ui-ribbon-loft-filettature-2026-11-05.md).
+**05/11 — UI/checkpoint/mappature.** `e1bde03` su origin/main,13CTest PASS.
+ISO M1–M68, ribbon, loft440px, schizzi vuoti: app/GUI PASS.
+[UI](docs/ui-ribbon-loft-filettature-2026-11-05.md).
+Mappature:4pattern, sviluppo Taglio12:F2–F5, appoggio multifaccia/schema4; F0/F1 non sviluppabili.
+Riempimento19/F6: fit/derivate e allineamento corretti;96solidi/672facce. App/8CTest/Wayland/Undo/codec/rigenerazione/mappa PASS.
+README IT/EN:128link/15CTest PASS; checkpoint locale.
+[Prove e limiti](docs/riempimento-sviluppo-adattamento-2026-11-05.md).
 
 **04/11 — Griglie, specchi e guide.** `3c644e2`: istanze condivise, B-rep2/cache10;
 `9eff99c`: appoggi G1/riordino e F7/E25 verificati. Griglie/cache11: PRT190,5→88,7MB,

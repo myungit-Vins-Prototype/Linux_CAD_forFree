@@ -29,7 +29,7 @@ QString featureIconName(const ExtrusionObject &body) {
     if (body.feature == BodyFeature::Revolution) return QStringLiteral("revolve");
     if (body.feature == BodyFeature::Blend) return body.blendChamfer ? QStringLiteral("chamfer") : QStringLiteral("fillet");
     if (body.feature == BodyFeature::SheetTrim) return QStringLiteral("trimSurface");
-    if (body.feature == BodyFeature::SurfaceTools) return body.surfaceTool.mode==0?QStringLiteral("surfaceExtendTo"):body.surfaceTool.mode==1?QStringLiteral("surfaceNetwork"):QStringLiteral("surfacePoles");
+    if (body.feature == BodyFeature::SurfaceTools) return body.surfaceTool.mode==3?QStringLiteral("surfaceUnroll"):body.surfaceTool.mode==4?QStringLiteral("surfaceWrap"):body.surfaceTool.mode==0?QStringLiteral("surfaceExtendTo"):body.surfaceTool.mode==1?QStringLiteral("surfaceNetwork"):QStringLiteral("surfacePoles");
     if (body.feature == BodyFeature::SheetExtend) return QStringLiteral("extendSurface");
     if (body.feature == BodyFeature::Scale) return QStringLiteral("scale");
     if (body.feature == BodyFeature::Helix) return QStringLiteral("helix");
@@ -40,7 +40,7 @@ QString featureIconName(const ExtrusionObject &body) {
     if (body.feature == BodyFeature::DatumPlane) return QStringLiteral("datumPlane");
     if (body.feature == BodyFeature::Imported) return QStringLiteral("import");
     if (body.feature == BodyFeature::Transform) return QStringLiteral("move");
-    if (body.feature == BodyFeature::Pattern) return QStringLiteral("patternLinear");
+    if (body.feature == BodyFeature::Pattern) return body.pattern.kind>=3?QStringList{"fillRect","fillStaggered","fillHex","fillCircular"}.value(body.pattern.kind-3):QStringLiteral("patternLinear");
     if (body.feature == BodyFeature::SurfaceOffset) return body.distance == 0.0 ? QStringLiteral("copyFaces") : QStringLiteral("offsetSurface");
     if (body.feature == BodyFeature::DeleteFace) return QStringLiteral("deleteFace");
     if (body.feature == BodyFeature::Draft) return QStringLiteral("draft");

@@ -79,8 +79,10 @@ Tavola 2D con viste proiettate, sezione, dettaglio quotato e vista isometrica.
 - Taglio, estensione, divisione, raccordo e smusso delle entità dello schizzo.
 - Offset delle entità e delle catene; spostamento, rotazione e copia.
 - Ripetizioni lineari e circolari e specchio delle entità dello schizzo.
-- Snap alla geometria, alla griglia e all'origine; riconoscimento di punti medi e quadranti.
-- Riferimenti esterni ad assi, piani, spigoli e curve; conversione degli spigoli e sezioni dei corpi nel piano dello schizzo.
+- Snap alla geometria, alla griglia e all'origine; punti medi, quadranti e **Intersezione** fra curve esatte. L'intersezione resta associata a entrambe le sorgenti e viene seguita dal risolutore. I prolungamenti e le sovrapposizioni senza un incrocio isolato non creano uno snap.
+- Riferimenti esterni ad assi, piani, spigoli, schizzi e curve, incluse quelle proiettate o estratte; conversione degli spigoli e sezioni dei corpi nel piano dello schizzo. Clic e passaggi del mouse restano temporanei: i riferimenti automatici sono salvati solo se usati, e ripuliti quando viene eliminato l'ultimo utilizzo, conservando vincoli, conversioni esplicite e Undo/Redo.
+- **Visualizza → Mostra linee di costruzione** permette di mostrarle anche fuori dalla modifica dello schizzo; l'opzione viene conservata. Le linee di costruzione non entrano nei profili di modellazione.
+- Uno schizzo nuovo chiuso senza entità completate viene scartato; punti e geometria di costruzione sono contenuti validi. Gli schizzi esistenti o usati da altre funzioni vengono conservati.
 - **Schizzi 3D** con polilinee e spline definite da punti XYZ nello spazio.
 - Estrazione associativa di bordi 3D, taglio delle curve 3D e proiezione di curve sulle superfici.
 - Eliche e spirali utilizzabili come percorsi di modellazione.
@@ -109,33 +111,60 @@ Tavola 2D con viste proiettate, sezione, dettaglio quotato e vista isometrica.
 | Raccordo e smusso | Lavorazione degli spigoli, anche scegliendo i bordi di una faccia |
 | Sformo | Inclinazione delle facce |
 | Svuotamento | Creazione di un corpo cavo |
-| Filettatura automatica | Creazione della feature di filettatura |
-| Ripetizioni e specchio | Copie lineari, circolari e speculari di corpi solidi o di superficie |
+| Filettatura automatica | Catalogo ISO metrico M1–M68, passi grossi e fini comuni; passo manuale, lunghezza, mano e inversione |
+| Ripetizioni e specchio | Copie lineari, circolari, speculari e riempimento automatico; variazioni dei parametri delle funzioni |
 | Trasformazioni | Spostamento, rotazione e scala dei corpi |
 | Piani di costruzione | Riferimenti per nuovi schizzi e operazioni |
 
 In **Estrusione**, la fine **Fino al prossimo corpo** arresta il profilo sulle prime superfici esatte incontrate nel verso **Positivo** o **Invertito**, anche quando appartengono a più corpi. Richiede contorni chiusi solidi e un solo verso. Considera i solidi precedenti attivi e non consumati, anche nascosti manualmente; i corpi limite restano disponibili e si aggiornano con la storia. Se manca la copertura del profilo o la geometria presenta sottosquadri, ostacoli interni o superfici non certificabili, il comando segnala un errore. Non è disponibile con simmetrica, due versi o sola superficie.
 
-La fine **Fino a una faccia o a un piano** accetta anche riferimenti a facce libere valide. Il caso Schizzo 3 / Corpo 1 di `Superfici.prt`, incluse entrambe le modalità e il verso Invertito, è documentato nel [rapporto di correzione](docs/superfici-estrusione-2026-11-02.md).
+La fine **Fino a una faccia o a un piano** accetta anche riferimenti a facce libere valide. Il risultato può usare la booleana di unione dell'estrusione quando geometricamente valida. Il caso Schizzo 3 / Corpo 1 di `Superfici.prt`, incluse entrambe le modalità e il verso Invertito, è documentato nel [rapporto di correzione](docs/superfici-estrusione-2026-11-02.md).
 
-Il Loft accetta sezioni e guide da schizzi e bordi esatti, anche spaziali, con elenchi ordinabili e riferimenti associativi. Nei controlli del primo e dell’ultimo profilo, **Inverti normale** cambia indipendentemente il verso G1/G2 e aggiorna l’anteprima. I versi sono conservati nel formato nativo 61; i file precedenti mantengono il verso automatico. Le condizioni G0/G1/G2 disponibili dipendono dal comando e dalla geometria: contatto, tangenza e curvatura richiedono riferimenti compatibili.
+Le **Loft** solide e di superficie offrono elenchi ordinabili e riferimenti associativi:
 
-Il comando **Raggio** comprende quattro schede con illustrazioni: **Costante**, **Conico**, **Variabile** e **Tra facce**. I conici offrono sezioni ellittiche (ρ < 0,5), paraboliche (ρ = 0,5) e iperboliche (ρ > 0,5), controllabili tramite ρ oppure raggio di curvatura al centro della sezione. Il raggio variabile accetta più bordi: quelli tangenti formano un percorso unico con 2–64 punti equidistanti lungo la lunghezza totale. I percorsi disgiunti hanno tabelle indipendenti, visibili selezionando un bordo nell’elenco; ogni percorso ha interpolazione morbida o lineare e inversione del verso. I punti con etichetta R si trascinano nella vista 3D per cambiare i raggi e aggiornare l’anteprima; sui percorsi chiusi i raggi iniziale e finale restano uguali. Il raccordo tra facce richiede due facce adiacenti dello stesso corpo e raccorda i loro bordi condivisi. La propagazione tangente è disattivabile; nel modo variabile resta disattivata. Il pannello si può chiudere anche durante il calcolo dell'anteprima. I parametri sono salvati nel formato nativo 59, con lettura dei documenti precedenti.
+- Sezioni e guide da schizzi, singole entità, bordi esatti e curve 3D proiettate o estratte. Le sezioni da schizzo intero escludono la costruzione. La scelta funziona nella vista e nella storyboard, anche per schizzi nascosti.
+- Sezioni puntuali da entità Punto o vertici, solo al primo o all'ultimo profilo e con almeno una sezione curva. Uno schizzo con un solo punto può essere scelto interamente.
+- Condizioni G0/G1/G2 ai profili, influenza e **Inverti normale** indipendente ai due estremi. **G1 — tangente a un piano** accetta piani principali, di costruzione o facce piane che contengano la sezione; le guide devono essere compatibili con la condizione.
+- **Condizione trasversale** delle guide: libera, G1 normale al piano del profilo con inversione, oppure G1 tangente a una o più facce adiacenti. Le curve spaziali richiedono un piano esplicito per la modalità normale; gli appoggi devono essere incidenti e compatibili. Questi controlli sono distinti da G0/G1/G2 lungo la guida e non si applicano alla loft rigata.
+- **Modifica corrispondenze fra sezioni**: punti trascinabili sui profili e posizioni percentuali lungo le curve per controllare cuciture e torsioni; aggiunta/rimozione dei collegamenti, inversione di una sezione e ripristino **Automatico**. Le corrispondenze incoerenti vengono segnalate.
+- **Unisci facce tangenti** elimina i bordi fra le pezze compatibili che il kernel può concatenare senza nuovo fit. Non fonde qualsiasi coppia di facce G1; le cuciture necessarie alle superfici chiuse restano nel B-rep.
+- Gli errori di attraversamento indicano guida e sezione con nome, freccia ed etichetta: guida rossa, sezione arancione.
 
-I pannelli hanno un’intestazione compatta e un menu **⋮** per l’aggancio a sinistra/destra e l’opzione **Usa tutta l’altezza disponibile**. Lo spazio disponibile inizia sempre sotto il ribbon, anche a tutta altezza. OK e Annulla deselezionano il comando del ribbon. Nei piani di costruzione ogni riferimento ha un pulsante **×** per rimuoverlo prima di sceglierne un altro. La preferenza vale per i pannelli aperti successivamente; trascinare il pannello permette di sganciarlo e riagganciarlo. Le illustrazioni usano uno sfondo bianco nel tema chiaro.
+Uso e limiti: [corrispondenze](docs/loft-corrispondenze-2026-11-04.md), [condizioni delle guide](docs/loft-controlli-guide-2026-11-04.md), [punti e piani](docs/loft-punti-piani-2026-11-05.md), [unione delle pezze](docs/loft-hook-2026-11-04.md#unione-delle-facce-tangenti).
+
+Il catalogo della filettatura comprende 40 misure ISO a passo grosso e 22 combinazioni a passo fine. Il diametro geometrico resta quello della faccia scelta; il catalogo propone i parametri nominali.
+
+**Taglia superfici → Taglia entrambi** permette di scegliere le porzioni da conservare di ciascun corpo e ricucirle in un nuovo risultato. Una lamina chiusa non viene promossa automaticamente a solido; per un volume usare la cucitura quando valida. Le booleane e i tagli lavorano sulle superfici esatte, anche NURBS, nei casi supportati dal kernel. [Esempi e limiti verificati](docs/knifehandle-taglio-reciproco-2026-11-05.md).
+
+Il comando **Raggio** comprende quattro schede con illustrazioni: **Costante**, **Conico**, **Variabile** e **Tra facce**. I conici offrono sezioni ellittiche (ρ < 0,5), paraboliche (ρ = 0,5) e iperboliche (ρ > 0,5), controllabili tramite ρ oppure raggio di curvatura al centro della sezione. Il raggio variabile accetta più bordi: quelli tangenti formano un percorso unico con 2–64 punti equidistanti lungo la lunghezza totale. I percorsi disgiunti hanno tabelle indipendenti, visibili selezionando un bordo nell’elenco; ogni percorso ha interpolazione morbida o lineare e inversione del verso. I punti con etichetta R si trascinano nella vista 3D per cambiare i raggi e aggiornare l’anteprima; sui percorsi chiusi i raggi iniziale e finale restano uguali. Il raccordo tra facce richiede due facce adiacenti dello stesso corpo e raccorda i loro bordi condivisi. La propagazione tangente è disattivabile; nel modo variabile resta disattivata. Il pannello si può chiudere anche durante il calcolo dell'anteprima. Il supporto è stato introdotto nel formato nativo 59, mantenendo la lettura dei documenti precedenti.
+
+I pannelli hanno un'intestazione compatta e un menu **⋮** per l'aggancio a sinistra/destra e **Usa tutta l'altezza disponibile**; restano sotto il ribbon. OK e Annulla deselezionano il comando. Nei piani di costruzione ogni riferimento, anche già definito, si rimuove con **×**. Le preferenze vengono conservate; trascinare il pannello permette di sganciarlo e riagganciarlo.
+
+Durante una funzione, il riquadro sinistro del ribbon offre **Conferma/Annulla** o **Chiudi**; durante uno schizzo offre **Termina**. Uscendo da Estrusione o Rivoluzione mentre lo schizzo resta in modifica, il ribbon torna alla scheda **Schizzo**. Il pannello Loft parte da 440 px, con etichette vicine agli elenchi e frecce **↑/↓** compatte; rispetta le dimensioni salvate dall'utente. Le illustrazioni usano uno sfondo bianco nel tema chiaro. [Uso dei nuovi controlli](docs/ui-ribbon-loft-filettature-2026-11-05.md).
 
 ### Curva 3D da due schizzi
 
 In **Curva proiettata** scegliere **Schizzo su schizzo (curva 3D)**, i due schizzi su piani non paralleli e le singole curve da usare. Gli elenchi e il pulsante **Scegli curva nella vista** permettono di escludere le altre entità. L’anteprima mostra la curva spaziale ottenuta dall’intersezione delle due proiezioni normali; la feature dipende da entrambi gli schizzi e si rigenera dopo le modifiche.
 
-Il risultato usa NURBS esatte quando possibile e una curva implicita esatta negli altri casi, conservata tramite gli input nel documento nativo. Anche i rami impliciti si possono usare come riferimenti associativi in altri schizzi con **Converti spigoli**, snap, quote, PointOnCurve e Pierce; sweep, conversione libera in NURBS e STEP/IGES restano indisponibili per questi rami; piani paralleli e degenerazioni non risolvibili danno errore. [Uso, geometria e verifiche](docs/curva-proiettata-due-schizzi-2026-11-02.md).
+Il risultato usa NURBS esatte quando possibile e una curva implicita esatta negli altri casi, conservata tramite gli input nel documento nativo. Anche i rami impliciti si possono usare come riferimenti associativi in altri schizzi con **Converti spigoli**, snap, quote, PointOnCurve e Pierce, oppure come sezioni e guide di loft; sweep, conversione libera in NURBS e STEP/IGES restano indisponibili per questi rami; piani paralleli e degenerazioni non risolvibili danno errore. [Uso, geometria e verifiche](docs/curva-proiettata-due-schizzi-2026-11-02.md).
+
+### Ripetizioni di funzione e riempimento automatico
+
+Nelle ripetizioni lineari e circolari, **Ripeti: Una funzione** permette di variare più parametri numerici con incrementi costanti: `q(i) = q(0) + i * incremento`. Le quote degli schizzi usati direttamente dalla funzione appaiono nella viewport e si scelgono con un clic; l'elenco comprende solo i parametri della funzione e dei suoi schizzi diretti. La variazione è disabilitata per **Il corpo intero**. Le esclusioni mantengono l'indice delle istanze; non tutti i tipi di funzione o combinazioni di valori sono supportati. [Uso delle variazioni](docs/ripetizioni-variabili-2026-11-04.md).
+
+**Funzioni → Ripetizione → Riempimento automatico…** dispone corpi o strumenti di funzioni additive/sottrattive dentro uno schizzo chiuso o una faccia piana:
+
+- Schemi **rettangolare, sfalsato, esagonale e concentrico**, con icone di anteprima, passi e rotazione della disposizione.
+- Esclusione dei fori e delle copie il cui ingombro rettangolare conservativo esce dal contorno; le copie mantengono l'orientamento della sorgente. La disposizione esagonale non cambia la forma del corpo ripetuto.
+- Massimo 500 copie. Questa modalità non usa variazioni di quota o esclusioni numerate; le funzioni booleane con più strumenti non sono ammesse come sorgenti.
+
+I risultati mantengono corpi e dipendenze nella storyboard, con modifica, rigenerazione e Undo/Redo. [Riempimento: dettagli e verifiche](docs/riempimento-sviluppo-adattamento-2026-11-05.md#riempimento-automatico).
 
 ### Modellazione di superfici
 
 - Estrusione di profili aperti, Loft di superfici e Sweep di superfici.
 - Superfici planari, rigate, tra curve e di riempimento.
 - Selezione di bordi e curve per definire contorni, sezioni e guide. Attiva il campo di scelta del pannello, poi scegli nella vista o nella storyboard: clic sullo schizzo per il contorno intero, espansione per singole entità e bordi dei corpi. Si possono scegliere anche schizzi nascosti, senza mostrarli nel documento.
-- Gli errori di attraversamento delle Loft identificano guida e sezione: guida rossa, sezione arancione, con nomi, etichette e frecce nella vista. Le segnalazioni si aggiornano correggendo i riferimenti e scompaiono chiudendo il pannello.
 - Copia e rimozione di facce.
 - Offset, estensione e taglio delle superfici.
 - **Estendi superficie** apre subito il pannello: i bordi si aggiungono o rimuovono nella vista, con distanza, tipo, contorno completo e anteprima nello stesso pannello.
@@ -147,9 +176,25 @@ Il risultato usa NURBS esatte quando possibile e una curva implicita esatta negl
 - Aggiunta di spessore per trasformare superfici in solidi.
 - Ripetizione lineare, circolare e specchio delle superfici.
 
-I nuovi comandi sono nel menu **Funzioni → Superfici**. Le reti accettano 2–16 curve aperte per famiglia; riordinare le curve con Su/Giù quando gli incroci non sono monotoni. Non è una superficie globale Gordon con G1/G2 fra le celle. L'estensione richiede che il riferimento attraversi tutto il prolungamento senza tagliare la superficie iniziale; aumentare la distanza di ricerca se necessario.
+I comandi di superficie sono nel menu **Funzioni → Superfici**. Le reti accettano 2–16 curve aperte per famiglia; riordinare le curve con Su/Giù quando gli incroci non sono monotoni. Non è una superficie globale Gordon con G1/G2 fra le celle. L'estensione richiede che il riferimento attraversi tutto il prolungamento senza tagliare la superficie iniziale; aumentare la distanza di ricerca se necessario.
 
 L'editor dei poli lavora su una singola faccia NURBS e conserva gradi, nodi e rifilature UV, inclusi i fori. Per una faccia di un corpo cucito usare prima **Copia facce**. Il trascinamento avviene sul piano dello schermo; per il terzo asse usare la tabella o ruotare la vista. Pesi positivi, griglia fino a 4096 poli. Se la struttura della griglia cambia a monte, ricaricare la griglia e riselezionare i poli. I controlli di regolarità sono campionati e non certificano l'assenza globale di auto-intersezioni. Le nuove funzioni partecipano a rigenerazione, Undo/Redo, salvataggio e revisioni; il formato nativo 54 conserva i nomi topologici degli appoggi degli schizzi e dei vincoli Pierce e legge i formati precedenti.
+
+#### Sviluppo esatto su un piano
+
+**Funzioni → Superfici → Distendi superficie…** accetta più facce e un piano di destinazione principale o di costruzione. Scegliere le facce nella vista o nella storyboard; un secondo clic le rimuove, **Termina selezione** o **Esc** avvia l'anteprima. Posizione e rotazione sono modificabili.
+
+Lo sviluppo mantiene lunghezze e forma intrinseca per i piani, i cilindri e i coni supportati; i coni richiedono contorni isoparametrici e le cuciture periodiche complesse possono richiedere una divisione preventiva. Le facce multiple diventano isole piane separate da 1 mm: non un unico sviluppo cucito. Le superfici a doppia curvatura vengono rifiutate; il comando non riconosce qualsiasi NURBS sviluppabile. La sorgente tridimensionale viene conservata.
+
+#### Deformazione di corpi sulle superfici
+
+**Funzioni → Superfici → Deforma corpo su superficie…** accetta più corpi solidi e/o singole facce. I corpi restano solidi separati e le facce diventano lamine; non vengono fusi automaticamente. Impostare piano sorgente, punto U/V sulla destinazione, posizione, rotazione e distanza normale. La conservazione dei corpi sorgenti è opzionale.
+
+Per un riempimento, evidenziare uno dei risultati nell'elenco e premere **Copie**; scegliere la faccia destinazione e **Centra e allinea dalla sorgente**. Il comando recupera il piano dello schizzo quando disponibile e orienta la disposizione sulla faccia, lasciando modificabili i valori. Sul caso KnifeHandle sono state verificate 96 copie su B15:F6, con salvataggio, rigenerazione e Undo/Redo.
+
+**Scegli superfici nella vista** consente di aggiungere più destinazioni: formano un unico appoggio e il corpo può attraversare giunzioni tangenti compatibili. Con più facce, il calcolo segue la normale all'appoggio della prima faccia e segnala vuoti, sovrapposizioni e giunzioni incompatibili; non è un avvolgimento universale di superfici ripiegate. Con una destinazione singola la mappa segue il carrier UV, senza ritaglio automatico al bordo della faccia. L'altezza locale segue la normale; può verificarsi stiramento tangenziale. Fit e controlli usano curve/superfici B-rep, senza mesh di calcolo.
+
+Queste operazioni conservano riferimenti associativi, modifica, anteprima, Undo/Redo e salvataggio nativo. [Uso, precisione e limiti](docs/riempimento-sviluppo-adattamento-2026-11-05.md).
 
 ### Storia parametrica e documenti
 
@@ -200,7 +245,7 @@ ForgeCAD è scritto in **C++17** con **Qt 6** e una viewport **OpenGL 3.3 Core**
 | STL | — | Mesh triangolare |
 | OBJ | — | Mesh quadrangolare, per esempio per Blender |
 
-Dal formato 56 i nuovi salvataggi usano Zstandard con checksum per definizione e cache, senza perdere precisione geometrica o mesh; richiedono un lettore aggiornato. I file precedenti zlib (1–55) restano leggibili.
+Il formato nativo corrente è **66**: comprende variazioni dei parametri, corrispondenze delle loft, unione delle facce e condizioni G1 ai piani. Riempimento e mappature conservano definizioni e riferimenti associativi; le destinazioni multiple richiedono un lettore aggiornato. Dal formato 56 i salvataggi usano Zstandard con checksum separati per definizione e cache, senza perdere precisione geometrica o mesh. I file precedenti, inclusi quelli zlib (1–55), restano leggibili.
 
 I documenti `.prt` di ForgeCAD hanno una firma interna `FCAD`: l'estensione non indica compatibilità con i documenti di altri CAD. STEP e IGES trasferiscono la geometria senza ricreare lo storyboard parametrico originale. Le esportazioni STEP/IGES usano i corpi visibili.
 
@@ -447,12 +492,16 @@ La mappa architetturale interattiva (`docs/architecture/index.html`, generata lo
 | `forgeCad2026_dialogs.h`, `forgeCad2026_dialogs_*.cpp` | Dialoghi raggruppati per solidi, superfici, schizzi/curve e analisi |
 | `forgeCad2026_dialogs_common.h/.cpp` | Pannelli, anteprime e selettori di riferimenti condivisi |
 | `cad_*.cpp`, `cad_*.h` | Schizzi, vincoli, feature, storia, documenti, analisi e scambio file |
+| `cad_fill_pattern.*`, `cad_surface_mapping.*`, `forgeCad2026_dialogs_mapping.cpp` | Riempimento, sviluppo esatto e deformazione associativa, con i relativi pannelli |
+| `kernel/fk_surface_mapping.*`, `kernel/fk_body_collection.cpp` | Mappe B-rep e collezioni di solidi/lamine con genealogia esplicita |
 | `kernel/` | Kernel geometrico, B-rep, curve/superfici e test numerici |
 | `tests/` | Test dell'applicazione e delle interazioni |
 | `packaging/` | Integrazione Linux e metadati macOS |
 | `icons/` | Icone e risorse |
 | `docs/` | Note tecniche e documentazione delle prestazioni |
 | Directory di esempi esterna | Modelli CAD locali, non inclusi nel repository |
+
+Le regressioni di riempimento e mappatura si eseguono con `ctest --test-dir build-linux --output-on-failure -R surface_mapping` (su macOS usare `build-macos`); il test applicativo richiede `FORGECAD_BUILD_VIEW_TESTS=ON`. Il [rapporto delle funzionalità](docs/riempimento-sviluppo-adattamento-2026-11-05.md) distingue le prove automatiche da quelle native Wayland sui documenti reali.
 
 La [politica delle tolleranze](docs/tolerance-policy.md) definisce risoluzione, budget di connessione e approssimazione, tolleranze locali e controlli di validita'.
 
@@ -477,6 +526,8 @@ QT_QPA_PLATFORM=xcb ./build-linux/forgecad
 ```sh
 FORGECAD_IGPU=1 ./build-linux/forgecad
 ```
+
+**Nuovi comandi assenti dal ribbon personalizzato.** Aprirli dal menu **Funzioni → Ripetizione** o **Funzioni → Superfici**, oppure aggiungerli al proprio layout. Riaprire l'app dopo aver aggiornato l'eseguibile.
 
 **Modello diverso dopo un aggiornamento.** Usare **Modifica → Rigenera tutto**. I documenti possono contenere corpi e mesh già calcolati; la rigenerazione aiuta a diagnosticare riferimenti mancanti e feature non valide.
 

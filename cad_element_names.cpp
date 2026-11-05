@@ -212,7 +212,11 @@ QVector<int> historyOperands(const ExtrusionObject &body) {
         if (mergingFeature(body) && body.mergeOperation != 0)
             for (int merged : body.mergeBodies) add(merged);
         return operands;
-    case BodyFeature::SurfaceTools: if(body.surfaceTool.mode!=1)add(body.firstBody);return operands;
+    case BodyFeature::SurfaceTools:
+        if (body.surfaceTool.mode>=3&&!body.surfaceTool.sources.isEmpty()) {
+            for (const auto &ref:body.surfaceTool.sources) add(ref.index);
+        } else if(body.surfaceTool.mode!=1) add(body.firstBody);
+        return operands;
     case BodyFeature::Sew:
         add(body.firstBody);
         for (int tool : body.booleanTools) add(tool);

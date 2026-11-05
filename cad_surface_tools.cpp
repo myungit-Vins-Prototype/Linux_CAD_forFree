@@ -1,4 +1,5 @@
 #include "cad_surface_tools.h"
+#include "cad_surface_mapping.h"
 #include "cad_datum.h"
 #include "cad_element_names.h"
 #include "cad_topology_ref.h"
@@ -41,6 +42,7 @@ QByteArray surfaceBasisHash(const ForgeBody &body) {
     return QCryptographicHash::hash(bytes, QCryptographicHash::Sha256);
 }
 void buildSurfaceTool(ExtrusionObject &body, int index, const QVector<SketchObject> &sketches, const QVector<ExtrusionObject> &bodies) {
+    if (body.surfaceTool.mode >= 3) { buildSurfaceMapping(body,index,sketches,bodies); return; }
     using namespace Kernel;
     try {
         const auto &p = body.surfaceTool;
@@ -128,6 +130,7 @@ void buildSurfaceTool(ExtrusionObject &body, int index, const QVector<SketchObje
 }
 QByteArray surfaceToolsExtras(const QVector<ExtrusionObject> &bodies) {
     QJsonArray records;
+    bool mapping=false, multiple=false, targetSet=false;
     for (int i = 0; i < bodies.size(); ++i) {
         const auto &b = bodies[i];
         if (b.feature != BodyFeature::SurfaceTools && b.fillFaceContinuities.isEmpty())
@@ -145,6 +148,20 @@ QByteArray surfaceToolsExtras(const QVector<ExtrusionObject> &bodies) {
                                    {"basis", QString::fromLatin1(p.basis.toHex())},
                                    {"edits", edits},
                                    {"contacts", contacts}};
+        if (p.mode >= 3) {
+            mapping=true;
+            targetSet=targetSet||(p.mode==4&&p.targets.size()>2);
+            record["mapping"]=QJsonObject{{"u",p.mappingU},{"v",p.mappingV},{"x",p.mappingX},{"y",p.mappingY},
+                {"angle",p.mappingAngle},{"offset",p.mappingOffset},{"copy",p.mappingCopy}};
+        }
+        if (!p.sources.isEmpty()) {
+            multiple=true;
+            QJsonArray sources;
+            for (const auto &r:p.sources)
+                sources.append(QJsonArray{r.kind,r.index,QString::number(r.featureId),r.point.x,r.point.y,r.point.z,
+                    r.point.subshape,r.point.geometry,r.point.context,r.point.role,r.point.name});
+            record["sources"]=sources;
+        }
         if (!p.targets.isEmpty()) {
             QJsonArray targets;
             for (const auto &r : p.targets)
@@ -155,7 +172,7 @@ QByteArray surfaceToolsExtras(const QVector<ExtrusionObject> &bodies) {
         records.append(record);
     }
     return records.isEmpty() ? QByteArray()
-                             : QJsonDocument(QJsonObject{{"schema", 1}, {"features", records}}).toJson(QJsonDocument::Compact);
+                             : QJsonDocument(QJsonObject{{"schema", targetSet ? 4 : multiple ? 3 : mapping ? 2 : 1}, {"features", records}}).toJson(QJsonDocument::Compact);
 }
 QString applySurfaceToolsExtras(const QByteArray &bytes, QVector<ExtrusionObject> &output) {
     auto bodies = output;
@@ -165,7 +182,7 @@ QString applySurfaceToolsExtras(const QByteArray &bytes, QVector<ExtrusionObject
             require(bytes.size() <= 4 * 1024 * 1024, "Estensioni superfici oltre4MiB.");
             QJsonParseError error;
             const auto root = QJsonDocument::fromJson(bytes, &error).object();
-            require(error.error == QJsonParseError::NoError && root.size() == 2 && root["schema"].toDouble(-1) == 1 &&
+            require(error.error == QJsonParseError::NoError && root.size() == 2 && (root["schema"].toDouble(-1) == 1 || root["schema"].toDouble(-1) == 2 || root["schema"].toDouble(-1) == 3 || root["schema"].toDouble(-1) == 4) &&
                         root["features"].isArray(),
                     "Estensioni superfici danneggiate.");
             const auto integer = [](const QJsonValue &v, int low, int high) {
@@ -176,7 +193,7 @@ QString applySurfaceToolsExtras(const QByteArray &bytes, QVector<ExtrusionObject
             for (const auto &entry : root["features"].toArray()) {
                 require(entry.isObject(), "Record superficie non valido.");
                 const auto o = entry.toObject();
-                require(o.size() == 7 || (o.size() == 8 && o.contains("targets")), "Record superficie incompleto.");
+                require(o.size() == 7 + int(o.contains("targets")) + int(o.contains("mapping")) + int(o.contains("sources")), "Record superficie incompleto.");
                 const int i = integer(o["index"], 0, bodies.size() - 1);
                 require(!present.contains(i), "Estensione superficie duplicata.");
                 present.insert(i);
@@ -184,7 +201,13 @@ QString applySurfaceToolsExtras(const QByteArray &bytes, QVector<ExtrusionObject
                 require(b.feature == BodyFeature::SurfaceTools || b.feature == BodyFeature::FillSurface,
                         "Estensione su un tipo di funzione incompatibile.");
                 auto &p = b.surfaceTool;
-                p.mode = integer(o["mode"], 0, 2);
+                p.mode = integer(o["mode"], 0, root["schema"].toInt()>=2?4:2);
+                if (p.mode >= 3) {
+                    require(o["mapping"].isObject(),"Parametri di mappatura assenti.");
+                    const auto m=o["mapping"].toObject();require(m.size()==7&&m["copy"].isBool(),"Parametri di mappatura incompleti.");
+                    const auto number=[&](const char*key){double v=m[key].toDouble(NAN);require(std::isfinite(v)&&std::fabs(v)<=1e9,"Parametro di mappatura non valido.");return v;};
+                    p.mappingU=number("u");p.mappingV=number("v");p.mappingX=number("x");p.mappingY=number("y");p.mappingAngle=number("angle");p.mappingOffset=number("offset");p.mappingCopy=m["copy"].toBool();
+                } else require(!o.contains("mapping"),"Mappatura su funzione incompatibile.");
                 p.maximum = o["maximum"].toDouble(NAN);
                 p.tolerance = o["tolerance"].toDouble(NAN);
                 require(std::isfinite(p.maximum) && p.maximum > 0 && p.maximum <= 1e6 && std::isfinite(p.tolerance) &&
@@ -215,37 +238,31 @@ QString applySurfaceToolsExtras(const QByteArray &bytes, QVector<ExtrusionObject
                     poles.insert(key);
                     p.edits.append(e);
                 }
-                p.targets.clear();
-                if (o.contains("targets")) {
-                    require(o["targets"].isArray() && !o["targets"].toArray().isEmpty() && o["targets"].toArray().size() <= 256 &&
-                            b.feature == BodyFeature::SurfaceTools && p.mode == 0, "Destinazioni superficie non valide.");
+                const auto readRefs=[&](const char *key,QVector<GeometryRef> &refs,bool source) {
+                    refs.clear();
+                    if (!o.contains(key)) return;
+                    require(o[key].isArray()&&!o[key].toArray().isEmpty()&&o[key].toArray().size()<=256&&
+                        b.feature==BodyFeature::SurfaceTools&&(source?p.mode>=3:(p.mode==0||p.mode>=3)),"Riferimenti superficie non validi.");
+                    if(source)require(root["schema"].toInt()>=3,"Sorgenti multiple senza schema3.");
                     QSet<QString> selected;
-                    for (const auto &value : o["targets"].toArray()) {
-                        require(value.isArray() && value.toArray().size() == 11, "Riferimento finale incompleto.");
-                        const auto a = value.toArray();
-                        GeometryRef r;
-                        r.kind = integer(a[0], 1, 8);
-                        require(r.kind == 1 || r.kind == 5 || r.kind == 8, "Tipo di riferimento finale non valido.");
-                        r.index = integer(a[1], 0, r.kind == 1 ? 2 : i - 1);
-                        bool idValid = false;
-                        require(a[2].isString(), "Identita' del riferimento finale assente.");
-                        r.featureId = a[2].toString().toULongLong(&idValid);
-                        require(idValid && QString::number(r.featureId) == a[2].toString(), "Identita' del riferimento finale non valida.");
-                        r.point.x = a[3].toDouble(NAN); r.point.y = a[4].toDouble(NAN); r.point.z = a[5].toDouble(NAN);
-                        require(std::isfinite(r.point.x) && std::isfinite(r.point.y) && std::isfinite(r.point.z), "Punto finale non valido.");
-                        r.point.subshape = integer(a[6], -1, 2147483647);
-                        r.point.geometry = integer(a[7], -1, 2147483647);
-                        r.point.context = integer(a[8], -1, 2147483647);
-                        r.point.role = integer(a[9], 0, 1);
-                        require(a[10].isString() && a[10].toString().size() <= 4096, "Nome topologico finale non valido.");
-                        r.point.name = a[10].toString();
-                        const QString key = QStringLiteral("%1/%2/%3").arg(r.kind).arg(r.index).arg(r.kind == 5 ? r.point.subshape : -1);
-                        require(!selected.contains(key), "Riferimento finale duplicato.");
-                        selected.insert(key);
-                        p.targets.append(r);
+                    for(const auto &value:o[key].toArray()) {
+                        require(value.isArray()&&value.toArray().size()==11,"Riferimento superficie incompleto.");
+                        const auto a=value.toArray();GeometryRef r;r.kind=integer(a[0],1,11);
+                        require(source?(r.kind==5||(p.mode==4&&r.kind==11)):(r.kind==1||r.kind==5||r.kind==8),"Tipo di riferimento superficie non valido.");
+                        r.index=integer(a[1],0,r.kind==1?2:i-1);bool valid=false;
+                        require(a[2].isString(),"Identita' sorgente assente.");r.featureId=a[2].toString().toULongLong(&valid);
+                        require(valid&&QString::number(r.featureId)==a[2].toString(),"Identita' sorgente non valida.");
+                        r.point.x=a[3].toDouble(NAN);r.point.y=a[4].toDouble(NAN);r.point.z=a[5].toDouble(NAN);
+                        require(std::isfinite(r.point.x)&&std::isfinite(r.point.y)&&std::isfinite(r.point.z),"Punto sorgente non valido.");
+                        r.point.subshape=integer(a[6],-1,2147483647);r.point.geometry=integer(a[7],-1,2147483647);
+                        r.point.context=integer(a[8],-1,2147483647);r.point.role=integer(a[9],0,1);
+                        require(a[10].isString()&&a[10].toString().size()<=4096,"Nome topologico non valido.");r.point.name=a[10].toString();
+                        const auto identity=QStringLiteral("%1/%2/%3").arg(r.kind).arg(r.index).arg(r.kind==5?r.point.subshape:-1);
+                        require(!selected.contains(identity),"Riferimento superficie duplicato.");selected.insert(identity);refs.append(r);
                     }
-                    b.extentRef = p.targets.front();
-                }
+                };
+                readRefs("targets",p.targets,false);readRefs("sources",p.sources,true);
+                if(p.mode==0&&!p.targets.isEmpty())b.extentRef=p.targets.front();
                 b.fillFaceContinuities.clear();
                 for (const auto &c : o["contacts"].toArray())
                     b.fillFaceContinuities.append(integer(c, -1, 2));
@@ -254,6 +271,12 @@ QString applySurfaceToolsExtras(const QByteArray &bytes, QVector<ExtrusionObject
                         "Continuita' per faccia incompatibili.");
                 if (b.feature == BodyFeature::SurfaceTools) {
                     require(b.fillFaceContinuities.isEmpty(), "Contatti fill su operazione superficie.");
+                    if (p.mode >= 3)
+                        {
+                            require(p.targets.size()>=2&&p.targets[0].kind==5,"Mappatura senza faccia e piano.");
+                            require(p.targets.size()==2||(p.mode==4&&root["schema"].toInt()==4),"Destinazioni multiple senza schema4.");
+                            for(int target=2;target<p.targets.size();++target)require(p.targets[target].kind==5,"Destinazione multipla non faccia.");
+                        }
                     if (p.mode == 0)
                         require(b.blendEdges.size() == 1 && b.extentRef.kind >= 0, "Estensione senza bordo o destinazione.");
                     if (p.mode == 1)

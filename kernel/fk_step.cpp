@@ -457,7 +457,13 @@ std::string writeStep(const std::vector<ExchangeBody> &bodies, const StepWriteOp
                     for (LoopId l : body.face(f).loops)
                         for (FinId fin : body.loopFins(l)) boxes[body.face(f).shell.index].add(body.vertex(body.fin(fin).vertex).point);
                 std::vector<int> outer, voids;
-                for (const auto &[shell, faces] : facesOf) (volumes.count(shell) && volumes.at(shell) < 0.0 ? voids : outer).push_back(shell);
+                std::vector<int> openShells;
+                for (const auto &[shell, faces] : facesOf) {
+                    if (!body.region(body.shell(ShellId(shell)).region).solid)
+                        openShells.push_back(w.add("OPEN_SHELL(''," + StepWriter::list(faces) + ")"));
+                    else (volumes.count(shell) && volumes.at(shell) < 0.0 ? voids : outer).push_back(shell);
+                }
+                if (!openShells.empty()) items.push_back(w.add("SHELL_BASED_SURFACE_MODEL(''," + StepWriter::list(openShells) + ")"));
                 std::map<int, std::vector<int>> voidsOf;
                 for (int v : voids) {
                     int best = outer.empty() ? -1 : outer.front();
@@ -485,7 +491,7 @@ std::string writeStep(const std::vector<ExchangeBody> &bodies, const StepWriteOp
                 }
                 std::vector<int> all = items;
                 all.push_back(origin);
-                representation = w.add("ADVANCED_BREP_SHAPE_REPRESENTATION(" + text(name) + "," + StepWriter::list(all) + "," + StepWriter::ref(context) + ")");
+                representation = w.add(std::string(openShells.empty()?"ADVANCED_BREP_SHAPE_REPRESENTATION(":"SHAPE_REPRESENTATION(") + text(name) + "," + StepWriter::list(all) + "," + StepWriter::ref(context) + ")");
             }
         }
         // Prodotto.

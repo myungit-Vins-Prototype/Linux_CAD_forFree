@@ -4,6 +4,9 @@
 // Interfaccia interna dei dialoghi per finestra principale e test.
 #include "forgeCad2026_dialogs_common.h"
 
+bool fillPatternDialog(QMainWindow *, CadViewport *, const QString &, int, const ExtrusionObject &, const std::function<QString(const ExtrusionObject &)> &);
+bool surfaceMappingDialog(QMainWindow *, CadViewport *, const QString &, int, const ExtrusionObject &, const std::function<QString(const ExtrusionObject &)> &);
+
 // Finestra della misura di un raccordo o smusso con l'anteprima dal vivo
 // (CadViewport::requestBlendPreview dopo Invio nel campo). `edgesLabel` descrive gli
 // spigoli; `chamferBox` (facoltativa) permette di passare da raccordo a

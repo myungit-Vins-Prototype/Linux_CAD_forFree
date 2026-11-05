@@ -684,10 +684,13 @@ struct CurveExtractionParameters {
 
 struct SurfacePoleEdit {int u=0,v=0;double dx=0,dy=0,dz=0,weightFactor=1;};
 struct SurfaceToolParameters {
-    int mode=0; // 0 fino a riferimento, 1 rete di curve, 2 poli NURBS
+    int mode=0; // 0 fino a riferimento, 1 rete, 2 poli, 3 sviluppo esatto, 4 deforma su superficie
+    double mappingU=0,mappingV=0,mappingX=0,mappingY=0,mappingAngle=0,mappingOffset=0;
+    bool mappingCopy=true;
     double maximum=100,tolerance=1e-6;
     QByteArray basis;
     QVector<SurfacePoleEdit> edits;
+    QVector<GeometryRef> sources; // mappature: kind11 corpo intero, kind5 faccia
     QVector<GeometryRef> targets; // mode0: riferimenti finali; vuoto nei file con il solo extentRef
 };
 // Condizione trasversale lungo una guida, distinta da G0/G1/G2 lungo la curva.

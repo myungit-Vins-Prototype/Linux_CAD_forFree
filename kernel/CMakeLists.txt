@@ -100,6 +100,8 @@ add_library(forgekernel STATIC
     fk_sheet.h
     fk_surface_tools.h
     fk_surface_tools.cpp
+    fk_body_collection.cpp
+    fk_surface_mapping.cpp
     fk_sheet.cpp
     fk_offset.h
     fk_offset.cpp
@@ -373,3 +375,10 @@ target_compile_options(forgekernel_marching_seed_grid_tests PRIVATE -Wall -Wextr
 set_target_properties(forgekernel_marching_seed_grid_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
 add_test(NAME forgekernel_marching_seed_grid_tests COMMAND forgekernel_marching_seed_grid_tests)
 set_tests_properties(forgekernel_marching_seed_grid_tests PROPERTIES TIMEOUT 60)
+
+add_executable(forgekernel_surface_mapping_tests tests/test_surface_mapping.cpp)
+target_link_libraries(forgekernel_surface_mapping_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_surface_mapping_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_surface_mapping_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_surface_mapping_tests COMMAND forgekernel_surface_mapping_tests)
+set_tests_properties(forgekernel_surface_mapping_tests PROPERTIES TIMEOUT 120)

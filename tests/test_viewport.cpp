@@ -28,6 +28,7 @@
 #include "fk_bspline.h"
 #include "../cad_forge.h"
 #include "../cad_pattern.h"
+#include "../cad_surface_tools.h"
 #include "../cad_extrude.h"
 #include "../cad_sketch_refs.h"
 #include "../cad_sketch_reference_usage.h"
@@ -269,6 +270,7 @@ public:
 #include "test_storyboard_panel_selection.h"
 #include "test_loft_projected_sections.h"
 #include "test_loft_points.h"
+#include "test_surface_mapping.h"
 #include "test_advanced_fillets.h"
 #include "test_fillet_refinements.h"
 #include "test_lazy_mesh.h"
@@ -11893,6 +11895,7 @@ int main(int argc, char **argv) {
         else if (app.arguments().contains(QStringLiteral("--saved-loft-surface")))
             ViewportInteractionTest::savedLoftSurface(app.arguments().value(app.arguments().indexOf(QStringLiteral("--saved-loft-surface"))+1));
         else if (app.arguments().contains(QStringLiteral("--edge-loft"))) ViewportInteractionTest::edgeLoftWorkflow();
+        else if (app.arguments().contains(QStringLiteral("--surface-mapping"))) ViewportInteractionTest::mappingAndFillTools();
         else if (app.arguments().contains(QStringLiteral("--loft-points")))
             ViewportInteractionTest::loftPointsAndPlanes();
         else if (app.arguments().contains(QStringLiteral("--open-loft-tangency")))

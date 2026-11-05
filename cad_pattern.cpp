@@ -1,4 +1,5 @@
 #include "cad_pattern.h"
+#include "cad_fill_pattern.h"
 #include "cad_forge.h"
 #include "cad_feature_dependencies.h"
 #include "cad_element_names.h"
@@ -108,7 +109,8 @@ bool patternFeatureSupported(const ExtrusionObject &source) {
 }
 
 bool patternPlacements(const PatternParameters &p, int owner, const QVector<SketchObject> &sketches, const QVector<ExtrusionObject> &bodies,
-                       std::vector<Transform3> &placements, QString *error) {
+                       std::vector<Transform3> &placements, QString *error, int source) {
+    if (p.kind >= 3) return fillPatternPlacements(p, source, owner, sketches, bodies, placements, error);
     placements.clear();
     constexpr quint64 maximumPlacements = 500;
     const auto resolve = [&](int k, ResolvedRef &r) {

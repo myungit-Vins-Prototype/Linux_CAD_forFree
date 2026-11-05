@@ -79,8 +79,10 @@ Screenshots from the application. Click the images to view them at full resoluti
 - Trimming, extending, splitting, filleting, and chamfering sketch entities.
 - Offsetting entities and chains; moving, rotating, and copying.
 - Linear and circular patterns and mirroring of sketch entities.
-- Snapping to geometry, the grid, and the origin; midpoint and quadrant recognition.
-- External references to axes, planes, edges, and curves; edge conversion and body sections in the sketch plane.
+- Snapping to geometry, the grid, and the origin; midpoints, quadrants, and **Intersezione** (intersection) between exact curves. Intersection constraints follow both source entities; extensions and overlaps without an isolated crossing do not produce an intersection snap.
+- External references to axes, planes, edges, sketches, and curves, including projected and extracted curves; edge conversion and body sections in the sketch plane. Clicks and hovering remain temporary: automatic references are stored only when used and cleaned up when their last use is deleted, preserving constraints, explicit conversions, and Undo/Redo.
+- **Visualizza → Mostra linee di costruzione** (View → Show construction lines) also displays construction geometry outside sketch editing; the preference is saved. Construction geometry is excluded from modeling profiles.
+- A newly created sketch is discarded when closed without completed entities; points and construction geometry count as content. Existing sketches and sketches used by other features are preserved.
 - **3D sketches** with polylines and splines defined by XYZ points in space.
 - Associative extraction of 3D edges, trimming of 3D curves, and projection of curves onto surfaces.
 - Helices and spirals that can be used as modeling paths.
@@ -101,7 +103,7 @@ Screenshots from the application. Click the images to view them at full resoluti
 | Operation | Description |
 |---|---|
 | Primitives | Box, cylinder, sphere, cone, and torus |
-| Extrusion | Sketch-based construction, one-sided, symmetric, or two-sided extrusion, and body cuts |
+| Extrusion | Sketch-based construction, one-sided, symmetric or two-sided extrusion, up to the next body, and body cuts |
 | Revolution | Geometry created by revolving a profile around an axis |
 | Booleans | Union, intersection, and difference A − B |
 | Sweep | A profile along a path, referencing sketches and 3D curves/edges |
@@ -109,22 +111,60 @@ Screenshots from the application. Click the images to view them at full resoluti
 | Fillet and chamfer | Edge operations, including selecting the edges of a face |
 | Draft | Inclining faces |
 | Shell | Creating a hollow body |
-| Automatic threading | Creating a thread feature |
-| Patterns and mirror | Linear, circular, and mirrored copies of solid or surface bodies |
+| Automatic threading | ISO metric M1–M68 catalog, common coarse/fine pitches; manual pitch, length, handedness and direction |
+| Patterns and mirror | Linear, circular, mirrored and automatic fill copies; variations of feature parameters |
 | Transformations | Moving, rotating, and scaling bodies |
 | Construction planes | References for new sketches and operations |
 
-Loft accepts sections and guides from sketches and exact edges, including spatial geometry, with reorderable lists and associative references. Available G0/G1/G2 conditions depend on the command and geometry: contact, tangency, and curvature require compatible references.
+In **Estrusione**, **Fino al prossimo corpo** (up to the next body) stops a closed solid profile at the first exact surfaces encountered in the positive or reversed direction, including limits belonging to multiple bodies. It uses earlier active, unconsumed solids even when manually hidden; limit bodies remain available in the history. Symmetric, two-sided and surface-only modes are excluded. Missing coverage, undercuts, internal obstacles or unsupported geometry produce an error. The result can use the extrusion's union operation when geometrically valid.
 
-The **Raggio** command has four illustrated tabs: **Costante** (constant), **Conico** (conic), **Variabile** (variable), and **Tra facce** (between faces). Conics support elliptical (ρ < 0.5), parabolic (ρ = 0.5), and hyperbolic (ρ > 0.5) sections, controlled by ρ or the curvature radius at the section midpoint. Variable fillets accept multiple selected edges: tangent edges form one path with 2–64 stations equally spaced by total arc length. Disconnected paths have independent tables; select an edge in the list to display its path’s table, interpolation and reverse direction controls. Drag the R markers in the 3D view to change radii and update the preview. Closed paths keep their first and last radii equal. Face fillets require two adjacent faces of the same body and round their shared edges. Tangent propagation can be disabled and stays off in variable mode. The panel can close while its preview is computing. Native format 59 stores these parameters and reads older documents.
+**Fino a una faccia o a un piano** (up to a face or plane) also accepts valid free faces. [Usage and verified limits (Italian)](docs/superfici-estrusione-2026-11-02.md).
 
-Panels have a compact header and a **⋮** menu for left/right anchoring and **Usa tutta l’altezza disponibile** (use the full available height). Subsequent panels inherit these preferences; dragging detaches a panel and snaps it to either side. Illustrations use a white background in the light theme.
+Solid and surface **Lofts** provide ordered lists and associative references:
+
+- Sections and guides from sketches, individual entities, exact edges, and projected or extracted 3D curves. Whole-sketch sections exclude construction geometry. Select in the viewport or storyboard, including hidden sketches.
+- Point sections from point entities or vertices, only at the first or last profile and with at least one curve section. A sketch containing a single point can be selected as a whole.
+- G0/G1/G2 profile conditions, influence, and independent **Inverti normale** (reverse normal) controls at both ends. **G1 — tangente a un piano** accepts a principal plane, construction plane or planar face containing the section; guide tangents must be compatible.
+- **Condizione trasversale** (guide cross condition): free, G1 normal to the profile plane with direction reversal, or G1 tangent to one or more adjacent faces. Spatial curves need an explicit plane for the normal mode; supporting faces must meet the guide and be compatible. These controls are separate from G0/G1/G2 along the guide and are unavailable for ruled lofts.
+- **Modifica corrispondenze fra sezioni** (edit section correspondences): drag points on the profiles or edit arc-length percentages to control seams and twisting; add/remove connections, reverse a section, or restore **Automatico**. Inconsistent correspondences are reported.
+- **Unisci facce tangenti** (merge tangent faces) removes edges between compatible patches that the kernel can concatenate without refitting. It does not merge arbitrary G1 face pairs; necessary seams on closed surfaces remain in the B-rep.
+- Guide-crossing errors identify the guide and section with names, labels and arrows: red for the guide and orange for the section.
+
+Usage and limits (Italian): [correspondences](docs/loft-corrispondenze-2026-11-04.md), [guide conditions](docs/loft-controlli-guide-2026-11-04.md), [points and planes](docs/loft-punti-piani-2026-11-05.md), [patch merging](docs/loft-hook-2026-11-04.md#unione-delle-facce-tangenti).
+
+The thread catalog includes 40 coarse-pitch ISO sizes and 22 fine-pitch combinations. The selected face supplies the actual geometric diameter; the catalog proposes nominal parameters.
+
+**Taglia superfici → Taglia entrambi** (trim surfaces → trim both) lets you retain portions of each body and sew them into a new result. A closed sheet is not automatically promoted to a solid; use sewing to create a volume when valid. Booleans and trims operate on exact surfaces, including NURBS, within the kernel's supported cases. [Verified examples and limits (Italian)](docs/knifehandle-taglio-reciproco-2026-11-05.md).
+
+The **Raggio** command has four illustrated tabs: **Costante** (constant), **Conico** (conic), **Variabile** (variable), and **Tra facce** (between faces). Conics support elliptical (ρ < 0.5), parabolic (ρ = 0.5), and hyperbolic (ρ > 0.5) sections, controlled by ρ or the curvature radius at the section midpoint. Variable fillets accept multiple selected edges: tangent edges form one path with 2–64 stations equally spaced by total arc length. Disconnected paths have independent tables; select an edge in the list to display its path’s table, interpolation and reverse direction controls. Drag the R markers in the 3D view to change radii and update the preview. Closed paths keep their first and last radii equal. Face fillets require two adjacent faces of the same body and round their shared edges. Tangent propagation can be disabled and stays off in variable mode. The panel can close while its preview is computing. Support was introduced in native format 59, retaining the ability to read older documents.
+
+Panels have a compact header and a **⋮** menu for left/right anchoring and **Usa tutta l'altezza disponibile** (use the full available height); they remain below the ribbon. OK and Cancel clear the ribbon command selection. Construction-plane references, including already defined points, can be removed with **×**. Preferences are saved; drag a panel to detach it or snap it to either side.
+
+While a feature is open, the ribbon's left tile provides **Conferma/Annulla** (confirm/cancel) or **Chiudi** (close); while sketching it provides **Termina** (finish). Closing Extrusion or Revolution returns to the **Schizzo** tab if sketch editing remains active. The Loft panel starts at 440 px, with labels close to lists and compact **↑/↓** arrows; saved user sizes take precedence. Illustrations use a white background in the light theme. [New controls (Italian)](docs/ui-ribbon-loft-filettature-2026-11-05.md).
+
+### 3D curve from two sketches
+
+In **Curva proiettata**, choose **Schizzo su schizzo (curva 3D)** (sketch on sketch), two sketches on nonparallel planes, and the individual input curves. Lists and **Scegli curva nella vista** (pick curve in the viewport) let you exclude other entities. The spatial curve is the intersection of the two normal projections; it depends on both sketches and regenerates after edits.
+
+The result retains NURBS where available and implicit branches otherwise. Both can supply associative sketch references through edge conversion, snapping, dimensions, PointOnCurve and Pierce, and can be used as loft sections or guides. Sweep, free conversion to NURBS and STEP/IGES export remain unavailable for implicit branches; parallel planes and unresolved degeneracies produce errors. [Geometry and usage (Italian)](docs/curva-proiettata-due-schizzi-2026-11-02.md).
+
+### Feature patterns and automatic fill
+
+In linear and circular patterns, **Ripeti: Una funzione** (repeat one feature) lets you vary multiple numeric parameters by constant increments: `q(i) = q(0) + i * increment`. Dimensions from sketches used directly by that feature appear in the viewport and can be selected with a click; the list contains only the feature's parameters and those of its direct sketches. Variations are disabled for **Il corpo intero** (whole body). Excluded instances retain their original indices; supported feature types and valid parameter combinations remain limited. [Using variations (Italian)](docs/ripetizioni-variabili-2026-11-04.md).
+
+**Funzioni → Ripetizione → Riempimento automatico…** arranges bodies or supported additive/subtractive feature tools inside a closed sketch or planar face:
+
+- **Rectangular, staggered, hexagonal and concentric** layouts, with preview icons, spacing and layout rotation.
+- Holes and copies whose conservative rectangular footprint crosses the boundary are excluded; copies retain the source orientation. A hexagonal layout does not change the repeated body's shape.
+- Up to 500 copies. This mode does not use dimension variations or numbered exclusions; Boolean features with multiple tools are not accepted as sources.
+
+Results retain bodies and dependencies in the storyboard, with editing, regeneration and Undo/Redo. [Fill details and validation (Italian)](docs/riempimento-sviluppo-adattamento-2026-11-05.md#riempimento-automatico).
 
 ### Surface modeling
 
 - Extrusion of open profiles, surface Loft, and surface Sweep.
 - Planar, ruled, boundary, and fill surfaces.
-- Selection of edges and curves to define boundaries, sections, and guides.
+- Select edges and curves for boundaries, sections and guides in the viewport or storyboard. Click a sketch for the full profile, or expand it for individual entities and body edges; hidden sketches can be selected without showing them in the document.
 - Copying and deleting faces.
 - Offsetting, extending, and trimming surfaces.
 - **Extend surface** opens its panel immediately: add or remove edges in the viewport while adjusting distance, extension type, complete contours, and preview in the same panel.
@@ -135,6 +175,22 @@ Panels have a compact header and a **⋮** menu for left/right anchoring and **U
 The **Functions → Surfaces** menu also provides extension of one free edge up to a plane or face (including curved faces), an ordered U/V curve network, per-contact G0/G1/G2 continuity in fills, and direct NURBS pole/weight editing with a draggable cage and XYZ table. Networks use 2–16 open curves per family, exactly one 3D crossing per pair, and sewn Coons cells with internal G0 continuity. They do not impose global G1/G2 continuity. The extension reference must cross the full extension within the search distance without cutting the original sheet.
 
 Pole editing supports a single NURBS face, preserving degree, knots and UV trims including holes; extract a face from a sewn body with **Copy faces** first. Drag in the screen plane or edit XYZ/positive weights in the table (up to 4096 poles). Deltas and weight factors follow the upstream surface; a changed knot layout requires explicit reselection. Regularity checks are sampled and do not certify the absence of global self-intersections. These features support regeneration, Undo/Redo, native files and revisions; native format 54 preserves topological names for sketch supports and Pierce constraints and reads older files.
+
+#### Exact surface development
+
+**Funzioni → Superfici → Distendi superficie…** accepts multiple faces and a principal or construction destination plane. Pick faces in the viewport or storyboard; clicking again removes a face, and **Termina selezione** (finish selection) or **Esc** starts the preview. Position and rotation can be edited.
+
+Development preserves lengths and intrinsic shape for supported planes, cylinders and cones; cones require isoparametric boundaries, and complex periodic seams may need splitting first. Multiple faces become separate planar islands spaced 1 mm apart, rather than a continuously sewn development. Double-curvature surfaces are rejected; the command does not recognize every developable NURBS surface. The 3D source is preserved.
+
+#### Deforming bodies onto surfaces
+
+**Funzioni → Superfici → Deforma corpo su superficie…** accepts multiple solid bodies and/or individual faces. Bodies remain separate solids and faces become sheets; they are not fused automatically. Set the source plane, target U/V anchor, position, rotation and normal offset. Keeping the source bodies is optional.
+
+For a fill, highlight one of its results in the list and click **Copie** (copies); select the target face, then **Centra e allinea dalla sorgente** (center and align from source). This retrieves the sketch plane when available and orients the layout on the face; values remain editable. The KnifeHandle case was verified with 96 copies on B15:F6, including saving, regeneration and Undo/Redo.
+
+**Scegli superfici nella vista** (pick target surfaces in the viewport) supports multiple destinations as one support, allowing a body to cross compatible tangent joins. With multiple faces, calculation follows the normal to the first face's anchor and reports gaps, overlaps and incompatible joins; this is not a universal wrap over folded surfaces. With one target face, the map follows its UV carrier without automatically trimming to its boundary. Local height follows the surface normal, with possible tangential stretching. Fitting and checks use B-rep curves and surfaces, without computational meshes.
+
+These operations preserve associative references, editing, previews, Undo/Redo and native saving. [Usage, precision and limits (Italian)](docs/riempimento-sviluppo-adattamento-2026-11-05.md).
 
 ### Parametric history and documents
 
@@ -185,7 +241,7 @@ ForgeCAD is written in **C++17** with **Qt 6** and an **OpenGL 3.3 Core** viewpo
 | STL | — | Triangle mesh |
 | OBJ | — | Quadrilateral mesh, for example for Blender |
 
-Starting with format 56, new saves use Zstandard with checksums for the definition and cache, preserving geometry and mesh precision; they require an updated reader. Previous zlib files (1–55) remain readable.
+The current native format is **66**, covering parameter variations, loft correspondences, face merging and G1 plane conditions. Fill patterns and surface mappings preserve definitions and associative references; multiple target faces require an updated reader. Since format 56, saves use Zstandard with separate checksums for definitions and caches, preserving geometry and mesh precision. Earlier files, including zlib formats 1–55, remain readable.
 
 ForgeCAD `.prt` documents have an internal `FCAD` signature: the extension does not imply compatibility with documents from other CAD applications. STEP and IGES transfer geometry without recreating the original parametric storyboard. STEP/IGES exports use visible bodies.
 
@@ -432,12 +488,18 @@ The offline interactive architecture map (`docs/architecture/index.html`, genera
 | `forgeCad2026_dialogs.h`, `forgeCad2026_dialogs_*.cpp` | Operation dialogs grouped into solids, surfaces, sketches/curves, and analysis |
 | `forgeCad2026_dialogs_common.h/.cpp` | Shared panels, previews, and reference pickers |
 | `cad_*.cpp`, `cad_*.h` | Sketches, constraints, features, history, documents, analysis, and file exchange |
+| `cad_fill_pattern.*`, `cad_surface_mapping.*`, `forgeCad2026_dialogs_mapping.cpp` | Fill patterns, exact development and associative deformation, with their panels |
+| `kernel/fk_surface_mapping.*`, `kernel/fk_body_collection.cpp` | B-rep mappings and solid/sheet collections with explicit genealogy |
 | `kernel/` | Geometry kernel, B-rep, curves/surfaces, and numerical tests |
 | `tests/` | Application and interaction tests |
 | `packaging/` | Linux integration and macOS metadata |
 | `icons/` | Icons and resources |
 | `docs/` | Technical notes and performance documentation |
 | External example directory | Local CAD models, not included in the repository |
+
+Fill and surface-mapping regressions can be run with `ctest --test-dir build-linux --output-on-failure -R surface_mapping` (use `build-macos` on macOS); the application test needs `FORGECAD_BUILD_VIEW_TESTS=ON`. The [feature report (Italian)](docs/riempimento-sviluppo-adattamento-2026-11-05.md) separates automated tests from native Wayland checks on real documents.
+
+The [tolerance policy (Italian)](docs/tolerance-policy.md) defines resolution, connection and fitting budgets, local tolerances and validity checks.
 
 ## Troubleshooting
 
@@ -460,6 +522,8 @@ QT_QPA_PLATFORM=xcb ./build-linux/forgecad
 ```sh
 FORGECAD_IGPU=1 ./build-linux/forgecad
 ```
+
+**New commands are missing from a custom ribbon.** Open them through **Funzioni → Ripetizione** or **Funzioni → Superfici**, or add them to your ribbon layout. Restart the application after updating the executable.
 
 **The model looks different after an update.** Use **Modifica → Rigenera tutto** (Edit → Rebuild all). Documents can contain precomputed bodies and meshes; rebuilding helps diagnose missing references and invalid features.
 

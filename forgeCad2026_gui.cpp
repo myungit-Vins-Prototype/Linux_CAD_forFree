@@ -1454,6 +1454,10 @@ void PdfWindow::initializeActionsAndView(WindowSetup &setup) {
     linearPatternAction->setToolTip(QStringLiteral("Copie di un corpo solido, di superficie o di una funzione (foro, sporgenza) lungo una o due direzioni"));
     circularPatternAction->setToolTip(QStringLiteral("Copie di un corpo solido, di superficie o di una funzione attorno a un asse"));
     mirrorAction->setToolTip(QStringLiteral("Immagine speculare di un corpo solido, di superficie o di una funzione rispetto a un piano"));
+    auto *fillPatternAction=patternMenu->addAction(QStringLiteral("Riempimento automatico…"));
+    fillPatternAction->setObjectName(QStringLiteral("fillPatternAction"));fillPatternAction->setIcon(ForgeCad::commandIcon("fillRect"));
+    connect(fillPatternAction,&QAction::triggered,this,[this,viewport]{ExtrusionObject d;d.feature=BodyFeature::Pattern;d.pattern.kind=3;d.pattern.angle=0;d.firstBody=viewport->selectedFeatureIndex();
+        fillPatternDialog(this,viewport,QStringLiteral("Ripetizione di riempimento"),-1,d,[viewport](const ExtrusionObject &value){auto result=value;result.name=QStringLiteral("Riempimento %1").arg(viewport->extrusions().size()+1);return viewport->createBody(result);});});
     moveAction = functionsMenu->addAction(QStringLiteral("Sposta / ruota corpo..."));
     moveAction->setToolTip(QStringLiteral("Traslazione e rotazione esatte del corpo selezionato (anche come copia)"));
     scaleAction = functionsMenu->addAction(QStringLiteral("Scala..."));
@@ -1502,6 +1506,11 @@ void PdfWindow::initializeActionsAndView(WindowSetup &setup) {
     sewSurfacesAction = surfaceMenu->addAction(QStringLiteral("Cuci superfici..."));
     sewSurfacesAction->setToolTip(QStringLiteral("Unisce le superfici lungo i bordi comuni; se chiudono un volume crea un solido"));
     for(int mode=0;mode<3;++mode){const QString title=QStringList{QStringLiteral("Estendi fino a riferimento"),QStringLiteral("Superficie da rete di curve"),QStringLiteral("Modifica poli NURBS")}[mode];auto *action=surfaceMenu->addAction(title+QStringLiteral("…"));action->setObjectName(QStringList{"surfaceExtendToAction","surfaceNetworkAction","surfacePolesAction"}[mode]);action->setIcon(ForgeCad::commandIcon(mode==0?"surfaceExtendTo":mode==1?"surfaceNetwork":"surfacePoles"));connect(action,&QAction::triggered,this,[this,viewport,mode,title]{ExtrusionObject definition;definition.feature=BodyFeature::SurfaceTools;definition.surfaceTool.mode=mode;surfaceToolDialog(this,viewport,title,-1,definition,[viewport,title](const ExtrusionObject &d){auto result=d;result.name=title;return viewport->createBody(result);});});}
+    for(int mode=3;mode<=4;++mode){
+        const QString title=mode==3?QStringLiteral("Distendi superficie"):QStringLiteral("Deforma corpo su superficie");
+        auto *action=surfaceMenu->addAction(title+QStringLiteral("…"));action->setObjectName(mode==3?"surfaceUnrollAction":"surfaceWrapAction");action->setIcon(ForgeCad::commandIcon(mode==3?"surfaceUnroll":"surfaceWrap"));
+        connect(action,&QAction::triggered,this,[this,viewport,mode,title]{ExtrusionObject d;d.feature=BodyFeature::SurfaceTools;d.surfaceTool.mode=mode;d.firstBody=viewport->selectedFeatureIndex();surfaceMappingDialog(this,viewport,title,-1,d,[viewport,title](const ExtrusionObject &value){auto result=value;result.name=title;return viewport->createBody(result);});});
+    }
     auto *analysisMenu = addCadMenu(menuBar(), QStringLiteral("Analisi"));
     auto *shapeAction = analysisMenu->addAction(QStringLiteral("Curvatura, zebra e continuità..."));
     connect(shapeAction, &QAction::triggered, this, [this, viewport] { shapeAnalysisDialog(this, viewport); });
@@ -4788,7 +4797,7 @@ void PdfWindow::rebuildModelTree() {
                 item->setToolTip(0, QStringLiteral("Spessore %1 %2 lungo %3").arg(ForgeCad::formatLength(body.distance, 6, true, this), QString::fromLatin1(sides[qBound(0, body.thickenSide, 2)]),
                     body.thickenDirection.kind < 0 ? QStringLiteral("la normale") : ForgeCad::geometryRefText(body.thickenDirection, sketches, extrusions)));
             } else if (body.feature == BodyFeature::SurfaceTools) {
-                const QString text=body.surfaceTool.mode==0?QStringLiteral("Estesa fino a: %1").arg(ForgeCad::geometryRefText(body.extentRef,sketches,extrusions)):body.surfaceTool.mode==1?QStringLiteral("Rete di %1 x %2 curve, celle G0").arg(body.ruledFirst.size()).arg(body.ruledSecond.size()):QStringLiteral("NURBS: %1 poli modificati").arg(body.surfaceTool.edits.size());
+                const QString text=body.surfaceTool.mode>=3?(body.surfaceTool.mode==3?QStringLiteral("Sviluppo isometrico esatto"):QStringLiteral("Corpo deformato su superficie")):body.surfaceTool.mode==0?QStringLiteral("Estesa fino a: %1").arg(ForgeCad::geometryRefText(body.extentRef,sketches,extrusions)):body.surfaceTool.mode==1?QStringLiteral("Rete di %1 x %2 curve, celle G0").arg(body.ruledFirst.size()).arg(body.ruledSecond.size()):QStringLiteral("NURBS: %1 poli modificati").arg(body.surfaceTool.edits.size());
                 item->setToolTip(0,text);
             } else if (body.feature == BodyFeature::SpatialSketch) {
                 item->setToolTip(0,QStringLiteral("Schizzo 3D libero: %1 entita'").arg(body.spatialSketch.entities.size()));
@@ -4864,7 +4873,7 @@ void PdfWindow::rebuildModelTree() {
                 item->setToolTip(0, QStringLiteral("%1 importato da %2").arg(body.solid ? QStringLiteral("Solido") : QStringLiteral("Superficie"), body.importSource));
             } else if (body.feature == BodyFeature::Pattern) {
                 const PatternParameters &p = body.pattern;
-                QString tip = p.kind == 0 ? QStringLiteral("Ripetizione lineare: %1 x passo %2").arg(p.count).arg(ForgeCad::formatLength(p.spacing, 6, true, this))
+                QString tip = p.kind >= 3 ? QStringLiteral("Riempimento %1, passo %2").arg(QStringList{QStringLiteral("rettangolare"),QStringLiteral("sfalsato"),QStringLiteral("esagonale"),QStringLiteral("concentrico")}.value(p.kind-3),ForgeCad::formatLength(p.spacing,6,true,this)) : p.kind == 0 ? QStringLiteral("Ripetizione lineare: %1 x passo %2").arg(p.count).arg(ForgeCad::formatLength(p.spacing, 6, true, this))
                               : p.kind == 1 ? QStringLiteral("Ripetizione circolare: %1 istanze, %2 %3\u00B0").arg(p.count)
                                                   .arg(p.spread ? QStringLiteral("angolo totale") : QStringLiteral("passo")).arg(p.angle)
                                             : QStringLiteral("Specchio%1").arg(p.keepOriginal || p.featureOnly ? QString() : QStringLiteral(" (solo l'immagine)"));
@@ -4937,7 +4946,8 @@ void PdfWindow::rebuildModelTree() {
                 children.append(QStringLiteral("Lato: ") + QString::fromLatin1(sides[qBound(0, body.thickenSide, 2)]));
             } else if (body.feature == BodyFeature::SurfaceTools) {
                 if(body.surfaceTool.mode!=1){children.append(QStringLiteral("Sorgente: ")+extrusions.value(body.firstBody).name);}
-                if(body.surfaceTool.mode==0){children.append(QStringLiteral("Fino a: ")+ForgeCad::geometryRefText(body.extentRef,sketches,extrusions));children.append(QStringLiteral("Ricerca massima: %1").arg(ForgeCad::formatLength(body.surfaceTool.maximum, 6, true, this)));}
+                if(body.surfaceTool.mode>=3){for(const auto &ref:body.surfaceTool.targets)children.append(ForgeCad::geometryRefText(ref,sketches,extrusions));}
+                else if(body.surfaceTool.mode==0){children.append(QStringLiteral("Fino a: ")+ForgeCad::geometryRefText(body.extentRef,sketches,extrusions));children.append(QStringLiteral("Ricerca massima: %1").arg(ForgeCad::formatLength(body.surfaceTool.maximum, 6, true, this)));}
                 else if(body.surfaceTool.mode==1){for(const auto &ref:body.ruledFirst)children.append(QStringLiteral("U: ")+ForgeCad::geometryRefText(ref,sketches,extrusions));for(const auto &ref:body.ruledSecond)children.append(QStringLiteral("V: ")+ForgeCad::geometryRefText(ref,sketches,extrusions));}
                 else children.append(QStringLiteral("Poli modificati: %1").arg(body.surfaceTool.edits.size()));
             } else if (body.feature == BodyFeature::SpatialSketch) {
@@ -5011,7 +5021,7 @@ void PdfWindow::rebuildModelTree() {
             } else if (body.feature == BodyFeature::Pattern) {
                 if (body.pattern.featureOnly || !previousStage(body.firstBody))
                     children.append((body.pattern.featureOnly ? QStringLiteral("Funzione: ") : QStringLiteral("Corpo: ")) + extrusions.value(body.firstBody).name);
-                const QStringList roles = {body.pattern.kind == 0 ? QStringLiteral("Direzione: ") : body.pattern.kind == 1 ? QStringLiteral("Asse: ")
+                const QStringList roles = {body.pattern.kind >= 3 ? QStringLiteral("Contorno: ") : body.pattern.kind == 0 ? QStringLiteral("Direzione: ") : body.pattern.kind == 1 ? QStringLiteral("Asse: ")
                                                                                                                              : QStringLiteral("Piano: "),
                                            QStringLiteral("Direzione 2: ")};
                 for (int k = 0; k < body.pattern.refs.size() && k < 2; ++k)

@@ -16,7 +16,7 @@ enum class GeometryRefFamily {
     LoftStartFaces, LoftEndFaces, LoftSections, LoftEdgeGuides,
     Extent, MoveAxis, RevolveAxis, DraftNeutral, ThickenDirection,
     SweepProfile, SweepPath, ExtractedSource, ExtractedSources, ExtractedTool,
-    LoftGuideSupports, Count
+    LoftGuideSupports, SurfaceSources, Count
 };
 
 template<class Feature, class Visit>
@@ -28,6 +28,7 @@ void visitGeometryRefs(Feature &feature, GeometryRefFamily family, Visit &&visit
     case GeometryRefFamily::Datum: list(feature.datum.refs); break;
     case GeometryRefFamily::Pattern: list(feature.pattern.refs); break;
     case GeometryRefFamily::SurfaceTargets: list(feature.surfaceTool.targets); break;
+    case GeometryRefFamily::SurfaceSources: list(feature.surfaceTool.sources); break;
     case GeometryRefFamily::RuledFirst: list(feature.ruledFirst); break;
     case GeometryRefFamily::RuledSecond: list(feature.ruledSecond); break;
     case GeometryRefFamily::Planar: list(feature.planarRefs); break;
