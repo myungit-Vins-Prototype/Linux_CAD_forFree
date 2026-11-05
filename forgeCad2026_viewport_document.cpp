@@ -1206,7 +1206,10 @@ void CadViewport::deleteObjects(const QVector<SceneSelection> &objects) {
             QMessageBox::Yes | QMessageBox::Cancel, QMessageBox::Cancel);
         if (answer != QMessageBox::Yes) return;
     }
-    if (sketchMode_ && sketchSet.contains(activeSketch_)) endSketchMode();
+    if (sketchMode_ && sketchSet.contains(activeSketch_)) {
+        newSketchStoryId_=0; // questa eliminazione esplicita gestisce gia' gli indici
+        endSketchMode();
+    }
     recordUndo();
     removeBodies(bodies);
     // Gli schizzi dall'ultimo: gli indici di quelli prima non cambiano.
@@ -1691,6 +1694,7 @@ int CadViewport::createDatumSketch(int body, const QString &name) {
     activeSketch_ = sketches_.size() - 1;
     selection_ = {};
     documentChanged();
+    newSketchStoryId_ = sketches_.at(activeSketch_).storyId;
     beginSketchMode(kFacePlane);
     return activeSketch_;
 }

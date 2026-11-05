@@ -189,6 +189,17 @@ FaceIntegrator::FaceIntegrator(const Body &body, FaceId faceId, const Vec3 &refe
         if (fins.empty()) continue;  // vertice isolato
         std::vector<FinTrack> tracks;
         std::vector<Walk> walks;
+        const auto walkCollapsed=[&](const Vec2 &from,const Vec2 &to) {
+            if(surface_->type()!=SurfaceType::BSpline || from.x()==to.x() || from.y()!=to.y())return;
+            const auto iso=surface_->vIso(from.y());
+            const auto *curve=dynamic_cast<const BSplineCurve<3> *>(iso.get());
+            if(!curve || curve->poles().empty())return;
+            const Vec3 point=curve->poles().front();
+            for(const auto &pole:curve->poles())if(distance(pole,point)>kLinearResolution)return;
+            // Un lato NURBS collassato non ha edge 3D, ma completa il
+            // contorno UV nell'integrale di Green (come un polo periodico).
+            walks.push_back({from.y(),from.x(),to.x()});
+        };
         int previousPole = -1, loopStartPole = -1;
         bool previousTop = false;
         Vec2 loopStart;
@@ -225,7 +236,7 @@ FaceIntegrator::FaceIntegrator(const Body &body, FaceId faceId, const Vec3 &refe
                     if (tracks.size() > 0 && startPole >= 0 && startPole == previousPole && uPeriod > 0.0) {
                         shifted[0] = poleWalk(previous[0], startUV[0], uPeriod, previousTop, sense_, previousNear, startNear);
                         walks.push_back({poles[startPole].v, previous[0], shifted[0]});
-                    }
+                    } else if(!tracks.empty()) walkCollapsed(previous,shifted);
                     track.shift = shifted - startUV;
                 }
                 if (tracks.empty()) {
@@ -283,7 +294,7 @@ FaceIntegrator::FaceIntegrator(const Body &body, FaceId faceId, const Vec3 &refe
                 if (startPole >= 0 && startPole == previousPole && uPeriod > 0.0) {
                     target = poleWalk(previousEnd[0], target, uPeriod, previousTop, sense_, previousNear, startNear);
                     walks.push_back({poles[startPole].v, previousEnd[0], target});
-                }
+                } else walkCollapsed(previousEnd,samples.front().uv);
                 const double delta = target - samples.front().uv[0];
                 if (delta != 0.0)
                     for (Sample &sample : samples) sample.uv[0] += delta;
@@ -304,6 +315,7 @@ FaceIntegrator::FaceIntegrator(const Body &body, FaceId faceId, const Vec3 &refe
         // Chiusura del loop in un polo.
         if (loopStartPole >= 0 && loopStartPole == previousPole && uPeriod > 0.0)
             walks.push_back({poles[loopStartPole].v, previous[0], poleWalk(previous[0], loopStart[0], uPeriod, previousTop, sense_, previousNear, loopStartNear)});
+        if(!(loopStartPole>=0 && loopStartPole==previousPole && uPeriod>0.0))walkCollapsed(previous,loopStart);
         loops_.push_back(std::move(tracks));
         walks_.push_back(std::move(walks));
     }

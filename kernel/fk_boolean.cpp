@@ -59,6 +59,8 @@ struct Snap {
 
 // Tratto di curva percorso in un verso: pezzo di bordo o taglio.
 struct Piece {
+    FinId sourceFin;  // distingue i due usi di una cucitura nella stessa faccia
+    CurvePtr<2> sourcePCurve;  // parametro originale: i due lati possono avere UV diversi
     EdgeId source;  // bordo originale, noto durante la suddivisione (invalido per i tagli nuovi)
     CurvePtr<3> curve;
     Interval range;
@@ -950,8 +952,15 @@ void BooleanBuilder::finishCycle(const Surface &surface, bool sense, Cycle &cycl
             const double accept = std::max({acceptOnSurface, 1.01 * piece.tolerance, 10.0 * std::max(piece.loTolerance, piece.hiTolerance)});
             std::vector<Vec2> uvs(samples + 1);
             const int middle = samples / 2;
-            const SurfaceProjection projection = projectPoint(surface, piece.pointAt(0.5));
-            uvs[middle] = Vec2(projection.u, projection.v);
+            // Una cucitura NURBS ha due immagini UV dello stesso punto 3D.
+            // La fin sorgente individua il lato corretto; la proiezione globale
+            // da sola sceglierebbe sempre lo stesso lato per entrambi gli usi.
+            if (piece.sourcePCurve) {
+                uvs[middle] = piece.sourcePCurve->point(piece.middleParameter());
+            } else {
+                const SurfaceProjection projection = projectPoint(surface, piece.pointAt(0.5));
+                uvs[middle] = Vec2(projection.u, projection.v);
+            }
             for (int j = middle + 1; j <= samples; ++j) {
                 uvs[j] = uvs[j - 1];
                 if (!invertPoint(surface, piece.pointAt(double(j) / samples), uvs[j], accept, scale_))
@@ -1159,6 +1168,8 @@ std::vector<SubFace> BooleanBuilder::buildSubFacesOnce(int k, FaceId f, const st
             for (const Interval &range : splitAtPoints(*edge.curve, edge.range)) {
                 Piece piece;
                 piece.source = fin.edge;
+                piece.sourceFin = finId;
+                piece.sourcePCurve = fin.pcurve;
                 piece.curve = edge.curve;
                 piece.range = range;
                 piece.forward = fin.sense;
@@ -1174,6 +1185,32 @@ std::vector<SubFace> BooleanBuilder::buildSubFacesOnce(int k, FaceId f, const st
                 halfEdges.push_back(piece);
             }
         }
+    bool hasSeam = false;
+    for (LoopId loop : face.loops)
+        for (FinId id : body.loopFins(loop)) {
+            const Edge &edge = body.edge(body.fin(id).edge);
+            hasSeam = hasSeam || (edge.forward.valid() && edge.backward.valid()
+                && body.finFace(edge.forward) == f && body.finFace(edge.backward) == f);
+        }
+    if (cuts.empty() && hasSeam) {
+        // Nessun taglio attraversa la faccia: conserva i suoi loop ordinati.
+        // Ricostruirli dal solo grafo 3D confonde i due lati della cucitura
+        // e crea un falso ciclo avanti/indietro di area nulla. I bordi restano
+        // suddivisi nei punti condivisi con le altre facce della booleana.
+        SubFace kept;
+        kept.body = k;
+        kept.face = f;
+        std::size_t offset = 0;
+        for (LoopId loop : face.loops) {
+            Cycle cycle;
+            for (FinId finId : body.loopFins(loop))
+                while (offset < halfEdges.size() && halfEdges[offset].sourceFin == finId)
+                    cycle.pieces.push_back(halfEdges[offset++]);
+            finishCycle(surface, face.sense, cycle, polygonSamples);
+            kept.cycles.push_back(std::move(cycle));
+        }
+        return {std::move(kept)};
+    }
     for (const Piece &cut : cuts) {
         cancellationPoint();
         halfEdges.push_back(cut);
@@ -2423,13 +2460,14 @@ Body BooleanBuilder::assemble(const std::vector<std::pair<SubFace, bool>> &kept,
                 fin.edge = index;
                 fin.sense = dot(piece.tangentAt(onPiece.parameter), edgeTangent) > 0.0;
                 // Conserva la SP-curve del tratto sorgente quando la curva
-                // 3D mantiene lo stesso parametro. Riproiettarla puo' scegliere
+                // 3D mantiene lo stesso parametro. Prima l'uso originale della
+                // cucitura, poi gli altri usi compatibili. Riproiettarla puo' scegliere
                 // un altro ramo di una superficie estrusa o di un loft.
                 if (piece.source.valid()) {
                     const Body &source = bodies_[subFace.body];
                     const Edge &original = source.edge(piece.source);
                     if (original.curve == edge.curve && edge.range.lo >= original.range.lo && edge.range.hi <= original.range.hi) {
-                        for (FinId id : {original.forward, original.backward}) {
+                        for (FinId id : {piece.sourceFin, original.forward, original.backward}) {
                             if (!id.valid() || source.finFace(id) != subFace.face) continue;
                             fin.pcurve = source.fin(id).pcurve;
                             fin.pcurveTolerance = source.fin(id).pcurveTolerance;

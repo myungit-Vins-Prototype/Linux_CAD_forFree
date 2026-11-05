@@ -350,3 +350,26 @@ target_compile_options(forgekernel_loft_correspondence_tests PRIVATE -Wall -Wext
 set_target_properties(forgekernel_loft_correspondence_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
 add_test(NAME forgekernel_loft_correspondence_tests COMMAND forgekernel_loft_correspondence_tests)
 set_tests_properties(forgekernel_loft_correspondence_tests PROPERTIES TIMEOUT 120)
+
+add_executable(forgekernel_loft_point_tests tests/test_loft_points.cpp)
+target_link_libraries(forgekernel_loft_point_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_loft_point_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_loft_point_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_loft_point_tests COMMAND forgekernel_loft_point_tests)
+set_tests_properties(forgekernel_loft_point_tests PROPERTIES TIMEOUT 120)
+
+# Cuciture UV dei loft chiusi durante booleane e unificazione delle facce.
+add_executable(forgekernel_boolean_seam_tests tests/test_boolean_seams.cpp)
+target_link_libraries(forgekernel_boolean_seam_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_boolean_seam_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_boolean_seam_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_boolean_seam_tests COMMAND forgekernel_boolean_seam_tests)
+set_tests_properties(forgekernel_boolean_seam_tests PROPERTIES TIMEOUT 120)
+
+# Griglie NURBS fitte: le coppie di pezze disgiunte non consumano la ricerca.
+add_executable(forgekernel_marching_seed_grid_tests tests/test_marching_seed_grid.cpp)
+target_link_libraries(forgekernel_marching_seed_grid_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_marching_seed_grid_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_marching_seed_grid_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_marching_seed_grid_tests COMMAND forgekernel_marching_seed_grid_tests)
+set_tests_properties(forgekernel_marching_seed_grid_tests PROPERTIES TIMEOUT 60)

@@ -704,7 +704,7 @@ bool read(ReadStream &in, ExtrusionObject &body, quint16 version, int extras) {
         in >> start >> end >> body.loftGuideInfluence >> body.loftStartInfluence >> body.loftEndInfluence;
         body.loftStartContinuity = start;
         body.loftEndContinuity = end;
-        if (start < 0 || start > (version >= 40 ? 3 : 2) || end < 0 || end > (version >= 40 ? 3 : 2) || body.loftGuideInfluence < 0.0 || body.loftGuideInfluence > 1.0
+        if (start < 0 || start > (version >= 66 ? 4 : version >= 40 ? 3 : 2) || end < 0 || end > (version >= 66 ? 4 : version >= 40 ? 3 : 2) || body.loftGuideInfluence < 0.0 || body.loftGuideInfluence > 1.0
             || body.loftStartInfluence < 0.0 || body.loftStartInfluence > 1.0 || body.loftEndInfluence < 0.0 || body.loftEndInfluence > 1.0)
             return false;
     }
@@ -990,7 +990,7 @@ constexpr quint32 kBodyCacheTag = 0x46434332;  // "FCC2"
 // 9: raccordi ricalcolati sui nodi degli appoggi; derivate laterali corrette.
 // 11: griglie loft senza molteplicita' superflue nei nodi adattivi delle guide.
 // 12: lift G1 cubico indipendente dal grado e raccordi con jet unilaterali.
-constexpr quint32 kBodyCacheVersion = 12;
+constexpr quint32 kBodyCacheVersion = 13;
 constexpr qsizetype kMaxDisplayValues = 200000000;
 
 QByteArray definitionHash(const QByteArray &payload) { return QCryptographicHash::hash(payload, QCryptographicHash::Sha256); }
@@ -1227,10 +1227,12 @@ void applyBodyCache(const QByteArray &compressed, const QByteArray &payload, Doc
     // cosi' la prossima cache non conserva le vecchie griglie duplicate.
     // Le loft precedenti alla cache 12 concentravano la correzione G1
     // in una riga di poli; i raccordi usavano il jet opposto sui nodi.
+    // Cache 13: i tagli per lunghezza vicini ai nodi non creano piu'
+    // micro campate NURBS che falsavano la normale delle loft adiacenti.
     if (state.version.checkinId.isNull()
         && std::any_of(state.extrusions.cbegin(), state.extrusions.cend(),
             [cacheVersion](const ExtrusionObject &body) {
-                return !body.suppressed && ((cacheVersion < 12 && body.feature == BodyFeature::Loft)
+                return !body.suppressed && ((cacheVersion < 13 && body.feature == BodyFeature::Loft)
                     || (cacheVersion < 12 && body.feature == BodyFeature::Blend)
                     || (cacheVersion < 10 && (body.feature == BodyFeature::Pattern || body.feature == BodyFeature::Transform)));
             }))
@@ -1389,6 +1391,8 @@ QString encodeDocumentVersion(const DocumentState &state, QByteArray &bytes, boo
         if (state.version.documentId.isNull() || (!state.version.checkinId.isNull() && state.version.checkinId == state.baseCheckinId))
             return QStringLiteral("Identita' del documento non valida.");
         for (const auto &body : state.extrusions) {
+            if (version < 66 && (body.loftStartContinuity==4 || body.loftEndContinuity==4))
+                return QStringLiteral("La tangenza della loft a un piano richiede il formato 66.");
             if (version < 65 && body.loftMergeTangentFaces)
                 return QStringLiteral("L’unione delle facce della loft richiede il formato 65.");
             if (version < 64 && !body.loftCorrespondences.isEmpty())
@@ -1473,6 +1477,10 @@ QString encodeDocumentVersion(const DocumentState &state, QByteArray &bytes, boo
 
 QString encodeDocument(const DocumentState &state, QByteArray &bytes, bool bodies, int compressionLevel) {
     return encodeDocumentVersion(state, bytes, bodies, compressionLevel, kVersion);
+}
+
+QString encodeDocumentDefinition65ForHash(const DocumentState &state, QByteArray &bytes) {
+    return encodeDocumentVersion(state, bytes, false, 9, 65);
 }
 
 QString encodeDocumentDefinition64ForHash(const DocumentState &state, QByteArray &bytes) {

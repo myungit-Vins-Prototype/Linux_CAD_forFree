@@ -1,4 +1,5 @@
 #include "forgeCad2026_viewport_internal.h"
+#include "cad_geometry_refs.h"
 #include "cad_sketch_reference_usage.h"
 
 
@@ -1285,6 +1286,7 @@ int CadViewport::createSketch(int plane, const QString &name) {
     sketches_.append(sketch);
     activeSketch_ = sketches_.size() - 1;
     documentChanged();
+    newSketchStoryId_ = sketches_.at(activeSketch_).storyId;
     beginSketchMode(plane);
     return activeSketch_;
 }
@@ -1313,6 +1315,7 @@ int CadViewport::createFaceSketch(int body, const FaceHit &face, const QString &
     activeSketch_ = sketches_.size() - 1;
     selection_ = {};
     documentChanged();
+    newSketchStoryId_ = sketches_.at(activeSketch_).storyId;
     beginSketchMode(kFacePlane);
     return activeSketch_;
 }
@@ -1328,7 +1331,13 @@ QString CadViewport::createSketchOnSelectedFace(const QString &name) {
 void CadViewport::selectSketch(int index) {
     if(documentReadOnly_)return;
     if (index < 0 || index >= sketches_.size()) return;
-    if(sketchMode_&&index!=activeSketch_)endSketchMode();
+    if(sketchMode_&&index!=activeSketch_) {
+        const quint64 target = sketches_.at(index).storyId;
+        endSketchMode();
+        index = -1;
+        for(int i=0;i<sketches_.size();++i)if(sketches_.at(i).storyId==target){index=i;break;}
+        if(index<0)return;
+    }
     activeSketch_ = index;
     beginSketchMode(sketches_.at(index).plane);
 }
@@ -1378,6 +1387,20 @@ void CadViewport::beginSketchMode(int plane) {
 
 void CadViewport::endSketchMode() {
     pruneActiveSketchReferences(false);
+    int discard = -1;
+    if(sketchMode_ && newSketchStoryId_ && activeSketch_>=0 && activeSketch_<sketches_.size()) {
+        const auto &sketch=sketches_.at(activeSketch_);
+        if(sketch.storyId==newSketchStoryId_ && sketch.segments.isEmpty() && sketch.curves.isEmpty()
+            && sketch.geometricConstraints.isEmpty() && sketch.linkedReferences.isEmpty()) {
+            bool used=false;
+            for(const auto &body:extrusions_)if(ForgeCad::sketchesOf(body).contains(activeSketch_))used=true;
+            for(const auto &other:sketches_)ForgeCad::visitSketchGeometryRefs(other,[&](const GeometryRef &ref,auto,int){
+                if(ForgeCad::isSketchRef(ref) && ref.index==activeSketch_)used=true;
+            });
+            if(!used)discard=activeSketch_;
+        }
+    }
+    newSketchStoryId_=0;
     circleRadiusDrag_=-1;
     dimensionPlacing_ = -1;
     sketchViewUnlocked_ = false;
@@ -1398,6 +1421,21 @@ void CadViewport::endSketchMode() {
     constraintHover_ = -1;
     curveControlPoints_.clear();
     sketchHover_ = {};
+    if(discard>=0) {
+        const int position=storyboardIndex(true,discard);
+        removeSketchAt(discard);
+        for(auto &other:sketches_)ForgeCad::visitSketchGeometryRefs(other,[&](GeometryRef &ref,auto,int){
+            if(ForgeCad::isSketchRef(ref) && ref.index>discard)--ref.index;
+        });
+        QSet<int> deferred;
+        for(int index:deferredSketches_)if(index!=discard)deferred.insert(index>discard?index-1:index);
+        deferredSketches_=deferred;
+        if(storyPosition_>=0 && position>=0 && position<storyPosition_)--storyPosition_;
+        selection_={};selectedObjects_.clear();hover_={};
+        // Nessun passo di eliminazione: Undo deve recuperare l'ultima geometria
+        // disegnata, se esiste, senza reintrodurre uno schizzo vuoto appena chiuso.
+        documentChanged();
+    }
     if(!deferredSketches_.isEmpty()){
         QSet<int> changed;
         for(int index:deferredSketches_)if(index>=0&&index<sketches_.size())changed.insert(index);

@@ -61,7 +61,7 @@ int main(int argc,char **argv) {
     const int themeTest=app.arguments().indexOf(QStringLiteral("--test-application-theme"));
     const bool selfTest=app.arguments().contains(QStringLiteral("--self-test")) || documentTest>=0 || themeTest>=0;
     QTemporaryDir settings;
-    if(selfTest){QSettings::setDefaultFormat(QSettings::IniFormat);QSettings::setPath(QSettings::IniFormat,QSettings::UserScope,settings.path());}
+    if(selfTest){QSettings::setDefaultFormat(QSettings::IniFormat);QSettings::setPath(QSettings::IniFormat,QSettings::UserScope,settings.path());qputenv("FORGECAD_RECOVERY_DIR",(settings.path()+QStringLiteral("/recovery")).toUtf8());}
     QIcon icon;icon.addFile(QStringLiteral(":/icons/forgecad-256.png"));app.setWindowIcon(icon);
     PdfWindow window;
     ForgeCad::RibbonPreview *ribbon=nullptr;

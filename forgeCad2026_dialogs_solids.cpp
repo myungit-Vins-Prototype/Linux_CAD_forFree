@@ -1147,7 +1147,71 @@ bool transformDialog(QMainWindow *window, CadViewport *viewport, const QString &
 
 QVector<ThreadChoice> threadChoices(int standard) {
     switch (standard) {
-    case 0: return {{"M3 x 0,5",3,.5},{"M4 x 0,7",4,.7},{"M5 x 0,8",5,.8},{"M6 x 1",6,1},{"M8 x 1,25",8,1.25},{"M10 x 1,5",10,1.5},{"M12 x 1,75",12,1.75},{"M16 x 2",16,2},{"M20 x 2,5",20,2.5},{"M24 x 3",24,3},{"M30 x 3,5",30,3.5},{"M36 x 4",36,4}};
+    // Serie grossa M1–M68 (Accu); passi fini comuni (Walter, compendio filettatura 2024).
+    case 0: return {
+        {"M1 x 0,25",1,0.25},
+        {"M1,1 x 0,25",1.1,0.25},
+        {"M1,2 x 0,25",1.2,0.25},
+        {"M1,4 x 0,3",1.4,0.3},
+        {"M1,6 x 0,35",1.6,0.35},
+        {"M1,8 x 0,35",1.8,0.35},
+        {"M2 x 0,4",2,0.4},
+        {"M2,2 x 0,45",2.2,0.45},
+        {"M2,5 x 0,45",2.5,0.45},
+        {"M3 x 0,5",3,0.5},
+        {"M3,5 x 0,6",3.5,0.6},
+        {"M4 x 0,7",4,0.7},
+        {"M4 x 0,5",4,0.5},
+        {"M4,5 x 0,75",4.5,0.75},
+        {"M5 x 0,8",5,0.8},
+        {"M5 x 0,5",5,0.5},
+        {"M6 x 1",6,1},
+        {"M6 x 0,75",6,0.75},
+        {"M6 x 0,5",6,0.5},
+        {"M7 x 1",7,1},
+        {"M7 x 0,75",7,0.75},
+        {"M8 x 1,25",8,1.25},
+        {"M8 x 1",8,1},
+        {"M8 x 0,75",8,0.75},
+        {"M9 x 1,25",9,1.25},
+        {"M10 x 1,5",10,1.5},
+        {"M10 x 1,25",10,1.25},
+        {"M10 x 1",10,1},
+        {"M10 x 0,75",10,0.75},
+        {"M11 x 1,5",11,1.5},
+        {"M12 x 1,75",12,1.75},
+        {"M12 x 1,5",12,1.5},
+        {"M12 x 1,25",12,1.25},
+        {"M12 x 1",12,1},
+        {"M14 x 2",14,2},
+        {"M14 x 1,5",14,1.5},
+        {"M14 x 1",14,1},
+        {"M16 x 2",16,2},
+        {"M16 x 1,5",16,1.5},
+        {"M16 x 1",16,1},
+        {"M18 x 2,5",18,2.5},
+        {"M18 x 1,5",18,1.5},
+        {"M18 x 1",18,1},
+        {"M20 x 2,5",20,2.5},
+        {"M20 x 2",20,2},
+        {"M20 x 1,5",20,1.5},
+        {"M22 x 2,5",22,2.5},
+        {"M22 x 1,5",22,1.5},
+        {"M24 x 3",24,3},
+        {"M27 x 3",27,3},
+        {"M30 x 3,5",30,3.5},
+        {"M33 x 3,5",33,3.5},
+        {"M36 x 4",36,4},
+        {"M39 x 4",39,4},
+        {"M42 x 4,5",42,4.5},
+        {"M45 x 4,5",45,4.5},
+        {"M48 x 5",48,5},
+        {"M52 x 5",52,5},
+        {"M56 x 5,5",56,5.5},
+        {"M60 x 5,5",60,5.5},
+        {"M64 x 6",64,6},
+        {"M68 x 6",68,6}
+    };
     case 1: return {{"1/4-20 UNC",6.35,25.4/20},{"5/16-18 UNC",7.9375,25.4/18},{"3/8-16 UNC",9.525,25.4/16},{"1/2-13 UNC",12.7,25.4/13},{"5/8-11 UNC",15.875,25.4/11},{"3/4-10 UNC",19.05,2.54},{"1-8 UNC",25.4,3.175}};
     case 2: return {{"1/4-28 UNF",6.35,25.4/28},{"5/16-24 UNF",7.9375,25.4/24},{"3/8-24 UNF",9.525,25.4/24},{"1/2-20 UNF",12.7,1.27},{"5/8-18 UNF",15.875,25.4/18},{"3/4-16 UNF",19.05,25.4/16},{"1-12 UNF",25.4,25.4/12}};
     case 3: case 4: return {{"G/R 1/8 - 28",9.728,25.4/28},{"G/R 1/4 - 19",13.157,25.4/19},{"G/R 3/8 - 19",16.662,25.4/19},{"G/R 1/2 - 14",20.955,25.4/14},{"G/R 3/4 - 14",26.441,25.4/14},{"G/R 1 - 11",33.249,25.4/11}};
@@ -1194,6 +1258,8 @@ bool threadDialog(QMainWindow *window, CadViewport *viewport, const QString &tit
                            QStringLiteral("ISO trapezoidale Tr (30°)"), QStringLiteral("ACME (29°)")});
     standardBox->setCurrentIndex(qBound(0, definition.thread.standard, 7));
     auto *sizeBox = new QComboBox(&dialog);
+    sizeBox->setObjectName(QStringLiteral("threadSize"));
+    sizeBox->setMaxVisibleItems(15);
     auto *pitchBox = new ForgeCad::ExpressionSpinBox(&dialog);
     pitchBox->setDecimals(6); pitchBox->setRange(0.01, 100.0); pitchBox->setValue(definition.thread.pitch); pitchBox->setKeyboardTracking(false);
     auto *lengthBox = new ForgeCad::ExpressionSpinBox(&dialog);

@@ -2,9 +2,8 @@
 
 Aggiornato il **5 novembre 2026**. Leggere con `AGENTS.md`; approfondire solo l’area richiesta.
 
-La cronologia precedente è conservata integralmente in [archivio al 2 novembre](docs/history/claude-2026-11-02.md). **Non
-caricare l'archivio per intero nel contesto**: cercare un argomento o una data e leggere solo la voce pertinente. Le sue
-diciture «in corso» o «non committato» sono storiche; per lo stato attuale prevalgono questa sintesi e i sorgenti.
+Cronologia: [archivio al 2 novembre](docs/history/claude-2026-11-02.md). **Leggere solo le voci pertinenti**,
+non l’intero archivio. Gli stati storici sono superati da questa sintesi e dai sorgenti.
 
 ## Regole permanenti e decisioni
 
@@ -43,7 +42,7 @@ storico della finestra principale. `pdfReader.c`, `pdfView.c` e vecchi binari PD
 | Schizzi e vincoli | `cad_types.h`, `cad_constraints*`, `cad_sketch_refs*`, `cad_expression*`: schizzi 2D/3D, asole/punti, quote e solver, snap e riferimenti associativi a piani/assi/bordi/curve. Cache automatiche nascoste; conversioni esplicite conservate; costruzione fuori modifica opzionale. Le entità locali visibili hanno priorità nella quotatura. |
 | Solidi e superfici | `cad_forge*`, `kernel/fk_*`: primitive, estrusione (anche fino al prossimo corpo), rivoluzione, sweep/loft, booleane, sformo, svuotamento/spessore, filettatura, cucitura, taglio/estensione, reti U/V e poli NURBS. Estendi apre il pannello prima della scelta dei bordi. Raccordi costanti, conici, variabili e tra facce; percorsi tangenti con leggi indipendenti e maniglie R. |
 | Storia e genealogia | `cad_history*`, `cad_element_names*`, viewport e storyboard: schizzi/piani come passi autonomi, riordino, rollback, soppressione, riparazione e Undo/Redo. Specchi/ripetizioni sono un evento con corpi separati ed esclusioni; conservano identità e dipendenze. |
-| Documenti e revisioni | `cad_document_io*`, `cad_document_read*`, `cad_native_revisions*`, `cad_workspace*`: `.prt` con firma FCAD, formato 65 (unione facce loft; 64: corrispondenze; 63: variazioni quote); Zstandard dal 56 e lettura legacy zlib. Definizione e cache B-rep/mesh distinte, salvataggio atomico, recupero, consultazione concorrente e lock della modifica. Check-out/check-in, ripristino, rilascio coordinato e recupero catalogo. |
+| Documenti e revisioni | `cad_document_io*`, `cad_document_read*`, `cad_native_revisions*`, `cad_workspace*`: `.prt` con firma FCAD, formato 66 (piani; 65: unione loft; 64: corrispondenze; 63: variazioni quote); Zstandard dal 56 e lettura legacy zlib. Definizione e cache B-rep/mesh distinte, salvataggio atomico, recupero, consultazione concorrente e lock della modifica. Check-out/check-in, ripristino, rilascio coordinato e recupero catalogo. |
 | Tavole 2D | `cad_drawing_*`: `.drw`, viste proiettate/ausiliarie, sezioni composte, dettagli e viste interrotte, più fogli, scale foglio/vista, quote e tolleranze, datum/GD&T, badge persistenti, rugosità Ra/Rz e PDF vettoriale. Agganci alle geometrie esatte e nomi genealogici; portabilità senza cache del modello nei casi migrabili. |
 | Scambio e analisi | `kernel/fk_step*`, `fk_iges*`, `fk_exchange*`, `fk_mass*`: STEP/IGES propri, esportazione STL/OBJ, misure/massa, zebra e curvatura. Parsing numerico indipendente dal locale, controlli di cicli/profondità e dimensioni dei dati importati. |
 
@@ -107,23 +106,35 @@ ctest --test-dir forgecad-release --output-on-failure
 - Snap Intersezione completato: app/11CTest/Wayland/Undo/codec/mappa586-8138 PASS; fixture legacy corretta.
   [Dettagli](docs/snap-intersezione-2026-11-04.md). Divisione facce coincidenti rinviata.
 - Loft: controlli/codec64 verificati: [rapporto](docs/loft-corrispondenze-2026-11-04.md).
-  Hook: pieghe/unione/codec65 verificati. Nuovi ingressi G1 punta OK; copia influenza25% riduce rigonfiamento, restano limiti fra pezze. [Dettagli](docs/loft-hook-2026-11-04.md).
+  Hook: pieghe/unione/codec65 verificati. G1 punta OK; influenza25% riduce rigonfiamento, limiti fra pezze conservati. [Dettagli](docs/loft-hook-2026-11-04.md).
 
 ## Ultimi interventi — esiti consolidati
 
-**05/11 — Checkpoint.** Pubblicazione richiesta di loft Hook, corrispondenze, snap intersezione,
-variazioni e prestazioni. Ricontrollati 26/26 CTest e diff. Successivi interventi UI/filettature da eseguire.
+**05/11 — KnifeHandle.** Unione NURBS/seam:6CTest/38Boolean/5Unify/42Loft/Wayland/STEP PASS.
+[Unione](docs/knifehandle-booleana-2026-11-05.md). Loft7: inversione ai nodi elimina microcampata;
+cache13 rigenera copie, check-in immutabili. App/9CTest/42Loft/G1/Wayland/codec/mappa PASS.
+[Tangenza](docs/knifehandle-loft7-tangenza-2026-11-05.md).
+Tagli4/5 e1/4: filtri box/Bezier, budget400k invariato.
+1/4:2+3regioni/6scelte, risultato connesso12facce/0bordi liberi, lamina chiusa.
+App/5CTest/130kernel/Wayland/Undo/codec/mappa598-8332/check/3HTML PASS.
+[Tagli](docs/knifehandle-taglio-reciproco-2026-11-05.md).
 
-**04/11 — Griglie, specchi e guide.** Specchi/guide pubblicati in `3c644e2`: B-rep2/cache10,
-PRT148,4→74,7MB prima shell,190,5→116,9MB con shell; identità e Undo/Redo verificati.
-[Specchi](docs/riduzione-complessita-specchi-2026-11-03.md). Guide normale invertibile/tangente, appoggi multipli/C2;formato62,10CTest/XCB/Wayland PASS.
-[Guide](docs/loft-controlli-guide-2026-11-04.md),[shell](docs/svuotamento-f0-f14-2026-11-03.md).
-Griglie: nodi V minimi, cache11/686MB; PRT190,5→88,7MB, STEP corpo745,1→458,7MB,
-shell928,5→642,7MB. 26feature, aperture F0/F14 e spessore1mm PASS; STEP rilegge poli esatti.
-[Prove e limiti](docs/riduzione-griglie-loft-step-2026-11-04.md): loft<4,1e-13mm; bordi raccordi
-rigenerati<0,00225mm entro budget originali. Grado ridotto escluso (errore Raccordo25).
-App/runner aggiornati;9CTest,Loft42,Blend60,Shell18,Wayland PASS;originali intatti.
-`9eff99c` su origin/main: appoggi G1/riordino autonomi;11CTest,26feature,XCB/Wayland,G1 PASS. [F7/E25](docs/loft-selezione-facce-storiche-2026-11-04.md).
+**05/11 — Loft punti/piani.** Sezioni puntuali/G1 piano, codec66/hash65.
+App/17CTest/42Loft/11Mass/Wayland PASS; mappa596/8294/check/7HTML PASS.
+[Dettagli](docs/loft-punti-piani-2026-11-05.md).
+
+**05/11 — UI e checkpoint.** `262f067` pubblicato; nuovo checkpoint autorizzato,13CTest PASS.
+ISO M1–M68/62misure, ribbon Conferma/Annulla/Termina, ritorno Schizzo,
+loft440px; nuovi schizzi vuoti scartati, esistenti/usati conservati. App/runner,
+11CTest e ribbon Wayland/offscreen PASS; UI6CTest/1024×720 PASS, mappa594/8255.
+[Dettagli](docs/ui-ribbon-loft-filettature-2026-11-05.md).
+
+**04/11 — Griglie, specchi e guide.** `3c644e2`: istanze condivise, B-rep2/cache10;
+`9eff99c`: appoggi G1/riordino e F7/E25 verificati. Griglie/cache11: PRT190,5→88,7MB,
+STEP745,1→458,7MB; shell928,5→642,7MB. App/runner/QA native e suite pertinenti PASS.
+[Specchi](docs/riduzione-complessita-specchi-2026-11-03.md),[guide](docs/loft-controlli-guide-2026-11-04.md),
+[griglie/budget](docs/riduzione-griglie-loft-step-2026-11-04.md),[F7/E25](docs/loft-selezione-facce-storiche-2026-11-04.md).
+[Dettagli storici](docs/history/claude-prima-taglio-reciproco-2026-11-05.md).
 
 **04/11 — Svuotamento e apertura.** Copia a501f4fd:31facce; taglio sole C0,
 jet laterali raccordi, lift G1 cubico e NURBS locali; cache12, check-in immutabili.
@@ -133,7 +144,7 @@ Mappa576/7987/276AST/check/8HTML PASS; copia84,29MB/26ID; `d0594e8` pubblicato.
 [Diagnosi](docs/svuotamento-poli-non-finiti-2026-11-04.md).
 Apertura copia17f72219: Apri Wayland3,87s,viewport2,46s; nuovo f695dd98 non provato.
 Bernstein/U:224→72,64s/3,09×; Wayland26feature senza cache92,7s,B-rep identico.
-App/runner,test mirati,ASan/UBSan PASS; mappa579/8023/278/check/5HTML PASS.
+App/ASan/UBSan PASS; mappa579/8023/278/check/5HTML PASS.
 [Misure e limiti](docs/apertura-tempi-surface219-2026-11-04.md).
 
 0. **03/11 — Schizzi, riferimenti e loft.** Visualizza/Mostra linee di costruzione persistente:
@@ -165,6 +176,9 @@ App/runner,test mirati,ASan/UBSan PASS; mappa579/8023/278/check/5HTML PASS.
    B8 solo reingresso iniettato. CTest151PASS/1SKIP/1FAIL,kernel457/458 (sformo preesistente);
    [dettagli, verifiche e limiti](docs/code-review-2026-11-02-correzioni.md).
 
-3. **Storico 01–02/11.** OCCT solo nei test facoltativi (`ab6fc71`, nessun HAVE_TK nell'app; confronti successivi non ricertificati). Bug review `9321643`: build/test/sanitizer cloud PASS, build locale riferita; [rapporto](docs/history/claude-checkpoint-prima-storyboard-2026-11-03.md). Quote/normali/shell `de1448a`/`7651724` pubblicati, app/prove native PASS: [archivio](docs/history/claude-intersezioni-2026-11-04.md). Schizzi/Estendi/unione `8121ed7`, raccordi/tavole: [registro](docs/history/claude-prima-svuotamento-2026-11-04.md).
+3. **Storico 01–02/11.** OCCT solo nei test (`ab6fc71`); review `9321643`:
+[checkpoint](docs/history/claude-checkpoint-prima-storyboard-2026-11-03.md).
+Quote/normali/shell `de1448a`/`7651724`: [archivio](docs/history/claude-intersezioni-2026-11-04.md).
+Schizzi/Estendi/unione `8121ed7`: [registro](docs/history/claude-prima-svuotamento-2026-11-04.md).
 
-Per riprendere lavori più vecchi, cercare nell'archivio o in Git e poi verificare i sorgenti attuali. Questa memoria non sostituisce i rapporti di prova.
+Per lavori più vecchi consultare archivi/Git e verificare i sorgenti.

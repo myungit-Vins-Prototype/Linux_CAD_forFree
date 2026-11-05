@@ -113,8 +113,8 @@ LoftCorrespondenceEditor::LoftCorrespondenceEditor(CadViewport *viewport, int ow
     reset->setObjectName(QStringLiteral("loftCorrespondenceReset"));
     buttons->addWidget(add_);
     buttons->addWidget(remove_);
-    buttons->addWidget(reset);
     layout->addLayout(buttons);
+    layout->addWidget(reset,0,Qt::AlignLeft);
     status_ = new QLabel(this);
     status_->setWordWrap(true);
     layout->addWidget(status_);
@@ -261,9 +261,11 @@ void LoftCorrespondenceEditor::rebuild() {
         if (enabled_->isChecked() && keys_.size() >= 2) {
             sections_ = resolveLoftSections(definition_, owner_, viewport_->sketches(), viewport_->extrusions());
             for (const auto &s : sections_)
-                paths_.push_back(loftSectionPath(s));
-            closed_ = distance(paths_.front().front().curve->point(paths_.front().front().range.lo),
-                               paths_.front().back().curve->point(paths_.front().back().range.hi)) < 1e-6;
+                paths_.push_back(s.point?std::vector<PathSegment>{}:loftSectionPath(s));
+            const auto first=std::find_if(paths_.begin(),paths_.end(),[](const auto &path){return !path.empty();});
+            if(first==paths_.end())throw std::domain_error("Serve almeno una sezione curva.");
+            closed_ = distance(first->front().curve->point(first->front().range.lo),
+                               first->back().curve->point(first->back().range.hi)) < 1e-6;
             LoftOptions options;
             for (int i = 0; i < loftGuideSequence(definition_).size(); ++i) {
                 const auto paths =
@@ -327,6 +329,7 @@ void LoftCorrespondenceEditor::updatePoints() {
     overlay_->update();
 }
 bool LoftCorrespondenceEditor::locked(int r, int c) const {
+    if(r>=0 && r<int(sections_.size()) && sections_[r].point)return true;
     return !closed_ && r >= 0 && r < keys_.size() && (c == 0 || c == values_[keys_[r]].positions.size() - 1);
 }
 void LoftCorrespondenceEditor::updateWidgets() {
@@ -336,7 +339,7 @@ void LoftCorrespondenceEditor::updateWidgets() {
     section_->setEnabled(valid);
     connector_->setEnabled(valid);
     position_->setEnabled(valid && !locked(r, c));
-    reverse_->setEnabled(valid);
+    reverse_->setEnabled(valid && !sections_[r].point);
     add_->setEnabled(valid && connector_->count() < 64);
     remove_->setEnabled(valid && !locked(r, c) && connector_->count() > (closed_ ? 1 : 2));
     if (valid) {

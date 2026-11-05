@@ -284,3 +284,20 @@ FK_TEST(LoftIncompatibleContactIdentifiesGuideAndSection) {
     bool rejected=false;try{loftSheet(sections,options);}catch(const std::domain_error&e){const std::string text=e.what();rejected=text.find("loft-guide=0")!=std::string::npos&&text.find("loft-section=1")!=std::string::npos&&text.find("5.710593")!=std::string::npos;}
     FK_CHECK(rejected);
 }
+
+// La lunghezza invertita appena oltre un nodo, entro il residuo del solver,
+// deve usare quel nodo: una pezza residua altera i jet della loft successiva.
+FK_TEST(LoftSectionLengthKeepsExistingKnots) {
+    const auto source = std::make_shared<BSplineCurve<3>>(toBSpline(
+        Circle<3>(Vec3(40,0,0), Vec3(0,1,0), Vec3(0,0,1), 12), 0, kTwoPi));
+    LoftSection section;
+    section.path = {{source, source->domain()}};
+    for (double fraction : {0.25 - 4e-14, 0.25, 0.25 + 4e-14})
+        FK_CHECK(distance(loftSectionPoint(section, fraction), source->point(kHalfPi)) == 0.0);
+    // Un dettaglio risolto fuori dal budget non viene riagganciato al nodo.
+    const auto distinct = loftSectionPoint(section, 0.25 + 1e-8);
+    FK_CHECK(distance(distinct, source->point(kHalfPi)) > 5e-7);
+    FK_CHECK(projectPoint(*source, distinct, source->domain()).distance < 1e-10);
+    FK_CHECK(distance(loftSectionPoint(section, 0), source->point(0)) == 0);
+    FK_CHECK(distance(loftSectionPoint(section, 1), source->point(kTwoPi)) == 0);
+}

@@ -4,6 +4,7 @@
 #include "cad_toolbar.h"
 #include "cad_curve_extract.h"
 #include "cad_loft_correspondence_editor.h"
+#include "cad_loft_correspondence.h"
 
 #include "kernel/fk_cancel.h"
 #include "cad_spatial_sketch.h"
@@ -324,7 +325,8 @@ bool loftDialog(QWidget *parent, CadViewport *viewport, const QString &title, in
     if (viewport) ForgeCad::setDisplayLengthUnit(viewport->lengthUnit(), &dialog);
     dialog.setObjectName(QStringLiteral("loftDialog"));
     dialog.setWindowTitle(title);
-    dialog.setMinimumSize(480, 360);
+    dialog.setMinimumSize(420, 360);
+    dialog.setProperty("functionPanelPreferredWidth",440);
     dialog.setSizeGripEnabled(false);
     dialog.setWindowFlag(Qt::MSWindowsFixedSizeDialogHint, false);
     auto *form = dialog.createScrollableForm();
@@ -377,10 +379,8 @@ bool loftDialog(QWidget *parent, CadViewport *viewport, const QString &title, in
     auto *moveRow = new QWidget(&dialog);
     auto *moveLayout = new QHBoxLayout(moveRow);
     moveLayout->setContentsMargins(0, 0, 0, 0);
-    auto *up = new QPushButton(QStringLiteral("↑ Su"), moveRow), *down = new QPushButton(QStringLiteral("↓ Giu'"), moveRow);
+    auto *up = new QPushButton(QStringLiteral("↑"), moveRow), *down = new QPushButton(QStringLiteral("↓"), moveRow);
     auto *pickSections = new QPushButton(QStringLiteral("Scegli sezioni nella vista"), moveRow);
-    moveLayout->addWidget(up);
-    moveLayout->addWidget(down);
     moveLayout->addWidget(pickSections);
     moveLayout->addWidget(removeSection);
     pickSections->setObjectName(QStringLiteral("loftPickSections"));
@@ -460,13 +460,12 @@ bool loftDialog(QWidget *parent, CadViewport *viewport, const QString &title, in
     auto *guideButtons = new QWidget(&dialog);
     auto *guideButtonsLayout = new QHBoxLayout(guideButtons);
     guideButtonsLayout->setContentsMargins(0,0,0,0);
-    auto *guideUp = new QPushButton(QStringLiteral("↑ Su"), guideButtons);
-    auto *guideDown = new QPushButton(QStringLiteral("↓ Giu'"), guideButtons);
+    auto *guideUp = new QPushButton(QStringLiteral("↑"), guideButtons);
+    auto *guideDown = new QPushButton(QStringLiteral("↓"), guideButtons);
     auto *removeGuide = new QPushButton(QStringLiteral("Rimuovi guida"), guideButtons);
     guideUp->setObjectName(QStringLiteral("loftGuideUp"));
     guideDown->setObjectName(QStringLiteral("loftGuideDown"));
     removeGuide->setObjectName(QStringLiteral("loftRemoveGuide"));
-    guideButtonsLayout->addWidget(guideUp); guideButtonsLayout->addWidget(guideDown);
     guideButtonsLayout->addWidget(removeGuide); guideButtonsLayout->addStretch(1);
     auto *pickGuides = new QPushButton(QStringLiteral("Scegli guide nella vista"), &dialog);
     pickGuides->setObjectName(QStringLiteral("loftPickGuides"));
@@ -511,8 +510,23 @@ bool loftDialog(QWidget *parent, CadViewport *viewport, const QString &title, in
     help->setWordWrap(true);
     help->setMaximumWidth(570);
     form->addRow(new LoftSelectionDiagram(&dialog));
-    form->addRow(QStringLiteral("Sezioni:"), list);
-    form->addRow(QString(), moveRow);
+    // Etichette e frecce locali: le altre righe lunghe non rubano spazio agli elenchi.
+    const auto addList = [&](const QString &label, QListWidget *items, QPushButton *upButton, QPushButton *downButton) {
+        auto *row = new QWidget(&dialog);
+        auto *layout = new QHBoxLayout(row); layout->setContentsMargins(0,0,0,0); layout->setSpacing(6);
+        layout->addWidget(new QLabel(label, row),0,Qt::AlignTop);
+        layout->addWidget(items,1);
+        auto *arrows = new QVBoxLayout; arrows->setSpacing(4);
+        upButton->setFixedWidth(28); downButton->setFixedWidth(28);
+        upButton->setToolTip(QStringLiteral("Sposta verso l'alto")); downButton->setToolTip(QStringLiteral("Sposta verso il basso"));
+        upButton->setAccessibleName(label + QStringLiteral(" sposta verso l'alto"));
+        downButton->setAccessibleName(label + QStringLiteral(" sposta verso il basso"));
+        arrows->addWidget(upButton); arrows->addWidget(downButton); arrows->addStretch(); layout->addLayout(arrows);
+        form->addRow(row);
+    };
+    up->setObjectName(QStringLiteral("loftSectionUp")); down->setObjectName(QStringLiteral("loftSectionDown"));
+    addList(QStringLiteral("Sezioni:"),list,up,down);
+    form->addRow(moveRow);
     auto *correspondences = new ForgeCad::LoftCorrespondenceEditor(viewport,replaced,&dialog);
     const auto sectionKeys = [&] {
         QVector<int> keys;
@@ -522,10 +536,10 @@ bool loftDialog(QWidget *parent, CadViewport *viewport, const QString &title, in
     };
     correspondences->initialize(sectionKeys(),initial.loftCorrespondences);
     form->addRow(correspondences);
-    form->addRow(QStringLiteral("Curve guida:"), guides);
-    form->addRow(QString(), pickGuides);
-    form->addRow(QString(), guideButtons);
-    form->addRow(QString(), pickStatus);
+    addList(QStringLiteral("Guide:"),guides,guideUp,guideDown);
+    guideButtonsLayout->insertWidget(0,pickGuides);
+    form->addRow(guideButtons);
+    form->addRow(pickStatus);
     form->addRow(QStringLiteral("Continuita' guida selezionata:"), guideContinuity);
     form->addRow(QStringLiteral("Influenza guida selezionata:"), guideInfluence);
     form->addRow(QStringLiteral("Condizione trasversale:"), crossRow);
@@ -537,6 +551,12 @@ bool loftDialog(QWidget *parent, CadViewport *viewport, const QString &title, in
     form->addRow(QString(), mergeFacesBox);
     form->addRow(QString(), surfaceBox);
     form->addRow(help);
+    for (int row=0;row<form->rowCount();++row) if (auto *item=form->itemAt(row,QFormLayout::LabelRole))
+        if (auto *label=qobject_cast<QLabel *>(item->widget())) {label->setWordWrap(true);label->setMaximumWidth(110);}
+    for (auto *combo:dialog.findChildren<QComboBox *>()) {
+        combo->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);
+        combo->setMinimumContentsLength(14);
+    }
     auto *footer = new QWidget(&dialog);
     footer->setObjectName(QStringLiteral("loftFooter"));
     auto *footerLayout = new QVBoxLayout(footer);
@@ -708,7 +728,13 @@ bool loftDialog(QWidget *parent, CadViewport *viewport, const QString &title, in
             }
             std::vector<ForgeCad::Kernel::PathSegment> path; QString reason;
             const int owner=replaced<0?viewport->extrusions().size():replaced;
-            if(!ForgeCad::geometryRefPath(ref,owner,sketches,viewport->extrusions(),path,&reason)) {
+            bool valid=false;
+            if(graphicalTarget==1) {
+                ExtrusionObject candidate;candidate.loftSections={ref};
+                try {ForgeCad::resolveLoftSections(candidate,owner,sketches,viewport->extrusions());valid=true;}
+                catch(const std::exception &e){reason=QString::fromUtf8(e.what());}
+            } else valid=ForgeCad::geometryRefPath(ref,owner,sketches,viewport->extrusions(),path,&reason);
+            if(!valid) {
                 pickStatus->setText(reason);
             } else if(graphicalTarget==1) {
                 QListWidgetItem *item=nullptr;
@@ -736,12 +762,12 @@ bool loftDialog(QWidget *parent, CadViewport *viewport, const QString &title, in
                 else item=appendGuide(2,existing,true);
                 guides->setCurrentItem(item); refresh();
             }
-            if(graphicalTarget) viewport->beginReferencePick(ForgeCad::DatumRoleCurve|ForgeCad::DatumRoleLine,replaced);
+            if(graphicalTarget) viewport->beginReferencePick(ForgeCad::DatumRoleCurve|ForgeCad::DatumRoleLine|(graphicalTarget==1?ForgeCad::DatumRolePoint:0),replaced);
         });
         const auto *item=guides->currentItem();
         const int supportMode=item?crossConditions.at(item->data(Qt::UserRole+6).toInt()).mode:0;
         const int role=target==3?(supportMode==1?ForgeCad::DatumRolePlane:ForgeCad::DatumRoleFace)
-                                :ForgeCad::DatumRoleCurve|ForgeCad::DatumRoleLine;
+                                :ForgeCad::DatumRoleCurve|ForgeCad::DatumRoleLine|(target==1?ForgeCad::DatumRolePoint:0);
         const QString reason=viewport->beginReferencePick(role,replaced);
         const QString instruction = target == 3 && supportMode == 2
             ? QStringLiteral("Scegli le facce adiacenti alla guida nella vista o nella storyboard. In modifica sono disponibili solo le funzioni precedenti alla loft. Per un appoggio successivo, riordina prima la storia rispettando le dipendenze. Esc termina.")
@@ -830,7 +856,7 @@ bool loftDialog(QWidget *parent, CadViewport *viewport, const QString &title, in
     refresh();
     const auto validate = [&] {
         const ExtrusionObject d = current();
-        if (d.loftSections.size() < 2) return QStringLiteral("Scegli almeno due sezioni (schizzi o bordi).");
+        if (d.loftSections.size() < 2) return QStringLiteral("Scegli almeno due sezioni (schizzi, bordi o punti alle estremita).");
         for(const auto &section : d.loftSections)
             for(const auto &guide : d.loftEdgeGuides)
                 if(sameRef(section,guide) || (section.kind==7 && section.element.kind==-1 && guide.kind==7 && section.index==guide.index))

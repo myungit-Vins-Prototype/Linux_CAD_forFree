@@ -1755,9 +1755,12 @@ void subdivisionSeeds(const Surface &a, const Surface &b, const Box &bounds, dou
     };
     std::function<void(const BSplineSurface &, const BSplineSurface &, int)> search = [&](const BSplineSurface &pa, const BSplineSurface &pb,
                                                                                          int depth) {
-        if (++visits > 400000) throw std::domain_error("intersectSurfaces: suddivisione per i semi troppo profonda");
+        cancellationPoint();
         const Box boxA = patchBox(pa), boxB = patchBox(pb);
         if (!boxA.padded(tolerance).overlaps(boxB) || !boxA.overlaps(area) || !boxB.overlaps(area)) return;
+        // Conta i nodi candidati anche nei livelli ricorsivi: i figli
+        // disgiunti non richiedono alcuna ricerca o suddivisione.
+        if (++visits > 400000) throw std::domain_error("intersectSurfaces: suddivisione per i semi troppo profonda");
         const double da = boxA.diagonal(), db = boxB.diagonal();
         if ((da <= leafSize && db <= leafSize) || depth > 40) {
             const Interval pua = pa.uDomain(), pva = pa.vDomain(), pub = pb.uDomain(), pvb = pb.vDomain();
@@ -1779,8 +1782,23 @@ void subdivisionSeeds(const Surface &a, const Surface &b, const Box &bounds, dou
             search(pa, second, depth + 1);
         }
     };
-    for (const BSplineSurface &pa : patchesA)
-        for (const BSplineSurface &pb : patchesB) search(pa, pb, 0);
+    // Il budget ricorsivo riguarda coppie candidate, non il prodotto
+    // cartesiano delle griglie NURBS. I box dei poli sono conservativi:
+    // scartare qui le coppie gia' disgiunte non elimina intersezioni.
+    // Il budget dei candidati e il limite di profondita' restano invariati.
+    std::vector<Box> boxesB;
+    for (const BSplineSurface &pb : patchesB) boxesB.push_back(patchBox(pb));
+    for (const BSplineSurface &pa : patchesA) {
+        cancellationPoint();
+        const Box boxA = patchBox(pa);
+        if (!boxA.overlaps(area)) continue;
+        const Box paddedA = boxA.padded(tolerance);
+        for (std::size_t j = 0; j < patchesB.size(); ++j) {
+            cancellationPoint();
+            if (boxesB[j].overlaps(area) && paddedA.overlaps(boxesB[j]))
+                search(pa, patchesB[j], 0);
+        }
+    }
 }
 
 }
@@ -1988,6 +2006,87 @@ SurfaceIntersection rotationalCase(const Surface &a, const Surface &b, const Vec
 
 }
 
+// Ogni pezza razionale a pesi positivi sta nell'inviluppo convesso dei
+// propri poli. Un asse qualsiasi che separa i due inviluppi prova quindi
+// la disgiunzione: le normali delle corde scelgono solo gli assi da provare.
+static bool separatedBezierHulls(const BSplineSurface &a, const BSplineSurface &b, double tolerance) {
+    const auto separates = [&](Vec3 axis) {
+        const double length = norm(axis);
+        if (!(length > 0.0) || !std::isfinite(length)) return false;
+        axis /= length;
+        const Vec3 origin = a.pole(0, 0);
+        double minA = 1e300, maxA = -1e300, minB = 1e300, maxB = -1e300, magnitude = 1.0;
+        const auto project = [&](const BSplineSurface &patch, double &lo, double &hi) {
+            for (int i = 0; i < patch.uPoleCount(); ++i)
+                for (int j = 0; j < patch.vPoleCount(); ++j) {
+                    const Vec3 p = patch.pole(i, j);
+                    const double value = dot(p - origin, axis);
+                    lo = std::min(lo, value);
+                    hi = std::max(hi, value);
+                    magnitude = std::max(magnitude, norm(p));
+                }
+        };
+        project(a, minA, maxA);
+        project(b, minB, maxB);
+        // I casi entro il margine di arrotondamento restano candidati.
+        const double margin = tolerance + 512.0 * kMachineEpsilon * magnitude;
+        return minB - maxA > margin || minA - maxB > margin;
+    };
+    const auto normal = [](const BSplineSurface &patch) {
+        return cross(patch.pole(patch.uPoleCount() - 1, 0) - patch.pole(0, 0),
+                     patch.pole(0, patch.vPoleCount() - 1) - patch.pole(0, 0));
+    };
+    return separates(normal(a)) || separates(normal(b));
+}
+
+// Filtro conservativo prima di coincidenza/semi: confronta le gerarchie
+// esatte, suddividendo anche una foglia grande prima di visitare tutte le
+// foglie piccole dell'altro operando. Una coppia incerta o un budget finito
+// restituisce false e lascia intatto il percorso ordinario di intersezione.
+static bool disjointSplineCarriers(const Surface &a, const Surface &b, const Box &bounds, double tolerance) {
+    if (a.type() != SurfaceType::BSpline || b.type() != SurfaceType::BSpline) return false;
+    const auto &splineA = static_cast<const BSplineSurface &>(a), &splineB = static_cast<const BSplineSurface &>(b);
+    const auto patchesA = splineA.cachedBezierPatches(), patchesB = splineB.cachedBezierPatches();
+    const auto treeA = splineA.cachedPatchTree(), treeB = splineB.cachedPatchTree();
+    if (treeA->nodes.empty() || treeB->nodes.empty()) return false;
+    const Box area = bounds.padded(10.0 * tolerance);
+    struct Node {
+        const BSplineSurface *patch = nullptr;
+        int index = 0, depth = 0;
+    };
+    std::size_t visits = 0;
+    std::function<bool(Node, Node)> search = [&](Node n, Node m) {
+        cancellationPoint();
+        const auto &treeNodeA = treeA->nodes[std::size_t(n.index)], &treeNodeB = treeB->nodes[std::size_t(m.index)];
+        if (!n.patch && treeNodeA.leaf >= 0) n.patch = &(*patchesA)[std::size_t(treeNodeA.leaf)];
+        if (!m.patch && treeNodeB.leaf >= 0) m.patch = &(*patchesB)[std::size_t(treeNodeB.leaf)];
+        const Box boxA = n.patch ? patchBox(*n.patch) : Box{treeNodeA.lo, treeNodeA.hi};
+        const Box boxB = m.patch ? patchBox(*m.patch) : Box{treeNodeB.lo, treeNodeB.hi};
+        if (!boxA.padded(tolerance).overlaps(boxB) || !boxA.overlaps(area) || !boxB.overlaps(area)) return true;
+        if (n.patch && m.patch && separatedBezierHulls(*n.patch, *m.patch, tolerance)) return true;
+        if (++visits > 400000) return false;
+        const bool canSplitA = !n.patch || n.depth < 12, canSplitB = !m.patch || m.depth < 12;
+        if (!canSplitA && !canSplitB) return false;
+        const bool splitA = canSplitA && (!canSplitB || boxA.diagonal() >= boxB.diagonal());
+        const Node self = splitA ? n : m;
+        if (!self.patch) {
+            const auto &tree = splitA ? *treeA : *treeB;
+            const auto &node = tree.nodes[std::size_t(self.index)];
+            const Node first{nullptr, node.first, 0}, second{nullptr, node.second, 0};
+            return splitA ? search(first, m) && search(second, m) : search(n, first) && search(n, second);
+        }
+        const BSplineSurface &patch = *self.patch;
+        const double uLength = distance(patch.pole(patch.uPoleCount() - 1, 0), patch.pole(0, 0))
+                             + distance(patch.pole(patch.uPoleCount() - 1, patch.vPoleCount() - 1), patch.pole(0, patch.vPoleCount() - 1));
+        const double vLength = distance(patch.pole(0, patch.vPoleCount() - 1), patch.pole(0, 0))
+                             + distance(patch.pole(patch.uPoleCount() - 1, patch.vPoleCount() - 1), patch.pole(patch.uPoleCount() - 1, 0));
+        const auto children = splitPatch(patch, uLength >= vLength);
+        const Node first{&children.first, self.index, self.depth + 1}, second{&children.second, self.index, self.depth + 1};
+        return splitA ? search(first, m) && search(second, m) : search(n, first) && search(n, second);
+    };
+    return search({}, {});
+}
+
 // Superfici B-spline che coincidono in parte con l'altra superficie (la
 // stessa geometria su una zona comune: una pezza ricavata dall'altra, con un
 // altro dominio o un'altra parametrizzazione, o due B-spline con alcune
@@ -2146,6 +2245,7 @@ static void dropResolved(SurfaceIntersection &out, const std::vector<Vec3> &reso
 
 SurfaceIntersection intersectSurfaces(const Surface &a, const Surface &b, const Box &bounds, const std::vector<Vec3> &seeds,
                                       const SurfaceIntersectionOptions &options) {
+    if (disjointSplineCarriers(a, b, bounds, options.tolerance)) return {};
     Vec3 axisPoint, axisDirection;
     if (coaxialPair(a, b, options.tolerance, axisPoint, axisDirection)) {
         bool handled = false;

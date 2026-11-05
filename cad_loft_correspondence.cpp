@@ -22,19 +22,37 @@ std::vector<LoftSection> resolveLoftSections(const ExtrusionObject &d, int owner
         }
     std::vector<LoftSection> result;
     for (int k = 0; k < refs.size(); ++k) {
-        const auto &ref = refs[k];
+        auto ref = refs[k];
+        if(ref.kind==7 && ref.index>=0 && ref.index<sketches.size()) {
+            const auto &sketch=sketches[ref.index];
+            int point=-1,count=0;
+            if(ref.element.kind==-1 && forgeSketchSegments(sketch).empty()) {
+                for(int i=0;i<sketch.curves.size();++i)
+                    if(sketch.curves[i].tool==DrawingTool::Point && isSketchEntityVisible(sketch,1,i,false)){point=i;++count;}
+                if(count==1)ref.element={1,point,0};
+            }
+            if(ref.element.kind==1 && ref.element.element>=0 && ref.element.element<sketch.curves.size()
+                && sketch.curves[ref.element.element].tool==DrawingTool::Point) {
+                ref.kind=6;ref.element.point=0;
+            }
+        }
         LoftSection section;
         const auto fail = [&](QString message) {
             throw std::domain_error((message + QStringLiteral(" [[loft-section=%1]]").arg(k)).toStdString());
         };
-        if (ref.kind == 7) {
+        if (ref.kind == 7 || ref.kind == 6) {
             if (ref.index < 0 || ref.index >= sketches.size())
                 fail(QStringLiteral("Lo schizzo della sezione non esiste piu'."));
             if (ref.element.kind >= 0 &&
                 !isSketchEntityVisible(sketches[ref.index], ref.element.kind, ref.element.element, false))
                 fail(QStringLiteral("Un'entita' di costruzione non e' una sezione."));
         }
-        if (ref.kind == 7 && ref.element.kind == -1) {
+        if(geometryRefRoles(ref,sketches)&DatumRolePoint) {
+            ResolvedRef resolved;QString error;
+            if(!resolveGeometryRef(ref,owner,sketches,bodies,resolved,&error) || !resolved.hasPoint)fail(error);
+            section.point=resolved.point;
+            if(ref.kind==6){double height;forgeSketchFrame(sketches[ref.index],0.0,section.frame,height);}
+        } else if (ref.kind == 7 && ref.element.kind == -1) {
             const auto &sketch = sketches[ref.index];
             if (sketch.datumPlane >= owner)
                 fail(QStringLiteral("Una sezione sta su un piano successivo."));

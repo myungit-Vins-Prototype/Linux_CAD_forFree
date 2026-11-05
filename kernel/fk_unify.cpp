@@ -214,7 +214,17 @@ Body unifySameDomain(const Body &body, double tolerance, BodyHistory *history) {
     }
     for (EdgeId e : body.edges()) {
         const Edge &edge = body.edge(e);
-        internal[e.index] = !body.isLaminar(e) && find(position[body.finFace(edge.forward).index]) == find(position[body.finFace(edge.backward).index]);
+        bool parameterSeam = false;
+        if (!body.isLaminar(e)) {
+            const FaceId first = body.finFace(edge.forward), second = body.finFace(edge.backward);
+            const Surface &surface = *body.face(first).surface;
+            // Una NURBS chiusa ma non periodica richiede entrambi i lati del
+            // rettangolo UV. La cucitura della stessa faccia non e' un bordo
+            // interno tra facce da fondere: rimuoverla apre il dominio UV.
+            parameterSeam = first == second && !surface.isUPeriodic() && !surface.isVPeriodic();
+        }
+        internal[e.index] = !body.isLaminar(e) && !parameterSeam
+            && find(position[body.finFace(edge.forward).index]) == find(position[body.finFace(edge.backward).index]);
     }
 
     // 2. Loop dei gruppi: dopo una fin che resta viene la prossima che resta

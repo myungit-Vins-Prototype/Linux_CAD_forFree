@@ -1596,6 +1596,7 @@ private:
     std::function<void(const QVector<SceneSelection> &)> multiSelectionCallback_;
     bool hoverScheduled_ = false;
     bool selectionPending_ = false, selectionDragged_ = false, releasingSelection_ = false;
+    quint64 newSketchStoryId_ = 0; // solo lo schizzo creato nella sessione di modifica corrente
     int lightingPreset_ = 0, constraintMode_ = 0, selectedPlane_ = 0, activePlane_ = 0, activeSketch_ = -1;
     double lineLength_ = 0.0;
     double lineAngle_ = -1.0;

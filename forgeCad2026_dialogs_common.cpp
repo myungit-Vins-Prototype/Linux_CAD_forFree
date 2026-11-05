@@ -837,8 +837,11 @@ QSize FunctionDialogPanel::naturalPanelSize() {
     }
     if (layout()) layout()->activate();
     const QMargins margins = contentsMargins();
-    return (layout() ? layout()->sizeHint() + QSize(margins.left() + margins.right(), margins.top() + margins.bottom()) : sizeHint())
+    QSize preferred = (layout() ? layout()->sizeHint() + QSize(margins.left() + margins.right(), margins.top() + margins.bottom()) : sizeHint())
         .expandedTo(minimumSize());
+    const int preferredWidth = property("functionPanelPreferredWidth").toInt();
+    if (preferredWidth > 0) preferred.setWidth(qMax(minimumWidth(),preferredWidth));
+    return preferred;
 }
 
 QSize FunctionDialogPanel::maximumPanelSize() const {
@@ -1465,7 +1468,8 @@ SurfaceEndControls::SurfaceEndControls(QDialog &dialog, QFormLayout &form, CadVi
         modes_[side] = new QComboBox(&dialog);
         modes_[side]->setObjectName(side == 0 ? QStringLiteral("surfaceStartContinuity") : QStringLiteral("surfaceEndContinuity"));
         modes_[side]->addItems(modes);
-        modes_[side]->setCurrentIndex(qBound(0, side == 0 ? definition.loftStartContinuity : definition.loftEndContinuity, 3));
+        if(dialog.objectName()==QStringLiteral("loftDialog"))modes_[side]->addItem(QStringLiteral("G1 — tangente a un piano"));
+        modes_[side]->setCurrentIndex(qBound(0, side == 0 ? definition.loftStartContinuity : definition.loftEndContinuity, modes_[side]->count()-1));
         influences_[side] = new QDoubleSpinBox(&dialog);
         influences_[side]->setRange(0.0, 100.0);
         influences_[side]->setSuffix(QStringLiteral(" %"));
@@ -1475,7 +1479,7 @@ SurfaceEndControls::SurfaceEndControls(QDialog &dialog, QFormLayout &form, CadVi
         picks_[side] = new QPushButton(QStringLiteral("Scegli facce nella vista"), &dialog);
         picks_[side]->setObjectName(side == 0 ? QStringLiteral("surfaceStartFacesPick") : QStringLiteral("surfaceEndFacesPick"));
         picks_[side]->setCheckable(true);
-        auto *clear = new QPushButton(QStringLiteral("Azzera facce"), &dialog);
+        auto *clear = new QPushButton(QStringLiteral("Azzera riferimenti"), &dialog);
         auto *row = new QWidget(&dialog);
         auto *layout = new QHBoxLayout(row);
         layout->setContentsMargins(0, 0, 0, 0);
@@ -1492,7 +1496,7 @@ SurfaceEndControls::SurfaceEndControls(QDialog &dialog, QFormLayout &form, CadVi
         conditionLayout->addWidget(influences_[side], 1);
         conditionLayout->addWidget(reverses_[side]);
         form.addRow(QStringLiteral("Influenza e verso:"), conditionRow);
-        form.addRow(QStringLiteral("Facce adiacenti:"), faces_[side]);
+        form.addRow(QStringLiteral("Riferimento tangente:"), faces_[side]);
         form.addRow(row);
         QObject::connect(modes_[side], &QComboBox::currentIndexChanged, &dialog, [this] { sync(); });
         QObject::connect(influences_[side], &QDoubleSpinBox::valueChanged, &dialog, [this] { sync(); });
@@ -1506,6 +1510,7 @@ SurfaceEndControls::SurfaceEndControls(QDialog &dialog, QFormLayout &form, CadVi
     status_ = new FunctionMessage(&dialog);
     form.addRow(status_);
     auto *note = new QLabel(QStringLiteral("La tangenza alle facce richiede che il profilo coincida con il loro bordo. "
+                                          "Per la tangenza a un piano, la sezione deve appartenere al piano scelto. "
                                           "Con tangenza attiva i collegamenti tra i profili diventano curvi. "
                                           "Per G1 alle facce l'influenza regola la lunghezza della tangente."), &dialog);
     note->setWordWrap(true); form.addRow(note);
@@ -1528,14 +1533,16 @@ QVector<GeometryRef> &SurfaceEndControls::refs(int side) { return side == 0 ? de
 void SurfaceEndControls::sync() {
     definition_.loftStartContinuity = modes_[0]->currentIndex(); definition_.loftEndContinuity = modes_[1]->currentIndex();
     for (int side = 0; side < 2; ++side) {
-        const bool contact = modes_[side]->currentIndex() == 3;
+        const bool plane=modes_[side]->currentIndex()==4;
+        const bool contact = modes_[side]->currentIndex() >= 3;
+        picks_[side]->setText(plane?QStringLiteral("Scegli piano nella vista"):QStringLiteral("Scegli facce nella vista"));
         influences_[side]->setMinimum(contact ? 1.0 : 0.0);
         influences_[side]->setEnabled(modes_[side]->currentIndex() > 0);
         reverses_[side]->setEnabled(modes_[side]->currentIndex() == 1 || modes_[side]->currentIndex() == 2);
         picks_[side]->setEnabled(contact); picks_[side]->setChecked(active_ == side);
         QStringList names;
         for (const auto &ref : refs(side)) names.append(ForgeCad::geometryRefText(ref, viewport_->sketches(), viewport_->extrusions()));
-        faces_[side]->setText(names.isEmpty() ? QStringLiteral("nessuna faccia") : names.join(QStringLiteral(", ")));
+        faces_[side]->setText(names.isEmpty() ? QStringLiteral("nessun riferimento") : names.join(QStringLiteral(", ")));
     }
     definition_.loftStartInfluence = influences_[0]->value() / 100.0; definition_.loftEndInfluence = influences_[1]->value() / 100.0;
     definition_.loftStartReverse = reverses_[0]->isChecked(); definition_.loftEndReverse = reverses_[1]->isChecked();
@@ -1546,18 +1553,24 @@ void SurfaceEndControls::start(int side) {
     active_ = side;
     viewport_->setReferencePickCallback([this](bool picked, GeometryRef ref) {
         if (!picked || active_ < 0) { active_ = -1; sync(); return; }
-        if (ref.kind != 5) { status_->setText(QStringLiteral("Scegli una faccia.")); return; }
+        const bool plane=modes_[active_]->currentIndex()==4;
+        if(plane) {
+            ForgeCad::ResolvedRef resolved;QString error;
+            if(!ForgeCad::resolveGeometryRef(ref,owner_<0?viewport_->extrusions().size():owner_,viewport_->sketches(),viewport_->extrusions(),resolved,&error)||!resolved.hasPlane) {
+                status_->setText(error.isEmpty()?QStringLiteral("Scegli un piano o una faccia piana."):error);return;
+            }
+        } else if (ref.kind != 5) { status_->setText(QStringLiteral("Scegli una faccia.")); return; }
         auto &list = refs(active_);
         int existing = -1;
         for (int k = 0; k < list.size(); ++k)
-            if (list[k].index == ref.index && list[k].point.subshape == ref.point.subshape) existing = k;
-        if (existing < 0) list.append(ref); else list.removeAt(existing);
+            if (list[k].kind==ref.kind && list[k].index == ref.index && list[k].point.subshape == ref.point.subshape) existing = k;
+        if (existing < 0) {if(plane)list.clear();list.append(ref);} else list.removeAt(existing);
         viewport_->setReferenceMarks(definition_.loftStartFaces + definition_.loftEndFaces);
         sync();
-        viewport_->beginReferencePick(ForgeCad::DatumRoleFace, owner_);
+        viewport_->beginReferencePick(modes_[active_]->currentIndex()==4?ForgeCad::DatumRolePlane:ForgeCad::DatumRoleFace, owner_);
     });
-    const QString error = viewport_->beginReferencePick(ForgeCad::DatumRoleFace, owner_);
-    status_->setText(error.isEmpty() ? QStringLiteral("Clicca le facce adiacenti; un secondo clic le toglie. Esc termina la scelta.") : error);
+    const QString error = viewport_->beginReferencePick(modes_[active_]->currentIndex()==4?ForgeCad::DatumRolePlane:ForgeCad::DatumRoleFace, owner_);
+    status_->setText(error.isEmpty() ? QStringLiteral("Scegli il riferimento nella vista o nella storyboard; un secondo clic lo toglie. Esc termina la scelta.") : error);
     if (!error.isEmpty()) active_ = -1;
 }
 

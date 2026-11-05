@@ -2,6 +2,7 @@
 #define FORGECAD_FK_LOFT_H
 
 #include <vector>
+#include <optional>
 
 #include "fk_profile.h"
 #include "fk_sweep.h"
@@ -44,12 +45,14 @@ struct LoftSection {
     ProfileLoop loop;  // chiuso (solidi) o catena aperta (lamine)
     // Alternativa esatta 3D, senza proiezione sul piano del frame.
     std::vector<PathSegment> path;
+    std::optional<Vec3> point; // sezione puntuale, ammessa solo alle estremita
 };
 
 // Facce da continuare lungo il bordo della prima/ultima sezione.
 struct LoftContact {
     std::shared_ptr<const Body> body;
     FaceId face;
+    std::optional<Frame3> plane; // piano di riferimento esatto, senza bordo topologico
 };
 
 // Una guida e' una catena 3D che deve attraversare una volta ogni sezione.

@@ -1,6 +1,9 @@
 #include "forgeCad2026_ribbon_preview.h"
 #include "forgeCad2026_ribbon_editor.h"
 #include "forgeCad2026_dialogs_common.h"
+#include "forgeCad2026_dialogs.h"
+#include <QScrollArea>
+#include <QScrollBar>
 #include <QSizeGrip>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -39,6 +42,7 @@
 #include <QOpenGLFunctions>
 #include <QPushButton>
 #include <QSettings>
+#include <QSignalBlocker>
 #include <QTabBar>
 #include <QTimer>
 #include <QToolBar>
@@ -223,7 +227,7 @@ struct RibbonPreview::Impl {
     QHBoxLayout *groupsLayout=nullptr;
     QVBoxLayout *bodyLayout=nullptr;
     int appliedPadding=-1;
-    QToolButton *density=nullptr;
+    QToolButton *density=nullptr,*cancelFunction=nullptr;
     QTimer contextTimer;
     QPointer<QAction> running;
     QPointer<QDialog> panel;
@@ -231,6 +235,7 @@ struct RibbonPreview::Impl {
     QHash<QAction *,QString> paths;
     bool compact=false,sketch=false,layingOut=false,scheduled=false;
     QString lastOrdinary=QStringLiteral("model");
+    bool returnToSketch=false;
     // Due regioni indipendenti: il distacco tra le carte lascia la scena intatta.
     QRect glassRects[2];
     bool glassRegistered=false;
@@ -399,9 +404,46 @@ struct RibbonPreview::Impl {
             button->style()->unpolish(button); button->style()->polish(button); button->update();
         }
     }
+    QAbstractButton *panelAcceptButton() const {
+        if (!panel) return nullptr;
+        for (auto *box : panel->findChildren<QDialogButtonBox *>()) {
+            // In showEvent il footer viene riposizionato: la visibilita' Qt dei
+            // figli puo' arrivare dopo Show. Il proprietario identifica il comando.
+            QWidget *owner=box->parentWidget();
+            while(owner && !qobject_cast<QDialog *>(owner))owner=owner->parentWidget();
+            if(owner!=panel)continue;
+            for (auto *button : box->buttons())
+                if (box->buttonRole(button)==QDialogButtonBox::AcceptRole
+                    || box->buttonRole(button)==QDialogButtonBox::YesRole) return button;
+        }
+        return nullptr;
+    }
+    void syncFinishControls() {
+        const bool editing=viewport->sketchModeActive();
+        const bool function=panel && panel->isVisible();
+        auto *accept=function?panelAcceptButton():nullptr;
+        const QSignalBlocker block(density);
+        density->setCheckable(!function && !editing);
+        density->setChecked(!function && !editing && compact);
+        density->setText(function?(accept?QStringLiteral("Conferma"):QStringLiteral("Chiudi"))
+                        :editing?QStringLiteral("Termina"):QStringLiteral("Compatta"));
+        density->setToolTip(function?(accept?QStringLiteral("Conferma la funzione aperta"):QStringLiteral("Chiudi il pannello aperto"))
+                           :editing?QStringLiteral("Termina la modifica dello schizzo")
+                           :QStringLiteral("Riduci la ribbon. Clic destro per personalizzarla."));
+        density->setEnabled(function?panel->isEnabled() && (!accept || accept->isEnabled()):!viewport->interactionLocked());
+        cancelFunction->setVisible(function && accept);
+        cancelFunction->setEnabled(function && panel->isEnabled());
+        workspaceTitle->setText(function?QStringLiteral("Funzione"):editing?QStringLiteral("Schizzo")
+                              :compact?QStringLiteral("Ribbon"):QStringLiteral("ForgeCAD\nRibbon"));
+    }
+    void restorePanelContext() {
+        if (returnToSketch && viewport->sketchModeActive()) selectTab(QStringLiteral("sketch"));
+        returnToSketch=false;
+        syncFinishControls();
+    }
     void finishPanel(QDialog *dialog) {
         if (panel != dialog) return;
-        panel.clear(); ++commandGeneration; setRunning(nullptr); schedule();
+        panel.clear(); ++commandGeneration; setRunning(nullptr); restorePanelContext(); schedule();
     }
     int groupWidth(const Group &group,int count,int buttonWidth,bool collapsed) const {
         int width=8;for(int i=0;i<count;++i)width+=(group.actions[i]?buttonWidth:8)+(i?3:0);
@@ -494,11 +536,13 @@ struct RibbonPreview::Impl {
     void dialogShown(QDialog *dialog) {
         if(!dynamic_cast<FunctionDialogPanel *>(dialog)||dynamic_cast<FloatingPanel *>(dialog)||dialog->parentWidget()!=viewport)return;
         panel=dialog;
+        returnToSketch=viewport->sketchModeActive();
+        syncFinishControls();
         const auto generation=++commandGeneration;
         QObject::connect(dialog,&QObject::destroyed,self,[this,generation] {
             // La distruzione di un pannello precedente non deve interrompere
             // il nuovo comando, eventualmente ancora nel mousePress.
-            if(generation==commandGeneration && !panel) {setRunning(nullptr);schedule();}
+            if(generation==commandGeneration && !panel) {setRunning(nullptr);restorePanelContext();schedule();}
         });
         const auto title=dialog->windowTitle().toLower();
         // Ponte sperimentale per riaperture dallo storyboard che non emettono QAction::triggered.
@@ -526,7 +570,20 @@ RibbonPreview::RibbonPreview(QMainWindow *window):QWidget(nullptr),impl_(std::ma
     auto *title=new QLabel(QStringLiteral("ForgeCAD\nRibbon"),impl_->workspace);title->setAlignment(Qt::AlignCenter);space->addWidget(title);
     impl_->workspaceTitle=title;
     impl_->density=new QToolButton(impl_->workspace);impl_->density->setObjectName("ribbonDensity");impl_->density->setText(QStringLiteral("Compatta"));impl_->density->setCheckable(true);impl_->density->setAutoRaise(true);space->addWidget(impl_->density);
-    connect(impl_->density,&QToolButton::toggled,this,&RibbonPreview::setCompact);layout->addWidget(impl_->workspace);
+    impl_->cancelFunction=new QToolButton(impl_->workspace);
+    impl_->cancelFunction->setObjectName("ribbonCancelFunction");impl_->cancelFunction->setText(QStringLiteral("Annulla"));
+    impl_->cancelFunction->setAutoRaise(true);impl_->cancelFunction->hide();space->addWidget(impl_->cancelFunction);
+    connect(impl_->cancelFunction,&QToolButton::clicked,this,[this]{if(impl_->panel)impl_->panel->reject();});
+    connect(impl_->density,&QToolButton::clicked,this,[this](bool checked){
+        if(impl_->panel) {
+            // Attraversa la stessa validazione/applicazione del pannello, mai accept() diretto.
+            if(auto *button=impl_->panelAcceptButton()) {if(button->isEnabled())button->click();}
+            else impl_->panel->reject();
+        } else if(impl_->viewport->sketchModeActive()) {
+            if(!impl_->viewport->interactionLocked())impl_->viewport->endSketchMode();
+        } else setCompact(checked);
+        syncContext();
+    });layout->addWidget(impl_->workspace);
     auto *body=new QWidget(this);body->setProperty("ribbonGlassSurface",true);auto *column=new QVBoxLayout(body);impl_->bodyLayout=column;column->setSizeConstraint(QLayout::SetNoConstraint);column->setContentsMargins(0,0,0,0);column->setSpacing(0);
     impl_->tabBar=new RibbonTabBar(body);impl_->tabBar->setObjectName("ribbonTabs");impl_->tabBar->setDrawBase(false);impl_->tabBar->setExpanding(false);impl_->tabBar->setFixedHeight(30);impl_->tabBar->setUsesScrollButtons(true);impl_->tabBar->setSizePolicy(QSizePolicy::Maximum,QSizePolicy::Fixed);
     for(const auto &tab:impl_->tabs){const int i=impl_->tabBar->addTab(tab.label);impl_->tabBar->setTabData(i,tab.id);}
@@ -564,8 +621,7 @@ QString RibbonPreview::selectedTab() const {return impl_->tabBar->tabData(impl_-
 bool RibbonPreview::compact() const {return impl_->compact;}
 void RibbonPreview::setCompact(bool value) {
     impl_->compact=value;
-    impl_->workspaceTitle->setText(value?QStringLiteral("Ribbon"):QStringLiteral("ForgeCAD\nRibbon"));
-    if(impl_->density->isChecked()!=value)impl_->density->setChecked(value);
+    impl_->syncFinishControls();
     QSettings().setValue("ribbon/compact",value);impl_->place();impl_->schedule();
 }
 void RibbonPreview::syncContext() {
@@ -576,6 +632,7 @@ void RibbonPreview::syncContext() {
         impl_->selectTab(active?QStringLiteral("sketch"):impl_->lastOrdinary);
         impl_->setRunning(nullptr);impl_->schedule();
     }
+    impl_->syncFinishControls();
     impl_->place();
 }
 void RibbonPreview::selectForAction(QAction *action) {
@@ -634,6 +691,102 @@ void RibbonPreview::paintEvent(QPaintEvent *) {
 }
 void RibbonPreview::runSelfTest() {
     const auto require=[](bool pass,const char *message){if(!pass)throw std::runtime_error(message);};
+    const auto checkContextControls = [&] {
+        const auto catalog=threadChoices(0);
+        const auto containsSize=[&](double diameter,double pitch) {
+            return std::any_of(catalog.cbegin(),catalog.cend(),[&](const ThreadChoice &c){return c.diameter==diameter && c.pitch==pitch;});
+        };
+        require(catalog.size()==62 && containsSize(1,.25) && containsSize(2.5,.45) && containsSize(68,6)
+            && containsSize(52,5) && containsSize(12,1.25),"catalogo metrico esteso e passi fini");
+        for(int i=1;i<catalog.size();++i)require(catalog[i].diameter>=catalog[i-1].diameter,"catalogo ordinato per diametro");
+        impl_->window->setFixedSize(1280,720);impl_->window->show();QApplication::processEvents();
+        for(auto *dock:impl_->window->findChildren<QDockWidget *>())
+            if(!dock->property("storyboardPanelSelection").toBool())dock->hide();
+        const auto original=impl_->viewport->currentDocument();
+        DocumentState fixture;
+        for(int i=0;i<3;++i) {
+            SketchObject sketch;sketch.name=QStringLiteral("Sezione %1").arg(i+1);sketch.storyId=100+i;
+            sketch.customFrame=true;sketch.frame.origin[2]=i*5;
+            sketch.segments={{{2,2},{4,2}},{{4,2},{4,4}},{{4,4},{2,4}},{{2,4},{2,2}}};
+            fixture.sketches.append(sketch);
+        }
+        impl_->viewport->loadDocument(fixture);impl_->viewport->selectSketch(0);syncContext();
+        for(bool compact:{false,true}) {
+            setCompact(compact);
+            FunctionDialogPanel dialog(impl_->window);dialog.setWindowTitle(QStringLiteral("Estrusione"));
+            auto *form=dialog.createScrollableForm();
+            auto *box=new QDialogButtonBox(QDialogButtonBox::Ok|QDialogButtonBox::Cancel,&dialog);form->addRow(box);
+            int validations=0;bool valid=false;
+            connect(box,&QDialogButtonBox::accepted,&dialog,[&]{++validations;if(valid)dialog.accept();});
+            connect(box,&QDialogButtonBox::rejected,&dialog,&QDialog::reject);
+            dialog.show();QApplication::processEvents();syncContext();
+            require(impl_->density->isEnabled() && !impl_->density->isCheckable(),"conferma ribbon disponibile durante WindowLock");
+            require(impl_->cancelFunction->isVisible(),"annulla ribbon disponibile");
+            for(auto *button:{impl_->density,impl_->cancelFunction})require(impl_->workspace->rect().contains(QRect(button->mapTo(impl_->workspace,QPoint()),button->size())),"azioni di chiusura contenute nel riquadro anche compatto");
+            impl_->density->click();require(dialog.isVisible() && validations==1,"conferma ribbon rispetta la validazione");
+            valid=true;impl_->density->click();require(!dialog.isVisible() && validations==2,"conferma applicata una sola volta");
+            require(selectedTab()=="sketch","conferma ripristina Schizzo");
+            dialog.show();QApplication::processEvents();syncContext();impl_->cancelFunction->click();
+            require(!dialog.isVisible() && validations==2 && selectedTab()=="sketch","annulla senza applicazione e ripristino Schizzo");
+        }
+        // Percorsi reali: la QAction apre il pannello e richiama il kernel alla conferma.
+        for(const auto &name:{QStringLiteral("Estrusione"),QStringLiteral("Rivoluzione")})for(bool accept:{false,true}) {
+            impl_->viewport->loadDocument(fixture);impl_->viewport->selectSketch(0);syncContext();
+            auto *action=impl_->paths.key(QStringLiteral("Funzioni/")+name+QStringLiteral("..."));require(action,"azione reale da schizzo");
+            std::exception_ptr failure;bool opened=false;
+            QTimer::singleShot(0,this,[&] {
+                auto panel=impl_->panel;
+                try {
+                    require(panel,"pannello reale aperto");opened=true;syncContext();
+                    (accept?impl_->density:impl_->cancelFunction)->click();
+                    require(!panel->isVisible(),"chiusura del pannello reale dal ribbon");
+                } catch(...) {failure=std::current_exception();if(panel)panel->reject();}
+            });
+            selectForAction(action);action->trigger();
+            if(failure)std::rethrow_exception(failure);
+            require(opened && impl_->viewport->sketchModeActive() && selectedTab()=="sketch","estrusione/rivoluzione ritornano allo schizzo aperto");
+            if(impl_->viewport->extrusions().size()!=(accept?1:0))throw std::runtime_error(QStringLiteral("%1 accept=%2: corpi=%3").arg(name).arg(accept).arg(impl_->viewport->extrusions().size()).toStdString());
+        }
+        syncContext();impl_->density->click();syncContext();require(!impl_->viewport->sketchModeActive() && impl_->density->isCheckable(),"Termina chiude lo schizzo e ripristina Compatta");
+        setCompact(false);impl_->viewport->loadDocument(fixture);
+        for(int width:{1280,1024}) {
+            impl_->window->setFixedSize(width,720);QApplication::processEvents();
+            std::exception_ptr failure;
+            QTimer::singleShot(0,this,[&] {
+                auto *dialog=impl_->window->findChild<QDialog *>("loftDialog");
+                try {
+                    require(dialog,"pannello loft reale");
+                    require(dialog->width()<=440,"larghezza iniziale loft compatta");
+                    dialog->resize(440,dialog->height());QApplication::processEvents();
+                    auto *scroll=dialog->findChild<QScrollArea *>("functionDialogScroll");
+                    require(scroll && scroll->horizontalScrollBar()->maximum()==0,"loft a 440 pixel senza scorrimento orizzontale");
+                    auto *list=dialog->findChild<QListWidget *>("loftSections");
+                    auto *up=dialog->findChild<QPushButton *>("loftSectionUp");
+                    require(up->mapTo(dialog,QPoint()).x()>list->mapTo(dialog,QPoint()).x()+list->width(),"frecce accanto all'elenco");
+                    list->setCurrentRow(1);const auto item=list->currentItem();up->click();require(list->row(item)==0,"riordino sezione funzionante");
+                    const auto capture=qEnvironmentVariable("FORGECAD_CONTEXT_UI_CAPTURE");
+                    if(!capture.isEmpty()) {
+                        impl_->window->grab().save(capture+QString::number(width)+QStringLiteral(".png"));
+                        scroll->ensureWidgetVisible(dialog->findChild<QWidget *>("loftPickSections"));QApplication::processEvents();
+                        dialog->grab().save(capture+QString::number(width)+QStringLiteral("-controls.png"));
+                    }
+                    scroll->verticalScrollBar()->setValue(scroll->verticalScrollBar()->maximum());QApplication::processEvents();
+                    require(scroll->horizontalScrollBar()->maximum()==0,"controlli inferiori senza tagli orizzontali");
+                } catch(...) {failure=std::current_exception();}
+                if(dialog)dialog->reject();
+            });
+            ExtrusionObject initial;initial.feature=BodyFeature::Loft;initial.loftSurface=true;
+            loftDialog(impl_->window,impl_->viewport,QStringLiteral("Loft"),-1,initial,[](const ExtrusionObject &){return QString();});
+            if(failure)std::rethrow_exception(failure);
+        }
+        const int beforeEmpty=impl_->viewport->sketches().size();
+        impl_->viewport->createSketch(0,QStringLiteral("Vuoto dal ribbon"));syncContext();
+        impl_->density->click();syncContext();
+        require(!impl_->viewport->sketchModeActive() && impl_->viewport->sketches().size()==beforeEmpty,
+                "Termina dal ribbon scarta lo schizzo nuovo vuoto");
+        impl_->viewport->loadDocument(original);syncContext();
+    };
+    if(qEnvironmentVariableIsSet("FORGECAD_CONTEXT_UI_ONLY")) { checkContextControls(); return; }
     const auto checkPanels = [&] {
         impl_->window->show();QApplication::processEvents();
         if(QGuiApplication::platformName()!=QStringLiteral("offscreen"))
@@ -946,7 +1099,11 @@ void RibbonPreview::runSelfTest() {
     }
     require(viewShortcuts>=3,"verificate scorciatoie zoom piu, meno e zero");
     setCompact(true);QApplication::processEvents();require(height()==95+2*impl_->contentPadding(),"altezza compatta con padding dinamico");setCompact(false);
-    impl_->viewport->createSketch(0,QStringLiteral("Prova ribbon"));syncContext();QApplication::processEvents();
+    impl_->viewport->createSketch(0,QStringLiteral("Prova ribbon"));
+    auto ribbonSketch=impl_->viewport->currentDocument();
+    ribbonSketch.sketches.last().segments={{{0,0},{1,0}}};
+    impl_->viewport->loadDocument(ribbonSketch);impl_->viewport->selectSketch(ribbonSketch.sketches.size()-1);
+    syncContext();QApplication::processEvents();
     require(selectedTab()=="sketch" && impl_->tabBar->isTabVisible(2),"entrata schizzo seleziona scheda");
     // Il Vincoli viene creato insieme alla finestra: deve seguire il tema anche
     // se il colore cambia prima della prima apertura o mentre resta aperto.

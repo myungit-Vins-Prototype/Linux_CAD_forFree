@@ -46,7 +46,7 @@
 namespace ForgeCad {
 
 inline constexpr const char *kDocumentSuffix = "prt";
-inline constexpr quint16 kDocumentFormatVersion = 65;
+inline constexpr quint16 kDocumentFormatVersion = 66;
 
 // Budget in byte, indipendenti dal numero di feature. I chiamanti che devono
 // aprire documenti piu' grandi possono passarne di espliciti agli overload.
@@ -67,6 +67,7 @@ QString encodeDocument(const DocumentState &state, QByteArray &bytes, bool bodie
 // Non usare per salvataggi o pubblicazioni di nuovi documenti.
 // Firma storica 60: rifiuta inversioni G1/G2 che quel formato non rappresenta.
 // Firma storica 61: rifiuta condizioni trasversali alle guide.
+QString encodeDocumentDefinition65ForHash(const DocumentState &state, QByteArray &bytes);
 QString encodeDocumentDefinition64ForHash(const DocumentState &state, QByteArray &bytes);
 QString encodeDocumentDefinition63ForHash(const DocumentState &state, QByteArray &bytes);
 QString encodeDocumentDefinition62ForHash(const DocumentState &state, QByteArray &bytes);

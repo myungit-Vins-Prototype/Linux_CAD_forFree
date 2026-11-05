@@ -784,7 +784,7 @@ struct ExtrusionObject {
     double loftGuideInfluence = 1.0;
     double loftStartInfluence = 1.0;
     double loftEndInfluence = 1.0;
-    // Modalita' 3: G1 alle facce scelte; condiviso dalla superficie rigata.
+    // Modalita' 3: G1 alle facce; 4: G1 al piano (loft). Riferimenti associativi.
     QVector<GeometryRef> loftStartFaces, loftEndFaces;
     // Loft di superficie: lamina senza coperchi (sezioni chiuse: un tubo).
     bool loftSurface = false;

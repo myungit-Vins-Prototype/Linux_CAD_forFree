@@ -1552,7 +1552,8 @@ ForgeBody forgeLoft(const QVector<SketchObject> &sketches, const QVector<SketchO
                     const std::vector<LoftSection> &exactSections,
                     const std::vector<std::vector<PathSegment>> &exactGuides,
                     const std::vector<LoftGuideCondition> &guideConditions, bool startReverse, bool endReverse,
-                    const QVector<LoftSectionCorrespondence> &correspondences, bool mergeTangentFaces) {
+                    const QVector<LoftSectionCorrespondence> &correspondences, bool mergeTangentFaces,
+                    const std::vector<LoftContact> &startPlanes, const std::vector<LoftContact> &endPlanes) {
     if (exactSections.empty() && sketches.size() < 2) {
         setError(error, QStringLiteral("Il loft richiede almeno due sezioni."));
         return nullptr;
@@ -1587,7 +1588,8 @@ ForgeBody forgeLoft(const QVector<SketchObject> &sketches, const QVector<SketchO
                     && distance(section.loop.segments.front().start(),section.loop.segments.back().end()) <= kSketchConnectionTolerance) ++closedCount;
             }
         }
-        if (closedCount != 0 && closedCount != int(sections.size())) {
+        const int pointCount=int(std::count_if(sections.begin(),sections.end(),[](const auto &s){return bool(s.point);}));
+        if (closedCount != 0 && closedCount != int(sections.size())-pointCount) {
             setError(error, QStringLiteral("Le sezioni del loft devono essere tutte chiuse o tutte aperte."));
             return nullptr;
         }
@@ -1595,7 +1597,16 @@ ForgeBody forgeLoft(const QVector<SketchObject> &sketches, const QVector<SketchO
         options.ruled = ruled;
         options.mergeTangentFaces = mergeTangentFaces;
         applyLoftCorrespondences(correspondences, sections, options);
-        loftEndConditions(options, startContinuity, endContinuity, startInfluence, endInfluence, startFaces, endFaces);
+        loftEndConditions(options, startContinuity==4?0:startContinuity, endContinuity==4?0:endContinuity,
+                          startInfluence, endInfluence, startFaces, endFaces);
+        if(startContinuity==4) {
+            if(startPlanes.size()!=1)throw std::domain_error("scegli un piano tangente per la prima sezione");
+            options.startContinuity=1;options.startFaces=startPlanes;
+        }
+        if(endContinuity==4) {
+            if(endPlanes.size()!=1)throw std::domain_error("scegli un piano tangente per l'ultima sezione");
+            options.endContinuity=1;options.endFaces=endPlanes;
+        }
         options.startReverse = startReverse; options.endReverse = endReverse;
         options.guideConditions = guideConditions;
         options.guideContinuity = guideContinuity;
@@ -1759,8 +1770,22 @@ ForgeBody forgeReferencedLoft(const ExtrusionObject &d, int owner, const QVector
         for (int index : order) edgeGuides.push_back(std::move(all[index]));
         guides.clear();
     }
+    std::vector<LoftContact> planes[2];
     for (int side=0; side<2; ++side) {
-        if ((side==0?d.loftStartContinuity:d.loftEndContinuity)!=3) continue;
+        const int mode=side==0?d.loftStartContinuity:d.loftEndContinuity;
+        if(mode==4) {
+            const auto &refs=side==0?d.loftStartFaces:d.loftEndFaces;
+            if(refs.size()!=1){setError(error,QStringLiteral("Scegli un piano tangente per la sezione."));return nullptr;}
+            ResolvedRef resolved;QString reason;
+            if(!resolveGeometryRef(refs.front(),owner,sketches,bodies,resolved,&reason)||!resolved.hasPlane) {
+                setError(error,reason.isEmpty()?QStringLiteral("Il riferimento non e' un piano."):reason);return nullptr;
+            }
+            const Vec3 normal=resolved.direction;
+            const Vec3 axis=std::fabs(normal.x())<0.8?Vec3(1,0,0):Vec3(0,1,0);
+            LoftContact contact;contact.plane=Frame3(resolved.point,normal,axis-dot(axis,normal)*normal);
+            planes[side].push_back(std::move(contact));continue;
+        }
+        if (mode!=3) continue;
         for (const auto &ref : side==0?d.loftStartFaces:d.loftEndFaces) {
             int i=ref.index;
             if (ref.featureId) { i=-1; for(int j=0;j<owner && j<bodies.size();++j) if(bodies.at(j).featureId==ref.featureId) {i=j;break;} }
@@ -1771,7 +1796,7 @@ ForgeBody forgeReferencedLoft(const ExtrusionObject &d, int owner, const QVector
         }
     }
         const auto result = forgeLoft(legacySections,guides,d.loftRuled,d.loftStartContinuity,d.loftEndContinuity,d.loftGuideContinuity,
-                         d.loftGuideInfluence,d.loftStartInfluence,d.loftEndInfluence,error,d.loftSurface,faces[0],faces[1],sections,edgeGuides,guideConditions,d.loftStartReverse,d.loftEndReverse,d.loftCorrespondences,d.loftMergeTangentFaces);
+                         d.loftGuideInfluence,d.loftStartInfluence,d.loftEndInfluence,error,d.loftSurface,faces[0],faces[1],sections,edgeGuides,guideConditions,d.loftStartReverse,d.loftEndReverse,d.loftCorrespondences,d.loftMergeTangentFaces,planes[0],planes[1]);
         if (!result && error) *error = namedLoftError(*error,d,sketches,bodies);
         return result;
     } catch (const std::exception &failure) { setError(error,namedLoftError(QString::fromUtf8(failure.what()),d,sketches,bodies)); return nullptr; }

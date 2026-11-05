@@ -129,6 +129,11 @@ QString drawingModelDefinitionMatches(const DocumentState &document,const QByteA
     if(current==expected){matches=true;return {};}
     auto normalized=document;normalized.version.checkinId={};normalized.baseCheckinId={};normalized.orientation=AxesOrientation{};
     normalized.lengthUnit=LengthUnit::Millimeter;
+    QByteArray format65;
+    if (encodeDocumentDefinition65ForHash(normalized,format65).isEmpty()
+        && QCryptographicHash::hash(format65,QCryptographicHash::Sha256)==expected) {
+        matches=true; return {};
+    }
     QByteArray format64;
     if (encodeDocumentDefinition64ForHash(normalized,format64).isEmpty()
         && QCryptographicHash::hash(format64,QCryptographicHash::Sha256)==expected) {

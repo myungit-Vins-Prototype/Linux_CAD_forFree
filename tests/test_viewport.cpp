@@ -268,6 +268,7 @@ public:
 #include "test_function_panels.h"
 #include "test_storyboard_panel_selection.h"
 #include "test_loft_projected_sections.h"
+#include "test_loft_points.h"
 #include "test_advanced_fillets.h"
 #include "test_fillet_refinements.h"
 #include "test_lazy_mesh.h"
@@ -2670,7 +2671,8 @@ public:
         view.undo();require(indexOf(view,aid)==0,"rifiuti atomici senza nuove voci Undo");view.redo();verify(view);
         // Muovere un piano scavalcando soltanto uno schizzo non cambia gli
         // indici delle feature: anche questo percorso deve validare i riferimenti.
-        const int free=view.createSketch(0,QStringLiteral("Schizzo libero"));view.endSketchMode();
+        const int free=view.createSketch(0,QStringLiteral("Schizzo libero"));
+        view.sketches_[free].segments={{{0,0},{1,0}}};view.endSketchMode();
         const int bpos=view.storyboardIndex(false,indexOf(view,bid));
         require(view.moveStoryboardStep(view.storyboardIndex(true,free),bpos).isEmpty(),"schizzo libero prima del piano");
         const auto bindex=indexOf(view,bid);
@@ -2742,6 +2744,50 @@ public:
             if(!dir.isEmpty()){QDir().mkpath(dir);require(window.modelTree_->grab().save(dir+QStringLiteral("/tree-%1.png").arg(found)),"cattura piani nella storia");}
         }
         std::cout<<"PASS piani definiti: riordino, dipendenze, appoggi, Undo/Redo, codec, cursore e UI"<<std::endl;
+    }
+
+    static void emptyNewSketches() {
+        CadViewport view;
+        view.createSketch(0,QStringLiteral("Vuoto"));
+        view.hasPendingPoint_=true;view.curveControlPoints_={{0,0}};view.endSketchMode();
+        require(view.sketches().isEmpty() && view.storyboard().isEmpty(),"Termina scarta uno schizzo nuovo vuoto");
+        view.undo();view.redo();require(view.sketches().isEmpty(),"Undo/Redo della creazione vuota non lascia lo schizzo");
+        view.createSketch(1,QStringLiteral("Primo vuoto"));view.createSketch(2,QStringLiteral("Secondo vuoto"));
+        require(view.sketches().size()==1 && view.activeSketchIndex()==0,"cambiare creazione scarta il precedente vuoto");
+        view.endSketchMode();
+        for(int kind=0;kind<3;++kind) {
+            const int index=view.createSketch(0,QStringLiteral("Geometria"));
+            view.recordUndo();
+            if(kind<2){view.sketches_[index].segments={{{0,0},{1,0}}};if(kind==1)view.sketches_[index].constructionSegments={0};}
+            else {CurveObject point;point.tool=DrawingTool::Point;point.controlPoints={{2,3}};view.sketches_[index].curves={point};}
+            view.endSketchMode();require(view.sketches().size()==kind+1,"segmenti, costruzione e punti conservano lo schizzo");
+        }
+        const int existing=view.createSketch(0,QStringLiteral("Disegnato poi cancellato"));
+        view.recordUndo();view.sketches_[existing].segments={{{0,0},{1,0}}};
+        view.recordUndo();view.sketches_[existing].segments.clear();view.endSketchMode();
+        require(view.sketches().size()==3,"tutta la geometria cancellata prima di Termina");
+        view.undo();require(view.sketches().size()==4 && !view.sketches().last().segments.isEmpty(),"Undo recupera l'ultima geometria, non una cancellazione vuota");
+        view.redo();require(view.sketches().size()==3,"Redo torna alla chiusura senza schizzo vuoto");
+        view.createSketch(0,QStringLiteral("Nuovo vuoto"));view.selectSketch(1);
+        require(view.sketches().size()==3 && view.activeSketchIndex()==1,"passaggio allo schizzo esistente conserva la selezione");view.endSketchMode();
+        DocumentState old;SketchObject empty;empty.name=QStringLiteral("Vuoto esistente");old.sketches={empty};
+        view.loadDocument(old);view.selectSketch(0);view.endSketchMode();require(view.sketches().size()==1,"schizzo esistente non eliminato implicitamente");
+        const int used=view.createSketch(0,QStringLiteral("Con utilizzatore"));
+        ExtrusionObject consumer;consumer.sketchIndex=used;view.extrusions_.append(consumer);
+        view.endSketchMode();require(view.sketches().size()==2,"riferimenti da altre feature conservati");
+        view.loadDocument({});
+        PrimitiveParameters box;box.size[0]=box.size[1]=box.size[2]=4;
+        require(view.createPrimitive(box,QStringLiteral("Base")).isEmpty(),"base per schizzo su faccia");
+        FaceHit face;face.planar=true;face.normal[2]=1;
+        require(view.createFaceSketch(0,face,QStringLiteral("Su faccia"))>=0,"creazione su faccia");
+        view.endSketchMode();require(view.sketches().isEmpty() && view.extrusions().size()==1,"schizzo vuoto su faccia scartato, corpo conservato");
+        ExtrusionObject datum;datum.feature=BodyFeature::DatumPlane;GeometryRef xy;xy.kind=1;xy.index=0;datum.datum.refs={xy};datum.datum.distance=2;
+        require(view.createBody(datum).isEmpty(),"piano per schizzo vuoto");
+        require(view.createDatumSketch(1,QStringLiteral("Su piano"))>=0,"creazione su piano");
+        view.endSketchMode();require(view.sketches().isEmpty() && view.extrusions().size()==2,"schizzo vuoto su piano scartato, piano conservato");
+        view.createSketch(0,QStringLiteral("Eliminazione esplicita"));
+        view.deleteObjects({{SceneObjectKind::Sketch,0,-1}});
+        require(view.sketches().isEmpty(),"eliminazione esplicita non elimina due volte");
     }
 
     static void sketchStoryRegressions() {
@@ -2824,7 +2870,8 @@ public:
         const int countBefore = restored.extrusions_.size();
         require(!restored.createExtrusion(extrusion, QStringLiteral("Uso anticipato")).isEmpty()
                     && restored.extrusions_.size() == countBefore, "nuova lavorazione non puo' usare uno schizzo futuro");
-        const int free = restored.createSketch(0,QStringLiteral("Schizzo al cursore")); restored.endSketchMode();
+        const int free = restored.createSketch(0,QStringLiteral("Schizzo al cursore"));
+        restored.sketches_[free].segments={{{0,0},{1,0}}}; restored.endSketchMode();
         require(restored.storyboardIndex(true,free) == 2 && restored.storyboardPosition() == 3, "nuovo schizzo al cursore indipendente");
         restored.setStoryboardPosition(2); require(!restored.isSketchDrawn(free), "rollback prima dello schizzo");
         restored.setStoryboardPosition(3); require(restored.isSketchDrawn(free), "rollback dopo lo schizzo");
@@ -11180,6 +11227,11 @@ int main(int argc, char **argv) {
         catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
         return 0;
     }
+    if (app.arguments().contains(QStringLiteral("--empty-new-sketch"))) {
+        try { ViewportInteractionTest::emptyNewSketches(); }
+        catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
+        return 0;
+    }
     if (app.arguments().contains(QStringLiteral("--sketch-story"))) {
         try { ViewportInteractionTest::sketchStoryRegressions(); }
         catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
@@ -11841,6 +11893,8 @@ int main(int argc, char **argv) {
         else if (app.arguments().contains(QStringLiteral("--saved-loft-surface")))
             ViewportInteractionTest::savedLoftSurface(app.arguments().value(app.arguments().indexOf(QStringLiteral("--saved-loft-surface"))+1));
         else if (app.arguments().contains(QStringLiteral("--edge-loft"))) ViewportInteractionTest::edgeLoftWorkflow();
+        else if (app.arguments().contains(QStringLiteral("--loft-points")))
+            ViewportInteractionTest::loftPointsAndPlanes();
         else if (app.arguments().contains(QStringLiteral("--open-loft-tangency")))
             ViewportInteractionTest::openLoftTangency(app.arguments().value(app.arguments().indexOf(QStringLiteral("--open-loft-tangency"))+1));
         else if (app.arguments().contains(QStringLiteral("--spline-clicks")))

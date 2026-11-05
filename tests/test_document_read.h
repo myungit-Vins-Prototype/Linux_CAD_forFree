@@ -220,7 +220,7 @@ void documentLoftCacheMigrationTests() {
     require(decodeDocument(encoded,current).isEmpty() && current.extrusions[0].cachedGeometry
             && current.extrusions[1].cachedGeometry && current.extrusions[1].forgeBody,
             "cache moderna conserva il loft e gli altri B-rep");
-    for (quint32 version : {7u, 10u, 11u}) {
+    for (quint32 version : {7u, 10u, 11u, 12u}) {
         require(decodeDocument(documentWithCacheVersion(encoded,version),previous).isEmpty()
                 && previous.sketches.size() == 2 && previous.extrusions[1].loftSketches == QVector<int>({0,1})
                 && !previous.extrusions[0].forgeBody && !previous.extrusions[1].forgeBody,
@@ -231,7 +231,7 @@ void documentLoftCacheMigrationTests() {
     const auto checkin = QUuid::createUuid();
     source.version.checkinId = checkin;
     require(encodeDocument(source,encoded,true).isEmpty(), "cache revisione con loft");
-    for (quint32 oldVersion : {10u,11u}) {
+    for (quint32 oldVersion : {10u,11u,12u}) {
         require(decodeDocument(documentWithCacheVersion(encoded,oldVersion),previous).isEmpty()
                 && previous.version.checkinId == checkin && previous.extrusions[0].cachedGeometry
                 && previous.extrusions[1].cachedGeometry && previous.extrusions[1].forgeBody
@@ -239,6 +239,11 @@ void documentLoftCacheMigrationTests() {
                 "revisione storica con loft conserva esattamente lo snapshot e resta validabile");
     }
     source.version.checkinId = {};
+    source.extrusions[1].suppressed = true;
+    require(encodeDocument(source,encoded,true).isEmpty()
+            && decodeDocument(documentWithCacheVersion(encoded,12),previous).isEmpty()
+            && previous.extrusions[0].cachedGeometry,
+            "loft soppressa non invalida la cache 12 degli altri corpi");
     source.extrusions.removeLast();
     require(encodeDocument(source,encoded,true).isEmpty(), "cache documento senza loft");
     require(decodeDocument(documentWithCacheVersion(encoded,10),previous).isEmpty()

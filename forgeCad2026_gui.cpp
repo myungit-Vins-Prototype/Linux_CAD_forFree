@@ -4857,8 +4857,8 @@ void PdfWindow::rebuildModelTree() {
                 item->setToolTip(0, QStringLiteral("Loft %1: %2 sezioni, %3 guide, estremità G%4/G%5, guide %6")
                                         .arg(body.loftRuled && !body.loftStartContinuity && !body.loftEndContinuity ? QStringLiteral("rigato") : QStringLiteral("liscio"))
                                         .arg(body.loftSections.isEmpty()?body.loftSketches.size():body.loftSections.size()).arg(guideCount)
-                                        .arg(body.loftStartContinuity == 3 ? QStringLiteral("1 (facce)") : QString::number(body.loftStartContinuity))
-                                        .arg(body.loftEndContinuity == 3 ? QStringLiteral("1 (facce)") : QString::number(body.loftEndContinuity))
+                                        .arg(body.loftStartContinuity == 4 ? QStringLiteral("1 (piano)") : body.loftStartContinuity == 3 ? QStringLiteral("1 (facce)") : QString::number(body.loftStartContinuity))
+                                        .arg(body.loftEndContinuity == 4 ? QStringLiteral("1 (piano)") : body.loftEndContinuity == 3 ? QStringLiteral("1 (facce)") : QString::number(body.loftEndContinuity))
                                         .arg(guideModes.join(QStringLiteral(", "))));
             } else if (body.feature == BodyFeature::Imported) {
                 item->setToolTip(0, QStringLiteral("%1 importato da %2").arg(body.solid ? QStringLiteral("Solido") : QStringLiteral("Superficie"), body.importSource));
