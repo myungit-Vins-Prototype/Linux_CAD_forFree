@@ -10,6 +10,23 @@ struct SnapResult {
     QPointF point;
 };
 
+// Coppia di entita' esatte: gli indici esterni appartengono alla cache transitoria.
+// Nessun riferimento persistente viene creato durante il movimento del cursore.
+struct IntersectionSnap {
+    bool found = false;
+    QPointF point;
+    ConstraintRef first, second;
+    bool firstExternal = false, secondExternal = false;
+};
+IntersectionSnap snapIntersection(const QPointF &point, const SketchObject &local,
+                                  const SketchObject &external, double tolerance,
+                                  const QVector<ConstraintRef> &excluded = {});
+// Conserva solo le due sorgenti usate e due PointOnCurve nel normale Undo del
+// chiamante. Operazione atomica; non introduce nuovi tipi di vincolo nel codec.
+bool constrainIntersection(SketchObject &sketch, const ConstraintRef &point,
+                           const IntersectionSnap &snap, const SketchObject &external,
+                           const QVector<SketchObject> &sketches, const QVector<ExtrusionObject> &bodies);
+
 // Aggancio a estremi, punti medi e punto piu' vicino dei segmenti e ai punti
 // notevoli `points` (estremi delle curve, centri, vertici, origine); i punti
 // entro la tolleranza vincono sul punto piu' vicino dei segmenti; altrimenti griglia.

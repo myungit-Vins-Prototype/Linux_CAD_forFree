@@ -1,7 +1,6 @@
 # CLAUDE.md — memoria operativa ForgeCAD
 
-Aggiornato il **4 novembre 2026**. Leggere questo file e `AGENTS.md` all'avvio; approfondire solo l'area del lavoro
-richiesto. Stato implementato, limiti e interventi recenti.
+Aggiornato il **5 novembre 2026**. Leggere con `AGENTS.md`; approfondire solo l’area richiesta.
 
 La cronologia precedente è conservata integralmente in [archivio al 2 novembre](docs/history/claude-2026-11-02.md). **Non
 caricare l'archivio per intero nel contesto**: cercare un argomento o una data e leggere solo la voce pertinente. Le sue
@@ -44,7 +43,7 @@ storico della finestra principale. `pdfReader.c`, `pdfView.c` e vecchi binari PD
 | Schizzi e vincoli | `cad_types.h`, `cad_constraints*`, `cad_sketch_refs*`, `cad_expression*`: schizzi 2D/3D, asole/punti, quote e solver, snap e riferimenti associativi a piani/assi/bordi/curve. Cache automatiche nascoste; conversioni esplicite conservate; costruzione fuori modifica opzionale. Le entità locali visibili hanno priorità nella quotatura. |
 | Solidi e superfici | `cad_forge*`, `kernel/fk_*`: primitive, estrusione (anche fino al prossimo corpo), rivoluzione, sweep/loft, booleane, sformo, svuotamento/spessore, filettatura, cucitura, taglio/estensione, reti U/V e poli NURBS. Estendi apre il pannello prima della scelta dei bordi. Raccordi costanti, conici, variabili e tra facce; percorsi tangenti con leggi indipendenti e maniglie R. |
 | Storia e genealogia | `cad_history*`, `cad_element_names*`, viewport e storyboard: schizzi/piani come passi autonomi, riordino, rollback, soppressione, riparazione e Undo/Redo. Specchi/ripetizioni sono un evento con corpi separati ed esclusioni; conservano identità e dipendenze. |
-| Documenti e revisioni | `cad_document_io*`, `cad_document_read*`, `cad_native_revisions*`, `cad_workspace*`: `.prt` con firma FCAD, formato corrente 62 (versi G1/G2 e condizioni guida); Zstandard dal 56 e lettura legacy zlib. Definizione e cache B-rep/mesh distinte, salvataggio atomico, recupero, consultazione concorrente e lock della modifica. Check-out/check-in, ripristino, rilascio coordinato e recupero catalogo. |
+| Documenti e revisioni | `cad_document_io*`, `cad_document_read*`, `cad_native_revisions*`, `cad_workspace*`: `.prt` con firma FCAD, formato 65 (unione facce loft; 64: corrispondenze; 63: variazioni quote); Zstandard dal 56 e lettura legacy zlib. Definizione e cache B-rep/mesh distinte, salvataggio atomico, recupero, consultazione concorrente e lock della modifica. Check-out/check-in, ripristino, rilascio coordinato e recupero catalogo. |
 | Tavole 2D | `cad_drawing_*`: `.drw`, viste proiettate/ausiliarie, sezioni composte, dettagli e viste interrotte, più fogli, scale foglio/vista, quote e tolleranze, datum/GD&T, badge persistenti, rugosità Ra/Rz e PDF vettoriale. Agganci alle geometrie esatte e nomi genealogici; portabilità senza cache del modello nei casi migrabili. |
 | Scambio e analisi | `kernel/fk_step*`, `fk_iges*`, `fk_exchange*`, `fk_mass*`: STEP/IGES propri, esportazione STL/OBJ, misure/massa, zebra e curvatura. Parsing numerico indipendente dal locale, controlli di cicli/profondità e dimensioni dei dati importati. |
 
@@ -82,6 +81,10 @@ ctest --test-dir forgecad-release --output-on-failure
 
 ## Limiti ancora utili alla prosecuzione
 
+- Ripetizioni variabili (04/11): codec63/ID quote, incremento per copia e ricalcolo isolato.
+  Correzione richiesta: solo funzione/schizzi diretti, quote cliccabili nel viewport, corpi esclusi.
+  App/13CTest/Wayland/mappa PASS. [Prove](docs/ripetizioni-variabili-2026-11-04.md).
+
 - Svuotamento `Superfici.prt`: riusciti fondo piano aperto e guscio chiuso a 0,5/1 mm sul modello originale. La variante con
   geometria scalata 2,5 e ruotata 0,42 rad fallisce ancora il fit di un bordo offset; il prototipo con base locale non è
   integrato. Nessuna soluzione universale per superfici libere dichiarata.
@@ -101,7 +104,15 @@ ctest --test-dir forgecad-release --output-on-failure
   cooperativi e release locali non costituiscono autenticazione o permessi di rete; Windows e pacchetto autonomo di rilascio
   non sono certificati. Priorità proposte nella roadmap.
 
+- Snap Intersezione completato: app/11CTest/Wayland/Undo/codec/mappa586-8138 PASS; fixture legacy corretta.
+  [Dettagli](docs/snap-intersezione-2026-11-04.md). Divisione facce coincidenti rinviata.
+- Loft: controlli/codec64 verificati: [rapporto](docs/loft-corrispondenze-2026-11-04.md).
+  Hook: pieghe/unione/codec65 verificati. Nuovi ingressi G1 punta OK; copia influenza25% riduce rigonfiamento, restano limiti fra pezze. [Dettagli](docs/loft-hook-2026-11-04.md).
+
 ## Ultimi interventi — esiti consolidati
+
+**05/11 — Checkpoint.** Pubblicazione richiesta di loft Hook, corrispondenze, snap intersezione,
+variazioni e prestazioni. Ricontrollati 26/26 CTest e diff. Successivi interventi UI/filettature da eseguire.
 
 **04/11 — Griglie, specchi e guide.** Specchi/guide pubblicati in `3c644e2`: B-rep2/cache10,
 PRT148,4→74,7MB prima shell,190,5→116,9MB con shell; identità e Undo/Redo verificati.
@@ -114,14 +125,16 @@ rigenerati<0,00225mm entro budget originali. Grado ridotto escluso (errore Racco
 App/runner aggiornati;9CTest,Loft42,Blend60,Shell18,Wayland PASS;originali intatti.
 `9eff99c` su origin/main: appoggi G1/riordino autonomi;11CTest,26feature,XCB/Wayland,G1 PASS. [F7/E25](docs/loft-selezione-facce-storiche-2026-11-04.md).
 
-**04/11 — Svuotamento corrente corretto.** Copia a501f4fd:31facce; taglio sole C0,
-jet laterali dei raccordi, lift G1 cubico indipendente dal grado e valutazione NURBS locale.
-Cache12 migra loft/raccordi di lavoro; check-in immutabili. Shell62facce,1mm,F0/F14;
-662punti errore max5,85e-8mm. Wayland/XCB OK/Undo/Redo/cache,Wayland no-cache PASS.
-11CTest,Blend62/62,Shell18/18,Offset26/26 e negativi PASS; app/runner aggiornati.
-Mappa576/7987/276AST,check e8dettagli HTML PASS. Copia verificata84,29MB/26ID conservati;
-originale intatto/hash riconfermato. `d0594e8` pubblicato su origin/main.
-[Diagnosi e prove](docs/svuotamento-poli-non-finiti-2026-11-04.md).
+**04/11 — Svuotamento e apertura.** Copia a501f4fd:31facce; taglio sole C0,
+jet laterali raccordi, lift G1 cubico e NURBS locali; cache12, check-in immutabili.
+Shell62facce/1mm/F0/F14,662punti errore max5,85e-8mm; Wayland/XCB OK/Undo/Redo/cache,
+Wayland no-cache PASS. 11CTest,Blend62,Shell18,Offset26 e negativi PASS; app/runner aggiornati.
+Mappa576/7987/276AST/check/8HTML PASS; copia84,29MB/26ID; `d0594e8` pubblicato.
+[Diagnosi](docs/svuotamento-poli-non-finiti-2026-11-04.md).
+Apertura copia17f72219: Apri Wayland3,87s,viewport2,46s; nuovo f695dd98 non provato.
+Bernstein/U:224→72,64s/3,09×; Wayland26feature senza cache92,7s,B-rep identico.
+App/runner,test mirati,ASan/UBSan PASS; mappa579/8023/278/check/5HTML PASS.
+[Misure e limiti](docs/apertura-tempi-surface219-2026-11-04.md).
 
 0. **03/11 — Schizzi, riferimenti e loft.** Visualizza/Mostra linee di costruzione persistente:
    app/CTest10/10,rendering e persistenza Wayland/XCB PASS; popup automatizzato Wayland non verificato.
@@ -148,24 +161,10 @@ originale intatto/hash riconfermato. `d0594e8` pubblicato su origin/main.
    [guide](docs/loft-guide-proiettate-2026-11-02.md),
    [unione/curve](docs/estrusione-unione-riferimenti-proiettati-2026-11-02.md).
 
-2. **02/11 — Review/storyboard/estrusione (`d4f15fc`).** R1–R5, picking/pan, riferimenti,
-   consumo/visibilita e fino al corpo B-rep/preview/genealogia, formato60. B8 solo reingresso
-   iniettato. CTest151PASS/1SKIP/1FAIL,kernel457/458: sformo preesistente1,794e-6>1e-6;
-   robustezza/STEP/IGES/BodyIO/GUI/sanitizer PASS. [Prove e dettagli](docs/code-review-2026-11-02-correzioni.md).
+2. **02/11 — Review/storyboard/estrusione (`d4f15fc`).** R1–R5, fino al corpo e genealogia;
+   B8 solo reingresso iniettato. CTest151PASS/1SKIP/1FAIL,kernel457/458 (sformo preesistente);
+   [dettagli, verifiche e limiti](docs/code-review-2026-11-02-correzioni.md).
 
-3. **02/11 — OCCT soltanto nei test (`ab6fc71`).** Facoltativo in `kernel/occt_tests`; app/kernel senza OCCT.
-   Configurazione minima verificata; utente conferma zero `HAVE_TK` nell'app. Confronti successivi non ricertificati.
-4. **02/11 — Bug review (`9321643`).** Parser STEP/IGES, espressioni, GlassCompositor, Qt6.4, specchio e C++17 corretti.
-   Build, gruppi pertinenti, sanitizer/fuzz nel cloud PASS; build locale riferita dall'utente. Mappa cloud verificata.
-   Dettagli conservati nel [checkpoint](docs/history/claude-checkpoint-prima-storyboard-2026-11-03.md).
-5. **02/11 — Quote costruzione, normali e svuotamento (`de1448a`, registro `7651724`).** Push completato con tutte le 16
-   modifiche allora presenti. Quotatura diretta della costruzione coincidente con piani/assi; normale solo in
-   definizione/hover, disattivabile da Visualizza e persistente; svuotamento delle giunzioni tolleranti con budget locali e
-   SP-curve conservate. App completa compilata; Shell 18/18, Boolean 38/38, Offset 25/25 e CTest pertinenti 16/16 PASS.
-   Quattro gusci reali verificati da pannello, anteprima, Undo/Redo e salvataggio/riapertura; limite trasformato distinto
-   sopra.
-6. **01/11 e precedenti.** Schizzi/Estendi/unione (`8121ed7`), raccordi, tavole e unificazione:
-   esiti storici e limiti nel [registro archiviato](docs/history/claude-prima-svuotamento-2026-11-04.md).
+3. **Storico 01–02/11.** OCCT solo nei test facoltativi (`ab6fc71`, nessun HAVE_TK nell'app; confronti successivi non ricertificati). Bug review `9321643`: build/test/sanitizer cloud PASS, build locale riferita; [rapporto](docs/history/claude-checkpoint-prima-storyboard-2026-11-03.md). Quote/normali/shell `de1448a`/`7651724` pubblicati, app/prove native PASS: [archivio](docs/history/claude-intersezioni-2026-11-04.md). Schizzi/Estendi/unione `8121ed7`, raccordi/tavole: [registro](docs/history/claude-prima-svuotamento-2026-11-04.md).
 
-Per riprendere lavori più vecchi, cercare nell'archivio o in Git e poi verificare i sorgenti attuali. Questa memoria non
-sostituisce i rapporti di prova e non richiede di caricarli tutti.
+Per riprendere lavori più vecchi, cercare nell'archivio o in Git e poi verificare i sorgenti attuali. Questa memoria non sostituisce i rapporti di prova.

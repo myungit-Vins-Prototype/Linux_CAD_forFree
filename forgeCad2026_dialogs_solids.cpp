@@ -24,6 +24,7 @@
 #include "cad_mass.h"
 #include "cad_measure.h"
 #include "cad_pattern.h"
+#include "cad_pattern_variation_editor.h"
 #include "forgeCad2026_storyboard.h"
 #include "cad_extrude.h"
 #include "cad_sketch_refs.h"
@@ -32,6 +33,7 @@
 #include "cad_shape_analysis.h"
 #include "fk_curve_ops.h"
 #include "cad_overlay_renderer.h"
+#include <QScrollArea>
 #include <array>
 #include <atomic>
 #include <set>
@@ -477,6 +479,9 @@ bool patternDialog(QMainWindow *window, CadViewport *viewport, const QString &ti
     occurrences->setMaximumHeight(150);
     occurrences->setToolTip(QStringLiteral("Togli la spunta per escludere un'occorrenza; rimettila per ripristinarla."));
     form->addRow(QStringLiteral("Occorrenze attive:"), occurrences);
+    auto *variations = new ForgeCad::PatternVariationEditor(&dialog);
+    variations->setVariations(p.variations);
+    form->addRow(QStringLiteral("Variazioni:"), variations);
     auto *status = new FunctionMessage(&dialog);
     status->setMinimumWidth(280);
     status->setObjectName(QStringLiteral("patternError"));
@@ -519,6 +524,7 @@ bool patternDialog(QMainWindow *window, CadViewport *viewport, const QString &ti
         d.pattern.count2 = grid ? countBox2->value() : 1;
         d.pattern.flip2 = flipBox2->isChecked();
         d.pattern.spacing2 = spacingBox2->value();
+        d.pattern.variations = d.pattern.featureOnly && d.pattern.kind != 2 ? variations->variations() : QVector<PatternVariation>{};
         d.pattern.refs = p.refs;
         if (!grid) d.pattern.refs.resize(1);
         return d;
@@ -553,6 +559,8 @@ bool patternDialog(QMainWindow *window, CadViewport *viewport, const QString &ti
                 item->setCheckState(p.excluded.contains(i) ? Qt::Unchecked : Qt::Checked);
             }
         }
+        variations->setContext(current(), viewport->sketches(), bodies);
+        form->setRowVisible(variations, kind != 2 || !variations->variations().isEmpty());
         form->setRowVisible(flipBox, kind != 2);
         form->setRowVisible(countBox, kind != 2);
         form->setRowVisible(spacingBox, kind == 0);
@@ -587,6 +595,17 @@ bool patternDialog(QMainWindow *window, CadViewport *viewport, const QString &ti
         else if (step == 2) stepHint->setText(QStringLiteral("Passaggio 2 di 3 — Scegli %1 nella viewport. Esc annulla questa scelta e conserva il riferimento precedente.").arg(referenceName.toLower()));
         else stepHint->setText(QStringLiteral("Passaggio 3 di 3 — Regola istanze e misure, poi premi OK. Sorgente: %1. %2: %3.")
             .arg(bodyBox->currentText(), referenceName, ForgeCad::geometryRefText(p.refs.at(0), viewport->sketches(), viewport->extrusions())));
+        const bool variableFeature = step == 3 && kind != 2 && whatBox->currentIndex() == 1 && feature;
+        variations->setEnabled(variableFeature);
+        variations->setToolTip(whatBox->currentIndex() == 0
+            ? QStringLiteral("Le variazioni sono disponibili soltanto scegliendo Una funzione.") : QString());
+        viewport->setParameterDimensions(variableFeature ? variations->dimensions() : QVector<PatternVariation>{},
+            variableFeature ? variations->variations() : QVector<PatternVariation>{},
+            variableFeature ? std::function<void(const PatternVariation &)>([&](const PatternVariation &ref) {
+                variations->selectParameter(ref);
+                if (auto *scroll = dialog.findChild<QScrollArea *>("functionDialogScroll"))
+                    scroll->ensureWidgetVisible(variations, 0, 20);
+            }) : std::function<void(const PatternVariation &)>{});
         buttons->button(QDialogButtonBox::Ok)->setEnabled(step == 3);
         form->setRowVisible(scope->label, step == 3);
         if (step != 3) {
@@ -595,6 +614,7 @@ bool patternDialog(QMainWindow *window, CadViewport *viewport, const QString &ti
         }
         scope->request(current());
     };
+    variations->changed = refresh;
     QObject::connect(occurrences, &QListWidget::itemChanged, &dialog, [&](QListWidgetItem *item) {
         const int occurrence = item->data(Qt::UserRole).toInt();
         p.excluded.removeAll(occurrence);
@@ -647,6 +667,7 @@ bool patternDialog(QMainWindow *window, CadViewport *viewport, const QString &ti
         refresh();
     });
     QObject::connect(bodyBox, &QComboBox::currentIndexChanged, &dialog, [&] {
+        variations->setVariations({});
         picker.stop(); active = -1; setStatus({}, false); refresh();
     });
     QObject::connect(whatBox, &QComboBox::currentIndexChanged, &dialog, [&] {
@@ -699,6 +720,7 @@ bool patternDialog(QMainWindow *window, CadViewport *viewport, const QString &ti
     viewport->cancelReferencePick();
     viewport->setReferencePickCallback(nullptr);
     viewport->setReferenceMarks({});
+    viewport->setParameterDimensions({}, {});
     scope.reset();
     return accepted;
 }

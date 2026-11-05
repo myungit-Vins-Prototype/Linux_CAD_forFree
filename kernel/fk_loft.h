@@ -72,7 +72,12 @@ struct LoftGuideCondition {
 };
 
 struct LoftOptions {
+    // Punti corrispondenti sui profili: una riga per sezione, stesse colonne.
+    // Vuoto conserva il comportamento automatico. Nessuna curva guida fittizia.
+    std::vector<std::vector<Vec3>> correspondencePoints;
+    std::vector<bool> reverseSections; // inversione rispetto al verso automatico
     bool ruled = false;
+    bool mergeTangentFaces = false; // unione esatta delle pezze compatibili G1
     std::vector<std::vector<PathSegment>> guides;
     // Un elemento per guides; vuoto eredita guideContinuity/guideInfluence.
     std::vector<LoftGuideCondition> guideConditions;
@@ -86,6 +91,15 @@ struct LoftOptions {
     double endInfluence = 1.0;
     std::vector<LoftContact> startFaces, endFaces;
 };
+
+// Percorso canonico della sezione originale e coordinate curvilinee esatte.
+std::vector<PathSegment> loftSectionPath(const LoftSection &section);
+Vec3 loftSectionPoint(const LoftSection &section, double fraction);
+double loftSectionFraction(const LoftSection &section, const Vec3 &point);
+// Punti iniziali del collegamento automatico (cucitura dei chiusi, estremi
+// degli aperti), con la stessa preparazione usata dalla costruzione.
+std::vector<std::vector<Vec3>> loftCorrespondenceDefaults(const std::vector<LoftSection> &sections,
+                                                        const LoftOptions &options = {}, std::vector<bool> *canonicalReverse = nullptr);
 
 // Solido: tutte le sezioni chiuse, facce di testa piane.
 Body loftSolid(const std::vector<LoftSection> &sections, bool ruled = false, FaceAliases *labels = nullptr);

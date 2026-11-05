@@ -1147,6 +1147,7 @@ SketchEditResult editSketchPattern(SketchObject &sketch, int constraint, const S
     SketchEditResult result = patternSketchEntities(work, sources, pattern);
     if (!result.error.isEmpty()) return result;
     // Il vincolo nuovo e' in fondo: con il segno del passo di prima.
+    work.geometricConstraints.last().parameterId = sketch.geometricConstraints.at(constraint).parameterId;
     SketchPatternData &created = work.geometricConstraints.last().pattern;
     created.spacing = next.spacing;
     created.spacing2 = next.spacing2;

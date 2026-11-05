@@ -42,7 +42,7 @@ using ForgeCurve = std::shared_ptr<const Kernel::Curve<3>>;
 // Dimension: lo strumento Quota (prima si scelgono le entita', poi si mette la quota).
 enum class DrawingTool { Line, Polyline, Spline, Nurbs, Circle, Arc, Polygon, ConstructionLine, Trim, Extend, Split, Fillet, Chamfer, Select,
                          Rectangle, CenterRectangle, Ellipse, ThreePointArc, TangentArc, Converted, ConvertEdges, Dimension, Slot, Point };
-enum class SnapKind { None, Endpoint, Midpoint, Nearest };
+enum class SnapKind { None, Endpoint, Midpoint, Nearest, Intersection };
 
 enum class ReferencePlane { XY, XZ, YZ };
 
@@ -194,6 +194,8 @@ struct SketchPierceData;
 
 // Vincolo geometrico dello schizzo, mantenuto dal risolutore (cad_constraints).
 struct SketchConstraint {
+    quint64 parameterId = 0; // identita locale persistente, non riusata dopo eliminazione
+
     std::shared_ptr<const SketchPierceData> pierce; // solo Pierce: riferimento esterno e sezione esatta
     ConstraintType type = ConstraintType::Coincident;
     ConstraintRef first, second;  // second.kind < 0: vincolo su un solo riferimento
@@ -219,6 +221,8 @@ struct SketchLinkedReference;
 struct StoryStep { bool sketch = false; int index = -1; };
 
 struct SketchObject {
+    quint64 nextParameterId = 1;
+
     quint64 storyId = 0;
     quint64 beforeFeatureId = 0; // 0: dopo tutte le feature; ID persistente del passo successivo
     int storyOrder = 0;         // ordine fra schizzi nello stesso intervallo
@@ -547,7 +551,18 @@ struct SketchPathRef {
 // il verso. `featureOnly`: se il corpo e' un'unione o una differenza si ripete
 // il suo secondo operando (lo strumento: fori, sporgenze) e l'operazione si
 // applica una volta sola al primo (ripetizione della funzione).
+// Incremento per numero originale di occorrenza (0 = sorgente), anche con esclusioni.
+// ownerId: storyId dello schizzo o featureId; parameterId identifica il vincolo.
+struct PatternVariation {
+    bool sketch = false;
+    quint64 ownerId = 0, parameterId = 0;
+    QString parameter;
+    double increment = 0.0;
+};
+
 struct PatternParameters {
+    QVector<PatternVariation> variations;
+
     int kind = 0;
     QVector<GeometryRef> refs;
     int count = 3, count2 = 1;
@@ -682,6 +697,12 @@ struct LoftGuideCrossCondition {
     QVector<GeometryRef> references;  // un piano opzionale / facce adiacenti esplicite
 };
 
+// Ascisse curvilinee sui profili originali, una colonna per collegamento.
+struct LoftSectionCorrespondence {
+    bool reverse = false;
+    QVector<double> positions;
+};
+
 struct ExtrusionObject {
     // Identita' persistente della feature e del corpo logico a cui appartiene.
     // Gli indici nel vettore restano il formato operativo delle dipendenze;
@@ -740,6 +761,7 @@ struct ExtrusionObject {
     // La continuita' 0/1/2 corrisponde a G0/G1/G2; le influenze sono [0, 1].
     // Se presenti, sostituiscono loftSketches: ogni riferimento e’ una sezione.
     // kind 7 / element.kind -1 indica un intero schizzo.
+    QVector<LoftSectionCorrespondence> loftCorrespondences;
     QVector<GeometryRef> loftSections, loftEdgeGuides;
     QVector<int> loftSketches;
     QVector<int> loftGuides;
@@ -748,6 +770,7 @@ struct ExtrusionObject {
     // Vuota conserva l’ordine dei documenti precedenti.
     QVector<int> loftGuideOrder;
     bool loftRuled = false;
+    bool loftMergeTangentFaces = false;
     int loftStartContinuity = 0;
     int loftEndContinuity = 0;
     // Verso della normale G1/G2, indipendente per primo/ultimo profilo.

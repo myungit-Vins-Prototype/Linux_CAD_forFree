@@ -14,6 +14,7 @@
 #include "cad_features.h"
 #include "cad_forge.h"
 #include "cad_pattern.h"
+#include "cad_pattern_variation.h"
 #include "cad_sketch_refs.h"
 #include "fk_topology.h"
 #include "fk_surface.h"
@@ -648,7 +649,9 @@ void buildGeometryImpl(ExtrusionObject &body, int index, const QVector<SketchObj
             }
             std::vector<ForgeCad::Kernel::Transform3> placements;
             if (!ForgeCad::patternPlacements(body.pattern, index, sketches, bodies, placements, &body.error)) return;
-            if (body.pattern.featureOnly) {
+            if (!body.pattern.variations.isEmpty()) {
+                body.forgeBody = forgeVariablePattern(body, index, sketches, bodies, &body.error);
+            } else if (body.pattern.featureOnly) {
                 if (!ForgeCad::patternFeatureSupported(*base)) {
                     body.error = QStringLiteral("Scegli un'unione, una differenza o un'estrusione, rivoluzione o sweep solido che si unisce o sottrae.");
                     return;
@@ -808,6 +811,7 @@ void configurePatternInstances(ExtrusionObject &body, int index, const QVector<S
     body.display.instancedBase.reset();
     body.display.instanceTransforms.clear();
     if (body.operation >= 0 || body.feature != BodyFeature::Pattern || body.patternComponent >= 0 || body.pattern.featureOnly
+        || !body.pattern.variations.isEmpty()
         || body.firstBody < 0 || body.firstBody >= index || body.firstBody >= bodies.size()) return;
     const BodyDisplay &base = bodies.at(body.firstBody).display;
     if (base.vertices.isEmpty()) return;

@@ -135,7 +135,9 @@ static QString exampleDocumentPath(const char *name) {
 #include "test_drawing_mouse.h"
 #include "test_drawing_section_model.h"
 #include "test_drawing_performance.h"
+#include "test_pattern_variation.h"
 #include "document_regression.h"
+#include "../cad_loft_correspondence_editor.h"
 #include "test_document_read.h"
 #include "test_history_suppression.h"
 #include "test_pattern_placements.h"
@@ -144,6 +146,34 @@ static QString exampleDocumentPath(const char *name) {
 class ViewportInteractionTest {
 public:
 #include "test_sketch_interaction.h"
+#include "test_sketch_intersections.h"
+#include "test_loft_correspondence.h"
+    static void intersectionSnapDrag() {
+        using namespace ForgeCad;
+        CadViewport v;v.resize(900,700);
+        SketchObject source;source.storyId=101;source.name="Riferimenti";
+        source.segments={{{0,3},{8,3}},{{2,0},{2,9}}};
+        SketchObject work;work.storyId=102;work.name="Rami trascinati";
+        work.segments={{{5,6},{6,7}},{{5,6},{7,5}}};
+        v.sketches_={source,work};v.activeSketch_=1;v.sketchMode_=true;
+        v.originSnap_=false;v.axesVisible_=false;for(auto &visible:v.planeVisible_)visible=false;
+        v.geometrySnap_=true;v.gridSnap_=false;v.pointDragActive_=true;v.pointDragPosition_={5,6};
+        v.dragSnapshot_=v.documentState();v.history_.record(v.dragSnapshot_);v.dragRecorded_=true;
+        const auto target=v.dragSnapPoint({2.04,3.03});
+        require(v.lastSnapKind_==SnapKind::Intersection,"snap di trascinamento a due sorgenti esterne");
+        v.dragSketchPoint(target);
+        QMouseEvent release(QEvent::MouseButtonRelease,QPointF(10,10),QPointF(10,10),Qt::LeftButton,Qt::NoButton,Qt::NoModifier);
+        v.mouseReleaseEvent(&release);
+        const auto &result=v.sketches_[1];
+        require(result.linkedReferences.size()==2 && result.geometricConstraints.size()==4,"due riferimenti e quattro vincoli per i rami mossi insieme");
+        for(const auto &c:result.geometricConstraints)
+            require(c.type==ConstraintType::PointOnCurve && c.first.element<2 && c.second.element>=2,
+                    "i rami trascinati si vincolano alle sorgenti, non fra loro");
+        v.undo();require(v.sketches_[1].linkedReferences.empty(),"Undo trascinamento libera entrambi i riferimenti");
+        v.redo();require(v.sketches_[1].linkedReferences.size()==2,"Redo trascinamento ripristina entrambi i riferimenti");
+        std::cout<<"PASS intersection drag with multiple incident segments"<<std::endl;
+    }
+
 
     static void constructionDimensionRegressions() {
         using namespace ForgeCad;
@@ -1178,6 +1208,115 @@ public:
             require(view.referenceListMarks_.isEmpty(), "chiusura funzione rimuove il bordo evidenziato");
         }
         std::cout << "Reference list highlight PASS\n";
+    }
+
+    static void variablePatternPanel() {
+        using namespace ForgeCad;
+        using namespace ForgeCad::Kernel;
+        DocumentState document;
+        ExtrusionObject base; base.feature=BodyFeature::Primitive; base.name=QStringLiteral("Piastra");
+        base.primitive.size[0]=70; base.primitive.size[1]=20; base.primitive.size[2]=1;
+        base.primitive.origin[2]=-1;
+        SketchObject sketch; sketch.name=QStringLiteral("Profilo da ripetere");
+        CurveObject circle; circle.tool=DrawingTool::Circle; circle.controlPoints={{10,10},{12,10}};
+        sketch.curves={circle};
+        SketchConstraint diameter; diameter.type=ConstraintType::Diameter; diameter.first={1,0,-1}; diameter.value=4;
+        sketch.geometricConstraints={diameter}; document.sketches={sketch};
+        ExtrusionObject boss; boss.name=QStringLiteral("Estrusione da ripetere"); boss.sketchIndex=0;
+        boss.distance=5; boss.mergeOperation=1; boss.mergeBodies={0};
+        document.extrusions={base,boss};
+        QMainWindow window;
+        auto *view=new CadViewport(&window); window.setCentralWidget(view);
+        window.resize(1280,800); view->loadDocument(document); window.show();
+        ExtrusionObject definition; definition.feature=BodyFeature::Pattern; definition.firstBody=1;
+        definition.name=QStringLiteral("Altezze variabili"); definition.pattern.count=4; definition.pattern.spacing=15; definition.pattern.featureOnly=true;
+        definition.pattern.refs={{2,0,{},{}}};
+        std::exception_ptr failure;
+        QTimer::singleShot(100,&window,[&] {
+            auto *dialog=window.findChild<QDialog *>();
+            try {
+                require(dialog,"pannello ripetizione aperto");
+                auto *combo=dialog->findChild<QComboBox *>("patternVariationParameter");
+                require(combo,"selettore parametro visibile");
+                require(combo->count()==1 && combo->itemText(0).contains(QStringLiteral("Distanza")),"solo parametri della funzione");
+                require(view->parameterDimensions_.size()==1 && !view->sketchMode_,"quota visibile fuori modifica schizzo");
+                auto *what=dialog->findChild<QComboBox *>("patternWhat");
+                what->setCurrentIndex(0);
+                require(view->parameterDimensions_.isEmpty() && !dialog->findChild<QWidget *>("patternVariations")->isEnabled(),"corpo disabilita variazione e quote");
+                what->setCurrentIndex(1);
+                require(view->parameterDimensions_.size()==1,"funzione ripristina quote");
+                dialog->resize(600,700); dialog->move(view->width()-dialog->width(),40);
+                view->setViewPreset(0); view->fitAll(); QApplication::processEvents();
+                CadViewport::DimensionGraphic graphic;
+                require(view->parameterDimensionGraphic(0,graphic),"grafica quota profilo");
+                require(view->parameterDimensionAt(graphic.textCenter)==0,"hit test testo quota");
+                const auto before=view->documentState();
+                QMouseEvent press(QEvent::MouseButtonPress,graphic.textCenter,view->mapToGlobal(graphic.textCenter.toPoint()),Qt::LeftButton,Qt::LeftButton,Qt::NoModifier);
+                QApplication::sendEvent(view,&press);
+                QMouseEvent release(QEvent::MouseButtonRelease,graphic.textCenter,view->mapToGlobal(graphic.textCenter.toPoint()),Qt::LeftButton,Qt::NoButton,Qt::NoModifier);
+                QApplication::sendEvent(view,&release);
+                require(view->sketches_[0].geometricConstraints[0].value==4 && !view->sketchMode_,"selezione quota non modifica schizzo");
+                QByteArray beforeBytes,afterBytes;
+                require(encodeDocument(before,beforeBytes,false).isEmpty() && encodeDocument(view->documentState(),afterBytes,false).isEmpty() && beforeBytes==afterBytes,"clic quota non modifica documento");
+                auto *increment=dialog->findChild<QDoubleSpinBox *>("patternVariationIncrement0");
+                require(increment,"incremento nel pannello"); increment->setValue(1);
+                QTimer::singleShot(1000,dialog,[&,dialog] {
+                    try {
+                        const auto output=qEnvironmentVariable("FORGECAD_VARIATION_SCREENSHOT");
+                        if(!output.isEmpty()) {
+                            dialog->resize(700,850);
+                            if(auto *scroll=dialog->findChild<QScrollArea *>("functionDialogScroll"))
+                                scroll->ensureWidgetVisible(dialog->findChild<QWidget *>("patternVariations"),0,50);
+                            view->fitView(view->preview_.display.vertices);
+                            view->zoomOut(); view->zoomOut();
+                            QApplication::processEvents(); view->repaint();
+                            require(window.grab().save(output),"screenshot del pannello variabile");
+                        }
+                        dialog->findChild<QDialogButtonBox *>()->button(QDialogButtonBox::Ok)->click();
+                        require(dialog->result()==QDialog::Accepted,"conferma ripetizione variabile dal pannello");
+                    } catch(...) {failure=std::current_exception();dialog->reject();}
+                });
+            } catch(...) {failure=std::current_exception();if(dialog)dialog->reject();}
+        });
+        const bool accepted=patternDialog(&window,view,QStringLiteral("Ripetizione variabile"),-1,definition,
+            [&](const ExtrusionObject &d){return view->createBody(d,{d.firstBody});});
+        if(failure)std::rethrow_exception(failure);
+        require(accepted,"pannello completato");
+        require(view->parameterDimensions_.isEmpty() && !view->parameterDimensionPicked_,"quote e callback rimossi dopo OK");
+        const auto check=[&](double expected) {
+            double volume=0;
+            for(int i:view->resultBodiesBefore(-1)) {
+                const auto &body=view->extrusions_.at(i);
+                require(body.error.isEmpty()&&body.forgeBody,"istanza della ripetizione valida");
+                volume+=massProperties(*body.forgeBody).volume;
+                require(!body.display.instancedBase,"copie variabili non riusano la mesh sorgente");
+            }
+            require(std::abs(volume-expected)<1e-7,"volume del risultato del pannello");
+        };
+        require(view->extrusions_[2].pattern.variations.size()==1,"pannello salva la variazione"); check(1400+157.5*M_PI);
+        auto edited=view->extrusions_[2];edited.pattern.variations[0].increment=2;
+        require(!view->unchangedFeature(edited,2),"incremento invalida la cache anteprima");
+        require(view->updateBody(2,edited).isEmpty(),"modifica incremento nella storia");check(1400+270*M_PI);
+        view->undo();check(1400+157.5*M_PI);view->redo();check(1400+270*M_PI);
+        QByteArray bytes;require(encodeDocument(view->documentState(),bytes,false).isEmpty(),"salvataggio storia variabile senza cache");
+        DocumentState loaded;require(decodeDocument(bytes,loaded).isEmpty(),"riapertura storia variabile");
+        view->loadDocument(loaded);check(1400+270*M_PI);
+        // Un errore non cambia il risultato né aggiunge un passo Undo.
+        const auto previous=view->extrusions_[2].forgeBody;
+        edited=view->extrusions_[2];edited.pattern.variations[0].increment=-3;
+        require(!view->updateBody(2,edited).isEmpty(),"modifica invalida rifiutata");
+        require(view->extrusions_[2].forgeBody==previous,"modifica fallita conserva geometria");check(1400+270*M_PI);
+        QTimer::singleShot(100,&window,[&] {
+            if (auto *dialog=window.findChild<QDialog *>()) dialog->reject();
+        });
+        require(!patternDialog(&window,view,QStringLiteral("Annulla variazione"),2,view->extrusions_[2],
+            [&](const ExtrusionObject &){throw std::runtime_error("Annulla non deve applicare");return QString();}),"annulla pannello");
+        require(view->parameterDimensions_.isEmpty() && !view->parameterDimensionPicked_,"quote e callback rimossi dopo Annulla");
+        if(const auto output=qEnvironmentVariable("FORGECAD_VARIATION_SCREENSHOT");!output.isEmpty()) {
+            view->fitAll();QApplication::processEvents();view->repaint();
+            require(window.grab().save(output+QStringLiteral(".result.png")),"screenshot istanze variabili");
+        }
+        std::cout<<"Variable pattern panel, regeneration, no-cache roundtrip, Undo/Redo and atomic failure PASS\n";
     }
 
     static void surfacePatterns() {
@@ -10906,6 +11045,26 @@ int main(int argc, char **argv) {
             else if (app.arguments().contains(QStringLiteral("--pattern-single-story"))) ViewportInteractionTest::patternSingleStory();
             else ViewportInteractionTest::failedFeatureRepair();
         } catch (const std::exception &error) { std::cerr << error.what() << std::endl; return 1; }
+        return 0;
+    }
+    if (app.arguments().contains(QStringLiteral("--pattern-variation-panel"))) {
+        try { ViewportInteractionTest::variablePatternPanel(); }
+        catch (const std::exception &error) { std::cerr << error.what() << std::endl; return 1; }
+        return 0;
+    }
+    if (app.arguments().contains(QStringLiteral("--loft-correspondences"))) {
+        try { ViewportInteractionTest::loftCorrespondenceControls(); }
+        catch (const std::exception &error) { std::cerr << error.what() << std::endl; return 1; }
+        return 0;
+    }
+    if (app.arguments().contains(QStringLiteral("--intersection-snaps"))) {
+        try { ViewportInteractionTest::intersectionSnaps(); ViewportInteractionTest::intersectionSnapDrag(); }
+        catch (const std::exception &error) { std::cerr << error.what() << std::endl; return 1; }
+        return 0;
+    }
+    if (app.arguments().contains(QStringLiteral("--pattern-variations"))) {
+        try { patternVariationTests(); }
+        catch (const std::exception &error) { std::cerr << error.what() << std::endl; return 1; }
         return 0;
     }
     if (app.arguments().contains(QStringLiteral("--pattern-results"))) {

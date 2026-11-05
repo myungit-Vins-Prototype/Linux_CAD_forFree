@@ -132,9 +132,17 @@ BernsteinPolynomial BernsteinPolynomial::operator-(const BernsteinPolynomial &ot
 BernsteinPolynomial BernsteinPolynomial::operator*(const BernsteinPolynomial &other) const {
     const int m = degree(), n = other.degree();
     std::vector<double> result(m + n + 1, 0.0);
+    // Ogni riga di Pascal dipende solo dal grado. Calcolarla fuori dalla
+    // convoluzione evita di ripetere la stessa ricorrenza per ogni coppia
+    // di poli, soprattutto nelle proiezioni delle curve di grado elevato.
+    // Stessa ricorrenza e stesso ordine dei prodotti/somme: nessuna variazione
+    // dei coefficienti in virgola mobile rispetto al percorso precedente.
+    std::vector<double> left(m + 1), right(n + 1);
+    for (int i = 0; i <= m; ++i) left[i] = binomial(m, i);
+    for (int j = 0; j <= n; ++j) right[j] = binomial(n, j);
     for (int i = 0; i <= m; ++i)
         for (int j = 0; j <= n; ++j)
-            result[i + j] += binomial(m, i) * binomial(n, j) * coefficients_[i] * other.coefficients_[j];
+            result[i + j] += left[i] * right[j] * coefficients_[i] * other.coefficients_[j];
     for (int k = 0; k <= m + n; ++k) result[k] /= binomial(m + n, k);
     return BernsteinPolynomial(std::move(result));
 }

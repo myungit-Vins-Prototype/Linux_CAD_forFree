@@ -1450,6 +1450,22 @@ QPointF CadViewport::dragSnapPoint(const QPointF &raw) {
             else if (nearestCurvePoint(cache, raw, result.kind==SnapKind::Nearest ? pointDistance(raw,result.point) : pickTolerance(10.0), onCurve) >= 0)
                 result = {SnapKind::Nearest,onCurve};
         }
+        QVector<ConstraintRef> excluded;
+        for (int i = 0; i < sketch.segments.size(); ++i)
+            if (pointDistance(sketch.segments[i].first, pointDragPosition_) <= tolerance
+                || pointDistance(sketch.segments[i].second, pointDragPosition_) <= tolerance) excluded.append({0,i,-1});
+        for (int i = 0; i < sketch.curves.size(); ++i) {
+            if (draggingControlPoint_ && i == draggingCurveIndex_) { excluded.append({1,i,-1}); continue; }
+            for (const auto &p : sketch.curves[i].controlPoints)
+                if (pointDistance(p, pointDragPosition_) <= tolerance) { excluded.append({1,i,-1}); break; }
+        }
+        const auto intersection = ForgeCad::snapIntersection(raw, sketch, cache, pickTolerance(10.0), excluded);
+        if (intersection.found && (result.kind == SnapKind::None || result.kind == SnapKind::Nearest
+            || pointDistance(raw, intersection.point) <= pointDistance(raw, result.point) + 1e-9)) {
+            result = {SnapKind::Intersection, intersection.point};
+            lastSnapExternal_ = intersection.firstExternal || intersection.secondExternal;
+            lastSnapNote_ = QStringLiteral("× Intersezione");
+        }
         if (result.kind != SnapKind::None) {
             for (const auto &segment : cache.segments)
                 if (distanceToSegment(result.point,segment.first,segment.second) <= 1e-9) lastSnapExternal_ = true;
@@ -1630,6 +1646,7 @@ QString CadViewport::snapLabel(SnapKind kind) {
     case SnapKind::Endpoint: return QStringLiteral("● Coincidente");
     case SnapKind::Midpoint: return QStringLiteral("◐ Punto medio");
     case SnapKind::Nearest: return QStringLiteral("∈ Su segmento");
+    case SnapKind::Intersection: return QStringLiteral("× Intersezione");
     default: return {};
     }
 }
@@ -1659,7 +1676,7 @@ CadViewport::LineInference CadViewport::inferLinePoint(const QPointF &raw) {
         // (punto comune esatto); su una spline il punto resta quello.
         const bool circleCurve = snap == SnapKind::Nearest && snapCurve >= 0 && snapCurve < sketch.curves.size()
             && (sketch.curves.at(snapCurve).tool == DrawingTool::Circle || sketch.curves.at(snapCurve).tool == DrawingTool::Arc);
-        const bool pointSnap = lastSnapExternal_ || snap == SnapKind::Endpoint || snap == SnapKind::Midpoint
+        const bool pointSnap = lastSnapExternal_ || snap == SnapKind::Intersection || snap == SnapKind::Endpoint || snap == SnapKind::Midpoint
             || (snap == SnapKind::Nearest && snapCurve >= 0 && !circleCurve);
         if (length > 0.0) {
             // Direzioni candidate con il loro vincolo e segmento di riferimento.
@@ -1781,7 +1798,14 @@ void CadViewport::recordCoincidences(SketchObject &sketch, int segment) {
 void CadViewport::recordPointCoincidences(SketchObject &sketch, const ConstraintRef &here, const QPointF &snappedPoint) {
     const QPointF point = snappedPoint; // append dei riferimenti puo' riallocare segments/curves
     const double tolerance = ForgeCad::kSketchConnectionTolerance;
-    if (geometrySnap_) attachSketchReferenceAt(sketch, point, tolerance);
+    if (geometrySnap_) {
+        if (!(originSnap_ && pointDistance(point, QPointF()) <= tolerance)) {
+            const auto &cache = sketchReferenceCache();
+            const auto intersection = ForgeCad::snapIntersection(point, sketch, cache, tolerance, {here});
+            if (ForgeCad::constrainIntersection(sketch, here, intersection, cache, sketches_, extrusions_)) return;
+        }
+        attachSketchReferenceAt(sketch, point, tolerance);
+    }
     bool modelReferenceAtPoint = false;
     for (const auto &link : sketch.linkedReferences) if (link && (ForgeCad::isBodyRef(link->source) || ForgeCad::isSketchRef(link->source)))
         for (const auto &entity : link->entities) {

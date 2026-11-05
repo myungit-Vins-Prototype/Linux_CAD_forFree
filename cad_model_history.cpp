@@ -316,6 +316,14 @@ void normalizeSketchHistory(QVector<SketchObject> &sketches, const QVector<Extru
     QSet<quint64> seen;
     for (int s = 0; s < sketches.size(); ++s) {
         auto &sketch = sketches[s];
+        QSet<quint64> parameterIds;
+        for (const auto &constraint : sketch.geometricConstraints)
+            sketch.nextParameterId = std::max(sketch.nextParameterId, constraint.parameterId + 1);
+        for (auto &constraint : sketch.geometricConstraints) {
+            if (!constraint.parameterId || parameterIds.contains(constraint.parameterId))
+                constraint.parameterId = sketch.nextParameterId++;
+            parameterIds.insert(constraint.parameterId);
+        }
         if (!sketch.support && sketch.datumPlane >= 0 && sketch.datumPlane < features.size()) {
             auto ref = std::make_shared<GeometryRef>();
             ref->kind = 8; ref->index = sketch.datumPlane; ref->featureId = features.at(sketch.datumPlane).featureId;

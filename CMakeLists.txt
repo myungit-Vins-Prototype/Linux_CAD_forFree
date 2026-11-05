@@ -137,6 +137,7 @@ add_executable(forgecad
     cad_storyboard_selection.cpp
     cad_loft_diagnostics.cpp
     forgeCad2026_viewport_render.cpp
+    forgeCad2026_viewport_parameter_dimensions.cpp
     forgeCad2026_viewport_preview.cpp
     forgeCad2026_viewport_scene.cpp
     forgeCad2026_viewport_interaction.cpp
@@ -291,6 +292,14 @@ add_executable(forgecad
     cad_import.cpp
     cad_pattern.h
     cad_pattern.cpp
+    cad_loft_correspondence.h
+    cad_loft_correspondence.cpp
+    cad_loft_correspondence_editor.h
+    cad_loft_correspondence_editor.cpp
+    cad_pattern_variation.h
+    cad_pattern_variation.cpp
+    cad_pattern_variation_editor.h
+    cad_pattern_variation_editor.cpp
     cad_extrude.h
     cad_extrude.cpp
     cad_projected_curve.h
@@ -584,6 +593,11 @@ if(FORGECAD_BUILD_VIEW_TESTS)
     set_tests_properties(forgecad_document_read_tests PROPERTIES TIMEOUT 60)
     forgecad_add_view_test(forgecad_pattern_placement_tests --pattern-placements)
     forgecad_add_view_test(forgecad_pattern_result_tests --pattern-results)
+    forgecad_add_view_test(forgecad_loft_correspondence_tests --loft-correspondences)
+    set_tests_properties(forgecad_loft_correspondence_tests PROPERTIES TIMEOUT 120)
+    forgecad_add_view_test(forgecad_pattern_variation_tests --pattern-variations)
+    forgecad_add_view_test(forgecad_pattern_variation_panel_tests --pattern-variation-panel)
+    set_tests_properties(forgecad_pattern_variation_tests forgecad_pattern_variation_panel_tests PROPERTIES TIMEOUT 120)
     forgecad_add_view_test(forgecad_pattern_legacy_history_tests --pattern-legacy-history)
     forgecad_add_view_test(forgecad_failed_feature_repair_tests --failed-feature-repair)
     forgecad_add_view_test(forgecad_pattern_single_story_tests --pattern-single-story)
@@ -635,6 +649,7 @@ if(FORGECAD_BUILD_VIEW_TESTS)
     forgecad_add_view_test(forgecad_extension_panel_tests --extend-contour-pick)
     set_tests_properties(forgecad_extension_panel_tests PROPERTIES TIMEOUT 60)
     forgecad_add_view_test(forgecad_sketch_reference_usage_tests --sketch-reference-usage)
+    forgecad_add_view_test(forgecad_intersection_snap_tests --intersection-snaps)
     forgecad_add_view_test(forgecad_sketch_construction_tests --sketch-construction)
     forgecad_add_view_test(forgecad_linked_reference_visibility_tests --linked-reference-visibility)
     forgecad_add_view_test(forgecad_linked_sketch_reference_tests --linked-sketch-references)

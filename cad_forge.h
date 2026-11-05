@@ -154,7 +154,8 @@ ForgeBody forgeLoft(const QVector<SketchObject> &sections, const QVector<SketchO
                     const std::vector<Kernel::LoftSection> &exactSections = {},
                     const std::vector<std::vector<Kernel::PathSegment>> &exactGuides = {},
                     const std::vector<Kernel::LoftGuideCondition> &guideConditions = {},
-                    bool startReverse = false, bool endReverse = false);
+                    bool startReverse = false, bool endReverse = false,
+                    const QVector<LoftSectionCorrespondence> &correspondences = {}, bool mergeTangentFaces = false);
 // Risolve sezioni/guide associative e facce di contatto della feature.
 QVector<int> loftGuideSequence(const ExtrusionObject &definition);
 

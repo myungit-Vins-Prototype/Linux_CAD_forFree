@@ -238,6 +238,19 @@ QVector<ForgeBody> forgePatternComponents(const ForgeBody &result, QString *erro
     }
 }
 
+ForgeBody forgePatternBodies(const std::vector<ForgeBody> &bodies, QString *error) {
+    if (bodies.empty()) return setError(error, QStringLiteral("Nessuna istanza.")), nullptr;
+    try {
+        for (const auto &body : bodies)
+            if (!body || body->isSheet() != bodies.front()->isSheet())
+                return setError(error, QStringLiteral("Le istanze devono essere tutte solide o tutte superfici.")), nullptr;
+        if (bodies.size() == 1) return bodies.front();
+        return bodies.front()->isSheet() ? collectSheets(bodies) : uniteAll(bodies);
+    } catch (const std::exception &failure) {
+        setError(error, QString::fromUtf8(failure.what())); return nullptr;
+    }
+}
+
 ForgeBody forgePattern(const ForgeBody &base, const std::vector<Transform3> &placements, bool keepOriginal, QString *error) {
     if (!base) return setError(error, QStringLiteral("Il corpo da ripetere non ha geometria valida.")), nullptr;
     try {

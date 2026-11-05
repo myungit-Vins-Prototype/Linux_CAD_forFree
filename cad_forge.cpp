@@ -1,5 +1,6 @@
 #include "cad_forge.h"
 #include "cad_loft_diagnostics.h"
+#include "cad_loft_correspondence.h"
 
 #include <algorithm>
 #include <cmath>
@@ -1550,7 +1551,8 @@ ForgeBody forgeLoft(const QVector<SketchObject> &sketches, const QVector<SketchO
                     const QVector<QPair<ForgeBody, EdgePoint>> &endFaces,
                     const std::vector<LoftSection> &exactSections,
                     const std::vector<std::vector<PathSegment>> &exactGuides,
-                    const std::vector<LoftGuideCondition> &guideConditions, bool startReverse, bool endReverse) {
+                    const std::vector<LoftGuideCondition> &guideConditions, bool startReverse, bool endReverse,
+                    const QVector<LoftSectionCorrespondence> &correspondences, bool mergeTangentFaces) {
     if (exactSections.empty() && sketches.size() < 2) {
         setError(error, QStringLiteral("Il loft richiede almeno due sezioni."));
         return nullptr;
@@ -1591,6 +1593,8 @@ ForgeBody forgeLoft(const QVector<SketchObject> &sketches, const QVector<SketchO
         }
         LoftOptions options;
         options.ruled = ruled;
+        options.mergeTangentFaces = mergeTangentFaces;
+        applyLoftCorrespondences(correspondences, sections, options);
         loftEndConditions(options, startContinuity, endContinuity, startInfluence, endInfluence, startFaces, endFaces);
         options.startReverse = startReverse; options.endReverse = endReverse;
         options.guideConditions = guideConditions;
@@ -1669,32 +1673,7 @@ ForgeBody forgeReferencedLoft(const ExtrusionObject &d, int owner, const QVector
         if (i < 0 || i >= sketches.size()) { setError(error,QStringLiteral("Uno schizzo del loft non esiste piu'.")); return nullptr; }
         return &sketches.at(i);
     };
-    if (d.loftSections.isEmpty()) {
-        for (int i : d.loftSketches) { const auto *s=getSketch(i); if (!s) return nullptr; legacySections.append(*s); }
-    } else for (int k=0; k<d.loftSections.size(); ++k) {
-        const GeometryRef &ref=d.loftSections.at(k);
-        LoftSection section;
-        if (ref.kind == 7 && ref.index >= 0 && ref.index < sketches.size() && ref.element.kind >= 0
-            && !isSketchEntityVisible(sketches[ref.index], ref.element.kind, ref.element.element, false)) {
-            setError(error, namedLoftError(QStringLiteral("L'entita' di costruzione non e' una sezione del profilo. [[loft-section=%1]]").arg(k), d, sketches, bodies));
-            return nullptr;
-        }
-        if (ref.kind==7 && ref.element.kind==-1) {
-            const auto *s=getSketch(ref.index); if (!s) return nullptr;
-            if (s->datumPlane >= owner) { setError(error,QStringLiteral("Una sezione sta su un piano successivo.")); return nullptr; }
-            const Profile profile=buildProfile(forgeSketchSegments(*s),kSketchConnectionTolerance);
-            double height; forgeSketchFrame(*s,0.0,section.frame,height);
-            if (profile.regions.size()==1 && profile.regions.front().holes.empty() && profile.chains.empty()) section.loop=profile.regions.front().outer;
-            else if (profile.regions.empty() && profile.chains.size()==1) section.loop=profile.chains.front();
-            else { setError(error,QStringLiteral("Sezione %1: serve un solo contorno o una sola catena.").arg(k+1)); return nullptr; }
-        } else {
-            QString reason;
-            if (!geometryRefPath(ref,owner,sketches,bodies,section.path,&reason)) {
-                setError(error,QStringLiteral("Sezione %1: %2.").arg(k+1).arg(reason)); return nullptr;
-            }
-        }
-        sections.push_back(std::move(section));
-    }
+    sections = resolveLoftSections(d,owner,sketches,bodies);
     for (int i : d.loftGuides) { const auto *s=getSketch(i); if (!s) return nullptr; guides.append(*s); }
     for (const auto &path : d.loftGuidePaths) {
         const auto *s=getSketch(path.sketch); if (!s) return nullptr;
@@ -1792,10 +1771,10 @@ ForgeBody forgeReferencedLoft(const ExtrusionObject &d, int owner, const QVector
         }
     }
         const auto result = forgeLoft(legacySections,guides,d.loftRuled,d.loftStartContinuity,d.loftEndContinuity,d.loftGuideContinuity,
-                         d.loftGuideInfluence,d.loftStartInfluence,d.loftEndInfluence,error,d.loftSurface,faces[0],faces[1],sections,edgeGuides,guideConditions,d.loftStartReverse,d.loftEndReverse);
+                         d.loftGuideInfluence,d.loftStartInfluence,d.loftEndInfluence,error,d.loftSurface,faces[0],faces[1],sections,edgeGuides,guideConditions,d.loftStartReverse,d.loftEndReverse,d.loftCorrespondences,d.loftMergeTangentFaces);
         if (!result && error) *error = namedLoftError(*error,d,sketches,bodies);
         return result;
-    } catch (const std::exception &failure) { setError(error,QString::fromUtf8(failure.what())); return nullptr; }
+    } catch (const std::exception &failure) { setError(error,namedLoftError(QString::fromUtf8(failure.what()),d,sketches,bodies)); return nullptr; }
 }
 
 ForgeBody forgeRuledSurface(const std::vector<PathSegment> &first, const std::vector<PathSegment> &second, QString *error,
@@ -2006,6 +1985,9 @@ void forgeTessellate(const Body &body, int quality, BodyDisplay &display) {
     }
     std::map<int, int> edgeDisplay;
     for (std::size_t e = 0; e < mesh.edges.size(); ++e) {
+        const auto &topology=body.edge(mesh.edgeIds[e]);
+        if(topology.forward.valid() && topology.backward.valid()
+           && body.finFace(topology.forward)==body.finFace(topology.backward)) continue;
         const std::vector<Vec3> &edge = mesh.edges[e];
         QVector<QVector3D> polyline;
         for (const Vec3 &point : edge) polyline.append(toDisplay(point));
@@ -2323,6 +2305,9 @@ static void forgeLocalPreviewDisplay(const QVector<const Body *> &bases, const B
         for (const std::array<int, 3> &triangle : face.triangles) appendDisplayTriangle(*target, face, triangle);
     }
     for (std::size_t edgeIndex = 0; edgeIndex < mesh.edges.size(); ++edgeIndex) {
+        const auto &topology=result.edge(mesh.edgeIds[edgeIndex]);
+        if(topology.forward.valid() && topology.backward.valid()
+           && result.finFace(topology.forward)==result.finFace(topology.backward)) continue;
         BodyDisplay *target = patchEdges.count(mesh.edgeIds[edgeIndex].index) ? &display : retainedDisplay;
         if (!target) continue;
         QVector<QVector3D> polyline;

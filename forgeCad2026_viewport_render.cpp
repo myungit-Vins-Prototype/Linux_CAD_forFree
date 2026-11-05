@@ -439,6 +439,7 @@ void CadViewport::drawReferenceLabels() {
     }
     drawDatumLabels(painter);
     drawTopologyLabels(painter);
+    drawParameterDimensions(painter);
     if (sketchMode_) {
         painter.setPen(QColor(255, 220, 120));
         const ForgeCad::SketchAnalysis &analysis = sketchAnalysis();

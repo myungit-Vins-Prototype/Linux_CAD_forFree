@@ -7,6 +7,6 @@ namespace ForgeCad::Kernel::detail {
 std::vector<BSplineCurve<3>> loftParameterPieces(const Curve<3> &, const Interval &, int degree);
 int normalizeLoftParameterJoins(std::vector<std::vector<BSplineCurve<3>>> &, const std::vector<std::vector<double>> &);
 void commonLoftDenominator(std::vector<BSplineCurve<3>> &, bool blendGuides, std::vector<double> &leftBlend,
-                           std::vector<double> &rightBlend);
+                           std::vector<double> &rightBlend, double blendStart=0.0, double blendEnd=1.0);
 } // namespace ForgeCad::Kernel::detail
 #endif

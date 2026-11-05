@@ -139,6 +139,17 @@ void CadViewport::mousePressEvent(QMouseEvent *event) {
         setCursor(Qt::ClosedHandCursor);
         return;
     }
+    if (event->button() == Qt::LeftButton && parameterDimensionPicked_ && !sketchMode_
+        && !refPicking_ && !edgePicking_ && event->modifiers() == Qt::NoModifier) {
+        const int dimension = parameterDimensionAt(event->position());
+        if (dimension >= 0) {
+            const auto picked = parameterDimensionPicked_;
+            const auto reference = parameterDimensions_.at(dimension);
+            picked(reference);
+            event->accept();
+            return;
+        }
+    }
     if (event->button() == Qt::LeftButton && beginFilletRadiusDrag(event->position())) {
         event->accept(); return;
     }
@@ -495,7 +506,7 @@ void CadViewport::mousePressEvent(QMouseEvent *event) {
         const SketchElementSelection hit = findSketchElement(rawPoint);
         if (hit.kind >= 0 && !hasPendingPoint_ && curveControlPoints_.isEmpty()) {
             snapPoint(rawPoint);
-            const bool pointSnap = lastSnapKind_ == SnapKind::Endpoint || lastSnapKind_ == SnapKind::Midpoint
+            const bool pointSnap = lastSnapKind_ == SnapKind::Intersection || lastSnapKind_ == SnapKind::Endpoint || lastSnapKind_ == SnapKind::Midpoint
                 || lastSnapKind_ == SnapKind::Nearest;
             if (!pointSnap) {
                 selectSketchElement(rawPoint, false);
@@ -621,6 +632,9 @@ void CadViewport::mousePressEvent(QMouseEvent *event) {
 }
 
 void CadViewport::mouseDoubleClickEvent(QMouseEvent *event) {
+    if (parameterDimensionPicked_ && parameterDimensionAt(event->position()) >= 0) {
+        mousePressEvent(event); return;
+    }
     if ((interactionLocked_ || documentReadOnly_)) { event->accept(); return; }
     if (sketchMode_ && sketchViewUnlocked_) return;
     // Fuori dallo schizzo, doppio clic su una parte del modello: si modifica
@@ -880,6 +894,12 @@ void CadViewport::contextMenuEvent(QContextMenuEvent *event) {
 }
 
 void CadViewport::mouseMoveEvent(QMouseEvent *event) {
+    if (!event->buttons() && !parameterDimensions_.isEmpty()) {
+        const int hovered = parameterDimensionAt(event->position());
+        if (hovered != parameterDimensionHover_) { parameterDimensionHover_ = hovered; update(); }
+        if (hovered >= 0) { setCursor(Qt::PointingHandCursor); event->accept(); return; }
+        unsetCursor();
+    }
     if (filletRadiusDrag_ >= 0) {
         dragFilletRadius(event->position(), !(event->buttons() & Qt::LeftButton));
         event->accept(); return;
@@ -1291,15 +1311,26 @@ void CadViewport::mouseReleaseEvent(QMouseEvent *event) {
             documentChanged();
         }
         dimensionDrag_ = -1;
-        if (dragRecorded_ && lastSnapExternal_ && geometrySnap_ && activeSketchObject()) {
+        if (dragRecorded_ && (lastSnapExternal_ || lastSnapKind_ == SnapKind::Intersection) && geometrySnap_ && activeSketchObject()) {
             auto &sketch = sketches_[activeSketch_]; const auto before = sketch;
             QVector<ForgeCad::PointTarget> snapped;
             if (pointDragActive_) snapped = targetsAt(sketch,pointDragPosition_);
             else if (draggingControlPoint_ && draggingPointKind_ == EditablePointKind::Control
                 && draggingCurveIndex_ >= 0 && draggingControlIndex_ >= 0)
                 snapped.append({{1,draggingCurveIndex_,draggingControlIndex_},sketch.curves[draggingCurveIndex_].controlPoints[draggingControlIndex_]});
-            for (const auto &target : snapped) if (!isLinkedSketchEntity(sketch,target.point.kind,target.point.element))
+            QVector<ConstraintRef> excluded;
+            for (const auto &target : snapped) excluded.append(target.point);
+            const auto &cache = sketchReferenceCache();
+            const auto intersection = lastSnapKind_ == SnapKind::Intersection
+                ? ForgeCad::snapIntersection(lastSnapPoint_, sketch, cache, ForgeCad::kSketchConnectionTolerance, excluded)
+                : ForgeCad::IntersectionSnap();
+            for (const auto &target : snapped) if (!isLinkedSketchEntity(sketch,target.point.kind,target.point.element)) {
+                // I rami che si muovono insieme non diventano sorgenti dello
+                // snap l'uno dell'altro: conservare la coppia ferma di appoggio.
+                if (intersection.found && pointDistance(target.position, intersection.point) <= ForgeCad::kSketchConnectionTolerance
+                    && ForgeCad::constrainIntersection(sketch, target.point, intersection, cache, sketches_, extrusions_)) continue;
                 recordPointCoincidences(sketch,target.point,target.position);
+            }
             if (!ForgeCad::solveSketch(sketch).ok) sketch = before;
         }
         pointDragActive_ = false;

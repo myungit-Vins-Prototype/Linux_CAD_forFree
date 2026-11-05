@@ -34,6 +34,9 @@ ForgeBody forgePattern(const ForgeBody &base, const std::vector<Kernel::Transfor
 ForgeBody forgePatternFeature(const ForgeBody &target, const ForgeBody &tool, BooleanOperation operation,
                               const std::vector<Kernel::Transform3> &placements, QString *error, bool keepOriginal = true);
 
+// Raccoglie istanze gia rigenerate/trasformate: unione solidi o shell separate.
+ForgeBody forgePatternBodies(const std::vector<ForgeBody> &bodies, QString *error);
+
 // Componenti esatte: shell separate per le superfici; per i solidi le
 // shell dei vuoti restano associate alla shell esterna che le contiene.
 QVector<ForgeBody> forgePatternComponents(const ForgeBody &result, QString *error);

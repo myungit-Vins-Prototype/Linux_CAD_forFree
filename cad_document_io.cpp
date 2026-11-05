@@ -180,6 +180,7 @@ void write(QDataStream &out, const SketchObject &sketch, quint16 version) {
     out << sketch.faceSource << sketch.customFrame;
     out << quint32(sketch.geometricConstraints.size());
     for (const SketchConstraint &c : sketch.geometricConstraints) {
+        if (version >= 63) out << c.parameterId;
         out << qint32(c.type);
         for (const ConstraintRef &r : {c.first, c.second}) out << qint32(r.kind) << qint32(r.element) << qint32(r.point);
         out << c.value << c.positions << c.placement << c.placed;
@@ -203,6 +204,7 @@ void write(QDataStream &out, const SketchObject &sketch, quint16 version) {
             out << c.offset.reverse << c.offset.bothSides << c.offset.roundCorners;
         }
     }
+    if (version >= 63) out << sketch.nextParameterId;
     out << qint32(sketch.datumPlane);  // formato 8
     out << sketch.symmetryAxes;        // formato 13
     out << sketch.storyId << sketch.beforeFeatureId << qint32(sketch.storyOrder); // formato 51
@@ -255,6 +257,7 @@ bool read(ReadStream &in, SketchObject &sketch, quint16 version) {
         quint32 constraintCount = 0;
         if (!readCount(in, constraintCount, 40)) return false;
         if (!in.readRecords(sketch.geometricConstraints, constraintCount, [&](SketchConstraint &c) {
+            if (version >= 63) in >> c.parameterId;
             qint32 type = 0;
             in >> type;
             c.type = ConstraintType(type);
@@ -303,6 +306,15 @@ bool read(ReadStream &in, SketchObject &sketch, quint16 version) {
             }
             return in.status() == QDataStream::Ok;
         })) return false;
+    }
+    if (version >= 63) {
+        in >> sketch.nextParameterId;
+        if (!sketch.nextParameterId || sketch.nextParameterId == std::numeric_limits<quint64>::max()) return false;
+        QSet<quint64> ids;
+        for (const auto &constraint : sketch.geometricConstraints) {
+            if (!constraint.parameterId || constraint.parameterId >= sketch.nextParameterId || ids.contains(constraint.parameterId)) return false;
+            ids.insert(constraint.parameterId);
+        }
     }
     if (version >= 8) {
         qint32 datum = -1;
@@ -561,6 +573,17 @@ void write(QDataStream &out, const ExtrusionObject &body, quint16 version) {
             for (const auto &ref : condition.references) out << ref.point.name;
         }
     }
+    if (version >= 63) {
+        out << quint32(body.pattern.variations.size());
+        for (const auto &v : body.pattern.variations)
+            out << v.sketch << v.ownerId << v.parameterId << v.parameter << v.increment;
+    }
+    if (version >= 65) out << body.loftMergeTangentFaces;
+    if (version >= 64) {
+        out << quint32(body.loftCorrespondences.size());
+        for (const auto &row : body.loftCorrespondences) out << row.reverse << row.positions;
+    }
+
 }
 
 // `extras` (solo formato 5): i file scritti durante lo sviluppo del formato 5
@@ -917,6 +940,36 @@ bool read(ReadStream &in, ExtrusionObject &body, quint16 version, int extras) {
             if ((mode == 0 && !condition.references.isEmpty()) || (mode == 1 && condition.references.size() > 1)) return false;
             for (auto &ref : condition.references) in >> ref.point.name;
             body.loftGuideCrossConditions.append(std::move(condition));
+        }
+    }
+    if (version >= 63) {
+        quint32 count;
+        if (!readCount(in, count, 29) || count > 256) return false;
+        for (quint32 i=0; i<count; ++i) {
+            PatternVariation v;
+            in >> v.sketch >> v.ownerId >> v.parameterId >> v.parameter >> v.increment;
+            if (!v.ownerId || v.parameter.isEmpty() || v.parameter.size()>256 || !std::isfinite(v.increment)
+                || (v.sketch ? !v.parameterId : v.parameterId != 0)) return false;
+            body.pattern.variations.append(v);
+        }
+    }
+    if (version >= 65) in >> body.loftMergeTangentFaces;
+    if (version >= 64) {
+        quint32 count;
+        const int sections = body.loftSections.isEmpty() ? body.loftSketches.size() : body.loftSections.size();
+        if (!readCount(in, count, 5) || (count && count != quint32(sections))) return false;
+        int columns = -1;
+        for (quint32 i = 0; i < count; ++i) {
+            LoftSectionCorrespondence row; quint32 points;
+            in >> row.reverse;
+            if (!readCount(in, points, 8) || !points || points > 64 || (columns >= 0 && points != quint32(columns))) return false;
+            columns = int(points);
+            for (quint32 j = 0; j < points; ++j) {
+                double value; in >> value;
+                if (!std::isfinite(value) || value < 0 || value > 1) return false;
+                row.positions.append(value);
+            }
+            body.loftCorrespondences.append(std::move(row));
         }
     }
     const BodyFeature last = version >= 53 ? BodyFeature::SurfaceTools : version >= 45 ? BodyFeature::SpatialSketch : version >= 44 ? BodyFeature::ExtractedCurve : version >= 39 ? BodyFeature::Thicken : version >= 38 ? BodyFeature::ProjectedCurve : version >= 36 ? BodyFeature::Draft : version >= 35 ? BodyFeature::FillSurface : version >= 27 ? BodyFeature::Thread : version >= 25 ? BodyFeature::Shell : BodyFeature::PlanarSurface;
@@ -1336,6 +1389,27 @@ QString encodeDocumentVersion(const DocumentState &state, QByteArray &bytes, boo
         if (state.version.documentId.isNull() || (!state.version.checkinId.isNull() && state.version.checkinId == state.baseCheckinId))
             return QStringLiteral("Identita' del documento non valida.");
         for (const auto &body : state.extrusions) {
+            if (version < 65 && body.loftMergeTangentFaces)
+                return QStringLiteral("L’unione delle facce della loft richiede il formato 65.");
+            if (version < 64 && !body.loftCorrespondences.isEmpty())
+                return QStringLiteral("Le corrispondenze della loft richiedono il formato 64.");
+            const int sections = body.loftSections.isEmpty() ? body.loftSketches.size() : body.loftSections.size();
+            if (!body.loftCorrespondences.isEmpty() && body.loftCorrespondences.size() != sections)
+                return QStringLiteral("Numero di corrispondenze della loft non valido.");
+            for (const auto &row : body.loftCorrespondences) {
+                if (row.positions.isEmpty() || row.positions.size() > 64 || row.positions.size() != body.loftCorrespondences.front().positions.size())
+                    return QStringLiteral("Collegamenti della loft incompleti.");
+                for (double value : row.positions)
+                    if (!std::isfinite(value) || value < 0 || value > 1) return QStringLiteral("Posizione del collegamento non valida.");
+            }
+
+            if (version < 63 && !body.pattern.variations.isEmpty())
+                return QStringLiteral("Le variazioni richiedono il formato 63.");
+            if (body.pattern.variations.size() > 256) return QStringLiteral("Troppe variazioni parametriche.");
+            for (const auto &v : body.pattern.variations)
+                if (!v.ownerId || v.parameter.isEmpty() || v.parameter.size()>256 || !std::isfinite(v.increment)
+                    || (v.sketch ? !v.parameterId : v.parameterId != 0))
+                    return QStringLiteral("Variazione parametrica non valida.");
             const auto &f=body.chamferSpec.fillet;
             if(f.mode<0||f.mode>3||f.conicType<0||f.conicType>2||f.conicControl<0||f.conicControl>1
                 ||!std::isfinite(f.rho)||f.rho<=0||f.rho>=1||!std::isfinite(f.conicRadius)||f.conicRadius<=0
@@ -1399,6 +1473,18 @@ QString encodeDocumentVersion(const DocumentState &state, QByteArray &bytes, boo
 
 QString encodeDocument(const DocumentState &state, QByteArray &bytes, bool bodies, int compressionLevel) {
     return encodeDocumentVersion(state, bytes, bodies, compressionLevel, kVersion);
+}
+
+QString encodeDocumentDefinition64ForHash(const DocumentState &state, QByteArray &bytes) {
+    return encodeDocumentVersion(state, bytes, false, 9, 64);
+}
+
+QString encodeDocumentDefinition63ForHash(const DocumentState &state, QByteArray &bytes) {
+    return encodeDocumentVersion(state, bytes, false, 9, 63);
+}
+
+QString encodeDocumentDefinition62ForHash(const DocumentState &state, QByteArray &bytes) {
+    return encodeDocumentVersion(state, bytes, false, 9, 62);
 }
 
 QString encodeDocumentDefinition61ForHash(const DocumentState &state, QByteArray &bytes) {

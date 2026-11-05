@@ -310,9 +310,9 @@
         legacyRef.kind=7;legacyRef.index=0;legacyRef.featureId=source.storyId;legacyRef.element={0,0,-1};
         require(appendLinkedSketchReference(legacyState.sketches[1],legacyRef,legacyState.sketches,{}).isEmpty(),"riferimento fixture storica");
         QByteArray hiddenBytes,visibleBytes;
-        require(encodeDocument(legacyState,hiddenBytes,false).isEmpty(),"fixture nascosta corrente");
+        require(encodeDocumentDefinition60ForHash(legacyState,hiddenBytes).isEmpty(),"fixture nascosta corrente");
         require(appendLinkedSketchReference(legacyState.sketches[1],legacyRef,legacyState.sketches,{},false,true,100,nullptr,true).isEmpty(),"fixture visibile corrente");
-        require(encodeDocument(legacyState,visibleBytes,false).isEmpty(),"fixture visibile corrente salvata");
+        require(encodeDocumentDefinition60ForHash(legacyState,visibleBytes).isEmpty(),"fixture visibile corrente salvata");
         auto hiddenPayload=testDocumentUncompress(hiddenBytes,11),visiblePayload=testDocumentUncompress(visibleBytes,11);
         require(hiddenPayload.size()==visiblePayload.size(),"visibilita senza variazioni del payload");
         int visibilityOffset=-1,differences=0;

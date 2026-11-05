@@ -129,6 +129,21 @@ QString drawingModelDefinitionMatches(const DocumentState &document,const QByteA
     if(current==expected){matches=true;return {};}
     auto normalized=document;normalized.version.checkinId={};normalized.baseCheckinId={};normalized.orientation=AxesOrientation{};
     normalized.lengthUnit=LengthUnit::Millimeter;
+    QByteArray format64;
+    if (encodeDocumentDefinition64ForHash(normalized,format64).isEmpty()
+        && QCryptographicHash::hash(format64,QCryptographicHash::Sha256)==expected) {
+        matches=true; return {};
+    }
+    QByteArray format63;
+    if (encodeDocumentDefinition63ForHash(normalized,format63).isEmpty()
+        && QCryptographicHash::hash(format63,QCryptographicHash::Sha256)==expected) {
+        matches=true; return {};
+    }
+    QByteArray format62;
+    if (encodeDocumentDefinition62ForHash(normalized,format62).isEmpty()
+        && QCryptographicHash::hash(format62,QCryptographicHash::Sha256)==expected) {
+        matches=true; return {};
+    }
     QByteArray format61;
     if (encodeDocumentDefinition61ForHash(normalized,format61).isEmpty()
         && QCryptographicHash::hash(format61,QCryptographicHash::Sha256)==expected) {

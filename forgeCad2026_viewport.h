@@ -574,8 +574,13 @@ public:
                                  std::function<void(int, int, EdgePoint)> callback);
     // Riferimenti gia' scelti, evidenziati nella vista (finestra del piano).
     void setReferenceMarks(const QVector<GeometryRef> &marks);
+    // Quote temporanee per scegliere parametri, senza entrare in modifica schizzo.
+    void setParameterDimensions(const QVector<PatternVariation> &dimensions,
+                                const QVector<PatternVariation> &selected,
+                                std::function<void(const PatternVariation &)> picked = {});
     void setSurfacePoleOverlay(const QVector<QVector3D> &points,int uCount=0,int vCount=0,int selected=-1);
     QPointF surfacePoleScreen(int index) const;
+    QPointF loftControlScreen(const QVector3D &point) const { return projectWorldPoint(point); }
     QVector3D surfacePoleDragVector(const QPoint &from,const QPoint &to) const;
     void setSurfacePoleSelection(const QVector<int> &selected, const std::array<QVector3D, 3> &axes, bool local);
     const std::array<QVector3D, 3> &surfacePoleAxes() const { return surfacePoleAxes_; }
@@ -1033,6 +1038,13 @@ private:
     // Quota sotto il puntatore (testo o linee), -1 se nessuna.
     int dimensionAt(const QPoint &position) const;
     void drawDimensions(QPainter &painter) const;
+    bool parameterDimensionGraphic(int index, DimensionGraphic &graphic, int *sketch = nullptr,
+                                   int *constraint = nullptr) const;
+    int parameterDimensionAt(const QPointF &position) const;
+    void drawParameterDimensions(QPainter &painter) const;
+    QVector<PatternVariation> parameterDimensions_, selectedParameterDimensions_;
+    std::function<void(const PatternVariation &)> parameterDimensionPicked_;
+    int parameterDimensionHover_ = -1;
 
     // Simboli dei vincoli accanto alle entita' (coordinate schermo), per disegnarli e sceglierli.
     struct ConstraintGlyph {

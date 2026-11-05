@@ -38,6 +38,25 @@ FK_TEST(BernsteinArithmetic) {
     }
 }
 
+FK_TEST(BernsteinHighDegreeProduct) {
+    std::mt19937 rng(20261104);
+    // Gradi delle proiezioni NURBS e dei loro polinomi stazionari.
+    for (const auto &degrees : {std::pair<int, int>{0, 34}, {12, 33}, {33, 34}, {34, 33}, {67, 34}, {34, 0}}) {
+        std::vector<double> a(degrees.first + 1), b(degrees.second + 1);
+        for (double &x : a) x = uniform(rng, -5, 5);
+        for (double &x : b) x = uniform(rng, -5, 5);
+        const BernsteinPolynomial p(a), q(b), product = p * q;
+        FK_CHECK(product.degree() == p.degree() + q.degree());
+        FK_CHECK(product.coefficients().front() == a.front() * b.front());
+        FK_CHECK(product.coefficients().back() == a.back() * b.back());
+        for (double t : {0., 1e-12, .125, .333333333333, .5, .875, 1. - 1e-12, 1.}) {
+            FK_CHECK_NEAR(product.evaluate(t), p.evaluate(t) * q.evaluate(t), 2e-12);
+            FK_CHECK_NEAR(product.derivative().evaluate(t),
+                          p.derivative().evaluate(t) * q.evaluate(t) + p.evaluate(t) * q.derivative().evaluate(t), 2e-10);
+        }
+    }
+}
+
 FK_TEST(BernsteinRoots) {
     std::mt19937 rng(41);
     for (int trial = 0; trial < 500; ++trial) {

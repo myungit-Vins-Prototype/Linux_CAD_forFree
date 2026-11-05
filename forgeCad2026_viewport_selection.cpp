@@ -865,6 +865,17 @@ QPointF CadViewport::snapPoint(const QPointF &point, bool snapToGrid ) {
             }
         }
     }
+    if (geometrySnap_ && activeSketchObject()
+        && !(originSnap_ && result.kind == SnapKind::Endpoint && result.point == QPointF())) {
+        const auto intersection = ForgeCad::snapIntersection(point, *activeSketchObject(), sketchReferenceCache(), tolerance);
+        if (intersection.found && (result.kind == SnapKind::None || result.kind == SnapKind::Nearest
+            || pointDistance(point, intersection.point) <= pointDistance(point, result.point) + 1e-9)) {
+            result = {SnapKind::Intersection, intersection.point};
+            lastSnapExternal_ = intersection.firstExternal || intersection.secondExternal;
+            lastSnapCurve_ = -1;
+            lastSnapNote_ = QStringLiteral("× Intersezione");
+        }
+    }
     if (result.kind == SnapKind::Endpoint && originSnap_ && result.point == QPointF(0.0, 0.0)) lastSnapNote_ = QStringLiteral("✚ Origine");
     if (geometrySnap_ && activeSketchObject() && result.kind != SnapKind::None) {
         const auto &local = *activeSketchObject();

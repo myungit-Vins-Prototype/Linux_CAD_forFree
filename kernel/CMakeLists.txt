@@ -60,6 +60,8 @@ add_library(forgekernel STATIC
     fk_micro.cpp
     fk_mass.h
     fk_mass.cpp
+    fk_bspline_isoline.h
+    fk_bspline_isoline.cpp
     fk_intersect.h
     fk_intersect.cpp
     fk_marching.h
@@ -126,6 +128,7 @@ add_library(forgekernel STATIC
     fk_sweep.h
     fk_sweep.cpp
     fk_loft.h
+    fk_loft_merge.cpp
     fk_loft.cpp
     fk_loft_guide_constraints.h
     fk_loft_guide_constraints.cpp
@@ -332,3 +335,18 @@ target_compile_options(forgekernel_plane_jets_tests PRIVATE -Wall -Wextra -Wpeda
 set_target_properties(forgekernel_plane_jets_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
 add_test(NAME forgekernel_plane_jets_tests COMMAND forgekernel_plane_jets_tests)
 set_tests_properties(forgekernel_plane_jets_tests PROPERTIES TIMEOUT 30)
+
+# Jet a u fisso: NURBS razionali, istanze, nodi stretti e quadrature di massa.
+add_executable(forgekernel_bspline_isoline_tests tests/fk_test_main.cpp tests/test_bspline_isoline.cpp)
+target_link_libraries(forgekernel_bspline_isoline_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_bspline_isoline_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_bspline_isoline_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_bspline_isoline_tests COMMAND forgekernel_bspline_isoline_tests)
+set_tests_properties(forgekernel_bspline_isoline_tests PROPERTIES TIMEOUT 60)
+
+add_executable(forgekernel_loft_correspondence_tests tests/fk_test_main.cpp tests/test_loft_correspondence.cpp)
+target_link_libraries(forgekernel_loft_correspondence_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_loft_correspondence_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_loft_correspondence_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_loft_correspondence_tests COMMAND forgekernel_loft_correspondence_tests)
+set_tests_properties(forgekernel_loft_correspondence_tests PROPERTIES TIMEOUT 120)

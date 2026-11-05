@@ -181,7 +181,7 @@ int normalizeLoftParameterJoins(std::vector<std::vector<BSplineCurve<3>>> &piece
     return degree;
 }
 void commonLoftDenominator(std::vector<BSplineCurve<3>> &curves, bool blend, std::vector<double> &leftBlend,
-                           std::vector<double> &rightBlend) {
+                           std::vector<double> &rightBlend, double blendStart, double blendEnd) {
     std::vector<std::vector<BSplineCurve<3>>> source;
     for (const auto &c : curves)
         source.push_back(c.bezierSegments());
@@ -255,7 +255,8 @@ void commonLoftDenominator(std::vector<BSplineCurve<3>> &curves, bool blend, std
         }
         Scalar r;
         if (blend) {
-            const double a = breaks[k], b = breaks[k + 1], h = b - a;
+            const double a = blendStart + (blendEnd-blendStart)*breaks[k];
+            const double b = blendStart + (blendEnd-blendStart)*breaks[k+1], h = b-a;
             const auto smooth = [](double u) { return u * u * (3 - 2 * u); };
             const auto derivative = [](double u) { return 6 * u * (1 - u); };
             r = multiply(denominator, Scalar{smooth(a), smooth(a) + h * derivative(a) / 3,

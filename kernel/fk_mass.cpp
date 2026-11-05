@@ -2,9 +2,11 @@
 
 #include <algorithm>
 #include <cmath>
+#include <optional>
 #include <stdexcept>
 
 #include "fk_bspline.h"
+#include "fk_bspline_isoline.h"
 #include "fk_precision.h"
 #include "fk_parallel.h"
 #include "fk_quadrature.h"
@@ -133,6 +135,7 @@ public:
 
 private:
     FaceEvaluation integrand(double u, double v) const;
+    FaceEvaluation integrand(const Vec3 *jet) const;
     FaceEvaluation inner(double u, double v) const;  // G(u, v)
     FaceValues band(double vEnd) const;          // \int_{periodo} G(u, vEnd) du
     LoopValues finIntegral(const FinTrack &track) const;
@@ -313,6 +316,10 @@ FaceIntegrator::FaceIntegrator(const Body &body, FaceId faceId, const Vec3 &refe
 FaceEvaluation FaceIntegrator::integrand(double u, double v) const {
     Vec3 d[4];
     surface_->evaluate(u, v, 1, d);
+    return integrand(d);
+}
+
+FaceEvaluation FaceIntegrator::integrand(const Vec3 *d) const {
     const Vec3 &su = d[Surface::derivativeIndex(1, 0, 1)], &sv = d[Surface::derivativeIndex(0, 1, 1)];
     // Con i parametri scambiati Su' x Sv' = -N: si usa la normale di S.
     const Vec3 n = swapped_ ? cross(sv, su) : cross(su, sv);
@@ -336,9 +343,21 @@ FaceEvaluation FaceIntegrator::inner(double u, double v) const {
     if (v == v0_) return total;
     const Interval range{std::min(v0_, v), std::max(v0_, v)};
     const std::vector<double> breaks = surface_->vBreakpoints(range);
+    // La quadratura tiene u fisso lungo molte campate V. Riutilizzare la
+    // contrazione U evita migliaia di rivalutazioni del prodotto tensoriale.
+    // Su poche campate il percorso diretto evita il costo di preparazione.
+    std::optional<detail::BSplineUIsoline> isoline;
+    if (breaks.size() > 4)
+        if (const auto *spline = dynamic_cast<const BSplineSurface *>(surface_)) isoline.emplace(*spline, u, range);
+    const auto at = [&](double v) {
+        if (!isoline) return integrand(u, v);
+        Vec3 jet[4];
+        isoline->evaluate(v, jet);
+        return integrand(jet);
+    };
     for (std::size_t i = 0; i + 1 < breaks.size(); ++i) {
         const FaceEvaluation piece = detail::integrateVector<kFaceValues>(
-            [&](double s) { return integrand(u, s); }, breaks[i], breaks[i + 1], tolerance_, kInnerRoundoff);
+            [&](double s) { return at(s); }, breaks[i], breaks[i + 1], tolerance_, kInnerRoundoff);
         for (std::size_t k = 0; k < kFaceValues; ++k) {
             total.value[k] += piece.value[k];
             total.magnitude[k] += piece.magnitude[k];

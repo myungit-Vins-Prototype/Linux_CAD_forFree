@@ -3,6 +3,7 @@
 #include "cad_drawing_window.h"
 #include "cad_toolbar.h"
 #include "cad_curve_extract.h"
+#include "cad_loft_correspondence_editor.h"
 
 #include "kernel/fk_cancel.h"
 #include "cad_spatial_sketch.h"
@@ -386,6 +387,10 @@ bool loftDialog(QWidget *parent, CadViewport *viewport, const QString &title, in
     moveLayout->addStretch(1);
     auto *ruledBox = new QCheckBox(QStringLiteral("Rigato (superfici rigate tra sezioni consecutive)"), &dialog);
     ruledBox->setChecked(initial.loftRuled);
+    auto *mergeFacesBox = new QCheckBox(QStringLiteral("Unisci facce tangenti"), &dialog);
+    mergeFacesBox->setObjectName(QStringLiteral("loftMergeTangentFaces"));
+    mergeFacesBox->setChecked(initial.loftMergeTangentFaces);
+    mergeFacesBox->setToolTip(QStringLiteral("Unisce le pezze NURBS compatibili e tangenti senza modificare la forma. Conserva gli spigoli reali e i bordi non compatibili."));
     auto *surfaceBox = new QCheckBox(QStringLiteral("Solo superficie (senza coperchi)"), &dialog);
     surfaceBox->setChecked(initial.loftSurface);
     surfaceBox->setToolTip(QStringLiteral("Una lamina: con sezioni chiuse il tubo che passa per le sezioni, aperto alle estremita'"));
@@ -508,6 +513,15 @@ bool loftDialog(QWidget *parent, CadViewport *viewport, const QString &title, in
     form->addRow(new LoftSelectionDiagram(&dialog));
     form->addRow(QStringLiteral("Sezioni:"), list);
     form->addRow(QString(), moveRow);
+    auto *correspondences = new ForgeCad::LoftCorrespondenceEditor(viewport,replaced,&dialog);
+    const auto sectionKeys = [&] {
+        QVector<int> keys;
+        for (int i=0;i<list->count();++i) if(list->item(i)->checkState()==Qt::Checked)
+            keys.append(list->item(i)->data(Qt::UserRole+1).toInt());
+        return keys;
+    };
+    correspondences->initialize(sectionKeys(),initial.loftCorrespondences);
+    form->addRow(correspondences);
     form->addRow(QStringLiteral("Curve guida:"), guides);
     form->addRow(QString(), pickGuides);
     form->addRow(QString(), guideButtons);
@@ -520,6 +534,7 @@ bool loftDialog(QWidget *parent, CadViewport *viewport, const QString &title, in
     ExtrusionObject endpointDefinition = initial;
     SurfaceEndControls endControls(dialog, *form, viewport, replaced, endpointDefinition);
     form->addRow(QString(), ruledBox);
+    form->addRow(QString(), mergeFacesBox);
     form->addRow(QString(), surfaceBox);
     form->addRow(help);
     auto *footer = new QWidget(&dialog);
@@ -566,19 +581,25 @@ bool loftDialog(QWidget *parent, CadViewport *viewport, const QString &title, in
             d.loftGuideCrossConditions[index] = controls[i];
         }
         d.loftRuled = ruledBox->isChecked();
+        d.loftMergeTangentFaces = mergeFacesBox->isChecked();
         d.loftSurface = surfaceBox->isChecked();
         endControls.copyTo(d);
         d.loftGuideContinuity = initial.loftGuideContinuity;
         d.loftGuideInfluence = initial.loftGuideInfluence;
         d.sketchIndex = d.loftSketches.value(0, -1);
         d.plane = sketches.value(d.sketchIndex).plane;
+        correspondences->copyTo(d,sectionKeys());
         return d;
     };
     const auto refresh = [&] {
-        const ExtrusionObject d = current();
+        ExtrusionObject d = current();
+        correspondences->synchronize(d,sectionKeys());
+        correspondences->copyTo(d,sectionKeys());
         if (d.loftSections.size() >= 2) scope.request(d);
         else viewport->clearPreview();
     };
+    correspondences->changed = refresh;
+    QObject::connect(&dialog, &QDialog::finished, correspondences, [correspondences] { correspondences->stop(); });
     int graphicalTarget = 0;  // 1 sezioni, 2 guide, 3 appoggi guida
     const auto syncGuideControls = [&] {
         const auto *item = guides->currentItem();
@@ -778,6 +799,7 @@ bool loftDialog(QWidget *parent, CadViewport *viewport, const QString &title, in
     QObject::connect(list, &QListWidget::itemChanged, &dialog, refresh);
     QObject::connect(guides, &QListWidget::itemChanged, &dialog, refresh);
     QObject::connect(ruledBox, &QCheckBox::toggled, &dialog, refresh);
+    QObject::connect(mergeFacesBox, &QCheckBox::toggled, &dialog, refresh);
     QObject::connect(surfaceBox, &QCheckBox::toggled, &dialog, refresh);
     QObject::connect(guideContinuity, &QComboBox::currentIndexChanged, &dialog, changeGuideCondition);
     QObject::connect(guideInfluence, &QDoubleSpinBox::valueChanged, &dialog, changeGuideCondition);

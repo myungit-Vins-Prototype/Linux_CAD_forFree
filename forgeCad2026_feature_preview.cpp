@@ -73,6 +73,10 @@ QString FeaturePreviewBuilder::previewKey(const ExtrusionObject &d, int index) {
     parts << QStringLiteral("P") << QString::number(r.kind) << QString::number(r.count) << QString::number(r.count2) << n(r.spacing) << n(r.spacing2)
           << n(r.angle) << QString::number(r.spread) << QString::number(r.flip) << QString::number(r.flip2) << QString::number(r.keepOriginal)
           << QString::number(r.featureOnly) << QString::number(d.patternComponent);
+    parts << QStringLiteral("Variations") << QString::number(r.variations.size());
+    for (const auto &v : r.variations)
+        parts << QString::number(v.sketch) << QString::number(v.ownerId) << QString::number(v.parameterId)
+              << v.parameter << n(v.increment);
     auto excluded = r.excluded;
     std::sort(excluded.begin(), excluded.end());
     for (int occurrence : excluded) parts << QStringLiteral("skip%1").arg(occurrence);
@@ -119,6 +123,12 @@ QString FeaturePreviewBuilder::previewKey(const ExtrusionObject &d, int index) {
     for (double value : d.fillFaceInfluences) parts << QStringLiteral("FI") << n(value);
     parts << QStringLiteral("FS") << QString::number(d.fillShapeFace) << n(d.fillShapeWeight);
     for(const auto &source:d.curveExtraction.sources){parts<<QStringLiteral("ES");ref(source);}
+    parts << QStringLiteral("LM") << QString::number(d.loftMergeTangentFaces);
+    parts << QStringLiteral("LC") << QString::number(d.loftCorrespondences.size());
+    for (const auto &row : d.loftCorrespondences) {
+        parts << QString::number(row.reverse) << QString::number(row.positions.size());
+        for (double value : row.positions) parts << n(value);
+    }
     parts << QStringLiteral("LS");
     for (const GeometryRef &g : d.loftSections) ref(g);
     parts << QStringLiteral("LG");
