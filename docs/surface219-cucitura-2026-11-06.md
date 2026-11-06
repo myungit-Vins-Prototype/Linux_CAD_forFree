@@ -53,7 +53,7 @@ Verifiche finali sulla correzione integrata:
   Il visualizzatore Python/QtWebEngine su Wayland e' andato in crash;
   la GUI CAD nativa Wayland ha completato la prova normalmente.
 - SHA256 dell'originale verificato identico al termine; nessun CAD utente modificato.
-- `git diff --check` PASS. Commit/push richiesti dall’utente il 6 novembre; revisione finale e allineamento con origin/main verificati.
+- `git diff --check` PASS. Commit `bbd2533` pubblicato su `origin/main` il 6 novembre su richiesta dell’utente; push riuscito e allineamento locale/remoto verificato.
 
 La scelta evita una ricostruzione inutile della SP-curve: non riduce i poli
 salvati dal modello e non risolve in generale i costi del ricalcolo integrale.

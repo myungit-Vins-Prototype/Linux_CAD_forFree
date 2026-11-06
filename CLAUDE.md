@@ -139,7 +139,7 @@ e761f43 su main;467kernel/37CTest PASS,CI in corso; [prove](docs/ci-raccordi-202
 Cucitura Surface219 Corpo9/10: conserva SP-curve dense, senza fit inutile oltre32kcampate.
 App/11CTest/5filtri kernel PASS; Wayland:solido91facce/0bordi liberi/29,7s,
 Undo/Redo/genealogia/codec PASS. Mappa624/8822/check/HTML XCB PASS.
-Originale invariato; QA cache4GiB, rigenerazione integrale non verificata; commit/push richiesti il 06/11.
+Originale invariato; QA cache4GiB, rigenerazione integrale non verificata; `bbd2533` pubblicato su origin/main il 06/11.
 [Indagine](docs/surface219-cucitura-2026-11-06.md).
 
 **04/11 — Griglie, specchi e guide.** `3c644e2`: istanze condivise, B-rep2/cache10;
