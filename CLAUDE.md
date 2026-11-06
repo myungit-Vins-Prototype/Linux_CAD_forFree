@@ -106,7 +106,7 @@ ctest --test-dir forgecad-release --output-on-failure
 ## Ultimi interventi — esiti consolidati
 
 **06/11 — Quote 2D.** Ricollegamento agganci rotti/singoli con snap, anteprima e conferma atomica;
-metadati conservati. App/18CTest/offscreen/Wayland/mappa628-8882/check/HTML PASS. Commit/push su main richiesti.
+metadati conservati. App/18CTest/offscreen/Wayland/mappa628-8882/check/HTML PASS. Pubblicato `56ae114` su origin/main.
 [Prove e file](docs/ricollegamento-quote-2d-2026-11-06.md).
 
 **05/11 — KnifeHandle.** Unione NURBS/seam:6CTest/38Boolean/5Unify/42Loft/Wayland/STEP PASS.

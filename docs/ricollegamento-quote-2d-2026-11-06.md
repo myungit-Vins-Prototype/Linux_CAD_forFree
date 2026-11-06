@@ -75,3 +75,7 @@ Non sono stati modificati documenti CAD originali.
 Nel seguito l’utente ha richiesto commit e push su `main`. Prima del commit, `git fetch origin`
 ha confermato `HEAD` e `origin/main` allineati, senza commit locali precedenti da pubblicare.
 Controllo architettura e `git diff --check` nuovamente PASS; i 18 test restano quelli eseguiti sul codice invariato.
+
+Pubblicazione completata: commit `56ae114` — **Ripristina i riferimenti delle quote 2D con snap** —
+push su `origin/main` riuscito, da `93dff18` a `56ae114`. HEAD e riferimento remoto verificati coincidenti,
+checkout pulito dopo il commit. Questo seguito aggiorna soltanto la registrazione della pubblicazione.
