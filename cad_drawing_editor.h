@@ -87,6 +87,8 @@ public:
     bool isModified() const;
     QString addDimension(DrawingDimension dimension,const QPointF &position);
     QString addDimensionSeries(const QUuid &view,const std::vector<DrawingAttachment> &points,DrawingDimensionSeries kind,const QPointF &baseline);
+    // reference=-1: riferimenti non risolti, oppure tutti se la quota e' valida.
+    QString beginDimensionRepair(const QUuid &id,int reference=-1);
     QString updateDimension(DrawingDimension dimension);
     QString updateDimension(DrawingDimension dimension,DrawingDimensionPresentation presentation);
     QString addSelectedDimension(DrawingMeasure measure);

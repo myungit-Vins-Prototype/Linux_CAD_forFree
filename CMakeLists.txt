@@ -209,6 +209,7 @@ add_executable(forgecad
     cad_drawing.h
     cad_drawing.cpp
     cad_drawing_dimension.h
+    cad_drawing_dimension_repair.h
     cad_drawing_dimension.cpp
     cad_drawing_sheet.h
     cad_drawing_numbering.h
@@ -891,6 +892,9 @@ set_tests_properties(forgecad_drawing_dimensions_tests PROPERTIES TIMEOUT 60)
 
 forgecad_add_drawing_editor_test(forgecad_drawing_dimensions_gui_tests 60
     tests/test_drawing_dimensions_gui.cpp tests/test_drawing_dimension_series.h tests/test_drawing_dimension_numbering.h tests/test_drawing_ambiguous_snaps.h tests/test_drawing_segment_spacing.h)
+
+forgecad_add_drawing_editor_test(forgecad_drawing_dimension_repair_tests 60
+    tests/test_drawing_dimension_repair.cpp cad_drawing_dimension_repair.h)
 
 # Inserimento con anteprima e contorni apparenti delle superfici.
 forgecad_add_drawing_editor_test(forgecad_drawing_view_placement_tests 120

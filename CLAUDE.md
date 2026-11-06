@@ -9,10 +9,10 @@ Aggiornato **6 novembre 2026**.
 - Italiano; nessun `codex` nei nomi dei branch. `main` unico;
   `solver-mesh-gpu` è stato integrato e archiviato il 30 ottobre. CUDA e Metal restano backend opzionali negli stessi
   sorgenti, con fallback CPU.
-- Aggiornare a ogni traguardo e prima della risposta finale. Rileggere e preservare le altre chat; distinguere
-  implementato, verificato, sperimentale e proposto, con prove effettive e limiti.
-- Mantenere **circa 200 righe e al massimo 16 KiB**, con non più di 10 interventi recenti sintetici. Aggiornare la voce
-  tematica; dettagli in rapporti `docs/` o archivio. Niente log grezzi o comandi ripetitivi.
+- Aggiornare a ogni traguardo e prima della risposta finale; rileggere e preservare le altre chat. Distinguere
+  implementato/verificato/sperimentale/proposto con prove e limiti.
+- **Circa 200 righe, massimo 16 KiB e 10 interventi recenti**. Aggiornare le voci tematiche;
+  dettagli in `docs/`/archivio, senza log grezzi o comandi ripetitivi.
 - **Geometria ingegneristica esatta**: coordinate e calcoli in `double`, curve analitiche/NURBS e solidi B-rep. Mesh,
   campioni di display, pixel, `float` e `QVector3D` servono alla visualizzazione/selezione, mai a booleane, misure o volumi.
   No CSG su mesh.
@@ -24,8 +24,8 @@ Aggiornato **6 novembre 2026**.
   La genealogia e i riferimenti topologici devono restare espliciti: non riassociare automaticamente per sola vicinanza.
 - Conservare compatibilità dei documenti e valori delle enum persistite. Codice nuovo in moduli mirati `cad_*`/`kernel/fk_*`,
   evitando di ingrandire i coordinatori. Stile Qt, membri con `_`, quattro spazi e graffa sulla stessa riga.
-- Non modificare i CAD originali per le prove; usare copie congelate. Non chiudere processi utente. Dichiarare aggiornato
-  l'eseguibile soltanto dopo la compilazione completa; una build del kernel o del runner non aggiorna l'app già aperta.
+- Prove su copie congelate, senza modificare CAD originali o chiudere processi utente. Eseguibile aggiornato solo dopo
+  build completa; kernel/runner non aggiornano l’app aperta.
 
 ## Mappa essenziale e stato implementato
 
@@ -65,10 +65,9 @@ ctest --test-dir forgecad-release --output-on-failure
   della sessione, storici e riferiti dall'utente.
 - Sul checkout Linux abituale l'app è `forgecad-release/forgecad`; serve riaprirla per caricare una nuova build. Verificare
   la destinazione effettiva del collegamento, senza attribuire vecchi hash o test al nuovo HEAD.
-- Vista architetturale: avviare `python3 tools/open_architecture.py` per controllo/aggiornamento all'apertura. Dopo
-  cambiamenti strutturali aggiornare descrizioni/gruppi in `tools/generate_architecture.py`, rigenerare sulla build
-  pertinente e verificare `python3 tools/generate_architecture.py --check`; controllare collegamenti bidirezionali e
-  HTML, distinguendo call/include/reference. CMake non rigenera la mappa. HTML/JSON sono generati e ignorati: non forzarne l'aggiunta. [Istruzioni](docs/architecture/README.md).
+- Architettura: `python3 tools/open_architecture.py` aggiorna all’apertura. Dopo modifiche strutturali aggiornare
+  catalogo/gruppi, rigenerare sulla build pertinente, eseguire `generate_architecture.py --check` e verificare HTML e
+  collegamenti bidirezionali call/include/reference. CMake non rigenera; HTML/JSON ignorati. [Istruzioni](docs/architecture/README.md).
 - Approfondimenti pertinenti: [roadmap](docs/roadmap.md), [schizzi](docs/sketch-tools.md),
   [storia](docs/storyboard-history.md), [tavole/revisioni](docs/drawing-revisions-study.md),
   [prestazioni](docs/viewport-performance.md), [review corrente](docs/code-review-2026-11-02.md). Rapporti datati e archivio
@@ -105,6 +104,10 @@ ctest --test-dir forgecad-release --output-on-failure
   Hook: pieghe/unione/codec65 verificati. G1 punta OK; influenza25% riduce rigonfiamento, limiti fra pezze conservati. [Dettagli](docs/loft-hook-2026-11-04.md).
 
 ## Ultimi interventi — esiti consolidati
+
+**06/11 — Quote 2D.** Ricollegamento agganci rotti/singoli con snap, anteprima e conferma atomica;
+metadati conservati. App/18CTest/offscreen/Wayland/mappa628-8882/check/HTML PASS. Commit/push su main richiesti.
+[Prove e file](docs/ricollegamento-quote-2d-2026-11-06.md).
 
 **05/11 — KnifeHandle.** Unione NURBS/seam:6CTest/38Boolean/5Unify/42Loft/Wayland/STEP PASS.
 [Unione](docs/knifehandle-booleana-2026-11-05.md). Loft7: inversione ai nodi elimina microcampata;
