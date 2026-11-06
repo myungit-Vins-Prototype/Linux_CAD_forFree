@@ -1,3 +1,4 @@
+#include "cad_surface_mapping.h"
 #include "forgeCad2026_viewport_internal.h"
 #include "cad_loft_diagnostics.h"
 
@@ -341,6 +342,18 @@ void CadViewport::startPreviewJob() {
     QString invalid;
     // Operandi: i body e le curve del kernel sono immutabili, si condividono.
     QVector<int> operands = ForgeCad::bodyOperands(d);
+    // La mappa collegata conserva il piano dell'appiattimento come
+    // dipendenza indiretta: lo snapshot del worker deve contenerlo.
+    if(d.operation<0&&d.feature==BodyFeature::SurfaceTools&&d.surfaceTool.mode==4&&
+        d.surfaceTool.targets.size()>1&&d.surfaceTool.targets[1].kind==11) {
+        auto mapping=d.surfaceTool;GeometryRef plane;
+        if(!ForgeCad::resolveFlattenedMapping(mapping,in.index,extrusions_,plane,&invalid)) {
+            preview_.error=invalid;
+            if(previewCallback_)previewCallback_(preview_.error);
+            update();return;
+        }
+        if(ForgeCad::isBodyRef(plane)&&!operands.contains(plane.index))operands.append(plane.index);
+    }
     // Ripetizione della funzione: servono anche gli operandi della booleana.
     if (d.operation < 0 && d.feature == BodyFeature::Pattern && d.pattern.featureOnly && d.firstBody >= 0 && d.firstBody < extrusions_.size())
         operands += ForgeCad::bodyOperands(extrusions_.at(d.firstBody));

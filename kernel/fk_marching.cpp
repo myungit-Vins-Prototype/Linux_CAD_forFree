@@ -132,6 +132,20 @@ std::vector<double> surfaceBreaks(const Surface &surface, bool isU, const Interv
     case SurfaceType::Revolution:
         if (isU) return {range.lo, range.hi};  // la rotazione e' liscia; i nodi del meridiano no
         break;
+    case SurfaceType::BSpline: {
+        // I nodi C1 non cambiano la tangente dell'intersezione. Fissarli
+        // come vincoli aggiuntivi poteva scegliere una radice vicina
+        // arretrata quando la curva sfiorava la linea del nodo.
+        // Gli spigoli reali e i limiti del dominio restano obbligatori;
+        // sui nodi lisci la validazione Hermite conserva il budget del fit.
+        const auto lines = static_cast<const BSplineSurface &>(surface).cachedSharpKnotLines();
+        const auto &sharp = isU ? lines->u : lines->v;
+        std::vector<double> result{range.lo, range.hi};
+        const auto domain = isU ? surface.uDomain() : surface.vDomain();
+        for (double value : {domain.lo, domain.hi}) if (range.contains(value)) result.push_back(value);
+        for (double value : sharp) if (range.contains(value)) result.push_back(value);
+        return result;
+    }
     default:
         break;
     }
@@ -397,6 +411,8 @@ bool Marcher::firstCrossing(const Params &from, const Params &to, double &fracti
         const Surface &surface = i < 2 ? a_ : b_;
         const bool isU = i % 2 == 0;
         const double lo = std::min(p0, p1), hi = std::max(p0, p1);
+        const bool periodic = isU ? surface.isUPeriodic() : surface.isVPeriodic();
+        const Interval domain = isU ? surface.uDomain() : surface.vDomain();
         auto consider = [&](double c, bool isLimit) {
             const double f = (c - p0) / (p1 - p0);
             if (f >= 0.0 && f < fraction) {
@@ -409,11 +425,13 @@ bool Marcher::firstCrossing(const Params &from, const Params &to, double &fracti
         const std::vector<double> breaks = surfaceBreaks(surface, isU, {lo, hi});
         for (double c : breaks) {
             cancellationPoint();
+            // I limiti si trattano sotto con il flag di arresto. Se il
+            // nodo li registrava prima, a parita' di frazione il flag
+            // restava false e il tracciamento continuava oltre il dominio.
+            if (!periodic && (c == domain.lo || c == domain.hi)) continue;
             const double margin = 1e-12 * (1.0 + std::fabs(c));
             if (c > lo + margin && c < hi - margin) consider(c, false);
         }
-        const bool periodic = isU ? surface.isUPeriodic() : surface.isVPeriodic();
-        const Interval domain = isU ? surface.uDomain() : surface.vDomain();
         if (!periodic) {
             if (std::isfinite(domain.hi) && p1 > domain.hi && p0 <= domain.hi) consider(domain.hi, true);
             if (std::isfinite(domain.lo) && p1 < domain.lo && p0 >= domain.lo) consider(domain.lo, true);
@@ -544,6 +562,16 @@ Stop Marcher::trace(Node &seed, std::vector<Node> &out, Vec3 &tangentPoint) {
             fixed.index = index;
             fixed.value = value;
             if (!correct(y, fixed) || !makeBreakNode(y, current.t, direction, index, next)) {
+                h *= 0.5;
+                continue;
+            }
+            // La correzione su una linea di nodo puo' convergere a
+            // un'altra radice, appena dietro il punto corrente. La
+            // tangente puo' avere lo stesso verso anche su quella radice:
+            // accettarla alternava indefinitamente due punti vicini.
+            // Un passo lungo un ramo regolare deve avanzare nella
+            // direzione prevista; riduciamo il passo e riproviamo.
+            if (!(limit && fraction == 0.0) && dot(next.p - current.p, current.t) < -1e-9 * scale_) {
                 h *= 0.5;
                 continue;
             }
@@ -1712,16 +1740,33 @@ void subdivisionSeeds(const Surface &a, const Surface &b, const Box &bounds, dou
     Interval ua, va, ub, vb;
     parameterWindow(a, bounds, ua, va);
     parameterWindow(b, bounds, ub, vb);
-    const std::vector<BSplineSurface> patchesA = toBSplineSurface(a, ua, va).bezierPatches();
-    const std::vector<BSplineSurface> patchesB = toBSplineSurface(b, ub, vb).bezierPatches();
+    // Le B-spline portano gia' una cache immutabile delle pezze esatte:
+    // ricostruire l'intera griglia per ogni coppia di piccoli ritagli
+    // ripeteva estrazioni e allocazioni del carrier del manico.
+    const auto pieces = [](const Surface &surface, const Interval &u, const Interval &v) {
+        if (surface.type() == SurfaceType::BSpline)
+            return static_cast<const BSplineSurface &>(surface).cachedBezierPatches();
+        return toBSplineSurface(surface, u, v).cachedBezierPatches();
+    };
+    const auto ownerA = pieces(a, ua, va), ownerB = pieces(b, ub, vb);
+    const auto &patchesA = *ownerA, &patchesB = *ownerB;
     const double scale = std::max(bounds.diagonal(), 1e-9);
     const double leafSize = 0.02 * scale;
     const Box area = bounds.padded(10.0 * tolerance);
     std::size_t visits = 0;
     ProjectionWorkspace projectionA(a), projectionB(b);
-    auto newton = [&](Vec3 pa, Vec3 pb) {
-        SurfaceProjection qa = projectionA.project(pa), qb = projectionB.project(pb);
-        double x[4] = {qa.u, qa.v, qb.u, qb.v};
+    auto newton = [&](const BSplineSurface &pa, const BSplineSurface &pb) {
+        const Interval pua = pa.uDomain(), pva = pa.vDomain(), pub = pb.uDomain(), pvb = pb.vDomain();
+        double x[4] = {0.5 * (pua.lo + pua.hi), 0.5 * (pva.lo + pva.hi),
+                       0.5 * (pub.lo + pub.hi), 0.5 * (pvb.lo + pvb.hi)};
+        // Sulle pezze NURBS i parametri sono quelli del carrier originale:
+        // il centro e' gia' noto, non occorre invertirlo globalmente.
+        if (a.type() != SurfaceType::BSpline) {
+            const auto q = projectionA.project(pa.point(x[0], x[1])); x[0] = q.u; x[1] = q.v;
+        }
+        if (b.type() != SurfaceType::BSpline) {
+            const auto q = projectionB.project(pb.point(x[2], x[3])); x[2] = q.u; x[3] = q.v;
+        }
         for (int iteration = 0; iteration < 40; ++iteration) {
             cancellationPoint();
             Vec3 ea[4], eb[4];
@@ -1763,8 +1808,7 @@ void subdivisionSeeds(const Surface &a, const Surface &b, const Box &bounds, dou
         if (++visits > 400000) throw std::domain_error("intersectSurfaces: suddivisione per i semi troppo profonda");
         const double da = boxA.diagonal(), db = boxB.diagonal();
         if ((da <= leafSize && db <= leafSize) || depth > 40) {
-            const Interval pua = pa.uDomain(), pva = pa.vDomain(), pub = pb.uDomain(), pvb = pb.vDomain();
-            newton(pa.point(0.5 * (pua.lo + pua.hi), 0.5 * (pva.lo + pva.hi)), pb.point(0.5 * (pub.lo + pub.hi), 0.5 * (pvb.lo + pvb.hi)));
+            newton(pa, pb);
             return;
         }
         const bool splitA = da >= db;
@@ -2102,17 +2146,24 @@ static bool splineCoincidence(const Surface &a, const Surface &b, const Box &bou
     enum class Cover { On, Off, Mixed };
     // Sopra l'altra e con la stessa normale (una curva di tangenza non basta:
     // serve un blocco 2 x 2 di campioni, che nessuna curva contiene).
-    auto coincidentAt = [&](const Surface &self, const Surface &other, double u, double v, const Vec3 &p) {
-        const SurfaceProjection q = projectPoint(other, p);
-        if (q.distance > tolerance) return false;
+    auto coincidentAt = [&](const Surface &self, const Surface &other, double u, double v, const Vec3 &p, Vec2 *hint) {
+        // Un box Bezier separato e' un certificato negativo; un punto
+        // verificato sul carrier e' un certificato positivo di distanza.
+        if(!surfaceMayBeWithinTolerance(other,p,tolerance))return false;
+        Vec2 uv=hint?*hint:Vec2(NAN,NAN);
+        if(surfaceDeviationAboveTolerance(other,p,tolerance,&uv)>0)return false;
+        if(hint)*hint=uv;
         try {
-            return norm(cross(self.normal(u, v), normalAt(other, q.u, q.v))) <= 1e-6;
-        } catch (const std::exception &) {
-            return false;
-        }
+            if(norm(cross(self.normal(u,v),normalAt(other,uv.x(),uv.y())))<=1e-6)return true;
+            // Un testimone su un ramo diverso non esclude quello piu'
+            // vicino: nei casi ambigui resta il proiettore originale.
+            const auto q=projectPoint(other,p);
+            return q.distance<=tolerance&&norm(cross(self.normal(u,v),normalAt(other,q.u,q.v)))<=1e-6;
+        } catch (const std::exception &) {return false;}
     };
     bool any = false;
     std::vector<IntersectionCurve> cuts;
+    std::vector<std::function<void()>> buildCuts;
     for (int side = 0; side < 2; ++side) {
         cancellationPoint();
         const Surface &self = side == 0 ? a : b, &other = side == 0 ? b : a;
@@ -2129,16 +2180,22 @@ static bool splineCoincidence(const Surface &a, const Surface &b, const Box &bou
             return self.point(u, v);
         };
         std::vector<Box> boxes(nu * nv);
-        for (std::size_t i = 0; i < nu; ++i)
-            for (std::size_t j = 0; j < nv; ++j) {
-                Box &box = boxes[i * nv + j];
-                for (int iu = 0; iu < 5; ++iu)
-                    for (int iv = 0; iv < 5; ++iv) {
-                        double u, v;
-                        box.add(sampleAt(i, j, iu, iv, u, v));
-                    }
-                near[i * nv + j] = box.padded(0.25 * box.diagonal() + tolerance).overlaps(bounds);
-            }
+        const auto &spline=static_cast<const BSplineSurface &>(self);
+        const auto tree=spline.cachedPatchTree();
+        const auto patches=spline.cachedBezierPatches();
+        if(patches->size()!=nu*nv)throw std::logic_error("splineCoincidence: griglia Bezier incoerente");
+        // Visita soltanto i rami che possono incontrare il box richiesto.
+        // I box dei poli racchiudono l'intera pezza, anche fra i campioni.
+        std::vector<int> pending;if(!tree->nodes.empty())pending.push_back(0);
+        const double factor=512*kMachineEpsilon*(spline.uDegree()+1)*(spline.vDegree()+1);
+        while(!pending.empty()) {
+            cancellationPoint();const auto &node=tree->nodes[std::size_t(pending.back())];pending.pop_back();
+            const Box box{node.lo,node.hi};double magnitude=1.;
+            for(int axis=0;axis<3;++axis)magnitude=std::max({magnitude,std::fabs(node.lo[axis]),std::fabs(node.hi[axis])});
+            if(!box.padded(tolerance+factor*magnitude).overlaps(bounds))continue;
+            if(node.leaf>=0){near[std::size_t(node.leaf)]=true;boxes[std::size_t(node.leaf)]=box;}
+            else {pending.push_back(node.first);pending.push_back(node.second);}
+        }
         // Si classificano solo le pezze vicine e le loro adiacenti: le altre
         // non entrano ne' in `any` ne' nei tagli (che stanno tra pezze vicine).
         const auto relevant = [&](std::size_t i, std::size_t j) {
@@ -2149,14 +2206,17 @@ static bool splineCoincidence(const Surface &a, const Surface &b, const Box &bou
         for (std::size_t i = 0; i < nu; ++i)
             for (std::size_t j = 0; j < nv; ++j) {
                 if (!relevant(i, j)) continue;
+                if(boxes[i*nv+j].isEmpty())boxes[i*nv+j]=patchBox((*patches)[i*nv+j]);
                 const Box &box = boxes[i * nv + j];
+                Vec2 hint(NAN,NAN);
                 // Scarto con una proiezione: se il centro della pezza dista
                 // dall'altra superficie piu' della tolleranza e della diagonale,
                 // nessun campione vi sta sopra.
                 {
                     double u, v;
                     const Vec3 center = sampleAt(i, j, 2, 2, u, v);
-                    if (projectPoint(other, center).distance > tolerance + box.diagonal()) continue;  // Cover::Off
+                    if (!surfaceMayBeWithinTolerance(other,center,tolerance+box.diagonal()) ||
+                        surfaceDeviationAboveTolerance(other,center,tolerance+box.diagonal(),&hint)>0) continue;  // Cover::Off
                 }
                 int on = 0, total = 0;
                 bool grid[5][5];
@@ -2164,7 +2224,7 @@ static bool splineCoincidence(const Surface &a, const Surface &b, const Box &bou
                     for (int iv = 0; iv < 5; ++iv) {
                         double u, v;
                         const Vec3 p = sampleAt(i, j, iu, iv, u, v);
-                        grid[iu][iv] = coincidentAt(self, other, u, v, p);
+                        grid[iu][iv] = coincidentAt(self, other, u, v, p, &hint);
                         on += grid[iu][iv];
                         ++total;
                     }
@@ -2174,39 +2234,47 @@ static bool splineCoincidence(const Surface &a, const Surface &b, const Box &bou
                 cover[i * nv + j] = on == total ? Cover::On : (on == 0 ? Cover::Off : Cover::Mixed);
                 any = any || (near[i * nv + j] && block);
             }
-        // Linee di nodo tra due pezze: i tratti che stanno sull'altra
-        // superficie (estremi esatti) e dove da una parte le superfici
-        // coincidono e dall'altra no sono tagli.
-        auto addCuts = [&](bool isU, double value, double lo, double hi, double before, double after) {
-            const CurvePtr<3> line = isU ? self.uIso(value) : self.vIso(value);
-            if (!line) return;
-            for (const Interval &piece : curveOnSurface(*line, {lo, hi}, other, tolerance)) {
-                if (!(piece.length() > 1e-9 * (hi - lo))) continue;
-                const double t = 0.5 * (piece.lo + piece.hi);
-                auto sideOn = [&](double across) {
-                    const double u = isU ? across : t, v = isU ? t : across;
-                    return coincidentAt(self, other, u, v, self.point(u, v));
-                };
-                if (sideOn(before) == sideOn(after)) continue;
-                IntersectionCurve cut;
-                cut.curve = line;
-                cut.range = piece;
-                cuts.push_back(cut);
-            }
-        };
-        for (std::size_t i = 0; i < nu; ++i)
-            for (std::size_t j = 0; j < nv; ++j) {
-                const std::size_t c = i * nv + j;
-                auto candidate = [&](std::size_t d) {
-                    return (near[c] || near[d]) && cover[c] != cover[d] ? true : (near[c] || near[d]) && cover[c] == Cover::Mixed;
-                };
-                if (i + 1 < nu && candidate((i + 1) * nv + j))
-                    addCuts(true, us[i + 1], vs[j], vs[j + 1], us[i + 1] - 0.05 * (us[i + 1] - us[i]), us[i + 1] + 0.05 * (us[i + 2] - us[i + 1]));
-                if (j + 1 < nv && candidate(i * nv + j + 1))
-                    addCuts(false, vs[j + 1], us[i], us[i + 1], vs[j + 1] - 0.05 * (vs[j + 1] - vs[j]), vs[j + 1] + 0.05 * (vs[j + 2] - vs[j + 1]));
-            }
+        // I tagli servono soltanto se almeno un lato ha dimostrato una
+        // zona comune di area. Nei soli contatti tangenti erano calcolati
+        // con molte proiezioni globali e poi scartati integralmente.
+        buildCuts.emplace_back([&,selfPointer=&self,otherPointer=&other,us,vs,cover=std::move(cover),near=std::move(near),nu,nv] {
+            const Surface &self=*selfPointer,&other=*otherPointer;
+            // Linee di nodo tra due pezze: i tratti che stanno sull'altra
+            // superficie (estremi esatti) e dove da una parte le superfici
+            // coincidono e dall'altra no sono tagli.
+            auto addCuts = [&](bool isU, double value, double lo, double hi, double before, double after) {
+                const CurvePtr<3> line = isU ? self.uIso(value) : self.vIso(value);
+                if (!line) return;
+                Vec2 hint(NAN,NAN);
+                for (const Interval &piece : curveOnSurface(*line, {lo, hi}, other, tolerance)) {
+                    if (!(piece.length() > 1e-9 * (hi - lo))) continue;
+                    const double t = 0.5 * (piece.lo + piece.hi);
+                    auto sideOn = [&](double across) {
+                        const double u = isU ? across : t, v = isU ? t : across;
+                        return coincidentAt(self, other, u, v, self.point(u, v), &hint);
+                    };
+                    if (sideOn(before) == sideOn(after)) continue;
+                    IntersectionCurve cut;
+                    cut.curve = line;
+                    cut.range = piece;
+                    cuts.push_back(cut);
+                }
+            };
+            for (std::size_t i = 0; i < nu; ++i)
+                for (std::size_t j = 0; j < nv; ++j) {
+                    const std::size_t c = i * nv + j;
+                    auto candidate = [&](std::size_t d) {
+                        return (near[c] || near[d]) && cover[c] != cover[d] ? true : (near[c] || near[d]) && cover[c] == Cover::Mixed;
+                    };
+                    if (i + 1 < nu && candidate((i + 1) * nv + j))
+                        addCuts(true, us[i + 1], vs[j], vs[j + 1], us[i + 1] - 0.05 * (us[i + 1] - us[i]), us[i + 1] + 0.05 * (us[i + 2] - us[i + 1]));
+                    if (j + 1 < nv && candidate(i * nv + j + 1))
+                        addCuts(false, vs[j + 1], us[i], us[i + 1], vs[j + 1] - 0.05 * (vs[j + 1] - vs[j]), vs[j + 1] + 0.05 * (vs[j + 2] - vs[j + 1]));
+                }
+        });
     }
     if (!any) return false;
+    for(const auto &build:buildCuts)build();
     out.coincident = true;
     // Tagli uguali visti dalle due superfici (la stessa linea di nodo): uno solo.
     for (const IntersectionCurve &cut : cuts) {

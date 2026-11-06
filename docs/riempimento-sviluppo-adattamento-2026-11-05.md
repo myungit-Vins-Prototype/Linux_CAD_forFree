@@ -414,3 +414,127 @@ precedente verifica completa; in questo passaggio sono cambiati soltanto i READM
 e i registri. Il checkpoint include i moduli applicativi/kernel, test e
 rapporti della funzionalita'; CAD originali, copie QA, binari e HTML/JSON generati
 restano esclusi. Nessun push richiesto per questo checkpoint.
+
+## 05/11 — Posa rigida e appoggio F5/F6
+
+L'utente ha chiesto un'alternativa alla deformazione: conservare ciascun solido
+sorgente e orientarlo secondo la **normale locale** della destinazione. Il
+selettore **Metodo → Posiziona senza deformare** e' nello stesso pannello.
+Ogni sorgente e' ruotata/traslata separatamente; il centro dell'ingombro esatto
+nel piano sorgente, a quota zero, diventa il suo punto di appoggio. X segue la
+disposizione nel piano tangente, Z la normale orientata; la distanza normale
+resta regolabile. La base rimane rigida: non viene piegata per farla aderire.
+Il posizionamento usa trasformazioni B-rep esatte, conserva carrier analitici,
+volume, distanze, nomi/genealogia e regioni separate. Nessun nuovo fit.
+
+Il nuovo booleano `mappingRigid` e' salvato nelle estensioni superfici schema5,
+solo quando attivo; gli schemi1–4 continuano a essere letti come deformazione.
+Un downgrade dello schema viene rifiutato atomicamente. Restano invariati i
+valori persistiti delle modalita' e il formato nativo66.
+
+La centratura precedente considerava soltanto la prima faccia. Per F5/F6 di
+Solido cucito16 la sua normale laterale lasciava la seconda falda fuori dal
+grafico di proiezione. **Centra e allinea dalla sorgente** ora usa E20, giunzione
+topologica realmente condivisa, e l'ingombro proiettato dell'insieme delle facce.
+Sul file congelato gia' usato nelle prove precedenti (SHA256
+`441eace4da5d476d17989b1f883132f5495d053d6e582d11c8acb8641dbeee96`)
+calcola appoggio U=0, V=0,521818, Piano4, rotazione90 gradi. Non cambia
+silenziosamente i parametri gia' salvati: il comando va premuto dopo la scelta
+delle destinazioni. Per facce senza una giunzione topologica condivisa con la
+prima conserva la centratura sulla prima faccia.
+
+Il pannello evidenzia i bordi di **tutti i corpi spuntati** e il piano scelto,
+anche quando le sorgenti non sono visibili normalmente. I marcatori sono
+transitori e si rimuovono uscendo dal pannello. Il riferimento visuale dei
+bordi e' kind9; non viene confuso con kind11, usato per le sorgenti intere nel
+contesto della mappatura ma riservato ai punti medi nei riferimenti di misura.
+
+Prove effettive:
+
+- kernel: volume e distanze rigide, carrier piani invariati, normale locale su
+  NURBS multifaccia, rifiuto sovrapposizioni; regressioni dello sviluppo e
+  deformazione preesistenti. Classificazione UV interno/esterno/bordo.
+- applicazione: schema5/compatibilita'/downgrade atomico, rigenerazione senza
+  cache, Undo/Redo, riapertura Metodo e due destinazioni, marcatori corpi/piano.
+- **15/15 CTest PASS**,11,71s; compilati app e runner Linux.
+- **Wayland KnifeHandle:96 solidi/672 facce su F5+F6 PASS**, volume51,3571mm3,
+  distanze di ogni coppia di vertici di ciascuna sorgente conservate entro1e-9mm,
+  volume totale entro1e-8mm3, checkBody, anteprima/Conferma/modifica,
+  salvataggio/lettura/rigenerazione dell'ultima funzione senza cache, Undo/Redo.
+  Marcatori verificati anche nel viewport. Evidenze nella cartella ignorata
+  `forgecad-release/knifehandle-wrap-twofaces-qa/`: `native-rigid-final.log`,
+  `panel-current-initial.png`, `viewport-highlights.png`, `viewport-current.png`,
+  `KnifeHandle-Riempimento19-F5-F6-rigido.prt`. Originale non modificato.
+
+La deformazione continua delle96copie sulle due facce dense rimane una prova
+separata dalla posa rigida: sono in corso profilazione e verifiche delle
+intersezioni ripetute. Le prove rigide non certificano quel percorso.
+
+### File aggiornato:155 copie e correzione dell'anteprima
+
+Il file salvato durante le verifiche contiene173funzioni/155copie, non le115
+funzioni/96copie della prima fotografia congelata. Copia di prova
+`input-7f89e509.prt`,19401127byte, SHA256
+`7f89e50938bb8639f47b01e450069b399874e0ac499490c69249f79fa396798b`.
+
+Sul nuovo file il solo centraggio dei bounding box lasciava il centro della
+copia29 fuori dall'appoggio. Il comando ora verifica gli input e cerca una
+piccola traslazione entro mezzo passo minimo della ripetizione, scegliendo la
+prima valida in ordine di distanza. Non scala i corpi e non cambia le distanze
+fra le copie. I valori corretti restano visibili: nel caso verificato
+X=0,473794mm,Y=0,510235mm, U=0,V=0,521818,angolo90gradi,Piano4.
+La ricerca finita non prova l'impossibilita' quando non trova una traslazione.
+Per facce singole vengono usati soltanto i vertici delle facce selezionate.
+
+C'era anche una causa indipendente: la chiave di anteprima ometteva sorgenti,
+U/V,X/Y,angolo,offset,conservazione sorgenti e metodo. Il viewport poteva
+riusare un errore o un B-rep precedente, e la modifica poteva apparire invariata.
+La chiave ora contiene tutti questi dati e i nomi genealogici dei riferimenti.
+Test reale errore→cambio posizione→anteprima valida→nuovo spostamento geometrico,
+oltre alle regressioni su persistenza, Undo/Redo e riapertura dei pannelli.
+
+**Posa rigida del file aggiornato: PASS Wayland**,155solidi/1085facce,
+volume82,9202mm3 circa. Controllate tutte le distanze fra coppie di vertici
+all'interno di ciascuna copia (1e-9mm), volume complessivo (1e-8mm3),
+appartenenza di ciascun centro a F5/F6 e corrispondenza di ciascun asse Z con la
+normale orientata locale (1e-8). Conferma, modifica, Undo/Redo, codec e
+rigenerazione dell'ultima funzione senza cache PASS. Evidenze:
+`native155-final.log`, `KnifeHandle-155-F5-F6-rigido.prt`, screenshot nella stessa
+cartella QA. Il CAD originale e' rimasto invariato.
+
+Il percorso del fit distingue ora il materiale sorgente dalla finestra
+rettangolare del suo carrier: triangoli e poligoni possono avere angoli del
+rettangolo che non appartengono alla faccia. Le guardie sul Jacobiano si
+applicano al materiale; il fit puo' usare una continuazione matematica fuori
+dal trim soltanto per quella parte inutilizzata del carrier. Vertici e curve
+di bordo reali restano controllati sull'appoggio rifilato. Un test triangolare
+copre la correzione; il negativo con vuoto fra le destinazioni continua a
+fallire. Il limite200000 e' applicato alla cache dei contatti, che viene
+svuotata, senza dichiarare una geometria invalida per aver superato un numero
+di accessi; restano i limiti di fit e la cancellazione.
+
+Il classificatore UV evita una nuova proiezione globale di parametri gia' noti.
+Le intersezioni retta/NURBS usano il raggio nel BVH e un percorso rapido sulle
+pezze polinomiali soltanto quando i poli delle derivate limitano la norma di
+I-AJ: unicita' della radice e/o esclusione intervallare. Negli altri casi resta
+la suddivisione completa; test con superficie ripiegata a due radici e
+sovrapposizioni conservano i rifiuti precedenti. Nessuna tolleranza aumentata.
+
+**Limite ancora aperto:** la deformazione completa delle155copie non e'
+risolta. Con la mappa normale attuale il primo solido fallisce al punto del
+piano sorgente X=-25,8149464709,Y=-9,70279121999,Z=0,1mm. Ora il messaggio
+riporta anche queste coordinate. L'esito rigido non certifica la deformazione.
+Prototipi di trasporto UV/arco e appoggio locale sono rimasti nella cartella
+QA ignorata; le prove di deformazione non hanno prodotto una convalida entro
+300s e non sono state integrate. Non e' stata estesa silenziosamente la
+superficie oltre il trim per far accettare punti del materiale reale.
+
+Validazione finale della build consegnata: **18/18 CTest PASS**,11,00s, con
+rilink dei binari kernel interessati. Inclusi anche parametrizzazione superfici,
+loft con guide proiettate e booleane sulle cuciture. App e runner ricompilati.
+`native155-delivery.log` conferma nuovamente la posa rigida, tutte le normali,
+Undo/Redo e rigenerazione dopo la pulizia degli esperimenti numerici; il file
+risultante e'19686894byte. Mappa609file/8565relazioni/294TU/0diagnostiche,
+`--check` PASS; verificati call/include nei due versi e overview+7dettagli HTML.
+Tolleranze di query e passo originario delle derivate conservati nella build
+finale; le variazioni provate durante l'indagine non sono state mantenute.

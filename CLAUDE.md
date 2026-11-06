@@ -1,9 +1,9 @@
 # CLAUDE.md — memoria operativa ForgeCAD
 
-Aggiornato il **5 novembre 2026**. Leggere con `AGENTS.md`; approfondire solo l’area richiesta.
+Aggiornato il **6 novembre 2026**. Leggere con `AGENTS.md`; approfondire solo l’area richiesta.
 
 Cronologia: [archivio al 2 novembre](docs/history/claude-2026-11-02.md). **Leggere solo le voci pertinenti**,
-non l’intero archivio. Gli stati storici sono superati da questa sintesi e dai sorgenti.
+non integralmente. Sintesi e sorgenti superano gli stati storici.
 
 ## Regole permanenti e decisioni
 
@@ -13,8 +13,7 @@ non l’intero archivio. Gli stati storici sono superati da questa sintesi e dai
 - Aggiornare a ogni traguardo e prima della risposta finale. Rileggere e preservare le altre chat; distinguere
   implementato, verificato, sperimentale e proposto, con prove effettive e limiti.
 - Mantenere **circa 200 righe e al massimo 16 KiB**, con non più di 10 interventi recenti sintetici. Aggiornare la voce
-  tematica invece di accumulare diagnosi, tentativi e successivi stati della stessa modifica. Spostare i dettagli in rapporti
-  `docs/` o nell'archivio, senza perderli. Non inserire log grezzi, lunghe liste di hash o comandi di ogni passaggio.
+  tematica; dettagli in rapporti `docs/` o archivio. Niente log grezzi o comandi ripetitivi.
 - **Geometria ingegneristica esatta**: coordinate e calcoli in `double`, curve analitiche/NURBS e solidi B-rep. Mesh,
   campioni di display, pixel, `float` e `QVector3D` servono alla visualizzazione/selezione, mai a booleane, misure o volumi.
   Nessun CSG su mesh.
@@ -31,8 +30,8 @@ non l’intero archivio. Gli stati storici sono superati da questa sintesi e dai
 
 ## Mappa essenziale e stato implementato
 
-ForgeCAD è un CAD parametrico 2D/3D per Linux e macOS, in C++17/Qt6 con viewport OpenGL 3.3 Core. `PdfWindow` è il nome
-storico della finestra principale. `pdfReader.c`, `pdfView.c` e vecchi binari PDF sono legacy, esclusi dall'app.
+CAD parametrico 2D/3D Linux/macOS, C++17/Qt6/OpenGL3.3 Core. Finestra storica `PdfWindow`;
+`pdfReader.c`, `pdfView.c` e binari PDF sono legacy esclusi.
 
 | Area | Moduli e comportamento attuale |
 | --- | --- |
@@ -70,8 +69,7 @@ ctest --test-dir forgecad-release --output-on-failure
 - Vista architetturale: avviare `python3 tools/open_architecture.py` per controllo/aggiornamento all'apertura. Dopo
   cambiamenti strutturali aggiornare descrizioni/gruppi in `tools/generate_architecture.py`, rigenerare sulla build
   pertinente e verificare `python3 tools/generate_architecture.py --check`; controllare collegamenti in entrambi i versi e
-  resa HTML, distinguendo call/include/reference. La compilazione CMake non rigenera la mappa. `docs/architecture/index.html`
-  e `graph.json` sono generati e ignorati da Git: non forzarne l'aggiunta. [Istruzioni](docs/architecture/README.md).
+  resa HTML, distinguendo call/include/reference. CMake non rigenera la mappa. HTML/JSON sono generati e ignorati: non forzarne l'aggiunta. [Istruzioni](docs/architecture/README.md).
 - Approfondimenti da aprire solo se pertinenti: [roadmap](docs/roadmap.md), [schizzi](docs/sketch-tools.md),
   [storia](docs/storyboard-history.md), [tavole/revisioni](docs/drawing-revisions-study.md),
   [prestazioni](docs/viewport-performance.md), [review corrente](docs/code-review-2026-11-02.md). Rapporti datati e archivio
@@ -125,14 +123,19 @@ App/17CTest/42Loft/11Mass/Wayland PASS; mappa596/8294/check/7HTML PASS.
 **05/11 — UI/checkpoint/mappature.** `e1bde03` su origin/main,13CTest PASS.
 ISO M1–M68, ribbon, loft440px, schizzi vuoti: app/GUI PASS.
 [UI](docs/ui-ribbon-loft-filettature-2026-11-05.md).
-Mappature:4pattern, sviluppo Taglio12:F2–F5, appoggio multifaccia/schema4; F0/F1 non sviluppabili.
-Riempimento19/F6: fit/derivate e allineamento corretti;96solidi/672facce. App/8CTest/Wayland/Undo/codec/rigenerazione/mappa PASS.
-README IT/EN:128link/15CTest PASS; checkpoint locale.
-[Prove e limiti](docs/riempimento-sviluppo-adattamento-2026-11-05.md).
+Mappature:4pattern,Taglio12:F2–F5,multifaccia/posa rigida155, app/18CTest PASS.
+`7894f64` nel checkpoint. [Prove](docs/riempimento-sviluppo-adattamento-2026-11-05.md).
+**06/11 — Superfici/storia, checkpoint origin/main.** R20schema8:117copie/GUI/codec/no-cache,15CTest PASS.
+Unione168:1188facce/1solido,GUI155s/Undo/codec/3viste,92kernel+9CTest PASS;app aggiornata. [Prove](docs/knifehandle-unione-rilievi-2026-11-06.md).
+Schema7:18CTest/F5-F6-P5/GUI/Undo/codec/no-cache PASS; -16,70/+32,41%.
+[Superfici](docs/confronto-flatten-quilt-creo-2026-11-06.md).
+Rigenerazione per dipendenze: app/29CTest e Wayland KnifeHandle151 PASS;
+B-rep precedenti invariati,1–5ms modello; mappa/check/13HTML PASS.
+[Storia](docs/rigenerazione-incrementale-2026-11-06.md).
 
 **04/11 — Griglie, specchi e guide.** `3c644e2`: istanze condivise, B-rep2/cache10;
 `9eff99c`: appoggi G1/riordino e F7/E25 verificati. Griglie/cache11: PRT190,5→88,7MB,
-STEP745,1→458,7MB; shell928,5→642,7MB. App/runner/QA native e suite pertinenti PASS.
+STEP745,1→458,7MB; shell928,5→642,7MB. App/runner/QA/suite PASS.
 [Specchi](docs/riduzione-complessita-specchi-2026-11-03.md),[guide](docs/loft-controlli-guide-2026-11-04.md),
 [griglie/budget](docs/riduzione-griglie-loft-step-2026-11-04.md),[F7/E25](docs/loft-selezione-facce-storiche-2026-11-04.md).
 [Dettagli storici](docs/history/claude-prima-taglio-reciproco-2026-11-05.md).
@@ -181,5 +184,3 @@ App/ASan/UBSan PASS; mappa579/8023/278/check/5HTML PASS.
 [checkpoint](docs/history/claude-checkpoint-prima-storyboard-2026-11-03.md).
 Quote/normali/shell `de1448a`/`7651724`: [archivio](docs/history/claude-intersezioni-2026-11-04.md).
 Schizzi/Estendi/unione `8121ed7`: [registro](docs/history/claude-prima-svuotamento-2026-11-04.md).
-
-Per lavori più vecchi consultare archivi/Git e verificare i sorgenti.

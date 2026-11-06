@@ -43,8 +43,107 @@ static void mappingAndFillTools() {
     require(std::fabs(massProperties(*cylinder.extrusions().last().forgeBody).volume-8.4)<1e-4,"volume deformazione applicativa");
     require(encodeDocument(cylinder.currentDocument(),bytes).isEmpty()&&decodeDocument(bytes,decoded).isEmpty(),"codec deformazione");
     require(decoded.extrusions.last().surfaceTool.mode==4&&decoded.extrusions.last().surfaceTool.mappingU==kHalfPi,"ancoraggio deformazione persistente");
+    const auto baseKey=Gui::FeaturePreviewBuilder::previewKey(wrap,-1);
+    for(int parameter=0;parameter<10;++parameter) {
+        auto changed=wrap;auto &m=changed.surfaceTool;
+        if(parameter==0)m.mappingU+=.01;
+        if(parameter==1)m.mappingV+=.01;
+        if(parameter==2)m.mappingX+=1;
+        if(parameter==3)m.mappingY+=1;
+        if(parameter==4)m.mappingAngle+=1;
+        if(parameter==5)m.mappingOffset+=1;
+        if(parameter==6)m.mappingCopy=!m.mappingCopy;
+        if(parameter==7)m.mappingRigid=true;
+        if(parameter==9)m.mappingQuilt=true;
+        if(parameter==8){GeometryRef source;source.kind=11;source.index=2;m.sources={source};}
+        require(Gui::FeaturePreviewBuilder::previewKey(changed,-1)!=baseKey,"ogni parametro di mappatura invalida anteprima e modifica");
+    }
     CadViewport reopened;reopened.loadDocument(decoded);require(reopened.extrusions().last().forgeBody&&reopened.extrusions().last().error.isEmpty(),"rigenerazione deformazione riaperta");
     cylinder.undo();require(cylinder.extrusions().size()==3,"Undo deformazione");cylinder.redo();require(cylinder.extrusions().size()==4,"Redo deformazione");
+    auto quiltDefinition=wrap;quiltDefinition.surfaceTool.mappingQuilt=true;
+    require(cylinder.createBody(quiltDefinition).isEmpty(),"piegatura applicativa da quilt appiattito");
+    require(encodeDocument(cylinder.currentDocument(),bytes).isEmpty()&&decodeDocument(bytes,decoded).isEmpty(),"codec quilt schema6");
+    require(decoded.extrusions.last().surfaceTool.mappingQuilt&&!decoded.extrusions.last().surfaceTool.mappingRigid,"metodo quilt persistente");
+    auto quiltJson=QJsonDocument::fromJson(surfaceToolsExtras(cylinder.extrusions())).object();
+    require(quiltJson["schema"].toInt()==6,"schema6 per mappa piano/quilt");
+    quiltJson["schema"]=5;auto atomicQuilt=cylinder.extrusions();
+    require(!applySurfaceToolsExtras(QJsonDocument(quiltJson).toJson(),atomicQuilt).isEmpty()&&atomicQuilt.last().surfaceTool.mappingQuilt,"downgrade quilt rifiutato atomicamente");
+    auto quiltRead=decoded;quiltRead.extrusions.last().cachedGeometry=false;quiltRead.extrusions.last().forgeBody.reset();quiltRead.extrusions.last().display={};
+    CadViewport quiltAgain;quiltAgain.loadDocument(quiltRead);
+    require(quiltAgain.extrusions().last().forgeBody&&quiltAgain.extrusions().last().error.isEmpty(),"quilt rigenerato senza cache");
+    cylinder.undo();require(cylinder.extrusions().size()==4,"Undo piegatura quilt");cylinder.redo();require(cylinder.extrusions().last().surfaceTool.mappingQuilt,"Redo piegatura quilt");
+    // Il nuovo appiattimento usa schema7; i vecchi metodi restano distinti.
+    DocumentState flattenState;flattenState.extrusions={seedBox};CadViewport flattenView;flattenView.loadDocument(flattenState);
+    const auto flattenSource=flattenView.extrusions()[0].forgeBody;const auto flattenFace=flattenSource->faces()[0];Vec3 flattenPoint;Vec2 flattenAnchor;
+    require(faceInteriorPoint(*flattenSource,flattenFace,flattenPoint,&flattenAnchor),"punto interno da appiattire");
+    GeometryRef flattenRef;flattenRef.kind=5;flattenRef.index=0;flattenRef.point.subshape=flattenFace.index;
+    flattenRef.point.geometry=int(flattenSource->face(flattenFace).surface->type());flattenRef.point.x=flattenPoint.x();flattenRef.point.y=flattenPoint.y();flattenRef.point.z=flattenPoint.z();
+    auto flattenDefinition=flat;flattenDefinition.surfaceTool.mappingQuilt=true;flattenDefinition.surfaceTool.mappingU=flattenAnchor.x();flattenDefinition.surfaceTool.mappingV=flattenAnchor.y();
+    flattenDefinition.surfaceTool.targets={flattenRef,plane};flattenDefinition.surfaceTool.sources={flattenRef};flattenDefinition.firstBody=0;
+    require(flattenView.createBody(flattenDefinition).isEmpty(),"creazione appiattimento associativo");
+    require(flattenView.extrusions().last().notice.contains("campionata")&&flattenView.isBodyVisibleInScene(0),"deformazione indicata e sorgente conservata");
+    QByteArray flattenBytes;DocumentState flattenDecoded;
+    require(encodeDocument(flattenView.currentDocument(),flattenBytes).isEmpty()&&decodeDocument(flattenBytes,flattenDecoded).isEmpty()&&
+        flattenDecoded.extrusions.last().surfaceTool.mappingQuilt,"codec appiattimento schema7");
+    auto flattenJson=QJsonDocument::fromJson(surfaceToolsExtras(flattenView.extrusions())).object();
+    require(flattenJson["schema"].toInt()==7,"schema7 esclusivo del nuovo appiattimento");flattenJson["schema"]=6;
+    auto flattenAtomic=flattenView.extrusions();
+    require(!applySurfaceToolsExtras(QJsonDocument(flattenJson).toJson(),flattenAtomic).isEmpty()&&flattenAtomic.last().surfaceTool.mappingQuilt,
+        "appiattimento rifiutato atomicamente senza schema7");
+    flattenView.undo();require(flattenView.extrusions().size()==1,"Undo appiattimento");flattenView.redo();require(flattenView.extrusions().size()==2,"Redo appiattimento");
+    flattenDecoded.extrusions.last().cachedGeometry=false;flattenDecoded.extrusions.last().forgeBody.reset();flattenDecoded.extrusions.last().display={};
+    CadViewport flattenAgain;flattenAgain.loadDocument(flattenDecoded);
+    require(flattenAgain.extrusions().last().forgeBody&&flattenAgain.extrusions().last().error.isEmpty(),"appiattimento rigenerato senza cache");
+    const auto beforeLinkedDecoded=decoded;
+    // Il riempimento usa le coordinate effettive dell'appiattimento ruotato/traslato.
+    auto movedFlat=flattenView.extrusions()[1];movedFlat.surfaceTool.mappingAngle=90;
+    movedFlat.surfaceTool.mappingX=-3;movedFlat.surfaceTool.mappingY=2;
+    require(flattenView.updateBody(1,movedFlat).isEmpty(),"appiattimento ruotato e traslato");
+    const auto flatBody=flattenView.extrusions()[1].forgeBody;const auto flatBounds=faceBox(*flatBody,flatBody->faces()[0]);
+    ExtrusionObject flatSeed;flatSeed.feature=BodyFeature::Primitive;flatSeed.primitive.origin[0]=.5*(flatBounds.lo.x()+flatBounds.hi.x())-.05;
+    flatSeed.primitive.origin[1]=.5*(flatBounds.lo.y()+flatBounds.hi.y())-.05;flatSeed.primitive.size[0]=.1;flatSeed.primitive.size[1]=.1;flatSeed.primitive.size[2]=.05;
+    require(flattenView.createBody(flatSeed).isEmpty(),"solido nell'appiattimento");
+    GeometryRef mapRef;mapRef.kind=11;mapRef.index=1;mapRef.featureId=flattenView.extrusions()[1].featureId;
+    GeometryRef flatSeedRef;flatSeedRef.kind=11;flatSeedRef.index=2;flatSeedRef.featureId=flattenView.extrusions()[2].featureId;
+    ExtrusionObject linked;linked.feature=BodyFeature::SurfaceTools;linked.firstBody=2;linked.surfaceTool.mode=4;linked.surfaceTool.mappingQuilt=true;
+    linked.surfaceTool.sources={flatSeedRef};linked.surfaceTool.targets={flattenRef,mapRef};
+    auto inverse=linked.surfaceTool;GeometryRef originalPlane;QString inverseError;
+    require(resolveFlattenedMapping(inverse,3,flattenView.extrusions(),originalPlane,&inverseError),qPrintable(inverseError));
+    require(inverse.mappingAngle==-90&&std::fabs(inverse.mappingX+2)<1e-12&&std::fabs(inverse.mappingY+3)<1e-12&&originalPlane.kind==1,"inversa completa R(-A)(q-T)");
+    require(flattenView.createBody(linked).isEmpty(),"piegatura collegata alla mappa originale");
+    require(bodyOperands(flattenView.extrusions().last()).contains(1),"dipendenza esplicita dall'appiattimento");
+    require(encodeDocument(flattenView.currentDocument(),bytes).isEmpty()&&decodeDocument(bytes,decoded).isEmpty(),"codec collegamento all'appiattimento");
+    require(decoded.extrusions.last().surfaceTool.targets[1].kind==11,"mappa sorgente conservata");
+    auto linkedJson=QJsonDocument::fromJson(surfaceToolsExtras(flattenView.extrusions())).object();require(linkedJson["schema"].toInt()==8,"schema8 per l'inversa associativa");
+    linkedJson["schema"]=7;auto linkedAtomic=flattenView.extrusions();require(!applySurfaceToolsExtras(QJsonDocument(linkedJson).toJson(),linkedAtomic).isEmpty()&&linkedAtomic.last().surfaceTool.targets[1].kind==11,"downgrade collegamento rifiutato atomicamente");
+    flattenView.undo();require(flattenView.extrusions().size()==3,"Undo inversa associativa");flattenView.redo();require(flattenView.extrusions().size()==4,"Redo inversa associativa");
+    decoded.extrusions.last().cachedGeometry=false;decoded.extrusions.last().forgeBody.reset();decoded.extrusions.last().display={};
+    CadViewport linkedAgain;linkedAgain.loadDocument(decoded);require(linkedAgain.extrusions().last().forgeBody&&linkedAgain.extrusions().last().error.isEmpty(),"inversa rigenerata senza cache");
+    auto invalidLink=linked;invalidLink.surfaceTool.mappingQuilt=false;
+    require(!flattenView.createBody(invalidLink).isEmpty(),"mappa esplicita incompatibile con metodi differenti");
+    // L'anteprima copia anche il piano usato indirettamente dall'appiattimento.
+    DocumentState datumMappingState;ExtrusionObject mappingDatum;mappingDatum.feature=BodyFeature::DatumPlane;
+    mappingDatum.datum.mode=0;mappingDatum.datum.refs={plane};mappingDatum.datum.distance=2;
+    datumMappingState.extrusions={mappingDatum,seedBox};CadViewport datumMapping;datumMapping.loadDocument(datumMappingState);
+    require(datumMapping.extrusions()[0].datumValid,"piano sorgente indiretto valido");
+    auto datumFace=flattenRef;datumFace.index=1;datumFace.featureId=datumMapping.extrusions()[1].featureId;
+    GeometryRef datumRef;datumRef.kind=8;datumRef.index=0;datumRef.featureId=datumMapping.extrusions()[0].featureId;
+    auto datumFlat=flattenDefinition;datumFlat.firstBody=1;datumFlat.surfaceTool.sources={datumFace};datumFlat.surfaceTool.targets={datumFace,datumRef};
+    require(datumMapping.createBody(datumFlat).isEmpty(),"appiattimento su piano di costruzione");
+    const auto datumSheet=datumMapping.extrusions()[2].forgeBody;const auto datumBounds=faceBox(*datumSheet,datumSheet->faces()[0]);
+    auto datumSeed=flatSeed;datumSeed.primitive.origin[0]=.5*(datumBounds.lo.x()+datumBounds.hi.x())-.05;
+    datumSeed.primitive.origin[1]=.5*(datumBounds.lo.y()+datumBounds.hi.y())-.05;datumSeed.primitive.origin[2]=datumBounds.lo.z();
+    require(datumMapping.createBody(datumSeed).isEmpty(),"seme sul piano di costruzione");
+    GeometryRef datumLink;datumLink.kind=11;datumLink.index=2;datumLink.featureId=datumMapping.extrusions()[2].featureId;
+    GeometryRef datumSource;datumSource.kind=11;datumSource.index=3;datumSource.featureId=datumMapping.extrusions()[3].featureId;
+    auto datumBend=linked;datumBend.firstBody=3;datumBend.surfaceTool.sources={datumSource};datumBend.surfaceTool.targets={datumFace,datumLink};
+    datumMapping.requestPreview(datumBend);QElapsedTimer datumPreviewTime;datumPreviewTime.start();
+    while(datumMapping.previewPending()&&datumPreviewTime.elapsed()<10000){QApplication::processEvents();QThread::msleep(1);}
+    require(!datumMapping.previewPending()&&datumMapping.previewError().isEmpty()&&datumMapping.preview_.geometry,"anteprima con piano indiretto copiato nello snapshot");
+    datumMapping.clearPreview();
+    decoded=beforeLinkedDecoded;
+    auto incompatible=flattenDefinition;incompatible.surfaceTool.mappingRigid=true;
+    require(!flattenView.createBody(incompatible).isEmpty(),"posizionamento rigido incompatibile con distensione");
     DocumentState perforated;perforated.sketches={boundary};ExtrusionObject plate;plate.feature=BodyFeature::Primitive;plate.primitive.size[0]=20;plate.primitive.size[1]=12;plate.primitive.size[2]=3;
     ExtrusionObject tool;tool.feature=BodyFeature::Primitive;tool.primitive.kind=PrimitiveKind::Cylinder;tool.primitive.origin[0]=.5;tool.primitive.origin[1]=.5;tool.primitive.size[0]=.5;tool.primitive.size[1]=3;
     ExtrusionObject cut;cut.operation=2;cut.firstBody=0;cut.secondBody=1;perforated.extrusions={plate,tool,cut};CadViewport repeatedFeature;repeatedFeature.loadDocument(perforated);
@@ -92,6 +191,26 @@ static void mappingAndFillTools() {
     supportState.extrusions={supportA,supportB,bridge};CadViewport joined;joined.loadDocument(supportState);
     const auto supportRef=[&](int index) {const auto body=joined.extrusions()[index].forgeBody;const auto id=body->faces()[0];Vec3 point;require(faceInteriorPoint(*body,id,point),"punto appoggio multiplo");GeometryRef r;r.kind=5;r.index=index;r.point.subshape=id.index;r.point.geometry=int(body->face(id).surface->type());r.point.x=point.x();r.point.y=point.y();r.point.z=point.z();return r;};
     const auto destinationA=supportRef(0),destinationB=supportRef(1);
+    const auto beforeAreasDecoded=decoded;
+    // Due facce coplanari adiacenti formano un dominio unico: copie anche sulla giunzione.
+    auto areaState=supportState;areaState.sketches[0].segments={{{0,0},{3,0}},{{3,0},{3,4}},{{3,4},{0,4}},{{0,4},{0,0}}};
+    areaState.sketches[1].segments={{{3,0},{6,0}},{{6,0},{6,4}},{{6,4},{3,4}},{{3,4},{3,0}}};
+    areaState.extrusions[2].primitive.size[0]=2;areaState.extrusions[2].primitive.size[1]=2;CadViewport areas;areas.loadDocument(areaState);
+    const auto areaRef=[&](int index){const auto body=areas.extrusions()[index].forgeBody;Vec3 p;require(faceInteriorPoint(*body,body->faces()[0],p),"interno contorno multifaccia");GeometryRef r;r.kind=5;r.index=index;r.featureId=areas.extrusions()[index].featureId;r.point.subshape=body->faces()[0].index;r.point.geometry=int(SurfaceType::Plane);r.point.x=p.x();r.point.y=p.y();r.point.z=p.z();return r;};
+    PatternParameters tiled;tiled.kind=3;tiled.refs={areaRef(0),areaRef(1)};tiled.spacing=2;tiled.spacing2=2;tiled.angle=0;
+    require(patternPlacements(tiled,3,areas.sketches(),areas.extrusions(),places,&error,2)&&places.size()==6,"riempimento multifaccia attraversa il bordo comune");
+    ExtrusionObject tiledDefinition;tiledDefinition.feature=BodyFeature::Pattern;tiledDefinition.firstBody=2;tiledDefinition.pattern=tiled;
+    require(areas.createBody(tiledDefinition).isEmpty(),"creazione riempimento multifaccia");
+    require(encodeDocument(areas.currentDocument(),bytes).isEmpty()&&decodeDocument(bytes,decoded).isEmpty()&&decoded.extrusions[3].pattern.refs.size()==2,"codec contorno multifaccia");
+    areas.undo();require(areas.extrusions().size()==3,"Undo contorno multifaccia");areas.redo();require(areas.extrusions()[3].pattern.refs.size()==2,"Redo contorno multifaccia");
+    auto badAreas=tiled;badAreas.refs.append(badAreas.refs.front());require(!patternPlacements(badAreas,3,areas.sketches(),areas.extrusions(),places,&error,2),"faccia duplicata rifiutata");
+    auto separateState=areaState;for(auto &segment:separateState.sketches[1].segments){segment.first.rx()+=2;segment.second.rx()+=2;}
+    CadViewport separateAreas;separateAreas.loadDocument(separateState);auto separatePattern=tiled;separatePattern.refs[1].point.x+=2;
+    require(patternPlacements(separatePattern,3,separateAreas.sketches(),separateAreas.extrusions(),places,&error,2)&&places.size()==4,"copie nel vuoto fra facce disgiunte escluse");
+    auto offsetArea=areaState;offsetArea.sketches[1].customFrame=true;offsetArea.sketches[1].frame.origin[2]=1;
+    CadViewport offsetAreas;offsetAreas.loadDocument(offsetArea);auto nonplanarPattern=tiled;nonplanarPattern.refs[1].point.z=1;
+    require(!patternPlacements(nonplanarPattern,3,offsetAreas.sketches(),offsetAreas.extrusions(),places,&error,2)&&error.contains("complanari"),"facce su piani differenti rifiutate");
+    decoded=beforeAreasDecoded;
     auto joinedDefinition=wrap;joinedDefinition.firstBody=2;joinedDefinition.surfaceTool.targets={destinationA,plane,destinationB};joinedDefinition.surfaceTool.mappingU=0;joinedDefinition.surfaceTool.mappingV=0;
     require(joined.createBody(joinedDefinition).isEmpty(),"un unico corpo attraversa due destinazioni");
     require(joined.extrusions().last().forgeBody->faces().size()==6&&std::fabs(massProperties(*joined.extrusions().last().forgeBody).volume-.4)<1e-7,"nessuna copia per destinazione");
@@ -100,9 +219,36 @@ static void mappingAndFillTools() {
     require(decodeDocument(bytes,joinedRead).isEmpty()&&joinedRead.extrusions.last().surfaceTool.targets.size()==3,"schema4 conserva tutte le destinazioni");
     for(auto &object:joinedRead.extrusions){object.cachedGeometry=false;object.forgeBody.reset();object.display={};}
     CadViewport joinedAgain;joinedAgain.loadDocument(joinedRead);require(joinedAgain.extrusions().last().forgeBody&&joinedAgain.extrusions().last().error.isEmpty(),"rigenerazione multidestinazione senza cache");
+    CadViewport previewCheck;previewCheck.loadDocument(supportState);
+    const auto waitPreview=[&] {
+        QElapsedTimer elapsed;elapsed.start();
+        while(previewCheck.previewPending()&&elapsed.elapsed()<10000){QApplication::processEvents();QThread::msleep(1);}
+        require(!previewCheck.previewPending(),"anteprima termina nei tempi");
+    };
+    auto badPlacement=joinedDefinition;badPlacement.surfaceTool.mappingX=100;badPlacement.surfaceTool.mappingRigid=true;
+    previewCheck.requestPreview(badPlacement);waitPreview();require(!previewCheck.previewError().isEmpty(),"anteprima posizione fuori appoggio fallisce");
+    auto fixedPlacement=badPlacement;fixedPlacement.surfaceTool.mappingX=0;
+    previewCheck.requestPreview(fixedPlacement);waitPreview();require(previewCheck.previewError().isEmpty()&&previewCheck.preview_.valid,"correzione posizione elimina errore precedente");
+    fixedPlacement.surfaceTool.mappingY=.25;
+    previewCheck.requestPreview(fixedPlacement);waitPreview();require(previewCheck.previewError().isEmpty(),"spostamento valido ricalcolato");
+    const auto movedBody=previewCheck.preview_.geometry;double centerY=0;for(auto id:movedBody->vertices())centerY+=movedBody->vertex(id).point.y();
+    require(std::fabs(centerY/double(movedBody->vertices().size())-.25)<1e-10,"geometria anteprima rispetta nuova posizione");
+    previewCheck.clearPreview();
     auto oldSchema=QJsonDocument::fromJson(surfaceToolsExtras(joined.extrusions())).object();oldSchema["schema"]=3;auto oldOutput=joined.extrusions();
     require(!applySurfaceToolsExtras(QJsonDocument(oldSchema).toJson(),oldOutput).isEmpty()&&oldOutput.last().surfaceTool.targets.size()==3,"destinazioni multiple senza schema4 rifiutate atomicamente");
     joined.undo();require(joined.extrusions().size()==3,"Undo appoggio multiplo");joined.redo();require(joined.extrusions().size()==4,"Redo appoggio multiplo");
+    auto rigidDefinition=joinedDefinition;rigidDefinition.surfaceTool.mappingRigid=true;
+    require(joined.createBody(rigidDefinition).isEmpty(),"creazione posizionamento rigido multifaccia");
+    require(std::fabs(massProperties(*joined.extrusions().last().forgeBody).volume-.4)<1e-8,"volume rigido applicativo");
+    require(encodeDocument(joined.currentDocument(),bytes).isEmpty()&&decodeDocument(bytes,joinedRead).isEmpty(),"codec rigido schema5");
+    require(joinedRead.extrusions.last().surfaceTool.mappingRigid&&joinedRead.extrusions.last().surfaceTool.targets.size()==3,"metodo e superfici persistenti");
+    auto rigidExtras=QJsonDocument::fromJson(surfaceToolsExtras(joined.extrusions())).object();
+    require(rigidExtras["schema"].toInt()==5,"schema5 dichiarato per posizionamento rigido");
+    rigidExtras["schema"]=4;oldOutput=joined.extrusions();
+    require(!applySurfaceToolsExtras(QJsonDocument(rigidExtras).toJson(),oldOutput).isEmpty()&&oldOutput.last().surfaceTool.mappingRigid,"downgrade rigido rifiutato atomicamente");
+    for(auto &object:joinedRead.extrusions){object.cachedGeometry=false;object.forgeBody.reset();object.display={};}
+    CadViewport rigidAgain;rigidAgain.loadDocument(joinedRead);require(rigidAgain.extrusions().last().error.isEmpty()&&rigidAgain.extrusions().last().forgeBody,"rigenerazione posizionamento senza cache");
+    joined.undo();require(joined.extrusions().size()==4,"Undo posizionamento rigido");joined.redo();require(joined.extrusions().last().surfaceTool.mappingRigid,"Redo posizionamento rigido");
     auto malformed=surfaceToolsExtras(decoded.extrusions);auto json=QJsonDocument::fromJson(malformed).object();auto records=json["features"].toArray();auto record=records[0].toObject();record["mapping"]=QJsonObject{};records[0]=record;json["features"]=records;
     auto unchanged=decoded.extrusions;require(!applySurfaceToolsExtras(QJsonDocument(json).toJson(),unchanged).isEmpty()&&unchanged[1].surfaceTool.mode==3,"parametri incompleti rifiutati atomicamente");
     PdfWindow window;window.resize(1100,800);window.show();QApplication::processEvents();
@@ -133,8 +279,14 @@ static void mappingAndFillTools() {
     });
     window.findChild<QAction*>("surfaceWrapAction")->trigger();require(inspected,"pannello multidestinazione verificato");
     windowView->loadDocument(joined.currentDocument());inspected=false;
-    QTimer::singleShot(100,[&] {auto *list=window.findChild<QListWidget*>("mappingTargetFaces");require(list&&list->count()==2,"modifica mantiene entrambe le destinazioni");inspected=true;QWidget *parent=list;while(parent&&!dynamic_cast<FunctionDialogPanel*>(parent))parent=parent->parentWidget();parent->findChild<QDialogButtonBox*>()->button(QDialogButtonBox::Cancel)->click();});
-    surfaceMappingDialog(&window,windowView,QStringLiteral("Modifica deformazione"),3,joined.extrusions().last(),[](const ExtrusionObject &){return QString();});require(inspected,"riapertura pannello multidestinazione");
+    QTimer::singleShot(100,[&] {auto *list=window.findChild<QListWidget*>("mappingTargetFaces");require(list&&list->count()==2,"modifica mantiene entrambe le destinazioni");auto *method=window.findChild<QComboBox*>("mappingMethod");require(method&&method->count()==3&&method->currentIndex()==1,"pannello mantiene posizionamento rigido");inspected=true;QWidget *parent=list;while(parent&&!dynamic_cast<FunctionDialogPanel*>(parent))parent=parent->parentWidget();parent->findChild<QDialogButtonBox*>()->button(QDialogButtonBox::Cancel)->click();});
+    surfaceMappingDialog(&window,windowView,QStringLiteral("Modifica deformazione"),4,joined.extrusions().last(),[](const ExtrusionObject &){return QString();});require(inspected,"riapertura pannello multidestinazione");
+    windowView->loadDocument(cylinder.currentDocument());inspected=false;
+    QTimer::singleShot(100,[&] {auto *method=window.findChild<QComboBox*>("mappingMethod");require(method&&method->currentIndex()==2&&!method->itemText(2).contains("quilt",Qt::CaseInsensitive),"modifica conserva metodo con nome italiano");auto *dialog=method->parentWidget();while(dialog&&!dynamic_cast<FunctionDialogPanel*>(dialog))dialog=dialog->parentWidget();inspected=true;dialog->findChild<QDialogButtonBox*>()->button(QDialogButtonBox::Cancel)->click();});
+    surfaceMappingDialog(&window,windowView,QStringLiteral("Modifica quilt"),4,cylinder.extrusions().last(),[](const ExtrusionObject &){return QString();});require(inspected,"riapertura metodo quilt verificata");
+    windowView->loadDocument(flattenView.currentDocument());inspected=false;
+    QTimer::singleShot(100,[&] {auto *method=window.findChild<QComboBox*>("mappingMethod");require(method&&method->count()==2,"pannello con due metodi di distensione");require(method->currentIndex()==1,"pannello conserva metodo di appiattimento");require(!method->isHidden(),"selettore del metodo non nascosto");inspected=true;auto *dialog=method->parentWidget();while(dialog&&!dynamic_cast<FunctionDialogPanel*>(dialog))dialog=dialog->parentWidget();dialog->findChild<QDialogButtonBox*>()->button(QDialogButtonBox::Cancel)->click();});
+    surfaceMappingDialog(&window,windowView,QStringLiteral("Modifica appiattimento"),1,flattenView.extrusions()[1],[](const ExtrusionObject &){return QString();});require(inspected,"riapertura appiattimento verificata");
     windowView->loadDocument(filled);inspected=false;
     QTimer::singleShot(100,[&] {
         auto *list=window.findChild<QListWidget*>("mappingBodies");require(list,"elenco corpi riempimento");
@@ -143,6 +295,8 @@ static void mappingAndFillTools() {
         window.findChild<QPushButton*>("mappingPatternBodies")->click();int count=0;
         for(int i=0;i<list->count();++i)if(list->item(i)->checkState()==Qt::Checked){++count;require(list->item(i)->data(Qt::UserRole).toInt()!=0,"sorgente originale esclusa dal gruppo");}
         require(count==filled.extrusions.size()-1,"tutte le copie e solo quelle selezionate");
+        int bodyMarks=0,planeMarks=0;for(const auto &mark:windowView->refMarks_){bodyMarks+=mark.kind==9;planeMarks+=mark.kind==1||mark.kind==8;}
+        require(bodyMarks==count&&planeMarks==1,"corpi selezionati e piano di centraggio evidenziati");
         const auto carrier=windowView->extrusions()[1].forgeBody;const auto f=carrier->faces()[0];Vec3 p;
         require(faceInteriorPoint(*carrier,f,p),"punto destinazione allineamento");GeometryRef destination;destination.kind=5;destination.index=1;destination.point.subshape=f.index;destination.point.geometry=int(carrier->face(f).surface->type());destination.point.x=p.x();destination.point.y=p.y();destination.point.z=p.z();
         auto *pick=window.findChild<QPushButton*>("mappingFacePick");pick->click();windowView->refPickFinished_(true,destination);pick->click();

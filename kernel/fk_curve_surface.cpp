@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <map>
+#include <limits>
 #include <cmath>
 #include <stdexcept>
 
@@ -10,9 +11,21 @@
 #include "fk_curve_algo.h"
 #include "fk_nurbs.h"
 #include "fk_surface_algo.h"
+#include "fk_surface_distance.h"
 
 namespace ForgeCad::Kernel {
 namespace {
+
+bool conservativeCurveBox(const Curve<3> &curve, const Interval &range) {
+    if (!range.isFinite()) return false;
+    switch (curve.type()) {
+    case CurveType::Line: case CurveType::Circle: case CurveType::Ellipse: return true;
+    case CurveType::BSpline: return range.lo >= curve.domain().lo && range.hi <= curve.domain().hi;
+    case CurveType::Trimmed: return conservativeCurveBox(*static_cast<const TrimmedCurve<3> &>(curve).basis(), range);
+    case CurveType::Transformed: return conservativeCurveBox(*static_cast<const TransformedCurve &>(curve).basis(), range);
+    default: return false;
+    }
+}
 
 std::vector<double> rootsAndTouchings(const BernsteinPolynomial &p, double valueTolerance, bool &touching) {
     std::vector<double> result = p.roots();
@@ -277,6 +290,12 @@ struct NumericSearch {
     // Per le B-spline la gerarchia dei box delle pezze sostituisce `boxes`.
     std::shared_ptr<const BSplineSurface::PatchTree> tree;
 
+    bool overlapsLine(const Box &box) const {
+        if(curve.type()!=CurveType::Line)return true;
+        const auto &line=static_cast<const Line<3>&>(curve);Interval hit;
+        return clipLineToBox(line.origin(),line.direction(),box.padded(tolerance),hit)&&
+               hit.hi>=range.lo&&hit.lo<=range.hi;
+    }
     bool maybeOnSurface(const Vec3 &x) const {
         if (tree && !tree->nodes.empty()) {
             std::vector<int> stack{0};
@@ -316,8 +335,9 @@ struct NumericSearch {
         const Interval dom = piece.domain();
         for (int i = 0; i <= 8; ++i)
             if (!maybeOnSurface(piece.point(dom.lo + dom.length() * i / 8.0))) return false;
+        Vec2 hint(NAN, NAN);
         for (int i = 0; i <= 8; ++i)
-            if (projectPoint(surface, piece.point(dom.lo + dom.length() * i / 8.0)).distance > tolerance) return false;
+            if (surfaceDeviationAboveTolerance(surface, piece.point(dom.lo + dom.length() * i / 8.0), tolerance, &hint) > 0.0) return false;
         return true;
     }
 
@@ -355,10 +375,53 @@ struct NumericSearch {
         // esatta della superficie: non serve proiettarlo.
         if (!converged) {
             // Newton non converge nelle tangenze: basta la distanza dalla superficie.
-            if (!maybeOnSurface(x) || projectPoint(surface, x).distance > tolerance) return;
+            if (!maybeOnSurface(x) || surfaceDeviationAboveTolerance(surface, x, tolerance) > 0.0) return;
             touching = true;
         }
         out.parameters.push_back(curveParameter(curve, range, piece, converged ? s : 0.5 * (ds.lo + ds.hi)));
+    }
+
+    // Una retta su una pezza polinomiale regolare non richiede decine di
+    // bisezioni. La norma di I-AJ, limitata dai poli delle derivate Bezier,
+    // certifica l'iniettivita' della proiezione sull'intera pezza convessa.
+    // Newton trova una radice; il limite prova che non ne omettiamo altre.
+    // Se il limite non riesce (razionale, piega, tangenza o Newton fuori
+    // pezza) si mantiene la ricerca completa precedente.
+    bool uniqueLineHit(const BSplineCurve<3> &piece,const BSplineSurface &patch) {
+        if(curve.type()!=CurveType::Line||patch.isRational())return false;
+        const auto u=patch.uDomain(),v=patch.vDomain();const auto c=piece.domain();
+        Vec3 data[4],line[2];patch.evaluate(.5*u.lo+.5*u.hi,.5*v.lo+.5*v.hi,1,data);
+        piece.evaluate(.5*c.lo+.5*c.hi,1,line);
+        const auto direction=normalized(line[1]);
+        const auto a=u.length()*(data[2]-dot(data[2],direction)*direction);
+        const auto b=v.length()*(data[1]-dot(data[1],direction)*direction);
+        const double aa=dot(a,a),bb=dot(b,b),ab=dot(a,b),det=aa*bb-ab*ab;
+        if(!(det>1e-12*aa*bb))return false;
+        const auto rowU=(bb*a-ab*b)/det,rowV=(aa*b-ab*a)/det;
+        double error[2][2]={{0,0},{0,0}};
+        for(int axis=0;axis<2;++axis) {
+            const int nu=patch.uPoleCount()-(axis==0),nv=patch.vPoleCount()-(axis==1);
+            const double degree=axis==0?patch.uDegree():patch.vDegree();
+            for(int i=0;i<nu;++i)for(int j=0;j<nv;++j) {
+                const auto d=degree*(patch.pole(i+(axis==0),j+(axis==1))-patch.pole(i,j));
+                error[0][axis]=std::max(error[0][axis],std::fabs(dot(rowU,d)-(axis==0?1.:0.)));
+                error[1][axis]=std::max(error[1][axis],std::fabs(dot(rowV,d)-(axis==1?1.:0.)));
+            }
+        }
+        if(std::max(error[0][0]+error[0][1],error[1][0]+error[1][1])>=.5)return false;
+        // Operatore di Newton precondizionato T(q)=q-A F(q). Una radice
+        // dovrebbe appartenere sia al rettangolo [0,1]^2 sia a T(rect).
+        // Limiti disgiunti certificano l'assenza, senza bisezioni su pezze
+        // vicine al raggio che il solo box 3D non riesce a escludere.
+        const Vec3 rows[2]={rowU,rowV};
+        for(int i=0;i<2;++i) {
+            const double center=.5-dot(rows[i],data[0]-line[0]);
+            const double radius=.5*(error[i][0]+error[i][1])+tolerance*norm(rows[i])+1e-12*(1+std::fabs(center));
+            if(center+radius<0||center-radius>1)return true;
+        }
+        double t=.5*c.lo+.5*c.hi,x=.5*u.lo+.5*u.hi,y=.5*v.lo+.5*v.hi;
+        if(!newton(piece,patch,t,x,y))return false;
+        out.parameters.push_back(curveParameter(curve,range,piece,t));return true;
     }
 
     void search(const BSplineCurve<3> &piece, const BSplineSurface &patch, int depth) {
@@ -366,6 +429,8 @@ struct NumericSearch {
         for (const Vec3 &p : piece.poles()) curveBox.add(p);
         const Box surfaceBox = patchBox(patch);
         if (!curveBox.padded(tolerance).overlaps(surfaceBox)) return;
+        if (!overlapsLine(surfaceBox)) return;
+        if (uniqueLineHit(piece, patch)) return;
         const double dc = curveBox.diagonal(), dsurf = surfaceBox.diagonal();
         // Tratto (gia' diviso) che giace sulla superficie: un pezzo comune,
         // non una radice (la suddivisione non finirebbe mai).
@@ -407,8 +472,14 @@ std::vector<Interval> curveOnSurface(const Curve<3> &curve, const Interval &rang
     // Sopra la superficie con i parametri dentro il dominio (oltre il bordo
     // la superficie finisce anche se il polinomio prosegue).
     const Interval ud = surface.uDomain(), vd = surface.vDomain();
+    Vec2 hint(NAN, NAN);
     auto on = [&](double t) {
         const Vec3 x = curve.point(t);
+        if (surface.type() == SurfaceType::BSpline) {
+            if (!surfaceMayBeWithinTolerance(surface, x, tolerance) ||
+                surfaceDeviationAboveTolerance(surface, x, tolerance, &hint) > 0.0) return false;
+            return distance(surface.point(ud.clamp(hint.x()), vd.clamp(hint.y())), x) <= tolerance;
+        }
         const SurfaceProjection q = projectPoint(surface, x);
         return distance(surface.point(ud.clamp(q.u), vd.clamp(q.v)), x) <= tolerance;
     };
@@ -441,7 +512,11 @@ std::vector<Interval> curveOnSurface(const Curve<3> &curve, const Interval &rang
             (on(middle) == loOn ? lo : hi) = middle;
         }
         const double guess = 0.5 * (lo + hi);
-        double t = guess, best = reach;
+        // La media dei due estremi puo' ricadere appena fuori dalla
+        // superficie, anche dopo la bisezione. Conserva l'estremo che
+        // il predicato ha gia' riconosciuto appartenente al carrier.
+        const double inside = loOn ? lo : hi;
+        double t = inside, best = reach;
         for (double knot : knots) {
             const double gap = distance(curve.point(knot), curve.point(guess));
             if (gap < best && std::fabs(knot - guess) <= 1e-3 * range.length()) {
@@ -449,7 +524,21 @@ std::vector<Interval> curveOnSurface(const Curve<3> &curve, const Interval &rang
                 t = knot;
             }
         }
+        const Vec3 guessPoint = curve.point(guess);
         for (const auto &[line, lineRange] : lines) {
+            // Un aggancio accettabile dista meno di reach dal punto di
+            // transizione e meno di 0.1*tolerance dall'isocurva. Per la
+            // disuguaglianza triangolare, un suo box oltre tale somma
+            // non puo' dare un candidato; nessuna proiezione e' necessaria.
+            if (conservativeCurveBox(*line, lineRange)) {
+                const auto candidateBox = curveBox(*line, lineRange);
+                const double magnitude = std::max({1.0, norm(guessPoint), norm(candidateBox.lo), norm(candidateBox.hi)});
+                const double margin = reach + 0.1 * tolerance + 512.0 * std::numeric_limits<double>::epsilon() * magnitude;
+                bool outside = false;
+                for (int axis = 0; axis < 3; ++axis)
+                    outside = outside || guessPoint[axis] < candidateBox.lo[axis] - margin || guessPoint[axis] > candidateBox.hi[axis] + margin;
+                if (outside) continue;
+            }
             double s = guess;
             Vec3 onLine;
             for (int iteration = 0; iteration < 50; ++iteration) {
@@ -465,7 +554,9 @@ std::vector<Interval> curveOnSurface(const Curve<3> &curve, const Interval &rang
                 t = s;
             }
         }
-        return t;
+        // Anche gli agganci a nodi/isocurve vanno verificati: i tagli
+        // precedenti possono provenire da un'altra coppia di carrier.
+        return on(t) ? t : inside;
     };
     std::vector<Interval> result;
     double start = range.lo;
@@ -539,6 +630,7 @@ CurveSurfaceIntersection numericCurveSurface(const Curve<3> &curve, const Interv
             box.add(node.lo);
             box.add(node.hi);
             if (!padded.overlaps(box)) continue;
+            if (!search.overlapsLine(box)) continue;
             if (node.leaf >= 0) {
                 leaves.push_back(node.leaf);
                 continue;

@@ -66,9 +66,14 @@ Box curveBox(const Curve<3> &curve, const Interval &range) {
         const auto &e = static_cast<const Ellipse<3> &>(curve);
         return Box{e.center(), e.center()}.padded(std::max(e.xRadius(), e.yRadius()));
     }
-    case CurveType::BSpline:
-        for (const Vec3 &pole : static_cast<const BSplineCurve<3> &>(curve).poles()) box.add(pole);
+    case CurveType::BSpline: {
+        const auto &spline=static_cast<const BSplineCurve<3> &>(curve);const auto domain=spline.domain();
+        if(range.lo==range.hi){box.add(spline.point(range.lo));return box;}
+        if(range.lo>=domain.lo&&range.hi<=domain.hi&&(range.lo>domain.lo||range.hi<domain.hi)) {
+            for(const auto &piece:rationalBezierPieces(spline,range))for(const auto &pole:piece.poles())box.add(pole);
+        } else for(const auto &pole:spline.poles())box.add(pole);
         return box;
+    }
     case CurveType::Trimmed:
         return curveBox(*static_cast<const TrimmedCurve<3> &>(curve).basis(), range);
     case CurveType::Transformed: {

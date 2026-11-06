@@ -1,4 +1,5 @@
 #include "fk_classify.h"
+#include "fk_classify_uv.h"
 
 #include <algorithm>
 #include <cmath>
@@ -8,6 +9,8 @@
 #include "fk_cancel.h"
 
 #include "fk_curve_algo.h"
+#include "fk_curve_ops.h"
+#include "fk_curve_surface.h"
 #include "fk_nurbs.h"
 #include "fk_pcurve.h"
 #include "fk_surface_algo.h"
@@ -36,6 +39,15 @@ bool conservativeBoundary(const Curve<3> &curve, const Interval &range) {
     case CurveType::Trimmed:return conservativeBoundary(*static_cast<const TrimmedCurve<3> &>(curve).basis(),range);
     case CurveType::Transformed:return conservativeBoundary(*static_cast<const TransformedCurve &>(curve).basis(),range);
     default:return false;
+    }
+}
+bool conservativeBoundary(const Curve<2> &curve, const Interval &range) {
+    switch (curve.type()) {
+    case CurveType::Line: case CurveType::Circle: case CurveType::Ellipse: return true;
+    case CurveType::BSpline: return range.lo >= curve.domain().lo && range.hi <= curve.domain().hi;
+    case CurveType::Trimmed:
+        return conservativeBoundary(*static_cast<const TrimmedCurve<2> &>(curve).basis(), range);
+    default: return false;
     }
 }
 struct PreparedFace {
@@ -81,7 +93,7 @@ struct PreparedFace {
         }
     }
 };
-PointLocation classifyFacePoint(const Body &body, FaceId faceId, const Vec3 &point, double tolerance, const PreparedFace *prepared) {
+PointLocation classifyFacePoint(const Body &body, FaceId faceId, const Vec3 &point, double tolerance, const PreparedFace *prepared, const Vec2 *knownParameters = nullptr) {
     const Face &face = body.face(faceId);
     const Surface &surface = *face.surface;
     if (prepared) {
@@ -101,7 +113,7 @@ PointLocation classifyFacePoint(const Body &body, FaceId faceId, const Vec3 &poi
     const auto &fins = prepared ? prepared->fins : localFins;
     if (fins.empty()) return PointLocation::Inside;  // faccia senza bordo
 
-    const SurfaceProjection projection = projectPoint(surface, point);
+    const SurfaceProjection projection = knownParameters ? SurfaceProjection{knownParameters->x(), knownParameters->y(), point, 0.0} : projectPoint(surface, point);
     const double periods[2] = {surface.isUPeriodic() ? surface.uPeriod() : 0.0, surface.isVPeriodic() ? surface.vPeriod() : 0.0};
     // Cammini dei loop lungo le linee dei poli (tratti orizzontali in (u, v)).
     std::vector<LoopPoleWalk> localWalks;
@@ -309,6 +321,19 @@ PointLocation FaceClassifier::classify(const Vec3 &point) const {
     return classifyFacePoint(data_->body,data_->face,point,data_->tolerance,&data_->prepared);
 }
 
+struct FaceParameterClassifier::Data {
+    const Body &body;FaceId face;double tolerance;PreparedFace prepared;
+    Data(const Body &b,FaceId f,double t):body(b),face(f),tolerance(t),prepared(b,f,t){}
+};
+FaceParameterClassifier::FaceParameterClassifier(const Body &body,FaceId face,double tolerance)
+    :data_(std::make_shared<const Data>(body,face,tolerance)){}
+PointLocation FaceParameterClassifier::classify(const Vec2 &uv) const {
+    const auto &surface=*data_->body.face(data_->face).surface;
+    if(!isFinite(uv)||(!surface.isUPeriodic()&&!surface.uDomain().contains(uv.x()))||
+       (!surface.isVPeriodic()&&!surface.vDomain().contains(uv.y())))return PointLocation::Outside;
+    return classifyFacePoint(data_->body,data_->face,surface.point(uv.x(),uv.y()),data_->tolerance,&data_->prepared,&uv);
+}
+
 namespace {
 
 bool degenerateAt(const Surface &surface, double v) {
@@ -326,6 +351,34 @@ bool degenerateAt(const Surface &surface, double v) {
 
 }
 
+namespace {
+Box splineWindowBox(const BSplineSurface &surface,const Interval &u,const Interval &v) {
+    const auto tree=surface.cachedPatchTree();const auto patches=surface.cachedBezierPatches();Box result;
+    const auto overlaps=[&](const Interval &a,const Interval &b){
+        const double roundoff=64*kMachineEpsilon*std::max({1.,std::fabs(a.lo),std::fabs(a.hi),std::fabs(b.lo),std::fabs(b.hi)});
+        return a.hi+roundoff>=b.lo&&b.hi+roundoff>=a.lo;
+    };
+    const auto contains=[&](const Interval &a,const Interval &b){return a.lo<=b.lo&&a.hi>=b.hi;};
+    std::function<void(const BSplineSurface &,int)> clip=[&](const BSplineSurface &patch,int depth) {
+        cancellationPoint();const auto pu=patch.uDomain(),pv=patch.vDomain();
+        if(!overlaps(pu,u)||!overlaps(pv,v))return;
+        const bool cutU=!contains(u,pu),cutV=!contains(v,pv);
+        if((!cutU&&!cutV)||depth>=12){result.add(patchBox(patch));return;}
+        const bool alongU=cutU&&(!cutV||pu.length()/std::max(u.length(),1e-15)>=pv.length()/std::max(v.length(),1e-15));
+        const auto halves=splitPatch(patch,alongU);clip(halves.first,depth+1);clip(halves.second,depth+1);
+    };
+    std::vector<int> pending;if(!tree->nodes.empty())pending.push_back(0);
+    while(!pending.empty()) {
+        cancellationPoint();const auto &node=tree->nodes[std::size_t(pending.back())];pending.pop_back();
+        if(!overlaps(node.u,u)||!overlaps(node.v,v))continue;
+        if(contains(u,node.u)&&contains(v,node.v)){result.add(Box{node.lo,node.hi});continue;}
+        if(node.leaf>=0)clip((*patches)[std::size_t(node.leaf)],0);
+        else {pending.push_back(node.first);pending.push_back(node.second);}
+    }
+    if(!result.isEmpty())result=result.padded(512*kMachineEpsilon*std::max({1.,norm(result.lo),norm(result.hi)}));
+    return result;
+}
+}
 Box faceBox(const Body &body, FaceId face) {
     Box box;
     const Surface &surface = *body.face(face).surface;
@@ -350,20 +403,23 @@ Box faceBox(const Body &body, FaceId face) {
     Interval u = surface.uDomain(), v = surface.vDomain();
     Interval pu{1e300, -1e300}, pv{1e300, -1e300};
     int wrapping = 0;
-    bool any = false;
+    bool any = false, boundedUV = true;
     for (LoopId l : body.face(face).loops) {
         double start = 0.0, travelled = 0.0;
         bool first = true;
         for (FinId f : body.loopFins(l)) {
             const Fin &fin = body.fin(f);
-            if (!fin.pcurve) continue;
+            if (!fin.pcurve) { boundedUV = false; continue; }
             const Edge &edge = body.edge(fin.edge);
-            for (int i = 0; i <= 16; ++i) {
-                const Vec2 uv = fin.pcurve->point(edge.range.lo + edge.range.length() * i / 16.0);
-                pu = {std::min(pu.lo, uv[0]), std::max(pu.hi, uv[0])};
-                pv = {std::min(pv.lo, uv[1]), std::max(pv.hi, uv[1])};
-                any = true;
+            if (!conservativeBoundary(*fin.pcurve, edge.range)) {
+                boundedUV = false;
+                continue;
             }
+            // Inviluppo delle curve esatte in UV: campionare gli estremi
+            // intermedi poteva perdere un massimo fra due campioni.
+            const auto uvBox=curveBox(*embedCurve(fin.pcurve,Frame3()),edge.range);
+            pu={std::min(pu.lo,uvBox.lo.x()),std::max(pu.hi,uvBox.hi.x())};
+            pv={std::min(pv.lo,uvBox.lo.y()),std::max(pv.hi,uvBox.hi.y())};any=true;
             const double a = fin.pcurve->point(fin.sense ? edge.range.lo : edge.range.hi)[0];
             const double b = fin.pcurve->point(fin.sense ? edge.range.hi : edge.range.lo)[0];
             if (first) start = a;
@@ -373,6 +429,8 @@ Box faceBox(const Body &body, FaceId face) {
         (void)start;
         if (surface.isUPeriodic() && std::fabs(travelled) > 0.5 * surface.uPeriod()) ++wrapping;
     }
+    // Senza un inviluppo UV certificato conserva il dominio del carrier.
+    any = any && boundedUV;
     if (surface.isUPeriodic()) u = {u.lo, u.lo + surface.uPeriod()};
     else if (any) u = pu;
     if (surface.isVPeriodic()) {
@@ -392,6 +450,10 @@ Box faceBox(const Body &body, FaceId face) {
     }
     if (!u.isFinite() || !v.isFinite()) return box;
     Box result;
+    if(type==SurfaceType::BSpline) {
+        result=splineWindowBox(static_cast<const BSplineSurface &>(surface),u,v);
+        result.add(box);return result;
+    }
     const BSplineSurface nurbs = toBSplineSurface(surface, u, v);
     for (int i = 0; i < nurbs.uPoleCount(); ++i)
         for (int j = 0; j < nurbs.vPoleCount(); ++j) result.add(nurbs.pole(i, j));

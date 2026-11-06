@@ -1,8 +1,10 @@
 #include "cad_surface_mapping.h"
 #include "cad_datum.h"
+#include "cad_model_history.h"
 #include "cad_topology_ref.h"
 #include "cad_element_names.h"
 #include "fk_surface_mapping.h"
+#include "fk_quilt_mapping.h"
 #include "fk_surface_algo.h"
 #include "fk_body_check.h"
 #include "fk_sew.h"
@@ -46,13 +48,85 @@ QString obstacle(const Body &source,FaceId face) {
 }
 }
 
+namespace {
+int mappingOwner(const GeometryRef &ref,int owner,const QVector<ExtrusionObject> &bodies) {
+    if(ref.featureId) {
+        for(int i=0;i<owner&&i<bodies.size();++i)if(bodies[i].featureId==ref.featureId)return i;
+        return -1;
+    }
+    return ref.index>=0&&ref.index<owner&&ref.index<bodies.size()?ref.index:-1;
+}
+bool isFlattening(const ExtrusionObject &body) {
+    return body.feature==BodyFeature::SurfaceTools&&body.surfaceTool.mode==3&&body.surfaceTool.mappingQuilt;
+}
+}
+int sourceSurfaceFlattening(const QVector<GeometryRef> &sources,int owner,const QVector<ExtrusionObject> &bodies) {
+    int common=-1;
+    for(const auto &source:sources) {
+        const int index=mappingOwner(source,owner,bodies);
+        if(index<0)return -1;
+        const int root=patternSourceIndex(bodies,index);
+        if(root<0||bodies[root].feature!=BodyFeature::Pattern||bodies[root].pattern.kind<3)return -1;
+        int flat=-1;
+        for(const auto &ref:bodies[root].pattern.refs) {
+            const int candidate=mappingOwner(ref,root,bodies);
+            if(ref.kind!=5||candidate<0||!isFlattening(bodies[candidate])||(flat>=0&&flat!=candidate))return -1;
+            flat=candidate;
+        }
+        if(flat<0||(common>=0&&common!=flat))return -1;
+        common=flat;
+    }
+    return common;
+}
+bool resolveFlattenedMapping(SurfaceToolParameters &p,int owner,const QVector<ExtrusionObject> &bodies,
+                             GeometryRef &plane,QString *error) {
+    try {
+        require(p.targets.size()>=2,QStringLiteral("Scegli facce e piano di riferimento."));
+        plane=p.targets[1];
+        if(plane.kind!=11)return true;
+        require(p.mode==4&&p.mappingQuilt&&!p.mappingRigid,QStringLiteral("La mappa di appiattimento richiede Piega da superfici appiattite."));
+        const int index=mappingOwner(plane,owner,bodies);
+        require(index>=0&&isFlattening(bodies[index])&&!bodies[index].suppressed&&bool(bodies[index].forgeBody),
+                QStringLiteral("Appiattimento sorgente non disponibile."));
+        const auto &flat=bodies[index].surfaceTool;
+        require(flat.targets.size()==2&&!flat.sources.isEmpty()&&flat.sources.size()<=2,
+                QStringLiteral("Mappa dell'appiattimento incompleta."));
+        QVector<GeometryRef> targets;
+        for(int i=0;i<p.targets.size();++i)if(i!=1)targets.append(p.targets[i]);
+        require(targets.size()==flat.sources.size(),QStringLiteral("Le facce destinazione devono essere quelle dell'appiattimento."));
+        QVector<GeometryRef> ordered;
+        for(auto ref:flat.sources) {
+            const int body=mappingOwner(ref,index,bodies);
+            require(body>=0&&bool(bodies[body].forgeBody),QStringLiteral("Faccia dell'appiattimento non disponibile."));
+            const auto face=resolveFaceReference(*bodies[body].forgeBody,ref.point,1e-6);
+            require(face.valid(),QStringLiteral("Faccia dell'appiattimento mancante o ambigua."));
+            bool found=false;
+            for(const auto &target:targets)if(target.kind==5&&mappingOwner(target,owner,bodies)==body)
+                found=found||resolveFaceReference(*bodies[body].forgeBody,target.point,1e-6)==face;
+            require(found,QStringLiteral("Le facce destinazione non corrispondono all'appiattimento scelto."));
+            ref.index=body;ordered.append(ref);
+        }
+        const auto link=p.targets[1];p.targets={ordered[0],link};
+        for(int i=1;i<ordered.size();++i)p.targets.append(ordered[i]);
+        plane=flat.targets[1];
+        require(plane.kind==1||plane.kind==8,QStringLiteral("Piano originale dell'appiattimento non disponibile."));
+        if(plane.kind==8)plane.index=mappingOwner(plane,index,bodies);
+        p.mappingU=flat.mappingU;p.mappingV=flat.mappingV;p.mappingAngle=-flat.mappingAngle;
+        const double a=flat.mappingAngle*Kernel::kPi/180.,c=std::cos(a),s=std::sin(a);
+        p.mappingX=-c*flat.mappingX-s*flat.mappingY;
+        p.mappingY=s*flat.mappingX-c*flat.mappingY;
+        return true;
+    } catch(const std::exception &e){if(error)*error=QString::fromUtf8(e.what());return false;}
+}
 void buildSurfaceMapping(ExtrusionObject &feature,int owner,const QVector<SketchObject> &sketches,
                          const QVector<ExtrusionObject> &bodies) {
     using namespace Kernel;
     try {
-        const auto &p=feature.surfaceTool;
+        auto p=feature.surfaceTool;
         require(p.mode==3||p.mode==4,QStringLiteral("Operazione di mappatura sconosciuta."));
         require((p.targets.size()==2||(p.mode==4&&p.targets.size()>2&&p.targets.size()<=256))&&p.targets[0].kind==5,QStringLiteral("Scegli facce e piano di riferimento."));
+        require(!p.mappingRigid||p.mode==4,QStringLiteral("Il posizionamento rigido richiede la deformazione su superficie."));
+        require(!p.mappingQuilt||!p.mappingRigid,QStringLiteral("Scegli un solo metodo di mappatura."));
         auto sources=p.sources;
         if(sources.isEmpty()) {
             auto ref=p.targets[0];
@@ -60,8 +134,10 @@ void buildSurfaceMapping(ExtrusionObject &feature,int owner,const QVector<Sketch
             sources.append(ref);
         }
         require(!sources.isEmpty()&&sources.size()<=256,QStringLiteral("Scegli da 1 a 256 corpi o facce."));
-        ResolvedRef planeRef;QString reason;
-        require(resolveGeometryRef(p.targets[1],owner,sketches,bodies,planeRef,&reason)&&planeRef.hasPlane,
+        ResolvedRef planeRef;QString reason;GeometryRef planeSource;
+        require(resolveFlattenedMapping(p,owner,bodies,planeSource,&reason),reason);
+        const bool planeValid=resolveGeometryRef(planeSource,owner,sketches,bodies,planeRef,&reason);
+        require(planeValid&&planeRef.hasPlane,
                 reason.isEmpty()?QStringLiteral("Scegli un piano valido."):reason);
         const Vec3 axis=std::fabs(planeRef.direction.x())<.9?Vec3(1,0,0):Vec3(0,1,0);
         Frame3 plane(planeRef.point,planeRef.direction,axis);
@@ -80,7 +156,7 @@ void buildSurfaceMapping(ExtrusionObject &feature,int owner,const QVector<Sketch
             auto &group=selected[ref.index];
             require(std::find(group.begin(),group.end(),face)==group.end(),QStringLiteral("Faccia sorgente duplicata."));
             group.push_back(face);faces.push_back({ref,face});
-            if(p.mode==3){const auto error=obstacle(source,face);if(!error.isEmpty())errors.append(faceLabel(ref,bodies,face)+QStringLiteral(": ")+error);}
+            if(p.mode==3&&!p.mappingQuilt){const auto error=obstacle(source,face);if(!error.isEmpty())errors.append(faceLabel(ref,bodies,face)+QStringLiteral(": ")+error);}
         }
         require(errors.isEmpty(),errors.join(QLatin1Char('\n')));
         for(const auto &[index,group]:selected)
@@ -89,6 +165,20 @@ void buildSurfaceMapping(ExtrusionObject &feature,int owner,const QVector<Sketch
             const double angle=p.mappingAngle*kPi/180.;
             plane=Frame3(plane.origin()+p.mappingX*plane.xDir()+p.mappingY*plane.yDir(),plane.zDir(),
                          std::cos(angle)*plane.xDir()+std::sin(angle)*plane.yDir());
+            if(p.mappingQuilt) {
+                require(faces.size()<=2&&selected.size()==1,
+                    QStringLiteral("Appiattimento: scegli una faccia oppure due facce tangenti dello stesso corpo."));
+                std::vector<SurfaceTargetFace> patches;
+                for(const auto &[ref,face]:faces)patches.push_back({bodies[ref.index].forgeBody.get(),face});
+                SurfaceQuiltMap map(patches,Vec2(p.mappingU,p.mappingV));
+                SurfaceFlattenStats stats;BodyHistory history;
+                auto flattened=map.flattenSheet(plane,p.tolerance,&stats,&history);
+                results.push_back(declared(std::move(flattened),{bodies[faces.front().first.index].forgeBody},std::move(history)));
+                feature.notice=QStringLiteral("%1 facce appiattite con deformazione, unite lungo il bordo comune. Variazione lineare locale campionata: %2% / %3%; area locale: %4% / %5% (%6 punti). Scarto dei contorni: %7 mm. Non e' uno sviluppo esatto; i campioni non certificano estremi globali.")
+                    .arg(faces.size()).arg(100*(stats.minimumStretch-1),0,'f',2).arg(100*(stats.maximumStretch-1),0,'f',2)
+                    .arg(100*(stats.minimumAreaRatio-1),0,'f',2).arg(100*(stats.maximumAreaRatio-1),0,'f',2)
+                    .arg(stats.samples).arg(stats.boundaryDeviation,0,'g',6);
+            } else {
             double right=0,bottom=0;
             for(const auto &[ref,face]:faces) {
                 cancellationPoint();BodyHistory history;const auto source=bodies[ref.index].forgeBody;
@@ -110,6 +200,7 @@ void buildSurfaceMapping(ExtrusionObject &feature,int owner,const QVector<Sketch
                 results.push_back(flat);
             }
             feature.notice=QStringLiteral("%1 facce sviluppate isometricamente, senza nuovo fit. Facce multiple come isole separate a 1 mm; conservata la precisione dei bordi sorgenti.").arg(results.size());
+            }
         } else {
             std::vector<SurfaceTargetFace> targetFaces;
             std::set<std::pair<int,int>> targetKeys;
@@ -123,15 +214,19 @@ void buildSurfaceMapping(ExtrusionObject &feature,int owner,const QVector<Sketch
                 targetFaces.push_back({carrier.get(),face});
             }
             const auto &primary=targetFaces.front();const bool sense=primary.body->face(primary.face).sense;
-            if(targetFaces.size()==1&&!sense)plane=Frame3::fromAxes(plane.origin(),plane.xDir(),-plane.yDir(),-plane.zDir());
+            require(!p.mappingQuilt||!p.mappingRigid,QStringLiteral("Scegli un solo metodo di mappatura."));
+            if(targetFaces.size()==1&&!sense&&!p.mappingRigid&&!p.mappingQuilt)plane=Frame3::fromAxes(plane.origin(),plane.xDir(),-plane.yDir(),-plane.zDir());
             SurfaceWrapOptions options;options.sourcePlane=plane;options.anchor=Vec2(p.mappingU,p.mappingV);
             options.shift=Vec2(p.mappingX,p.mappingY);options.angle=p.mappingAngle*kPi/180.;
-            options.normalOffset=p.mappingOffset*(targetFaces.size()>1||sense?1.:-1.);options.tolerance=p.tolerance;
+            options.rigid=p.mappingRigid;options.quilt=p.mappingQuilt;
+            std::unique_ptr<SurfaceQuiltMap> quilt;
+            if(p.mappingQuilt)quilt=std::make_unique<SurfaceQuiltMap>(targetFaces,options.anchor);
+            options.normalOffset=p.mappingOffset*(p.mappingQuilt||p.mappingRigid||targetFaces.size()>1||sense?1.:-1.);options.tolerance=p.tolerance;
             double worst=0;
             const auto deform=[&](const ForgeBody &source,const QString &label) {
                 try {
                     cancellationPoint();BodyHistory history;double deviation=0;
-                    auto result=targetFaces.size()==1
+                    auto result=quilt?quilt->bend(*source,options,&history,&deviation):targetFaces.size()==1&&!p.mappingRigid
                         ?wrapBodyOnSurface(*source,*primary.body->face(primary.face).surface,options,&history,&deviation)
                         :wrapBodyOnFaces(*source,targetFaces,options,&history,&deviation);
                     results.push_back(declared(std::move(result),{source},std::move(history)));worst=std::max(worst,deviation);
@@ -144,7 +239,11 @@ void buildSurfaceMapping(ExtrusionObject &feature,int owner,const QVector<Sketch
                 auto sheet=facesAsSheet(*source,group,&history);
                 deform(declared(std::move(sheet),{source},std::move(history)),bodies[index].name);
             }
-            feature.notice=QStringLiteral("%1 sorgenti deformate su %2 facce destinazione, come unico appoggio. Scarto B-rep misurato: %3 mm; possibile stiramento tangenziale.").arg(results.size()).arg(targetFaces.size()).arg(worst,0,'g',6);
+            feature.notice=p.mappingQuilt
+                ?QStringLiteral("%1 sorgenti piegate mediante una mappa comune piano/superfici su %2 facce. Piano sorgente piegato sulle superfici, quota lungo le normali; scarto B-rep misurato: %3 mm. Nessuna isometria generale garantita.").arg(results.size()).arg(targetFaces.size()).arg(worst,0,'g',6)
+                :p.mappingRigid
+                ?QStringLiteral("%1 sorgenti posizionate su %2 facce; ogni copia segue la normale locale. Forma e dimensioni conservate; la base resta rigida.").arg(results.size()).arg(targetFaces.size())
+                :QStringLiteral("%1 sorgenti deformate su %2 facce destinazione, come unico appoggio. Scarto B-rep misurato: %3 mm; possibile stiramento tangenziale.").arg(results.size()).arg(targetFaces.size()).arg(worst,0,'g',6);
         }
         require(!results.empty(),QStringLiteral("Nessun risultato dalla selezione."));
         if(results.size()==1)feature.forgeBody=results.front();

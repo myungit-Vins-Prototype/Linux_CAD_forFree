@@ -130,7 +130,7 @@ void buildSurfaceTool(ExtrusionObject &body, int index, const QVector<SketchObje
 }
 QByteArray surfaceToolsExtras(const QVector<ExtrusionObject> &bodies) {
     QJsonArray records;
-    bool mapping=false, multiple=false, targetSet=false;
+    bool mapping=false, multiple=false, targetSet=false, rigid=false, quilt=false, flatten=false, linked=false;
     for (int i = 0; i < bodies.size(); ++i) {
         const auto &b = bodies[i];
         if (b.feature != BodyFeature::SurfaceTools && b.fillFaceContinuities.isEmpty())
@@ -150,9 +150,16 @@ QByteArray surfaceToolsExtras(const QVector<ExtrusionObject> &bodies) {
                                    {"contacts", contacts}};
         if (p.mode >= 3) {
             mapping=true;
+            linked=linked||(p.mode==4&&p.targets.size()>1&&p.targets[1].kind==11);
             targetSet=targetSet||(p.mode==4&&p.targets.size()>2);
             record["mapping"]=QJsonObject{{"u",p.mappingU},{"v",p.mappingV},{"x",p.mappingX},{"y",p.mappingY},
                 {"angle",p.mappingAngle},{"offset",p.mappingOffset},{"copy",p.mappingCopy}};
+            if(p.mode>=3&&p.mappingQuilt) {
+                quilt=true;flatten=flatten||p.mode==3;auto settings=record["mapping"].toObject();settings["quilt"]=true;record["mapping"]=settings;
+            }
+            if(p.mode==4&&p.mappingRigid) {
+                rigid=true;auto settings=record["mapping"].toObject();settings["rigid"]=true;record["mapping"]=settings;
+            }
         }
         if (!p.sources.isEmpty()) {
             multiple=true;
@@ -172,7 +179,7 @@ QByteArray surfaceToolsExtras(const QVector<ExtrusionObject> &bodies) {
         records.append(record);
     }
     return records.isEmpty() ? QByteArray()
-                             : QJsonDocument(QJsonObject{{"schema", targetSet ? 4 : multiple ? 3 : mapping ? 2 : 1}, {"features", records}}).toJson(QJsonDocument::Compact);
+                             : QJsonDocument(QJsonObject{{"schema", linked ? 8 : flatten ? 7 : quilt ? 6 : rigid ? 5 : targetSet ? 4 : multiple ? 3 : mapping ? 2 : 1}, {"features", records}}).toJson(QJsonDocument::Compact);
 }
 QString applySurfaceToolsExtras(const QByteArray &bytes, QVector<ExtrusionObject> &output) {
     auto bodies = output;
@@ -182,7 +189,7 @@ QString applySurfaceToolsExtras(const QByteArray &bytes, QVector<ExtrusionObject
             require(bytes.size() <= 4 * 1024 * 1024, "Estensioni superfici oltre4MiB.");
             QJsonParseError error;
             const auto root = QJsonDocument::fromJson(bytes, &error).object();
-            require(error.error == QJsonParseError::NoError && root.size() == 2 && (root["schema"].toDouble(-1) == 1 || root["schema"].toDouble(-1) == 2 || root["schema"].toDouble(-1) == 3 || root["schema"].toDouble(-1) == 4) &&
+            require(error.error == QJsonParseError::NoError && root.size() == 2 && (root["schema"].toDouble(-1) == 1 || root["schema"].toDouble(-1) == 2 || root["schema"].toDouble(-1) == 3 || root["schema"].toDouble(-1) == 4 || root["schema"].toDouble(-1) == 5 || root["schema"].toDouble(-1) == 6 || root["schema"].toDouble(-1) == 7 || root["schema"].toDouble(-1) == 8) &&
                         root["features"].isArray(),
                     "Estensioni superfici danneggiate.");
             const auto integer = [](const QJsonValue &v, int low, int high) {
@@ -204,7 +211,19 @@ QString applySurfaceToolsExtras(const QByteArray &bytes, QVector<ExtrusionObject
                 p.mode = integer(o["mode"], 0, root["schema"].toInt()>=2?4:2);
                 if (p.mode >= 3) {
                     require(o["mapping"].isObject(),"Parametri di mappatura assenti.");
-                    const auto m=o["mapping"].toObject();require(m.size()==7&&m["copy"].isBool(),"Parametri di mappatura incompleti.");
+                    const auto m=o["mapping"].toObject();
+                    require(m.size()==7+int(m.contains("rigid"))+int(m.contains("quilt"))&&m["copy"].isBool(),"Parametri di mappatura incompleti.");
+                    p.mappingQuilt=false;
+                    if(m.contains("quilt")) {
+                        require((p.mode==4?root["schema"].toInt()>=6:p.mode==3&&root["schema"].toInt()>=7)&&m["quilt"].isBool(),"Mappa delle superfici senza schema compatibile (6 piegatura, 7 appiattimento).");
+                        p.mappingQuilt=m["quilt"].toBool();
+                    }
+                    p.mappingRigid=false;
+                    if(m.contains("rigid")) {
+                        require(p.mode==4&&root["schema"].toInt()>=5&&m["rigid"].isBool(),"Posizionamento rigido senza schema5 o incompatibile.");
+                        p.mappingRigid=m["rigid"].toBool();
+                    }
+                    require(!p.mappingQuilt||!p.mappingRigid,"Appiattimento e posizionamento rigido sono metodi distinti.");
                     const auto number=[&](const char*key){double v=m[key].toDouble(NAN);require(std::isfinite(v)&&std::fabs(v)<=1e9,"Parametro di mappatura non valido.");return v;};
                     p.mappingU=number("u");p.mappingV=number("v");p.mappingX=number("x");p.mappingY=number("y");p.mappingAngle=number("angle");p.mappingOffset=number("offset");p.mappingCopy=m["copy"].toBool();
                 } else require(!o.contains("mapping"),"Mappatura su funzione incompatibile.");
@@ -248,7 +267,7 @@ QString applySurfaceToolsExtras(const QByteArray &bytes, QVector<ExtrusionObject
                     for(const auto &value:o[key].toArray()) {
                         require(value.isArray()&&value.toArray().size()==11,"Riferimento superficie incompleto.");
                         const auto a=value.toArray();GeometryRef r;r.kind=integer(a[0],1,11);
-                        require(source?(r.kind==5||(p.mode==4&&r.kind==11)):(r.kind==1||r.kind==5||r.kind==8),"Tipo di riferimento superficie non valido.");
+                        require(source?(r.kind==5||(p.mode==4&&r.kind==11)):(r.kind==1||r.kind==5||r.kind==8||(r.kind==11&&p.mode==4&&p.mappingQuilt&&refs.size()==1&&root["schema"].toInt()>=8)),"Tipo di riferimento superficie non valido.");
                         r.index=integer(a[1],0,r.kind==1?2:i-1);bool valid=false;
                         require(a[2].isString(),"Identita' sorgente assente.");r.featureId=a[2].toString().toULongLong(&valid);
                         require(valid&&QString::number(r.featureId)==a[2].toString(),"Identita' sorgente non valida.");
@@ -274,7 +293,7 @@ QString applySurfaceToolsExtras(const QByteArray &bytes, QVector<ExtrusionObject
                     if (p.mode >= 3)
                         {
                             require(p.targets.size()>=2&&p.targets[0].kind==5,"Mappatura senza faccia e piano.");
-                            require(p.targets.size()==2||(p.mode==4&&root["schema"].toInt()==4),"Destinazioni multiple senza schema4.");
+                            require(p.targets.size()==2||(p.mode==4&&root["schema"].toInt()>=4),"Destinazioni multiple senza schema4.");
                             for(int target=2;target<p.targets.size();++target)require(p.targets[target].kind==5,"Destinazione multipla non faccia.");
                         }
                     if (p.mode == 0)

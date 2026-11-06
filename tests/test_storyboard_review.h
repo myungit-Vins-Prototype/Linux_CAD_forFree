@@ -44,7 +44,76 @@ static void storyboardReentrantRebuildRegression() {
     }
 }
 
+static void storyboardIncrementalRegressions() {
+    using namespace ForgeCad;using namespace Kernel;
+    PrimitiveParameters box;box.size[0]=box.size[1]=box.size[2]=2;
+    {
+        CadViewport view;
+        for(int i=0;i<5;++i)require(view.createPrimitive(box,QStringLiteral("Indipendente %1").arg(i)).isEmpty(),"corpi indipendenti per invalidazione");
+        QVector<ForgeBody> before;for(const auto &b:view.extrusions())before.append(b.forgeBody);
+        view.deleteFeature(4);
+        require(view.extrusions().size()==4,"eliminata ultima feature");
+        for(int i=0;i<4;++i)require(view.extrusions()[i].forgeBody==before[i],"eliminare ultima feature conserva tutti i B-rep precedenti");
+        view.undo();require(view.extrusions().size()==5,"Undo eliminazione incrementale");view.redo();
+        for(int i=0;i<4;++i)require(view.extrusions()[i].forgeBody==before[i],"Redo conserva geometrie precedenti");
+        auto changed=view.extrusions()[2];changed.primitive.size[0]=3;
+        require(view.updateBody(2,changed).isEmpty(),"modifica primitiva intermedia");
+        require(view.extrusions()[0].forgeBody==before[0]&&view.extrusions()[1].forgeBody==before[1]&&
+            view.extrusions()[2].forgeBody!=before[2]&&view.extrusions()[3].forgeBody==before[3],
+            "modifica conserva predecessori e rami successivi indipendenti");
+        const auto same=view.extrusions()[2].forgeBody;
+        require(view.updateBody(2,view.extrusions()[2]).isEmpty()&&view.extrusions()[2].forgeBody==same,
+            "conferma senza modifiche conserva il risultato");
+    }
+    {
+        CadViewport view;
+        require(view.createPrimitive(box,QStringLiteral("Base")).isEmpty()&&view.createScale(0,2,0,{},QStringLiteral("Scala rimossa")).isEmpty()&&
+            view.createPrimitive(box,QStringLiteral("Ramo indipendente")).isEmpty()&&view.createScale(1,3,0,{},QStringLiteral("Consumatore")).isEmpty()&&
+            view.createScale(3,2,0,{},QStringLiteral("Discendente")).isEmpty()&&view.createPrimitive(box,QStringLiteral("Ultimo indipendente")).isEmpty(),
+            "catena intercalata per invalidazione");
+        const auto base=view.extrusions()[0].forgeBody,unrelated=view.extrusions()[2].forgeBody,last=view.extrusions()[5].forgeBody;
+        const auto previous=view.extrusions()[3].forgeBody,descendant=view.extrusions()[4].forgeBody;
+        view.deleteFeature(1);
+        require(view.extrusions().size()==5&&view.extrusions()[2].firstBody==0&&view.extrusions()[3].firstBody==2,"catena ricollegata e indici rimappati");
+        require(view.extrusions()[0].forgeBody==base&&view.extrusions()[1].forgeBody==unrelated&&view.extrusions()[4].forgeBody==last,
+            "eliminazione intermedia conserva entrambi i rami indipendenti");
+        require(view.extrusions()[2].forgeBody!=previous&&view.extrusions()[3].forgeBody!=descendant&&
+            std::fabs(massProperties(*view.extrusions()[2].forgeBody).volume-216)<1e-8&&
+            std::fabs(massProperties(*view.extrusions()[3].forgeBody).volume-1728)<1e-7,
+            "solo consumatore ricollegato e discendente rigenerati con geometria aggiornata");
+        view.undo();require(view.extrusions().size()==6&&view.extrusions()[3].forgeBody==previous,"Undo recupera la catena senza nuovo calcolo");
+        view.redo();require(view.extrusions().size()==5&&view.extrusions()[0].forgeBody==base,"Redo mantiene il prefisso");
+    }
+    {
+        CadViewport source;require(source.createPrimitive(box,QStringLiteral("Sorgente esterna")).isEmpty(),"sorgente riferimenti indipendenti");
+        DocumentState state=source.currentDocument();const auto sourceBody=state.extrusions[0].forgeBody;
+        GeometryRef vertex;vertex.kind=3;vertex.index=0;vertex.featureId=state.extrusions[0].featureId;
+        vertex.point=vertexReference(*sourceBody,sourceBody->vertices()[0]);
+        SketchObject external;external.name="Profilo con riferimento indipendente";external.segments={{{0,0},{1,0}}};external.beforeFeatureId=103;
+        require(appendLinkedSketchReference(external,vertex,{},state.extrusions,false,true,100,nullptr,true).isEmpty(),"conversione esplicita indipendente");
+        ExtrusionObject datum;datum.feature=BodyFeature::DatumPlane;datum.featureId=102;datum.name="Piano modificato";GeometryRef xy;xy.kind=1;xy.index=0;datum.datum.refs={xy};datum.datum.distance=5;
+        ExtrusionObject independent;independent.feature=BodyFeature::Extrusion;independent.featureId=103;independent.sketchIndex=0;independent.extrudeSurface=true;independent.distance=1;
+        auto dependent=independent;dependent.featureId=104;dependent.sketchIndex=1;
+        SketchObject onDatum;onDatum.name="Profilo sul piano";onDatum.segments={{{0,0},{1,0}}};onDatum.plane=kFacePlane;onDatum.customFrame=true;onDatum.datumPlane=1;onDatum.beforeFeatureId=104;
+        state.sketches={external,onDatum};state.extrusions.append(datum);state.extrusions.append(independent);state.extrusions.append(dependent);
+        CadViewport view;view.loadDocument(state);
+        require(view.extrusions()[2].forgeBody&&view.extrusions()[3].forgeBody,"due superfici per prova datum");
+        const auto base=view.extrusions()[0].forgeBody,untouched=view.extrusions()[2].forgeBody,affected=view.extrusions()[3].forgeBody;
+        const auto link=view.sketches()[0].linkedReferences[0];
+        auto moved=view.extrusions()[1];moved.datum.distance=9;
+        require(view.updateBody(1,moved).isEmpty(),"modifica datum incrementale");
+        require(view.extrusions()[0].forgeBody==base&&view.extrusions()[2].forgeBody==untouched&&view.sketches()[0].linkedReferences[0]->source.featureId==link->source.featureId
+            &&view.sketches()[0].linkedReferences[0]->source.index==link->source.index,
+            "datum non aggiorna schizzi o geometrie di rami indipendenti");
+        require(view.extrusions()[3].forgeBody&&view.extrusions()[3].forgeBody!=affected&&std::fabs(view.sketches()[1].frame.origin[2]-9)<1e-12,
+            "datum aggiorna piano dello schizzo e superficie dipendente");
+        view.undo();require(view.extrusions()[2].forgeBody==untouched&&view.extrusions()[3].forgeBody==affected,"Undo datum conserva i risultati precedenti");
+        view.redo();require(view.extrusions()[2].forgeBody==untouched&&std::fabs(view.sketches()[1].frame.origin[2]-9)<1e-12,"Redo datum incrementale");
+    }
+}
+
 static void storyboardReviewRegressions() {
+    storyboardIncrementalRegressions();
     using namespace ForgeCad;
     using namespace Kernel;
     const auto box = [] {

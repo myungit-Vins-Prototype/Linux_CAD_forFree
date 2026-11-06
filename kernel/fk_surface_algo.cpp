@@ -7,6 +7,7 @@
 #include "fk_bernstein.h"
 #include "fk_curve_ops.h"
 #include "fk_curve_algo.h"
+#include "fk_intersect.h"
 #include "fk_precision.h"
 #include "fk_nurbs.h"
 
@@ -97,6 +98,17 @@ void projectOnIso(const Surface &surface, const Vec3 &p, bool fixedU, double val
     const CurvePtr<3> iso = fixedU ? surface.uIso(value) : surface.vIso(value);
     CurveProjection<3> result;
     if (iso) {
+        // Sulle isoparametriche NURBS il box dei poli e' conservativo:
+        // dopo un primo candidato vicino, un bordo lontano non puo'
+        // migliorare il minimo. I casi al limite restano al proiettore.
+        if (iso->type() == CurveType::BSpline && range.isFinite() &&
+            range.lo >= iso->domain().lo && range.hi <= iso->domain().hi && std::isfinite(candidates.bestDistance())) {
+            const Box box = curveBox(*iso, range);
+            Vec3 outside;
+            for (int axis = 0; axis < 3; ++axis) outside[axis] = std::max({box.lo[axis] - p[axis], 0.0, p[axis] - box.hi[axis]});
+            const double margin = 512.0 * kMachineEpsilon * std::max({1.0, norm(p), norm(box.lo), norm(box.hi), candidates.bestDistance()});
+            if (norm(outside) > candidates.bestDistance() + margin) return;
+        }
         result = projectPoint(*iso, p, range);
     } else {
         const IsoAdapter adapter(surface, fixedU, value);
@@ -347,7 +359,11 @@ void projectOnBSplineSurface(const BSplineSurface &surface, const Vec3 &p, const
     // quindi non e' piu' vicina del limite della pezza. Proiettarle tutte a ogni
     // chiamata costava centinaia di proiezioni di curve sulle superfici dei
     // raccordi, fatte a tratti con molti nodi.
-    projectOnBoundary(surface, p, uRange, vRange, candidates);
+    // Limiti superiori immediati, senza proiettare i lunghi bordi del
+    // carrier prima di avere visitato la zona piu' vicina.
+    for (double u : {uRange.lo, uRange.hi})
+        for (double v : {vRange.lo, vRange.hi}) candidates.consider(u, v);
+    candidates.consider(0.5 * (uRange.lo + uRange.hi), 0.5 * (vRange.lo + vRange.hi));
 
     // Best-first: si esplora prima la pezza con il limite inferiore piu' basso,
     // cosi' il minimo si trova presto e il resto viene scartato subito.
@@ -458,6 +474,9 @@ void projectOnBSplineSurface(const BSplineSurface &surface, const Vec3 &p, const
         queue.push({std::max(firstBound, bounds.lowerBound), std::move(first), node.depth + 1});
         queue.push({std::max(secondBound, bounds.lowerBound), std::move(second), node.depth + 1});
     }
+    // Anche un minimo sul bordo resta candidato; ora i suoi box possono
+    // scartare i lati sicuramente piu' lontani del minimo gia' trovato.
+    projectOnBoundary(surface, p, uRange, vRange, candidates);
 }
 
 // --- Estrusione: riduzione esatta a una curva --------------------------------

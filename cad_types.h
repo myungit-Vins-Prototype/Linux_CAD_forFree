@@ -684,9 +684,11 @@ struct CurveExtractionParameters {
 
 struct SurfacePoleEdit {int u=0,v=0;double dx=0,dy=0,dz=0,weightFactor=1;};
 struct SurfaceToolParameters {
-    int mode=0; // 0 fino a riferimento, 1 rete, 2 poli, 3 sviluppo esatto, 4 deforma su superficie
+    int mode=0; // 0 fino a riferimento, 1 rete, 2 poli, 3 distendi (esatto o con deformazione), 4 deforma su superficie
     double mappingU=0,mappingV=0,mappingX=0,mappingY=0,mappingAngle=0,mappingOffset=0;
     bool mappingCopy=true;
+    bool mappingRigid=false; // ogni sorgente segue la normale locale senza deformarsi
+    bool mappingQuilt=false; // mappa comune piano/superfici; modo3 appiattisce con deformazione
     double maximum=100,tolerance=1e-6;
     QByteArray basis;
     QVector<SurfacePoleEdit> edits;

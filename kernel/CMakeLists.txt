@@ -67,6 +67,7 @@ add_library(forgekernel STATIC
     fk_marching.h
     fk_marching.cpp
     fk_classify.h
+    fk_classify_uv.h
     fk_classify.cpp
     fk_cancel.h
     fk_parallel.h
@@ -102,6 +103,8 @@ add_library(forgekernel STATIC
     fk_surface_tools.cpp
     fk_body_collection.cpp
     fk_surface_mapping.cpp
+    fk_mapping_fit.cpp
+    fk_quilt_mapping.cpp
     fk_sheet.cpp
     fk_offset.h
     fk_offset.cpp
@@ -382,3 +385,11 @@ target_compile_options(forgekernel_surface_mapping_tests PRIVATE -Wall -Wextra -
 set_target_properties(forgekernel_surface_mapping_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
 add_test(NAME forgekernel_surface_mapping_tests COMMAND forgekernel_surface_mapping_tests)
 set_tests_properties(forgekernel_surface_mapping_tests PROPERTIES TIMEOUT 120)
+
+# Box delle facce NURBS ritagliate: geometria conservata e ricerca locale.
+add_executable(forgekernel_trimmed_face_bounds_tests tests/test_trimmed_face_bounds.cpp)
+target_link_libraries(forgekernel_trimmed_face_bounds_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_trimmed_face_bounds_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_trimmed_face_bounds_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_trimmed_face_bounds_tests COMMAND forgekernel_trimmed_face_bounds_tests)
+set_tests_properties(forgekernel_trimmed_face_bounds_tests PROPERTIES TIMEOUT 30)

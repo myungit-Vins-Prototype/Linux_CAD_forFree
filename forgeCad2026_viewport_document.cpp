@@ -643,7 +643,9 @@ QString CadViewport::setFeaturesSuppressed(const QVector<int> &indices, bool sup
         extrusions_[index] = std::move(result);
         regenerateAfter(index);
     } else {
-        regenerateAll();
+        QVector<bool> dirty(extrusions_.size(),false);
+        for(int index:list)dirty[index]=true;
+        regenerateFrom(list.first(),std::move(dirty),{});
     }
     int lastTip = -1;
     for (auto it = bodyVisible.cbegin(); it != bodyVisible.cend(); ++it) {
@@ -681,6 +683,12 @@ void CadViewport::deleteFeatures(const QVector<int> &indices) {
     }
     recordUndo();
     const QSet<int> removed(list.cbegin(),list.cend());
+    QSet<quint64> invalidated;
+    // Conservare i consumatori PRIMA di ricollegare la catena allo stadio
+    // precedente: dopo la rimappatura la dipendenza eliminata non esiste piu'.
+    for(int i=0;i<extrusions_.size();++i)if(!removed.contains(i))
+        for(int operand:ForgeCad::bodyOperands(extrusions_.at(i)))
+            if(removed.contains(operand))invalidated.insert(extrusions_.at(i).featureId);
     // Rimuove il gruppo in un'unica rimappatura. Fra due rimozioni separate
     // l'aggiornamento degli schizzi associativi potrebbe rigenerare le copie
     // appena tolte, lasciando un derivato orfano quando si elimina la madre.
@@ -704,7 +712,7 @@ void CadViewport::deleteFeatures(const QVector<int> &indices) {
         for (int &merged:dependent.mergeBodies)
             if (removed.contains(merged) && extrusions_.at(merged).modelBodyId==bodyId) merged=previousStage(merged,bodyId);
     }
-    removeBodies(removed);
+    removeBodies(removed, invalidated);
     for (auto it = bodyVisible.cbegin(); it != bodyVisible.cend(); ++it) {
         int tip = -1;
         for (int candidate = extrusions_.size() - 1; candidate >= 0; --candidate)
@@ -712,7 +720,6 @@ void CadViewport::deleteFeatures(const QVector<int> &indices) {
         for (int candidate = 0; candidate < extrusions_.size(); ++candidate)
             if (extrusions_.at(candidate).modelBodyId == it.key()) extrusions_[candidate].visible = candidate == tip && it.value();
     }
-    regenerateAll();
     selection_ = {};
     documentChanged();
 }
@@ -2062,7 +2069,7 @@ void CadViewport::regenerateFrom(int from, QVector<bool> dirty, QSet<int> dirtyS
             extrusions_[index].booleanTools = candidates;
         }
         const ExtrusionObject &body = extrusions_.at(index);
-        bool depends = all || candidatesChanged;
+        bool depends = all || dirty.at(index) || candidatesChanged;
         for (int sketch : ForgeCad::sketchesOf(body)) depends = depends || dirtySketches.contains(sketch);
         for (int operand : ForgeCad::bodyOperands(body)) depends = depends || (operand >= 0 && operand < index && dirty.at(operand));
         if (!depends) continue;
@@ -2218,7 +2225,12 @@ SketchFrame CadViewport::datumSketchFrame(const SketchFrame &datum, const Sketch
     return frame;
 }
 
-void CadViewport::removeBodies(const QSet<int> &removed) {
+void CadViewport::removeBodies(const QSet<int> &removed, const QSet<quint64> &invalidated) {
+    if(removed.isEmpty())return;
+    QSet<quint64> affected=invalidated;
+    for(int i=0;i<extrusions_.size();++i)if(!removed.contains(i))
+        for(int operand:ForgeCad::bodyOperands(extrusions_.at(i)))
+            if(removed.contains(operand))affected.insert(extrusions_.at(i).featureId);
     // La rigenerazione puo' ridisegnare la vista prima di documentChanged().
     // Gli indici della scelta spigoli appartengono ancora alla vecchia lista:
     // annullarla prima di eliminare o rinumerare i corpi, anche se la base
@@ -2271,9 +2283,11 @@ void CadViewport::removeBodies(const QSet<int> &removed) {
     // Gli schizzi su un piano di costruzione eliminato restano dove sono (piano fisso).
     ForgeCad::remapSketchSupports(sketches_, [&](int old) { return old < 0 ? old : map.value(old, -1); });
     extrusions_ = std::move(kept);
-    QSet<int> changed;
-    refreshSurfacePierceSketches(-1,changed);
-    if (!changed.isEmpty()) regenerateFrom(0,QVector<bool>(extrusions_.size(),false),changed);
+    QVector<bool> dirty(extrusions_.size(),false);
+    for(int i=0;i<extrusions_.size();++i)dirty[i]=affected.contains(extrusions_.at(i).featureId);
+    // regenerateFrom verifica anche appoggi e riferimenti rimasti senza
+    // sorgente; gli altri schizzi e B-rep restano invariati.
+    regenerateFrom(0,std::move(dirty),{});
 }
 
 void CadViewport::regenerateAfter(int changed) {
@@ -2282,7 +2296,7 @@ void CadViewport::regenerateAfter(int changed) {
     if (changed >= 0 && changed < dirty.size()) {
         dirty[changed] = true;
         followDatum(changed, sketches);
-        refreshSurfacePierceSketches(ForgeCad::isDatumBody(extrusions_.at(changed)) ? -1 : changed, sketches);
+        refreshSurfacePierceSketches(changed, sketches);
     }
     regenerateFrom(changed + 1, dirty, sketches);
 }

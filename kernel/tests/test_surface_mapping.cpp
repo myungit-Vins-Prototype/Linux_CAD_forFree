@@ -1,4 +1,5 @@
 #include "fk_surface_mapping.h"
+#include "fk_quilt_mapping.h"
 #include "fk_bspline_surface.h"
 #include "fk_primitives.h"
 #include "fk_sheet.h"
@@ -9,6 +10,8 @@
 #include "fk_tessellate.h"
 #include "fk_pcurve.h"
 #include "fk_curve_algo.h"
+#include "fk_classify_uv.h"
+#include "fk_curve_surface.h"
 #include <iostream>
 #include <stdexcept>
 using namespace ForgeCad::Kernel;
@@ -45,6 +48,24 @@ int main(){try{
     require(error<=options.tolerance,"fit deformazione oltre budget");
     require(std::fabs(massProperties(wrapped,1e-8).volume-8.2)<1e-4,"volume deformazione cilindrica errato");
     for(auto face:wrapped.faces())require(history.isDeclared(EntityKind::Face,face.index),"genealogia deformazione assente");
+    SurfaceQuiltMap quilt({{&cylinder,side}},Vec2(kHalfPi,10));
+    for(double x:{-2.,0.,2.})for(double y:{-1.,0.,1.}) {
+        const Vec2 uv(kHalfPi+x/10.,10+y);const auto flat=quilt.flatten(0,uv);
+        require(distance(flat,Vec2(x,y))<1e-9,"sviluppo metrico cilindrico");
+        require(distance(quilt.fold(Vec3(flat.x(),flat.y(),0)),cylinder.face(side).surface->point(uv.x(),uv.y()))<1e-9,"mappa quilt andata/ritorno");
+    }
+    auto quiltBody=quilt.bend(source,options,&history,&error);
+    require(checkBody(quiltBody,{true,true}).empty()&&error<=options.tolerance,"piegatura da quilt appiattito B-rep");
+    bool exactContact=false;
+    for(auto f:quiltBody.faces())exactContact=exactContact||quiltBody.face(f).surface.get()==cylinder.face(side).surface.get();
+    require(exactContact,"faccia a quota zero conserva il carrier esatto e la parametrizzazione");
+    for(auto e:quiltBody.edges())for(int k=0;k<=12;++k) {
+        const auto &edge=quiltBody.edge(e);const auto p=edge.curve->point(edge.range.lo+(edge.range.hi-edge.range.lo)*k/12.);
+        require(std::fabs(std::hypot(p.x(),p.y())-10)<1e-7||std::fabs(std::hypot(p.x(),p.y())-11)<1e-7||k!=0,"appoggio e quota della cella cilindrica");
+    }
+    ExchangeBody quiltExchange;quiltExchange.name="quilt";quiltExchange.body=quiltBody;
+    const auto quiltStep=readStep(writeStep({quiltExchange}));
+    require(quiltStep.bodies.size()==1&&checkBody(quiltStep.bodies[0].body,{true,true}).empty(),"STEP del corpo piegato con superfici quintiche");
     auto roundtrip=readBodyBinary(writeBodyBinary(wrapped));require(checkBody(roundtrip,{true,true}).empty(),"roundtrip B-rep");
     TessellationOptions mesh;mesh.deflection=.05;require(tessellate(roundtrip,mesh).failedFaces==0,"mesh deformazione incompleta");
     ExchangeBody item;item.name="wrapped";item.body=wrapped;auto step=readStep(writeStep({item}));require(step.bodies.size()==1&&checkBody(step.bodies[0].body).empty(),"scambio STEP deformazione");
@@ -94,6 +115,61 @@ int main(){try{
         Body::BuildFace face;face.surface=surface;face.loops={{{0,true,nullptr,0},{1,true,nullptr,0},{2,false,nullptr,0},{3,false,nullptr,0}}};
         auto result=Body::buildSheet(vertices,edges,{face});require(computePCurves(result)==0,"SP-curve appoggio");return result;
     };
+    // Due facce del medesimo carrier, una sola giunzione topologica.
+    const std::vector<Vec3> joinedPoints{curved.point(0,0),curved.point(.5,0),curved.point(1,0),curved.point(0,1),curved.point(.5,1),curved.point(1,1)};
+    std::vector<Body::BuildEdge> joinedEdges{{0,1,curved.vIso(0),{0,.5},0},{1,2,curved.vIso(0),{.5,1},0},
+        {2,5,curved.uIso(1),{0,1},0},{4,5,curved.vIso(1),{.5,1},0},{3,4,curved.vIso(1),{0,.5},0},
+        {0,3,curved.uIso(0),{0,1},0},{1,4,curved.uIso(.5),{0,1},0}};
+    Body::BuildFace joinedLeft,joinedRight;joinedLeft.surface=joinedRight.surface=std::make_shared<BSplineSurface>(curved);
+    joinedLeft.loops={{{0,true,nullptr,0},{6,true,nullptr,0},{4,false,nullptr,0},{5,false,nullptr,0}}};
+    joinedRight.loops={{{1,true,nullptr,0},{2,true,nullptr,0},{3,false,nullptr,0},{6,false,nullptr,0}}};
+    auto quiltSupport=Body::buildSheet(joinedPoints,joinedEdges,{joinedLeft,joinedRight});
+    require(computePCurves(quiltSupport)==0&&checkBody(quiltSupport,{true,true}).empty(),"quilt topologico di due NURBS");
+    const std::vector<SurfaceTargetFace> flattenTargets{{&quiltSupport,quiltSupport.faces()[0]},{&quiltSupport,quiltSupport.faces()[1]}};
+    const auto autoAnchor=surfaceQuiltAnchor(flattenTargets);
+    require(distance(autoAnchor,Vec2(.5,.5))<1e-12,"origine sul bordo topologico comune");
+    SurfaceQuiltMap flattenMap(flattenTargets,autoAnchor);
+    SurfaceFlattenStats flattenStats;BodyHistory flattenHistory;
+    const Frame3 flattenPlane(Vec3(2,4,6),normalized(Vec3(1,2,3)),Vec3(1,0,0));
+    const auto flatJoined=flattenMap.flattenSheet(flattenPlane,1e-6,&flattenStats,&flattenHistory);
+    require(flatJoined.isSheet()&&flatJoined.faces().size()==2&&flatJoined.edges().size()==7&&flatJoined.vertices().size()==6&&
+        checkBody(flatJoined,{true,true}).empty(),"appiattimento conserva il bordo comune e la lamina");
+    for(auto v:flatJoined.vertices())require(std::fabs(flattenPlane.toLocal(flatJoined.vertex(v).point).z())<1e-12,"tutti i vertici sul piano destinazione");
+    require(flattenStats.samples>400&&flattenStats.minimumStretch<1&&flattenStats.maximumStretch>1&&
+        flattenStats.boundaryDeviation<=2e-8,"deformazione della doppia curvatura misurata, contorni nel budget");
+    for(auto f:flatJoined.faces())require(flattenHistory.isDeclared(EntityKind::Face,f.index),"genealogia delle facce appiattite");
+    require(flattenHistory.descendants(EntityKind::Edge,0,6).size()==1,"un solo discendente del bordo comune");
+    SurfaceQuiltMap reverseMap({flattenTargets[1],flattenTargets[0]},autoAnchor);
+    require(checkBody(reverseMap.flattenSheet(flattenPlane,1e-6),{true,true}).empty(),"ordine inverso delle facce appiattite valido");
+    const std::vector<SurfaceTargetFace> planeTarget{{&plane,plane.faces()[0]}};
+    SurfaceQuiltMap planeMap(planeTarget,surfaceQuiltAnchor(planeTarget));
+    const auto flatPlane=planeMap.flattenSheet(flattenPlane,1e-6,&flattenStats);
+    require(std::fabs(faceArea(flatPlane,flatPlane.faces()[0])-36)<1e-9&&
+        std::fabs(flattenStats.minimumStretch-1)<1e-10&&std::fabs(flattenStats.maximumStretch-1)<1e-10,
+        "appiattimento di un piano senza deformazione artificiale");
+    rejected=false;try{quilt.flattenSheet(flattenPlane,1e-6);}catch(const std::domain_error&){rejected=true;}
+    require(rejected,"superficie periodica non tagliata rifiutata esplicitamente");
+    ExchangeBody flattenExchange;flattenExchange.name="superfici appiattite";flattenExchange.body=flatJoined;
+    const auto flattenStep=readStep(writeStep({flattenExchange}));
+    require(flattenStep.bodies.size()==1&&flattenStep.bodies[0].body.faces().size()==2&&
+        checkBody(flattenStep.bodies[0].body,{true,true}).empty(),"STEP dell'insieme appiattito");
+    SurfaceQuiltMap multiQuilt({{&quiltSupport,quiltSupport.faces()[0]},{&quiltSupport,quiltSupport.faces()[1]}},Vec2(.5,.5));
+    for(int side=0;side<2;++side)for(double u:{.1,.4})for(double v:{.2,.7}) {
+        const Vec2 uv(side?.5+u:u,v);const auto xy=multiQuilt.flatten(side,uv);
+        require(distance(multiQuilt.fold(Vec3(xy.x(),xy.y(),0)),curved.point(uv.x(),uv.y()))<1e-9,"corrispondenza multifaccia reversibile");
+    }
+    SurfaceQuiltMap offGridQuilt({{&quiltSupport,quiltSupport.faces()[0]}},Vec2(.37,.43));
+    for(double v:{.13,.41,.77}) {
+        const auto xy=offGridQuilt.flatten(0,Vec2(.37,v));
+        require(std::fabs(xy.x())<1e-12,"origine della mappa esatta anche fuori dai nodi del fit");
+        require(distance(offGridQuilt.fold(Vec3(0,xy.y(),.1)),curved.point(.37,v)+.1*curved.normal(.37,v))<1e-9,"ancoraggio e normale coerenti lungo la meridiana");
+    }
+    const auto seamLeft=multiQuilt.flatten(0,Vec2(.5,.5)),seamRight=multiQuilt.flatten(1,Vec2(.5,.5));
+    require(distance(seamLeft,seamRight)<1e-10,"nessuna cucitura artificiale nella mappa piana");
+    const auto bentAcross=multiQuilt.bend(small,onNurbs,&history,&error);
+    require(checkBody(bentAcross,{true,true}).empty()&&error<=onNurbs.tolerance,"cella solida piegata attraverso la giunzione");
+    rejected=false;try{multiQuilt.fold(Vec3(100,0,0));}catch(const std::domain_error&){rejected=true;}
+    require(rejected,"materiale fuori dal quilt non viene esteso silenziosamente");
     const auto spanning=makeBox(Frame3(Vec3(-1,-.5,0),Vec3(0,0,1),Vec3(1,0,0)),2,1,.2);
     auto left=support(-3,0,false),right=support(0,3,false);SurfaceWrapOptions joined;
     auto across=wrapBodyOnFaces(spanning,{{&left,left.faces()[0]},{&right,right.faces()[0]}},joined,&history,&error);
@@ -111,6 +187,60 @@ int main(){try{
     left=support(-3,-.25,false);right=support(.25,3,false);joined.anchor=Vec2();rejected=false;
     try{wrapBodyOnFaces(spanning,{{&left,left.faces()[0]},{&right,right.faces()[0]}},joined);}catch(const std::domain_error&){rejected=true;}
     require(rejected,"vuoto fra superfici destinazione rifiutato");
+    left=support(-3,0,false);right=support(0,3,false);SurfaceWrapOptions centered;
+    require(fitSurfaceWrapPlacement({Vec2(3.1,0),Vec2(-2,0)},{{&left,left.faces()[0]},{&right,right.faces()[0]}},centered,.5),"centraggio trova piccola traslazione con tutti i centri nelle facce");
+    require(centered.shift.x()<0&&norm(centered.shift)<=.5,"traslazione limitata senza scala");
+    const auto previous=centered.shift;
+    require(!fitSurfaceWrapPlacement({Vec2(10,0)},{{&left,left.faces()[0]},{&right,right.faces()[0]}},centered,.1)&&distance(centered.shift,previous)==0,"ricerca fallita conserva la posizione");
+    Body::BuildFace triangleFace;triangleFace.surface=std::make_shared<Plane>(Frame3());
+    const std::vector<Vec3> trianglePoints{{0,0,0},{1,0,0},{0,1,0}};
+    std::vector<Body::BuildEdge> triangleEdges;
+    for(int i=0;i<3;++i){const auto d=trianglePoints[(i+1)%3]-trianglePoints[i];triangleEdges.push_back({i,(i+1)%3,std::make_shared<Line<3>>(trianglePoints[i],normalized(d)),{0,norm(d)},0});}
+    triangleFace.loops={{{0,true,nullptr,0},{1,true,nullptr,0},{2,true,nullptr,0}}};
+    auto triangle=Body::buildSheet(trianglePoints,triangleEdges,{triangleFace});require(computePCurves(triangle)==0,"SP-curve triangolo sorgente");
+    const auto distant=makePlaneSheet(Frame3(Vec3(10,0,0),Vec3(0,0,1),Vec3(1,0,0)),1);
+    SurfaceWrapOptions polygonMapping;
+    const auto mappedTriangle=wrapBodyOnFaces(triangle,{{&triangle,triangle.faces()[0]},{&distant,distant.faces()[0]}},polygonMapping,&history,&error);
+    require(checkBody(mappedTriangle,{true,true}).empty()&&std::fabs(faceArea(mappedTriangle,mappedTriangle.faces()[0])-.5)<1e-9,"fit rettangolare esteso soltanto fuori dal triangolo materiale");
+    // Ogni sorgente e' una rototraslazione: distanze, volume e carrier
+    // analitici restano invariati, Z segue la normale al centro del profilo.
+    options.rigid=true;options.normalOffset=.3;
+    auto rigid=wrapBodyOnSurface(source,target,options,&history,&error);
+    require(error==0&&checkBody(rigid,{true,true}).empty(),"posizionamento rigido valido senza fit");
+    require(std::fabs(massProperties(rigid).volume-8)<1e-8,"volume rigido invariato");
+    const auto originalVertices=source.vertices(),rigidVertices=rigid.vertices();
+    for(std::size_t i=0;i<originalVertices.size();++i)for(std::size_t j=0;j<i;++j)
+        require(std::fabs(distance(source.vertex(originalVertices[i]).point,source.vertex(originalVertices[j]).point)-
+                          distance(rigid.vertex(rigidVertices[i]).point,rigid.vertex(rigidVertices[j]).point))<1e-10,"distanze rigide conservate");
+    for(auto f:rigid.faces())require(rigid.face(f).surface->type()==SurfaceType::Plane,"piani sorgenti conservati");
+    const auto near=makeBox(Frame3(Vec3(1,-.5,0),Vec3(0,0,1),Vec3(1,0,0)),1,1,.2);
+    left=support(-3,0,true);right=support(0,3,true);joined.anchor=Vec2(1,.5);joined.rigid=true;
+    rigid=wrapBodyOnFaces(near,{{&left,left.faces()[0]},{&right,right.faces()[0]}},joined,&history,&error);
+    require(std::fabs(massProperties(rigid).volume-.2)<1e-9,"volume rigido su due facce");
+    const auto ids=rigid.vertices();Vec3 baseCenter,topCenter;int countBase=0,countTop=0;
+    const auto from=near.vertices();for(std::size_t i=0;i<from.size();++i) {
+        if(near.vertex(from[i]).point.z()<.1){baseCenter+=rigid.vertex(ids[i]).point;++countBase;}
+        else {topCenter+=rigid.vertex(ids[i]).point;++countTop;}
+    }
+    baseCenter=baseCenter/double(countBase);topCenter=topCenter/double(countTop);
+    require(distance(baseCenter,Vec3(1.5,0,.025*1.5*1.5))<1e-9,"centro sorgente sul supporto corretto");
+    require(distance(normalized(topCenter-baseCenter),normalized(Vec3(-.075,0,1)))<1e-10,"ogni copia segue la normale locale");
+    FaceParameterClassifier classifier(left,left.faces()[0],1e-7);
+    require(classifier.classify(Vec2(.5,.5))==PointLocation::Inside&&classifier.classify(Vec2(-.1,.5))==PointLocation::Outside&&
+            classifier.classify(Vec2(1,.5))==PointLocation::Boundary,"classificazione UV interno/esterno/bordo");
+    // La scorciatoia retta/Bezier non deve perdere radici su una falda
+    // ripiegata, ne' nascondere due destinazioni sovrapposte.
+    std::vector<Vec3> foldPoles;
+    for(int i=0;i<3;++i)for(double y:{-1.,1.})foldPoles.emplace_back(i==1?-1.:1.,y,i-1.);
+    const BSplineSurface fold(2,1,{0,0,0,1,1,1},{0,0,1,1},3,2,foldPoles);
+    auto hits=numericCurveSurface(Line<3>(Vec3(.25,0,-2),Vec3(0,0,1)),{0,4},fold,1e-8);
+    require(hits.parameters.size()==2&&std::fabs(hits.parameters[0]-1.5)<1e-7&&std::fabs(hits.parameters[1]-2.5)<1e-7,"ricerca completa delle due radici su superficie ripiegata");
+    // Un secondo carrier regolare alla stessa impronta resta ambiguo.
+    const auto over=makePlaneSheet(Frame3(Vec3(0,0,1),Vec3(0,0,1),Vec3(1,0,0)),3);
+    left=support(-3,0,false);right=support(0,3,false);joined.anchor=Vec2();rejected=false;
+    try{wrapBodyOnFaces(spanning,{{&left,left.faces()[0]},{&right,right.faces()[0]},{&over,over.faces()[0]}},joined);}catch(const std::domain_error&){rejected=true;}
+    require(rejected,"sovrapposizioni rigide rifiutate senza scelta arbitraria");
+    options.rigid=false;
     options.normalOffset=-21;rejected=false;try{wrapBodyOnSurface(source,target,options);}catch(const std::domain_error&){rejected=true;}require(rejected,"inversione deformazione accettata");
     std::cout<<"PASS sviluppo piano/cilindro/cono, aree/lunghezze, rifiuto doppia curvatura, deformazione cilindrica/volume, genealogia, B-rep, STEP e mesh, appoggio multifaccia continuo/NURBS/vuoti\n";
     return 0;

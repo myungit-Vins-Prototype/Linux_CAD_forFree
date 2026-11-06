@@ -1121,7 +1121,7 @@ private:
 
     // Toglie i corpi (gli operandi di booleane e raccordi eliminati che restano
     // tornano visibili) e rinumera i riferimenti.
-    void removeBodies(const QSet<int> &removed);
+    void removeBodies(const QSet<int> &removed, const QSet<quint64> &invalidated = {});
     void synchronizePatternResults();
 
     // Elimina le entita' selezionate dello schizzo attivo, con i loro vincoli;

@@ -29,6 +29,7 @@
 #include "../cad_forge.h"
 #include "../cad_pattern.h"
 #include "../cad_surface_tools.h"
+#include "../cad_surface_mapping.h"
 #include "../cad_extrude.h"
 #include "../cad_sketch_refs.h"
 #include "../cad_sketch_reference_usage.h"

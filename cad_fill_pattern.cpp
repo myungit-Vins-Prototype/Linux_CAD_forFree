@@ -8,6 +8,10 @@
 #include "fk_curve_algo.h"
 #include "fk_intersect.h"
 #include "fk_pcurve.h"
+#include "fk_sew.h"
+#include "fk_unify.h"
+#include <map>
+#include <set>
 #include <cmath>
 #include <stdexcept>
 namespace ForgeCad {
@@ -19,7 +23,7 @@ bool fillPatternPlacements(const PatternParameters &p, int source, int owner,
     try {
         const auto require=[](bool b,const QString &m){if(!b)throw std::domain_error(m.toStdString());};
         require(source>=0&&source<owner&&source<bodies.size(),QStringLiteral("Scegli il corpo o la funzione da ripetere."));
-        require(p.kind>=3&&p.kind<=6&&p.refs.size()==1,QStringLiteral("Scegli un contorno chiuso di riempimento."));
+        require(p.kind>=3&&p.kind<=6&&!p.refs.isEmpty()&&p.refs.size()<=64,QStringLiteral("Scegli un contorno chiuso di riempimento."));
         require(std::isfinite(p.spacing)&&p.spacing>1e-7&&std::isfinite(p.spacing2)&&p.spacing2>1e-7&&std::isfinite(p.angle),QStringLiteral("I passi devono essere positivi e finiti."));
         require(p.variations.isEmpty()&&p.excluded.isEmpty(),QStringLiteral("Il riempimento automatico non usa variazioni o esclusioni numerate."));
         ForgeBody seed=bodies[source].forgeBody;
@@ -34,15 +38,39 @@ bool fillPatternPlacements(const PatternParameters &p, int source, int owner,
             }
         }
         require(bool(seed),QStringLiteral("Sorgente priva di geometria."));
-        const auto &ref=p.refs.front();ForgeBody boundary;std::vector<FaceId> selected;
-        if(ref.kind==7&&ref.element.kind<0) {
+        ForgeBody boundary;std::vector<FaceId> selected;
+        if(p.refs.size()==1&&p.refs[0].kind==7&&p.refs[0].element.kind<0) {
+            const auto &ref=p.refs[0];
             require(ref.index>=0&&ref.index<sketches.size(),QStringLiteral("Schizzo del contorno non disponibile."));
             QString reason;boundary=forgePlanarSketch(sketches[ref.index],&reason);require(bool(boundary),reason);selected=boundary->faces();
-        } else if(ref.kind==5) {
-            require(ref.index>=0&&ref.index<owner&&ref.index<bodies.size()&&bool(bodies[ref.index].forgeBody),QStringLiteral("Faccia del contorno non disponibile."));
-            boundary=bodies[ref.index].forgeBody;auto face=resolveFaceReference(*boundary,ref.point,1e-6);
-            require(face.valid(),QStringLiteral("Faccia del contorno mancante o ambigua."));selected={face};
-        } else require(false,QStringLiteral("Scegli uno schizzo chiuso o una faccia piana."));
+        } else {
+            std::map<int,std::vector<FaceId>> groups;std::set<std::pair<int,int>> unique;
+            const Plane *common=nullptr;
+            for(const auto &ref:p.refs) {
+                require(ref.kind==5,QStringLiteral("Scegli uno schizzo chiuso oppure piu' facce piane."));
+                int index=ref.index;
+                if(ref.featureId){index=-1;for(int i=0;i<owner&&i<bodies.size();++i)if(bodies[i].featureId==ref.featureId){index=i;break;}}
+                require(index>=0&&index<owner&&index<bodies.size()&&bool(bodies[index].forgeBody),QStringLiteral("Faccia del contorno non disponibile."));
+                const auto body=bodies[index].forgeBody;const auto face=resolveFaceReference(*body,ref.point,1e-6);
+                require(face.valid(),QStringLiteral("Faccia del contorno mancante o ambigua."));
+                const auto &surface=*body->face(face).surface;
+                require(surface.type()==SurfaceType::Plane,QStringLiteral("Il riempimento richiede facce piane."));
+                const auto &plane=static_cast<const Plane &>(surface);
+                if(common)require(norm(cross(common->frame().zDir(),plane.frame().zDir()))<=kAngularResolution&&
+                    std::fabs(dot(common->frame().zDir(),plane.frame().origin()-common->frame().origin()))<=kLinearResolution,
+                    QStringLiteral("Le facce del contorno devono essere complanari."));
+                else common=&plane;
+                require(unique.insert({index,face.index}).second,QStringLiteral("Faccia del contorno duplicata."));groups[index].push_back(face);
+            }
+            std::vector<Body> sheets;for(const auto &[index,faces]:groups)sheets.push_back(facesAsSheet(*bodies[index].forgeBody,faces));
+            if(sheets.size()==1)boundary=std::make_shared<const Body>(unifySameDomain(sheets[0],kLinearResolution));
+            else {
+                std::vector<const Body *> parts;for(const auto &sheet:sheets)parts.push_back(&sheet);
+                const auto joined=sewSheets(parts,kLinearResolution,false);
+                boundary=std::make_shared<const Body>(unifySameDomain(joined.body,kLinearResolution));
+            }
+            selected=boundary->faces();
+        }
         require(!selected.empty(),QStringLiteral("Contorno senza regioni chiuse."));
         const auto &surface=*boundary->face(selected.front()).surface;
         require(surface.type()==SurfaceType::Plane,QStringLiteral("Il riempimento richiede un contorno piano."));

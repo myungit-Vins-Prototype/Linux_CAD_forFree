@@ -19,6 +19,8 @@
 
 #include "fk_body_check.h"
 #include "fk_classify.h"
+#include "fk_classify_uv.h"
+#include "fk_cycle_point_index.h"
 #include "fk_curve_ops.h"
 #include "fk_curve_algo.h"
 #include "fk_intersect.h"
@@ -131,6 +133,17 @@ struct SubFace {
 };
 
 bool isPlane(const Surface &s) { return s.type() == SurfaceType::Plane; }
+// Il filtro scarta solo curve racchiuse da un box conservativo.
+bool boundedCurve(const Curve<3> &curve,const Interval &range) {
+    switch(curve.type()) {
+    case CurveType::Line:case CurveType::Circle:case CurveType::Ellipse:return true;
+    case CurveType::BSpline:return range.lo>=curve.domain().lo&&range.hi<=curve.domain().hi;
+    case CurveType::Trimmed:return boundedCurve(*static_cast<const TrimmedCurve<3> &>(curve).basis(),range);
+    case CurveType::Transformed:return boundedCurve(*static_cast<const TransformedCurve &>(curve).basis(),range);
+    default:return false;
+    }
+}
+
 
 // Normale uscente della faccia in x. Nei poli (sfera, vertice del cono) la
 // normale dell'anello attorno, dalla parte di `toward` (un punto della
@@ -624,6 +637,8 @@ void BooleanBuilder::surfaceArcs(FaceId fa, FaceId fb, PairResult &out) const {
             for (FinId f : body.loopFins(l)) {
                 const Edge &edge = body.edge(body.fin(f).edge);
                 const double edgeTolerance = edge.tolerance;
+                if(boundedCurve(*edge.curve,edge.range)&&
+                    !curveBox(*edge.curve,edge.range).padded(tolerance_+vertexTolerance_+edgeTolerance).overlaps(boxes_[1-k].at(otherFace.index)))continue;
                 const auto cross = [&](const Vec3 &x) {
                     if (classifyPointOnFace(other, otherFace, x, tolerance_) == PointLocation::Outside) return;
                     crossings.push_back(x);
@@ -794,23 +809,33 @@ std::vector<Interval> BooleanBuilder::coincidentRanges(const Curve<3> &curve, co
     if (surface.type() != SurfaceType::BSpline) return intersectCurveSurface(curve, range, surface, tolerance_).coincident;
     // B-spline: gli estremi si agganciano anche ai tagli della zona comune.
     std::vector<std::pair<CurvePtr<3>, Interval>> snap;
-    out.usedEarlierCuts = true;
     if (out.earlierCuts)
         for (const IntersectionCurve &cut : *out.earlierCuts) snap.emplace_back(cut.curve, cut.range);
     for (const IntersectionCurve &cut : out.partialCuts) snap.emplace_back(cut.curve, cut.range);
-    return curveOnSurface(curve, range, surface, tolerance_, snap);
+    const auto ranges = curveOnSurface(curve, range, surface, tolerance_, snap);
+    // I tagli precedenti servono solo ad agganciare una transizione
+    // sopra/fuori. Su un edge interamente sopra o fuori nessun aggancio
+    // viene consultato: ripetere la coppia in sequenza era inutile.
+    if (!ranges.empty() && !(ranges.size() == 1 && ranges[0].lo == range.lo && ranges[0].hi == range.hi))
+        out.usedEarlierCuts = true;
+    return ranges;
 }
 
 void BooleanBuilder::coincidentArcs(FaceId fa, FaceId fb, PairResult &out, bool partial) const {
+    const bool identicalParameters=sameSurfaceParameterization(*bodies_[0].face(fa).surface,*bodies_[1].face(fb).surface);
     for (int k = 0; k < 2; ++k) {
         cancellationPoint();
         const FaceId fx = k == 0 ? fa : fb, fy = k == 0 ? fb : fa;
         const Body &bx = bodies_[k], &by = bodies_[1 - k];
         const Surface &surface = *bx.face(fx).surface;
+        std::unique_ptr<FaceParameterClassifier> knownUV;
+        if(identicalParameters)knownUV=std::make_unique<FaceParameterClassifier>(bx,fx,tolerance_);
         const double accept = std::max(tolerance_, 1e-9 * scale_);
         for (LoopId l : by.face(fy).loops)
             for (FinId f : by.loopFins(l)) {
                 const Edge &fullEdge = by.edge(by.fin(f).edge);
+                if(boundedCurve(*fullEdge.curve,fullEdge.range)&&
+                    !curveBox(*fullEdge.curve,fullEdge.range).padded(accept+vertexTolerance_+fullEdge.tolerance).overlaps(boxes_[k].at(fx.index)))continue;
                 // Superfici coincidenti in parte: solo i tratti dell'edge che stanno sull'altra.
                 std::vector<Interval> ranges{fullEdge.range};
                 if (partial) ranges = coincidentRanges(*fullEdge.curve, fullEdge.range, surface, out);
@@ -824,11 +849,23 @@ void BooleanBuilder::coincidentArcs(FaceId fa, FaceId fb, PairResult &out, bool 
                         && distance(edge.curve->point(range.lo), edge.curve->point(0.5 * (range.lo + range.hi))) <= tolerance_))
                     continue;
                 CurvePtr<2> pcurve;
-                const bool identicalParameters = sameSurfaceParameterization(surface,*by.face(fy).surface);
                 if (identicalParameters) pcurve = by.fin(f).pcurve;
                 if (!pcurve) pcurve = exactPCurve(surface, edge.curve, edge.range, accept);
                 if (!pcurve && !isPlane(surface)) pcurve = fitPCurve(surface, edge.curve, edge.range, std::min(accept, kPCurveTolerance));
-                if (!pcurve) throw std::logic_error("booleanOperation: edge fuori dalla superficie coincidente");
+                bool clippingOnly = false;
+                if (!pcurve && partial) {
+                    // Il tratto comune del carrier puo' iniziare fuori dal
+                    // ritaglio della faccia, nella fascia della connessione.
+                    // Per trovare il taglio basta un'immagine temporanea
+                    // entro quel budget; ogni arco conservato viene poi
+                    // ricontrollato con il normale budget SP-curve.
+                    pcurve = fitPCurve(surface, edge.curve, edge.range, accept);
+                    clippingOnly = bool(pcurve);
+                }
+                if (!pcurve) throw std::logic_error("booleanOperation: edge fuori dalla superficie coincidente (E" +
+                    std::to_string(by.fin(f).edge.index) + " operando " + std::to_string(1-k) + ", F" +
+                    std::to_string(fx.index) + " operando " + std::to_string(k) + ", intervallo " +
+                    std::to_string(range.lo) + ".." + std::to_string(range.hi) + (partial ? ", parziale)" : ")"));
                 if (identicalParameters && by.fin(f).pcurve) {
                     PCurves entry;
                     entry.surface[0]=&surface;entry.surface[1]=by.face(fy).surface.get();
@@ -865,8 +902,11 @@ void BooleanBuilder::coincidentArcs(FaceId fa, FaceId fb, PairResult &out, bool 
                     }
                 for (const Interval &piece : splitRange(*edge.curve, edge.range, parameters)) {
                     const Vec3 middle = edge.curve->point(0.5 * (piece.lo + piece.hi));
-                    const PointLocation location = classifyPointOnFace(bx, fx, middle, tolerance_);
+                    const PointLocation location = knownUV?knownUV->classify(pcurve->point(.5*piece.lo+.5*piece.hi))
+                        :classifyPointOnFace(bx,fx,middle,tolerance_);
                     if (location == PointLocation::Outside) continue;
+                    if (clippingOnly && !fitPCurve(surface, edge.curve, piece, std::min(accept, kPCurveTolerance)))
+                        throw std::logic_error("booleanOperation: arco conservato fuori dalla superficie coincidente");
                     Arc arc;
                     arc.curve = edge.curve;
                     arc.range = piece;
@@ -1141,8 +1181,9 @@ std::vector<SubFace> BooleanBuilder::buildSubFaces(int k, FaceId f, const std::v
                 result.front().unchanged = before == after;
             }
             return result;
-        } catch (const std::domain_error &) {
-            if (samples == 1536) throw;
+        } catch (const std::domain_error &error) {
+            if (samples == 1536) throw std::domain_error(std::string(error.what()) + " (F" +
+                std::to_string(f.index) + " operando " + std::to_string(k) + ")");
         }
     }
     return {};
@@ -1540,6 +1581,10 @@ std::vector<SubFace> BooleanBuilder::buildSubFacesOnce(int k, FaceId f, const st
         }
         return implicitWhole;
     };
+    std::vector<detail::CyclePointIndex::Point> cyclePoints;
+    if (!holes.empty()) for (std::size_t c=0;c<cycles.size();++c)
+        for (const Vec2 &point:cycles[c].polygon) cyclePoints.push_back({point,int(c)});
+    const detail::CyclePointIndex cyclePointIndex(std::move(cyclePoints));
     for (int h : holes) {
         cancellationPoint();
         // Punto appena dentro il dominio del foro (a sinistra del ciclo
@@ -1556,14 +1601,10 @@ std::vector<SubFace> BooleanBuilder::buildSubFacesOnce(int k, FaceId f, const st
             if (!(distance(a, b) > 0.0)) continue;
             const Vec2 middle = 0.5 * (a + b);
             double clearance = 1e300;
-            for (std::size_t c = 0; c < cycles.size(); ++c) {
-                if (int(c) == h) continue;
-                for (const Vec2 &q : cycles[c].polygon)
-                    for (int su = -1; su <= 1; ++su)
-                        for (int sv = -1; sv <= 1; ++sv)
-                            if ((su == 0 || periods[0] > 0.0) && (sv == 0 || periods[1] > 0.0))
-                                clearance = std::min(clearance, distance(middle, q + Vec2(su * periods[0], sv * periods[1])));
-            }
+            for (int su = -1; su <= 1; ++su)
+                for (int sv = -1; sv <= 1; ++sv)
+                    if ((su == 0 || periods[0] > 0.0) && (sv == 0 || periods[1] > 0.0))
+                        clearance=std::min(clearance,cyclePointIndex.nearest(middle,h,Vec2(su*periods[0],sv*periods[1])));
             if (clearance > bestClearance) {
                 bestClearance = clearance;
                 longest = i;
@@ -1907,7 +1948,13 @@ void BooleanBuilder::computeCuts(std::map<int, std::vector<Piece>> (&cuts)[2]) {
             result.earlierCuts = &partialCuts_;
             compute(i);
         }
-        if (result.error) std::rethrow_exception(result.error);
+        if (result.error) {
+            const std::string context = " (F" + std::to_string(pairs[i].first.index) + " operando 0, F" +
+                                        std::to_string(pairs[i].second.index) + " operando 1)";
+            try { std::rethrow_exception(result.error); }
+            catch (const std::domain_error &error) { throw std::domain_error(std::string(error.what()) + context); }
+            catch (const std::logic_error &error) { throw std::logic_error(std::string(error.what()) + context); }
+        }
         arcs_.insert(arcs_.end(), std::make_move_iterator(result.arcs.begin()), std::make_move_iterator(result.arcs.end()));
         pcurves_.merge(result.pcurves);
         partial_.merge(result.partial);
@@ -1918,6 +1965,32 @@ void BooleanBuilder::computeCuts(std::map<int, std::vector<Piece>> (&cuts)[2]) {
 }
 
 void BooleanBuilder::collectCuts(std::map<int, std::vector<Piece>> (&cuts)[2]) {
+    // Gli estremi sono immutabili finche' un doppione viene sostituito.
+    // Ricalcolarli per ogni confronto rivalutava milioni di volte le
+    // stesse NURBS; la cache conserva i medesimi punti, senza quantizzarli.
+    using Ends = std::pair<Vec3,Vec3>;
+    std::map<int,std::vector<Ends>> endPoints[2];
+    std::map<int,std::unique_ptr<FaceClassifier>> trimClassifiers[2];
+    std::map<int,std::unique_ptr<FaceParameterClassifier>> parameterClassifiers[2];
+    const auto insideTrim = [&](int k,FaceId face,const CurvePtr<3> &curve,double parameter,const Vec3 &point) {
+        const auto &surface=*bodies_[k].face(face).surface;
+        const auto images=pcurves_.equal_range(curve.get());
+        for(auto image=images.first;image!=images.second;++image)for(int side=0;side<2;++side) {
+            const auto &pc=image->second.pcurve[side];
+            if(image->second.surface[side]!=&surface||!pc||!pc->domain().contains(parameter))continue;
+            const auto uv=pc->point(parameter);
+            if(distance(surface.point(uv.x(),uv.y()),point)>kPCurveTolerance)continue;
+            auto &classifier=parameterClassifiers[k][face.index];
+            if(!classifier)classifier=std::make_unique<FaceParameterClassifier>(bodies_[k],face,tolerance_);
+            return classifier->classify(uv);
+        }
+        auto &classifier=trimClassifiers[k][face.index];
+        if(!classifier)classifier=std::make_unique<FaceClassifier>(bodies_[k],face,tolerance_);
+        return classifier->classify(point);
+    };
+    double magnitude=1.;
+    for(const auto &box:bounds_)if(!box.isEmpty())magnitude=std::max({magnitude,norm(box.lo),norm(box.hi)});
+    const double roundoff=512*std::numeric_limits<double>::epsilon()*magnitude;
     snapNearEnds();
 
     for (const Arc &arc : arcs_) {
@@ -1927,12 +2000,23 @@ void BooleanBuilder::collectCuts(std::map<int, std::vector<Piece>> (&cuts)[2]) {
         vertexTolerance_ = std::max({vertexTolerance_, arc.loTolerance, arc.hiTolerance});
     }
 
-    // Tagli di ogni faccia, divisi nei punti dei vertici e senza doppioni.
-    for (const Arc &arc : arcs_)
-        for (int k = 0; k < 2; ++k) {
+    // Dopo la suddivisione globale ogni nuovo tratto va classificato
+    // nuovamente: un pezzo sul bordo non e' un taglio interno e un pezzo
+    // esterno non appartiene al grafo. La vecchia etichetta del punto
+    // medio dell'arco non e' valida per tutti i sottointervalli.
+    for (const Arc &arc : arcs_) {
+        for (const Interval &range : splitAtPoints(*arc.curve, arc.range)) {
             cancellationPoint();
-            if (!arc.cut[k]) continue;
-            for (const Interval &range : splitAtPoints(*arc.curve, arc.range)) {
+            const double parameter=0.5*(range.lo+range.hi);
+            const Vec3 middle=arc.curve->point(parameter);
+            const auto in1=arc.face[1].valid()&&bodies_[1].contains(arc.face[1])
+                ?insideTrim(1,arc.face[1],arc.curve,parameter,middle):PointLocation::Boundary;
+            if(in1==PointLocation::Outside)continue;
+            const auto in0=insideTrim(0,arc.face[0],arc.curve,parameter,middle);
+            if(in0==PointLocation::Outside)continue;
+            const PointLocation locations[2]={in0,in1};
+            for (int k = 0; k < 2; ++k) {
+                if(locations[k]!=PointLocation::Inside)continue;
                 // Pezzi di un arco che esce appena dalla superficie (seme su un edge
                 // tollerante, fuori dal dominio della B-spline): fuori dalla faccia.
                 if (vertexTolerance_ > tolerance_ && (range.lo != arc.range.lo || range.hi != arc.range.hi)
@@ -1944,7 +2028,7 @@ void BooleanBuilder::collectCuts(std::map<int, std::vector<Piece>> (&cuts)[2]) {
                 piece.tolerance = arc.tolerance;
                 piece.cut = true;
                 piece.partner = arc.face[1 - k];
-                piece.partnerCrosses = arc.cut[1 - k];
+                piece.partnerCrosses = locations[1-k]==PointLocation::Inside;
                 piece.coplanar = arc.coplanar;
                 if (range.lo == arc.range.lo && arc.loTolerance > 0.0) {
                     piece.loVertex = arc.loPoint;
@@ -1955,27 +2039,33 @@ void BooleanBuilder::collectCuts(std::map<int, std::vector<Piece>> (&cuts)[2]) {
                     piece.hiTolerance = arc.hiTolerance;
                 }
                 std::vector<Piece> &list = cuts[k][arc.face[k].index];
+                auto &ends=endPoints[k][arc.face[k].index];
+                const Vec3 start=piece.startNode(),end=piece.endNode();
                 bool duplicate = false;
                 // Estremi uguali: entro la tolleranza, o quella dei punti presi su edge tolleranti.
                 const auto near = [&](const Vec3 &a, double ta, const Vec3 &b, double tb) { return distance(a, b) <= std::max({tolerance_, ta, tb}); };
-                for (Piece &existing : list) {
-                    const bool sameEnds = (near(existing.startNode(), existing.startTolerance(), piece.startNode(), piece.startTolerance())
-                                           && near(existing.endNode(), existing.endTolerance(), piece.endNode(), piece.endTolerance()))
-                        || (near(existing.startNode(), existing.startTolerance(), piece.endNode(), piece.endTolerance())
-                            && near(existing.endNode(), existing.endTolerance(), piece.startNode(), piece.startTolerance()));
+                for (std::size_t i=0;i<list.size();++i) {
+                    Piece &existing=list[i];
+                    const double reach=std::max({tolerance_,existing.startTolerance(),existing.endTolerance(),piece.startTolerance(),piece.endTolerance()});
+                    if(std::fabs(ends[i].first.x()-start.x())>reach+roundoff &&
+                       std::fabs(ends[i].second.x()-start.x())>reach+roundoff)continue;
+                    const bool sameEnds = (near(ends[i].first, existing.startTolerance(), start, piece.startTolerance())
+                                           && near(ends[i].second, existing.endTolerance(), end, piece.endTolerance()))
+                        || (near(ends[i].first, existing.startTolerance(), end, piece.endTolerance())
+                            && near(ends[i].second, existing.endTolerance(), start, piece.startTolerance()));
                     // Stessa geometria anche con parametri diversi (un'isoparametrica
                     // esatta e la stessa linea tracciata): il punto medio dell'uno sull'altro.
                     if (sameEnds && (distance(existing.middle(), piece.middle()) <= 10.0 * tolerance_
                                      || projectPoint(*existing.curve, piece.middle(), existing.range).distance <= 10.0 * tolerance_)) {
                         duplicate = true;
-                        if (existing.coplanar && !piece.coplanar) existing = piece;  // meglio un taglio trasversale
+                        if (existing.coplanar && !piece.coplanar) { existing = piece; ends[i]={start,end}; }  // meglio un taglio trasversale
                         break;
                     }
                 }
-                if (!duplicate) list.push_back(piece);
+                if (!duplicate) { list.push_back(piece); ends.emplace_back(start,end); }
             }
         }
-
+    }
 }
 
 // Dove tre superfici sono tangenti nello stesso punto (due raccordi che si
@@ -2381,6 +2471,21 @@ Body BooleanBuilder::assemble(const std::vector<std::pair<SubFace, bool>> &kept,
     }
     std::vector<Body::BuildEdge> edges;
     std::vector<Vec3> edgeMiddles;
+    std::vector<std::vector<const Surface *>> edgeSurfaces;
+    const auto fitsSurface = [&](const CurvePtr<3> &curve,const Interval &range,const Surface &surface,double budget) {
+        Vec2 hint(NAN,NAN);const auto images=pcurves_.equal_range(curve.get());
+        for(int i=0;i<=8;++i) {
+            const double t=range.lo+range.length()*i/8.;const auto point=curve->point(t);bool known=false;
+            for(auto image=images.first;image!=images.second&&!known;++image)for(int side=0;side<2;++side) {
+                const auto &pc=image->second.pcurve[side];
+                if(image->second.surface[side]!=&surface||!pc||!pc->domain().contains(t))continue;
+                const auto uv=pc->point(t);
+                known=distance(surface.point(uv.x(),uv.y()),point)<=budget;
+            }
+            if(!known&&surfaceDeviationAboveTolerance(surface,point,budget,&hint)>0.0)return false;
+        }
+        return true;
+    };
     std::vector<Body::BuildFace> faces;
     for (const auto &[subFace, flip] : kept) {
         cancellationPoint();
@@ -2440,7 +2545,39 @@ Body BooleanBuilder::assemble(const std::vector<std::pair<SubFace, bool>> &kept,
                     edge.tolerance = piece.tolerance;
                     edges.push_back(edge);
                     edgeMiddles.push_back(middle);
+                    edgeSurfaces.push_back({face.surface.get()});
                     index = int(edges.size()) - 1;
+                } else {
+                    auto &existing=edges[std::size_t(index)];
+                    const double budget=std::max({kLinearResolution,existing.tolerance,piece.tolerance});
+                    if(existing.curve!=piece.curve&&!fitsSurface(existing.curve,existing.range,*face.surface,budget)) {
+                        bool compatible=fitsSurface(piece.curve,piece.range,*face.surface,budget);
+                        for(const Surface *owner:edgeSurfaces[std::size_t(index)])
+                            if(compatible&&!fitsSurface(piece.curve,piece.range,*owner,budget))compatible=false;
+                        if(compatible) {
+                            // Due rappresentazioni dello stesso bordo sono
+                            // gia' state abbinate. Il primo candidato puo'
+                            // non appartenere all'altra faccia: conserva la
+                            // curva sorgente che rispetta tutti gli appoggi,
+                            // senza adattarla o aumentare il budget.
+                            const auto oldPoint=existing.curve->point(0.5*(existing.range.lo+existing.range.hi));
+                            const auto parameter=projectPoint(*piece.curve,oldPoint,piece.range).parameter;
+                            const bool reverse=dot(existing.curve->derivative(0.5*(existing.range.lo+existing.range.hi)),piece.curve->derivative(parameter))<0;
+                            const auto resetFin=[&](Body::BuildFin &fin) {
+                                if(fin.edge!=index)return;
+                                if(reverse)fin.sense=!fin.sense;
+                                fin.pcurve.reset();fin.pcurveTolerance=0;
+                            };
+                            for(auto &previous:faces)for(auto &cycle:previous.loops)for(auto &fin:cycle)resetFin(fin);
+                            for(auto &cycle:built.loops)for(auto &fin:cycle)resetFin(fin);
+                            for(auto &fin:loop)resetFin(fin);
+                            existing.curve=piece.curve;existing.range=piece.range;
+                            existing.start=piece.forward?vs:ve;existing.end=piece.forward?ve:vs;
+                            edgeMiddles[std::size_t(index)]=middle;
+                        }
+                    }
+                    auto &owners=edgeSurfaces[std::size_t(index)];
+                    if(std::find(owners.begin(),owners.end(),face.surface.get())==owners.end())owners.push_back(face.surface.get());
                 }
                 // Il bordo condiviso eredita il budget di entrambi gli usi,
                 // anche quando la prima faccia lo aveva creato esatto.

@@ -157,6 +157,18 @@ evitando puntatori residui durante aggiornamenti e chiusura.
 - La cronologia Undo/Redo continua a usare istantanee complete del documento;
   ogni soppressione, eliminazione o riordino e' un singolo passo.
 
+## Rigenerazione incrementale
+
+Eliminazione, modifica dei parametri e soppressione di gruppi conservano i
+risultati precedenti validi e i rami indipendenti. Si aggiornano i consumatori
+coinvolti e la loro cascata; modificare un datum aggiorna solo gli schizzi e
+le lavorazioni che ne dipendono. Eliminando uno stadio, la catena del corpo
+si ricollega al precedente prima di propagare l'invalidazione per ID persistenti.
+Riferimenti geometrici rimasti senza sorgente continuano a segnalare l'errore.
+Undo/Redo conservano le istantanee. Il comando esplicito di rigenerazione
+completa mantiene il proprio comportamento.
+[Verifiche, misure e limiti](rigenerazione-incrementale-2026-11-06.md).
+
 ## Lavoro successivo
 
 Aggiornamento del 30 ottobre 2026: la proposta originaria di un porting separato
