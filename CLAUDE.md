@@ -146,9 +146,8 @@ genealogia prima delle ripetizioni. App/18CTest/Wayland: apertura28,361s,tavola1
 Loft36: derivate locali264→7,8s;storia senza cache137s/0errori,Svuota69s.
 App/20CTest/gruppi kernel/mappa PASS. [Ricalcolo](docs/surface219-ricalcolo-2026-11-06.md),
 [apertura e limiti](docs/surface219-tavola-apertura-2026-11-06.md).
-CT0578 cf25833: Sweep10/24errori; UV fuori dominio scartati prima del budget fisico del bordo.
-App/17CTest/51kernel/Wayland/mappa PASS:36feature senza cache17,3s,riapertura8,1s/0errori.
-[Indagine](docs/ct0578-regressione-filetto-2026-11-06.md).
+CT0578: fix UV ai bordi;36feature/0errori,17CTest/468kernel/Wayland/mappa PASS.
+a6248ea pubblicato;CI42266591981 PASS:Linux75/2SKIP,macOS79/1SKIP. [Dettagli](docs/ct0578-regressione-filetto-2026-11-06.md).
 
 **04/11 — Griglie, specchi e guide.** `3c644e2`: istanze condivise, B-rep2/cache10;
 `9eff99c`: appoggi G1/riordino e F7/E25 verificati. Griglie/cache11: PRT190,5→88,7MB,
