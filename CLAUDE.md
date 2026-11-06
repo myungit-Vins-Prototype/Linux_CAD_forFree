@@ -135,7 +135,7 @@ HoneyRepeat:13solidi, app/Wayland/Undo/codec/test PASS; circolare2/12istanze262/
 Taglia superficie: pannello unico, conversioni/5CTest PASS; [prove](docs/honeyrepeat-taglio-tra-superfici-2026-11-06.md).
 Booleane:9CTest/48kernel/GUI PASS; HoneyRepeat senza Corpo3:1solido/2096facce/47s.
 [Dettagli](docs/booleane-selezione-rettangolo-2026-11-06.md).
-CI318: raccordo corretto,20casi+4rifiuti PASS; [prove](docs/ci-raccordi-2026-11-06.md).
+e761f43 su main;467kernel/37CTest PASS,CI in corso; [prove](docs/ci-raccordi-2026-11-06.md).
 
 **04/11 — Griglie, specchi e guide.** `3c644e2`: istanze condivise, B-rep2/cache10;
 `9eff99c`: appoggi G1/riordino e F7/E25 verificati. Griglie/cache11: PRT190,5→88,7MB,

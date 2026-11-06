@@ -34,4 +34,27 @@ rotazione con traslazione, con lo stesso controllo geometrico assoluto di
 Gli errori del test ora indicano modalità e raggio. Gli input restano invariati.
 
 Prototipi e log esclusi dal repository in /tmp/forgecad-ci-20261106.
-Verifica completa e nuova CI in corso al momento della pubblicazione.
+La verifica locale completa è terminata con successo; la nuova CI è ancora in corso.
+
+Commit pubblicato su origin/main: e761f433604bf91372f3e6b37aa89eb823cdf07f.
+Nuova CI: https://github.com/myungit-Vins-Prototype/Linux_CAD_forFree/actions/runs/42242095481
+
+Build locale completa PASS. Mappa 624 file / 8.822 relazioni / 303 unità,
+nessuna diagnostica; controllo di aggiornamento e due dettagli HTML PASS.
+Verificati chiamanti del raccordo, dipendenze geometriche e regressioni,
+distinguendo chiamate, include e riferimenti nei due versi.
+
+
+Esiti locali conclusivi sul codice pubblicato:
+
+- Applicazione e tutti i target della build locale ricompilati.
+- Suite generale kernel: 467/467 PASS, incluso il test fallito sulla CI.
+- CTest: 37/37 PASS (28 suite kernel autonome e nove UI/storia).
+- Prova temporanea del nuovo calcolo dei coni con intermedi solo double:
+  PASS. È un controllo numerico locale, non una compilazione su macOS.
+- Diff senza errori di spaziatura; nessun documento CAD originale pubblicato.
+- Il codice e761f43 è su origin/main. La CI 42242095481 ha completato
+  configurazione e dipendenze ed è in compilazione su Linux e macOS.
+  Nessun successo remoto ancora dichiarato.
+- L'aggiornamento conclusivo di questa memoria e di CLAUDE è un commit solo
+  documentale con skip CI, per conservare l'esecuzione del commit di codice.
