@@ -877,6 +877,21 @@ bool sewModel(RawModel &model, double tolerance) {
         }
         throw std::domain_error("cucitura: verso del bordo chiuso non determinabile");
     };
+    // Conserva il parametro del bordo che richiederebbe la rimappatura
+    // piu' costosa. Le SP-curve dense gia' valide restano inalterate;
+    // si rimappano quelle piu' semplici degli altri bordi coincidenti.
+    std::vector<std::size_t> remapCost(model.edges.size(), 0);
+    for (const RawFace &face : model.faces)
+        for (const auto &loop : face.loops)
+            for (const RawFin &fin : loop)
+                if (fin.pcurve) {
+                    const auto *spline = dynamic_cast<const BSplineCurve<2> *>(fin.pcurve.get());
+                    remapCost[std::size_t(fin.edge)] += spline ? spline->poles().size() : 2;
+                }
+    for (auto &[ends, list] : byEnds)
+        std::stable_sort(list.begin(), list.end(), [&](int a, int b) {
+            return remapCost[std::size_t(a)] > remapCost[std::size_t(b)];
+        });
     for (const auto &[ends, list] : byEnds)
         for (std::size_t i = 0; i < list.size(); ++i) {
             if (edgeTarget[std::size_t(list[i])] != list[i]) continue;

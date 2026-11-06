@@ -136,6 +136,11 @@ Taglia superficie: pannello unico, conversioni/5CTest PASS; [prove](docs/honeyre
 Booleane:9CTest/48kernel/GUI PASS; HoneyRepeat senza Corpo3:1solido/2096facce/47s.
 [Dettagli](docs/booleane-selezione-rettangolo-2026-11-06.md).
 e761f43 su main;467kernel/37CTest PASS,CI in corso; [prove](docs/ci-raccordi-2026-11-06.md).
+Cucitura Surface219 Corpo9/10: conserva SP-curve dense, senza fit inutile oltre32kcampate.
+App/11CTest/5filtri kernel PASS; Wayland:solido91facce/0bordi liberi/29,7s,
+Undo/Redo/genealogia/codec PASS. Mappa624/8822/check/HTML XCB PASS.
+Originale invariato; QA cache4GiB, rigenerazione integrale non verificata; commit/push richiesti il 06/11.
+[Indagine](docs/surface219-cucitura-2026-11-06.md).
 
 **04/11 — Griglie, specchi e guide.** `3c644e2`: istanze condivise, B-rep2/cache10;
 `9eff99c`: appoggi G1/riordino e F7/E25 verificati. Griglie/cache11: PRT190,5→88,7MB,
@@ -155,21 +160,12 @@ Bernstein/U:224→72,64s/3,09×; Wayland26feature senza cache92,7s,B-rep identic
 App/ASan/UBSan PASS; mappa579/8023/278/check/5HTML PASS.
 [Misure e limiti](docs/apertura-tempi-surface219-2026-11-04.md).
 
-0. **03/11 — Schizzi, riferimenti e loft.** Visualizza/Mostra linee di costruzione persistente:
-   app/CTest10/10,rendering e persistenza Wayland/XCB PASS; popup automatizzato Wayland non verificato.
-   [Opzione](docs/visualizzazione-costruzione-2026-11-03.md). `4fafbaa` pubblicato: clic transitori senza falso
-   Undo/dirty, pulizia cache con rimappatura e protezione di vincoli/consumatori; costruzione solo
-   in modifica o con Visualizza/Mostra linee di costruzione (persistente), esclusa dai loft. Undo approvato; dati malformati conservati. App/runner,6QA,
-   file49→33,CTest169PASS/1SKIP/0FAIL,ultimo17/17 PASS. [Rapporto](docs/schizzi-riferimenti-costruzione-2026-11-03.md).
-   Loft3sezioni/2guide: raccordo C2 del residuo2,235e-7mm nel budget esistente; fit1e-9mm, sorgenti invariati. App/runner,CTest8/8,forma11/11,Loft42/42,
-   4flussi Wayland/XCB PASS;sezioni4,99e-14 mm. Mappa566/7825/268/check/HTML PASS.
-   [Prove](docs/loft-tolleranza-incontri-2026-11-03.md).
-   Studio statico SolidCraft138e347/FreeCAD1.1.4: base adeguata; proposti ID locali/prodotti e mutazioni
-   comuni; storage esterno/Binder rinviabili. Nessuna migrazione/suite esterna. [Studio](docs/confronto-riferimenti-solidcraft-freecad-2026-11-03.md).
-   `cb35a2e`: sezioni implicite fit1e-9,CTest19/19,Loft42/42,4QA. [Sezioni](docs/loft-sezioni-proiettate-2026-11-03.md).
-   `1a8c60d`: picker/diagnostica/specchi;[storia](docs/storyboard-diagnostica-loft-2026-11-03.md).
-   `2e4366f`: pannelli/ribbon,tre punti,versoG1/G2;[UI](docs/ui-pannelli-verso-loft-2026-11-03.md).
-   [Checkpoint](docs/history/claude-checkpoint-prima-confronto-riferimenti-2026-11-03.md).
+0. **03/11 — Schizzi/riferimenti/loft.** Costruzione visibile su richiesta, riferimenti transitori/pulizia
+   con protezione dei consumatori (`4fafbaa`): app/Undo/codec/GUI verificati.
+   Loft3sezioni: fit1e-9 e raccordo C2 nel budget, app/8CTest/42Loft/GUI PASS.
+   Studio SolidCraft/FreeCAD: base adeguata; ID locali/mutazioni comuni proposti, nessuna migrazione.
+   Sezioni proiettate `cb35a2e`, picker/specchi `1a8c60d`, pannelli/G1 `2e4366f` verificati.
+   Rapporti e prove: [archivio](docs/history/claude-prima-cucitura-2026-11-06.md).
 
 1. **02–03/11 — Guide/Loft9 (`e54a174`).** CI41513461524 su `ec08b12`:
    Linux56PASS/2SKIP,macOS60PASS/1SKIP;storico. Profili razionali/Hermite/guide;

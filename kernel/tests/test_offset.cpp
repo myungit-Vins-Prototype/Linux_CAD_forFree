@@ -787,3 +787,72 @@ FK_TEST(SewMappedSamplesRetainDistanceLimit) {
         FK_CHECK(writeBodyBinary(lower)==beforeA && writeBodyBinary(upper)==beforeB);
     }
 }
+
+// Il bordo e' lo stesso, ma una delle SP-curve ha piu' campate del budget
+// di raffinamento. Cucirlo non richiede ricostruire quella curva gia' valida.
+FK_TEST(SewPreservesDensePCurveRegardlessOfOperandOrder) {
+    CurvePtr<2> dense;
+    const auto rectangle = [&](bool right) {
+        const double x = right ? 1 : 0;
+        const std::vector<Vec3> points{{x,0,0},{x+1,0,0},{x+1,1,0},{x,1,0}};
+        std::vector<Body::BuildEdge> edges;
+        std::vector<Body::BuildFin> fins;
+        for (int i = 0; i < 4; ++i) {
+            const Vec3 a = points[i], b = points[(i+1)%4];
+            CurvePtr<3> curve;
+            CurvePtr<2> uv;
+            Interval range;
+            double uvTolerance = 0;
+            if (right && i == 3) {
+                range = {10,20};
+                curve = std::make_shared<BSplineCurve<3>>(3,
+                    std::vector<double>{10,10,10,10,20,20,20,20},
+                    std::vector<Vec3>{{1,1,0},{1,.98,0},{1,.8,0},{1,0,0}});
+                constexpr int segments = 33000;
+                std::vector<double> knots{range.lo};
+                std::vector<Vec2> poles;
+                for (int k = 0; k <= segments; ++k) {
+                    const double t = range.lo + range.length()*k/segments;
+                    knots.push_back(t);
+                    poles.emplace_back(1,curve->point(t).y());
+                }
+                knots.push_back(range.hi);
+                uv = std::make_shared<BSplineCurve<2>>(1,knots,poles);
+                dense = uv;
+                uvTolerance = 1e-8;
+            } else {
+                range = {0,distance(a,b)};
+                curve = std::make_shared<Line<3>>(a,b-a);
+                uv = std::make_shared<BSplineCurve<2>>(1,
+                    std::vector<double>{0,0,range.hi,range.hi},
+                    std::vector<Vec2>{{a.x(),a.y()},{b.x(),b.y()}});
+            }
+            edges.push_back({i,(i+1)%4,curve,range});
+            fins.push_back({i,true,uv,uvTolerance});
+        }
+        return Body::buildSheet(points,edges,{{std::make_shared<Plane>(Frame3()),true,{fins}}});
+    };
+    const Body a = rectangle(false), b = rectangle(true);
+    FK_CHECK(checkBody(a,{true,true}).empty() && checkBody(b,{true,true}).empty());
+    const std::string beforeA = writeBodyBinary(a), beforeB = writeBodyBinary(b);
+    for (bool reverse : {false,true}) {
+        const auto result = sewSheets(reverse ? std::vector<const Body*>{&b,&a}
+                                             : std::vector<const Body*>{&a,&b},1e-6,false);
+        FK_CHECK(result.shells == 1 && result.freeEdges == 6);
+        FK_CHECK(result.body.faces().size() == 2 && result.body.edges().size() == 7);
+        FK_CHECK(checkBody(result.body,{true,true}).empty());
+        bool preserved = false;
+        for (EdgeId id : result.body.edges()) {
+            const auto &edge = result.body.edge(id);
+            if (!edge.forward.valid() || !edge.backward.valid()) continue;
+            for (FinId f : {edge.forward,edge.backward}) {
+                const auto &fin = result.body.fin(f);
+                preserved = preserved || fin.pcurve == dense;
+                FK_CHECK(fin.pcurve && pcurveDeviation(*result.body.face(result.body.finFace(f)).surface,
+                    *edge.curve,*fin.pcurve,edge.range,128) < 1e-7);
+            }
+        }
+        FK_CHECK(preserved);
+        FK_CHECK(writeBodyBinary(a) == beforeA && writeBodyBinary(b) == beforeB);
+    }
+}
