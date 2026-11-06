@@ -108,6 +108,14 @@ PointLocation classifyFacePoint(const Body &body, FaceId faceId, const Vec3 &poi
         }
     } else if (distanceToFaceBoundary(body, faceId, point) <= tolerance) return PointLocation::Boundary;
 
+    // Le SP-curve approssimate possono superare di poco il dominio del
+    // carrier pur descrivendo un punto sul bordo entro il budget fisico.
+    // Il controllo del bordo precede quindi quello dei parametri: la sola
+    // uscita da [uMin,uMax] non rende esterno un contatto valido.
+    if (knownParameters && ((!surface.isUPeriodic() && !surface.uDomain().contains(knownParameters->x()))
+        || (!surface.isVPeriodic() && !surface.vDomain().contains(knownParameters->y()))))
+        return PointLocation::Outside;
+
     std::vector<FinId> localFins;
     if (!prepared) for (LoopId l : face.loops)
         for (FinId f : body.loopFins(l)) localFins.push_back(f);
@@ -330,9 +338,10 @@ FaceParameterClassifier::FaceParameterClassifier(const Body &body,FaceId face,do
     :data_(std::make_shared<const Data>(body,face,tolerance)){}
 PointLocation FaceParameterClassifier::classify(const Vec2 &uv) const {
     const auto &surface=*data_->body.face(data_->face).surface;
-    if(!isFinite(uv)||(!surface.isUPeriodic()&&!surface.uDomain().contains(uv.x()))||
-       (!surface.isVPeriodic()&&!surface.vDomain().contains(uv.y())))return PointLocation::Outside;
-    return classifyFacePoint(data_->body,data_->face,surface.point(uv.x(),uv.y()),data_->tolerance,&data_->prepared,&uv);
+    if (!isFinite(uv)) return PointLocation::Outside;
+    const Vec3 point = surface.point(uv.x(), uv.y());
+    if (!isFinite(point)) return PointLocation::Outside;
+    return classifyFacePoint(data_->body,data_->face,point,data_->tolerance,&data_->prepared,&uv);
 }
 
 namespace {

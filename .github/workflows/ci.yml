@@ -43,14 +43,37 @@ jobs:
 
       - name: Installa le dipendenze
         if: runner.os == 'Linux'
+        timeout-minutes: 15
+        env:
+          DEBIAN_FRONTEND: noninteractive
         run: |
-          sudo apt-get update
-          sudo apt-get install --no-install-recommends -y \
+          # Il mirror Azure puo' restare in download fino al timeout del job.
+          # Cambia solo quel mirror sui runner effimeri; firme APT invariate.
+          sudo python3 - <<'PYAPT'
+          from pathlib import Path
+          directory = Path('/etc/apt/sources.list.d')
+          paths = [Path('/etc/apt/sources.list'), *directory.glob('*.list'), *directory.glob('*.sources')]
+          for path in paths:
+              if not path.is_file():
+                  continue
+              original = path.read_text()
+              updated = original
+              for protocol in ('http', 'https'):
+                  updated = updated.replace(protocol + '://azure.archive.ubuntu.com/ubuntu',
+                                            'https://archive.ubuntu.com/ubuntu')
+              if updated != original:
+                  path.write_text(updated)
+                  print('Mirror Ubuntu principale:', path)
+          PYAPT
+          forgecad_apt_options=(-o Acquire::Retries=3 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30)
+          sudo apt-get "${forgecad_apt_options[@]}" update 2>&1 | tee "$RUNNER_TEMP/dependencies.log"
+          sudo apt-get "${forgecad_apt_options[@]}" install --no-install-recommends -y \
             build-essential cmake ninja-build qt6-base-dev libqt6opengl6-dev \
             libgl1-mesa-dev zlib1g-dev libzstd-dev \
             libocct-foundation-dev libocct-modeling-data-dev \
             libocct-modeling-algorithms-dev libocct-data-exchange-dev \
-            libocct-visualization-dev
+            libocct-visualization-dev \
+            2>&1 | tee -a "$RUNNER_TEMP/dependencies.log"
 
       - name: Installa le dipendenze macOS
         if: runner.os == 'macOS'
@@ -88,6 +111,7 @@ jobs:
           retention-days: 7
           if-no-files-found: warn
           path: |
+            ${{ runner.temp }}/dependencies.log
             ${{ runner.temp }}/configure.log
             ${{ runner.temp }}/build.log
             ${{ runner.temp }}/ctest.log

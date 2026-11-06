@@ -328,6 +328,20 @@ void documentInstanceCacheMigrationTests() {
 }
 
 void documentReadTests() {
+    constexpr quint64 mib=1024*1024;
+    require(ForgeCad::documentOpenReadLimits(32*1024*mib,0).cacheBytes==4096*mib,
+            "cache automatica limitata a 4 GiB anche su macchine grandi");
+    require(ForgeCad::documentOpenReadLimits(3*1024*mib,0).cacheBytes==384*mib,
+            "cache limitata a un ottavo della memoria disponibile");
+    require(ForgeCad::documentOpenReadLimits(32*1024*mib,512).cacheBytes==512*mib,
+            "preferenza esplicita piu' piccola rispettata");
+    require(ForgeCad::documentOpenReadLimits(512*mib,4096).cacheBytes==64*mib,
+            "preferenza grande limitata dalla memoria disponibile");
+    require(ForgeCad::documentOpenReadLimits(0,0).cacheBytes==1024*mib
+        &&ForgeCad::documentOpenReadLimits(1,0).cacheBytes==0,
+            "memoria sconosciuta conserva limite precedente, memoria esaurita esclude cache");
+    require(ForgeCad::DocumentReadLimits{}.cacheBytes==1024*mib,
+            "codec generico conserva il budget fisso");
     using namespace ForgeCad;
     using DocumentReadDetail::DataStream;
     documentSketchReferenceNameTests();

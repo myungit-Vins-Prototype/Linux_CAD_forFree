@@ -69,6 +69,13 @@ void CadViewport::loadDocument(DocumentState state,
     ForgeCad::setDisplayLengthUnit(lengthUnit_, this);
     ForgeCad::normalizePatternResultOrder(state.sketches, state.extrusions);
     ForgeCad::normalizeModelHistory(state);
+    // Registra la genealogia dell'intero snapshot prima di ricostruire i
+    // risultati runtime delle ripetizioni. Altrimenti un operando sostituito
+    // rompe le dichiarazioni dei B-rep salvati a valle e puo' far risolvere
+    // due riferimenti simmetrici sullo stesso bordo.
+    for(int i=0;i<state.extrusions.size();++i)
+        if(state.extrusions.at(i).cachedGeometry&&state.extrusions.at(i).forgeBody)
+            ForgeCad::registerFeatureGenealogy(state.extrusions.at(i),i,state.sketches,state.extrusions);
     sketches_ = std::move(state.sketches);
     storyPosition_ = -1;
     insertionSketchSourceSize_ = -1;

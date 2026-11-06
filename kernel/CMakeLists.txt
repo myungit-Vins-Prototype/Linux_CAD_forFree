@@ -343,6 +343,22 @@ set_target_properties(forgekernel_plane_jets_tests PROPERTIES AUTOMOC OFF AUTOUI
 add_test(NAME forgekernel_plane_jets_tests COMMAND forgekernel_plane_jets_tests)
 set_tests_properties(forgekernel_plane_jets_tests PROPERTIES TIMEOUT 30)
 
+# Derivate polinomiali stabili e lunghezze di curve fitte, senza OCCT.
+add_executable(forgekernel_bspline_derivative_tests tests/fk_test_main.cpp tests/test_bspline_derivatives.cpp)
+target_link_libraries(forgekernel_bspline_derivative_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_bspline_derivative_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_bspline_derivative_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_bspline_derivative_tests COMMAND forgekernel_bspline_derivative_tests)
+set_tests_properties(forgekernel_bspline_derivative_tests PROPERTIES TIMEOUT 30)
+
+# Classificazione UV ai bordi NURBS: budget fisico e domini periodici.
+add_executable(forgekernel_face_parameter_tests tests/fk_test_main.cpp tests/test_face_parameter_classify.cpp)
+target_link_libraries(forgekernel_face_parameter_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_face_parameter_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_face_parameter_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_face_parameter_tests COMMAND forgekernel_face_parameter_tests)
+set_tests_properties(forgekernel_face_parameter_tests PROPERTIES TIMEOUT 30)
+
 # Jet a u fisso: NURBS razionali, istanze, nodi stretti e quadrature di massa.
 add_executable(forgekernel_bspline_isoline_tests tests/fk_test_main.cpp tests/test_bspline_isoline.cpp)
 target_link_libraries(forgekernel_bspline_isoline_tests PRIVATE forgekernel)

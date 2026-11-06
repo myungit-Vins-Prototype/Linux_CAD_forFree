@@ -28,7 +28,11 @@ QString drawingModelDefinitionHash(const DocumentState &document,QByteArray &has
 // Accetta anche le impronte del formato 53 soltanto se il modello non ha
 // nuovi nomi topologici degli schizzi che quel formato non rappresentava.
 QString drawingModelDefinitionMatches(const DocumentState &document,const QByteArray &expected,bool &matches);
-QString prepareDrawingEditorModel(DocumentState &document,DrawingEditorModel &model);
+enum class DrawingModelPreparation { BuildMissingGeometry, ReuseEvaluatedGeometry };
+// ReuseEvaluatedGeometry acquisisce lo stato gia' calcolato del viewport:
+// non ricostruisce feature, curve, piani o funzioni in errore.
+QString prepareDrawingEditorModel(DocumentState &document,DrawingEditorModel &model,
+    DrawingModelPreparation mode=DrawingModelPreparation::BuildMissingGeometry);
 // Migra nomi legacy sullo stesso snapshot verificando identita di curva e punto.
 // Il chiamante deve avere verificato l'impronta della definizione del modello.
 int upgradeDrawingFileReferences(DrawingFile &drawing,const DrawingEditorModel &model);

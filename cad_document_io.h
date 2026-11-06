@@ -58,6 +58,11 @@ struct DocumentReadLimits {
     qsizetype cacheBytes = qsizetype(1024) * 1024 * 1024;
 };
 
+// Budget dell'apertura interattiva: preferenza utente, al massimo 1/8 della
+// RAM disponibile e 4 GiB. I lettori/codec generici mantengono i limiti fissi.
+DocumentReadLimits documentOpenReadLimits();
+DocumentReadLimits documentOpenReadLimits(quint64 availableBytes,int requestedMiB);
+
 // Codec senza accesso al filesystem, usato anche dall'archivio revisioni.
 // La codifica puo' rappresentare uno snapshot archiviato; il normale Salva
 // su file richiede invece una copia di lavoro.

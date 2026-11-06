@@ -1,3 +1,5 @@
+#include "cad_memory.h"
+#include <QSettings>
 #include "cad_document_io.h"
 #include "cad_surface_tools.h"
 #include "cad_document_read.h"
@@ -1336,6 +1338,20 @@ void applyBodyCache(const QByteArray &compressed, const QByteArray &payload, Doc
     }
 }
 
+}
+
+DocumentReadLimits documentOpenReadLimits(quint64 availableBytes,int requestedMiB) {
+    DocumentReadLimits limits;
+    constexpr quint64 mib=1024*1024;
+    const quint64 requested=requestedMiB>0?quint64(requestedMiB)*mib:4096*mib;
+    const quint64 memoryBudget=availableBytes?availableBytes/8:quint64(limits.cacheBytes);
+    limits.cacheBytes=qsizetype(std::min({requested,memoryBudget,quint64(4096)*mib,
+                                        quint64(std::numeric_limits<qsizetype>::max())}));
+    return limits;
+}
+DocumentReadLimits documentOpenReadLimits() {
+    return documentOpenReadLimits(availableMemoryBytes(),
+        QSettings().value(QStringLiteral("document/openCacheMiB"),0).toInt());
 }
 
 QString canonicalDocumentPath(const QString &path) {

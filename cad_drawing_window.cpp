@@ -1,5 +1,7 @@
 #include "cad_drawing_window.h"
 #include "cad_drawing_focus.h"
+#include "cad_drawing_compute.h"
+#include <optional>
 #include "cad_icons.h"
 #include "cad_menu.h"
 #include "cad_toolbar.h"
@@ -167,15 +169,56 @@ void DrawingWindow::installEditor(DrawingSheetEditor *prepared){
             :QStringLiteral("Modello fissato al check-in %1. Il comando Modello consente di scegliere un'altra revisione o tornare alla copia di lavoro.").arg(pinned.toString(QUuid::WithoutBraces)));
     }
 }
-QString DrawingWindow::createFromModel(const QString &modelPath){
+QString DrawingWindow::createFromModel(const QString &modelPath,const DocumentState *evaluatedModel,const QByteArray &savedFingerprint){
     if(editor_)return QStringLiteral("Questa finestra contiene gia' una tavola.");
-    const auto resolved=canonicalDocumentPath(modelPath);DocumentState source;
-    auto error=loadDocumentFile(resolved,source);if(!error.isEmpty())return error;
-    DrawingFile prepared;prepared.sheet.title=QFileInfo(resolved).completeBaseName();prepared.sheet.drawing.model=source.version;prepared.modelPath=resolved;prepared.sheet.titleBlock.visible=true;prepared.sheet.titleBlock.date=QDate::currentDate().toString(Qt::ISODate);
-    error=drawingModelDefinitionHash(source,prepared.modelDefinitionHash);if(!error.isEmpty())return error;
-    DrawingEditorModel geometry;error=prepareDrawingEditorModel(source,geometry);if(!error.isEmpty())return error;
-    if(geometry.choices.isEmpty())return QStringLiteral("Il modello non contiene corpi o superfici disponibili per una tavola.");
-    modelBaseCheckinId_=source.baseCheckinId;drawing_=std::move(prepared);model_=std::move(geometry);sourcePath_=resolved;sourceReady_=true;containerDirty_=true;modified_=true;installEditor();refreshTitle();return {};
+    const auto resolved=canonicalDocumentPath(modelPath);
+    const auto evaluated=evaluatedModel?std::make_optional(*evaluatedModel):std::nullopt;
+    struct Prepared { DrawingFile drawing; DrawingEditorModel model; QUuid base; };
+    Prepared prepared;
+    const auto error=runDrawingComputation(parentWidget()?parentWidget():this,busy_,
+        QStringLiteral("Preparazione della tavola 2D"),prepared,[resolved,evaluated,savedFingerprint](auto phase){
+            const auto check=[](const QString &message){if(!message.isEmpty())throw std::runtime_error(message.toStdString());};
+            auto limits=documentOpenReadLimits();
+            if(evaluated){
+                QByteArray fingerprint;check(documentFileFingerprint(resolved,fingerprint));
+                if(savedFingerprint.size()!=32||fingerprint!=savedFingerprint)
+                    throw std::runtime_error("Il file del modello e' cambiato. Riaprirlo o salvare il modello prima di creare la tavola.");
+            }
+            // La verifica della definizione non deve espandere una seconda
+            // copia di tutta la cache, ne' dipendere dal suo budget di lettura.
+            if(evaluated)limits.cacheBytes=0;
+            DocumentState source;check(loadDocumentFile(resolved,source,limits));
+            if(evaluated){
+                QByteArray fingerprint;check(documentFileFingerprint(resolved,fingerprint));
+                if(fingerprint!=savedFingerprint)
+                    throw std::runtime_error("Il file del modello e' cambiato durante la lettura. Riprovare dopo averlo riaperto.");
+            }
+            phase(1);
+            Prepared result;
+            result.drawing.sheet.title=QFileInfo(resolved).completeBaseName();
+            result.drawing.sheet.drawing.model=source.version;result.drawing.modelPath=resolved;
+            result.drawing.sheet.titleBlock.visible=true;
+            result.drawing.sheet.titleBlock.date=QDate::currentDate().toString(Qt::ISODate);
+            check(drawingModelDefinitionHash(source,result.drawing.modelDefinitionHash));
+            if(evaluated){
+                if(evaluated->version.documentId!=source.version.documentId
+                    ||evaluated->version.checkinId!=source.version.checkinId)
+                    throw std::runtime_error("Il modello aperto non corrisponde al file salvato. Salvare il modello o riaprirlo prima di creare la tavola.");
+                const auto orientation=source.orientation;
+                source=*evaluated;source.orientation=orientation;
+            }
+            phase(2);
+            check(prepareDrawingEditorModel(source,result.model,evaluated
+                ?DrawingModelPreparation::ReuseEvaluatedGeometry:DrawingModelPreparation::BuildMissingGeometry));
+            if(result.model.choices.isEmpty())
+                throw std::runtime_error("Il modello non contiene corpi o superfici disponibili per una tavola.");
+            result.base=source.baseCheckinId;phase(5);return result;
+        },{QStringLiteral("Lettura della definizione salvata"),QStringLiteral("Verifica del modello"),
+           QStringLiteral("Preparazione dei corpi e dei riferimenti"),QStringLiteral("Preparazione dei corpi e dei riferimenti"),
+           QStringLiteral("Preparazione del foglio"),QStringLiteral("Preparazione completata")});
+    if(!error.isEmpty())return error;
+    modelBaseCheckinId_=prepared.base;drawing_=std::move(prepared.drawing);model_=std::move(prepared.model);
+    sourcePath_=resolved;sourceReady_=true;containerDirty_=true;modified_=true;installEditor();refreshTitle();return {};
 }
 QString DrawingWindow::openPath(const QString &path){
     if(editor_)return QStringLiteral("Questa finestra contiene gia' una tavola.");

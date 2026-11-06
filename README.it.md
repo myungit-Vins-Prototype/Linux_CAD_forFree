@@ -263,6 +263,8 @@ ForgeCAD è scritto in **C++17** con **Qt 6** e una viewport **OpenGL 3.3 Core**
 
 Il formato nativo corrente è **66**: comprende variazioni dei parametri, corrispondenze delle loft, unione delle facce e condizioni G1 ai piani. Riempimento e mappature conservano definizioni e riferimenti associativi; le destinazioni multiple richiedono un lettore aggiornato. Dal formato 56 i salvataggi usano Zstandard con checksum separati per definizione e cache, senza perdere precisione geometrica o mesh. I file precedenti, inclusi quelli zlib (1–55), restano leggibili.
 
+La cache dei corpi evita di ricostruire la storia all'apertura. In **Opzioni → Memoria per la cache all'apertura** il budget automatico usa al massimo un ottavo della RAM disponibile, fino a 4 GiB; si può scegliere un limite più basso. Una cache oltre il budget viene ignorata e i corpi vengono ricalcolati. **Nuova tavola 2D** riusa i corpi del modello aperto dopo il salvataggio, verificando che il file non sia cambiato; non ricostruisce la storia per creare il foglio vuoto.
+
 I documenti `.prt` di ForgeCAD hanno una firma interna `FCAD`: l'estensione non indica compatibilità con i documenti di altri CAD. STEP e IGES trasferiscono la geometria senza ricreare lo storyboard parametrico originale. Le esportazioni STEP/IGES usano i corpi visibili.
 
 ## Requisiti

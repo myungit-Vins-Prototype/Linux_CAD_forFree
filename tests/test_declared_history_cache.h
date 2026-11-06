@@ -2,7 +2,40 @@
 #define FORGECAD_TEST_DECLARED_HISTORY_CACHE_H
 
 // Incluso dal runner dopo la definizione del viewport e di require.
+// Uno snapshot a valle deve conservare le dichiarazioni anche quando la
+// madre di una ripetizione ricrea i componenti runtime durante l'apertura.
+static void patternSnapshotGenealogyTest() {
+    using namespace ForgeCad;using namespace ForgeCad::Kernel;
+    DocumentState source;ExtrusionObject box;box.feature=BodyFeature::Primitive;
+    box.primitive.size[0]=2;box.primitive.size[1]=3;box.primitive.size[2]=4;
+    source.extrusions={box};CadViewport view;view.loadDocument(source);
+    ExtrusionObject pattern;pattern.feature=BodyFeature::Pattern;pattern.firstBody=0;
+    pattern.pattern.kind=0;pattern.pattern.count=2;pattern.pattern.spacing=10;
+    pattern.pattern.refs={{2,0,{},{}}};
+    require(view.createBody(pattern).isEmpty(),"ripetizione per la genealogia della cache");
+    require(view.extrusions().size()==3&&view.extrusions()[1].patternComponent==0,
+            "madre e componente esposte");
+    ExtrusionObject copy;copy.feature=BodyFeature::SurfaceOffset;copy.firstBody=1;copy.distance=0;copy.offsetSew=false;
+    require(view.createBody(copy).isEmpty(),"copia dipendente dalla ripetizione");
+    const auto original=view.currentDocument();const auto names=elementNamesOf(*original.extrusions.back().forgeBody);
+    require(bool(names),"nomi prima del salvataggio");
+    QByteArray bytes;require(encodeDocument(original,bytes,true).isEmpty(),"salva genealogia dopo ripetizione");
+    DocumentState loaded;require(decodeDocument(bytes,loaded).isEmpty(),"legge genealogia dopo ripetizione");
+    const auto cached=loaded.extrusions.back().forgeBody;require(bool(cached),"copia salvata presente");
+    CadViewport reopened;reopened.loadDocument(loaded);
+    const auto result=reopened.extrusions().back().forgeBody;
+    require(result==cached&&reopened.extrusions().back().error.isEmpty(),"copia a valle riusata");
+    const auto history=featureHistoryOf(*result),originalHistory=featureHistoryOf(*original.extrusions.back().forgeBody);
+    require(bool(history)&&bool(originalHistory),"genealogia disponibile dopo riapertura");
+    for(auto face:result->faces())require(history->isDeclared(EntityKind::Face,face.index),
+        "la ricostruzione della madre non perde le dichiarazioni della copia");
+    const auto restored=elementNamesOf(*result);
+    require(restored&&restored->faces==names->faces&&restored->edges==names->edges&&restored->vertices==names->vertices,
+            "nomi invariati a valle della ripetizione");
+}
+
 static void declaredHistoryCacheTest() {
+    patternSnapshotGenealogyTest();
     using namespace ForgeCad;
     using namespace ForgeCad::Kernel;
     DocumentState definition;

@@ -172,13 +172,17 @@ QString drawingModelDefinitionMatches(const DocumentState &document,const QByteA
     const auto legacyError=encodeDocumentDefinition53ForHash(normalized,legacy);if(!legacyError.isEmpty())return legacyError;
     matches=QCryptographicHash::hash(legacy,QCryptographicHash::Sha256)==expected;return {};
 }
-QString prepareDrawingEditorModel(DocumentState &document,DrawingEditorModel &model){
+QString prepareDrawingEditorModel(DocumentState &document,DrawingEditorModel &model,DrawingModelPreparation mode){
     try{
+        const bool rebuild=mode==DrawingModelPreparation::BuildMissingGeometry;
+        require(rebuild||document.pendingSketchChanges.isEmpty(),
+                QStringLiteral("Terminare la modifica dello schizzo prima di creare la tavola."));
         normalizeModelHistory(document);
         QSet<quint64> cached;
         for(int index=0;index<document.extrusions.size();++index){auto &feature=document.extrusions[index];
-            if(feature.cachedGeometry&&feature.forgeBody)cached.insert(feature.featureId);
-            if(!feature.forgeBody)buildGeometry(feature,index,document.sketches,document.extrusions);
+            Kernel::cancellationPoint();
+            if(rebuild&&feature.cachedGeometry&&feature.forgeBody)cached.insert(feature.featureId);
+            if(rebuild&&!feature.forgeBody)buildGeometry(feature,index,document.sketches,document.extrusions);
             else registerFeatureGenealogy(feature,index,document.sketches,document.extrusions);}
         normalizeModelHistory(document);
         QHash<quint64,quint64> parents;
@@ -306,7 +310,7 @@ int upgradeDrawingFileReferences(DrawingFile &drawing,const DrawingEditorModel &
 QString loadDrawingModel(const QString &drawingPath,const DrawingFile &drawing,DocumentState &model,QString &resolvedPath,bool &definitionChanged,const QString &overridePath){
     try{
         const auto path=canonicalDocumentPath(overridePath.isEmpty()?resolve(drawingPath,drawing.modelPath):overridePath);
-        DocumentState prepared;auto error=loadDocumentFile(path,prepared);
+        DocumentState prepared;auto error=loadDocumentFile(path,prepared,documentOpenReadLimits());
         const auto expected=drawing.sheet.drawing.model;
         if(expected.checkinId.isNull()){
             ok(error);require(prepared.version.documentId==expected.documentId&&prepared.version.checkinId.isNull(),QStringLiteral("Il file scelto non e' la copia di lavoro del modello richiesto dalla tavola."));

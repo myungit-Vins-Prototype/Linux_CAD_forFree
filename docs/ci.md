@@ -18,6 +18,11 @@ OCCT serve solo a `forgekernel_tests` (`kernel/occt_tests`, opzione
 `FORGECAD_BUILD_OCCT_TESTS`): l'applicazione non lo collega. I toolkit di scambio
 si scelgono secondo la versione (`TKDE*` da OCCT 7.8, nomi storici prima). I runner GitHub standard non forniscono una GPU NVIDIA
 e questa build usa il backend CPU senza installare CUDA.
+L’installazione Linux sostituisce il mirror Azure del runner con il mirror principale
+Ubuntu via HTTPS, conservando le verifiche delle firme APT. Ogni connessione ha
+un timeout di 30 secondi e fino a tre tentativi; il passaggio delle dipendenze
+ha un limite complessivo di 15 minuti. Anche `dependencies.log` viene conservato,
+per distinguere problemi di download dagli errori del compilatore e dei test.
 
 `FORGECAD_BUILD_VIEW_TESTS` e `FORGECAD_BUILD_RIBBON_PREVIEW` sono esplicitamente
 disattivati. La suite viewport comprende anche prove che richiedono documenti

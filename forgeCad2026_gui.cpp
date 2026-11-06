@@ -2717,6 +2717,15 @@ void PdfWindow::initializeOptions(WindowSetup &setup) {
     saveBodiesAction->setChecked(QSettings().value(QStringLiteral("document/saveBodies"), true).toBool());
     saveBodiesAction->setToolTip(QStringLiteral("Il file e' piu' grande, ma all'apertura i corpi non si ricalcolano"));
     connect(saveBodiesAction, &QAction::toggled, this, [](bool enabled) { QSettings().setValue(QStringLiteral("document/saveBodies"), enabled); });
+    auto *cacheMenu=optionsMenu->addMenu(QStringLiteral("Memoria per la cache all'apertura"));
+    auto *cacheGroup=new QActionGroup(cacheMenu);cacheGroup->setExclusive(true);
+    const int cacheMiB=QSettings().value(QStringLiteral("document/openCacheMiB"),0).toInt();
+    for(int mib:{0,256,512,1024,2048,4096}){
+        auto *action=cacheMenu->addAction(mib?QStringLiteral("%1 MiB").arg(mib):QStringLiteral("Automatica (in base alla memoria disponibile)"));
+        action->setCheckable(true);action->setChecked(mib==cacheMiB);cacheGroup->addAction(action);
+        action->setToolTip(QStringLiteral("Limite per la cache espansa; al massimo un ottavo della memoria disponibile, fino a 4 GiB. Vale dalla prossima apertura."));
+        connect(action,&QAction::triggered,this,[mib]{QSettings().setValue(QStringLiteral("document/openCacheMiB"),mib);});
+    }
     // Tassellazione di display con CUDA (cad_cuda_tessellation): i punti delle
     // superfici B-spline si valutano sulla GPU; vale dalla prossima tassellazione.
     const QString tessellationBackend = QString::fromUtf8(forgecad_cuda_backend()).startsWith(QStringLiteral("Metal"))
@@ -3799,7 +3808,7 @@ void PdfWindow::initializeToolbarsAndStatus(WindowSetup &setup) {
                                    QStringLiteral("view/planeNormalsOnHover"),
                                    QStringLiteral("view/antialiasing"), QStringLiteral("view/panKey"), QStringLiteral("sketch/originSnap"),
                                    QStringLiteral("sketch/geometrySnap"), QStringLiteral("sketch/gridSnap"),
-                                   QStringLiteral("view/constraintPanel"), QStringLiteral("document/saveBodies"),
+                                   QStringLiteral("view/constraintPanel"), QStringLiteral("document/saveBodies"), QStringLiteral("document/openCacheMiB"),
                                    QStringLiteral("view/sketchBodyOpacity"), QStringLiteral("view/hiddenEdges"),
                                    QStringLiteral("view/featureHighlightColor")})
             settings.remove(key);
@@ -4156,7 +4165,8 @@ void PdfWindow::newDrawing() {
     if (foregroundProgressDepth_>0 || viewport_->interactionLocked()) return;
     if ((documentPath_.isEmpty()||documentModified_)&&!saveDocument(false)) return;
     auto *drawing = new ForgeCad::DrawingWindow(this);
-    const auto error = drawing->createFromModel(documentPath_);
+    const auto source = viewport_->currentDocument();
+    const auto error = drawing->createFromModel(documentPath_, &source, documentDiskFingerprint_);
     if (!error.isEmpty()) { delete drawing; QMessageBox::warning(this,QStringLiteral("Tavola 2D"),error); return; }
     drawing->setAttribute(Qt::WA_DeleteOnClose); drawing->show();
 }
@@ -4236,7 +4246,11 @@ bool PdfWindow::openDocumentPath(const QString &path) {
     beginForegroundProgress(QStringLiteral("Lettura di %1... 0%").arg(fileName), 100);
     updateForegroundProgress(QStringLiteral("Lettura del file %1... 5%").arg(fileName), 5);
     DocumentState state;
-    QString error = ForgeCad::loadDocumentFile(resolved, state);
+    // Prima si leggono solo i metadati per l'accesso. La cache si espande
+    // una sola volta, sotto il lock quando disponibile.
+    auto limits=ForgeCad::documentOpenReadLimits();
+    auto definitionLimits=limits;definitionLimits.cacheBytes=0;
+    QString error = ForgeCad::loadDocumentFile(resolved, state, definitionLimits);
     QByteArray fingerprint;
     if(error.isEmpty()){
         ForgeCad::WorkspaceEditAccess access;
@@ -4247,11 +4261,9 @@ bool PdfWindow::openDocumentPath(const QString &path) {
         if(!access.readOnly&&(statusError.isEmpty()?!status.hasSession:state.baseCheckinId.isNull())){
             candidate=std::make_unique<ForgeCad::DocumentFileLock>(resolved);
             if(!candidate->acquire().isEmpty())candidate.reset();
-            else{
-                error=ForgeCad::loadDocumentFile(resolved,state);
-                if(error.isEmpty())error=ForgeCad::documentFileFingerprint(resolved,fingerprint);
-            }
         }
+        error=ForgeCad::loadDocumentFile(resolved,state,limits);
+        if(error.isEmpty())error=ForgeCad::documentFileFingerprint(resolved,fingerprint);
     }
     if (!error.isEmpty()) {
         endForegroundProgress();

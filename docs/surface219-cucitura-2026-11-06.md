@@ -59,3 +59,31 @@ La scelta evita una ricostruzione inutile della SP-curve: non riduce i poli
 salvati dal modello e non risolve in generale i costi del ricalcolo integrale.
 Sono state verificate le geometrie salvate e la nuova funzione; la rigenerazione
 completa senza cache resta esclusa dalle verifiche di questo intervento.
+
+
+## Chiarimento sul limite della cache
+
+Su domanda dell'utente dopo il push:1GiB e' un limite di lettura in
+`DocumentReadLimits::cacheBytes`, non un filtro di salvataggio.
+`bodyCache` serializza i risultati; `applyBodyCache` ignora lo snapshot se
+la decompressione o l'espansione cumulativa dei chunk supera il budget.
+`SnapshotChunkReader` conteggia anche le copie ricostruite da chunk condivisi,
+per tutti i B-rep e le genealogie della storia, non soltanto il risultato finale.
+Un limite distinto `fileBytes` di1GiB riguarda il file compresso intero.
+
+Misura della copia congelata:117.561.982byte (112,12MiB) su disco;
+i26B-rep diagnostici estratti sommano1.506.556.355byte (1,403GiB),
+escluse mesh/genealogia e strutture runtime. Il loro caricamento puo' richiedere
+piu' RAM del solo volume serializzato. Nelle prove precedenti il budget4GiB
+consentiva di rileggere gli snapshot senza modificare la geometria.
+
+Scopo del limite: contenere allocazioni, picchi di memoria e amplificazione dei
+dati compressi, anche per file malformati. Alzarlo non riduce la precisione;
+i rischi sono RAM esaurita, swap e chiusura del processo, con perdita possibile
+del lavoro non salvato. Con il limite attuale la definizione resta leggibile,
+ma ignorare tutta la cache obbliga a rigenerare e puo' esporre errori delle feature.
+Il salvataggio puo' quindi produrre una cache che la lettura predefinita non riusa:
+limite prudenziale da migliorare, non limite geometrico del CAD.
+Proposti budget configurabile e gestione della memoria piu' selettiva; non implementati.
+Verifica di questo chiarimento:lettura dei percorsi e misura dei dump gia' prodotti;
+nessuna modifica funzionale o nuova compilazione/test.

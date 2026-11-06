@@ -11,7 +11,7 @@ class QPushButton;
 class QTabBar;
 class QVBoxLayout;
 namespace ForgeCad {
-// Documento tavola autonomo: il modello viene letto dal file salvato.
+// Documento tavola autonomo, collegato alla definizione del modello salvato.
 class DrawingToolbarController;
 class DrawingWindow final:public QMainWindow {
 public:
@@ -23,7 +23,11 @@ public:
     QString useWorkingModel();
     QString openRevision(const QString &workingPath,const DocumentVersion &version);
     QString restoreRevision(const DocumentVersion &version);
-    QString createFromModel(const QString &modelPath);
+    // Il chiamante salva prima le modifiche; savedFingerprint e' l'impronta
+    // acquisita all'ultima apertura/salvataggio. Sono ammessi gli aggiornamenti
+    // dei riferimenti effettuati durante il caricamento, senza rigenerarli qui.
+    QString createFromModel(const QString &modelPath,const DocumentState *evaluatedModel=nullptr,
+                            const QByteArray &savedFingerprint={});
     QString openPath(const QString &path);
     QString savePath(const QString &path);
     QString exportPdfPath(const QString &path,DrawingPdfReport &report,bool allSheets=true)const;

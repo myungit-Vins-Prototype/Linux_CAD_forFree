@@ -78,8 +78,15 @@ void BSplineCurve<N>::evaluateSpan(int span, double t, int order, Vec<N> *out) c
     if (!isRational()) {
         for (int k = 0; k <= order; ++k) {
             Vec<N> value;
+            // Per k > 0 la somma delle derivate delle basi e' zero.
+            // Sottrarre un polo locale evita la cancellazione fra coordinate
+            // grandi: il rumore sulla velocita' di curve fitte faceva esplodere
+            // la quadratura della lunghezza fino alla profondita' massima.
+            // Posizioni, basi, nodi e tolleranze restano invariati.
+            const Vec<N> origin = k ? poles_[span - p] : Vec<N>();
             if (k <= basisOrder)
-                for (int j = 0; j <= p; ++j) value += ders[k * (p + 1) + j] * poles_[span - p + j];
+                for (int j = 0; j <= p; ++j)
+                    value += ders[k * (p + 1) + j] * (poles_[span - p + j] - origin);
             out[k] = value;
         }
         return;

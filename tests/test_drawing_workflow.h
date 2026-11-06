@@ -9,7 +9,43 @@
 #include <QCheckBox>
 #include <QSettings>
 namespace {
+void evaluatedDrawingModelTests(){
+    using namespace ForgeCad;using namespace ForgeCad::Kernel;
+    QTemporaryDir dir;require(dir.isValid(),"directory tavola da modello aperto");
+    auto source=clientModel();const auto body=source.extrusions.front().forgeBody;
+    ExtrusionObject failed;failed.feature=BodyFeature::Primitive;failed.featureId=81002;
+    failed.name="Feature non riuscita";failed.error="Errore conservato, senza nuovo tentativo";
+    source.extrusions.append(failed);normalizeModelHistory(source);
+    const auto path=dir.filePath("senza-cache.prt");clientOk(saveDocumentFile(path,source,false));
+    QByteArray fingerprint,definition;clientOk(documentFileFingerprint(path,fingerprint));
+    DocumentState noCache;clientOk(loadDocumentFile(path,noCache));
+    clientOk(drawingModelDefinitionHash(noCache,definition));
+    require(!noCache.extrusions.front().forgeBody,"file senza corpi calcolati");
+    DrawingEditorModel model;auto evaluated=source;
+    clientOk(prepareDrawingEditorModel(evaluated,model,DrawingModelPreparation::ReuseEvaluatedGeometry));
+    require(model.choices.size()==1&&model.snapshot.bodies.size()==1
+        &&model.snapshot.bodies.front().body==body,"snapshot condivide il B-rep esatto senza rigenerarlo");
+    require(!evaluated.extrusions.back().forgeBody&&evaluated.extrusions.back().error==failed.error,
+        "la preparazione non ritenta funzioni in errore");
+    DrawingWindow window;clientOk(window.createFromModel(path,&source,fingerprint));
+    require(window.editor()&&window.editor()->sheet().drawing.views.empty()
+        &&window.document().modelDefinitionHash==definition,"tavola vuota pronta e collegata alla definizione salvata");
+    DrawingView view;view.plane=Frame3(Vec3(0,0,2),Vec3(0,0,1),Vec3(1,0,0));
+    clientOk(window.editor()->insertView(view,{view.id,"Sezione",{100,100},{source.extrusions.front().featureId}}));
+    require(!window.editor()->sections(view.id).empty(),"geometria condivisa utilizzabile nelle viste");
+    require(source.extrusions.front().forgeBody==body&&!source.extrusions.back().forgeBody,
+        "creazione tavola non modifica lo stato 3D");
+    DrawingWindow rejected;auto other=source;forkDocumentIdentity(other);
+    require(!rejected.createFromModel(path,&other,fingerprint).isEmpty()&&!rejected.editor(),"UUID diverso rifiutato senza tavola parziale");
+    require(!rejected.createFromModel(path,&source).isEmpty()&&!rejected.editor(),"riuso senza provenienza rifiutato");
+    auto pending=source;pending.pendingSketchChanges={0};
+    require(!rejected.createFromModel(path,&pending,fingerprint).isEmpty()&&!rejected.editor(),"schizzo da ricalcolare non trasferito come geometria aggiornata");
+    auto changed=source;changed.extrusions.front().primitive.size[0]=14;clientOk(saveDocumentFile(path,changed,false));
+    require(!rejected.createFromModel(path,&source,fingerprint).isEmpty()&&!rejected.editor(),"modello salvato cambiato non accetta lo snapshot precedente");
+    std::cout<<"PASS tavola da modello valutato: riuso B-rep senza cache, errori conservati, viste e provenienza\n";
+}
 void drawingWorkflowTests(){
+ evaluatedDrawingModelTests();
  using namespace ForgeCad;using namespace ForgeCad::Kernel;
  struct SettingsRestore{QMap<QString,QVariant> old;bool relevant(const QString &key){return key.startsWith("toolbar/layout/drawing")||key.startsWith("drawingToolbar/")||key.startsWith("drawingInterface/");}SettingsRestore(){QSettings s;for(const auto &k:s.allKeys())if(relevant(k)){old[k]=s.value(k);s.remove(k);}}~SettingsRestore(){QSettings s;for(const auto &k:s.allKeys())if(relevant(k))s.remove(k);for(auto i=old.begin();i!=old.end();++i)s.setValue(i.key(),i.value());}} restore;
  const auto qa=qEnvironmentVariable("FORGECAD_DRAWING_WORKFLOW_OUTPUT");if(!qa.isEmpty())QDir().mkpath(qa);
