@@ -272,6 +272,150 @@ public:
 #include "test_loft_projected_sections.h"
 #include "test_loft_points.h"
 #include "test_surface_mapping.h"
+#include "test_boolean_box.h"
+static void solidTrims() {
+    using namespace ForgeCad;using namespace Kernel;
+    DocumentState document;
+    ExtrusionObject source;source.feature=BodyFeature::Primitive;source.primitive.size[0]=2;source.primitive.size[1]=2;source.primitive.size[2]=10;
+    auto a=source;a.primitive.origin[2]=1;a.primitive.size[2]=1;
+    auto b=a;b.primitive.origin[2]=6;document.extrusions={source,a,b};
+    CadViewport view;view.loadDocument(document);
+    const auto ref=[&](int index,double z){GeometryRef r;r.kind=5;r.index=index;r.featureId=view.extrusions()[index].featureId;const auto shape=view.extrusions()[index].forgeBody;for(auto f:shape->faces()){const auto &surface=*shape->face(f).surface;if(surface.type()!=SurfaceType::Plane)continue;const auto &plane=static_cast<const Plane &>(surface);if(std::fabs(plane.frame().origin().z()-z)<1e-9){r.point=faceReference(*shape,f,{1,1,z});return r;}}throw std::runtime_error("faccia piano");};
+    ExtrusionObject trim;trim.feature=BodyFeature::SurfaceTools;trim.firstBody=0;trim.surfaceTool.mode=5;trim.surfaceTool.targets={ref(1,2),ref(2,7)};
+    clientOk(view.createBody(trim));const auto result=view.extrusions().last();
+    require(result.solid&&std::fabs(massProperties(*result.forgeBody).volume-20)<1e-8,"taglio applicativo chiuso");
+    require(result.modelBodyId==view.extrusions()[0].modelBodyId,"taglio mantiene il corpo logico");
+    require(!view.isBodyVisibleInScene(0)&&view.isBodyVisibleInScene(1)&&view.isBodyVisibleInScene(2),"consumo del solo sorgente");
+    require(bodyOperands(result)==QVector<int>({0,1,2}),"dipendenze corpo e due facce");
+    auto changed=trim;changed.surfaceTool.trimReverseFirst=true;
+    require(Gui::FeaturePreviewBuilder::previewKey(changed,-1)!=Gui::FeaturePreviewBuilder::previewKey(trim,-1),"inversione primo limite invalida preview");
+    changed=trim;changed.surfaceTool.trimReverseSecond=true;
+    require(Gui::FeaturePreviewBuilder::previewKey(changed,-1)!=Gui::FeaturePreviewBuilder::previewKey(trim,-1),"inversione secondo limite invalida preview");
+    QByteArray bytes;DocumentState decoded;clientOk(encodeDocument(view.currentDocument(),bytes));clientOk(decodeDocument(bytes,decoded));
+    require(decoded.extrusions.last().surfaceTool.mode==5&&decoded.extrusions.last().surfaceTool.targets.size()==2,"schema9 persistente");
+    auto json=QJsonDocument::fromJson(surfaceToolsExtras(view.extrusions())).object();require(json["schema"].toInt()==9,"schema9 richiesto");json["schema"]=8;auto atomic=view.extrusions();
+    require(!applySurfaceToolsExtras(QJsonDocument(json).toJson(),atomic).isEmpty()&&atomic.last().surfaceTool.mode==5,"downgrade schema rifiutato atomicamente");
+    for(auto &feature:decoded.extrusions){feature.forgeBody.reset();}
+    CadViewport regenerated;regenerated.loadDocument(decoded);require(regenerated.extrusions().last().error.isEmpty()&&regenerated.extrusions().last().forgeBody,"rigenerazione senza cache");
+    require(std::fabs(massProperties(*regenerated.extrusions().last().forgeBody).volume-20)<1e-8,"volume dopo rigenerazione");
+    view.undo();require(view.extrusions().size()==3&&view.isBodyVisibleInScene(0),"Undo taglio");view.redo();require(view.extrusions().size()==4&&!view.isBodyVisibleInScene(0),"Redo taglio");
+    auto invalid=trim;invalid.surfaceTool.targets.removeLast();require(!view.createBody(invalid).isEmpty()&&view.extrusions().size()==4,"taglio incompleto non inserito");
+    // The real command and both saved feature types use one panel. Exercise
+    // mode switching during picking, incomplete input, conversion and Undo.
+    PdfWindow window;
+    window.resize(1200, 850);
+    window.show();
+    auto *gui = window.viewport_;
+    auto guiDocument = document;
+    for (auto &body : guiDocument.extrusions) body.primitive.origin[1] = -1;
+    gui->loadDocument(guiDocument);
+    QAction *action = nullptr;
+    for (auto *candidate : window.findChildren<QAction *>()) {
+        if (candidate->text() == QStringLiteral("Taglia superficie...")) action = candidate;
+        require(candidate->objectName() != QStringLiteral("solidTrimBetweenAction"), "nessun comando separato di taglio tra superfici");
+    }
+    require(action, "comando Taglia superficie presente");
+    const auto limitRef = [&](int index, double z) {
+        GeometryRef ref; ref.kind = 5; ref.index = index; ref.featureId = gui->extrusions()[index].featureId;
+        const auto body = gui->extrusions()[index].forgeBody;
+        for (auto face : body->faces()) {
+            const auto &surface = *body->face(face).surface;
+            if (surface.type() == SurfaceType::Plane && std::fabs(static_cast<const Plane &>(surface).frame().origin().z() - z) < 1e-9) {
+                ref.point = faceReference(*body, face, {1, 0, z});
+                return ref;
+            }
+        }
+        throw std::runtime_error("faccia limite del test GUI");
+    };
+    const auto pick = [&](QDialog *panel, int slot, const GeometryRef &ref) {
+        panel->findChild<QPushButton *>(QStringLiteral("solidTrimPick%1").arg(slot))->click();
+        require(gui->referencePicking(), "picking della faccia limite attivo");
+        gui->cancelReferencePick();
+        gui->refPickFinished_(true, ref);
+    };
+    QString interactionError;
+    const auto nextPanel = [&](const std::function<void(QDialog *)> &interact) {
+        auto *driver = new QTimer(&window);
+        driver->setInterval(10);
+        QObject::connect(driver, &QTimer::timeout, &window, [&, interact, driver] {
+            auto *panel = window.findChild<QDialog *>(QStringLiteral("trimDialog"));
+            // Standard trim may process events while splitting the regions,
+            // before the modeless confirmation handler is installed.
+            if (!panel || !panel->isVisible()) return;
+            driver->stop();
+            driver->deleteLater();
+            QTimer::singleShot(10000, panel, [panel] { if (panel->isVisible()) panel->reject(); });
+            try { interact(panel); }
+            catch (const std::exception &e) { interactionError = QString::fromUtf8(e.what()); panel->reject(); }
+        });
+        driver->start();
+    };
+    nextPanel([&](QDialog *panel) {
+        auto *mode = panel->findChild<QComboBox *>("trimMode");
+        require(mode && mode->currentIndex() == 0, "taglio standard iniziale");
+        mode->setCurrentIndex(1); // Also cancels the automatic source picker.
+        require(!gui->referencePicking(), "cambio modalita termina il picking precedente");
+        require(!panel->findChild<QComboBox *>("trimTool")->isVisibleTo(panel)
+            && panel->findChild<QListWidget *>("solidTrimLimit0")->isVisibleTo(panel), "solo controlli della modalita tra superfici");
+        pick(panel, 0, limitRef(1, 2));
+        panel->findChild<QDialogButtonBox *>("trimButtons")->button(QDialogButtonBox::Ok)->click();
+        require(panel->isVisible() && gui->extrusions().size() == 3, "limite mancante non chiude il pannello e non modifica il modello");
+        pick(panel, 1, limitRef(2, 7));
+        panel->findChild<QDialogButtonBox *>("trimButtons")->button(QDialogButtonBox::Ok)->click();
+    });
+    action->trigger();
+    clientOk(interactionError);
+    require(gui->extrusions().size() == 4 && gui->extrusions().last().feature == BodyFeature::SurfaceTools
+        && gui->extrusions().last().surfaceTool.mode == 5, "comando comune crea il taglio volumetrico");
+    require(std::fabs(massProperties(*gui->extrusions().last().forgeBody).volume - 20) < 1e-8, "volume creato dal comando comune");
+    const auto featureId = gui->extrusions().last().featureId;
+    nextPanel([&](QDialog *panel) {
+        auto *mode = panel->findChild<QComboBox *>("trimMode");
+        require(mode->currentIndex() == 1, "modifica taglio tra superfici riconosce la modalita salvata");
+        panel->findChild<QPushButton *>("solidTrimPick0")->click();
+        mode->setCurrentIndex(0);
+        require(!gui->referencePicking() && panel->findChild<QComboBox *>("trimTool")->isVisibleTo(panel)
+            && !panel->findChild<QListWidget *>("solidTrimLimit0")->isVisibleTo(panel), "cambio a standard chiude scelta limite e nasconde i controlli");
+        mode->setCurrentIndex(1);
+        require(panel->findChild<QListWidget *>("solidTrimLimit0")->count() == 1
+            && panel->findChild<QListWidget *>("solidTrimLimit1")->count() == 1, "riferimenti mantenuti cambiando modalita");
+        panel->findChild<QPushButton *>("solidTrimRemove0")->click();
+        require(panel->findChild<QListWidget *>("solidTrimLimit0")->count() == 0
+            && panel->findChild<QListWidget *>("solidTrimLimit1")->count() == 1, "rimozione indipendente dei limiti");
+        pick(panel, 0, limitRef(1, 2));
+        panel->findChild<QDialogButtonBox *>("trimButtons")->button(QDialogButtonBox::Ok)->click();
+    });
+    gui->editBodyCallback_(3);
+    clientOk(interactionError);
+    require(gui->extrusions().last().featureId == featureId && !gui->referencePicking() && gui->refMarks_.isEmpty(),
+        "modifica conserva identita e ripulisce selezione/evidenze");
+    nextPanel([&](QDialog *panel) {
+        panel->findChild<QComboBox *>("trimMode")->setCurrentIndex(0);
+        auto *tool = panel->findChild<QComboBox *>("trimTool");
+        tool->setCurrentIndex(tool->count() - 2); // Main XZ plane, through the middle of the source.
+        panel->findChild<QDialogButtonBox *>("trimButtons")->button(QDialogButtonBox::Ok)->click();
+    });
+    gui->editBodyCallback_(3);
+    clientOk(interactionError);
+    require(gui->extrusions().last().feature == BodyFeature::SheetTrim
+        && gui->extrusions().last().surfaceTool.targets.isEmpty(), "conversione a standard elimina dipendenze inattive");
+    nextPanel([&](QDialog *panel) {
+        require(panel->findChild<QComboBox *>("trimMode")->currentIndex() == 0, "modifica standard apre la modalita corretta");
+        panel->findChild<QComboBox *>("trimMode")->setCurrentIndex(1);
+        pick(panel, 0, limitRef(1, 2)); pick(panel, 1, limitRef(2, 7));
+        panel->findChild<QDialogButtonBox *>("trimButtons")->button(QDialogButtonBox::Ok)->click();
+    });
+    gui->editBodyCallback_(3);
+    clientOk(interactionError);
+    require(gui->extrusions().last().feature == BodyFeature::SurfaceTools
+        && gui->extrusions().last().secondBody == -1 && gui->extrusions().last().sketchIndex == -1
+        && gui->extrusions().last().featureId == featureId, "conversione da standard conserva identita e solo operandi attivi");
+    gui->undo(); require(gui->extrusions().last().feature == BodyFeature::SheetTrim, "Undo conversione");
+    gui->redo(); require(gui->extrusions().last().feature == BodyFeature::SurfaceTools, "Redo conversione");
+    std::cout << "PASS pannello Taglia superficie: comando, due modalita, picking, modifica, conversioni e Undo/Redo\n";
+
+}
+
 #include "test_advanced_fillets.h"
 #include "test_fillet_refinements.h"
 #include "test_lazy_mesh.h"
@@ -11896,6 +12040,8 @@ int main(int argc, char **argv) {
         else if (app.arguments().contains(QStringLiteral("--saved-loft-surface")))
             ViewportInteractionTest::savedLoftSurface(app.arguments().value(app.arguments().indexOf(QStringLiteral("--saved-loft-surface"))+1));
         else if (app.arguments().contains(QStringLiteral("--edge-loft"))) ViewportInteractionTest::edgeLoftWorkflow();
+        else if (app.arguments().contains(QStringLiteral("--boolean-box-pick"))) ViewportInteractionTest::booleanBoxPicking();
+        else if (app.arguments().contains(QStringLiteral("--solid-trim"))) ViewportInteractionTest::solidTrims();
         else if (app.arguments().contains(QStringLiteral("--surface-mapping"))) ViewportInteractionTest::mappingAndFillTools();
         else if (app.arguments().contains(QStringLiteral("--loft-points")))
             ViewportInteractionTest::loftPointsAndPlanes();

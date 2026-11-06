@@ -127,6 +127,11 @@ QVector<QVector<QPointF>> CadViewport::sketchScreenPolylines(const SketchObject 
 void CadViewport::finishBoxSelection() {
     const QRectF r = boxRect();
     const bool window = boxWindowMode();
+    if (refPicking_ && bodyBoxPickFinished_) {
+        const auto finished = bodyBoxPickFinished_;
+        finished(referenceBodiesInBox(r, window));
+        return;
+    }
     if (sketchMode_) {
         const SketchObject *sketch = activeSketchObject();
         if (!sketch) return;
@@ -376,6 +381,7 @@ void CadViewport::setPickBodies(const QVector<int> &bodies) {
 }
 
 void CadViewport::cancelReferencePick() {
+    if (bodyBoxPickFinished_) boxArmed_ = boxSelecting_ = false;
     if (!refPicking_) return;
     refPicking_ = false;
     refPickOwner_ = -1;

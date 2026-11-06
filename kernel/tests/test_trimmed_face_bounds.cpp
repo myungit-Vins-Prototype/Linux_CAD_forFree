@@ -6,6 +6,10 @@
 #include "fk_surface_algo.h"
 #include "fk_curve_surface.h"
 #include "fk_cycle_point_index.h"
+#include "fk_boolean.h"
+#include "fk_primitives.h"
+#include "fk_solid_trim.h"
+#include "fk_body_check.h"
 #include <iostream>
 #include <algorithm>
 #include <stdexcept>
@@ -39,6 +43,59 @@ int main(){try{
         for(int i=0;i<=80;++i)for(int j=0;j<=80;++j){const auto p=surface->point(u.lo+u.length()*i/80.,v.lo+v.length()*j/80.);for(int axis=0;axis<3;++axis)require(p[axis]>=box.lo[axis]&&p[axis]<=box.hi[axis],"punto interno escluso dal box");}
         const auto whole=rectangle(surface,{0,1},{0,1});const auto all=faceBox(whole,whole.faces()[0]);require(all.lo.x()<=0&&all.hi.x()>=100,"carrier completo conservato quando richiesto");
     }
+    // Ritagli periodici locali: coordinate delle fin in periodi diversi,
+    // rotazione del carrier e verso della faccia invertito. Il box include
+    // tutta la pezza senza includere il lato opposto del carrier.
+    std::vector<SurfacePtr> periodic{
+        std::make_shared<ToroidalSurface>(Frame3(),20.,3.),
+        std::make_shared<RevolutionSurface>(std::make_shared<Circle<3>>(
+            Vec3(-195,0,50),Vec3(1,0,0),Vec3(0,0,1),250.),Vec3(),Vec3(0,0,1))};
+    for(const auto &surface:periodic) {
+        const Interval u{-.08,.08},v{-.02,.02};auto patch=rectangle(surface,u,v);
+        int n=0;
+        for(auto fin:patch.fins()) {
+            const Vec2 shift((n%2)*surface->uPeriod(),(n%3)*surface->vPeriod());
+            patch.fin(fin).pcurve=translatedCurve(patch.fin(fin).pcurve,shift);++n;
+        }
+        const auto box=faceBox(patch,patch.faces()[0]);
+        require(box.hi.x()-box.lo.x()<2&&box.hi.y()-box.lo.y()<10,"ritaglio periodico non limitato");
+        for(int i=0;i<=80;++i)for(int j=0;j<=80;++j) {
+            const auto p=surface->point(u.lo+u.length()*i/80.,v.lo+v.length()*j/80.);
+            for(int k=0;k<3;++k)require(p[k]>=box.lo[k]&&p[k]<=box.hi[k],"punto periodico perso");
+        }
+        const auto rotated=transformBody(patch,Transform3::rotation(Vec3(),Vec3(0,0,1),kPi));
+        require(!box.overlaps(faceBox(rotated,rotated.faces()[0])),"copie opposte falsamente sovrapposte");
+        // Un foro sul carrier completo ha orientamento opposto: restringere
+        // al foro perderebbe la maggior parte della faccia.
+        auto complement=patch;complement.face(complement.faces()[0]).sense=false;
+        const auto all=faceBox(complement,complement.faces()[0]);
+        require(all.lo.x()<0&&all.hi.x()>0,"complemento periodico ristretto al foro");
+        auto missing=patch;missing.fin(missing.fins()[0]).pcurve.reset();
+        const auto conservative=faceBox(missing,missing.faces()[0]);
+        require(conservative.lo.x()<0,"seam senza SP-curve deve restare conservativo");
+    }
+    // Una fascia che avvolge il toro non e' una pezza locale.
+    auto belt=rectangle(periodic.front(),{0.,kTwoPi},{-.1,.1});
+    const auto beltBox=faceBox(belt,belt.faces()[0]);
+    require(beltBox.lo.x()<-20&&beltBox.hi.x()>20,"fascia periodica troncata");
+    // Riproduzione sintetica HoneyRepeat: tredici solidi chiusi da due
+    // rivoluzioni concentriche; due istanze circolari non si intersecano.
+    // Il carrier esterno ha un meridiano periodico che attraversa l'asse:
+    // avviare il marching sull'intero carrier rende questa prova lentissima.
+    std::vector<Body> blocks;
+    for(int i=0;i<13;++i)blocks.push_back(makeBox(Frame3({40,-3,2.+7*i},{0,0,1},{1,0,0}),20,6,5));
+    std::vector<const Body*> operands;for(const auto &b:blocks)operands.push_back(&b);
+    const auto source=Body::collect(operands);
+    const auto inner=rectangle(periodic.back(),{-.2,.2},{-.21,.21});
+    const auto outerSurface=std::make_shared<RevolutionSurface>(std::make_shared<Circle<3>>(
+        Vec3(-195,0,50),Vec3(1,0,0),Vec3(0,0,1),251.),Vec3(),Vec3(0,0,1));
+    const auto outer=rectangle(outerSurface,{-.2,.2},{-.21,.21});
+    const auto trimmed=trimSolidBetweenFaces(source,inner,outer);
+    require(trimmed.shells().size()==13&&checkBody(trimmed,{true,true}).empty(),"13 solidi sintetici tagliati");
+    const auto opposite=transformBody(trimmed,Transform3::rotation(Vec3(),Vec3(0,0,1),kPi));
+    BooleanOptions options;options.threads=1;
+    const auto copies=booleanOperation(trimmed,opposite,BooleanOperation::Unite,options);
+    require(copies.shells().size()==26&&checkBody(copies,{true,true}).empty(),"26 solidi nella ripetizione sintetica");
     // Picco di una SP-curve fra due campioni uniformi: il box deve usare
     // l'inviluppo della curva, non perdere il picco stretto del ritaglio.
     auto plane=std::make_shared<BSplineSurface>(1,1,std::vector<double>{0,0,1,1},std::vector<double>{0,0,1,1},2,2,

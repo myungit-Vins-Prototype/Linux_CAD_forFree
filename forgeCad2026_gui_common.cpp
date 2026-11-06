@@ -29,7 +29,7 @@ QString featureIconName(const ExtrusionObject &body) {
     if (body.feature == BodyFeature::Revolution) return QStringLiteral("revolve");
     if (body.feature == BodyFeature::Blend) return body.blendChamfer ? QStringLiteral("chamfer") : QStringLiteral("fillet");
     if (body.feature == BodyFeature::SheetTrim) return QStringLiteral("trimSurface");
-    if (body.feature == BodyFeature::SurfaceTools) return body.surfaceTool.mode==3?QStringLiteral("surfaceUnroll"):body.surfaceTool.mode==4?QStringLiteral("surfaceWrap"):body.surfaceTool.mode==0?QStringLiteral("surfaceExtendTo"):body.surfaceTool.mode==1?QStringLiteral("surfaceNetwork"):QStringLiteral("surfacePoles");
+    if (body.feature == BodyFeature::SurfaceTools) return body.surfaceTool.mode==5?QStringLiteral("trimSurface"):body.surfaceTool.mode==3?QStringLiteral("surfaceUnroll"):body.surfaceTool.mode==4?QStringLiteral("surfaceWrap"):body.surfaceTool.mode==0?QStringLiteral("surfaceExtendTo"):body.surfaceTool.mode==1?QStringLiteral("surfaceNetwork"):QStringLiteral("surfacePoles");
     if (body.feature == BodyFeature::SheetExtend) return QStringLiteral("extendSurface");
     if (body.feature == BodyFeature::Scale) return QStringLiteral("scale");
     if (body.feature == BodyFeature::Helix) return QStringLiteral("helix");

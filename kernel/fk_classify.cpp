@@ -13,6 +13,7 @@
 #include "fk_curve_surface.h"
 #include "fk_nurbs.h"
 #include "fk_pcurve.h"
+#include "fk_profile.h"
 #include "fk_surface_algo.h"
 
 namespace ForgeCad::Kernel {
@@ -404,6 +405,7 @@ Box faceBox(const Body &body, FaceId face) {
     Interval pu{1e300, -1e300}, pv{1e300, -1e300};
     int wrapping = 0;
     bool any = false, boundedUV = true;
+    double boundaryTolerance = 0.;
     for (LoopId l : body.face(face).loops) {
         double start = 0.0, travelled = 0.0;
         bool first = true;
@@ -411,6 +413,7 @@ Box faceBox(const Body &body, FaceId face) {
             const Fin &fin = body.fin(f);
             if (!fin.pcurve) { boundedUV = false; continue; }
             const Edge &edge = body.edge(fin.edge);
+            boundaryTolerance = std::max({boundaryTolerance,fin.pcurveTolerance,edge.tolerance});
             if (!conservativeBoundary(*fin.pcurve, edge.range)) {
                 boundedUV = false;
                 continue;
@@ -431,10 +434,52 @@ Box faceBox(const Body &body, FaceId face) {
     }
     // Senza un inviluppo UV certificato conserva il dominio del carrier.
     any = any && boundedUV;
-    if (surface.isUPeriodic()) u = {u.lo, u.lo + surface.uPeriod()};
+    // Un contorno locale orientato verso il materiale delimita una pezza
+    // nel rivestimento UV, anche quando attraversa il seam. Senza questo
+    // controllo le copie ruotate sembrano tutte sovrapposte. Le fasce
+    // avvolte, le calotte e il carrier con fori mantengono il periodo intero.
+    bool localPeriodic = any && body.face(face).loops.size() == 1
+        && (surface.isUPeriodic() || surface.isVPeriodic());
+    if (localPeriodic) {
+        ProfileLoop boundary;
+        Interval localU{1e300,-1e300}, localV{1e300,-1e300};
+        const double periods[]{surface.isUPeriodic() ? surface.uPeriod() : 0.,
+                               surface.isVPeriodic() ? surface.vPeriod() : 0.};
+        for (FinId id : body.loopFins(body.face(face).loops.front())) {
+            const auto &fin = body.fin(id);
+            ProfileSegment segment{fin.pcurve, body.edge(fin.edge).range};
+            if (!fin.sense) segment = reversed(segment);
+            Vec2 shift;
+            if (!boundary.segments.empty()) {
+                const Vec2 delta = boundary.segments.back().end() - segment.start();
+                for (int k=0;k<2;++k) if (periods[k]>0.)
+                    shift[k] = periods[k] * std::round(delta[k]/periods[k]);
+            }
+            if (squaredNorm(shift) > 0.) segment.curve = translatedCurve(segment.curve,shift);
+            const auto bounds = curveBox(*embedCurve(segment.curve,Frame3()),segment.range);
+            localU = {std::min(localU.lo,bounds.lo.x()),std::max(localU.hi,bounds.hi.x())};
+            localV = {std::min(localV.lo,bounds.lo.y()),std::max(localV.hi,bounds.hi.y())};
+            boundary.segments.push_back(segment);
+        }
+        localPeriodic = (!periods[0] || localU.length()<0.5*periods[0])
+            && (!periods[1] || localV.length()<0.5*periods[1]);
+        if (localPeriodic) {
+            // I raccordi fra estremi UV coprono il piccolo scarto delle
+            // SP-curve tolleranti e sono inclusi nel loro inviluppo.
+            double twiceArea = 2.0 * signedArea(boundary);
+            for (std::size_t i=0;i<boundary.segments.size();++i)
+                twiceArea += cross(boundary.segments[i].end(),
+                                   boundary.segments[(i+1)%boundary.segments.size()].start());
+            const double magnitude = std::max({1.,std::fabs(localU.lo),std::fabs(localU.hi),std::fabs(localV.lo),std::fabs(localV.hi)});
+            localPeriodic = (body.face(face).sense ? twiceArea : -twiceArea)
+                > 512.0*kMachineEpsilon*magnitude*magnitude;
+            if (localPeriodic) { pu=localU; pv=localV; }
+        }
+    }
+    if (surface.isUPeriodic()) u = localPeriodic ? pu : Interval{u.lo, u.lo + surface.uPeriod()};
     else if (any) u = pu;
     if (surface.isVPeriodic()) {
-        v = {v.lo, v.lo + surface.vPeriod()};
+        v = localPeriodic ? pv : Interval{v.lo, v.lo + surface.vPeriod()};
     } else if (any) {
         Interval w = pv;
         if (v.isFinite()) {
@@ -457,6 +502,7 @@ Box faceBox(const Body &body, FaceId face) {
     const BSplineSurface nurbs = toBSplineSurface(surface, u, v);
     for (int i = 0; i < nurbs.uPoleCount(); ++i)
         for (int j = 0; j < nurbs.vPoleCount(); ++j) result.add(nurbs.pole(i, j));
+    if (localPeriodic) result=result.padded(boundaryTolerance+512*kMachineEpsilon*std::max({1.,norm(result.lo),norm(result.hi)}));
     return result;
 }
 

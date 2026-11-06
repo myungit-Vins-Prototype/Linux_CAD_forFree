@@ -247,7 +247,7 @@ QString featureType(const ExtrusionObject &feature) {
     case BodyFeature::ProjectedCurve: return QStringLiteral("Curva proiettata");
     case BodyFeature::Thicken: return QStringLiteral("Spessore");
     case BodyFeature::SpatialSketch: return QStringLiteral("Schizzo 3D");
-    case BodyFeature::SurfaceTools: return feature.surfaceTool.mode==0?QStringLiteral("Estendi fino a riferimento"):feature.surfaceTool.mode==1?QStringLiteral("Rete di curve"):QStringLiteral("Poli NURBS");
+    case BodyFeature::SurfaceTools: return feature.surfaceTool.mode==5?QStringLiteral("Taglia solidi tra superfici"):feature.surfaceTool.mode==0?QStringLiteral("Estendi fino a riferimento"):feature.surfaceTool.mode==1?QStringLiteral("Rete di curve"):QStringLiteral("Poli NURBS");
     case BodyFeature::ExtractedCurve: return QStringLiteral("Curva estratta 3D");
     }
     return QStringLiteral("Feature");
@@ -394,7 +394,7 @@ QVector<Dependency> dependencies(int index, const DocumentState &document) {
         if(feature.surfaceTool.mode!=1)addBodyDependency(result,features,index,feature.firstBody,QStringLiteral("superficie sorgente"));
         if(feature.surfaceTool.mode>=3) {
             addRefs(Family::SurfaceSources, QStringLiteral("sorgente mappatura"));
-            addRefs(Family::SurfaceTargets, QStringLiteral("riferimento mappatura"));
+            addRefs(Family::SurfaceTargets, feature.surfaceTool.mode==5?QStringLiteral("faccia limite taglio"):QStringLiteral("riferimento mappatura"));
         }
         if(feature.surfaceTool.mode==0) {
             addRefs(feature.surfaceTool.targets.isEmpty() ? Family::Extent : Family::SurfaceTargets, QStringLiteral("limite estensione"));

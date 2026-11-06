@@ -2128,11 +2128,14 @@ FK_TEST(BlendPlanarCapOnTangentSplineSupports) {
     FK_CHECK(bool(file));
     std::stringstream bytes; bytes << file.rdbuf();
     const Body fixture = readBodyBinary(bytes.str());
-    for (int mode : {0, 1, 2}) {
+    for (int mode : {0, 1, 2, 3}) {
         detail::BlendModel model(fixture);
         if (mode != 0) std::reverse(model.faces.begin(), model.faces.end());
         Body body = model.build();
-        if (mode == 2) body = transformBody(body, Transform3::rotation(Vec3(1,2,3), normalized(Vec3(1,2,1)), 0.7));
+        const auto transform = mode == 2
+            ? Transform3::rotation(Vec3(1,2,3), normalized(Vec3(1,2,1)), 0.7)
+            : Transform3::translation(Vec3(40,-30,20)) * Transform3::rotation(Vec3(), normalized(Vec3(2,-1,3)), -1.1);
+        if (mode >= 2) body = transformBody(body, transform);
         // Trova il coperchio dal loop a 12 edge: nessuna dipendenza dagli ID
         // persistenti, dall'ordine delle fin o dall'orientamento globale.
         FaceId cap;
@@ -2141,7 +2144,7 @@ FK_TEST(BlendPlanarCapOnTangentSplineSupports) {
                 && body.loopFins(body.face(f).loops.front()).size() == 12) {
                 const auto &plane = static_cast<const Plane &>(*body.face(f).surface);
                 Vec3 expected(0,14.2,0);
-                if (mode == 2) expected = Transform3::rotation(Vec3(1,2,3), normalized(Vec3(1,2,1)), 0.7).applyToPoint(expected);
+                if (mode >= 2) expected = transform.applyToPoint(expected);
                 if (std::fabs(dot(expected-plane.frame().origin(),plane.frame().zDir())) < 1e-8) cap = f;
             }
         FK_CHECK(cap.valid()); if (!cap.valid()) continue;
@@ -2153,7 +2156,12 @@ FK_TEST(BlendPlanarCapOnTangentSplineSupports) {
         for (double radius : {0.01, 0.05, 0.1, 0.15, 0.159}) {
             BodyHistory history;
             const auto chosen = mode == 1 ? std::vector<EdgeId>{contour[3]} : contour;
-            const Body result = blendEdges(body, chosen, radius, false, &history);
+            const Body result = [&] {
+                try { return blendEdges(body, chosen, radius, false, &history); }
+                catch (const std::exception &error) {
+                    throw std::runtime_error("coperchio mode=" + std::to_string(mode) + " R=" + std::to_string(radius) + ": " + error.what());
+                }
+            }();
             CheckOptions checks; checks.loopCrossings = true;
             FK_CHECK(checkBody(result,checks).empty());
             FK_CHECK(tessellate(result,{}).failedFaces == 0);

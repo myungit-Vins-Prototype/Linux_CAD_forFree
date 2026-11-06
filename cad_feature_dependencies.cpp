@@ -247,6 +247,7 @@ QVector<int> hiddenOperands(const ExtrusionObject &body) {
         return replaced;
     }
     if (mergingFeature(body) && body.mergeOperation != 0) return body.mergeBodies;
+    if (body.feature==BodyFeature::SurfaceTools && body.surfaceTool.mode==5) return {body.firstBody};
     if (body.feature==BodyFeature::SurfaceTools && body.surfaceTool.mode==4 && !body.surfaceTool.mappingCopy) {
         if (body.surfaceTool.sources.isEmpty()) return {body.firstBody};
         QVector<int> consumed;

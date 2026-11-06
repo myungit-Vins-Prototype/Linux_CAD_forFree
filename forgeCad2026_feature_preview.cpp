@@ -120,7 +120,7 @@ QString FeaturePreviewBuilder::previewKey(const ExtrusionObject &d, int index) {
         const auto &mapping=d.surfaceTool;
         parts << QStringLiteral("STM") << n(mapping.mappingU) << n(mapping.mappingV)
               << n(mapping.mappingX) << n(mapping.mappingY) << n(mapping.mappingAngle) << n(mapping.mappingOffset)
-              << QString::number(mapping.mappingCopy) << QString::number(mapping.mappingRigid) << QString::number(mapping.mappingQuilt);
+              << QString::number(mapping.mappingCopy) << QString::number(mapping.mappingRigid) << QString::number(mapping.mappingQuilt) << QString::number(mapping.trimReverseFirst) << QString::number(mapping.trimReverseSecond);
         for(const auto &source:mapping.sources) { parts << QStringLiteral("STS"); ref(source);parts << source.point.name; }
         for(const auto &target:mapping.targets) { parts << QStringLiteral("STT"); ref(target);parts << target.point.name; }
         for(const auto &edit:d.surfaceTool.edits)parts << QString::number(edit.u) << QString::number(edit.v) << n(edit.dx) << n(edit.dy) << n(edit.dz) << n(edit.weightFactor);

@@ -257,7 +257,8 @@ void microFeaturesDialog(QWidget *parent, CadViewport *viewport);
 
 void massPropertiesDialog(QWidget *parent, CadViewport *viewport);
 
-// Finestra del taglio: corpo e strumento (corpo, superficie, piano o schizzo),
+// Taglia superficie: con uno strumento (corpo, superficie, piano o schizzo)
+// oppure tra due facce limite, mantenendo tutti i solidi compresi. Per uno strumento,
 // parti da tenere scelte nell'elenco o direttamente con un clic nella vista.
 // Le parti si ricalcolano a ogni cambio di superficie o di strumento; ognuna
 // e' ricordata da un suo punto (trimKeep). `definition` porta i valori
@@ -292,5 +293,6 @@ bool primitiveDialog(QWidget *parent, PrimitiveParameters &parameters,
                             const PreviewSpec<const PrimitiveParameters &> &preview = {});
 
 bool surfaceToolDialog(QMainWindow *window,CadViewport *viewport,const QString &title,int replaced,const ExtrusionObject &initial,const std::function<QString(const ExtrusionObject &)> &apply);
+
 
 #endif

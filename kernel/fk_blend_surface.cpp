@@ -2362,8 +2362,41 @@ Body blendSurfaceChainsWithGuide(const Body &input, const std::vector<EdgeId> &s
                 if (before.solver->intrinsicGuide() || rest.solver->intrinsicGuide()) {
                     const double dirI = fi.end > fi.start ? 1.0 : -1.0;
                     const double dirK = fk.end > fk.start ? 1.0 : -1.0;
-                    const double end = crossing(before, 2, c, before.b, 0.5*(fi.start+fi.end), dirI);
-                    const double start = crossing(rest, 2, c, rest.b, 0.5*(fk.start+fk.end), -dirK);
+                    double end = crossing(before, 2, c, before.b, 0.5*(fi.start+fi.end), dirI);
+                    double start = crossing(rest, 2, c, rest.b, 0.5*(fk.start+fk.end), -dirK);
+                    // Il bordo sorgente puo' essere approssimato: i due attraversamenti
+                    // indipendenti non minimizzano lo scarto fra le sezioni. Raffinarne
+                    // insieme i contatti, entro la risoluzione sorgente, prima dello
+                    // stesso controllo di coincidenza. Nessuna tolleranza allargata.
+                    const Section initialA = before.blend->section(end), initialB = rest.blend->section(start);
+                    const auto mismatch = [](const Section &a, const Section &b) {
+                        return squaredNorm(a.row[0].p-b.row[0].p) + squaredNorm(a.row[2].p-b.row[2].p);
+                    };
+                    if (std::max(distance(initialA.row[0].p,initialB.row[0].p),distance(initialA.row[2].p,initialB.row[2].p)) > 1e-9*scale) {
+                        for (int iteration=0;iteration<6;++iteration) {
+                            bool improved=false;
+                            for (int side=0;side<2;++side) {
+                                Piece &moving=side==0?before:rest;
+                                double &parameter=side==0?end:start;
+                                const Section a=moving.blend->section(parameter);
+                                const Section b=(side==0?rest:before).blend->section(side==0?start:end);
+                                const double speed2=squaredNorm(a.drow[0].p)+squaredNorm(a.drow[2].p);
+                                if (!(speed2>0.)) continue;
+                                const double step=(dot(b.row[0].p-a.row[0].p,a.drow[0].p)+dot(b.row[2].p-a.row[2].p,a.drow[2].p))/speed2;
+                                if (!std::isfinite(step) || step*step*speed2 > kLinearResolution*kLinearResolution) continue;
+                                Section candidate;
+                                try { candidate=moving.blend->section(parameter+step); }
+                                catch (const std::domain_error &) { continue; }
+                                const Section &original=side==0?initialA:initialB;
+                                if (std::max(distance(candidate.row[0].p,original.row[0].p),distance(candidate.row[2].p,original.row[2].p))>kLinearResolution) continue;
+                                const Edge &boundary=body.edge(c);
+                                if (projectPoint(*boundary.curve,candidate.row[2].p,boundary.range).distance
+                                    > std::max(kLinearResolution,boundary.tolerance)) continue;
+                                if (mismatch(candidate,b)<mismatch(a,b)) { parameter+=step; improved=true; }
+                            }
+                            if (!improved) break;
+                        }
+                    }
                     const Section &a = before.blend->section(end), &b = rest.blend->section(start);
                     if (std::max(distance(a.row[0].p, b.row[0].p), distance(a.row[2].p, b.row[2].p)) > 1e-9 * scale)
                         throw std::domain_error("blendEdges: i raccordi del coperchio non coincidono sulla cucitura del fianco");

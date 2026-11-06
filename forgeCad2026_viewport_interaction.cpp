@@ -207,6 +207,12 @@ void CadViewport::mousePressEvent(QMouseEvent *event) {
         setCursor(Qt::SizeAllCursor);
         return;
     }
+    if (refPicking_ && bodyBoxPickFinished_ && event->button() == Qt::LeftButton
+        && (!sketchMode_ || sketchViewUnlocked_)) {
+        armBoxSelection(lastMousePosition_, true);
+        event->accept();
+        return;
+    }
     if (!releasingSelection_ && event->button() == Qt::LeftButton
         && (!sketchMode_ || (sketchViewUnlocked_ && refPicking_))
         && (edgePicking_ || refPicking_ || sketchMode_ || !(event->modifiers() & (Qt::ShiftModifier | Qt::ControlModifier)))) {
@@ -1277,7 +1283,16 @@ void CadViewport::mouseReleaseEvent(QMouseEvent *event) {
         boxArmed_ = false;
         boxSelecting_ = false;
         if (dragged) finishBoxSelection();
-        else if (!sketchMode_) toggleObjectAt(event->position().toPoint());
+        else if (refPicking_ && bodyBoxPickFinished_) {
+            GeometryRef ref;
+            if (pickReference(event->position().toPoint(), ref)) {
+                cancelReferencePick();
+                const auto finished = refPickFinished_;
+                if (finished) finished(true, ref);
+            }
+            update();
+            return;
+        } else if (!sketchMode_) toggleObjectAt(event->position().toPoint());
         update();
         if (!sketchMode_ || dragged) return;  // nello schizzo un clic nel vuoto prosegue come prima
     }

@@ -134,6 +134,8 @@ Usage and limits (Italian): [correspondences](docs/loft-corrispondenze-2026-11-0
 
 The thread catalog includes 40 coarse-pitch ISO sizes and 22 fine-pitch combinations. The selected face supplies the actual geometric diameter; the catalog proposes nominal parameters.
 
+In **Union**, **Intersection** and **Difference**, tool selection starts active using the body A shown in the panel: drag a rectangle to add multiple bodies to the current selection. Left to right selects fully enclosed bodies; right to left also selects crossed bodies. Click to add/remove one body; **Esc** or **Termina selezione** ends picking; **Strumenti dalla vista** (tools from view) activates it again. Use the separate A picker to change the base body. Selected bodies are highlighted.
+
 **Taglia superfici → Taglia entrambi** (trim surfaces → trim both) lets you retain portions of each body and sew them into a new result. A closed sheet is not automatically promoted to a solid; use sewing to create a volume when valid. Booleans and trims operate on exact surfaces, including NURBS, within the kernel's supported cases. [Verified examples and limits (Italian)](docs/knifehandle-taglio-reciproco-2026-11-05.md).
 
 The **Raggio** command has four illustrated tabs: **Costante** (constant), **Conico** (conic), **Variabile** (variable), and **Tra facce** (between faces). Conics support elliptical (ρ < 0.5), parabolic (ρ = 0.5), and hyperbolic (ρ > 0.5) sections, controlled by ρ or the curvature radius at the section midpoint. Variable fillets accept multiple selected edges: tangent edges form one path with 2–64 stations equally spaced by total arc length. Disconnected paths have independent tables; select an edge in the list to display its path’s table, interpolation and reverse direction controls. Drag the R markers in the 3D view to change radii and update the preview. Closed paths keep their first and last radii equal. Face fillets require two adjacent faces of the same body and round their shared edges. Tangent propagation can be disabled and stays off in variable mode. The panel can close while its preview is computing. Support was introduced in native format 59, retaining the ability to read older documents.
@@ -177,6 +179,10 @@ The **Functions → Surfaces** menu also provides extension of one free edge up 
 Pole editing supports a single NURBS face, preserving degree, knots and UV trims including holes; extract a face from a sewn body with **Copy faces** first. Drag in the screen plane or edit XYZ/positive weights in the table (up to 4096 poles). Deltas and weight factors follow the upstream surface; a changed knot layout requires explicit reselection. Regularity checks are sampled and do not certify the absence of global self-intersections. These features support regeneration, Undo/Redo, native files and revisions; native format 54 preserves topological names for sketch supports and Pierce constraints and reads older files.
 
 The fill boundary can be a sketch or several coplanar planar faces. Click **Scegli contorno nella vista**, add faces, then **Termina selezione**; **Rimuovi** removes highlighted rows. Adjacent faces form one area, allowing copies to cross internal joins while respecting holes and the exterior boundary.
+
+#### Trimming solids between two surfaces
+
+**Funzioni → Superfici → Taglia superficie…**, with **Tipo di taglio → Tra due superfici (solidi)** (between two surfaces), keeps every volume of the source body between two selected faces, including bodies containing disconnected solids. Select the body and the two faces in the viewport or storyboard; each boundary has an independent side reversal. Cuts are closed using the exact target surfaces. Finite boundary faces must fully cross the volumes; extend them beforehand when necessary. The feature preserves associative references, editing, previews and Undo/Redo (surface extension schema9).
 
 #### Surface development and flattening
 

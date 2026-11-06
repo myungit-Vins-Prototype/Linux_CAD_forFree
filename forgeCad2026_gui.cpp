@@ -488,18 +488,7 @@ void PdfWindow::initializeSceneAndTree(WindowSetup &setup) {
             });
         } else if (original.feature == BodyFeature::SheetTrim) {
             trimDialog(this, viewport, QStringLiteral("Modifica taglio"), index, original, [&](const ExtrusionObject &values) {
-                ExtrusionObject body = original;
-                body.firstBody = values.firstBody;
-                body.secondBody = values.secondBody;
-                body.sketchIndex = values.sketchIndex;
-                body.trimPlane = values.trimPlane;
-                body.trimKeep = values.trimKeep;
-                body.trimBoth = values.trimBoth;
-                body.trimProject = values.trimProject;
-                body.projectionMode = values.projectionMode;
-                body.projectionReverse = values.projectionReverse;
-                body.trimToolKeep = values.trimToolKeep;
-                return update(body);
+                return update(values);
             });
         } else if (original.feature == BodyFeature::Transform) {
             transformDialog(this, viewport, QStringLiteral("Modifica spostamento"), index, original, [&](const ExtrusionObject &values) { return update(values); });
@@ -1472,7 +1461,7 @@ void PdfWindow::initializeActionsAndView(WindowSetup &setup) {
     functionsMenu->addSeparator();
     auto *surfaceMenu = addCadMenu(functionsMenu, QStringLiteral("Superfici"));
     trimSurfaceAction = surfaceMenu->addAction(QStringLiteral("Taglia superficie..."));
-    trimSurfaceAction->setToolTip(QStringLiteral("Taglia una superficie con un corpo (superficie o solido) o un piano e ne tiene una parte"));
+    trimSurfaceAction->setToolTip(QStringLiteral("Taglia con un corpo, una superficie, un piano o uno schizzo, oppure conserva i solidi tra due superfici"));
     extendSurfaceAction = surfaceMenu->addAction(QStringLiteral("Estendi superficie..."));
     extendSurfaceAction->setToolTip(QStringLiteral("Apre il pannello: seleziona nella vista i bordi da estendere e imposta la distanza"));
     copyFacesAction = surfaceMenu->addAction(QStringLiteral("Copia facce..."));
@@ -2321,6 +2310,11 @@ void PdfWindow::initializeFeatureCommands(WindowSetup &setup) {
         }
         const QString name = QStringLiteral("Taglio %1").arg(viewport->extrusions().size() + 1);
         trimDialog(this, viewport, QStringLiteral("Taglia superficie"), -1, definition, [viewport, name](const ExtrusionObject &d) {
+            if (d.feature == BodyFeature::SurfaceTools && d.surfaceTool.mode == 5) {
+                auto body = d;
+                body.name = name;
+                return viewport->createBody(body);
+            }
             return viewport->createSheetTrim(d, name);
         });
     });
@@ -4797,7 +4791,7 @@ void PdfWindow::rebuildModelTree() {
                 item->setToolTip(0, QStringLiteral("Spessore %1 %2 lungo %3").arg(ForgeCad::formatLength(body.distance, 6, true, this), QString::fromLatin1(sides[qBound(0, body.thickenSide, 2)]),
                     body.thickenDirection.kind < 0 ? QStringLiteral("la normale") : ForgeCad::geometryRefText(body.thickenDirection, sketches, extrusions)));
             } else if (body.feature == BodyFeature::SurfaceTools) {
-                const QString text=body.surfaceTool.mode>=3?(body.surfaceTool.mode==3?QStringLiteral("Sviluppo isometrico esatto"):QStringLiteral("Corpo deformato su superficie")):body.surfaceTool.mode==0?QStringLiteral("Estesa fino a: %1").arg(ForgeCad::geometryRefText(body.extentRef,sketches,extrusions)):body.surfaceTool.mode==1?QStringLiteral("Rete di %1 x %2 curve, celle G0").arg(body.ruledFirst.size()).arg(body.ruledSecond.size()):QStringLiteral("NURBS: %1 poli modificati").arg(body.surfaceTool.edits.size());
+                const QString text=body.surfaceTool.mode==5?QStringLiteral("Solidi compresi tra due superfici"):body.surfaceTool.mode>=3?(body.surfaceTool.mode==3?QStringLiteral("Sviluppo isometrico esatto"):QStringLiteral("Corpo deformato su superficie")):body.surfaceTool.mode==0?QStringLiteral("Estesa fino a: %1").arg(ForgeCad::geometryRefText(body.extentRef,sketches,extrusions)):body.surfaceTool.mode==1?QStringLiteral("Rete di %1 x %2 curve, celle G0").arg(body.ruledFirst.size()).arg(body.ruledSecond.size()):QStringLiteral("NURBS: %1 poli modificati").arg(body.surfaceTool.edits.size());
                 item->setToolTip(0,text);
             } else if (body.feature == BodyFeature::SpatialSketch) {
                 item->setToolTip(0,QStringLiteral("Schizzo 3D libero: %1 entita'").arg(body.spatialSketch.entities.size()));

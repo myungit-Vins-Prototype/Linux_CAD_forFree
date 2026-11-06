@@ -1018,6 +1018,41 @@ std::vector<double> intersectLineSurface(const Vec3 &origin, const Vec3 &directi
         quadratic(squaredNorm(dp), 2.0 * dot(wp, dp), squaredNorm(wp) - r * r);
         break;
     }
+    case SurfaceType::Cone: {
+        // La forma tan(a)^2*z^2 perde le radici quando il cono e' quasi
+        // piano. Centrare il parametro sul piano del vertice e usare sin/cos
+        // mantiene la quadratica ben scalata, anche con falde vicinissime.
+        // Non fondere le due radici: solo il ritaglio della faccia decide
+        // quale falda appartiene al solido.
+        const auto &cone = static_cast<const ConicalSurface &>(surface);
+        const Vec3 w = cone.frame().toLocal(origin), d = cone.frame().directionToLocal(direction);
+        const long double sn = std::sin(cone.semiAngle()), cs = std::cos(cone.semiAngle());
+        const long double ox = w.x(), oy = w.y(), oz = static_cast<long double>(w.z()) + cone.referenceRadius() * cs / sn;
+        const long double dx = d.x(), dy = d.y(), dz = d.z();
+        // Un cono quasi cilindrico ha il vertice molto lontano: in quel
+        // caso conservare l'origine evita una nuova cancellazione delle radici.
+        const bool nearFlat = std::fabs(sn) > 0.5L, apexPlane = nearFlat && std::fabs(dz) > 0.25L;
+        const long double shift = !nearFlat ? 0.L : apexPlane ? -oz / dz : -(ox*dx + oy*dy + oz*dz);
+        const long double x = ox + shift*dx, y = oy + shift*dy, z = apexPlane ? 0.L : oz + shift*dz;
+        const long double a = cs*cs*(dx*dx+dy*dy)-sn*sn*dz*dz;
+        const long double b = 2*(cs*cs*(x*dx+y*dy)-sn*sn*z*dz);
+        const long double c = cs*cs*(x*x+y*y)-sn*sn*z*z;
+        const long double eps = 64 * std::numeric_limits<double>::epsilon();
+        const long double aScale = cs*cs*(dx*dx+dy*dy)+sn*sn*dz*dz;
+        const long double bScale = 2*(cs*cs*(std::fabs(x*dx)+std::fabs(y*dy))+sn*sn*std::fabs(z*dz));
+        const long double cScale = cs*cs*(x*x+y*y)+sn*sn*z*z;
+        if (std::fabs(a) <= eps*aScale) {
+            if (std::fabs(b) > eps*bScale) result.push_back(double(shift-c/b));
+            else grazing = std::fabs(std::fabs(cs)*std::hypot(ox,oy)-std::fabs(sn*oz)) <= tolerance;
+            break;
+        }
+        const long double disc = std::fma(b,b,-4*a*c), error = eps*(bScale*bScale+4*aScale*cScale);
+        if (disc < -error) break;
+        if (disc <= error) { grazing = true; break; }
+        const long double root = std::sqrt(disc), q = -0.5L*(b+std::copysign(root,b));
+        result.push_back(double(shift+q/a)); result.push_back(double(shift+c/q));
+        break;
+    }
     case SurfaceType::Sphere: {
         const auto &sphere = static_cast<const SphericalSurface &>(surface);
         const Vec3 w = origin - sphere.frame().origin();

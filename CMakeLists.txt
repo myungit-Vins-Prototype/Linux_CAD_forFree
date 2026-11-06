@@ -132,6 +132,7 @@ add_executable(forgecad
     forgeCad2026_viewport_sketch.cpp
     forgeCad2026_viewport_document.cpp
     forgeCad2026_viewport_selection.cpp
+    forgeCad2026_viewport_body_box.cpp
     forgeCad2026_viewport_storyboard.cpp
     forgeCad2026_viewport_loft_diagnostics.cpp
     cad_storyboard_selection.cpp
@@ -170,6 +171,7 @@ add_executable(forgecad
     forgeCad2026_dialogs_surfaces.cpp
     forgeCad2026_dialogs_projection.cpp
     forgeCad2026_dialogs_surface_tools.cpp
+    forgeCad2026_dialogs_trim.cpp
     forgeCad2026_dialogs_mapping.cpp
     forgeCad2026_dialogs_sketch.cpp
     forgeCad2026_dialogs_analysis.cpp
@@ -188,6 +190,7 @@ add_executable(forgecad
     cad_spatial_sketch.h
     cad_surface_tools.h
     cad_surface_tools.cpp
+    cad_solid_trim.cpp
     cad_surface_mapping.cpp
     cad_spatial_sketch.cpp
     cad_curve_extract.cpp
@@ -615,6 +618,8 @@ if(FORGECAD_BUILD_VIEW_TESTS)
     forgecad_add_view_test(forgecad_history_diagnostics_tests --history-diagnostics)
     forgecad_add_view_test(forgecad_declared_history_cache_tests --declared-history-cache)
     forgecad_add_view_test(forgecad_boolean_history_tests --boolean-history)
+    forgecad_add_view_test(forgecad_boolean_box_tests --boolean-box-pick)
+    set_tests_properties(forgecad_boolean_box_tests PROPERTIES TIMEOUT 60)
     forgecad_add_view_test(forgecad_blend_history_tests --blend-history)
     forgecad_add_view_test(forgecad_all_history_tests --all-history)
     forgecad_add_view_test(forgecad_native_revisions_tests --native-revisions)
@@ -704,6 +709,8 @@ if(FORGECAD_BUILD_VIEW_TESTS)
     forgecad_add_view_test(forgecad_spline_shape_tests --spline-shape)
     forgecad_add_view_test(forgecad_spline_click_tests --spline-clicks)
     set_tests_properties(forgecad_spline_click_tests PROPERTIES TIMEOUT 60)
+    forgecad_add_view_test(forgecad_solid_trim_tests --solid-trim)
+    set_tests_properties(forgecad_solid_trim_tests PROPERTIES TIMEOUT 120)
     forgecad_add_view_test(forgecad_surface_mapping_tests --surface-mapping)
     set_tests_properties(forgecad_surface_mapping_tests PROPERTIES TIMEOUT 120)
     forgecad_add_view_test(forgecad_loft_point_tests --loft-points)

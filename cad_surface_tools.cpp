@@ -1,4 +1,5 @@
 #include "cad_surface_tools.h"
+#include "cad_solid_trim.h"
 #include "cad_surface_mapping.h"
 #include "cad_datum.h"
 #include "cad_element_names.h"
@@ -42,6 +43,7 @@ QByteArray surfaceBasisHash(const ForgeBody &body) {
     return QCryptographicHash::hash(bytes, QCryptographicHash::Sha256);
 }
 void buildSurfaceTool(ExtrusionObject &body, int index, const QVector<SketchObject> &sketches, const QVector<ExtrusionObject> &bodies) {
+    if (body.surfaceTool.mode == 5) { buildSolidTrim(body,index,bodies); return; }
     if (body.surfaceTool.mode >= 3) { buildSurfaceMapping(body,index,sketches,bodies); return; }
     using namespace Kernel;
     try {
@@ -130,7 +132,7 @@ void buildSurfaceTool(ExtrusionObject &body, int index, const QVector<SketchObje
 }
 QByteArray surfaceToolsExtras(const QVector<ExtrusionObject> &bodies) {
     QJsonArray records;
-    bool mapping=false, multiple=false, targetSet=false, rigid=false, quilt=false, flatten=false, linked=false;
+    bool mapping=false, multiple=false, targetSet=false, rigid=false, quilt=false, flatten=false, linked=false, solidTrim=false;
     for (int i = 0; i < bodies.size(); ++i) {
         const auto &b = bodies[i];
         if (b.feature != BodyFeature::SurfaceTools && b.fillFaceContinuities.isEmpty())
@@ -148,7 +150,8 @@ QByteArray surfaceToolsExtras(const QVector<ExtrusionObject> &bodies) {
                                    {"basis", QString::fromLatin1(p.basis.toHex())},
                                    {"edits", edits},
                                    {"contacts", contacts}};
-        if (p.mode >= 3) {
+        if (p.mode == 5) {solidTrim=true;record["trimSides"]=QJsonArray{p.trimReverseFirst,p.trimReverseSecond};}
+        if (p.mode == 3 || p.mode == 4) {
             mapping=true;
             linked=linked||(p.mode==4&&p.targets.size()>1&&p.targets[1].kind==11);
             targetSet=targetSet||(p.mode==4&&p.targets.size()>2);
@@ -179,7 +182,7 @@ QByteArray surfaceToolsExtras(const QVector<ExtrusionObject> &bodies) {
         records.append(record);
     }
     return records.isEmpty() ? QByteArray()
-                             : QJsonDocument(QJsonObject{{"schema", linked ? 8 : flatten ? 7 : quilt ? 6 : rigid ? 5 : targetSet ? 4 : multiple ? 3 : mapping ? 2 : 1}, {"features", records}}).toJson(QJsonDocument::Compact);
+                             : QJsonDocument(QJsonObject{{"schema", solidTrim ? 9 : linked ? 8 : flatten ? 7 : quilt ? 6 : rigid ? 5 : targetSet ? 4 : multiple ? 3 : mapping ? 2 : 1}, {"features", records}}).toJson(QJsonDocument::Compact);
 }
 QString applySurfaceToolsExtras(const QByteArray &bytes, QVector<ExtrusionObject> &output) {
     auto bodies = output;
@@ -189,7 +192,7 @@ QString applySurfaceToolsExtras(const QByteArray &bytes, QVector<ExtrusionObject
             require(bytes.size() <= 4 * 1024 * 1024, "Estensioni superfici oltre4MiB.");
             QJsonParseError error;
             const auto root = QJsonDocument::fromJson(bytes, &error).object();
-            require(error.error == QJsonParseError::NoError && root.size() == 2 && (root["schema"].toDouble(-1) == 1 || root["schema"].toDouble(-1) == 2 || root["schema"].toDouble(-1) == 3 || root["schema"].toDouble(-1) == 4 || root["schema"].toDouble(-1) == 5 || root["schema"].toDouble(-1) == 6 || root["schema"].toDouble(-1) == 7 || root["schema"].toDouble(-1) == 8) &&
+            require(error.error == QJsonParseError::NoError && root.size() == 2 && (root["schema"].toDouble(-1) == 1 || root["schema"].toDouble(-1) == 2 || root["schema"].toDouble(-1) == 3 || root["schema"].toDouble(-1) == 4 || root["schema"].toDouble(-1) == 5 || root["schema"].toDouble(-1) == 6 || root["schema"].toDouble(-1) == 7 || root["schema"].toDouble(-1) == 8 || root["schema"].toDouble(-1) == 9) &&
                         root["features"].isArray(),
                     "Estensioni superfici danneggiate.");
             const auto integer = [](const QJsonValue &v, int low, int high) {
@@ -200,7 +203,7 @@ QString applySurfaceToolsExtras(const QByteArray &bytes, QVector<ExtrusionObject
             for (const auto &entry : root["features"].toArray()) {
                 require(entry.isObject(), "Record superficie non valido.");
                 const auto o = entry.toObject();
-                require(o.size() == 7 + int(o.contains("targets")) + int(o.contains("mapping")) + int(o.contains("sources")), "Record superficie incompleto.");
+                require(o.size() == 7 + int(o.contains("targets")) + int(o.contains("mapping")) + int(o.contains("sources")) + int(o.contains("trimSides")), "Record superficie incompleto.");
                 const int i = integer(o["index"], 0, bodies.size() - 1);
                 require(!present.contains(i), "Estensione superficie duplicata.");
                 present.insert(i);
@@ -208,8 +211,13 @@ QString applySurfaceToolsExtras(const QByteArray &bytes, QVector<ExtrusionObject
                 require(b.feature == BodyFeature::SurfaceTools || b.feature == BodyFeature::FillSurface,
                         "Estensione su un tipo di funzione incompatibile.");
                 auto &p = b.surfaceTool;
-                p.mode = integer(o["mode"], 0, root["schema"].toInt()>=2?4:2);
-                if (p.mode >= 3) {
+                p.mode = integer(o["mode"], 0, root["schema"].toInt()>=9?5:root["schema"].toInt()>=2?4:2);
+                if(p.mode==5) {
+                    const auto sides=o["trimSides"].toArray();
+                    require(root["schema"].toInt()>=9&&sides.size()==2&&sides[0].isBool()&&sides[1].isBool(),"Taglio tra superfici senza schema9 o lati validi.");
+                    p.trimReverseFirst=sides[0].toBool();p.trimReverseSecond=sides[1].toBool();
+                } else require(!o.contains("trimSides"),"Lati di taglio su funzione incompatibile.");
+                if (p.mode == 3 || p.mode == 4) {
                     require(o["mapping"].isObject(),"Parametri di mappatura assenti.");
                     const auto m=o["mapping"].toObject();
                     require(m.size()==7+int(m.contains("rigid"))+int(m.contains("quilt"))&&m["copy"].isBool(),"Parametri di mappatura incompleti.");
@@ -290,12 +298,13 @@ QString applySurfaceToolsExtras(const QByteArray &bytes, QVector<ExtrusionObject
                         "Continuita' per faccia incompatibili.");
                 if (b.feature == BodyFeature::SurfaceTools) {
                     require(b.fillFaceContinuities.isEmpty(), "Contatti fill su operazione superficie.");
-                    if (p.mode >= 3)
+                    if (p.mode == 3 || p.mode == 4)
                         {
                             require(p.targets.size()>=2&&p.targets[0].kind==5,"Mappatura senza faccia e piano.");
                             require(p.targets.size()==2||(p.mode==4&&root["schema"].toInt()>=4),"Destinazioni multiple senza schema4.");
                             for(int target=2;target<p.targets.size();++target)require(p.targets[target].kind==5,"Destinazione multipla non faccia.");
                         }
+                    if(p.mode==5)require(p.targets.size()==2&&p.targets[0].kind==5&&p.targets[1].kind==5&&p.sources.isEmpty(),"Taglio tra superfici senza due facce valide.");
                     if (p.mode == 0)
                         require(b.blendEdges.size() == 1 && b.extentRef.kind >= 0, "Estensione senza bordo o destinazione.");
                     if (p.mode == 1)

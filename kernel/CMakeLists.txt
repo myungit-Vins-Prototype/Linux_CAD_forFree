@@ -75,6 +75,8 @@ add_library(forgekernel STATIC
     fk_body_io.cpp
     fk_boolean.h
     fk_boolean.cpp
+    fk_solid_trim.cpp
+    fk_solid_trim.h
     fk_unify.h
     fk_unify.cpp
     fk_history.h
@@ -393,3 +395,18 @@ target_compile_options(forgekernel_trimmed_face_bounds_tests PRIVATE -Wall -Wext
 set_target_properties(forgekernel_trimmed_face_bounds_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
 add_test(NAME forgekernel_trimmed_face_bounds_tests COMMAND forgekernel_trimmed_face_bounds_tests)
 set_tests_properties(forgekernel_trimmed_face_bounds_tests PROPERTIES TIMEOUT 30)
+
+add_executable(forgekernel_solid_trim_tests tests/test_solid_trim.cpp)
+target_link_libraries(forgekernel_solid_trim_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_solid_trim_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_solid_trim_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_solid_trim_tests COMMAND forgekernel_solid_trim_tests)
+set_tests_properties(forgekernel_solid_trim_tests PROPERTIES TIMEOUT 60)
+
+# Raggi sui coni quasi piani: falde distinte, classificazione e booleane.
+add_executable(forgekernel_cone_rays_tests tests/test_cone_rays.cpp)
+target_link_libraries(forgekernel_cone_rays_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_cone_rays_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_cone_rays_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_cone_rays_tests COMMAND forgekernel_cone_rays_tests)
+set_tests_properties(forgekernel_cone_rays_tests PROPERTIES TIMEOUT 60)

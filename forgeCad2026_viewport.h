@@ -413,6 +413,7 @@ public:
     QVector<QPointF> projectSketchPoints(const QVector<QPointF> &points, const SketchObject &sketch) const;
     QVector<QVector<QPointF>> sketchScreenPolylines(const SketchObject &sketch) const;
     void finishBoxSelection();
+    QVector<int> referenceBodiesInBox(const QRectF &rect, bool window) const;
     // Maiusc+clic senza trascinare (fuori dallo schizzo): aggiunge o toglie l'oggetto sotto il puntatore.
     void toggleObjectAt(const QPoint &position);
     // Il riquadro mentre lo si trascina: continuo e azzurro da sinistra (oggetti dentro), tratteggiato e verde da destra (toccati).
@@ -560,6 +561,9 @@ public:
     // lista non e' vuota si disegnano e si scelgono solo questi, anche se sono
     // stadi nascosti della storia.
     void setPickBodies(const QVector<int> &bodies);
+    // Abilita il trascinamento a rettangolo durante il picking dei corpi.
+    // Restituisce gli operandi disponibili in un solo gruppo; il clic resta singolo.
+    void setBodyBoxPickCallback(std::function<void(const QVector<int> &)> callback);
     // Gli stessi picker dei pannelli accettano riferimenti espliciti dalla storyboard.
     QString storyboardPickContext() const;
     QVector<GeometryRef> storyboardReferences(SceneObjectKind kind, int index, bool wholeBody = false) const;
@@ -1697,6 +1701,7 @@ private:
     bool refPicking_ = false;
     QSet<int> refPickContextBodies_;  // risultati/operandi prima della feature in riparazione
     QVector<int> pickBodies_;
+    std::function<void(const QVector<int> &)> bodyBoxPickFinished_;
     int refPickRoles_ = 0;
     int refPickOwner_ = -1;
     GeometryRef refHover_;

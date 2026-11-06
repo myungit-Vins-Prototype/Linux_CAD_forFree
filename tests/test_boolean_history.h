@@ -133,6 +133,32 @@ static void booleanHistoryTest() {
     require(history && history->operandCount() == 2 && operands.size() == 2 && operands[0].index == 2 && operands[1].index == 3,
         "composizione fermata agli operandi effettivi della feature");
     for (FaceId face : last.forgeBody->faces()) require(history->isDeclared(EntityKind::Face, face.index), "origine dichiarata nella catena");
+
+    // Molti strumenti: l'aggregazione bilanciata deve conservare anche gli
+    // operandi profondi nell'albero, non solo gli ultimi due intermedi.
+    DocumentState many;
+    ExtrusionObject base; base.feature = BodyFeature::Primitive;
+    base.primitive.size[0] = 20; base.primitive.size[1] = base.primitive.size[2] = 2;
+    many.extrusions.append(base);
+    QVector<int> tools;
+    for (int i = 0; i < 10; ++i) {
+        auto tool = base; tool.primitive.origin[0] = 2*i; tool.primitive.origin[1] = 1;
+        tool.primitive.size[0] = 1; many.extrusions.append(tool); tools.append(i+1);
+    }
+    CadViewport batch; batch.loadDocument(many);
+    require(batch.createBoolean(::BooleanOperation::Union, 0, tools, QStringLiteral("Unione dieci strumenti")).isEmpty(), "creazione unione bilanciata");
+    const auto batchShape = batch.extrusions().last().forgeBody;
+    require(batchShape && std::fabs(massProperties(*batchShape).volume - 100) < 1e-8, "unione bilanciata conserva il volume");
+    const auto origins = featureHistoryOf(*batchShape);
+    require(origins && origins->operandCount() == 11, "undici operandi nella genealogia dell'unione bilanciata");
+    QSet<int> contributors;
+    for (FaceId face : batchShape->faces()) {
+        require(origins->isDeclared(EntityKind::Face, face.index), "faccia dell'unione bilanciata dichiarata");
+        for (const auto &link : origins->origins(EntityKind::Face, face.index)) contributors.insert(link.operand);
+    }
+    require(contributors.size() == 11, "tutti gli strumenti contribuiscono al risultato");
+    batch.undo(); require(batch.extrusions().size() == 11, "Undo unico per dieci strumenti");
+    batch.redo(); require(batch.extrusions().size() == 12, "Redo dell'unione bilanciata");
 }
 
 #endif

@@ -1,13 +1,12 @@
 # CLAUDE.md — memoria operativa ForgeCAD
 
-Aggiornato il **6 novembre 2026**. Leggere con `AGENTS.md`; approfondire solo l’area richiesta.
+Aggiornato **6 novembre 2026**.
 
-Cronologia: [archivio al 2 novembre](docs/history/claude-2026-11-02.md). **Leggere solo le voci pertinenti**,
-non integralmente. Sintesi e sorgenti superano gli stati storici.
+[Cronologia](docs/history/claude-2026-11-02.md).
 
 ## Regole permanenti e decisioni
 
-- Italiano; nessun `codex` nei nomi dei branch. Sviluppo unificato su `main`;
+- Italiano; nessun `codex` nei nomi dei branch. `main` unico;
   `solver-mesh-gpu` è stato integrato e archiviato il 30 ottobre. CUDA e Metal restano backend opzionali negli stessi
   sorgenti, con fallback CPU.
 - Aggiornare a ogni traguardo e prima della risposta finale. Rileggere e preservare le altre chat; distinguere
@@ -16,12 +15,12 @@ non integralmente. Sintesi e sorgenti superano gli stati storici.
   tematica; dettagli in rapporti `docs/` o archivio. Niente log grezzi o comandi ripetitivi.
 - **Geometria ingegneristica esatta**: coordinate e calcoli in `double`, curve analitiche/NURBS e solidi B-rep. Mesh,
   campioni di display, pixel, `float` e `QVector3D` servono alla visualizzazione/selezione, mai a booleane, misure o volumi.
-  Nessun CSG su mesh.
+  No CSG su mesh.
 - Un solo kernel di produzione: `kernel/`, namespace `ForgeCad::Kernel`, C++17 puro senza Qt e senza OCCT. Anche STEP/IGES
   usano il kernel proprio. OpenCASCADE è facoltativo e confinato ai test di confronto in `kernel/occt_tests`; non deve
   entrare nelle dipendenze o nei flag dell'app.
 - Tolleranze: seguire [politica unica](docs/tolerance-policy.md), `kernel/fk_precision.h` e `cad_kernel.h`. Distinguere
-  risoluzione, connessione, fit, parametri e budget locali; non aumentare tolleranze o indebolire test per nascondere errori.
+  risoluzione, connessione, fit e budget locali; non aumentare tolleranze o indebolire test per nascondere errori.
   La genealogia e i riferimenti topologici devono restare espliciti: non riassociare automaticamente per sola vicinanza.
 - Conservare compatibilità dei documenti e valori delle enum persistite. Codice nuovo in moduli mirati `cad_*`/`kernel/fk_*`,
   evitando di ingrandire i coordinatori. Stile Qt, membri con `_`, quattro spazi e graffa sulla stessa riga.
@@ -68,9 +67,9 @@ ctest --test-dir forgecad-release --output-on-failure
   la destinazione effettiva del collegamento, senza attribuire vecchi hash o test al nuovo HEAD.
 - Vista architetturale: avviare `python3 tools/open_architecture.py` per controllo/aggiornamento all'apertura. Dopo
   cambiamenti strutturali aggiornare descrizioni/gruppi in `tools/generate_architecture.py`, rigenerare sulla build
-  pertinente e verificare `python3 tools/generate_architecture.py --check`; controllare collegamenti in entrambi i versi e
-  resa HTML, distinguendo call/include/reference. CMake non rigenera la mappa. HTML/JSON sono generati e ignorati: non forzarne l'aggiunta. [Istruzioni](docs/architecture/README.md).
-- Approfondimenti da aprire solo se pertinenti: [roadmap](docs/roadmap.md), [schizzi](docs/sketch-tools.md),
+  pertinente e verificare `python3 tools/generate_architecture.py --check`; controllare collegamenti bidirezionali e
+  HTML, distinguendo call/include/reference. CMake non rigenera la mappa. HTML/JSON sono generati e ignorati: non forzarne l'aggiunta. [Istruzioni](docs/architecture/README.md).
+- Approfondimenti pertinenti: [roadmap](docs/roadmap.md), [schizzi](docs/sketch-tools.md),
   [storia](docs/storyboard-history.md), [tavole/revisioni](docs/drawing-revisions-study.md),
   [prestazioni](docs/viewport-performance.md), [review corrente](docs/code-review-2026-11-02.md). Rapporti datati e archivio
   conservano riproduttori, misure e prove storiche.
@@ -95,7 +94,7 @@ ctest --test-dir forgecad-release --output-on-failure
   riaggancio per prossimità.
 - Review del 2 novembre: B8 irrobustito e verificato con reingresso iniettato, senza evento normale riprodotto;
   orfane e semplificazioni restano proposte. Contesto GL e pan verificati su Wayland/XCB; macOS e combinazioni Qt/OCCT
-  diverse da quelle locali non ricertificate. Le vecchie CI verdi non attestano queste modifiche.
+  diverse da quelle locali non ricertificate. CI storiche non ricertificano queste modifiche.
 - Accelerazione: nessun guadagno globale 10× dimostrato. Benefici e limiti dei backend sono specifici dei casi misurati. Lock
   cooperativi e release locali non costituiscono autenticazione o permessi di rete; Windows e pacchetto autonomo di rilascio
   non sono certificati. Priorità proposte nella roadmap.
@@ -125,13 +124,18 @@ ISO M1–M68, ribbon, loft440px, schizzi vuoti: app/GUI PASS.
 [UI](docs/ui-ribbon-loft-filettature-2026-11-05.md).
 Mappature:4pattern,Taglio12:F2–F5,multifaccia/posa rigida155, app/18CTest PASS.
 `7894f64` nel checkpoint. [Prove](docs/riempimento-sviluppo-adattamento-2026-11-05.md).
-**06/11 — Superfici/storia, checkpoint origin/main.** R20schema8:117copie/GUI/codec/no-cache,15CTest PASS.
-Unione168:1188facce/1solido,GUI155s/Undo/codec/3viste,92kernel+9CTest PASS;app aggiornata. [Prove](docs/knifehandle-unione-rilievi-2026-11-06.md).
-Schema7:18CTest/F5-F6-P5/GUI/Undo/codec/no-cache PASS; -16,70/+32,41%.
+**06/11 — Superfici/storia.** `3188714` pubblicato.
+R20schema8:117copie/GUI/codec/no-cache,15CTest PASS; schema7:18CTest PASS.
 [Superfici](docs/confronto-flatten-quilt-creo-2026-11-06.md).
-Rigenerazione per dipendenze: app/29CTest e Wayland KnifeHandle151 PASS;
-B-rep precedenti invariati,1–5ms modello; mappa/check/13HTML PASS.
-[Storia](docs/rigenerazione-incrementale-2026-11-06.md).
+Unione168:1188facce/1solido,GUI155s/Undo/codec,92kernel+9CTest PASS.
+[Unione](docs/knifehandle-unione-rilievi-2026-11-06.md).
+Storia incrementale:29CTest/Wayland/B-rep invariati,1–5ms;
+[storia](docs/rigenerazione-incrementale-2026-11-06.md).
+HoneyRepeat:13solidi, app/Wayland/Undo/codec/test PASS; circolare2/12istanze262/2767ms.
+Taglia superficie: pannello unico, conversioni/5CTest PASS; [prove](docs/honeyrepeat-taglio-tra-superfici-2026-11-06.md).
+Booleane:9CTest/48kernel/GUI PASS; HoneyRepeat senza Corpo3:1solido/2096facce/47s.
+[Dettagli](docs/booleane-selezione-rettangolo-2026-11-06.md).
+CI318: raccordo corretto,20casi+4rifiuti PASS; [prove](docs/ci-raccordi-2026-11-06.md).
 
 **04/11 — Griglie, specchi e guide.** `3c644e2`: istanze condivise, B-rep2/cache10;
 `9eff99c`: appoggi G1/riordino e F7/E25 verificati. Griglie/cache11: PRT190,5→88,7MB,
@@ -155,7 +159,7 @@ App/ASan/UBSan PASS; mappa579/8023/278/check/5HTML PASS.
    app/CTest10/10,rendering e persistenza Wayland/XCB PASS; popup automatizzato Wayland non verificato.
    [Opzione](docs/visualizzazione-costruzione-2026-11-03.md). `4fafbaa` pubblicato: clic transitori senza falso
    Undo/dirty, pulizia cache con rimappatura e protezione di vincoli/consumatori; costruzione solo
-   in modifica o con Visualizza/Mostra linee di costruzione (persistente), esclusa dai loft. Undo approvato; dati malformati conservati. App/runner,6QA native,
+   in modifica o con Visualizza/Mostra linee di costruzione (persistente), esclusa dai loft. Undo approvato; dati malformati conservati. App/runner,6QA,
    file49→33,CTest169PASS/1SKIP/0FAIL,ultimo17/17 PASS. [Rapporto](docs/schizzi-riferimenti-costruzione-2026-11-03.md).
    Loft3sezioni/2guide: raccordo C2 del residuo2,235e-7mm nel budget esistente; fit1e-9mm, sorgenti invariati. App/runner,CTest8/8,forma11/11,Loft42/42,
    4flussi Wayland/XCB PASS;sezioni4,99e-14 mm. Mappa566/7825/268/check/HTML PASS.
@@ -168,7 +172,7 @@ App/ASan/UBSan PASS; mappa579/8023/278/check/5HTML PASS.
    [Checkpoint](docs/history/claude-checkpoint-prima-confronto-riferimenti-2026-11-03.md).
 
 1. **02–03/11 — Guide/Loft9 (`e54a174`).** CI41513461524 su `ec08b12`:
-   Linux56PASS/2SKIP,macOS60PASS/1SKIP;storico. Profili razionali esatti,Hermite,guide curvilinee;
+   Linux56PASS/2SKIP,macOS60PASS/1SKIP;storico. Profili razionali/Hermite/guide;
    corner sorgente3,18° conservato. Cache8 migra copie loft/derivati;check-in immutabili,formato60.
    App/QA Wayland-XCB1→2→1,Undo/Redo,cache/no-cache PASS;CTest164PASS/1SKIP/0FAIL,kernel459/459,
    Clang/ASan/UBSan mirati PASS,LSan escluso ptrace;Mappa552/7635/261.

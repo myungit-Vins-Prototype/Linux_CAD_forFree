@@ -1405,6 +1405,7 @@ bool booleanDialog(QMainWindow *parent, CadViewport *viewport, const QString &ti
     };
     FunctionDialogPanel dialog(parent);
     dialog.setSizeIdentity(QStringLiteral("boolean"));
+    dialog.setObjectName(QStringLiteral("booleanDialog"));
     if (viewport) ForgeCad::setDisplayLengthUnit(viewport->lengthUnit(), &dialog);
     dialog.setWindowTitle(title);
     dialog.setModal(false);
@@ -1413,11 +1414,13 @@ bool booleanDialog(QMainWindow *parent, CadViewport *viewport, const QString &ti
     operationBox->addItems({QStringLiteral("Unione"), QStringLiteral("Intersezione"), QStringLiteral("Differenza (A meno gli strumenti)")});
     operationBox->setCurrentIndex(qBound(0, initial.operation, 2));
     auto *firstBox = new QComboBox(&dialog);
+    firstBox->setObjectName(QStringLiteral("booleanFirst"));
     for (int index : indices) firstBox->addItem(label(index));
     int first = int(indices.indexOf(initial.firstBody));
     if (first < 0) first = 0;
     firstBox->setCurrentIndex(first);
     auto *toolList = new QListWidget(&dialog);
+    toolList->setObjectName(QStringLiteral("booleanTools"));
     toolList->setMinimumHeight(110);
     QVector<int> chosen;
     if (initial.secondBody >= 0) chosen = QVector<int>{initial.secondBody} + initial.booleanTools;
@@ -1431,10 +1434,13 @@ bool booleanDialog(QMainWindow *parent, CadViewport *viewport, const QString &ti
     if (chosen.isEmpty() && indices.size() == 2) toolList->item(first == 0 ? 1 : 0)->setCheckState(Qt::Checked);
     auto *pickFirst = new QPushButton(QStringLiteral("A dalla vista"), &dialog);
     auto *pickTools = new QPushButton(QStringLiteral("Strumenti dalla vista"), &dialog);
+    pickFirst->setObjectName(QStringLiteral("booleanPickFirst"));
+    pickTools->setObjectName(QStringLiteral("booleanPickTools"));
     for (QPushButton *button : {pickFirst, pickTools}) {
         button->setCheckable(true);
         button->setToolTip(QStringLiteral("Clicca i corpi nella vista (di nuovo uno strumento per toglierlo); Esc nella vista termina"));
     }
+    pickTools->setToolTip(QStringLiteral("Clicca per aggiungere/togliere un corpo, oppure trascina un rettangolo per aggiungerne piu' insieme; Esc termina"));
     auto *pickRow = new QWidget(&dialog);
     auto *pickLayout = new QHBoxLayout(pickRow);
     pickLayout->setContentsMargins(0, 0, 0, 0);
@@ -1445,7 +1451,7 @@ bool booleanDialog(QMainWindow *parent, CadViewport *viewport, const QString &ti
     form->addRow(QStringLiteral("Oggetto A:"), firstBox);
     form->addRow(QStringLiteral("Strumenti:"), toolList);
     form->addRow(QString(), pickRow);
-    form->addRow(wrappedNote(QStringLiteral("Spunta uno o piu' strumenti: l'operazione li applica ad A uno dopo l'altro."), &dialog));
+    form->addRow(wrappedNote(QStringLiteral("Spunta gli strumenti oppure usa Strumenti dalla vista: clic per aggiungere/togliere, rettangolo per aggiungerne piu' insieme. Da sinistra a destra: corpi interamente inclusi; da destra a sinistra: anche attraversati. Esc termina la selezione."), &dialog));
     form->addRow(status);
     const PreviewScope scope(viewport, dialog, form, replaced);
     const auto setStatus = [status](const QString &text, bool error) {
@@ -1469,6 +1475,7 @@ bool booleanDialog(QMainWindow *parent, CadViewport *viewport, const QString &ti
     // 0: nessuna scelta nella vista, 1: A, 2: strumenti. Durante la scelta
     // l'anteprima si toglie: nella vista restano i corpi da cliccare.
     int picking = 0;
+    std::function<void(const QVector<int> &)> pickGroup;
     const auto refresh = [&] {
         // A non e' uno strumento.
         const int a = indices.at(firstBox->currentIndex());
@@ -1482,7 +1489,16 @@ bool booleanDialog(QMainWindow *parent, CadViewport *viewport, const QString &ti
         }
         pickFirst->setChecked(picking == 1);
         pickTools->setChecked(picking == 2);
+        pickTools->setText(picking == 2 ? QStringLiteral("Termina selezione") : QStringLiteral("Strumenti dalla vista"));
         const ExtrusionObject body = current();
+        QVector<GeometryRef> marks;
+        for (int index : QVector<int>{body.firstBody, body.secondBody} + body.booleanTools) {
+            if (index < 0) continue;
+            GeometryRef ref; ref.kind = 9; ref.index = index;  // Contorno del corpo, solo per la visualizzazione.
+            marks.append(ref);
+        }
+        viewport->setReferenceMarks(marks);
+        viewport->setBodyBoxPickCallback(picking == 2 ? pickGroup : std::function<void(const QVector<int> &)>());
         viewport->setPickBodies(picking ? indices : QVector<int>());
         if (picking) {
             scope.label->setText(QStringLiteral("scelta dei corpi nella vista"));
@@ -1495,6 +1511,24 @@ bool booleanDialog(QMainWindow *parent, CadViewport *viewport, const QString &ti
             return;
         }
         scope.request(body);
+    };
+    pickGroup = [&](const QVector<int> &bodies) {
+        if (picking != 2) return;
+        int added = 0;
+        {
+            const QSignalBlocker blocker(toolList);
+            for (int row = 0; row < toolList->count(); ++row) {
+                auto *item = toolList->item(row);
+                const int index = item->data(Qt::UserRole).toInt();
+                if (!bodies.contains(index) || index == indices.at(firstBox->currentIndex())
+                    || !(item->flags() & Qt::ItemIsEnabled) || item->checkState() == Qt::Checked) continue;
+                item->setCheckState(Qt::Checked);
+                ++added;
+            }
+        }
+        setStatus(added ? QStringLiteral("%1 corpi aggiunti agli strumenti. Puoi continuare a selezionare; Esc termina.").arg(added)
+                        : QStringLiteral("Nessun nuovo strumento nel riquadro."), false);
+        refresh();
     };
     const auto startPick = [&](int mode) {
         if (picking == mode) {
@@ -1512,7 +1546,7 @@ bool booleanDialog(QMainWindow *parent, CadViewport *viewport, const QString &ti
             setStatus(error, true);
         } else {
             setStatus(mode == 1 ? QStringLiteral("Clicca il corpo A nella vista.")
-                                : QStringLiteral("Clicca gli strumenti nella vista (di nuovo per toglierli); Esc nella vista termina."), false);
+                                : QStringLiteral("Clicca gli strumenti o trascina un rettangolo per aggiungerne piu' insieme; Esc termina."), false);
         }
         refresh();
     };
@@ -1530,7 +1564,7 @@ bool booleanDialog(QMainWindow *parent, CadViewport *viewport, const QString &ti
             const QSignalBlocker blocker(firstBox);
             firstBox->setCurrentIndex(int(indices.indexOf(body)));
             picking = 2;  // poi gli strumenti
-            setStatus(QStringLiteral("A: %1. Ora clicca gli strumenti; Esc nella vista termina.").arg(resultBodyLabel(viewport, body, false)), false);
+            setStatus(QStringLiteral("A: %1. Ora scegli gli strumenti con clic o rettangolo; Esc termina.").arg(resultBodyLabel(viewport, body, false)), false);
         } else if (body == indices.at(firstBox->currentIndex())) {
             setStatus(QStringLiteral("Quel corpo e' A: non puo' essere anche uno strumento."), true);
         } else {
@@ -1549,8 +1583,10 @@ bool booleanDialog(QMainWindow *parent, CadViewport *viewport, const QString &ti
         refresh();
     });
     QObject::connect(pickFirst, &QPushButton::clicked, &dialog, [&] { startPick(1); });
-    // Di default la scelta nella vista e' attiva: A se manca, poi gli strumenti.
-    if (replaced < 0) startPick(indices.contains(initial.firstBody) ? 2 : 1);
+    // A e' gia' indicato dal menu (il primo corpo se non c'e' una preselezione).
+    // Aprire gli strumenti anche in quel caso: il primo trascinamento deve
+    // selezionare, non restare nel picker singolo di A che ruota la scena.
+    if (replaced < 0) startPick(2);
     QObject::connect(pickTools, &QPushButton::clicked, &dialog, [&] { startPick(2); });
     QObject::connect(operationBox, &QComboBox::currentIndexChanged, &dialog, refresh);
     QObject::connect(firstBox, &QComboBox::currentIndexChanged, &dialog, refresh);
@@ -1573,6 +1609,8 @@ bool booleanDialog(QMainWindow *parent, CadViewport *viewport, const QString &ti
     });
     viewport->cancelReferencePick();
     viewport->setReferencePickCallback(nullptr);
+    viewport->setBodyBoxPickCallback({});
+    viewport->setReferenceMarks({});
     viewport->setPickBodies({});
     return accepted;
 }

@@ -1,4 +1,5 @@
 #include "fk_boolean.h"
+#include "fk_solid_trim.h"
 #include "fk_history.h"
 
 #include "fk_cancel.h"
@@ -253,6 +254,7 @@ public:
     }
 
     Body run(BodyHistory *history);
+    Body clipFace(bool positive, BodyHistory *history);
     Body adjacentRun(BodyHistory *history) { adjacentOnly_ = true; return run(history); }
     std::vector<BodySectionCurve> section(bool preserveFacePairs = false);
     // Divisione della lamina (body 0) lungo le curve in cui la attraversa il body 1: un body per regione connessa.
@@ -2309,6 +2311,50 @@ Body BooleanBuilder::run(BodyHistory *history) {
     return assemble(kept, sheetResult, history);
 }
 
+Body BooleanBuilder::clipFace(bool positive, BodyHistory *history) {
+    recordHistory_ = history != nullptr;
+    if (bodies_[0].isSheet() || bodies_[0].faces().empty() || !bodies_[1].isSheet() || bodies_[1].faces().size()!=1)
+        throw std::domain_error("Taglio solido: servono un solido e una singola faccia aperta.");
+    const auto toolFace=bodies_[1].faces().front();
+    const auto &tool=bodies_[1].face(toolFace);
+    std::map<int,std::vector<Piece>> cuts[2];
+    computeCuts(cuts);
+    SolidClassifier original(bodies_[0],tolerance_);
+    std::vector<std::pair<SubFace,bool>> kept;
+    for(int k=0;k<2;++k)for(auto face:bodies_[k].faces()) {
+        cancellationPoint();
+        const auto found=cuts[k].find(face.index);
+        const std::vector<Piece> none;
+        for(auto &part:buildSubFaces(k,face,found==cuts[k].end()?none:found->second)) {
+            if(k==1) {
+                if(classify(part,original)==Location::In)kept.emplace_back(std::move(part),positive);
+                continue;
+            }
+            const auto &source=bodies_[0].face(face);
+            bool retain=false;
+            const bool same=coincident(*source.surface,*tool.surface);
+            const bool classified=interiorPoint(part,[&](const Vec3 &point) {
+                const auto projection=projectPoint(*tool.surface,point);
+                const auto normal=faceNormal(*tool.surface,tool.sense,projection.point);
+                const double side=dot(point-projection.point,normal);
+                if(std::fabs(side)<=tolerance_) {
+                    if(!same)return false;
+                    retain=dot(faceNormal(*source.surface,source.sense,point),normal)*(positive?-1.:1.)>0;
+                } else retain=positive?side>0:side<0;
+                return true;
+            });
+            if(!classified)throw std::domain_error("Taglio solido: impossibile determinare il lato di F"+std::to_string(face.index));
+            if(retain)kept.emplace_back(std::move(part),false);
+        }
+    }
+    if(kept.empty()) {
+        Body empty;
+        if(history)*history=makeHistory({&bodies_[0],&bodies_[1]},empty);
+        return empty;
+    }
+    return assemble(kept,false,history);
+}
+
 std::vector<Body> BooleanBuilder::split(std::vector<BodyHistory> *histories) {
     recordHistory_=histories!=nullptr;
     if (!bodies_[0].isSheet()) throw std::domain_error("splitSheet: si dividono solo le lamine");
@@ -2707,6 +2753,11 @@ std::vector<BodySectionCurve> bodySectionCurvesWithOrigins(const Body &a, const 
 Body booleanOperation(const Body &a, const Body &b, BooleanOperation operation, const BooleanOptions &options, BodyHistory *history) {
     if (history) *history = BodyHistory();
     return BooleanBuilder(a, b, operation, options).run(history);
+}
+
+Body clipSolidByFace(const Body &solid,const Body &face,bool positive,const BooleanOptions &options,BodyHistory *history) {
+    if(history)*history={};
+    return BooleanBuilder(solid,face,BooleanOperation::Intersect,options).clipFace(positive,history);
 }
 
 Body uniteDisjointBodies(const Body &a, const Body &b, const BooleanOptions &options, BodyHistory *history) {

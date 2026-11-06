@@ -198,8 +198,33 @@ void buildGeometryImpl(ExtrusionObject &body, int index, const QVector<SketchObj
                 body.error = QStringLiteral("Operandi della booleana non validi.");
                 return;
             }
-            // A op B, poi op con gli altri strumenti uno dopo l'altro.
+            // Per molte copie l'unione sequenziale ricostruirebbe A a ogni
+            // strumento. Riusare l'albero bilanciato delle ripetizioni per
+            // unire prima gli strumenti, mantenendone la genealogia esatta.
+            if (body.operation == int(BooleanOperation::Union) && !body.booleanTools.isEmpty()) {
+                std::vector<ForgeBody> tools;
+                for (int tool : QVector<int>{body.secondBody} + body.booleanTools) {
+                    const auto *other = operand(tool);
+                    if (!other || !other->forgeBody || !other->solid) {
+                        body.error = QStringLiteral("Strumento della booleana non valido: %1.")
+                            .arg(other ? other->name : QString::number(tool));
+                        return;
+                    }
+                    tools.push_back(other->forgeBody);
+                }
+                const auto combined = forgePatternBodies(tools, &body.error);
+                if (combined) body.forgeBody = forgeBoolean(first->forgeBody, combined, BooleanOperation::Union, &body.error);
+                if (body.forgeBody) {
+                    body.solid = !body.forgeBody->isSheet();
+                    return;
+                }
+                // Un contatto tollerante puo' dipendere dall'ordine: mantenere
+                // il percorso storico anche come ripiego e diagnostica per corpo.
+                body.error.clear();
+            }
+            // Intersezione e differenza conservano l'ordine degli strumenti.
             body.forgeBody = ForgeCad::forgeBoolean(first->forgeBody, second->forgeBody, BooleanOperation(body.operation), &body.error);
+            if (!body.forgeBody) body.error = QStringLiteral("Con \"%1\": %2").arg(second->name, body.error);
             for (int tool : body.booleanTools) {
                 if (!body.forgeBody) break;
                 const ExtrusionObject *other = operand(tool);

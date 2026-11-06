@@ -112,3 +112,12 @@ non prenotano il lock del writer. Le regressioni verificano sformi ripetuti e
 pubblicazioni concorrenti senza allargare tolleranze o disattivare prove.
 Diagnosi, riproduttori e risultati sono nel
 [rapporto di riparazione](ci-riparazione-2026-11-02.md).
+
+
+### Cuciture dei raccordi su coperchi spline
+
+Il fallimento del 6 novembre era nel test del raccordo ruotato, dopo build
+riuscite su entrambe le piattaforme. Il raffinamento delle due sezioni sulla
+cucitura riduce lo scarto prima del controllo di coincidenza; non cambia le
+tolleranze di accettazione. La regressione verifica anche una seconda
+rototraslazione. [Diagnosi e prove](ci-raccordi-2026-11-06.md).
