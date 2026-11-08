@@ -112,7 +112,7 @@ Shower2,5mm **interno**:28facce/0errori/mesh,13superfici esterne originali;
 `output/Shower-Head-spessore-interno-2.5mm.prt`:Undo/Redo/codec/no-cache/Wayland PASS.
 App/33CTest,Offset27/Thicken6/Shell18/Sew12 e mappa652-9337/check/4HTML PASS;
 riaprire l’app. [Prove e limiti](docs/shower-head-spessore-2026-11-08.md).
-Commit/push richiesti su origin/main (08/11).
+Pubblicato `a388270` su origin/main (08/11).
 Snap90→5–10ms:[prove](docs/bottle-prestazioni-2026-11-08.md). 07/11:
 [offset±3mm](docs/bottle-offset-2026-11-07.md),[guide](docs/bottle-ripetizione-2026-11-07.md),
 [raccordi](docs/bottle-raccordi-2026-11-07.md) verificati; storico esteso
