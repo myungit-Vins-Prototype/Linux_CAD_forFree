@@ -20,7 +20,7 @@
 namespace ForgeCad {
 namespace {
 
-constexpr double kTolerance = kSketchConnectionTolerance;
+double connectionTolerance() { return sketchConnectionTolerance(); }
 constexpr double kTwoPi = 2.0 * M_PI;
 
 double length(const QPointF &p) { return std::hypot(p.x(), p.y()); }
@@ -67,7 +67,7 @@ Geometry geometryOf(const SketchObject &sketch, SketchEntity entity) {
         if (entity.kind == 0 && entity.index >= 0 && entity.index < sketch.segments.size()) {
             const SketchSegment &segment = sketch.segments.at(entity.index);
             const double l = distance(segment.first, segment.second);
-            if (l <= kTolerance) return g;
+            if (l <= connectionTolerance()) return g;
             const QPointF u = (segment.second - segment.first) / l;
             g.shape = Shape::Segment;
             g.basis = std::make_shared<Kernel::Line<2>>(toVec(segment.first), toVec(u));
@@ -83,7 +83,7 @@ Geometry geometryOf(const SketchObject &sketch, SketchEntity entity) {
             // Come curveGeometry: raggio dal punto iniziale, angolo finale dal terzo punto, verso antiorario.
             const QPointF center = curve.controlPoints.at(0), start = curve.controlPoints.at(1), end = curve.controlPoints.at(2);
             const double r = distance(center, start);
-            if (r <= kTolerance || distance(center, end) <= kTolerance) return g;
+            if (r <= connectionTolerance() || distance(center, end) <= connectionTolerance()) return g;
             const double a0 = std::atan2(start.y() - center.y(), start.x() - center.x());
             double a1 = std::atan2(end.y() - center.y(), end.x() - center.x());
             while (a1 <= a0 + 1e-12) a1 += kTwoPi;
@@ -100,7 +100,7 @@ Geometry geometryOf(const SketchObject &sketch, SketchEntity entity) {
         if (curve.tool == DrawingTool::Circle && curve.controlPoints.size() >= 2) {
             const QPointF center = curve.controlPoints.at(0);
             const double r = distance(center, curve.controlPoints.at(1));
-            if (r <= kTolerance) return g;
+            if (r <= connectionTolerance()) return g;
             g.shape = Shape::Circle;
             g.basis = std::make_shared<Kernel::Circle<2>>(Kernel::makeCircle(toVec(center), r));
             g.first = 0.0;
@@ -144,7 +144,7 @@ std::vector<Kernel::ProfileSegment> cutters(const SketchObject &sketch, SketchEn
         if (except.kind == 0 && except.index == index) continue;
         const SketchSegment &segment = sketch.segments.at(index);
         const double l = distance(segment.first, segment.second);
-        if (l <= kTolerance) continue;
+        if (l <= connectionTolerance()) continue;
         result.push_back({std::make_shared<Kernel::Line<2>>(toVec(segment.first), toVec(segment.second - segment.first)), {0.0, l}});
     }
     for (int index = 0; index < sketch.curves.size(); ++index) {
@@ -185,12 +185,12 @@ QVector<double> crossings(const Geometry &g, const std::vector<Kernel::ProfileSe
     QVector<double> unique;
     for (double t : params) {
         const QPointF p = g.value(t);
-        if (!g.closed() && (distance(p, g.start) <= kTolerance || distance(p, g.end) <= kTolerance)) continue;
-        if (!unique.isEmpty() && distance(g.value(unique.back()), p) <= kTolerance) continue;
+        if (!g.closed() && (distance(p, g.start) <= connectionTolerance() || distance(p, g.end) <= connectionTolerance())) continue;
+        if (!unique.isEmpty() && distance(g.value(unique.back()), p) <= connectionTolerance()) continue;
         unique.append(t);
     }
     // Sul cerchio il primo e l'ultimo possono essere lo stesso punto.
-    if (g.closed() && unique.size() > 1 && distance(g.value(unique.front()), g.value(unique.back())) <= kTolerance) unique.removeLast();
+    if (g.closed() && unique.size() > 1 && distance(g.value(unique.front()), g.value(unique.back())) <= connectionTolerance()) unique.removeLast();
     return unique;
 }
 
@@ -352,7 +352,7 @@ void refreshCoincidences(SketchObject &sketch, const QVector<SketchEntity> &touc
     };
     QVector<SketchConstraint> kept;
     for (const SketchConstraint &c : sketch.geometricConstraints) {
-        if ((isTouched(c.first) || isTouched(c.second)) && constraintError(sketch, c) > kTolerance) continue;
+        if ((isTouched(c.first) || isTouched(c.second)) && constraintError(sketch, c) > connectionTolerance()) continue;
         kept.append(c);
     }
     auto exists = [&](const ConstraintRef &a, const ConstraintRef &b) {
@@ -377,7 +377,7 @@ void refreshCoincidences(SketchObject &sketch, const QVector<SketchEntity> &touc
                 if (entity.kind == 0 && other == entity.index) continue;
                 for (int k = 0; k < 2; ++k) {
                     const QPointF q = k == 0 ? sketch.segments.at(other).first : sketch.segments.at(other).second;
-                    if (distance(p, q) <= kTolerance) add({0, other, k});
+                    if (distance(p, q) <= connectionTolerance()) add({0, other, k});
                 }
             }
             for (int other = 0; other < sketch.curves.size(); ++other) {
@@ -386,7 +386,7 @@ void refreshCoincidences(SketchObject &sketch, const QVector<SketchEntity> &touc
                 // Delle curve derivate contano solo gli estremi (i poli interni non stanno sulla curva).
                 const bool derived = sketch.curves.at(other).tool == DrawingTool::Converted;
                 for (int k = 0; k < points.size(); ++k)
-                    if ((!derived || k == 0 || k == points.size() - 1) && distance(p, points.at(k)) <= kTolerance) add({1, other, k});
+                    if ((!derived || k == 0 || k == points.size() - 1) && distance(p, points.at(k)) <= connectionTolerance()) add({1, other, k});
             }
         }
     }
@@ -642,7 +642,7 @@ SketchEditResult extendSketchEntity(SketchObject &sketch, SketchEntity entity, c
         circle.last = kTwoPi;
         const QVector<double> params = crossings(circle, others);
         const double gap = kTwoPi - (g.last - g.first);
-        const double tiny = kTolerance / g.radius;
+        const double tiny = connectionTolerance() / g.radius;
         double best = gap - tiny;
         bool found = false;
         for (double angle : params) {
@@ -687,7 +687,7 @@ SketchEditResult splitSketchEntity(SketchObject &sketch, SketchEntity entity, co
         pieces.append(pieceOf(work, entity, g, t, t + kTwoPi));
     } else {
         const QPointF p = g.value(t);
-        if (distance(p, g.start) <= kTolerance || distance(p, g.end) <= kTolerance)
+        if (distance(p, g.start) <= connectionTolerance() || distance(p, g.end) <= connectionTolerance())
             return {QStringLiteral("Spezza: il punto e' un estremo dell'entita'."), {}};
         pieces.append(pieceOf(work, entity, g, g.first, t));
         pieces.append(pieceOf(work, entity, g, t, g.last));
@@ -713,7 +713,7 @@ SketchEditResult blendSketchSegments(SketchObject &sketch, int first, const QPoi
     const SketchSegment a = work.segments.at(first), b = work.segments.at(second);
     const QPointF da = a.second - a.first, db = b.second - b.first;
     const double la = length(da), lb = length(db);
-    if (la <= kTolerance || lb <= kTolerance) return {QStringLiteral("%1: segmento degenere.").arg(operation), {}};
+    if (la <= connectionTolerance() || lb <= connectionTolerance()) return {QStringLiteral("%1: segmento degenere.").arg(operation), {}};
     const double denominator = cross(da, db);
     if (std::abs(denominator) <= 1e-12 * la * lb) return {QStringLiteral("%1: i segmenti sono paralleli.").arg(operation), {}};
     // Spigolo: punto comune alle due rette (parametri ta, tb in [0, 1] sui segmenti).
@@ -723,7 +723,7 @@ SketchEditResult blendSketchSegments(SketchObject &sketch, int first, const QPoi
     // Se gli estremi coincidono gia' lo spigolo e' quel punto, esatto.
     for (const QPointF &p : {a.first, a.second})
         for (const QPointF &q : {b.first, b.second})
-            if (distance(p, q) <= kTolerance && distance(p, corner) <= 10.0 * kTolerance) corner = p;
+            if (distance(p, q) <= connectionTolerance() && distance(p, corner) <= 10.0 * connectionTolerance()) corner = p;
     // Parte da tenere: dalla parte del punto scelto rispetto allo spigolo.
     const double pa = QPointF::dotProduct(pickFirst - a.first, da) / (la * la);
     const double pb = QPointF::dotProduct(pickSecond - b.first, db) / (lb * lb);
@@ -734,7 +734,7 @@ SketchEditResult blendSketchSegments(SketchObject &sketch, int first, const QPoi
     const double half = 0.5 * std::acos(cosine);
     if (half <= 1e-9 || half >= M_PI_2 - 1e-9) return {QStringLiteral("%1: i segmenti sono allineati.").arg(operation), {}};
     const double d = chamfer ? size : size / std::tan(half);
-    if (d >= availableA - kTolerance || d >= availableB - kTolerance)
+    if (d >= availableA - connectionTolerance() || d >= availableB - connectionTolerance())
         return {QStringLiteral("%1: la misura e' troppo grande per questi segmenti (tangenza a %2).").arg(operation).arg(d), {}};
     const QPointF tangentA = corner + d * ua, tangentB = corner + d * ub;
     (keepEndA ? work.segments[first].first : work.segments[first].second) = tangentA;
@@ -786,9 +786,9 @@ bool sketchCornerAt(const SketchObject &sketch, const QPointF &point, double tol
             QVector<QPair<int, QPointF>> incident;
             for (int j = 0; j < sketch.segments.size(); ++j) {
                 const SketchSegment &s = sketch.segments.at(j);
-                if (distance(s.first, s.second) <= kTolerance) continue;
-                if (distance(s.first, vertex) <= kTolerance) incident.append({j, s.second});
-                else if (distance(s.second, vertex) <= kTolerance) incident.append({j, s.first});
+                if (distance(s.first, s.second) <= connectionTolerance()) continue;
+                if (distance(s.first, vertex) <= connectionTolerance()) incident.append({j, s.second});
+                else if (distance(s.second, vertex) <= connectionTolerance()) incident.append({j, s.first});
             }
             if (incident.size() != 2) continue;
             best = d;
@@ -936,7 +936,7 @@ SketchEditResult patternSketchEntities(SketchObject &sketch, const QVector<Sketc
         if (pattern.count < 1 || pattern.count2 < 1 || pattern.count * pattern.count2 < 2)
             return {QStringLiteral("Ripetizione: servono almeno due istanze."), {}};
         if (!(l1 > 0.0) || (pattern.count2 > 1 && !(l2 > 0.0))) return {QStringLiteral("Ripetizione: direzione nulla."), {}};
-        if (!(std::fabs(pattern.spacing) > kTolerance) || (pattern.count2 > 1 && !(std::fabs(pattern.spacing2) > kTolerance)))
+        if (!(std::fabs(pattern.spacing) > connectionTolerance()) || (pattern.count2 > 1 && !(std::fabs(pattern.spacing2) > connectionTolerance())))
             return {QStringLiteral("Ripetizione: il passo deve essere diverso da zero."), {}};
         const QPointF u = pattern.direction / l1, w = pattern.count2 > 1 ? pattern.direction2 / l2 : QPointF();
         for (int j = 0; j < pattern.count2; ++j)
@@ -1072,7 +1072,7 @@ SketchEditResult editSketchPattern(SketchObject &sketch, int constraint, const S
     next.dimensioned2 = values.dimensioned2;
     if (next.kind == 0 && (next.count < 1 || next.count * next.count2 < 2)) return {QStringLiteral("Ripetizione: servono almeno due istanze."), {}};
     if (next.kind == 1 && next.count < 2) return {QStringLiteral("Ripetizione: servono almeno due istanze."), {}};
-    if (next.kind == 0 && (!(std::fabs(next.spacing) > kTolerance) || (next.count2 > 1 && !(std::fabs(next.spacing2) > kTolerance))))
+    if (next.kind == 0 && (!(std::fabs(next.spacing) > connectionTolerance()) || (next.count2 > 1 && !(std::fabs(next.spacing2) > connectionTolerance()))))
         return {QStringLiteral("Ripetizione: il passo deve essere diverso da zero."), {}};
     if (next.instances() > 1000) return {QStringLiteral("Ripetizione: troppe istanze (al massimo 1000)."), {}};
     if (next.instances() == old.instances() && next.count == old.count) {

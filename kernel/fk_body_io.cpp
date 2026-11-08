@@ -4,6 +4,9 @@
 #include <cstring>
 #include <map>
 #include <memory>
+#include <mutex>
+#include <algorithm>
+#include <unordered_map>
 #include <stdexcept>
 
 #include "fk_bspline.h"
@@ -12,6 +15,83 @@
 #include "fk_helix.h"
 
 namespace ForgeCad::Kernel {
+
+class BodyReadPool {
+public:
+    SurfacePtr share(const SurfacePtr &surface, const std::vector<SurfacePtr> &local) {
+        const auto spline = std::dynamic_pointer_cast<const BSplineSurface>(surface);
+        if (!spline) return surface;
+        std::uint64_t hash = 1469598103934665603ull;
+        const auto scalar = [&](double value) {
+            std::uint64_t bits;
+            std::memcpy(&bits, &value, sizeof(bits));
+            hash = (hash ^ bits) * 1099511628211ull;
+        };
+        scalar(spline->uDegree()); scalar(spline->vDegree());
+        scalar(spline->uPoleCount()); scalar(spline->vPoleCount());
+        scalar(spline->isRational()); scalar(bool(spline->basis()));
+        if (spline->basis()) {
+            hash ^= std::hash<const void *>{}(spline->basis().get());
+            const auto &t = spline->placement();
+            for (int i = 0; i < 3; ++i) {
+                for (int j = 0; j < 3; ++j) scalar(t.matrix(i, j));
+                scalar(t.translationPart()[i]);
+            }
+        } else {
+            for (double value : spline->uKnots()) scalar(value);
+            for (double value : spline->vKnots()) scalar(value);
+            for (int i = 0; i < spline->uPoleCount(); ++i)
+                for (int j = 0; j < spline->vPoleCount(); ++j) {
+                    const auto pole = spline->pole(i, j);
+                    for (int k = 0; k < 3; ++k) scalar(pole[k]);
+                    if (spline->isRational()) scalar(spline->weight(i, j));
+                }
+        }
+        std::lock_guard<std::mutex> lock(mutex_);
+        auto &bucket = surfaces_[hash];
+        for (const auto &candidate : bucket) {
+            // Due record distinti nello stesso body restano distinti anche
+            // quando i coefficienti coincidono: serializzazione invariata.
+            if (std::find(local.begin(), local.end(), candidate) == local.end()
+                && identical(*spline, *candidate)) return candidate;
+        }
+        bucket.push_back(spline);
+        return spline;
+    }
+private:
+    static bool identical(const BSplineSurface &a, const BSplineSurface &b) {
+        const auto equal = [](double x, double y) { return std::memcmp(&x, &y, sizeof(x)) == 0; };
+        if (a.uDegree() != b.uDegree() || a.vDegree() != b.vDegree()
+            || a.uPoleCount() != b.uPoleCount() || a.vPoleCount() != b.vPoleCount()
+            || a.isRational() != b.isRational() || bool(a.basis()) != bool(b.basis())) return false;
+        if (a.basis()) {
+            if (a.basis() != b.basis()) return false;
+            for (int i = 0; i < 3; ++i) {
+                for (int j = 0; j < 3; ++j)
+                    if (!equal(a.placement().matrix(i, j), b.placement().matrix(i, j))) return false;
+                if (!equal(a.placement().translationPart()[i], b.placement().translationPart()[i])) return false;
+            }
+            return true;
+        }
+        for (const auto &knots : {std::pair{&a.uKnots(), &b.uKnots()}, std::pair{&a.vKnots(), &b.vKnots()}}) {
+            if (knots.first->size() != knots.second->size()) return false;
+            for (std::size_t i = 0; i < knots.first->size(); ++i)
+                if (!equal((*knots.first)[i], (*knots.second)[i])) return false;
+        }
+        for (int i = 0; i < a.uPoleCount(); ++i)
+            for (int j = 0; j < a.vPoleCount(); ++j) {
+                const auto p = a.pole(i, j), q = b.pole(i, j);
+                for (int k = 0; k < 3; ++k) if (!equal(p[k], q[k])) return false;
+                if (a.isRational() && !equal(a.weight(i, j), b.weight(i, j))) return false;
+            }
+        return true;
+    }
+    std::mutex mutex_;
+    std::unordered_map<std::uint64_t, std::vector<BSplineSurfacePtr>> surfaces_;
+};
+
+std::shared_ptr<BodyReadPool> makeBodyReadPool() { return std::make_shared<BodyReadPool>(); }
+
 namespace {
 
 constexpr char kMagic[4] = {'F', 'K', 'B', 'D'};
@@ -54,7 +134,7 @@ private:
 
 class Reader {
 public:
-    explicit Reader(const std::string &data) : data_(data) {}
+    explicit Reader(std::string_view data) : data_(data) {}
     void raw(void *target, std::size_t size) {
         if (size > data_.size() - pos_) throw std::invalid_argument("readBodyBinary: dati troncati");
         std::memcpy(target, data_.data() + pos_, size);
@@ -109,7 +189,7 @@ public:
     bool atEnd() const { return pos_ == data_.size(); }
 
 private:
-    const std::string &data_;
+    std::string_view data_;
     std::size_t pos_ = 0;
 };
 
@@ -309,7 +389,7 @@ private:
 
 class GeometryReader {
 public:
-    explicit GeometryReader(Reader &in, std::uint32_t version) : in_(in), version_(version) {}
+    explicit GeometryReader(Reader &in, std::uint32_t version, BodyReadPool *pool) : in_(in), version_(version), pool_(pool) {}
 
     void readAll() {
         for (;;) {
@@ -317,7 +397,10 @@ public:
             if (record == EndOfGeometry) return;
             if (record == Curve2) curves2_.push_back(readCurve<2>());
             else if (record == Curve3) curves3_.push_back(readCurve<3>());
-            else if (record == SurfaceRecord) surfaces_.push_back(readSurface());
+            else if (record == SurfaceRecord) {
+                const auto surface = readSurface();
+                surfaces_.push_back(pool_ ? pool_->share(surface, surfaces_) : surface);
+            }
             else throw std::invalid_argument("readBodyBinary: record di geometria sconosciuto");
         }
     }
@@ -466,6 +549,7 @@ private:
 
     Reader &in_;
     std::uint32_t version_;
+    BodyReadPool *pool_;
     std::vector<CurvePtr<2>> curves2_;
     std::vector<CurvePtr<3>> curves3_;
     std::vector<SurfacePtr> surfaces_;
@@ -549,7 +633,7 @@ struct BodyIO {
         return out.take();
     }
 
-    static Body read(const std::string &data) {
+    static Body read(std::string_view data, BodyReadPool *pool = nullptr) {
         Reader in(data);
         char magic[4];
         in.raw(magic, 4);
@@ -557,7 +641,7 @@ struct BodyIO {
         const auto version = in.u32();
         if (version < 1 || version > kVersion) throw std::invalid_argument("readBodyBinary: versione del formato non gestita");
         if (in.u32() != kByteOrder) throw std::invalid_argument("readBodyBinary: ordine dei byte diverso");
-        GeometryReader geometry(in, version);
+        GeometryReader geometry(in, version, pool);
         geometry.readAll();
 
         Body body;
@@ -672,5 +756,7 @@ struct BodyIO {
 std::string writeBodyBinary(const Body &body) { return detail::BodyIO::write(body); }
 
 Body readBodyBinary(const std::string &data) { return detail::BodyIO::read(data); }
+
+Body readBodyBinary(std::string_view data, BodyReadPool &pool) { return detail::BodyIO::read(data, &pool); }
 
 }

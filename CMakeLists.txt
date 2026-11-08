@@ -202,6 +202,7 @@ add_executable(forgecad
     cad_expression.cpp
     cad_document_io.h
     cad_document_io.cpp
+    cad_document_precision.cpp
     cad_document_recovery.h
     cad_document_recovery.cpp
     cad_document_read.h
@@ -298,6 +299,8 @@ add_executable(forgecad
     cad_import.cpp
     cad_pattern.h
     cad_pattern.cpp
+    cad_circular_pattern_fit.h
+    cad_circular_pattern_fit.cpp
     cad_fill_pattern.cpp
     cad_loft_correspondence.h
     cad_loft_correspondence.cpp
@@ -312,6 +315,7 @@ add_executable(forgecad
     cad_projected_curve.h
     cad_projected_curve.cpp
     cad_sketch_refs.h
+    cad_sketch_section_selection.h
     cad_sketch_refs.cpp
     cad_sketch_reference_usage.h
     cad_sketch_reference_usage.cpp
@@ -655,6 +659,7 @@ if(FORGECAD_BUILD_VIEW_TESTS)
     set_tests_properties(forgecad_boolean_history_tests PROPERTIES TIMEOUT 60)
     set_tests_properties(forgecad_declared_history_cache_tests PROPERTIES TIMEOUT 60)
     set_tests_properties(forgecad_genealogy_tests PROPERTIES TIMEOUT 60)
+    forgecad_add_view_test(forgecad_document_precision_tests --document-precision)
     forgecad_add_view_test(forgecad_mouse_snapshot_tests --mouse-snapshot)
     set_tests_properties(forgecad_mouse_snapshot_tests PROPERTIES TIMEOUT 120)
     forgecad_add_view_test(forgecad_offset_face_pick_tests --offset-pick)

@@ -951,6 +951,7 @@ struct DocumentState {
     bool orientationSet = false;  // letto dal file (altrimenti quello predefinito delle opzioni)
     LengthUnit lengthUnit = LengthUnit::Millimeter;
     bool lengthUnitSet = false;
+    double calculationAccuracy = 1.0e-7; // mm, profilo numerico persistente del documento
     // Metadati del documento, indipendenti dalla cronologia parametrica.
     ForgeCad::DocumentVersion version{QUuid::createUuid(), {}};
     QUuid baseCheckinId;

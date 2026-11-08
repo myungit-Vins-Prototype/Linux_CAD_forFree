@@ -12,6 +12,7 @@
 #include <stdexcept>
 
 #include "fk_blend_loop.h"
+#include "fk_blend_polar.h"
 #include "fk_blend_surface.h"
 #include "fk_blend_model.h"
 #include "fk_body_check.h"
@@ -531,7 +532,7 @@ Body sewBodies(const std::vector<const Body *> &bodies, double tolerance, const 
                     const Vec3 q = edge.curve->point(edge.range.lo + edge.range.length() * k / 8.0);
                     gap = std::max(gap, distance(q, projectPoint(*kept.curve, q, kept.range).point));
                 }
-                if (gap > kLinearResolution) {
+                if (gap > linearResolution()) {
                     // Se questa arriva nel polo di una sua faccia (il meridiano di
                     // una sfera, quando il raggio del raccordo e' uguale a quello
                     // dell'arco) e l'altra gli passa solo accanto, resta questa: un
@@ -542,9 +543,9 @@ Body sewBodies(const std::vector<const Body *> &bodies, double tolerance, const 
                         if (!fin.valid()) continue;
                         const std::vector<SurfacePole> poles = surfacePoles(*body.face(body.finFace(fin)).surface);
                         for (const Vec3 &end : {edge.curve->point(edge.range.lo), edge.curve->point(edge.range.hi)})
-                            atPole = atPole || poleIndex(poles, end, kLinearResolution) >= 0;
+                            atPole = atPole || poleIndex(poles, end, linearResolution()) >= 0;
                         for (const Vec3 &end : {kept.curve->point(kept.range.lo), kept.curve->point(kept.range.hi)})
-                            keptAtPole = keptAtPole || poleIndex(poles, end, kLinearResolution) >= 0;
+                            keptAtPole = keptAtPole || poleIndex(poles, end, linearResolution()) >= 0;
                     }
                     if (atPole && !keptAtPole) {
                         const bool reverse = kept.start != start;
@@ -617,7 +618,7 @@ Body sewBodies(const std::vector<const Body *> &bodies, double tolerance, const 
         for (const auto &[v, t] : {std::pair<VertexId, double>{sewn.edgeStart(e), edge.range.lo}, {sewn.edgeEnd(e), edge.range.hi}}) {
             cancellationPoint();
             const double gap = distance(sewn.vertex(v).point, edge.curve->point(t));
-            if (gap <= kLinearResolution) continue;
+            if (gap <= linearResolution()) continue;
             edge.tolerance = std::max(edge.tolerance, 1.01 * gap);
             sewn.vertex(v).tolerance = std::max(sewn.vertex(v).tolerance, 1.01 * gap);
         }
@@ -705,7 +706,7 @@ Body chamferEdges(const Body &body, const std::vector<EdgeId> &edges, const std:
     double size = 0.0;
     for (const ChamferSides &side : sides) {
         cancellationPoint();
-        if (!(side.onReference > kLinearResolution) || !(side.onOther > kLinearResolution)) throw std::domain_error("blendEdges: distanze dello smusso non valide");
+        if (!(side.onReference > linearResolution()) || !(side.onOther > linearResolution())) throw std::domain_error("blendEdges: distanze dello smusso non valide");
         size = std::max({size, side.onReference, side.onOther});
     }
     return blendEdgesWith(body, edges, size, true, &sides, history);
@@ -773,12 +774,13 @@ Body blendEdgesWith(const Body &body, const std::vector<EdgeId> &selected, doubl
     for (EdgeId edge : selected)
         if (!body.contains(edge) || body.isLaminar(edge))
             throw std::domain_error("blendEdges: scegli uno spigolo condiviso da due facce cucite, non un bordo libero");
-    if (!(size > kLinearResolution)) throw std::domain_error("blendEdges: raggio o distanza non validi");
+    if (!(size > linearResolution())) throw std::domain_error("blendEdges: raggio o distanza non validi");
     std::vector<EdgeId> edges = selected;
     std::vector<ChamferSides> propagatedSides;
     if (selectedSides) propagatedSides = *selectedSides;
     if (propagate) propagateTangent(body, edges, selectedSides ? &propagatedSides : nullptr);
     const std::vector<ChamferSides> *sides = selectedSides ? &propagatedSides : nullptr;
+    if (!chamfer) if (auto polar = detail::blendPolarEdges(body,edges,size,history)) return std::move(*polar);
     if (!propagate) {
         try { return analyticBlend(body, edges, size, chamfer, sides, history); }
         catch (const std::domain_error &) { return blendSurfaceChains(body, edges, size, chamfer, sides, history, nullptr, false); }
@@ -1665,8 +1667,15 @@ Body blendProfileEdges(const Body &body, const std::vector<EdgeId> &selected, do
         const auto paths=blendPaths(body,law.edges);
         if(paths.size()!=1)throw std::domain_error("raggio variabile: ogni tabella deve descrivere un unico percorso tangente");
         if(law.radii.size()<2||law.radii.size()>64)throw std::domain_error("raggio variabile: occorrono da 2 a 64 punti per percorso");
-        for(double value:law.radii)if(!std::isfinite(value)||value<=kLinearResolution)
-            throw std::domain_error("raggio variabile: raggi non validi");
+        bool positive=false;
+        for(std::size_t i=0;i<law.radii.size();++i) {
+            const double value=law.radii[i];
+            const bool end=i==0||i+1==law.radii.size();
+            if(!std::isfinite(value)||value<0 || (value<=linearResolution() && !(value==0&&end&&!paths[0].closed)))
+                throw std::domain_error("raggio variabile: zero ammesso solo agli estremi aperti");
+            positive=positive||value>linearResolution();
+        }
+        if(!positive)throw std::domain_error("raggio variabile: occorre almeno un raggio positivo");
         if(paths[0].closed && std::fabs(law.radii.front()-law.radii.back())>1e-9*std::max(law.radii.front(),law.radii.back()))
             throw std::domain_error("raggio variabile: su un percorso chiuso il primo e l'ultimo raggio devono coincidere");
         for(EdgeId e:law.edges) {

@@ -56,18 +56,18 @@ bool fillPatternPlacements(const PatternParameters &p, int source, int owner,
                 const auto &surface=*body->face(face).surface;
                 require(surface.type()==SurfaceType::Plane,QStringLiteral("Il riempimento richiede facce piane."));
                 const auto &plane=static_cast<const Plane &>(surface);
-                if(common)require(norm(cross(common->frame().zDir(),plane.frame().zDir()))<=kAngularResolution&&
-                    std::fabs(dot(common->frame().zDir(),plane.frame().origin()-common->frame().origin()))<=kLinearResolution,
+                if(common)require(norm(cross(common->frame().zDir(),plane.frame().zDir()))<=angularResolution()&&
+                    std::fabs(dot(common->frame().zDir(),plane.frame().origin()-common->frame().origin()))<=linearResolution(),
                     QStringLiteral("Le facce del contorno devono essere complanari."));
                 else common=&plane;
                 require(unique.insert({index,face.index}).second,QStringLiteral("Faccia del contorno duplicata."));groups[index].push_back(face);
             }
             std::vector<Body> sheets;for(const auto &[index,faces]:groups)sheets.push_back(facesAsSheet(*bodies[index].forgeBody,faces));
-            if(sheets.size()==1)boundary=std::make_shared<const Body>(unifySameDomain(sheets[0],kLinearResolution));
+            if(sheets.size()==1)boundary=std::make_shared<const Body>(unifySameDomain(sheets[0],linearResolution()));
             else {
                 std::vector<const Body *> parts;for(const auto &sheet:sheets)parts.push_back(&sheet);
-                const auto joined=sewSheets(parts,kLinearResolution,false);
-                boundary=std::make_shared<const Body>(unifySameDomain(joined.body,kLinearResolution));
+                const auto joined=sewSheets(parts,linearResolution(),false);
+                boundary=std::make_shared<const Body>(unifySameDomain(joined.body,linearResolution()));
             }
             selected=boundary->faces();
         }

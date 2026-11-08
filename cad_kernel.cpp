@@ -113,7 +113,7 @@ bool sketchRevolutionAxis(const SketchObject &sketch, int axis, QPointF &point, 
     const SketchSegment &segment = sketch.segments.at(axis);
     const QPointF delta = segment.second - segment.first;
     const double length = std::hypot(delta.x(), delta.y());
-    if (length <= kSketchConnectionTolerance) {
+    if (length <= sketchConnectionTolerance()) {
         setError(error, QStringLiteral("L'asse di rivoluzione ha lunghezza nulla."));
         return false;
     }
@@ -141,7 +141,7 @@ int revolutionProfileSide(const SketchObject &sketch, const QPointF &point, cons
         if (curve.construction) continue;
         for (const QPointF &sample : curve.samples) consider(sample);
     }
-    const double tolerance = kSketchConnectionTolerance;
+    const double tolerance = sketchConnectionTolerance();
     if (lowest < -tolerance && highest > tolerance) {
         setError(error, QStringLiteral("Il profilo attraversa l'asse di rivoluzione: deve stare tutto da una parte."));
         return 0;
@@ -160,7 +160,7 @@ Frame3 primitiveAxes(const PrimitiveParameters &parameters) {
 
 QString primitiveError(const PrimitiveParameters &parameters) {
     const double *size = parameters.size;
-    const double confusion = 1.0e-7;
+    const double confusion = Kernel::linearResolution();
     switch (parameters.kind) {
     case PrimitiveKind::Box:
         if (size[0] <= confusion || size[1] <= confusion || size[2] <= confusion)

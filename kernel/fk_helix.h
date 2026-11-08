@@ -1,3 +1,4 @@
+#include "fk_precision.h"
 #ifndef FORGECAD_FK_HELIX_H
 #define FORGECAD_FK_HELIX_H
 
@@ -55,7 +56,7 @@ private:
 };
 
 // Approssimazione B-spline (grado 5, nodi tripli: C2) entro `tolerance` dalla curva esatta.
-BSplineCurve<3> helixBSpline(const HelixCurve &helix, double tolerance = 1e-9);
+BSplineCurve<3> helixBSpline(const HelixCurve &helix, double tolerance = scaledAccuracy(1e-9));
 
 }
 

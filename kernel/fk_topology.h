@@ -48,7 +48,7 @@ using FaceId = Id<struct FaceTag>;
 using ShellId = Id<struct ShellTag>;
 using RegionId = Id<struct RegionTag>;
 
-// tolerance == 0: tolleranza di default (kLinearResolution). Una tolleranza
+// tolerance == 0: tolleranza di default (linearResolution()). Una tolleranza
 // locale maggiore (vertici ed edge "tolleranti" di Parasolid, TVERTEX/TEDGE
 // di ACIS) si usa quando la geometria non si chiude entro quella di default,
 // per esempio sui risultati delle intersezioni o sui dati importati.

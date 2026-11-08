@@ -7,6 +7,8 @@
 #include "fk_mass.h"
 #include "fk_loft.h"
 #include "fk_sew.h"
+#include "fk_revolve.h"
+#include "fk_intersect.h"
 #include "fk_primitives.h"
 #include "fk_profile.h"
 #include "fk_sheet.h"
@@ -237,4 +239,62 @@ FK_TEST(SheetSectionKeepsExactSplineBoundary) {
     const Body joined = sewSheets({&sheet, &neighbor}, 1e-6, false).body;
     const Body plane = makePlaneSheet(Frame3(Vec3(), Vec3(0, 1, 0), Vec3(1, 0, 0)), 10.0);
     FK_CHECK(bodySectionCurves(plane, joined).size() == 2);
+}
+
+// La sezione assiale di una rivoluzione NURBS termina anche al polo:
+// il marching generico falliva proprio alla punta di Onion2.
+FK_TEST(SheetRevolutionMeridianSection) {
+    for (bool rational : {false, true}) {
+        auto profile = std::make_shared<BSplineCurve<2>>(3, std::vector<double>{0,0,0,0,1,1,1,1},
+            std::vector<Vec2>{{4,0},{10,1},{7,10},{0,12}},
+            rational ? std::vector<double>{1,.7,1.3,1} : std::vector<double>{});
+        ProfileLoop chain; chain.segments.push_back({profile, profile->domain()});
+        for (const auto &frame : {Frame3(), Frame3(Vec3(12,-7,3), Vec3(1,2,3), Vec3(1,0,0))}) {
+            const Body sheet = makeSheetRevolution(frame, {chain}, kTwoPi);
+            const auto &surface = static_cast<const RevolutionSurface &>(*sheet.face(sheet.faces().front()).surface);
+            for (double angle : {-kPi/18, kPi/18, .7}) {
+                const Vec3 radial = std::cos(angle)*frame.xDir()+std::sin(angle)*frame.yDir();
+                const Vec3 normal = cross(frame.zDir(), radial);
+                const Plane plane(Frame3(frame.origin()+6*frame.zDir(), normal, radial));
+                double u = 0;
+                FK_CHECK(revolutionMeridianAngle(plane, surface, 1e-9, u));
+                Box box; box.add(frame.origin()-Vec3(30,30,30)); box.add(frame.origin()+Vec3(30,30,30));
+                const auto analytic = intersectPlaneSurface(plane, surface, box, 1e-9);
+                FK_CHECK(analytic.curves.size() == 2);
+                const Body tool = makePlaneSheet(plane.frame(), 30);
+                for (bool swapped : {false,true}) {
+                    const auto curves = swapped ? bodySectionCurves(sheet, tool) : bodySectionCurves(tool, sheet);
+                    FK_CHECK(curves.size() == 2);
+                    for (const auto &curve : curves) for (int i=0;i<=40;++i) {
+                        const double t = curve.range.lo+curve.range.length()*i/40.;
+                        const Vec3 p = curve.curve->point(t);
+                        FK_CHECK(std::fabs(dot(normal,p-plane.frame().origin())) < 1e-9);
+                        FK_CHECK(projectPoint(*analytic.curves[0],p,analytic.ranges[0]).distance < 1e-9
+                              || projectPoint(*analytic.curves[1],p,analytic.ranges[1]).distance < 1e-9);
+                    }
+                }
+                // Il piano finito deve rifilare i meridiani, non restituirli interi.
+                const Frame3 finiteFrame(plane.frame().origin()+6*radial, normal, radial);
+                const Body finite = makePlaneSheet(finiteFrame, 2);
+                const auto clipped = bodySectionCurves(finite, sheet);
+                FK_CHECK(!clipped.empty());
+                for (const auto &curve : clipped) for (int i=0;i<=20;++i) {
+                    const Vec3 p = finiteFrame.toLocal(curve.curve->point(curve.range.lo+curve.range.length()*i/20.));
+                    FK_CHECK(std::fabs(p.x()) <= 2+1e-6 && std::fabs(p.y()) <= 2+1e-6);
+                }
+                FK_CHECK(!revolutionMeridianAngle(Plane(Frame3(plane.frame().origin()+.01*normal,normal,radial)),surface,1e-9,u));
+                FK_CHECK(!revolutionMeridianAngle(Plane(Frame3(frame.origin(),normal+.001*frame.zDir(),radial)),surface,1e-9,u));
+            }
+            // Anche una faccia di rivoluzione parziale conserva i soli rami nel ritaglio.
+            const Body partial = makeSheetRevolution(frame, {chain}, kHalfPi);
+            const Vec3 radial = normalized(frame.xDir()+frame.yDir());
+            const Body tool = makePlaneSheet(Frame3(frame.origin(),cross(frame.zDir(),radial),radial),30);
+            FK_CHECK(bodySectionCurves(tool,partial).size() == 1);
+        }
+    }
+    // Un meridiano sghembo non produce due semplici copie ruotate.
+    auto skew = std::make_shared<BSplineCurve<3>>(3, std::vector<double>{0,0,0,0,1,1,1,1},
+        std::vector<Vec3>{{4,0,0},{10,.1,1},{7,0,10},{0,0,12}});
+    const RevolutionSurface surface(skew,Vec3(),Vec3(0,0,1)); double angle=0;
+    FK_CHECK(!revolutionMeridianAngle(Plane(Frame3(Vec3(),Vec3(0,1,0),Vec3(1,0,0))),surface,1e-9,angle));
 }

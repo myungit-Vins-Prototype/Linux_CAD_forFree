@@ -21,7 +21,7 @@ void verifyConstruction(const Curve<3> &source, const Curve<3> &curve, const Int
         }
     }
 }
-CurvePtr<3> constructionCurve(const CurvePtr<3> &source, const Interval &range, double tolerance = kLoftSectionFitTolerance) {
+CurvePtr<3> constructionCurve(const CurvePtr<3> &source, const Interval &range, double tolerance = scaledAccuracy(kLoftSectionFitTolerance)) {
     if (!source || !isImplicitSketchProjection(*source)) return source;
     const auto domain = source->domain();
     if (!range.isFinite() || !(range.length() > 0) || range.lo < domain.lo || range.hi > domain.hi)

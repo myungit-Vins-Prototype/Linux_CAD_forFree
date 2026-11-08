@@ -1,3 +1,4 @@
+#include "fk_precision.h"
 #ifndef FORGECAD_FK_SHEET_H
 #define FORGECAD_FK_SHEET_H
 
@@ -21,7 +22,7 @@ std::size_t closestSheetPiece(const std::vector<Body> &pieces, const Vec3 &keep)
 // Taglio: la lamina si divide lungo le curve in cui la attraversa `tool`
 // (un'altra lamina o un solido, vedi splitSheet) e resta la regione piu'
 // vicina a `keep`. std::domain_error se lo strumento non la divide.
-Body trimSheet(const Body &sheet, const Body &tool, const Vec3 &keep, double tolerance = 1e-6, BodyHistory *history = nullptr);
+Body trimSheet(const Body &sheet, const Body &tool, const Vec3 &keep, double tolerance = scaledAccuracy(1e-6), BodyHistory *history = nullptr);
 
 // Lamina piana quadrata di lato 2 `halfSize` nel piano XY di `frame`, centrata
 // nell'origine (strumento di taglio per i piani di riferimento), con la

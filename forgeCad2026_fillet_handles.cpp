@@ -62,7 +62,7 @@ void CadViewport::dragFilletRadius(const QPointF &position, bool finished) {
                        QPointF::dotProduct(filletRadiusScreenDirection_,
                                            filletRadiusScreenDirection_);
   const double radius =
-      qBound(0.000001, filletRadiusInitial_ + delta, 100000.0);
+      qBound(0.0, filletRadiusInitial_ + delta, 100000.0);
   filletRadiusHandles_[filletRadiusDrag_].radius = radius;
   if (finished) {
     filletRadiusDrag_ = -1;

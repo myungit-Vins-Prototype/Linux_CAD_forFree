@@ -1,3 +1,4 @@
+#include "fk_precision.h"
 #include "forgeCad2026_feature_preview.h"
 #include "cad_feature_build.h"
 #include "cad_feature_dependencies.h"
@@ -164,6 +165,7 @@ QString FeaturePreviewBuilder::previewKey(const ExtrusionObject &d, int index) {
 bool FeaturePreviewBuilder::computePreview(const PreviewInputs &in, BodyDisplay &display, BodyDisplay &retainedDisplay,
                                BodyDisplay &resultDisplay, ForgeCad::ForgeBody &geometry,
                                QString &error, QVector<int> *merged , QString *notice ) {
+    ForgeCad::Kernel::PrecisionScope precision(in.calculationAccuracy);
     ExtrusionObject body = in.definition;
     if (in.reuse) {
         body.forgeBody = in.existing;

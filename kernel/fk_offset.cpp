@@ -1,4 +1,7 @@
+#include "fk_curve_ops.h"
 #include "fk_offset.h"
+#include "fk_offset_support.h"
+#include "fk_open_offset.h"
 
 #include <algorithm>
 #include <optional>
@@ -287,7 +290,7 @@ std::vector<double> offsetParameterBreaks(const Surface &surface, const Interval
     return breaks;
 }
 
-SurfacePtr offsetBSplineC2(const Surface &surface, double d, const Interval &uw, const Interval &vw, double tolerance, bool preserveEndSections) {
+SurfacePtr offsetBSplineC2(const Surface &surface, double d, const Interval &uw, const Interval &vw, double tolerance, bool preserveEndSections, bool checkCurvature = true) {
     requireContinuousNormals(static_cast<const BSplineSurface &>(surface), d, uw, vw, tolerance);
     const std::vector<double> uSegments = sortedBreaks(uw, offsetParameterBreaks(surface, uw, true, preserveEndSections), 1e-9 * uw.length());
     const std::vector<double> vSegments = sortedBreaks(vw, offsetParameterBreaks(surface, vw, false, preserveEndSections), 1e-9 * vw.length());
@@ -514,7 +517,7 @@ SurfacePtr offsetBSplineC2(const Surface &surface, double d, const Interval &uw,
 // sono della cella. Nodi interni tripli: C0 garantita, C1 dove O lo e'. Le
 // celle si controllano in parallelo; si dividono solo nelle direzioni in cui
 // sbagliano (lo scarto lungo i bordi della cella dice quale).
-SurfacePtr offsetBSpline(const Surface &surface, double d, const Interval &uw, const Interval &vw, double tolerance, bool preserveEndSections) {
+SurfacePtr offsetBSpline(const Surface &surface, double d, const Interval &uw, const Interval &vw, double tolerance, bool preserveEndSections, bool checkCurvature = true) {
     requireContinuousNormals(static_cast<const BSplineSurface &>(surface), d, uw, vw, tolerance);
     const auto O = [&](double u, double v) { return surface.point(u, v) + d * surface.normal(u, v); };
     std::vector<double> us = sortedBreaks(uw, offsetParameterBreaks(surface, uw, true, preserveEndSections), 1e-9 * uw.length());
@@ -672,7 +675,7 @@ CurvePtr<3> exactOffsetCurve(const CurvePtr<3> &curve, const Interval &range, co
 // periodica) a distanza non si richiude: la superficie a distanza avrebbe un
 // taglio nella faccia, che non ha cucitura.
 void requireClosed(const Curve<3> &curve, const Interval &domain, const std::function<Vec3(double)> &f, double tolerance) {
-    if (distance(curve.point(domain.lo), curve.point(domain.hi)) > kLinearResolution) return;
+    if (distance(curve.point(domain.lo), curve.point(domain.hi)) > linearResolution()) return;
     if (distance(f(domain.lo), f(domain.hi)) > 10.0 * tolerance)
         throw std::domain_error("offset: la curva chiusa della superficie ha un angolo nel punto di chiusura "
                                 "(spigolo vivo dentro la faccia)");
@@ -700,13 +703,13 @@ CurvePtr<3> replacementSectionCircle(const CurvePtr<3> &source, const Surface &a
     const auto &cap = static_cast<const Plane &>(*plane).frame();
     const auto &axis = round->type() == SurfaceType::Cone ? static_cast<const ConicalSurface &>(*round).frame()
                                                          : static_cast<const CylindricalSurface &>(*round).frame();
-    if (norm(cross(cap.zDir(), axis.zDir())) > kAngularResolution
-        || norm(cross(cross(circle.xAxis(), circle.yAxis()), axis.zDir())) > kAngularResolution) return {};
+    if (norm(cross(cap.zDir(), axis.zDir())) > angularResolution()
+        || norm(cross(cross(circle.xAxis(), circle.yAxis()), axis.zDir())) > angularResolution()) return {};
     const double height = dot(cap.origin() - axis.origin(), cap.zDir()) / dot(axis.zDir(), cap.zDir());
     const double radius = round->type() == SurfaceType::Cone
         ? static_cast<const ConicalSurface &>(*round).referenceRadius() + height * std::tan(static_cast<const ConicalSurface &>(*round).semiAngle())
         : static_cast<const CylindricalSurface &>(*round).radius();
-    if (!(radius > kLinearResolution)) return {};
+    if (!(radius > linearResolution())) return {};
     return std::make_shared<Circle<3>>(axis.origin() + height * axis.zDir(), circle.xAxis(), circle.yAxis(), radius);
 }
 
@@ -1227,7 +1230,7 @@ std::shared_ptr<BSplineCurve<3>> fitCurve(const std::function<Vec3(double)> &f, 
     return std::make_shared<BSplineCurve<3>>(3, std::move(knots), std::move(poles));
 }
 
-static SurfacePtr offsetSurfaceImpl(const Surface &surface, double d, const Interval &uw, const Interval &vw, double tolerance, bool preserveEndSections) {
+static SurfacePtr offsetSurfaceImpl(const Surface &surface, double d, const Interval &uw, const Interval &vw, double tolerance, bool preserveEndSections, bool checkCurvature = true) {
     if (!(std::fabs(d) > 0.0)) throw std::domain_error("offset: distanza nulla");
     SurfacePtr result;
     switch (surface.type()) {
@@ -1303,7 +1306,7 @@ static SurfacePtr offsetSurfaceImpl(const Surface &surface, double d, const Inte
     }
     case SurfaceType::BSpline:
         if (!uw.isFinite() || !vw.isFinite()) throw std::domain_error("offset: finestra della B-spline non limitata");
-        requireOffsetBelowCurvature(surface, d, uw, vw);
+        if (checkCurvature) requireOffsetBelowCurvature(surface, d, uw, vw);
         result = offsetBSplineC2(surface, d, uw, vw, tolerance, preserveEndSections);
         if (!result) result = offsetBSpline(surface, d, uw, vw, tolerance, preserveEndSections);
         break;
@@ -1343,6 +1346,12 @@ OffsetResult offsetFaces(const Body &input, const std::vector<FaceId> &faces, do
         const detail::PhaseTimer timer("offset: SP-curve iniziali");
         if (computePCurves(body) > 0) throw std::domain_error("offset: SP-curve non calcolabili");
     }
+    const auto aliveFaces=body.faces();
+    const bool entireSheet=faces.size()==aliveFaces.size() && std::all_of(aliveFaces.begin(),aliveFaces.end(),[&](FaceId f) {
+        return std::find(faces.begin(),faces.end(),f)!=faces.end();
+    });
+    if(preserveSeams && entireSheet && detail::canOffsetOpenSheet(body,tolerance))
+        return detail::offsetOpenSheet(body,distanceValue,tolerance);
     Body split;
     BodyHistory splitHistory;
     bool splitPatches = false, splitCreases = false;
@@ -1653,9 +1662,19 @@ OffsetResult offsetFaces(const Body &input, const std::vector<FaceId> &faces, do
         raw.start = pointIndex(body.edgeStart(e).index, face);
         raw.end = pointIndex(body.edgeEnd(e).index, face);
         if (trimSeams) {
+            // Una scelta per tutto il bordo, come nel percorso dei gusci:
+            // vicino alla tangenza il solve non deve alternare rango pieno
+            // e rango ridotto durante il fit della stessa curva.
+            bool stabilize = false;
+            if (used.size() == 2) for (int k = 0; k <= 16 && !stabilize; ++k) {
+                const double t = edge.range.lo+edge.range.length()*k/16.;
+                const Vec3 a = faceNormal(body,body.finFace(used[0]),body.fin(used[0]).pcurve->point(t));
+                const Vec3 b = faceNormal(body,body.finFace(used[1]),body.fin(used[1]).pcurve->point(t));
+                stabilize = norm(cross(a,b)) < kSeamAngularStabilization;
+            }
             const Vec3 startDelta = model.points[std::size_t(raw.start)] - f(edge.range.lo);
             const Vec3 endDelta = model.points[std::size_t(raw.end)] - f(edge.range.hi);
-            f = [&, original = f, used, range = edge.range, startDelta, endDelta](double t) {
+            f = [&, original = f, used, range = edge.range, startDelta, endDelta, stabilize](double t) {
                 const double fraction = (t - range.lo) / range.length();
                 Vec3 point = original(t) + (1.0 - fraction) * startDelta + fraction * endDelta;
                 std::vector<SeamSurface> incident;
@@ -1670,7 +1689,10 @@ OffsetResult offsetFaces(const Body &input, const std::vector<FaceId> &faces, do
                     const Vec3 axis = std::fabs(tangent.x()) < 0.8 ? Vec3(1,0,0) : Vec3(0,1,0);
                     incident.push_back({std::make_shared<Plane>(Frame3(point, tangent, axis)), Vec2()});
                 }
-                return seamPoint(point, std::move(incident), seamTolerance, seamReach);
+                return stabilize
+                    ? tolerantSeamPoint(point,std::move(incident),seamTolerance,seamReach,
+                                        .01*kSeamAngularStabilization*kSeamAngularStabilization)
+                    : seamPoint(point,std::move(incident),seamTolerance,seamReach);
             };
         }
         raw.hasRange = true;
@@ -1793,7 +1815,9 @@ OffsetResult offsetFaces(const Body &input, const std::vector<FaceId> &faces, do
 }
 
 // Offset con intersezione dei supporti e contrazione dei raccordi collassati.
-OffsetResult offsetJoinedFaces(const Body &input, const std::vector<FaceOffset> &specifications, double tolerance) {
+OffsetResult offsetJoinedFaces(const Body &input, const std::vector<FaceOffset> &specifications, double tolerance, OffsetExtension extension) {
+    const bool continueSupports=extension==OffsetExtension::CurvatureContinuous;
+    const auto regular=[](const SeamSurface &entry) { return detail::regularOffset(*entry.surface,entry.offset,entry.uv); };
     if (specifications.empty() || !(tolerance > 0.0) || !std::isfinite(tolerance))
         throw std::invalid_argument("offset cucito: facce o tolleranza non valide");
     Body body = input;
@@ -1817,9 +1841,25 @@ OffsetResult offsetJoinedFaces(const Body &input, const std::vector<FaceOffset> 
     }
     if (specs.size() != body.faces().size())
         throw std::invalid_argument("offset cucito: specificare tutte le facce del corpo");
+    std::map<int,SurfacePtr> supports;
     const auto support = [&](FaceId f) -> SurfacePtr {
+        const auto found=supports.find(f.index);if(found!=supports.end())return found->second;
         const auto &spec = specs.at(f.index);
         return spec.replacement ? spec.replacement : body.face(f).surface;
+    };
+    // I cerchi fra piano e cilindro/cono restano analitici anche quando
+    // i supporti sono spostati: niente errore del solve regolarizzato nel
+    // raggio o nella quota di una gola di rivoluzione.
+    const auto sectionCircle = [&](const CurvePtr<3> &source, FaceId first, FaceId second) -> CurvePtr<3> {
+        const auto a = support(first), b = support(second);
+        const auto round = [](SurfaceType t) { return t == SurfaceType::Cylinder || t == SurfaceType::Cone; };
+        if (!((a->type() == SurfaceType::Plane && round(b->type())) || (b->type() == SurfaceType::Plane && round(a->type()))))
+            return {};
+        const auto shifted = [&](FaceId f, const SurfacePtr &surface) {
+            const double d = specs.at(f.index).distance * (body.face(f).sense ? 1. : -1.);
+            return d == 0.0 ? surface : offsetSurface(*surface, d, surface->uDomain(), surface->vDomain(), tolerance);
+        };
+        return replacementSectionCircle(source, *shifted(first, a), *shifted(second, b));
     };
     const auto supportUV = [&](FinId fin, double t) {
         const FaceId f = body.finFace(fin);
@@ -1849,10 +1889,23 @@ OffsetResult offsetJoinedFaces(const Body &input, const std::vector<FaceOffset> 
             spec.face = f;
             pieces.push_back(spec);
         }
-        auto result = offsetJoinedFaces(split, pieces, tolerance);
+        auto result = offsetJoinedFaces(split, pieces, tolerance, extension);
         result.history = BodyHistory::compose(splitHistory, result.history, 0);
         return result;
     }
+    std::map<const Surface *, std::pair<Interval, Interval>> naturalDomains;
+    if (continueSupports)
+        for (const auto &[index, spec] : specs) {
+            const auto surface = support(FaceId{index});
+            if (surface->type() != SurfaceType::BSpline || spec.replacement)
+                continue;
+            const auto u = surface->uDomain(), v = surface->vDomain();
+            auto continued = std::make_shared<BSplineSurface>(detail::continueOffsetSupport(
+                static_cast<const BSplineSurface &>(*surface), {u.lo - .05 * u.length(), u.hi + .05 * u.length()},
+                {v.lo - .05 * v.length(), v.hi + .05 * v.length()}));
+            naturalDomains.emplace(continued.get(), std::make_pair(u, v));
+            supports[index] = std::move(continued);
+        }
     Box box;
     int vertexCapacity = 0;
     for (VertexId v : body.vertices()) {
@@ -1958,21 +2011,25 @@ OffsetResult offsetJoinedFaces(const Body &input, const std::vector<FaceOffset> 
     // solve regolarizzato: il vertice appartiene alla sezione analitica del
     // bordo stesso. Cosi' il budget UV ereditato non sposta il punto esatto.
     std::map<int, Vec3> circularVertices;
-    if (replacing) for (const auto &[index, uses] : edgeUses) {
+    for (const auto &[index, uses] : edgeUses) {
         const EdgeId e{index};
-        if (uses.size() != 2 || body.edgeStart(e) != body.edgeEnd(e)) continue;
+        if (uses.size() != 2 || body.edgeStart(e) != body.edgeEnd(e))
+            continue;
         const int v = root(body.edgeStart(e).index);
-        if (vertexConstraints.at(v).size() != 2) continue;
+        if (vertexConstraints.at(v).size() != 2)
+            continue;
         const auto first = body.finFace(uses[0]), second = body.finFace(uses[1]);
-        if (specs.at(first.index).distance != 0.0 || specs.at(second.index).distance != 0.0) continue;
         const auto &edge = body.edge(e);
-        const auto circle = replacementSectionCircle(edge.curve, *support(first), *support(second));
-        if (!circle) continue;
+        const auto circle = sectionCircle(edge.curve, first, second);
+        if (!circle)
+            continue;
         const auto point = circle->point(edge.range.lo);
         const double budget = std::max(seamTolerance, vertexBudgets.at(v));
-        if (distance(point, circle->point(edge.range.hi)) <= budget
-            && distance(point, vertexSeed.at(v) / double(vertexCount.at(v))) <= seamReach) circularVertices.emplace(v, point);
+        if (distance(point, circle->point(edge.range.hi)) <= budget &&
+            distance(point, vertexSeed.at(v) / double(vertexCount.at(v))) <= seamReach)
+            circularVertices.emplace(v, point);
     }
+    std::map<std::pair<int, const Surface *>, Vec2> movedVertexUV;
     for (const auto &[v, constraints] : vertexConstraints) {
         pointOf[v] = int(model.points.size());
         const auto circular = circularVertices.find(v);
@@ -1982,9 +2039,63 @@ OffsetResult offsetJoinedFaces(const Body &input, const std::vector<FaceOffset> 
         }
         const Vec3 seed = vertexSeed.at(v) / double(vertexCount.at(v));
         const double localTolerance = std::max(seamTolerance, vertexBudgets.at(v));
-        model.points.push_back(localTolerance > seamTolerance
-            ? tolerantSeamPoint(seed, constraints, localTolerance, seamReach)
-            : seamPoint(seed, constraints, seamTolerance, seamReach));
+        auto active = constraints;
+        Vec3 point = localTolerance > seamTolerance ? tolerantSeamPoint(seed, active, localTolerance, seamReach)
+                                                    : seamPoint(seed, active, seamTolerance, seamReach);
+        const auto projected = [&](Vec3 p, std::vector<SeamSurface> entries) {
+            for (auto &at : entries)
+                at.uv = projectLocal(*at.surface, p, at.uv, at.offset);
+            return entries;
+        };
+        auto solved = continueSupports ? projected(point, active) : std::vector<SeamSurface>{};
+        if (continueSupports && !std::all_of(solved.begin(), solved.end(), regular)) {
+            bool found = false;
+            // Procedere verso l'interno del dominio: le due intersezioni
+            // vicine a una cuspide possono appartenere a rami diversi.
+            for (int axis : {1, 0}) {
+                for (double fraction : {.0001, .0005, .001, .002, .005, .01, .02, .05}) {
+                    auto trial = constraints;
+                    Vec3 start;
+                    int count = 0;
+                    for (auto &at : trial)
+                        if (naturalDomains.count(at.surface.get())) {
+                            const auto domains = naturalDomains.at(at.surface.get());
+                            const auto range = axis == 0 ? domains.first : domains.second;
+                            const double uvBudget = 1e-7 * range.length();
+                            if (std::abs(at.uv[axis] - range.hi) < uvBudget)
+                                at.uv[axis] -= fraction * range.length();
+                            else if (std::abs(at.uv[axis] - range.lo) < uvBudget)
+                                at.uv[axis] += fraction * range.length();
+                            else
+                                continue;
+                            Vec3 j[4];
+                            seamJet(*at.surface, at.offset, at.uv.x(), at.uv.y(), j);
+                            start += j[0];
+                            ++count;
+                        }
+                    if (!count)
+                        continue;
+                    try {
+                        const auto candidate = tolerantSeamPoint(start / double(count), trial, localTolerance, seamReach, 1e-10);
+                        auto check = projected(candidate, trial);
+                        if (std::all_of(check.begin(), check.end(), regular)) {
+                            point = candidate;
+                            solved = std::move(check);
+                            found = true;
+                            break;
+                        }
+                    } catch (const std::domain_error &) {
+                    }
+                }
+                if (found)
+                    break;
+            }
+            if (!found)
+                throw std::domain_error("offset: nessuna intersezione regolare vicino al vertice della cavita'");
+            for (const auto &at : solved)
+                movedVertexUV[{v, at.surface.get()}] = at.uv;
+        }
+        model.points.push_back(point);
     }
     std::map<int, double> edgeBudgets;
     std::map<int, int> rawEdgeOf;
@@ -2007,8 +2118,20 @@ OffsetResult offsetJoinedFaces(const Body &input, const std::vector<FaceOffset> 
         raw.end = pointOf.at(root(body.edgeEnd(e).index));
         const auto sourceUV = [&](FinId finId, double t) {
             const auto &fin = body.fin(finId);
-            if (fin.edge == e)
-                return supportUV(finId, t);
+            if (fin.edge == e) {
+                auto uv = supportUV(finId, t);
+                const auto surface = support(body.finFace(finId));
+                for (int endpoint = 0; endpoint < 2; ++endpoint) {
+                    const int v = root((endpoint == 0 ? body.edgeStart(e) : body.edgeEnd(e)).index);
+                    auto moved = movedVertexUV.find({v, surface.get()});
+                    if (moved != movedVertexUV.end()) {
+                        double fraction = (t - edge.range.lo) / edge.range.length();
+                        uv += (endpoint == 0 ? 1 - fraction : fraction) *
+                              (moved->second - supportUV(finId, endpoint == 0 ? edge.range.lo : edge.range.hi));
+                    }
+                }
+                return uv;
+            }
             const auto &rail = body.edge(fin.edge);
             double fraction = (t - edge.range.lo) / edge.range.length();
             if (dot(edge.curve->derivative((edge.range.lo + edge.range.hi) * 0.5),
@@ -2034,6 +2157,17 @@ OffsetResult offsetJoinedFaces(const Body &input, const std::vector<FaceOffset> 
             for (FinId fin : uses) {
                 const auto f = body.finFace(fin);
                 shift += specs.at(f.index).distance * faceNormal(body, f, sourceUV(fin, t));
+            }
+            if (!movedVertexUV.empty()) {
+                Vec3 mean;
+                for (FinId fin : uses) {
+                    auto f = body.finFace(fin);
+                    auto uv = sourceUV(fin, t);
+                    Vec3 j[4];
+                    seamJet(*support(f), specs.at(f.index).distance * (body.face(f).sense ? 1. : -1.), uv.x(), uv.y(), j);
+                    mean += j[0];
+                }
+                return mean / double(uses.size());
             }
             return p + shift / double(uses.size());
         };
@@ -2067,8 +2201,7 @@ OffsetResult offsetJoinedFaces(const Body &input, const std::vector<FaceOffset> 
         if (unchanged) raw.curve = edge.curve;
         else {
             const auto first = body.finFace(uses[0]), second = body.finFace(uses[1]);
-            if (replacing && specs.at(first.index).distance == 0.0 && specs.at(second.index).distance == 0.0)
-                raw.curve = replacementSectionCircle(edge.curve, *support(first), *support(second));
+            raw.curve = sectionCircle(edge.curve,first,second);
             // Un supporto spostato puo' cambiare la posizione angolare dei
             // vertici: in quel caso resta il percorso generale parametrico.
             if (raw.curve && (distance(raw.curve->point(edge.range.lo), model.points[std::size_t(raw.start)]) > localTolerance
@@ -2122,7 +2255,16 @@ OffsetResult offsetJoinedFaces(const Body &input, const std::vector<FaceOffset> 
                 const auto uvAt = [&](double t) {
                     const double fraction = (t - targetEdge.range.lo) / targetEdge.range.length();
                     const double source = sourceEdge.range.lo + (aligned ? fraction : 1.0 - fraction) * sourceEdge.range.length();
-                    const Vec2 uv = projectLocal(*targetSupport, targetEdge.curve->point(t), supportUV(finId, source), signedDistance);
+                    auto seed=supportUV(finId,source);
+                    for(int endpoint=0;endpoint<2;++endpoint) {
+                        const int v=root((endpoint==0?body.edgeStart(fin.edge):body.edgeEnd(fin.edge)).index);
+                        auto moved=movedVertexUV.find({v,targetSupport.get()});
+                        if(moved!=movedVertexUV.end()) {
+                            const double part=(source-sourceEdge.range.lo)/sourceEdge.range.length();
+                            seed+=(endpoint==0?1-part:part)*(moved->second-supportUV(finId,endpoint==0?sourceEdge.range.lo:sourceEdge.range.hi));
+                        }
+                    }
+                    const Vec2 uv = projectLocal(*targetSupport,targetEdge.curve->point(t),seed,signedDistance);
                     return Vec3(uv.x(), uv.y(), 0);
                 };
                 double rate = 1.0;
@@ -2158,7 +2300,13 @@ OffsetResult offsetJoinedFaces(const Body &input, const std::vector<FaceOffset> 
             ur = face.surface->uDomain();
         if (face.surface->isVPeriodic() && vr.length() >= 0.98 * face.surface->vPeriod())
             vr = face.surface->vDomain();
-        raw.surface = spec.distance == 0.0 ? targetSupport : offsetSurfaceImpl(*face.surface, signedDistance, ur, vr, tolerance, false);
+        if (continueSupports) {
+            auto trim = raw;
+            trim.surface = targetSupport;
+            detail::requireRegularOffsetTrim(model, trim, signedDistance, ur, vr, tolerance);
+        }
+        raw.surface = spec.distance == 0.0 ? targetSupport
+                                           : offsetSurfaceImpl(*targetSupport, signedDistance, ur, vr, tolerance, false, !continueSupports);
         if (spec.distance == 0.0 && raw.surface->type() == SurfaceType::BSpline)
             raw.surface = std::make_shared<BSplineSurface>(extendBSplineSurface(static_cast<const BSplineSurface &>(*raw.surface), ur, vr));
         for (const auto &loop : raw.loops) for (const auto &fin : loop) {

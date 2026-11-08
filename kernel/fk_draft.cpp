@@ -25,7 +25,7 @@ Body draftFaces(const Body &input, const std::vector<FaceId> &selected,
     const Vec3 pull = normalized(direction);
     Box bounds;
     for (VertexId v : input.vertices()) bounds.add(input.vertex(v).point);
-    const double tolerance = std::max(kLinearResolution, bounds.diagonal() * 1e-9);
+    const double tolerance = std::max(linearResolution(), bounds.diagonal() * 1e-9);
     std::set<int> chosen;
     for (FaceId f : selected) {
         if (!input.contains(f)) throw std::domain_error("una faccia scelta non esiste piu'");
@@ -81,9 +81,9 @@ Body draftFaces(const Body &input, const std::vector<FaceId> &selected,
             }
             specs.push_back(std::move(spec));
         }
-        auto refitted = offsetJoinedFaces(input, specs, kLinearResolution);
+        auto refitted = offsetJoinedFaces(input, specs, linearResolution());
         BodyHistory sewnHistory;
-        auto sewn = sewSheets({&refitted.body}, kLinearResolution, true, history ? &sewnHistory : nullptr);
+        auto sewn = sewSheets({&refitted.body}, linearResolution(), true, history ? &sewnHistory : nullptr);
         if (!sewn.solid || sewn.shells != 1) throw std::domain_error("sformo: il risultato non e' un solido chiuso connesso");
         const auto issues = checkBody(sewn.body, {true, true});
         if (!issues.empty()) throw std::domain_error("sformo non valido: " + issues.front().message);

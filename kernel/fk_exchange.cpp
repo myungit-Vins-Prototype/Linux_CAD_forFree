@@ -25,6 +25,7 @@
 #endif
 
 #include "fk_body_check.h"
+#include "fk_nurbs.h"
 #include "fk_curve_algo.h"
 #include "fk_curve_ops.h"
 #include "fk_parallel.h"
@@ -241,7 +242,7 @@ static int alignClosedSplineSeams(Body &body) {
                     if (before - after < domain.length()) continue;
                     const auto candidate = translatedCurve(fin.pcurve, shift);
                     const double deviation = pcurveDeviation(surface, *edge.curve, *candidate, edge.range, 32);
-                    if (!(deviation <= std::max({kPCurveTolerance, edge.tolerance, fin.pcurveTolerance}))) continue;
+                    if (!(deviation <= std::max({pCurveTolerance(), edge.tolerance, fin.pcurveTolerance}))) continue;
                     fin.pcurve = candidate;
                     fin.pcurveTolerance = std::max(fin.pcurveTolerance, deviation);
                     ++changed;
@@ -358,14 +359,14 @@ Body assembleBody(const RawModel &input, bool solid, std::vector<std::string> *n
             if (!domain.isFinite()) throw std::domain_error("edge chiuso su una curva illimitata");
             ts = domain.lo, te = domain.hi;
         } else if (te < ts && domain.isFinite()
-                   && distance(curve.point(domain.lo), curve.point(domain.hi)) <= kLinearResolution) {
+                   && distance(curve.point(domain.lo), curve.point(domain.hi)) <= linearResolution()) {
             // Una B-spline chiusa non e' necessariamente periodica: la
             // proiezione del vertice sulla chiusura puo' scegliere l'altro
             // estremo del dominio. Conserva il tratto nel verso dell'edge,
             // prima di decidere se la curva e' davvero percorsa al contrario.
             const Vec3 &start = model.points[std::size_t(e.start)], &end = model.points[std::size_t(e.end)];
-            if (distance(curve.point(domain.hi), end) <= kLinearResolution) te = domain.hi;
-            else if (distance(curve.point(domain.lo), start) <= kLinearResolution) ts = domain.lo;
+            if (distance(curve.point(domain.hi), end) <= linearResolution()) te = domain.hi;
+            else if (distance(curve.point(domain.lo), start) <= linearResolution()) ts = domain.lo;
         }
         if (te < ts) {
             // La curva va dall'altra parte: si gira l'edge (e le sue fin).
@@ -821,10 +822,37 @@ bool sewModel(RawModel &model, double tolerance) {
         e.start = target[std::size_t(e.start)];
         e.end = target[std::size_t(e.end)];
     }
+    // I lati NURBS collassati rappresentano un vertice singolare, non un
+    // giunto fra facce. Fonderli (18 spicchi alla stessa punta, per esempio)
+    // crea un edge con piu' di due fin. Si tolgono solo curve costanti entro
+    // l'arrotondamento double: non si usa la tolleranza di cucitura per
+    // cancellare bordi piccoli ma geometricamente distinti. I salti UV al
+    // polo sono gia' ricostruiti da tessellazione e integrali di massa.
+    std::vector<bool> collapsed(model.edges.size(), false);
+    for (std::size_t k = 0; k < model.edges.size(); ++k) {
+        const RawEdge &edge = model.edges[k];
+        if (edge.start != edge.end || !edge.hasRange || !edge.range.isFinite()) continue;
+        try {
+            const auto pieces = rationalBezierPieces(*edge.curve, edge.range);
+            const Vec3 point = model.points[std::size_t(edge.start)];
+            const double roundoff = 32 * kMachineEpsilon * std::max(1.0, norm(point));
+            bool constant = !pieces.empty();
+            for (const auto &piece : pieces) for (const auto &pole : piece.poles())
+                constant = constant && distance(pole, point) <= roundoff;
+            collapsed[k] = constant;
+        } catch (const std::domain_error &) { /* Nessuna prova sui poli: conserva il bordo. */ }
+    }
+    for (RawFace &face : model.faces) for (auto &loop : face.loops) {
+        const auto nonCollapsed = std::count_if(loop.begin(), loop.end(), [&](const RawFin &fin) { return !collapsed[std::size_t(fin.edge)]; });
+        if (nonCollapsed >= 2) loop.erase(std::remove_if(loop.begin(), loop.end(), [&](const RawFin &fin) {
+            return collapsed[std::size_t(fin.edge)];
+        }), loop.end());
+    }
     // Edge uguali: stessi estremi e punto medio sull'altro.
     std::map<std::pair<int, int>, std::vector<int>> byEnds;
     for (std::size_t k = 0; k < model.edges.size(); ++k) {
         const RawEdge &e = model.edges[k];
+        if (collapsed[k]) continue;
         byEnds[{std::min(e.start, e.end), std::max(e.start, e.end)}].push_back(int(k));
     }
     std::vector<int> edgeTarget(model.edges.size());

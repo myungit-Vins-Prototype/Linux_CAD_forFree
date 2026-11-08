@@ -2,6 +2,7 @@
 #define FORGECAD_FK_BODY_IO_H
 
 #include <string>
+#include <string_view>
 
 #include "fk_topology.h"
 
@@ -25,6 +26,14 @@ std::string writeBodyBinary(const Body &body);
 // Lancia std::invalid_argument se i dati non sono validi (versione, indici,
 // lunghezze).
 Body readBodyBinary(const std::string &data);
+
+// Pool locale alla lettura di un documento: condivide soltanto NURBS con
+// coefficienti bit per bit identici fra body diversi. Preserva la distinta
+// identita' dei record nello stesso body, la topologia e il formato binario.
+// Thread-safe; nessuna cache globale o prolungamento della vita dei documenti.
+class BodyReadPool;
+std::shared_ptr<BodyReadPool> makeBodyReadPool();
+Body readBodyBinary(std::string_view data, BodyReadPool &pool);
 
 }
 

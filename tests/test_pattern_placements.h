@@ -2,6 +2,7 @@
 #include "../cad_pattern.h"
 #include "../cad_document_io.h"
 #include <limits>
+#include "test_circular_pattern_fit.h"
 
 namespace {
 void patternPlacementTests() {
@@ -91,6 +92,7 @@ void patternPlacementTests() {
         require(decodeDocument(bytes,restored).isEmpty() && restored.extrusions.size()==2, "fixture con conteggi estremi riletta");
         reject(restored.extrusions[1].pattern,tooMany);
     }
+    circularPatternFitTests();
     std::cout << "PASS pattern placements: limiti, overflow, output, griglie, rotazioni e simmetria" << std::endl;
 }
 }

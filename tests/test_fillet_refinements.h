@@ -94,7 +94,7 @@ static void filletRefinements() {
   spec.fillet.mode = 2;
   spec.fillet.propagate = false;
   spec.fillet.radii = {1, 2, 1};
-  spec.fillet.paths = {{{0}, {1, 2, 1}, true, false},
+  spec.fillet.paths = {{{0}, {1, 2, 0}, true, false},
                        {{1}, {3, 3.5, 4, 3.5, 3}, true, false}};
   view.fitAll();
   bool checked = false;
@@ -116,6 +116,16 @@ static void filletRefinements() {
     };
     checked = list && list->count() == 2 && count->value() == 3 &&
               std::abs(radius()->value() - 1) < 1e-8;
+    auto *middle = qobject_cast<QDoubleSpinBox *>(
+        window.findChild<QTableWidget *>("filletRadiusTable")->cellWidget(1, 2));
+    checked = checked && radius()->minimum() == 0.0 && middle->minimum() > 0.0;
+    radius()->setValue(0.0);
+    checked = checked && radius()->value() == 0.0 &&
+              !view.filletRadiusHandles_.isEmpty() &&
+              view.filletRadiusHandles_.first().radius == 0.0;
+    list->setCurrentRow(1);
+    list->setCurrentRow(0);
+    checked = checked && radius()->value() == 0.0;
     radius()->setValue(1.8);
     list->setCurrentRow(1);
     checked = checked && list->currentRow() == 1 && count->value() == 5 &&
@@ -209,7 +219,7 @@ static void filletRefinements() {
   const auto &paths = built.chamferSpec.fillet.paths;
   require(paths.size() == 2 && paths[0].radii.size() == 3 &&
               paths[1].radii.size() == 5 &&
-              std::abs(paths[0].radii[0] - 1.8) < 1e-8 &&
+              std::abs(paths[0].radii[0] - 1.8) < 1e-8 && paths[0].radii.back() == 0.0 &&
               std::abs(paths[1].radii[0] - 4.5) < 2e-5,
           "tabelle e modifica grafica nel modello");
   const double volume = massProperties(*built.forgeBody).volume;
@@ -221,7 +231,7 @@ static void filletRefinements() {
             "salvataggio formato 59 dei percorsi");
     const auto &saved = restored.extrusions.last().chamferSpec.fillet.paths;
     require(saved.size() == 2 && saved[0].edges == paths[0].edges &&
-                saved[1].radii == paths[1].radii,
+                saved[0].radii == paths[0].radii && saved[1].radii == paths[1].radii,
             "associazioni e raggi conservati");
     CadViewport reopened;
     reopened.loadDocument(restored);

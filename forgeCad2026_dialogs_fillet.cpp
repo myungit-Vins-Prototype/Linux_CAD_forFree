@@ -276,6 +276,7 @@ BlendDialogResult filletDialog(
   QSpinBox *number = nullptr;
   QTableWidget *table = nullptr;
   QLabel *pointInfo = nullptr;
+  QPushButton *completeContour = nullptr;
   QCheckBox *reverse = nullptr;
   const auto measure = [&](double value, QWidget *owner) {
     auto *spin = new ForgeCad::ExpressionSpinBox(owner);
@@ -381,6 +382,10 @@ BlendDialogResult filletDialog(
       QObject::connect(pick, &QPushButton::clicked, &dialog, startEdges);
     }
     if (mode == 0) {
+      completeContour = new QPushButton(QStringLiteral("Completa contorno dell’incavo"), content);
+      completeContour->setObjectName("filletCompleteContour");
+      completeContour->setToolTip(QStringLiteral("Aggiunge i bordi del contorno chiuso dell’incavo estruso alla selezione."));
+      form->addRow(QString(), completeContour);
       radiiBoxes[0] = measure(size, content);
       radiiBoxes[0]->setObjectName("filletConstantRadius");
       form->addRow(QStringLiteral("Raggio"), radiiBoxes[0]);
@@ -615,12 +620,28 @@ BlendDialogResult filletDialog(
     viewport->requestBlendPreview(body, currentEdges(), currentRadius(), false,
                                   hidden, currentSpec());
   };
+  QObject::connect(completeContour, &QPushButton::clicked, &dialog, [&] {
+    QString error;
+    const auto source = body >= 0 && body < viewport->extrusions().size()
+        ? viewport->extrusions()[body].forgeBody : ForgeCad::ForgeBody();
+    const auto completed = ForgeCad::filletCavityContours(source, edges, &error);
+    if (!error.isEmpty()) { status->setText(error); return; }
+    edges = completed;
+    synchronizing = true;
+    viewport->resumeEdgePick(body, edges, false, true);
+    synchronizing = false;
+    refresh(false);
+  });
   const auto changeRadius = [&](int pathIndex, int station, double radius) {
     auto &path = pathIndex >= 0 && pathIndex < variablePaths.size()
                      ? variablePaths[pathIndex]
                      : draft;
     if (station < 0 || station >= path.radii.size())
       return;
+    const bool closed = pathIndex >= 0 && pathIndex < variableGeometry.size() &&
+                        variableGeometry[pathIndex].path.closed;
+    const bool endpoint = station == 0 || station + 1 == path.radii.size();
+    radius = qMax(!closed && endpoint ? 0.0 : 0.000001, radius);
     path.radii[station] = radius;
     if (pathIndex >= 0 && pathIndex < variableGeometry.size() &&
         variableGeometry[pathIndex].path.closed &&
@@ -668,6 +689,11 @@ BlendDialogResult filletDialog(
       table->setItem(i, 0, index);
       table->setItem(i, 1, position);
       auto *value = measure(path.radii[i], table);
+      const bool closed = activePath >= 0 && activePath < variableGeometry.size() &&
+                          variableGeometry[activePath].path.closed;
+      value->setMinimum(!closed && (i == 0 || i + 1 == count) ? 0.0 : 0.000001);
+      value->setValue(path.radii[i]);
+      value->setToolTip(QStringLiteral("Agli estremi di un percorso aperto il raggio può essere zero."));
       value->setObjectName(QStringLiteral("filletStationRadius%1").arg(i));
       value->setMinimumWidth(0);
       value->setFrame(false);

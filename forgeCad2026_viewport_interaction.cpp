@@ -521,7 +521,7 @@ void CadViewport::mousePressEvent(QMouseEvent *event) {
         }
         if(drawingTool_==DrawingTool::Slot) {
             const auto point=snapPoint(rawPoint);
-            if(curveControlPoints_.size()==1 && pointDistance(point,curveControlPoints_[0])<=ForgeCad::kSketchConnectionTolerance) {
+            if(curveControlPoints_.size()==1 && pointDistance(point,curveControlPoints_[0])<=ForgeCad::sketchConnectionTolerance()) {
                 showStatus(QStringLiteral("Asola: scegli un secondo centro distinto dal primo"));return;
             }
             curveControlPoints_.append(point);hasPendingPoint_=true;
@@ -547,7 +547,7 @@ void CadViewport::mousePressEvent(QMouseEvent *event) {
                 }
             }
             if (!curveControlPoints_.isEmpty()
-                && pointDistance(point, curveControlPoints_.last()) <= ForgeCad::kSketchConnectionTolerance) return;
+                && pointDistance(point, curveControlPoints_.last()) <= ForgeCad::sketchConnectionTolerance()) return;
             curveControlPoints_.append(point);
             hasPendingPoint_ = true;
             const int requiredPoints = drawingTool_ == DrawingTool::ThreePointArc ? 3 : 2;
@@ -579,7 +579,7 @@ void CadViewport::mousePressEvent(QMouseEvent *event) {
         }
         const int appliedConstraint = inference.constraint >= 0 ? inference.constraint : constraintMode_;
         const QPointF constrainedPoint = inference.point;
-        if (pointDistance(constrainedPoint, pendingPoint_) <= ForgeCad::kSketchConnectionTolerance) return;
+        if (pointDistance(constrainedPoint, pendingPoint_) <= ForgeCad::sketchConnectionTolerance()) return;
         bool closedOnPoint = false;
         if (activeSketch_ >= 0 && activeSketch_ < sketches_.size()) {
             recordUndo();
@@ -1039,13 +1039,21 @@ void CadViewport::mouseMoveEvent(QMouseEvent *event) {
             update();
             return;
         }
-        cursorSketchPoint_ = snapPoint(rawPoint, drawingTool_ != DrawingTool::Spline
-            && drawingTool_ != DrawingTool::Nurbs);
         if (drawingTool_ == DrawingTool::Line || drawingTool_ == DrawingTool::Polyline || drawingTool_ == DrawingTool::ConstructionLine) {
+            // L'inferenza calcola gia' lo snap: non ripeterlo prima o dopo.
             currentInference_ = inferLinePoint(rawPoint);
             cursorSketchPoint_ = currentInference_.point;
         } else {
             currentInference_ = {};
+            // L'hover di selezione usa le entita' locali: non crea riferimenti
+            // esterni e non cerca intersezioni che poi verrebbero nascoste.
+            if (drawingTool_ == DrawingTool::Select && !event->buttons()) {
+                cursorSketchPoint_ = rawPoint;
+                lastSnapKind_ = SnapKind::None;
+            } else {
+                cursorSketchPoint_ = snapPoint(rawPoint, drawingTool_ != DrawingTool::Spline
+                    && drawingTool_ != DrawingTool::Nurbs);
+            }
         }
         if (dimensionDrag_ >= 0 && (event->buttons() & Qt::LeftButton)) {
             SketchObject &sketch = sketches_[activeSketch_];
@@ -1146,8 +1154,6 @@ void CadViewport::mouseMoveEvent(QMouseEvent *event) {
             // solveActive ricampiona gia' le curve. Con gli offset puo'
             // sostituire lo schizzo: il riferimento `curve` non e' piu' valido.
         } else {
-            snapPoint(rawPoint, drawingTool_ != DrawingTool::Spline
-                && drawingTool_ != DrawingTool::Nurbs);
             if (drawingTool_ == DrawingTool::Select) lastSnapKind_ = SnapKind::None;
             sketchHover_ = findSketchElement(rawPoint);
             trimPreview_.clear();
@@ -1337,12 +1343,12 @@ void CadViewport::mouseReleaseEvent(QMouseEvent *event) {
             for (const auto &target : snapped) excluded.append(target.point);
             const auto &cache = sketchReferenceCache();
             const auto intersection = lastSnapKind_ == SnapKind::Intersection
-                ? ForgeCad::snapIntersection(lastSnapPoint_, sketch, cache, ForgeCad::kSketchConnectionTolerance, excluded)
+                ? ForgeCad::snapIntersection(lastSnapPoint_, sketch, cache, ForgeCad::sketchConnectionTolerance(), excluded)
                 : ForgeCad::IntersectionSnap();
             for (const auto &target : snapped) if (!isLinkedSketchEntity(sketch,target.point.kind,target.point.element)) {
                 // I rami che si muovono insieme non diventano sorgenti dello
                 // snap l'uno dell'altro: conservare la coppia ferma di appoggio.
-                if (intersection.found && pointDistance(target.position, intersection.point) <= ForgeCad::kSketchConnectionTolerance
+                if (intersection.found && pointDistance(target.position, intersection.point) <= ForgeCad::sketchConnectionTolerance()
                     && ForgeCad::constrainIntersection(sketch, target.point, intersection, cache, sketches_, extrusions_)) continue;
                 recordPointCoincidences(sketch,target.point,target.position);
             }

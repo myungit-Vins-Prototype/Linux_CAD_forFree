@@ -1,4 +1,5 @@
 #include "cad_sketch_refs.h"
+#include "cad_sketch_section_selection.h"
 #include "fk_sketch_projection.h"
 
 #include <algorithm>
@@ -157,7 +158,7 @@ QString appendProjectedCurve(SketchObject &sketch, const CurvePtr<3> &curve, con
         const Curve<3> *basis = basisOf(curve.get());
         if (basis->type() == CurveType::Line) {
             const QPointF a = local(curve->point(range.lo)), b = local(curve->point(range.hi));
-            if (std::hypot(b.x() - a.x(), b.y() - a.y()) <= kSketchConnectionTolerance)
+            if (std::hypot(b.x() - a.x(), b.y() - a.y()) <= sketchConnectionTolerance())
                 return QStringLiteral("Lo spigolo e' perpendicolare al piano dello schizzo: la sua proiezione e' un punto.");
             appendSegment(sketch, a, b, construction);
         } else if (basis->type() == CurveType::Circle
@@ -187,7 +188,7 @@ QString appendProjectedCurve(SketchObject &sketch, const CurvePtr<3> &curve, con
                 // La proiezione e' affine: poli e nodi della B-spline
                 // approssimata dell'elica possono essere proiettati senza
                 // scomporla e ricomporla due volte in tratti di Bezier.
-                const BSplineCurve<3> full = helixBSpline(*helix, kLinearResolution);
+                const BSplineCurve<3> full = helixBSpline(*helix, linearResolution());
                 if (std::fabs(range.lo - full.domain().lo) <= 1e-12
                     && std::fabs(range.hi - full.domain().hi) <= 1e-12) {
                     spline = full;
@@ -198,7 +199,7 @@ QString appendProjectedCurve(SketchObject &sketch, const CurvePtr<3> &curve, con
                 // Le curve procedurali (ad esempio isoparametriche) non
                 // hanno necessariamente una forma razionale: le approssima
                 // il fitter adattivo, poi la proiezione affine dei poli.
-                spline=*fitCurve([&](double t){return curve->point(t);},range,curve->breakpoints(range),kLinearResolution);
+                spline=*fitCurve([&](double t){return curve->point(t);},range,curve->breakpoints(range),linearResolution());
             } else {
                 std::vector<BSplineCurve<3>> pieces = standardBezierPieces(*curve, range);
                 int degree = 1;
@@ -224,7 +225,7 @@ QString appendProjectedCurve(SketchObject &sketch, const CurvePtr<3> &curve, con
                 const double d=std::hypot(p.x()-a.x(),p.y()-a.y());
                 if(d>span){span=d;b=p;}
             }
-            bool collinear = span > kSketchConnectionTolerance;
+            bool collinear = span > sketchConnectionTolerance();
             for (const QPointF &p : projected) {
                 const QPointF d = b - a, r = p - a;
                 collinear = collinear && std::fabs(d.x() * r.y() - d.y() * r.x()) / span <= 1e-9 * std::max(1.0, span);
@@ -307,13 +308,13 @@ QString appendSectionCurves(SketchObject &sketch, const Body &body, bool constru
         // piano sono interni). Niente booleana, che con tutto il bordo sulla
         // lamina e' lenta.
         const Vec3 normal = frame.zDir();
-        if (onOneSide(body, frame.origin(), normal, kLinearResolution) || onOneSide(body, frame.origin(), -normal, kLinearResolution)) {
+        if (onOneSide(body, frame.origin(), normal, linearResolution()) || onOneSide(body, frame.origin(), -normal, linearResolution())) {
             std::vector<FaceId> onPlane;
             for (FaceId f : body.faces()) {
                 const Surface &surface = *body.face(f).surface;
                 if (surface.type() != SurfaceType::Plane) continue;
                 const Frame3 &plane = static_cast<const Plane &>(surface).frame();
-                if (norm(cross(plane.zDir(), normal)) <= 1e-12 && std::fabs(dot(plane.origin() - frame.origin(), normal)) <= kLinearResolution)
+                if (norm(cross(plane.zDir(), normal)) <= 1e-12 && std::fabs(dot(plane.origin() - frame.origin(), normal)) <= linearResolution())
                     onPlane.push_back(f);
             }
             const auto inPlane = [&](FaceId f) { return std::find(onPlane.begin(), onPlane.end(), f) != onPlane.end(); };
@@ -365,7 +366,7 @@ QString refreshSurfacePierce(const SketchObject &sketch, SketchConstraint &const
         if (geometry.type() == SurfaceType::Plane) {
             const Frame3 &plane = static_cast<const Plane &>(geometry).frame();
             if (norm(cross(plane.zDir(),frame.zDir())) <= 1e-12
-                && std::fabs(dot(plane.origin()-frame.origin(),frame.zDir())) <= kLinearResolution)
+                && std::fabs(dot(plane.origin()-frame.origin(),frame.zDir())) <= linearResolution())
                 return fail(QStringLiteral("La faccia e' complanare allo schizzo: non definisce un'intersezione Pierce."));
         }
         SketchObject section;
@@ -419,7 +420,7 @@ QString appendProjectedSketchEntity(SketchObject &sketch, const SketchObject &so
             const SketchSegment &segment = source.segments.at(entity.index);
             const Vec2 a(segment.first.x(), segment.first.y()), b(segment.second.x(), segment.second.y());
             const double length = distance(a, b);
-            if (length <= kSketchConnectionTolerance) return QStringLiteral("Il segmento sorgente e' un punto.");
+            if (length <= sketchConnectionTolerance()) return QStringLiteral("Il segmento sorgente e' un punto.");
             pieces.push_back({std::make_shared<Line<2>>(a, (b - a) / length), {0.0, length}});
         } else if (entity.kind == 1 && entity.index >= 0 && entity.index < source.curves.size()) {
             const auto geometry = curveGeometry(source.curves.at(entity.index));
@@ -458,8 +459,8 @@ QString appendSketchContactReferences(SketchObject &sketch, const SketchObject &
                 if (index < 0 || index >= sketch.segments.size()) continue;
                 const SketchSegment &segment = sketch.segments.at(index);
                 const auto gap = [](const QPointF &a, const QPointF &b) { return std::hypot(a.x() - b.x(), a.y() - b.y()); };
-                if (gap(segment.first, segment.second) <= kSketchConnectionTolerance
-                    && gap(segment.first, point) <= kSketchConnectionTolerance) return;
+                if (gap(segment.first, segment.second) <= sketchConnectionTolerance()
+                    && gap(segment.first, point) <= sketchConnectionTolerance()) return;
             }
             const int index = int(sketch.segments.size());
             appendSegment(sketch, point, point, true);
@@ -492,7 +493,7 @@ QString appendSketchContactReferences(SketchObject &sketch, const SketchObject &
             const Vec3 a = from.toGlobal(Vec3(segment.first.x(), segment.first.y(), 0.0));
             const Vec3 b = from.toGlobal(Vec3(segment.second.x(), segment.second.y(), 0.0));
             const double length = distance(a, b);
-            if (length <= kSketchConnectionTolerance) continue;
+            if (length <= sketchConnectionTolerance()) continue;
             addCurve(std::make_shared<Line<3>>(a, (b - a) / length), {0.0, length});
         }
         for (const CurveObject &object : source.curves) {
@@ -629,7 +630,7 @@ QString projectLinkedReference(SketchObject &target, GeometryRef ref, bool conta
     const auto appendPoint = [&](const Vec3 &point) {
         const auto p = worldToSketch(point, target);
         for (const auto &segment : target.segments)
-            if (segment.first == segment.second && std::hypot(p.x()-segment.first.x(),p.y()-segment.first.y()) <= kSketchConnectionTolerance) return;
+            if (segment.first == segment.second && std::hypot(p.x()-segment.first.x(),p.y()-segment.first.y()) <= sketchConnectionTolerance()) return;
         appendSegment(target, p, p, construction);
     };
     if (ref.kind == 0 || ref.kind == 3 || ref.kind == 6 || ref.kind == 10) {
@@ -749,6 +750,74 @@ QString appendLinkedSketchReference(SketchObject &sketch, GeometryRef source,
     return {};
 }
 
+namespace {
+// Migrazione dei vecchi blocchi parziali: serve identita' dell'intera NURBS,
+// non una distanza minima fra curve. Sorgente e piano sono gia' espliciti;
+// grado, nodi, pesi e verso devono coincidere, i poli solo entro arrotondamento.
+bool sameSectionCurve(const CurveObject &a, const CurveObject &b) {
+    if (a.tool != DrawingTool::Converted || b.tool != a.tool || a.degree <= 0 || a.degree != b.degree
+        || a.knots != b.knots || a.weights != b.weights || a.controlPoints.size() != b.controlPoints.size()) return false;
+    double scale = 1.0;
+    for (const auto *curve : {&a, &b}) for (const auto &p : curve->controlPoints) {
+        if (!std::isfinite(p.x()) || !std::isfinite(p.y())) return false;
+        scale = std::max(scale, std::hypot(p.x(), p.y()));
+    }
+    const double rounding = 64.0 * Kernel::kMachineEpsilon * scale;
+    for (int i = 0; i < a.controlPoints.size(); ++i)
+        if (std::hypot(a.controlPoints[i].x()-b.controlPoints[i].x(), a.controlPoints[i].y()-b.controlPoints[i].y()) > rounding) return false;
+    return true;
+}
+void selectSectionBranches(SketchLinkedReference &link, const SketchObject &existing, SketchObject &projected,
+                           const QVector<ExtrusionObject> &bodies) {
+    if (link.source.kind != 11 || !link.error.isEmpty()) return;
+    auto selection = SketchSectionSelection::read(link);
+    const int owner = sketchReferenceSourceIndex(link.source, {}, bodies);
+    const auto source = owner >= 0 && owner < bodies.size() ? bodies[owner].forgeBody : ForgeBody{};
+    // Recupero legacy limitato al caso di due meridiani su una singola
+    // lamina di rivoluzione. Non interpretare aggiunte topologiche generiche
+    // come cancellazioni dell'utente nei file privi del selettore persistito.
+    const bool legacyMeridian = source && source->isSheet() && source->faces().size() == 1
+        && source->face(source->faces().front()).surface->type() == SurfaceType::Revolution
+        && link.entities.size() == 1 && link.entities.front().kind == 1
+        && projected.segments.isEmpty() && projected.curves.size() == 2;
+    if (!selection.declared && link.source.point.name.isEmpty() && legacyMeridian) {
+        QVector<int> entries;
+        QSet<int> used;
+        for (const auto &entity : link.entities) {
+            int match = -1;
+            if (entity.kind == 0 && entity.element >= 0 && entity.element < existing.segments.size()) {
+                for (int i = 0; i < projected.segments.size(); ++i)
+                    if (existing.segments[entity.element] == projected.segments[i]) {
+                        if (match >= 0) return;
+                        match = i;
+                    }
+            } else if (entity.kind == 1 && entity.element >= 0 && entity.element < existing.curves.size()) {
+                for (int i = 0; i < projected.curves.size(); ++i)
+                    if (sameSectionCurve(existing.curves[entity.element], projected.curves[i])) {
+                        if (match >= 0) return;
+                        match = projected.segments.size() + i;
+                    }
+            }
+            if (match < 0 || used.contains(match)) return;
+            used.insert(match); entries.append(match);
+        }
+        SketchSectionSelection::write(link, projected.segments.size(), projected.curves.size(), entries);
+        selection = SketchSectionSelection::read(link);
+    }
+    if (!selection.declared) return;
+    if (!selection.valid || selection.segments != projected.segments.size() || selection.curves != projected.curves.size()) {
+        link.error = QStringLiteral("La topologia della sezione selezionata e' cambiata: selezionare nuovamente la sorgente.");
+        return;
+    }
+    SketchObject selected;
+    for (int entry : selection.entries) {
+        if (entry < selection.segments) selected.segments.append(projected.segments[entry]);
+        else selected.curves.append(projected.curves[entry-selection.segments]);
+    }
+    projected = std::move(selected);
+}
+}
+
 QString refreshLinkedSketchReferences(SketchObject &sketch, const QVector<SketchObject> &sketches,
                                      const QVector<ExtrusionObject> &bodies) {
     sketch.referenceError.clear();
@@ -758,6 +827,7 @@ QString refreshLinkedSketchReferences(SketchObject &sketch, const QVector<Sketch
         SketchObject projected;
         projected.plane = sketch.plane; projected.frame = sketch.frame; projected.customFrame = sketch.customFrame;
         data->error = projectLinkedReference(projected, data->source, data->contact, data->construction, data->halfLength, sketches, bodies);
+        selectSectionBranches(*data, sketch, projected, bodies);
         int s = 0, c = 0;
         for (const auto &entity : data->entities) {
             if (entity.kind == 0) {

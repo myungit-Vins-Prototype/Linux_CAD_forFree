@@ -81,7 +81,7 @@ int connectTolerantSectionEnds(const Body &body,const DrawingView &view,const st
         const auto &edge=body.edge(edgeId);if(!edge.forward.valid()||!edge.backward.valid())continue;
         const auto first=body.finFace(edge.forward),second=body.finFace(edge.backward);
         if(first==second||std::none_of(ends.begin(),ends.end(),[&](const auto &e){return e.face==first;})||std::none_of(ends.begin(),ends.end(),[&](const auto &e){return e.face==second;}))continue;
-        const double budget=std::max({view.tolerance,kLinearResolution,edge.tolerance});
+        const double budget=std::max({view.tolerance,linearResolution(),edge.tolerance});
         if(budget<=view.tolerance&&body.fin(edge.forward).pcurveTolerance==0&&body.fin(edge.backward).pcurveTolerance==0)continue;
         CurveSurfaceIntersection cut;
         try{cut=intersectCurveSurface(*edge.curve,edge.range,plane,view.tolerance);}catch(const std::exception &){continue;}

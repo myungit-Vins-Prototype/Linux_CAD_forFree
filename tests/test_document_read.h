@@ -220,7 +220,7 @@ void documentLoftCacheMigrationTests() {
     require(decodeDocument(encoded,current).isEmpty() && current.extrusions[0].cachedGeometry
             && current.extrusions[1].cachedGeometry && current.extrusions[1].forgeBody,
             "cache moderna conserva il loft e gli altri B-rep");
-    for (quint32 version : {7u, 10u, 11u, 12u}) {
+    for (quint32 version : {7u, 10u, 11u, 12u, 13u, 14u}) {
         require(decodeDocument(documentWithCacheVersion(encoded,version),previous).isEmpty()
                 && previous.sketches.size() == 2 && previous.extrusions[1].loftSketches == QVector<int>({0,1})
                 && !previous.extrusions[0].forgeBody && !previous.extrusions[1].forgeBody,
@@ -231,7 +231,7 @@ void documentLoftCacheMigrationTests() {
     const auto checkin = QUuid::createUuid();
     source.version.checkinId = checkin;
     require(encodeDocument(source,encoded,true).isEmpty(), "cache revisione con loft");
-    for (quint32 oldVersion : {10u,11u,12u}) {
+    for (quint32 oldVersion : {10u,11u,12u,13u,14u}) {
         require(decodeDocument(documentWithCacheVersion(encoded,oldVersion),previous).isEmpty()
                 && previous.version.checkinId == checkin && previous.extrusions[0].cachedGeometry
                 && previous.extrusions[1].cachedGeometry && previous.extrusions[1].forgeBody
@@ -420,6 +420,7 @@ void documentReadTests() {
         if (version >= 19) out << quint32(0);
         if (version >= 26) out << qint32(LengthUnit::Millimeter);
         if (version >= 50) out << QUuid::createUuid() << QUuid{} << QUuid{};
+        if (version >= 67) out << double(1e-7);
         DocumentState restored; require(decodeDocument(documentReadFixture(payload, version), restored).isEmpty(), "formato storico vuoto leggibile");
     }
     for (int extras : {0,1,2}) {

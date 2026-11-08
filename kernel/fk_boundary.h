@@ -1,3 +1,4 @@
+#include "fk_precision.h"
 #ifndef FORGECAD_FK_BOUNDARY_H
 #define FORGECAD_FK_BOUNDARY_H
 
@@ -33,7 +34,7 @@
 // lati di lunghezza nulla, risultato non valido.
 namespace ForgeCad::Kernel {
 
-Body boundarySheet(const std::vector<PathSegment> &pieces, double tolerance = 1e-9, FaceAliases *labels = nullptr);
+Body boundarySheet(const std::vector<PathSegment> &pieces, double tolerance = scaledAccuracy(1e-9), FaceAliases *labels = nullptr);
 
 }
 

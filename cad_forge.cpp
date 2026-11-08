@@ -132,7 +132,7 @@ Body sweptHelicalTool(const std::shared_ptr<const HelixCurve> &helix, std::vecto
 
 // Segmenti e curve dello schizzo (curveGeometry di cad_curve_solver), senza costruzione.
 static std::vector<ProfileSegment> sketchSegmentsWithSources(const SketchObject &sketch, std::vector<std::string> *keys) {
-    constexpr double confusion = 1.0e-7;
+    const double confusion = linearResolution();
     std::vector<ProfileSegment> result;
     for (int index = 0; index < sketch.segments.size(); ++index) {
         if (sketch.isConstructionSegment(index)) continue;
@@ -215,7 +215,7 @@ void forgeSketchFrame(const SketchObject &sketch, double distance, Frame3 &frame
 }
 
 ForgeBody forgeExtrusion(const SketchObject &sketch, double distance, QString *error, double start, bool surfaceOnly, bool reverseCaps) {
-    if (std::abs(distance) <= 1.0e-7) {
+    if (std::abs(distance) <= linearResolution()) {
         setError(error, QStringLiteral("La distanza di estrusione e' nulla."));
         return nullptr;
     }
@@ -226,7 +226,7 @@ ForgeBody forgeExtrusion(const SketchObject &sketch, double distance, QString *e
             setError(error, QStringLiteral("Lo schizzo non contiene geometria."));
             return nullptr;
         }
-        const Profile profile = buildProfile(segments, kSketchConnectionTolerance);
+        const Profile profile = buildProfile(segments, sketchConnectionTolerance());
         Frame3 frame;
         double height;
         forgeSketchFrame(sketch, distance, frame, height);
@@ -263,7 +263,7 @@ ForgeBody forgeExtrusion(const SketchObject &sketch, double distance, QString *e
             std::vector<const Body *> pointers;
             for (const auto &sheet : sheets) pointers.push_back(sheet.get());
             BodyHistory history;
-            Body body = sewSheets(pointers, kSketchConnectionTolerance, false, &history).body;
+            Body body = sewSheets(pointers, sketchConnectionTolerance(), false, &history).body;
             const ForgeBody result = std::make_shared<const Body>(std::move(body));
             registerDeclaredHistory(result, sheets, std::move(history));
             return result;
@@ -314,7 +314,7 @@ bool sketchLineFromWorld(const SketchObject &sketch, const Vec3 &point, const Ve
     const Frame3 axes = sketchAxes(sketch);
     const Vec3 n = axes.zDir();
     const double scale = std::max(1.0, norm(point - axes.origin()));
-    if (std::abs(dot(n, direction)) > 1.0e-9 || std::abs(dot(n, point - axes.origin())) > 1.0e-7 * scale) {
+    if (std::abs(dot(n, direction)) > 1.0e-9 || std::abs(dot(n, point - axes.origin())) > linearResolution() * scale) {
         setError(error, QStringLiteral("L'asse di rivoluzione deve stare nel piano dello schizzo."));
         return false;
     }
@@ -350,7 +350,7 @@ ForgeBody forgeRevolution(const SketchObject &sketch, const QPointF &point, cons
         const QPointF r = q - point;
         double x = r.x() * normal.x() + r.y() * normal.y();
         // Estremi sull'asse entro la tolleranza di collegamento dello schizzo.
-        if (std::abs(x) <= kSketchConnectionTolerance) x = 0.0;
+        if (std::abs(x) <= sketchConnectionTolerance()) x = 0.0;
         return QPointF(x, r.x() * axisDirection.x() + r.y() * axisDirection.y());
     };
     const auto localHandle = [&](const QPointF &q) {
@@ -366,7 +366,7 @@ ForgeBody forgeRevolution(const SketchObject &sketch, const QPointF &point, cons
     try {
         std::vector<std::string> keys;
         const std::vector<ProfileSegment> segments = sketchSegmentsWithSources(profileSketch, &keys);
-        const Profile profile = buildProfile(segments, kSketchConnectionTolerance);
+        const Profile profile = buildProfile(segments, sketchConnectionTolerance());
         if (profile.regions.empty() && profile.chains.empty()) {
             setError(error, QStringLiteral("Lo schizzo non ha un profilo da far ruotare."));
             return nullptr;
@@ -644,7 +644,7 @@ ForgeBody forgeTrimSheet(const ForgeBody &sheet, const ForgeBody &tool, int plan
     try {
         const auto target=declaredSheet(sheet);
         const auto cutter=tool?tool:declaredConstruction([&](FaceAliases &labels){Body b=trimTool(*target,{},plane);labels={{"plane"}};return b;});
-        return declaredModification({target,cutter},[&](BodyHistory &h){return trimSheet(*target,*cutter,Vec3(keep.x,keep.y,keep.z),1e-6,&h);});
+        return declaredModification({target,cutter},[&](BodyHistory &h){return trimSheet(*target,*cutter,Vec3(keep.x,keep.y,keep.z),scaledAccuracy(1e-6),&h);});
     } catch (const std::exception &failure) {
         setError(error, QStringLiteral("Taglio non riuscito: %1").arg(QString::fromUtf8(failure.what())));
         return nullptr;
@@ -659,9 +659,9 @@ ForgeBody forgeTrimBoth(const ForgeBody &first, const ForgeBody &second, const E
     }
     try {
         const auto a=declaredSheet(first),b=declaredSheet(second);
-        const auto keptA=declaredModification({a,b},[&](BodyHistory &h){return trimSheet(*a,*b,Vec3(firstKeep.x,firstKeep.y,firstKeep.z),1e-6,&h);});
-        const auto keptB=declaredModification({b,a},[&](BodyHistory &h){return trimSheet(*b,*a,Vec3(secondKeep.x,secondKeep.y,secondKeep.z),1e-6,&h);});
-        return declaredModification({keptA,keptB},[&](BodyHistory &h){return sewSheets({keptA.get(),keptB.get()},1e-6,false,&h).body;});
+        const auto keptA=declaredModification({a,b},[&](BodyHistory &h){return trimSheet(*a,*b,Vec3(firstKeep.x,firstKeep.y,firstKeep.z),scaledAccuracy(1e-6),&h);});
+        const auto keptB=declaredModification({b,a},[&](BodyHistory &h){return trimSheet(*b,*a,Vec3(secondKeep.x,secondKeep.y,secondKeep.z),scaledAccuracy(1e-6),&h);});
+        return declaredModification({keptA,keptB},[&](BodyHistory &h){return sewSheets({keptA.get(),keptB.get()},scaledAccuracy(1e-6),false,&h).body;});
     } catch (const std::exception &failure) {
         setError(error, QStringLiteral("Taglio reciproco non riuscito: %1").arg(QString::fromUtf8(failure.what())));
         return nullptr;
@@ -690,7 +690,7 @@ ForgeBody forgeTrimSketchTool(const ForgeBody &target, const SketchObject &sketc
         std::vector<std::string> keys;
         const std::vector<ProfileSegment> segments=sketchSegmentsWithSources(sketch,&keys);
         if (segments.empty()) throw std::domain_error("lo schizzo non contiene curve utilizzabili");
-        const Profile profile = buildProfile(segments, kSketchConnectionTolerance);
+        const Profile profile = buildProfile(segments, sketchConnectionTolerance());
         const Frame3 axes = sketchAxes(sketch);
         const double reach = trimToolReach(*target, axes.origin());
         const Frame3 frame(axes.origin() - reach * axes.zDir(), axes.zDir(), axes.xDir());
@@ -708,7 +708,7 @@ ForgeBody forgeTrimSketchTool(const ForgeBody &target, const SketchObject &sketc
         if (cutters.empty()) throw std::domain_error("lo schizzo non produce superfici di taglio");
         std::vector<const Body *> pointers;
         for(const auto &cutter:cutters)pointers.push_back(cutter.get());
-        return declaredModification(cutters,[&](BodyHistory &h){return sewSheets(pointers,1e-6,false,&h).body;});
+        return declaredModification(cutters,[&](BodyHistory &h){return sewSheets(pointers,scaledAccuracy(1e-6),false,&h).body;});
     } catch (const std::exception &failure) {
         setError(error, QStringLiteral("Schizzo di taglio non valido: %1").arg(QString::fromUtf8(failure.what())));
         return nullptr;
@@ -734,7 +734,7 @@ ForgeBody forgeProjectedCut(const ForgeBody &target, const SketchObject &sketch,
     try {
         const std::vector<ProfileSegment> segments = forgeSketchSegments(sketch);
         if (segments.empty()) throw std::domain_error("lo schizzo non contiene curve utilizzabili");
-        const Profile profile = buildProfile(segments, kSketchConnectionTolerance);
+        const Profile profile = buildProfile(segments, sketchConnectionTolerance());
         const Frame3 axes = sketchAxes(sketch);
         ProjectedCutReport report;
         const ProjectedCutMode cutMode = mode == 1 ? ProjectedCutMode::KeepInside : (mode == 2 ? ProjectedCutMode::SplitOnly : ProjectedCutMode::RemoveInside);
@@ -765,7 +765,7 @@ QVector<ForgeCurve> forgeProjectedCurves(const ForgeBody &target, const SketchOb
     try {
         const std::vector<ProfileSegment> segments = forgeSketchSegments(sketch);
         if (segments.empty()) throw std::domain_error("lo schizzo non contiene curve utilizzabili");
-        const Profile profile = buildProfile(segments, kSketchConnectionTolerance);
+        const Profile profile = buildProfile(segments, sketchConnectionTolerance());
         const Frame3 axes = sketchAxes(sketch);
         const Vec3 direction = forgeProjectionDirection(*target, sketch, reverse);
         std::vector<const ProfileLoop *> loops;
@@ -1096,7 +1096,7 @@ ForgeBody forgeOffsetFaces(const ForgeBody &base, const QVector<EdgePoint> &poin
             registerDeclaredHistory(result, {base}, std::move(declared));
             return result;
         }
-        OffsetResult result = offsetFaces(*base, faces, distance, 1e-7, preserveSeams);
+        OffsetResult result = offsetFaces(*base, faces, distance, linearResolution(), preserveSeams);
         if (summary) {
             *summary = result.shells == 1 ? QStringLiteral("una superficie cucita")
                                           : QStringLiteral("%1 superfici separate").arg(result.shells);
@@ -1129,8 +1129,8 @@ ForgeBody forgeSew(const QVector<ForgeBody> &sheets, double tolerance, bool soli
         BodyHistory declared;
         const SewResult result=sewSheets(bodies,tolerance,solid,&declared);
         if (solid && !result.closed) {
-            setError(error, QStringLiteral("Le superfici non chiudono un volume: restano %1 bordi liberi (prova una tolleranza "
-                                           "maggiore, o togli \"Crea un solido\" per una superficie cucita).").arg(result.freeEdges));
+            setError(error, QStringLiteral("Le superfici non chiudono un volume: restano %1 bordi liberi. Disattiva \"Crea un solido\" "
+                                           "per una superficie cucita, oppure chiudi i bordi aperti con altre superfici.").arg(result.freeEdges));
             return nullptr;
         }
         if (summary) {
@@ -1335,7 +1335,7 @@ ForgeBody forgeThread(const ForgeBody &baseBody, const ThreadParameters &paramet
         setError(error, QStringLiteral("La filettatura richiede un solido."));
         return nullptr;
     }
-    if (!(parameters.pitch > 1.0e-7) || !std::isfinite(parameters.pitch)) {
+    if (!(parameters.pitch > linearResolution()) || !std::isfinite(parameters.pitch)) {
         setError(error, QStringLiteral("Il passo della filettatura non e' valido."));
         return nullptr;
     }
@@ -1360,7 +1360,7 @@ ForgeBody forgeThread(const ForgeBody &baseBody, const ThreadParameters &paramet
         HelixBase base;
         if (!forgeHelixBase(*baseBody, 2, parameters.face, base, error)) return nullptr;
         double length = parameters.length > 0.0 ? parameters.length : base.length;
-        if (!(length > 1.0e-7)) throw std::domain_error("lunghezza della faccia nulla");
+        if (!(length > linearResolution())) throw std::domain_error("lunghezza della faccia nulla");
         if (base.length > 0.0) length = std::min(length, base.length);
         double taper = base.hasTaper ? base.taper : 0.0;
         if (parameters.reverse) {
@@ -1378,7 +1378,7 @@ ForgeBody forgeThread(const ForgeBody &baseBody, const ThreadParameters &paramet
                      : (parameters.standard == 6 || parameters.standard == 7) ? 0.5 * pitch
                      : (info.internal ? 0.54127 : 0.61343) * pitch;
         depth = std::min(depth, 0.45 * info.diameter);
-        if (!(depth > 1.0e-7)) throw std::domain_error("profondita' del filetto nulla");
+        if (!(depth > linearResolution())) throw std::domain_error("profondita' del filetto nulla");
 
         // Per i filetti interni il tagliente oltrepassa le estremita', cosi'
         // non lascia una gola incompleta.  Su un filetto esterno, invece,
@@ -1430,7 +1430,7 @@ ForgeBody forgeSweep(const SketchObject &profileSketch, const std::vector<PathSe
             setError(error, QStringLiteral("Il profilo dello sweep non contiene geometria."));
             return nullptr;
         }
-        const Profile profile = buildProfile(segments, kSketchConnectionTolerance);
+        const Profile profile = buildProfile(segments, sketchConnectionTolerance());
         Frame3 frame;
         double height;
         forgeSketchFrame(profileSketch, 0.0, frame, height);
@@ -1499,7 +1499,7 @@ ForgeBody forgeSweep(const std::vector<PathSegment> &section, const std::vector<
             if (!image.curve) throw std::domain_error("sezione degenere");
             segments.push_back({image.curve,image.range,int(segments.size())});
         }
-        const Profile profile = buildProfile(segments, kSketchConnectionTolerance);
+        const Profile profile = buildProfile(segments, sketchConnectionTolerance());
         const SweepOrientation orientation = mode == 1 ? SweepOrientation::Frenet : mode == 2 ? SweepOrientation::Fixed : SweepOrientation::MinimalTwist;
         if (surface) {
             std::vector<ProfileLoop> loops = profile.chains;
@@ -1562,7 +1562,7 @@ ForgeBody forgeLoft(const QVector<SketchObject> &sketches, const QVector<SketchO
         std::vector<LoftSection> sections;
         int closedCount = 0;
         for (const SketchObject &sketch : sketches) {
-            const Profile profile = buildProfile(forgeSketchSegments(sketch), kSketchConnectionTolerance);
+            const Profile profile = buildProfile(forgeSketchSegments(sketch), sketchConnectionTolerance());
             LoftSection section;
             double height;
             forgeSketchFrame(sketch, 0.0, section.frame, height);
@@ -1583,9 +1583,9 @@ ForgeBody forgeLoft(const QVector<SketchObject> &sketches, const QVector<SketchO
             for (const auto &section : sections) {
                 if (!section.path.empty()) {
                     const auto &a=section.path.front(), &b=section.path.back();
-                    if (distance(a.curve->point(a.range.lo),b.curve->point(b.range.hi)) <= kSketchConnectionTolerance) ++closedCount;
+                    if (distance(a.curve->point(a.range.lo),b.curve->point(b.range.hi)) <= sketchConnectionTolerance()) ++closedCount;
                 } else if (!section.loop.segments.empty()
-                    && distance(section.loop.segments.front().start(),section.loop.segments.back().end()) <= kSketchConnectionTolerance) ++closedCount;
+                    && distance(section.loop.segments.front().start(),section.loop.segments.back().end()) <= sketchConnectionTolerance()) ++closedCount;
             }
         }
         const int pointCount=int(std::count_if(sections.begin(),sections.end(),[](const auto &s){return bool(s.point);}));
@@ -1621,7 +1621,7 @@ ForgeBody forgeLoft(const QVector<SketchObject> &sketches, const QVector<SketchO
                 return nullptr;
             }
             if (distance(path.front().curve->point(path.front().range.lo), path.back().curve->point(path.back().range.hi))
-                <= kSketchConnectionTolerance) {
+                <= sketchConnectionTolerance()) {
                 setError(error, QStringLiteral("La curva guida \"%1\" deve essere una catena aperta.").arg(guide.name));
                 return nullptr;
             }
@@ -1693,7 +1693,7 @@ ForgeBody forgeReferencedLoft(const ExtrusionObject &d, int owner, const QVector
     for (const auto &ref : d.loftEdgeGuides) {
         std::vector<PathSegment> path; QString reason;
         if (!geometryRefPath(ref,owner,sketches,bodies,path,&reason)) { setError(error,QStringLiteral("Guida: %1.").arg(reason)); return nullptr; }
-        if (path.empty() || distance(path.front().curve->point(path.front().range.lo),path.back().curve->point(path.back().range.hi))<=kSketchConnectionTolerance) {
+        if (path.empty() || distance(path.front().curve->point(path.front().range.lo),path.back().curve->point(path.back().range.hi))<=sketchConnectionTolerance()) {
             setError(error,QStringLiteral("Una guida da bordo deve essere una catena aperta.")); return nullptr;
         }
         edgeGuides.push_back(std::move(path));
@@ -1760,7 +1760,7 @@ ForgeBody forgeReferencedLoft(const ExtrusionObject &d, int owner, const QVector
         for (const auto &guide : guides) {
             std::vector<PathSegment> path; QString reason;
             if (!sketchPath(guide, path, &reason)) { setError(error,reason); return nullptr; }
-            if (path.empty() || distance(path.front().curve->point(path.front().range.lo),path.back().curve->point(path.back().range.hi)) <= kSketchConnectionTolerance) {
+            if (path.empty() || distance(path.front().curve->point(path.front().range.lo),path.back().curve->point(path.back().range.hi)) <= sketchConnectionTolerance()) {
                 setError(error,QStringLiteral("Ogni guida deve essere una catena aperta.")); return nullptr;
             }
             all.push_back(std::move(path));
@@ -1827,7 +1827,7 @@ ForgeBody forgeBoundarySurface(const std::vector<PathSegment> &segments, QString
         return nullptr;
     }
     try {
-        return declaredConstruction([&](FaceAliases &labels){return boundarySheet(segments,1e-9,&labels);});
+        return declaredConstruction([&](FaceAliases &labels){return boundarySheet(segments,scaledAccuracy(1e-9),&labels);});
     } catch (const std::exception &failure) {
         setError(error, QStringLiteral("Superficie tra curve non riuscita: %1").arg(QString::fromUtf8(failure.what())));
         return nullptr;
@@ -1920,7 +1920,7 @@ QVector<EdgePoint> forgeFillContactFaces(const std::vector<PathSegment> &boundar
 ForgeBody forgePlanarSketch(const SketchObject &sketch, QString *error) {
     try {
         const std::vector<ProfileSegment> segments = forgeSketchSegments(sketch);
-        const Profile profile = buildProfile(segments, kSketchConnectionTolerance);
+        const Profile profile = buildProfile(segments, sketchConnectionTolerance());
         if (profile.regions.empty()) {
             setError(error, QStringLiteral("Lo schizzo \"%1\" non ha contorni chiusi.").arg(sketch.name));
             return nullptr;
@@ -1950,7 +1950,7 @@ ForgeBody forgePlanarCurves(const std::vector<PathSegment> &segments, QString *e
             box.add(ends[ends.size() - 2]);
             box.add(ends.back());
         }
-        const double tolerance = kSketchConnectionTolerance * std::max(1.0, box.diagonal());
+        const double tolerance = sketchConnectionTolerance() * std::max(1.0, box.diagonal());
         std::vector<int> parent(segments.size());
         for (size_t i = 0; i < parent.size(); ++i) parent[i] = int(i);
         const std::function<int(int)> root = [&](int i) { return parent[i] == i ? i : parent[i] = root(parent[i]); };

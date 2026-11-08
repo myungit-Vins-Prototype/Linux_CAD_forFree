@@ -1,9 +1,34 @@
 #include "cad_fillet_paths.h"
 #include "cad_topology_ref.h"
+#include "fk_blend_contour.h"
+#include <set>
 #include "fk_surface_algo.h"
 #include <algorithm>
 #include <map>
 namespace ForgeCad {
+QVector<EdgePoint> filletCavityContours(const ForgeBody &body, const QVector<EdgePoint> &references, QString *error) {
+    if (error) error->clear();
+    QVector<EdgePoint> result;
+    if (!body || references.isEmpty()) {
+        if (error) *error = QStringLiteral("Seleziona un bordo del contorno dell’incavo.");
+        return result;
+    }
+    std::set<int> selected;
+    for (const auto &reference : references) {
+        const auto edge = reference.role == kEdgePointEdge
+            ? resolveEdgeReference(*body, reference, 1e-4) : Kernel::EdgeId();
+        const auto contour = Kernel::blendCavityContour(*body, edge);
+        if (contour.empty()) {
+            if (error) *error = QStringLiteral("Nessun contorno chiuso univoco: seleziona i bordi manualmente.");
+            return {};
+        }
+        for (auto e : contour) if (selected.insert(e.index).second) {
+            const auto &data = body->edge(e);
+            result.append(edgeReference(*body, e, data.curve->point(0.5*(data.range.lo + data.range.hi))));
+        }
+    }
+    return result;
+}
 QVector<FilletPathGeometry>
 filletPathGeometry(const ForgeBody &body, const QVector<EdgePoint> &references,
                    QString *error) {

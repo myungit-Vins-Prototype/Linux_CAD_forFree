@@ -9,7 +9,7 @@ Frame3::Frame3() : x_(1.0, 0.0, 0.0), y_(0.0, 1.0, 0.0), z_(0.0, 0.0, 1.0) {}
 Frame3::Frame3(const Vec3 &origin, const Vec3 &zDirection, const Vec3 &xReference) : origin_(origin) {
     z_ = normalized(zDirection);
     const Vec3 projected = xReference - dot(xReference, z_) * z_;
-    if (norm(projected) <= kAngularResolution * norm(xReference))
+    if (norm(projected) <= angularResolution() * norm(xReference))
         throw std::invalid_argument("Frame3: direzione X parallela a Z");
     x_ = normalized(projected);
     x_ = normalized(x_ - dot(x_, z_) * z_);  // seconda passata: ortogonalita' ~1e-16

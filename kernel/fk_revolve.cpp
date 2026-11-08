@@ -24,7 +24,7 @@ const Curve<2> &basisOf(const Curve<2> &curve) {
 }
 
 ProfileRegion regionOf(const std::vector<ProfileSegment> &segments) {
-    const Profile profile = buildProfile(segments, kLinearResolution);
+    const Profile profile = buildProfile(segments, linearResolution());
     if (profile.regions.size() != 1) throw std::invalid_argument("profilo di rivoluzione non valido");
     return profile.regions.front();
 }
@@ -53,7 +53,7 @@ void revolveLoops(const Frame3 &frame, const std::vector<ProfileLoop> &loops, bo
         // con la medesima sorgente, senza ricampionare o alterare il profilo.
         const bool split = closed && loop.segments.size() == 1
             && !basisOf(*loop.segments.front().curve).isPeriodic()
-            && distance(loop.segments.front().start(), loop.segments.front().end()) <= kLinearResolution;
+            && distance(loop.segments.front().start(), loop.segments.front().end()) <= linearResolution();
         if (split) {
             const ProfileSegment original = loop.segments.front();
             const double middle = 0.5 * (original.range.lo + original.range.hi);
@@ -70,7 +70,7 @@ void revolveLoops(const Frame3 &frame, const std::vector<ProfileLoop> &loops, bo
         // Edge circolare di ogni vertice fuori dall'asse (-1: sull'asse). Un
         // loop di una sola curva chiusa (cerchio: toro intero) non ha vertici.
         std::vector<int> circle(points, -1);
-        const bool singleClosedCurve = closed && n == 1 && distance(loop.segments[0].start(), loop.segments[0].end()) <= kLinearResolution;
+        const bool singleClosedCurve = closed && n == 1 && distance(loop.segments[0].start(), loop.segments[0].end()) <= linearResolution();
         for (std::size_t k = 0; k < points && !singleClosedCurve; ++k) {
             const Vec2 p = pointAt(k);
             if (p.x() < -tolerance) throw std::invalid_argument("makeRevolution: il profilo attraversa l'asse");
@@ -83,7 +83,7 @@ void revolveLoops(const Frame3 &frame, const std::vector<ProfileLoop> &loops, bo
             // Vertici che si toccano solo entro la tolleranza dello schizzo.
             if (closed || (k > 0 && k < n)) {
                 const double gap = distance(loop.segments[(k + n - 1) % n].end(), p);
-                if (gap > kLinearResolution) edge.tolerance = 1.01 * gap;
+                if (gap > linearResolution()) edge.tolerance = 1.01 * gap;
             }
             circle[k] = int(edges.size());
             edges.push_back(edge);
@@ -148,8 +148,8 @@ void revolveLoops(const Frame3 &frame, const std::vector<ProfileLoop> &loops, bo
 // Il corpo del giro completo ridotto all'angolo `angle`: intersezione con il
 // cuneo dei due semipiani per l'asse.
 Body cutToAngle(Body full, const Frame3 &frame, double angle, RevolutionProvenance *provenance) {
-    if (!(std::fabs(angle) < kTwoPi - kAngularResolution)) return full;
-    if (std::fabs(angle) <= kAngularResolution) throw std::invalid_argument("makeRevolution: angolo nullo");
+    if (!(std::fabs(angle) < kTwoPi - angularResolution())) return full;
+    if (std::fabs(angle) <= angularResolution()) throw std::invalid_argument("makeRevolution: angolo nullo");
     // Estensione del corpo lungo l'asse e distanza massima dall'asse, dagli
     // angoli del suo box.
     Box box;
@@ -264,7 +264,7 @@ Body makeRevolution(const Frame3 &frame, const ProfileRegion &region) {
 
 Body makeSphere(const Frame3 &frame, double radius, FaceAliases *labels) {
     if(labels)labels->clear();
-    if (!(radius > kLinearResolution)) throw std::invalid_argument("makeSphere: raggio non valido");
+    if (!(radius > linearResolution())) throw std::invalid_argument("makeSphere: raggio non valido");
     auto arc = std::make_shared<Circle<2>>(makeCircle(Vec2(0.0, 0.0), radius));
     Body result=makeRevolution(frame,regionOf({{arc,{-kHalfPi,kHalfPi}},line2(Vec2(0.0,radius),Vec2(0.0,-radius))}));
     if(labels)*labels={{"sphere"}};
@@ -273,11 +273,11 @@ Body makeSphere(const Frame3 &frame, double radius, FaceAliases *labels) {
 
 Body makeCone(const Frame3 &frame, double baseRadius, double topRadius, double height, FaceAliases *labels) {
     if(labels)labels->clear();
-    if (!(height > kLinearResolution) || baseRadius < 0.0 || topRadius < 0.0 || std::max(baseRadius, topRadius) <= kLinearResolution)
+    if (!(height > linearResolution()) || baseRadius < 0.0 || topRadius < 0.0 || std::max(baseRadius, topRadius) <= linearResolution())
         throw std::invalid_argument("makeCone: dimensioni non valide");
     std::vector<Vec2> points{Vec2(0.0, 0.0)};
-    if (baseRadius > kLinearResolution) points.push_back(Vec2(baseRadius, 0.0));
-    if (topRadius > kLinearResolution) points.push_back(Vec2(topRadius, height));
+    if (baseRadius > linearResolution()) points.push_back(Vec2(baseRadius, 0.0));
+    if (topRadius > linearResolution()) points.push_back(Vec2(topRadius, height));
     points.push_back(Vec2(0.0, height));
     std::vector<ProfileSegment> segments;
     for (std::size_t i = 0; i < points.size(); ++i) segments.push_back(line2(points[i], points[(i + 1) % points.size()]));
@@ -295,7 +295,7 @@ Body makeCone(const Frame3 &frame, double baseRadius, double topRadius, double h
 
 Body makeTorus(const Frame3 &frame, double majorRadius, double minorRadius, FaceAliases *labels) {
     if(labels)labels->clear();
-    if (!(minorRadius > kLinearResolution) || !(majorRadius > minorRadius + kLinearResolution))
+    if (!(minorRadius > linearResolution()) || !(majorRadius > minorRadius + linearResolution()))
         throw std::invalid_argument("makeTorus: il raggio minore deve essere positivo e minore del maggiore");
     auto circle = std::make_shared<Circle<2>>(makeCircle(Vec2(majorRadius, 0.0), minorRadius));
     Body result=makeRevolution(frame,regionOf({{circle,{0.0,kTwoPi}}}));

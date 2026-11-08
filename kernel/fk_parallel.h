@@ -8,6 +8,7 @@
 #include <mutex>
 
 #include "fk_cancel.h"
+#include "fk_precision.h"
 #include <thread>
 #include <vector>
 
@@ -41,11 +42,13 @@ void parallelFor(std::size_t count, unsigned threads, const Task &task) {
     }
     std::atomic<std::size_t> next{0};
     const auto cancellation = currentCancellation;
+    const auto accuracy = currentCalculationAccuracy;
     std::atomic<bool> stopped{false};
     std::mutex failureMutex;
     std::exception_ptr failure;
     const auto work = [&] {
         CancellationScope scope(cancellation);
+        PrecisionScope precision(accuracy);
         ++parallelDepth;
         try {
             for (std::size_t i = next++; i < count && !stopped.load(std::memory_order_relaxed); i = next++) {

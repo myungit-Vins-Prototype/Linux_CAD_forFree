@@ -28,7 +28,7 @@ namespace {
 
 using Model = detail::BlendModel;
 
-constexpr double kFitTolerance = 1e-9;  // scarto delle curve di controllo dalle curve vere
+double kFitTolerance() { return scaledAccuracy(1e-9); }  // scarto delle curve di controllo dalle curve vere
 constexpr double kParallel = 1e-9;
 
 // Normale del piano (uscente dalla faccia), se la faccia e' piana.
@@ -151,7 +151,7 @@ public:
                 if (!(dot(exact.derivative[2], exact.derivative[1]) > 0.0))
                     throw std::domain_error("blendEdges: raggio maggiore del raggio di curvatura del bordo");
             }
-            if (error > kFitTolerance && h > 1e-9 * span.length()) {
+            if (error > kFitTolerance() && h > 1e-9 * span.length()) {
                 const double m = 0.5 * (a + b);
                 pending.push_back({m, b});
                 pending.push_back({a, m});
@@ -247,7 +247,7 @@ bool straightAlong(const Model &model, int e, const Vec3 &direction) {
     const Body::BuildEdge &edge = model.edges[std::size_t(e)];
     const Vec3 a = edge.curve->point(edge.range.lo), b = edge.curve->point(edge.range.hi), m = edge.curve->point(0.5 * (edge.range.lo + edge.range.hi));
     const double length = distance(a, b);
-    return length > kLinearResolution && norm(cross((b - a) / length, direction)) <= 1e-9 && norm(cross(m - a, (b - a) / length)) <= 1e-9 * length;
+    return length > linearResolution() && norm(cross((b - a) / length, direction)) <= 1e-9 && norm(cross(m - a, (b - a) / length)) <= 1e-9 * length;
 }
 
 }
@@ -279,7 +279,7 @@ std::vector<EdgeId> planarChainRuns(const Body &body, const std::vector<EdgeId> 
 Body blendPlanarChains(const Body &input, const std::vector<EdgeId> &selected, double size, bool chamfer, const std::vector<ChamferSides> *sides,
                        FaceId preferredPlane, BodyHistory *history) {
     if (history) *history = BodyHistory();
-    if (!(size > kLinearResolution)) throw std::domain_error("blendEdges: raggio o distanza non validi");
+    if (!(size > linearResolution())) throw std::domain_error("blendEdges: raggio o distanza non validi");
     Body body = input;
     std::map<int, int> edgeSources;
     std::vector<EdgeId> edges = selected;

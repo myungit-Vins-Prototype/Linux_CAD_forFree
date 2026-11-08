@@ -1,3 +1,4 @@
+#include "fk_precision.h"
 #ifndef FORGECAD_FK_PLANAR_H
 #define FORGECAD_FK_PLANAR_H
 
@@ -32,7 +33,7 @@ namespace ForgeCad::Kernel {
 //    loop esterno e' antiorario attorno a lei, i fori orari.
 // std::domain_error se un loop non si chiude, se le curve non stanno in un
 // piano o se un loop e' degenere (area nulla).
-Body planarSheet(const std::vector<std::vector<PathSegment>> &loops, double tolerance = 1e-6, FaceAliases *labels = nullptr);
+Body planarSheet(const std::vector<std::vector<PathSegment>> &loops, double tolerance = scaledAccuracy(1e-6), FaceAliases *labels = nullptr);
 
 // Lamina piana delle regioni di un profilo (piano XY di `frame`): una faccia
 // per regione, come la base di un'estrusione ma con la normale lungo +Z del

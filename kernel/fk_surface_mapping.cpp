@@ -38,7 +38,7 @@ CurvePtr<2> basis2(CurvePtr<2> curve) {
 struct FlatEdge { CurvePtr<3> curve; Interval range; bool reverse = false; };
 FlatEdge lineImage(const Vec3 &a, const Vec3 &b) {
     const double length = distance(a, b);
-    require(length > kLinearResolution, "Sviluppo: bordo degenere o vertice del cono non gestito.");
+    require(length > linearResolution(), "Sviluppo: bordo degenere o vertice del cono non gestito.");
     return {std::make_shared<Line<3>>(a, (b - a) / length), {0, length}, false};
 }
 CurvePtr<3> affineImage(const CurvePtr<2> &input, const Interval &range, const Frame3 &frame, double scaleX) {
@@ -87,8 +87,8 @@ SurfacePtr fitMappedSurface(const Surface &source, Interval uw, Interval vw,
         const auto insert=[](std::vector<double> &grid,double value){if(value>grid.front()&&value<grid.back()){grid.push_back(value);std::sort(grid.begin(),grid.end());grid.erase(std::unique(grid.begin(),grid.end()),grid.end());}};
         for(const auto &cut:cuts) {
             const auto &f=cut.frame();const double a=dot(f.zDir(),d[2]),b=dot(f.zDir(),d[1]),c=dot(f.zDir(),d[0]-f.origin());
-            if(std::fabs(b)<=kAngularResolution&&std::fabs(a)>kAngularResolution)insert(us,-c/a);
-            if(std::fabs(a)<=kAngularResolution&&std::fabs(b)>kAngularResolution)insert(vs,-c/b);
+            if(std::fabs(b)<=angularResolution()&&std::fabs(a)>angularResolution())insert(us,-c/a);
+            if(std::fabs(a)<=angularResolution()&&std::fabs(b)>angularResolution())insert(vs,-c/b);
         }
     }
     return detail::fitMappingSurface(std::move(us),std::move(vs),
@@ -122,8 +122,8 @@ Body mapBody(const Body &source,const std::function<Vec3(const Vec3 &)> &map,dou
     std::unique_ptr<SolidClassifier> material;
     std::vector<std::pair<SurfacePtr,FaceClassifier>> sheetFaces;
     if(carrierMap) {
-        if(!source.isSheet())material=std::make_unique<SolidClassifier>(source,kLinearResolution,true);
-        else for(auto id:source.faces())sheetFaces.emplace_back(source.face(id).surface,FaceClassifier(source,id,kLinearResolution));
+        if(!source.isSheet())material=std::make_unique<SolidClassifier>(source,linearResolution(),true);
+        else for(auto id:source.faces())sheetFaces.emplace_back(source.face(id).surface,FaceClassifier(source,id,linearResolution()));
     }
     const double h=1e-5*std::max(1.,box.diagonal());
     for(int i=0;i<3;++i)for(int j=0;j<3;++j)for(int k=0;k<3;++k) {
@@ -132,7 +132,7 @@ Body mapBody(const Body &source,const std::function<Vec3(const Vec3 &)> &map,dou
         // poligoni, fori). Non devono imporre un appoggio inesistente.
         if(material&&material->classify(p)==PointLocation::Outside)continue;
         if(!sheetFaces.empty()) {
-            bool on=false;for(const auto &f:sheetFaces)if(projectPoint(*f.first,p).distance<=kLinearResolution&&f.second.classify(p)!=PointLocation::Outside){on=true;break;}
+            bool on=false;for(const auto &f:sheetFaces)if(projectPoint(*f.first,p).distance<=linearResolution()&&f.second.classify(p)!=PointLocation::Outside){on=true;break;}
             if(!on)continue;
         }
         const auto at=map(p);
@@ -141,9 +141,9 @@ Body mapBody(const Body &source,const std::function<Vec3(const Vec3 &)> &map,dou
     }
     std::vector<Vec3> vertices;std::vector<Body::BuildEdge> edges;std::vector<Body::BuildFace> faces;
     // Il fit deve rispettare anche la connessione edge/superficie del B-rep,
-    // che usa kLinearResolution quando l'edge non e' tollerante. Il budget
+    // che usa linearResolution() quando l'edge non e' tollerante. Il budget
     // dell'operazione non autorizza un edge lontano dalle facce adiacenti.
-    const double connectionBudget=std::min(tolerance,kLinearResolution);
+    const double connectionBudget=std::min(tolerance,linearResolution());
     const double fitBudget=.2*connectionBudget;
     std::map<int,int> vertexOf,edgeOf;double worst=0;
     for(auto v:source.vertices()){vertexOf[v.index]=int(vertices.size());vertices.push_back(map(source.vertex(v).point));}
@@ -154,7 +154,7 @@ Body mapBody(const Body &source,const std::function<Vec3(const Vec3 &)> &map,dou
         const int a=vertexOf.at(source.edgeStart(id).index),b=vertexOf.at(source.edgeEnd(id).index);
         const double gap=std::max(distance(curve->point(edge.range.lo),vertices[a]),distance(curve->point(edge.range.hi),vertices[b]));
         require(gap<=fitBudget,"Deformazione: bordo sorgente non collegato ai vertici.");
-        edges.push_back({a,b,curve,edge.range,gap>kLinearResolution?gap*1.01:0.});
+        edges.push_back({a,b,curve,edge.range,gap>linearResolution()?gap*1.01:0.});
     }
     for(auto id:source.faces()) {
         const auto &face=source.face(id);const auto window=faceWindow(source,id);
@@ -221,11 +221,11 @@ Body unrollFace(const Body &source, FaceId id, const Frame3 &plane, BodyHistory 
             // Isometria esatta della curva di trim gia' rappresentata in UV.
             // Nessun nuovo fit: si trasporta il budget del B-rep sorgente,
             // incluse le connessioni tolleranti ai vertici del taglio.
-            const double budget=std::max({kLinearResolution,edge.tolerance,
+            const double budget=std::max({linearResolution(),edge.tolerance,
                 source.vertex(source.edgeStart(fin.edge)).tolerance,source.vertex(source.edgeEnd(fin.edge)).tolerance})+fin.pcurveTolerance;
             uses.push_back({fin.pcurve,edge.range,fin.sense,fin.edge.index,budget});
             const Vec2 a=fin.pcurve->point(edge.range.lo),b=fin.pcurve->point(edge.range.hi);
-            winding=winding||(type!=SurfaceType::Plane&&distance(edge.curve->point(edge.range.lo),edge.curve->point(edge.range.hi))<=kLinearResolution&&std::fabs(b.x()-a.x())>kPi);
+            winding=winding||(type!=SurfaceType::Plane&&distance(edge.curve->point(edge.range.lo),edge.curve->point(edge.range.hi))<=linearResolution()&&std::fabs(b.x()-a.x())>kPi);
         }
         loops.push_back(std::move(uses));
     }
@@ -261,7 +261,7 @@ Body unrollFace(const Body &source, FaceId id, const Frame3 &plane, BodyHistory 
             else {
                 const auto pc=basis2(use.curve);require(pc->type()==CurveType::Line,"Sviluppo conico esatto: scegliere contorni isoparametrici.");
                 const Vec2 a=pc->point(use.range.lo),b=pc->point(use.range.hi);
-                const auto image=[&](Vec2 uv){const double r=reference/sine+uv.y(),angle=sine*uv.x();require(r*sine>kLinearResolution,"Sviluppo: il contorno attraversa il vertice del cono.");return plane.toGlobal(Vec3(r*std::cos(angle),-r*std::sin(angle),0));};
+                const auto image=[&](Vec2 uv){const double r=reference/sine+uv.y(),angle=sine*uv.x();require(r*sine>linearResolution(),"Sviluppo: il contorno attraversa il vertice del cono.");return plane.toGlobal(Vec3(r*std::cos(angle),-r*std::sin(angle),0));};
                 // Solo rumore entro gli arrotondamenti delle inversioni UV;
                 // il criterio dipende dall'intero intervallo, non dalla pendenza.
                 const double roundU=16*kMachineEpsilon*std::max({1.,std::fabs(a.x()),std::fabs(b.x())});
@@ -270,7 +270,7 @@ Body unrollFace(const Body &source, FaceId id, const Frame3 &plane, BodyHistory 
                 else {
                     require(std::fabs(a.y()-b.y())<=roundV,"Sviluppo conico esatto: bordo obliquo non isoparametrico.");
                     const double r=reference/sine+a.y(),sign=r>0?1.:-1.;
-                    require(r*sine>kLinearResolution,"Sviluppo: bordo sul vertice del cono.");
+                    require(r*sine>linearResolution(),"Sviluppo: bordo sul vertice del cono.");
                     mapped.curve=std::make_shared<Circle<3>>(plane.origin(),sign*plane.xDir(),-sign*plane.yDir(),std::fabs(r));
                     const double lo=sine*a.x(),hi=sine*b.x();mapped.range={std::min(lo,hi),std::max(lo,hi)};mapped.reverse=hi<lo;
                 }
@@ -356,7 +356,7 @@ static void withFaceMapping(const std::vector<SurfaceTargetFace> &targets,const 
     require(isFinite(options.anchor)&&isFinite(options.shift)&&std::isfinite(options.angle)&&
             std::isfinite(options.normalOffset)&&isFinite(options.sourcePlane.origin()),
             "Deformazione: parametri di appoggio non finiti.");
-    const double precision=std::min(kLinearResolution,.02*options.tolerance);
+    const double precision=std::min(linearResolution(),.02*options.tolerance);
     struct Patch {
         const Body *body;FaceId face;Box bounds;FaceParameterClassifier classifier;Vec2 seed;
     };

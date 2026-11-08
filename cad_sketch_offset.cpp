@@ -22,7 +22,7 @@ using Kernel::Vec2;
 using Kernel::Vec3;
 
 constexpr double kPi = 3.14159265358979323846;
-constexpr double kFitTolerance = 1e-7;  // scarto delle copie delle curve libere (kLinearResolution)
+constexpr double kFitTolerance = 1e-7;  // scarto delle copie delle curve libere (linearResolution())
 
 Vec2 vec(const QPointF &p) { return Vec2(p.x(), p.y()); }
 QPointF point(const Vec2 &p) { return QPointF(p.x(), p.y()); }
@@ -50,7 +50,7 @@ struct Piece {
     }
     bool isLine() const { return curve->type() == Kernel::CurveType::Line; }
     bool isCircle() const { return curve->type() == Kernel::CurveType::Circle; }
-    bool closed() const { return distance(at(range.lo), at(range.hi)) <= kSketchConnectionTolerance; }
+    bool closed() const { return distance(at(range.lo), at(range.hi)) <= sketchConnectionTolerance(); }
 };
 
 struct Chain {
@@ -98,7 +98,7 @@ std::vector<Piece> piecesOf(const SketchObject &sketch, const QVector<SketchEnti
         if (entity.kind == 0 && entity.index >= 0 && entity.index < sketch.segments.size()) {
             const Vec2 a = vec(sketch.segments.at(entity.index).first), b = vec(sketch.segments.at(entity.index).second);
             const double length = distance(a, b);
-            if (length <= kSketchConnectionTolerance) continue;
+            if (length <= sketchConnectionTolerance()) continue;
             pieces.push_back({entity, std::make_shared<Kernel::Line<2>>(a, (b - a) / length), {0.0, length}});
         } else if (entity.kind == 1 && entity.index >= 0 && entity.index < sketch.curves.size()) {
             const CurveObject &curve = sketch.curves.at(entity.index);
@@ -144,7 +144,7 @@ std::vector<Chain> chainsOf(std::vector<Piece> pieces) {
     }
     const auto degree = [&](const Vec2 &p) {
         int n = 0;
-        for (const Vec2 &e : ends) n += distance(e, p) <= kSketchConnectionTolerance;
+        for (const Vec2 &e : ends) n += distance(e, p) <= sketchConnectionTolerance();
         return n;
     };
     std::vector<bool> used(pieces.size(), false);
@@ -165,8 +165,8 @@ std::vector<Chain> chainsOf(std::vector<Piece> pieces) {
                     bool forward = true;
                     for (std::size_t k = 0; k < pieces.size() && next < 0; ++k) {
                         if (used[k]) continue;
-                        if (distance(pieces[k].at(pieces[k].range.lo), p) <= kSketchConnectionTolerance) next = int(k), forward = direction == 0;
-                        else if (distance(pieces[k].at(pieces[k].range.hi), p) <= kSketchConnectionTolerance) next = int(k), forward = direction != 0;
+                        if (distance(pieces[k].at(pieces[k].range.lo), p) <= sketchConnectionTolerance()) next = int(k), forward = direction == 0;
+                        else if (distance(pieces[k].at(pieces[k].range.hi), p) <= sketchConnectionTolerance()) next = int(k), forward = direction != 0;
                     }
                     if (next < 0) break;
                     used[std::size_t(next)] = true;
@@ -178,7 +178,7 @@ std::vector<Chain> chainsOf(std::vector<Piece> pieces) {
             }
         }
         const Piece &first = chain.pieces.front(), &last = chain.pieces.back();
-        chain.closed = distance(first.at(first.start()), last.at(last.end())) <= kSketchConnectionTolerance;
+        chain.closed = distance(first.at(first.start()), last.at(last.end())) <= sketchConnectionTolerance();
         chains.push_back(std::move(chain));
     }
     return chains;
@@ -219,7 +219,7 @@ OffsetPiece offsetOf(const SketchObject &sketch, const Piece &piece, double s) {
         const auto &circle = static_cast<const Kernel::Circle<2> &>(*piece.curve);
         // Antiorario: la sinistra e' verso il centro.
         const double r = circle.radius() + (piece.forward ? -s : s);
-        if (!(r > kSketchConnectionTolerance))
+        if (!(r > sketchConnectionTolerance()))
             throw std::domain_error("il raggio di un arco o di un cerchio diventa nullo o negativo: distanza troppo grande");
         const Vec2 a = piece.at(piece.start()) - circle.center(), b = piece.at(piece.end()) - circle.center();
         result.center = circle.center();

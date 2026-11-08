@@ -412,7 +412,7 @@ std::vector<CurvePtr<3>> connect(std::vector<CurvePtr<3>> pieces, const std::vec
     for (int i = 0; i < int(endpoints.size()); ++i) {
         cancellationPoint();
         for (int j = i; j < int(endpoints.size()); ++j)
-            if (distance(endpoints[std::size_t(i)],endpoints[std::size_t(j)]) <= kLinearResolution) {
+            if (distance(endpoints[std::size_t(i)],endpoints[std::size_t(j)]) <= linearResolution()) {
                 neighbours[std::size_t(i)].push_back(j);
                 if (j != i) neighbours[std::size_t(j)].push_back(i);
             }
@@ -530,12 +530,12 @@ std::vector<CurvePtr<3>> projectSketchOnSketch(const std::vector<SketchProjectio
     const std::vector<SketchProjectionSpan> &second, const Vec3 &secondNormal, std::vector<std::string> *identities) {
     if(identities)identities->clear();
     if (first.empty() || second.empty()) throw std::domain_error("Scegli almeno una curva in ciascuno dei due schizzi.");
-    if (!std::isfinite(norm(firstNormal)) || !std::isfinite(norm(secondNormal)) || norm(firstNormal) <= kAngularResolution || norm(secondNormal) <= kAngularResolution)
+    if (!std::isfinite(norm(firstNormal)) || !std::isfinite(norm(secondNormal)) || norm(firstNormal) <= angularResolution() || norm(secondNormal) <= angularResolution())
         throw std::domain_error("Normale del piano di schizzo non valida.");
     const Vec3 n1 = normalized(firstNormal), n2 = normalized(secondNormal);
     const Vec3 direction = cross(n1, n2);
     const double sine = norm(direction);
-    if (sine <= kAngularResolution) throw std::domain_error("I due piani sono paralleli: la proiezione schizzo su schizzo non definisce una curva 3D univoca.");
+    if (sine <= angularResolution()) throw std::domain_error("I due piani sono paralleli: la proiezione schizzo su schizzo non definisce una curva 3D univoca.");
     const Vec3 axis = direction / sine;
     const Lifting lift{n1, cross(n2, axis), sine};
     const auto a = branches(first, axis), b = branches(second, axis);
@@ -556,7 +556,7 @@ std::vector<CurvePtr<3>> projectSketchOnSketch(const std::vector<SketchProjectio
         cancellationPoint();
         if (one.constant || two.constant) {
             if (one.constant && two.constant) {
-                if (std::fabs(one.start - two.start) <= kLinearResolution)
+                if (std::fabs(one.start - two.start) <= linearResolution())
                     throw std::domain_error("Le superfici proiettate coincidono su una regione: il risultato non e' una curva univoca.");
                 continue;
             }
@@ -574,7 +574,7 @@ std::vector<CurvePtr<3>> projectSketchOnSketch(const std::vector<SketchProjectio
                     const Vec3 point = one.constant ? lift(p, fixed) : lift(fixed, p);
                     requirePoint(point); poles.push_back(point);
                 }
-                if (distance(poles.front(), poles.back()) > kLinearResolution)
+                if (distance(poles.front(), poles.back()) > linearResolution())
                     append(std::make_shared<BSplineCurve<3>>(part.degree(), part.knots(), poles, part.weights()));
             }
             continue;

@@ -442,6 +442,10 @@ void BooleanBuilder::pairArcs(FaceId fa, FaceId fb, PairResult &out, bool includ
         exact = std::fabs(dot(n, torus.frame().zDir())) <= 1e-14
              && std::fabs(dot(n, torus.frame().origin() - plane.frame().origin())) <= 1e-12 * std::max({1.0, torus.majorRadius(), torus.minorRadius()});
     }
+    if (other == SurfaceType::Revolution) {
+        double angle = 0.0;
+        exact = revolutionMeridianAngle(plane, static_cast<const RevolutionSurface &>(curved), tolerance_, angle);
+    }
     if (!exact) {
         surfaceArcs(fa, fb, out);
         return;
@@ -853,7 +857,7 @@ void BooleanBuilder::coincidentArcs(FaceId fa, FaceId fb, PairResult &out, bool 
                 CurvePtr<2> pcurve;
                 if (identicalParameters) pcurve = by.fin(f).pcurve;
                 if (!pcurve) pcurve = exactPCurve(surface, edge.curve, edge.range, accept);
-                if (!pcurve && !isPlane(surface)) pcurve = fitPCurve(surface, edge.curve, edge.range, std::min(accept, kPCurveTolerance));
+                if (!pcurve && !isPlane(surface)) pcurve = fitPCurve(surface, edge.curve, edge.range, std::min(accept, pCurveTolerance()));
                 bool clippingOnly = false;
                 if (!pcurve && partial) {
                     // Il tratto comune del carrier puo' iniziare fuori dal
@@ -907,7 +911,7 @@ void BooleanBuilder::coincidentArcs(FaceId fa, FaceId fb, PairResult &out, bool 
                     const PointLocation location = knownUV?knownUV->classify(pcurve->point(.5*piece.lo+.5*piece.hi))
                         :classifyPointOnFace(bx,fx,middle,tolerance_);
                     if (location == PointLocation::Outside) continue;
-                    if (clippingOnly && !fitPCurve(surface, edge.curve, piece, std::min(accept, kPCurveTolerance)))
+                    if (clippingOnly && !fitPCurve(surface, edge.curve, piece, std::min(accept, pCurveTolerance())))
                         throw std::logic_error("booleanOperation: arco conservato fuori dalla superficie coincidente");
                     Arc arc;
                     arc.curve = edge.curve;
@@ -1981,7 +1985,7 @@ void BooleanBuilder::collectCuts(std::map<int, std::vector<Piece>> (&cuts)[2]) {
             const auto &pc=image->second.pcurve[side];
             if(image->second.surface[side]!=&surface||!pc||!pc->domain().contains(parameter))continue;
             const auto uv=pc->point(parameter);
-            if(distance(surface.point(uv.x(),uv.y()),point)>kPCurveTolerance)continue;
+            if(distance(surface.point(uv.x(),uv.y()),point)>pCurveTolerance())continue;
             auto &classifier=parameterClassifiers[k][face.index];
             if(!classifier)classifier=std::make_unique<FaceParameterClassifier>(bodies_[k],face,tolerance_);
             return classifier->classify(uv);
@@ -2595,7 +2599,7 @@ Body BooleanBuilder::assemble(const std::vector<std::pair<SubFace, bool>> &kept,
                     index = int(edges.size()) - 1;
                 } else {
                     auto &existing=edges[std::size_t(index)];
-                    const double budget=std::max({kLinearResolution,existing.tolerance,piece.tolerance});
+                    const double budget=std::max({linearResolution(),existing.tolerance,piece.tolerance});
                     if(existing.curve!=piece.curve&&!fitsSurface(existing.curve,existing.range,*face.surface,budget)) {
                         bool compatible=fitsSurface(piece.curve,piece.range,*face.surface,budget);
                         for(const Surface *owner:edgeSurfaces[std::size_t(index)])

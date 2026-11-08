@@ -202,6 +202,8 @@ public:
     int rebuildAllFeatures();
 
     LengthUnit lengthUnit() const;
+    double calculationAccuracy() const;
+    QString setCalculationAccuracy(double accuracy);
     void setLengthUnit(LengthUnit unit);
     void loadDocument(DocumentState state,
                       const std::function<void(int, int, const QString &)> &progress = {});
@@ -1778,6 +1780,7 @@ private:
     BodyDisplay exportMeshPreview_;
     bool exportMeshPreviewQuadrangular_ = false;
     bool exportMeshPreviewLimited_ = false;
+    double calculationAccuracy_ = 1.0e-7;
     LengthUnit lengthUnit_ = LengthUnit::Millimeter;
     struct LoftErrorMark {
         QString label;

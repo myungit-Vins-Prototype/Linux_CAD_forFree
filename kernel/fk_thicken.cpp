@@ -15,6 +15,7 @@
 #include "fk_classify.h"
 #include "fk_exchange.h"
 #include "fk_offset.h"
+#include "fk_open_offset.h"
 #include "fk_pcurve.h"
 #include "fk_parallel.h"
 #include "fk_sew.h"
@@ -203,6 +204,8 @@ Body thickenAlongNormal(const Body &sheet, const std::vector<FreeEdge> &free, do
             const Vec3 p = edge.curve->point(edge.range.lo + edge.range.length() * k / 4.0);
             angle = std::max(angle, std::asin(std::min(1.0, norm(cross(faceNormalAt(sheet, a, p), faceNormalAt(sheet, b, p))))));
         }
+        if (angle > 2.0 * M_PI / 180.0 && detail::canOffsetOpenSheet(sheet,tolerance))
+            return detail::thickenOpenSheet(sheet,s0,s1,std::min(tolerance,linearResolution()),history);
         if (angle > 2.0 * M_PI / 180.0)
             throw std::domain_error("spessore lungo la normale: le facce formano uno spigolo vivo (E" + std::to_string(e.index)
                                     + "); usa lo spessore lungo una direzione o separa le facce");

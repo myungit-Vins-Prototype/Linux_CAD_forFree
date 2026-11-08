@@ -221,7 +221,7 @@ QVector<ForgeBody> forgePatternComponents(const ForgeBody &result, QString *erro
             int owner = -1;
             for (std::size_t j = 0; j < shells.size(); ++j)
                 if (volumes[j] > 0 && (owner < 0 || volumes[j] < volumes[owner])
-                    && SolidClassifier(*pieces[int(j)], kLinearResolution).classify(point) == PointLocation::Inside)
+                    && SolidClassifier(*pieces[int(j)], linearResolution()).classify(point) == PointLocation::Inside)
                     owner = int(j);
             if (owner < 0) throw std::domain_error("shell interna priva di involucro");
             groups[owner].insert(groups[owner].end(), groups[i].begin(), groups[i].end());

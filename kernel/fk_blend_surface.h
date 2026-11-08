@@ -2,6 +2,8 @@
 #define FORGECAD_FK_BLEND_SURFACE_H
 
 #include <vector>
+#include <array>
+#include <optional>
 
 #include "fk_blend.h"
 #include "fk_topology.h"
@@ -53,6 +55,13 @@
 // Le sezioni iniziali e il fitting delle pezze di una catena sono calcolati
 // in parallelo; il montaggio topologico delle facce resta ordinato.
 namespace ForgeCad::Kernel {
+
+namespace detail {
+// Pezza costante fra due tangenze/collassi del ventaglio polare.
+SurfacePtr polarBlendPatch(const Body &body, EdgeId edge, const Interval &range, double radius,
+                           bool convex, const std::array<std::optional<Vec3>,2> &collapsed,
+                           const std::array<std::optional<Vec3>,2> &centers);
+}
 
 // Raccordo (o smusso di distanza `size`) delle catene formate dagli edge.
 // `sides` (facoltativo, uno per edge): smussi asimmetrici, vedi chamferEdges.

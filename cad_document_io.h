@@ -22,6 +22,11 @@
 // Le cache 8/9 aggiornano la semantica di loft/raccordi senza cambiare il
 // formato della definizione: gli snapshot precedenti delle copie di lavoro interessate si
 // rigenerano insieme ai derivati. I check-in conservano la geometria storica.
+// La cache 14 rigenera pose/ripetizioni e cuciture delle copie di lavoro:
+// conserva i trim NURBS singolari e normalizza i bordi collassati della cucitura.
+// La cache 15 rigenera loft guidati e relativi derivati delle copie di lavoro:
+// nodi comuni senza microcampate da arrotondamento e cuciture quasi tangenti stabili.
+// I check-in mantengono i loro snapshot immutabili.
 // Il formato 50 aggiunge identita' del documento, check-in e base della
 // copia di lavoro; la cache geometrica resta 7. Legge i formati precedenti.
 // Il formato 54 conserva anche i nomi topologici degli appoggi degli schizzi
@@ -46,7 +51,7 @@
 namespace ForgeCad {
 
 inline constexpr const char *kDocumentSuffix = "prt";
-inline constexpr quint16 kDocumentFormatVersion = 66;
+inline constexpr quint16 kDocumentFormatVersion = 67;
 
 // Budget in byte, indipendenti dal numero di feature. I chiamanti che devono
 // aprire documenti piu' grandi possono passarne di espliciti agli overload.
@@ -72,6 +77,7 @@ QString encodeDocument(const DocumentState &state, QByteArray &bytes, bool bodie
 // Non usare per salvataggi o pubblicazioni di nuovi documenti.
 // Firma storica 60: rifiuta inversioni G1/G2 che quel formato non rappresenta.
 // Firma storica 61: rifiuta condizioni trasversali alle guide.
+QString encodeDocumentDefinition66ForHash(const DocumentState &state, QByteArray &bytes);
 QString encodeDocumentDefinition65ForHash(const DocumentState &state, QByteArray &bytes);
 QString encodeDocumentDefinition64ForHash(const DocumentState &state, QByteArray &bytes);
 QString encodeDocumentDefinition63ForHash(const DocumentState &state, QByteArray &bytes);

@@ -1468,7 +1468,7 @@ bool CadViewport::segmentEndpointAt(const QPointF &point, QPointF &endpoint) con
 QPointF CadViewport::dragSnapPoint(const QPointF &raw) {
     if (activeSketch_ < 0 || activeSketch_ >= sketches_.size()) return raw;
     const SketchObject &sketch = sketches_.at(activeSketch_);
-    const double tolerance = ForgeCad::kSketchConnectionTolerance;
+    const double tolerance = ForgeCad::sketchConnectionTolerance();
     QVector<SketchSegment> segments;
     for (const SketchSegment &segment : sketch.segments)
         if (pointDistance(segment.first, pointDragPosition_) > tolerance && pointDistance(segment.second, pointDragPosition_) > tolerance)
@@ -1724,7 +1724,7 @@ CadViewport::LineInference CadViewport::inferLinePoint(const QPointF &raw) {
             for (int index = 0; index < sketch.segments.size(); ++index) {
                 const QPointF d = sketch.segments.at(index).second - sketch.segments.at(index).first;
                 const double l = pointLength(d);
-                if (l <= ForgeCad::kSketchConnectionTolerance) continue;
+                if (l <= ForgeCad::sketchConnectionTolerance()) continue;
                 const QPointF u = d / l;
                 if (index == attached) candidates.append({QPointF(-u.y(), u.x()), 3, index});
                 candidates.append({u, 4, index});
@@ -1733,7 +1733,7 @@ CadViewport::LineInference CadViewport::inferLinePoint(const QPointF &raw) {
                 const auto &cache = sketchReferenceCache();
                 for (int index = 0; index < cache.segments.size(); ++index) {
                     const auto &segment = cache.segments[index]; const QPointF d = segment.second - segment.first;
-                    const double l = pointLength(d); if (l <= ForgeCad::kSketchConnectionTolerance) continue;
+                    const double l = pointLength(d); if (l <= ForgeCad::sketchConnectionTolerance()) continue;
                     const QPointF u = d / l;
                     if (distanceToSegment(start, segment.first, segment.second) <= 1e-9)
                         candidates.append({QPointF(-u.y(), u.x()), 3, -2-index});
@@ -1835,7 +1835,7 @@ void CadViewport::recordCoincidences(SketchObject &sketch, int segment) {
 
 void CadViewport::recordPointCoincidences(SketchObject &sketch, const ConstraintRef &here, const QPointF &snappedPoint) {
     const QPointF point = snappedPoint; // append dei riferimenti puo' riallocare segments/curves
-    const double tolerance = ForgeCad::kSketchConnectionTolerance;
+    const double tolerance = ForgeCad::sketchConnectionTolerance();
     if (geometrySnap_) {
         if (!(originSnap_ && pointDistance(point, QPointF()) <= tolerance)) {
             const auto &cache = sketchReferenceCache();
@@ -1928,7 +1928,7 @@ bool CadViewport::threePointArc(const QPointF &start, const QPointF &end, const 
     const QPointF b = end - start, c = through - start;
     const double scale = qMax(pointLength(b), pointLength(c));
     const double cross = b.x() * c.y() - b.y() * c.x();
-    if (scale <= ForgeCad::kSketchConnectionTolerance || std::abs(cross) <= 1e-9 * scale * scale) return false;
+    if (scale <= ForgeCad::sketchConnectionTolerance() || std::abs(cross) <= 1e-9 * scale * scale) return false;
     const double b2 = b.x() * b.x() + b.y() * b.y(), c2 = c.x() * c.x() + c.y() * c.y();
     const QPointF center = start + QPointF(c.y() * b2 - b.y() * c2, b.x() * c2 - c.x() * b2) / (2.0 * cross);
     arc.tool = DrawingTool::Arc;
@@ -1939,7 +1939,7 @@ bool CadViewport::threePointArc(const QPointF &start, const QPointF &end, const 
 bool CadViewport::tangentArc(const QPointF &start, const QPointF &direction, const QPointF &end, CurveObject &arc, int *startPoint ) {
     const QPointF d = end - start, normal(-direction.y(), direction.x());
     const double length = pointLength(d), across = normal.x() * d.x() + normal.y() * d.y();
-    if (length <= ForgeCad::kSketchConnectionTolerance || std::abs(across) <= 1e-9 * length) return false;
+    if (length <= ForgeCad::sketchConnectionTolerance() || std::abs(across) <= 1e-9 * length) return false;
     const QPointF center = start + normal * (length * length / (2.0 * across));
     arc.tool = DrawingTool::Arc;
     arc.controlPoints = across > 0.0 ? QVector<QPointF>{center, start, end} : QVector<QPointF>{center, end, start};
@@ -1951,7 +1951,7 @@ QVector<CadViewport::TangentStart> CadViewport::tangentStartsAt(const QPointF &p
     QVector<TangentStart> result;
     if (activeSketch_ < 0 || activeSketch_ >= sketches_.size()) return result;
     const SketchObject &sketch = sketches_.at(activeSketch_);
-    const double tolerance = ForgeCad::kSketchConnectionTolerance;
+    const double tolerance = ForgeCad::sketchConnectionTolerance();
     for (int index = 0; index < sketch.segments.size(); ++index) {
         const SketchSegment &s = sketch.segments.at(index);
         const double length = pointDistance(s.first, s.second);
@@ -2032,7 +2032,7 @@ bool CadViewport::previewCurve(CurveObject &curve) const {
     case DrawingTool::Slot:
         if(curve.controlPoints.size()==1) {
             curve.tool=DrawingTool::Line;curve.controlPoints.append(cursor);curve.samples=curve.controlPoints;
-            return pointDistance(curve.samples[0],cursor)>ForgeCad::kSketchConnectionTolerance;
+            return pointDistance(curve.samples[0],cursor)>ForgeCad::sketchConnectionTolerance();
         }
         if(curve.controlPoints.size()!=2)return false;
         curve.controlPoints.append(cursor);break;
@@ -2050,7 +2050,7 @@ bool CadViewport::previewCurve(CurveObject &curve) const {
         break;
     case DrawingTool::Spline:
     case DrawingTool::Nurbs:
-        if (pointDistance(curve.controlPoints.last(), cursor) > ForgeCad::kSketchConnectionTolerance) curve.controlPoints.append(cursor);
+        if (pointDistance(curve.controlPoints.last(), cursor) > ForgeCad::sketchConnectionTolerance()) curve.controlPoints.append(cursor);
         if (curve.tool == DrawingTool::Spline) {
             ForgeCad::initializeTangentHandles(curve);
             ForgeCad::shapeSpline(curve, splineShapeOptions_);
@@ -2067,7 +2067,7 @@ bool CadViewport::previewCurve(CurveObject &curve) const {
             curve.tool = DrawingTool::Line;
             curve.controlPoints = {first, curve.controlPoints.size() == 2 ? curve.controlPoints.at(1) : cursor};
             curve.samples = curve.controlPoints;
-            return pointDistance(curve.samples.at(0), curve.samples.at(1)) > ForgeCad::kSketchConnectionTolerance;
+            return pointDistance(curve.samples.at(0), curve.samples.at(1)) > ForgeCad::sketchConnectionTolerance();
         }
         break;
     }
@@ -2272,7 +2272,7 @@ QString CadViewport::editCurveDimension(int index) {
         if (length <= 0.0) continue;
         const QPointF target = newCenter + direction * (newRadius / length);
         // Se il punto non e' stato trascinato dal centro, si parte dalla sua posizione.
-        const QPointF from = pointDistance(current, moved) <= ForgeCad::kSketchConnectionTolerance ? moved : current;
+        const QPointF from = pointDistance(current, moved) <= ForgeCad::sketchConnectionTolerance() ? moved : current;
         moveSketchPoint(sketch, -1, from, target - from, newCenter);
         sketch.curves[index].controlPoints[k] = target;
     }
@@ -2324,7 +2324,7 @@ bool CadViewport::solveActiveDrag(const QVector<ForgeCad::PointTarget> &targets,
 
 QVector<ForgeCad::PointTarget> CadViewport::targetsAt(const SketchObject &sketch, const QPointF &position) {
     QVector<ForgeCad::PointTarget> targets;
-    const double tolerance = ForgeCad::kSketchConnectionTolerance;
+    const double tolerance = ForgeCad::sketchConnectionTolerance();
     for (int i = 0; i < sketch.segments.size(); ++i) {
         if (pointDistance(sketch.segments.at(i).first, position) <= tolerance) targets.append({{0, i, 0}, position});
         if (pointDistance(sketch.segments.at(i).second, position) <= tolerance) targets.append({{0, i, 1}, position});
@@ -2676,7 +2676,7 @@ void CadViewport::moveSketchPoint(SketchObject &sketch,int edited,const QPointF 
 }
 
 void CadViewport::moveSketchPoints(SketchObject &sketch, int edited, const QVector<QPointF> &origins, const QPointF &delta, const QPointF &fixed) {
-    const double tolerance = ForgeCad::kSketchConnectionTolerance;
+    const double tolerance = ForgeCad::sketchConnectionTolerance();
     struct Move { QPointF from, delta; };
     QVector<Move> pending;for(const auto &from:origins)pending.append({from,delta});
     QVector<QPointF> done;
@@ -2734,7 +2734,7 @@ QVector<QPointF> CadViewport::curveEditMarkers(const CurveObject &curve,bool hov
 }
 
 bool CadViewport::closedSpline(const CurveObject &curve) {
-    return curve.tool==DrawingTool::Spline&&curve.controlPoints.size()>2&&pointDistance(curve.controlPoints.first(),curve.controlPoints.last())<=ForgeCad::kSketchConnectionTolerance;
+    return curve.tool==DrawingTool::Spline&&curve.controlPoints.size()>2&&pointDistance(curve.controlPoints.first(),curve.controlPoints.last())<=ForgeCad::sketchConnectionTolerance();
 }
 
 void CadViewport::moveSplineHandle(CurveObject &curve,int control,int side,QPointF position) {
@@ -2756,7 +2756,7 @@ void CadViewport::moveSplineHandle(CurveObject &curve,int control,int side,QPoin
 bool CadViewport::visibleSplineHandle(const CurveObject &curve, int control, int side) {
     const int last = int(curve.controlPoints.size()) - 1;
     const bool closed = curve.tool == DrawingTool::Spline && last > 1
-        && pointDistance(curve.controlPoints.first(),curve.controlPoints.last()) <= ForgeCad::kSketchConnectionTolerance;
+        && pointDistance(curve.controlPoints.first(),curve.controlPoints.last()) <= ForgeCad::sketchConnectionTolerance();
     // Alla chiusura partecipano solo l'uscente del primo punto e
     // l'entrante dell'ultimo: le altre due non influenzano la curva.
     return !closed || !((control == 0 && side == 0) || (control == last && side == 1));
@@ -3133,7 +3133,7 @@ void CadViewport::finalizeCurve() {
         for (int k = 0; k <= last; ++k)
             recordPointCoincidences(sketch, {1, index, k}, curve.controlPoints.at(k));
         if (curve.tool == DrawingTool::Spline && last > 1
-            && pointDistance(curve.controlPoints.first(),curve.controlPoints.last()) <= ForgeCad::kSketchConnectionTolerance) {
+            && pointDistance(curve.controlPoints.first(),curve.controlPoints.last()) <= ForgeCad::sketchConnectionTolerance()) {
             SketchConstraint closure;
             closure.type = ConstraintType::Coincident;
             closure.first = {1,index,0};
@@ -3177,7 +3177,7 @@ void CadViewport::finalizeRectangle() {
     hasPendingPoint_ = false;
     if (activeSketch_ < 0 || activeSketch_ >= sketches_.size()) return;
     const QPointF a = centered ? 2.0 * p - q : p;
-    const double tolerance = ForgeCad::kSketchConnectionTolerance;
+    const double tolerance = ForgeCad::sketchConnectionTolerance();
     if (std::abs(q.x() - a.x()) <= tolerance || std::abs(q.y() - a.y()) <= tolerance) {
         update();
         return;

@@ -1,3 +1,4 @@
+#include "fk_precision.h"
 #ifndef FORGECAD_FK_PROJECT_H
 #define FORGECAD_FK_PROJECT_H
 
@@ -19,7 +20,7 @@ namespace ForgeCad::Kernel {
 class BodyHistory;
 
 struct ProjectionOptions {
-    double tolerance = 1e-8;      // scarto massimo delle curve proiettate dalla proiezione vera
+    double tolerance = scaledAccuracy(1e-8);      // scarto massimo delle curve proiettate dalla proiezione vera
     double edgeTolerance = 1e-5;  // un tratto entro questa distanza da un edge del body lo segue
     // Un tratto con gli estremi sul bordo della faccia (entro edgeTolerance) e
     // tutto entro questa distanza dal bordo lo segue anche se non coincide: la
@@ -69,7 +70,7 @@ struct ProjectedChain {
     std::shared_ptr<const BSplineCurve<3>> curve;
     bool closed = false;
 };
-std::vector<ProjectedChain> joinProjectedPieces(const std::vector<ProjectedPiece> &pieces, double tolerance = 1e-6);
+std::vector<ProjectedChain> joinProjectedPieces(const std::vector<ProjectedPiece> &pieces, double tolerance = scaledAccuracy(1e-6));
 
 // Taglio di un body con un profilo piano proiettato (regioni e catene aperte
 // di un profilo nel piano XY di `frame`) lungo `direction`:

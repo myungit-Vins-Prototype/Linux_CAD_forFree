@@ -1,3 +1,4 @@
+#include "fk_precision.h"
 #ifndef FORGECAD_FK_PCURVE_H
 #define FORGECAD_FK_PCURVE_H
 
@@ -26,13 +27,13 @@ namespace ForgeCad::Kernel {
 // `tolerance` o non ha una forma esatta riconosciuta. Sulle superfici
 // periodiche u(range.lo) cade nel dominio di base.
 CurvePtr<2> exactPCurve(const Surface &surface, const CurvePtr<3> &curve, const Interval &range,
-                        double tolerance = kLinearResolution);
+                        double tolerance = linearResolution());
 
 // SP-curve approssimata (B-spline cubica C1) con scarto 3D <= tolerance, o
 // nullptr se non si riesce (curva fuori dalla superficie, passaggio per un
 // polo). `deviation`: scarto massimo misurato.
 CurvePtr<2> fitPCurve(const Surface &surface, const CurvePtr<3> &curve, const Interval &range,
-                      double tolerance = kPCurveTolerance, double *deviation = nullptr);
+                      double tolerance = pCurveTolerance(), double *deviation = nullptr);
 
 // Scarto massimo |S(p(t)) - C(t)| su `samples` + 1 punti per tratto liscio.
 double pcurveDeviation(const Surface &surface, const Curve<3> &curve, const Curve<2> &pcurve, const Interval &range,
@@ -41,7 +42,7 @@ double pcurveDeviation(const Surface &surface, const Curve<3> &curve, const Curv
 // Assegna l'SP-curve alle fin che non l'hanno: esatta se possibile
 // (pcurveTolerance = 0), altrimenti approssimata. Restituisce il numero di
 // fin rimaste senza SP-curve.
-int computePCurves(Body &body, double tolerance = kPCurveTolerance);
+int computePCurves(Body &body, double tolerance = pCurveTolerance());
 
 // Cammini di un loop lungo la linea di un polo della sua faccia (sfera,
 // vertice del cono): dove una fin arriva nel polo con u = `from` e la
@@ -52,7 +53,7 @@ struct LoopPoleWalk {
     double v = 0.0, from = 0.0, to = 0.0;
     std::size_t nextFin = 0;
 };
-std::vector<LoopPoleWalk> loopPoleWalks(const Body &body, LoopId loop, double tolerance = 1e-6);
+std::vector<LoopPoleWalk> loopPoleWalks(const Body &body, LoopId loop, double tolerance = scaledAccuracy(1e-6));
 
 }
 

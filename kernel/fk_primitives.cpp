@@ -20,7 +20,7 @@ double signedArea(const std::vector<Vec2> &polygon) {
 std::vector<Vec2> counterClockwise(std::vector<Vec2> polygon) {
     if (polygon.size() < 3) throw std::invalid_argument("makePrism: servono almeno 3 vertici");
     const double area = signedArea(polygon);
-    if (std::fabs(area) <= kLinearResolution * kLinearResolution) throw std::invalid_argument("makePrism: poligono degenere");
+    if (std::fabs(area) <= linearResolution() * linearResolution()) throw std::invalid_argument("makePrism: poligono degenere");
     if (area < 0.0) std::reverse(polygon.begin(), polygon.end());
     return polygon;
 }
@@ -33,7 +33,7 @@ void assignPolyhedralGeometry(Body &body) {
         if (edge.curve) continue;
         const Vec3 start = body.vertex(body.edgeStart(e)).point, end = body.vertex(body.edgeEnd(e)).point;
         const double length = distance(start, end);
-        if (!(length > kLinearResolution)) throw std::logic_error("assignPolyhedralGeometry: edge di lunghezza nulla");
+        if (!(length > linearResolution())) throw std::logic_error("assignPolyhedralGeometry: edge di lunghezza nulla");
         edge.curve = std::make_shared<Line<3>>(start, end - start);
         edge.range = {0.0, length};
     }
@@ -57,7 +57,7 @@ void assignPolyhedralGeometry(Body &body) {
                 }
             }
         }
-        if (first || !(norm(newell) > kLinearResolution * kLinearResolution))
+        if (first || !(norm(newell) > linearResolution() * linearResolution()))
             throw std::logic_error("assignPolyhedralGeometry: faccia degenere");
         face.surface = std::make_shared<Plane>(Frame3(origin, newell, xDirection));
         face.sense = true;
@@ -72,7 +72,7 @@ ProfileLoop polygonLoop(const std::vector<Vec2> &polygon) {
     for (std::size_t i = 0; i < polygon.size(); ++i) {
         const Vec2 a = polygon[i], b = polygon[(i + 1) % polygon.size()];
         const double length = distance(a, b);
-        if (!(length > kLinearResolution)) throw std::invalid_argument("makePrism: vertici coincidenti");
+        if (!(length > linearResolution())) throw std::invalid_argument("makePrism: vertici coincidenti");
         loop.segments.push_back({std::make_shared<Line<2>>(a, b - a), {0.0, length}});
     }
     return loop;
@@ -91,7 +91,7 @@ Body makePrism(const Frame3 &frame, const std::vector<Vec2> &outerPolygon, const
 
 Body makeBox(const Frame3 &frame, double dx, double dy, double dz, FaceAliases *labels) {
     if(labels)labels->clear();
-    if (!(dx > kLinearResolution && dy > kLinearResolution)) throw std::invalid_argument("makeBox: dimensioni non valide");
+    if (!(dx > linearResolution() && dy > linearResolution())) throw std::invalid_argument("makeBox: dimensioni non valide");
     ExtrusionProvenance origins;
     Body result=makePrism(frame,{Vec2(0,0),Vec2(dx,0),Vec2(dx,dy),Vec2(0,dy)},{},dz,labels?&origins:nullptr);
     if(labels) {
@@ -104,7 +104,7 @@ Body makeBox(const Frame3 &frame, double dx, double dy, double dz, FaceAliases *
 // Un cerchio come unico tratto: il fianco resta senza cucitura.
 Body makeCylinder(const Frame3 &frame, double radius, double height, FaceAliases *labels) {
     if(labels)labels->clear();
-    if (!(radius > kLinearResolution)) throw std::invalid_argument("makeCylinder: raggio non valido");
+    if (!(radius > linearResolution())) throw std::invalid_argument("makeCylinder: raggio non valido");
     ProfileRegion region;
     region.outer.segments.push_back({std::make_shared<Circle<2>>(makeCircle(Vec2(), radius)), {0.0, kTwoPi}});
     ExtrusionProvenance origins;

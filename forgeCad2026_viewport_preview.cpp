@@ -328,6 +328,7 @@ void CadViewport::startPreviewJob() {
     in.definition.curve.reset();
     in.definition.display = {};
     in.quality = tessellationQuality_;
+    in.calculationAccuracy = calculationAccuracy_;
     in.index = preview_.index >= 0 ? preview_.index : int(extrusions_.size());
     in.sketches = sketches_;
     in.bodies.resize(in.index);

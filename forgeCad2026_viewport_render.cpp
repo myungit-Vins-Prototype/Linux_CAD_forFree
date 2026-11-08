@@ -1145,7 +1145,7 @@ void CadViewport::drawSketch() {
             const bool construction = sketch.isConstructionSegment(index);
             const QVector3D first = mapSketchPoint(segment.first, sketch);
             const QVector3D second = mapSketchPoint(segment.second, sketch);
-            if (pointDistance(segment.first, segment.second) <= ForgeCad::kSketchConnectionTolerance && construction) {
+            if (pointDistance(segment.first, segment.second) <= ForgeCad::sketchConnectionTolerance() && construction) {
                 for (const QPointF &arm : {QPointF(markerSize, 0.0), QPointF(0.0, markerSize)}) {
                     const QVector3D a = mapSketchPoint(segment.first - arm, sketch), b = mapSketchPoint(segment.first + arm, sketch);
                     constructionMarkers.push_back(a);

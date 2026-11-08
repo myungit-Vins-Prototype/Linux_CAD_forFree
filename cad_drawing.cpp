@@ -83,10 +83,10 @@ void validateView(const DrawingView &view) {
     const auto &p = view.plane;
     require(isFinite(p.origin()) && isFinite(p.xDir()) && isFinite(p.yDir()) && isFinite(p.zDir()),
             "Piano della vista non finito.");
-    require(std::fabs(norm(p.xDir()) - 1) <= kAngularResolution && std::fabs(norm(p.yDir()) - 1) <= kAngularResolution
-            && std::fabs(norm(p.zDir()) - 1) <= kAngularResolution
-            && distance(cross(p.xDir(), p.yDir()), p.zDir()) <= kAngularResolution
-            && std::fabs(dot(p.xDir(), p.yDir())) <= kAngularResolution, "Assi del piano non ortonormali e destrorsi.");
+    require(std::fabs(norm(p.xDir()) - 1) <= angularResolution() && std::fabs(norm(p.yDir()) - 1) <= angularResolution()
+            && std::fabs(norm(p.zDir()) - 1) <= angularResolution()
+            && distance(cross(p.xDir(), p.yDir()), p.zDir()) <= angularResolution()
+            && std::fabs(dot(p.xDir(), p.yDir())) <= angularResolution(), "Assi del piano non ortonormali e destrorsi.");
 }
 
 void validateDocument(const DrawingDocument &document) {

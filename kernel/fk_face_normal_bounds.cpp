@@ -219,7 +219,7 @@ bool polynomialProjection(const BSplineSurface &surface, const Vec3 &direction, 
             cancellationPoint();
             for (const auto &v : dv) {
                 const double projection = dot(cross(u,v),direction), scale = norm(u)*norm(v);
-                if (!std::isfinite(projection) || !std::isfinite(scale) || projection < -kAngularResolution*scale) return false;
+                if (!std::isfinite(projection) || !std::isfinite(scale) || projection < -angularResolution()*scale) return false;
             }
         }
     }
@@ -244,7 +244,7 @@ bool faceHasNonnegativeNormalProjection(const Body &body, FaceId id, const Vec3 
             // Ogni normale dell'estrusione e' ortogonale alla generatrice,
             // anche per basi razionali/ellittiche, dominio V infinito o
             // SP-curve mancanti: questa identita' non usa i poli della base.
-            if (norm(cross(extrusion.direction(),outward)) <= kAngularResolution) return true;
+            if (norm(cross(extrusion.direction(),outward)) <= angularResolution()) return true;
             if (!polynomialCurve(*extrusion.curve())) return false;
             const auto window = parameterWindow(body,id);
             if (!window.first.isFinite() || !window.second.isFinite()) return false;

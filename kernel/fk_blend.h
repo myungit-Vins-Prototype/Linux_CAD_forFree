@@ -62,7 +62,10 @@ Body blendEdges(const Body &body, const std::vector<EdgeId> &edges, double size,
 
 // Sezione conica razionale: peso centrale rho/(1-rho); rho=0 conserva il
 // cerchio. conicRadius>0 controlla il raggio di curvatura al centro della
-// sezione. Raggi variabili: valori su stazioni equidistanti lungo ogni edge.
+// sezione. Raggi variabili: valori su stazioni equidistanti lungo il percorso.
+// R=0 e' ammesso solo agli estremi di un percorso aperto, con almeno un
+// raggio positivo. La sezione collassa nel vertice originale: piu' raccordi
+// possono terminarvi a zero senza una pezza d'angolo, anche con valenza >4.
 struct BlendProfileSpec {
     double rho = 0.0, conicRadius = 0.0;
     int conicFamily = -1; // -1 automatico, 0 ellisse, 1 parabola, 2 iperbole

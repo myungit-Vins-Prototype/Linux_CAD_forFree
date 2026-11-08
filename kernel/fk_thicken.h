@@ -1,3 +1,4 @@
+#include "fk_precision.h"
 #ifndef FORGECAD_FK_THICKEN_H
 #define FORGECAD_FK_THICKEN_H
 
@@ -33,11 +34,12 @@ struct ThickenOptions {
     // dividono in pezze dove il salto per lo spessore supera 10 volte questo
     // valore: con 1e-7 sono centinaia di pezze (minuti). 0: si provano in
     // ordine 5e-5 e 2e-5 per mm di spessore (almeno 1), poi 1e-5, 1e-6 e
-    // 1e-7 mm, e vale la prima che riesce.
-    double offsetTolerance = 0.0;
+    // 1e-7 mm, e vale la prima che riesce. Con un profilo documento piu'
+    // accurato si richiede invece la sua risoluzione, senza tentativi piu' larghi.
+    double offsetTolerance = currentCalculationAccuracy < kLinearResolution ? linearResolution() : 0.0;
     bool useDirection = false;
     Vec3 direction{0.0, 0.0, 1.0};
-    double tolerance = 1e-6;
+    double tolerance = scaledAccuracy(1e-6);
 };
 
 // `faces`: le facce del body da ispessire (vuoto: tutte); possono essere anche

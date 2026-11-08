@@ -1,3 +1,5 @@
+#include <thread>
+#include <chrono>
 #include <set>
 #include <QThread>
 #include <QEventLoop>
@@ -148,6 +150,37 @@ static QString exampleDocumentPath(const char *name) {
 class ViewportInteractionTest {
 public:
 #include "test_sketch_interaction.h"
+    static void snapCacheRegressions() {
+        using namespace ForgeCad;
+        const auto check = [](bool ok, const char *text) { require(ok, text); };
+    // Una cache riusata deve seguire ogni modifica dei dati esatti, anche
+    // dopo il distacco copy-on-write e dopo l'espulsione degli elementi vecchi.
+    CurveObject converted; converted.tool=DrawingTool::Converted; converted.degree=2;
+    converted.controlPoints={{0,0},{1,2},{2,0}}; converted.knots={0,0,0,1,1,1};
+    const auto first=curveGeometry(converted);
+    check(first.size()==1 && curveGeometry(converted)[0].curve==first[0].curve,"riuso geometria NURBS immutabile");
+    const auto original=converted;
+    converted.controlPoints[1]={1,4};
+    const auto moved=curveGeometry(converted);
+    check(moved[0].curve!=first[0].curve && std::abs(moved[0].curve->point(.5).y()-2)<1e-12
+          && std::abs(first[0].curve->point(.5).y()-1)<1e-12,"modifica poli invalida senza alterare la curva precedente");
+    converted.weights={1,2,1};
+    check(std::abs(curveGeometry(converted)[0].curve->point(.5).y()-8./3)<1e-12,"modifica pesi invalida la cache");
+    converted=original;converted.knots={0,0,0,2,2,2};
+    check(curveGeometry(converted)[0].range.hi==2,"modifica nodi invalida la cache");
+    converted.degree=1;converted.controlPoints={{0,0},{2,0}};converted.knots={0,0,1,1};
+    check(curveGeometry(converted)[0].curve->point(.5).y()==0,"modifica grado invalida la cache");
+    for(int i=0;i<520;++i){auto next=original;next.controlPoints[1]={1,double(i)};curveGeometry(next);}
+    check(std::abs(first[0].curve->point(.5).y()-1)<1e-12,"curva viva dopo espulsione cache");
+
+    CadViewport passive;passive.resize(900,700);passive.sketches_={SketchObject()};passive.activeSketch_=0;passive.sketchMode_=true;
+    QMouseEvent hover(QEvent::MouseMove,QPointF(400,300),QPointF(400,300),Qt::NoButton,Qt::NoButton,Qt::NoModifier);
+    passive.mouseMoveEvent(&hover);
+    check(!passive.sketchReferenceCacheValid_ && passive.lastSnapKind_==SnapKind::None,"hover Seleziona non prepara gli snap esterni");
+    passive.drawingTool_=DrawingTool::Point;passive.mouseMoveEvent(&hover);
+    check(passive.sketchReferenceCacheValid_,"disegno prepara ancora i riferimenti esatti");
+
+    }
 #include "test_sketch_intersections.h"
 #include "test_loft_correspondence.h"
     static void intersectionSnapDrag() {
@@ -2464,6 +2497,93 @@ static void solidTrims() {
         }
         pool->setMaxThreadCount(previousLimit);
     }
+    static void documentPrecisionTests() {
+        using namespace ForgeCad;
+        using namespace ForgeCad::Kernel;
+        PdfWindow first, second;
+        auto &view=*first.viewport_;
+        PrimitiveParameters primitive;
+        require(view.createPrimitive(primitive,QStringLiteral("Base precisione")).isEmpty(), "base precisione");
+        const auto before=view.currentDocument().extrusions[0].forgeBody;
+        require(view.setCalculationAccuracy(1e-9).isEmpty(), "precisione alta e ricalcolo");
+        require(view.calculationAccuracy()==1e-9 && view.extrusions_[0].forgeBody!=before
+                && view.extrusions_[0].error.isEmpty(), "profilo ricalcola i corpi");
+        require(second.viewport_->calculationAccuracy()==kLinearResolution, "profilo isolato per finestra");
+        view.undo(); require(view.calculationAccuracy()==kLinearResolution && view.extrusions_[0].forgeBody==before,"Undo precisione e geometria");
+        view.redo(); require(view.calculationAccuracy()==1e-9,"Redo precisione");
+        QByteArray bytes; auto state=view.currentDocument();
+        require(encodeDocument(state,bytes,true).isEmpty(),"codifica precisione");
+        DocumentState restored; require(decodeDocument(bytes,restored).isEmpty() && restored.calculationAccuracy==1e-9
+            && restored.extrusions[0].forgeBody,"riapertura conserva profilo e geometria");
+        QByteArray standard, legacy;
+        require(!encodeDocumentDefinition66ForHash(state,legacy).isEmpty(),"nessuna perdita del profilo su formato antico");
+        state.calculationAccuracy=kLinearResolution;
+        require(encodeDocumentDefinition66ForHash(state,legacy).isEmpty() && decodeDocument(legacy,restored).isEmpty()
+                && restored.calculationAccuracy==kLinearResolution,"formato66 usa il default storico");
+        auto drawingState=state; drawingState.orientation=AxesOrientation{};
+        drawingState.lengthUnit=LengthUnit::Millimeter; drawingState.version.checkinId={}; drawingState.baseCheckinId={};
+        require(encodeDocumentDefinition66ForHash(drawingState,legacy).isEmpty(),"firma66 della tavola");
+        const auto legacyHash=QCryptographicHash::hash(legacy,QCryptographicHash::Sha256); bool matches=false;
+        require(drawingModelDefinitionMatches(drawingState,legacyHash,matches).isEmpty() && matches,"firma66 delle tavole compatibile");
+        drawingState.calculationAccuracy=1e-9;
+        require(drawingModelDefinitionMatches(drawingState,legacyHash,matches).isEmpty() && !matches,"precisione diversa invalida la vecchia firma");
+        require(encodeDocument(state,standard,false).isEmpty() && standard!=bytes,"profilo incluso nella definizione");
+        const auto valid=bytes;
+        DocumentState small; small.calculationAccuracy=1e-9;
+        ExtrusionObject tiny; tiny.feature=BodyFeature::Primitive;
+        tiny.primitive.kind=PrimitiveKind::Cylinder; tiny.primitive.size[0]=1e-8;
+        {
+            PrecisionScope fine(small.calculationAccuracy);
+            tiny.forgeBody=forgePrimitive(tiny.primitive,&tiny.error);
+        }
+        require(tiny.forgeBody && tiny.error.isEmpty(),"cerchio piu' piccolo del default nel profilo fine");
+        small.extrusions.append(tiny); QByteArray smallBytes;
+        require(encodeDocument(small,smallBytes).isEmpty() && decodeDocument(smallBytes,restored).isEmpty()
+                && restored.extrusions[0].cachedGeometry && restored.extrusions[0].forgeBody,
+                "lettura cache eredita la precisione per costruire cerchi piccoli");
+        require(linearResolution()==kLinearResolution,"lettura non lascia il profilo attivo");
+        for (double invalid : {0.,-1.,1e-11,1e-6,std::numeric_limits<double>::quiet_NaN(),std::numeric_limits<double>::infinity()}) {
+            state.calculationAccuracy=invalid;
+            require(!encodeDocument(state,bytes).isEmpty() && bytes==valid,"profilo invalido rifiutato atomicamente");
+            require(!view.setCalculationAccuracy(invalid).isEmpty() && view.calculationAccuracy()==1e-9,"setter rifiuta profilo invalido");
+        }
+        // Precisione e' dopo le tre UUID nel payload corrente; corrompere solo
+        // quel campo e verificare la destinazione preservata dal decoder.
+        const auto payload=testDocumentUncompress(valid,11,qFromBigEndian<quint32>(valid.constData()+7));
+        QByteArray identity; QDataStream ids(&identity,QIODevice::WriteOnly);
+        ids << view.documentState().version.documentId << view.documentState().version.checkinId << view.documentState().baseCheckinId;
+        const auto at=payload.indexOf(identity)+identity.size();
+        require(at>=identity.size(),"posizione profilo nel payload");
+        auto corrupt=payload; QByteArray nan; QDataStream nanOut(&nan,QIODevice::WriteOnly); nanOut<<std::numeric_limits<double>::quiet_NaN();
+        corrupt.replace(at,8,nan);
+        restored.calculationAccuracy=1e-8;
+        require(!decodeDocument(nativeFixture(corrupt,kDocumentFormatVersion),restored).isEmpty()
+                && restored.calculationAccuracy==1e-8,"decoder rifiuta precisione non finita senza mutazioni");
+        view.setDocumentReadOnly(true);
+        require(!view.setCalculationAccuracy(1e-8).isEmpty() && view.calculationAccuracy()==1e-9,"consultazione protegge la precisione");
+        view.setDocumentReadOnly(false);
+        first.show(); QCoreApplication::processEvents();
+        bool guiDefault=false, workerFine=false;
+        QTimer::singleShot(0,&first,[&]{guiDefault=linearResolution()==kLinearResolution;});
+        view.runWhileResponsive([&]{workerFine=linearResolution()==1e-9;std::this_thread::sleep_for(std::chrono::milliseconds(30));});
+        require(guiDefault && workerFine && linearResolution()==kLinearResolution,"worker riceve il profilo senza contaminare il ciclo GUI");
+        bool dialogChecked=false;
+        QTimer::singleShot(0,&first,[&]{
+            auto *dialog=first.findChild<QDialog*>(QStringLiteral("documentPrecisionDialog"));
+            auto *field=dialog ? dialog->findChild<QDoubleSpinBox*>(QStringLiteral("documentPrecisionAccuracy")) : nullptr;
+            if (field) {
+                dialogChecked=field->value()==1e-9;
+                const auto capture=qEnvironmentVariable("FORGECAD_PRECISION_QA_IMAGE");
+                if (!capture.isEmpty()) dialog->grab().save(capture);
+                field->setValue(1e-8);dialog->accept();
+            }
+        });
+        auto *action=first.findChild<QAction*>(QStringLiteral("documentPrecisionAction"));
+        require(action,"azione precisione nel menu Opzioni"); action->trigger();
+        require(dialogChecked && view.calculationAccuracy()==1e-8,"dialogo applica il profilo");
+        first.documentModified_=false;second.documentModified_=false;
+        first.close();second.close();
+    }
     static void mouseSnapshotRegression(const QString &output = {}) {
         using namespace ForgeCad;
         const QString input = exampleDocumentPath("Mouse.prt");
@@ -2471,6 +2591,51 @@ static void solidTrims() {
         const auto loadError = loadDocumentFile(input, original);
         require(loadError.isEmpty(), qPrintable(QStringLiteral("lettura Mouse cache precedente (%1): %2; configurare FORGECAD_EXAMPLE_DIR")
                                                .arg(input, loadError)));
+        // Questa prova conserva lo snapshot storico, come un check-in: la
+        // migrazione delle copie di lavoro appartiene alle prove di rebuild.
+        // Cambiare soltanto l'identita' nella fixture in memoria permette di
+        // leggere i vecchi B-rep senza rigenerarli con algoritmi successivi.
+        if (std::none_of(original.extrusions.cbegin(), original.extrusions.cend(),
+                         [](const ExtrusionObject &body) { return bool(body.forgeBody); })) {
+            QFile fixture(input);
+            require(fixture.open(QIODevice::ReadOnly), "lettura snapshot storico Mouse");
+            const auto file = fixture.readAll();
+            require(file.size()>=11,"intestazione fixture Mouse completa");
+            QDataStream header(file);
+            header.skipRawData(4);
+            quint16 version=0;
+            quint8 compressed=0;
+            quint32 size=0;
+            header >> version >> compressed >> size;
+            require(header.status()==QDataStream::Ok && version>=50 && compressed==1
+                    && file.size()>=11+qsizetype(size), "fixture Mouse con identita' e cache");
+            auto payload = testDocumentUncompress(file,11,size);
+            const auto cache = testDocumentUncompress(file,11+size);
+            QByteArray previous;
+            QDataStream oldIdentity(&previous,QIODevice::WriteOnly);
+            oldIdentity << original.version.documentId << original.version.checkinId << original.baseCheckinId;
+            const auto at = payload.indexOf(previous);
+            require(at>=0 && at==payload.lastIndexOf(previous), "identita' univoca nella fixture Mouse");
+            QByteArray archived;
+            QDataStream newIdentity(&archived,QIODevice::WriteOnly);
+            newIdentity << original.version.documentId << QUuid::createUuid() << original.baseCheckinId;
+            require(archived.size()==previous.size(), "identita' storica di dimensione invariata");
+            payload.replace(at,previous.size(),archived);
+            QDataStream cached(cache);
+            QByteArray sourceHash,payloadHash;
+            cached >> sourceHash >> payloadHash;
+            require(cached.status()==QDataStream::Ok, "intestazione cache storica Mouse");
+            QByteArray prepared;
+            QDataStream out(&prepared,QIODevice::WriteOnly);
+            out << sourceHash << QCryptographicHash::hash(payload,QCryptographicHash::Sha256);
+            const auto rest = cache.mid(cached.device()->pos());
+            out.writeRawData(rest.constData(),int(rest.size()));
+            require(decodeDocument(nativeFixture(payload,version,qCompress(prepared,9)),original).isEmpty(),
+                    "lettura dei B-rep Mouse come snapshot immutabile");
+            original.version.checkinId = {};
+        }
+        require(std::any_of(original.extrusions.cbegin(), original.extrusions.cend(),
+                            [](const ExtrusionObject &body) { return bool(body.forgeBody); }), "snapshot Mouse con geometria effettiva");
         QVector<std::string> geometry;
         for (const auto &feature : original.extrusions)
             geometry.append(feature.forgeBody ? Kernel::writeBodyBinary(*feature.forgeBody) : std::string());
@@ -3453,6 +3618,38 @@ static void solidTrims() {
 
     static void sketchReferenceWorkflow() {
         using namespace ForgeCad;
+        {
+            using namespace Kernel;
+            auto profile=std::make_shared<BSplineCurve<2>>(3,std::vector<double>{0,0,0,0,1,1,1,1},
+                std::vector<Vec2>{{4,0},{10,1},{7,10},{0,12}},std::vector<double>{1,.7,1.3,1});
+            ProfileLoop chain;chain.segments.push_back({profile,profile->domain()});
+            const Body surface=makeSheetRevolution(Frame3(),{chain},kTwoPi);
+            for(double angle:{-kPi/18,kPi/18}) {
+                CadViewport view;
+                ExtrusionObject body;body.name="Rivoluzione";body.feature=BodyFeature::Imported;body.featureId=1;
+                body.solid=false;body.visible=true;body.forgeBody=std::make_shared<const Body>(surface);
+                body.importData=QByteArray::fromStdString(writeStep({{"Rivoluzione",surface,false,{0,0,0},nullptr,{}}}));
+                view.extrusions_.append(body);
+                SketchObject sketch;sketch.name="Sezione";sketch.storyId=1;sketch.plane=kFacePlane;
+                sketch.customFrame=true;sketch.frame.normal[0]=-std::sin(angle);sketch.frame.normal[1]=std::cos(angle);sketch.frame.normal[2]=0;
+                sketch.frame.xAxis[0]=std::cos(angle);sketch.frame.xAxis[1]=std::sin(angle);sketch.frame.xAxis[2]=0;
+                sketch.frame.origin[2]=6;
+                view.sketches_.append(sketch);view.activeSketch_=0;view.sketchMode_=true;
+                int added=0;const auto error=view.addSectionReferences(&added);
+                require(error.isEmpty()&&added==2,"sezione assiale NURBS con polo sui due piani ruotati");
+                require(view.sketches_[0].linkedReferences.size()==1&&view.sketches_[0].curves.size()==2,
+                        "due meridiani in un riferimento associativo");
+                view.undo();require(view.sketches_[0].curves.isEmpty(),"Undo sezione meridiana");
+                view.redo();require(view.sketches_[0].curves.size()==2,"Redo sezione meridiana");
+                for(bool cache:{false,true}) {
+                    QByteArray bytes;DocumentState loaded;
+                    require(encodeDocument(view.documentState(),bytes,cache).isEmpty()&&decodeDocument(bytes,loaded).isEmpty(),"codec sezione meridiana");
+                    CadViewport reopened;reopened.loadDocument(loaded);
+                    require(reopened.rebuildAllFeatures()==0&&reopened.sketches_[0].referenceError.isEmpty()
+                        &&reopened.sketches_[0].curves.size()==2,"sezione meridiana rigenerata dopo riapertura");
+                }
+            }
+        }
         {
             using namespace Kernel;
             const auto wall=[](double x) { return makePlaneSheet(Frame3(Vec3(x,0,0),Vec3(1,0,0),Vec3(0,1,0)),4); };
@@ -11252,7 +11449,7 @@ int main(int argc, char **argv) {
         return 0;
     }
     if (app.arguments().contains(QStringLiteral("--intersection-snaps"))) {
-        try { ViewportInteractionTest::intersectionSnaps(); ViewportInteractionTest::intersectionSnapDrag(); }
+        try { ViewportInteractionTest::snapCacheRegressions(); ViewportInteractionTest::intersectionSnaps(); ViewportInteractionTest::intersectionSnapDrag(); }
         catch (const std::exception &error) { std::cerr << error.what() << std::endl; return 1; }
         return 0;
     }
@@ -11343,6 +11540,11 @@ int main(int argc, char **argv) {
         try { ViewportInteractionTest::asyncLifetimeRegressions(); }
         catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
         return 0;
+    }
+    if (app.arguments().contains(QStringLiteral("--document-precision"))) {
+        try { ViewportInteractionTest::documentPrecisionTests(); }
+        catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
+        std::cout << "PASS document precision: codec67/66, invalid values, Undo/Redo, windows, workers and UI" << std::endl; return 0;
     }
     if (app.arguments().contains(QStringLiteral("--mouse-snapshot"))) {
         try { ViewportInteractionTest::mouseSnapshotRegression(app.arguments().value(app.arguments().indexOf(QStringLiteral("--mouse-snapshot")) + 1)); }

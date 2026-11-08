@@ -195,7 +195,7 @@ FaceIntegrator::FaceIntegrator(const Body &body, FaceId faceId, const Vec3 &refe
             const auto *curve=dynamic_cast<const BSplineCurve<3> *>(iso.get());
             if(!curve || curve->poles().empty())return;
             const Vec3 point=curve->poles().front();
-            for(const auto &pole:curve->poles())if(distance(pole,point)>kLinearResolution)return;
+            for(const auto &pole:curve->poles())if(distance(pole,point)>linearResolution())return;
             // Un lato NURBS collassato non ha edge 3D, ma completa il
             // contorno UV nell'integrale di Green (come un polo periodico).
             walks.push_back({from.y(),from.x(),to.x()});
@@ -212,7 +212,7 @@ FaceIntegrator::FaceIntegrator(const Body &body, FaceId faceId, const Vec3 &refe
             track.curve = edge.curve;
             track.range = edge.range;
             track.sense = fin.sense;
-            track.acceptance = 10.0 * std::max(edge.tolerance, kLinearResolution) + 1e-9 * scale_;
+            track.acceptance = 10.0 * std::max(edge.tolerance, linearResolution()) + 1e-9 * scale_;
 
             const CurvePtr<2> pcurve = fin.pcurve && swap ? std::make_shared<SwappedCurve>(fin.pcurve) : fin.pcurve;
             if (pcurve && fin.pcurveTolerance <= kMassPCurveTolerance) {

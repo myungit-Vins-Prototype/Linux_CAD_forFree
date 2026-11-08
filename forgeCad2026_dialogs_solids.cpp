@@ -24,6 +24,7 @@
 #include "cad_mass.h"
 #include "cad_measure.h"
 #include "cad_pattern.h"
+#include "cad_circular_pattern_fit.h"
 #include "cad_pattern_variation_editor.h"
 #include "forgeCad2026_storyboard.h"
 #include "cad_extrude.h"
@@ -451,6 +452,13 @@ bool patternDialog(QMainWindow *window, CadViewport *viewport, const QString &ti
     countBox->setValue(p.count);
     QDoubleSpinBox *spacingBox = spin(p.spacing, -1e6, 1e6);
     QDoubleSpinBox *angleBox = spin(p.angle, -360.0, 360.0, QStringLiteral(" °"));
+    auto *fitBorders = new QPushButton(QStringLiteral("Calcola dai bordi"), &dialog);
+    fitBorders->setObjectName(QStringLiteral("patternFitBorders"));
+    fitBorders->setToolTip(QStringLiteral("Calcola le istanze totali, originale compreso, per chiudere il giro con i bordi coincidenti. Scegli il corpo di superficie e il suo asse."));
+    auto *fitResult = new QLabel(&dialog);
+    fitResult->setObjectName(QStringLiteral("patternFitResult"));
+    fitResult->setWordWrap(true);
+    fitResult->hide();
     auto *spreadBox = new QCheckBox(QStringLiteral("Angolo totale (istanze distribuite; 360 = giro intero)"), &dialog);
     spreadBox->setChecked(p.spread);
     auto *keepBox = new QCheckBox(QStringLiteral("Tieni anche il corpo di partenza"), &dialog);
@@ -466,6 +474,8 @@ bool patternDialog(QMainWindow *window, CadViewport *viewport, const QString &ti
     form->addRow(refLabel, refButton);
     form->addRow(QString(), flipBox);
     form->addRow(QStringLiteral("Istanze:"), countBox);
+    form->addRow(QString(), fitBorders);
+    form->addRow(fitResult);
     form->addRow(QStringLiteral("Passo:"), spacingBox);
     form->addRow(QStringLiteral("Angolo:"), angleBox);
     form->addRow(QString(), spreadBox);
@@ -531,6 +541,7 @@ bool patternDialog(QMainWindow *window, CadViewport *viewport, const QString &ti
         return d;
     };
     const auto refresh = [&] {
+        fitResult->hide();
         const int kind = kindBox->currentIndex();
         p.kind = kind;
         const int source = bodyBox->currentIndex() < 0 ? -1 : candidates.at(bodyBox->currentIndex());
@@ -567,6 +578,7 @@ bool patternDialog(QMainWindow *window, CadViewport *viewport, const QString &ti
         form->setRowVisible(spacingBox, kind == 0);
         form->setRowVisible(angleBox, kind == 1);
         form->setRowVisible(spreadBox, kind == 1);
+        form->setRowVisible(fitBorders, kind == 1 && whatBox->currentIndex() == 0);
         form->setRowVisible(keepBox, kind == 2 && whatBox->currentIndex() == 0);
         form->setRowVisible(secondBox, kind == 0);
         for (QWidget *w : {static_cast<QWidget *>(refButton2), static_cast<QWidget *>(flipBox2), static_cast<QWidget *>(countBox2),
@@ -589,6 +601,8 @@ bool patternDialog(QMainWindow *window, CadViewport *viewport, const QString &ti
         refButton2->setEnabled(validSource);
         for (QWidget *w : QList<QWidget *>{flipBox, countBox, spacingBox, angleBox, spreadBox, keepBox,
                           secondBox, flipBox2, countBox2, spacingBox2, occurrences}) w->setEnabled(step == 3);
+        fitBorders->setEnabled(step == 3 && kind == 1 && whatBox->currentIndex() == 0
+            && source >= 0 && bodies.at(source).forgeBody && bodies.at(source).forgeBody->isSheet());
         sourcePick->setText(picker.active() ? QStringLiteral("Termina scelta") : QStringLiteral("Scegli sorgente"));
         if (step == 1) stepHint->setText(picker.active()
             ? QStringLiteral("Passaggio 1 di 3 — Scegli la sorgente. Clicca una funzione nella storyboard o una faccia nella viewport; puoi usare anche l'elenco Sorgente.")
@@ -615,6 +629,38 @@ bool patternDialog(QMainWindow *window, CadViewport *viewport, const QString &ti
         }
         scope->request(current());
     };
+    QObject::connect(fitBorders, &QPushButton::clicked, &dialog, [&] {
+        const auto d = current();
+        ForgeCad::ResolvedRef axis;
+        QString error;
+        int count = 0;
+        double gap = 0;
+        if (d.firstBody < 0 || d.pattern.refs.isEmpty()) return;
+        const int owner = replaced < 0 ? viewport->historyPosition() : replaced;
+        if (!ForgeCad::resolveGeometryRef(d.pattern.refs.first(), owner, viewport->sketches(), bodies, axis, &error)
+            || !axis.hasLine) {
+            fitResult->setText(error.isEmpty() ? QStringLiteral("Scegli un asse di rotazione valido.") : error);
+            fitResult->show();
+            return;
+        }
+        if (!ForgeCad::fitCircularPatternBorders(bodies.at(d.firstBody).forgeBody, axis.point, axis.direction, count, gap, &error)) {
+            fitResult->setText(error);
+            fitResult->show();
+            return;
+        }
+        {
+            const QSignalBlocker blockCount(countBox), blockAngle(angleBox), blockSpread(spreadBox);
+            countBox->setValue(count);
+            angleBox->setValue(360);
+            spreadBox->setChecked(true);
+        }
+        refresh();
+        QString message = QStringLiteral("%1 spicchi totali (%2 copie + originale), passo %3°. Bordi coincidenti.")
+            .arg(count).arg(count - 1).arg(360.0 / count, 0, 'g', 10);
+        if (!p.excluded.isEmpty()) message += QStringLiteral(" Riattiva tutte le occorrenze escluse per completare il giro.");
+        fitResult->setText(message);
+        fitResult->show();
+    });
     variations->changed = refresh;
     QObject::connect(occurrences, &QListWidget::itemChanged, &dialog, [&](QListWidgetItem *item) {
         const int occurrence = item->data(Qt::UserRole).toInt();

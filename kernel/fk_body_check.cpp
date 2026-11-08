@@ -183,7 +183,7 @@ void checkEuler(const Body &body, Report &report) {
 }
 
 double vertexTolerance(const Body &body, VertexId v, double edgeTolerance) {
-    return std::max({kLinearResolution, body.vertex(v).tolerance, edgeTolerance});
+    return std::max({linearResolution(), body.vertex(v).tolerance, edgeTolerance});
 }
 
 // Poligono campionato del loop (ogni fin nel suo verso, senza ripetere i vertici).
@@ -213,7 +213,7 @@ void checkEdge(const Body &body, EdgeId e, Report &report) {
         report.add(CheckCode::VertexOffEdge, "edge ", e.index, ": fine a ", endGap, " dal vertice ", end.index);
 
     // La curva deve giacere sulle superfici delle due facce adiacenti.
-    const double tolerance = std::max(kLinearResolution, ed.tolerance);
+    const double tolerance = std::max(linearResolution(), ed.tolerance);
     for (FinId f : {ed.forward, ed.backward}) {
         if (!f.valid()) continue;  // bordo di una lamina
         const FaceId faceId = body.finFace(f);
@@ -378,7 +378,7 @@ void checkLoopCrossings(const Body &body, Report &report) {
                                     bool shared = false;
                                     for (VertexId v : p.ends)
                                         if (std::find(q.ends.begin(), q.ends.end(), v) != q.ends.end()
-                                            && distance(body.vertex(v).point, point) <= std::max(body.vertex(v).tolerance, kLinearResolution) * 10.0)
+                                            && distance(body.vertex(v).point, point) <= std::max(body.vertex(v).tolerance, linearResolution()) * 10.0)
                                             shared = true;
                                     if (shared) continue;
                                     report.add(CheckCode::LoopsCross, "faccia ", f.index, ": i loop ", a, " e ", b, " si incontrano in (", point.x(), ", ",

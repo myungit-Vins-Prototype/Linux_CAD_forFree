@@ -56,6 +56,7 @@ void CadViewport::setLengthUnit(LengthUnit unit) {
 void CadViewport::loadDocument(DocumentState state,
                       const std::function<void(int, int, const QString &)> &progress ) {
     ForgeCad::pruneUnusedSketchReferences(state);
+    calculationAccuracy_ = state.calculationAccuracy;
     ScopedWork work(workCallback_, QStringLiteral("Caricamento e rigenerazione del documento..."));
     if (sketchMode_) endSketchMode();
     deferredSketches_.clear();
@@ -100,6 +101,7 @@ void CadViewport::loadDocument(DocumentState state,
 }
 
 void CadViewport::loadPreviewDocument(DocumentState state) {
+    calculationAccuracy_ = state.calculationAccuracy;
     activeSketch_ = -1;
     selection_ = {};
     adoptDocumentIdentity(state.version, state.baseCheckinId);
@@ -1837,6 +1839,7 @@ DocumentState CadViewport::documentState(bool normalizeVisibility ) const {
     state.orientationSet = true;
     state.lengthUnit = lengthUnit_;
     state.lengthUnitSet = true;
+    state.calculationAccuracy = calculationAccuracy_;
     ForgeCad::pruneUnusedSketchReferences(state);
     return state;
 }
@@ -2324,7 +2327,9 @@ void CadViewport::rebuildBody(ExtrusionObject &body, int index) {
 }
 
 void CadViewport::runWhileResponsive(const std::function<void()> &task) {
+    const double accuracy = calculationAccuracy_;
     if (!qApp || QThread::currentThread() != qApp->thread() || !window() || !window()->isVisible()) {
+        ForgeCad::Kernel::PrecisionScope precision(accuracy);
         task();
         return;
     }
@@ -2346,6 +2351,7 @@ void CadViewport::runWhileResponsive(const std::function<void()> &task) {
     std::exception_ptr failure;
     std::thread worker([&] {
         try {
+            ForgeCad::Kernel::PrecisionScope precision(accuracy);
             task();
         } catch (...) {
             failure = std::current_exception();
@@ -2365,6 +2371,7 @@ void CadViewport::tessellateBody(ExtrusionObject &body, int index ) const {
 }
 
 void CadViewport::restoreDocument(DocumentState state) {
+    calculationAccuracy_ = state.calculationAccuracy;
     if (state.lengthUnitSet) lengthUnit_ = state.lengthUnit;
     ForgeCad::setDisplayLengthUnit(lengthUnit_, this);
     deferredSketches_.clear();for(int index:state.pendingSketchChanges)if(index>=0&&index<state.sketches.size())deferredSketches_.insert(index);

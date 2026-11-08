@@ -2039,6 +2039,7 @@ bool sewDialog(QWidget *parent, CadViewport *viewport, const QString &title, int
     auto *form = dialog.createScrollableForm();
     auto *list = new QListWidget(&dialog);
     list->setMinimumHeight(160);
+    list->setObjectName(QStringLiteral("sewSurfaceList"));
     for (int index : indices) {
         const ExtrusionObject &body = bodies.at(index);
         const QString text = resultBodyLabel(viewport, index, false) + (body.solid ? QStringLiteral(" (solido: le sue facce)") : QString());
@@ -2054,9 +2055,24 @@ bool sewDialog(QWidget *parent, CadViewport *viewport, const QString &title, int
     toleranceBox->setKeyboardTracking(false);
     toleranceBox->setToolTip(QStringLiteral("Distanza massima tra i bordi e i vertici da unire"));
     auto *solidBox = new QCheckBox(QStringLiteral("Crea un solido (le superfici devono chiudere un volume)"), &dialog);
+    solidBox->setObjectName(QStringLiteral("sewSolid"));
     solidBox->setChecked(initial.sewSolid);
     BodyPicker picker(dialog, viewport, replaced, indices, nullptr, list);
-    form->addRow(QStringLiteral("Superfici:"), picker.row(list));
+    auto *surfaceRow = picker.row(list);
+    auto *rowLayout = qobject_cast<QHBoxLayout *>(surfaceRow->layout());
+    auto *pickButton = surfaceRow->findChild<QPushButton *>();
+    rowLayout->removeWidget(pickButton);
+    auto *selectionButtons = new QVBoxLayout();
+    selectionButtons->addWidget(pickButton);
+    auto *selectAll = new QPushButton(QStringLiteral("Seleziona tutte"), &dialog);
+    selectAll->setObjectName(QStringLiteral("sewSelectAll"));
+    auto *clearAll = new QPushButton(QStringLiteral("Deseleziona tutte"), &dialog);
+    clearAll->setObjectName(QStringLiteral("sewClearAll"));
+    selectionButtons->addWidget(selectAll);
+    selectionButtons->addWidget(clearAll);
+    selectionButtons->addStretch();
+    rowLayout->addLayout(selectionButtons);
+    form->addRow(QStringLiteral("Superfici:"), surfaceRow);
     form->addRow(QStringLiteral("Tolleranza:"), toleranceBox);
     form->addRow(QString(), solidBox);
     form->addRow(wrappedNote(QStringLiteral("I bordi comuni (stessi estremi e stessa curva entro la tolleranza) si uniscono; un "
@@ -2085,6 +2101,16 @@ bool sewDialog(QWidget *parent, CadViewport *viewport, const QString &title, int
         }
         scope.request(body);
     };
+    const auto setAll = [&](Qt::CheckState state) {
+        picker.stop();
+        {
+            const QSignalBlocker blocker(list);
+            for (int row = 0; row < list->count(); ++row) list->item(row)->setCheckState(state);
+        }
+        refresh();
+    };
+    QObject::connect(selectAll, &QPushButton::clicked, &dialog, [&] { setAll(Qt::Checked); });
+    QObject::connect(clearAll, &QPushButton::clicked, &dialog, [&] { setAll(Qt::Unchecked); });
     picker.changed = refresh;
     picker.message = [&](const QString &text, bool) { scope.label->setText(text); };
     picker.install();

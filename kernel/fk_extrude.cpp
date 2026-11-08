@@ -110,7 +110,7 @@ void assignSideSurface(Face &face, const ProfileSegment &segment, const Frame3 &
 Body makeExtrusion(const Frame3 &inputFrame, const ProfileRegion &region, double height, ExtrusionProvenance *provenance) {
     if (provenance) *provenance = {};
     ExtrusionProvenance declared;
-    if (!(std::fabs(height) > kLinearResolution)) throw std::invalid_argument("makeExtrusion: altezza nulla");
+    if (!(std::fabs(height) > linearResolution())) throw std::invalid_argument("makeExtrusion: altezza nulla");
     if (region.outer.segments.empty()) throw std::invalid_argument("makeExtrusion: profilo vuoto");
     // Altezza negativa: stessa estrusione partendo dalla quota piu' bassa.
     const Frame3 frame = height > 0.0 ? inputFrame
@@ -218,7 +218,7 @@ Body makeExtrusion(const Frame3 &inputFrame, const ProfileRegion &region, double
                 int(plan.reversed ? count - 1 - j : j), segment.source});
             // Vertici tolleranti dove i tratti si toccano solo entro la tolleranza dello schizzo.
             const double gap = distance(plan.segments[(j + count - 1) % count].end(), segment.start());
-            if (gap > kLinearResolution) {
+            if (gap > linearResolution()) {
                 body.vertex(plan.bottom[j]).tolerance = 1.01 * gap;
                 body.vertex(plan.top[j]).tolerance = 1.01 * gap;
                 // Lo spigolo verticale sta anche sulla faccia del tratto precedente.
@@ -237,7 +237,7 @@ Body makeExtrusion(const Frame3 &inputFrame, const ProfileRegion &region, double
 Body makeSheetExtrusion(const Frame3 &inputFrame, const std::vector<ProfileLoop> &chains, double height, ExtrusionProvenance *provenance) {
     if (provenance) *provenance = {};
     std::vector<ExtrusionFaceOrigin> declared;
-    if (!(std::fabs(height) > kLinearResolution)) throw std::invalid_argument("makeSheetExtrusion: altezza nulla");
+    if (!(std::fabs(height) > linearResolution())) throw std::invalid_argument("makeSheetExtrusion: altezza nulla");
     const Frame3 frame = height > 0.0 ? inputFrame
         : Frame3(inputFrame.origin() + height * inputFrame.zDir(), inputFrame.zDir(), inputFrame.xDir());
     const double h = std::fabs(height);
@@ -267,7 +267,7 @@ Body makeSheetExtrusion(const Frame3 &inputFrame, const std::vector<ProfileLoop>
             vertical.end = top(i);
             vertical.curve = std::make_shared<Line<3>>(vertices[std::size_t(bottom(i))], frame.zDir());
             vertical.range = {0.0, h};
-            vertical.tolerance = gaps[i] > kLinearResolution ? 1.01 * gaps[i] : 0.0;
+            vertical.tolerance = gaps[i] > linearResolution() ? 1.01 * gaps[i] : 0.0;
             edges.push_back(vertical);
         }
         for (std::size_t j = 0; j < n; ++j) {
@@ -281,7 +281,7 @@ Body makeSheetExtrusion(const Frame3 &inputFrame, const std::vector<ProfileLoop>
             upper.end = top(j + 1);
             upper.curve = embedCurve(segment.curve, frame, h);
             upper.range = segment.range;
-            lower.tolerance = upper.tolerance = std::max(gaps[j], gaps[j + 1]) > kLinearResolution ? 1.01 * std::max(gaps[j], gaps[j + 1]) : 0.0;
+            lower.tolerance = upper.tolerance = std::max(gaps[j], gaps[j + 1]) > linearResolution() ? 1.01 * std::max(gaps[j], gaps[j + 1]) : 0.0;
             const int lowerIndex = int(edges.size());
             edges.push_back(lower);
             edges.push_back(upper);

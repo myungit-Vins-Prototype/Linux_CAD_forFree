@@ -83,7 +83,7 @@ void buildBody(ExtrusionObject &body, int index, const QVector<SketchObject> &sk
         const auto &curve = *surface.meridian();
         const auto range = curve.domain();
         if (!curve.isPeriodic() && range.isFinite()
-            && Kernel::distance(curve.point(range.lo), curve.point(range.hi)) <= Kernel::kLinearResolution) {
+            && Kernel::distance(curve.point(range.lo), curve.point(range.hi)) <= Kernel::linearResolution()) {
             usedSnapshot = false;
             break;
         }

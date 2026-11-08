@@ -11,7 +11,7 @@ template <int N>
 void orthonormalize(Vec<N> &x, Vec<N> &y) {
     x = normalized(x);
     const Vec<N> projected = y - dot(y, x) * x;
-    if (norm(projected) <= kAngularResolution * norm(y))
+    if (norm(projected) <= angularResolution() * norm(y))
         throw std::invalid_argument("Conica: assi X e Y paralleli");
     y = normalized(projected);
 }
@@ -74,7 +74,7 @@ template <int N>
 Circle<N>::Circle(const Vec<N> &center, const Vec<N> &xAxis, const Vec<N> &yAxis, double radius)
     : center_(center), x_(xAxis), y_(yAxis), radius_(radius) {
     if (!isFinite(center)) throw std::invalid_argument("Circle: centro non finito");
-    if (!(radius > kLinearResolution) || !std::isfinite(radius)) throw std::invalid_argument("Circle: raggio non valido");
+    if (!(radius > linearResolution()) || !std::isfinite(radius)) throw std::invalid_argument("Circle: raggio non valido");
     orthonormalize(x_, y_);
 }
 
@@ -92,7 +92,7 @@ template <int N>
 Ellipse<N>::Ellipse(const Vec<N> &center, const Vec<N> &xAxis, const Vec<N> &yAxis, double xRadius, double yRadius)
     : center_(center), x_(xAxis), y_(yAxis), xRadius_(xRadius), yRadius_(yRadius) {
     if (!isFinite(center)) throw std::invalid_argument("Ellipse: centro non finito");
-    if (!(xRadius > kLinearResolution) || !(yRadius > kLinearResolution) || !std::isfinite(xRadius) || !std::isfinite(yRadius))
+    if (!(xRadius > linearResolution()) || !(yRadius > linearResolution()) || !std::isfinite(xRadius) || !std::isfinite(yRadius))
         throw std::invalid_argument("Ellipse: semiassi non validi");
     orthonormalize(x_, y_);
 }

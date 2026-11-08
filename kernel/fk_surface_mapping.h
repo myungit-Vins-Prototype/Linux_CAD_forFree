@@ -1,3 +1,4 @@
+#include "fk_precision.h"
 #pragma once
 #include "fk_history.h"
 #include "fk_topology.h"
@@ -12,7 +13,7 @@ struct SurfaceWrapOptions {
     Vec2 shift;                  // spostamento sul piano sorgente, in mm
     double angle = 0.0;          // rotazione nel piano, radianti
     double normalOffset = 0.0;
-    double tolerance = 1e-6;    // budget totale di fit, in mm
+    double tolerance = scaledAccuracy(1e-6);    // budget totale di fit, in mm
     bool rigid = false;         // sola rototraslazione per ogni corpo sorgente
     bool quilt = false;         // centraggio nella corrispondenza piano/quilt
 };

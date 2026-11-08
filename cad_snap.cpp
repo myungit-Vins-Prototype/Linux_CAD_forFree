@@ -35,7 +35,7 @@ IntersectionSnap snapIntersection(const QPointF &point, const SketchObject &loca
         for (int i = 0; i < sketch.segments.size(); ++i) {
             const auto &line = sketch.segments[i];
             const double length = distance(line.first, line.second);
-            if (length <= kSketchConnectionTolerance) continue;
+            if (length <= sketchConnectionTolerance()) continue;
             add({std::make_shared<Kernel::Line<2>>(Kernel::Vec2(line.first.x(), line.first.y()),
                  Kernel::Vec2(line.second.x()-line.first.x(), line.second.y()-line.first.y())), {0., length}}, {0,i,-1});
         }

@@ -5,9 +5,16 @@
 #include "fk_surface_algo.h"
 #include "fk_transform.h"
 #include "fk_step.h"
+#include "fk_sew.h"
+#include "fk_tessellate.h"
+#include "fk_mass.h"
+#include "fk_blend.h"
+#include "fk_curve_algo.h"
+#include <algorithm>
 #include <cstring>
 #include <cstdint>
 #include <limits>
+#include "fk_parallel.h"
 
 using namespace ForgeCad::Kernel;
 
@@ -254,4 +261,210 @@ FK_TEST(SurfaceInstanceStepReadsStandardMirrorAndScale) {
     const auto &surface = *restored.bodies[1].body.face(restored.bodies[1].body.faces()[0]).surface;
     for (double u : {0., .31, .7, 1.}) for (double v : {0., .17, .8, 1.})
         FK_CHECK(distance(surface.point(u,v), transform.applyToPoint(base->point(u,v))) < 2e-14);
+}
+
+namespace {
+Body polarWedge() {
+    const std::vector<Vec3> left{{15,0,0},{15,0,12},{8,0,30},{0,0,30}};
+    std::vector<Vec3> right;
+    const auto turn=Transform3::rotation({},{0,0,1},kTwoPi/18);
+    for(const auto &p:left)right.push_back(turn.applyToPoint(p));
+    const std::vector<double> knots{0,0,0,0,1,1,1,1};
+    const auto curve=[&](const std::vector<Vec3> &p){return std::make_shared<BSplineCurve<3>>(int(p.size())-1,
+        p.size()==4?knots:std::vector<double>{0,0,1,1},p);};
+    const auto uv=[](Vec2 a,Vec2 b){return std::make_shared<BSplineCurve<2>>(1,std::vector<double>{0,0,1,1},std::vector<Vec2>{a,b});};
+    auto poles=left;poles.insert(poles.end(),right.begin(),right.end());
+    Body::BuildFace face;
+    face.surface=std::make_shared<BSplineSurface>(1,3,std::vector<double>{0,0,1,1},knots,2,4,poles);
+    face.loops={{{3,true,uv({0,0},{1,0}),1e-10},{2,true,uv({1,0},{1,1}),1e-10},
+                 {1,false,uv({0,1},{1,1}),1e-10},{0,false,uv({0,0},{0,1}),1e-10}}};
+    return Body::buildSheet({left.front(),right.front(),left.back()},
+        {{0,2,curve(left),{0,1}},{2,2,curve({left.back(),left.back()}),{0,1}},
+         {1,2,curve(right),{0,1}},{0,1,curve({left.front(),right.front()}),{0,1}}},{face});
+}
+}
+
+FK_TEST(SurfaceInstancePreservesSingularTrimsAndMesh) {
+    const Body source=polarWedge();
+    const auto original=writeBodyBinary(source);
+    FK_CHECK(checkBody(source).empty());
+    for(double scale:{0.25,1.0,3.0})for(int i=0;i<18;++i){
+        const auto t=Transform3::translation({17,-23,11})*Transform3::scaling({},scale)
+            *Transform3::rotation({},{0,0,1},i*kTwoPi/18);
+        const auto moved=transformBody(source,t);
+        FK_CHECK(checkBody(moved).empty());
+        for(auto f:source.fins()){
+            FK_CHECK(moved.fin(f).pcurve==source.fin(f).pcurve);
+            FK_CHECK_NEAR(moved.fin(f).pcurveTolerance,scale*source.fin(f).pcurveTolerance,1e-20);
+        }
+        TessellationOptions o;o.deflection=0.02*scale;o.threads=1;
+        const auto mesh=tessellate(moved,o);FK_CHECK(mesh.failedFaces==0&&mesh.faces.size()==1);
+        for(const auto &face:mesh.faces)for(const auto &tri:face.triangles){
+            const auto n=cross(face.points[tri[1]]-face.points[tri[0]],face.points[tri[2]]-face.points[tri[0]]);
+            if(norm(n)>1e-8*scale*scale)
+                FK_CHECK(dot(n,face.normals[tri[0]]+face.normals[tri[1]]+face.normals[tri[2]])>=0);
+        }
+    }
+    FK_CHECK(writeBodyBinary(source)==original);
+}
+
+FK_TEST(SurfaceInstanceSewPolarWedgesAndCap) {
+    const Body source=polarWedge();std::vector<Body> wedges;
+    for(int i=0;i<18;++i)wedges.push_back(transformBody(source,Transform3::rotation({},{0,0,1},i*kTwoPi/18)));
+    std::vector<const Body*> inputs;for(const auto &b:wedges)inputs.push_back(&b);
+    std::vector<Vec3> points;std::vector<Body::BuildEdge> edges;std::vector<Body::BuildFin> loop;
+    for(int i=0;i<18;++i)points.push_back(Transform3::rotation({},{0,0,1},i*kTwoPi/18).applyToPoint({15,0,0}));
+    for(int i=0;i<18;++i){edges.push_back({i,(i+1)%18,std::make_shared<Line<3>>(points[i],points[(i+1)%18]-points[i]),{0,distance(points[i],points[(i+1)%18])}});loop.push_back({i,true,{}});}
+    const Body cap=Body::buildSheet(points,edges,{{std::make_shared<Plane>(Frame3()),true,{loop}}});
+    for(bool reverse:{false,true}){
+        const auto sewn=sewSheets(inputs,1e-6,false);
+        FK_CHECK(!sewn.closed&&!sewn.solid&&sewn.shells==1&&sewn.freeEdges==18);
+        FK_CHECK(sewn.body.faces().size()==18&&sewn.body.edges().size()==36&&checkBody(sewn.body).empty());
+        double area=0;for(auto f:sewn.body.faces())area+=faceArea(sewn.body,f);
+        FK_CHECK_NEAR(area,18*faceArea(source,source.faces().front()),1e-8*area);
+        auto closedInputs=inputs;closedInputs.push_back(&cap);
+        const auto closed=sewSheets(closedInputs,1e-6,true);
+        FK_CHECK(closed.closed&&closed.solid&&closed.shells==1&&closed.freeEdges==0);
+        FK_CHECK(closed.body.faces().size()==19&&checkBody(closed.body).empty());
+        FK_CHECK(massProperties(closed.body).volume>0);
+        std::reverse(inputs.begin(),inputs.end());
+    }
+}
+
+FK_TEST(SurfaceInstanceZeroRadiusAtHighValenceCusp) {
+    const Body wedge = polarWedge();
+    std::vector<Body> copies;
+    for (int i = 0; i < 18; ++i)
+        copies.push_back(transformBody(wedge, Transform3::rotation({}, {0,0,1}, i*kTwoPi/18)));
+    std::vector<const Body*> inputs;
+    for (const auto &b : copies) inputs.push_back(&b);
+    const Body base = sewSheets(inputs, 1e-6, false).body;
+    const auto original = writeBodyBinary(base);
+    std::vector<EdgeId> seams;
+    for (auto e : base.edges()) if (!base.isLaminar(e)) seams.push_back(e);
+    FK_CHECK(seams.size() == 18);
+    BlendProfileSpec spec;
+    // Il verso della legge si conserva anche invertendo esplicitamente
+    // ogni tabella, indipendentemente dal verso topologico dell'edge.
+    for (auto e : seams) {
+        const auto path = blendPaths(base, {e}).front();
+        const bool tipFirst = blendPathPoint(base, path, 0).point.z() > 15;
+        spec.paths.push_back({{e}, tipFirst ? std::vector<double>{.3,0} : std::vector<double>{0,.3}, false, true});
+    }
+    const Body result = blendProfileEdges(base, seams, .3, spec, false);
+    FK_CHECK(result.faces().size() == 36 && result.shells().size() == 1);
+    FK_CHECK(checkBody(result, {true,true}).empty());
+    FK_CHECK(writeBodyBinary(base) == original);
+    for (auto f : result.faces()) {
+        if (f.index < 18) continue;
+        const auto &s = *result.face(f).surface;
+        const auto ur = s.uDomain();
+        const double tip = s.point(ur.lo,.5).z() > s.point(ur.hi,.5).z() ? ur.lo : ur.hi;
+        for (int j = 0; j <= 8; ++j)
+            FK_CHECK(distance(s.point(tip,j/8.), {0,0,30}) < 1e-10);
+        EdgeId source; double best = std::numeric_limits<double>::infinity();
+        const auto middle = s.point((ur.lo+ur.hi)/2,.5);
+        for (auto e : seams) {
+            const auto &edge = base.edge(e);
+            const auto q = projectPoint(*edge.curve, middle, edge.range);
+            if (q.distance < best) { best = q.distance; source = e; }
+        }
+        const auto &edge = base.edge(source);
+        const double length = arcLength(*edge.curve,edge.range);
+        for (double f : {.2,.5,.8}) {
+            const double u = ur.lo + f*ur.length();
+            const auto a = s.point(u,0), b = s.point(u,.5), c = s.point(u,1);
+            const double radius = distance(a,b)*distance(b,c)*distance(c,a)/(2*norm(cross(b-a,c-a)));
+            const double fraction = arcLength(*edge.curve,{edge.range.lo,u}) / length;
+            const bool sourceTipFirst = edge.curve->point(edge.range.lo).z() > 15;
+            FK_CHECK_NEAR(radius,.3*(sourceTipFirst ? fraction : 1-fraction),1e-7);
+            for (double v : {0.,1.}) {
+                const auto contact = s.point(u,v);
+                double gap = std::numeric_limits<double>::infinity();
+                Vec3 normal;
+                for (auto fin : {edge.forward,edge.backward}) {
+                    const auto &support = *base.face(base.finFace(fin)).surface;
+                    const auto q = projectPoint(support,contact);
+                    if (q.distance < gap) { gap = q.distance; normal = support.normal(q.u,q.v); }
+                }
+                FK_CHECK(gap < 1e-7);
+                FK_CHECK(std::fabs(dot(s.normal(u,v),normal)) > 1-1e-8);
+            }
+        }
+    }
+    TessellationOptions options; options.deflection = .04; options.threads = 1;
+    const auto mesh = tessellate(result,options);
+    FK_CHECK(mesh.failedFaces == 0 && mesh.faces.size() == 36);
+    for (const auto &face : mesh.faces) for (const auto &t : face.triangles) {
+        const auto n = cross(face.points[t[1]]-face.points[t[0]],face.points[t[2]]-face.points[t[0]]);
+        if (norm(n) > 1e-8)
+            FK_CHECK(dot(n,face.normals[t[0]]+face.normals[t[1]]+face.normals[t[2]]) >= 0);
+    }
+    FK_CHECK(checkBody(readBodyBinary(writeBodyBinary(result)), {true,true}).empty());
+    // Lo zero interno, negativo o su tutta la legge non definisce un
+    // raccordo valido; un raggio positivo alla cuspide resta non gestito.
+    BlendProfileSpec invalid;
+    for (const auto &radii : {std::vector<double>{0,0}, {1,0,1}, {1,-1}, {1,1e-10}}) {
+        invalid.radii = radii;
+        FK_CHECK_THROWS(blendProfileEdges(base, {seams.front()}, .3, invalid, false));
+    }
+    FK_CHECK_THROWS(blendEdges(base, {seams.front()}, .3, false, nullptr, false));
+}
+
+
+FK_TEST(BodyReadPoolExactSharingAndRecordIdentity) {
+    const auto base = sample(true, 8, 7);
+    const auto bytes = writeBodyBinary(sheet(base));
+    const auto pool = makeBodyReadPool();
+    const auto first = readBodyBinary(bytes, *pool), second = readBodyBinary(bytes, *pool);
+    FK_CHECK(first.face(first.faces().front()).surface == second.face(second.faces().front()).surface);
+    FK_CHECK(writeBodyBinary(first) == writeBodyBinary(readBodyBinary(bytes)));
+    const Body distinct = Body::buildSheet({}, {}, {{sample(true), true, {}}, {sample(true), false, {}}});
+    const auto duplicateBytes = writeBodyBinary(distinct);
+    const auto copy = readBodyBinary(duplicateBytes, *pool);
+    FK_CHECK(copy.face(copy.faces()[0]).surface != copy.face(copy.faces()[1]).surface);
+    FK_CHECK(writeBodyBinary(copy) == writeBodyBinary(readBodyBinary(duplicateBytes)));
+    const auto image = std::make_shared<BSplineSurface>(base, Transform3::translation({2,3,4}));
+    const auto placedBytes = writeBodyBinary(sheet(image));
+    const auto placed = readBodyBinary(placedBytes, *pool), again = readBodyBinary(placedBytes, *pool);
+    FK_CHECK(placed.face(placed.faces()[0]).surface == again.face(again.faces()[0]).surface);
+    FK_CHECK(writeBodyBinary(placed) == writeBodyBinary(readBodyBinary(placedBytes)));
+    const auto otherPool = makeBodyReadPool();
+    const auto independent = readBodyBinary(bytes, *otherPool);
+    FK_CHECK(first.face(first.faces()[0]).surface != independent.face(independent.faces()[0]).surface);
+}
+
+FK_TEST(BodyReadPoolRejectsNearDuplicatesAndSurvivesPool) {
+    const auto base = sample(true);
+    std::vector<Vec3> poles;
+    std::vector<double> weights;
+    for (int i=0;i<base->uPoleCount();++i) for(int j=0;j<base->vPoleCount();++j) {
+        poles.push_back(base->pole(i,j)); weights.push_back(base->weight(i,j));
+    }
+    const auto pool = makeBodyReadPool();
+    const auto original = readBodyBinary(writeBodyBinary(sheet(base)), *pool);
+    poles[0][0] = -0.0; // geometricamente uguale, bit differenti
+    const auto signedZero = std::make_shared<BSplineSurface>(3,3,base->uKnots(),base->vKnots(),4,4,poles,weights);
+    const auto changed = readBodyBinary(writeBodyBinary(sheet(signedZero)), *pool);
+    FK_CHECK(original.face(original.faces()[0]).surface != changed.face(changed.faces()[0]).surface);
+    weights[1] = std::nextafter(weights[1], 2.);
+    const auto near = std::make_shared<BSplineSurface>(3,3,base->uKnots(),base->vKnots(),4,4,poles,weights);
+    const auto almost = readBodyBinary(writeBodyBinary(sheet(near)), *pool);
+    FK_CHECK(changed.face(changed.faces()[0]).surface != almost.face(almost.faces()[0]).surface);
+    Body retained;
+    { const auto temporary = makeBodyReadPool(); retained = readBodyBinary(writeBodyBinary(sheet(base)), *temporary); }
+    FK_CHECK(writeBodyBinary(retained) == writeBodyBinary(readBodyBinary(writeBodyBinary(sheet(base)))));
+    FK_CHECK_THROWS(readBodyBinary(std::string_view("FKBD"), *pool));
+}
+
+FK_TEST(BodyReadPoolConcurrentDocuments) {
+    const auto bytes = writeBodyBinary(sheet(sample(true,8,7)));
+    const auto pool = makeBodyReadPool();
+    std::vector<Body> bodies(16);
+    parallelFor(bodies.size(), 8, [&](std::size_t i) { bodies[i] = readBodyBinary(bytes, *pool); });
+    const auto first = bodies[0].face(bodies[0].faces()[0]).surface;
+    for (const auto &body : bodies) {
+        FK_CHECK(body.face(body.faces()[0]).surface == first);
+        FK_CHECK(writeBodyBinary(body) == writeBodyBinary(readBodyBinary(bytes)));
+    }
 }

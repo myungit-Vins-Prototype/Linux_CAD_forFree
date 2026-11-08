@@ -6,6 +6,11 @@
 #include "fk_primitives.h"
 
 #include <limits>
+#include "fk_parallel.h"
+#include "fk_offset.h"
+#include "fk_bspline_surface.h"
+#include <thread>
+#include <atomic>
 
 using namespace ForgeCad::Kernel;
 
@@ -93,4 +98,58 @@ FK_TEST(ToleranceEdgeFaceBudget) {
         edge.tolerance = 4e-6;
         FK_CHECK(checkBody(body).empty());
     }
+}
+
+FK_TEST(ToleranceDocumentScopesAndWorkers) {
+    FK_CHECK(linearResolution() == kLinearResolution);
+    Body perturbed = makeBox(Frame3{}, 2, 3, 4);
+    for (auto v : perturbed.vertices()) perturbed.vertex(v).tolerance = 0;
+    for (auto e : perturbed.edges()) perturbed.edge(e).tolerance = 0;
+    perturbed.vertex(perturbed.vertices().front()).point += Vec3(3e-8, 0, 0);
+    FK_CHECK(!hasIssue(perturbed, CheckCode::VertexOffEdge));
+    {
+        PrecisionScope fine(1e-9);
+        FK_CHECK(hasIssue(perturbed, CheckCode::VertexOffEdge));
+        FK_CHECK(std::abs(BooleanOptions{}.tolerance - 1e-8) < 1e-23);
+        FK_CHECK(std::abs(SurfaceIntersectionOptions{}.fitTolerance - 1e-11) < 1e-25);
+        std::atomic<bool> correct{true};
+        parallelFor(64, 4, [&](std::size_t) {
+            if (linearResolution() != 1e-9) correct = false;
+            parallelFor(3, 3, [&](std::size_t) { if (linearResolution() != 1e-9) correct = false; });
+        });
+        FK_CHECK(correct);
+        std::thread other([&] { if (linearResolution() != kLinearResolution) correct = false; });
+        other.join(); FK_CHECK(correct);
+        try { PrecisionScope nested(1e-8); throw std::runtime_error("unwind"); } catch (const std::runtime_error &) {}
+        FK_CHECK(linearResolution() == 1e-9);
+    }
+    FK_CHECK(linearResolution() == kLinearResolution);
+    for (double invalid : {0., -1., 1e-11, 1e-6, std::numeric_limits<double>::quiet_NaN(), std::numeric_limits<double>::infinity()}) {
+        bool rejected = false;
+        try { PrecisionScope scope(invalid); } catch (const std::invalid_argument &) { rejected = true; }
+        FK_CHECK(rejected && linearResolution() == kLinearResolution);
+    }
+}
+
+FK_TEST(ToleranceDocumentOffsetAccuracy) {
+    std::vector<Vec3> poles;
+    std::vector<double> weights;
+    for (int i=0;i<4;++i) for (int j=0;j<4;++j) {
+        poles.emplace_back(i, j, .1*i*j);
+        weights.push_back(1 + .1*((i+j)%3));
+    }
+    BSplineSurface source(3,3,{0,0,0,0,1,1,1,1},{0,0,0,0,1,1,1,1},4,4,poles,weights);
+    double measured[2]{};
+    for (int profile=0;profile<2;++profile) {
+        const double accuracy=profile ? 1e-9 : kLinearResolution;
+        PrecisionScope scope(accuracy);
+        const auto offset=offsetSurface(source,.2,{0,1},{0,1});
+        for (int i=0;i<=37;++i) for (int j=0;j<=37;++j) {
+            const double u=i/37.,v=j/37.;
+            const Vec3 expected=source.point(u,v)+.2*source.normal(u,v);
+            measured[profile]=std::max(measured[profile],distance(offset->point(u,v),expected));
+        }
+        FK_CHECK(measured[profile] < 2*accuracy);
+    }
+    FK_CHECK(measured[1] < measured[0]/10);
 }

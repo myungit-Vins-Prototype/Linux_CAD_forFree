@@ -114,8 +114,8 @@ void projectOnIso(const Surface &surface, const Vec3 &p, bool fixedU, double val
         const IsoAdapter adapter(surface, fixedU, value);
         // Isoparametrica degenere (polo della sfera, vertice del cono): un punto solo.
         const Vec3 first = adapter.point(range.lo);
-        if (range.isFinite() && distance(first, adapter.point(0.5 * (range.lo + range.hi))) <= kLinearResolution
-            && distance(first, adapter.point(range.hi)) <= kLinearResolution) {
+        if (range.isFinite() && distance(first, adapter.point(0.5 * (range.lo + range.hi))) <= linearResolution()
+            && distance(first, adapter.point(range.hi)) <= linearResolution()) {
             result.parameter = range.lo;
         } else {
             result = projectPoint(adapter, p, range);
@@ -433,7 +433,7 @@ void projectOnBSplineSurface(const BSplineSurface &surface, const Vec3 &p, const
             if (v > vRange.lo && v < vRange.hi && std::binary_search(sharp->v.begin(), sharp->v.end(), v))
                 projectOnIso(surface, p, false, v, uSpan, candidates);
     };
-    const double leafDiagonal = std::max(1.0e-4 * rootDiagonal, kLinearResolution);
+    const double leafDiagonal = std::max(1.0e-4 * rootDiagonal, linearResolution());
     while (!queue.empty()) {
         const Node node = queue.top();
         queue.pop();
@@ -560,11 +560,11 @@ bool meridianPlane(const RevolutionSurface &revolution, Vec3 &radial) {
             radial = perpendicular;
         }
     }
-    if (largest <= kLinearResolution) return false;
+    if (largest <= linearResolution()) return false;
     radial = radial / largest;
     const Vec3 side = cross(a, radial);
     for (const Vec3 &point : points)
-        if (std::fabs(dot(point - revolution.axisPoint(), side)) > kLinearResolution) return false;
+        if (std::fabs(dot(point - revolution.axisPoint(), side)) > linearResolution()) return false;
     return true;
 }
 

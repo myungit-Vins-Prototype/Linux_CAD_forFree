@@ -274,8 +274,18 @@ Body transformBody(const Body &input, const Transform3 &transform, BodyHistory *
         edge.range = {k * edge.range.lo, k * edge.range.hi};
     }
     for (FinId f : body.fins()) {
-        body.fin(f).pcurve = nullptr;
-        body.fin(f).pcurveTolerance = 0.0;
+        Fin &fin = body.fin(f);
+        const auto &face = input.face(input.finFace(f));
+        // La posa dei poli NURBS conserva U/V. Reinvertire la superficie
+        // perde il ramo della SP-curve nei lati collassati (la punta di un
+        // loft): tutti i parametri di quel lato danno lo stesso punto 3D.
+        if (face.surface && face.surface->type() == SurfaceType::BSpline
+            && t.curve(input.edge(fin.edge).curve).second == 1.0) {
+            fin.pcurveTolerance *= t.scale();
+        } else {
+            fin.pcurve = nullptr;
+            fin.pcurveTolerance = 0.0;
+        }
     }
     for (FaceId f : body.faces())
         if (body.face(f).surface) body.face(f).surface = t.surface(body.face(f).surface);

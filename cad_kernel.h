@@ -1,3 +1,4 @@
+#include "fk_precision.h"
 #ifndef FORGECAD_KERNEL_H
 #define FORGECAD_KERNEL_H
 
@@ -12,6 +13,7 @@ namespace ForgeCad {
 // Tolleranza con cui gli estremi di due entita' dello schizzo sono considerati
 // coincidenti quando si formano i contorni.
 constexpr double kSketchConnectionTolerance = 1.0e-6;
+inline double sketchConnectionTolerance() { return Kernel::scaledAccuracy(kSketchConnectionTolerance); }
 
 // Sistema di riferimento dei piani di schizzo: 0 = XY, 1 = XZ, 2 = YZ.
 // Le coordinate (x, y) dello schizzo sono gli assi X e Y del sistema.

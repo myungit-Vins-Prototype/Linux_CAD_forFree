@@ -7,6 +7,9 @@ struct FilletPathGeometry {
   QVector<int> edges;
   Kernel::BlendPath path;
 };
+// Completa esplicitamente i bordi selezionati con i rispettivi contorni
+// chiusi di cavita' estruse. Fallimento atomico per contorni ambigui.
+QVector<EdgePoint> filletCavityContours(const ForgeBody &body, const QVector<EdgePoint> &edges, QString *error = nullptr);
 // Le voci restano associate agli indici dell'elenco selezione originale.
 QVector<FilletPathGeometry> filletPathGeometry(const ForgeBody &body,
                                                const QVector<EdgePoint> &edges,

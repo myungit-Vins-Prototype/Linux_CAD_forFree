@@ -1,6 +1,6 @@
 # CLAUDE.md — memoria operativa ForgeCAD
 
-Aggiornato **6 novembre 2026**.
+Aggiornato **8 novembre 2026**.
 
 [Cronologia](docs/history/claude-2026-11-02.md).
 
@@ -39,7 +39,7 @@ CAD parametrico 2D/3D Linux/macOS, C++17/Qt6/OpenGL3.3 Core. Finestra storica `P
 | Schizzi e vincoli | `cad_types.h`, `cad_constraints*`, `cad_sketch_refs*`, `cad_expression*`: schizzi 2D/3D, asole/punti, quote e solver, snap e riferimenti associativi a piani/assi/bordi/curve. Cache automatiche nascoste; conversioni esplicite conservate; costruzione fuori modifica opzionale. Le entità locali visibili hanno priorità nella quotatura. |
 | Solidi e superfici | `cad_forge*`, `kernel/fk_*`: primitive, estrusione (anche fino al prossimo corpo), rivoluzione, sweep/loft, booleane, sformo, svuotamento/spessore, filettatura, cucitura, taglio/estensione, reti U/V e poli NURBS. Estendi apre il pannello prima della scelta dei bordi. Raccordi costanti, conici, variabili e tra facce; percorsi tangenti con leggi indipendenti e maniglie R. |
 | Storia e genealogia | `cad_history*`, `cad_element_names*`, viewport e storyboard: schizzi/piani come passi autonomi, riordino, rollback, soppressione, riparazione e Undo/Redo. Specchi/ripetizioni sono un evento con corpi separati ed esclusioni; conservano identità e dipendenze. |
-| Documenti e revisioni | `cad_document_io*`, `cad_document_read*`, `cad_native_revisions*`, `cad_workspace*`: `.prt` con firma FCAD, formato 66 (piani; 65: unione loft; 64: corrispondenze; 63: variazioni quote); Zstandard dal 56 e lettura legacy zlib. Definizione e cache B-rep/mesh distinte, salvataggio atomico, recupero, consultazione concorrente e lock della modifica. Check-out/check-in, ripristino, rilascio coordinato e recupero catalogo. |
+| Documenti e revisioni | `cad_document_io*`, `cad_document_read*`, `cad_native_revisions*`, `cad_workspace*`: `.prt` con firma FCAD, formato 67 (precisione; 66:piani; 65: unione loft; 64: corrispondenze; 63: variazioni quote); Zstandard dal 56 e lettura legacy zlib. Definizione e cache B-rep/mesh distinte, salvataggio atomico, recupero, consultazione concorrente e lock della modifica. Check-out/check-in, ripristino, rilascio coordinato e recupero catalogo. |
 | Tavole 2D | `cad_drawing_*`: `.drw`, viste proiettate/ausiliarie, sezioni composte, dettagli e viste interrotte, più fogli, scale foglio/vista, quote e tolleranze, datum/GD&T, badge persistenti, rugosità Ra/Rz e PDF vettoriale. Agganci alle geometrie esatte e nomi genealogici; portabilità senza cache del modello nei casi migrabili. |
 | Scambio e analisi | `kernel/fk_step*`, `fk_iges*`, `fk_exchange*`, `fk_mass*`: STEP/IGES propri, esportazione STL/OBJ, misure/massa, zebra e curvatura. Parsing numerico indipendente dal locale, controlli di cicli/profondità e dimensioni dei dati importati. |
 
@@ -57,17 +57,15 @@ ctest --test-dir forgecad-release --output-on-failure
 ./forgecad-release/forgecad
 ```
 
-- `FORGECAD_BUILD_OCCT_TESTS=OFF` esclude i confronti OCCT; senza OCCT vengono saltati con avviso e `forgekernel_tests` non
-  esiste. I test indipendenti restano disponibili. `FORGECAD_ENABLE_CUDA=OFF` consente una build CPU anche con toolkit
-  installato; per le altre opzioni vedere CMake/README.
-- Eseguire i test pertinenti al cambiamento, inclusi persistenza/Undo/storia quando coinvolti. Le prove Qt offscreen non
-  attestano la resa OpenGL: usare una sessione grafica per quella. Indicare sempre piattaforma, skip e differenza fra esiti
-  della sessione, storici e riferiti dall'utente.
+- `FORGECAD_BUILD_OCCT_TESTS=OFF`: niente confronti OCCT/`forgekernel_tests`; restano i test indipendenti.
+  Senza OCCT i confronti sono saltati con avviso. `FORGECAD_ENABLE_CUDA=OFF`: build CPU; altre opzioni in CMake/README.
+- Test pertinenti, inclusi persistenza/Undo/storia se coinvolti; Qt offscreen non certifica OpenGL: usare la sessione grafica.
+  Distinguere piattaforma, skip, prove correnti, storiche e riferite dall'utente.
 - Sul checkout Linux abituale l'app è `forgecad-release/forgecad`; serve riaprirla per caricare una nuova build. Verificare
   la destinazione effettiva del collegamento, senza attribuire vecchi hash o test al nuovo HEAD.
-- Architettura: `python3 tools/open_architecture.py` aggiorna all’apertura. Dopo modifiche strutturali aggiornare
-  catalogo/gruppi, rigenerare sulla build pertinente, eseguire `generate_architecture.py --check` e verificare HTML e
-  collegamenti bidirezionali call/include/reference. CMake non rigenera; HTML/JSON ignorati. [Istruzioni](docs/architecture/README.md).
+- Architettura: `python3 tools/open_architecture.py` aggiorna all’apertura; dopo modifiche strutturali aggiornare
+  catalogo, rigenerare, `--check` e verificare HTML/collegamenti bidirezionali. CMake non rigenera; HTML/JSON ignorati.
+  [Procedura](docs/architecture/README.md), dettagli permanenti in `AGENTS.md`.
 - Approfondimenti pertinenti: [roadmap](docs/roadmap.md), [schizzi](docs/sketch-tools.md),
   [storia](docs/storyboard-history.md), [tavole/revisioni](docs/drawing-revisions-study.md),
   [prestazioni](docs/viewport-performance.md), [review corrente](docs/code-review-2026-11-02.md). Rapporti datati e archivio
@@ -81,7 +79,7 @@ ctest --test-dir forgecad-release --output-on-failure
 
 - Svuotamento `Superfici.prt`: riusciti fondo piano aperto e guscio chiuso a 0,5/1 mm sul modello originale. La variante con
   geometria scalata 2,5 e ruotata 0,42 rad fallisce ancora il fit di un bordo offset; il prototipo con base locale non è
-  integrato. Nessuna soluzione universale per superfici libere dichiarata.
+  integrato. Limite generale aperto.
 - Unione `Flacone3`, Corpo 1/4: l'app gestisce entrambi gli ordini con un tentativo inverso validato dopo errore. La chiamata
   kernel grezza nell'ordine inverso può ancora fallire su un contatto tollerante.
 - Raccordi liberi, sformo generale, collasso dei raccordi nello svuotamento e alcune geometrie di contorno apparente restano
@@ -105,6 +103,41 @@ ctest --test-dir forgecad-release --output-on-failure
 
 ## Ultimi interventi — esiti consolidati
 
+**08/11 — Bottle e Shower Head.** Pool esatto:690duplicati,poli/pesi1042→135MiB;
+Bottle RSS9,95→2,75GiB (-72%),30 B-rep byte-identici. Anche ultimo salvataggio:
+33funzioni/8schizzi/182facce,codec67/Wayland/idle0frame/nuovo schizzo senza rebuild PASS.
+Precisione1e-7..1e-10mm persistente,worker/UI/Undo; snapshot storico Mouse corretto.
+[Prove](docs/bottle-memoria-precisione-2026-11-08.md); precisione fine Bottle non certificata.
+Shower2,5mm **interno**:28facce/0errori/mesh,13superfici esterne originali;
+`output/Shower-Head-spessore-interno-2.5mm.prt`:Undo/Redo/codec/no-cache/Wayland PASS.
+App/33CTest,Offset27/Thicken6/Shell18/Sew12 e mappa652-9337/check/4HTML PASS;
+riaprire l’app. [Prove e limiti](docs/shower-head-spessore-2026-11-08.md).
+Commit/push richiesti su origin/main (08/11).
+Snap90→5–10ms:[prove](docs/bottle-prestazioni-2026-11-08.md). 07/11:
+[offset±3mm](docs/bottle-offset-2026-11-07.md),[guide](docs/bottle-ripetizione-2026-11-07.md),
+[raccordi](docs/bottle-raccordi-2026-11-07.md) verificati; storico esteso
+[archiviato](docs/history/claude-prima-bottle-prestazioni-2026-11-08.md).
+
+**07/11 — Onion2, sezioni/loft/raggio.** Sezioni app/8CTest/Wayland/Undo/codec PASS;
+[sezioni](docs/onion2-sezioni-piani-2026-11-07.md). Loft3/4: sottoinsiemi persistiti/migrazione univoca;
+app/13CTest/Wayland/Undo/codec/no-cache/rebuild PASS; `output/Onion2-superficie.prt`:1faccia,31,5107mm².
+[Loft](docs/onion2-loft-schizzi-2026-11-07.md):mappa632/8958/check/4HTML PASS.
+Raccordi: due poli valenza18 e due cambi di convessità/giunto; ricostruzione simultanea con calotta e collassi G1.
+Tutti18 aR0,092797mm,73facce/0errori/genealogia completa; passo0,092798 rifiutato, massimo numerico verificato.
+`output/Onion2-raccordato.prt`; originale invariato. App/6CTest/3polari/62Blend/Wayland UI/Undo/codec/no-cache/rebuild/GL PASS.
+Mappa635/9017/check/5HTML bidirezionali PASS. App aggiornata, riaprire; massimo globale/massa non certificati.
+[Rapporto](docs/onion2-raccordi-2026-11-07.md), [storico](docs/history/claude-prima-raggio-onion2-2026-11-07.md).
+
+**07/11 — Onion, ripetizione/cucitura/raccordi.** Calcolo18totali/20°: Bezier razionali entro1e-7mm;
+app/8CTest/Wayland/18giunti/Undo/codec/no-cache PASS, giunti<=1,53e-14mm; `output/Onion-bordi-combacianti.prt`.
+Originale aggiornato esternamente17→18; ricalcolare dal pulsante dopo modifiche al loft.
+Cucitura: poli collassati normalizzati entro arrotondamento e SP-curve preservate; app/14CTest/123kernel/Wayland/codec/mappa PASS.
+Cuspide della lamina18: R0 esatto, limiti unilaterali/UI/maniglie;36facce/tangenza/mesh/Undo/codec/no-cache/GL PASS.
+`output/Onion-raccordato.prt` R0,3→0; scartoR1,44e-9mm,contatto5,20e-11mm;app/21CTest/62Blend/12box/4pose PASS.
+Mappa631/8939/check/15HTML PASS. Lamina aperta: disattivare Crea un solido o aggiungere fondo;
+raggio positivo alla cuspide della lamina aperta resta non gestito. [Rapporto](docs/onion-ripetizione-cucitura-2026-11-07.md).
+Dettagli precedenti: [archivio](docs/history/claude-prima-sezioni-onion2-2026-11-07.md).
+
 **06/11 — Quote 2D.** Ricollegamento agganci rotti/singoli con snap, anteprima e conferma atomica;
 metadati conservati. App/18CTest/offscreen/Wayland/mappa628-8882/check/HTML PASS. Pubblicato `56ae114` su origin/main.
 [Prove e file](docs/ricollegamento-quote-2d-2026-11-06.md).
@@ -127,30 +160,19 @@ ISO M1–M68, ribbon, loft440px, schizzi vuoti: app/GUI PASS.
 [UI](docs/ui-ribbon-loft-filettature-2026-11-05.md).
 Mappature:4pattern,Taglio12:F2–F5,multifaccia/posa rigida155, app/18CTest PASS.
 `7894f64` nel checkpoint. [Prove](docs/riempimento-sviluppo-adattamento-2026-11-05.md).
-**06/11 — Superfici/storia.** `3188714` pubblicato.
-R20schema8:117copie/GUI/codec/no-cache,15CTest PASS; schema7:18CTest PASS.
-[Superfici](docs/confronto-flatten-quilt-creo-2026-11-06.md).
-Unione168:1188facce/1solido,GUI155s/Undo/codec,92kernel+9CTest PASS.
-[Unione](docs/knifehandle-unione-rilievi-2026-11-06.md).
-Storia incrementale:29CTest/Wayland/B-rep invariati,1–5ms;
-[storia](docs/rigenerazione-incrementale-2026-11-06.md).
-HoneyRepeat:13solidi, app/Wayland/Undo/codec/test PASS; circolare2/12istanze262/2767ms.
-Taglia superficie: pannello unico, conversioni/5CTest PASS; [prove](docs/honeyrepeat-taglio-tra-superfici-2026-11-06.md).
-Booleane:9CTest/48kernel/GUI PASS; HoneyRepeat senza Corpo3:1solido/2096facce/47s.
-[Dettagli](docs/booleane-selezione-rettangolo-2026-11-06.md).
-e761f43:467kernel/37CTest e CI PASS;bbd2533:macOS PASS,Linux timeout APT;fix mirror/attese. [prove](docs/ci-raccordi-2026-11-06.md).
-Cucitura Surface219 Corpo9/10: conserva SP-curve dense, senza fit inutile oltre32kcampate.
-App/11CTest/5filtri kernel PASS; Wayland:solido91facce/0bordi liberi/29,7s,
-Undo/Redo/genealogia/codec PASS. Mappa624/8822/check/HTML XCB PASS.
-Originale invariato; QA cache4GiB, rigenerazione integrale non verificata; `bbd2533` pubblicato su origin/main il 06/11.
-[Indagine](docs/surface219-cucitura-2026-11-06.md).
-Surface219: cache lettura<=RAM/8 e4GiB configurabile; tavola riusa B-rep con impronta,
-genealogia prima delle ripetizioni. App/18CTest/Wayland: apertura28,361s,tavola1,261s,0errori.
-Loft36: derivate locali264→7,8s;storia senza cache137s/0errori,Svuota69s.
-App/20CTest/gruppi kernel/mappa PASS. [Ricalcolo](docs/surface219-ricalcolo-2026-11-06.md),
-[apertura e limiti](docs/surface219-tavola-apertura-2026-11-06.md).
-CT0578: fix UV ai bordi;36feature/0errori,17CTest/468kernel/Wayland/mappa PASS.
-a6248ea pubblicato;CI42266591981 PASS:Linux75/2SKIP,macOS79/1SKIP. [Dettagli](docs/ct0578-regressione-filetto-2026-11-06.md).
+**06/11 — Superfici/storia.** `3188714`/`bbd2533`/`a6248ea` pubblicati.
+Ripetizione117copie,Unione168:1188facce/1solido/155s; [superfici](docs/confronto-flatten-quilt-creo-2026-11-06.md),
+[unione](docs/knifehandle-unione-rilievi-2026-11-06.md). Storia incrementale1–5ms/29CTest/Wayland/B-rep invariati:
+[rapporto](docs/rigenerazione-incrementale-2026-11-06.md). HoneyRepeat:13solidi/circolare2–12istanze/262–2767ms;
+[taglio](docs/honeyrepeat-taglio-tra-superfici-2026-11-06.md),[booleane](docs/booleane-selezione-rettangolo-2026-11-06.md).
+`e761f43`:467kernel/37CTest/CI PASS; [CI](docs/ci-raccordi-2026-11-06.md).
+Surface219:91facce cucite/0bordi liberi/29,7s; app/11CTest/5kernel/Wayland/Undo/codec/mappa PASS,
+ricalcolo integrale non verificato. [Cucitura](docs/surface219-cucitura-2026-11-06.md).
+Cache lettura<=RAM/8 e4GiB configurabile; apertura28,361s/tavola1,261s/0errori,app/18CTest/Wayland PASS.
+Loft36:derivate locali264→7,8s; storia senza cache137s/0errori,Svuota69s;app/20CTest/kernel/mappa PASS.
+[Ricalcolo](docs/surface219-ricalcolo-2026-11-06.md),[apertura](docs/surface219-tavola-apertura-2026-11-06.md).
+CT0578:fix UV36feature/0errori,17CTest/468kernel/Wayland/mappa PASS;CI42266591981 Linux75/2SKIP,macOS79/1SKIP.
+[Prove](docs/ct0578-regressione-filetto-2026-11-06.md); dettagli precedenti nell'archivio Bottle08/11.
 
 **04/11 — Griglie, specchi e guide.** `3c644e2`: istanze condivise, B-rep2/cache10;
 `9eff99c`: appoggi G1/riordino e F7/E25 verificati. Griglie/cache11: PRT190,5→88,7MB,
@@ -159,38 +181,9 @@ STEP745,1→458,7MB; shell928,5→642,7MB. App/runner/QA/suite PASS.
 [griglie/budget](docs/riduzione-griglie-loft-step-2026-11-04.md),[F7/E25](docs/loft-selezione-facce-storiche-2026-11-04.md).
 [Dettagli storici](docs/history/claude-prima-taglio-reciproco-2026-11-05.md).
 
-**04/11 — Svuotamento e apertura.** Copia a501f4fd:31facce; taglio sole C0,
-jet laterali raccordi, lift G1 cubico e NURBS locali; cache12, check-in immutabili.
-Shell62facce/1mm/F0/F14,662punti errore max5,85e-8mm; Wayland/XCB OK/Undo/Redo/cache,
-Wayland no-cache PASS. 11CTest,Blend62,Shell18,Offset26 e negativi PASS; app/runner aggiornati.
-Mappa576/7987/276AST/check/8HTML PASS; copia84,29MB/26ID; `d0594e8` pubblicato.
-[Diagnosi](docs/svuotamento-poli-non-finiti-2026-11-04.md).
-Apertura copia17f72219: Apri Wayland3,87s,viewport2,46s; nuovo f695dd98 non provato.
-Bernstein/U:224→72,64s/3,09×; Wayland26feature senza cache92,7s,B-rep identico.
-App/ASan/UBSan PASS; mappa579/8023/278/check/5HTML PASS.
-[Misure e limiti](docs/apertura-tempi-surface219-2026-11-04.md).
+04/11 — Svuotamento/poli e apertura: app/kernel/GUI verificati;
+[archivio](docs/history/claude-prima-shower-head-2026-11-08.md).
 
-0. **03/11 — Schizzi/riferimenti/loft.** Costruzione visibile su richiesta, riferimenti transitori/pulizia
-   con protezione dei consumatori (`4fafbaa`): app/Undo/codec/GUI verificati.
-   Loft3sezioni: fit1e-9 e raccordo C2 nel budget, app/8CTest/42Loft/GUI PASS.
-   Studio SolidCraft/FreeCAD: base adeguata; ID locali/mutazioni comuni proposti, nessuna migrazione.
-   Sezioni proiettate `cb35a2e`, picker/specchi `1a8c60d`, pannelli/G1 `2e4366f` verificati.
-   Rapporti e prove: [archivio](docs/history/claude-prima-cucitura-2026-11-06.md).
-
-1. **02–03/11 — Guide/Loft9 (`e54a174`).** CI41513461524 su `ec08b12`:
-   Linux56PASS/2SKIP,macOS60PASS/1SKIP;storico. Profili razionali/Hermite/guide;
-   corner sorgente3,18° conservato. Cache8 migra copie loft/derivati;check-in immutabili,formato60.
-   App/QA Wayland-XCB1→2→1,Undo/Redo,cache/no-cache PASS;CTest164PASS/1SKIP/0FAIL,kernel459/459,
-   Clang/ASan/UBSan mirati PASS,LSan escluso ptrace;Mappa552/7635/261.
-   [Forma](docs/loft-forma-guide-2026-11-03.md),[CI](docs/ci-riparazione-2026-11-02.md),
-   [guide](docs/loft-guide-proiettate-2026-11-02.md),
-   [unione/curve](docs/estrusione-unione-riferimenti-proiettati-2026-11-02.md).
-
-2. **02/11 — Review/storyboard/estrusione (`d4f15fc`).** R1–R5, fino al corpo e genealogia;
-   B8 solo reingresso iniettato. CTest151PASS/1SKIP/1FAIL,kernel457/458 (sformo preesistente);
-   [dettagli, verifiche e limiti](docs/code-review-2026-11-02-correzioni.md).
-
-3. **Storico 01–02/11.** OCCT solo nei test (`ab6fc71`); review `9321643`:
-[checkpoint](docs/history/claude-checkpoint-prima-storyboard-2026-11-03.md).
-Quote/normali/shell `de1448a`/`7651724`: [archivio](docs/history/claude-intersezioni-2026-11-04.md).
-Schizzi/Estendi/unione `8121ed7`: [registro](docs/history/claude-prima-svuotamento-2026-11-04.md).
+Storico 01–03/11: Schizzi/riferimenti, Loft9/guide, review/storyboard e checkpoint:
+[archivio completo precedente a Onion](docs/history/claude-prima-onion-2026-11-07.md).
+Restano validi i limiti operativi sopra; esiti CI/kernel storici non ricertificano il nuovo lavoro.

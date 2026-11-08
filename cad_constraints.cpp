@@ -1,5 +1,6 @@
 #include "cad_constraints.h"
 #include "cad_sketch_offset.h"
+#include "cad_sketch_section_selection.h"
 
 #include <QHash>
 #include <QSet>
@@ -1620,7 +1621,7 @@ QVector<Block> buildBlocks(const System &system, const SketchObject &sketch, con
     // anche quando una quota o il solver sposta uno dei due riferimenti.
     for(int curve=0;curve<sketch.curves.size();++curve){
         const auto &object=sketch.curves[curve];const int last=int(object.controlPoints.size())-1;
-        if(object.tool!=DrawingTool::Spline||last<2||length(object.controlPoints.first()-object.controlPoints.last())>kSketchConnectionTolerance)continue;
+        if(object.tool!=DrawingTool::Spline||last<2||length(object.controlPoints.first()-object.controlPoints.last())>sketchConnectionTolerance())continue;
         const int firstPoint=system.curvePoint(curve,0),lastPoint=system.curvePoint(curve,last);
         Block join;join.points={firstPoint,lastPoint};join.evaluate=[&system,firstPoint,lastPoint](QVector<double> &out){const auto d=system.point(firstPoint)-system.point(lastPoint);out<<d.x()<<d.y();};blocks.append(join);
         const int base=system.handleBase(curve);
@@ -2363,7 +2364,12 @@ void remapConstraints(SketchObject &sketch, const QVector<int> &segmentMap, cons
     for (const auto &link : sketch.linkedReferences) if (link) {
         auto data = std::make_shared<SketchLinkedReference>(*link);
         QVector<ConstraintRef> entities;
-        for (auto entity : data->entities) if (remap(entity)) entities.append(entity);
+        QVector<int> positions;
+        for (int i = 0; i < data->entities.size(); ++i) {
+            auto entity = data->entities[i];
+            if (remap(entity)) { entities.append(entity); positions.append(i); }
+        }
+        SketchSectionSelection::retain(*data, positions);
         if (!entities.isEmpty()) { data->entities = entities; links.append(data); }
     }
     sketch.linkedReferences = links;

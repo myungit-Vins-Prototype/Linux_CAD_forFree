@@ -503,7 +503,7 @@ int computePCurves(Body &body, double tolerance) {
     const auto computeOne = [&](std::size_t k) {
         Job &job = jobs[k];
         const Edge &edge = source.edge(source.fin(job.fin).edge);
-        const double edgeTolerance = std::max(kLinearResolution, edge.tolerance);
+        const double edgeTolerance = std::max(linearResolution(), edge.tolerance);
         if (CurvePtr<2> exact = exactPCurve(*job.surface, edge.curve, edge.range, edgeTolerance)) {
             job.pcurve = std::move(exact);
             job.pcurveTolerance = 0.0;

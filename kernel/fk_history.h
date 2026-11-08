@@ -1,3 +1,4 @@
+#include "fk_precision.h"
 #ifndef FORGECAD_FK_HISTORY_H
 #define FORGECAD_FK_HISTORY_H
 
@@ -106,7 +107,7 @@ private:
 struct HistoryOptions {
     // Distanza entro la quale due punti coincidono (si somma alle
     // tolleranze locali di vertici ed edge).
-    double tolerance = 1e-6;
+    double tolerance = scaledAccuracy(1e-6);
     // Provenienza delle entita' generate (gli spigoli raccordati di una
     // faccia di raccordo, le facce su cui giace uno spigolo nuovo).
     bool generatedOrigins = true;

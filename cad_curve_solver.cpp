@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <deque>
 #include <memory>
 
 #include "fk_bspline.h"
@@ -80,10 +81,10 @@ bool slotParts(const QVector<QPointF> &points, QVector<SketchSegment> &lines, QV
     for(const auto &p:points)if(!std::isfinite(p.x())||!std::isfinite(p.y()))return false;
     const QPointF a=points[0],b=points[1],axis=b-a;
     const double length=std::hypot(axis.x(),axis.y());
-    if(length<=kSketchConnectionTolerance)return false;
+    if(length<=sketchConnectionTolerance())return false;
     const QPointF normal(-axis.y()/length,axis.x()/length);
     const double radius=std::abs(QPointF::dotProduct(points[2]-a,normal));
-    if(!std::isfinite(radius)||radius<=kSketchConnectionTolerance)return false;
+    if(!std::isfinite(radius)||radius<=sketchConnectionTolerance())return false;
     const QPointF offset=radius*normal;
     lines={{a-offset,b-offset},{b+offset,a+offset}};
     CurveObject right;right.tool=DrawingTool::Arc;right.controlPoints={b,b-offset,b+offset};
@@ -118,11 +119,39 @@ std::vector<ProfileSegment> curveGeometry(const CurveObject &curve) {
             }
             // Riferimento esterno: la B-spline razionale cosi' com'e'.
             if (count < 2 || curve.degree < 1 || curve.knots.size() != count + curve.degree + 1) break;
+            // I riferimenti automatici sono immutabili fra gli eventi mouse.
+            // Conservare gli array Qt mantiene vivi gli indirizzi della chiave:
+            // una modifica stacca i dati e non puo' riusare una curva obsoleta.
+            // Riutilizzare anche le cache Bezier del kernel, senza ricostruirle
+            // a ogni proiezione o ricerca di intersezioni.
+            struct Cached {
+                int degree;
+                QVector<QPointF> poles;
+                QVector<double> weights, knots;
+                CurvePtr<2> geometry;
+            };
+            static thread_local std::deque<Cached> cache;
+            const auto same = [](const auto &a, const auto &b) {
+                return a.constData() == b.constData() && a.size() == b.size();
+            };
+            const auto found = std::find_if(cache.begin(), cache.end(), [&](const Cached &entry) {
+                return entry.degree == curve.degree && same(entry.poles, curve.controlPoints)
+                    && same(entry.weights, curve.weights) && same(entry.knots, curve.knots);
+            });
+            if (found != cache.end()) {
+                const auto geometry = found->geometry;
+                result.push_back({geometry, geometry->domain()});
+                break;
+            }
             std::vector<Vec2> poles;
             for (const QPointF &p : curve.controlPoints) poles.push_back(toVec(p));
             std::vector<double> weights(curve.weights.begin(), curve.weights.end());
             if (int(weights.size()) != count) weights.clear();
             const auto c = std::make_shared<BSplineCurve<2>>(curve.degree, std::vector<double>(curve.knots.begin(), curve.knots.end()), std::move(poles), std::move(weights));
+            // Limite per thread: la cronologia degli schizzi non deve restare
+            // interamente viva solo per l'accelerazione del cursore.
+            if (cache.size() >= 512) cache.pop_front();
+            cache.push_back({curve.degree, curve.controlPoints, curve.weights, curve.knots, c});
             result.push_back({c, c->domain()});
             break;
         }

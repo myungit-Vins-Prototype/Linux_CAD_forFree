@@ -153,7 +153,7 @@ bool sketchPath(const SketchObject &sketch, std::vector<PathSegment> &path, QStr
             setError(error, QStringLiteral("Lo schizzo del percorso non contiene geometria."));
             return false;
         }
-        const Profile profile = buildProfile(segments, kSketchConnectionTolerance);
+        const Profile profile = buildProfile(segments, sketchConnectionTolerance());
         const ProfileLoop *loop = nullptr;
         if (profile.regions.size() == 1 && profile.regions.front().holes.empty() && profile.chains.empty()) loop = &profile.regions.front().outer;
         else if (profile.regions.empty() && profile.chains.size() == 1) loop = &profile.chains.front();
@@ -187,7 +187,7 @@ QVector<SketchPathRef> sketchPathComponents(const SketchObject &sketch) {
     }
     const auto touches = [](const Entity &a, const Entity &b) {
         for (const QPointF &p : a.ends) for (const QPointF &q : b.ends)
-            if (std::hypot(p.x() - q.x(), p.y() - q.y()) <= kSketchConnectionTolerance) return true;
+            if (std::hypot(p.x() - q.x(), p.y() - q.y()) <= sketchConnectionTolerance()) return true;
         return false;
     };
     QVector<bool> used(entities.size(), false);

@@ -27,3 +27,6 @@ forgecad-linux-solver/
 
 # Materiale diagnostico locale conservato dopo la pulizia delle build.
 /archivi-locali/
+
+# Catalogo locale delle copie CAD prodotte in output.
+/output/.forgecad/

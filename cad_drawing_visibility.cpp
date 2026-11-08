@@ -132,7 +132,7 @@ bool completeCylinder(const DrawingSourceBody &source,const DrawingView &view,Ex
         const auto &circle=static_cast<const Circle<3> &>(*edge.curve);const auto center=frame.toLocal(circle.center());
         if(std::hypot(center.x(),center.y())>epsilon||std::abs(circle.radius()-radius)>epsilon||std::abs(dot(cross(circle.xAxis(),circle.yAxis()),frame.zDir()))<1-1e-10)return false;
         levels.push_back(center.z());}
-    std::sort(levels.begin(),levels.end());if(levels[1]-levels[0]<=kLinearResolution)return false;
+    std::sort(levels.begin(),levels.end());if(levels[1]-levels[0]<=linearResolution())return false;
     bool bottom=false,top=false;
     for(const auto *cap:caps){if(cap->shell!=side->shell||cap->loops.size()!=1||body.loopFins(cap->loops[0]).size()!=1)return false;
         const auto &plane=static_cast<const Plane &>(*cap->surface);const double level=frame.toLocal(plane.frame().origin()).z(),normal=dot(plane.frame().zDir(),frame.zDir())*(cap->sense?1:-1);
@@ -181,7 +181,7 @@ bool completeCone(const DrawingSourceBody &source,const DrawingView &view,ExactC
         if(std::hypot(center.x(),center.y())>epsilon||std::abs(circle.radius()-radius-slope*center.z())>epsilon||std::abs(dot(cross(circle.xAxis(),circle.yAxis()),frame.zDir()))<1-1e-10)return false;
         levels.push_back(center.z());}
     if(edges.size()==1)levels.push_back(-radius/slope);
-    std::sort(levels.begin(),levels.end());if(levels[1]-levels[0]<=kLinearResolution)return false;
+    std::sort(levels.begin(),levels.end());if(levels[1]-levels[0]<=linearResolution())return false;
     bool bottom=std::abs(radius+slope*levels[0])<=epsilon,top=std::abs(radius+slope*levels[1])<=epsilon;
     for(const auto *cap:caps){if(cap->shell!=side->shell||cap->loops.size()!=1||body.loopFins(cap->loops[0]).size()!=1)return false;
         const auto &plane=static_cast<const Plane &>(*cap->surface);const double level=frame.toLocal(plane.frame().origin()).z(),normal=dot(plane.frame().zDir(),frame.zDir())*(cap->sense?1:-1);
@@ -378,7 +378,7 @@ public:
             const auto cut=[&](const Surface &surface){const auto crossing=intersectCurveSurface(geometry,range,surface,intersectionTolerance_);cuts.insert(cuts.end(),crossing.parameters.begin(),crossing.parameters.end());for(auto span:crossing.coincident){cuts.push_back(span.lo);cuts.push_back(span.hi);}};
             cut(ConicalSurface(Frame3(frame.origin()-offset,axis,frame.xDir()),cone.angle,cone.radius));
             for(double level:{cone.low,cone.high}){const auto center=frame.origin()+level*axis;cut(Plane(Frame3(center-offset,axis,frame.xDir())));const double r=cone.radiusAt(level);
-                if(r>kLinearResolution&&std::abs(dot(axis,direction))>1e-12)cut(ExtrusionSurface(std::make_shared<Circle<3>>(center,frame.xDir(),frame.yDir(),r),direction));}
+                if(r>linearResolution()&&std::abs(dot(axis,direction))>1e-12)cut(ExtrusionSurface(std::make_shared<Circle<3>>(center,frame.xDir(),frame.yDir(),r),direction));}
             // Generatrici tangenti: (U - pendenza*asse) . direzioneVista = 0.
             const auto d=frame.directionToLocal(direction);const double radial=std::hypot(d.x(),d.y()),axial=cone.slope*d.z();
             if(radial>0&&std::abs(axial)<=radial){const double middle=std::atan2(d.y(),d.x()),delta=std::acos(std::clamp(axial/radial,-1.,1.));

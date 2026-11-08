@@ -85,7 +85,7 @@ struct Meridian {
             sum += arcLength(*curve, { cuts[i - 1], cuts[i] }, 1e-11);
             lengths.push_back(double(sum));
         }
-        require(std::isfinite(lengths.back()) && lengths.back() > kLinearResolution, "Insieme di superfici: meridiana degenere.");
+        require(std::isfinite(lengths.back()) && lengths.back() > linearResolution(), "Insieme di superfici: meridiana degenere.");
         zero = lengthAt(anchor);
     }
     double lengthAt(double t) const {
@@ -96,7 +96,7 @@ struct Meridian {
     }
     double parameter(double y) const {
         const double value = y + zero;
-        require(value >= -kLinearResolution && value <= lengths.back() + kLinearResolution,
+        require(value >= -linearResolution() && value <= lengths.back() + linearResolution(),
             "Insieme di superfici: punto oltre lo sviluppo longitudinale.");
         const double target = std::clamp(value, 0., lengths.back());
         auto it = std::upper_bound(lengths.begin(), lengths.end(), target);
@@ -130,7 +130,7 @@ struct Chart {
         , u(uw)
         , v(vw)
         , u0(origin)
-        , classifier(*t.body, t.face, kLinearResolution * .1) {
+        , classifier(*t.body, t.face, linearResolution() * .1) {
         const auto &surface = *t.body->face(t.face).surface;
         std::map<double, std::shared_ptr<ArcSlice>> slices;
         std::size_t cachedIntervals = 0;
@@ -177,7 +177,7 @@ struct Chart {
         double lo = u.lo, hi = u.hi;
         const auto at = originAndScale(b);
         const double a = flat->point(lo, b).x(), z = flat->point(hi, b).x(), value = sign * x / at.second + at.first;
-        require(value >= a - kLinearResolution && value <= z + kLinearResolution,
+        require(value >= a - linearResolution() && value <= z + linearResolution(),
             "Insieme di superfici: punto oltre lo sviluppo trasversale.");
         const double target = std::clamp(value, a, z);
         double t = lo + (hi - lo) * (target - a) / (z - a);
@@ -311,7 +311,7 @@ SurfaceQuiltMap::SurfaceQuiltMap(const std::vector<SurfaceTargetFace> &targets, 
                             const double t = range.lo + (range.hi - range.lo) * i / 16.;
                             const auto ua = pa.point(t), ub = pb.point(t);
                             require(distance(a.surface->point(ua.x(), ua.y()), b.surface->point(ub.x(), ub.y()))
-                                    <= kLinearResolution,
+                                    <= linearResolution(),
                                 "Insieme di superfici: giunzione non coincidente.");
                             require(distance(data->sense * a.surface->normal(ua.x(), ua.y()),
                                         (b.sense ? 1. : -1.) * b.surface->normal(ub.x(), ub.y()))
@@ -359,7 +359,7 @@ Body SurfaceQuiltMap::flattenSheet(const Frame3 &plane, double tolerance,
     SurfaceFlattenStats *stats, BodyHistory *history) const {
     require(std::isfinite(tolerance) && tolerance >= 1e-9 && tolerance <= .01,
         "Appiattimento: budget di fit non valido.");
-    const double connection = std::min(tolerance, kLinearResolution), budget = .2 * connection;
+    const double connection = std::min(tolerance, linearResolution()), budget = .2 * connection;
     const auto &source = *data_->charts.front().target.body;
     std::vector<Vec3> points;
     std::vector<Body::BuildEdge> edges;
@@ -561,7 +561,7 @@ Body SurfaceQuiltMap::bend(
         const auto &face=source.face(id);
         if(face.surface->type()!=SurfaceType::Plane)return image;
         const auto &plane=static_cast<const Plane &>(*face.surface).frame();
-        if(norm(cross(plane.zDir(),options.sourcePlane.zDir()))>kAngularResolution)return image;
+        if(norm(cross(plane.zDir(),options.sourcePlane.zDir()))>angularResolution())return image;
         const double roundoff=64*kMachineEpsilon*std::max(1.,norm(plane.origin())+norm(options.sourcePlane.origin()));
         const double height=flat(plane.origin()).z();
         Box bounds;
@@ -586,7 +586,7 @@ Body SurfaceQuiltMap::bend(
         };
         if(std::fabs(height)>roundoff) {
             Box uvBounds;
-            const double budget=.1*std::min(options.tolerance,kLinearResolution);
+            const double budget=.1*std::min(options.tolerance,linearResolution());
             for(auto loop:face.loops)for(auto use:source.loopFins(loop)) {
                 const auto &edge=source.edge(source.fin(use).edge);
                 const auto uvCurve=fitCurve([&](double t){const auto uv=image.parameters(edge.curve->point(t));return Vec3(uv.x(),uv.y(),0);},

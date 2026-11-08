@@ -266,10 +266,10 @@ Interval faceProjection(const Body &body, FaceId face, const Vec3 &origin, const
         if (body.loop(loop).isolatedVertex.valid()) add(body.vertex(body.loop(loop).isolatedVertex).point);
     }
     const auto *sphere = dynamic_cast<const SphericalSurface *>(body.face(face).surface.get());
-    if (sphere && norm(direction) > kAngularResolution) {
+    if (sphere && norm(direction) > angularResolution()) {
         for (double sign : {-1.0, 1.0}) {
             const Vec3 point = sphere->frame().origin() + sign * sphere->radius() * normalized(direction);
-            if (classifyPointOnFace(body, face, point, kLinearResolution) != PointLocation::Outside) add(point);
+            if (classifyPointOnFace(body, face, point, linearResolution()) != PointLocation::Outside) add(point);
         }
     }
     if (range.lo > range.hi) for (const auto &point : corners(faceBox(body, face))) add(point);
@@ -285,20 +285,20 @@ bool firstSurfaceEnvelope(const Body &body, const Vec3 &origin, const Vec3 &dire
         const double sense = face.sense ? 1.0 : -1.0;
         if (const auto *plane = dynamic_cast<const Plane *>(face.surface.get())) {
             const double normal = sense * dot(plane->frame().zDir(), direction);
-            if (normal >= -kAngularResolution) continue;
-            if (std::fabs(normal + 1.0) <= kAngularResolution
-                && std::fabs(dot(plane->frame().origin() - origin, direction)) <= kLinearResolution) continue;
+            if (normal >= -angularResolution()) continue;
+            if (std::fabs(normal + 1.0) <= angularResolution()
+                && std::fabs(dot(plane->frame().origin() - origin, direction)) <= linearResolution()) continue;
             return false;
         }
         if (const auto *cylinder = dynamic_cast<const CylindricalSurface *>(face.surface.get())) {
             const auto &frame = cylinder->frame();
             const Vec3 radial = direction - dot(direction, frame.zDir()) * frame.zDir();
             const Interval projected = faceProjection(body, id, frame.origin(), sense * radial);
-            if (projected.lo / cylinder->radius() >= -kAngularResolution) continue;
+            if (projected.lo / cylinder->radius() >= -angularResolution()) continue;
             return false;
         }
         if (const auto *sphere = dynamic_cast<const SphericalSurface *>(face.surface.get())) {
-            if (faceProjection(body, id, sphere->frame().origin(), sense * direction).lo / sphere->radius() >= -kAngularResolution) continue;
+            if (faceProjection(body, id, sphere->frame().origin(), sense * direction).lo / sphere->radius() >= -angularResolution()) continue;
             return false;
         }
         if (const auto *cone = dynamic_cast<const ConicalSurface *>(face.surface.get())) {
@@ -307,13 +307,13 @@ bool firstSurfaceEnvelope(const Body &body, const Vec3 &origin, const Vec3 &dire
             const Interval axial = faceProjection(body, id, frame.origin(), frame.zDir());
             const double r0 = cone->referenceRadius() + axial.lo * sine / cosine;
             const double r1 = cone->referenceRadius() + axial.hi * sine / cosine;
-            if (std::min(r0, r1) < -kLinearResolution && std::max(r0, r1) > kLinearResolution) return false;
-            const double branch = std::max(r0, r1) > kLinearResolution ? 1.0 : -1.0;
+            if (std::min(r0, r1) < -linearResolution() && std::max(r0, r1) > linearResolution()) return false;
+            const double branch = std::max(r0, r1) > linearResolution() ? 1.0 : -1.0;
             const Vec3 radial = direction - dot(direction, frame.zDir()) * frame.zDir();
             const double minimumRadius = std::min(std::fabs(r0), std::fabs(r1));
             const double maximumRadius = std::max(std::fabs(r0), std::fabs(r1));
             double minimum = -norm(radial), maximum = norm(radial);
-            if (minimumRadius > kLinearResolution) {
+            if (minimumRadius > linearResolution()) {
                 const Interval numerator = faceProjection(body, id, frame.origin(), radial);
                 const double values[] = {numerator.lo / minimumRadius, numerator.lo / maximumRadius,
                                          numerator.hi / minimumRadius, numerator.hi / maximumRadius};
@@ -322,7 +322,7 @@ bool firstSurfaceEnvelope(const Body &body, const Vec3 &origin, const Vec3 &dire
             }
             const double axialNormal = branch * sine * dot(frame.zDir(), direction);
             const double lower = sense > 0 ? cosine * minimum - axialNormal : axialNormal - cosine * maximum;
-            if (lower >= -kAngularResolution) continue;
+            if (lower >= -angularResolution()) continue;
             return false;
         }
         if (face.surface->type() == SurfaceType::Extrusion || face.surface->type() == SurfaceType::BSpline)
@@ -342,7 +342,7 @@ ForgeBody extrusionUntilNext(ExtrusionObject &body, int index, const SketchObjec
         setError(error, QStringLiteral("Il verso dell'estrusione non e' valido.")); return nullptr;
     }
     const double side = body.distance < 0 ? -1.0 : 1.0;
-    const Profile profile = buildProfile(forgeSketchSegments(sketch), kSketchConnectionTolerance);
+    const Profile profile = buildProfile(forgeSketchSegments(sketch), sketchConnectionTolerance());
     if (profile.regions.empty() || profile.openChains > 0) {
         setError(error, QStringLiteral("Fino al prossimo corpo richiede solo contorni chiusi del profilo.")); return nullptr;
     }
@@ -368,7 +368,7 @@ ForgeBody extrusionUntilNext(ExtrusionObject &body, int index, const SketchObjec
             const double projected = dot(point - origin, direction);
             lo = std::min(lo, projected); hi = std::max(hi, projected);
         }
-        if (hi <= kLinearResolution) {
+        if (hi <= linearResolution()) {
             // Solo il semispazio davvero dietro il profilo prova che gli
             // interni non si intersecano. La fascia (0,resolution] non basta.
             if (hi <= 0.0) disjoint.append({target, bodies.at(target).forgeBody});
@@ -385,7 +385,7 @@ ForgeBody extrusionUntilNext(ExtrusionObject &body, int index, const SketchObjec
     const double length = reach + std::max(1.0, bodyBox(*unit).diagonal() + reach) * 0.01;
     ForgeBody result = forgeExtrusion(sketch, side * length, error);
     if (!result) return nullptr;
-    const auto base = [&](const Body &shape, ShellId shell) { return touchesPlane(shape, shell, origin, direction, kLinearResolution); };
+    const auto base = [&](const Body &shape, ShellId shell) { return touchesPlane(shape, shell, origin, direction, linearResolution()); };
     bool encountered = false;
     for (const auto &candidate : candidates) {
         const ForgeBody tool = extrusionEndTool(*bodies.at(candidate.index).forgeBody, bodies.at(candidate.index).forgeBody);
@@ -423,7 +423,7 @@ ForgeBody extrusionUntilNext(ExtrusionObject &body, int index, const SketchObjec
         setError(error, QStringLiteral("Nessun corpo incontra il profilo nel verso dell'estrusione.")); return nullptr;
     }
     const Vec3 far = origin + length * direction;
-    for (ShellId shell : result->shells()) if (touchesPlane(*result, shell, far, direction, kLinearResolution)) {
+    for (ShellId shell : result->shells()) if (touchesPlane(*result, shell, far, direction, linearResolution())) {
         setError(error, QStringLiteral("Il profilo non e' interamente coperto dai corpi incontrati nel verso scelto.")); return nullptr;
     }
     if (!firstSurfaceEnvelope(*result, origin, direction)) {

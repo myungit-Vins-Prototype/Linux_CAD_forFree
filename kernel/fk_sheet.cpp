@@ -233,14 +233,14 @@ Body extendPlanarFace(const Body &body, const std::vector<EdgeId> &selected, dou
             const bool canonicalStart = trimStart ? plain.sense : !plain.sense;
             if (canonicalStart) plain.range.lo = projection.parameter;
             else plain.range.hi = projection.parameter;
-            if (plain.range.length() > kLinearResolution) {
+            if (plain.range.length() > linearResolution()) {
                 if (trimStart) plain.start = target;
                 else plain.end = target;
             }
         }
         std::vector<std::size_t> active;
         for (std::size_t i = 0; i < pieces.size(); ++i)
-            if (pieces[i].range.length() > kLinearResolution) active.push_back(i);
+            if (pieces[i].range.length() > linearResolution()) active.push_back(i);
         if (active.empty()) throw std::domain_error("extendSheet: l'estensione annulla il contorno planare");
         std::vector<PathSegment> boundary;
         for (std::size_t k = 0; k < active.size(); ++k) {
@@ -502,7 +502,7 @@ void joinSplineExtensions(Model &model, const Body &body, const std::vector<Spli
 Body extendSheet(const Body &input, const std::vector<EdgeId> &selected, double length, bool linear, BodyHistory *history) {
     if(history)*history={};
     if (!input.isSheet()) throw std::domain_error("extendSheet: si estendono solo le superfici (lamine)");
-    if (!(length > kLinearResolution)) throw std::domain_error("extendSheet: distanza non valida");
+    if (!(length > linearResolution())) throw std::domain_error("extendSheet: distanza non valida");
     Body body = input;
     computePCurves(body);
     Box box;
@@ -603,7 +603,7 @@ Body extendSheet(const Body &input, const std::vector<EdgeId> &selected, double 
             const double start = vIso ? uv0.y() : uv0.x();
             CurvePtr<3> crossCurve = vIso ? surface->uIso(uvm.x()) : surface->vIso(uvm.y());
             const double speed = norm(crossCurve->derivative(start));
-            if (!(speed > kLinearResolution)) throw std::domain_error("extendSheet: direzione di estensione singolare");
+            if (!(speed > linearResolution())) throw std::domain_error("extendSheet: direzione di estensione singolare");
             const double guess = start + outward * 2.0 * length / speed;
             const auto &crossSpline = static_cast<const BSplineCurve<3> &>(*crossCurve);
             const auto reach = extendBSpline(crossSpline, std::min(crossSpline.domain().lo, guess), std::max(crossSpline.domain().hi, guess));

@@ -10,18 +10,21 @@
 #include <stdexcept>
 #include <string>
 
-#include "fk_blend_model.h"
 #include "fk_blend_contact_breaks.h"
+#include "fk_blend_contour.h"
+#include "fk_blend_mitre.h"
+#include "fk_blend_model.h"
+#include "fk_blend_section_curve.h"
 #include "fk_body_check.h"
 #include "fk_bspline.h"
 #include "fk_bspline_surface.h"
 #include "fk_classify.h"
-#include "fk_intersect.h"
 #include "fk_curve_algo.h"
-#include "fk_pcurve.h"
-#include "fk_parallel.h"
-#include "fk_offset.h"
+#include "fk_intersect.h"
 #include "fk_nurbs.h"
+#include "fk_offset.h"
+#include "fk_parallel.h"
+#include "fk_pcurve.h"
 #include "fk_precision.h"
 #include "fk_sheet.h"
 #include "fk_surface_algo.h"
@@ -31,67 +34,11 @@ namespace {
 
 using Model = detail::BlendModel;
 
-constexpr double kFitTolerance = 1e-9;  // scarto della superficie dagli archi (o dai segmenti) veri
+double kFitTolerance() { return scaledAccuracy(1e-9); }  // scarto della superficie dagli archi (o dai segmenti) veri
 constexpr double kSmooth = 1e-9;        // vertici lisci: 1 - coseno dell'angolo tra le tangenti
 constexpr double kCrossSmooth = 5e-5;   // continuazioni separate da un trim/booleano: le curve sono approssimate
 constexpr double kSplitPassageTolerance = 1e-6;   // mm: palle dei due lati di un passaggio Split considerate la stessa
 constexpr double kFilletSolveTolerance = 1e-2;  // residuo relativo ammesso sulle patch B-spline approssimate
-
-// Curva dello spigolo per le sezioni. Un edge rifilato da una booleana a
-// meno della risoluzione da un nodo della curva tracciata comincia (o finisce)
-// con un tratto di Hermite lungo qualche 1e-8: li' la derivata seconda non ha
-// significato geometrico e, attraverso il piano normale, fa tornare indietro
-// le righe dei contatti. Il tratto si sostituisce con il prolungamento del
-// tratto vicino (stesso polinomio, extendBSpline); la curva resta quella del
-// B-rep altrove e gli estremi si spostano meno della risoluzione.
-CurvePtr<3> sectionCurve(const CurvePtr<3> &curve, const Interval &range) {
-    const auto *spline = dynamic_cast<const BSplineCurve<3> *>(curve.get());
-    if (!spline) return curve;
-    double first = range.hi, last = range.lo;
-    for (double k : spline->knots())
-        if (k > range.lo && k < range.hi) first = std::min(first, k), last = std::max(last, k);
-    if (!(first < range.hi)) return curve;
-    const bool head = distance(curve->point(range.lo), curve->point(first)) <= kLinearResolution;
-    const bool tail = distance(curve->point(last), curve->point(range.hi)) <= kLinearResolution;
-    if (!head && !tail) return curve;
-    try {
-        BSplineCurve<3> c = spline->clamped();
-        const int p = c.degree();
-        const auto cut = [&](double k, bool keepRight) {
-            c = c.insertKnot(k, p - c.multiplicity(k));
-            const std::vector<double> &knots = c.knots();
-            const std::size_t s = std::size_t(std::lower_bound(knots.begin(), knots.end(), k) - knots.begin());
-            std::vector<double> newKnots;
-            std::vector<Vec3> poles;
-            std::vector<double> weights;
-            if (keepRight) {
-                newKnots.push_back(k);
-                newKnots.insert(newKnots.end(), knots.begin() + std::ptrdiff_t(s), knots.end());
-                for (int i = int(s) - 1; i < c.poleCount(); ++i) {
-                    poles.push_back(c.poles()[std::size_t(i)]);
-                    if (c.isRational()) weights.push_back(c.weight(i));
-                }
-            } else {
-                newKnots.assign(knots.begin(), knots.begin() + std::ptrdiff_t(s + std::size_t(p)));
-                newKnots.push_back(k);
-                for (int i = 0; i < int(s); ++i) {
-                    poles.push_back(c.poles()[std::size_t(i)]);
-                    if (c.isRational()) weights.push_back(c.weight(i));
-                }
-            }
-            c = BSplineCurve<3>(p, newKnots, poles, weights);
-        };
-        if (head) cut(first, true);
-        if (tail && last > first) cut(last, false);
-        const auto regular = std::make_shared<BSplineCurve<3>>(extendBSpline(c, range.lo, range.hi));
-        if (distance(regular->point(range.lo), curve->point(range.lo)) > kLinearResolution
-            || distance(regular->point(range.hi), curve->point(range.hi)) > kLinearResolution)
-            return curve;
-        return regular;
-    } catch (const std::exception &) {
-        return curve;
-    }
-}
 
 // Punto di una faccia con le derivate prime, la normale uscente e le sue derivate.
 struct FacePoint {
@@ -191,7 +138,7 @@ Vec3 sectionPoint(const HPoint *rows, bool chamfer, double v) {
 }
 
 // Legge dei raggi su stazioni equidistanti in lunghezza d'arco, non nel
-// parametro della curva. Hermite monotona: raggi positivi senza overshoot.
+// parametro della curva. Hermite monotona: raggi non negativi senza overshoot; zero solo agli estremi aperti.
 class RadiusLaw {
 public:
     RadiusLaw(CurvePtr<3> curve, Interval range, const BlendProfileSpec &spec,
@@ -200,11 +147,14 @@ public:
         if (spec.radii.empty()) return;
         if (spec.radii.size() < 2 || spec.radii.size() > 64)
             throw std::domain_error("raccordo variabile: occorrono da 2 a 64 punti");
-        for (double r : spec.radii)
-            if (!std::isfinite(r) || r <= kLinearResolution)
-                throw std::domain_error("raccordo variabile: tutti i raggi devono essere positivi");
+        for (std::size_t i=0;i<spec.radii.size();++i) {
+            const double r=spec.radii[i];
+            const bool zeroEnd = r == 0.0 && !closed && (i == 0 || i + 1 == spec.radii.size());
+            if (!std::isfinite(r) || (r <= linearResolution() && !zeroEnd))
+                throw std::domain_error("raccordo variabile: zero solo agli estremi aperti");
+        }
         length_ = arcLength(*curve_, range_);
-        if (!(length_ > kLinearResolution)) throw std::domain_error("raccordo variabile: bordo troppo corto");
+        if (!(length_ > linearResolution())) throw std::domain_error("raccordo variabile: bordo troppo corto");
         edgeLength_ = length_;
         if (total > 0.0) length_ = total;
         values_ = spec.radii;
@@ -244,7 +194,11 @@ public:
         if (u > 1.0) return {values_.back() + (u - 1.0) * slopes_.back(), speed * slopes_.back()};
         const int count = int(values_.size()) - 1;
         double station = u * count;
-        if (std::fabs(station - std::round(station)) < 1e-8) station = std::round(station);
+        const double nearest = std::round(station);
+        // Non allargare lo zero a una fascia interna al percorso.
+        const bool nearZeroEnd = (nearest == 0 && values_.front() == 0.0)
+            || (nearest == count && values_.back() == 0.0);
+        if (std::fabs(station - nearest) < 1e-8 && (!nearZeroEnd || zeroEndpoint(t))) station = nearest;
         const int i = std::clamp(int(std::floor(station)) - (left && station == std::floor(station) ? 1 : 0), 0, count - 1);
         const double a = station - i, h = 1.0 / count;
         if (!spec_.smooth) return {values_[i] + a * (values_[i + 1] - values_[i]), speed * count * (values_[i + 1] - values_[i])};
@@ -255,6 +209,13 @@ public:
             + (-6*a2+6*a)*values_[i+1] + (3*a2-2*a)*h*slopes_[i+1]) / h;
         return {value, speed * du};
     }
+    bool zeroEndpoint(double t) const {
+        if (values_.empty() || (t != range_.lo && t != range_.hi)) return false;
+        const bool head = reversed_ ? t == range_.hi : t == range_.lo;
+        return head ? offset_ == 0.0 && values_.front() == 0.0
+                    : offset_ + edgeLength_ == length_ && values_.back() == 0.0;
+    }
+    const Interval &range() const { return range_; }
     const std::vector<double> &knots() const { return knots_; }
 private:
     CurvePtr<3> curve_; Interval range_; BlendProfileSpec spec_;
@@ -297,6 +258,7 @@ public:
     }
     std::vector<double> profileBreaks() const { return law_ ? law_->knots() : std::vector<double>(); }
     bool chamfer() const { return chamfer_; }
+    bool zeroEndpoint(double t) const { return law_ && law_->zeroEndpoint(t); }
     double size() const { return size_; }
     bool intrinsicGuide() const { return bool(guide_); }
     std::vector<double> contactBreaks(const Interval &range, const std::vector<double> &breaks,
@@ -310,7 +272,7 @@ public:
         const double factor = radius < 0.0 ? 1.0 : radius / size_;
         const auto value = law_ ? law_->at(t, left, size_) : std::make_pair(size_, 0.0);
         radius = value.first * factor;
-        if (!(radius > kLinearResolution)) return false;
+        if (!(radius > 0.0)) return false;
         s.t = t;
         Vec3 e[3];
         if (left) edge_->evaluateLeft(t, 2, e);
@@ -325,6 +287,38 @@ public:
     // Sezione in t continuando da quella vicina (predittore lungo le derivate);
     // se Newton non converge, o salta su un altro ramo, a passi piu' corti.
     Section follow(double t, bool left, const Section &from) const {
+        if (zeroEndpoint(t)) {
+            // Il sistema delle superfici offset e' singolare a R=0. Le
+            // coordinate di contatto e i jet hanno un limite unilaterale:
+            // lo estrapoliamo quadraticamente da tre sezioni interne. Il
+            // bordo terminale viene invece imposto esattamente al vertice
+            // originale, senza raggio minimo o aumento di tolleranza.
+            const Interval range = law_->range();
+            const double direction = t == range.lo ? 1.0 : -1.0;
+            const double delta = 0.001 * range.length();
+            if (t + direction * delta / 4 == t)
+                throw std::domain_error("blendEdges: limite del raccordo a raggio zero non risolvibile");
+            const auto one = follow(t + direction * delta, false, from);
+            const auto two = follow(t + direction * delta / 2, false, one);
+            const auto three = follow(t + direction * delta / 4, false, two);
+            Section result = three;
+            result.t = t; result.center = edge_->point(t);
+            result.residual = 0.0; result.noise = 0.0;
+            for (int i = 0; i < 4; ++i) {
+                result.x[i] = (one.x[i] - 6 * two.x[i] + 8 * three.x[i]) / 3;
+                result.dx[i] = (one.dx[i] - 6 * two.dx[i] + 8 * three.dx[i]) / 3;
+                if (!std::isfinite(result.x[i]) || !std::isfinite(result.dx[i]))
+                    throw std::domain_error("blendEdges: contatto a raggio zero non finito");
+            }
+            for (int row = 0; row < 3; ++row) {
+                const double weight = (one.row[row].w - 6 * two.row[row].w + 8 * three.row[row].w) / 3;
+                if (!(weight > 0.0) || !std::isfinite(weight))
+                    throw std::domain_error("blendEdges: peso del limite a raggio zero non valido");
+                result.row[row] = {weight * result.center, weight};
+                result.drow[row] = (1.0 / 3) * (one.drow[row] - 6.0 * two.drow[row] + 8.0 * three.drow[row]);
+            }
+            return result;
+        }
         Section current = from;
         double step = t - from.t;
         const double smallest = 1e-12 * (1.0 + std::fabs(t) + std::fabs(from.t));
@@ -491,7 +485,7 @@ private:
             const Vec3 chord = pb.p - pa.p, dchord = dpB - dpA;
             const Vec3 height = mid - 0.5 * (pa.p + pb.p), dheight = dmid - 0.5 * (dpA + dpB);
             const double h = norm(height), l2 = 0.25 * dot(chord, chord);
-            if (!(h > kLinearResolution)) throw std::domain_error("raccordo conico: sezione degenere");
+            if (!(h > linearResolution())) throw std::domain_error("raccordo conico: sezione degenere");
             w = l2 / (h * profile_.conicRadius);
             dw = (0.5 * dot(chord, dchord) / h - l2 * dot(height, dheight) / (h*h*h)) / profile_.conicRadius;
             const int family = w < 1.0 - 1e-7 ? 0 : w > 1.0 + 1e-7 ? 2 : 1;
@@ -673,7 +667,7 @@ public:
         // estremi uguali e derivate senza significato: non e' un punto della
         // geometria e si toglie (gli estremi del tratto restano).
         for (std::size_t k = 1; k < breaks.size();) {
-            if (distance(curve_->point(breaks[k - 1]), curve_->point(breaks[k])) > kLinearResolution) {
+            if (distance(curve_->point(breaks[k - 1]), curve_->point(breaks[k])) > linearResolution()) {
                 ++k;
                 continue;
             }
@@ -743,7 +737,7 @@ public:
                     // la risoluzione sorgente e' un limite numerico. Il
                     // troncamento della differenza finita deve invece
                     // continuare a raffinarsi fino al budget nominale.
-                    if (change <= .5*uncertainty && uncertainty <= kLinearResolution)
+                    if (change <= .5*uncertainty && uncertainty <= linearResolution())
                         value.endpointUncertainty = uncertainty;
                 }
                 return value;
@@ -781,7 +775,7 @@ public:
             // alla soglia numerica, lo scarto e' il rumore delle sezioni (la
             // stima di Section::noise puo' essere ottimista di qualche volta).
             const bool noise = parentError > 0.0 && error >= 0.5 * parentError && error <= 16.0 * numericalFloor;
-            if (error > std::max({kFitTolerance,numericalFloor,endpointUncertainty}) && !noise && h > 1e-9 * range_.length()) {
+            if (error > std::max({kFitTolerance(),numericalFloor,endpointUncertainty}) && !noise && h > 1e-9 * range_.length()) {
                 const double m = 0.5 * (a + b);
                 pending.push_back({m, b, error});
                 pending.push_back({a, m, error});
@@ -913,7 +907,7 @@ std::vector<EdgeId> seamChain(const Body &body, EdgeId c) {
 //  - Cross: lo spigolo prosegue tangente su un'altra coppia di facce (A', B')
 //    tangenti ad A e B lungo gli spigoli del vertice (i fianchi di uno sweep
 //    dove il percorso passa da un segmento a un arco): la stessa sezione.
-enum class Joint { Smooth, Split, SplitA, Mitre, Cross };
+enum class Joint { Smooth, Split, SplitA, Mitre, MitreA, Cross };
 
 struct ChainFin {
     FinId fin;  // fin della faccia A
@@ -946,7 +940,7 @@ ChainFin chainFin(const Body &body, FinId f) {
 }
 
 // Il giunto nel vertice tra la fin `in` e la fin `out` di A (eccezione se non gestito).
-Joint classifyJoint(const Body &body, FinId in, FinId out, EdgeId &third) {
+Joint classifyJoint(const Body &body, FinId in, FinId out, EdgeId &third, bool allowConcave = false) {
     third = EdgeId();
     const VertexId v = body.finEnd(in);
     const std::vector<EdgeId> at = edgesAtVertex(body, v);
@@ -975,7 +969,8 @@ Joint classifyJoint(const Body &body, FinId in, FinId out, EdgeId &third) {
     }
     const Vec3 nA = faceNormal(body, body.finFace(in), p);
     // La faccia A sta a sinistra delle fin: una svolta a sinistra e' un angolo convesso di A.
-    if (dot(cross(tIn, tOut), nA) <= 0.0) throw std::domain_error("blendEdges: angoli vivi concavi della catena non gestiti");
+    if (!allowConcave && dot(cross(tIn, tOut), nA) <= 0.0)
+        throw std::domain_error("blendEdges: angoli vivi concavi della catena non selezionati");
     return Joint::Mitre;
 }
 
@@ -1014,7 +1009,7 @@ FinId crossContinuation(const Body &body, FinId f, bool forward, EdgeId &jA, Edg
 
 // Passaggio tangente con B comune e A divisa: percorri il loop opposto
 // al contrario, mantenendo A a sinistra e B a destra della catena.
-FinId splitAContinuation(const Body &body, FinId f, bool forward, EdgeId &third) {
+FinId splitAContinuation(const Body &body, FinId f, bool forward, EdgeId &third, const std::set<int> &selected, Joint &kind) {
     const VertexId v = forward ? body.finEnd(f) : body.finStart(f);
     if (edgesAtVertex(body, v).size() != 3) return FinId();
     const FinId twin = body.otherFin(f);
@@ -1023,17 +1018,24 @@ FinId splitAContinuation(const Body &body, FinId f, bool forward, EdgeId &third)
     const FinId g = body.otherFin(alongB);
     if (!g.valid() || g == f || body.finFace(g) == body.finFace(f)) return FinId();
     const Vec3 tf = finTangent(body, f, forward), tg = finTangent(body, g, !forward);
-    if (dot(tf, tg) < 1.0 - kSmooth) return FinId();
-    // Solo cambi di supporto lisci; gli angoli vivi restano al percorso mitra.
+    if (dot(tf, tg) < 1.0 - kSmooth && !selected.count(body.fin(g).edge.index))
+        return FinId();
+    // I giunti vivi sul supporto opposto richiedono la selezione esplicita.
     try {
-        const Joint j = forward ? classifyJoint(body, alongB, twin, third)
-                                : classifyJoint(body, twin, alongB, third);
-        return j == Joint::Split ? g : FinId();
+        const Joint j = forward ? classifyJoint(body, alongB, twin, third, selected.count(body.fin(g).edge.index))
+                                : classifyJoint(body, twin, alongB, third, selected.count(body.fin(g).edge.index));
+        if (j == Joint::Split)
+            return g;
+        if (j == Joint::Mitre && selected.count(body.fin(g).edge.index)) {
+            kind = Joint::MitreA;
+            return g;
+        }
+        return FinId();
     } catch (const std::domain_error &) { return FinId(); }
 }
 
 // La catena lungo il loop della faccia della fin `seed` (A), con le fin i cui edge sono scelti.
-LoopChain chainAlong(const Body &body, FinId seed, const std::set<int> &selected, bool propagate) {
+LoopChain chainAlong(const Body &body, FinId seed, const std::set<int> &selected, bool propagate, const std::set<int> *zeroEnds = nullptr) {
     LoopChain chain;
     chain.a = body.finFace(seed);
     if (body.finFace(body.otherFin(seed)) == chain.a) throw std::domain_error("blendEdges: spigolo interno a una faccia");
@@ -1051,16 +1053,17 @@ LoopChain chainAlong(const Body &body, FinId seed, const std::set<int> &selected
     };
     FinId f = seed;
     while (true) {
+        if (zeroEnds && zeroEnds->count(body.finEnd(f).index)) break;
         const FinId next = body.fin(f).next;
         EdgeId third, fourth;
         FinId g;
         Joint j = Joint::Smooth;
         if (continues(f, next, true)) {
             g = next;
-            j = classifyJoint(body, f, next, third);
+            j = classifyJoint(body, f, next, third, selected.count(body.fin(next).edge.index));
         } else {
-            g = splitAContinuation(body, f, true, third);
             j = Joint::SplitA;
+            g = splitAContinuation(body, f, true, third, selected, j);
             if (!g.valid()) {
                 g = crossContinuation(body, f, true, third, fourth, selected);
                 if (!g.valid()) break;
@@ -1082,16 +1085,17 @@ LoopChain chainAlong(const Body &body, FinId seed, const std::set<int> &selected
     if (!chain.closed) {
         f = seed;
         while (true) {
+            if (zeroEnds && zeroEnds->count(body.finStart(f).index)) break;
             const FinId previous = body.fin(f).previous;
             EdgeId third, fourth;
             FinId g;
             Joint j = Joint::Smooth;
             if (previous != fins.back() && continues(f, previous, false)) {
                 g = previous;
-                j = classifyJoint(body, previous, f, third);
+                j = classifyJoint(body, previous, f, third, selected.count(body.fin(previous).edge.index));
             } else {
-                g = splitAContinuation(body, f, false, third);
                 j = Joint::SplitA;
+                g = splitAContinuation(body, f, false, third, selected, j);
                 if (!g.valid()) {
                     g = crossContinuation(body, f, false, third, fourth, selected);
                     j = Joint::Cross;
@@ -1115,7 +1119,7 @@ LoopChain chainAlong(const Body &body, FinId seed, const std::set<int> &selected
 }
 
 // Catena dello spigolo `seed`: dalla parte di una delle sue facce (la piu' lunga; a parita' la faccia piana).
-LoopChain chainOf(const Body &body, EdgeId seed, const std::set<int> &selected, bool propagate = true) {
+LoopChain chainOf(const Body &body, EdgeId seed, const std::set<int> &selected, bool propagate = true, const std::set<int> *zeroEnds = nullptr) {
     const Edge &edge = body.edge(seed);
     if (!edge.curve || body.isLaminar(seed)) throw std::domain_error("blendEdges: spigolo non valido");
     std::string failure;
@@ -1124,7 +1128,7 @@ LoopChain chainOf(const Body &body, EdgeId seed, const std::set<int> &selected, 
     int bestSelected = -1;
     for (FinId f : {edge.forward, edge.backward}) {
         try {
-            LoopChain chain = chainAlong(body, f, selected, propagate);
+            LoopChain chain = chainAlong(body, f, selected, propagate, zeroEnds);
             int selectedCount = 0;
             for (const ChainFin &fin : chain.fins)
                 if (selected.count(fin.edge.index)) ++selectedCount;
@@ -1176,6 +1180,7 @@ struct Junction {
     int connector = -1;            // arco della sezione (Smooth, Split, estremo normale) o curva di taglio (estremo)
     int gamma = -1, delta = -1;    // Mitre: intersezione dei raccordi, taglio del raccordo profondo con l'altro fianco
     int deepPoint = -1;            // Mitre: punto su c dove finisce il contatto del raccordo profondo
+    bool commonB = false;
     int deep = -1;                 // Mitre: 0 il pezzo prima, 1 quello dopo, -1 simmetrico
     double toleranceA = 0.0, toleranceB = 0.0;  // giunto Cross attraverso curve di trim approssimate
 };
@@ -1224,237 +1229,13 @@ std::vector<std::vector<EdgeId>> surfaceChainGroups(const Body &body, const std:
 
 namespace {
 
-// Curva d'intersezione tra `a` e `b` da `from` a `to` (punti comuni), dentro il box: curva, tratto, scarto.
-struct Cut {
-    CurvePtr<3> curve;
-    Interval range;
-    bool forward = true;  // dal punto `from` a `to` il parametro cresce
-    double gap = 0.0;
-    Interval sV{0.0, 0.0};  // traceBetween: valori di v su S toccati dai nodi
-};
-
-// Curva comune ai raccordi S (t, v) e T (s, w) in un angolo a mitra, dal punto
-// in A (v = w = 0: i parametri t0, s0) al punto X (tX, vX, sX, wX). Sui punti
-// della curva v + w = g, da 0 a vX + wX: Newton 4 x 4 su (t, v, s, w) con la
-// continuazione in g (predittore dalle derivate), poi cubiche di Hermite a
-// tratti in g raffinate finche' si scostano meno di kFitTolerance dai punti
-// veri. Vicino al punto in A i raccordi sono tangenti tra loro (entrambi
-// tangenti ad A) e il sistema degenera: l'ultimo tratto va fino al punto
-// esatto e il suo scarto (misurato) diventa la tolleranza della curva.
-Cut traceMitre(const Surface &S, const Surface &T, double t0, double s0, const double X[4], double scale, double fitTolerance) {
-    // Fra raccordi quasi tangenti il sistema d'intersezione e' mal
-    // condizionato. Prima verifica una curva comune entro la risoluzione
-    // geometrica, senza aumentare le tolleranze delle facce di appoggio.
-    const auto pointOn = [&](const Surface &surface, double start, double end, double v, double f) {
-        return surface.point(start + f * (end - start), f * v);
-    };
-    bool coincident = true;
-    for (int i = 0; i <= 64 && coincident; ++i) {
-        const double f = i / 64.0;
-        const Vec3 a = pointOn(S, t0, X[0], X[1], f), b = pointOn(T, s0, X[2], X[3], f);
-        coincident = isFinite(a) && isFinite(b) && distance(a, b) <= kLinearResolution;
-        if (coincident) {
-            try {
-                const Vec3 na = S.normal(t0 + f * (X[0] - t0), f * X[1]);
-                const Vec3 nb = T.normal(s0 + f * (X[2] - s0), f * X[3]);
-                coincident = norm(cross(na, nb)) <= 1e-5;
-            } catch (const std::domain_error &) { coincident = false; }
-        }
-    }
-    if (coincident) {
-        try {
-            const auto curve = fitCurve([&](double f) {
-                return 0.5 * (pointOn(S, t0, X[0], X[1], f) + pointOn(T, s0, X[2], X[3], f));
-            }, {0.0, 1.0}, {}, kFitTolerance);
-            double gap = 0.0;
-            for (int i = 0; i <= 128; ++i) {
-                const double f = i / 128.0;
-                const Vec3 p = curve->point(f);
-                if (!isFinite(p)) { gap = std::numeric_limits<double>::infinity(); break; }
-                gap = std::max({gap, distance(p, pointOn(S, t0, X[0], X[1], f)),
-                                   distance(p, pointOn(T, s0, X[2], X[3], f))});
-            }
-            if (gap <= kLinearResolution) {
-                Cut cut;
-                cut.curve = curve;
-                cut.range = {0.0, 1.0};
-                cut.forward = true;
-                cut.gap = gap;
-                return cut;
-            }
-        } catch (const std::domain_error &) {
-            // La stima non e' approssimabile: usa la continuazione esatta.
-        }
-    }
-    struct Node {
-        double g = 0.0, x[4] = {0, 0, 0, 0}, dx[4] = {0, 0, 0, 0};
-        Vec3 p, dp;
-    };
-    const auto solve = [&](double g, Node &n) {
-        for (int iteration = 0; iteration < 50; ++iteration) {
-            Vec3 a[4], b[4];
-            S.evaluate(n.x[0], n.x[1], 1, a);
-            T.evaluate(n.x[2], n.x[3], 1, b);
-            const Vec3 f = a[0] - b[0];
-            const double f4 = n.x[1] + n.x[3] - g;
-            const Vec3 c0 = a[Surface::derivativeIndex(1, 0, 1)], c1 = a[Surface::derivativeIndex(0, 1, 1)];
-            const Vec3 c2 = -b[Surface::derivativeIndex(1, 0, 1)], c3 = -b[Surface::derivativeIndex(0, 1, 1)];
-            double J[4][4] = {{c0.x(), c1.x(), c2.x(), c3.x()}, {c0.y(), c1.y(), c2.y(), c3.y()}, {c0.z(), c1.z(), c2.z(), c3.z()}, {0, 1, 0, 1}};
-            double r[4] = {-f.x(), -f.y(), -f.z(), -f4};
-            const bool done = norm(f) < 1e-13 * scale && std::fabs(f4) < 1e-15;
-            if (!solveLinear<4>(J, r)) return false;
-            for (int k = 0; k < 4; ++k) n.x[k] += r[k];
-            if (done) break;
-        }
-        Vec3 a[4], b[4];
-        S.evaluate(n.x[0], n.x[1], 1, a);
-        T.evaluate(n.x[2], n.x[3], 1, b);
-        if (distance(a[0], b[0]) > 1e-10 * scale) return false;
-        const Vec3 c0 = a[Surface::derivativeIndex(1, 0, 1)], c1 = a[Surface::derivativeIndex(0, 1, 1)];
-        const Vec3 c2 = -b[Surface::derivativeIndex(1, 0, 1)], c3 = -b[Surface::derivativeIndex(0, 1, 1)];
-        double J[4][4] = {{c0.x(), c1.x(), c2.x(), c3.x()}, {c0.y(), c1.y(), c2.y(), c3.y()}, {c0.z(), c1.z(), c2.z(), c3.z()}, {0, 1, 0, 1}};
-        double r[4] = {0, 0, 0, 1};
-        if (!solveLinear<4>(J, r)) return false;
-        n.g = g;
-        std::copy(r, r + 4, n.dx);
-        n.p = 0.5 * (a[0] + b[0]);
-        n.dp = c0 * r[0] + c1 * r[1];
-        return true;
-    };
-    const double gX = X[1] + X[3];
-    if (!(gX > 0.0)) throw std::domain_error("blendEdges: angolo a mitra degenere");
-    // Nodo in g da quello vicino (predittore lineare), a passi dimezzati se Newton non converge.
-    const auto nodeAt = [&](double g, const Node &from, Node &out) {
-        Node current = from;
-        double step = g - from.g;
-        while (true) {
-            const bool last = std::fabs(g - current.g) <= std::fabs(step) * (1.0 + 1e-12);
-            const double target = last ? g : current.g + step;
-            Node trial = current;
-            for (int k = 0; k < 4; ++k) trial.x[k] = current.x[k] + current.dx[k] * (target - current.g);
-            if (solve(target, trial)) {
-                current = trial;
-                if (last) {
-                    out = current;
-                    return true;
-                }
-                continue;
-            }
-            step *= 0.5;
-            if (std::fabs(step) < 1e-12 * gX) return false;
-        }
-    };
-    Node top;
-    std::copy(X, X + 4, top.x);
-    if (!solve(gX, top)) throw std::domain_error("blendEdges: punto dei raccordi sui fianchi non trovato nell'angolo");
-    double gMin = 1e-4 * gX;
-    Node low;
-    bool haveLow = false;
-    // In prossimita' di A le due superfici di raccordo sono tangenti e il
-    // sistema 4x4 diventa singolare. Sui loft guidati la zona numericamente
-    // singolare puo' essere piu' ampia del valore fisso usato in precedenza;
-    // arretra il primo nodo e lascia all'ultimo tratto tollerante la parte
-    // tangente, gia' delimitata dai due punti esatti.
-    for (double fraction : {1e-4, 3e-4, 1e-3, 3e-3, 1e-2, 3e-2, 1e-1}) {
-        gMin = fraction * gX;
-        if (nodeAt(gMin, top, low)) {
-            haveLow = true;
-            break;
-        }
-    }
-    if (!haveLow) throw std::domain_error("blendEdges: curva dei raccordi nell'angolo non tracciata vicino alla faccia comune");
-    std::map<double, Node> nodes{{gX, top}};
-    nodes[gMin] = low;
-    const auto hermite = [](const Node &a, const Node &b, double f) {
-        const double h = b.g - a.g;
-        const double h00 = (1 + 2 * f) * (1 - f) * (1 - f), h10 = f * (1 - f) * (1 - f), h01 = f * f * (3 - 2 * f), h11 = f * f * (f - 1);
-        return h00 * a.p + (h10 * h) * a.dp + h01 * b.p + (h11 * h) * b.dp;
-    };
-    // Tratti tra gMin e gX: suddivisi finche' la cubica sta sulla curva vera.
-    std::vector<std::pair<double, double>> pending{{gMin, gX}};
-    std::vector<double> breaks;
-    double approximationGap = 0.0;
-    int guard = 0;
-    while (!pending.empty()) {
-        // La soglia minima 1e-4 consente fino a 2^14 foglie: il limite
-        // deve contenere anche tutti i nodi interni dell'albero di raffinamento.
-        if (++guard > 32767) throw std::domain_error("blendEdges: curva dei raccordi nell'angolo troppo complessa");
-        const auto [ga, gb] = pending.back();
-        pending.pop_back();
-        const Node &a = nodes.at(ga), &b = nodes.at(gb);
-        double error = 0.0;
-        bool ok = true;
-        for (double f : {0.25, 0.5, 0.75}) {
-            Node exact;
-            if (!nodeAt(ga + f * (gb - ga), a, exact)) {
-                ok = false;
-                break;
-            }
-            error = std::max(error, distance(hermite(a, b, f), exact.p));
-        }
-        // Vicino alle singolarita' dei fianchi di un loft Newton puo' non
-        // risolvere uno dei campioni pur avendo estremi validi. Non suddividere
-        // indefinitamente un intervallo ormai trascurabile.
-        if ((!ok || error > fitTolerance) && gb - ga > 1e-4 * gX) {
-            const double gm = 0.5 * (ga + gb);
-            Node mid;
-            // La continuazione puo' attraversare una parametrizzazione quasi
-            // singolare in un solo verso. Il nodo superiore e' altrettanto
-            // valido come predittore e spesso resta meglio condizionato.
-            if (!nodeAt(gm, a, mid) && !nodeAt(gm, b, mid))
-                throw std::domain_error("blendEdges: curva dei raccordi nell'angolo non tracciata nel tratto interno");
-            nodes[gm] = mid;
-            pending.push_back({gm, gb});
-            pending.push_back({ga, gm});
-            continue;
-        }
-        if (!ok || error > fitTolerance) {
-            for (double f : {0.25, 0.5, 0.75}) {
-                const Vec3 p = hermite(a, b, f);
-                approximationGap = std::max({approximationGap, projectPoint(S, p).distance, projectPoint(T, p).distance});
-            }
-        }
-    }
-    // L'ultimo tratto fino al punto in A: stessa tangente del nodo gMin (la curva vi e' liscia).
-    Node start;
-    start.g = 0.0;
-    start.x[0] = t0;
-    start.x[2] = s0;
-    start.p = 0.5 * (S.point(t0, 0.0) + T.point(s0, 0.0));
-    start.dp = low.dp;
-    double gap = 0.0;
-    for (double f : {0.5, 0.9}) {
-        Node exact;
-        if (nodeAt(f * gMin, low, exact)) gap = std::max(gap, distance(hermite(start, low, f), exact.p));
-    }
-    nodes[0.0] = start;
-    // B-spline cubica: nodi tripli nei punti di rottura.
-    std::vector<double> knots;
-    std::vector<Vec3> poles;
-    std::vector<double> gs;
-    for (const auto &[g, node] : nodes) gs.push_back(g);
-    for (int k = 0; k < 4; ++k) knots.push_back(gs.front());
-    poles.push_back(nodes.at(gs.front()).p);
-    for (std::size_t k = 0; k + 1 < gs.size(); ++k) {
-        const Node &a = nodes.at(gs[k]), &b = nodes.at(gs[k + 1]);
-        const double h = b.g - a.g;
-        poles.push_back(a.p + (h / 3.0) * a.dp);
-        poles.push_back(b.p - (h / 3.0) * b.dp);
-        poles.push_back(b.p);
-        for (int j = 0; j < (k + 2 == gs.size() ? 4 : 3); ++j) knots.push_back(b.g);
-    }
-    Cut cut;
-    cut.curve = std::make_shared<BSplineCurve<3>>(3, knots, poles);
-    cut.range = {0.0, gX};
-    cut.forward = true;
-    cut.gap = std::max(gap, approximationGap);
-    return cut;
-}
+using Cut = detail::BlendCut;
+using detail::traceBlendMitre;
 
 // Curva comune alle superfici S e T tra i punti comuni `from` e `to`, con
 // parametro s lungo la corda: sui punti (P - from) . D = s |D|^2, D = to - from.
 // Newton 4 x 4 sui parametri delle due superfici con la continuazione in s,
-// cubiche di Hermite a tratti raffinate a kFitTolerance. Funziona anche con le
+// cubiche di Hermite a tratti raffinate a kFitTolerance(). Funziona anche con le
 // superfici che si incontrano sotto un angolo piccolo (dove il tracciamento
 // generale si ferma), purche' la curva avanzi lungo la corda.
 // Con `vRange` il parametro e' invece la v di S (v = lo + s (hi - lo)): la
@@ -1474,7 +1255,7 @@ Cut traceBetween(const Surface &S, const Surface &T, const Vec3 &from, const Vec
     // errore di approssimazione proporzionale alle dimensioni del modello.
     // Pretendere sempre un nanometro assoluto rende il fit instabile nei
     // giunti tra pezze, dove Newton oscilla tra soluzioni equivalenti.
-    const double fitTolerance = std::max(kFitTolerance, surfaceError);
+    const double fitTolerance = std::max(kFitTolerance(), surfaceError);
     struct Node {
         double s = 0.0, y[4] = {0, 0, 0, 0}, dy[4] = {0, 0, 0, 0};
         Vec3 p, dp;
@@ -1540,8 +1321,8 @@ Cut traceBetween(const Surface &S, const Surface &T, const Vec3 &from, const Vec
         if (stableTangencies && (target == 0. || target == 1.)) {
             n.s = target;
             n.p = p;
-            return distance(S.point(n.y[0], n.y[1]), p) <= std::max(kFitTolerance, surfaceError) &&
-                   distance(T.point(n.y[2], n.y[3]), p) <= std::max(kFitTolerance, surfaceError);
+            return distance(S.point(n.y[0], n.y[1]), p) <= std::max(kFitTolerance(), surfaceError) &&
+                   distance(T.point(n.y[2], n.y[3]), p) <= std::max(kFitTolerance(), surfaceError);
         }
         return solve(target, n);
     };
@@ -1607,7 +1388,7 @@ Cut traceBetween(const Surface &S, const Surface &T, const Vec3 &from, const Vec
         }
         // Vicino alla tangenza la posizione dei parametri puo' essere
         // rumorosa anche con un punto preciso. Accetta una piccola campata
-        // solo se sta su entrambi gli appoggi a kFitTolerance e attraversa
+        // solo se sta su entrambi gli appoggi a kFitTolerance() e attraversa
         // le sezioni richieste: nessuna tolleranza geometrica viene allargata.
         if (stableTangencies && alongV && (!ok || error > fitTolerance) && sb - sa <= 1e-3) {
             double measured = 0.;
@@ -1721,7 +1502,7 @@ CurvePtr<3> boundaryIsoGuide(const Body &body, EdgeId id, const SurfacePtr (&sup
         bool agrees = true;
         for (int i = 0; i <= 32; ++i) {
             const double t = edge.range.lo + edge.range.length() * i / 32.0;
-            if (distance(candidate->point(t), edge.curve->point(t)) > std::max(2 * kFitTolerance, 2 * edge.tolerance)) agrees = false;
+            if (distance(candidate->point(t), edge.curve->point(t)) > std::max(2 * kFitTolerance(), 2 * edge.tolerance)) agrees = false;
         }
         if (agrees) return candidate;
     }
@@ -1731,7 +1512,7 @@ CurvePtr<3> boundaryIsoGuide(const Body &body, EdgeId id, const SurfacePtr (&sup
 void extendSplineBoundary(Body &body, Model &model, EdgeId id, const Interval &window, bool tangentSeams = false) {
     const Edge &edge = body.edge(id);
     const CurvePtr<3> original = edge.curve;
-    const CurvePtr<3> predictor = sectionCurve(original, edge.range);
+    const CurvePtr<3> predictor = detail::blendSectionCurve(original, edge.range);
     const FinId fins[2] = {edge.forward, edge.backward};
     SurfacePtr supports[2];
     for (int side = 0; side < 2; ++side) {
@@ -1770,7 +1551,7 @@ void extendSplineBoundary(Body &body, Model &model, EdgeId id, const Interval &w
                     const Vec3 p = isoGuide->point(breaks[k - 1] + fraction * (breaks[k] - breaks[k - 1]));
                     for (int side = 0; side < 2; ++side) worst = std::max(worst, projectPoint(*supports[side], p).distance);
                 }
-            if (worst > std::max(2 * kFitTolerance, edge.tolerance))
+            if (worst > std::max(2 * kFitTolerance(), edge.tolerance))
                 throw std::domain_error("blendEdges: il prolungamento della cucitura tangente supera il supporto entro tolleranza");
             extensionDeviation = std::max(extensionDeviation, worst);
             return isoGuide;
@@ -1814,7 +1595,7 @@ void extendSplineBoundary(Body &body, Model &model, EdgeId id, const Interval &w
             }
             throw std::domain_error("blendEdges: prolungamento dell'intersezione non convergente");
         };
-        return fitCurve(continuation, range, {}, kFitTolerance);
+        return fitCurve(continuation, range, {}, kFitTolerance());
     };
     std::vector<CurvePtr<3>> curves;
     std::vector<Interval> ranges;
@@ -1990,15 +1771,25 @@ Body blendSurfaceChainsWithGuide(const Body &input, const std::vector<EdgeId> &s
                                  BodyHistory *history, bool useGuide, bool boundaryMode = false, const BlendProfileSpec *profile = nullptr, bool propagate = true, bool trackContacts = true) {
 
     if (history) *history = BodyHistory();
-    if (!(size > kLinearResolution)) throw std::domain_error("blendEdges: raggio o distanza non validi");
+    if (!(size > linearResolution())) throw std::domain_error("blendEdges: raggio o distanza non validi");
     Body body = input;
     std::map<int, int> edgeSources;
     struct EdgeLaw { const BlendRadiusPath *law; BlendPathEdge piece; double total; bool closed; };
     std::map<int,EdgeLaw> edgeLaws;
+    std::set<int> zeroEnds;
     if(profile)for(const auto &law:profile->paths) {
         const auto paths=blendPaths(input,law.edges);
         if(paths.size()!=1)throw std::domain_error("raggio variabile: percorso non valido");
         for(const auto &piece:paths[0].edges)edgeLaws.emplace(piece.edge.index,EdgeLaw{&law,piece,paths[0].length,paths[0].closed});
+        if (!paths[0].closed && !law.radii.empty()) {
+            // Catene diverse possono incontrarsi nello stesso vertice solo
+            // se ogni raccordo termina li' a zero: non occorre una pezza.
+            const auto &head = paths[0].edges.front(), &tail = paths[0].edges.back();
+            if ((law.reverse ? law.radii.back() : law.radii.front()) == 0.0)
+                zeroEnds.insert((head.reversed ? input.edgeEnd(head.edge) : input.edgeStart(head.edge)).index);
+            if ((law.reverse ? law.radii.front() : law.radii.back()) == 0.0)
+                zeroEnds.insert((tail.reversed ? input.edgeStart(tail.edge) : input.edgeEnd(tail.edge)).index);
+        }
     }
     std::vector<EdgeId> edges = selected;
     std::map<int, ChamferSides> sideOf;
@@ -2025,7 +1816,7 @@ Body blendSurfaceChainsWithGuide(const Body &input, const std::vector<EdgeId> &s
     for (EdgeId e : edges) pending.insert(e.index);
     std::vector<LoopChain> chains;
     while (!pending.empty()) {
-        LoopChain chain = chainOf(body, EdgeId(*pending.begin()), pending, propagate);
+        LoopChain chain = chainOf(body, EdgeId(*pending.begin()), pending, propagate, &zeroEnds);
         for (const ChainFin &f : chain.fins) pending.erase(f.edge.index);
         chains.push_back(std::move(chain));
     }
@@ -2039,7 +1830,7 @@ Body blendSurfaceChainsWithGuide(const Body &input, const std::vector<EdgeId> &s
     };
     std::map<int, FaceEdit> edits;
     std::vector<std::pair<int, FaceEdit>> newFaces;
-    std::set<int> usedVertices;
+    std::set<int> usedVertices, usedZeroVertices;
     bool approximateCross = false;
     std::set<const Surface *> guidedCaps;
 
@@ -2098,7 +1889,7 @@ Body blendSurfaceChainsWithGuide(const Body &input, const std::vector<EdgeId> &s
             piece.to = to;
             const Edge &edge = body.edge(chain.fins[std::size_t(f)].edge);
             const Face &faceB = body.face(b), &faceA = body.face(piece.a);
-            const CurvePtr<3> curve = sectionCurve(edge.curve, edge.range);
+            const CurvePtr<3> curve = detail::blendSectionCurve(edge.curve, edge.range, 50.0 * size);
             piece.solver = std::make_unique<SectionSolver>(
                 curve, faceA.surface, faceA.sense, faceB.surface, faceB.sense, reachA, chamfer, convex, scale, chamfer ? sizeOnB : -1.0,
                 guideChain && faceA.surface->type() == SurfaceType::Plane && faceB.surface->type() == SurfaceType::BSpline &&
@@ -2383,15 +2174,15 @@ Body blendSurfaceChainsWithGuide(const Body &input, const std::vector<EdgeId> &s
                                 const double speed2=squaredNorm(a.drow[0].p)+squaredNorm(a.drow[2].p);
                                 if (!(speed2>0.)) continue;
                                 const double step=(dot(b.row[0].p-a.row[0].p,a.drow[0].p)+dot(b.row[2].p-a.row[2].p,a.drow[2].p))/speed2;
-                                if (!std::isfinite(step) || step*step*speed2 > kLinearResolution*kLinearResolution) continue;
+                                if (!std::isfinite(step) || step*step*speed2 > linearResolution()*linearResolution()) continue;
                                 Section candidate;
                                 try { candidate=moving.blend->section(parameter+step); }
                                 catch (const std::domain_error &) { continue; }
                                 const Section &original=side==0?initialA:initialB;
-                                if (std::max(distance(candidate.row[0].p,original.row[0].p),distance(candidate.row[2].p,original.row[2].p))>kLinearResolution) continue;
+                                if (std::max(distance(candidate.row[0].p,original.row[0].p),distance(candidate.row[2].p,original.row[2].p))>linearResolution()) continue;
                                 const Edge &boundary=body.edge(c);
                                 if (projectPoint(*boundary.curve,candidate.row[2].p,boundary.range).distance
-                                    > std::max(kLinearResolution,boundary.tolerance)) continue;
+                                    > std::max(linearResolution(),boundary.tolerance)) continue;
                                 if (mismatch(candidate,b)<mismatch(a,b)) { parameter+=step; improved=true; }
                             }
                             if (!improved) break;
@@ -2576,6 +2367,7 @@ Body blendSurfaceChainsWithGuide(const Body &input, const std::vector<EdgeId> &s
         // la loro intersezione.
         struct MitreData {
             int before = -1, after = -1;
+            bool commonB = false;
             EdgeId c;
             VertexId vertex;              // dove c si accorcia
             double tA0 = 0.0, tA1 = 0.0;  // parametri del punto comune in A sui due pezzi
@@ -2591,7 +2383,9 @@ Body blendSurfaceChainsWithGuide(const Body &input, const std::vector<EdgeId> &s
             m.after = next(p);
             if (a.chainFin != b.chainFin && chain.joints[std::size_t(a.chainFin)] == Joint::Cross) {
                 continue;
-            } else if (a.chainFin != b.chainFin && chain.joints[std::size_t(a.chainFin)] == Joint::Mitre) {
+            } else if (a.chainFin != b.chainFin &&
+                       (chain.joints[std::size_t(a.chainFin)] == Joint::Mitre || chain.joints[std::size_t(a.chainFin)] == Joint::MitreA)) {
+                m.commonB = chain.joints[std::size_t(a.chainFin)] == Joint::MitreA;
                 m.c = chain.third[std::size_t(a.chainFin)];
                 m.vertex = body.finEnd(chain.fins[std::size_t(a.chainFin)].fin);
             } else if (a.a != b.a || a.b != b.b) {
@@ -2617,25 +2411,22 @@ Body blendSurfaceChainsWithGuide(const Body &input, const std::vector<EdgeId> &s
                 continue;
             }
             // Il punto comune in A: Gauss-Newton sui contatti delle sezioni.
+            const int commonRow = m.commonB ? 2 : 0, dividedRow = 2 - commonRow;
             double ta = a.to, tb = b.from;
-            for (int iteration = 0; iteration < 60; ++iteration) {
-                const Section &sa = a.blend->section(ta), &sb = b.blend->section(tb);
-                const Vec3 f = sa.row[0].p - sb.row[0].p, da = sa.drow[0].p, db = sb.drow[0].p;
-                const double a11 = dot(da, da), a12 = -dot(da, db), a22 = dot(db, db);
-                const double r1 = -dot(da, f), r2 = dot(db, f), det = a11 * a22 - a12 * a12;
-                if (!(std::fabs(det) > 0.0)) break;
-                const double du = (r1 * a22 - a12 * r2) / det, dv = (a11 * r2 - a12 * r1) / det;
-                ta += du;
-                tb += dv;
-                if (std::fabs(du) + std::fabs(dv) < 1e-15 * (1.0 + std::fabs(ta) + std::fabs(tb))) break;
-            }
-            if (distance(a.blend->section(ta).row[0].p, b.blend->section(tb).row[0].p) > 1e-9 * scale)
+            const auto contact = [commonRow](const Piece &piece, double t) {
+                const Section section = piece.blend->section(t);
+                return detail::BlendContactJet{section.row[commonRow].p, section.drow[commonRow].p};
+            };
+            detail::meetBlendContacts([&](double t) { return contact(a, t); }, [&](double t) { return contact(b, t); }, size, scale, ta,
+                                      tb);
+            if (distance(contact(a, ta).point, contact(b, tb).point) > 1e-9 * scale)
                 throw std::domain_error("blendEdges: i contatti dei raccordi nell'angolo non si incontrano (raggio troppo grande)");
+
             m.tA0 = ta;
             m.tA1 = tb;
             const double dirA = a.to > a.from ? 1.0 : -1.0, dirB = b.to > b.from ? 1.0 : -1.0;
-            m.q0 = crossing(a, 2, m.c, a.b, 0.5 * (a.from + a.to), dirA);
-            m.q1 = crossing(b, 2, m.c, b.b, 0.5 * (b.from + b.to), -dirB);
+            m.q0 = crossing(a, dividedRow, m.c, m.commonB ? a.a : a.b, 0.5 * (a.from + a.to), dirA);
+            m.q1 = crossing(b, dividedRow, m.c, m.commonB ? b.a : b.b, 0.5 * (b.from + b.to), -dirB);
             // Le superfici coprono il punto comune in A e l'attraversamento di c, con un margine,
             // solo dalla parte del giunto (l'altra estremita' resta com'e').
             const CurvePtr<3> &ca = body.edge(chain.fins[std::size_t(a.chainFin)].edge).curve, &cb = body.edge(chain.fins[std::size_t(b.chainFin)].edge).curve;
@@ -2656,6 +2447,7 @@ Body blendSurfaceChainsWithGuide(const Body &input, const std::vector<EdgeId> &s
             FaceId face;
             FaceId secondFace;
             EdgeId seam;
+            bool zero = false;
             bool free = false;    // i due bordi terminano sulla frontiera della lamina
             bool normal = false;  // E piana e normale allo spigolo: la sezione nel vertice
             double tA = 0.0, tB = 0.0;
@@ -2671,7 +2463,10 @@ Body blendSurfaceChainsWithGuide(const Body &input, const std::vector<EdgeId> &s
                 const ChainFin &cf = chain.fins[std::size_t(atStart ? 0 : n - 1)];
                 end.vertex = atStart ? body.finStart(cf.fin) : body.finEnd(cf.fin);
                 const std::vector<EdgeId> at = edgesAtVertex(body, end.vertex);
-                if (at.size() != 3 && at.size() != 4)
+                Piece &terminal = pieces[std::size_t(end.piece)];
+                const double endParameter = atStart ? cf.start : cf.end;
+                end.zero = terminal.solver->zeroEndpoint(endParameter);
+                if (!end.zero && at.size() != 3 && at.size() != 4)
                     throw std::domain_error("blendEdges: estremo della catena con piu' di quattro spigoli (caso non gestito)");
                 const FinId finB = body.otherFin(cf.fin);
                 FinId onA = atStart ? body.fin(cf.fin).previous : body.fin(cf.fin).next;
@@ -2693,6 +2488,13 @@ Body blendSurfaceChainsWithGuide(const Body &input, const std::vector<EdgeId> &s
                 }
                 end.onA = body.fin(onA).edge;
                 end.onB = body.fin(onB).edge;
+                if (end.zero) {
+                    end.free = true; end.tA = end.tB = endParameter;
+                    end.windowA = body.edge(end.onA).range;
+                    end.windowB = body.edge(end.onB).range;
+                    ends.push_back(end);
+                    continue;
+                }
                 const FinId acrossA = body.otherFin(onA), acrossB = body.otherFin(onB);
                 end.free = !acrossA.valid() && !acrossB.valid();
                 if (acrossA.valid() != acrossB.valid())
@@ -2816,7 +2618,8 @@ Body blendSurfaceChainsWithGuide(const Body &input, const std::vector<EdgeId> &s
                     for (double seedC : {atVertex, 0.5 * (c.range.lo + c.range.hi)}) {
                         double t = piece.fitLo + (piece.fitHi - piece.fitLo) * double(i) / 12.0;
                         double onC = seedC;
-                        if (!surfaceCurveMeet(*piece.surface, 1.0, *c.curve, c.range, t, onC, scale)) continue;
+                        if (!surfaceCurveMeet(*piece.surface, mitre.commonB ? 0.0 : 1.0, *c.curve, c.range, t, onC, scale))
+                            continue;
                         const double margin = 1e-8 * (1.0 + piece.fitHi - piece.fitLo);
                         if (t < piece.fitLo - margin || t > piece.fitHi + margin) continue;
                         const double travel = distance(c.curve->point(onC), body.vertex(mitre.vertex).point);
@@ -2876,7 +2679,7 @@ Body blendSurfaceChainsWithGuide(const Body &input, const std::vector<EdgeId> &s
                 const double onC = 0.5 * (s0 + s1);
                 const Vec3 q = c.curve->point(onC);
                 if (distance(q, body.vertex(mitre.vertex).point) <= 1e-6 * size) return;
-                const CurvePtr<3> contact = std::make_shared<BSplineCurve<3>>(piece.surface->vIsoCurve(1.0));
+                const CurvePtr<3> contact = std::make_shared<BSplineCurve<3>>(piece.surface->vIsoCurve(mitre.commonB ? 0.0 : 1.0));
                 parameter = projectPoint(*contact, q, {piece.fitLo, piece.fitHi}).parameter;
                 boundaryPoint = q;
                 haveBoundaryPoint = true;
@@ -2892,7 +2695,7 @@ Body blendSurfaceChainsWithGuide(const Body &input, const std::vector<EdgeId> &s
         // reali della faccia d'estremita': evita di scambiare quel limite
         // numerico per un raggio che non entra nella faccia.
         for (EndData &end : ends) {
-            if (end.normal) continue;
+            if (end.normal || end.zero) continue;
             Piece &piece = pieces[std::size_t(end.piece)];
             const auto refine = [&](double v, EdgeId boundary, const Interval &window, double &parameter,
                                     Vec3 &point, bool &havePoint) {
@@ -2929,8 +2732,15 @@ Body blendSurfaceChainsWithGuide(const Body &input, const std::vector<EdgeId> &s
             // Due catene non devono toccarsi (un vertice con tre spigoli scelti: pezza d'angolo, non gestita).
             std::set<int> own;
             for (const ChainFin &cf : chain.fins) own.insert({body.finStart(cf.fin).index, body.finEnd(cf.fin).index});
+            for (const auto &end : ends) if (end.zero) {
+                if (usedVertices.count(end.vertex.index))
+                    throw std::domain_error("blendEdges: raccordi a raggio positivo e zero nello stesso vertice");
+                own.erase(end.vertex.index);
+                usedZeroVertices.insert(end.vertex.index);
+            }
             for (int v : own)
-                if (!usedVertices.insert(v).second) throw std::domain_error("blendEdges: catene di raccordi che si toccano (pezze d'angolo tra facce curve non gestite)");
+                if (usedZeroVertices.count(v) || !usedVertices.insert(v).second)
+                    throw std::domain_error("blendEdges: catene di raccordi che si toccano (pezze d'angolo tra facce curve non gestite)");
         }
 
         // Estremi dei contatti di ogni pezzo: [lo, hi] nel parametro dell'edge.
@@ -3035,50 +2845,63 @@ Body blendSurfaceChainsWithGuide(const Body &input, const std::vector<EdgeId> &s
                 continue;
             }
             // Angolo a mitra.
-            const Vec3 pA = 0.5 * (a.blend->section(mitre->tA0).row[0].p + b.blend->section(mitre->tA1).row[0].p);
-            junction.pointA = model.addPoint(pA);
-            setEnd(aLo, aHi, p, true, mitre->tA0);
-            setEnd(aLo, aHi, next(p), false, mitre->tA1);
+            junction.commonB = mitre->commonB;
+            const int commonRow = mitre->commonB ? 2 : 0;
+            auto &commonLo = mitre->commonB ? bLo : aLo, &commonHi = mitre->commonB ? bHi : aHi;
+            auto &dividedLo = mitre->commonB ? aLo : bLo, &dividedHi = mitre->commonB ? aHi : bHi;
+            int &commonPoint = mitre->commonB ? junction.pointB : junction.pointA;
+            int &dividedPoint = mitre->commonB ? junction.pointA : junction.pointB;
+            const auto surfA = detail::orientBlendMitre(a.surface, mitre->commonB);
+            const auto surfB = detail::orientBlendMitre(b.surface, mitre->commonB);
+            const Vec3 pA = 0.5 * (a.blend->section(mitre->tA0).row[commonRow].p + b.blend->section(mitre->tA1).row[commonRow].p);
+            commonPoint = model.addPoint(pA);
+            setEnd(commonLo, commonHi, p, true, mitre->tA0);
+            setEnd(commonLo, commonHi, next(p), false, mitre->tA1);
             // Punti tripli: il contatto su B di un raccordo sull'altro raccordo.
-            double t0 = a.to, s0 = b.from, w0 = 1.0;
-            const bool ok0 = surfaceMeet(*a.surface, 1.0, *b.surface, t0, s0, w0, scale) && w0 <= 1.0 + 1e-9 && w0 >= -1e-9;
-            double t1 = b.from, s1 = a.to, w1 = 1.0;
-            const bool ok1 = surfaceMeet(*b.surface, 1.0, *a.surface, t1, s1, w1, scale) && w1 <= 1.0 + 1e-9 && w1 >= -1e-9;
+            double t0 = mitre->q0, s0 = mitre->q1, w0 = 1.0;
+            const bool ok0 = surfaceMeet(*surfA, 1.0, *surfB, t0, s0, w0, scale) && w0 <= 1.0 + 1e-9 && w0 >= -1e-9;
+            double t1 = mitre->q1, s1 = mitre->q0, w1 = 1.0;
+            const bool ok1 = surfaceMeet(*surfB, 1.0, *surfA, t1, s1, w1, scale) && w1 <= 1.0 + 1e-9 && w1 >= -1e-9;
             if (!ok0 && !ok1) throw std::domain_error("blendEdges: i raccordi nell'angolo non si incontrano sui fianchi (raggio troppo grande?)");
             const bool symmetric = ok0 && ok1 && w0 >= 1.0 - 1e-7 && w1 >= 1.0 - 1e-7;
             // Il raccordo profondo e' quello il cui contatto su B arriva fino a c.
             junction.deep = symmetric ? -1 : (ok0 && (!ok1 || w0 < w1) ? 1 : 0);
             Vec3 X;
-            if (junction.deep == 1) X = a.surface->point(t0, 1.0);        // sul contatto del primo (basso), il secondo va a c
-            else if (junction.deep == 0) X = b.surface->point(t1, 1.0);
-            else X = 0.5 * (a.surface->point(mitre->q0, 1.0) + b.surface->point(mitre->q1, 1.0));
-            junction.pointB = model.addPoint(X);
+            if (junction.deep == 1)
+                X = surfA->point(t0, 1.0); // sul contatto del primo (basso), il secondo va a c
+            else if (junction.deep == 0)
+                X = surfB->point(t1, 1.0);
+            else
+                X = 0.5 * (surfA->point(mitre->q0, 1.0) + surfB->point(mitre->q1, 1.0));
+            dividedPoint = model.addPoint(X);
             // Contatti su B: il basso finisce in X, il profondo sull'attraversamento di c.
-            const Vec3 onC0 = mitre->haveOnC0 ? mitre->onC0 : a.surface->point(mitre->q0, 1.0);
-            const Vec3 onC1 = mitre->haveOnC1 ? mitre->onC1 : b.surface->point(mitre->q1, 1.0);
+            const Vec3 onC0 = mitre->haveOnC0 ? mitre->onC0 : surfA->point(mitre->q0, 1.0);
+            const Vec3 onC1 = mitre->haveOnC1 ? mitre->onC1 : surfB->point(mitre->q1, 1.0);
             const auto deepPoint = [&](const Vec3 &onC) {
                 const double gap = distance(X, onC);
                 if (gap <= std::max(1e-8 * scale, 0.01 * size)) {
                     if (gap > 1e-9 * scale)
-                        model.pointTolerance[std::size_t(junction.pointB)] = std::max(model.pointTolerance[std::size_t(junction.pointB)], 2.0 * gap);
-                    return junction.pointB;
+                        model.pointTolerance[std::size_t(dividedPoint)] =
+                            std::max(model.pointTolerance[std::size_t(dividedPoint)], 2.0 * gap);
+                    return dividedPoint;
                 }
                 return model.addPoint(onC);
             };
             if (junction.deep == 1) {
-                setEnd(bLo, bHi, p, true, t0);
-                setEnd(bLo, bHi, next(p), false, mitre->q1);
+                setEnd(dividedLo, dividedHi, p, true, t0);
+                setEnd(dividedLo, dividedHi, next(p), false, mitre->q1);
                 junction.deepPoint = deepPoint(onC1);
             } else if (junction.deep == 0) {
-                setEnd(bLo, bHi, p, true, mitre->q0);
-                setEnd(bLo, bHi, next(p), false, t1);
+                setEnd(dividedLo, dividedHi, p, true, mitre->q0);
+                setEnd(dividedLo, dividedHi, next(p), false, t1);
                 junction.deepPoint = deepPoint(onC0);
             } else {
-                setEnd(bLo, bHi, p, true, mitre->q0);
-                setEnd(bLo, bHi, next(p), false, mitre->q1);
-                junction.deepPoint = junction.pointB;
+                setEnd(dividedLo, dividedHi, p, true, mitre->q0);
+                setEnd(dividedLo, dividedHi, next(p), false, mitre->q1);
+                junction.deepPoint = dividedPoint;
                 const double gap = distance(onC0, onC1);
-                if (gap > 1e-7 * scale) model.pointTolerance[std::size_t(junction.pointB)] = gap;
+                if (gap > 1e-7 * scale)
+                    model.pointTolerance[std::size_t(dividedPoint)] = gap;
             }
             // Gamma: i due raccordi tra il punto in A e X, tracciata direttamente (i raccordi vi si
             // incontrano anche sotto angoli piccoli, dove il tracciamento generale non basta).
@@ -3091,8 +2914,8 @@ Body blendSurfaceChainsWithGuide(const Body &input, const std::vector<EdgeId> &s
                 // Simmetrico: X su c; il punto comune esatto dei due contatti su B.
                 Xp[0] = t0, Xp[1] = 1.0, Xp[2] = s0, Xp[3] = w0;
             }
-            const double mitreTolerance = std::max({kFitTolerance, a.fit.error, b.fit.error});
-            gamma = traceMitre(*a.surface, *b.surface, mitre->tA0, mitre->tA1, Xp, scale, mitreTolerance);
+            const double mitreTolerance = std::max({kFitTolerance(), a.fit.error, b.fit.error});
+            gamma = traceBlendMitre(*surfA, *surfB, mitre->tA0, mitre->tA1, Xp, scale, mitreTolerance);
             {
                 const Vec3 end = gamma.curve->point(gamma.range.hi), begin = gamma.curve->point(gamma.range.lo);
                 gamma.gap = std::max({gamma.gap, distance(end, X), distance(begin, pA)});
@@ -3103,23 +2926,31 @@ Body blendSurfaceChainsWithGuide(const Body &input, const std::vector<EdgeId> &s
             // produrre SP-curve fuori dalla pezza e triangoli attraverso il
             // modello. Applica anche qui il limite relativo al raggio usato
             // per gli altri contatti approssimati, prima di costruire il B-rep.
-            const double admissibleMitreGap = std::max(kLinearResolution, 0.01 * size);
+            const double admissibleMitreGap = std::max(linearResolution(), 0.01 * size);
             if (!std::isfinite(gamma.gap) || gamma.gap > admissibleMitreGap)
                 throw std::domain_error("blendEdges: raccordo non valido nell'angolo: scarto "
                     + std::to_string(gamma.gap) + " mm oltre il limite "
                     + std::to_string(admissibleMitreGap) + " mm; scegliere un raggio diverso");
-            junction.gamma = model.addEdge(junction.pointA, junction.pointB, gamma.curve, gamma.range, gamma.gap > 1e-7 ? 2.0 * gamma.gap : 0.0);
-            if (gamma.gap > 1e-7) model.pointTolerance[std::size_t(junction.pointA)] = std::max(model.pointTolerance[std::size_t(junction.pointA)], 2.0 * gamma.gap);
-            if (junction.deep >= 0 && junction.deepPoint != junction.pointB) {
+            junction.gamma = model.addEdge(commonPoint, dividedPoint, gamma.curve, gamma.range, gamma.gap > 1e-7 ? 2.0 * gamma.gap : 0.0);
+            if (gamma.gap > 1e-7)
+                model.pointTolerance[std::size_t(commonPoint)] = std::max(model.pointTolerance[std::size_t(commonPoint)], 2.0 * gamma.gap);
+            if (junction.deep >= 0 && junction.deepPoint != dividedPoint) {
                 // Delta: il raccordo profondo con il fianco del basso, da X a c.
                 const Piece &deepPiece = junction.deep == 1 ? b : a;
-                const FaceId other = junction.deep == 1 ? a.b : b.b;
+                const auto &deepSurface = junction.deep == 1 ? surfB : surfA;
+                const FaceId other = junction.deep == 1 ? (mitre->commonB ? a.a : a.b) : (mitre->commonB ? b.a : b.b);
                 const Vec3 to = model.points[std::size_t(junction.deepPoint)];
                 Cut delta;
-                try { delta = traceBetween(*deepPiece.surface, *body.face(other).surface, X, to, scale, deepPiece.fit.error); }
-                catch (const std::domain_error &failure) { throw std::domain_error(std::string("blendEdges: delta della mitra: ") + failure.what()); }
-                junction.delta = delta.forward ? model.addEdge(junction.pointB, junction.deepPoint, delta.curve, delta.range, delta.gap > 1e-7 ? 2.0 * delta.gap : 0.0)
-                                               : model.addEdge(junction.deepPoint, junction.pointB, delta.curve, delta.range, delta.gap > 1e-7 ? 2.0 * delta.gap : 0.0);
+                try {
+                    const Interval along{junction.deep == 1 ? w0 : w1, 1.};
+                    delta = traceBetween(*deepSurface, *body.face(other).surface, X, to, scale, deepPiece.fit.error, &along);
+                } catch (const std::domain_error &failure) {
+                    throw std::domain_error(std::string("blendEdges: delta della mitra: ") + failure.what());
+                }
+                junction.delta = delta.forward ? model.addEdge(dividedPoint, junction.deepPoint, delta.curve, delta.range,
+                                                               delta.gap > 1e-7 ? 2.0 * delta.gap : 0.0)
+                                               : model.addEdge(junction.deepPoint, dividedPoint, delta.curve, delta.range,
+                                                               delta.gap > 1e-7 ? 2.0 * delta.gap : 0.0);
             }
             // c si accorcia fino al punto dove arriva il contatto profondo.
             try { model.moveEnd(model.edgeIndex.at(mitre->c.index), model.vertexIndex.at(mitre->vertex.index), junction.deepPoint); }
@@ -3135,7 +2966,11 @@ Body blendSurfaceChainsWithGuide(const Body &input, const std::vector<EdgeId> &s
         for (const EndData &end : ends) {
             Junction &junction = junctions[std::size_t(end.atStart ? 0 : pieceCount)];
             Piece &piece = pieces[std::size_t(end.piece)];
-            if (end.normal) {
+            if (end.zero) {
+                junction.pointA = junction.pointB = model.vertexIndex.at(end.vertex.index);
+                setEnd(aLo, aHi, end.piece, !end.atStart, end.tA);
+                setEnd(bLo, bHi, end.piece, !end.atStart, end.tB);
+            } else if (end.normal) {
                 sectionJunction(junction, piece, end.atStart ? piece.from : piece.to, false, EdgeId(), VertexId());
             } else {
                 // Le intersezioni preliminari danno i punti esatti sugli edge
@@ -3277,7 +3112,7 @@ Body blendSurfaceChainsWithGuide(const Body &input, const std::vector<EdgeId> &s
                     const double vLo = trimmedContact == 0 ? cutV : 0.0, vHi = trimmedContact == 0 ? 1.0 : cutV;
                     middle.connector = model.addEdge(middle.pointA, middle.pointB,
                         std::make_shared<BSplineCurve<3>>(piece.surface->uIsoCurve(splitParameter)), {vLo, vHi});
-                    const double allowed = std::max(kLinearResolution, 0.01 * size);
+                    const double allowed = std::max(linearResolution(), 0.01 * size);
                     if (std::max(parentCut.gap, terminalCut.gap) > allowed)
                         throw std::domain_error("blendEdges: chiusura sul coperchio oltre la tolleranza del raccordo");
                     const int remaining = trimmedContact == 0 ? junction.pointB : junction.pointA;
@@ -3289,6 +3124,7 @@ Body blendSurfaceChainsWithGuide(const Body &input, const std::vector<EdgeId> &s
                     edits[model.faceIndex.at(end.face.index)].free.push_back(cap);
                 } else if (!end.seam.valid()) {
                     Cut kappa;
+
                     // Da A (v = 0) a B (v = 1), seguendo gli archi delle
                     // sezioni. La proiezione sulla corda puo' avere un estremo
                     // interno: tracciarla per prima produceva micro-campate
@@ -3311,7 +3147,7 @@ Body blendSurfaceChainsWithGuide(const Body &input, const std::vector<EdgeId> &s
                         } catch (const std::domain_error &) {
                         }
                     }
-                    if (boundaryMode && (!traced || kappa.gap > std::max(kFitTolerance, piece.fit.error))) {
+                    if (boundaryMode && (!traced || kappa.gap > std::max(kFitTolerance(), piece.fit.error))) {
                         try {
                             const Interval along{0.0, 1.0};
                             Cut stable = traceBetween(*piece.surface, E, ra, rb, scale, piece.fit.error, &along, true);
@@ -3322,7 +3158,7 @@ Body blendSurfaceChainsWithGuide(const Body &input, const std::vector<EdgeId> &s
                         } catch (const std::domain_error &) {
                         }
                     }
-                    if (boundaryMode && traced && kappa.gap > std::max(32 * kFitTolerance, 1e-3 * size))
+                    if (boundaryMode && traced && kappa.gap > std::max(32 * kFitTolerance(), 1e-3 * size))
                         throw std::domain_error("blendEdges: chiusura del raccordo non risolta con precisione sufficiente per questo raggio");
                     if (!traced) throw std::domain_error(std::string("blendEdges: chiusura dell'estremo: ") + failure);
                     junction.connector = kappa.forward ? model.addEdge(junction.pointA, junction.pointB, kappa.curve, kappa.range, kappa.gap > 1e-7 ? 2.0 * kappa.gap : 0.0)
@@ -3446,7 +3282,7 @@ Body blendSurfaceChainsWithGuide(const Body &input, const std::vector<EdgeId> &s
                     // tolleranti. Eredita soltanto lo scarto misurato agli
                     // estremi, e solo se coperto dalla tolleranza precedente.
                     const auto inheritedGap = [&](double gap, EdgeId edgeId, VertexId vertex) {
-                        const double tolerance = std::max({kLinearResolution, body.edge(edgeId).tolerance,
+                        const double tolerance = std::max({linearResolution(), body.edge(edgeId).tolerance,
                                                            body.vertex(vertex).tolerance});
                         return gap <= tolerance ? gap : 0.0;
                     };
@@ -3454,7 +3290,7 @@ Body blendSurfaceChainsWithGuide(const Body &input, const std::vector<EdgeId> &s
                         inheritedGap(ea.distance, end.onA, end.vertex), inheritedGap(eq.distance, end.seam, qVertex)});
                     const double allowedB = std::max({allowed,
                         inheritedGap(eb.distance, end.onB, end.vertex), inheritedGap(eq2.distance, end.seam, qVertex)});
-                    if (gapNew > allowed || gapA > allowedA + kLinearResolution || gapB > allowedB + kLinearResolution)
+                    if (gapNew > allowed || gapA > allowedA + linearResolution() || gapB > allowedB + linearResolution())
                         throw std::domain_error("blendEdges: la pezza d'angolo si discosta troppo dai raccordi adiacenti ("
                                                 + std::to_string(gapNew) + ", " + std::to_string(gapA) + ", "
                                                 + std::to_string(gapB) + "; limiti " + std::to_string(allowed) + ", "
@@ -3529,14 +3365,18 @@ Body blendSurfaceChainsWithGuide(const Body &input, const std::vector<EdgeId> &s
             const Junction &endJ = junctions[std::size_t(chain.closed ? next(p) : p + 1)];
             // Punti di inizio e fine dei contatti nel verso della catena.
             const bool startMitre = startJ.gamma >= 0, endMitre = endJ.gamma >= 0;
-            const int aStart = aStartOverride[std::size_t(p)]>= 0 ? aStartOverride[std::size_t(p)] : startJ.pointA;
-            const int aEnd = aEndOverride[std::size_t(p)]>= 0 ? aEndOverride[std::size_t(p)] : endJ.pointA;
+            int aStart = aStartOverride[std::size_t(p)] >= 0 ? aStartOverride[std::size_t(p)] : startJ.pointA;
+            int aEnd = aEndOverride[std::size_t(p)] >= 0 ? aEndOverride[std::size_t(p)] : endJ.pointA;
             int bStart = bStartOverride[std::size_t(p)]>= 0 ? bStartOverride[std::size_t(p)] : startJ.pointB;
             int bEnd = bEndOverride[std::size_t(p)]>= 0 ? bEndOverride[std::size_t(p)] : endJ.pointB;
-            if (startMitre && startJ.deep == 1) bStart = startJ.deepPoint;  // questo pezzo e' il profondo del giunto
-            if (endMitre && endJ.deep == 0) bEnd = endJ.deepPoint;
-            if (startMitre && startJ.deep == -1) bStart = startJ.deepPoint;
-            if (endMitre && endJ.deep == -1) bEnd = endJ.deepPoint;
+            if (startMitre && startJ.deep == 1)
+                (startJ.commonB ? aStart : bStart) = startJ.deepPoint; // questo pezzo e' il profondo del giunto
+            if (endMitre && endJ.deep == 0)
+                (endJ.commonB ? aEnd : bEnd) = endJ.deepPoint;
+            if (startMitre && startJ.deep == -1)
+                (startJ.commonB ? aStart : bStart) = startJ.deepPoint;
+            if (endMitre && endJ.deep == -1)
+                (endJ.commonB ? aEnd : bEnd) = endJ.deepPoint;
             const Interval ra{aLo[std::size_t(p)], aHi[std::size_t(p)]}, rb{bLo[std::size_t(p)], bHi[std::size_t(p)]};
             if ((!skipA[std::size_t(p)] && !(ra.hi > ra.lo)) || (!skipB[std::size_t(p)] && !(rb.hi > rb.lo)))
                 throw std::domain_error("blendEdges: tratto interamente consumato dai raccordi vicini; "
@@ -3588,7 +3428,7 @@ Body blendSurfaceChainsWithGuide(const Body &input, const std::vector<EdgeId> &s
             const Junction &junction = junctions[std::size_t(chain.closed ? next(p) : p + 1)];
             if (junction.delta < 0) continue;
             const Piece &shallow = junction.deep == 1 ? pieces[std::size_t(p)] : pieces[std::size_t(next(p))];
-            edits[model.faceIndex.at(shallow.b.index)].free.push_back(junction.delta);
+            edits[model.faceIndex.at((junction.commonB ? shallow.a : shallow.b).index)].free.push_back(junction.delta);
         }
     }
     // Loop ricollegati per i vertici.
@@ -3674,7 +3514,7 @@ Body blendSurfaceChainsWithGuide(const Body &input, const std::vector<EdgeId> &s
             }
         }
         const double admissible = (approximateCross ? 0.05 : 0.01) * size;
-        if (gap > std::max(kLinearResolution, edge.tolerance) && gap <= admissible)
+        if (gap > std::max(linearResolution(), edge.tolerance) && gap <= admissible)
             edge.tolerance = 1.01 * gap;
     }
     // Le SP-curve di un contatto approssimato possono essere state rifiutate
@@ -3689,7 +3529,7 @@ Body blendSurfaceChainsWithGuide(const Body &input, const std::vector<EdgeId> &s
             for (FinId fin : result.loopFins(loop)) {
                 if (result.fin(fin).pcurve) continue;
                 const Edge &edge = result.edge(result.fin(fin).edge);
-                const double tolerance = std::max(kPCurveTolerance, edge.tolerance);
+                const double tolerance = std::max(pCurveTolerance(), edge.tolerance);
                 const auto breaks = edge.curve->breakpoints(edge.range);
                 for (std::size_t k = 1; k < breaks.size(); ++k) for (double f : {0.25, 0.5, 0.75}) {
                     const Vec3 point = edge.curve->point(breaks[k-1] + f*(breaks[k]-breaks[k-1]));
@@ -3703,6 +3543,13 @@ Body blendSurfaceChainsWithGuide(const Body &input, const std::vector<EdgeId> &s
     }
     for (FaceId f : result.faces())
         if (guidedCaps.count(result.face(f).surface.get())) checkGuidedCap(result, f, scale);
+    std::vector<FaceId> trimmedFaces;
+    const auto resultFaces = result.faces();
+    for (const auto &[face, edit] : edits) {
+        (void)edit;
+        trimmedFaces.push_back(resultFaces.at(std::size_t(face)));
+    }
+    validateBlendTrimOrientation(result, trimmedFaces);
     CheckOptions checks;
     checks.loopCrossings = true;  // un raccordo che invade un altro contorno della faccia
     const std::vector<CheckIssue> issues = checkBody(result, checks);
@@ -3712,6 +3559,63 @@ Body blendSurfaceChainsWithGuide(const Body &input, const std::vector<EdgeId> &s
 }
 
 }  // namespace
+
+SurfacePtr detail::polarBlendPatch(const Body &body, EdgeId id, const Interval &range, double radius,
+                                  bool convex, const std::array<std::optional<Vec3>,2> &collapsed,
+                                  const std::array<std::optional<Vec3>,2> &centers) {
+    const auto &edge = body.edge(id);
+    const auto &a = body.face(body.finFace(edge.forward)), &b = body.face(body.finFace(edge.backward));
+    const auto curve = detail::blendSectionCurve(edge.curve, edge.range);
+    const double scale = std::max(1.,arcLength(*curve,edge.range));
+    // La coordinata del meridiano evita i piani normali che si ripiegano
+    // vicino ai cambi di convessita'. La regolarita' di entrambi gli offset
+    // e' controllata dal solver; il raggio resta costante anche ai collassi.
+    SectionSolver solver(curve,a.surface,a.sense,b.surface,b.sense,radius,false,convex,scale,-1.,
+                         body.fin(edge.backward).pcurve,.5*(edge.range.lo+edge.range.hi),edge.range,true);
+    const double mid = .5*(range.lo+range.hi);
+    const auto ua = body.fin(edge.forward).pcurve->point(mid), ub = body.fin(edge.backward).pcurve->point(mid);
+    Section seed; seed.x[0] = ua.x(); seed.x[1] = ua.y(); seed.x[2] = ub.x(); seed.x[3] = ub.y();
+    for (double factor = 1./1024; factor <= 1.; factor *= 2)
+        if (!solver.solve(mid,false,seed,factor*radius))
+            throw std::domain_error("raccordo ai poli: raggio eccessivo o offset non regolare");
+    EdgeBlend blend(solver,curve,range,true); blend.seed(seed);
+    for (int end = 0; end < 2; ++end) if (centers[end]) {
+        const double t = end ? range.hi : range.lo;
+        const auto qa = projectPoint(*a.surface,*centers[end]), qb = projectPoint(*b.surface,*centers[end]);
+        Section boundary = seed;
+        boundary.x[0] = qa.u; boundary.x[1] = qa.v; boundary.x[2] = qb.u; boundary.x[3] = qb.v;
+        if (!solver.solve(t,false,boundary) || distance(boundary.center,*centers[end]) > kFitTolerance())
+            throw std::domain_error("raccordo ai poli: contatto sulla calotta non risolto");
+        blend.seed(boundary);
+    }
+    for (int end = 0; end < 2; ++end) if (collapsed[end]) {
+        const double t = end ? range.hi : range.lo, direction = end ? -1. : 1.;
+        const double delta = .001*range.length();
+        const Section one = blend.section(t+direction*delta), two = blend.section(t+direction*delta/2),
+                      three = blend.section(t+direction*delta/4);
+        Section limit = three; limit.t = t; limit.residual = 0; limit.noise = 0;
+        for (int row = 0; row < 3; ++row) {
+            limit.row[row] = {*collapsed[end],1.};
+            limit.drow[row] = (1./3)*(one.drow[row]-6.*two.drow[row]+8.*three.drow[row]);
+        }
+        blend.seed(limit);
+    }
+    const auto fit = blend.fit();
+    // Budget fissato prima della costruzione: il target nominale e' 1e-9,
+    // ma la continuazione quasi tangente puo' arrivare alla risoluzione del
+    // kernel. Oltre tale budget si rifiuta senza allargare edge o vertici.
+    if (fit.error > linearResolution())
+        throw std::domain_error("raccordo ai poli: fit oltre la risoluzione geometrica su E"+std::to_string(id.index)+" ("+std::to_string(fit.error)+" mm)");
+    const auto result = EdgeBlend::surface(fit,false);
+    for (std::size_t k = 1; k < fit.breaks.size(); ++k) {
+        const double t = .5*(fit.breaks[k-1]+fit.breaks[k]);
+        const auto &section = blend.section(t);
+        for (double v : {0.,.25,.5,.75,1.})
+            if (std::abs(distance(result->point(t,v),section.center)-radius) > linearResolution())
+                throw std::domain_error("raccordo ai poli: raggio non conservato entro la risoluzione geometrica");
+    }
+    return result;
+}
 
 static Body blendSurfaceChainsAttempts(const Body &input, const std::vector<EdgeId> &selected, double size, bool chamfer,
                         const std::vector<ChamferSides> *sides, BodyHistory *history, const BlendProfileSpec *profile, bool propagate, bool trackContacts) {
@@ -3743,6 +3647,7 @@ static Body blendSurfaceChainsAttempts(const Body &input, const std::vector<Edge
 
 Body blendSurfaceChains(const Body &input, const std::vector<EdgeId> &selected, double size, bool chamfer,
                         const std::vector<ChamferSides> *sides, BodyHistory *history, const BlendProfileSpec *profile, bool propagate) {
+
     if (history) *history = BodyHistory();
     BodyHistory working;
     BodyHistory *target = history ? &working : nullptr;

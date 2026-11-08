@@ -291,6 +291,10 @@ std::shared_ptr<const BSplineSurface::SharpKnotLines> BSplineSurface::cachedShar
     };
     if (patches->size() == nu * nv) {
         for (std::size_t i = 0; i + 1 < nu; ++i) {
+            // La molteplicita' certifica C1 o migliore: il confronto di jet
+            // Bezier su campate a pochi ULP amplifica l'arrotondamento e
+            // non puo' trasformare un nodo liscio in una piega reale.
+            if (std::count(uKnots().begin(),uKnots().end(),us[i+1]) < uDegree()) continue;
             bool sharp = false;
             for (std::size_t j = 0; j < nv && !sharp; ++j) {
                 const BSplineSurface &left = (*patches)[i * nv + j], &right = (*patches)[(i + 1) * nv + j];
@@ -305,6 +309,7 @@ std::shared_ptr<const BSplineSurface::SharpKnotLines> BSplineSurface::cachedShar
             if (sharp) result->u.push_back(us[i + 1]);
         }
         for (std::size_t j = 0; j + 1 < nv; ++j) {
+            if (std::count(vKnots().begin(),vKnots().end(),vs[j+1]) < vDegree()) continue;
             bool sharp = false;
             for (std::size_t i = 0; i < nu && !sharp; ++i) {
                 const BSplineSurface &low = (*patches)[i * nv + j], &high = (*patches)[i * nv + j + 1];
@@ -319,9 +324,11 @@ std::shared_ptr<const BSplineSurface::SharpKnotLines> BSplineSurface::cachedShar
             if (sharp) result->v.push_back(vs[j + 1]);
         }
     } else {
-        // Disposizione inattesa: tutte le linee, come prima.
-        result->u.assign(us.begin() + 1, us.end() - 1);
-        result->v.assign(vs.begin() + 1, vs.end() - 1);
+        // Disposizione inattesa: solo le linee che possono essere C0.
+        for (auto it = us.begin()+1; it != us.end()-1; ++it)
+            if (std::count(uKnots().begin(),uKnots().end(),*it) >= uDegree()) result->u.push_back(*it);
+        for (auto it = vs.begin()+1; it != vs.end()-1; ++it)
+            if (std::count(vKnots().begin(),vKnots().end(),*it) >= vDegree()) result->v.push_back(*it);
     }
     lines = result;
     std::atomic_store(&sharpCache_, lines);

@@ -45,7 +45,7 @@ class BodyHistory;
 enum class BooleanOperation { Unite = 0, Intersect = 1, Subtract = 2 };
 
 struct BooleanOptions {
-    double tolerance = kBooleanConnectionTolerance;  // distanza sotto la quale due punti sono lo stesso vertice
+    double tolerance = booleanConnectionTolerance();  // distanza sotto la quale due punti sono lo stesso vertice
     // Fonde facce ed edge sulla stessa geometria (fk_unify.h), come fa l'app
     // con ShapeUpgrade_UnifySameDomain dopo le booleane di OCCT.
     bool unifySameDomain = true;

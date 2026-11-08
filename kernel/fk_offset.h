@@ -1,3 +1,4 @@
+#include "fk_precision.h"
 #ifndef FORGECAD_FK_OFFSET_H
 #define FORGECAD_FK_OFFSET_H
 
@@ -33,7 +34,7 @@ namespace ForgeCad::Kernel {
 // (serve alle B-spline; le altre valgono su tutto il dominio).
 // std::domain_error se degenera (raggio nullo o negativo, punti singolari,
 // cuspidi: la distanza supera il raggio di curvatura).
-SurfacePtr offsetSurface(const Surface &surface, double distance, const Interval &u, const Interval &v, double tolerance = 1e-7);
+SurfacePtr offsetSurface(const Surface &surface, double distance, const Interval &u, const Interval &v, double tolerance = linearResolution());
 
 // B-spline cubica C1 (nodi interni tripli) che approssima f su `range` entro
 // `tolerance`, con lo stesso parametro; `breaks` (dentro range) sono punti in
@@ -73,7 +74,7 @@ struct OffsetResult {
 // angolo (radianti) restano condivisi come quelli tangenti, con la normale
 // media; l'edge a distanza diventa tollerante per lo scarto misurato (le pieghe
 // piccole di uno sweep lungo una spline solo C1). 0: solo gli edge tangenti.
-OffsetResult offsetFaces(const Body &body, const std::vector<FaceId> &faces, double distance, double tolerance = 1e-7, bool preserveSeams = false,
+OffsetResult offsetFaces(const Body &body, const std::vector<FaceId> &faces, double distance, double tolerance = linearResolution(), bool preserveSeams = false,
                          double joinAngle = 0.0);
 
 // Offset per faccia di un contorno chiuso, con intersezione dei supporti.
@@ -92,7 +93,12 @@ struct FaceOffset {
 // Restituisce una lamina chiusa, da orientare/cucire prima delle booleane.
 // Mantiene le origini delle facce sopravvissute. Rifiuta contorni aperti,
 // raccordi senza appoggi riconosciuti, bordi invertiti e scarti fuori budget.
-OffsetResult offsetJoinedFaces(const Body &body, const std::vector<FaceOffset> &faces, double tolerance = 1e-7);
+// La continuazione C2 aggiunge supporti solo fuori dal dominio originale.
+// Serve alla rifilatura interna di lamine; controlla le pieghe sul trim reale
+// e cerca un ramo regolare quando il vecchio vertice cade sul ramo ripiegato.
+enum class OffsetExtension { Polynomial, CurvatureContinuous };
+OffsetResult offsetJoinedFaces(const Body &body, const std::vector<FaceOffset> &faces, double tolerance = linearResolution(),
+                               OffsetExtension extension = OffsetExtension::Polynomial);
 
 }
 

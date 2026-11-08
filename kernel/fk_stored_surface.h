@@ -1,3 +1,4 @@
+#include "fk_precision.h"
 #ifndef FORGECAD_FK_STORED_SURFACE_H
 #define FORGECAD_FK_STORED_SURFACE_H
 #include "fk_bspline.h"
@@ -61,7 +62,7 @@ inline bool sameStoredSpline(const BSplineSurface &a, const BSplineSurface &b) {
 // appoggio senza cambiarla nel dominio precedente. Riconosciamo soltanto
 // la stessa estensione algebrica del kernel, confrontando nodi/poli/pesi;
 // niente campioni geometrici che possano nascondere superfici nuove.
-inline bool sameStoredSurface(const Surface &a, const Surface &b, double tolerance = 1e-6) {
+inline bool sameStoredSurface(const Surface &a, const Surface &b, double tolerance = scaledAccuracy(1e-6)) {
     if (sameSurface(a, b, tolerance)) return true;
     if (a.type() != b.type()) return false;
     if (a.type() == SurfaceType::Revolution) {

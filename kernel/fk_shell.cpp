@@ -74,7 +74,7 @@ bool supportingPlane(const Body &body, FaceId id) {
     const auto &plane = static_cast<const Plane &>(*face.surface);
     const Vec3 origin = plane.frame().origin();
     const Vec3 inward = plane.frame().zDir() * (face.sense ? -1.0 : 1.0);
-    double budget = kLinearResolution;
+    double budget = linearResolution();
     for (LoopId l : face.loops) for (FinId f : body.loopFins(l))
         budget = std::max(budget, body.edge(body.fin(f).edge).tolerance);
     const auto above = [&](const Box &bounds) {
@@ -126,7 +126,7 @@ std::optional<Body> nestedShell(const Body &outer, const Body &inner, const std:
             return {};
         const auto f = caps.at(index);
         if (inner.face(f).loops.size() != 1 || inner.face(f).surface != outer.face(FaceId{index}).surface) return {};
-        FaceClassifier classify(outer, FaceId{index}, kBooleanConnectionTolerance);
+        FaceClassifier classify(outer, FaceId{index}, booleanConnectionTolerance());
         for (auto l : inner.face(f).loops)
             for (auto fid : inner.loopFins(l)) {
                 const auto &e = inner.edge(inner.fin(fid).edge);
@@ -135,7 +135,7 @@ std::optional<Body> nestedShell(const Body &outer, const Body &inner, const std:
                         return {};
             }
     }
-    SolidClassifier classify(outer, kBooleanConnectionTolerance, true);
+    SolidClassifier classify(outer, booleanConnectionTolerance(), true);
     for (auto e : inner.edges()) {
         const auto &edge = inner.edge(e);
         for (int k = 0; k <= 8; ++k)
@@ -243,7 +243,7 @@ std::optional<Body> nestedShell(const Body &outer, const Body &inner, const std:
 Body shellBody(const Body &solid, const std::vector<FaceId> &removed, double thickness, BodyHistory *history) {
     if (history) *history = {};
     if (solid.isSheet() || solid.faces().empty()) throw std::domain_error("guscio: serve un solido");
-    if (!(thickness > kLinearResolution) || !std::isfinite(thickness))
+    if (!(thickness > linearResolution()) || !std::isfinite(thickness))
         throw std::domain_error("guscio: lo spessore deve essere positivo e finito");
     std::set<int> openings;
     for (FaceId f : removed) {
@@ -265,14 +265,14 @@ Body shellBody(const Body &solid, const std::vector<FaceId> &removed, double thi
         if (surface.type() == SurfaceType::Cylinder) radius = static_cast<const CylindricalSurface &>(surface).radius();
         else if (surface.type() == SurfaceType::Sphere) radius = static_cast<const SphericalSurface &>(surface).radius();
         else if (surface.type() == SurfaceType::Torus) radius = static_cast<const ToroidalSurface &>(surface).minorRadius();
-        const bool collapse = !opening && face.sense && radius > 0.0 && radius - thickness <= kLinearResolution;
+        const bool collapse = !opening && face.sense && radius > 0.0 && radius - thickness <= linearResolution();
         offsets.push_back({f, opening ? 0.0 : -thickness, collapse});
     }
     bool freeform = false, tolerant = false;
     for (FaceId f : solid.faces())
         freeform = freeform || solid.face(f).surface->type() == SurfaceType::BSpline;
     for (EdgeId e : solid.edges())
-        tolerant = tolerant || solid.edge(e).tolerance > kLinearResolution;
+        tolerant = tolerant || solid.edge(e).tolerance > linearResolution();
     const bool tolerantFreeform = freeform && tolerant && solid.shells().size() == 1;
     // Nel guscio chiuso il vincolo del fondo si applica dopo le giunzioni
     // delle pareti, con un taglio piano: evita una rifilatura mal condizionata
@@ -287,9 +287,9 @@ Body shellBody(const Body &solid, const std::vector<FaceId> &removed, double thi
     if (temporaryCap.valid())
         for (auto &spec : offsets)
             if (spec.face == temporaryCap) spec.distance = 0;
-    const auto offset = offsetJoinedFaces(solid, offsets, kLinearResolution);
+    const auto offset = offsetJoinedFaces(solid, offsets, linearResolution());
     BodyHistory sewn;
-    auto inner = sewSheets({&offset.body}, kBooleanConnectionTolerance, true, &sewn);
+    auto inner = sewSheets({&offset.body}, booleanConnectionTolerance(), true, &sewn);
     if (!inner.solid) throw std::domain_error("guscio: la superficie interna non si chiude");
     auto insideDirect = detail::transportHistory(sewn, {&offset.history});
     if (temporaryCap.valid()) {
@@ -314,7 +314,7 @@ Body shellBody(const Body &solid, const std::vector<FaceId> &removed, double thi
         // Il taglio deve rispettare la precisione dell'offset (1e-7 mm),
         // distinta dal budget predefinito di connessione delle booleane.
         BooleanOptions clipOptions;
-        clipOptions.tolerance = kLinearResolution;
+        clipOptions.tolerance = linearResolution();
         auto clipped = booleanOperation(inner.body, tool, BooleanOperation::Intersect, clipOptions, &cutHistory);
         auto toolHistory =
             detail::generatedFaces(solid, tool, {{0, EntityKind::Face, temporaryCap.index, HistoryRelation::Modified}});

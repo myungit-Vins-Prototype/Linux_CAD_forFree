@@ -1,4 +1,5 @@
 #include "fk_loft.h"
+#include "fk_loft_knots.h"
 #include "fk_loft_guide_constraints.h"
 #include "fk_loft_profiles.h"
 #include "fk_loft_merge.h"
@@ -81,7 +82,7 @@ bool rationalSectionPlane(const Section &section, Frame3 &plane, Vec3 &secondNor
     const double length=norm(direction);
     const double roundoff=128*std::numeric_limits<double>::epsilon()*std::max({1.0,norm(origin),length});
     // Non certificare se l'incertezza aritmetica supera il budget locale.
-    if (roundoff>std::min(tolerance,kLinearResolution) || !(length>roundoff)) return false;
+    if (roundoff>std::min(tolerance,linearResolution()) || !(length>roundoff)) return false;
     Vec3 normal;
     for (const Vec3 &pole : poles) {
         cancellationPoint();
@@ -339,7 +340,7 @@ double parameterAtLength(const Piece &p, double target, LengthCache &lengthCache
     // per non produrre una campata artificiale di pochi ulp.
     for (double knot : p.curve->breakpoints(p.range)) {
         if (knot <= p.range.lo || knot >= p.range.hi || knot == t) continue;
-        if (distance(p.curve->point(t), p.curve->point(knot)) > kLinearResolution) continue;
+        if (distance(p.curve->point(t), p.curve->point(knot)) > linearResolution()) continue;
         const double gap = lengthCache.get(*p.curve, {std::min(t, knot), std::max(t, knot)}, 1e-14);
         const double residual = lengthCache.get(*p.curve, {p.range.lo, knot}, 1e-14) - target;
         if (gap <= lengthTolerance && std::fabs(residual) <= lengthTolerance) return knot;
@@ -931,12 +932,6 @@ BSplineCurve<3> refineLoftRow(BSplineCurve<3> curve, const std::vector<double> &
     return curve;
 }
 
-std::vector<double> unionLoftKnots(const std::vector<double> &a, const std::vector<double> &b) {
-    std::vector<double> result;
-    result.reserve(a.size() + b.size());
-    std::set_union(a.begin(), a.end(), b.begin(), b.end(), std::back_inserter(result));
-    return result;
-}
 
 Body loftCore(const std::vector<Section> &sections, const LoftOptions &options, bool closed, const std::vector<Frame3> &capPlanes,
               double scale, const std::vector<std::vector<double>> &guideParameters, const std::vector<std::vector<GuideHit>> &guideHits, FaceAliases *labels);
@@ -1618,7 +1613,7 @@ Body loftCore(const std::vector<Section> &sections, const LoftOptions &options, 
             edge.curve = split[i][m].curve;
             edge.range = split[i][m].range;
             const double gap = distance(edge.curve->point(edge.range.hi), vertexPoint[i][nextVertex(m)]);
-            if (gap > kLinearResolution) edge.tolerance = 1.01 * gap;
+            if (gap > linearResolution()) edge.tolerance = 1.01 * gap;
             sectionEdge[{i, m}] = int(edges.size());
             edges.push_back(edge);
         }
@@ -1747,18 +1742,16 @@ Body loftCore(const std::vector<Section> &sections, const LoftOptions &options, 
             std::vector<std::vector<Vec3>> vertexRows(V);
             std::vector<std::vector<double>> vertexWeights(V);
             std::vector<BSplineCurvePtr<3>> followed(V);
-            std::vector<double> commonKnots = originalVKnots;
             for (std::size_t m=0;m<V;++m) if (vertexGuide[m] && activeGuide(options, std::size_t(vertexGuide[m] - guideHits.data()))) {
                 std::vector<Vec3> row;std::vector<double> weights;
                 if(m<M) interpolate(m,0,row,weights);
                 else interpolate(M-1,nurbs[M-1][0].poleCount()-1,row,weights);
                 const BSplineCurve<3> base(q,originalVKnots,row,weights);
                 const std::size_t guide=std::size_t(vertexGuide[m]-guideHits.data());
-                auto curve=followingGuide(options.guides[guide],guideHits[guide],v,base,guideCondition(options, guide).influence,1e-9,1e-6*scale);
-                commonKnots = unionLoftKnots(commonKnots, curve.knots());
+                auto curve=followingGuide(options.guides[guide],guideHits[guide],v,base,guideCondition(options, guide).influence,scaledAccuracy(1e-9),scaledAccuracy(1e-6)*scale);
                 followed[m]=std::make_shared<BSplineCurve<3>>(std::move(curve));
             }
-            vKnots = std::move(commonKnots);
+            vKnots = detail::harmonizeLoftGuideKnots(followed,originalVKnots);
             vCount = int(vKnots.size()) - q - 1;
             for (auto &curve : followed)
                 if (curve) curve = std::make_shared<BSplineCurve<3>>(refineLoftRow(*curve, vKnots));
@@ -2157,7 +2150,7 @@ Vec3 loftSectionPoint(const LoftSection &section, double fraction) {
 
 double loftSectionFraction(const LoftSection &section, const Vec3 &point) {
     if(section.point) {
-        if(distance(*section.point,point)>kLinearResolution)throw std::domain_error("loft: punto diverso dalla sezione");
+        if(distance(*section.point,point)>linearResolution())throw std::domain_error("loft: punto diverso dalla sezione");
         return 0.0;
     }
     Section s;

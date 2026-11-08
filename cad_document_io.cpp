@@ -87,6 +87,19 @@ constexpr quint16 kVersion = kDocumentFormatVersion;
 constexpr quint8 kZlib = 1;
 constexpr quint8 kZstd = 2;
 
+// Controllo strutturale della legge; apertura e verso del percorso sono
+// verificati dal kernel sulla topologia, anche quando manca la cache.
+bool validFilletRadii(const QVector<double> &values) {
+    bool positive = values.isEmpty();
+    for (int i = 0; i < values.size(); ++i) {
+        const double radius = values[i];
+        if (!std::isfinite(radius) || radius < 0.0 ||
+            (radius == 0.0 && i != 0 && i + 1 != values.size())) return false;
+        positive = positive || radius > 0.0;
+    }
+    return positive;
+}
+
 void write(QDataStream &out, const CurveObject &curve) {
     out << qint32(curve.tool) << curve.controlPoints << curve.weights << curve.tangentHandles << qint32(curve.sides)
         << curve.construction;
@@ -912,7 +925,8 @@ bool read(ReadStream &in, ExtrusionObject &body, quint16 version, int extras) {
             || !std::isfinite(f.rho) || f.rho <= 0 || f.rho >= 1
             || !std::isfinite(f.conicRadius) || f.conicRadius <= 0 || !readCount(in,count,8) || count > 64) return false;
         f.mode=mode; f.conicType=type; f.conicControl=control;
-        for (quint32 k=0;k<count;++k) {double value;in>>value;if(!std::isfinite(value)||value<=0)return false;f.radii.append(value);}
+        for (quint32 k=0;k<count;++k) {double value;in>>value;f.radii.append(value);}
+        if (!validFilletRadii(f.radii)) return false;
         in >> f.smooth >> f.reverse >> f.propagate;
         if (version >= 59) {
             quint32 paths; if(!readCount(in,paths,4)||paths>512) return false;
@@ -922,7 +936,8 @@ bool read(ReadStream &in, ExtrusionObject &body, quint16 version, int extras) {
                 if(!readCount(in,n,4)||n==0||n>4096) return false;
                 for(quint32 j=0;j<n;++j) {qint32 edge;in>>edge;if(edge<0||edge>=body.blendEdges.size()||used.contains(edge))return false;used.insert(edge);path.edges.append(edge);}
                 if(!readCount(in,n,8)||n<2||n>64)return false;
-                for(quint32 j=0;j<n;++j) {double radius;in>>radius;if(!std::isfinite(radius)||radius<=0)return false;path.radii.append(radius);}
+                for(quint32 j=0;j<n;++j) {double radius;in>>radius;path.radii.append(radius);}
+                if (!validFilletRadii(path.radii)) return false;
                 in >> path.smooth >> path.reverse; f.paths.append(path);
             }
             if(f.mode==2&&!f.paths.isEmpty()&&used.size()!=body.blendEdges.size())return false;
@@ -992,7 +1007,7 @@ constexpr quint32 kBodyCacheTag = 0x46434332;  // "FCC2"
 // 9: raccordi ricalcolati sui nodi degli appoggi; derivate laterali corrette.
 // 11: griglie loft senza molteplicita' superflue nei nodi adattivi delle guide.
 // 12: lift G1 cubico indipendente dal grado e raccordi con jet unilaterali.
-constexpr quint32 kBodyCacheVersion = 13;
+constexpr quint32 kBodyCacheVersion = 15;
 constexpr qsizetype kMaxDisplayValues = 200000000;
 
 QByteArray definitionHash(const QByteArray &payload) { return QCryptographicHash::hash(payload, QCryptographicHash::Sha256); }
@@ -1199,6 +1214,9 @@ QByteArray bodyCache(const QByteArray &payload, const DocumentState &state, quin
 void applyBodyCache(const QByteArray &compressed, const QByteArray &payload, DocumentState &state, bool previewCache,
                     const DocumentReadLimits &limits, quint8 compression) {
     (void)previewCache;
+    // Anche i costruttori letti dal B-rep (per esempio cerchi molto piccoli)
+    // devono usare il profilo salvato, prima di creare i worker di lettura.
+    Kernel::PrecisionScope precision(state.calculationAccuracy);
     const bool profile=qEnvironmentVariableIsSet("FORGECAD_PROFILE_READ");
     QElapsedTimer timer;if(profile)timer.start();
     const auto stage=[&](const char *name){if(profile)qInfo("LETTURA cache %s: %lld ms",name,static_cast<long long>(timer.restart()));};
@@ -1231,10 +1249,16 @@ void applyBodyCache(const QByteArray &compressed, const QByteArray &payload, Doc
     // in una riga di poli; i raccordi usavano il jet opposto sui nodi.
     // Cache 13: i tagli per lunghezza vicini ai nodi non creano piu'
     // micro campate NURBS che falsavano la normale delle loft adiacenti.
+    // Cache 14: pose NURBS conservano le SP-curve dei poli singolari;
+    // cucitura elimina solo i bordi realmente collassati, prima di unirli.
+    // Cache 15: guide del loft con nodi comuni entro arrotondamento e
+    // offset cuciti stabili sulle sezioni quasi tangenti.
     if (state.version.checkinId.isNull()
         && std::any_of(state.extrusions.cbegin(), state.extrusions.cend(),
             [cacheVersion](const ExtrusionObject &body) {
-                return !body.suppressed && ((cacheVersion < 13 && body.feature == BodyFeature::Loft)
+                return !body.suppressed && ((cacheVersion < 14 && (body.feature == BodyFeature::Pattern
+                        || body.feature == BodyFeature::Transform || body.feature == BodyFeature::Sew))
+                    || (cacheVersion < 15 && body.feature == BodyFeature::Loft)
                     || (cacheVersion < 12 && body.feature == BodyFeature::Blend)
                     || (cacheVersion < 10 && (body.feature == BodyFeature::Pattern || body.feature == BodyFeature::Transform)));
             }))
@@ -1285,12 +1309,13 @@ void applyBodyCache(const QByteArray &compressed, const QByteArray &payload, Doc
     // picking vengono ricostruiti su tutti i core. Eventuali record non piu'
     // leggibili ricadranno nella normale rigenerazione parametrica.
     std::vector<ForgeBody> bodies(count);
+    const auto geometryPool = Kernel::makeBodyReadPool();
     std::vector<std::shared_ptr<const Kernel::RayFaceIndex>> rayIndices(count);
     Kernel::parallelFor(count, Kernel::threadCount(0), [&](std::size_t i) {
         if (!records[i].hasBody) return;
         try {
             bodies[i] = std::make_shared<const Kernel::Body>(
-                Kernel::readBodyBinary(std::string(records[i].data.constData(), std::size_t(records[i].data.size()))));
+                Kernel::readBodyBinary(std::string_view(records[i].data.constData(), std::size_t(records[i].data.size())), *geometryPool));
             if (records[i].hasDisplay) {
                 try {
                     rayIndices[i] = std::make_shared<const Kernel::RayFaceIndex>(*bodies[i]);
@@ -1404,6 +1429,10 @@ bool DocumentFileLock::owns(const QString &path) const {
 namespace {
 QString encodeDocumentVersion(const DocumentState &state, QByteArray &bytes, bool bodies, int compressionLevel, quint16 version) {
     try {
+        if (!Kernel::validCalculationAccuracy(state.calculationAccuracy))
+            return QStringLiteral("Precisione di calcolo del documento non valida.");
+        if (version < 67 && state.calculationAccuracy != Kernel::kLinearResolution)
+            return QStringLiteral("La precisione personalizzata richiede il formato 67.");
         if (state.version.documentId.isNull() || (!state.version.checkinId.isNull() && state.version.checkinId == state.baseCheckinId))
             return QStringLiteral("Identita' del documento non valida.");
         for (const auto &body : state.extrusions) {
@@ -1435,13 +1464,13 @@ QString encodeDocumentVersion(const DocumentState &state, QByteArray &bytes, boo
                 ||!std::isfinite(f.rho)||f.rho<=0||f.rho>=1||!std::isfinite(f.conicRadius)||f.conicRadius<=0
                 ||f.radii.size()>64||(f.mode==2&&f.paths.isEmpty()&&f.radii.size()<2))
                 return QStringLiteral("Parametri del raccordo non validi: impossibile salvare il documento.");
-            for(double value:f.radii)if(!std::isfinite(value)||value<=0)return QStringLiteral("Raggi variabili non validi: impossibile salvare il documento.");
+            if(!validFilletRadii(f.radii))return QStringLiteral("Raggi variabili non validi: impossibile salvare il documento.");
             if(f.paths.size()>512)return QStringLiteral("Troppi percorsi di raggio variabile.");
             QSet<int> used;
             for(const auto &path:f.paths) {
                 if(path.edges.isEmpty()||path.edges.size()>4096||path.radii.size()<2||path.radii.size()>64)return QStringLiteral("Tabella del raggio variabile non valida.");
                 for(int edge:path.edges){if(edge<0||edge>=body.blendEdges.size()||used.contains(edge))return QStringLiteral("Associazione bordo/percorso non valida.");used.insert(edge);}
-                for(double radius:path.radii)if(!std::isfinite(radius)||radius<=0)return QStringLiteral("Raggio del percorso non valido.");
+                if(!validFilletRadii(path.radii))return QStringLiteral("Raggio del percorso non valido.");
             }
             if(f.mode==2&&!f.paths.isEmpty()&&used.size()!=body.blendEdges.size())return QStringLiteral("Manca una tabella del raggio variabile.");
         }
@@ -1470,6 +1499,7 @@ QString encodeDocumentVersion(const DocumentState &state, QByteArray &bytes, boo
                 out << body.id << body.name << body.visible << body.tipFeatureId << body.meshColor;
             out << qint32(normalized.lengthUnit);
             out << normalized.version.documentId << normalized.version.checkinId << normalized.baseCheckinId;
+            if (version >= 67) out << normalized.calculationAccuracy;
             if(!surfaceExtras.isEmpty())out << quint32(0x53524631) << surfaceExtras;
         }
         QByteArray prepared;
@@ -1493,6 +1523,10 @@ QString encodeDocumentVersion(const DocumentState &state, QByteArray &bytes, boo
 
 QString encodeDocument(const DocumentState &state, QByteArray &bytes, bool bodies, int compressionLevel) {
     return encodeDocumentVersion(state, bytes, bodies, compressionLevel, kVersion);
+}
+
+QString encodeDocumentDefinition66ForHash(const DocumentState &state, QByteArray &bytes) {
+    return encodeDocumentVersion(state, bytes, false, 9, 66);
 }
 
 QString encodeDocumentDefinition65ForHash(const DocumentState &state, QByteArray &bytes) {
@@ -1631,6 +1665,11 @@ QString parsePayload(const QByteArray &payload, quint16 version, int extras, Doc
         if (in.status() != QDataStream::Ok || loaded.version.documentId.isNull()
             || (!loaded.version.checkinId.isNull() && loaded.version.checkinId == loaded.baseCheckinId))
             return QStringLiteral("Il file e' danneggiato (identita' del documento).");
+    }
+    if (version >= 67) {
+        in >> loaded.calculationAccuracy;
+        if (in.status() != QDataStream::Ok || !Kernel::validCalculationAccuracy(loaded.calculationAccuracy))
+            return QStringLiteral("Il file contiene una precisione di calcolo non valida.");
     }
     if(version>=53){QByteArray extras;if(!buffer.atEnd()){quint32 tag=0;in>>tag>>extras;if(in.status()!=QDataStream::Ok||tag!=0x53524631)return QStringLiteral("Estensioni superfici danneggiate.");}const auto error=applySurfaceToolsExtras(extras,loaded.extrusions);if(!error.isEmpty())return error;}
     if (!buffer.atEnd()) return QStringLiteral("Il file e' danneggiato (dati in piu' alla fine).");

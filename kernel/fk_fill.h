@@ -1,3 +1,4 @@
+#include "fk_precision.h"
 #ifndef FORGECAD_FK_FILL_H
 #define FORGECAD_FK_FILL_H
 
@@ -66,7 +67,7 @@ struct FillOptions {
     int continuity = 1;          // 0 contatto, 1 tangenza, 2 curvatura (sui tratti con una faccia adiacente)
     double influence = 1.0;      // controllo di forma (1 naturale); non scala la G1 sul raccordo proiettabile
     double guideWeight = 1.0;    // peso delle guide rispetto al contorno (0 = ignorate)
-    double tolerance = 1e-6;     // scarto voluto sul contorno e sulle guide
+    double tolerance = scaledAccuracy(1e-6);     // scarto voluto sul contorno e sulle guide
     int shapeContact = -1;       // indice del contatto che guida le sezioni interne; -1 forma libera
     double shapeWeight = 1.0;   // forza del controllo direzionale, separata dalla tangenza
     int maxSpans = 96;           // celle per lato al massimo

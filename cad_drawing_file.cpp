@@ -127,8 +127,17 @@ QString drawingModelDefinitionHash(const DocumentState &document,QByteArray &has
 QString drawingModelDefinitionMatches(const DocumentState &document,const QByteArray &expected,bool &matches){
     QByteArray current;const auto error=drawingModelDefinitionHash(document,current);if(!error.isEmpty())return error;
     if(current==expected){matches=true;return {};}
+    // Le impronte precedenti al formato67 rappresentano solo il profilo
+    // standard: una precisione diversa e' una modifica, non un errore di lettura.
+    matches=false;
+    if(document.calculationAccuracy!=Kernel::kLinearResolution)return {};
     auto normalized=document;normalized.version.checkinId={};normalized.baseCheckinId={};normalized.orientation=AxesOrientation{};
     normalized.lengthUnit=LengthUnit::Millimeter;
+    QByteArray format66;
+    if (encodeDocumentDefinition66ForHash(normalized,format66).isEmpty()
+        && QCryptographicHash::hash(format66,QCryptographicHash::Sha256)==expected) {
+        matches=true; return {};
+    }
     QByteArray format65;
     if (encodeDocumentDefinition65ForHash(normalized,format65).isEmpty()
         && QCryptographicHash::hash(format65,QCryptographicHash::Sha256)==expected) {

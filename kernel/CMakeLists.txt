@@ -96,8 +96,16 @@ add_library(forgekernel STATIC
     fk_blend_loop.h
     fk_blend_loop.cpp
     fk_blend_model.h
+    fk_blend_polar.h
+    fk_blend_polar.cpp
     fk_blend_surface.h
     fk_blend_surface.cpp
+    fk_blend_contour.h
+    fk_blend_contour.cpp
+    fk_blend_mitre.h
+    fk_blend_mitre.cpp
+    fk_blend_section_curve.h
+    fk_blend_section_curve.cpp
     fk_blend_contact_breaks.h
     fk_blend_contact_breaks.cpp
     fk_sheet.h
@@ -110,6 +118,10 @@ add_library(forgekernel STATIC
     fk_sheet.cpp
     fk_offset.h
     fk_offset.cpp
+    fk_open_offset.h
+    fk_open_offset.cpp
+    fk_offset_support.h
+    fk_offset_support.cpp
     fk_sew.h
     fk_sew.cpp
     fk_planar.h
@@ -134,6 +146,8 @@ add_library(forgekernel STATIC
     fk_helix.cpp
     fk_sweep.h
     fk_sweep.cpp
+    fk_loft_knots.h
+    fk_loft_knots.cpp
     fk_loft.h
     fk_loft_merge.cpp
     fk_loft.cpp
@@ -176,6 +190,29 @@ set_target_properties(forgekernel PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF
 if(FORGECAD_BUILD_OCCT_TESTS)
     add_subdirectory(occt_tests)
 endif()
+
+# Offset/spessore di lamine e continuazione dei supporti, senza OCCT.
+add_executable(forgekernel_open_offset_tests tests/fk_test_main.cpp tests/test_open_offset.cpp)
+target_link_libraries(forgekernel_open_offset_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_open_offset_tests PRIVATE -Wall -Wextra -Wpedantic)
+target_compile_definitions(forgekernel_open_offset_tests PRIVATE FORGEKERNEL_TEST_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/tests/data")
+set_target_properties(forgekernel_open_offset_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_open_offset_tests COMMAND forgekernel_open_offset_tests)
+set_tests_properties(forgekernel_open_offset_tests PROPERTIES TIMEOUT 180)
+
+# Nodi quasi coincidenti delle guide e continuita' NURBS, senza OCCT.
+add_executable(forgekernel_loft_knots_tests tests/fk_test_main.cpp tests/test_loft_knots.cpp)
+target_link_libraries(forgekernel_loft_knots_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_loft_knots_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_loft_knots_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_loft_knots_tests COMMAND forgekernel_loft_knots_tests)
+
+# Raccordi simultanei ai poli multipli e cambi di convessita', senza OCCT.
+add_executable(forgekernel_polar_blend_tests tests/fk_test_main.cpp tests/test_polar_blend.cpp)
+target_link_libraries(forgekernel_polar_blend_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_polar_blend_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_polar_blend_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_polar_blend_tests COMMAND forgekernel_polar_blend_tests)
 
 # Istanze esatte NURBS, specchi e persistenza senza duplicare i poli.
 add_executable(forgekernel_surface_instances_tests tests/fk_test_main.cpp tests/test_surface_instances.cpp)
@@ -426,3 +463,11 @@ target_compile_options(forgekernel_cone_rays_tests PRIVATE -Wall -Wextra -Wpedan
 set_target_properties(forgekernel_cone_rays_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
 add_test(NAME forgekernel_cone_rays_tests COMMAND forgekernel_cone_rays_tests)
 set_tests_properties(forgekernel_cone_rays_tests PROPERTIES TIMEOUT 60)
+
+add_executable(forgekernel_blend_cavity_tests tests/fk_test_main.cpp tests/test_blend_cavity.cpp)
+target_link_libraries(forgekernel_blend_cavity_tests PRIVATE forgekernel)
+target_compile_definitions(forgekernel_blend_cavity_tests PRIVATE FORGECAD_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+target_compile_options(forgekernel_blend_cavity_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_blend_cavity_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_blend_cavity_tests COMMAND forgekernel_blend_cavity_tests)
+set_tests_properties(forgekernel_blend_cavity_tests PROPERTIES TIMEOUT 90)

@@ -1,4 +1,5 @@
 #include "fk_intersect.h"
+#include "fk_precision.h"
 #include "fk_sketch_projection.h"
 
 #include "fk_curve_surface.h"
@@ -791,6 +792,41 @@ CurvePtr<3> obliqueImage(const Curve<3> &curve, const Interval &range, const Vec
 
 }
 
+bool revolutionMeridianAngle(const Plane &plane, const RevolutionSurface &surface, double tolerance, double &angle) {
+    const Vec3 n = plane.frame().zDir(), a = surface.axisDirection(), origin = surface.axisPoint();
+    const double axial = std::fabs(dot(n, a));
+    const double offset = std::fabs(dot(n, origin - plane.frame().origin()));
+    if (axial > angularResolution() || offset > tolerance || !surface.vDomain().isFinite()) return false;
+    for (auto curve = surface.meridian();;) {
+        if (curve->type() == CurveType::Trimmed) curve = static_cast<const TrimmedCurve<3> &>(*curve).basis();
+        else if (curve->type() == CurveType::Transformed) {
+            const auto &placed = static_cast<const TransformedCurve &>(*curve);
+            if (!placed.transform().isSimilarity()) return false;
+            curve = placed.basis();
+        } else break;
+    }
+    // I poli Bezier certificano il piano dell'intero meridiano, anche NURBS
+    // trasformati/rifilati: nessuna deduzione da campioni o mesh.
+    const auto pieces = rationalBezierPieces(*surface.meridian(), surface.vDomain());
+    Vec3 radial;
+    double radius = 0.0, extent = 0.0;
+    for (const auto &piece : pieces) for (const Vec3 &p : piece.poles()) {
+        const Vec3 w = p - origin, r = w - dot(w, a) * a;
+        extent = std::max(extent, norm(w));
+        if (norm(r) > radius) { radius = norm(r); radial = r; }
+    }
+    if (radius <= linearResolution() || offset + axial * extent > tolerance) return false;
+    radial = radial / radius;
+    const Vec3 side = cross(a, radial);
+    double deviation = 0.0;
+    for (const auto &piece : pieces) for (const Vec3 &p : piece.poles())
+        deviation = std::max(deviation, std::fabs(dot(p - origin, side)));
+    if (deviation > linearResolution() || deviation + offset + axial * extent > tolerance) return false;
+    const Vec3 target = normalized(cross(n, a));
+    angle = std::atan2(dot(a, cross(radial, target)), dot(radial, target));
+    return true;
+}
+
 PlaneSurfaceIntersection intersectPlaneSurface(const Plane &plane, const Surface &surface, const Box &bounds, double tolerance) {
     PlaneSurfaceIntersection out;
     const Vec3 n = plane.frame().zDir(), p0 = plane.frame().origin();
@@ -911,6 +947,31 @@ PlaneSurfaceIntersection intersectPlaneSurface(const Plane &plane, const Surface
         Interval range;
         out.curves.push_back(obliqueImage(base, domain, n, offset, d, range));
         out.ranges.push_back(range);
+        return out;
+    }
+    case SurfaceType::Revolution: {
+        const auto &revolution = static_cast<const RevolutionSurface &>(surface);
+        double angle = 0.0;
+        if (!revolutionMeridianAngle(plane, revolution, tolerance, angle))
+            throw std::domain_error("intersectPlaneSurface: sezione di rivoluzione non meridiana");
+        for (double u : {angle, angle + kPi}) {
+            auto meridian = revolution.meridian();
+            auto placement = Transform3::rotation(revolution.axisPoint(), revolution.axisDirection(), u);
+            // Materializza la rotazione nei poli/assi: le SP-curve planari
+            // richiedono curve concrete e lo stesso parametro del meridiano.
+            for (;;) {
+                if (meridian->type() == CurveType::Trimmed)
+                    meridian = static_cast<const TrimmedCurve<3> &>(*meridian).basis();
+                else if (meridian->type() == CurveType::Transformed) {
+                    const auto &placed = static_cast<const TransformedCurve &>(*meridian);
+                    placement = placement * placed.transform(); meridian = placed.basis();
+                } else break;
+            }
+            double parameterScale = 1.0;
+            out.curves.push_back(transformCurve(meridian, placement, &parameterScale));
+            const auto domain = revolution.vDomain();
+            out.ranges.push_back({parameterScale * domain.lo, parameterScale * domain.hi});
+        }
         return out;
     }
     case SurfaceType::Torus: {

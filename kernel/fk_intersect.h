@@ -16,7 +16,7 @@
 //    per sostituzione nell'equazione implicita della conica (Bernstein),
 //    B-spline con B-spline per suddivisione delle pezze di Bezier + Newton;
 //  - piano con piano, cilindro, sfera, superficie estrusa (qualsiasi curva
-//    base), toro nei piani per l'asse: curve esatte (rette, cerchi, ellissi, NURBS);
+//    base), rivoluzione e toro nei piani per l'asse: curve esatte (rette, cerchi, ellissi, NURBS);
 //  - retta con piano, cilindro, sfera, superficie estrusa (per il test
 //    punto-in-solido).
 //  - curva con piano, cilindro, superficie estrusa (riduzione esatta a
@@ -76,6 +76,11 @@ struct PlaneSurfaceIntersection {
     std::vector<CurvePtr<3>> tangentCurves;
     std::vector<Interval> tangentRanges;
 };
+// Piano per l'asse di una rivoluzione con meridiano piano: angolo della
+// prima isoparametrica meridiana (l'altra e' angle + pi). Falso per i casi
+// generici, che devono continuare a usare il tracciamento delle superfici.
+bool revolutionMeridianAngle(const Plane &plane, const RevolutionSurface &surface, double tolerance, double &angle);
+
 PlaneSurfaceIntersection intersectPlaneSurface(const Plane &plane, const Surface &surface, const Box &bounds,
                                                double tolerance);
 

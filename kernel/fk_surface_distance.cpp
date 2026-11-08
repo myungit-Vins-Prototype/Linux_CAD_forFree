@@ -19,7 +19,7 @@ double surfaceDeviationAboveTolerance(const Surface &surface, const Vec3 &p, dou
     cancellationPoint();
     if (!(tolerance >= 0.0) || !std::isfinite(tolerance) || !isFinite(p))
         throw std::invalid_argument("surfaceDeviationAboveTolerance: punto o tolleranza non validi");
-    if (surface.type() == SurfaceType::BSpline && tolerance >= kLinearResolution) {
+    if (surface.type() == SurfaceType::BSpline && tolerance >= linearResolution()) {
         const Interval u = surface.uDomain(), v = surface.vDomain();
         Vec2 uv = hint && isFinite(*hint) ? *hint : Vec2(0.5 * u.lo + 0.5 * u.hi, 0.5 * v.lo + 0.5 * v.hi);
         uv[0] = u.clamp(uv[0]);

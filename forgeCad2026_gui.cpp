@@ -1,3 +1,4 @@
+#include "cad_document_precision.h"
 #include "cad_revision_recovery_ui.h"
 #include <QScopedValueRollback>
 #include "forgeCad2026_ribbon_preview.h"
@@ -2618,6 +2619,10 @@ void PdfWindow::initializeOptions(WindowSetup &setup) {
         statusBar()->showMessage(QStringLiteral("Unita' del documento: %1. Geometria e storia convertite in visualizzazione senza ricalcolo.")
                                      .arg(ForgeCad::lengthUnitName(unit)), 7000);
     });
+    auto *precisionAction = optionsMenu->addAction(QStringLiteral("Precisione di calcolo del documento..."));
+    precisionAction->setObjectName(QStringLiteral("documentPrecisionAction"));
+    documentMutationActions_.append(precisionAction);
+    connect(precisionAction, &QAction::triggered, this, [this, viewport] { ForgeCad::editDocumentPrecision(this, viewport); });
     optionsMenu->addSeparator();
     // Orientamento degli assi del documento: quale asse sta in alto e quale guarda
     // l'osservatore nella vista frontale (o la vista corrente come frontale).

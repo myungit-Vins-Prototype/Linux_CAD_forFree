@@ -8,7 +8,8 @@
 // s R, una B-spline ha i poli trasformati), le curve e le superfici condivise
 // restano condivise. Nella simmetria si conservano le SP-curve delle
 // superfici B-spline se il parametro dell'edge resta invariato; le altre
-// si ricalcolano.
+// si ricalcolano. Anche le pose dirette conservano le SP-curve NURBS
+// quando il parametro degli edge resta invariato, inclusi i lati collassati.
 namespace ForgeCad::Kernel {
 class BodyHistory;
 

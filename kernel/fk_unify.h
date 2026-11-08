@@ -1,3 +1,4 @@
+#include "fk_precision.h"
 #ifndef FORGECAD_FK_UNIFY_H
 #define FORGECAD_FK_UNIFY_H
 
@@ -19,7 +20,7 @@ class BodyHistory;
 
 // history facoltativa: provenienza dichiarata delle facce, compresi tutti
 // i membri dei gruppi fusi. Edge/vertici restano senza copertura dichiarata.
-Body unifySameDomain(const Body &body, double tolerance = 1e-6, BodyHistory *history = nullptr);
+Body unifySameDomain(const Body &body, double tolerance = scaledAccuracy(1e-6), BodyHistory *history = nullptr);
 
 }
 

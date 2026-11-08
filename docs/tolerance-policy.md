@@ -117,3 +117,28 @@ Migrazione ancora aperta: classificare le soglie anonime nei singoli moduli,
 verificare propagazione nelle trasformazioni e nelle operazioni, validare gli
 override alle API, aggiungere misure conservative dove oggi ci sono campioni.
 Non vietare con una regex tutti gli `1e-9`: possono descrivere grandezze diverse.
+
+## Profilo persistente del documento (8 novembre 2026)
+
+Il formato nativo 67 salva `DocumentState::calculationAccuracy`, in mm, con
+valore storico 1e-7 e intervallo finito da 1e-10 a 1e-7. Il menu Opzioni /
+Precisione di calcolo del documento ricalcola esplicitamente tutte le funzioni;
+Undo/Redo comprende profilo e geometria. I formati precedenti usano il default.
+
+`PrecisionScope` applica il profilo al solo lavoro corrente. I worker di
+rigenerazione, anteprima e `parallelFor` ereditano il valore; il ciclo eventi
+GUI e gli altri documenti non vengono modificati. Gli accessori dei budget
+mantengono distinti risoluzione lineare/angolare, connessioni, fit e SP-curve:
+il fattore e' accuratezza / 1e-7, senza alterare i rapporti storici. Gli override
+espliciti del chiamante e le tolleranze importate rimangono tali.
+
+Sono contestualizzati i default nominati e i budget di fit di marching,
+offset, raccordi, loft, contorni, superfici, proiezioni e connessione schizzi.
+Per lo spessore un profilo personalizzato richiede l'offset alla risoluzione
+scelta; il profilo standard mantiene la sequenza storica di tentativi.
+Le soglie di condizionamento, UV, arrotondamento e i predicati esatti non sono
+riscalati. Restano soglie locali da classificare: il valore impostato e' un
+obiettivo numerico, non una certificazione dell'errore massimo di ogni algoritmo,
+della geometria sorgente o dei controlli campionati. Aumentare l'accuratezza puo'
+richiedere piu' poli, RAM e tempo, oppure rifiutare geometria prima accettata.
+Il tipo numerico resta double e il limite pratico dipende dalla scala delle coordinate.

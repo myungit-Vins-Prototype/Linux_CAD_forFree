@@ -2,6 +2,7 @@
     static void linkedSketchReferences() {
         using namespace ForgeCad;
         using namespace Kernel;
+        sectionReferenceSubsets();
         const auto near = [](QPointF a, QPointF b) { return pointDistance(a,b) < 1e-7; };
         const auto line = [](SketchObject &s, QPointF a, QPointF b) {
             s.segments.append({a,b}); s.constraints.append(-1); s.segmentLengths.append(0); s.segmentAngles.append(-1);
@@ -387,4 +388,65 @@
             view.close();
         }
         std::cout<<"PASS linked reference visibility"<<(gl?" OpenGL":" raster")<<std::endl;
+    }
+
+    static void sectionReferenceSubsets() {
+        using namespace ForgeCad; using namespace Kernel;
+        const auto revolution=[](double radius) {
+            auto profile=std::make_shared<BSplineCurve<2>>(3,std::vector<double>{0,0,0,0,1,1,1,1},
+                std::vector<Vec2>{{4,0},{radius,1},{7,10},{0,12}},std::vector<double>{1,.7,1.3,1});
+            ProfileLoop chain;chain.segments.push_back({profile,profile->domain()});
+            return makeSheetRevolution(Frame3(),{chain},kTwoPi);
+        };
+        ExtrusionObject body;body.feature=BodyFeature::Imported;body.name="Rivoluzione";body.featureId=501;body.solid=false;
+        body.forgeBody=std::make_shared<const Body>(revolution(10));
+        body.importData=QByteArray::fromStdString(writeStep({{"Rivoluzione",*body.forgeBody,false,{0,0,0},nullptr,{}}}));
+        const QVector<ExtrusionObject> initialBodies{body};
+        GeometryRef source;source.kind=11;source.index=0;source.featureId=501;
+        SketchObject full;full.customFrame=true;full.frame.normal[1]=1;full.frame.normal[2]=0;
+        require(appendLinkedSketchReference(full,source,{},initialBodies,true,false,100,nullptr,true).isEmpty()
+            &&full.curves.size()==2,"sezione sorgente con due rami NURBS");
+        for(int kept:{0,1}) {
+            auto selected=full;
+            removeSketchEntities(selected,{},QSet<int>{1-kept});
+            require(selected.curves.size()==1&&selected.linkedReferences.size()==1
+                &&selected.linkedReferences[0]->source.point.name.startsWith("section-subset-v1/"),"eliminazione conserva l'indice del ramo originale");
+            require(full.linkedReferences[0]->source.point.name.isEmpty()&&full.curves.size()==2,"istantanea precedente immutabile");
+            require(refreshLinkedSketchReferences(selected,{},initialBodies).isEmpty()&&selected.curves.size()==1,"refresh non ricrea il ramo eliminato");
+            const auto before=selected.curves[0].controlPoints;
+            auto changed=initialBodies;changed[0].forgeBody=std::make_shared<const Body>(revolution(12));
+            require(refreshLinkedSketchReferences(selected,{},changed).isEmpty()&&selected.curves.size()==1
+                &&selected.curves[0].controlPoints!=before,"entrambi i rami selezionabili seguono la sorgente modificata");
+            require(refreshLinkedSketchReferences(selected,{},initialBodies).isEmpty(),"ripristino della geometria sorgente");
+            for(bool cache:{false,true}) {
+                DocumentState state;state.sketches={selected};state.extrusions=initialBodies;
+                QByteArray bytes;DocumentState loaded;
+                require(encodeDocument(state,bytes,cache).isEmpty()&&decodeDocument(bytes,loaded).isEmpty(),"codec ramo di sezione selezionato");
+                CadViewport reopened;reopened.loadDocument(loaded);
+                require(reopened.sketches_[0].referenceError.isEmpty()&&reopened.sketches_[0].curves.size()==1
+                    &&reopened.rebuildAllFeatures()==0,"riapertura e rigenerazione della sezione parziale");
+            }
+            // Vecchi file: stessa sorgente e NURBS completa identica, senza nearest match.
+            auto legacy=selected;
+            auto link=std::make_shared<SketchLinkedReference>(*legacy.linkedReferences[0]);link->source.point.name.clear();legacy.linkedReferences[0]=link;
+            require(refreshLinkedSketchReferences(legacy,{},initialBodies).isEmpty()
+                &&legacy.linkedReferences[0]->source.point.name.startsWith("section-subset-v1/"),"migrazione univoca della NURBS conservata nei file precedenti");
+            auto altered=selected;link=std::make_shared<SketchLinkedReference>(*altered.linkedReferences[0]);link->source.point.name.clear();altered.linkedReferences[0]=link;
+            altered.curves[0].controlPoints[1]+=QPointF(1e-8,0);
+            require(!refreshLinkedSketchReferences(altered,{},initialBodies).isEmpty()
+                &&altered.linkedReferences[0]->source.point.name.isEmpty(),"NURBS vicina ma diversa non viene riassociata");
+            auto malformed=selected;link=std::make_shared<SketchLinkedReference>(*malformed.linkedReferences[0]);
+            link->source.point.name="section-subset-v1/0/2/20";malformed.linkedReferences[0]=link;
+            require(!refreshLinkedSketchReferences(malformed,{},initialBodies).isEmpty(),"selettore fuori intervallo rifiutato");
+            changed[0].forgeBody=std::make_shared<const Body>(makeBox(Frame3(),10,12,5));
+            require(!refreshLinkedSketchReferences(selected,{},changed).isEmpty(),"cambio della topologia sorgente ancora diagnosticato");
+        }
+        // Sezioni poligonali: la mappa resta corretta dopo piu' cancellazioni.
+        auto bodies=initialBodies;bodies[0].forgeBody=std::make_shared<const Body>(makeBox(Frame3(),10,12,5));
+        SketchObject polygon;polygon.customFrame=true;polygon.frame.origin[2]=2;
+        require(appendLinkedSketchReference(polygon,source,{},bodies,true,false).isEmpty()&&polygon.segments.size()==4,"sezione poligonale completa");
+        removeSketchEntities(polygon,QSet<int>{0},{});removeSketchEntities(polygon,QSet<int>{1},{});
+        require(refreshLinkedSketchReferences(polygon,{},bodies).isEmpty()&&polygon.segments.size()==2,"cancellazioni successive conservano gli indici sorgente");
+        removeSketchEntities(polygon,QSet<int>{0,1},{});
+        require(polygon.linkedReferences.isEmpty(),"eliminazione completa rimuove il collegamento");
     }

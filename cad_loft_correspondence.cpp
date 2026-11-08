@@ -56,7 +56,7 @@ std::vector<LoftSection> resolveLoftSections(const ExtrusionObject &d, int owner
             const auto &sketch = sketches[ref.index];
             if (sketch.datumPlane >= owner)
                 fail(QStringLiteral("Una sezione sta su un piano successivo."));
-            const auto profile = buildProfile(forgeSketchSegments(sketch), kSketchConnectionTolerance);
+            const auto profile = buildProfile(forgeSketchSegments(sketch), sketchConnectionTolerance());
             double height;
             forgeSketchFrame(sketch, 0.0, section.frame, height);
             if (profile.regions.size() == 1 && profile.regions.front().holes.empty() && profile.chains.empty())

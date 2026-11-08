@@ -11,6 +11,7 @@ public:
         QVector<SketchObject> sketches;
         QVector<ExtrusionObject> bodies;  // solo gli operandi, copiati
         int quality = 1;
+        double calculationAccuracy = 1.0e-7;
         // Modifica senza valori cambiati (unchangedFeature): il body e la
         // tassellazione del corpo, niente kernel; si prepara solo la vista
         // (la patch del raccordo, le curve U/V).

@@ -72,8 +72,8 @@ struct SurfaceIntersection {
 };
 
 struct SurfaceIntersectionOptions {
-    double tolerance = kMarchingConnectionTolerance;       // due punti piu' vicini sono lo stesso punto
-    double fitTolerance = kMarchingFitTolerance;  // scarto massimo della curva e delle SP-curve
+    double tolerance = marchingConnectionTolerance();       // due punti piu' vicini sono lo stesso punto
+    double fitTolerance = marchingFitTolerance();  // scarto massimo della curva e delle SP-curve
 };
 
 // Componenti di A inter B dentro `bounds` che passano per un punto di `seeds`

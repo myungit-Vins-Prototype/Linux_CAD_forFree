@@ -377,7 +377,7 @@ std::string writeStep(const std::vector<ExchangeBody> &bodies, const StepWriteOp
             const int basis = writeCurve(w, exchange.curve, range);
             const Vec3 a = exchange.curve->point(range.lo), b = exchange.curve->point(range.hi);
             int item = basis;
-            if (distance(a, b) > kLinearResolution)
+            if (distance(a, b) > linearResolution())
                 item = w.add("TRIMMED_CURVE(" + text(name) + "," + StepWriter::ref(basis) + ",(" + StepWriter::ref(w.point(a)) + "),(" +
                              StepWriter::ref(w.point(b)) + "),.T.,.CARTESIAN.)");
             items.push_back(w.add("GEOMETRIC_CURVE_SET(" + text(name) + ",(" + StepWriter::ref(item) + "))"));

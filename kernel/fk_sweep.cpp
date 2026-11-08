@@ -435,7 +435,7 @@ Body sweep(const Frame3 &profileFrame, const ProfileData &profile, bool sheet, c
                 edge.range = {k * piece.range.lo, k * piece.range.hi};
             }
             const double gap = std::max(profile.gaps[std::size_t(piece.start)], profile.gaps[std::size_t(piece.end)]);
-            if (gap > kLinearResolution) edge.tolerance = 1.01 * gap;
+            if (gap > linearResolution()) edge.tolerance = 1.01 * gap;
             sectionEdge[std::size_t(j * P + p)] = int(edges.size());
             edges.push_back(edge);
         }
@@ -674,7 +674,7 @@ Body sweep(const Frame3 &profileFrame, const ProfileData &profile, bool sheet, c
     Body body = sheet ? Body::buildSheet(vertices, edges, faces) : Body::build(vertices, edges, faces);
     for (int j = 0; j < joints; ++j)
         for (int v = 0; v < V; ++v)
-            if (profile.gaps[std::size_t(v)] > kLinearResolution) body.vertex(VertexId(vertexIndex(j, v))).tolerance = 1.01 * profile.gaps[std::size_t(v)];
+            if (profile.gaps[std::size_t(v)] > linearResolution()) body.vertex(VertexId(vertexIndex(j, v))).tolerance = 1.01 * profile.gaps[std::size_t(v)];
     computePCurves(body);
     const std::vector<CheckIssue> issues = checkBody(body);
     if (!issues.empty()) throw std::domain_error("sweep: risultato non valido (" + describe(issues.front().code) + ": " + issues.front().message + ")");

@@ -6,7 +6,7 @@
 namespace ForgeCad::Kernel {
 
 // Certificato conservativo del segno della normale orientata di una faccia:
-// dot(n, direction) >= 0, entro kAngularResolution. Gestisce superfici
+// dot(n, direction) >= 0, entro angularResolution(). Gestisce superfici
 // B-spline polinomiali (anche pesi tutti uguali) ed estrusioni di curve
 // polinomiali. Le estrusioni di qualsiasi curva sono certificate quando
 // direction e' parallela alla generatrice (proiezione identicamente nulla).

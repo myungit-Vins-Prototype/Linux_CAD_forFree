@@ -39,13 +39,13 @@ Interval infiniteInterval() {
 }
 
 void requireRadius(double radius, const char *message) {
-    if (!(radius > kLinearResolution) || !std::isfinite(radius)) throw std::invalid_argument(message);
+    if (!(radius > linearResolution()) || !std::isfinite(radius)) throw std::invalid_argument(message);
 }
 
 // Cerchio di raggio con segno: con raggio negativo si invertono gli assi,
 // cosi' il parametro resta l'angolo u della superficie.
 CurvePtr<3> signedCircle(const Vec3 &center, const Vec3 &x, const Vec3 &y, double radius) {
-    if (std::fabs(radius) <= kLinearResolution) return nullptr;
+    if (std::fabs(radius) <= linearResolution()) return nullptr;
     if (radius > 0.0) return std::make_shared<Circle<3>>(center, x, y, radius);
     return std::make_shared<Circle<3>>(center, -x, -y, -radius);
 }
@@ -69,7 +69,7 @@ Vec3 Surface::normal(double u, double v) const {
     const double length = norm(n);
     // Relativo alla derivata piu' grande: al polo della sfera Su -> 0.
     const double scale = std::max(norm(su), norm(sv));
-    if (!(length > kAngularResolution * scale * scale))
+    if (!(length > angularResolution() * scale * scale))
         throw std::domain_error("Surface::normal: punto singolare");
     return n / length;
 }
@@ -129,7 +129,7 @@ CurvePtr<3> CylindricalSurface::vIso(double v) const {
 
 ConicalSurface::ConicalSurface(const Frame3 &frame, double semiAngle, double referenceRadius)
     : frame_(frame), semiAngle_(semiAngle), radius_(referenceRadius) {
-    if (!(std::fabs(semiAngle) > kAngularResolution && std::fabs(semiAngle) < kHalfPi - kAngularResolution))
+    if (!(std::fabs(semiAngle) > angularResolution() && std::fabs(semiAngle) < kHalfPi - angularResolution()))
         throw std::invalid_argument("ConicalSurface: semiangolo fuori da (0, pi/2)");
     if (!(referenceRadius >= 0.0) || !std::isfinite(referenceRadius))
         throw std::invalid_argument("ConicalSurface: raggio negativo");
@@ -235,7 +235,7 @@ ExtrusionSurface::ExtrusionSurface(CurvePtr<3> curve, const Vec3 &direction)
     if (curve_->isPeriodic()) {
         periodic_ = true;
         period_ = curve_->period();
-    } else if (domain.isFinite() && distance(curve_->point(domain.lo), curve_->point(domain.hi)) <= kLinearResolution) {
+    } else if (domain.isFinite() && distance(curve_->point(domain.lo), curve_->point(domain.hi)) <= linearResolution()) {
         periodic_ = wraps_ = true;
         period_ = domain.length();
     }
@@ -327,7 +327,7 @@ CurvePtr<3> RevolutionSurface::vIso(double v) const {
     const Vec3 parallel = dot(axisDirection_, w) * axisDirection_;
     const Vec3 perpendicular = w - parallel;
     const double radius = norm(perpendicular);
-    if (radius <= kLinearResolution) return nullptr;
+    if (radius <= linearResolution()) return nullptr;
     return std::make_shared<Circle<3>>(axisPoint_ + parallel, perpendicular / radius,
                                        cross(axisDirection_, perpendicular) / radius, radius);
 }

@@ -517,6 +517,7 @@ void CadViewport::warmPickCaches() {
         for (int operand : ForgeCad::bodyOperands(extrusions_.at(index)))
             if (operand >= 0 && operand < index && !chain.contains(operand)) chain.insert(operand), pending.append(operand);
     }
+    QVector<ForgeCad::ForgeBody> pendingBodies;
     for (int index : chain) {
         const ExtrusionObject &body = extrusions_.at(index);
         if (body.suppressed || !body.forgeBody || !ForgeCad::isShapeBody(body)) continue;
@@ -526,13 +527,24 @@ void CadViewport::warmPickCaches() {
         });
         if (warmed) continue;
         warmedBodies_.push_back(forgeBody);
-        QThreadPool::globalInstance()->start([forgeBody] {
+        pendingBodies.append(forgeBody);
+    }
+    if (pendingBodies.isEmpty()) return;
+    // Gli stadi storici condividono le superfici. Prepararli in parallelo
+    // costruiva piu' volte le stesse cache atomiche e saturava i core mentre
+    // l'utente disegnava. Una sola coda riusa i risultati gia' pubblicati.
+    QThreadPool::globalInstance()->start([bodies = std::move(pendingBodies)] {
+        QElapsedTimer timer; timer.start();
+        for (const auto &body : bodies) {
             try {
-                ForgeCad::forgeWarmPickCaches(*forgeBody);
+                ForgeCad::forgeWarmPickCaches(*body);
             } catch (const std::exception &) {
             }
-        });
-    }
+        }
+        if (qEnvironmentVariableIsSet("FORGECAD_PROFILE"))
+            std::fprintf(stderr, "PROFILO cache selezione: %lld corpi, %lld ms\n",
+                         static_cast<long long>(bodies.size()), static_cast<long long>(timer.elapsed()));
+    }, -1);
 }
 
 SketchElementSelection CadViewport::findSketchElement(const QPointF &point) const {
@@ -604,7 +616,7 @@ int CadViewport::segmentMidpointAt(const QPointF &point) const {
     int result = -1;
     for (int i = 0; i < sketch->segments.size(); ++i) {
         const auto &segment = sketch->segments.at(i);
-        if (pointDistance(segment.first, segment.second) <= ForgeCad::kSketchConnectionTolerance) continue;
+        if (pointDistance(segment.first, segment.second) <= ForgeCad::sketchConnectionTolerance()) continue;
         const double distance = pointDistance(point, 0.5 * (segment.first + segment.second));
         if (distance < best) { best = distance; result = i; }
     }
@@ -1813,6 +1825,7 @@ bool CadViewport::cachedRayFace(int index, const QVector3D &origin, const QVecto
 }
 
 bool CadViewport::pickBodyFace(int index, const QPoint &position, FaceHit &hit) const {
+    ForgeCad::Kernel::PrecisionScope precision(calculationAccuracy_);
     if (index < 0 || index >= extrusions_.size() || !ForgeCad::isShapeBody(extrusions_.at(index))) return false;
     QVector3D origin, direction;
     viewRay(position, origin, direction);
