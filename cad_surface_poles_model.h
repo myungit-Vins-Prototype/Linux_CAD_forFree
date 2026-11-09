@@ -5,6 +5,7 @@
 #include "cad_types.h"
 #include "fk_bspline_surface.h"
 #include <QAbstractTableModel>
+#include <QSet>
 #include <QMap>
 #include <array>
 
@@ -28,16 +29,23 @@ class SurfacePolesModel final : public QAbstractTableModel {
     int coordinateColumn() const { return faces_.empty() ? 2 : 3; }
     int faceIndex(int row) const;
     int faceRow(int row) const;
-    QString faceEdits(int face, QVector<SurfacePoleEdit> &result) const;
+    QString faceEdits(int face, QVector<SurfacePoleEdit> &result,bool resolved=false) const;
     std::shared_ptr<const Kernel::BSplineSurface> surfaceForRow(int row) const;
     std::array<double, 4> values(int row) const;
-    QString edits(QVector<SurfacePoleEdit> &result) const;
+    QString edits(QVector<SurfacePoleEdit> &result,bool resolved=false) const;
+    QVector<QVector<SurfacePoleEdit>> automaticEdits() const;
     std::shared_ptr<const Kernel::BSplineSurface> modifiedSurface(int row = 0) const;
     struct Cage {
         QVector<int> rows;
         int u = 0, v = 0;
         QVector<std::array<int, 3>> grids; // primo punto, conteggi U/V di ogni gabbia
     };
+    using EditSnapshot = QMap<int, std::array<QString, 4>>;
+    EditSnapshot snapshot() const;
+    void restore(const EditSnapshot &snapshot);
+    void setConstraintMode(bool enabled);
+    void setAutomatic(const QVector<QVector<SurfacePoleEdit>> &edits,const QSet<int> &drivers={},bool fromAction=false);
+    QSet<int> automaticRows() const;
     Cage cage(const QVector<int> &selected, int budget = 4096) const;
 
   private:
@@ -50,5 +58,8 @@ class SurfacePolesModel final : public QAbstractTableModel {
     std::array<double, 4> original(int row) const;
     std::shared_ptr<const Kernel::BSplineSurface> surface_;
     QMap<int, std::array<QString, 4>> edited_;
+    QMap<int, std::array<double, 4>> automatic_;
+    QSet<int> automaticManual_;
+    bool constraintMode_=false;
 };
 } // namespace ForgeCad

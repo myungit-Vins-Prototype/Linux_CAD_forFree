@@ -588,6 +588,7 @@ public:
     QPointF surfacePoleScreen(int index) const;
     QPointF loftControlScreen(const QVector3D &point) const { return projectWorldPoint(point); }
     QVector3D surfacePoleDragVector(const QPoint &from,const QPoint &to) const;
+    void setSurfacePoleFollowers(const QSet<int> &rows) { surfacePoleFollowers_=rows;update(); }
     void setSurfacePoleSelection(const QVector<int> &selected, const std::array<QVector3D, 3> &axes, bool local, const QString &label = {});
     const std::array<QVector3D, 3> &surfacePoleAxes() const { return surfacePoleAxes_; }
     QPointF surfacePoleGizmoCenter() const;
@@ -1714,6 +1715,7 @@ private:
     QVector<QVector3D> surfacePoleOverlay_;
     int surfacePoleU_=0,surfacePoleV_=0,surfacePoleSelected_=-1;
     QSet<int> surfacePoleSelection_;
+    QSet<int> surfacePoleFollowers_;
     QVector3D surfacePoleGizmoOrigin_;
     std::array<QVector3D, 3> surfacePoleAxes_{{{1,0,0},{0,1,0},{0,0,1}}};
     bool surfacePoleLocal_ = false;

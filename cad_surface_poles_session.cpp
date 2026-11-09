@@ -13,13 +13,13 @@ QString SurfacePolesSession::store(const SurfacePolesModel &model, SurfaceToolPa
     if (faces_.isEmpty() || !model.rowCount())
         return {};
     if (legacy_)
-        return model.edits(p.edits);
+        return model.edits(p.edits,p.poleContinuity!=0);
     auto output = p.poleFaces;
     int count = 0;
     for (int i = 0; i < faces_.size(); ++i) {
         if (i >= output.size())
             return QStringLiteral("Selezione delle facce da aggiornare.");
-        const auto error = model.faceEdits(i, output[i].edits);
+        const auto error = model.faceEdits(i, output[i].edits,p.poleContinuity!=0);
         if (!error.isEmpty())
             return QStringLiteral("F%1: %2").arg(faces_[i].index).arg(error);
         count += output[i].edits.size();
@@ -31,7 +31,7 @@ QString SurfacePolesSession::store(const SurfacePolesModel &model, SurfaceToolPa
 }
 QString SurfacePolesSession::load(const ForgeBody &body, const QVector<Kernel::FaceId> &faces, SurfaceToolParameters &p,
                                   SurfacePolesModel &model) {
-    faces_.clear();
+    faces_.clear();constraints_.reset();continuity_={};drivers_.clear();hasDrivers_=false;
     model.setSurface({});
     deviation_ = 0;
     details_.clear();
@@ -94,6 +94,12 @@ QString SurfacePolesSession::load(const ForgeBody &body, const QVector<Kernel::F
     } catch (const std::exception &error) {
         return QString::fromUtf8(error.what());
     }
+    if(p.poleContinuity)try {
+        std::vector<Kernel::SurfaceFacePoleChange> bases;
+        for(int i=0;i<faces.size();++i)bases.push_back({faces[i],{},p.refitU?grids[i].surface:Kernel::BSplineSurfacePtr{}});
+        constraints_=std::make_unique<Kernel::SurfacePoleConstraints>(*body,bases,p.poleContinuity,p.tolerance);
+        deviation_=std::max(deviation_,constraints_->refitDeviation());
+    }catch(const std::exception &error){return QString::fromUtf8(error.what());}
     faces_ = faces;
     if (legacy_) {
         p.basis = records[0].basis;
@@ -104,7 +110,40 @@ QString SurfacePolesSession::load(const ForgeBody &body, const QVector<Kernel::F
         p.poleFaces = records;
         model.setFaces(grids);
     }
+    model.setConstraintMode(p.poleContinuity!=0);
     return {};
+}
+QString SurfacePolesSession::constrain(SurfacePolesModel &model,SurfaceToolParameters &p) {
+    const bool action=hasDrivers_;hasDrivers_=false;const QSet<int> activeRows(drivers_.cbegin(),drivers_.cend());
+    if(!constraints_){QSignalBlocker guard(&model);model.setAutomatic({});return {};}
+    auto error=store(model,p);if(!error.isEmpty())return error;
+    std::vector<Kernel::SurfaceFacePoleChange> drivers;
+    for(int i=0;i<faces_.size();++i){Kernel::SurfaceFacePoleChange face;face.face=faces_[i];
+        const auto edits=legacy_?p.edits:p.poleFaces[i].edits;
+        for(const auto &e:edits)face.changes.push_back({e.u,e.v,{e.dx,e.dy,e.dz},e.weightFactor});
+        drivers.push_back(std::move(face));
+    }
+    try {
+        std::vector<std::array<int,3>> active;
+        if(action)for(int row:activeRows)if(row>=0&&row<model.rowCount()){
+            const int f=model.faceIndex(row);const auto surface=model.surfaceForRow(row);const int local=model.faceRow(row);
+            active.push_back({faces_[f<0?0:f].index,local/surface->vPoleCount(),local%surface->vPoleCount()});
+        }
+        const auto result=constraints_->propagate(drivers,&continuity_,action?&active:nullptr);
+        QVector<QVector<SurfacePoleEdit>> automatic(faces_.size());
+        for(const auto &face:result){const int i=faces_.indexOf(face.face);if(i<0)continue;
+            for(const auto &e:face.changes)automatic[i].append({e.u,e.v,e.delta.x(),e.delta.y(),e.delta.z(),e.weightFactor});}
+        {QSignalBlocker guard(&model);model.setAutomatic(automatic,activeRows,action);}
+        continuity_.followers=model.automaticRows().size();
+        return store(model,p);
+    }catch(const std::exception &error){QSignalBlocker guard(&model);model.setAutomatic({});return QString::fromUtf8(error.what());}
+    return {};
+}
+QString SurfacePolesSession::continuityText()const {
+    if(!constraints_)return {};
+    if(!continuity_.connected)return QStringLiteral("Nessun giunto condiviso: la faccia è isolata.");
+    return QStringLiteral("%1 giunti; %2 tangenti, %3 spigoli; %4 poli spostati automaticamente (verdi). %5 giunti protetti con griglie non compatibili.")
+        .arg(continuity_.connected).arg(continuity_.tangent).arg(continuity_.sharp).arg(continuity_.followers).arg(continuity_.protectedJoints);
 }
 void SurfacePolesSession::cacheRefit(const QVector<Kernel::FaceId> &faces,
                                      const std::vector<Kernel::BSplineSurfacePtr> &sources,

@@ -34,6 +34,7 @@
 #include "../cad_surface_poles_model.h"
 #include "../cad_surface_poles_interaction.h"
 #include "fk_surface_refit.h"
+#include "fk_surface_poles_constraints.h"
 #include "../cad_surface_mapping.h"
 #include "../cad_extrude.h"
 #include "../cad_sketch_refs.h"
@@ -303,6 +304,7 @@ public:
 #include "test_catalog_recovery_gui.h"
 #include "test_surface_tools_gui.h"
 #include "test_surface_poles_multi.h"
+#include "test_surface_poles_continuity.h"
 #include "test_document_units.h"
 #include "test_function_panels.h"
 #include "test_storyboard_panel_selection.h"
@@ -11507,6 +11509,10 @@ int main(int argc, char **argv) {
     }
     if(app.arguments().contains(QStringLiteral("--drawing-section-model"))){
         try{drawingSectionModelTest(app.arguments().value(app.arguments().indexOf(QStringLiteral("--drawing-section-model"))+1));}
+        catch(const std::exception &e){std::cerr<<e.what()<<std::endl;return 1;}return 0;
+    }
+    if(app.arguments().contains(QStringLiteral("--surface-poles-continuity"))) {
+        try{ViewportInteractionTest::surfacePolesContinuity(app.arguments().contains(QStringLiteral("--gl")));}
         catch(const std::exception &e){std::cerr<<e.what()<<std::endl;return 1;}return 0;
     }
     if(app.arguments().contains(QStringLiteral("--surface-poles-multiple"))) {

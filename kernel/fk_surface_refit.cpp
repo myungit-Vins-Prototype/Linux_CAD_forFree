@@ -173,20 +173,23 @@ SurfaceRefitResult refitSurfacePoles(const BSplineSurface &source, int uCount, i
         t = t == 0 ? v.lo : t == 1 ? v.hi : v.lo + v.length() * t;
     auto surface =
         std::make_shared<const BSplineSurface>(3, 3, std::move(ku), std::move(kv), uCount, vCount, std::move(points));
-    const auto us = probes(source, true, uCount), vs = probes(source, false, vCount);
+    return {surface,sampledSurfacePoleDeviation(source,*surface)};
+}
+double sampledSurfacePoleDeviation(const BSplineSurface &source,const BSplineSurface &surface) {
+    const auto us = probes(source, true, surface.uPoleCount()), vs = probes(source, false, surface.vPoleCount());
     if (us.size() > 8000000 / vs.size())
         throw std::domain_error("Ricostruzione poli: dominio troppo complesso per verificare lo scarto.");
     std::vector<double> worst(us.size(), 0.);
     parallelFor(us.size(), threadCount(0), [&](std::size_t i) {
         for (double t : vs) {
             cancellationPoint();
-            const double d = distance(source.point(us[i], t), surface->point(us[i], t));
+            const double d = distance(source.point(us[i], t), surface.point(us[i], t));
             if (!std::isfinite(d))
                 throw std::domain_error("Ricostruzione poli: scarto non finito.");
             worst[i] = std::max(worst[i], d);
         }
     });
-    return {surface, *std::max_element(worst.begin(), worst.end())};
+    return *std::max_element(worst.begin(), worst.end());
 }
 SurfaceRefitGrid refitSurfacePolesWithinTolerance(const std::vector<BSplineSurfacePtr> &sources, int u, int v,
                                                   double tolerance) {

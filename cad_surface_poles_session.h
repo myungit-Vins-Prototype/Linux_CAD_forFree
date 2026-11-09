@@ -2,6 +2,7 @@
 #include "cad_surface_poles_model.h"
 #include "fk_topology.h"
 #include "fk_surface_refit.h"
+#include "fk_surface_poles_constraints.h"
 #include "fk_cancel.h"
 #include <QObject>
 namespace ForgeCad {
@@ -12,6 +13,9 @@ class SurfacePolesSession {
     QString store(const SurfacePolesModel &model, SurfaceToolParameters &parameters) const;
     QString load(const ForgeBody &body, const QVector<Kernel::FaceId> &faces, SurfaceToolParameters &parameters,
                  SurfacePolesModel &model);
+    void setDrivers(const QVector<int> &rows) { drivers_=rows;hasDrivers_=true; }
+    QString constrain(SurfacePolesModel &model, SurfaceToolParameters &parameters);
+    QString continuityText() const;
     double deviation() const { return deviation_; }
     QString details() const { return details_; }
     void reset() { cache_.clear(); }
@@ -25,6 +29,10 @@ class SurfacePolesSession {
         double deviation = 0;
     };
     QMap<int, Fit> cache_;
+    std::unique_ptr<Kernel::SurfacePoleConstraints> constraints_;
+    Kernel::SurfacePoleContinuityReport continuity_;
+    QVector<int> drivers_;
+    bool hasDrivers_=false;
     QVector<Kernel::FaceId> faces_;
     bool legacy_ = true;
     double deviation_ = 0;

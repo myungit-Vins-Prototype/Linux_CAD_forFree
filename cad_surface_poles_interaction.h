@@ -1,6 +1,9 @@
 #pragma once
 #include <QObject>
+#include "cad_types.h"
 #include <QPoint>
+#include <QMap>
+#include <QString>
 #include <QVector>
 #include <QTimer>
 #include <array>
@@ -22,6 +25,7 @@ class SurfacePolesInteraction final : public QObject {
             cancel();
     }
     void setBoxSelection(bool enabled) { cancel(); boxSelection_ = enabled; }
+    const QVector<int> &draggedRows() const { return rows_; }
     bool interacting() const { return active_ || boxing_; }
 
   protected:
@@ -42,5 +46,7 @@ class SurfacePolesInteraction final : public QObject {
     Qt::KeyboardModifiers modifiers_{};
     QVector<int> rows_, initialSelection_;
     QVector<std::array<double, 3>> initial_;
+    QMap<int,std::array<QString,4>> initialEdits_;
+    QVector<QVector<SurfacePoleEdit>> initialAutomatic_;
 };
 } // namespace ForgeCad

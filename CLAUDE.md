@@ -103,24 +103,18 @@ ctest --test-dir forgecad-release --output-on-failure
 
 ## Ultimi interventi — esiti consolidati
 
-**09/11 — Poli Hook.** Checkpoint griglia/spinner `ddf856a` pubblicato su origin/main.
-Multifaccia implementata: lista/picking, gabbie simultanee e gruppo tra facce, U/V comuni,
-scarto per faccia, codec11 compatibile; facce escluse e connessioni conservate.
-Hook/Cucitura8:2facce/572438poli virtuali/3680display; corpo7:8×48/scarto0,0848055mm.
-App/7CTest/Wayland/Undo/codec/riapertura PASS; fixture senza cache e vertici tolleranti PASS.
-Riferimenti espliciti senza prossimita'; budget locali originali rispettati. Originale invariato.
-Giunti incompatibili rifiutati; controlli campionati, nessuna certificazione globale/G1/G2.
-Mappa662/9482/324TU/0diag/check/4HTML PASS; riaprire app. Multifaccia `b6c10df` pubblicata su origin/main.
-Mouse/riquadro: rilascio fuori vista/perdita cattura/reset griglia recuperati, anteprima riattivata.
-Riquadro sui poli visualizzati, Ctrl/Maiusc/Esc, anche multifaccia. App/7CTest/Hook7/Wayland PASS;
-mappa664/9496/325TU/0diag/check/4HTML PASS; riquadro Hook ispezionato. Mouse/riquadro `9f455a9` pubblicati su origin/main.
-Seguito: riquadro esplicito/Alt e rotazione con selezione multipla; aggiornato messaggio dopo rifiuto dello scarto.
-Ricerca asincrona cancellabile U/V fino256, scostamento vincolante e codec12 oltre64.
-Hook7 GUI:18×162/scarto0,00070033mm, modifica/Undo/codec/riapertura PASS; 7CTest/Wayland PASS.
-Sonda QPA: rotazione, rilascio soppresso e spunta durante ricerca PASS; originale invariato.
-Worker allineato alla precisione del documento; app/runner definitivi,7CTest (12,22s) e Wayland PASS.
-Mappa664/9509/325TU/0diag/check/5HTML e8moduli bidirezionali PASS; riaprire app. Correzione `30d4e72` pubblicata su origin/main.
-[Griglia](docs/poli-nurbs-griglia-2026-11-09.md), [multifaccia](docs/poli-nurbs-multifaccia-2026-11-09.md).
+**09/11 — Poli NURBS / Hook.** Pubblicati griglia/spinner `ddf856a`, multifaccia `b6c10df`,
+riquadro `9f455a9`, rotazione/Alt e scarto vincolante `30d4e72` su origin/main.
+Tabelle virtuali, gabbie multiple, 4096poli modificati; refit U/V fino256, ricerca asincrona cancellabile.
+Hook7 GUI:18×162/scarto0,00070033mm entro0,001; modifica/Undo/codec12/riapertura PASS.
+App/7CTest/Wayland/QPA rilascio soppresso PASS; originale invariato; mappa664/9509/325TU/5HTML PASS.
+Opzioni G0/G1 esistente implementate: poli del gesto rigidi, altri compensativi verdi anche se già modificati;
+vincoli sparsi su adiacenze B-rep, spigoli conservati/giunti incompatibili protetti, stato risolto salvato/codec13.
+App/8CTest/Wayland PASS; Hook7facce/2,29Mrighe virtuali:propagazione/B-rep/Undo/codec PASS,
+apertura2,02e-8mm; originale invariato. Mappa668/9584/327TU/check/6HTML PASS.
+Commit/push della continuità in preparazione; riaprire l’app per la nuova build.
+Controlli campionati, nessuna certificazione globale/G2/auto-intersezioni.
+[Continuità](docs/poli-nurbs-continuita-2026-11-09.md), [multifaccia/storico](docs/poli-nurbs-multifaccia-2026-11-09.md).
 
 **08/11 — Bottle e Shower Head.** Pool esatto:690duplicati,poli/pesi1042→135MiB;
 Bottle RSS9,95→2,75GiB (-72%),30 B-rep byte-identici. Anche ultimo salvataggio:

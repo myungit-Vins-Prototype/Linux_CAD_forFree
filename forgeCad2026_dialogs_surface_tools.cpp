@@ -112,6 +112,16 @@ bool surfaceToolDialog(QMainWindow *window, CadViewport *viewport, const QString
     poleBox->setObjectName("surfacePolesBoxSelection");
     poleBox->setCheckable(true);
     poleBox->setToolTip(QStringLiteral("Attiva il riquadro oppure tieni premuto Alt e trascina. Sullo sfondo, senza Alt, trascina per ruotare."));
+    auto *keepConnected=new QCheckBox(QStringLiteral("Mantieni i bordi connessi (G0)"),&dialog);
+    keepConnected->setObjectName("surfacePolesKeepConnected");keepConnected->setChecked(definition.surfaceTool.poleContinuity>=1);
+    auto *keepTangent=new QCheckBox(QStringLiteral("Mantieni la tangenza esistente (G1)"),&dialog);
+    keepTangent->setObjectName("surfacePolesKeepTangent");keepTangent->setChecked(definition.surfaceTool.poleContinuity==2);
+    auto *continuityInfo = new FunctionMessage(&dialog);
+    continuityInfo->setObjectName("surfacePolesContinuityInfo");
+    continuityInfo->setLineWrapMode(QPlainTextEdit::WidgetWidth);
+    continuityInfo->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    continuityInfo->setMinimumHeight(96);
+    auto *checkContinuity=new QPushButton(QStringLiteral("Verifica continuità"),&dialog);checkContinuity->setObjectName("surfacePolesCheckContinuity");
     auto *poleSelection = new FunctionMessage(&dialog);
     poleSelection->setObjectName("surfacePolesSelection");
     auto *poleGridInfo = new QLabel(&dialog);
@@ -411,6 +421,9 @@ bool surfaceToolDialog(QMainWindow *window, CadViewport *viewport, const QString
         form->addRow(QStringLiteral("Orientamento assi:"), poleOrientation);
         form->addRow(poleBox);
         form->addRow(ForgeCad::Gui::wrappedNote(QStringLiteral("Alt + trascinamento: riquadro. Ctrl: aggiungi/togli; Maiusc: aggiungi. Trascina sullo sfondo per ruotare."), &dialog));
+        form->addRow(keepConnected);form->addRow(keepTangent);
+        form->addRow(ForgeCad::Gui::wrappedNote(QStringLiteral("Le facce NURBS adiacenti vengono incluse. I poli collegati seguono anche se non selezionati (verdi). G1 conserva i giunti già tangenti; gli spigoli restano netti. I giunti con griglie non compatibili sono protetti."),&dialog));
+        form->addRow(checkContinuity);form->addRow(continuityInfo);
         form->addRow(poleSelection);
         form->addRow(poleGridInfo);
         form->addRow(poles);
@@ -436,7 +449,8 @@ bool surfaceToolDialog(QMainWindow *window, CadViewport *viewport, const QString
         }
         int active=poles->currentIndex().row();
         if(!selected.contains(active)) active=selected.value(0,-1);
-        const auto display = poleModel->cage(selected);
+        QVector<int> visible=selected;for(int row:poleModel->automaticRows())if(!visible.contains(row))visible.append(row);
+        const auto display = poleModel->cage(visible);
         displayedRows = display.rows;
         QVector<QVector3D> cage;
         for (int row : displayedRows) {
@@ -446,6 +460,8 @@ bool surfaceToolDialog(QMainWindow *window, CadViewport *viewport, const QString
             cage.append(QVector3D(values[0],values[1],values[2]));
         }
         viewport->setSurfacePoleOverlay(cage,display.u,display.v,displayedRows.indexOf(active),display.grids);
+        QSet<int> followers;for(int row:poleModel->automaticRows()){const int i=displayedRows.indexOf(row);if(i>=0)followers.insert(i);}
+        viewport->setSurfacePoleFollowers(followers);
         QVector<int> selectedOverlay;
         for (int row : selected) selectedOverlay.append(displayedRows.indexOf(row));
         poleGridInfo->setText(QStringLiteral("%1 facce; %2 poli totali. Gabbia: %3 poli visualizzati.\n%4")
@@ -532,6 +548,15 @@ bool surfaceToolDialog(QMainWindow *window, CadViewport *viewport, const QString
             QVector<FaceId> selected;
             for (int i=0;i<faceList->count();++i) if (faceList->item(i)->checkState()==Qt::Checked)
                 selected.append(FaceId(faceList->item(i)->data(Qt::UserRole).toInt()));
+            if(definition.surfaceTool.poleContinuity&&!selected.isEmpty())try {
+                const std::vector<FaceId> seeds(selected.cbegin(),selected.cend());
+                const auto connected=connectedSurfacePoleFaces(*shape,seeds);selected=QVector<FaceId>(connected.cbegin(),connected.cend());
+                for(const auto face:selected)if(faceEdits.contains(face.index)&&
+                    std::none_of(definition.surfaceTool.poleFaces.cbegin(),definition.surfaceTool.poleFaces.cend(),[&](const auto &entry){return entry.face.subshape==face.index;}))
+                    definition.surfaceTool.poleFaces.append(faceEdits.value(face.index));
+                QSignalBlocker guard(faceList);
+                for(int i=0;i<faceList->count();++i)faceList->item(i)->setCheckState(selected.contains(FaceId(faceList->item(i)->data(Qt::UserRole).toInt()))?Qt::Checked:Qt::Unchecked);
+            }catch(const std::exception &error){filling=false;poleLoadError=QString::fromUtf8(error.what());fail(poleLoadError);return;}
             const auto error=poleSession.load(shape,selected,definition.surfaceTool,*poleModel);
             if (!error.isEmpty()) {filling=false;poleLoadError=error;fail(error);return;}
             refitDeviation=poleSession.deviation();
@@ -607,6 +632,9 @@ bool surfaceToolDialog(QMainWindow *window, CadViewport *viewport, const QString
             if (refitSearching) { fail(QStringLiteral("Calcolo della griglia entro lo scostamento richiesto…"));return; }
             if (refitPending) { fail(QStringLiteral("Aggiornamento della griglia in attesa del nuovo numero di poli…"));return; }
             definition.surfaceTool.refitTolerance=refitTolerance->value();
+            const auto continuityError=poleSession.constrain(*poleModel,definition.surfaceTool);
+            if(definition.surfaceTool.poleContinuity)continuityInfo->setText(poleSession.continuityText());
+            if(!continuityError.isEmpty()){fail(continuityError);return;}
             const auto error = poleSession.store(*poleModel,definition.surfaceTool);
             if (!error.isEmpty()) {
                 fail(error);
@@ -653,7 +681,12 @@ bool surfaceToolDialog(QMainWindow *window, CadViewport *viewport, const QString
         buttons->button(QDialogButtonBox::Ok)->setEnabled(false);
         preview.label->setText(QStringLiteral("rilascia il mouse per calcolare l'anteprima"));
     };
-    drag.moved = [&] { updatePoleOverlay(false); };
+    drag.moved = [&] {
+        poleSession.setDrivers(drag.draggedRows());
+        const auto error=poleSession.constrain(*poleModel,definition.surfaceTool);
+        continuityInfo->setText(error.isEmpty()?poleSession.continuityText():error);
+        updatePoleOverlay(false);
+    };
     drag.finished = [&] { poleDragging=false;if(!filling){updatePoleOverlay();refresh();} };
     cancelRefitSearch = [&] {
         refitSearch.cancel();searchTimer.stop();refitSearching=false;
@@ -695,11 +728,44 @@ bool surfaceToolDialog(QMainWindow *window, CadViewport *viewport, const QString
     };
     QObject::connect(refitAuto,&QPushButton::clicked,&dialog,searchGrid);
     QObject::connect(&searchTimer,&QTimer::timeout,&dialog,searchGrid);
+    const auto setContinuity=[&](int mode) {
+        if(filling)return;
+        drag.cancel();if(cancelRefitSearch)cancelRefitSearch();
+        const auto error=poleSession.store(*poleModel,definition.surfaceTool);
+        if(!error.isEmpty()){
+            QSignalBlocker a(keepConnected),b(keepTangent);
+            keepConnected->setChecked(definition.surfaceTool.poleContinuity>=1);keepTangent->setChecked(definition.surfaceTool.poleContinuity==2);fail(error);return;
+        }
+        definition.surfaceTool.poleContinuity=mode;
+        {QSignalBlocker a(keepConnected),b(keepTangent);keepConnected->setChecked(mode>=1);keepTangent->setChecked(mode==2);}
+        loadSource();
+        if(!poleSession.constrain(*poleModel,definition.surfaceTool).isEmpty())poleSession.setDrivers({});
+        refresh();
+    };
+    QObject::connect(keepConnected,&QCheckBox::toggled,&dialog,[&](bool on){setContinuity(on?(keepTangent->isChecked()?2:1):0);});
+    QObject::connect(keepTangent,&QCheckBox::toggled,&dialog,[&](bool on){setContinuity(on?2:keepConnected->isChecked()?1:0);});
+    QObject::connect(checkContinuity,&QPushButton::clicked,&dialog,[&] {
+        try {
+            const auto shape=viewport->extrusions()[definition.firstBody].forgeBody;
+            std::vector<FaceId> faces;for(int i=0;i<faceList->count();++i)if(faceList->item(i)->checkState()==Qt::Checked)faces.push_back(FaceId(faceList->item(i)->data(Qt::UserRole).toInt()));
+            const auto report=checkSurfacePoleContinuity(*shape,*shape,faces,definition.surfaceTool.tolerance);
+            refresh();
+            continuityInfo->setText(QStringLiteral("Sorgente: %1 giunti, %2 tangenti, %3 spigoli. Apertura campionata %4 mm; scarto G1 %5°. Il controllo è campionato.")
+                .arg(report.connected).arg(report.tangent).arg(report.sharp).arg(report.gap,0,'g',6).arg(report.angle*180/3.141592653589793,0,'g',6));
+        }catch(const std::exception &error){continuityInfo->setText(QString::fromUtf8(error.what()));}
+    });
     if (mode != 2)
         drag.setEnabled(false);
-    QObject::connect(poleModel, &QAbstractItemModel::dataChanged, &dialog, [&] {
-        if (!filling)
-            schedule();
+    else viewport->setPreviewCallback([&](const QString &error){
+        preview.label->setText(error.isEmpty()?QStringLiteral("pronta (in ambra nella vista)"):QStringLiteral("non riuscita: %1").arg(error));
+        if(error.isEmpty()&&!viewport->previewNotice().isEmpty())continuityInfo->setText(poleSession.continuityText()+QStringLiteral("\n")+viewport->previewNotice());
+    });
+    QObject::connect(poleModel, &QAbstractItemModel::dataChanged, &dialog, [&](const QModelIndex &first,const QModelIndex &last) {
+        if(!filling){
+            QVector<int> rows;const auto snapshot=poleModel->snapshot();
+            for(auto it=snapshot.cbegin();it!=snapshot.cend();++it)if(it.key()>=first.row()&&it.key()<=last.row())rows.append(it.key());
+            poleSession.setDrivers(rows);schedule();
+        }
     });
     QObject::connect(poles->selectionModel(), &QItemSelectionModel::selectionChanged, &dialog, [&] { if(!filling) updatePoleOverlay(!poleDragging); });
     QObject::connect(poles->selectionModel(), &QItemSelectionModel::currentChanged, &dialog, [&] { if(!filling) updatePoleOverlay(!poleDragging); });
@@ -802,7 +868,7 @@ bool surfaceToolDialog(QMainWindow *window, CadViewport *viewport, const QString
         refitEnabled->hide();refitControls->hide();
         poles->hide();
         poleOrientation->hide();
-        poleBox->hide();
+        poleBox->hide();keepConnected->hide();keepTangent->hide();continuityInfo->hide();checkContinuity->hide();
         poleSelection->hide();
     }
     form->addRow(QStringLiteral("Tolleranza geometrica:"), tolerance);
@@ -833,5 +899,6 @@ bool surfaceToolDialog(QMainWindow *window, CadViewport *viewport, const QString
         viewport->setPickBodies({});
     viewport->setReferenceMarks({});
     viewport->setSurfacePoleOverlay({});
+    viewport->setPreviewCallback({});
     return accepted;
 }

@@ -6,6 +6,7 @@
 #include "cad_topology_ref.h"
 #include "fk_surface_tools.h"
 #include "fk_surface_refit.h"
+#include "fk_surface_poles_constraints.h"
 #include "fk_sheet.h"
 #include "fk_sew.h"
 #include "fk_intersect.h"
@@ -164,11 +165,24 @@ void buildSurfaceTool(ExtrusionObject &body, int index, const QVector<SketchObje
                     change.replacement=fitted.surface;
                     deviation=std::max(deviation,fitted.sampledDeviation);
                 }
-                if (change.replacement || !change.changes.empty()) changes.push_back(std::move(change));
+                changes.push_back(std::move(change));
             }
+            require(p.poleContinuity>=0&&p.poleContinuity<=2,"Opzione di continuita' non valida.");
+            SurfacePoleContinuityReport continuity;
+            if(p.poleContinuity){
+                SurfacePoleConstraints constraints(*source,changes,p.poleContinuity,p.tolerance);
+                require(!p.refitU||constraints.refitDeviation()<=p.refitTolerance,"La griglia vincolata supera lo scostamento ammesso: aumentare i poli U/V.");
+                changes=constraints.propagate(changes,&continuity);
+            }
+            changes.erase(std::remove_if(changes.begin(),changes.end(),[](const auto &face){return !face.replacement&&face.changes.empty();}),changes.end());
             result=editBodyFacesPoles(*source,changes,p.tolerance,&history);
+            std::vector<FaceId> affected;for(const auto &face:changes)affected.push_back(face.face);
+            const auto checked=checkSurfacePoleContinuity(*source,result,affected,p.tolerance);
+            require(p.poleContinuity!=2||checked.angle<=1e-5,"Continuita': tangenza G1 non rispettata; modifica non applicata.");
             if (p.refitU) body.notice=QStringLiteral("%1 facce; griglie %2 × %3; scarto campionato iniziale massimo %4 mm.")
                 .arg(selected.size()).arg(p.refitU).arg(p.refitV).arg(deviation,0,'g',6);
+            if(checked.connected)body.notice+=QStringLiteral(" Giunti: %1; apertura campionata %2 mm; scarto G1 massimo %3° su %4 giunti tangenti; controllo campionato.")
+                .arg(checked.connected).arg(checked.gap,0,'g',6).arg(checked.angle*180/3.141592653589793,0,'g',6).arg(checked.tangent);
             body.forgeBody = std::make_shared<const Body>(std::move(result));
             registerDeclaredHistory(body.forgeBody, {source}, std::move(history));
         }
@@ -198,6 +212,7 @@ QByteArray surfaceToolsExtras(const QVector<ExtrusionObject> &bodies) {
                                    {"basis", QString::fromLatin1(p.basis.toHex())},
                                    {"edits", edits},
                                    {"contacts", contacts}};
+        if(p.poleContinuity)record["continuity"]=p.poleContinuity;
         if (!p.poleFaces.isEmpty()) {
             poleFaces=true; QJsonArray faces;
             for (const auto &entry:p.poleFaces) {
@@ -240,12 +255,13 @@ QByteArray surfaceToolsExtras(const QVector<ExtrusionObject> &bodies) {
         }
         records.append(record);
     }
+    const bool continuity = std::any_of(bodies.cbegin(),bodies.cend(),[](const auto &body){return body.feature==BodyFeature::SurfaceTools&&body.surfaceTool.mode==2&&body.surfaceTool.poleContinuity;});
     const bool extendedRefit = std::any_of(bodies.cbegin(), bodies.cend(), [](const ExtrusionObject &body) {
         return body.feature == BodyFeature::SurfaceTools && body.surfaceTool.mode == 2 &&
                (body.surfaceTool.refitU > 64 || body.surfaceTool.refitV > 64);
     });
     return records.isEmpty() ? QByteArray()
-                             : QJsonDocument(QJsonObject{{"schema", extendedRefit ? 12 : poleFaces ? 11 : refit ? 10 : solidTrim ? 9 : linked ? 8 : flatten ? 7 : quilt ? 6 : rigid ? 5 : targetSet ? 4 : multiple ? 3 : mapping ? 2 : 1}, {"features", records}}).toJson(QJsonDocument::Compact);
+                             : QJsonDocument(QJsonObject{{"schema", continuity ? 13 : extendedRefit ? 12 : poleFaces ? 11 : refit ? 10 : solidTrim ? 9 : linked ? 8 : flatten ? 7 : quilt ? 6 : rigid ? 5 : targetSet ? 4 : multiple ? 3 : mapping ? 2 : 1}, {"features", records}}).toJson(QJsonDocument::Compact);
 }
 QString applySurfaceToolsExtras(const QByteArray &bytes, QVector<ExtrusionObject> &output) {
     auto bodies = output;
@@ -255,7 +271,7 @@ QString applySurfaceToolsExtras(const QByteArray &bytes, QVector<ExtrusionObject
             require(bytes.size() <= 4 * 1024 * 1024, "Estensioni superfici oltre4MiB.");
             QJsonParseError error;
             const auto root = QJsonDocument::fromJson(bytes, &error).object();
-            require(error.error == QJsonParseError::NoError && root.size() == 2 && (root["schema"].toDouble(-1) == 1 || root["schema"].toDouble(-1) == 2 || root["schema"].toDouble(-1) == 3 || root["schema"].toDouble(-1) == 4 || root["schema"].toDouble(-1) == 5 || root["schema"].toDouble(-1) == 6 || root["schema"].toDouble(-1) == 7 || root["schema"].toDouble(-1) == 8 || root["schema"].toDouble(-1) == 9 || root["schema"].toDouble(-1) == 10 || root["schema"].toDouble(-1) == 11 || root["schema"].toDouble(-1) == 12) &&
+            require(error.error == QJsonParseError::NoError && root.size() == 2 && (root["schema"].toDouble(-1) == 1 || root["schema"].toDouble(-1) == 2 || root["schema"].toDouble(-1) == 3 || root["schema"].toDouble(-1) == 4 || root["schema"].toDouble(-1) == 5 || root["schema"].toDouble(-1) == 6 || root["schema"].toDouble(-1) == 7 || root["schema"].toDouble(-1) == 8 || root["schema"].toDouble(-1) == 9 || root["schema"].toDouble(-1) == 10 || root["schema"].toDouble(-1) == 11 || root["schema"].toDouble(-1) == 12 || root["schema"].toDouble(-1) == 13) &&
                         root["features"].isArray(),
                     "Estensioni superfici danneggiate.");
             const auto integer = [](const QJsonValue &v, int low, int high) {
@@ -266,7 +282,7 @@ QString applySurfaceToolsExtras(const QByteArray &bytes, QVector<ExtrusionObject
             for (const auto &entry : root["features"].toArray()) {
                 require(entry.isObject(), "Record superficie non valido.");
                 const auto o = entry.toObject();
-                require(o.size() == 7 + int(o.contains("targets")) + int(o.contains("mapping")) + int(o.contains("sources")) + int(o.contains("trimSides")) + int(o.contains("refit")) + int(o.contains("poleFaces")), "Record superficie incompleto.");
+                require(o.size() == 7 + int(o.contains("targets")) + int(o.contains("mapping")) + int(o.contains("sources")) + int(o.contains("trimSides")) + int(o.contains("refit")) + int(o.contains("poleFaces")) + int(o.contains("continuity")), "Record superficie incompleto.");
                 const int i = integer(o["index"], 0, bodies.size() - 1);
                 require(!present.contains(i), "Estensione superficie duplicata.");
                 present.insert(i);
@@ -275,6 +291,11 @@ QString applySurfaceToolsExtras(const QByteArray &bytes, QVector<ExtrusionObject
                         "Estensione su un tipo di funzione incompatibile.");
                 auto &p = b.surfaceTool;
                 p.mode = integer(o["mode"], 0, root["schema"].toInt()>=9?5:root["schema"].toInt()>=2?4:2);
+                p.poleContinuity=0;
+                if(o.contains("continuity")){
+                    require(root["schema"].toInt()>=13&&b.feature==BodyFeature::SurfaceTools&&p.mode==2,"Continuita' su funzione o schema incompatibile.");
+                    p.poleContinuity=integer(o["continuity"],0,2);
+                }
                 p.refitU=p.refitV=0; p.refitTolerance=.1;
                 if(o.contains("refit")) {
                     require(root["schema"].toInt()>=10 && b.feature==BodyFeature::SurfaceTools && p.mode==2 && o["refit"].isArray() && o["refit"].toArray().size()==3,

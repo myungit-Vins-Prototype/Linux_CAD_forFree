@@ -424,7 +424,7 @@ void CadViewport::drawReferenceLabels() {
             }
         }
         }
-        for(int k=0;k<surfacePoleOverlay_.size();++k){const bool selected=surfacePoleSelection_.contains(k);painter.setPen(Qt::black);painter.setBrush(selected?QColor(255,195,50):QColor(65,220,255));painter.drawEllipse(surfacePoleScreen(k),selected?5:3,selected?5:3);}
+        for(int k=0;k<surfacePoleOverlay_.size();++k){const bool selected=surfacePoleSelection_.contains(k);painter.setPen(Qt::black);painter.setBrush(selected?QColor(255,195,50):surfacePoleFollowers_.contains(k)?QColor(110,235,135):QColor(65,220,255));painter.drawEllipse(surfacePoleScreen(k),selected?5:3,selected?5:3);}
         if (!surfacePoleSelection_.isEmpty()) {
             const auto center = surfacePoleGizmoCenter();
             const std::array<QColor,3> colors{{QColor(245,85,85),QColor(80,215,115),QColor(85,155,255)}};

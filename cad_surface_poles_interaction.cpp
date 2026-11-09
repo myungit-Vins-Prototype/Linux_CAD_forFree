@@ -77,10 +77,8 @@ void SurfacePolesInteraction::finish(bool cancel) {
     band_->hide();
     if (cancel && wasDrag) {
         QSignalBlocker guard(table_->model());
-        for (int i = 0; i < rows_.size(); ++i)
-            for (int k = 0; k < 3; ++k)
-                table_->model()->setData(table_->model()->index(rows_[i], k + coordinateColumn()),
-                                         QLocale().toString(initial_[i][k], 'g', 17));
+        static_cast<SurfacePolesModel *>(table_->model())->restore(initialEdits_);
+        static_cast<SurfacePolesModel *>(table_->model())->setAutomatic(initialAutomatic_);
     }
     if (!cancel && wasBox)
         selectBox();
@@ -133,6 +131,8 @@ bool SurfacePolesInteraction::eventFilter(QObject *object, QEvent *event) {
             const auto delta = view_->surfacePoleAxisDragVector(axis_, origin_, position);
             {
                 QSignalBlocker guard(table_->model());
+                static_cast<SurfacePolesModel *>(table_->model())->restore(initialEdits_);
+                static_cast<SurfacePolesModel *>(table_->model())->setAutomatic(initialAutomatic_);
                 for (int i = 0; i < rows_.size(); ++i)
                     for (int k = 0; k < 3; ++k)
                         table_->model()->setData(table_->model()->index(rows_[i], k + coordinateColumn()),
@@ -227,6 +227,8 @@ bool SurfacePolesInteraction::eventFilter(QObject *object, QEvent *event) {
         }
         if (rows_.isEmpty())
             return true;
+        initialEdits_=static_cast<SurfacePolesModel *>(table_->model())->snapshot();
+        initialAutomatic_=static_cast<SurfacePolesModel *>(table_->model())->automaticEdits();
         axis_ = handle >= 0 && handle < 3 ? handle : -1;
         origin_ = position.toPoint();
         active_ = true;

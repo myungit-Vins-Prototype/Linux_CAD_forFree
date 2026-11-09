@@ -332,7 +332,7 @@ bool CadViewport::sketchModeActive() const { return sketchMode_; }
 
 void CadViewport::setEditBodyCallback(std::function<void(int)> callback) { editBodyCallback_ = std::move(callback); }
 
-void CadViewport::setSurfacePoleOverlay(const QVector<QVector3D> &points,int u,int v,int selected,const QVector<std::array<int,3>> &grids){surfacePoleGrids_=grids;if(grids.isEmpty()&&u>0&&v>0)surfacePoleGrids_.append({0,u,v});surfacePoleOverlay_=points;surfacePoleU_=u;surfacePoleV_=v;surfacePoleSelected_=selected;if(points.isEmpty())surfacePoleSelection_.clear();update();}
+void CadViewport::setSurfacePoleOverlay(const QVector<QVector3D> &points,int u,int v,int selected,const QVector<std::array<int,3>> &grids){surfacePoleGrids_=grids;if(grids.isEmpty()&&u>0&&v>0)surfacePoleGrids_.append({0,u,v});surfacePoleOverlay_=points;surfacePoleU_=u;surfacePoleV_=v;surfacePoleSelected_=selected;if(points.isEmpty()){surfacePoleSelection_.clear();surfacePoleFollowers_.clear();}update();}
 QPointF CadViewport::surfacePoleScreen(int index)const{return index>=0&&index<surfacePoleOverlay_.size()?projectWorldPoint(surfacePoleOverlay_[index]):QPointF(-1e6,-1e6);}
 QVector3D CadViewport::surfacePoleDragVector(const QPoint &from,const QPoint &to)const{QVector3D a,b,d;camera_.viewRay(from,size(),1,a,d);camera_.viewRay(to,size(),1,b,d);return b-a;}
 void CadViewport::setSurfacePoleSelection(const QVector<int> &selected, const std::array<QVector3D,3> &axes, bool local, const QString &label) {
