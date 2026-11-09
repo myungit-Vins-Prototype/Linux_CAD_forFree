@@ -27,3 +27,5 @@ Sulla copia congelata di Hook, Cucitura8 include sette facce NURBS e 2.288.269 r
 Mappa architetturale aggiornata: 668 file, 9.584 relazioni, 327 unità C++ e nessuna diagnostica. Controllo `--check`, confini di chiamata, include/riferimenti distinti, collegamenti nei due versi e sei viste HTML verificati. I file generati restano locali e ignorati da Git.
 
 Checkpoint precedenti: `30d4e72` pubblica rotazione/Alt, recupero mouse e adattamento U/V con scarto vincolante; `b6c10df` multifaccia e `9f455a9` primo riquadro. Dettagli e prove storiche: [multifaccia](poli-nurbs-multifaccia-2026-11-09.md), [griglia](poli-nurbs-griglia-2026-11-09.md).
+
+Implementazione pubblicata su `origin/main`: `160e185`. L’eseguibile locale è stato ricompilato; riaprire ForgeCAD per caricare la nuova versione.

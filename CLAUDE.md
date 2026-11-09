@@ -112,7 +112,7 @@ Opzioni G0/G1 esistente implementate: poli del gesto rigidi, altri compensativi 
 vincoli sparsi su adiacenze B-rep, spigoli conservati/giunti incompatibili protetti, stato risolto salvato/codec13.
 App/8CTest/Wayland PASS; Hook7facce/2,29Mrighe virtuali:propagazione/B-rep/Undo/codec PASS,
 apertura2,02e-8mm; originale invariato. Mappa668/9584/327TU/check/6HTML PASS.
-Commit/push della continuità in preparazione; riaprire l’app per la nuova build.
+Continuità `160e185` pubblicata su origin/main; riaprire l’app per la nuova build.
 Controlli campionati, nessuna certificazione globale/G2/auto-intersezioni.
 [Continuità](docs/poli-nurbs-continuita-2026-11-09.md), [multifaccia/storico](docs/poli-nurbs-multifaccia-2026-11-09.md).
 
