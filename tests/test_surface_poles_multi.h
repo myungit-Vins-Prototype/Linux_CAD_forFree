@@ -40,10 +40,29 @@ static void surfacePolesMultiple(bool gl=false) {
                 else mouse(view,QEvent::MouseButtonRelease,box.bottomRight(),mods);
                 require(!interaction->interacting(),"riquadro termina senza bloccare il mouse");
             };
+            // Selezionare piu' nodi non intercetta la normale rotazione.
+            auto *boxButton=dialog->findChild<QPushButton *>("surfacePolesBoxSelection");
+            require(boxButton && !boxButton->isChecked(),"riquadro esplicito disattivato all'apertura");
+            mouse(view,QEvent::MouseButtonPress,box.topLeft());
+            require(!interaction->interacting(),"clic sullo sfondo disponibile per la rotazione");
+            mouse(view,QEvent::MouseButtonRelease,box.topLeft());
+            boxButton->click();
             rectangle(Qt::NoModifier);require(table->selectionModel()->selectedRows().size()==32,"riquadro seleziona i nodi di entrambe le facce");
             rectangle(Qt::ControlModifier);require(table->selectionModel()->selectedRows().isEmpty(),"Ctrl e riquadro tolgono i nodi");
             rectangle(Qt::ShiftModifier);require(table->selectionModel()->selectedRows().size()==32,"Maiusc e riquadro aggiungono i nodi");
             rectangle(Qt::NoModifier,true);require(table->selectionModel()->selectedRows().size()==32,"Esc del riquadro conserva la selezione iniziale");
+            boxButton->click();
+            rectangle(Qt::AltModifier);
+            require(table->selectionModel()->selectedRows().size()==32,"Alt attiva il riquadro senza cambiare modalita'");
+            if(gl) {
+                const auto camera=view->camera_.yaw_;
+                const QPointF background(view->width()-20,view->height()-20);
+                mouse(view,QEvent::MouseButtonPress,background);
+                require(!interaction->interacting(),"sfondo senza maniglie lascia passare il gesto di rotazione");
+                mouse(view,QEvent::MouseMove,background+QPointF(-30,-10));
+                mouse(view,QEvent::MouseButtonRelease,background+QPointF(-30,-10));
+                require(view->camera_.yaw_!=camera && table->selectionModel()->selectedRows().size()==32,"rotazione con selezione multipla conservata");
+            }
             table->selectRow(5);auto point=view->surfacePoleScreen(5);
             mouse(view,QEvent::MouseButtonPress,point);require(interaction->interacting(),"trascinamento avviato");
             auto *refit=dialog->findChild<QCheckBox *>("surfacePolesRefitEnabled");
@@ -62,6 +81,9 @@ static void surfacePolesMultiple(bool gl=false) {
             mouse(view,QEvent::MouseButtonPress,point);mouse(view,QEvent::MouseMove,point+QPointF(8,4));
             mouse(view,QEvent::MouseMove,point+QPointF(8,4),Qt::NoModifier,Qt::NoButton);
             require(!interaction->interacting(),"movimento senza pulsante recupera rilascio mancante");
+            mouse(view,QEvent::MouseButtonPress,point);
+            mouse(refit,QEvent::MouseButtonPress,point);
+            require(!interaction->interacting(),"nuovo clic sul pannello recupera una cattura rimasta aperta");
             refit->setChecked(false);require(model->rowCount()==32&&!interaction->interacting(),"ritorno a griglie originali senza cattura residua");
             table->clearSelection();
             // La selezione dalla vista continua e alterna lo stato della faccia.

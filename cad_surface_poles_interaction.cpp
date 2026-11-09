@@ -19,6 +19,11 @@ SurfacePolesInteraction::SurfacePolesInteraction(CadViewport *view, QTableView *
       band_(new QRubberBand(QRubberBand::Rectangle, view)) {
     setObjectName("surfacePolesInteraction");
     band_->setAttribute(Qt::WA_TransparentForMouseEvents);
+    releaseCheck_.setInterval(60);
+    connect(&releaseCheck_, &QTimer::timeout, this, [this] {
+        if (interacting() && !(QApplication::mouseButtons() & Qt::LeftButton))
+            finish(false);
+    });
     qApp->installEventFilter(this);
 }
 SurfacePolesInteraction::~SurfacePolesInteraction() {
@@ -66,6 +71,7 @@ void SurfacePolesInteraction::selectBox() {
 void SurfacePolesInteraction::finish(bool cancel) {
     if (!interacting())
         return;
+    releaseCheck_.stop();
     const bool wasBox = boxing_, wasDrag = active_;
     active_ = boxing_ = false;
     band_->hide();
@@ -88,6 +94,10 @@ bool SurfacePolesInteraction::eventFilter(QObject *object, QEvent *event) {
     if (!enabled_)
         return false;
     if (interacting()) {
+        // Un nuovo clic, anche su un controllo del pannello, chiude una
+        // cattura rimasta aperta prima che il controllo cambi la griglia.
+        if (event->type() == QEvent::MouseButtonPress || event->type() == QEvent::MouseButtonDblClick)
+            finish(false);
         if ((object == view_ && (event->type() == QEvent::UngrabMouse || event->type() == QEvent::Hide)) ||
             event->type() == QEvent::ApplicationDeactivate ||
             (event->type() == QEvent::WindowDeactivate && (object == view_ || object == view_->window()))) {
@@ -98,7 +108,8 @@ bool SurfacePolesInteraction::eventFilter(QObject *object, QEvent *event) {
             finish(true);
             return true;
         }
-        if (event->type() == QEvent::MouseButtonRelease &&
+        if ((event->type() == QEvent::MouseButtonRelease ||
+             event->type() == QEvent::NonClientAreaMouseButtonRelease) &&
             static_cast<QMouseEvent *>(event)->button() == Qt::LeftButton) {
             auto *mouse = static_cast<QMouseEvent *>(event);
             boxEnd_ =
@@ -141,10 +152,11 @@ bool SurfacePolesInteraction::eventFilter(QObject *object, QEvent *event) {
             return false;
         const auto position = mouse->position();
         modifiers_ = mouse->modifiers();
-        int handle = view_->surfacePoleHandleAt(position);
+        const bool boxGesture = boxSelection_ || (modifiers_ & Qt::AltModifier);
+        int handle = boxGesture ? -1 : view_->surfacePoleHandleAt(position);
         int row = -1;
         double nearest = 10 * 10;
-        for (int i = 0; i < displayedRows_.size(); ++i) {
+        for (int i = 0; !boxGesture && i < displayedRows_.size(); ++i) {
             const auto d = view_->surfacePoleScreen(i) - position;
             const double distance = QPointF::dotProduct(d, d);
             if (distance < nearest) {
@@ -173,6 +185,8 @@ bool SurfacePolesInteraction::eventFilter(QObject *object, QEvent *event) {
                                                           QItemSelectionModel::NoUpdate);
                 table_->scrollTo(table_->model()->index(row, coordinateColumn()));
             } else if (handle != 3) {
+                if (!boxGesture)
+                    return false; // Il trascinamento normale sullo sfondo ruota la vista.
                 boxing_ = true;
                 origin_ = position.toPoint();
                 boxEnd_ = origin_;
@@ -184,6 +198,8 @@ bool SurfacePolesInteraction::eventFilter(QObject *object, QEvent *event) {
                 if (started)
                     started();
                 view_->grabMouse();
+                if (mouse->spontaneous())
+                    releaseCheck_.start();
                 return true;
             }
             // I modificatori servono alla selezione; trascinare il gruppo
@@ -218,6 +234,8 @@ bool SurfacePolesInteraction::eventFilter(QObject *object, QEvent *event) {
             started();
         view_->setFocus();
         view_->grabMouse();
+        if (mouse->spontaneous())
+            releaseCheck_.start();
         return true;
     }
     return false;

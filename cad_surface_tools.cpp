@@ -240,8 +240,12 @@ QByteArray surfaceToolsExtras(const QVector<ExtrusionObject> &bodies) {
         }
         records.append(record);
     }
+    const bool extendedRefit = std::any_of(bodies.cbegin(), bodies.cend(), [](const ExtrusionObject &body) {
+        return body.feature == BodyFeature::SurfaceTools && body.surfaceTool.mode == 2 &&
+               (body.surfaceTool.refitU > 64 || body.surfaceTool.refitV > 64);
+    });
     return records.isEmpty() ? QByteArray()
-                             : QJsonDocument(QJsonObject{{"schema", poleFaces ? 11 : refit ? 10 : solidTrim ? 9 : linked ? 8 : flatten ? 7 : quilt ? 6 : rigid ? 5 : targetSet ? 4 : multiple ? 3 : mapping ? 2 : 1}, {"features", records}}).toJson(QJsonDocument::Compact);
+                             : QJsonDocument(QJsonObject{{"schema", extendedRefit ? 12 : poleFaces ? 11 : refit ? 10 : solidTrim ? 9 : linked ? 8 : flatten ? 7 : quilt ? 6 : rigid ? 5 : targetSet ? 4 : multiple ? 3 : mapping ? 2 : 1}, {"features", records}}).toJson(QJsonDocument::Compact);
 }
 QString applySurfaceToolsExtras(const QByteArray &bytes, QVector<ExtrusionObject> &output) {
     auto bodies = output;
@@ -251,7 +255,7 @@ QString applySurfaceToolsExtras(const QByteArray &bytes, QVector<ExtrusionObject
             require(bytes.size() <= 4 * 1024 * 1024, "Estensioni superfici oltre4MiB.");
             QJsonParseError error;
             const auto root = QJsonDocument::fromJson(bytes, &error).object();
-            require(error.error == QJsonParseError::NoError && root.size() == 2 && (root["schema"].toDouble(-1) == 1 || root["schema"].toDouble(-1) == 2 || root["schema"].toDouble(-1) == 3 || root["schema"].toDouble(-1) == 4 || root["schema"].toDouble(-1) == 5 || root["schema"].toDouble(-1) == 6 || root["schema"].toDouble(-1) == 7 || root["schema"].toDouble(-1) == 8 || root["schema"].toDouble(-1) == 9 || root["schema"].toDouble(-1) == 10 || root["schema"].toDouble(-1) == 11) &&
+            require(error.error == QJsonParseError::NoError && root.size() == 2 && (root["schema"].toDouble(-1) == 1 || root["schema"].toDouble(-1) == 2 || root["schema"].toDouble(-1) == 3 || root["schema"].toDouble(-1) == 4 || root["schema"].toDouble(-1) == 5 || root["schema"].toDouble(-1) == 6 || root["schema"].toDouble(-1) == 7 || root["schema"].toDouble(-1) == 8 || root["schema"].toDouble(-1) == 9 || root["schema"].toDouble(-1) == 10 || root["schema"].toDouble(-1) == 11 || root["schema"].toDouble(-1) == 12) &&
                         root["features"].isArray(),
                     "Estensioni superfici danneggiate.");
             const auto integer = [](const QJsonValue &v, int low, int high) {
@@ -276,7 +280,8 @@ QString applySurfaceToolsExtras(const QByteArray &bytes, QVector<ExtrusionObject
                     require(root["schema"].toInt()>=10 && b.feature==BodyFeature::SurfaceTools && p.mode==2 && o["refit"].isArray() && o["refit"].toArray().size()==3,
                             "Ricostruzione poli senza schema10 o su funzione incompatibile.");
                     const auto fit=o["refit"].toArray();
-                    p.refitU=integer(fit[0],4,64); p.refitV=integer(fit[1],4,64);
+                    const int maxCount = root["schema"].toInt() >= 12 ? Kernel::surfaceRefitMaxPoles : 64;
+                    p.refitU=integer(fit[0],4,maxCount); p.refitV=integer(fit[1],4,maxCount);
                     p.refitTolerance=fit[2].toDouble(NAN);
                     require(std::isfinite(p.refitTolerance)&&p.refitTolerance>=1e-7&&p.refitTolerance<=1000,"Scarto ricostruzione non valido.");
                 }

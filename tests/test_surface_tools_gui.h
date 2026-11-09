@@ -609,7 +609,7 @@ static void surfacePolesRefitControls(CadViewport &view,QMainWindow &window,int 
     using namespace ForgeCad;using namespace Kernel;
     const auto original=view.extrusions_[source].forgeBody;
     const auto bytesBefore=writeBodyBinary(*original);
-    const int initialCount=view.extrusions_.size(),nu=fixture?6:8,nv=fixture?12:48;
+    const int initialCount=view.extrusions_.size();int nu=fixture?6:8,nv=fixture?12:48;
     ExtrusionObject definition;definition.feature=BodyFeature::SurfaceTools;definition.surfaceTool.mode=2;definition.firstBody=source;
     std::exception_ptr failure;
     QTimer::singleShot(gl?400:0,&window,[&]{
@@ -631,7 +631,18 @@ static void surfacePolesRefitControls(CadViewport &view,QMainWindow &window,int 
             if(!fixture) {
                 limit->setValue(1e-7);QElapsedTimer wait;wait.start();while(wait.elapsed()<150)QApplication::processEvents();
                 require(!ok->isEnabled(),"limite di scostamento troppo stretto impedisce conferma");
-                limit->setValue(.1);
+                require(!dialog->findChild<QPlainTextEdit *>("surfaceToolStatus")->toPlainText().contains("rilascia"),"errore di scarto non attribuito al rilascio del mouse");
+                limit->setValue(.001);
+                QElapsedTimer search;search.start();
+                auto *automaticFit=dialog->findChild<QPushButton *>("surfacePolesRefitAuto");
+                automaticFit->click();
+                while((!table->isEnabled() || v->value()<=64) && search.elapsed()<20000)QApplication::processEvents();
+                nu=u->value();nv=v->value();
+                require(nv>64 && nu<=surfaceRefitMaxPoles && nv<=surfaceRefitMaxPoles && table->isEnabled(),"adattamento automatico oltre 64 poli termina entro il limite richiesto");
+                const auto support=std::dynamic_pointer_cast<const BSplineSurface>(original->face(original->faces().front()).surface);
+                const auto fitted=refitSurfacePoles(*support,nu,nv);
+                require(fitted.sampledDeviation<=.001,"griglia Hook entro lo scostamento vincolante senza cambiare tolleranza");
+                std::cout<<"Hook automatico "<<nu<<"x"<<nv<<" scarto="<<fitted.sampledDeviation<<std::endl;
             }
             const int row=(nu/2)*nv+nv/2;
             table->selectRow(row);table->scrollTo(table->model()->index(row,4));
@@ -670,7 +681,7 @@ static void surfacePolesRefitControls(CadViewport &view,QMainWindow &window,int 
     require(restored.extrusions.back().surfaceTool.refitU==nu&&restored.extrusions.back().surfaceTool.refitV==nv,"codec conserva conteggi U/V");
     auto broken=QJsonDocument::fromJson(surfaceToolsExtras(view.extrusions_)).object();
     auto records=broken["features"].toArray();auto record=records.last().toObject();
-    record["refit"]=QJsonArray{65,nv,.1};records[records.size()-1]=record;broken["features"]=records;
+    record["refit"]=QJsonArray{surfaceRefitMaxPoles+1,nv,.1};records[records.size()-1]=record;broken["features"]=records;
     auto retained=view.extrusions_;require(!applySurfaceToolsExtras(QJsonDocument(broken).toJson(),retained).isEmpty(),"codec rifiuta ricostruzione fuori limite");
     QTimer::singleShot(0,&window,[&]{auto *dialog=window.findChild<QDialog *>("surfaceToolDialog");try{
         require(dialog->findChild<QCheckBox *>("surfacePolesRefitEnabled")->isChecked(),"riapertura ripristina ricostruzione");

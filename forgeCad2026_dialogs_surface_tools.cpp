@@ -11,6 +11,7 @@
 #include "fk_bspline_surface.h"
 #include "fk_surface_refit.h"
 #include "fk_history.h"
+#include "fk_precision.h"
 #include <QMouseEvent>
 #include <QKeyEvent>
 #include <QLineF>
@@ -107,6 +108,10 @@ bool surfaceToolDialog(QMainWindow *window, CadViewport *viewport, const QString
     auto *poleOrientation = new QComboBox(&dialog);
     poleOrientation->setObjectName("surfacePolesOrientation");
     poleOrientation->addItems({QStringLiteral("Globale (X, Y, Z)"),QStringLiteral("Locale (U, V, normale)")});
+    auto *poleBox = new QPushButton(QStringLiteral("Selezione rettangolare"), &dialog);
+    poleBox->setObjectName("surfacePolesBoxSelection");
+    poleBox->setCheckable(true);
+    poleBox->setToolTip(QStringLiteral("Attiva il riquadro oppure tieni premuto Alt e trascina. Sullo sfondo, senza Alt, trascina per ruotare."));
     auto *poleSelection = new FunctionMessage(&dialog);
     poleSelection->setObjectName("surfacePolesSelection");
     auto *poleGridInfo = new QLabel(&dialog);
@@ -122,7 +127,7 @@ bool surfaceToolDialog(QMainWindow *window, CadViewport *viewport, const QString
     for (int direction=0; direction<2; ++direction) {
         auto *row = new QWidget(refitControls); auto *layout = new QHBoxLayout(row); layout->setContentsMargins(0,0,0,0);
         auto *slider = new QSlider(Qt::Horizontal,row); auto *count = new QSpinBox(row);
-        slider->setRange(4,64); count->setRange(4,64); count->setKeyboardTracking(false);
+        slider->setRange(4,surfaceRefitMaxPoles); count->setRange(4,surfaceRefitMaxPoles); count->setKeyboardTracking(false);
         count->setObjectName(direction==0?"surfacePolesRefitU":"surfacePolesRefitV");
         const int initialCount=direction==0?definition.surfaceTool.refitU:definition.surfaceTool.refitV;
         count->setValue(initialCount>0?initialCount:direction==0?8:32); slider->setValue(count->value());
@@ -139,10 +144,17 @@ bool surfaceToolDialog(QMainWindow *window, CadViewport *viewport, const QString
     refitForm->addRow(QStringLiteral("Scostamento ammesso:"),refitTolerance);
     auto *refitApply = new QPushButton(QStringLiteral("Aggiorna griglia (azzera gli spostamenti)"),refitControls);
     refitApply->setObjectName("surfacePolesRefitApply");refitForm->addRow(refitApply);
-    refitForm->addRow(ForgeCad::Gui::wrappedNote(QStringLiteral("Gli spinner aggiornano automaticamente la griglia. Cambiare U/V azzera gli spostamenti dei poli."),refitControls));
+    auto *refitAuto = new QPushButton(QStringLiteral("Adatta i poli allo scostamento"), refitControls);
+    refitAuto->setObjectName("surfacePolesRefitAuto");
+    refitForm->addRow(refitAuto);
+    refitForm->addRow(ForgeCad::Gui::wrappedNote(QStringLiteral("Lo scostamento è vincolante. Adatta aumenta U/V fino al rispetto del limite (massimo 256 per direzione). Cambiare griglia azzera gli spostamenti."),refitControls));
     refitControls->setVisible(refitEnabled->isChecked());
     QTimer refitTimer;refitTimer.setSingleShot(true);refitTimer.setInterval(180);
-    bool refitPending = false;
+    bool refitPending = false, refitSearching = false;
+    SurfacePolesRefitSearch refitSearch(&dialog);
+    std::function<void()> searchGrid, cancelRefitSearch;
+    QTimer searchTimer;
+    searchTimer.setSingleShot(true); searchTimer.setInterval(180);
     double refitDeviation = 0;
     QString poleLoadError;
     SurfacePolesSession poleSession;
@@ -175,8 +187,8 @@ bool surfaceToolDialog(QMainWindow *window, CadViewport *viewport, const QString
         status->setText(text);
         buttons->button(QDialogButtonBox::Ok)->setEnabled(false);
         viewport->clearPreview();
-        if (mode == 0)
-            preview.label->setText(QStringLiteral("in attesa delle selezioni"));
+        preview.label->setText(mode == 0 ? QStringLiteral("in attesa delle selezioni")
+                                                : QStringLiteral("non disponibile"));
     };
     const auto candidates = operandBodies(viewport, replaced, {definition.firstBody}, [&](const ExtrusionObject &b) {
         if (!b.forgeBody) return false;
@@ -387,7 +399,7 @@ bool surfaceToolDialog(QMainWindow *window, CadViewport *viewport, const QString
     } else {
         form->addRow(ForgeCad::Gui::wrappedNote(
             QStringLiteral("Clicca un polo per muoverlo liberamente, oppure trascina una freccia per vincolarlo a un asse. "
-                           "Ctrl/Cmd aggiunge o toglie poli, Maiusc aggiunge. Trascina nello spazio vuoto per selezionare con un riquadro i poli visualizzati. "
+                           "Ctrl/Cmd aggiunge o toglie poli, Maiusc aggiunge. Alt + trascinamento oppure Selezione rettangolare selezionano un gruppo di poli. Trascina sullo sfondo per ruotare. "
                            "L'anteprima si calcola al rilascio. Esc durante il trascinamento annulla lo spostamento."),
             &dialog));
         form->addRow(QStringLiteral("Facce NURBS da modificare:"),faceList);
@@ -397,6 +409,8 @@ bool surfaceToolDialog(QMainWindow *window, CadViewport *viewport, const QString
         form->addRow(refitEnabled);
         form->addRow(refitControls);
         form->addRow(QStringLiteral("Orientamento assi:"), poleOrientation);
+        form->addRow(poleBox);
+        form->addRow(ForgeCad::Gui::wrappedNote(QStringLiteral("Alt + trascinamento: riquadro. Ctrl: aggiungi/togli; Maiusc: aggiungi. Trascina sullo sfondo per ruotare."), &dialog));
         form->addRow(poleSelection);
         form->addRow(poleGridInfo);
         form->addRow(poles);
@@ -481,6 +495,7 @@ bool surfaceToolDialog(QMainWindow *window, CadViewport *viewport, const QString
         if (mode == 1)
             return;
         filling = true;
+        if(cancelRefitSearch)cancelRefitSearch();
         if(cancelPoleInteraction)cancelPoleInteraction();
         if (mode == 2) {
             spline = nullptr;poleLoadError.clear();
@@ -589,6 +604,7 @@ bool surfaceToolDialog(QMainWindow *window, CadViewport *viewport, const QString
                 fail(poleLoadError.isEmpty()?QStringLiteral("Griglia NURBS non disponibile."):poleLoadError);
                 return;
             }
+            if (refitSearching) { fail(QStringLiteral("Calcolo della griglia entro lo scostamento richiesto…"));return; }
             if (refitPending) { fail(QStringLiteral("Aggiornamento della griglia in attesa del nuovo numero di poli…"));return; }
             definition.surfaceTool.refitTolerance=refitTolerance->value();
             const auto error = poleSession.store(*poleModel,definition.surfaceTool);
@@ -598,7 +614,7 @@ bool surfaceToolDialog(QMainWindow *window, CadViewport *viewport, const QString
             }
             updatePoleOverlay();
             if (definition.surfaceTool.refitU > 0 && refitDeviation > definition.surfaceTool.refitTolerance) {
-                fail(QStringLiteral("Scostamento campionato %1 mm oltre %2 mm: aumenta i poli U/V o modifica lo scostamento ammesso.")
+                fail(QStringLiteral("Scostamento campionato %1 mm oltre %2 mm: premi Adatta i poli allo scostamento oppure aumenta U/V.")
                     .arg(refitDeviation,0,'g',6).arg(definition.surfaceTool.refitTolerance,0,'g',6));return;
             }
             if (definition.surfaceTool.edits.isEmpty() && definition.surfaceTool.refitU == 0 &&
@@ -617,15 +633,20 @@ bool surfaceToolDialog(QMainWindow *window, CadViewport *viewport, const QString
         for(auto &face:definition.surfaceTool.poleFaces) face.edits.clear();
         loadSource();refresh();
     };
-    QObject::connect(refitEnabled,&QCheckBox::toggled,&dialog,[&](bool enabled){refitControls->setVisible(enabled);applyRefit();});
+    QObject::connect(refitEnabled,&QCheckBox::toggled,&dialog,[&](bool enabled){refitControls->setVisible(enabled);applyRefit();if(enabled && searchGrid)searchGrid();});
     QObject::connect(refitApply,&QPushButton::clicked,&dialog,applyRefit);
     QObject::connect(&refitTimer,&QTimer::timeout,&dialog,applyRefit);
     for (auto *count : refitCounts) QObject::connect(count,qOverload<int>(&QSpinBox::valueChanged),&dialog,[&]{
-        if(refitEnabled->isChecked()){refitPending=true;timer.stop();refitTimer.start();refresh();}
+        if(refitEnabled->isChecked()){if(cancelRefitSearch)cancelRefitSearch();refitPending=true;timer.stop();refitTimer.start();refresh();}
     });
-    QObject::connect(refitTolerance,&QDoubleSpinBox::valueChanged,&dialog,schedule);
+    QObject::connect(refitTolerance,&QDoubleSpinBox::valueChanged,&dialog,[&] {
+        if(cancelRefitSearch)cancelRefitSearch();
+        schedule();
+        if(refitEnabled->isChecked())searchTimer.start();
+    });
     SurfacePolesInteraction drag(viewport,poles,displayedRows,&dialog);
     cancelPoleInteraction=[&]{drag.cancel();};
+    QObject::connect(poleBox, &QPushButton::toggled, &dialog, [&](bool enabled) { drag.setBoxSelection(enabled); });
     drag.message=[&](const QString &text){status->setText(text);};
     drag.started = [&] {
         poleDragging=true;timer.stop();viewport->clearPreview();
@@ -634,6 +655,46 @@ bool surfaceToolDialog(QMainWindow *window, CadViewport *viewport, const QString
     };
     drag.moved = [&] { updatePoleOverlay(false); };
     drag.finished = [&] { poleDragging=false;if(!filling){updatePoleOverlay();refresh();} };
+    cancelRefitSearch = [&] {
+        refitSearch.cancel();searchTimer.stop();refitSearching=false;
+        poles->setEnabled(true);drag.setEnabled(mode==2);
+    };
+    searchGrid = [&] {
+        if(mode!=2 || !refitEnabled->isChecked() || !spline ||
+           (!refitPending && refitDeviation<=refitTolerance->value()))return;
+        QVector<FaceId> faces;
+        std::vector<BSplineSurfacePtr> surfaces;
+        const auto shape=viewport->extrusions()[definition.firstBody].forgeBody;
+        for(int i=0;i<faceList->count();++i)if(faceList->item(i)->checkState()==Qt::Checked) {
+            const FaceId face(faceList->item(i)->data(Qt::UserRole).toInt());
+            faces.append(face);
+            surfaces.push_back(std::dynamic_pointer_cast<const BSplineSurface>(shape->face(face).surface));
+        }
+        if(faces.isEmpty())return;
+        refitTimer.stop();timer.stop();refitPending=false;refitSearching=true;
+        drag.setEnabled(false);poles->setEnabled(false);refresh();
+        refitSearch.finished = [&,faces,surfaces](const SurfaceRefitGrid &grid,const QString &error) {
+            refitSearching=false;poles->setEnabled(true);drag.setEnabled(true);
+            if(!error.isEmpty()){fail(error);return;}
+            poleSession.cacheRefit(faces,surfaces,grid);
+            { QSignalBlocker u(refitCounts[0]),v(refitCounts[1]);
+              refitCounts[0]->setValue(grid.u);refitCounts[1]->setValue(grid.v); }
+            // Gli slider seguono gli spinner anche quando i segnali del fit
+            // sono bloccati: la ricerca non deve avviare un nuovo fit manuale.
+            for(auto *slider:refitControls->findChildren<QSlider *>()) {
+                const int direction=slider->parentWidget()==refitCounts[0]->parentWidget()?0:1;
+                QSignalBlocker guard(slider);slider->setValue(refitCounts[direction]->value());
+            }
+            applyRefit();
+            if(grid.sampledDeviation>refitTolerance->value())
+                fail(QStringLiteral("Limite di 256 poli raggiunto: scarto campionato %1 mm oltre %2 mm. Conferma disabilitata.")
+                     .arg(grid.sampledDeviation,0,'g',6).arg(refitTolerance->value(),0,'g',6));
+        };
+        const Kernel::PrecisionScope accuracy(viewport->calculationAccuracy());
+        refitSearch.start(std::move(surfaces),refitCounts[0]->value(),refitCounts[1]->value(),refitTolerance->value());
+    };
+    QObject::connect(refitAuto,&QPushButton::clicked,&dialog,searchGrid);
+    QObject::connect(&searchTimer,&QTimer::timeout,&dialog,searchGrid);
     if (mode != 2)
         drag.setEnabled(false);
     QObject::connect(poleModel, &QAbstractItemModel::dataChanged, &dialog, [&] {
@@ -741,6 +802,7 @@ bool surfaceToolDialog(QMainWindow *window, CadViewport *viewport, const QString
         refitEnabled->hide();refitControls->hide();
         poles->hide();
         poleOrientation->hide();
+        poleBox->hide();
         poleSelection->hide();
     }
     form->addRow(QStringLiteral("Tolleranza geometrica:"), tolerance);
@@ -762,7 +824,7 @@ bool surfaceToolDialog(QMainWindow *window, CadViewport *viewport, const QString
             return status->text();
         return apply(definition);
     });
-    refitTimer.stop();timer.stop();
+    refitSearch.cancel();searchTimer.stop();refitTimer.stop();timer.stop();
     if (mode == 1)
         picker.stop();
     viewport->cancelReferencePick();

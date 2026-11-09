@@ -17,12 +17,13 @@ std::vector<double> knots(int count) {
     return result;
 }
 // Proiezione LS monodimensionale con estremi imposti. Il sistema delle
-// basi cubiche ha dimensione <=62; si fattorizza una sola volta.
+// basi cubiche ha dimensione limitata dal massimo di poli; si fattorizza una sola volta.
 std::vector<double> projector(int count, const std::vector<double> &parameters, const std::vector<double> &k) {
     const int samples = parameters.size();
     const int n = count - 2;
     std::vector<double> basis(samples * count, 0.), gram(n * n, 0.), map(count * samples, 0.);
     for (int s = 0; s < samples; ++s) {
+        cancellationPoint();
         const double t = parameters[s];
         const int span = detail::findSpan(k, 3, count, t);
         double values[4];
@@ -46,6 +47,7 @@ std::vector<double> projector(int count, const std::vector<double> &parameters, 
                 gram[i * n + j] = a / gram[j * n + j];
         }
     for (int s = 0; s < samples; ++s) {
+        cancellationPoint();
         std::vector<double> x(n);
         for (int i = 0; i < n; ++i) {
             double a = basis[s * count + i + 1];
@@ -64,6 +66,7 @@ std::vector<double> projector(int count, const std::vector<double> &parameters, 
     for (int i = 1; i < count - 1; ++i) {
         double first = 0, last = 0;
         for (int s = 0; s < samples; ++s) {
+        cancellationPoint();
             first += map[i * samples + s] * basis[s * count];
             last += map[i * samples + s] * basis[s * count + count - 1];
         }
@@ -88,8 +91,8 @@ std::vector<double> probes(const BSplineSurface &source, bool u, int count) {
 }
 } // namespace
 SurfaceRefitResult refitSurfacePoles(const BSplineSurface &source, int uCount, int vCount) {
-    if (uCount < 4 || vCount < 4 || uCount > 64 || vCount > 64)
-        throw std::domain_error("Ricostruzione poli: scegliere da 4 a 64 poli per direzione.");
+    if (uCount < 4 || vCount < 4 || uCount > surfaceRefitMaxPoles || vCount > surfaceRefitMaxPoles)
+        throw std::domain_error("Ricostruzione poli: scegliere da 4 a 256 poli per direzione.");
     const auto u = source.uDomain(), v = source.vDomain();
     const int mu = std::max(33, 4 * uCount + 1), mv = std::max(33, 4 * vCount + 1);
     // Densita' dei nodi guidata dalla differenza quarta delle sezioni: e'
@@ -171,7 +174,7 @@ SurfaceRefitResult refitSurfacePoles(const BSplineSurface &source, int uCount, i
     auto surface =
         std::make_shared<const BSplineSurface>(3, 3, std::move(ku), std::move(kv), uCount, vCount, std::move(points));
     const auto us = probes(source, true, uCount), vs = probes(source, false, vCount);
-    if (us.size() > 4000000 / vs.size())
+    if (us.size() > 8000000 / vs.size())
         throw std::domain_error("Ricostruzione poli: dominio troppo complesso per verificare lo scarto.");
     std::vector<double> worst(us.size(), 0.);
     parallelFor(us.size(), threadCount(0), [&](std::size_t i) {
@@ -184,5 +187,38 @@ SurfaceRefitResult refitSurfacePoles(const BSplineSurface &source, int uCount, i
         }
     });
     return {surface, *std::max_element(worst.begin(), worst.end())};
+}
+SurfaceRefitGrid refitSurfacePolesWithinTolerance(const std::vector<BSplineSurfacePtr> &sources, int u, int v,
+                                                  double tolerance) {
+    if (sources.empty() || sources.size() > 256 || !std::isfinite(tolerance) || tolerance < 1e-7 || tolerance > 1000)
+        throw std::domain_error("Ricostruzione poli: facce o scostamento non validi.");
+    const auto fit = [&](int nu, int nv) {
+        SurfaceRefitGrid grid;
+        grid.u = nu; grid.v = nv;
+        for (const auto &source : sources) {
+            cancellationPoint();
+            if (!source)
+                throw std::domain_error("Ricostruzione poli: faccia non NURBS.");
+            auto result = refitSurfacePoles(*source, nu, nv);
+            grid.sampledDeviation = std::max(grid.sampledDeviation, result.sampledDeviation);
+            grid.faces.push_back(std::move(result));
+        }
+        return grid;
+    };
+    auto best = fit(u, v);
+    const auto next = [](int count) { return std::min(surfaceRefitMaxPoles, count + std::max(2, count / 2)); };
+    while (best.sampledDeviation > tolerance && (u < surfaceRefitMaxPoles || v < surfaceRefitMaxPoles)) {
+        cancellationPoint();
+        // Valutazioni indipendenti: non moltiplicare inutilmente anche la
+        // direzione che rappresenta gia' correttamente la superficie.
+        auto alongU = u < surfaceRefitMaxPoles ? fit(next(u), v) : SurfaceRefitGrid{};
+        auto alongV = v < surfaceRefitMaxPoles ? fit(u, next(v)) : SurfaceRefitGrid{};
+        if (alongU.faces.empty() || (!alongV.faces.empty() && alongV.sampledDeviation < alongU.sampledDeviation))
+            best = std::move(alongV);
+        else
+            best = std::move(alongU);
+        u = best.u; v = best.v;
+    }
+    return best;
 }
 } // namespace ForgeCad::Kernel

@@ -2,6 +2,7 @@
 #include <QObject>
 #include <QPoint>
 #include <QVector>
+#include <QTimer>
 #include <array>
 #include <functional>
 class CadViewport;
@@ -20,6 +21,7 @@ class SurfacePolesInteraction final : public QObject {
         if (!enabled)
             cancel();
     }
+    void setBoxSelection(bool enabled) { cancel(); boxSelection_ = enabled; }
     bool interacting() const { return active_ || boxing_; }
 
   protected:
@@ -33,7 +35,8 @@ class SurfacePolesInteraction final : public QObject {
     QTableView *table_;
     const QVector<int> &displayedRows_;
     QRubberBand *band_;
-    bool enabled_ = true, active_ = false, boxing_ = false;
+    bool enabled_ = true, active_ = false, boxing_ = false, boxSelection_ = false;
+    QTimer releaseCheck_;
     int axis_ = -1;
     QPoint origin_, boxEnd_;
     Qt::KeyboardModifiers modifiers_{};

@@ -1,6 +1,9 @@
 #pragma once
 #include "cad_surface_poles_model.h"
 #include "fk_topology.h"
+#include "fk_surface_refit.h"
+#include "fk_cancel.h"
+#include <QObject>
 namespace ForgeCad {
 // Stato del pannello: tutte le facce selezionate, cache di ricostruzione e
 // conversione delle sole modifiche sparse nella definizione persistente.
@@ -12,6 +15,8 @@ class SurfacePolesSession {
     double deviation() const { return deviation_; }
     QString details() const { return details_; }
     void reset() { cache_.clear(); }
+    void cacheRefit(const QVector<Kernel::FaceId> &faces, const std::vector<Kernel::BSplineSurfacePtr> &sources,
+                    const Kernel::SurfaceRefitGrid &grid);
 
   private:
     struct Fit {
@@ -24,5 +29,18 @@ class SurfacePolesSession {
     bool legacy_ = true;
     double deviation_ = 0;
     QString details_;
+};
+// Il calcolo non blocca gli eventi del mouse. Ogni nuova richiesta cancella
+// quella precedente; la consegna avviene sul thread GUI e solo a oggetto vivo.
+class SurfacePolesRefitSearch final : public QObject {
+  public:
+    explicit SurfacePolesRefitSearch(QObject *parent) : QObject(parent) {}
+    ~SurfacePolesRefitSearch() override { cancel(); }
+    void cancel();
+    void start(std::vector<Kernel::BSplineSurfacePtr> sources, int u, int v, double tolerance);
+    std::function<void(const Kernel::SurfaceRefitGrid &, const QString &)> finished;
+  private:
+    Kernel::CancellationToken cancellation_;
+    quint64 generation_ = 0;
 };
 } // namespace ForgeCad

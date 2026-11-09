@@ -114,6 +114,12 @@ Mappa662/9482/324TU/0diag/check/4HTML PASS; riaprire app. Multifaccia `b6c10df` 
 Mouse/riquadro: rilascio fuori vista/perdita cattura/reset griglia recuperati, anteprima riattivata.
 Riquadro sui poli visualizzati, Ctrl/Maiusc/Esc, anche multifaccia. App/7CTest/Hook7/Wayland PASS;
 mappa664/9496/325TU/0diag/check/4HTML PASS; riquadro Hook ispezionato. Mouse/riquadro `9f455a9` pubblicati su origin/main.
+Seguito: riquadro esplicito/Alt e rotazione con selezione multipla; aggiornato messaggio dopo rifiuto dello scarto.
+Ricerca asincrona cancellabile U/V fino256, scostamento vincolante e codec12 oltre64.
+Hook7 GUI:18×162/scarto0,00070033mm, modifica/Undo/codec/riapertura PASS; 7CTest/Wayland PASS.
+Sonda QPA: rotazione, rilascio soppresso e spunta durante ricerca PASS; originale invariato.
+Worker allineato alla precisione del documento; app/runner definitivi,7CTest (12,22s) e Wayland PASS.
+Mappa664/9509/325TU/0diag/check/5HTML e8moduli bidirezionali PASS; riaprire app. Commit/push in preparazione.
 [Griglia](docs/poli-nurbs-griglia-2026-11-09.md), [multifaccia](docs/poli-nurbs-multifaccia-2026-11-09.md).
 
 **08/11 — Bottle e Shower Head.** Pool esatto:690duplicati,poli/pesi1042→135MiB;

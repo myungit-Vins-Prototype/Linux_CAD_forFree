@@ -209,7 +209,7 @@ FK_TEST(SurfacePolesRefitControlCounts) {
     valid(edited);
     FK_CHECK(original->uPoleCount()==4 && original->vPoleCount()==4);
     FK_CHECK_THROWS(refitSurfacePoles(*original,3,8));
-    FK_CHECK_THROWS(refitSurfacePoles(*original,8,65));
+    FK_CHECK_THROWS(refitSurfacePoles(*original,8,surfaceRefitMaxPoles+1));
     // Razionale curva: lo scarto scende aumentando i controlli; verifica su
     // una griglia indipendente da campioni e nodi usati dal ricostruttore.
     std::vector<Vec3> points;
@@ -219,6 +219,15 @@ FK_TEST(SurfacePolesRefitControlCounts) {
     const BSplineSurface rational(3,3,{0,0,0,0,1,1,1,1},{0,0,0,0,1,1,1,1},4,4,points,weights);
     const auto coarse=refitSurfacePoles(rational,4,4),fine=refitSurfacePoles(rational,12,12);
     FK_CHECK(fine.sampledDeviation<coarse.sampledDeviation*.1);
+    const auto automatic=refitSurfacePolesWithinTolerance({std::make_shared<const BSplineSurface>(rational)},4,4,.001);
+    FK_CHECK(automatic.sampledDeviation<=.001);
+    FK_CHECK(automatic.u>4 || automatic.v>4);
+    FK_CHECK(automatic.faces.size()==1);
+    FK_CHECK(automatic.u<=surfaceRefitMaxPoles && automatic.v<=surfaceRefitMaxPoles);
+    FK_CHECK_THROWS(refitSurfacePolesWithinTolerance({},4,4,.001));
+    FK_CHECK_THROWS(refitSurfacePolesWithinTolerance({original},4,4,0));
+    const auto wide=refitSurfacePoles(*original,6,96);
+    FK_CHECK(wide.sampledDeviation<1e-10 && wide.surface->vPoleCount()==96);
     double independent=0;
     for(int i=0;i<53;++i)for(int j=0;j<47;++j) {
         const double u=(i+.371)/53,v=(j+.619)/47;

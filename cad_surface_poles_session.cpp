@@ -3,6 +3,11 @@
 #include "cad_topology_ref.h"
 #include "fk_surface_refit.h"
 #include <climits>
+#include "fk_precision.h"
+#include <QPointer>
+#include <QCoreApplication>
+#include <QRunnable>
+#include <QThreadPool>
 namespace ForgeCad {
 QString SurfacePolesSession::store(const SurfacePolesModel &model, SurfaceToolParameters &p) const {
     if (faces_.isEmpty() || !model.rowCount())
@@ -100,5 +105,45 @@ QString SurfacePolesSession::load(const ForgeBody &body, const QVector<Kernel::F
         model.setFaces(grids);
     }
     return {};
+}
+void SurfacePolesSession::cacheRefit(const QVector<Kernel::FaceId> &faces,
+                                     const std::vector<Kernel::BSplineSurfacePtr> &sources,
+                                     const Kernel::SurfaceRefitGrid &grid) {
+    if (faces.size() != int(sources.size()) || sources.size() != grid.faces.size())
+        return;
+    for (int i = 0; i < faces.size(); ++i)
+        cache_[faces[i].index] = {sources[i], grid.faces[i].surface, grid.u, grid.v, grid.faces[i].sampledDeviation};
+}
+void SurfacePolesRefitSearch::cancel() {
+    ++generation_;
+    if (cancellation_)
+        cancellation_->store(true, std::memory_order_relaxed);
+    cancellation_.reset();
+}
+void SurfacePolesRefitSearch::start(std::vector<Kernel::BSplineSurfacePtr> sources, int u, int v, double tolerance) {
+    cancel();
+    cancellation_ = std::make_shared<std::atomic<bool>>(false);
+    const auto token = cancellation_;
+    const auto generation = generation_;
+    const double accuracy = Kernel::currentCalculationAccuracy;
+    const QPointer<SurfacePolesRefitSearch> guard(this);
+    QThreadPool::globalInstance()->start(QRunnable::create([guard, token, generation, accuracy, sources = std::move(sources), u, v, tolerance] {
+        Kernel::CancellationScope scope(token);
+        Kernel::SurfaceRefitGrid grid;
+        QString error;
+        try {
+            Kernel::PrecisionScope precision(accuracy);
+            grid = Kernel::refitSurfacePolesWithinTolerance(sources, u, v, tolerance);
+        } catch (const Kernel::OperationCancelled &) { return; }
+        catch (const std::exception &e) { error = QString::fromUtf8(e.what()); }
+        // La consegna passa dall'applicazione: guard e token vengono
+        // controllati sul thread GUI prima di toccare il destinatario.
+        if (token->load(std::memory_order_relaxed))
+            return;
+        QMetaObject::invokeMethod(QCoreApplication::instance(), [guard, token, generation, grid = std::move(grid), error] {
+            if (guard && !token->load(std::memory_order_relaxed) && generation == guard->generation_ && guard->finished)
+                guard->finished(grid, error);
+        }, Qt::QueuedConnection);
+    }));
 }
 } // namespace ForgeCad
