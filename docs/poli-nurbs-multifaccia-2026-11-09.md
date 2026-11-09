@@ -42,3 +42,15 @@ Scarto, regolarità e confronto delle SP-curve sono controlli campionati: non so
 ## Moduli
 
 `cad_surface_poles_session.*` gestisce stato/cache/raccolta delle modifiche; `cad_surface_poles_model.*` gestisce la tabella e le gabbie multifaccia; `kernel/fk_surface_poles.cpp` applica la modifica simultanea preservando le connessioni. Aggiornati codec/coordinamento, parametri, chiavi di anteprima, pannello, viewport, test, CMake, README e catalogo dell'architettura. HTML/JSON della mappa restano generati e ignorati da Git.
+
+## Interazione mouse e riquadro — seguito
+
+Richiesta successiva: un rilascio del mouse perso, soprattutto dopo la spunta di approssimazione, sospendeva gli aggiornamenti dell'anteprima; aggiungere la selezione rettangolare.
+
+Il precedente gestore ascoltava soltanto gli eventi della vista e chiudeva il trascinamento soltanto su rilascio/Esc ricevuti dalla vista. La perdita di cattura non azzerava lo stato; il cambio U/V restava rinviato dal controllo di trascinamento attivo. Il nuovo modulo `cad_surface_poles_interaction.*` ascolta il ciclo di interazione nell'applicazione: rilascio anche su un altro widget, movimento senza pulsante, perdita della cattura e disattivazione. Cattura e stato vengono azzerati prima di richiamare i callback; la perdita di cattura annulla lo spostamento e riattiva l'anteprima. Il caricamento della griglia interrompe e annulla l'interazione prima di sostituire il modello, evitando rinvii indefiniti dopo il cambio di approssimazione.
+
+Trascinando dallo spazio vuoto si selezionano con un riquadro i poli visualizzati, anche su più facce: selezione normale sostitutiva, Maiusc additiva, Ctrl/Cmd alternata; Esc conserva la selezione iniziale. Il limite resta4096 poli selezionati per funzione. Il riquadro segue la gabbia visualizzata: per griglie campionate gli altri poli restano selezionabili dalla tabella.
+
+Verifiche finali: **app completa e runner compilati, 7/7 CTest PASS** (11,79s), prova multifaccia Wayland/OpenGL PASS. Riquadro su32nodi/due facce, Ctrl/Maiusc/Esc, spunta approssimazione durante cattura residua, rilascio su checkbox dopo refit, UngrabMouse con ripristino, movimento senza pulsante e ritorno alla griglia originale PASS. Il test controlla che il rilascio su un altro widget faccia avanzare la generazione dell'anteprima. Anche il workflow completo su corpo7 Hook (griglia grande, refit8×48, modifica, Undo/Redo, codec e riapertura) PASS con il gestore definitivo. Sonda su due facce di Hook e ispezione del riquadro attivo in finestra reale PASS; sorgente invariata.
+
+Mappa finale del seguito: **664file, 9496relazioni, 325TU, zero diagnostiche**, `--check` PASS. Sette moduli verificati in entrata/uscita, sei confini di chiamata e righe dei sorgenti confermati. Quattro viste HTML rigenerate e ispezionate, incluso il nuovo gestore di interazione. Log finali: `/tmp/forgecad-poles-multiface/ctest-mouse-validated.log`, `mouse-Wayland-validated.log`, `Hook7-mouse-validated.log`, `Hook-box.log`; immagine `Hook-box.png`.

@@ -3,6 +3,7 @@
 #include "cad_surface_tools.h"
 #include "cad_surface_poles_model.h"
 #include "cad_surface_poles_session.h"
+#include "cad_surface_poles_interaction.h"
 #include "cad_datum.h"
 #include "cad_feature_dependencies.h"
 #include "cad_topology_ref.h"
@@ -27,105 +28,6 @@ class PoleNumberDelegate final : public QStyledItemDelegate {
         bool valid = false;
         const double number = locale.toDouble(value.toString(), &valid);
         return valid ? locale.toString(number, 'g', 10) : value.toString();
-    }
-};
-class PoleDrag final : public QObject {
-  public:
-    CadViewport *view;
-    QTableView *table;
-    const QVector<int> &displayedRows;
-    std::function<void()> started, moved, finished;
-    bool active = false;
-    int axis = -1;
-    QPoint origin;
-    QVector<int> rows;
-    QVector<std::array<double,3>> initial;
-    PoleDrag(CadViewport *v, QTableView *t, const QVector<int> &rows, QObject *parent)
-        : QObject(parent), view(v), table(t), displayedRows(rows) { view->installEventFilter(this); }
-    ~PoleDrag() override { view->removeEventFilter(this); if(active) view->releaseMouse(); }
-    void finish(bool cancel) {
-        if (cancel) {
-            QSignalBlocker guard(table->model());
-            for (int i=0; i<rows.size(); ++i)
-                for (int k=0; k<3; ++k) table->model()->setData(table->model()->index(rows[i],k+static_cast<ForgeCad::SurfacePolesModel *>(table->model())->coordinateColumn()),QLocale().toString(initial[i][k],'g',17));
-        }
-        active=false;
-        view->releaseMouse();
-        table->viewport()->update();
-        if (finished) finished();
-    }
-    bool eventFilter(QObject *object, QEvent *event) override {
-        if (object != view || view->referencePicking()) return false;
-        if (active && event->type()==QEvent::KeyPress && static_cast<QKeyEvent *>(event)->key()==Qt::Key_Escape) {
-            finish(true); return true;
-        }
-        if (event->type()==QEvent::MouseButtonPress) {
-            auto *mouse=static_cast<QMouseEvent *>(event);
-            if(mouse->button()!=Qt::LeftButton) return false;
-            int handle=view->surfacePoleHandleAt(mouse->position());
-            int row=-1; double nearest=10*10;
-            for(int i=0;i<displayedRows.size();++i) {
-                const auto d=view->surfacePoleScreen(i)-mouse->position();
-                const double distance=QPointF::dotProduct(d,d);
-                if(distance<nearest) { nearest=distance;row=displayedRows[i]; }
-            }
-            const bool toggle=mouse->modifiers() & (Qt::ControlModifier|Qt::MetaModifier);
-            const bool add=mouse->modifiers() & Qt::ShiftModifier;
-            if(row>=0 && (toggle||add||handle<0||handle==3 ||
-                QLineF(mouse->position(),view->surfacePoleAxisScreen(handle)).length()>12)) handle=-1;
-            if(handle<0 || handle==3) {
-                if(row>=0) {
-                    const auto index=table->model()->index(row,0);
-                    const bool selected=table->selectionModel()->isRowSelected(row,{});
-                    if(toggle && selected) {
-                        table->selectionModel()->select(index,QItemSelectionModel::Deselect|QItemSelectionModel::Rows);
-                        return true;
-                    }
-                    if(!selected) table->selectionModel()->select(index,
-                        (toggle||add ? QItemSelectionModel::Select : QItemSelectionModel::ClearAndSelect)|QItemSelectionModel::Rows);
-                    table->selectionModel()->setCurrentIndex(table->model()->index(row,static_cast<ForgeCad::SurfacePolesModel *>(table->model())->coordinateColumn()),QItemSelectionModel::NoUpdate);
-                    table->scrollTo(table->model()->index(row,static_cast<ForgeCad::SurfacePolesModel *>(table->model())->coordinateColumn()));
-                } else if(handle!=3) {
-                    if(!toggle&&!add) table->clearSelection();
-                    return false;
-                }
-                // I modificatori servono alla selezione; trascinare il gruppo
-                // richiede un normale clic su uno dei poli gia' selezionati.
-                if(toggle||add) return true;
-            }
-            rows.clear(); initial.clear();
-            if (table->selectionModel()->selectedRows().size() > 4096) return true;
-            for(const auto &index:table->selectionModel()->selectedRows()) {
-                const int r=index.row(); std::array<double,3> values;
-                for(int k=0;k<3;++k) {
-                    bool valid=false; values[k]=QLocale().toDouble(table->model()->data(table->model()->index(r,k+static_cast<ForgeCad::SurfacePolesModel *>(table->model())->coordinateColumn()),Qt::EditRole).toString(),&valid);
-                    if(!valid||!std::isfinite(values[k])) return true;
-                }
-                rows.append(r); initial.append(values);
-            }
-            if(rows.isEmpty()) return true;
-            axis=handle>=0&&handle<3?handle:-1;
-            origin=mouse->position().toPoint(); active=true;
-            if(started) started();
-            view->setFocus(); view->grabMouse();
-            return true;
-        }
-        if(active && event->type()==QEvent::MouseMove) {
-            auto *mouse=static_cast<QMouseEvent *>(event);
-            const auto delta=view->surfacePoleAxisDragVector(axis,origin,mouse->position().toPoint());
-            {
-                QSignalBlocker guard(table->model());
-                for(int i=0;i<rows.size();++i)
-                    for(int k=0;k<3;++k) table->model()->setData(table->model()->index(rows[i],k+static_cast<ForgeCad::SurfacePolesModel *>(table->model())->coordinateColumn()),QLocale().toString(initial[i][k]+double(delta[k]),'g',17));
-            }
-            table->viewport()->update();
-            if(moved) moved();
-            return true;
-        }
-        if(active && event->type()==QEvent::MouseButtonRelease && static_cast<QMouseEvent *>(event)->button()==Qt::LeftButton) {
-            finish(false);return true;
-        }
-        return false;
     }
 };
 } // namespace
@@ -257,6 +159,7 @@ bool surfaceToolDialog(QMainWindow *window, CadViewport *viewport, const QString
     QMap<int,SurfacePoleFace> faceEdits;
     std::function<void()> loadSource;
     bool poleDragging = false;
+    std::function<void()> cancelPoleInteraction;
     const BSplineSurface *spline = nullptr;
     bool filling = false;
     QTimer timer;
@@ -484,7 +387,7 @@ bool surfaceToolDialog(QMainWindow *window, CadViewport *viewport, const QString
     } else {
         form->addRow(ForgeCad::Gui::wrappedNote(
             QStringLiteral("Clicca un polo per muoverlo liberamente, oppure trascina una freccia per vincolarlo a un asse. "
-                           "Ctrl/Cmd aggiunge o toglie poli, Maiusc aggiunge; la tabella permette selezioni multiple. "
+                           "Ctrl/Cmd aggiunge o toglie poli, Maiusc aggiunge. Trascina nello spazio vuoto per selezionare con un riquadro i poli visualizzati. "
                            "L'anteprima si calcola al rilascio. Esc durante il trascinamento annulla lo spostamento."),
             &dialog));
         form->addRow(QStringLiteral("Facce NURBS da modificare:"),faceList);
@@ -578,6 +481,7 @@ bool surfaceToolDialog(QMainWindow *window, CadViewport *viewport, const QString
         if (mode == 1)
             return;
         filling = true;
+        if(cancelPoleInteraction)cancelPoleInteraction();
         if (mode == 2) {
             spline = nullptr;poleLoadError.clear();
             poleModel->setSurface({});
@@ -706,7 +610,6 @@ bool surfaceToolDialog(QMainWindow *window, CadViewport *viewport, const QString
         preview.request(definition);
     };
     const auto applyRefit = [&] {
-        if(poleDragging){refitTimer.start();return;}
         refitTimer.stop();timer.stop();refitPending=false;
         definition.surfaceTool.refitU=refitEnabled->isChecked()?refitCounts[0]->value():0;
         definition.surfaceTool.refitV=refitEnabled->isChecked()?refitCounts[1]->value():0;
@@ -721,16 +624,18 @@ bool surfaceToolDialog(QMainWindow *window, CadViewport *viewport, const QString
         if(refitEnabled->isChecked()){refitPending=true;timer.stop();refitTimer.start();refresh();}
     });
     QObject::connect(refitTolerance,&QDoubleSpinBox::valueChanged,&dialog,schedule);
-    PoleDrag drag(viewport, poles, displayedRows, &dialog);
+    SurfacePolesInteraction drag(viewport,poles,displayedRows,&dialog);
+    cancelPoleInteraction=[&]{drag.cancel();};
+    drag.message=[&](const QString &text){status->setText(text);};
     drag.started = [&] {
         poleDragging=true;timer.stop();viewport->clearPreview();
         buttons->button(QDialogButtonBox::Ok)->setEnabled(false);
         preview.label->setText(QStringLiteral("rilascia il mouse per calcolare l'anteprima"));
     };
     drag.moved = [&] { updatePoleOverlay(false); };
-    drag.finished = [&] { poleDragging=false;updatePoleOverlay();refresh(); };
+    drag.finished = [&] { poleDragging=false;if(!filling){updatePoleOverlay();refresh();} };
     if (mode != 2)
-        viewport->removeEventFilter(&drag);
+        drag.setEnabled(false);
     QObject::connect(poleModel, &QAbstractItemModel::dataChanged, &dialog, [&] {
         if (!filling)
             schedule();

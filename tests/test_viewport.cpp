@@ -32,6 +32,7 @@
 #include "../cad_pattern.h"
 #include "../cad_surface_tools.h"
 #include "../cad_surface_poles_model.h"
+#include "../cad_surface_poles_interaction.h"
 #include "fk_surface_refit.h"
 #include "../cad_surface_mapping.h"
 #include "../cad_extrude.h"

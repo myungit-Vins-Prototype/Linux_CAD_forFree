@@ -23,6 +23,47 @@ static void surfacePolesMultiple(bool gl=false) {
             require(model->index(16,0).data().toString()!=model->index(0,0).data().toString(),"faccia riconoscibile in tabella");
             list->item(2)->setCheckState(Qt::Unchecked);
             require(model->rowCount()==32&&view->surfacePoleGrids_.size()==2,"deselezione rimuove la sola griglia");
+            auto *interaction=static_cast<SurfacePolesInteraction *>(dialog->findChild<QObject *>("surfacePolesInteraction"));
+            require(interaction,"gestore interazione poli disponibile");
+            const auto mouse=[&](QObject *target,QEvent::Type type,QPointF point,Qt::KeyboardModifiers mods=Qt::NoModifier,Qt::MouseButtons buttons=Qt::LeftButton) {
+                const auto global=view->mapToGlobal(point.toPoint());
+                QMouseEvent e(type,point,global,type==QEvent::MouseMove?Qt::NoButton:Qt::LeftButton,
+                    type==QEvent::MouseButtonRelease?Qt::NoButton:buttons,mods);QApplication::sendEvent(target,&e);
+            };
+            QRectF box;bool firstPoint=true;
+            for(int i=0;i<view->surfacePoleOverlay_.size();++i){const auto point=view->surfacePoleScreen(i);if(firstPoint){box=QRectF(point,QSizeF(.001,.001));firstPoint=false;}else box=box.united(QRectF(point,QSizeF(.001,.001)));}
+            box=box.adjusted(-16,-16,16,16);
+            const auto rectangle=[&](Qt::KeyboardModifiers mods,bool cancel=false) {
+                mouse(view,QEvent::MouseButtonPress,box.topLeft(),mods);require(interaction->interacting(),"riquadro attivo");
+                mouse(view,QEvent::MouseMove,box.bottomRight(),mods);
+                if(cancel){QKeyEvent escape(QEvent::KeyPress,Qt::Key_Escape,Qt::NoModifier);QApplication::sendEvent(dialog,&escape);}
+                else mouse(view,QEvent::MouseButtonRelease,box.bottomRight(),mods);
+                require(!interaction->interacting(),"riquadro termina senza bloccare il mouse");
+            };
+            rectangle(Qt::NoModifier);require(table->selectionModel()->selectedRows().size()==32,"riquadro seleziona i nodi di entrambe le facce");
+            rectangle(Qt::ControlModifier);require(table->selectionModel()->selectedRows().isEmpty(),"Ctrl e riquadro tolgono i nodi");
+            rectangle(Qt::ShiftModifier);require(table->selectionModel()->selectedRows().size()==32,"Maiusc e riquadro aggiungono i nodi");
+            rectangle(Qt::NoModifier,true);require(table->selectionModel()->selectedRows().size()==32,"Esc del riquadro conserva la selezione iniziale");
+            table->selectRow(5);auto point=view->surfacePoleScreen(5);
+            mouse(view,QEvent::MouseButtonPress,point);require(interaction->interacting(),"trascinamento avviato");
+            auto *refit=dialog->findChild<QCheckBox *>("surfacePolesRefitEnabled");
+            dialog->findChild<QSpinBox *>("surfacePolesRefitU")->setValue(6);dialog->findChild<QSpinBox *>("surfacePolesRefitV")->setValue(8);
+            refit->setChecked(true);
+            require(!interaction->interacting()&&model->rowCount()==96,"spunta approssimazione interrompe cattura e rigenera entrambe le griglie");
+            const int dragRow=2*8+3;table->selectRow(dragRow);point=view->surfacePoleScreen(dragRow);
+            auto numbers=model->values(dragRow);mouse(view,QEvent::MouseButtonPress,point);mouse(view,QEvent::MouseMove,point+QPointF(10,5));
+            const auto generation=view->preview_.generation;
+            mouse(refit,QEvent::MouseButtonRelease,point+QPointF(10,5));
+            require(!interaction->interacting()&&view->preview_.generation>generation,"rilascio su altro widget riattiva anteprima dopo approssimazione");
+            table->selectRow(dragRow);point=view->surfacePoleScreen(dragRow);numbers=model->values(dragRow);
+            mouse(view,QEvent::MouseButtonPress,point);mouse(view,QEvent::MouseMove,point+QPointF(10,5));
+            QEvent ungrab(QEvent::UngrabMouse);QApplication::sendEvent(view,&ungrab);
+            require(!interaction->interacting()&&model->values(dragRow)==numbers,"perdita cattura annulla spostamento senza blocco");
+            mouse(view,QEvent::MouseButtonPress,point);mouse(view,QEvent::MouseMove,point+QPointF(8,4));
+            mouse(view,QEvent::MouseMove,point+QPointF(8,4),Qt::NoModifier,Qt::NoButton);
+            require(!interaction->interacting(),"movimento senza pulsante recupera rilascio mancante");
+            refit->setChecked(false);require(model->rowCount()==32&&!interaction->interacting(),"ritorno a griglie originali senza cattura residua");
+            table->clearSelection();
             // La selezione dalla vista continua e alterna lo stato della faccia.
             auto *pick=dialog->findChild<QPushButton *>("surfacePolesPickFaces");pick->click();
             GeometryRef picked;picked.kind=5;picked.index=0;picked.featureId=view->extrusions_[0].featureId;

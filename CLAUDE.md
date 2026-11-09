@@ -111,6 +111,9 @@ App/7CTest/Wayland/Undo/codec/riapertura PASS; fixture senza cache e vertici tol
 Riferimenti espliciti senza prossimita'; budget locali originali rispettati. Originale invariato.
 Giunti incompatibili rifiutati; controlli campionati, nessuna certificazione globale/G1/G2.
 Mappa662/9482/324TU/0diag/check/4HTML PASS; riaprire app. Multifaccia `b6c10df` pubblicata su origin/main.
+Mouse/riquadro: rilascio fuori vista/perdita cattura/reset griglia recuperati, anteprima riattivata.
+Riquadro sui poli visualizzati, Ctrl/Maiusc/Esc, anche multifaccia. App/7CTest/Hook7/Wayland PASS;
+mappa664/9496/325TU/0diag/check/4HTML PASS; riquadro Hook ispezionato. Nuovo checkpoint da pubblicare.
 [Griglia](docs/poli-nurbs-griglia-2026-11-09.md), [multifaccia](docs/poli-nurbs-multifaccia-2026-11-09.md).
 
 **08/11 — Bottle e Shower Head.** Pool esatto:690duplicati,poli/pesi1042→135MiB;

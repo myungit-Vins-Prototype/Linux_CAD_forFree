@@ -194,6 +194,8 @@ add_executable(forgecad
     cad_surface_poles_model.cpp
     cad_surface_poles_session.h
     cad_surface_poles_session.cpp
+    cad_surface_poles_interaction.h
+    cad_surface_poles_interaction.cpp
     cad_solid_trim.cpp
     cad_surface_mapping.cpp
     cad_spatial_sketch.cpp
