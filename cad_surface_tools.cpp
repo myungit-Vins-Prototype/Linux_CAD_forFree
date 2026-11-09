@@ -27,10 +27,34 @@ void require(bool b, const char *s) {
         throw std::runtime_error(s);
 }
 } // namespace
+Kernel::FaceId resolveSurfacePoleFace(const Kernel::Body &body, const EdgePoint &reference) {
+    using namespace Kernel;
+    std::vector<FaceId> named;
+    if (!reference.name.isEmpty()) {
+        const auto names=elementNamesOf(body);
+        if (!names) return {};
+        for (int index:names->find(EntityKind::Face,reference.name.toStdString()))
+            if (body.contains(FaceId(index)) && int(body.face(FaceId(index)).surface->type())==reference.geometry)
+                named.push_back(FaceId(index));
+        if (named.size()==1) return named.front();
+        if (named.empty()) return {};
+    }
+    const FaceId exact(reference.subshape);
+    if (!body.contains(exact) || int(body.face(exact).surface->type())!=reference.geometry) return {};
+    if (!named.empty() && std::find(named.begin(),named.end(),exact)==named.end()) return {};
+    const auto &face=body.face(exact);int edges=0;
+    for (const auto loop:face.loops) edges+=int(body.loopFins(loop).size());
+    const int context=std::min(int(face.loops.size()),0x7fff)|(std::min(edges,0xffff)<<15);
+    return context==reference.context?exact:FaceId{};
+}
 QByteArray surfaceBasisHash(const ForgeBody &body) {
     if (!body || body->faces().size() != 1)
         return {};
-    const auto *s = dynamic_cast<const Kernel::BSplineSurface *>(body->face(body->faces().front()).surface.get());
+    return surfaceBasisHash(body, body->faces().front());
+}
+QByteArray surfaceBasisHash(const ForgeBody &body, Kernel::FaceId face) {
+    if (!body || !body->contains(face)) return {};
+    const auto *s = dynamic_cast<const Kernel::BSplineSurface *>(body->face(face).surface.get());
     if (!s)
         return {};
     QByteArray bytes;
@@ -116,31 +140,39 @@ void buildSurfaceTool(ExtrusionObject &body, int index, const QVector<SketchObje
             registerDeclaredHistory(body.forgeBody, {source}, std::move(history));
         } else {
             const auto source = base();
-            require(p.basis.size() == 32 && surfaceBasisHash(source) == p.basis,
-                    "La griglia NURBS a monte e' cambiata: riselezionare i poli.");
-            std::vector<SurfacePoleChange> edits;
-            for (const auto &e : p.edits)
-                edits.push_back({e.u, e.v, Vec3(e.dx, e.dy, e.dz), e.weightFactor});
-            BSplineSurfacePtr replacement;
-            double deviation = 0;
-            if (p.refitU || p.refitV) {
-                require(std::isfinite(p.refitTolerance) && p.refitTolerance >= 1e-7 && p.refitTolerance <= 1000,
-                        "Scarto di ricostruzione non valido.");
-                const auto original = std::dynamic_pointer_cast<const BSplineSurface>(source->face(source->faces().front()).surface);
-                const auto fitted = refitSurfacePoles(*original, p.refitU, p.refitV);
-                require(fitted.sampledDeviation <= p.refitTolerance,
-                        qPrintable(QStringLiteral("Scarto campionato %1 mm oltre il limite %2 mm: aumentare i poli U/V.")
-                            .arg(fitted.sampledDeviation,0,'g',6).arg(p.refitTolerance,0,'g',6)));
-                replacement = fitted.surface;
-                deviation = fitted.sampledDeviation;
+            QVector<SurfacePoleFace> selected=p.poleFaces;
+            if (selected.isEmpty()) {
+                require(source->faces().size()==1,"Scegliere le facce NURBS da modificare.");
+                selected.append({faceReference(*source,source->faces().front(),{}),p.basis,p.edits});
             }
-            result = editSheetPoles(*source, edits, p.tolerance, &history, replacement);
-            if (replacement) body.notice = QStringLiteral("Griglia ricostruita %1 × %2; scarto campionato iniziale %3 mm.")
-                .arg(p.refitU).arg(p.refitV).arg(deviation,0,'g',6);
+            require(selected.size()<=256,"Scegliere fino a 256 facce.");
+            std::vector<SurfaceFacePoleChange> changes;
+            double deviation=0;
+            for (const auto &entry:selected) {
+                const auto face=resolveSurfacePoleFace(*source,entry.face);
+                require(face.valid() && entry.basis.size()==32 && surfaceBasisHash(source,face)==entry.basis,
+                        "Una faccia o la sua griglia NURBS a monte e' cambiata: riselezionare le facce.");
+                SurfaceFacePoleChange change; change.face=face;
+                for (const auto &e:entry.edits) change.changes.push_back({e.u,e.v,Vec3(e.dx,e.dy,e.dz),e.weightFactor});
+                if (p.refitU || p.refitV) {
+                    require(std::isfinite(p.refitTolerance) && p.refitTolerance>=1e-7 && p.refitTolerance<=1000,
+                            "Scarto di ricostruzione non valido.");
+                    const auto original=std::dynamic_pointer_cast<const BSplineSurface>(source->face(face).surface);
+                    const auto fitted=refitSurfacePoles(*original,p.refitU,p.refitV);
+                    require(fitted.sampledDeviation<=p.refitTolerance,qPrintable(QStringLiteral("Faccia F%1: scarto campionato %2 mm oltre %3 mm; aumentare i poli U/V.")
+                        .arg(face.index).arg(fitted.sampledDeviation,0,'g',6).arg(p.refitTolerance,0,'g',6)));
+                    change.replacement=fitted.surface;
+                    deviation=std::max(deviation,fitted.sampledDeviation);
+                }
+                if (change.replacement || !change.changes.empty()) changes.push_back(std::move(change));
+            }
+            result=editBodyFacesPoles(*source,changes,p.tolerance,&history);
+            if (p.refitU) body.notice=QStringLiteral("%1 facce; griglie %2 × %3; scarto campionato iniziale massimo %4 mm.")
+                .arg(selected.size()).arg(p.refitU).arg(p.refitV).arg(deviation,0,'g',6);
             body.forgeBody = std::make_shared<const Body>(std::move(result));
             registerDeclaredHistory(body.forgeBody, {source}, std::move(history));
         }
-        body.solid = false;
+        body.solid = body.forgeBody && !body.forgeBody->isSheet();
     } catch (const std::exception &e) {
         body.forgeBody.reset();
         body.error = QString::fromUtf8(e.what());
@@ -148,7 +180,7 @@ void buildSurfaceTool(ExtrusionObject &body, int index, const QVector<SketchObje
 }
 QByteArray surfaceToolsExtras(const QVector<ExtrusionObject> &bodies) {
     QJsonArray records;
-    bool mapping=false, multiple=false, targetSet=false, rigid=false, quilt=false, flatten=false, linked=false, solidTrim=false, refit=false;
+    bool mapping=false, multiple=false, targetSet=false, rigid=false, quilt=false, flatten=false, linked=false, solidTrim=false, refit=false, poleFaces=false;
     for (int i = 0; i < bodies.size(); ++i) {
         const auto &b = bodies[i];
         if (b.feature != BodyFeature::SurfaceTools && b.fillFaceContinuities.isEmpty())
@@ -166,6 +198,16 @@ QByteArray surfaceToolsExtras(const QVector<ExtrusionObject> &bodies) {
                                    {"basis", QString::fromLatin1(p.basis.toHex())},
                                    {"edits", edits},
                                    {"contacts", contacts}};
+        if (!p.poleFaces.isEmpty()) {
+            poleFaces=true; QJsonArray faces;
+            for (const auto &entry:p.poleFaces) {
+                const auto &f=entry.face; QJsonArray changes;
+                for (const auto &e:entry.edits) changes.append(QJsonArray{e.u,e.v,e.dx,e.dy,e.dz,e.weightFactor});
+                faces.append(QJsonObject{{"face",QJsonArray{f.x,f.y,f.z,f.subshape,f.geometry,f.context,f.role,f.name}},
+                    {"basis",QString::fromLatin1(entry.basis.toHex())},{"edits",changes}});
+            }
+            record["poleFaces"]=faces;
+        }
         if (p.refitU || p.refitV) { refit=true; record["refit"]=QJsonArray{p.refitU,p.refitV,p.refitTolerance}; }
         if (p.mode == 5) {solidTrim=true;record["trimSides"]=QJsonArray{p.trimReverseFirst,p.trimReverseSecond};}
         if (p.mode == 3 || p.mode == 4) {
@@ -199,7 +241,7 @@ QByteArray surfaceToolsExtras(const QVector<ExtrusionObject> &bodies) {
         records.append(record);
     }
     return records.isEmpty() ? QByteArray()
-                             : QJsonDocument(QJsonObject{{"schema", refit ? 10 : solidTrim ? 9 : linked ? 8 : flatten ? 7 : quilt ? 6 : rigid ? 5 : targetSet ? 4 : multiple ? 3 : mapping ? 2 : 1}, {"features", records}}).toJson(QJsonDocument::Compact);
+                             : QJsonDocument(QJsonObject{{"schema", poleFaces ? 11 : refit ? 10 : solidTrim ? 9 : linked ? 8 : flatten ? 7 : quilt ? 6 : rigid ? 5 : targetSet ? 4 : multiple ? 3 : mapping ? 2 : 1}, {"features", records}}).toJson(QJsonDocument::Compact);
 }
 QString applySurfaceToolsExtras(const QByteArray &bytes, QVector<ExtrusionObject> &output) {
     auto bodies = output;
@@ -209,7 +251,7 @@ QString applySurfaceToolsExtras(const QByteArray &bytes, QVector<ExtrusionObject
             require(bytes.size() <= 4 * 1024 * 1024, "Estensioni superfici oltre4MiB.");
             QJsonParseError error;
             const auto root = QJsonDocument::fromJson(bytes, &error).object();
-            require(error.error == QJsonParseError::NoError && root.size() == 2 && (root["schema"].toDouble(-1) == 1 || root["schema"].toDouble(-1) == 2 || root["schema"].toDouble(-1) == 3 || root["schema"].toDouble(-1) == 4 || root["schema"].toDouble(-1) == 5 || root["schema"].toDouble(-1) == 6 || root["schema"].toDouble(-1) == 7 || root["schema"].toDouble(-1) == 8 || root["schema"].toDouble(-1) == 9 || root["schema"].toDouble(-1) == 10) &&
+            require(error.error == QJsonParseError::NoError && root.size() == 2 && (root["schema"].toDouble(-1) == 1 || root["schema"].toDouble(-1) == 2 || root["schema"].toDouble(-1) == 3 || root["schema"].toDouble(-1) == 4 || root["schema"].toDouble(-1) == 5 || root["schema"].toDouble(-1) == 6 || root["schema"].toDouble(-1) == 7 || root["schema"].toDouble(-1) == 8 || root["schema"].toDouble(-1) == 9 || root["schema"].toDouble(-1) == 10 || root["schema"].toDouble(-1) == 11) &&
                         root["features"].isArray(),
                     "Estensioni superfici danneggiate.");
             const auto integer = [](const QJsonValue &v, int low, int high) {
@@ -220,7 +262,7 @@ QString applySurfaceToolsExtras(const QByteArray &bytes, QVector<ExtrusionObject
             for (const auto &entry : root["features"].toArray()) {
                 require(entry.isObject(), "Record superficie non valido.");
                 const auto o = entry.toObject();
-                require(o.size() == 7 + int(o.contains("targets")) + int(o.contains("mapping")) + int(o.contains("sources")) + int(o.contains("trimSides")) + int(o.contains("refit")), "Record superficie incompleto.");
+                require(o.size() == 7 + int(o.contains("targets")) + int(o.contains("mapping")) + int(o.contains("sources")) + int(o.contains("trimSides")) + int(o.contains("refit")) + int(o.contains("poleFaces")), "Record superficie incompleto.");
                 const int i = integer(o["index"], 0, bodies.size() - 1);
                 require(!present.contains(i), "Estensione superficie duplicata.");
                 present.insert(i);
@@ -291,6 +333,42 @@ QString applySurfaceToolsExtras(const QByteArray &bytes, QVector<ExtrusionObject
                     poles.insert(key);
                     p.edits.append(e);
                 }
+                p.poleFaces.clear();
+                if (o.contains("poleFaces")) {
+                    require(root["schema"].toInt()>=11 && b.feature==BodyFeature::SurfaceTools && p.mode==2 &&
+                        p.basis.isEmpty() && p.edits.isEmpty() && o["poleFaces"].isArray(),"Facce poli incompatibili.");
+                    const auto faces=o["poleFaces"].toArray();
+                    require(!faces.isEmpty() && faces.size()<=256,"Numero di facce poli non valido.");
+                    QSet<QString> selectedFaces; int total=0;
+                    for (const auto &value:faces) {
+                        require(value.isObject(),"Faccia poli non valida.");
+                        const auto item=value.toObject(); const auto f=item["face"].toArray();
+                        require(item.size()==3 && f.size()==8,"Faccia poli incompleta.");
+                        SurfacePoleFace entry; auto &point=entry.face;
+                        point.x=f[0].toDouble(NAN); point.y=f[1].toDouble(NAN); point.z=f[2].toDouble(NAN);
+                        require(std::isfinite(point.x)&&std::isfinite(point.y)&&std::isfinite(point.z),"Punto faccia poli non valido.");
+                        point.subshape=integer(f[3],0,2147483647); point.geometry=integer(f[4],-1,2147483647);
+                        point.context=integer(f[5],-1,2147483647); point.role=integer(f[6],0,1);
+                        require(f[7].isString()&&f[7].toString().size()<=4096,"Nome faccia poli non valido.");point.name=f[7].toString();
+                        const auto key=QString::number(point.subshape);
+                        require(!selectedFaces.contains(key),"Faccia poli duplicata.");selectedFaces.insert(key);
+                        const auto hex=item["basis"].toString().toLatin1();entry.basis=QByteArray::fromHex(hex);
+                        require(hex.size()==64 && entry.basis.toHex()==hex,"Base faccia poli non valida.");
+                        require(item["edits"].isArray(),"Modifiche faccia poli mancanti.");
+                        QSet<quint64> seen;
+                        for (const auto &change:item["edits"].toArray()) {
+                            const auto a=change.toArray();require(a.size()==6,"Polo faccia incompleto.");
+                            SurfacePoleEdit e;e.u=integer(a[0],0,4095);e.v=integer(a[1],0,4095);
+                            e.dx=a[2].toDouble(NAN);e.dy=a[3].toDouble(NAN);e.dz=a[4].toDouble(NAN);e.weightFactor=a[5].toDouble(NAN);
+                            const quint64 key=quint64(e.u)*4096+e.v;
+                            require(!seen.contains(key)&&std::isfinite(e.dx)&&std::isfinite(e.dy)&&std::isfinite(e.dz)&&
+                                std::isfinite(e.weightFactor)&&e.weightFactor>0&&e.weightFactor<=1e6,"Polo faccia duplicato o non valido.");
+                            seen.insert(key);entry.edits.append(e);
+                            require(++total<=4096,"Troppi poli modificati.");
+                        }
+                        p.poleFaces.append(entry);
+                    }
+                }
                 const auto readRefs=[&](const char *key,QVector<GeometryRef> &refs,bool source) {
                     refs.clear();
                     if (!o.contains(key)) return;
@@ -338,7 +416,9 @@ QString applySurfaceToolsExtras(const QByteArray &bytes, QVector<ExtrusionObject
                                     b.ruledSecond.size() <= 16,
                                 "Rete senza due famiglie valide.");
                     if (p.mode == 2)
-                        require(p.basis.size() == 32 && !p.edits.isEmpty(), "Modifica poli senza base o modifiche.");
+                        require((!p.poleFaces.isEmpty() || p.basis.size()==32) &&
+                            (p.refitU || !p.edits.isEmpty() || std::any_of(p.poleFaces.cbegin(),p.poleFaces.cend(),[](const SurfacePoleFace &f){return !f.edits.isEmpty();})),
+                            "Modifica poli senza base o modifiche.");
                 }
             }
         }

@@ -2,6 +2,8 @@
 #include "fk_surface_tools.h"
 #include "fk_pcurve.h"
 #include "fk_curve_algo.h"
+#include "fk_transform.h"
+#include "fk_sew.h"
 namespace surface_fixture {
 using namespace ForgeCad::Kernel;
 inline PathSegment line(const Vec3 &a, const Vec3 &b) {
@@ -37,6 +39,10 @@ inline Body patch(bool hole = false) {
     if (hole)
         loop({Vec3(3, 3, 0), Vec3(3, 7, 0), Vec3(7, 7, 0), Vec3(7, 3, 0)});
     return Body::buildSheet(vertices, edges, {face});
+}
+inline Body strip() {
+    const auto a=patch(), b=transformBody(a,Transform3::translation({10,0,0})),c=transformBody(a,Transform3::translation({20,0,0}));
+    return sewSheets({&a,&b,&c},1e-6,false).body;
 }
 inline EdgeId edgeNear(const Body &body, const Vec3 &p) {
     EdgeId best;

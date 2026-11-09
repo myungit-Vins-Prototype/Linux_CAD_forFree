@@ -410,10 +410,20 @@ void CadViewport::drawReferenceLabels() {
     painter.setPen(QColor(255, 170, 140));
     size = referencePlaneExtents(2);
     if (isPlaneShown(2)) painter.drawText(projectWorldPoint(QVector3D(0.0f, 0.75f * float(size.width()), 0.75f * float(size.height()))), QStringLiteral("Piano YZ"));
-    if(surfacePoleU_>0&&surfacePoleV_>0&&surfacePoleU_*surfacePoleV_<=surfacePoleOverlay_.size()){
+    if(!surfacePoleOverlay_.isEmpty()){
         painter.save();
-        painter.setPen(QPen(QColor(70,205,245,180),1,Qt::DashLine));
-        for(int i=0;i<surfacePoleU_;++i)for(int j=0;j<surfacePoleV_;++j){const int k=i*surfacePoleV_+j;const auto p=surfacePoleScreen(k);if(i+1<surfacePoleU_)painter.drawLine(p,surfacePoleScreen(k+surfacePoleV_));if(j+1<surfacePoleV_)painter.drawLine(p,surfacePoleScreen(k+1));}
+        for (int pass=0;pass<2;++pass) {
+        painter.setPen(pass==0?QPen(QColor(15,25,35,220),3):QPen(QColor(255,215,100,230),1,Qt::DashLine));
+        for (const auto &grid:surfacePoleGrids_) {
+            const int offset=grid[0],nu=grid[1],nv=grid[2];
+            if (offset<0 || nu<=0 || nv<=0 || qint64(offset)+qint64(nu)*nv>surfacePoleOverlay_.size()) continue;
+            for (int i=0;i<nu;++i) for (int j=0;j<nv;++j) {
+                const int k=offset+i*nv+j;const auto p=surfacePoleScreen(k);
+                if(i+1<nu)painter.drawLine(p,surfacePoleScreen(k+nv));
+                if(j+1<nv)painter.drawLine(p,surfacePoleScreen(k+1));
+            }
+        }
+        }
         for(int k=0;k<surfacePoleOverlay_.size();++k){const bool selected=surfacePoleSelection_.contains(k);painter.setPen(Qt::black);painter.setBrush(selected?QColor(255,195,50):QColor(65,220,255));painter.drawEllipse(surfacePoleScreen(k),selected?5:3,selected?5:3);}
         if (!surfacePoleSelection_.isEmpty()) {
             const auto center = surfacePoleGizmoCenter();

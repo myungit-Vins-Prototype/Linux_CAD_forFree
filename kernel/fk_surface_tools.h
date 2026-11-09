@@ -17,6 +17,15 @@ struct SurfacePoleChange {
     Vec3 delta;
     double weightFactor = 1;
 };
+struct SurfaceFacePoleChange {
+    FaceId face;
+    std::vector<SurfacePoleChange> changes;
+    BSplineSurfacePtr replacement;
+};
+// Modifica simultanea di facce NURBS di una lamina o solido; conserva le altre
+// facce, le connessioni e i trim. Giunti incompatibili vengono rifiutati.
+Body editBodyFacesPoles(const Body &body, const std::vector<SurfaceFacePoleChange> &changes,
+                        double tolerance = scaledAccuracy(1e-6), BodyHistory *history = nullptr);
 // Singola faccia NURBS: conserva topologia e trim UV (fori compresi), ricalcola
 // curve 3D e vertici. Le modifiche sono relative al supporto parametrico a monte.
 Body editSheetPoles(const Body &sheet, const std::vector<SurfacePoleChange> &changes, double tolerance = scaledAccuracy(1e-6),

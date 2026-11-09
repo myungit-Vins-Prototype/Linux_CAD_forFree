@@ -584,7 +584,7 @@ public:
     void setParameterDimensions(const QVector<PatternVariation> &dimensions,
                                 const QVector<PatternVariation> &selected,
                                 std::function<void(const PatternVariation &)> picked = {});
-    void setSurfacePoleOverlay(const QVector<QVector3D> &points,int uCount=0,int vCount=0,int selected=-1);
+    void setSurfacePoleOverlay(const QVector<QVector3D> &points, int u = 0, int v = 0, int selected = -1, const QVector<std::array<int,3>> &grids = {});
     QPointF surfacePoleScreen(int index) const;
     QPointF loftControlScreen(const QVector3D &point) const { return projectWorldPoint(point); }
     QVector3D surfacePoleDragVector(const QPoint &from,const QPoint &to) const;
@@ -1718,6 +1718,7 @@ private:
     std::array<QVector3D, 3> surfacePoleAxes_{{{1,0,0},{0,1,0},{0,0,1}}};
     bool surfacePoleLocal_ = false;
     QString surfacePoleLabel_;
+    QVector<std::array<int,3>> surfacePoleGrids_;
     QPointer<QObject> referenceListOwner_;
     QVector<GeometryRef> referenceListMarks_;
     bool measureValid_ = false;  // linea della misura (finestra Misura)

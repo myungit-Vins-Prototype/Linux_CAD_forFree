@@ -226,3 +226,71 @@ FK_TEST(SurfacePolesRefitControlCounts) {
     }
     FK_CHECK(independent<=fine.sampledDeviation*1.1+1e-10);
 }
+
+FK_TEST(SurfacePolesMultipleConnectedFaces) {
+    const auto source=surface_fixture::strip();valid(source);
+    const auto faces=source.faces();FK_CHECK(faces.size()==3);
+    FK_CHECK(dynamic_cast<const BSplineSurface *>(source.face(faces[0]).surface.get()));
+    const auto fixed=source.face(faces[2]).surface;
+    BodyHistory history;
+    const auto edited=editBodyFacesPoles(source,{{faces[0],{{1,1,{0,0,.2},1}},{}},{faces[1],{{2,2,{0,0,.3},1}}, {}}},1e-6,&history);
+    valid(edited);FK_CHECK(edited.faces()==faces && edited.edges()==source.edges());
+    FK_CHECK(edited.face(faces[2]).surface==fixed);
+    FK_CHECK(edited.face(faces[0]).surface->point(.5,.5).z()>0);
+    FK_CHECK(edited.face(faces[1]).surface->point(.5,.5).z()>0);
+    FK_CHECK(source.face(faces[0]).surface->point(.5,.5).z()==0);
+    const auto joined=editBodyFacesPoles(source,{{faces[0],{{3,1,{0,0,.2},1}},{}},{faces[1],{{0,1,{0,0,.2},1}}, {}}});
+    valid(joined);
+    FK_CHECK_THROWS(editBodyFacesPoles(source,{{faces[0],{{3,1,{0,0,.2},1}}, {}}}));
+    FK_CHECK_THROWS(editBodyFacesPoles(source,{{faces[0],{{1,1,{0,0,.2},1}},{}},{faces[0],{{2,2,{0,0,.3},1}}, {}}}));
+    std::vector<SurfaceFacePoleChange> refitted;
+    for (int i=0;i<2;++i) {
+        const auto original=std::dynamic_pointer_cast<const BSplineSurface>(source.face(faces[i]).surface);
+        refitted.push_back({faces[i],{},refitSurfacePoles(*original,6,8).surface});
+    }
+    const auto reduced=editBodyFacesPoles(source,refitted);valid(reduced);
+    FK_CHECK(reduced.face(faces[2]).surface==fixed);
+    for(const auto face:faces) FK_CHECK(!history.origins(EntityKind::Face,face.index).empty());
+}
+
+FK_TEST(SurfacePolesMultipleFacesOfSolid) {
+    auto source=makeBox(Frame3(),10,10,10);
+    FK_CHECK(computePCurves(source)==0);
+    const auto faces=source.faces();
+    for (int k=0;k<2;++k) {
+        const auto face=faces[k];const auto plane=source.face(face).surface;
+        double u0=1e30,u1=-1e30,v0=1e30,v1=-1e30;
+        for(const auto loop:source.face(face).loops) for(const auto fin:source.loopFins(loop)) {
+            const auto &e=source.edge(source.fin(fin).edge);
+            for(const double t:{e.range.lo,e.range.hi}) {
+                const auto q=source.fin(fin).pcurve->point(t);
+                u0=std::min(u0,q.x());u1=std::max(u1,q.x());v0=std::min(v0,q.y());v1=std::max(v1,q.y());
+            }
+        }
+        std::vector<Vec3> points;
+        for(int i=0;i<4;++i)for(int j=0;j<4;++j)points.push_back(plane->point(u0+(u1-u0)*i/3,v0+(v1-v0)*j/3));
+        source.face(face).surface=std::make_shared<BSplineSurface>(3,3,std::vector<double>{u0,u0,u0,u0,u1,u1,u1,u1},
+            std::vector<double>{v0,v0,v0,v0,v1,v1,v1,v1},4,4,points);
+    }
+    valid(source);
+    const auto edited=editBodyFacesPoles(source,{{faces[0],{{1,1,{0,0,.1},1}},{}},{faces[1],{{1,1,{0,0,.1},1}}, {}}});
+    valid(edited);FK_CHECK(!edited.isSheet());FK_CHECK(edited.faces()==faces);
+    for(int k=2;k<6;++k)FK_CHECK(edited.face(faces[k]).surface==source.face(faces[k]).surface);
+}
+
+FK_TEST(SurfacePolesPreserveDeclaredVertexTolerance) {
+    auto source=surface_fixture::patch();
+    const auto edge=source.edges().front();const auto fin=source.edge(edge).forward;
+    const auto range=source.edge(edge).range;
+    const auto uv=source.fin(fin).pcurve;
+    const auto first=uv->point(range.lo),last=uv->point(range.hi);
+    source.fin(fin).pcurve=std::make_shared<BSplineCurve<2>>(1,std::vector<double>{range.lo,range.lo,range.hi,range.hi},
+        std::vector<Vec2>{first+Vec2(2e-7,0),last});
+    const auto vertex=source.edgeStart(edge);
+    source.vertex(vertex).tolerance=3e-6;source.edge(edge).tolerance=2.1e-6;
+    valid(source);
+    const auto edited=editSheetPoles(source,{{1,1,{0,0,.1},1}});
+    valid(edited);
+    FK_CHECK(edited.vertex(vertex).tolerance==source.vertex(vertex).tolerance);
+    FK_CHECK(edited.edge(edge).tolerance==source.edge(edge).tolerance);
+}

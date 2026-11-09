@@ -7,15 +7,25 @@
 namespace ForgeCad {
 SurfacePolesModel::SurfacePolesModel(QObject *parent) : QAbstractTableModel(parent) {}
 int SurfacePolesModel::rowCount(const QModelIndex &parent) const {
-    return !parent.isValid() && surface_ ? surface_->uPoleCount() * surface_->vPoleCount() : 0;
+    if (parent.isValid())
+        return 0;
+    if (!faces_.empty()) {
+        const auto &last = faces_.back();
+        return last.offset + last.model->rowCount();
+    }
+    return surface_ ? surface_->uPoleCount() * surface_->vPoleCount() : 0;
 }
-int SurfacePolesModel::columnCount(const QModelIndex &parent) const { return parent.isValid() ? 0 : 6; }
+int SurfacePolesModel::columnCount(const QModelIndex &parent) const {
+    return parent.isValid() ? 0 : coordinateColumn() + 4;
+}
 std::array<double, 4> SurfacePolesModel::original(int row) const {
     const int u = row / surface_->vPoleCount(), v = row % surface_->vPoleCount();
     const auto point = surface_->pole(u, v);
     return {point.x(), point.y(), point.z(), surface_->weight(u, v)};
 }
 std::array<double, 4> SurfacePolesModel::values(int row) const {
+    if (!faces_.empty())
+        return faces_[faceIndex(row)].model->values(faceRow(row));
     auto result = original(row);
     const auto found = edited_.constFind(row);
     if (found != edited_.cend())
@@ -28,9 +38,15 @@ std::array<double, 4> SurfacePolesModel::values(int row) const {
     return result;
 }
 QVariant SurfacePolesModel::data(const QModelIndex &index, int role) const {
-    if (!index.isValid() || index.row() >= rowCount() || index.column() >= 6 ||
+    if (!index.isValid() || index.row() >= rowCount() || index.column() >= columnCount() ||
         (role != Qt::DisplayRole && role != Qt::EditRole && role != Qt::ToolTipRole))
         return {};
+    if (!faces_.empty()) {
+        const auto &face = faces_[faceIndex(index.row())];
+        if (index.column() == 0)
+            return face.label;
+        return face.model->data(face.model->index(faceRow(index.row()), index.column() - 1), role);
+    }
     if (index.column() < 2)
         return index.column() == 0 ? index.row() / surface_->vPoleCount() + 1
                                    : index.row() % surface_->vPoleCount() + 1;
@@ -39,18 +55,31 @@ QVariant SurfacePolesModel::data(const QModelIndex &index, int role) const {
                                    : found.value()[index.column() - 2];
 }
 QVariant SurfacePolesModel::headerData(int section, Qt::Orientation orientation, int role) const {
+    if (!faces_.empty() && orientation == Qt::Horizontal && role == Qt::DisplayRole) {
+        if (section == 0)
+            return QStringLiteral("Faccia");
+        return faces_.front().model->headerData(section - 1, orientation, role);
+    }
     if (orientation == Qt::Horizontal && role == Qt::DisplayRole && section >= 0 && section < 6)
         return QStringList{"U", "V", "X", "Y", "Z", QStringLiteral("Peso")}[section];
     return QAbstractTableModel::headerData(section, orientation, role);
 }
 Qt::ItemFlags SurfacePolesModel::flags(const QModelIndex &index) const {
     return QAbstractTableModel::flags(index) |
-           (index.isValid() && index.column() >= 2 ? Qt::ItemIsEditable : Qt::NoItemFlags);
+           (index.isValid() && index.column() >= coordinateColumn() ? Qt::ItemIsEditable : Qt::NoItemFlags);
 }
 bool SurfacePolesModel::setData(const QModelIndex &index, const QVariant &value, int role) {
-    if (role != Qt::EditRole || !index.isValid() || index.row() >= rowCount() || index.column() < 2 ||
-        index.column() >= 6)
+    if (role != Qt::EditRole || !index.isValid() || index.row() >= rowCount() || index.column() < coordinateColumn() ||
+        index.column() >= columnCount())
         return false;
+    if (!faces_.empty()) {
+        auto &face = faces_[faceIndex(index.row())];
+        const bool changed =
+            face.model->setData(face.model->index(faceRow(index.row()), index.column() - 1), value, role);
+        if (changed)
+            emit dataChanged(index, index, {Qt::DisplayRole, Qt::EditRole, Qt::ToolTipRole});
+        return changed;
+    }
     auto found = edited_.find(index.row());
     if (found == edited_.end()) {
         std::array<QString, 4> text;
@@ -72,6 +101,7 @@ bool SurfacePolesModel::setData(const QModelIndex &index, const QVariant &value,
 void SurfacePolesModel::setSurface(std::shared_ptr<const Kernel::BSplineSurface> surface,
                                    const QVector<SurfacePoleEdit> &edits) {
     beginResetModel();
+    faces_.clear();
     surface_ = std::move(surface);
     edited_.clear();
     if (surface_)
@@ -93,6 +123,8 @@ void SurfacePolesModel::setSurface(std::shared_ptr<const Kernel::BSplineSurface>
 }
 QString SurfacePolesModel::edits(QVector<SurfacePoleEdit> &result) const {
     result.clear();
+    if (!faces_.empty())
+        return QStringLiteral("Usare le modifiche per faccia.");
     for (auto it = edited_.cbegin(); it != edited_.cend(); ++it) {
         const auto numbers = values(it.key()), source = original(it.key());
         for (int c = 0; c < 4; ++c)
@@ -108,7 +140,9 @@ QString SurfacePolesModel::edits(QVector<SurfacePoleEdit> &result) const {
     }
     return {};
 }
-std::shared_ptr<const Kernel::BSplineSurface> SurfacePolesModel::modifiedSurface() const {
+std::shared_ptr<const Kernel::BSplineSurface> SurfacePolesModel::modifiedSurface(int row) const {
+    if (!faces_.empty())
+        return faces_[faceIndex(row)].model->modifiedSurface();
     if (edited_.isEmpty())
         return surface_;
     std::vector<Kernel::Vec3> points;
@@ -124,21 +158,39 @@ std::shared_ptr<const Kernel::BSplineSurface> SurfacePolesModel::modifiedSurface
         surface_->uDegree(), surface_->vDegree(), surface_->uKnots(), surface_->vKnots(), surface_->uPoleCount(),
         surface_->vPoleCount(), std::move(points), std::move(weights));
 }
-SurfacePolesModel::Cage SurfacePolesModel::cage(const QVector<int> &selected) const {
+SurfacePolesModel::Cage SurfacePolesModel::cage(const QVector<int> &selected, int budget) const {
     Cage result;
+    if (!faces_.empty()) {
+        for (const auto &face : faces_) {
+            QVector<int> local;
+            for (int row : selected)
+                if (row >= face.offset && row < face.offset + face.model->rowCount())
+                    local.append(row - face.offset);
+            const auto child = face.model->cage(local, std::max(4, budget / int(faces_.size())));
+            result.grids.append({int(result.rows.size()), child.u, child.v});
+            for (int row : child.rows)
+                result.rows.append(face.offset + row);
+        }
+        if (!result.grids.isEmpty()) {
+            result.u = result.grids[0][1];
+            result.v = result.grids[0][2];
+        }
+        return result;
+    }
     if (!surface_)
         return result;
     const int nu = surface_->uPoleCount(), nv = surface_->vPoleCount();
     // Limita il solo display, includendo sempre entrambi i bordi del dominio.
-    int step = std::max(1, int(std::ceil(std::sqrt(double(rowCount()) / 4096))));
+    int step = std::max(1, int(std::ceil(std::sqrt(double(rowCount()) / budget))));
     const auto count = [&](int n) { return (n - 1 + step - 1) / step + 1; };
-    while (qint64(count(nu)) * count(nv) > 4096)
+    while (qint64(count(nu)) * count(nv) > budget)
         ++step;
     result.u = count(nu);
     result.v = count(nv);
     for (int i = 0; i < result.u; ++i)
         for (int j = 0; j < result.v; ++j)
             result.rows.append(std::min(i * step, nu - 1) * nv + std::min(j * step, nv - 1));
+    result.grids.append({0, result.u, result.v});
     QSet<int> included(result.rows.cbegin(), result.rows.cend());
     for (int row : selected)
         if (row >= 0 && row < rowCount() && !included.contains(row)) {
@@ -146,5 +198,35 @@ SurfacePolesModel::Cage SurfacePolesModel::cage(const QVector<int> &selected) co
             included.insert(row);
         }
     return result;
+}
+void SurfacePolesModel::setFaces(const QVector<FaceGrid> &grids) {
+    beginResetModel();
+    surface_.reset();
+    edited_.clear();
+    faces_.clear();
+    int offset = 0;
+    for (const auto &grid : grids) {
+        FaceModel face;
+        face.model = std::make_unique<SurfacePolesModel>();
+        face.model->setSurface(grid.surface, grid.edits);
+        face.label = grid.label;
+        face.offset = offset;
+        offset += face.model->rowCount();
+        faces_.push_back(std::move(face));
+    }
+    endResetModel();
+}
+int SurfacePolesModel::faceIndex(int row) const {
+    for (int i = int(faces_.size()) - 1; i >= 0; --i)
+        if (row >= faces_[i].offset)
+            return i;
+    return -1;
+}
+int SurfacePolesModel::faceRow(int row) const { return faces_.empty() ? row : row - faces_[faceIndex(row)].offset; }
+QString SurfacePolesModel::faceEdits(int face, QVector<SurfacePoleEdit> &result) const {
+    return faces_.empty() ? edits(result) : faces_.at(face).model->edits(result);
+}
+std::shared_ptr<const Kernel::BSplineSurface> SurfacePolesModel::surfaceForRow(int row) const {
+    return faces_.empty() ? surface_ : faces_[faceIndex(row)].model->surface_;
 }
 } // namespace ForgeCad

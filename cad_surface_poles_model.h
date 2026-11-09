@@ -19,16 +19,34 @@ class SurfacePolesModel final : public QAbstractTableModel {
     Qt::ItemFlags flags(const QModelIndex &index) const override;
     bool setData(const QModelIndex &index, const QVariant &value, int role = Qt::EditRole) override;
     void setSurface(std::shared_ptr<const Kernel::BSplineSurface> surface, const QVector<SurfacePoleEdit> &edits = {});
+    struct FaceGrid {
+        std::shared_ptr<const Kernel::BSplineSurface> surface;
+        QVector<SurfacePoleEdit> edits;
+        QString label;
+    };
+    void setFaces(const QVector<FaceGrid> &faces);
+    int coordinateColumn() const { return faces_.empty() ? 2 : 3; }
+    int faceIndex(int row) const;
+    int faceRow(int row) const;
+    QString faceEdits(int face, QVector<SurfacePoleEdit> &result) const;
+    std::shared_ptr<const Kernel::BSplineSurface> surfaceForRow(int row) const;
     std::array<double, 4> values(int row) const;
     QString edits(QVector<SurfacePoleEdit> &result) const;
-    std::shared_ptr<const Kernel::BSplineSurface> modifiedSurface() const;
+    std::shared_ptr<const Kernel::BSplineSurface> modifiedSurface(int row = 0) const;
     struct Cage {
         QVector<int> rows;
         int u = 0, v = 0;
+        QVector<std::array<int, 3>> grids; // primo punto, conteggi U/V di ogni gabbia
     };
-    Cage cage(const QVector<int> &selected) const;
+    Cage cage(const QVector<int> &selected, int budget = 4096) const;
 
   private:
+    struct FaceModel {
+        std::unique_ptr<SurfacePolesModel> model;
+        QString label;
+        int offset = 0;
+    };
+    std::vector<FaceModel> faces_;
     std::array<double, 4> original(int row) const;
     std::shared_ptr<const Kernel::BSplineSurface> surface_;
     QMap<int, std::array<QString, 4>> edited_;

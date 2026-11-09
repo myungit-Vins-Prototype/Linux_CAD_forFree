@@ -2,6 +2,7 @@
 #include "forgeCad2026_dialogs_common.h"
 #include "cad_surface_tools.h"
 #include "cad_surface_poles_model.h"
+#include "cad_surface_poles_session.h"
 #include "cad_datum.h"
 #include "cad_feature_dependencies.h"
 #include "cad_topology_ref.h"
@@ -46,7 +47,7 @@ class PoleDrag final : public QObject {
         if (cancel) {
             QSignalBlocker guard(table->model());
             for (int i=0; i<rows.size(); ++i)
-                for (int k=0; k<3; ++k) table->model()->setData(table->model()->index(rows[i],k+2),QLocale().toString(initial[i][k],'g',17));
+                for (int k=0; k<3; ++k) table->model()->setData(table->model()->index(rows[i],k+static_cast<ForgeCad::SurfacePolesModel *>(table->model())->coordinateColumn()),QLocale().toString(initial[i][k],'g',17));
         }
         active=false;
         view->releaseMouse();
@@ -54,7 +55,7 @@ class PoleDrag final : public QObject {
         if (finished) finished();
     }
     bool eventFilter(QObject *object, QEvent *event) override {
-        if (object != view) return false;
+        if (object != view || view->referencePicking()) return false;
         if (active && event->type()==QEvent::KeyPress && static_cast<QKeyEvent *>(event)->key()==Qt::Key_Escape) {
             finish(true); return true;
         }
@@ -82,8 +83,8 @@ class PoleDrag final : public QObject {
                     }
                     if(!selected) table->selectionModel()->select(index,
                         (toggle||add ? QItemSelectionModel::Select : QItemSelectionModel::ClearAndSelect)|QItemSelectionModel::Rows);
-                    table->selectionModel()->setCurrentIndex(table->model()->index(row,2),QItemSelectionModel::NoUpdate);
-                    table->scrollTo(table->model()->index(row,2));
+                    table->selectionModel()->setCurrentIndex(table->model()->index(row,static_cast<ForgeCad::SurfacePolesModel *>(table->model())->coordinateColumn()),QItemSelectionModel::NoUpdate);
+                    table->scrollTo(table->model()->index(row,static_cast<ForgeCad::SurfacePolesModel *>(table->model())->coordinateColumn()));
                 } else if(handle!=3) {
                     if(!toggle&&!add) table->clearSelection();
                     return false;
@@ -97,7 +98,7 @@ class PoleDrag final : public QObject {
             for(const auto &index:table->selectionModel()->selectedRows()) {
                 const int r=index.row(); std::array<double,3> values;
                 for(int k=0;k<3;++k) {
-                    bool valid=false; values[k]=QLocale().toDouble(table->model()->data(table->model()->index(r,k+2),Qt::EditRole).toString(),&valid);
+                    bool valid=false; values[k]=QLocale().toDouble(table->model()->data(table->model()->index(r,k+static_cast<ForgeCad::SurfacePolesModel *>(table->model())->coordinateColumn()),Qt::EditRole).toString(),&valid);
                     if(!valid||!std::isfinite(values[k])) return true;
                 }
                 rows.append(r); initial.append(values);
@@ -115,7 +116,7 @@ class PoleDrag final : public QObject {
             {
                 QSignalBlocker guard(table->model());
                 for(int i=0;i<rows.size();++i)
-                    for(int k=0;k<3;++k) table->model()->setData(table->model()->index(rows[i],k+2),QLocale().toString(initial[i][k]+double(delta[k]),'g',17));
+                    for(int k=0;k<3;++k) table->model()->setData(table->model()->index(rows[i],k+static_cast<ForgeCad::SurfacePolesModel *>(table->model())->coordinateColumn()),QLocale().toString(initial[i][k]+double(delta[k]),'g',17));
             }
             table->viewport()->update();
             if(moved) moved();
@@ -240,12 +241,23 @@ bool surfaceToolDialog(QMainWindow *window, CadViewport *viewport, const QString
     refitControls->setVisible(refitEnabled->isChecked());
     QTimer refitTimer;refitTimer.setSingleShot(true);refitTimer.setInterval(180);
     bool refitPending = false;
-    double refitDeviation = 0, cachedRefitDeviation = 0;
-    BSplineSurfacePtr poleSurface, refitSource, refitSurface;
-    int cachedRefitU=0,cachedRefitV=0;
+    double refitDeviation = 0;
+    QString poleLoadError;
+    SurfacePolesSession poleSession;
+    auto *faceList=new QListWidget(&dialog);
+    faceList->setObjectName("surfacePolesFaces");faceList->setMaximumHeight(112);
+    auto *faceControls=new QWidget(&dialog);auto *faceLayout=new QHBoxLayout(faceControls);faceLayout->setContentsMargins(0,0,0,0);
+    auto *pickFaces=new QPushButton(QStringLiteral("Scegli facce nella vista"),faceControls);
+    pickFaces->setObjectName("surfacePolesPickFaces");
+    auto *allFaces=new QPushButton(QStringLiteral("Tutte"),faceControls),*noFaces=new QPushButton(QStringLiteral("Nessuna"),faceControls);
+    allFaces->setObjectName("surfacePolesAllFaces");noFaces->setObjectName("surfacePolesNoFaces");
+    faceLayout->addWidget(pickFaces,1);faceLayout->addWidget(allFaces);faceLayout->addWidget(noFaces);
+    int listedBody=-1;
+    bool choosingFaces=false;
+    QMap<int,SurfacePoleFace> faceEdits;
+    std::function<void()> loadSource;
     bool poleDragging = false;
     const BSplineSurface *spline = nullptr;
-    int nu = 0, nv = 0;
     bool filling = false;
     QTimer timer;
     timer.setSingleShot(true);
@@ -264,9 +276,10 @@ bool surfaceToolDialog(QMainWindow *window, CadViewport *viewport, const QString
             preview.label->setText(QStringLiteral("in attesa delle selezioni"));
     };
     const auto candidates = operandBodies(viewport, replaced, {definition.firstBody}, [&](const ExtrusionObject &b) {
-        if (!b.forgeBody || !b.forgeBody->isSheet())
-            return false;
-        return mode != 2 || !surfaceBasisHash(b.forgeBody).isEmpty();
+        if (!b.forgeBody) return false;
+        if (mode!=2) return b.forgeBody->isSheet();
+        for (const auto face:b.forgeBody->faces()) if (!surfaceBasisHash(b.forgeBody,face).isEmpty()) return true;
+        return false;
     });
     if (mode != 1) {
         sources = candidates;
@@ -276,7 +289,7 @@ bool surfaceToolDialog(QMainWindow *window, CadViewport *viewport, const QString
             QMessageBox::information(
                 window, title,
                 mode == 2
-                    ? QStringLiteral("Serve una superficie a una faccia NURBS. Per una faccia di un corpo cucito usare prima Copia facce.")
+                    ? QStringLiteral("Serve un corpo con almeno una faccia NURBS.")
                     : QStringLiteral("Serve una superficie aperta da estendere."));
             return false;
         }
@@ -474,6 +487,10 @@ bool surfaceToolDialog(QMainWindow *window, CadViewport *viewport, const QString
                            "Ctrl/Cmd aggiunge o toglie poli, Maiusc aggiunge; la tabella permette selezioni multiple. "
                            "L'anteprima si calcola al rilascio. Esc durante il trascinamento annulla lo spostamento."),
             &dialog));
+        form->addRow(QStringLiteral("Facce NURBS da modificare:"),faceList);
+        form->addRow(faceControls);
+        form->addRow(ForgeCad::Gui::wrappedNote(QStringLiteral("Le griglie selezionate si modificano insieme. U/V valgono per tutte le facce. "
+            "I bordi condivisi devono restare coincidenti: seleziona insieme i poli corrispondenti delle facce adiacenti."),&dialog));
         form->addRow(refitEnabled);
         form->addRow(refitControls);
         form->addRow(QStringLiteral("Orientamento assi:"), poleOrientation);
@@ -486,11 +503,14 @@ bool surfaceToolDialog(QMainWindow *window, CadViewport *viewport, const QString
         QObject::connect(reload, &QPushButton::clicked, &dialog, [&] {
             definition.surfaceTool.basis.clear();
             definition.surfaceTool.edits.clear();
-            base->currentIndexChanged(base->currentIndex());
+            for (auto &entry:definition.surfaceTool.poleFaces) {entry.basis.clear();entry.edits.clear();}
+            // Rigenera esplicitamente i riferimenti dalle facce ancora selezionate.
+            definition.surfaceTool.poleFaces.clear();faceEdits.clear();
+            loadSource();
         });
     }
     const auto updatePoleOverlay = [&](bool recomputeAxes = true) {
-        if(mode!=2 || !spline || poleModel->rowCount()!=nu*nv) return;
+        if(mode!=2 || !spline || !poleModel->rowCount()) return;
         QVector<int> selected;
         for(const auto &index:poles->selectionModel()->selectedRows()) selected.append(index.row());
         if (selected.size() > 4096) {
@@ -508,13 +528,11 @@ bool surfaceToolDialog(QMainWindow *window, CadViewport *viewport, const QString
                 if (!std::isfinite(values[c]) || (c == 3 && values[c] <= 0)) return;
             cage.append(QVector3D(values[0],values[1],values[2]));
         }
-        viewport->setSurfacePoleOverlay(cage,display.u,display.v,displayedRows.indexOf(active));
+        viewport->setSurfacePoleOverlay(cage,display.u,display.v,displayedRows.indexOf(active),display.grids);
         QVector<int> selectedOverlay;
         for (int row : selected) selectedOverlay.append(displayedRows.indexOf(row));
-        poleGridInfo->setText(QStringLiteral("Griglia: %1 × %2 (%3 poli). %4")
-            .arg(nu).arg(nv).arg(poleModel->rowCount()).arg(poleModel->rowCount() > display.u * display.v
-                ? QStringLiteral("Gabbia alleggerita: %1 poli, più i selezionati. Tutti i poli sono accessibili in tabella.").arg(display.u * display.v)
-                : QStringLiteral("Gabbia completa.")));
+        poleGridInfo->setText(QStringLiteral("%1 facce; %2 poli totali. Gabbia: %3 poli visualizzati.\n%4")
+            .arg(faceList->count()==1?1:definition.surfaceTool.poleFaces.size()).arg(poleModel->rowCount()).arg(displayedRows.size()).arg(poleSession.details()));
         if (definition.surfaceTool.refitU > 0)
             poleGridInfo->setText(poleGridInfo->text() + QStringLiteral("\nScostamento campionato iniziale: %1 mm. La verifica campionata non certifica un massimo globale.").arg(refitDeviation,0,'g',6));
         auto axes = std::array<QVector3D,3>{{{1,0,0},{0,1,0},{0,0,1}}};
@@ -528,12 +546,16 @@ bool surfaceToolDialog(QMainWindow *window, CadViewport *viewport, const QString
                 double t=0;for(int k=1;k<=degree;++k)t+=knots[pole+k];return t/degree;
             };
             try {
-                const auto current = poleModel->modifiedSurface();
-                const double u=greville(spline->uKnots(),spline->uDegree(),active/nv),v=greville(spline->vKnots(),spline->vDegree(),active%nv);
+                const auto current = poleModel->modifiedSurface(active);
+                const auto support=poleModel->surfaceForRow(active);
+                const int row=poleModel->faceRow(active),countV=support->vPoleCount();
+                const double u=greville(support->uKnots(),support->uDegree(),row/countV),v=greville(support->vKnots(),support->vDegree(),row%countV);
                 Vec3 d[4];current->evaluate(u,v,1,d);
                 const auto x=normalized(d[Surface::derivativeIndex(1,0,1)]);
                 const auto shape=viewport->extrusions()[definition.firstBody].forgeBody;
-                const double sense=shape->face(shape->faces().front()).sense?1.:-1.;
+                const int index=poleModel->faceIndex(active);
+                const auto face=index<0?shape->faces().front():resolveSurfacePoleFace(*shape,definition.surfaceTool.poleFaces[index].face);
+                const double sense=shape->face(face).sense?1.:-1.;
                 const auto z=sense*normalized(cross(d[Surface::derivativeIndex(1,0,1)],d[Surface::derivativeIndex(0,1,1)]));
                 const auto y=normalized(cross(z,x));
                 for(int k=0;k<3;++k) axes[k]=QVector3D((k==0?x:k==1?y:z).x(),(k==0?x:k==1?y:z).y(),(k==0?x:k==1?y:z).z());
@@ -542,16 +564,22 @@ bool surfaceToolDialog(QMainWindow *window, CadViewport *viewport, const QString
                 singular=true;
             }
         }
-        viewport->setSurfacePoleSelection(selectedOverlay,axes,local,active >= 0
-            ? QStringLiteral("P(%1,%2)").arg(active/nv+1).arg(active%nv+1) : QString());
+        QString label;
+        if (active>=0) {
+            const auto support=poleModel->surfaceForRow(active);const int row=poleModel->faceRow(active);
+            const int face=poleModel->faceIndex(active);
+            label=(face<0?QString():QStringLiteral("F%1 / ").arg(definition.surfaceTool.poleFaces[face].face.subshape))+
+                QStringLiteral("P(%1,%2)").arg(row/support->vPoleCount()+1).arg(row%support->vPoleCount()+1);
+        }
+        viewport->setSurfacePoleSelection(selectedOverlay,axes,local,label);
         poleSelection->setText(QStringLiteral("%1 poli selezionati%2").arg(selected.size()).arg(singular?QStringLiteral(" — normale singolare: assi globali"):local?QStringLiteral(" — assi del polo attivo"):QString()));
     };
-    const auto loadSource = [&] {
+    loadSource = [&] {
         if (mode == 1)
             return;
         filling = true;
         if (mode == 2) {
-            spline = nullptr;
+            spline = nullptr;poleLoadError.clear();
             poleModel->setSurface({});
             displayedRows.clear();
             viewport->setSurfacePoleOverlay({});
@@ -567,41 +595,32 @@ bool surfaceToolDialog(QMainWindow *window, CadViewport *viewport, const QString
             else
                 definition.blendEdges.clear();
         } else {
-            poleSurface = std::dynamic_pointer_cast<const BSplineSurface>(shape->face(shape->faces().front()).surface);
-            refitDeviation = 0;
-            if (definition.surfaceTool.refitU > 0) {
-                try {
-                    if (refitSource != poleSurface || cachedRefitU != definition.surfaceTool.refitU || cachedRefitV != definition.surfaceTool.refitV) {
-                        const auto fitted = refitSurfacePoles(*poleSurface,definition.surfaceTool.refitU,definition.surfaceTool.refitV);
-                        refitSource=poleSurface;refitSurface=fitted.surface;cachedRefitU=definition.surfaceTool.refitU;cachedRefitV=definition.surfaceTool.refitV;
-                        refitDeviation=cachedRefitDeviation=fitted.sampledDeviation;
-                    } else {
-                        // Lo scarto appartiene alla stessa ricostruzione, anche cambiando il limite ammesso.
-                        refitDeviation=cachedRefitDeviation;
+            if (listedBody!=definition.firstBody) {
+                listedBody=definition.firstBody;faceEdits.clear();poleSession.reset();
+                QSignalBlocker guard(faceList);faceList->clear();
+                for (const auto face:shape->faces()) {
+                    if (surfaceBasisHash(shape,face).isEmpty()) continue;
+                    auto *item=new QListWidgetItem(QStringLiteral("F%1").arg(face.index),faceList);
+                    item->setData(Qt::UserRole,face.index);item->setFlags(item->flags()|Qt::ItemIsUserCheckable);
+                    bool selected=definition.surfaceTool.poleFaces.isEmpty();
+                    for (const auto &prior:definition.surfaceTool.poleFaces) {
+                        const auto resolved=resolveSurfacePoleFace(*shape,prior.face);
+                        if (resolved==face) {selected=true;faceEdits.insert(face.index,prior);}
                     }
-                    poleSurface=refitSurface;
-                } catch(const std::exception &error) { filling=false;fail(QString::fromUtf8(error.what()));return; }
+                    item->setCheckState(selected?Qt::Checked:Qt::Unchecked);
+                }
             }
-            spline = poleSurface.get();
-            nu = spline->uPoleCount();
-            nv = spline->vPoleCount();
-            if (nu > 4096 || nv > 4096) {
-                spline = nullptr;
-                filling = false;
-                fail(QStringLiteral("La griglia supera 4096 poli per direzione: scegliere una patch piu' piccola."));
-                return;
+            QVector<FaceId> selected;
+            for (int i=0;i<faceList->count();++i) if (faceList->item(i)->checkState()==Qt::Checked)
+                selected.append(FaceId(faceList->item(i)->data(Qt::UserRole).toInt()));
+            const auto error=poleSession.load(shape,selected,definition.surfaceTool,*poleModel);
+            if (!error.isEmpty()) {filling=false;poleLoadError=error;fail(error);return;}
+            refitDeviation=poleSession.deviation();
+            const auto support=poleModel->surfaceForRow(0);spline=support.get();
+            for (int c=0;c<poleModel->columnCount();++c) {
+                poles->horizontalHeader()->setSectionResizeMode(c,c>=poleModel->coordinateColumn()&&c<poleModel->coordinateColumn()+3?QHeaderView::Stretch:QHeaderView::Fixed);
+                poles->setColumnWidth(c,c<poleModel->coordinateColumn()?56:72);
             }
-            const bool same = definition.surfaceTool.basis == surfaceBasisHash(shape);
-            if (!same && !definition.surfaceTool.basis.isEmpty()) {
-                spline = nullptr;
-                filling = false;
-                fail(QStringLiteral("La griglia a monte e cambiata: ricaricare la griglia e riselezionare i poli."));
-                return;
-            }
-            if (!same)
-                definition.surfaceTool.edits.clear();
-            definition.surfaceTool.basis = surfaceBasisHash(shape);
-            poleModel->setSurface(poleSurface,definition.surfaceTool.edits);
         }
         filling = false;
         schedule();
@@ -662,13 +681,13 @@ bool surfaceToolDialog(QMainWindow *window, CadViewport *viewport, const QString
                 return;
             }
         } else {
-            if (!spline || poleModel->rowCount() != nu * nv) {
-                fail(QStringLiteral("Griglia NURBS non disponibile."));
+            if (!spline || !poleModel->rowCount()) {
+                fail(poleLoadError.isEmpty()?QStringLiteral("Griglia NURBS non disponibile."):poleLoadError);
                 return;
             }
             if (refitPending) { fail(QStringLiteral("Aggiornamento della griglia in attesa del nuovo numero di poli…"));return; }
             definition.surfaceTool.refitTolerance=refitTolerance->value();
-            const auto error = poleModel->edits(definition.surfaceTool.edits);
+            const auto error = poleSession.store(*poleModel,definition.surfaceTool);
             if (!error.isEmpty()) {
                 fail(error);
                 return;
@@ -678,7 +697,8 @@ bool surfaceToolDialog(QMainWindow *window, CadViewport *viewport, const QString
                 fail(QStringLiteral("Scostamento campionato %1 mm oltre %2 mm: aumenta i poli U/V o modifica lo scostamento ammesso.")
                     .arg(refitDeviation,0,'g',6).arg(definition.surfaceTool.refitTolerance,0,'g',6));return;
             }
-            if (definition.surfaceTool.edits.isEmpty() && definition.surfaceTool.refitU == 0) {
+            if (definition.surfaceTool.edits.isEmpty() && definition.surfaceTool.refitU == 0 &&
+                std::none_of(definition.surfaceTool.poleFaces.cbegin(),definition.surfaceTool.poleFaces.cend(),[](const SurfacePoleFace &f){return !f.edits.isEmpty();})) {
                 fail(QStringLiteral("Sposta un polo o modifica un peso."));
                 return;
             }
@@ -690,7 +710,8 @@ bool surfaceToolDialog(QMainWindow *window, CadViewport *viewport, const QString
         refitTimer.stop();timer.stop();refitPending=false;
         definition.surfaceTool.refitU=refitEnabled->isChecked()?refitCounts[0]->value():0;
         definition.surfaceTool.refitV=refitEnabled->isChecked()?refitCounts[1]->value():0;
-        definition.surfaceTool.edits.clear();
+        definition.surfaceTool.edits.clear();faceEdits.clear();
+        for(auto &face:definition.surfaceTool.poleFaces) face.edits.clear();
         loadSource();refresh();
     };
     QObject::connect(refitEnabled,&QCheckBox::toggled,&dialog,[&](bool enabled){refitControls->setVisible(enabled);applyRefit();});
@@ -717,9 +738,61 @@ bool surfaceToolDialog(QMainWindow *window, CadViewport *viewport, const QString
     QObject::connect(poles->selectionModel(), &QItemSelectionModel::selectionChanged, &dialog, [&] { if(!filling) updatePoleOverlay(!poleDragging); });
     QObject::connect(poles->selectionModel(), &QItemSelectionModel::currentChanged, &dialog, [&] { if(!filling) updatePoleOverlay(!poleDragging); });
     QObject::connect(poleOrientation, qOverload<int>(&QComboBox::currentIndexChanged), &dialog, [&] { if(!poleDragging) updatePoleOverlay(); });
+    const auto changeFaces=[&] {
+        if(filling || mode!=2) return;
+        if(poleDragging) {fail(QStringLiteral("Terminare prima il trascinamento dei poli."));return;}
+        const auto error=poleSession.store(*poleModel,definition.surfaceTool);
+        if(!error.isEmpty()) {
+            QSignalBlocker guard(faceList);
+            for(int i=0;i<faceList->count();++i) {
+                const int id=faceList->item(i)->data(Qt::UserRole).toInt();
+                const bool checked=std::any_of(definition.surfaceTool.poleFaces.cbegin(),definition.surfaceTool.poleFaces.cend(),[&](const SurfacePoleFace &f){return f.face.subshape==id;});
+                faceList->item(i)->setCheckState(checked?Qt::Checked:Qt::Unchecked);
+            }
+            fail(error);return;
+        }
+        for(const auto &face:definition.surfaceTool.poleFaces) faceEdits.insert(face.face.subshape,face);
+        QVector<SurfacePoleFace> selected;
+        for(int i=0;i<faceList->count();++i) if(faceList->item(i)->checkState()==Qt::Checked) {
+            const int id=faceList->item(i)->data(Qt::UserRole).toInt();
+            if(faceEdits.contains(id)) selected.append(faceEdits[id]);
+        }
+        definition.surfaceTool.poleFaces=selected;
+        timer.stop();loadSource();refresh();
+    };
+    QObject::connect(faceList,&QListWidget::itemChanged,&dialog,[&]{changeFaces();});
+    const auto checkAll=[&](Qt::CheckState state) {
+        {QSignalBlocker guard(faceList);for(int i=0;i<faceList->count();++i)faceList->item(i)->setCheckState(state);}
+        changeFaces();
+    };
+    QObject::connect(allFaces,&QPushButton::clicked,&dialog,[&]{checkAll(Qt::Checked);});
+    QObject::connect(noFaces,&QPushButton::clicked,&dialog,[&]{checkAll(Qt::Unchecked);});
+    std::function<void()> beginFacePick;
+    beginFacePick=[&] {
+        choosingFaces=true;viewport->setPickBodies({definition.firstBody});
+        const auto error=viewport->beginReferencePick(DatumRoleFace,owner);
+        pickFaces->setText(QStringLiteral("Termina selezione facce"));
+        if(!error.isEmpty()){choosingFaces=false;fail(error);}
+    };
+    QObject::connect(pickFaces,&QPushButton::clicked,&dialog,[&] {
+        if(choosingFaces) {choosingFaces=false;viewport->cancelReferencePick();viewport->setPickBodies({});pickFaces->setText(QStringLiteral("Scegli facce nella vista"));refresh();}
+        else beginFacePick();
+    });
+    if(mode==2) viewport->setReferencePickCallback([&](bool accepted,GeometryRef ref) {
+        viewport->cancelReferencePick();
+        if(!accepted){choosingFaces=false;viewport->setPickBodies({});pickFaces->setText(QStringLiteral("Scegli facce nella vista"));refresh();return;}
+        const int body=resultBodyForPick(viewport,{definition.firstBody},ref.index);
+        const auto shape=viewport->extrusions()[definition.firstBody].forgeBody;
+        const auto face=ref.kind==5&&body==definition.firstBody?resolveSurfacePoleFace(*shape,ref.point):FaceId{};
+        if(face.valid()) for(int i=0;i<faceList->count();++i) if(faceList->item(i)->data(Qt::UserRole).toInt()==face.index)
+            faceList->item(i)->setCheckState(faceList->item(i)->checkState()==Qt::Checked?Qt::Unchecked:Qt::Checked);
+        beginFacePick();
+        if(!face.valid() || surfaceBasisHash(shape,face).isEmpty()) status->setText(QStringLiteral("Scegli una faccia NURBS del corpo corrente."));
+    });
     QObject::connect(base, qOverload<int>(&QComboBox::currentIndexChanged), &dialog, [&] {
+        viewport->cancelReferencePick();viewport->setPickBodies({});choosingFaces=false;pickFaces->setText(QStringLiteral("Scegli facce nella vista"));
         definition.surfaceTool.basis.clear();
-        definition.surfaceTool.edits.clear();
+        definition.surfaceTool.edits.clear();definition.surfaceTool.poleFaces.clear();faceEdits.clear();
         loadSource();
     });
     QObject::connect(targets, qOverload<int>(&QComboBox::currentIndexChanged), &dialog, [&] {
@@ -759,6 +832,7 @@ bool surfaceToolDialog(QMainWindow *window, CadViewport *viewport, const QString
         columnList->hide();
     }
     if (mode != 2) {
+        faceList->hide();faceControls->hide();
         refitEnabled->hide();refitControls->hide();
         poles->hide();
         poleOrientation->hide();
@@ -773,8 +847,8 @@ bool surfaceToolDialog(QMainWindow *window, CadViewport *viewport, const QString
         beginExtensionPick(1);
     const bool accepted = runUntilAppliedModeless(window, viewport, dialog, form, buttons, [&] {
         timer.stop();
-        if (mode == 0) {
-            extensionPick = 0;
+        if (mode == 0 || mode==2) {
+            extensionPick = 0;choosingFaces=false;
             viewport->cancelReferencePick();
             viewport->setPickBodies({});
         }
@@ -788,7 +862,7 @@ bool surfaceToolDialog(QMainWindow *window, CadViewport *viewport, const QString
         picker.stop();
     viewport->cancelReferencePick();
     viewport->setReferencePickCallback({});
-    if (mode == 0)
+    if (mode == 0 || mode==2)
         viewport->setPickBodies({});
     viewport->setReferenceMarks({});
     viewport->setSurfacePoleOverlay({});

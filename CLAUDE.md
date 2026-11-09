@@ -103,12 +103,15 @@ ctest --test-dir forgecad-release --output-on-failure
 
 ## Ultimi interventi — esiti consolidati
 
-**09/11 — Poli Hook.** Corpo7/Copia facce16:193×1483=286219 poli; risolto il limite totale4096.
-Tabella virtuale; spinner U/V4–64 automatici, bicubica e scarto campionato persistiti(schema10).
-Hook8×48=384poli/scarto0,0848055mm:App/6CTest/Wayland/Undo/codec/riapertura PASS; originale invariato.
-Fixture senza cache PASS; scarto e auto-intersezioni senza certificazione globale.
-Mappa658/9411/check/4HTML PASS. [Prove](docs/poli-nurbs-griglia-2026-11-09.md).
-
+**09/11 — Poli Hook.** Checkpoint griglia/spinner `ddf856a` pubblicato su origin/main.
+Multifaccia implementata: lista/picking, gabbie simultanee e gruppo tra facce, U/V comuni,
+scarto per faccia, codec11 compatibile; facce escluse e connessioni conservate.
+Hook/Cucitura8:2facce/572438poli virtuali/3680display; corpo7:8×48/scarto0,0848055mm.
+App/7CTest/Wayland/Undo/codec/riapertura PASS; fixture senza cache e vertici tolleranti PASS.
+Riferimenti espliciti senza prossimita'; budget locali originali rispettati. Originale invariato.
+Giunti incompatibili rifiutati; controlli campionati, nessuna certificazione globale/G1/G2.
+Mappa662/9482/324TU/0diag/check/4HTML PASS; riaprire app. Pubblicazione multifaccia in corso.
+[Griglia](docs/poli-nurbs-griglia-2026-11-09.md), [multifaccia](docs/poli-nurbs-multifaccia-2026-11-09.md).
 
 **08/11 — Bottle e Shower Head.** Pool esatto:690duplicati,poli/pesi1042→135MiB;
 Bottle RSS9,95→2,75GiB (-72%),30 B-rep byte-identici. Anche ultimo salvataggio:
@@ -162,23 +165,4 @@ App/5CTest/130kernel/Wayland/Undo/codec/mappa598-8332/check/3HTML PASS.
 App/17CTest/42Loft/11Mass/Wayland PASS; mappa596/8294/check/7HTML PASS.
 [Dettagli](docs/loft-punti-piani-2026-11-05.md).
 
-**05/11 — UI/checkpoint/mappature.** `e1bde03` su origin/main,13CTest PASS.
-ISO M1–M68, ribbon, loft440px, schizzi vuoti: app/GUI PASS.
-[UI](docs/ui-ribbon-loft-filettature-2026-11-05.md).
-Mappature:4pattern,Taglio12:F2–F5,multifaccia/posa rigida155, app/18CTest PASS.
-`7894f64` nel checkpoint. [Prove](docs/riempimento-sviluppo-adattamento-2026-11-05.md).
-**06/11 — Superfici/storia.** `3188714`/`bbd2533`/`a6248ea` pubblicati.
-Ripetizione117copie,Unione168:1188facce/1solido/155s; [superfici](docs/confronto-flatten-quilt-creo-2026-11-06.md),
-[unione](docs/knifehandle-unione-rilievi-2026-11-06.md). Storia incrementale1–5ms/29CTest/Wayland/B-rep invariati:
-[rapporto](docs/rigenerazione-incrementale-2026-11-06.md). HoneyRepeat:13solidi/circolare2–12istanze/262–2767ms;
-[taglio](docs/honeyrepeat-taglio-tra-superfici-2026-11-06.md),[booleane](docs/booleane-selezione-rettangolo-2026-11-06.md).
-`e761f43`:467kernel/37CTest/CI PASS; [CI](docs/ci-raccordi-2026-11-06.md).
-Surface219:91facce cucite/0bordi liberi/29,7s; app/11CTest/5kernel/Wayland/Undo/codec/mappa PASS,
-ricalcolo integrale non verificato. [Cucitura](docs/surface219-cucitura-2026-11-06.md).
-Cache lettura<=RAM/8 e4GiB configurabile; apertura28,361s/tavola1,261s/0errori,app/18CTest/Wayland PASS.
-Loft36:derivate locali264→7,8s; storia senza cache137s/0errori,Svuota69s;app/20CTest/kernel/mappa PASS.
-[Ricalcolo](docs/surface219-ricalcolo-2026-11-06.md),[apertura](docs/surface219-tavola-apertura-2026-11-06.md).
-CT0578:fix UV36feature/0errori,17CTest/468kernel/Wayland/mappa PASS;CI42266591981 Linux75/2SKIP,macOS79/1SKIP.
-[Prove](docs/ct0578-regressione-filetto-2026-11-06.md); dettagli precedenti nell'archivio Bottle08/11.
-
-Storico precedente e dettagli: [archivio](docs/history/claude-prima-poli-nurbs-2026-11-09.md).
+Interventi precedenti: [archivio](docs/history/claude-prima-poli-nurbs-2026-11-09.md).

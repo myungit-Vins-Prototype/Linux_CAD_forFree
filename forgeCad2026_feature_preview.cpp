@@ -126,6 +126,11 @@ QString FeaturePreviewBuilder::previewKey(const ExtrusionObject &d, int index) {
               << QString::number(mapping.mappingCopy) << QString::number(mapping.mappingRigid) << QString::number(mapping.mappingQuilt) << QString::number(mapping.trimReverseFirst) << QString::number(mapping.trimReverseSecond);
         for(const auto &source:mapping.sources) { parts << QStringLiteral("STS"); ref(source);parts << source.point.name; }
         for(const auto &target:mapping.targets) { parts << QStringLiteral("STT"); ref(target);parts << target.point.name; }
+        for(const auto &face:mapping.poleFaces) {
+            GeometryRef selected;selected.kind=5;selected.index=d.firstBody;selected.point=face.face;
+            parts << QStringLiteral("STF");ref(selected);parts << face.face.name << QString::fromLatin1(face.basis.toHex());
+            for(const auto &edit:face.edits) parts << QString::number(edit.u) << QString::number(edit.v) << n(edit.dx) << n(edit.dy) << n(edit.dz) << n(edit.weightFactor);
+        }
         for(const auto &edit:d.surfaceTool.edits)parts << QString::number(edit.u) << QString::number(edit.v) << n(edit.dx) << n(edit.dy) << n(edit.dz) << n(edit.weightFactor);
     }
     for (double value : d.fillFaceInfluences) parts << QStringLiteral("FI") << n(value);

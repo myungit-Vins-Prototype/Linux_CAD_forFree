@@ -1,5 +1,7 @@
 # Griglia e controlli dei poli NURBS — 9 novembre 2026
 
+Rapporto della verifica iniziale, pubblicata successivamente con `ddf856a`. Per l’estensione e le verifiche multifaccia vedere il [rapporto successivo](poli-nurbs-multifaccia-2026-11-09.md).
+
 ## Richiesta e riproduzione
 
 Ripristinare la griglia di **Modifica poli NURBS**; usare `Hook.prt`, **Corpo 7**, come esempio. Precisazione successiva: scegliere il numero di poli con spinner e vedere lo scostamento dovuto alla griglia più o meno fine.
