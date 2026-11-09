@@ -69,3 +69,5 @@ esatta di righe e pesi restano protetti nella fascia del trim: quei poli non son
 il vincolo è attivo. Controlli geometrici campionati, nessuna certificazione globale di auto-intersezione.
 Il refit comune su tutte le184facce può risultare incompatibile sui giunti protetti; il limite resta
 vincolante e la griglia originale è utilizzabile senza approssimazione.
+
+Correzione pubblicata su `origin/main`: `a0c9915`. App e runner compilati sulla versione funzionale finale; riaprire ForgeCAD.

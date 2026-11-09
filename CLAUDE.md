@@ -116,7 +116,7 @@ Vincoli sui supporti locali dei trim, non sull'intera faccia; stato neutro tolle
 Kernel36/36 PASS; Corpo2:184facce convertite, F3 polo96/741 spostato0,1mm con G0/G1,
 B-rep0errori, apertura6,34e-8mm e angolo3,50e-6rad. App/runner completi,14CTest e Wayland PASS:
 184gabbie/2,324Mrighe, G0/G1, mouse/rilascio/anteprima, Undo/Redo, codec e rigenerazione ultima funzione.
-Originale invariato. Mappa672/9702/329TU/check/6HTML PASS; riaprire l’app. Correzione verificata, pronta per commit/push.
+Originale invariato. Mappa672/9702/329TU/check/6HTML PASS; riaprire l’app. Correzione `a0c9915` pubblicata su origin/main.
 [Prove e limiti](docs/poli-nurbs-Hook-corpo2-2026-11-09.md). Controlli campionati, nessuna certificazione globale/G2.
 
 **08/11 — Bottle e Shower Head.** Pool esatto:690duplicati,poli/pesi1042→135MiB;
