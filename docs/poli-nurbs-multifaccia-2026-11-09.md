@@ -1,7 +1,7 @@
 # Poli NURBS su più facce — 9 novembre 2026
 
 Richiesta: pubblicare il lavoro già verificato e poi estendere Modifica poli NURBS alle facce multiple.
-Il checkpoint iniziale `ddf856a` è stato pubblicato su `origin/main`; le modifiche preesistenti a STL/OBJ e memoria sono state mantenute separate.
+Pubblicati su `origin/main`: checkpoint iniziale `ddf856a`, estensione multifaccia `b6c10df`. Le modifiche preesistenti a STL/OBJ e memoria sono state mantenute separate.
 
 ## Comportamento implementato
 

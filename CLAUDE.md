@@ -110,7 +110,7 @@ Hook/Cucitura8:2facce/572438poli virtuali/3680display; corpo7:8×48/scarto0,0848
 App/7CTest/Wayland/Undo/codec/riapertura PASS; fixture senza cache e vertici tolleranti PASS.
 Riferimenti espliciti senza prossimita'; budget locali originali rispettati. Originale invariato.
 Giunti incompatibili rifiutati; controlli campionati, nessuna certificazione globale/G1/G2.
-Mappa662/9482/324TU/0diag/check/4HTML PASS; riaprire app. Pubblicazione multifaccia in corso.
+Mappa662/9482/324TU/0diag/check/4HTML PASS; riaprire app. Multifaccia `b6c10df` pubblicata su origin/main.
 [Griglia](docs/poli-nurbs-griglia-2026-11-09.md), [multifaccia](docs/poli-nurbs-multifaccia-2026-11-09.md).
 
 **08/11 — Bottle e Shower Head.** Pool esatto:690duplicati,poli/pesi1042→135MiB;
