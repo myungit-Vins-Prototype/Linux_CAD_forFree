@@ -113,7 +113,7 @@ Giunti incompatibili rifiutati; controlli campionati, nessuna certificazione glo
 Mappa662/9482/324TU/0diag/check/4HTML PASS; riaprire app. Multifaccia `b6c10df` pubblicata su origin/main.
 Mouse/riquadro: rilascio fuori vista/perdita cattura/reset griglia recuperati, anteprima riattivata.
 Riquadro sui poli visualizzati, Ctrl/Maiusc/Esc, anche multifaccia. App/7CTest/Hook7/Wayland PASS;
-mappa664/9496/325TU/0diag/check/4HTML PASS; riquadro Hook ispezionato. Nuovo checkpoint da pubblicare.
+mappa664/9496/325TU/0diag/check/4HTML PASS; riquadro Hook ispezionato. Mouse/riquadro `9f455a9` pubblicati su origin/main.
 [Griglia](docs/poli-nurbs-griglia-2026-11-09.md), [multifaccia](docs/poli-nurbs-multifaccia-2026-11-09.md).
 
 **08/11 — Bottle e Shower Head.** Pool esatto:690duplicati,poli/pesi1042→135MiB;
