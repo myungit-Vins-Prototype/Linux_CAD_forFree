@@ -48,7 +48,8 @@ inline bool sameStoredCurve(const Curve<3> &a, const Curve<3> &b) {
 inline bool sameStoredSpline(const BSplineSurface &a, const BSplineSurface &b) {
     if (a.uDegree() != b.uDegree() || a.vDegree() != b.vDegree()
         || a.uPoleCount() != b.uPoleCount() || a.vPoleCount() != b.vPoleCount()
-        || a.uKnots() != b.uKnots() || a.vKnots() != b.vKnots()) return false;
+        || a.uKnots() != b.uKnots() || a.vKnots() != b.vKnots()
+        || a.isUPeriodic() != b.isUPeriodic() || a.isVPeriodic() != b.isVPeriodic()) return false;
     for (int i = 0; i < a.uPoleCount(); ++i)
         for (int j = 0; j < a.vPoleCount(); ++j) {
             if (a.weight(i, j) != b.weight(i, j)) return false;

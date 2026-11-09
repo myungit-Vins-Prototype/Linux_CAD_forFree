@@ -172,7 +172,8 @@ SurfaceRefitResult refitSurfacePoles(const BSplineSurface &source, int uCount, i
     for (auto &t : kv)
         t = t == 0 ? v.lo : t == 1 ? v.hi : v.lo + v.length() * t;
     auto surface =
-        std::make_shared<const BSplineSurface>(3, 3, std::move(ku), std::move(kv), uCount, vCount, std::move(points));
+        std::make_shared<const BSplineSurface>(3, 3, std::move(ku), std::move(kv), uCount, vCount, std::move(points),
+                                              std::vector<double>{}, source.isUPeriodic(), source.isVPeriodic());
     return {surface,sampledSurfacePoleDeviation(source,*surface)};
 }
 double sampledSurfacePoleDeviation(const BSplineSurface &source,const BSplineSurface &surface) {

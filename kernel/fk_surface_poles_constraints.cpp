@@ -1,5 +1,10 @@
 #include "fk_surface_poles_constraints.h"
 #include "fk_cancel.h"
+#include "fk_curve_algo.h"
+#include "fk_curve_ops.h"
+#include "fk_intersect.h"
+#include "fk_nurbs.h"
+#include <functional>
 #include "fk_pcurve.h"
 #include "fk_surface_refit.h"
 #include <algorithm>
@@ -136,6 +141,7 @@ struct SurfacePoleConstraints::Data {
     std::map<Pole, int> indices;
     std::vector<Pole> poles;
     std::vector<Row> equations;
+    std::set<Pole> protectedPoles;
     SurfacePoleContinuityReport info;
     double residualTolerance = 1e-8, refitDeviation = 0;
     Vec3 point(Pole p) const { return surfaces.at(p.face)->pole(p.u, p.v); }
@@ -151,10 +157,16 @@ struct SurfacePoleConstraints::Data {
     }
     void row(std::initializer_list<std::pair<Pole, double>> terms, bool relative = false) {
         Row equation;
+        // Senza refit i vincoli agiscono sugli spostamenti: il corpo neutro
+        // conserva le connessioni tolleranti gia' dichiarate dal B-rep.
+        // Non si tenta di guarirle spostando poli protetti prima del gesto.
+        const bool refitted = std::any_of(terms.begin(), terms.end(), [&](const auto &term) {
+            return replacements.count(term.first.face) != 0;
+        });
         std::map<int, double> coefficients;
         for (const auto &term : terms) {
             coefficients[index(term.first)] += term.second;
-            if (!relative)
+            if (!relative && refitted)
                 equation.rhs -= point(term.first) * term.second;
         }
         double scale = 0;
@@ -169,16 +181,63 @@ struct SurfacePoleConstraints::Data {
         equation.rhs /= scale;
         equations.push_back(std::move(equation));
     }
-    void protect(int face, Side side, bool tangent) {
+    void protect(int face, Side side, bool tangent, const CurvePtr<2> &trim, Interval range) {
         const auto &s = *surfaces.at(face);
-        // Rifilature non isoparametriche: si protegge il supporto intero.
-        // Non si attribuisce una corrispondenza artificiale ai poli vicini.
-        for (int u = 0; u < s.uPoleCount(); ++u)
-            for (int v = 0; v < s.vPoleCount(); ++v)
-                if (side.axis < 0 ||
-                    (side.axis == 0 ? (side.high ? u >= s.uPoleCount() - (tangent ? 2 : 1) : u < (tangent ? 2 : 1))
-                                    : (side.high ? v >= s.vPoleCount() - (tangent ? 2 : 1) : v < (tangent ? 2 : 1))))
-                    row({{{face, u, v}, 1}}, true);
+        const auto freeze = [&](int u, int v) {
+            const Pole p{face, u, v};
+            if (protectedPoles.insert(p).second) row({{p, 1}}, true);
+        };
+        if (side.axis >= 0) {
+            for (int i = 0; i < side.count(s); ++i)
+                for (int layer = 0; layer < (tangent ? 2 : 1); ++layer) {
+                    const auto p = side.pole(face, s, i, layer);
+                    freeze(p.u, p.v);
+                }
+            return;
+        }
+        // Una base B-spline ha supporto locale [k_i,k_{i+p+1}]. Fissare
+        // solo le basi che toccano il trim conserva esattamente bordo e
+        // derivate, lasciando liberi i poli interni anche sulle griglie grandi.
+        const auto intervals = [](Interval box, Interval domain, bool periodic) {
+            if (!periodic) return std::vector<Interval>{box};
+            if (box.length() >= domain.length()) return std::vector<Interval>{domain};
+            const double shift = std::floor((box.lo - domain.lo) / domain.length()) * domain.length();
+            box.lo -= shift; box.hi -= shift;
+            if (box.hi <= domain.hi) return std::vector<Interval>{box};
+            return std::vector<Interval>{{box.lo, domain.hi}, {domain.lo, box.hi - domain.length()}};
+        };
+        const auto indices = [](const std::vector<double> &knots, int degree, int count, Interval box) {
+            const double epsilon = 1e-12 * std::max({1., std::abs(box.lo), std::abs(box.hi)});
+            const int first = std::max(0, int(std::lower_bound(knots.begin(), knots.end(), box.lo - epsilon) - knots.begin()) - degree - 1);
+            const int end = std::min(count, int(std::upper_bound(knots.begin(), knots.end(), box.hi + epsilon) - knots.begin()));
+            return std::pair<int, int>{first, end};
+        };
+        const auto curve = embedCurve(trim, Frame3());
+        std::function<void(const BSplineCurve<3> &, int)> protectPiece;
+        protectPiece = [&](const BSplineCurve<3> &piece, int depth) {
+            cancellationPoint();
+            Box box;
+            for (const auto &p : piece.poles()) box.add(p);
+            std::vector<std::pair<std::pair<int, int>, std::pair<int, int>>> blocks;
+            std::size_t count = 0;
+            for (auto u : intervals({box.lo.x(), box.hi.x()}, s.uDomain(), s.isUPeriodic()))
+                for (auto v : intervals({box.lo.y(), box.hi.y()}, s.vDomain(), s.isVPeriodic())) {
+                    const auto us = indices(s.uKnots(), s.uDegree(), s.uPoleCount(), u);
+                    const auto vs = indices(s.vKnots(), s.vDegree(), s.vPoleCount(), v);
+                    count += std::size_t(std::max(0, us.second - us.first)) * std::max(0, vs.second - vs.first);
+                    blocks.push_back({us, vs});
+                }
+            if (count > 128 && depth < 12) {
+                const auto d = piece.domain();
+                const auto halves = piece.insertKnot((d.lo + d.hi) * .5, piece.degree()).bezierSegments();
+                for (const auto &half : halves) protectPiece(half, depth + 1);
+                return;
+            }
+            for (const auto &block : blocks)
+                for (int i = block.first.first; i < block.first.second; ++i)
+                    for (int j = block.second.first; j < block.second.second; ++j) freeze(i, j);
+        };
+        for (const auto &piece : rationalBezierPieces(*curve, range)) protectPiece(piece, 0);
     }
 };
 namespace {
@@ -275,9 +334,9 @@ SurfacePoleConstraints::SurfacePoleConstraints(const Body &body, const std::vect
             ++data->info.protectedJoints;
             protectRefit(mode == 2 && smooth);
             if (fa != data->surfaces.end())
-                data->protect(a.index, sa, mode == 2 && smooth);
+                data->protect(a.index, sa, mode == 2 && smooth, ca, edge.range);
             if (fb != data->surfaces.end())
-                data->protect(b.index, sb, mode == 2 && smooth);
+                data->protect(b.index, sb, mode == 2 && smooth, cb, edge.range);
             continue;
         }
         const auto &as = *fa->second, &bs = *fb->second;
@@ -286,8 +345,8 @@ SurfacePoleConstraints::SurfacePoleConstraints(const Body &body, const std::vect
         if (tangent && (!original.strong || ka <= 0 || kb <= 0)) {
             ++data->info.protectedJoints;
             protectRefit(true);
-            data->protect(a.index, sa, true);
-            data->protect(b.index, sb, true);
+            data->protect(a.index, sa, true, ca, edge.range);
+            data->protect(b.index, sb, true, cb, edge.range);
             continue;
         }
         for (int i = 0; i < sa.count(as); ++i) {
@@ -351,7 +410,7 @@ SurfacePoleConstraints::SurfacePoleConstraints(const Body &body, const std::vect
                 weights[edit.u * s.vPoleCount() + edit.v] *= edit.weightFactor;
             }
             BSplineSurface neutral(s.uDegree(), s.vDegree(), s.uKnots(), s.vKnots(), s.uPoleCount(), s.vPoleCount(),
-                                   std::move(points), std::move(weights));
+                                   std::move(points), std::move(weights), s.isUPeriodic(), s.isVPeriodic());
             const auto original = std::dynamic_pointer_cast<const BSplineSurface>(body.face(face.face).surface);
             data->refitDeviation = std::max(data->refitDeviation, sampledSurfacePoleDeviation(*original, neutral));
         }

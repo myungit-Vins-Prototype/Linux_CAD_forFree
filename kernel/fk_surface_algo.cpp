@@ -950,6 +950,7 @@ bool sameSurfaceParameterization(const Surface &a, const Surface &b) {
         const auto &x=static_cast<const BSplineSurface &>(a), &y=static_cast<const BSplineSurface &>(b);
         if (x.uDegree()!=y.uDegree() || x.vDegree()!=y.vDegree() || x.uPoleCount()!=y.uPoleCount()
             || x.vPoleCount()!=y.vPoleCount() || x.isRational()!=y.isRational()
+            || x.isUPeriodic()!=y.isUPeriodic() || x.isVPeriodic()!=y.isVPeriodic()
             || !sameParameterValues(x.uKnots(),y.uKnots()) || !sameParameterValues(x.vKnots(),y.vKnots())) return false;
         for (int i=0;i<x.uPoleCount();++i) for (int j=0;j<x.vPoleCount();++j) {
             cancellationPoint();

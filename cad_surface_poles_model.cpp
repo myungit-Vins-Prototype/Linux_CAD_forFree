@@ -166,7 +166,7 @@ std::shared_ptr<const Kernel::BSplineSurface> SurfacePolesModel::modifiedSurface
     }
     return std::make_shared<const Kernel::BSplineSurface>(
         surface_->uDegree(), surface_->vDegree(), surface_->uKnots(), surface_->vKnots(), surface_->uPoleCount(),
-        surface_->vPoleCount(), std::move(points), std::move(weights));
+        surface_->vPoleCount(), std::move(points), std::move(weights), surface_->isUPeriodic(), surface_->isVPeriodic());
 }
 SurfacePolesModel::Cage SurfacePolesModel::cage(const QVector<int> &selected, int budget) const {
     Cage result;

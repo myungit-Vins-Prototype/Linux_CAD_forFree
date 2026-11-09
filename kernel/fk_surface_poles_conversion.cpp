@@ -6,6 +6,7 @@
 #include "fk_intersect.h"
 #include "fk_nurbs.h"
 #include "fk_pcurve.h"
+#include "fk_surface_algo.h"
 #include <algorithm>
 #include <set>
 #include <stdexcept>
@@ -34,7 +35,7 @@ BSplineSurface enrichLinear(BSplineSurface s, bool u) {
     const std::vector<double> knots{domain.lo, domain.lo, domain.lo, domain.lo,
                                     domain.hi, domain.hi, domain.hi, domain.hi};
     return BSplineSurface(u ? 3 : s.uDegree(), u ? s.vDegree() : 3, u ? knots : s.uKnots(), u ? s.vKnots() : knots, nu,
-                          nv, std::move(points), std::move(weights));
+                          nv, std::move(points), std::move(weights), s.isUPeriodic(), s.isVPeriodic());
 }
 BSplineSurfacePtr support(const Body &uv, FaceId face) {
     const auto original = uv.face(face).surface;
@@ -42,22 +43,38 @@ BSplineSurfacePtr support(const Body &uv, FaceId face) {
         return spline;
     require(bool(original), "Poli: faccia priva di supporto.");
     Box bounds;
-    for (auto loop : uv.face(face).loops)
+    for (auto loop : uv.face(face).loops) {
+        const auto isolated = uv.loop(loop).isolatedVertex;
+        if (isolated.valid()) {
+            const auto projected = projectPoint(*original, uv.vertex(isolated).point);
+            bounds.add(Vec3(projected.u, projected.v, 0));
+        }
         for (auto fin : uv.loopFins(loop)) {
             const auto &use = uv.fin(fin);
             const auto &edge = uv.edge(use.edge);
             require(bool(use.pcurve), "Poli: rifilature originali senza coordinate UV.");
             bounds.add(curveBox(*embedCurve(use.pcurve, Frame3()), edge.range));
         }
+    }
     Interval u{bounds.lo.x(), bounds.hi.x()}, v{bounds.lo.y(), bounds.hi.y()};
-    if (!(u.isFinite() && u.length() > 0))
+    if (!(u.isFinite() && u.length() > 1e-12 * std::max({1., std::abs(u.lo), std::abs(u.hi)})))
         u = original->uDomain();
-    if (!(v.isFinite() && v.length() > 0))
+    if (!(v.isFinite() && v.length() > 1e-12 * std::max({1., std::abs(v.lo), std::abs(v.hi)})))
         v = original->vDomain();
     require(u.isFinite() && v.isFinite() && u.length() > 0 && v.length() > 0,
             "Poli: dominio analitico non finito o degenere.");
     auto spline = enrichLinear(enrichLinear(toBSplineSurface(*original, u, v), true), false);
-    return std::make_shared<const BSplineSurface>(std::move(spline));
+    const bool pu = original->isUPeriodic() && u.length() >= original->uPeriod() * (1 - 1e-12);
+    const bool pv = original->isVPeriodic() && v.length() >= original->vPeriod() * (1 - 1e-12);
+    if (!pu && !pv) return std::make_shared<const BSplineSurface>(std::move(spline));
+    std::vector<Vec3> points;
+    std::vector<double> weights;
+    for (int i = 0; i < spline.uPoleCount(); ++i)
+        for (int j = 0; j < spline.vPoleCount(); ++j) {
+            points.push_back(spline.pole(i, j)); weights.push_back(spline.weight(i, j));
+        }
+    return std::make_shared<const BSplineSurface>(spline.uDegree(), spline.vDegree(), spline.uKnots(), spline.vKnots(),
+        spline.uPoleCount(), spline.vPoleCount(), std::move(points), std::move(weights), pu, pv);
 }
 } // namespace
 BSplineSurfacePtr surfacePoleSupport(const Body &body, FaceId face) {

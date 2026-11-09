@@ -12,7 +12,9 @@
 // 64 bit bit per bit. Serve a salvare nei documenti il risultato delle
 // funzioni costose (booleane tra B-spline, sweep) e a rileggerlo senza
 // ricalcolarlo. Dal formato 2 le istanze NURBS conservano base e similitudine,
-// senza espandere i poli; il lettore accetta anche il formato 1. Non e' un formato di scambio (per quello fk_step, fk_iges).
+// senza espandere i poli. Il formato 3 conserva l'estensione periodica delle
+// NURBS; i body senza questa restano scritti nel formato 2. Il lettore accetta
+// anche i formati 1 e 2. Non e' un formato di scambio (per quello fk_step, fk_iges).
 //
 // I costruttori delle curve normalizzano gli assi (cerchi, ellissi, rette,
 // direzioni delle estrusioni e delle rivoluzioni): su vettori gia' unitari

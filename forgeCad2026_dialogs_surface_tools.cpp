@@ -193,12 +193,13 @@ bool surfaceToolDialog(QMainWindow *window, CadViewport *viewport, const QString
         if (refresh)
             refresh();
     });
-    const auto fail = [&](const QString &text) {
+    const auto fail = [&](const QString &text, bool waitingForEdit = false) {
         status->setText(text);
         buttons->button(QDialogButtonBox::Ok)->setEnabled(false);
         viewport->clearPreview();
         preview.label->setText(mode == 0 ? QStringLiteral("in attesa delle selezioni")
-                                                : QStringLiteral("non disponibile"));
+                                                : waitingForEdit ? QStringLiteral("in attesa di modifiche")
+                                                                 : QStringLiteral("non disponibile: %1").arg(text));
     };
     const auto candidates = operandBodies(viewport, replaced, {definition.firstBody}, [&](const ExtrusionObject &b) {
         if (!b.forgeBody) return false;
@@ -648,7 +649,7 @@ bool surfaceToolDialog(QMainWindow *window, CadViewport *viewport, const QString
             }
             if (definition.surfaceTool.edits.isEmpty() && definition.surfaceTool.refitU == 0 &&
                 std::none_of(definition.surfaceTool.poleFaces.cbegin(),definition.surfaceTool.poleFaces.cend(),[](const SurfacePoleFace &f){return !f.edits.isEmpty();})) {
-                fail(QStringLiteral("Sposta un polo o modifica un peso."));
+                fail(QStringLiteral("Sposta un polo o modifica un peso."), true);
                 return;
             }
         }

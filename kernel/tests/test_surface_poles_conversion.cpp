@@ -1,5 +1,6 @@
 #include "fk_body_check.h"
 #include "fk_body_io.h"
+#include "fk_helix.h"
 #include "fk_primitives.h"
 #include "fk_revolve.h"
 #include "fk_sew.h"
@@ -119,4 +120,75 @@ FK_TEST(SurfacePolesCurvedAnalyticTrimmedHoles) {
         FK_CHECK(changed.face(changed.faces().front()).loops.size() == 2);
         FK_CHECK(checkBody(changed, {true, true}).empty());
     }
+}
+
+// Un giro oltre la cucitura: i trim della filettatura di Hook attraversano u=0.
+FK_TEST(SurfacePolesPeriodicHelicalTrims) {
+    HelixSpec spec; spec.radius = 10; spec.pitch = 3; spec.turns = 1.2; spec.startAngle = -.2;
+    const HelixCurve lower(spec);
+    auto bottom = std::make_shared<BSplineCurve<3>>(helixBSpline(lower, 1e-10));
+    spec.frame = Frame3({0, 0, 1},{0,0,1},{1,0,0});
+    auto top = std::make_shared<BSplineCurve<3>>(helixBSpline(HelixCurve(spec), 1e-10));
+    const auto r = lower.domain();
+    std::vector<Vec3> points{bottom->point(r.lo), bottom->point(r.hi), top->point(r.hi), top->point(r.lo)};
+    const auto line = [](Vec2 a, Vec2 b, Interval r) {
+        return std::make_shared<BSplineCurve<2>>(1, std::vector<double>{r.lo,r.lo,r.hi,r.hi}, std::vector<Vec2>{a,b});
+    };
+    const double end = spec.startAngle + r.hi;
+    Body::BuildFace face; face.surface = std::make_shared<CylindricalSurface>(Frame3(), 10);
+    face.loops = {{{0,true,line({-.2,0},{end,3*spec.turns},r),1e-9},
+                   {1,true,line({end,3*spec.turns},{end,3*spec.turns+1},{0,1}),1e-9},
+                   {2,false,line({-.2,1},{end,3*spec.turns+1},r),1e-9},
+                   {3,false,line({-.2,0},{-.2,1},{0,1}),1e-9}}};
+    const auto source = Body::buildSheet(points, {{0,1,bottom,r,1e-9},
+        {1,2,std::make_shared<Line<3>>(points[1],Vec3(0,0,1)),{0,1},1e-9}, {3,2,top,r,1e-9},
+        {0,3,std::make_shared<Line<3>>(points[0],Vec3(0,0,1)),{0,1},1e-9}}, {face});
+    const auto converted = prepareSurfacePoleBody(source,source.faces(),1e-6);
+    FK_CHECK(checkBody(converted,{true,true}).empty());
+    const auto s = std::dynamic_pointer_cast<const BSplineSurface>(converted.face(converted.faces()[0]).surface);
+    FK_CHECK(s->isUPeriodic() && !s->isVPeriodic());
+    for (double u : {-.1,.1,6.4}) {
+        Vec3 a[9],b[9]; s->evaluate(u,.5,2,a);s->evaluate(u+kTwoPi,.5,2,b);
+        for(int i:{0,1,2,3,4,6}) FK_CHECK(distance(a[i],b[i])<1e-10);
+    }
+    FK_CHECK(distance(s->uIsoCurve(-.1).point(.5),s->point(-.1,.5))<1e-10);
+    FK_CHECK(s->uBreakpoints({-.1,6.4}).size()>5);
+    FK_CHECK(s->uBreakpoints({1e18,1e18}).size()==1);
+    const auto bytes = writeBodyBinary(converted);
+    FK_CHECK(static_cast<unsigned char>(bytes[4])==3);
+    const auto reread = readBodyBinary(bytes);
+    FK_CHECK(writeBodyBinary(reread)==bytes);
+    FK_CHECK(checkBody(reread,{true,true}).empty());
+    const auto moved = transformBody(converted,Transform3::translation({1,2,3}));
+    const auto restored = readBodyBinary(writeBodyBinary(moved));
+    const auto rs = std::dynamic_pointer_cast<const BSplineSurface>(restored.face(restored.faces()[0]).surface);
+    FK_CHECK(rs->isUPeriodic() && distance(rs->point(-.1,.5),s->point(-.1,.5)+Vec3(1,2,3))<1e-10);
+    auto pool = makeBodyReadPool();
+    const auto pooled = readBodyBinary(bytes,*pool);
+    auto unwrapped=converted;
+    std::vector<Vec3> poles; std::vector<double> weights;
+    for(int i=0;i<s->uPoleCount();++i)for(int j=0;j<s->vPoleCount();++j){poles.push_back(s->pole(i,j));weights.push_back(s->weight(i,j));}
+    unwrapped.face(unwrapped.faces()[0]).surface=std::make_shared<BSplineSurface>(s->uDegree(),s->vDegree(),s->uKnots(),s->vKnots(),s->uPoleCount(),s->vPoleCount(),poles,weights);
+    const auto legacyBytes=writeBodyBinary(unwrapped);
+    FK_CHECK(static_cast<unsigned char>(legacyBytes[4])==2);
+    const auto old=readBodyBinary(legacyBytes,*pool);
+    FK_CHECK(!old.face(old.faces()[0]).surface->isUPeriodic());
+    FK_CHECK(old.face(old.faces()[0]).surface!=pooled.face(pooled.faces()[0]).surface);
+}
+FK_TEST(SurfacePolesSphericalCapAtConstantLatitude) {
+    const auto sphere=std::make_shared<SphericalSurface>(Frame3(),10);
+    const double latitude=.202149;
+    std::vector<Vec3> vertices;std::vector<Body::BuildEdge> edges;Body::BuildFace face;face.surface=sphere;
+    std::vector<Body::BuildFin> loop;
+    for(int i=0;i<4;++i)vertices.push_back(sphere->point(.35+i*kTwoPi/4,latitude));
+    for(int i=0;i<4;++i){Interval r{.35+i*kTwoPi/4,.35+(i+1)*kTwoPi/4};
+        edges.push_back({i,(i+1)%4,sphere->vIso(latitude),r,1e-9});
+        loop.push_back({i,true,std::make_shared<BSplineCurve<2>>(1,std::vector<double>{r.lo,r.lo,r.hi,r.hi},std::vector<Vec2>{{r.lo,latitude},{r.hi,latitude}}),0});}
+    face.loops={loop};const auto source=Body::buildSheet(vertices,edges,{face});
+    const auto converted=prepareSurfacePoleBody(source,source.faces(),1e-6);
+    const auto s=std::dynamic_pointer_cast<const BSplineSurface>(converted.face(converted.faces()[0]).surface);
+    FK_CHECK(s->vDomain().length()>1 && s->isUPeriodic());
+    FK_CHECK(checkBody(converted,{true,true}).empty());
+    for(const auto f:converted.fins()){const auto &use=converted.fin(f);const auto &edge=converted.edge(use.edge);
+        FK_CHECK(pcurveDeviation(*s,*edge.curve,*use.pcurve,edge.range,128)<1e-6);}
 }

@@ -8,10 +8,36 @@
 #include "fk_bspline_basis.h"
 
 namespace ForgeCad::Kernel {
+namespace {
+double wrapped(double t, Interval domain, bool periodic) {
+    if (!periodic || (t >= domain.lo && t <= domain.hi)) return t;
+    double local = std::fmod(t - domain.lo, domain.length());
+    if (local < 0) local += domain.length();
+    return domain.lo + local;
+}
+std::vector<double> breaks(const std::vector<double> &knots, Interval range, Interval domain, bool periodic) {
+    if (!periodic) return detail::knotBreakpoints(knots, range);
+    const double first = std::floor((range.lo - domain.lo) / domain.length());
+    const double last = std::ceil((range.hi - domain.lo) / domain.length());
+    if (!range.isFinite() || !std::isfinite(first) || !std::isfinite(last) || last - first > 100000)
+        throw std::invalid_argument("BSplineSurface: intervallo periodico troppo esteso");
+    std::vector<double> result{range.lo, range.hi};
+    for (int k = 0; k <= int(last - first); ++k)
+        for (double t : knots) {
+            const double shifted = t + (first + k) * domain.length();
+            if (t >= domain.lo && t <= domain.hi && shifted > range.lo && shifted < range.hi)
+                result.push_back(shifted);
+        }
+    std::sort(result.begin(), result.end());
+    result.erase(std::unique(result.begin(), result.end()), result.end());
+    return result;
+}
+} // namespace
 
 BSplineSurface::BSplineSurface(int uDegree, int vDegree, std::vector<double> uKnots, std::vector<double> vKnots,
-                               int uPoleCount, int vPoleCount, std::vector<Vec3> poles, std::vector<double> weights)
-    : uDegree_(uDegree), vDegree_(vDegree), uKnots_(std::move(uKnots)), vKnots_(std::move(vKnots)),
+                               int uPoleCount, int vPoleCount, std::vector<Vec3> poles, std::vector<double> weights,
+                               bool periodicU, bool periodicV)
+    : periodicU_(periodicU), periodicV_(periodicV), uDegree_(uDegree), vDegree_(vDegree), uKnots_(std::move(uKnots)), vKnots_(std::move(vKnots)),
       uPoleCount_(uPoleCount), vPoleCount_(vPoleCount), poles_(std::move(poles)), weights_(std::move(weights)) {
     detail::validateKnotVector(uKnots_, uDegree_, uPoleCount_, "BSplineSurface (u)");
     detail::validateKnotVector(vKnots_, vDegree_, vPoleCount_, "BSplineSurface (v)");
@@ -44,6 +70,8 @@ BSplineSurface::BSplineSurface(std::shared_ptr<const BSplineSurface> basis, cons
         basis_ = basis_->basis_;
         if (!valid(placement_)) throw std::invalid_argument("BSplineSurface: trasformazione composta non valida");
     }
+    periodicU_ = basis_->periodicU_;
+    periodicV_ = basis_->periodicV_;
     uDegree_ = basis_->uDegree_;
     vDegree_ = basis_->vDegree_;
     uPoleCount_ = basis_->uPoleCount_;
@@ -54,11 +82,11 @@ Interval BSplineSurface::uDomain() const { return {uKnots()[uDegree_], uKnots()[
 Interval BSplineSurface::vDomain() const { return {vKnots()[vDegree_], vKnots()[vPoleCount_]}; }
 
 std::vector<double> BSplineSurface::uBreakpoints(const Interval &range) const {
-    return detail::knotBreakpoints(uKnots(), range);
+    return breaks(uKnots(), range, uDomain(), periodicU_);
 }
 
 std::vector<double> BSplineSurface::vBreakpoints(const Interval &range) const {
-    return detail::knotBreakpoints(vKnots(), range);
+    return breaks(vKnots(), range, vDomain(), periodicV_);
 }
 
 void BSplineSurface::evaluate(double u, double v, int order, Vec3 *out) const {
@@ -72,6 +100,8 @@ void BSplineSurface::evaluate(double u, double v, int order, Vec3 *out) const {
             }
         return;
     }
+    u = wrapped(u, uDomain(), periodicU_);
+    v = wrapped(v, vDomain(), periodicV_);
     const int pu = uDegree_, pv = vDegree_;
     const int du = std::min(order, pu), dv = std::min(order, pv);
     const int su = detail::findSpan(uKnots(), pu, uPoleCount_, u);
@@ -154,6 +184,7 @@ void BSplineSurface::evaluate(double u, double v, int order, Vec3 *out) const {
 
 // Poli della curva a u costante: Q_j = sum_i N_i(u) w_ij P_ij / W_j, W_j = sum_i N_i(u) w_ij.
 BSplineCurve<3> BSplineSurface::uIsoCurve(double u) const {
+    u = wrapped(u, uDomain(), periodicU_);
     const int pu = uDegree_;
     const int su = detail::findSpan(uKnots(), pu, uPoleCount_, u);
     detail::ScratchBuffer<double> nu(pu + 1);
@@ -175,6 +206,7 @@ BSplineCurve<3> BSplineSurface::uIsoCurve(double u) const {
 }
 
 BSplineCurve<3> BSplineSurface::vIsoCurve(double v) const {
+    v = wrapped(v, vDomain(), periodicV_);
     const int pv = vDegree_;
     const int sv = detail::findSpan(vKnots(), pv, vPoleCount_, v);
     detail::ScratchBuffer<double> nv(pv + 1);

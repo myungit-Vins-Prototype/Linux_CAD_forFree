@@ -49,7 +49,7 @@ BSplineSurfacePtr changedSupport(const Body &sheet, const SurfaceFacePoleChange 
     }
     auto support =
         std::make_shared<BSplineSurface>(s->uDegree(), s->vDegree(), s->uKnots(), s->vKnots(), s->uPoleCount(),
-                                         s->vPoleCount(), std::move(poles), std::move(weights));
+                                         s->vPoleCount(), std::move(poles), std::move(weights), s->isUPeriodic(), s->isVPeriodic());
     const auto &original=static_cast<const BSplineSurface &>(*sheet.face(edit.face).surface);
     checkSurfacePoleClosure(original,*support,tolerance);
     const auto u = support->uDomain(), v = support->vDomain();

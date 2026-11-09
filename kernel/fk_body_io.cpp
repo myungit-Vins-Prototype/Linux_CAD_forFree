@@ -30,6 +30,7 @@ public:
         scalar(spline->uDegree()); scalar(spline->vDegree());
         scalar(spline->uPoleCount()); scalar(spline->vPoleCount());
         scalar(spline->isRational()); scalar(bool(spline->basis()));
+        scalar(spline->isUPeriodic()); scalar(spline->isVPeriodic());
         if (spline->basis()) {
             hash ^= std::hash<const void *>{}(spline->basis().get());
             const auto &t = spline->placement();
@@ -63,7 +64,8 @@ private:
         const auto equal = [](double x, double y) { return std::memcmp(&x, &y, sizeof(x)) == 0; };
         if (a.uDegree() != b.uDegree() || a.vDegree() != b.vDegree()
             || a.uPoleCount() != b.uPoleCount() || a.vPoleCount() != b.vPoleCount()
-            || a.isRational() != b.isRational() || bool(a.basis()) != bool(b.basis())) return false;
+            || a.isRational() != b.isRational() || bool(a.basis()) != bool(b.basis())
+            || a.isUPeriodic() != b.isUPeriodic() || a.isVPeriodic() != b.isVPeriodic()) return false;
         if (a.basis()) {
             if (a.basis() != b.basis()) return false;
             for (int i = 0; i < 3; ++i) {
@@ -95,7 +97,7 @@ std::shared_ptr<BodyReadPool> makeBodyReadPool() { return std::make_shared<BodyR
 namespace {
 
 constexpr char kMagic[4] = {'F', 'K', 'B', 'D'};
-constexpr std::uint32_t kVersion = 2;
+constexpr std::uint32_t kVersion = 3;
 constexpr std::uint32_t kByteOrder = 0x01020304;  // letto come e' scritto: stesso ordine dei byte
 
 enum Record : std::uint8_t { Curve2 = 1, Curve3 = 2, SurfaceRecord = 3, EndOfGeometry = 0 };
@@ -197,7 +199,7 @@ private:
 // curve su cui e' costruita; i riferimenti sono indici nelle tre tabelle.
 class GeometryWriter {
 public:
-    explicit GeometryWriter(Writer &out) : out_(out) {}
+    explicit GeometryWriter(Writer &out, std::uint32_t version) : out_(out), version_(version) {}
 
     template <int N>
     int curve(const CurvePtr<N> &curve) {
@@ -282,6 +284,7 @@ public:
                 record.i32(b.vPoleCount());
                 for (int i = 0; i < b.uPoleCount(); ++i)
                     for (int j = 0; j < b.vPoleCount(); ++j) record.vec(b.pole(i, j));
+                if (version_ >= 3) { record.flag(b.isUPeriodic()); record.flag(b.isVPeriodic()); }
                 record.flag(b.isRational());
                 if (b.isRational())
                     for (int i = 0; i < b.uPoleCount(); ++i)
@@ -382,6 +385,7 @@ private:
     }
 
     Writer &out_;
+    std::uint32_t version_;
     std::map<const Curve<2> *, int> curves2_;
     std::map<const Curve<3> *, int> curves3_;
     std::map<const Surface *, int> surfaces_;
@@ -534,6 +538,8 @@ private:
             in_.requireElements(poleCount, 3 * sizeof(double));
             std::vector<Vec3> poles(poleCount);
             for (Vec3 &p : poles) p = in_.vec<3>();
+            const bool periodicU = version_ >= 3 && in_.flag();
+            const bool periodicV = version_ >= 3 && in_.flag();
             std::vector<double> weights;
             if (in_.flag()) {
                 in_.requireElements(poles.size(), sizeof(double));
@@ -541,7 +547,7 @@ private:
                 for (double &w : weights) w = in_.f64();
             }
             return std::make_shared<BSplineSurface>(uDegree, vDegree, std::move(uKnots), std::move(vKnots), uCount, vCount, std::move(poles),
-                                                    std::move(weights));
+                                                    std::move(weights), periodicU, periodicV);
         }
         }
         throw std::invalid_argument("readBodyBinary: tipo di superficie sconosciuto");
@@ -563,10 +569,14 @@ struct BodyIO {
     static std::string write(const Body &body) {
         Writer out;
         out.raw(kMagic, 4);
-        out.u32(kVersion);
+        std::uint32_t version = 2;
+        for (const Face &face : body.faces_)
+            if (const auto spline = std::dynamic_pointer_cast<const BSplineSurface>(face.surface))
+                if (spline->isUPeriodic() || spline->isVPeriodic()) version = 3;
+        out.u32(version);
         out.u32(kByteOrder);
         // Prima tutta la geometria, poi la topologia con gli indici.
-        GeometryWriter geometry(out);
+        GeometryWriter geometry(out, version);
         std::vector<int> edgeCurves, finCurves, faceSurfaces;
         for (const Edge &e : body.edges_) edgeCurves.push_back(geometry.curve<3>(e.curve));
         for (const Fin &f : body.fins_) finCurves.push_back(geometry.curve<2>(f.pcurve));

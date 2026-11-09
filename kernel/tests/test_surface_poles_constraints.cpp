@@ -128,3 +128,40 @@ FK_TEST(SurfacePolesContinuityRefitAndProtection) {
                                                                   s->uPoleCount(), s->vPoleCount(), moved);
     FK_CHECK_THROWS(SurfacePoleConstraints(source, bases, 2, 1e-6));
 }
+FK_TEST(SurfacePolesTrimProtectionLeavesInteriorFree) {
+    const auto dense=refitSurfacePoles(*plane(false),24,32).surface;
+    auto a=quad(dense);
+    std::vector<Vec3> points;
+    for(int i=0;i<dense->uPoleCount();++i)for(int j=0;j<dense->vPoleCount();++j){auto p=dense->pole(i,j);p[0]*=2;points.push_back(p);}
+    a.face(a.faces()[0]).surface=std::make_shared<BSplineSurface>(dense->uDegree(),dense->vDegree(),dense->uKnots(),dense->vKnots(),24,32,points);
+    for(auto f:a.fins()){
+        auto &use=a.fin(f);const auto range=a.edge(use.edge).range;
+        auto p=use.pcurve->point(range.lo),q=use.pcurve->point(range.hi);p[0]*=.5;q[0]*=.5;
+        use.pcurve=std::make_shared<BSplineCurve<2>>(1,std::vector<double>{range.lo,range.lo,range.hi,range.hi},std::vector<Vec2>{p,q});
+    }
+    const auto b=quad(plane(true));
+    const auto source=sewSheets({&a,&b},1e-6,false).body;
+    const auto faces=source.faces();
+    SurfacePoleConstraints constraints(source,{{faces[0],{},{}}},2,1e-6);
+    FK_CHECK(constraints.report().protectedJoints==1);
+    FK_CHECK(constraints.propagate({}).empty());
+    const auto changes=constraints.propagate({{faces[0],{{4,16,{0,0,.2},1}}, {}}});
+    const auto result=editBodyFacesPoles(source,changes);
+    FK_CHECK(checkBody(result,{true,true}).empty());
+    FK_CHECK(checkSurfacePoleContinuity(source,result,faces,1e-6).gap<1e-10);
+    const auto s=std::dynamic_pointer_cast<const BSplineSurface>(result.face(faces[0]).surface);
+    FK_CHECK_NEAR(s->pole(4,16).z(),.2,1e-12);
+    FK_CHECK_THROWS(constraints.propagate({{faces[0],{{12,16,{0,0,.2},1}}, {}}}));
+}
+FK_TEST(SurfacePolesNeutralTolerantConnections) {
+    const auto a=quad(plane(false));
+    const auto b=transformBody(quad(plane(true)),Transform3::translation({0,0,2e-8}));
+    const auto source=sewSheets({&a,&b},1e-6,false).body;
+    const auto faces=source.faces();
+    SurfacePoleConstraints constraints(source,{{faces[0],{},{}}},2,1e-6);
+    FK_CHECK(constraints.propagate({}).empty());
+    const auto result=editBodyFacesPoles(source,constraints.propagate({{faces[0],{{3,1,{0,0,.2},1}},{}}}));
+    const auto report=checkSurfacePoleContinuity(source,result,faces,1e-6);
+    FK_CHECK(report.gap<1e-6 && report.angle<1e-9);
+    FK_CHECK_NEAR(std::dynamic_pointer_cast<const BSplineSurface>(result.face(faces[1]).surface)->pole(0,1).z(),.2+2e-8,1e-12);
+}

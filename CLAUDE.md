@@ -103,22 +103,21 @@ ctest --test-dir forgecad-release --output-on-failure
 
 ## Ultimi interventi — esiti consolidati
 
-**09/11 — Poli NURBS / Hook.** Pubblicati griglia/spinner `ddf856a`, multifaccia `b6c10df`,
-riquadro `9f455a9`, rotazione/Alt e scarto vincolante `30d4e72` su origin/main.
-Tabelle virtuali, gabbie multiple, 4096poli modificati; refit U/V fino256, ricerca asincrona cancellabile.
-Hook7 GUI:18×162/scarto0,00070033mm entro0,001; modifica/Undo/codec12/riapertura PASS.
-App/7CTest/Wayland/QPA rilascio soppresso PASS; originale invariato; mappa664/9509/325TU/5HTML PASS.
-Opzioni G0/G1 esistente implementate: poli del gesto rigidi, altri compensativi verdi anche se già modificati;
-vincoli sparsi su adiacenze B-rep, spigoli conservati/giunti incompatibili protetti, stato risolto salvato/codec13.
-App/8CTest/Wayland PASS; Hook7facce/2,29Mrighe virtuali:propagazione/B-rep/Undo/codec PASS,
-apertura2,02e-8mm; originale invariato. Mappa668/9584/327TU/check/6HTML PASS.
-Continuità `160e185` pubblicata su origin/main; riaprire l’app per la nuova build.
-Controlli campionati, nessuna certificazione globale/G2/auto-intersezioni.
-Conversione analitica richiesta/implementata: supporti NURBS esatti, piano4×4, SP-curve aggiornate,
-fori/identita conservati, giunti misti e cuciture/poli degeneri vincolati; codec14. App/9CTest/Kernel12/Wayland PASS;
-Hook8facce incl. analitica:modifica/B-rep/Undo/codec14/originale invariato PASS; `d2bea6d` su origin/main.
-Mappa672/9679/329TU/check/6HTML PASS; riaprire l’app. [Conversione](docs/poli-nurbs-analitiche-2026-11-09.md).
-[Continuità](docs/poli-nurbs-continuita-2026-11-09.md), [multifaccia/storico](docs/poli-nurbs-multifaccia-2026-11-09.md).
+**09/11 — Poli NURBS / Hook.** Griglie/spinner `ddf856a`, multifaccia `b6c10df`,
+riquadro `9f455a9`, rotazione/Alt e scarto vincolante `30d4e72`, G0/G1 `160e185`, analitiche `d2bea6d` su origin/main.
+Tabelle virtuali, gabbie multiple, 4096poli modificati; refit U/V fino256 e ricerca asincrona entro limite.
+Piani4×4, supporti analitici esatti, topologia/fori conservati; poli del gesto rigidi, compensativi verdi, stato risolto/codec14.
+Storico: Hook funzione intermedia Cucitura8 (non Corpo2 finale), modifica/Undo/codec/Wayland PASS;
+app/9CTest/kernel12/mappa672-9679 PASS. [Conversione](docs/poli-nurbs-analitiche-2026-11-09.md),
+[continuita](docs/poli-nurbs-continuita-2026-11-09.md), [multifaccia](docs/poli-nurbs-multifaccia-2026-11-09.md).
+**Corpo2 finale riprodotto**: Raccordo15,184facce; F10 cilindro filettato e F166 calotta bloccavano tutta la griglia.
+Corrette conversione periodica/cuciture e finestra della calotta; B-rep v3 solo con NURBS periodiche, lettura v1/v2.
+Vincoli sui supporti locali dei trim, non sull'intera faccia; stato neutro tollerante conservato senza deriva.
+Kernel36/36 PASS; Corpo2:184facce convertite, F3 polo96/741 spostato0,1mm con G0/G1,
+B-rep0errori, apertura6,34e-8mm e angolo3,50e-6rad. App/runner completi,14CTest e Wayland PASS:
+184gabbie/2,324Mrighe, G0/G1, mouse/rilascio/anteprima, Undo/Redo, codec e rigenerazione ultima funzione.
+Originale invariato. Mappa672/9702/329TU/check/6HTML PASS; riaprire l’app. Correzione verificata, pronta per commit/push.
+[Prove e limiti](docs/poli-nurbs-Hook-corpo2-2026-11-09.md). Controlli campionati, nessuna certificazione globale/G2.
 
 **08/11 — Bottle e Shower Head.** Pool esatto:690duplicati,poli/pesi1042→135MiB;
 Bottle RSS9,95→2,75GiB (-72%),30 B-rep byte-identici. Anche ultimo salvataggio:

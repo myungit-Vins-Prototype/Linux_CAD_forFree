@@ -4,7 +4,7 @@
 #include "fk_bspline.h"
 #include "fk_surface.h"
 
-// Superfici B-spline e NURBS a prodotto tensoriale, non periodiche, con nodi
+// Superfici B-spline e NURBS a prodotto tensoriale con nodi
 // espansi (come BSplineCurve). Algoritmi: A3.6 e A4.4 del NURBS Book.
 namespace ForgeCad::Kernel {
 
@@ -13,7 +13,8 @@ public:
     // poles[i * vPoleCount + j]: i lungo u, j lungo v (Poles(i+1, j+1) di OCCT).
     // weights vuoto = polinomiale, altrimenti stessa disposizione dei poli.
     BSplineSurface(int uDegree, int vDegree, std::vector<double> uKnots, std::vector<double> vKnots,
-                   int uPoleCount, int vPoleCount, std::vector<Vec3> poles, std::vector<double> weights = {});
+                   int uPoleCount, int vPoleCount, std::vector<Vec3> poles, std::vector<double> weights = {},
+                   bool periodicU = false, bool periodicV = false);
 
     // Istanza esatta di una superficie immutabile: i poli restano nella base,
     // le valutazioni e gli accessi restituiscono coordinate trasformate.
@@ -25,6 +26,12 @@ public:
     SurfaceType type() const override { return SurfaceType::BSpline; }
     Interval uDomain() const override;
     Interval vDomain() const override;
+    // Estensione periodica del dominio fondamentale, anche con nodi clamped.
+    // Gli estremi esatti restano distinti per verificare la chiusura dopo un edit.
+    bool isUPeriodic() const override { return periodicU_; }
+    bool isVPeriodic() const override { return periodicV_; }
+    double uPeriod() const override { return periodicU_ ? uDomain().length() : 0; }
+    double vPeriod() const override { return periodicV_ ? vDomain().length() : 0; }
     void evaluate(double u, double v, int order, Vec3 *out) const override;
     std::vector<double> uBreakpoints(const Interval &range) const override;
     std::vector<double> vBreakpoints(const Interval &range) const override;
@@ -76,6 +83,7 @@ public:
     std::shared_ptr<const PatchTree> cachedPatchTree() const;
 
 private:
+    bool periodicU_ = false, periodicV_ = false;
     int uDegree_, vDegree_;
     std::vector<double> uKnots_, vKnots_;
     int uPoleCount_, vPoleCount_;
