@@ -18,7 +18,10 @@ class SurfacePolesSession {
     QString continuityText() const;
     double deviation() const { return deviation_; }
     QString details() const { return details_; }
-    void reset() { cache_.clear(); }
+    void reset() { cache_.clear();originalSource_.reset();preparedSource_.reset();preparedFaces_.clear(); }
+    Kernel::BSplineSurfacePtr sourceSurface(Kernel::FaceId face) const {
+        return std::dynamic_pointer_cast<const Kernel::BSplineSurface>(preparedSource_->face(face).surface);
+    }
     void cacheRefit(const QVector<Kernel::FaceId> &faces, const std::vector<Kernel::BSplineSurfacePtr> &sources,
                     const Kernel::SurfaceRefitGrid &grid);
 
@@ -29,6 +32,8 @@ class SurfacePolesSession {
         double deviation = 0;
     };
     QMap<int, Fit> cache_;
+    ForgeBody originalSource_,preparedSource_;
+    QVector<Kernel::FaceId> preparedFaces_;
     std::unique_ptr<Kernel::SurfacePoleConstraints> constraints_;
     Kernel::SurfacePoleContinuityReport continuity_;
     QVector<int> drivers_;

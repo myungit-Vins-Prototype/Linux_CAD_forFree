@@ -114,6 +114,8 @@ add_library(forgekernel STATIC
     fk_surface_poles.cpp
     fk_surface_poles_constraints.h
     fk_surface_poles_constraints.cpp
+    fk_surface_poles_conversion.h
+    fk_surface_poles_conversion.cpp
     fk_surface_refit.h
     fk_surface_refit.cpp
     fk_body_collection.cpp
@@ -269,7 +271,7 @@ set_target_properties(forgekernel_tolerance_tests PROPERTIES AUTOMOC OFF AUTOUIC
 add_test(NAME forgekernel_tolerance_tests COMMAND forgekernel_tolerance_tests)
 
 # Geometria delle nuove funzioni, eseguibile anche senza il riferimento OCCT.
-add_executable(forgekernel_surface_tools_tests tests/fk_test_main.cpp tests/test_surface_tools.cpp tests/test_surface_poles_constraints.cpp tests/test_fill.cpp)
+add_executable(forgekernel_surface_tools_tests tests/fk_test_main.cpp tests/test_surface_tools.cpp tests/test_surface_poles_constraints.cpp tests/test_surface_poles_conversion.cpp tests/test_fill.cpp)
 target_link_libraries(forgekernel_surface_tools_tests PRIVATE forgekernel)
 target_compile_options(forgekernel_surface_tools_tests PRIVATE -Wall -Wextra -Wpedantic)
 set_target_properties(forgekernel_surface_tools_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)

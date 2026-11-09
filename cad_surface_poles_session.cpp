@@ -2,6 +2,7 @@
 #include "cad_surface_tools.h"
 #include "cad_topology_ref.h"
 #include "fk_surface_refit.h"
+#include "fk_surface_poles_conversion.h"
 #include <climits>
 #include "fk_precision.h"
 #include <QPointer>
@@ -39,11 +40,16 @@ QString SurfacePolesSession::load(const ForgeBody &body, const QVector<Kernel::F
         return QStringLiteral("Scegli almeno una faccia NURBS.");
     if (faces.size() > 256)
         return QStringLiteral("Scegli fino a 256 facce NURBS.");
-    legacy_ = body->faces().size() == 1 && p.poleFaces.isEmpty();
+    legacy_ = body->faces().size() == 1 && p.poleFaces.isEmpty() &&
+        body->face(faces.front()).surface->type()==Kernel::SurfaceType::BSpline;
     QVector<SurfacePoleFace> records;
     QVector<SurfacePolesModel::FaceGrid> grids;
     qint64 rows = 0;
     try {
+        if(originalSource_!=body || preparedFaces_!=faces) {
+            preparedSource_=std::make_shared<const Kernel::Body>(Kernel::prepareSurfacePoleBody(*body,{faces.cbegin(),faces.cend()},p.tolerance));
+            originalSource_=body;preparedFaces_=faces;
+        }
         for (const auto face : faces) {
             const auto basis = surfaceBasisHash(body, face);
             if (basis.isEmpty())
@@ -65,7 +71,7 @@ QString SurfacePolesSession::load(const ForgeBody &body, const QVector<Kernel::F
                 }
             if (entry.basis != basis)
                 return QStringLiteral("La griglia F%1 a monte e' cambiata: ricaricare la griglia.").arg(face.index);
-            auto surface = std::dynamic_pointer_cast<const Kernel::BSplineSurface>(body->face(face).surface);
+            auto surface = sourceSurface(face);
             double error = 0;
             if (p.refitU || p.refitV) {
                 auto &fit = cache_[face.index];
@@ -88,6 +94,8 @@ QString SurfacePolesSession::load(const ForgeBody &body, const QVector<Kernel::F
                             .arg(surface->uPoleCount())
                             .arg(surface->vPoleCount())
                             .arg(p.refitU ? QStringLiteral("; scarto %1 mm").arg(error, 0, 'g', 6) : QString());
+            if(body->face(face).surface->type()!=Kernel::SurfaceType::BSpline)
+                details_+=QStringLiteral("  Superficie analitica convertita in NURBS esatta.\n");
             records.append(entry);
             grids.append({surface, entry.edits, QStringLiteral("F%1").arg(face.index)});
         }
@@ -97,7 +105,7 @@ QString SurfacePolesSession::load(const ForgeBody &body, const QVector<Kernel::F
     if(p.poleContinuity)try {
         std::vector<Kernel::SurfaceFacePoleChange> bases;
         for(int i=0;i<faces.size();++i)bases.push_back({faces[i],{},p.refitU?grids[i].surface:Kernel::BSplineSurfacePtr{}});
-        constraints_=std::make_unique<Kernel::SurfacePoleConstraints>(*body,bases,p.poleContinuity,p.tolerance);
+        constraints_=std::make_unique<Kernel::SurfacePoleConstraints>(*preparedSource_,bases,p.poleContinuity,p.tolerance);
         deviation_=std::max(deviation_,constraints_->refitDeviation());
     }catch(const std::exception &error){return QString::fromUtf8(error.what());}
     faces_ = faces;

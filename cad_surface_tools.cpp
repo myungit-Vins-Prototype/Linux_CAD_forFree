@@ -7,6 +7,7 @@
 #include "fk_surface_tools.h"
 #include "fk_surface_refit.h"
 #include "fk_surface_poles_constraints.h"
+#include "fk_surface_poles_conversion.h"
 #include "fk_sheet.h"
 #include "fk_sew.h"
 #include "fk_intersect.h"
@@ -55,9 +56,9 @@ QByteArray surfaceBasisHash(const ForgeBody &body) {
 }
 QByteArray surfaceBasisHash(const ForgeBody &body, Kernel::FaceId face) {
     if (!body || !body->contains(face)) return {};
-    const auto *s = dynamic_cast<const Kernel::BSplineSurface *>(body->face(face).surface.get());
-    if (!s)
-        return {};
+    Kernel::BSplineSurfacePtr s;
+    try { s=Kernel::surfacePoleSupport(*body,face); }
+    catch(const std::exception &) { return {}; }
     QByteArray bytes;
     QDataStream out(&bytes, QIODevice::WriteOnly);
     out << s->uDegree() << s->vDegree() << s->uPoleCount() << s->vPoleCount();
@@ -147,6 +148,13 @@ void buildSurfaceTool(ExtrusionObject &body, int index, const QVector<SketchObje
                 selected.append({faceReference(*source,source->faces().front(),{}),p.basis,p.edits});
             }
             require(selected.size()<=256,"Scegliere fino a 256 facce.");
+            std::vector<FaceId> convertedFaces;
+            for(const auto &entry:selected) {
+                const auto face=resolveSurfacePoleFace(*source,entry.face);
+                require(face.valid(),"Faccia da convertire non disponibile.");
+                convertedFaces.push_back(face);
+            }
+            const auto prepared=prepareSurfacePoleBody(*source,convertedFaces,p.tolerance);
             std::vector<SurfaceFacePoleChange> changes;
             double deviation=0;
             for (const auto &entry:selected) {
@@ -154,11 +162,13 @@ void buildSurfaceTool(ExtrusionObject &body, int index, const QVector<SketchObje
                 require(face.valid() && entry.basis.size()==32 && surfaceBasisHash(source,face)==entry.basis,
                         "Una faccia o la sua griglia NURBS a monte e' cambiata: riselezionare le facce.");
                 SurfaceFacePoleChange change; change.face=face;
+                if(source->face(face).surface->type()!=SurfaceType::BSpline)
+                    change.replacement=std::dynamic_pointer_cast<const BSplineSurface>(prepared.face(face).surface);
                 for (const auto &e:entry.edits) change.changes.push_back({e.u,e.v,Vec3(e.dx,e.dy,e.dz),e.weightFactor});
                 if (p.refitU || p.refitV) {
                     require(std::isfinite(p.refitTolerance) && p.refitTolerance>=1e-7 && p.refitTolerance<=1000,
                             "Scarto di ricostruzione non valido.");
-                    const auto original=std::dynamic_pointer_cast<const BSplineSurface>(source->face(face).surface);
+                    const auto original=std::dynamic_pointer_cast<const BSplineSurface>(prepared.face(face).surface);
                     const auto fitted=refitSurfacePoles(*original,p.refitU,p.refitV);
                     require(fitted.sampledDeviation<=p.refitTolerance,qPrintable(QStringLiteral("Faccia F%1: scarto campionato %2 mm oltre %3 mm; aumentare i poli U/V.")
                         .arg(face.index).arg(fitted.sampledDeviation,0,'g',6).arg(p.refitTolerance,0,'g',6)));
@@ -170,14 +180,14 @@ void buildSurfaceTool(ExtrusionObject &body, int index, const QVector<SketchObje
             require(p.poleContinuity>=0&&p.poleContinuity<=2,"Opzione di continuita' non valida.");
             SurfacePoleContinuityReport continuity;
             if(p.poleContinuity){
-                SurfacePoleConstraints constraints(*source,changes,p.poleContinuity,p.tolerance);
+                SurfacePoleConstraints constraints(prepared,changes,p.poleContinuity,p.tolerance);
                 require(!p.refitU||constraints.refitDeviation()<=p.refitTolerance,"La griglia vincolata supera lo scostamento ammesso: aumentare i poli U/V.");
                 changes=constraints.propagate(changes,&continuity);
             }
             changes.erase(std::remove_if(changes.begin(),changes.end(),[](const auto &face){return !face.replacement&&face.changes.empty();}),changes.end());
-            result=editBodyFacesPoles(*source,changes,p.tolerance,&history);
+            result=editBodyFacesPoles(prepared,changes,p.tolerance,&history);
             std::vector<FaceId> affected;for(const auto &face:changes)affected.push_back(face.face);
-            const auto checked=checkSurfacePoleContinuity(*source,result,affected,p.tolerance);
+            const auto checked=checkSurfacePoleContinuity(prepared,result,affected,p.tolerance);
             require(p.poleContinuity!=2||checked.angle<=1e-5,"Continuita': tangenza G1 non rispettata; modifica non applicata.");
             if (p.refitU) body.notice=QStringLiteral("%1 facce; griglie %2 × %3; scarto campionato iniziale massimo %4 mm.")
                 .arg(selected.size()).arg(p.refitU).arg(p.refitV).arg(deviation,0,'g',6);
@@ -255,13 +265,17 @@ QByteArray surfaceToolsExtras(const QVector<ExtrusionObject> &bodies) {
         }
         records.append(record);
     }
+    const bool analytic=std::any_of(bodies.cbegin(),bodies.cend(),[](const auto &body){
+        return body.feature==BodyFeature::SurfaceTools && body.surfaceTool.mode==2 &&
+            std::any_of(body.surfaceTool.poleFaces.cbegin(),body.surfaceTool.poleFaces.cend(),[](const auto &face){return face.face.geometry!=int(Kernel::SurfaceType::BSpline);});
+    });
     const bool continuity = std::any_of(bodies.cbegin(),bodies.cend(),[](const auto &body){return body.feature==BodyFeature::SurfaceTools&&body.surfaceTool.mode==2&&body.surfaceTool.poleContinuity;});
     const bool extendedRefit = std::any_of(bodies.cbegin(), bodies.cend(), [](const ExtrusionObject &body) {
         return body.feature == BodyFeature::SurfaceTools && body.surfaceTool.mode == 2 &&
                (body.surfaceTool.refitU > 64 || body.surfaceTool.refitV > 64);
     });
     return records.isEmpty() ? QByteArray()
-                             : QJsonDocument(QJsonObject{{"schema", continuity ? 13 : extendedRefit ? 12 : poleFaces ? 11 : refit ? 10 : solidTrim ? 9 : linked ? 8 : flatten ? 7 : quilt ? 6 : rigid ? 5 : targetSet ? 4 : multiple ? 3 : mapping ? 2 : 1}, {"features", records}}).toJson(QJsonDocument::Compact);
+                             : QJsonDocument(QJsonObject{{"schema", analytic ? 14 : continuity ? 13 : extendedRefit ? 12 : poleFaces ? 11 : refit ? 10 : solidTrim ? 9 : linked ? 8 : flatten ? 7 : quilt ? 6 : rigid ? 5 : targetSet ? 4 : multiple ? 3 : mapping ? 2 : 1}, {"features", records}}).toJson(QJsonDocument::Compact);
 }
 QString applySurfaceToolsExtras(const QByteArray &bytes, QVector<ExtrusionObject> &output) {
     auto bodies = output;
@@ -271,7 +285,7 @@ QString applySurfaceToolsExtras(const QByteArray &bytes, QVector<ExtrusionObject
             require(bytes.size() <= 4 * 1024 * 1024, "Estensioni superfici oltre4MiB.");
             QJsonParseError error;
             const auto root = QJsonDocument::fromJson(bytes, &error).object();
-            require(error.error == QJsonParseError::NoError && root.size() == 2 && (root["schema"].toDouble(-1) == 1 || root["schema"].toDouble(-1) == 2 || root["schema"].toDouble(-1) == 3 || root["schema"].toDouble(-1) == 4 || root["schema"].toDouble(-1) == 5 || root["schema"].toDouble(-1) == 6 || root["schema"].toDouble(-1) == 7 || root["schema"].toDouble(-1) == 8 || root["schema"].toDouble(-1) == 9 || root["schema"].toDouble(-1) == 10 || root["schema"].toDouble(-1) == 11 || root["schema"].toDouble(-1) == 12 || root["schema"].toDouble(-1) == 13) &&
+            require(error.error == QJsonParseError::NoError && root.size() == 2 && (root["schema"].toDouble(-1) == 1 || root["schema"].toDouble(-1) == 2 || root["schema"].toDouble(-1) == 3 || root["schema"].toDouble(-1) == 4 || root["schema"].toDouble(-1) == 5 || root["schema"].toDouble(-1) == 6 || root["schema"].toDouble(-1) == 7 || root["schema"].toDouble(-1) == 8 || root["schema"].toDouble(-1) == 9 || root["schema"].toDouble(-1) == 10 || root["schema"].toDouble(-1) == 11 || root["schema"].toDouble(-1) == 12 || root["schema"].toDouble(-1) == 13 || root["schema"].toDouble(-1) == 14) &&
                         root["features"].isArray(),
                     "Estensioni superfici danneggiate.");
             const auto integer = [](const QJsonValue &v, int low, int high) {
@@ -375,6 +389,9 @@ QString applySurfaceToolsExtras(const QByteArray &bytes, QVector<ExtrusionObject
                         require(std::isfinite(point.x)&&std::isfinite(point.y)&&std::isfinite(point.z),"Punto faccia poli non valido.");
                         point.subshape=integer(f[3],0,2147483647); point.geometry=integer(f[4],-1,2147483647);
                         point.context=integer(f[5],-1,2147483647); point.role=integer(f[6],0,1);
+                        require(point.geometry==int(Kernel::SurfaceType::BSpline) ||
+                            (root["schema"].toInt()>=14 && point.geometry>=0 && point.geometry<int(Kernel::SurfaceType::BSpline)),
+                            "Conversione analitica senza schema14 o tipo supportato.");
                         require(f[7].isString()&&f[7].toString().size()<=4096,"Nome faccia poli non valido.");point.name=f[7].toString();
                         const auto key=QString::number(point.subshape);
                         require(!selectedFaces.contains(key),"Faccia poli duplicata.");selectedFaces.insert(key);

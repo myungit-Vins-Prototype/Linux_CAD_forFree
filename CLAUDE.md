@@ -114,6 +114,9 @@ App/8CTest/Wayland PASS; Hook7facce/2,29Mrighe virtuali:propagazione/B-rep/Undo/
 apertura2,02e-8mm; originale invariato. Mappa668/9584/327TU/check/6HTML PASS.
 Continuità `160e185` pubblicata su origin/main; riaprire l’app per la nuova build.
 Controlli campionati, nessuna certificazione globale/G2/auto-intersezioni.
+Conversione analitica richiesta/implementata: supporti NURBS esatti, piano4×4, SP-curve aggiornate,
+fori/identita conservati, giunti misti e cuciture/poli degeneri vincolati; codec14. App/9CTest/Kernel12/Wayland PASS;
+Hook8facce incl. analitica:modifica/B-rep/Undo/codec14/originale invariato PASS; mappa/commit in corso. [Conversione](docs/poli-nurbs-analitiche-2026-11-09.md).
 [Continuità](docs/poli-nurbs-continuita-2026-11-09.md), [multifaccia/storico](docs/poli-nurbs-multifaccia-2026-11-09.md).
 
 **08/11 — Bottle e Shower Head.** Pool esatto:690duplicati,poli/pesi1042→135MiB;

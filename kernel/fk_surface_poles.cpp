@@ -3,6 +3,7 @@
 #include "fk_offset.h"
 #include "fk_pcurve.h"
 #include "fk_surface_tools.h"
+#include "fk_surface_poles_conversion.h"
 #include <algorithm>
 #include <set>
 #include <stdexcept>
@@ -12,7 +13,7 @@ void demand(bool condition, const char *message) {
     if (!condition)
         throw std::domain_error(message);
 }
-BSplineSurfacePtr changedSupport(const Body &sheet, const SurfaceFacePoleChange &edit) {
+BSplineSurfacePtr changedSupport(const Body &sheet, const SurfaceFacePoleChange &edit, double tolerance) {
     demand(sheet.contains(edit.face), "poli: faccia non disponibile");
     const auto *s = dynamic_cast<const BSplineSurface *>(sheet.face(edit.face).surface.get());
     demand(s, "poli: il supporto selezionato non e' NURBS");
@@ -49,13 +50,19 @@ BSplineSurfacePtr changedSupport(const Body &sheet, const SurfaceFacePoleChange 
     auto support =
         std::make_shared<BSplineSurface>(s->uDegree(), s->vDegree(), s->uKnots(), s->vKnots(), s->uPoleCount(),
                                          s->vPoleCount(), std::move(poles), std::move(weights));
+    const auto &original=static_cast<const BSplineSurface &>(*sheet.face(edit.face).surface);
+    checkSurfacePoleClosure(original,*support,tolerance);
     const auto u = support->uDomain(), v = support->vDomain();
     for (int i = 0; i <= 24; ++i)
         for (int j = 0; j <= 24; ++j) {
             cancellationPoint();
             Vec3 d[4];
             support->evaluate(u.lo + u.length() * i / 24, v.lo + v.length() * j / 24, 1, d);
-            demand(isFinite(d[0]) && isFinite(d[1]) && isFinite(d[2]) && norm(cross(d[1], d[2])) > 1e-12,
+            Vec3 neutral[4];
+            original.evaluate(u.lo+u.length()*i/24,v.lo+v.length()*j/24,1,neutral);
+            const bool existingBoundaryPole=(i==0 || i==24 || j==0 || j==24) && norm(cross(neutral[1],neutral[2]))<=1e-12;
+            demand(isFinite(d[0]) && isFinite(d[1]) && isFinite(d[2]) &&
+                       (norm(cross(d[1], d[2])) > 1e-12 || existingBoundaryPole),
                    "poli: la modifica rende la superficie singolare");
         }
     return support;
@@ -72,7 +79,7 @@ Body editBodyFacesPoles(const Body &source, const std::vector<SurfaceFacePoleCha
         demand(faces.insert(edit.face.index).second, "poli: faccia duplicata");
         count += edit.changes.size();
         demand(count <= 4096, "poli: modificare fino a 4096 poli per funzione");
-        result.face(edit.face).surface = changedSupport(source, edit);
+        result.face(edit.face).surface = changedSupport(source, edit,tolerance);
     }
     // Le SP-curve appartengono alla topologia originale. Calcolarle prima di
     // sostituire i supporti, mai proiettare i vecchi bordi sui supporti deformati.

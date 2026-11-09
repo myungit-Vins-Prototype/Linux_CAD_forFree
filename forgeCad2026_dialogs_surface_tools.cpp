@@ -214,7 +214,7 @@ bool surfaceToolDialog(QMainWindow *window, CadViewport *viewport, const QString
             QMessageBox::information(
                 window, title,
                 mode == 2
-                    ? QStringLiteral("Serve un corpo con almeno una faccia NURBS.")
+                    ? QStringLiteral("Serve un corpo con almeno una faccia convertibile in NURBS.")
                     : QStringLiteral("Serve una superficie aperta da estendere."));
             return false;
         }
@@ -412,7 +412,8 @@ bool surfaceToolDialog(QMainWindow *window, CadViewport *viewport, const QString
                            "Ctrl/Cmd aggiunge o toglie poli, Maiusc aggiunge. Alt + trascinamento oppure Selezione rettangolare selezionano un gruppo di poli. Trascina sullo sfondo per ruotare. "
                            "L'anteprima si calcola al rilascio. Esc durante il trascinamento annulla lo spostamento."),
             &dialog));
-        form->addRow(QStringLiteral("Facce NURBS da modificare:"),faceList);
+        form->addRow(QStringLiteral("Facce da modificare:"),faceList);
+        form->addRow(ForgeCad::Gui::wrappedNote(QStringLiteral("Le superfici analitiche vengono convertite automaticamente in NURBS esatte prima della modifica. Bordi e fori vengono conservati."),&dialog));
         form->addRow(faceControls);
         form->addRow(ForgeCad::Gui::wrappedNote(QStringLiteral("Le griglie selezionate si modificano insieme. U/V valgono per tutte le facce. "
             "I bordi condivisi devono restare coincidenti: seleziona insieme i poli corrispondenti delle facce adiacenti."),&dialog));
@@ -422,7 +423,7 @@ bool surfaceToolDialog(QMainWindow *window, CadViewport *viewport, const QString
         form->addRow(poleBox);
         form->addRow(ForgeCad::Gui::wrappedNote(QStringLiteral("Alt + trascinamento: riquadro. Ctrl: aggiungi/togli; Maiusc: aggiungi. Trascina sullo sfondo per ruotare."), &dialog));
         form->addRow(keepConnected);form->addRow(keepTangent);
-        form->addRow(ForgeCad::Gui::wrappedNote(QStringLiteral("Le facce NURBS adiacenti vengono incluse. I poli collegati seguono anche se non selezionati (verdi). G1 conserva i giunti già tangenti; gli spigoli restano netti. I giunti con griglie non compatibili sono protetti."),&dialog));
+        form->addRow(ForgeCad::Gui::wrappedNote(QStringLiteral("Le facce adiacenti vengono incluse. I poli collegati seguono anche se non selezionati (verdi). G1 conserva i giunti già tangenti; gli spigoli restano netti. I giunti con griglie non compatibili sono protetti."),&dialog));
         form->addRow(checkContinuity);form->addRow(continuityInfo);
         form->addRow(poleSelection);
         form->addRow(poleGridInfo);
@@ -701,7 +702,7 @@ bool surfaceToolDialog(QMainWindow *window, CadViewport *viewport, const QString
         for(int i=0;i<faceList->count();++i)if(faceList->item(i)->checkState()==Qt::Checked) {
             const FaceId face(faceList->item(i)->data(Qt::UserRole).toInt());
             faces.append(face);
-            surfaces.push_back(std::dynamic_pointer_cast<const BSplineSurface>(shape->face(face).surface));
+            surfaces.push_back(poleSession.sourceSurface(face));
         }
         if(faces.isEmpty())return;
         refitTimer.stop();timer.stop();refitPending=false;refitSearching=true;
@@ -819,7 +820,7 @@ bool surfaceToolDialog(QMainWindow *window, CadViewport *viewport, const QString
         if(face.valid()) for(int i=0;i<faceList->count();++i) if(faceList->item(i)->data(Qt::UserRole).toInt()==face.index)
             faceList->item(i)->setCheckState(faceList->item(i)->checkState()==Qt::Checked?Qt::Unchecked:Qt::Checked);
         beginFacePick();
-        if(!face.valid() || surfaceBasisHash(shape,face).isEmpty()) status->setText(QStringLiteral("Scegli una faccia NURBS del corpo corrente."));
+        if(!face.valid() || surfaceBasisHash(shape,face).isEmpty()) status->setText(QStringLiteral("Scegli una faccia del corpo corrente convertibile in NURBS."));
     });
     QObject::connect(base, qOverload<int>(&QComboBox::currentIndexChanged), &dialog, [&] {
         viewport->cancelReferencePick();viewport->setPickBodies({});choosingFaces=false;pickFaces->setText(QStringLiteral("Scegli facce nella vista"));

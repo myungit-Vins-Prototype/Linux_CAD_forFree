@@ -181,7 +181,8 @@ struct SurfacePoleConstraints::Data {
                     row({{{face, u, v}, 1}}, true);
     }
 };
-std::vector<FaceId> connectedSurfacePoleFaces(const Body &body, const std::vector<FaceId> &seeds) {
+namespace {
+std::vector<FaceId> connectedPoleFaces(const Body &body, const std::vector<FaceId> &seeds,bool analytic) {
     std::set<int> included;
     for (auto f : seeds)
         included.insert(f.index);
@@ -196,7 +197,7 @@ std::vector<FaceId> connectedSurfacePoleFaces(const Body &body, const std::vecto
             if (included.count(a.index) == included.count(b.index))
                 continue;
             auto target = included.count(a.index) ? b : a;
-            if (dynamic_cast<const BSplineSurface *>(body.face(target).surface.get())) {
+            if (body.face(target).surface && (analytic || body.face(target).surface->type()==SurfaceType::BSpline)) {
                 included.insert(target.index);
                 changed = true;
             }
@@ -208,6 +209,10 @@ std::vector<FaceId> connectedSurfacePoleFaces(const Body &body, const std::vecto
         if (included.count(f.index))
             result.push_back(f);
     return result;
+}
+} // namespace
+std::vector<FaceId> connectedSurfacePoleFaces(const Body &body,const std::vector<FaceId> &seeds) {
+    return connectedPoleFaces(body,seeds,true);
 }
 SurfacePoleConstraints::SurfacePoleConstraints(const Body &body, const std::vector<SurfaceFacePoleChange> &bases,
                                                int mode, double tolerance) {
@@ -222,7 +227,7 @@ SurfacePoleConstraints::SurfacePoleConstraints(const Body &body, const std::vect
         if (base.replacement)
             data->replacements[base.face.index] = base.replacement;
     }
-    auto connected = connectedSurfacePoleFaces(body, selected);
+    auto connected = connectedPoleFaces(body, selected,false);
     Body uv = body;
     require(computePCurves(uv) == 0, "Continuita': rifilature UV non disponibili.");
     for (auto face : connected) {
@@ -297,6 +302,39 @@ SurfacePoleConstraints::SurfacePoleConstraints(const Body &body, const std::vect
         }
     }
     require(data->poles.size() <= 1000000, "Continuita': rete troppo grande; semplificare la griglia.");
+    // Le cuciture implicite delle NURBS chiuse e i lati degeneri (poli di
+    // sfere/coni) appartengono allo stesso supporto, senza un edge di seam.
+    for(const auto &entry:data->surfaces) {
+        const int f=entry.first;const auto &s=*entry.second;
+        const auto &neutral=static_cast<const BSplineSurface &>(*body.face(FaceId(f)).surface);
+        const auto neutralPoint=[&](Pole p){return neutral.pole(p.u,p.v);};
+        for(int axis=0;axis<2;++axis) {
+            Side low{axis,false,false}, high{axis,true,false};
+            const int count=low.count(s);
+            bool closed=compatible(s,low,s,high);
+            for(int i=0;i<low.count(neutral);++i)closed=closed && distance(neutralPoint(low.pole(f,neutral,i)),neutralPoint(high.pole(f,neutral,i)))<=1e-10;
+            if(closed) {
+                ++data->info.connected;
+                const double ka=low.factor(s)*rowRatio(s,low),kb=high.factor(s)*rowRatio(s,high);
+                bool smooth=ka>0 && kb>0;
+                for(int i=0;i<low.count(neutral);++i){const auto a=low.pole(f,neutral,i),b=high.pole(f,neutral,i);
+                    const auto x=(neutralPoint(low.pole(f,neutral,i,1))-neutralPoint(a))*low.factor(neutral)*rowRatio(neutral,low);
+                    const auto y=(neutralPoint(high.pole(f,neutral,i,1))-neutralPoint(b))*high.factor(neutral)*rowRatio(neutral,high);
+                    smooth=smooth && norm(x+y)<=1e-8*std::max({1.,norm(x),norm(y)});
+                }
+                if(smooth)++data->info.tangent;else ++data->info.sharp;
+                for(int i=0;i<count;++i){const auto a=low.pole(f,s,i),b=high.pole(f,s,i);
+                    data->row({{a,1},{b,-1}});
+                    if(mode==2 && smooth)data->row({{low.pole(f,s,i,1),ka},{high.pole(f,s,i,1),kb},{a,-(ka+kb)*.5},{b,-(ka+kb)*.5}});
+                }
+            }
+            for(auto side:{low,high}) {
+                const auto first=side.pole(f,s,0);bool collapsed=true;
+                for(int i=1;i<side.count(neutral);++i)collapsed=collapsed && distance(neutralPoint(side.pole(f,neutral,0)),neutralPoint(side.pole(f,neutral,i)))<=1e-10;
+                if(collapsed)for(int i=1;i<count;++i)data->row({{first,1},{side.pole(f,s,i),-1}});
+            }
+        }
+    }
     data_ = data;
     if (!data->replacements.empty())
         for (const auto &face : propagate({})) {
