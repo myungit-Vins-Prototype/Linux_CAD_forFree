@@ -1,6 +1,6 @@
 # CLAUDE.md — memoria operativa ForgeCAD
 
-Aggiornato **8 novembre 2026**.
+Aggiornato **9 novembre 2026**.
 
 [Cronologia](docs/history/claude-2026-11-02.md).
 
@@ -103,6 +103,13 @@ ctest --test-dir forgecad-release --output-on-failure
 
 ## Ultimi interventi — esiti consolidati
 
+**09/11 — Poli Hook.** Corpo7/Copia facce16:193×1483=286219 poli; risolto il limite totale4096.
+Tabella virtuale; spinner U/V4–64 automatici, bicubica e scarto campionato persistiti(schema10).
+Hook8×48=384poli/scarto0,0848055mm:App/6CTest/Wayland/Undo/codec/riapertura PASS; originale invariato.
+Fixture senza cache PASS; scarto e auto-intersezioni senza certificazione globale.
+Mappa658/9411/check/4HTML PASS. [Prove](docs/poli-nurbs-griglia-2026-11-09.md).
+
+
 **08/11 — Bottle e Shower Head.** Pool esatto:690duplicati,poli/pesi1042→135MiB;
 Bottle RSS9,95→2,75GiB (-72%),30 B-rep byte-identici. Anche ultimo salvataggio:
 33funzioni/8schizzi/182facce,codec67/Wayland/idle0frame/nuovo schizzo senza rebuild PASS.
@@ -174,16 +181,4 @@ Loft36:derivate locali264→7,8s; storia senza cache137s/0errori,Svuota69s;app/2
 CT0578:fix UV36feature/0errori,17CTest/468kernel/Wayland/mappa PASS;CI42266591981 Linux75/2SKIP,macOS79/1SKIP.
 [Prove](docs/ct0578-regressione-filetto-2026-11-06.md); dettagli precedenti nell'archivio Bottle08/11.
 
-**04/11 — Griglie, specchi e guide.** `3c644e2`: istanze condivise, B-rep2/cache10;
-`9eff99c`: appoggi G1/riordino e F7/E25 verificati. Griglie/cache11: PRT190,5→88,7MB,
-STEP745,1→458,7MB; shell928,5→642,7MB. App/runner/QA/suite PASS.
-[Specchi](docs/riduzione-complessita-specchi-2026-11-03.md),[guide](docs/loft-controlli-guide-2026-11-04.md),
-[griglie/budget](docs/riduzione-griglie-loft-step-2026-11-04.md),[F7/E25](docs/loft-selezione-facce-storiche-2026-11-04.md).
-[Dettagli storici](docs/history/claude-prima-taglio-reciproco-2026-11-05.md).
-
-04/11 — Svuotamento/poli e apertura: app/kernel/GUI verificati;
-[archivio](docs/history/claude-prima-shower-head-2026-11-08.md).
-
-Storico 01–03/11: Schizzi/riferimenti, Loft9/guide, review/storyboard e checkpoint:
-[archivio completo precedente a Onion](docs/history/claude-prima-onion-2026-11-07.md).
-Restano validi i limiti operativi sopra; esiti CI/kernel storici non ricertificano il nuovo lavoro.
+Storico precedente e dettagli: [archivio](docs/history/claude-prima-poli-nurbs-2026-11-09.md).

@@ -190,6 +190,8 @@ add_executable(forgecad
     cad_spatial_sketch.h
     cad_surface_tools.h
     cad_surface_tools.cpp
+    cad_surface_poles_model.h
+    cad_surface_poles_model.cpp
     cad_solid_trim.cpp
     cad_surface_mapping.cpp
     cad_spatial_sketch.cpp
@@ -632,6 +634,8 @@ if(FORGECAD_BUILD_VIEW_TESTS)
     forgecad_add_view_test(forgecad_linked_drawing_tests --linked-drawings)
     forgecad_add_view_test(forgecad_drawing_revisions_tests --drawing-revisions)
     forgecad_add_view_test(forgecad_projected_drawing_file_tests --projected-drawings)
+    forgecad_add_view_test(forgecad_surface_poles_large_tests --surface-poles-large)
+    set_tests_properties(forgecad_surface_poles_large_tests PROPERTIES TIMEOUT 120)
     forgecad_add_view_test(forgecad_surface_tools_tests --surface-tools)
     set_tests_properties(forgecad_surface_tools_tests PROPERTIES TIMEOUT 180)
     forgecad_add_view_test(forgecad_catalog_recovery_gui_tests --catalog-recovery)

@@ -185,12 +185,12 @@ static void surfaceTools() {
         auto *dialog = window.findChild<QDialog *>("surfaceToolDialog");
         try {
             require(dialog, "pannello poli aperto");
-            auto *table = dialog->findChild<QTableWidget *>("surfacePolesTable");
-            require(table && table->rowCount() > 0 && view.surfacePoleOverlay_.size() == table->rowCount(), "gabbia e tabella concordano");
+            auto *table = dialog->findChild<QTableView *>("surfacePolesTable");
+            require(table && table->model()->rowCount() > 0 && view.surfacePoleOverlay_.size() == table->model()->rowCount(), "gabbia e tabella concordano");
             require(!dialog->findChild<QListWidget *>("surfaceToolEdge")->isVisible(), "controlli degli altri modi nascosti");
-            const int row = table->rowCount() / 2;
+            const int row = table->model()->rowCount() / 2;
             const auto start = view.surfacePoleScreen(row);
-            const double x = QLocale().toDouble(table->item(row, 2)->text());
+            const double x = QLocale().toDouble(table->model()->index(row,2).data(Qt::EditRole).toString());
             QMouseEvent press(QEvent::MouseButtonPress, start, start, Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
             QApplication::sendEvent(&view, &press);
             const auto dragGeneration=view.preview_.generation;
@@ -204,9 +204,9 @@ static void surfaceTools() {
             QMouseEvent release(QEvent::MouseButtonRelease, start + QPointF(14, 5), start + QPointF(14, 5), Qt::LeftButton, Qt::NoButton,
                                 Qt::NoModifier);
             QApplication::sendEvent(&view, &release);
-            require(QLocale().toDouble(table->item(row, 2)->text()) != x, "trascinamento modifica coordinate");
+            require(QLocale().toDouble(table->model()->index(row,2).data(Qt::EditRole).toString()) != x, "trascinamento modifica coordinate");
             require(view.preview_.generation>dragGeneration,"anteprima richiesta al rilascio");
-            const auto point=[&](int r) {return QVector3D(QLocale().toDouble(table->item(r,2)->text()),QLocale().toDouble(table->item(r,3)->text()),QLocale().toDouble(table->item(r,4)->text()));};
+            const auto point=[&](int r) {return QVector3D(QLocale().toDouble(table->model()->index(r,2).data(Qt::EditRole).toString()),QLocale().toDouble(table->model()->index(r,3).data(Qt::EditRole).toString()),QLocale().toDouble(table->model()->index(r,4).data(Qt::EditRole).toString()));};
             const auto send=[&](QEvent::Type type,QPointF p,Qt::KeyboardModifiers mods=Qt::NoModifier) {
                 QMouseEvent e(type,p,p,type==QEvent::MouseMove?Qt::NoButton:Qt::LeftButton,
                     type==QEvent::MouseButtonRelease?Qt::NoButton:Qt::LeftButton,mods);QApplication::sendEvent(&view,&e);
@@ -234,7 +234,7 @@ static void surfaceTools() {
                 for(int k=0;k<3;++k)if(k!=axis)require(std::fabs(delta[k])<1e-5,"vincolo all'asse globale esatto");
                 require((point(untouched)-fixed).length()<1e-7,"poli non selezionati fermi");
             }
-            table->item(other,4)->setText(QLocale().toString(double(point(other).z())+2.,'g',17));
+            table->model()->setData(table->model()->index(other,4),QLocale().toString(double(point(other).z())+2.,'g',17));
             orientation->setCurrentIndex(1);
             const auto local=view.surfacePoleAxes();
             require(view.surfacePoleLocal_ && std::fabs(QVector3D::dotProduct(local[0],local[2]))<1e-6 &&
@@ -251,14 +251,14 @@ static void surfaceTools() {
             send(QEvent::MouseButtonPress,cancelHead);send(QEvent::MouseMove,cancelEnd);
             QKeyEvent escape(QEvent::KeyPress,Qt::Key_Escape,Qt::NoModifier);QApplication::sendEvent(&view,&escape);
             require((point(row)-cancelBefore).length()<1e-7 && (point(other)-cancelOther).length()<1e-7,"Esc ripristina l'intero gruppo");
-            table->item(row, 5)->setText("0");
+            table->model()->setData(table->model()->index(row,5),"0");
             QElapsedTimer validation;
             validation.start();
             while (validation.elapsed() < 2000 && dialog->findChild<QDialogButtonBox *>("surfaceToolButtons")->button(QDialogButtonBox::Ok)->isEnabled())
                 QApplication::processEvents();
             require(!dialog->findChild<QDialogButtonBox *>("surfaceToolButtons")->button(QDialogButtonBox::Ok)->isEnabled(),
                     "peso zero disabilita conferma");
-            table->item(row, 5)->setText(QLocale().toString(1.4));
+            table->model()->setData(table->model()->index(row,5),QLocale().toString(1.4));
             validation.restart();
             while (validation.elapsed() < 2000 && !dialog->findChild<QDialogButtonBox *>("surfaceToolButtons")->button(QDialogButtonBox::Ok)->isEnabled())
                 QApplication::processEvents();
@@ -484,4 +484,204 @@ static void surfaceTools() {
     individualFillControls();
     std::cout << "PASS superfici: rete/estensione/poli, dipendenze, rigenerazione, Undo/Redo, UI/mouse, formato53, errori atomici, "
                  "revisioni e sola lettura\n";
+}
+
+// Griglia reale grande: il corpo 7 di Hook contiene 286219 poli. La fixture
+// autonoma riproduce le dimensioni senza distribuire il documento dell'utente.
+static void surfacePolesLargeGrid(const QString &path = {}, bool gl = false) {
+    using namespace ForgeCad;
+    using namespace Kernel;
+    DocumentState document;
+    if (!path.isEmpty()) clientOk(loadDocumentFile(path, document));
+    else {
+        constexpr int nu = 193, nv = 1483;
+        const auto knots = [](int count) {
+            std::vector<double> result{0};
+            for (int i=0;i<count;++i) result.push_back(double(i)/(count-1));
+            result.push_back(1); return result;
+        };
+        std::vector<Vec3> points;
+        for (int i=0;i<nu;++i) for(int j=0;j<nv;++j)
+            points.emplace_back(10.*i/(nu-1),10.*j/(nv-1),0);
+        auto shape=surface_fixture::patch(true);
+        shape.face(shape.faces().front()).surface=std::make_shared<const BSplineSurface>(1,1,knots(nu),knots(nv),nu,nv,std::move(points));
+        ExtrusionObject source; source.feature=BodyFeature::Imported; source.name="Griglia grande con foro";
+        source.forgeBody=std::make_shared<const Body>(std::move(shape)); source.cachedGeometry=true;
+        source.importData=QByteArray::fromStdString(writeStep({{"Fixture",*source.forgeBody,false,{0,0,0},nullptr,{}}}));
+        document.extrusions={source};
+    }
+    PdfWindow window;
+    window.resize(1600,1000);
+    auto &view=*window.viewport_;
+    view.tessellationQuality_=0;
+    view.loadDocument(document);
+    int source=-1;
+    for(int index:view.resultBodiesBefore(-1)) {
+        const auto shape=view.extrusions_[index].forgeBody;
+        if(!surfaceBasisHash(shape).isEmpty() && shape->isSheet()) source=index;
+    }
+    require(source>=0,"sorgente NURBS singola disponibile");
+    const auto shape=view.extrusions_[source].forgeBody;
+    const auto spline=std::dynamic_pointer_cast<const BSplineSurface>(shape->face(shape->faces().front()).surface);
+    require(spline && qint64(spline->uPoleCount())*spline->vPoleCount()>4096,"riproduttore oltre il vecchio limite");
+    const auto before=writeBodyBinary(*shape);
+    std::cout << "Griglia grande: " << spline->uPoleCount() << " x " << spline->vPoleCount()
+              << ", feature=" << view.extrusions_[source].name.toStdString() << ", corpo="
+              << logicalBodyLabel(&view,source).toStdString() << std::endl;
+    if(gl) {
+        window.show(); QApplication::processEvents(); require(view.isValid(),"contesto OpenGL reale");
+        view.setReferencePlanesVisible(false);view.setAxesVisible(false);view.setGridVisible(false);
+        view.setViewPreset(4);view.fitAll();
+    } else view.resize(1000,700);
+    ExtrusionObject definition;definition.feature=BodyFeature::SurfaceTools;definition.surfaceTool.mode=2;definition.firstBody=source;
+    ExtrusionObject submitted;
+    std::exception_ptr failure;
+    const int nv=spline->vPoleCount();
+    SurfacePolesModel expected;expected.setSurface(spline);
+    const auto sampled=expected.cage({});
+    int selected=(spline->uPoleCount()/2)*nv+nv/2;
+    while(sampled.rows.contains(selected)) ++selected;
+    QTimer::singleShot(gl?800:0,&window,[&] {
+        auto *dialog=window.findChild<QDialog *>("surfaceToolDialog");
+        try {
+            require(dialog,"pannello griglia grande aperto");
+            auto *table=dialog->findChild<QTableView *>("surfacePolesTable");
+            require(table && table->model()->rowCount()==spline->uPoleCount()*nv,"tutti i poli disponibili in tabella virtuale");
+            require(!view.surfacePoleOverlay_.isEmpty() && view.surfacePoleOverlay_.size()<=4096,"gabbia grande creata con display limitato");
+            require(table->model()->index(selected,0).data().toInt()==selected/nv+1 &&
+                table->model()->index(selected,1).data().toInt()==selected%nv+1,"indici originali delle righe oltre 4096");
+            table->selectRow(selected);table->scrollTo(table->model()->index(selected,2));
+            require(view.surfacePoleSelection_.size()==1,"selezione dalla tabella crea il polo escluso dal campionamento");
+            const auto point=spline->pole(selected/nv,selected%nv);
+            require((view.surfacePoleGizmoOrigin_-QVector3D(point.x(),point.y(),point.z())).length()<1e-4,"gizmo sul polo reale selezionato");
+            require(view.surfacePoleLabel_==QStringLiteral("P(%1,%2)").arg(selected/nv+1).arg(selected%nv+1),"etichetta con indici originali");
+            // Esc ripristina anche un polo aggiunto alla gabbia dalla tabella.
+            const auto start=view.surfacePoleAxisScreen(0);
+            const auto send=[&](QEvent::Type type,QPointF p) {
+                QMouseEvent event(type,p,p,type==QEvent::MouseMove?Qt::NoButton:Qt::LeftButton,
+                    type==QEvent::MouseButtonRelease?Qt::NoButton:Qt::LeftButton,Qt::NoModifier);
+                QApplication::sendEvent(&view,&event);
+            };
+            const auto old=table->model()->index(selected,2).data(Qt::EditRole).toString();
+            send(QEvent::MouseButtonPress,start);send(QEvent::MouseMove,start+QPointF(12,5));
+            require(table->model()->index(selected,2).data(Qt::EditRole).toString()!=old,"trascina il polo reale fuori campionamento");
+            QKeyEvent escape(QEvent::KeyPress,Qt::Key_Escape,Qt::NoModifier);QApplication::sendEvent(&view,&escape);
+            require(table->model()->index(selected,2).data(Qt::EditRole).toString()==old,"Esc ripristina le coordinate originali");
+            // La conferma conserva esattamente l'indice del polo, non quello nel display.
+            table->model()->setData(table->model()->index(selected,4),QLocale().toString(point.z()+.001,'g',17));
+            if(gl) {
+                QApplication::processEvents();
+                QDir().mkpath("/tmp/forgecad-poles-large-qa");
+                require(window.grab().save("/tmp/forgecad-poles-large-qa/window.png"),"cattura pannello e griglia");
+                require(view.grabFramebuffer().save("/tmp/forgecad-poles-large-qa/cage.png"),"cattura OpenGL gabbia");
+            }
+            auto *buttons=dialog->findChild<QDialogButtonBox *>("surfaceToolButtons");
+            QElapsedTimer validation;validation.start();
+            while(!buttons->button(QDialogButtonBox::Ok)->isEnabled() && validation.elapsed()<3000) QApplication::processEvents();
+            require(buttons->button(QDialogButtonBox::Ok)->isEnabled(),"modifica grande valida abilita conferma");
+            buttons->button(QDialogButtonBox::Ok)->click();
+        } catch(...) { failure=std::current_exception();if(dialog)dialog->reject(); }
+    });
+    const bool accepted=surfaceToolDialog(&window,&view,"Modifica poli NURBS",-1,definition,[&](const ExtrusionObject &result){submitted=result;return QString();});
+    if(failure)std::rethrow_exception(failure);
+    require(accepted && submitted.surfaceTool.edits.size()==1,"conferma modifica una sola cella della griglia grande");
+    const auto change=submitted.surfaceTool.edits.front();
+    require(change.u==selected/nv && change.v==selected%nv && std::abs(change.dz-.001)<1e-10,"delta e indici corretti oltre la riga 4096");
+    require(writeBodyBinary(*shape)==before && view.surfacePoleOverlay_.isEmpty(),"documento sorgente immutato e overlay rimosso");
+    // Persistenza e applicazione della funzione sulla fixture indipendente.
+    if(path.isEmpty()) {
+        clientOk(view.createBody(submitted));
+        const auto modified=view.extrusions_.back().forgeBody;
+        require(modified && modified->faces().size()==shape->faces().size(),"funzione grande applicata mantenendo facce e foro");
+        const auto changed=std::dynamic_pointer_cast<const BSplineSurface>(modified->face(modified->faces().front()).surface);
+        require(std::abs(changed->pole(change.u,change.v).z()-.001)<1e-12,"kernel applica il polo corretto");
+        view.undo();require(view.extrusions_.size()==1,"Undo della modifica grande");
+        view.redo();require(view.extrusions_.size()==2,"Redo della modifica grande");
+        QByteArray encoded;clientOk(encodeDocument(view.documentState(),encoded));
+        DocumentState restored;clientOk(decodeDocument(encoded,restored));
+        require(restored.extrusions.back().surfaceTool.edits.front().v==change.v,"round trip dei poli grandi");
+    }
+    std::cout << "PASS griglia grande: apertura, gabbia, indici, selezione, trascinamento/Esc, conferma e sorgente immutata" << std::endl;
+    surfacePolesRefitControls(view,window,source,path.isEmpty(),gl);
+}
+
+static void surfacePolesRefitControls(CadViewport &view,QMainWindow &window,int source,bool fixture,bool gl) {
+    using namespace ForgeCad;using namespace Kernel;
+    const auto original=view.extrusions_[source].forgeBody;
+    const auto bytesBefore=writeBodyBinary(*original);
+    const int initialCount=view.extrusions_.size(),nu=fixture?6:8,nv=fixture?12:48;
+    ExtrusionObject definition;definition.feature=BodyFeature::SurfaceTools;definition.surfaceTool.mode=2;definition.firstBody=source;
+    std::exception_ptr failure;
+    QTimer::singleShot(gl?400:0,&window,[&]{
+        auto *dialog=window.findChild<QDialog *>("surfaceToolDialog");
+        try {
+            require(dialog,"pannello ricostruzione aperto");
+            auto *enabled=dialog->findChild<QCheckBox *>("surfacePolesRefitEnabled");
+            auto *u=dialog->findChild<QSpinBox *>("surfacePolesRefitU"),*v=dialog->findChild<QSpinBox *>("surfacePolesRefitV");
+            auto *limit=dialog->findChild<QDoubleSpinBox *>("surfacePolesRefitTolerance");
+            auto *apply=dialog->findChild<QPushButton *>("surfacePolesRefitApply");
+            auto *table=dialog->findChild<QTableView *>("surfacePolesTable");
+            auto *ok=dialog->findChild<QDialogButtonBox *>("surfaceToolButtons")->button(QDialogButtonBox::Ok);
+            require(enabled&&u&&v&&limit&&apply&&table,"controlli U/V e scostamento disponibili");
+            enabled->setChecked(true);u->setValue(nu);v->setValue(nv);
+            require(!ok->isEnabled(),"nuovi conteggi attendono ricostruzione");
+            QElapsedTimer automatic;automatic.start();
+            while(table->model()->rowCount()!=nu*nv && automatic.elapsed()<3000)QApplication::processEvents();
+            require(table->model()->rowCount()==nu*nv && view.surfacePoleOverlay_.size()==nu*nv,"spinner aggiornano automaticamente la griglia completa");
+            if(!fixture) {
+                limit->setValue(1e-7);QElapsedTimer wait;wait.start();while(wait.elapsed()<150)QApplication::processEvents();
+                require(!ok->isEnabled(),"limite di scostamento troppo stretto impedisce conferma");
+                limit->setValue(.1);
+            }
+            const int row=(nu/2)*nv+nv/2;
+            table->selectRow(row);table->scrollTo(table->model()->index(row,4));
+            const double z=QLocale().toDouble(table->model()->index(row,4).data(Qt::EditRole).toString());
+            table->model()->setData(table->model()->index(row,4),QLocale().toString(z+.01,'g',17));
+            QElapsedTimer wait;wait.start();while(!ok->isEnabled()&&wait.elapsed()<5000)QApplication::processEvents();
+            require(ok->isEnabled(),"griglia ridotta modificabile e confermabile");
+            if(gl) {
+                dialog->resize(620,900);table->scrollTo(table->model()->index(row,4));
+                for(auto *area:dialog->findChildren<QScrollArea *>())area->verticalScrollBar()->setValue(area->verticalScrollBar()->maximum());
+                QApplication::processEvents();
+                require(window.grab().save("/tmp/forgecad-poles-large-qa/refit-window.png"),"cattura barre U/V e tabella");
+                require(view.grabFramebuffer().save("/tmp/forgecad-poles-large-qa/refit-cage.png"),"cattura gabbia semplificata");
+            }
+            ok->click();
+        }catch(...){failure=std::current_exception();if(dialog)dialog->reject();}
+    });
+    const bool accepted=surfaceToolDialog(&window,&view,"Modifica poli NURBS",-1,definition,[&](const auto &d){return view.createBody(d);});
+    if(failure)std::rethrow_exception(failure);
+    require(accepted&&view.extrusions_.size()==initialCount+1,"ricostruzione e modifica applicate in un solo passo");
+    const auto result=view.extrusions_.back();
+    const auto spline=std::dynamic_pointer_cast<const BSplineSurface>(result.forgeBody->face(result.forgeBody->faces().front()).surface);
+    require(spline&&spline->uPoleCount()==nu&&spline->vPoleCount()==nv,"risultato usa davvero i nuovi controlli");
+    require(checkBody(*result.forgeBody,{true,true}).empty(),"B-rep ricostruito valido");
+    require(result.forgeBody->face(result.forgeBody->faces().front()).loops.size()==original->face(original->faces().front()).loops.size(),"rifilature e fori conservati");
+    require(writeBodyBinary(*original)==bytesBefore,"ricostruzione non modifica la sorgente");
+    view.undo();require(view.extrusions_.size()==initialCount,"Undo della ricostruzione");
+    view.redo();require(view.extrusions_.size()==initialCount+1,"Redo della ricostruzione");
+    const auto key=CadViewport::previewKey(result,initialCount);
+    auto different=result;different.surfaceTool.refitU++;
+    require(CadViewport::previewKey(different,initialCount)!=key,"conteggio poli invalida anteprima");
+    different=result;different.surfaceTool.refitTolerance*=2;
+    require(CadViewport::previewKey(different,initialCount)!=key,"scarto ammesso invalida anteprima");
+    QByteArray encoded;clientOk(encodeDocument(view.documentState(),encoded));
+    DocumentState restored;clientOk(decodeDocument(encoded,restored));
+    require(restored.extrusions.back().surfaceTool.refitU==nu&&restored.extrusions.back().surfaceTool.refitV==nv,"codec conserva conteggi U/V");
+    auto broken=QJsonDocument::fromJson(surfaceToolsExtras(view.extrusions_)).object();
+    auto records=broken["features"].toArray();auto record=records.last().toObject();
+    record["refit"]=QJsonArray{65,nv,.1};records[records.size()-1]=record;broken["features"]=records;
+    auto retained=view.extrusions_;require(!applySurfaceToolsExtras(QJsonDocument(broken).toJson(),retained).isEmpty(),"codec rifiuta ricostruzione fuori limite");
+    QTimer::singleShot(0,&window,[&]{auto *dialog=window.findChild<QDialog *>("surfaceToolDialog");try{
+        require(dialog->findChild<QCheckBox *>("surfacePolesRefitEnabled")->isChecked(),"riapertura ripristina ricostruzione");
+        require(dialog->findChild<QTableView *>("surfacePolesTable")->model()->rowCount()==nu*nv,"riapertura ripristina griglia modificata");
+    }catch(...){failure=std::current_exception();}dialog->reject();});
+    surfaceToolDialog(&window,&view,"Modifica poli NURBS",initialCount,view.extrusions_.back(),[](const auto &){return QString();});
+    if(failure)std::rethrow_exception(failure);
+    if(fixture) {
+        for(auto &body:restored.extrusions){body.forgeBody.reset();body.cachedGeometry=false;body.display={};}
+        CadViewport rebuilt;rebuilt.tessellationQuality_=0;rebuilt.loadDocument(restored);
+        require(rebuilt.extrusions_.back().error.isEmpty()&&rebuilt.extrusions_.back().forgeBody,"ricostruzione rigenera senza cache");
+    }
+    std::cout<<"PASS ricostruzione poli: barre U/V, scarto, modifica, B-rep, Undo/Redo, codec, riapertura"<<std::endl;
 }

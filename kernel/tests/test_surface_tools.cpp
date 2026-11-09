@@ -1,5 +1,6 @@
 #include "surface_tools_fixture.h"
 #include "fk_test.h"
+#include "fk_surface_refit.h"
 #include "fk_surface_algo.h"
 #include "fk_body_check.h"
 #include "fk_classify.h"
@@ -191,4 +192,37 @@ FK_TEST(SurfacePolesPreserveTrimsAndTopology) {
             collapse.push_back({i, j, -s->pole(i, j), 1});
     FK_CHECK_THROWS(editSheetPoles(source, collapse));
     FK_CHECK_THROWS(editSheetPoles(makePlaneSheet(Frame3(), 10), {{0, 0, Vec3(0, 0, 1), 1}}));
+}
+
+FK_TEST(SurfacePolesRefitControlCounts) {
+    const auto source=surface_fixture::patch(true);
+    const auto original=std::dynamic_pointer_cast<const BSplineSurface>(source.face(source.faces().front()).surface);
+    const auto fitted=refitSurfacePoles(*original,6,9);
+    FK_CHECK(fitted.surface->uPoleCount()==6 && fitted.surface->vPoleCount()==9);
+    FK_CHECK(fitted.sampledDeviation<1e-10);
+    BodyHistory history;
+    const auto rebuilt=editSheetPoles(source,{},1e-6,&history,fitted.surface);
+    valid(rebuilt);
+    FK_CHECK(rebuilt.edges()==source.edges() && rebuilt.vertices()==source.vertices());
+    FK_CHECK(rebuilt.face(rebuilt.faces().front()).loops.size()==2);
+    const auto edited=editSheetPoles(source,{{2,4,Vec3(0,0,.2),1}},1e-6,&history,fitted.surface);
+    valid(edited);
+    FK_CHECK(original->uPoleCount()==4 && original->vPoleCount()==4);
+    FK_CHECK_THROWS(refitSurfacePoles(*original,3,8));
+    FK_CHECK_THROWS(refitSurfacePoles(*original,8,65));
+    // Razionale curva: lo scarto scende aumentando i controlli; verifica su
+    // una griglia indipendente da campioni e nodi usati dal ricostruttore.
+    std::vector<Vec3> points;
+    std::vector<double> weights(16,1.);
+    for(int u=0;u<4;++u)for(int v=0;v<4;++v)points.emplace_back(u,v,u==1&&v==1?3.:0.);
+    weights[5]=1.8;
+    const BSplineSurface rational(3,3,{0,0,0,0,1,1,1,1},{0,0,0,0,1,1,1,1},4,4,points,weights);
+    const auto coarse=refitSurfacePoles(rational,4,4),fine=refitSurfacePoles(rational,12,12);
+    FK_CHECK(fine.sampledDeviation<coarse.sampledDeviation*.1);
+    double independent=0;
+    for(int i=0;i<53;++i)for(int j=0;j<47;++j) {
+        const double u=(i+.371)/53,v=(j+.619)/47;
+        independent=std::max(independent,distance(rational.point(u,v),fine.surface->point(u,v)));
+    }
+    FK_CHECK(independent<=fine.sampledDeviation*1.1+1e-10);
 }

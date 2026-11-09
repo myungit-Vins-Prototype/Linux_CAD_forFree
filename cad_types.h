@@ -691,6 +691,8 @@ struct SurfaceToolParameters {
     bool mappingQuilt=false; // mappa comune piano/superfici; modo3 appiattisce con deformazione
     bool trimReverseFirst=false,trimReverseSecond=false;
     double maximum=100,tolerance=1e-6;
+    int refitU=0,refitV=0; // 0: griglia originale; altrimenti ricostruzione bicubica 4..64
+    double refitTolerance=.1; // scarto campionato accettabile in mm, distinto dalla tolleranza del B-rep
     QByteArray basis;
     QVector<SurfacePoleEdit> edits;
     QVector<GeometryRef> sources; // mappature: kind11 corpo intero, kind5 faccia

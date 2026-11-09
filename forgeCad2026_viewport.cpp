@@ -335,7 +335,7 @@ void CadViewport::setEditBodyCallback(std::function<void(int)> callback) { editB
 void CadViewport::setSurfacePoleOverlay(const QVector<QVector3D> &points,int u,int v,int selected){surfacePoleOverlay_=points;surfacePoleU_=u;surfacePoleV_=v;surfacePoleSelected_=selected;if(points.isEmpty())surfacePoleSelection_.clear();update();}
 QPointF CadViewport::surfacePoleScreen(int index)const{return index>=0&&index<surfacePoleOverlay_.size()?projectWorldPoint(surfacePoleOverlay_[index]):QPointF(-1e6,-1e6);}
 QVector3D CadViewport::surfacePoleDragVector(const QPoint &from,const QPoint &to)const{QVector3D a,b,d;camera_.viewRay(from,size(),1,a,d);camera_.viewRay(to,size(),1,b,d);return b-a;}
-void CadViewport::setSurfacePoleSelection(const QVector<int> &selected, const std::array<QVector3D,3> &axes, bool local) {
+void CadViewport::setSurfacePoleSelection(const QVector<int> &selected, const std::array<QVector3D,3> &axes, bool local, const QString &label) {
     surfacePoleSelection_.clear();
     surfacePoleGizmoOrigin_ = {};
     for (int i : selected) if (i >= 0 && i < surfacePoleOverlay_.size() && !surfacePoleSelection_.contains(i)) {
@@ -345,6 +345,7 @@ void CadViewport::setSurfacePoleSelection(const QVector<int> &selected, const st
     if (!surfacePoleSelection_.isEmpty()) surfacePoleGizmoOrigin_ /= float(surfacePoleSelection_.size());
     surfacePoleAxes_ = axes;
     surfacePoleLocal_ = local;
+    surfacePoleLabel_ = label;
     update();
 }
 QPointF CadViewport::surfacePoleGizmoCenter() const { return projectWorldPoint(surfacePoleGizmoOrigin_); }

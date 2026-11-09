@@ -5,6 +5,7 @@
 #include "cad_element_names.h"
 #include "cad_topology_ref.h"
 #include "fk_surface_tools.h"
+#include "fk_surface_refit.h"
 #include "fk_sheet.h"
 #include "fk_sew.h"
 #include "fk_intersect.h"
@@ -120,7 +121,22 @@ void buildSurfaceTool(ExtrusionObject &body, int index, const QVector<SketchObje
             std::vector<SurfacePoleChange> edits;
             for (const auto &e : p.edits)
                 edits.push_back({e.u, e.v, Vec3(e.dx, e.dy, e.dz), e.weightFactor});
-            result = editSheetPoles(*source, edits, p.tolerance, &history);
+            BSplineSurfacePtr replacement;
+            double deviation = 0;
+            if (p.refitU || p.refitV) {
+                require(std::isfinite(p.refitTolerance) && p.refitTolerance >= 1e-7 && p.refitTolerance <= 1000,
+                        "Scarto di ricostruzione non valido.");
+                const auto original = std::dynamic_pointer_cast<const BSplineSurface>(source->face(source->faces().front()).surface);
+                const auto fitted = refitSurfacePoles(*original, p.refitU, p.refitV);
+                require(fitted.sampledDeviation <= p.refitTolerance,
+                        qPrintable(QStringLiteral("Scarto campionato %1 mm oltre il limite %2 mm: aumentare i poli U/V.")
+                            .arg(fitted.sampledDeviation,0,'g',6).arg(p.refitTolerance,0,'g',6)));
+                replacement = fitted.surface;
+                deviation = fitted.sampledDeviation;
+            }
+            result = editSheetPoles(*source, edits, p.tolerance, &history, replacement);
+            if (replacement) body.notice = QStringLiteral("Griglia ricostruita %1 × %2; scarto campionato iniziale %3 mm.")
+                .arg(p.refitU).arg(p.refitV).arg(deviation,0,'g',6);
             body.forgeBody = std::make_shared<const Body>(std::move(result));
             registerDeclaredHistory(body.forgeBody, {source}, std::move(history));
         }
@@ -132,7 +148,7 @@ void buildSurfaceTool(ExtrusionObject &body, int index, const QVector<SketchObje
 }
 QByteArray surfaceToolsExtras(const QVector<ExtrusionObject> &bodies) {
     QJsonArray records;
-    bool mapping=false, multiple=false, targetSet=false, rigid=false, quilt=false, flatten=false, linked=false, solidTrim=false;
+    bool mapping=false, multiple=false, targetSet=false, rigid=false, quilt=false, flatten=false, linked=false, solidTrim=false, refit=false;
     for (int i = 0; i < bodies.size(); ++i) {
         const auto &b = bodies[i];
         if (b.feature != BodyFeature::SurfaceTools && b.fillFaceContinuities.isEmpty())
@@ -150,6 +166,7 @@ QByteArray surfaceToolsExtras(const QVector<ExtrusionObject> &bodies) {
                                    {"basis", QString::fromLatin1(p.basis.toHex())},
                                    {"edits", edits},
                                    {"contacts", contacts}};
+        if (p.refitU || p.refitV) { refit=true; record["refit"]=QJsonArray{p.refitU,p.refitV,p.refitTolerance}; }
         if (p.mode == 5) {solidTrim=true;record["trimSides"]=QJsonArray{p.trimReverseFirst,p.trimReverseSecond};}
         if (p.mode == 3 || p.mode == 4) {
             mapping=true;
@@ -182,7 +199,7 @@ QByteArray surfaceToolsExtras(const QVector<ExtrusionObject> &bodies) {
         records.append(record);
     }
     return records.isEmpty() ? QByteArray()
-                             : QJsonDocument(QJsonObject{{"schema", solidTrim ? 9 : linked ? 8 : flatten ? 7 : quilt ? 6 : rigid ? 5 : targetSet ? 4 : multiple ? 3 : mapping ? 2 : 1}, {"features", records}}).toJson(QJsonDocument::Compact);
+                             : QJsonDocument(QJsonObject{{"schema", refit ? 10 : solidTrim ? 9 : linked ? 8 : flatten ? 7 : quilt ? 6 : rigid ? 5 : targetSet ? 4 : multiple ? 3 : mapping ? 2 : 1}, {"features", records}}).toJson(QJsonDocument::Compact);
 }
 QString applySurfaceToolsExtras(const QByteArray &bytes, QVector<ExtrusionObject> &output) {
     auto bodies = output;
@@ -192,7 +209,7 @@ QString applySurfaceToolsExtras(const QByteArray &bytes, QVector<ExtrusionObject
             require(bytes.size() <= 4 * 1024 * 1024, "Estensioni superfici oltre4MiB.");
             QJsonParseError error;
             const auto root = QJsonDocument::fromJson(bytes, &error).object();
-            require(error.error == QJsonParseError::NoError && root.size() == 2 && (root["schema"].toDouble(-1) == 1 || root["schema"].toDouble(-1) == 2 || root["schema"].toDouble(-1) == 3 || root["schema"].toDouble(-1) == 4 || root["schema"].toDouble(-1) == 5 || root["schema"].toDouble(-1) == 6 || root["schema"].toDouble(-1) == 7 || root["schema"].toDouble(-1) == 8 || root["schema"].toDouble(-1) == 9) &&
+            require(error.error == QJsonParseError::NoError && root.size() == 2 && (root["schema"].toDouble(-1) == 1 || root["schema"].toDouble(-1) == 2 || root["schema"].toDouble(-1) == 3 || root["schema"].toDouble(-1) == 4 || root["schema"].toDouble(-1) == 5 || root["schema"].toDouble(-1) == 6 || root["schema"].toDouble(-1) == 7 || root["schema"].toDouble(-1) == 8 || root["schema"].toDouble(-1) == 9 || root["schema"].toDouble(-1) == 10) &&
                         root["features"].isArray(),
                     "Estensioni superfici danneggiate.");
             const auto integer = [](const QJsonValue &v, int low, int high) {
@@ -203,7 +220,7 @@ QString applySurfaceToolsExtras(const QByteArray &bytes, QVector<ExtrusionObject
             for (const auto &entry : root["features"].toArray()) {
                 require(entry.isObject(), "Record superficie non valido.");
                 const auto o = entry.toObject();
-                require(o.size() == 7 + int(o.contains("targets")) + int(o.contains("mapping")) + int(o.contains("sources")) + int(o.contains("trimSides")), "Record superficie incompleto.");
+                require(o.size() == 7 + int(o.contains("targets")) + int(o.contains("mapping")) + int(o.contains("sources")) + int(o.contains("trimSides")) + int(o.contains("refit")), "Record superficie incompleto.");
                 const int i = integer(o["index"], 0, bodies.size() - 1);
                 require(!present.contains(i), "Estensione superficie duplicata.");
                 present.insert(i);
@@ -212,6 +229,15 @@ QString applySurfaceToolsExtras(const QByteArray &bytes, QVector<ExtrusionObject
                         "Estensione su un tipo di funzione incompatibile.");
                 auto &p = b.surfaceTool;
                 p.mode = integer(o["mode"], 0, root["schema"].toInt()>=9?5:root["schema"].toInt()>=2?4:2);
+                p.refitU=p.refitV=0; p.refitTolerance=.1;
+                if(o.contains("refit")) {
+                    require(root["schema"].toInt()>=10 && b.feature==BodyFeature::SurfaceTools && p.mode==2 && o["refit"].isArray() && o["refit"].toArray().size()==3,
+                            "Ricostruzione poli senza schema10 o su funzione incompatibile.");
+                    const auto fit=o["refit"].toArray();
+                    p.refitU=integer(fit[0],4,64); p.refitV=integer(fit[1],4,64);
+                    p.refitTolerance=fit[2].toDouble(NAN);
+                    require(std::isfinite(p.refitTolerance)&&p.refitTolerance>=1e-7&&p.refitTolerance<=1000,"Scarto ricostruzione non valido.");
+                }
                 if(p.mode==5) {
                     const auto sides=o["trimSides"].toArray();
                     require(root["schema"].toInt()>=9&&sides.size()==2&&sides[0].isBool()&&sides[1].isBool(),"Taglio tra superfici senza schema9 o lati validi.");

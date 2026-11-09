@@ -167,13 +167,19 @@ Body extendSheetTo(const Body &sheet, EdgeId edge, const Body &tool, double maxi
     }
     return result;
 }
-Body editSheetPoles(const Body &sheet, const std::vector<SurfacePoleChange> &changes, double tolerance, BodyHistory *history) {
+Body editSheetPoles(const Body &sheet, const std::vector<SurfacePoleChange> &changes, double tolerance, BodyHistory *history, const BSplineSurfacePtr &replacement) {
     demand(sheet.isSheet() && sheet.faces().size() == 1,
            "poli: usare una superficie a una sola faccia; estrarre prima la faccia con Copia facce");
     const auto face = sheet.faces().front();
     const auto *s = dynamic_cast<const BSplineSurface *>(sheet.face(face).surface.get());
     demand(s, "poli: il supporto selezionato non e' NURBS");
-    demand(!changes.empty() && changes.size() <= 4096, "poli: nessuna modifica o troppi poli");
+    if (replacement) {
+        demand(replacement->uDomain().lo == s->uDomain().lo && replacement->uDomain().hi == s->uDomain().hi &&
+               replacement->vDomain().lo == s->vDomain().lo && replacement->vDomain().hi == s->vDomain().hi,
+               "poli: la ricostruzione deve conservare il dominio UV");
+        s = replacement.get();
+    }
+    demand((replacement || !changes.empty()) && changes.size() <= 4096, "poli: nessuna modifica o troppi poli");
     demand(std::isfinite(tolerance) && tolerance >= 1e-9 && tolerance <= 0.01, "poli: tolleranza non valida");
     std::vector<Vec3> poles;
     std::vector<double> weights;

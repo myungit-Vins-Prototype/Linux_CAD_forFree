@@ -31,6 +31,8 @@
 #include "../cad_forge.h"
 #include "../cad_pattern.h"
 #include "../cad_surface_tools.h"
+#include "../cad_surface_poles_model.h"
+#include "fk_surface_refit.h"
 #include "../cad_surface_mapping.h"
 #include "../cad_extrude.h"
 #include "../cad_sketch_refs.h"
@@ -11298,7 +11300,7 @@ static void surfaceToolsVisualQa() {
         if(mode==2){definition.surfaceTool.basis=surfaceBasisHash(view->extrusions()[0].forgeBody);definition.surfaceTool.edits={{1,1,0,0,2,1.4}};}
         view->setReferencePlanesVisible(false);view->setAxesVisible(false);view->setGridVisible(false);view->setViewNormal(0);view->setViewPreset(4);view->fitAll();QApplication::processEvents();
         std::exception_ptr failure;bool captured=false;const auto name=QStringList{"estensione","rete","poli"}[mode];
-        QTimer::singleShot(1200,&window,[&]{auto *dialog=window.findChild<QDialog *>("surfaceToolDialog");try{require(dialog,"pannello QA aperto");if(!view->previewError().isEmpty()){dialog->grab().save(qa+"/errore-"+name+".png");for(auto *box:dialog->findChildren<QComboBox *>())std::cerr<<box->objectName().toStdString()<<": "<<box->currentText().toStdString()<<"\n";}require(view->previewError().isEmpty(),qPrintable(view->previewError()));dialog->resize(mode==2?620:480,mode==2?720:650);dialog->move(16,180);const QPointF center(view->width()/2.,view->height()/2.);QMouseEvent press(QEvent::MouseButtonPress,center,center,Qt::MiddleButton,Qt::MiddleButton,Qt::NoModifier);QApplication::sendEvent(view,&press);QMouseEvent move(QEvent::MouseMove,center+QPointF(290,0),center+QPointF(290,0),Qt::NoButton,Qt::MiddleButton,Qt::NoModifier);QApplication::sendEvent(view,&move);QMouseEvent release(QEvent::MouseButtonRelease,center+QPointF(290,0),center+QPointF(290,0),Qt::MiddleButton,Qt::NoButton,Qt::NoModifier);QApplication::sendEvent(view,&release);if(mode==2)dialog->findChild<QTableWidget *>("surfacePolesTable")->selectRow(5);QApplication::processEvents();require(dialog->grab().save(qa+"/dialogo-"+name+".png"),"cattura pannello");require(view->grabFramebuffer().save(qa+"/geometria-"+name+".png"),"cattura B-rep e gabbia");require(window.grab().save(qa+"/ambiente-"+name+".png"),"cattura ambiente3D");captured=true;dialog->reject();}catch(...){failure=std::current_exception();if(dialog)dialog->reject();}});
+        QTimer::singleShot(1200,&window,[&]{auto *dialog=window.findChild<QDialog *>("surfaceToolDialog");try{require(dialog,"pannello QA aperto");if(!view->previewError().isEmpty()){dialog->grab().save(qa+"/errore-"+name+".png");for(auto *box:dialog->findChildren<QComboBox *>())std::cerr<<box->objectName().toStdString()<<": "<<box->currentText().toStdString()<<"\n";}require(view->previewError().isEmpty(),qPrintable(view->previewError()));dialog->resize(mode==2?620:480,mode==2?720:650);dialog->move(16,180);const QPointF center(view->width()/2.,view->height()/2.);QMouseEvent press(QEvent::MouseButtonPress,center,center,Qt::MiddleButton,Qt::MiddleButton,Qt::NoModifier);QApplication::sendEvent(view,&press);QMouseEvent move(QEvent::MouseMove,center+QPointF(290,0),center+QPointF(290,0),Qt::NoButton,Qt::MiddleButton,Qt::NoModifier);QApplication::sendEvent(view,&move);QMouseEvent release(QEvent::MouseButtonRelease,center+QPointF(290,0),center+QPointF(290,0),Qt::MiddleButton,Qt::NoButton,Qt::NoModifier);QApplication::sendEvent(view,&release);if(mode==2)dialog->findChild<QTableView *>("surfacePolesTable")->selectRow(5);QApplication::processEvents();require(dialog->grab().save(qa+"/dialogo-"+name+".png"),"cattura pannello");require(view->grabFramebuffer().save(qa+"/geometria-"+name+".png"),"cattura B-rep e gabbia");require(window.grab().save(qa+"/ambiente-"+name+".png"),"cattura ambiente3D");captured=true;dialog->reject();}catch(...){failure=std::current_exception();if(dialog)dialog->reject();}});
         surfaceToolDialog(&window,view,name,-1,definition,[](const ExtrusionObject &){return QString();});if(failure)std::rethrow_exception(failure);require(captured,"QA visiva completata");
     }
     std::cout<<"PASS QA OpenGL superfici: estensione, rete, tabella poli e gabbia\n";
@@ -11504,6 +11506,12 @@ int main(int argc, char **argv) {
     if(app.arguments().contains(QStringLiteral("--drawing-section-model"))){
         try{drawingSectionModelTest(app.arguments().value(app.arguments().indexOf(QStringLiteral("--drawing-section-model"))+1));}
         catch(const std::exception &e){std::cerr<<e.what()<<std::endl;return 1;}return 0;
+    }
+    if(app.arguments().contains(QStringLiteral("--surface-poles-large"))) {
+        try {
+            const int at=app.arguments().indexOf(QStringLiteral("--surface-poles-document"));
+            ViewportInteractionTest::surfacePolesLargeGrid(at<0?QString():app.arguments().value(at+1),app.arguments().contains(QStringLiteral("--gl")));
+        } catch(const std::exception &e){std::cerr<<e.what()<<std::endl;return 1;}return 0;
     }
     if(app.arguments().contains(QStringLiteral("--surface-tools-visual"))){try{surfaceToolsVisualQa();}catch(const std::exception &e){std::cerr<<e.what()<<std::endl;return 1;}return 0;}
     if(app.arguments().contains(QStringLiteral("--surface-tools"))){try{ViewportInteractionTest::surfaceTools();}catch(const std::exception &e){std::cerr<<e.what()<<std::endl;return 1;}return 0;}

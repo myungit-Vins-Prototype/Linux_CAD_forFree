@@ -20,5 +20,5 @@ struct SurfacePoleChange {
 // Singola faccia NURBS: conserva topologia e trim UV (fori compresi), ricalcola
 // curve 3D e vertici. Le modifiche sono relative al supporto parametrico a monte.
 Body editSheetPoles(const Body &sheet, const std::vector<SurfacePoleChange> &changes, double tolerance = scaledAccuracy(1e-6),
-                    BodyHistory *history = nullptr);
+                    BodyHistory *history = nullptr, const BSplineSurfacePtr &replacement = {});
 } // namespace ForgeCad::Kernel

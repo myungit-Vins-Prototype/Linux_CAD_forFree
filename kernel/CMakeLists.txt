@@ -111,6 +111,8 @@ add_library(forgekernel STATIC
     fk_sheet.h
     fk_surface_tools.h
     fk_surface_tools.cpp
+    fk_surface_refit.h
+    fk_surface_refit.cpp
     fk_body_collection.cpp
     fk_surface_mapping.cpp
     fk_mapping_fit.cpp

@@ -410,7 +410,7 @@ void CadViewport::drawReferenceLabels() {
     painter.setPen(QColor(255, 170, 140));
     size = referencePlaneExtents(2);
     if (isPlaneShown(2)) painter.drawText(projectWorldPoint(QVector3D(0.0f, 0.75f * float(size.width()), 0.75f * float(size.height()))), QStringLiteral("Piano YZ"));
-    if(surfacePoleU_>0&&surfacePoleV_>0&&surfacePoleU_*surfacePoleV_==surfacePoleOverlay_.size()){
+    if(surfacePoleU_>0&&surfacePoleV_>0&&surfacePoleU_*surfacePoleV_<=surfacePoleOverlay_.size()){
         painter.save();
         painter.setPen(QPen(QColor(70,205,245,180),1,Qt::DashLine));
         for(int i=0;i<surfacePoleU_;++i)for(int j=0;j<surfacePoleV_;++j){const int k=i*surfacePoleV_+j;const auto p=surfacePoleScreen(k);if(i+1<surfacePoleU_)painter.drawLine(p,surfacePoleScreen(k+surfacePoleV_));if(j+1<surfacePoleV_)painter.drawLine(p,surfacePoleScreen(k+1));}
@@ -432,7 +432,7 @@ void CadViewport::drawReferenceLabels() {
             painter.setPen(QPen(Qt::white,2)); painter.setBrush(QColor(45,50,60)); painter.drawEllipse(center,6,6);
             painter.setPen(QColor(255,210,80));
             const auto label = surfacePoleSelection_.size()>1 ? QStringLiteral("%1 poli").arg(surfacePoleSelection_.size())
-                : QStringLiteral("P(%1,%2)").arg(surfacePoleSelected_/surfacePoleV_+1).arg(surfacePoleSelected_%surfacePoleV_+1);
+                : surfacePoleLabel_;
             painter.drawText(center+QPointF(10,20),label);
         }
         painter.restore();

@@ -119,6 +119,8 @@ QString FeaturePreviewBuilder::previewKey(const ExtrusionObject &d, int index) {
     if(d.feature==BodyFeature::SurfaceTools){
         parts << QStringLiteral("ST") << QString::number(d.surfaceTool.mode) << n(d.surfaceTool.maximum) << n(d.surfaceTool.tolerance) << QString::fromLatin1(d.surfaceTool.basis.toHex());
         const auto &mapping=d.surfaceTool;
+        if(mapping.refitU||mapping.refitV) parts << QStringLiteral("STR") << QString::number(mapping.refitU)
+            << QString::number(mapping.refitV) << n(mapping.refitTolerance);
         parts << QStringLiteral("STM") << n(mapping.mappingU) << n(mapping.mappingV)
               << n(mapping.mappingX) << n(mapping.mappingY) << n(mapping.mappingAngle) << n(mapping.mappingOffset)
               << QString::number(mapping.mappingCopy) << QString::number(mapping.mappingRigid) << QString::number(mapping.mappingQuilt) << QString::number(mapping.trimReverseFirst) << QString::number(mapping.trimReverseSecond);
