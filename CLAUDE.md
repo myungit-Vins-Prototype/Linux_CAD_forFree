@@ -119,7 +119,7 @@ Ricerca asincrona cancellabile U/V fino256, scostamento vincolante e codec12 olt
 Hook7 GUI:18×162/scarto0,00070033mm, modifica/Undo/codec/riapertura PASS; 7CTest/Wayland PASS.
 Sonda QPA: rotazione, rilascio soppresso e spunta durante ricerca PASS; originale invariato.
 Worker allineato alla precisione del documento; app/runner definitivi,7CTest (12,22s) e Wayland PASS.
-Mappa664/9509/325TU/0diag/check/5HTML e8moduli bidirezionali PASS; riaprire app. Commit/push in preparazione.
+Mappa664/9509/325TU/0diag/check/5HTML e8moduli bidirezionali PASS; riaprire app. Correzione `30d4e72` pubblicata su origin/main.
 [Griglia](docs/poli-nurbs-griglia-2026-11-09.md), [multifaccia](docs/poli-nurbs-multifaccia-2026-11-09.md).
 
 **08/11 — Bottle e Shower Head.** Pool esatto:690duplicati,poli/pesi1042→135MiB;
