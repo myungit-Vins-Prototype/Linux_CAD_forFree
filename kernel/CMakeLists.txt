@@ -207,7 +207,10 @@ target_compile_options(forgekernel_open_offset_tests PRIVATE -Wall -Wextra -Wped
 target_compile_definitions(forgekernel_open_offset_tests PRIVATE FORGEKERNEL_TEST_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/tests/data")
 set_target_properties(forgekernel_open_offset_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
 add_test(NAME forgekernel_open_offset_tests COMMAND forgekernel_open_offset_tests)
-set_tests_properties(forgekernel_open_offset_tests PROPERTIES TIMEOUT 180)
+# Le cinque regressioni includono due costruzioni Shower Head con NURBS
+# dense e richiedono circa 600 secondi CPU: sui runner a due core 180 s
+# interrompono un calcolo valido. Stesso budget della suite kernel generale.
+set_tests_properties(forgekernel_open_offset_tests PROPERTIES TIMEOUT 900)
 
 # Nodi quasi coincidenti delle guide e continuita' NURBS, senza OCCT.
 add_executable(forgekernel_loft_knots_tests tests/fk_test_main.cpp tests/test_loft_knots.cpp)

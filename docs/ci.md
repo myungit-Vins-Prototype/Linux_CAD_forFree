@@ -126,3 +126,15 @@ riuscite su entrambe le piattaforme. Il raffinamento delle due sezioni sulla
 cucitura riduce lo scarto prima del controllo di coincidenza; non cambia le
 tolleranze di accettazione. La regressione verifica anche una seconda
 rototraslazione. [Diagnosi e prove](ci-raccordi-2026-11-06.md).
+
+
+### Spessore interno e chiusure tangenti dei raccordi
+
+I fallimenti dell’8–10 novembre avvenivano nei test dopo build riuscite. La suite
+offset aperto ora dispone di 900 secondi: comprende costruzioni NURBS dense che
+richiedono circa 600 secondi CPU, oltre il vecchio limite di 180 sui runner con
+pochi core. Tutti i casi e i controlli geometrici restano attivi. La chiusura
+tangente dei raccordi smorza i passi Newton e usa la continuazione stabile anche
+per bordi analitici, con gli stessi limiti di scarto; una rotazione perturbata
+di 1e-14 rad riproduce il problema anche su Linux.
+[Diagnosi, correzione ed esiti](ci-riparazione-2026-11-10.md).

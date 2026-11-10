@@ -2219,15 +2219,18 @@ FK_TEST(BlendOpenChainsAtTangentSplineSeams) {
     const Body fixture = readBodyBinary(bytes.str());
     const Vec3 locations[] = {Vec3(-1.7449967448207901,0.29061805539976088,-0.092506600137252634),
                               Vec3(-2.0354934892613477,0.28092546857789052,-0.089421353929156622)};
-    for (int mode : {0, 1, 2}) {
+    // La rotazione quasi identica riproduce anche su x86 la chiusura
+    // instabile osservata su Apple Silicon: stessi controlli geometrici.
+    for (int mode : {0, 1, 2, 3}) {
         detail::BlendModel model(fixture);
         if (mode != 0) std::reverse(model.faces.begin(), model.faces.end());
         Body body = model.build();
-        const auto rotation = Transform3::rotation(Vec3(1,2,3), normalized(Vec3(1,2,1)), 0.7);
-        if (mode == 2) body = transformBody(body, rotation);
+        const double angle = mode == 3 ? 0.7 + 1e-14 : 0.7;
+        const auto rotation = Transform3::rotation(Vec3(1,2,3), normalized(Vec3(1,2,1)), angle);
+        if (mode >= 2) body = transformBody(body, rotation);
         const auto original = writeBodyBinary(body);
         for (int side : {0, 1}) {
-            const Vec3 location = mode == 2 ? rotation.applyToPoint(locations[side]) : locations[side];
+            const Vec3 location = mode >= 2 ? rotation.applyToPoint(locations[side]) : locations[side];
             const EdgeId selected = nearestEdge(body, location, 1e-6);
             FK_CHECK(selected.valid()); if (!selected.valid()) continue;
             const std::vector<double> radii = side == 0 ? std::vector<double>{0.001,0.01,0.05,0.2,0.208}

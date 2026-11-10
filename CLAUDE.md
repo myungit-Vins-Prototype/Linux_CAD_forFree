@@ -103,23 +103,28 @@ ctest --test-dir forgecad-release --output-on-failure
 
 ## Ultimi interventi — esiti consolidati
 
-**10/11 — Poli NURBS / Hook.** Griglie/spinner, multifaccia, riquadro/Alt, rotazione, refit entro scarto,
-analitiche esatte e G0/G1 tra facce pubblicati fino `a0c9915` su origin/main; dettagli nei rapporti.
-Corpo2 finale Raccordo15:184facce, conversione periodica/cuciture e calotta corretta; vincoli locali sui trim,
-stato neutro tollerante conservato. App/14CTest/Wayland/Undo/codec/rigenerazione ultima funzione PASS,
-originale invariato; mappa672/9702/329TU. [Prove](docs/poli-nurbs-Hook-corpo2-2026-11-09.md).
-Nuova segnalazione: Corpo7 isolato, griglia8×108, G1 attiva ma nessun vicino segue e deformazione appuntita.
-Riprodotta la sorgente reale: refit0,00913601mm, nodi interni semplici/grado3 (C2 parametrica).
-G1 operava solo sui giunti tra facce; nessun campo di influenza interno era implementato.
-Aggiunto trascinamento morbido opzionale, raggi U/V1..32, vicini verdi e decadimento compatto, sovrapposizioni
-senza somme; G0/G1 restano separati e vincolanti. Gestione atomica4096poli, Esc e stato risolto/codec15.
-Kernel18/18 poli e sonda Qt PASS; Hook8×108 Wayland:47vicini,Esc/rilascio/anteprima/B-rep/Undo/rigenerazione PASS.
-Corretto salto nei movimenti ripetuti congelando la conversione pixel/mondo del gesto. App/runner completi,11CTest e2Wayland PASS; mappa676/9751/331TU/check/6HTML PASS.
-Trascinamento morbido `7dda9c9` pubblicato su origin/main; riaprire l’app.
-[Intervento corrente](docs/poli-nurbs-trascinamento-morbido-2026-11-10.md),
+**10/11 — CI GitHub.** Run42777286467: build app/test PASS su Linux/macOS; errore CTest.
+Offset:5/5 PASS locale101s/594CPU, TIMEOUT180 insufficiente sui runner; portato a900s.
+Mac: BlendOpenChainsAtTangentSplineSeams mode2/side1/R0,06; riprodotto GCC/Clang con angolo+1e-14.
+Newton oscilla su appoggi tangenti approssimati: smorzamento nel tentativo stabile e accesso anche
+per bordi analitici; soglie geometriche invariate. Regressione estesa alla quarta rotazione.
+Build app GCC e Clang(pulita),kernelGCC475/475,40rotazioni,offset5,mappa676-9751 PASS.
+CTest Clang in corso; tema Qt passa fuori sandbox. Nessun nuovo esito remoto.
+[Diagnosi e stato](docs/ci-riparazione-2026-11-10.md).
+
+**10/11 — Poli NURBS / Hook.** Griglie/spinner, multifaccia, Alt/riquadro, rotazione, refit vincolante,
+analitiche esatte e G0/G1 pubblicati fino `a0c9915`: Corpo2 finale184facce, periodi/cuciture/calotta,
+vincoli locali sui trim e neutro tollerante conservato. App/14CTest/Wayland/Undo/codec/replay PASS;
+mappa672/9702. [Prove](docs/poli-nurbs-Hook-corpo2-2026-11-09.md).
+Corpo7 isolato8×108: scarto0,00913601mm, nodi semplici/grado3(C2); G1 riguarda solo giunti tra facce.
+Aggiunto trascinamento morbido opzionale: raggiU/V1..32, vicini verdi, decadimento compatto senza somme,
+G0/G1 separati, limite atomico4096poli, Esc e codec15; conversione pixel/mondo congelata per gesto.
+`7dda9c9` su origin/main: kernel18poli/11CTest/2Wayland/app/runner PASS; Hook47vicini, rilascio,
+anteprima/B-rep/Undo/replay; mappa676/9751/331TU/check/6HTML PASS. Riaprire l’app.
+[Rapporto](docs/poli-nurbs-trascinamento-morbido-2026-11-10.md),
 [continuita](docs/poli-nurbs-continuita-2026-11-09.md),[conversione](docs/poli-nurbs-analitiche-2026-11-09.md).
-Hook salvato ha176poli già mossi (max25,93mm): influenza vale sui nuovi gesti, nessun ripristino implicito.
-Limiti: controlli campionati, nessuna garanzia globale/G2/auto-intersezioni; influenza non impone la normale originale.
+Hook salvato:176poli già mossi(max25,93mm); influenza sui nuovi gesti, nessun ripristino implicito.
+Limiti: controlli campionati, nessuna garanzia globale/G2/auto-intersezioni o normale originale imposta.
 
 **08/11 — Bottle e Shower Head.** Pool esatto:690duplicati,poli/pesi1042→135MiB;
 Bottle RSS9,95→2,75GiB (-72%),30 B-rep byte-identici. Anche ultimo salvataggio:

@@ -1244,7 +1244,7 @@ using detail::traceBlendMitre;
 // avanza lungo la corda (facce d'estremita' quasi tangenti a una delle due
 // facce: la curva e' una parabola che prima si allontana da `to`).
 Cut traceBetween(const Surface &S, const Surface &T, const Vec3 &from, const Vec3 &to, double scale, double surfaceError, const Interval *vRange = nullptr,
-                 bool stableTangencies = false) {
+                 bool stableTangencies = false, bool damped = false) {
     const Vec3 D = to - from;
     const double L2 = dot(D, D);
     if (!(L2 > 0.0)) throw std::domain_error("blendEdges: curva di taglio degenere");
@@ -1276,7 +1276,30 @@ Cut traceBetween(const Surface &S, const Surface &T, const Vec3 &from, const Vec
                 && std::fabs(f4) < (alongV ? 1e-13 * std::fabs(dv) : 1e-13 * scale * std::sqrt(L2));
             if (stableTangencies && done) break;
             if (!solveLinear<4>(J, r)) return false;
-            for (int k = 0; k < 4; ++k) n.y[k] += r[k];
+            // Presso una tangenza il fit puo' separare gli appoggi di pochi
+            // decimi di nanometro: il passo Newton pieno peggiora il residuo.
+            // Nel tentativo stabile accetta solo passi che lo riducono; il
+            // controllo geometrico finale conserva la soglia precedente.
+            if (damped) {
+                const double constraintScale = alongV ? std::sqrt(L2) / std::fabs(dv) : 1. / std::sqrt(L2);
+                const double residual = std::hypot(norm(f), f4 * constraintScale);
+                bool improved = false;
+                for (double step = 1.; step >= 1. / 16777216; step *= .5) {
+                    double y[4];
+                    for (int k = 0; k < 4; ++k) y[k] = n.y[k] + step * r[k];
+                    const Vec3 point = S.point(y[0], y[1]);
+                    const double fourth = alongV ? y[1] - (v0 + target * dv) : dot(point - from, D) - target * L2;
+                    const double trial = std::hypot(distance(point, T.point(y[2], y[3])), fourth * constraintScale);
+                    if (std::isfinite(trial) && trial < residual) {
+                        std::copy(y, y + 4, n.y);
+                        improved = true;
+                        break;
+                    }
+                }
+                if (!improved) break;
+            } else {
+                for (int k = 0; k < 4; ++k) n.y[k] += r[k];
+            }
             if (done) break;
         }
         Vec3 a[4], b[4];
@@ -3147,17 +3170,24 @@ Body blendSurfaceChainsWithGuide(const Body &input, const std::vector<EdgeId> &s
                         } catch (const std::domain_error &) {
                         }
                     }
-                    if (boundaryMode && (!traced || kappa.gap > std::max(kFitTolerance(), piece.fit.error))) {
+                    const auto tryStable = [&](bool damped) {
                         try {
                             const Interval along{0.0, 1.0};
-                            Cut stable = traceBetween(*piece.surface, E, ra, rb, scale, piece.fit.error, &along, true);
-                            if (stable.sV.lo >= -1e-6 && stable.sV.hi <= 1.0 + 1e-6) {
+                            Cut stable = traceBetween(*piece.surface, E, ra, rb, scale, piece.fit.error, &along, true, damped);
+                            if (stable.sV.lo >= -1e-6 && stable.sV.hi <= 1.0 + 1e-6 &&
+                                stable.gap <= std::max(32 * kFitTolerance(), 1e-3 * size)) {
                                 kappa = stable;
                                 traced = true;
                             }
                         } catch (const std::domain_error &) {
                         }
-                    }
+                    };
+                    if (boundaryMode && (!traced || kappa.gap > std::max(kFitTolerance(), piece.fit.error)))
+                        tryStable(false);
+                    // Anche un bordo analitico puo' terminare su una cucitura
+                    // tangente. Smorza solo l'ultimo tentativo: conserva le
+                    // continuazioni gia' valide e i loro budget geometrici.
+                    if (!traced) tryStable(true);
                     if (boundaryMode && traced && kappa.gap > std::max(32 * kFitTolerance(), 1e-3 * size))
                         throw std::domain_error("blendEdges: chiusura del raccordo non risolta con precisione sufficiente per questo raggio");
                     if (!traced) throw std::domain_error(std::string("blendEdges: chiusura dell'estremo: ") + failure);
