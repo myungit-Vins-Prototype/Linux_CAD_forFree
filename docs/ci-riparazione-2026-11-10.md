@@ -79,6 +79,8 @@ il solo tema Qt in timeout; rieseguito lo stesso test dall’host con CTest,
 sorgenti e timeout invariati: PASS in 0,10 secondi. La suite kernel completa
 Clang impiega 386,35 secondi. Verificati per hash tutti i 657 sorgenti, header e
 file CMake della build pulita: identici al commit pubblicato `5ad19c4`.
+La build GCC locale usa il checkout condiviso; la build Clang pulita e la CI
+usano i sorgenti pubblicati, con le modifiche delle altre chat escluse dai commit.
 Log JUnit e risultati sotto `/tmp/forgecad-ci-20261110/`.
 
 - Applicazione locale `forgecad-release/forgecad` ricompilata completamente.
@@ -127,3 +129,53 @@ esecuzione. Parsing YAML e matrice/fasi CI PASS. L’archivio HTTPS risponde e
 la sua Release `resolute` include `amd64` e `amd64v3`, richieste dal runner.
 La nuova pubblicazione modifica soltanto workflow e documentazione;
 sorgenti C++, controlli geometrici e suite invariati rispetto a `5ad19c4`.
+
+## Seconda pubblicazione
+
+Fix delle mirrorlist pubblicato su `origin/main`: `994c771e56e712cc8bc4a0953220739e50a9043e`.
+[CI 42789007301](https://github.com/myungit-Vins-Prototype/Linux_CAD_forFree/actions/runs/42789007301),
+avviata alle 09:14 UTC. La nuova esecuzione sostituisce la precedente ancora
+attiva, secondo la concorrenza del workflow. Nessuna ulteriore modifica C++:
+applicazione e test sono quelli già verificati su `5ad19c4`.
+Dipendenze Linux completate in circa tre minuti. Configurazione e compilazione
+complete sono riuscite su Linux e macOS. macOS ha concluso positivamente:
+85 suite, 84 PASS / uno SKIP grafico previsto / zero errori, 604,32 secondi.
+Artefatto scaricato e verificato: kernel475/475 e
+`BlendOpenChainsAtTangentSplineSeams` PASS; offset aperto PASS in 194,29 secondi.
+Anche Linux ha concluso positivamente: 82 suite, 80 PASS / due SKIP grafici
+previsti / zero errori, 565,90 secondi. Verificati il kernel475/475, il raccordo
+precedentemente fallito e l’offset aperto (181,56 secondi).
+
+Il log conclusivo del precedente job macOS `129728115109` conferma il PASS della
+suite offset in 205,05 secondi prima dell’annullamento dei test restanti.
+La cancellazione è dovuta al nuovo push, non a un errore rilevato nel raccordo;
+la suite generale era ancora in corso. Non la si considera certificata.
+
+Mappa aggiornata anche per il workflow: 676 file / 9.751 relazioni, 331 unità
+da cache e zero diagnostiche, `--check` PASS. Quarta vista HTML verificata;
+il workflow ha solo il catalogo, senza chiamate C++ attribuite al file YAML.
+
+## Esito finale GitHub
+
+[CI 42789007301](https://github.com/myungit-Vins-Prototype/Linux_CAD_forFree/actions/runs/42789007301):
+**SUCCESS** sul commit `994c771e56e712cc8bc4a0953220739e50a9043e`.
+Configurazione, applicazione completa e tutti i test configurati riusciti su entrambi i sistemi.
+
+| Runner | Suite PASS | SKIP previsti | Fallimenti | Kernel | Tempo CTest |
+| --- | ---: | ---: | ---: | --- | ---: |
+| Linux CPU | 80 | 2 | 0 | 475/475 | 565,90 s |
+| macOS CPU e Metal | 84 | 1 | 0 | 475/475 | 604,32 s |
+
+Gli SKIP riguardano il broad phase GPU su Linux e l’overlay OpenGL su entrambi.
+`BlendOpenChainsAtTangentSplineSeams` e tutte le cinque regressioni offset passano
+su entrambi i runner. Anche i test Metal configurati sono superati su macOS.
+Nessuna tolleranza geometrica aumentata e nessun controllo disattivato.
+
+Artefatti JUnit, `LastTest.log` e log delle dipendenze scaricati e verificati in
+`/tmp/forgecad-ci-20261110/remote-linux` e `remote-macos`. Il log Linux conferma
+l’uso di `https://archive.ubuntu.com/ubuntu`, senza URL Azure: il blocco dei
+pacchetti è risolto. Metadati del run salvati in `remote-final.json`;
+entrambi i job risultano `success`, conclusi alle 09:37:15 / 09:39:40 UTC.
+
+L’aggiornamento finale della memoria e della descrizione del workflow è soltanto
+documentale, con `skip ci`, per conservare questo esito sul codice verificato.

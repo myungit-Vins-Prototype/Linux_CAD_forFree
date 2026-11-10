@@ -103,17 +103,15 @@ ctest --test-dir forgecad-release --output-on-failure
 
 ## Ultimi interventi — esiti consolidati
 
-**10/11 — CI GitHub.** Run42777286467: build app/test PASS su Linux/macOS; errore CTest.
-Offset5/5 PASS; prova Clang su2core189s > TIMEOUT180: portato a900s (controlli invariati).
-Mac: BlendOpenChainsAtTangentSplineSeams mode2/side1/R0,06; riprodotto GCC/Clang con angolo+1e-14.
-Newton oscilla su appoggi tangenti approssimati: smorzamento nel tentativo stabile e accesso anche
-per bordi analitici; soglie geometriche invariate. Regressione estesa alla quarta rotazione.
-App GCC/Clang(pulita),kernel475/475 su entrambi,40rotazioni,offset5,mappa676-9751 PASS.
-CTest82:80PASS/2SKIP previsti; tema Qt passa fuori sandbox con stesso timeout.
-`5ad19c4` su origin/main; otto run falliti: stesse due cause. Nuova CI42786261591:
-Mac build PASS/test in corso; Linux downloadAzure fermo15min, mirrorlistAPT non riscritte.
-Workflow include apt-mirrors.txt/apt-security-mirrors.txt: fixture/YAML/archivioHTTPS PASS.
-[Diagnosi e stato](docs/ci-riparazione-2026-11-10.md).
+**10/11 — CI GitHub.** Otto run falliti dopo build: offset180s e chiusura raccordo MacR0,06.
+Budget offset900s; Newton smorzato come ultimo recupero, quarta rotazione+1e-14 di regressione.
+Runner Ubuntu usava mirrorlistAPT ancora su Azure: corrette anche quelle, HTTPS/firme conservati.
+`5ad19c4` codice e `994c771` workflow su origin/main. CI42789007301 **PASS Linux/macOS**:
+Linux82suite:80PASS/2SKIP; Mac85:84PASS/1SKIP; kernel475/475 e raccordo PASS su entrambi.
+Offset181,56s Linux/194,29s Mac; prova locale2core189s conferma limite180 insufficiente.
+App GCC/Clang(pulita),kernel475 su entrambi,40rotazioni,mappa676-9751/check/4HTML PASS.
+Artefatti verificati: download Linux da archivioHTTPS, zeroAzure; soli SKIP grafici previsti.
+[Diagnosi e prove](docs/ci-riparazione-2026-11-10.md).
 
 **10/11 — Poli NURBS / Hook.** Griglie/spinner, multifaccia, Alt/riquadro, rotazione, refit vincolante,
 analitiche esatte e G0/G1 pubblicati fino `a0c9915`: Corpo2 finale184facce, periodi/cuciture/calotta,
