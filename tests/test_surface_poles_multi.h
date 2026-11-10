@@ -11,10 +11,65 @@ static void surfacePolesMultiple(bool gl=false) {
     view->setReferencePlanesVisible(false);view->setAxesVisible(false);view->setGridVisible(false);view->setViewNormal(0);view->setViewPreset(4);view->fitAll();
     ExtrusionObject definition;definition.feature=BodyFeature::SurfaceTools;definition.surfaceTool.mode=2;definition.firstBody=0;
     std::exception_ptr failure;
+    const auto checkFacePicking = [&](QDialog *dialog) {
+        auto *pick = dialog->findChild<QPushButton *>("surfacePolesPickFaces");
+        auto *list = dialog->findChild<QListWidget *>("surfacePolesFaces");
+        const auto savedVisibility = view->extrusions_[0].visible;
+        pick->click();
+        require(view->referencePicking() && view->referenceBodyEligible(0), "sorgente selezionabile durante scelta facce");
+        if (gl) {
+            require(view->isValid(), "contesto OpenGL nativo per selezione facce");
+            const auto frame = view->grabFramebuffer();
+            int filled = 0;
+            for (int y = 0; y < frame.height(); ++y)
+                for (int x = 0; x < frame.width(); ++x) {
+                    const auto color = frame.pixelColor(x, y);
+                    if (color.green() - color.red() > 50 && color.blue() - color.red() > 50) ++filled;
+                }
+            std::cout << "face picking filled pixels=" << filled << std::endl;
+            require(filled > frame.width() * frame.height() / 100, "mesh ombreggiata visibile prima del passaggio del mouse");
+        }
+        require(view->isBodyVisibleInScene(0), "sorgente disegnata durante scelta facce anche in creazione");
+        // Un clic reale nell'interno di una faccia, lontano dai poli/bordi.
+        GeometryRef hit;
+        QPoint point;
+        bool found = false;
+        for (const auto face : source->faces()) {
+            const auto p = source->face(face).surface->point(.37, .43);
+            const QPoint screen = view->projectWorldPoint(QVector3D(p.x(), p.y(), p.z())).toPoint();
+            if (!view->rect().contains(screen) || (gl && dialog->isVisible()
+                && dialog->rect().contains(dialog->mapFromGlobal(view->mapToGlobal(screen))))) continue;
+            if (view->pickReference(screen, hit) && hit.kind == 5 && hit.index == 0) {
+                point = screen; found = true; break;
+            }
+        }
+        require(found, "interno di una faccia esposto e selezionabile");
+        QListWidgetItem *item = nullptr;
+        for (int i = 0; i < list->count(); ++i)
+            if (list->item(i)->data(Qt::UserRole).toInt() == hit.point.subshape) item = list->item(i);
+        require(item, "riferimento topologico della faccia mostrata");
+        const auto checked = item->checkState();
+        const auto click = [&] {
+            const auto global = view->mapToGlobal(point);
+            QMouseEvent press(QEvent::MouseButtonPress, point, global, Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+            QMouseEvent release(QEvent::MouseButtonRelease, point, global, Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+            QApplication::sendEvent(view, &press); QApplication::sendEvent(view, &release);
+            require(view->referencePicking() && view->isBodyVisibleInScene(0), "selezione continua conserva la mesh sorgente");
+        };
+        click(); require(item->checkState() != checked, "clic sulla mesh alterna la faccia corretta");
+        click(); require(item->checkState() == checked, "secondo clic ripristina la selezione senza cambiare i poli");
+        QKeyEvent escape(QEvent::KeyPress, Qt::Key_Escape, Qt::NoModifier);
+        QApplication::sendEvent(view, &escape);
+        require(!view->referencePicking() && view->pickBodies_.isEmpty(), "Esc conclude la scelta facce");
+        pick->click(); pick->click();
+        require(!view->referencePicking() && view->pickBodies_.isEmpty(), "Termina conclude la scelta ripetuta");
+        require(view->extrusions_[0].visible == savedVisibility, "scelta facce conserva la visibilita salvata");
+    };
     QTimer::singleShot(0,&window,[&] {
         auto *dialog=window.findChild<QDialog *>("surfaceToolDialog");
         try {
             require(dialog,"pannello multifaccia aperto");
+            checkFacePicking(dialog);
             auto *list=dialog->findChild<QListWidget *>("surfacePolesFaces");
             auto *table=dialog->findChild<QTableView *>("surfacePolesTable");
             auto *model=static_cast<SurfacePolesModel *>(table->model());
@@ -114,6 +169,13 @@ static void surfacePolesMultiple(bool gl=false) {
             auto *ok=dialog->findChild<QDialogButtonBox *>("surfaceToolButtons")->button(QDialogButtonBox::Ok);
             QElapsedTimer wait;wait.start();while(!ok->isEnabled()&&wait.elapsed()<5000)QApplication::processEvents();
             require(ok->isEnabled(),"due facce modificabili nello stesso comando");
+            wait.restart();
+            while ((view->previewPending() || view->previewRunning_) && wait.elapsed() < 10000) QApplication::processEvents();
+            require(view->preview_.valid, "anteprima pronta prima di riaprire la scelta facce");
+            checkFacePicking(dialog);
+            wait.restart();
+            while ((view->previewPending() || view->previewRunning_) && wait.elapsed() < 10000) QApplication::processEvents();
+            require(view->preview_.valid && !view->isBodyVisibleInScene(0), "fine scelta ripristina anteprima e nasconde la sola sorgente sostituita");
             if(gl){
                 dialog->resize(620,950);dialog->move(8,20);
                 if(auto *panel=dynamic_cast<FunctionDialogPanel *>(dialog))panel->setPanelOpacity(100);
@@ -148,6 +210,14 @@ static void surfacePolesMultiple(bool gl=false) {
     require(rebuilt.extrusions_.back().forgeBody&&rebuilt.extrusions_.back().error.isEmpty(),"multifaccia rigenera senza cache");
     QTimer::singleShot(0,&window,[&]{auto *dialog=window.findChild<QDialog *>("surfaceToolDialog");try{
         require(dialog->findChild<QTableView *>("surfacePolesTable")->model()->rowCount()==32,"riapertura ripristina due griglie");
+        checkFacePicking(dialog);
+        // Anche una nuova feature puo' scegliere esplicitamente uno stadio
+        // precedente al risultato corrente, senza cambiare Mostra/Nascondi.
+        view->setPickBodies({0}); clientOk(view->beginReferencePick(DatumRoleFace, view->extrusions_.size()));
+        require(view->isBodyVisibleInScene(0) && !view->isBodyVisibleInScene(1), "stadio esplicito consumato visibile senza sovrapporre il risultato");
+        view->clearPreview();
+        require(view->isBodyVisibleInScene(0), "Azzera anteprima non nasconde lo stadio in scelta");
+        view->cancelReferencePick(); view->setPickBodies({});
         const auto *list=dialog->findChild<QListWidget *>("surfacePolesFaces");require(list->item(2)->checkState()==Qt::Unchecked,"faccia esclusa conservata alla riapertura");
     }catch(...){failure=std::current_exception();}dialog->reject();});
     surfaceToolDialog(&window,view,"Poli NURBS multifaccia",1,result,[](const auto &){return QString();});

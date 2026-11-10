@@ -358,15 +358,20 @@ QString CadViewport::beginReferencePick(int roles, int owner) {
     refPickRoles_ = roles;
     refPickOwner_ = owner;
     refPickContextBodies_.clear();
-    if (owner >= 0 && owner < extrusions_.size()) {
+    // Una nuova feature ha owner == size(): anche in creazione serve la
+    // scena sorgente, altrimenti isBodyDrawn esclude tutte le mesh.
+    if (owner >= 0 && owner <= extrusions_.size()) {
         const auto include = [&](int index) {
             if (index >= 0 && index < owner && !extrusions_.at(index).suppressed
                 && extrusions_.at(index).error.isEmpty() && ForgeCad::isShapeBody(extrusions_.at(index)))
                 refPickContextBodies_.insert(index);
         };
         for (int index : resultBodiesBefore(owner)) include(index);
-        // Un riferimento esistente puo' usare anche uno stadio intermedio.
-        for (int index : ForgeCad::bodyOperands(extrusions_.at(owner))) include(index);
+        // Un riferimento esistente o un corpo esplicitamente scelto nel
+        // pannello puo' usare anche uno stadio intermedio consumato.
+        if (owner < extrusions_.size())
+            for (int index : ForgeCad::bodyOperands(extrusions_.at(owner))) include(index);
+        for (int index : pickBodies_) include(index);
     }
     refHoverValid_ = false;
     setFocus();
