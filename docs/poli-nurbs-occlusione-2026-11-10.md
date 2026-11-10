@@ -61,6 +61,12 @@ Mappa:679 file/9.779 relazioni/333 unità, zero diagnostiche e controllo di cons
 Verificati blocchi, collegamenti in entrambi i versi e quattro viste HTML; chiamate, include e
 riferimenti distinti. HTML/JSON restano generati localmente e ignorati da Git.
 
+Le prove su Hook usano la copia congelata SHA256
+`8e028d543346a8d422f7983a36d8ce43884d1a5d90fe9bf6f99ee86553d9219e`.
+Al controllo finale il file originale risulta aggiornato esternamente a questa prova, SHA256
+`dcf3bd66e9e3bccefab389793eea6fa294e6efcc2e267c218f29c2142c3a41d1`;
+non è stato scritto da questa chat e la nuova revisione non è stata ricertificata.
+
 Sonde/log/immagini in `/tmp/forgecad-face-picking/visibility-*` e `Hook-corpo{2,7}-{visibili,xray}.png`.
 La verifica grafica corrente riguarda Linux/Wayland. Offscreen, senza GL, il filtro mantiene il
 comportamento accessibile dei test ma non certifica l’occlusione. Riaprire l’app aggiornata.

@@ -126,6 +126,7 @@ Scelta facce `577734d`: contesto in creazione/stadi consumati corretto;10CTest/W
 Occlusione GPU poli/segmenti/clic/riquadro + Mostra nascosti: app GCC/Clang/runner/11CTest,
 Wayland1×/2×/preview/sezioni/istanze/cache e Hook2/7 PASS. Hook2:2,32Mpoli,1789esposti/1855coperti
 nella gabbia; rotazione17ms. [Prove](docs/poli-nurbs-occlusione-2026-11-10.md).
+Hook corrente aggiornato esternamente; prove su copia congelata.
 Mappa679/9779/333TU/check/4HTML PASS; riaprire l’app. Limiti: controlli campionati, nessuna garanzia globale/G2/auto-intersezioni.
 
 **08/11 — Bottle e Shower Head.** Pool esatto:690duplicati,poli/pesi1042→135MiB;
