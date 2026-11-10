@@ -50,3 +50,5 @@ I test nativi della nuova influenza partono dalla sorgente Copiafacce16 congelat
 Sonde, log e screenshot in `/tmp/forgecad-poles-soft/`; impostazioni dei processi di prova isolate.
 Le modifiche preesistenti di altre chat sono preservate ed escluse dal commit di questa funzione.
 Riaprire ForgeCAD per usare la build aggiornata.
+
+Implementazione pubblicata su `origin/main`: `7dda9c9`. Build app e runner complete; riaprire ForgeCAD.

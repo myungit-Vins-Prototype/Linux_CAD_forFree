@@ -115,6 +115,7 @@ Aggiunto trascinamento morbido opzionale, raggi U/V1..32, vicini verdi e decadim
 senza somme; G0/G1 restano separati e vincolanti. Gestione atomica4096poli, Esc e stato risolto/codec15.
 Kernel18/18 poli e sonda Qt PASS; Hook8×108 Wayland:47vicini,Esc/rilascio/anteprima/B-rep/Undo/rigenerazione PASS.
 Corretto salto nei movimenti ripetuti congelando la conversione pixel/mondo del gesto. App/runner completi,11CTest e2Wayland PASS; mappa676/9751/331TU/check/6HTML PASS.
+Trascinamento morbido `7dda9c9` pubblicato su origin/main; riaprire l’app.
 [Intervento corrente](docs/poli-nurbs-trascinamento-morbido-2026-11-10.md),
 [continuita](docs/poli-nurbs-continuita-2026-11-09.md),[conversione](docs/poli-nurbs-analitiche-2026-11-09.md).
 Hook salvato ha176poli già mossi (max25,93mm): influenza vale sui nuovi gesti, nessun ripristino implicito.
