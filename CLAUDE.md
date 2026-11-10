@@ -104,12 +104,15 @@ ctest --test-dir forgecad-release --output-on-failure
 ## Ultimi interventi — esiti consolidati
 
 **10/11 — CI GitHub.** Run42777286467: build app/test PASS su Linux/macOS; errore CTest.
-Offset:5/5 PASS locale101s/594CPU, TIMEOUT180 insufficiente sui runner; portato a900s.
+Offset5/5 PASS; prova Clang su2core189s > TIMEOUT180: portato a900s (controlli invariati).
 Mac: BlendOpenChainsAtTangentSplineSeams mode2/side1/R0,06; riprodotto GCC/Clang con angolo+1e-14.
 Newton oscilla su appoggi tangenti approssimati: smorzamento nel tentativo stabile e accesso anche
 per bordi analitici; soglie geometriche invariate. Regressione estesa alla quarta rotazione.
-Build app GCC e Clang(pulita),kernelGCC475/475,40rotazioni,offset5,mappa676-9751 PASS.
-CTest Clang in corso; tema Qt passa fuori sandbox. Nessun nuovo esito remoto.
+App GCC/Clang(pulita),kernel475/475 su entrambi,40rotazioni,offset5,mappa676-9751 PASS.
+CTest82:80PASS/2SKIP previsti; tema Qt passa fuori sandbox con stesso timeout.
+`5ad19c4` su origin/main; otto run falliti: stesse due cause. Nuova CI42786261591:
+Mac build PASS/test in corso; Linux downloadAzure fermo15min, mirrorlistAPT non riscritte.
+Workflow include apt-mirrors.txt/apt-security-mirrors.txt: fixture/YAML/archivioHTTPS PASS.
 [Diagnosi e stato](docs/ci-riparazione-2026-11-10.md).
 
 **10/11 — Poli NURBS / Hook.** Griglie/spinner, multifaccia, Alt/riquadro, rotazione, refit vincolante,

@@ -19,7 +19,9 @@ OCCT serve solo a `forgekernel_tests` (`kernel/occt_tests`, opzione
 si scelgono secondo la versione (`TKDE*` da OCCT 7.8, nomi storici prima). I runner GitHub standard non forniscono una GPU NVIDIA
 e questa build usa il backend CPU senza installare CUDA.
 L’installazione Linux sostituisce il mirror Azure del runner con il mirror principale
-Ubuntu via HTTPS, conservando le verifiche delle firme APT. Ogni connessione ha
+Ubuntu via HTTPS, conservando le verifiche delle firme APT. Aggiorna sia le
+sorgenti `.list`/`.sources` sia `apt-mirrors.txt` e `apt-security-mirrors.txt`,
+utilizzati dai runner tramite `mirror+file:`. Ogni connessione ha
 un timeout di 30 secondi e fino a tre tentativi; il passaggio delle dipendenze
 ha un limite complessivo di 15 minuti. Anche `dependencies.log` viene conservato,
 per distinguere problemi di download dagli errori del compilatore e dei test.

@@ -52,7 +52,10 @@ jobs:
           sudo python3 - <<'PYAPT'
           from pathlib import Path
           directory = Path('/etc/apt/sources.list.d')
-          paths = [Path('/etc/apt/sources.list'), *directory.glob('*.list'), *directory.glob('*.sources')]
+          # Ubuntu usa anche mirror+file:/etc/apt/apt-mirrors.txt:
+          # cambiare solo .list/.sources lascia Azure attivo nei download.
+          paths = [Path('/etc/apt/sources.list'), Path('/etc/apt/apt-mirrors.txt'),
+                   Path('/etc/apt/apt-security-mirrors.txt'), *directory.glob('*.list'), *directory.glob('*.sources')]
           for path in paths:
               if not path.is_file():
                   continue
