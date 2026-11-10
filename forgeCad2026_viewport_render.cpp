@@ -125,6 +125,7 @@ void CadViewport::initializeGL() {
         overlayRenderer_.clear();
         sceneRenderer_.clearResources();
         gpuPicker_.clearResources();
+        surfacePoleVisibility_.clearResources();
         // Anche shader e framebuffer del vetro appartengono al contesto che
         // sta per sparire: riusarli dopo la ricreazione sarebbe un errore GL.
         glassCompositor_.clearResources();
@@ -184,6 +185,7 @@ void CadViewport::paintGL() {
         drawSnapMarkers();
         if (axesOnTop_) drawAxes();
     });
+    if (!surfacePoleOverlay_.isEmpty()) visibleSurfacePoles();
     drawReferenceLabels();
     drawSelectionHighlight();
     drawPlaneResizeHandles();
@@ -412,19 +414,16 @@ void CadViewport::drawReferenceLabels() {
     if (isPlaneShown(2)) painter.drawText(projectWorldPoint(QVector3D(0.0f, 0.75f * float(size.width()), 0.75f * float(size.height()))), QStringLiteral("Piano YZ"));
     if(!surfacePoleOverlay_.isEmpty()){
         painter.save();
+        const auto &visible = surfacePoleVisibility_.visible();
         for (int pass=0;pass<2;++pass) {
-        painter.setPen(pass==0?QPen(QColor(15,25,35,220),3):QPen(QColor(255,215,100,230),1,Qt::DashLine));
-        for (const auto &grid:surfacePoleGrids_) {
-            const int offset=grid[0],nu=grid[1],nv=grid[2];
-            if (offset<0 || nu<=0 || nv<=0 || qint64(offset)+qint64(nu)*nv>surfacePoleOverlay_.size()) continue;
-            for (int i=0;i<nu;++i) for (int j=0;j<nv;++j) {
-                const int k=offset+i*nv+j;const auto p=surfacePoleScreen(k);
-                if(i+1<nu)painter.drawLine(p,surfacePoleScreen(k+nv));
-                if(j+1<nv)painter.drawLine(p,surfacePoleScreen(k+1));
-            }
+            painter.setPen(pass==0?QPen(QColor(15,25,35,220),3):QPen(QColor(255,215,100,230),1,Qt::DashLine));
+            painter.drawLines(surfacePoleVisibility_.lines());
         }
+        for(int k=0;k<surfacePoleOverlay_.size();++k) if (visible.testBit(k)) {
+            const bool selected=surfacePoleSelection_.contains(k);painter.setPen(Qt::black);
+            painter.setBrush(selected?QColor(255,195,50):surfacePoleFollowers_.contains(k)?QColor(110,235,135):QColor(65,220,255));
+            painter.drawEllipse(surfacePoleScreen(k),selected?5:3,selected?5:3);
         }
-        for(int k=0;k<surfacePoleOverlay_.size();++k){const bool selected=surfacePoleSelection_.contains(k);painter.setPen(Qt::black);painter.setBrush(selected?QColor(255,195,50):surfacePoleFollowers_.contains(k)?QColor(110,235,135):QColor(65,220,255));painter.drawEllipse(surfacePoleScreen(k),selected?5:3,selected?5:3);}
         if (!surfacePoleSelection_.isEmpty()) {
             const auto center = surfacePoleGizmoCenter();
             const std::array<QColor,3> colors{{QColor(245,85,85),QColor(80,215,115),QColor(85,155,255)}};

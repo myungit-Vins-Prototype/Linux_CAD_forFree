@@ -18,6 +18,7 @@
 #include "cad_import.h"
 #include "cad_mass.h"
 #include "cad_overlay_renderer.h"
+#include "cad_surface_poles_visibility.h"
 #include "cad_shape_analysis.h"
 #include "cad_sketch_edit.h"
 #include "cad_sketch_offset.h"
@@ -586,6 +587,9 @@ public:
                                 std::function<void(const PatternVariation &)> picked = {});
     void setSurfacePoleOverlay(const QVector<QVector3D> &points, int u = 0, int v = 0, int selected = -1, const QVector<std::array<int,3>> &grids = {});
     QPointF surfacePoleScreen(int index) const;
+    const QBitArray &visibleSurfacePoles() const;
+    void setSurfacePoleHiddenVisible(bool visible);
+    bool surfacePoleHiddenVisible() const { return surfacePoleHiddenVisible_; }
     QPointF loftControlScreen(const QVector3D &point) const { return projectWorldPoint(point); }
     QVector3D surfacePoleDragVector(const QPoint &from,const QPoint &to) const;
     void setSurfacePoleFollowers(const QSet<int> &rows) { surfacePoleFollowers_=rows;update(); }
@@ -1712,6 +1716,8 @@ private:
     FaceHit refHoverFace_;  // faccia sotto il puntatore (per evidenziarne i bordi)
     int refHoverFaceBody_ = -1;
     QVector<GeometryRef> refMarks_;
+    mutable ForgeCad::Gui::SurfacePolesVisibility surfacePoleVisibility_;
+    bool surfacePoleHiddenVisible_ = false;
     QVector<QVector3D> surfacePoleOverlay_;
     int surfacePoleU_=0,surfacePoleV_=0,surfacePoleSelected_=-1;
     QSet<int> surfacePoleSelection_;

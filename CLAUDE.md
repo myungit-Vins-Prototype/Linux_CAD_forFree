@@ -115,18 +115,18 @@ Artefatti verificati: download Linux da archivioHTTPS, zeroAzure; soli SKIP graf
 
 **10/11 — Poli NURBS / Hook.** Griglie/spinner, multifaccia, Alt/riquadro, rotazione, refit vincolante,
 analitiche esatte e G0/G1 fino `a0c9915`: Corpo2 finale184facce, periodi/cuciture/calotta e vincoli
-locali sui trim; neutro tollerante conservato. App/14CTest/Wayland/Undo/codec/replay/mappa PASS.
-[Prove](docs/poli-nurbs-Hook-corpo2-2026-11-09.md). Corpo7:8×108,scarto0,00913601mm,grado3/C2.
-G1 agisce solo tra facce; trascinamento morbido opzionale dentro la griglia, raggiU/V1..32,
-vicini verdi/decadimento compatto, limite atomico4096poli, Esc/codec15 e conversione pixel/mondo congelata.
-`7dda9c9`: kernel18poli/11CTest/2Wayland/app/runner PASS; Hook47vicini, rilascio/Undo/replay e mappa PASS.
+locali sui trim; neutro tollerante conservato. [Prove](docs/poli-nurbs-Hook-corpo2-2026-11-09.md).
+Corpo7:8×108,scarto0,00913601mm,grado3/C2. G1 tra facce; influenza morbida nella griglia, raggi1..32,
+vicini verdi, limite4096, Esc/codec15 e conversione pixel/mondo congelata. `7dda9c9`:18kernel/11CTest/Wayland/Hook47vicini/Undo/replay PASS.
 [Influenza](docs/poli-nurbs-trascinamento-morbido-2026-11-10.md),
 [continuita](docs/poli-nurbs-continuita-2026-11-09.md),[conversione](docs/poli-nurbs-analitiche-2026-11-09.md).
 Hook:176poli già mossi(max25,93mm); influenza sui nuovi gesti, nessun reset implicito.
-Scelta facce: owner==size lasciava vuota la scena; corretti creazione e stadi espliciti consumati.
-App GCC/Clang pulita/runner/10CTest PASS; Wayland480→212061pixel, clic/Esc/Termina/anteprima/riapertura,
-HookCorpo2/7 e originali intatti PASS. [Prove](docs/poli-nurbs-selezione-visibile-2026-11-10.md).
-Mappa676/9756/331TU/check/3HTML PASS; riaprire l’app. Limiti: controlli campionati, nessuna garanzia globale/G2/auto-intersezioni.
+Scelta facce `577734d`: contesto in creazione/stadi consumati corretto;10CTest/Wayland/Hook2/7 e CI PASS.
+[Prove](docs/poli-nurbs-selezione-visibile-2026-11-10.md).
+Occlusione GPU poli/segmenti/clic/riquadro + Mostra nascosti: app GCC/Clang/runner/11CTest,
+Wayland1×/2×/preview/sezioni/istanze/cache e Hook2/7 PASS. Hook2:2,32Mpoli,1789esposti/1855coperti
+nella gabbia; rotazione17ms. [Prove](docs/poli-nurbs-occlusione-2026-11-10.md).
+Mappa679/9779/333TU/check/4HTML PASS; riaprire l’app. Limiti: controlli campionati, nessuna garanzia globale/G2/auto-intersezioni.
 
 **08/11 — Bottle e Shower Head.** Pool esatto:690duplicati,poli/pesi1042→135MiB;
 Bottle RSS9,95→2,75GiB (-72%),30 B-rep byte-identici. Anche ultimo salvataggio:

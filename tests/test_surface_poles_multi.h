@@ -1,5 +1,71 @@
+// Regressione nativa: disegno e selezione condividono la profondita del corpo.
+static void surfacePolesOcclusion() {
+    using namespace ForgeCad; using namespace Kernel;
+    QMainWindow window; auto *view = new CadViewport(&window); window.setCentralWidget(view); window.resize(1000,750);
+    view->tessellationQuality_=0; window.show(); QApplication::processEvents();
+    require(view->isValid(), "occlusione poli richiede OpenGL nativo");
+    PrimitiveParameters box; box.size[0]=box.size[1]=10; box.size[2]=2;
+    clientOk(view->createPrimitive(box,"Occlusore"));
+    const auto original=writeBodyBinary(*view->extrusions_[0].forgeBody);
+    view->setReferencePlanesVisible(false); view->setAxesVisible(false); view->setGridVisible(false);
+    view->setViewFrame({1,0,0},{0,0,1}); view->camera_.autoFit_=false;
+    view->camera_.zoom_=16; view->camera_.panX_=view->camera_.panY_=-5;
+    const QVector<QVector3D> points{{2,3,-.05f},{2,3,2.05f},{8,3,1},{12,3,1},{4,6,2},{13,7,3}};
+    const auto setOverlay=[&]{view->setSurfacePoleOverlay(points,3,2);}; setOverlay();
+    const auto front=view->visibleSurfacePoles();
+    require(!front[0]&&front[1]&&!front[2]&&front[3]&&front[4]&&front[5], "davanti/sopra la faccia/silhouette visibili, retro e interno nascosti");
+    const auto reads=view->surfacePoleVisibility_.depthPasses(); require(reads>0,"profondita GPU realmente letta, nessun fallback");
+    for(int i=0;i<20;++i)view->visibleSurfacePoles();
+    require(view->surfacePoleVisibility_.depthPasses()==reads,"hover e selezione riusano la profondita");
+    const auto image=view->grabFramebuffer(); const auto hidden=view->surfacePoleScreen(2).toPoint();
+    view->setSurfacePoleOverlay({}); const auto without=view->grabFramebuffer(); setOverlay();
+    const qreal ratio=view->devicePixelRatioF();
+    require(image.pixel(qRound(hidden.x()*ratio),qRound(hidden.y()*ratio))==without.pixel(qRound(hidden.x()*ratio),qRound(hidden.y()*ratio)),"nessun punto o segmento disegnato sopra il corpo al polo nascosto");
+    QTableView table; SurfacePolesModel model;
+    model.setSurface(std::make_shared<const BSplineSurface>(2,1,std::vector<double>{0,0,0,1,1,1},std::vector<double>{0,0,1,1},3,2,
+        std::vector<Vec3>{{2,3,-.05},{2,3,2.05},{8,3,1},{12,3,1},{4,6,2},{13,7,3}}));
+    table.setModel(&model); table.setSelectionBehavior(QAbstractItemView::SelectRows); table.setSelectionMode(QAbstractItemView::ExtendedSelection);
+    QVector<int> rows{0,1,2,3,4,5}; SurfacePolesInteraction interaction(view,&table,rows,&window);
+    const auto mouse=[&](QEvent::Type type,QPointF p,Qt::KeyboardModifiers mods=Qt::NoModifier){
+        QMouseEvent e(type,p,view->mapToGlobal(p.toPoint()),type==QEvent::MouseMove?Qt::NoButton:Qt::LeftButton,
+            type==QEvent::MouseButtonRelease?Qt::NoButton:Qt::LeftButton,mods); QApplication::sendEvent(view,&e);
+    };
+    const auto click=[&](int row){const auto p=view->surfacePoleScreen(row);mouse(QEvent::MouseButtonPress,p,Qt::ControlModifier);mouse(QEvent::MouseButtonRelease,p,Qt::ControlModifier);};
+    click(0); require(table.selectionModel()->selectedRows().size()==1&&table.selectionModel()->isRowSelected(1,{}),"clic su poli sovrapposti sceglie solo quello davanti");
+    table.clearSelection(); interaction.setBoxSelection(true);
+    const auto rectangle=[&]{mouse(QEvent::MouseButtonPress,{2,2});mouse(QEvent::MouseMove,{view->width()-2.,view->height()-2.});mouse(QEvent::MouseButtonRelease,{view->width()-2.,view->height()-2.});};
+    rectangle(); require(table.selectionModel()->selectedRows().size()==4&&!table.selectionModel()->isRowSelected(0,{})&&!table.selectionModel()->isRowSelected(2,{}),"riquadro include solo i quattro poli esposti");
+    view->setSurfacePoleHiddenVisible(true); require(view->visibleSurfacePoles().count(true)==6,"opzione X-ray rende accessibili tutti i poli");
+    rectangle(); require(table.selectionModel()->selectedRows().size()==6,"riquadro X-ray include intenzionalmente i nascosti");
+    view->setSurfacePoleHiddenVisible(false); table.clearSelection(); interaction.setBoxSelection(false);
+    view->setViewFrame({1,0,0},{0,0,-1}); const auto back=view->visibleSurfacePoles();
+    require(back[0]&&!back[1],"rotazione aggiorna il filtro anche prima del repaint");
+    view->setViewFrame({1,0,0},{0,0,1});
+    auto preview=view->extrusions_[0]; preview.primitive.size[2]=4; view->requestPreview(preview,0);
+    QElapsedTimer wait; wait.start(); while((view->previewPending()||view->previewRunning_)&&wait.elapsed()<10000)QApplication::processEvents();
+    require(view->preview_.valid&&!view->visibleSurfacePoles()[1],"anteprima corrente occlude i poli coperti dalla nuova superficie");
+    view->clearPreview(); require(view->visibleSurfacePoles()[1],"annullare anteprima ripristina la profondita sorgente");
+    view->setSection(true,{0,0,1},{0,0,1});
+    require(!view->visibleSurfacePoles()[1],"poli rimossi dalla sezione esclusi");
+    view->setSurfacePoleOverlay({{5,5,.5f}},1,1);
+    require(!view->visibleSurfacePoles()[0],"calotta della sezione occlude un polo interno");
+    view->setSection(false);
+    PrimitiveParameters bar; bar.origin[0]=4;bar.origin[1]=5;bar.origin[2]=2;bar.size[0]=bar.size[1]=2;bar.size[2]=4;
+    clientOk(view->createPrimitive(bar,"Ostacolo davanti alla griglia"));
+    view->setSurfacePoleOverlay({{2,6,2.05f},{8,6,2.05f}},1,2);
+    require(view->visibleSurfacePoles().count(true)==2&&view->surfacePoleVisibility_.lines().size()>=2,"segmento fra poli visibili interrotto dietro altro corpo");
+    const auto middle=view->projectWorldPoint({5,6,2.05f});
+    for(const auto &line:view->surfacePoleVisibility_.lines())require(view->distanceToSegment(middle,line.p1(),line.p2())>2,"nessun segmento attraversa l'occlusore");
+    view->setSurfacePoleHiddenVisible(true); view->visibleSurfacePoles();
+    require(view->surfacePoleVisibility_.lines().size()==1,"X-ray ripristina intenzionalmente il segmento completo");
+    require(writeBodyBinary(*view->extrusions_[0].forgeBody)==original,"filtro non modifica il B-rep");
+    std::cout<<"PASS occlusione poli: profondita GPU, clic/riquadro, X-ray, rotazione, preview, sezione, segmenti e cache; ratio="<<ratio<<std::endl;
+    view->setSurfacePoleOverlay({}); window.close();
+}
+
 static void surfacePolesMultiple(bool gl=false) {
     using namespace ForgeCad;using namespace Kernel;
+    if (gl) surfacePolesOcclusion();
     QMainWindow window;auto *view=new CadViewport(&window);window.setCentralWidget(view);
     view->tessellationQuality_=0;
     if(gl){window.resize(1500,1000);window.show();QApplication::processEvents();}

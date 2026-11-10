@@ -132,6 +132,7 @@ add_executable(forgecad
     forgeCad2026_viewport_sketch.cpp
     forgeCad2026_viewport_document.cpp
     forgeCad2026_viewport_selection.cpp
+    forgeCad2026_viewport_pole_visibility.cpp
     forgeCad2026_viewport_body_box.cpp
     forgeCad2026_viewport_storyboard.cpp
     forgeCad2026_viewport_loft_diagnostics.cpp
@@ -192,6 +193,8 @@ add_executable(forgecad
     cad_surface_tools.cpp
     cad_surface_poles_model.h
     cad_surface_poles_model.cpp
+    cad_surface_poles_visibility.h
+    cad_surface_poles_visibility.cpp
     cad_surface_poles_session.h
     cad_surface_poles_session.cpp
     cad_surface_poles_interaction.h

@@ -44,8 +44,9 @@ void SurfacePolesInteraction::selectBox() {
     if (toggle || add)
         for (int row : initialSelection_)
             selected.insert(row);
+    const auto &visible = view_->visibleSurfacePoles();
     for (int i = 0; i < displayedRows_.size(); ++i)
-        if (box.contains(view_->surfacePoleScreen(i).toPoint())) {
+        if (visible.testBit(i) && box.contains(view_->surfacePoleScreen(i).toPoint())) {
             const int row = displayedRows_[i];
             if (toggle && selected.contains(row))
                 selected.remove(row);
@@ -159,7 +160,9 @@ bool SurfacePolesInteraction::eventFilter(QObject *object, QEvent *event) {
         int handle = boxGesture ? -1 : view_->surfacePoleHandleAt(position);
         int row = -1;
         double nearest = 10 * 10;
+        const auto &visible = view_->visibleSurfacePoles();
         for (int i = 0; !boxGesture && i < displayedRows_.size(); ++i) {
+            if (!visible.testBit(i)) continue;
             const auto d = view_->surfacePoleScreen(i) - position;
             const double distance = QPointF::dotProduct(d, d);
             if (distance < nearest) {

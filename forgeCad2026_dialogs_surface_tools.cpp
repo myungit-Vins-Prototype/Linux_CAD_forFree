@@ -112,6 +112,12 @@ bool surfaceToolDialog(QMainWindow *window, CadViewport *viewport, const QString
     poleBox->setObjectName("surfacePolesBoxSelection");
     poleBox->setCheckable(true);
     poleBox->setToolTip(QStringLiteral("Attiva il riquadro oppure tieni premuto Alt e trascina. Sullo sfondo, senza Alt, trascina per ruotare."));
+    auto *hiddenPoles = new QCheckBox(QStringLiteral("Mostra poli nascosti"), &dialog);
+    hiddenPoles->setObjectName("surfacePolesShowHidden");
+    hiddenPoles->setToolTip(QStringLiteral("Mostra e rende selezionabili anche i poli coperti dal corpo. La vista normale mostra soltanto quelli visibili."));
+    hiddenPoles->setChecked(false);
+    viewport->setSurfacePoleHiddenVisible(false);
+    QObject::connect(hiddenPoles, &QCheckBox::toggled, &dialog, [=](bool checked) { viewport->setSurfacePoleHiddenVisible(checked); });
     auto *soft = new QCheckBox(QStringLiteral("Trascina anche i poli vicini"), &dialog);
     soft->setObjectName("surfacePolesSoft");soft->setChecked(definition.surfaceTool.poleSoft);
     auto *influence = new QWidget(&dialog);auto *influenceForm = new QFormLayout(influence);
@@ -434,6 +440,7 @@ bool surfaceToolDialog(QMainWindow *window, CadViewport *viewport, const QString
         form->addRow(refitControls);
         form->addRow(QStringLiteral("Orientamento assi:"), poleOrientation);
         form->addRow(poleBox);
+        form->addRow(hiddenPoles);
         form->addRow(ForgeCad::Gui::wrappedNote(QStringLiteral("Alt + trascinamento: riquadro. Ctrl: aggiungi/togli; Maiusc: aggiungi. Trascina sullo sfondo per ruotare."), &dialog));
         form->addRow(soft);form->addRow(influence);
         form->addRow(ForgeCad::Gui::wrappedNote(QStringLiteral("Il trascinamento morbido muove i poli vicini della stessa griglia con influenza decrescente. I raggi regolano l'ampiezza in U/V; i vicini sono verdi. Le coordinate in tabella agiscono sul singolo polo."),&dialog));
@@ -480,7 +487,7 @@ bool surfaceToolDialog(QMainWindow *window, CadViewport *viewport, const QString
         viewport->setSurfacePoleFollowers(followers);
         QVector<int> selectedOverlay;
         for (int row : selected) selectedOverlay.append(displayedRows.indexOf(row));
-        poleGridInfo->setText(QStringLiteral("%1 facce; %2 poli totali. Gabbia: %3 poli visualizzati.\n%4")
+        poleGridInfo->setText(QStringLiteral("%1 facce; %2 poli totali. Gabbia campionata: %3 poli.\n%4")
             .arg(faceList->count()==1?1:definition.surfaceTool.poleFaces.size()).arg(poleModel->rowCount()).arg(displayedRows.size()).arg(poleSession.details()));
         if (definition.surfaceTool.refitU > 0)
             poleGridInfo->setText(poleGridInfo->text() + QStringLiteral("\nScostamento campionato iniziale: %1 mm. La verifica campionata non certifica un massimo globale.").arg(refitDeviation,0,'g',6));
@@ -899,6 +906,7 @@ bool surfaceToolDialog(QMainWindow *window, CadViewport *viewport, const QString
         refitEnabled->hide();refitControls->hide();
         poles->hide();
         poleOrientation->hide();
+        hiddenPoles->hide();
         poleBox->hide();keepConnected->hide();keepTangent->hide();continuityInfo->hide();checkContinuity->hide();
         poleSelection->hide();
     }
