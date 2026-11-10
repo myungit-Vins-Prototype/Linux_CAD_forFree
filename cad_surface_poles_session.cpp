@@ -14,13 +14,13 @@ QString SurfacePolesSession::store(const SurfacePolesModel &model, SurfaceToolPa
     if (faces_.isEmpty() || !model.rowCount())
         return {};
     if (legacy_)
-        return model.edits(p.edits,p.poleContinuity!=0);
+        return model.edits(p.edits,(p.poleContinuity!=0||p.poleSoft));
     auto output = p.poleFaces;
     int count = 0;
     for (int i = 0; i < faces_.size(); ++i) {
         if (i >= output.size())
             return QStringLiteral("Selezione delle facce da aggiornare.");
-        const auto error = model.faceEdits(i, output[i].edits,p.poleContinuity!=0);
+        const auto error = model.faceEdits(i, output[i].edits,(p.poleContinuity!=0||p.poleSoft));
         if (!error.isEmpty())
             return QStringLiteral("F%1: %2").arg(faces_[i].index).arg(error);
         count += output[i].edits.size();
@@ -118,12 +118,12 @@ QString SurfacePolesSession::load(const ForgeBody &body, const QVector<Kernel::F
         p.poleFaces = records;
         model.setFaces(grids);
     }
-    model.setConstraintMode(p.poleContinuity!=0);
+    model.setConstraintMode((p.poleContinuity!=0||p.poleSoft));
     return {};
 }
 QString SurfacePolesSession::constrain(SurfacePolesModel &model,SurfaceToolParameters &p) {
     const bool action=hasDrivers_;hasDrivers_=false;const QSet<int> activeRows(drivers_.cbegin(),drivers_.cend());
-    if(!constraints_){QSignalBlocker guard(&model);model.setAutomatic({});return {};}
+    if(!constraints_){if(!p.poleSoft){QSignalBlocker guard(&model);model.setAutomatic({});}return {};}
     auto error=store(model,p);if(!error.isEmpty())return error;
     std::vector<Kernel::SurfaceFacePoleChange> drivers;
     for(int i=0;i<faces_.size();++i){Kernel::SurfaceFacePoleChange face;face.face=faces_[i];
@@ -149,7 +149,7 @@ QString SurfacePolesSession::constrain(SurfacePolesModel &model,SurfaceToolParam
 }
 QString SurfacePolesSession::continuityText()const {
     if(!constraints_)return {};
-    if(!continuity_.connected)return QStringLiteral("Nessun giunto condiviso: la faccia è isolata.");
+    if(!continuity_.connected)return QStringLiteral("Nessun giunto tra facce: G1 non distribuisce lo spostamento dentro questa griglia. Per i poli vicini usa il trascinamento morbido.");
     return QStringLiteral("%1 giunti; %2 tangenti, %3 spigoli; %4 poli spostati automaticamente (verdi). %5 giunti protetti con griglie non compatibili.")
         .arg(continuity_.connected).arg(continuity_.tangent).arg(continuity_.sharp).arg(continuity_.followers).arg(continuity_.protectedJoints);
 }

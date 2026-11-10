@@ -128,15 +128,18 @@ bool SurfacePolesInteraction::eventFilter(QObject *object, QEvent *event) {
                 band_->setGeometry(QRect(origin_, position).normalized());
                 return object == view_;
             }
-            const auto delta = view_->surfacePoleAxisDragVector(axis_, origin_, position);
+            // Il gizmo segue la griglia: la conversione pixel/mondo resta
+            // quella del primo fotogramma, senza dipendere dalla nuova origine.
+            Kernel::Vec3 delta;
+            for(int c=0;c<3;++c)delta[c]=dragBasis_[0][c]*(position.x()-origin_.x())+
+                                        dragBasis_[1][c]*(position.y()-origin_.y());
             {
                 QSignalBlocker guard(table_->model());
                 static_cast<SurfacePolesModel *>(table_->model())->restore(initialEdits_);
                 static_cast<SurfacePolesModel *>(table_->model())->setAutomatic(initialAutomatic_);
-                for (int i = 0; i < rows_.size(); ++i)
-                    for (int k = 0; k < 3; ++k)
-                        table_->model()->setData(table_->model()->index(rows_[i], k + coordinateColumn()),
-                                                 QLocale().toString(initial_[i][k] + double(delta[k]), 'g', 17));
+                const auto error = static_cast<SurfacePolesModel *>(table_->model())->translatePoles(
+                    rows_, delta, radiusU_, radiusV_);
+                if (!error.isEmpty() && message) message(error);
             }
             table_->viewport()->update();
             if (moved)
@@ -208,7 +211,6 @@ bool SurfacePolesInteraction::eventFilter(QObject *object, QEvent *event) {
                 return true;
         }
         rows_.clear();
-        initial_.clear();
         if (table_->selectionModel()->selectedRows().size() > 4096)
             return true;
         for (const auto &index : table_->selectionModel()->selectedRows()) {
@@ -223,7 +225,6 @@ bool SurfacePolesInteraction::eventFilter(QObject *object, QEvent *event) {
                     return true;
             }
             rows_.append(r);
-            initial_.append(values);
         }
         if (rows_.isEmpty())
             return true;
@@ -231,6 +232,9 @@ bool SurfacePolesInteraction::eventFilter(QObject *object, QEvent *event) {
         initialAutomatic_=static_cast<SurfacePolesModel *>(table_->model())->automaticEdits();
         axis_ = handle >= 0 && handle < 3 ? handle : -1;
         origin_ = position.toPoint();
+        const auto x=view_->surfacePoleAxisDragVector(axis_,origin_,origin_+QPoint(1,0));
+        const auto y=view_->surfacePoleAxisDragVector(axis_,origin_,origin_+QPoint(0,1));
+        for(int c=0;c<3;++c){dragBasis_[0][c]=double(x[c]);dragBasis_[1][c]=double(y[c]);}
         active_ = true;
         if (started)
             started();

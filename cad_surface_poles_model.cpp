@@ -1,4 +1,5 @@
 #include "cad_surface_poles_model.h"
+#include "fk_surface_poles_influence.h"
 #include <QLocale>
 #include <QColor>
 #include <QSet>
@@ -51,7 +52,7 @@ QVariant SurfacePolesModel::data(const QModelIndex &index, int role) const {
         return face.model->data(face.model->index(faceRow(index.row()), index.column() - 1), role);
     }
     if(role==Qt::BackgroundRole)return ((automatic_.contains(index.row())&&!edited_.contains(index.row()))||automaticManual_.contains(index.row()))?QVariant(QColor(55,115,75,100)):QVariant();
-    if(role==Qt::ToolTipRole&&((automatic_.contains(index.row())&&!edited_.contains(index.row()))||automaticManual_.contains(index.row())))return QStringLiteral("Polo spostato automaticamente dal vincolo di continuità.");
+    if(role==Qt::ToolTipRole&&((automatic_.contains(index.row())&&!edited_.contains(index.row()))||automaticManual_.contains(index.row())))return QStringLiteral("Polo spostato automaticamente dalla modifica morbida o dai vincoli sui giunti.");
     if (index.column() < 2)
         return index.column() == 0 ? index.row() / surface_->vPoleCount() + 1
                                    : index.row() % surface_->vPoleCount() + 1;
@@ -295,5 +296,48 @@ QSet<int> SurfacePolesModel::automaticRows() const {
     if(faces_.empty()){result=automaticManual_;for(auto it=automatic_.cbegin();it!=automatic_.cend();++it){if(!edited_.contains(it.key()))result.insert(it.key());}}
     else for(const auto &face:faces_)for(int row:face.model->automaticRows())result.insert(face.offset+row);
     return result;
+}
+QString SurfacePolesModel::translatePoles(const QVector<int> &drivers, const Kernel::Vec3 &delta, int ru, int rv) {
+    if (!Kernel::isFinite(delta)) return QStringLiteral("Spostamento poli non finito.");
+    if (Kernel::norm(delta)==0) return {};
+    QVector<QVector<SurfacePoleEdit>> output;
+    QMap<int,std::vector<std::array<int,2>>> groups;
+    QSet<int> selected;
+    for (int row : drivers) {
+        if (row < 0 || row >= rowCount()) return QStringLiteral("Polo fuori griglia.");
+        if (selected.contains(row)) continue;
+        selected.insert(row);
+        const auto s = surfaceForRow(row); const int local = faceRow(row);
+        groups[std::max(0,faceIndex(row))].push_back({local/s->vPoleCount(),local%s->vPoleCount()});
+    }
+    try {
+        const int count = faces_.empty() ? 1 : int(faces_.size());
+        int total = 0;
+        for (int f = 0; f < count; ++f) {
+            auto &model = faces_.empty() ? *this : *faces_[f].model;
+            QVector<SurfacePoleEdit> prior;
+            const auto error = model.edits(prior,true); if (!error.isEmpty()) return error;
+            QMap<int,SurfacePoleEdit> changes;
+            for (const auto &e : prior) changes[e.u*model.surface_->vPoleCount()+e.v] = e;
+            for (const auto &p : Kernel::surfacePoleInfluence(*model.surface_,groups.value(f),ru,rv)) {
+                const int row = p.u*model.surface_->vPoleCount()+p.v;
+                const auto current = model.values(row), original = model.original(row);
+                changes[row] = {p.u,p.v,current[0]-original[0]+p.weight*delta.x(),
+                    current[1]-original[1]+p.weight*delta.y(),current[2]-original[2]+p.weight*delta.z(),
+                    current[3]/original[3]};
+            }
+            QVector<SurfacePoleEdit> edits;
+            for (const auto &e : changes) edits.append(e);
+            total += edits.size(); if (total > 4096) return QStringLiteral("Influenza poli: oltre4096poli; ridurre raggi o selezione.");
+            output.append(edits);
+        }
+        // Preparazione atomica: nessuna cella cambia se il campo supera il budget.
+        for (int row : selected) {
+            const auto point = values(row);
+            for (int c=0;c<3;++c) setData(index(row,coordinateColumn()+c),QLocale().toString(point[c]+delta[c],'g',17));
+        }
+        setAutomatic(output,selected,true);
+    } catch (const std::exception &e) { return QString::fromUtf8(e.what()); }
+    return {};
 }
 } // namespace ForgeCad

@@ -112,9 +112,21 @@ bool surfaceToolDialog(QMainWindow *window, CadViewport *viewport, const QString
     poleBox->setObjectName("surfacePolesBoxSelection");
     poleBox->setCheckable(true);
     poleBox->setToolTip(QStringLiteral("Attiva il riquadro oppure tieni premuto Alt e trascina. Sullo sfondo, senza Alt, trascina per ruotare."));
+    auto *soft = new QCheckBox(QStringLiteral("Trascina anche i poli vicini"), &dialog);
+    soft->setObjectName("surfacePolesSoft");soft->setChecked(definition.surfaceTool.poleSoft);
+    auto *influence = new QWidget(&dialog);auto *influenceForm = new QFormLayout(influence);
+    influenceForm->setContentsMargins(0,0,0,0);
+    std::array<QSpinBox *,2> radii;
+    for(int direction=0;direction<2;++direction){
+        radii[direction]=new QSpinBox(influence);radii[direction]->setRange(1,32);
+        radii[direction]->setObjectName(direction==0?"surfacePolesRadiusU":"surfacePolesRadiusV");
+        radii[direction]->setValue(direction==0?definition.surfaceTool.poleRadiusU:definition.surfaceTool.poleRadiusV);
+        influenceForm->addRow(direction==0?QStringLiteral("Raggio U (poli):"):QStringLiteral("Raggio V (poli):"),radii[direction]);
+    }
+    influence->setVisible(soft->isChecked());
     auto *keepConnected=new QCheckBox(QStringLiteral("Mantieni i bordi connessi (G0)"),&dialog);
     keepConnected->setObjectName("surfacePolesKeepConnected");keepConnected->setChecked(definition.surfaceTool.poleContinuity>=1);
-    auto *keepTangent=new QCheckBox(QStringLiteral("Mantieni la tangenza esistente (G1)"),&dialog);
+    auto *keepTangent=new QCheckBox(QStringLiteral("Mantieni la tangenza tra facce (G1)"),&dialog);
     keepTangent->setObjectName("surfacePolesKeepTangent");keepTangent->setChecked(definition.surfaceTool.poleContinuity==2);
     auto *continuityInfo = new FunctionMessage(&dialog);
     continuityInfo->setObjectName("surfacePolesContinuityInfo");
@@ -423,8 +435,10 @@ bool surfaceToolDialog(QMainWindow *window, CadViewport *viewport, const QString
         form->addRow(QStringLiteral("Orientamento assi:"), poleOrientation);
         form->addRow(poleBox);
         form->addRow(ForgeCad::Gui::wrappedNote(QStringLiteral("Alt + trascinamento: riquadro. Ctrl: aggiungi/togli; Maiusc: aggiungi. Trascina sullo sfondo per ruotare."), &dialog));
+        form->addRow(soft);form->addRow(influence);
+        form->addRow(ForgeCad::Gui::wrappedNote(QStringLiteral("Il trascinamento morbido muove i poli vicini della stessa griglia con influenza decrescente. I raggi regolano l'ampiezza in U/V; i vicini sono verdi. Le coordinate in tabella agiscono sul singolo polo."),&dialog));
         form->addRow(keepConnected);form->addRow(keepTangent);
-        form->addRow(ForgeCad::Gui::wrappedNote(QStringLiteral("Le facce adiacenti vengono incluse. I poli collegati seguono anche se non selezionati (verdi). G1 conserva i giunti già tangenti; gli spigoli restano netti. I giunti con griglie non compatibili sono protetti."),&dialog));
+        form->addRow(ForgeCad::Gui::wrappedNote(QStringLiteral("Le facce adiacenti vengono incluse. I poli collegati seguono anche se non selezionati (verdi). G1 agisce tra facce e conserva i giunti già tangenti; gli spigoli restano netti. I giunti con griglie non compatibili sono protetti."),&dialog));
         form->addRow(checkContinuity);form->addRow(continuityInfo);
         form->addRow(poleSelection);
         form->addRow(poleGridInfo);
@@ -507,7 +521,7 @@ bool surfaceToolDialog(QMainWindow *window, CadViewport *viewport, const QString
                 QStringLiteral("P(%1,%2)").arg(row/support->vPoleCount()+1).arg(row%support->vPoleCount()+1);
         }
         viewport->setSurfacePoleSelection(selectedOverlay,axes,local,label);
-        poleSelection->setText(QStringLiteral("%1 poli selezionati%2").arg(selected.size()).arg(singular?QStringLiteral(" — normale singolare: assi globali"):local?QStringLiteral(" — assi del polo attivo"):QString()));
+        poleSelection->setText(QStringLiteral("%1 poli selezionati; %2 poli automatici (verdi)%3").arg(selected.size()).arg(poleModel->automaticRows().size()).arg(singular?QStringLiteral(" — normale singolare: assi globali"):local?QStringLiteral(" — assi del polo attivo"):QString()));
     };
     loadSource = [&] {
         if (mode == 1)
@@ -676,6 +690,21 @@ bool surfaceToolDialog(QMainWindow *window, CadViewport *viewport, const QString
     });
     SurfacePolesInteraction drag(viewport,poles,displayedRows,&dialog);
     cancelPoleInteraction=[&]{drag.cancel();};
+    drag.setInfluence(definition.surfaceTool.poleSoft?definition.surfaceTool.poleRadiusU:0,
+                      definition.surfaceTool.poleSoft?definition.surfaceTool.poleRadiusV:0);
+    const auto updateInfluence = [&] {
+        if(filling)return;
+        drag.cancel();
+        const auto error=poleSession.store(*poleModel,definition.surfaceTool);
+        if(!error.isEmpty()){fail(error);return;}
+        definition.surfaceTool.poleSoft=soft->isChecked();
+        definition.surfaceTool.poleRadiusU=radii[0]->value();definition.surfaceTool.poleRadiusV=radii[1]->value();
+        influence->setVisible(soft->isChecked());
+        drag.setInfluence(soft->isChecked()?radii[0]->value():0,soft->isChecked()?radii[1]->value():0);
+        loadSource();refresh();
+    };
+    QObject::connect(soft,&QCheckBox::toggled,&dialog,updateInfluence);
+    for(auto *radius:radii)QObject::connect(radius,qOverload<int>(&QSpinBox::valueChanged),&dialog,updateInfluence);
     QObject::connect(poleBox, &QPushButton::toggled, &dialog, [&](bool enabled) { drag.setBoxSelection(enabled); });
     drag.message=[&](const QString &text){status->setText(text);};
     drag.started = [&] {

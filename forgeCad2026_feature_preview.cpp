@@ -120,6 +120,7 @@ QString FeaturePreviewBuilder::previewKey(const ExtrusionObject &d, int index) {
         parts << QStringLiteral("ST") << QString::number(d.surfaceTool.mode) << n(d.surfaceTool.maximum) << n(d.surfaceTool.tolerance) << QString::fromLatin1(d.surfaceTool.basis.toHex());
         const auto &mapping=d.surfaceTool;
         parts << QStringLiteral("STC") << QString::number(mapping.poleContinuity);
+        if(mapping.poleSoft)parts << QStringLiteral("STI") << QString::number(mapping.poleRadiusU) << QString::number(mapping.poleRadiusV);
         if(mapping.refitU||mapping.refitV) parts << QStringLiteral("STR") << QString::number(mapping.refitU)
             << QString::number(mapping.refitV) << n(mapping.refitTolerance);
         parts << QStringLiteral("STM") << n(mapping.mappingU) << n(mapping.mappingV)

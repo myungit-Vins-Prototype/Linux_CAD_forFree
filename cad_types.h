@@ -697,6 +697,8 @@ struct SurfaceToolParameters {
     bool trimReverseFirst=false,trimReverseSecond=false;
     double maximum=100,tolerance=1e-6;
     int refitU=0,refitV=0; // 0: griglia originale; altrimenti ricostruzione bicubica 4..256
+    bool poleSoft=false; // influenza del trascinamento, distinta dai vincoli sui giunti
+    int poleRadiusU=3,poleRadiusV=6; // fasce di poli vicini,1..32
     int poleContinuity=0; // 0 libero, 1 bordi connessi G0, 2 conserva anche i giunti tangenti G1
     double refitTolerance=.1; // scarto campionato accettabile in mm, distinto dalla tolleranza del B-rep
     QByteArray basis;

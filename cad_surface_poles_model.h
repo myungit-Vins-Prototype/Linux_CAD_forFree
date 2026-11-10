@@ -46,6 +46,7 @@ class SurfacePolesModel final : public QAbstractTableModel {
     void setConstraintMode(bool enabled);
     void setAutomatic(const QVector<QVector<SurfacePoleEdit>> &edits,const QSet<int> &drivers={},bool fromAction=false);
     QSet<int> automaticRows() const;
+    QString translatePoles(const QVector<int> &drivers, const Kernel::Vec3 &delta, int radiusU, int radiusV);
     Cage cage(const QVector<int> &selected, int budget = 4096) const;
 
   private:

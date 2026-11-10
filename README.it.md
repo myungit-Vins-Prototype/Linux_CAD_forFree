@@ -184,6 +184,9 @@ L'editor dei poli lavora su una o più facce NURBS dello stesso corpo, anche cuc
 
 Le **facce analitiche** (piani, cilindri, coni, sfere e tori) vengono convertite automaticamente in NURBS esatte prima della modifica. Un piano parte da una griglia 4×4; gli spinner consentono di cambiarne la densità. Restano i bordi, le rifilature e i fori, mentre il corpo sorgente rimane invariato. [Conversione e verifiche](docs/poli-nurbs-analitiche-2026-11-09.md).
 
+**Trascina anche i poli vicini** distribuisce il trascinamento nella stessa griglia, con raggi U/V regolabili e vicini verdi. G1 conserva i giunti tangenti tra facce; su una faccia isolata non distribuisce da solo lo spostamento. Le coordinate in tabella agiscono sul singolo polo. [Uso e prove](docs/poli-nurbs-trascinamento-morbido-2026-11-10.md).
+
+
 **Continuità opzionale dei poli:** attiva **Mantieni i bordi connessi (G0)** per propagare il movimento sui giunti; **Mantieni la tangenza esistente (G1)** include anche i poli della fascia tangente. Le facce NURBS adiacenti vengono incluse e i poli automatici sono verdi. **Verifica continuità** mostra apertura e scarto angolare campionati; gli spigoli netti vengono conservati. I giunti con griglie incompatibili sono protetti e segnalati. Si salvano la griglia risolta e le opzioni; i vincoli vengono ricalcolati a ogni nuovo gesto, anche sui poli già modificati. Esc ripristina la forma precedente e la riapertura conserva la stessa griglia. [Uso e limiti](docs/poli-nurbs-continuita-2026-11-09.md).
 
 Il contorno può essere uno schizzo oppure più facce piane complanari. In **Scegli contorno nella vista** aggiungi le facce con clic successivi, poi **Termina selezione**; **Rimuovi** toglie le righe evidenziate. Le facce adiacenti formano un’area comune e le copie possono attraversare il bordo interno; fori e contorno esterno restano esclusi.

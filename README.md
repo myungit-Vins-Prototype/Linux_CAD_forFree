@@ -180,6 +180,9 @@ Pole editing supports multiple NURBS faces of the same sheet or solid. Select fa
 
 **Analytic faces** (planes, cylinders, cones, spheres and tori) are automatically converted into exact NURBS before pole editing. Planes start with a 4×4 grid, and the spinners control grid density. Boundaries, trims and holes are retained while the source body stays unchanged. [Conversion and verification (Italian)](docs/poli-nurbs-analitiche-2026-11-09.md).
 
+**Trascina anche i poli vicini** spreads a drag across nearby poles in the same grid, with adjustable U/V radii and green followers. G1 preserves tangent joints between faces; on an isolated face it does not spread pole movement. Table coordinates edit one pole directly. [Usage and verification (Italian)](docs/poli-nurbs-trascinamento-morbido-2026-11-10.md).
+
+
 **Optional pole continuity:** **Mantieni i bordi connessi (G0)** propagates movement across connected boundaries; **Mantieni la tangenza esistente (G1)** also adjusts the tangent rows. Adjacent NURBS faces are included and automatic poles appear green. **Verifica continuità** reports sampled gaps and tangent angles. Sharp joints are preserved; incompatible grids are protected and reported. The resolved grid and settings are saved; each new gesture recalculates constraints, including previously moved poles. Escape restores the previous shape and reopening preserves the resolved grid. [Usage and limitations (Italian)](docs/poli-nurbs-continuita-2026-11-09.md).
 
 The fill boundary can be a sketch or several coplanar planar faces. Click **Scegli contorno nella vista**, add faces, then **Termina selezione**; **Rimuovi** removes highlighted rows. Adjacent faces form one area, allowing copies to cross internal joins while respecting holes and the exterior boundary.

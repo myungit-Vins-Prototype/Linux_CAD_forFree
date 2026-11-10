@@ -19,6 +19,7 @@ class SurfacePolesInteraction final : public QObject {
     std::function<void()> started, moved, finished;
     std::function<void(const QString &)> message;
     void cancel();
+    void setInfluence(int u, int v) { cancel(); radiusU_=u; radiusV_=v; }
     void setEnabled(bool enabled) {
         enabled_ = enabled;
         if (!enabled)
@@ -41,11 +42,12 @@ class SurfacePolesInteraction final : public QObject {
     QRubberBand *band_;
     bool enabled_ = true, active_ = false, boxing_ = false, boxSelection_ = false;
     QTimer releaseCheck_;
+    int radiusU_=0,radiusV_=0;
     int axis_ = -1;
     QPoint origin_, boxEnd_;
     Qt::KeyboardModifiers modifiers_{};
     QVector<int> rows_, initialSelection_;
-    QVector<std::array<double, 3>> initial_;
+    std::array<std::array<double,3>,2> dragBasis_{};
     QMap<int,std::array<QString,4>> initialEdits_;
     QVector<QVector<SurfacePoleEdit>> initialAutomatic_;
 };

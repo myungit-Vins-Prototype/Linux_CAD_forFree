@@ -1,6 +1,6 @@
 # CLAUDE.md — memoria operativa ForgeCAD
 
-Aggiornato **9 novembre 2026**.
+Aggiornato **10 novembre 2026**.
 
 [Cronologia](docs/history/claude-2026-11-02.md).
 
@@ -103,21 +103,22 @@ ctest --test-dir forgecad-release --output-on-failure
 
 ## Ultimi interventi — esiti consolidati
 
-**09/11 — Poli NURBS / Hook.** Griglie/spinner `ddf856a`, multifaccia `b6c10df`,
-riquadro `9f455a9`, rotazione/Alt e scarto vincolante `30d4e72`, G0/G1 `160e185`, analitiche `d2bea6d` su origin/main.
-Tabelle virtuali, gabbie multiple, 4096poli modificati; refit U/V fino256 e ricerca asincrona entro limite.
-Piani4×4, supporti analitici esatti, topologia/fori conservati; poli del gesto rigidi, compensativi verdi, stato risolto/codec14.
-Storico: Hook funzione intermedia Cucitura8 (non Corpo2 finale), modifica/Undo/codec/Wayland PASS;
-app/9CTest/kernel12/mappa672-9679 PASS. [Conversione](docs/poli-nurbs-analitiche-2026-11-09.md),
-[continuita](docs/poli-nurbs-continuita-2026-11-09.md), [multifaccia](docs/poli-nurbs-multifaccia-2026-11-09.md).
-**Corpo2 finale riprodotto**: Raccordo15,184facce; F10 cilindro filettato e F166 calotta bloccavano tutta la griglia.
-Corrette conversione periodica/cuciture e finestra della calotta; B-rep v3 solo con NURBS periodiche, lettura v1/v2.
-Vincoli sui supporti locali dei trim, non sull'intera faccia; stato neutro tollerante conservato senza deriva.
-Kernel36/36 PASS; Corpo2:184facce convertite, F3 polo96/741 spostato0,1mm con G0/G1,
-B-rep0errori, apertura6,34e-8mm e angolo3,50e-6rad. App/runner completi,14CTest e Wayland PASS:
-184gabbie/2,324Mrighe, G0/G1, mouse/rilascio/anteprima, Undo/Redo, codec e rigenerazione ultima funzione.
-Originale invariato. Mappa672/9702/329TU/check/6HTML PASS; riaprire l’app. Correzione `a0c9915` pubblicata su origin/main.
-[Prove e limiti](docs/poli-nurbs-Hook-corpo2-2026-11-09.md). Controlli campionati, nessuna certificazione globale/G2.
+**10/11 — Poli NURBS / Hook.** Griglie/spinner, multifaccia, riquadro/Alt, rotazione, refit entro scarto,
+analitiche esatte e G0/G1 tra facce pubblicati fino `a0c9915` su origin/main; dettagli nei rapporti.
+Corpo2 finale Raccordo15:184facce, conversione periodica/cuciture e calotta corretta; vincoli locali sui trim,
+stato neutro tollerante conservato. App/14CTest/Wayland/Undo/codec/rigenerazione ultima funzione PASS,
+originale invariato; mappa672/9702/329TU. [Prove](docs/poli-nurbs-Hook-corpo2-2026-11-09.md).
+Nuova segnalazione: Corpo7 isolato, griglia8×108, G1 attiva ma nessun vicino segue e deformazione appuntita.
+Riprodotta la sorgente reale: refit0,00913601mm, nodi interni semplici/grado3 (C2 parametrica).
+G1 operava solo sui giunti tra facce; nessun campo di influenza interno era implementato.
+Aggiunto trascinamento morbido opzionale, raggi U/V1..32, vicini verdi e decadimento compatto, sovrapposizioni
+senza somme; G0/G1 restano separati e vincolanti. Gestione atomica4096poli, Esc e stato risolto/codec15.
+Kernel18/18 poli e sonda Qt PASS; Hook8×108 Wayland:47vicini,Esc/rilascio/anteprima/B-rep/Undo/rigenerazione PASS.
+Corretto salto nei movimenti ripetuti congelando la conversione pixel/mondo del gesto. App/runner completi,11CTest e2Wayland PASS; mappa676/9751/331TU/check/6HTML PASS.
+[Intervento corrente](docs/poli-nurbs-trascinamento-morbido-2026-11-10.md),
+[continuita](docs/poli-nurbs-continuita-2026-11-09.md),[conversione](docs/poli-nurbs-analitiche-2026-11-09.md).
+Hook salvato ha176poli già mossi (max25,93mm): influenza vale sui nuovi gesti, nessun ripristino implicito.
+Limiti: controlli campionati, nessuna garanzia globale/G2/auto-intersezioni; influenza non impone la normale originale.
 
 **08/11 — Bottle e Shower Head.** Pool esatto:690duplicati,poli/pesi1042→135MiB;
 Bottle RSS9,95→2,75GiB (-72%),30 B-rep byte-identici. Anche ultimo salvataggio:

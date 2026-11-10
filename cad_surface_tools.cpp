@@ -177,6 +177,7 @@ void buildSurfaceTool(ExtrusionObject &body, int index, const QVector<SketchObje
                 }
                 changes.push_back(std::move(change));
             }
+            require(!p.poleSoft||(p.poleRadiusU>=1&&p.poleRadiusU<=32&&p.poleRadiusV>=1&&p.poleRadiusV<=32),"Raggi di influenza poli non validi.");
             require(p.poleContinuity>=0&&p.poleContinuity<=2,"Opzione di continuita' non valida.");
             SurfacePoleContinuityReport continuity;
             if(p.poleContinuity){
@@ -223,6 +224,7 @@ QByteArray surfaceToolsExtras(const QVector<ExtrusionObject> &bodies) {
                                    {"edits", edits},
                                    {"contacts", contacts}};
         if(p.poleContinuity)record["continuity"]=p.poleContinuity;
+        if(p.poleSoft)record["influence"]=QJsonArray{p.poleRadiusU,p.poleRadiusV};
         if (!p.poleFaces.isEmpty()) {
             poleFaces=true; QJsonArray faces;
             for (const auto &entry:p.poleFaces) {
@@ -269,13 +271,14 @@ QByteArray surfaceToolsExtras(const QVector<ExtrusionObject> &bodies) {
         return body.feature==BodyFeature::SurfaceTools && body.surfaceTool.mode==2 &&
             std::any_of(body.surfaceTool.poleFaces.cbegin(),body.surfaceTool.poleFaces.cend(),[](const auto &face){return face.face.geometry!=int(Kernel::SurfaceType::BSpline);});
     });
+    const bool influence = std::any_of(bodies.cbegin(),bodies.cend(),[](const auto &b){return b.feature==BodyFeature::SurfaceTools&&b.surfaceTool.mode==2&&b.surfaceTool.poleSoft;});
     const bool continuity = std::any_of(bodies.cbegin(),bodies.cend(),[](const auto &body){return body.feature==BodyFeature::SurfaceTools&&body.surfaceTool.mode==2&&body.surfaceTool.poleContinuity;});
     const bool extendedRefit = std::any_of(bodies.cbegin(), bodies.cend(), [](const ExtrusionObject &body) {
         return body.feature == BodyFeature::SurfaceTools && body.surfaceTool.mode == 2 &&
                (body.surfaceTool.refitU > 64 || body.surfaceTool.refitV > 64);
     });
     return records.isEmpty() ? QByteArray()
-                             : QJsonDocument(QJsonObject{{"schema", analytic ? 14 : continuity ? 13 : extendedRefit ? 12 : poleFaces ? 11 : refit ? 10 : solidTrim ? 9 : linked ? 8 : flatten ? 7 : quilt ? 6 : rigid ? 5 : targetSet ? 4 : multiple ? 3 : mapping ? 2 : 1}, {"features", records}}).toJson(QJsonDocument::Compact);
+                             : QJsonDocument(QJsonObject{{"schema", influence ? 15 : analytic ? 14 : continuity ? 13 : extendedRefit ? 12 : poleFaces ? 11 : refit ? 10 : solidTrim ? 9 : linked ? 8 : flatten ? 7 : quilt ? 6 : rigid ? 5 : targetSet ? 4 : multiple ? 3 : mapping ? 2 : 1}, {"features", records}}).toJson(QJsonDocument::Compact);
 }
 QString applySurfaceToolsExtras(const QByteArray &bytes, QVector<ExtrusionObject> &output) {
     auto bodies = output;
@@ -285,7 +288,7 @@ QString applySurfaceToolsExtras(const QByteArray &bytes, QVector<ExtrusionObject
             require(bytes.size() <= 4 * 1024 * 1024, "Estensioni superfici oltre4MiB.");
             QJsonParseError error;
             const auto root = QJsonDocument::fromJson(bytes, &error).object();
-            require(error.error == QJsonParseError::NoError && root.size() == 2 && (root["schema"].toDouble(-1) == 1 || root["schema"].toDouble(-1) == 2 || root["schema"].toDouble(-1) == 3 || root["schema"].toDouble(-1) == 4 || root["schema"].toDouble(-1) == 5 || root["schema"].toDouble(-1) == 6 || root["schema"].toDouble(-1) == 7 || root["schema"].toDouble(-1) == 8 || root["schema"].toDouble(-1) == 9 || root["schema"].toDouble(-1) == 10 || root["schema"].toDouble(-1) == 11 || root["schema"].toDouble(-1) == 12 || root["schema"].toDouble(-1) == 13 || root["schema"].toDouble(-1) == 14) &&
+            require(error.error == QJsonParseError::NoError && root.size() == 2 && (root["schema"].toDouble(-1) == 1 || root["schema"].toDouble(-1) == 2 || root["schema"].toDouble(-1) == 3 || root["schema"].toDouble(-1) == 4 || root["schema"].toDouble(-1) == 5 || root["schema"].toDouble(-1) == 6 || root["schema"].toDouble(-1) == 7 || root["schema"].toDouble(-1) == 8 || root["schema"].toDouble(-1) == 9 || root["schema"].toDouble(-1) == 10 || root["schema"].toDouble(-1) == 11 || root["schema"].toDouble(-1) == 12 || root["schema"].toDouble(-1) == 13 || root["schema"].toDouble(-1) == 14 || root["schema"].toDouble(-1) == 15) &&
                         root["features"].isArray(),
                     "Estensioni superfici danneggiate.");
             const auto integer = [](const QJsonValue &v, int low, int high) {
@@ -296,7 +299,7 @@ QString applySurfaceToolsExtras(const QByteArray &bytes, QVector<ExtrusionObject
             for (const auto &entry : root["features"].toArray()) {
                 require(entry.isObject(), "Record superficie non valido.");
                 const auto o = entry.toObject();
-                require(o.size() == 7 + int(o.contains("targets")) + int(o.contains("mapping")) + int(o.contains("sources")) + int(o.contains("trimSides")) + int(o.contains("refit")) + int(o.contains("poleFaces")) + int(o.contains("continuity")), "Record superficie incompleto.");
+                require(o.size() == 7 + int(o.contains("targets")) + int(o.contains("mapping")) + int(o.contains("sources")) + int(o.contains("trimSides")) + int(o.contains("refit")) + int(o.contains("poleFaces")) + int(o.contains("continuity")) + int(o.contains("influence")), "Record superficie incompleto.");
                 const int i = integer(o["index"], 0, bodies.size() - 1);
                 require(!present.contains(i), "Estensione superficie duplicata.");
                 present.insert(i);
@@ -305,6 +308,12 @@ QString applySurfaceToolsExtras(const QByteArray &bytes, QVector<ExtrusionObject
                         "Estensione su un tipo di funzione incompatibile.");
                 auto &p = b.surfaceTool;
                 p.mode = integer(o["mode"], 0, root["schema"].toInt()>=9?5:root["schema"].toInt()>=2?4:2);
+                p.poleSoft=false; p.poleRadiusU=3; p.poleRadiusV=6;
+                if(o.contains("influence")) {
+                    require(root["schema"].toInt()>=15&&b.feature==BodyFeature::SurfaceTools&&p.mode==2&&o["influence"].isArray()&&o["influence"].toArray().size()==2,"Influenza poli incompatibile con funzione o schema.");
+                    const auto radii=o["influence"].toArray();p.poleSoft=true;
+                    p.poleRadiusU=integer(radii[0],1,32);p.poleRadiusV=integer(radii[1],1,32);
+                }
                 p.poleContinuity=0;
                 if(o.contains("continuity")){
                     require(root["schema"].toInt()>=13&&b.feature==BodyFeature::SurfaceTools&&p.mode==2,"Continuita' su funzione o schema incompatibile.");
