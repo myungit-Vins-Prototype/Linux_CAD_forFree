@@ -21,8 +21,12 @@ File utente caricato attraverso il normale viewport: vecchia deformazione con re
 Build completa GCC dell'app e del runner riuscita; 11/11 CTest pertinenti PASS. Suite kernel superfici 40/40 PASS, di cui 20 per i poli. Sei sorgenti modificati verificati anche con Clang `-fsyntax-only` (non una build completa Clang).
 Runner ufficiale Wayland/OpenGL: G1/G2, ribbon, Undo/Redo, schema16 e rigenerazione senza cache PASS a scala1× e2×. Selezione, occlusione e poli multifaccia PASS. Il test preserva anche i comandi manuali compatibili all'attivazione dei vincoli e rifiuta le opzioni sconosciute/nuove su schemi precedenti.
 Ribbon: il comando attivo viene mostrato anche se normalmente oltre i primi pulsanti promossi del gruppo, senza modificare il layout persistente; Modifica poli appartiene a Modifica.
-Architettura: 681 file,9800 relazioni,334 unità C++,0 diagnostiche; check e quattro schede HTML verificate anche visivamente. Nuova CI da avviare dopo il push.
+Architettura: 681 file,9800 relazioni,334 unità C++,0 diagnostiche; check e quattro schede HTML verificate anche visivamente. Commit funzionale `ddc02f90a0bedfac589ceb3cd4b2ead53df75590` su origin/main. CI42982288794 Linux/macOS in corso.
 
 Limiti: conserva la continuità esistente; non ripara automaticamente gli spigoli presenti nel supporto a monte. Il residuo G2 relativo misura i jet rappresentabili e non certifica regolarità globale o assenza di auto-intersezioni. Le griglie quadratiche rade possono richiedere spostamenti estesi; più poli danno più libertà locale.
 
 Approssimazione: una griglia refittata con passaggi/cuciture incompatibili viene rifiutata con indicazione di disattivare Semplifica. Riproduttore sfera12×16: incompatibile; griglia razionale originale9×5 verificata. Nessun aumento della tolleranza per consentire la conferma.
+
+Verifica supplementare della ribbon: il self-test completo nativo Wayland si arresta sul fondale dei popup (`glassBackdropReady`), riprodotto anche sostituendo solo il modulo ribbon con la versione HEAD precedente. Il percorso G1/G2 e i suoi controlli della ribbon passano; il test generale dei popup non è dichiarato riuscito né attribuito alla modifica NURBS.
+
+Confronto grafico nativo del file reale e della copia G2: calotta appuntita e fascia visibili nell’originale, eliminate con G2; immagine locale `/tmp/forgecad-sphere/compare.png`. L’originale conserva lo SHA-256 iniziale. La CI precedente richiedeva circa25–30min complessivi; quella nuova è ancora nella compilazione, senza esito dichiarato.

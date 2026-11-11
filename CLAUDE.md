@@ -122,7 +122,8 @@ Hook corrente cambiato esternamente; prove storiche su copia congelata.
 Nuovo `Sphere_deformed.prt`: F0 quadratica razionale9×5,24poli mossi; G1 legacy omette i nodi interni.
 Implementati jet G1/G2 interni/cuciture e fasce affini alle calotte;20/20kernel PASS. File reale G2:residui<3e-12.
 Schema16, G1 nella sessione e titolo/ribbon: app/runner,11CTest,Wayland1×/2×/multifaccia,Undo/codec PASS.
-40/40kernel superfici e sintassi6sorgenti Clang PASS; mappa681/9800/334TU/0diagnostiche/check/4HTML PASS; nuova CI da verificare.
+40/40kernel superfici e sintassi6sorgenti Clang PASS; mappa681/9800/334TU/0diagnostiche/check/4HTML PASS; `ddc02f9` su origin/main; CI42982288794 in corso.
+Selftest Ribbon Wayland: cattura popup fallisce anche col modulo precedente; percorso poli PASS.
 Refit incompatibile con G1/G2 rifiutato esplicitamente; usare la griglia esatta.
 [Prove correnti e limiti](docs/poli-nurbs-sfera-G1-G2-2026-11-11.md).
 
