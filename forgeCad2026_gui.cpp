@@ -514,7 +514,7 @@ void PdfWindow::initializeSceneAndTree(WindowSetup &setup) {
         } else if (original.feature == BodyFeature::Thicken) {
             thickenDialog(this, viewport, QStringLiteral("Modifica spessore"), index, original, [&](const ExtrusionObject &values) { return update(values); });
         } else if(original.feature==BodyFeature::SurfaceTools){
-            surfaceToolDialog(this,viewport,QStringLiteral("Modifica funzione superficie"),index,original,[&](const ExtrusionObject &values){return update(values);});
+            surfaceToolDialog(this,viewport,QStringList{QStringLiteral("Modifica estensione a riferimento"),QStringLiteral("Modifica superficie da rete di curve"),QStringLiteral("Modifica poli NURBS"),QStringLiteral("Modifica distensione superficie"),QStringLiteral("Modifica deformazione su superficie"),QStringLiteral("Modifica taglio superficie")}.value(original.surfaceTool.mode),index,original,[&](const ExtrusionObject &values){return update(values);});
         } else if (original.feature == BodyFeature::SpatialSketch) {
             spatialSketchDialog(this,viewport,QStringLiteral("Modifica schizzo 3D"),index,original,
                 [viewport,index](const ExtrusionObject &d){return viewport->updateBody(index,d);});

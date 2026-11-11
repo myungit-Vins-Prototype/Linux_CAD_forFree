@@ -316,7 +316,7 @@ struct RibbonPreview::Impl {
             paths.insert(entry.action,entry.path);
             const auto &p=entry.path;const auto label=text(entry.action->text());
             if(p.startsWith("Funzioni/Superfici/")) {
-                const bool edit=label.startsWith("Taglia")||label.startsWith("Estendi")||label.startsWith("Offset")||label.startsWith("Elimina")||label.startsWith("Copia");
+                const bool edit=label.startsWith("Taglia")||label.startsWith("Estendi")||label.startsWith("Offset")||label.startsWith("Elimina")||label.startsWith("Copia")||label.startsWith("Modifica poli");
                 add("surface",label.startsWith("Cuci")||label.startsWith("Spessore")?QStringLiteral("Unisci / converti"):edit?QStringLiteral("Modifica"):QStringLiteral("Crea"),entry.action);
             } else if(p.startsWith("Funzioni/")) {
                 const auto group=p.contains("/Booleane/")?QStringLiteral("Booleane"):p.contains("/Ripetizione/")?QStringLiteral("Ripeti"):
@@ -454,7 +454,8 @@ struct RibbonPreview::Impl {
         QVector<Plan> result;
         for(const auto &g:tab.groups) {
             const int promoted=g.promoted;
-            result.append({std::min(promoted,int(g.actions.size())),0,promoted==0,false});
+            const bool active=running && g.actions.contains(running);
+            result.append({std::max(active?1:0,std::min(promoted,int(g.actions.size()))),0,promoted==0&&!active,false});
         }
         const auto used=[&]{int sum=0;for(int i=0;i<result.size();++i)if(!result[i].more)sum+=std::max(tab.groups[i].finish?80:0,groupWidth(tab.groups[i],result[i].shown,buttonWidth,result[i].collapsed))+1;return sum;};
         while(!compact && buttonWidth>54 && used()>room)--buttonWidth;
@@ -462,10 +463,10 @@ struct RibbonPreview::Impl {
             int pick=-1;
             for(int i=0;i<result.size();++i)if(!tab.groups[i].finish && !result[i].collapsed && result[i].shown>1 && (pick<0||result[i].shown>=result[pick].shown))pick=i;
             if(pick<0)break;
-            auto &p=result[pick];--p.shown;if(p.shown==1)p.collapsed=true;
+            auto &p=result[pick];--p.shown;if(p.shown==1)p.collapsed=!(running&&tab.groups[pick].actions.contains(running));
         }
         if(used()>room)for(int i=result.size()-1;i>=0;--i) {
-            if(tab.groups[i].finish)continue;
+            if(tab.groups[i].finish || (running&&tab.groups[i].actions.contains(running)))continue;
             result[i].more=true;
             if(used()+40<=room)break;
         }
@@ -520,7 +521,13 @@ struct RibbonPreview::Impl {
             if(p.collapsed) {
                 auto *b=new QToolButton(group);b->setFixedSize(group->width()-8,compact?38:66);for(auto *a:g.actions)if(a){b->setIcon(a->icon());break;}b->setIconSize(QSize(28,28));
                 b->setAutoRaise(true);b->setMenu(menu);b->setPopupMode(QToolButton::InstantPopup);b->setToolTip(g.name);row->addWidget(b);
-            } else for(int j=0;j<p.shown;++j){if(g.actions[j])row->addWidget(button(g.actions[j],group,g.finish?p.width-8:width,compact?38:66));else{auto *line=new QFrame(group);line->setFrameShape(QFrame::VLine);line->setFixedWidth(8);row->addWidget(line);}}
+            } else {
+                auto shown=g.actions;
+                // Anche un comando normalmente nel menu del gruppo resta
+                // visibile durante la modifica, senza cambiare il layout salvato.
+                if(running && p.shown>0 && shown.indexOf(running)>=p.shown)shown[p.shown-1]=running;
+                for(int j=0;j<p.shown;++j){if(shown[j])row->addWidget(button(shown[j],group,g.finish?p.width-8:width,compact?38:66));else{auto *line=new QFrame(group);line->setFrameShape(QFrame::VLine);line->setFixedWidth(8);row->addWidget(line);}}
+            }
             row->addStretch();column->addLayout(row);
             auto *footer=new QToolButton(group);footer->setAutoRaise(true);footer->setText(QFontMetrics(footer->font()).elidedText(g.name,Qt::ElideRight,p.width-24));footer->setToolTip(g.name);footer->setFixedWidth(group->width()-8);
             footer->setFixedHeight(20);footer->setMenu(menu);footer->setPopupMode(QToolButton::InstantPopup);column->addWidget(footer);
@@ -549,6 +556,10 @@ struct RibbonPreview::Impl {
         const QList<QPair<QString,QString>> hints={{"estrusion","model"},{"rivoluz","model"},{"raccord","model"},{"smuss","model"},
             {"svuota","model"},{"sform","model"},{"filett","model"},{"superfic","surface"},{"cucitur","surface"},{"misur","inspect"},{"massa","inspect"}};
         for(const auto &hint:hints)if(title.contains(hint.first)){selectTab(hint.second);break;}
+        const auto command=dialog->property("ribbonCommand").toString();
+        if(!command.isEmpty())for(auto it=paths.cbegin();it!=paths.cend();++it)if(it.key()->objectName()==command) {
+            selectTab(QStringLiteral("surface"));setRunning(it.key());break;
+        }
         if (!running) for(auto it=paths.cbegin();it!=paths.cend();++it) {
             const auto word=caption(it.key()).toLower().split(' ').first();
             if(word.size()>4 && title.contains(word)){setRunning(it.key());break;}

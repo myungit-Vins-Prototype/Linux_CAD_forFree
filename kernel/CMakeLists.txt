@@ -116,6 +116,8 @@ add_library(forgekernel STATIC
     fk_surface_poles_influence.cpp
     fk_surface_poles_constraints.h
     fk_surface_poles_constraints.cpp
+    fk_surface_poles_jets.h
+    fk_surface_poles_jets.cpp
     fk_surface_poles_conversion.h
     fk_surface_poles_conversion.cpp
     fk_surface_refit.h

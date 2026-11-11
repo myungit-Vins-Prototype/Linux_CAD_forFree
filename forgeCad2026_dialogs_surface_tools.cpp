@@ -10,6 +10,7 @@
 #include "cad_expression.h"
 #include "fk_bspline_surface.h"
 #include "fk_surface_refit.h"
+#include "fk_surface_poles_conversion.h"
 #include "fk_history.h"
 #include "fk_precision.h"
 #include <QMouseEvent>
@@ -39,6 +40,8 @@ bool surfaceToolDialog(QMainWindow *window, CadViewport *viewport, const QString
     using namespace ForgeCad;
     using namespace Kernel;
     ExtrusionObject definition = initial;
+    const bool upgradeContinuity=definition.surfaceTool.poleContinuity==2;
+    if(upgradeContinuity)definition.surfaceTool.poleContinuity=3;
     definition.feature = BodyFeature::SurfaceTools;
     definition.operation = -1;
     const int mode = definition.surfaceTool.mode, owner = replaced < 0 ? viewport->extrusions().size() : replaced;
@@ -53,7 +56,8 @@ bool surfaceToolDialog(QMainWindow *window, CadViewport *viewport, const QString
     dialog.setSizeIdentity(mode == 0 ? QStringLiteral("surface-extend-to") : mode == 1 ? QStringLiteral("surface-network") : QStringLiteral("surface-poles"));
     if (viewport) ForgeCad::setDisplayLengthUnit(viewport->lengthUnit(), &dialog);
     dialog.setObjectName("surfaceToolDialog");
-    dialog.setWindowTitle(title);
+    dialog.setWindowTitle(mode==2?QStringLiteral("Modifica poli NURBS"):title);
+    dialog.setProperty("ribbonCommand",mode==0?"surfaceExtendToAction":mode==1?"surfaceNetworkAction":"surfacePolesAction");
     dialog.setModal(false);
     dialog.setMinimumWidth(mode == 2 ? 580 : 440);
     auto *form = dialog.createScrollableForm();
@@ -132,8 +136,10 @@ bool surfaceToolDialog(QMainWindow *window, CadViewport *viewport, const QString
     influence->setVisible(soft->isChecked());
     auto *keepConnected=new QCheckBox(QStringLiteral("Mantieni i bordi connessi (G0)"),&dialog);
     keepConnected->setObjectName("surfacePolesKeepConnected");keepConnected->setChecked(definition.surfaceTool.poleContinuity>=1);
-    auto *keepTangent=new QCheckBox(QStringLiteral("Mantieni la tangenza tra facce (G1)"),&dialog);
-    keepTangent->setObjectName("surfacePolesKeepTangent");keepTangent->setChecked(definition.surfaceTool.poleContinuity==2);
+    auto *keepTangent=new QCheckBox(QStringLiteral("Mantieni la tangenza (G1)"),&dialog);
+    keepTangent->setObjectName("surfacePolesKeepTangent");keepTangent->setChecked(definition.surfaceTool.poleContinuity>=2);
+    auto *keepCurvature=new QCheckBox(QStringLiteral("Mantieni la curvatura esistente (G2)"),&dialog);
+    keepCurvature->setObjectName("surfacePolesKeepCurvature");keepCurvature->setChecked(definition.surfaceTool.poleContinuity==4);
     auto *continuityInfo = new FunctionMessage(&dialog);
     continuityInfo->setObjectName("surfacePolesContinuityInfo");
     continuityInfo->setLineWrapMode(QPlainTextEdit::WidgetWidth);
@@ -435,7 +441,7 @@ bool surfaceToolDialog(QMainWindow *window, CadViewport *viewport, const QString
         form->addRow(ForgeCad::Gui::wrappedNote(QStringLiteral("Le superfici analitiche vengono convertite automaticamente in NURBS esatte prima della modifica. Bordi e fori vengono conservati."),&dialog));
         form->addRow(faceControls);
         form->addRow(ForgeCad::Gui::wrappedNote(QStringLiteral("Le griglie selezionate si modificano insieme. U/V valgono per tutte le facce. "
-            "I bordi condivisi devono restare coincidenti: seleziona insieme i poli corrispondenti delle facce adiacenti."),&dialog));
+            "Attiva G0/G1/G2 per mantenere i giunti e muovere automaticamente i poli collegati."),&dialog));
         form->addRow(refitEnabled);
         form->addRow(refitControls);
         form->addRow(QStringLiteral("Orientamento assi:"), poleOrientation);
@@ -443,9 +449,9 @@ bool surfaceToolDialog(QMainWindow *window, CadViewport *viewport, const QString
         form->addRow(hiddenPoles);
         form->addRow(ForgeCad::Gui::wrappedNote(QStringLiteral("Alt + trascinamento: riquadro. Ctrl: aggiungi/togli; Maiusc: aggiungi. Trascina sullo sfondo per ruotare."), &dialog));
         form->addRow(soft);form->addRow(influence);
-        form->addRow(ForgeCad::Gui::wrappedNote(QStringLiteral("Il trascinamento morbido muove i poli vicini della stessa griglia con influenza decrescente. I raggi regolano l'ampiezza in U/V; i vicini sono verdi. Le coordinate in tabella agiscono sul singolo polo."),&dialog));
-        form->addRow(keepConnected);form->addRow(keepTangent);
-        form->addRow(ForgeCad::Gui::wrappedNote(QStringLiteral("Le facce adiacenti vengono incluse. I poli collegati seguono anche se non selezionati (verdi). G1 agisce tra facce e conserva i giunti già tangenti; gli spigoli restano netti. I giunti con griglie non compatibili sono protetti."),&dialog));
+        form->addRow(ForgeCad::Gui::wrappedNote(QStringLiteral("Il trascinamento morbido muove i poli vicini della stessa griglia con influenza decrescente. I raggi regolano l'ampiezza in U/V; i vicini sono verdi. Il valore in tabella guida il polo scelto; i vincoli di continuità possono muovere altri poli."),&dialog));
+        form->addRow(keepConnected);form->addRow(keepTangent);form->addRow(keepCurvature);
+        form->addRow(ForgeCad::Gui::wrappedNote(QStringLiteral("Le facce adiacenti vengono incluse. I poli collegati seguono anche se non selezionati (verdi). G1/G2 mantengono anche i passaggi interni e la cucitura della stessa faccia. G2 conserva i raccordi già lisci; gli spigoli restano netti. Sulle griglie rade possono muoversi molti poli. I giunti con griglie non compatibili sono protetti."),&dialog));
         form->addRow(checkContinuity);form->addRow(continuityInfo);
         form->addRow(poleSelection);
         form->addRow(poleGridInfo);
@@ -771,25 +777,27 @@ bool surfaceToolDialog(QMainWindow *window, CadViewport *viewport, const QString
         drag.cancel();if(cancelRefitSearch)cancelRefitSearch();
         const auto error=poleSession.store(*poleModel,definition.surfaceTool);
         if(!error.isEmpty()){
-            QSignalBlocker a(keepConnected),b(keepTangent);
-            keepConnected->setChecked(definition.surfaceTool.poleContinuity>=1);keepTangent->setChecked(definition.surfaceTool.poleContinuity==2);fail(error);return;
+            QSignalBlocker a(keepConnected),b(keepTangent),c(keepCurvature);
+            keepConnected->setChecked(definition.surfaceTool.poleContinuity>=1);keepTangent->setChecked(definition.surfaceTool.poleContinuity>=2);keepCurvature->setChecked(definition.surfaceTool.poleContinuity==4);fail(error);return;
         }
         definition.surfaceTool.poleContinuity=mode;
-        {QSignalBlocker a(keepConnected),b(keepTangent);keepConnected->setChecked(mode>=1);keepTangent->setChecked(mode==2);}
+        {QSignalBlocker a(keepConnected),b(keepTangent),c(keepCurvature);keepConnected->setChecked(mode>=1);keepTangent->setChecked(mode>=2);keepCurvature->setChecked(mode==4);}
         loadSource();
         if(!poleSession.constrain(*poleModel,definition.surfaceTool).isEmpty())poleSession.setDrivers({});
         refresh();
     };
-    QObject::connect(keepConnected,&QCheckBox::toggled,&dialog,[&](bool on){setContinuity(on?(keepTangent->isChecked()?2:1):0);});
-    QObject::connect(keepTangent,&QCheckBox::toggled,&dialog,[&](bool on){setContinuity(on?2:keepConnected->isChecked()?1:0);});
+    QObject::connect(keepConnected,&QCheckBox::toggled,&dialog,[&](bool on){setContinuity(on?(keepCurvature->isChecked()?4:keepTangent->isChecked()?3:1):0);});
+    QObject::connect(keepTangent,&QCheckBox::toggled,&dialog,[&](bool on){setContinuity(on?3:keepConnected->isChecked()?1:0);});
+    QObject::connect(keepCurvature,&QCheckBox::toggled,&dialog,[&](bool on){setContinuity(on?4:keepTangent->isChecked()?3:keepConnected->isChecked()?1:0);});
     QObject::connect(checkContinuity,&QPushButton::clicked,&dialog,[&] {
         try {
             const auto shape=viewport->extrusions()[definition.firstBody].forgeBody;
             std::vector<FaceId> faces;for(int i=0;i<faceList->count();++i)if(faceList->item(i)->checkState()==Qt::Checked)faces.push_back(FaceId(faceList->item(i)->data(Qt::UserRole).toInt()));
-            const auto report=checkSurfacePoleContinuity(*shape,*shape,faces,definition.surfaceTool.tolerance);
+            const auto prepared=prepareSurfacePoleBody(*shape,faces,definition.surfaceTool.tolerance);
+            const auto report=checkSurfacePoleContinuity(prepared,prepared,faces,definition.surfaceTool.tolerance);
             refresh();
-            continuityInfo->setText(QStringLiteral("Sorgente: %1 giunti, %2 tangenti, %3 spigoli. Apertura campionata %4 mm; scarto G1 %5°. Il controllo è campionato.")
-                .arg(report.connected).arg(report.tangent).arg(report.sharp).arg(report.gap,0,'g',6).arg(report.angle*180/3.141592653589793,0,'g',6));
+            continuityInfo->setText(QStringLiteral("Sorgente: %1 giunti tra facce, %2 tangenti, %3 spigoli; %6 passaggi interni/cuciture, %7 raccordi G2. Apertura campionata %4 mm; scarto G1 %5°. I residui della deformazione compaiono nell’anteprima.")
+                .arg(report.connected).arg(report.tangent).arg(report.sharp).arg(report.gap,0,'g',6).arg(report.angle*180/3.141592653589793,0,'g',6).arg(report.internal).arg(report.curvature));
         }catch(const std::exception &error){continuityInfo->setText(QString::fromUtf8(error.what()));}
     });
     if (mode != 2)
@@ -907,13 +915,14 @@ bool surfaceToolDialog(QMainWindow *window, CadViewport *viewport, const QString
         poles->hide();
         poleOrientation->hide();
         hiddenPoles->hide();
-        poleBox->hide();keepConnected->hide();keepTangent->hide();continuityInfo->hide();checkContinuity->hide();
+        poleBox->hide();keepConnected->hide();keepTangent->hide();keepCurvature->hide();continuityInfo->hide();checkContinuity->hide();
         poleSelection->hide();
     }
     form->addRow(QStringLiteral("Tolleranza geometrica:"), tolerance);
     dialog.layout()->addWidget(buttons);
     if (mode != 1)
         loadSource();
+    if(upgradeContinuity)poleSession.setDrivers({});
     refresh();
     if (mode == 0 && definition.blendEdges.isEmpty())
         beginExtensionPick(1);

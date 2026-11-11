@@ -1,4 +1,56 @@
+static void surfacePolesSphereContinuity(bool gl) {
+    using namespace ForgeCad;using namespace Kernel;
+    PdfWindow window;auto *view=window.viewport_;view->tessellationQuality_=0;
+    window.resize(1600,1100);if(gl){window.show();QApplication::processEvents();}
+    ExtrusionObject sphere;sphere.feature=BodyFeature::Primitive;sphere.primitive.kind=PrimitiveKind::Sphere;sphere.primitive.size[0]=10;
+    DocumentState document;document.extrusions={sphere};view->loadDocument(document);view->setViewPreset(4);view->fitAll();
+    const auto source=view->extrusions()[0].forgeBody;
+    const auto prepared=prepareSurfacePoleBody(*source,source->faces(),1e-6);
+    ExtrusionObject definition;definition.feature=BodyFeature::SurfaceTools;definition.firstBody=0;definition.surfaceTool.mode=2;definition.surfaceTool.poleContinuity=2;
+    SurfacePolesSession session;SurfacePolesModel model;auto &p=definition.surfaceTool;
+    clientOk(session.load(source,{source->faces()[0]},p,model));
+    clientOk(model.setData(model.index(13,model.coordinateColumn()),QLocale().toString(model.values(13)[0]+.4,'g',17))?QString():QStringLiteral("modifica polo sfera"));
+    session.setDrivers({13});clientOk(session.constrain(model,p));clientOk(session.store(model,p));
+    clientOk(view->createBody(definition));
+    const auto legacy=writeBodyBinary(*view->extrusions().last().forgeBody);
+    std::exception_ptr failure;
+    QTimer::singleShot(0,&window,[&]{auto *dialog=window.findChild<QDialog *>("surfaceToolDialog");try {
+        require(dialog&&dialog->windowTitle()==QStringLiteral("Modifica poli NURBS"),"titolo semantico in modifica");
+        const auto wait=[&](int ms){QElapsedTimer t;t.start();while(t.elapsed()<ms)QApplication::processEvents();};wait(200);
+        require(dialog->property("ribbonCommand").toString()=="surfacePolesAction","identita esplicita del comando");
+        if(gl){bool running=false;for(auto *b:window.findChildren<QToolButton *>())if(b->property("ribbonRunning").toBool()){
+            require(b->defaultAction()&&b->defaultAction()->objectName()=="surfacePolesAction","ribbon non evidenzia reti di curve");running=true;}
+            require(running,"ribbon evidenzia il comando poli riaperto");}
+        auto *table=dialog->findChild<QTableView *>("surfacePolesTable");auto *m=static_cast<SurfacePolesModel *>(table->model());
+        auto *g2=dialog->findChild<QCheckBox *>("surfacePolesKeepCurvature");require(g2&&!g2->isChecked(),"G2 opzionale inizialmente spenta");g2->setChecked(true);wait(200);
+        require(dialog->findChild<QCheckBox *>("surfacePolesKeepTangent")->isChecked(),"G2 include G1");
+        require(!m->automaticRows().isEmpty(),"G2 muove anche poli non selezionati");
+        auto *ok=dialog->findChild<QDialogButtonBox *>("surfaceToolButtons")->button(QDialogButtonBox::Ok);
+        QElapsedTimer ready;ready.start();while((view->previewPending()||!ok->isEnabled())&&ready.elapsed()<8000)QApplication::processEvents();
+        require(ok->isEnabled()&&view->previewError().isEmpty(),"anteprima sfera G2 riuscita");
+        if(gl){window.grab().save("/tmp/forgecad-sphere/panel-g2.png");view->grabFramebuffer().save("/tmp/forgecad-sphere/sphere-g2.png");}
+        ok->click();
+    }catch(...){failure=std::current_exception();dialog->reject();}});
+    surfaceToolDialog(&window,view,"Modifica funzione superficie",1,view->extrusions().last(),[&](const auto &d){return view->updateBody(1,d);});
+    if(failure)std::rethrow_exception(failure);
+    require(view->extrusions().last().surfaceTool.poleContinuity==4,"G2 persistita nella funzione");
+    const auto result=writeBodyBinary(*view->extrusions().last().forgeBody);
+    require(result!=legacy,"G2 corregge la deformazione precedente");
+    const auto report=checkSurfacePoleContinuity(prepared,*view->extrusions().last().forgeBody,prepared.faces(),1e-6);
+    require(report.internalTangentError<1e-9&&report.curvatureError<1e-9,"G1 e G2 interni della sfera");
+    view->undo();require(writeBodyBinary(*view->extrusions().last().forgeBody)==legacy,"Undo conserva la deformazione legacy");
+    view->redo();require(writeBodyBinary(*view->extrusions().last().forgeBody)==result,"Redo conserva G2");
+    const auto extras=QJsonDocument::fromJson(surfaceToolsExtras(view->extrusions())).object();require(extras["schema"].toInt()==16,"schema16 per G1 completo/G2");
+    QTemporaryDir dir;const auto path=dir.filePath("sphere.prt");clientOk(saveDocumentFile(path,view->currentDocument(),false));
+    DocumentState decoded;clientOk(loadDocumentFile(path,decoded));CadViewport rebuilt;rebuilt.tessellationQuality_=0;rebuilt.loadDocument(decoded);
+    require(rebuilt.extrusions().last().error.isEmpty()&&rebuilt.extrusions().last().surfaceTool.poleContinuity==4,"riapertura senza cache G2");
+    require(writeBodyBinary(*rebuilt.extrusions().last().forgeBody)==result,"ricostruzione G2 identica senza cache");
+    auto invalid=extras;invalid["schema"]=15;auto output=view->extrusions();
+    require(!applySurfaceToolsExtras(QJsonDocument(invalid).toJson(QJsonDocument::Compact),output).isEmpty(),"schema vecchio non accetta G2");
+}
+
 static void surfacePolesContinuity(bool gl = false) {
+    surfacePolesSphereContinuity(gl);
     using namespace ForgeCad;
     using namespace Kernel;
     QMainWindow window;
@@ -150,7 +202,7 @@ static void surfacePolesContinuity(bool gl = false) {
     int stored = 0;
     for (const auto &face : result.surfaceTool.poleFaces)
         stored += face.edits.size();
-    require(result.surfaceTool.poleContinuity == 2 && stored == 4, "salvati opzione e stato risolto completo");
+    require(result.surfaceTool.poleContinuity == 3 && stored == 4, "salvati opzione e stato risolto completo");
     auto report = checkSurfacePoleContinuity(*source, *result.forgeBody, source->faces(), 1e-6);
     require(report.gap < 1e-9 && report.angle < 1e-9, "G0 e G1 verificati sulla geometria finale");
     require(checkBody(*result.forgeBody, {true, true}).empty() && writeBodyBinary(*source) == before,
@@ -167,12 +219,12 @@ static void surfacePolesContinuity(bool gl = false) {
     clientOk(encodeDocument(view->documentState(), bytes));
     DocumentState decoded;
     clientOk(decodeDocument(bytes, decoded));
-    require(decoded.extrusions.back().surfaceTool.poleContinuity == 2, "codec13 conserva G1");
+    require(decoded.extrusions.back().surfaceTool.poleContinuity == 3, "codec16 conserva G1 completo");
     auto extras = QJsonDocument::fromJson(surfaceToolsExtras(view->extrusions_)).object();
-    require(extras["schema"].toInt() == 13, "schema13 per i vincoli");
+    require(extras["schema"].toInt() == 16, "schema16 per i vincoli completi");
     auto records = extras["features"].toArray();
     auto record = records.last().toObject();
-    record["continuity"] = 3;
+    record["continuity"] = 5;
     records[records.size() - 1] = record;
     extras["features"] = records;
     auto retained = view->extrusions_;

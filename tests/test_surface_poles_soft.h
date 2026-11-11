@@ -70,7 +70,7 @@ static void surfacePolesSoft(bool gl=false) {
     require(distance(support->pole(0,49),{neighborResult[0],neighborResult[1],neighborResult[2]})<1e-10,"vicino salvato nella geometria");
     require(checkBody(*result.forgeBody,{true,true}).empty(),"B-rep morbido valido");view->undo();require(view->extrusions_.size()==1,"Undo");view->redo();require(view->extrusions_.size()==2,"Redo");
     QByteArray bytes;clientOk(encodeDocument(view->documentState(),bytes));DocumentState decoded;clientOk(decodeDocument(bytes,decoded));require(decoded.extrusions.back().surfaceTool.poleSoft,"codec conserva impostazione");
-    auto extras=QJsonDocument::fromJson(surfaceToolsExtras(view->extrusions_)).object();require(extras["schema"].toInt()==15,"schema15 influenza");extras["schema"]=14;auto invalid=view->extrusions_;
+    auto extras=QJsonDocument::fromJson(surfaceToolsExtras(view->extrusions_)).object();require(extras["schema"].toInt()==16,"schema16 influenza e G1 completo");extras["schema"]=14;auto invalid=view->extrusions_;
     require(!applySurfaceToolsExtras(QJsonDocument(extras).toJson(),invalid).isEmpty(),"rifiuto influenza su vecchio schema");
     decoded.extrusions.back().forgeBody.reset();decoded.extrusions.back().cachedGeometry=false;decoded.extrusions.back().display={};CadViewport rebuilt;rebuilt.loadDocument(decoded);
     require(rebuilt.extrusions_.back().error.isEmpty()&&rebuilt.extrusions_.back().forgeBody,"rigenerazione senza cache del risultato");

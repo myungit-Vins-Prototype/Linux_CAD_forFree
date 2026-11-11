@@ -5,9 +5,12 @@
 namespace ForgeCad::Kernel {
 struct SurfacePoleContinuityReport {
     int connected = 0, tangent = 0, sharp = 0, protectedJoints = 0, followers = 0;
+    int internal = 0, curvature = 0;
+    double internalTangentError = 0, curvatureError = 0; // residui relativi dei jet razionali
     double gap = 0, angle = 0; // mm e radianti, verifica campionata
 };
-// Vincoli sui giunti topologici: G0 e G1 esistente, senza ricerca per prossimita'.
+// Modi: 1 G0; 2 G1 fra facce (legacy); 3 G1 completo; 4 G2 esistente.
+// Vincoli su giunti topologici, nodi interni e cuciture, senza prossimita'.
 // Le righe compatibili usano equazioni esatte sui poli razionali; i giunti
 // non rappresentabili sono protetti. Con active i poli del gesto corrente
 // restano rigidi e gli altri comandi sono preferenze; senza active tutti i

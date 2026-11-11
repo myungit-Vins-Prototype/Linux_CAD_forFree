@@ -104,7 +104,7 @@ static void surfacePolesAnalytic(bool gl = false) {
     DocumentState decoded;
     clientOk(decodeDocument(bytes, decoded));
     auto extras = QJsonDocument::fromJson(surfaceToolsExtras(view->extrusions_)).object();
-    require(extras["schema"].toInt() == 14, "schema14 per superfici analitiche");
+    require(extras["schema"].toInt() == 16, "schema16 per superfici analitiche e G1 completo");
     extras["schema"] = 13;
     auto prior = view->extrusions_;
     require(!applySurfaceToolsExtras(QJsonDocument(extras).toJson(), prior).isEmpty(),

@@ -1,3 +1,5 @@
+#include "fk_revolve.h"
+#include "fk_surface_poles_conversion.h"
 #include "fk_body_check.h"
 #include "fk_body_io.h"
 #include "fk_surface_poles_constraints.h"
@@ -164,4 +166,65 @@ FK_TEST(SurfacePolesNeutralTolerantConnections) {
     const auto report=checkSurfacePoleContinuity(source,result,faces,1e-6);
     FK_CHECK(report.gap<1e-6 && report.angle<1e-9);
     FK_CHECK_NEAR(std::dynamic_pointer_cast<const BSplineSurface>(result.face(faces[1]).surface)->pole(0,1).z(),.2+2e-8,1e-12);
+}
+
+FK_TEST(SurfacePolesSphereInternalG1AndG2) {
+    const auto source=prepareSurfacePoleBody(makeSphere(Frame3(),10),{FaceId(0)},1e-6);
+    const auto face=source.faces().front();
+    const auto neutral=std::dynamic_pointer_cast<const BSplineSurface>(source.face(face).surface);
+    FK_CHECK(neutral->uPoleCount()==9&&neutral->vPoleCount()==5);
+    const auto before=writeBodyBinary(source);
+    const std::vector<SurfaceFacePoleChange> driver{{face,{{2,3,{.4,.1,.2},1}}, {}}};
+    const auto free=editBodyFacesPoles(source,driver);
+    const auto freeReport=checkSurfacePoleContinuity(source,free,{face},1e-6);
+    FK_CHECK(freeReport.internalTangentError>1e-4);
+    for(int mode:{3,4}) {
+        SurfacePoleConstraints constraints(source,{{face,{}, {}}},mode,1e-6);
+        SurfacePoleContinuityReport info;
+        const auto edits=constraints.propagate(driver,&info);
+        FK_CHECK(info.internal>=6&&info.followers>0);
+        const auto changed=editBodyFacesPoles(source,edits);
+        const auto report=checkSurfacePoleContinuity(source,changed,{face},1e-6);
+        FK_CHECK(report.internalTangentError<1e-9);
+        if(mode==4)FK_CHECK(report.curvatureError<1e-9);
+        // Verifica geometrica indipendente dal solver ai due lati dell'equatore:
+        // normali e curvatura normale della sezione meridiana.
+        const auto &s=*changed.face(face).surface;
+        for(double u:{.3,1.,2.,3.7,5.1}) {
+            Vec3 a[9],b[9];s.evaluate(u,-1e-8,2,a);s.evaluate(u,1e-8,2,b);
+            const auto na=normalized(cross(a[3],a[1])),nb=normalized(cross(b[3],b[1]));
+            FK_CHECK(norm(cross(na,nb))<1e-7);
+            if(mode==4)FK_CHECK_NEAR(dot(a[2],na)/squaredNorm(a[1]),dot(b[2],nb)/squaredNorm(b[1]),1e-7);
+        }
+        FK_CHECK(checkBody(changed,{true,true}).empty());
+        // Rigenerazione esatta dei valori risolti e pesi sul giunto protetti.
+        FK_CHECK(writeBodyBinary(editBodyFacesPoles(source,constraints.propagate(edits)))==writeBodyBinary(changed));
+        auto bad=driver;bad[0].changes[0].weightFactor=1.1;FK_CHECK_THROWS(constraints.propagate(bad));
+    }
+    FK_CHECK(writeBodyBinary(source)==before);
+}
+
+FK_TEST(SurfacePolesG2AcrossFacesAndRigidPoses) {
+    for(bool weighted:{false,true}) {
+        const auto first=quad(plane(false)),second=quad(plane(true,true,weighted));
+        const auto source=sewSheets({&first,&second},1e-6,false).body;
+        const auto faces=source.faces();
+        SurfacePoleConstraints constraints(source,{{faces[0],{}, {}}},4,1e-6);
+        const std::vector<SurfaceFacePoleChange> driver{{faces[0],{{3,1,{0,0,.2},1}}, {}}};
+        const auto result=editBodyFacesPoles(source,constraints.propagate(driver));
+        const auto report=checkSurfacePoleContinuity(source,result,faces,1e-6);
+        FK_CHECK(report.curvature==1&&report.curvatureError<1e-10&&report.angle<1e-9);
+        // Curvatura normale trasversale misurata dai due supporti, con
+        // parametri scambiati e orientazione inversa della seconda faccia.
+        Vec3 a[9],b[9];result.face(faces[0]).surface->evaluate(1,.4,2,a);result.face(faces[1]).surface->evaluate(.6,0,2,b);
+        const auto na=normalized(cross(a[3],a[1])),nb=normalized(cross(b[3],b[1]));
+        FK_CHECK_NEAR(dot(a[6],na)/squaredNorm(a[3]),dot(b[2],nb)/squaredNorm(b[1]),1e-10);
+        FK_CHECK(checkBody(result,{true,true}).empty());
+    }
+    // Grande traslazione: le relazioni non dipendono dall'origine del mondo.
+    const auto sphere=prepareSurfacePoleBody(makeSphere(Frame3({1e7,-2e7,3e7},{0,0,1},{1,0,0}),10),{FaceId(0)},1e-6);
+    SurfacePoleConstraints constraints(sphere,{{FaceId(0),{}, {}}},4,1e-6);
+    const auto result=editBodyFacesPoles(sphere,constraints.propagate({{FaceId(0),{{2,3,{.4,.1,.2},1}}, {}}}));
+    const auto report=checkSurfacePoleContinuity(sphere,result,sphere.faces(),1e-6);
+    FK_CHECK(report.curvatureError<1e-8&&report.internalTangentError<1e-8);
 }

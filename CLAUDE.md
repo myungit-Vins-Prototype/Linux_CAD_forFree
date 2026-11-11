@@ -1,6 +1,6 @@
 # CLAUDE.md — memoria operativa ForgeCAD
 
-Aggiornato **10 novembre 2026**.
+Aggiornato **11 novembre 2026**.
 
 [Cronologia](docs/history/claude-2026-11-02.md).
 
@@ -113,21 +113,18 @@ App GCC/Clang(pulita),kernel475 su entrambi,40rotazioni,mappa676-9751/check/4HTM
 Artefatti verificati: download Linux da archivioHTTPS, zeroAzure; soli SKIP grafici previsti.
 [Diagnosi e prove](docs/ci-riparazione-2026-11-10.md).
 
-**10/11 — Poli NURBS / Hook.** Griglie/spinner, multifaccia, Alt/riquadro, rotazione, refit vincolante,
-analitiche esatte e G0/G1 fino `a0c9915`: Corpo2 finale184facce, periodi/cuciture/calotta e vincoli
-locali sui trim; neutro tollerante conservato. [Prove](docs/poli-nurbs-Hook-corpo2-2026-11-09.md).
-Corpo7:8×108,scarto0,00913601mm,grado3/C2. G1 tra facce; influenza morbida nella griglia, raggi1..32,
-vicini verdi, limite4096, Esc/codec15 e conversione pixel/mondo congelata. `7dda9c9`:18kernel/11CTest/Wayland/Hook47vicini/Undo/replay PASS.
-[Influenza](docs/poli-nurbs-trascinamento-morbido-2026-11-10.md),
-[continuita](docs/poli-nurbs-continuita-2026-11-09.md),[conversione](docs/poli-nurbs-analitiche-2026-11-09.md).
-Hook:176poli già mossi(max25,93mm); influenza sui nuovi gesti, nessun reset implicito.
-Scelta facce `577734d`: contesto in creazione/stadi consumati corretto;10CTest/Wayland/Hook2/7 e CI PASS.
-[Prove](docs/poli-nurbs-selezione-visibile-2026-11-10.md).
-Occlusione GPU poli/segmenti/clic/riquadro + Mostra nascosti: app GCC/Clang/runner/11CTest,
-Wayland1×/2×/preview/sezioni/istanze/cache e Hook2/7 PASS. Hook2:2,32Mpoli,1789esposti/1855coperti
-nella gabbia; rotazione17ms. [Prove](docs/poli-nurbs-occlusione-2026-11-10.md).
-Hook corrente aggiornato esternamente; prove su copia congelata.
-Mappa679/9779/333TU/check/4HTML PASS; riaprire l’app. Limiti: controlli campionati, nessuna garanzia globale/G2/auto-intersezioni.
+**11/11 — Poli NURBS.** Hook: griglie, refit vincolante, multifaccia, analitiche esatte,
+G0/G1/trascinamento morbido e occlusione GPU fino `8bdfa20`: app GCC/Clang,11CTest,Wayland1×/2×,
+Hook2/7 e CI Linux/macOS42852161648 PASS. Milioni di poli virtuali, gabbia ridotta.
+[Hook](docs/poli-nurbs-Hook-corpo2-2026-11-09.md),[influenza](docs/poli-nurbs-trascinamento-morbido-2026-11-10.md),
+[selezione](docs/poli-nurbs-selezione-visibile-2026-11-10.md),[occlusione](docs/poli-nurbs-occlusione-2026-11-10.md).
+Hook corrente cambiato esternamente; prove storiche su copia congelata.
+Nuovo `Sphere_deformed.prt`: F0 quadratica razionale9×5,24poli mossi; G1 legacy omette i nodi interni.
+Implementati jet G1/G2 interni/cuciture e fasce affini alle calotte;20/20kernel PASS. File reale G2:residui<3e-12.
+Schema16, G1 nella sessione e titolo/ribbon: app/runner,11CTest,Wayland1×/2×/multifaccia,Undo/codec PASS.
+40/40kernel superfici e sintassi6sorgenti Clang PASS; mappa681/9800/334TU/0diagnostiche/check/4HTML PASS; nuova CI da verificare.
+Refit incompatibile con G1/G2 rifiutato esplicitamente; usare la griglia esatta.
+[Prove correnti e limiti](docs/poli-nurbs-sfera-G1-G2-2026-11-11.md).
 
 **08/11 — Bottle e Shower Head.** Pool esatto:690duplicati,poli/pesi1042→135MiB;
 Bottle RSS9,95→2,75GiB (-72%),30 B-rep byte-identici. Anche ultimo salvataggio:

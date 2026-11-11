@@ -178,7 +178,7 @@ void buildSurfaceTool(ExtrusionObject &body, int index, const QVector<SketchObje
                 changes.push_back(std::move(change));
             }
             require(!p.poleSoft||(p.poleRadiusU>=1&&p.poleRadiusU<=32&&p.poleRadiusV>=1&&p.poleRadiusV<=32),"Raggi di influenza poli non validi.");
-            require(p.poleContinuity>=0&&p.poleContinuity<=2,"Opzione di continuita' non valida.");
+            require(p.poleContinuity>=0&&p.poleContinuity<=4,"Opzione di continuita' non valida.");
             SurfacePoleContinuityReport continuity;
             if(p.poleContinuity){
                 SurfacePoleConstraints constraints(prepared,changes,p.poleContinuity,p.tolerance);
@@ -189,7 +189,10 @@ void buildSurfaceTool(ExtrusionObject &body, int index, const QVector<SketchObje
             result=editBodyFacesPoles(prepared,changes,p.tolerance,&history);
             std::vector<FaceId> affected;for(const auto &face:changes)affected.push_back(face.face);
             const auto checked=checkSurfacePoleContinuity(prepared,result,affected,p.tolerance);
-            require(p.poleContinuity!=2||checked.angle<=1e-5,"Continuita': tangenza G1 non rispettata; modifica non applicata.");
+            require(p.poleContinuity<2||checked.angle<=1e-5,"Continuita': tangenza G1 non rispettata; modifica non applicata.");
+            require(p.poleContinuity<3||checked.internalTangentError<=1e-8,"Continuita': G1 interno non rispettato; modifica non applicata.");
+            require(p.poleContinuity!=4||checked.curvatureError<=1e-8,"Continuita': G2 non rispettata; modifica non applicata.");
+            if(p.poleContinuity>=3)body.notice=QStringLiteral("%1 passaggi interni/cuciture; residui relativi G1 %2, G2 %3.").arg(checked.internal).arg(checked.internalTangentError,0,'g',4).arg(checked.curvatureError,0,'g',4);
             if (p.refitU) body.notice=QStringLiteral("%1 facce; griglie %2 × %3; scarto campionato iniziale massimo %4 mm.")
                 .arg(selected.size()).arg(p.refitU).arg(p.refitV).arg(deviation,0,'g',6);
             if(checked.connected)body.notice+=QStringLiteral(" Giunti: %1; apertura campionata %2 mm; scarto G1 massimo %3° su %4 giunti tangenti; controllo campionato.")
@@ -278,7 +281,7 @@ QByteArray surfaceToolsExtras(const QVector<ExtrusionObject> &bodies) {
                (body.surfaceTool.refitU > 64 || body.surfaceTool.refitV > 64);
     });
     return records.isEmpty() ? QByteArray()
-                             : QJsonDocument(QJsonObject{{"schema", influence ? 15 : analytic ? 14 : continuity ? 13 : extendedRefit ? 12 : poleFaces ? 11 : refit ? 10 : solidTrim ? 9 : linked ? 8 : flatten ? 7 : quilt ? 6 : rigid ? 5 : targetSet ? 4 : multiple ? 3 : mapping ? 2 : 1}, {"features", records}}).toJson(QJsonDocument::Compact);
+                             : QJsonDocument(QJsonObject{{"schema", std::any_of(bodies.cbegin(),bodies.cend(),[](const auto &b){return b.surfaceTool.poleContinuity>=3;}) ? 16 : influence ? 15 : analytic ? 14 : continuity ? 13 : extendedRefit ? 12 : poleFaces ? 11 : refit ? 10 : solidTrim ? 9 : linked ? 8 : flatten ? 7 : quilt ? 6 : rigid ? 5 : targetSet ? 4 : multiple ? 3 : mapping ? 2 : 1}, {"features", records}}).toJson(QJsonDocument::Compact);
 }
 QString applySurfaceToolsExtras(const QByteArray &bytes, QVector<ExtrusionObject> &output) {
     auto bodies = output;
@@ -288,7 +291,7 @@ QString applySurfaceToolsExtras(const QByteArray &bytes, QVector<ExtrusionObject
             require(bytes.size() <= 4 * 1024 * 1024, "Estensioni superfici oltre4MiB.");
             QJsonParseError error;
             const auto root = QJsonDocument::fromJson(bytes, &error).object();
-            require(error.error == QJsonParseError::NoError && root.size() == 2 && (root["schema"].toDouble(-1) == 1 || root["schema"].toDouble(-1) == 2 || root["schema"].toDouble(-1) == 3 || root["schema"].toDouble(-1) == 4 || root["schema"].toDouble(-1) == 5 || root["schema"].toDouble(-1) == 6 || root["schema"].toDouble(-1) == 7 || root["schema"].toDouble(-1) == 8 || root["schema"].toDouble(-1) == 9 || root["schema"].toDouble(-1) == 10 || root["schema"].toDouble(-1) == 11 || root["schema"].toDouble(-1) == 12 || root["schema"].toDouble(-1) == 13 || root["schema"].toDouble(-1) == 14 || root["schema"].toDouble(-1) == 15) &&
+            require(error.error == QJsonParseError::NoError && root.size() == 2 && (root["schema"].toDouble(-1) == 1 || root["schema"].toDouble(-1) == 2 || root["schema"].toDouble(-1) == 3 || root["schema"].toDouble(-1) == 4 || root["schema"].toDouble(-1) == 5 || root["schema"].toDouble(-1) == 6 || root["schema"].toDouble(-1) == 7 || root["schema"].toDouble(-1) == 8 || root["schema"].toDouble(-1) == 9 || root["schema"].toDouble(-1) == 10 || root["schema"].toDouble(-1) == 11 || root["schema"].toDouble(-1) == 12 || root["schema"].toDouble(-1) == 13 || root["schema"].toDouble(-1) == 14 || root["schema"].toDouble(-1) == 15 || root["schema"].toDouble(-1) == 16) &&
                         root["features"].isArray(),
                     "Estensioni superfici danneggiate.");
             const auto integer = [](const QJsonValue &v, int low, int high) {
@@ -317,7 +320,7 @@ QString applySurfaceToolsExtras(const QByteArray &bytes, QVector<ExtrusionObject
                 p.poleContinuity=0;
                 if(o.contains("continuity")){
                     require(root["schema"].toInt()>=13&&b.feature==BodyFeature::SurfaceTools&&p.mode==2,"Continuita' su funzione o schema incompatibile.");
-                    p.poleContinuity=integer(o["continuity"],0,2);
+                    p.poleContinuity=integer(o["continuity"],0,root["schema"].toInt()>=16?4:2);
                 }
                 p.refitU=p.refitV=0; p.refitTolerance=.1;
                 if(o.contains("refit")) {

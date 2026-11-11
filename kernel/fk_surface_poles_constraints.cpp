@@ -7,6 +7,7 @@
 #include <functional>
 #include "fk_pcurve.h"
 #include "fk_surface_refit.h"
+#include "fk_surface_poles_jets.h"
 #include <algorithm>
 #include <cmath>
 #include <map>
@@ -155,7 +156,7 @@ struct SurfacePoleConstraints::Data {
         poles.push_back(p);
         return i;
     }
-    void row(std::initializer_list<std::pair<Pole, double>> terms, bool relative = false) {
+    void row(const std::vector<std::pair<Pole, double>> &terms, bool relative = false) {
         Row equation;
         // Senza refit i vincoli agiscono sugli spostamenti: il corpo neutro
         // conserva le connessioni tolleranti gia' dichiarate dal B-rep.
@@ -165,6 +166,7 @@ struct SurfacePoleConstraints::Data {
         });
         std::map<int, double> coefficients;
         for (const auto &term : terms) {
+            if(term.second==0)continue;
             coefficients[index(term.first)] += term.second;
             if (!relative && refitted)
                 equation.rhs -= point(term.first) * term.second;
@@ -173,7 +175,8 @@ struct SurfacePoleConstraints::Data {
         for (const auto &c : coefficients)
             scale += c.second * c.second;
         scale = std::sqrt(scale);
-        if (scale == 0)
+        double largest=0;for(const auto &term:terms)largest=std::max(largest,std::abs(term.second));
+        if (scale <= 1e-12*largest)
             return;
         for (const auto &c : coefficients)
             if (std::abs(c.second) > 1e-15)
@@ -181,7 +184,7 @@ struct SurfacePoleConstraints::Data {
         equation.rhs /= scale;
         equations.push_back(std::move(equation));
     }
-    void protect(int face, Side side, bool tangent, const CurvePtr<2> &trim, Interval range) {
+    void protect(int face, Side side, int order, const CurvePtr<2> &trim, Interval range) {
         const auto &s = *surfaces.at(face);
         const auto freeze = [&](int u, int v) {
             const Pole p{face, u, v};
@@ -189,7 +192,7 @@ struct SurfacePoleConstraints::Data {
         };
         if (side.axis >= 0) {
             for (int i = 0; i < side.count(s); ++i)
-                for (int layer = 0; layer < (tangent ? 2 : 1); ++layer) {
+                for (int layer = 0; layer < (order + 1); ++layer) {
                     const auto p = side.pole(face, s, i, layer);
                     freeze(p.u, p.v);
                 }
@@ -275,7 +278,7 @@ std::vector<FaceId> connectedSurfacePoleFaces(const Body &body,const std::vector
 }
 SurfacePoleConstraints::SurfacePoleConstraints(const Body &body, const std::vector<SurfaceFacePoleChange> &bases,
                                                int mode, double tolerance) {
-    require(mode == 1 || mode == 2, "Continuita': opzione non valida.");
+    require(mode >= 1 && mode <= 4, "Continuita': opzione non valida.");
     require(std::isfinite(tolerance) && tolerance >= 1e-9 && tolerance <= .01, "Continuita': tolleranza non valida.");
     auto data = std::make_shared<Data>();
     data->residualTolerance = std::max(1e-12, tolerance * .01);
@@ -332,22 +335,38 @@ SurfacePoleConstraints::SurfacePoleConstraints(const Body &body, const std::vect
         };
         if (fa == data->surfaces.end() || fb == data->surfaces.end() || !compatible(*fa->second, sa, *fb->second, sb)) {
             ++data->info.protectedJoints;
-            protectRefit(mode == 2 && smooth);
+            protectRefit(mode >= 2 && smooth);
             if (fa != data->surfaces.end())
-                data->protect(a.index, sa, mode == 2 && smooth, ca, edge.range);
+                data->protect(a.index, sa, smooth ? (mode == 4 ? 2 : int(mode >= 2)) : 0, ca, edge.range);
             if (fb != data->surfaces.end())
-                data->protect(b.index, sb, mode == 2 && smooth, cb, edge.range);
+                data->protect(b.index, sb, smooth ? (mode == 4 ? 2 : int(mode >= 2)) : 0, cb, edge.range);
             continue;
         }
         const auto &as = *fa->second, &bs = *fb->second;
         const double ka = sa.factor(as) * rowRatio(as, sa), kb = sb.factor(bs) * rowRatio(bs, sb) * original.ratio;
-        const bool tangent = mode == 2 && smooth;
+        const bool tangent = mode >= 2 && smooth;
         if (tangent && (!original.strong || ka <= 0 || kb <= 0)) {
             ++data->info.protectedJoints;
             protectRefit(true);
-            data->protect(a.index, sa, true, ca, edge.range);
-            data->protect(b.index, sb, true, cb, edge.range);
+            data->protect(a.index, sa, mode==4?2:1, ca, edge.range);
+            data->protect(b.index, sb, mode==4?2:1, cb, edge.range);
             continue;
+        }
+        if(mode==4 && tangent) {
+            const auto parameter=[](const BSplineSurface &s,Side side){const auto d=side.axis==0?s.uDomain():s.vDomain();return side.high?d.hi:d.lo;};
+            const auto link=surfacePoleJetLink(as,{sa.axis,parameter(as,sa),sa.high,sa.reversed},bs,{sb.axis,parameter(bs,sb),sb.high,sb.reversed},2);
+            if(!link.compatible || !link.tangent || !link.curvature) {
+                ++data->info.protectedJoints;
+                protectRefit(true);
+                data->protect(a.index,sa,2,ca,edge.range);data->protect(b.index,sb,2,cb,edge.range);
+            } else {
+                ++data->info.curvature;
+                for(const auto &jet:link.rows) {
+                    std::vector<std::pair<Pole,double>> terms;
+                    for(const auto &term:jet.terms)terms.push_back({{term.side==0?a.index:b.index,term.u,term.v},term.coefficient});
+                    data->row(terms);
+                }
+            }
         }
         for (int i = 0; i < sa.count(as); ++i) {
             const int j = sa.reversed == sb.reversed ? i : sb.count(bs) - 1 - i;
@@ -365,6 +384,26 @@ SurfacePoleConstraints::SurfacePoleConstraints(const Body &body, const std::vect
     // sfere/coni) appartengono allo stesso supporto, senza un edge di seam.
     for(const auto &entry:data->surfaces) {
         const int f=entry.first;const auto &s=*entry.second;
+        if(mode>=3)for(const auto &link:surfacePoleInternalJets(s,mode==4?2:1)) {
+            ++data->info.internal;
+            if(mode==4&&link.curvature)++data->info.curvature;
+            if(link.protectedBand) {
+                require(!data->replacements.count(f),"Continuita' G1/G2: la griglia approssimata non conserva un passaggio interno o una cucitura; disattivare Semplifica la griglia.");
+                ++data->info.protectedJoints;
+                for(const auto &term:link.support) {
+                    const Pole p{f,term.u,term.v};
+                    if(data->protectedPoles.insert(p).second)data->row({{p,1}},true);
+                }
+            }
+
+            // Spigoli preesistenti non vengono spianati implicitamente.
+            for(const auto &jet:link.rows) {
+                std::vector<std::pair<Pole,double>> terms;
+                for(const auto &term:jet.terms)terms.push_back({{f,term.u,term.v},term.coefficient});
+                data->row(terms);
+            }
+        }
+
         const auto &neutral=static_cast<const BSplineSurface &>(*body.face(FaceId(f)).surface);
         const auto neutralPoint=[&](Pole p){return neutral.pole(p.u,p.v);};
         for(int axis=0;axis<2;++axis) {
@@ -384,7 +423,7 @@ SurfacePoleConstraints::SurfacePoleConstraints(const Body &body, const std::vect
                 if(smooth)++data->info.tangent;else ++data->info.sharp;
                 for(int i=0;i<count;++i){const auto a=low.pole(f,s,i),b=high.pole(f,s,i);
                     data->row({{a,1},{b,-1}});
-                    if(mode==2 && smooth)data->row({{low.pole(f,s,i,1),ka},{high.pole(f,s,i,1),kb},{a,-(ka+kb)*.5},{b,-(ka+kb)*.5}});
+                    if(mode>=2 && smooth)data->row({{low.pole(f,s,i,1),ka},{high.pole(f,s,i,1),kb},{a,-(ka+kb)*.5},{b,-(ka+kb)*.5}});
                 }
             }
             for(auto side:{low,high}) {
@@ -581,6 +620,16 @@ SurfacePoleContinuityReport checkSurfacePoleContinuity(const Body &reference, co
         const auto ca = uv.fin(edge.forward).pcurve, cb = uv.fin(edge.backward).pcurve;
         const auto before = measure(*reference.face(a).surface, *ca, *reference.face(b).surface, *cb, edge.range);
         const auto after = measure(*result.face(a).surface, *ca, *result.face(b).surface, *cb, edge.range);
+        const auto oa=std::dynamic_pointer_cast<const BSplineSurface>(reference.face(a).surface),ob=std::dynamic_pointer_cast<const BSplineSurface>(reference.face(b).surface);
+        const auto ra=std::dynamic_pointer_cast<const BSplineSurface>(result.face(a).surface),rb=std::dynamic_pointer_cast<const BSplineSurface>(result.face(b).surface);
+        if(oa&&ob&&ra&&rb&&oa->uKnots()==ra->uKnots()&&oa->vKnots()==ra->vKnots()&&ob->uKnots()==rb->uKnots()&&ob->vKnots()==rb->vKnots()) {
+            const auto sa=side(*oa,*ca,edge.range),sb=side(*ob,*cb,edge.range);
+            if(compatible(*oa,sa,*ob,sb)) {
+                const auto parameter=[](const BSplineSurface &s,Side side){const auto d=side.axis==0?s.uDomain():s.vDomain();return side.high?d.hi:d.lo;};
+                const auto link=surfacePoleJetLink(*oa,{sa.axis,parameter(*oa,sa),sa.high,sa.reversed},*ob,{sb.axis,parameter(*ob,sb),sb.high,sb.reversed},2);
+                if(link.curvature){++report.curvature;report.curvatureError=std::max(report.curvatureError,surfacePoleJetResidual(link,*ra,*rb,2));}
+            }
+        }
         ++report.connected;
         report.gap = std::max(report.gap, after.gap);
         (void)tolerance;
@@ -589,6 +638,19 @@ SurfacePoleContinuityReport checkSurfacePoleContinuity(const Body &reference, co
             report.angle = std::max(report.angle, after.angle);
         } else
             ++report.sharp;
+    }
+    for(auto face:faces) {
+        const auto a=std::dynamic_pointer_cast<const BSplineSurface>(reference.face(face).surface);
+        const auto b=std::dynamic_pointer_cast<const BSplineSurface>(result.face(face).surface);
+        if(!a || !b || a->uKnots()!=b->uKnots() || a->vKnots()!=b->vKnots())continue;
+        for(const auto &link:surfacePoleInternalJets(*a,2)) {
+            ++report.internal;
+            report.internalTangentError=std::max(report.internalTangentError,surfacePoleJetResidual(link,*b,*b,1));
+            if(link.curvature) {
+                ++report.curvature;
+                report.curvatureError=std::max(report.curvatureError,surfacePoleJetResidual(link,*b,*b,2));
+            }
+        }
     }
     return report;
 }

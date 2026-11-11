@@ -149,9 +149,9 @@ QString SurfacePolesSession::constrain(SurfacePolesModel &model,SurfaceToolParam
 }
 QString SurfacePolesSession::continuityText()const {
     if(!constraints_)return {};
-    if(!continuity_.connected)return QStringLiteral("Nessun giunto tra facce: G1 non distribuisce lo spostamento dentro questa griglia. Per i poli vicini usa il trascinamento morbido.");
-    return QStringLiteral("%1 giunti; %2 tangenti, %3 spigoli; %4 poli spostati automaticamente (verdi). %5 giunti protetti con griglie non compatibili.")
-        .arg(continuity_.connected).arg(continuity_.tangent).arg(continuity_.sharp).arg(continuity_.followers).arg(continuity_.protectedJoints);
+    if(!continuity_.connected && !continuity_.internal)return QStringLiteral("Nessun giunto tra facce: G1 non distribuisce lo spostamento dentro questa griglia. Per i poli vicini usa il trascinamento morbido.");
+    return QStringLiteral("%6 passaggi interni/cuciture; %7 vincoli G2. %1 giunti topologici; %2 tangenti, %3 spigoli; %4 poli spostati automaticamente (verdi). %5 giunti protetti con griglie non compatibili.")
+        .arg(continuity_.connected).arg(continuity_.tangent).arg(continuity_.sharp).arg(continuity_.followers).arg(continuity_.protectedJoints).arg(continuity_.internal).arg(continuity_.curvature);
 }
 void SurfacePolesSession::cacheRefit(const QVector<Kernel::FaceId> &faces,
                                      const std::vector<Kernel::BSplineSurfacePtr> &sources,
