@@ -152,5 +152,116 @@ static void filletSelectionReviewRegressions(bool openGl) {
             require(view->extrusions_[i].visible == initialDocument.extrusions[i].visible, "visibilita' persistente non alterata da anteprima o chiusura");
         require(!view->isBodyVisibleInScene(0) && view->isBodyVisibleInScene(1), "nessun corpo finale lasciato nascosto dal pannello");
     }
+    // Conferma anticipata: il gate rende deterministici timer pendente,
+    // worker attivo e sostituzione di una richiesta gia' partita. Si verifica
+    // il puntatore pubblicato dal worker, non solo l'equivalenza geometrica.
+    auto *pool = QThreadPool::globalInstance();
+    require(pool->waitForDone(10000), "pool libero prima della conferma anticipata");
+    const int previousLimit = pool->maxThreadCount();
+    pool->setMaxThreadCount(1);
+    for (bool embedded : {false, true}) for (int scenario = 0; scenario < 4; ++scenario) {
+        const bool edit = scenario == 2;
+        DocumentState before = initialDocument;
+        if (!edit) { before.extrusions.resize(1); before.extrusions[0].visible = true; }
+        view->loadDocument(before);
+        const auto baseGeometry = view->extrusions_[0].forgeBody;
+        const auto savedGeometry = edit ? view->extrusions_[1].forgeBody : ForgeBody{};
+        QSemaphore entered, release;
+        pool->start([&] { entered.release(); release.acquire(); });
+        entered.acquire();
+        bool released = false, inspected = false, hiddenWhilePending = false;
+        int starts = 0, ends = 0, delivered = 0, applications = 0;
+        ForgeBody published;
+        std::exception_ptr failure;
+        view->workCallback_ = [&](bool active, const QString &, bool background) {
+            if (background) (active ? starts : ends)++;
+        };
+        QTimer::singleShot(0, &window, [&] {
+            QDialog *dialog = nullptr;
+            for (auto *widget : QApplication::topLevelWidgets()) {
+                if (auto *candidate = qobject_cast<QDialog *>(widget); candidate && candidate->findChild<QTabWidget *>("filletTabs")) dialog = candidate;
+                for (auto *candidate : widget->findChildren<QDialog *>())
+                    if (candidate->findChild<QTabWidget *>("filletTabs")) dialog = candidate;
+            }
+            try {
+                require(dialog && !dialog->isHidden() && (!openGl || dialog->isVisible()) && view->previewPending(),
+                        "raccordo aperto con anteprima pendente");
+                const auto statusCallback = view->previewCallback_;
+                view->setPreviewCallback([&, statusCallback](const QString &error) {
+                    published = view->preview_.geometry;
+                    ++delivered;
+                    if (statusCallback) statusCallback(error);
+                });
+                if (scenario != 0) {
+                    view->startPreviewJob();
+                    view->previewTimer_->stop();
+                    require(view->previewRunning_, "worker raccordo attivo prima di Conferma");
+                }
+                if (edit) {
+                    // Il risultato superato deve essere scartato, poi la
+                    // conferma attende solo la nuova definizione.
+                    dialog->findChild<QDoubleSpinBox *>("filletConstantRadius")->setValue(.4);
+                }
+                QTimer::singleShot(0, dialog, [&, dialog] {
+                    hiddenWhilePending = dialog->isHidden() && view->previewPending();
+                    if (!released) { released = true; release.release(); }
+                });
+                auto *ok = dialog->findChild<QDialogButtonBox *>()->button(QDialogButtonBox::Ok);
+                ok->click();
+                require(hiddenWhilePending, "Conferma chiude il pannello prima della fine dell'anteprima");
+                if (scenario == 3) {
+                    auto *message = dialog->findChild<QPlainTextEdit *>("functionApplyError");
+                    require(!dialog->isHidden() && (!openGl || dialog->isVisible()) && message && !message->isHidden()
+                                && !view->previewError().isEmpty() && message->toPlainText().contains(view->previewError()),
+                            "errore geometrico reale riapre il pannello con il messaggio dell'anteprima");
+                    require(view->extrusions_.size() == before.extrusions.size()
+                                && view->extrusions_[0].forgeBody == baseGeometry,
+                            "anteprima fallita non modifica il documento");
+                    dialog->findChild<QDoubleSpinBox *>("filletConstantRadius")->setValue(.35);
+                    ok->click();
+                }
+                require(dialog->result() == QDialog::Accepted, "conferma anticipata completata senza errore di attesa");
+                inspected = true;
+            } catch (...) {
+                failure = std::current_exception();
+                if (dialog) dialog->reject();
+            }
+            if (!released) { released = true; release.release(); }
+        });
+        const auto result = filletDialog(embedded ? static_cast<QWidget *>(&window) : &plainOwner, view,
+            QStringLiteral("Conferma raccordo in calcolo"), 0, edit ? 1 : -1, {originalReference},
+            scenario == 3 ? 20. : .35, ChamferSpec{},
+            [&](int body, const QVector<EdgePoint> &edges, double radius, bool chamfer, const ChamferSpec &spec) {
+                ++applications;
+                require(view->previewPending() && view->preview_.key == CadViewport::previewKey(view->preview_.definition, edit ? 1 : -1),
+                        "apply entra con la stessa anteprima ancora pendente");
+                if (!edit) return view->createBlend(body, edges, radius, chamfer, QStringLiteral("Raccordo anticipato"), spec);
+                auto changed = view->extrusions_[1];
+                changed.blendEdges = edges; changed.blendSize = radius; changed.chamferSpec = spec;
+                return view->updateBody(1, changed);
+            });
+        require(pool->waitForDone(10000), "worker raccordo terminato");
+        QApplication::processEvents();
+        view->workCallback_ = {};
+        if (failure) { pool->setMaxThreadCount(previousLimit); std::rethrow_exception(failure); }
+        require(inspected && result.applied && view->extrusions_.size() == 2
+                    && published && view->extrusions_[1].forgeBody == published,
+                "creazione/modifica acquisisce esattamente il puntatore pubblicato dall'anteprima");
+        const int expectedJobs = (edit || scenario == 3) ? 2 : 1;
+        require(starts == expectedJobs && ends == starts && delivered == (scenario == 3 ? 2 : 1)
+                    && applications == (scenario == 3 ? 2 : 1),
+                "nessun secondo calcolo uguale, callback obsolete scartate e lavoro bilanciato");
+        require(!view->extrusions_[1].display.vertices.isEmpty() && view->extrusions_[1].display.constructionCurves.isEmpty()
+                    && !view->previewPending() && !view->previewRunning_ && view->preview_.key.isEmpty(),
+                "risultato completo e pulizia dopo la conferma anticipata");
+        view->undo();
+        require(view->extrusions_.size() == before.extrusions.size() && view->extrusions_[0].forgeBody == baseGeometry
+                    && (!edit || view->extrusions_[1].forgeBody == savedGeometry),
+                "un solo Undo ripristina il documento prima della conferma anticipata");
+        view->redo();
+        require(view->extrusions_.size() == 2 && view->extrusions_[1].forgeBody == published,
+                "Redo conserva il puntatore del raccordo confermato");
+    }
+    pool->setMaxThreadCount(previousLimit);
     std::cout << "PASS raccordi review: occlusione facce, X-ray, scena editata, evidenziazioni, Esc/Annulla/chiusura/conferma e Undo/Redo" << std::endl;
 }

@@ -230,7 +230,7 @@ struct BlendModel {
         }
         return best;
     }
-    void moveEndAlongChain(int edge, int vertex, int point) {
+    void moveEndAlongChain(int edge, int vertex, int point, bool extend = false, const Interval *endWindow = nullptr) {
         const auto chain = edgeChain(edge, vertex);
         std::size_t best = 0;
         double gap = std::numeric_limits<double>::infinity();
@@ -242,7 +242,7 @@ struct BlendModel {
             }
         }
         if (best == 0 || gap > std::max(1e-7, pointTolerance[std::size_t(point)])) {
-            moveEnd(edge, vertex, point);
+            moveEnd(edge, vertex, point, extend, endWindow);
             return;
         }
         // Verifica e accorcia prima di rimuovere gli edge interamente consumati.

@@ -2,6 +2,8 @@
 #include "cad_export.h"
 #include "cad_cuda_tessellation.h"
 #include "fk_body_io.h"
+#include "fk_primitives.h"
+#include "fk_revolve.h"
 #include "kernel/tests/surface_tools_fixture.h"
 
 #include <QCoreApplication>
@@ -150,6 +152,68 @@ void validateTrim(const Mesh &mesh,const Surface &surface,bool hole) {
 QByteArray readFile(const QString &path) {
     QFile file(path);require(file.open(QIODevice::ReadOnly),"rilettura export fallita");return file.readAll();
 }
+double sphereDeviation(const Mesh &mesh, const Vec3 &center, double radius) {
+    double worst = 0.0;
+    for (const auto &polygon : mesh.polygons) {
+        Vec3 centroid;
+        for (const auto &[vertex, normal] : polygon) {
+            (void)normal;
+            centroid += mesh.points[std::size_t(vertex)];
+        }
+        worst = std::max(worst, std::abs(radius - distance(centroid / double(polygon.size()), center)));
+        for (std::size_t i = 0; i < polygon.size(); ++i) {
+            const Vec3 midpoint = (mesh.points[std::size_t(polygon[i].first)]
+                + mesh.points[std::size_t(polygon[(i + 1) % polygon.size()].first)]) / 2.0;
+            worst = std::max(worst, std::abs(radius - distance(midpoint, center)));
+        }
+    }
+    return worst;
+}
+void automaticQuality() {
+    setCudaTessellationEnabled(false);
+    for (double radius : {0.05, 5.0, 50.0}) {
+        const QVector<ExportBody> bodies{{QStringLiteral("Sfera"),
+            std::make_shared<const Body>(makeSphere(Frame3(), radius)), {}, QColor()}};
+        const auto original = writeBodyBinary(*bodies.front().body);
+        StlExportOptions old;
+        // Vecchio automatico: diagonale della scena di display / 2000, 10°.
+        const double diagonal = 2.0 * radius * std::sqrt(3.0);
+        old.maxEdgeLength = diagonal / 50.0;
+        old.deflection = diagonal / 2000.0;
+        const auto coarse = buildBinaryStl(bodies, old);
+        auto options = suggestedStlOptions(bodies);
+        options.automaticRefinement = true;
+        const auto fine = buildBinaryStl(bodies, options);
+        require(coarse.error.isEmpty() && fine.error.isEmpty(), "export automatico della sfera fallito");
+        const double coarseError = sphereDeviation(readStl(coarse.data, coarse.triangleCount), Vec3(), radius);
+        const double fineError = sphereDeviation(readStl(fine.data, fine.triangleCount), Vec3(), radius);
+        std::printf("Automatico R=%g mm: triangoli=%llu -> %llu scarto=%g -> %g mm budget=%g mm tentativi=%d\n",
+            radius, static_cast<unsigned long long>(coarse.triangleCount), static_cast<unsigned long long>(fine.triangleCount),
+            coarseError, fineError, options.deflection, fine.tessellationAttempts);
+        const double floatBudget = 8.0 * std::numeric_limits<float>::epsilon() * radius;
+        require(fineError <= options.deflection + floatBudget, "scarto STL automatico superiore al budget");
+        require(fineError < coarseError / 2.0, "automatico non migliora abbastanza la fedelta' geometrica");
+        require(fine.usedOptions.deflection <= options.deflection && fine.usedOptions.angle <= options.angle,
+                "il recupero automatico non deve allargare scarto o angolo");
+        require(writeBodyBinary(*bodies.front().body) == original, "automatico modifica il B-rep");
+        std::printf("PASS qualita' automatica R=%g mm\n", radius);
+    }
+    const auto sphere = std::make_shared<const Body>(makeSphere(Frame3(), 1));
+    const QVector<ExportBody> single{{QStringLiteral("Piccolo"), sphere, {}, QColor()}};
+    const auto alone = suggestedStlOptions(single);
+    const QVector<ExportBody> distant{{QStringLiteral("Piccolo"), sphere, {}, QColor()},
+        {QStringLiteral("Distante"), std::make_shared<const Body>(makeSphere(Frame3(Vec3(10000, 0, 0), Vec3(0,0,1), Vec3(1,0,0)), 1)), {}, QColor()}};
+    const auto apart = suggestedStlOptions(distant);
+    require(std::abs(apart.deflection - alone.deflection) < 1e-12 && std::abs(apart.maxEdgeLength - alone.maxEdgeLength) < 1e-12,
+            "la distanza fra i corpi non deve peggiorare il raffinamento");
+    QVector<ExportBody> mixed = single;
+    mixed.append({QStringLiteral("Grande"), std::make_shared<const Body>(makeBox(Frame3(), 1000, 1000, 1000)), {}, QColor()});
+    require(suggestedStlOptions(mixed).deflection == alone.deflection, "il corpo grande non deve cancellare il dettaglio del piccolo");
+    const QVector<ExportBody> large{{QStringLiteral("Grande"), mixed.back().body, {}, QColor()}};
+    require(suggestedStlOptions(large).deflection == 0.01, "tetto assoluto dello scarto automatico sui modelli grandi");
+    const auto empty = suggestedStlOptions({});
+    require(std::isfinite(empty.deflection) && empty.deflection > 0.0, "default automatico finito senza corpi");
+}
 void runCase(bool rational, bool withGpu, const QString &directory) {
     auto source=surface_fixture::patch(rational); // foro nel caso razionale
     source=editSheetPoles(source,{{1,1,Vec3(0,0,2),rational?1.3:1.0},
@@ -189,6 +253,39 @@ void runCase(bool rational, bool withGpu, const QString &directory) {
     };
     const auto cpu=roundTrip(cpuStl,cpuObj,QStringLiteral("/cpu"));
     validateTrim(cpu.first,*spline,rational);validateTrim(cpu.second,*spline,rational);
+    {
+        setCudaTessellationEnabled(withGpu);
+        auto automatic = suggestedStlOptions(bodies);
+        automatic.automaticRefinement = true;
+        const auto stl = buildBinaryStl(bodies, automatic);
+        const auto obj = buildQuadObj(bodies, automatic);
+        if (!stl.error.isEmpty() || !obj.error.isEmpty())
+            std::fprintf(stderr, "Automatico NURBS: %s / %s\n", qPrintable(stl.error), qPrintable(obj.error));
+        require(stl.error.isEmpty() && obj.error.isEmpty(), "automatico NURBS STL/OBJ fallito");
+        const Mesh stlMesh = readStl(stl.data, stl.triangleCount);
+        validateTrim(stlMesh, *spline, rational);
+        validateTrim(readObj(obj.data, obj.quadCount, obj.triangleCount), *spline, rational);
+        require(stl.usedOptions.deflection <= automatic.deflection && stl.usedOptions.angle <= automatic.angle
+                    && obj.usedOptions.deflection <= automatic.deflection && obj.usedOptions.angle <= automatic.angle,
+                "recupero NURBS senza sacrificare la qualita'");
+        if (!rational) {
+            // In questa patch polinomiale x=10u, y=10v: misura indipendente
+            // sui triangoli serializzati, senza riusare i parametri del mesher.
+            double worst = 0.0;
+            for (const auto &polygon : stlMesh.polygons) {
+                Vec3 center;
+                for (const auto &[vertex, normal] : polygon) {
+                    (void)normal;
+                    center += stlMesh.points[std::size_t(vertex)];
+                }
+                center /= 3.0;
+                worst = std::max(worst, std::abs(spline->point(center.x() / 10.0, center.y() / 10.0).z() - center.z()));
+            }
+            require(worst <= automatic.deflection + 8.0 * std::numeric_limits<float>::epsilon() * 10.0,
+                    "scarto NURBS esportato oltre il budget automatico");
+            std::printf("PASS automatico NURBS: scarto verticale=%g mm budget=%g mm\n", worst, automatic.deflection);
+        }
+    }
     if(withGpu) {
         setCudaTessellationEnabled(true);
         auto points=cudaTessellationPoints();const auto gpuStl=buildBinaryStl(bodies,options);
@@ -215,6 +312,7 @@ int main(int argc,char **argv) {
     try {
         QTemporaryDir directory;require(directory.isValid(),"directory temporanea non disponibile");
         runCase(false,gpu,directory.path());runCase(true,gpu,directory.path());
+        if (!gpu) automaticQuality();
         return 0;
     } catch(const std::exception &error) {std::fprintf(stderr,"FAIL export: %s\n",error.what());return 1;}
 }

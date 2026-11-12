@@ -522,7 +522,7 @@ void CadViewport::warmPickCaches() {
         for (int operand : ForgeCad::bodyOperands(extrusions_.at(index)))
             if (operand >= 0 && operand < index && !chain.contains(operand)) chain.insert(operand), pending.append(operand);
     }
-    QVector<ForgeCad::ForgeBody> pendingBodies;
+    QVector<std::weak_ptr<const ForgeCad::Kernel::Body>> pendingBodies;
     for (int index : chain) {
         const ExtrusionObject &body = extrusions_.at(index);
         if (body.suppressed || !body.forgeBody || !ForgeCad::isShapeBody(body)) continue;
@@ -538,11 +538,21 @@ void CadViewport::warmPickCaches() {
     // Gli stadi storici condividono le superfici. Prepararli in parallelo
     // costruiva piu' volte le stesse cache atomiche e saturava i core mentre
     // l'utente disegnava. Una sola coda riusa i risultati gia' pubblicati.
-    QThreadPool::globalInstance()->start([bodies = std::move(pendingBodies)] {
+    if (!pickCacheCancellation_) pickCacheCancellation_ = std::make_shared<std::atomic<bool>>(false);
+    const auto cancellation = pickCacheCancellation_;
+    const double accuracy = calculationAccuracy_;
+    QThreadPool::globalInstance()->start([bodies = std::move(pendingBodies), cancellation, accuracy] {
+        ForgeCad::Kernel::CancellationScope scope(cancellation);
+        ForgeCad::Kernel::PrecisionScope precision(accuracy);
         QElapsedTimer timer; timer.start();
-        for (const auto &body : bodies) {
+        for (const auto &weak : bodies) {
+            if (cancellation->load(std::memory_order_relaxed)) break;
+            const auto body = weak.lock();
+            if (!body) continue;
             try {
                 ForgeCad::forgeWarmPickCaches(*body);
+            } catch (const ForgeCad::Kernel::OperationCancelled &) {
+                break;
             } catch (const std::exception &) {
             }
         }

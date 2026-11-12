@@ -10,6 +10,7 @@
 #include "fk_curve_algo.h"
 #include "fk_pcurve.h"
 #include "fk_surface_algo.h"
+#include "fk_nurbs_join.h"
 
 namespace ForgeCad::Kernel {
 namespace {
@@ -34,8 +35,13 @@ bool sameDomain(const Face &a, const Face &b, double tolerance) {
 
 struct Lists {
     std::vector<Vec3> vertices;
+    std::vector<double> vertexTolerance;
+    std::vector<VertexId> vertexSources;
     std::vector<Body::BuildEdge> edges;
     std::vector<bool> alive;
+    std::vector<std::vector<EdgeId>> edgeSources;
+    std::vector<bool> edgeModified;
+    std::vector<double> joinError;
     std::vector<Body::BuildFace> faces;
     std::vector<std::vector<FaceId>> faceSources;
     std::vector<bool> faceModified;
@@ -54,12 +60,13 @@ double positiveModulo(double x, double period) {
 // Edge che unisce e1 (con il vertice v in comune) ed e2 sulla stessa curva:
 // curva, tratto e vertici, con il parametro crescente da start a end.
 // `samePointer`: stessa curva di prima (le SP-curve restano valide).
-bool mergeEdges(const Lists &lists, int e1, int e2, int v, double tolerance, Body::BuildEdge &merged, bool &samePointer) {
+bool mergeEdges(const Lists &lists, int e1, int e2, int v, double tolerance, Body::BuildEdge &merged, bool &samePointer, bool joinSplines, double &introducedError) {
     const Body::BuildEdge &a = lists.edges[e1], &b = lists.edges[e2];
     const bool forward1 = a.end == v, forward2 = b.start == v;  // e1 va verso v, e2 parte da v
     const int far1 = forward1 ? a.start : a.end, far2 = forward2 ? b.end : b.start;
     merged.tolerance = std::max(a.tolerance, b.tolerance);
     samePointer = false;
+    introducedError = 0.0;
     auto near = [](double s, double t) { return std::fabs(s - t) <= 1e-9 * (1.0 + std::fabs(s) + std::fabs(t)); };
     if (a.curve == b.curve) {
         if (forward1 != forward2) return false;
@@ -118,11 +125,24 @@ bool mergeEdges(const Lists &lists, int e1, int e2, int v, double tolerance, Bod
         merged.curve = a.curve;
         return true;
     }
+    if (joinSplines) {
+        const double budget = scaledAccuracy(1e-9); // budget di fit dei trim, fissato prima della concatenazione
+        if (std::max(lists.joinError[e1], lists.joinError[e2])+budget > linearResolution()) return false;
+        if (auto curve = detail::joinTangentSplineCurves(a.curve, a.range, forward1, b.curve, b.range, forward2, budget)) {
+            merged.curve = std::move(curve);
+            merged.range = merged.curve->domain();
+            merged.start = far1;
+            merged.end = far2;
+            merged.tolerance += budget;
+            introducedError = budget;
+            return true;
+        }
+    }
     return false;
 }
 
 // Unisce gli edge nei vertici che separano solo due edge sulla stessa curva.
-void mergeCollinearEdges(Lists &lists, double tolerance) {
+void mergeCollinearEdges(Lists &lists, double tolerance, bool joinSplines) {
     std::vector<std::vector<SurfacePole>> poles;
     for (const Body::BuildFace &face : lists.faces) poles.push_back(surfacePoles(*face.surface));
     for (bool changed = true; changed;) {
@@ -148,7 +168,8 @@ void mergeCollinearEdges(Lists &lists, double tolerance) {
             if (atPole) continue;
             Body::BuildEdge merged;
             bool samePointer;
-            if (!mergeEdges(lists, e1, e2, v, tolerance, merged, samePointer)) continue;
+            double introducedError = 0.0;
+            if (!mergeEdges(lists, e1, e2, v, tolerance, merged, samePointer, joinSplines, introducedError)) continue;
             // Nei loop le due fin sono consecutive: diventano una.
             std::vector<std::pair<std::size_t, std::size_t>> places;  // faccia, loop
             bool consistent = true;
@@ -185,6 +206,10 @@ void mergeCollinearEdges(Lists &lists, double tolerance) {
                     for (const Body::BuildFin &fin : loop) uses += fin.edge == e1 ? 1 : 0;
             if (places.size() != uses || uses == 0) throw std::logic_error("unifySameDomain: fin non consecutive in un vertice di grado 2");
             merged.tolerance = std::max(merged.tolerance, 0.0);
+            lists.edgeSources[e1].insert(lists.edgeSources[e1].end(), lists.edgeSources[e2].begin(), lists.edgeSources[e2].end());
+            lists.edgeSources[e2].clear();
+            lists.edgeModified[e1] = true;
+            lists.joinError[e1] = std::max(lists.joinError[e1], lists.joinError[e2])+introducedError;
             lists.edges[e1] = merged;
             lists.alive[e2] = false;
             changed = true;
@@ -195,7 +220,7 @@ void mergeCollinearEdges(Lists &lists, double tolerance) {
 
 }
 
-Body unifySameDomain(const Body &body, double tolerance, BodyHistory *history) {
+static Body unifyBody(const Body &body, double tolerance, BodyHistory *history, bool joinSplines) {
     if (history) *history = BodyHistory();
     const std::vector<FaceId> faceIds = body.faces();
     std::map<int, int> position;
@@ -235,6 +260,8 @@ Body unifySameDomain(const Body &body, double tolerance, BodyHistory *history) {
         const auto found = vertexIndex.find(v.index);
         if (found != vertexIndex.end()) return found->second;
         lists.vertices.push_back(body.vertex(v).point);
+        lists.vertexTolerance.push_back(body.vertex(v).tolerance);
+        lists.vertexSources.push_back(v);
         return vertexIndex[v.index] = int(lists.vertices.size()) - 1;
     };
     auto edgeOf = [&](EdgeId e) {
@@ -249,6 +276,9 @@ Body unifySameDomain(const Body &body, double tolerance, BodyHistory *history) {
         spec.end = vertexOf(body.edgeEnd(e));
         lists.edges.push_back(spec);
         lists.alive.push_back(true);
+        lists.edgeSources.push_back({e});
+        lists.edgeModified.push_back(false);
+        lists.joinError.push_back(0.0);
         return edgeIndex[e.index] = int(lists.edges.size()) - 1;
     };
     std::map<int, std::vector<FaceId>> groups;
@@ -306,7 +336,7 @@ Body unifySameDomain(const Body &body, double tolerance, BodyHistory *history) {
     }
 
     // 3. Edge sulla stessa curva separati da un vertice che non serve piu'.
-    mergeCollinearEdges(lists, tolerance);
+    mergeCollinearEdges(lists, tolerance, joinSplines);
 
     // Solo gli edge e i vertici rimasti.
     std::vector<int> newEdge(lists.edges.size(), -1), newVertex(lists.vertices.size(), -1);
@@ -329,6 +359,9 @@ Body unifySameDomain(const Body &body, double tolerance, BodyHistory *history) {
         for (std::vector<Body::BuildFin> &loop : face.loops)
             for (Body::BuildFin &fin : loop) fin.edge = newEdge[fin.edge];
     Body result = body.isSheet() ? Body::buildSheet(vertices, edges, lists.faces) : Body::build(vertices, edges, lists.faces);
+    const auto resultVertices = result.vertices();
+    for (std::size_t i = 0; i < newVertex.size(); ++i)
+        if (newVertex[i] >= 0) result.vertex(resultVertices.at(std::size_t(newVertex[i]))).tolerance = lists.vertexTolerance[i];
     computePCurves(result);
     if (history) {
         BodyHistory declared = makeHistory({&body}, result);
@@ -340,7 +373,79 @@ Body unifySameDomain(const Body &body, double tolerance, BodyHistory *history) {
                 origins.push_back({0, EntityKind::Face, source.index, lists.faceModified[i] ? HistoryRelation::Modified : HistoryRelation::Same});
             declared.declareOrigins(EntityKind::Face, faces[i].index, std::move(origins));
         }
+        const auto resultEdges = result.edges();
+        for (std::size_t i = 0; i < newEdge.size(); ++i) if (newEdge[i] >= 0) {
+            std::vector<HistoryLink> origins;
+            for (EdgeId source : lists.edgeSources[i]) origins.push_back({0, EntityKind::Edge, source.index,
+                lists.edgeModified[i] ? HistoryRelation::Modified : HistoryRelation::Same});
+            declared.declareOrigins(EntityKind::Edge, resultEdges.at(std::size_t(newEdge[i])).index, std::move(origins));
+        }
+        for (std::size_t i = 0; i < newVertex.size(); ++i) if (newVertex[i] >= 0)
+            declared.declareOrigins(EntityKind::Vertex, resultVertices.at(std::size_t(newVertex[i])).index,
+                {{0, EntityKind::Vertex, lists.vertexSources[i].index, HistoryRelation::Same}});
         *history = std::move(declared);
+    }
+    return result;
+}
+
+Body unifySameDomain(const Body &body, double tolerance, BodyHistory *history) {
+    return unifyBody(body, tolerance, history, false);
+}
+
+std::optional<Body> unifyTangentNurbsSupports(const Body &input, BodyHistory *history) {
+    Body charts = input;
+    bool any = false;
+    for (bool changed = true; changed;) {
+        changed = false;
+        for (EdgeId e : charts.edges()) {
+            cancellationPoint();
+            if (charts.isLaminar(e)) continue;
+            const Edge &edge = charts.edge(e);
+            const FaceId first = charts.finFace(edge.forward), second = charts.finFace(edge.backward);
+            const auto a = charts.face(first).surface, b = charts.face(second).surface;
+            if (a == b || a->type() != SurfaceType::BSpline || b->type() != SurfaceType::BSpline) continue;
+            const auto joined = detail::joinTangentNurbs(static_cast<const BSplineSurface &>(*a), static_cast<const BSplineSurface &>(*b));
+            if (!joined || (charts.face(first).sense != joined->reverseNormalA) != (charts.face(second).sense != joined->reverseNormalB)) continue;
+            const auto onBoundary = [&](FinId id, const Surface &surface, int axis, double parameter) {
+                // La cucitura effettiva deve essere proprio il bordo
+                // isoparametrico certificato, non un'altra intersezione
+                // fra le stesse superfici. Il limite UV e' solo roundoff.
+                auto curve = charts.fin(id).pcurve;
+                if (!curve) curve = exactPCurve(surface,edge.curve,edge.range,std::max(linearResolution(),edge.tolerance));
+                if (!curve) return false;
+                const double roundoff = 128*kMachineEpsilon*std::max(1.0,std::fabs(parameter));
+                const auto on = [&](const Vec2 &p) { return std::fabs(p[axis]-parameter)<=roundoff; };
+                if (curve->type()==CurveType::Line) return on(curve->point(edge.range.lo)) && on(curve->point(edge.range.hi));
+                const auto *spline=dynamic_cast<const BSplineCurve<2>*>(curve.get());
+                if (!spline) return false;
+                return std::all_of(spline->poles().begin(),spline->poles().end(),on);
+            };
+            if (!onBoundary(edge.forward,*a,joined->boundaryAxisA,joined->boundaryA)
+                || !onBoundary(edge.backward,*b,joined->boundaryAxisB,joined->boundaryB)) continue;
+            for (FaceId f : charts.faces()) {
+                const bool onA = charts.face(f).surface == a, onB = charts.face(f).surface == b;
+                if (!onA && !onB) continue;
+                charts.face(f).surface = joined->surface;
+                if (onA ? joined->reverseNormalA : joined->reverseNormalB) charts.face(f).sense = !charts.face(f).sense;
+                for (LoopId l : charts.face(f).loops) for (FinId fin : charts.loopFins(l)) {
+                    charts.fin(fin).pcurve.reset();
+                    charts.fin(fin).pcurveTolerance = 0.0;
+                }
+            }
+            changed = any = true;
+            break;
+        }
+    }
+    if (!any) return {};
+    BodyHistory merged;
+    Body result = unifyBody(charts, linearResolution(), history ? &merged : nullptr, true);
+    if (history) {
+        BodyHistory atlas = makeHistory({&input}, charts);
+        for (FaceId f : charts.faces()) atlas.declareOrigins(EntityKind::Face, f.index,
+            {{0, EntityKind::Face, f.index, charts.face(f).surface == input.face(f).surface ? HistoryRelation::Same : HistoryRelation::Modified}});
+        for (EdgeId e : charts.edges()) atlas.declareOrigins(EntityKind::Edge, e.index, {{0, EntityKind::Edge, e.index, HistoryRelation::Same}});
+        for (VertexId v : charts.vertices()) atlas.declareOrigins(EntityKind::Vertex, v.index, {{0, EntityKind::Vertex, v.index, HistoryRelation::Same}});
+        *history = BodyHistory::compose(atlas, merged, 0);
     }
     return result;
 }

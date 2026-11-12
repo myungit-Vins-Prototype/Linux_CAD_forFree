@@ -85,6 +85,7 @@ add_library(forgekernel STATIC
     fk_tessellate.cpp
     fk_nurbs.h
     fk_nurbs.cpp
+    fk_nurbs_join.cpp
     fk_curve_surface.h
     fk_curve_surface.cpp
     fk_revolve.h
@@ -485,3 +486,12 @@ target_compile_options(forgekernel_blend_cavity_tests PRIVATE -Wall -Wextra -Wpe
 set_target_properties(forgekernel_blend_cavity_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
 add_test(NAME forgekernel_blend_cavity_tests COMMAND forgekernel_blend_cavity_tests)
 set_tests_properties(forgekernel_blend_cavity_tests PROPERTIES TIMEOUT 90)
+
+# Atlanti NURBS G1 e raccordi oltre le suddivisioni artificiali dei supporti.
+add_executable(forgekernel_nurbs_support_tests tests/fk_test_main.cpp tests/test_nurbs_supports.cpp)
+target_link_libraries(forgekernel_nurbs_support_tests PRIVATE forgekernel)
+target_compile_definitions(forgekernel_nurbs_support_tests PRIVATE FORGECAD_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+target_compile_options(forgekernel_nurbs_support_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_nurbs_support_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_nurbs_support_tests COMMAND forgekernel_nurbs_support_tests)
+set_tests_properties(forgekernel_nurbs_support_tests PROPERTIES TIMEOUT 240)

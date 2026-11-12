@@ -144,12 +144,13 @@ inline QString extendDrawingNumbering(DrawingSheet &sheet){
 }
 inline QString renumberDrawingDimensions(DrawingSheet &sheet){
     auto candidate=sheet;auto &n=candidate.dimensionNumbering;n.persistent=true;n.enabled=true;
-    // L'operazione esplicita conserva le riserve delle quote nascoste o eliminate.
+    // Una riassegnazione esplicita ricostruisce la sequenza dal numero richiesto,
+    // liberando anche le riserve di quote escluse o eliminate. Le modifiche
+    // ordinarie passano da extendDrawingNumbering e conservano invece le riserve.
     const auto order=drawingNumberingOrder(candidate);
-    for(const auto &id:order)n.assignments.remove(id);
-    QSet<int> reserved;for(auto value:n.assignments)reserved.insert(value);
-    int number=n.firstNumber;for(const auto &id:order){while(reserved.contains(number))++number;if(number>999999)return QStringLiteral("Numeri dei badge esauriti.");n.assignments.insert(id,number++);}
-    n.nextNumber=std::max(n.nextNumber,number);for(auto value:n.assignments)n.nextNumber=std::max(n.nextNumber,value+1);
+    n.assignments.clear();
+    int number=n.firstNumber;for(const auto &id:order){if(number>999999)return QStringLiteral("Numeri dei badge esauriti.");n.assignments.insert(id,number++);}
+    n.nextNumber=number;
     const auto error=validateDrawingDimensionNumbering(n,candidate.dimensions.size());if(error.isEmpty())sheet=std::move(candidate);return error;
 }
 inline QString changeDrawingDimensionNumber(DrawingSheet &sheet,const QUuid &id,int number,bool swap){

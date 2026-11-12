@@ -602,6 +602,62 @@ bool sameSketchSource(const GeometryRef &a, const GeometryRef &b) {
         && (a.kind != 9 || (a.point.x == b.point.x && a.point.y == b.point.y && a.point.z == b.point.z));
 }
 
+QString projectReferencePath(SketchObject &target, const std::vector<PathSegment> &path, bool contact, bool construction) {
+    const auto appendPoint = [&](const Vec3 &point) {
+        const auto p = worldToSketch(point, target);
+        for (const auto &segment : target.segments)
+            if (segment.first == segment.second && std::hypot(p.x()-segment.first.x(),p.y()-segment.first.y()) <= sketchConnectionTolerance()) return;
+        appendSegment(target, p, p, construction);
+    };
+    const Frame3 frame = sketchAxes(target);
+    for (const auto &piece : path) {
+        if (contact) {
+            const auto roots = planeRoots<3>(*piece.curve, piece.range, frame.zDir(), dot(frame.zDir(), frame.origin()), 1e-9);
+            for (double t : roots.parameters) appendPoint(piece.curve->point(t));
+        } else {
+            if(isImplicitSketchProjection(*piece.curve)) {
+                CurveObject exact;exact.tool=DrawingTool::Converted;exact.degree=0;exact.construction=construction;
+                exact.referenceCurve=std::make_shared<SketchProjectionImage>(piece.curve,piece.range,frame);
+                const auto a=exact.referenceCurve->point(piece.range.lo),b=exact.referenceCurve->point(piece.range.hi);
+                exact.controlPoints={QPointF(a.x(),a.y()),QPointF(b.x(),b.y())};
+                recalculateCurve(exact);
+                if(!exact.numericallyValid)return QStringLiteral("La proiezione esatta della curva non e' risolvibile sul piano dello schizzo.");
+                target.curves.append(std::move(exact));continue;
+            }
+            const QString error = appendProjectedCurve(target, piece.curve, piece.range, construction, false);
+            if (!error.isEmpty()) {
+                // Una retta normale al piano si proietta in un punto esatto.
+                const Vec3 a = piece.curve->point(piece.range.lo), b = piece.curve->point(piece.range.hi);
+                if (basisOf(piece.curve.get())->type() == CurveType::Line
+                    && norm(cross(b - a, frame.zDir())) <= 1e-10 * std::max(1.0, norm(b - a))) appendPoint(a);
+                else return error;
+            }
+        }
+    }
+    if (target.segments.isEmpty() && target.curves.isEmpty())
+        return QStringLiteral("La curva non attraversa il piano dello schizzo.");
+    return {};
+}
+
+void appendReferenceProjection(SketchObject &sketch, const SketchObject &projected, const GeometryRef &source,
+                               bool contact, bool construction, double halfLength,
+                               QVector<SketchEntity> *created = nullptr, bool visible = false) {
+    auto data = std::make_shared<SketchLinkedReference>();
+    data->source = source; data->contact = contact; data->construction = construction; data->visible = visible; data->halfLength = halfLength;
+    for (const auto &segment : projected.segments) {
+        const int index = sketch.segments.size();
+        appendSegment(sketch, segment.first, segment.second, construction);
+        data->entities.append({0, index, -1});
+        if (created) created->append({0, index});
+    }
+    for (const auto &curve : projected.curves) {
+        const int index = sketch.curves.size(); sketch.curves.append(curve);
+        data->entities.append({1, index, -1});
+        if (created) created->append({1, index});
+    }
+    sketch.linkedReferences.append(data);
+}
+
 QString projectLinkedReference(SketchObject &target, GeometryRef ref, bool contact, bool construction, double halfLength,
                                const QVector<SketchObject> &sketches, const QVector<ExtrusionObject> &bodies) {
     try {
@@ -653,34 +709,7 @@ QString projectLinkedReference(SketchObject &target, GeometryRef ref, bool conta
     }
     std::vector<PathSegment> path;
     if (!geometryRefPath(ref, bodies.size(), sketches, bodies, path, &error)) return error;
-    const Frame3 frame = sketchAxes(target);
-    for (const auto &piece : path) {
-        if (contact) {
-            const auto roots = planeRoots<3>(*piece.curve, piece.range, frame.zDir(), dot(frame.zDir(), frame.origin()), 1e-9);
-            for (double t : roots.parameters) appendPoint(piece.curve->point(t));
-        } else {
-            if(isImplicitSketchProjection(*piece.curve)) {
-                CurveObject exact;exact.tool=DrawingTool::Converted;exact.degree=0;exact.construction=construction;
-                exact.referenceCurve=std::make_shared<SketchProjectionImage>(piece.curve,piece.range,frame);
-                const auto a=exact.referenceCurve->point(piece.range.lo),b=exact.referenceCurve->point(piece.range.hi);
-                exact.controlPoints={QPointF(a.x(),a.y()),QPointF(b.x(),b.y())};
-                recalculateCurve(exact);
-                if(!exact.numericallyValid)return QStringLiteral("La proiezione esatta della curva non e' risolvibile sul piano dello schizzo.");
-                target.curves.append(std::move(exact));continue;
-            }
-            error = appendProjectedCurve(target, piece.curve, piece.range, construction, false);
-            if (!error.isEmpty()) {
-                // Una retta normale al piano si proietta in un punto esatto.
-                const Vec3 a = piece.curve->point(piece.range.lo), b = piece.curve->point(piece.range.hi);
-                if (basisOf(piece.curve.get())->type() == CurveType::Line
-                    && norm(cross(b - a, frame.zDir())) <= 1e-10 * std::max(1.0, norm(b - a))) appendPoint(a);
-                else return error;
-            }
-        }
-    }
-    if (target.segments.isEmpty() && target.curves.isEmpty())
-        return QStringLiteral("La curva non attraversa il piano dello schizzo.");
-    return {};
+    return projectReferencePath(target, path, contact, construction);
     } catch (const std::exception &error) {
         return QStringLiteral("Riferimento associativo non risolto: %1").arg(QString::fromUtf8(error.what()));
     }
@@ -733,21 +762,41 @@ QString appendLinkedSketchReference(SketchObject &sketch, GeometryRef source,
                 }
             }
     }
-    auto data = std::make_shared<SketchLinkedReference>();
-    data->source = source; data->contact = contact; data->construction = construction; data->visible = visible; data->halfLength = halfLength;
-    for (const auto &segment : projected.segments) {
-        const int index = sketch.segments.size();
-        appendSegment(sketch, segment.first, segment.second, construction);
-        data->entities.append({0, index, -1});
-        if (created) created->append({0, index});
-    }
-    for (const auto &curve : projected.curves) {
-        const int index = sketch.curves.size(); sketch.curves.append(curve);
-        data->entities.append({1, index, -1});
-        if (created) created->append({1, index});
-    }
-    sketch.linkedReferences.append(data);
+    appendReferenceProjection(sketch, projected, source, contact, construction, halfLength, created, visible);
     return {};
+}
+
+void appendBodySketchReferences(SketchObject &cache, int bodyIndex, const ExtrusionObject &body) {
+    if (!body.forgeBody || body.suppressed || !body.error.isEmpty()) return;
+    const Body &shape = *body.forgeBody;
+    GeometryRef source; source.index = bodyIndex; source.featureId = body.featureId;
+    // Gli ID vengono dallo stesso B-rep immutabile che stiamo proiettando.
+    // Non risolvere migliaia di nomi appena creati: i nomi divisi possono
+    // richiedere confronti globali. Restano sul link per refresh/persistenza.
+    source.kind = 4;
+    for (EdgeId edgeId : shape.edges()) {
+        const Edge &edge = shape.edge(edgeId);
+        if (!edge.curve) continue;
+        source.point = edgeReference(shape, edgeId, edge.curve->point((edge.range.lo + edge.range.hi) * 0.5));
+        const std::vector<PathSegment> path{{edge.curve, edge.range}};
+        for (bool contact : {true, false}) {
+            SketchObject projected; projected.plane = cache.plane; projected.frame = cache.frame; projected.customFrame = cache.customFrame;
+            try {
+                if (projectReferencePath(projected, path, contact, true).isEmpty())
+                    appendReferenceProjection(cache, projected, source, contact, true, 100.0);
+            } catch (const std::exception &) {
+                // Stesso isolamento per entita' della cache associativa ordinaria.
+            }
+        }
+    }
+    source.kind = 3;
+    for (const EdgePoint &point : vertexReferences(shape)) {
+        source.point = point;
+        SketchObject projected;
+        const auto p = worldToSketch(Vec3(point.x, point.y, point.z), cache);
+        appendSegment(projected, p, p, true);
+        appendReferenceProjection(cache, projected, source, false, true, 100.0);
+    }
 }
 
 namespace {

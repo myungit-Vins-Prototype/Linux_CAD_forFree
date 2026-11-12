@@ -1,4 +1,5 @@
 #include <QStyleHints>
+#include <QStyleOptionButton>
 
 static void functionPanelsReview() {
     using namespace ForgeCad;
@@ -28,7 +29,9 @@ static void functionPanelsReview() {
     {
         struct RestorePalette {
             QPalette saved = QApplication::palette();
+            ApplicationThemeMode mode = applicationThemeMode();
             ~RestorePalette() {
+                setApplicationThemeMode(*qApp, mode);
 #if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
                 QMetaObject::invokeMethod(qApp->styleHints(), "colorSchemeChanged", Qt::DirectConnection,
                                          Q_ARG(Qt::ColorScheme, scheme));
@@ -40,28 +43,26 @@ static void functionPanelsReview() {
             Qt::ColorScheme scheme = qApp->styleHints()->colorScheme();
 #endif
         } restore;
-        QWidget owner;
+        PdfWindow owner;
+        auto *themeMenu=owner.findChild<QMenu *>(QStringLiteral("applicationThemeMenu"));
+        require(themeMenu && themeMenu->actions().size()==3, "menu Visualizza/Tema nella finestra reale");
         FunctionDialogPanel panel(&owner, false);
         panel.setSizeIdentity(token + "-style");
         auto *fields = panel.createScrollableForm();
         auto *amount = new QDoubleSpinBox(&panel);
         auto *disabled = new QDoubleSpinBox(&panel); disabled->setEnabled(false);
         auto *enabled = new QCheckBox(QStringLiteral("Opzione"), &panel);
+        enabled->setFocusPolicy(Qt::NoFocus);
+        auto *faces = new QListWidget(&panel); faces->setMaximumHeight(90);
+        auto *face = new QListWidgetItem(QStringLiteral("F0"), faces); face->setCheckState(Qt::Unchecked);
+        fields->addRow(QStringLiteral("Facce"), faces);
         fields->addRow(QStringLiteral("Valore"), amount); fields->addRow(disabled); fields->addRow(enabled);
         auto *actions = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &panel);
         fields->addRow(actions);
         panel.setPanelOpacity(100);
         owner.show(); panel.show(); QApplication::processEvents();
         for (bool dark : {true, false, true}) {
-#if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
-            // Segnale simulato: non cambia le preferenze del desktop. Una
-            // setPalette manuale sarebbe corretta dal controller del tema.
-            require(QMetaObject::invokeMethod(qApp->styleHints(), "colorSchemeChanged", Qt::DirectConnection,
-                    Q_ARG(Qt::ColorScheme, dark ? Qt::ColorScheme::Dark : Qt::ColorScheme::Light)),
-                    "segnale del tema disponibile");
-#else
-            QApplication::setPalette(QPalette(QColor(dark ? "#111820" : "#f0f0f0")));
-#endif
+            themeMenu->actions()[dark ? 2 : 1]->trigger();
             for (int i=0; i<3; ++i) QApplication::processEvents();
             require((panel.panelColor().lightness() < 128) == dark
                     && (amount->palette().color(QPalette::Base).lightness() < 128) == dark,
@@ -71,8 +72,33 @@ static void functionPanelsReview() {
                     "testo dei campi leggibile nei due temi");
             require(disabled->palette().color(QPalette::Disabled, QPalette::Text)
                     != amount->palette().color(QPalette::Active, QPalette::Text), "campi disabilitati distinguibili");
+            require(faces->palette().color(QPalette::Base) == amount->palette().color(QPalette::Base), "elenchi con lo stesso fondo dei campi");
+            // Confronta pixel realmente disegnati, non la sola palette: il bug
+            // produceva nero su nero negli elenchi e bianco su bianco nei box.
+            const auto readableCheck = [&](auto capture, auto setState) {
+                setState(Qt::Unchecked); const auto empty = capture().convertToFormat(QImage::Format_RGB32);
+                setState(Qt::Checked); const auto checked = capture().convertToFormat(QImage::Format_RGB32);
+                int contrasting = 0;
+                for (int y=0; y<empty.height(); ++y) for (int x=0; x<empty.width(); ++x) {
+                    const auto a=empty.pixelColor(x,y), b=checked.pixelColor(x,y);
+                    if (std::max({std::abs(a.red()-b.red()), std::abs(a.green()-b.green()), std::abs(a.blue()-b.blue())}) > 100) ++contrasting;
+                }
+                return contrasting >= 6;
+            };
+            QStyleOptionButton option; option.initFrom(enabled); option.rect=enabled->rect();
+            const auto indicator=enabled->style()->subElementRect(QStyle::SE_CheckBoxIndicator, &option, enabled);
+            require(readableCheck([&]{return enabled->grab(indicator).toImage();}, [&](Qt::CheckState state){enabled->setCheckState(state);}), "spunta normale contrastata nei due temi");
+            auto row=faces->visualItemRect(face); row.setWidth(faces->style()->pixelMetric(QStyle::PM_IndicatorWidth)+8);
+            require(readableCheck([&]{return faces->viewport()->grab(row).toImage();}, [&](Qt::CheckState state){face->setCheckState(state);}), "spunta elenco contrastata nei due temi");
+            const auto qa=qEnvironmentVariable("FORGECAD_PANEL_REVIEW_OUTPUT");
+            if (!qa.isEmpty()) {
+                QDir().mkpath(qa);
+                require(panel.grab().save(qa + (dark ? "/checkbox-scuro.png" : "/checkbox-chiaro.png")), "cattura pannello e checkbox");
+                themeMenu->ensurePolished(); themeMenu->adjustSize();
+                require(themeMenu->grab().save(qa + (dark ? "/menu-scuro.png" : "/menu-chiaro.png")), "cattura menu reale del tema");
+            }
         }
-        enabled->click(); require(enabled->isChecked(), "spunte funzionanti nel contenitore a schede");
+        enabled->setChecked(false); enabled->click(); require(enabled->isChecked(), "spunte funzionanti nel contenitore a schede");
         panel.resize(380, 260); QApplication::processEvents();
         require(panel.rect().contains(QRect(actions->mapTo(&panel, QPoint()), actions->size())),
                 "azioni raggiungibili nel nuovo layout compatto");

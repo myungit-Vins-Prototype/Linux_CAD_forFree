@@ -41,10 +41,15 @@ struct StlExportOptions {
     double maxEdgeLength = 1.0; // mm; 0 = nessun limite esplicito
     double deflection = 0.05;   // scarto cordale massimo, mm
     double angle = 10.0;        // variazione massima delle normali, gradi
-    // Ricerca un raffinamento completo e sostenibile, senza esportare facce
-    // mancanti. False conserva esattamente i parametri manuali.
+    // Ricerca una mesh completa entro la qualita' automatica suggerita o
+    // quella richiesta, se piu' precisa. Puo' alleggerire il lato massimo,
+    // senza aumentare scarto o angolo. False conserva i parametri manuali.
     bool automaticRefinement = false;
 };
+
+// Qualita' ricavata dai B-rep in double, indipendente dalla mesh di display
+// e dalla distanza fra i corpi. Non modifica la geometria del modello.
+StlExportOptions suggestedStlOptions(const QVector<ExportBody> &bodies);
 
 struct StlBuildResult {
     QByteArray data;            // STL binario pronto da salvare

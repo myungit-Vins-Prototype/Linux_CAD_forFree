@@ -241,6 +241,9 @@ void CadViewport::clearPreview() {
     preview_.valid = false;
     preview_.error.clear();
     preview_.geometry.reset();
+    preview_.definition = {};
+    previewHandleDefinition_ = {};
+    previewDragDefinition_ = {};
     previewErrorSketch_ = -1;
     previewLoftErrors_.clear();
     preview_.display = {};
@@ -274,10 +277,10 @@ bool CadViewport::takePreviewResult(ExtrusionObject &body, int previewIndex, QSt
     body.forgeBody = preview_.geometry;
     body.solid = !preview_.geometry->isSheet();
     body.display = preview_.resultDisplay.vertices.isEmpty() && preview_.resultDisplay.edges.isEmpty() ? preview_.display : preview_.resultDisplay;
-    // Per un'estrusione fusa/sottratta preview_.display e' volutamente la
-    // sola patch locale. Alla conferma serve invece la mesh completa del
-    // risultato definitivo (senza rifare il calcolo B-rep).
-    if (localMergePreview(body) && body.mergeOperation != 0
+    // Raccordi ed estrusioni fuse/sottratte mostrano solo una patch locale.
+    // Alla conferma si completa la mesh, conservando lo stesso B-rep.
+    if (((body.operation < 0 && body.feature == BodyFeature::Blend)
+         || (localMergePreview(body) && body.mergeOperation != 0))
         && preview_.resultDisplay.vertices.isEmpty() && preview_.resultDisplay.edges.isEmpty())
         ForgeCad::tessellateGeometry(body, tessellationQuality_, body.display);
     body.display.constructionCurves.clear();

@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <exception>
 #include <limits>
+#include <map>
 #include <QThreadStorage>
 
 #include "cad_element_names.h"
@@ -241,6 +242,28 @@ EdgePoint vertexReference(const Body &body, VertexId vertex) {
     EdgePoint reference{point.x(), point.y(), point.z(), vertex.index, 0, vertexContext(body, vertex)};
     nameReference(body, EntityKind::Vertex, vertex.index, reference);
     return reference;
+}
+
+QVector<EdgePoint> vertexReferences(const Body &body) {
+    std::map<int, int> valences;
+    for (EdgeId edge : body.edges()) {
+        const Edge &e = body.edge(edge);
+        VertexId first;
+        for (FinId fin : {e.forward, e.backward}) {
+            if (!fin.valid()) continue;
+            const VertexId vertex = body.fin(fin).vertex;
+            if (vertex != first) ++valences[vertex.index];
+            first = vertex;
+        }
+    }
+    QVector<EdgePoint> result;
+    for (VertexId vertex : body.vertices()) {
+        const Vec3 &p = body.vertex(vertex).point;
+        EdgePoint ref{p.x(), p.y(), p.z(), vertex.index, 0, valences[vertex.index]};
+        nameReference(body, EntityKind::Vertex, vertex.index, ref);
+        result.append(ref);
+    }
+    return result;
 }
 
 QVector<EdgePoint> freeBoundaryLoop(const Body &body, EdgeId edge) {

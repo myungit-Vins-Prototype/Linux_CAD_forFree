@@ -1,6 +1,9 @@
 #include "forgeCad2026_application_theme.h"
 
 #include <QApplication>
+#include <QMenu>
+#include <QSettings>
+#include <QTemporaryDir>
 #include <QComboBox>
 #include <QEvent>
 #include <QLineEdit>
@@ -63,9 +66,22 @@ void chooseScheme(QApplication &app, bool dark) {
 int main(int argc, char **argv) {
     QApplication app(argc, argv);
     try {
+        QCoreApplication::setOrganizationName(QStringLiteral("ForgeCADTests"));
+        QCoreApplication::setApplicationName(QStringLiteral("ApplicationTheme"));
+        QTemporaryDir settings;
+        require(settings.isValid(), "preferenze isolate disponibili");
+        QSettings::setDefaultFormat(QSettings::IniFormat);
+        QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, settings.path());
+        using ForgeCad::ApplicationThemeMode;
+        require(ForgeCad::applicationThemeMode() == ApplicationThemeMode::Desktop, "default segue desktop");
+        QSettings().setValue(QStringLiteral("view/applicationTheme"), QStringLiteral("invalid"));
+        require(ForgeCad::applicationThemeMode() == ApplicationThemeMode::Desktop, "preferenza sconosciuta segue desktop");
+        QSettings().setValue(QStringLiteral("view/applicationTheme"), QStringLiteral("dark"));
         PaletteEvents events;
         app.installEventFilter(&events);
         ForgeCad::initializeApplicationTheme(app);
+        require(app.palette().color(QPalette::Window).lightness() < 128, "tema salvato ripristinato all'avvio");
+        ForgeCad::setApplicationThemeMode(app, ApplicationThemeMode::Desktop);
         ForgeCad::initializeApplicationTheme(app);
         require(app.findChildren<QObject *>(QStringLiteral("forgecadApplicationTheme"), Qt::FindDirectChildrenOnly).size() == 1,
                 "una sola gestione del tema per applicazione");
@@ -109,6 +125,30 @@ int main(int argc, char **argv) {
             require(events.count == before, "nessun ciclo di eventi generato dalla palette applicativa");
         }
         require(app.palette() == light, "ritorno alla medesima palette chiara");
+        QMenu parent, otherParent;
+        auto *menu = parent.addMenu(QStringLiteral("Tema"));
+        auto *otherMenu = otherParent.addMenu(QStringLiteral("Tema"));
+        ForgeCad::setupApplicationThemeMenu(*menu);
+        ForgeCad::setupApplicationThemeMenu(*otherMenu);
+        require(menu->actions().size() == 3 && menu->actions()[0]->isChecked(), "menu con tre opzioni e desktop selezionato");
+        for (bool dark : {true, false}) {
+            menu->actions()[dark ? 2 : 1]->trigger(); settle();
+            require(ForgeCad::applicationThemeMode() == (dark ? ApplicationThemeMode::Dark : ApplicationThemeMode::Light), "azione menu salva la scelta");
+            require((app.palette().color(QPalette::Window).lightness() < 128) == dark, "tema manuale applicato subito");
+            chooseScheme(app, !dark);
+            require((field->palette().color(QPalette::Base).lightness() < 128) == dark
+                    && secondWindow.palette().color(QPalette::Window) == app.palette().color(QPalette::Window), "tema manuale stabile con cambio desktop e finestre aperte");
+            QSettings saved; saved.sync();
+            require(saved.value(QStringLiteral("view/applicationTheme")).toString() == QString(dark ? "dark" : "light"), "preferenza su disco");
+            QMetaObject::invokeMethod(otherMenu, "aboutToShow", Qt::DirectConnection);
+            int selected = 0;
+            for (auto *action : otherMenu->actions()) selected += action->isChecked();
+            require(selected == 1 && otherMenu->actions()[dark ? 2 : 1]->isChecked(), "menu seconda finestra sincronizzato");
+            menu->actions()[0]->trigger(); settle();
+            require((app.palette().color(QPalette::Window).lightness() < 128) == !dark, "ritorno al desktop usa l'ultimo schema ricevuto");
+            chooseScheme(app, dark);
+            require((app.palette().color(QPalette::Window).lightness() < 128) == dark, "desktop torna a seguire le transizioni");
+        }
         // Plasma può rimpiazzare QStyle, oltre a notificare il nuovo colore.
         const auto commonPalette=app.palette();
         for (const auto &styleName : QStyleFactory::keys()) {
@@ -138,7 +178,7 @@ int main(int argc, char **argv) {
         }
         std::cout << "PASS Fusion, quattro transizioni chiaro/scuro, finestre aperte, campi, disabilitati, metriche e stabilità eventi (Qt "
                   << qVersion() << "); richieste native=" << nativeChanges << ", segnali simulati=" << simulatedChanges
-                  << "; fallback palette PASS\n";
+                  << "; fallback palette, menu, preferenze e override manuale PASS\n";
     } catch (const std::exception &e) {
         std::cerr << e.what() << '\n';
         return 1;

@@ -238,7 +238,7 @@ During initial dimension placement and while dragging dimension text, blinking g
 
 ### Visualization and analysis
 
-ForgeCAD is written in **C++17** with **Qt 6** and an **OpenGL 3.3 Core** viewport. The interface uses the common Fusion style and light/dark application palettes, following the system preference while keeping the same control design across platforms. Color scheme detection uses Qt 6.5+; older backends depend on system palette notifications.
+ForgeCAD is written in **C++17** with **Qt 6** and an **OpenGL 3.3 Core** viewport. The interface uses the common Fusion style and light/dark application palettes, with **Visualizza → Tema** offering **Chiaro** (light), **Scuro** (dark), and **Segui il desktop** (follow desktop, the default). The saved choice also updates open windows and panels while keeping the same control design across platforms. Color scheme detection uses Qt 6.5+; older backends depend on system palette notifications.
 
 - Rotation, panning, zooming, and fitting the scene into view.
 - Wireframe, shaded, and shaded-with-edges display modes.

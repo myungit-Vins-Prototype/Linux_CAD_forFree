@@ -148,7 +148,7 @@ void viewNumberingGuiTests(const DrawingEditorModel &model,const DrawingSheet &b
  QCoreApplication::sendPostedEvents(nullptr,QEvent::DeferredDelete);
  std::cout<<"PASS GUI una vista alla volta: clic alto/destra, anteprima Vista1=1..8 e sezione=9..11, conferma, codec, PDF, Undo/Redo\n";
 }
-void persistentNumberingTests(DrawingSheetEditor &e,const QVector<QUuid> &ids){
+void persistentNumberingTests(DrawingSheetEditor &e,const QVector<QUuid> &ids,const DrawingEditorModel &model){
  auto source=e.sheet();source.dimensionNumbering.persistent=true;source.dimensionNumbering.assignments.clear();
  const QVector<QVector<int>> expected{{0,1,2,3},{2,3,0,1},{1,0,3,2},{3,2,1,0},{0,2,1,3},{1,3,0,2},{2,0,3,1},{3,1,2,0}};
  const QVector<QPair<int,int>> directions{{0,1},{0,3},{2,1},{2,3},{1,0},{1,2},{3,0},{3,2}};
@@ -162,6 +162,33 @@ void persistentNumberingTests(DrawingSheetEditor &e,const QVector<QUuid> &ids){
  auto newcomer=trial.dimensions.front();newcomer.dimensionId=QUuid::createUuid();trial.dimensions.append(newcomer);ok(extendDrawingNumbering(trial));require(trial.dimensionNumbering.assignments.value(newcomer.dimensionId)==3,"nuova quota non riutilizza numero eliminato");
  trial=source;ok(renumberDrawingDimensions(trial));QByteArray bytes;ok(encodeDrawingSheet(trial,bytes));DrawingSheet restored;ok(decodeDrawingSheet(bytes,restored));require(restored.dimensionNumbering.assignments==trial.dimensionNumbering.assignments,"codec22 conserva associazioni");
  auto json=QJsonDocument::fromJson(bytes).object();auto metadata=json["numberingAssignments"].toObject();auto assignments=metadata["assignments"].toArray();auto duplicate=assignments[1].toObject();duplicate["number"]=assignments[0].toObject()["number"];assignments[1]=duplicate;metadata["assignments"]=assignments;json["numberingAssignments"]=metadata;require(!decodeDrawingSheet(QJsonDocument(json).toJson(),restored).isEmpty()&&restored.dimensionNumbering.assignments==trial.dimensionNumbering.assignments,"codec rifiuta numeri duplicati atomicamente");
+ // CT0578 riaperto: i numeri1..19,21,22 appartengono a quote eliminate,
+ // restano soltanto20/23 e i badge sono disattivati. Il vecchio comando partiva da20.
+ auto reopened=source;auto &restart=reopened.dimensionNumbering;restart.enabled=false;restart.nextNumber=24;
+ for(int number=1;number<=23;++number)restart.assignments.insert(number==20?ids[0]:number==23?ids[1]:QUuid::createUuid(),number);
+ QByteArray saved;ok(encodeDrawingSheet(reopened,saved));DrawingSheet loaded;ok(decodeDrawingSheet(saved,loaded));
+ for(int first:{1,10})for(bool enabled:{false,true}){
+  auto reset=loaded;reset.dimensionNumbering.firstNumber=first;reset.dimensionNumbering.enabled=enabled;reset.dimensionNumbering.firstDimension=ids[0];
+  reset.dimensions[1].presentation.numberingExcluded=true;reset.dimensions[2].presentation.prefix="(";reset.dimensions[2].presentation.suffix=")";reset.dimensionNumbering.excludeParenthesized=true;
+  ok(renumberDrawingDimensions(reset));const auto numbers=drawingDimensionNumbers(reset);
+  require(numbers.value(ids[0])==first&&numbers.value(ids[3])==first+1&&reset.dimensionNumbering.assignments.size()==2&&reset.dimensionNumbering.nextNumber==first+2,"riassegnazione riparte dal numero richiesto liberando riserve eliminate/escluse");
+  const auto assignments=reset.dimensionNumbering.assignments;ok(renumberDrawingDimensions(reset));require(reset.dimensionNumbering.assignments==assignments&&reset.dimensionNumbering.nextNumber==first+2,"riassegnazione ripetuta stabile");
+  reset.dimensions[1].presentation.numberingExcluded=false;ok(extendDrawingNumbering(reset));require(drawingDimensionNumbers(reset).value(ids[1])==first+2,"badge riattivato dopo riassegnazione usa il nuovo progressivo");
+ }
+ {
+  DrawingSheetEditor editor(loaded,model);editor.resize(1450,900);editor.show();editor.fitSheet();QApplication::processEvents();editor.markSaved();const auto original=encoded(editor);
+  const auto preview=[&]{QHash<QUuid,int> numbers;for(auto *item:editor.canvas()->scene()->items())if(item->data(0).toString()=="numberingPreview")numbers.insert(item->data(3).toUuid(),item->data(7).toInt());return numbers;};
+  const auto open=[&]{editor.findChild<QAction *>("drawingDimensionNumberingAction")->trigger();auto *panel=editor.findChild<QDialog *>("drawingDimensionNumberingDialog");require(panel,"dialogo su tavola riaperta");require(panel->findChild<QCheckBox *>("drawingNumberingReassign")->isChecked(),"riapertura badge disattivati propone riassegnazione");click(editor,dimensionTextItem(editor,ids[0])->sceneBoundingRect().center());
+   for(int direction:{3,0}){bool clicked=false;for(auto *item:editor.canvas()->scene()->items())if(item->data(0).toString()=="numberingArrow"&&item->data(8).toInt()==direction){click(editor,item->sceneBoundingRect().center());clicked=true;break;}require(clicked,"freccia su tavola riaperta");}return panel;};
+  auto *panel=open();require(preview().value(ids[0])==1&&encoded(editor)==original,"anteprima riaperta parte da1 senza modificare lo stato");
+  panel->findChild<QSpinBox *>("drawingNumberingFirst")->setValue(10);require(preview().value(ids[0])==10,"numero iniziale10 rispettato nell'anteprima");panel->reject();QApplication::processEvents();QCoreApplication::sendPostedEvents(nullptr,QEvent::DeferredDelete);require(encoded(editor)==original&&!editor.isModified(),"annulla conserva badge disattivati e tutte le riserve");
+  panel=open();auto *reassign=panel->findChild<QCheckBox *>("drawingNumberingReassign");reassign->setChecked(false);require(preview().value(ids[0])==20&&preview().value(ids[1])==23,"senza riassegnazione le riserve restano intatte");reassign->setChecked(true);const auto expected=preview();require(expected.size()==4&&expected.value(ids[0])==1,"riassegnazione torna a1 dopo confronto con i numeri conservati");
+  const auto qa=QStringLiteral("/tmp/forgecad-badge-restart-qa");QDir().mkpath(qa);editor.grab().save(qa+"/riapertura-anteprima.png");panel->grab().save(qa+"/riapertura-pannello.png");auto *buttons=panel->findChild<QDialogButtonBox *>();require(buttons->button(QDialogButtonBox::Ok)->isEnabled(),"conferma riassegnazione riaperta abilitata");buttons->button(QDialogButtonBox::Ok)->click();QApplication::processEvents();
+  require(drawingDimensionNumbers(editor.sheet())==expected&&editor.sheet().dimensionNumbering.assignments.size()==4&&editor.sheet().dimensionNumbering.nextNumber==5,"conferma riparte da1 e progressivo5");
+  const auto assigned=encoded(editor);DrawingSheet decoded;ok(decodeDrawingSheet(assigned,decoded));require(drawingDimensionNumbers(decoded)==expected,"salvataggio e riapertura conservano la nuova numerazione");
+  ok(editor.undo());require(encoded(editor)==original&&!editor.isModified(),"Undo unico ripristina tutte le riserve e badge disattivati");ok(editor.redo());require(encoded(editor)==assigned,"Redo ripristina la numerazione da1");
+  QCoreApplication::sendPostedEvents(nullptr,QEvent::DeferredDelete);
+ }
  const auto before=encoded(e);e.findChild<QAction *>("drawingDimensionNumberingAction")->trigger();auto *dialog=e.findChild<QDialog *>("drawingDimensionNumberingDialog");require(dialog&&!dialog->isModal(),"pannello non modale");dialog->findChild<QCheckBox *>("drawingNumberingReassign")->setChecked(true);
  auto *buttons=dialog->findChild<QDialogButtonBox *>();require(!buttons->button(QDialogButtonBox::Ok)->isEnabled(),"conferma richiede prima quota e frecce");click(e,dimensionTextItem(e,ids[1])->sceneBoundingRect().center());
  const auto arrow=[&](int direction){for(auto *item:e.canvas()->scene()->items())if(item->data(0).toString()=="numberingArrow"&&item->data(8).toInt()==direction){const auto p=item->sceneBoundingRect().center();click(e,p);return;}throw std::runtime_error("freccia numerazione assente");};
@@ -186,7 +213,7 @@ void drawingDimensionNumberingTests(){
  e.fitSheet();QApplication::processEvents();require(items(e,"dimensionBadge")==0,"fogli precedenti senza badge");e.markSaved();const auto legacy=encoded(e);const auto *curve=e.curves(v.id).front().curve.get();DrawingDimensionNumbering setting{true,1,6,3};ok(e.setDimensionNumbering(setting));QApplication::processEvents();const auto numbered=encoded(e);
  require(e.isModified()&&items(e,"dimensionBadge")==4&&e.curves(v.id).front().curve.get()==curve,"badge su tutte le quote e cache geometrica conservata");
  for(int i=0;i<4;++i){auto *badge=numberBadge(e,ids[i]);auto *label=dimensionTextItem(e,ids[i]);require(badge->data(7).toInt()==i+1&&!badge->sceneBoundingRect().intersects(label->sceneBoundingRect()),"numero spaziale e spazio libero dal testo");near(badge->sceneBoundingRect().width(),6.3,"diametro in mm carta indipendente dalla scala vista");}
- persistentNumberingTests(e,ids);
+ persistentNumberingTests(e,ids,model);
  nearbyNumberingGuiTests(model,e.sheet());
  viewNumberingGuiTests(model,e.sheet());
  drawingDimensionNumberingExclusionTests(e,ids);

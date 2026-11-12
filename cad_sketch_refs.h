@@ -27,6 +27,10 @@ QString appendLinkedSketchReference(SketchObject &sketch, GeometryRef source,
                                    const QVector<SketchObject> &sketches, const QVector<ExtrusionObject> &bodies,
                                    bool contact = false, bool construction = true, double halfLength = 100.0,
                                    QVector<SketchEntity> *created = nullptr, bool visible = false);
+// Cache automatica da un solo snapshot immutabile: proietta direttamente
+// edge e vertici correnti, conservando feature/nomi persistenti sui link.
+// Il chiamante verifica visibilita' e precedenza nella storia una volta per corpo.
+void appendBodySketchReferences(SketchObject &cache, int bodyIndex, const ExtrusionObject &body);
 QString refreshLinkedSketchReferences(SketchObject &sketch, const QVector<SketchObject> &sketches,
                                      const QVector<ExtrusionObject> &bodies);
 

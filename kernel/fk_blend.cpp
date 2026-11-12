@@ -697,7 +697,78 @@ Body analyticBlend(const Body &body, const std::vector<EdgeId> &edges, double si
 
 Body blendEdges(const Body &body, const std::vector<EdgeId> &edges, double size, bool chamfer, BodyHistory *history, bool propagate) {
     if (history) *history = BodyHistory();
-    return blendEdgesWith(body, edges, size, chamfer, nullptr, history, propagate);
+    BodyHistory working, atlas;
+    std::optional<Body> supports;
+    std::vector<EdgeId> mapped;
+    std::exception_ptr preparedFailure;
+    bool selectedJoin = false;
+    const bool eligible = !chamfer && propagate && size > linearResolution() && !edges.empty()
+        && std::all_of(edges.begin(), edges.end(), [&](EdgeId e) { return body.contains(e) && !body.isLaminar(e); });
+    bool prepared = false;
+    const auto prepare = [&]() {
+        prepared = true;
+        try {
+            // Il certificato dipende dagli appoggi, non dal raggio. Se una
+            // faccia scelta attraversa carte G1 gia' componibili, tentare
+            // prima sulle carte separate ripete inutilmente fit e mitre.
+            supports = unifyTangentNurbsSupports(body, &atlas);
+            if (supports) {
+                std::set<int> used;
+                for (EdgeId original : edges) {
+                    const Edge &old = body.edge(original);
+                    for (FinId fin : {old.forward, old.backward})
+                        selectedJoin = selectedJoin || atlas.evolution(EntityKind::Face, 0, body.finFace(fin).index) == Evolution::Merged;
+                    const auto descendants = atlas.descendants(EntityKind::Edge, 0, original.index);
+                    if (descendants.empty()) {
+                        const auto a = atlas.descendants(EntityKind::Face, 0, body.finFace(old.forward).index);
+                        const auto b = atlas.descendants(EntityKind::Face, 0, body.finFace(old.backward).index);
+                        if (a.size() == 1 && a == b) continue; // cucitura G1 selezionata, divenuta interna
+                    }
+                    if (descendants.size() != 1)
+                        throw std::domain_error("blendEdges: selezione non conservata nel supporto NURBS composto");
+                    if (used.insert(descendants.front()).second) mapped.emplace_back(descendants.front());
+                }
+            }
+        } catch (const std::domain_error &) {
+            preparedFailure = std::current_exception();
+            supports.reset();
+        }
+    };
+    // I contorni su un appoggio piano hanno gia' un percorso specializzato
+    // con guida intrinseca. Conservane la priorita'; la composizione precoce
+    // evita le ripetizioni costose nei contatti fra due appoggi curvi.
+    const bool curvedNurbs = eligible && std::any_of(edges.begin(), edges.end(), [&](EdgeId e) {
+        const Edge &edge = body.edge(e);
+        const auto a = body.face(body.finFace(edge.forward)).surface->type();
+        const auto b = body.face(body.finFace(edge.backward)).surface->type();
+        return a != SurfaceType::Plane && b != SurfaceType::Plane
+            && (a == SurfaceType::BSpline || b == SurfaceType::BSpline);
+    });
+    if (curvedNurbs) prepare();
+    const auto onSupports = [&]() {
+        Body result = blendEdgesWith(*supports, mapped, size, false, nullptr, history ? &working : nullptr, true);
+        if (history) *history = BodyHistory::compose(atlas, working, 0);
+        return result;
+    };
+    std::exception_ptr composedFailure;
+    if (selectedJoin && supports && !mapped.empty()) {
+        try { return onSupports(); }
+        catch (const std::domain_error &) { composedFailure = std::current_exception(); }
+    }
+    try {
+        Body result = blendEdgesWith(body, edges, size, chamfer, nullptr, history ? &working : nullptr, propagate);
+        if (history) *history = std::move(working);
+        return result;
+    } catch (const std::domain_error &) {
+        // Conserva il percorso ordinario per le carte non certificabili e
+        // come ripiego: nessun risultato precedentemente valido e' perso.
+        // Un tentativo composto gia' fallito non va eseguito una seconda volta.
+        if (composedFailure) std::rethrow_exception(composedFailure);
+        if (eligible && !prepared) prepare();
+        if (preparedFailure) std::rethrow_exception(preparedFailure);
+        if (!supports || mapped.empty()) throw;
+        return onSupports();
+    }
 }
 
 Body chamferEdges(const Body &body, const std::vector<EdgeId> &edges, const std::vector<ChamferSides> &sides, BodyHistory *history) {

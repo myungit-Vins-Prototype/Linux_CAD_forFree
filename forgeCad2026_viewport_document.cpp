@@ -57,14 +57,13 @@ void CadViewport::setLengthUnit(LengthUnit unit) {
 void CadViewport::loadDocument(DocumentState state,
                       const std::function<void(int, int, const QString &)> &progress ) {
     ForgeCad::pruneUnusedSketchReferences(state);
-    calculationAccuracy_ = state.calculationAccuracy;
     ScopedWork work(workCallback_, QStringLiteral("Caricamento e rigenerazione del documento..."));
-    if (sketchMode_) endSketchMode();
+    resetDocumentForLoad();
+    calculationAccuracy_ = state.calculationAccuracy;
     deferredSketches_.clear();
     if(!state.pendingSketchChanges.isEmpty())for(auto &body:state.extrusions)body.cachedGeometry=false;
     activeSketch_ = -1;
     selection_ = {};
-    history_.clear();
     adoptDocumentIdentity(state.version, state.baseCheckinId);
     if (state.orientationSet) camera_.orientation_ = state.orientation;
     lengthUnit_ = state.lengthUnitSet ? state.lengthUnit : LengthUnit::Millimeter;
@@ -101,9 +100,11 @@ void CadViewport::loadDocument(DocumentState state,
     if (progress && extrusions_.isEmpty()) progress(1, 1, QStringLiteral("Preparazione della scena..."));
     restoreDocument(documentState());
     fitAll();
+    releaseReplacedDocumentMemory();
 }
 
 void CadViewport::loadPreviewDocument(DocumentState state) {
+    resetDocumentForLoad();
     calculationAccuracy_ = state.calculationAccuracy;
     activeSketch_ = -1;
     selection_ = {};
@@ -134,6 +135,7 @@ void CadViewport::loadPreviewDocument(DocumentState state) {
     setViewPreset(4);
     fitAll();
     update();
+    releaseReplacedDocumentMemory();
 }
 
 QVector<ForgeCad::ExportBody> CadViewport::exportableBodies() const {
@@ -150,27 +152,7 @@ QVector<ForgeCad::ExportBody> CadViewport::exportableBodies() const {
 }
 
 ForgeCad::StlExportOptions CadViewport::suggestedStlOptions() const {
-    QVector3D minimum, maximum;
-    bool found = false;
-    const auto add = [&](const QVector3D &point) {
-        if (!found) minimum = maximum = point, found = true;
-        else {
-            minimum.setX(qMin(minimum.x(), point.x())); minimum.setY(qMin(minimum.y(), point.y())); minimum.setZ(qMin(minimum.z(), point.z()));
-            maximum.setX(qMax(maximum.x(), point.x())); maximum.setY(qMax(maximum.y(), point.y())); maximum.setZ(qMax(maximum.z(), point.z()));
-        }
-    };
-    for (const ExtrusionObject &body : extrusions_) {
-        if (!body.visible || !body.error.isEmpty() || !body.forgeBody) continue;
-        for (const QVector3D &point : body.display.vertices) add(point);
-        for (const QVector<QVector3D> &edge : body.display.edges)
-            for (const QVector3D &point : edge) add(point);
-    }
-    const double diagonal = found ? qMax(1e-6, double((maximum - minimum).length())) : 100.0;
-    ForgeCad::StlExportOptions options;
-    options.maxEdgeLength = diagonal / 50.0;
-    options.deflection = diagonal / 2000.0;
-    options.angle = 10.0;
-    return options;
+    return ForgeCad::suggestedStlOptions(exportableBodies());
 }
 
 int CadViewport::displayMode() const { return displayMode_; }
@@ -1079,10 +1061,6 @@ QString CadViewport::updateBody(int index, const ExtrusionObject &definition) {
     if (candidate.feature == BodyFeature::Pattern && candidate.operation < 0)
         candidate.patternComponent = extrusions_.at(index).patternComponent < 0 ? -1 : 0;
     candidate.visible = extrusions_.at(index).visible;
-    const bool sameBlendPreview = candidate.operation < 0 && candidate.feature == BodyFeature::Blend
-        && preview_.key == previewKey(candidate, index);
-    if (sameBlendPreview && !unchangedFeature(candidate, index) && (!preview_.valid || !preview_.geometry))
-        return preview_.error.isEmpty() ? QStringLiteral("Attendi che l'anteprima sia pronta.") : preview_.error;
     const bool unchanged = unchangedFeature(candidate, index);
     if (unchanged) {
         // Nessun valore cambiato: il corpo e quelli che ne dipendono restano come sono.
@@ -1092,17 +1070,6 @@ QString CadViewport::updateBody(int index, const ExtrusionObject &definition) {
         candidate.solid = existing.solid;
         candidate.display = existing.display;
         candidate.error.clear();
-    } else if (sameBlendPreview) {
-        candidate.forgeBody = preview_.geometry;
-        candidate.solid = true;
-        // Il candidato e' una copia della feature: se prima era fallita ne
-        // conserverebbe il messaggio, e la storyboard continuerebbe a
-        // mostrare lo stadio precedente come risultato del corpo.
-        candidate.error.clear();
-        candidate.display = preview_.resultDisplay;
-        if (candidate.display.vertices.isEmpty() && candidate.display.edges.isEmpty())
-            ForgeCad::tessellateGeometry(candidate, tessellationQuality_, candidate.display);
-        candidate.display.constructionCurves.clear();
     } else {
         // La stessa definizione dell'anteprima (guscio, offset...): il suo risultato.
         QString previewError;
@@ -1365,16 +1332,9 @@ QString CadViewport::createBlend(int baseIndex, const QVector<EdgePoint> &edges,
     // B-rep immutabile si promuove direttamente. Durante l'anteprima si
     // tassella soltanto la patch locale; la mesh completa si prepara una
     // sola volta, quando l'utente conferma.
-    const QString key = previewKey(blend, -1);
-    if (preview_.key == key) {
-        if (!preview_.valid || !preview_.geometry)
-            return preview_.error.isEmpty() ? QStringLiteral("Attendi che l'anteprima sia pronta.") : preview_.error;
-        blend.forgeBody = preview_.geometry;
-        blend.solid = !blend.forgeBody->isSheet();
-        blend.display = preview_.resultDisplay;
-        if (blend.display.vertices.isEmpty() && blend.display.edges.isEmpty())
-            ForgeCad::tessellateGeometry(blend, tessellationQuality_, blend.display);
-        blend.display.constructionCurves.clear();
+    QString previewError;
+    if (takePreviewResult(blend, -1, &previewError)) {
+        if (!previewError.isEmpty()) return previewError;
     } else {
         rebuildBody(blend, int(extrusions_.size()));
         if (!ForgeCad::hasGeometry(blend)) return blend.error;

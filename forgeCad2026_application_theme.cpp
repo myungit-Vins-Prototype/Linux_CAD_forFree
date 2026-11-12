@@ -1,6 +1,9 @@
 #include "forgeCad2026_application_theme.h"
 
 #include <QApplication>
+#include <QActionGroup>
+#include <QMenu>
+#include <QSettings>
 #include <QEvent>
 #include <QPalette>
 #include <QStyleHints>
@@ -16,6 +19,7 @@
 namespace ForgeCad {
 namespace {
 constexpr auto themeObjectName = "forgecadApplicationTheme";
+constexpr auto themeSettingsKey = "view/applicationTheme";
 
 QPalette applicationPalette(bool dark) {
     const QColor window(dark ? "#111820" : "#f0f0f0");
@@ -53,6 +57,7 @@ QPalette applicationPalette(bool dark) {
 
 class ApplicationTheme final : public QObject {
     QApplication &application_;
+    ApplicationThemeMode mode_ = applicationThemeMode();
     bool fallbackDark_;
     bool applying_ = false;
     bool scheduled_ = false;
@@ -62,6 +67,7 @@ class ApplicationTheme final : public QObject {
 #endif
 
     bool dark() const {
+        if (mode_ != ApplicationThemeMode::Desktop) return mode_ == ApplicationThemeMode::Dark;
 #if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
         if (scheme_ != Qt::ColorScheme::Unknown) return scheme_ == Qt::ColorScheme::Dark;
 #endif
@@ -118,6 +124,8 @@ class ApplicationTheme final : public QObject {
     }
 
 public:
+    void setMode(ApplicationThemeMode mode) { mode_ = mode; apply(); }
+
     explicit ApplicationTheme(QApplication &application)
         : QObject(&application), application_(application),
           fallbackDark_(application.palette().color(QPalette::Window).lightness() < 128)
@@ -134,6 +142,45 @@ public:
         apply();
     }
 };
+}
+
+ApplicationThemeMode applicationThemeMode() {
+    const auto saved = QSettings().value(QString::fromLatin1(themeSettingsKey)).toString();
+    if (saved == QStringLiteral("light")) return ApplicationThemeMode::Light;
+    if (saved == QStringLiteral("dark")) return ApplicationThemeMode::Dark;
+    return ApplicationThemeMode::Desktop;
+}
+
+void setApplicationThemeMode(QApplication &application, ApplicationThemeMode mode) {
+    initializeApplicationTheme(application);
+    const QString saved = mode == ApplicationThemeMode::Light ? QStringLiteral("light")
+        : mode == ApplicationThemeMode::Dark ? QStringLiteral("dark") : QStringLiteral("desktop");
+    QSettings().setValue(QString::fromLatin1(themeSettingsKey), saved);
+    auto *controller = static_cast<ApplicationTheme *>(application.findChild<QObject *>(
+        QString::fromLatin1(themeObjectName), Qt::FindDirectChildrenOnly));
+    controller->setMode(mode);
+}
+
+void setupApplicationThemeMenu(QMenu &themeMenu) {
+    auto *menu = &themeMenu;
+    menu->setObjectName(QStringLiteral("applicationThemeMenu"));
+    auto *group = new QActionGroup(menu);
+    group->setExclusive(true);
+    const QStringList labels{QStringLiteral("Segui il desktop"), QStringLiteral("Chiaro"), QStringLiteral("Scuro")};
+    const QStringList names{QStringLiteral("applicationThemeDesktop"), QStringLiteral("applicationThemeLight"), QStringLiteral("applicationThemeDark")};
+    const ApplicationThemeMode modes[]{ApplicationThemeMode::Desktop, ApplicationThemeMode::Light, ApplicationThemeMode::Dark};
+    for (int i = 0; i < labels.size(); ++i) {
+        auto *action = menu->addAction(labels[i]);
+        action->setObjectName(names[i]);
+        action->setCheckable(true);
+        action->setData(int(modes[i]));
+        action->setChecked(applicationThemeMode() == modes[i]);
+        group->addAction(action);
+        QObject::connect(action, &QAction::triggered, menu, [mode = modes[i]] { setApplicationThemeMode(*qApp, mode); });
+    }
+    QObject::connect(menu, &QMenu::aboutToShow, menu, [group] {
+        for (auto *action : group->actions()) action->setChecked(action->data().toInt() == int(applicationThemeMode()));
+    });
 }
 
 void initializeApplicationTheme(QApplication &application) {

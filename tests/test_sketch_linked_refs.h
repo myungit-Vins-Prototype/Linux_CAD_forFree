@@ -1,4 +1,129 @@
 // Incluso nel friend ViewportInteractionTest: regressioni dei riferimenti vivi.
+    static void bodySketchReferenceCacheRegressions(const QString &path = {}) {
+        using namespace ForgeCad;
+        using namespace Kernel;
+        if (!path.isEmpty()) {
+            DocumentState state;
+            require(loadDocumentFile(path, state).isEmpty(), "lettura copia del modello per schizzo su faccia");
+            PdfWindow window;
+            auto &view = *window.viewport_;
+            view.resize(1000, 750);
+            view.loadDocument(std::move(state));
+            const bool gl = QCoreApplication::arguments().contains(QStringLiteral("--gl"));
+            if (gl) {
+                window.resize(1400,900); window.show();
+                QCoreApplication::processEvents();
+                require(view.context() && view.context()->isValid(), "contesto OpenGL della prova su faccia");
+            }
+            const auto original = view.currentDocument();
+            const int index = view.extrusions_.size() - 1;
+            const auto shape = view.extrusions_.at(index).forgeBody;
+            require(bool(shape), "B-rep finale presente");
+            bool created = false;
+            for (FaceId face : shape->faces()) {
+                const auto &surface = *shape->face(face).surface;
+                if (surface.type() != SurfaceType::Plane) continue;
+                const auto &axes = static_cast<const Plane &>(surface).frame();
+                FaceHit hit; hit.face = face.index; hit.planar = true;
+                for (int k = 0; k < 3; ++k) { hit.point[k] = axes.origin()[k]; hit.normal[k] = axes.zDir()[k]; }
+                view.selectedFace_.body = index; view.selectedFace_.hit = hit;
+                QElapsedTimer timer; timer.start();
+                require(view.createSketchOnSelectedFace(QStringLiteral("Schizzo di verifica")).isEmpty(), "nuovo schizzo da faccia selezionata");
+                const auto creation = timer.elapsed();
+                beginTopologyResolutionCapture();
+                const auto &cache = view.sketchReferenceCache();
+                const auto resolutions = endTopologyResolutionCapture(view.extrusions_);
+                require(!cache.linkedReferences.isEmpty() && resolutions.isEmpty(), "cache reale senza ricerche topologiche ripetute");
+                std::cout << "face sketch: create=" << creation << " ms, cache=" << timer.elapsed()-creation
+                          << " ms, segments=" << cache.segments.size() << ", curves=" << cache.curves.size() << std::endl;
+                view.setDrawingTool(DrawingTool::Line);
+                for (int k = 0; k < 3; ++k) {
+                    QMouseEvent move(QEvent::MouseMove, QPointF(420+k,360), QPointF(420+k,360), Qt::NoButton, Qt::NoButton, Qt::NoModifier);
+                    view.mouseMoveEvent(&move);
+                }
+                const int sketch = view.activeSketch_;
+                for (const QPointF pixel : {QPointF(430,360), QPointF(480,390)}) {
+                    QMouseEvent press(QEvent::MouseButtonPress, pixel, pixel, Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+                    view.mousePressEvent(&press);
+                    QMouseEvent release(QEvent::MouseButtonRelease, pixel, pixel, Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+                    view.mouseReleaseEvent(&release);
+                }
+                view.endSketchMode();
+                const auto localSegments = [](const SketchObject &s) {
+                    int count=0;
+                    for (int i=0; i<s.segments.size(); ++i) if (!isLinkedSketchEntity(s,0,i)) ++count;
+                    return count;
+                };
+                require(localSegments(view.sketches_[sketch]) == 1, "geometria disegnata conservata");
+                view.undo(); view.redo();
+                require(localSegments(view.sketches_[sketch]) == 1 && view.sketches_[sketch].support, "Undo/Redo conserva geometria e appoggio");
+                QByteArray bytes; DocumentState restored;
+                require(encodeDocument(view.currentDocument(),bytes).isEmpty() && decodeDocument(bytes,restored).isEmpty(), "codec dello schizzo su faccia");
+                require(restored.sketches[sketch].support && localSegments(restored.sketches[sketch])==1, "appoggio persistente dopo riapertura");
+                for (int i=0; i<original.extrusions.size(); ++i)
+                    require(view.extrusions_[i].forgeBody == original.extrusions[i].forgeBody, "nuovo schizzo senza rigenerare i solidi");
+                if (gl) {
+                    view.selectSketch(sketch); QCoreApplication::processEvents();
+                    const auto image=qEnvironmentVariable("FORGECAD_SKETCH_FACE_QA_IMAGE");
+                    if (!image.isEmpty()) require(window.grab().save(image), "cattura dello schizzo reale su faccia");
+                    view.endSketchMode(); window.hide();
+                }
+                created = true; break;
+            }
+            require(created, "almeno una faccia piana verificata");
+            window.documentModified_ = false;
+            return;
+        }
+        const auto samePoint = [](const EdgePoint &a, const EdgePoint &b) {
+            return a.x==b.x && a.y==b.y && a.z==b.z && a.subshape==b.subshape
+                && a.geometry==b.geometry && a.context==b.context && a.name==b.name;
+        };
+        for (int kind=0; kind<3; ++kind) {
+            ExtrusionObject body; body.featureId=1234;
+            body.forgeBody=std::make_shared<const Body>(kind==0 ? makeBox(Frame3(),4,5,6)
+                : kind==1 ? makeCylinder(Frame3(),2,6) : makePlaneSheet(Frame3(),3));
+            registerImportedHistory(body.forgeBody);
+            const auto vertices = vertexReferences(*body.forgeBody);
+            require(vertices.size()==qsizetype(body.forgeBody->vertices().size()), "tutti i vertici nella scansione singola");
+            for (const auto &ref : vertices)
+                require(samePoint(ref, vertexReference(*body.forgeBody, VertexId(ref.subshape))), "valenza e nomi identici anche su edge chiusi e di bordo");
+            for (int pose=0; pose<2; ++pose) {
+                SketchObject cache; cache.plane=3;
+                cache.frame=faceSketchFrame(Vec3(0,0,1),pose ? normalized(Vec3(1,2,3)) : Vec3(0,0,1),Vec3(0,1,0));
+                beginTopologyResolutionCapture();
+                appendBodySketchReferences(cache,0,body);
+                require(endTopologyResolutionCapture({body}).isEmpty(), "cache da snapshot senza risolvere gli ID appena creati");
+                SketchObject expected; expected.plane=cache.plane; expected.frame=cache.frame;
+                GeometryRef source; source.index=0; source.featureId=body.featureId; source.kind=4;
+                for (EdgeId edgeId : body.forgeBody->edges()) {
+                    const auto &edge=body.forgeBody->edge(edgeId);
+                    source.point=edgeReference(*body.forgeBody,edgeId,edge.curve->point((edge.range.lo+edge.range.hi)*0.5));
+                    appendLinkedSketchReference(expected,source,{}, {body},true);
+                    appendLinkedSketchReference(expected,source,{}, {body});
+                }
+                source.kind=3;
+                for (const auto &vertex : vertices) { source.point=vertex; appendLinkedSketchReference(expected,source,{}, {body}); }
+                require(cache.linkedReferences.size()==expected.linkedReferences.size() && cache.segments==expected.segments
+                    && cache.curves.size()==expected.curves.size(), "proiezioni e contatti identici al percorso associativo");
+                for (int i=0; i<cache.linkedReferences.size(); ++i) {
+                    const auto &a=*cache.linkedReferences[i], &b=*expected.linkedReferences[i];
+                    require(samePoint(a.source.point,b.source.point) && a.source.featureId==body.featureId
+                        && a.contact==b.contact && a.entities==b.entities && !a.visible && a.construction, "provenienza e visibilita conservate");
+                }
+                for (int i=0; i<cache.curves.size(); ++i) {
+                    const auto a=curveGeometry(cache.curves[i]), b=curveGeometry(expected.curves[i]);
+                    require(a.size()==b.size(), "stesse componenti di curva");
+                    for (std::size_t k=0; k<a.size(); ++k) for (int j=0; j<=8; ++j) {
+                        const double t=a[k].range.lo+a[k].range.length()*j/8.;
+                        require(norm(a[k].curve->point(t)-b[k].curve->point(t))<1e-10, "immagine affine esatta conservata");
+                    }
+                }
+                require(cache.geometricConstraints.isEmpty(), "cache esterna senza vincoli solver");
+            }
+        }
+        std::cout << "PASS body sketch reference cache" << std::endl;
+    }
+
     static void linkedSketchReferences() {
         using namespace ForgeCad;
         using namespace Kernel;

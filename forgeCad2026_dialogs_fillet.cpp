@@ -1000,17 +1000,14 @@ BlendDialogResult filletDialog(
     const QString error = selectionError();
     if (!error.isEmpty())
       return error;
-    if (viewport->previewPending())
-      return QStringLiteral("L’anteprima è ancora in calcolo. Puoi attendere "
-                            "oppure annullare subito il comando.");
     return apply(body, currentEdges(), currentRadius(), false, currentSpec());
   };
   if (auto *window = qobject_cast<QMainWindow *>(parent))
     result.applied = runUntilAppliedModeless(window, viewport, dialog,
-                                             validationForm, buttons, commit);
+                                             validationForm, buttons, commit, true);
   else
     result.applied =
-        ForgeCad::Gui::runUntilApplied(dialog, validationForm, buttons, commit);
+        ForgeCad::Gui::runUntilApplied(dialog, validationForm, buttons, commit, true);
   result.size = currentRadius();
   result.chamfer = false;
   result.spec = currentSpec();

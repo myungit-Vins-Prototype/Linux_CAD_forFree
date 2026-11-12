@@ -12,6 +12,7 @@
 #include <QTableWidget>
 #include <QHeaderView>
 #include "forgeCad2026_gui.h"
+#include "forgeCad2026_application_theme.h"
 #include "forgeCad2026_viewport.h"
 #include "forgeCad2026_storyboard.h"
 #include "cad_storyboard_selection.h"
@@ -1013,7 +1014,7 @@ void PdfWindow::initializeFileMenu(WindowSetup &setup) {
         layout->addWidget(description);
         auto *automaticMesh = new QCheckBox(QStringLiteral("Calcola automaticamente il raffinamento migliore"), &dialog);
         automaticMesh->setChecked(settings.value(QStringLiteral("export/automaticMeshRefinement"), true).toBool());
-        automaticMesh->setToolTip(QStringLiteral("Parte dalle dimensioni del modello e cerca parametri che triangolino tutte le facce. I valori riusciti sono mostrati nel risultato."));
+        automaticMesh->setToolTip(QStringLiteral("Usa la geometria esatta dei singoli corpi: scarto fino a 0,01 mm e angolo di 2°. Cerca una mesh completa senza allargare questi limiti; i parametri effettivi sono mostrati nel risultato."));
         layout->addWidget(automaticMesh);
         auto *form = new QFormLayout;
         const auto distanceBox = [&](double value, bool allowZero) {
@@ -1342,6 +1343,7 @@ void PdfWindow::initializeActionsAndView(WindowSetup &setup) {
     });
     updateUndoActions();
     viewMenu = addCadMenu(menuBar(), QStringLiteral("Visualizza"));
+    ForgeCad::setupApplicationThemeMenu(*addCadMenu(viewMenu, QStringLiteral("Tema")));
     storyboardCursorMenu = addCadMenu(viewMenu, QStringLiteral("Barra di posizione storyboard"));
     auto *storyboardCursorGroup = new QActionGroup(this);
     storyboardCursorGroup->setExclusive(true);

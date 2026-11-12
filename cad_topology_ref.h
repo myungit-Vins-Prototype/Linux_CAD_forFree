@@ -12,6 +12,10 @@ EdgePoint edgeReference(const Kernel::Body &body, Kernel::EdgeId edge, const Ker
 EdgePoint faceReference(const Kernel::Body &body, Kernel::FaceId face, const Kernel::Vec3 &point);
 EdgePoint vertexReference(const Kernel::Body &body, Kernel::VertexId vertex);
 
+// Tutti i vertici, con lo stesso contesto di vertexReference, in una sola
+// scansione degli spigoli (anche per edge chiusi o di bordo).
+QVector<EdgePoint> vertexReferences(const Kernel::Body &body);
+
 // Bordo libero di una lamina che contiene `edge` (edge con una sola fin): la
 // catena degli edge di bordo collegati nei vertici in cui se ne incontrano due
 // soli, chiusa o fino ai vertici ambigui. Riferimenti con il punto medio di

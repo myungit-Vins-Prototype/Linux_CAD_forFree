@@ -131,6 +131,7 @@ add_executable(forgecad
     forgeCad2026_zoom.h
     forgeCad2026_viewport_sketch.cpp
     forgeCad2026_viewport_document.cpp
+    forgeCad2026_viewport_document_lifetime.cpp
     forgeCad2026_viewport_selection.cpp
     forgeCad2026_viewport_pole_visibility.cpp
     forgeCad2026_viewport_body_box.cpp
@@ -677,6 +678,7 @@ if(FORGECAD_BUILD_VIEW_TESTS)
     set_tests_properties(forgecad_declared_history_cache_tests PROPERTIES TIMEOUT 60)
     set_tests_properties(forgecad_genealogy_tests PROPERTIES TIMEOUT 60)
     forgecad_add_view_test(forgecad_document_precision_tests --document-precision)
+    forgecad_add_view_test(forgecad_document_lifetime_tests --document-lifetime)
     forgecad_add_view_test(forgecad_mouse_snapshot_tests --mouse-snapshot)
     set_tests_properties(forgecad_mouse_snapshot_tests PROPERTIES TIMEOUT 120)
     forgecad_add_view_test(forgecad_offset_face_pick_tests --offset-pick)
@@ -686,6 +688,8 @@ if(FORGECAD_BUILD_VIEW_TESTS)
     forgecad_add_view_test(forgecad_intersection_snap_tests --intersection-snaps)
     forgecad_add_view_test(forgecad_sketch_construction_tests --sketch-construction)
     forgecad_add_view_test(forgecad_linked_reference_visibility_tests --linked-reference-visibility)
+    forgecad_add_view_test(forgecad_body_sketch_reference_cache_tests --body-sketch-reference-cache)
+    set_tests_properties(forgecad_body_sketch_reference_cache_tests PROPERTIES TIMEOUT 30)
     forgecad_add_view_test(forgecad_linked_sketch_reference_tests --linked-sketch-references)
     set_tests_properties(forgecad_linked_sketch_reference_tests PROPERTIES TIMEOUT 60)
     forgecad_add_view_test(forgecad_sketch_reference_workflow_tests --sketch-reference-workflow)

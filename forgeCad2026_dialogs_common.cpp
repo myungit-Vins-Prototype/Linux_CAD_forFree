@@ -772,12 +772,15 @@ QColor FunctionDialogPanel::readableText(const QColor &background) {
 void FunctionDialogPanel::applyTransparentStyle() {
     // Trasferisce lo stile della prima anteprima Raggio ai contenitori reali;
     // Fusion conserva frecce, spinner, spunte e stati nativi dei controlli.
+    // Il colore QSS di QCheckBox sovrascrive anche Text, usato da Fusion per
+    // la spunta: lasciare WindowText e Text distinti nella palette. Le liste
+    // richiedono Base opaco, altrimenti l'indicatore nativo diventa nero.
     const auto color = [this](QPalette::ColorRole role) { return palette().color(QPalette::Active, role).name(QColor::HexRgb); };
     const QString sheet = QStringLiteral(R"(
         QDialog#functionDialogPanel, QScrollArea#functionDialogScroll,
         QScrollArea#functionDialogScroll > QWidget > QWidget, QWidget#functionDialogContents,
         QWidget#loftContents, QWidget#loftFooter { background: transparent; }
-        QDialog#functionDialogPanel, QLabel, QCheckBox, QRadioButton, QToolButton { color: %1; }
+        QDialog#functionDialogPanel, QLabel, QRadioButton, QToolButton { color: %1; }
         QAbstractSpinBox, QLineEdit { background: %4; color: %2; }
         QPushButton { background: transparent; color: %2; }
         QAbstractSpinBox, QComboBox { min-height: 27px; }
@@ -791,7 +794,7 @@ void FunctionDialogPanel::applyTransparentStyle() {
         QComboBox QAbstractItemView::item { min-height: 24px; padding: 2px 5px; }
         QComboBox QAbstractItemView::item:hover, QComboBox QAbstractItemView::item:selected { background: %6; color: %7; }
         QAbstractItemView { color: %2; selection-background-color: %6; selection-color: %7; }
-        QListWidget, QTreeWidget { background: transparent; border: 1px solid %5; border-radius: 5px; }
+        QListWidget, QTreeWidget { background: %4; border: 1px solid %5; border-radius: 5px; }
         QTableWidget { background: %4; alternate-background-color: %8; gridline-color: %5; }
         QHeaderView::section { background: %9; color: %2; border: 0; padding: 7px; }
         QTableCornerButton::section { background: %9; border: 0; }
@@ -1122,7 +1125,7 @@ void FeatureOperationDiagram::paintEvent(QPaintEvent *) {
         : kind_ == Revolution ? QStringLiteral("revolution") : QStringLiteral("sweep"));
 }
 
-bool ForgeCad::Gui::runUntilApplied(QDialog &dialog, QFormLayout *form, QDialogButtonBox *buttons, const std::function<QString()> &apply) {
+bool ForgeCad::Gui::runUntilApplied(QDialog &dialog, QFormLayout *form, QDialogButtonBox *buttons, const std::function<QString()> &apply, bool hideWhileApplying) {
     auto *errorLabel = new FunctionMessage(&dialog);
     errorLabel->setObjectName(QStringLiteral("functionApplyError"));
     errorLabel->setStyleSheet(QStringLiteral("color: #ff7b72; font-weight: 600;"));
@@ -1136,10 +1139,17 @@ bool ForgeCad::Gui::runUntilApplied(QDialog &dialog, QFormLayout *form, QDialogB
     else
         form->addRow(errorLabel);
     QObject::disconnect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
-    QObject::connect(buttons, &QDialogButtonBox::accepted, &dialog, [&dialog, errorLabel, apply] {
+    QObject::connect(buttons, &QDialogButtonBox::accepted, &dialog, [&dialog, buttons, errorLabel, apply, hideWhileApplying] {
+        if (hideWhileApplying) {
+            buttons->setEnabled(false);
+            // Nascondere non emette finished: l'anteprima resta viva finche'
+            // apply ne ha acquisito il risultato, senza cancellare il worker.
+            dialog.hide();
+        }
         QApplication::setOverrideCursor(Qt::WaitCursor);
         const QString error = apply();
         QApplication::restoreOverrideCursor();
+        if (hideWhileApplying) buttons->setEnabled(true);
         if (error.isEmpty()) {
             dialog.accept();
             return;
@@ -1148,13 +1158,22 @@ bool ForgeCad::Gui::runUntilApplied(QDialog &dialog, QFormLayout *form, QDialogB
         visible.remove(QRegularExpression(QStringLiteral("\\s*\\[\\[loft-(section|guide)=\\d+\\]\\]")));
         errorLabel->setText(visible + QStringLiteral("\nCorreggi i valori e riprova, oppure Annulla."));
         errorLabel->show();
+        if (hideWhileApplying) dialog.show();
         if (!dynamic_cast<FunctionDialogPanel *>(&dialog)) dialog.adjustSize();
     });
-    return dialog.exec() == QDialog::Accepted;
+    if (!hideWhileApplying) return dialog.exec() == QDialog::Accepted;
+    // QDialog::exec termina anche con hide(): qui si attende invece finished,
+    // come nei pannelli incorporati, per poter riaprire dopo un errore reale.
+    QEventLoop loop;
+    QObject::connect(&dialog, &QDialog::finished, &loop, &QEventLoop::quit);
+    dialog.setModal(true);
+    dialog.show();
+    loop.exec();
+    return dialog.result() == QDialog::Accepted;
 }
 
 bool runUntilAppliedModeless(QMainWindow *window, CadViewport *viewport, QDialog &dialog, QFormLayout *form, QDialogButtonBox *buttons,
-                                    const std::function<QString()> &apply) {
+                                    const std::function<QString()> &apply, bool hideWhileApplying) {
     auto *errorLabel = new FunctionMessage(&dialog);
     errorLabel->setObjectName(QStringLiteral("functionApplyError"));
     errorLabel->setStyleSheet(QStringLiteral("color: #ff7b72; font-weight: 600;"));
@@ -1168,10 +1187,17 @@ bool runUntilAppliedModeless(QMainWindow *window, CadViewport *viewport, QDialog
     else
         form->addRow(errorLabel);
     QObject::disconnect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
-    QObject::connect(buttons, &QDialogButtonBox::accepted, &dialog, [&dialog, errorLabel, apply] {
+    QObject::connect(buttons, &QDialogButtonBox::accepted, &dialog, [&dialog, buttons, errorLabel, apply, hideWhileApplying] {
+        if (hideWhileApplying) {
+            buttons->setEnabled(false);
+            // Nascondere non emette finished: l'anteprima resta viva finche'
+            // apply ne ha acquisito il risultato, senza cancellare il worker.
+            dialog.hide();
+        }
         QApplication::setOverrideCursor(Qt::WaitCursor);
         const QString error = apply();
         QApplication::restoreOverrideCursor();
+        if (hideWhileApplying) buttons->setEnabled(true);
         if (error.isEmpty()) {
             dialog.accept();
             return;
@@ -1180,6 +1206,7 @@ bool runUntilAppliedModeless(QMainWindow *window, CadViewport *viewport, QDialog
         visible.remove(QRegularExpression(QStringLiteral("\\s*\\[\\[loft-(section|guide)=\\d+\\]\\]")));
         errorLabel->setText(visible + QStringLiteral("\nCorreggi i valori e riprova, oppure Annulla."));
         errorLabel->show();
+        if (hideWhileApplying) dialog.show();
         if (!dynamic_cast<FunctionDialogPanel *>(&dialog)) dialog.adjustSize();
     });
     return runModeless(window, viewport, dialog);

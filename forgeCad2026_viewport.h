@@ -1174,6 +1174,9 @@ private:
     void runWhileResponsive(const std::function<void()> &task);
     void tessellateBody(ExtrusionObject &body, int index = -1) const;
     void restoreDocument(DocumentState state);
+    void resetDocumentForLoad();
+    void releaseReplacedDocumentMemory();
+    bool documentMemoryReleasePending_ = false;
 
     // Sfondo sfumato disegnato in coordinate schermo: bande perpendicolari alla
     // direzione della sfumatura (angolo), con il punto di mescolanza al 50%
@@ -1887,6 +1890,7 @@ private:
     ForgeCad::OverlayRenderer overlayRenderer_;
     mutable ForgeCad::Gui::GpuPicker gpuPicker_;
     mutable QVector<RaySelectionCache> raySelectionCache_;
+    ForgeCad::Kernel::CancellationToken pickCacheCancellation_;
     std::vector<std::weak_ptr<const ForgeCad::Kernel::Body>> warmedBodies_;  // B-rep con le cache di selezione gia' preparate
     mutable QVector<ProjectedEdges> projectedEdges_;
     bool axesVisible_ = true, axesOnTop_ = true;  // assi mostrati; sopra solidi, superfici e schizzi

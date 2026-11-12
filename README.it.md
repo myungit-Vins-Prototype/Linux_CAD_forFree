@@ -242,7 +242,7 @@ Durante il primo posizionamento e il trascinamento delle quote, guide lampeggian
 
 ### Visualizzazione e analisi
 
-ForgeCAD è scritto in **C++17** con **Qt 6** e una viewport **OpenGL 3.3 Core**. L’interfaccia usa lo stile comune Fusion e due palette dell’app, chiara e scura. Segue la scelta chiaro/scuro del sistema, mantenendo lo stesso disegno dei controlli tra le piattaforme. Il riconoscimento dello schema usa Qt 6.5+; sui backend precedenti dipende dalle notifiche della palette di sistema.
+ForgeCAD è scritto in **C++17** con **Qt 6** e una viewport **OpenGL 3.3 Core**. L’interfaccia usa lo stile comune Fusion e due palette dell’app, chiara e scura. In **Visualizza → Tema** si può scegliere **Chiaro**, **Scuro** oppure **Segui il desktop** (predefinito). La scelta viene salvata e aggiorna anche le finestre e i pannelli già aperti, mantenendo lo stesso disegno dei controlli tra le piattaforme. Il riconoscimento dello schema usa Qt 6.5+; sui backend precedenti dipende dalle notifiche della palette di sistema.
 
 - Rotazione, pan, zoom e inquadratura della scena.
 - Modalità filo di ferro, ombreggiata e ombreggiata con bordi.

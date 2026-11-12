@@ -1,3 +1,5 @@
+#include "../forgeCad2026_application_theme.h"
+#include <QSemaphore>
 #include <thread>
 #include <chrono>
 #include <set>
@@ -157,6 +159,7 @@ static QString exampleDocumentPath(const char *name) {
 class ViewportInteractionTest {
 public:
 #include "test_sketch_interaction.h"
+#include "test_document_lifetime.h"
     static void snapCacheRegressions() {
         using namespace ForgeCad;
         const auto check = [](bool ok, const char *text) { require(ok, text); };
@@ -11289,7 +11292,6 @@ static void solidTrims() {
     }
 };
 #include "test_blend_history.h"
-#include "../forgeCad2026_application_theme.h"
 // QA facoltativa con un contesto OpenGL reale: non tocca documenti dell'utente.
 static void surfaceToolsVisualQa() {
     using namespace ForgeCad; using namespace Kernel;
@@ -11372,12 +11374,12 @@ int main(int argc, char **argv) {
         catch(const std::exception &error) { std::cerr<<error.what()<<std::endl;return 1; }
         return 0;
     }
-    ForgeCad::initializeApplicationTheme(app);
     QCoreApplication::setOrganizationName(QStringLiteral("ForgeCADTests"));
     QCoreApplication::setApplicationName(QStringLiteral("Viewport"));
     QTemporaryDir settings;
     QSettings::setDefaultFormat(QSettings::IniFormat);
     QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, settings.path());
+    ForgeCad::initializeApplicationTheme(app);
     qputenv("FORGECAD_RECOVERY_DIR",settings.filePath(QStringLiteral("recovery")).toUtf8());
     if (app.arguments().contains(QStringLiteral("--gui-3d-review"))) {
         try { ViewportInteractionTest::gui3dReviewRegressions(app.arguments().contains(QStringLiteral("--gl"))); }
@@ -11574,6 +11576,11 @@ int main(int argc, char **argv) {
         catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
         return 0;
     }
+    if (app.arguments().contains(QStringLiteral("--document-lifetime"))) {
+        try { ViewportInteractionTest::documentLifetimeTests(); }
+        catch (const std::exception &error) { std::cerr << error.what() << std::endl; return 1; }
+        return 0;
+    }
     if (app.arguments().contains(QStringLiteral("--document-precision"))) {
         try { ViewportInteractionTest::documentPrecisionTests(); }
         catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
@@ -11661,6 +11668,10 @@ int main(int argc, char **argv) {
     if (app.arguments().contains(QStringLiteral("--linked-reference-visibility"))) {
         try { ViewportInteractionTest::linkedReferenceVisibility(app.arguments().contains(QStringLiteral("--gl"))); return 0; }
         catch(const std::exception &error) { std::cerr<<error.what()<<std::endl;return 1; }
+    }
+    if (app.arguments().contains(QStringLiteral("--body-sketch-reference-cache"))) {
+        try { ViewportInteractionTest::bodySketchReferenceCacheRegressions(app.arguments().value(app.arguments().indexOf(QStringLiteral("--body-sketch-reference-cache"))+1)); return 0; }
+        catch (const std::exception &e) { std::cerr<<e.what()<<std::endl; return 1; }
     }
     if (app.arguments().contains(QStringLiteral("--linked-sketch-references"))) {
         try { ViewportInteractionTest::linkedSketchReferences(); return 0; }

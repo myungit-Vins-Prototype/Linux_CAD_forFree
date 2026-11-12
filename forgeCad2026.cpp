@@ -41,7 +41,6 @@ int main(int argc, char **argv) {
     QCoreApplication::setAttribute(Qt::AA_UseDesktopOpenGL);
     QApplication application(argc, argv);
     ForgeCad::initializeGeometryAcceleration();
-    ForgeCad::initializeApplicationTheme(application);
 #ifdef Q_OS_MACOS
     // Il tema di piattaforma puo' nascondere le icone dei menu (macOS).
     // Impostarlo dopo QApplication e prima di creare le azioni e i menu.
@@ -50,6 +49,7 @@ int main(int argc, char **argv) {
     QCoreApplication::setOrganizationName(QStringLiteral("ForgeCAD"));
     // Identificatore stabile per conservare le preferenze QSettings esistenti.
     QCoreApplication::setApplicationName(QStringLiteral("ForgeCAD"));
+    ForgeCad::initializeApplicationTheme(application);
 #if defined(Q_OS_MACOS)
     QGuiApplication::setApplicationDisplayName(QStringLiteral("MacOs Cad for free"));
 #elif defined(Q_OS_LINUX)

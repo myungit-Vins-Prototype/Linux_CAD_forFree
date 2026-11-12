@@ -20,6 +20,7 @@
 #include <vector>
 
 #include "cad_cuda_tessellation.h"
+#include "fk_classify.h"
 #include "fk_curve.h"
 #include "fk_sketch_projection.h"
 #include "fk_iges.h"
@@ -105,22 +106,14 @@ bool validMeshOptions(const StlExportOptions &options) {
         && std::isfinite(options.maxEdgeLength) && options.maxEdgeLength >= 0.0;
 }
 
-// Dimensione del corpo piu' grande, indipendente dalla sua posizione nella
-// scena. Include i box delle curve, anche dei bordi chiusi con un solo vertice.
-double exportModelSize(const QVector<ExportBody> &bodies) {
-    double size = 0.0;
-    for (const ExportBody &body : bodies) {
-        if (!body.body) continue;
-        Kernel::Box box;
-        for (Kernel::VertexId vertex : body.body->vertices()) box.add(body.body->vertex(vertex).point);
-        for (Kernel::EdgeId id : body.body->edges()) {
-            const Kernel::Edge &edge = body.body->edge(id);
-            if (!edge.curve) continue;
-            box.add(Kernel::curveBox(*edge.curve, edge.range));
-        }
-        size = std::max(size, box.diagonal());
-    }
-    return size;
+// Dimensione di ogni corpo, indipendente dalla sua posizione nella scena.
+// I box delle facce includono anche superfici chiuse senza bordi (sfera,
+// toro) e rigonfiamenti interni alle patch NURBS.
+double exportBodySize(const Kernel::Body &body) {
+    Kernel::Box box;
+    for (Kernel::VertexId vertex : body.vertices()) box.add(body.vertex(vertex).point);
+    for (Kernel::FaceId face : body.faces()) box.add(Kernel::faceBox(body, face));
+    return box.diagonal();
 }
 
 // La mesh riuscita passa direttamente agli scrittori e all'anteprima: non
@@ -142,28 +135,35 @@ ExportMeshes prepareExportMeshes(const QVector<ExportBody> &bodies, const StlExp
     }
     StlExportOptions base = requested;
     if (requested.automaticRefinement) {
-        const double size = exportModelSize(bodies);
+        const StlExportOptions suggested = suggestedStlOptions(bodies);
+        base.deflection = std::min(base.deflection, suggested.deflection);
+        base.angle = std::min(base.angle, suggested.angle);
         // Evita di saturare il limite di vertici prima di poter cercare una
-        // mesh valida, anche con valori salvati da un documento molto piccolo.
-        if (base.maxEdgeLength > 0.0) base.maxEdgeLength = std::max(base.maxEdgeLength, size / 100.0);
-        base.deflection = std::max(base.deflection, size / 100000.0);
+        // mesh valida. Il lato regola la densita' sui piani; scarto e angolo
+        // restano vincoli di qualita' e non vengono mai allargati.
+        if (base.maxEdgeLength > 0.0)
+            base.maxEdgeLength = std::max(base.maxEdgeLength, suggested.maxEdgeLength / 2.0);
     }
     bool densityLimited = false;
+    double refinedDeflection = base.deflection;
+    double relaxedEdgeLength = base.maxEdgeLength;
     const int limit = requested.automaticRefinement ? 9 : 1;
     for (int attempt = 0; attempt < limit; ++attempt) {
-        // Le triangolazioni dei contorni sottili non sono monotone rispetto
-        // alla densita': prova sia piu' fine sia piu' grossolano. Per un limite
-        // di vertici/lato, invece, passa direttamente al tentativo piu' largo.
+        // Alterna dettagli piu' fini a lati piu' lunghi. Il recupero della
+        // densita' non sacrifica mai la precisione di raggi e superfici curve.
         if (attempt % 2 == 1 && densityLimited) continue;
         const bool finer = attempt % 2 == 1;
         const double factor = attempt == 0 ? 1.0 : std::pow(2.0, (attempt + 1) / 2);
         result.options = base;
         if (attempt > 0) {
-            result.options.deflection = base.deflection * (finer ? 1.0 / factor : factor);
-            // Raffinare lo scarto basta a recuperare contorni sottili senza
-            // imporre triangoli enormemente piu' numerosi sui piani.
-            if (!finer) result.options.maxEdgeLength = base.maxEdgeLength * factor;
-            result.options.angle = std::min(90.0, base.angle * (finer ? 1.0 / std::sqrt(factor) : std::sqrt(factor)));
+            // Passi cordali graduali evitano di saturare i vertici sui
+            // raccordi. L'angolo resta gia' vincolato alla qualita' scelta.
+            // Se occorre anche alleggerire il lato, conserva lo scarto gia'
+            // raffinato: tornare alla base perdeva il dettaglio recuperato.
+            if (finer) refinedDeflection = base.deflection / std::pow(1.25, (attempt + 1) / 2);
+            else relaxedEdgeLength = base.maxEdgeLength * factor;
+            result.options.deflection = refinedDeflection;
+            result.options.maxEdgeLength = relaxedEdgeLength;
         }
         Kernel::TessellationOptions tessellation;
         tessellation.deflection = result.options.deflection;
@@ -192,6 +192,7 @@ ExportMeshes prepareExportMeshes(const QVector<ExportBody> &bodies, const StlExp
                 break;
             }
             for (const Kernel::FaceMesh &face : mesh.faces) {
+                const Kernel::Face &source = body.body->face(face.face);
                 if (face.triangles.empty()) {
                     result.error = QStringLiteral("La faccia F%1 del corpo %2 non contiene triangoli.").arg(face.face.index).arg(body.name);
                     break;
@@ -210,6 +211,29 @@ ExportMeshes prepareExportMeshes(const QVector<ExportBody> &bodies, const StlExp
                         result.error = QStringLiteral("La densita' richiesta supera il limite di raffinamento su %1; aumentare il lato massimo.").arg(body.name);
                         break;
                     }
+                    // Il tessellatore ha un budget finito di vertici/giri.
+                    // Non basta che tutte le facce contengano triangoli:
+                    // controlla anche l'interno delle faccette curve prima
+                    // di accettare il risultato automatico. E' un controllo
+                    // campionato, non un certificato globale dello scarto.
+                    if (requested.automaticRefinement && source.surface->type() != Kernel::SurfaceType::Plane) {
+                        const Kernel::Vec2 uv = (face.parameters[std::size_t(triangle[0])]
+                            + face.parameters[std::size_t(triangle[1])] + face.parameters[std::size_t(triangle[2])]) / 3.0;
+                        const Kernel::Vec3 point = source.surface->point(uv[0], uv[1]);
+                        const Kernel::Vec3 normal = Kernel::cross(b - a, c - a);
+                        const double area = Kernel::norm(normal);
+                        // Nei triangoli collassati entro arrotondamento il
+                        // piano e' indeterminato: dividere per l'area quasi
+                        // nulla produce falsi scarti. I writer controllano
+                        // separatamente la degenerazione dopo la conversione.
+                        const double areaResolution = 64.0 * std::numeric_limits<double>::epsilon() * longest * longest;
+                        const double deviation = area > areaResolution ? std::abs(Kernel::dot(point - a, normal)) / area : 0.0;
+                        if (!Kernel::isFinite(point) || !std::isfinite(deviation) || deviation > base.deflection) {
+                            result.error = QStringLiteral("La faccia F%1 del corpo %2 supera lo scarto richiesto di %3 mm; occorre un raffinamento piu' preciso.")
+                                .arg(face.face.index).arg(body.name).arg(base.deflection, 0, 'g', 6);
+                            break;
+                        }
+                    }
                 }
                 if (!result.error.isEmpty()) break;
             }
@@ -224,6 +248,26 @@ ExportMeshes prepareExportMeshes(const QVector<ExportBody> &bodies, const StlExp
     return result;
 }
 
+}
+
+StlExportOptions suggestedStlOptions(const QVector<ExportBody> &bodies) {
+    double smallest = std::numeric_limits<double>::infinity(), largest = 0.0;
+    for (const ExportBody &body : bodies) {
+        if (!body.body) continue;
+        const double size = exportBodySize(*body.body);
+        if (!std::isfinite(size) || size <= 0.0) continue;
+        smallest = std::min(smallest, size);
+        largest = std::max(largest, size);
+    }
+    if (largest <= 0.0) smallest = largest = 100.0;
+    StlExportOptions options;
+    options.maxEdgeLength = std::max(1e-6, largest / 50.0);
+    // Budget di esportazione in mm: 1/10000 del corpo piu' piccolo, con
+    // tetto 0,01 mm per i pezzi grandi e risoluzione minima UI di 1e-6 mm.
+    // Il limite angolare conserva anche raggi piccoli in corpi molto grandi.
+    options.deflection = std::clamp(smallest / 10000.0, 1e-6, 0.01);
+    options.angle = 2.0;
+    return options;
 }
 
 QString exportSuffix(ExportFormat format) {

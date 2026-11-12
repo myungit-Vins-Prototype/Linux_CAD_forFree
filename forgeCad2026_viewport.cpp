@@ -36,6 +36,7 @@ CadViewport::~CadViewport() {
     stopWheelZoom();
     clearFeatureHandle();
     if (previewCancellation_) previewCancellation_->store(true, std::memory_order_relaxed);
+    if (pickCacheCancellation_) pickCacheCancellation_->store(true, std::memory_order_relaxed);
     // I pannelli figli si deregistrano dal compositore: devono sparire
     // mentre i membri del viewport esistono ancora, prima della classe base.
     QVector<ForgeCad::RibbonPreview *> ribbons;
@@ -455,6 +456,7 @@ void CadViewport::setSection(bool enabled, const QVector3D &point , const QVecto
 bool CadViewport::sectionEnabled() const { return section_.enabled; }
 
 void CadViewport::clearFeatureHandle() {
+    featureHandleDefinition_ = {};
     featureHandleChanged_ = {};
     featureHandleDragging_ = false;
     featureHandlePath_.clear();

@@ -41,8 +41,10 @@ struct ExtendDialogResult {
 
 const QStringList &planeNames();
 
+// Stessa politica hideWhileApplying del runner modale; il lock della finestra
+// resta attivo fino al completamento o alla riapertura dopo errore.
 bool runUntilAppliedModeless(QMainWindow *window, CadViewport *viewport, QDialog &dialog, QFormLayout *form, QDialogButtonBox *buttons,
-                                    const std::function<QString()> &apply);
+                                    const std::function<QString()> &apply, bool hideWhileApplying = false);
 
 // Selezionare una riga identifica il riferimento senza cambiare gli operandi
 // della funzione o ricalcolarne l'anteprima. Vale anche per liste con checkbox.

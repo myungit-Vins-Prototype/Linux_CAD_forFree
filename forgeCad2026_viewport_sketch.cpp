@@ -3314,17 +3314,7 @@ const SketchObject &CadViewport::sketchReferenceCache() {
             }
         } else if (body.forgeBody) {
             ref.kind = 4;
-            for (const auto edge : body.forgeBody->edges()) {
-                const auto &geometry = body.forgeBody->edge(edge);
-                if (!geometry.curve) continue;
-                ref.point = ForgeCad::edgeReference(*body.forgeBody, edge, geometry.curve->point(0.5 * (geometry.range.lo + geometry.range.hi)));
-                add(ref, true); add(ref);
-            }
-            ref.kind = 3;
-            for (const auto vertex : body.forgeBody->vertices()) {
-                ref.point = ForgeCad::vertexReference(*body.forgeBody, vertex);
-                add(ref);
-            }
+            if (allowedSketchReference(ref)) ForgeCad::appendBodySketchReferences(cache, i, body);
         }
     }
     for (int i = 0; i < sketches_.size(); ++i) {
