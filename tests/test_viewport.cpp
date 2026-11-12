@@ -43,6 +43,7 @@
 #include "../cad_sketch_reference_usage.h"
 #include "../cad_history_graph.h"
 #include "../cad_model_history.h"
+#include "../cad_history_chain.h"
 #include "../cad_topology_ref.h"
 #include "../cad_icons.h"
 #include "../cad_menu.h"

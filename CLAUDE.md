@@ -103,6 +103,11 @@ ctest --test-dir forgecad-release --output-on-failure
 
 ## Ultimi interventi — esiti consolidati
 
+**12/11 — Storyboard Applicatore4.** Fusioni scavalcavano la sottrazione inserita a monte.
+Fix generale delle basi, cache dipendenti e visibilita in rollback; riparazione all'apertura.
+App/19CTest/CAD19/codec/rebuild/Wayland/mappa PASS; originale invariato.
+Commit storyboard separato dagli altri interventi; push su main richiesto. [Prove](docs/applicatore4-storyboard-2026-11-12.md).
+
 **10/11 — CI GitHub.** Otto run falliti dopo build: offset180s e chiusura raccordo MacR0,06.
 Budget offset900s; Newton smorzato come ultimo recupero, quarta rotazione+1e-14 di regressione.
 Runner Ubuntu usava mirrorlistAPT ancora su Azure: corrette anche quelle, HTTPS/firme conservati.

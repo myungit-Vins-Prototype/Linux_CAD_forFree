@@ -1,5 +1,7 @@
 #pragma once
 
+#include "test_storyboard_merge_chain.h"
+
 // Incluso nel friend ViewportInteractionTest. Le prove riguardano identita'
 // e dipendenze del documento, senza richiedere un contesto OpenGL.
 static void storyboardReentrantRebuildRegression() {
@@ -113,6 +115,7 @@ static void storyboardIncrementalRegressions() {
 }
 
 static void storyboardReviewRegressions() {
+    storyboardMergedChainRegressions();
     storyboardIncrementalRegressions();
     using namespace ForgeCad;
     using namespace Kernel;

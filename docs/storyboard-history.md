@@ -71,7 +71,16 @@ scelta. Le funzioni successive restano nella storia: le basi implicite dello
 stesso corpo vengono ricollegate e la sequenza viene rigenerata. I riferimenti
 espliciti che non sono più risolvibili producono il normale errore della
 feature. Per vedere il risultato completo dopo l'inserimento, avanzare alla
-fine. Il salvataggio conserva tutta la storia; riapertura e Undo/Redo riportano
+fine. Anche quando una funzione gia' inserita diventa una fusione o una
+sottrazione, il suo risultato entra nella catena del corpo e diventa la base
+implicita delle fusioni successive. Le preferenze di visibilita' dei corpi
+restano indipendenti dai tip futuri nascosti durante il rollback.
+All'apertura, una fusione salvata su una base che scavalca uno stadio dello
+stesso corpo viene ricongiunta e le cache dipendenti sono rigenerate, anche
+attraverso gli schizzi associativi. Bersagli di altri corpi e riferimenti
+espliciti a facce, bordi o assi conservano il proprio produttore; riferimenti
+mancanti restano errori espliciti. Il file originale cambia solo al salvataggio.
+Il salvataggio conserva tutta la storia; riapertura e Undo/Redo riportano
 la vista alla fine della sequenza.
 
 Dal menu **Visualizza → Barra di posizione storyboard** si sceglie tra

@@ -1,5 +1,6 @@
 #include "forgeCad2026_viewport_internal.h"
 #include "cad_geometry_refs.h"
+#include "cad_history_chain.h"
 #include "cad_sketch_reference_usage.h"
 
 
@@ -70,6 +71,8 @@ void CadViewport::loadDocument(DocumentState state,
     ForgeCad::setDisplayLengthUnit(lengthUnit_, this);
     ForgeCad::normalizePatternResultOrder(state.sketches, state.extrusions);
     ForgeCad::normalizeModelHistory(state);
+    const auto reconnected = ForgeCad::reconnectMergedHistory(state.extrusions);
+    ForgeCad::invalidateHistoryCaches(state, reconnected);
     // Registra la genealogia dell'intero snapshot prima di ricostruire i
     // risultati runtime delle ripetizioni. Altrimenti un operando sostituito
     // rompe le dichiarazioni dei B-rep salvati a valle e puo' far risolvere
@@ -1129,9 +1132,24 @@ QString CadViewport::updateBody(int index, const ExtrusionObject &definition) {
         if (before != 0 && before != ForgeCad::inheritedModelBody(extrusions_, candidate)) candidate.modelBodyId = 0;
     }
     extrusions_[index] = candidate;
-    if (!unchanged) {
+    // Una funzione gia' inserita puo' diventare una fusione/sottrazione di
+    // un corpo precedente. Aggiornare l'owner da solo lascia i suoi successori
+    // sul vecchio stadio, scavalcando la nuova lavorazione nella storyboard.
+    // Il rollback nasconde i tip futuri nella scena: quei flag non sono
+    // una nuova preferenza Nascondi da salvare durante la normalizzazione.
+    if (historyPosition_ >= 0)
+        for (auto &feature : extrusions_) for (const auto &model : modelBodies_)
+            if (feature.modelBodyId == model.id && feature.featureId == model.tipFeatureId) feature.visible = model.visible;
+    ForgeCad::normalizeModelHistory(extrusions_, modelBodies_);
+    const auto reconnected = ForgeCad::reconnectMergedHistory(extrusions_, {extrusions_.at(index).modelBodyId});
+    if (!unchanged || !reconnected.isEmpty()) {
         QApplication::setOverrideCursor(Qt::WaitCursor);
-        regenerateAfter(index);
+        if (!reconnected.isEmpty() && reconnected.first() <= index) {
+            QVector<bool> dirty(extrusions_.size(), false);
+            dirty[index] = true;
+            for (int changed : reconnected) dirty[changed] = true;
+            regenerateFrom(reconnected.first(), std::move(dirty), {});
+        } else regenerateAfter(index);
         QApplication::restoreOverrideCursor();
     }
     synchronizePatternResults();
@@ -1607,8 +1625,11 @@ void CadViewport::synchronizePatternResults() {
     // I derivati consumati a valle sono nascosti nella scena, non nelle
     // preferenze del corpo. Ripristinare il tip prima di normalizzare:
     // altrimenti una seconda rigenerazione li nasconde anche nel rollback.
-    for (auto &feature : extrusions_) if (feature.feature == BodyFeature::Pattern && feature.patternComponent > 0
-                                          && consumedBodies_.contains(feature.modelBodyId))
+    // Lo stesso vale per tutti i tip futuri nascosti dal cursore: durante
+    // una creazione/modifica non cambiano le preferenze del corpo.
+    for (auto &feature : extrusions_) if (historyPosition_ >= 0
+        || (feature.feature == BodyFeature::Pattern && feature.patternComponent > 0
+            && consumedBodies_.contains(feature.modelBodyId)))
         for (const auto &model : modelBodies_)
             if (feature.modelBodyId == model.id && feature.featureId == model.tipFeatureId) feature.visible = model.visible;
     ForgeCad::normalizeModelHistory(extrusions_, modelBodies_);

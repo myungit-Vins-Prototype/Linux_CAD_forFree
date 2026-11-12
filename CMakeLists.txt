@@ -286,6 +286,8 @@ add_executable(forgecad
     cad_feature_build.cpp
     cad_model_history.h
     cad_model_history.cpp
+    cad_history_chain.h
+    cad_history_chain.cpp
     cad_topology_ref.h
     cad_topology_ref.cpp
     cad_element_names.h
