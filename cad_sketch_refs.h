@@ -17,6 +17,10 @@
 // nodi: la stessa curva proiettata; le eliche passano per la B-spline entro 1e-9).
 namespace ForgeCad {
 
+// Identita leggibile della sorgente, con numero del bordo/vertice/faccia e ID persistente.
+QString sketchReferenceLabel(const GeometryRef &source, const QVector<SketchObject> &sketches,
+                             const QVector<ExtrusionObject> &bodies);
+
 // Crea/riusa un riferimento vivo. I dati geometrici sono cache governate
 // dalla sorgente, senza Fix; il refresh conserva gli indici dei vincoli.
 // visible distingue le conversioni esplicite dalle cache automatiche; rende

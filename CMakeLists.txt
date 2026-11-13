@@ -130,6 +130,7 @@ add_executable(forgecad
     forgeCad2026_zoom.cpp
     forgeCad2026_zoom.h
     forgeCad2026_viewport_sketch.cpp
+    forgeCad2026_viewport_sketch_reference.cpp
     forgeCad2026_viewport_document.cpp
     forgeCad2026_viewport_document_lifetime.cpp
     forgeCad2026_viewport_selection.cpp
@@ -327,6 +328,7 @@ add_executable(forgecad
     cad_projected_curve.h
     cad_projected_curve.cpp
     cad_sketch_refs.h
+    cad_sketch_apparent.h
     cad_sketch_section_selection.h
     cad_sketch_refs.cpp
     cad_sketch_reference_usage.h
@@ -665,8 +667,16 @@ if(FORGECAD_BUILD_VIEW_TESTS)
     set_tests_properties(forgecad_native_revisions_tests PROPERTIES TIMEOUT 120)
     set_tests_properties(forgecad_all_history_tests PROPERTIES TIMEOUT 120)
     forgecad_add_view_test(forgecad_preview_performance_tests --preview-performance)
+    forgecad_add_view_test(forgecad_edit_preview_reuse_tests --edit-preview-reuse)
+    set_tests_properties(forgecad_edit_preview_reuse_tests PROPERTIES TIMEOUT 60)
     forgecad_add_view_test(forgecad_history_preview_mesh_tests --history-preview-mesh)
     set_tests_properties(forgecad_history_preview_mesh_tests PROPERTIES TIMEOUT 60)
+    forgecad_add_view_test(forgecad_sketch_apparent_tests --sketch-apparent)
+    set_tests_properties(forgecad_sketch_apparent_tests PROPERTIES TIMEOUT 60)
+    forgecad_add_view_test(forgecad_sketch_reference_hover_tests --sketch-reference-hover)
+    set_tests_properties(forgecad_sketch_reference_hover_tests PROPERTIES TIMEOUT 60)
+    forgecad_add_view_test(forgecad_sketch_tools_refs_tests --sketch-tools-refs)
+    set_tests_properties(forgecad_sketch_tools_refs_tests PROPERTIES TIMEOUT 60)
     forgecad_add_view_test(forgecad_sketch_slot_point_tests --sketch-slot-point)
     forgecad_add_view_test(forgecad_feature_handle_tests --feature-handles)
     forgecad_add_view_test(forgecad_revolution_history_tests --revolution-history)

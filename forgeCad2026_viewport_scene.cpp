@@ -12,8 +12,12 @@ bool CadViewport::isBodyVisibleInScene(int index) const {
     }
     const bool previewing = (!sketchMode_ || sketchViewUnlocked_) && !preview_.key.isEmpty();
     const bool replaced = previewing && preview_.replaced.contains(index);
+    // Il picker dei bordi interroga la topologia d'ingresso anche quando
+    // l'anteprima mostra gia' il risultato completo. drawExtrusions evita
+    // di ridisegnare la superficie di questa base sopra il risultato.
+    const bool pickingPreviewBase = edgePicking_ && edgePickBody_ == index && preview_.sceneResult;
     if (previewing && (index == preview_.index || preview_.later.contains(index)
-        || (replaced && (preview_.valid || previewDragVisible_)))) return false;
+        || (replaced && (preview_.valid || previewDragVisible_) && !pickingPreviewBase))) return false;
     if (!pickBodies_.isEmpty() && !pickBodies_.contains(index)) return false;
     const bool blendBase = previewing && preview_.definition.operation < 0
         && preview_.definition.feature == BodyFeature::Blend && preview_.definition.firstBody == index;

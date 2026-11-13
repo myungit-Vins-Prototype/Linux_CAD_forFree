@@ -36,7 +36,9 @@ void CadViewport::rememberPreview() {
         return points*sizeof(QVector3D);
     };
     const auto size=[&](const Preview &preview) {
-        return bytes(preview.display)+bytes(preview.retainedDisplay)+bytes(preview.resultDisplay);
+        std::size_t total = bytes(preview.display)+bytes(preview.retainedDisplay)+bytes(preview.resultDisplay);
+        for (const auto &display : preview.additionalDisplays) total += bytes(display);
+        return total;
     };
     constexpr std::size_t budget=64*1024*1024;
     if (size(preview_)>budget) return;
@@ -159,6 +161,8 @@ void CadViewport::requestPreview(const ExtrusionObject &definition, int index ) 
         preview_.replaced = definition.mergeOperation != 0 ? definition.mergeBodies : QVector<int>();
     }
     preview_.valid = false;
+    preview_.sceneResult = false;
+    preview_.additionalDisplays.clear();
     preview_.error.clear();
     preview_.geometry.reset();
     if (!previewDragVisible_) preview_.retainedDisplay = {};
@@ -166,6 +170,26 @@ void CadViewport::requestPreview(const ExtrusionObject &definition, int index ) 
     previewErrorSketch_ = -1;
     previewLoftErrors_.clear();
     ++preview_.generation;
+    const auto existing = existingPreviewResults(definition, index);
+    const bool ready = !existing.isEmpty() && std::all_of(existing.begin(), existing.end(), [&](const auto &body) {
+        return body.display.quality == tessellationQuality_
+            && (!body.display.vertices.isEmpty() || !body.display.edges.isEmpty());
+    });
+    if (ready) {
+        preview_.geometry = existing.first().forgeBody;
+        preview_.display = existing.first().display;
+        preview_.notice = existing.first().notice;
+        for (int i = 1; i < existing.size(); ++i) preview_.additionalDisplays.append(existing.at(i).display);
+        preview_.valid = true;
+        useExistingPreviewResults();
+        previewDragVisible_ = false;
+        refreshPreviewDragSource();
+        if (previewTimer_) previewTimer_->stop();
+        previewRerun_ = false;
+        if (previewCallback_) previewCallback_({});
+        update();
+        return;
+    }
     const auto cached=std::find_if(previewCache_.begin(),previewCache_.end(),
         [&](const Preview &entry){return entry.key==key;});
     if(cached!=previewCache_.end()) {
@@ -239,6 +263,8 @@ void CadViewport::clearPreview() {
     preview_.later.clear();
     preview_.restored.clear();
     preview_.valid = false;
+    preview_.sceneResult = false;
+    preview_.additionalDisplays.clear();
     preview_.error.clear();
     preview_.geometry.reset();
     preview_.definition = {};
@@ -314,13 +340,46 @@ QString CadViewport::previewKey(const ExtrusionObject &d, int index) {
 
 bool CadViewport::computePreview(const PreviewInputs &in, BodyDisplay &display, BodyDisplay &retainedDisplay,
                                  BodyDisplay &resultDisplay, ForgeCad::ForgeBody &geometry,
-                                 QString &error, QVector<int> *merged, QString *notice) {
+                                 QString &error, QVector<int> *merged, QString *notice, QVector<BodyDisplay> *additionalDisplays) {
     return ForgeCad::Gui::FeaturePreviewBuilder::computePreview(in, display, retainedDisplay, resultDisplay,
-                                                               geometry, error, merged, notice);
+                                                               geometry, error, merged, notice, additionalDisplays);
+}
+
+QVector<ExtrusionObject> CadViewport::existingPreviewResults(const ExtrusionObject &definition, int index) const {
+    if (!unchangedFeature(definition, index) || ForgeCad::isDatumBody(definition)) return {};
+    QVector<ExtrusionObject> results{extrusions_.at(index)};
+    if (definition.operation < 0 && definition.feature == BodyFeature::Pattern
+        && definition.patternComponent < 0 && extrusions_.at(index).patternComponent == 0) {
+        for (int i = index + 1; i < extrusions_.size(); ++i) {
+            const auto &body = extrusions_.at(i);
+            if (body.feature != BodyFeature::Pattern || body.patternComponent <= 0 || body.firstBody != index
+                || body.suppressed) continue;
+            if (!body.error.isEmpty() || !ForgeCad::hasGeometry(body)) return {};
+            results.append(body);
+        }
+    }
+    return results;
+}
+
+void CadViewport::useExistingPreviewResults() {
+    preview_.sceneResult = true;
+    // L'intero risultato pronto sostituisce gli operandi: non occorre
+    // estrarre patch o curve U/V dalle superfici gia' visualizzate.
+    const auto &existing = extrusions_.at(preview_.index);
+    preview_.replaced = ForgeCad::hiddenOperands(existing, extrusions_);
+    // I modificatori continuano lo stesso corpo logico: la scena nasconde
+    // implicitamente lo stadio precedente, anche se non e' un operando
+    // consumato esplicito. Un risultato completo deve sostituire anche
+    // questi stadi, altrimenti raccordo e base si sovrappongono.
+    for (int operand : ForgeCad::bodyOperands(existing))
+        if (operand >= 0 && operand < preview_.index && existing.modelBodyId
+            && extrusions_.at(operand).modelBodyId == existing.modelBodyId
+            && !preview_.replaced.contains(operand)) preview_.replaced.append(operand);
+    for (int body : preview_.replaced) preview_.restored.remove(body);
 }
 
 void CadViewport::startPreviewJob() {
-    if (preview_.key.isEmpty()) return;
+    if (preview_.key.isEmpty() || preview_.valid || !preview_.error.isEmpty()) return;
     if (previewRunning_) {
         previewRerun_ = true;
         return;
@@ -335,13 +394,8 @@ void CadViewport::startPreviewJob() {
     in.index = preview_.index >= 0 ? preview_.index : int(extrusions_.size());
     in.sketches = sketches_;
     in.bodies.resize(in.index);
-    if (preview_.index >= 0 && unchangedFeature(preview_.definition, preview_.index)) {
-        const ExtrusionObject &existing = extrusions_.at(preview_.index);
-        in.reuse = true;
-        in.existing = existing.forgeBody;
-        in.existingDisplay = existing.display;
-        in.existingMerge = existing.mergeBodies;
-    }
+    in.existingResults = existingPreviewResults(preview_.definition, preview_.index);
+    in.reuse = !in.existingResults.isEmpty();
     const ExtrusionObject &d = in.definition;
     QString invalid;
     // Operandi: i body e le curve del kernel sono immutabili, si condividono.
@@ -378,7 +432,7 @@ void CadViewport::startPreviewJob() {
     for (int sketch : ForgeCad::sketchesOf(d))
         if (sketch < 0 || sketch >= sketches_.size()) invalid = QStringLiteral("nessuno schizzo");
     const quint64 generation = preview_.generation;
-    if (!invalid.isEmpty()) {
+    if (!invalid.isEmpty() && !in.reuse) {
         preview_.error = invalid;
         if (edgePicking_ && edgePickStatus_) edgePickStatus_(edgePickMessage());
         if (previewCallback_) previewCallback_(preview_.error);
@@ -396,6 +450,7 @@ void CadViewport::startPreviewJob() {
         BodyDisplay display;
         BodyDisplay retainedDisplay;
         BodyDisplay resultDisplay;
+        QVector<BodyDisplay> additionalDisplays;
         ForgeCad::ForgeBody geometry;
         QString error, notice;
         bool ok = false;
@@ -403,7 +458,7 @@ void CadViewport::startPreviewJob() {
         const bool probe = in.definition.mergeProbe;
         try {
             ForgeCad::Kernel::cancellationPoint();
-            ok = computePreview(in, display, retainedDisplay, resultDisplay, geometry, error, &merged, &notice);
+            ok = computePreview(in, display, retainedDisplay, resultDisplay, geometry, error, &merged, &notice, &additionalDisplays);
             ForgeCad::Kernel::cancellationPoint();
         } catch (const ForgeCad::Kernel::OperationCancelled &) {
             ok = false;
@@ -413,8 +468,8 @@ void CadViewport::startPreviewJob() {
             error = QStringLiteral("errore imprevisto");
         }
         if (!ok && error.isEmpty()) error = QStringLiteral("costruzione non riuscita");
-        deliverResult(guard, [this, generation, ok, error, notice, probe, merged, workText,
-                                             geometry = std::move(geometry), display = std::move(display),
+        deliverResult(guard, [this, generation, ok, error, notice, probe, merged, workText, reuse = in.reuse,
+                                             additionalDisplays = std::move(additionalDisplays), geometry = std::move(geometry), display = std::move(display),
                                              retainedDisplay = std::move(retainedDisplay),
                                              resultDisplay = std::move(resultDisplay)]() mutable {
             previewRunning_ = false;
@@ -446,6 +501,8 @@ void CadViewport::startPreviewJob() {
                 refreshPreviewDragSource();
                 preview_.retainedDisplay = std::move(retainedDisplay);
                 preview_.resultDisplay = std::move(resultDisplay);
+                preview_.additionalDisplays = std::move(additionalDisplays);
+                if (ok && reuse) useExistingPreviewResults();
                 rememberPreview();
                 if (edgePicking_ && edgePickStatus_) edgePickStatus_(edgePickMessage());
                 if (previewCallback_) previewCallback_(preview_.error);

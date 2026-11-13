@@ -12,6 +12,8 @@
 
 ## Vista architetturale — istruzione permanente dell’utente
 
+- Per richiesta esplicita del 13 novembre 2026, prima di modificare il software consultare il grafico costruito in `docs/architecture/index.html` / `graph.json`: usare descrizioni dei file e collegamenti fra funzioni per individuare responsabilita', chiamanti e dipendenze; affiancare il grafico ai sorgenti, senza limitarne l'uso alla rigenerazione finale.
+
 - Per richiesta esplicita dell’utente, `docs/architecture/index.html` e `graph.json` sono generati localmente e ignorati da Git; non forzarne l’aggiunta ai commit. Versionare generatori, launcher, template e documentazione necessari a ricrearli.
 - Dopo ogni cambiamento strutturale (file/moduli aggiunti, spostati o rimossi, responsabilità o confini di chiamata/dipendenza modificati), aggiornare la vista consultabile `docs/architecture/index.html` e il relativo `graph.json`.
 - Per consultazione con aggiornamento all’apertura usare `python3 tools/open_architecture.py`: la pagina richiede a Python un controllo/aggiornamento a ogni apertura o ricaricamento; il solo index.html è uno snapshot offline.

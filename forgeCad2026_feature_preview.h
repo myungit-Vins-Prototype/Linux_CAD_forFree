@@ -12,19 +12,18 @@ public:
         QVector<ExtrusionObject> bodies;  // solo gli operandi, copiati
         int quality = 1;
         double calculationAccuracy = 1.0e-7;
-        // Modifica senza valori cambiati (unchangedFeature): il body e la
-        // tassellazione del corpo, niente kernel; si prepara solo la vista
-        // (la patch del raccordo, le curve U/V).
+        // Modifica invariata: risultati della scena, comprese tutte le
+        // componenti esposte della ripetizione. Il worker prepara soltanto
+        // le visualizzazioni mancanti; non ricostruisce la geometria.
         bool reuse = false;
-        ForgeCad::ForgeBody existing;
-        BodyDisplay existingDisplay;
-        QVector<int> existingMerge;
+        QVector<ExtrusionObject> existingResults;
     };
     static QString previewKey(const ExtrusionObject &d, int index);
     static bool localMergePreview(const ExtrusionObject &body);
     static bool computePreview(const PreviewInputs &in, BodyDisplay &display, BodyDisplay &retainedDisplay,
                                BodyDisplay &resultDisplay, ForgeBody &geometry, QString &error,
-                               QVector<int> *merged = nullptr, QString *notice = nullptr);
+                               QVector<int> *merged = nullptr, QString *notice = nullptr,
+                               QVector<BodyDisplay> *additionalDisplays = nullptr);
 };
 }
 #endif

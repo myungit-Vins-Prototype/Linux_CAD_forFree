@@ -1497,7 +1497,9 @@ SurfaceEndControls::SurfaceEndControls(QDialog &dialog, QFormLayout &form, CadVi
         modes_[side]->addItems(modes);
         if(dialog.objectName()==QStringLiteral("loftDialog"))modes_[side]->addItem(QStringLiteral("G1 — tangente a un piano"));
         modes_[side]->setCurrentIndex(qBound(0, side == 0 ? definition.loftStartContinuity : definition.loftEndContinuity, modes_[side]->count()-1));
-        influences_[side] = new QDoubleSpinBox(&dialog);
+        auto *influence = new ForgeCad::ExpressionSpinBox(&dialog);
+        influence->setLengthMeasurement(false);
+        influences_[side] = influence;
         influences_[side]->setRange(0.0, 100.0);
         influences_[side]->setSuffix(QStringLiteral(" %"));
         influences_[side]->setValue(100.0 * (side == 0 ? definition.loftStartInfluence : definition.loftEndInfluence));

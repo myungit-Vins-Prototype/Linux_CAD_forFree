@@ -178,6 +178,11 @@ std::map<QString, Draw> &registry() {
         line(p, {12, 12}, {18, 6}, stroke(c.ink, 1.0, Qt::DashLine));
         dot(p, {12, 12}, c.ink, 1.7);
     };
+    icons["circleThreePoint"] = [](QPainter &p, const IconPalette &c) {
+        p.setPen(stroke(c.accent,1.8));p.setBrush(Qt::NoBrush);
+        p.drawEllipse(QPointF(12,12),8.5,8.5);
+        for (const QPointF &point:{QPointF(12,3.5),QPointF(3.5,12),QPointF(18,18)}) dot(p,point,c.ink,1.8);
+    };
     icons["arcCenter"] = [](QPainter &p, const IconPalette &c) {
         p.setPen(stroke(c.accent, 1.8));
         p.setBrush(Qt::NoBrush);

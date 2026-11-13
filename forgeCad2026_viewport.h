@@ -374,7 +374,7 @@ public:
 
     // Clic con lo strumento Quota: su un punto o un'entita' la sceglie (o la
     // toglie); nel vuoto mette la quota in anteprima e ne chiede il valore.
-    void dimensionToolClick(const QPointF &point);
+    void dimensionToolClick(const QPointF &point, ConstraintRef explicitReference = {});
 
     // Valore scritto per una quota d'angolo: senza segno vale nel verso attuale
     // della quota (come appare nel disegno), con il segno meno lo inverte.
@@ -965,6 +965,7 @@ protected:
     // fine) con le coincidenze degli estremi e, per quello tangente, il
     // vincolo di tangenza con l'entita' da cui parte.
     void finalizeDrawnArc();
+    void finalizeThreePointCircle();
 
     // Anteprima della curva in costruzione (cerchio, arco, poligono, spline,
     // NURBS) con il cursore come punto successivo. Solo per disegnare: la
@@ -1098,7 +1099,18 @@ private:
     void refreshSurfacePierceSketches(int sourceIndex,QSet<int> &changed,int targetSketch=-1);
     bool allowedSketchReference(const GeometryRef &ref) const;
     const SketchObject &sketchReferenceCache();
-    bool attachSketchReferenceAt(SketchObject &work, const QPointF &point, double tolerance);
+    void updateSnapReferenceNote(const ForgeCad::SnapResult &result);
+    GeometryRef sketchReferenceSourceForHit(const SketchReferenceHit &hit, QString &error) const;
+    void updateSketchReferenceHover(const QPoint &position, bool pointMode);
+    bool selectSketchReferenceAt(const QPoint &position, bool pointMode, bool dimension);
+    void drawSketchReferenceHover(QPainter &painter) const;
+    GeometryRef sketchReferenceHoverSource_;
+    SketchObject sketchReferenceHoverGeometry_;
+    ConstraintRef sketchReferenceHoverTarget_;
+    QVector<ConstraintRef> sketchReferenceHoverSelection_;
+    QString sketchReferenceHoverKey_, sketchReferenceHoverError_;
+    QStringList sketchReferenceHoverLabels_;
+    bool sketchReferenceHoverContact_ = false;
     SketchObject sketchReferenceCache_;
     int sketchReferenceCacheOwner_ = -1;
     bool sketchReferenceCacheValid_ = false;
@@ -1523,11 +1535,14 @@ private:
     // La geometria dell'anteprima, come rebuildBody, e la sua tassellazione.
     static bool computePreview(const PreviewInputs &in, BodyDisplay &display, BodyDisplay &retainedDisplay,
                                BodyDisplay &resultDisplay, ForgeCad::ForgeBody &geometry,
-                               QString &error, QVector<int> *merged = nullptr, QString *notice = nullptr);
+                               QString &error, QVector<int> *merged = nullptr, QString *notice = nullptr,
+                               QVector<BodyDisplay> *additionalDisplays = nullptr);
 
     // Calcolo dell'anteprima in un thread del pool. Il risultato arriva nel
     // thread dell'interfaccia e vale solo se nel frattempo non e' arrivata
     // un'altra richiesta.
+    QVector<ExtrusionObject> existingPreviewResults(const ExtrusionObject &definition, int index) const;
+    void useExistingPreviewResults();
     void startPreviewJob();
 
     QString preparePreviewError(QString error);
@@ -1771,6 +1786,10 @@ private:
         // non si disegnano, i corpi che solo loro consumavano si' di nuovo.
         QSet<int> later, restored;
         bool valid = false;
+        // Modifica invariata: visualizzazioni complete gia' disponibili, una
+        // per risultato della ripetizione, senza aggregare o ritassellare.
+        bool sceneResult = false;
+        QVector<BodyDisplay> additionalDisplays;
         QString error;
         QString notice;  // esito non bloccante (ExtrusionObject::notice)
         ForgeCad::ForgeBody geometry;

@@ -200,7 +200,15 @@ geometria rendono inutilizzabili i risultati superati.
 
 Anche l'editor di una feature nascosta richiede una mesh: il builder delle
 anteprime riusa il B-rep, ma prepara sul worker la visualizzazione se manca
-o ha una qualità diversa. Una cache valida continua a essere condivisa.
+o ha una qualità diversa. Una cache valida continua a essere condivisa. Dal 13 novembre 2026,
+la modifica invariata adotta subito la visualizzazione pronta, senza worker,
+ritassellazione o estrazione di patch/U/V; le ripetizioni riusano i buffer di
+ogni risultato. Solo mesh mancanti o di qualità diversa richiedono preparazione
+grafica dal B-rep esistente. [Verifiche](anteprime-modifica-riuso-scena-2026-11-13.md).
+Il risultato completo sostituisce anche gli stadi precedenti dello stesso
+corpo logico: raccordo e base non vengono disegnati insieme. Durante la scelta
+dei bordi la base resta interrogabile dal picker, mentre il renderer mostra
+il risultato riusato. [Verifiche](raccordo-anteprima-comandi-2026-11-13.md).
 Regressioni per estrusione/rivoluzione con cache assente, obsoleta e valida
 sono incluse in `forgecad_preview_performance_tests`. Corretto il caso reale
 «Rivoluzione 1» del flacone che mostrava soltanto le U/V: prima zero vertici,

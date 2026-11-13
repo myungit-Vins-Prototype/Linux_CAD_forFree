@@ -977,7 +977,7 @@ ExtrusionObject CadViewport::withMergeCandidates(ExtrusionObject definition, int
 bool CadViewport::unchangedFeature(const ExtrusionObject &definition, int index) const {
     if (index < 0 || index >= extrusions_.size()) return false;
     const ExtrusionObject &existing = extrusions_.at(index);
-    if (existing.suppressed || !existing.error.isEmpty() || !existing.forgeBody || ForgeCad::isCurveBody(existing) || ForgeCad::isDatumBody(existing))
+    if (existing.suppressed || !existing.error.isEmpty() || !ForgeCad::hasGeometry(existing))
         return false;
     // Le vecchie unioni automatiche fino al prossimo corpo potevano salvare
     // il solo prisma: il contatto sul cap veniva scartato e mergeBodies
@@ -995,6 +995,11 @@ bool CadViewport::unchangedFeature(const ExtrusionObject &definition, int index)
     normalized.mergeProbe = false;
     ExtrusionObject reference = existing;
     reference.mergeProbe = false;
+    // L'editor chiede tutte le istanze (-1), la madre conserva la prima
+    // componente (0): cambia la presentazione, non la funzione.
+    if (reference.operation < 0 && reference.feature == BodyFeature::Pattern
+        && reference.patternComponent <= 0 && normalized.patternComponent <= 0)
+        normalized.patternComponent = reference.patternComponent;
     if (previewKey(normalized, index) == previewKey(reference, index)) return true;
     // Raccordi: gli spigoli scelti di nuovo nella vista hanno punti diversi
     // da quelli salvati anche quando sono gli stessi spigoli; conta lo
@@ -1067,6 +1072,12 @@ QString CadViewport::updateBody(int index, const ExtrusionObject &definition) {
         const ExtrusionObject &existing = extrusions_.at(index);
         candidate.mergeBodies = existing.mergeBodies;
         candidate.forgeBody = existing.forgeBody;
+        candidate.curve = existing.curve;
+        candidate.curves = existing.curves;
+        candidate.datumValid = existing.datumValid;
+        candidate.datumFrame = existing.datumFrame;
+        candidate.patternResults = existing.patternResults;
+        candidate.notice = existing.notice;
         candidate.solid = existing.solid;
         candidate.display = existing.display;
         candidate.error.clear();
@@ -1672,6 +1683,15 @@ void CadViewport::setDocumentReadOnly(bool readOnly) {
 }
 
 bool CadViewport::previewDatum(const DatumParameters &parameters, int index, SketchFrame &frame, QString *error) const {
+    if (index >= 0 && index < extrusions_.size() && ForgeCad::isDatumBody(extrusions_.at(index))) {
+        auto definition = extrusions_.at(index);
+        definition.datum = parameters;
+        if (unchangedFeature(definition, index)) {
+            frame = extrusions_.at(index).datumFrame;
+            if (error) error->clear();
+            return true;
+        }
+    }
     return ForgeCad::computeDatum(parameters, index < 0 ? int(extrusions_.size()) : index, sketches_, extrusions_, frame, error);
 }
 
@@ -1826,6 +1846,7 @@ DocumentState CadViewport::documentState(bool normalizeVisibility ) const {
 }
 
 void CadViewport::selectionChanged() {
+    sketchReferenceHoverLabels_.clear(); sketchReferenceHoverSource_ = {};
     pruneActiveSketchReferences(true);
     if (sketchOffsetSelectionCallback_) sketchOffsetSelectionCallback_();
     if (constraintPanelCallback_) constraintPanelCallback_();
@@ -1839,6 +1860,7 @@ void CadViewport::recordUndo() {
 
 void CadViewport::documentChanged() {
     sketchReferenceCacheValid_ = false;
+    sketchReferenceHoverKey_.clear(); sketchReferenceHoverSource_ = {}; sketchReferenceHoverLabels_.clear();
     const int insertionPosition = storyPosition_;
     const int addedFeatures = insertionSourceSize_ < 0 ? 0 : int(extrusions_.size()) - insertionSourceSize_;
     const int addedSketches = insertionSketchSourceSize_ < 0 ? 0 : int(sketches_.size()) - insertionSketchSourceSize_;
@@ -2010,7 +2032,7 @@ void CadViewport::refreshSurfacePierceSketches(int sourceIndex,QSet<int> &change
         const auto solved=ForgeCad::solveSketch(work);
         if (!solved.ok) {
             showStatus(solved.error);
-            if (!work.linkedReferences.isEmpty()) work.referenceError = solved.error;
+            if (!work.linkedReferences.isEmpty() && work.referenceError.isEmpty()) work.referenceError = solved.error;
         }
         sketches_[index]=std::move(work);
         changed.insert(index);
@@ -2027,7 +2049,8 @@ void CadViewport::regenerateFrom(int from, QVector<bool> dirty, QSet<int> dirtyS
         for (int f = 0; f < extrusions_.size(); ++f)
             if (ref.featureId ? extrusions_.at(f).featureId == ref.featureId : f == ref.index) { found = true; break; }
         if (!found) {
-            sketches_[s].supportError = QStringLiteral("La lavorazione della faccia di appoggio e' stata eliminata.");
+            sketches_[s].supportError = QStringLiteral("Faccia F%1 di %2 [ID %3]: la lavorazione di appoggio e' stata eliminata.")
+                .arg(ref.point.subshape).arg(sketches_[s].faceSource).arg(ref.featureId);
             dirtySketches.insert(s);
         }
     }
@@ -2178,6 +2201,9 @@ void CadViewport::followDatum(int index, QSet<int> &changed) {
         }
         const SketchFrame before = sketch.frame;
         const QString beforeError = sketch.supportError;
+        if(!error.isEmpty() && sketch.support)
+            error=QStringLiteral("Faccia F%1 di %2 [ID %3]: %4").arg(sketch.support->point.subshape)
+                .arg(sketch.faceSource).arg(sketch.support->featureId).arg(error);
         sketch.supportError = error;
         if (error.isEmpty()) sketch.frame = datumSketchFrame(plane, &before);
         bool same = beforeError == error;

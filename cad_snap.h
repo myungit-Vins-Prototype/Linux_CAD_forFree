@@ -5,6 +5,23 @@
 
 namespace ForgeCad {
 
+// Un solo aggancio per punto; le intersezioni restano una scelta separata.
+struct PointAttachment {
+    ConstraintRef target;
+    ConstraintType type = ConstraintType::Coincident;
+    double value = 0.0;
+    int priority = 4; // punto, quadrante, punto medio, curva
+    bool external = false; // indici nella cache transitoria
+};
+PointAttachment pointAttachment(const QPointF &point, const SketchObject &local,
+                                const SketchObject &external, double tolerance, bool origin,
+                                const QVector<ConstraintRef> &excluded = {});
+
+// Materializza soltanto l'entita esatta scelta nella cache; indici rimappati dopo append.
+ConstraintRef resolvePointAttachment(SketchObject &sketch, const PointAttachment &attachment,
+                                     const SketchObject &external, const QVector<SketchObject> &sketches,
+                                     const QVector<ExtrusionObject> &bodies);
+
 struct SnapResult {
     SnapKind kind = SnapKind::None;
     QPointF point;

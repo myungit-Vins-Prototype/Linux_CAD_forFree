@@ -2,6 +2,8 @@
 #include "cad_expression.h"
 
 #include <QApplication>
+#include <QLineEdit>
+#include <QLocale>
 #include <cmath>
 #include <iostream>
 #include <stdexcept>
@@ -30,6 +32,26 @@ void rejects(const QString &text, const std::string &label) {
 int main(int argc, char **argv) {
     QApplication application(argc, argv);
     try {
+        // Aprire un editor o spostare il focus non arrotonda la definizione.
+        for (const auto &locale : {QLocale::c(), QLocale(QLocale::Italian)}) {
+            ForgeCad::ExpressionSpinBox spin;
+            spin.setLocale(locale); spin.setLengthMeasurement(false);
+            spin.setDecimals(6); spin.setRange(-1e6, 1e6);
+            const double exact = 5.123456789012345;
+            spin.setValue(exact);
+            require(spin.value() == exact, "setValue conserva la precisione del modello");
+            spin.interpretText();
+            require(spin.value() == exact, "focus/Invio senza modifiche conservano il double");
+            spin.setDecimals(3); spin.interpretText();
+            require(spin.value() == exact, "cambiare cifre visibili non cambia il parametro");
+            spin.findChild<QLineEdit *>()->setText(QStringLiteral("6.125")); spin.interpretText();
+            require(spin.value() == 6.125, "una modifica effettiva viene acquisita");
+            spin.stepUp(); require(spin.value() == 7.125, "le frecce modificano il valore esatto");
+            spin.setDecimals(6); spin.setRange(1e-12, 1e6);
+            const double tiny = 1.23456789e-9;
+            spin.setValue(tiny); spin.interpretText();
+            require(spin.value() == tiny, "quota inferiore alle cifre visibili non viene portata al minimo");
+        }
         // Comportamento esistente da conservare.
         accepts("25/2", 12.5);
         accepts("3*(4+1.5)", 16.5);

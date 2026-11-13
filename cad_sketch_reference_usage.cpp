@@ -66,7 +66,7 @@ SketchReferenceRemap pruneUnusedSketchReferences(int index, QVector<SketchObject
     for (const auto &link : input.linkedReferences) if (link && !link->visible && link->construction) {
         bool keep = false;
         for (const auto &r : link->entities) if (key(r) >= 0 && used[key(r)]) keep = true;
-        if (!keep && !link->entities.isEmpty() && !link->error.isEmpty() && link->error == input.referenceError)
+        if (!keep && !link->entities.isEmpty() && !link->error.isEmpty() && input.referenceError.contains(link->error))
             removedReportedError = true;
         if (!keep) for (const auto &r : link->entities) {
             if (r.kind == 0 && key(r) >= 0) removedSegments.insert(r.element);
@@ -81,11 +81,15 @@ SketchReferenceRemap pruneUnusedSketchReferences(int index, QVector<SketchObject
     if (removedReportedError) {
         auto &sketch = sketches[index];
         sketch.referenceError.clear();
+        const auto appendError=[&](const QString &error) {
+            if(!sketch.referenceError.isEmpty())sketch.referenceError+=QLatin1Char('\n');
+            sketch.referenceError+=error;
+        };
         for (const auto &link : sketch.linkedReferences)
             if (!link || !link->error.isEmpty())
-                sketch.referenceError = link ? link->error : QStringLiteral("Riferimento associativo mancante.");
+                appendError(link ? link->error : QStringLiteral("Riferimento associativo mancante."));
         for (const auto &c : sketch.geometricConstraints)
-            if (c.pierce && !c.pierce->error.isEmpty()) sketch.referenceError = c.pierce->error;
+            if (c.pierce && !c.pierce->error.isEmpty()) appendError(c.pierce->error);
     }
     const auto remap = [&](GeometryRef &r, auto, int) {
         if (!targetsSketch(r, index, sketches)) return;

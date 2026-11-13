@@ -303,6 +303,7 @@ ExpressionSpinBox::ExpressionSpinBox(QWidget *parent) : QDoubleSpinBox(parent) {
     setToolTip(QStringLiteral("Si possono scrivere espressioni: 25/2, 3*(4+1.5), sqrt(2)*10, 360/7, sin(30)...\n"
                               "Invio calcola il risultato."));
     setCorrectionMode(QAbstractSpinBox::CorrectToNearestValue);
+    QDoubleSpinBox::setDecimals(323); // precisione interna, separata dalla presentazione
     refreshLengthUnit();
 }
 
@@ -326,6 +327,15 @@ void ExpressionSpinBox::setSuffix(const QString &suffix) {
     }
 }
 
+void ExpressionSpinBox::setDecimals(int decimals) {
+    displayDecimals_ = qBound(0, decimals, 323);
+    // Non chiamare setDecimals con la precisione di presentazione: Qt
+    // arrotonderebbe anche il valore, rendendo modificata una riapertura.
+    QDoubleSpinBox::setDecimals(323);
+    lineEdit()->setText(value() == minimum() && !specialValueText().isEmpty()
+                            ? specialValueText() : prefix() + textFromValue(value()) + suffix());
+}
+
 QString ExpressionSpinBox::expressionText(const QString &text) const {
     QString body = text;
     if (!prefix().isEmpty() && body.startsWith(prefix())) body.remove(0, prefix().size());
@@ -336,6 +346,9 @@ QString ExpressionSpinBox::expressionText(const QString &text) const {
 QValidator::State ExpressionSpinBox::validate(QString &text, int &pos) const {
     (void)pos;
     const QString body = expressionText(text);
+    // Una quota positiva molto piccola puo' essere mostrata come zero:
+    // senza digitazione resta valido il parametro esatto, entro i limiti.
+    if (!lineEdit()->isModified() && body == textFromValue(value())) return QValidator::Acceptable;
     if (body.isEmpty()) return QValidator::Intermediate;
     for (const QChar c : body)
         if (!(c.isLetterOrNumber() || c.isSpace() || QStringLiteral("+-*/^().,:×÷π").contains(c))) return QValidator::Invalid;
@@ -348,6 +361,9 @@ QValidator::State ExpressionSpinBox::validate(QString &text, int &pos) const {
 }
 
 double ExpressionSpinBox::valueFromText(const QString &text) const {
+    // Invio/focus perso senza digitare conservano il valore completo,
+    // anche quando il testo visibile contiene meno decimali.
+    if (!lineEdit()->isModified() && expressionText(text) == textFromValue(this->value())) return this->value();
     double value = 0.0;
     if (!evaluateExpression(expressionText(text), value)) return this->value();
     if (lengthMeasurement_) value *= millimetersPerUnit(displayLengthUnit(this));
@@ -355,7 +371,10 @@ double ExpressionSpinBox::valueFromText(const QString &text) const {
 }
 
 QString ExpressionSpinBox::textFromValue(double value) const {
-    return QDoubleSpinBox::textFromValue(lengthMeasurement_ ? value / millimetersPerUnit(displayLengthUnit(this)) : value);
+    auto numberLocale = locale();
+    if (!isGroupSeparatorShown()) numberLocale.setNumberOptions(numberLocale.numberOptions() | QLocale::OmitGroupSeparator);
+    return numberLocale.toString(lengthMeasurement_ ? value / millimetersPerUnit(displayLengthUnit(this)) : value,
+                                 'f', displayDecimals_);
 }
 
 void ExpressionSpinBox::fixup(QString &input) const {

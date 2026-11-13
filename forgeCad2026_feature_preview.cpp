@@ -173,16 +173,29 @@ QString FeaturePreviewBuilder::previewKey(const ExtrusionObject &d, int index) {
 
 bool FeaturePreviewBuilder::computePreview(const PreviewInputs &in, BodyDisplay &display, BodyDisplay &retainedDisplay,
                                BodyDisplay &resultDisplay, ForgeCad::ForgeBody &geometry,
-                               QString &error, QVector<int> *merged , QString *notice ) {
+                               QString &error, QVector<int> *merged, QString *notice, QVector<BodyDisplay> *additionalDisplays) {
     ForgeCad::Kernel::PrecisionScope precision(in.calculationAccuracy);
+    retainedDisplay = {};
+    resultDisplay = {};
+    if (additionalDisplays) additionalDisplays->clear();
     ExtrusionObject body = in.definition;
     if (in.reuse) {
-        body.forgeBody = in.existing;
-        body.mergeBodies = in.existingMerge;
-        body.error.clear();
-    } else {
-        ForgeCad::buildGeometry(body, in.index, in.sketches, in.bodies);
+        if (in.existingResults.isEmpty()) return false;
+        geometry = in.existingResults.first().forgeBody;
+        if (notice) *notice = in.existingResults.first().notice;
+        if (merged) *merged = in.existingResults.first().mergeBodies;
+        for (int i = 0; i < in.existingResults.size(); ++i) {
+            const auto &existing = in.existingResults.at(i);
+            if (!ForgeCad::hasGeometry(existing)) return false;
+            BodyDisplay ready = existing.display;
+            if (ready.quality != in.quality || (ready.vertices.isEmpty() && ready.edges.isEmpty()))
+                ForgeCad::tessellateGeometry(existing, in.quality, ready);
+            if (i == 0) display = std::move(ready);
+            else if (additionalDisplays) additionalDisplays->append(std::move(ready));
+        }
+        return true;
     }
+    ForgeCad::buildGeometry(body, in.index, in.sketches, in.bodies);
     if (merged && body.mergeProbe) *merged = body.mergeBodies;  // i corpi toccati dalla fusione automatica
     if (notice) *notice = body.notice;
     if (!ForgeCad::hasGeometry(body)) {
@@ -190,27 +203,16 @@ bool FeaturePreviewBuilder::computePreview(const PreviewInputs &in, BodyDisplay 
         return false;
     }
     geometry = body.forgeBody;
-    // Il B-rep di uno stadio nascosto puo' essere pronto senza una mesh.
-    // Il riuso della geometria non implica il riuso della visualizzazione:
-    // prepararla qui, sul worker, soltanto se manca o ha qualita' diversa.
-    BodyDisplay existingDisplay;
-    if (in.reuse) {
-        existingDisplay = in.existingDisplay;
-        if (existingDisplay.quality != in.quality)
-            ForgeCad::tessellateGeometry(body, in.quality, existingDisplay);
-    }
     const bool blend = in.definition.operation < 0 && in.definition.feature == BodyFeature::Blend && body.forgeBody
         && in.definition.firstBody >= 0 && in.definition.firstBody < in.bodies.size()
         && in.bodies.at(in.definition.firstBody).forgeBody;
     const bool localExtrusion = localMergePreview(in.definition)
         && body.mergeOperation != 0 && !body.mergeBodies.isEmpty() && body.forgeBody;
     if (blend) {
-        if (in.reuse) resultDisplay = existingDisplay;
         ForgeCad::forgeBlendPreviewDisplay(*in.bodies.at(in.definition.firstBody).forgeBody, *body.forgeBody, in.quality, display,
                                            in.quality <= 0 ? 3 : in.quality == 1 ? 5 : 7,
-                                           in.reuse ? &existingDisplay : nullptr);
+                                           nullptr);
     } else if (localExtrusion) {
-        if (in.reuse) resultDisplay = existingDisplay;
         QVector<ForgeCad::ForgeBody> bases;
         for (int index : body.mergeBodies)
             if (index >= 0 && index < in.bodies.size() && in.bodies.at(index).forgeBody)
@@ -218,9 +220,6 @@ bool FeaturePreviewBuilder::computePreview(const PreviewInputs &in, BodyDisplay 
         ForgeCad::forgeExtrusionPreviewDisplay(bases, *body.forgeBody, in.quality, display,
                                                in.quality <= 0 ? 3 : in.quality == 1 ? 5 : 7,
                                                body.mergeOperation == 2 ? &retainedDisplay : nullptr);
-    } else if (in.reuse) {
-        display = existingDisplay;
-        display.constructionCurves.clear();
     } else {
         ForgeCad::tessellateGeometry(body, in.quality, display);
     }

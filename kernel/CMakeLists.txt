@@ -66,6 +66,8 @@ add_library(forgekernel STATIC
     fk_intersect.cpp
     fk_marching.h
     fk_marching.cpp
+    fk_apparent_contour.h
+    fk_apparent_contour.cpp
     fk_classify.h
     fk_classify_uv.h
     fk_classify.cpp

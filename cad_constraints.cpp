@@ -1074,6 +1074,15 @@ bool isAxisReference(const SketchObject &sketch, const ConstraintRef &ref) {
 }
 
 QString describeRef(const SketchObject &sketch, const ConstraintRef &ref) {
+    for (const auto &link:sketch.linkedReferences) if (link)
+        for (const auto &entity:link->entities)
+            if (entity.kind==ref.kind && entity.element==ref.element && !link->sourceLabel.isEmpty()) {
+                QString role;
+                if (ref.kind==1 && ref.point==0 && ref.element>=0 && ref.element<sketch.curves.size()
+                    && centered(sketch.curves[ref.element].tool)) role=QStringLiteral("Centro · ");
+                else if (ref.point>=0) role=QStringLiteral("Punto %1 · ").arg(ref.point+1);
+                return (link->error.isEmpty()?QString():QStringLiteral("⚠ ROTTO · "))+role+link->sourceLabel;
+            }
     if (ref.kind == 2) return ref.element == 0 ? QStringLiteral("Origine") : ref.element == 1 ? QStringLiteral("Asse X") : QStringLiteral("Asse Y");
     if (ref.kind == 0) {
         const QString name = QStringLiteral("segmento %1").arg(ref.element + 1);

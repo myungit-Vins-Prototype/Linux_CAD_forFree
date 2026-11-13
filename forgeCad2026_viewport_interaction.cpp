@@ -382,17 +382,12 @@ void CadViewport::mousePressEvent(QMouseEvent *event) {
             return;
         }
         if (drawingTool_ == DrawingTool::Dimension) {
+            if (selectSketchReferenceAt(lastMousePosition_, event->modifiers() & Qt::ControlModifier, true)) return;
             int kind = -1, index = -1;
             ConstraintRef ref;
             if (!dimensionRefAt(rawPoint, ref) && pickSketchReferencePlaneAxis(lastMousePosition_, kind, index)) {
                 selectSketchReference(kind, index);
                 return;
-            }
-            if (!dimensionRefAt(rawPoint, ref)) {
-                auto work = *activeSketchObject();
-                if (attachSketchReferenceAt(work, rawPoint, pickTolerance())) {
-                    sketches_[activeSketch_] = std::move(work);
-                }
             }
             dimensionToolClick(rawPoint);
             return;
@@ -407,12 +402,8 @@ void CadViewport::mousePressEvent(QMouseEvent *event) {
             return;
         }
         if (drawingTool_ == DrawingTool::Select) {
-            if (findSketchElement(rawPoint).kind < 0) {
-                auto work = *activeSketchObject();
-                if (attachSketchReferenceAt(work, rawPoint, pickTolerance())) {
-                    sketches_[activeSketch_] = std::move(work);
-                }
-            }
+            if (!sketchOffsetSelectionCallback_
+                && selectSketchReferenceAt(lastMousePosition_, event->modifiers() & Qt::ControlModifier, false)) return;
             if (sketchOffsetSelectionCallback_) {
                 // Nel pannello Offset si scelgono entita', senza muovere
                 // poli, estremi o simboli dei vincoli.
@@ -537,7 +528,7 @@ void CadViewport::mousePressEvent(QMouseEvent *event) {
             update();
             return;
         }
-        if (drawingTool_ == DrawingTool::ThreePointArc || drawingTool_ == DrawingTool::TangentArc) {
+        if (drawingTool_ == DrawingTool::ThreePointCircle || drawingTool_ == DrawingTool::ThreePointArc || drawingTool_ == DrawingTool::TangentArc) {
             const QPointF point = snapPoint(rawPoint);
             if (drawingTool_ == DrawingTool::TangentArc && curveControlPoints_.isEmpty()) {
                 tangentStarts_ = tangentStartsAt(point);
@@ -550,8 +541,11 @@ void CadViewport::mousePressEvent(QMouseEvent *event) {
                 && pointDistance(point, curveControlPoints_.last()) <= ForgeCad::sketchConnectionTolerance()) return;
             curveControlPoints_.append(point);
             hasPendingPoint_ = true;
-            const int requiredPoints = drawingTool_ == DrawingTool::ThreePointArc ? 3 : 2;
-            if (curveControlPoints_.size() >= requiredPoints) finalizeDrawnArc();
+            const int requiredPoints = drawingTool_ == DrawingTool::TangentArc ? 2 : 3;
+            if (curveControlPoints_.size() >= requiredPoints) {
+                if (drawingTool_==DrawingTool::ThreePointCircle) finalizeThreePointCircle();
+                else finalizeDrawnArc();
+            }
             update();
             return;
         }
@@ -1028,6 +1022,13 @@ void CadViewport::mouseMoveEvent(QMouseEvent *event) {
     if (sketchMode_ && !sketchViewUnlocked_) {
         lastMousePosition_ = currentPosition;
         const QPointF rawPoint = screenToSketchPoint(currentPosition);
+        if (drawingTool_ == DrawingTool::Dimension)
+            updateSketchReferenceHover(currentPosition, event->modifiers() & Qt::ControlModifier);
+        else {
+            // In Selezione non proporre riferimenti: il clic esplicito li
+            // risolve comunque, mentre i comandi di disegno usano gli snap.
+            sketchReferenceHoverLabels_.clear(); sketchReferenceHoverSource_ = {};
+        }
         if (drawingTool_ == DrawingTool::Dimension) {
             // Strumento Quota: al passaggio il punto o l'entita' che si sceglierebbe, e la quota in anteprima.
             ConstraintRef ref;
@@ -1348,7 +1349,9 @@ void CadViewport::mouseReleaseEvent(QMouseEvent *event) {
             for (const auto &target : snapped) if (!isLinkedSketchEntity(sketch,target.point.kind,target.point.element)) {
                 // I rami che si muovono insieme non diventano sorgenti dello
                 // snap l'uno dell'altro: conservare la coppia ferma di appoggio.
-                if (intersection.found && pointDistance(target.position, intersection.point) <= ForgeCad::sketchConnectionTolerance()
+                const auto attachment=ForgeCad::pointAttachment(target.position,sketch,cache,
+                    ForgeCad::sketchConnectionTolerance(),originSnap_,excluded);
+                if (attachment.priority>=3 && intersection.found && pointDistance(target.position, intersection.point) <= ForgeCad::sketchConnectionTolerance()
                     && ForgeCad::constrainIntersection(sketch, target.point, intersection, cache, sketches_, extrusions_)) continue;
                 recordPointCoincidences(sketch,target.point,target.position);
             }
@@ -1368,7 +1371,9 @@ void CadViewport::mouseReleaseEvent(QMouseEvent *event) {
 }
 
 void CadViewport::leaveEvent(QEvent *event) {
-    if (hover_.kind != SceneObjectKind::None || sketchHover_.kind >= 0 || trimPartHover_ >= 0) {
+    if (hover_.kind != SceneObjectKind::None || sketchHover_.kind >= 0 || trimPartHover_ >= 0
+        || sketchReferenceHoverSource_.kind >= 0) {
+        sketchReferenceHoverSource_ = {}; sketchReferenceHoverLabels_.clear();
         hover_ = {};
         sketchHover_ = {};
         trimPartHover_ = -1;

@@ -41,7 +41,7 @@ using ForgeCurve = std::shared_ptr<const Kernel::Curve<3>>;
 // grado in CurveObject); ConvertEdges: lo strumento che le crea con un clic.
 // Dimension: lo strumento Quota (prima si scelgono le entita', poi si mette la quota).
 enum class DrawingTool { Line, Polyline, Spline, Nurbs, Circle, Arc, Polygon, ConstructionLine, Trim, Extend, Split, Fillet, Chamfer, Select,
-                         Rectangle, CenterRectangle, Ellipse, ThreePointArc, TangentArc, Converted, ConvertEdges, Dimension, Slot, Point };
+                         Rectangle, CenterRectangle, Ellipse, ThreePointArc, TangentArc, Converted, ConvertEdges, Dimension, Slot, Point, ThreePointCircle };
 enum class SnapKind { None, Endpoint, Midpoint, Nearest, Intersection };
 
 enum class ReferencePlane { XY, XZ, YZ };
@@ -64,6 +64,7 @@ using SketchSegment = QPair<QPointF, QPointF>;
 //  - Rectangle / CenterRectangle: due angoli / centro e angolo (solo per
 //    l'anteprima: il rettangolo diventa quattro segmenti)
 //  - ThreePointArc / TangentArc: solo strumenti di disegno, creano un Arc
+//  - ThreePointCircle: solo strumento di disegno, crea un Circle
 //  - Slot: solo anteprima (due centri e larghezza), diventa due segmenti e due archi
 //  - Point: un punto autonomo, senza geometria di profilo
 // `samples` e' solo un'approssimazione per disegnare e selezionare a schermo.
@@ -458,6 +459,7 @@ struct SketchLinkedReference {
     bool visible = false; // conversione esplicita: visibile anche se di costruzione
     double halfLength = 100.0; // estensione grafica delle rette infinite
     QString error;
+    QString sourceLabel; // ultima identita leggibile, conservata anche dopo eliminazione della sorgente
 };
 
 inline bool isLinkedSketchEntity(const SketchObject &sketch, int kind, int element) {

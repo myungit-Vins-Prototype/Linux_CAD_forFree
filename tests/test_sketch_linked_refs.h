@@ -101,6 +101,13 @@
                     appendLinkedSketchReference(expected,source,{}, {body},true);
                     appendLinkedSketchReference(expected,source,{}, {body});
                 }
+                int contours=0;
+                for (const auto &link : cache.linkedReferences) if (isSketchApparentReference(link->source)) {
+                    ++contours;
+                    require(appendLinkedSketchReference(expected,link->source,{}, {body}).isEmpty(),
+                            "contorno della cache risolvibile dal percorso associativo persistente");
+                }
+                require(contours==(kind==1 && pose==1 ? 2 : 0), "solo il cilindro visto obliquamente aggiunge due contorni apparenti");
                 source.kind=3;
                 for (const auto &vertex : vertices) { source.point=vertex; appendLinkedSketchReference(expected,source,{}, {body}); }
                 require(cache.linkedReferences.size()==expected.linkedReferences.size() && cache.segments==expected.segments
@@ -317,15 +324,15 @@
         cascade.removeBodies({0});
         require(!cascade.sketches_[0].referenceError.isEmpty() && !cascade.extrusions_.back().forgeBody
             && !cascade.extrusions_.back().error.isEmpty(),"sorgente eliminata blocca le lavorazioni dipendenti");
-        // Un vertice coincidente con l'origine conserva l'identita' del modello.
+        // Il badge Origine comporta un unico vincolo all'origine dello schizzo.
         CadViewport atOrigin;atOrigin.sketches_={first,second};atOrigin.activeSketch_=1;atOrigin.sketchMode_=true;
         atOrigin.sketches_[0].segments[0]={{0,0},{10,0}};atOrigin.geometrySnap_=atOrigin.originSnap_=true;atOrigin.axesVisible_=false;
         line(atOrigin.sketches_[1],{0,0},{0,5});
         atOrigin.recordPointCoincidences(atOrigin.sketches_[1],{0,0,0},{0,0});
-        require(atOrigin.sketches_[1].linkedReferences.size()==1,"vertice sull'origine resta associato al modello");
-        for(const auto &c:atOrigin.sketches_[1].geometricConstraints) require(c.second.kind!=2,"nessun doppio blocco involontario sull'origine");
+        require(atOrigin.sketches_[1].linkedReferences.isEmpty() && atOrigin.sketches_[1].geometricConstraints.size()==1
+            && atOrigin.sketches_[1].geometricConstraints[0].second.kind==2,"origine prioritaria senza un secondo blocco sul modello");
         atOrigin.sketches_[0].segments[0]={{2,3},{12,3}};atOrigin.regenerateDependents(0);
-        require(near(atOrigin.sketches_[1].segments[0].first,{2,3}),"vertice inizialmente all'origine segue lo spostamento della parte");
+        require(near(atOrigin.sketches_[1].segments[0].first,{0,0}),"origine locale indipendente dallo spostamento della sorgente sovrapposta");
         std::cout<<"PASS linked sketch references (solver, quote, snap, Pierce, datum, storia, IO, mouse, Undo)"<<std::endl;
     }
 

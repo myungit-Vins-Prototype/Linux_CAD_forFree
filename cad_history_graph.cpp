@@ -1033,7 +1033,7 @@ void HistoryGraphDialog::rebuild() {
                 && (sourceSketch ? sketchPositions[index] : featurePositions[index]) < sketchPositions[s];
             auto *edge = new HistoryGraphEdge(source, target, QStringLiteral("riferimento associativo"),
                 valid ? QColor(90,190,205) : QColor(255,76,76), valid, showLabels_->isChecked());
-            edge->setToolTip(geometryRefText(ref, sketches, features) + QChar(u'\n') + link->error);
+            edge->setToolTip((link->sourceLabel.isEmpty()?geometryRefText(ref, sketches, features):link->sourceLabel) + QChar(u'\n') + link->error);
             scene_->addItem(edge); edge->updateGeometry(); ++edgeCount_; if (!valid) ++invalidDependencies_;
         }
     int failures = 0, suppressed = 0;

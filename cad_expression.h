@@ -42,6 +42,9 @@ public:
     void setLengthMeasurement(bool enabled);
     bool isLengthMeasurement() const { return lengthMeasurement_; }
     void setSuffix(const QString &suffix);
+    // Le cifre mostrate non arrotondano il parametro double conservato.
+    void setDecimals(int decimals);
+    int decimals() const { return displayDecimals_; }
     QValidator::State validate(QString &text, int &pos) const override;
     double valueFromText(const QString &text) const override;
     QString textFromValue(double value) const override;
@@ -60,6 +63,7 @@ private:
     friend void setDisplayLengthUnit(LengthUnit unit, QObject *context);
     void refreshLengthUnit();
     bool lengthMeasurement_ = true;
+    int displayDecimals_ = 2;
 };
 
 // Come QInputDialog::getDouble, con la casella a espressioni.

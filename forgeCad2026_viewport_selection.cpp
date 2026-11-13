@@ -902,7 +902,7 @@ QPointF CadViewport::snapPoint(const QPointF &point, bool snapToGrid ) {
         && !(originSnap_ && result.kind == SnapKind::Endpoint && result.point == QPointF())) {
         const auto intersection = ForgeCad::snapIntersection(point, *activeSketchObject(), sketchReferenceCache(), tolerance);
         if (intersection.found && (result.kind == SnapKind::None || result.kind == SnapKind::Nearest
-            || pointDistance(point, intersection.point) <= pointDistance(point, result.point) + 1e-9)) {
+            || (result.kind!=SnapKind::Endpoint && pointDistance(point, intersection.point) <= pointDistance(point, result.point) + 1e-9))) {
             result = {SnapKind::Intersection, intersection.point};
             lastSnapExternal_ = intersection.firstExternal || intersection.secondExternal;
             lastSnapCurve_ = -1;
@@ -919,6 +919,7 @@ QPointF CadViewport::snapPoint(const QPointF &point, bool snapToGrid ) {
         if (lastSnapCurve_ >= local.curves.size()) { lastSnapCurve_ = -1; lastSnapExternal_ = true; }
         if (lastSnapExternal_ && lastSnapNote_.isEmpty()) lastSnapNote_ = QStringLiteral("Riferimento associativo");
     }
+    updateSnapReferenceNote(result);
     lastSnapKind_ = result.kind;
     lastSnapPoint_ = result.point;
     return result.point;

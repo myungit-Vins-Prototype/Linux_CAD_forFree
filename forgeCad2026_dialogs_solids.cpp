@@ -274,7 +274,7 @@ bool scaleDialog(QWidget *parent, CadViewport *viewport, const QString &title, i
     auto *centerBox = new QComboBox(&dialog);
     centerBox->addItems({QStringLiteral("Origine"), QStringLiteral("Baricentro del solido"), QStringLiteral("Punto")});
     centerBox->setCurrentIndex(qBound(0, definition.scaleCenterMode, 2));
-    QDoubleSpinBox *coordinates[3];
+    ForgeCad::ExpressionSpinBox *coordinates[3];
     auto *pointRow = new QWidget(&dialog);
     auto *pointLayout = new QHBoxLayout(pointRow);
     pointLayout->setContentsMargins(0, 0, 0, 0);

@@ -1,4 +1,6 @@
 #include "cad_sketch_refs.h"
+#include "cad_sketch_apparent.h"
+#include "fk_apparent_contour.h"
 #include "cad_sketch_section_selection.h"
 #include "fk_sketch_projection.h"
 
@@ -130,6 +132,20 @@ const Curve<3> *basisOf(const Curve<3> *curve) {
     return curve;
 }
 
+}
+
+QString sketchReferenceLabel(const GeometryRef &source, const QVector<SketchObject> &sketches,
+                             const QVector<ExtrusionObject> &bodies) {
+    GeometryRef ref=source;
+    if (isBodyRef(ref) || isSketchRef(ref)) ref.index=sketchReferenceSourceIndex(ref,sketches,bodies);
+    QString label=geometryRefText(ref,sketches,bodies);
+    if (ref.kind>=3 && ref.kind<=5 && ref.point.subshape>=0) {
+        const QString type=ref.kind==3?QStringLiteral("Vertice"):ref.kind==4?QStringLiteral("Spigolo"):QStringLiteral("Faccia");
+        const QChar code=ref.kind==3?QChar('V'):ref.kind==4?QChar('E'):QChar('F');
+        label.replace(type+QStringLiteral(" di "),type+QStringLiteral(" %1%2 di ").arg(code).arg(ref.point.subshape));
+    }
+    if (ref.featureId) label+=QStringLiteral(" [ID %1]").arg(ref.featureId);
+    return label;
 }
 
 bool nearestBodyEdge(const Body &body, const Vec3 &point, CurvePtr<3> &curve, Interval &range) {
@@ -641,8 +657,9 @@ QString projectReferencePath(SketchObject &target, const std::vector<PathSegment
 
 void appendReferenceProjection(SketchObject &sketch, const SketchObject &projected, const GeometryRef &source,
                                bool contact, bool construction, double halfLength,
-                               QVector<SketchEntity> *created = nullptr, bool visible = false) {
+                               QVector<SketchEntity> *created = nullptr, bool visible = false, const QString &sourceLabel = {}) {
     auto data = std::make_shared<SketchLinkedReference>();
+    data->sourceLabel = sourceLabel;
     data->source = source; data->contact = contact; data->construction = construction; data->visible = visible; data->halfLength = halfLength;
     for (const auto &segment : projected.segments) {
         const int index = sketch.segments.size();
@@ -668,6 +685,18 @@ QString projectLinkedReference(SketchObject &target, GeometryRef ref, bool conta
             return QStringLiteral("La sorgente del riferimento associativo non e' disponibile.");
         if (isSketchRef(ref) && (!sketches[ref.index].referenceError.isEmpty() || !sketches[ref.index].supportError.isEmpty()))
             return QStringLiteral("Lo schizzo sorgente ha riferimenti non risolti.");
+    }
+    if (isSketchApparentReference(ref)) {
+        if (contact || ref.index < 0 || !bodies[ref.index].forgeBody)
+            return QStringLiteral("La faccia del contorno apparente non e' disponibile.");
+        const auto &body = *bodies[ref.index].forgeBody;
+        const auto face = resolveFaceReference(body, ref.point, sketchConnectionTolerance());
+        if (!face.valid()) return QStringLiteral("La faccia del contorno apparente non e' piu' risolvibile.");
+        std::vector<PathSegment> path;
+        for (const auto &span : faceApparentContours(body, face, sketchAxes(target).zDir(), sketchConnectionTolerance()))
+            if (span.side == ref.element.element) path.push_back({span.curve, span.range});
+        if (path.empty()) return QStringLiteral("Il contorno apparente non esiste piu' per questa faccia e direzione di proiezione.");
+        return projectReferencePath(target, path, false, construction);
     }
     if (ref.kind == 11) {
         if (ref.index < 0 || !bodies[ref.index].forgeBody) return QStringLiteral("Il corpo della sezione associativa non e' disponibile.");
@@ -762,7 +791,8 @@ QString appendLinkedSketchReference(SketchObject &sketch, GeometryRef source,
                 }
             }
     }
-    appendReferenceProjection(sketch, projected, source, contact, construction, halfLength, created, visible);
+    appendReferenceProjection(sketch, projected, source, contact, construction, halfLength, created, visible,
+                              sketchReferenceLabel(source, sketches, bodies));
     return {};
 }
 
@@ -773,6 +803,10 @@ void appendBodySketchReferences(SketchObject &cache, int bodyIndex, const Extrus
     // Gli ID vengono dallo stesso B-rep immutabile che stiamo proiettando.
     // Non risolvere migliaia di nomi appena creati: i nomi divisi possono
     // richiedere confronti globali. Restano sul link per refresh/persistenza.
+    const auto label = [&](const GeometryRef &ref) {
+        GeometryRef named=ref; named.index=0;
+        return sketchReferenceLabel(named,{}, {body});
+    };
     source.kind = 4;
     for (EdgeId edgeId : shape.edges()) {
         const Edge &edge = shape.edge(edgeId);
@@ -783,19 +817,37 @@ void appendBodySketchReferences(SketchObject &cache, int bodyIndex, const Extrus
             SketchObject projected; projected.plane = cache.plane; projected.frame = cache.frame; projected.customFrame = cache.customFrame;
             try {
                 if (projectReferencePath(projected, path, contact, true).isEmpty())
-                    appendReferenceProjection(cache, projected, source, contact, true, 100.0);
+                    appendReferenceProjection(cache, projected, source, contact, true, 100.0, nullptr, false, label(source));
             } catch (const std::exception &) {
                 // Stesso isolamento per entita' della cache associativa ordinaria.
             }
         }
     }
-    source.kind = 3;
+    // I contorni apparenti sono generati dalla stessa geometria esatta,
+    // dopo i bordi reali che mantengono la precedenza in caso di coincidenza.
+    source.kind = 5;
+    for (auto face : shape.faces()) {
+        try {
+            const auto contours = faceApparentContours(shape, face, sketchAxes(cache).zDir(), sketchConnectionTolerance());
+            for (int side : {-1, 0, 1}) {
+                std::vector<PathSegment> path;
+                for (const auto &span : contours) if (span.side == side) path.push_back({span.curve, span.range});
+                if (path.empty()) continue;
+                source.element = {kSketchApparentFace, side, -1};
+                source.point = faceReference(shape, face, path.front().curve->point(.5*(path.front().range.lo+path.front().range.hi)));
+                SketchObject projected; projected.plane=cache.plane;projected.frame=cache.frame;projected.customFrame=cache.customFrame;
+                if (projectReferencePath(projected,path,false,true).isEmpty())
+                    appendReferenceProjection(cache,projected,source,false,true,100.0,nullptr,false,label(source));
+            }
+        } catch (const std::exception &) { /* faccia senza contorno esatto disponibile */ }
+    }
+    source.kind = 3; source.element = {};
     for (const EdgePoint &point : vertexReferences(shape)) {
         source.point = point;
         SketchObject projected;
         const auto p = worldToSketch(Vec3(point.x, point.y, point.z), cache);
         appendSegment(projected, p, p, true);
-        appendReferenceProjection(cache, projected, source, false, true, 100.0);
+        appendReferenceProjection(cache, projected, source, false, true, 100.0, nullptr, false, label(source));
     }
 }
 
@@ -873,6 +925,8 @@ QString refreshLinkedSketchReferences(SketchObject &sketch, const QVector<Sketch
     for (auto &link : sketch.linkedReferences) {
         if (!link) { sketch.referenceError = QStringLiteral("Riferimento associativo mancante."); continue; }
         auto data = std::make_shared<SketchLinkedReference>(*link);
+        if (data->sourceLabel.isEmpty())
+            data->sourceLabel=sketchReferenceLabel(data->source,sketches,bodies);
         SketchObject projected;
         projected.plane = sketch.plane; projected.frame = sketch.frame; projected.customFrame = sketch.customFrame;
         data->error = projectLinkedReference(projected, data->source, data->contact, data->construction, data->halfLength, sketches, bodies);
@@ -892,6 +946,7 @@ QString refreshLinkedSketchReferences(SketchObject &sketch, const QVector<Sketch
         if (data->error.isEmpty() && (s + c != data->entities.size() || s != projected.segments.size() || c != projected.curves.size()))
             data->error = QStringLiteral("La topologia del riferimento e' cambiata: selezionare nuovamente la sorgente.");
         if (data->error.isEmpty()) {
+            data->sourceLabel=sketchReferenceLabel(data->source,sketches,bodies);
             s = c = 0;
             for (const auto &entity : data->entities) {
                 if (entity.kind == 0) sketch.segments[entity.element] = projected.segments[s++];
@@ -899,7 +954,17 @@ QString refreshLinkedSketchReferences(SketchObject &sketch, const QVector<Sketch
             }
             data->source.index = sketchReferenceSourceIndex(data->source, sketches, bodies);
         } else {
-            sketch.referenceError = data->error;
+            QStringList affected;
+            for (int i=0;i<sketch.geometricConstraints.size();++i)
+                for (const auto &entity:data->entities)
+                    if (refersTo(sketch.geometricConstraints[i],entity.kind,entity.element)) {
+                        affected.append(QStringLiteral("%1 (%2)").arg(i+1).arg(constraintName(sketch.geometricConstraints[i].type)));
+                        break;
+                    }
+            data->error=QStringLiteral("%1: %2").arg(data->sourceLabel,data->error);
+            if (!affected.isEmpty()) data->error+=QStringLiteral(" Vincoli: %1.").arg(affected.join(QStringLiteral(", ")));
+            if (!sketch.referenceError.isEmpty()) sketch.referenceError+=QLatin1Char('\n');
+            sketch.referenceError += data->error;
             for(const auto &entity:data->entities) if(entity.kind==1 && entity.element>=0 && entity.element<sketch.curves.size()) {
                 auto &curve=sketch.curves[entity.element];
                 if(curve.tool==DrawingTool::Converted && curve.degree==0) {curve.referenceCurve.reset();curve.samples.clear();curve.numericallyValid=false;}

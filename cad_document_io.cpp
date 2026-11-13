@@ -1,6 +1,7 @@
 #include "cad_memory.h"
 #include <QSettings>
 #include "cad_document_io.h"
+#include "cad_sketch_apparent.h"
 #include "cad_surface_tools.h"
 #include "cad_document_read.h"
 #include "cad_workspace.h"
@@ -82,6 +83,8 @@ constexpr char kMagic[4] = {'F', 'C', 'A', 'D'};
 // 57 riferimenti associativi dello schizzo (sorgente persistente e cache).
 // 60 visibilita delle conversioni esplicite, distinta dalle cache automatiche.
 // 61 verso normale indipendente per i profili iniziale/finale del loft.
+// 68 nomi leggibili delle sorgenti associative, conservati dopo eliminazione.
+// 69 contorni apparenti associativi: faccia e lato analitico nel GeometryRef dello schizzo.
 // 62 condizioni trasversali alle guide e riferimenti ai loro appoggi.
 constexpr quint16 kVersion = kDocumentFormatVersion;
 constexpr quint8 kZlib = 1;
@@ -232,6 +235,7 @@ void write(QDataStream &out, const SketchObject &sketch, quint16 version) {
             writeRefs(out, {data.source});
             out << data.source.point.name << data.contact << data.construction << data.halfLength << data.error;
             if (version >= 60) out << data.visible;
+            if (version >= 68) out << data.sourceLabel;
             out << quint32(data.entities.size());
             for (const auto &entity : data.entities) writeRef(out, entity);
         }
@@ -358,6 +362,7 @@ bool read(ReadStream &in, SketchObject &sketch, quint16 version) {
             data->source = refs.front();
             in >> data->source.point.name >> data->contact >> data->construction >> data->halfLength >> data->error;
             if (version >= 60) in >> data->visible;
+            if (version >= 68) in >> data->sourceLabel;
             if (!std::isfinite(data->halfLength) || data->halfLength <= 0.0) return false;
             quint32 entities = 0;
             if (!readCount(in, entities, 12) || !entities) return false;
@@ -1435,6 +1440,11 @@ QString encodeDocumentVersion(const DocumentState &state, QByteArray &bytes, boo
             return QStringLiteral("La precisione personalizzata richiede il formato 67.");
         if (state.version.documentId.isNull() || (!state.version.checkinId.isNull() && state.version.checkinId == state.baseCheckinId))
             return QStringLiteral("Identita' del documento non valida.");
+        if (version < 69)
+            for (const auto &sketch : state.sketches)
+                for (const auto &link : sketch.linkedReferences)
+                    if (link && isSketchApparentReference(link->source))
+                        return QStringLiteral("I contorni apparenti associativi richiedono il formato 69.");
         for (const auto &body : state.extrusions) {
             if (version < 66 && (body.loftStartContinuity==4 || body.loftEndContinuity==4))
                 return QStringLiteral("La tangenza della loft a un piano richiede il formato 66.");

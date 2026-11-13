@@ -42,6 +42,9 @@
 #include "../cad_surface_mapping.h"
 #include "../cad_extrude.h"
 #include "../cad_sketch_refs.h"
+#include "../cad_sketch_apparent.h"
+#include "fk_apparent_contour.h"
+#include "fk_surface_algo.h"
 #include "../cad_sketch_reference_usage.h"
 #include "../cad_history_graph.h"
 #include "../cad_model_history.h"
@@ -303,6 +306,9 @@ public:
 #include "test_sketch_linked_refs.h"
 #include "test_sketch_construction.h"
 #include "test_sketch_slot_point.h"
+#include "test_sketch_tools_refs.h"
+#include "test_sketch_reference_hover.h"
+#include "test_sketch_apparent.h"
 #include "test_helix_start_angle.h"
 #include "test_sketch_menu_cancel.h"
 #include "test_document_recovery.h"
@@ -470,6 +476,7 @@ static void solidTrims() {
 #include "test_thread_edges.h"
 #include "test_mesh_memory.h"
 #include "test_history_preview_mesh.h"
+#include "test_edit_preview_reuse.h"
 #include "test_pattern_history_repair.h"
 #include "test_gui_3d_review.h"
 #include "test_fillet_selection_review.h"
@@ -700,8 +707,10 @@ static void solidTrims() {
                 view.requestPreview(view.extrusions_[0],0);settle(view);
                 const auto &display=view.preview_.display;
                 require(view.preview_.geometry==geometry,"anteprima stadio nascosto riusa il B-rep senza ricostruirlo");
-                require(display.quality==1 && !display.vertices.isEmpty() && !display.constructionCurves.isEmpty(),
-                        "anteprima riusata contiene superficie e U/V alla qualita' richiesta");
+                require(display.quality==1 && !display.vertices.isEmpty(),
+                        "anteprima riusata contiene la superficie alla qualita' richiesta");
+                if (cachedQuality==1) require(view.preview_.sceneResult && !view.previewRunning_,
+                                             "mesh pronta riusata senza preparare curve U/V");
                 require(display.vertices==expected.vertices && display.normals==expected.normals
                         && display.triangleFaces==expected.triangleFaces && display.edges==expected.edges,
                         "anteprima riusata concorde con tassellazione esplicita");
@@ -718,7 +727,7 @@ static void solidTrims() {
             DocumentState state;require(ForgeCad::decodeDocument(original,state,true).isEmpty(),"modello QA letto");
             CadViewport view;view.loadDocument(state);require(!view.extrusions().isEmpty(),"funzione del modello QA disponibile");
             view.requestPreview(view.extrusions().first(),0);settle(view);
-            require(!view.preview_.display.constructionCurves.isEmpty(),"U/V sul modello reale");
+            require(view.preview_.sceneResult,"risultato reale riusato senza estrazione delle U/V");
             require(!view.preview_.display.vertices.isEmpty() && view.preview_.display.quality==view.tessellationQuality_,
                     "superficie del modello reale pronta nell'anteprima riusata");
             view.resize(1000,750);view.setViewPreset(4);view.fitView(view.preview_.display.vertices);view.show();QApplication::processEvents();
@@ -4541,7 +4550,7 @@ static void solidTrims() {
         timer.restart();
         while (viewport.previewRunning_ && timer.elapsed() < 30000) QApplication::processEvents();
         require(viewport.preview_.valid && viewport.preview_.geometry == feature.forgeBody
-                    && viewport.preview_.display.vertices == reused.vertices, "apertura modifica conserva il corpo e riusa la mesh");
+                    && viewport.preview_.display.vertices == feature.display.vertices, "apertura modifica conserva il corpo e riusa la mesh completa");
     }
 
     static void reviewRegressions() {
@@ -11243,9 +11252,8 @@ static void solidTrims() {
                                                repairedSnapshot.extrusions_.back().forgeBody),
                     "una cache no-op del raccordo viene scartata e rigenerata");
 
-            // Modifica senza cambiare valori: l'anteprima mostra la patch con le
-            // curve U/V dal body esistente (niente kernel) e la conferma lascia
-            // il corpo com'e'.
+            // Modifica invariata: mostra subito la visualizzazione esistente,
+            // senza estrarre patch o U/V, e la conferma conserva il corpo.
             const int blendIndex = int(cachedBlend.extrusions_.size()) - 1;
             const ExtrusionObject existing = cachedBlend.extrusions_.at(blendIndex);
             require(cachedBlend.unchangedFeature(existing, blendIndex), "funzione non modificata riconosciuta");
@@ -11256,9 +11264,9 @@ static void solidTrims() {
             while (cachedBlend.previewRunning_ && previewTimeout.elapsed() < 10000) QApplication::processEvents();
             require(cachedBlend.preview_.valid && cachedBlend.preview_.geometry == existing.forgeBody,
                     "l'anteprima della modifica riusa il B-rep del corpo");
-            require(!cachedBlend.preview_.display.vertices.isEmpty() && !cachedBlend.preview_.display.constructionCurves.isEmpty()
-                        && cachedBlend.preview_.display.vertices.size() < existing.display.vertices.size(),
-                    "patch in trasparenza con le curve U/V senza ricalcolo");
+            require(cachedBlend.preview_.sceneResult && !cachedBlend.previewRunning_
+                        && cachedBlend.preview_.display.vertices.constData() == existing.display.vertices.constData(),
+                    "modifica riusa immediatamente il buffer esistente senza estrarre patch");
             require(cachedBlend.updateBody(blendIndex, existing).isEmpty()
                         && cachedBlend.extrusions_.at(blendIndex).forgeBody == existing.forgeBody,
                     "conferma senza modifiche: corpo invariato");
@@ -12063,6 +12071,21 @@ int main(int argc, char **argv) {
         catch (const std::exception &e) { std::cerr<<e.what()<<std::endl;return 1; }
         return 0;
     }
+    if (app.arguments().contains(QStringLiteral("--sketch-apparent"))) {
+        try { ViewportInteractionTest::sketchApparent(app.arguments().contains("--gl")); }
+        catch(const std::exception &error){std::cerr<<error.what()<<std::endl;return 1;}
+        return 0;
+    }
+    if (app.arguments().contains(QStringLiteral("--sketch-reference-hover"))) {
+        try { ViewportInteractionTest::sketchReferenceHover(app.arguments().contains("--gl")); }
+        catch(const std::exception &error){std::cerr<<error.what()<<std::endl;return 1;}
+        return 0;
+    }
+    if (app.arguments().contains(QStringLiteral("--sketch-tools-refs"))) {
+        try { ViewportInteractionTest::sketchToolsReferences(app.arguments().contains(QStringLiteral("--gl"))); }
+        catch(const std::exception &e){std::cerr<<e.what()<<std::endl;return 1;}
+        return 0;
+    }
     if (app.arguments().contains(QStringLiteral("--sketch-slot-point"))) {
         try { ViewportInteractionTest::sketchSlotPoint(app.arguments().contains(QStringLiteral("--gl"))); }
         catch(const std::exception &e){std::cerr<<e.what()<<std::endl;return 1;}
@@ -12073,6 +12096,14 @@ int main(int argc, char **argv) {
             ViewportInteractionTest::historyPreviewMesh(index+1<app.arguments().size() && !app.arguments().at(index+1).startsWith("--")
                 ?app.arguments().at(index+1):QString(),app.arguments().contains(QStringLiteral("--gl"))); }
         catch (const std::exception &e) { std::cerr<<e.what()<<std::endl;return 1; }
+        return 0;
+    }
+    if (app.arguments().contains(QStringLiteral("--edit-preview-reuse"))) {
+        try {
+            const int option = app.arguments().indexOf(QStringLiteral("--edit-preview-reuse"));
+            const auto path = app.arguments().value(option + 1);
+            ViewportInteractionTest::editPreviewReuse(path.startsWith("--") ? QString() : path, app.arguments().contains("--gl"));
+        } catch (const std::exception &error) { std::cerr << error.what() << std::endl; return 1; }
         return 0;
     }
     if (app.arguments().contains(QStringLiteral("--preview-performance"))) {

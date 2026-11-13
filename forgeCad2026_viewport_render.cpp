@@ -206,7 +206,7 @@ void CadViewport::drawCurvePreview(QPainter &painter, const SketchObject &sketch
     painter.setBrush(Qt::NoBrush);
     const bool centered = curve.tool == DrawingTool::Circle || curve.tool == DrawingTool::Arc || curve.tool == DrawingTool::Polygon
                        || curve.tool == DrawingTool::Ellipse || curve.tool == DrawingTool::CenterRectangle;
-    if (centered) {
+    if (centered && drawingTool_!=DrawingTool::ThreePointArc && drawingTool_!=DrawingTool::ThreePointCircle) {
         painter.setPen(QPen(QColor(255, 170, 90, 170), 1.2, Qt::DotLine));
         painter.drawLine(projectWorldPoint(mapSketchPoint(curve.controlPoints.first(), sketch)),
                          projectWorldPoint(mapSketchPoint(cursorSketchPoint_, sketch)));
@@ -230,8 +230,9 @@ void CadViewport::drawInferenceTags(QPainter &painter) const {
         labels = QStringList{editToolLabel()};
     } else if (!lineTool) {
         labels.clear();
-        if (lastSnapKind_ != SnapKind::None && lastSnapKind_ != SnapKind::Nearest) labels.append(snapLabelAt(lastSnapKind_, lastSnapPoint_));
+        if (lastSnapKind_ != SnapKind::None) labels.append(snapLabelAt(lastSnapKind_, lastSnapPoint_));
         labels += previewMeasures();
+        if (drawingTool_ == DrawingTool::Dimension) labels += sketchReferenceHoverLabels_;
     } else if (hasPendingPoint_) {
         // Quote del segmento in costruzione.
         const QPointF delta = currentInference_.point - pendingPoint_;
@@ -624,7 +625,8 @@ void CadViewport::strokeHighlight(QPainter &painter, const QVector<QPointF> &poi
 
 void CadViewport::highlightSketchElement(QPainter &painter, const SketchObject &sketch,
                                 const SketchElementSelection &element, const QColor &color) const {
-    if (!isSketchEntityDisplayed(sketch, element.kind, element.index)) return;
+    if (!isSketchEntityDisplayed(sketch, element.kind, element.index)
+        && !(isHiddenSketchReference(sketch, element.kind, element.index) && sketchSelections_.contains(element))) return;
     if (element.kind == 0 && element.index >= 0 && element.index < sketch.segments.size()) {
         const auto &segment = sketch.segments.at(element.index);
         const QVector<QPointF> points = projectSketchPolyline({segment.first, segment.second}, sketch);
@@ -667,7 +669,7 @@ void CadViewport::drawSelectionHighlight() {
     drawFilletRadiusHandles(painter);
     drawSelectionBox(painter);
     if (sketchMode_ && activeSketch_ >= 0 && activeSketch_ < sketches_.size()) {
-        if (drawingTool_ == DrawingTool::Select || drawingTool_ == DrawingTool::Dimension) {
+        if (drawingTool_ == DrawingTool::Dimension) {
             int kind = -1, index = -1;
             if (findSketchElement(cursorSketchPoint_).kind < 0 && pickSketchReferencePlaneAxis(lastMousePosition_, kind, index)) {
                 GeometryRef ref;
@@ -675,6 +677,7 @@ void CadViewport::drawSelectionHighlight() {
                 drawGeometryRef(painter, ref, kHoverColor);
             }
         }
+        drawSketchReferenceHover(painter);
         const SketchObject &sketch = sketches_.at(activeSketch_);
         if (sketchHover_.kind >= 0 && !sketchSelections_.contains(sketchHover_))
             highlightSketchElement(painter, sketch, sketchHover_, kHoverColor);
@@ -1384,6 +1387,9 @@ void CadViewport::drawExtrusions() {
         // smussi la base resta invece opaca sotto la sola patch locale,
         // anche quando e' un operando nascosto di una lavorazione esistente.
         if (!isBodyVisibleInScene(index) || (extrusion.display.vertices.isEmpty() && extrusion.display.edges.isEmpty())) continue;
+        // La base resta interrogabile dal picker dei bordi, ma il risultato
+        // completo ne sostituisce tutte le facce e gli spigoli di display.
+        if (previewing && preview_.valid && preview_.sceneResult && preview_.replaced.contains(index)) continue;
         drawn.append(index);
     }
     // Un solo strato trasparente per pixel: prima trova la superficie piu
@@ -1476,9 +1482,9 @@ void CadViewport::drawPreview() {
     const bool nearestSurface = extrusion || revolution;
     ForgeCad::Gui::SceneRenderer::PreviewStyle style;
     style.displayMode = displayMode_;
-    style.transparent = transparent;
-    style.nearestSurface = nearestSurface;
-    style.xray = blend;
+    style.transparent = transparent && !preview_.sceneResult;
+    style.nearestSurface = nearestSurface && !preview_.sceneResult;
+    style.xray = blend && !preview_.sceneResult;
     style.spatial = preview_.definition.feature == BodyFeature::SpatialSketch
                  || preview_.definition.feature == BodyFeature::ExtractedCurve;
     style.thread = preview_.definition.feature == BodyFeature::Thread;
@@ -1490,6 +1496,9 @@ void CadViewport::drawPreview() {
         style.retainedColor = base >= 0 && base < extrusions_.size() ? meshColorForFeature(base) : QColor::fromRgbF(0.25, 0.65, 0.90);
     }
     sceneRenderer_.drawFeaturePreview(displayCache_, overlayRenderer_, display, retained, style);
+    if (!previewDragVisible_)
+        for (const auto &part : preview_.additionalDisplays)
+            sceneRenderer_.drawFeaturePreview(displayCache_, overlayRenderer_, part, {}, style);
 }
 
 void CadViewport::drawExportMeshPreview() {

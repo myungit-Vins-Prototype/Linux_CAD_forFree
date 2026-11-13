@@ -1,5 +1,23 @@
 # Strumenti e riferimenti dello schizzo
 
+## Polilinea, cerchio e arco per tre punti
+
+**Polilinea** sostituisce **Linea** in menu, ribbon e toolbar: ogni clic dopo il primo
+aggiunge un segmento collegato e prosegue dal suo estremo. Esc termina il disegno;
+resta disponibile la linea di costruzione. I vecchi comandi personalizzati Linea
+attivano la Polilinea. I valori dei tipi nei documenti esistenti non cambiano.
+
+**Cerchio per tre punti**, accanto al cerchio da centro e raggio, usa tre punti
+distinti sulla circonferenza. Dopo il secondo punto mostra l'anteprima; se il terzo
+e' allineato ai primi due, resta in attesa di un punto valido. Il risultato e' un
+cerchio analitico ordinario, quotabile ed estrudibile; Undo/Redo agiscono sull'intero
+cerchio. Il centro calcolato non riceve vincoli automatici.
+
+L'anteprima di **Arco per tre punti** non mostra il segmento di raggio ne' la misura R;
+restano angolo e lunghezza dell'arco. Le quote di raggio aggiunte esplicitamente
+alle geometrie restano disponibili.
+
+
 I comandi **Asola** e **Punto** si trovano in **Schizzo → Strumento geometrico**,
 nella scheda Schizzo della ribbon e nella toolbar di disegno.
 
@@ -71,6 +89,32 @@ normalmente; **Ctrl + clic** sceglie un punto. Piani e assi visibili sono
 riferimenti utilizzabili anche dall'albero. L'origine del modello viene
 proiettata correttamente anche su schizzi con sistema locale traslato.
 
+I suggerimenti associativi compaiono soltanto durante un comando attivo:
+Polilinea, Spline, Cerchio e gli altri strumenti mostrano la sorgente dello
+snap; **Quota** mostra la proiezione del bordo o la sezione della faccia con
+il piano dello schizzo. In **Selezione** il solo passaggio del mouse non
+propone né evidenzia riferimenti associativi. Se hai già scelto un punto o un elemento
+locale, elenca i vincoli compatibili. Il clic mantiene la selezione locale e
+sceglie un solo riferimento; applica poi il vincolo dal pannello **Vincoli**.
+**Ctrl + clic** permette anche di scegliere il centro di un cerchio. Le entità
+locali visibili hanno priorità quando sono sovrapposte alla geometria esterna.
+Il riferimento scelto viene evidenziato; il passaggio del mouse non crea
+vincoli. Se la faccia non produce una sezione utilizzabile, il badge ne indica
+la ragione. La scelta esplicita è disponibile anche con gli snap disattivati.
+
+Sulle parti raggiate puoi usare anche il **contorno apparente**: il bordo estremo
+visibile della superficie curva, anche dove non esiste uno spigolo reale. Si
+proietta sul piano dello schizzo lungo la normale del piano, anche quando
+il piano è esterno al corpo. Non richiede un'intersezione tra piano e faccia.
+In Polilinea e negli altri comandi di disegno passa sul bordo estremo per
+agganciarlo; in **Quota** scegli l'entità locale e il contorno proiettato.
+Il badge riporta **Contorno apparente della faccia F… di …**, con la sorgente.
+Il collegamento segue le variazioni della faccia, compreso il raggio, e usa
+un solo riferimento per la stessa faccia e lo stesso ramo. Il formato `.prt`
+**69** conserva questa distinzione; le versioni precedenti restano leggibili.
+Sono supportati cilindri, coni, sfere e i meridiani dei tori in vista laterale;
+le superfici libere e i contorni toroidali obliqui richiedono un'estensione.
+
 Gli attraversamenti degli spigoli con il piano dello schizzo forniscono punti
 **Pierce** esatti. Resta disponibile **Pierce su superficie** per vincolare un
 punto alla sezione di una faccia. **Converti** e **Sezione** conservano ora
@@ -93,7 +137,24 @@ salvataggio, riapertura e Undo/Redo conservano collegamento e visibilità.
 Per recuperare una conversione di costruzione nascosta salvata nei formati
 57–59, selezionare nuovamente la stessa sorgente con **Converti**: il riferimento
 esistente torna visibile senza duplicare la geometria o perdere i vincoli. Un vertice coincidente inizialmente con l'origine
-conserva il collegamento alla parte, evitando un secondo blocco sull'origine.
+segue la scelta del badge: con snap Origine attivo usa soltanto l'origine locale;
+con Origine disattivato conserva il collegamento alla parte.
+
+Il badge indica la sorgente e il ruolo del riferimento (per esempio centro,
+quadrante o punto medio), con nome della funzione/schizzo e identificatore
+dell'entita'. Alla conferma si assegna un solo aggancio al punto mostrato:
+l'origine locale ha precedenza su centri ed estremi sovrapposti. Per scegliere
+esplicitamente una sorgente sovrapposta all'origine si puo' disattivare lo snap
+Origine. Uno snap **Intersezione** conserva invece le due curve necessarie.
+
+Se una sorgente viene eliminata o diventa irrisolvibile, l'errore elenca il nome
+conservato della sorgente e i numeri/tipi dei vincoli coinvolti. La storyboard
+segnala lo schizzo e mostra il dettaglio nel suggerimento; nel pannello Vincoli
+le voci interessate sono segnate **ROTTO**, distinguibili da quelle sane. Si
+possono selezionare ed eliminare soltanto quei vincoli per ricrearli. Il formato
+`.prt` **68** conserva i nomi anche dopo salvataggio e riapertura; legge i
+formati precedenti. Per riferimenti gia' eliminati in file precedenti senza
+nome conservato, resta disponibile l'identita' persistente della sorgente.
 
 Un riferimento deve precedere lo schizzo nella storia. La cancellazione
 della sorgente, una sorgente non disponibile o un cambio di topologia che

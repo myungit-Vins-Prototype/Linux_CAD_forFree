@@ -1,4 +1,5 @@
 #include "cad_datum.h"
+#include "cad_sketch_apparent.h"
 #include "cad_features.h"
 #include "cad_spatial_sketch.h"
 
@@ -545,6 +546,8 @@ QString geometryRefText(const GeometryRef &ref, const QVector<SketchObject> &ske
         return i >= 0 && i < bodies.size() ? bodies.at(i).name : QStringLiteral("?");
     };
     const auto sketchName = [&](int i) { return i >= 0 && i < sketches.size() ? sketches.at(i).name : QStringLiteral("?"); };
+    if (isSketchApparentReference(ref))
+        return QStringLiteral("Contorno apparente della faccia F%1 di %2").arg(ref.point.subshape).arg(bodyName(ref.index));
     if (ref.kind == 11) return QStringLiteral("Sezione di %1").arg(
         ref.index >= 0 && ref.index < bodies.size() ? bodies[ref.index].name : QStringLiteral("corpo eliminato"));
     switch (ref.kind) {

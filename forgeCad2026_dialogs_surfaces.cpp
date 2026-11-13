@@ -471,7 +471,8 @@ bool loftDialog(QWidget *parent, CadViewport *viewport, const QString &title, in
     pickGuides->setObjectName(QStringLiteral("loftPickGuides"));
     auto *pickStatus = new FunctionMessage(QStringLiteral("Spunta gli schizzi interi oppure scegli bordi e curve nella vista; un secondo clic li toglie."), &dialog);
     const auto influence = [&](double value) {
-        auto *spin = new QDoubleSpinBox(&dialog);
+        auto *spin = new ForgeCad::ExpressionSpinBox(&dialog);
+        spin->setLengthMeasurement(false);
         spin->setRange(0.0, 100.0);
         spin->setSuffix(QStringLiteral(" %"));
         spin->setDecimals(0);

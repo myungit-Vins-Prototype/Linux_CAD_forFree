@@ -13,6 +13,81 @@ namespace {
 double distance(const QPointF &a, const QPointF &b) { return std::hypot(b.x() - a.x(), b.y() - a.y()); }
 }
 
+PointAttachment pointAttachment(const QPointF &point, const SketchObject &local,
+                                const SketchObject &external, double tolerance, bool origin,
+                                const QVector<ConstraintRef> &excluded) {
+    if (origin && distance(point, {}) <= tolerance)
+        return {{2,0,-1}, ConstraintType::Coincident, 0.0, -1, false};
+    PointAttachment result;
+    double bestDistance=tolerance;
+    const auto append = [&](const SketchObject &sketch, bool isExternal) {
+        if (result.priority==0) return;
+        const auto skip = [&](int kind, int element) {
+            if (isExternal) return false;
+            for (const auto &ref : excluded)
+                if (ref.kind == kind && ref.element == element) return true;
+            return false;
+        };
+        const auto consider = [&](ConstraintRef ref, ConstraintType type, double d, int priority, double value = 0.0) {
+            if (d > tolerance) return;
+            // A parita' di tipo vince il punto piu vicino; a pari distanza resta il primo.
+            if (priority > result.priority || (priority==result.priority && d>=bestDistance)) return;
+            bestDistance=d;
+            result = {ref, type, value, priority, isExternal};
+        };
+        for (int i = 0; i < sketch.segments.size(); ++i) {
+            if (skip(0,i)) continue;
+            const auto &s = sketch.segments[i];
+            consider({0,i,0},ConstraintType::Coincident,distance(point,s.first),0);
+            consider({0,i,1},ConstraintType::Coincident,distance(point,s.second),0);
+            consider({0,i,-1},ConstraintType::Midpoint,distance(point,(s.first+s.second)*0.5),2);
+            const QPointF d=s.second-s.first;
+            const double d2=QPointF::dotProduct(d,d);
+            if (d2>0.0) {
+                const double t=qBound(0.0,QPointF::dotProduct(point-s.first,d)/d2,1.0);
+                consider({0,i,-1},ConstraintType::PointOnCurve,distance(point,s.first+t*d),3);
+            }
+        }
+        for (int i = 0; i < sketch.curves.size(); ++i) {
+            if (skip(1,i)) continue;
+            const auto &curve=sketch.curves[i];
+            for (int k=0;k<curve.controlPoints.size();++k) {
+                if ((curve.tool==DrawingTool::Circle || curve.tool==DrawingTool::Polygon) && k>0) continue;
+                if (curve.tool==DrawingTool::Converted && k!=0 && k!=curve.controlPoints.size()-1) continue;
+                consider({1,i,k},ConstraintType::Coincident,distance(point,curve.controlPoints[k]),0);
+            }
+            for (const auto &q:curveQuadrants(curve))
+                consider({1,i,-1},ConstraintType::Quadrant,distance(point,q.second),1,q.first);
+            if (curve.tool==DrawingTool::Polygon || result.priority<3) continue;
+            try {
+                for (const auto &span:curveGeometry(curve))
+                    consider({1,i,-1},ConstraintType::PointOnCurve,
+                        Kernel::projectPoint(*span.curve,{point.x(),point.y()},span.range).distance,3);
+            } catch (const std::exception &) { /* geometria ancora incompleta */ }
+        }
+    };
+    append(local,false); append(external,true);
+    return result;
+}
+
+ConstraintRef resolvePointAttachment(SketchObject &sketch, const PointAttachment &attachment,
+                                     const SketchObject &external, const QVector<SketchObject> &sketches,
+                                     const QVector<ExtrusionObject> &bodies) {
+    const ConstraintRef target=attachment.target;
+    if (!attachment.external) return target;
+    for (const auto &link:external.linkedReferences) if (link)
+        for (int k=0;k<link->entities.size();++k) {
+            const auto &entity=link->entities[k];
+            if (entity.kind!=target.kind || entity.element!=target.element) continue;
+            QVector<SketchEntity> created;
+            if (appendLinkedSketchReference(sketch,link->source,sketches,bodies,link->contact,
+                link->construction,link->halfLength,&created).isEmpty() && k<created.size())
+                return {target.kind,created[k].index,target.point};
+            return {};
+        }
+    return {};
+}
+
 IntersectionSnap snapIntersection(const QPointF &point, const SketchObject &local,
                                   const SketchObject &external, double tolerance,
                                   const QVector<ConstraintRef> &excluded) {

@@ -301,11 +301,11 @@ struct PdfWindow::WindowSetup {
     QAction * spatialSketchAction{};
     QAction * faceSketchAction{};
     QAction * selectTool{};
-    QAction * lineTool{};
     QAction * polylineTool{};
     QAction * splineTool{};
     QAction * nurbsTool{};
     QAction * circleTool{};
+    QAction * threePointCircleTool{};
     QAction * arcTool{};
     QAction * threePointArcTool{};
     QAction * tangentArcTool{};
@@ -2796,11 +2796,11 @@ void PdfWindow::initializeSketchCommands(WindowSetup &setup) {
     auto &spatialSketchAction = setup.spatialSketchAction;
     auto &faceSketchAction = setup.faceSketchAction;
     auto &selectTool = setup.selectTool;
-    auto &lineTool = setup.lineTool;
     auto &polylineTool = setup.polylineTool;
     auto &splineTool = setup.splineTool;
     auto &nurbsTool = setup.nurbsTool;
     auto &circleTool = setup.circleTool;
+    auto &threePointCircleTool = setup.threePointCircleTool;
     auto &arcTool = setup.arcTool;
     auto &threePointArcTool = setup.threePointArcTool;
     auto &tangentArcTool = setup.tangentArcTool;
@@ -2858,7 +2858,7 @@ void PdfWindow::initializeSketchCommands(WindowSetup &setup) {
         const QString error = viewport->createSketchOnSelectedFace(QStringLiteral("Schizzo %1").arg(viewport->sketches().size() + 1));
         if (!error.isEmpty()) QMessageBox::information(this, QStringLiteral("Schizzo sulla faccia"), error);
     });
-    QAction *sketchAction = sketchMenu->addAction(QStringLiteral("Disegna segmenti"));
+    QAction *sketchAction = sketchMenu->addAction(QStringLiteral("Disegna polilinea"));
     auto *toolMenu = addCadMenu(sketchMenu, QStringLiteral("Strumento geometrico"));
     auto *toolGroup = new QActionGroup(this); toolGroup->setExclusive(true);
     auto addTool = [this, toolMenu, toolGroup, viewport](const QString &text, DrawingTool tool, bool checked) {
@@ -2873,8 +2873,8 @@ void PdfWindow::initializeSketchCommands(WindowSetup &setup) {
         for (QAction *action : toolGroup->actions())
             if (action->data().isValid() && action->data().toInt() == int(tool)) action->setChecked(true);
     });
-    lineTool = addTool(QStringLiteral("Linea"), DrawingTool::Line, false);
     polylineTool = addTool(QStringLiteral("Polilinea"), DrawingTool::Polyline, false);
+    ForgeCad::migrateSketchToolCommands();
     splineTool = addTool(QStringLiteral("Spline"), DrawingTool::Spline, false);
     auto *splineOptionsMenu = addCadMenu(toolMenu, QStringLiteral("Opzioni spline"));
     auto *uniformSpline = splineOptionsMenu->addAction(QStringLiteral("Uniforma la curvatura (C2)"));
@@ -2894,6 +2894,8 @@ void PdfWindow::initializeSketchCommands(WindowSetup &setup) {
                                         "per curve esistenti: Selezione, clic destro > Modifica punti e maniglie"));
     nurbsTool = addTool(QStringLiteral("NURBS"), DrawingTool::Nurbs, false);
     circleTool = addTool(QStringLiteral("Cerchio"), DrawingTool::Circle, false);
+    threePointCircleTool = addTool(QStringLiteral("Cerchio per tre punti"), DrawingTool::ThreePointCircle, false);
+    threePointCircleTool->setToolTip(QStringLiteral("Cerchio passante per tre punti distinti e non allineati"));
     arcTool = addTool(QStringLiteral("Arco (centro, inizio, fine)"), DrawingTool::Arc, false);
     threePointArcTool = addTool(QStringLiteral("Arco per tre punti"), DrawingTool::ThreePointArc, false);
     threePointArcTool->setToolTip(QStringLiteral("Arco per tre punti: inizio, fine, poi un punto dell'arco"));
@@ -3106,6 +3108,11 @@ void PdfWindow::initializeSketchCommands(WindowSetup &setup) {
             *refreshingPanel = false;
             return;
         }
+        QStringList referenceErrors;
+        if(!sketch->supportError.isEmpty())referenceErrors.append(sketch->supportError);
+        if(!sketch->referenceError.isEmpty())referenceErrors.append(sketch->referenceError);
+        panelError->setText(referenceErrors.join(QLatin1Char('\n')));
+        panelError->setVisible(!referenceErrors.isEmpty());
         const QVector<ConstraintRef> refs = viewport->constraintSelection();
         QStringList names;
         for (const ConstraintRef &ref : refs) names.append(ForgeCad::describeRef(*sketch, ref));
@@ -3142,8 +3149,15 @@ void PdfWindow::initializeSketchCommands(WindowSetup &setup) {
                     related = related || (ref.kind == 2 ? (c.first == ref || c.second == ref) : ForgeCad::refersTo(c, ref.kind, ref.element));
                 if (!related) continue;
             }
-            auto *item = new QListWidgetItem(ForgeCad::describeConstraint(*sketch, c), constraintList);
+            auto *item = new QListWidgetItem(QStringLiteral("%1. %2").arg(index+1).arg(ForgeCad::describeConstraint(*sketch, c)), constraintList);
             item->setData(Qt::UserRole, index);
+            QStringList errors;
+            for(const auto &link:sketch->linkedReferences) if(link && !link->error.isEmpty())
+                for(const auto &entity:link->entities) if(ForgeCad::refersTo(c,entity.kind,entity.element)) {
+                    errors.append(link->error);break;
+                }
+            item->setToolTip(errors.join(QLatin1Char('\n')));
+            if(!errors.isEmpty())item->setForeground(QColor(255,100,90));
             if (ForgeCad::constraintError(*sketch, c) > 1e-7) item->setForeground(QColor(255, 140, 90));
             item->setSelected(selected.contains(index));
         }
@@ -3230,7 +3244,7 @@ void PdfWindow::initializeSketchCommands(WindowSetup &setup) {
         const QString selected = QInputDialog::getItem(this, QStringLiteral("Nuovo schizzo"), QStringLiteral("Seleziona il piano:"), names, 0, false, &accepted);
         if (accepted) (*createSketchOnPlane)(names.indexOf(selected));
     });
-    connect(sketchAction, &QAction::triggered, this, [viewport] { viewport->setDrawingTool(DrawingTool::Line); });
+    connect(sketchAction, &QAction::triggered, this, [viewport] { viewport->setDrawingTool(DrawingTool::Polyline); });
     connect(polygonSidesAction, &QAction::triggered, this, [this, viewport] {
         bool accepted = false;
         const int sides = QInputDialog::getInt(this, QStringLiteral("Poligono"),
@@ -3375,11 +3389,11 @@ void PdfWindow::initializeToolbarsAndStatus(WindowSetup &setup) {
     auto &spatialSketchAction = setup.spatialSketchAction;
     auto &faceSketchAction = setup.faceSketchAction;
     auto &selectTool = setup.selectTool;
-    auto &lineTool = setup.lineTool;
     auto &polylineTool = setup.polylineTool;
     auto &splineTool = setup.splineTool;
     auto &nurbsTool = setup.nurbsTool;
     auto &circleTool = setup.circleTool;
+    auto &threePointCircleTool = setup.threePointCircleTool;
     auto &arcTool = setup.arcTool;
     auto &threePointArcTool = setup.threePointArcTool;
     auto &tangentArcTool = setup.tangentArcTool;
@@ -3447,9 +3461,9 @@ void PdfWindow::initializeToolbarsAndStatus(WindowSetup &setup) {
         {resetZoomAction, QStringLiteral("zoomAll")}, {sectionAction, QStringLiteral("section")},
         {modeMenu->actions().at(0), QStringLiteral("displayWireframe")}, {modeMenu->actions().at(1), QStringLiteral("displayShaded")},
         {modeMenu->actions().at(2), QStringLiteral("displayShadedEdges")},
-        {selectTool, QStringLiteral("select")}, {lineTool, QStringLiteral("line")}, {polylineTool, QStringLiteral("polyline")},
+        {selectTool, QStringLiteral("select")}, {polylineTool, QStringLiteral("polyline")},
         {constructionTool, QStringLiteral("constructionLine")}, {splineTool, QStringLiteral("spline")}, {nurbsTool, QStringLiteral("nurbs")},
-        {circleTool, QStringLiteral("circle")}, {arcTool, QStringLiteral("arcCenter")}, {threePointArcTool, QStringLiteral("arcThreePoint")},
+        {circleTool, QStringLiteral("circle")}, {threePointCircleTool, QStringLiteral("circleThreePoint")}, {arcTool, QStringLiteral("arcCenter")}, {threePointArcTool, QStringLiteral("arcThreePoint")},
         {tangentArcTool, QStringLiteral("arcTangent")}, {polygonTool, QStringLiteral("polygon")}, {polygonSidesAction, QStringLiteral("polygonSides")},
         {slotTool, QStringLiteral("slot")}, {pointTool, QStringLiteral("point")}, {rectangleTool, QStringLiteral("rectangle")}, {centerRectangleTool, QStringLiteral("centerRectangle")}, {ellipseTool, QStringLiteral("ellipse")},
         {trimTool, QStringLiteral("trim")}, {extendTool, QStringLiteral("extend")}, {splitTool, QStringLiteral("split")},
@@ -3692,12 +3706,11 @@ void PdfWindow::initializeToolbarsAndStatus(WindowSetup &setup) {
     drawingToolbar->addAction(exitSketch); drawingToolbar->addAction(sketchNormalView); drawingToolbar->addSeparator();
     drawingToolbar->addAction(undoAction_); drawingToolbar->addAction(redoAction_); drawingToolbar->addSeparator();
     drawingToolbar->addAction(selectTool); drawingToolbar->addSeparator();
-    flyout(drawingToolbar, {lineTool, constructionTool}, QStringLiteral("Linee: la freccia per le altre"));
-    drawingToolbar->addAction(polylineTool);
+    flyout(drawingToolbar, {polylineTool, constructionTool}, QStringLiteral("Polilinea e linea di costruzione"));
     drawingToolbar->addAction(slotTool);
     drawingToolbar->addAction(pointTool);
     flyout(drawingToolbar, {rectangleTool, centerRectangleTool}, QStringLiteral("Rettangoli: la freccia per gli altri"));
-    drawingToolbar->addAction(circleTool);
+    flyout(drawingToolbar, {circleTool, threePointCircleTool}, QStringLiteral("Cerchi: centro e raggio oppure tre punti"));
     flyout(drawingToolbar, {arcTool, threePointArcTool, tangentArcTool}, QStringLiteral("Archi: la freccia per gli altri"));
     flyout(drawingToolbar, {polygonTool, polygonSidesAction}, QStringLiteral("Poligono: la freccia per il numero di lati"));
     drawingToolbar->addAction(ellipseTool);
@@ -4679,7 +4692,11 @@ void PdfWindow::rebuildModelTree() {
         sketchItems.insert(index, item);
         item->setFlags(item->flags() | Qt::ItemIsDragEnabled | Qt::ItemIsDropEnabled);
         item->setToolTip(0, sketch.supportError.isEmpty() ? QStringLiteral("Passo autonomo: modifica il piano o sposta lo schizzo nella storia.") : sketch.supportError);
-        if (!sketch.supportError.isEmpty()) item->setForeground(0, QColor(255,150,90));
+        if (!sketch.referenceError.isEmpty()) {
+            item->setText(0,item->text(0)+QStringLiteral(" ⚠ Riferimenti rotti"));
+            item->setToolTip(0,sketch.referenceError+(sketch.supportError.isEmpty()?QString():QLatin1Char('\n')+sketch.supportError));
+        }
+        if (!sketch.supportError.isEmpty() || !sketch.referenceError.isEmpty()) item->setForeground(0, QColor(255,150,90));
         item->setIcon(0, ForgeCad::commandIcon(QStringLiteral("newSketch")));
         if ((selection.kind == SceneObjectKind::Sketch && selection.index == index)
             || viewport_->activeSketchIndex() == index) modelTree_->setCurrentItem(item);
