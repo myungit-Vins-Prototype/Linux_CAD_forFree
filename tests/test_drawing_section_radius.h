@@ -16,7 +16,7 @@ void drawingSectionRadiusTests(){
    if(auto *line=qgraphicsitem_cast<QGraphicsLineItem*>(i)){const auto p=line->line().p1(),q=line->line().p2();const auto delta=b-a;const double squared=QPointF::dotProduct(delta,delta);const auto on=[&](QPointF point){const double t=QPointF::dotProduct(point-a,delta)/squared;return t>=-1e-8&&t<=1+1e-8&&QLineF(a+t*delta,point).length()<1e-6;};if(on(p)&&on(q))centerLength+=line->line().length();}
   }require(arrows==1,"una sola freccia per il raggio");QPainterPath internal;internal.moveTo(a);internal.lineTo(b);QGraphicsItem *label=nullptr;for(auto *item:editor.canvas()->scene()->items())if(item->data(0).toString()=="dimension"&&item->data(3).toUuid()==dim.id)label=item;near(centerLength,external?0:drawingDimensionStroke(internal,drawingDimensionTextMask(label)).length(),"richiamo esterno senza linea interna; quota interna ritagliata solo sotto il proprio testo");return path;
  };
- const auto finalArrow=radial(e,false);require(finalArrow.elementCount()==previewArrow.elementCount(),"stessa freccia in anteprima e dopo inserimento");
+ const auto finalArrow=radial(e,true);require(finalArrow.elementCount()==previewArrow.elementCount(),"stessa freccia in anteprima e dopo inserimento");
  for(int i=0;i<finalArrow.elementCount();++i){near(finalArrow.elementAt(i).x,previewArrow.elementAt(i).x,"freccia senza salto orizzontale al clic");near(finalArrow.elementAt(i).y,previewArrow.elementAt(i).y,"freccia senza salto verticale al clic");}
  QPointF labelCenter;for(auto *i:e.canvas()->scene()->items())if(i->data(0).toString()=="dimension"&&i->data(3).toUuid()==dim.id)labelCenter=i->sceneBoundingRect().center()-i->pos();
  ok(e.moveDimension(dim.id,outside-labelCenter));radial(e,true);const auto saved=encoded(e);

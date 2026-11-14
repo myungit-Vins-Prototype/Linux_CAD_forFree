@@ -1,3 +1,4 @@
+#include "cad_drawing_local_section.h"
 #include "cad_drawing_dimension.h"
 #include "fk_curve_algo.h"
 #include "fk_bspline_surface.h"
@@ -294,6 +295,7 @@ QString validateDrawingAttachments(const DrawingDimension &d,const DrawingView &
     }catch(const std::exception &e){return QString::fromUtf8(e.what());}
 }
 DrawingAttachment drawingAttachment(const DrawingView &view,const DrawingCurve &curve,const DrawingModelSnapshot &model,DrawingPointRole role,double parameter){
+    if(view.localSection&&curve.kind==DrawingCurveKind::Section)return drawingAttachment(drawingLocalSectionPlane(view),curve,model,role,parameter);
     DrawingAttachment ref;ref.curve=dimensionOfCurve(view,curve).section;ref.role=role;need(!drawingDatum(role),"Usare un riferimento del piano senza curva.");
     if(std::isfinite(parameter))need(parameter>=curve.range.lo&&parameter<=curve.range.hi,"Parametro dell'aggancio fuori dalla curva.");
     const auto &source=sourceFor(model,curve.featureId);setCurveSupport(source,curve,ref);const auto primitive=drawingPrimitive(view,curve);
@@ -320,7 +322,7 @@ DrawingAttachment drawingAttachment(const DrawingView &view,const DrawingCurve &
     return ref;
 }
 DrawingResolvedAttachment resolveDrawingAttachment(const DrawingView &view,const DrawingModelSnapshot &model,const std::vector<DrawingCurve> &curves,const DrawingAttachment &ref,const DrawingAttachmentResolver &axes){
-    try{return !ref.axisId.isNull()&&axes?axes(ref):resolve(view,model,curves,ref);}catch(const ReferenceError &e){DrawingResolvedAttachment out;out.status=e.status;out.message=e.message;return out;}catch(const std::exception &e){DrawingResolvedAttachment out;out.message=QString::fromUtf8(e.what());return out;}
+    try{return !ref.axisId.isNull()&&axes?axes(ref):resolve(view.localSection&&ref.curve.kind==DrawingCurveKind::Section&&!drawingDatum(ref.role)?drawingLocalSectionPlane(view):view,model,curves,ref);}catch(const ReferenceError &e){DrawingResolvedAttachment out;out.status=e.status;out.message=e.message;return out;}catch(const std::exception &e){DrawingResolvedAttachment out;out.message=QString::fromUtf8(e.what());return out;}
 }
 namespace {
 DrawingResolvedAttachment resolved(const DrawingView &view,const DrawingModelSnapshot &model,const std::vector<DrawingCurve> &curves,const DrawingAttachment &ref,const DrawingAttachmentResolver &axes){

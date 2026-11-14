@@ -2464,6 +2464,13 @@ static void solidTrims() {
         require(pool->waitForDone(10000), "background pool initially idle");
         const int previousLimit = pool->maxThreadCount();
         pool->setMaxThreadCount(1);
+        // Il riuso pronto non avvia piu' un worker ne' crea un timer.
+        // Qui serve una vera modifica per esercitare la consegna asincrona.
+        const auto changedDefinition = [](const CadViewport &view) {
+            auto definition = view.extrusions().first();
+            definition.primitive.size[0] += 1;
+            return definition;
+        };
         for (bool destroy : {false, true}) {
             auto viewport = std::make_unique<CadViewport>();
             PrimitiveParameters primitive;
@@ -2474,7 +2481,7 @@ static void solidTrims() {
             QSemaphore entered, release;
             pool->start([&] { entered.release(); release.acquire(); });
             entered.acquire();
-            viewport->requestPreview(viewport->extrusions().first(), 0);
+            viewport->requestPreview(changedDefinition(*viewport), 0);
             viewport->startPreviewJob();
             viewport->previewTimer_->stop();
             viewport->setFeatureHighlights({0});
@@ -2500,7 +2507,7 @@ static void solidTrims() {
             entered.acquire();
             int finished = 0;
             viewport.workCallback_ = [&](bool active, const QString &, bool) { if (!active) ++finished; };
-            viewport.requestPreview(viewport.extrusions().first(), 0);
+            viewport.requestPreview(changedDefinition(viewport), 0);
             viewport.startPreviewJob();
             const auto token = viewport.previewCancellation_;
             viewport.clearPreview();
@@ -2511,7 +2518,7 @@ static void solidTrims() {
             QCoreApplication::processEvents();
             require(!viewport.previewRunning_ && !viewport.previewCancellation_, "cancelled preview releases job state");
             require(!viewport.preview_.valid && !viewport.preview_.geometry && finished == 1, "cancelled result is discarded and progress closes");
-            viewport.requestPreview(viewport.extrusions().first(), 0);
+            viewport.requestPreview(changedDefinition(viewport), 0);
             viewport.startPreviewJob();
             viewport.previewTimer_->stop();
             require(pool->waitForDone(10000), "preview restarts after cancellation");

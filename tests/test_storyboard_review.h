@@ -1,6 +1,8 @@
 #pragma once
 
 #include "test_storyboard_merge_chain.h"
+#include "test_sketch_support.h"
+#include "test_feature_faces.h"
 
 // Incluso nel friend ViewportInteractionTest. Le prove riguardano identita'
 // e dipendenze del documento, senza richiedere un contesto OpenGL.
@@ -115,6 +117,8 @@ static void storyboardIncrementalRegressions() {
 }
 
 static void storyboardReviewRegressions() {
+    sketchSupportRegressions();
+    featureFaceSearchRegressions();
     storyboardMergedChainRegressions();
     storyboardIncrementalRegressions();
     using namespace ForgeCad;

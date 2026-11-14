@@ -1442,6 +1442,53 @@ std::map<QString, Draw> &registry() {
         for(int i=0;i<3;++i)line(p,{15.,double(12+4*i)},{19.,double(8+4*i)},stroke(c.construction,.8));
         line(p,{6,3},{6,22},stroke(c.accent,1.4,Qt::DashDotLine));line(p,{6,3},{12,3},stroke(c.accent,1.3));arrowHead(p,{12,3},{6,3},c.accent,2.5);
     };
+    icons["drawingSteppedSection"]=[](QPainter &p,const IconPalette &c){
+        p.setPen(stroke(c.ink,1.2));p.setBrush(Qt::NoBrush);p.drawRect(QRectF(3,4,18,16));
+        p.setPen(stroke(c.accent,1.6,Qt::DashDotLine));p.drawPolyline(QPolygonF({{2,9},{10,9},{10,15},{22,15}}));
+        line(p,{2,9},{2,3},stroke(c.accent,1.3));arrowHead(p,{2,3},{2,9},c.accent,2.8);line(p,{22,15},{22,21},stroke(c.accent,1.3));arrowHead(p,{22,21},{22,15},c.accent,2.8);
+    };
+    icons["drawingAlignedSection"]=[](QPainter &p,const IconPalette &c){
+        p.setPen(stroke(c.ink,1.2));p.setBrush(Qt::NoBrush);p.drawEllipse(QPointF(12,12),8,8);
+        p.setPen(stroke(c.accent,1.6,Qt::DashDotLine));p.drawPolyline(QPolygonF({{2,18},{12,12},{12,2}}));
+        line(p,{2,18},{5,23},stroke(c.accent,1.3));arrowHead(p,{5,23},{2,18},c.accent,2.8);line(p,{12,2},{19,2},stroke(c.accent,1.3));arrowHead(p,{19,2},{12,2},c.accent,2.8);
+    };
+    icons["drawingLocalSection"]=[](QPainter &p,const IconPalette &c){
+        p.setPen(stroke(c.ink,1.3));p.setBrush(c.faceLight);p.drawRect(QRectF(3,4,18,16));
+        QPainterPath area({3,4});area.lineTo(13,4);area.cubicTo(8,8,17,10,12,13);area.cubicTo(8,16,14,17,11,20);area.lineTo(3,20);area.closeSubpath();
+        p.save();p.setClipPath(area);for(int x=-16;x<24;x+=4)line(p,{double(x),22},{double(x+18),2},stroke(c.construction,.9));p.restore();p.setPen(stroke(c.accent,1.5));p.setBrush(Qt::NoBrush);p.drawPath(area);
+    };
+    icons["drawingRemoveLocalSection"]=[base=icons["drawingLocalSection"]](QPainter &p,const IconPalette &c){base(p,c);line(p,{16,14},{23,21},stroke(c.remove,2));line(p,{23,14},{16,21},stroke(c.remove,2));};
+    icons["drawingClearCenters"]=[base=icons["drawingCenterMark"]](QPainter &p,const IconPalette &c){base(p,c);line(p,{16,16},{22,22},stroke(c.remove,2));line(p,{22,16},{16,22},stroke(c.remove,2));};
+    for(int mode=0;mode<3;++mode)icons[mode==0?"drawingDimensionNumbering":mode==1?"drawingChangeDimensionNumber":"drawingToggleDimensionNumber"]=[mode,pencil](QPainter &p,const IconPalette &c){
+        p.setPen(stroke(c.ink,1.3));p.setBrush(c.faceLight);p.drawEllipse(QPointF(10,11),7,7);p.setPen(stroke(c.accent,1.6));p.drawPolyline(QPolygonF({{8,8},{10,6},{10,15}}));line(p,{7,15},{13,15},stroke(c.accent,1.5));
+        if(mode==0){p.setPen(stroke(c.construction,1.3));p.drawEllipse(QPointF(19,19),4,4);line(p,{19,17},{19,21},stroke(c.accent,1.2));line(p,{17,19},{21,19},stroke(c.accent,1.2));}
+        else if(mode==1)pencil(p,c);else line(p,{3,21},{21,3},stroke(c.remove,1.8));
+    };
+    for(int mode=0;mode<3;++mode)icons[mode==0?"drawingRepairDimension":mode==1?"drawingRepairFirstReference":"drawingRepairSecondReference"]=[mode](QPainter &p,const IconPalette &c){
+        line(p,{3,17},{8,12},stroke(c.ink,1.6));line(p,{16,12},{21,7},stroke(c.ink,1.6));
+        p.setPen(stroke(c.accent,1.6));p.setBrush(c.faceLight);p.drawEllipse(QPointF(12,12),4,4);line(p,{9,12},{15,12},stroke(c.accent,1.2));
+        square(p,{3,17},c.construction,2);square(p,{21,7},c.construction,2);
+        if(mode){p.setPen(stroke(c.ink,1));QFont f=p.font();f.setPixelSize(9);f.setBold(true);p.setFont(f);p.drawText(QRectF(mode==1?0:16,mode==1?0:15,8,9),Qt::AlignCenter,QString::number(mode));}
+    };
+    for(int mode=0;mode<4;++mode)icons[mode==0?"drawingChainHorizontal":mode==1?"drawingChainVertical":mode==2?"drawingOrdinateX":"drawingOrdinateY"]=[mode](QPainter &p,const IconPalette &c){
+        p.save();if(mode==1||mode==3){p.translate(0,24);p.rotate(-90);}
+        for(double x:{3.,12.,21.})line(p,{x,5},{x,21},stroke(c.construction,1));
+        line(p,{3,10},{21,10},stroke(c.accent,1.4));arrowHead(p,{21,10},{3,10},c.accent,3);
+        if(mode<2){arrowHead(p,{3,10},{21,10},c.accent,3);arrowHead(p,{12,10},{3,10},c.accent,2.5);line(p,{3,18},{21,18},stroke(c.ink,1.3));}
+        else{p.setPen(stroke(c.ink,1.2));p.setBrush(c.faceLight);p.drawEllipse(QPointF(3,10),2,2);line(p,{3,17},{12,17},stroke(c.accent,1.3));arrowHead(p,{12,17},{3,17},c.accent,2.5);}p.restore();
+    };
+    icons["drawingDatum"]=[](QPainter &p,const IconPalette &c){
+        line(p,{2,20},{22,20},stroke(c.ink,1.4));polygon(p,QPolygonF({{12,20},{9,15},{15,15}}),c.accent,stroke(c.accent,1));line(p,{12,15},{12,11},stroke(c.ink,1.2));
+        p.setPen(stroke(c.ink,1.2));p.setBrush(Qt::NoBrush);p.drawRect(QRectF(7,1,10,10));line(p,{9,9},{12,3},stroke(c.accent,1.4));line(p,{12,3},{15,9},stroke(c.accent,1.4));line(p,{10,7},{14,7},stroke(c.accent,1.2));
+    };
+    icons["drawingGeometricTolerance"]=[](QPainter &p,const IconPalette &c){
+        p.setPen(stroke(c.ink,1.3));p.setBrush(Qt::NoBrush);p.drawRect(QRectF(1,5,22,12));line(p,{10,5},{10,17},stroke(c.ink,1));
+        p.drawEllipse(QPointF(5.5,11),2.5,2.5);line(p,{5.5,7},{5.5,15},stroke(c.accent,1));line(p,{2,11},{9,11},stroke(c.accent,1));line(p,{13,11},{20,11},stroke(c.accent,1.7));
+    };
+    icons["drawingSurfaceTexture"]=[](QPainter &p,const IconPalette &c){
+        line(p,{2,20},{22,20},stroke(c.construction,1.1));p.setPen(stroke(c.accent,1.8));p.drawPolyline(QPolygonF({{3,12},{7,20},{16,3},{22,3}}));line(p,{11,12},{22,12},stroke(c.ink,1.2));
+    };
+    icons["drawingTemplate"]=[sheet,pencil](QPainter &p,const IconPalette &c){sheet(p,c);line(p,{5,8},{18,8},stroke(c.construction,1));line(p,{5,12},{12,12},stroke(c.construction,1));pencil(p,c);};
     icons["drawingDetachView"]=[](QPainter &p,const IconPalette &c){
         p.setPen(stroke(c.ink,1.3));p.setBrush(Qt::NoBrush);p.drawRect(QRectF(2,6,6,13));p.drawRect(QRectF(17,6,5,13));
         line(p,{8,12},{11,12},stroke(c.construction,1.6));line(p,{14,12},{17,12},stroke(c.construction,1.6));

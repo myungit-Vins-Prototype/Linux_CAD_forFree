@@ -27,6 +27,9 @@
 // La cache 15 rigenera loft guidati e relativi derivati delle copie di lavoro:
 // nodi comuni senza microcampate da arrotondamento e cuciture quasi tangenti stabili.
 // I check-in mantengono i loro snapshot immutabili.
+// La cache 16 rigenera le ripetizioni/specchi di una funzione e i derivati
+// delle vecchie copie di lavoro: dichiarazioni dei nomi coerenti con la build.
+// Gli stadi indipendenti e i check-in mantengono i propri snapshot.
 // Il formato 50 aggiunge identita' del documento, check-in e base della
 // copia di lavoro; la cache geometrica resta 7. Legge i formati precedenti.
 // Il formato 54 conserva anche i nomi topologici degli appoggi degli schizzi

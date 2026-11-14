@@ -56,7 +56,7 @@ QString layoutDrawingRevisionTable(const DrawingSheet &sheet,const DrawingPageCo
     try{
         if(!sheet.revisionTable.visible){result={};return {};}
         if(sheet.size.width()<195)return QStringLiteral("Foglio troppo stretto per la tabella revisioni.");
-        const auto rows=revisionCells(sheet,context);const double bottom=sheet.size.height()-(sheet.titleBlock.visible?54:26),available=bottom-12;
+        const auto rows=revisionCells(sheet,context);const double bottom=sheet.titleBlock.visible?drawingFrameBounds(sheet).top()-2:sheet.size.height()-26,available=bottom-12;
         for(double font:{2.5,2.3,2.1,1.9,1.7,1.6}){DrawingRevisionTableLayout layout;layout.fontHeight=font;double total=12;
             for(const auto &row:rows){double height=4;for(int column=0;column<5;++column)height=std::max(height,2+wrappedText(nullptr,{0,0,revisionWidths[column]-3,1e6},row[column],font));layout.rowHeights.append(height);total+=height;}
             if(total<=available){layout.rect={sheet.size.width()-185,bottom-total,175,total};result=std::move(layout);return {};}
@@ -69,6 +69,7 @@ void paintDrawingPage(QPainter &painter,const DrawingSheet &sheet,const DrawingP
     painter.save();painter.setPen(QPen(QColor("#222222"),.25));painter.setBrush(Qt::NoBrush);const QRectF frame(10,10,sheet.size.width()-20,sheet.size.height()-20);painter.drawRect(frame);
     paintRevisionTable(painter,sheet,context);
     if(!sheet.titleBlock.visible){text(painter,QRectF(14,sheet.size.height()-21,sheet.size.width()-28,7),sheet.title+QStringLiteral("  |  Quote in mm"),3);painter.restore();return;}
+    if(sheet.titleBlock.customLayout){paintDrawingFrame(painter,sheet,context);painter.restore();return;}
     const QRectF block(frame.right()-175,frame.bottom()-42,175,42);painter.setBrush(Qt::white);painter.drawRect(block);painter.setBrush(Qt::NoBrush);
     const auto line=[&](double x1,double y1,double x2,double y2){painter.drawLine(block.topLeft()+QPointF(x1,y1),block.topLeft()+QPointF(x2,y2));};
     line(0,12,175,12);line(0,23,175,23);line(0,33,175,33);line(105,0,105,23);line(60,23,60,33);line(117,23,117,33);line(60,33,60,42);line(117,33,117,42);

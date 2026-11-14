@@ -1012,7 +1012,7 @@ constexpr quint32 kBodyCacheTag = 0x46434332;  // "FCC2"
 // 9: raccordi ricalcolati sui nodi degli appoggi; derivate laterali corrette.
 // 11: griglie loft senza molteplicita' superflue nei nodi adattivi delle guide.
 // 12: lift G1 cubico indipendente dal grado e raccordi con jet unilaterali.
-constexpr quint32 kBodyCacheVersion = 15;
+constexpr quint32 kBodyCacheVersion = 16;
 constexpr qsizetype kMaxDisplayValues = 200000000;
 
 QByteArray definitionHash(const QByteArray &payload) { return QCryptographicHash::hash(payload, QCryptographicHash::Sha256); }
@@ -1344,9 +1344,26 @@ void applyBodyCache(const QByteArray &compressed, const QByteArray &payload, Doc
     for (quint32 i = 0; i < count; ++i)
         if (!readDeclaredHistory(records[i].declared, int(i), snapshotBodies, histories[i])) return;
     stage("storia");
+    // Cache precedenti: le copie di una funzione potevano perdere le
+    // dichiarazioni delle facce costruite dallo strumento. Il B-rep era
+    // corretto, ma i nomi cambiavano alla riapertura. Rigenerare soltanto
+    // queste feature e i loro derivati, conservando gli altri snapshot.
+    // I check-in mantengono sempre la propria geometria storica.
+    std::vector<bool> rebuildNames(count, false);
+    if (cacheVersion < 16 && state.version.checkinId.isNull()) {
+        for (quint32 i = 0; i < count; ++i) {
+            const auto &feature = snapshotBodies[int(i)];
+            bool rebuild = feature.feature == BodyFeature::Pattern && feature.pattern.featureOnly;
+            if (feature.firstBody >= 0 && feature.firstBody < int(i))
+                rebuild = rebuild || rebuildNames[std::size_t(feature.firstBody)];
+            for (int operand : featureGenealogyOperandIndices(feature, int(i), snapshotBodies))
+                rebuild = rebuild || rebuildNames[std::size_t(operand)];
+            rebuildNames[i] = rebuild;
+        }
+    }
     for (quint32 i = 0; i < count; ++i) {
         ExtrusionObject &body = state.extrusions[int(i)];
-        if (!bodies[i]) continue;
+        if (!bodies[i] || rebuildNames[i]) continue;
         body.forgeBody = std::move(bodies[i]);
         body.solid = !body.forgeBody->isSheet();
         body.error = records[i].error;

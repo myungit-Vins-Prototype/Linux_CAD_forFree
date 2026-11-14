@@ -1,4 +1,5 @@
 #include "cad_drawing_sheet.h"
+#include "cad_drawing_center_selection.h"
 #include "cad_drawing_break.h"
 #include "cad_drawing_annotations.h"
 #include "cad_drawing_derived.h"
@@ -35,6 +36,11 @@ DrawingDocument annotationSupportDocument(const DrawingSheet &sheet){
     for(const auto &note:sheet.annotations)if(note.reference)document.dimensions.push_back(drawingAnnotationSupport(note));
     return document;
 }
+DrawingDocument centerSupportDocument(const DrawingSheet &sheet){
+    auto document=sheet.drawing;document.dimensions.clear();
+    for(const auto &mark:sheet.centerMarks)document.dimensions.push_back(drawingCenterSupport(mark));
+    return document;
+}
 void validate(const DrawingSheet &sheet){
     require(std::isfinite(sheet.scale)&&sheet.scale>=1e-6&&sheet.scale<=1e6,"Scala del foglio non valida.");
     require(!sheet.title.trimmed().isEmpty()&&sheet.title.size()<=256,"Titolo della tavola non valido.");
@@ -43,10 +49,11 @@ void validate(const DrawingSheet &sheet){
     require(sheet.views.size()==qsizetype(sheet.drawing.views.size())&&sheet.dimensions.size()==qsizetype(sheet.drawing.dimensions.size()),"Presentazione del foglio incompleta.");
     ok(validateDrawingStyle(sheet.style));
     ok(validateDrawingDimensionNumbering(sheet.dimensionNumbering,sheet.dimensions.size()));
+    ok(validateDrawingFrame(sheet));
     const auto &block=sheet.titleBlock;
     require(block.code.size()<=128&&block.organization.size()<=128&&block.author.size()<=128&&block.date.size()<=32,"Campi del cartiglio troppo lunghi.");
     for(const auto &field:{block.code,block.organization,block.author,block.date})for(const QChar c:field)require(c.isPrint(),"Il cartiglio contiene caratteri non stampabili.");
-    require(!block.visible||(sheet.size.width()>=195&&sheet.size.height()>=80),"Foglio troppo piccolo per il cartiglio: minimo 195 x 80 mm.");
+    require(!block.visible||block.customLayout||(sheet.size.width()>=195&&sheet.size.height()>=80),"Foglio troppo piccolo per il cartiglio: minimo 195 x 80 mm.");
     require(sheet.revisionTable.notes.size()<=1000,"Troppe annotazioni nella tabella revisioni.");QSet<QUuid> revisions;
     for(const auto &row:sheet.revisionTable.notes){
         require(!row.checkinId.isNull()&&!revisions.contains(row.checkinId)&&row.description.size()<=8192&&row.verifiedBy.size()<=256,"Riga della tabella revisioni non valida.");revisions.insert(row.checkinId);
@@ -71,6 +78,14 @@ void validate(const DrawingSheet &sheet){
     for(const auto &note:sheet.annotations){
         require(!note.id.isNull()&&!axisIds.contains(note.id),"Identita' della nota nulla o duplicata.");axisIds.insert(note.id);
     }
+    require(sheet.centerMarks.size()<=10000,"Troppi centri nella tavola.");
+    for(const auto &mark:sheet.centerMarks){
+        require(!mark.id.isNull()&&!axisIds.contains(mark.id),"Identita' del centro nulla o duplicata.");axisIds.insert(mark.id);
+        const auto layout=std::find_if(sheet.views.cbegin(),sheet.views.cend(),[&](const auto &v){return v.viewId==mark.viewId;});
+        require(layout!=sheet.views.cend()&&mark.reference.axisId.isNull()&&mark.reference.role==DrawingPointRole::Curve
+                &&layout->features.contains(mark.reference.curve.featureId),"Il centro deve riferire una curva della propria vista.");
+    }
+    if(!sheet.centerMarks.isEmpty()){QByteArray checked;ok(encodeDrawingDocument(centerSupportDocument(sheet),checked));}
     const auto documentIds=axisIds;QHash<QUuid,QUuid> axisViews;
     for(const auto &axis:sheet.axes){
         require(!axis.id.isNull()&&!axisIds.contains(axis.id)&&!axis.name.trimmed().isEmpty()&&axis.name.size()<=128,"Identita' o nome dell'asse non validi.");axisIds.insert(axis.id);axisViews.insert(axis.id,axis.viewId);
@@ -168,7 +183,7 @@ QString encodeDrawingSheet(const DrawingSheet &sheet,QByteArray &bytes){
         for(const auto &d:sheet.drawing.dimensions)for(const auto &r:d.references)endpointWitness|=r.endpointWitness.has_value();
         for(const auto &a:sheet.axes)for(const auto &r:a.references)endpointWitness|=r.endpointWitness.has_value();
         for(const auto &n:sheet.annotations)if(n.reference)endpointWitness|=n.reference->endpointWitness.has_value();
-        QJsonObject object{{"format","ForgeCAD.DrawingSheet"},{"schema",std::any_of(sheet.annotations.cbegin(),sheet.annotations.cend(),[](const auto &n){return n.technical&&n.technical->kind==DrawingTechnicalKind::SurfaceTexture;})?28:endpointWitness?27:std::any_of(sheet.views.cbegin(),sheet.views.cend(),[](const auto &v){return v.relation.detailLinked;})?26:(std::any_of(sheet.drawing.dimensions.cbegin(),sheet.drawing.dimensions.cend(),[](const auto &d){return d.measure==DrawingMeasure::ProfileRadius;})||sheet.style.arrowWidth!=0||std::any_of(sheet.dimensions.cbegin(),sheet.dimensions.cend(),[](const auto &d){return d.presentation.extensionSlant!=0;}))?25:std::any_of(sheet.views.cbegin(),sheet.views.cend(),[](const auto &v){return !v.relation.detailOutline.isEmpty()||v.relation.detailLabelOffset.has_value();})?24:drawingUsesSheetScale(sheet)?23:sheet.dimensionNumbering.persistent?22:(sheet.dimensionNumbering.excludeParenthesized||std::any_of(sheet.dimensions.cbegin(),sheet.dimensions.cend(),[](const auto &d){return d.presentation.numberingExcluded;}))?21:sheet.dimensionNumbering.active()?20:std::any_of(sheet.annotations.cbegin(),sheet.annotations.cend(),[](const auto &n){return n.technical.has_value();})?19:std::any_of(sheet.drawing.dimensions.cbegin(),sheet.drawing.dimensions.cend(),[](const auto &d){return drawingOrdinate(d.measure);})?18:std::any_of(sheet.drawing.views.cbegin(),sheet.drawing.views.cend(),[](const auto &v){return v.bend.has_value();})?17:std::any_of(sheet.drawing.views.cbegin(),sheet.drawing.views.cend(),[](const auto &v){return v.step&&!v.step->additional.empty();})?16:std::any_of(sheet.drawing.views.cbegin(),sheet.drawing.views.cend(),[](const auto &v){return v.step.has_value();})?15:std::any_of(sheet.views.cbegin(),sheet.views.cend(),[](const auto &v){return v.interruption.has_value();})?14:std::any_of(sheet.views.cbegin(),sheet.views.cend(),[](const auto &v){return v.relation.kind==DrawingDerivedKind::Auxiliary;})?13:sheet.style.textLayoutActive()?12:(std::any_of(sheet.axes.cbegin(),sheet.axes.cend(),[](const auto &a){return a.endExtension.has_value();})||std::any_of(sheet.dimensions.cbegin(),sheet.dimensions.cend(),[](const auto &d){return d.presentation.reverseArrows;}))?11:std::any_of(sheet.views.cbegin(),sheet.views.cend(),[](const auto &v){return v.relation.kind==DrawingDerivedKind::Detail;})?10:(sheet.style.extensionGap!=0||sheet.style.dimensionOffset!=0)?9:(sheet.style.active()||std::any_of(sheet.views.cbegin(),sheet.views.cend(),[](const auto &v){return v.titleOffset.has_value();}))?8:styled?7:!sheet.annotations.isEmpty()?6:drawingNeedsAxisSchema(sheet.drawing)?5:!sheet.axes.isEmpty()?4:(drawingNeedsSectionSchema(sheet.drawing)||std::any_of(sheet.views.cbegin(),sheet.views.cend(),[](const auto &v){return v.relation.parentId.isNull()&&!v.relation.hatch;}))?3:std::any_of(sheet.views.cbegin(),sheet.views.cend(),[](const auto &v){return !v.relation.parentId.isNull();})?2:1},{"title",sheet.title},
+        QJsonObject object{{"format","ForgeCAD.DrawingSheet"},{"schema",sheet.titleBlock.customLayout?30:(!sheet.centerMarks.isEmpty()||std::any_of(sheet.drawing.views.cbegin(),sheet.drawing.views.cend(),[](const auto &v){return v.localSection.has_value();}))?29:std::any_of(sheet.annotations.cbegin(),sheet.annotations.cend(),[](const auto &n){return n.technical&&n.technical->kind==DrawingTechnicalKind::SurfaceTexture;})?28:endpointWitness?27:std::any_of(sheet.views.cbegin(),sheet.views.cend(),[](const auto &v){return v.relation.detailLinked;})?26:(std::any_of(sheet.drawing.dimensions.cbegin(),sheet.drawing.dimensions.cend(),[](const auto &d){return d.measure==DrawingMeasure::ProfileRadius;})||sheet.style.arrowWidth!=0||std::any_of(sheet.dimensions.cbegin(),sheet.dimensions.cend(),[](const auto &d){return d.presentation.extensionSlant!=0;}))?25:std::any_of(sheet.views.cbegin(),sheet.views.cend(),[](const auto &v){return !v.relation.detailOutline.isEmpty()||v.relation.detailLabelOffset.has_value();})?24:drawingUsesSheetScale(sheet)?23:sheet.dimensionNumbering.persistent?22:(sheet.dimensionNumbering.excludeParenthesized||std::any_of(sheet.dimensions.cbegin(),sheet.dimensions.cend(),[](const auto &d){return d.presentation.numberingExcluded;}))?21:sheet.dimensionNumbering.active()?20:std::any_of(sheet.annotations.cbegin(),sheet.annotations.cend(),[](const auto &n){return n.technical.has_value();})?19:std::any_of(sheet.drawing.dimensions.cbegin(),sheet.drawing.dimensions.cend(),[](const auto &d){return drawingOrdinate(d.measure);})?18:std::any_of(sheet.drawing.views.cbegin(),sheet.drawing.views.cend(),[](const auto &v){return v.bend.has_value();})?17:std::any_of(sheet.drawing.views.cbegin(),sheet.drawing.views.cend(),[](const auto &v){return v.step&&!v.step->additional.empty();})?16:std::any_of(sheet.drawing.views.cbegin(),sheet.drawing.views.cend(),[](const auto &v){return v.step.has_value();})?15:std::any_of(sheet.views.cbegin(),sheet.views.cend(),[](const auto &v){return v.interruption.has_value();})?14:std::any_of(sheet.views.cbegin(),sheet.views.cend(),[](const auto &v){return v.relation.kind==DrawingDerivedKind::Auxiliary;})?13:sheet.style.textLayoutActive()?12:(std::any_of(sheet.axes.cbegin(),sheet.axes.cend(),[](const auto &a){return a.endExtension.has_value();})||std::any_of(sheet.dimensions.cbegin(),sheet.dimensions.cend(),[](const auto &d){return d.presentation.reverseArrows;}))?11:std::any_of(sheet.views.cbegin(),sheet.views.cend(),[](const auto &v){return v.relation.kind==DrawingDerivedKind::Detail;})?10:(sheet.style.extensionGap!=0||sheet.style.dimensionOffset!=0)?9:(sheet.style.active()||std::any_of(sheet.views.cbegin(),sheet.views.cend(),[](const auto &v){return v.titleOffset.has_value();}))?8:styled?7:!sheet.annotations.isEmpty()?6:drawingNeedsAxisSchema(sheet.drawing)?5:!sheet.axes.isEmpty()?4:(drawingNeedsSectionSchema(sheet.drawing)||std::any_of(sheet.views.cbegin(),sheet.views.cend(),[](const auto &v){return v.relation.parentId.isNull()&&!v.relation.hatch;}))?3:std::any_of(sheet.views.cbegin(),sheet.views.cend(),[](const auto &v){return !v.relation.parentId.isNull();})?2:1},{"title",sheet.title},
             {"size",QJsonArray{sheet.size.width(),sheet.size.height()}},{"drawing",QJsonDocument::fromJson(document).object()},
             {"views",views},{"dimensions",dimensions}};
         if(object["schema"].toInt()>=23)object.insert("sheetScale",sheet.scale);
@@ -191,7 +206,13 @@ QString encodeDrawingSheet(const DrawingSheet &sheet,QByteArray &bytes){
                     else{technical["characteristic"]=int(t.characteristic);technical["tolerance"]=t.tolerance;technical["diameter"]=t.diameter;QJsonArray datums;for(const auto &id:t.datums)datums.append(id.toString(QUuid::WithoutBraces));technical["datums"]=datums;}entry["technical"]=technical;}notes.append(entry);}
             object.insert("annotations",notes);if(index)object.insert("annotationReferenceSchema",support["schema"]);
         }
+        if(!sheet.centerMarks.isEmpty()){
+            QByteArray encoded;ok(encodeDrawingDocument(centerSupportDocument(sheet),encoded));const auto support=QJsonDocument::fromJson(encoded).object();const auto definitions=support["dimensions"].toArray();QJsonArray centers;
+            for(qsizetype i=0;i<sheet.centerMarks.size();++i)centers.append(QJsonObject{{"definition",definitions[i]},{"axes",sheet.centerMarks[i].axes}});
+            object.insert("centerMarks",centers);object.insert("centerReferenceSchema",support["schema"]);
+        }
         const auto &block=sheet.titleBlock;if(block.visible||!block.code.isEmpty()||!block.organization.isEmpty()||!block.author.isEmpty()||!block.date.isEmpty())object.insert("titleBlock",QJsonObject{{"visible",block.visible},{"code",block.code},{"organization",block.organization},{"author",block.author},{"date",block.date}});
+        if(block.customLayout){QJsonArray items;for(const auto &i:block.items){QJsonObject item{{"id",i.id.toString(QUuid::WithoutBraces)},{"kind",int(i.kind)},{"rect",QJsonArray{i.rect.x(),i.rect.y(),i.rect.width(),i.rect.height()}},{"text",i.text},{"textHeight",i.textHeight},{"lineWidth",i.lineWidth},{"bold",i.bold},{"alignment",i.alignment}};if(i.kind==DrawingFrameKind::Image)item.insert("imagePng",QString::fromLatin1(i.imagePng.toBase64()));items.append(item);}object.insert("frameItems",items);}
         if(sheet.revisionTable.visible||!sheet.revisionTable.notes.isEmpty()){
             QJsonArray notes;for(const auto &r:sheet.revisionTable.notes)notes.append(QJsonObject{{"checkinId",r.checkinId.toString(QUuid::WithoutBraces)},{"description",r.description},{"verifiedBy",r.verifiedBy}});
             object.insert("revisionTable",QJsonObject{{"visible",sheet.revisionTable.visible},{"notes",notes}});
@@ -204,8 +225,10 @@ QString decodeDrawingSheet(const QByteArray &bytes,DrawingSheet &sheet){
     try{
         require(!bytes.isEmpty()&&bytes.size()<=8*1024*1024,"Dimensione del foglio non valida.");
         const auto json=QJsonDocument::fromJson(bytes);const auto object=json.object();
-        require(json.isObject()&&object["format"].toString()==QLatin1String("ForgeCAD.DrawingSheet")&&(object["schema"].toInt(-1)==1||object["schema"].toInt(-1)==2||object["schema"].toInt(-1)==3||object["schema"].toInt(-1)==4||object["schema"].toInt(-1)==5||object["schema"].toInt(-1)==6||object["schema"].toInt(-1)==7||object["schema"].toInt(-1)==8||object["schema"].toInt(-1)==9||object["schema"].toInt(-1)==10||object["schema"].toInt(-1)==11||object["schema"].toInt(-1)==12||object["schema"].toInt(-1)==13||object["schema"].toInt(-1)==14||object["schema"].toInt(-1)==15||object["schema"].toInt(-1)==16||object["schema"].toInt(-1)==17||object["schema"].toInt(-1)==18||object["schema"].toInt(-1)==19||object["schema"].toInt(-1)==20||object["schema"].toInt(-1)==21||object["schema"].toInt(-1)==22||object["schema"].toInt(-1)==23||object["schema"].toInt(-1)==24||object["schema"].toInt(-1)==25||object["schema"].toInt(-1)==26||object["schema"].toInt(-1)==27||object["schema"].toInt(-1)==28),"Formato del foglio non supportato.");
+        require(json.isObject()&&object["format"].toString()==QLatin1String("ForgeCAD.DrawingSheet")&&(object["schema"].toInt(-1)==1||object["schema"].toInt(-1)==2||object["schema"].toInt(-1)==3||object["schema"].toInt(-1)==4||object["schema"].toInt(-1)==5||object["schema"].toInt(-1)==6||object["schema"].toInt(-1)==7||object["schema"].toInt(-1)==8||object["schema"].toInt(-1)==9||object["schema"].toInt(-1)==10||object["schema"].toInt(-1)==11||object["schema"].toInt(-1)==12||object["schema"].toInt(-1)==13||object["schema"].toInt(-1)==14||object["schema"].toInt(-1)==15||object["schema"].toInt(-1)==16||object["schema"].toInt(-1)==17||object["schema"].toInt(-1)==18||object["schema"].toInt(-1)==19||object["schema"].toInt(-1)==20||object["schema"].toInt(-1)==21||object["schema"].toInt(-1)==22||object["schema"].toInt(-1)==23||object["schema"].toInt(-1)==24||object["schema"].toInt(-1)==25||object["schema"].toInt(-1)==26||object["schema"].toInt(-1)==27||object["schema"].toInt(-1)==28||object["schema"].toInt(-1)==29||object["schema"].toInt(-1)==30),"Formato del foglio non supportato.");
         const int schema=object["schema"].toInt();
+        require((schema==30)==object.contains("frameItems"),"Layout del cartiglio incompatibile con lo schema del foglio.");
+        require(schema>=29||(!object.contains("centerMarks")&&!object.contains("centerReferenceSchema")&&object["drawing"].toObject()["schema"].toInt()<14&&object["axisReferenceSchema"].toInt()<14&&object["annotationReferenceSchema"].toInt()<14),"Centri selettivi o sezione locale estranei allo schema del foglio.");
         require(schema>=27||(object["drawing"].toObject()["schema"].toInt()<13&&object["axisReferenceSchema"].toInt()<13&&object["annotationReferenceSchema"].toInt()<13),"Testimoni degli estremi estranei allo schema del foglio.");
         require(schema>=25||object["drawing"].toObject()["schema"].toInt()<12,"Raggio del profilo estraneo allo schema del foglio.");
         require(schema>=18||object["drawing"].toObject()["schema"].toInt()<11,"Ordinate estranee allo schema del foglio.");
@@ -262,6 +285,18 @@ QString decodeDrawingSheet(const QByteArray &bytes,DrawingSheet &sheet){
         if(object.contains("titleBlock")){require(object["titleBlock"].isObject(),"Cartiglio non valido.");const auto block=object["titleBlock"].toObject();require(block["visible"].isBool(),"Visibilita' del cartiglio non valida.");
             for(const auto &key:{"code","organization","author","date"})require(block[key].isString(),"Dati del cartiglio incompleti.");
             prepared.titleBlock={block["visible"].toBool(),block["code"].toString(),block["organization"].toString(),block["author"].toString(),block["date"].toString()};}
+        if(schema>=30){
+            require(object["frameItems"].isArray()&&object["frameItems"].toArray().size()<=256,"Elementi del cartiglio non validi.");prepared.titleBlock.customLayout=true;
+            for(const auto &value:object["frameItems"].toArray()){
+                require(value.isObject(),"Elemento del cartiglio non valido.");const auto o=value.toObject();DrawingFrameItem i;i.id=readId(o["id"]);
+                require(o["kind"].isDouble()&&o["kind"].toDouble()==o["kind"].toInt(-1)&&o["kind"].toInt(-1)>=0&&o["kind"].toInt(-1)<=3&&o["rect"].isArray()&&o["rect"].toArray().size()==4,"Tipo o rettangolo del cartiglio non valido.");
+                const auto a=o["rect"].toArray();for(const auto &v:a)require(v.isDouble(),"Coordinate del cartiglio non numeriche.");
+                require(o["text"].isString()&&o["textHeight"].isDouble()&&o["lineWidth"].isDouble()&&o["bold"].isBool()&&o["alignment"].isDouble()&&o["alignment"].toDouble()==o["alignment"].toInt(-1),"Stile del cartiglio incompleto.");
+                i.kind=DrawingFrameKind(o["kind"].toInt());i.rect={a[0].toDouble(),a[1].toDouble(),a[2].toDouble(),a[3].toDouble()};i.text=o["text"].toString();i.textHeight=o["textHeight"].toDouble();i.lineWidth=o["lineWidth"].toDouble();i.bold=o["bold"].toBool();i.alignment=o["alignment"].toInt();
+                if(o.contains("imagePng")){require(i.kind==DrawingFrameKind::Image&&o["imagePng"].isString()&&o["imagePng"].toString().size()<=6*1024*1024,"Logo del cartiglio non valido.");const auto encoded=o["imagePng"].toString().toLatin1();const auto decoded=QByteArray::fromBase64Encoding(encoded,QByteArray::AbortOnBase64DecodingErrors);require(bool(decoded),"Codifica del logo non valida.");i.imagePng=decoded.decoded;}
+                prepared.titleBlock.items.append(std::move(i));
+            }
+        }
         if(object.contains("revisionTable")){
             require(object["revisionTable"].isObject(),"Tabella revisioni non valida.");const auto table=object["revisionTable"].toObject();require(table["visible"].isBool()&&table["notes"].isArray()&&table["notes"].toArray().size()<=1000,"Dati della tabella revisioni non validi.");prepared.revisionTable.visible=table["visible"].toBool();
             for(const auto &value:table["notes"].toArray()){require(value.isObject(),"Riga revisioni non valida.");const auto row=value.toObject();require(row["description"].isString()&&row["verifiedBy"].isString(),"Testo della revisione non valido.");prepared.revisionTable.notes.append({readId(row["checkinId"]),row["description"].toString(),row["verifiedBy"].toString()});}
@@ -270,7 +305,7 @@ QString decodeDrawingSheet(const QByteArray &bytes,DrawingSheet &sheet){
         require(!drawingNeedsAxisSchema(prepared.drawing)||object["schema"].toInt()>=5,"Quote sugli assi estranee allo schema del foglio.");
         if(schema==4||object.contains("axes")){
             require(object["axes"].isArray()&&object["axes"].toArray().size()<=10000,"Elenco assi non valido.");
-            const auto refSchema=object["axisReferenceSchema"].toDouble(-1);require(refSchema==3||refSchema==4||refSchema==6||refSchema==7||refSchema==8||refSchema==9||refSchema==10||refSchema==11||refSchema==13,"Schema degli agganci degli assi non valido.");
+            const auto refSchema=object["axisReferenceSchema"].toDouble(-1);require(refSchema==3||refSchema==4||refSchema==6||refSchema==7||refSchema==8||refSchema==9||refSchema==10||refSchema==11||refSchema==13||refSchema==14,"Schema degli agganci degli assi non valido.");
             auto support=object["drawing"].toObject();support["schema"]=refSchema;QJsonArray views,definitions;
             const auto originalViews=support["views"].toArray();
             for(qsizetype i=0;i<originalViews.size();++i){auto v=originalViews[i].toObject();v["kind"]=int(prepared.drawing.views[std::size_t(i)].kind);v["sectionReferences"]=prepared.drawing.views[std::size_t(i)].sectionReferences;
@@ -298,7 +333,7 @@ QString decodeDrawingSheet(const QByteArray &bytes,DrawingSheet &sheet){
             }
             require(!definitions.isEmpty()==object.contains("annotationReferenceSchema"),"Schema degli agganci delle note incoerente.");
             if(!definitions.isEmpty()){
-                const double rs=object["annotationReferenceSchema"].toDouble(-1);require(rs==3||rs==4||rs==5||rs==6||rs==7||rs==8||rs==9||rs==10||rs==11||rs==12||rs==13,"Schema degli agganci delle note non supportato.");
+                const double rs=object["annotationReferenceSchema"].toDouble(-1);require(rs==3||rs==4||rs==5||rs==6||rs==7||rs==8||rs==9||rs==10||rs==11||rs==12||rs==13||rs==14,"Schema degli agganci delle note non supportato.");
                 auto support=object["drawing"].toObject();support["schema"]=rs;support["dimensions"]=definitions;
                 QJsonArray supportViews;const auto sourceViews=support["views"].toArray();
                 for(qsizetype i=0;i<sourceViews.size();++i){auto v=sourceViews[i].toObject();const auto &original=prepared.drawing.views[std::size_t(i)];v["kind"]=int(original.kind);v["sectionReferences"]=original.sectionReferences;
@@ -308,6 +343,18 @@ QString decodeDrawingSheet(const QByteArray &bytes,DrawingSheet &sheet){
                 for(qsizetype i=0;i<attached.size();++i){auto &n=prepared.annotations[attached[i]];const auto &d=refs.dimensions[std::size_t(i)];require(d.id==n.id&&d.measure==DrawingMeasure::SectionLength&&d.references.size()==1&&d.decimals==2&&d.angleSides==0,"Record degli agganci della nota incoerente.");n.viewId=d.viewId;n.reference=d.references[0];}
             }
         }
+        if(object.contains("centerMarks")){
+            require(schema>=29&&object["centerMarks"].isArray()&&object["centerMarks"].toArray().size()<=10000&&object["centerReferenceSchema"].isDouble(),"Elenco centri non valido.");
+            auto support=object["drawing"].toObject();const int rs=object["centerReferenceSchema"].toInt(-1);support["schema"]=rs;QJsonArray definitions;
+            for(const auto &entry:object["centerMarks"].toArray()){
+                require(entry.isObject()&&entry.toObject()["definition"].isObject()&&entry.toObject()["axes"].isBool(),"Record centro incompleto.");
+                DrawingCenterMark mark;mark.axes=entry.toObject()["axes"].toBool();prepared.centerMarks.append(mark);definitions.append(entry.toObject()["definition"]);
+            }
+            support["dimensions"]=definitions;QJsonArray supportViews;
+            for(qsizetype i=0;i<support["views"].toArray().size();++i){auto v=support["views"].toArray()[i].toObject();const auto &original=prepared.drawing.views[std::size_t(i)];v["kind"]=int(original.kind);v["sectionReferences"]=original.sectionReferences;if(rs>=4)v["sectionStyle"]=int(original.sectionStyle);else v.remove("sectionStyle");supportViews.append(v);}
+            support["views"]=supportViews;DrawingDocument references;ok(decodeDrawingDocument(QJsonDocument(support).toJson(QJsonDocument::Compact),references));
+            for(qsizetype i=0;i<prepared.centerMarks.size();++i){auto &mark=prepared.centerMarks[i];const auto &d=references.dimensions[std::size_t(i)];require(d.measure==DrawingMeasure::SectionLength&&d.references.size()==1&&d.references[0].role==DrawingPointRole::Curve,"Aggancio del centro incoerente.");mark.id=d.id;mark.viewId=d.viewId;mark.reference=d.references[0];}
+        }else require(!object.contains("centerReferenceSchema"),"Schema centri senza elenco.");
         require(object["views"].toArray().size()<=10000&&object["dimensions"].toArray().size()<=10000,"Troppi elementi nel foglio.");
         for(const auto &value:object["views"].toArray()){
             require(value.isObject(),"Vista del foglio non valida.");const auto view=value.toObject();DrawingViewLayout layout;

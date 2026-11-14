@@ -1,4 +1,6 @@
 #include "cad_drawing_window.h"
+#include "cad_drawing_template.h"
+#include "cad_drawing_template_editor.h"
 #include "cad_drawing_focus.h"
 #include "cad_drawing_compute.h"
 #include <optional>
@@ -38,6 +40,7 @@ DrawingWindow::DrawingWindow(QWidget *parent):QMainWindow(parent,Qt::Window){
     connect(saveAs,&QAction::triggered,this,[this]{save(true);});
     auto *exportPdf=file->addAction(QStringLiteral("Esporta PDF..."));exportPdf->setObjectName("drawingExportPdfAction");exportPdf->setIcon(commandIcon("drawingPdf"));exportPdf->setToolTip(QStringLiteral("Esporta uno o tutti i fogli in PDF vettoriale alla scala indicata, senza selezioni e anteprime."));
     connect(exportPdf,&QAction::triggered,this,[this]{showPdfExportDialog();});
+    auto *templates=file->addAction(commandIcon("drawingTemplate"),QStringLiteral("Template dei fogli..."));templates->setObjectName("drawingTemplatesAction");connect(templates,&QAction::triggered,this,[this]{showDrawingTemplateEditor(this,editor_);});
     file->addSeparator();addRevisionMenus(file);
     editMenu_=addCadMenu(menuBar(),QStringLiteral("Modifica"));insertMenu_=addCadMenu(menuBar(),QStringLiteral("Inserisci"));
     dimensionMenu_=addCadMenu(menuBar(),QStringLiteral("Quote"));viewMenu_=addCadMenu(menuBar(),QStringLiteral("Visualizza"));
@@ -151,11 +154,11 @@ void DrawingWindow::installEditor(DrawingSheetEditor *prepared){
     layout->addWidget(next,1);installSheetTabs(layout);auto *previous=takeCentralWidget();setCentralWidget(container);editor_=next;if(prepared){previous->setEnabled(false);previous->deleteLater();}else delete previous;
     const auto populate=[next,this](QMenu *menu,std::initializer_list<const char *> names){menu->clear();for(auto name:names){auto *action=next->findChild<QAction *>(name);if(!action)action=findChild<QAction *>(name);if(action)menu->addAction(action);}};
     populate(editMenu_,{"drawingOptionsAction","drawingResetViewTitleAction","drawingPageSettingsAction","drawingRevisionTableAction","drawingUndoAction","drawingRedoAction","drawingEditViewAction","drawingAlignViewAction","drawingDetachViewAction","drawingReleaseAlignmentAction","drawingEditSectionLineAction","drawingAlignSectionOrientationAction","drawingReverseSectionAction","drawingSectionHatchAction","drawingEditAxisAction","drawingEditAnnotationAction","drawingDeleteSelectionAction"});
-    populate(insertMenu_,{"drawingAddProjectionAction","drawingDerivedViewAction","drawingAuxiliaryViewAction","drawingBreakViewAction","drawingDetailViewAction","drawingAddViewAction","drawingTechnicalSectionAction","drawingSteppedSectionAction","drawingAlignedSectionAction","drawingAxisThroughPointsAction","drawingAxisBetweenLinesAction","drawingAddNoteAction","drawingAddLeaderAction","drawingAddDatumAction","drawingAddGeometricToleranceAction","drawingAddSurfaceTextureAction"});
+    populate(insertMenu_,{"drawingAddProjectionAction","drawingDerivedViewAction","drawingAuxiliaryViewAction","drawingBreakViewAction","drawingDetailViewAction","drawingLocalSectionAction","drawingRemoveLocalSectionAction","drawingAddViewAction","drawingTechnicalSectionAction","drawingSteppedSectionAction","drawingAlignedSectionAction","drawingAxisThroughPointsAction","drawingAxisBetweenLinesAction","drawingAddNoteAction","drawingAddLeaderAction","drawingAddDatumAction","drawingAddGeometricToleranceAction","drawingAddSurfaceTextureAction"});
     populate(dimensionMenu_,{"drawingDimensionNumberingAction","drawingChangeDimensionNumberAction","drawingToggleDimensionNumberAction","drawingSmartDimensionAction","drawingChainHorizontalAction","drawingChainVerticalAction","drawingOrdinateXAction","drawingOrdinateYAction","drawingRepairDimensionAction","drawingEditDimensionAction","drawingReverseDimensionArrowsAction","drawingEndpointDimensionAction","drawingHorizontalDimensionAction","drawingVerticalDimensionAction","drawingLengthDimensionAction"});
     auto *references=addCadMenu(dimensionMenu_,QStringLiteral("Riferimenti del piano"));
     for(auto name:{"drawingOriginReferenceAction","drawingAxisXReferenceAction","drawingAxisYReferenceAction"})references->addAction(next->findChild<QAction *>(name));
-    populate(viewMenu_,{"drawingHiddenLinesAction","drawingShadedFacesAction","drawingCenterMarksAction","drawingCenterLinesAction","drawingCylinderAxesAction","drawingFitAction"});viewMenu_->addSeparator();viewMenu_->addAction(next->findChild<QDockWidget *>("drawingTreeDock")->toggleViewAction());
+    populate(viewMenu_,{"drawingHiddenLinesAction","drawingShadedFacesAction","drawingCenterMarksAction","drawingCenterLinesAction","drawingClearCenterMarksAction","drawingCylinderAxesAction","drawingFitAction"});viewMenu_->addSeparator();viewMenu_->addAction(next->findChild<QDockWidget *>("drawingTreeDock")->toggleViewAction());
     viewMenu_->addAction(revisionDock_->toggleViewAction());
     viewMenu_->addAction(next->findChild<QToolBar *>("drawingCommandBar")->toggleViewAction());viewMenu_->addAction(findChild<QToolBar *>("drawingDocumentBar")->toggleViewAction());
     auto *workspace=next->findChild<QMainWindow *>();
@@ -197,8 +200,10 @@ QString DrawingWindow::createFromModel(const QString &modelPath,const DocumentSt
             Prepared result;
             result.drawing.sheet.title=QFileInfo(resolved).completeBaseName();
             result.drawing.sheet.drawing.model=source.version;result.drawing.modelPath=resolved;
-            result.drawing.sheet.titleBlock.visible=true;
-            result.drawing.sheet.titleBlock.date=QDate::currentDate().toString(Qt::ISODate);
+            result.drawing.sheet.size=preferredDrawingTemplateSize();
+            DrawingSheetTemplate appearance;bool found=false;check(loadDefaultDrawingTemplate(result.drawing.sheet.size,appearance,found));if(found)applyDrawingTemplate(result.drawing.sheet,appearance);
+            if(!found)result.drawing.sheet.titleBlock.visible=true;
+            if(result.drawing.sheet.titleBlock.date.isEmpty())result.drawing.sheet.titleBlock.date=QDate::currentDate().toString(Qt::ISODate);
             check(drawingModelDefinitionHash(source,result.drawing.modelDefinitionHash));
             if(evaluated){
                 if(evaluated->version.documentId!=source.version.documentId
@@ -255,9 +260,17 @@ void DrawingWindow::loadContents(const QString &path,DrawingFile prepared){
     sourceStatus_->setText(changed?QStringLiteral("Il modello salvato e' cambiato: premere Aggiorna dal .prt salvato per ricalcolare viste e quote."):
         QStringLiteral("Modello non disponibile: %1. Individuare il modello per verificare le quote.").arg(error));
     installEditor();
-    if(upgraded&&drawing_.sheet.drawing.version.checkinId.isNull()&&!editAccess_.readOnly){
+    // installEditor verifica l'accesso effettivo: prima l'editor e' ancora
+    // nello stato iniziale di sola lettura.
+    QByteArray fingerprint;
+    const bool fingerprintUpgraded=canUpgrade&&drawing_.sheet.drawing.version.checkinId.isNull()
+        &&!editAccess_.readOnly&&drawingModelDefinitionHash(source,fingerprint).isEmpty()
+        &&fingerprint!=drawing_.modelDefinitionHash;
+    if(fingerprintUpgraded){drawing_.modelDefinitionHash=fingerprint;resetSheetsHistory(false);}
+    if((upgraded||fingerprintUpgraded)&&drawing_.sheet.drawing.version.checkinId.isNull()&&!editAccess_.readOnly){
         savedDrawing_=beforeUpgrade;containerDirty_=true;modified_=true;
-        sourceStatus_->setText(QStringLiteral("Riferimenti della tavola aggiornati per la rigenerazione. Salvare la tavola per conservarli."));
+        sourceStatus_->setText(upgraded?QStringLiteral("Riferimenti della tavola aggiornati per la rigenerazione. Salvare la tavola per conservarli.")
+            :QStringLiteral("Verifica del modello aggiornata: la visibilita' non modifica le quote. Salvare la tavola per conservarla."));
     }
     refreshTitle();
 }

@@ -56,6 +56,19 @@ struct DrawingSectionBend {
     bool operator==(const DrawingSectionBend &b)const{return at==b.at&&angle==b.angle;}
     bool operator!=(const DrawingSectionBend &b)const{return !(*this==b);}
 };
+// Sezione locale: contorno chiuso nel piano della vista (mm modello).
+// Il piano iniziale e' fissato alla definizione; il taglio avanza verso -Z.
+struct DrawingLocalSection {
+    std::vector<Kernel::Vec2> outline;
+    double front=0,depth=1;
+    bool operator==(const DrawingLocalSection &other) const {
+        if(front!=other.front||depth!=other.depth||outline.size()!=other.outline.size())return false;
+        for(std::size_t i=0;i<outline.size();++i)
+            if(outline[i].x()!=other.outline[i].x()||outline[i].y()!=other.outline[i].y())return false;
+        return true;
+    }
+    bool operator!=(const DrawingLocalSection &other) const {return !(*this==other);}
+};
 struct DrawingView {
     QUuid id = QUuid::createUuid();
     Kernel::Frame3 plane;
@@ -66,6 +79,7 @@ struct DrawingView {
     DrawingSectionStyle sectionStyle=DrawingSectionStyle::Removed;
     std::optional<DrawingSectionStep> step;
     std::optional<DrawingSectionBend> bend;
+    std::optional<DrawingLocalSection> localSection;
 };
 
 // Rotazione dal secondo piano originale al piano comune della vista.

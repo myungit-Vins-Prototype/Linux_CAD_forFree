@@ -1,5 +1,7 @@
 #pragma once
 #include <QTabBar>
+#include "../cad_document_read.h"
+#include "fk_body_io.h"
 #include "../cad_drawing_numbering.h"
 #include <QComboBox>
 #include <QLineEdit>
@@ -9,6 +11,95 @@
 #include <QProgressDialog>
 #include "fk_cancel.h"
 namespace {
+QByteArray drawingLegacyPatternCache(const QByteArray &bytes){
+ using namespace ForgeCad;
+ QDataStream header(bytes);header.skipRawData(7);quint32 size=0;header>>size;
+ const auto offset=11+qsizetype(size);QByteArray cache;
+ require(DocumentReadDetail::uncompress(bytes.mid(offset),256*1024*1024,cache,quint8(bytes[6])),"decompressione cache della fixture");
+ QDataStream input(cache);QByteArray sourceHash,payloadHash;quint32 marker=0;input>>sourceHash>>payloadHash>>marker;
+ const auto versionOffset=input.device()->pos();QByteArray oldVersion;QDataStream version(&oldVersion,QIODevice::WriteOnly);version<<quint32(15);
+ cache.replace(versionOffset,4,oldVersion);
+ return bytes.left(offset)+DocumentReadDetail::compress(cache,quint8(bytes[6]));
+}
+void drawingPatternCacheIdentityReview(){
+ using namespace ForgeCad;using namespace ForgeCad::Kernel;
+ DocumentState source;auto base=clientModel().extrusions[0];base.featureId=901;base.forgeBody.reset();base.cachedGeometry=false;
+ auto tool=base;tool.featureId=902;tool.forgeBody.reset();tool.cachedGeometry=false;tool.primitive.origin[0]=6;tool.primitive.size[0]=8;
+ ExtrusionObject united;united.featureId=903;united.operation=0;united.firstBody=0;united.secondBody=1;
+ ExtrusionObject pattern;pattern.featureId=904;pattern.feature=BodyFeature::Pattern;pattern.firstBody=2;
+ pattern.pattern.featureOnly=true;pattern.pattern.count=2;pattern.pattern.spacing=18;GeometryRef axis;axis.kind=2;axis.index=0;pattern.pattern.refs={axis};
+ ExtrusionObject scale;scale.featureId=905;scale.feature=BodyFeature::Scale;scale.firstBody=3;scale.scaleFactor=1.1;
+ auto independent=tool;independent.featureId=906;independent.primitive.origin[0]=80;
+ source.extrusions={base,tool,united,pattern,scale,independent};
+ DrawingEditorModel initial;clientOk(prepareDrawingEditorModel(source,initial));
+ for(const auto &feature:source.extrusions)require(feature.forgeBody&&feature.error.isEmpty(),"geometria della fixture cache disponibile");
+ const auto geometry=writeBodyBinary(*source.extrusions[4].forgeBody);
+ const auto names=elementNamesOf(*source.extrusions[4].forgeBody);
+ QByteArray bytes;clientOk(encodeDocument(source,bytes));
+ DocumentState old;clientOk(decodeDocument(drawingLegacyPatternCache(bytes),old));
+ require(old.extrusions[0].forgeBody&&old.extrusions[1].forgeBody&&old.extrusions[2].forgeBody&&old.extrusions[5].forgeBody,
+     "migrazione della cache conserva gli stadi precedenti e indipendenti");
+ require(!old.extrusions[3].forgeBody&&!old.extrusions[4].forgeBody,"cache15 rigenera la funzione ripetuta e i derivati");
+ DrawingEditorModel migrated;clientOk(prepareDrawingEditorModel(old,migrated));
+ const auto restored=elementNamesOf(*old.extrusions[4].forgeBody);
+ require(writeBodyBinary(*old.extrusions[4].forgeBody)==geometry&&restored->faces==names->faces&&restored->edges==names->edges&&restored->vertices==names->vertices,
+     "migrazione ripristina gli stessi nomi sul B-rep identico");
+ clientOk(encodeDocument(old,bytes));DocumentState current;clientOk(decodeDocument(bytes,current));
+ for(const auto &feature:current.extrusions)require(feature.forgeBody&&feature.cachedGeometry,"cache16 conserva tutti i B-rep alla riapertura");
+ DrawingEditorModel reopened;clientOk(prepareDrawingEditorModel(current,reopened));
+ const auto persisted=elementNamesOf(*current.extrusions[4].forgeBody);
+ require(persisted->faces==names->faces&&persisted->edges==names->edges&&persisted->vertices==names->vertices,"nomi persistiti identici dopo salvataggio e nuova lettura");
+ source.version.checkinId=QUuid::createUuid();clientOk(encodeDocument(source,bytes));DocumentState archived;clientOk(decodeDocument(drawingLegacyPatternCache(bytes),archived));
+ for(const auto &feature:archived.extrusions)require(feature.forgeBody&&feature.cachedGeometry,"check-in storico conserva la cache15 senza migrazione");
+ std::cout<<"PASS pattern cache identity: selective migration, geometry/names invariant, cache16 and archived snapshots\n";
+}
+void drawingPresentationIdentityReview(){
+ using namespace ForgeCad;using namespace ForgeCad::Kernel;
+ auto source=clientModel();
+ SketchObject first;first.name="Schizzo nascosto";first.visible=false;
+ SketchObject second;second.name="Schizzo visibile";
+ source.sketches={first,second};normalizeModelHistory(source);
+ const auto hash=[](const DocumentState &d){QByteArray bytes;clientOk(drawingModelDefinitionHash(d,bytes));return bytes;};
+ const auto legacyHash=[](DocumentState d){d.version.checkinId={};d.baseCheckinId={};d.orientation={};d.lengthUnit=LengthUnit::Millimeter;
+     QByteArray bytes;clientOk(encodeDocument(d,bytes,false));return QCryptographicHash::hash(bytes,QCryptographicHash::Sha256);};
+ const auto stable=hash(source),legacy=legacyHash(source);
+ auto partial=source;partial.extrusions[0].forgeBody.reset();
+ require(hash(partial)==stable,"la disponibilita' della cache non cambia l'identita' della definizione");
+ auto staged=source;ExtrusionObject next;next.feature=BodyFeature::Scale;next.featureId=81002;next.firstBody=0;next.scaleFactor=1.1;staged.extrusions.append(next);
+ DrawingEditorModel stages;clientOk(prepareDrawingEditorModel(staged,stages));const auto complete=hash(staged);
+ staged.extrusions.back().forgeBody.reset();
+ require(hash(staged)==complete,"una cache parziale non arretra il tip usato nell'impronta geometrica");
+ auto presentation=source;presentation.sketches[0].visible=true;presentation.sketches[1].visible=false;
+ presentation.extrusions[0].visible=!presentation.extrusions[0].visible;
+ presentation.modelBodies[0].visible=!presentation.modelBodies[0].visible;
+ require(hash(presentation)==stable,"visibilita' di schizzi, feature e corpi non cambia l'identita' geometrica");
+ bool matches=false;clientOk(drawingModelDefinitionMatches(presentation,stable,matches));require(matches,"piu' modifiche di presentazione conservano il modello");
+ auto changed=source;changed.sketches[1].visible=false;
+ clientOk(drawingModelDefinitionMatches(changed,legacy,matches));require(matches,"vecchia impronta verificata esattamente dopo il cambio di visibilita' di uno schizzo");
+ changed=source;changed.extrusions[0].visible=!changed.extrusions[0].visible;
+ clientOk(drawingModelDefinitionMatches(changed,legacy,matches));require(matches,"compatibilita' della vecchia visibilita' delle feature");
+ changed=source;changed.modelBodies[0].visible=!changed.modelBodies[0].visible;
+ clientOk(drawingModelDefinitionMatches(changed,legacy,matches));require(matches,"compatibilita' della vecchia visibilita' dei corpi");
+ changed=source;changed.extrusions[0].primitive.size[0]+=2;
+ clientOk(drawingModelDefinitionMatches(changed,stable,matches));require(!matches,"dimensioni reali cambiate invalidano l'impronta nuova");
+ clientOk(drawingModelDefinitionMatches(changed,legacy,matches));require(!matches,"dimensioni reali cambiate invalidano anche l'impronta storica");
+ changed=source;changed.calculationAccuracy=source.calculationAccuracy*.1;
+ clientOk(drawingModelDefinitionMatches(changed,stable,matches));require(!matches,"la precisione resta parte della definizione");
+ QTemporaryDir temporary;const auto sourcePath=temporary.filePath("visibilita.prt"),path=temporary.filePath("visibilita.drw");
+ clientOk(saveDocumentFile(sourcePath,source));DrawingEditorModel model;clientOk(prepareDrawingEditorModel(source,model));
+ DrawingFile file;file.modelPath="visibilita.prt";file.modelDefinitionHash=legacy;file.sheet.drawing.model=source.version;
+ DrawingView view;view.kind=DrawingViewKind::ProjectedEdges;file.sheet.drawing.views={view};file.sheet.views={{view.id,"Vista",{100,100},{81001}}};
+ std::vector<DrawingCurve> curves;clientOk(drawingViewCurves(model.snapshot,view,curves));
+ const auto edge=std::find_if(curves.begin(),curves.end(),[](const auto &c){return std::abs(arcLength(*c.curve,c.range)-10)<1e-7;});require(edge!=curves.end(),"bordo per prova apertura dopo visibilita'");
+ auto dimension=dimensionOfCurve(view,*edge,DrawingMeasure::EndpointDistance);file.sheet.drawing.dimensions={dimension};file.sheet.dimensions={{dimension.id,{100,140}}};
+ clientOk(saveDrawingFile(path,file));source.sketches[1].visible=false;clientOk(saveDocumentFile(sourcePath,source));
+ DrawingWindow reopened;clientOk(reopened.openPath(path));
+ require(reopened.editor()->dimensionResult(dimension.id).status==DrawingDimensionStatus::Ready
+     &&std::abs(reopened.editor()->dimensionResult(dimension.id).value-10)<1e-7,"apertura reale conserva la quota dopo il solo cambio di visibilita'");
+ require(reopened.isModified()&&reopened.document().modelDefinitionHash==stable,"impronta storica migrata al controllo indipendente dalla presentazione");
+ clientOk(reopened.savePath(path));
+ std::cout<<"PASS drawing identity: visibility, exact legacy verification, geometry/precision rejection and native reopen with dimensions\n";
+}
 void multisheetPreparationReview(){
  using namespace ForgeCad;
  QTemporaryDir temporary;
@@ -61,6 +152,8 @@ void multisheetPreparationReview(){
 }
 void multisheetTests(){
  using namespace ForgeCad;using namespace ForgeCad::Kernel;
+ drawingPatternCacheIdentityReview();
+ drawingPresentationIdentityReview();
  const auto encoded=[](const DrawingFile &file){QByteArray bytes;clientOk(encodeDrawingFile(file,bytes));return bytes;};
  QTemporaryDir temporary;const auto sourcePath=temporary.filePath("multiparte.prt"),path=temporary.filePath("multifoglio.drw");
  DocumentState source=clientModel();DrawingEditorModel geometry;clientOk(prepareDrawingEditorModel(source,geometry));clientOk(saveDocumentFile(sourcePath,source));clientOk(checkoutWorkspaceDocument(sourcePath,source,"qa"));RevisionRecord modelA;clientOk(checkinWorkspaceDocument(sourcePath,source,"M-A","",modelA));const auto originalModel=clientRead(sourcePath);

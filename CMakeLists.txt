@@ -231,6 +231,9 @@ add_executable(forgecad
     cad_drawing_editor.h
     cad_drawing_editor.cpp
     cad_drawing_preparation.cpp
+    cad_drawing_local_section_display.cpp
+    cad_drawing_local_section_tool.cpp
+    cad_drawing_local_section_depth.cpp
     cad_drawing_preparation.h
     cad_drawing_silhouette.h
     cad_drawing_silhouette.cpp
@@ -241,6 +244,9 @@ add_executable(forgecad
     cad_drawing_visibility.h
     cad_drawing_visibility.cpp
     cad_drawing_page.h
+    cad_drawing_frame.cpp
+    cad_drawing_template.cpp
+    cad_drawing_template_editor.cpp
     cad_drawing_page.cpp
     cad_drawing_file.h
     cad_drawing_file.cpp
@@ -298,6 +304,7 @@ add_executable(forgecad
     cad_kernel.cpp
     cad_forge.h
     cad_forge.cpp
+    cad_feature_faces.cpp
     cad_features.h
     cad_features.cpp
     cad_mass.h
@@ -878,6 +885,9 @@ add_library(forgecad_drawing_test_support STATIC
     forgeCad2026_zoom.cpp
     cad_drawing_editor.cpp
     cad_drawing_preparation.cpp
+    cad_drawing_local_section_display.cpp
+    cad_drawing_local_section_tool.cpp
+    cad_drawing_local_section_depth.cpp
     cad_drawing_preparation.h
     cad_drawing_sheet.cpp
     cad_drawing_derived.cpp
@@ -885,6 +895,9 @@ add_library(forgecad_drawing_test_support STATIC
     cad_drawing_dimension.cpp
     cad_drawing_silhouette.cpp
     cad_drawing_visibility.cpp
+    cad_drawing_frame.cpp
+    cad_drawing_template.cpp
+    cad_drawing_template_editor.cpp
     cad_drawing_page.cpp)
 target_include_directories(forgecad_drawing_test_support PUBLIC ${PROJECT_SOURCE_DIR})
 target_link_libraries(forgecad_drawing_test_support PUBLIC Qt6::Widgets forgekernel forgecad_drawing_menus)
@@ -898,6 +911,18 @@ function(forgecad_add_drawing_editor_test name timeout)
     set_tests_properties(${name} PROPERTIES TIMEOUT ${timeout}
         ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QPA_OFFSCREEN_NO_GLX=1;QT_QPA_PLATFORMTHEME=;QT_STYLE_OVERRIDE=Fusion")
 endfunction()
+
+forgecad_add_drawing_editor_test(forgecad_drawing_local_tools_tests 120
+    tests/test_drawing_local_tools.cpp)
+
+forgecad_add_drawing_editor_test(forgecad_drawing_local_section_depth_tests 120
+    tests/test_drawing_local_section_depth.cpp)
+
+forgecad_add_drawing_editor_test(forgecad_drawing_crop_tests 90
+    tests/test_drawing_crop.cpp)
+
+forgecad_add_drawing_editor_test(forgecad_drawing_templates_tests 90
+    tests/test_drawing_templates.cpp)
 
 forgecad_add_drawing_editor_test(forgecad_drawing_preparation_tests 90
     tests/test_drawing_preparation.cpp)
@@ -919,7 +944,7 @@ forgecad_add_drawing_editor_test(forgecad_drawing_layout_history_tests 60
     tests/test_drawing_layout_history.cpp)
 
 # Quote associative complete e interazione degli snap, senza includere la GUI 3D.
-add_executable(forgecad_drawing_dimensions_tests tests/test_drawing_dimensions.cpp cad_drawing.cpp cad_drawing_dimension.cpp cad_drawing_sheet.cpp cad_drawing_derived.cpp)
+add_executable(forgecad_drawing_dimensions_tests tests/test_drawing_dimensions.cpp cad_drawing.cpp cad_drawing_dimension.cpp cad_drawing_sheet.cpp cad_drawing_derived.cpp cad_drawing_frame.cpp cad_drawing_page.cpp)
 target_include_directories(forgecad_drawing_dimensions_tests PRIVATE ${PROJECT_SOURCE_DIR})
 target_link_libraries(forgecad_drawing_dimensions_tests PRIVATE Qt6::Gui forgekernel)
 target_compile_options(forgecad_drawing_dimensions_tests PRIVATE -Wall -Wextra -Wpedantic)

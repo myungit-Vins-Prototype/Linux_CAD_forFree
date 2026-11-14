@@ -481,7 +481,7 @@ set_target_properties(forgekernel_cone_rays_tests PROPERTIES AUTOMOC OFF AUTOUIC
 add_test(NAME forgekernel_cone_rays_tests COMMAND forgekernel_cone_rays_tests)
 set_tests_properties(forgekernel_cone_rays_tests PROPERTIES TIMEOUT 60)
 
-add_executable(forgekernel_blend_cavity_tests tests/fk_test_main.cpp tests/test_blend_cavity.cpp)
+add_executable(forgekernel_blend_cavity_tests tests/fk_test_main.cpp tests/test_blend_cavity.cpp tests/test_blend_transitions.cpp)
 target_link_libraries(forgekernel_blend_cavity_tests PRIVATE forgekernel)
 target_compile_definitions(forgekernel_blend_cavity_tests PRIVATE FORGECAD_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
 target_compile_options(forgekernel_blend_cavity_tests PRIVATE -Wall -Wextra -Wpedantic)

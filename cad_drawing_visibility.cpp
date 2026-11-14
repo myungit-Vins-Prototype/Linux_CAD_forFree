@@ -289,7 +289,7 @@ class Occlusion {
         }
     }
 public:
-    Occlusion(const DrawingModelSnapshot &model,const DrawingView &view,DrawingSilhouetteCache &cache,QStringList &warnings,const QPainterPath *material):plane_(view.plane),depthBias_(4*view.tolerance),intersectionTolerance_(std::max(1e-10,view.tolerance*.001)){QSet<quint64> ids;
+    Occlusion(const DrawingModelSnapshot &model,const DrawingView &view,DrawingSilhouetteCache &cache,QStringList &warnings,const QPainterPath *material,const Bounds *crop):plane_(view.plane),depthBias_(4*view.tolerance),intersectionTolerance_(std::max(1e-10,view.tolerance*.001)){QSet<quint64> ids;
         if(view.sectionStyle!=DrawingSectionStyle::Removed){need(material,"Materiale della sezione non preparato per la visibilita'.");capBias_=4*view.tolerance;cap_=QTransform::fromScale(1/view.scale,-1/view.scale).map(*material);capLoops_=cap_.toSubpathPolygons();}
         for(const auto &source:model.bodies){cancellationPoint();need(source.featureId&&!ids.contains(source.featureId)&&source.body&&source.names&&source.names->body==source.body.get(),"Sorgente della visibilita' incoerente.");ids.insert(source.featureId);
             ExactCylinder cylinder;const bool exactCylinder=completeCylinder(source,view,cylinder);if(exactCylinder)cylinders_.push_back(cylinder);
@@ -314,6 +314,7 @@ public:
             for(const auto &face:mesh->faces){cancellationPoint();const bool planar=source.body->face(face.face).surface->type()==SurfaceType::Plane;
                 for(const auto &indices:face.triangles){const auto a=view.plane.toLocal(face.points.at(indices[0])),b=view.plane.toLocal(face.points.at(indices[1])),c=view.plane.toLocal(face.points.at(indices[2]));
                     need(isFinite(a)&&isFinite(b)&&isFinite(c),"Triangolo non finito nella visibilita'.");
+                    if(crop){Bounds box;box.add(a);box.add(b);box.add(c);if(!box.overlaps(*crop))continue;}
                     for(const auto &polygon:retainedTriangles(a,b,c,view))for(std::size_t i=2;i<polygon.size();++i){Triangle triangle;triangle.a=polygon[0];triangle.b=polygon[i-1];triangle.c=polygon[i];triangle.area=cross2(triangle.b-triangle.a,triangle.c-triangle.a);
                         const double side=std::max({norm(triangle.b-triangle.a),norm(triangle.c-triangle.a),norm(triangle.c-triangle.b)});if(std::abs(triangle.area)<=1e-12*side*side)continue;
                         triangle.bias=std::max(4*view.tolerance,planar?0.0:2*deflection);
@@ -438,7 +439,7 @@ void renderShadedMesh(const DrawingModelSnapshot &model,const DrawingView &view,
 }
 
 void append(QPainterPath &path,QPointF a,QPointF b){if(QLineF(a,b).length()<1e-10)return;if(path.isEmpty()||QLineF(path.currentPosition(),a).length()>1e-8)path.moveTo(a);path.lineTo(b);}
-DrawingVisiblePath displayConic(const DisplayConic &world,Interval range,const Curve<3> &geometry,const DrawingView &view,const Occlusion *index,const DisplaySource &source){
+DrawingVisiblePath displayConic(const DisplayConic &world,Interval range,const Curve<3> &geometry,const DrawingView &view,const Occlusion *index,const DisplaySource &source,const Bounds *crop){
     DisplayConic curve{view.plane.toLocal(world.center),view.plane.directionToLocal(world.a),view.plane.directionToLocal(world.b)};DrawingVisiblePath result;
     const double step=conicDisplayStep((norm(curve.a)+norm(curve.b))*view.scale);
     const auto paper=[&](double t){const auto p=curve.point(t);const QPointF q(p.x()*view.scale,-p.y()*view.scale);need(std::isfinite(q.x())&&std::isfinite(q.y()),"Conica non finita sul foglio.");return q;};
@@ -452,13 +453,16 @@ DrawingVisiblePath displayConic(const DisplayConic &world,Interval range,const C
     for(auto part:retained){const double count=std::max(1.,std::ceil(part.length()/step));need(std::isfinite(count)&&count<=200000,"Troppi intervalli per la conica della tavola.");
         const auto spherical=index?index->analyticHidden(geometry,part,source):std::vector<Interval>{};
         for(int i=0;i<int(count);++i){cancellationPoint();const Interval arc{part.lo+part.length()*i/count,part.lo+part.length()*(i+1)/count};
+            if(crop&&!curve.bounds(arc).overlaps(*crop))continue;
             const auto hidden=index?index->hidden(curve,arc,source,spherical):std::vector<Interval>{};double start=arc.lo;
             for(auto hit:hidden){draw(result.visible,{start,hit.lo});draw(result.hidden,hit);start=hit.hi;}draw(result.visible,{start,arc.hi});}}
     return result;
 }
-DrawingVisiblePath display(const std::vector<Vec3> &points,const DrawingView &view,const Occlusion *index,const DisplaySource &source={},const std::function<bool(Vec3,Vec3)> &omit={}){DrawingVisiblePath result;auto displayed=source;
+DrawingVisiblePath display(const std::vector<Vec3> &points,const DrawingView &view,const Occlusion *index,const DisplaySource &source={},const std::function<bool(Vec3,Vec3)> &omit={},const Bounds *crop=nullptr){DrawingVisiblePath result;auto displayed=source;
     const auto paper=[&](Vec3 p){const QPointF point(p.x()*view.scale,-p.y()*view.scale);need(std::isfinite(point.x())&&std::isfinite(point.y()),"Tratto non finito sul foglio.");return point;};
-    for(std::size_t i=1;i<points.size();++i){cancellationPoint();if(omit&&omit(points[i-1],points[i]))continue;const auto a=view.plane.toLocal(points[i-1]),b=view.plane.toLocal(points[i]);need(isFinite(a)&&isFinite(b),"Curva non finita nella visibilita'.");
+    for(std::size_t i=1;i<points.size();++i){cancellationPoint();const auto a=view.plane.toLocal(points[i-1]),b=view.plane.toLocal(points[i]);need(isFinite(a)&&isFinite(b),"Curva non finita nella visibilita'.");
+        if(crop){Bounds box;box.add(a);box.add(b);if(!box.overlaps(*crop))continue;}
+        if(omit&&omit(points[i-1],points[i]))continue;
         // Misura anche la corda effettiva: un contorno con raffinamento
         // limitato puo' superare la precisione grafica richiesta.
         if(source.surface){const auto projection=projectPoint(*source.surface,.5*(points[i-1]+points[i]));
@@ -512,9 +516,11 @@ void consolidateConicPaths(const DrawingView &view,const std::vector<DrawingCurv
     }
 }
 }
-QString drawingViewVisibility(const DrawingModelSnapshot &model,const DrawingView &view,const std::vector<DrawingCurve> &curves,const DrawingSilhouetteResult &silhouettes,DrawingSilhouetteCache &cache,DrawingViewVisibility &result,const QPainterPath *sectionMaterial,bool includeMesh){
+QString drawingViewVisibility(const DrawingModelSnapshot &model,const DrawingView &view,const std::vector<DrawingCurve> &curves,const DrawingSilhouetteResult &silhouettes,DrawingSilhouetteCache &cache,DrawingViewVisibility &result,const QPainterPath *sectionMaterial,bool includeMesh,const QRectF *paperBounds){
     try{need(!model.version.documentId.isNull()&&std::isfinite(view.scale)&&view.scale>0&&std::isfinite(view.tolerance)&&view.tolerance>0,"Vista non valida per la visibilita'.");DrawingViewVisibility next;
-        std::unique_ptr<Occlusion> index;if(drawingHasProjection(view))index=std::make_unique<Occlusion>(model,view,cache,next.warnings,sectionMaterial);
+        Bounds crop;const Bounds *window=nullptr;
+        if(paperBounds){const auto box=paperBounds->normalized();need(std::isfinite(box.left())&&std::isfinite(box.top())&&std::isfinite(box.right())&&std::isfinite(box.bottom())&&!box.isEmpty(),"Limiti del dettaglio non validi.");crop.add(Vec3(box.left()/view.scale,-box.top()/view.scale,0));crop.add(Vec3(box.right()/view.scale,-box.bottom()/view.scale,0));window=&crop;}
+        std::unique_ptr<Occlusion> index;if(drawingHasProjection(view))index=std::make_unique<Occlusion>(model,view,cache,next.warnings,sectionMaterial,window);
         TessellationOptions options;options.deflection=std::clamp(.03/view.scale,1e-6,1.0);options.angle=.12;
         for(const auto &curve:curves){cancellationPoint();need(curve.viewId==view.id&&curve.curve,"Curva estranea alla vista.");CurvePtr<3> geometry=curve.curve;auto range=curve.range;DisplaySource origin;
             if(curve.kind==DrawingCurveKind::ProjectedEdge){const auto source=std::find_if(model.bodies.begin(),model.bodies.end(),[&](const auto &body){return body.featureId==curve.featureId;});need(source!=model.bodies.end()&&source->body,"Sorgente del bordo assente.");
@@ -530,10 +536,10 @@ QString drawingViewVisibility(const DrawingModelSnapshot &model,const DrawingVie
                 }
             }
             DisplayConic conic;Interval angles;
-            if(recognizedConic(geometry,range,view.tolerance,conic,angles)){const double radius=norm(conic.a);const Circle<3> exact(conic.center,conic.a/radius,conic.b/radius,radius);next.curves.push_back(displayConic(conic,angles,exact,view,curve.kind!=DrawingCurveKind::Section?index.get():nullptr,origin));continue;}
-            if(conicForm(*geometry,conic)){next.curves.push_back(displayConic(conic,range,*geometry,view,curve.kind!=DrawingCurveKind::Section?index.get():nullptr,origin));continue;}
+            if(recognizedConic(geometry,range,view.tolerance,conic,angles)){const double radius=norm(conic.a);const Circle<3> exact(conic.center,conic.a/radius,conic.b/radius,radius);next.curves.push_back(displayConic(conic,angles,exact,view,curve.kind!=DrawingCurveKind::Section?index.get():nullptr,origin,window));continue;}
+            if(conicForm(*geometry,conic)){next.curves.push_back(displayConic(conic,range,*geometry,view,curve.kind!=DrawingCurveKind::Section?index.get():nullptr,origin,window));continue;}
             const auto parameters=sampleCurve(*geometry,range,options);need(parameters.size()<=200000,"Troppi campioni per la visibilita'.");std::vector<Vec3> points;points.reserve(parameters.size());for(auto parameter:parameters)points.push_back(geometry->point(parameter));
-            next.curves.push_back(display(points,view,curve.kind!=DrawingCurveKind::Section?index.get():nullptr,origin));}
+            next.curves.push_back(display(points,view,curve.kind!=DrawingCurveKind::Section?index.get():nullptr,origin,{},window));}
         if(drawingHasProjection(view)){consolidateLinearPaths(view,curves,next.curves);consolidateConicPaths(view,curves,next.curves);}
         std::vector<bool> eligible(curves.size(),true);next.allCenters=drawingCenterGeometry(view,curves,eligible);
         for(std::size_t i=0;i<curves.size();++i)eligible[i]=!next.curves[i].visible.isEmpty();
@@ -558,7 +564,7 @@ QString drawingViewVisibility(const DrawingModelSnapshot &model,const DrawingVie
             std::vector<const DrawingCurve *> exact;
             for(const auto &c:curves)if(c.kind==DrawingCurveKind::ApparentArc&&c.featureId==contour.featureId&&c.sourceFace==contour.sourceFace)exact.push_back(&c);
             const auto coincident=[&](Vec3 a,Vec3 b){return std::any_of(exact.begin(),exact.end(),[&](const auto *c){return projectPoint(*c->sourceGeometry,a,c->sourceRange).distance<=8*view.tolerance&&projectPoint(*c->sourceGeometry,b,c->sourceRange).distance<=8*view.tolerance;});};
-            next.silhouettes.push_back(display(contour.points,view,index.get(),origin,exact.empty()?std::function<bool(Vec3,Vec3)>{}:coincident));
+            next.silhouettes.push_back(display(contour.points,view,index.get(),origin,exact.empty()?std::function<bool(Vec3,Vec3)>{}:coincident,window));
         }
         std::set<std::pair<quint64,std::uint32_t>> visibleFaces;
         for(std::size_t i=0;i<curves.size();++i)if(!next.curves[i].visible.isEmpty()){

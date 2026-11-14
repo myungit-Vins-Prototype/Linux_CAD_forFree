@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <numeric>
+#include <limits>
 
 #include "fk_curve_ops.h"
 #include "fk_quadrature.h"
@@ -35,11 +36,23 @@ double signedArea(const ProfileLoop &loop) {
     double twice = 0.0;
     for (const ProfileSegment &segment : loop.segments) {
         const Curve<2> &curve = *segment.curve;
-        twice += integrateSegment(segment, [&curve](double t) {
+        // La differenza x*y' - y*x' puo' essere quasi nulla anche con
+        // termini grandi. Il valore assoluto del risultato non misura
+        // l'arrotondamento dei due prodotti: usa la quadratura che segue
+        // anche la loro grandezza e riconosce la stagnazione numerica.
+        const auto integrand = [&curve](double t) {
             Vec2 d[2];
             curve.evaluate(t, 1, d);
-            return cross(d[0], d[1]);
-        }, 1.0e-13);
+            detail::Evaluation<1> result;
+            result.value[0] = cross(d[0], d[1]);
+            result.magnitude[0] = std::abs(d[0].x()*d[1].y()) + std::abs(d[0].y()*d[1].x());
+            return result;
+        };
+        const auto breaks = curve.breakpoints(segment.range);
+        for (std::size_t k = 1; k < breaks.size(); ++k)
+            if (breaks[k] > breaks[k-1])
+                twice += detail::adaptiveIntegral<1>(integrand, breaks[k-1], breaks[k],
+                    detail::Values<1>{1.0e-13}, 50.0*std::numeric_limits<double>::epsilon(), 0).value[0];
     }
     return 0.5 * twice;
 }

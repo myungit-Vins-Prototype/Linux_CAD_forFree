@@ -2303,7 +2303,7 @@ Body blendSurfaceChainsWithGuide(const Body &input, const std::vector<EdgeId> &s
                 // Il contatto e' gia' sulla faccia di k nel vertice: si passa sulla fin i.
                 const double dir = fi.end > fi.start ? 1.0 : -1.0;
                 double t = crossing(before, row, c, support, 0.5 * (fi.start + fi.end), dir);
-                if (onA) t = refineCrossing(before, row, c, t);
+                if (onA || t == fi.end) t = refineCrossing(before, row, c, t);
                 if (nearVertex(fi, t, fi.end)) continue;
                 Piece after = makePiece(i, fk.b, t, fi.end, fk.a);
                 after.startOnA = onA;
@@ -2323,7 +2323,7 @@ Body blendSurfaceChainsWithGuide(const Body &input, const std::vector<EdgeId> &s
                 // La sezione nel vertice sull'edge k: lo stesso punto, un'altra curva.
                 const double dir = fk.end > fk.start ? 1.0 : -1.0;
                 double t = crossing(bridge, row, c, support, fk.start, dir);
-                if (onA) t = refineCrossing(bridge, row, c, t);
+                if (onA || t == fk.end) t = refineCrossing(bridge, row, c, t);
                 if (nearVertex(fk, t, fk.start)) continue;
                 bridge.to = t;
                 Piece &rest = pieces[std::size_t(pk)];
@@ -2337,6 +2337,91 @@ Body blendSurfaceChainsWithGuide(const Body &input, const std::vector<EdgeId> &s
                     // Catena chiusa: il pezzo di passaggio sta all'inizio.
                 }
             }
+        }
+
+        // Due cuciture tangenti su supporti opposti possono scambiarsi
+        // l'ordine quando il raggio consuma il tratto fra i loro vertici.
+        // Ricostruisci la coppia intermedia; se il passaggio supera anche
+        // un vertice della guida, continua sulla fin adiacente reale.
+        for (std::size_t pass = 0; pass < 2*pieces.size(); ++pass) {
+            std::size_t p = 0;
+            for (; p < pieces.size(); ++p) {
+                const Piece &piece = pieces[p];
+                const ChainFin &cf = chain.fins[std::size_t(piece.chainFin)];
+                if ((cf.end-cf.start)*(piece.to-piece.from) < 0.0) break;
+            }
+            if (p == pieces.size()) break;
+            if (pieces.size() < 3 || (!chain.closed && (p == 0 || p+1 == pieces.size())))
+                throw std::domain_error("blendEdges: passaggio tangente oltre l'estremo della catena");
+            Piece &middle = pieces[p], &before = pieces[(p+pieces.size()-1)%pieces.size()],
+                  &after = pieces[(p+1)%pieces.size()];
+            const ChainFin &cf = chain.fins[std::size_t(middle.chainFin)];
+            const double direction = cf.end > cf.start ? 1.0 : -1.0;
+            if (before.chainFin == middle.chainFin && after.chainFin != middle.chainFin &&
+                middle.a == after.a && middle.b == after.b && middle.startOnC.valid()) {
+                const ChainFin &following = chain.fins[std::size_t(after.chainFin)];
+                const double nextDirection = following.end > following.start ? 1.0 : -1.0;
+                Piece bridge = makePiece(after.chainFin, before.b, following.start, following.end, before.a);
+                seedFrom(bridge, before.blend->section(cf.end), following.start);
+                const bool onA = middle.startOnA;
+                double end = crossing(bridge, onA ? 0 : 2, middle.startOnC, onA ? bridge.a : bridge.b,
+                                      following.start, nextDirection);
+                if (onA) end = refineCrossing(bridge, 0, middle.startOnC, end);
+                before.to = cf.end;
+                bridge.to = end;
+                after.from = end;
+                after.startOnC = middle.startOnC;
+                after.startOnA = onA;
+                after.startVertex = middle.startVertex;
+                middle = std::move(bridge);
+            } else if (before.chainFin != middle.chainFin && after.chainFin == middle.chainFin &&
+                       middle.a == before.a && middle.b == before.b && after.startOnC.valid()) {
+                const ChainFin &preceding = chain.fins[std::size_t(before.chainFin)];
+                const double previousDirection = preceding.end > preceding.start ? 1.0 : -1.0;
+                Piece bridge = makePiece(before.chainFin, after.b, preceding.start, preceding.end, after.a);
+                seedFrom(bridge, after.blend->section(cf.start), preceding.end);
+                const bool onA = after.startOnA;
+                double start = crossing(bridge, onA ? 0 : 2, after.startOnC, onA ? bridge.a : bridge.b,
+                                        preceding.end, -previousDirection);
+                if (onA) start = refineCrossing(bridge, 0, after.startOnC, start);
+                before.to = start;
+                bridge.from = start;
+                bridge.startOnC = after.startOnC;
+                bridge.startOnA = onA;
+                bridge.startVertex = after.startVertex;
+                after.from = cf.start;
+                after.startOnC = EdgeId();
+                middle = std::move(bridge);
+            } else if (before.chainFin == middle.chainFin && after.chainFin == middle.chainFin &&
+                       middle.startOnC.valid() && after.startOnC.valid() && middle.startOnA != after.startOnA) {
+                const bool firstOnA = after.startOnA;
+                const EdgeId firstSeam = after.startOnC, secondSeam = middle.startOnC;
+                const VertexId firstVertex = after.startVertex, secondVertex = middle.startVertex;
+                const double first = refineCrossing(before, firstOnA ? 0 : 2, firstSeam, middle.to);
+                Piece bridge = makePiece(middle.chainFin, firstOnA ? before.b : after.b,
+                                         first, cf.end, firstOnA ? after.a : before.a);
+                seedFrom(bridge, before.blend->section(first), first);
+                const double second = refineCrossing(bridge, firstOnA ? 2 : 0, secondSeam, middle.from);
+                if (!(direction*(second-first) > 0.0))
+                    throw std::domain_error("blendEdges: passaggi tangenti sovrapposti non ordinabili");
+                bridge.to = second;
+                bridge.startOnC = firstSeam;
+                bridge.startOnA = firstOnA;
+                bridge.startVertex = firstVertex;
+                before.to = first;
+                after.from = second;
+                after.startOnC = secondSeam;
+                after.startOnA = !firstOnA;
+                after.startVertex = secondVertex;
+                middle = std::move(bridge);
+            } else {
+                throw std::domain_error("blendEdges: tratto consumato fra passaggi tangenti non ricostruibile");
+            }
+        }
+        for (const Piece &piece : pieces) {
+            const ChainFin &cf = chain.fins[std::size_t(piece.chainFin)];
+            if (!((cf.end-cf.start)*(piece.to-piece.from) > 0.0))
+                throw std::domain_error("blendEdges: passaggi tangenti senza avanzamento lungo la guida");
         }
 
         // Se il contatto supera un bordo terminale, passa al supporto

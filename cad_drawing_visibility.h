@@ -23,10 +23,12 @@ struct DrawingViewVisibility {
     bool meshPrepared=false;
     DrawingCenterGeometry visibleCenters,allCenters; // cache dei riferimenti grafici, senza valutazioni al toggle
     QStringList warnings;
+    QPainterPath localBoundary; // contorno grafico della sezione locale, non quotabile
     QPainterPath breakMarks; // simboli grafici senza riferimenti quotabili
 };
 // Le sezioni con proiezione richiedono il materiale di chiusura (anche vuoto sulle superfici).
 QString drawingViewVisibility(const DrawingModelSnapshot &model,const DrawingView &view,
                              const std::vector<DrawingCurve> &curves,const DrawingSilhouetteResult &silhouettes,
-                             DrawingSilhouetteCache &cache,DrawingViewVisibility &result,const QPainterPath *sectionMaterial=nullptr,bool includeMesh=false);
+                             DrawingSilhouetteCache &cache,DrawingViewVisibility &result,const QPainterPath *sectionMaterial=nullptr,bool includeMesh=false,
+                             const QRectF *paperBounds=nullptr);
 }

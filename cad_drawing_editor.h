@@ -11,6 +11,7 @@
 
 class QGraphicsView;
 namespace ForgeCad {
+struct DrawingSheetTemplate;
 class DrawingSheetEditor final : public QWidget {
 public:
     DrawingSheetEditor(DrawingSheet sheet,DrawingEditorModel model,QWidget *parent=nullptr);
@@ -59,6 +60,11 @@ public:
     QString removeView(const QUuid &id);
     QString setHiddenLinesVisible(const QUuid &id,bool visible);
     QString setShadedFacesVisible(const QUuid &id,bool visible);
+    QString addCenterMarks(const QVector<DrawingCenterMark> &marks);
+    QString removeCenterMark(const QUuid &id);
+    QString clearCenterMarks(const QUuid &viewId);
+    QString beginLocalSection(const QUuid &viewId);
+    QString setLocalSection(const QUuid &viewId,std::optional<DrawingLocalSection> section);
     QString setCenterMarksVisible(const QUuid &id,bool visible);
     QString setCenterLinesVisible(const QUuid &id,bool visible);
     QString setCylinderAxesVisible(const QUuid &id,bool visible);
@@ -76,6 +82,7 @@ public:
     QString setRevisionTable(const DrawingRevisionTable &table);
     bool isComputing()const;
     QString setPageSettings(const QString &title,const QSizeF &size,const DrawingTitleBlock &block,std::optional<double> scale={});
+    QString applyPageTemplate(const DrawingSheetTemplate &appearance);
     void setPageContext(DrawingPageContext context);
     DrawingPageContext pageContext()const;
     QString exportPdf(const QString &path,DrawingPdfReport &report)const;

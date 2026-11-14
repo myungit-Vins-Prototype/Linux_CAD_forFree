@@ -28,6 +28,14 @@
 
 namespace ForgeCad {
 namespace {
+// Copia legacy del piano nella definizione: lo schizzo resta la sorgente
+// geometrica anche dopo una sostituzione dell'appoggio e con cache valide.
+void synchronizeSketchPlane(ExtrusionObject &body, const QVector<SketchObject> &sketches) {
+    if (body.operation < 0 && (body.feature == BodyFeature::Extrusion || body.feature == BodyFeature::Revolution)
+        && body.sketchIndex >= 0 && body.sketchIndex < sketches.size())
+        body.plane = sketches.at(body.sketchIndex).plane;
+}
+
 // Tratti dei contorni senza ripetizioni: rigenerando la storia con una
 // topologia diversa a monte piu' riferimenti (frammenti di un vecchio
 // bordo) possono indicare lo stesso spigolo, che nel loop va una volta.
@@ -45,6 +53,7 @@ static void appendDistinctSegments(std::vector<ForgeCad::Kernel::PathSegment> &s
 // Geometria e tassellazione di un corpo (anche da un thread: non tocca il viewport).
 void buildBody(ExtrusionObject &body, int index, const QVector<SketchObject> &sketches, const QVector<ExtrusionObject> &bodies,
                       int quality, bool prepareDisplay) {
+    synchronizeSketchPlane(body, sketches);
     QElapsedTimer timer;
     timer.start();
     // Le feature nuove vengono costruite prima di entrare nella storyboard:
@@ -125,6 +134,7 @@ void buildGeometryImpl(ExtrusionObject &body, int index, const QVector<SketchObj
 // operandi (nomi topologici calcolati quando servono, cad_element_names) e gli
 // avvisi della risoluzione dei riferimenti (ambigui) vanno nell'esito.
 void buildGeometry(ExtrusionObject &body, int index, const QVector<SketchObject> &sketches, const QVector<ExtrusionObject> &bodies) {
+    synchronizeSketchPlane(body, sketches);
     clearReferenceWarnings();
     body.referenceResolutions.clear();
     beginTopologyResolutionCapture();

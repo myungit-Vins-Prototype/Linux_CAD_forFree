@@ -1,3 +1,4 @@
+#include "cad_drawing_template.h"
 #include "cad_drawing_window.h"
 #include "cad_drawing_focus.h"
 #include "cad_drawing_compute.h"
@@ -110,6 +111,7 @@ QString DrawingWindow::restoreSheets(bool redo){
 QString DrawingWindow::addSheet(const QString &name,const QSizeF &size){
     const auto access=sheetMutationError();if(!access.isEmpty())return access;
     auto prepared=drawing_;ensureIds(prepared);DrawingSheet sheet;sheet.drawing.version=drawing_.sheet.drawing.version;sheet.drawing.model=drawing_.sheet.drawing.model;sheet.title=name.trimmed();sheet.size=size;sheet.titleBlock=editor_->sheet().titleBlock;sheet.style=editor_->sheet().style;
+    DrawingSheetTemplate appearance;bool found=false;const auto templateError=loadDefaultDrawingTemplate(size,appearance,found);if(!templateError.isEmpty())return templateError;if(found)applyDrawingTemplate(sheet,appearance);
     const auto id=QUuid::createUuid();prepared.otherSheets.append(std::move(sheet));prepared.sheetIds.append(id);return commitSheets(std::move(prepared),id,QStringLiteral("Nuovo foglio"));
 }
 QString DrawingWindow::duplicateSheet(int index){

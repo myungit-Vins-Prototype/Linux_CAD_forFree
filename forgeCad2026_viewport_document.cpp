@@ -422,7 +422,7 @@ QString CadViewport::changeSketchSupport(int index, GeometryRef reference) {
     }
     ForgeCad::ResolvedRef resolved;
     QString error;
-    if (!ForgeCad::resolveGeometryRef(reference, extrusions_.size(), sketches_, extrusions_, resolved, &error) || !resolved.hasPlane)
+    if (!ForgeCad::resolveSketchSupport(reference, extrusions_.size(), sketches_, extrusions_, resolved, &error) || !resolved.hasPlane)
         return error.isEmpty() ? QStringLiteral("Il riferimento non e' un piano valido.") : error;
     SketchObject next = sketches_.at(index);
     next.plane = reference.kind == 1 ? reference.index : kFacePlane;
@@ -2195,7 +2195,7 @@ void CadViewport::followDatum(int index, QSet<int> &changed) {
             else plane = extrusions_.at(index).datumFrame;
         } else {
             ForgeCad::ResolvedRef resolved;
-            if (!ForgeCad::resolveGeometryRef(*sketch.support, extrusions_.size(), sketches_, extrusions_, resolved, &error) || !resolved.hasPlane)
+            if (!ForgeCad::resolveSketchSupport(*sketch.support, extrusions_.size(), sketches_, extrusions_, resolved, &error) || !resolved.hasPlane)
                 error = error.isEmpty() ? QStringLiteral("La faccia di appoggio non e' piu' un piano risolvibile.") : error;
             else plane = ForgeCad::faceSketchFrame(resolved.point, resolved.direction, ForgeCad::Kernel::Vec3(0,0,1));
         }

@@ -1,8 +1,8 @@
 # CLAUDE.md — memoria operativa ForgeCAD
 
-Aggiornato **13 novembre 2026**.
+Aggiornato **14 novembre 2026**.
 
-[Cronologia](docs/history/claude-2026-11-02.md).
+[Cronologia](docs/history/claude-2026-11-02.md); [stato prima di Part23](docs/history/claude-prima-part23-2026-11-14.md).
 
 ## Regole permanenti e decisioni
 
@@ -41,7 +41,7 @@ CAD parametrico 2D/3D Linux/macOS, C++17/Qt6/OpenGL3.3 Core. Finestra storica `P
 | Solidi e superfici | `cad_forge*`, `kernel/fk_*`: primitive, estrusione (anche fino al prossimo corpo), rivoluzione, sweep/loft, booleane, sformo, svuotamento/spessore, filettatura, cucitura, taglio/estensione, reti U/V e poli NURBS. Estendi apre il pannello prima della scelta dei bordi. Raccordi costanti, conici, variabili e tra facce; percorsi tangenti con leggi indipendenti e maniglie R. |
 | Storia e genealogia | `cad_history*`, `cad_element_names*`, viewport e storyboard: schizzi/piani come passi autonomi, riordino, rollback, soppressione, riparazione e Undo/Redo. Specchi/ripetizioni sono un evento con corpi separati ed esclusioni; conservano identità e dipendenze. |
 | Documenti/revisioni | `cad_document_io*`, `cad_document_read*`, `cad_native_revisions*`, `cad_workspace*`: `.prt` con firma FCAD, formato 69 (contorni apparenti associativi; 68:nomi sorgenti; 67:precisione; 66:piani; 65: unione loft; 64: corrispondenze; 63: variazioni quote); Zstandard dal 56 e lettura legacy zlib. Definizione e cache B-rep/mesh distinte, salvataggio atomico, recupero, consultazione concorrente e lock della modifica. Check-out/check-in, ripristino, rilascio coordinato e recupero catalogo. |
-| Tavole 2D | `cad_drawing_*`: `.drw`, viste proiettate/ausiliarie, sezioni composte, dettagli e viste interrotte, più fogli, scale foglio/vista, quote e tolleranze, datum/GD&T, badge persistenti, rugosità Ra/Rz e PDF vettoriale. Agganci alle geometrie esatte e nomi genealogici; portabilità senza cache del modello nei casi migrabili. |
+| Tavole 2D | `cad_drawing_*`: `.drw`, viste proiettate/ausiliarie, sezioni composte/locali con contorno e profondita’, centri sui bordi scelti, dettagli e viste interrotte, più fogli, scale foglio/vista, quote e tolleranze, datum/GD&T, badge persistenti, rugosità Ra/Rz e PDF vettoriale. Agganci alle geometrie esatte e nomi genealogici; portabilità senza cache del modello nei casi migrabili. |
 | Scambio e analisi | `kernel/fk_step*`, `fk_iges*`, `fk_exchange*`, `fk_mass*`: STEP/IGES propri, esportazione STL/OBJ, misure/massa, zebra e curvatura. Parsing numerico indipendente dal locale, controlli di cicli/profondità e dimensioni dei dati importati. |
 
 ## Compilazione, verifiche e documentazione
@@ -108,6 +108,35 @@ ctest --test-dir forgecad-release --output-on-failure
 
 ## Ultimi interventi — esiti consolidati
 
+**14/11 — CT0578, icone e template.** Cache curve/piani e dettagli ritagliati prima della visibilita’:
+viste11,83→8,33s, totale17,96→14,54s; restano~6s di genealogia;12viste/47quote e originali invariati.
+Icone 2D distinte. `File > Template dei fogli`: cartiglio/testi/campi/logo/stile, .drwt, default per
+formato/orientamento, nuovi fogli/formato iniziale e applicazione con Undo; foglio30 condizionale.
+App/runner,34/34CTest e3 ripetuti dopo codec, Wayland/PDF/default reali PASS.
+[Prove, tempi, immagini e hash](docs/ct0578-tavole-template-2026-11-14.md).
+
+**14/11 — Tavole 2D.** Centri/assi selettivi, raggio mobile/leader corto, sezioni locali esatte.
+Foglio29/documento14, assi/note14 corretti; firma indipendente da visibilita'/cache parziali.
+Cache16 migra specchi di funzione/derivati delle copie di lavoro; check-in/altri snapshot preservati.
+Recupero29/29Part23 su B-rep identico,47/47CT0578;8/8persistenza e3cicli isolati PASS.
+Migrazione: riavvio/salvataggio modello+tavola. Falso blocco sezioni quotate corretto, rimozione protetta.
+Guida zero/taglio su ortogonale/appoggio; snap esatti a estremi/medi/centri/quadranti/bordi,
+indicatore, Tab/Alt e profili riusati, senza ricalcolo dei tagli ai valori. App/runner completi,35/35CTest2D e Wayland PASS; ultimo Part23:
+30/30quote dopo Applica/salva/riapri, originali invariati. Mappa718/10333/351TU,zero diagnostica/check/HTML PASS.
+Riavviare app; vista > Inserisci > Sezione locale. Avvisi contorni/piano locale conservati.
+[Cache/agganci](docs/part23-quote-associative-cache-2026-11-14.md);
+[guida/snap e prove](docs/sezione-locale-snap-profondita-2026-11-14.md);
+[precedenti e limiti](docs/history/claude-prima-guida-profondita-2026-11-14.md).
+
+**14/11 — Part23 raccordi e storyboard.** Split/SplitA, guide corte/ciclo, contorni piani e area:
+R21:102,8s→63–65ms; due contorni R2:170facce/452edge, Wayland/anteprima/codec PASS.
+Nuovo Part23:23feature; E17 sincronizzato col piano dello schizzo, appoggi nominati persi/ambigui
+rifiutati senza spostare frame. Cambio storico non riprodotto. Rebuild/riapertura stabili; R23:kernel509ms,
+UI624ms,riuso0ms; area originale>100s. Storyboard:11,7s→266ms/stesse38facce con box storici.
+App/runner/17CTest/Wayland PASS; generale fermo alla cache legacy di Applicatore. Cavita'7/8 con
+fallimento gia' presente; dettagli/kernel test precedenti e mappa699/10105 conservati nel
+[rapporto](docs/part23-raccordi-2026-11-14.md) e [archivio completo](docs/history/claude-prima-tavole2d-2026-11-14.md).
+
 **13/11 — Contorno apparente proiettato.** Richiesta: bordo immaginario della parte raggiata proiettato sul piano,
 non sezione. Kernel analitico e trim B-rep; faccia/ramo persistenti, cache snap, Quota, etichetta sorgente e codec69.
 App/runner completi, 18/18CTest e2avvii Wayland/GL PASS: geometria/trim, mouse, vincolo unico, raggio,
@@ -126,11 +155,7 @@ App/runner completi, 18/18CTest e tre prove Wayland/GL PASS; mappa691/9966/338AS
 Girante su disco con storia diversa e senza il raccordo dell'immagine; prove su fixture/pannello reale, originale invariato.
 [Verifiche attuali](docs/raccordo-anteprima-comandi-2026-11-13.md), [intervento precedente](docs/schizzi-riferimenti-hover-2026-11-13.md).
 
-**13/11 — Anteprime e strumenti schizzo.** Riuso immediato di risultati pronti, anche ripetizioni; campi double
-senza arrotondamento. Cerchio3, arco3 senza raggio, Polilinea e aggancio unico/origine prioritaria;
-nomi sorgenti e vincoli rotti, codec68. App/23 e24CTest/Wayland/GL e mappe PASS.
-[Anteprime](docs/anteprime-modifica-riuso-scena-2026-11-13.md), [strumenti](docs/schizzi-strumenti-riferimenti-2026-11-13.md);
-[dettagli conservati](docs/history/claude-prima-contorno-apparente-2026-11-13.md).
+Anteprime/strumenti schizzo13/11: prove e limiti conservati nell’[archivio CT0578](docs/history/claude-prima-ct0578-template-2026-11-14.md).
 
 **12/11 — Applicatore4.** Raccordi: fix SplitA/mitre/NURBS; app/kernel/storia/mappa PASS.
 R22/R23=0,20 e R22=0,30/R23=0,14:19funzioni PASS; massimo aperto. [Prove](docs/applicatore4-raccordi-2026-11-12.md).
@@ -138,42 +163,12 @@ Storyboard: fix fusioni/cache/rollback. App/19CTest/CAD19/codec/rebuild/GUI/mapp
 `ce84735` storyboard; altri nel commit corrente. [Prove](docs/applicatore4-storyboard-2026-11-12.md).
 Pubblicazione: build completa/25CTest/62Blend/38History/5Unify/NURBS6/mappa PASS.
 
-**11/11 — Badge CT0578.** Riassegnazione libera riserve e riparte dal numero richiesto;
-modifiche ordinarie conservano numeri/riserve. App/4CTest/Wayland/codec1..47 e10..56/mappa PASS.
-Originale invariato; riaprire app. [Prove e limite Tab](docs/ct0578-badge-ripartenza-2026-11-11.md).
-
-Tema/checkbox e CI10/11: [esiti e riferimenti conservati](docs/history/claude-prima-anteprime-2026-11-13.md).
-
 **11/11 — Poli NURBS.** Hook e sfera: jet G1/G2 interni, fasce affini, schema16; app/runner,
 20+40kernel/11CTest/Wayland/codec e mappa PASS, `ddc02f9` pubblicato. Refit incompatibile rifiutato.
 CI42982288794 era in corso; selftest cattura ribbon falliva anche prima; Hook cambiato esternamente.
 [Prove](docs/poli-nurbs-sfera-G1-G2-2026-11-11.md), [storico completo](docs/history/claude-prima-hover-riferimenti-2026-11-13.md).
 
-**08/11 — STL/OBJ automatico.** B-rep double, scarto<=0,01mm/angolo2°;
-recupero combinato precisione/densita'. Sfere3scale: errore ~4× minore;
-Shower3corpi:821845triangoli/4tentativi/B-rep invariati; app/10CTest PASS.
-Mouse:F1/Raccordo18 fuori scarto, export rifiutato. Mappa652/9346/check/HTML PASS.
-[Prove e limiti](docs/stl-qualita-automatica-2026-11-08.md).
-
-**08/11 — Bottle/Shower e memoria.** Pool esatto:690duplicati,poli/pesi1042→135MiB;
-Bottle RSS9,95→2,75GiB (-72%),30 B-rep byte-identici. Anche ultimo salvataggio:
-33funzioni/8schizzi/182facce,codec67/Wayland/idle0frame/nuovo schizzo senza rebuild PASS.
-Precisione1e-7..1e-10mm persistente,worker/UI/Undo; snapshot storico Mouse corretto.
-[Prove](docs/bottle-memoria-precisione-2026-11-08.md); precisione fine Bottle non certificata.
-Shower2,5mm **interno**:28facce/0errori/mesh,13superfici esterne originali;
-`output/Shower-Head-spessore-interno-2.5mm.prt`:Undo/Redo/codec/no-cache/Wayland PASS.
-App/33CTest,Offset27/Thicken6/Shell18/Sew12 e mappa/check/HTML PASS;
-riaprire l’app. [Prove e limiti](docs/shower-head-spessore-2026-11-08.md).
-`a388270` su origin/main.
-Cambio file corretto: snapshot30corpi + >2GiB liberi trattenuti; 3cicli Wayland:Shower0,88–0,90GiB,0corpi/superfici vecchi.
-[Prove e limiti](docs/cambio-documenti-memoria-2026-11-08.md); App/16CTest/GL PASS; mappa/HTML PASS.
-Snap90→5–10ms:[prove](docs/bottle-prestazioni-2026-11-08.md). Storico:
-[offset±3mm](docs/bottle-offset-2026-11-07.md),[guide](docs/bottle-ripetizione-2026-11-07.md),
-[raccordi](docs/bottle-raccordi-2026-11-07.md);
-[archivio](docs/history/claude-prima-bottle-prestazioni-2026-11-08.md).
-
-Interventi 07/11 Onion/Onion2 (sezioni, loft, raccordi e cucitura):
-[esiti e limiti conservati](docs/history/claude-prima-schizzi-2026-11-13.md).
+Bottle/Shower/memoria: prove, esiti e limiti conservati nell’[archivio prima di CT0578](docs/history/claude-prima-ct0578-template-2026-11-14.md).
 
 **11/11 — KnifeHandle.** Blocco cache riferimenti:191feature/13521edge; solver escluso.
 Proiezione diretta B-rep/genealogia e valenze in una scansione:0,34–0,40s contro>45s.

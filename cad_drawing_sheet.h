@@ -4,6 +4,7 @@
 #include "cad_drawing_tolerances.h"
 #include "cad_drawing_axes.h"
 #include "cad_drawing_style.h"
+#include "cad_drawing_frame.h"
 #include <QPointF>
 #include <QSizeF>
 #include <QVector>
@@ -80,6 +81,8 @@ struct DrawingDimensionNumbering {
 struct DrawingTitleBlock {
     bool visible=false;
     QString code,organization,author,date; // data dichiarata, non aggiornata all’apertura
+    bool customLayout=false;
+    QVector<DrawingFrameItem> items;
 };
 struct DrawingRevisionNote {
     QUuid checkinId;
@@ -116,6 +119,12 @@ struct DrawingAnnotation {
     std::optional<DrawingAttachment> reference; // punta del richiamo, mai coordinate congelate
     std::optional<DrawingTechnicalAnnotation> technical{};
 };
+// Un centro appartiene soltanto alla curva scelta e ne conserva la genealogia.
+struct DrawingCenterMark {
+    QUuid id=QUuid::createUuid(),viewId;
+    DrawingAttachment reference;
+    bool axes=false;
+};
 struct DrawingSheet {
     DrawingDocument drawing;
     QString title = QStringLiteral("Tavola");
@@ -125,6 +134,7 @@ struct DrawingSheet {
     DrawingTitleBlock titleBlock;
     DrawingRevisionTable revisionTable;
     QVector<DrawingAxis> axes;
+    QVector<DrawingCenterMark> centerMarks;
     QVector<DrawingAnnotation> annotations;
     DrawingStyle style;
     DrawingDimensionNumbering dimensionNumbering;

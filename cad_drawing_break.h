@@ -91,7 +91,7 @@ inline void applyDrawingBreak(const DrawingView &view,const DrawingViewLayout &l
     if(!problem.isEmpty()){display.warnings.append(problem);return;}
     const auto &b=*layout.interruption;
     for(auto *paths:{&display.curves,&display.silhouettes})for(auto &p:*paths){p.visible=drawingBreakPath(p.visible,view,layout);p.hidden=drawingBreakPath(p.hidden,view,layout);}
-    for(auto *path:{&display.sectionHatch,&display.visibleCylinderAxes,&display.allCylinderAxes,&display.visibleCenters.crosses,&display.visibleCenters.axes,&display.allCenters.crosses,&display.allCenters.axes})*path=drawingBreakPath(*path,view,layout);
+    for(auto *path:{&display.localBoundary,&display.sectionHatch,&display.visibleCylinderAxes,&display.allCylinderAxes,&display.visibleCenters.crosses,&display.visibleCenters.axes,&display.allCenters.crosses,&display.allCenters.axes})*path=drawingBreakPath(*path,view,layout);
     const double lo=(b.vertical?-b.end:b.start)*view.scale,hi=(b.vertical?-b.start:b.end)*view.scale,shift=hi-lo-b.gap;
     // Due ritagli della stessa immagine, traslati come le curve; nessuna nuova tassellazione.
     if(!display.shadedImage.isNull()){

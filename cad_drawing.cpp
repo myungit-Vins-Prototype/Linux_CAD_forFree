@@ -1,4 +1,5 @@
 #include "cad_drawing.h"
+#include "cad_drawing_local_section.h"
 #include "cad_drawing_dimension.h"
 #include "fk_bspline.h"
 #include "cad_drawing_curve_recognition.h"
@@ -59,6 +60,7 @@ bool genericProjection(const Curve<3> &curve){
 
 void validateView(const DrawingView &view) {
     require(!view.id.isNull(), "Vista senza identita'.");
+    const auto localError=validateDrawingLocalSection(view);require(localError.isEmpty(),qPrintable(localError));
     require(view.kind==DrawingViewKind::Section || view.kind==DrawingViewKind::ProjectedEdges,"Tipo di vista non supportato.");
     if(view.bend)require(!view.step&&view.kind==DrawingViewKind::Section&&view.sectionStyle==DrawingSectionStyle::Removed&&!view.sectionReferences
         &&std::isfinite(view.bend->at)&&view.bend->at>1e-7&&view.bend->at<=1e7&&std::isfinite(view.bend->angle)
@@ -113,12 +115,12 @@ void validateDocument(const DrawingDocument &document) {
         require(reference.featureId && isFinite(reference.witness),"Riferimento geometrico non valido.");
         require(edge ? (!reference.edgeName.isEmpty() && reference.edgeName.size()<=4096 && reference.faceName.isEmpty())
                      : (!reference.faceName.isEmpty() && reference.faceName.size()<=4096 && reference.edgeName.isEmpty()),"Nome del riferimento geometrico non valido.");
-        require(edge||reference.kind==DrawingCurveKind::ApparentLine||reference.kind==DrawingCurveKind::ApparentArc ? drawingHasProjection(*view) : (view->kind==DrawingViewKind::Section || view->sectionReferences),"Riferimento estraneo al tipo di vista.");
+        require(edge||reference.kind==DrawingCurveKind::ApparentLine||reference.kind==DrawingCurveKind::ApparentArc ? drawingHasProjection(*view) : (view->kind==DrawingViewKind::Section || view->sectionReferences || view->localSection.has_value()),"Riferimento estraneo al tipo di vista.");
         }
         require(int(dimension.measure)>=0&&int(dimension.measure)<=12,"Tipo di quota non supportato.");
         const auto attachments=validateDrawingAttachments(dimension,*view);require(attachments.isEmpty(),qPrintable(attachments));
         for(const auto &attachment:dimension.references)if(attachment.axisId.isNull()&&!drawingDatum(attachment.role)){
-            const auto &r=attachment.curve;require((r.kind==DrawingCurveKind::ProjectedEdge||r.kind==DrawingCurveKind::ApparentLine||r.kind==DrawingCurveKind::ApparentArc)?drawingHasProjection(*view):(view->kind==DrawingViewKind::Section||view->sectionReferences),"Aggancio estraneo al tipo di vista.");
+            const auto &r=attachment.curve;require((r.kind==DrawingCurveKind::ProjectedEdge||r.kind==DrawingCurveKind::ApparentLine||r.kind==DrawingCurveKind::ApparentArc)?drawingHasProjection(*view):(view->kind==DrawingViewKind::Section||view->sectionReferences||view->localSection.has_value()),"Aggancio estraneo al tipo di vista.");
         }
     }
 }
@@ -243,6 +245,7 @@ QString sectionDrawingView(const DrawingModelSnapshot &model, const DrawingView 
         validateView(view);
         require(!model.version.documentId.isNull(), "Modello senza identita'.");
         std::vector<DrawingSection> prepared;
+        if(view.localSection)return sectionDrawingView(model,drawingLocalSectionPlane(view),sections);
         if(view.bend){
             const auto unfold=drawingSectionUnfoldTransform(view);
             for(int side=0;side<2;++side){
@@ -418,18 +421,26 @@ void appendApparentArcs(const DrawingModelSnapshot &model,const DrawingView &vie
 }
 }
 QString drawingViewCurves(const DrawingModelSnapshot &model,const DrawingView &view,std::vector<DrawingCurve> &curves){
+    if(view.localSection){
+        const auto valid=validateDrawingLocalSection(view);if(!valid.isEmpty())return valid;
+        auto ordinary=view;ordinary.localSection.reset();std::vector<DrawingCurve> outside,inside;
+        auto error=drawingViewCurves(model,ordinary,outside);if(!error.isEmpty())return error;
+        error=drawingViewCurves(model,drawingLocalSectionPlane(view),inside);if(!error.isEmpty())return error;
+        mergeDrawingLocalCurves(view,outside,inside);curves=std::move(outside);return {};
+    }
     if(view.kind==DrawingViewKind::Section&&!drawingHasProjection(view))return sectionDrawingView(model,view,curves);
     std::vector<DrawingCurve> prepared;auto error=projectDrawingEdges(model,view,prepared);if(!error.isEmpty())return error;
-    if(view.kind==DrawingViewKind::Section||view.sectionReferences){std::vector<DrawingCurve> sections;error=sectionDrawingView(model,view,sections);if(!error.isEmpty())return error;
+    if(view.kind==DrawingViewKind::Section||view.sectionReferences||view.localSection.has_value()){std::vector<DrawingCurve> sections;error=sectionDrawingView(model,view,sections);if(!error.isEmpty())return error;
         prepared.insert(prepared.end(),sections.begin(),sections.end());}
     appendApparentLines(model,view,prepared);appendApparentArcs(model,view,prepared);
     curves=std::move(prepared);return {};
 }
 DrawingDimension dimensionOfCurve(const DrawingView &view,const DrawingCurve &curve,DrawingMeasure measure){
+    if(view.localSection&&curve.kind==DrawingCurveKind::Section)return dimensionOfCurve(drawingLocalSectionPlane(view),curve,measure);
     validateView(view);const bool edge=curve.kind==DrawingCurveKind::ProjectedEdge;
     require(curve.kind==DrawingCurveKind::Section||curve.kind==DrawingCurveKind::ApparentLine||curve.kind==DrawingCurveKind::ApparentArc||edge,"Tipo di curva non supportato.");
     require(curve.viewId==view.id&&curve.featureId&&curve.curve&&curve.range.isFinite()&&curve.range.length()>0,"Curva della quota non valida.");
-    require((edge||curve.kind==DrawingCurveKind::ApparentLine||curve.kind==DrawingCurveKind::ApparentArc)?drawingHasProjection(view):(view.kind==DrawingViewKind::Section||view.sectionReferences),"Curva estranea alla vista.");
+    require((edge||curve.kind==DrawingCurveKind::ApparentLine||curve.kind==DrawingCurveKind::ApparentArc)?drawingHasProjection(view):(view.kind==DrawingViewKind::Section||view.sectionReferences||view.localSection.has_value()),"Curva estranea alla vista.");
     require(edge?!curve.edgeName.empty():!curve.faceName.empty(),"Curva senza provenienza topologica.");
     require(measure==DrawingMeasure::SectionLength||measure==DrawingMeasure::EndpointDistance||measure==DrawingMeasure::HorizontalDistance||measure==DrawingMeasure::VerticalDistance,"Tipo di quota non supportato.");
     const auto point=view.plane.toLocal(curve.curve->point(0.5*(curve.range.lo+curve.range.hi)));
@@ -482,7 +493,8 @@ DrawingDimensionResult evaluateDrawingDimension(const DrawingDocument &document,
         if (candidates.size() > 1 || dimension->section.requiresWitness) {
             chosen = nullptr;
             const auto &p = dimension->section.witness;
-            const Vec3 witness = view->plane.toGlobal(Vec3(p.x(), p.y(), 0));
+            const auto referenceView=view->localSection&&dimension->section.kind==DrawingCurveKind::Section?drawingLocalSectionPlane(*view):*view;
+            const Vec3 witness = referenceView.plane.toGlobal(Vec3(p.x(), p.y(), 0));
             for (const auto *candidate : candidates)
                 if (projectPoint(*candidate->curve, witness, candidate->range).distance <= view->tolerance) {
                     if (chosen) return failure(DrawingDimensionStatus::Ambiguous, QStringLiteral("Piu' rami contengono l'ancoraggio della quota."));
@@ -520,6 +532,7 @@ bool drawingNeedsSectionSchema(const DrawingDocument &document){
 QString encodeDrawingDocument(const DrawingDocument &document, QByteArray &bytes) {
     try {
         validateDocument(document);
+        const bool localSections=std::any_of(document.views.begin(),document.views.end(),[](const auto &v){return v.localSection.has_value();});
         const bool axisReferences=drawingNeedsAxisSchema(document);
         const bool apparent=std::any_of(document.dimensions.begin(),document.dimensions.end(),[](const auto &d){return d.section.kind==DrawingCurveKind::ApparentLine||std::any_of(d.references.begin(),d.references.end(),[](const auto &r){return r.curve.kind==DrawingCurveKind::ApparentLine;});});
         const bool apparentArc=std::any_of(document.dimensions.begin(),document.dimensions.end(),[](const auto &d){return d.section.kind==DrawingCurveKind::ApparentArc||std::any_of(d.references.begin(),d.references.end(),[](const auto &r){return r.curve.kind==DrawingCurveKind::ApparentArc;});});
@@ -529,7 +542,7 @@ QString encodeDrawingDocument(const DrawingDocument &document, QByteArray &bytes
         const bool ordinate=std::any_of(document.dimensions.begin(),document.dimensions.end(),[](const auto &d){return drawingOrdinate(d.measure);});
         const bool profileRadius=std::any_of(document.dimensions.begin(),document.dimensions.end(),[](const auto &d){return d.measure==DrawingMeasure::ProfileRadius;});
         const bool endpointWitness=std::any_of(document.dimensions.begin(),document.dimensions.end(),[](const auto &d){return std::any_of(d.references.begin(),d.references.end(),[](const auto &r){return r.endpointWitness.has_value();});});
-        const bool technical=endpointWitness||profileRadius||ordinate||bent||stepped||apparentArc||apparent||axisReferences||drawingNeedsSectionSchema(document);
+        const bool technical=localSections||endpointWitness||profileRadius||ordinate||bent||stepped||apparentArc||apparent||axisReferences||drawingNeedsSectionSchema(document);
         const bool attachments=technical||std::any_of(document.dimensions.begin(),document.dimensions.end(),[](const auto &d){return !d.references.empty()||d.decimals!=2;});
         const bool extended=attachments||std::any_of(document.views.begin(),document.views.end(),[](const auto &view){return view.kind!=DrawingViewKind::Section;})
             ||std::any_of(document.dimensions.begin(),document.dimensions.end(),[](const auto &dimension){return int(dimension.measure)>1;});
@@ -537,7 +550,7 @@ QString encodeDrawingDocument(const DrawingDocument &document, QByteArray &bytes
         for(const auto &view:document.views){QJsonObject object{
             {"id",uuidText(view.id)},{"origin",vectorJson(view.plane.origin())},{"x",vectorJson(view.plane.xDir())},
             {"y",vectorJson(view.plane.yDir())},{"z",vectorJson(view.plane.zDir())},{"scale",view.scale},{"tolerance",view.tolerance}};
-            if(extended){object["kind"]=int(view.kind);object["sectionReferences"]=view.sectionReferences;}if(technical)object["sectionStyle"]=int(view.sectionStyle);if(view.step)object["step"]=QJsonArray{view.step->at,view.step->offset};if(view.step&&!view.step->additional.empty()){QJsonArray extra;for(const auto &step:view.step->additional)extra.append(QJsonArray{step.at,step.offset});object["additionalSteps"]=extra;}if(view.bend)object["bend"]=QJsonArray{view.bend->at,view.bend->angle};views.append(object);}
+            if(extended){object["kind"]=int(view.kind);object["sectionReferences"]=view.sectionReferences;}if(technical)object["sectionStyle"]=int(view.sectionStyle);if(view.step)object["step"]=QJsonArray{view.step->at,view.step->offset};if(view.step&&!view.step->additional.empty()){QJsonArray extra;for(const auto &step:view.step->additional)extra.append(QJsonArray{step.at,step.offset});object["additionalSteps"]=extra;}if(view.bend)object["bend"]=QJsonArray{view.bend->at,view.bend->angle};if(view.localSection){const auto &l=*view.localSection;QJsonArray outline;for(const auto &p:l.outline)outline.append(QJsonArray{p.x(),p.y()});object["localSection"]=QJsonObject{{"front",l.front},{"depth",l.depth},{"outline",outline}};}views.append(object);}
         for(const auto &dimension:document.dimensions){QJsonObject object{
             {"id",uuidText(dimension.id)},{"viewId",uuidText(dimension.viewId)},{"featureId",QString::number(dimension.section.featureId)},
             {"faceName",dimension.section.faceName},{"witness",QJsonArray{dimension.section.witness.x(),dimension.section.witness.y()}},
@@ -550,7 +563,7 @@ QString encodeDrawingDocument(const DrawingDocument &document, QByteArray &bytes
                 {"role",int(r.role)},{"fraction",r.fraction},{"polar",r.polar},{"supportFace",r.supportFace},{"curveSide",r.curveSide},{"anchorSide",r.anchorSide},{"vertex",r.vertexName},{"boundary",r.boundaryName}});if(technical){auto object=references.last().toObject();if(r.endpointWitness)object["endpointWitness"]=vectorJson(*r.endpointWitness);if(r.curve.contourSide)object["contourSide"]=r.curve.contourSide;object["clipBoundary"]=r.clipBoundary;if(!r.axisId.isNull())object["axisId"]=uuidText(r.axisId);references[references.size()-1]=object;}}
                 object["references"]=references;object["angleSides"]=dimension.angleSides;object["decimals"]=dimension.decimals;}
             dimensions.append(object);}
-        const QByteArray prepared=QJsonDocument(QJsonObject{{"format","ForgeCAD.DrawingPrototype"},{"schema",endpointWitness?13:profileRadius?12:ordinate?11:bent?10:multiple?9:stepped?8:apparentArc?7:apparent?6:axisReferences?5:technical?4:attachments?3:extended?2:1},
+        const QByteArray prepared=QJsonDocument(QJsonObject{{"format","ForgeCAD.DrawingPrototype"},{"schema",localSections?14:endpointWitness?13:profileRadius?12:ordinate?11:bent?10:multiple?9:stepped?8:apparentArc?7:apparent?6:axisReferences?5:technical?4:attachments?3:extended?2:1},
             {"version",versionJson(document.version)},{"model",versionJson(document.model)},{"views",views},{"dimensions",dimensions}}).toJson(QJsonDocument::Compact);
         require(prepared.size() <= kMaxDrawingBytes, "Tavola troppo grande per il codec del prototipo.");
         bytes = prepared;
@@ -566,7 +579,7 @@ QString decodeDrawingDocument(const QByteArray &bytes, DrawingDocument &document
         require(parse.error == QJsonParseError::NoError && json.isObject(), "Documento tavola JSON non valido.");
         const auto root = json.object();
         const double schema=root["schema"].toDouble(-1);
-        require(root["format"].toString()==QLatin1String("ForgeCAD.DrawingPrototype")&&(schema==1||schema==2||schema==3||schema==4||schema==5||schema==6||schema==7||schema==8||schema==9||schema==10||schema==11||schema==12||schema==13),"Formato o schema della tavola non supportato.");
+        require(root["format"].toString()==QLatin1String("ForgeCAD.DrawingPrototype")&&(schema==1||schema==2||schema==3||schema==4||schema==5||schema==6||schema==7||schema==8||schema==9||schema==10||schema==11||schema==12||schema==13||schema==14),"Formato o schema della tavola non supportato.");
         require(root["views"].isArray() && root["dimensions"].isArray(), "Elenchi della tavola assenti.");
         const auto views = root["views"].toArray(), dimensions = root["dimensions"].toArray();
         require(views.size() <= qsizetype(kMaxRecords) && dimensions.size() <= qsizetype(kMaxRecords), "Troppi elementi nella tavola.");
@@ -586,6 +599,14 @@ QString decodeDrawingDocument(const QByteArray &bytes, DrawingDocument &document
             if(v.contains("step")){require(schema>=8&&v["step"].isArray(),"Gradino estraneo allo schema dichiarato.");
                 const auto a=v["step"].toArray();require(a.size()==2&&a[0].isDouble()&&a[1].isDouble(),"Gradino incompleto.");view.step=DrawingSectionStep{a[0].toDouble(),a[1].toDouble()};}
             if(v.contains("additionalSteps")){require(schema>=9&&view.step&&v["additionalSteps"].isArray(),"Gradini multipli estranei allo schema dichiarato.");const auto extra=v["additionalSteps"].toArray();require(!extra.isEmpty()&&extra.size()<32,"Numero di gradini non valido.");for(const auto &entry:extra){require(entry.isArray(),"Gradino non valido.");const auto a=entry.toArray();require(a.size()==2&&a[0].isDouble()&&a[1].isDouble(),"Gradino incompleto.");view.step->additional.push_back({a[0].toDouble(),a[1].toDouble()});}}
+            if(v.contains("localSection")){
+                require(schema>=14&&v["localSection"].isObject(),"Sezione locale estranea allo schema dichiarato.");
+                const auto local=v["localSection"].toObject();require(local["front"].isDouble()&&local["depth"].isDouble()&&local["outline"].isArray(),"Sezione locale incompleta.");
+                DrawingLocalSection section;section.front=local["front"].toDouble();section.depth=local["depth"].toDouble();
+                require(local["outline"].toArray().size()<=4096,"Troppi vertici della sezione locale.");
+                for(const auto &p:local["outline"].toArray()){require(p.isArray(),"Vertice della sezione locale non valido.");const auto a=p.toArray();require(a.size()==2&&a[0].isDouble()&&a[1].isDouble(),"Vertice incompleto.");section.outline.push_back({a[0].toDouble(),a[1].toDouble()});}
+                view.localSection=std::move(section);
+            }
             if(v.contains("bend")){require(schema>=10&&v["bend"].isArray(),"Sezione angolare estranea allo schema dichiarato.");const auto a=v["bend"].toArray();require(a.size()==2&&a[0].isDouble()&&a[1].isDouble(),"Sezione angolare incompleta.");view.bend=DrawingSectionBend{a[0].toDouble(),a[1].toDouble()};}
             prepared.views.push_back(std::move(view));
         }

@@ -1011,6 +1011,44 @@ Body blendEdgesWith(const Body &body, const std::vector<EdgeId> &selected, doubl
                         "blendEdges: spigoli che toccano i raccordi dei bordi di forma libera");
     }
 
+    // Un contorno piano chiuso e tangente si rifila localmente. La
+    // booleana degli utensili attraverserebbe anche le facce estranee al
+    // contorno, incluse le superfici libere dei raccordi precedenti.
+    if (edges.size() > 1 && std::all_of(edges.begin(), edges.end(), [&](EdgeId e) {
+            return isPlanarChainEdge(body, e);
+        })) {
+        std::set<int> chosen;
+        for (EdgeId edge : edges) chosen.insert(edge.index);
+        for (FinId seed : {body.edge(edges.front()).forward, body.edge(edges.front()).backward}) {
+            const FaceId plane = body.finFace(seed);
+            if (body.face(plane).surface->type() != SurfaceType::Plane) continue;
+            bool complete = true;
+            std::size_t count = 0;
+            for (LoopId loop : body.face(plane).loops) {
+                const auto fins = body.loopFins(loop);
+                const bool selectedLoop = std::any_of(fins.begin(), fins.end(), [&](FinId f) {
+                    return chosen.count(body.fin(f).edge.index);
+                });
+                if (!selectedLoop) continue;
+                if (fins.size() < 2) { complete = false; break; }
+                for (FinId f : fins) {
+                    const Edge &edge = body.edge(body.fin(f).edge);
+                    const FinId next = body.fin(f).next;
+                    const Edge &following = body.edge(body.fin(next).edge);
+                    const Vec3 end = body.fin(f).sense ? normalized(edge.curve->derivative(edge.range.hi))
+                                                     : -normalized(edge.curve->derivative(edge.range.lo));
+                    const Vec3 start = body.fin(next).sense ? normalized(following.curve->derivative(following.range.lo))
+                                                          : -normalized(following.curve->derivative(following.range.hi));
+                    complete = complete && chosen.count(body.fin(f).edge.index) && dot(end, start) >= 1.0 - 1e-9;
+                    ++count;
+                }
+            }
+            if (!complete || count != edges.size()) continue;
+            try { return blendPlanarChains(body, edges, size, chamfer, sides, plane, history); }
+            catch (const std::domain_error &) { /* Conserva gli altri percorsi validi. */ }
+        }
+    }
+
     // Solo rette e cerchi: le sezioni analitiche. Se non riescono (un arco che
     // finisce contro un fianco obliquo, angoli vivi tra archi e segmenti) e gli
     // spigoli sono tutti bordi tra una faccia piana e fianchi normali ad essa,

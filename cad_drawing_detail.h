@@ -97,7 +97,7 @@ inline void clipDrawingDetailVisibility(const DrawingView &view,const DrawingVie
     const auto boundary=drawingDetailBoundary(view,layout);const auto box=boundary.boundingRect();
     const auto clip=[&](QPainterPath &path){path=clipDrawingDetailPath(path,view,layout);};
     for(auto *paths:{&display.curves,&display.silhouettes})for(auto &path:*paths){clip(path.visible);clip(path.hidden);}
-    clip(display.sectionHatch);display.sectionMaterial=display.sectionMaterial.intersected(boundary);
+    clip(display.localBoundary);clip(display.sectionHatch);display.sectionMaterial=display.sectionMaterial.intersected(boundary);
     clip(display.visibleCylinderAxes);clip(display.allCylinderAxes);
     clip(display.visibleCenters.crosses);clip(display.visibleCenters.axes);clip(display.allCenters.crosses);clip(display.allCenters.axes);
     if(!display.shadedImage.isNull()){

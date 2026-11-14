@@ -40,6 +40,7 @@ void validate(const DrawingFile &drawing){
         for(const auto &d:sheet.drawing.dimensions)entity(d.id);
         for(const auto &a:sheet.axes)entity(a.id);
         for(const auto &n:sheet.annotations)entity(n.id);
+        for(const auto &mark:sheet.centerMarks)entity(mark.id);
     }
     require(!drawing.modelPath.trimmed().isEmpty()&&drawing.modelPath.size()<=4096&&!drawing.modelPath.contains(QChar(0)),QStringLiteral("Riferimento al modello non valido."));
     require(drawing.modelDefinitionHash.size()==32,QStringLiteral("Impronta della definizione del modello non valida."));
@@ -63,6 +64,7 @@ QString cloneDrawingSheet(const DrawingSheet &source,DrawingSheet &copy){
         for(const auto &d:source.drawing.dimensions)add(d.id);
         for(const auto &a:source.axes)add(a.id);
         for(const auto &n:source.annotations)add(n.id);
+        for(const auto &mark:source.centerMarks)add(mark.id);
     for(auto it=source.dimensionNumbering.assignments.cbegin();it!=source.dimensionNumbering.assignments.cend();++it)if(!ids.contains(text(it.key())))add(it.key());
     const QSet<QString> identityKeys{QStringLiteral("firstDimension"),QStringLiteral("id"),QStringLiteral("viewId"),QStringLiteral("parent"),QStringLiteral("axisId"),QStringLiteral("datums")};
     std::function<QJsonValue(QJsonValue,const QString &)> remap=[&](QJsonValue value,const QString &key)->QJsonValue{
@@ -121,18 +123,48 @@ QString saveDrawingFile(const QString &path,const DrawingFile &drawing,const Doc
 }
 QString drawingModelDefinitionHash(const DocumentState &document,QByteArray &hash){
     auto normalized=document;normalized.version.checkinId={};normalized.baseCheckinId={};normalized.orientation=AxesOrientation{};
-    normalized.lengthUnit=LengthUnit::Millimeter;QByteArray definition;const auto error=encodeDocument(normalized,definition,false);if(!error.isEmpty())return error;
+    normalized.lengthUnit=LengthUnit::Millimeter;
+    // La visibilita' e' una preferenza di presentazione, non geometria del
+    // modello: nascondere uno schizzo non invalida gli agganci della tavola.
+    for(auto &sketch:normalized.sketches)sketch.visible=true;
+    for(auto &feature:normalized.extrusions){
+        feature.visible=true;
+        // normalizeModelHistory non deve scegliere un tip intermedio solo
+        // perche' una parte della cache e' ancora da rigenerare.
+        feature.forgeBody.reset();
+    }
+    for(auto &body:normalized.modelBodies)body.visible=true;
+    QByteArray definition;const auto error=encodeDocument(normalized,definition,false);if(!error.isEmpty())return error;
     hash=QCryptographicHash::hash(definition,QCryptographicHash::Sha256);return {};
 }
 QString drawingModelDefinitionMatches(const DocumentState &document,const QByteArray &expected,bool &matches){
     QByteArray current;const auto error=drawingModelDefinitionHash(document,current);if(!error.isEmpty())return error;
     if(current==expected){matches=true;return {};}
-    // Le impronte precedenti al formato67 rappresentano solo il profilo
-    // standard: una precisione diversa e' una modifica, non un errore di lettura.
     matches=false;
-    if(document.calculationAccuracy!=Kernel::kLinearResolution)return {};
     auto normalized=document;normalized.version.checkinId={};normalized.baseCheckinId={};normalized.orientation=AxesOrientation{};
     normalized.lengthUnit=LengthUnit::Millimeter;
+    for(auto &feature:normalized.extrusions)feature.forgeBody.reset();
+    const auto legacyMatch=[&](const DocumentState &candidate){
+        Kernel::cancellationPoint();QByteArray bytes;
+        return encodeDocument(candidate,bytes,false).isEmpty()
+            &&QCryptographicHash::hash(bytes,QCryptographicHash::Sha256)==expected;
+    };
+    if(legacyMatch(normalized)){matches=true;return {};}
+    // Le vecchie impronte includevano la visibilita'. La compatibilita'
+    // verifica l'intera definizione contro l'impronta salvata: nessuna
+    // inferenza geometrica e nessuna modifica dello stato del documento.
+    for(int i=0;i<normalized.sketches.size();++i){auto candidate=normalized;
+        candidate.sketches[i].visible=!candidate.sketches[i].visible;
+        if(legacyMatch(candidate)){matches=true;return {};}}
+    for(int i=0;i<normalized.extrusions.size();++i){auto candidate=normalized;
+        candidate.extrusions[i].visible=!candidate.extrusions[i].visible;
+        if(legacyMatch(candidate)){matches=true;return {};}}
+    for(int i=0;i<normalized.modelBodies.size();++i){auto candidate=normalized;
+        candidate.modelBodies[i].visible=!candidate.modelBodies[i].visible;
+        if(legacyMatch(candidate)){matches=true;return {};}}
+    // Le impronte precedenti al formato67 rappresentano solo il profilo
+    // standard: una precisione diversa resta una modifica.
+    if(document.calculationAccuracy!=Kernel::kLinearResolution)return {};
     QByteArray format66;
     if (encodeDocumentDefinition66ForHash(normalized,format66).isEmpty()
         && QCryptographicHash::hash(format66,QCryptographicHash::Sha256)==expected) {
@@ -313,6 +345,7 @@ int upgradeDrawingFileReferences(DrawingFile &drawing,const DrawingEditorModel &
         }
         for(auto &axis:sheet.axes)for(auto &ref:axis.references)attachment(axis.viewId,ref);
         for(auto &note:sheet.annotations)if(note.reference)attachment(note.viewId,*note.reference);
+        for(auto &mark:sheet.centerMarks)attachment(mark.viewId,mark.reference);
     }
     return changed;
 }

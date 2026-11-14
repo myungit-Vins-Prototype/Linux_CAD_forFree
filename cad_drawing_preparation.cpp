@@ -1,4 +1,5 @@
 #include "cad_drawing_preparation.h"
+#include "cad_drawing_local_section_display.h"
 #include "cad_drawing_derived.h"
 #include "cad_drawing_detail.h"
 #include "cad_drawing_break.h"
@@ -34,11 +35,13 @@ void validateDrawingViewPaths(const DrawingView &view,const DrawingViewLayout &l
 }
 PreparedDrawingView prepareDrawingView(const DrawingModelSnapshot &source,const DrawingView &definition,const DrawingViewLayout &layout,
         DrawingSilhouetteCache seeds,const std::function<void(int)> &phase,const std::vector<DrawingCurve> *reuseCurves,const DrawingSilhouetteResult *reuseContours){
+        if(definition.localSection)return prepareDrawingLocalSection(source,definition,layout,std::move(seeds),phase);
         PreparedDrawingView result;result.cache=std::move(seeds);const auto ok=[](const QString &message){if(!message.isEmpty())throw std::runtime_error(message.toStdString());};
-        if(reuseCurves)result.curves=*reuseCurves;else ok(drawingViewCurves(source,definition,result.curves));phase(1);
+        if(reuseCurves){result.curves=*reuseCurves;for(auto &curve:result.curves)curve.viewId=definition.id;}else ok(drawingViewCurves(source,definition,result.curves));phase(1);
         if(reuseContours)result.contours=*reuseContours;else ok(drawingViewSilhouettes(source,definition,result.contours,result.cache));phase(2);
         DrawingSectionHatch hatch;ok(drawingSectionHatch(source,definition,result.curves,hatch));phase(3);
-        result.display=std::make_shared<DrawingViewVisibility>();ok(drawingViewVisibility(source,definition,result.curves,result.contours,result.cache,*result.display,&hatch.material,layout.showMesh));
+        const auto crop=drawingIsDetail(layout)?std::make_optional(drawingDetailBounds(definition,layout).adjusted(-.1,-.1,.1,.1)):std::nullopt;
+        result.display=std::make_shared<DrawingViewVisibility>();ok(drawingViewVisibility(source,definition,result.curves,result.contours,result.cache,*result.display,&hatch.material,layout.showMesh,crop?&*crop:nullptr));
         result.display->sectionHatch=std::move(hatch.lines);result.display->sectionMaterial=std::move(hatch.material);result.display->warnings.append(hatch.warnings);clipDrawingDetailVisibility(definition,layout,*result.display);if(!source.bodies.empty()){ok(drawingBreakFits(definition,layout,drawingBreakBounds(*result.display)));applyDrawingBreak(definition,layout,*result.display);}
         else if(layout.interruption)result.display->warnings.append(QStringLiteral("Interruzione non verificabile: modello non disponibile."));phase(4);validateDrawingViewPaths(definition,layout,result.curves,result.contours);phase(5);return result;
     }
@@ -49,6 +52,7 @@ DrawingSheet retargetDrawingSheetModel(DrawingSheet next,const DrawingEditorMode
     const auto error=retargetDrawingModel(next.drawing,model.snapshot.version);if(!error.isEmpty())throw std::runtime_error(error.toStdString());
     for(auto &layout:next.views){QVector<quint64> features;for(auto id:layout.features){const auto current=model.replacements.value(id,id);if(!features.contains(current))features.append(current);}layout.features=features;}
     for(auto &dimension:next.drawing.dimensions){dimension.section.featureId=model.replacements.value(dimension.section.featureId,dimension.section.featureId);for(auto &ref:dimension.references)if(ref.axisId.isNull()&&!drawingDatum(ref.role))ref.curve.featureId=model.replacements.value(ref.curve.featureId,ref.curve.featureId);}
+    for(auto &mark:next.centerMarks)mark.reference.curve.featureId=model.replacements.value(mark.reference.curve.featureId,mark.reference.curve.featureId);
     for(auto &axis:next.axes)for(auto &ref:axis.references)if(ref.axisId.isNull()&&!drawingDatum(ref.role))ref.curve.featureId=model.replacements.value(ref.curve.featureId,ref.curve.featureId);
     for(auto &n:next.annotations)if(n.reference&&n.reference->axisId.isNull())n.reference->curve.featureId=model.replacements.value(n.reference->curve.featureId,n.reference->curve.featureId);
     return next;
@@ -70,6 +74,20 @@ PreparedDrawingSheet prepareDrawingSheet(DrawingSheet sheet,DrawingEditorModel m
         for(const auto &body:model.snapshot.bodies)if(layout->features.contains(body.featureId))source.bodies.push_back(body);
         work.push_back({&definition,&*layout,std::move(source)});
     }
+    struct CurveJob {std::once_flag once;std::vector<DrawingCurve> curves;};
+    std::vector<std::shared_ptr<CurveJob>> curveJobs;
+    const auto sameGeometry=[](const DrawingView &a,const DrawingView &b){
+        const auto same=[](const Vec3 &x,const Vec3 &y){return x.x()==y.x()&&x.y()==y.y()&&x.z()==y.z();};
+        return a.kind==b.kind&&a.tolerance==b.tolerance&&a.sectionStyle==b.sectionStyle
+            &&a.sectionReferences==b.sectionReferences&&a.step==b.step&&a.bend==b.bend&&a.localSection==b.localSection
+            &&same(a.plane.origin(),b.plane.origin())&&same(a.plane.xDir(),b.plane.xDir())
+            &&same(a.plane.yDir(),b.plane.yDir())&&same(a.plane.zDir(),b.plane.zDir());
+    };
+    for(std::size_t i=0;i<work.size();++i){
+        auto found=i;
+        for(std::size_t j=0;j<i;++j)if(work[i].layout->features==work[j].layout->features&&sameGeometry(*work[i].definition,*work[j].definition)){found=j;break;}
+        curveJobs.push_back(found<i?curveJobs[found]:std::make_shared<CurveJob>());
+    }
     PreparedDrawingSheet prepared;
     const auto workers=std::min(threadCount(threads),threads?8u:4u);
     std::mutex progressMutex;std::vector<int> stages(work.size());std::size_t total=0;int reported=-1;
@@ -90,7 +108,9 @@ PreparedDrawingSheet prepareDrawingSheet(DrawingSheet sheet,DrawingEditorModel m
         std::vector<PreparedDrawingView> results(end-first);
         const auto compute=[&](std::size_t offset,DrawingSilhouetteCache seeds){
             const auto index=first+offset;const auto &job=work[index];
-            results[offset]=prepareDrawingView(job.source,*job.definition,*job.layout,std::move(seeds),[&](int value){progress(index,value);});
+            const auto &curves=curveJobs[index];
+            if(!job.definition->localSection)std::call_once(curves->once,[&]{const auto error=drawingViewCurves(job.source,*job.definition,curves->curves);if(!error.isEmpty())throw std::runtime_error(error.toStdString());});
+            results[offset]=prepareDrawingView(job.source,*job.definition,*job.layout,std::move(seeds),[&](int value){progress(index,value);},&curves->curves);
         };
         if(end-first>1){
             // Ogni worker ha la propria mappa; soltanto mesh immutabili sono

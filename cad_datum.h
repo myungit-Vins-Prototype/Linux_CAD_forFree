@@ -42,6 +42,12 @@ struct ResolvedRef {
 bool resolveGeometryRef(const GeometryRef &ref, int owner, const QVector<SketchObject> &sketches, const QVector<ExtrusionObject> &bodies,
                         ResolvedRef &resolved, QString *error);
 
+// Appoggio di uno schizzo: se la faccia ha un nome persistente richiede
+// una risoluzione genealogica univoca; mai un piano sostitutivo per indice
+// o prossimita'. Piani di origine/datum e facce legacy restano compatibili.
+bool resolveSketchSupport(const GeometryRef &ref, int owner, const QVector<SketchObject> &sketches,
+                          const QVector<ExtrusionObject> &bodies, ResolvedRef &resolved, QString *error);
+
 // Tratti esatti di un riferimento curva, usato per intero: lo spigolo del
 // corpo (la sua curva sul suo intervallo), l'entita' dello schizzo (il
 // segmento, o i tratti di curveGeometry portati nel piano dello schizzo), la

@@ -43,7 +43,7 @@ void setLine(ResolvedRef &r, const Vec3 &point, const Vec3 &direction) {
     r.direction = normalized(direction);
 }
 
-bool resolveForgeBody(const Body &body, int kind, const EdgePoint &reference, ResolvedRef &r, QString *error) {
+bool resolveForgeBody(const Body &body, int kind, const EdgePoint &reference, ResolvedRef &r, QString *error, bool sketchSupport = false) {
     const Vec3 p(reference.x, reference.y, reference.z);
     if (kind == 3) {
         const VertexId vertex = resolveVertexReference(body, reference, std::numeric_limits<double>::max());
@@ -68,7 +68,16 @@ bool resolveForgeBody(const Body &body, int kind, const EdgePoint &reference, Re
     Box box;
     for (VertexId v : body.vertices()) box.add(body.vertex(v).point);
     const double tolerance = 1e-6 * std::max(1.0, box.diagonal());
-    const FaceId best = resolveFaceReference(body, reference, 1e3 * tolerance);
+    TopologyReferenceResolution resolution;
+    const FaceId best = resolveFaceReference(body, reference, 1e3 * tolerance, ReferenceState::Same, &resolution);
+    // Un appoggio nominato non puo' cambiare piano per un indice riusato
+    // o per il ripiego geometrico. I documenti legacy senza nome conservano
+    // la risoluzione storica fino a una scelta esplicita dell'appoggio.
+    if (sketchSupport && !reference.name.isEmpty() && resolution.method != TopologyResolutionMethod::Name) {
+        setError(error, QStringLiteral("La faccia di appoggio nominata \"%1\" non e' piu' risolvibile in modo univoco. Scegli nuovamente il piano.")
+                        .arg(reference.name));
+        return false;
+    }
     if (!best.valid()) return setError(error, QStringLiteral("il punto non sta piu' su una faccia del corpo")), false;
     r.face = best.index;
     const Face &face = body.face(best);
@@ -175,6 +184,23 @@ int geometryRefRoles(const GeometryRef &ref, const QVector<SketchObject> &sketch
     case 9: return DatumRoleCurve;
     case 10: return DatumRolePoint;
     default: return 0;
+    }
+}
+
+bool resolveSketchSupport(const GeometryRef &ref, int owner, const QVector<SketchObject> &sketches,
+                          const QVector<ExtrusionObject> &bodies, ResolvedRef &resolved, QString *error) {
+    if (ref.kind != 5) return resolveGeometryRef(ref, owner, sketches, bodies, resolved, error);
+    resolved = {};
+    const int index = referenceBody(ref, owner, bodies);
+    if (index < 0 || !bodies.at(index).forgeBody) {
+        setError(error, QStringLiteral("Il corpo della faccia di appoggio non esiste piu' o non ha geometria."));
+        return false;
+    }
+    try {
+        return resolveForgeBody(*bodies.at(index).forgeBody, ref.kind, ref.point, resolved, error, true);
+    } catch (const std::exception &failure) {
+        setError(error, QString::fromUtf8(failure.what()));
+        return false;
     }
 }
 
