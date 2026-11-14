@@ -1,4 +1,5 @@
 #include "forgeCad2026_dialogs.h"
+#include "cad_widget_context.h"
 #include <QDynamicPropertyChangeEvent>
 #include "cad_drawing_browser.h"
 #include "cad_drawing_window.h"
@@ -548,7 +549,7 @@ void FunctionDialogPanel::showEvent(QShowEvent *event) {
     updatePalette();
     locateViewport();
     if (exclusive_ && viewport_ && !windowLock_)
-        if (auto *window = qobject_cast<QMainWindow *>(viewport_->window()))
+        if (auto *window = qobject_cast<QMainWindow *>(ForgeCad::documentWorkspaceWidget(viewport_)))
             windowLock_ = std::make_unique<WindowLock>(window, viewport_, this);
     if (form_ && ForgeCad::Gui::hasOperationIllustration(sizeIdentity_)
         && !findChild<QWidget *>(QStringLiteral("operationIllustration"))) {
@@ -739,7 +740,8 @@ bool FunctionDialogPanel::eventFilter(QObject *watched, QEvent *event) {
 
 QWidget *FunctionDialogPanel::overlayParent(QWidget *requested) {
     if (!requested) return nullptr;
-    QWidget *root = requested->window();
+    if (dynamic_cast<CadViewport *>(requested)) return requested;
+    QWidget *root = ForgeCad::documentWorkspaceWidget(requested);
     if (!root) return requested;
     for (QOpenGLWidget *candidate : root->findChildren<QOpenGLWidget *>())
         if (dynamic_cast<CadViewport *>(candidate)) return candidate;
@@ -933,9 +935,11 @@ void FunctionDialogPanel::focusFirstEditor() {
 
 void FunctionDialogPanel::locateViewport() {
     if (viewport_) return;
-    QWidget *root = parentWidget() ? parentWidget()->window() : nullptr;
+    QWidget *root = ForgeCad::documentWorkspaceWidget(parentWidget());
     if (!root) return;
-    for (QOpenGLWidget *candidate : root->findChildren<QOpenGLWidget *>()) {
+    auto candidates = root->findChildren<QOpenGLWidget *>();
+    if (auto *ownViewport=qobject_cast<QOpenGLWidget *>(root)) candidates.prepend(ownViewport);
+    for (QOpenGLWidget *candidate : candidates) {
         if (auto *cad = dynamic_cast<CadViewport *>(candidate)) {
             viewport_ = cad;
             connect(viewport_, &QOpenGLWidget::frameSwapped, this,

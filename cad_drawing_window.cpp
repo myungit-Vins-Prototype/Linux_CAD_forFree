@@ -1,4 +1,5 @@
 #include "cad_drawing_window.h"
+#include "cad_document_tabs.h"
 #include "cad_drawing_template.h"
 #include "cad_drawing_template_editor.h"
 #include "cad_drawing_focus.h"
@@ -31,7 +32,8 @@
 #include <stdexcept>
 
 namespace ForgeCad {
-DrawingWindow::DrawingWindow(QWidget *parent):QMainWindow(parent,Qt::Window){
+DrawingWindow::DrawingWindow(QWidget *parent):QMainWindow(parent,documentTabsWindow(parent)?Qt::Widget:Qt::Window){
+    setProperty("documentWorkspace",true);
     setObjectName("drawingWindow");resize(1100,780);
     auto *file=addCadMenu(menuBar(),QStringLiteral("File"));
     auto *saveAction=file->addAction(QStringLiteral("Salva tavola"));saveAction->setShortcut(QKeySequence::Save);
@@ -164,6 +166,7 @@ void DrawingWindow::installEditor(DrawingSheetEditor *prepared){
     auto *workspace=next->findChild<QMainWindow *>();
     auto *custom=workspace->addToolBar(QStringLiteral("Personalizzata"));custom->setObjectName("drawingCustomBar");configureCommandBar(custom);
     toolbarController_=new DrawingToolbarController(this,workspace,viewMenu_,{findChild<QToolBar *>("drawingDocumentBar"),next->findChild<QToolBar *>("drawingCommandBar"),custom},[this,next,revisionWidth]{if(revisionWidth>0)resizeDocks({revisionDock_},{revisionWidth},Qt::Horizontal);QTimer::singleShot(0,next,[next]{next->fitSheet();});});
+    if(auto *host=documentTabsWindow(this))host->refreshDocumentActions(this);
     busy_=oldBusy;resetSheetsHistory(!modified_);refreshSheetTabs();refreshPageContext();
     refreshEditAccess();
     if(sourceReady_){
@@ -409,12 +412,19 @@ bool DrawingWindow::save(bool askPath){
     }
     const auto error=savePath(path);report(error);return error.isEmpty();
 }
-void DrawingWindow::closeEvent(QCloseEvent *event){
-    if(busy_||(editor_&&editor_->isComputing())){event->ignore();return;}
+bool DrawingWindow::prepareToClose(){
+    if(busy_||(editor_&&editor_->isComputing()))return false;
     if(modified_){
         const auto choice=QMessageBox::warning(this,QStringLiteral("Tavola 2D"),QStringLiteral("Salvare le modifiche alla tavola?"),QMessageBox::Save|QMessageBox::Discard|QMessageBox::Cancel,QMessageBox::Save);
-        if(choice==QMessageBox::Cancel||(choice==QMessageBox::Save&&!save(false))){event->ignore();return;}
+        if(choice==QMessageBox::Cancel||(choice==QMessageBox::Save&&!save(false)))return false;
     }
-    lock_.reset();event->accept();
+    return true;
+}
+void DrawingWindow::closeEvent(QCloseEvent *event){
+    auto *host=documentTabsWindow(this);
+    if(busy_||(editor_&&editor_->isComputing())||(!(host&&host->closingAll())&&!prepareToClose())){event->ignore();return;}
+    lock_.reset();
+    if(host)host->documentClosed(this);
+    event->accept();
 }
 }

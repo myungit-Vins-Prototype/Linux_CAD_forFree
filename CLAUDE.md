@@ -108,6 +108,17 @@ ctest --test-dir forgecad-release --output-on-failure
 
 ## Ultimi interventi — esiti consolidati
 
+**14/11 — Schede documenti.** Prima commit unico `2b180e4` di tutti gli interventi precedenti,
+push `origin/main` verificato. Implementati contenitore unico 3D/2D, posizione alto/basso
+persistente (Visualizza > Schede documenti), riordino, deduplica percorsi, aperture/revisioni/recupero;
+comandi, unita', Undo, pannelli e viewport isolati, chiusura con preflight e arresto asincrono.
+App completa compilata; harness app offscreen/Wayland PASS, copie Part23/CT0578:35/35+47/47quote,
+80cambi/2594ms, contesti GL e originali invariati. Runner completo:43/43CTest e Wayland PASS.
+Mappa722/10384/352TU, zero diagnostica, check/HTML e chiamate bidirezionali PASS.
+Focus desktop autonomo fallisce anche sul precedente HEAD; dettagli e prove nel
+[rapporto](docs/schede-documenti-2026-11-14.md). Schede consolidate e pubblicate su `main`
+su richiesta dell’utente; diff e mappa ricontrollati PASS.
+
 **14/11 — CT0578, icone e template.** Cache curve/piani e dettagli ritagliati prima della visibilita’:
 viste11,83→8,33s, totale17,96→14,54s; restano~6s di genealogia;12viste/47quote e originali invariati.
 Icone 2D distinte. `File > Template dei fogli`: cartiglio/testi/campi/logo/stile, .drwt, default per
@@ -146,16 +157,7 @@ Nessun CAD originale modificato; riaprire l'app. Limiti: NURBS e contorni toroid
 [Dettagli e limiti](docs/schizzi-contorno-apparente-2026-11-13.md).
 Pubblicazione richiesta su `main`: consolidati gli interventi del 13/11; diff e mappa ricontrollati PASS.
 
-**13/11 — Riferimenti e anteprima raccordo.** Scelta esplicita di bordi/facce/centri separata dagli snap puntuali;
-un solo riferimento al clic, selezione locale conservata e vincolo scelto nel pannello. Proposte visive solo
-nei comandi attivi: snap nominati nel disegno, proiezione/sezione e vincoli in Quota; nessuna in Selezione.
-Il risultato completo riusato sostituisce anche gli stadi dello stesso corpo logico; la base resta disponibile
-al picker dei bordi, senza superfici sovrapposte nel renderer. Nessun ricalcolo di geometria pronta.
-App/runner completi, 18/18CTest e tre prove Wayland/GL PASS; mappa691/9966/338AST, zero errori, check/HTML PASS.
-Girante su disco con storia diversa e senza il raccordo dell'immagine; prove su fixture/pannello reale, originale invariato.
-[Verifiche attuali](docs/raccordo-anteprima-comandi-2026-11-13.md), [intervento precedente](docs/schizzi-riferimenti-hover-2026-11-13.md).
-
-Anteprime/strumenti schizzo13/11: prove e limiti conservati nell’[archivio CT0578](docs/history/claude-prima-ct0578-template-2026-11-14.md).
+Riferimenti/anteprime13/11: esiti e limiti nell’[archivio prima delle schede](docs/history/claude-prima-schede-2026-11-14.md).
 
 **12/11 — Applicatore4.** Raccordi: fix SplitA/mitre/NURBS; app/kernel/storia/mappa PASS.
 R22/R23=0,20 e R22=0,30/R23=0,14:19funzioni PASS; massimo aperto. [Prove](docs/applicatore4-raccordi-2026-11-12.md).

@@ -1,3 +1,7 @@
+#include <QtTest/QTest>
+#include "../cad_document_tabs.h"
+#include <QTabWidget>
+#include <QTabBar>
 #include "../forgeCad2026_application_theme.h"
 #include <QSemaphore>
 #include <thread>
@@ -163,6 +167,7 @@ class ViewportInteractionTest {
 public:
 #include "test_sketch_interaction.h"
 #include "test_document_lifetime.h"
+#include "test_document_tabs.h"
     static void snapCacheRegressions() {
         using namespace ForgeCad;
         const auto check = [](bool ok, const char *text) { require(ok, text); };
@@ -11396,6 +11401,11 @@ int main(int argc, char **argv) {
     QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, settings.path());
     ForgeCad::initializeApplicationTheme(app);
     qputenv("FORGECAD_RECOVERY_DIR",settings.filePath(QStringLiteral("recovery")).toUtf8());
+    if (app.arguments().contains(QStringLiteral("--document-tabs"))) {
+        try { ViewportInteractionTest::documentTabsTests(); }
+        catch (const std::exception &error) { std::cerr << error.what() << std::endl; return 1; }
+        return 0;
+    }
     if (app.arguments().contains(QStringLiteral("--gui-3d-review"))) {
         try { ViewportInteractionTest::gui3dReviewRegressions(app.arguments().contains(QStringLiteral("--gl"))); }
         catch (const std::exception &error) { std::cerr << error.what() << std::endl; return 1; }

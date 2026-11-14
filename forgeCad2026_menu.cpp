@@ -1,4 +1,5 @@
 #include "cad_menu.h"
+#include "cad_widget_context.h"
 #include "forgeCad2026_ui_glass.h"
 #ifndef FORGECAD_MENU_STANDALONE
 #include "forgeCad2026_viewport.h"
@@ -107,7 +108,7 @@ struct CadMenu::Impl {
         return changed;
     }
     QWidget *ownerWindow() const {
-        QWidget *root=self->parentWidget();while(root && root->parentWidget())root=root->parentWidget();return root;
+        return ForgeCad::documentWorkspaceWidget(self->parentWidget());
     }
     void locateViewport() {
 #ifndef FORGECAD_MENU_STANDALONE

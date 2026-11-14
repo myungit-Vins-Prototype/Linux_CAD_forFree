@@ -1,4 +1,5 @@
 #include "forgeCad2026_gui.h"
+#include "cad_document_tabs.h"
 #include "forgeCad2026_application_theme.h"
 
 #include <QApplication>
@@ -64,13 +65,14 @@ int main(int argc, char **argv) {
     QIcon icon;
     for (int size : {16, 24, 32, 48, 64, 128, 256, 512}) icon.addFile(QStringLiteral(":/icons/forgecad-%1.png").arg(size), QSize(size, size));
     QApplication::setWindowIcon(icon);
-    PdfWindow window;
+    ForgeCad::DocumentTabsWindow window;
+    window.newModel();
 #ifdef Q_OS_MACOS
     ForgeCad::enableMacMenuIcons(window.menuBar());
 #endif
     window.show();
     // ./forgecad documento.prt apre il documento.
     const QStringList arguments = application.arguments();
-    if (arguments.size() > 1) window.openDocumentPath(arguments.at(1));
+    for (int i=1;i<arguments.size();++i) window.openPath(arguments.at(i));
     return application.exec();
 }

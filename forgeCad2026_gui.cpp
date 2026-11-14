@@ -4,6 +4,7 @@
 #include "forgeCad2026_ribbon_preview.h"
 #include "cad_drawing_browser.h"
 #include "cad_drawing_window.h"
+#include "cad_document_tabs.h"
 #include "cad_toolbar.h"
 #include "cad_curve_extract.h"
 
@@ -348,6 +349,7 @@ struct PdfWindow::WindowSetup {
 };
 
 PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
+    setProperty("documentWorkspace",true);
     WindowSetup setup;
     initializeSceneAndTree(setup);
     initializeFileMenu(setup);
@@ -3281,7 +3283,9 @@ void PdfWindow::initializeSketchCommands(WindowSetup &setup) {
     connect(exitSketch, &QAction::triggered, this, [viewport] { viewport->endSketchMode(); });
 
     viewActions = std::make_shared<QList<QAction *>>();
-    auto *quit = fileMenu->addAction(QStringLiteral("Esci")); connect(quit, &QAction::triggered, this, &QWidget::close);
+    auto *quit = fileMenu->addAction(QStringLiteral("Esci")); connect(quit, &QAction::triggered, this, [this] {
+        if (auto *host=ForgeCad::documentTabsWindow(this)) host->close(); else close();
+    });
     const QList<QPair<QString, int>> views = {{QStringLiteral("Frontale"),0},{QStringLiteral("Posteriore"),1},{QStringLiteral("Destra"),2},{QStringLiteral("Superiore"),3},{QStringLiteral("Isometrica"),4},{QStringLiteral("Trimetrica"),5}};
     for (int index = 0; index < views.size(); ++index) {
         auto *action = new QAction(QStringLiteral("Vista ") + views.at(index).first.toLower(), this); action->setShortcut(QKeySequence(Qt::Key_1 + index)); addAction(action); viewActions->append(action);
@@ -3789,7 +3793,7 @@ void PdfWindow::initializeToolbarsAndStatus(WindowSetup &setup) {
     connect(saveInterfaceAction, &QAction::triggered, this, [this, viewport] {
         QSettings settings;
         settings.beginGroup(QStringLiteral("interface"));
-        settings.setValue(QStringLiteral("geometry"), saveGeometry());
+        settings.setValue(QStringLiteral("geometry"), window()->saveGeometry());
         settings.setValue(QStringLiteral("state"), saveState());
         settings.setValue(QStringLiteral("displayMode"), viewport->displayMode());
         settings.setValue(QStringLiteral("hiddenEdges"), viewport->hiddenEdgesVisible());
@@ -3857,7 +3861,7 @@ void PdfWindow::initializeToolbarsAndStatus(WindowSetup &setup) {
             background.lightingStrength = settings.value(QStringLiteral("background/lightingStrength"), background.lightingStrength).toFloat();
             viewport->setBackground(background);
         }
-        if (settings.contains(QStringLiteral("geometry"))) restoreGeometry(settings.value(QStringLiteral("geometry")).toByteArray());
+        if (settings.contains(QStringLiteral("geometry"))) { if(isWindow())restoreGeometry(settings.value(QStringLiteral("geometry")).toByteArray()); }
         if (settings.contains(QStringLiteral("state"))) restoreState(settings.value(QStringLiteral("state")).toByteArray());
         // La visibilita' delle barre dipende dalla modalita', non dallo stato
         // salvato (che puo' provenire da una sessione in schizzo).
@@ -3970,8 +3974,10 @@ void PdfWindow::initializeToolbarsAndStatus(WindowSetup &setup) {
     connect(recovery_,&ForgeCad::DocumentRecovery::restored,this,[this](DocumentState state,const ForgeCad::RecoveryEntry &entry,const QString &error){
         if(!error.isEmpty()){QMessageBox::warning(this,QStringLiteral("Recupero documento"),error);return;}
         ForgeCad::forkDocumentIdentity(state);
-        auto *window=new PdfWindow;window->setAttribute(Qt::WA_DeleteOnClose);
-        window->show();window->beginForegroundProgress(QStringLiteral("Ricostruzione del modello recuperato..."));
+        auto *host=ForgeCad::documentTabsWindow(this);
+        auto *window=new PdfWindow(host);
+        ForgeCad::showDocumentWorkspace(window,this,false);
+        window->beginForegroundProgress(QStringLiteral("Ricostruzione del modello recuperato..."));
         window->loadingDocument_=true;window->viewport_->loadDocument(std::move(state));window->loadingDocument_=false;
         window->endForegroundProgress();
         window->documentModified_=true;window->recoveredSource_=entry;window->recovery_->changed();
@@ -4188,20 +4194,22 @@ void PdfWindow::newDrawing() {
     const auto source = viewport_->currentDocument();
     const auto error = drawing->createFromModel(documentPath_, &source, documentDiskFingerprint_);
     if (!error.isEmpty()) { delete drawing; QMessageBox::warning(this,QStringLiteral("Tavola 2D"),error); return; }
-    drawing->setAttribute(Qt::WA_DeleteOnClose); drawing->show();
+    ForgeCad::showDocumentWorkspace(drawing,this,true);
 }
 
 void PdfWindow::openDrawing() {
     const auto path=ForgeCad::chooseLinkedDrawing(this,documentPath_,viewport_->currentDocument().version.documentId);
     if (path.isEmpty()) return;
+    if (auto *host=ForgeCad::documentTabsWindow(this)) { host->openPath(path); return; }
     for (auto *child:children()) if (auto *drawing=dynamic_cast<ForgeCad::DrawingWindow *>(child))
         if (drawing->filePath()==ForgeCad::canonicalDocumentPath(path) && drawing->document().sheet.drawing.version.checkinId.isNull()) { drawing->show(); drawing->raise(); drawing->activateWindow(); return; }
     auto *drawing=new ForgeCad::DrawingWindow(this); const auto error=drawing->openPath(path);
     if (!error.isEmpty()) { delete drawing; QMessageBox::warning(this,QStringLiteral("Apri tavola 2D"),error); return; }
-    drawing->setAttribute(Qt::WA_DeleteOnClose); drawing->show();
+    ForgeCad::showDocumentWorkspace(drawing,this,true);
 }
 
 void PdfWindow::newDocument() {
+    if (auto *host=ForgeCad::documentTabsWindow(this)) { host->newModel(); return; }
     if (!maybeSaveChanges()) return;
     clearDocumentRecovery();
     loadingDocument_ = true;
@@ -4223,7 +4231,7 @@ void PdfWindow::newDocument() {
 
 void PdfWindow::openDocument() {
     QFileDialog dialog(this, QStringLiteral("Apri"), QFileInfo(documentPath_).absolutePath(),
-                       QStringLiteral("Documenti %1 (*.prt);;Tutti i file (*)").arg(QGuiApplication::applicationDisplayName()));
+                       QStringLiteral("Documenti %1 (*.prt *.drw);;Modelli 3D (*.prt);;Tavole 2D (*.drw);;Tutti i file (*)").arg(QGuiApplication::applicationDisplayName()));
     dialog.setAcceptMode(QFileDialog::AcceptOpen);
     dialog.setFileMode(QFileDialog::ExistingFile);
     // I dialoghi nativi non espongono un'area portabile per un widget
@@ -4254,7 +4262,15 @@ QString PdfWindow::gpuStatusText() const {
     return QStringLiteral("%1 | OpenGL: %2").arg(cuda, glRenderer_);
 }
 
+bool PdfWindow::isHistoricalDocument() const { return !viewport_->documentVersion().checkinId.isNull(); }
+bool PdfWindow::isEmptyDocument() const {
+    return documentPath_.isEmpty() && !documentModified_ && !foregroundProgressDepth_ && !viewport_->interactionLocked();
+}
 bool PdfWindow::openDocumentPath(const QString &path) {
+    if (auto *host=ForgeCad::documentTabsWindow(this)) return host->openPath(path);
+    return openDocumentPathInPlace(path);
+}
+bool PdfWindow::openDocumentPathInPlace(const QString &path) {
     const QString resolved = ForgeCad::canonicalDocumentPath(path);
     if (documentLock_ && documentLock_->owns(resolved)) {
         rememberRecentDocument(resolved);
@@ -4465,7 +4481,7 @@ void PdfWindow::installDocumentRevisionPanel(QMenu *viewMenu) {
     documentRevisionHistory_=new QTableWidget(0,5,body);documentRevisionHistory_->setObjectName("documentRevisionHistory");
     documentRevisionHistory_->setHorizontalHeaderLabels({QStringLiteral("N."),QStringLiteral("Rev."),QStringLiteral("Autore"),QStringLiteral("Data"),QStringLiteral("Commento")});
     documentRevisionHistory_->setEditTriggers(QAbstractItemView::NoEditTriggers);documentRevisionHistory_->setSelectionBehavior(QAbstractItemView::SelectRows);documentRevisionHistory_->setSelectionMode(QAbstractItemView::SingleSelection);documentRevisionHistory_->horizontalHeader()->setStretchLastSection(true);layout->addWidget(documentRevisionHistory_,1);
-    documentOpenRevision_=new QPushButton(ForgeCad::commandIcon("open"),QStringLiteral("Apri revisione selezionata"),body);documentOpenRevision_->setObjectName("documentOpenSelectedRevision");documentOpenRevision_->setToolTip(QStringLiteral("Apre il modello archiviato in una finestra separata in sola lettura."));documentOpenRevision_->setEnabled(false);layout->addWidget(documentOpenRevision_);
+    documentOpenRevision_=new QPushButton(ForgeCad::commandIcon("open"),QStringLiteral("Apri revisione selezionata"),body);documentOpenRevision_->setObjectName("documentOpenSelectedRevision");documentOpenRevision_->setToolTip(QStringLiteral("Apre il modello archiviato in una scheda in sola lettura."));documentOpenRevision_->setEnabled(false);layout->addWidget(documentOpenRevision_);
     connect(documentOpenRevision_,&QPushButton::clicked,this,&PdfWindow::openSelectedDocumentRevision);
     connect(documentRevisionHistory_,&QTableWidget::cellDoubleClicked,this,[this](int,int){openSelectedDocumentRevision();});
     connect(documentRevisionHistory_,&QTableWidget::itemSelectionChanged,this,[this]{documentOpenRevision_->setEnabled(documentRevisionHistory_->currentRow()>=0&&!foregroundProgressDepth_&&!viewport_->interactionLocked());});
@@ -4510,7 +4526,7 @@ void PdfWindow::refreshDocumentRevisionPanel() {
     findChild<QAction *>("revisionCancelAction")->setEnabled(writableVersion&&known&&status.hasSession&&!status.hasPending);
 }
 QString PdfWindow::openArchivedDocument(const QString &workingPath,const ForgeCad::DocumentVersion &version){
-    if(!documentPath_.isEmpty()||documentModified_)return QStringLiteral("Aprire il modello archiviato in una nuova finestra.");
+    if(!documentPath_.isEmpty()||documentModified_)return QStringLiteral("Aprire il modello archiviato in una nuova scheda.");
     const auto canonical=ForgeCad::canonicalDocumentPath(workingPath);ForgeCad::WorkspacePaths paths;auto error=ForgeCad::locateDocumentWorkspace(canonical,paths);DocumentState source;
     if(error.isEmpty()){ForgeCad::RevisionStore store(paths.revisions);error=ForgeCad::readNativeRevision(store,version,source);}if(!error.isEmpty())return error;
     loadingDocument_=true;viewport_->loadDocument(source);documentPath_=canonical;documentModified_=false;loadingDocument_=false;refreshDocumentEditAccess();updateWindowTitle();rebuildModelTree();return {};
@@ -4519,9 +4535,9 @@ void PdfWindow::openSelectedDocumentRevision() {
     if(foregroundProgressDepth_||viewport_->interactionLocked()||!documentRevisionHistory_)return;
     const int row=documentRevisionHistory_->currentRow();auto *item=row>=0?documentRevisionHistory_->item(row,0):nullptr;if(!item)return;
     const ForgeCad::DocumentVersion version{item->data(Qt::UserRole+1).toUuid(),item->data(Qt::UserRole).toUuid()};
-    auto *window=new PdfWindow;const auto error=window->openArchivedDocument(documentPath_,version);
+    auto *window=new PdfWindow(ForgeCad::documentTabsWindow(this));const auto error=window->openArchivedDocument(documentPath_,version);
     if(!error.isEmpty()){delete window;QMessageBox::warning(this,QStringLiteral("Revisioni"),error);return;}
-    window->setAttribute(Qt::WA_DeleteOnClose);window->show();
+    ForgeCad::showDocumentWorkspace(window,this,false);
 }
 
 void PdfWindow::showDocumentRevisions() {
@@ -4550,8 +4566,17 @@ void PdfWindow::showDocumentRevisions() {
     dialog.resize(760,360);dialog.exec();
 }
 
+bool PdfWindow::prepareToClose() {
+    if (recoveryClosing_) return false;
+    if (foregroundProgressDepth_ || (viewport_ && viewport_->interactionLocked())) return false;
+    return maybeSaveChanges();
+}
 void PdfWindow::closeEvent(QCloseEvent *event) {
-    if(recoveryCloseReady_){documentLock_.reset();event->accept();return;}
+    if(recoveryCloseReady_){
+        documentLock_.reset();
+        if (auto *host=ForgeCad::documentTabsWindow(this)) host->documentClosed(this);
+        event->accept();return;
+    }
     if(recoveryClosing_){event->ignore();return;}
     // Durante un calcolo il ciclo di eventi gira ancora (runWhileResponsive):
     // la chiusura aspetta la fine.
@@ -4559,7 +4584,8 @@ void PdfWindow::closeEvent(QCloseEvent *event) {
         event->ignore();
         return;
     }
-    if (maybeSaveChanges()) {
+    const auto *host=ForgeCad::documentTabsWindow(this);
+    if ((host && host->closingAll()) || maybeSaveChanges()) {
         const auto attached=children();
         for (auto *child:attached) if (auto *drawing=dynamic_cast<ForgeCad::DrawingWindow *>(child)) {
             if (!drawing->close()) { event->ignore(); return; }

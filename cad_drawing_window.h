@@ -44,6 +44,7 @@ public:
     const DrawingFile &document()const{return drawing_;}
     QString filePath()const{return path_;}
     bool isModified()const{return modified_;}
+    bool prepareToClose();
 protected:
     void closeEvent(QCloseEvent *event)override;
     bool event(QEvent *event)override;

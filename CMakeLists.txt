@@ -115,6 +115,9 @@ endif()
 
 add_executable(forgecad
     forgeCad2026.cpp
+    cad_document_tabs.cpp
+    cad_document_tabs.h
+    cad_widget_context.h
     forgeCad2026_application_theme.cpp
     forgeCad2026_application_theme.h
     forgeCad2026_menu.cpp
@@ -562,6 +565,7 @@ endif()
 # quando e' disponibile una sessione grafica con OpenGL desktop.
 option(FORGECAD_BUILD_VIEW_TESTS "Compila i test delle interazioni del viewport" OFF)
 if(FORGECAD_BUILD_VIEW_TESTS)
+    find_package(Qt6 REQUIRED COMPONENTS Test)
     set(FORGECAD_EXAMPLE_DIR "${PROJECT_SOURCE_DIR}/File_Esempio" CACHE PATH "Cartella dei documenti di esempio per i test GUI")
     # Il comparatore offline usa NumPy; nessuna nuova dipendenza dell'app.
     find_package(Python3 QUIET COMPONENTS Interpreter)
@@ -584,7 +588,7 @@ if(FORGECAD_BUILD_VIEW_TESTS)
     add_executable(forgecad_view_tests tests/test_viewport.cpp tests/test_declared_history_cache.h tests/test_boolean_history.h tests/test_blend_history.h tests/test_extrusion_history.h tests/test_revolution_history.h tests/test_all_history.h tests/test_native_revisions.h tests/test_workspace_revisions.h tests/test_linked_drawing.h tests/test_drawing_workflow.h tests/test_drawing_revisions.h tests/test_projected_drawing_file.h tests/test_drawing_multisheet.h tests/test_drawing_revision_restore.h tests/test_drawing_release.h tests/test_catalog_recovery_gui.h tests/test_surface_tools_gui.h tests/test_document_units.h tests/test_history_suppression.h tests/test_function_panels.h tests/test_advanced_fillets.h tests/test_fillet_refinements.h tests/test_drawing_mouse.h tests/test_drawing_section_model.h tests/test_drawing_performance.h cuda_support_cpu.cpp ${FORGECAD_VIEW_TEST_SOURCES})
     add_dependencies(forgecad_view_tests forgecad) # genera l'impronta una sola volta, prima dei test
     target_include_directories(forgecad_view_tests PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/generated)
-    target_link_libraries(forgecad_view_tests PRIVATE forgecad_compute Qt6::Widgets Qt6::OpenGL Qt6::OpenGLWidgets OpenGL::GL forgekernel ZLIB::ZLIB ${FORGECAD_ZSTD_TARGET})
+    target_link_libraries(forgecad_view_tests PRIVATE Qt6::Test forgecad_compute Qt6::Widgets Qt6::OpenGL Qt6::OpenGLWidgets OpenGL::GL forgekernel ZLIB::ZLIB ${FORGECAD_ZSTD_TARGET})
     target_compile_options(forgecad_view_tests PRIVATE -Wall -Wextra -Wpedantic)
     target_compile_definitions(forgecad_view_tests PRIVATE FORGECAD_HAS_CUDA=0 FORGECAD_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
     add_executable(forgecad_selection_benchmark tests/benchmark_selection.cpp)
@@ -596,6 +600,8 @@ if(FORGECAD_BUILD_VIEW_TESTS)
         set_tests_properties(${name} PROPERTIES
             ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QPA_OFFSCREEN_NO_GLX=1;QT_QPA_PLATFORMTHEME=;QT_STYLE_OVERRIDE=Fusion;FORGECAD_EXAMPLE_DIR=${FORGECAD_EXAMPLE_DIR}")
     endfunction()
+    forgecad_add_view_test(forgecad_document_tabs_tests --document-tabs)
+    set_tests_properties(forgecad_document_tabs_tests PROPERTIES TIMEOUT 90)
     forgecad_add_view_test(forgecad_gui_3d_review_tests --gui-3d-review)
     forgecad_add_view_test(forgecad_storyboard_review_tests --storyboard-review)
     set_tests_properties(forgecad_gui_3d_review_tests forgecad_storyboard_review_tests PROPERTIES TIMEOUT 120)

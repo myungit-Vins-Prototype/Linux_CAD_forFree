@@ -26,6 +26,12 @@ class QPushButton;
 class PdfWindow final : public QMainWindow {
 public:
     explicit PdfWindow(QWidget *parent = nullptr);
+    QString documentFilePath() const { return documentPath_; }
+    bool isHistoricalDocument() const;
+    bool isEmptyDocument() const;
+    bool isClosingDocument() const { return recoveryClosing_; }
+    bool prepareToClose();
+    bool openDocumentPathInPlace(const QString &path);
     // Apre un documento .prt (errori in una finestra di messaggio).
     bool openDocumentPath(const QString &path);
     QString openArchivedDocument(const QString &workingPath,const ForgeCad::DocumentVersion &version);

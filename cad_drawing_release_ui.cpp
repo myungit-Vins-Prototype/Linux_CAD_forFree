@@ -1,4 +1,5 @@
 #include "cad_drawing_window.h"
+#include "cad_document_tabs.h"
 #include "cad_drawing_release.h"
 #include "cad_drawing_compute.h"
 #include "cad_workspace.h"
@@ -82,8 +83,8 @@ QString showPublishedReleases(DrawingWindow *owner,RevisionStore store,const Wor
         details->resizeColumnsToContents();details->selectRow(1);open->setEnabled(true);status->setText(QStringLiteral("Rilascio verificato: %1 · %2 tavole\n%3").arg(selected->name).arg(selected->drawings.size()).arg(selected->comment));
     });
     QObject::connect(open,&QPushButton::clicked,&dialog,[&]{if(!selected||details->currentRow()<0)return;RevisionReleaseManifest checked;bool busy=false;const auto error=runDrawingComputation(&dialog,busy,QStringLiteral("Verifica documento del rilascio"),checked,[store,id=selected->releaseId](auto phase)mutable{RevisionReleaseManifest result;phase(1);releaseUiOk(readDrawingRelease(store,id,result));phase(5);return result;},releasePhases);if(!error.isEmpty()){open->setEnabled(false);status->setText(error);return;}const int row=details->currentRow();const auto member=row==0?checked.model:checked.drawings[row-1];QString filename=QFileInfo(member.name).fileName();if(filename.isEmpty())filename=member.version.documentId.toString(QUuid::WithoutBraces);const QString extension=row==0?QStringLiteral("prt"):QStringLiteral("drw");if(QFileInfo(filename).suffix().compare(extension,Qt::CaseInsensitive)!=0)filename+="."+extension;const auto anchor=QDir(workspace.root).filePath(filename);
-        if(row==0){auto *window=new PdfWindow;const auto result=window->openArchivedDocument(anchor,member.version);if(!result.isEmpty()){delete window;status->setText(result);return;}window->setWindowTitle(checked.name+QStringLiteral(" · ")+window->windowTitle());window->setAttribute(Qt::WA_DeleteOnClose);window->show();}
-        else{auto *window=new DrawingWindow;const auto result=window->openRevision(anchor,member.version);if(!result.isEmpty()){delete window;status->setText(result);return;}window->setWindowTitle(checked.name+QStringLiteral(" · ")+window->windowTitle());window->setAttribute(Qt::WA_DeleteOnClose);window->show();QTimer::singleShot(0,window,[window]{window->editor()->fitSheet();});}dialog.accept();
+        if(row==0){auto *window=new PdfWindow(documentTabsWindow(owner));const auto result=window->openArchivedDocument(anchor,member.version);if(!result.isEmpty()){delete window;status->setText(result);return;}window->setWindowTitle(checked.name+QStringLiteral(" · ")+window->windowTitle());showDocumentWorkspace(window,owner,false);}
+        else{auto *window=new DrawingWindow(documentTabsWindow(owner));const auto result=window->openRevision(anchor,member.version);if(!result.isEmpty()){delete window;status->setText(result);return;}window->setWindowTitle(checked.name+QStringLiteral(" · ")+window->windowTitle());showDocumentWorkspace(window,owner,true);QTimer::singleShot(0,window,[window]{window->editor()->fitSheet();});}dialog.accept();
     });
     QObject::connect(buttons,&QDialogButtonBox::rejected,&dialog,&QDialog::reject);if(!records.isEmpty())QTimer::singleShot(0,&dialog,[table,records]{table->selectRow(records.size()-1);});dialog.resize(1020,700);dialog.exec();return {};
 }
