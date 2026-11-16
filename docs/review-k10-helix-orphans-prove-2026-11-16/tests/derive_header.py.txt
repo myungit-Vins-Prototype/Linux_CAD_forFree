@@ -1,0 +1,12 @@
+from pathlib import Path
+import re, subprocess
+root=Path('/tmp/k10-sketch-review/tests');s=(root/'test_sketch_projection_fit_validation.cpp').read_text()
+s=s.replace('using namespace ForgeCad; using namespace ForgeCad::Kernel;','namespace K10SketchProjectionTests {\nusing namespace ForgeCad; using namespace ForgeCad::Kernel;').replace('int main(int argc,char**argv){QApplication app(argc,argv);QString directory=argc>1?QString::fromLocal8Bit(argv[1]):QString();','inline int run(const QString &directory = {}){')+'\n} // namespace K10SketchProjectionTests\n'
+lines=[]; active=[]
+for line in s.splitlines(keepends=True):
+ if line.strip()=='#ifdef HAVE_HELIX_PROJECTION':active.append(True)
+ elif line.strip()=='#else':active[-1]=not active[-1]
+ elif line.strip()=='#endif':active.pop()
+ elif all(active):lines.append(line)
+assert not active
+h=root/'test_sketch_projection_fit_validation.h';h.write_text('#pragma once\n'+''.join(lines));subprocess.run(['clang-format','-i','--style={BasedOnStyle: LLVM, IndentWidth: 4, ColumnLimit: 120}',str(h)],check=True)

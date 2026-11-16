@@ -1,0 +1,773 @@
+--- before/CLAUDE.md
++++ after/CLAUDE.md
+@@ -108,6 +108,11 @@
+ 
+ ## Ultimi interventi — esiti consolidati
+ 
++**16/11 — K10 Mapping/Quilt UV verificato con tre agenti Sol.**
++Plane: fin continue postassemblaggio e offset senza fitUV; due rifiutiUV1e4 risolti.
++App/26CTest/Wayland/21sanitizer/Fraction80fin PASS; altri carrier campionati.
++K10:21/24parziali+3aperti,31rilievi invariati. [Prove/limiti](docs/review-k10-mapping-uv-2026-11-16.md).
++
+ **16/11 — UI8 tema nelle schede corretto con tre agenti Sol.**
+ Palette/QSS nel controller unico; menu Tema2D conservato al cambio foglio.
+ App completa,21CTest e Wayland misto1569/solo2D898 PASS; carta e colori utente
+@@ -115,11 +120,9 @@
+ 31rilievi corretti; sigillo152 e mappa PASS. K10 invariato. [Prove/limiti](docs/review-theme-tabs-2026-11-16.md).
+ 
+ **16/11 — K12 cavità corretto con tre agenti Sol.**
+-R0,5:quarto vincolo efit minimo verificati,continuazioneU sugli stessi
+-supporti/endpoint,budget invariati;looplimitati/cancellabili. App completa e
+-Wayland,34CTest,8varianti/6regressioni,sanitizer4TU PASS.
+-Fraction prova vecchiopunto>10edgeTol;audit734fin/426917campate campionato PASS.
+-30rilievi corretti;K10resta19/24parziali+5aperti,fitimpliciticampionati.
++R0,5:quarto vincolo/fit minimo e continuazioneU; supporti e budget invariati.
++App/Wayland/34CTest,8varianti/6regressioni/sanitizer4TU/Fraction PASS;
++audit734fin campionato. K10 resta19/24parziali+5aperti.
+ [Rapporto/prove/limiti](docs/review-blend-cavity-2026-11-16.md).
+ 
+ **16/11 — K10 Helix e cinque orfane verificati con tre agenti Sol.**
+@@ -178,10 +181,8 @@
+ Frame ortonormale e cuciture UV: app/runner,42 test kernel e16CTest PASS; mappa724/10414 PASS.
+ K4 e K2 poi corretti; riferimenti sopra. [Rapporto e prove](docs/sweep-review-fix-2026-11-15.md).
+ 
+-**15/11 — Cache B-spline M1/M2 corrette con tre agenti Sol.**
+-Snapshot/CAS,copie atomiche e durata shared_ptr:5regressioni ASan/TSan PASS.
+-App/47CTest/mappa PASS;runner325casi poi timeout300s,nessun GL.
+-[Prove e limiti](docs/cache-bspline-2026-11-15.md).
++Cache M1/M2: snapshot/CAS, copie atomiche e shared_ptr; app/47CTest/5ASan/TSan PASS,
++runner325 poi timeout300s,nessun GL. [Prove](docs/cache-bspline-2026-11-15.md); dettagli in memoria precedente.
+ 
+ Review iniziale con quattro agenti (15/11): 19difetti e22candidate orfane;
+ 45test mirati,16Sweep,mappa723/10397 PASS; nessunleak permanente certificato.
+--- before/docs/code-review-2026-11-15.md
++++ after/docs/code-review-2026-11-15.md
+@@ -1,6 +1,8 @@
+ # Review generale ForgeCAD — 15 novembre 2026
+ 
+-**Stato più recente, 16 novembre:** **31 rilievi confermati corretti complessivamente**. [UI8, cambio tema nelle schede 3D/2D](review-theme-tabs-2026-11-16.md): palette e QSS aggiornati dallo stesso controller globale, senza dipendere dagli eventi delle singole finestre incorporate. Aggiunto il menu Tema alle tavole 2D, conservato una sola volta al cambio foglio e disponibile anche dopo la chiusura dell’ultimo modello 3D. App completa, 21/21 CTest e Wayland con 1.569 controlli misti e 898 con sole tavole PASS; carta, cartiglio e colori utente conservati. Sanitizer mirati PASS, con leak detection disabilitata. K10 resta 19/24 siti iniziali parzialmente trattati e cinque interamente da migrare; uniformazione dei colori letterali dell’interfaccia e 17 API pubbliche ancora aperte.
++**Stato più recente, 16 novembre:** proseguito [K10, trasferimenti UV Mapping/Quilt](review-k10-mapping-uv-2026-11-16.md). Su Plane il trasferimento delle SP-curve usa un limite continuo fisico sul bordo effettivo, ricontrollato dopo assemblaggio; l’offset analitico evita un fit UV superfluo. Risolti due falsi rifiuti pubblici con coordinate UV≈10.000 e geometria vicina all’origine; nessun aumento di tolleranze. App completa, 26/26 CTest, 21/21 gruppi geometrici/sanitizer mirati, 20 corpi Release identici al candidato e Wayland PASS. Audit indipendente Fraction: 80 fin / 27.089 campate entro budget. **K10 passa a 21/24 siti iniziali parzialmente trattati e tre interamente da migrare; il totale resta 31 rilievi corretti.** Bordi 3D, Jacobiani e carrier non Plane restano campionati; UV≥100.000 può essere rifiutato conservativamente. Le 17 API pubbliche e l’uniformazione dei colori letterali restano aperte.
++
++**Stato precedente UI8:** **31 rilievi confermati corretti complessivamente**. [UI8, cambio tema nelle schede 3D/2D](review-theme-tabs-2026-11-16.md): palette e QSS aggiornati dallo stesso controller globale, senza dipendere dagli eventi delle singole finestre incorporate. Aggiunto il menu Tema alle tavole 2D, conservato una sola volta al cambio foglio e disponibile anche dopo la chiusura dell’ultimo modello 3D. App completa, 21/21 CTest e Wayland con 1.569 controlli misti e 898 con sole tavole PASS; carta, cartiglio e colori utente conservati. Sanitizer mirati PASS, con leak detection disabilitata. K10 resta 19/24 siti iniziali parzialmente trattati e cinque interamente da migrare; uniformazione dei colori letterali dell’interfaccia e 17 API pubbliche ancora aperte.
+ 
+ **Stato precedente K12:** [K12, raccordo cavità](review-blend-cavity-2026-11-16.md): il raggio 0,5 mm riesce nei due ordini, con semi diversi, posa e scala. Il costruttore accettava una campata minima con errore noto oltre budget e ometteva il quarto vincolo; ora rifiuta quel tentativo e continua lungo U sugli stessi supporti, conservando estremi e tolleranze. App completa, avvio isolato Wayland, 34/34 CTest, otto varianti e sei regressioni PASS. Sanitizer mirati su quattro TU e audit di 734 fin / 426.917 campate PASS; la prova Fraction sul vecchio punto contro l'intero carrier conferma uno scarto oltre dieci volte il budget edge. Mappa 773/11195/386 verificata. **K10 resta aperto: 19/24 siti iniziali parzialmente trattati, cinque interamente da migrare**, oltre ai fallback; le intersezioni implicite qui restano campionate. [Helix e cinque orfane](review-k10-helix-orphans-2026-11-16.md) conservate; 17 API pubbliche ancora da valutare. Precedenti [cucitura/PRE8](review-k10-sew-preview-2026-11-16.md), [UV/PRE7](review-k10-uv-preview-2026-11-16.md), [K11 Supporto.prt](supporto-booleana-2026-11-16.md) e [PRE5/PRE6/UI2](review-preview-unification-2026-11-16.md) conservati. K2 in produzione ed [ellisse per estremi](ellisse-estremi-2026-11-16.md) completata; uniformazione globale UI ancora aperta. I conteggi storici successivi descrivono le rispettive consegne precedenti.
+ 
+--- before/kernel/CMakeLists.txt
++++ after/kernel/CMakeLists.txt
+@@ -219,7 +219,7 @@
+ # I validatori usano intervalli outward: niente riassociazioni o assunzioni
+ # di finitezza implicite, anche se una configurazione esterna abilita fast-math.
+ set_source_files_properties(fk_sweep_surface_validation.cpp fk_sweep_caps.cpp
+-    fk_sweep_analytic_bridge.cpp fk_curve_fit_bounds.cpp fk_helix_projection.cpp fk_project.cpp fk_mapping_carrier.cpp fk_affine_surface_fit.cpp fk_planar_flatten.cpp fk_quilt_mapping.cpp fk_boolean_boundary.cpp PROPERTIES COMPILE_OPTIONS
++    fk_sweep_analytic_bridge.cpp fk_curve_fit_bounds.cpp fk_helix_projection.cpp fk_project.cpp fk_mapping_carrier.cpp fk_surface_mapping.cpp fk_affine_surface_fit.cpp fk_planar_flatten.cpp fk_quilt_mapping.cpp fk_boolean_boundary.cpp PROPERTIES COMPILE_OPTIONS
+     "$<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang,AppleClang>:-fno-fast-math;-ffp-contract=off>")
+ set_target_properties(forgekernel PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+ 
+@@ -605,6 +605,14 @@
+ add_test(NAME forgekernel_mapping_carrier_validation_tests COMMAND forgekernel_mapping_carrier_validation_tests)
+ set_tests_properties(forgekernel_mapping_carrier_validation_tests PROPERTIES TIMEOUT 180)
+ 
++# Trasferimenti Plane: residuo continuo e offset indipendente dalle coordinate UV.
++add_executable(forgekernel_mapping_uv_validation_tests tests/test_mapping_pcurve_validation.cpp)
++target_link_libraries(forgekernel_mapping_uv_validation_tests PRIVATE forgekernel)
++target_compile_options(forgekernel_mapping_uv_validation_tests PRIVATE -Wall -Wextra -Wpedantic)
++set_target_properties(forgekernel_mapping_uv_validation_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
++add_test(NAME forgekernel_mapping_uv_validation_tests COMMAND forgekernel_mapping_uv_validation_tests)
++set_tests_properties(forgekernel_mapping_uv_validation_tests PROPERTIES TIMEOUT 180)
++
+ # Certificazione del mapping affine obliquo sulle estrusioni originali.
+ add_executable(forgekernel_mapping_diagonal_validation_tests tests/fk_test_main.cpp tests/test_mapping_diagonal_validation.cpp)
+ target_link_libraries(forgekernel_mapping_diagonal_validation_tests PRIVATE forgekernel)
+--- before/kernel/fk_quilt_mapping.cpp
++++ after/kernel/fk_quilt_mapping.cpp
+@@ -708,14 +708,22 @@
+         if(std::fabs(height)>roundoff) {
+             Box uvBounds;
+             const double budget=.1*std::min(options.tolerance,linearResolution());
+-            for(auto loop:face.loops)for(auto use:source.loopFins(loop)) {
+-                const auto &edge=source.edge(source.fin(use).edge);
+-                const auto uvCurve=fitCurve([&](double t){const auto uv=image.parameters(edge.curve->point(t));return Vec3(uv.x(),uv.y(),0);},
+-                    edge.range,edge.curve->breakpoints(edge.range),1e-12);
+-                uvBounds.add(curveBox(*uvCurve,edge.range));
++            if (carrier.surface->type() == SurfaceType::Plane) {
++                // L'offset Plane e' una traslazione esatta del carrier e non
++                // usa finestre UV. Nessun fit dei contorni serve a costruirlo.
++                const auto &chart = data_->charts[patch];
++                image.surface = offsetSurface(*carrier.surface, (carrier.sense ? 1. : -1.) * height,
++                    chart.u, chart.v, budget);
++            } else {
++                for(auto loop:face.loops)for(auto use:source.loopFins(loop)) {
++                    const auto &edge=source.edge(source.fin(use).edge);
++                    const auto uvCurve=fitCurve([&](double t){const auto uv=image.parameters(edge.curve->point(t));return Vec3(uv.x(),uv.y(),0);},
++                        edge.range,edge.curve->breakpoints(edge.range),1e-12);
++                    uvBounds.add(curveBox(*uvCurve,edge.range));
++                }
++                image.surface=offsetSurface(*carrier.surface,(carrier.sense?1.:-1.)*height,
++                    {uvBounds.lo.x(),uvBounds.hi.x()},{uvBounds.lo.y(),uvBounds.hi.y()},budget);
+             }
+-            image.surface=offsetSurface(*carrier.surface,(carrier.sense?1.:-1.)*height,
+-                {uvBounds.lo.x(),uvBounds.hi.x()},{uvBounds.lo.y(),uvBounds.hi.y()},budget);
+         }
+         return image;
+     };
+--- before/kernel/fk_surface_mapping.cpp
++++ after/kernel/fk_surface_mapping.cpp
+@@ -16,6 +16,7 @@
+ #include "fk_sew.h"
+ #include "fk_transform.h"
+ #include "fk_curve_algo.h"
++#include "fk_curve_fit_bounds.h"
+ #include <algorithm>
+ #include <array>
+ #include <functional>
+@@ -153,6 +154,11 @@
+     const double connectionBudget=std::min(tolerance,linearResolution());
+     const double fitBudget=.2*connectionBudget;
+     std::map<int,int> vertexOf,edgeOf;double worst=0;
++    // Il contratto delle fin Plane e' fissato prima del fit e viene
++    // ricontrollato dopo l'assemblaggio sui discendenti dichiarati.
++    const double planePCurveBudget = .8 * connectionBudget;
++    std::map<int, SurfacePtr> planeImages;
++    std::map<std::tuple<int, int, bool>, std::vector<std::pair<CurvePtr<2>, double>>> planeFinOrigins;
+     for(auto v:source.vertices()){vertexOf[v.index]=int(vertices.size());vertices.push_back(map(source.vertex(v).point));}
+     for(auto id:source.edges()) {
+         cancellationPoint();const auto &edge=source.edge(id);double error=0;
+@@ -167,6 +173,8 @@
+         const auto &face=source.face(id);const auto window=faceWindow(source,id);
+         Body::BuildFace mapped;mapped.sense=face.sense;
+         const auto image=faceImage?faceImage(id):detail::MappingFaceImage{};
++        const bool planeImage = image.surface && image.surface->type() == SurfaceType::Plane;
++        if (planeImage) planeImages.emplace(id.index, image.surface);
+         if(image.surface){mapped.surface=image.surface;mapped.sense=image.sense;}
+         else {
+             try {mapped.surface=fitMappedSurface(*face.surface,window.first,window.second,differentialMap,fitBudget,worst,cuts,derivativeFraction,degree);}
+@@ -176,7 +184,15 @@
+             std::vector<Body::BuildFin> fins;
+             for(auto use:source.loopFins(loop)) {
+                 const auto &fin=source.fin(use);const auto &edge=edges[edgeOf.at(fin.edge.index)];auto pc=fin.pcurve;
+-                if(image.surface) {
++                double planeError = 0;
++                if (planeImage) {
++                    // Parametro originale del bordo effettivamente emesso.
++                    // Il provider conserva coefficienti e supporto originali;
++                    // il residuo fisico continuo include lo scarto normale.
++                    pc = detail::fitPCurveOnPlane(edge.curve, mapped.surface, edge.range,
++                        std::min(1e-10, .05 * fitBudget), planePCurveBudget, &planeError);
++                    require(bool(pc), "Deformazione: trasferimento SP-curve Plane non supportato.");
++                } else if(image.surface) {
+                     const auto &original=source.edge(fin.edge);
+                     // Fit in UV seguito dalla verifica nello spazio fisico;
+                     // il carrier e i suoi nodi non vengono riapprossimati.
+@@ -191,16 +207,66 @@
+                     const auto planar=planarImage(*curve,original.range,Frame3());pc=planar.curve;
+                     require(bool(pc),"Deformazione: trasferimento SP-curve non riuscito.");
+                 }
+-                const double error=pcurveDeviation(*mapped.surface,*edge.curve,*pc,edge.range,32);
++                const double error = planeImage ? planeError :
++                    pcurveDeviation(*mapped.surface,*edge.curve,*pc,edge.range,32);
+                 require(error<=connectionBudget*.8,"Deformazione: SP-curve fuori tolleranza.");worst=std::max(worst,error);
+-                fins.push_back({edgeOf.at(fin.edge.index),fin.sense,pc,std::max(error*1.01,1e-14)});
++                const double pcurveTolerance = planeImage ? std::max(error, 1e-14) : std::max(error*1.01,1e-14);
++                if (planeImage)
++                    planeFinOrigins[{id.index, fin.edge.index, fin.sense}].push_back({pc, pcurveTolerance});
++                fins.push_back({edgeOf.at(fin.edge.index),fin.sense,pc,pcurveTolerance});
+             }
+             mapped.loops.push_back(std::move(fins));
+         }
+         faces.push_back(std::move(mapped));
+     }
+     Body result=source.isSheet()?Body::buildSheet(vertices,edges,faces):Body::build(vertices,edges,faces);checked(result);
+-    if(history)*history=mappedHistory(source,result);
++    BodyHistory preparedHistory;
++    if (history || !planeImages.empty()) preparedHistory = mappedHistory(source, result);
++    if (!planeImages.empty()) {
++        const auto origin = [&](EntityKind kind, int index) {
++            const auto &links = preparedHistory.origins(kind, index);
++            require(links.size() == 1 && links.front().operand == 0 && links.front().kind == kind
++                    && links.front().relation == HistoryRelation::Modified,
++                "Deformazione: genealogia del trasferimento Plane incoerente.");
++            return links.front().index;
++        };
++        for (auto id : result.faces()) {
++            cancellationPoint();
++            const int sourceFace = origin(EntityKind::Face, id.index);
++            const auto expected = planeImages.find(sourceFace);
++            if (expected == planeImages.end()) continue;
++            const auto &face = result.face(id);
++            require(face.surface == expected->second,
++                "Deformazione: carrier Plane modificato durante l'assemblaggio.");
++            for (auto loop : face.loops) for (auto use : result.loopFins(loop)) {
++                cancellationPoint();
++                const auto &fin = result.fin(use);
++                const auto &edge = result.edge(fin.edge);
++                const int sourceEdge = origin(EntityKind::Edge, fin.edge.index);
++                auto planned = planeFinOrigins.find({sourceFace, sourceEdge, fin.sense});
++                require(planned != planeFinOrigins.end() && !planned->second.empty(),
++                    "Deformazione: fin Plane priva di origine dichiarata.");
++                const auto contract = std::find_if(planned->second.begin(), planned->second.end(),
++                    [&](const auto &entry) { return entry.first == fin.pcurve && entry.second == fin.pcurveTolerance; });
++                require(contract != planned->second.end(),
++                    "Deformazione: SP-curve o budget Plane modificato durante l'assemblaggio.");
++                planned->second.erase(contract);
++                const auto &original = source.edge(EdgeId(sourceEdge));
++                require(edge.range.lo == original.range.lo && edge.range.hi == original.range.hi,
++                    "Deformazione: parametro originale del bordo Plane modificato.");
++                require(std::isfinite(fin.pcurveTolerance) && fin.pcurveTolerance >= 0
++                        && fin.pcurveTolerance <= planePCurveBudget,
++                    "Deformazione: budget finale della fin Plane non valido.");
++                const double residual = detail::requirePCurveOnPlane(edge.curve, face.surface, fin.pcurve,
++                    edge.range, std::min(planePCurveBudget, fin.pcurveTolerance));
++                worst = std::max(worst, residual);
++            }
++        }
++        for (const auto &planned : planeFinOrigins)
++            require(planned.second.empty(), "Deformazione: fin Plane persa nell'assemblaggio.");
++    }
++    cancellationPoint();
++    if(history)*history=std::move(preparedHistory);
+     if(deviation)*deviation=worst;
+     return result;
+ }
+--- before/tools/generate_architecture.py
++++ after/tools/generate_architecture.py
+@@ -238,9 +238,10 @@
+  'kernel/tests/test_mapping_diagonal_validation.cpp': ('tests', 'Regressioni del mapping obliquo su estrusioni originali: rilievi nascosti, UV affini, direzioni, pesi, pose, scale, topologia, persistenza e pubblicazione atomica; query avverse sul certificato continuo.'),
+  'kernel/fk_mapping_carrier.cpp': ('kernel', 'Mapping di lamine piane su carrier originale NURBS/estrusione: trasferimento affine UV, bordi certificati sui coefficienti originali, budget di arrotondamento e quota, conservazione topologia e pubblicazione atomica; famiglie non supportate distinte.'),
+  'kernel/fk_mapping_carrier.h': ('kernel', 'Contratto interno della conservazione del carrier nel mapping: risultato opzionale per famiglie supportate, rifiuto esplicito del controllo inconclusivo.'),
++ 'kernel/tests/test_mapping_pcurve_validation.cpp': ('tests', 'Trasferimenti UV su Plane con coordinate grandi e offset: parametri originali, fin finali certificate al budget pubblicato, pesi e wrapper, pose e scale, codec e fallimenti atomici; certificato distinto dal fit 3D campionato.'),
+  'kernel/tests/test_mapping_carrier_validation.cpp': ('tests', 'Regressioni mapping con rilievi del carrier nascosti, bordi e parametri, pesi, scale, pose, fori, genealogia, codec e fallimenti atomici; confronto con il percorso precedente e sanitizer mirati.'),
+  'kernel/fk_mapping_fit.cpp': ('kernel', 'Fit Hermite cubico/quintico adattivo condiviso dalle mappature: celle NURBS con derivate comuni, stencil locali espliciti, controlli dello scarto e budget geometrici prefissati; nessuna mesh di calcolo.'),
+- 'kernel/fk_mapping_fit.h': ('kernel', 'Contratti interni del fit parametrico e della trasformazione B-rep tramite corrispondenza analitica; immagine di faccia a carrier conservato e trasferimento UV esplicito.'),
++ 'kernel/fk_mapping_fit.h': ('kernel', 'Contratti interni del fit parametrico e della trasformazione B-rep tramite corrispondenza analitica; immagine di faccia a carrier conservato e trasferimento UV esplicito, con ricostruzione Plane sul bordo effettivo e metrica fisica.'),
+  'cad_sketch_offset.cpp': ('sketch', 'Offset dello schizzo: fit NURBS certificato da coefficienti originali nei giunti e nelle copie finali, ricertificazione dei poli effettivi dopo rifilo con domini sorgente conservati, vincoli associativi e fallimenti atomici; altri tipi mantengono il fit campionato.'),
+  'cad_sketch_offset.h': ('sketch', 'Contratto offset schizzo: catene e lati, copie associative, limite continuo per NURBS supportate anche dopo il rifilo e limiti campionati delle altre famiglie.'),
+  'tests/test_sketch_offset_validation.cpp': ('tests', 'Regressioni offset schizzo con dettagli NURBS nascosti, versi e segni, giunti concavi, nodi angolosi, rifilo e rigenerazione associativa; input invalidi e pubblicazione atomica.'),
+@@ -250,9 +251,9 @@
+  'kernel/fk_planar_flatten.cpp': ('kernel', 'Trasformazione affine dei contorni UV originali per appiattimento di una faccia Plane: coefficienti e parametro conservati, limiti continui di arrotondamento, risorse e cancellazione.'),
+  'kernel/fk_planar_flatten.h': ('kernel', 'Contratto del percorso affine per appiattimento piano: mappa condivisa, curve originali supportate e errore continuo dichiarato.'),
+  'kernel/tests/test_planar_flatten_validation.cpp': ('tests', 'Regressioni appiattimento piano con dettagli NURBS nascosti tra campioni: pesi, pose, scale, trim, fori, inversione della mappa, codec, genealogia e atomicita degli output.'),
+- 'kernel/fk_quilt_mapping.cpp': ('kernel', 'Appiattimento B-rep con bordo topologico comune; una faccia Plane conserva i coefficienti dei contorni tramite mappa affine e limite di arrotondamento, altri casi usano fit;  Jacobiani e deformazione campionata; origine suggerita e genealogia esplicita. Mappa comune e reversibile piano/quilt tramite coordinate di lunghezza d arco sulle isocurve esatte; una faccia o due facce tangenti con giunzione U, trim e piegatura solida lungo le normali. Monotonia dai poli, origine/metrica esatte sulla giunzione, cache per piegatura e nodi espliciti del fit; nessuna proiezione per raggi o isometria generale promessa.'),
++ 'kernel/fk_quilt_mapping.cpp': ('kernel', 'Appiattimento B-rep con bordo topologico comune; una faccia Plane conserva i coefficienti dei contorni tramite mappa affine e limite di arrotondamento, altri casi usano fit;  Jacobiani e deformazione campionata; origine suggerita e genealogia esplicita. Mappa comune e reversibile piano/quilt tramite coordinate di lunghezza d arco sulle isocurve esatte; una faccia o due facce tangenti con giunzione U, trim e piegatura solida lungo le normali. Monotonia dai poli, origine/metrica esatte sulla giunzione, cache per piegatura e nodi espliciti del fit; offset Plane analitico senza fit di contorni UV superfluo, fin Plane delegate al controllo continuo. Nessuna proiezione per raggi o isometria generale promessa.'),
+  'kernel/fk_quilt_mapping.h': ('kernel', 'Contratti di appiattimento della lamina, misure della deformazione e corrispondenza condivisa flatten/fold per la piegatura B-rep; destinazioni immutabili con genealogia esplicita.'),
+- 'kernel/fk_surface_mapping.cpp': ('kernel', 'Sviluppo isometrico, posa rigida e mapping su superficie o appoggio multifaccia: delega la conservazione del carrier per lamine piane supportate, mantiene il fit campionato esplicito per i casi restanti; controlli locali di inversione, trim, genealogia e nessuna mesh di calcolo.'),
++ 'kernel/fk_surface_mapping.cpp': ('kernel', 'Sviluppo isometrico, posa rigida e mapping su superficie o appoggio multifaccia: conserva i carrier supportati; trasferimento SP-curve su Plane con limite continuo fisico e verifica delle fin dopo assemblaggio tramite genealogia, coefficienti e budget prefissati. Bordi 3D e famiglie restanti mantengono fit campionato; controlli locali di inversione/trim, nessuna mesh di calcolo.'),
+  'kernel/fk_classify_uv.h': ('kernel', 'Classificatore preparato di coordinate UV gia note: trim esatto e budget fisico senza nuova proiezione globale sul carrier; corpo immutabile.'),
+  'kernel/fk_surface_mapping.h': ('kernel', 'Contratti di sviluppo esatto, deformazione o posa rigida per sorgente; appoggio UV o centrato sulla giunzione topologica comune, piano sorgente e budget di fit.'),
+  'kernel/tests/test_surface_mapping.cpp': ('tests', 'Appiattimento NURBS multifaccia, bordo comune, metriche e piano inclinato; sviluppo: aree e lunghezze analitiche piano/cilindro/cono; deformazione volumetrica cilindrica, genealogia, negativi, mesh, binario e STEP.'),
+--- /dev/null
++++ after/kernel/tests/test_mapping_pcurve_validation.cpp
+@@ -0,0 +1,514 @@
++#include "fk_body_check.h"
++#include "fk_body_io.h"
++#include "fk_bspline.h"
++#include "fk_cancel.h"
++#include "fk_curve_fit_bounds.h"
++#include "fk_curve_ops.h"
++#include "fk_mapping_fit.h"
++#include "fk_quilt_mapping.h"
++#include "fk_sheet.h"
++#include <algorithm>
++#include <atomic>
++#include <fstream>
++#include <iomanip>
++#include <iostream>
++#include <limits>
++#include <stdexcept>
++using namespace ForgeCad::Kernel;
++namespace {
++void require(bool value, const char *message) {
++    if (!value)
++        throw std::runtime_error(message);
++}
++struct Options {
++    bool rational = false, trim = false, reverse = false, pose = false,
++         transformed = false;
++    double scale = 1, height = 0, normalOffset = 0, farUV = 0;
++    Interval range{0, 1};
++};
++Frame3 sourceFrame(const Options &o) {
++    return o.pose ? Frame3({3, -4, 2}, {1, 2, 3}, {2, -1, .4}) : Frame3();
++}
++Frame3 targetFrame(const Options &o) {
++    return o.pose ? Frame3({-2, 1, 4}, {-1, 3, 2}, {1, 2, -.2}) : Frame3();
++}
++Body source(const Options &o) {
++    const auto frame = sourceFrame(o);
++    const auto raised =
++        Frame3(frame.toGlobal({0, 0, o.height}), frame.zDir(), frame.xDir());
++    std::vector<Vec3> local{{0, 0, o.height},
++                            {o.scale, 0, o.height},
++                            {o.scale, o.scale, o.height},
++                            {0, o.scale, o.height}};
++    std::vector<Vec3> points;
++    for (auto p : local)
++        points.push_back(frame.toGlobal(p));
++    std::vector<Body::BuildEdge> edges;
++    Body::BuildFace face;
++    face.surface = std::make_shared<Plane>(raised);
++    std::vector<Body::BuildFin> fins;
++    const double x = .1003, y = .1013;
++    std::vector<double> knots{0, 0, 0, 0, x, x, x, y, y, y, 1, 1, 1, 1};
++    for (auto &k : knots)
++        k = o.range.lo + k * o.range.length();
++    std::vector<double> q{0,
++                          x / 3,
++                          2 * x / 3,
++                          x,
++                          x + (y - x) / 3 + 1e-5,
++                          y - (y - x) / 3 + 1e-5,
++                          y,
++                          y + (1 - y) / 3,
++                          y + 2 * (1 - y) / 3,
++                          1};
++    std::vector<double> w(q.size(), 1);
++    if (o.rational) {
++        w[4] = 1.2;
++        w[5] = .8;
++    }
++    for (int i = 0; i < 4; ++i) {
++        auto a = local[i], b = local[(i + 1) % 4];
++        std::vector<Vec3> p;
++        std::vector<Vec2> uv;
++        for (double t : q) {
++            auto v = a + t * (b - a);
++            p.push_back(o.transformed ? v : frame.toGlobal(v));
++            uv.push_back({v.x(), v.y()});
++        }
++        if (o.reverse) {
++            std::reverse(p.begin(), p.end());
++            std::reverse(uv.begin(), uv.end());
++        }
++        auto weights = w;
++        auto ks = knots;
++        if (o.reverse) {
++            std::reverse(weights.begin(), weights.end());
++            std::reverse(ks.begin(), ks.end());
++            for (auto &k : ks)
++                k = o.range.lo + o.range.hi - k;
++        }
++        CurvePtr<3> c = std::make_shared<BSplineCurve<3>>(3, ks, p, weights);
++        CurvePtr<2> pc = std::make_shared<BSplineCurve<2>>(3, ks, uv, weights);
++        if (o.transformed)
++            c = std::make_shared<TransformedCurve>(
++                c, Transform3::fromFrame(frame));
++        if (o.trim) {
++            c = std::make_shared<TrimmedCurve<3>>(c, o.range.lo, o.range.hi);
++            pc = std::make_shared<TrimmedCurve<2>>(pc, o.range.lo, o.range.hi);
++        }
++        edges.push_back({o.reverse ? (i + 1) % 4 : i,
++                         o.reverse ? i : (i + 1) % 4, c, o.range, 0});
++        fins.push_back({i, !o.reverse, pc, 0});
++    }
++    face.loops = {fins};
++    return Body::buildSheet(points, edges, {face});
++}
++void hex(std::ostream &s, double x) {
++    s << '"' << std::hexfloat << x << std::defaultfloat << '"';
++}
++template <int N> void vec(std::ostream &s, const Vec<N> &v) {
++    s << '[';
++    for (int i = 0; i < N; ++i) {
++        if (i)
++            s << ',';
++        hex(s, v[i]);
++    }
++    s << ']';
++}
++void numbers(std::ostream &s, const std::vector<double> &a) {
++    s << '[';
++    bool first = true;
++    for (double v : a) {
++        if (!first)
++            s << ',';
++        first = false;
++        hex(s, v);
++    }
++    s << ']';
++}
++template <int N> void curve(std::ostream &s, const CurvePtr<N> &c) {
++    s << '{';
++    if (c->type() == CurveType::Line) {
++        auto &l = static_cast<const Line<N> &>(*c);
++        s << "\"type\":\"line\",\"origin\":";
++        vec(s, l.origin());
++        s << ",\"direction\":";
++        vec(s, l.direction());
++    } else if (c->type() == CurveType::BSpline) {
++        auto &b = static_cast<const BSplineCurve<N> &>(*c);
++        s << "\"type\":\"bspline\",\"degree\":" << b.degree() << ",\"knots\":";
++        numbers(s, b.knots());
++        s << ",\"weights\":";
++        numbers(s, b.weights());
++        s << ",\"poles\":[";
++        bool first = true;
++        for (auto p : b.poles()) {
++            if (!first)
++                s << ',';
++            first = false;
++            vec(s, p);
++        }
++        s << ']';
++    } else if (c->type() == CurveType::Trimmed) {
++        auto &t = static_cast<const TrimmedCurve<N> &>(*c);
++        s << "\"type\":\"trimmed\",\"range\":[";
++        hex(s, t.domain().lo);
++        s << ',';
++        hex(s, t.domain().hi);
++        s << "],\"basis\":";
++        curve(s, t.basis());
++    } else if constexpr (N == 3) {
++        if (c->type() == CurveType::Transformed) {
++            auto &t = static_cast<const TransformedCurve &>(*c);
++            s << "\"type\":\"transformed\",\"matrix\":[";
++            for (int i = 0; i < 3; ++i) {
++                if (i)
++                    s << ',';
++                s << '[';
++                for (int j = 0; j < 3; ++j) {
++                    if (j)
++                        s << ',';
++                    hex(s, t.transform().matrix(i, j));
++                }
++                s << ']';
++            }
++            s << "],\"translation\":";
++            vec(s, t.transform().translationPart());
++            s << ",\"basis\":";
++            curve(s, t.basis());
++        } else
++            throw std::runtime_error("unsupported exporter curve");
++    } else
++        throw std::runtime_error("unsupported exporter curve");
++    s << '}';
++}
++void fins(std::ostream &s, const Body &body) {
++    s << '[';
++    bool first = true;
++    for (auto id : body.fins()) {
++        auto &fin = body.fin(id);
++        auto &edge = body.edge(fin.edge);
++        auto faceId = body.finFace(id);
++        auto &face = body.face(faceId);
++        require(face.surface->type() == SurfaceType::Plane,
++                "exporter requires final Plane");
++        auto &f = static_cast<const Plane &>(*face.surface).frame();
++        if (!first)
++            s << ',';
++        first = false;
++        s << "{\"fin\":" << id.index << ",\"edge\":" << fin.edge.index
++          << ",\"face\":" << faceId.index
++          << ",\"sense\":" << (fin.sense ? "true" : "false") << ",\"range\":[";
++        hex(s, edge.range.lo);
++        s << ',';
++        hex(s, edge.range.hi);
++        s << "],\"budget\":";
++        hex(s, fin.pcurveTolerance);
++        s << ",\"plane\":{\"origin\":";
++        vec(s, f.origin());
++        s << ",\"x\":";
++        vec(s, f.xDir());
++        s << ",\"y\":";
++        vec(s, f.yDir());
++        s << ",\"z\":";
++        vec(s, f.zDir());
++        s << "},\"curve\":";
++        curve(s, edge.curve);
++        s << ",\"pcurve\":";
++        curve(s, fin.pcurve);
++        s << '}';
++    }
++    s << ']';
++}
++
++void exportCase(const std::string &directory, const std::string &name,
++                const Body &src, const Body &out, const BodyHistory &history,
++                double tolerance, double deviation) {
++    if (directory.empty())
++        return;
++    std::ofstream s(directory + "/" + name + ".json");
++    s << "{\"case\":\"" << name << "\",\"tolerance\":";
++    hex(s, tolerance);
++    s << ",\"deviation\":";
++    hex(s, deviation);
++    s << ",\"source\":";
++    fins(s, src);
++    s << ",\"actual\":";
++    fins(s, out);
++    s << ",\"face_origins\":[";
++    bool first = true;
++    for (auto id : out.faces()) {
++        if (!first)
++            s << ',';
++        first = false;
++        s << "{\"actual\":" << id.index << ",\"source\":[";
++        bool f = true;
++        for (auto x : history.origins(EntityKind::Face, id.index)) {
++            if (!f)
++                s << ',';
++            f = false;
++            s << x.index;
++        }
++        s << "]}";
++    }
++    s << "]}\n";
++    std::ofstream(directory + "/" + name + ".source.body", std::ios::binary)
++        << writeBodyBinary(src);
++    std::ofstream(directory + "/" + name + ".actual.body", std::ios::binary)
++        << writeBodyBinary(out);
++}
++Body targetBody(const Options &o) {
++    auto to = targetFrame(o);
++    auto target = makePlaneSheet(to, 3 * o.scale);
++    if (o.farUV) {
++        target.face(target.faces()[0]).surface = std::make_shared<Plane>(
++            Frame3(to.toGlobal({-o.farUV, 0, 0}), to.zDir(), to.xDir()));
++        for (auto id : target.fins()) {
++            auto &f = target.fin(id);
++            f.pcurve = translatedCurve<2>(f.pcurve, {o.farUV, 0});
++        }
++        require(checkBody(target, {true, true}).empty(),
++                "invalid far-UV original target");
++    }
++    return target;
++}
++Body mapped(const Body &b, const Options &o, bool quilt, BodyHistory *h,
++            double *d) {
++    auto from = sourceFrame(o), to = targetFrame(o);
++    SurfaceWrapOptions opt;
++    opt.sourcePlane = from;
++    opt.normalOffset = o.normalOffset;
++    opt.tolerance = 1e-6;
++    if (quilt) {
++        auto target = targetBody(o);
++        SurfaceQuiltMap m({{&target, target.faces()[0]}}, {o.farUV, 0});
++        return m.bend(b, opt, h, d);
++    }
++    const auto map = [=](const Vec3 &p) {
++        auto q = from.toLocal(p);
++        q[2] += o.normalOffset;
++        return to.toGlobal(q);
++    };
++    const auto image = [=](FaceId) {
++        detail::MappingFaceImage im;
++        im.surface = std::make_shared<Plane>(
++            Frame3(to.toGlobal({0, 0, o.height + o.normalOffset}), to.zDir(),
++                   to.xDir()));
++        im.parameters = [=](const Vec3 &p) {
++            auto q = from.toLocal(p);
++            return Vec2(q.x(), q.y());
++        };
++        return im;
++    };
++    return detail::mapBodyByFunction(b, map, {}, opt.tolerance, h, d, {}, .001,
++                                     3, image);
++}
++void run(const Options &o, bool quilt, const std::string &name,
++         const std::string &dir) {
++    const auto b = source(o);
++    const auto before = writeBodyBinary(b);
++    require(checkBody(b, {true, true}).empty(), "source checker failure");
++    BodyHistory h;
++    double d = -1;
++    const auto out = mapped(b, o, quilt, &h, &d);
++    require(writeBodyBinary(b) == before, "source mutated");
++    require(checkBody(out, {true, true}).empty(), "output checker failure");
++    require(out.faces().size() == b.faces().size() &&
++                out.edges().size() == b.edges().size() &&
++                out.vertices().size() == b.vertices().size(),
++            "topology changed");
++    exportCase(dir, name, b, out, h, 1e-6, d);
++    // Dense witnesses check the actual mapping at the SAME source parameter.
++    // They do not certify the sampled upstream 3D edge fitter globally.
++    double worst = 0, ratio = 0, mapError = 0, sourceResidual = 0;
++    const auto from = sourceFrame(o), to = targetFrame(o);
++    const auto expectedTarget = targetBody(o);
++    std::unique_ptr<SurfaceQuiltMap> expectedQuilt;
++    if (quilt)
++        expectedQuilt = std::make_unique<SurfaceQuiltMap>(
++            std::vector<SurfaceTargetFace>{
++                {&expectedTarget, expectedTarget.faces()[0]}},
++            Vec2(o.farUV, 0));
++    for (auto id : out.fins()) {
++        const auto &f = out.fin(id);
++        const auto &e = out.edge(f.edge);
++        const auto &s = *out.face(out.finFace(id)).surface;
++        require(e.range.lo == o.range.lo && e.range.hi == o.range.hi,
++                "original parameter range lost");
++        require(f.pcurveTolerance >= 0 &&
++                    f.pcurveTolerance <= .8 * linearResolution(),
++                "fin exceeds preassigned operation budget");
++        require(h.isDeclared(EntityKind::Edge, f.edge.index) &&
++                    h.isDeclared(EntityKind::Face, out.finFace(id).index),
++                "missing declared genealogy");
++        auto origins = h.origins(EntityKind::Edge, f.edge.index);
++        require(origins.size() == 1, "ambiguous edge genealogy");
++        const auto &se = b.edge(EdgeId{origins.front().index});
++        auto cuts = e.curve->breakpoints(e.range);
++        auto more = f.pcurve->breakpoints(e.range);
++        cuts.insert(cuts.end(), more.begin(), more.end());
++        std::sort(cuts.begin(), cuts.end());
++        cuts.erase(std::unique(cuts.begin(), cuts.end()), cuts.end());
++        for (size_t k = 1; k < cuts.size(); ++k)
++            for (int j = 0; j <= 100; ++j) {
++                double t = cuts[k - 1] + (cuts[k] - cuts[k - 1]) * j / 100.;
++                auto uv = f.pcurve->point(t);
++                double r = distance(s.point(uv.x(), uv.y()), e.curve->point(t));
++                worst = std::max(worst, r);
++                ratio =
++                    std::max(ratio, r / std::max(1e-300, f.pcurveTolerance));
++                auto q = from.toLocal(se.curve->point(t));
++                q[2] += o.normalOffset;
++                mapError =
++                    std::max(mapError, distance(e.curve->point(t),
++                                                quilt ? expectedQuilt->fold(q)
++                                                      : to.toGlobal(q)));
++            }
++    }
++    for (auto id : out.fins()) {
++        const auto &f = out.fin(id);
++        const auto &e = out.edge(f.edge);
++        const double bound = detail::requirePCurveOnPlane(
++            e.curve, out.face(out.finFace(id)).surface, f.pcurve, e.range,
++            f.pcurveTolerance);
++        require(std::isfinite(bound) && bound <= f.pcurveTolerance,
++                "continuous final fin check failed");
++    }
++    for (auto id : b.fins()) {
++        const auto &f = b.fin(id);
++        const auto &e = b.edge(f.edge);
++        const auto &s = *b.face(b.finFace(id)).surface;
++        for (int j = 0; j <= 1000; ++j) {
++            double t = e.range.lo + e.range.length() * j / 1000.;
++            auto uv = f.pcurve->point(t);
++            sourceResidual =
++                std::max(sourceResidual,
++                         distance(s.point(uv.x(), uv.y()), e.curve->point(t)));
++        }
++    }
++    std::cout << name << " source=" << sourceResidual << " residual=" << worst
++              << " ratio=" << ratio << " map_error=" << mapError
++              << " deviation=" << d;
++    require(sourceResidual < 1e-10 * std::max(1., o.scale),
++            "source construction inconsistent");
++    require(ratio <= 1., "final fin exceeds its published physical tolerance");
++    require(mapError <= .2 * linearResolution(),
++            "mapped edge witness exceeds fit budget");
++    require(std::isfinite(d) && d <= .8 * linearResolution(),
++            "deviation not finite/in budget");
++    auto round = readBodyBinary(writeBodyBinary(out));
++    require(checkBody(round, {true, true}).empty(), "roundtrip invalid");
++}
++void failures() {
++    Options o;
++    o.rational = true;
++    o.trim = true;
++    auto b = source(o);
++    auto before = writeBodyBinary(b);
++    BodyHistory h = makeHistory({&b}, b);
++    h.declareOrigins(
++        EntityKind::Face, b.faces()[0].index,
++        {{0, EntityKind::Face, b.faces()[0].index, HistoryRelation::Same}});
++    const auto initial = h.origins(EntityKind::Face, b.faces()[0].index);
++    double d = 123;
++    auto token = std::make_shared<std::atomic<bool>>(true);
++    for (bool quilt : {false, true}) {
++        bool cancelled = false;
++        try {
++            CancellationScope scope(token);
++            (void)mapped(b, o, quilt, &h, &d);
++        } catch (const OperationCancelled &) {
++            cancelled = true;
++        }
++        require(cancelled && d == 123 &&
++                    h.origins(EntityKind::Face, b.faces()[0].index)
++                            .front()
++                            .relation == initial.front().relation &&
++                    writeBodyBinary(b) == before,
++                "cancellation published outputs or mutated source");
++    }
++    for (double far : {1e5, 1e6})
++        for (bool pose : {false, true}) {
++            o.height = .2;
++            o.normalOffset = .3;
++            o.farUV = far;
++            o.pose = pose;
++            b = source(o);
++            before = writeBodyBinary(b);
++            bool rejected = false;
++            try {
++                (void)mapped(b, o, true, &h, &d);
++            } catch (const std::domain_error &) {
++                rejected = true;
++            }
++            require(rejected && d == 123 &&
++                        h.origins(EntityKind::Face, b.faces()[0].index)
++                                .front()
++                                .relation == initial.front().relation &&
++                        writeBodyBinary(b) == before,
++                    "unresolved large UV accepted or changed outputs");
++        }
++}
++} // namespace
++int main(int argc, char **argv) {
++    std::string dir = argc > 1 ? argv[1] : "";
++    int failed = 0, passed = 0;
++    const auto one = [&](Options o, bool q, const std::string &name) {
++        try {
++            run(o, q, name, dir);
++            std::cout << " PASS\n";
++            ++passed;
++        } catch (const std::exception &e) {
++            std::cout << name << " FAIL " << e.what() << '\n';
++            ++failed;
++        }
++    };
++    for (bool quilt : {false, true}) {
++        const std::string p = quilt ? "quilt_" : "mapping_";
++        Options o;
++        one(o, quilt, p + "polynomial");
++        o.rational = true;
++        one(o, quilt, p + "rational");
++        o.trim = true;
++        o.range = {-2, 5};
++        one(o, quilt, p + "trim_range");
++        o.reverse = true;
++        one(o, quilt, p + "reverse");
++        o.pose = true;
++        o.transformed = true;
++        one(o, quilt, p + "pose_wrapper");
++        o.scale = 1000;
++        one(o, quilt, p + "scale1000");
++        o.scale = .01;
++        one(o, quilt, p + "scale001");
++        o = Options{};
++        o.rational = true;
++        o.height = .2;
++        one(o, quilt, p + "height");
++        o.normalOffset = .3;
++        one(o, quilt, p + "normal_offset");
++    }
++    for (double far : {1e4})
++        for (bool pose : {false, true}) {
++            Options o;
++            o.rational = true;
++            o.trim = true;
++            o.height = .2;
++            o.normalOffset = .3;
++            o.farUV = far;
++            o.pose = pose;
++            one(o, true,
++                "quilt_faruv" + std::to_string(int(far)) +
++                    (pose ? "_pose" : "_identity"));
++        }
++    try {
++        failures();
++        std::cout << "atomic_failures PASS\n";
++        ++passed;
++    } catch (const std::exception &e) {
++        std::cout << "atomic_failures FAIL " << e.what() << '\n';
++        ++failed;
++    }
++    std::cout << "passed=" << passed << " failed=" << failed << '\n';
++    return failed ? 1 : 0;
++}

@@ -1,0 +1,10 @@
+reverse before=0
+reverse error=Body: fin non valido
+reverse after=2
+empty op=0 faces=6
+empty op=1 faces=0
+empty op=2 faces=6
+loft x=0 corr=2
+loft x=0 faces=1 checks=0 area=0.5
+loft x=1e+06 corr=1
+loft x=1e+06 faces=2 checks=0 area=0.998611

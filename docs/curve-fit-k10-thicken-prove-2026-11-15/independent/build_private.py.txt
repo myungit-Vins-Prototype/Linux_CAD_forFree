@@ -1,0 +1,11 @@
+from pathlib import Path
+import json,shlex,subprocess,hashlib
+r=Path('/home/myungit/Linux_CAD_forFree');p=Path(__file__).parent;s=p.parent/'implementation';f=p/'first-sources';f.mkdir(exist_ok=True);(f/'fk_thicken.cpp').write_bytes((s/'fk_thicken.cpp').read_bytes());cs=json.loads((r/'forgecad-release/compile_commands.json').read_text())
+def compile(n,src):
+ c=next((x for x in cs if x['file'].endswith('/kernel/'+n+'.cpp')),next(x for x in cs if x['file'].endswith('/kernel/fk_offset.cpp')));cmd=shlex.split(c['command']);cmd[cmd.index('-o')+1]=str(p/(n+'.first.o'));cmd[cmd.index('-c')+1]=str(src);cmd+=['-I'+str(r/'kernel'),'-fno-fast-math','-ffp-contract=off'];subprocess.run(cmd,cwd=c['directory'],check=True)
+compile('fk_thicken',f/'fk_thicken.cpp')
+for name in ['baseline','selective','coplanar']:
+ compile(name,p/(name+'.cpp'));subprocess.run(['/usr/bin/c++','-o',str(p/(name+'-first')),str(p/(name+'.first.o')),str(p/'fk_thicken.first.o'),str(r/'forgecad-release/kernel/libforgekernel.a'),'-lpthread'],check=True)
+ with (p/(name+'-first.log')).open('w') as out:subprocess.run([str(p/(name+'-first'))],stdout=out,stderr=subprocess.STDOUT,check=True)
+ print(name+' PASS',flush=True)
+(p/'first-manifest.json').write_text(json.dumps({'kernel/fk_thicken.cpp':hashlib.sha256((f/'fk_thicken.cpp').read_bytes()).hexdigest()},indent=2)+'\n')

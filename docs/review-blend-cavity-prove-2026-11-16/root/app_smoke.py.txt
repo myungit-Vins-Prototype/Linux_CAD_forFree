@@ -1,0 +1,15 @@
+from pathlib import Path
+import os,subprocess,tempfile,time,signal,json,hashlib
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/blend-cavity-review/root');exe=R/'forgecad-release/forgecad'
+with tempfile.TemporaryDirectory(prefix='forgecad-cavity-startup-') as directory:
+ env=os.environ.copy();env.update(QT_QPA_PLATFORM='wayland',QT_QPA_PLATFORMTHEME='',QT_STYLE_OVERRIDE='Fusion',XDG_CONFIG_HOME=directory,FORGECAD_RECOVERY_DIR=directory+'/recovery')
+ with (T/'app-startup.log').open('w') as log:
+  p=subprocess.Popen([str(exe)],cwd=R,env=env,stdout=log,stderr=subprocess.STDOUT,start_new_session=True)
+  time.sleep(5)
+  alive=p.poll() is None;actual=os.readlink('/proc/'+str(p.pid)+'/exe') if alive else None
+  if alive:os.killpg(p.pid,signal.SIGTERM)
+  try:code=p.wait(timeout=5)
+  except subprocess.TimeoutExpired:os.killpg(p.pid,signal.SIGKILL);code=p.wait()
+  result={'startup_alive_after_seconds':5,'alive':alive,'expected_executable':str(exe),'actual_executable':actual,'binary_sha256':hashlib.sha256(exe.read_bytes()).hexdigest(),'platform':'Wayland','profile':'isolated temporary configuration and recovery','documents_opened':0,'exit_after_own_test_termination':code,'user_processes_touched':False,'pixel_rendering_certified':False}
+  (T/'app-startup-result.json').write_text(json.dumps(result,indent=2)+'\n');print(result)
+  assert alive and actual==str(exe)

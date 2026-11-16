@@ -1,0 +1,65 @@
+from pathlib import Path
+import hashlib,json,subprocess,re
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/k10-helix-review/root');D=Path('/tmp/k10-sketch-review/core/delivery');sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+# Re-read shared memory immediately before writes. No other agent writes repo.
+memory=(R/'CLAUDE.md').read_text();initial=json.loads((T/'hashes-before.json').read_text())
+for line in (D/'MANIFEST.sha256').read_text().splitlines():
+ h,f=line.split('  ',1);assert sha(D/f)==h,f
+base=json.loads((D/'base-hashes.json').read_text());stage=json.loads((D/'stage-hashes.json').read_text())
+for f,h in base.items():
+ if h is None:assert not (R/f).exists(),f
+ else:assert sha(R/f)==h==initial[f],f
+for f,h in stage.items():assert sha(D/f)==h,f
+header=Path('/tmp/k10-sketch-review/tests/test_sketch_projection_fit_validation.h')
+assert sha(header)=='ee479598579c2fb0a2951cc1564838fb7c4741f76c6c1c91132c4e8d4e1934f4'
+assert 'groups=13 pass=13 fail=0' in Path('/tmp/k10-sketch-review/tests/header-suite-final.log').read_text()
+assert not (R/'tests'/header.name).exists()
+for f in ['CMakeLists.txt','kernel/CMakeLists.txt','tests/test_viewport.cpp','tools/generate_architecture.py']:assert sha(R/f)==initial[f],f
+updates={f:(D/f).read_text() for f in stage};updates['tests/'+header.name]=header.read_text()
+k=(R/'kernel/CMakeLists.txt').read_text();assert k.count('    fk_helix.cpp\n')==1
+k=k.replace('    fk_helix.cpp\n','    fk_helix.cpp\n    fk_helix_projection.h\n    fk_helix_projection.cpp\n')
+assert k.count('fk_curve_fit_bounds.cpp fk_project.cpp')==1
+updates['kernel/CMakeLists.txt']=k.replace('fk_curve_fit_bounds.cpp fk_project.cpp','fk_curve_fit_bounds.cpp fk_helix_projection.cpp fk_project.cpp')
+c=(R/'CMakeLists.txt').read_text();needle='tests/test_chamfer_preview_editing.h tests/test_advanced_fillets.h';assert c.count(needle)==1
+c=c.replace(needle,'tests/test_chamfer_preview_editing.h tests/test_sketch_projection_fit_validation.h tests/test_advanced_fillets.h')
+needle='    forgecad_add_view_test(forgecad_sketch_projection_tests --sketch-projection)\n';assert c.count(needle)==1
+updates['CMakeLists.txt']=c.replace(needle,needle+'    forgecad_add_view_test(forgecad_sketch_projection_fit_validation_tests --sketch-projection-fit-validation)\n    set_tests_properties(forgecad_sketch_projection_fit_validation_tests PROPERTIES TIMEOUT 180)\n')
+v=(R/'tests/test_viewport.cpp').read_text();needle='#include "test_sketch_projection_gui.h"';assert v.count(needle)==1
+v=v.replace(needle,needle+'\n#include "test_sketch_projection_fit_validation.h"')
+needle='    if (app.arguments().contains(QStringLiteral("--sketch-projection"))) {';assert v.count(needle)==1
+updates['tests/test_viewport.cpp']=v.replace(needle,'    if (app.arguments().contains(QStringLiteral("--sketch-projection-fit-validation"))) {\n        return K10SketchProjectionTests::run(QString::fromLocal8Bit(qgetenv("FORGECAD_HELIX_EXPORT_DIR")));\n    }\n'+needle)
+g=(R/'tools/generate_architecture.py').read_text();needle='\nDESCRIPTIONS = {\n';assert g.count(needle)==1
+entries=""" 'kernel/fk_helix_projection': ('kernel', 'Proiezione di Helix nel parametro originale: snapshot di coefficienti IEEE, wrapper e frame; intervalli trigonometrici outward e resto Hermite continuo, fit cubico e ricontrollo dei poli2D effettivi, risorse finite e cancellazione. Nessuna certificazione del percorso quintico diretto legacy.'),
+ 'cad_sketch_refs': ('sketch', 'Riferimenti associativi, sezioni e conversioni proiettate nello schizzo; Helix con Transformed usa un fit diretto2D con controllo continuo dopo recalculateCurve e pubblicazione atomica. Helix nuda o solo rifilata conserva il percorso quinticoC2 legacy; altri Other restano fallback campionati. Traversal dei wrapper limitato e cancellabile.'),
+ 'tests/test_sketch_projection_fit_validation.h': ('tests', 'Tredici gruppi Qt sulla proiezione Helix: due alias negativi a un milione di giri, otto varianti con pose/trim/affini/spirale e budget invariati, compatibilita quintica diretta, atomicita di errori e cancellazione, contratto e poli finali; exporter originale/effettivo in floathex.'),
+"""
+updates['tools/generate_architecture.py']=g.replace(needle,needle+entries)
+entry='''**16/11 — K10 Helix e orfane, integrati; verifiche finali in corso.**
+Con tre agenti Sol: Helix trasformate nello schizzo ora usano un limite continuo
+trigonometrico/Hermite e ricontrollano i poli Qt effettivi. Due alias reali
+prima accettati oltre budget ora rifiutati atomicamente; percorso diretto C2
+conservato. Fraction indipendente:8varianti/624campate entro budget,37guardie PASS.
+Rimosse5funzioni private/locali in7file;17API pubbliche conservate.
+App completa,regressioni e mappa pendenti;29rilievi corretti prima del blocco,
+K10 ancora18/24parziali+6nonmigrati fino alla verifica finale.
+[Stato/prove](docs/review-k10-helix-orphans-2026-11-16.md);
+[memoria precedente](docs/history/claude-prima-k10-helix-orphans-2026-11-16.md).
+
+'''
+a=memory.index('**16/11 — K10 Helix');b=memory.index('**16/11 — K10 cucitura',a);memory=memory[:a]+entry+memory[b:]
+# Details remain in the already archived complete memory if compacting is needed.
+if len(memory.encode())>16384:
+ a=memory.index('**15/11 — Review iniziale');b=memory.index('Sweep/vincoli15/11:',a)
+ memory=memory[:a]+'''Review iniziale:19difetti e22candidate orfane; prove storiche nel
+[rapporto](docs/code-review-2026-11-15.md) e nella
+[memoria](docs/history/claude-prima-preview-unification-2026-11-16.md).
+
+'''+memory[b:]
+assert len(memory.encode())<=16384 and len(re.findall(r'^\*\*',memory,re.M))<=10
+updates['CLAUDE.md']=memory
+for f,s in updates.items():(R/f).write_text(s)
+orphans=json.loads((T/'orphan-stage-hashes.json').read_text());source=set(updates)-{'CLAUDE.md'}|set(orphans)
+freeze={f:sha(R/f) for f in sorted(source)};(T/'frozen-source-hashes.json').write_text(json.dumps(freeze,indent=2)+'\n')
+for f,h in stage.items():assert sha(R/f)==h,f
+report=R/'docs/review-k10-helix-orphans-2026-11-16.md';text=report.read_text();text=text.replace('Il prototipo in preparazione userà','Integrato il percorso che usa').replace('e fallimento prima della pubblicazione','e fallisce prima della pubblicazione');report.write_text(text+'\nPrototipo integrato dopo13gruppi Qt PASS e37guardie indipendenti; Fraction indipendente su8varianti/624campate PASS, compreso un polo finale alterato respinto. Build app e mappa ancora in corso.\n')
+print('Helix integrated; source freeze',len(freeze),'memory',len(memory.encode()),flush=True)

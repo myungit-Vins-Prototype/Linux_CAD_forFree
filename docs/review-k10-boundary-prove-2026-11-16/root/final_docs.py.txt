@@ -1,0 +1,71 @@
+from pathlib import Path
+import hashlib,json
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/boundary-review/root');sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+for n in ['build','ctest','release-variants','release-general-blend','wayland-fillet','wayland-blend-preview','wayland-theme','fraction-final']:assert json.loads((T/(n+'-result.json')).read_text())['exit']==0,n
+assert json.loads((T/'app-startup-result.json').read_text())['alive']
+report='''# K10 — continuazioni dei bordi spline, 16 novembre 2026
+
+Corrette la concatenazione che cambiava il parametro del bordo razionale originale e l'accettazione campionata di continuazioni ISO fuori dal secondo supporto. Le mappe riconosciute dai coefficienti originali sono verificate continuamente su entrambi i supporti con cap prefissato; le fin effettive sono ricontrollate sul risultato. Tre agenti GPT-6.1 Sol: implementazione, regressioni e audit indipendente.
+
+**K10: 24/24 siti iniziali parzialmente trattati; nessuno rimasto del tutto intatto. Questo non chiude K10:** Newton e famiglie non supportate restano campionati. Totale 31 rilievi corretti invariato; 17 API pubbliche candidate orfane e uniformazione dei colori letterali UI ancora aperte.
+
+## Difetti riprodotti e perimetro
+
+Il vecchio `extendSplineBoundary` concatena con `standardBezierPieces`, che normalizza i pesi tramite una trasformazione di Moebius mantenendo gli estremi del parametro. Quattro fixture razionali mostrano scarti nello stesso parametro: 0,2420503588 mm; posa/scala2,5: 0,6051258970 mm; verso opposto: 0,2420503588 mm; trim[0,1;0,9]: 0,1636200144 mm. Il controllo polinomiale passa. Il luogo geometrico di una singola campata può restare lo stesso: non si attribuisce una deformazione pubblica dal solo cambio di parametro. Le vecchie pcurve dello staging non sono fin pubbliche postbuild.
+
+Difetto distinto e concreto della famiglia supportata: E(t)=(t,0,0), range[0,1], richiesta[0,2], mappe ISO affini originali. Il primo supporto è piano con una sola campata; il secondo ha un picco a19/16, nullo nei cinque campioni del controllo precedente. Il vecchio helper accetta e modifica Body/Model. Il candidato rifiuta prima del commit. Fraction prova residuo quadrato1/4 al parametro19/16 e una distanza globale oltre cap tramite strisce UV. La prima bozza della fixture metteva gli stessi nodi nascosti anche sul primo supporto, provocando un rifiuto corretto: fixture corretta prima della baseline congelata.
+
+Un altro negativo dimostra l'alias del riconoscitore a33campioni: mappa multipolo con variazione0,01mm tra1/512 e3/512. **Questa famiglia resta fuori certificazione e conserva la compatibilità storica campionata.** Il test finale richiede l'assenza di un certificato, senza dichiarare risolto quell'alias. Le nove prove diagnostiche baseline hanno3PASS/6FAIL attesi; i sei fallimenti non rappresentano sei difetti indipendenti.
+
+## Correzione finale V2
+
+Estensione e concatenazione spostate dal coordinatore `fk_blend_surface` al modulo mirato `fk_blend_section_curve`. La curva di riferimento delle sezioni conserva il comportamento precedente. La concatenazione usa elevazione omogenea e una sola scala comune per pezzo, senza Moebius; il confronto continuo nello stesso parametro verifica il tratto originale anche nel percorso storico.
+
+La via certificata riconosce mappe Line2 ISO o B-spline2 grado1 con due poli e pesi uguali su supporti B-spline. Le mappe estese conservano nodi e poli centrali originali: nessun offset/slope ricostruito sostituisce la mappa sorgente. I provider esistenti leggono coefficienti originali; un cubico ausiliario consente di sommare due limiti arrotondati verso l'esterno e verificare la curva effettiva tramite disuguaglianza triangolare. Il cubico non sostituisce l'output. Il fit iniziale usa min(fitTolerance,0,25cap); accettazione al cap fisico `max(2*fitTolerance, edge.tolerance)` fissato prima della costruzione. Nessun budget deriva dal massimo osservato dopo il fit; la tolleranza edge originale resta invariata nella via certificata.
+
+Il ledger conserva edge/face di modello, mappe, identità e budget. I tentativi di `extendBoundaryWindow` copiano e ripristinano anche il ledger. Dopo moveEnd le fin vengono installate sul range effettivo, ricontrollate dopo build e computePCurves e saltano l'aumento finale delle tolleranze. Le frontiere esplicitamente consumate non richiedono fin in uscita. In V2 la faccia emessa si individua tramite l'ordinale preservato da BlendModel::build e dalla sua genealogia; due facce con lo stesso SurfacePtr rimangono distinguibili. La V1 rifiutava erroneamente questo positivo, ora coperto dal test15. Nessuna ricerca per prossimità e nessun unify in questo percorso.
+
+Preflight su range, tolleranze finite/nonnegative e indici; allocazione dei piani prima del commit; cancellazione propagata. I bound posizionali non dimostrano topologia globale, appartenenza ai trim, iniettività o G1/G2. Il rettangolo originale dei carrier estesi è verificato offline nelle fixture: non è stato aggiunto un provider runtime generale di preservazione tensoriale.
+
+## Verifiche realmente eseguite
+
+- Build completa app e test **exit0, 341,27s**; **28/28 CTest, 93,56s**, suite pertinenti kernel, raccordi/lamine, storia e interfaccia. Baseline4/4CTest prima della modifica.
+- **15/15 test mirati** su V2, anche eseguiti personalmente dall'audit; coprono pesi1/0,8/4, posa e scala2,5, UV inversa, trim, parametro affine[-3,2], ordine supporti, Line2 conV variabile, atomicità, cancellazione, budget invalidi, fin reali estese, cinque contratti alterati e carrier condiviso.
+- **15/15 ASan/UBSan/LSan** fuori ptrace, due TU modificate più driver/testmain strumentati; resto kernel/provider Release. Leak detection attiva e calibrata con perdita intenzionale separata19byte/exit23. V1 dentro ptrace: framework14PASS ma chiusuraLSan fatale/exit1, non PASS complessivo. Nessuna garanzia app-wide di assenza di leak.
+- Libreria finale: tre filtri pubblici `BlendOpenChainsAtTangentSplineSeams`, `BlendPlanarCapOnTangentSplineSupports`, `BlendConsumedTerminalReachesTangentSupport` **3/3PASS**; controllo generale1/1PASS. Il runner CMake corrente è relinkato con la libreria finale.
+- Diagnostica privata pubblica V1: Open2876tentativi, **zero ISO certificate**,2876legacy; Cap/Consumed non chiamano l'estensione. BaselineOpen1420guideISO campionate. Non si attribuisce al comando pubblico un positivo della nuova famiglia certificata.
+- Wayland: raccordi avanzati, anteprima/reload e tema/schede PASS. App finale avviata per5s con profilo temporaneo isolato, percorso effettivo verificato e terminato solo quel processo; zero CAD utente aperti. Non è una nuova certificazione pixel/GL.
+- Sei export prodotti dal runner Release integrato **identici byte per byte** alle copie V2 audit. Root riesegue Fraction sugli export finali, tuttiPASS.
+
+## Audit indipendente sui coefficienti effettivi
+
+Fraction ricostruisce gli IEEE originali e usa composizione omogenea, Cox/deBoor e limiti Bernstein su intervalli completi, non una griglia. **6 preservazioni originali**, uppermax9,5613e-15mm; **12 fin reali/60campate**, uppermax1,191612723e-10mm sotto cap effettivo3e-9mm; **12 carrier sul rettangolo originale**, uppermax4,8749e-14mm. Due fin percorrono[-0,05;1,05] oltre il range originale[0,1], coprendo50campate; le altre dieci usano il range originale, incluso un trim reale[0,1;0,9]. Budget edge invariato e budget fin esportati e controllati. Tre alterazioni dei coefficienti edge/carrier/UV rifiutate con testimoni esatti. I conteggi si sovrappongono, non rappresentano casi pubblici distinti. Tutte queste fin derivano da helper di produzione e Body sintetici con BlendModel::build/computePCurves.
+
+## Conservazione, architettura e provenienza
+
+Baseline4.755file, dodici sigilli precedenti intatti. Prima del codice consultati descrizioni e797relazioni incidenti nel grafo777/11312/389. Vista aggiornata **778nodi/11361relazioni/390TU, zero errori**;587relazioni nel focus finale controllate in entrambi i versi, distinte call/include/reference. Hash sorgenti, digest compileDB, HTML/JSON e controllo--check PASS. Le viste generate restano ignorate da Git.
+
+CompileDB809→811record: unica variazione esistente, flags rigorosi della TU section_curve (`-fno-fast-math -ffp-contract=off`); aggiunti test e main. Libreria93oggetti:90identici, due TU modificate, terzo `fk_nurbs_join.cpp.o` differente solo nel debug per l'header incluso. Eliminato il debug, oggetti identici byte per byte, SHA256 `a71d687530317789abf94dd21db8f360d3e616a21a165e3c1b487e728c992474`; sorgente e comando invariati.
+
+Verifica runner: residui di ottobre in `kernel/CMakeFiles/forgekernel_tests.dir` non sono gli oggetti del target attuale, che usa `kernel/occt_tests/CMakeFiles/...`. L'erroreABI è apparso solo in un tentativo privato di link con residui vecchi, corretto ricompilando dal sorgente. CacheOCCT=ON e build mitre precedente relinkata: nessuna rettifica delle prove integrate precedenti. OCCT è confinato ai test, nessun confronto dichiarato per filtri che non lo eseguono.
+
+Errata documentale: rimosso uno spazio spurio nel SHA del sorgente del rapporto mitre precedente. Il suo sigillo storico è preservato, non riscritto. Nessun CAD originale modificato, nessun processo utente terminato. Commit/push richiesti dall'utente; prima si controllano anche le build GitHub fallite, in un'indagine separata.
+
+[Prove e sigillo](review-k10-boundary-prove-2026-11-16/README.txt); [memoria precedente](history/claude-prima-k10-boundary-2026-11-16.md). Solo testi/JSON e sorgenti/script inerti, niente ELF/oggetti/librerie/CAD. I manifest upstream documentano provenienza; il sigillo radice descrive il pacchetto curato.
+'''
+report+='\nApp finale SHA256 `'+sha(R/'forgecad-release/forgecad')+'`; section `'+sha(R/'kernel/fk_blend_section_curve.cpp')+'`; surface `'+sha(R/'kernel/fk_blend_surface.cpp')+'`; test `'+sha(R/'kernel/tests/test_blend_boundary_validation.cpp')+'`.\n'
+(R/'docs/review-k10-boundary-2026-11-16.md').write_text(report)
+p=R/'docs/code-review-2026-11-15.md';s=p.read_text();a=s.index('**Stato più recente, 16 novembre:**');b=s.index('\n\n',a);old=s[a:b].replace('**Stato più recente, 16 novembre:**','**Stato precedente mitre ISO:**');latest='''**Stato più recente, 16 novembre:** proseguito [K10, continuazioni dei bordi](review-k10-boundary-2026-11-16.md) con tre agenti GPT-6.1 Sol. Parametro razionale originale preservato e ISO riconosciute dai coefficienti originali verificate su entrambi i supporti; cap prefissato e fin effettive ricontrollate dopo build. App completa,28/28CTest,15/15mirati/sanitizer,Wayland e Fraction6originali/12fin/12carrier PASS. Le3regressioni pubbliche passano sul percorso legacy; zero ISO certificate osservate. **K10:24/24 siti iniziali parzialmente trattati, nessuno rimasto del tutto intatto; totale31rilievi invariato.** Newton, ISO non supportate e preservazione runtime globale dei carrier restano aperti;17API pubbliche candidate orfane e colori letterali UI da valutare. Commit/push richiesti, controllo CI GitHub in corso.''';s=s[:a]+latest+'\n\n'+old+s[b:];p.write_text(s)
+p=R/'CLAUDE.md';s=p.read_text();a=s.index('**16/11 — Supporto.prt');b=s.index('\n\n',a);s=s[:a]+'''**16/11 — Supporto.prt, K11 corretto con tre agenti Sol.**
+Corpo2/Estrusione3–Corpo3/Loft6: clipping asimmetrico corretto con genealogia,
+bound continuo e retry atomico; coppia nei due ordini/tre corpi PASS.
+App/24CTest/38Boolean/424Release/78sanitizer/15retry/65storia PASS.
+output/Supporto_unito.prt con nuovo UUID; input prove SHA79887e91,
+originale successivo SHA70e4ec5c preservato, non ricertificato. Mappa PASS.
+[Prove/limiti](docs/supporto-booleana-2026-11-16.md);27rilievi alla consegna storica.'''+s[b:]
+a=s.index('**16/11 — K10 continuazioni');b=s.index('\n\n',a);s=s[:a]+'''**16/11 — K10 continuazioni verificate con tre agenti Sol.**
+Parametro razionale/ISO e fin: app/28CTest/15mirati/sanitizer/Wayland/Fraction PASS.
+Pubbliche3/3 legacy, zero ISO certificate. K10:24/24parziali,31rilievi invariati;
+Newton/unsupported/carrier globale runtime aperti. Commit/push richiesti,
+prima verifica CI GitHub. [Prove/limiti](docs/review-k10-boundary-2026-11-16.md).'''+s[b:];assert len(s.encode())<=16384,len(s.encode());assert len(__import__('re').findall(r'^\*\*',s,__import__('re').M))<=10;p.write_text(s)
+print('Final boundary documentation; CLAUDE',len(s.encode()),'bytes')

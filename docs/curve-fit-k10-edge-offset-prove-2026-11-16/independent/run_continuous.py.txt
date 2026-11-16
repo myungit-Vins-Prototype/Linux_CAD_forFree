@@ -1,0 +1,17 @@
+from pathlib import Path
+from concurrent.futures import ProcessPoolExecutor,as_completed
+import json,sys,multiprocessing
+sys.path.insert(0,'/tmp/review-offset-proof')
+from certify_final import verify
+base=Path('/tmp/review-offset-proof')
+def work(path):
+ try:return verify(path)
+ except Exception as e:return {'name':path.stem,'status':'FAIL','error':repr(e)}
+if __name__=='__main__':
+ paths=sorted((base/'cases').glob('*.json'));results=[]
+ with ProcessPoolExecutor(max_workers=2,mp_context=multiprocessing.get_context("fork")) as ex:
+  for future in as_completed([ex.submit(work,p) for p in paths]):
+   r=future.result();results.append(r);print(json.dumps({k:v for k,v in r.items() if k!='independent_upper_exact'}),flush=True)
+ results.sort(key=lambda r:r['name'])
+ (base/'continuous-results.json').write_text(json.dumps({'method':'Independent exact Fraction extraction, original E/G/UV/transform inputs, unit-normal residual identity and Bernstein subdivision; no production oracle read/called.','results':results},indent=2)+'\n')
+ sys.exit(any(r['status']!='PASS' for r in results))

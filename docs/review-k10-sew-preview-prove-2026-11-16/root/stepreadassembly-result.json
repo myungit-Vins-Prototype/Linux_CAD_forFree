@@ -1,0 +1,8 @@
+{
+  "exit": 0,
+  "seconds": 0.031665386999520706,
+  "command": [
+    "forgecad-release/kernel/forgekernel_tests",
+    "StepReadAssembly"
+  ]
+}

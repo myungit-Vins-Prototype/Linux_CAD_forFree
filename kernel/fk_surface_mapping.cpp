@@ -1,4 +1,5 @@
 #include "fk_surface_mapping.h"
+#include "fk_mapping_carrier.h"
 #include "fk_mapping_fit.h"
 #include "fk_quilt_mapping.h"
 #include "fk_bspline_surface.h"
@@ -15,6 +16,7 @@
 #include "fk_sew.h"
 #include "fk_transform.h"
 #include "fk_curve_algo.h"
+#include "fk_curve_fit_bounds.h"
 #include <algorithm>
 #include <array>
 #include <functional>
@@ -113,7 +115,8 @@ Body placeRigidBody(const Body &source,const SurfaceWrapOptions &options,
     checked(result);if(deviation)*deviation=0.;return result;
 }
 Body mapBody(const Body &source,const std::function<Vec3(const Vec3 &)> &map,double tolerance,
-             BodyHistory *history,double *deviation,const std::function<Vec3(const Vec3 &)> &carrierMap={},const std::vector<Plane> &cuts={},double derivativeFraction=.001,int degree=3,const detail::MappingFaceFunction &faceImage={}) {
+             BodyHistory *history,double *deviation,const std::function<Vec3(const Vec3 &)> &carrierMap={},const std::vector<Plane> &cuts={},double derivativeFraction=.001,int degree=3,const detail::MappingFaceFunction &faceImage={},
+             const std::function<std::optional<Body>()> &carrierBody={}) {
     // Guardie locali sul volume sorgente; le degenerazioni non diventano
     // corpi validi soltanto perche' il fit riesce.
     Box box;for(auto e:source.edges())box.add(curveBox(*source.edge(e).curve,source.edge(e).range));
@@ -139,6 +142,11 @@ Body mapBody(const Body &source,const std::function<Vec3(const Vec3 &)> &map,dou
         Vec3 axes[3];for(int a=0;a<3;++a){Vec3 q=p;const double step=p[a]+h<=box.hi[a]||box.hi[a]==box.lo[a]?h:-h;q[a]+=step;axes[a]=(differentialMap(q)-at)/step;}
         require(dot(cross(axes[0],axes[1]),axes[2])>1e-8,"Deformazione: inversione o collasso del corpo; ridurre spessore o estensione.");
     }
+    if (carrierBody) {
+        auto exact = carrierBody();
+        if (exact)
+            return std::move(*exact);
+    }
     std::vector<Vec3> vertices;std::vector<Body::BuildEdge> edges;std::vector<Body::BuildFace> faces;
     // Il fit deve rispettare anche la connessione edge/superficie del B-rep,
     // che usa linearResolution() quando l'edge non e' tollerante. Il budget
@@ -146,6 +154,11 @@ Body mapBody(const Body &source,const std::function<Vec3(const Vec3 &)> &map,dou
     const double connectionBudget=std::min(tolerance,linearResolution());
     const double fitBudget=.2*connectionBudget;
     std::map<int,int> vertexOf,edgeOf;double worst=0;
+    // Il contratto delle fin Plane e' fissato prima del fit e viene
+    // ricontrollato dopo l'assemblaggio sui discendenti dichiarati.
+    const double planePCurveBudget = .8 * connectionBudget;
+    std::map<int, SurfacePtr> planeImages;
+    std::map<std::tuple<int, int, bool>, std::vector<std::pair<CurvePtr<2>, double>>> planeFinOrigins;
     for(auto v:source.vertices()){vertexOf[v.index]=int(vertices.size());vertices.push_back(map(source.vertex(v).point));}
     for(auto id:source.edges()) {
         cancellationPoint();const auto &edge=source.edge(id);double error=0;
@@ -160,6 +173,8 @@ Body mapBody(const Body &source,const std::function<Vec3(const Vec3 &)> &map,dou
         const auto &face=source.face(id);const auto window=faceWindow(source,id);
         Body::BuildFace mapped;mapped.sense=face.sense;
         const auto image=faceImage?faceImage(id):detail::MappingFaceImage{};
+        const bool planeImage = image.surface && image.surface->type() == SurfaceType::Plane;
+        if (planeImage) planeImages.emplace(id.index, image.surface);
         if(image.surface){mapped.surface=image.surface;mapped.sense=image.sense;}
         else {
             try {mapped.surface=fitMappedSurface(*face.surface,window.first,window.second,differentialMap,fitBudget,worst,cuts,derivativeFraction,degree);}
@@ -169,7 +184,15 @@ Body mapBody(const Body &source,const std::function<Vec3(const Vec3 &)> &map,dou
             std::vector<Body::BuildFin> fins;
             for(auto use:source.loopFins(loop)) {
                 const auto &fin=source.fin(use);const auto &edge=edges[edgeOf.at(fin.edge.index)];auto pc=fin.pcurve;
-                if(image.surface) {
+                double planeError = 0;
+                if (planeImage) {
+                    // Parametro originale del bordo effettivamente emesso.
+                    // Il provider conserva coefficienti e supporto originali;
+                    // il residuo fisico continuo include lo scarto normale.
+                    pc = detail::fitPCurveOnPlane(edge.curve, mapped.surface, edge.range,
+                        std::min(1e-10, .05 * fitBudget), planePCurveBudget, &planeError);
+                    require(bool(pc), "Deformazione: trasferimento SP-curve Plane non supportato.");
+                } else if(image.surface) {
                     const auto &original=source.edge(fin.edge);
                     // Fit in UV seguito dalla verifica nello spazio fisico;
                     // il carrier e i suoi nodi non vengono riapprossimati.
@@ -184,16 +207,66 @@ Body mapBody(const Body &source,const std::function<Vec3(const Vec3 &)> &map,dou
                     const auto planar=planarImage(*curve,original.range,Frame3());pc=planar.curve;
                     require(bool(pc),"Deformazione: trasferimento SP-curve non riuscito.");
                 }
-                const double error=pcurveDeviation(*mapped.surface,*edge.curve,*pc,edge.range,32);
+                const double error = planeImage ? planeError :
+                    pcurveDeviation(*mapped.surface,*edge.curve,*pc,edge.range,32);
                 require(error<=connectionBudget*.8,"Deformazione: SP-curve fuori tolleranza.");worst=std::max(worst,error);
-                fins.push_back({edgeOf.at(fin.edge.index),fin.sense,pc,std::max(error*1.01,1e-14)});
+                const double pcurveTolerance = planeImage ? std::max(error, 1e-14) : std::max(error*1.01,1e-14);
+                if (planeImage)
+                    planeFinOrigins[{id.index, fin.edge.index, fin.sense}].push_back({pc, pcurveTolerance});
+                fins.push_back({edgeOf.at(fin.edge.index),fin.sense,pc,pcurveTolerance});
             }
             mapped.loops.push_back(std::move(fins));
         }
         faces.push_back(std::move(mapped));
     }
     Body result=source.isSheet()?Body::buildSheet(vertices,edges,faces):Body::build(vertices,edges,faces);checked(result);
-    if(history)*history=mappedHistory(source,result);
+    BodyHistory preparedHistory;
+    if (history || !planeImages.empty()) preparedHistory = mappedHistory(source, result);
+    if (!planeImages.empty()) {
+        const auto origin = [&](EntityKind kind, int index) {
+            const auto &links = preparedHistory.origins(kind, index);
+            require(links.size() == 1 && links.front().operand == 0 && links.front().kind == kind
+                    && links.front().relation == HistoryRelation::Modified,
+                "Deformazione: genealogia del trasferimento Plane incoerente.");
+            return links.front().index;
+        };
+        for (auto id : result.faces()) {
+            cancellationPoint();
+            const int sourceFace = origin(EntityKind::Face, id.index);
+            const auto expected = planeImages.find(sourceFace);
+            if (expected == planeImages.end()) continue;
+            const auto &face = result.face(id);
+            require(face.surface == expected->second,
+                "Deformazione: carrier Plane modificato durante l'assemblaggio.");
+            for (auto loop : face.loops) for (auto use : result.loopFins(loop)) {
+                cancellationPoint();
+                const auto &fin = result.fin(use);
+                const auto &edge = result.edge(fin.edge);
+                const int sourceEdge = origin(EntityKind::Edge, fin.edge.index);
+                auto planned = planeFinOrigins.find({sourceFace, sourceEdge, fin.sense});
+                require(planned != planeFinOrigins.end() && !planned->second.empty(),
+                    "Deformazione: fin Plane priva di origine dichiarata.");
+                const auto contract = std::find_if(planned->second.begin(), planned->second.end(),
+                    [&](const auto &entry) { return entry.first == fin.pcurve && entry.second == fin.pcurveTolerance; });
+                require(contract != planned->second.end(),
+                    "Deformazione: SP-curve o budget Plane modificato durante l'assemblaggio.");
+                planned->second.erase(contract);
+                const auto &original = source.edge(EdgeId(sourceEdge));
+                require(edge.range.lo == original.range.lo && edge.range.hi == original.range.hi,
+                    "Deformazione: parametro originale del bordo Plane modificato.");
+                require(std::isfinite(fin.pcurveTolerance) && fin.pcurveTolerance >= 0
+                        && fin.pcurveTolerance <= planePCurveBudget,
+                    "Deformazione: budget finale della fin Plane non valido.");
+                const double residual = detail::requirePCurveOnPlane(edge.curve, face.surface, fin.pcurve,
+                    edge.range, std::min(planePCurveBudget, fin.pcurveTolerance));
+                worst = std::max(worst, residual);
+            }
+        }
+        for (const auto &planned : planeFinOrigins)
+            require(planned.second.empty(), "Deformazione: fin Plane persa nell'assemblaggio.");
+    }
+    cancellationPoint();
+    if(history)*history=std::move(preparedHistory);
     if(deviation)*deviation=worst;
     return result;
 }
@@ -319,7 +392,9 @@ Body wrapBodyOnSurface(const Body &source, const Surface &target, const SurfaceW
         const auto tangent=(c/scaleU)*derivatives[2]+(s/scaleV)*derivatives[1];
         return Frame3(derivatives[0]+options.normalOffset*normal,normal,tangent);
     },history,deviation);
-    return mapBody(source,map,options.tolerance,history,deviation);
+    return mapBody(source,map,options.tolerance,history,deviation,{}, {},.001,3,{},[&] {
+        return detail::wrapPlanarBodyOnCarrier(source,target,options,scaleU,scaleV,history,deviation);
+    });
 }
 bool commonSurfaceWrapAnchor(const std::vector<SurfaceTargetFace> &targets,const Frame3 &plane,Vec2 &anchor) {
     if(targets.size()<2||!targets.front().body||!targets.front().body->contains(targets.front().face))return false;

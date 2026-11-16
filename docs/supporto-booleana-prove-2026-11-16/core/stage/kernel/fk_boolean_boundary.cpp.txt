@@ -1,0 +1,334 @@
+#include "fk_boolean_boundary.h"
+#include "fk_bspline.h"
+#include <algorithm>
+#include <array>
+#include <cmath>
+#include <limits>
+namespace ForgeCad::Kernel::detail {
+namespace {
+// Original IEEE coefficients, enclosed after every operation. Unsupported or
+// unresolved inputs never authorize a boundary substitution.
+namespace boundaryCertificate {
+struct I {
+    double lo = 0, hi = 0;
+    I() = default;
+    I(double x) : lo(x), hi(x) {}
+    I(double a, double b) : lo(a), hi(b) {}
+};
+bool finite(I a) { return std::isfinite(a.lo) && std::isfinite(a.hi) && a.lo <= a.hi; }
+I unresolved() { return {-INFINITY, INFINITY}; }
+double down(double x) { return std::nextafter(x, -std::numeric_limits<double>::infinity()); }
+double up(double x) { return std::nextafter(x, std::numeric_limits<double>::infinity()); }
+I operator+(I a, I b) {
+    if (!finite(a) || !finite(b))
+        return unresolved();
+    return {down(a.lo + b.lo), up(a.hi + b.hi)};
+}
+I operator-(I a, I b) {
+    if (!finite(a) || !finite(b))
+        return unresolved();
+    return {down(a.lo - b.hi), up(a.hi - b.lo)};
+}
+I operator-(I a) {
+    if (!finite(a))
+        return unresolved();
+    return {-a.hi, -a.lo};
+}
+I operator*(I a, I b) {
+    if (!finite(a) || !finite(b))
+        return unresolved();
+    const double p[] = {a.lo * b.lo, a.lo * b.hi, a.hi * b.lo, a.hi * b.hi};
+    return {down(*std::min_element(p, p + 4)), up(*std::max_element(p, p + 4))};
+}
+I operator/(I a, I b) {
+    if (!finite(a) || !finite(b))
+        return unresolved();
+    if (b.lo <= 0 && b.hi >= 0)
+        return {-INFINITY, INFINITY};
+    return a * I(down(1 / b.hi), up(1 / b.lo));
+}
+I square(I a) {
+    if (!finite(a))
+        return unresolved();
+    if (a.lo >= 0)
+        return {std::max(0., down(a.lo * a.lo)), up(a.hi * a.hi)};
+    if (a.hi <= 0)
+        return square(-a);
+    return {0, up(std::max(a.lo * a.lo, a.hi * a.hi))};
+}
+I root(I a) {
+    if (!finite(a))
+        return unresolved();
+    if (a.hi < 0)
+        return {-INFINITY, INFINITY};
+    return {std::max(0., down(std::sqrt(std::max(0., a.lo)))), up(std::sqrt(a.hi))};
+}
+double absMax(I a) {
+    if (!finite(a))
+        return INFINITY;
+    return std::max(std::abs(a.lo), std::abs(a.hi));
+}
+using V = std::array<I, 3>;
+bool finite(V v) {
+    return std::all_of(v.begin(), v.end(), [](I x) { return finite(x); });
+}
+V vector(const Vec3 &p) { return {I(p.x()), I(p.y()), I(p.z())}; }
+V operator+(V a, V b) {
+    for (int i = 0; i < 3; ++i)
+        a[i] = a[i] + b[i];
+    return a;
+}
+V operator-(V a, V b) {
+    for (int i = 0; i < 3; ++i)
+        a[i] = a[i] - b[i];
+    return a;
+}
+V operator*(V a, I b) {
+    for (auto &x : a)
+        x = x * b;
+    return a;
+}
+V operator/(V a, I b) {
+    for (auto &x : a)
+        x = x / b;
+    return a;
+}
+I dot(V a, V b) {
+    I s;
+    for (int i = 0; i < 3; ++i)
+        s = s + a[i] * b[i];
+    return s;
+}
+V cross(V a, V b) { return {a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]}; }
+I norm(V a) {
+    I s;
+    for (auto x : a)
+        s = s + square(x);
+    return root(s);
+}
+// Taylor on |theta|<=8: cosine degree 96, sine degree 97.
+// |R|<=8^97/97! is conservative for both polynomials.
+// No libm trigonometric value is used as a certificate.
+I trig(double theta, bool sine) {
+    if (!std::isfinite(theta) || std::abs(theta) > 8)
+        return {-INFINITY, INFINITY};
+    I x(theta), xx = square(x), term = sine ? x : I(1), sum = term;
+    for (int k = 1; k <= 48; ++k) {
+        const int n = 2 * k + (sine ? 1 : 0);
+        term = -(term * xx) / I(double(n * (n - 1)));
+        sum = sum + term;
+    }
+    I remainder(1);
+    for (int i = 1; i <= 97; ++i)
+        remainder = remainder * I(8) / I(double(i));
+    return sum + I(-remainder.hi, remainder.hi);
+}
+V ellipsePoint(const Ellipse<3> &e, double t) {
+    return vector(e.center()) + vector(e.xAxis()) * (I(e.xRadius()) * trig(t, false)) +
+           vector(e.yAxis()) * (I(e.yRadius()) * trig(t, true));
+}
+V ellipseDerivative(const Ellipse<3> &e, double t) {
+    return vector(e.xAxis()) * (-I(e.xRadius()) * trig(t, true)) +
+           vector(e.yAxis()) * (I(e.yRadius()) * trig(t, false));
+}
+I acceleration(const Ellipse<3> &e) {
+    const auto a = vector(e.xAxis()) * I(e.xRadius()), b = vector(e.yAxis()) * I(e.yRadius());
+    return root(square(norm(a)) + square(norm(b)));
+}
+V linePoint(const Line<3> &line, double t) { return vector(line.origin()) + vector(line.direction()) * I(t); }
+// Bound distance of every point of the finite line segment to the ORIGINAL
+// plane or cylinder carrier. The latter includes original frame defects.
+double carrier(const Surface &s, V a, V b) {
+    if (!finite(a) || !finite(b))
+        return INFINITY;
+    if (s.type() == SurfaceType::Plane) {
+        const auto &f = static_cast<const Plane &>(s).frame();
+        auto n = cross(vector(f.xDir()), vector(f.yDir()));
+        auto length = norm(n);
+        if (!(length.lo > 0))
+            return INFINITY;
+        return (I(std::max(absMax(dot(a - vector(f.origin()), n)), absMax(dot(b - vector(f.origin()), n)))) / length)
+            .hi;
+    }
+    if (s.type() != SurfaceType::Cylinder)
+        return INFINITY;
+    const auto &c = static_cast<const CylindricalSurface &>(s);
+    if (!(c.radius() > 0) || !std::isfinite(c.radius()))
+        return INFINITY;
+    const auto &f = c.frame();
+    auto z = vector(f.zDir());
+    auto zz = dot(z, z);
+    if (!(zz.lo > 0))
+        return INFINITY;
+    auto zu = z / root(zz);
+    auto x = vector(f.xDir());
+    auto xu = x - zu * dot(x, zu);
+    auto nx = norm(xu);
+    if (!(nx.lo > 0))
+        return INFINITY;
+    xu = xu / nx;
+    auto yu = cross(zu, xu);
+    const I frameError = I(c.radius()) * (norm(x - xu) + norm(vector(f.yDir()) - yu));
+    auto radial = [&](V p) {
+        auto d = p - vector(f.origin());
+        return d - z * (dot(d, z) / zz);
+    };
+    auto ra = radial(a), rb = radial(b);
+    I rr = square(I(c.radius()));
+    I q0 = dot(ra, ra) - rr, q1 = dot(ra, rb) - rr, q2 = dot(rb, rb) - rr;
+    // Quadratic Bernstein hull encloses squared radial distance minus R^2.
+    const double q = std::max({absMax(q0), absMax(q1), absMax(q2)});
+    return (I(q) / I(c.radius()) + frameError).hi;
+}
+bool piece(const Ellipse<3> &e, Interval range, bool forward, const Line<3> &line, double ta, double tb,
+           const Surface &sa, const Surface &sb, double budget) {
+    if (!(range.isFinite() && range.lo < range.hi && std::isfinite(ta) && std::isfinite(tb) && ta < tb &&
+          std::isfinite(budget) && budget > 0))
+        return false;
+    if (!finite(vector(e.center())) || !finite(vector(e.xAxis())) || !finite(vector(e.yAxis())) ||
+        !finite(vector(line.origin())) || !finite(vector(line.direction())) || !std::isfinite(e.xRadius()) ||
+        !std::isfinite(e.yRadius()))
+        return false;
+    I width = I(range.hi) - I(range.lo), m = acceleration(e);
+    double mid = range.lo * .5 + range.hi * .5;
+    I reach(std::max(absMax(I(mid) - I(range.lo)), absMax(I(range.hi) - I(mid))));
+    auto d = vector(line.direction());
+    I slope = dot(ellipseDerivative(e, mid), d) * (forward ? I(1) : I(-1));
+    I variation = m * reach * norm(d);
+    if (!finite(slope) || !(slope.lo > variation.hi))
+        return false;
+    auto a = ellipsePoint(e, forward ? range.lo : range.hi), b = ellipsePoint(e, forward ? range.hi : range.lo),
+         la = linePoint(line, ta), lb = linePoint(line, tb);
+    I endpoints(std::max(norm(a - la).hi, norm(b - lb).hi));
+    I gap = endpoints + m * square(width) / I(8);
+    if (!finite(gap) || gap.hi > budget)
+        return false;
+    const double ca = carrier(sa, la, lb), cb = carrier(sb, la, lb);
+    return finite(I(ca)) && finite(I(cb)) && (gap + I(std::max(ca, cb))).hi <= budget;
+}
+// Insert inside namespace boundaryCertificate, after the existing outward I/V
+// arithmetic, trig(double,bool), ellipsePoint and acceleration helpers.
+// No production evaluator or sampled deviation authorizes this certificate.
+using UVInterval = std::array<I, 2>;
+
+bool affineParameters(const Curve<2> &pcurve, double t, UVInterval &uv) {
+    if (!std::isfinite(t))
+        return false;
+    if (pcurve.type() == CurveType::Line) {
+        const auto &line = static_cast<const Line<2> &>(pcurve);
+        for (int k = 0; k < 2; ++k)
+            uv[k] = I(line.origin()[k]) + I(line.direction()[k]) * I(t);
+    } else if (pcurve.type() == CurveType::BSpline) {
+        const auto &spline = static_cast<const BSplineCurve<2> &>(pcurve);
+        if (spline.degree() != 1 || spline.poleCount() != 2 || spline.knots().size() != 4)
+            return false;
+        const auto &knots = spline.knots();
+        if (!std::isfinite(knots[0]) || !std::isfinite(knots[2]) || !(knots[0] < knots[2]) || knots[0] != knots[1] ||
+            knots[2] != knots[3] || t < knots[0] || t > knots[2])
+            return false;
+        // The supported image is polynomial affine UV, not a rational map.
+        if (!spline.weights().empty() &&
+            (spline.weights().size() != 2 || spline.weights()[0] != 1.0 || spline.weights()[1] != 1.0))
+            return false;
+        const auto &poles = spline.poles();
+        if (!isFinite(poles[0]) || !isFinite(poles[1]))
+            return false;
+        if (t == knots[0] || t == knots[2]) {
+            const auto &pole = poles[t == knots[0] ? 0 : 1];
+            uv = {I(pole.x()), I(pole.y())};
+        } else {
+            const I denominator = I(knots[2]) - I(knots[0]);
+            if (!finite(denominator) || !(denominator.lo > 0.0))
+                return false;
+            const I lambda = (I(t) - I(knots[0])) / denominator;
+            if (!finite(lambda))
+                return false;
+            for (int k = 0; k < 2; ++k)
+                uv[k] = I(poles[0][k]) * (I(1.0) - lambda) + I(poles[1][k]) * lambda;
+        }
+    } else {
+        return false;
+    }
+    return finite(uv[0]) && finite(uv[1]);
+}
+
+// Endpoint UV coordinates may themselves be intervals because their affine
+// parameter map is evaluated outward. Sin/cos are globally 1-Lipschitz; this
+// expands the existing rigorous Taylor enclosure without relying on libm.
+I affineTrig(I angle, bool sine) {
+    if (!finite(angle) || absMax(angle) > 8.0)
+        return unresolved();
+    const double mid = angle.lo * 0.5 + angle.hi * 0.5;
+    if (!std::isfinite(mid))
+        return unresolved();
+    const double reach = absMax(angle - I(mid));
+    if (!std::isfinite(reach))
+        return unresolved();
+    return trig(mid, sine) + I(-reach, reach);
+}
+
+V affineSurfacePoint(const Surface &surface, const UVInterval &uv) {
+    if (!finite(uv[0]) || !finite(uv[1]))
+        return {unresolved(), unresolved(), unresolved()};
+    if (surface.type() == SurfaceType::Plane) {
+        const auto &frame = static_cast<const Plane &>(surface).frame();
+        return vector(frame.origin()) + vector(frame.xDir()) * uv[0] + vector(frame.yDir()) * uv[1];
+    }
+    if (surface.type() == SurfaceType::Cylinder) {
+        const auto &cylinder = static_cast<const CylindricalSurface &>(surface);
+        if (!std::isfinite(cylinder.radius()) || !(cylinder.radius() > 0.0))
+            return {unresolved(), unresolved(), unresolved()};
+        const auto &frame = cylinder.frame();
+        return vector(frame.origin()) +
+               (vector(frame.xDir()) * affineTrig(uv[0], false) + vector(frame.yDir()) * affineTrig(uv[0], true)) *
+                   I(cylinder.radius()) +
+               vector(frame.zDir()) * uv[1];
+    }
+    return {unresolved(), unresolved(), unresolved()};
+}
+
+double affinePCurveError(const Ellipse<3> &ellipse, Interval range, const Surface &surface, const Curve<2> &pcurve) {
+    if (!range.isFinite() || !(range.lo < range.hi) ||
+        (surface.type() != SurfaceType::Plane && surface.type() != SurfaceType::Cylinder))
+        return INFINITY;
+    UVInterval uv0, uv1;
+    if (!affineParameters(pcurve, range.lo, uv0) || !affineParameters(pcurve, range.hi, uv1))
+        return INFINITY;
+    const V e0 = ellipsePoint(ellipse, range.lo), e1 = ellipsePoint(ellipse, range.hi);
+    const V s0 = affineSurfacePoint(surface, uv0), s1 = affineSurfacePoint(surface, uv1);
+    if (!finite(e0) || !finite(e1) || !finite(s0) || !finite(s1))
+        return INFINITY;
+    const I gap0 = norm(e0 - s0), gap1 = norm(e1 - s1);
+    const I width = I(range.hi) - I(range.lo), m = acceleration(ellipse);
+    if (!finite(gap0) || !finite(gap1) || !finite(width) || !finite(m) || !(width.hi > 0.0))
+        return INFINITY;
+    I error = I(std::max(gap0.hi, gap1.hi)) + m * square(width) / I(8.0);
+    if (surface.type() == SurfaceType::Cylinder) {
+        const auto &cylinder = static_cast<const CylindricalSurface &>(surface);
+        const auto &frame = cylinder.frame();
+        const I xLength = norm(vector(frame.xDir())), yLength = norm(vector(frame.yDir()));
+        const I uWidth = uv1[0] - uv0[0];
+        if (!finite(xLength) || !finite(yLength) || !finite(uWidth))
+            return INFINITY;
+        // For affine U(t), S'' = -R*(U')^2*(cos(U)X+sin(U)Y).
+        // Thus Mcomposition*DeltaT^2 = R*(||X||+||Y||)*DeltaU^2.
+        // This avoids dividing by a tiny DeltaT, including subnormal spans.
+        error = error + I(cylinder.radius()) * (xLength + yLength) * square(uWidth) / I(8.0);
+    }
+    // Peano interpolation error for BOTH original curves, plus their two
+    // corresponding endpoint gaps, bounds the difference at every t.
+    return finite(error) && error.hi >= 0.0 ? error.hi : INFINITY;
+}
+
+} // namespace boundaryCertificate
+
+} // namespace
+bool certifyEllipseBoundarySegment(const Ellipse<3> &ellipse, Interval range, bool forward, const Line<3> &line,
+                                   double first, double last, const Surface &sa, const Surface &sb, double budget) {
+    return boundaryCertificate::piece(ellipse, range, forward, line, first, last, sa, sb, budget);
+}
+double ellipseAffinePCurveError(const Ellipse<3> &ellipse, Interval range, const Surface &surface,
+                                const Curve<2> &pcurve) {
+    return boundaryCertificate::affinePCurveError(ellipse, range, surface, pcurve);
+}
+} // namespace ForgeCad::Kernel::detail

@@ -1,0 +1,9 @@
+#include "fk_body_io.h"
+#include "fk_surface_algo.h"
+#include "fk_bspline_surface.h"
+#include <fstream>
+#include <iostream>
+#include <iomanip>
+#include <iterator>
+using namespace ForgeCad::Kernel;
+int main(){std::ifstream f("/home/myungit/Linux_CAD_forFree/kernel/tests/data/blend_cavity_loft.body",std::ios::binary);auto b=readBodyBinary(std::string(std::istreambuf_iterator<char>(f),{}));std::cout<<std::setprecision(17);int n=0;double worst=0;for(auto face:b.faces()){auto&s=*b.face(face).surface;auto u=s.uDomain(),v=s.vDomain();if(!u.isFinite()||!v.isFinite())continue;std::cout<<"FACE "<<face.index<<" type="<<int(s.type())<<" domain="<<u.lo<<","<<u.hi<<","<<v.lo<<","<<v.hi<<std::endl;for(double a:{.125,.375,.625,.875})for(double c:{.25,.5,.75}){double x=u.lo+a*u.length(),y=v.lo+c*v.length();auto p=s.point(x,y);auto q=projectPoint(s,p);++n;worst=std::max(worst,q.distance);if(q.distance>1e-10)std::cout<<"KNOWN_POINT face="<<face.index<<" uv="<<x<<","<<y<<" projected="<<q.u<<","<<q.v<<" residual="<<q.distance<<"\n";}}std::cout<<"TOTAL n="<<n<<" worst="<<worst<<"\n";}

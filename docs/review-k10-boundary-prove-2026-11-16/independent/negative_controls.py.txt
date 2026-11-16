@@ -1,0 +1,18 @@
+#!/usr/bin/env python3
+"""Alter independent original coefficients; the verifier must reject them."""
+import sys,types,copy,json
+from pathlib import Path
+root=Path(__file__).parent
+for name in ['fraction_common','verify_tensor_fraction']:
+ m=types.ModuleType(name);m.__file__=str(root/(name+'.py.txt'));sys.modules[name]=m;exec(compile(Path(m.__file__).read_text(),m.__file__,'exec'),m.__dict__)
+from verify_tensor_fraction import verify
+inp=Path(sys.argv[1]);j=json.loads(inp.read_text());base=j['records'][0];out=[]
+for mode in ['edge_original_coefficients','carrier_original_coefficients','pcurve_original_coefficients']:
+ r=copy.deepcopy(base);key={'edge_original_coefficients':'curve','carrier_original_coefficients':'surface','pcurve_original_coefficients':'pcurve'}[mode];dimension=1 if key=='pcurve' else 2
+ for p in r[key]['poles']:p[dimension]=(float.fromhex(p[dimension])+(-.001 if key=='pcurve' else .001)).hex()
+ try:verify(r)
+ except Exception as e:
+  assert 'witness' in str(e),('Negative rejected without direct witness',mode,str(e))
+  out.append({'case':mode,'rejected':True,'exact_witness':str(e)})
+ else:raise AssertionError('Altered coefficients accepted: '+mode)
+Path(sys.argv[2]).write_text(json.dumps({'input':str(inp),'records':out,'pass':True},indent=2)+'\n');print([(x['case'],x['rejected']) for x in out])

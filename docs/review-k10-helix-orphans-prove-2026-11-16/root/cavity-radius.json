@@ -1,0 +1,9 @@
+{
+  "fixture": "kernel/tests/data/blend_cavity_loft.body",
+  "fixture_sha256": "8d7d8d50e0bcbfb7e392cb86a17516547f874ee6a355954601f3a473164d39bc",
+  "source_sha256": "b43eb7aaa3af1d3849e6ba0f14a1b6439a91ecf8742ab4278c5d3b5d44df7bd7",
+  "kernel_sha256": "9eccfa56f36268d8d6680cf0b0db292cb827ec2f2ed1af08c111d394bcbc4554",
+  "output": "radius=0.5 REJECT blendEdges: il contatto esce dal dominio del fianco F0; il passaggio su un altro supporto non e' ancora gestito per questo raggio\nradius=1.1 OK faces=18 check=0\nradius=1.675 OK faces=18 check=0\n",
+  "original_body_bytes_preserved": true,
+  "correction_claimed": false
+}

@@ -1,0 +1,20 @@
+{
+  "exit": 0,
+  "seconds": 1.8836724270004197,
+  "command": [
+    "/usr/bin/c++",
+    "-O3",
+    "-DNDEBUG",
+    "-std=gnu++17",
+    "-Wall",
+    "-Wextra",
+    "-Wpedantic",
+    "-ffp-contract=off",
+    "-I/home/myungit/Linux_CAD_forFree/kernel",
+    "-I/home/myungit/Linux_CAD_forFree/kernel/tests",
+    "/tmp/blend-cavity-review/root/probe_release.cpp",
+    "/home/myungit/Linux_CAD_forFree/forgecad-release/kernel/libforgekernel.a",
+    "-o",
+    "/tmp/blend-cavity-review/root/probe-release"
+  ]
+}

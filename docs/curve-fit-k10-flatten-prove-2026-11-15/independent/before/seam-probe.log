@@ -1,0 +1,5 @@
+rational=0 source_issues=0
+ accepted=1 reported=2.4765581702771594e-10 same_param_error=5.7424751730714065e-05 geometric_error=5.7424751730650314e-05 witness_t=0.87929999999999997 result_issues=0 samples=7 min_stretch=1 max_stretch=1.0000000000001463 history_faces=1 source_immutable=1
+rational=1 source_issues=0
+ accepted=1 reported=2.8941041063890748e-10 same_param_error=5.4162191958085001e-05 geometric_error=5.4162191958084804e-05 witness_t=0.1203 result_issues=0 samples=17 min_stretch=0.99999999999980282 max_stretch=1.0000000000001854 history_faces=1 source_immutable=1
+elapsed=2.16 maxrss_kb=5892

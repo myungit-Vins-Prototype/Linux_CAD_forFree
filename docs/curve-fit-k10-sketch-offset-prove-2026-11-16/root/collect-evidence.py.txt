@@ -1,0 +1,42 @@
+from pathlib import Path
+import hashlib,shutil,difflib
+r=Path('/home/myungit/Linux_CAD_forFree');p=Path('/tmp/forgecad-k10-sketch-offset-20261116');dest=r/'docs/curve-fit-k10-sketch-offset-prove-2026-11-16';dest.mkdir(exist_ok=True)
+for folder in ['root','implementation','tests','independent']:
+ for f in (p/folder).rglob('*'):
+  if not f.is_file() or f.suffix not in {'.py','.cpp','.h','.log','.md','.json','.patch','.csv','.sha256','.txt'} and f.name!='SHA256SUMS':continue
+  if any(x in {'settings','data','cache','forgecad-release'} for x in f.relative_to(p/folder).parts):continue
+  target=dest/f.relative_to(p)
+  if f.suffix in {'.py','.cpp','.h'}:target=target.with_name(target.name+'.txt')
+  target.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(f,target)
+for name in ['hashes-before.json','architecture-before.json']:shutil.copy2(p/name,dest/name)
+diff=[]
+for old in sorted((p/'before').rglob('*')):
+ if not old.is_file():continue
+ rel=old.relative_to(p/'before');new=r/rel
+ if new.exists():diff.extend(difflib.unified_diff(old.read_text().splitlines(True),new.read_text().splitlines(True),fromfile='before/'+str(rel),tofile='after/'+str(rel)))
+(dest/'change.diff').write_text(''.join(diff))
+(dest/'README.md').write_text('''# Prove K10 offset dello schizzo, 16 novembre 2026
+
+- `root/`: build app, CTest, grafo, conservazione e hash.
+- `implementation/`: adapter certificato, prove del rifilo e nodi C0.
+- `tests/`: regressioni pubbliche, baseline e sanitizer mirato.
+- `independent/`: prova geometrica sui coefficienti originali, query avverse e audit.
+
+Sorgenti e script hanno suffisso `.txt` per non entrare nel catalogo C++.
+Per ripetere ricreare lo staging `/tmp/forgecad-k10-sketch-offset-20261116`, ripristinare le estensioni dei sorgenti/script e adattare i percorsi locali.
+Binari e oggetti non sono inclusi; main, librerie e unità strumentate sono distinti nei rapporti.
+Gli script privati in `tests/` documentano il confronto con gli oggetti congelati della sessione;
+quella directory di build non è distribuita nell'archivio. Per riprodurre oggi, ricompilare il kernel
+corrente nella build Release del repository e usare gli script in `independent/`, che ricompilano
+adattatore, solver e harness: `build.py before`, `public-before <stage>`, `proof.py`,
+`build.py final`, `public-final`, `build-direct.py final`, `direct`.
+La baseline dell'adattatore e le fixture numeriche originali sono incluse. Il test permanente
+si ripete con il target CMake `forgecad_sketch_offset_validation_tests` e CTest omonimo.
+Per ripetere il confronto di 27 casi sulla baseline, ricompilare lo stesso test con
+`tests/baseline/cad_sketch_offset.cpp` al posto del sorgente corrente e il relativo header;
+`cad_curve_solver.cpp` e il kernel non cambiano. I comandi dei rapporti distinguono le sei
+unità strumentate dalle altre unità Release; non usare il risultato come sanitizer dell'intera app.
+`change.diff` confronta i file esistenti con l'inizio di questo intervento; la baseline preserva le modifiche pregresse.
+I confronti campionati sono regressioni; il certificato continuo e i suoi limiti sono descritti nel rapporto principale.
+''')
+files=sorted(f for f in dest.rglob('*') if f.is_file() and f!=dest/'SHA256SUMS');(dest/'SHA256SUMS').write_text(''.join(hashlib.sha256(f.read_bytes()).hexdigest()+'  '+str(f.relative_to(dest))+'\n' for f in files));print('Collected',len(files),'files')

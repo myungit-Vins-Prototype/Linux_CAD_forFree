@@ -1,0 +1,7 @@
+#include "fk_body_io.h"
+#include <fstream>
+#include <iterator>
+#include <iostream>
+#include <iomanip>
+using namespace ForgeCad::Kernel;
+int main(int argc,char**argv){std::ifstream f(argv[1],std::ios::binary);std::string bytes((std::istreambuf_iterator<char>(f)),{});auto b=readBodyBinary(bytes);std::cout<<std::setprecision(17);for(auto id:b.edges()){auto&e=b.edge(id);std::cout<<"E"<<id.index<<" type="<<int(e.curve->type())<<" range="<<e.range.lo<<","<<e.range.hi<<"\n";}}

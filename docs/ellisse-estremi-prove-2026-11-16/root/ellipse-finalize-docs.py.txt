@@ -1,0 +1,101 @@
+from pathlib import Path
+import json,hashlib
+r=Path('/home/myungit/Linux_CAD_forFree');p=r/'docs/ellisse-estremi-prove-2026-11-16';root=p/'root'
+read=lambda n:json.loads((root/n).read_text())
+assert read('build-final-result.json')['exit']==0
+assert read('ctest-result.json')['exit']==0 and read('ctest-result.json')['actual_passed']==24
+g=read('architecture-audit.json');assert not g['errors'] and g['html_matches']
+gl=read('gl-result.json');assert gl['exit']==0
+before=read('hashes-before.json');changed=[f for f,h in before.items() if not (r/f).is_file() or hashlib.sha256((r/f).read_bytes()).hexdigest()!=h]
+assert len(changed)==18,changed
+report='''# Ellisse per estremi — 16 novembre 2026
+
+Richiesta: creare un’ellisse senza scegliere prima il centro e usare tutti i quattro estremi per quote e vincoli. Implementata con tre agenti GPT-6.1 Sol; la modalità dal centro rimane disponibile.
+
+## Uso
+
+Apri **Schizzo → Strumento geometrico → Ellisse per estremi**; il comando ha una propria icona ed è disponibile anche nella toolbar e nella ribbon.
+
+1. Scegli il primo estremo di un asse.
+2. Scegli l’estremo opposto dello stesso asse.
+3. Scegli un estremo del secondo asse: il punto viene proiettato sulla perpendicolare che passa per il punto medio del primo asse.
+
+Il quarto estremo viene ricavato per simmetria. L’anteprima mostra i quattro punti e i due assi. Un clic degenere viene rifiutato mantenendo la costruzione in corso; Esc annulla l’anteprima. Il comando rimane attivo per disegnare altre ellissi.
+
+Con **Quota**, scegli uno dei quattro estremi e un riferimento per assegnare distanze o coordinate X/Y. In **Selezione**, usa Ctrl+clic sui punti e il pannello **Vincoli** per coincidenze, allineamenti, Fisso e gli altri vincoli compatibili. Il doppio clic sulla curva attiva Quota. Il centro si aggiorna di conseguenza.
+
+## Definizione geometrica e vincoli
+
+La nuova entità conserva quattro punti reali `[A0,A1,B0,B1]`, referenziati senza punti virtuali o appoggi al campionamento del display. Le coppie A0/A1 e B0/B1 hanno lo stesso punto medio e i loro assi sono perpendicolari. Sono tre equazioni intrinseche su otto coordinate: l’ellisse libera ha cinque gradi di libertà. Il centro non è un’incognita aggiuntiva.
+
+Il trascinamento di un estremo conserva il controestremo dello stesso asse e adegua l’altra coppia; il solver applica poi i vincoli esistenti. La concentricità usa il centro derivato e le dipendenze di entrambe le coordinate della prima coppia. Un risultato degenere o fuori dalla precisione del documento viene rifiutato atomicamente, senza aumentare le tolleranze.
+
+La geometria di profilo è una `Kernel::Ellipse` analitica. Taglia e Spezza riconoscono la stessa conica; gli archi risultanti vengono rappresentati esattamente come NURBS razionali. I quattro estremi sono disponibili per snap, picking e quote, compresi il terzo e il quarto.
+
+## Persistenza e compatibilità
+
+`DrawingTool::EllipseExtremes` è aggiunto in coda con valore 25: i valori precedenti rimangono invariati. Il formato nativo è **70**, senza modifica del layout della curva: conserva i quattro punti e tutti i riferimenti dei vincoli. Il lettore mantiene i documenti precedenti; una nuova ellisse non viene serializzata con un formato storico che non la rappresenta. La validazione geometrica usa la precisione salvata nel documento, anche nei dati Pierce.
+
+Il controllo delle impronte delle tavole riconosce il precedente formato69, anche con precisione personalizzata e più entità nascoste. Una modifica geometrica reale o l’aggiunta della nuova ellisse resta una modifica, senza riassociazione per vicinanza né errore degli encoder storici. Il riproduttore ha fallito prima della correzione e passa sul matcher finale.
+
+## Verifiche finali
+
+| Verifica | Esito |
+|---|---|
+| App e runner Release | Build completa finale PASS; eseguibile aggiornato |
+| CTest pertinenti | **24/24 PASS**, nuova ellisse, ellisse storica, editing, snap, solver, precisione, codec, revisioni, tavole collegate e regressioni del kernel |
+| Interazione nuova ellisse | **12 geometrie**, **48 normalizzazioni**, **48 bersagli solver**, tutti e quattro gli estremi con quote X/Y, Fix, Coincidente e punto sulla curva |
+| UI e salvataggio | Tre clic, degeneri, anteprima/Esc, quattro drag mouse, snap/picking, Undo/Redo, QAction e formato70/legacy69 PASS |
+| Taglio conica | Ellisse ruotata con secondo asse maggiore: semiarco razionale, estremi, 21 punti e area del semiprofilo **5π** PASS |
+| Compatibilità impronte69 | Precisioni 1e-7/1e-8, visibilità, cambi geometrici e nuova entità diretta/Pierce PASS |
+| Sanitizer mirati | ASan/UBSan/LSan sui quattro TU geometrici/solver/editing e probe PASS, senza soppressioni |
+| Wayland/OpenGL | Nuova suite con `--gl` PASS, contesto nativo valido |
+| Architettura | __GRAPH__; zero diagnostica, check, HTML/JSON e archi entranti/uscenti PASS |
+| Conservazione | **__PRESERVED__/2687 file iniziali invariati**, 18 modifiche esistenti circoscritte e nuovi modulo/test/rapporti |
+
+La prima build si è sovrapposta all’aggiunta dell’encoder69 e ha fallito il link per un oggetto precedente. Dopo il congelamento delle sorgenti, i file interessati sono stati ricompilati e la build finale è passata; i due log restano distinti. L’ultima compilazione e i test usano gli hash finali verificati.
+
+Il probe sanitizer strumenta `cad_ellipse`, `cad_curve_solver`, `cad_constraints`, `cad_sketch_edit` e il main privato; kernel e dipendenze offset restano Release non strumentate. Un primo link con tutte le dipendenze GUI riportava allocazioni del driver NVIDIA: il probe finale collega soltanto QtCore e le dipendenze necessarie, senza soppressioni. Nessuna certificazione generale dei leak dell’app grafica. Le prove Wayland verificano il contesto e la suite, senza attribuire una revisione visuale completa di ogni tema.
+
+La prima esecuzione CTest ha dato 23/24: la fixture mouse confrontava coordinate ideali con clic arrotondati ai pixel interi. L’atteso finale usa i punti effettivamente ricevuti e una proiezione calcolata indipendentemente; la tolleranza 1e-5 resta invariata e nessun codice di produzione è stato modificato per questo esito. Il log iniziale è conservato separatamente.
+
+Il test d’area è stato corretto prima della verifica finale per usare la lunghezza del segmento come dominio della retta normalizzata; l’area attesa 5π non è cambiata. CAD originali e modifiche pregresse, incluso il blocco K10, sono preservati. K10 resta aperto come documentato nel rapporto precedente.
+
+[Guida dello schizzo](sketch-tools.md), [prove e manifest](ellisse-estremi-prove-2026-11-16/README.md), [memoria prima dell’intervento](history/claude-prima-ellisse-estremi-2026-11-16.md).
+'''
+report=report.replace('__GRAPH__',f"**{g['files']} file, {g['edges']} archi, {g['units']} TU**").replace('__PRESERVED__',str(len(before)-len(changed)))
+(r/'docs/ellisse-estremi-2026-11-16.md').write_text(report)
+(p/'README.md').write_text('''# Prove ellisse per estremi, 16 novembre 2026
+
+- `root/`: baseline di 2687 file, fonti congelate, build intermedia/finale, 24 CTest, Wayland/OpenGL, mappa e conservazione.
+- `tests/`: probe geometrici/solver/Taglia e compatibilità impronte69; fonti e istruzioni nei file `results.txt` e negli script.
+- `core/compat69/`: baseline del matcher delle tavole e hash finali della compatibilità.
+
+Gli script/sorgenti archiviati hanno suffisso `.txt` per restare fuori dal catalogo. Gli script root si eseguono con `python3 nome.py.txt`; i probe privati indicano percorsi e comandi. Non sono distribuiti oggetti, binari o librerie. Prima di ripetere confrontare gli hash dei sorgenti e ricompilare l’app sulla macchina corrente.
+
+Il test permanente si ripete con `ctest --test-dir forgecad-release -R '^forgecad_ellipse_extremes_tests$' --output-on-failure`; per Wayland usare il runner con `--ellipse-extremes --gl`. Le impostazioni delle prove root sono isolate in `/tmp`.
+
+I risultati sanitizer riguardano quattro TU e il probe; il resto del kernel/offset non è strumentato. Il tentativo con dipendenze GUI e il link minimo finale sono distinti, senza soppressioni. La prima build con sorgenti ancora in integrazione e quella finale congelata sono conservate separatamente.
+
+`root/final-audit.json` registra conservazione, hash dei sorgenti e dei binari, link senza OCCT. `SHA256SUMS` copre l’archivio escluso il manifest stesso. `root/change.diff` confronta con le copie all’inizio dell’intervento, senza confondere modifiche pregresse e correnti.
+''')
+# Rileggere immediatamente la memoria condivisa; sostituire la sola voce tematica.
+f=r/'CLAUDE.md';text=f.read_text();start=text.index('**16/11 — Ellisse per estremi');end=text.index('**16/11 — K10',start)
+entry='''**16/11 — Ellisse per estremi completata con tre agenti GPT-6.1 Sol.**
+Nuovo comando Schizzo:3 clic,4 estremi reali quotabili/vincolabili,centro derivato,
+5 DOF,conica analitica,drag/anteprima/snap eTaglia. Codec70 legge i precedenti;
+impronte tavole69 riconosciute anche con precisione diversa evisibilita multipla.
+Build completa app/runner,24 CTest,probe core/Taglia/hash69,sanitizer mirati4TU
+eWayland/GL PASS; mappa/check/HTML/archi PASS. __PRESERVED__/2687 file invariati.
+App aggiornata:riaprire. Poi proseguire i punti aperti della review su richiesta.
+K10 rimane aperto nel rapporto sotto.
+[Uso,prove e limiti](docs/ellisse-estremi-2026-11-16.md),
+[memoria conservata](docs/history/claude-prima-ellisse-estremi-2026-11-16.md).
+
+'''.replace('__PRESERVED__',str(len(before)-len(changed)))
+text=text[:start]+entry+text[end:]
+text=text.replace('formato 69 (contorni apparenti associativi;','formato 70 (ellisse per estremi; 69:contorni apparenti associativi;')
+if len(text.encode())>16384:
+    start=text.index('**14/11 — Schede documenti.**');end=text.index('**14/11 — CT0578, template e tavole 2D.**',start)
+    text=text[:start]+'Schede documenti14/11: prove e limiti nel [rapporto](docs/schede-documenti-2026-11-14.md) e nella [memoria prima delle ellissi](docs/history/claude-prima-ellisse-estremi-2026-11-16.md).\n\n'+text[end:]
+assert len(text.encode())<=16384;f.write_text(text);print('Rapporto e memoria aggiornati;',len(text.encode()),'byte')

@@ -1,0 +1,23 @@
+Baseline compatibility: continuous provider assertion omitted; physical assertions unchanged.
+mapping_polynomial source=0 residual=0 ratio=0 map_error=2.1222e-11 deviation=2.11308e-11 PASS
+mapping_rational source=0 residual=1.75629e-08 ratio=0.990193 map_error=1.75745e-08 deviation=1.75612e-08 PASS
+mapping_trim_range source=0 residual=1.75629e-08 ratio=0.990193 map_error=1.75745e-08 deviation=1.75612e-08 PASS
+mapping_reverse source=0 residual=1.75629e-08 ratio=0.990193 map_error=1.75745e-08 deviation=1.75612e-08 PASS
+mapping_pose_wrapper source=1.33227e-15 residual=1.75629e-08 ratio=0.990193 map_error=1.75745e-08 deviation=1.75612e-08 PASS
+mapping_scale1000 source=2.29143e-13 residual=1.97726e-08 ratio=0.990121 map_error=1.9745e-08 deviation=1.97726e-08 PASS
+mapping_scale001 source=1.08779e-15 residual=5.97502e-09 ratio=0.990119 map_error=5.97786e-09 deviation=5.9749e-09 PASS
+mapping_height source=5.55112e-17 residual=1.75629e-08 ratio=0.990193 map_error=1.75745e-08 deviation=1.75612e-08 PASS
+mapping_normal_offset source=5.55112e-17 residual=1.75629e-08 ratio=0.990193 map_error=1.75745e-08 deviation=1.75612e-08 PASS
+quilt_polynomial source=0 residual=0 ratio=0 map_error=2.1222e-11 deviation=2.11308e-11 PASS
+quilt_rational source=0 residual=1.75629e-08 ratio=0.990193 map_error=1.75745e-08 deviation=1.75612e-08 PASS
+quilt_trim_range source=0 residual=1.75629e-08 ratio=0.990193 map_error=1.75745e-08 deviation=1.75612e-08 PASS
+quilt_reverse source=0 residual=1.75629e-08 ratio=0.990193 map_error=1.75745e-08 deviation=1.75612e-08 PASS
+quilt_pose_wrapper source=1.33227e-15 residual=1.75629e-08 ratio=0.990193 map_error=1.75745e-08 deviation=1.75613e-08 PASS
+quilt_scale1000 source=2.29143e-13 residual=1.97726e-08 ratio=0.990121 map_error=1.9745e-08 deviation=1.97726e-08 PASS
+quilt_scale001 source=1.08779e-15 residual=5.97501e-09 ratio=0.990119 map_error=5.97785e-09 deviation=5.97488e-09 PASS
+quilt_height source=5.55112e-17 residual=1.75629e-08 ratio=0.990193 map_error=1.75745e-08 deviation=1.75612e-08 PASS
+quilt_normal_offset source=5.55112e-17 residual=1.75629e-08 ratio=0.990193 map_error=1.75745e-08 deviation=1.75612e-08 PASS
+quilt_faruv10000_identity FAIL fitCurve: impossibile rispettare la tolleranza entro il limite di raffinamento
+quilt_faruv10000_pose FAIL fitCurve: impossibile rispettare la tolleranza entro il limite di raffinamento
+atomic_failures PASS
+passed=19 failed=2

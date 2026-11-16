@@ -1,0 +1,8 @@
+exec(open('/tmp/forgecad-followup-fix-20261115/kernel/build.py').read().split("c=next(x for x in cmds if x['file'].endswith('/kernel/tests/test_offset.cpp')")[0])
+c=next(x for x in cmds if x['file'].endswith('/kernel/tests/test_offset.cpp') and 'occt_tests' in x['directory'])
+objects=[]
+for source in [str(out/'test_offset_validation.cpp'),str(root/'kernel/tests/fk_test_main.cpp')]:
+ cmd=shlex.split(c['command']);obj=out/(Path(source).stem+'.o');cmd[cmd.index('-o')+1]=str(obj);cmd[cmd.index('-c')+1]=source;cmd+=['-I'+str(root/'kernel/tests')];subprocess.run(cmd,cwd=c['directory'],check=True);objects.append(str(obj))
+l=root/'forgecad-release/kernel/occt_tests';cmd=shlex.split((l/'CMakeFiles/forgekernel_tests.dir/link.txt').read_text());tail=cmd[cmd.index('../libforgekernel.a'):]
+for mode in ['before','after']:
+ args=[cmd[0],'-o',str(out/('tests-'+mode))]+objects+([str(out/'fk_offset.o')] if mode=='after' else [])+tail;subprocess.run(args,cwd=l,check=True)

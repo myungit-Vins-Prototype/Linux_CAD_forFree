@@ -1,0 +1,267 @@
+#include "forgeCad2026_gui.h"
+#include "forgeCad2026_viewport.h"
+#include "forgeCad2026_dialogs.h"
+#include "forgeCad2026_dialogs_common.h"
+#include "cad_document_tabs.h"
+#include "forgeCad2026_storyboard.h"
+#include "cad_topology_ref.h"
+#include "cad_forge.h"
+#include "fk_surface.h"
+#include <QDockWidget>
+#include <QComboBox>
+#include <QScrollArea>
+#include <QScrollBar>
+#include <QWindow>
+#include <QElapsedTimer>
+#include <QFormLayout>
+#include <QVBoxLayout>
+#include <QDialogButtonBox>
+#include <QApplication>
+#include <QTimer>
+#include <QDialog>
+#include <QPlainTextEdit>
+#include <QSettings>
+#include <QTemporaryDir>
+#include <QTabWidget>
+#include <iostream>
+class ViewportInteractionTest {
+    static inline int passed_=0,failed_=0;
+    static void check(bool ok,const char *message) {
+        std::cout<<(ok?"PASS ":"FAIL ")<<message<<std::endl;
+        ok?++passed_:++failed_;
+    }
+    static QDialog *panel(QMainWindow &owner,const QString &title) {
+        for(auto *dialog:owner.findChildren<QDialog *>())if(dialog->windowTitle()==title)return dialog;
+        return nullptr;
+    }
+    static DocumentState source() {
+        DocumentState doc;ExtrusionObject box;box.feature=BodyFeature::Primitive;
+        box.primitive.size[0]=10;box.primitive.size[1]=8;box.primitive.size[2]=6;
+        doc.extrusions={box,box};return doc;
+    }
+    static ExtrusionObject shell() {ExtrusionObject d;d.feature=BodyFeature::Shell;d.firstBody=0;d.distance=.5;return d;}
+    static ExtrusionObject boolean() {ExtrusionObject d;d.operation=0;d.firstBody=0;d.secondBody=-1;return d;}
+    static bool coherent(const QString &text) {return !text.contains("calcolo")&&!text.contains("pronta");}
+    static void closePanels(QMainWindow &owner) {for(auto *d:owner.findChildren<QDialog *>())d->reject();}
+    static void states() {
+        QMainWindow owner;CadViewport view;view.loadDocument(source());
+        QTimer poll,watchdog;poll.setInterval(10);watchdog.setSingleShot(true);int phase=0;bool completed=false;
+        QObject::connect(&watchdog,&QTimer::timeout,&owner,[&]{check(false,"Shell watchdog");closePanels(owner);});
+        QObject::connect(&poll,&QTimer::timeout,&owner,[&]{
+            if(!view.preview_.valid)return;
+            auto *d=panel(owner,"Shell states");auto *spin=d?d->findChild<QDoubleSpinBox *>("offsetDistance"):nullptr;
+            auto *label=d?d->findChild<QPlainTextEdit *>("functionPreviewMessage"):nullptr;
+            if(!d||!spin||!label){check(false,"Shell controls found");closePanels(owner);return;}
+            poll.stop();
+            if(phase==1) {
+                bool staleError=false;for(auto *m:d->findChildren<QPlainTextEdit *>())if(m!=label&&m->toPlainText().contains("maggiore di zero"))staleError=true;
+                check(view.preview_.valid&&spin->value()==.6&&label->toPlainText().contains("pronta"),"Shell valid preview recovers after zero thickness");
+                check(!staleError,"Shell clears the old thickness error on recovery");completed=true;d->reject();return;
+            }
+            check(label->toPlainText().contains("pronta"),"Shell starts with a real ready worker result");
+            spin->setValue(0);
+            check(!view.preview_.valid&&!view.previewPending()&&view.preview_.key.isEmpty()&&!view.preview_.geometry,"Shell zero thickness cancels geometry and pending work");
+            check(coherent(label->toPlainText())&&label->toPlainText().contains("maggiore"),"Shell zero thickness has an explicit unavailable preview state");
+            QTimer::singleShot(120,d,[&,spin,label]{
+                check(!view.preview_.valid&&!view.previewPending()&&coherent(label->toPlainText()),"Shell invalid state remains stable after queued work");
+                phase=1;spin->setValue(.6);poll.start();
+            });
+        });
+        QTimer::singleShot(0,&owner,[&]{QKeyEvent escape(QEvent::KeyPress,Qt::Key_Escape,Qt::NoModifier);view.keyPressEvent(&escape);});
+        watchdog.start(12000);poll.start();offsetDialog(&owner,&view,"Shell states",-1,shell(),[](const auto&){return QString();});poll.stop();watchdog.stop();
+        check(completed&&!view.interactionLocked()&&!view.referencePicking()&&!view.previewPending(),"Shell closes without picker, worker or interaction lock");
+        ExtrusionObject thread;thread.feature=BodyFeature::Thread;thread.firstBody=0;completed=false;
+        QTimer::singleShot(0,&owner,[&]{
+            auto *d=panel(owner,"Thread states");auto *label=d?d->findChild<QPlainTextEdit *>("functionPreviewMessage"):nullptr;
+            if(!d||!label){check(false,"Thread controls found");closePanels(owner);return;}
+            check(!view.preview_.valid&&!view.previewPending()&&coherent(label->toPlainText()),"Thread without a cylindrical face does not claim a running calculation");
+            QTimer::singleShot(20,d,[&,d,label]{
+                check(view.referencePicking()&&!view.previewPending()&&coherent(label->toPlainText())&&label->toPlainText().contains("vista"),"Thread picker has an explicit waiting state");
+                completed=true;d->reject();
+            });
+        });
+        watchdog.start(12000);threadDialog(&owner,&view,"Thread states",-1,thread,[](const auto&){return QString();});watchdog.stop();
+        check(completed&&!view.referencePicking()&&!view.interactionLocked()&&!view.previewPending(),"Thread cancellation clears picker, preview and lock");
+    }
+    static void realCross(QMainWindow &a,CadViewport &va,QMainWindow &b,CadViewport &vb,bool firstShell,ForgeCad::DocumentTabsWindow *host=nullptr) {
+        bool attempted=false;QTimer watchdog;watchdog.setSingleShot(true);
+        QObject::connect(&watchdog,&QTimer::timeout,&a,[&]{check(false,"Cross-document watchdog");closePanels(b);closePanels(a);});
+        QTimer::singleShot(0,&a,[&]{
+            auto *outer=panel(a,"Outer command");check(outer&&va.interactionLocked(),"The first real command owns its document lock");
+            if(host){host->activateDocument(&b);check(host->documentTabs()->currentWidget()==&b&&va.interactionLocked(),"Consulting another document tab remains allowed");}
+            bool secondShown=false;QTimer observer;observer.setSingleShot(true);
+            QObject::connect(&observer,&QTimer::timeout,&b,[&]{auto *inner=panel(b,"Blocked command");secondShown=inner&&!inner->isHidden();if(inner)inner->reject();});observer.start(30);
+            const bool accepted=firstShell
+                ?booleanDialog(&b,&vb,"Blocked command",-1,boolean(),[](const auto&){return QString();})
+                :offsetDialog(&b,&vb,"Blocked command",-1,shell(),[](const auto&){return QString();});
+            observer.stop();attempted=true;
+            check(!accepted&&!secondShown,"The second real command is rejected before it is shown");
+            check(!vb.referencePicking()&&!vb.interactionLocked()&&!vb.previewPending()&&vb.preview_.key.isEmpty(),"Rejected second command leaves no picker, preview or lock");
+            if(host)host->activateDocument(&a);
+            check(outer&&!outer->isHidden()&&va.interactionLocked()&&va.referencePicking(),"Rejected second command preserves the first panel and picker");
+            if(outer)outer->reject();
+        });
+        watchdog.start(5000);
+        if(firstShell)offsetDialog(&a,&va,"Outer command",-1,shell(),[](const auto&){return QString();});
+        else booleanDialog(&a,&va,"Outer command",-1,boolean(),[](const auto&){return QString();});
+        watchdog.stop();
+        check(attempted&&!va.interactionLocked()&&!va.referencePicking()&&!va.previewPending(),"The first command releases immediately after cancellation");
+        bool reopened=false;QTimer::singleShot(0,&b,[&]{auto *next=panel(b,"Next command");reopened=next&&!next->isHidden();if(next)next->reject();});
+        booleanDialog(&b,&vb,"Next command",-1,boolean(),[](const auto&){return QString();});
+        check(reopened&&!vb.interactionLocked()&&!vb.referencePicking(),"A real command in the other document opens after the first closes");
+    }
+    static void nesting() {
+        QMainWindow a;CadViewport va;va.loadDocument(source());bool nested=false;
+        QTimer::singleShot(0,&a,[&]{
+            auto *outer=panel(a,"Shell with subdialog");FunctionDialogPanel child(&a,false);child.setWindowTitle("Same document subdialog");
+            QTimer::singleShot(0,&child,[&]{nested=!child.isHidden();child.reject();});
+            check(!runModeless(&a,&va,child)&&nested,"A subdialog in the same document remains allowed");
+            check(va.interactionLocked()&&va.referencePicking(),"Same-document subdialog preserves the outer lock and picker");
+            if(outer)outer->reject();
+        });
+        offsetDialog(&a,&va,"Shell with subdialog",-1,shell(),[](const auto&){return QString();});
+        check(!va.interactionLocked()&&!va.referencePicking(),"Nested command cleanup restores the document");
+    }
+#ifdef PREVIEW_ON_SHOWN_API
+    static void synchronousFinish() {
+        QMainWindow a,b;CadViewport va,vb;
+        for(bool accept:{false,true}) {
+            FunctionDialogPanel d(&a,false);QTimer watchdog;watchdog.setSingleShot(true);bool timeout=false,called=false;
+            QObject::connect(&watchdog,&QTimer::timeout,&d,[&]{timeout=true;d.reject();});watchdog.start(2000);
+            const bool result=runModeless(&a,&va,d,[&]{called=true;if(accept)d.accept();else d.reject();});watchdog.stop();
+            check(called&&!timeout&&result==accept&&!va.interactionLocked(),"Synchronous accept/reject in onShown does not enter a dead event loop");
+        }
+        FunctionDialogPanel outer(&a,false);bool blockedCallback=false;
+        QTimer::singleShot(0,&outer,[&]{FunctionDialogPanel inner(&b,false);const bool result=runModeless(&b,&vb,inner,[&]{blockedCallback=true;inner.accept();});check(!result&&!blockedCallback&&!vb.interactionLocked(),"A rejected cross-document command does not execute onShown");outer.reject();});
+        runModeless(&a,&va,outer);
+    }
+#endif
+
+
+    static void fixedFooter(QDialog *dialog,const QString &key) {
+        auto labels=dialog->findChildren<QPlainTextEdit*>("functionPreviewMessage");
+        if(key=="Datum"||key=="Measure") {
+            std::cout<<"SKIP footer "<<key.toStdString()<<" reason=no PreviewScope message in this runner"<<std::endl;
+            return;
+        }
+        const auto named=[&](const char *message){return (key+" "+QString::fromLatin1(message)).toUtf8();};
+        auto *preview=labels.size()==1?labels.front():nullptr;
+        auto *scroll=dialog->findChild<QScrollArea*>("functionDialogScroll");
+        auto *root=qobject_cast<QVBoxLayout*>(dialog->layout());
+        auto *form=scroll&&scroll->widget()?qobject_cast<QFormLayout*>(scroll->widget()->layout()):nullptr;
+        auto *footer=preview?preview->parentWidget():nullptr;
+        const bool outside=preview&&scroll&&form&&root&&footer&&footer->parentWidget()==dialog
+            &&!scroll->isAncestorOf(preview)&&form->indexOf(preview)<0&&root->indexOf(footer)>=0;
+        auto message=named("preview belongs to a fixed footer outside the scrolling form");check(outside,message.constData());
+        const auto buttons=dialog->findChildren<QDialogButtonBox*>();
+        const bool order=outside&&buttons.size()==1&&root->indexOf(footer)+1==root->indexOf(buttons.front());
+        message=named("fixed footer precedes the persistent confirmation buttons");check(order,message.constData());
+        if(scroll&&preview) {
+            // La prima configurazione Wayland puo' sostituire una resize pre-esposizione.
+            QElapsedTimer exposureWait;exposureWait.start();
+            while((!dialog->windowHandle()||!dialog->windowHandle()->isExposed())&&exposureWait.elapsed()<2000) {
+                QEventLoop exposureEvents;QTimer::singleShot(5,&exposureEvents,&QEventLoop::quit);
+                exposureEvents.exec(QEventLoop::ExcludeUserInputEvents);
+            }
+            const bool exposed=dialog->windowHandle()&&dialog->windowHandle()->isExposed();
+            dialog->resize(430,280);QApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
+            auto *bar=scroll->verticalScrollBar();bar->setValue(0);
+            const QPoint position=preview->mapTo(dialog,QPoint());const QPoint contentPosition=scroll->widget()->pos();
+            const int maximum=bar->maximum();bar->setValue(maximum);
+            const bool fixed=exposed&&maximum>0&&bar->value()==maximum&&scroll->widget()->pos().y()<contentPosition.y()
+                &&preview->mapTo(dialog,QPoint())==position;
+            std::cout<<"FOOTER scroll "<<key.toStdString()<<" maximum="<<maximum<<" value="<<bar->value()
+                     <<" exposed="<<int(exposed)<<" exposure_wait_ms="<<exposureWait.elapsed()<<" panel="<<dialog->width()<<","<<dialog->height()
+                     <<" preview_y_before="<<position.y()<<" preview_y_after="<<preview->mapTo(dialog,QPoint()).y()<<std::endl;
+            message=named("scrolling the actual form keeps the preview footer fixed");check(fixed,message.constData());
+        } else {message=named("scroll controls available for fixed-footer regression");check(false,message.constData());}
+        const int rootCount=root?root->count():-1;const int buttonCount=buttons.size();
+        dialog->hide();dialog->show();
+        const auto again=dialog->findChildren<QPlainTextEdit*>("functionPreviewMessage");
+        const bool unique=outside&&again.size()==1&&again.front()==preview&&preview->parentWidget()==footer
+            &&root->count()==rootCount&&dialog->findChildren<QDialogButtonBox*>().size()==buttonCount
+            &&root->indexOf(footer)+1==root->indexOf(buttons.front());
+        message=named("hide/show does not duplicate or relocate footer, preview message or buttons");check(unique,message.constData());
+    }
+    static void smokeAllRunners() {
+        using Runner=std::function<bool(QMainWindow*,CadViewport*,const QString&,int,const ExtrusionObject&,const std::function<QString(const ExtrusionObject&)>&)>;
+        const std::vector<std::pair<const char*,Runner>> cases={
+            {"Pattern",patternDialog},{"Extrusion",extrusionDialog},{"Transform",transformDialog},
+            {"Thread",threadDialog},{"Offset Shell",offsetDialog},{"Ruled",ruledDialog},
+            {"Boundary",boundaryDialog},{"Fill",fillDialog},{"Planar",planarDialog},
+            {"Datum",datumDialog},
+            {"Measure",[](auto*w,auto*v,const auto&,int,const auto&,const auto&){measureDialog(w,v);return false;}}
+        };
+        int actualPanelsOpened=0,actualPanelsClosed=0;
+        for(const auto &[name,runner]:cases) {
+            std::cout<<"BEGIN smoke "<<name<<std::endl;
+            QMainWindow owner;CadViewport view;
+            auto doc=source();SketchObject sketch;sketch.name="Closed square";
+            sketch.segments={{{0,0},{4,0}},{{4,0},{4,4}},{{4,4},{0,4}},{{0,4},{0,0}}};
+            doc.sketches.append(sketch);
+            ExtrusionObject cylinder;cylinder.feature=BodyFeature::Primitive;cylinder.primitive.kind=PrimitiveKind::Cylinder;
+            cylinder.primitive.size[0]=2;cylinder.primitive.size[1]=4;doc.extrusions.append(cylinder);
+            view.loadDocument(doc);check(view.extrusions().size()==3&&view.extrusions()[2].forgeBody,"Smoke fixture contains real built solids and a cylinder");
+            ExtrusionObject d;d.firstBody=0;d.sketchIndex=0;d.distance=.5;d.pattern.count=2;
+            const QString title=QString::fromLatin1(name)=="Measure"?QStringLiteral("Misura"):QStringLiteral("Smoke %1").arg(QString::fromLatin1(name));
+            QVector<GeometryRef> boundary;
+            for(int i=0;i<4;++i){GeometryRef ref;ref.kind=7;ref.index=0;ref.element={0,i,-1};boundary.append(ref);}
+            const QString key=QString::fromLatin1(name);
+            if(key=="Offset Shell")d.feature=BodyFeature::Shell;
+            if(key=="Ruled"){d.ruledFirst={boundary[0]};d.ruledSecond={boundary[2]};}
+            if(key=="Boundary"||key=="Fill")d.planarRefs=boundary;
+            if(key=="Datum"){GeometryRef ref;ref.kind=1;ref.index=0;d.datum.refs={ref};}
+            if(key=="Thread") {
+                d.firstBody=2;bool found=false;const auto&shape=*view.extrusions()[2].forgeBody;
+                for(auto face:shape.faces())if(shape.face(face).surface->type()==ForgeCad::Kernel::SurfaceType::Cylinder) {
+                    auto point=shape.face(face).surface->point(0,2);
+                    d.thread.face=ForgeCad::faceReference(shape,face,point);
+                    ForgeCad::ThreadFaceInfo info;QString error;found=ForgeCad::forgeThreadFaceInfo(shape,d.thread.face,info,&error);break;
+                }
+                check(found,"Thread fixture has a resolvable cylindrical face before dialog initialization");
+            }
+            QDockWidget *dock=nullptr;StoryboardTree *tree=nullptr;
+            if(key=="Pattern") {dock=new QDockWidget(&owner);dock->setObjectName("modelDock");tree=new StoryboardTree(dock);dock->setWidget(tree);owner.addDockWidget(Qt::LeftDockWidgetArea,dock);dock->setEnabled(true);}
+            bool seen=false;QTimer watchdog;watchdog.setSingleShot(true);
+            QObject::connect(&watchdog,&QTimer::timeout,&owner,[&]{check(false,"Smoke watchdog");closePanels(owner);});
+            QTimer::singleShot(0,&owner,[&,key]{
+                auto *dialog=panel(owner,title);seen=dialog&&!dialog->isHidden()&&dynamic_cast<FunctionDialogPanel*>(dialog);
+                if(seen)++actualPanelsOpened;
+                const QByteArray opened=(key+" opens its actual function panel after synchronous initialization").toUtf8();check(seen,opened.constData());
+                if(!seen){closePanels(owner);return;}
+                check(view.interactionLocked(),"Smoke panel holds its document interaction lock");
+                fixedFooter(dialog,key);
+                if(key=="Pattern")check(dock->isEnabled()&&tree->property("storyboardSourcePicking").toBool(),"Pattern enables storyboard picking only while active");
+                if(key=="Thread") {
+                    auto combos=dialog->findChildren<QComboBox*>();QComboBox *body=nullptr,*standard=nullptr;
+                    for(auto *combo:combos){if(combo->count()==3&&combo->objectName().isEmpty())body=combo;if(combo->count()==8&&combo->itemText(0).contains("ISO metrico"))standard=combo;}
+                    auto *sizes=dialog->findChild<QComboBox*>("threadSize");
+                    check(body&&body->currentIndex()==2&&standard&&sizes&&sizes->count()>0,"Thread readFace and populateSizes initialize using valid candidate indices");
+                    if(body&&standard&&sizes){standard->setCurrentIndex(1);check(sizes->count()>0&&sizes->currentIndex()>=0,"Thread standard change repopulates valid sizes");body->setCurrentIndex(0);body->setCurrentIndex(2);check(body->currentIndex()==2&&sizes->currentIndex()>=0,"Thread body selection change and restoration preserve valid indices");}
+                }
+                dialog->reject();
+            });
+            watchdog.start(5000);const bool accepted=runner(&owner,&view,title,-1,d,[](const auto&){return QString();});watchdog.stop();
+            const QByteArray cleaned=(key+" cancellation clears picker, callbacks, preview and lock").toUtf8();
+            const bool clean=seen&&!accepted&&!view.interactionLocked()&&!view.referencePicking()&&!view.refPickFinished_&&!view.previewCallback_&&!view.previewPending()&&view.preview_.key.isEmpty()&&!view.preview_.geometry;
+            check(clean,cleaned.constData());if(clean)++actualPanelsClosed;
+            std::cout<<"SMOKE "<<name<<" actual_visible="<<int(seen)<<" close_and_cleanup="<<int(clean)<<std::endl;
+            if(dock)check(dock->isEnabled()&&!tree->property("storyboardSourcePicking").toBool()&&tree->historyRail()->isEnabled(),"Pattern restores enabled dock, clears its callback and re-enables the history rail");
+            std::cout<<"END smoke "<<name<<std::endl;
+        }
+        std::cout<<"SMOKE TOTAL actual_visible="<<actualPanelsOpened<<" close_and_cleanup="<<actualPanelsClosed<<" expected=11"<<std::endl;
+    }
+public:
+    static int run() {
+        smokeAllRunners();
+        states();
+        {QMainWindow a,b;CadViewport va,vb;va.loadDocument(source());vb.loadDocument(source());realCross(a,va,b,vb,false);}
+        {ForgeCad::DocumentTabsWindow host;auto *a=new QMainWindow,*b=new QMainWindow;auto *va=new CadViewport(a),*vb=new CadViewport(b);a->setCentralWidget(va);b->setCentralWidget(vb);a->setProperty("documentWorkspace",true);b->setProperty("documentWorkspace",true);va->loadDocument(source());vb->loadDocument(source());host.addDocument(a,false);host.addDocument(b,false);host.activateDocument(a);realCross(*a,*va,*b,*vb,true,&host);}
+        nesting();
+#ifdef PREVIEW_ON_SHOWN_API
+        synchronousFinish();
+#endif
+        std::cout<<"RESULT passed="<<passed_<<" failed="<<failed_<<std::endl;return failed_?1:0;
+    }
+};
+int main(int argc,char **argv){QApplication app(argc,argv);QTemporaryDir settings;QSettings::setDefaultFormat(QSettings::IniFormat);QSettings::setPath(QSettings::IniFormat,QSettings::UserScope,settings.path());return ViewportInteractionTest::run();}

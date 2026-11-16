@@ -1,0 +1,14 @@
+from pathlib import Path
+import os,subprocess,time,json
+r=Path('/home/myungit/Linux_CAD_forFree');p=r/'docs/ellisse-estremi-prove-2026-11-16/root';env=os.environ.copy()
+env.update(QT_QPA_PLATFORM='wayland',QT_QPA_PLATFORMTHEME='',QT_QPA_PLATFORMTHEME_QT6='',QT_STYLE_OVERRIDE='Fusion')
+env.pop('QT_QPA_OFFSCREEN_NO_GLX',None);env.pop('LIBGL_ALWAYS_SOFTWARE',None)
+temp=Path('/tmp/ellipse-gl-checks');temp.mkdir(exist_ok=True)
+for key,folder in [('XDG_CONFIG_HOME','settings'),('XDG_DATA_HOME','data'),('XDG_CACHE_HOME','cache')]:
+    target=temp/folder;target.mkdir(exist_ok=True);env[key]=str(target)
+command=[str(r/'forgecad-release/forgecad_view_tests'),'--ellipse-extremes','--gl'];start=time.monotonic()
+with (p/'gl.log').open('w') as log:
+    try:process=subprocess.run(command,cwd=r,env=env,stdout=log,stderr=subprocess.STDOUT,timeout=90);exit_code=process.returncode
+    except subprocess.TimeoutExpired:exit_code=124
+result=dict(exit=exit_code,seconds=time.monotonic()-start,command=command,platform=env['QT_QPA_PLATFORM'])
+(p/'gl-result.json').write_text(json.dumps(result,indent=2)+'\n');print(result);print((p/'gl.log').read_text()[-3500:]);assert exit_code==0

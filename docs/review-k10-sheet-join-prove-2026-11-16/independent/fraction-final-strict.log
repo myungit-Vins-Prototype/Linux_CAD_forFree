@@ -1,0 +1,30 @@
+BEGIN tangent-canonical-reversal
+tangent-canonical-reversal source 0 / 0
+tangent-canonical-reversal actual 3 / 3
+BEGIN tangent-face-sense
+tangent-face-sense source 0 / 0
+tangent-face-sense actual 3 / 3
+BEGIN tangent-large-scale
+tangent-large-scale source 0 / 0
+tangent-large-scale actual 3 / 3
+BEGIN tangent-lower-boundary
+tangent-lower-boundary source 0 / 0
+tangent-lower-boundary actual 3 / 3
+BEGIN tangent-polynomial
+tangent-polynomial source 0 / 0
+tangent-polynomial actual 3 / 3
+BEGIN tangent-rational
+tangent-rational source 0 / 0
+tangent-rational actual 3 / 3
+BEGIN tangent-reverse-selection
+tangent-reverse-selection source 0 / 0
+tangent-reverse-selection actual 3 / 3
+BEGIN tangent-rigid-pose
+tangent-rigid-pose source 0 / 0
+tangent-rigid-pose actual 3 / 3
+BEGIN tangent-small-scale
+tangent-small-scale source 0 / 0
+tangent-small-scale actual 3 / 3
+BEGIN tangent-trimmed-support
+tangent-trimmed-support source 0 / 0
+tangent-trimmed-support actual 3 / 3

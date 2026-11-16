@@ -1,0 +1,245 @@
+{
+  "graph_sha256": "a6dca48781f49300e37c873032f95d3460e60b03499e42da9534497163b2c098",
+  "nodes": [
+    {
+      "id": "kernel/fk_blend.cpp",
+      "description": "Raccordi e smussi analitici: priorita al rifilo locale dei contorni piani chiusi e tangenti, preparazione anticipata degli appoggi NURBS G1 certificati per le facce selezionate, riuso della composizione e genealogia esplicita, ripiego sulle carte originali senza ripetere i tentativi composti; sezioni, utensili su appoggi curvi, catene tangenti, contorni misti, pezze terminali e raggi zero agli estremi aperti."
+    },
+    {
+      "id": "kernel/fk_blend_contour.cpp",
+      "description": "Selezione esplicita di contorni chiusi di cavita estruse tramite generatrici analitiche e adiacenze topologiche, con rifiuto dei percorsi ambigui e controllo integrale delle SP-curve contro gli appoggi consumati o invertiti."
+    },
+    {
+      "id": "kernel/fk_blend_surface.cpp",
+      "description": "Raccordi e smussi a palla rotolante: riordino delle transizioni tangenti su supporti opposti con consumo dei tratti corti e continuazione sulle guide adiacenti in entrambi i versi, raffinamento 3D del contatto sulle cuciture tangenti, copertura del fit e intersezioni locali smorzate entro il dominio delle pezze; consumo topologico di una frontiera terminale corta verso una quarta faccia e pezze d angolo, provenienza di bordi e vertici nuovi dichiarata per incidenza; sezioni normali e guida intrinseca per coperchi piani su fianchi B-spline tangenti, continuazione delle cuciture tangenti e raffinamento dei contatti accoppiati entro la risoluzione sorgente, chiusure terminali tangenti con Newton smorzato e continuazione unilaterale anche per bordi analitici, derivate unilaterali su tutti i nodi e scarto laterale misurato entro la risoluzione sorgente, tentativi atomici, limiti unilaterali a raggio zero con sezione collassata esatta anche a cuspidi di alta valenza, raffinamento presso le punte singolari, pezze intrinseche costanti tra collassi G1 dei ventagli polari e controllo dei contorni."
+    },
+    {
+      "id": "kernel/fk_pcurve.cpp",
+      "description": "SP-curve (Parasolid) / pcurve (OCCT): la curva di un edge nello spazio dei parametri (u, v) di una faccia, con lo stesso parametro dell'edge: S(p(t)) = C(t) per t nel range dell'edge."
+    },
+    {
+      "id": "kernel/fk_surface_algo.cpp",
+      "description": "Proiezioni globali NURBS: ricerca Bezier del minimo prima dei bordi del dominio; inviluppi conservativi delle isoparametriche escludono solo minimi impossibili. Bordi, nodi C0 e finestre limitate restano candidati."
+    },
+    {
+      "id": "kernel/tests/test_blend_cavity.cpp",
+      "description": "Regressione del contorno a otto bordi su loft con piccole creste reali: selezione da ogni bordo, raggio costante, genealogia, persistenza, triangolazione e prolungamento esatto."
+    }
+  ],
+  "edges": [
+    {
+      "source": "kernel/fk_blend.cpp",
+      "target": "kernel/fk_blend_surface.cpp",
+      "kind": "call",
+      "count": 9,
+      "sites": [
+        {
+          "line": 855,
+          "symbol": "ForgeCad::Kernel::blendSurfaceChains",
+          "owner": "ForgeCad::Kernel::blendEdgesWith"
+        },
+        {
+          "line": 888,
+          "symbol": "ForgeCad::Kernel::blendSurfaceChains",
+          "owner": "ForgeCad::Kernel::blendEdgesWith"
+        },
+        {
+          "line": 971,
+          "symbol": "ForgeCad::Kernel::blendSurfaceChains",
+          "owner": "ForgeCad::Kernel::blendEdgesWith"
+        },
+        {
+          "line": 998,
+          "symbol": "ForgeCad::Kernel::blendSurfaceChains",
+          "owner": "ForgeCad::Kernel::blendEdgesWith"
+        },
+        {
+          "line": 1105,
+          "symbol": "ForgeCad::Kernel::blendSurfaceChains",
+          "owner": "ForgeCad::Kernel::blendEdgesWith"
+        },
+        {
+          "line": 1794,
+          "symbol": "ForgeCad::Kernel::blendSurfaceChains",
+          "owner": "ForgeCad::Kernel::blendProfileEdges"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_blend.cpp",
+      "target": "kernel/fk_pcurve.cpp",
+      "kind": "call",
+      "count": 2,
+      "sites": [
+        {
+          "line": 352,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::buildPiece"
+        },
+        {
+          "line": 624,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::sewBodies"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_blend.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 6,
+      "sites": [
+        {
+          "line": 276,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::outwardNormal"
+        },
+        {
+          "line": 1245,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::analyticBlend"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_blend_surface.cpp",
+      "target": "kernel/fk_blend_contour.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": []
+    },
+    {
+      "source": "kernel/fk_blend_surface.cpp",
+      "target": "kernel/fk_pcurve.cpp",
+      "kind": "call",
+      "count": 3,
+      "sites": [
+        {
+          "line": 1866,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::blendSurfaceChainsWithGuide"
+        },
+        {
+          "line": 3785,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::blendSurfaceChainsWithGuide"
+        },
+        {
+          "line": 3810,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::blendSurfaceChainsWithGuide"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_blend_surface.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 16,
+      "sites": [
+        {
+          "line": 854,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::faceNormal"
+        },
+        {
+          "line": 1154,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::surfaceUV"
+        },
+        {
+          "line": 1342,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::traceBetween"
+        },
+        {
+          "line": 1420,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::traceBetween"
+        },
+        {
+          "line": 1422,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::traceBetween"
+        },
+        {
+          "line": 1609,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        },
+        {
+          "line": 2901,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::blendSurfaceChainsWithGuide"
+        },
+        {
+          "line": 3438,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::blendSurfaceChainsWithGuide"
+        },
+        {
+          "line": 3439,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::blendSurfaceChainsWithGuide"
+        },
+        {
+          "line": 3461,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::blendSurfaceChainsWithGuide"
+        },
+        {
+          "line": 3531,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::blendSurfaceChainsWithGuide"
+        },
+        {
+          "line": 3799,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::blendSurfaceChainsWithGuide"
+        },
+        {
+          "line": 3822,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::blendSurfaceChainsWithGuide"
+        },
+        {
+          "line": 3870,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::detail::polarBlendPatch"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_pcurve.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 16,
+      "sites": [
+        {
+          "line": 116,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::sampleParameters"
+        },
+        {
+          "line": 249,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::Fitter::node"
+        }
+      ]
+    },
+    {
+      "source": "kernel/tests/test_blend_cavity.cpp",
+      "target": "kernel/fk_blend.cpp",
+      "kind": "call",
+      "count": 2,
+      "sites": []
+    },
+    {
+      "source": "kernel/tests/test_blend_cavity.cpp",
+      "target": "kernel/fk_blend_contour.cpp",
+      "kind": "call",
+      "count": 5,
+      "sites": []
+    }
+  ]
+}

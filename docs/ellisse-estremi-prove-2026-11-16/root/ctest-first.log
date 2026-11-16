@@ -1,0 +1,59 @@
+Test project /home/myungit/Linux_CAD_forFree/forgecad-release
+      Start   3: forgecad_geometry_sources_tests
+ 1/24 Test   #3: forgecad_geometry_sources_tests ...............   Passed    0.03 sec
+      Start  28: forgecad_document_read_tests
+ 2/24 Test  #28: forgecad_document_read_tests ..................   Passed    0.12 sec
+      Start  29: forgecad_document_units_tests
+ 3/24 Test  #29: forgecad_document_units_tests .................   Passed    0.12 sec
+      Start  34: forgecad_history_suppression_tests
+ 4/24 Test  #34: forgecad_history_suppression_tests ............   Passed    0.03 sec
+      Start  50: forgecad_native_revisions_tests
+ 5/24 Test  #50: forgecad_native_revisions_tests ...............   Passed    0.07 sec
+      Start  51: forgecad_workspace_revisions_tests
+ 6/24 Test  #51: forgecad_workspace_revisions_tests ............   Passed    1.25 sec
+      Start  52: forgecad_linked_drawing_tests
+ 7/24 Test  #52: forgecad_linked_drawing_tests .................   Passed    1.22 sec
+      Start  53: forgecad_drawing_revisions_tests
+ 8/24 Test  #53: forgecad_drawing_revisions_tests ..............   Passed    0.70 sec
+      Start  70: forgecad_sketch_tools_refs_tests
+ 9/24 Test  #70: forgecad_sketch_tools_refs_tests ..............   Passed    0.07 sec
+      Start  75: forgecad_document_precision_tests
+10/24 Test  #75: forgecad_document_precision_tests .............   Passed    0.19 sec
+      Start  76: forgecad_document_lifetime_tests
+11/24 Test  #76: forgecad_document_lifetime_tests ..............   Passed    0.04 sec
+      Start  81: forgecad_intersection_snap_tests
+12/24 Test  #81: forgecad_intersection_snap_tests ..............   Passed    0.03 sec
+      Start  87: forgecad_document_access_tests
+13/24 Test  #87: forgecad_document_access_tests ................   Passed    0.30 sec
+      Start  88: forgecad_document_consultation_tests
+14/24 Test  #88: forgecad_document_consultation_tests ..........   Passed    0.83 sec
+      Start  92: forgecad_handle_constraints_tests
+15/24 Test  #92: forgecad_handle_constraints_tests .............   Passed    0.03 sec
+      Start  93: forgecad_solver_partition_tests
+16/24 Test  #93: forgecad_solver_partition_tests ...............   Passed    2.51 sec
+      Start  94: forgecad_connected_solver_tests
+17/24 Test  #94: forgecad_connected_solver_tests ...............   Passed    0.12 sec
+      Start  99: forgecad_sketch_editing_tests
+18/24 Test  #99: forgecad_sketch_editing_tests .................   Passed    0.04 sec
+      Start 119: forgecad_automatic_snap_tests
+19/24 Test #119: forgecad_automatic_snap_tests .................   Passed    0.03 sec
+      Start 125: forgecad_ellipse_trim_tests
+20/24 Test #125: forgecad_ellipse_trim_tests ...................   Passed    0.03 sec
+      Start 126: forgecad_ellipse_extremes_tests
+21/24 Test #126: forgecad_ellipse_extremes_tests ...............***Failed    0.03 sec
+ellisse: terzo clic negativo e centro conseguente
+
+      Start 147: forgecad_document_compression_tests
+22/24 Test #147: forgecad_document_compression_tests ...........   Passed    0.04 sec
+      Start 186: forgecad_sketch_offset_validation_tests
+23/24 Test #186: forgecad_sketch_offset_validation_tests .......   Passed    3.75 sec
+      Start 235: forgekernel_projection_fit_validation_tests
+24/24 Test #235: forgekernel_projection_fit_validation_tests ...   Passed    3.21 sec
+
+96% tests passed, 1 tests failed out of 24
+
+Total Test time (real) =  14.85 sec
+
+The following tests FAILED:
+	126 - forgecad_ellipse_extremes_tests (Failed)
+Errors while running CTest

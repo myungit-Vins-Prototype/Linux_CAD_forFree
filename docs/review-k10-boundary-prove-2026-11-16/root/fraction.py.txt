@@ -1,0 +1,13 @@
+from pathlib import Path
+import sys,subprocess,hashlib,json
+sys.path.insert(0,'/tmp/boundary-review/root');from checks import run
+T=Path('/tmp/boundary-review/root');A=Path('/tmp/boundary-review/audit');S=T/'fraction-runtime';S.mkdir(exist_ok=True)
+for name in ['check_exports','fraction_common','verify_tensor_fraction','verify_curve_preservation','verify_surface_preservation']:(S/(name+'.py.txt')).write_bytes((A/(name+'.py.txt')).read_bytes())
+run('fraction-final',['python3',str(S/'check_exports.py.txt'),str(T/'release-export'),str(T/'fraction-final.json')],timeout=180)
+j=json.loads((T/'fraction-final.json').read_text());assert len(j['records'])==6
+for record in j['records']:
+ assert record['original_same_parameter']['pass'],record
+ for use in record['finUses']:
+  assert use['carrier_original_domain']['pass'],use
+  assert use['edge_vs_effective_carrier_and_pcurve']['pass'],use
+print('Final Release Fraction: 6 preserved curves, 12 actual fins and 12 carriers PASS')

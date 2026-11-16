@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# Run effettivo fuori sandbox per permettere LeakSanitizer senza ptrace.
+ASAN_OPTIONS=detect_leaks=1:halt_on_error=1 UBSAN_OPTIONS=halt_on_error=1 /tmp/k10-sew-review/tests/sanitizer/test_sew_pcurve_validation > /tmp/k10-sew-review/tests/sanitizer/validation-outside-sandbox.log 2>&1

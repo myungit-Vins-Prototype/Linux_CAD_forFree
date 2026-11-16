@@ -1,0 +1,37 @@
+from pathlib import Path
+import re
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/theme-tabs-review/root');p=R/'CLAUDE.md';old=p.read_text();s=old
+begin=s.index('**16/11 — K10 Helix e cinque orfane');end=s.index('\n**16/11 — K10 cucitura',begin)
+s=s[:begin]+'''**16/11 — K10 Helix e cinque orfane verificati con tre agenti Sol.**
+Helix trasformate: limite continuo e poli Qt ricontrollati; due alias rifiutati.
+Percorso quintico C2 conservato; rimosse5private,17API aperte. App/Wayland,
+13Qt/sanitizer3TU,37guardie,Fraction8varianti/624campate e11export PASS.
+CTest20/21 poi risolto da K12 sopra; mappa772/11165/385 PASS.
+[Rapporto e limiti](docs/review-k10-helix-orphans-2026-11-16.md).
+''' +s[end:]
+s=s.replace('**15/11 — Sweep K1/K3 corretti con due agenti GPT-6.1 Sol.**','15/11 — Sweep K1/K3 corretti con due agenti GPT-6.1 Sol.')
+anchor='## Ultimi interventi — esiti consolidati\n\n';assert s.count(anchor)==1
+s=s.replace(anchor,anchor+'''**16/11 — UI8 tema nelle schede, diagnosi con tre agenti Sol.**
+Confermato:palette app cambia ma QSS resta precedente nei documenti embedded;
+ApplicationPaletteChange arriva solo ai top-level,il QSS bloccaanchePaletteChange.
+Prototipo/tmp:gestione QSS nel controllerglobale e menuTema2D;nessunresetcolori.
+Produzione invariata;testreali/build/mappa pendenti. [Stato](docs/review-theme-tabs-2026-11-16.md).
+
+''')
+assert len(s.encode())<=16384 and len(re.findall(r'^\*\*',s,re.M))<=10,(len(s.encode()),len(re.findall(r'^\*\*',s,re.M)))
+h=R/'docs/history/claude-prima-theme-tabs-2026-11-16.md';assert not h.exists();h.write_text(old);p.write_text(s)
+(R/'docs/review-theme-tabs-2026-11-16.md').write_text('''# UI8 — tema coerente nelle schede 3D e 2D, 16 novembre 2026
+
+**Diagnosi confermata, correzione privata in corso con tre agenti GPT-6.1 Sol.** Nessuna modifica di produzione integrata. Baseline di 4.076 file congelata; sigillo precedente 182/182 verificato. Consultate descrizioni e 1.043 relazioni incidenti del grafo 773/11195/386 prima delle modifiche.
+
+Il cambio tema aggiorna la palette applicativa, ma il foglio di stile globale era aggiornato da `PdfWindow::event` soltanto su `ApplicationPaletteChange`. Le pagine incorporate nelle schede non ricevono quell'evento. La riproduzione indipendente con il QSS reale mostra palette app `#111820` e pagine visibile/nascosta ancora `#f0f0f0`; il QSS può sopprimere anche `PaletteChange`, quindi ampliare soltanto il filtro eventi non basta.
+
+Il prototipo trasferisce il QSS nel controller `ApplicationTheme`, insieme alla palette. Nessuna scansione che azzeri palette locali, colori personalizzati dell'albero, canvas o pagina 2D. Si prepara inoltre lo stesso menu Tema nel 2D: oggi esiste solo nel 3D e manca quando resta aperta soltanto una tavola.
+
+L'audit dei moduli reali ha verificato 210 icone riusate nei due stati normale/disabilitato (420 controlli) e sei stati del menu: i colori vengono già letti dal tema corrente, senza cache raster da correggere. Il test originale del tema e i test del candidato raggiungevano un blocco nel plugin Breeze dentro sandbox; la baseline binaria reale eseguita fuori sandbox passa in 0,114 s, così come il candidato riferito dall'agente. Nessun bug Breeze attribuito e nessun caso saltato.
+
+Test reali sulle schede, nuove regressioni, build completa, verifica Wayland e mappa finale ancora pendenti. Conteggio precedente: 30 rilievi corretti. K10 e gli altri punti aperti restano invariati.
+
+[Memoria precedente completa](history/claude-prima-theme-tabs-2026-11-16.md).
+''')
+print('Diagnosi registrata; memoria',len(s.encode()),'bytes',len(s.splitlines()),'lines')

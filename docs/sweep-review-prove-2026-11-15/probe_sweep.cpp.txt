@@ -1,0 +1,21 @@
+#include "fk_sweep.h"
+#include "fk_bspline.h"
+#include "fk_primitives.h"
+#include "fk_mass.h"
+#include "fk_body_check.h"
+#include "fk_tessellate.h"
+#include <iostream>
+#include <iomanip>
+using namespace ForgeCad::Kernel;
+int main(int argc,char **argv) {
+ const double R=10, r=8;
+ auto path=std::make_shared<Circle<3>>(Vec3(),Vec3(1,0,0),Vec3(0,1,0),R);
+ const Interval range{0,kHalfPi};
+ auto nurbsPath=std::make_shared<BSplineCurve<3>>(conicArcToBSpline(Vec3(),Vec3(R,0,0),Vec3(0,R,0),range.lo,range.hi));
+ ProfileRegion disk;disk.outer.segments={{std::make_shared<Circle<2>>(Vec2(),Vec2(1,0),Vec2(0,1),r),{0,kTwoPi}}};
+ for(int useNurbs=0;useNurbs<2;++useNurbs)for(int rotated=0;rotated<2;++rotated)try{
+  const Frame3 frame(Vec3(R,0,0),Vec3(0,1,0),rotated?Vec3(1,0,1):Vec3(1,0,0));
+  const Body b=sweepRegions(frame,{disk},{{useNurbs?std::static_pointer_cast<const Curve<3>>(nurbsPath):path,range}});
+  std::cout<<"nurbs="<<useNurbs<<" rotated="<<rotated<<" success volume="<<std::setprecision(15)<<massProperties(b).volume<<" expected="<<kPi*r*r*R*kHalfPi<<" checks="<<checkBody(b).size()<<std::endl;
+ }catch(const std::exception&e){std::cout<<"nurbs="<<useNurbs<<" rotated="<<rotated<<" error="<<e.what()<<std::endl;}
+}

@@ -1,0 +1,7 @@
+from pathlib import Path
+import json,re
+p=Path('/tmp/forgecad-k10-sketch-offset-20261116/root');assert json.loads((p/'build-exits.json').read_text())=={'initial_full_build':0,'final_configuration_build':0};s=(p/'build.log').read_text()
+for target in ['forgecad','forgecad_view_tests','forgecad_sketch_offset_validation_tests']:assert re.search(r'Built target '+target+r'\s*$',s,re.M),target
+assert 'error:' not in s
+warnings=[x for x in s.splitlines() if 'warning:' in x];assert not any('/cad_sketch_offset.' in x or '/test_sketch_offset_validation.' in x for x in warnings),warnings
+result=dict(full_app_and_runner=True,warnings=len(warnings),warning_lines=warnings);(p/'build-result.json').write_text(json.dumps(result,indent=2));print('Full build PASS; warnings',len(warnings))

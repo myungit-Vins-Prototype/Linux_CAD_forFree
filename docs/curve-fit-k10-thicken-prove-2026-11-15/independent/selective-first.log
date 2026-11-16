@@ -1,0 +1,9 @@
+kind=0 rational=0 scale=0.01 sense=1 volume=1.0000000000000001e-07 geometric_error=5.7509746178135652e-17 faces=6 codec=1 lineage=1 immutable=1
+kind=0 rational=1 scale=1000 sense=0 volume=100000100.39919534 geometric_error=8.5878724176712513e-13 faces=6 codec=1 lineage=1 immutable=1
+kind=1 rational=0 scale=0.01 sense=1 volume=7.1000000000000027e-08 geometric_error=2.1387107373180891e-17 faces=10 codec=1 lineage=1 immutable=1
+kind=1 rational=1 scale=1000 sense=0 volume=71000084.506520227 geometric_error=2.7754494148515964e-12 faces=10 codec=1 lineage=1 immutable=1
+kind=2 rational=0 scale=0.01 sense=1 volume=3.1415926535897911e-07 geometric_error=5.0761044285972432e-18 faces=4 codec=1 lineage=1 immutable=1
+kind=2 rational=1 scale=1000 sense=0 volume=314159265.35897934 geometric_error=2.3821733370596421e-13 faces=4 codec=1 lineage=1 immutable=1
+kind=3 rational=0 scale=0.01 sense=1 volume=6.2831853071795811e-07 geometric_error=8.6979777200750769e-18 faces=4 codec=1 lineage=1 immutable=1
+kind=3 rational=1 scale=1000 sense=0 volume=628318530.71795881 geometric_error=4.6874284016867712e-13 faces=4 codec=1 lineage=1 immutable=1
+checks=8 PASS

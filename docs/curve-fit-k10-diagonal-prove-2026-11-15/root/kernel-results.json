@@ -1,0 +1,77 @@
+[
+  {
+    "filter": "Offset",
+    "exit": 0,
+    "seconds": 22.010880548004934
+  },
+  {
+    "filter": "Shell",
+    "exit": 0,
+    "seconds": 43.54637720599567
+  },
+  {
+    "filter": "Sheet",
+    "exit": 0,
+    "seconds": 22.004015093996713
+  },
+  {
+    "filter": "BoundarySheet",
+    "exit": 0,
+    "seconds": 0.26424832599877845
+  },
+  {
+    "filter": "Fill",
+    "exit": 0,
+    "seconds": 7.226732110000739
+  },
+  {
+    "filter": "Projected",
+    "exit": 0,
+    "seconds": 0.2642182290001074
+  },
+  {
+    "filter": "Sew",
+    "exit": 0,
+    "seconds": 1.5161847790004686
+  },
+  {
+    "filter": "Thicken",
+    "exit": 0,
+    "seconds": 0.7149411610007519
+  },
+  {
+    "filter": "BlendSurfaceNonAnalyticEdges",
+    "exit": 0,
+    "seconds": 2.969197462000011
+  },
+  {
+    "filter": "BlendFreeformClosedEdges",
+    "exit": 0,
+    "seconds": 8.930020902000251
+  },
+  {
+    "filter": "BlendFreeformOpenEdges",
+    "exit": 0,
+    "seconds": 4.522329849998641
+  },
+  {
+    "filter": "BlendSurfaceMatchesExactPlanarCases",
+    "exit": 0,
+    "seconds": 1.3659946139960084
+  },
+  {
+    "filter": "BlendSurfaceMatchesCircularCases",
+    "exit": 0,
+    "seconds": 0.41437586399842985
+  },
+  {
+    "filter": "BlendOpenChainsAtTangentSplineSeams",
+    "exit": 0,
+    "seconds": 46.847000879002735
+  },
+  {
+    "filter": "BlendPlanarCapOnTangentSplineSupports",
+    "exit": 0,
+    "seconds": 14.389222267003788
+  }
+]

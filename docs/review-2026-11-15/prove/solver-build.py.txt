@@ -1,0 +1,20 @@
+"""Eseguire dalla radice ForgeCAD; probe.cpp accanto allo script, output in /tmp."""
+from pathlib import Path
+import shlex, subprocess, tempfile
+root=Path.cwd(); source=Path(__file__).with_name('solver-probe.cpp')
+if not source.exists(): source=Path(__file__).with_name('probe.cpp')
+out=Path(tempfile.mkdtemp(prefix='forgecad-solver-review-'))
+flags=shlex.split(subprocess.check_output(['pkg-config','--cflags','Qt6Widgets','Qt6OpenGLWidgets','Qt6Concurrent'],text=True))
+subprocess.run(['c++','-std=c++17','-O2','-fPIC','-I'+str(root),'-I'+str(root/'kernel'),*flags,'-c',str(source),'-o',str(out/'probe.o')],check=True)
+args=shlex.split((root/'forgecad-release/CMakeFiles/forgecad_view_tests.dir/link.txt').read_text())
+args=[x for x in args if not x.startswith('-Wl,--dependency-file=')]
+args=[str(out/'probe.o') if x.endswith('tests/test_viewport.cpp.o') else x for x in args]
+args[args.index('-o')+1]=str(out/'probe')
+subprocess.run(args,cwd=root/'forgecad-release',check=True)
+for mode in ['nan','inf','huge']:
+    try:
+        p=subprocess.run([str(out/'probe'),mode],capture_output=True,text=True,timeout=3)
+        print(mode,p.returncode,p.stdout,p.stderr)
+    except subprocess.TimeoutExpired as e:
+        print(mode,'TIMEOUT 3s',e.stdout.decode() if e.stdout else '')
+print('Output:',out)

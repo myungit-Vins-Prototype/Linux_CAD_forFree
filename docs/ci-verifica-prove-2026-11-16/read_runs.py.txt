@@ -1,0 +1,14 @@
+from pathlib import Path
+import subprocess,json
+T=Path('/tmp/boundary-review/ci');repo='myungit-Vins-Prototype/Linux_CAD_forFree'
+ids=[43636595574,43629615411,43496897328,43308279339]
+for run in ids:
+ data=json.loads(subprocess.check_output(['gh','run','view',str(run),'--repo',repo,'--json','conclusion,headSha,jobs,url']))
+ (T/('run-'+str(run)+'.json')).write_text(json.dumps(data,indent=2)+'\n')
+ for job in data['jobs']:
+  failed=[s['name'] for s in job['steps'] if s['conclusion']=='failure']
+  build=[s for s in job['steps'] if s['name']=='Compila l\'applicazione e tutti i test configurati']
+  assert len(build)==1 and build[0]['conclusion']=='success',job['name']
+  assert failed==['Esegui i test'],failed
+  print(run,job['name'],'buildPASS; only test step failed',flush=True)
+(T/'recent-runs.json').write_bytes(subprocess.check_output(['gh','run','list','--repo',repo,'--limit','10','--json','databaseId,headSha,headBranch,status,conclusion,workflowName,createdAt,url']))

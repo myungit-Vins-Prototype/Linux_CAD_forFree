@@ -1,0 +1,10 @@
+from pathlib import Path
+import subprocess,sys,shlex,os
+p=Path(__file__).resolve().parent;r=Path(os.environ.get('FORGECAD_REPO',str(Path.cwd())))
+flags=shlex.split(subprocess.check_output(['pkg-config','--cflags','Qt6Widgets'],text=True))
+libs=shlex.split(subprocess.check_output(['pkg-config','--libs','Qt6Widgets'],text=True))
+mode=sys.argv[1];src=p/'before-cad_sketch_offset.cpp' if mode=='before' else p.parent/'implementation/candidate/cad_sketch_offset.cpp' if mode=='candidate' else r/'cad_sketch_offset.cpp'
+objs=[]
+for name,s in [('offset',src),('solver',r/'cad_curve_solver.cpp'),('public',p/'public.cpp')]:
+ o=p/(name+'-'+mode+'.o');subprocess.run(['c++','-std=c++17','-O2','-fno-fast-math','-ffp-contract=off',*(['-DEXPECT_CERTIFIED=1'] if mode!='before' else []),'-fPIC','-ffunction-sections','-fdata-sections','-I'+str(r),'-I'+str(r/'kernel'),'-I'+str(p),*flags,'-c',str(s),'-o',str(o)],check=True);objs.append(str(o))
+subprocess.run(['c++','-Wl,--gc-sections',*objs,str(r/'forgecad-release/kernel/libforgekernel.a'),*libs,'-lpthread','-o',str(p/('public-'+mode))],check=True)

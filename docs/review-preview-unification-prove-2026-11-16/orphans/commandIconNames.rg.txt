@@ -1,0 +1,4 @@
+Command: rg --hidden -n -w commandIconNames . --glob !docs/** --glob !archivi-locali/** --glob !.git/**
+./cad_icons.h:13:// Icona del comando `name` (vedi commandIconNames); vuota se il nome non esiste.
+./cad_icons.h:15:QStringList commandIconNames();
+./cad_icons.cpp:1634:QStringList commandIconNames() {

@@ -1,0 +1,6 @@
+from pathlib import Path
+import json,shlex,subprocess,hashlib
+r=Path('/home/myungit/Linux_CAD_forFree');o=Path('/tmp/forgecad-k10-next-20261115/independent');f=Path('/tmp/forgecad-k10-20261115/independent');cs=json.loads((r/'forgecad-release/compile_commands.json').read_text());c=next(x for x in cs if x['file'].endswith('/kernel/tests/test_offset_validation.cpp'));cmd=shlex.split(c['command']);cmd[cmd.index('-o')+1]=str(o/'boundary.o');cmd[cmd.index('-c')+1]=str(o/'boundary.cpp');subprocess.run(cmd,cwd=c['directory'],check=True)
+l=r/'forgecad-release/kernel/occt_tests';cmd=shlex.split((l/'CMakeFiles/forgekernel_tests.dir/link.txt').read_text());tail=cmd[cmd.index('../libforgekernel.a'):];tail[0]=str(f/'libforgekernel.baseline.a');subprocess.run([cmd[0],'-o',str(o/'boundary'),str(o/'boundary.o'),str(f/'fk_offset.o'),str(f/'fk_curve_fit_bounds.o')]+tail,cwd=l,check=True)
+(o/'boundary-source.sha256').write_text(hashlib.sha256((r/'kernel/fk_boundary.cpp').read_bytes()).hexdigest()+' kernel/fk_boundary.cpp\n'+(f/'source.sha256').read_text()+(f/'baseline-archive.sha256').read_text())
+with (o/'boundary.log').open('w') as f:subprocess.run([str(o/'boundary')],stdout=f,check=True)

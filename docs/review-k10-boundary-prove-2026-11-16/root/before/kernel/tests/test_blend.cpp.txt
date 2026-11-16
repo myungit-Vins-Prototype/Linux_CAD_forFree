@@ -1,0 +1,2307 @@
+#include <cmath>
+#include <fstream>
+#include <set>
+#include <sstream>
+#include <tuple>
+#include <TopExp_Explorer.hxx>
+#include <Poly_Triangulation.hxx>
+#include <BRep_Tool.hxx>
+#include <BRepMesh_IncrementalMesh.hxx>
+#include <cstdio>
+#include <BRepBuilderAPI_MakeVertex.hxx>
+#include <BRepExtrema_DistShapeShape.hxx>
+#include <BRepFilletAPI_MakeChamfer.hxx>
+#include <BRepFilletAPI_MakeFillet.hxx>
+#include <BRepGProp.hxx>
+#include <BRepPrimAPI_MakeBox.hxx>
+#include <BRepPrimAPI_MakePrism.hxx>
+#include <BRepPrimAPI_MakeCylinder.hxx>
+#include <BRepAlgoAPI_Common.hxx>
+#include <BRepAlgoAPI_Cut.hxx>
+#include <BRepAlgoAPI_Fuse.hxx>
+#include <BRepAdaptor_Surface.hxx>
+#include <BRepLProp_SLProps.hxx>
+#include <BRepTools.hxx>
+#include <GProp_GProps.hxx>
+#include <TopExp.hxx>
+#include <TopTools_IndexedMapOfShape.hxx>
+#include <TopoDS.hxx>
+
+#include "fk_blend.h"
+#include "fk_micro.h"
+#include "fk_body_io.h"
+#include "fk_blend_loop.h"
+#include "fk_blend_surface.h"
+#include "fk_blend_model.h"
+#include "fk_surface_algo.h"
+#include "fk_classify.h"
+#include "fk_curve_algo.h"
+#include "fk_curve_ops.h"
+#include "fk_body_check.h"
+#include "fk_boolean.h"
+#include "fk_extrude.h"
+#include "fk_mass.h"
+#include "fk_loft.h"
+#include "fk_primitives.h"
+#include "fk_revolve.h"
+#include "fk_tessellate.h"
+#include "fk_transform.h"
+#include "fk_test_profiles.h"
+
+using namespace fktest;
+
+namespace {
+
+// Raccordo o smusso degli spigoli per i punti dati: body valido, volume
+// atteso (se > 0) e visualizzazione riuscita. Restituisce il volume.
+double blended(const Body &body, const std::vector<Vec3> &points, double size, bool chamfer, double expected) {
+    std::vector<EdgeId> edges;
+    for (const Vec3 &p : points) {
+        const EdgeId e = nearestEdge(body, p, 1e-6);
+        FK_CHECK(e.valid());
+        if (!e.valid()) return 0.0;
+        edges.push_back(e);
+    }
+    Body result;
+    try {
+        result = blendEdges(body, edges, size, chamfer);
+    } catch (const std::exception &error) {
+        reportFailure(__FILE__, __LINE__, std::string(chamfer ? "smusso " : "raccordo ") + std::to_string(points.front().x()) + " " + std::to_string(points.front().y()) + " " + std::to_string(points.front().z()) + ": " + error.what());
+        return 0.0;
+    }
+    for (const CheckIssue &issue : checkBody(result)) reportFailure(__FILE__, __LINE__, describe(issue.code) + ": " + issue.message);
+    const double volume = massProperties(result).volume;
+    if (expected > 0.0) FK_CHECK_NEAR(volume, expected, 1e-9 * expected);
+    TessellationOptions options;
+    options.deflection = 0.01;
+    FK_CHECK(tessellate(result, options).failedFaces == 0);
+    return volume;
+}
+
+// Volume OCCT del parallelepipedo [0, a] x [0, b] x [0, c] con gli spigoli per i punti dati raccordati o smussati.
+double occtBox(double a, double b, double c, const std::vector<Vec3> &points, double size, bool chamfer) {
+    const TopoDS_Shape box = BRepPrimAPI_MakeBox(a, b, c).Shape();
+    TopTools_IndexedMapOfShape edges;
+    TopExp::MapShapes(box, TopAbs_EDGE, edges);
+    auto nearest = [&](const Vec3 &p) {
+        const TopoDS_Shape vertex = BRepBuilderAPI_MakeVertex(gp_Pnt(p.x(), p.y(), p.z())).Shape();
+        int best = 1;
+        double closest = 1e300;
+        for (int i = 1; i <= edges.Extent(); ++i) {
+            BRepExtrema_DistShapeShape distance(vertex, edges(i));
+            if (distance.Value() < closest) {
+                closest = distance.Value();
+                best = i;
+            }
+        }
+        return TopoDS::Edge(edges(best));
+    };
+    TopoDS_Shape result;
+    if (chamfer) {
+        BRepFilletAPI_MakeChamfer maker(box);
+        for (const Vec3 &p : points) maker.Add(size, nearest(p));
+        result = maker.Shape();
+    } else {
+        BRepFilletAPI_MakeFillet maker(box);
+        for (const Vec3 &p : points) maker.Add(size, nearest(p));
+        result = maker.Shape();
+    }
+    GProp_GProps props;
+    BRepGProp::VolumeProperties(result, props, 1e-12);
+    return props.Mass();
+}
+
+// Solido del nuovo kernel e lo stesso in OCCT (estrusione del profilo lungo Z).
+struct Operand {
+    Body body;
+    TopoDS_Shape shape;
+};
+
+Operand extrusion(const std::vector<ProfileSegment> &segments, double height) {
+    const ProfileRegion region = buildProfile(segments, 1e-9).regions.front();
+    return {makeExtrusion(Frame3(), region, height),
+            BRepPrimAPI_MakePrism(occtFace(region, Frame3()), gp_Vec(0.0, 0.0, height)).Shape()};
+}
+
+std::vector<ProfileSegment> polygon(const std::vector<Vec2> &points) {
+    std::vector<ProfileSegment> segments;
+    for (std::size_t i = 0; i < points.size(); ++i) segments.push_back(lineSegment(points[i], points[(i + 1) % points.size()]));
+    return segments;
+}
+
+LoftSection splitCircleAt(double z, double radius) {
+    LoftSection section;
+    section.frame = Frame3(Vec3(0, 0, z), Vec3(0, 0, 1), Vec3(1, 0, 0));
+    for (int quarter = 0; quarter < 4; ++quarter)
+        section.loop.segments.push_back(arcSegment(Vec2(0, 0), radius, quarter * kHalfPi, (quarter + 1) * kHalfPi));
+    return section;
+}
+
+// Forma OCCT con gli spigoli per i punti dati raccordati o smussati (nulla se OCCT fallisce).
+TopoDS_Shape occtBlendedShape(const TopoDS_Shape &shape, const std::vector<Vec3> &points, double size, bool chamfer) {
+    TopTools_IndexedMapOfShape edges;
+    TopExp::MapShapes(shape, TopAbs_EDGE, edges);
+    auto nearest = [&](const Vec3 &p) {
+        const TopoDS_Shape vertex = BRepBuilderAPI_MakeVertex(gp_Pnt(p.x(), p.y(), p.z())).Shape();
+        int best = 1;
+        double closest = 1e300;
+        for (int i = 1; i <= edges.Extent(); ++i) {
+            BRepExtrema_DistShapeShape distance(vertex, edges(i));
+            if (distance.Value() < closest) {
+                closest = distance.Value();
+                best = i;
+            }
+        }
+        return TopoDS::Edge(edges(best));
+    };
+    try {
+        if (chamfer) {
+            BRepFilletAPI_MakeChamfer maker(shape);
+            for (const Vec3 &p : points) maker.Add(size, nearest(p));
+            return maker.Shape();
+        }
+        BRepFilletAPI_MakeFillet maker(shape);
+        for (const Vec3 &p : points) maker.Add(size, nearest(p));
+        return maker.Shape();
+    } catch (const Standard_Failure &) {
+        return {};
+    }
+}
+
+// Volume OCCT (BRepGProp adattivo) della forma raccordata, 0 se OCCT fallisce.
+double occtBlended(const TopoDS_Shape &shape, const std::vector<Vec3> &points, double size, bool chamfer) {
+    const TopoDS_Shape result = occtBlendedShape(shape, points, size, chamfer);
+    if (result.IsNull()) return 0.0;
+    GProp_GProps props;
+    BRepGProp::VolumeProperties(result, props, 1e-12);
+    return props.Mass();
+}
+
+// Volume della tassellazione fine di OCCT: il terzo parere sui prismi estrusi
+// da spline, dove BRepGProp sbaglia anche dell'1% (vedi CLAUDE.md).
+double meshVolume(const TopoDS_Shape &shape) {
+    BRepMesh_IncrementalMesh mesh(shape, 2e-4, false, 0.02);
+    double volume = 0.0;
+    for (TopExp_Explorer faces(shape, TopAbs_FACE); faces.More(); faces.Next()) {
+        const TopoDS_Face &face = TopoDS::Face(faces.Current());
+        TopLoc_Location location;
+        const Handle(Poly_Triangulation) triangulation = BRep_Tool::Triangulation(face, location);
+        if (triangulation.IsNull()) continue;
+        for (int t = 1; t <= triangulation->NbTriangles(); ++t) {
+            int n1, n2, n3;
+            triangulation->Triangle(t).Get(n1, n2, n3);
+            if (face.Orientation() == TopAbs_REVERSED) std::swap(n2, n3);
+            const gp_Pnt p1 = triangulation->Node(n1).Transformed(location), p2 = triangulation->Node(n2).Transformed(location),
+                         p3 = triangulation->Node(n3).Transformed(location);
+            volume += gp_Vec(p1.XYZ()).Dot(gp_Vec(p2.XYZ()).Crossed(gp_Vec(p3.XYZ()))) / 6.0;
+        }
+    }
+    return volume;
+}
+
+// Volume tolto (o aggiunto, negativo) da OCCT secondo le tassellazioni fini, NaN se OCCT fallisce.
+double occtRemoved(const TopoDS_Shape &shape, const std::vector<Vec3> &points, double size, bool chamfer) {
+    const TopoDS_Shape result = occtBlendedShape(shape, points, size, chamfer);
+    if (result.IsNull()) return std::nan("");
+    return meshVolume(shape) - meshVolume(result);
+}
+
+// Punti medi degli edge di una faccia piana a quota z (per scegliere tutti i suoi bordi).
+std::vector<Vec3> edgesAtHeight(const Body &body, double z) {
+    std::vector<Vec3> points;
+    for (EdgeId e : body.edges()) {
+        const Edge &edge = body.edge(e);
+        const Vec3 p = edge.curve->point(0.5 * (edge.range.lo + edge.range.hi));
+        if (std::fabs(p.z() - z) < 1e-9 && std::fabs(edge.curve->point(edge.range.lo).z() - z) < 1e-9) points.push_back(p);
+    }
+    return points;
+}
+
+// Volume del solido generato ruotando attorno all'asse la zona tra un angolo
+// retto (spigolo in (rho, z)) e il raccordo di raggio r (Pappus).
+double ringVolume(double rho, double r, bool inward) {
+    // Quadrato r x r meno il quarto di cerchio: baricentri radiali dal lato del centro del cerchio.
+    const double side = inward ? -1.0 : 1.0;  // il centro del cerchio sta a rho + side r
+    const double square = r * r, quarter = kPi * r * r / 4.0;
+    const double squareRho = rho + side * r / 2.0, quarterRho = rho + side * (r - 4.0 * r / (3.0 * kPi));
+    return kTwoPi * (square * squareRho - quarter * quarterRho);
+}
+
+}
+
+FK_TEST(BlendBoxEdges) {
+    const double a = 10, b = 6, c = 4, r = 1.0;
+    const Body box = makeBox(Frame3(), a, b, c);
+    const double v = a * b * c;
+    // Un raccordo e uno smusso sullo spigolo superiore lungo x.
+    blended(box, {Vec3(5, 0, 4)}, r, false, v - (1.0 - kPi / 4.0) * r * r * a);
+    blended(box, {Vec3(5, 0, 4)}, r, true, v - 0.5 * r * r * a);
+    FK_CHECK_NEAR(occtBox(a, b, c, {Vec3(5, 0, 4)}, r, false), v - (1.0 - kPi / 4.0) * r * r * a, 1e-6);
+    // Due spigoli che si incontrano in un vertice: come OCCT.
+    for (bool chamfer : {false, true}) {
+        const std::vector<Vec3> two{Vec3(5, 0, 4), Vec3(10, 3, 4)};
+        const double ours = blended(box, two, r, chamfer, 0.0);
+        FK_CHECK_NEAR(ours, occtBox(a, b, c, two, r, chamfer), 1e-6);
+    }
+    // Spigoli paralleli e uno verticale.
+    const std::vector<Vec3> apart{Vec3(5, 0, 4), Vec3(5, 6, 0)};
+    blended(box, apart, 0.5, false, v - (1.0 - kPi / 4.0) * 0.25 * (a + a));
+    // Tre spigoli in un vertice: la pezza d'angolo (ottante di sfera per il
+    // raccordo, triangolo per lo smusso), come OCCT.
+    const std::vector<Vec3> three{Vec3(5, 0, 4), Vec3(10, 3, 4), Vec3(10, 0, 2)};
+    const double corner = (1.0 - kPi / 4.0) * r * r * ((a - r) + (b - r) + (c - r)) + r * r * r * (1.0 - kPi / 6.0);
+    blended(box, three, r, false, v - corner);
+    FK_CHECK_NEAR(occtBox(a, b, c, three, r, false), v - corner, 1e-6);
+    FK_CHECK_NEAR(blended(box, three, r, true, 0.0), occtBox(a, b, c, three, r, true), 1e-6);
+    // Tutti gli spigoli: otto angoli.
+    std::vector<Vec3> all;
+    for (EdgeId e : box.edges()) all.push_back(box.edge(e).curve->point(0.5 * (box.edge(e).range.lo + box.edge(e).range.hi)));
+    const double q = 0.75;
+    const double rounded = v - (1.0 - kPi / 4.0) * q * q * 4.0 * ((a - 2 * q) + (b - 2 * q) + (c - 2 * q)) - 8.0 * q * q * q * (1.0 - kPi / 6.0);
+    blended(box, all, q, false, rounded);
+    FK_CHECK_NEAR(occtBox(a, b, c, all, q, false), rounded, 1e-6);
+    FK_CHECK_NEAR(blended(box, all, q, true, 0.0), occtBox(a, b, c, all, q, true), 1e-6);
+}
+
+FK_TEST(BlendConcaveAndCurvedEdges) {
+    // Profilo a L estruso: lo spigolo interno (concavo) riceve materiale.
+    const double h = 5.0, r = 0.8;
+    const Body ell = makeExtrusion(Frame3(), buildProfile({lineSegment(Vec2(0, 0), Vec2(6, 0)), lineSegment(Vec2(6, 0), Vec2(6, 2)),
+                                                           lineSegment(Vec2(6, 2), Vec2(2, 2)), lineSegment(Vec2(2, 2), Vec2(2, 5)),
+                                                           lineSegment(Vec2(2, 5), Vec2(0, 5)), lineSegment(Vec2(0, 5), Vec2(0, 0))}, 1e-9)
+                                                  .regions.front(), h);
+    const double vEll = (12.0 + 6.0) * h;
+    blended(ell, {Vec3(2, 2, 2.5)}, r, false, vEll + (1.0 - kPi / 4.0) * r * r * h);
+    blended(ell, {Vec3(2, 2, 2.5)}, r, true, vEll + 0.5 * r * r * h);
+    // Cilindro: bordo superiore (toro) e smusso (cono).
+    const double R = 3.0, H = 4.0, q = 0.5;
+    const Body cylinder = makeCylinder(Frame3(Vec3(1, 2, 3), Vec3(0, 0, 1), Vec3(1, 0, 0)), R, H);
+    const double vCyl = kPi * R * R * H;
+    blended(cylinder, {Vec3(1 + R, 2, 3 + H)}, q, false, vCyl - ringVolume(R, q, true));
+    blended(cylinder, {Vec3(1 + R, 2, 3 + H)}, q, true, vCyl - kTwoPi * (R - q / 3.0) * q * q / 2.0);
+    // Foro in un blocco: il bordo del foro (convesso) e il cilindro con un
+    // bordo piano (profilo a D: spigolo rettilineo tra piano e cilindro).
+    const Body block = booleanOperation(makeBox(Frame3(), 10, 10, 4), makeCylinder(Frame3(Vec3(5, 5, -1), Vec3(0, 0, 1), Vec3(1, 0, 0)), 2.0, 6.0),
+                                        BooleanOperation::Subtract);
+    blended(block, {Vec3(7, 5, 4)}, q, false, 400.0 - kPi * 4.0 * 4.0 - ringVolume(2.0, q, false));
+    // Perno unito sopra un blocco: lo spigolo alla base (concavo, circolare) riceve un raccordo.
+    const Body boss = booleanOperation(makeBox(Frame3(), 10, 10, 4), makeCylinder(Frame3(Vec3(5, 5, 4), Vec3(0, 0, 1), Vec3(1, 0, 0)), 2.0, 3.0),
+                                       BooleanOperation::Unite);
+    blended(boss, {Vec3(7, 5, 4)}, q, false, 400.0 + kPi * 4.0 * 3.0 + ringVolume(2.0, q, false));
+    const Body dee = makeExtrusion(Frame3(), buildProfile({arcSegment(Vec2(0, 0), 3.0, -kHalfPi, kHalfPi), lineSegment(Vec2(0, 3), Vec2(0, -3))}, 1e-9)
+                                                 .regions.front(), 4.0);
+    const double vDee = 0.5 * kPi * 9.0 * 4.0;
+    const double ours = blended(dee, {Vec3(0, 3, 2)}, q, false, 0.0);
+    FK_CHECK(ours < vDee && ours > vDee - q * q * 4.0);
+}
+
+FK_TEST(BlendSphericalSupportLeavesNoDetachedRing) {
+    // Caso minimo di Raccordo 10: una sfera unitaria tagliata a z=-0,5.
+    // Una sola corda nell'utensile scostato lascia una shell sfera/cono
+    // separata a R0,6, valida per checkBody ma estranea al raccordo.
+    const Vec2 corner(std::sqrt(0.75), -0.5), top(0, 1), axis(0, -0.5);
+    const Body source = makeRevolution(Frame3(), buildProfile({
+        arcSegment(Vec2(), 1, -kPi / 6, kHalfPi), lineSegment(top, axis), lineSegment(axis, corner)}, 1e-9).regions.front());
+    for (int mode : {0, 1}) {
+        const Transform3 transform = mode == 0 ? Transform3() : Transform3::rotation(Vec3(1, 2, 3), normalized(Vec3(1, 2, 1)), 0.7);
+        const Body body = transformBody(source, transform);
+        const auto original = writeBodyBinary(body);
+        const EdgeId edge = nearestEdge(body, transform.applyToPoint(Vec3(corner.x(), 0, corner.y())), 1e-8);
+        FK_CHECK(edge.valid());
+        if (!edge.valid()) continue;
+        for (bool chamfer : {false, true}) for (double radius : {0.1, 0.3, 0.6}) {
+            // Profilo atteso indipendente dall'utensile e dalla booleana:
+            // cerchio tangente a piano/sfera, oppure corda dello smusso.
+            Vec2 center, contact, bottom;
+            double angle;
+            if (chamfer) {
+                angle = -kPi / 6 + 2 * std::asin(radius / 2);
+                contact = Vec2(std::cos(angle), std::sin(angle));
+                bottom = Vec2(corner.x() - radius, -0.5);
+            } else {
+                center = Vec2(std::sqrt(0.75 - radius), radius - 0.5);
+                contact = center / (1 - radius);
+                angle = std::atan2(contact.y(), contact.x());
+                bottom = Vec2(center.x(), -0.5);
+            }
+            std::vector<ProfileSegment> profile{arcSegment(Vec2(), 1, angle, kHalfPi),
+                lineSegment(top, axis), lineSegment(axis, bottom)};
+            profile.push_back(chamfer ? lineSegment(bottom, contact) : arcSegment(center, radius, -kHalfPi, angle));
+            const Body expected = makeRevolution(Frame3(), buildProfile(profile, 1e-9).regions.front());
+            BodyHistory history;
+            const Body result = blendEdges(body, {edge}, radius, chamfer, &history);
+            FK_CHECK(result.shells().size() == 1);
+            FK_CHECK(result.faces().size() == 3);
+            CheckOptions checks; checks.loopCrossings = true;
+            FK_CHECK(checkBody(result, checks).empty());
+            FK_CHECK_NEAR(massProperties(result).volume, massProperties(expected).volume, 1e-8);
+            int generated = 0;
+            for (FaceId f : result.faces()) {
+                const Surface &surface = *result.face(f).surface;
+                if (surface.type() == (chamfer ? SurfaceType::Cone : SurfaceType::Torus)) {
+                    ++generated;
+                    if (!chamfer) FK_CHECK_NEAR(static_cast<const ToroidalSurface &>(surface).minorRadius(), radius, 1e-12);
+                } else FK_CHECK(surface.type() == SurfaceType::Sphere || surface.type() == SurfaceType::Plane);
+            }
+            FK_CHECK(generated == 1);
+            FK_CHECK(history.generated(EntityKind::Face, EntityKind::Edge, 0, edge.index).size() == 1);
+            for (EdgeId e : result.edges()) FK_CHECK(!result.isLaminar(e));
+            const auto mesh = tessellate(result, {});
+            FK_CHECK(mesh.failedFaces == 0 && mesh.faces.size() == 3);
+            const Body reread = readBodyBinary(writeBodyBinary(result));
+            FK_CHECK(reread.shells().size() == 1 && reread.faces().size() == 3 && checkBody(reread, checks).empty());
+            FK_CHECK(writeBodyBinary(body) == original);
+        }
+    }
+}
+
+FK_TEST(BlendTangentChains) {
+    // Rettangolo con gli angoli arrotondati: il bordo superiore e' una catena
+    // di segmenti e archi tangenti (gli archi sono spigoli circolari aperti,
+    // le zone finiscono nei piani normali agli spigoli nei vertici di tangenza).
+    const double w = 10.0, d = 6.0, R = 1.5, h = 3.0, r = 0.5;
+    const Operand slab = extrusion(roundedRectangle(Vec2(0, 0), w, d, R), h);
+    const double waste = (1.0 - kPi / 4.0) * r * r, straight = 2.0 * (w - 2.0 * R) + 2.0 * (d - 2.0 * R);
+    const double vSlab = (w * d - (4.0 - kPi) * R * R) * h;
+    const std::vector<Vec3> top = edgesAtHeight(slab.body, h);
+    FK_CHECK(top.size() == 8);
+    blended(slab.body, top, r, false, vSlab - waste * straight - ringVolume(R, r, true));
+    FK_CHECK_NEAR(occtBlended(slab.shape, top, r, false), vSlab - waste * straight - ringVolume(R, r, true), 1e-6);
+    const double chamferRing = kTwoPi * (R - r / 3.0) * r * r / 2.0;
+    blended(slab.body, top, r, true, vSlab - 0.5 * r * r * straight - chamferRing);
+    // Un solo arco: il raccordo prosegue per tangenza su tutto il bordo (come nei CAD e in OCCT).
+    blended(slab.body, {Vec3(w - R + R * std::cos(0.25 * kPi), d - R + R * std::sin(0.25 * kPi), h)}, r, false, vSlab - waste * straight - ringVolume(R, r, true));
+
+    // Tasca con gli angoli arrotondati in un blocco: il bordo (convesso, gli
+    // archi su cilindri concavi) e il fondo (concavo: il raccordo aggiunge materiale).
+    const double depth = 2.0;
+    const Body block = makeBox(Frame3(), 14.0, 10.0, 5.0);
+    const Body pocket = booleanOperation(block, makeExtrusion(Frame3(Vec3(2, 2, 5.0 - depth), Vec3(0, 0, 1), Vec3(1, 0, 0)),
+                                                              buildProfile(roundedRectangle(Vec2(0, 0), w, d, R), 1e-9).regions.front(), depth + 1.0),
+                                         BooleanOperation::Subtract);
+    const double vPocket = 14.0 * 10.0 * 5.0 - (w * d - (4.0 - kPi) * R * R) * depth;
+    std::vector<Vec3> rim, floor;
+    for (const Vec3 &p : edgesAtHeight(pocket, 5.0))
+        if (p.x() > 0.5 && p.x() < 13.5 && p.y() > 0.5 && p.y() < 9.5) rim.push_back(p);
+    floor = edgesAtHeight(pocket, 5.0 - depth);
+    FK_CHECK(rim.size() == 8 && floor.size() == 8);
+    blended(pocket, rim, r, false, vPocket - waste * straight - ringVolume(R, r, false));
+    blended(pocket, floor, r, false, vPocket + waste * straight + ringVolume(R, r, true));
+}
+
+FK_TEST(BlendRoundedPlateWithPolygonalHoles) {
+    // Bordo esterno misto archi/segmenti e 18 fori rettangolari nella stessa
+    // faccia: il recupero a catene piane deve includere anche i loop senza archi.
+    const double w = 120.0, d = 80.0, corner = 8.0, h = 4.0, r = 2.0;
+    std::vector<ProfileSegment> segments = roundedRectangle(Vec2(0, 0), w, d, corner);
+    for (int row = 0; row < 3; ++row) for (int column = 0; column < 6; ++column) {
+        const double x = 18.0 + 16.0 * column, y = 12.0 + 22.0 * row;
+        const auto hole = polygon({Vec2(x, y), Vec2(x + 6.0, y), Vec2(x + 6.0, y + 14.0), Vec2(x, y + 14.0)});
+        segments.insert(segments.end(), hole.begin(), hole.end());
+    }
+    const auto profile = buildProfile(segments, 1e-9);
+    FK_CHECK(profile.regions.size() == 1 && profile.regions.front().holes.size() == 18);
+    const Body base = makeExtrusion(Frame3(), profile.regions.front(), h);
+    std::vector<EdgeId> selected;
+    for (const Vec3 &p : edgesAtHeight(base, h)) selected.push_back(nearestEdge(base, p, 1e-7));
+    FK_CHECK(selected.size() == 80);
+    const std::string original = writeBodyBinary(base);
+    const Body rounded = blendEdges(base, selected, r, false);
+    FK_CHECK(writeBodyBinary(base) == original);
+    FK_CHECK(checkBody(rounded, {true, true}).empty());
+    for (EdgeId e : rounded.edges()) FK_CHECK(!rounded.isLaminar(e));
+    // 80 raccordi, senza perdere fori o raccordare involontariamente il fondo.
+    FK_CHECK(rounded.faces().size() == base.faces().size() + selected.size());
+    FaceId cap;
+    for (FaceId f : rounded.faces()) {
+        const auto *plane = dynamic_cast<const Plane *>(rounded.face(f).surface.get());
+        if (plane && std::fabs(plane->frame().origin().z() - h) < 1e-9) cap = f;
+    }
+    FK_CHECK(cap.valid());
+    if (cap.valid()) FK_CHECK(rounded.face(cap).loops.size() == 19);
+    // Volume indipendente: sezione orizzontale con esterno contratto e fori
+    // rettangolari allargati di inset; Simpson sulla fascia del quarto di cerchio.
+    const auto sectionArea = [&](double inset) {
+        return (w - 2.0 * inset) * (d - 2.0 * inset)
+            - (4.0 - kPi) * (corner - inset) * (corner - inset)
+            - 18.0 * (6.0 + 2.0 * inset) * (14.0 + 2.0 * inset);
+    };
+    const int intervals = 2048;
+    const double step = kHalfPi / intervals;
+    double sum = 0.0;
+    for (int i = 0; i <= intervals; ++i) {
+        const double theta = i * step;
+        sum += (i == 0 || i == intervals ? 1 : i % 2 ? 4 : 2)
+            * sectionArea(r * (1.0 - std::cos(theta))) * r * std::cos(theta);
+    }
+    const double expected = sectionArea(0.0) * (h - r) + sum * step / 3.0;
+    FK_CHECK_NEAR(massProperties(rounded).volume, expected, 1e-8 * expected);
+    const auto mesh = tessellate(rounded, {});
+    FK_CHECK(mesh.failedFaces == 0 && mesh.faces.size() == rounded.faces().size());
+    const Body reopened = readBodyBinary(writeBodyBinary(rounded));
+    FK_CHECK(checkBody(reopened, {true, true}).empty());
+    FK_CHECK_NEAR(massProperties(reopened).volume, expected, 1e-8 * expected);
+}
+
+FK_TEST(BlendRadiusEqualsCornerRadius) {
+    // Raggio del raccordo uguale a quello degli angoli arrotondati: negli
+    // angoli il toro degenera in una sfera (centro sull'asse dell'arco) e le
+    // sezioni dei segmenti arrivano nel suo polo. Da 1476.prt (bordo superiore,
+    // angoli R 7 e raccordo R 7): la booleana con l'utensile cucito andava in
+    // crash (SP-curve mancante dereferenziata).
+    const double w = 10.0, d = 6.0, R = 1.5, h = 3.0;
+    const Operand slab = extrusion(roundedRectangle(Vec2(0, 0), w, d, R), h);
+    const double straight = 2.0 * (w - 2.0 * R) + 2.0 * (d - 2.0 * R);
+    const double vSlab = (w * d - (4.0 - kPi) * R * R) * h;
+    const std::vector<Vec3> top = edgesAtHeight(slab.body, h);
+    FK_CHECK(top.size() == 8);
+    blended(slab.body, top, R, false, vSlab - (1.0 - kPi / 4.0) * R * R * straight - ringVolume(R, R, true));
+}
+
+FK_TEST(BlendOpenArcsAndObliqueEnds) {
+    // Profilo a D: l'arco superiore finisce contro la faccia piana per l'asse.
+    const double R = 3.0, h = 4.0, q = 0.5;
+    const Operand dee = extrusion({arcSegment(Vec2(0, 0), R, -kHalfPi, kHalfPi), lineSegment(Vec2(0, R), Vec2(0, -R))}, h);
+    const double vDee = 0.5 * kPi * R * R * h;
+    blended(dee.body, {Vec3(R, 0, h)}, q, false, vDee - 0.5 * ringVolume(R, q, true));
+    FK_CHECK_NEAR(occtBlended(dee.shape, {Vec3(R, 0, h)}, q, false), vDee - 0.5 * ringVolume(R, q, true), 1e-6);
+    blended(dee.body, {Vec3(R, 0, h)}, q, true, vDee - 0.5 * kTwoPi * (R - q / 3.0) * q * q / 2.0);
+
+    // Prisma trapezoidale: gli spigoli superiori finiscono contro fianchi obliqui.
+    const Operand trapezoid = extrusion(polygon({Vec2(0, 0), Vec2(10, 0), Vec2(8, 5), Vec2(1, 5)}), 3.0);
+    const double vTrapezoid = 0.5 * (10.0 + 7.0) * 5.0 * 3.0, r = 0.6;
+    const std::vector<Vec3> bottomEdge{Vec3(5, 0, 3)};
+    for (bool chamfer : {false, true}) {
+        // Un solo spigolo: la zona tagliata dai fianchi obliqui.
+        const double ours = blended(trapezoid.body, bottomEdge, r, chamfer, 0.0);
+        FK_CHECK_NEAR(ours, occtBlended(trapezoid.shape, bottomEdge, r, chamfer), 1e-6);
+        FK_CHECK(ours < vTrapezoid);
+    }
+    // Tutti i bordi della faccia superiore (angoli non retti) e un angolo con
+    // tre spigoli tra piani non ortogonali (pezza sferica o triangolo).
+    const std::vector<Vec3> top = edgesAtHeight(trapezoid.body, 3.0);
+    FK_CHECK(top.size() == 4);
+    const std::vector<Vec3> corner{Vec3(5, 0, 3), Vec3(9, 2.5, 3), Vec3(10, 0, 1.5)};
+    for (bool chamfer : {false, true})
+        FK_CHECK_NEAR(blended(trapezoid.body, top, r, chamfer, 0.0), occtBlended(trapezoid.shape, top, r, chamfer), 1e-6);
+    FK_CHECK_NEAR(blended(trapezoid.body, corner, r, false, 0.0), occtBlended(trapezoid.shape, corner, r, false), 1e-6);
+    // Smusso d'angolo tra piani non ortogonali: OCCT vi mette una pezza
+    // B-spline di riempimento, il nuovo kernel il triangolo piano per i punti
+    // in cui si incontrano i bordi degli smussi (come OCCT negli angoli retti).
+    const double chamfered = blended(trapezoid.body, corner, r, true, 0.0);
+    FK_CHECK(std::fabs(chamfered - occtBlended(trapezoid.shape, corner, r, true)) < 0.02);
+
+    // Arco e segmento che si incontrano ad angolo (non tangenti): bordo superiore del profilo a D.
+    const std::vector<Vec3> rim{Vec3(R, 0, h), Vec3(0, 0, h)};
+    for (bool chamfer : {false, true})
+        FK_CHECK_NEAR(blended(dee.body, rim, q, chamfer, 0.0), occtBlended(dee.shape, rim, q, chamfer), 1e-6);
+}
+
+namespace {
+
+// Area e momento (rispetto allo spigolo, lungo la faccia piana) della zona
+// tolta o aggiunta in sezione: raccordo di raggio r, smusso a distanza d.
+void wasteSection(double size, bool chamfer, double &area, double &moment) {
+    if (chamfer) {
+        area = 0.5 * size * size;
+        moment = size * size * size / 6.0;
+    } else {
+        area = (1.0 - kPi / 4.0) * size * size;
+        moment = size * size * size * (5.0 / 6.0 - kPi / 4.0);
+    }
+}
+
+// Volume spazzato dalla sezione lungo il bordo (Pappus-Guldino locale):
+// A L - M * (rotazione della tangente verso la faccia piana).
+double sweptVolume(double size, bool chamfer, double length, double turning) {
+    double area, moment;
+    wasteSection(size, chamfer, area, moment);
+    return area * length - moment * turning;
+}
+
+ProfileSegment ellipseSegment(const Vec2 &center, double a, double b) {
+    return {std::make_shared<Ellipse<2>>(makeEllipse(center, a, b)), {0.0, kTwoPi}};
+}
+
+double profileLength(const std::vector<ProfileSegment> &segments) {
+    double length = 0.0;
+    for (const ProfileSegment &s : segments) length += arcLength(*s.curve, s.range);
+    return length;
+}
+
+}
+
+FK_TEST(BlendFreeformClosedEdges) {
+    // Cilindro ellittico: il bordo superiore e' un'ellisse (un solo edge chiuso).
+    const double a = 3.0, b = 2.0, h = 4.0;
+    const std::vector<ProfileSegment> ellipse{ellipseSegment(Vec2(0, 0), a, b)};
+    const Operand cylinder = extrusion(ellipse, h);
+    const double v = kPi * a * b * h, L = profileLength(ellipse);
+    for (bool chamfer : {false, true}) {
+        const double r = 0.4;
+        const double expected = v - sweptVolume(r, chamfer, L, kTwoPi);
+        const double ours = blended(cylinder.body, {Vec3(a, 0, h)}, r, chamfer, expected);
+        const double occt = occtBlended(cylinder.shape, {Vec3(a, 0, h)}, r, chamfer);
+        FK_CHECK(occt == 0.0 || std::fabs(ours - occt) < 1e-5 * v);
+        // Entrambi i bordi (sopra e sotto).
+        blended(cylinder.body, {Vec3(a, 0, h), Vec3(0, b, 0)}, r, chamfer, v - 2.0 * sweptVolume(r, chamfer, L, kTwoPi));
+    }
+    // Spline chiusa liscia (tangente continua anche nel punto di chiusura).
+    const std::vector<Vec2> poles{Vec2(3, 0), Vec2(3, 2), Vec2(1, 3), Vec2(-2, 2.5), Vec2(-3, 0), Vec2(-2, -2.5), Vec2(1, -3), Vec2(3, -2), Vec2(3, 0)};
+    const auto spline = std::make_shared<BSplineCurve<2>>(3, std::vector<double>{0, 0, 0, 0, 1. / 6, 2. / 6, 3. / 6, 4. / 6, 5. / 6, 1, 1, 1, 1}, poles);
+    const std::vector<ProfileSegment> blob{{spline, spline->domain()}};
+    const Operand smooth = extrusion(blob, 2.0);
+    const double vBlob = area(buildProfile(blob, 1e-9).regions.front()) * 2.0, lBlob = profileLength(blob);
+    const Vec3 onTop = embedCurve(std::make_shared<BSplineCurve<2>>(*spline), Frame3(Vec3(0, 0, 2), Vec3(0, 0, 1), Vec3(1, 0, 0)))->point(0.3);
+    for (bool chamfer : {false, true}) {
+        const double ours = blended(smooth.body, {onTop}, 0.3, chamfer, vBlob - sweptVolume(0.3, chamfer, lBlob, kTwoPi));
+        // OCCT (tassellazione fine: BRepGProp sbaglia sui prismi da spline) a meno del rumore della mesh.
+        if (!chamfer) {
+            const double occt = occtRemoved(smooth.shape, {onTop}, 0.3, chamfer);
+            FK_CHECK(std::isnan(occt) || std::fabs((vBlob - ours) - occt) < 5e-3 * (vBlob - ours));
+        }
+    }
+    // Tasca ellittica in un blocco: il bordo (convesso, il foro gira dall'altra
+    // parte) toglie A L + 2 pi M, il fondo (concavo) aggiunge A L - 2 pi M.
+    const double depth = 2.0, r = 0.3;
+    const Body block = booleanOperation(makeBox(Frame3(), 10, 8, 4),
+                                        makeExtrusion(Frame3(Vec3(5, 4, 4.0 - depth), Vec3(0, 0, 1), Vec3(1, 0, 0)),
+                                                      buildProfile({ellipseSegment(Vec2(0, 0), a, b)}, 1e-9).regions.front(), depth + 1.0),
+                                        BooleanOperation::Subtract);
+    const double vBlock = 320.0 - kPi * a * b * depth;
+    blended(block, {Vec3(5 + a, 4, 4)}, r, false, vBlock - sweptVolume(r, false, L, -kTwoPi));
+    blended(block, {Vec3(5 + a, 4, 4.0 - depth)}, r, false, vBlock + sweptVolume(r, false, L, kTwoPi));
+}
+
+FK_TEST(BlendFreeformOpenEdges) {
+    // Profilo "a lapide": una spline sopra (tangenti orizzontali agli estremi)
+    // tra due lati verticali. La spline da sola finisce contro i fianchi piani
+    // normali a essa; la tangente non ruota in totale, quindi il volume tolto e' A L.
+    const auto top = std::make_shared<BSplineCurve<2>>(
+        3, std::vector<double>{0, 0, 0, 0, 0.5, 0.5, 0.5, 1, 1, 1, 1},
+        std::vector<Vec2>{Vec2(6, 4), Vec2(5, 4), Vec2(4.5, 5.5), Vec2(3, 5.5), Vec2(1.5, 5.5), Vec2(1, 4), Vec2(0, 4)});
+    const std::vector<ProfileSegment> profile{lineSegment(Vec2(0, 0), Vec2(6, 0)), lineSegment(Vec2(6, 0), Vec2(6, 4)), {top, top->domain()},
+                                              lineSegment(Vec2(0, 4), Vec2(0, 0))};
+    const double h = 3.0;
+    const Operand stone = extrusion(profile, h);
+    const double v = area(buildProfile(profile, 1e-9).regions.front()) * h, L = arcLength(*top, top->domain());
+    const Vec3 onTop(3, 5.5, h);
+    for (bool chamfer : {false, true}) blended(stone.body, {onTop}, 0.4, chamfer, v - sweptVolume(0.4, chamfer, L, 0.0));
+    const double occt = occtRemoved(stone.shape, {onTop}, 0.4, false);
+    FK_CHECK(std::isnan(occt) || std::fabs(sweptVolume(0.4, false, L, 0.0) - occt) < 5e-3 * occt);
+    // Tutto il bordo superiore: angoli vivi tra la spline e i lati (a mitra).
+    // OCCT qui non da' un risultato affidabile (il raccordo esce sbagliato):
+    // gli angoli vivi si verificano sotto, sugli spigoli rettilinei, contro il
+    // percorso delle booleane (a sua volta uguale a OCCT).
+    const std::vector<Vec3> rim{onTop, Vec3(3, 0, h), Vec3(6, 2, h), Vec3(0, 2, h)};
+    for (bool chamfer : {false, true}) {
+        const double removed = v - blended(stone.body, rim, 0.4, chamfer, 0.0);
+        FK_CHECK(removed > sweptVolume(0.4, chamfer, L + 6.0 + 8.0, 0.0) - 1.0 && removed < sweptVolume(0.4, chamfer, L + 6.0 + 8.0, 0.0));
+    }
+}
+
+namespace {
+
+// Le catene del nuovo percorso (blendPlanarChains) anche su segmenti e archi,
+// contro il percorso con le booleane (blendEdges, verificato con OCCT).
+void compareChains(const Body &body, const std::vector<Vec3> &points, double size) {
+    std::vector<EdgeId> edges;
+    for (const Vec3 &p : points) edges.push_back(nearestEdge(body, p, 1e-6));
+    for (bool chamfer : {false, true}) {
+        const double reference = blended(body, points, size, chamfer, 0.0);
+        try {
+            const Body chains = blendPlanarChains(body, edges, size, chamfer);
+            for (const CheckIssue &issue : checkBody(chains)) reportFailure(__FILE__, __LINE__, describe(issue.code) + ": " + issue.message);
+            FK_CHECK_NEAR(massProperties(chains).volume, reference, 1e-8 * reference);
+            TessellationOptions options;
+            options.deflection = 0.01;
+            FK_CHECK(tessellate(chains, options).failedFaces == 0);
+        } catch (const std::exception &error) {
+            reportFailure(__FILE__, __LINE__, std::string(chamfer ? "catene smusso " : "catene raccordo ") + std::to_string(points.size()) + ": " + error.what());
+        }
+    }
+}
+
+}
+
+FK_TEST(BlendChainsMatchBooleanPath) {
+    // Faccia superiore di un parallelepipedo: quattro angoli vivi (a mitra).
+    const Body box = makeBox(Frame3(), 10, 6, 4);
+    compareChains(box, {Vec3(5, 0, 4), Vec3(10, 3, 4), Vec3(5, 6, 4), Vec3(0, 3, 4)}, 1.0);
+    // Uno spigolo solo: la catena aperta finisce contro le facce normali.
+    compareChains(box, {Vec3(5, 0, 4)}, 1.0);
+    // Prisma trapezoidale: angoli vivi non retti.
+    compareChains(extrusion(polygon({Vec2(0, 0), Vec2(10, 0), Vec2(8, 5), Vec2(1, 5)}), 3.0).body,
+                  {Vec3(5, 0, 3), Vec3(9, 2.5, 3), Vec3(4.5, 5, 3), Vec3(0.5, 2.5, 3)}, 0.6);
+    // Rettangolo arrotondato: catena liscia di segmenti e archi.
+    const Body slab = extrusion(roundedRectangle(Vec2(0, 0), 10, 6, 1.5), 3.0).body;
+    compareChains(slab, edgesAtHeight(slab, 3.0), 0.5);
+}
+
+namespace {
+
+// Volume tolto (o aggiunto, negativo) da OCCT secondo BRepGProp (niente
+// prismi da spline qui), NaN se OCCT fallisce.
+double occtRemovedExact(const TopoDS_Shape &shape, const std::vector<Vec3> &points, double size) {
+    const TopoDS_Shape result = occtBlendedShape(shape, points, size, false);
+    if (result.IsNull()) return std::nan("");
+    GProp_GProps before, after;
+    BRepGProp::VolumeProperties(shape, before, 1e-12);
+    BRepGProp::VolumeProperties(result, after, 1e-12);
+    return before.Mass() - after.Mass();
+}
+
+// Raccordo generale (fk_blend_surface) degli spigoli per i punti: body valido,
+// continuita' G1 lungo le curve di contatto (raccordi), volume atteso entro
+// `relative` (se expected > 0), tassellazione riuscita. Restituisce il volume.
+double surfaceBlended(const Body &body, const std::vector<Vec3> &points, double size, bool chamfer, double expected, double relative = 1e-9) {
+    std::vector<EdgeId> edges;
+    for (const Vec3 &p : points) {
+        const EdgeId e = nearestEdge(body, p, 1e-6);
+        FK_CHECK(e.valid());
+        if (!e.valid()) return 0.0;
+        edges.push_back(e);
+    }
+    Body result;
+    try {
+        result = blendSurfaceChains(body, surfaceChainRuns(body, edges, edges), size, chamfer);
+    } catch (const std::exception &error) {
+        reportFailure(__FILE__, __LINE__, std::string(chamfer ? "smusso generale " : "raccordo generale ") + std::to_string(points.front().x()) + " "
+                                              + std::to_string(points.front().y()) + " " + std::to_string(points.front().z()) + ": " + error.what());
+        return 0.0;
+    }
+    for (const CheckIssue &issue : checkBody(result)) reportFailure(__FILE__, __LINE__, describe(issue.code) + ": " + issue.message);
+    // Facce nuove: superfici che il body di partenza non aveva.
+    std::vector<const Surface *> old;
+    for (FaceId f : body.faces()) old.push_back(body.face(f).surface.get());
+    auto isNew = [&](FaceId f) { return std::find(old.begin(), old.end(), result.face(f).surface.get()) == old.end(); };
+    auto outward = [&](FinId fin, double t) {
+        const Face &face = result.face(result.finFace(fin));
+        const Vec2 uv = result.fin(fin).pcurve->point(t);
+        const Vec3 n = face.surface->normal(uv.x(), uv.y());
+        return face.sense ? n : -n;
+    };
+    double worst = 0.0;
+    int contacts = 0;
+    for (EdgeId e : result.edges()) {
+        const Edge &edge = result.edge(e);
+        const bool a = isNew(result.finFace(edge.forward)), b = isNew(result.finFace(edge.backward));
+        if (a == b || chamfer) continue;
+        // Solo le curve di contatto (v = 0 o 1 sulla faccia nuova), non gli archi d'estremita'.
+        const FinId onNew = a ? edge.forward : edge.backward;
+        const double v = result.fin(onNew).pcurve->point(0.5 * (edge.range.lo + edge.range.hi)).y();
+        if (std::fabs(v) > 1e-6 && std::fabs(v - 1.0) > 1e-6) continue;
+        ++contacts;
+        for (double f : {0.1, 0.37, 0.5, 0.81}) {
+            const double t = edge.range.lo + f * edge.range.length();
+            worst = std::max(worst, norm(outward(edge.forward, t) - outward(edge.backward, t)));
+        }
+    }
+    if (!chamfer) FK_CHECK(contacts > 0);
+    FK_CHECK(worst < 1e-6);
+    // Palla rotolante: da ogni punto P del raccordo il centro c = P -+ r n dista
+    // esattamente r da entrambe le facce dello spigolo (le superfici vecchie).
+    if (!chamfer) {
+        std::vector<const Surface *> sides;
+        for (EdgeId e : edges)
+            for (FinId fin : {body.edge(e).forward, body.edge(e).backward}) sides.push_back(body.face(body.finFace(fin)).surface.get());
+        double ball = 0.0;
+        for (FaceId f : result.faces()) {
+            if (!isNew(f)) continue;
+            const Surface &surface = *result.face(f).surface;
+            const Interval u = surface.uDomain();
+            for (double fu : {0.1, 0.3, 0.5, 0.7, 0.9})
+                for (double fv : {0.0, 0.25, 0.5, 0.75, 1.0}) {
+                    const double uu = u.lo + fu * u.length();
+                    const Vec3 p = surface.point(uu, fv), n = surface.normal(uu, fv);
+                    double best = 1e300;
+                    for (double sign : {1.0, -1.0}) {
+                        const Vec3 c = p + sign * size * n;
+                        double gap = 0.0;
+                        int touching = 0;
+                        for (const Surface *side : sides) {
+                            const double d = projectPoint(*side, c).distance;
+                            if (std::fabs(d - size) < 1e-3 * size) ++touching;
+                            gap = std::max(gap, std::fabs(d - size) < 1e-3 * size ? std::fabs(d - size) : 0.0);
+                        }
+                        if (touching >= 2) best = std::min(best, gap);
+                    }
+                    ball = std::max(ball, best);
+                }
+        }
+        FK_CHECK(ball < 1e-7 * size);
+    }
+    const double volume = massProperties(result).volume;
+    if (expected > 0.0) FK_CHECK_NEAR(volume, expected, relative * expected);
+    TessellationOptions options;
+    options.deflection = 0.01;
+    FK_CHECK(tessellate(result, options).failedFaces == 0);
+    return volume;
+}
+
+// Punti medi degli edge che soddisfano il predicato.
+template <class Predicate>
+std::vector<Vec3> edgeMidpoints(const Body &body, Predicate predicate) {
+    std::vector<Vec3> points;
+    for (EdgeId e : body.edges()) {
+        const Edge &edge = body.edge(e);
+        const Vec3 p = edge.curve->point(0.5 * (edge.range.lo + edge.range.hi));
+        if (predicate(edge, p)) points.push_back(p);
+    }
+    return points;
+}
+
+}
+
+FK_TEST(BlendSurfaceMatchesExactPlanarCases) {
+    // Il raccordo generale sui casi con il volume esatto (sezione che scorre
+    // lungo una curva piana): ellisse, spline chiusa, tasca ellittica (bordo
+    // convesso e fondo concavo), spline aperta contro i fianchi normali.
+    const double a = 3.0, b = 2.0, h = 4.0;
+    const std::vector<ProfileSegment> ellipse{ellipseSegment(Vec2(0, 0), a, b)};
+    const Operand cylinder = extrusion(ellipse, h);
+    const double v = kPi * a * b * h, L = profileLength(ellipse);
+    for (bool chamfer : {false, true}) {
+        surfaceBlended(cylinder.body, {Vec3(a, 0, h)}, 0.4, chamfer, v - sweptVolume(0.4, chamfer, L, kTwoPi));
+        surfaceBlended(cylinder.body, {Vec3(a, 0, h), Vec3(0, b, 0)}, 0.4, chamfer, v - 2.0 * sweptVolume(0.4, chamfer, L, kTwoPi));
+    }
+    const std::vector<Vec2> poles{Vec2(3, 0), Vec2(3, 2), Vec2(1, 3), Vec2(-2, 2.5), Vec2(-3, 0), Vec2(-2, -2.5), Vec2(1, -3), Vec2(3, -2), Vec2(3, 0)};
+    const auto spline = std::make_shared<BSplineCurve<2>>(3, std::vector<double>{0, 0, 0, 0, 1. / 6, 2. / 6, 3. / 6, 4. / 6, 5. / 6, 1, 1, 1, 1}, poles);
+    const std::vector<ProfileSegment> blob{{spline, spline->domain()}};
+    const Operand smooth = extrusion(blob, 2.0);
+    const double vBlob = area(buildProfile(blob, 1e-9).regions.front()) * 2.0, lBlob = profileLength(blob);
+    const Vec3 onTop = embedCurve(std::make_shared<BSplineCurve<2>>(*spline), Frame3(Vec3(0, 0, 2), Vec3(0, 0, 1), Vec3(1, 0, 0)))->point(0.3);
+    for (bool chamfer : {false, true}) surfaceBlended(smooth.body, {onTop}, 0.3, chamfer, vBlob - sweptVolume(0.3, chamfer, lBlob, kTwoPi));
+    const double depth = 2.0, r = 0.3;
+    const Body block = booleanOperation(makeBox(Frame3(), 10, 8, 4),
+                                        makeExtrusion(Frame3(Vec3(5, 4, 4.0 - depth), Vec3(0, 0, 1), Vec3(1, 0, 0)),
+                                                      buildProfile({ellipseSegment(Vec2(0, 0), a, b)}, 1e-9).regions.front(), depth + 1.0),
+                                        BooleanOperation::Subtract);
+    const double vBlock = 320.0 - kPi * a * b * depth;
+    surfaceBlended(block, {Vec3(5 + a, 4, 4)}, r, false, vBlock - sweptVolume(r, false, L, -kTwoPi));
+    surfaceBlended(block, {Vec3(5 + a, 4, 4.0 - depth)}, r, false, vBlock + sweptVolume(r, false, L, kTwoPi));
+    surfaceBlended(block, {Vec3(5 + a, 4, 4.0 - depth)}, r, true, vBlock + sweptVolume(r, true, L, kTwoPi));
+    // Spline aperta tra due fianchi piani normali ai suoi estremi.
+    const auto top = std::make_shared<BSplineCurve<2>>(
+        3, std::vector<double>{0, 0, 0, 0, 0.5, 0.5, 0.5, 1, 1, 1, 1},
+        std::vector<Vec2>{Vec2(6, 4), Vec2(5, 4), Vec2(4.5, 5.5), Vec2(3, 5.5), Vec2(1.5, 5.5), Vec2(1, 4), Vec2(0, 4)});
+    const std::vector<ProfileSegment> profile{lineSegment(Vec2(0, 0), Vec2(6, 0)), lineSegment(Vec2(6, 0), Vec2(6, 4)), {top, top->domain()},
+                                              lineSegment(Vec2(0, 4), Vec2(0, 0))};
+    const Operand stone = extrusion(profile, 3.0);
+    const double vStone = area(buildProfile(profile, 1e-9).regions.front()) * 3.0, lTop = arcLength(*top, top->domain());
+    for (bool chamfer : {false, true}) surfaceBlended(stone.body, {Vec3(3, 5.5, 3.0)}, 0.4, chamfer, vStone - sweptVolume(0.4, chamfer, lTop, 0.0));
+}
+
+FK_TEST(BlendSurfaceMatchesCircularCases) {
+    // Cerchi tra superfici coassiali (Pappus): bordo superiore di un cilindro,
+    // bordo di un foro, base di un perno (concavo).
+    const double R = 3.0, H = 4.0, q = 0.5;
+    const Body cylinder = makeCylinder(Frame3(Vec3(1, 2, 3), Vec3(0, 0, 1), Vec3(1, 0, 0)), R, H);
+    const double vCyl = kPi * R * R * H;
+    surfaceBlended(cylinder, {Vec3(1 + R, 2, 3 + H)}, q, false, vCyl - ringVolume(R, q, true));
+    const Body block = booleanOperation(makeBox(Frame3(), 10, 10, 4), makeCylinder(Frame3(Vec3(5, 5, -1), Vec3(0, 0, 1), Vec3(1, 0, 0)), 2.0, 6.0),
+                                        BooleanOperation::Subtract);
+    surfaceBlended(block, {Vec3(7, 5, 4)}, q, false, 400.0 - kPi * 4.0 * 4.0 - ringVolume(2.0, q, false));
+    const Body boss = booleanOperation(makeBox(Frame3(), 10, 10, 4), makeCylinder(Frame3(Vec3(5, 5, 4), Vec3(0, 0, 1), Vec3(1, 0, 0)), 2.0, 3.0),
+                                       BooleanOperation::Unite);
+    // Il raccordo concavo aggiunge l'anello attorno al perno: quadrato r x r meno il quarto di cerchio, fuori dal raggio 2.
+    const double added = kTwoPi * (q * q * (2.0 + q / 2.0) - kPi * q * q / 4.0 * (2.0 + q - 4.0 * q / (3.0 * kPi)));
+    surfaceBlended(boss, {Vec3(7, 5, 4)}, q, false, 400.0 + kPi * 4.0 * 3.0 + added);
+    // Lo stesso con il percorso dell'app (blendEdges sceglie da solo il modulo analitico).
+    FK_CHECK_NEAR(blended(boss, {Vec3(7, 5, 4)}, q, false, 0.0), 400.0 + kPi * 4.0 * 3.0 + added, 1e-9 * 450.0);
+}
+
+FK_TEST(BlendSurfaceNonAnalyticEdges) {
+    // Cilindro obliquo su un blocco: lo spigolo alla base e' un'ellisse tra il
+    // piano e un cilindro non coassiale (concavo), quello in cima un'ellisse
+    // convessa (il cilindro e' tagliato da un piano orizzontale).
+    const Vec3 axis = normalized(Vec3(0.5, 0.0, 1.0));
+    const Frame3 tilted(Vec3(5, 5, 0), axis, Vec3(0, 1, 0));
+    const Body box = makeBox(Frame3(), 10, 10, 4), slab = makeBox(Frame3(Vec3(-5, -5, 6), Vec3(0, 0, 1), Vec3(1, 0, 0)), 20, 20, 10);
+    const Body post = booleanOperation(makeCylinder(tilted, 1.5, 8.0), slab, BooleanOperation::Subtract);
+    const Body oblique = booleanOperation(box, post, BooleanOperation::Unite);
+    gp_Ax2 occtAxis(gp_Pnt(5, 5, 0), gp_Dir(axis.x(), axis.y(), axis.z()), gp_Dir(0, 1, 0));
+    const TopoDS_Shape occtPost = BRepAlgoAPI_Cut(BRepPrimAPI_MakeCylinder(occtAxis, 1.5, 8.0).Shape(),
+                                                  BRepPrimAPI_MakeBox(gp_Pnt(-5, -5, 6), 20, 20, 10).Shape()).Shape();
+    const TopoDS_Shape occtOblique = BRepAlgoAPI_Fuse(BRepPrimAPI_MakeBox(10, 10, 4).Shape(), occtPost).Shape();
+    const std::vector<Vec3> base = edgeMidpoints(oblique, [](const Edge &e, const Vec3 &p) { return e.curve->type() == CurveType::Ellipse && std::fabs(p.z() - 4) < 1e-9; });
+    const std::vector<Vec3> cap = edgeMidpoints(oblique, [](const Edge &e, const Vec3 &p) { return e.curve->type() == CurveType::Ellipse && std::fabs(p.z() - 6) < 1e-9; });
+    FK_CHECK(base.size() == 1 && cap.size() == 1);
+    if (base.size() != 1 || cap.size() != 1) return;
+    const double vOblique = massProperties(oblique).volume;
+    for (const auto &[points, r] : {std::pair<std::vector<Vec3>, double>{base, 0.4}, {cap, 0.3}, {{base.front(), cap.front()}, 0.3}}) {
+        // Dal percorso dell'app (blendEdges) e dal modulo generale direttamente: stesso risultato.
+        const double ours = blended(oblique, points, r, false, 0.0);
+        FK_CHECK_NEAR(surfaceBlended(oblique, points, r, false, 0.0), ours, 1e-9 * vOblique);
+        const double occt = occtRemovedExact(occtOblique, points, r);
+        FK_CHECK(std::isnan(occt) || std::fabs((vOblique - ours) - occt) < 1e-2 * std::fabs(occt));
+        surfaceBlended(oblique, points, r, true, 0.0);
+    }
+
+    // Innesto a T tra due cilindri (curva del marching, concava) e foro
+    // trasversale in un cilindro (due curve convesse).
+    const Body main = makeCylinder(Frame3(Vec3(-5, 0, 0), Vec3(1, 0, 0), Vec3(0, 1, 0)), 2.0, 10.0);
+    const Body tee = booleanOperation(main, makeCylinder(Frame3(Vec3(0, 0, 0), Vec3(0, 0, 1), Vec3(1, 0, 0)), 1.0, 4.0), BooleanOperation::Unite);
+    const TopoDS_Shape occtMain = BRepPrimAPI_MakeCylinder(gp_Ax2(gp_Pnt(-5, 0, 0), gp_Dir(1, 0, 0), gp_Dir(0, 1, 0)), 2.0, 10.0).Shape();
+    const TopoDS_Shape occtTee = BRepAlgoAPI_Fuse(occtMain, BRepPrimAPI_MakeCylinder(gp_Ax2(gp_Pnt(0, 0, 0), gp_Dir(0, 0, 1), gp_Dir(1, 0, 0)), 1.0, 4.0).Shape()).Shape();
+    const std::vector<Vec3> junction = edgeMidpoints(tee, [](const Edge &e, const Vec3 &p) { return e.curve->type() == CurveType::BSpline && p.z() > 0.5; });
+    FK_CHECK(!junction.empty());
+    const double vTee = massProperties(tee).volume;
+    if (!junction.empty()) {
+        const double ours = blended(tee, {junction.front()}, 0.3, false, 0.0);
+        const double occt = occtRemovedExact(occtTee, {junction.front()}, 0.3);
+        FK_CHECK(ours > vTee);
+        FK_CHECK(std::isnan(occt) || std::fabs((vTee - ours) - occt) < 1e-2 * std::fabs(occt));
+        FK_CHECK_NEAR(surfaceBlended(tee, {junction.front()}, 0.3, false, 0.0), ours, 1e-9 * vTee);
+        surfaceBlended(tee, {junction.front()}, 0.3, true, 0.0);
+    }
+    const Body drilled = booleanOperation(main, makeCylinder(Frame3(Vec3(0, 0, -3), Vec3(0, 0, 1), Vec3(1, 0, 0)), 0.8, 6.0), BooleanOperation::Subtract);
+    const TopoDS_Shape occtDrilled = BRepAlgoAPI_Cut(occtMain, BRepPrimAPI_MakeCylinder(gp_Ax2(gp_Pnt(0, 0, -3), gp_Dir(0, 0, 1), gp_Dir(1, 0, 0)), 0.8, 6.0).Shape()).Shape();
+    const std::vector<Vec3> mouths = edgeMidpoints(drilled, [](const Edge &e, const Vec3 &) { return e.curve->type() == CurveType::BSpline; });
+    FK_CHECK(mouths.size() >= 2);
+    const double vDrilled = massProperties(drilled).volume;
+    if (!mouths.empty()) {
+        const std::vector<Vec3> upper = edgeMidpoints(drilled, [](const Edge &e, const Vec3 &p) { return e.curve->type() == CurveType::BSpline && p.z() > 0.0; });
+        const double ours = blended(drilled, upper, 0.25, false, 0.0);
+        const double occt = occtRemovedExact(occtDrilled, upper, 0.25);
+        FK_CHECK(ours < vDrilled);
+        FK_CHECK(std::isnan(occt) || std::fabs((vDrilled - ours) - occt) < 1e-2 * std::fabs(occt));
+        FK_CHECK_NEAR(surfaceBlended(drilled, mouths, 0.25, false, 0.0), vDrilled - 2.0 * (vDrilled - ours), 1e-9 * vDrilled);
+        blended(drilled, mouths, 0.25, true, 0.0);
+    }
+}
+
+FK_TEST(BlendSurfaceTeeIsExactRollingBall) {
+    // Innesto a T tra un cilindro di raggio 2 lungo x e uno di raggio 1 lungo z:
+    // la palla di raggio r che rotola nell'angolo (concavo) ha il centro a
+    // 2 + r dall'asse x e a 1 + r dall'asse z. Nei piani di simmetria le
+    // sezioni sono note in forma chiusa.
+    const Body main = makeCylinder(Frame3(Vec3(-5, 0, 0), Vec3(1, 0, 0), Vec3(0, 1, 0)), 2.0, 10.0);
+    const Body tee = booleanOperation(main, makeCylinder(Frame3(Vec3(0, 0, 0), Vec3(0, 0, 1), Vec3(1, 0, 0)), 1.0, 4.0), BooleanOperation::Unite);
+    const std::vector<Vec3> junction = edgeMidpoints(tee, [](const Edge &e, const Vec3 &p) { return e.curve->type() == CurveType::BSpline && p.z() > 0.5; });
+    FK_CHECK(junction.size() == 1);
+    if (junction.empty()) return;
+    const double r = 0.3;
+    const Body result = blendEdges(tee, {nearestEdge(tee, junction.front(), 1e-6)}, r, false);
+    FK_CHECK(checkBody(result).empty());
+    auto ballError = [r](const Vec3 &p, const Vec3 &n) {
+        double best = 1e300;
+        for (double sign : {1.0, -1.0}) {
+            const Vec3 c = p + sign * r * n;
+            best = std::min(best, std::max(std::fabs(std::hypot(c.y(), c.z()) - (2 + r)), std::fabs(std::hypot(c.x(), c.y()) - (1 + r))));
+        }
+        return best;
+    };
+    double worst = 0.0;
+    int blends = 0;
+    for (FaceId f : result.faces()) {
+        if (result.face(f).surface->type() != SurfaceType::BSpline) continue;
+        ++blends;
+        const Surface &surface = *result.face(f).surface;
+        const Interval u = surface.uDomain();
+        for (double fu = 0.05; fu < 1.0; fu += 0.1)
+            for (double fv = 0.0; fv <= 1.0; fv += 0.125)
+                worst = std::max(worst, ballError(surface.point(u.lo + fu * u.length(), fv), surface.normal(u.lo + fu * u.length(), fv)));
+    }
+    FK_CHECK(blends == 2);
+    FK_CHECK(worst < 1e-8);
+    // Punti esatti: nel piano x = 0 centro (0, 1 + r, zc), nel piano y = 0 centro (1 + r, 0, 2 + r).
+    const double zc = std::sqrt((2 + r) * (2 + r) - (1 + r) * (1 + r));
+    for (const Vec3 &p : {Vec3(0, 1, zc), Vec3(0, (1 + r) * 2 / (2 + r), zc * 2 / (2 + r)), Vec3(1, 0, 2 + r), Vec3(1 + r, 0, 2)}) {
+        double best = 1e300;
+        for (FaceId f : result.faces()) {
+            const SurfaceProjection projection = projectPoint(*result.face(f).surface, p);
+            if (classifyPointOnFace(result, f, projection.point, 1e-7) != PointLocation::Outside) best = std::min(best, projection.distance);
+        }
+        FK_CHECK(best < 1e-9);
+    }
+    // OCCT (BRepFilletAPI) approssima: la sua faccia si scosta dalla palla esatta di qualche 1e-4.
+    const TopoDS_Shape occtMain = BRepPrimAPI_MakeCylinder(gp_Ax2(gp_Pnt(-5, 0, 0), gp_Dir(1, 0, 0), gp_Dir(0, 1, 0)), 2.0, 10.0).Shape();
+    const TopoDS_Shape occtTee = BRepAlgoAPI_Fuse(occtMain, BRepPrimAPI_MakeCylinder(gp_Ax2(gp_Pnt(0, 0, 0), gp_Dir(0, 0, 1), gp_Dir(1, 0, 0)), 1.0, 4.0).Shape()).Shape();
+    const TopoDS_Shape occtResult = occtBlendedShape(occtTee, {junction.front()}, r, false);
+    double occtWorst = 0.0;
+    for (TopExp_Explorer faces(occtResult, TopAbs_FACE); faces.More(); faces.Next()) {
+        const TopoDS_Face &face = TopoDS::Face(faces.Current());
+        BRepAdaptor_Surface adaptor(face);
+        if (adaptor.GetType() == GeomAbs_Cylinder || adaptor.GetType() == GeomAbs_Plane) continue;
+        double u0, u1, v0, v1;
+        BRepTools::UVBounds(face, u0, u1, v0, v1);
+        for (double fu = 0.05; fu < 1.0; fu += 0.1)
+            for (double fv = 0.05; fv < 1.0; fv += 0.1) {
+                BRepLProp_SLProps props(adaptor, u0 + fu * (u1 - u0), v0 + fv * (v1 - v0), 1, 1e-9);
+                if (props.IsNormalDefined()) occtWorst = std::max(occtWorst, ballError(fromOcct(props.Value()), fromOcct(gp_Vec(props.Normal().XYZ()))));
+            }
+    }
+    FK_CHECK(occtResult.IsNull() || occtWorst > 1e3 * worst);
+}
+
+namespace {
+
+// Volume OCCT del parallelepipedo con gli spigoli per i punti smussati di d1 (sulla faccia la
+// cui normale e' piu' vicina a `reference`) e d2.
+double occtAsymmetricBox(double a, double b, double c, const std::vector<Vec3> &points, const Vec3 &reference, double d1, double d2) {
+    const TopoDS_Shape box = BRepPrimAPI_MakeBox(a, b, c).Shape();
+    TopTools_IndexedDataMapOfShapeListOfShape edgeFaces;
+    TopExp::MapShapesAndAncestors(box, TopAbs_EDGE, TopAbs_FACE, edgeFaces);
+    BRepFilletAPI_MakeChamfer maker(box);
+    for (const Vec3 &p : points) {
+        const TopoDS_Shape vertex = BRepBuilderAPI_MakeVertex(gp_Pnt(p.x(), p.y(), p.z())).Shape();
+        int best = 1;
+        double closest = 1e300;
+        for (int i = 1; i <= edgeFaces.Extent(); ++i) {
+            BRepExtrema_DistShapeShape distance(vertex, edgeFaces.FindKey(i));
+            if (distance.Value() < closest) closest = distance.Value(), best = i;
+        }
+        TopoDS_Face chosen;
+        double score = -1e300;
+        for (const TopoDS_Shape &face : edgeFaces(best)) {
+            BRepAdaptor_Surface surface(TopoDS::Face(face));
+            gp_Dir n = surface.Plane().Axis().Direction();
+            if (face.Orientation() == TopAbs_REVERSED) n.Reverse();
+            const double d = n.X() * reference.x() + n.Y() * reference.y() + n.Z() * reference.z();
+            if (d > score) score = d, chosen = TopoDS::Face(face);
+        }
+        maker.Add(d1, d2, TopoDS::Edge(edgeFaces.FindKey(best)), chosen);
+    }
+    GProp_GProps props;
+    BRepGProp::VolumeProperties(maker.Shape(), props, 1e-12);
+    return props.Mass();
+}
+
+double chamferedVolume(const Body &body, const std::vector<Vec3> &points, const ChamferSides &sides) {
+    std::vector<EdgeId> edges;
+    for (const Vec3 &p : points) edges.push_back(nearestEdge(body, p, 1e-6));
+    Body result;
+    try {
+        result = chamferEdges(body, edges, std::vector<ChamferSides>(edges.size(), sides));
+    } catch (const std::exception &error) {
+        reportFailure(__FILE__, __LINE__, std::string("smusso asimmetrico: ") + error.what());
+        return 0.0;
+    }
+    FK_CHECK(checkBody(result).empty());
+    return massProperties(result).volume;
+}
+
+}
+
+FK_TEST(ChamferTwoDistances) {
+    const double a = 10, b = 6, c = 4;
+    const Body box = makeBox(Frame3(), a, b, c);
+    const Vec3 up(0, 0, 1);
+    for (const auto &[d1, d2] : {std::pair<double, double>{1.0, 0.4}, {0.4, 1.0}}) {
+        // Spigolo in alto lungo x: d1 sulla faccia in alto, d2 su quella davanti.
+        const double v = chamferedVolume(box, {Vec3(5, 0, 4)}, {up, d1, d2});
+        FK_CHECK_NEAR(v, a * b * c - 0.5 * d1 * d2 * a, 1e-9 * a * b * c);
+        FK_CHECK_NEAR(v, occtAsymmetricBox(a, b, c, {Vec3(5, 0, 4)}, up, d1, d2), 1e-7);
+        // Il vertice nuovo sulla faccia in alto sta a d1 dallo spigolo.
+        Body result = chamferEdges(box, {nearestEdge(box, Vec3(5, 0, 4), 1e-6)}, {{up, d1, d2}});
+        bool found = false;
+        for (VertexId vertex : result.vertices()) found = found || distance(result.vertex(vertex).point, Vec3(0, d1, 4)) < 1e-9;
+        FK_CHECK(found);
+        // Tre spigoli in un vertice (pezza d'angolo) e i dodici: come OCCT.
+        const std::vector<Vec3> three{Vec3(5, 0, 4), Vec3(10, 3, 4), Vec3(10, 0, 2)};
+        FK_CHECK_NEAR(chamferedVolume(box, three, {up, d1, d2}), occtAsymmetricBox(a, b, c, three, up, d1, d2), 1e-7);
+    }
+    // Bordi circolari (Pappus: triangolo di lati dT in alto e dW sul fianco, baricentro a R - dT / 3).
+    const double R = 3.0, H = 4.0, dT = 0.6, dW = 0.25;
+    const Body cylinder = makeCylinder(Frame3(), R, H);
+    FK_CHECK_NEAR(chamferedVolume(cylinder, {Vec3(R, 0, H)}, {up, dT, dW}), kPi * R * R * H - kTwoPi * (R - dT / 3.0) * 0.5 * dT * dW, 1e-9 * 100);
+    // Bordo di forma libera (catena piana: ellisse) e lo stesso con il modulo generale.
+    const double ea = 3.0, eb = 2.0;
+    const std::vector<ProfileSegment> ellipse{ellipseSegment(Vec2(0, 0), ea, eb)};
+    const Operand elliptic = extrusion(ellipse, H);
+    const double L = profileLength(ellipse), area = 0.5 * dT * dW, moment = area * dT / 3.0;
+    const double expected = kPi * ea * eb * H - (area * L - moment * kTwoPi);
+    FK_CHECK_NEAR(chamferedVolume(elliptic.body, {Vec3(ea, 0, H)}, {up, dT, dW}), expected, 1e-9 * expected);
+    const EdgeId rim = nearestEdge(elliptic.body, Vec3(ea, 0, H), 1e-6);
+    const std::vector<ChamferSides> rimSides{{up, dT, dW}};
+    const Body general = blendSurfaceChains(elliptic.body, {rim}, std::max(dT, dW), true, &rimSides);
+    FK_CHECK(checkBody(general).empty());
+    FK_CHECK_NEAR(massProperties(general).volume, expected, 1e-9 * expected);
+}
+
+FK_TEST(BlendSmallRadiusOnLargeRims) {
+    // Raggi piccoli rispetto al bordo: la corona dell'utensile attorno al cerchio
+    // e' sottile e i poligoni (u, v) delle booleane devono infittirsi.
+    for (double r : {0.1, 0.5, 2.0}) {
+        const Body cylinder = makeCylinder(Frame3(), 12.1, 110.0);
+        blended(cylinder, {Vec3(12.1, 0, 110)}, r, false, kPi * 12.1 * 12.1 * 110.0 - ringVolume(12.1, r, true));
+    }
+    // Il flacone (rivoluzione con fondo sferico, spalla e collo): il bordo del collo e quello del fondo.
+    const auto arc = [](const Vec2 &c, const Vec2 &a, const Vec2 &b) {
+        const double t0 = std::atan2(a.y() - c.y(), a.x() - c.x()), t1 = std::atan2(b.y() - c.y(), b.x() - c.x());
+        return arcSegment(c, distance(c, a), std::min(t0, t1), std::max(t0, t1));
+    };
+    const std::vector<ProfileSegment> profile{lineSegment(Vec2(0, 110), Vec2(12.1, 110)), lineSegment(Vec2(12.1, 110), Vec2(12.1, 95.8)),
+                                              lineSegment(Vec2(12.1, 95.8), Vec2(14, 95.8)), arc(Vec2(14, 85.8), Vec2(24, 85.8), Vec2(14, 95.8)),
+                                              lineSegment(Vec2(24, 85.8), Vec2(24, 0)), lineSegment(Vec2(24, 0), Vec2(21, 0)),
+                                              arc(Vec2(0, -220), Vec2(21, 0), Vec2(0, 1)), lineSegment(Vec2(0, 1), Vec2(0, 110))};
+    const Body bottle = makeRevolution(Frame3(), buildProfile(profile, 1e-9).regions.front());
+    const double v = massProperties(bottle).volume;
+    blended(bottle, {Vec3(12.1, 0, 110)}, 0.5, false, v - ringVolume(12.1, 0.5, true));
+    blended(bottle, {Vec3(24, 0, 0)}, 0.5, false, v - ringVolume(24.0, 0.5, true));
+    // Una selezione con uno spigolo liscio (corpo cilindrico e spalla toroidale, tangenti): si lascia.
+    FK_CHECK_NEAR(blended(bottle, {Vec3(12.1, 0, 110), Vec3(24, 0, 85.8)}, 0.5, false, 0.0), v - ringVolume(12.1, 0.5, true), 1e-9 * v);
+    FK_CHECK_THROWS(blendEdges(bottle, {nearestEdge(bottle, Vec3(24, 0, 85.8), 1e-6)}, 0.5, false));
+}
+
+FK_TEST(BlendLoftCircularCapsSplitIntoPatches) {
+    // Una loft liscia tra cerchi suddivisi in quarti produce quattro fianchi
+    // B-spline. I bordi dei coperchi sono quindi catene circolari con giunti
+    // tra patch, come nel modello prova con loft-CerchiCerchio.prt.
+    const double endRadius = 7.4, middleRadius = 15.0, height = 100.0;
+    const Body loft = loftSolid({splitCircleAt(0.0, endRadius), splitCircleAt(0.5 * height, middleRadius), splitCircleAt(height, endRadius)}, false);
+    const double c = std::sqrt(0.5) * endRadius;
+    for (double radius : {0.01, 0.1}) {
+        blended(loft, {Vec3(c, c, 0.0)}, radius, false, 0.0);
+        blended(loft, {Vec3(c, c, height)}, radius, false, 0.0);
+    }
+}
+
+FK_TEST(BlendEdgeEndingOnExistingFilletCornerPatch) {
+    Body body = makeBox(Frame3(), 10.0, 8.0, 20.0);
+    body = blendEdges(body, {nearestEdge(body, Vec3(5, 0, 20), 1e-6)}, 1.0, false);
+    FK_CHECK(checkBody(body).empty());
+    const EdgeId longitudinal = nearestEdge(body, Vec3(10.0, 0.0, 10.0), 1e-6);
+    FK_CHECK(longitudinal.valid());
+    if (longitudinal.valid()) {
+        body = blendEdges(body, {longitudinal}, 0.5, false);
+        FK_CHECK(checkBody(body).empty());
+        TessellationOptions options; options.deflection = 0.02;
+        FK_CHECK(tessellate(body, options).failedFaces == 0);
+        FK_CHECK(massProperties(body).volume > 0.0);
+    }
+}
+
+FK_TEST(BlendPlanarChainConcaveCornersBetweenLongArcs) {
+    // Contorno superiore dell'unione di un disco (R = 16) e di due lobi
+    // (R = 6, centri a +-d): archi lunghi (i lobi quasi 270 gradi) che si
+    // incontrano in angoli vivi concavi, come il profilo di "prova con
+    // loft-CerchiCerchio.prt" prima dei raccordi degli angoli. Con r = 1 le
+    // parallele dei due archi sono quasi tangenti (16 + 6 - 2 r appena sopra
+    // d): Gauss-Newton dal vertice divergeva e l'allungamento dei lobi dai due
+    // lati superava il giro completo.
+    const double h = 5.0, d = 19.8, R = 16.0, a = 6.0, r = 1.0;
+    Body body = makeCylinder(Frame3(Vec3(0, 0, 0), Vec3(0, 0, 1), Vec3(1, 0, 0)), R, h);
+    for (double x : {-d, d})
+        body = booleanOperation(body, makeCylinder(Frame3(Vec3(x, 0, 0), Vec3(0, 0, 1), Vec3(1, 0, 0)), a, h), BooleanOperation::Unite);
+    FaceId top;
+    for (FaceId f : body.faces()) {
+        const auto *plane = dynamic_cast<const Plane *>(body.face(f).surface.get());
+        if (plane && std::fabs(plane->frame().origin().z() - h) < 1e-9 && std::fabs(std::fabs(plane->frame().zDir().z()) - 1.0) < 1e-12) top = f;
+    }
+    FK_CHECK(top.valid());
+    if (!top.valid()) return;
+    std::vector<EdgeId> edges;
+    for (LoopId loop : body.face(top).loops)
+        for (FinId fin : body.loopFins(loop)) edges.push_back(body.fin(fin).edge);
+    FK_CHECK(edges.size() == 4);
+    try {
+        const Body result = blendPlanarChains(body, edges, r, false);
+        FK_CHECK(checkBody(result).empty());
+        TessellationOptions options;
+        options.deflection = 0.02;
+        FK_CHECK(tessellate(result, options).failedFaces == 0);
+        // La faccia superiore perde una striscia di larghezza r lungo il bordo:
+        // area tolta / r = perimetro + O(r) (angoli e curvatura).
+        const double phi = std::acos((d * d + R * R - a * a) / (2.0 * d * R)), psi = std::acos((d * d + a * a - R * R) / (2.0 * d * a));
+        const double perimeter = R * (kTwoPi - 4.0 * phi) + 2.0 * a * (kTwoPi - 2.0 * psi);
+        double topArea = 0.0;
+        for (FaceId f : result.faces()) {
+            const auto *plane = dynamic_cast<const Plane *>(result.face(f).surface.get());
+            if (plane && std::fabs(plane->frame().origin().z() - h) < 1e-9 && std::fabs(std::fabs(plane->frame().zDir().z()) - 1.0) < 1e-12)
+                topArea += faceArea(result, f);
+        }
+        FK_CHECK_NEAR((faceArea(body, top) - topArea) / r, perimeter, 0.01 * perimeter);
+        // Volume tolto: sezione r^2 (1 - pi/4) lungo il bordo, a meno degli angoli.
+        FK_CHECK_NEAR(massProperties(body).volume - massProperties(result).volume, r * r * (1.0 - kPi / 4.0) * perimeter, 0.01 * r * r * perimeter);
+    } catch (const std::exception &error) {
+        reportFailure(__FILE__, __LINE__, error.what());
+    }
+}
+
+FK_TEST(BlendArcsIntoConcaveCornersAreExact) {
+    // Stesso profilo (disco e due lobi). Le sezioni analitiche scostano gli
+    // utensili degli archi oltre le facce: presso un angolo concavo lo
+    // scostamento scavava un gradino nella parete accanto (7% di volume in
+    // piu' a r = 0.5, 30 facce invece di 10) e il risultato era valido ma
+    // sbagliato. Ora quei casi vanno alle catene piane o al raccordo generale.
+    const double h = 5.0, d = 19.8, R = 16.0, a = 6.0;
+    Body body = makeCylinder(Frame3(Vec3(0, 0, 0), Vec3(0, 0, 1), Vec3(1, 0, 0)), R, h);
+    for (double x : {-d, d})
+        body = booleanOperation(body, makeCylinder(Frame3(Vec3(x, 0, 0), Vec3(0, 0, 1), Vec3(1, 0, 0)), a, h), BooleanOperation::Unite);
+    FaceId top;
+    for (FaceId f : body.faces()) {
+        const auto *plane = dynamic_cast<const Plane *>(body.face(f).surface.get());
+        if (plane && std::fabs(plane->frame().origin().z() - h) < 1e-9 && std::fabs(std::fabs(plane->frame().zDir().z()) - 1.0) < 1e-12) top = f;
+    }
+    FK_CHECK(top.valid());
+    if (!top.valid()) return;
+    std::vector<EdgeId> contour, lobe;
+    for (LoopId loop : body.face(top).loops)
+        for (FinId fin : body.loopFins(loop)) {
+            const EdgeId e = body.fin(fin).edge;
+            contour.push_back(e);
+            const Edge &edge = body.edge(e);
+            if (edge.curve->point(0.5 * (edge.range.lo + edge.range.hi)).x() > d) lobe.push_back(e);
+        }
+    FK_CHECK(contour.size() == 4 && lobe.size() == 1);
+    const double volume = massProperties(body).volume;
+    try {
+        // Tutto il contorno: lo stesso risultato delle catene piane.
+        const double r = 0.5;
+        const Body result = blendEdges(body, contour, r, false), reference = blendPlanarChains(body, contour, r, false);
+        FK_CHECK(checkBody(result).empty());
+        FK_CHECK(result.counts().faces == reference.counts().faces);
+        FK_CHECK_NEAR(massProperties(result).volume, massProperties(reference).volume, 1e-9 * volume);
+    } catch (const std::exception &error) {
+        reportFailure(__FILE__, __LINE__, error.what());
+    }
+    try {
+        // L'arco di un lobo da solo, con gli estremi negli angoli concavi.
+        const double r = 0.25;
+        const Body result = blendEdges(body, lobe, r, false);
+        FK_CHECK(checkBody(result).empty());
+        FK_CHECK(result.counts().faces == body.counts().faces + 1);
+        const double psi = std::acos((d * d + a * a - R * R) / (2.0 * d * a)), length = a * (kTwoPi - 2.0 * psi);
+        FK_CHECK_NEAR(volume - massProperties(result).volume, r * r * (1.0 - kPi / 4.0) * length, 0.02 * r * r * length);
+        TessellationOptions options;
+        options.deflection = 0.02;
+        FK_CHECK(tessellate(result, options).failedFaces == 0);
+    } catch (const std::exception &error) {
+        reportFailure(__FILE__, __LINE__, error.what());
+    }
+}
+
+FK_TEST(BlendVanishingAtTangentMitreEnd) {
+    // Spigolo verticale che prosegue per tangenza nella mitra di due raccordi
+    // uguali: la mitra nasce sul coperchio, dove i due raccordi sono tangenti
+    // tra loro, e li' il nuovo raccordo svanisce (1476.prt, B173:E112/E458).
+    // Prima il fit inseguiva il rumore della sezione mal condizionata e la
+    // chiusura cercava una curva tra due contatti coincidenti.
+    const double a = 10.0, b = 8.0, c = 6.0, R = 2.0;
+    const std::vector<Vec3> top{Vec3(5, 0, c), Vec3(a, 4, c)};
+    Body base = makeBox(Frame3(), a, b, c);
+    base = blendEdges(base, {nearestEdge(base, top[0], 1e-6), nearestEdge(base, top[1], 1e-6)}, R, false);
+    FK_CHECK(checkBody(base).empty());
+    const double v0 = massProperties(base).volume;
+    const TopoDS_Shape occtBase = occtBlendedShape(BRepPrimAPI_MakeBox(a, b, c).Shape(), top, R, false);
+    const double occtV0 = occtBase.IsNull() ? 0.0 : [&] { GProp_GProps p; BRepGProp::VolumeProperties(occtBase, p, 1e-12); return p.Mass(); }();
+    for (double r : {0.5, 0.1}) {
+        const Body result = blendEdges(base, {nearestEdge(base, Vec3(a, 0, 1), 1e-6)}, r, false);
+        FK_CHECK(checkBody(result).empty());
+        TessellationOptions options;
+        options.deflection = 0.01;
+        FK_CHECK(tessellate(result, options).failedFaces == 0);
+        // Non basta la validita' entro le tolleranze registrate nel B-rep:
+        // una stima singolare alla punta accettava tratti con scarti grandi.
+        // Controllo indipendente sui cilindri di appoggio, anche fra i nodi.
+        double supportGap = 0.0;
+        for (FaceId face : result.faces()) {
+            const auto *cylinder = dynamic_cast<const CylindricalSurface *>(result.face(face).surface.get());
+            if (!cylinder) continue;
+            for (LoopId loop : result.face(face).loops) for (FinId fin : result.loopFins(loop)) {
+                const Edge &edge = result.edge(result.fin(fin).edge);
+                const std::vector<double> knots = edge.curve->breakpoints(edge.range);
+                for (std::size_t k = 0; k + 1 < knots.size(); ++k) for (int j = 0; j <= 4; ++j) {
+                    const Vec3 p = cylinder->frame().toLocal(edge.curve->point(knots[k] + (knots[k + 1] - knots[k]) * j / 4.0));
+                    supportGap = std::max(supportGap, std::fabs(std::hypot(p.x(), p.y()) - cylinder->radius()));
+                }
+            }
+        }
+        FK_CHECK_NEAR(supportGap, 0.0, 1e-5);
+        const double volume = massProperties(result).volume;
+        const double removed = v0 - volume, straight = r * r * (1.0 - kPi / 4.0) * (c - R);
+        // Oltre al tratto rettilineo, il tratto lungo la mitra (angolo da 90 gradi a zero).
+        FK_CHECK(removed > straight);
+        FK_CHECK(removed < straight + r * r * (1.0 - kPi / 4.0) * kPi * R);
+        if (occtV0 > 0.0) {
+            const double occt = occtBlended(occtBase, {Vec3(a, 0, 1)}, r, false);
+            if (occt > 0.0) FK_CHECK_NEAR(removed, occtV0 - occt, 1e-2 * (occtV0 - occt));
+        }
+    }
+}
+
+FK_TEST(BlendArcsMeetingSegments) {
+    // Profilo estruso: tre segmenti e un arco che li incontra ad angolo vivo
+    // (non tangente). Tutto il bordo in alto (catena piana con gli angoli a
+    // mitra), l'arco da solo (i suoi estremi contro fianchi piani obliqui) e il
+    // bordo in basso con uno smusso: come OCCT.
+    const Vec2 center(3, 1);
+    const double radius = distance(center, Vec2(6, 3)), from = std::atan2(2.0, 3.0), to = kPi - from;
+    const std::vector<ProfileSegment> profile{lineSegment(Vec2(0, 0), Vec2(6, 0)), lineSegment(Vec2(6, 0), Vec2(6, 3)), arcSegment(center, radius, from, to),
+                                              lineSegment(Vec2(0, 3), Vec2(0, 0))};
+    const double h = 2.0;
+    const Operand block = extrusion(profile, h);
+    const std::vector<Vec3> top = edgesAtHeight(block.body, h), bottom = edgesAtHeight(block.body, 0.0);
+    const Vec3 onArc(3, 1 + radius, h);
+    // Il raccordo dell'intero bordo ha sezioni orizzontali pari all'offset
+    // interno del profilo. Riferimento analitico indipendente: OCCT 7.9 su
+    // Linux produce qui anche un solido di volume maggiore dell'originale.
+    const auto sectionArea = [&](double inset) {
+        const double halfWidth = 3.0 - inset, r = radius - inset;
+        return 2.0 * halfWidth * (1.0 - inset)
+             + halfWidth * std::sqrt(r * r - halfWidth * halfWidth)
+             + r * r * std::asin(halfWidth / r);
+    };
+    const double fillet = 0.3;
+    const auto expectedVolume = [&](int intervals) {
+        // z = h-r+r*sin(theta), inset = r*(1-cos(theta)); Simpson
+        // sul profilo analitico, senza usare la quadratura del kernel.
+        const double step = kHalfPi / intervals;
+        double sum = 0.0;
+        for (int i = 0; i <= intervals; ++i) {
+            const double theta = i * step;
+            const double value = sectionArea(fillet * (1.0 - std::cos(theta))) * fillet * std::cos(theta);
+            sum += (i == 0 || i == intervals ? 1 : i % 2 ? 4 : 2) * value;
+        }
+        return sectionArea(0.0) * (h - fillet) + sum * step / 3.0;
+    };
+    const double expected = expectedVolume(1024);
+    FK_CHECK_NEAR(expected, expectedVolume(2048), 1e-10);
+    FK_CHECK_NEAR(massProperties(block.body).volume, h * sectionArea(0.0), 1e-10);
+    const double rounded = blended(block.body, top, fillet, false, 0.0);
+    FK_CHECK_NEAR(rounded, expected, 1e-8 * expected);
+    FK_CHECK(rounded < massProperties(block.body).volume);
+    for (const auto &[points, chamfer] : {std::pair<std::vector<Vec3>, bool>{{onArc}, false}, {{onArc}, true}, {bottom, true}}) {
+        const double ours = blended(block.body, points, 0.3, chamfer, 0.0);
+        const double occt = occtBlended(block.shape, points, 0.3, chamfer);
+        if (occt != 0.0) FK_CHECK_NEAR(ours, occt, 1e-6 * ours);
+    }
+}
+
+namespace {
+
+// Profilo con un lato corto S (0.2) tra il fianco B e l'arco C (R 2)
+// tangente a S; B e S ad angolo retto nello spigolo K = (10 + dx, 5). Il
+// raccordo di raggio 1 dello spigolo tra B e S toccherebbe S a 1 dallo
+// spigolo, oltre la sua fine: S e C formano un solo appoggio (tangenti nel
+// punto comune), il raccordo e' tangente a B e all'arco C e S sparisce.
+// `filleted` e' il profilo atteso (centro a r sopra B e a Rc - r dal centro di C).
+struct ShortFaceProfiles {
+    std::vector<ProfileSegment> prism, filleted;
+    Vec2 corner;
+};
+
+ShortFaceProfiles shortFaceProfiles(double dx, double r) {
+    const Vec2 O(8 + dx, 5.2), K(10 + dx, 5), A(dx, 0), B(4 + dx, 0), C(4 + dx, 5), T(8 + dx, 7.2), U(dx, 7.2);
+    const double Rc = 2.0;
+    ShortFaceProfiles result;
+    result.corner = K;
+    result.prism = {lineSegment(A, B), lineSegment(B, C), lineSegment(C, K), lineSegment(K, Vec2(10 + dx, 5.2)), arcSegment(O, Rc, 0.0, kHalfPi),
+                    lineSegment(T, U), lineSegment(U, A)};
+    const double lift = K.y() + r - O.y();
+    const Vec2 c(O.x() + std::sqrt((Rc - r) * (Rc - r) - lift * lift), K.y() + r);
+    const Vec2 tB(c.x(), K.y()), tC = O + Rc * normalized(c - O);
+    FK_CHECK(tB.x() < K.x() && tC.x() < K.x() && tC.y() > 5.2);
+    result.filleted = {lineSegment(A, B), lineSegment(B, C), lineSegment(C, tB), arcSegment(c, r, -kHalfPi, std::atan2(tC.y() - c.y(), tC.x() - c.x())),
+                       arcSegment(O, Rc, std::atan2(tC.y() - O.y(), tC.x() - O.x()), kHalfPi), lineSegment(T, U), lineSegment(U, A)};
+    return result;
+}
+
+}
+
+FK_TEST(BlendShortFaceJoinsTangentNeighbour) {
+    // Prisma (spigolo convesso) e piastra con il prisma come foro (concavo):
+    // la stessa zona tolta o aggiunta, con il volume esatto del profilo atteso.
+    const double r = 1.0, h = 3.0;
+    const ShortFaceProfiles profiles = shortFaceProfiles(0.0, r);
+    const Body expected = makeExtrusion(Frame3(), buildProfile(profiles.filleted, 1e-9).regions.front(), h);
+    const Operand block = extrusion(profiles.prism, h);
+    const double vPrism = massProperties(block.body).volume, vExpected = massProperties(expected).volume;
+    FK_CHECK(vExpected < vPrism);
+    const Vec3 corner(profiles.corner.x(), profiles.corner.y(), 0.5 * h);
+    FK_CHECK_NEAR(blended(block.body, {corner}, r, false, vExpected), vExpected, 1e-9 * vExpected);
+
+    std::vector<ProfileSegment> plate = polygon({Vec2(-5, -5), Vec2(20, -5), Vec2(20, 15), Vec2(-5, 15)});
+    std::vector<ProfileSegment> plateExpected = plate;
+    plate.insert(plate.end(), profiles.prism.begin(), profiles.prism.end());
+    plateExpected.insert(plateExpected.end(), profiles.filleted.begin(), profiles.filleted.end());
+    const Body holed = makeExtrusion(Frame3(), buildProfile(plate, 1e-9).regions.front(), h);
+    const double vHoledExpected = massProperties(makeExtrusion(Frame3(), buildProfile(plateExpected, 1e-9).regions.front(), h)).volume;
+    FK_CHECK_NEAR(blended(holed, {corner}, r, false, vHoledExpected), vHoledExpected, 1e-9 * vHoledExpected);
+
+    // Faccia corta che finisce ad angolo vivo (non tangente) nella faccia
+    // accanto: niente appoggio da unire, errore invece di un raccordo sbagliato.
+    const std::vector<ProfileSegment> sharp{lineSegment(Vec2(0, 0), Vec2(4, 0)), lineSegment(Vec2(4, 0), Vec2(4, 5)), lineSegment(Vec2(4, 5), Vec2(10, 5)),
+                                            lineSegment(Vec2(10, 5), Vec2(10, 5.2)), lineSegment(Vec2(10, 5.2), Vec2(8, 7.2)),
+                                            lineSegment(Vec2(8, 7.2), Vec2(0, 7.2)), lineSegment(Vec2(0, 7.2), Vec2(0, 0))};
+    const Body sharpBody = extrusion(sharp, h).body;
+    FK_CHECK_THROWS(blendEdges(sharpBody, {nearestEdge(sharpBody, corner, 1e-6)}, r, false));
+}
+
+FK_TEST(BlendShortFaceOnRevolution) {
+    // Lo stesso profilo fatto ruotare attorno all'asse Z (spostato di 5 dall'asse):
+    // lo spigolo circolare tra la corona piana (B) e il cilindro corto (S), con
+    // il toro di C come appoggio. Volume esatto della rivoluzione del profilo atteso.
+    const double r = 1.0;
+    const ShortFaceProfiles profiles = shortFaceProfiles(5.0, r);
+    const Body solid = makeRevolution(Frame3(), buildProfile(profiles.prism, 1e-9).regions.front());
+    const double vExpected = massProperties(makeRevolution(Frame3(), buildProfile(profiles.filleted, 1e-9).regions.front())).volume;
+    FK_CHECK(vExpected < massProperties(solid).volume);
+    blended(solid, {Vec3(profiles.corner.x(), 0.0, profiles.corner.y())}, r, false, vExpected);
+}
+
+FK_TEST(BlendConcaveCornerPocket) {
+    // Tasca rettangolare passante: gli spigoli verticali sono concavi per il
+    // solido, quelli del bordo in alto convessi. Nell'angolo tra due bordi scelti
+    // i due raccordi si incontrano a mitra: oltre gli spigoli, dietro entrambe le
+    // pareti, si toglie il materiale sopra tutti e due (per angolo r^3 (5/3 - pi/2)
+    // col raccordo, r^3 / 3 con lo smusso: l'integrale di min(g(u), g(v)) sul quadrato).
+    const double h = 3.0;
+    const Body plate = makeBox(Frame3(), 10.0, 8.0, h);
+    const Body pocket = booleanOperation(plate, makeBox(Frame3(Vec3(3, 2, -1), Vec3(0, 0, 1), Vec3(1, 0, 0)), 4.0, 3.0, h + 2.0), BooleanOperation::Subtract);
+    const double v0 = 80.0 * h - 12.0 * h;
+    const std::vector<Vec3> rim{Vec3(5, 2, h), Vec3(7, 3.5, h), Vec3(5, 5, h), Vec3(3, 3.5, h)};
+    for (double r : {0.4, 0.5}) {
+        const double waste = r * r * (1.0 - kPi / 4.0), corner = r * r * r * (5.0 / 3.0 - kPi / 2.0);
+        const double chamferWaste = 0.5 * r * r, chamferCorner = r * r * r / 3.0;
+        blended(pocket, rim, r, false, v0 - waste * 14.0 - 4.0 * corner);
+        blended(pocket, rim, r, true, v0 - chamferWaste * 14.0 - 4.0 * chamferCorner);
+        // Due bordi vicini (catena aperta: gli estremi contro le pareti normali, un angolo).
+        blended(pocket, {rim[0], rim[1]}, r, false, v0 - waste * 7.0 - corner);
+        blended(pocket, {rim[0], rim[1]}, r, true, v0 - chamferWaste * 7.0 - chamferCorner);
+        // Un bordo solo: finisce contro le pareti accanto.
+        blended(pocket, {rim[0]}, r, false, v0 - waste * 4.0);
+    }
+}
+
+FK_TEST(BlendConcaveCornerPolygons) {
+    // Tasche poligonali con gli angoli concavi ottusi (esagono) e acuti
+    // (triangolo): tutto il bordo e un lato solo (che finisce contro le pareti
+    // oblique accanto: il raccordo arriva fino a loro), come OCCT.
+    const double h = 3.0, r = 0.4;
+    const Frame3 below(Vec3(0, 0, -1), Vec3(0, 0, 1), Vec3(1, 0, 0));
+    for (const std::vector<Vec2> &corners : {std::vector<Vec2>{Vec2(3, 2), Vec2(7, 2), Vec2(8.5, 4), Vec2(7, 6), Vec2(3, 6), Vec2(1.5, 4)},
+                                             std::vector<Vec2>{Vec2(2, 2), Vec2(8, 2), Vec2(4, 6)}}) {
+        const ProfileRegion region = buildProfile(polygon(corners), 1e-9).regions.front();
+        const Body pocket = booleanOperation(makeBox(Frame3(), 10.0, 8.0, h), makeExtrusion(below, region, h + 2.0), BooleanOperation::Subtract);
+        const TopoDS_Shape occtPocket = BRepAlgoAPI_Cut(BRepPrimAPI_MakeBox(10.0, 8.0, h).Shape(),
+                                                        BRepPrimAPI_MakePrism(occtFace(region, below), gp_Vec(0, 0, h + 2.0)).Shape()).Shape();
+        std::vector<Vec3> rim;
+        for (std::size_t i = 0; i < corners.size(); ++i) {
+            const Vec2 m = 0.5 * (corners[i] + corners[(i + 1) % corners.size()]);
+            rim.push_back(Vec3(m.x(), m.y(), h));
+        }
+        for (bool chamfer : {false, true})
+            for (const std::vector<Vec3> &points : {rim, std::vector<Vec3>{rim.front()}}) {
+                const double occt = occtBlended(occtPocket, points, r, chamfer);
+                FK_CHECK(occt > 0.0);
+                blended(pocket, points, r, chamfer, occt > 0.0 ? occt : 0.0);
+            }
+    }
+}
+
+FK_TEST(BlendConcaveCornerLens) {
+    // Tasca a lente (intersezione di due cerchi) passante in una piastra, come
+    // un foro tagliato da un altro: i due archi del bordo finiscono negli angoli
+    // concavi, ognuno contro il cilindro dell'altro. Riferimento indipendente: le
+    // zone dei due bordi come anelli interi (rivoluzione completa della
+    // sezione); si toglie l'anello di A dentro il cerchio di B (il bordo di A),
+    // quello di B dentro A e negli angoli la parte comune dei due anelli (le
+    // mitre: per lo smusso con la booleana tra i due coni, per il raccordo
+    // integrata numericamente, perche' la booleana tra i due tori non riesce).
+    const double h = 3.0, R = 2.0, offset = 1.5;
+    const Body plate = makeBox(Frame3(Vec3(-5, -5, 0), Vec3(0, 0, 1), Vec3(1, 0, 0)), 12.0, 10.0, h);
+    auto cylinder = [&](double x) { return makeCylinder(Frame3(Vec3(x, 0, -1), Vec3(0, 0, 1), Vec3(1, 0, 0)), R, h + 2.0); };
+    const Body pocket = booleanOperation(plate, booleanOperation(cylinder(0.0), cylinder(offset), BooleanOperation::Intersect), BooleanOperation::Subtract);
+    const double v0 = massProperties(pocket).volume;
+    const std::vector<Vec3> rim{Vec3(R, 0, h), Vec3(offset - R, 0, h)};
+    for (double r : {0.2, 0.5})
+        for (bool chamfer : {false, true}) {
+            auto ring = [&](double x) {
+                std::vector<ProfileSegment> section{lineSegment(Vec2(R, h), Vec2(R + r, h))};
+                if (chamfer) section.push_back(lineSegment(Vec2(R + r, h), Vec2(R, h - r)));
+                else section.push_back(arcSegment(Vec2(R + r, h - r), r, kHalfPi, kPi));
+                section.push_back(lineSegment(Vec2(R, h - r), Vec2(R, h)));
+                return makeRevolution(Frame3(Vec3(x, 0, 0), Vec3(0, 0, 1), Vec3(1, 0, 0)), buildProfile(section, 1e-9).regions.front());
+            };
+            const Body ringA = ring(0.0), ringB = ring(offset);
+            auto common = [&](const Body &a, const Body &b) { return massProperties(booleanOperation(a, b, BooleanOperation::Intersect)).volume; };
+            double mitre = 0.0;
+            if (chamfer) {
+                mitre = common(ringA, ringB);
+            } else {
+                // Altezza tolta dall'anello a distanza d fuori dal suo cerchio; nella
+                // parte comune la minore delle due. Gauss 4 x 4 su 800 x 800 celle attorno all'angolo.
+                auto height = [&](double d) { return d > 0.0 && d < r ? r - std::sqrt(r * r - (r - d) * (r - d)) : 0.0; };
+                const double gx[4] = {-0.8611363115940526, -0.3399810435848563, 0.3399810435848563, 0.8611363115940526};
+                const double gw[4] = {0.3478548451374538, 0.6521451548625461, 0.6521451548625461, 0.3478548451374538};
+                const double cy = std::sqrt(R * R - 0.25 * offset * offset), x0 = 0.5 * offset - 4.0 * r, y0 = cy - r, step = 8.0 * r / 800.0;
+                for (int i = 0; i < 800; ++i)
+                    for (int j = 0; j < 800; ++j)
+                        for (int a = 0; a < 4; ++a)
+                            for (int b = 0; b < 4; ++b) {
+                                const double x = x0 + (i + 0.5 + 0.5 * gx[a]) * step, y = y0 + (j + 0.5 + 0.5 * gx[b]) * step;
+                                const double dA = std::hypot(x, y) - R, dB = std::hypot(x - offset, y) - R;
+                                mitre += 0.25 * gw[a] * gw[b] * step * step * std::min(height(dA), height(dB));
+                            }
+                mitre *= 2.0;  // i due angoli, simmetrici rispetto a y = 0
+            }
+            const double reference = v0 - common(ringA, cylinder(offset)) - common(ringB, cylinder(0.0)) - mitre;
+            const double ours = blended(pocket, rim, r, chamfer, chamfer ? reference : 0.0);
+            if (!chamfer) FK_CHECK_NEAR(ours, reference, 3e-6);
+        }
+}
+
+FK_TEST(BlendConcaveCornerRoundedPocket) {
+    // Come nel documento dell'utente: una tasca con il bordo fatto di archi,
+    // raccordi e segmenti tangenti tra loro tranne in un angolo vivo concavo tra
+    // due archi (la lente dei due cerchi R 2, tagliata in basso da una retta con
+    // due raccordi). Tutto il bordo in alto e' una catena chiusa con
+    // quell'angolo. Riferimento: le zone esatte dei tratti (segmenti: sezione per
+    // lunghezza; archi: Pappus) fino al vertice, piu' la correzione vicino
+    // all'angolo, integrata numericamente sulle altezze: la mitra (la parte
+    // comune dei due anelli fuori dai due cerchi) meno le parti delle due zone
+    // che stanno dietro la parete dell'altro arco.
+    const double h = 3.0, R = 2.0, rho = 0.3, bottom = -1.5;
+    const Vec2 cA(0, 0), cB(1.5, 0);
+    const double cy = std::sqrt(R * R - 0.75 * 0.75);
+    const Vec2 V(0.75, cy);
+    const double xc = std::sqrt((R - rho) * (R - rho) - (bottom + rho) * (bottom + rho));
+    const Vec2 cRight(xc, bottom + rho), cLeft(cB.x() - xc, bottom + rho);
+    const double aRight = std::atan2(cRight.y(), cRight.x()), aLeft = std::atan2(cLeft.y() - cB.y(), cLeft.x() - cB.x());
+    const double aVA = std::atan2(V.y(), V.x()), aVB = std::atan2(V.y() - cB.y(), V.x() - cB.x());
+    struct Arc {
+        Vec2 center;
+        double radius, from, to;
+    };
+    const std::vector<Arc> arcs{{cA, R, aRight, aVA}, {cRight, rho, -kHalfPi, aRight}, {cLeft, rho, aLeft, -kHalfPi}, {cB, R, aVB, aLeft + kTwoPi}};
+    std::vector<ProfileSegment> outline{lineSegment(Vec2(cLeft.x(), bottom), Vec2(cRight.x(), bottom))};
+    for (const Arc &arc : arcs) outline.push_back(arcSegment(arc.center, arc.radius, arc.from, arc.to));
+    const Frame3 below(Vec3(0, 0, -1), Vec3(0, 0, 1), Vec3(1, 0, 0));
+    const Body pocket = booleanOperation(makeBox(Frame3(Vec3(-5, -5, 0), Vec3(0, 0, 1), Vec3(1, 0, 0)), 12.0, 10.0, h),
+                                         makeExtrusion(below, buildProfile(outline, 1e-9).regions.front(), h + 2.0), BooleanOperation::Subtract);
+    const double v0 = massProperties(pocket).volume;
+    for (double r : {0.1, 0.2})
+        for (bool chamfer : {false, true}) {
+            // Zone esatte dei tratti: sezione (area, momento radiale rispetto all'asse) per angolo o lunghezza.
+            const double area = chamfer ? 0.5 * r * r : r * r * (1.0 - kPi / 4.0);
+            auto moment = [&](double radius) {
+                if (chamfer) return 0.5 * r * r * (radius + r / 3.0);
+                return r * r * (radius + 0.5 * r) - 0.25 * kPi * r * r * (radius + r - 4.0 * r / (3.0 * kPi));
+            };
+            double removed = area * (cRight.x() - cLeft.x());
+            for (const Arc &arc : arcs) removed += (arc.to - arc.from) * moment(arc.radius);
+            // Correzione vicino all'angolo (altezza tolta a distanza d fuori da un cerchio).
+            auto height = [&](double d) {
+                if (!(d > 0.0 && d < r)) return 0.0;
+                return chamfer ? r - d : r - std::sqrt(r * r - (r - d) * (r - d));
+            };
+            auto cross2d = [](const Vec2 &a, const Vec2 &b) { return a.x() * b.y() - a.y() * b.x(); };
+            const double gx[4] = {-0.8611363115940526, -0.3399810435848563, 0.3399810435848563, 0.8611363115940526};
+            const double gw[4] = {0.3478548451374538, 0.6521451548625461, 0.6521451548625461, 0.3478548451374538};
+            const double x0 = V.x() - 4.0 * r, y0 = V.y() - 2.0 * r, step = 8.0 * r / 800.0;
+            double correction = 0.0;
+            for (int i = 0; i < 800; ++i)
+                for (int j = 0; j < 800; ++j)
+                    for (int a = 0; a < 4; ++a)
+                        for (int b = 0; b < 4; ++b) {
+                            const Vec2 q(x0 + (i + 0.5 + 0.5 * gx[a]) * step, y0 + (j + 0.5 + 0.5 * gx[b]) * step);
+                            const double dA = distance(q, cA) - R, dB = distance(q, cB) - R;
+                            if (!(dA > 0.0 && dB > 0.0)) continue;  // dentro un cerchio: tasca o bordo dell'altro
+                            double value = std::min(height(dA), height(dB));
+                            if (cross2d(V - cA, q - cA) < 0.0) value -= height(dA);  // zona di A (lato dell'arco) dietro B
+                            if (cross2d(V - cB, q - cB) > 0.0) value -= height(dB);  // zona di B dietro A
+                            correction += 0.25 * gw[a] * gw[b] * step * step * value;
+                        }
+            const double reference = v0 - removed - correction;
+            const double ours = blended(pocket, {Vec3(R, 0, h)}, r, chamfer, 0.0);  // un arco: la catena prosegue per tangenza
+            FK_CHECK_NEAR(ours, reference, 3e-6);
+        }
+}
+
+FK_TEST(BlendSurfaceEndsOnConcaveCircularWall) {
+    // Bordo rettilineo che termina su una parete cilindrica concava:
+    // il contatto sul coperchio deve prolungare l'arco, non fermarsi
+    // sul vecchio vertice (scanalatura di 1.prt, Raccordo 23).
+    const std::vector<ProfileSegment> profile{
+        lineSegment(Vec2(-5, -5), Vec2(5, -5)),
+        lineSegment(Vec2(5, -5), Vec2(5, 0)),
+        lineSegment(Vec2(5, 0), Vec2(1, 0)),
+        arcSegment(Vec2(0, -1), std::sqrt(2.0), kPi / 4.0, 3.0 * kPi / 4.0),
+        lineSegment(Vec2(-1, 0), Vec2(-5, 0)),
+        lineSegment(Vec2(-5, 0), Vec2(-5, -5))};
+    const Operand part = extrusion(profile, 4.0);
+    for (const Vec3 &point : {Vec3(-3, 0, 4), Vec3(3, 0, 4)})
+        for (double radius : {0.1, 0.5}) {
+            const double expected = occtBlended(part.shape, {point}, radius, false);
+            FK_CHECK(expected > 0.0);
+            surfaceBlended(part.body, {point}, radius, false, expected);
+        }
+}
+
+// Applicatore.prt, corpo 4: cilindro con due solchi elicoidali (sweep) che
+// partono da una parete piana (piano del profilo) e finiscono sul cono in
+// cima. Gli spigoli tra il cilindro e i fianchi si avvolgono attorno al
+// cilindro: l'attraversamento del bordo terminale si cerca dal vertice (da
+// meta' spigolo se ne trovava uno lontano, a mezzo giro); contro la parete il
+// cilindro continua oltre il vertice (angolo concavo della faccia) e il bordo
+// rettilineo si allunga; sul cono la curva di chiusura e' una parabola che non
+// avanza lungo la corda e si traccia lungo la v del raccordo.
+FK_TEST(BlendHelicalGrooveEnds) {
+    std::ifstream in(std::string(FORGECAD_SOURCE_DIR) + "/kernel/tests/data/applicatore_threads.bin", std::ios::binary);
+    std::stringstream content;
+    content << in.rdbuf();
+    const Body body = readBodyBinary(content.str());
+    const std::vector<Vec3> points{Vec3(0.90687701161201262, 5.6434640999695747, -2.0864321426261907),
+                                   Vec3(2.0380604771102773, 5.7649196926916986, -1.0109077558558131)};
+    std::vector<const Surface *> old;
+    for (FaceId f : body.faces()) old.push_back(body.face(f).surface.get());
+    for (const Vec3 &point : points)
+        for (double size : {0.1, 0.3})
+            for (bool chamfer : {false, true}) {
+                const EdgeId edge = nearestEdge(body, point, 1e-6);
+                FK_CHECK(edge.valid());
+                if (!edge.valid()) continue;
+                std::vector<const Surface *> sides;
+                for (FinId fin : {body.edge(edge).forward, body.edge(edge).backward}) sides.push_back(body.face(body.finFace(fin)).surface.get());
+                Body result;
+                try {
+                    result = blendEdges(body, {edge}, size, chamfer);
+                } catch (const std::exception &error) {
+                    reportFailure(__FILE__, __LINE__, error.what());
+                    continue;
+                }
+                FK_CHECK(checkBody(result).empty());
+                int created = 0;
+                double ball = 0.0;
+                for (FaceId f : result.faces()) {
+                    if (std::find(old.begin(), old.end(), result.face(f).surface.get()) != old.end()) continue;
+                    ++created;
+                    if (chamfer) continue;
+                    // Palla rotolante: il centro dista r da entrambe le facce dello spigolo.
+                    const Surface &surface = *result.face(f).surface;
+                    const Interval u = surface.uDomain();
+                    for (double fu : {0.1, 0.3, 0.5, 0.7, 0.9})
+                        for (double fv : {0.0, 0.5, 1.0}) {
+                            const double uu = u.lo + fu * u.length();
+                            const Vec3 p = surface.point(uu, fv), n = surface.normal(uu, fv);
+                            double best = 1e300;
+                            for (double sign : {1.0, -1.0}) {
+                                const Vec3 c = p + sign * size * n;
+                                best = std::min(best, std::max(std::fabs(projectPoint(*sides[0], c).distance - size),
+                                                               std::fabs(projectPoint(*sides[1], c).distance - size)));
+                            }
+                            ball = std::max(ball, best);
+                        }
+                }
+                FK_CHECK(created == 1);
+                FK_CHECK(ball < 1e-6 * size);
+                TessellationOptions options;
+                options.deflection = 0.01;
+                FK_CHECK(tessellate(result, options).failedFaces == 0);
+            }
+}
+
+// Un'estensione lascia un vertice di grado due poco sotto il coperchio.
+// Il raccordo deve consumare tutto il tratto corto e continuare sul bordo
+// precedente, senza considerare il vertice una limitazione del raggio.
+FK_TEST(BlendSurfaceAcrossSplitSeam) {
+    const Body base = loftSolid({splitCircleAt(0.0, 5.0), splitCircleAt(10.0, 5.0)}, false);
+    detail::BlendModel model(base);
+    for (EdgeId id : base.edges()) {
+        const Edge &edge = base.edge(id);
+        const Vec3 a = edge.curve->point(edge.range.lo), b = edge.curve->point(edge.range.hi);
+        if (std::fabs(a.z() - b.z()) < 9.0) continue;
+        const int index = model.edgeIndex.at(id.index);
+        const auto original = model.edges[std::size_t(index)];
+        const double t = edge.range.lo + (a.z() < b.z() ? 0.98 : 0.02) * edge.range.length();
+        const int vertex = model.addPoint(edge.curve->point(t));
+        const int next = model.addEdge(vertex, original.end, edge.curve, {t, edge.range.hi});
+        model.edges[std::size_t(index)].end = vertex;
+        model.edges[std::size_t(index)].range.hi = t;
+        for (auto &face : model.faces) for (auto &loop : face.loops) {
+            std::vector<Body::BuildFin> divided;
+            for (const auto &fin : loop) {
+                if (fin.edge != index) { divided.push_back(fin); continue; }
+                auto added = fin;
+                added.edge = next;
+                if (fin.sense) { divided.push_back(fin); divided.push_back(added); }
+                else { divided.push_back(added); divided.push_back(fin); }
+            }
+            loop = std::move(divided);
+        }
+    }
+    const Body divided = model.build();
+    FK_CHECK(checkBody(divided).empty());
+    FK_CHECK(divided.edges().size() > base.edges().size());
+    const auto roundTop = [](const Body &body) {
+        std::vector<EdgeId> selected;
+        for (EdgeId id : body.edges()) {
+            const Edge &edge = body.edge(id);
+            if (std::fabs(edge.curve->point(edge.range.lo).z() - 10.0) < 1e-8
+                && std::fabs(edge.curve->point(edge.range.hi).z() - 10.0) < 1e-8) selected.push_back(id);
+        }
+        return blendSurfaceChains(body, selected, 1.0, false);
+    };
+    const Body expected = roundTop(base), result = roundTop(divided);
+    FK_CHECK(checkBody(result).empty());
+    for (EdgeId edge : result.edges()) FK_CHECK(!result.isLaminar(edge));
+    FK_CHECK(result.faces().size() == expected.faces().size());
+    FK_CHECK_NEAR(massProperties(result).volume, massProperties(expected).volume, 1e-7);
+}
+
+// Corpo finale di Loft_offset.prt: offset, estensioni e tagli. Il contorno
+// superiore attraversa cuciture segmentate e raccordi quasi tangenti.
+FK_TEST(BlendOffsetLoftTrimmedTopOneMillimeter) {
+    std::ifstream in(std::string(FORGECAD_SOURCE_DIR) + "/kernel/tests/data/loft_offset_trimmed.body", std::ios::binary);
+    FK_CHECK(bool(in));
+    if (!in) return;
+    std::stringstream content;
+    content << in.rdbuf();
+    const Body body = readBodyBinary(content.str());
+    FK_CHECK(checkBody(body).empty());
+    std::vector<EdgeId> selected;
+    for (LoopId loop : body.face(FaceId(7)).loops)
+        for (FinId fin : body.loopFins(loop)) selected.push_back(body.fin(fin).edge);
+    FK_CHECK(selected.size() == 6);
+    const Body result = blendEdges(body, selected, 1.0, false);
+    FK_CHECK(checkBody(result).empty());
+    FK_CHECK(result.faces().size() > body.faces().size());
+    for (EdgeId edge : result.edges()) {
+        FK_CHECK(!result.isLaminar(edge));
+        FK_CHECK(result.edge(edge).tolerance < 5e-5);
+    }
+    // Verifica geometrica del raggio sulle nuove superfici: il centro
+    // della sfera tangente deve distare 1 mm dal coperchio e da un fianco.
+    int patches = 0;
+    for (FaceId f : result.faces()) {
+        const auto surface = result.face(f).surface;
+        bool original = false;
+        for (FaceId old : body.faces()) original = original || body.face(old).surface == surface;
+        if (original) continue;
+        ++patches;
+        const Interval u = surface->uDomain();
+        for (double fraction : {0.25, 0.5, 0.75}) {
+            const double t = u.lo + fraction * u.length();
+            const Vec3 p = surface->point(t, 0.5), normal = surface->normal(t, 0.5);
+            double error = 1e300;
+            for (double sign : {-1.0, 1.0}) {
+                const Vec3 center = p + sign * normal;
+                const double cap = std::fabs(projectPoint(*body.face(FaceId(7)).surface, center).distance - 1.0);
+                double side = 1e300;
+                for (int index = 0; index < 6; ++index)
+                    side = std::min(side, std::fabs(projectPoint(*body.face(FaceId(index)).surface, center).distance - 1.0));
+                error = std::min(error, std::max(cap, side));
+            }
+            FK_CHECK(error < 1e-4);
+        }
+    }
+    FK_CHECK(patches > 0);
+}
+
+// Corpo equivalente al finale di Loft_offset.prt rigenerato con il loft
+// corretto: due fianchi B-spline (le meta' dell'offset, cucitura tangente
+// divisa in due edge dall'estensione) tra i coperchi piani y = -0.5 e 20.5.
+// Gli spigoli dei coperchi vengono da una booleana e cominciano con un tratto
+// di Hermite di 5.6e-8 prima di un nodo; il contatto sul fianco attraversa la
+// cucitura oltre il primo dei suoi edge. Raccordi sopra e sotto, R1 e R3.
+FK_TEST(BlendRegeneratedLoftOffsetCaps) {
+    std::ifstream in(std::string(FORGECAD_SOURCE_DIR) + "/kernel/tests/data/loft_offset_regenerated.body", std::ios::binary);
+    FK_CHECK(bool(in));
+    if (!in) return;
+    std::stringstream content;
+    content << in.rdbuf();
+    const Body body = readBodyBinary(content.str());
+    FK_CHECK(checkBody(body).empty());
+    std::vector<FaceId> caps, sides;
+    for (FaceId f : body.faces()) (body.face(f).surface->type() == SurfaceType::Plane ? caps : sides).push_back(f);
+    FK_CHECK(caps.size() == 2 && sides.size() == 2);
+    std::vector<EdgeId> selected;
+    for (FaceId cap : caps)
+        for (LoopId loop : body.face(cap).loops)
+            for (FinId fin : body.loopFins(loop)) selected.push_back(body.fin(fin).edge);
+    FK_CHECK(selected.size() == 4);
+    for (double radius : {1.0, 3.0}) {
+        const Body result = blendEdges(body, selected, radius, false);
+        FK_CHECK(checkBody(result).empty());
+        for (EdgeId edge : result.edges()) {
+            FK_CHECK(!result.isLaminar(edge));
+            FK_CHECK(result.edge(edge).tolerance < 1e-6);
+        }
+        // Palla vera: il centro dista r da un coperchio e da un fianco originali.
+        int patches = 0;
+        for (FaceId f : result.faces()) {
+            const auto surface = result.face(f).surface;
+            bool original = false;
+            for (FaceId old : body.faces()) original = original || body.face(old).surface == surface;
+            if (original) continue;
+            ++patches;
+            const Interval u = surface->uDomain();
+            for (double fraction : {0.1, 0.5, 0.9}) {
+                const double t = u.lo + fraction * u.length();
+                const Vec3 p = surface->point(t, 0.5), normal = surface->normal(t, 0.5);
+                double error = 1e300;
+                for (double sign : {-1.0, 1.0}) {
+                    const Vec3 center = p + sign * radius * normal;
+                    double cap = 1e300, side = 1e300;
+                    for (FaceId c : caps) cap = std::min(cap, std::fabs(projectPoint(*body.face(c).surface, center).distance - radius));
+                    for (FaceId s : sides) side = std::min(side, std::fabs(projectPoint(*body.face(s).surface, center).distance - radius));
+                    error = std::min(error, std::max(cap, side));
+                }
+                FK_CHECK(error < 1e-6);
+            }
+        }
+        FK_CHECK(patches >= 4);
+    }
+}
+
+// Le micro-geometrie che impedivano il raccordo inferiore del vecchio corpo
+// finale di Loft_offset: le due strisce larghe circa 0.008 mm (F0, F1) tra le
+// meta' dell'offset, i loro lati corti sui coperchi e i giunti a circa 3
+// gradi tra F1 e le facce vicine. Il corpo rigenerato con il loft corretto
+// non ne ha.
+FK_TEST(MicroFeaturesOfLoftOffsetBodies) {
+    const auto load = [](const char *name) {
+        std::ifstream in(std::string(FORGECAD_SOURCE_DIR) + "/kernel/tests/data/" + name, std::ios::binary);
+        std::stringstream content;
+        content << in.rdbuf();
+        return readBodyBinary(content.str());
+    };
+    const Body noisy = load("loft_offset_trimmed.body");
+    std::set<int> thin, shortEdges, nearTangent;
+    double thinWidth = 0.0;
+    for (const MicroFeature &feature : findMicroFeatures(noisy)) {
+        if (feature.kind == MicroFeature::Kind::ThinFace) thin.insert(feature.index), thinWidth = std::max(thinWidth, feature.measure);
+        if (feature.kind == MicroFeature::Kind::ShortEdge) shortEdges.insert(feature.index);
+        if (feature.kind == MicroFeature::Kind::NearTangentEdge) nearTangent.insert(feature.index);
+    }
+    FK_CHECK(thin == std::set<int>({0, 1}));
+    FK_CHECK(thinWidth > 0.005 && thinWidth < 0.01);
+    FK_CHECK(shortEdges == std::set<int>({2, 5, 7, 9}));
+    // I giunti di F1 con F2 e F4 (E6, E8) e quelli del fondo con E9 vicini.
+    FK_CHECK(nearTangent.count(6) == 1 && nearTangent.count(8) == 1);
+    const Body clean = load("loft_offset_regenerated.body");
+    FK_CHECK(findMicroFeatures(clean).empty());
+}
+
+// Due edge possono usare la stessa spline senza essere tangenti al nodo.
+// La continuazione non deve prendere la derivata destra su entrambi.
+FK_TEST(BlendSplitSeamPreservesKnotCorner) {
+    const std::vector<Vec3> points{Vec3(0,0,0), Vec3(1,0,0), Vec3(1,1,0)};
+    const auto curve = std::make_shared<BSplineCurve<3>>(1, std::vector<double>{0,0,1,2,2}, points);
+    const std::vector<Body::BuildEdge> edges{{0,1,curve,{0,1},0}, {1,2,curve,{1,2},0},
+        {2,0,std::make_shared<Line<3>>(points[2],points[0]-points[2]),{0,norm(points[0]-points[2])},0}};
+    Body::BuildFace face;
+    face.surface = std::make_shared<Plane>(Frame3());
+    face.sense = true;
+    face.loops = {{{0,true,nullptr,0},{1,true,nullptr,0},{2,true,nullptr,0}}};
+    const Body body = Body::buildSheet(points, edges, {face});
+    FK_CHECK(checkBody(body).empty());
+    detail::BlendModel model(body);
+    const EdgeId first = nearestEdge(body, Vec3(0.5,0,0), 1e-7);
+    FK_CHECK(first.valid());
+    const auto chain = model.edgeChain(model.edgeIndex.at(first.index), model.vertexIndex.at(body.edgeStart(first).index));
+    FK_CHECK(chain.size() == 1);
+}
+
+// TaglioSuperfici.prt, Raccordo 22: raccordo R 0.5 del bordo della faccia
+// piana y = 0 di un cilindro (asse y, R 1.1536) la cui fascia (y < 0.5)
+// invade il raccordo R 0.5 della tasca (Raccordo 21, contatto fino a
+// y = 0.11). Le due fasce si rifilano a vicenda: nei due punti in cui i
+// contatti si incrociano sul cilindro le tre superfici sono tangenti e le
+// curve toro/raccordo vi arrivano solo entro qualche tolleranza. Prima la
+// booleana falliva e la chirurgia lasciava due loop del cilindro sovrapposti.
+FK_TEST(BlendTopContourWithCornerRadiusEqualToFillet) {
+    // 1476.prt, corpo B175: bordo superiore (46 spigoli tangenti, archi R 7, 10
+    // e 25) raccordato. Con R 7 gli archi convessi danno sfere; nella cucitura
+    // degli utensili un meridiano della sezione di un segmento passava a 2.3e-7
+    // dal polo (base tangente solo entro quella precisione): SP-curve mancante e
+    // crash nella booleana. Poi il volume: il cammino lungo il polo delle fin
+    // senza SP-curve esatta partiva dal punto sbagliato (una faccia contava come
+    // la sfera intera). Riferimenti: OCCT 7.9.3 (BRepFilletAPI_MakeFillet sullo
+    // STEP del corpo) toglie 3845.5484 (R 4) e 11721.471 (R 7); il volume di OCCT
+    // del nostro R 7 coincide con il nostro entro 1e-3.
+    std::ifstream in(std::string(FORGECAD_SOURCE_DIR) + "/kernel/tests/data/1476_b175.body", std::ios::binary);
+    FK_CHECK(bool(in));
+    if (!in) return;
+    std::stringstream content;
+    content << in.rdbuf();
+    const Body body = readBodyBinary(content.str());
+    const EdgeId top = nearestEdge(body, Vec3(0.0, 148.0, 54.0), 1e-6);
+    FK_CHECK(top.valid());
+    const double before = massProperties(body).volume;
+    for (const auto &[radius, occt, relative] : {std::tuple<double, double, double>{4.0, 3845.5484, 1e-6}, {7.0, 11721.471, 2e-3}}) {
+        Body result;
+        try {
+            result = blendEdges(body, {top}, radius, false);
+        } catch (const std::exception &failure) {
+            fktest::reportFailure(__FILE__, __LINE__, failure.what());
+            continue;
+        }
+        for (const CheckIssue &issue : checkBody(result)) fktest::reportFailure(__FILE__, __LINE__, describe(issue.code) + ": " + issue.message);
+        for (EdgeId e : result.edges()) FK_CHECK(result.edge(e).tolerance < 1e-6);
+        FK_CHECK_NEAR(before - massProperties(result).volume, occt, relative * occt);
+    }
+}
+
+FK_TEST(BlendCapOverlappingPocketFillet) {
+    std::ifstream in(std::string(FORGECAD_SOURCE_DIR) + "/kernel/tests/data/taglio_superfici_b20.body", std::ios::binary);
+    FK_CHECK(bool(in));
+    if (!in) return;
+    std::stringstream content;
+    content << in.rdbuf();
+    const Body body = readBodyBinary(content.str());
+    const EdgeId cap = nearestEdge(body, Vec3(2.864466571, 0.0, -0.03534507751), 1e-6);
+    FK_CHECK(cap.valid());
+    Body result;
+    try {
+        result = blendEdges(body, {cap}, 0.5, false);
+    } catch (const std::exception &failure) {
+        fktest::reportFailure(__FILE__, __LINE__, failure.what());
+        return;
+    }
+    CheckOptions options;
+    options.loopCrossings = true;
+    for (const CheckIssue &issue : checkBody(result, options)) fktest::reportFailure(__FILE__, __LINE__, describe(issue.code) + ": " + issue.message);
+    for (EdgeId e : result.edges()) FK_CHECK(result.edge(e).tolerance < 2e-5);
+    // Il volume tolto e' l'unione delle due zone: piu' della zona del bordo
+    // da sola sul corpo con la tasca gia' raccordata non puo' essere.
+    const double before = massProperties(body).volume, after = massProperties(result).volume;
+    FK_CHECK(after < before);
+    FK_CHECK_NEAR(after, 17.6649, 2e-3);
+    TessellationOptions tessellation;
+    tessellation.deflection = 1e-3;
+    FK_CHECK(tessellate(result, tessellation).failedFaces == 0);
+}
+
+// B6 di Applicatore.prt: estremi concavi su bordi B-spline ottenuti per
+// intersezione. La continuazione polinomiale del trim non segue gli appoggi.
+// Due pannelli a 90 gradi: A cambia supporto a x=3, B a x=7.
+// Le cuciture oblique spostano il passaggio del contatto rispetto al vertice:
+// servono pezzi di transizione su entrambi i lati della stessa catena.
+static Body alternatingSupportSheet(bool reversedFaces) {
+    const std::vector<Vec3> points{
+        Vec3(0,0,0), Vec3(3,0,0), Vec3(7,0,0), Vec3(10,0,0),
+        Vec3(0,-2,0), Vec3(4,-2,0), Vec3(10,-2,0),
+        Vec3(0,0,2), Vec3(6,0,2), Vec3(10,0,2)};
+    std::vector<std::vector<int>> polygons{{0,4,5,1}, {1,5,6,3,2}, {0,1,2,8,7}, {2,3,9,8}};
+    if (reversedFaces) std::reverse(polygons.begin(), polygons.end());
+    std::vector<Body::BuildEdge> edges;
+    std::vector<Body::BuildFace> faces;
+    for (const auto &polygon : polygons) {
+        Body::BuildFace face;
+        const bool horizontal = points[std::size_t(polygon[1])].y() < 0;
+        face.surface = std::make_shared<Plane>(Frame3(Vec3(), horizontal ? Vec3(0,0,1) : Vec3(0,-1,0), Vec3(1,0,0)));
+        face.sense = true;
+        face.loops.resize(1);
+        for (std::size_t j = 0; j < polygon.size(); ++j) {
+            const int a = polygon[j], b = polygon[(j+1) % polygon.size()];
+            int index = -1;
+            bool sense = true;
+            for (std::size_t k = 0; k < edges.size(); ++k) {
+                if ((edges[k].start == a && edges[k].end == b) || (edges[k].start == b && edges[k].end == a)) {
+                    index = int(k);
+                    sense = edges[k].start == a;
+                    break;
+                }
+            }
+            if (index < 0) {
+                index = int(edges.size());
+                edges.push_back({a, b, std::make_shared<Line<3>>(points[std::size_t(a)], points[std::size_t(b)]-points[std::size_t(a)]),
+                                 {0, distance(points[std::size_t(a)], points[std::size_t(b)])}, 0});
+            }
+            face.loops[0].push_back({index, sense, nullptr, 0});
+        }
+        faces.push_back(std::move(face));
+    }
+    return Body::buildSheet(points, edges, faces);
+}
+
+FK_TEST(BlendAlternatingTangentSupports) {
+    for (bool reversed : {false, true}) {
+        const Body body = alternatingSupportSheet(reversed);
+        FK_CHECK(checkBody(body).empty());
+        const std::string original = writeBodyBinary(body);
+        std::vector<EdgeId> run;
+        for (double x : {1.0, 5.0, 9.0}) run.push_back(nearestEdge(body, Vec3(x,0,0), 1e-7));
+        for (double size : {0.1, 0.5}) for (bool chamfer : {false, true})
+            for (int selection = 0; selection < 4; ++selection) {
+                const std::vector<EdgeId> chosen = selection == 3 ? run : std::vector<EdgeId>{run[std::size_t(selection)]};
+                BodyHistory history;
+                const Body result = blendEdges(body, chosen, size, chamfer, &history);
+                CheckOptions checks;
+                checks.loopCrossings = true;
+                FK_CHECK(result.isSheet() && checkBody(result, checks).empty());
+                FK_CHECK(tessellate(result, {}).failedFaces == 0);
+                int patches = 0;
+                for (FaceId id : result.faces()) {
+                    FK_CHECK(history.isDeclared(EntityKind::Face, id.index));
+                    const auto surface = result.face(id).surface;
+                    bool old = false;
+                    for (FaceId source : body.faces()) old = old || surface == body.face(source).surface;
+                    if (old) continue;
+                    ++patches;
+                    const Interval u = surface->uDomain();
+                    for (double f : {0.2, 0.5, 0.8}) {
+                        const double t = u.lo + f*u.length();
+                        const Vec3 a = surface->point(t,0), b = surface->point(t,1);
+                        // La scelta della fin puo' invertire l'ordine dei supporti.
+                        const bool aHorizontal = std::fabs(a.z()) < std::fabs(b.z());
+                        const Vec3 horizontal = aHorizontal ? a : b, vertical = aHorizontal ? b : a;
+                        FK_CHECK_NEAR(horizontal.z(), 0, 1e-8);
+                        FK_CHECK_NEAR(vertical.y(), 0, 1e-8);
+                        FK_CHECK_NEAR(horizontal.y(), -size, 1e-8);
+                        FK_CHECK_NEAR(vertical.z(), size, 1e-8);
+                        if (chamfer) continue;
+                        FK_CHECK(norm(cross(surface->normal(t,aHorizontal ? 0 : 1), Vec3(0,0,1))) < 1e-7);
+                        FK_CHECK(norm(cross(surface->normal(t,aHorizontal ? 1 : 0), Vec3(0,1,0))) < 1e-7);
+                        for (double v : {0.0, 0.5, 1.0}) {
+                            const Vec3 point = surface->point(t,v), normal = surface->normal(t,v);
+                            double error = 1e300;
+                            for (double sign : {-1.0, 1.0}) {
+                                const Vec3 center = point + sign*size*normal;
+                                error = std::min(error, std::max(std::fabs(std::fabs(center.y())-size), std::fabs(std::fabs(center.z())-size)));
+                            }
+                            FK_CHECK(error < 1e-8);
+                        }
+                    }
+                }
+                FK_CHECK(patches == 5);
+                for (EdgeId id : result.edges()) FK_CHECK(result.edge(id).tolerance < 1e-7);
+            }
+        FK_CHECK(writeBodyBinary(body) == original);
+    }
+}
+
+// Spigolo obliquo su un piano che termina vicino al raccordo cilindrico
+// del fianco. Il contatto supera il bordo corto del coperchio, raggiunge
+// il cilindro e richiede una chiusura attraverso due pezze del raccordo.
+static Body consumedTerminalBody(bool reversedFaces) {
+    const std::vector<ProfileSegment> profile{
+        lineSegment(Vec2(-1,-2), Vec2(5,-2)), lineSegment(Vec2(5,-2), Vec2(5,0)),
+        lineSegment(Vec2(5,0), Vec2(0,0)), arcSegment(Vec2(0,-1), 1, kHalfPi, kPi),
+        lineSegment(Vec2(-1,-1), Vec2(-1,-2))};
+    const Body bar = makeExtrusion(Frame3(Vec3(), Vec3(1,0,0), Vec3(0,1,0)),
+                                    buildProfile(profile, 1e-9).regions.front(), 10);
+    const std::vector<ProfileSegment> wedge{
+        lineSegment(Vec2(-1,-3), Vec2(11,-3)), lineSegment(Vec2(11,-3), Vec2(11,11.1)),
+        lineSegment(Vec2(11,11.1), Vec2(-1,-0.9)), lineSegment(Vec2(-1,-0.9), Vec2(-1,-3))};
+    const Body clip = makeExtrusion(Frame3(Vec3(0,0,-3), Vec3(0,0,1), Vec3(1,0,0)),
+                                     buildProfile(wedge, 1e-9).regions.front(), 4);
+    Body body = booleanOperation(bar, clip, BooleanOperation::Intersect);
+    if (reversedFaces) {
+        detail::BlendModel model(body);
+        std::reverse(model.faces.begin(), model.faces.end());
+        body = model.build();
+    }
+    return body;
+}
+
+FK_TEST(BlendConsumedTerminalReachesTangentSupport) {
+    for (bool reversed : {false, true}) {
+        const Body body = consumedTerminalBody(reversed);
+        FK_CHECK(checkBody(body).empty());
+        const EdgeId edge = nearestEdge(body, Vec3(1,1.1,0), 1e-7);
+        FK_CHECK(edge.valid());
+        const std::string original = writeBodyBinary(body);
+        const double initialVolume = massProperties(body).volume;
+        double previousVolume = initialVolume;
+        bool triangularCap = false;
+        for (double radius : {0.05, 0.1, 0.2, 0.3}) {
+            BodyHistory history;
+            const Body result = blendSurfaceChains(body, {edge}, radius, false, nullptr, &history);
+            CheckOptions checks;
+            checks.loopCrossings = true;
+            FK_CHECK(checkBody(result, checks).empty());
+            FK_CHECK(tessellate(result, {}).failedFaces == 0);
+            const double volume = massProperties(result).volume;
+            FK_CHECK(volume > 0 && volume < initialVolume && volume < previousVolume);
+            previousVolume = volume;
+            int patches = 0, triangles = 0;
+            for (FaceId id : result.faces()) {
+                FK_CHECK(history.isDeclared(EntityKind::Face, id.index));
+                const auto surface = result.face(id).surface;
+                bool old = false;
+                for (FaceId source : body.faces()) old = old || surface == body.face(source).surface;
+                if (old) continue;
+                ++patches;
+                for (LoopId loop : result.face(id).loops) triangles += result.loopFins(loop).size() == 3;
+                const Interval u = surface->uDomain();
+                for (double f : {0.2, 0.5, 0.8}) for (double v : {0.0, 0.5, 1.0}) {
+                    const double t = u.lo + f*u.length();
+                    const Vec3 p = surface->point(t,v), normal = surface->normal(t,v);
+                    double error = 1e300;
+                    for (double sign : {-1.0, 1.0}) {
+                        const Vec3 center = p + sign*radius*normal;
+                        const double onA = std::fabs(std::fabs(center.y()-center.x()-0.1)/std::sqrt(2.0)-radius);
+                        const double plane = std::fabs(std::fabs(center.z())-radius);
+                        const double cylinder = std::fabs(std::fabs(std::hypot(center.y(),center.z()+1)-1)-radius);
+                        error = std::min(error, std::max(onA, std::min(plane,cylinder)));
+                    }
+                    FK_CHECK(error < 1e-7);
+                }
+            }
+            FK_CHECK(patches == (radius == 0.05 ? 1 : 2));
+            triangularCap = triangularCap || triangles > 0;
+            for (EdgeId id : result.edges()) {
+                FK_CHECK(!result.isLaminar(id));
+                FK_CHECK(result.edge(id).tolerance < 1e-7);
+                const Edge &e = result.edge(id);
+                FK_CHECK(bool(result.fin(e.forward).pcurve) && bool(result.fin(e.backward).pcurve));
+            }
+            FK_CHECK(writeBodyBinary(body) == original);
+        }
+        FK_CHECK(triangularCap);
+        // Il raggio che invade ulteriormente il fianco viene rifiutato;
+        // il fallimento non deve cambiare l'ingresso o lasciare history parziale.
+        BodyHistory history;
+        bool rejected = false;
+        try { (void)blendSurfaceChains(body, {edge}, 0.5, false, nullptr, &history); }
+        catch (const std::domain_error &) { rejected = true; }
+        FK_CHECK(rejected && writeBodyBinary(body) == original);
+        FK_CHECK(history.resultSize(EntityKind::Face) == 0);
+    }
+}
+
+FK_TEST(BlendApplicatoreRevolutionEnds) {
+    std::ifstream in(std::string(FORGECAD_SOURCE_DIR) + "/kernel/tests/data/applicatore_revolution_blend.body", std::ios::binary);
+    std::stringstream content;
+    content << in.rdbuf();
+    const Body body = readBodyBinary(content.str());
+    const std::string original = writeBodyBinary(body);
+    struct Case { std::vector<EdgeId> edges; double radius; int faces; };
+    const std::vector<Case> cases{
+        {{EdgeId(17), EdgeId(20)}, 0.01, 17},
+        {{EdgeId(17), EdgeId(20)}, 0.05, 17},
+        {{EdgeId(17), EdgeId(20)}, 0.1, 17},
+        {{EdgeId(17)}, 0.01, 16}, {{EdgeId(20)}, 0.01, 16},
+        {{EdgeId(17)}, 0.05, 16}, {{EdgeId(20)}, 0.05, 16},
+        {{EdgeId(17)}, 0.1, 16}, {{EdgeId(20)}, 0.1, 16},
+        {{EdgeId(27), EdgeId(3)}, 0.1, 21},
+        {{EdgeId(3), EdgeId(27)}, 0.1, 21},
+        {{EdgeId(3)}, 0.1, 20}, {{EdgeId(5)}, 0.1, 20}};
+    for (const Case &test : cases) {
+        Body result;
+        try { result = blendEdges(body, test.edges, test.radius, false); }
+        catch (const std::exception &error) {
+            reportFailure(__FILE__, __LINE__, "E" + std::to_string(test.edges.front().index)
+                          + " R" + std::to_string(test.radius) + ": " + error.what());
+            continue;
+        }
+        FK_CHECK(result.counts().faces == test.faces);
+        CheckOptions checks;
+        checks.loopCrossings = true;
+        FK_CHECK(checkBody(result, checks).empty());
+        for (EdgeId edge : result.edges()) {
+            FK_CHECK(!result.isLaminar(edge));
+            FK_CHECK(result.edge(edge).tolerance <= 1e-4 * test.radius);
+        }
+        TessellationOptions options;
+        options.deflection = 0.01;
+        FK_CHECK(tessellate(result, options).failedFaces == 0);
+    }
+    FK_CHECK(writeBodyBinary(body) == original);
+}
+
+FK_TEST(BlendMouseInternalNormalJump) {
+    std::ifstream in(std::string(FORGECAD_SOURCE_DIR) + "/kernel/tests/data/mouse_sewn.body", std::ios::binary);
+    FK_CHECK(bool(in));
+    std::stringstream bytes; bytes << in.rdbuf();
+    const Body source = readBodyBinary(bytes.str());
+    const std::string beforeBlend = writeBodyBinary(source);
+    // Il reader ricostruisce i frame normalizzati: una fixture prodotta su
+    // un'altra piattaforma non e' necessariamente identica byte per byte.
+    // Verifica l'immutabilita' delle operazioni rispetto al body appena letto.
+    FK_CHECK(checkBody(source).empty());
+    FK_CHECK(tessellate(source, {}).failedFaces == 0);
+    for (double radius : {1.0, 2.0}) {
+        bool rejected = false;
+        try { (void)blendEdges(source, {EdgeId(7)}, radius, false); }
+        catch (const std::domain_error &error) {
+            rejected = std::string(error.what()).find("discontinuita' interna") != std::string::npos;
+        }
+        FK_CHECK(rejected);
+    }
+    FK_CHECK(writeBodyBinary(source) == beforeBlend);
+}
+
+
+// Coperchio di Applicatore4, isolato a y >= 13 mm (14 facce). Sui vecchi
+// raccordi elicoidali R0,16 i piani normali al bordo si incrociano gia' a
+// R0,006: rifiutare quel ripiegamento non significa che gli offset reali
+// siano singolari. La guida intrinseca ricostruisce il contorno senza i
+// retracciamenti della semplice rimozione del controllo.
+FK_TEST(BlendPlanarCapOnTangentSplineSupports) {
+    std::ifstream file(std::string(FORGECAD_SOURCE_DIR) + "/kernel/tests/data/applicatore_cap.body", std::ios::binary);
+    FK_CHECK(bool(file));
+    std::stringstream bytes; bytes << file.rdbuf();
+    const Body fixture = readBodyBinary(bytes.str());
+    for (int mode : {0, 1, 2, 3}) {
+        detail::BlendModel model(fixture);
+        if (mode != 0) std::reverse(model.faces.begin(), model.faces.end());
+        Body body = model.build();
+        const auto transform = mode == 2
+            ? Transform3::rotation(Vec3(1,2,3), normalized(Vec3(1,2,1)), 0.7)
+            : Transform3::translation(Vec3(40,-30,20)) * Transform3::rotation(Vec3(), normalized(Vec3(2,-1,3)), -1.1);
+        if (mode >= 2) body = transformBody(body, transform);
+        // Trova il coperchio dal loop a 12 edge: nessuna dipendenza dagli ID
+        // persistenti, dall'ordine delle fin o dall'orientamento globale.
+        FaceId cap;
+        for (FaceId f : body.faces())
+            if (body.face(f).surface->type() == SurfaceType::Plane && body.face(f).loops.size() == 1
+                && body.loopFins(body.face(f).loops.front()).size() == 12) {
+                const auto &plane = static_cast<const Plane &>(*body.face(f).surface);
+                Vec3 expected(0,14.2,0);
+                if (mode >= 2) expected = transform.applyToPoint(expected);
+                if (std::fabs(dot(expected-plane.frame().origin(),plane.frame().zDir())) < 1e-8) cap = f;
+            }
+        FK_CHECK(cap.valid()); if (!cap.valid()) continue;
+        const auto &plane = static_cast<const Plane &>(*body.face(cap).surface);
+        const Vec3 outward = body.face(cap).sense ? plane.frame().zDir() : -plane.frame().zDir();
+        std::vector<EdgeId> contour;
+        for (FinId f : body.loopFins(body.face(cap).loops.front())) contour.push_back(body.fin(f).edge);
+        const auto original = writeBodyBinary(body);
+        for (double radius : {0.01, 0.05, 0.1, 0.15, 0.159}) {
+            BodyHistory history;
+            const auto chosen = mode == 1 ? std::vector<EdgeId>{contour[3]} : contour;
+            const Body result = [&] {
+                try { return blendEdges(body, chosen, radius, false, &history); }
+                catch (const std::exception &error) {
+                    throw std::runtime_error("coperchio mode=" + std::to_string(mode) + " R=" + std::to_string(radius) + ": " + error.what());
+                }
+            }();
+            CheckOptions checks; checks.loopCrossings = true;
+            FK_CHECK(checkBody(result,checks).empty());
+            FK_CHECK(tessellate(result,{}).failedFaces == 0);
+            for (EdgeId e : result.edges()) {
+                FK_CHECK(!result.isLaminar(e));
+                FK_CHECK(result.edge(e).tolerance < 2e-8);
+            }
+            for (FinId f : result.fins()) FK_CHECK(bool(result.fin(f).pcurve));
+            int created = 0;
+            for (FaceId f : result.faces()) {
+                FK_CHECK(history.isDeclared(EntityKind::Face,f.index));
+                bool inherited = false;
+                for (FaceId source : body.faces()) inherited = inherited || result.face(f).surface == body.face(source).surface;
+                if (inherited) continue;
+                ++created;
+                EdgeId origin;
+                for (const auto &link : history.origins(EntityKind::Face,f.index))
+                    if (link.kind == EntityKind::Edge && link.relation == HistoryRelation::Generated) origin = EdgeId(link.index);
+                FK_CHECK(origin.valid()); if (!origin.valid()) continue;
+                const auto &edge = body.edge(origin);
+                const FaceId side = body.finFace(edge.forward) == cap ? body.finFace(edge.backward) : body.finFace(edge.forward);
+                const auto &surface = *result.face(f).surface;
+                const Interval u = surface.uDomain();
+                for (double fraction : {0.03,0.2,0.5,0.8,0.97}) {
+                    const double t = u.lo + fraction*u.length();
+                    const Vec3 a = surface.point(t,0), b = surface.point(t,1), center = a-radius*outward;
+                    FK_CHECK(std::fabs(dot(a-plane.frame().origin(),outward)) < 2e-8);
+                    FK_CHECK(norm(cross(surface.normal(t,0),outward)) < 2e-6);
+                    const auto projected = projectPoint(*body.face(side).surface,b);
+                    FK_CHECK(projected.distance < 2e-8);
+                    FK_CHECK(norm(cross(surface.normal(t,1),body.face(side).surface->normal(projected.u,projected.v))) < 2e-6);
+                    for (double v : {0.,0.25,0.5,0.75,1.})
+                        FK_CHECK_NEAR(distance(surface.point(t,v),center),radius,2e-8);
+                }
+            }
+            FK_CHECK(created == 12);
+            FK_CHECK(writeBodyBinary(body) == original);
+            // Persistenza: la geometria ricaricata conserva tutti i contatti.
+            FK_CHECK(checkBody(readBodyBinary(writeBodyBinary(result)),checks).empty());
+        }
+        bool rejected = false;
+        try { (void)blendEdges(body,contour,0.2,false); }
+        catch (const std::exception &) { rejected = true; }
+        FK_CHECK(rejected && writeBodyBinary(body) == original);
+    }
+}
+
+// Partenza del solco elicoidale di Applicatore4 (23 facce). La cucitura
+// tangente cono/vecchio raccordo e' un'iso del supporto, ma Newton per
+// intersezioni trasverse non ne trovava la continuazione, anche a R0,001.
+FK_TEST(BlendOpenChainsAtTangentSplineSeams) {
+    std::ifstream file(std::string(FORGECAD_SOURCE_DIR) + "/kernel/tests/data/applicatore_start.body", std::ios::binary);
+    FK_CHECK(bool(file));
+    std::stringstream bytes; bytes << file.rdbuf();
+    const Body fixture = readBodyBinary(bytes.str());
+    const Vec3 locations[] = {Vec3(-1.7449967448207901,0.29061805539976088,-0.092506600137252634),
+                              Vec3(-2.0354934892613477,0.28092546857789052,-0.089421353929156622)};
+    // La rotazione quasi identica riproduce anche su x86 la chiusura
+    // instabile osservata su Apple Silicon: stessi controlli geometrici.
+    for (int mode : {0, 1, 2, 3}) {
+        detail::BlendModel model(fixture);
+        if (mode != 0) std::reverse(model.faces.begin(), model.faces.end());
+        Body body = model.build();
+        const double angle = mode == 3 ? 0.7 + 1e-14 : 0.7;
+        const auto rotation = Transform3::rotation(Vec3(1,2,3), normalized(Vec3(1,2,1)), angle);
+        if (mode >= 2) body = transformBody(body, rotation);
+        const auto original = writeBodyBinary(body);
+        for (int side : {0, 1}) {
+            const Vec3 location = mode >= 2 ? rotation.applyToPoint(locations[side]) : locations[side];
+            const EdgeId selected = nearestEdge(body, location, 1e-6);
+            FK_CHECK(selected.valid()); if (!selected.valid()) continue;
+            const std::vector<double> radii = side == 0 ? std::vector<double>{0.001,0.01,0.05,0.2,0.208}
+                                                       : std::vector<double>{0.001,0.01,0.05,0.06,0.075};
+            for (double radius : radii) {
+                BodyHistory history;
+                Body result;
+                try { result = blendEdges(body, {selected}, radius, false, &history); }
+                catch (const std::exception &error) {
+                    reportFailure(__FILE__, __LINE__, "mode=" + std::to_string(mode) + " side=" + std::to_string(side)
+                                  + " R=" + std::to_string(radius) + ": " + error.what());
+                    continue;
+                }
+                CheckOptions checks; checks.loopCrossings = true;
+                FK_CHECK(checkBody(result, checks).empty());
+                FK_CHECK(tessellate(result, {}).failedFaces == 0);
+                for (EdgeId edge : result.edges()) {
+                    FK_CHECK(!result.isLaminar(edge));
+                    FK_CHECK(result.edge(edge).tolerance < 5e-5);
+                }
+                for (FinId fin : result.fins()) FK_CHECK(bool(result.fin(fin).pcurve));
+                int created = 0, contacts = 0;
+                for (FaceId id : result.faces()) {
+                    FK_CHECK(history.isDeclared(EntityKind::Face, id.index));
+                    bool generated = false;
+                    for (const auto &link : history.origins(EntityKind::Face, id.index))
+                        generated |= link.kind == EntityKind::Edge && link.relation == HistoryRelation::Generated;
+                    if (!generated) continue;
+                    ++created;
+                    const auto &surface = *result.face(id).surface;
+                    // Campiona i contatti effettivamente rifilati, non tutto
+                    // il dominio della superficie di raccordo sottostante.
+                    for (LoopId loop : result.face(id).loops) for (FinId fin : result.loopFins(loop)) {
+                        const auto &fn = result.fin(fin);
+                        const auto &edge = result.edge(fn.edge);
+                        const FinId other = result.otherFin(fin);
+                        const FaceId support = result.finFace(other);
+                        const auto pc = result.fin(other).pcurve;
+                        if (!fn.pcurve || !pc) continue;
+                        const Vec2 mid = fn.pcurve->point(0.5*(edge.range.lo+edge.range.hi));
+                        const bool onA = std::fabs(mid.y()) < 1e-8, onB = std::fabs(mid.y()-1) < 1e-8;
+                        if (!onA && !onB) continue;
+                        ++contacts;
+                        for (double fraction : {0.025,0.1,0.25,0.5,0.75,0.9,0.975}) {
+                            const double t = edge.range.lo + fraction*edge.range.length();
+                            const Vec2 uv = fn.pcurve->point(t), sp = pc->point(t);
+                            const Vec3 normal = result.face(support).surface->normal(sp.x(),sp.y());
+                            FK_CHECK(norm(cross(surface.normal(uv.x(),uv.y()),normal)) < 2e-5);
+                            if (onA) {
+                                const Vec3 outward = (result.face(support).sense ? 1.0 : -1.0)*normal;
+                                const Vec3 center = surface.point(uv.x(),0) + (side == 0 ? radius : -radius)*outward;
+                                for (double v : {0.,0.25,0.5,0.75,1.})
+                                    FK_CHECK_NEAR(distance(surface.point(uv.x(),v),center),radius,2e-8);
+                            }
+                        }
+                    }
+                }
+                FK_CHECK(created == (side == 0 ? 3 : 1));
+                FK_CHECK(contacts >= 2*created);
+                FK_CHECK(checkBody(readBodyBinary(writeBodyBinary(result)), checks).empty());
+                FK_CHECK(writeBodyBinary(body) == original);
+            }
+            // R0,21 produceva una falsa riuscita con errore del raggio e
+            // tolleranza locale macroscopici. Il nuovo percorso deve rifiutarlo.
+            for (double radius : side == 0 ? std::vector<double>{0.21} : std::vector<double>{0.076,0.08}) {
+                bool rejected = false;
+                try { (void)blendEdges(body, {selected}, radius, false); }
+                catch (const std::domain_error &) { rejected = true; }
+                FK_CHECK(rejected);
+                FK_CHECK(writeBodyBinary(body) == original);
+            }
+        }
+    }
+}

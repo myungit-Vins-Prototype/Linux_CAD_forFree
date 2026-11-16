@@ -1,0 +1,78 @@
+--- /tmp/mitre-review/core/baseline/fk_blend_surface.cpp	2026-11-16 14:52:03.097473736 +0100
++++ /tmp/mitre-review/core/v2/fk_blend_surface.cpp	2026-11-16 17:10:29.465212994 +0100
+@@ -1965,6 +1965,8 @@
+         chains.push_back(std::move(chain));
+     }
+     Model model(body, history ? &input : nullptr, edgeSources);
++    std::vector<detail::BlendMitreUse> mitreCertificates;
++    std::set<const Curve<3> *> certifiedMitreCurves;
+     // Modifiche delle facce esistenti: edge tolti, fin nuove (con il verso) e
+     // edge nuovi senza verso; alla fine i loop si ricollegano per i vertici.
+     struct FaceEdit {
+@@ -3266,9 +3268,33 @@
+                 throw std::domain_error("blendEdges: raccordo non valido nell'angolo: scarto "
+                     + std::to_string(gamma.gap) + " mm oltre il limite "
+                     + std::to_string(admissibleMitreGap) + " mm; scegliere un raggio diverso");
+-            junction.gamma = model.addEdge(commonPoint, dividedPoint, gamma.curve, gamma.range, gamma.gap > 1e-7 ? 2.0 * gamma.gap : 0.0);
+-            if (gamma.gap > 1e-7)
+-                model.pointTolerance[std::size_t(commonPoint)] = std::max(model.pointTolerance[std::size_t(commonPoint)], 2.0 * gamma.gap);
++            if (gamma.certificateBudget > 0.0) {
++                const double budget = gamma.certificateBudget;
++                if (!std::isfinite(gamma.gap) || gamma.gap > budget)
++                    throw std::domain_error("blendEdges: estremi della mitra certificata oltre il budget fissato");
++                // Undo the explicit carrier orientation in ORIGINAL UV data;
++                // the final faces use a.surface/b.surface, not surfA/surfB.
++                const auto uvA = detail::originalBlendMitreUV(gamma.pcurveS, mitre->commonB, a.surface->vDomain());
++                const auto uvB = detail::originalBlendMitreUV(gamma.pcurveT, mitre->commonB, b.surface->vDomain());
++                detail::requireBlendMitreCertificate(gamma.curve, a.surface, uvA, gamma.range, budget);
++                detail::requireBlendMitreCertificate(gamma.curve, b.surface, uvB, gamma.range, budget);
++                for (int point : {commonPoint, dividedPoint}) {
++                    double &tolerance = model.pointTolerance[std::size_t(point)];
++                    if (!std::isfinite(tolerance) || tolerance > budget)
++                        throw std::domain_error("blendEdges: vertice della mitra oltre il budget fissato");
++                    tolerance = budget;
++                }
++                junction.gamma = model.addEdge(commonPoint, dividedPoint, gamma.curve, gamma.range, budget);
++                mitreCertificates.push_back({junction.gamma, gamma.curve, a.surface, uvA, gamma.range, budget});
++                mitreCertificates.push_back({junction.gamma, gamma.curve, b.surface, uvB, gamma.range, budget});
++                certifiedMitreCurves.insert(gamma.curve.get());
++            } else {
++                // The Newton continuation retains its legacy sampled budget;
++                // it is outside the continuous affine ISO certificate.
++                junction.gamma = model.addEdge(commonPoint, dividedPoint, gamma.curve, gamma.range, gamma.gap > 1e-7 ? 2.0 * gamma.gap : 0.0);
++                if (gamma.gap > 1e-7)
++                    model.pointTolerance[std::size_t(commonPoint)] = std::max(model.pointTolerance[std::size_t(commonPoint)], 2.0 * gamma.gap);
++            }
+             if (junction.deep >= 0 && junction.deepPoint != dividedPoint) {
+                 // Delta: il raccordo profondo con il fianco del basso, da X a c.
+                 const Piece &deepPiece = junction.deep == 1 ? b : a;
+@@ -3868,8 +3894,11 @@
+         relink(face, fixed, edit.free);
+     }
+     for (auto &[face, edit] : newFaces) relink(face, edit.fixed, edit.free);
++    // Preserve planned UV before automatic projection/refitting.
++    detail::installBlendMitreCertificates(model.faces, mitreCertificates);
+     BodyHistory declared;
+     Body result = model.build(history ? &declared : nullptr);
++    detail::requireEmittedBlendMitres(result, mitreCertificates);
+     if (history) {
+         // I contatti e le chiusure nuovi provengono dalle pezze che li
+         // usano. Dichiarali tramite l'incidenza, senza riassegnazioni per
+@@ -3899,6 +3928,7 @@
+     // limite relativo al raggio impedisce di nascondere costruzioni errate.
+     for (EdgeId edgeId : result.edges()) {
+         Edge &edge = result.edge(edgeId);
++        if (certifiedMitreCurves.count(edge.curve.get())) continue;
+         double gap = std::max(distance(result.vertex(result.edgeStart(edgeId)).point, edge.curve->point(edge.range.lo)),
+                               distance(result.vertex(result.edgeEnd(edgeId)).point, edge.curve->point(edge.range.hi)));
+         for (FinId fin : {edge.forward, edge.backward}) {
+@@ -3950,6 +3980,9 @@
+     checks.loopCrossings = true;  // un raccordo che invade un altro contorno della faccia
+     const std::vector<CheckIssue> issues = checkBody(result, checks);
+     if (!issues.empty()) throw std::domain_error("blendEdges: raccordo non valido (" + describe(issues.front().code) + ": " + issues.front().message + ")");
++    // computePCurves and all later checks must preserve actual controls,
++    // parameter, UV maps and fixed budgets. This path performs no unify.
++    detail::requireEmittedBlendMitres(result, mitreCertificates);
+     if (history) *history = std::move(declared);
+     return result;
+ }

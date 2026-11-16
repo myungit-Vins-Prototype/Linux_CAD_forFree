@@ -1,0 +1,11 @@
+{
+  "exit": 0,
+  "seconds": 41.59247632400002,
+  "command": [
+    "/home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_tests",
+    "Boolean"
+  ],
+  "passed": 38,
+  "failed": 0,
+  "phase": "Prima della correzione Supporto, kernel corrente"
+}

@@ -1,0 +1,17 @@
+from pathlib import Path
+import hashlib,json,shutil,runpy
+r=Path('/home/myungit/Linux_CAD_forFree');p=Path('/tmp/forgecad-k10-flatten-20261115')
+manifest=json.loads((p/'implementation/final/manifest.json').read_text())
+for name,entry in manifest.items():
+ src=p/'implementation/final'/name;dest=r/'kernel'/name
+ assert hashlib.sha256(src.read_bytes()).hexdigest()==entry['sha256'],name
+ if entry['before']:assert hashlib.sha256(dest.read_bytes()).hexdigest()==entry['before'],name
+ else:assert not dest.exists(),name
+src=p/'tests/test_planar_flatten_validation.cpp';assert hashlib.sha256(src.read_bytes()).hexdigest()=='6a95304ed60f2bdbc05ecc5a41e38baf2a34373af3918c84f47943241d03d211'
+assert not (r/'kernel/tests'/src.name).exists()
+for name in manifest:shutil.copy2(p/'implementation/final'/name,r/'kernel'/name)
+shutil.copy2(src,r/'kernel/tests'/src.name)
+runpy.run_path(str(p/'root/prepare-integration.py'))
+f=r/'kernel/fk_quilt_mapping.h';s=f.read_text();anchor='    // Appiattimento non isometrico, con bordo comune condiviso e genealogia.\n';assert anchor in s
+s=s.replace(anchor,anchor+'    // Su una sola Plane i contorni Line/NURBS conservano i coefficienti\n    // originali con limite continuo di arrotondamento; altre famiglie\n    // mantengono il fit campionato. Il gap dei vertici e\' misurato sui\n    // punti valutati, non certifica la valutazione esatta degli estremi.\n');f.write_text(s)
+print('Integrated frozen core and test; CMake and architecture catalog updated.')

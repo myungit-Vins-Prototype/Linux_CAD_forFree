@@ -1,0 +1,3 @@
+Command: rg --hidden -n -w sectionEnabled . --glob !docs/** --glob !archivi-locali/** --glob !.git/**
+./forgeCad2026_viewport.h:750:    bool sectionEnabled() const;
+./forgeCad2026_viewport.cpp:456:bool CadViewport::sectionEnabled() const { return section_.enabled; }

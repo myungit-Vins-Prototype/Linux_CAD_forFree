@@ -1,0 +1,608 @@
+{
+  "case": "tangent-rigid-pose",
+  "actual": [
+    {
+      "face": 0,
+      "fin": 2,
+      "edge": 2,
+      "range": [
+        "0x0p+0",
+        "0x1.efbaa4019ff9cp-3"
+      ],
+      "budget": "0x1.ad7f29abcaf48p-24",
+      "edgeTolerance": "0x1.ad7f29abcaf48p-24",
+      "finTolerance": "0x1.ad7f29abcaf48p-24",
+      "resolution": "0x1.ad7f29abcaf48p-24",
+      "curve": {
+        "type": "bspline",
+        "degree": 3,
+        "knots": [
+          "0x0p+0",
+          "0x0p+0",
+          "0x0p+0",
+          "0x0p+0",
+          "0x1.efbaa4019ff9cp-3",
+          "0x1.efbaa4019ff9cp-3",
+          "0x1.efbaa4019ff9cp-3",
+          "0x1.f1af3f0819e3p-3",
+          "0x1.f1af3f0819e3p-3",
+          "0x1.f1af3f0819e3p-3",
+          "0x1.f1af3f0819e3p-3"
+        ],
+        "poles": [
+          [
+            "0x1.026882c5a4cb1p+1",
+            "-0x1.01c92e9a65bcap+1",
+            "0x1.33a15e8b56b8bp+2"
+          ],
+          [
+            "0x1.02cbff4c822b3p+1",
+            "-0x1.ee9f221ce36a7p+0",
+            "0x1.331e3a40a7cb9p+2"
+          ],
+          [
+            "0x1.033b86396d052p+1",
+            "-0x1.d987c7d6eb3f8p+0",
+            "0x1.32b92ff1e5695p+2"
+          ],
+          [
+            "0x1.03b7178a7a8a4p+1",
+            "-0x1.c44c4e61b6ffcp+0",
+            "0x1.32723fa0aed8ap+2"
+          ],
+          [
+            "0x1.03b79452f9c8ep+1",
+            "-0x1.c436dd7034bf4p+0",
+            "0x1.3271f7fdb8b51p+2"
+          ],
+          [
+            "0x1.03b81127bfff8p+1",
+            "-0x1.c4216c59dcc4ap+0",
+            "0x1.3271b07974e87p+2"
+          ],
+          [
+            "0x1.03b88e08cd598p+1",
+            "-0x1.c40bfb1eafb74p+0",
+            "0x1.32716913e327ep+2"
+          ]
+        ],
+        "weights": [
+          "0x1p+0",
+          "0x1p+0",
+          "0x1p+0",
+          "0x1p+0",
+          "0x1p+0",
+          "0x1p+0",
+          "0x1p+0"
+        ]
+      },
+      "pcurve": {
+        "type": "bspline",
+        "degree": 1,
+        "knots": [
+          "0x0p+0",
+          "0x0p+0",
+          "0x1.efbaa4019ff9cp-3",
+          "0x1.f1af3f0819e3p-3",
+          "0x1.f1af3f0819e3p-3"
+        ],
+        "poles": [
+          [
+            "0x1p+0",
+            "0x1p+0"
+          ],
+          [
+            "0x1p+0",
+            "0x1.3df7548033ff4p+0"
+          ],
+          [
+            "0x1p+0",
+            "0x1.3e35e7e1033c6p+0"
+          ]
+        ],
+        "weights": [
+          "0x1p+0",
+          "0x1p+0",
+          "0x1p+0"
+        ]
+      },
+      "surface": {
+        "uDegree": 2,
+        "vDegree": 2,
+        "uKnots": [
+          "0x0p+0",
+          "0x0p+0",
+          "0x0p+0",
+          "0x1p+0",
+          "0x1p+0",
+          "0x1p+0"
+        ],
+        "vKnots": [
+          "0x0p+0",
+          "0x0p+0",
+          "0x0p+0",
+          "0x1.3e35e7e1033c6p+0",
+          "0x1.3e35e7e1033c6p+0",
+          "0x1.3e35e7e1033c6p+0"
+        ],
+        "uPoleCount": 3,
+        "vPoleCount": 3,
+        "poles": [
+          [
+            "0x1.ff82b76704c2cp-1",
+            "-0x1.7cb13c44075f4p+1",
+            "0x1.45834639490bfp+2"
+          ],
+          [
+            "0x1.ff82b76704c2cp-1",
+            "-0x1.307ea5924d502p+1",
+            "0x1.3a15493839fp+2"
+          ],
+          [
+            "0x1.096e0030cb7d1p+0",
+            "-0x1.ba15270538d86p+0",
+            "0x1.3abf19d3c637p+2"
+          ],
+          [
+            "0x1.7d782b141c65ap+0",
+            "-0x1.802700363f47ep+1",
+            "0x1.3fbeffa596883p+2"
+          ],
+          [
+            "0x1.7d782b141c65ap+0",
+            "-0x1.33f469848538cp+1",
+            "0x1.345102a4876c4p+2"
+          ],
+          [
+            "0x1.84e94725b718ap+0",
+            "-0x1.c459fb8b2e47p+0",
+            "0x1.323068b979b02p+2"
+          ],
+          [
+            "0x1p+1",
+            "-0x1.8p+1",
+            "0x1.4p+2"
+          ],
+          [
+            "0x1p+1",
+            "-0x1.33cd694e45f0ep+1",
+            "0x1.349202fef0e42p+2"
+          ],
+          [
+            "0x1.03b88e08cd598p+1",
+            "-0x1.c40bfb1eafb74p+0",
+            "0x1.32716913e327ep+2"
+          ]
+        ],
+        "weights": [
+          "0x1p+0",
+          "0x1p+0",
+          "0x1p+0",
+          "0x1p+0",
+          "0x1p+0",
+          "0x1p+0",
+          "0x1p+0",
+          "0x1p+0",
+          "0x1p+0"
+        ]
+      },
+      "faceOrigins": [
+        {
+          "operand": 0,
+          "kind": 2,
+          "index": 0,
+          "relation": 1
+        },
+        {
+          "operand": 0,
+          "kind": 1,
+          "index": 2,
+          "relation": 2
+        }
+      ],
+      "checkBodyBudget": "0x1.421f5f40d8376p-22"
+    },
+    {
+      "face": 0,
+      "fin": 3,
+      "edge": 3,
+      "range": [
+        "0x1.efbaa4019ff9cp-3",
+        "0x1.f1af3f0819e3p-3"
+      ],
+      "budget": "0x1.ad7f29abcaf48p-24",
+      "edgeTolerance": "0x1.ad7f29abcaf48p-24",
+      "finTolerance": "0x1.ad7f29abcaf48p-24",
+      "resolution": "0x1.ad7f29abcaf48p-24",
+      "curve": {
+        "type": "bspline",
+        "degree": 3,
+        "knots": [
+          "0x0p+0",
+          "0x0p+0",
+          "0x0p+0",
+          "0x0p+0",
+          "0x1.efbaa4019ff9cp-3",
+          "0x1.efbaa4019ff9cp-3",
+          "0x1.efbaa4019ff9cp-3",
+          "0x1.f1af3f0819e3p-3",
+          "0x1.f1af3f0819e3p-3",
+          "0x1.f1af3f0819e3p-3",
+          "0x1.f1af3f0819e3p-3"
+        ],
+        "poles": [
+          [
+            "0x1.026882c5a4cb1p+1",
+            "-0x1.01c92e9a65bcap+1",
+            "0x1.33a15e8b56b8bp+2"
+          ],
+          [
+            "0x1.02cbff4c822b3p+1",
+            "-0x1.ee9f221ce36a7p+0",
+            "0x1.331e3a40a7cb9p+2"
+          ],
+          [
+            "0x1.033b86396d052p+1",
+            "-0x1.d987c7d6eb3f8p+0",
+            "0x1.32b92ff1e5695p+2"
+          ],
+          [
+            "0x1.03b7178a7a8a4p+1",
+            "-0x1.c44c4e61b6ffcp+0",
+            "0x1.32723fa0aed8ap+2"
+          ],
+          [
+            "0x1.03b79452f9c8ep+1",
+            "-0x1.c436dd7034bf4p+0",
+            "0x1.3271f7fdb8b51p+2"
+          ],
+          [
+            "0x1.03b81127bfff8p+1",
+            "-0x1.c4216c59dcc4ap+0",
+            "0x1.3271b07974e87p+2"
+          ],
+          [
+            "0x1.03b88e08cd598p+1",
+            "-0x1.c40bfb1eafb74p+0",
+            "0x1.32716913e327ep+2"
+          ]
+        ],
+        "weights": [
+          "0x1p+0",
+          "0x1p+0",
+          "0x1p+0",
+          "0x1p+0",
+          "0x1p+0",
+          "0x1p+0",
+          "0x1p+0"
+        ]
+      },
+      "pcurve": {
+        "type": "bspline",
+        "degree": 1,
+        "knots": [
+          "0x0p+0",
+          "0x0p+0",
+          "0x1.efbaa4019ff9cp-3",
+          "0x1.f1af3f0819e3p-3",
+          "0x1.f1af3f0819e3p-3"
+        ],
+        "poles": [
+          [
+            "0x1p+0",
+            "0x1p+0"
+          ],
+          [
+            "0x1p+0",
+            "0x1.3df7548033ff4p+0"
+          ],
+          [
+            "0x1p+0",
+            "0x1.3e35e7e1033c6p+0"
+          ]
+        ],
+        "weights": [
+          "0x1p+0",
+          "0x1p+0",
+          "0x1p+0"
+        ]
+      },
+      "surface": {
+        "uDegree": 2,
+        "vDegree": 2,
+        "uKnots": [
+          "0x0p+0",
+          "0x0p+0",
+          "0x0p+0",
+          "0x1p+0",
+          "0x1p+0",
+          "0x1p+0"
+        ],
+        "vKnots": [
+          "0x0p+0",
+          "0x0p+0",
+          "0x0p+0",
+          "0x1.3e35e7e1033c6p+0",
+          "0x1.3e35e7e1033c6p+0",
+          "0x1.3e35e7e1033c6p+0"
+        ],
+        "uPoleCount": 3,
+        "vPoleCount": 3,
+        "poles": [
+          [
+            "0x1.ff82b76704c2cp-1",
+            "-0x1.7cb13c44075f4p+1",
+            "0x1.45834639490bfp+2"
+          ],
+          [
+            "0x1.ff82b76704c2cp-1",
+            "-0x1.307ea5924d502p+1",
+            "0x1.3a15493839fp+2"
+          ],
+          [
+            "0x1.096e0030cb7d1p+0",
+            "-0x1.ba15270538d86p+0",
+            "0x1.3abf19d3c637p+2"
+          ],
+          [
+            "0x1.7d782b141c65ap+0",
+            "-0x1.802700363f47ep+1",
+            "0x1.3fbeffa596883p+2"
+          ],
+          [
+            "0x1.7d782b141c65ap+0",
+            "-0x1.33f469848538cp+1",
+            "0x1.345102a4876c4p+2"
+          ],
+          [
+            "0x1.84e94725b718ap+0",
+            "-0x1.c459fb8b2e47p+0",
+            "0x1.323068b979b02p+2"
+          ],
+          [
+            "0x1p+1",
+            "-0x1.8p+1",
+            "0x1.4p+2"
+          ],
+          [
+            "0x1p+1",
+            "-0x1.33cd694e45f0ep+1",
+            "0x1.349202fef0e42p+2"
+          ],
+          [
+            "0x1.03b88e08cd598p+1",
+            "-0x1.c40bfb1eafb74p+0",
+            "0x1.32716913e327ep+2"
+          ]
+        ],
+        "weights": [
+          "0x1p+0",
+          "0x1p+0",
+          "0x1p+0",
+          "0x1p+0",
+          "0x1p+0",
+          "0x1p+0",
+          "0x1p+0",
+          "0x1p+0",
+          "0x1p+0"
+        ]
+      },
+      "faceOrigins": [
+        {
+          "operand": 0,
+          "kind": 2,
+          "index": 0,
+          "relation": 1
+        },
+        {
+          "operand": 0,
+          "kind": 1,
+          "index": 2,
+          "relation": 2
+        }
+      ],
+      "checkBodyBudget": "0x1.421f5f40d8376p-22"
+    },
+    {
+      "face": 1,
+      "fin": 11,
+      "edge": 2,
+      "range": [
+        "0x0p+0",
+        "0x1.efbaa4019ff9cp-3"
+      ],
+      "budget": "0x1.ad7f29abcaf48p-24",
+      "edgeTolerance": "0x1.ad7f29abcaf48p-24",
+      "finTolerance": "0x1.ad7f29abcaf48p-24",
+      "resolution": "0x1.ad7f29abcaf48p-24",
+      "curve": {
+        "type": "bspline",
+        "degree": 3,
+        "knots": [
+          "0x0p+0",
+          "0x0p+0",
+          "0x0p+0",
+          "0x0p+0",
+          "0x1.efbaa4019ff9cp-3",
+          "0x1.efbaa4019ff9cp-3",
+          "0x1.efbaa4019ff9cp-3",
+          "0x1.f1af3f0819e3p-3",
+          "0x1.f1af3f0819e3p-3",
+          "0x1.f1af3f0819e3p-3",
+          "0x1.f1af3f0819e3p-3"
+        ],
+        "poles": [
+          [
+            "0x1.026882c5a4cb1p+1",
+            "-0x1.01c92e9a65bcap+1",
+            "0x1.33a15e8b56b8bp+2"
+          ],
+          [
+            "0x1.02cbff4c822b3p+1",
+            "-0x1.ee9f221ce36a7p+0",
+            "0x1.331e3a40a7cb9p+2"
+          ],
+          [
+            "0x1.033b86396d052p+1",
+            "-0x1.d987c7d6eb3f8p+0",
+            "0x1.32b92ff1e5695p+2"
+          ],
+          [
+            "0x1.03b7178a7a8a4p+1",
+            "-0x1.c44c4e61b6ffcp+0",
+            "0x1.32723fa0aed8ap+2"
+          ],
+          [
+            "0x1.03b79452f9c8ep+1",
+            "-0x1.c436dd7034bf4p+0",
+            "0x1.3271f7fdb8b51p+2"
+          ],
+          [
+            "0x1.03b81127bfff8p+1",
+            "-0x1.c4216c59dcc4ap+0",
+            "0x1.3271b07974e87p+2"
+          ],
+          [
+            "0x1.03b88e08cd598p+1",
+            "-0x1.c40bfb1eafb74p+0",
+            "0x1.32716913e327ep+2"
+          ]
+        ],
+        "weights": [
+          "0x1p+0",
+          "0x1p+0",
+          "0x1p+0",
+          "0x1p+0",
+          "0x1p+0",
+          "0x1p+0",
+          "0x1p+0"
+        ]
+      },
+      "pcurve": {
+        "type": "bspline",
+        "degree": 1,
+        "knots": [
+          "0x0p+0",
+          "0x0p+0",
+          "0x1.efbaa4019ff9cp-3",
+          "0x1.f1af3f0819e3p-3",
+          "0x1.f1af3f0819e3p-3"
+        ],
+        "poles": [
+          [
+            "0x0p+0",
+            "0x1p+0"
+          ],
+          [
+            "0x0p+0",
+            "0x1.3df7548033ff4p+0"
+          ],
+          [
+            "0x0p+0",
+            "0x1.3e35e7e1033c6p+0"
+          ]
+        ],
+        "weights": [
+          "0x1p+0",
+          "0x1p+0",
+          "0x1p+0"
+        ]
+      },
+      "surface": {
+        "uDegree": 2,
+        "vDegree": 2,
+        "uKnots": [
+          "0x0p+0",
+          "0x0p+0",
+          "0x0p+0",
+          "0x1p+0",
+          "0x1p+0",
+          "0x1p+0"
+        ],
+        "vKnots": [
+          "0x0p+0",
+          "0x0p+0",
+          "0x0p+0",
+          "0x1.3e35e7e1033c6p+0",
+          "0x1.3e35e7e1033c6p+0",
+          "0x1.3e35e7e1033c6p+0"
+        ],
+        "uPoleCount": 3,
+        "vPoleCount": 3,
+        "poles": [
+          [
+            "0x1p+1",
+            "-0x1.8p+1",
+            "0x1.4p+2"
+          ],
+          [
+            "0x1p+1",
+            "-0x1.33cd694e45f0ep+1",
+            "0x1.349202fef0e41p+2"
+          ],
+          [
+            "0x1.03b88e08cd597p+1",
+            "-0x1.c40bfb1eafb74p+0",
+            "0x1.32716913e327fp+2"
+          ],
+          [
+            "0x1.4143ea75f1cd3p+1",
+            "-0x1.7fd8ffc9c0b82p+1",
+            "0x1.4041005a6977dp+2"
+          ],
+          [
+            "0x1.4143ea75f1cd3p+1",
+            "-0x1.33a6691806a9p+1",
+            "0x1.34d303595a5bfp+2"
+          ],
+          [
+            "0x1.44fc787ebf26ap+1",
+            "-0x1.c3bdfab231278p+0",
+            "0x1.32b2696e4c9fap+2"
+          ],
+          [
+            "0x1.84f057b188656p+1",
+            "-0x1.7c153b6b0a3fbp+1",
+            "0x1.468747a2eeeb2p+2"
+          ],
+          [
+            "0x1.84f057b188656p+1",
+            "-0x1.2fe2a4b950308p+1",
+            "0x1.3b194aa1dfcf6p+2"
+          ],
+          [
+            "0x1.8ae46e260427bp+1",
+            "-0x1.b583d8b1b8fbep+0",
+            "0x1.3e8d85c406194p+2"
+          ]
+        ],
+        "weights": [
+          "0x1p+0",
+          "0x1p+0",
+          "0x1p+0",
+          "0x1p+0",
+          "0x1p+0",
+          "0x1p+0",
+          "0x1p+0",
+          "0x1p+0",
+          "0x1p+0"
+        ]
+      },
+      "faceOrigins": [
+        {
+          "operand": 0,
+          "kind": 2,
+          "index": 1,
+          "relation": 1
+        },
+        {
+          "operand": 0,
+          "kind": 1,
+          "index": 6,
+          "relation": 2
+        }
+      ],
+      "checkBodyBudget": "0x1.421f5f40d8376p-22"
+    }
+  ]
+}

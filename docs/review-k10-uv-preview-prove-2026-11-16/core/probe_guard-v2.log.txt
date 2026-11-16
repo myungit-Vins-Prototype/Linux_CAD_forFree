@@ -1,0 +1,8 @@
+smooth-seven-pole-schema PASS
+proper-Bezier-schema PASS
+nonfinite-budget PASS
+custom-metric-mm-not-UV PASS uvError=3725.32 metricBound=9.93415e-09
+actual-output-topological-map PASS
+actual-output-pole-tamper PASS
+actual-output-budget-tamper PASS
+7 guard cases passed

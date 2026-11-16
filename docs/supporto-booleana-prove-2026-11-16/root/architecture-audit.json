@@ -1,0 +1,99 @@
+{
+  "files": 765,
+  "edges": 11045,
+  "units": 382,
+  "errors": {},
+  "html_matches": true,
+  "incident_edges": 107,
+  "required": [
+    [
+      "kernel/fk_boolean.cpp",
+      "kernel/fk_boolean_boundary.cpp",
+      "certifyEllipseBoundarySegment"
+    ],
+    [
+      "kernel/fk_boolean.cpp",
+      "kernel/fk_boolean_boundary.cpp",
+      "ellipseAffinePCurveError"
+    ],
+    [
+      "kernel/tests/test_boolean_boundary.cpp",
+      "kernel/fk_boolean_boundary.cpp",
+      "certifyEllipseBoundarySegment"
+    ],
+    [
+      "kernel/tests/test_boolean_boundary.cpp",
+      "kernel/fk_boolean_boundary.cpp",
+      "ellipseAffinePCurveError"
+    ],
+    [
+      "kernel/fk_boolean.cpp",
+      "kernel/fk_boolean.cpp",
+      "boundaryChain"
+    ],
+    [
+      "kernel/fk_boolean.cpp",
+      "kernel/fk_topology.cpp",
+      "Body::build"
+    ],
+    [
+      "kernel/fk_boolean.cpp",
+      "kernel/fk_unify.cpp",
+      "unifySameDomain"
+    ]
+  ],
+  "focus": {
+    "kernel/fk_boolean.cpp": {
+      "description": "Booleane B-rep: dispatch esatto delle sezioni meridiane di rivoluzione; filtri conservativi sui ritagli e sugli spigoli; classificazione UV sui carrier identici, tagli, ritaglio prima della validazione degli archi e riuso dei soli agganci necessari; riclassificazione di ogni sottoarco nei ritagli, scelta della curva condivisa compatibile con tutte le facce, indice UV dei vertici per i fori e diagnostica delle facce; taglio di solidi su un lato di una faccia finita e chiusure orientate. Contatti Line/trim ellittico: eventi e catena sorgente espliciti, limiti continui e UV affine certificata, mapping dal montaggio e ricontrollo dopo unify; retry transazionale conservativo.",
+      "incoming": {
+        "call": 39,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 29,
+        "include": 20,
+        "reference": 0
+      }
+    },
+    "kernel/fk_boolean_boundary.cpp": {
+      "description": "Certificati continui outward dei contatti fra retta e bordo ellittico: originali IEEE, monotonia, scarto dai carrier Plane/Cylinder e frame double; pcurve affine nel parametro originale con bound di Peano, input non finiti e famiglie non risolte rifiutati.",
+      "incoming": {
+        "call": 3,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 5,
+        "include": 2,
+        "reference": 0
+      }
+    },
+    "kernel/fk_boolean_boundary.h": {
+      "description": "Contratti interni dei certificati di contatto ellisse/retta finita e delle immagini UV affini; limite continuo o rifiuto, senza tolleranze aumentate e senza campionamento come autorizzazione.",
+      "incoming": {
+        "call": 0,
+        "include": 3,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 0,
+        "include": 1,
+        "reference": 0
+      }
+    },
+    "kernel/tests/test_boolean_boundary.cpp": {
+      "description": "Regressioni indipendenti sui certificati di contatto e pcurve: budget, monotonia, versi, dati non finiti, overflow, parametri originali, pose e scale e famiglie rifiutate.",
+      "incoming": {
+        "call": 1,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 8,
+        "include": 4,
+        "reference": 0
+      }
+    }
+  }
+}

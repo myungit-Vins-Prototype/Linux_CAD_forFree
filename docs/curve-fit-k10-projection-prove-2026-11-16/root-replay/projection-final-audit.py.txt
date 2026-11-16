@@ -1,0 +1,37 @@
+from pathlib import Path
+import hashlib,json,subprocess,re
+r=Path('/home/myungit/Linux_CAD_forFree');p=r/'docs/curve-fit-k10-projection-prove-2026-11-16';root=p/'root-replay'
+sha=lambda f:hashlib.sha256(f.read_bytes()).hexdigest()
+before=json.loads((root/'hashes-resume.json').read_text());changed=[f for f,h in before.items() if not (r/f).is_file() or sha(r/f)!=h]
+assert set(changed)=={'CLAUDE.md','docs/curve-fit-k10-projection-2026-11-16.md'},changed
+names=subprocess.check_output(['git','ls-files','--cached','--others','--exclude-standard','-z'],cwd=r).decode().split('\0')
+new=sorted(f for f in set(names)-set(before) if f and (r/f).is_file() and not (r/f).is_symlink());assert all(f.startswith('docs/curve-fit-k10-projection-prove-2026-11-16/') for f in new),new
+expected=json.loads((root/'historical-final-source-hashes.json').read_text())
+for f,h in expected.items():assert sha(r/f)==h,f
+source=list(expected)+['cad_forge.cpp','kernel/CMakeLists.txt','tools/generate_architecture.py']
+binaries=['forgecad-release/forgecad','forgecad-release/forgecad_view_tests','forgecad-release/kernel/forgekernel_tests','forgecad-release/kernel/forgekernel_projection_fit_validation_tests','forgecad-release/kernel/libforgekernel.a']
+latest=max((r/f).stat().st_mtime for f in source if f!='tools/generate_architecture.py')
+for f in binaries:assert (r/f).stat().st_mtime>latest,f
+assert (r/'CLAUDE.md').stat().st_size<=16384
+links={name:(r/path).read_text() for name,path in [('new_target','forgecad-release/kernel/CMakeFiles/forgekernel_projection_fit_validation_tests.dir/link.txt'),('app','forgecad-release/CMakeFiles/forgecad.dir/link.txt')]}
+assert 'Qt' not in links['new_target'] and 'libTK' not in links['new_target'] and 'opencascade' not in links['new_target'].lower()
+assert 'libTK' not in links['app'] and 'opencascade' not in links['app'].lower()
+db=r/'forgecad-release/compile_commands.json';g=json.loads((r/'docs/architecture/graph.json').read_text());assert g['analysis']['configurationDigest']==sha(db)
+commands=json.loads(db.read_text());strict={name:[c['command'] for c in commands if c['file'].endswith('/'+name)] for name in ['kernel/fk_project.cpp','kernel/fk_curve_fit_bounds.cpp','kernel/tests/test_projection_fit_validation.cpp']}
+for name,items in strict.items():assert items and all('-fno-fast-math' in c and '-ffp-contract=off' in c for c in items),name
+for name in ['build','ctest','projection-33','kernel-Projected','architecture-check']:assert json.loads((root/(name+'-result.json')).read_text())['exit']==0,name
+assert 'RESULT passed=33 failed=0' in (root/'projection-33.log').read_text()
+assert json.loads((root/'ctest-result.json').read_text())['actual_passed']==24
+assert json.loads((p/'tests-replay/sanitizer-result.json').read_text())['exit_code']==0
+assert 'RESULT passed=33 failed=0' in (p/'tests-replay/sanitizer-run.log').read_text()
+assert json.loads((p/'tests-replay/app-result.json').read_text())['exit_code']==0
+independent=json.loads((p/'independent-replay/results.json').read_text())
+assert independent['geometry_records']==16 and independent['geometry_chain_spans']==688 and independent['multi_source_join_spans']==264
+assert independent['baseline_geometry_witnesses']==16 and independent['upper_bound_maximum']<1e-7
+assert independent['all_current_certificates_pass'] and independent['all_baseline_witnesses_pass'] and independent['documented_replay_exit_code']==0
+assert sha(r/'forgecad-release/kernel/libforgekernel.a')=='fde7076d2cde820df08723c045bd7866aaadefbb890aca6c5ed280d8eba47eeb'
+for f in p.rglob('*'):
+    if f.is_file():assert f.suffix not in {'.a','.o','.cpp','.h','.py'} and f.name!='CMakeLists.txt',str(f)
+subprocess.run(['git','diff','--check'],cwd=r,check=True)
+result=dict(resume_baseline_files=len(before),resume_preserved_files=len(before)-len(changed),changed_since_resume=changed,new_files=new,source_hashes={f:sha(r/f) for f in source},binary_hashes={f:sha(r/f) for f in binaries},claude_bytes=(r/'CLAUDE.md').stat().st_size,link_commands=links,strict_fp_commands=strict,limits='Original pre-projection 2600-file manifest was lost with temporary staging; this preservation audit starts at resumption. Current source hashes match those recorded before interruption. No numerical 2590/2600 claim is made.')
+(root/'final-audit.json').write_text(json.dumps(result,indent=2)+'\n');print('Conservazione ripresa',result['resume_preserved_files'],'/',len(before),'PASS; sorgenti e binari finali verificati')

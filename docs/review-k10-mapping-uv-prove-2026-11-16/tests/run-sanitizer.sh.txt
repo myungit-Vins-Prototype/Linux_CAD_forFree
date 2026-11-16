@@ -1,0 +1,12 @@
+#!/bin/bash
+set -eu
+TASK_TESTS=/tmp/mapping-uv-review/tests
+TASK_CORE=/tmp/mapping-uv-review/core
+cd /home/myungit/Linux_CAD_forFree
+mkdir -p "$TASK_TESTS/sanitizer"
+for TASK_UNIT in fk_surface_mapping fk_quilt_mapping; do
+    /usr/bin/c++ -std=c++17 -O1 -g -fno-fast-math -ffp-contract=off -fsanitize=address,undefined -fno-omit-frame-pointer -I "$TASK_CORE/candidate/kernel" -I kernel -c "$TASK_CORE/candidate/kernel/$TASK_UNIT.cpp" -o "$TASK_TESTS/sanitizer/$TASK_UNIT.o"
+done
+/usr/bin/c++ -std=c++17 -O1 -g -fno-fast-math -ffp-contract=off -fsanitize=address,undefined -fno-omit-frame-pointer -I kernel -c kernel/fk_curve_fit_bounds.cpp -o "$TASK_TESTS/sanitizer/fk_curve_fit_bounds.o"
+/usr/bin/c++ -std=c++17 -O1 -g -fno-fast-math -ffp-contract=off -fsanitize=address,undefined -fno-omit-frame-pointer -I kernel "$TASK_TESTS/test_mapping_pcurve_validation.cpp" "$TASK_TESTS/sanitizer/fk_surface_mapping.o" "$TASK_TESTS/sanitizer/fk_quilt_mapping.o" "$TASK_TESTS/sanitizer/fk_curve_fit_bounds.o" "$TASK_TESTS/baseline/libforgekernel.a" -o "$TASK_TESTS/sanitizer/mapping-uv-tests"
+ASAN_OPTIONS=detect_leaks=1:halt_on_error=1 UBSAN_OPTIONS=halt_on_error=1 "$TASK_TESTS/sanitizer/mapping-uv-tests" > "$TASK_TESTS/sanitizer/result.log" 2>&1

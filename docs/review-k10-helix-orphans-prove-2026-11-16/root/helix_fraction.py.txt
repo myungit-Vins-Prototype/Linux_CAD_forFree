@@ -1,0 +1,171 @@
+#!/usr/bin/env python3
+"""Independent continuous Helix/actual cubic certificate using rational intervals.
+Inputs are exact IEEE hex values. No production oracle or source is imported.
+Machin alternating series brackets pi; Taylor intervals bracket sin/cos. Exact
+Hermite controls plus the fourth-derivative remainder cover every output span.
+Arithmetic rounds OUTWARD to a 192-bit absolute rational grid to bound size.
+"""
+from fractions import Fraction as F
+from math import factorial,isqrt,inf,nextafter
+from pathlib import Path
+import json,sys,hashlib,copy
+BITS=192;DEN=1<<BITS
+
+def floor(q):return q.numerator//q.denominator
+
+def rounded(lo,hi):
+ assert lo<=hi
+ return (F(floor(lo*DEN),DEN),F(-floor(-hi*DEN),DEN))
+
+class I:
+ def __init__(self,x=0,hi=None):
+  if isinstance(x,I):self.lo,self.hi=x.lo,x.hi;return
+  self.lo=F(x);self.hi=F(x if hi is None else hi);assert self.lo<=self.hi
+ @classmethod
+ def outward(cls,lo,hi):return cls(*rounded(lo,hi))
+ def __add__(self,b):
+  b=I(b);return I.outward(self.lo+b.lo,self.hi+b.hi)
+ __radd__=__add__
+ def __neg__(self):return I(-self.hi,-self.lo)
+ def __sub__(self,b):return self+-I(b)
+ def __rsub__(self,b):return I(b)+-self
+ def __mul__(self,b):
+  b=I(b);p=[x*y for x in (self.lo,self.hi) for y in (b.lo,b.hi)];return I.outward(min(p),max(p))
+ __rmul__=__mul__
+ def __truediv__(self,b):
+  b=I(b);assert b.lo>0
+  return self*I.outward(1/b.hi,1/b.lo)
+ def abs(self):return max(abs(self.lo),abs(self.hi))
+
+def exact(x):return F.from_float(float.fromhex(x)) if isinstance(x,str) else F.from_float(float(x))
+def vec(v):return [I(exact(x)) for x in v]
+def add(a,b):return [x+y for x,y in zip(a,b)]
+def sub(a,b):return [x-y for x,y in zip(a,b)]
+def scale(a,b):return [x*b for x in a]
+def dot(a,b):return sum((x*y for x,y in zip(a,b)),I())
+def sqrt_upper(q):
+ assert q>=0
+ k=isqrt((q.numerator<<(2*BITS))//q.denominator)
+ out=F(k+1,DEN) if k*k*q.denominator!=q.numerator<<(2*BITS) else F(k,DEN)
+ assert out*out>=q
+ return out
+
+def norm(a):return sqrt_upper(sum(v.abs()**2 for v in a))
+def atan_bracket(inv,n):
+ terms=[F((-1)**k,(2*k+1)*inv**(2*k+1)) for k in range(n)]
+ s=sum(terms,F());nxt=F((-1)**n,(2*n+1)*inv**(2*n+1));return I(min(s,s+nxt),max(s,s+nxt))
+PI=16*atan_bracket(5,100)-4*atan_bracket(239,40)
+assert PI.lo<F.from_float(3.141592653589793)<PI.hi or abs(float(PI.lo)-3.141592653589793)<1e-15
+
+def sincos(angle):
+ # Rounded quadrant is merely a proposal; the exact residual enclosure below
+ # must fit the Taylor domain, so it never authorizes an unproved reduction.
+ quarter=round(float((angle.lo+angle.hi)/2)/(3.141592653589793/2))
+ r=angle-I(quarter)*(PI/2);assert r.abs()<=1
+ negsquare=-r*r;s=I();c=I();st=r;ct=I(1)
+ for k in range(24):
+  s=s+st;c=c+ct
+  st=st*negsquare/((2*k+2)*(2*k+3));ct=ct*negsquare/((2*k+1)*(2*k+2))
+ tail=F(1,factorial(48));s=s+I(-tail,tail);c=c+I(-tail,tail)
+ return [(s,c),(c,-s),(-s,-c),(-c,s)][quarter%4]
+
+class Source:
+ def __init__(self,original,target):
+  transforms=[];self.trim_ranges=[]
+  while original['type'] in ('trimmed','transformed'):
+   if original['type']=='trimmed':self.trim_ranges.append(tuple(map(exact,original['range'])))
+   else:transforms.append(original)
+   original=original['basis']
+  assert original['type']=='helix'
+  self.original=original;f=original['frame'];self.o=vec(f['origin']);self.x=vec(f['x']);self.y=vec(f['y']);self.z=vec(f['z'])
+  self.radius=exact(original['radius']);self.slope=exact(original['radialSlope']);self.rise=exact(original['risePerRadian']);self.start=exact(original['startAngle']);self.sense=-1 if original['leftHanded'] else 1
+  for t in reversed(transforms):
+   m=[[I(exact(x)) for x in row] for row in t['matrix']];v=vec(t['translation'])
+   def move(a,point):return [dot(row,a)+(v[k] if point else I()) for k,row in enumerate(m)]
+   self.o=move(self.o,True);self.x=move(self.x,False);self.y=move(self.y,False);self.z=move(self.z,False)
+  o=vec(target['origin']);x=vec(target['x']);y=vec(target['y'])
+  def project(a,point):
+   if point:a=sub(a,o)
+   return [dot(a,x),dot(a,y)]
+  self.o=project(self.o,True);self.x=project(self.x,False);self.y=project(self.y,False);self.z=project(self.z,False)
+  self.radial_norm=norm(self.x)+norm(self.y)
+ def jet(self,t):
+  s,c=sincos(I(self.start)+self.sense*I(t));r=self.radius+self.slope*t
+  radial=add(scale(self.x,c),scale(self.y,s));deriv=scale(add(scale(self.x,-s),scale(self.y,c)),self.sense)
+  p=add(add(self.o,scale(radial,r)),scale(self.z,self.rise*t))
+  d=add(add(scale(radial,self.slope),scale(deriv,r)),scale(self.z,self.rise))
+  return p,d
+ def fourth(self,a,b):
+  radius=I(self.radius)+I(self.slope)*I(a,b)
+  return (radius.abs()+4*abs(self.slope))*self.radial_norm
+ def bound(self,a,b,poles):
+  h=b-a;p,dp=self.jet(a);q,dq=self.jet(b)
+  ideal=[p,add(p,scale(dp,h/3)),sub(q,scale(dq,h/3)),q]
+  controls=max(norm(sub(actual,expected)) for actual,expected in zip(poles,ideal))
+  remainder=self.fourth(a,b)*h**4/384
+  return controls+remainder
+
+def normalize_source(j):
+ d=copy.deepcopy(j);d['type']={'trim':'trimmed','transform':'transformed'}.get(d.pop('kind'),j['kind'])
+ if 'basis' in d:d['basis']=normalize_source(d['basis'])
+ if d['type']=='helix':d['radialSlope']=d['stored_slope'];d['risePerRadian']=d['stored_rise']
+ return d
+
+def normalize(record):
+ d=copy.deepcopy(record);d['case']=d['label'];d['source']=normalize_source(d['source']);d['targetFrame']=d['projection']
+ if d['actual']:assert len(d['actual'])==1;d['actual']=d['actual'][0]
+ return d
+
+def check(record):
+ source=Source(record['source'],record['targetFrame']);budget=exact(record['budget']);a,b=map(exact,record['range']);actual=record['actual']
+ assert actual['degree']==3 and not actual['weights']
+ knots=list(map(exact,actual['knots']));poles=[vec(v) for v in actual['poles']]
+ assert len(knots)==len(poles)+4 and (len(poles)-1)%3==0
+ assert knots[:4]==[a]*4 and knots[-4:]==[b]*4
+ for lo,hi in source.trim_ranges:assert lo<=a<b<=hi
+ worst=F();count=0
+ for k in range(0,len(poles)-3,3):
+  lo,hi=knots[k+3:k+5]
+  assert lo<hi and knots[k+1:k+4]==[lo]*3 and knots[k+4:k+7]==[hi]*3
+  bound=source.bound(lo,hi,poles[k:k+4]);worst=max(worst,bound);count+=1
+  if bound>budget:
+   return dict(pass_=False,span=k//3,upper_mm=float(bound),budget=float(budget))
+ return dict(pass_=True,spans=count,upper_mm=float(worst),upper_fraction=str(worst),budget=float(budget))
+
+def run(folder):
+ results=[]
+ for path in sorted(Path(folder).glob('*.json')):
+  record=normalize(json.loads(path.read_text()))
+  if not record.get('migrated',False) or record['expected_rejection']:continue
+  proof=check(record);proof.update(case=record['case'],sha256=hashlib.sha256(path.read_bytes()).hexdigest());results.append(proof)
+  print(path.name,proof['pass_'],proof.get('spans'),proof['upper_mm'],flush=True)
+ assert len(results)==8 and all(p['pass_'] for p in results)
+ # The verifier must notice altered final controls independently of production.
+ first=next(normalize(json.loads(p.read_text())) for p in sorted(Path(folder).glob('*.json')) if json.loads(p.read_text()).get('migrated',False) and not json.loads(p.read_text())['expected_rejection'])
+ altered=copy.deepcopy(first);p=altered['actual']['poles'][1];p[0]=(float.fromhex(p[0])+1e-3).hex();bad=check(altered);assert not bad['pass_']
+ return dict(arithmetic='Fraction/192-bit outward grid',pi_identity='16 atan(1/5)-4 atan(1/239), exact alternating bounds',cases=results,altered_pole=bad)
+def witness_negative(record):
+ record=normalize(record);source=Source(record['source'],record['targetFrame']);budget=exact(record['budget'])
+ assert record['expected_rejection'] and not record['rejected'] and record['created_count']==1
+ if record['actual']:
+  actual=record['actual'];assert actual['degree']==3 and len(actual['poles'])==4 and not actual['weights']
+  lo,hi=map(exact,record['range']);t=exact(float(3.141592653589793/2).hex());u=(t-lo)/(hi-lo)
+  poles=[vec(v) for v in actual['poles']]
+  while len(poles)>1:poles=[add(scale(a,1-u),scale(b,u)) for a,b in zip(poles,poles[1:])]
+  residual=sub(source.jet(t)[0],poles[0])
+ else:
+  # XZ published a vertical segment: the exact projected X source at t=pi
+  # lies outside the segment's constant X by about twice the original radius.
+  assert len(record['actual_segments'])==1
+  ends=record['actual_segments'][0];assert ends[0][0]==ends[1][0]
+  t=exact(float(3.141592653589793).hex());p=source.jet(t)[0]
+  residual=[p[0]-I(exact(ends[0][0]))]
+ lower2=sum((v.lo if v.lo>0 else v.hi if v.hi<0 else F())**2 for v in residual)
+ assert lower2>budget**2
+ return dict(case=record['case'],parameter=str(t),lower_squared=str(lower2),budget=float(budget),ratio_over_budget_at_least=float(lower2/budget**2)**.5)
+
+if __name__=='__main__':
+ if len(sys.argv)>3 and sys.argv[3]=='--baseline':
+  result=[witness_negative(json.loads(p.read_text())) for p in sorted(Path(sys.argv[1]).glob('*.json')) if json.loads(p.read_text())['expected_rejection']];assert len(result)==2;print('Two exact negative witnesses PASS',flush=True)
+ else:result=run(sys.argv[1])
+ Path(sys.argv[2]).write_text(json.dumps(result,indent=2)+'\n')

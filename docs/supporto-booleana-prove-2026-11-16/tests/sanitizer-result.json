@@ -1,0 +1,40 @@
+{
+  "exit_code": 0,
+  "checks": 78,
+  "failures": 0,
+  "diagnostics": 0,
+  "instrumented_translation_units": [
+    "/tmp/supporto-review/stage/kernel/fk_boolean.cpp",
+    "/tmp/supporto-review/stage/kernel/fk_boolean_boundary.cpp",
+    "/tmp/supporto-review/tests/boundary_private.cpp including test_boolean_boundary.cpp"
+  ],
+  "remaining_kernel": "Release static archive, not instrumented",
+  "asan": true,
+  "ubsan": true,
+  "lsan": true,
+  "leak_check_execution": "unrestricted, no ptrace sandbox",
+  "suppressions": [],
+  "initial_sandbox_log": "certificates-extended-sanitized.log; 78 PASS followed by LSan ptrace fatal error; not counted as successful LSan",
+  "hashes": {
+    "test_boolean_boundary.cpp": "06f613580054c6de37f46738ccfc39d42c4c0965732f59415ab4db03590e2ad3",
+    "boundary_private.cpp": "1c7509c1cfa5a5e2d60b4161fa1d7dc7463c469d14facc9fd2f2ac7bc6e20174",
+    "fk_boolean.sanitized.o": "88f21595a5c4716cca8e364df3681d81fc06abcffd203a42731f73057833ff37",
+    "fk_boolean_boundary.sanitized.o": "fdaa52bf4718014f3bb51759c04c1ad034fd52d7889a66c5fbb11785bb6544b5",
+    "boundary-certificates-extended-sanitized": "bc6509c948791adce28c1327bd52945e18ba38793fd35b1c2f88fbf86f7a46ed",
+    "certificates-extended-sanitized-unrestricted.log": "11909f7c8c930c3fed62f4f99df18c127861391238ba9607b36f15c1cc4e2c2a"
+  },
+  "production_sources": {
+    "kernel/fk_boolean.cpp": "3b8e21c9133627c99cf51df712d8b638cc466f7d2d6442f2c43c1ba47f1feda2",
+    "kernel/fk_boolean_boundary.h": "2d268df2dd61d4d36aacc6e24853ec3148390c85d27b79f671b04eedc9387fec",
+    "kernel/fk_boolean_boundary.cpp": "9d0234bfdcd029cea584f0e47ecfe650e404a33aeb2981b027b3b0024e3bc2d4",
+    "fk_boolean.o": "64fbdf4e0341a80223928af8259962e2ebe4a48d280e1effdab795f4036be406",
+    "fk_boolean_boundary.o": "abf82ce723ed0a482c7cb33c14419e809ebc23729ddc514be42637d7420dbd45",
+    "probe": "68040f23622a60f608db4dce3047ae87910ef9a8c0f942f57f62e4f6449ac4dd",
+    "commands.json": "a0d3265804be08d7b33417882bc2b5f3b0acbd4a77c1d95ab30791ab3e171ecd"
+  },
+  "permanent_test_candidate_sha256": "06f613580054c6de37f46738ccfc39d42c4c0965732f59415ab4db03590e2ad3",
+  "permanent_test_integrated_sha256": "f053cc39a74c22b91721f53cb026f688058bf9e84b5401d8e63cc9bf0e11cbe8",
+  "permanent_test_difference": "Root reformatted the permanent source; sanitizer driver uses the preserved original candidate (same 51 assertions).",
+  "permanent_test_token_equal": true,
+  "exit": 0
+}

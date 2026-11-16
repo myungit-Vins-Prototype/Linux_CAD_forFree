@@ -1,0 +1,61 @@
+# Audit indipendente K10 — pareti piane di thicken
+
+Esito: nessun bloccante nella patch finale. **37 controlli indipendenti PASS** sul core produzione SHA d235fdfa46ecc301a1d88b659cc45df40f4de9368ca1133f5844f8d7c11e6ef0. Nessuna modifica produzione, build condivisa, CMake/documentazione o CAD utente da questo audit. I due fit sono manifestazioni della stessa causa K10, non due nuovi findings.
+
+## Versioni e ripetizione
+
+`manifest.json` usa percorsi relativi al repository e SHA256 completi del core compilato, header pubblico, dipendenze ispezionate e test permanente letto. `final-sources/` conserva i byte; finalize.py ne verifica l'identità con produzione. `build_final.py` compila un solo TU produttivo in privato usando compile_commands e strictFP, lo collega prima dell'archivio kernel corrente e lancia quattro eseguibili indipendenti. Nessuna build condivisa. I log definitivi sono `*-final.log`; `*-first.log` sono intermedi, sullo stesso core hash ma non vanno confusi con il replay finale.
+
+`baseline-before.log` è la prova pubblica precedente alla patch. `before/fk_thicken.cpp` è il congelamento baseline SHA a4623eda855af811beca759521fd13ee14dfaba08f465af0792348352fac30ec. Il confronto Other è stato esplicitamente ricompilato con tale baseline dopo l'integrazione produzione, evitando che un archivio aggiornato sostituisse la versione da confrontare. Il primo tentativo dei probe selettivi mancava dell'include fk_history.h; corretto solo il probe prima dell'esecuzione, senza problema prodotto.
+
+## Difetto riprodotto e validità geometrica
+
+Fixture: una lamina Plane con bordo B-spline grado27 a una sola campata, polynomial o razionale con pesi positivi non costanti, piccolo rilievoY fra i campioni. Spessore .1, tolleranza pubblica1e-6, offsetTolerance1e-7, tre lati Forward/Backward/Both. Tutti i24casi baseline riuscivano come solidi6facce, checkBody0 e source immutata.
+
+Nei12casi lungo la normale la parete intermedia perdeva il rilievo: distanza minima del punto atteso a TUTTI i carrier output5.7424750601736843e-5/poly e5.416219077815233e-5/rational (ampiezza1). Riducendo il rilievo di10, gli errori diventavano5.74247506e-6/5.41621908e-6. Risultato uguale sui tre lati. Le12controparti lungo la direzione preservavano già la forma, errore circa1e-17..2.3e-16. Il confronto su tutti i supporti, anche prima del trim, esclude che la discrepanza dipenda solo dal parametro o da un altro bordo/faccia corretti non considerati.
+
+`regularity.py/json` e fixtures.h conservano la prova sulla fonte originale IEEE: X' ha bound Bernstein positivo (>=0.9999999999999999/poly; >=0.4444444444444445/rational, conservativo); |Y| è limitata mediante64intervalli dyadici esatti a5.74869e-5/5.45061e-5. X monotona da0a1 e |Y|<.001 escludono auto-intersezioni e incroci con gli altri tre lati salvo i corner. La fonte è regolare e semplice; la Plane ha normale costante. Le ampiezze ridotte mantengono queste proprietà.
+
+Dopo patch i24casi riescono/checkBody0, tutti con errore intermedio<1e-12; i12controlli direzionali sono identici byte per byte nei log. Il massimo è circa2.3e-16 in questi casi a scala1.
+
+## Analisi del percorso e correzione locale
+
+Il grafo e i sorgenti mostrano il percorso thickenSheet→thickenAlongNormal→offsetFaces per i due caps, fitCurve(at(s0))/fitCurve(at(s1)) per le pareti, assembleBody/wall e sewSolid→sewSheets. Le funzioni normali, offset Plane, curve transform e sewing sono state ispezionate.
+
+Su una faccia Plane, faceNormalAt restituisce il vettore zDir originale firmato con face.sense; non dipende da p. Perciò i due bordi sono matematicamente C(t)+s0*n e C(t)+s1*n: il campionamento non è necessario. La patch intercetta soltanto le pareti il cui supporto è strutturalmente Plane e la base della curva è gestita da transformCurve; attraversa Trimmed/Transformed con cancellationPoint, mantiene Other sul percorso legacy.
+
+Il nuovo ramo traduce la curva originale e crea ExtrusionSurface(base,n). Conserva famiglia, parametro, nodi, grado e pesi della generatrice; non inserisce nodi e non applica fit. Per s=0 riusa la curva originale immutabile. Il vettore di spostamento n non viene rinormalizzato. Il costruttore ExtrusionSurface normalizza la direzione del carrier: cambia la parametrizzazioneV e introduce il normale roundoff, senza alterare la costruzione geometrica ideale. V ora è il parametro fisico dell'estrusione, non il vecchio0..1 della superficie rigata cubica.
+
+La precedente superficie rigata aveva grado hardcoded3 e nessun peso. Questo era coerente con l'output polinomiale cubico dei due fit, quindi non è un ulteriore bug attuale indipendente; avrebbe però reso errata una sostituzione ingenua dei fit con NURBS grado arbitrario. Il ramo nuovo evita interamente quel costruttore e usa il carrier originale.
+
+La selezione è **per parete di una faccia Plane**, anche all'interno di una lamina multifaccia; non richiede che tutto il body sia una sola Plane. Il ramo nonPlane è invariato e resta campionato. Non si certificano globalmente quilt curvi o misti.
+
+## Caps, cucitura, genealogia e compatibilità
+
+La patch locale non modifica offsetFaces, i caps, il loro frame, la gestione pieghe o l'ordine upper/lower nella cucitura. L'alternativa di instradare l'intero corpo sul percorso direction è stata esclusa dall'implementazione: avrebbe ricostruito i frame via transformBody e invertito l'ordine dei caps. Il diff finale aggiunge fk_cancel e la sola branch locale.
+
+La politica di sewTolerance resta la stessa formula. Una parete esatta non contribuisce più a wallAccuracy: il vecchio contributo2*1e-9 dei fit piani scompare, mentre i contributi delle altre pareti rimangono. Non c'è aumento delle tolleranze. Sew e SPcurve finali sono la pipeline preesistente: le prove verificano il risultato, non lo sostituiscono con un carrier intermedio.
+
+Due lamine coplanari con un edge topologico condiviso (polynomial/rational) ispessiscono correttamente in solidi10facce, volumepositivo~.1, errore<=2.64e-16, genealogia dichiarata e roundtrip B-rep validi. Otto casi selettivi con pose, scale .01/1000, sense opposto, trim parziale annidato, foro, Circle/Ellipse angolari chiusi passano sorgente/output/codec, source immutata e volume finito positivo. Max errore selettivo2.77545e-12 a scala1000. Il confronto cade sulle pareti a metà spessore, non sui caps che avrebbero potuto mascherare il difetto.
+
+Other: un controllo OpaqueLine diretto fallisce già in transformBody nella baseline (cap offset), identico dopo patch. Lo stesso Other avvolto in Transformed e Trimmed(Transformed) riesce su entrambi i core con solidi6facce e volume.1. I log Other prima/dopo sono identici. Questi tre controlli servono alla compatibilità del fallback; non si attribuisce loro codec native (Other non è una curva persistita supportata).
+
+History conserva il contratto preesistente: thickenSheet la azzera all'ingresso e compone il risultato soltanto al successo; non promette ripristino della sentinella su errore/cancel. Il nuovo loop di riconoscimento wrapper coopera con la cancellazione e non cattura OperationCancelled. Le sorgenti geometriche native restano immutate byte per byte in34casi; il test Other non usa una serializzazione non supportata. Le verifiche di cancellazione e invalid input del test permanente sono state lette; la loro esecuzione/sanitizer resta di altri agenti/root.
+
+## Prove finali realmente eseguite
+
+| Probe | Casi | Contenuto |
+|---|---:|---|
+| baseline-final |24| polynomial/rational ×amp1/.1 ×tre lati ×normal/direction; confronto baseline e sorgenteimmutata |
+| selective-final |8| pose,scale,sense,trim+hole,Circle,Ellipse,codec,genealogia,volume |
+| coplanar-final |2| due Plane consharededge,poly/rational,codec,genealogia,volume |
+| other-final |3| Other/TransformedOther/TrimmedTransformedOther, confronto identico col vecchio core |
+| Totale |37| PASS |
+
+I campioni indipendenti e la proiezione sui supporti sono prove di regressione; **non sono un nuovo certificato intervallare**. Il test permanente test_planar_thicken_validation.cpp (hash f8864efc…) è stato letto e copiato nel manifest. Build app, runner, CTest, sanitizer, test legacy completi e architettura sono di root/altri agenti e non vengono rivendicati come esecuzioni indipendenti di questo audit.
+
+## Limiti e inventario
+
+Garanzia nuova: conservazione strutturale della geometria originale mediante traduzione/estrusione, con roundoff ordinario delle trasformazioni e della direzione del carrier. Non è un provider outward e non certifica uniformemente qualsiasi coordinata enorme, peso estremo, fase della cucitura, Jacobiano globale o iniettività. Le pcurve finali e le misure di volume sono state verificate nei casi indicati; non si estende la conclusione a tutte le facce curve/Other.
+
+I due siti fitCurve delle pareti sono ora parzialmente coperti per Plane: inventario **11/24 siti parzialmente coperti,13 rimanenti**, oltre ai fallback dei siti già parziali. K10 resta aperto; orfane/UI non sono oggetto di questa modifica.

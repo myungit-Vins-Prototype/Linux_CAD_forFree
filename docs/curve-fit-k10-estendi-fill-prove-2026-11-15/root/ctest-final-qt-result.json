@@ -1,0 +1,20 @@
+{
+  "exit": 0,
+  "seconds": 3.8933495940000284,
+  "tests": [
+    "forgecad_function_panels_tests",
+    "forgecad_history_suppression_tests",
+    "forgecad_document_lifetime_tests",
+    "forgecad_offset_face_pick_tests",
+    "forgecad_linked_reference_visibility_tests",
+    "forgecad_blend_preview_reload_tests",
+    "forgecad_reference_list_highlight_tests",
+    "forgecad_surface_pattern_tests",
+    "forgecad_surface_mapping_tests",
+    "forgecad_body_owner_history_tests",
+    "forgecad_history_position_tests",
+    "forgecad_async_lifetime_tests",
+    "forgecad_sketch_projection_tests",
+    "forgecad_projected_curve_reference_tests"
+  ]
+}

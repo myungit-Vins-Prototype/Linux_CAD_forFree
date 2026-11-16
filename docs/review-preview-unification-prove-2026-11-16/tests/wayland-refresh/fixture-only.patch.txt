@@ -1,0 +1,37 @@
+--- /tmp/review-previews-wayland/original.cpp.txt	2026-11-16 09:40:14.553069007 +0100
++++ /tmp/review-previews-wayland/final-fixture.cpp.txt	2026-11-16 09:44:23.241094427 +0100
+@@ -11,6 +11,8 @@
+ #include <QComboBox>
+ #include <QScrollArea>
+ #include <QScrollBar>
++#include <QWindow>
++#include <QElapsedTimer>
+ #include <QFormLayout>
+ #include <QVBoxLayout>
+ #include <QDialogButtonBox>
+@@ -155,13 +157,24 @@
+         const bool order=outside&&buttons.size()==1&&root->indexOf(footer)+1==root->indexOf(buttons.front());
+         message=named("fixed footer precedes the persistent confirmation buttons");check(order,message.constData());
+         if(scroll&&preview) {
++            // Il compositor puo' imporre l'altezza della finestra: il test deve
++            // garantire overflow nel vero viewport di scorrimento.
++            scroll->setMaximumHeight(120);
++            // Attende la presentazione effettiva senza assumere una pausa fissa.
++            QElapsedTimer exposureWait;exposureWait.start();
++            while((!dialog->windowHandle()||!dialog->windowHandle()->isExposed())&&exposureWait.elapsed()<2000) {
++                QEventLoop exposureEvents;QTimer::singleShot(5,&exposureEvents,&QEventLoop::quit);
++                exposureEvents.exec(QEventLoop::ExcludeUserInputEvents);
++            }
++            const bool exposed=dialog->windowHandle()&&dialog->windowHandle()->isExposed();
+             dialog->resize(430,280);QApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
+             auto *bar=scroll->verticalScrollBar();bar->setValue(0);
+             const QPoint position=preview->mapTo(dialog,QPoint());const QPoint contentPosition=scroll->widget()->pos();
+             const int maximum=bar->maximum();bar->setValue(maximum);
+-            const bool fixed=maximum>0&&bar->value()==maximum&&scroll->widget()->pos().y()<contentPosition.y()
++            const bool fixed=exposed&&maximum>0&&bar->value()==maximum&&scroll->widget()->pos().y()<contentPosition.y()
+                 &&preview->mapTo(dialog,QPoint())==position;
+             std::cout<<"FOOTER scroll "<<key.toStdString()<<" maximum="<<maximum<<" value="<<bar->value()
++                     <<" scroll_height="<<scroll->height()<<" exposed="<<int(exposed)<<" exposure_wait_ms="<<exposureWait.elapsed()<<" panel="<<dialog->width()<<","<<dialog->height()
+                      <<" preview_y_before="<<position.y()<<" preview_y_after="<<preview->mapTo(dialog,QPoint()).y()<<std::endl;
+             message=named("scrolling the actual form keeps the preview footer fixed");check(fixed,message.constData());
+         } else {message=named("scroll controls available for fixed-footer regression");check(false,message.constData());}

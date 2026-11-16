@@ -1,0 +1,97 @@
+#!/usr/bin/env python3
+"""Independent exact-rational witness from original IEEE source/output coefficients.
+Only sqrt is enclosed; its integer certificate is checked by squaring Fractions.
+No kernel evaluator, fit oracle, or sampled maximum establishes the lower bound.
+"""
+from fractions import Fraction as F
+from math import isqrt
+from decimal import Decimal, localcontext, ROUND_FLOOR, ROUND_CEILING
+from pathlib import Path
+import hashlib, json, re
+ROOT=Path('/tmp/review-offset-proof')
+fixture=ROOT/'fixture-original.txt'
+source=Path('/tmp/review-next-readonly/offsetprobe.cpp')
+def exact(token): return F.from_float(float.fromhex(token))
+def decimal(q,upper=False):
+    with localcontext() as c:
+        c.prec=55;c.rounding=ROUND_CEILING if upper else ROUND_FLOOR
+        return str(Decimal(q.numerator)/Decimal(q.denominator))
+def evaluate(controls,t):
+    c=list(controls)
+    for r in range(1,len(c)):
+        for k in range(len(c)-r):c[k]=(1-t)*c[k]+t*c[k+1]
+    return c[0]
+def square_root_enclosure(q,bits=256):
+    assert q>0
+    denominator=1<<bits
+    integer=isqrt((q.numerator<<(2*bits))//q.denominator)
+    low=F(integer,denominator);high=F(integer+1,denominator)
+    assert low*low<=q<high*high
+    return low,high
+poles={}; outputs={}; witness=None
+for line in fixture.read_text().splitlines():
+    s=line.split()
+    if not s:continue
+    if s[0]=='SOURCE_POLE': poles[int(s[1])]=tuple(map(exact,s[2:]))
+    elif s[0]=='WITNESS_T':t,d,tolerance=map(exact,[s[1],s[3],s[5]])
+    elif s[0]=='OUTPUT_CURVE': outputs[int(s[1])]={'degree':int(s[2]),'lo':exact(s[3]),'hi':exact(s[4]),'knots':{},'poles':{}}
+    elif s[0]=='OUTPUT_KNOT':outputs[int(s[1])]['knots'][int(s[2])]=exact(s[3])
+    elif s[0]=='OUTPUT_POLE':outputs[int(s[1])]['poles'][int(s[2])]=tuple(map(exact,s[3:]))
+    elif s[0]=='UNSUPPORTED_OUTPUT':raise AssertionError('Unbounded output family')
+assert len(poles)==28 and len(outputs)==4
+originals=[float(x) for x in re.search(r'const double z\[\]=\{([^}]*)\}',source.read_text()).group(1).split(',')]
+for i in range(28):
+    assert poles[i]==(F.from_float(i/27.),F(0),F.from_float(.01*originals[i]),F(1))
+# Original curve is degree 27, knots [0]*28+[1]*28: Bernstein directly.
+assert 'BSplineCurve<3>>(27,k,p)' in source.read_text()
+assert 'std::vector<double>k(28,0);k.insert(k.end(),28,1)' in source.read_text()
+assert 0<=t<=1 and d>0
+x=[poles[i][0] for i in range(28)];z=[poles[i][2] for i in range(28)]
+dx=evaluate([27*(x[i+1]-x[i]) for i in range(27)],t)
+dz=evaluate([27*(z[i+1]-z[i]) for i in range(27)],t)
+Ez=evaluate(z,t)
+# Original D=(0,1,0), exact G' cross D=(-dz,0,dx).
+# The ExtrusionSurface constructor's normalization leaves this D exact.
+assert dx>0
+norm2=dx*dx+dz*dz
+normal_low,normal_high=square_root_enclosure(norm2)
+target_low=Ez+d*dx/normal_high
+target_high=Ez+d*dx/normal_low
+maximum_pole=F(-10**100)
+for edge,data in outputs.items():
+    p=[data['poles'][i] for i in range(len(data['poles']))]
+    knots=[data['knots'][i] for i in range(len(data['knots']))]
+    degree=data['degree']
+    assert len(knots)==len(p)+degree+1 and degree==3
+    assert all(w[3]>0 for w in p)
+    assert all(a<=b for a,b in zip(knots,knots[1:]))
+    assert knots[degree]<=data['lo']<=data['hi']<=knots[len(p)]
+    maximum_pole=max(maximum_pole,max(q[2] for q in p))
+# Positive rational B-spline basis on its natural domain is a convex combination.
+# Thus every output edge has z <= maximum_pole, independent of its parameter.
+# At this original-source point, Euclidean distance to every output edge is
+# at least the positive z separation. This proves geometric, not same-t error.
+error_low=target_low-maximum_pole
+error_high=target_high-maximum_pole
+assert error_low>tolerance
+result={
+ 'status':'PASS: strict geometric failure certified using original binary64 coefficients',
+ 'source_degree':27,'source_poles':28,'output_edges':len(outputs),
+ 'output_poles':sum(len(e['poles']) for e in outputs.values()),
+ 'witness_t_hex':float(t).hex(),'witness_t_exact':str(t),
+ 'target_z_lower':decimal(target_low),'target_z_upper':decimal(target_high,True),
+ 'all_output_edge_z_upper':decimal(maximum_pole,True),
+ 'geometric_distance_lower':decimal(error_low),'witness_z_separation_upper':decimal(error_high,True),
+ 'tolerance_exact':str(tolerance),'tolerance_decimal':decimal(tolerance,True),
+ 'error_to_tolerance_lower':decimal(error_low/tolerance),
+ 'sqrt_certificate_bits':256,
+ 'fixture_sha256':hashlib.sha256(fixture.read_bytes()).hexdigest(),
+ 'original_probe_sha256':hashlib.sha256(source.read_bytes()).hexdigest(),
+ 'method':'Exact Fraction de Casteljau of original degree-27 controls and derivative; integer sqrt enclosure checked by rational squaring; global positive-weight output pole hull.',
+ 'scope':'One original exact offset point separated from the union of all four returned output edges. Source/output checkBody PASS comes from exporter, not this proof.'
+}
+(ROOT/'proof-result.json').write_text(json.dumps(result,indent=2)+'\n')
+# Full rational expressions are machine-checkable, without decimal conversion.
+certificate={k:[v.numerator,v.denominator] for k,v in {'t':t,'d':d,'tolerance':tolerance,'Ez':Ez,'dx':dx,'dz':dz,'norm2':norm2,'sqrt_lo':normal_low,'sqrt_hi':normal_high,'target_lo':target_low,'target_hi':target_high,'maximum_pole_z':maximum_pole,'error_lo':error_low}.items()}
+(ROOT/'rational-certificate.json').write_text(json.dumps(certificate,indent=2)+'\n')
+print(json.dumps(result,indent=2))

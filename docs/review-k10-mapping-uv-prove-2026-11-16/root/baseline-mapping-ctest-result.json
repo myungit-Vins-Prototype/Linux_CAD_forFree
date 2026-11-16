@@ -1,0 +1,13 @@
+{
+  "exit": 0,
+  "seconds": 3.6784174169988546,
+  "command": [
+    "ctest",
+    "--test-dir",
+    "forgecad-release",
+    "--output-on-failure",
+    "-V",
+    "-R",
+    "^forgekernel_(surface_mapping|mapping_carrier_validation|mapping_diagonal_validation|planar_flatten_validation)_tests$"
+  ]
+}

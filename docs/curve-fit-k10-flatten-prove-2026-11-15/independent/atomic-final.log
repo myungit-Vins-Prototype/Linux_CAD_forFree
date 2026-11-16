@@ -1,0 +1,4 @@
+kind=0 failed=Appiattimento affine: errore oltre budget.
+kind=1 cancelled=1
+kind=2 failed=Appiattimento: budget di fit non valido.
+checks=3 PASS

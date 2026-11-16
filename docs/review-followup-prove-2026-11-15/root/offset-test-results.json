@@ -1,0 +1,34 @@
+[
+  {
+    "test": "OffsetAnalyticSurfaces",
+    "command": [
+      "/home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_tests",
+      "OffsetAnalyticSurfaces"
+    ],
+    "exit": 0
+  },
+  {
+    "test": "OffsetFreeformSurfaces",
+    "command": [
+      "/home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_tests",
+      "OffsetFreeformSurfaces"
+    ],
+    "exit": 0
+  },
+  {
+    "test": "OffsetFitCurveSmallSmoothFeature",
+    "command": [
+      "/home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_tests",
+      "OffsetFitCurveSmallSmoothFeature"
+    ],
+    "exit": 0
+  },
+  {
+    "test": "OffsetInwardBeyondCurvatureIsExplained",
+    "command": [
+      "/home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_tests",
+      "OffsetInwardBeyondCurvatureIsExplained"
+    ],
+    "exit": 0
+  }
+]

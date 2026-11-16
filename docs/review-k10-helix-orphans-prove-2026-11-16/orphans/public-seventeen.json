@@ -1,0 +1,231 @@
+[
+  {
+    "symbol": "CadViewport::setEdgePickLinear",
+    "definition": "`forgeCad2026_viewport_selection.cpp:232`",
+    "declaration": "`forgeCad2026_viewport.h:458`",
+    "category": "pubblica",
+    "status": "preserved, no removal proposed",
+    "graph_incoming": [],
+    "lexical_occurrences": [
+      "forgeCad2026_viewport.h:458:    void setEdgePickLinear(bool linear);",
+      "forgeCad2026_viewport_selection.cpp:232:void CadViewport::setEdgePickLinear(bool linear) {"
+    ]
+  },
+  {
+    "symbol": "CadViewport::setExtendPickCallback",
+    "definition": "`forgeCad2026_viewport_selection.cpp:230`",
+    "declaration": "`forgeCad2026_viewport.h:456`",
+    "category": "pubblica",
+    "status": "preserved, no removal proposed",
+    "graph_incoming": [],
+    "lexical_occurrences": [
+      "forgeCad2026_viewport.h:456:    void setExtendPickCallback(std::function<void(int, QVector<EdgePoint>)> callback);",
+      "forgeCad2026_viewport_selection.cpp:230:void CadViewport::setExtendPickCallback(std::function<void(int, QVector<EdgePoint>)> callback) { extendPickFinished_ = std::move(callback); }"
+    ]
+  },
+  {
+    "symbol": "CadViewport::resumeExtendPick",
+    "definition": "`forgeCad2026_viewport_selection.cpp:237`",
+    "declaration": "`forgeCad2026_viewport.h:460`",
+    "category": "pubblica",
+    "status": "preserved, no removal proposed",
+    "graph_incoming": [],
+    "lexical_occurrences": [
+      "forgeCad2026_viewport.h:460:    void resumeExtendPick(int body, const QVector<EdgePoint> &edges, bool linear);",
+      "forgeCad2026_viewport_selection.cpp:237:void CadViewport::resumeExtendPick(int body, const QVector<EdgePoint> &edges, bool linear) {"
+    ]
+  },
+  {
+    "symbol": "CadViewport::constraintsVisible",
+    "definition": "`forgeCad2026_viewport_sketch.cpp:1259`",
+    "declaration": "`forgeCad2026_viewport.h:799`",
+    "category": "pubblica",
+    "status": "preserved, no removal proposed",
+    "graph_incoming": [],
+    "lexical_occurrences": [
+      "forgeCad2026_viewport_sketch.cpp:1259:bool CadViewport::constraintsVisible() const { return constraintsVisible_; }",
+      "forgeCad2026_viewport.h:799:    bool constraintsVisible() const;"
+    ]
+  },
+  {
+    "symbol": "CadViewport::sectionEnabled",
+    "definition": "`forgeCad2026_viewport.cpp:456`",
+    "declaration": "`forgeCad2026_viewport.h:750`",
+    "category": "pubblica",
+    "status": "preserved, no removal proposed",
+    "graph_incoming": [],
+    "lexical_occurrences": [
+      "forgeCad2026_viewport.cpp:456:bool CadViewport::sectionEnabled() const { return section_.enabled; }",
+      "forgeCad2026_viewport.h:750:    bool sectionEnabled() const;"
+    ]
+  },
+  {
+    "symbol": "CadViewport::geometrySnap",
+    "definition": "`forgeCad2026_viewport.cpp:76`",
+    "declaration": "`forgeCad2026_viewport.h:105`",
+    "category": "pubblica",
+    "status": "preserved, no removal proposed",
+    "graph_incoming": [],
+    "lexical_occurrences": [
+      "forgeCad2026_gui.cpp:2956:    snapAction->setCheckable(true); snapAction->setChecked(QSettings().value(QStringLiteral(\"sketch/geometrySnap\"), true).toBool());",
+      "forgeCad2026_gui.cpp:3263:        QSettings().setValue(QStringLiteral(\"sketch/geometrySnap\"), enabled);",
+      "forgeCad2026_gui.cpp:3841:                                   QStringLiteral(\"sketch/geometrySnap\"), QStringLiteral(\"sketch/gridSnap\"),",
+      "forgeCad2026_viewport.cpp:76:bool CadViewport::geometrySnap() const { return geometrySnap_; }",
+      "forgeCad2026_viewport.h:105:    bool geometrySnap() const;"
+    ]
+  },
+  {
+    "symbol": "CadViewport::gridSnap",
+    "definition": "`forgeCad2026_viewport.cpp:80`",
+    "declaration": "`forgeCad2026_viewport.h:107`",
+    "category": "pubblica",
+    "status": "preserved, no removal proposed",
+    "graph_incoming": [],
+    "lexical_occurrences": [
+      "forgeCad2026_gui.cpp:2959:    gridSnapAction->setCheckable(true); gridSnapAction->setChecked(QSettings().value(QStringLiteral(\"sketch/gridSnap\"), true).toBool());",
+      "forgeCad2026_gui.cpp:3267:        QSettings().setValue(QStringLiteral(\"sketch/gridSnap\"), enabled);",
+      "forgeCad2026_gui.cpp:3488:        {angleConstraint, QStringLiteral(\"constraintAngle\")}, {snapAction, QStringLiteral(\"snap\")}, {gridSnapAction, QStringLiteral(\"gridSnap\")}, {originSnapAction, QStringLiteral(\"originSnap\")},",
+      "forgeCad2026_gui.cpp:3841:                                   QStringLiteral(\"sketch/geometrySnap\"), QStringLiteral(\"sketch/gridSnap\"),",
+      "forgeCad2026_viewport.h:107:    bool gridSnap() const;",
+      "forgeCad2026_viewport.cpp:80:bool CadViewport::gridSnap() const { return gridSnap_; }",
+      "cad_icons.cpp:413:    icons[\"gridSnap\"] = [](QPainter &p, const IconPalette &c) {"
+    ]
+  },
+  {
+    "symbol": "CadViewport::basisMatrix",
+    "definition": "`forgeCad2026_viewport_scene.cpp:48`",
+    "declaration": "`forgeCad2026_viewport.h:823`",
+    "category": "pubblica",
+    "status": "preserved, no removal proposed",
+    "graph_incoming": [],
+    "lexical_occurrences": [
+      "forgeCad2026_camera.cpp:6:QMatrix4x4 ViewportCamera::basisMatrix() const {",
+      "forgeCad2026_camera.cpp:30:    modelView *= basisMatrix();",
+      "forgeCad2026_camera.cpp:51:    const QMatrix4x4 basis = basisMatrix();",
+      "forgeCad2026_camera.cpp:85:    rotation *= basisMatrix();",
+      "forgeCad2026_camera.cpp:110:        projectionMatrix_ *= basisMatrix();",
+      "forgeCad2026_camera.cpp:124:    rotation *= basisMatrix();",
+      "forgeCad2026_camera.cpp:138:    rotation *= basisMatrix();",
+      "forgeCad2026_camera.h:20:    QMatrix4x4 basisMatrix() const;",
+      "forgeCad2026_viewport.h:823:    QMatrix4x4 basisMatrix() const;",
+      "forgeCad2026_viewport_scene.cpp:48:QMatrix4x4 CadViewport::basisMatrix() const {",
+      "forgeCad2026_viewport_scene.cpp:49:    return camera_.basisMatrix();",
+      "tests/test_boolean_box.h:60:        const auto camera = view->camera_.basisMatrix();",
+      "tests/test_boolean_box.h:90:                require(view->camera_.basisMatrix() == camera && view->selection() == sceneSelection"
+    ]
+  },
+  {
+    "symbol": "CadViewport::normalizedViewAngle",
+    "definition": "`forgeCad2026_viewport_scene.cpp:83`",
+    "declaration": "`forgeCad2026_viewport.h:844`",
+    "category": "pubblica statica",
+    "status": "preserved, no removal proposed",
+    "graph_incoming": [],
+    "lexical_occurrences": [
+      "forgeCad2026_camera.cpp:63:float ViewportCamera::normalizedViewAngle(float degrees) {",
+      "forgeCad2026_camera.cpp:70:    yaw_ = normalizedViewAngle(yaw_ + delta.x()*kOrbitDegreesPerPixel);",
+      "forgeCad2026_camera.cpp:71:    pitch_ = normalizedViewAngle(pitch_ + delta.y()*kOrbitDegreesPerPixel);",
+      "forgeCad2026_camera.h:26:    static float normalizedViewAngle(float degrees);",
+      "forgeCad2026_viewport.h:844:    static float normalizedViewAngle(float degrees);",
+      "forgeCad2026_viewport_scene.cpp:83:float CadViewport::normalizedViewAngle(float degrees) {",
+      "forgeCad2026_viewport_scene.cpp:84:    return ForgeCad::Gui::ViewportCamera::normalizedViewAngle(degrees);"
+    ]
+  },
+  {
+    "symbol": "CadViewport::extrusionNames",
+    "definition": "`forgeCad2026_viewport_document.cpp:914`",
+    "declaration": "`forgeCad2026_viewport.h:318`",
+    "category": "pubblica",
+    "status": "preserved, no removal proposed",
+    "graph_incoming": [],
+    "lexical_occurrences": [
+      "forgeCad2026_viewport_document.cpp:914:QStringList CadViewport::extrusionNames() const {",
+      "forgeCad2026_viewport.h:318:    QStringList extrusionNames() const;"
+    ]
+  },
+  {
+    "symbol": "ForgeCad::DrawingSheetEditor::setModelProvider",
+    "definition": "`cad_drawing_editor.cpp:3649`",
+    "declaration": "`cad_drawing_editor.h:104`",
+    "category": "pubblica",
+    "status": "preserved, no removal proposed",
+    "graph_incoming": [],
+    "lexical_occurrences": [
+      "cad_drawing_editor.h:104:    void setModelProvider(std::function<DrawingEditorModel()> provider);",
+      "cad_drawing_editor.cpp:3649:void DrawingSheetEditor::setModelProvider(std::function<DrawingEditorModel()> provider){impl_->provider=std::move(provider);impl_->updateAction->setEnabled(bool(impl_->provider)&&!impl_->readOnly);}"
+    ]
+  },
+  {
+    "symbol": "ForgeCad::forgeIntersectRay",
+    "definition": "`cad_forge.cpp:2407`",
+    "declaration": "`cad_forge.h:228`",
+    "category": "pubblica libera",
+    "status": "preserved, no removal proposed",
+    "graph_incoming": [],
+    "lexical_occurrences": [
+      "cad_forge.h:228:bool forgeIntersectRay(const Kernel::Body &body, const QVector3D &origin, const QVector3D &direction, double &distance, const Kernel::RayFaceIndex *index = nullptr);",
+      "cad_forge.cpp:2407:bool forgeIntersectRay(const Body &body, const QVector3D &origin, const QVector3D &direction, double &distance, const Kernel::RayFaceIndex *index) {"
+    ]
+  },
+  {
+    "symbol": "ForgeCad::modelBodyFeatures",
+    "definition": "`cad_model_history.cpp:75`",
+    "declaration": "`cad_model_history.h:42`",
+    "category": "pubblica libera",
+    "status": "preserved, no removal proposed",
+    "graph_incoming": [],
+    "lexical_occurrences": [
+      "cad_model_history.h:42:QVector<int> modelBodyFeatures(const DocumentState &state, quint64 bodyId);",
+      "cad_model_history.cpp:75:QVector<int> modelBodyFeatures(const DocumentState &state, quint64 bodyId) {"
+    ]
+  },
+  {
+    "symbol": "ForgeCad::usesSketch",
+    "definition": "`cad_feature_dependencies.cpp:205`",
+    "declaration": "`cad_feature_dependencies.h:21`",
+    "category": "pubblica libera",
+    "status": "preserved, no removal proposed",
+    "graph_incoming": [],
+    "lexical_occurrences": [
+      "cad_feature_dependencies.h:21:bool usesSketch(const ExtrusionObject &body);",
+      "cad_feature_dependencies.cpp:205:bool usesSketch(const ExtrusionObject &body) { return !sketchesOf(body).isEmpty(); }"
+    ]
+  },
+  {
+    "symbol": "ForgeCad::commandIconNames",
+    "definition": "`cad_icons.cpp:1634`",
+    "declaration": "`cad_icons.h:15`",
+    "category": "pubblica libera",
+    "status": "preserved, no removal proposed",
+    "graph_incoming": [],
+    "lexical_occurrences": [
+      "cad_icons.h:13:// Icona del comando `name` (vedi commandIconNames); vuota se il nome non esiste.",
+      "cad_icons.h:15:QStringList commandIconNames();",
+      "cad_icons.cpp:1634:QStringList commandIconNames() {"
+    ]
+  },
+  {
+    "symbol": "ForgeCad::nearestBodyEdge",
+    "definition": "`cad_sketch_refs.cpp:151`",
+    "declaration": "`cad_sketch_refs.h:66`",
+    "category": "pubblica libera",
+    "status": "preserved, no removal proposed",
+    "graph_incoming": [],
+    "lexical_occurrences": [
+      "cad_sketch_refs.h:66:bool nearestBodyEdge(const Kernel::Body &body, const Kernel::Vec3 &point, Kernel::CurvePtr<3> &curve, Kernel::Interval &range);",
+      "cad_sketch_refs.cpp:151:bool nearestBodyEdge(const Body &body, const Vec3 &point, CurvePtr<3> &curve, Interval &range) {"
+    ]
+  },
+  {
+    "symbol": "ForgeCad::appendFixedReferenceLine",
+    "definition": "`cad_sketch_refs.cpp:576`",
+    "declaration": "`cad_sketch_refs.h:57`",
+    "category": "pubblica libera",
+    "status": "preserved, no removal proposed",
+    "graph_incoming": [],
+    "lexical_occurrences": [
+      "cad_sketch_refs.h:57:int appendFixedReferenceLine(SketchObject &sketch, const QPointF &point, const QPointF &direction, double halfLength);",
+      "cad_sketch_refs.cpp:576:int appendFixedReferenceLine(SketchObject &sketch, const QPointF &point, const QPointF &direction, double halfLength) {"
+    ]
+  }
+]

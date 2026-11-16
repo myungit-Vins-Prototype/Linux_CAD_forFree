@@ -1,0 +1,17 @@
+[  OK  ] BlendCavitySmallRadiusKeepsForwardContour
+[  OK  ] BlendCavitySmallRadiusKeepsDifferentSeed
+[  OK  ] BlendCavitySmallRadiusKeepsRigidPose
+[  OK  ] BlendCavitySmallRadiusKeepsScaledGeometry
+[  OK  ] BlendCavityCancellationPreservesBodyAndClearsOutputHistory
+[  OK  ] BlendCavityConsumedSideRejectsWithoutBodyOrPartialHistory
+[  OK  ] BlendGeneralMatchesAnalytic
+[  OK  ] BlendSequentialNearbyEdges
+[  OK  ] BlendSweptTubeCap
+[  OK  ] BlendRuledLoftCone
+[  OK  ] BlendSweepAcrossPathJoint
+[  OK  ] BlendLoftCircleToSquare
+[  OK  ] BlendSmoothLoftPolygonCap
+[  OK  ] BlendConcaveSmoothLoftEdge
+[  OK  ] BlendSmoothLoftSplitSidePatches
+[  OK  ] SheetBlendCurvedLoft
+16/16 test superati

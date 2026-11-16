@@ -1,0 +1,8 @@
+{
+  "exit": 0,
+  "seconds": 15.892339607002214,
+  "command": [
+    "forgecad-release/forgecad_view_tests",
+    "--theme-tabs"
+  ]
+}

@@ -1,0 +1,4 @@
+from pathlib import Path
+import shlex,json,subprocess
+r=Path('/home/myungit/Linux_CAD_forFree');o=Path('/tmp/forgecad-k10-next-20261115/independent');c=next(x for x in json.loads((r/'forgecad-release/compile_commands.json').read_text()) if x['file'].endswith('/kernel/fk_sheet.cpp'));cmd=shlex.split(c['command']);cmd[cmd.index('-o')+1]=str(o/'sheet_hole.o');cmd[cmd.index('-c')+1]=str(o/'sheet_hole.cpp');cmd+=['-I'+str(r/'kernel')];subprocess.run(cmd,cwd=c['directory'],check=True);subprocess.run(['/usr/bin/c++','-o',str(o/'sheet_hole'),str(o/'sheet_hole.o'),'/tmp/forgecad-k10-next-20261115/sheet/fk_sheet.o',str(r/'forgecad-release/kernel/libforgekernel.a'),'-lpthread'],check=True)
+with (o/'sheet_hole.log').open('w') as f:subprocess.run([str(o/'sheet_hole')],stdout=f,check=True)

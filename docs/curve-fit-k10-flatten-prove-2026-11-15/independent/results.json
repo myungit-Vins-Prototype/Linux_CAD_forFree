@@ -1,0 +1,62 @@
+{
+  "manifest": {
+    "kernel/fk_quilt_mapping.cpp": "9f2cc08b051e92569dac5081aa558f61e431e332abc652f51a23096ff286b826",
+    "kernel/fk_planar_flatten.h": "2379037d4404c5cc778ae38ea264e5fc27cb7eb81238506e97037ec02bd0adac",
+    "kernel/fk_planar_flatten.cpp": "fa746a9dfbe1f722e0590a60899f2a651efffee2beb1bb5b912034d47ca6c30f",
+    "kernel/fk_quilt_mapping.h": "f2caaaca17d8b5083bc00a919fa6c6eaedc8a72ad7c97aa3ab95000e1a735c54",
+    "kernel/fk_pcurve.cpp": "ad5e5ce7082274aee5c279772f30caa56b21689b7b4b7331d27543444c58df79",
+    "kernel/fk_curve_ops.cpp": "b898e88ec871c0c08f9c2a27b5deed00512f0376f97a391cf7e5404a10b4cd63",
+    "kernel/fk_math.cpp": "dd3e697be5cdb47ad3bd6629d71a86eba9c1655b024ea3798dcb09ebf274c16d",
+    "kernel/tests/test_planar_flatten_validation.cpp": "6a95304ed60f2bdbc05ecc5a41e38baf2a34373af3918c84f47943241d03d211"
+  },
+  "independent_checks": 118,
+  "check_breakdown": {
+    "helper": 48,
+    "contracts": 18,
+    "nonclamped": 12,
+    "roundtrip": 11,
+    "atomic": 3,
+    "downstream": 24,
+    "public_repro": 2
+  },
+  "additional_full_legacy_mapping_target_pass": true,
+  "final_repro_same_parameter_error": [
+    0,
+    0
+  ],
+  "final_repro_declared_bounds": [
+    8.526979022893637e-14,
+    8.526979022893637e-14
+  ],
+  "before_geometric_lower_control_hull": [
+    5.7424751730650314e-05,
+    5.4162191958084804e-05
+  ],
+  "before_reported": [
+    2.4765581702771594e-10,
+    2.894104106389075e-10
+  ],
+  "source_regularity": [
+    {
+      "rational": false,
+      "x_derivative_lower_exact": "59672695062659067/59672695062659072",
+      "x_derivative_lower_float": 0.9999999999999999,
+      "abs_y_upper_exact": "336068717510870016320114958089756186010300845/5846006549323611672814739330865132078623730171904",
+      "abs_y_upper_float": 5.748688693305578e-05,
+      "proof": "Original IEEE poles and weights as exact rationals; positive Bernstein hull for (Hx_prime W-Hx W_prime)/W^2; 64 exact deCasteljau subdivisions for Y/W. Monotone X and |Y|<.001 exclude self-intersection and intersection with sides X=0,1 or topY=1 except intended corners."
+    },
+    {
+      "rational": true,
+      "x_derivative_lower_exact": "18028808536579263179073266284275/40564819207303340847894502572032",
+      "x_derivative_lower_float": 0.4444444444444445,
+      "abs_y_upper_exact": "24216303215243575889292577921387375777288329954195065866944121/444286230476725623718957214148893862379153757068132171276721766240",
+      "abs_y_upper_float": 5.450608538837481e-05,
+      "proof": "Original IEEE poles and weights as exact rationals; positive Bernstein hull for (Hx_prime W-Hx W_prime)/W^2; 64 exact deCasteljau subdivisions for Y/W. Monotone X and |Y|<.001 exclude self-intersection and intersection with sides X=0,1 or topY=1 except intended corners."
+    }
+  ],
+  "scope": "one structural Plane face, original Line/NURBS UV including Trimmed; all other families explicit legacy",
+  "endpoint_limit": "IEEE evaluated endpoint gap is charged; no outward enclosure of exact NURBS endpoint evaluation claimed",
+  "site_inventory": "9/24 partially covered,15 remaining; general/unsupported fallback remains sampled",
+  "no_production_edits_or_shared_build": true,
+  "final_sources_equal_production": true
+}

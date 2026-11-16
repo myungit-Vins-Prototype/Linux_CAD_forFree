@@ -1,0 +1,16 @@
+{
+  "cases": 8,
+  "actual_fins": 192,
+  "source_fins": 192,
+  "actual_passed": 192,
+  "projection_passed": 192,
+  "negative_cases": 6,
+  "negative_actual_fins": 12,
+  "altered_pole_rejected": true,
+  "source_budget_mm": 1e-07,
+  "actual_max_upper_mm": 2.4265474962703596e-08,
+  "actual_cells": 248,
+  "actual_leaves": 248,
+  "unscaled_max_upper_mm": 4.014619673235568e-10,
+  "method": "Exact Fraction inputs, knot insertion/restriction, homogeneous Bernstein residual of original Plane/edge/UV, positive weights, rational outward sqrt, all spans covered; no production certificate calls"
+}

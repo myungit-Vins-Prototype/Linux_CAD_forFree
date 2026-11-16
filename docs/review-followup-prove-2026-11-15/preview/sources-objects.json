@@ -1,0 +1,50 @@
+[
+  {
+    "source": "forgeCad2026_dialogs_mapping.cpp",
+    "sha256": "2dc3b2e2ca98d6901898abdd8c5f4e028509dfdfc64b61c17fe6f454bd5f4e0d",
+    "sourceMtime": 1794739432.1027808,
+    "objectExists": true,
+    "objectMtime": 1794746857.027338,
+    "objectNotOlderThanSource": true
+  },
+  {
+    "source": "forgeCad2026_dialogs_common.cpp",
+    "sha256": "5a69a50938c181a3b094fef630e7f0f0e53bc904765c8767ed8ab011fb54a17f",
+    "sourceMtime": 1794739432.1021914,
+    "objectExists": true,
+    "objectMtime": 1794746852.9443197,
+    "objectNotOlderThanSource": true
+  },
+  {
+    "source": "forgeCad2026_viewport_scene.cpp",
+    "sha256": "d172524a036d384451e2cd39a8923c8dcb223452b43204ce10dec66acc9de1ef",
+    "sourceMtime": 1794568108.33166,
+    "objectExists": true,
+    "objectMtime": 1794746890.4534845,
+    "objectNotOlderThanSource": true
+  },
+  {
+    "source": "forgeCad2026_viewport_selection.cpp",
+    "sha256": "df437d0c824f81734880a57f984273a64176a903ebbd472b1c4dce8221d4bbf5",
+    "sourceMtime": 1794554542.231156,
+    "objectExists": true,
+    "objectMtime": 1794746902.224535,
+    "objectNotOlderThanSource": true
+  },
+  {
+    "source": "forgeCad2026_viewport_interaction.cpp",
+    "sha256": "576f8858de1f2e766e6f2b8e7369b276f1e6952606fa2c0214af934206227d8e",
+    "sourceMtime": 1794567750.8135295,
+    "objectExists": true,
+    "objectMtime": 1794746883.6754553,
+    "objectNotOlderThanSource": true
+  },
+  {
+    "source": "forgeCad2026_viewport_preview.cpp",
+    "sha256": "189603185301b494d3545ad78e3e07ea565d12d5de3b095c0bff9edf3ec7c944",
+    "sourceMtime": 1794739102.848224,
+    "objectExists": true,
+    "objectMtime": 1794746890.2514837,
+    "objectNotOlderThanSource": true
+  }
+]

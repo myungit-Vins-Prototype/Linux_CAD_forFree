@@ -1,0 +1,16 @@
+import json,shlex,subprocess,sys
+from pathlib import Path
+repo=Path('/home/myungit/Linux_CAD_forFree');out=Path('/tmp/k10-sketch-review/tests');core=out.parent/'core';build=repo/'forgecad-release';header='--header' in sys.argv;stage='--stage' in sys.argv or header;mode='header' if header else 'stage' if stage else 'baseline'
+entry=next(e for e in json.loads((build/'compile_commands.json').read_text()) if e['file']==str(repo/'cad_sketch_refs.cpp') and 'forgecad_view_tests.dir' in e['command'])
+base=shlex.split(entry['command']);i=base.index('-o');del base[i:i+2];base.remove('-c');base.remove(str(repo/'cad_sketch_refs.cpp'))
+def compile(source,obj,stage):
+ a=base.copy()
+ if stage:a[1:1]=['-I'+str(core),'-DHAVE_HELIX_PROJECTION=1']
+ a+=['-c',str(source),'-o',str(obj)];print(shlex.join(a),flush=True);subprocess.run(a,cwd=repo,check=True)
+if stage and not header:compile(core/'cad_sketch_refs.cpp',core/'cad_sketch_refs.o',True)
+obj=out/('suite-'+mode+'.o');compile(out/('header_main.cpp' if header else 'test_sketch_projection_fit_validation.cpp'),obj,stage)
+a=shlex.split((build/'CMakeFiles/forgecad_view_tests.dir/link.txt').read_text());a=[x for x in a if not x.endswith('/tests/test_viewport.cpp.o') and not x.startswith('-Wl,--dependency-file=')]
+a=[str(core/'cad_sketch_refs.o') if stage and x.endswith('/cad_sketch_refs.cpp.o') else str(out/'baseline/cad_sketch_refs.cpp.o') if x.endswith('/cad_sketch_refs.cpp.o') else str(out/'baseline/libforgekernel.a') if x=='kernel/libforgekernel.a' else x for x in a]
+i=a.index('-o');a[i+1]=str(out/('suite-'+mode));a.insert(1,str(obj))
+if stage:a.insert(2,str(core/'fk_helix_projection.o'))
+(out/('link-'+mode+'.txt')).write_text(shlex.join(a)+'\n');subprocess.run(a,cwd=build,check=True)

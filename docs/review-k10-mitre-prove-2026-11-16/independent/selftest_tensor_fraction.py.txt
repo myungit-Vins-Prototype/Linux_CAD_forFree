@@ -1,0 +1,14 @@
+from verify_tensor_fraction import *
+def h(x):return float(x).hex()
+def spl(p,k,pts,w=[]):return {'type':'bspline','degree':p,'knots':list(map(h,k)),'poles':[[h(x) for x in a] for a in pts],'weights':list(map(h,w))}
+def line(o,d):return {'type':'line','origin':list(map(h,o)),'direction':list(map(h,d))}
+def surf(p,q,U,V,nu,nv,P,W=[]):return {'uDegree':p,'vDegree':q,'uKnots':list(map(h,U)),'vKnots':list(map(h,V)),'uPoleCount':nu,'vPoleCount':nv,'poles':[[h(x) for x in a] for a in P],'weights':list(map(h,W))}
+base={'range':list(map(h,[0,1])),'budget':h(1e-10),'pcurve':line([0,.5],[1,0])}
+a=dict(base,curve=line([1,.5,0],[1,0,0]),surface=surf(1,1,[0,0,.5,1,1],[0,0,1,1],3,2,[[u+2*v,v,0] for u in [0,.5,1] for v in [0,1]]));assert verify(a)['pass']
+b=dict(base,curve=spl(1,[0,0,1,1],[[0,.75,0],[1,.75,0]],[1,2]),surface=surf(1,1,[0,0,1,1],[0,0,1,1],2,2,[[u,v,0] for u in [0,1] for v in [0,1]],[1,3,2,6]));assert verify(b)['pass']
+c=copy.deepcopy(b);c['curve']['poles'][0][2]=h(.01)
+try:verify(c)
+except RuntimeError as e:assert 'witness' in str(e)
+else:raise AssertionError('Negative control accepted')
+print('PASS exact bilinear / multiple original knots / positive rational tensor / altered output pole rejected')
+Path('/tmp/sheet-join-review/audit/verifier-selftest.json').write_text(json.dumps({'pass':True,'cases':['bilinear with crossed original internal knot','positive rational tensor composition','altered output pole rejected by exact rational witness']},indent=2))

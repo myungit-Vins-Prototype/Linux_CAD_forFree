@@ -1,0 +1,21 @@
+from fraction_verify_common import *
+import sys,copy,json,hashlib
+
+def verify(folder):
+ results=[]
+ for path in sorted(Path(folder).glob('*.json')):
+  j=json.loads(path.read_text());case={'case':j['case'],'sha256':hashlib.sha256(path.read_bytes()).hexdigest(),'source':[],'actual':[],'fin_budget':[],'projection':[]}
+  for r in j['source']:
+   case['source'].append(verify_record(r,exact(r['standard_resolution'])))
+  for r in j['actual']:
+   case['actual'].append(verify_record(r,exact(r['budget'])))
+   if r['migrated']:
+    case['fin_budget'].append(verify_record(r,exact(r['fin_tolerance'])))
+    case['projection'].append(verify_record(r,F.from_float(1e-8),True))
+  results.append(case)
+  print(case['case'],'source',sum(x['pass_'] for x in case['source']), '/',len(case['source']),'actual cap',sum(x['pass_'] for x in case['actual']), '/',len(case['actual']),'fin',sum(x['pass_'] for x in case['fin_budget']),'projection',sum(x['pass_'] for x in case['projection']),flush=True)
+ return results
+if __name__=='__main__':
+ data=verify(sys.argv[1]);Path(sys.argv[2]).write_text(json.dumps(data,indent=2)+'\n')
+ if '--expect-pass' in sys.argv:
+  assert all(r['pass_'] for j in data for k in ['source','actual','fin_budget','projection'] for r in j[k])

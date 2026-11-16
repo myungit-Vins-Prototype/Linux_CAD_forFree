@@ -1,0 +1,21 @@
+{
+  "CMakeLists.txt": "e68ddb89976d1b86cfa16ffd41d29d91b4fb35cf902e6825cc0effbf43f4cf56",
+  "cad_constraints.cpp": "0d86f5e1f7e87dedd2e0c6206952f59be7970bd731786f98bdcdef86878e0a1e",
+  "cad_curve_solver.cpp": "556b79656f324c7c01713aaed6e4b23978f3c736c7980ea8baba5299263eae68",
+  "cad_document_io.cpp": "93981e91e658821e232f10ea8acbdd49670e22d31f6c897874e5144b86ec02d6",
+  "cad_document_io.h": "1f70431d037c0cdbdc6801651aabc48c363bcc231dfaaefb229386cdf2e3dc58",
+  "cad_icons.cpp": "066493060482d8cd90bfd4e1153471403b625c3acf7be85f250da2178a87cceb",
+  "cad_sketch_edit.cpp": "40b15c75fd2efda2049364d64e29f10000457937ab9fb7cb2c9fa58913965e93",
+  "cad_types.h": "7adc598b05ef34a89d216066192112dcb13241047b14115d1aeddce69be6353c",
+  "forgeCad2026_gui.cpp": "d0a4c21575cee88890da855c56fd8d338c4ecaf0379b2813977f4fb137298b3b",
+  "forgeCad2026_viewport_interaction.cpp": "25c01ad034dfcca13cedf383c7b618f0953977fcfda3963f4f9d9434b785a958",
+  "forgeCad2026_viewport_render.cpp": "b2039418a5ec4c7bce29b98957786db5c2198cb53a99fbe2b668b2745bcfc265",
+  "forgeCad2026_viewport_selection.cpp": "651c65b1cea6e508d6a4eb1b63324aaf3f82f4ed39caf15ccddf7b751b6d86ea",
+  "forgeCad2026_viewport_sketch.cpp": "f8cda4c9d13bb541e4f5fe2a89ac05872e885c6005d70a5b194b31b00d822aa9",
+  "tests/test_viewport.cpp": "083872bf55824aa92e26be5e2741287ad353013f9aa5db1252588839e17e5065",
+  "tools/generate_architecture.py": "905fd6e090c430cc5e2458b75ac01b8c5dfb5004f84a7388eff0746098e1bd71",
+  "cad_ellipse.h": "4d96dced6184ca8ab82015b9e69af9d8de8ae02fbfa5fe23e3b02bc78db3f2b2",
+  "cad_ellipse.cpp": "38a693b4d02e7a017efd11592a1dfc089349c8995d8fbf663b03440945045be4",
+  "tests/test_ellipse_extremes.h": "7fb9e941a899713d205e5c56da3c5b0de33be1647847b6919e4677ec859a9e32",
+  "cad_drawing_file.cpp": "5d5134afd69de269e20251a5c398b3185fb819a7edb15ce23a49557d759bc06d"
+}

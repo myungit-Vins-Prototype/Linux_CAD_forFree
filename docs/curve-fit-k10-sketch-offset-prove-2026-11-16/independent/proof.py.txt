@@ -1,0 +1,64 @@
+from pathlib import Path
+from fractions import Fraction as F
+from math import comb,isqrt
+import re,json
+p=Path(__file__).resolve().parent
+z=[float(x) for x in re.search(r'z27=\{([^}]+)',(p/'fixtures.h').read_text()).group(1).split(',')]
+def prod(a,b):
+ m,n=len(a)-1,len(b)-1
+ return [sum((a[i]*b[k-i]*F(comb(m,i)*comb(n,k-i),comb(m+n,k)) for i in range(max(0,k-n),min(m,k)+1)),F(0)) for k in range(m+n+1)]
+def derivative(a): return [(len(a)-1)*(a[i+1]-a[i]) for i in range(len(a)-1)]
+def at(a,t):
+ while len(a)>1:a=[(1-t)*a[i]+t*a[i+1] for i in range(len(a)-1)]
+ return a[0]
+def sqrtbound(x):
+ scale=10**60;n=isqrt(x.numerator*scale*scale//x.denominator)
+ return F(n,scale),F(n+1,scale)
+def split(a):
+ left=[a[0]];right=[a[-1]]
+ while len(a)>1:
+  a=[(a[i]+a[i+1])/2 for i in range(len(a)-1)];left.append(a[0]);right.append(a[-1])
+ return left,right[::-1]
+def refine(a,depth):
+ if not depth:return [a]
+ l,r=split(a);return refine(l,depth-1)+refine(r,depth-1)
+def maxabs(a):return max(abs(x) for x in a)
+rows=[]
+for rational in [False,True]:
+ for amp in [.01,.001]:
+  inputs=[[F(float(s)) for s in row.split()] for row in (p/('source-'+('rat' if rational else 'pol')+'-'+format(amp,'.6f')+'.txt')).read_text().splitlines()]
+  x=[a[0] for a in inputs];y=[a[1] for a in inputs];w=[a[2] for a in inputs]
+  hx=[a*b for a,b in zip(x,w)];hy=[a*b for a,b in zip(y,w)]
+  nx=[a-b for a,b in zip(prod(derivative(hx),w),prod(hx,derivative(w)))];ny=[a-b for a,b in zip(prod(derivative(hy),w),prod(hy,derivative(w)))]
+  # Exact positive Bernstein coefficients imply Cx'(t)>0 everywhere.
+  lower=min(nx)/max(w)**2
+  assert lower>F(4,10) and min(w)>0
+  # Rational second derivatives: Y''=H''/W-H W''/W²-2H'W'/W²+2H(W')²/W³.
+  # Exact restricted hulls (64 cells) bound original-parameter derivatives.
+  max_dx=max_dy=max_ddx=max_ddy=F(0)
+  for ax,ay,aw in zip(refine(hx,6),refine(hy,6),refine(w,6)):
+   wl=min(aw);Wh=max(aw);dw=maxabs(derivative(aw))*64;ddw=maxabs(derivative(derivative(aw)))*4096
+   for aa,axis in [(ax,0),(ay,1)]:
+    a=maxabs(aa);da=maxabs(derivative(aa))*64;dda=maxabs(derivative(derivative(aa)))*4096
+    d=da/wl+a*dw/wl**2
+    dd=dda/wl+a*ddw/wl**2+2*da*dw/wl**2+2*a*dw**2/wl**3
+    if axis==0:max_dx=max(max_dx,d);max_ddx=max(max_ddx,dd)
+    else:max_dy=max(max_dy,d);max_ddy=max(max_ddy,dd)
+  curvature=(max_dx*max_ddy+max_dy*max_ddx)/lower**3
+  assert F(.01)*curvature<1
+
+  for reverse in [False,True]:
+   file=p/('curve-'+('rat' if rational else 'pol')+'-'+format(amp,'.6f')+'-'+('reverse' if reverse else 'left')+'.txt')
+   lines=file.read_text().splitlines();controls=[[F(float(s)) for s in row.split()] for row in lines[2:]]
+   ymin=min(q[1] for q in controls);ymax=max(q[1] for q in controls)
+   best=F(0);witness={}
+   for tf in [.1203,.8793]:
+    t=F(tf);W=at(w,t);Y=at(hy,t)/W;dx=at(nx,t);dy=at(ny,t)
+    slo,shi=sqrtbound(dx*dx+dy*dy);a=F(.01)*dx/shi;b=F(.01)*dx/slo
+    lo,hi=(Y-b,Y-a) if reverse else (Y+a,Y+b)
+    gap=max(F(0),lo-ymax,ymin-hi)
+    if gap>best:best=gap;witness={'t':tf,'offset_y_lo':float(lo),'offset_y_hi':float(hi),'hull_y_lo':float(ymin),'hull_y_hi':float(ymax)}
+   if amp==.01:assert best>F(5,10**7)
+   rows.append({'rational':rational,'amplitude':amp,'reverse':reverse,'positive_weight_min':float(min(w)),'regular_x_derivative_lower':float(lower),'curvature_upper':float(curvature),'offset_curvature_product_upper':float(F(.01)*curvature),'geometric_error_lower':float(best),'geometric_error_lower_exact':str(best),'witness':witness,'output_control_count':len(controls)})
+result={'proof':'Exact Fraction arithmetic on ORIGINAL IEEE poles and weights, source Bernstein derivative numerator positivity and source offset witness enclosed by integer sqrt at scale10^60. Every output point lies in global control Y hull (output polynomial B-spline); Y separating axis gives geometric distance lower for the entire output curve. Projection only diagnostics. No finite sample set is used to bound output.','rows':rows}
+(p/'proof.json').write_text(json.dumps(result,indent=2)+'\n');print(json.dumps([{k:v for k,v in row.items() if k not in ['geometric_error_lower_exact','witness']} for row in rows],indent=2))

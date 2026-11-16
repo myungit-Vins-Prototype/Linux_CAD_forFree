@@ -1,0 +1,59 @@
+In file included from /home/myungit/Linux_CAD_forFree/tests/test_viewport.cpp:153:
+/home/myungit/Linux_CAD_forFree/tests/test_drawing_multisheet.h: In function ‘void {anonymous}::multisheetTests()’:
+/home/myungit/Linux_CAD_forFree/tests/test_drawing_multisheet.h:169:49: warning: missing initializer for member ‘ForgeCad::DrawingDimensionNumbering::firstDimension’ [-Wmissing-field-initializers]
+  169 |  clientOk(window.editor()->setDimensionNumbering({true,7,6,3,true}));
+      |           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~
+/home/myungit/Linux_CAD_forFree/tests/test_drawing_multisheet.h:169:49: warning: missing initializer for member ‘ForgeCad::DrawingDimensionNumbering::excludePatterns’ [-Wmissing-field-initializers]
+/home/myungit/Linux_CAD_forFree/tests/test_drawing_multisheet.h:169:49: warning: missing initializer for member ‘ForgeCad::DrawingDimensionNumbering::assignments’ [-Wmissing-field-initializers]
+In file included from /home/myungit/Linux_CAD_forFree/tests/test_viewport.cpp:154:
+/home/myungit/Linux_CAD_forFree/tests/test_drawing_revision_restore.h: In function ‘void {anonymous}::drawingRevisionRestoreTests()’:
+/home/myungit/Linux_CAD_forFree/tests/test_drawing_revision_restore.h:12:375: warning: missing initializer for member ‘ForgeCad::DrawingDimensionNumbering::firstDimension’ [-Wmissing-field-initializers]
+   12 |  DrawingDimension dimension;bool have=false;for(const auto &c:window.editor()->curves(view.id))if(std::abs(arcLength(*c.curve,c.range)-10)<1e-7){dimension=dimensionOfCurve(view,c,DrawingMeasure::EndpointDistance);have=true;break;}require(have,"curva per ripristino");clientOk(window.editor()->addDimension(dimension,{85,140}));clientOk(window.editor()->setDimensionNumbering({true,7,6,3,true}));auto presentation=window.editor()->sheet().dimensions[0].presentation;presentation.numberingExcluded=true;presentation.prefix="(";presentation.suffix=")";clientOk(window.editor()->updateDimension(dimension,presentation));
+      |                                                                                                                                                                                                                                                                                                                                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~
+/home/myungit/Linux_CAD_forFree/tests/test_drawing_revision_restore.h:12:375: warning: missing initializer for member ‘ForgeCad::DrawingDimensionNumbering::excludePatterns’ [-Wmissing-field-initializers]
+/home/myungit/Linux_CAD_forFree/tests/test_drawing_revision_restore.h:12:375: warning: missing initializer for member ‘ForgeCad::DrawingDimensionNumbering::assignments’ [-Wmissing-field-initializers]
+In file included from /home/myungit/Linux_CAD_forFree/tests/test_viewport.cpp:155:
+/home/myungit/Linux_CAD_forFree/tests/test_drawing_release.h: In lambda function:
+/home/myungit/Linux_CAD_forFree/tests/test_drawing_release.h:9:161: warning: missing initializer for member ‘ForgeCad::DrawingDimensionNumbering::firstDimension’ [-Wmissing-field-initializers]
+    9 |  const auto archiveDrawing=[&](DrawingFile &file,const QString &path,const QString &title){file.sheet.title=title;file.sheet.dimensionNumbering={true,7,6,3,true};file.sheet.dimensions[0].presentation.numberingExcluded=true;file.sheet.dimensions[0].presentation.prefix="(";file.sheet.dimensions[0].presentation.suffix=")";file.sheet.dimensions[0].position={90,140};DrawingSheet copy;clientOk(cloneDrawingSheet(file.sheet,copy));copy.title="Secondo foglio";file.otherSheets={copy};file.sheetIds={QUuid::createUuid(),QUuid::createUuid()};clientOk(pinWorkspaceDrawingModel(path,file,ma.version));clientOk(checkoutWorkspaceDrawing(path,file,"qa"));RevisionRecord record;clientOk(checkinWorkspaceDrawing(path,file,{},"Tavola A",record));return record;};
+      |                                                                                                                                                                 ^
+/home/myungit/Linux_CAD_forFree/tests/test_drawing_release.h:9:161: warning: missing initializer for member ‘ForgeCad::DrawingDimensionNumbering::excludePatterns’ [-Wmissing-field-initializers]
+/home/myungit/Linux_CAD_forFree/tests/test_drawing_release.h:9:161: warning: missing initializer for member ‘ForgeCad::DrawingDimensionNumbering::assignments’ [-Wmissing-field-initializers]
+In file included from /home/myungit/Linux_CAD_forFree/tests/test_viewport.cpp:171:
+/home/myungit/Linux_CAD_forFree/tests/test_document_tabs.h: In static member function ‘static void ViewportInteractionTest::documentTabsTests()’:
+/home/myungit/Linux_CAD_forFree/tests/test_document_tabs.h:54:56: warning: ‘static void QApplication::setActiveWindow(QWidget*)’ is deprecated: Use QWidget::activateWindow() instead. [-Wdeprecated-declarations]
+   54 |     host.activateWindow();QApplication::setActiveWindow(&host);
+      |                           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~
+In file included from /usr/include/qt6/QtTest/qtestkeyboard.h:27,
+                 from /usr/include/qt6/QtTest/qtestevent.h:14,
+                 from /usr/include/qt6/QtTest/qtest_gui.h:17,
+                 from /usr/include/qt6/QtTest/qtest_widgets.h:15,
+                 from /usr/include/qt6/QtTest/qtest.h:283,
+                 from /usr/include/qt6/QtTest/QTest:1,
+                 from /home/myungit/Linux_CAD_forFree/tests/test_viewport.cpp:1:
+/usr/include/qt6/QtWidgets/qapplication.h:85:17: note: declared here
+   85 |     static void setActiveWindow(QWidget* act);
+      |                 ^~~~~~~~~~~~~~~
+/home/myungit/Linux_CAD_forFree/tests/test_document_tabs.h:91:56: warning: ‘static void QApplication::setActiveWindow(QWidget*)’ is deprecated: Use QWidget::activateWindow() instead. [-Wdeprecated-declarations]
+   91 |     host.activateWindow();QApplication::setActiveWindow(&host);
+      |                           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~
+/usr/include/qt6/QtWidgets/qapplication.h:85:17: note: declared here
+   85 |     static void setActiveWindow(QWidget* act);
+      |                 ^~~~~~~~~~~~~~~
+In file included from /home/myungit/Linux_CAD_forFree/tests/test_viewport.cpp:317:
+/home/myungit/Linux_CAD_forFree/tests/test_sketch_apparent.h: In static member function ‘static void ViewportInteractionTest::sketchApparent(bool)’:
+/home/myungit/Linux_CAD_forFree/tests/test_sketch_apparent.h:47:97: warning: missing initializer for member ‘ForgeCad::Kernel::ExchangeBody::curve’ [-Wmissing-field-initializers]
+   47 |     source.importData=QByteArray::fromStdString(writeStep({ExchangeBody{"Parte raggiata",rounded}}));
+      |                                                                                                 ^
+/home/myungit/Linux_CAD_forFree/tests/test_sketch_apparent.h:47:97: warning: missing initializer for member ‘ForgeCad::Kernel::ExchangeBody::curveRange’ [-Wmissing-field-initializers]
+/home/myungit/Linux_CAD_forFree/tests/test_viewport.cpp: In static member function ‘static void ViewportInteractionTest::edgeLoftWorkflow()’:
+/home/myungit/Linux_CAD_forFree/tests/test_viewport.cpp:1918:109: warning: missing initializer for member ‘ForgeCad::Kernel::LoftContact::plane’ [-Wmissing-field-initializers]
+ 1918 |         LoftOptions tangent; tangent.startContinuity=1; tangent.startFaces={{source,source->faces().front()}};
+      |                                                                                                             ^
+/home/myungit/Linux_CAD_forFree/tests/test_viewport.cpp: In static member function ‘static void ViewportInteractionTest::openLoftTangency(const QString&)’:
+/home/myungit/Linux_CAD_forFree/tests/test_viewport.cpp:2351:54: warning: missing initializer for member ‘ForgeCad::Kernel::LoftContact::plane’ [-Wmissing-field-initializers]
+ 2351 |         tangentOptions.startFaces = {{adjacent, face}}; tangentOptions.endFaces = {{adjacentEnd, endFace}};
+      |                                                      ^
+/home/myungit/Linux_CAD_forFree/tests/test_viewport.cpp:2351:106: warning: missing initializer for member ‘ForgeCad::Kernel::LoftContact::plane’ [-Wmissing-field-initializers]
+ 2351 |         tangentOptions.startFaces = {{adjacent, face}}; tangentOptions.endFaces = {{adjacentEnd, endFace}};
+      |                                                                                                          ^

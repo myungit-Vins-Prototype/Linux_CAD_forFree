@@ -1,0 +1,9 @@
+{
+  "forgeCad2026_viewport_selection.cpp": "651c65b1cea6e508d6a4eb1b63324aaf3f82f4ed39caf15ccddf7b751b6d86ea",
+  "forgeCad2026_viewport.h": "8763a9c7d1a5778afb58b163398cbb95ebb565d8b5fa0c78d16a75da1c760899",
+  "forgeCad2026_storyboard.cpp": "646504acf6a50b3ec7b8b1d16409e8cf8e21a78c28e819c5611268bdf6c20bee",
+  "forgeCad2026_storyboard.h": "cb28de8115510fd6e2481525e88a973b93a1453dcdcff5a42f53314f5f083e45",
+  "kernel/fk_blend.cpp": "21ca873385e16c0179cb093fdcdbcb6413e7fdf7f978055011ba1fbd555095ca",
+  "kernel/fk_blend_loop.cpp": "792463b3274b9eafa248c8be1fb84db59c61b8d17b08f08f456dd5a3bcd99167",
+  "kernel/fk_fill.cpp": "5fdf7cefbdd80f0d7baf2f1b5bf53bca295c55eee145ae09cea376fcbc371a3d"
+}

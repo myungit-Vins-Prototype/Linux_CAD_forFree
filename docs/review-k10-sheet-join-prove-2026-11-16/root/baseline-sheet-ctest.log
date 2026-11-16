@@ -1,0 +1,78 @@
+UpdateCTestConfiguration  from :/home/myungit/Linux_CAD_forFree/forgecad-release/DartConfiguration.tcl
+Test project /home/myungit/Linux_CAD_forFree/forgecad-release
+Constructing a list of tests
+Done constructing a list of tests
+Updating test list for fixtures
+Added 0 tests to meet fixture requirements
+Checking test dependency graph...
+Checking test dependency graph end
+test 200
+    Start 200: forgekernel_surface_tools_tests
+
+200: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_surface_tools_tests
+200: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+200: Test timeout computed to be: 180
+200: [  OK  ] SurfaceNetworkCrossingFamilies
+200: [  OK  ] SurfaceExtendUntilPlaneAndCurvedFace
+200: [  OK  ] SurfaceExtendUntilFacetedTarget
+200: [  OK  ] SurfaceExtendUntilSplineExtrusion
+200: [  OK  ] SurfacePolesPreserveTrimsAndTopology
+200: [  OK  ] SurfacePolesRefitControlCounts
+200: [  OK  ] SurfacePolesMultipleConnectedFaces
+200: [  OK  ] SurfacePolesMultipleFacesOfSolid
+200: [  OK  ] SurfacePolesPreserveDeclaredVertexTolerance
+200: [  OK  ] SurfacePolesAutomaticConnectionAndTangency
+200: [  OK  ] SurfacePolesContinuitySwappedReversedRationalAndSharp
+200: [  OK  ] SurfacePolesContinuityRefitAndProtection
+200: [  OK  ] SurfacePolesTrimProtectionLeavesInteriorFree
+200: [  OK  ] SurfacePolesNeutralTolerantConnections
+200: [  OK  ] SurfacePolesSphereInternalG1AndG2
+200: [  OK  ] SurfacePolesG2AcrossFacesAndRigidPoses
+200: [  OK  ] SurfacePolesExactAnalyticConversion
+200: [  OK  ] SurfacePolesAnalyticEditsHolesAndClosure
+200: [  OK  ] SurfacePolesMixedAnalyticAndNurbsTangency
+200: [  OK  ] SurfacePolesCurvedAnalyticTrimmedHoles
+200: [  OK  ] SurfacePolesPeriodicHelicalTrims
+200: [  OK  ] SurfacePolesSphericalCapAtConstantLatitude
+200: [  OK  ] SurfacePolesSoftInfluenceLocalAndOverlap
+200: [  OK  ] SurfacePolesSoftInfluencePeriodAndBudget
+200: [  OK  ] FillPlanarSquare
+200: [  OK  ] FillSphericalCapThroughGuides
+200: [  OK  ] FillTangentToCylinder
+200: cono: celle 64, contorno 2.13e-07, guide 2.32e-07, tangenza 0.000912 gradi
+200: cono senza guide: celle 32, contorno 1.77e-07, tangenza 0.000319 gradi
+200: [  OK  ] FillConeWithConflictingGuides
+200: sfera G2: celle 32, contorno 1.98e-07, guide 1.81e-07, tangenza 0.00149 gradi, curvatura 0.003, dalla sfera 0.00668
+200: [  OK  ] FillCapContinuesSphereInCurvature
+200: [  OK  ] FillObliqueContactsPreserveInterior
+200: [  OK  ] FillInfluencePreservesProjectionAndTangency
+200: sfera G1 naturale: scarto curvatura 0.00897 1/mm
+200: [  OK  ] FillNaturalG1FollowsSupportCurvature
+200: [  OK  ] FillRejectsInvalidShapeParameters
+200: [  OK  ] FillIndependentContactInfluences
+200: [  OK  ] FillIgnoredGuidesPreserveLocalInfluence
+200: [  OK  ] FillDirectionalProfilePreservesContacts
+200: [  OK  ] FillDirectionalProfileRejectsInvalidSelection
+200: [  OK  ] FillUnequalCompoundBoundarySpans
+200: [  OK  ] FillReportsBoundaryContactConflictAtCorner
+200: [  OK  ] FillPerFaceContinuityOverrides
+200: 40/40 test superati
+1/2 Test #200: forgekernel_surface_tools_tests ..........   Passed    5.02 sec
+test 233
+    Start 233: forgekernel_sheet_fit_validation_tests
+
+233: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_sheet_fit_validation_tests
+233: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+233: Test timeout computed to be: 180
+233: [  OK  ] SheetFitPlanarNurbsOrientationsAndPose
+233: [  OK  ] SheetFitHiddenFeatureBothBranchesAndScale
+233: 2/2 test superati
+2/2 Test #233: forgekernel_sheet_fit_validation_tests ...   Passed    1.33 sec
+
+The following tests passed:
+	forgekernel_surface_tools_tests
+	forgekernel_sheet_fit_validation_tests
+
+100% tests passed out of 2
+
+Total Test time (real) =   6.36 sec

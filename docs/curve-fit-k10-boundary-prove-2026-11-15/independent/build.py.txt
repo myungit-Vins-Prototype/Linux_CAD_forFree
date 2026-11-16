@@ -1,0 +1,4 @@
+from pathlib import Path
+import json,shlex,subprocess
+r=Path('/home/myungit/Linux_CAD_forFree');o=Path('/tmp/forgecad-k10-boundary-20261115/independent');f=Path('/tmp/forgecad-k10-20261115/independent');cs=json.loads((r/'forgecad-release/compile_commands.json').read_text());c=next(x for x in cs if x['file'].endswith('/kernel/tests/test_offset_validation.cpp'));cmd=shlex.split(c['command']);cmd[cmd.index('-o')+1]=str(o/'corners.o');cmd[cmd.index('-c')+1]=str(o/'corners.cpp');subprocess.run(cmd,cwd=c['directory'],check=True);subprocess.run(['/usr/bin/c++','-o',str(o/'corners-baseline'),str(o/'corners.o'),str(f/'fk_offset.o'),str(f/'fk_curve_fit_bounds.o'),str(f/'libforgekernel.baseline.a'),'-lpthread'],check=True)
+with (o/'corners-baseline.log').open('w') as f:subprocess.run([str(o/'corners-baseline')],stdout=f,check=True)

@@ -1,0 +1,3 @@
+Command: rg --hidden -n -w forgeIntersectRay . --glob !docs/** --glob !archivi-locali/** --glob !.git/**
+./cad_forge.h:228:bool forgeIntersectRay(const Kernel::Body &body, const QVector3D &origin, const QVector3D &direction, double &distance, const Kernel::RayFaceIndex *index = nullptr);
+./cad_forge.cpp:2407:bool forgeIntersectRay(const Body &body, const QVector3D &origin, const QVector3D &direction, double &distance, const Kernel::RayFaceIndex *index) {

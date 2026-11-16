@@ -1,0 +1,133 @@
+I normInterval(V vector) {
+    I squared(0);
+    for (I component : vector) {
+        if (!finite(component))
+            return {-inf, inf};
+        const double maximum = std::max(std::abs(component.lo), std::abs(component.hi));
+        squared = squared + I(maximum) * I(maximum);
+    }
+    return finite(squared) ? I(0, up(std::sqrt(squared.hi))) : I(-inf, inf);
+}
+double curveParameterBound(const CurvePtr<3> &curve) {
+    auto source = prepareSource(curve, curve->domain().isFinite() ? curve->domain() : Interval{-1, 1}, true);
+    if (!source)
+        return inf;
+    double worst = 0;
+    for (const Span &span : source->spans) {
+        cancellationPoint();
+        const I weight = span.constantWeight ? I(1) : range(span.w);
+        if (!(weight.lo > 0) || !finite(weight))
+            return inf;
+        VP tangent;
+        for (int axis = 0; axis < 3; ++axis) {
+            // Subtract any constant origin before forming the quotient jet.
+            // This changes no derivative and reduces translation conditioning.
+            const I value = span.h[axis].front() / span.w.front();
+            if (!finite(value))
+                return inf;
+            const double origin = value.lo * .5 + value.hi * .5;
+            const P centered = sum(span.h[axis], scaled(span.w, I(origin)), true);
+            tangent[axis] = span.constantWeight ? derivative(centered)
+                : sum(product(derivative(centered), span.w), product(centered, derivative(span.w)), true);
+        }
+        const I denominator = (I(span.domain.hi) - I(span.domain.lo)) * I(weight.lo) * I(weight.lo);
+        const I bound = I(normUpper(tangent)) / denominator;
+        if (!finite(bound))
+            return inf;
+        worst = std::max(worst, bound.hi);
+    }
+    return worst;
+}
+std::optional<SurfaceParameterBounds> parameterBounds(const SurfacePtr &surface) {
+    cancellationPoint();
+    if (!surface)
+        throw std::domain_error("metrica superficie: sorgente assente");
+    if (surface->type() == SurfaceType::Extrusion) {
+        const auto &extrusion = static_cast<const ExtrusionSurface &>(*surface);
+        const double u = curveParameterBound(extrusion.curve());
+        if (!std::isfinite(u))
+            return {};
+        const I v = normInterval(vec(extrusion.direction()));
+        if (!finite(v))
+            throw std::domain_error("metrica superficie: direzione non risolta");
+        return SurfaceParameterBounds{u, v.hi};
+    }
+    const auto *base = dynamic_cast<const BSplineSurface *>(surface.get());
+    if (!base)
+        return {};
+    std::vector<Transform3> placements;
+    while (base->basis()) {
+        cancellationPoint();
+        placements.push_back(base->placement());
+        base = base->basis().get();
+    }
+    const int nu = base->uPoleCount(), nv = base->vPoleCount();
+    if (nu > 100000 || nv > 100000 || std::size_t(nu) > 1000000 / std::size_t(nv))
+        throw std::domain_error("metrica superficie: budget poli esaurito");
+    double maximumWeight = 0;
+    for (int i = 0; i < nu; ++i) {
+        cancellationPoint();
+        for (int j = 0; j < nv; ++j)
+            maximumWeight = std::max(maximumWeight, base->weight(i, j));
+    }
+    std::vector<V> homogeneous(std::size_t(nu) * nv);
+    std::vector<I> weights(homogeneous.size());
+    const Vec3 origin = base->pole(0, 0);
+    I weightRange(inf, -inf);
+    double maximumHomogeneous = 0;
+    for (int i = 0; i < nu; ++i) {
+        cancellationPoint();
+        for (int j = 0; j < nv; ++j) {
+            const std::size_t index = std::size_t(i) * nv + j;
+            const I weight = I(base->weight(i, j)) / I(maximumWeight);
+            V point;
+            for (int axis = 0; axis < 3; ++axis)
+                point[axis] = I(base->pole(i, j)[axis]) - I(origin[axis]);
+            // Translation cancels identically in derivatives; use only each
+            // original placement's linear part on the recentered controls.
+            for (auto t = placements.rbegin(); t != placements.rend(); ++t) {
+                V transformed{I(0), I(0), I(0)};
+                for (int row = 0; row < 3; ++row)
+                    for (int col = 0; col < 3; ++col)
+                        transformed[row] = transformed[row] + point[col] * I(t->matrix(row, col));
+                point = transformed;
+            }
+            homogeneous[index] = mul(point, weight);
+            weights[index] = weight;
+            weightRange.lo = std::min(weightRange.lo, weight.lo);
+            weightRange.hi = std::max(weightRange.hi, weight.hi);
+            maximumHomogeneous = std::max(maximumHomogeneous, normInterval(homogeneous[index]).hi);
+        }
+    }
+    if (!finite(weightRange) || !(weightRange.lo > 0))
+        throw std::domain_error("metrica superficie: pesi non risolti");
+    const auto derivativeBound = [&](bool alongU) {
+        double derivativeH = 0, derivativeW = 0;
+        const auto &knots = alongU ? base->uKnots() : base->vKnots();
+        const int degree = alongU ? base->uDegree() : base->vDegree();
+        for (int i = 0; i < nu - (alongU ? 1 : 0); ++i) {
+            cancellationPoint();
+            for (int j = 0; j < nv - (alongU ? 0 : 1); ++j) {
+                const int pole = alongU ? i : j;
+                const I factor = I(degree) / (I(knots[pole + degree + 1]) - I(knots[pole + 1]));
+                const std::size_t a = std::size_t(i) * nv + j, b = a + (alongU ? nv : 1);
+                V difference;
+                for (int axis = 0; axis < 3; ++axis)
+                    difference[axis] = (homogeneous[b][axis] - homogeneous[a][axis]) * factor;
+                derivativeH = std::max(derivativeH, normInterval(difference).hi);
+                const I dw = (weights[b] - weights[a]) * factor;
+                if (!finite(dw))
+                    return inf;
+                derivativeW = std::max(derivativeW, std::max(std::abs(dw.lo), std::abs(dw.hi)));
+            }
+        }
+        // H/W quotient derivative, over the FULL natural knot rectangle.
+        const I bound = (I(derivativeH) * I(weightRange.hi) + I(maximumHomogeneous) * I(derivativeW)) /
+                        (I(weightRange.lo) * I(weightRange.lo));
+        return finite(bound) ? bound.hi : inf;
+    };
+    const SurfaceParameterBounds bounds{derivativeBound(true), derivativeBound(false)};
+    if (!std::isfinite(bounds.u) || !std::isfinite(bounds.v))
+        throw std::domain_error("metrica superficie: derivata non risolta");
+    return bounds;
+}

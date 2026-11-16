@@ -1,0 +1,8 @@
+from pathlib import Path
+import hashlib,json,shutil,runpy
+r=Path('/home/myungit/Linux_CAD_forFree');p=Path('/tmp/forgecad-k10-thicken-20261115');manifest=json.loads((p/'implementation/final/manifest.json').read_text());print(manifest)
+src=p/'implementation/final/fk_thicken.cpp';assert hashlib.sha256(src.read_bytes()).hexdigest()=='d235fdfa46ecc301a1d88b659cc45df40f4de9368ca1133f5844f8d7c11e6ef0';assert hashlib.sha256((r/'kernel/fk_thicken.cpp').read_bytes()).hexdigest()=='a4623eda855af811beca759521fd13ee14dfaba08f465af0792348352fac30ec'
+test=p/'tests/test_planar_thicken_validation.cpp';assert hashlib.sha256(test.read_bytes()).hexdigest()=='f8864efc84c721d03f89cd5b58de146b1bddb971655ebff487aecfca5aa5ceb1';assert not (r/'kernel/tests'/test.name).exists()
+shutil.copy2(src,r/'kernel/fk_thicken.cpp');shutil.copy2(test,r/'kernel/tests'/test.name)
+runpy.run_path(str(p/'root/prepare-integration.py'))
+print('Frozen core and test integrated')

@@ -1,0 +1,18 @@
+{
+  "polynomial_internal_knot": {
+    "x_derivative_lower_by_span": [
+      0.9999999999999998,
+      0.9999999999999722,
+      0.9999999999999997
+    ],
+    "minimum": 0.9999999999999722
+  },
+  "rational_internal_knot": {
+    "x_derivative_lower_by_span": [
+      0.9070294784580497,
+      0.9990482988882072,
+      0.4904667777777777
+    ],
+    "minimum": 0.4904667777777777
+  }
+}

@@ -1,5 +1,7 @@
 #include "fk_body_check.h"
 #include "fk_primitives.h"
+#include "fk_sheet.h"
+#include "fk_pcurve.h"
 #include "fk_test_util.h"
 
 using namespace fktest;
@@ -180,4 +182,36 @@ FK_TEST(CheckerDetectsDamage) {
     FK_CHECK_THROWS(Body().vertex(VertexId(0)));
     FK_CHECK_THROWS(Body(box).kev(box.edges().front()));  // non e' uno sperone
     FK_CHECK_THROWS(Body(box).kemr(box.edges().front()));  // fin in facce diverse
+}
+
+FK_TEST(ReverseEdgePreservesSolidAndLaminarGeometry) {
+    for (Body body : {makePlaneSheet(Frame3(), 1), makeBox(Frame3(), 1, 2, 3)}) {
+        computePCurves(body);
+        FK_CHECK(checkBody(body).empty());
+        for (EdgeId id : body.edges()) {
+            const Edge before = body.edge(id);
+            const VertexId start = body.edgeStart(id), end = body.edgeEnd(id);
+            const auto fins = body.fins();
+            std::vector<Vec3> points;
+            for (FinId f : fins) for (double t : {0.0, .37, 1.0}) points.push_back(body.finPoint(f,t));
+            for (int flip = 0; flip < 2; ++flip) {
+                body.reverseEdge(id);
+                FK_CHECK(checkBody(body).empty());
+                FK_CHECK(body.edgeStart(id) == (flip == 0 ? end : start));
+                FK_CHECK(body.edgeEnd(id) == (flip == 0 ? start : end));
+                std::size_t p = 0;
+                for (FinId f : fins) for (double t : {0.0, .37, 1.0})
+                    FK_CHECK(distance(body.finPoint(f,t),points[p++]) < 1e-12);
+                for (FinId f : {body.edge(id).forward,body.edge(id).backward}) {
+                    if (!f.valid()) continue;
+                    const Fin &fin = body.fin(f);
+                    FK_CHECK(bool(fin.pcurve));
+                    if (fin.pcurve) FK_CHECK(pcurveDeviation(*body.face(body.finFace(f)).surface,
+                        *body.edge(id).curve,*fin.pcurve,body.edge(id).range) < 1e-12);
+                }
+            }
+            FK_CHECK(body.edge(id).forward == before.forward && body.edge(id).backward == before.backward);
+            FK_CHECK(body.edge(id).range.lo == before.range.lo && body.edge(id).range.hi == before.range.hi);
+        }
+    }
 }

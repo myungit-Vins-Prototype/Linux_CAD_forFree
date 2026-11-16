@@ -16,6 +16,14 @@ public:
                    int uPoleCount, int vPoleCount, std::vector<Vec3> poles, std::vector<double> weights = {},
                    bool periodicU = false, bool periodicV = false);
 
+    // La copia puo' concorrere con le letture e la costruzione delle cache
+    // della sorgente immutabile. Assegnazione, move e distruzione richiedono
+    // accesso esclusivo all'oggetto modificato (anche alla sorgente del move).
+    BSplineSurface(const BSplineSurface &other);
+    BSplineSurface &operator=(const BSplineSurface &other);
+    BSplineSurface(BSplineSurface &&other) noexcept = default;
+    BSplineSurface &operator=(BSplineSurface &&other) noexcept = default;
+
     // Istanza esatta di una superficie immutabile: i poli restano nella base,
     // le valutazioni e gli accessi restituiscono coordinate trasformate.
     // Simmetrie e ripetizioni condividono cosi' anche griglie molto grandi.

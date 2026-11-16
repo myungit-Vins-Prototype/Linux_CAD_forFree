@@ -1,0 +1,21 @@
+original_parametric_deviation polynomial 5.7219584981527968e-17
+[  OK  ] BoundaryOriginalPolynomialPositive
+original_parametric_deviation rational 2.2247786310271853e-16
+[  OK  ] BoundaryOriginalRationalParameter
+original_parametric_deviation rational-pose-scale 3.820199830714189e-15
+[  OK  ] BoundaryOriginalRationalPoseScale
+original_parametric_deviation rational-negative-uv 2.2247786310271853e-16
+[  OK  ] BoundaryOriginalRationalReverse
+original_parametric_deviation rational-trim 3.3335590258932494e-16
+[  OK  ] BoundaryOriginalRationalTrim
+[  OK  ] BoundaryFailureBodyAndModelAtomicity
+[  OK  ] BoundaryCancellationBodyAndModelAtomicity
+[  OK  ] BoundaryIsoHiddenPcurveAndCurveSpan
+hidden_support_extension_rejected 1
+[  OK  ] BoundaryIsoHiddenSupportExtensionRejectsAtomically
+[  OK  ] BoundaryActualExtendedFinUsesFullCertifiedWindow
+[  OK  ] BoundaryActualEmissionRejectsChangedContracts
+[  OK  ] BoundaryIsoAffineParameterAndSupportOrder
+[  OK  ] BoundaryIsoLineMapVaryingV
+[  OK  ] BoundaryInvalidBudgetsAndRangeRejectBeforeMutation
+14/14 test superati

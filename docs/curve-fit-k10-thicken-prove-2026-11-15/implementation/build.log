@@ -1,0 +1,5 @@
+/home/myungit/Linux_CAD_forFree/kernel/tests/test_history.cpp: In function ‘void HistorySweepAndLoftKeepSectionSources()’:
+/home/myungit/Linux_CAD_forFree/kernel/tests/test_history.cpp:977:136: warning: missing initializer for member ‘ForgeCad::Kernel::LoftSection::point’ [-Wmissing-field-initializers]
+  977 |     std::vector<LoftSection> sections{{Frame3(),region.outer,{}},{Frame3(Vec3(0,0,3),Vec3(0,0,1),Vec3(1,0,0)),reversed(round.outer),{}}};
+      |                                                                                                                                        ^
+/home/myungit/Linux_CAD_forFree/kernel/tests/test_history.cpp:977:136: warning: missing initializer for member ‘ForgeCad::Kernel::LoftSection::point’ [-Wmissing-field-initializers]

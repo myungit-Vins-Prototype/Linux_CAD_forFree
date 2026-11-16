@@ -1,0 +1,127 @@
+from pathlib import Path
+import json,re
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/k10-next-review/root');P=R/'docs/review-k10-sew-preview-prove-2026-11-16'
+load=lambda name:json.loads((T/name).read_text());build=load('build-result.json');tests=load('ctest-result.json');replay=load('release-replay-result.json');wayland=load('wayland-result.json');fraction=load('fraction-summary.json');architecture=load('architecture-audit.json')
+for x in [build,tests,replay,wayland]:assert x['exit']==0
+assert replay['passed_groups']==12 and replay['identical_exports']==8 and wayland['assertions']==90
+assert fraction['actual_fins']==64 and fraction['migrated_fins']==8 and fraction['negative_cases']==6
+meta=json.loads((P/'tests/metadata.txt').read_text());assert '12 passed 0 failed' in (P/'tests/sanitizer-12-pass.log').read_text()
+checks={}
+for name in ['iges','exchange','steproundtrip','stepreadassembly','offset','sheet']:
+ r=load(name+'-result.json');assert r['exit']==0
+ s=(T/(name+'.log')).read_text();match=re.search(r'(\d+)/(\d+) test superati',s);assert match and match.group(1)==match.group(2);checks[name]=int(match.group(1))
+report=f'''# Review: cucitura Plane e anteprima Smusso — 16 novembre 2026
+
+**Completato questo blocco con tre agenti GPT-6.1 Sol.** Correzione della ricostruzione delle SP-curve durante la cucitura su Plane e del difetto PRE8 nello Smusso. **29 rilievi confermati corretti complessivamente. K10 resta aperto:18/24siti iniziali parzialmente trattati,6interamente da migrare, oltre ai fallback.** Nessun CAD originale modificato; l’app è stata ricompilata completamente. Riaprire l’eseguibile aggiornato per usarla.
+
+## Cucitura: difetto riprodotto
+
+Due rettangoli piani adiacenti hanno lo stesso bordo geometrico, ma parametri differenti. Il rappresentante conserva una NURBS monotona di grado128, con una piccola variazione Bernstein tra i vecchi campioni; il bordo dell’altra faccia è una retta. Gli input hanno pcurve coerenti, `checkBody` non segnala problemi e la cucitura passa da8a7bordi.
+
+Sulla baseline il ramo non affine emette una cubica a4poli e il checker continua a passare. A `t=3/128`, però, `||S(PC(t))-E(t)||=1,120011104e-7mm`, oltre il cap preesistente di1e-7mm. I controlli uniformi16/64non vedono il massimo. Non si tratta di un volume perso: è errata la corrispondenza nello stesso parametro, richiesta dalla fin. Una traccia privata dimostra l’esecuzione del vecchio fit non affine; due ulteriori varianti riproducono anche i riusi con parametro identico e rimappatura affine.
+
+Sei regressioni geometriche falliscono prima della correzione. Scala1000 e pesi razionali non uniformi erano già compatibili sulla baseline e rimangono controlli positivi; la cancellazione costituisce il nono gruppo baseline. I fallimenti dei test non sono conteggiati come sei nuovi difetti separati: estendono la correzione K10 già aperta.
+
+## Correzione e contratto
+
+- Per le sole fin realmente rimappate con supporto Plane e bordo Line/NURBS a pesi positivi, inclusi wrapper Trimmed/Transformed, `sewnPCurve` ricostruisce la pcurve nel parametro originale del bordo rappresentativo, prima delle scorciatoie campionate. Gli altri supporti/famiglie restano fallback.
+- Le API interne `detail::fitPCurveOnPlane` e `requirePCurveOnPlane` riusano il provider duale originale: bound continuo della proiezione per il fit in mm, poi residuo completo contro il bordo3D. La soluzione del sistema Gram produce soltanto candidatiUV; sono i coefficienti originali e l’oracolo Bernstein outward ad autorizzarli. Il fit mantiene1e-8mm.
+- Il cap rimane numericamente quello preesistente: `original(sampled)+max(1e-7,10*tolerance)`. Non è sostituito da un upper bound più largo. La nuova `pcurveTolerance` pubblica l’upper bound continuo effettivo, entro quel cap. Il residuo normale fuori piano è incluso e, se troppo grande, la costruzione fallisce senza pubblicare una deviazione parziale.
+- Due campi transitori di `RawFin` trasportano l’obbligo e il cap all’assemblaggio. Non cambiano il formato persistente. `AssemblyMap` identifica faccia e bordo effettivi; l’identità dell’oggetto pcurve condiviso distingue le fin migrate nella stessa coppia faccia/bordo. Ogni obbligo deve ritrovare esattamente identità, numero e budget. Il controllo legge comunque i coefficienti, il bordo, il parametro e il Plane realmente emessi dopo i passaggi di assemblaggio.
+- Le fin rappresentanti non rimappate rimangono fuori dal nuovo contratto. Un primo prototipo contava tutte le fin della coppia e poteva rifiutare una coppia mista: è stato corretto prima dell’integrazione. La prova privata verifica il caso positivo e rifiuta copia della pcurve con identità diversa, budget aumentato, polo alterato nella stessa identità e intervallo cambiato:5/5PASS.
+
+Sorgenti: `kernel/fk_exchange.cpp/.h`, `kernel/fk_offset.cpp`, `kernel/fk_curve_fit_bounds.h`. Regressione permanente: `kernel/tests/test_sew_pcurve_validation.cpp`, target `forgekernel_sew_pcurve_tests`,12gruppi. `fk_curve_fit_bounds.cpp` non è cambiato in questo blocco.
+
+## PRE8: Smusso dopo digitazione e Tab
+
+Digitare1,25al posto di0,5e premere Tab aggiorna il campo, ma sulla baseline anteprima, chiave, generazione e messaggio «pronta» rimangono sul vecchio valore. Il caso è riprodotto con veri eventi di tastiera e `editingFinished`, anche con un worker pendente. **La conferma costruisce già il valore corretto**: la chiave protegge il riuso del B-rep, quindi il difetto dimostrato riguarda anteprima/stato e ricalcolo superfluo.
+
+I due campi erano collegati soltanto al callback di Invio/frecce. Due connessioni `editingFinished` alla funzione di aggiornamento esistente coprono ora Tab e perdita del focus. Nessuna modifica al componente generale `ExpressionSpinBox`.
+
+La regressione permanente `tests/test_chamfer_preview_editing.h`, CLI `--chamfer-preview-editing`, usa sei scenari: primaria, seconda distanza e angolo, ciascuno con risultato pronto o worker pendente. Controlla tasti effettivi, invalidazione, token inizialmente non cancellato, recupero, Invio/frecce, conferma unica, geometria mostrata/confermata e cleanup. Stesso header sul vecchio codice:63PASS/27FAIL; corretto:90/90PASS. Le27asserzioni fallite descrivono un solo difetto PRE8. La pista adiacente sulle unità dell’angolo è stata scartata: `setSuffix` disabilita già la conversione delle lunghezze.
+
+## Verifiche finali
+
+| Verifica | Esito effettivo |
+|---|---|
+| Build completa app, kernel e runner Release | PASS, {build['seconds']:.2f}s; nessun overlay privato nei binari finali |
+| CTest pertinenti, incluse entrambe le nuove regressioni | {tests['actual_passed']}/{tests['actual_passed']}PASS, {tests['seconds']:.2f}s; è un sottoinsieme selezionato |
+| Runner generale Iges / Exchange / StepRoundTrip / StepReadAssembly | {checks['iges']}/{checks['iges']}, {checks['exchange']}/{checks['exchange']}, {checks['steproundtrip']}/{checks['steproundtrip']}, {checks['stepreadassembly']}/{checks['stepreadassembly']}PASS |
+| Runner generale Offset / Sheet | {checks['offset']}/{checks['offset']}, {checks['sheet']}/{checks['sheet']}PASS |
+| Regressione cucitura Release | 12/12PASS;8/8JSON byteidentici ai dati congelati e verificati indipendentemente |
+| ASan/UBSan/LSan mirati | 12/12PASS, leak check attivo, nessuna soppressione/diagnostica;3TU kernel+driver strumentati, resto Release |
+| Anteprima Smusso su runner finale | 90/90offscreen e90/90Wayland PASS; nessuna certificazione nuova dei pixel OpenGL |
+| Guardie di provenienza | 5/5PASS sul prototipo esatto integrato |
+| Certificato indipendente Fraction | 64fin sorgenti entro risoluzione esplicita1e-7mm;64fin finali/169campate complete entro cap;8migrate anche entro budget pubblicato e fit1e-8mm |
+| Massimo bound indipendente finale | {fraction['max_upper_mm']:.12g}mm; sei negativi baseline confermati e polo finale alterato di1e-4rifiutato |
+| Architettura | {architecture['files']}file/{architecture['edges']}archi/{architecture['units']}TU;0diagnostiche;check, hash, HTML e archi nei due versi PASS |
+
+Il verificatore Python parte dai valori IEEE originali esportati in floathex: nodi/pesi, inserimento dei nodi e restrizione razionali, residuo omogeneo Bernstein e radice razionale arrotondata verso l’esterno. Copre tutte le campate e non chiama né legge gli oracoli del prodotto. Le sorgenti dichiarano localmente zero in alcuni casi: il controllo indipendente delle sorgenti usa esplicitamente la risoluzione1e-7mm, senza rivendicare uguaglianza algebrica a zero. Le8fin rimappate finali hanno invece anche la verifica contro la propria tolleranza pubblicata.
+
+Le prove private con oggetti sostituiti sono limitate al percorso esercitato: il layout `RawFin` è cambiato e non si attribuiscono loro le suite IGES/STEP. Queste ultime sono state eseguite dopo la ricompilazione completa, con tutte le unità allineate. ASan strumenta offset, exchange, sew e driver; non certifica tutto il kernel o la GUI contro ogni perdita.
+
+## Conservazione e lavoro ancora aperto
+
+Baseline3519file congelata, descrizioni e archi consultati prima degli interventi;3508file preesistenti preservati,11modifiche esistenti attese e due nuovi test, oltre a rapporto/memoria/prove. Gli archivi precedenti95/146/172/267/126restano invariati e verificati. Nessuna rimozione delle22candidate orfane e nessuna modifica ai CAD.
+
+Restano sei siti K10 interamente da migrare:
+
+1. `fk_blend_mitre.cpp`: giunto tra supporti con parametri risolti.
+2. `fk_blend_surface.cpp`: prosecuzione del raccordo implicito.
+3. `fk_surface_mapping.cpp`: trasferimentoUV sul carrier conservato.
+4. `fk_quilt_mapping.cpp`: trasferimentoUV e bound per l’offset del carrier.
+5. `fk_sheet.cpp`: giunzione implicita delle superfici estese.
+6. `cad_sketch_refs.cpp`: proiezione procedurale `Other`.
+
+Anche i18siti parzialmente trattati conservano famiglie fallback, compresa la cucitura nonPlane. Il matching dei bordi e il residuo sorgente usato per il cap restano campionati: il nuovo certificato riguarda la pcurve del target emesso, non dimostra l’equivalenza globale dei bordi scelti né certifica retroattivamente la sorgente. Il limite del sistema Gram e le risorse possono produrre un rifiuto dichiarato.
+
+Per il prossimo sito procedurale è conservato un probe di `TransformedCurve(HelixCurve)` con molti giri: il callback del fitter può aliasare la periodicità e perdere una deviazione. Non è ancora una riproduzione della funzioneQt `appendProjectedCurve` e non aggiunge un rilievo conteggiato separato a K10. Restano inoltre l’uniformazione complessiva di pannelli/stili/anteprime e la decisione sulle5orfane private/locali e17API senza usi interni.
+
+[Prove e manifest](review-k10-sew-preview-prove-2026-11-16/), [stato generale](code-review-2026-11-15.md), [memoria precedente](history/claude-prima-k10-sew-preview-2026-11-16.md).
+'''
+# Reports use readable spacing; compact operational memory remains separate.
+report=re.sub(r'(\d)(?=(?:siti|interamente|bordi|gruppi|campate|migrate|fin|JSON|poli|asserzioni|TU|PASS|FAIL|stati)\b)',r'\1 ',report)
+report=re.sub(r'\b(di|da|a|entro|grado|oltre|con)(?=\d)',r'\1 ',report)
+report=re.sub(r'([eE][+-]?\d+)(mm)\b',r'\1 \2',report)
+for old,new in {'da8a7bordi':'da 8 a 7 bordi','da8a7 bordi':'da 8 a 7 bordi','Digitare1,25al posto di0,5e':'Digitare 1,25 al posto di 0,5 e','16/64non':'16/64 non','Line/NURBS':'Line/NURBS','4TU':'4 TU','la funzioneQt':'la funzione Qt','callback(nonQt)':'callback (non Qt)'}.items(): report=report.replace(old,new)
+report=report.replace('da 8a7 bordi','da 8 a 7 bordi').replace('Digitare1,25al posto di 0,5e','Digitare 1,25 al posto di 0,5 e').replace('90/90offscreen','90/90 offscreen').replace('e90/90Wayland','e 90/90 Wayland').replace('prima della correzione. Scala1000','prima della correzione. Scala 1000')
+report=re.sub(r'\b(Le|le|i|Gli|sulle|e|Baseline|precedenti|mantiene|uniformi|risoluzione|esplicita|fit)(?=\d)',r'\1 ',report)
+report=re.sub(r'(\d)(?=(?:file|archi|diagnostiche|modifiche|candidate|orfane|API|restano|rifiutato)\b)',r'\1 ',report)
+report=re.sub(r':(?=\S)',': ',report);report=re.sub(r';(?=\S)','; ',report)
+report=report.replace('bordo3D','bordo 3D').replace('candidatiUV','candidati UV').replace('trasferimentoUV','trasferimento UV').replace('nonPlane','non Plane').replace('byteidentici','identici byte per byte')
+# Read immediately before writing shared memory; archive at turn start remains intact.
+m=(R/'CLAUDE.md').read_text();start=m.index('**16/11 — Prosecuzione K10 cucitura') if '**16/11 — Prosecuzione K10 cucitura' in m else m.index('**16/11 — K10 cucitura e PRE8 verificati');end=m.index('**16/11 — K10 UV e PRE7',start)
+entry=f'''**16/11 — K10 cucitura e PRE8 verificati con tre agenti Sol.**
+Plane rimappato: parametro originale, bound mm e fin emesse ricontrollate via
+mappa+identitàPC; cap invariato. PRE8 Smusso: Tab aggiorna quote/anteprima.
+29rilievi corretti; K10:18/24parziali+6nonmigrati, più fallback.
+App completa,{tests['actual_passed']}CTest,12sanitizer mirati4TU,5guardie e90stati UI
+ancheWayland PASS. Fraction:64fin/169campate,8migrate entro budget;
+8dump Release identici. Mappa{architecture['files']}/{architecture['edges']}/{architecture['units']},check/HTML/archi PASS.
+Matching/cap sorgente restano campionati; pista Helix solo callback, nonQt.
+[Rapporto/prove/limiti](docs/review-k10-sew-preview-2026-11-16.md);
+[memoria precedente](docs/history/claude-prima-k10-sew-preview-2026-11-16.md).
+
+'''
+m=m[:start]+entry+m[end:];assert len(m.encode())<=16384,len(m.encode());assert len(re.findall(r'^\*\*',m,re.M))<=10
+ledger=(R/'docs/code-review-2026-11-15.md').read_text();start=ledger.index('**Stato più recente, 16 novembre:**');end=ledger.index('\n\n',start)
+latest=f'''**Stato più recente, 16 novembre:** **29 rilievi confermati corretti complessivamente**. [Cucitura Plane e PRE8](review-k10-sew-preview-2026-11-16.md): trasferimento SP-curve certificato nel parametro originale, cap invariato e fin realmente emesse ricontrollate tramite genealogia esplicita; Smusso aggiorna l’anteprima dopo digitazione e Tab. App completa,{tests['actual_passed']}CTest pertinenti,12gruppi sanitizer mirati e90stati UI ancheWayland PASS;64fin/169campate verificate con Fraction,8dump Release identici. **K10 resta aperto:18/24siti iniziali parzialmente trattati,6interamente da migrare**, oltre ai fallback e ai limiti del matching/cap sorgente campionati. Precedenti [UV/PRE7](review-k10-uv-preview-2026-11-16.md), [K11 Supporto.prt](supporto-booleana-2026-11-16.md) e [PRE5/PRE6/UI2](review-preview-unification-2026-11-16.md) conservati; K2 in produzione ed [ellisse per estremi](ellisse-estremi-2026-11-16.md) completata. Uniformazione globale UI e [22candidate orfane](review-orphans-refresh-2026-11-16.md) ancora aperte. I conteggi storici successivi descrivono le rispettive consegne precedenti.'''
+ledger=ledger[:start]+latest+ledger[end:]
+(R/'CLAUDE.md').write_text(m);(R/'docs/code-review-2026-11-15.md').write_text(ledger);(R/'docs/review-k10-sew-preview-2026-11-16.md').write_text(report)
+(T/'report-check-counts.json').write_text(json.dumps(checks,indent=2)+'\n')
+(P/'README.txt').write_text('''Prove della review K10 cucitura Plane e PRE8 Smusso,16novembre2026.
+core/:4sorgenti esatti+contratto e5guardie private, snapshot .txt.
+tests/:baseline/stage8+8JSON,12gruppi normali eASan/UBSan/LSan4TU,
+provenienza dei sorgenti e pistaHelix soltanto callback(nonQt).
+ui/:dueconnessioni e header90asserzioni,baseline63PASS/27FAIL,Wayland privato.
+root/:baseline conservazione,archi prima/dopo,build completa/CTest/runner,
+replay Release8exportidentici,Wayland90finale,verificatore Fraction indipendente,
+fonti finali testuali,diff e audit/manifest.
+Il primo avvio build UI e' stato arrestato dal coordinatore per integrare prima
+il kernel; ui-interrupted-build.log non e' un esito positivo. Solo build.log
+con exit0 documenta la build completa finale. Nessun processo utente arrestato.
+Gli overlay privati precedono la build completa e non certificano ABI
+fraTU RawModel/RawFin storiche; le suite generali sono eseguite dopo fullbuild.
+Nessun binario,oggetto,CAD o segreto incluso. SHA256SUMS copre l'archivio.
+''')
+print('Rapporto,ledger e memoria finali aggiornati;',len(m.encode()),'byte',flush=True)

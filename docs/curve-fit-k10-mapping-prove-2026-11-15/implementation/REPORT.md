@@ -1,0 +1,35 @@
+# K10 mapping — frozen V5 delivery
+
+Five core files frozen in final/, with SHA256SUMS. changes.patch is relative to coordinator's before/kernel snapshots. Production integration, CMake, architecture, docs and shared application build remain coordinator-owned. This agent changed only private staged sources and compiled private objects/runners. AGENTS/CLAUDE/graph consulted before changes.
+
+## Scope and behavior
+
+wrapBodyOnSurface now attempts the focused wrapPlanarBodyOnCarrier helper AFTER the original mapBody local 27-point Jacobian checks. Supported source is a planar sheet with Line3/equal-weight degree-one BSpline3 boundary curves and affine source trims, including nested Trimmed wrappers. The source plane's whole finite trimmed region and actual edges must have zero mapped height within a rigorously charged approximation budget. Nonzero source height exactly cancelled by normalOffset is included. Face orientation includes source plane's orientation relative to the wrapping frame.
+
+Target is the ORIGINAL BSplineSurface or ExtrusionSurface with Line/NURBS generator, copied as immutable geometry. No target surface fit or rounded NURBS conversion occurs. The provider extracts original homogeneous curve/surface data outward. Fixed-v extrusion adds v*D*W to original H; fixed-u evaluates original generator outward, then constructs its affine v line.
+
+Actual SP-curves retain original edge parameter and are explicit degree-one affine maps. Small cross-axis residuals are snapped only after bounding and charging their complete error. The edge is fit with a continuous oracle, then actual output cubic coefficients are recertified. Both source edge geometry and EVERY ORIGINAL source fin's mapped trim are compared continuously to the constructed UV curve. This prevents tolerant input fins from silently changing the source footprint. Original mapped vertices are separately checked and their error contributes to returned deviation. History/deviation publish only after successful body construction/check.
+
+## Position error proof
+
+Original source point -> sourceFrame -> angle/shift/anchor/frozen scaleU,V affine arithmetic is enclosed from original IEEE data. It is compared with the actual SP-curve coefficients over each affine piece, including reverse/partial/nonunit ranges. Source plane height is affine in its own UV; its original affine boundary hull gives a rectangle containing the entire finite planar region, including holes. Height is bounded over that whole rectangle, not merely vertices or edges.
+
+For target S=H/W, positive original rational weights imply W>=Wmin. Global derivative hulls give M_U>=(||H_u||max*Wmax+||H||max*|W_u|max)/Wmin^2 and similarly V. Original controls are recentered before applying placement linear parts; translations cancel in derivatives. Curve generators use original outward Bezier extraction and quotient derivative. Therefore the map bridge is bounded by M_U*epsU+M_V*epsV+Hheight. Entire original/constructed UV corridors must lie in the natural target domain before those metric bounds are used. Fit plus bridge stays within the existing fit budget .2*min(operationTolerance,linearResolution()); no tolerance or budget increased.
+
+Unsupported generator families are distinguished from recognized but unresolved bounds: the latter throw. Nominally isoparametric or zero-height recognized-but-inconclusive inputs also throw rather than silently falling back.
+
+## Numerical diagnosis and exact-preserving improvements
+
+The scale1000 posed fixture initially exhausted refinement despite a bridge of only2.269258e-11 and unchanged fit budget2e-8. Captured terminal query was t=[49.999999999999773,50.000000000465434] around U=.1; four candidate poles near(3064,2089,-1014) differed only1e-10, yet interval bound was2.6415. Inverse pullback uncertainty interacted with a*(1-t)+b*t, artificially losing the common translation. The mathematically equivalent outward form a+(b-a)*t in affineBezier removes that dependency; the SAME twelve HiddenTargets variants, including1000scale, pass. Debug trace and poles are in debug-scale.log; fixed gate is debug-scale-v5.log. No acceptance criterion changed.
+
+Endpoint identities are exact-aware: zero/±1 operations, TwoSum singleton sums, identical positive singleton division, and original BSP1 endpoint poles avoid needless domain spill. No equality shortcut is used for non-singleton intervals. BSP span lookup uses upper_bound and affinePoint checkpoints cancellation, avoiding quadratic scans for large input knot vectors.
+
+## Tests and limits
+
+Private build.py compiles bounds/carrier/mapping from actual compile_commands, strict FP. V4 private full legacy mapping runner PASS (development/unroll planes/cylinders/cones, wraps/volume/history/BRep/STEP/mesh, multifaceNURBS). Reviewer V4: original rational and metricU=.4 baseline successes preserved,8/8 supported variants PASS; tolerant large vertex/fin gaps rejected, small1.9e-8 vertex gap accepted and included in deviation;16 direct metric checks and24 extrusion fit checks PASS. V5 immutable HiddenTargets gate12 variants PASS. Final frozen V5 tests:8/8 PASS normal (1.19s), baseline4/8; ASan/UBSan/LSan8/8 PASS (8.98s), exit0 and no diagnostics. Instrumented four TUs: helper, mapping, bounds, test; framework main and remaining Release archive uninstrumented. LSan detect_leaks=1 and halt_on_error enabled, execution escalated outside sandbox ptrace restriction. Test source SHA bb29d7ca7ce5dc9fae9cc15d9ef8e9b9a0b7f101db9b8e1fa0ee49093c6cb0c5; tests/final.sha256 matches frozen core. Parent performs broad current build.
+
+Remaining scope: solids/nonplanar sources, higher-degree source edges/trims, genuinely diagonal UV images, nonzero normal-offset families, unsupported targets and other mapping entry points retain explicit legacy sampled behavior. Posed/quarter-turn inputs exactly on a natural-domain boundary can fail closed when interval arithmetic cannot prove the full UV corridor lies inside; internal-margin posed cases are retained as accepted controls and boundary refusals are tested separately. No epsilon clamp, domain padding, or enlarged tolerance is introduced. Original local regularity checks remain sampled; this delivery does not certify global injectivity, absence of folds, or a continuous normal field. Resource bounds may reject difficult valid inputs.
+
+## V6 final contract guard
+
+Only affinePieces changed from V5: degree-one spline source exceeding100000 poles now throws resource exhaustion instead of returning unsupported; each weight-check iteration checkpoints cancellation. No geometric formulas or acceptance budgets changed. final-v6/SHA256SUMS is authoritative; final/ remains the previous V5 audit snapshot. New helper SHA a98eb1941657e929c9ad18c7c9bd9918f1b2b13e7fc77e35bb7242713c831b68. Dedicated strict-FP helper compilation PASS. Independent final V5 replay completed106 checks PASS, covering original public wraps, tolerant inputs, direct metrics/Extrusion fits and prior composition providers/queries. V6 shared build and broad tests are coordinator-owned.

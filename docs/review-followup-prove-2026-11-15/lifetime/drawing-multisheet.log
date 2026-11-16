@@ -1,0 +1,4 @@
+PASS pattern cache identity: selective migration, geometry/names invariant, cache16 and archived snapshots
+PASS drawing identity: visibility, exact legacy verification, geometry/precision rejection and native reopen with dimensions
+PASS multisheet preparation: two calculations instead of five, cancellation atomic, presentation/history preserved
+PASS multifoglio: codec1/2, UUID, isolamento datum/quote, schede/riordino, Undo globale, PDF3/1, modello10->16, revisioni A/B e Salva con nome

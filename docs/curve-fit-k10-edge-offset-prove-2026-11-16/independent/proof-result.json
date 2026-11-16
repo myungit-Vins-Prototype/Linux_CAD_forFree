@@ -1,0 +1,22 @@
+{
+  "status": "PASS: strict geometric failure certified using original binary64 coefficients",
+  "source_degree": 27,
+  "source_poles": 28,
+  "output_edges": 4,
+  "output_poles": 16,
+  "witness_t_hex": "0x1.c2339c0ebedfap-1",
+  "witness_t_exact": "3960015152346877/4503599627370496",
+  "target_z_lower": "0.001000574247517282988158673583375163961292636195410068054",
+  "target_z_upper": "0.001000574247517282988158673583375163961292636195410068055",
+  "all_output_edge_z_upper": "0.001000000000108420238065232155122430413030087947845458985",
+  "geometric_distance_lower": "5.742474088627500934414282527335482625482475646090699016E-7",
+  "witness_z_separation_upper": "5.742474088627500934414282527335482625482475646090699017E-7",
+  "tolerance_exact": "944473296573929/9444732965739290427392",
+  "tolerance_decimal": "9.999999999999999547481118258862586856139387236908078194E-8",
+  "error_to_tolerance_lower": "5.742474088627501194272077828652888360402382197117009854",
+  "sqrt_certificate_bits": 256,
+  "fixture_sha256": "53eabb3d569cb2a4bf1573af41badefdf7d152f5c9ece6d7a190a01d9a8efc09",
+  "original_probe_sha256": "c3f2ba7ec20c538c43024233aad312fdd4c8202b333e08810a80d40064ec6671",
+  "method": "Exact Fraction de Casteljau of original degree-27 controls and derivative; integer sqrt enclosure checked by rational squaring; global positive-weight output pole hull.",
+  "scope": "One original exact offset point separated from the union of all four returned output edges. Source/output checkBody PASS comes from exporter, not this proof."
+}

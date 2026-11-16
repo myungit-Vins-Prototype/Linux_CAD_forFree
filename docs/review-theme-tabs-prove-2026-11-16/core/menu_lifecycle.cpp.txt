@@ -1,0 +1,5 @@
+#include <QApplication>
+#include <QMenu>
+#include <QPointer>
+#include <iostream>
+int main(int argc,char**argv){QApplication a(argc,argv);QMenu parent;QPointer<QMenu> child=parent.addMenu("theme");std::cout<<"before="<<parent.findChildren<QMenu*>().size()<<'\n';parent.clear();std::cout<<"alive="<<bool(child)<<" children="<<parent.findChildren<QMenu*>().size()<<'\n';}

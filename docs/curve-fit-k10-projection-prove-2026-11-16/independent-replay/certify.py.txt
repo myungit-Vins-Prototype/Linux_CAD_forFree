@@ -1,0 +1,128 @@
+#!/usr/bin/env python3
+"""Independent exact Bernstein audit; no production bounds are called/imported.
+All hex IEEE inputs become exact Fractions. Assertions compare exact squares.
+"""
+from fractions import Fraction as F
+from math import comb, sqrt, nextafter, inf
+import json, sys, time, hashlib
+
+def q(x): return F.from_float(float.fromhex(x)) if isinstance(x,str) else F(x)
+def vector(v): return list(map(q,v))
+def cross(a,b): return [a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]]
+def dot(a,b): return sum(x*y for x,y in zip(a,b))
+def split(p,t):
+    rows=[p];left=[p[0]];right=[p[-1]]
+    while len(rows[-1])>1:
+        row=[(1-t)*a+t*b for a,b in zip(rows[-1],rows[-1][1:])]
+        rows.append(row);left.append(row[0]);right.append(row[-1])
+    return left,list(reversed(right))
+def restrict(p,a,b):
+    assert 0<=a<b<=1
+    if a: p=split(p,a)[1]
+    if b<1: p=split(p,(b-a)/(1-a))[0]
+    return p
+
+def multiply(a,b):
+    m,n=len(a)-1,len(b)-1
+    return [sum(a[i]*b[k-i]*F(comb(m,i)*comb(n,k-i),comb(m+n,k))
+                for i in range(max(0,k-n),min(m,k)+1)) for k in range(m+n+1)]
+def sub(a,b): return [x-y for x,y in zip(a,b)]
+def derivative(a):return [(len(a)-1)*(y-x) for x,y in zip(a,a[1:])]
+def source_data(c,o,x,y,d):
+    assert c['degree']==27 and len(c['poles'])==28
+    assert list(map(q,c['knots']))==[F(0)]*28+[F(1)]*28
+    poles=[vector(v) for v in c['poles']];W=list(map(q,c['weights'])) if c['weights'] else [F(1)]*28
+    assert min(W)>0
+    H=[[p[j]*w for p,w in zip(poles,W)] for j in range(3)]
+    n=cross(x,y);nd=dot(n,d);assert nd
+    nH=[sum(n[j]*H[j][i] for j in range(3))-dot(n,o)*W[i] for i in range(28)]
+    A=[[H[j][i]*nd-d[j]*nH[i] for i in range(28)] for j in range(3)]
+    # Monotonicity along the original x axis implies nonzero derivative.
+    src_x=[sum(x[j]*H[j][i] for j in range(3)) for i in range(28)]
+    dst_x=[sum(x[j]*A[j][i]/nd for j in range(3)) for i in range(28)]
+    src_der=sub(multiply(derivative(src_x),W),multiply(src_x,derivative(W)))
+    dst_der=sub(multiply(derivative(dst_x),W),multiply(dst_x,derivative(W)))
+    assert min(src_der)>0 and min(dst_der)>0
+    ray=[-v/nd for v in nH];assert min(ray)>0
+    return A,W,nd,{'weight_lower':down_float(min(W)), 'source_monotonic_lower':down_float(min(src_der)), 'projection_monotonic_lower':down_float(min(dst_der)), 'forward_ray_numerator_lower':down_float(min(ray)), 'abs_n_dot_d_lower':down_float(abs(nd))}
+
+def up_float(f):
+    v=float(f)
+    if F.from_float(v)<f:v=nextafter(v,inf)
+    return v
+
+def down_float(f):
+    v=float(f)
+    if F.from_float(v)>f:v=nextafter(v,-inf)
+    return v
+
+def sqrt_up(f):
+    v=sqrt(float(f))
+    while F.from_float(v)**2<f:v=nextafter(v,inf)
+    return v
+
+def certify_span(source,controls,a,b,threshold):
+    A,W,nd,_=source;As=[restrict(v,a,b) for v in A];Ws=restrict(W,a,b)
+    R=[sub(multiply(v,[F(1)]*4),[nd*z for z in multiply(Ws,Q)]) for v,Q in zip(As,controls)]
+    stack=[(R,Ws,0)];worst=F(0);leaves=0;depth=0
+    while stack:
+        rs,ws,d=stack.pop();minimum=min(ws);assert minimum>0
+        bound2=sum(max(map(abs,r))**2 for r in rs)/(minimum*abs(nd))**2
+        if bound2<=threshold**2:
+            worst=max(worst,bound2);leaves+=1;depth=max(depth,d);continue
+        assert d<24,'subdivision budget exhausted'
+        halves=[split(r,F(1,2)) for r in rs];wleft,wright=split(ws,F(1,2))
+        stack.extend([([h[0] for h in halves],wleft,d+1),([h[1] for h in halves],wright,d+1)])
+    assert worst<=threshold**2
+    return {'upper_bound':sqrt_up(worst),'bound_squared_numerator':str(worst.numerator),'bound_squared_denominator':str(worst.denominator),'leaves':leaves,'depth':depth}
+
+def audit_curve(c,maps,sources,reported):
+    assert c['degree']==3 and not c['weights']
+    knots=list(map(q,c['knots']));poles=[vector(v) for v in c['poles']]
+    assert len(knots)==len(poles)+4 and len(set(knots[:4]))==len(set(knots[-4:]))==1
+    mapped_sources={}
+    for m in maps:mapped_sources.setdefault(m['source'],[]).append(tuple(map(q,m['range'])))
+    for ranges in mapped_sources.values():
+        assert ranges[0][0]==0 and ranges[-1][1]==1
+        assert all(a[1]==b[0] for a,b in zip(ranges,ranges[1:]))
+    assert (len(poles)-1)%3==0 and len(maps)==(len(poles)-1)//3
+    results=[]
+    for k,m in enumerate(maps):
+        i=3*k
+        # This proves the actual published span is an isolated Bernstein cubic.
+        assert knots[i+1]==knots[i+2]==knots[i+3]<knots[i+4]==knots[i+5]==knots[i+6]
+        controls=[[poles[i+l][j] for l in range(4)] for j in range(3)]
+        a,b=map(q,m['range']);results.append(certify_span(sources[m['source']],controls,a,b,reported))
+    return {'spans':len(results),'upper_bound':max(r['upper_bound'] for r in results),'max_depth':max(r['depth'] for r in results),'leaves':sum(r['leaves'] for r in results),'span_certificates':results}
+
+def maps_from_curve(c,source_index=0):
+    return [{'source':source_index,'range':[c['knots'][i+3],c['knots'][i+4]]} for i in range(0,len(c['poles'])-1,3)]
+
+def main():
+    started=time.monotonic();records=[json.loads(line) for line in open(sys.argv[1])];output=[]
+    tol=F.from_float(1e-7);geometry=piece_spans=chain_spans=join_spans=0;max_bound=0.;joins=0
+    for r in records:
+        if 'name' in r:
+            source=source_data(r['source'],vector(r['origin']),vector(r['x']),vector(r['y']),vector(r['d']))
+            assert len(r['pieces'])==len(r['chains'])==1
+            piece=r['pieces'][0];chain=r['chains'][0]
+            assert list(map(q,piece['range']))==[F(0),F(1)]
+            assert q(piece['curve']['knots'][3])==0 and q(piece['curve']['knots'][-4])==1
+            assert q(chain['curve']['knots'][3])==0 and q(chain['curve']['knots'][-4])==1
+            a=audit_curve(piece['curve'],maps_from_curve(piece['curve']),[source],q(piece['deviation']))
+            b=audit_curve(chain['curve'],maps_from_curve(piece['curve']),[source],q(chain['deviation']))
+            assert q(piece['deviation'])<=tol and q(chain['deviation'])<=tol
+            output.append({'name':r['name'],'source_properties':source[3],'piece':a,'chain':b})
+            geometry+=1;piece_spans+=a['spans'];chain_spans+=b['spans'];max_bound=max(max_bound,a['upper_bound'],b['upper_bound'])
+            print(r['name'],'piece',a['spans'],a['upper_bound'],'chain',b['upper_bound'],flush=True)
+        else:
+            sources=[source_data(s,[F(0)]*3,[F(1),F(0),F(0)],[F(0),F(1),F(0)],[F(0),F(0),F(-1)]) for s in r['sources']]
+            results=[]
+            for c in r['chains']:
+                assert q(c['deviation'])<=tol
+                a=audit_curve(c['curve'],c['maps'],sources,q(c['deviation']));results.append(a);join_spans+=a['spans'];max_bound=max(max_bound,a['upper_bound'])
+            joins+=1;output.append({'join_name':r['join_name'],'chains':results})
+            print(r['join_name'],[(a['spans'],a['upper_bound']) for a in results],flush=True)
+    result={'method':'Exact IEEE Fractions; homogeneous residual Bernstein hull; positive W and abs(n.d); exact squared comparisons against published bounds and tolerance','geometry_records':geometry,'geometry_source_property_checks':geometry,'geometry_piece_certificates':geometry,'geometry_chain_certificates':geometry,'multi_source_join_scenarios':joins,'piece_spans':piece_spans,'geometry_chain_spans':chain_spans,'multi_source_join_spans':join_spans,'upper_bound_maximum':max_bound,'tolerance_hex':(1e-7).hex(),'seconds':time.monotonic()-started,'results':output}
+    json.dump(result,open(sys.argv[2],'w'),indent=2);print('SUMMARY',json.dumps({k:v for k,v in result.items() if k!='results'}),flush=True)
+if __name__=='__main__':main()

@@ -1,0 +1,94 @@
+--- a/forgeCad2026_viewport_selection.cpp
++++ b/forgeCad2026_viewport_selection.cpp
+@@ -741,22 +741,6 @@
+         return h % 2 == 0 ? curve.tangentHandles.at(h / 2).first : curve.tangentHandles.at(h / 2).second;
+     }
+     return curve.controlPoints.at(point.point);
+-}
+-
+-void CadViewport::setSelectedPointPosition(const SelectedPoint &point, const QPointF &position) {
+-    if (point.kind == 0) {
+-        auto &segment = sketches_[activeSketch_].segments[point.element];
+-        if (point.point == 0) segment.first = position;
+-        else segment.second = position;
+-    } else {
+-        CurveObject &curve = sketches_[activeSketch_].curves[point.element];
+-        const QPointF delta = position - curve.controlPoints.at(point.point);
+-        curve.controlPoints[point.point] = position;
+-        if (curve.tool == DrawingTool::Spline && curve.tangentHandles.size() == curve.controlPoints.size()) {
+-            curve.tangentHandles[point.point].first += delta;
+-            curve.tangentHandles[point.point].second += delta;
+-        }
+-    }
+ }
+ 
+ QVector<CadViewport::TopologyLabelItem> CadViewport::topologyLabelItems() const {
+--- a/forgeCad2026_viewport.h
++++ b/forgeCad2026_viewport.h
+@@ -1252,8 +1252,6 @@
+     static bool isPickableCurvePoint(const CurveObject &curve, int control);
+ 
+     QPointF selectedPointPosition(const SelectedPoint &point) const;
+-
+-    void setSelectedPointPosition(const SelectedPoint &point, const QPointF &position);
+ 
+     void finalizeCurve();
+ 
+--- a/forgeCad2026_storyboard.cpp
++++ b/forgeCad2026_storyboard.cpp
+@@ -546,9 +546,3 @@
+     return target;
+ }
+ 
+-QTreeWidgetItem *StoryboardTree::firstFeature(QTreeWidgetItem *body) {
+-    if (!body) return nullptr;
+-    for (int row = 0; row < body->childCount(); ++row)
+-        if (body->child(row)->data(0, Qt::UserRole).toInt() == kTreeExtrusion) return body->child(row);
+-    return nullptr;
+-}
+--- a/forgeCad2026_storyboard.h
++++ b/forgeCad2026_storyboard.h
+@@ -91,8 +91,6 @@
+ 
+     QTreeWidgetItem *normalizedTarget(QTreeWidgetItem *body, QTreeWidgetItem *target) const;
+ 
+-    static QTreeWidgetItem *firstFeature(QTreeWidgetItem *body);
+-
+     QWidget *historyRailViewport_ = nullptr;
+     QSlider *historyRail_ = nullptr;
+     CursorMode cursorMode_ = CursorMode::Horizontal;
+--- a/kernel/fk_blend.cpp
++++ b/kernel/fk_blend.cpp
+@@ -365,8 +365,6 @@
+     Vec3 vertex;
+     Vec3 n[3], d[3];
+     int edgeFaces[3][2];
+-    // Per ogni spigolo, la faccia che non lo contiene.
+-    int otherFace(int k) const { return 3 - edgeFaces[k][0] - edgeFaces[k][1]; }
+     // I due spigoli della faccia i.
+     void edgesOf(int i, int &k, int &l) const {
+         k = l = -1;
+--- a/kernel/fk_blend_loop.cpp
++++ b/kernel/fk_blend_loop.cpp
+@@ -104,11 +104,6 @@
+         s.derivative[2] = d[1] + size_ * tT1;
+         return s;
+     }
+-    Vec3 inPlane(double t) const {
+-        const Vec3 w = cross(normal_, curve_->derivative(t));
+-        return sideT_ * normalized(w);
+-    }
+-
+     RowFit fit() const { return fit(range_); }
+     RowFit fit(const Interval &span) const {
+         std::vector<double> breaks = curve_->breakpoints(span);
+--- a/kernel/fk_fill.cpp
++++ b/kernel/fk_fill.cpp
+@@ -237,7 +237,6 @@
+             }
+         return y;
+     }
+-    int band() const { return b_; }
+ 
+     // Cholesky in place; falso se la matrice non e' definita positiva.
+     bool factor() {

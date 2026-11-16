@@ -1,0 +1,432 @@
+[
+  {
+    "case": "tangent-canonical-reversal",
+    "input_sha256": "c2c6a09900716397d2525ca6aa8a588743cf288c5ee9db1b1506078101cfb095",
+    "actual": [
+      {
+        "fin": 2,
+        "edge": 2,
+        "face": 0,
+        "budget": 1e-07,
+        "pass": true,
+        "upper_mm": 2.7563884114757423e-10,
+        "cells": 1,
+        "leaves": 1,
+        "branches": 1,
+        "max_depth": 0
+      },
+      {
+        "fin": 3,
+        "edge": 3,
+        "face": 0,
+        "budget": 1e-07,
+        "pass": true,
+        "upper_mm": 2.503552646185477e-13,
+        "cells": 1,
+        "leaves": 1,
+        "branches": 1,
+        "max_depth": 0
+      },
+      {
+        "fin": 11,
+        "edge": 2,
+        "face": 1,
+        "budget": 1e-07,
+        "pass": true,
+        "upper_mm": 2.7563868418903365e-10,
+        "cells": 1,
+        "leaves": 1,
+        "branches": 1,
+        "max_depth": 0
+      }
+    ],
+    "source": []
+  },
+  {
+    "case": "tangent-face-sense",
+    "input_sha256": "f00b2f777ea4b499684a1f78554efe0e407eb7d2a6bc30fe39fc66fd822ee39c",
+    "actual": [
+      {
+        "fin": 3,
+        "edge": 3,
+        "face": 0,
+        "budget": 1e-07,
+        "pass": true,
+        "upper_mm": 2.503552646185477e-13,
+        "cells": 1,
+        "leaves": 1,
+        "branches": 1,
+        "max_depth": 0
+      },
+      {
+        "fin": 4,
+        "edge": 4,
+        "face": 0,
+        "budget": 1e-07,
+        "pass": true,
+        "upper_mm": 2.7563884114757423e-10,
+        "cells": 1,
+        "leaves": 1,
+        "branches": 1,
+        "max_depth": 0
+      },
+      {
+        "fin": 8,
+        "edge": 4,
+        "face": 1,
+        "budget": 1e-07,
+        "pass": true,
+        "upper_mm": 2.756386841616262e-10,
+        "cells": 1,
+        "leaves": 1,
+        "branches": 1,
+        "max_depth": 0
+      }
+    ],
+    "source": []
+  },
+  {
+    "case": "tangent-large-scale",
+    "input_sha256": "dd0d771f861dc50b9939c86ce2a16e671b82af12d6dd6305bb369d45a5d54316",
+    "actual": [
+      {
+        "fin": 2,
+        "edge": 2,
+        "face": 0,
+        "budget": 2.305124725476287e-06,
+        "pass": true,
+        "upper_mm": 1.7944397059908764e-07,
+        "cells": 1,
+        "leaves": 1,
+        "branches": 1,
+        "max_depth": 0
+      },
+      {
+        "fin": 3,
+        "edge": 3,
+        "face": 0,
+        "budget": 2.305124725476287e-06,
+        "pass": true,
+        "upper_mm": 5.397093333110094e-10,
+        "cells": 1,
+        "leaves": 1,
+        "branches": 1,
+        "max_depth": 0
+      },
+      {
+        "fin": 11,
+        "edge": 2,
+        "face": 1,
+        "budget": 2.305124725476287e-06,
+        "pass": true,
+        "upper_mm": 1.7944382059490958e-07,
+        "cells": 1,
+        "leaves": 1,
+        "branches": 1,
+        "max_depth": 0
+      }
+    ],
+    "source": []
+  },
+  {
+    "case": "tangent-lower-boundary",
+    "input_sha256": "ab3059292d7237bca5902ddbaf4f3450d2449303bbd820efa125af6e0a5a1077",
+    "actual": [
+      {
+        "fin": 5,
+        "edge": 5,
+        "face": 0,
+        "budget": 1e-07,
+        "pass": true,
+        "upper_mm": 2.5850080389808404e-15,
+        "cells": 1,
+        "leaves": 1,
+        "branches": 1,
+        "max_depth": 0
+      },
+      {
+        "fin": 6,
+        "edge": 6,
+        "face": 0,
+        "budget": 1e-07,
+        "pass": true,
+        "upper_mm": 4.411215831595949e-11,
+        "cells": 1,
+        "leaves": 1,
+        "branches": 1,
+        "max_depth": 0
+      },
+      {
+        "fin": 10,
+        "edge": 6,
+        "face": 1,
+        "budget": 1e-07,
+        "pass": true,
+        "upper_mm": 4.411217381190011e-11,
+        "cells": 1,
+        "leaves": 1,
+        "branches": 1,
+        "max_depth": 0
+      }
+    ],
+    "source": []
+  },
+  {
+    "case": "tangent-polynomial",
+    "input_sha256": "f7aac55704fb2012767a77635c75859c95f7b28c0d374cab64e3219b09767638",
+    "actual": [
+      {
+        "fin": 2,
+        "edge": 2,
+        "face": 0,
+        "budget": 1e-07,
+        "pass": true,
+        "upper_mm": 2.7563884114757423e-10,
+        "cells": 1,
+        "leaves": 1,
+        "branches": 1,
+        "max_depth": 0
+      },
+      {
+        "fin": 3,
+        "edge": 3,
+        "face": 0,
+        "budget": 1e-07,
+        "pass": true,
+        "upper_mm": 2.503552646185477e-13,
+        "cells": 1,
+        "leaves": 1,
+        "branches": 1,
+        "max_depth": 0
+      },
+      {
+        "fin": 11,
+        "edge": 2,
+        "face": 1,
+        "budget": 1e-07,
+        "pass": true,
+        "upper_mm": 2.756386841616262e-10,
+        "cells": 1,
+        "leaves": 1,
+        "branches": 1,
+        "max_depth": 0
+      }
+    ],
+    "source": []
+  },
+  {
+    "case": "tangent-rational",
+    "input_sha256": "2d3315340a2a11a637053898b2336898030292eac98761f8b95a3f3ff6b2d016",
+    "actual": [
+      {
+        "fin": 2,
+        "edge": 2,
+        "face": 0,
+        "budget": 1e-07,
+        "pass": true,
+        "upper_mm": 7.420321277108172e-11,
+        "cells": 1,
+        "leaves": 1,
+        "branches": 1,
+        "max_depth": 0
+      },
+      {
+        "fin": 3,
+        "edge": 3,
+        "face": 0,
+        "budget": 1e-07,
+        "pass": true,
+        "upper_mm": 7.683910653457672e-13,
+        "cells": 1,
+        "leaves": 1,
+        "branches": 1,
+        "max_depth": 0
+      },
+      {
+        "fin": 11,
+        "edge": 2,
+        "face": 1,
+        "budget": 1e-07,
+        "pass": true,
+        "upper_mm": 7.420309235192143e-11,
+        "cells": 1,
+        "leaves": 1,
+        "branches": 1,
+        "max_depth": 0
+      }
+    ],
+    "source": []
+  },
+  {
+    "case": "tangent-reverse-selection",
+    "input_sha256": "2028e8e4df4b487f5d4d627045398b98b9cdfb320f0e09c7d99ec04f4fa3b608",
+    "actual": [
+      {
+        "fin": 2,
+        "edge": 2,
+        "face": 0,
+        "budget": 1e-07,
+        "pass": true,
+        "upper_mm": 1.211007970084036e-10,
+        "cells": 1,
+        "leaves": 1,
+        "branches": 1,
+        "max_depth": 0
+      },
+      {
+        "fin": 3,
+        "edge": 3,
+        "face": 0,
+        "budget": 1e-07,
+        "pass": true,
+        "upper_mm": 2.7853737870001245e-13,
+        "cells": 1,
+        "leaves": 1,
+        "branches": 1,
+        "max_depth": 0
+      },
+      {
+        "fin": 11,
+        "edge": 2,
+        "face": 1,
+        "budget": 1e-07,
+        "pass": true,
+        "upper_mm": 1.2110054840331518e-10,
+        "cells": 1,
+        "leaves": 1,
+        "branches": 1,
+        "max_depth": 0
+      }
+    ],
+    "source": []
+  },
+  {
+    "case": "tangent-rigid-pose",
+    "input_sha256": "6abfd921e96675f9ceeef4a5a40b46a4345ef1ca5f8d03cb86fd4950558366a1",
+    "actual": [
+      {
+        "fin": 2,
+        "edge": 2,
+        "face": 0,
+        "budget": 1e-07,
+        "pass": true,
+        "upper_mm": 1.92253960883374e-10,
+        "cells": 1,
+        "leaves": 1,
+        "branches": 1,
+        "max_depth": 0
+      },
+      {
+        "fin": 3,
+        "edge": 3,
+        "face": 0,
+        "budget": 1e-07,
+        "pass": true,
+        "upper_mm": 8.279467194339747e-13,
+        "cells": 1,
+        "leaves": 1,
+        "branches": 1,
+        "max_depth": 0
+      },
+      {
+        "fin": 11,
+        "edge": 2,
+        "face": 1,
+        "budget": 1e-07,
+        "pass": true,
+        "upper_mm": 1.9225382741832168e-10,
+        "cells": 1,
+        "leaves": 1,
+        "branches": 1,
+        "max_depth": 0
+      }
+    ],
+    "source": []
+  },
+  {
+    "case": "tangent-small-scale",
+    "input_sha256": "4b41e65fbe9d84ecfad21d875863e1e75613a2fc5c7ca36b905cc117cba756f2",
+    "actual": [
+      {
+        "fin": 2,
+        "edge": 2,
+        "face": 0,
+        "budget": 1e-07,
+        "pass": true,
+        "upper_mm": 1.6287795313693273e-12,
+        "cells": 1,
+        "leaves": 1,
+        "branches": 1,
+        "max_depth": 0
+      },
+      {
+        "fin": 3,
+        "edge": 3,
+        "face": 0,
+        "budget": 1e-07,
+        "pass": true,
+        "upper_mm": 6.753632483725423e-15,
+        "cells": 1,
+        "leaves": 1,
+        "branches": 1,
+        "max_depth": 0
+      },
+      {
+        "fin": 11,
+        "edge": 2,
+        "face": 1,
+        "budget": 1e-07,
+        "pass": true,
+        "upper_mm": 1.6287794991778572e-12,
+        "cells": 1,
+        "leaves": 1,
+        "branches": 1,
+        "max_depth": 0
+      }
+    ],
+    "source": []
+  },
+  {
+    "case": "tangent-trimmed-support",
+    "input_sha256": "eed601b37da577f79c41a339193e674363c33cfc392e61b13f83f48fc8d64fdb",
+    "actual": [
+      {
+        "fin": 2,
+        "edge": 2,
+        "face": 0,
+        "budget": 1e-07,
+        "pass": true,
+        "upper_mm": 7.21995584823076e-08,
+        "cells": 4,
+        "leaves": 9,
+        "branches": 27,
+        "max_depth": 3
+      },
+      {
+        "fin": 3,
+        "edge": 3,
+        "face": 0,
+        "budget": 1e-07,
+        "pass": true,
+        "upper_mm": 7.663998492828934e-12,
+        "cells": 1,
+        "leaves": 1,
+        "branches": 1,
+        "max_depth": 0
+      },
+      {
+        "fin": 11,
+        "edge": 2,
+        "face": 1,
+        "budget": 1e-07,
+        "pass": true,
+        "upper_mm": 7.21995584823076e-08,
+        "cells": 4,
+        "leaves": 9,
+        "branches": 27,
+        "max_depth": 3
+      }
+    ],
+    "source": []
+  }
+]

@@ -1,0 +1,8 @@
+from pathlib import Path
+import json,subprocess,shlex,sys
+root=Path('/home/myungit/Linux_CAD_forFree');stage=Path(__file__).parent;baseline=stage/'baseline';mode=sys.argv[1] if len(sys.argv)>1 else 'baseline'
+cc=json.loads((baseline/'forgecad-release/compile_commands.json').read_text());item=next(x for x in cc if x['output']=='CMakeFiles/forgecad.dir/cad_sketch_offset.cpp.o');cmd=shlex.split(item['command']);cmd[cmd.index('-o')+1]=str(stage/'probe.o');cmd[cmd.index('-c')+1]=str(stage/('test_sketch_offset_validation.cpp' if len(sys.argv)>2 else 'probe.cpp'));subprocess.run(cmd,cwd=item['directory'],check=True)
+objdir=baseline/'forgecad-release/CMakeFiles/forgecad.dir';objs=[objdir/'cad_curve_solver.cpp.o',objdir/'cad_sketch_offset.cpp.o'];lib=baseline/'forgecad-release/kernel/libforgekernel.a'
+if mode!='baseline':
+ cmd[cmd.index('-o')+1]=str(stage/'cad_sketch_offset-fixed.o');cmd[cmd.index('-c')+1]=str(stage.parent/'implementation/candidate/cad_sketch_offset.cpp');subprocess.run(cmd,cwd=item['directory'],check=True);objs[1]=stage/'cad_sketch_offset-fixed.o';lib=baseline/'forgecad-release/kernel/libforgekernel.a'
+subprocess.run(['/usr/bin/c++',str(stage/'probe.o'),*map(str,objs),str(lib),'-lQt6Widgets','-lQt6Gui','-lQt6Core','-lpthread','-o',str(stage/(('tests-' if len(sys.argv)>2 else 'probe-')+mode))],check=True)

@@ -1,0 +1,7 @@
+/home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:294:151: warning: unused parameter 'checkCurvature' [-Wunused-parameter]
+  294 | SurfacePtr offsetBSplineC2(const Surface &surface, double d, const Interval &uw, const Interval &vw, double tolerance, bool preserveEndSections, bool checkCurvature = true) {
+      |                                                                                                                                                       ^
+/home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:521:149: warning: unused parameter 'checkCurvature' [-Wunused-parameter]
+  521 | SurfacePtr offsetBSpline(const Surface &surface, double d, const Interval &uw, const Interval &vw, double tolerance, bool preserveEndSections, bool checkCurvature = true) {
+      |                                                                                                                                                     ^
+2 warnings generated.

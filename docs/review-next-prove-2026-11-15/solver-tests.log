@@ -1,0 +1,3 @@
+solver finite numbers PASS
+PASS contatti tangenti: 96 casi, conflitti, vicinanza, codec e Undo/Redo
+solver partition + tangent PASS

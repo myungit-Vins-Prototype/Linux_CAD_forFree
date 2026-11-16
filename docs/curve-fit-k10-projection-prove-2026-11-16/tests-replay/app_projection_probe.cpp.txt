@@ -1,0 +1,38 @@
+#include "cad_forge.h"
+#include "cad_kernel.h"
+#include "fk_sheet.h"
+#include "fk_project.h"
+#include "fk_curve_ops.h"
+#include <QApplication>
+#include <iostream>
+#include <iomanip>
+#include <stdexcept>
+#include <algorithm>
+#include <cmath>
+using namespace ForgeCad;
+using namespace ForgeCad::Kernel;
+const std::vector<double> z27={0,0,0,0.0023926594471666389,-0.03158506535957388,0.22274247758415186,-1.0588644597919092,3.7068614333740251,-10.150702528319338,22.626599248232061,-42.105538437516088,66.431608164324672,-89.673893632054558,104.07526656293437,-104.07526656293437,89.673893632054558,-66.431608164324672,42.105538437516088,-22.626599248232061,10.150702528319338,-3.7068614333740251,1.0588644597919092,-0.22274247758415186,0.03158506535957388,-0.0023926594471666389,0,0,0};
+void require(bool b,const char *m){if(!b)throw std::runtime_error(m);}
+SketchObject source(bool nurbs,double gap){
+ SketchObject s;s.customFrame=true;s.frame.origin[2]=1.;
+ if(!nurbs){s.segments.append({QPointF(0,0),QPointF(1,0)});s.segments.append({QPointF(1+gap,0),QPointF(2+gap,0)});}
+ else for(int piece=0;piece<2;++piece){CurveObject c;c.tool=DrawingTool::Converted;c.degree=27;for(int i=0;i<28;++i)c.controlPoints.append(QPointF(piece*(1.+gap)+i/27.,z27[i]));for(int i=0;i<28;++i)c.knots.append(0.);for(int i=0;i<28;++i)c.knots.append(1.);s.curves.append(c);}
+ return s;
+}
+void scenario(const char *name,bool nurbs,double gap){
+ const SketchObject sketch=source(nurbs,gap);const ForgeBody target=std::make_shared<const Body>(makePlaneSheet(Frame3(),100));QString error,summary;
+ const auto app=forgeProjectedCurves(target,sketch,false,&error,&summary);require(!app.empty(),error.toStdString().c_str());require(error.isEmpty(),"unexpected app diagnostic");
+ const auto segments=forgeSketchSegments(sketch);const auto profile=buildProfile(segments,sketchConnectionTolerance());const auto axes=sketchAxes(sketch);const auto direction=forgeProjectionDirection(*target,sketch,false);
+ require(profile.regions.empty()&&profile.chains.size()==1,"fixture must produce one open chain");require(segments.size()==2,"fixture must retain two original segments");
+ std::vector<const ProfileLoop*> loops;for(const auto&r:profile.regions){loops.push_back(&r.outer);for(const auto &h:r.holes)loops.push_back(&h);}for(const auto &c:profile.chains)loops.push_back(&c);
+ std::vector<CurveSpan> spans;std::vector<std::size_t> ends;for(const auto *loop:loops){for(const auto &seg:loop->segments)spans.push_back({embedCurve(seg.curve,axes),seg.range});ends.push_back(spans.size());}
+ const auto projected=projectCurves(*target,spans,direction);double pieceMax=0.,chainMax=0.;std::size_t next=0;std::vector<ProjectedChain> chains;
+ for(auto end:ends){std::vector<ProjectedPiece> pieces;for(;next<end;++next){for(const auto&p:projected[next])pieceMax=std::max(pieceMax,p.deviation);pieces.insert(pieces.end(),projected[next].begin(),projected[next].end());}for(auto &c:joinProjectedPieces(pieces)){chainMax=std::max(chainMax,c.deviation);chains.push_back(std::move(c));}}
+ require(chains.size()==1&&app.size()==1,"fixture must join to one app and pipeline curve");require(std::isfinite(chainMax)&&chainMax<=ProjectionOptions().tolerance,"final chain exceeds default projection tolerance");
+ double geometryError=0.;for(std::size_t j=0;j<chains.size();++j){auto a=std::dynamic_pointer_cast<const BSplineCurve<3>>(app[int(j)]);auto b=chains[j].curve;require(bool(a)&&bool(b),"expected spline output");require(a->degree()==b->degree()&&a->knots()==b->knots()&&a->weights()==b->weights()&&a->poles().size()==b->poles().size(),"app and pipeline spline structures differ");for(std::size_t k=0;k<a->poles().size();++k)require(distance(a->poles()[k],b->poles()[k])==0.,"app and pipeline poles differ");for(int k=0;k<=1024;++k){const auto d=b->domain();double t=d.lo+d.length()*k/1024.;geometryError=std::max(geometryError,distance(a->point(t),b->point(t)));}}
+ require(geometryError==0.,"app geometry differs from independent pipeline");const QString expected=QStringLiteral("%1 curve proiettate; scarto massimo %2 mm.").arg(app.size()).arg(chainMax,0,'g',3);require(summary==expected,"app summary differs from final chain deviation");
+ const QString pieceSummary=QStringLiteral("%1 curve proiettate; scarto massimo %2 mm.").arg(app.size()).arg(pieceMax,0,'g',3);
+ if(!nurbs){require(chainMax>10.*pieceMax,"line join must increase bound significantly");require(summary!=pieceSummary,"line summary incorrectly uses pre-join piece max");}
+ std::cout<<name<<" PASS piece_max="<<pieceMax<<" chain_max="<<chainMax<<" chain_over_piece="<<chainMax/pieceMax<<" geometry_error="<<geometryError<<" summary="<<summary.toStdString()<<" piece_summary="<<pieceSummary.toStdString()<<'\n';
+}
+int main(int argc,char**argv){QApplication application(argc,argv);std::cout<<std::setprecision(17)<<std::unitbuf;try{scenario("two_lines_gap_5e-9",false,5e-9);scenario("degree27_gap0",true,0.);scenario("degree27_gap_5e-9",true,5e-9);std::cout<<"RESULT passed=3 failed=0\n";return 0;}catch(const std::exception&e){std::cerr<<"FAIL "<<e.what()<<'\n';return 1;}}

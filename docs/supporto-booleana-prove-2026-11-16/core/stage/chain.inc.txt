@@ -1,0 +1,54 @@
+bool BooleanBuilder::boundaryChain(const Arc&arc,const Interval&range,int boundary,std::vector<Piece>&result) const {
+    if(!arc.curve||arc.curve->type()!=CurveType::Line||arc.loTolerance!=0||arc.hiTolerance!=0||range.lo!=arc.range.lo||range.hi!=arc.range.hi)return false;
+    const auto &body=bodies_[boundary];const auto faceId=arc.face[boundary];
+    if(body.face(faceId).surface->type()!=SurfaceType::Plane)return false;
+    const auto &line=static_cast<const Line<3>&>(*arc.curve);
+    const double budget=std::min(tolerance_,linearResolution());
+    std::vector<std::vector<Piece>> candidates;
+    std::size_t work=0;
+    for(const auto &first:arc.anchors)for(const auto &last:arc.anchors) {
+        cancellationPoint();if(++work>4096)return false;
+        if(first.body!=boundary||last.body!=boundary||first.face!=faceId||last.face!=faceId||first.arcParameter!=range.lo||last.arcParameter!=range.hi)continue;
+        if(!body.contains(first.fin)||!body.contains(last.fin)||body.fin(first.fin).edge!=first.edge||body.fin(last.fin).edge!=last.edge||body.fin(first.fin).loop!=body.fin(last.fin).loop)continue;
+        for(bool reverse:{false,true}) {
+            cancellationPoint();std::vector<Piece> chain;FinId current=first.fin;double parameter=first.edgeParameter;bool complete=false;
+            for(std::size_t steps=0;steps<4096;++steps) {
+                cancellationPoint();if(++work>16384)return false;
+                const auto &fin=body.fin(current);const auto &edge=body.edge(fin.edge);if(!edge.curve||edge.curve->type()!=CurveType::Ellipse||!edge.range.contains(parameter))break;
+                const bool forward=fin.sense!=reverse;const double end=forward?edge.range.hi:edge.range.lo;
+                bool reaches=current==last.fin&&edge.range.contains(last.edgeParameter)&&(forward?last.edgeParameter>=parameter:last.edgeParameter<=parameter);
+                const double stop=reaches?last.edgeParameter:end;
+                if(stop!=parameter) {
+                    if(!(forward?stop>parameter:stop<parameter))break;
+                    Piece piece;piece.curve=edge.curve;piece.range={std::min(parameter,stop),std::max(parameter,stop)};piece.forward=forward;
+                    piece.cut=true;piece.partner=faceId;piece.partnerCrosses=false;piece.tolerance=edge.tolerance;
+                    piece.boundarySource={boundary,faceId,current,fin.edge,piece.range,forward};chain.push_back(std::move(piece));
+                }
+                if(reaches){complete=true;break;}
+                const FinId next=reverse?fin.previous:fin.next;
+                if(!next.valid()||next==first.fin)break;
+                // Both paths use original loop incidence, never a nearest edge.
+                const VertexId at=reverse?body.finStart(current):body.finEnd(current);
+                const VertexId other=reverse?body.finEnd(next):body.finStart(next);if(at!=other)break;
+                current=next;const auto &nextFin=body.fin(current);const auto&nextEdge=body.edge(nextFin.edge);parameter=(nextFin.sense!=reverse)?nextEdge.range.lo:nextEdge.range.hi;
+            }
+            if(!complete||chain.empty())continue;
+            double ta=range.lo;bool certified=true;
+            for(std::size_t n=0;n<chain.size();++n) {
+                const auto &piece=chain[n];double tb=range.hi;
+                if(n+1<chain.size()) {
+                    // The topological shared vertex supplies the intermediate
+                    // line parameter; the interval proof covers its rounding.
+                    const auto&w=piece.boundarySource;const auto&fin=body.fin(w.fin);
+                    const auto vertex=piece.forward?body.edgeEnd(fin.edge):body.edgeStart(fin.edge);
+                    tb=projectPoint(line,body.vertex(vertex).point,range).parameter;
+                }
+                if(!(ta<tb&&tb<=range.hi)||!boundaryCertificate::piece(static_cast<const Ellipse<3>&>(*piece.curve),piece.range,piece.forward,line,ta,tb,*bodies_[0].face(arc.face[0]).surface,*bodies_[1].face(arc.face[1]).surface,budget)) {certified=false;break;}
+                ta=tb;
+            }
+            if(certified)candidates.push_back(std::move(chain));
+        }
+    }
+    if(candidates.size()!=1)return false;
+    result=std::move(candidates.front());return true;
+}

@@ -1,0 +1,10 @@
+step=0 sceneItems=2 black=1516 nonwhite=12370 identical=1
+ item kind=page z=-19
+ item kind=paper z=-20 pen=#b5bdc4 brush=#ffffff
+step=1 sceneItems=2 black=1516 nonwhite=12370 identical=1
+ item kind=page z=-19
+ item kind=paper z=-20 pen=#b5bdc4 brush=#ffffff
+step=2 sceneItems=2 black=1516 nonwhite=12370 identical=1
+ item kind=page z=-19
+ item kind=paper z=-20 pen=#b5bdc4 brush=#ffffff
+PASS real DrawingSheetEditor scene with V2 global QSS; page identical across light/dark/light Qt=6.12.0

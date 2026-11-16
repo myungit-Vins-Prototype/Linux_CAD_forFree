@@ -1,0 +1,146 @@
+[
+  {
+    "file": "cad_sketch_offset.cpp",
+    "line": 401,
+    "symbol": "ForgeCad::Kernel::fitCurve",
+    "owner": "ForgeCad::extended"
+  },
+  {
+    "file": "cad_sketch_offset.cpp",
+    "line": 602,
+    "symbol": "ForgeCad::Kernel::fitCurve",
+    "owner": "ForgeCad::offsetSketchEntities"
+  },
+  {
+    "file": "cad_sketch_refs.cpp",
+    "line": 218,
+    "symbol": "ForgeCad::Kernel::fitCurve",
+    "owner": "ForgeCad::appendProjectedCurve"
+  },
+  {
+    "file": "kernel/fk_blend_mitre.cpp",
+    "line": 129,
+    "symbol": "ForgeCad::Kernel::fitCurve",
+    "owner": "ForgeCad::Kernel::detail::traceBlendMitre"
+  },
+  {
+    "file": "kernel/fk_blend_surface.cpp",
+    "line": 1655,
+    "symbol": "ForgeCad::Kernel::fitCurve",
+    "owner": "ForgeCad::Kernel::extendSplineBoundary"
+  },
+  {
+    "file": "kernel/fk_boundary.cpp",
+    "line": 216,
+    "symbol": "ForgeCad::Kernel::fitCurve",
+    "owner": "ForgeCad::Kernel::boundarySheet"
+  },
+  {
+    "file": "kernel/fk_exchange.cpp",
+    "line": 740,
+    "symbol": "ForgeCad::Kernel::fitCurve",
+    "owner": "ForgeCad::Kernel::detail::sewnPCurve"
+  },
+  {
+    "file": "kernel/fk_fill.cpp",
+    "line": 1117,
+    "symbol": "ForgeCad::Kernel::fitCurve",
+    "owner": "ForgeCad::Kernel::fillSurface"
+  },
+  {
+    "file": "kernel/fk_offset.cpp",
+    "line": 679,
+    "symbol": "ForgeCad::Kernel::fitCurve",
+    "owner": "ForgeCad::Kernel::offsetCurve"
+  },
+  {
+    "file": "kernel/fk_offset.cpp",
+    "line": 1311,
+    "symbol": "ForgeCad::Kernel::fitCurve",
+    "owner": "ForgeCad::Kernel::offsetSurfaceImpl"
+  },
+  {
+    "file": "kernel/fk_offset.cpp",
+    "line": 1330,
+    "symbol": "ForgeCad::Kernel::fitCurve",
+    "owner": "ForgeCad::Kernel::offsetSurfaceImpl"
+  },
+  {
+    "file": "kernel/fk_offset.cpp",
+    "line": 1855,
+    "symbol": "ForgeCad::Kernel::fitCurve",
+    "owner": "ForgeCad::Kernel::offsetFaces"
+  },
+  {
+    "file": "kernel/fk_offset.cpp",
+    "line": 2348,
+    "symbol": "ForgeCad::Kernel::fitCurve",
+    "owner": "ForgeCad::Kernel::offsetJoinedFaces"
+  },
+  {
+    "file": "kernel/fk_project.cpp",
+    "line": 449,
+    "symbol": "ForgeCad::Kernel::fitCurve",
+    "owner": "ForgeCad::Kernel::Projector::finish"
+  },
+  {
+    "file": "kernel/fk_quilt_mapping.cpp",
+    "line": 411,
+    "symbol": "ForgeCad::Kernel::fitCurve",
+    "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+  },
+  {
+    "file": "kernel/fk_quilt_mapping.cpp",
+    "line": 592,
+    "symbol": "ForgeCad::Kernel::fitCurve",
+    "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+  },
+  {
+    "file": "kernel/fk_sheet.cpp",
+    "line": 213,
+    "symbol": "ForgeCad::Kernel::fitCurve",
+    "owner": "ForgeCad::Kernel::extendPlanarFace"
+  },
+  {
+    "file": "kernel/fk_sheet.cpp",
+    "line": 402,
+    "symbol": "ForgeCad::Kernel::fitCurve",
+    "owner": "ForgeCad::Kernel::joinSplineExtensions"
+  },
+  {
+    "file": "kernel/fk_sheet.cpp",
+    "line": 590,
+    "symbol": "ForgeCad::Kernel::fitCurve",
+    "owner": "ForgeCad::Kernel::extendSheet"
+  },
+  {
+    "file": "kernel/fk_surface_mapping.cpp",
+    "line": 152,
+    "symbol": "ForgeCad::Kernel::fitCurve",
+    "owner": "ForgeCad::Kernel::mapBody"
+  },
+  {
+    "file": "kernel/fk_surface_mapping.cpp",
+    "line": 182,
+    "symbol": "ForgeCad::Kernel::fitCurve",
+    "owner": "ForgeCad::Kernel::mapBody"
+  },
+  {
+    "file": "kernel/fk_surface_poles.cpp",
+    "line": 107,
+    "symbol": "ForgeCad::Kernel::fitCurve",
+    "owner": "ForgeCad::Kernel::editBodyFacesPoles"
+  },
+  {
+    "file": "kernel/fk_thicken.cpp",
+    "line": 312,
+    "symbol": "ForgeCad::Kernel::fitCurve",
+    "owner": "ForgeCad::Kernel::thickenAlongNormal"
+  },
+  {
+    "file": "kernel/fk_thicken.cpp",
+    "line": 313,
+    "symbol": "ForgeCad::Kernel::fitCurve",
+    "owner": "ForgeCad::Kernel::thickenAlongNormal"
+  }
+]

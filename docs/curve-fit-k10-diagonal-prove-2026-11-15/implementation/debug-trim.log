@@ -1,0 +1,4 @@
+TRACE edge=2 fitBudget=2e-08 image.fitError=1.9963656671755555e-08 image.bridge=2.4736019199761739e-11 trimBridge=4.1109545733455688e-11 final=2.0004766217489015e-08
+    /home/myungit/Linux_CAD_forFree/kernel/tests/fk_test_main.cpp:36: eccezione: Mappatura carrier: trim originale oltre budget. scale=1000.000000 rational=0 reverse=0
+[ FAIL ] MappingDiagonalExtrusionHiddenPolynomialRationalPoseScaleReverse (1 controlli falliti)
+0/1 test superati

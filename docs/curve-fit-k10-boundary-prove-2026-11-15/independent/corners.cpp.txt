@@ -1,0 +1,8 @@
+#include "fk_boundary.h"
+#include "fk_bspline_surface.h"
+#include "fk_body_check.h"
+#include <iostream>
+#include <iomanip>
+using namespace ForgeCad::Kernel;
+PathSegment line(Vec3 a,Vec3 b){return{std::make_shared<Line<3>>(a,b-a),{0,distance(a,b)}};}
+int main(){std::cout<<std::setprecision(17);double tol=1e-7;for(double factor:{0.,.25,2.,5.,20.}){double dz=factor*tol;try{auto b=boundarySheet({line({0,0,0},{1,0,0}),line({1,0,dz},{1,1,0}),line({1,1,0},{0,1,0}),line({0,1,0},{0,0,0})},tol);auto&s=*b.face(b.faces()[0]).surface;double err=0;for(int k=0;k<=100;++k){double u=k/100.;err=std::max(err,distance(s.point(u,0),Vec3(u,0,0)));}std::cout<<"factor="<<factor<<" accepted=1 bottom_error="<<err<<" lower_right_surfaceZ="<<s.point(1,0).z()<<" issues="<<checkBody(b).size()<<"\n";}catch(const std::exception&e){std::cout<<"factor="<<factor<<" accepted=0 reason="<<e.what()<<"\n";}}}

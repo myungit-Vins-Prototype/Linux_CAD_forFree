@@ -1,0 +1,19 @@
+{
+  "file": "forgeCad2026_gui.cpp",
+  "change": "remove one superfluous newline at EOF, no token changes",
+  "candidate_sha256": "e481484361ea21e6ab59d9a6510cfc57fc57ac4736249d83899c5e733a628ee1",
+  "final_sha256": "4b23e22c0811d6ed33ccc96aa6ca215620b115ad2a0cb9b882b5a267cfefaf76",
+  "before_binary_hashes": {
+    "forgecad-release/forgecad": "5f14df1b7ad67b1c6c198799deb40880ad762bf422980f3627bcce6a12ea3794",
+    "forgecad-release/forgecad_view_tests": "681d098b1891da054b6063fc55a75ce4eabd1227235530156e8ab6a5291be48e",
+    "forgecad-release/forgecad_application_theme_tests": "77de6bf602833de06db657cc6d7257caf9fda3e4286ea1f79657dd26b55aee6d",
+    "forgecad-release/kernel/libforgekernel.a": "e30b40c55b27f0702a2a1e95279b627643679b1823368e3c60ebc4d8c67f2a72"
+  },
+  "after_binary_hashes": {
+    "forgecad-release/forgecad": "5f14df1b7ad67b1c6c198799deb40880ad762bf422980f3627bcce6a12ea3794",
+    "forgecad-release/forgecad_view_tests": "681d098b1891da054b6063fc55a75ce4eabd1227235530156e8ab6a5291be48e",
+    "forgecad-release/forgecad_application_theme_tests": "77de6bf602833de06db657cc6d7257caf9fda3e4286ea1f79657dd26b55aee6d",
+    "forgecad-release/kernel/libforgekernel.a": "e30b40c55b27f0702a2a1e95279b627643679b1823368e3c60ebc4d8c67f2a72"
+  },
+  "all_binary_hashes_equal": true
+}

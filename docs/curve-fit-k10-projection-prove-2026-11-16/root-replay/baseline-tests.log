@@ -1,0 +1,34 @@
+hidden rational=0 upward=0 wrapper=0 FAIL reported piece deviation underestimates measured error
+hidden rational=0 upward=0 wrapper=1 FAIL reported piece deviation underestimates measured error
+hidden rational=0 upward=0 wrapper=2 FAIL reported piece deviation underestimates measured error
+hidden rational=0 upward=1 wrapper=0 FAIL reported piece deviation underestimates measured error
+hidden rational=0 upward=1 wrapper=1 FAIL reported piece deviation underestimates measured error
+hidden rational=0 upward=1 wrapper=2 FAIL reported piece deviation underestimates measured error
+hidden rational=1 upward=0 wrapper=0 FAIL reported piece deviation underestimates measured error
+hidden rational=1 upward=0 wrapper=1 FAIL reported piece deviation underestimates measured error
+hidden rational=1 upward=0 wrapper=2 FAIL reported piece deviation underestimates measured error
+hidden rational=1 upward=1 wrapper=0 FAIL reported piece deviation underestimates measured error
+hidden rational=1 upward=1 wrapper=1 FAIL reported piece deviation underestimates measured error
+hidden rational=1 upward=1 wrapper=2 FAIL reported piece deviation underestimates measured error
+placed rational=0 parameterShift=0 scale=0.001000 FAIL reported piece deviation underestimates measured error
+placed rational=0 parameterShift=0 scale=1.000000 FAIL reported piece deviation underestimates measured error
+placed rational=0 parameterShift=0 scale=1000.000000 max_error=9.5916212670687065e-08 PASS
+placed rational=0 parameterShift=1 scale=0.001000 FAIL reported piece deviation underestimates measured error
+placed rational=0 parameterShift=1 scale=1.000000 FAIL reported piece deviation underestimates measured error
+placed rational=0 parameterShift=1 scale=1000.000000 FAIL reported piece deviation underestimates measured error
+placed rational=1 parameterShift=0 scale=0.001000 FAIL reported piece deviation underestimates measured error
+placed rational=1 parameterShift=0 scale=1.000000 FAIL reported piece deviation underestimates measured error
+placed rational=1 parameterShift=0 scale=1000.000000 FAIL reported piece deviation underestimates measured error
+placed rational=1 parameterShift=1 scale=0.001000 FAIL reported piece deviation underestimates measured error
+placed rational=1 parameterShift=1 scale=1.000000 FAIL reported piece deviation underestimates measured error
+placed rational=1 parameterShift=1 scale=1000.000000 FAIL reported piece deviation underestimates measured error
+knot_corner max_error=5.0814708581899583e-12 PASS
+mixed_batch threads=1 FAIL reported piece deviation underestimates measured error
+mixed_batch threads=4 FAIL reported piece deviation underestimates measured error
+join_lifetime joined_error=5.7419003527314766e-05 FAIL joined final poles exceed source projection tolerance
+join_first_last joined_error=5.7419003525364713e-05 FAIL joined final poles exceed source projection tolerance
+unsafe_join FAIL join accepted final endpoint outside its source tolerance
+unsafe_first_last FAIL join accepted final endpoint outside its source tolerance
+altered_certified_piece FAIL modified curve retained a stale source certificate
+invalid_inputs PASS
+RESULT passed=3 failed=30

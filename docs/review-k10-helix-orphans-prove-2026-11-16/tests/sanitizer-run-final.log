@@ -1,0 +1,14 @@
+wrapped-cylinder witness=7.25784e-08 budget=1e-07 poles=97 PASS
+wrapped-rigid-pose witness=2.95275e-08 budget=1e-07 poles=385 PASS
+nested-trim-conical-left witness=1.82928e-08 budget=1e-07 poles=193 PASS
+spiral-custom-frame witness=1.12783e-08 budget=1e-07 poles=385 PASS
+affine-shear witness=5.02038e-08 budget=1e-07 poles=193 PASS
+absolute-parameter-trim witness=1.29004e-08 budget=1e-07 poles=193 PASS
+small-affine-scale witness=6.31644e-08 budget=1e-07 poles=49 PASS
+tight-accuracy witness=2.90609e-09 budget=1e-08 poles=385 PASS
+naked-legacy-compatibility witness=1.16722e-08 budget=1e-07 poles=27 PASS
+alias-million-turns-YZ PASS
+alias-million-turns-XZ-trim PASS
+public-failure-cancellation-atomicity PASS
+original-provider-contracts PASS
+groups=13 pass=13 fail=0

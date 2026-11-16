@@ -1,0 +1,4 @@
+kind=0 accepted=0 reason=transformBody: tipo di curva non gestito
+kind=1 accepted=1 volume=0.1 faces=6
+kind=2 accepted=1 volume=0.1 faces=6
+checks=3 completed

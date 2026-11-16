@@ -1,0 +1,8 @@
+{
+  "kernel/fk_blend_mitre.cpp": "a36cf93ed20bb44c5cc7127ea4b0ce1d35f37c4047b53d5875a330f8eda68104",
+  "kernel/fk_blend_mitre.h": "9b7c65b9d03097ec50274ece69dcd243e32b44aae209d3794078c6a1cf2bc460",
+  "kernel/fk_blend_surface.cpp": "0fd41f22575881c8317a2a41696f0645e6f73a1ccecf687adaa84f35dce833c5",
+  "kernel/tests/test_blend_mitre_validation.cpp": "73811bf286bd01217092d662cbc34a98e614bdba453d6dff05ebac8d1e1235ba",
+  "kernel/CMakeLists.txt": "3dba143597b4581f2f2154621d00a6697f67e66ef756f87673810b33aedf305f",
+  "tools/generate_architecture.py": "b4fd8934fa7812f4a4071ac451c45a9495b126ae51f9ddb6f911887aac24e453"
+}

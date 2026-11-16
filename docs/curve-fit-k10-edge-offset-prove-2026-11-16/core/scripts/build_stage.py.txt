@@ -1,0 +1,12 @@
+import json,shlex,subprocess
+from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor
+root=Path('/home/myungit/Linux_CAD_forFree');stage=Path('/tmp/review-next-readonly/stage');db=json.loads((root/'forgecad-release/compile_commands.json').read_text())
+def compile(name):
+ e=next(x for x in db if x['file'].endswith('/kernel/'+name));args=shlex.split(e['command']);args=args[:args.index('-o')]+['-I'+str(stage/'kernel'),'-I'+str(root/'kernel'),'-c',str(stage/'kernel'/name),'-o',str(stage/(name+'.o'))];r=subprocess.run(args,cwd=e['directory'],stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True);(stage/(name+'.build.log')).write_text(r.stdout);return name,r.returncode,r.stdout[-1400:]
+with ThreadPoolExecutor(max_workers=2) as ex:
+ for r in ex.map(compile,['fk_curve_fit_bounds.cpp','fk_offset.cpp']):print(r)
+cmd=['c++','-std=c++17','-O2','-I'+str(stage/'kernel'),'-I'+str(root/'kernel'),'/tmp/review-next-readonly/offsetprobe.cpp',str(stage/'fk_offset.cpp.o'),str(stage/'fk_curve_fit_bounds.cpp.o'),str(root/'forgecad-release/kernel/libforgekernel.a'),'-o',str(stage/'offsetprobe')]
+r=subprocess.run(cmd,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True);(stage/'link.log').write_text(r.stdout);print('link',r.returncode,r.stdout[-2000:])
+if r.returncode==0:
+ r=subprocess.run([str(stage/'offsetprobe')],stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True);(stage/'offsetprobe.log').write_text(r.stdout);print('run',r.returncode,r.stdout)

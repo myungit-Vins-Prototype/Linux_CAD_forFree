@@ -1,0 +1,7 @@
+{
+  "QSS_expression_byte_identical": true,
+  "characters": 3023,
+  "sha256": "e07832522de6cde54ca806f7da6a2cc0d4936a8ba561c0b43635426085b1e38c",
+  "from": "PdfWindow::setTheme",
+  "to": "applicationStyleSheet"
+}

@@ -1,0 +1,63 @@
+==================
+WARNING: ThreadSanitizer: data race (pid=11)
+  Write of size 8 at 0x7220000001e8 by thread T1 (mutexes: write M0):
+    #0 std::enable_if<std::__and_<std::__not_<std::__is_tuple_like<std::vector<ForgeCad::Kernel::BSplineCurve<3>, std::allocator<ForgeCad::Kernel::BSplineCurve<3> > > const*> >, std::is_move_constructible<std::vector<ForgeCad::Kernel::BSplineCurve<3>, std::allocator<ForgeCad::Kernel::BSplineCurve<3> > > const*>, std::is_move_assignable<std::vector<ForgeCad::Kernel::BSplineCurve<3>, std::allocator<ForgeCad::Kernel::BSplineCurve<3> > > const*> >::value, void>::type std::swap<std::vector<ForgeCad::Kernel::BSplineCurve<3>, std::allocator<ForgeCad::Kernel::BSplineCurve<3> > > const*>(std::vector<ForgeCad::Kernel::BSplineCurve<3>, std::allocator<ForgeCad::Kernel::BSplineCurve<3> > > const*&, std::vector<ForgeCad::Kernel::BSplineCurve<3>, std::allocator<ForgeCad::Kernel::BSplineCurve<3> > > const*&) /usr/include/c++/16/bits/move.h:239 (bspline_copy_race+0x121a0) (BuildId: 3b195684f36233c6507730ab17f33d2e2d91b888)
+    #1 std::__shared_ptr<std::vector<ForgeCad::Kernel::BSplineCurve<3>, std::allocator<ForgeCad::Kernel::BSplineCurve<3> > > const, (__gnu_cxx::_Lock_policy)2>::swap(std::__shared_ptr<std::vector<ForgeCad::Kernel::BSplineCurve<3>, std::allocator<ForgeCad::Kernel::BSplineCurve<3> > > const, (__gnu_cxx::_Lock_policy)2>&) /usr/include/c++/16/bits/shared_ptr_base.h:1773 (bspline_copy_race+0x121a0)
+    #2 void std::atomic_store_explicit<std::vector<ForgeCad::Kernel::BSplineCurve<3>, std::allocator<ForgeCad::Kernel::BSplineCurve<3> > > const>(std::shared_ptr<std::vector<ForgeCad::Kernel::BSplineCurve<3>, std::allocator<ForgeCad::Kernel::BSplineCurve<3> > > const>*, std::shared_ptr<std::vector<ForgeCad::Kernel::BSplineCurve<3>, std::allocator<ForgeCad::Kernel::BSplineCurve<3> > > const>, std::memory_order) /usr/include/c++/16/bits/shared_ptr_atomic.h:177 (bspline_copy_race+0x121a0)
+    #3 void std::atomic_store<std::vector<ForgeCad::Kernel::BSplineCurve<3>, std::allocator<ForgeCad::Kernel::BSplineCurve<3> > > const>(std::shared_ptr<std::vector<ForgeCad::Kernel::BSplineCurve<3>, std::allocator<ForgeCad::Kernel::BSplineCurve<3> > > const>*, std::shared_ptr<std::vector<ForgeCad::Kernel::BSplineCurve<3>, std::allocator<ForgeCad::Kernel::BSplineCurve<3> > > const>) /usr/include/c++/16/bits/shared_ptr_atomic.h:184 (bspline_copy_race+0x121a0)
+    #4 ForgeCad::Kernel::BSplineCurve<3>::cachedBezierSegments() const kernel/fk_bspline.cpp:224 (bspline_copy_race+0x121a0)
+    #5 operator() /tmp/forgecad-review-20261115/memory/bspline_copy_race.cpp:11 (bspline_copy_race+0x314c) (BuildId: 3b195684f36233c6507730ab17f33d2e2d91b888)
+    #6 __invoke_impl<void, main()::<lambda()> > /usr/include/c++/16/bits/invoke.h:63 (bspline_copy_race+0x314c)
+    #7 __invoke<main()::<lambda()> > /usr/include/c++/16/bits/invoke.h:98 (bspline_copy_race+0x314c)
+    #8 _M_invoke<0> /usr/include/c++/16/bits/std_thread.h:303 (bspline_copy_race+0x314c)
+    #9 operator() /usr/include/c++/16/bits/std_thread.h:310 (bspline_copy_race+0x314c)
+    #10 _M_run /usr/include/c++/16/bits/std_thread.h:255 (bspline_copy_race+0x314c)
+    #11 <null> <null> (libstdc++.so.6+0x105e25) (BuildId: f8d95d6acca0f89fa5c387ad48aefcfaf4cccc0c)
+
+  Previous read of size 8 at 0x7220000001e8 by thread T2:
+    #0 std::__shared_ptr<std::vector<ForgeCad::Kernel::BSplineCurve<3>, std::allocator<ForgeCad::Kernel::BSplineCurve<3> > > const, (__gnu_cxx::_Lock_policy)2>::__shared_ptr(std::__shared_ptr<std::vector<ForgeCad::Kernel::BSplineCurve<3>, std::allocator<ForgeCad::Kernel::BSplineCurve<3> > > const, (__gnu_cxx::_Lock_policy)2> const&) /usr/include/c++/16/bits/shared_ptr_base.h:1609 (bspline_copy_race+0x7d2e) (BuildId: 3b195684f36233c6507730ab17f33d2e2d91b888)
+    #1 std::shared_ptr<std::vector<ForgeCad::Kernel::BSplineCurve<3>, std::allocator<ForgeCad::Kernel::BSplineCurve<3> > > const>::shared_ptr(std::shared_ptr<std::vector<ForgeCad::Kernel::BSplineCurve<3>, std::allocator<ForgeCad::Kernel::BSplineCurve<3> > > const> const&) /usr/include/c++/16/bits/shared_ptr.h:203 (bspline_copy_race+0x7d2e)
+    #2 ForgeCad::Kernel::BSplineCurve<3>::BSplineCurve(ForgeCad::Kernel::BSplineCurve<3> const&) kernel/fk_bspline.h:16 (bspline_copy_race+0x7d2e)
+    #3 ForgeCad::Kernel::BSplineCurve<3>::clamped() const kernel/fk_bspline.cpp:180 (bspline_copy_race+0x10471) (BuildId: 3b195684f36233c6507730ab17f33d2e2d91b888)
+    #4 operator() /tmp/forgecad-review-20261115/memory/bspline_copy_race.cpp:12 (bspline_copy_race+0x2fd7) (BuildId: 3b195684f36233c6507730ab17f33d2e2d91b888)
+    #5 __invoke_impl<void, main()::<lambda()> > /usr/include/c++/16/bits/invoke.h:63 (bspline_copy_race+0x2fd7)
+    #6 __invoke<main()::<lambda()> > /usr/include/c++/16/bits/invoke.h:98 (bspline_copy_race+0x2fd7)
+    #7 _M_invoke<0> /usr/include/c++/16/bits/std_thread.h:303 (bspline_copy_race+0x2fd7)
+    #8 operator() /usr/include/c++/16/bits/std_thread.h:310 (bspline_copy_race+0x2fd7)
+    #9 _M_run /usr/include/c++/16/bits/std_thread.h:255 (bspline_copy_race+0x2fd7)
+    #10 <null> <null> (libstdc++.so.6+0x105e25) (BuildId: f8d95d6acca0f89fa5c387ad48aefcfaf4cccc0c)
+
+  Location is heap block of size 120 at 0x722000000180 allocated by main thread:
+    #0 operator new(unsigned long) <null> (libtsan.so.2+0xdcc78) (BuildId: c0670d748c7be427bc51ccea04958e180c125573)
+    #1 std::__new_allocator<std::_Sp_counted_ptr_inplace<ForgeCad::Kernel::BSplineCurve<3>, std::allocator<void>, (__gnu_cxx::_Lock_policy)2> >::allocate(unsigned long, void const*) /usr/include/c++/16/bits/new_allocator.h:162 (bspline_copy_race+0x42b3) (BuildId: 3b195684f36233c6507730ab17f33d2e2d91b888)
+    #2 std::allocator_traits<std::allocator<std::_Sp_counted_ptr_inplace<ForgeCad::Kernel::BSplineCurve<3>, std::allocator<void>, (__gnu_cxx::_Lock_policy)2> > >::allocate(std::allocator<std::_Sp_counted_ptr_inplace<ForgeCad::Kernel::BSplineCurve<3>, std::allocator<void>, (__gnu_cxx::_Lock_policy)2> >&, unsigned long) /usr/include/c++/16/bits/alloc_traits.h:638 (bspline_copy_race+0x42b3)
+    #3 std::__allocated_ptr<std::allocator<std::_Sp_counted_ptr_inplace<ForgeCad::Kernel::BSplineCurve<3>, std::allocator<void>, (__gnu_cxx::_Lock_policy)2> > > std::__allocate_guarded<std::allocator<std::_Sp_counted_ptr_inplace<ForgeCad::Kernel::BSplineCurve<3>, std::allocator<void>, (__gnu_cxx::_Lock_policy)2> > >(std::allocator<std::_Sp_counted_ptr_inplace<ForgeCad::Kernel::BSplineCurve<3>, std::allocator<void>, (__gnu_cxx::_Lock_policy)2> >&) /usr/include/c++/16/bits/allocated_ptr.h:103 (bspline_copy_race+0x42b3)
+    #4 std::__shared_count<(__gnu_cxx::_Lock_policy)2>::__shared_count<ForgeCad::Kernel::BSplineCurve<3> const, std::allocator<void>, ForgeCad::Kernel::BSplineCurve<3>&>(ForgeCad::Kernel::BSplineCurve<3> const*&, std::_Sp_alloc_shared_tag<std::allocator<void> >, ForgeCad::Kernel::BSplineCurve<3>&) /usr/include/c++/16/bits/shared_ptr_base.h:1035 (bspline_copy_race+0x42b3)
+    #5 std::__shared_ptr<ForgeCad::Kernel::BSplineCurve<3> const, (__gnu_cxx::_Lock_policy)2>::__shared_ptr<std::allocator<void>, ForgeCad::Kernel::BSplineCurve<3>&>(std::_Sp_alloc_shared_tag<std::allocator<void> >, ForgeCad::Kernel::BSplineCurve<3>&) /usr/include/c++/16/bits/shared_ptr_base.h:1813 (bspline_copy_race+0x42b3)
+    #6 std::shared_ptr<ForgeCad::Kernel::BSplineCurve<3> const>::shared_ptr<std::allocator<void>, ForgeCad::Kernel::BSplineCurve<3>&>(std::_Sp_alloc_shared_tag<std::allocator<void> >, ForgeCad::Kernel::BSplineCurve<3>&) /usr/include/c++/16/bits/shared_ptr.h:463 (bspline_copy_race+0x42b3)
+    #7 std::shared_ptr<std::enable_if<!std::is_array<ForgeCad::Kernel::BSplineCurve<3> const>::value, ForgeCad::Kernel::BSplineCurve<3> const>::type> std::make_shared<ForgeCad::Kernel::BSplineCurve<3> const, ForgeCad::Kernel::BSplineCurve<3>&>(ForgeCad::Kernel::BSplineCurve<3>&) /usr/include/c++/16/bits/shared_ptr.h:1066 (bspline_copy_race+0x42b3)
+    #8 main /tmp/forgecad-review-20261115/memory/bspline_copy_race.cpp:10 (bspline_copy_race+0x42b3)
+
+  Mutex M0 (0x7f9b9f72b0c0) created at:
+    #0 pthread_mutex_lock <null> (libtsan.so.2+0x64f3f) (BuildId: c0670d748c7be427bc51ccea04958e180c125573)
+    #1 std::_Sp_locker::_Sp_locker(void const*) <null> (libstdc++.so.6+0x1041ac) (BuildId: f8d95d6acca0f89fa5c387ad48aefcfaf4cccc0c)
+    #2 operator() /tmp/forgecad-review-20261115/memory/bspline_copy_race.cpp:11 (bspline_copy_race+0x314c) (BuildId: 3b195684f36233c6507730ab17f33d2e2d91b888)
+    #3 __invoke_impl<void, main()::<lambda()> > /usr/include/c++/16/bits/invoke.h:63 (bspline_copy_race+0x314c)
+    #4 __invoke<main()::<lambda()> > /usr/include/c++/16/bits/invoke.h:98 (bspline_copy_race+0x314c)
+    #5 _M_invoke<0> /usr/include/c++/16/bits/std_thread.h:303 (bspline_copy_race+0x314c)
+    #6 operator() /usr/include/c++/16/bits/std_thread.h:310 (bspline_copy_race+0x314c)
+    #7 _M_run /usr/include/c++/16/bits/std_thread.h:255 (bspline_copy_race+0x314c)
+    #8 <null> <null> (libstdc++.so.6+0x105e25) (BuildId: f8d95d6acca0f89fa5c387ad48aefcfaf4cccc0c)
+
+  Thread T1 (tid=13, running) created by main thread at:
+    #0 pthread_create <null> (libtsan.so.2+0x63df1) (BuildId: c0670d748c7be427bc51ccea04958e180c125573)
+    #1 std::thread::_M_start_thread(std::unique_ptr<std::thread::_State, std::default_delete<std::thread::_State> >, void (*)()) <null> (libstdc++.so.6+0x105f09) (BuildId: f8d95d6acca0f89fa5c387ad48aefcfaf4cccc0c)
+    #2 <null> <null> (libc.so.6+0x27d0d) (BuildId: e363db7c8fcc7c06c6f0d2839b2a8ad875b75406)
+
+  Thread T2 (tid=14, finished) created by main thread at:
+    #0 pthread_create <null> (libtsan.so.2+0x63df1) (BuildId: c0670d748c7be427bc51ccea04958e180c125573)
+    #1 std::thread::_M_start_thread(std::unique_ptr<std::thread::_State, std::default_delete<std::thread::_State> >, void (*)()) <null> (libstdc++.so.6+0x105f09) (BuildId: f8d95d6acca0f89fa5c387ad48aefcfaf4cccc0c)
+    #2 <null> <null> (libc.so.6+0x27d0d) (BuildId: e363db7c8fcc7c06c6f0d2839b2a8ad875b75406)
+
+SUMMARY: ThreadSanitizer: data race kernel/fk_bspline.cpp:224 in ForgeCad::Kernel::BSplineCurve<3>::cachedBezierSegments() const
+==================

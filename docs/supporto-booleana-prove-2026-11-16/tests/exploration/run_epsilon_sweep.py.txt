@@ -1,0 +1,11 @@
+from pathlib import Path
+import subprocess,json
+p=Path('/tmp/supporto-review/tests');root=Path('/home/myungit/Linux_CAD_forFree');result=[]
+for name,source in [('parallel','synthetic-parallel.cpp.txt'),('oblique-g1','synthetic-g1-generic.cpp.txt')]:
+ s=(p/source).read_text().replace('BooleanOperation::Unite,BooleanOperation::Intersect,BooleanOperation::Subtract','BooleanOperation::Unite')
+ s=s.replace(' expected_loft_volume=',' linear_reference_volume=')
+ cpp=p/('epsilon-sweep-'+name+'.cpp');cpp.write_text(s);exe=p/('epsilon-sweep-'+name)
+ c=['/usr/bin/c++','-std=c++17','-O0','-I'+str(root/'kernel'),str(cpp),str(root/'forgecad-release/kernel/libforgekernel.a'),'-pthread','-o',str(exe)];subprocess.run(c,check=True)
+ for epsilon in ['1.5e-11','2e-11','5e-11','1e-10']:
+  command=[str(exe),epsilon,'.25','100','.9'];run=subprocess.run(command,text=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT);log=p/('epsilon-sweep-'+name+'-'+epsilon+'.log');log.write_text(run.stdout);item={'shape':name,'epsilon':epsilon,'command':command,'exit':run.returncode,'log':str(log),'results':[x for x in run.stdout.splitlines() if x.startswith('RESULT ')]};result.append(item);print(json.dumps(item),flush=True)
+(p/'epsilon-sweep-result.json').write_text(json.dumps(result,indent=2)+'\n')

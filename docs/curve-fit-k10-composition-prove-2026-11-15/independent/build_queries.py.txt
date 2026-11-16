@@ -1,0 +1,8 @@
+from pathlib import Path
+import json,shlex,subprocess,hashlib
+r=Path('/home/myungit/Linux_CAD_forFree');o=Path('/tmp/forgecad-k10-composition-20261115/independent');s=Path('/tmp/forgecad-k10-composition-20261115/implementation');c=next(x for x in json.loads((r/'forgecad-release/compile_commands.json').read_text()) if x['file'].endswith('/kernel/fk_offset.cpp'))
+for name in ['provider_queries']:
+ source=o/(name+'.snapshot.cpp' if name.startswith('fk_') else name+'.cpp');snap=o/(name+'.snapshot.cpp');snap.write_bytes(source.read_bytes());cmd=shlex.split(c['command']);cmd[cmd.index('-o')+1]=str(o/(name+'.o'));cmd[cmd.index('-c')+1]=str(snap);cmd+=['-I'+str(o),'-I'+str(r/'kernel')];subprocess.run(cmd,cwd=c['directory'],check=True)
+subprocess.run(['/usr/bin/c++','-o',str(o/'provider_queries'),str(o/'provider_queries.o'),str(o/'fk_curve_fit_bounds.o'),str(r/'forgecad-release/kernel/libforgekernel.a'),'-lpthread'],check=True)
+with (o/'provider_queries.log').open('w') as f:subprocess.run([str(o/'provider_queries')],stdout=f,check=True)
+(o/'provider-source.sha256').write_text(hashlib.sha256((o/'fk_curve_fit_bounds.snapshot.cpp').read_bytes()).hexdigest()+' kernel/fk_curve_fit_bounds.cpp\n'+hashlib.sha256((o/'fk_curve_fit_bounds.h').read_bytes()).hexdigest()+' kernel/fk_curve_fit_bounds.h\n')

@@ -1,0 +1,26 @@
+from pathlib import Path
+import json,hashlib
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/blend-cavity-review/root');C=Path('/tmp/blend-cavity-review/core');A=Path('/tmp/blend-cavity-review/tests')
+sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+# Preserve concurrent memory updates by rereading it immediately before this step.
+memory=(R/'CLAUDE.md').read_text();assert 'Cavità raccordata' in memory
+frozen=json.loads((C/'delivery/stage-source-hashes.json').read_text())
+source=C/'delivery/fk_blend_surface.cpp.txt';assert sha(source)==frozen['kernel/fk_blend_surface.cpp']
+assert sha(R/'kernel/fk_blend_surface.cpp')==json.loads((T/'hashes-before.json').read_text())['kernel/fk_blend_surface.cpp']
+(R/'kernel/fk_blend_surface.cpp').write_bytes(source.read_bytes())
+new='kernel/tests/test_blend_cavity_regressions.cpp';assert not (R/new).exists();(R/new).write_bytes((A/'test_blend_cavity_regressions.cpp').read_bytes())
+p=R/'kernel/CMakeLists.txt';s=p.read_text();anchor='set_tests_properties(forgekernel_blend_cavity_tests PROPERTIES TIMEOUT 90)';assert s.count(anchor)==1
+s=s.replace(anchor,anchor+'''
+
+add_executable(forgekernel_blend_cavity_regression_tests tests/fk_test_main.cpp tests/test_blend_cavity_regressions.cpp)
+target_link_libraries(forgekernel_blend_cavity_regression_tests PRIVATE forgekernel)
+target_compile_definitions(forgekernel_blend_cavity_regression_tests PRIVATE FORGECAD_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+target_compile_options(forgekernel_blend_cavity_regression_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_blend_cavity_regression_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_blend_cavity_regression_tests COMMAND forgekernel_blend_cavity_regression_tests)
+set_tests_properties(forgekernel_blend_cavity_regression_tests PROPERTIES TIMEOUT 90)
+''');p.write_text(s)
+p=R/'tools/generate_architecture.py';s=p.read_text();key=" 'kernel/tests/test_blend_cavity.cpp':";lines=s.splitlines(True);ix=next(i for i,l in enumerate(lines) if l.startswith(key));lines.insert(ix+1," 'kernel/tests/test_blend_cavity_regressions.cpp': ('tests', 'Raccordo della cavita a raggio piccolo nei due ordini, con semi diversi, posa rigida e scala: raggio analitico, genealogia, input immutato, persistenza, SP-curve e triangolazione; consumo specifico e cancellazione transazionale.'),\n");s=''.join(lines);old="pezze intrinseche costanti tra collassi G1 dei ventagli polari e controllo dei contorni.'";assert s.count(old)==1;s=s.replace(old,"pezze intrinseche costanti tra collassi G1 dei ventagli polari e controllo dei contorni; curve terminali con quarto vincolo verificato, rifiuto dei tratti minimi fuori budget e continuazione alternativa lungo U sugli stessi supporti, estremi conservati e lavoro limitato cancellabile.'");p.write_text(s)
+focus=['kernel/fk_blend_surface.cpp',new,'kernel/CMakeLists.txt','tools/generate_architecture.py']
+(T/'frozen-source-hashes.json').write_text(json.dumps({f:sha(R/f) for f in focus},indent=2)+'\n')
+print('Integrated frozen source; full application build still pending',flush=True)

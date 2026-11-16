@@ -1,0 +1,412 @@
+{
+  "kernel_distinct": 129,
+  "kernel_executions": 145,
+  "kernel_seconds": 216.90970483400451,
+  "kernel_cases": {
+    "ToleranceDocumentOffsetAccuracy": [
+      "Offset"
+    ],
+    "BlendOffsetLoftTrimmedTopOneMillimeter": [
+      "Offset"
+    ],
+    "BlendRegeneratedLoftOffsetCaps": [
+      "Offset"
+    ],
+    "MicroFeaturesOfLoftOffsetBodies": [
+      "Offset"
+    ],
+    "BlendContactKnotKeepsRadiusAndAllowsOneMillimeterOffset": [
+      "Offset"
+    ],
+    "LoftEllipsePreservesSmoothOffsetFaces": [
+      "Offset"
+    ],
+    "OffsetAnalyticSurfaces": [
+      "Offset"
+    ],
+    "OffsetFreeformSurfaces": [
+      "Offset"
+    ],
+    "OffsetFacesJoinsTangentFaces": [
+      "Offset"
+    ],
+    "OffsetFacesCurvedAndFreeform": [
+      "Offset"
+    ],
+    "OffsetFacesLoft": [
+      "Offset"
+    ],
+    "OffsetThenSewSolid": [
+      "Offset",
+      "Sew"
+    ],
+    "OffsetFacesSpring": [
+      "Offset"
+    ],
+    "OffsetFacesImportedParts": [
+      "Offset"
+    ],
+    "OffsetPreservesSharpSeams": [
+      "Offset"
+    ],
+    "OffsetLoftExtension": [
+      "Offset"
+    ],
+    "OffsetLoftMixedSections": [
+      "Offset"
+    ],
+    "OffsetLoftSewnCaps": [
+      "Offset",
+      "Sew"
+    ],
+    "OffsetFitCurveSmallSmoothFeature": [
+      "Offset"
+    ],
+    "OffsetReportsInternalNormalDiscontinuity": [
+      "Offset"
+    ],
+    "OffsetLoftInternalCreasesOneMillimeter": [
+      "Offset"
+    ],
+    "OffsetLoftExtendedSeamsTrimBoth": [
+      "Offset"
+    ],
+    "OffsetDenseBSplineIsC2": [
+      "Offset"
+    ],
+    "OffsetInwardBeyondCurvatureIsExplained": [
+      "Offset"
+    ],
+    "OffsetLoftSeamExtensionFollowsTangentSeam": [
+      "Offset"
+    ],
+    "HistoryOffsetKeepsFaceNamesAcrossSurfaceChanges": [
+      "Offset"
+    ],
+    "HistoryOffsetComposesRectangularAndTrimmedCreases": [
+      "Offset"
+    ],
+    "BooleanShellSlabsThroughHoleVertex": [
+      "Shell"
+    ],
+    "ShellOpenBox": [
+      "Shell"
+    ],
+    "ShellCup": [
+      "Shell"
+    ],
+    "ShellConcaveEdge": [
+      "Shell"
+    ],
+    "ShellFilletedBox": [
+      "Shell",
+      "Fill"
+    ],
+    "ShellRoundedPrism": [
+      "Shell"
+    ],
+    "ShellNotchAndFilletedHole": [
+      "Shell",
+      "Fill"
+    ],
+    "ShellRejectsBadInput": [
+      "Shell"
+    ],
+    "ShellCollapsedConvexFillet": [
+      "Shell",
+      "Fill"
+    ],
+    "ShellCollapsedRoundedPrism": [
+      "Shell"
+    ],
+    "ShellCollapsedToroidalFillet": [
+      "Shell",
+      "Fill"
+    ],
+    "ShellCollapsedSphericalCorner": [
+      "Shell"
+    ],
+    "ShellCollapsedAllBoxFillets": [
+      "Shell",
+      "Fill"
+    ],
+    "ShellRectangularCutKeepsSharpCorners": [
+      "Shell"
+    ],
+    "ShellRejectsInvalidAndInvertedCavities": [
+      "Shell"
+    ],
+    "ShellStitchedTolerantTangencies": [
+      "Shell"
+    ],
+    "SweepSheetClosedPathIsClosedShell": [
+      "Shell",
+      "Sheet"
+    ],
+    "HistoryTrimExtendShellAndProjectionComposeOrigins": [
+      "Shell"
+    ],
+    "SheetExtrusion": [
+      "Sheet"
+    ],
+    "BooleanSheets": [
+      "Sheet"
+    ],
+    "RevolutionSheets": [
+      "Sheet"
+    ],
+    "SheetExtendBSplineKeepsCurve": [
+      "Sheet"
+    ],
+    "SheetSplitAndTrim": [
+      "Sheet"
+    ],
+    "SheetExtend": [
+      "Sheet"
+    ],
+    "SheetSectionKeepsExactSplineBoundary": [
+      "Sheet"
+    ],
+    "SheetRevolutionMeridianSection": [
+      "Sheet"
+    ],
+    "SheetDraftAndBlend": [
+      "Sheet"
+    ],
+    "SweepClosedPathAndSheet": [
+      "Sheet"
+    ],
+    "LoftSheet": [
+      "Sheet"
+    ],
+    "OcctImportSheet": [
+      "Sheet"
+    ],
+    "SheetBlendCurvedLoft": [
+      "Sheet"
+    ],
+    "SewSheetsIntoSolid": [
+      "Sheet",
+      "Sew"
+    ],
+    "PlanarSheetRectangleWithHole": [
+      "Sheet"
+    ],
+    "PlanarSheetTwoRegions": [
+      "Sheet"
+    ],
+    "PlanarSheetIslandInHole": [
+      "Sheet"
+    ],
+    "PlanarSheetFromCylinderEdge": [
+      "Sheet"
+    ],
+    "PlanarSheetClosedSpline": [
+      "Sheet"
+    ],
+    "PlanarSheetShuffledSegments": [
+      "Sheet"
+    ],
+    "PlanarSheetRejectsInvalidLoops": [
+      "Sheet"
+    ],
+    "PlanarSheetFromProfileMatchesExtrusionBase": [
+      "Sheet"
+    ],
+    "PlanarSheetHoleNearCurvedBoundary": [
+      "Sheet"
+    ],
+    "PlanarSheetRejectsTouchingLoops": [
+      "Sheet"
+    ],
+    "BoundarySheetSkewQuad": [
+      "Sheet",
+      "BoundarySheet"
+    ],
+    "BoundarySheetPlanarRegions": [
+      "Sheet",
+      "BoundarySheet"
+    ],
+    "BoundarySheetHalfCylinder": [
+      "Sheet",
+      "BoundarySheet"
+    ],
+    "BoundarySheetRejectsBadContours": [
+      "Sheet",
+      "BoundarySheet"
+    ],
+    "ThickenCylindricalSheetAlongNormal": [
+      "Sheet",
+      "Thicken"
+    ],
+    "ThickenSmoothBSplineSheet": [
+      "Sheet",
+      "Thicken"
+    ],
+    "LoftSheetTubeOfCylinder": [
+      "Sheet"
+    ],
+    "LoftSheetTubeMatchesSolidSides": [
+      "Sheet"
+    ],
+    "LoftSheetMixedSectionsThrow": [
+      "Sheet"
+    ],
+    "SweepSheetCircleAlongLineAndArc": [
+      "Sheet"
+    ],
+    "SweepSheetSquareAlongSplineMatchesSolid": [
+      "Sheet"
+    ],
+    "SweepSheetRoundedRectangleAlongHelix": [
+      "Sheet"
+    ],
+    "SweepSheetMixedProfileAndChains": [
+      "Sheet"
+    ],
+    "SweepSheetMixedChainKeepsChainSense": [
+      "Sheet"
+    ],
+    "HistoryBlendGeneralChainsAndOpenSheet": [
+      "Sheet"
+    ],
+    "HistoryRevolutionCurvesSheetsAndRejectedOutputs": [
+      "Sheet"
+    ],
+    "BlendEdgeEndingOnExistingFilletCornerPatch": [
+      "Fill"
+    ],
+    "BlendTopContourWithCornerRadiusEqualToFillet": [
+      "Fill"
+    ],
+    "BlendCapOverlappingPocketFillet": [
+      "Fill"
+    ],
+    "SewFillPreservesKnownBoundaryCurves": [
+      "Fill",
+      "Sew"
+    ],
+    "FillPlanarSquare": [
+      "Fill"
+    ],
+    "FillSphericalCapThroughGuides": [
+      "Fill"
+    ],
+    "FillTangentToCylinder": [
+      "Fill"
+    ],
+    "FillConeWithConflictingGuides": [
+      "Fill"
+    ],
+    "FillCapContinuesSphereInCurvature": [
+      "Fill"
+    ],
+    "FillObliqueContactsPreserveInterior": [
+      "Fill"
+    ],
+    "FillInfluencePreservesProjectionAndTangency": [
+      "Fill"
+    ],
+    "FillNaturalG1FollowsSupportCurvature": [
+      "Fill"
+    ],
+    "FillRejectsInvalidShapeParameters": [
+      "Fill"
+    ],
+    "FillIndependentContactInfluences": [
+      "Fill"
+    ],
+    "FillIgnoredGuidesPreserveLocalInfluence": [
+      "Fill"
+    ],
+    "FillDirectionalProfilePreservesContacts": [
+      "Fill"
+    ],
+    "FillDirectionalProfileRejectsInvalidSelection": [
+      "Fill"
+    ],
+    "FillUnequalCompoundBoundarySpans": [
+      "Fill"
+    ],
+    "FillReportsBoundaryContactConflictAtCorner": [
+      "Fill"
+    ],
+    "FillPerFaceContinuityOverrides": [
+      "Fill"
+    ],
+    "ProjectedCutPlanarHole": [
+      "Projected"
+    ],
+    "ProjectedCutBandAlongExistingEdges": [
+      "Projected"
+    ],
+    "ProjectedCutChordOfCurvedEdge": [
+      "Projected"
+    ],
+    "ProjectedCutOnCylinderFirstFaceOnly": [
+      "Projected"
+    ],
+    "ProjectedCurveClosedOnCylinder": [
+      "Projected"
+    ],
+    "IgesSewSpatialRepresentatives": [
+      "Sew"
+    ],
+    "SewPreservesBoundaryWithDifferentParameters": [
+      "Sew"
+    ],
+    "SewClosedEdgesWithUnequalParameters": [
+      "Sew"
+    ],
+    "SewDoesNotMergeDifferentCurvesWithSameMidpoint": [
+      "Sew"
+    ],
+    "SewThinSolidRetainsOutwardOrientation": [
+      "Sew"
+    ],
+    "SewMappedSamplesRetainDistanceLimit": [
+      "Sew"
+    ],
+    "SewPreservesDensePCurveRegardlessOfOperandOrder": [
+      "Sew"
+    ],
+    "HistoryExtractAndSewFacesPreserveDeclaredSources": [
+      "Sew"
+    ],
+    "ThickenPlanarFaceSides": [
+      "Thicken"
+    ],
+    "ThickenAlongDirection": [
+      "Thicken"
+    ],
+    "ThickenSharpCreaseAlongDirection": [
+      "Thicken"
+    ],
+    "ThickenTrimmedFaceWithInternalCrease": [
+      "Thicken"
+    ],
+    "BlendSurfaceNonAnalyticEdges": [
+      "BlendSurfaceNonAnalyticEdges"
+    ],
+    "BlendFreeformClosedEdges": [
+      "BlendFreeformClosedEdges"
+    ],
+    "BlendFreeformOpenEdges": [
+      "BlendFreeformOpenEdges"
+    ],
+    "BlendSurfaceMatchesExactPlanarCases": [
+      "BlendSurfaceMatchesExactPlanarCases"
+    ],
+    "BlendSurfaceMatchesCircularCases": [
+      "BlendSurfaceMatchesCircularCases"
+    ],
+    "BlendOpenChainsAtTangentSplineSeams": [
+      "BlendOpenChainsAtTangentSplineSeams"
+    ],
+    "BlendPlanarCapOnTangentSplineSupports": [
+      "BlendPlanarCapOnTangentSplineSupports"
+    ]
+  },
+  "ctest_suites": 36,
+  "ctest_seconds": 198.2750981709978
+}

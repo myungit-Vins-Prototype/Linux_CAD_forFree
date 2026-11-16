@@ -1,0 +1,28 @@
+#include "cad_topology_ref.h"
+#include "fk_curve.h"
+#include "fk_mass.h"
+#include "fk_topology.h"
+#include "forgeCad2026_dialogs.h"
+#include <QApplication>
+#include <QPlainTextEdit>
+#include <QSettings>
+#include <QTemporaryDir>
+#include <QTimer>
+#include <iostream>
+class ViewportInteractionTest {
+  public:
+#include "test_chamfer_preview_editing.h"
+};
+int main(int argc, char **argv) {
+    QApplication app(argc, argv);
+    QTemporaryDir t;
+    QSettings::setDefaultFormat(QSettings::IniFormat);
+    QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, t.path());
+    try {
+        ViewportInteractionTest::chamferPreviewEditingReview();
+        return 0;
+    } catch (const std::exception &e) {
+        std::cerr << e.what() << std::endl;
+        return 1;
+    }
+}

@@ -1,0 +1,61 @@
+#include "cad_document_io.h"
+#include "cad_drawing_file.h"
+#include "cad_model_history.h"
+#include "cad_ellipse.h"
+#include "fk_precision.h"
+#include <QtEndian>
+#include <QCryptographicHash>
+#include <iostream>
+#include <stdexcept>
+static void require(bool ok,const char *message){if(!ok)throw std::runtime_error(message);}
+int main(){try{using namespace ForgeCad;
+const auto base=ellipseFromExtremes({10,11},{18,11},{14,14});
+CurveObject legacy;legacy.tool=DrawingTool::Ellipse;legacy.controlPoints={{-10,-7},{-5,-7},{-10,-5}};
+        for(double accuracy:{Kernel::kLinearResolution,1e-8}) {
+            DocumentState historical;historical.calculationAccuracy=accuracy;
+            historical.version.checkinId=QUuid::createUuid();historical.lengthUnit=LengthUnit::Inch;
+            historical.orientation.right[0]=0;historical.orientation.right[1]=1;
+            historical.orientation.up[0]=-1;historical.orientation.up[1]=0;
+            SketchObject sketch;sketch.name=QStringLiteral("Ellisse storica");sketch.visible=false;sketch.curves={legacy};historical.sketches={sketch};
+            ExtrusionObject box;box.feature=BodyFeature::Primitive;box.featureId=90701;
+            box.primitive.kind=PrimitiveKind::Box;box.primitive.size[0]=10;box.primitive.size[1]=6;box.primitive.size[2]=4;historical.extrusions={box};
+            normalizeModelHistory(historical);require(historical.modelBodies.size()==1,"ellisse: fixture impronta69 con corpo normalizzato");
+            auto normalized=historical;normalized.version.checkinId={};normalized.baseCheckinId={};
+            normalized.orientation=AxesOrientation{};normalized.lengthUnit=LengthUnit::Millimeter;
+            for(auto &feature:normalized.extrusions)feature.forgeBody.reset();
+            QByteArray definition69;require(encodeDocumentDefinition69ForHash(normalized,definition69).isEmpty()
+                && qFromBigEndian<quint16>(definition69.constData()+4)==69,"ellisse: impronta storica serializzata nel formato69 effettivo");
+            const auto hash69=QCryptographicHash::hash(definition69,QCryptographicHash::Sha256);bool matches=false;
+            require(drawingModelDefinitionMatches(historical,hash69,matches).isEmpty() && matches,"ellisse: tavola69 riconosce la stessa geometria anche con precisione personalizzata");
+            for(int presentation=0;presentation<3;++presentation) {
+                auto changed=historical;
+                if(presentation==0)changed.sketches[0].visible=!changed.sketches[0].visible;
+                if(presentation==1)changed.extrusions[0].visible=!changed.extrusions[0].visible;
+                if(presentation==2)changed.modelBodies[0].visible=!changed.modelBodies[0].visible;
+                require(drawingModelDefinitionMatches(changed,hash69,matches).isEmpty() && matches,"ellisse: impronta69 riconosce i cambi di sola visibilita");
+            }
+            auto canonical69=normalized;
+            for(auto &item:canonical69.sketches)item.visible=true;
+            for(auto &item:canonical69.extrusions)item.visible=true;
+            for(auto &item:canonical69.modelBodies)item.visible=true;
+            QByteArray canonicalBytes;require(encodeDocumentDefinition69ForHash(canonical69,canonicalBytes).isEmpty(),"ellisse: fixture impronta69 con visibilita canonica");
+            auto hidden=historical;hidden.extrusions[0].visible=false;hidden.modelBodies[0].visible=false;
+            require(drawingModelDefinitionMatches(hidden,QCryptographicHash::hash(canonicalBytes,QCryptographicHash::Sha256),matches).isEmpty()
+                && matches,"ellisse: impronta69 canonica riconosce piu cambi simultanei di visibilita");
+            auto changed=historical;changed.sketches[0].curves[0].controlPoints[1]+=QPointF(1,0);
+            require(drawingModelDefinitionMatches(changed,hash69,matches).isEmpty() && !matches,"ellisse: impronta69 rileva la modifica di un semiasse");
+            changed=historical;changed.calculationAccuracy*=0.1;
+            require(drawingModelDefinitionMatches(changed,hash69,matches).isEmpty() && !matches,"ellisse: impronta69 rileva la modifica della precisione");
+            for(bool nested:{false,true}) {
+                changed=historical;
+                if(nested) {
+                    auto section=std::make_shared<SketchPierceData>();section->curves={base};
+                    SketchConstraint pierce;pierce.type=ConstraintType::Pierce;pierce.first={1,0,1};pierce.pierce=section;
+                    changed.sketches[0].geometricConstraints.append(pierce);
+                } else changed.sketches[0].curves.append(base);
+                QByteArray untouched="immutato";
+                require(!encodeDocumentDefinition69ForHash(changed,untouched).isEmpty() && untouched=="immutato","ellisse: codec69 rifiuta la nuova ellisse anche nelle sezioni Pierce senza mutare l'output");
+                require(drawingModelDefinitionMatches(changed,hash69,matches).isEmpty() && !matches,"ellisse: nessun falso match69 dopo aggiunta della nuova ellisse");
+            }
+        }
+std::cout<<"PASS hash69 compatibility and rejection"<<std::endl;return 0;}catch(const std::exception &e){std::cerr<<e.what()<<std::endl;return 1;}}

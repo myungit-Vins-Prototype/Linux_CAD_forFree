@@ -1,0 +1,3 @@
+from pathlib import Path
+import subprocess,json
+root=Path('/home/myungit/Linux_CAD_forFree');p=Path('/tmp/supporto-review/tests');cmd=['/usr/bin/c++','-std=c++17','-O0','-I'+str(root/'kernel'),str(p/'synthetic.cpp'),str(root/'forgecad-release/kernel/libforgekernel.a'),'-pthread','-o',str(p/'synthetic')];(p/'synthetic-build-command.json').write_text(json.dumps(cmd,indent=2)+'\n');r=subprocess.run(cmd,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True);(p/'synthetic-build.log').write_text(r.stdout);print(r.returncode,r.stdout[-3000:]);raise SystemExit(r.returncode)

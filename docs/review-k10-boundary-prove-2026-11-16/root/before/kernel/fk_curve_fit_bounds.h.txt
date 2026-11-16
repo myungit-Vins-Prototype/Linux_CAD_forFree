@@ -1,0 +1,105 @@
+#ifndef FORGECAD_FK_CURVE_FIT_BOUNDS_H
+#define FORGECAD_FK_CURVE_FIT_BOUNDS_H
+#include "fk_bspline.h"
+#include "fk_surface.h"
+#include <array>
+#include <functional>
+#include <optional>
+namespace ForgeCad::Kernel {
+// Whole-interval bound on |f(t)-Bezier(poles,t)|, same original parameter.
+// +infinity means unresolved; it must never mean an accepted segment.
+using CurveFitErrorBound = std::function<double(const Interval &, const std::array<Vec3, 4> &)>;
+
+// Requires an oracle. Every output span must have a finite bound <=tolerance.
+// Resource exhaustion, nonfinite input/output or an unresolved terminal span
+// throws; deviation is published only after successful output construction.
+std::shared_ptr<BSplineCurve<3>> fitCurveCertified(const std::function<Vec3(double)> &f, const Interval &range,
+                                                   const std::vector<double> &breaks, double tolerance,
+                                                   const CurveFitErrorBound &bound, double *deviation = nullptr);
+namespace detail {
+struct SurfaceParameterBounds {
+    double u = 0, v = 0;
+};
+// Upper bounds for ||Su|| and ||Sv|| from ORIGINAL rational controls.
+// Empty for unsupported families; recognized nonfinite/unresolved data throw.
+std::optional<SurfaceParameterBounds> surfaceParameterBounds(const SurfacePtr &surface);
+struct SurfaceCurveFitData {
+    CurveFitErrorBound bound;
+    std::vector<double> breaks;
+};
+// Original BSpline data with isoparametric affine UV spans; original
+// Extrusion(Line/NURBS generator) also supports general affine UV spans.
+// Line2/equal-weight degree-one BSpline2 and Trimmed wrappers retain their
+// original anchors/parameters. Unsupported kinds return an empty bound.
+// Recognized spans outside the natural domain (including periodic shifts),
+// unresolved data or exhausted resources throw. Instances use original data.
+SurfaceCurveFitData surfaceCompositionErrorBound(const SurfacePtr &surface, const CurvePtr<2> &pcurve,
+                                                 const Interval &range);
+// One explicit affine source map on fitRange. sourceRange is ordered;
+// reversed maps its upper endpoint to the lower fit endpoint.
+struct CurveFitSourceSpan {
+    CurvePtr<3> source;
+    Interval sourceRange;
+    Interval fitRange;
+    bool reversed = false;
+};
+// Whole-domain position residual for a contiguous partition of fit ranges.
+// Closed queries at a compound junction enclose both neighboring values.
+// Line/NURBS and their Trimmed/Transformed wrappers preserve their original
+// parameter. Empty if any source kind is unsupported; never a partial bound.
+CurveFitErrorBound curvePositionErrorBound(const std::vector<CurveFitSourceSpan> &spans);
+
+// Directional projection onto the ORIGINAL Plane parameterization. Line/
+// positive-weight NURBS with Trimmed/Transformed wrappers are snapshotted;
+// no reference to source or plane survives factory construction. The plane
+// normal is enclosed from original X cross Y, not rounded into a transform.
+// Empty only for unsupported source kinds; invalid/parallel/unresolved data
+// throw. Queries retain the original source parameter and bound position,
+// not first-hit selection, finite face membership or transition topology.
+CurveFitErrorBound planeProjectionErrorBound(const Curve<3> &source, const Interval &range, const Plane &plane,
+                                              const Vec3 &direction);
+
+// Empty only for unsupported source kinds. NURBS/Trimmed/Transformed inputs
+// retain their original parameter; positive rational weights are required.
+// Extraction and subsequent coefficient arithmetic enclose the original
+// IEEE input data with outward rounding, including trims and transforms.
+// E(t) + signedDistance * normalize(G'(U(t)) cross D), with independent
+// ORIGINAL edge E, extrusion generator G and affine original pcurve (U,V).
+// Line/positive NURBS E/G with Trimmed/Transformed wrappers; UV Line or
+// equal-weight degree-one NURBS with Trimmed wrappers. No E=S(U,V) identity
+// or zero fin tolerance is assumed. Returns empty only for unsupported
+// families; invalid domains/regularity/resources throw or remain unresolved.
+// Snapshots own all coefficients. breaks are hints, never the certificate.
+SurfaceCurveFitData extrusionEdgeOffsetErrorBound(const CurvePtr<3> &edge, const SurfacePtr &surface,
+                                                  const CurvePtr<2> &pcurve, const Interval &range,
+                                                  double signedDistance);
+// Plane UV candidates are lifted with the ORIGINAL O/X/Y under outward rounding.
+// projection bounds |S(Q)-projection_P(E)| in mm for fitting; residual bounds
+// |S(Q)-E| in mm for the final fin contract. Both own snapshots. Empty only
+// for unsupported source or support. Invalid factory input throws; an unresolved
+// query returns +infinity and cannot authorize an accepted fit.
+struct PlanePCurveFitData {
+    CurveFitErrorBound projection;
+    CurveFitErrorBound residual;
+    std::vector<double> breaks;
+};
+PlanePCurveFitData planePCurveErrorBound(const CurvePtr<3> &edge, const SurfacePtr &surface,
+                                        const Interval &range);
+// Targeted Plane construction: the approximation budget and the returned
+// deviation are physical distances in mm. Unsupported source/support returns
+// null; recognized invalid/unresolved data throw. deviation is transactional.
+CurvePtr<2> fitPCurveOnPlane(const CurvePtr<3> &edge, const SurfacePtr &surface, const Interval &range,
+                            double fitTolerance, double residualBudget, double *deviation = nullptr);
+// Rebuilds the oracle from the actually emitted edge/Plane and checks every
+// ORIGINAL control of a cubic nonrational C0 Bezier pcurve. Throws on unsupported
+// or invalid representation, unresolved bounds or a residual above budget.
+// The return value is the continuous residual upper bound over the whole range.
+double requirePCurveOnPlane(const CurvePtr<3> &edge, const SurfacePtr &surface, const CurvePtr<2> &pcurve,
+                            const Interval &range, double residualBudget);
+CurveFitErrorBound extrusionOffsetErrorBound(const CurvePtr<3> &source, const Interval &range, double distance,
+                                             const Vec3 &direction);
+CurveFitErrorBound revolutionOffsetErrorBound(const CurvePtr<3> &source, const Interval &range, double distance,
+                                              const Vec3 &axisPoint, const Vec3 &axisDirection);
+} // namespace detail
+} // namespace ForgeCad::Kernel
+#endif

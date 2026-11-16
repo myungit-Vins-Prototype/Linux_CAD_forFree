@@ -1,0 +1,67 @@
+from pathlib import Path
+p=Path('/tmp/forgecad-k10-composition-20261115/tests');fixture=(p/'poles-fixture.h').read_text();fixture=fixture[fixture.index('namespace composition_fixture'):]
+s='''#include "fk_body_io.h"
+#include "fk_body_check.h"
+#include "fk_curve_fit_bounds.h"
+#include "fk_surface_tools.h"
+#include "fk_transform.h"
+#include "fk_test.h"
+#include <algorithm>
+using namespace ForgeCad::Kernel;
+namespace {
+'''+fixture+'''
+} // namespace
+
+FK_TEST(SurfaceCurveFitPolesHiddenSupportPoseScaleAndParameters) {
+    for (double scale : {.01, 1., 1000.}) for (bool rational : {false, true}) for (int mode : {0, 1, 2}) {
+        Body source = composition_fixture::single(rational, mode == 1 ? .2 : 0., mode == 1 ? .8 : 1., mode == 2, mode == 2);
+        const auto transform = Transform3::translation(scale * Vec3(2, -1, .5)) *
+            Transform3::rotation({}, Vec3(1, 2, 3), .4) * Transform3::scaling({}, scale);
+        source = transformBody(source, transform);
+        const double tolerance = 1e-7 * scale;
+        FK_CHECK(checkBody(source, {true, true}).empty());
+        FK_CHECK(composition_fixture::gap(source) <= tolerance);
+        const auto frozen = writeBodyBinary(source);
+        const Vec3 delta = transform.applyToVector(Vec3(0, 0, .0016));
+        const auto result = editBodyFacesPoles(source, {{source.faces().front(), {{9, 0, delta, 1}}, {}}}, tolerance);
+        // A valid input MUST succeed; no conservative rejection is accepted here.
+        FK_CHECK(checkBody(result, {true, true}).empty());
+        FK_CHECK_NEAR(composition_fixture::gap(result), 0., tolerance);
+        FK_CHECK(writeBodyBinary(source) == frozen);
+    }
+}
+
+FK_TEST(SurfaceCurveFitSharedHiddenNeighborRejectedAndCoherentAccepted) {
+    for (bool rational : {false, true}) {
+        const Body source = composition_fixture::shared(rational);
+        FK_CHECK(checkBody(source, {true, true}).empty());
+        FK_CHECK_NEAR(composition_fixture::gap(source), 0., 1e-9);
+        const auto frozen = writeBodyBinary(source);
+        const SurfaceFacePoleChange upper{source.faces()[0], {{9, 0, {0, 0, .0016}, 1}}, {}};
+        FK_CHECK_THROWS(editBodyFacesPoles(source, {upper}, 1e-7));
+        FK_CHECK(writeBodyBinary(source) == frozen);
+        const SurfaceFacePoleChange lower{source.faces()[1], {{9, 0, {0, 0, .0016}, 1}}, {}};
+        const Body result = editBodyFacesPoles(source, {upper, lower}, 1e-7);
+        FK_CHECK(checkBody(result, {true, true}).empty());
+        FK_CHECK_NEAR(composition_fixture::gap(result), 0., 1e-7);
+        FK_CHECK(writeBodyBinary(source) == frozen);
+    }
+}
+
+FK_TEST(SurfaceCurveFitDirectOracleKnotCrossingsAndUnsupportedUV) {
+    for (bool rational : {false, true}) {
+        const auto surface = composition_fixture::support(rational);
+        const auto uv = composition_fixture::affineUV({0, 0}, {1, 0}, {-2, 3});
+        const auto data = detail::surfaceCompositionErrorBound(surface, uv, {-2, 3});
+        FK_CHECK(bool(data.bound));
+        for (double knot : {-1.5, -1.495}) FK_CHECK(std::any_of(data.breaks.begin(), data.breaks.end(),
+            [&](double t) { return std::abs(t - knot) < 1e-12; }));
+        const double peak = surface->point(.1005, 0).z();
+        const std::array<Vec3, 4> candidate{Vec3(0, 0, 0), Vec3(1./3, 0, 0), Vec3(2./3, 0, 0), Vec3(1, 0, 0)};
+        FK_CHECK(data.bound({-2, 3}, candidate) >= peak);
+        const auto diagonal = composition_fixture::affineUV({0, 0}, {1, 1}, {0, 1});
+        FK_CHECK(!detail::surfaceCompositionErrorBound(surface, diagonal, {0, 1}).bound);
+    }
+}
+'''
+(p/'test_surface_curve_fit_validation.cpp').write_text(s)

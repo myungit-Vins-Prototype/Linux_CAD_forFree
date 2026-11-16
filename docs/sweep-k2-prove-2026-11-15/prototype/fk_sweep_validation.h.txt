@@ -1,0 +1,43 @@
+#ifndef FORGECAD_FK_SWEEP_VALIDATION_H
+#define FORGECAD_FK_SWEEP_VALIDATION_H
+#include "fk_math.h"
+#include <cstddef>
+#include <string>
+#include <vector>
+namespace ForgeCad::Kernel::detail {
+// F(x,y,t)=C(t)+U(t)x+V(t)y. I tre campi condividono grado e pesi
+// Bezier positivi; weights vuoto significa polinomiale. duration>0 permette
+// una riparametrizzazione affine positiva del singolo slab.
+struct SweepValidationSlab {
+    std::vector<Vec3> center, xAxis, yAxis;
+    std::vector<double> weights;
+    double duration = 1.0;
+};
+enum class SweepValidationStatus { CertifiedInjective, IntersectionWitness, Unresolved };
+struct SweepValidationOptions {
+    std::size_t maxVisits = 200000;
+    int maxDepth = 24;
+    std::size_t maxChartSlabs = 64;
+};
+struct SweepValidationResult {
+    SweepValidationStatus status = SweepValidationStatus::Unresolved;
+    std::string diagnostic;
+    std::size_t visits = 0;
+    int deepestSubdivision = 0;
+};
+// convexHull contiene il profilo reale, inclusi gli interni: l'iniettivita'
+// su questo inviluppo e' sufficiente anche per profili concavi/con fori.
+// La riduzione a dimensione0/1 richiede un hull minimale con uno/due punti
+// distinti. Tre punti distinti sono sempre trattati in dimensione2, anche se
+// collineari (criterio conservativo che evita falsi ranghi da underflow).
+// Tutti i confini
+// dei tre campi devono essere IDENTICI, anche last/first se closed; nessuna
+// associazione per distanza. Unresolved NON autorizza accettazione.
+// Il certificato riguarda esclusivamente la mappa fornita, non un BRep
+// vicino in C0. Questa prima versione non produce IntersectionWitness:
+// un punto nel solo inviluppo non prova sovrapposizione del profilo reale.
+SweepValidationResult validateSweepMap(const std::vector<SweepValidationSlab> &slabs,
+                                       const std::vector<Vec2> &convexHull, bool closed,
+                                       const SweepValidationOptions &options = {});
+} // namespace ForgeCad::Kernel::detail
+#endif

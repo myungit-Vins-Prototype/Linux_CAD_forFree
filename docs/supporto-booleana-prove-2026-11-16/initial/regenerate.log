@@ -1,0 +1,11 @@
+REGENERATE failed=0
+REBUILT 0 error= cached=0
+ F=6 E=12 V=8 solid=1 shells=1 sheet=0 box=[-100,-1.4508343650386994e-41,0]-[1.0855918359145935e-20,150,25] check=0
+REBUILT 2 error= cached=0
+ F=3 E=2 V=2 solid=1 shells=1 sheet=0 box=[-154,18.499999999999993,111]-[-106,131.5,159] check=0
+REBUILT 5 error= cached=0
+ F=4 E=6 V=4 solid=1 shells=1 sheet=0 box=[-154.37285608401115,35,-15]-[-19.999727997524644,115,159.09585816367044] check=0
+REGEN_UNION 2,5 FAIL booleanOperation: risultato non chiuso (Body::build: l'edge 3 non ha due fin opposte)
+REGEN_UNION 5,2 FAIL booleanOperation: risultato non chiuso (Body::build: l'edge 2 non ha due fin opposte)
+REGEN_UNION 0,2 PASS F=9 E=14 V=10 solid=1 shells=2 sheet=0 box=[-154,-1.4508343650386994e-41,0]-[1.0855918359145935e-20,150,159] check=0
+REGEN_UNION 0,5 PASS F=9 E=21 V=14 solid=1 shells=1 sheet=0 box=[-154.37285608401115,-1.4508343650386994e-41,0]-[1.0855918359145935e-20,150,159.09585816367044] check=0

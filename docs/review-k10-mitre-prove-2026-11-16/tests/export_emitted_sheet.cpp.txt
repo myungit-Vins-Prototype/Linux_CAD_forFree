@@ -1,0 +1,27 @@
+#include "test_blend_mitre_validation.cpp"
+#include "json_helpers.inc"
+#include <stdexcept>
+namespace fktest {
+std::vector<TestCase> &registry() { static std::vector<TestCase> tests; return tests; }
+void reportFailure(const char *, int, const std::string &message) { throw std::runtime_error(message); }
+}
+int main() {
+    const auto fixture = emittedMitre();
+    const Body &body = fixture.body;
+    detail::requireEmittedBlendMitres(body, fixture.plans);
+    const auto &edge = body.edge(EdgeId(0));
+    const auto &f = body.fin(edge.forward), &b = body.fin(edge.backward);
+    const auto &s = dynamic_cast<const BSplineSurface &>(*body.face(body.finFace(edge.forward)).surface);
+    const auto &t = dynamic_cast<const BSplineSurface &>(*body.face(body.finFace(edge.backward)).surface);
+    std::ofstream out("/tmp/mitre-review/tests/candidate-emitted-sheet-coefficients.json");
+    out << std::setprecision(17) << "[{\"source\":\"syntheticBody_after_production_install_and_buildSheet_not_public_blend\",\"surface_s\":";
+    surfaceJson(out, s); out << ",\"surface_t\":"; surfaceJson(out, t);
+    out << ",\"curve\":"; curveJson(out, edge.curve);
+    out << ",\"pcurve_s\":"; curveJson(out, f.pcurve);
+    out << ",\"pcurve_t\":"; curveJson(out, b.pcurve);
+    out << ",\"range\":[" << edge.range.lo << ',' << edge.range.hi << "],\"reported_gap\":" << edge.tolerance
+        << ",\"budget\":" << edge.tolerance << ",\"fin_forward\":" << edge.forward.index
+        << ",\"fin_backward\":" << edge.backward.index << ",\"fin_s_budget\":" << f.pcurveTolerance
+        << ",\"fin_t_budget\":" << b.pcurveTolerance << "}]\n";
+    std::cout << "actual syntheticBody fins=" << edge.forward.index << ',' << edge.backward.index << " edge_budget=" << edge.tolerance << '\n';
+}

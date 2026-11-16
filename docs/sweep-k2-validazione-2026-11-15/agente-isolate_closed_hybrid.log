@@ -1,0 +1,8 @@
+START representation=0 split=0
+PASS rep=0 split=0 issues=0 volume=12.4357 seconds=1.19802
+START representation=0 split=1
+PASS rep=0 split=1 issues=0 volume=12.4357 seconds=1.15683
+START representation=1 split=0
+PASS rep=1 split=0 issues=0 volume=12.4357 seconds=17.213
+START representation=1 split=1
+PASS rep=1 split=1 issues=0 volume=12.4357 seconds=18.7526

@@ -1,0 +1,14 @@
+from pathlib import Path
+import json,subprocess
+p=Path('/tmp/theme-tabs-review/tests');s=(p/'theme_probe.cpp').read_text();prefix=s[:s.index('static int checks=')];main=r'''static void require(bool value,const char *message){if(!value)throw std::runtime_error(message);}
+class ViewportInteractionTest {
+public:
+#include "test_document_theme_tabs.h"
+};
+int main(int argc,char **argv){
+ QApplication app(argc,argv);QCoreApplication::setOrganizationName("ForgeCAD-ThemeTabs-Isolated");QCoreApplication::setApplicationName("HeaderProbe");QTemporaryDir configuration;QSettings::setDefaultFormat(QSettings::IniFormat);QSettings::setPath(QSettings::IniFormat,QSettings::UserScope,configuration.path());qputenv("FORGECAD_RECOVERY_DIR",(configuration.path()+"/recovery").toUtf8());
+ try{ViewportInteractionTest::documentThemeTabsTests();return 0;}catch(const std::exception &e){std::cerr<<e.what()<<std::endl;return 1;}
+}
+''';(p/'header_runner.cpp').write_text(prefix+main);a=json.loads((p/'candidate/compile-command.json').read_text());a[-1]=str(p/'header_runner.cpp');a[a.index('-o')+1]=str(p/'header_runner.o');(p/'header-compile-command.json').write_text(json.dumps(a,indent=2));subprocess.run(a,cwd='/tmp',check=True)
+for mode in ['baseline','candidate']:
+ link=json.loads((p/mode/'link-command.json').read_text());link=[str(p/'header_runner.o') if x.endswith('/theme_probe.o') else x for x in link];link[link.index('-o')+1]=str(p/mode/'header_runner');(p/mode/'header-link-command.json').write_text(json.dumps(link,indent=2));subprocess.run(link,cwd='/tmp',check=True)

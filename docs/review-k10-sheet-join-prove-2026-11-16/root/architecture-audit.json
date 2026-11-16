@@ -1,0 +1,149 @@
+{
+  "files": 776,
+  "edges": 11282,
+  "units": 388,
+  "errors": {},
+  "html_matches": true,
+  "incident_edges": 328,
+  "required_calls": [
+    [
+      "kernel/fk_sheet.cpp",
+      "kernel/fk_offset.cpp",
+      "fitCurveCertified"
+    ],
+    [
+      "kernel/fk_sheet.cpp",
+      "kernel/fk_curve_fit_bounds.cpp",
+      "surfaceCompositionErrorBound"
+    ],
+    [
+      "kernel/fk_sheet.cpp",
+      "kernel/fk_unify.cpp",
+      "unifySameDomain"
+    ],
+    [
+      "kernel/tests/test_sheet_join_validation.cpp",
+      "kernel/fk_sheet.cpp",
+      "extendSheet"
+    ]
+  ],
+  "focus": {
+    "kernel/CMakeLists.txt": {
+      "description": "Definisce libreria geometrica, test, rilevamento from_chars decimale e arrotondamento coerente senza contrazione FMA implicita nei chiamanti CPU C++/Objective-C++.",
+      "incoming": {
+        "call": 0,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 0,
+        "include": 0,
+        "reference": 0
+      }
+    },
+    "kernel/fk_blend_model.h": {
+      "description": "Interno ai raccordi senza booleane (fk_blend_loop, fk_blend_surface): il body come liste modificabili di Body::build, per la chirurgia topologica.",
+      "incoming": {
+        "call": 7,
+        "include": 6,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 9,
+        "include": 5,
+        "reference": 0
+      }
+    },
+    "kernel/fk_curve_fit_bounds.cpp": {
+      "description": "Limiti continui Bernstein outward per posizione, offset NURBS e composizione isoparametrica NURBS e affine anche obliqua su estrusione con SP-curve originale; limiti delle derivate del supporto per il trasferimento UV, coefficienti originali, pesi, istanze, budget e cancellazione. Proiezione affine su Plane dagli originali IEEE, normale da assi del piano e direzione originale, con residuo omogeneo outward. Offset bordi: posizione edge e normale del generatore indipendenti, SP-curve affine originale e controllo continuo dei poli dopo assemblaggio. Doppio certificato Plane/SP-curve: proiezione fisica per il fit e residuo completo della fin, coefficienti originali posseduti e metriche in mm.",
+      "incoming": {
+        "call": 14,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 12,
+        "include": 6,
+        "reference": 0
+      }
+    },
+    "kernel/fk_offset.cpp": {
+      "description": "Superfici e bordi a distanza; divisione esatta delle sole pieghe C0, nodi lisci conservati, solve uniforme regolarizzato sui bordi quasi tangenti, intersezioni stabilizzate per bordo con pesi distinti per precisione e arresto sul residuo 3D verificato, budget locali, domini derivati dalle SP-curve esatte senza celle terminali artificiali, sezioni circolari analitiche e vertici di cucitura conservati nei supporti sostitutivi dello sformo, rifilatura e provenienza. Costruzioni analitiche autorizzate dai supporti e da bounds geometrici uniformi, regolarita toroidale sul dominio periodico e raffinamento curve con cancellazione cooperativa e fallimenti atomici; offset di estrusioni/rivoluzioni NURBS con limite continuo, callback generiche ancora campionate. Offset di singola faccia estrusa e SP-curve affine certificato dagli originali separati; provenienza esplicita e ricontrollo delle cubiche realmente emesse. Ricostruzioni UV Plane con metrica certificata in mm, ricontrollo delle fin effettive da AssemblyMap e budget/conteggi invariati. Helper interni Plane per costruzione e verifica delle pcurve con metrica fisica, budget transazionali e ricontrollo dei coefficienti effettivi.",
+      "incoming": {
+        "call": 36,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 36,
+        "include": 20,
+        "reference": 0
+      }
+    },
+    "kernel/fk_sheet.cpp": {
+      "description": "Taglio, rifilo ed estensione di lamine; offset NURBS planari certificati. Giunti tangenti isoparametrici con fit continuo sui due supporti, dominio da poli UV originali e cap fisso; fin effettive ricontrollate dopo assemblaggio/unificazione tramite identita e genealogia. Continuazione Newton trasversa e altri fallback restano campionati.",
+      "incoming": {
+        "call": 40,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 31,
+        "include": 16,
+        "reference": 0
+      }
+    },
+    "kernel/fk_sheet.h": {
+      "description": "Taglio e rifilo di lamine; selezione del pezzo piu vicino condivisa con estensione, senza ripetere le intersezioni.",
+      "incoming": {
+        "call": 0,
+        "include": 35,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 1,
+        "include": 4,
+        "reference": 0
+      }
+    },
+    "kernel/fk_unify.cpp": {
+      "description": "Unisce facce sullo stesso dominio e bordi compatibili, preservando le cuciture UV necessarie alle superfici chiuse non periodiche.",
+      "incoming": {
+        "call": 10,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 16,
+        "include": 6,
+        "reference": 0
+      }
+    },
+    "kernel/tests/test_sheet_join_validation.cpp": {
+      "description": "Estensioni NURBS adiacenti: giunti tangenti con controllo continuo e cap fisso, positivi trasversali e regressioni per picchi stretti/gap, pose/scale/pesi/versi, genealogia dopo unificazione, codec e cancellazione.",
+      "incoming": {
+        "call": 1,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 24,
+        "include": 10,
+        "reference": 0
+      }
+    },
+    "tools/generate_architecture.py": {
+      "description": "Implementazione: generate architecture.",
+      "incoming": {
+        "call": 0,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 0,
+        "include": 0,
+        "reference": 0
+      }
+    }
+  }
+}

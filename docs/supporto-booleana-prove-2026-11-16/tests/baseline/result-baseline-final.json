@@ -1,0 +1,1022 @@
+{
+    "app_operations": [
+        {
+            "error": "",
+            "first": 0,
+            "genealogy": {
+                "all_named": true,
+                "faces_with_origins": true,
+                "links": 33,
+                "operand_count": 2,
+                "operand_feature_ids": [
+                    1,
+                    3
+                ],
+                "original_surface_carriers": 9,
+                "registered_operands": 2,
+                "valid_links": true
+            },
+            "label": "snapshot app pair 0-2",
+            "second": 2,
+            "shape": {
+                "area": 55920.8838161356,
+                "bounds_hi": [
+                    1.0855918359145935e-20,
+                    150,
+                    159
+                ],
+                "bounds_lo": [
+                    -154,
+                    -1.4508343650386994e-41,
+                    0
+                ],
+                "centroid": [
+                    -69.10128464435206,
+                    75,
+                    41.7488421116641
+                ],
+                "edges": 14,
+                "faces": 9,
+                "fins": 28,
+                "geometry": true,
+                "issues": [
+                ],
+                "loops": 10,
+                "max_edge_tolerance": 1.0964477542737394e-20,
+                "max_pcurve_tolerance": 0,
+                "max_vertex_tolerance": 0,
+                "regions": 2,
+                "sha256": "4351d14c7221cc64104ebf2b2f4413e9a1f3e00dda40090f955f937d9f52bb20",
+                "sheet": false,
+                "shell_genera": [
+                    0,
+                    0
+                ],
+                "shells": 2,
+                "solid_regions": 1,
+                "surface_types": {
+                    "0": 8,
+                    "1": 1
+                },
+                "vertices": 10,
+                "volume": 492621.228950402
+            },
+            "success": true,
+            "tools": [
+            ],
+            "witnesses": {
+                "continuous_certificate": false,
+                "extra": 0,
+                "input_count": 61,
+                "lost": 0,
+                "output_count": 61
+            }
+        },
+        {
+            "error": "",
+            "first": 0,
+            "genealogy": {
+                "all_named": true,
+                "faces_with_origins": true,
+                "links": 48,
+                "operand_count": 2,
+                "operand_feature_ids": [
+                    1,
+                    6
+                ],
+                "original_surface_carriers": 9,
+                "registered_operands": 2,
+                "valid_links": true
+            },
+            "label": "snapshot app pair 0-5",
+            "second": 5,
+            "shape": {
+                "area": 62258.10790563772,
+                "bounds_hi": [
+                    1.0855918359145935e-20,
+                    150,
+                    159.09585816367044
+                ],
+                "bounds_lo": [
+                    -154.37285608401115,
+                    -1.4508343650386994e-41,
+                    0
+                ],
+                "centroid": [
+                    -58.28420441364207,
+                    75.00000000000375,
+                    36.01859435669618
+                ],
+                "edges": 21,
+                "faces": 9,
+                "fins": 42,
+                "geometry": true,
+                "issues": [
+                ],
+                "loops": 9,
+                "max_edge_tolerance": 6.475626435076265e-10,
+                "max_pcurve_tolerance": 4.228172807864248e-08,
+                "max_vertex_tolerance": 0,
+                "regions": 2,
+                "sha256": "74fde4fc30d205829233dc3a80c29c4de22e2dbdce49ac035de64fe6fc2a8f46",
+                "sheet": false,
+                "shell_genera": [
+                    0
+                ],
+                "shells": 1,
+                "solid_regions": 1,
+                "surface_types": {
+                    "0": 7,
+                    "7": 2
+                },
+                "vertices": 14,
+                "volume": 595147.4261758638
+            },
+            "success": true,
+            "tools": [
+            ],
+            "witnesses": {
+                "continuous_certificate": false,
+                "extra": 0,
+                "input_count": 76,
+                "lost": 0,
+                "output_count": 86
+            }
+        },
+        {
+            "error": "Con \"Loft 6\": L'operazione booleana non e' riuscita: booleanOperation: risultato non chiuso (Body::build: l'edge 2 non ha due fin opposte)",
+            "first": 2,
+            "label": "snapshot app pair 2-5",
+            "second": 5,
+            "success": false,
+            "tools": [
+            ]
+        },
+        {
+            "error": "Con \"Estrusione 3\": L'operazione booleana non e' riuscita: booleanOperation: risultato non chiuso (Body::build: l'edge 3 non ha due fin opposte)",
+            "first": 5,
+            "label": "snapshot app pair 5-2",
+            "second": 2,
+            "success": false,
+            "tools": [
+            ]
+        },
+        {
+            "error": "Con \"Loft 6\": L'operazione booleana non e' riuscita: booleanOperation: risultato non chiuso (Body::build: l'edge 3 non ha due fin opposte)",
+            "first": 0,
+            "label": "snapshot app multi 0-2-5",
+            "second": 2,
+            "success": false,
+            "tools": [
+                5
+            ]
+        },
+        {
+            "error": "Con \"Estrusione 3\": L'operazione booleana non e' riuscita: booleanOperation: risultato non chiuso (Body::build: l'edge 3 non ha due fin opposte)",
+            "first": 0,
+            "label": "snapshot app multi 0-5-2",
+            "second": 5,
+            "success": false,
+            "tools": [
+                2
+            ]
+        },
+        {
+            "error": "",
+            "first": 0,
+            "genealogy": {
+                "all_named": true,
+                "faces_with_origins": true,
+                "links": 33,
+                "operand_count": 2,
+                "operand_feature_ids": [
+                    1,
+                    3
+                ],
+                "original_surface_carriers": 9,
+                "registered_operands": 2,
+                "valid_links": true
+            },
+            "label": "rebuilt app pair 0-2",
+            "second": 2,
+            "shape": {
+                "area": 55920.8838161356,
+                "bounds_hi": [
+                    1.0855918359145935e-20,
+                    150,
+                    159
+                ],
+                "bounds_lo": [
+                    -154,
+                    -1.4508343650386994e-41,
+                    0
+                ],
+                "centroid": [
+                    -69.10128464435206,
+                    75,
+                    41.7488421116641
+                ],
+                "edges": 14,
+                "faces": 9,
+                "fins": 28,
+                "geometry": true,
+                "issues": [
+                ],
+                "loops": 10,
+                "max_edge_tolerance": 1.0964477542737394e-20,
+                "max_pcurve_tolerance": 0,
+                "max_vertex_tolerance": 0,
+                "regions": 2,
+                "sha256": "4351d14c7221cc64104ebf2b2f4413e9a1f3e00dda40090f955f937d9f52bb20",
+                "sheet": false,
+                "shell_genera": [
+                    0,
+                    0
+                ],
+                "shells": 2,
+                "solid_regions": 1,
+                "surface_types": {
+                    "0": 8,
+                    "1": 1
+                },
+                "vertices": 10,
+                "volume": 492621.228950402
+            },
+            "success": true,
+            "tools": [
+            ],
+            "witnesses": {
+                "continuous_certificate": false,
+                "extra": 0,
+                "input_count": 61,
+                "lost": 0,
+                "output_count": 61
+            }
+        },
+        {
+            "error": "",
+            "first": 0,
+            "genealogy": {
+                "all_named": true,
+                "faces_with_origins": true,
+                "links": 48,
+                "operand_count": 2,
+                "operand_feature_ids": [
+                    1,
+                    6
+                ],
+                "original_surface_carriers": 9,
+                "registered_operands": 2,
+                "valid_links": true
+            },
+            "label": "rebuilt app pair 0-5",
+            "second": 5,
+            "shape": {
+                "area": 62258.10790563772,
+                "bounds_hi": [
+                    1.0855918359145935e-20,
+                    150,
+                    159.09585816367044
+                ],
+                "bounds_lo": [
+                    -154.37285608401115,
+                    -1.4508343650386994e-41,
+                    0
+                ],
+                "centroid": [
+                    -58.28420441364207,
+                    75.00000000000375,
+                    36.01859435669618
+                ],
+                "edges": 21,
+                "faces": 9,
+                "fins": 42,
+                "geometry": true,
+                "issues": [
+                ],
+                "loops": 9,
+                "max_edge_tolerance": 6.475626435076265e-10,
+                "max_pcurve_tolerance": 4.228172807864248e-08,
+                "max_vertex_tolerance": 0,
+                "regions": 2,
+                "sha256": "74fde4fc30d205829233dc3a80c29c4de22e2dbdce49ac035de64fe6fc2a8f46",
+                "sheet": false,
+                "shell_genera": [
+                    0
+                ],
+                "shells": 1,
+                "solid_regions": 1,
+                "surface_types": {
+                    "0": 7,
+                    "7": 2
+                },
+                "vertices": 14,
+                "volume": 595147.4261758638
+            },
+            "success": true,
+            "tools": [
+            ],
+            "witnesses": {
+                "continuous_certificate": false,
+                "extra": 0,
+                "input_count": 76,
+                "lost": 0,
+                "output_count": 86
+            }
+        },
+        {
+            "error": "Con \"Loft 6\": L'operazione booleana non e' riuscita: booleanOperation: risultato non chiuso (Body::build: l'edge 2 non ha due fin opposte)",
+            "first": 2,
+            "label": "rebuilt app pair 2-5",
+            "second": 5,
+            "success": false,
+            "tools": [
+            ]
+        },
+        {
+            "error": "Con \"Estrusione 3\": L'operazione booleana non e' riuscita: booleanOperation: risultato non chiuso (Body::build: l'edge 3 non ha due fin opposte)",
+            "first": 5,
+            "label": "rebuilt app pair 5-2",
+            "second": 2,
+            "success": false,
+            "tools": [
+            ]
+        },
+        {
+            "error": "Con \"Loft 6\": L'operazione booleana non e' riuscita: booleanOperation: risultato non chiuso (Body::build: l'edge 3 non ha due fin opposte)",
+            "first": 0,
+            "label": "rebuilt app multi 0-2-5",
+            "second": 2,
+            "success": false,
+            "tools": [
+                5
+            ]
+        },
+        {
+            "error": "Con \"Estrusione 3\": L'operazione booleana non e' riuscita: booleanOperation: risultato non chiuso (Body::build: l'edge 3 non ha due fin opposte)",
+            "first": 0,
+            "label": "rebuilt app multi 0-5-2",
+            "second": 5,
+            "success": false,
+            "tools": [
+                2
+            ]
+        }
+    ],
+    "calculation_accuracy": 1e-07,
+    "checks": 176,
+    "definition_equal_after_rebuild": true,
+    "definition_hash_after": "8aaa5d9d4c6eddf0178d9d050212e5eee7bb0f03743b48a223088c258f2fad2d",
+    "definition_hash_before": "8aaa5d9d4c6eddf0178d9d050212e5eee7bb0f03743b48a223088c258f2fad2d",
+    "failures": 0,
+    "linear_resolution": 1e-07,
+    "operations": [
+        {
+            "error": "",
+            "first": 0,
+            "genealogy": {
+                "all_named": true,
+                "faces_with_origins": true,
+                "links": 33,
+                "operand_count": 2,
+                "operand_feature_ids": [
+                    1,
+                    3
+                ],
+                "original_surface_carriers": 9,
+                "registered_operands": 2,
+                "valid_links": true
+            },
+            "label": "snapshot pair 0-2",
+            "notice": "",
+            "second": 2,
+            "shape": {
+                "area": 55920.8838161356,
+                "bounds_hi": [
+                    1.0855918359145935e-20,
+                    150,
+                    159
+                ],
+                "bounds_lo": [
+                    -154,
+                    -1.4508343650386994e-41,
+                    0
+                ],
+                "centroid": [
+                    -69.10128464435206,
+                    75,
+                    41.7488421116641
+                ],
+                "edges": 14,
+                "faces": 9,
+                "fins": 28,
+                "geometry": true,
+                "issues": [
+                ],
+                "loops": 10,
+                "max_edge_tolerance": 1.0964477542737394e-20,
+                "max_pcurve_tolerance": 0,
+                "max_vertex_tolerance": 0,
+                "regions": 2,
+                "sha256": "4351d14c7221cc64104ebf2b2f4413e9a1f3e00dda40090f955f937d9f52bb20",
+                "sheet": false,
+                "shell_genera": [
+                    0,
+                    0
+                ],
+                "shells": 2,
+                "solid_regions": 1,
+                "surface_types": {
+                    "0": 8,
+                    "1": 1
+                },
+                "vertices": 10,
+                "volume": 492621.228950402
+            },
+            "success": true,
+            "tools": [
+            ],
+            "volume_overlap_implied": -1.1641532182693481e-10,
+            "volume_sum_inputs": 492621.2289504019,
+            "witnesses": {
+                "continuous_certificate": false,
+                "extra": 0,
+                "input_count": 61,
+                "lost": 0,
+                "output_count": 61
+            }
+        },
+        {
+            "error": "",
+            "first": 0,
+            "genealogy": {
+                "all_named": true,
+                "faces_with_origins": true,
+                "links": 48,
+                "operand_count": 2,
+                "operand_feature_ids": [
+                    1,
+                    6
+                ],
+                "original_surface_carriers": 9,
+                "registered_operands": 2,
+                "valid_links": true
+            },
+            "label": "snapshot pair 0-5",
+            "notice": "",
+            "second": 5,
+            "shape": {
+                "area": 62258.10790563772,
+                "bounds_hi": [
+                    1.0855918359145935e-20,
+                    150,
+                    159.09585816367044
+                ],
+                "bounds_lo": [
+                    -154.37285608401115,
+                    -1.4508343650386994e-41,
+                    0
+                ],
+                "centroid": [
+                    -58.28420441364207,
+                    75.00000000000375,
+                    36.01859435669618
+                ],
+                "edges": 21,
+                "faces": 9,
+                "fins": 42,
+                "geometry": true,
+                "issues": [
+                ],
+                "loops": 9,
+                "max_edge_tolerance": 6.475626435076265e-10,
+                "max_pcurve_tolerance": 4.228172807864248e-08,
+                "max_vertex_tolerance": 0,
+                "regions": 2,
+                "sha256": "74fde4fc30d205829233dc3a80c29c4de22e2dbdce49ac035de64fe6fc2a8f46",
+                "sheet": false,
+                "shell_genera": [
+                    0
+                ],
+                "shells": 1,
+                "solid_regions": 1,
+                "surface_types": {
+                    "0": 7,
+                    "7": 2
+                },
+                "vertices": 14,
+                "volume": 595147.4261758638
+            },
+            "success": true,
+            "tools": [
+            ],
+            "volume_overlap_implied": -1.2188684195280075e-07,
+            "volume_sum_inputs": 595147.426175742,
+            "witnesses": {
+                "continuous_certificate": false,
+                "extra": 0,
+                "input_count": 76,
+                "lost": 0,
+                "output_count": 86
+            }
+        },
+        {
+            "error": "Con \"Loft 6\": L'operazione booleana non e' riuscita: booleanOperation: risultato non chiuso (Body::build: l'edge 2 non ha due fin opposte)",
+            "first": 2,
+            "label": "snapshot pair 2-5",
+            "notice": "",
+            "second": 5,
+            "success": false,
+            "tools": [
+            ]
+        },
+        {
+            "error": "Con \"Estrusione 3\": L'operazione booleana non e' riuscita: booleanOperation: risultato non chiuso (Body::build: l'edge 3 non ha due fin opposte)",
+            "first": 5,
+            "label": "snapshot pair 5-2",
+            "notice": "",
+            "second": 2,
+            "success": false,
+            "tools": [
+            ]
+        },
+        {
+            "error": "Con \"Loft 6\": L'operazione booleana non e' riuscita: booleanOperation: risultato non chiuso (Body::build: l'edge 3 non ha due fin opposte)",
+            "first": 0,
+            "label": "snapshot multi 0-2-5",
+            "notice": "",
+            "second": 2,
+            "success": false,
+            "tools": [
+                5
+            ]
+        },
+        {
+            "error": "Con \"Estrusione 3\": L'operazione booleana non e' riuscita: booleanOperation: risultato non chiuso (Body::build: l'edge 3 non ha due fin opposte)",
+            "first": 0,
+            "label": "snapshot multi 0-5-2",
+            "notice": "",
+            "second": 5,
+            "success": false,
+            "tools": [
+                2
+            ]
+        },
+        {
+            "error": "",
+            "first": 0,
+            "genealogy": {
+                "all_named": true,
+                "faces_with_origins": true,
+                "links": 33,
+                "operand_count": 2,
+                "operand_feature_ids": [
+                    1,
+                    3
+                ],
+                "original_surface_carriers": 9,
+                "registered_operands": 2,
+                "valid_links": true
+            },
+            "label": "rebuilt pair 0-2",
+            "notice": "",
+            "second": 2,
+            "shape": {
+                "area": 55920.8838161356,
+                "bounds_hi": [
+                    1.0855918359145935e-20,
+                    150,
+                    159
+                ],
+                "bounds_lo": [
+                    -154,
+                    -1.4508343650386994e-41,
+                    0
+                ],
+                "centroid": [
+                    -69.10128464435206,
+                    75,
+                    41.7488421116641
+                ],
+                "edges": 14,
+                "faces": 9,
+                "fins": 28,
+                "geometry": true,
+                "issues": [
+                ],
+                "loops": 10,
+                "max_edge_tolerance": 1.0964477542737394e-20,
+                "max_pcurve_tolerance": 0,
+                "max_vertex_tolerance": 0,
+                "regions": 2,
+                "sha256": "4351d14c7221cc64104ebf2b2f4413e9a1f3e00dda40090f955f937d9f52bb20",
+                "sheet": false,
+                "shell_genera": [
+                    0,
+                    0
+                ],
+                "shells": 2,
+                "solid_regions": 1,
+                "surface_types": {
+                    "0": 8,
+                    "1": 1
+                },
+                "vertices": 10,
+                "volume": 492621.228950402
+            },
+            "success": true,
+            "tools": [
+            ],
+            "volume_overlap_implied": -1.1641532182693481e-10,
+            "volume_sum_inputs": 492621.2289504019,
+            "witnesses": {
+                "continuous_certificate": false,
+                "extra": 0,
+                "input_count": 61,
+                "lost": 0,
+                "output_count": 61
+            }
+        },
+        {
+            "error": "",
+            "first": 0,
+            "genealogy": {
+                "all_named": true,
+                "faces_with_origins": true,
+                "links": 48,
+                "operand_count": 2,
+                "operand_feature_ids": [
+                    1,
+                    6
+                ],
+                "original_surface_carriers": 9,
+                "registered_operands": 2,
+                "valid_links": true
+            },
+            "label": "rebuilt pair 0-5",
+            "notice": "",
+            "second": 5,
+            "shape": {
+                "area": 62258.10790563772,
+                "bounds_hi": [
+                    1.0855918359145935e-20,
+                    150,
+                    159.09585816367044
+                ],
+                "bounds_lo": [
+                    -154.37285608401115,
+                    -1.4508343650386994e-41,
+                    0
+                ],
+                "centroid": [
+                    -58.28420441364207,
+                    75.00000000000375,
+                    36.01859435669618
+                ],
+                "edges": 21,
+                "faces": 9,
+                "fins": 42,
+                "geometry": true,
+                "issues": [
+                ],
+                "loops": 9,
+                "max_edge_tolerance": 6.475626435076265e-10,
+                "max_pcurve_tolerance": 4.228172807864248e-08,
+                "max_vertex_tolerance": 0,
+                "regions": 2,
+                "sha256": "74fde4fc30d205829233dc3a80c29c4de22e2dbdce49ac035de64fe6fc2a8f46",
+                "sheet": false,
+                "shell_genera": [
+                    0
+                ],
+                "shells": 1,
+                "solid_regions": 1,
+                "surface_types": {
+                    "0": 7,
+                    "7": 2
+                },
+                "vertices": 14,
+                "volume": 595147.4261758638
+            },
+            "success": true,
+            "tools": [
+            ],
+            "volume_overlap_implied": -1.2188684195280075e-07,
+            "volume_sum_inputs": 595147.426175742,
+            "witnesses": {
+                "continuous_certificate": false,
+                "extra": 0,
+                "input_count": 76,
+                "lost": 0,
+                "output_count": 86
+            }
+        },
+        {
+            "error": "Con \"Loft 6\": L'operazione booleana non e' riuscita: booleanOperation: risultato non chiuso (Body::build: l'edge 2 non ha due fin opposte)",
+            "first": 2,
+            "label": "rebuilt pair 2-5",
+            "notice": "",
+            "second": 5,
+            "success": false,
+            "tools": [
+            ]
+        },
+        {
+            "error": "Con \"Estrusione 3\": L'operazione booleana non e' riuscita: booleanOperation: risultato non chiuso (Body::build: l'edge 3 non ha due fin opposte)",
+            "first": 5,
+            "label": "rebuilt pair 5-2",
+            "notice": "",
+            "second": 2,
+            "success": false,
+            "tools": [
+            ]
+        },
+        {
+            "error": "Con \"Loft 6\": L'operazione booleana non e' riuscita: booleanOperation: risultato non chiuso (Body::build: l'edge 3 non ha due fin opposte)",
+            "first": 0,
+            "label": "rebuilt multi 0-2-5",
+            "notice": "",
+            "second": 2,
+            "success": false,
+            "tools": [
+                5
+            ]
+        },
+        {
+            "error": "Con \"Estrusione 3\": L'operazione booleana non e' riuscita: booleanOperation: risultato non chiuso (Body::build: l'edge 3 non ha due fin opposte)",
+            "first": 0,
+            "label": "rebuilt multi 0-5-2",
+            "notice": "",
+            "second": 5,
+            "success": false,
+            "tools": [
+                2
+            ]
+        }
+    ],
+    "original_sha256": "79887e91d75feb748af19fcdb14cd469cc40e74abab03e3cbeaa12e2d3271f7f",
+    "shapes": [
+        {
+            "exact_binary_equal": true,
+            "feature": 0,
+            "rebuilt": {
+                "area": 42500,
+                "bounds_hi": [
+                    1.0855918359145935e-20,
+                    150,
+                    25
+                ],
+                "bounds_lo": [
+                    -100,
+                    -1.4508343650386994e-41,
+                    0
+                ],
+                "centroid": [
+                    -50,
+                    75,
+                    12.5
+                ],
+                "edges": 12,
+                "faces": 6,
+                "fins": 24,
+                "geometry": true,
+                "issues": [
+                ],
+                "loops": 6,
+                "max_edge_tolerance": 0,
+                "max_pcurve_tolerance": 0,
+                "max_vertex_tolerance": 0,
+                "regions": 2,
+                "sha256": "b1c869c971618b3da9e85688e5b0b70d4c0e7fbb833208eacd5e2441b13bd0e2",
+                "sheet": false,
+                "shell_genera": [
+                    0
+                ],
+                "shells": 1,
+                "solid_regions": 1,
+                "surface_types": {
+                    "0": 6
+                },
+                "vertices": 8,
+                "volume": 375000
+            },
+            "snapshot": {
+                "area": 42500,
+                "bounds_hi": [
+                    1.0855918359145935e-20,
+                    150,
+                    25
+                ],
+                "bounds_lo": [
+                    -100,
+                    -1.4508343650386994e-41,
+                    0
+                ],
+                "centroid": [
+                    -50,
+                    75,
+                    12.5
+                ],
+                "edges": 12,
+                "faces": 6,
+                "fins": 24,
+                "geometry": true,
+                "issues": [
+                ],
+                "loops": 6,
+                "max_edge_tolerance": 0,
+                "max_pcurve_tolerance": 0,
+                "max_vertex_tolerance": 0,
+                "regions": 2,
+                "sha256": "b1c869c971618b3da9e85688e5b0b70d4c0e7fbb833208eacd5e2441b13bd0e2",
+                "sheet": false,
+                "shell_genera": [
+                    0
+                ],
+                "shells": 1,
+                "solid_regions": 1,
+                "surface_types": {
+                    "0": 6
+                },
+                "vertices": 8,
+                "volume": 375000
+            }
+        },
+        {
+            "exact_binary_equal": true,
+            "feature": 2,
+            "rebuilt": {
+                "area": 13420.883816135602,
+                "bounds_hi": [
+                    -106,
+                    131.5,
+                    159
+                ],
+                "bounds_lo": [
+                    -154,
+                    18.499999999999993,
+                    111
+                ],
+                "centroid": [
+                    -130,
+                    75,
+                    135
+                ],
+                "edges": 2,
+                "faces": 3,
+                "fins": 4,
+                "geometry": true,
+                "issues": [
+                ],
+                "loops": 4,
+                "max_edge_tolerance": 0,
+                "max_pcurve_tolerance": 0,
+                "max_vertex_tolerance": 0,
+                "regions": 2,
+                "sha256": "b65a96af43b29f090e1538bcac3854cf86f1108646e987d959bbf23ecaa1d324",
+                "sheet": false,
+                "shell_genera": [
+                    0
+                ],
+                "shells": 1,
+                "solid_regions": 1,
+                "surface_types": {
+                    "0": 2,
+                    "1": 1
+                },
+                "vertices": 2,
+                "volume": 117621.22895040191
+            },
+            "snapshot": {
+                "area": 13420.883816135602,
+                "bounds_hi": [
+                    -106,
+                    131.5,
+                    159
+                ],
+                "bounds_lo": [
+                    -154,
+                    18.499999999999993,
+                    111
+                ],
+                "centroid": [
+                    -130,
+                    75,
+                    135
+                ],
+                "edges": 2,
+                "faces": 3,
+                "fins": 4,
+                "geometry": true,
+                "issues": [
+                ],
+                "loops": 4,
+                "max_edge_tolerance": 0,
+                "max_pcurve_tolerance": 0,
+                "max_vertex_tolerance": 0,
+                "regions": 2,
+                "sha256": "b65a96af43b29f090e1538bcac3854cf86f1108646e987d959bbf23ecaa1d324",
+                "sheet": false,
+                "shell_genera": [
+                    0
+                ],
+                "shells": 1,
+                "solid_regions": 1,
+                "surface_types": {
+                    "0": 2,
+                    "1": 1
+                },
+                "vertices": 2,
+                "volume": 117621.22895040191
+            }
+        },
+        {
+            "exact_binary_equal": true,
+            "feature": 5,
+            "rebuilt": {
+                "area": 24784.656151388164,
+                "bounds_hi": [
+                    -19.999727997524644,
+                    115,
+                    159.09585816367044
+                ],
+                "bounds_lo": [
+                    -154.37285608401115,
+                    35,
+                    -15
+                ],
+                "centroid": [
+                    -72.39555111018578,
+                    75.00000000000006,
+                    76.08026138123027
+                ],
+                "edges": 6,
+                "faces": 4,
+                "fins": 12,
+                "geometry": true,
+                "issues": [
+                ],
+                "loops": 4,
+                "max_edge_tolerance": 0,
+                "max_pcurve_tolerance": 4.228172807864248e-08,
+                "max_vertex_tolerance": 0,
+                "regions": 2,
+                "sha256": "86850cdf4f6c918bceb20a268796f856106106a706918ca7c5be5df4dd633bd3",
+                "sheet": false,
+                "shell_genera": [
+                    0
+                ],
+                "shells": 1,
+                "solid_regions": 1,
+                "surface_types": {
+                    "0": 2,
+                    "7": 2
+                },
+                "vertices": 4,
+                "volume": 220147.42617574192
+            },
+            "snapshot": {
+                "area": 24784.656151388164,
+                "bounds_hi": [
+                    -19.999727997524644,
+                    115,
+                    159.09585816367044
+                ],
+                "bounds_lo": [
+                    -154.37285608401115,
+                    35,
+                    -15
+                ],
+                "centroid": [
+                    -72.39555111018578,
+                    75.00000000000006,
+                    76.08026138123027
+                ],
+                "edges": 6,
+                "faces": 4,
+                "fins": 12,
+                "geometry": true,
+                "issues": [
+                ],
+                "loops": 4,
+                "max_edge_tolerance": 0,
+                "max_pcurve_tolerance": 4.228172807864248e-08,
+                "max_vertex_tolerance": 0,
+                "regions": 2,
+                "sha256": "86850cdf4f6c918bceb20a268796f856106106a706918ca7c5be5df4dd633bd3",
+                "sheet": false,
+                "shell_genera": [
+                    0
+                ],
+                "shells": 1,
+                "solid_regions": 1,
+                "surface_types": {
+                    "0": 2,
+                    "7": 2
+                },
+                "vertices": 4,
+                "volume": 220147.42617574192
+            }
+        }
+    ]
+}

@@ -1,0 +1,23 @@
+#include <QtWidgets>
+#include <QStyleHints>
+#include <QGraphicsView>
+#include <iostream>
+#include <stdexcept>
+#include "cad_document_tabs.h"
+#include "forgeCad2026_gui.h"
+#include "cad_drawing_window.h"
+#include "forgeCad2026_dialogs_common.h"
+#include "forgeCad2026_application_theme.h"
+#include "forgeCad2026_storyboard.h"
+#include "cad_icons.h"
+#include "cad_menu.h"
+using namespace ForgeCad;
+static void require(bool value,const char *message){if(!value)throw std::runtime_error(message);}
+class ViewportInteractionTest {
+public:
+#include "test_document_theme_tabs.h"
+};
+int main(int argc,char **argv){
+ QApplication app(argc,argv);QCoreApplication::setOrganizationName("ForgeCAD-ThemeTabs-Isolated");QCoreApplication::setApplicationName("HeaderProbe");QTemporaryDir configuration;QSettings::setDefaultFormat(QSettings::IniFormat);QSettings::setPath(QSettings::IniFormat,QSettings::UserScope,configuration.path());qputenv("FORGECAD_RECOVERY_DIR",(configuration.path()+"/recovery").toUtf8());
+ try{ViewportInteractionTest::documentThemeTabsTests();return 0;}catch(const std::exception &e){std::cerr<<e.what()<<std::endl;return 1;}
+}

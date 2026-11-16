@@ -1,0 +1,9 @@
+{
+  "exit": 0,
+  "verified": [
+    "PRE4",
+    "UI7"
+  ],
+  "qt": "offscreen/generic/Fusion/noGLX",
+  "xdg": "/tmp/forgecad-review-followup-20261115/root/qt-env"
+}

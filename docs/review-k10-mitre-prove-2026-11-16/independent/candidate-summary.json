@@ -1,0 +1,21 @@
+{
+  "independently_compiled_export": {
+    "records": 8,
+    "cells": 734,
+    "maximum_upper_mm": 9.422179106173454e-10,
+    "all_pass": true
+  },
+  "tester_export": {
+    "records": 10,
+    "cells": 736,
+    "maximum_upper_mm": 5.000003783880121e-08,
+    "all_pass": true
+  },
+  "scope": "actual direct detail cuts, not public emitted Body fins",
+  "candidate_files": {
+    "fk_blend_mitre.cpp": "7e05c26ef53b01addcdcd8015be4932e0f2b11d989cc1cc40e7b4a6d9fdf5c8f",
+    "fk_blend_mitre.h": "cae49be81a524e952354fc267719d0e523dd985ff7a06587b988a8f80d202527",
+    "fk_blend_surface.cpp": "9b4b76711f75cd644b9a65e5f86299366135be47e90a5eb10660121927936afe",
+    "fk_blend_mitre.cpp.o": "fa53a9b6bc8c68680216aad5cfd1ae3d815517d47a3b2d2d6bd002469b4b4aa0"
+  }
+}

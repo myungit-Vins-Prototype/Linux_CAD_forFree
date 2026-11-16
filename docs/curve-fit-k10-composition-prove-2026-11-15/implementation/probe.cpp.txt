@@ -1,0 +1,35 @@
+#include "fk_offset.h"
+#include "fk_surface_tools.h"
+#include "fk_pcurve.h"
+#include "fk_body_check.h"
+#include <iostream>
+using namespace ForgeCad::Kernel;
+Body quad(BSplineSurfacePtr surface) {
+    std::vector<Vec3> vertices{surface->point(0, 0), surface->point(1, 0), surface->point(1, 1), surface->point(0, 1)};
+    std::vector<Body::BuildEdge> edges{{0, 1, std::make_shared<BSplineCurve<3>>(surface->vIsoCurve(0)), {0, 1}, 1e-9},
+                                       {1, 2, std::make_shared<BSplineCurve<3>>(surface->uIsoCurve(1)), {0, 1}, 1e-9},
+                                       {3, 2, std::make_shared<BSplineCurve<3>>(surface->vIsoCurve(1)), {0, 1}, 1e-9},
+                                       {0, 3, std::make_shared<BSplineCurve<3>>(surface->uIsoCurve(0)), {0, 1}, 1e-9}};
+    const auto line = [](Vec2 a, Vec2 b) {
+        return std::make_shared<BSplineCurve<2>>(1, std::vector<double>{0, 0, 1, 1}, std::vector<Vec2>{a, b});
+    };
+    Body::BuildFace face;
+    face.surface = std::move(surface);
+    face.loops = {{{0, true, line({0, 0}, {1, 0}), 1e-9},
+                   {1, true, line({1, 0}, {1, 1}), 1e-9},
+                   {2, false, line({0, 1}, {1, 1}), 1e-9},
+                   {3, false, line({0, 0}, {0, 1}), 1e-9}}};
+    return Body::buildSheet(vertices, edges, {face});
+}
+
+int main(){
+ const double c=.123456789,h=1e-5,amplitude=.01;
+ std::vector<double> k{0,0,c-h,c,c+h,1,1};
+ auto surface=[&](bool bump){std::vector<Vec3> p;for(int i=0;i<5;++i)for(int j=0;j<2;++j)p.push_back({k[i+1],double(j),bump&&i==2?amplitude:0});return std::make_shared<BSplineSurface>(1,1,k,std::vector<double>{0,0,1,1},5,2,p);};
+ auto source=quad(surface(false));auto target=surface(true);
+ try {auto result=editSheetPoles(source,{},1e-6,nullptr,target);double worst=0;for(auto f:result.fins()){auto &fin=result.fin(f);auto &e=result.edge(fin.edge);auto uv=fin.pcurve->point(c);worst=std::max(worst,distance(result.face(result.finFace(f)).surface->point(uv.x(),uv.y()),e.curve->point(c)));}std::cout<<"accepted worst_at_hidden_knot="<<worst<<" checkBody="<<checkBody(result,{true,true}).size()<<std::endl;}
+ catch(const std::exception &e){std::cout<<"throw "<<e.what()<<std::endl;}
+ auto uv=std::make_shared<BSplineCurve<2>>(1,std::vector<double>{0,0,1,1},std::vector<Vec2>{{0,0},{1,0}});
+ auto fit=fitCurve([&](double t){auto p=uv->point(t);return target->point(p.x(),p.y());},{0,1},uv->breakpoints({0,1}),2.5e-7);
+ std::cout<<"direct_fit_error="<<distance(fit->point(c),target->point(c,0))<<" sampled_adjacency="<<pcurveDeviation(*target,*fit,*uv,{0,1},64)<<std::endl;
+}

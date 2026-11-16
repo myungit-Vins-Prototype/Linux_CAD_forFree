@@ -1,0 +1,35 @@
+[
+  {
+    "file": "/tmp/boundary-review/tests/public-cap-baseline.log",
+    "calls": 0,
+    "tangent": 0,
+    "guide": 0,
+    "other": 0,
+    "end": [
+      "[  OK  ] BlendPlanarCapOnTangentSplineSupports",
+      "1/1 test superati"
+    ]
+  },
+  {
+    "file": "/tmp/boundary-review/tests/public-consumed-baseline.log",
+    "calls": 0,
+    "tangent": 0,
+    "guide": 0,
+    "other": 0,
+    "end": [
+      "[  OK  ] BlendConsumedTerminalReachesTangentSupport",
+      "1/1 test superati"
+    ]
+  },
+  {
+    "file": "/tmp/boundary-review/tests/public-open-baseline.log",
+    "calls": 2876,
+    "tangent": 2600,
+    "guide": 1420,
+    "other": 1456,
+    "end": [
+      "[  OK  ] BlendOpenChainsAtTangentSplineSeams",
+      "1/1 test superati"
+    ]
+  }
+]

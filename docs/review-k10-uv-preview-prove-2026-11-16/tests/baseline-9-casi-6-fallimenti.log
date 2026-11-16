@@ -1,0 +1,10 @@
+joined_polynomial source_residual=2.2204460492503131e-16 actual_residual=7.5000052078555424e-06 fin_budget=9.9999999999999995e-07 at=0.1008 fin=10 ratio=7.5000052078555424 FAIL emitted fin S(PC(t))-E(t) exceeds its published 3D tolerance
+joined_rational source_residual=2.2204460492503131e-16 actual_residual=1.7499999230161101e-05 fin_budget=9.9999999999999995e-07 at=0.1008 fin=7 ratio=17.499999230161102 FAIL emitted fin S(PC(t))-E(t) exceeds its published 3D tolerance
+joined_shift_trim source_residual=2.2204460492503131e-16 actual_residual=7.5000233120958715e-06 fin_budget=9.9999999999999995e-07 at=-2.1936 fin=10 ratio=7.5000233120958715 FAIL emitted fin S(PC(t))-E(t) exceeds its published 3D tolerance
+joined_reverse source_residual=3.3306690738754696e-16 actual_residual=7.500002441179765e-06 fin_budget=9.9999999999999995e-07 at=0.8992 fin=10 ratio=7.500002441179765 FAIL emitted fin S(PC(t))-E(t) exceeds its published 3D tolerance
+joined_pose source_residual=2.9457545650361182e-15 actual_residual=7.5000070081444888e-06 fin_budget=9.9999999999999995e-07 at=0.1008 fin=10 ratio=7.5000070081444887 FAIL emitted fin S(PC(t))-E(t) exceeds its published 3D tolerance
+joined_scale source_residual=2.2737367544323206e-13 actual_residual=0.0075000061038963395 fin_budget=0.001 at=0.1008 fin=10 ratio=7.5000061038963395 FAIL emitted fin S(PC(t))-E(t) exceeds its published 3D tolerance
+faces_trim_polynomial source_residual=2.2204460492503131e-16 actual_residual=1.3948072545286034e-10 fin_budget=9.9999999999999995e-07 at=0.51870000000000005 fin=2 ratio=0.00013948072545286034 PASS
+faces_trim_rational source_residual=2.2204460492503131e-16 actual_residual=2.8447197375492589e-10 fin_budget=9.9999999999999995e-07 at=0.10115 fin=10 ratio=0.00028447197375492593 PASS
+public_atomic_invalid_cancel PASS
+3 passed 6 failed

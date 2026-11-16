@@ -1,0 +1,105 @@
+#include <QApplication>
+#include <QSettings>
+#include <QTemporaryDir>
+#include <QMainWindow>
+#include <QTimer>
+#include <QPushButton>
+#include <QComboBox>
+#include <QDialogButtonBox>
+#include <QPlainTextEdit>
+#include <iostream>
+#include "forgeCad2026_dialogs.h"
+#include "forgeCad2026_dialogs_common.h"
+#include "forgeCad2026_viewport.h"
+#include "forgeCad2026_application_theme.h"
+#include "cad_datum.h"
+#include "cad_expression.h"
+#include "cad_document_tabs.h"
+#include <QLineEdit>
+
+int main(int argc,char **argv) {
+ QApplication app(argc,argv); QCoreApplication::setOrganizationName("ReviewTmp");QCoreApplication::setApplicationName("UiReview");
+ QTemporaryDir settings;QSettings::setDefaultFormat(QSettings::IniFormat);QSettings::setPath(QSettings::IniFormat,QSettings::UserScope,settings.path());
+ ForgeCad::setApplicationThemeMode(app,ForgeCad::ApplicationThemeMode::Light);
+ QMainWindow owner;auto *view=new CadViewport(&owner);owner.setCentralWidget(view);owner.resize(1000,800);
+ DocumentState doc;ExtrusionObject box;box.feature=BodyFeature::Primitive;box.name="Box";doc.extrusions.append(box);view->loadDocument(doc);
+ ExtrusionObject fill;fill.feature=BodyFeature::Pattern;fill.firstBody=0;
+ QTimer::singleShot(0,&owner,[&]{
+  auto *button=owner.findChild<QPushButton*>("fillPatternBoundaryPick");
+  if(!button){std::cout<<"MISSING fill button"<<std::endl;app.exit(2);return;}
+  button->click();std::cout<<"fill during pick="<<view->referencePicking()<<std::endl;
+  auto *panel=dynamic_cast<QDialog*>(button->window());
+  for(auto *d:owner.findChildren<QDialog*>())if(d->findChild<QPushButton*>("fillPatternBoundaryPick")){panel=d;break;}
+  panel->reject();
+ });
+ fillPatternDialog(&owner,view,"Fill",-1,fill,[](const auto&){return QString();});
+ std::cout<<"fill after cancel pick="<<view->referencePicking()<<" lock="<<view->interactionLocked()<<std::endl;
+ view->cancelReferencePick();
+ {
+ FunctionDialogPanel panel(&owner,false);panel.setObjectName("loftDialog");auto *form=panel.createScrollableForm();ExtrusionObject loft;
+ SurfaceEndControls controls(panel,*form,view,-1,loft);
+ auto *mode=panel.findChild<QComboBox*>("surfaceStartContinuity");auto *pick=panel.findChild<QPushButton*>("surfaceStartFacesPick");
+ mode->setCurrentIndex(3);pick->click();std::cout<<"surface end during pick="<<view->referencePicking()<<std::endl;
+ mode->setCurrentIndex(0);std::cout<<"surface end after G0 pick="<<view->referencePicking()<<" buttonEnabled="<<pick->isEnabled()<<" checked="<<pick->isChecked()<<std::endl;
+ }
+ {
+ FunctionDialogPanel panel(nullptr,false);panel.setPanelOpacity(100);panel.setWindowTitle("Contrast review");auto *form=panel.createScrollableForm();
+ auto *normal=new FunctionMessage("Messaggio standard",&panel);auto *status=new FunctionMessage("Scegli una faccia o un riferimento nella vista",&panel);status->setStyleSheet("color: #9fc6e8;");
+ form->addRow(normal);form->addRow(status);panel.show();app.processEvents();
+ std::cout<<"light normal="<<normal->palette().color(QPalette::Text).name().toStdString()<<" status="<<status->palette().color(QPalette::Text).name().toStdString()<<" panel="<<panel.panelColor().name().toStdString()<<std::endl;
+ panel.grab().save("/tmp/forgecad-review-20261115/ui/contrast-light.png");panel.hide();
+ }
+ {
+ QMainWindow other;auto *view2=new CadViewport(&other);other.setCentralWidget(view2);
+ FunctionDialogPanel a(&owner,false),b(&other,false);
+ QTimer::singleShot(0,&owner,[&]{
+  QTimer::singleShot(0,&other,[&]{
+    a.reject();std::cout<<"nested A finished visible="<<a.isVisible()<<" A locked="<<view->interactionLocked()<<" B visible="<<b.isVisible()<<std::endl;
+    b.reject();
+  });
+  runModeless(&other,view2,b);
+ });
+ runModeless(&owner,view,a);
+ std::cout<<"nested after B finished A locked="<<view->interactionLocked()<<std::endl;
+ }
+ {
+ view->setLengthUnit(LengthUnit::Centimeter);ExtrusionObject definition;definition.feature=BodyFeature::FillSurface;
+ QTimer::singleShot(0,&owner,[&]{
+  auto *d=owner.findChild<QDialog*>("fillDialog");
+  for(auto *spin:d->findChildren<QDoubleSpinBox*>()){
+    auto *box=dynamic_cast<ForgeCad::ExpressionSpinBox*>(spin);
+    std::cout<<"fill coefficient name="<<box->objectName().toStdString()<<" isLength="<<box->isLengthMeasurement()<<" text="<<box->text().toStdString()<<" typed1="<<box->valueFromText("1")<<std::endl;
+  }
+  d->reject();
+ });
+ fillDialog(&owner,view,"Fill surface",-1,definition,[](const auto&){return QString();});
+ view->setLengthUnit(LengthUnit::Millimeter);
+ }
+ {
+ FunctionDialogPanel panel(&owner,false);GeometryReferenceList list(panel,view,"multiple");list.setSelectionMode(QAbstractItemView::ExtendedSelection);
+ GeometryRef a;a.kind=5;a.index=0;a.point.subshape=0;GeometryRef b=a;b.point.subshape=1;
+ list.setReferences({a,b});list.setCurrentRow(1);list.item(0)->setSelected(true);
+ std::cout<<"multiselect before refresh="<<list.selectedItems().size()<<std::endl;
+ list.setReferences({a,b});std::cout<<"multiselect after same references="<<list.selectedItems().size()<<std::endl;
+ }
+ {
+ ForgeCad::DocumentTabsWindow host;
+ auto *docA=new QMainWindow;auto *docB=new QMainWindow;
+ docA->setProperty("documentWorkspace",true);docB->setProperty("documentWorkspace",true);
+ auto *va=new CadViewport(docA);auto *vb=new CadViewport(docB);docA->setCentralWidget(va);docB->setCentralWidget(vb);
+ host.addDocument(docA,false);host.addDocument(docB,false);host.activateDocument(docA);
+ FunctionDialogPanel pa(docA,false),pb(docB,false);
+ QTimer::singleShot(0,&host,[&]{
+  host.activateDocument(docB);
+  QTimer::singleShot(0,&host,[&]{
+    host.activateDocument(docA);pa.reject();
+    std::cout<<"tabs A cancelled hidden="<<pa.isHidden()<<" A locked="<<va->interactionLocked()<<" B pending="<<!pb.isHidden()<<std::endl;
+    host.activateDocument(docB);pb.reject();
+  });
+  runModeless(docB,vb,pb);
+ });
+ runModeless(docA,va,pa);
+ std::cout<<"tabs after B cancelled A locked="<<va->interactionLocked()<<std::endl;
+ }
+ view->clearPreview();return 0;
+}

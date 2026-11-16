@@ -1,6 +1,6 @@
 # CLAUDE.md — memoria operativa ForgeCAD
 
-Aggiornato **14 novembre 2026**.
+Aggiornato **16 novembre 2026**.
 
 [Cronologia](docs/history/claude-2026-11-02.md); [stato prima di Part23](docs/history/claude-prima-part23-2026-11-14.md).
 
@@ -40,7 +40,7 @@ CAD parametrico 2D/3D Linux/macOS, C++17/Qt6/OpenGL3.3 Core. Finestra storica `P
 | Schizzi e vincoli | `cad_types.h`, `cad_constraints*`, `cad_sketch_refs*`, `cad_expression*`: schizzi 2D/3D, cerchio3/asole/punti, polilinee, quote e solver, snap univoci e riferimenti associativi a piani/assi/bordi/curve. Cache automatiche nascoste; conversioni esplicite conservate; costruzione fuori modifica opzionale. Le entità locali visibili hanno priorità nella quotatura. |
 | Solidi e superfici | `cad_forge*`, `kernel/fk_*`: primitive, estrusione (anche fino al prossimo corpo), rivoluzione, sweep/loft, booleane, sformo, svuotamento/spessore, filettatura, cucitura, taglio/estensione, reti U/V e poli NURBS. Estendi apre il pannello prima della scelta dei bordi. Raccordi costanti, conici, variabili e tra facce; percorsi tangenti con leggi indipendenti e maniglie R. |
 | Storia e genealogia | `cad_history*`, `cad_element_names*`, viewport e storyboard: schizzi/piani come passi autonomi, riordino, rollback, soppressione, riparazione e Undo/Redo. Specchi/ripetizioni sono un evento con corpi separati ed esclusioni; conservano identità e dipendenze. |
-| Documenti/revisioni | `cad_document_io*`, `cad_document_read*`, `cad_native_revisions*`, `cad_workspace*`: `.prt` con firma FCAD, formato 69 (contorni apparenti associativi; 68:nomi sorgenti; 67:precisione; 66:piani; 65: unione loft; 64: corrispondenze; 63: variazioni quote); Zstandard dal 56 e lettura legacy zlib. Definizione e cache B-rep/mesh distinte, salvataggio atomico, recupero, consultazione concorrente e lock della modifica. Check-out/check-in, ripristino, rilascio coordinato e recupero catalogo. |
+| Documenti/revisioni | `cad_document_io*`, `cad_document_read*`, `cad_native_revisions*`, `cad_workspace*`: `.prt` con firma FCAD, formato 70 (ellisse per estremi; 69:contorni apparenti associativi; 68:nomi sorgenti; 67:precisione; 66:piani; 65: unione loft; 64: corrispondenze; 63: variazioni quote); Zstandard dal 56 e lettura legacy zlib. Definizione e cache B-rep/mesh distinte, salvataggio atomico, recupero, consultazione concorrente e lock della modifica. Check-out/check-in, ripristino, rilascio coordinato e recupero catalogo. |
 | Tavole 2D | `cad_drawing_*`: `.drw`, viste proiettate/ausiliarie, sezioni composte/locali con contorno e profondita’, centri sui bordi scelti, dettagli e viste interrotte, più fogli, scale foglio/vista, quote e tolleranze, datum/GD&T, badge persistenti, rugosità Ra/Rz e PDF vettoriale. Agganci alle geometrie esatte e nomi genealogici; portabilità senza cache del modello nei casi migrabili. |
 | Scambio e analisi | `kernel/fk_step*`, `fk_iges*`, `fk_exchange*`, `fk_mass*`: STEP/IGES propri, esportazione STL/OBJ, misure/massa, zebra e curvatura. Parsing numerico indipendente dal locale, controlli di cicli/profondità e dimensioni dei dati importati. |
 
@@ -70,7 +70,7 @@ ctest --test-dir forgecad-release --output-on-failure
   [Procedura](docs/architecture/README.md), dettagli permanenti in `AGENTS.md`.
 - Approfondimenti pertinenti: [roadmap](docs/roadmap.md), [schizzi](docs/sketch-tools.md),
   [storia](docs/storyboard-history.md), [tavole/revisioni](docs/drawing-revisions-study.md),
-  [prestazioni](docs/viewport-performance.md), [review corrente](docs/code-review-2026-11-02.md). Rapporti datati e archivio
+  [prestazioni](docs/viewport-performance.md), [review corrente](docs/code-review-2026-11-15.md). Rapporti datati e archivio
   conservano riproduttori, misure e prove storiche.
 
 ## Limiti ancora utili alla prosecuzione
@@ -108,74 +108,104 @@ ctest --test-dir forgecad-release --output-on-failure
 
 ## Ultimi interventi — esiti consolidati
 
-**14/11 — Schede documenti.** Prima commit unico `2b180e4` di tutti gli interventi precedenti,
-push `origin/main` verificato. Implementati contenitore unico 3D/2D, posizione alto/basso
-persistente (Visualizza > Schede documenti), riordino, deduplica percorsi, aperture/revisioni/recupero;
-comandi, unita', Undo, pannelli e viewport isolati, chiusura con preflight e arresto asincrono.
-App completa compilata; harness app offscreen/Wayland PASS, copie Part23/CT0578:35/35+47/47quote,
-80cambi/2594ms, contesti GL e originali invariati. Runner completo:43/43CTest e Wayland PASS.
-Mappa722/10384/352TU, zero diagnostica, check/HTML e chiamate bidirezionali PASS.
-Focus desktop autonomo fallisce anche sul precedente HEAD; dettagli e prove nel
-[rapporto](docs/schede-documenti-2026-11-14.md). Schede consolidate e pubblicate su `main`
-su richiesta dell’utente; diff e mappa ricontrollati PASS.
+**16/11 — Verifica CI GitHub prima del commit/push.**
+Quattro run: build Linux/macOS PASS, unico fail WholeRim/K12; stesso test/fixture
+invariati, ora8/8cavity e28/28CTest PASS. Clang14TU PASS; remoto in attesa.
+[Diagnosi/prove](docs/ci-verifica-2026-11-16.md).
 
-**14/11 — CT0578, icone e template.** Cache curve/piani e dettagli ritagliati prima della visibilita’:
-viste11,83→8,33s, totale17,96→14,54s; restano~6s di genealogia;12viste/47quote e originali invariati.
-Icone 2D distinte. `File > Template dei fogli`: cartiglio/testi/campi/logo/stile, .drwt, default per
-formato/orientamento, nuovi fogli/formato iniziale e applicazione con Undo; foglio30 condizionale.
-App/runner,34/34CTest e3 ripetuti dopo codec, Wayland/PDF/default reali PASS.
-[Prove, tempi, immagini e hash](docs/ct0578-tavole-template-2026-11-14.md).
+**16/11 — K10 continuazioni verificate con tre agenti Sol.**
+Parametro razionale/ISO e fin: app/28CTest/15mirati/sanitizer/Wayland/Fraction PASS.
+Pubbliche3/3 legacy, zero ISO certificate. K10:24/24parziali,31rilievi invariati;
+Newton/unsupported/carrier globale runtime aperti. [Prove/limiti](docs/review-k10-boundary-2026-11-16.md).
 
-**14/11 — Tavole 2D.** Centri/assi selettivi, raggio mobile/leader corto, sezioni locali esatte.
-Foglio29/documento14, assi/note14 corretti; firma indipendente da visibilita'/cache parziali.
-Cache16 migra specchi di funzione/derivati delle copie di lavoro; check-in/altri snapshot preservati.
-Recupero29/29Part23 su B-rep identico,47/47CT0578;8/8persistenza e3cicli isolati PASS.
-Migrazione: riavvio/salvataggio modello+tavola. Falso blocco sezioni quotate corretto, rimozione protetta.
-Guida zero/taglio su ortogonale/appoggio; snap esatti a estremi/medi/centri/quadranti/bordi,
-indicatore, Tab/Alt e profili riusati, senza ricalcolo dei tagli ai valori. App/runner completi,35/35CTest2D e Wayland PASS; ultimo Part23:
-30/30quote dopo Applica/salva/riapri, originali invariati. Mappa718/10333/351TU,zero diagnostica/check/HTML PASS.
-Riavviare app; vista > Inserisci > Sezione locale. Avvisi contorni/piano locale conservati.
-[Cache/agganci](docs/part23-quote-associative-cache-2026-11-14.md);
-[guida/snap e prove](docs/sezione-locale-snap-profondita-2026-11-14.md);
-[precedenti e limiti](docs/history/claude-prima-guida-profondita-2026-11-14.md).
+**16/11 — K10 mitre ISO verificate con tre agenti Sol.**
+App/27CTest/13mirati/19sanitizer/Wayland/Fraction PASS; fin sintetiche reali.
+Pubbliche16/16 senzaISO; diagonali/Newton campionati. K10:23/24parziali+1aperto.
+[Prove/limiti](docs/review-k10-mitre-2026-11-16.md).
 
-**14/11 — Part23 raccordi e storyboard.** Split/SplitA, guide corte/ciclo, contorni piani e area:
-R21:102,8s→63–65ms; due contorni R2:170facce/452edge, Wayland/anteprima/codec PASS.
-Nuovo Part23:23feature; E17 sincronizzato col piano dello schizzo, appoggi nominati persi/ambigui
-rifiutati senza spostare frame. Cambio storico non riprodotto. Rebuild/riapertura stabili; R23:kernel509ms,
-UI624ms,riuso0ms; area originale>100s. Storyboard:11,7s→266ms/stesse38facce con box storici.
-App/runner/17CTest/Wayland PASS; generale fermo alla cache legacy di Applicatore. Cavita'7/8 con
-fallimento gia' presente; dettagli/kernel test precedenti e mappa699/10105 conservati nel
-[rapporto](docs/part23-raccordi-2026-11-14.md) e [archivio completo](docs/history/claude-prima-tavole2d-2026-11-14.md).
+**16/11 — K10 giunti estensioni, tre agenti Sol.**
+Via tangente continua/cap fisso; app/22CTest/29sanitizer/41Sheet/Wayland/Fraction PASS.
+Newton trasverso aperto. [Prove/limiti](docs/review-k10-sheet-join-2026-11-16.md).
 
-**13/11 — Contorno apparente proiettato.** Richiesta: bordo immaginario della parte raggiata proiettato sul piano,
-non sezione. Kernel analitico e trim B-rep; faccia/ramo persistenti, cache snap, Quota, etichetta sorgente e codec69.
-App/runner completi, 18/18CTest e2avvii Wayland/GL PASS: geometria/trim, mouse, vincolo unico, raggio,
-riapertura/Undo e piano esterno al corpo. Mappa695/10025/339TU, zero errori; check e HTML bidirezionale PASS.
-Copia KnifeHandle: cache449ms, creazione3924ms, mouse/Undo/codec PASS, SHA originale invariato.
-Nessun CAD originale modificato; riaprire l'app. Limiti: NURBS e contorni toroidali obliqui non implementati.
-[Dettagli e limiti](docs/schizzi-contorno-apparente-2026-11-13.md).
-Pubblicazione richiesta su `main`: consolidati gli interventi del 13/11; diff e mappa ricontrollati PASS.
+**16/11 — K10 Mapping/Quilt UV, tre agenti Sol.**
+Plane/offset:app/26CTest/Wayland/21sanitizer/Fraction80fin PASS; altri carrier campionati.
+[Prove/limiti](docs/review-k10-mapping-uv-2026-11-16.md).
 
-Riferimenti/anteprime13/11: esiti e limiti nell’[archivio prima delle schede](docs/history/claude-prima-schede-2026-11-14.md).
+**16/11 — UI8 tema/schede, tre agenti Sol.**
+Palette/QSS e menuTema2D:app/21CTest/Wayland/API PASS; carta/colori invariati,
+LSan escluso. [Prove](docs/review-theme-tabs-2026-11-16.md).
 
-**12/11 — Applicatore4.** Raccordi: fix SplitA/mitre/NURBS; app/kernel/storia/mappa PASS.
-R22/R23=0,20 e R22=0,30/R23=0,14:19funzioni PASS; massimo aperto. [Prove](docs/applicatore4-raccordi-2026-11-12.md).
-Storyboard: fix fusioni/cache/rollback. App/19CTest/CAD19/codec/rebuild/GUI/mappa PASS.
-`ce84735` storyboard; altri nel commit corrente. [Prove](docs/applicatore4-storyboard-2026-11-12.md).
-Pubblicazione: build completa/25CTest/62Blend/38History/5Unify/NURBS6/mappa PASS.
+**16/11 — K12 cavità corretto con tre agenti Sol.**
+R0,5:quarto vincolo/fit minimo e continuazioneU; supporti e budget invariati.
+App/Wayland/34CTest,8varianti/6regressioni/sanitizer4TU/Fraction PASS;
+audit734fin campionato. K10 resta19/24parziali+5aperti.
+[Rapporto/prove/limiti](docs/review-blend-cavity-2026-11-16.md).
 
-**11/11 — Poli NURBS.** Hook e sfera: jet G1/G2 interni, fasce affini, schema16; app/runner,
-20+40kernel/11CTest/Wayland/codec e mappa PASS, `ddc02f9` pubblicato. Refit incompatibile rifiutato.
-CI42982288794 era in corso; selftest cattura ribbon falliva anche prima; Hook cambiato esternamente.
-[Prove](docs/poli-nurbs-sfera-G1-G2-2026-11-11.md), [storico completo](docs/history/claude-prima-hover-riferimenti-2026-11-13.md).
+**16/11 — K10 Helix e cinque orfane verificati con tre agenti Sol.**
+Helix trasformate: limite continuo e poli Qt ricontrollati; due alias rifiutati.
+Percorso quintico C2 conservato; rimosse5private,17API aperte. App/Wayland,
+13Qt/sanitizer3TU,37guardie,Fraction8varianti/624campate e11export PASS.
+CTest20/21 poi risolto da K12 sopra; mappa772/11165/385 PASS.
+[Rapporto e limiti](docs/review-k10-helix-orphans-2026-11-16.md).
 
-Bottle/Shower/memoria: prove, esiti e limiti conservati nell’[archivio prima di CT0578](docs/history/claude-prima-ct0578-template-2026-11-14.md).
+**16/11 — K10 cucitura e PRE8 verificati con tre agenti Sol.**
+Plane rimappato: parametro originale e fin effettive via genealogia,cap invariato;
+Smusso aggiorna anteprima dopo Tab.29rilievi;app/37CTest/12sanitizer/90statiUI
+Wayland/Fraction64fin e mappa PASS. Matching/cap sorgente campionati restano.
+[Prove e limiti](docs/review-k10-sew-preview-2026-11-16.md).
 
-**11/11 — KnifeHandle.** Blocco cache riferimenti:191feature/13521edge; solver escluso.
-Proiezione diretta B-rep/genealogia e valenze in una scansione:0,34–0,40s contro>45s.
-App/12CTest/Wayland/Undo/Redo/codec/mappa/check/HTML PASS; originale invariato. Riaprire app.
-[Prove e storico](docs/knifehandle-schizzo-faccia-2026-11-11.md).
+UV/PRE7: due ricostruzioni Plane e selezione Mapping/Pattern corrette;
+app/30CTest,10sanitizer e79stati UI Wayland,192fin Fraction/mappa PASS.
+[Prove/limiti](docs/review-k10-uv-preview-2026-11-16.md),
+[memoria](docs/history/claude-prima-k10-uv-preview-2026-11-16.md).
 
-Quote2D06/11: snap/18CTest/Wayland, `56ae114` pubblicato: [prove](docs/ricollegamento-quote-2d-2026-11-06.md).
-Dettagli: [archivio](docs/history/claude-prima-multifaccia-poli-2026-11-09.md).
+**16/11 — Supporto.prt, K11 corretto con tre agenti Sol.**
+Corpo2/Estrusione3–Corpo3/Loft6: clipping asimmetrico corretto con genealogia,
+bound continuo e retry atomico; coppia nei due ordini/tre corpi PASS.
+App/24CTest/38Boolean/424Release/78sanitizer/15retry/65storia PASS.
+output/Supporto_unito.prt con nuovo UUID; input prove SHA79887e91,
+originale successivo SHA70e4ec5c preservato, non ricertificato. Mappa PASS.
+[Prove/limiti](docs/supporto-booleana-2026-11-16.md);27rilievi alla consegna storica.
+
+PRE5/PRE6/UI2:11runner comuni,setup/footer/chiusura; app/24CTest/Wayland PASS.
+[Prove e limiti](docs/review-preview-unification-2026-11-16.md).
+
+Ellisse per estremi: tre clic, quattro quote/vincoli, centro derivato e codec70.
+App/24CTest/sanitizer/Wayland/GL/mappa PASS. [Uso e limiti](docs/ellisse-estremi-2026-11-16.md).
+
+K2 in produzione:app/54kernel/8CTest/22sanitizer PASS; risorsefinite possono rifiutarecurvevalide.
+[Prove/limiti](docs/sweep-k2-completamento-2026-11-15.md).
+
+15/11 — Altri14rilievi corretti con agenti Sol.
+K4/K5/K6,S1/S2,UI1–6,PRE1–3: sweep/loft/lamine,input,picker eanteprime.
+App/74testkernel(75esecuzioni)/34CTest,mappa724/10429/353TU PASS;fixture
+confrontodouble baseline corretto,nessun nuovoGL. [Prove/limiti](docs/review-fix-next-2026-11-15.md).
+
+15/11 — Sweep K1/K3 corretti con due agenti GPT-6.1 Sol.
+Frame ortonormale e cuciture UV: app/runner,42 test kernel e16CTest PASS; mappa724/10414 PASS.
+K4 e K2 poi corretti; riferimenti sopra. [Rapporto e prove](docs/sweep-review-fix-2026-11-15.md).
+
+Cache M1/M2: snapshot/CAS, copie atomiche e shared_ptr; app/47CTest/5ASan/TSan PASS,
+runner325 poi timeout300s,nessun GL. [Prove](docs/cache-bspline-2026-11-15.md); dettagli in memoria precedente.
+
+Review iniziale con quattro agenti (15/11): 19difetti e22candidate orfane;
+45test mirati,16Sweep,mappa723/10397 PASS; nessunleak permanente certificato.
+Stato eprove storiche nel [rapporto](docs/code-review-2026-11-15.md) e nella
+[memoria conservata](docs/history/claude-prima-preview-unification-2026-11-16.md).
+
+Sweep/vincoli15/11:96casi,codec/Undo,app/mappa; volumeNURBS poi correttoK3.
+[Geometria](docs/exhaust-mainfold-sweep-2026-11-15.md),
+[solver](docs/vincoli-tangenza-transitiva-2026-11-15.md); dettagli in memoria precedente.
+
+Schede14/11: [prove/limiti](docs/schede-documenti-2026-11-14.md), [memoria](docs/history/claude-prima-ellisse-estremi-2026-11-16.md).
+
+CT0578/tavole14/11: codec,app,Wayland/PDF eCTest PASS;
+[prestazioni e template](docs/ct0578-tavole-template-2026-11-14.md),
+[agganci](docs/part23-quote-associative-cache-2026-11-14.md),
+[sezioni e snap](docs/sezione-locale-snap-profondita-2026-11-14.md).
+Esiti,limiti eprove estese nella [memoria conservata](docs/history/claude-prima-k10-edge-offset-2026-11-16.md).
+
+Archivi precedenti: [Part23/raccordi/storyboard](docs/history/claude-prima-review-next-2026-11-15.md),
+[contorno apparente](docs/history/claude-prima-sweep-review-fix-2026-11-15.md),
+[riferimenti/anteprime](docs/history/claude-prima-schede-2026-11-14.md),
+[Applicatore4, poli, memoria, KnifeHandle e quote2D](docs/history/claude-prima-review-2026-11-15.md).

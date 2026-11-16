@@ -1,0 +1,3 @@
+MULTITOOL 0 booleanOperation: risultato non chiuso (Body::build: l'edge 3 non ha due fin opposte)
+SEQUENTIAL AB 1 booleanOperation: risultato non chiuso (Body::build: l'edge 3 non ha due fin opposte)
+SEQUENTIAL ABC 0 L'operazione booleana non e' riuscita: booleanOperation: risultato non chiuso (Body::build: l'edge 3 non ha due fin opposte)

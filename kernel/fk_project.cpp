@@ -11,13 +11,67 @@
 #include "fk_boolean.h"
 #include "fk_classify.h"
 #include "fk_curve_algo.h"
+#include "fk_curve_fit_bounds.h"
 #include "fk_curve_ops.h"
 #include "fk_offset.h"
 #include "fk_parallel.h"
 #include "fk_surface_algo.h"
 
 namespace ForgeCad::Kernel {
+
+struct ProjectedFitCertificate {
+    struct Span {
+        std::size_t firstPole;
+        Interval sourceRange;
+        CurveFitErrorBound bound;
+        double tolerance;
+    };
+    std::shared_ptr<const BSplineCurve<3>> curve;
+    std::vector<Span> spans;
+    bool hasLegacy = false;
+    double legacyDeviation = 0.0;
+};
+
 namespace {
+
+// Validate the ACTUAL output controls. Every proved span is an isolated
+// polynomial cubic, with an affine normalized map to its original range.
+// Knot shifts may round differently at each endpoint; no exact shift is
+// assumed and no rounded intermediate curve becomes an oracle.
+double validateProjectedFit(const std::shared_ptr<const BSplineCurve<3>> &curve,
+                             const std::shared_ptr<const ProjectedFitCertificate> &certificate) {
+    if(!certificate) return 0;
+    if(!curve || certificate->curve!=curve || curve->degree()!=3 || curve->isRational())
+        throw std::domain_error("joinProjectedPieces: provenienza del fit non coerente");
+    const auto &poles=curve->poles();
+    const auto &knots=curve->knots();
+    double worst=0;
+    for(const auto &span:certificate->spans) {
+        cancellationPoint();
+        const auto i=span.firstPole;
+        if(i>=poles.size() || poles.size()-i<4 || knots.size()-i<7
+            || knots[i+1]!=knots[i+3] || knots[i+2]!=knots[i+3]
+            || knots[i+4]!=knots[i+5] || knots[i+4]!=knots[i+6]
+            || !(knots[i+3]<knots[i+4]))
+            throw std::domain_error("joinProjectedPieces: cubica finale non isolabile");
+        const double error=span.bound(span.sourceRange,{poles[i],poles[i+1],poles[i+2],poles[i+3]});
+        if(!std::isfinite(error) || error<0 || error>span.tolerance)
+            throw std::domain_error("joinProjectedPieces: tolleranza del fit finale non certificata");
+        worst=std::max(worst,error);
+    }
+    return worst;
+}
+
+std::shared_ptr<const ProjectedFitCertificate> projectedFitCertificate(
+    const std::shared_ptr<const BSplineCurve<3>> &curve,const CurveFitErrorBound &bound,double tolerance) {
+    auto certificate=std::make_shared<ProjectedFitCertificate>();
+    certificate->curve=curve;
+    for(std::size_t i=0;i+3<curve->poles().size();i+=3) {
+        cancellationPoint();
+        certificate->spans.push_back({i,{curve->knots()[i+3],curve->knots()[i+4]},bound,tolerance});
+    }
+    return certificate;
+}
 
 // Soluzione di un sistema 3 x 3 a colonne a, b, c (regola di Cramer).
 bool solve3(const Vec3 &a, const Vec3 &b, const Vec3 &c, const Vec3 &r, double x[3]) {
@@ -85,7 +139,7 @@ EdgeFoot nearestFaceEdge(const Body &body, FaceId face, const Vec3 &p) {
 class Projector {
 public:
     Projector(const Body &body, const Curve<3> &curve, const Interval &range, const Vec3 &direction, const ProjectionOptions &options)
-        : body_(body), curve_(curve), range_(range), d_(normalized(direction)), options_(options), index_(body) {
+        : body_(body), curve_(curve), range_(range), d_(normalized(direction)), originalDirection_(direction), options_(options), index_(body) {
         scale_ = std::max(1.0, index_.bounds.diagonal());
     }
 
@@ -176,7 +230,7 @@ private:
     const Body &body_;
     const Curve<3> &curve_;
     Interval range_;
-    Vec3 d_;
+    Vec3 d_, originalDirection_;
     ProjectionOptions options_;
     RayFaceIndex index_;
     double scale_ = 1.0;
@@ -446,7 +500,16 @@ std::vector<ProjectedPiece> Projector::finish() {
         for (double b : breaks_)
             if (b > lo && b < hi) inner.push_back(b);
         double deviation = 0.0;
-        piece.curve = fitCurve(f, Interval{lo, hi}, inner, options_.tolerance, &deviation);
+        CurveFitErrorBound bound;
+        const Surface &surface=*body_.face(firstRun.face).surface;
+        bool monoPlane=surface.type()==SurfaceType::Plane;
+        for(std::size_t r=group.firstRun;r<=group.lastRun;++r)
+            monoPlane=monoPlane && runs[r].face==firstRun.face;
+        if(monoPlane)
+            bound=detail::planeProjectionErrorBound(curve_,{lo,hi},static_cast<const Plane &>(surface),originalDirection_);
+        piece.curve = bound ? fitCurveCertified(f,{lo,hi},inner,options_.tolerance,bound,&deviation)
+                            : fitCurve(f,{lo,hi},inner,options_.tolerance,&deviation);
+        if(bound) piece.fitCertificate=projectedFitCertificate(piece.curve,bound,options_.tolerance);
         piece.range = Interval{lo, hi};
         piece.deviation = deviation;
         // Estremi: sull'edge del passaggio, o sul bordo se la curva vi finisce.
@@ -471,20 +534,35 @@ std::vector<ProjectedPiece> Projector::finish() {
 
 // Cubiche (anche con nodi interni di molteplicita' qualsiasi) concatenate: il
 // parametro della seconda continua dalla fine della prima, nodo triplo nel giunto.
-std::shared_ptr<const BSplineCurve<3>> concatenate(const std::vector<std::shared_ptr<const BSplineCurve<3>>> &curves) {
+ProjectedChain concatenate(const std::vector<ProjectedChain> &curves) {
     std::vector<double> knots;
     std::vector<Vec3> poles;
+    std::vector<std::size_t> starts;
+    auto certificate=std::make_shared<ProjectedFitCertificate>();
     double offset = 0.0;
     for (std::size_t k = 0; k < curves.size(); ++k) {
-        const BSplineCurve<3> &c = *curves[k];
+        cancellationPoint();
+        const BSplineCurve<3> &c = *curves[k].curve;
         if (c.degree() != 3 || c.isRational()) throw std::domain_error("joinProjectedPieces: tratto non cubico");
+        const std::size_t firstPole=k==0 ? 0 : poles.size()-1;
+        starts.push_back(firstPole);
+        if(curves[k].fitCertificate) {
+            if(curves[k].fitCertificate->curve!=curves[k].curve)
+                throw std::domain_error("joinProjectedPieces: provenienza del fit non coerente");
+            if(certificate->spans.size()+curves[k].fitCertificate->spans.size()>200000)
+                throw std::domain_error("joinProjectedPieces: budget provenienza esaurito");
+            for(auto span:curves[k].fitCertificate->spans) {
+                span.firstPole+=firstPole;
+                certificate->spans.push_back(std::move(span));
+            }
+        }
         const std::vector<double> &ck = c.knots();
         const double shift = k == 0 ? 0.0 : offset - ck.front();
         if (k == 0) {
             knots.insert(knots.end(), ck.begin(), ck.end() - 1);
             poles = c.poles();
         } else {
-            // Giunto: l'ultimo polo della precedente e il primo di questa (uguali entro la tolleranza) diventano la loro media.
+            // The final certificate includes BOTH controls replaced by this mean.
             poles.back() = 0.5 * (poles.back() + c.poles().front());
             for (std::size_t i = 4; i + 1 < ck.size(); ++i) knots.push_back(ck[i] + shift);
             poles.insert(poles.end(), c.poles().begin() + 1, c.poles().end());
@@ -492,7 +570,25 @@ std::shared_ptr<const BSplineCurve<3>> concatenate(const std::vector<std::shared
         offset = ck.back() + shift;
     }
     knots.push_back(offset);
-    return std::make_shared<BSplineCurve<3>>(3, std::move(knots), std::move(poles));
+    ProjectedChain result;
+    result.curve=std::make_shared<BSplineCurve<3>>(3,std::move(knots),std::move(poles));
+    certificate->curve=result.curve;
+    for(std::size_t k=0;k<curves.size();++k) {
+        cancellationPoint();
+        const auto &input=curves[k];
+        if(input.fitCertificate && !input.fitCertificate->hasLegacy) continue;
+        certificate->hasLegacy=true;
+        const auto &original=input.curve->poles();
+        const auto &final=result.curve->poles();
+        const double movement=std::max(distance(original.front(),final[starts[k]]),
+                                      distance(original.back(),final[starts[k]+original.size()-1]));
+        const double previous=input.fitCertificate ? input.fitCertificate->legacyDeviation : input.deviation;
+        certificate->legacyDeviation=std::max(certificate->legacyDeviation,previous+movement);
+    }
+    const double certified=validateProjectedFit(result.curve,certificate);
+    result.deviation=std::max(certified,certificate->legacyDeviation);
+    if(!certificate->spans.empty()) result.fitCertificate=std::move(certificate);
+    return result;
 }
 
 }
@@ -541,21 +637,32 @@ std::vector<std::vector<ProjectedPiece>> projectCurves(const Body &body, const s
 
 std::vector<ProjectedChain> joinProjectedPieces(const std::vector<ProjectedPiece> &pieces, double tolerance) {
     std::vector<ProjectedChain> chains;
-    std::vector<std::shared_ptr<const BSplineCurve<3>>> current;
+    std::vector<ProjectedChain> current;
     Vec3 currentEnd;
     auto flush = [&]() {
         if (current.empty()) return;
-        ProjectedChain chain;
-        chain.curve = current.size() == 1 ? current.front() : concatenate(current);
+        ProjectedChain chain=current.size()==1 ? current.front() : concatenate(current);
+        if(current.size()==1 && chain.fitCertificate)
+            chain.deviation=std::max(validateProjectedFit(chain.curve,chain.fitCertificate),chain.fitCertificate->legacyDeviation);
         const Interval domain = chain.curve->domain();
         chain.closed = distance(chain.curve->point(domain.lo), chain.curve->point(domain.hi)) <= tolerance;
-        chains.push_back(chain);
+        chains.push_back(std::move(chain));
         current.clear();
     };
     for (const ProjectedPiece &piece : pieces) {
+        ProjectedChain input;
+        input.curve=piece.curve;
+        input.deviation=piece.deviation;
+        input.fitCertificate=piece.fitCertificate;
+        if(piece.fitCertificate) {
+            if(!piece.curve || piece.range.lo!=piece.curve->domain().lo || piece.range.hi!=piece.curve->domain().hi)
+                throw std::domain_error("joinProjectedPieces: intervallo del fit certificato modificato");
+            if(piece.fitCertificate->curve!=piece.curve)
+                throw std::domain_error("joinProjectedPieces: provenienza del fit non coerente");
+        }
         const Vec3 start = piece.curve->point(piece.range.lo);
         if (!current.empty() && distance(start, currentEnd) > tolerance) flush();
-        current.push_back(piece.curve);
+        current.push_back(std::move(input));
         currentEnd = piece.curve->point(piece.range.hi);
     }
     flush();
@@ -564,11 +671,10 @@ std::vector<ProjectedChain> joinProjectedPieces(const std::vector<ProjectedPiece
         const ProjectedChain &first = chains.front(), &last = chains.back();
         if (!first.closed && !last.closed
             && distance(last.curve->point(last.curve->domain().hi), first.curve->point(first.curve->domain().lo)) <= tolerance) {
-            ProjectedChain joined;
-            joined.curve = concatenate({last.curve, first.curve});
+            ProjectedChain joined=concatenate({last,first});
             const Interval domain = joined.curve->domain();
             joined.closed = distance(joined.curve->point(domain.lo), joined.curve->point(domain.hi)) <= tolerance;
-            chains.front() = joined;
+            chains.front() = std::move(joined);
             chains.pop_back();
         }
     }

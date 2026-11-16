@@ -1,0 +1,38 @@
+#include "fk_offset.h"
+#include "fk_body_check.h"
+#include "fk_extrude.h"
+#include "fk_primitives.h"
+#include <algorithm>
+#include <iostream>
+using namespace ForgeCad::Kernel;
+int main(){int checks=0,failed=0;
+ const std::vector<Frame3> frames{Frame3(),Frame3(Vec3(1,2,3),Vec3(0,0,-1),Vec3(1,0,0)),Frame3(Vec3(-2,1,3),Vec3(.2,.3,1),Vec3(1,0,0))};
+ const auto validate=[&](const Body& source,const std::vector<FaceId>& faces,double d,const std::string& name){
+  try{auto output=offsetFaces(source,faces,d,1e-7,false);double residual=0;int circles=0,lines=0;
+   for(FaceId f:output.body.faces())for(LoopId l:output.body.face(f).loops)for(FinId fi:output.body.loopFins(l)){const auto& fin=output.body.fin(fi);const auto& edge=output.body.edge(fin.edge);if(edge.curve->type()==CurveType::Circle)++circles;if(edge.curve->type()==CurveType::Line)++lines;
+    if(!fin.pcurve)throw std::domain_error("missing pcurve");
+    for(int i=0;i<=100;++i){double t=edge.range.lo+edge.range.length()*i/100.;const auto uv=fin.pcurve->point(t);residual=std::max(residual,distance(edge.curve->point(t),output.body.face(f).surface->point(uv.x(),uv.y())));}}
+   const auto issues=checkBody(output.body);bool ok=residual<1e-6&&issues.empty();checks++;failed+=!ok;std::cout<<name<<" d="<<d<<" pass="<<ok<<" residual="<<residual<<" checker="<<issues.size()<<" circle_fin_uses="<<circles<<" line_fin_uses="<<lines<<"\n";
+  }catch(const std::exception&e){checks++;failed++;std::cout<<name<<" d="<<d<<" pass=0 reason="<<e.what()<<"\n";}
+ };
+ for(int frame=0;frame<3;++frame)for(double d:{-.1,.1}){
+  Body cylinder=makeCylinder(frames[frame],2,3);std::vector<FaceId> caps,side;
+  for(auto f:cylinder.faces())(cylinder.face(f).surface->type()==SurfaceType::Cylinder?side:caps).push_back(f);
+  validate(cylinder,side,d,"cylinder_side_frame"+std::to_string(frame));validate(cylinder,caps,d,"cylinder_caps_frame"+std::to_string(frame));validate(cylinder,cylinder.faces(),d,"cylinder_all_frame"+std::to_string(frame));
+  for(bool reverse:{false,true}){
+   auto circle=std::make_shared<Circle<2>>(Vec2(.5,-.25),Vec2(1,0),Vec2(0,reverse?-1:1),2);
+   auto trim=std::make_shared<TrimmedCurve<2>>(std::make_shared<TrimmedCurve<2>>(circle,.1,2.5),.2,2.1);
+   ProfileLoop chain{{ProfileSegment{trim,{.2,2.1},1}}};Body sheet=makeSheetExtrusion(frames[frame],{chain},3);
+   validate(sheet,sheet.faces(),d,"trimmed_arc_frame"+std::to_string(frame)+"_reverse"+std::to_string(reverse));
+  }
+ }
+ for(int frame=0;frame<3;++frame)for(double angle:{0.,1e-10,1e-3})for(double sign:{-1.,1.}){
+  const auto &f=frames[frame];auto circle=std::make_shared<Circle<3>>(f.origin(),f.xDir(),f.yDir(),2.);
+  auto trim=std::make_shared<TrimmedCurve<3>>(std::make_shared<TrimmedCurve<3>>(circle,.1,2.5),.2,2.1);
+  ExtrusionSurface source(trim,sign*f.zDir()+angle*f.xDir());
+  try{const auto result=offsetSurface(source,.1,{.2,2.1},{0,1},1e-7);double error=0;for(int i=0;i<=1000;++i){double u=.2+1.9*i/1000.;error=std::max(error,distance(result->point(u,.5),source.point(u,.5)+.1*source.normal(u,.5)));}
+   const auto type=static_cast<const ExtrusionSurface&>(*result).curve()->type();bool ok=error<1e-7&&((angle<1e-6)==(type==CurveType::Circle));++checks;failed+=!ok;std::cout<<"extrusion_frame"<<frame<<" angle="<<angle<<" sign="<<sign<<" pass="<<ok<<" error="<<error<<" curveType="<<int(type)<<"\n";
+  }catch(const std::exception&e){++checks;++failed;std::cout<<"extrusion_frame"<<frame<<" angle="<<angle<<" sign="<<sign<<" pass=0 reason="<<e.what()<<"\n";}
+ }
+ std::cout<<"TOTAL "<<checks<<" failed="<<failed<<"\n";return failed?1:0;
+}

@@ -1,0 +1,37 @@
+from pathlib import Path
+p=Path('/tmp/supporto-review/stage/kernel/fk_boolean.cpp');s=p.read_text();s=s.replace('''    BooleanBuilder(const Body &a, const Body &b, BooleanOperation operation, const BooleanOptions &options)
+        : operation_(operation), tolerance_(options.tolerance), unify_(options.unifySameDomain), threads_(options.threads) {
+        bodies_[0] = a;''','''    BooleanBuilder(const Body &a, const Body &b, BooleanOperation operation, const BooleanOptions &options,
+                   bool enableBoundary = false)
+        : operation_(operation), tolerance_(options.tolerance), unify_(options.unifySameDomain), threads_(options.threads) {
+        enableBoundary_ = enableBoundary;
+        bodies_[0] = a;''',1)
+s=s.replace('''    Body run(BodyHistory *history);
+    Body clipFace''','''    Body run(BodyHistory *history);
+    bool usedBoundarySubstitution() const { return usedBoundary_; }
+    Body clipFace''',1)
+s=s.replace('''    bool adjacentOnly_ = false;
+    unsigned workers''','''    bool adjacentOnly_ = false;
+    bool enableBoundary_ = false;
+    bool usedBoundary_ = false;
+    unsigned workers''',1)
+s=s.replace('''if (anchorBudget && curve->type() == CurveType::Line''','''if (enableBoundary_ && anchorBudget && curve->type() == CurveType::Line''',1)
+s=s.replace('''                if (locations[boundary] == PointLocation::Boundary &&''','''                if (enableBoundary_ && locations[boundary] == PointLocation::Boundary &&''',1)
+s=s.replace('''                        substituted = true;''','''                        substituted = true;
+                        usedBoundary_ = true;''',1)
+needle='''    if (history) *history = BodyHistory();
+    return BooleanBuilder(a, b, operation, options).run(history);''';repl='''    if (history) *history = BodyHistory();
+    BooleanBuilder builder(a, b, operation, options, true);
+    try {
+        return builder.run(history);
+    } catch (const OperationCancelled &) {
+        throw;
+    } catch (const std::domain_error &) {
+        if (!builder.usedBoundarySubstitution()) throw;
+        // La sostituzione e' transazionale: se l'output reale non conserva il
+        // certificato, riprova il percorso precedente su nuove copie, con le
+        // medesime opzioni. Cancellazioni e logic_error non sono recuperati.
+        if (history) *history = BodyHistory();
+        return BooleanBuilder(a, b, operation, options).run(history);
+    }''';assert needle in s;s=s.replace(needle,repl,1)
+p.write_text(s)

@@ -1,0 +1,3 @@
+from pathlib import Path
+import json,subprocess,hashlib
+p=Path('/tmp/review-previews-wayland');old=Path('/tmp/review-previews-refresh/before-footer/forgeCad2026_dialogs_common.cpp.o');data=json.loads((p/'link-app-release.json').read_text());cmd=data['command'];hits=[i for i,v in enumerate(cmd) if v.endswith('/forgeCad2026_dialogs_common.cpp.o')];assert len(hits)==1;cmd[hits[0]]=str(old);cmd[cmd.index('-o')+1]=str(p/'negative-before-footer');subprocess.run(cmd,cwd='/home/myungit/Linux_CAD_forFree/forgecad-release',check=True);(p/'link-negative.json').write_text(json.dumps({'private_overlay_objects':[str(old)],'old_common_source_sha256':hashlib.sha256(old.with_suffix('').read_bytes()).hexdigest(),'command':cmd},indent=2)+'\n')

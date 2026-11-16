@@ -1,0 +1,25 @@
+#include "fk_offset.h"
+#include "fk_surface_tools.h"
+#include "fk_pcurve.h"
+#include "fk_body_check.h"
+#include <iostream>
+using namespace ForgeCad::Kernel;
+Body quad(BSplineSurfacePtr surface) {
+    std::vector<Vec3> vertices{surface->point(0, 0), surface->point(1, 0), surface->point(1, 1), surface->point(0, 1)};
+    std::vector<Body::BuildEdge> edges{{0, 1, std::make_shared<BSplineCurve<3>>(surface->vIsoCurve(0)), {0, 1}, 1e-9},
+                                       {1, 2, std::make_shared<BSplineCurve<3>>(surface->uIsoCurve(1)), {0, 1}, 1e-9},
+                                       {3, 2, std::make_shared<BSplineCurve<3>>(surface->vIsoCurve(1)), {0, 1}, 1e-9},
+                                       {0, 3, std::make_shared<BSplineCurve<3>>(surface->uIsoCurve(0)), {0, 1}, 1e-9}};
+    const auto line = [](Vec2 a, Vec2 b) {
+        return std::make_shared<BSplineCurve<2>>(1, std::vector<double>{0, 0, 1, 1}, std::vector<Vec2>{a, b});
+    };
+    Body::BuildFace face;
+    face.surface = std::move(surface);
+    face.loops = {{{0, true, line({0, 0}, {1, 0}), 1e-9},
+                   {1, true, line({1, 0}, {1, 1}), 1e-9},
+                   {2, false, line({0, 1}, {1, 1}), 1e-9},
+                   {3, false, line({0, 0}, {0, 1}), 1e-9}}};
+    return Body::buildSheet(vertices, edges, {face});
+}
+
+int main(){std::cout.precision(17);const int d=6;std::vector<double>k(7,0);k.insert(k.end(),6,.1);k.insert(k.end(),6,.101);k.insert(k.end(),7,1);auto support=[&](bool bump){std::vector<Vec3>p;for(int i=0;i<19;++i){double x=0;for(int j=1;j<=d;++j)x+=k[i+j]/d;for(int j=0;j<2;++j)p.emplace_back(x,j,bump&&i==9?.0032:0);}return std::make_shared<BSplineSurface>(6,1,k,std::vector<double>{0,0,1,1},19,2,p);};auto original=support(false);auto source=quad(original);auto target=support(true);auto result=editSheetPoles(source,{},1e-6,nullptr,target);double error=0;for(auto f:result.fins()){const auto&fin=result.fin(f);const auto&e=result.edge(fin.edge);for(int i=0;i<=20000;++i){double t=i/20000.;auto uv=fin.pcurve->point(t);error=std::max(error,distance(e.curve->point(t),target->point(uv.x(),uv.y())));}}double sourceError=0;for(auto f:source.fins()){const auto&fin=source.fin(f);const auto&e=source.edge(fin.edge);sourceError=std::max(sourceError,std::fabs(e.curve->point(.1005).z()));}auto issues=checkBody(result,{true,true}).size();std::cout<<"degree6_body accepted=1 dense_boundary_error="<<error<<" tolerance=1e-6 source_absZ="<<sourceError<<" target_peakZ="<<target->point(.1005,.5).z()<<" issues="<<issues<<"\n";return error<=1e-6&&sourceError==0&&issues==0?0:1;}

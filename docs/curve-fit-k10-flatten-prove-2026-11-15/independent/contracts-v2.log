@@ -1,0 +1,19 @@
+null reject=Appiattimento affine: curva nulla.
+zero_range reject=Appiattimento affine: parametri non validi.
+nan_range reject=Appiattimento affine: parametri non validi.
+overflow_length reject=Appiattimento affine: parametri non validi.
+nan_anchor reject=Appiattimento affine: parametri non validi.
+zero_scale reject=Appiattimento affine: parametri non validi.
+nan_scale reject=Appiattimento affine: parametri non validi.
+infinite_budget reject=Appiattimento affine: parametri non validi.
+nan_frame reject=Appiattimento affine: frame non finito.
+overflow_product reject=Appiattimento affine: immagine non finita.
+roundoff_over_budget reject=Appiattimento affine: errore oltre budget.
+outside_trim reject=Appiattimento affine: intervallo fuori trim.
+outside_bspline reject=Appiattimento affine: intervallo fuori dominio naturale.
+resource_100001 reject=Appiattimento affine: budget poli superato.
+degree_129 reject=Appiattimento affine: budget poli superato.
+circle unsupported
+cancel PASS
+trimline bound=3.08474e-15 error=0
+checks=18 PASS

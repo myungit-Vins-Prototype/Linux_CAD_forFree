@@ -1,0 +1,29 @@
+empty rejected=fit UV affine: numero campate non valido
+gap rejected=fit UV affine: ancore o copertura non valide
+overlap rejected=fit UV affine: ancore o copertura non valide
+unsorted rejected=fit UV affine: ancore o copertura non valide
+short_coverage rejected=fit UV affine: copertura incompleta
+long_coverage rejected=fit UV affine: ancore o copertura non valide
+zero_span rejected=fit UV affine: ancore o copertura non valide
+nan_parameter rejected=fit UV affine: ancore o copertura non valide
+nan_uv rejected=fit UV affine: ancore o copertura non valide
+backward_anchor rejected=fit UV affine: ancore o copertura non valide
+outside_anchor rejected=fit UV affine: ancore o copertura non valide
+overflow_anchor_length rejected=fit UV affine: ancore o copertura non valide
+overflow_requested_length rejected=fit UV affine: intervallo o superficie non valido
+resource_100001 rejected=fit UV affine: numero campate non valido
+null_surface rejected=fit UV affine: intervallo o superficie non valido
+null_uv rejected=fit UV affine: sorgente o intervallo non valido
+unequal_uv_weights unsupported=1
+degree2_uv unsupported=1
+plane_surface unsupported=1
+circle_generator unsupported=1
+typed_plane unsupported=1
+preset_cancel PASS
+source_lifetime bound=4.6503636588481437e-14
+closed_join kind=0 bound=10.000000000000172
+closed_join kind=1 bound=10.000000000000012
+closed_join kind=2 bound=10.00000000000971
+constant_u point=0 bound=8.8138703324251412e-15
+constant_u point=1 bound=4.8638033156057395e-15
+checks=28 PASS

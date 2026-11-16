@@ -1,0 +1,68 @@
+#include <QApplication>
+#include <QTemporaryDir>
+#include <QSettings>
+#include <QTimer>
+#include <QPushButton>
+#include <QComboBox>
+#include <QStatusBar>
+#include <QDialogButtonBox>
+#include <iostream>
+#include "forgeCad2026_dialogs.h"
+#include "forgeCad2026_dialogs_common.h"
+#include "forgeCad2026_viewport.h"
+#include "cad_document_tabs.h"
+#include "cad_datum.h"
+int main(int argc,char **argv){
+ QApplication app(argc,argv);QCoreApplication::setOrganizationName("UiLifecycleReview");QCoreApplication::setApplicationName("Isolated");QTemporaryDir settings;QSettings::setDefaultFormat(QSettings::IniFormat);QSettings::setPath(QSettings::IniFormat,QSettings::UserScope,settings.path());
+ int failures=0;auto check=[&](bool value,const char *name){std::cout<<(value?"PASS ":"FAIL ")<<name<<std::endl;if(!value)++failures;};
+ QMainWindow a,b;auto *va=new CadViewport(&a);a.setCentralWidget(va);auto *vb=new CadViewport(&b);b.setCentralWidget(vb);
+ DocumentState doc;ExtrusionObject box;box.feature=BodyFeature::Primitive;box.name="Box";doc.extrusions.append(box);va->loadDocument(doc);vb->loadDocument(doc);
+ {
+ FunctionDialogPanel panel(&a,false);panel.setObjectName("loftDialog");auto *form=panel.createScrollableForm();ExtrusionObject loft;SurfaceEndControls controls(panel,*form,va,-1,loft);
+ auto *mode=panel.findChild<QComboBox*>("surfaceStartContinuity");auto *pick=panel.findChild<QPushButton*>("surfaceStartFacesPick");
+ mode->setCurrentIndex(3);pick->click();check(va->referencePicking(),"G1 faces picking");mode->setCurrentIndex(0);check(!va->referencePicking()&&!pick->isEnabled()&&!pick->isChecked(),"G0 cancels and unchecks picker");
+ mode->setCurrentIndex(4);pick->click();check(va->referencePicking(),"plane picking");mode->setCurrentIndex(3);check(!va->referencePicking()&&!pick->isChecked(),"plane to faces cancels stale role");pick->click();check(va->referencePicking(),"new face picker can start");controls.stop();
+ }
+ {
+ FunctionDialogPanel panel(&a,false);GeometryReferenceList list(panel,va,"multiple");list.setSelectionMode(QAbstractItemView::ExtendedSelection);
+ GeometryRef x;x.kind=5;x.index=0;x.point.subshape=0;GeometryRef y=x;y.point.subshape=1;GeometryRef z=x;z.point.subshape=2;
+ list.setReferences({x,y,z});list.setCurrentRow(1);list.item(0)->setSelected(true);list.setReferences({x,y,z});check(list.selectedItems().size()==2&&list.currentRow()==1,"multiselection refresh");
+ list.setReferences({z,x,y});check(list.selectedItems().size()==2&&list.item(1)->isSelected()&&list.item(2)->isSelected()&&list.currentRow()==2,"selection follows reordered identities");
+ list.setCurrentRow(0,QItemSelectionModel::NoUpdate);list.setReferences({y,z,x});check(list.currentRow()==1&&!list.currentItem()->isSelected()&&list.selectedItems().size()==2,"current stays separate from selection");
+ list.setReferences({z,x});check(list.currentRow()==0&&list.selectedItems().size()==1&&list.item(1)->isSelected(),"removed references are discarded");
+ x.point.x=37;list.setReferences({z,x});check(list.selectedItems().size()==1&&list.item(1)->isSelected(),"same face identity survives changed pick point");
+ }
+ {
+ ExtrusionObject fill;fill.feature=BodyFeature::Pattern;fill.firstBody=0;
+ QTimer::singleShot(0,&a,[&]{auto *pick=a.findChild<QPushButton*>("fillPatternBoundaryPick");check(bool(pick),"fill picker exists");if(!pick)return;pick->click();check(va->referencePicking(),"fill boundary picking");for(auto *d:a.findChildren<QDialog*>())if(d->findChild<QPushButton*>("fillPatternBoundaryPick"))d->reject();});
+ check(!fillPatternDialog(&a,va,"Fill",-1,fill,[](const auto&){return QString();}),"fill cancel result");check(!va->referencePicking()&&!va->interactionLocked(),"fill cancel clears picker and lock");
+ }
+ for (int mode : {0,3}) {
+ ExtrusionObject mapping;mapping.feature=BodyFeature::SurfaceTools;mapping.firstBody=0;mapping.surfaceTool.mode=mode;
+ QTimer::singleShot(0,&a,[&]{auto *pick=a.findChild<QPushButton*>(mode==3?"mappingFacePick":"mappingSourceFacePick");check(bool(pick),"mapping picker exists");if(!pick)return;pick->click();check(va->referencePicking(),"mapping face picking");for(auto *d:a.findChildren<QDialog*>())if(d->findChild<QPushButton*>(mode==3?"mappingFacePick":"mappingSourceFacePick")) {QObject::connect(d,&QDialog::finished,d,[&]{check(!va->referencePicking(),"mapping picker cleared synchronously at finished");});d->reject();}});
+ check(!surfaceMappingDialog(&a,va,"Mapping",-1,mapping,[](const auto&){return QString();}),"mapping cancel result");check(!va->referencePicking()&&!va->interactionLocked(),"mapping cancel clears picker and lock");
+ }
+ {
+ FunctionDialogPanel pa(&a,false);bool rejected=false;
+ QTimer::singleShot(0,&a,[&]{
+ FunctionDialogPanel pb(&b,false);auto *form=pb.createScrollableForm();PreviewScope preview(vb,pb,form,-1);preview.request(box);vb->beginReferencePick(ForgeCad::DatumRoleFace,-1);vb->setReferencePickCallback([](bool,GeometryRef){});
+ check(!runModeless(&b,vb,pb),"cross workspace runner rejected");rejected=true;check(!vb->referencePicking()&&!vb->interactionLocked()&&!vb->previewPending()&&pb.isHidden(),"second runner leaves no picker lock or panel");check(va->interactionLocked()&&!pa.isHidden(),"first runner remains active");check(!b.statusBar()->currentMessage().isEmpty(),"second workspace explains restriction");pa.reject();
+ });
+ check(!runModeless(&a,va,pa)&&rejected&&!va->interactionLocked(),"first runner closes and unlocks immediately");
+ FunctionDialogPanel pb(&b,false);QTimer::singleShot(0,&pb,&QDialog::reject);check(!runModeless(&b,vb,pb)&&!vb->interactionLocked(),"second workspace opens after first closes");
+ }
+ {
+ ForgeCad::DocumentTabsWindow host;auto *da=new QMainWindow;auto *db=new QMainWindow;
+ da->setProperty("documentWorkspace",true);db->setProperty("documentWorkspace",true);
+ auto *vda=new CadViewport(da);auto *vdb=new CadViewport(db);da->setCentralWidget(vda);db->setCentralWidget(vdb);
+ host.addDocument(da,false);host.addDocument(db,false);host.activateDocument(da);FunctionDialogPanel pa(da,false);
+ QTimer::singleShot(0,&host,[&]{host.activateDocument(db);FunctionDialogPanel pb(db,false);check(!runModeless(db,vdb,pb),"real tabs second runner rejected");host.activateDocument(da);pa.reject();});
+ check(!runModeless(da,vda,pa)&&!vda->interactionLocked(),"real tabs original runner unlocked");
+ }
+ {
+ FunctionDialogPanel pa(&a,false);
+ QTimer::singleShot(0,&a,[&]{FunctionDialogPanel nested(&a,false);QTimer::singleShot(0,&nested,&QDialog::reject);check(!runModeless(&a,va,nested)&&va->interactionLocked(),"same workspace nesting preserves outer lock");pa.reject();});
+ check(!runModeless(&a,va,pa)&&!va->interactionLocked(),"same workspace nested runner restores lock");
+ }
+ std::cout<<"failures="<<failures<<std::endl;return failures?1:0;
+}

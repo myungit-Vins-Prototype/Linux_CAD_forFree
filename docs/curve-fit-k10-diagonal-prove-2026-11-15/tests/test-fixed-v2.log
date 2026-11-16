@@ -1,0 +1,9 @@
+[  OK  ] MappingDiagonalExtrusionHiddenPolynomialRationalPoseScaleReverse
+[  OK  ] MappingDiagonalExtrusionNestedGeneratorTrimHolesHistoryRoundtrip
+[  OK  ] MappingDiagonalOriginalLineExtrusionSuccess
+[  OK  ] MappingDiagonalProviderPullbackKnotsAndWrongCandidate
+[  OK  ] MappingDiagonalFailureCancellationAreAtomicAndTensorIsUnsupported
+[  OK  ] MappingDiagonalProviderTinyNonzeroUDirectionMustNotSnap
+[  OK  ] MappingDiagonalProviderLineConstantUAndClosedJunctionQueries
+7/7 test superati
+elapsed=0.72 maxrss_kb=6492

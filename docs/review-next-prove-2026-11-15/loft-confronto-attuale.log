@@ -1,0 +1,9 @@
+GUIDE row=0 mode=1 weight=1 value=100
+GUIDE row=0 mode=1 weight=1 value=100
+GUIDE row=1 mode=1 weight=1 value=100
+GUIDE row=0 mode=1 weight=1 value=100
+GUIDE row=0 mode=1 weight=1 value=100
+GUIDE row=0 mode=2 weight=0.84999999999999998 value=85
+GUIDE row=0 mode=2 weight=0.84999999999999998 value=85
+GUIDE row=1 mode=1 weight=0.55000000000000004 value=55.000000000000007
+selected guide restores its own controls

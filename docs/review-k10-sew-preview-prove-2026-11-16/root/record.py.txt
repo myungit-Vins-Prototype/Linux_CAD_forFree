@@ -1,0 +1,66 @@
+from pathlib import Path
+import shutil,json
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/k10-next-review/root');P=R/'docs/review-k10-sew-preview-prove-2026-11-16';P.mkdir(exist_ok=True)
+m=(R/'CLAUDE.md').read_text();a=R/'docs/history/claude-prima-k10-sew-preview-2026-11-16.md';assert not a.exists() or a.read_text()==m
+if not a.exists(): a.write_text(m)
+marker='## Ultimi interventi — esiti consolidati\n\n'
+entry='''**16/11 — Prosecuzione K10 cucitura e PRE8, indagine con tre agenti Sol.**
+Scelto il trasferimento SP-curve della cucitura Plane: parametro originale e
+certificato continuo del bordo rappresentativo; prototipo/prove in preparazione.
+PRE8 confermato su Smusso: digitazione+Tab lascia anteprima e stato sul vecchio
+valore; la conferma calcola invece il valore corretto. Correzione non ancora
+integrata. Restano28rilievi corretti e K10:17/24parziali+7nonmigrati.
+[Stato/prove](docs/review-k10-sew-preview-2026-11-16.md);
+[memoria precedente](docs/history/claude-prima-k10-sew-preview-2026-11-16.md).
+
+'''
+m=m.replace(marker,marker+entry,1)
+start=m.index('**15/11 — exhaustMainfold, sweep e vincoli.**');end=m.index('Schede documenti14/11',start)
+m=m[:start]+'''Sweep exhaustMainfold e vincoli transitivi15/11:96casi/scale/pose,codec/Undo,
+app/mappa verificati; volumeNURBS poi correttoK3. Rapporti
+[geometria](docs/exhaust-mainfold-sweep-2026-11-15.md) e
+[solver](docs/vincoli-tangenza-transitiva-2026-11-15.md); dettagli nella memoria precedente.
+
+'''+m[end:]
+m=m.replace('Due ricostruzioni UV Plane certificate in mm, originali/genealogia espliciti,\nfin effettive ricontrollate. K10:17/24parziali+7nonmigrati,più fallback.', 'Due ricostruzioni UV Plane certificate in mm, fin emesse ricontrollate.\nK10:17/24parziali+7nonmigrati,più fallback.')
+m=m.replace('Tre clic,4punti reali quotabili/vincolabili,centro derivato,5DOF,conica\nanalitica;drag/anteprima/snap/Taglia. Codec70 legge precedenti eimpronte69.', 'Tre clic,4punti quotabili/vincolabili,centro derivato,5DOF;drag/snap/Taglia.\nCodec70 compatibile precedenti/impronte69.')
+# Move details of the already completed cache work to its existing report.
+start=m.index('**15/11 — Cache B-spline M1/M2');end=m.index('**15/11 — Review iniziale',start)
+m=m[:start]+'''**15/11 — Cache B-spline M1/M2 corrette con tre agenti Sol.**
+Durata shared_ptr e copie/assegnazioni atomiche, snapshot/CAS; cinque regressioni
+normale/ASan/TSan PASS, M1isolata200x8 eM2. App/47CTest e mappa724/10410/353TU PASS.
+Runner generale325casi poi timeout300s, senza certificazione completa né nuovo GL.
+[Prove e limiti](docs/cache-bspline-2026-11-15.md).
+
+'''+m[end:]
+m=m.replace('Runner generale325casi poi timeout300s, senza certificazione completa né nuovo GL.', 'Runner325casi poi timeout300s, non completo; nessun GL.')
+m=m.replace('Scelto il trasferimento SP-curve della cucitura Plane: parametro originale e\ncertificato continuo del bordo rappresentativo; prototipo/prove in preparazione.', 'Cucitura Plane: parametro originale e bound continuo; prototipo in preparazione.')
+assert len(m.encode())<=16384,len(m.encode());assert m.count('\n**16/')+m.count('\n**15/')<=10
+(R/'CLAUDE.md').write_text(m)
+(R/'docs/review-k10-sew-preview-2026-11-16.md').write_text('''# Review: cucitura Plane e aggiornamento Smusso — 16 novembre 2026
+
+**In corso.** Continuazione autorizzata con tre agenti GPT-6.1 Sol. Baseline congelata di3519file; descrizioni e collegamenti architetturali consultati prima delle modifiche. Nessun CAD originale modificato.
+
+## K10: cucitura
+
+Dopo il precedente blocco restano sette siti interamente campionati. Il prossimo è `sewnPCurve` in `fk_exchange.cpp`, raggiunto dalla cucitura di superfici e dall’importazione. Le scorciatoie confrontano campioni del residuo3D; il percorso non affine proietta sul bordo sorgente e adatta la curvaUV. Per la famiglia Plane/Line/NURBS si studia una ricostruzione nel parametro del bordo3D effettivo e un controllo continuo in mm dei dati finali. Riproduttore negativo e integrazione ancora pendenti; nessuna migrazione conteggiata.
+
+Il fit delle proiezioni procedurali nello schizzo resta aperto: il ramo residuo accetta curve `Other` opache ai certificatori esistenti. Le isoparametriche dell’adattatore locale di proiezione non espongono una provenienza riutilizzabile in quel chiamante; non basta collegargli un certificatore destinato a Line/NURBS.
+
+## PRE8: Smusso dopo digitazione e Tab
+
+Il pannello reale, usando eventi di tastiera, accetta1,25 al posto di0,5 ed emette `editingFinished`, ma anteprima, chiave, generazione e stato «pronta» rimangono sul vecchio valore. I campi sono collegati soltanto al callback di Invio/frecce. La conferma effettiva crea la geometria con1,25: il problema dimostrato è l’anteprima incoerente, non la promozione della geometria vecchia. Correzione e test di campo primario/seconda distanza/angolo, con risultato pronto o worker pendente, sono in preparazione.
+
+Restano28rilievi corretti; PRE8 è confermato ma non ancora integrato/verificato. K10 resta17/24siti iniziali parzialmente trattati e7interamente da migrare, oltre ai fallback. Le cinque orfane private/locali e17API pubbliche senza usi interni restano proposte separate.
+
+## Prove
+
+Prove di questo blocco: [archivio](review-k10-sew-preview-prove-2026-11-16/). [Memoria precedente](history/claude-prima-k10-sew-preview-2026-11-16.md). Gli esiti definitivi sostituiranno questo stato provvisorio.
+''')
+D=P/'root';D.mkdir(exist_ok=True)
+for f in T.rglob('*'):
+ if f.is_file():
+  q=D/f.relative_to(T)
+  if q.suffix in ['.py','.cpp','.h','.sh']:q=q.with_name(q.name+'.txt')
+  q.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(f,q)
+print('Registrata diagnosi PRE8; memoria',len(m.encode()),'byte')

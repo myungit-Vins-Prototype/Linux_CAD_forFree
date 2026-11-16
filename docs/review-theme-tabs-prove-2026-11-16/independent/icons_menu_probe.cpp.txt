@@ -1,0 +1,22 @@
+#include "cad_icons.h"
+#include "cad_menu.h"
+#include "forgeCad2026_ui_glass.h"
+#include <QApplication>
+#include <QMainWindow>
+#include <QTabWidget>
+#include <QTemporaryDir>
+#include <QLineEdit>
+#include <QCryptographicHash>
+#include <iostream>
+#include <map>
+void settle(){for(int i=0;i<12;++i)QApplication::processEvents();}
+QByteArray hash(const QImage &i){return QCryptographicHash::hash(QByteArray((const char*)i.constBits(),i.sizeInBytes()),QCryptographicHash::Sha256);}
+int main(int argc,char**argv){QApplication app(argc,argv);QTemporaryDir settings;QSettings::setDefaultFormat(QSettings::IniFormat);QSettings::setPath(QSettings::IniFormat,QSettings::UserScope,settings.path());app.setStyle("Fusion");
+QMainWindow root;QTabWidget tabs;root.setCentralWidget(&tabs);auto *visible=new QMainWindow;auto *hidden=new QMainWindow;tabs.addTab(visible,"3D");tabs.addTab(hidden,"2D");CadMenu menu(visible);menu.addAction(ForgeCad::commandIcon("save"),"Salva");root.show();settle();
+std::map<QString,QIcon> icons;std::map<QString,QByteArray> first;for(auto &name:ForgeCad::commandIconNames())icons.emplace(name,ForgeCad::commandIcon(name));int changes=0,stable=0,menuChecks=0;auto names=ForgeCad::commandIconNames();
+for(int step=0;step<3;++step){const bool dark=step==1;QPalette p(QColor(dark?"#111820":"#f0f0f0"));p.setColor(QPalette::WindowText,QColor(dark?"#d8e4ea":"#202020"));p.setColor(QPalette::Disabled,QPalette::WindowText,QColor(dark?"#788995":"#737373"));app.setPalette(p);settle();
+for(auto &[name,icon]:icons)for(auto mode:{QIcon::Normal,QIcon::Disabled}){auto key=name+QString::number(int(mode));auto image=icon.pixmap(QSize(32,32),mode).toImage();auto value=hash(image);if(step==0)first[key]=value;else if(step==1)changes+=value!=first.at(key);else stable+=value==first.at(key);}
+for(bool open:{true,false}){if(open)menu.popup(QPoint(30,30));else menu.hide();settle();if(menu.palette().color(QPalette::Window).alpha()!=0||menu.testAttribute(Qt::WA_StyledBackground)||menu.autoFillBackground())return 2;if(menu.palette().color(QPalette::WindowText)!=p.color(QPalette::WindowText))return 3;++menuChecks;}
+if(ForgeCad::uiGlassPalette(hidden).color(QPalette::Window)!=p.color(QPalette::Window)||ForgeCad::uiGlassPalette(&menu).color(QPalette::Window)!=p.color(QPalette::Window))return 4;
+std::cout<<"step="<<step<<" root="<<root.palette().color(QPalette::Window).name().toStdString()<<" hidden="<<hidden->palette().color(QPalette::Window).name().toStdString()<<" menu="<<menu.palette().color(QPalette::WindowText).name().toStdString()<<'\n';}
+root.takeCentralWidget();std::cout<<"PASS icons="<<icons.size()<<" mode_states="<<first.size()<<" changed_in_dark="<<changes<<" restored_exactly="<<stable<<" menu_checks="<<menuChecks<<" Qt="<<qVersion()<<'\n';return stable==int(first.size())&&changes>0?0:5;}

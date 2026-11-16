@@ -1,0 +1,30 @@
+[  OK  ] ToleranceDocumentOffsetAccuracy
+[  OK  ] BlendOffsetLoftTrimmedTopOneMillimeter
+[  OK  ] BlendRegeneratedLoftOffsetCaps
+[  OK  ] MicroFeaturesOfLoftOffsetBodies
+[  OK  ] BlendContactKnotKeepsRadiusAndAllowsOneMillimeterOffset
+[  OK  ] LoftEllipsePreservesSmoothOffsetFaces
+[  OK  ] OffsetAnalyticSurfaces
+[  OK  ] OffsetFreeformSurfaces
+    /home/myungit/Linux_CAD_forFree/kernel/tests/test_offset.cpp:158: totalArea(outward.body) = 77.814155962136653, atteso 77.814156250923645 (differenza 2.887869925416453e-07 > 1.0000000000000001e-09)
+    /home/myungit/Linux_CAD_forFree/kernel/tests/test_offset.cpp:161: totalArea(inward.body) = 62.734511346502664, atteso 62.734511513692638 (differenza 1.6718997386533374e-07 > 1.0000000000000001e-09)
+[ FAIL ] OffsetFacesJoinsTangentFaces (2 controlli falliti)
+[  OK  ] OffsetFacesCurvedAndFreeform
+[  OK  ] OffsetFacesLoft
+[  OK  ] OffsetThenSewSolid
+[  OK  ] OffsetFacesSpring
+[  OK  ] OffsetFacesImportedParts
+[  OK  ] OffsetPreservesSharpSeams
+[  OK  ] OffsetLoftExtension
+[  OK  ] OffsetLoftMixedSections
+[  OK  ] OffsetLoftSewnCaps
+[  OK  ] OffsetFitCurveSmallSmoothFeature
+[  OK  ] OffsetReportsInternalNormalDiscontinuity
+[  OK  ] OffsetLoftInternalCreasesOneMillimeter
+[  OK  ] OffsetLoftExtendedSeamsTrimBoth
+[  OK  ] OffsetDenseBSplineIsC2
+[  OK  ] OffsetInwardBeyondCurvatureIsExplained
+[  OK  ] OffsetLoftSeamExtensionFollowsTangentSeam
+[  OK  ] HistoryOffsetKeepsFaceNamesAcrossSurfaceChanges
+[  OK  ] HistoryOffsetComposesRectangularAndTrimmedCreases
+26/27 test superati

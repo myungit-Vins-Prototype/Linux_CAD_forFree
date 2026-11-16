@@ -1,0 +1,11 @@
+{
+  "actual_pole_altered": {
+    "rejected": true,
+    "reason": "Exact midpoint witness exceeds budget: squared=25374944792490806331411321806178665676745883676897262072817846801535543516289811716146425279234291802529/180444014874335239689098048893848735950349303620952321023942229327424487277731528864550129008272277650800640000",
+    "exact_witness": true
+  },
+  "support_pole_altered": {
+    "rejected": true,
+    "reason": "('Original support not preserved within budget', 0.0010000000000000009, 1e-07)"
+  }
+}

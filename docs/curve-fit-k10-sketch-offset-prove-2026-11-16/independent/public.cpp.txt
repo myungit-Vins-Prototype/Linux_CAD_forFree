@@ -1,0 +1,29 @@
+#include "cad_sketch_offset.h"
+#include "cad_curve_solver.h"
+#include "fk_bspline.h"
+#include "fk_curve_algo.h"
+#include <iostream>
+#include <iomanip>
+#include <fstream>
+using namespace ForgeCad;
+using namespace ForgeCad::Kernel;
+#include "fixtures.h"
+int main(int argc,char**argv){std::cout<<std::unitbuf<<std::setprecision(17);for(bool rational:{false,true})for(double amp:{1.,.1,.01,.001})for(bool reverse:{false,true}){
+ SketchObject sketch;CurveObject c;c.tool=DrawingTool::Converted;c.degree=27;
+ for(int i=0;i<28;++i){double t=i/27.,w=rational?1+.5*t:1,n=t+(rational?.5*i*(i-1.)/(27*26.):0.);c.controlPoints.append({n/w,amp*z27[i]/w});if(rational)c.weights.append(w);}
+ for(int i=0;i<28;++i)c.knots.append(0.);for(int i=0;i<28;++i)c.knots.append(1.);sketch.curves.append(c);auto source=curveGeometry(c).front().curve;
+ if(argc>1){auto&sp=static_cast<const BSplineCurve<2>&>(*source);std::ofstream f(std::string(argv[1])+"/source-"+(rational?"rat":"pol")+"-"+std::to_string(amp)+".txt");f<<std::setprecision(17);for(int i=0;i<sp.poleCount();++i)f<<sp.poles()[i].x()<<" "<<sp.poles()[i].y()<<" "<<sp.weight(i)<<"\n";}
+ SketchOffset o;o.distance=.01;o.reverse=reverse;QVector<SketchEntity> created;const auto r=offsetSketchEntities(sketch,{{1,0}},o,&created);
+ std::cout<<"rational="<<rational<<" amp="<<amp<<" reverse="<<reverse<<" accepted="<<r.error.isEmpty()<<" reason="<<r.error.toStdString();
+
+#ifdef EXPECT_CERTIFIED
+ if(!r.error.isEmpty())return 2;
+#endif
+ if(r.error.isEmpty()) {auto out=curveGeometry(sketch.curves[created[0].index]).front().curve;double worst=0,worstT=0;double ts[]={.1203,.8793,.06,.94,.15,.85};for(double t:ts){Vec2 d[2];source->evaluate(t,1,d);auto p=d[0]+(reverse?-.01:.01)*Vec2(-d[1].y(),d[1].x())/norm(d[1]);double gap=projectPoint(*out,p,out->domain()).distance;if(gap>worst){worst=gap;worstT=t;}}std::cout<<" witness_projection_gap="<<worst<<" witness_t="<<worstT;
+
+#ifdef EXPECT_CERTIFIED
+ if(!(worst<=1e-7))return 3;
+#endif
+ if(argc>1){std::ofstream f(std::string(argv[1])+"/curve-"+(rational?"rat":"pol")+"-"+std::to_string(amp)+"-"+(reverse?"reverse":"left")+".txt");f<<std::setprecision(17)<<static_cast<const BSplineCurve<2>&>(*out).degree()<<"\n";auto&sp=static_cast<const BSplineCurve<2>&>(*out);for(double k:sp.knots())f<<k<<" ";f<<"\n";for(auto p:sp.poles())f<<p.x()<<" "<<p.y()<<"\n";}
+ }std::cout<<"\n";
+}}

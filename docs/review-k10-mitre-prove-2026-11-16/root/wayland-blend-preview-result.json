@@ -1,0 +1,8 @@
+{
+  "exit": 0,
+  "seconds": 0.11402365599860786,
+  "command": [
+    "forgecad-release/forgecad_view_tests",
+    "--blend-preview-reload"
+  ]
+}

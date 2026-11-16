@@ -1,0 +1,8 @@
+{
+  "exit": 0,
+  "seconds": 0.07493659699866839,
+  "command": [
+    "forgecad-release/forgecad_view_tests",
+    "--sketch-projection-fit-validation"
+  ]
+}

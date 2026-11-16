@@ -1,0 +1,183 @@
+--- a/forgeCad2026_application_theme.cpp
++++ b/forgeCad2026_application_theme.cpp
+@@ -15,6 +15,7 @@
+ #include <QJsonDocument>
+ #include <QJsonObject>
+ #include <QDateTime>
++#include <QScopedValueRollback>
+ 
+ namespace ForgeCad {
+ namespace {
+@@ -55,6 +56,41 @@
+     return palette;
+ }
+ 
++QString applicationStyleSheet(bool dark) {
++    return dark ? QStringLiteral("QMainWindow { background: #111820; color: #d8e4ea; }QMenuBar,QToolBar,QStatusBar { background: #1b2730; color: #d8e4ea; }QMenu { background: #202d36; color: #d8e4ea; }"
++        "QToolBar { spacing: 1px; padding: 2px 4px; border: none; }"
++        "QToolBar::separator { background: #34444f; width: 1px; margin: 5px 3px; }"
++        "QToolBar QToolButton { border: 1px solid transparent; border-radius: 4px; padding: 2px; }"
++        "QToolBar QToolButton:checked { background: #24495f; border-color: #4f9fd0; }"
++        "QToolButton:enabled:hover, QToolBar QToolButton:enabled:hover { background: #365d78; border-color: #80c8f0; color: #ffffff; }"
++        "QToolButton:enabled:pressed, QToolBar QToolButton:enabled:pressed { background: #1f4258; border-color: #80c8f0; }"
++        "QToolBar QToolButton[popupMode=\"1\"] { padding-right: 11px; }"
++        "QToolBar QToolButton::menu-button { border: none; width: 10px; }"
++        "QToolButton::menu-button:enabled:hover { background: #5089ad; }"
++        "QToolButton::menu-button:enabled:pressed { background: #1f4258; }"
++        "QPushButton:enabled:hover { background: #365d78; border-color: #80c8f0; color: #ffffff; }"
++        "QPushButton:enabled:pressed { background: #1f4258; border-color: #80c8f0; }"
++        "QMenuBar::item:selected:enabled { background: #365d78; border-color: #80c8f0; color: #ffffff; }"
++        "QMenuBar::item:pressed:enabled { background: #1f4258; border-color: #80c8f0; color: #ffffff; }"
++        "QMenu::item:selected:enabled { background: #365d78; border-color: #80c8f0; color: #ffffff; }"
++        "QMenu::item:disabled { color: #788995; }") : QStringLiteral(
++        "QMainWindow { background: palette(window); color: palette(window-text); }"
++        "QMenuBar,QToolBar,QStatusBar,QMenu { background: palette(window); color: palette(window-text); }"
++        "QToolBar { spacing: 1px; padding: 2px 4px; border: none; }"
++        "QToolBar::separator { background: #c3cbd2; width: 1px; margin: 5px 3px; }"
++        "QToolBar QToolButton { background: transparent; border: 1px solid transparent; border-radius: 4px; padding: 2px; }"
++        "QToolBar QToolButton:checked { background: #d6eafb; border-color: #659dca; }"
++        "QToolButton:enabled:hover, QToolBar QToolButton:enabled:hover { background: #e2eff9; border-color: #659dca; }"
++        "QToolButton:enabled:pressed, QToolBar QToolButton:enabled:pressed { background: #c1dcf1; border-color: #427fab; }"
++        "QToolBar QToolButton[popupMode=\"1\"] { padding-right: 11px; }"
++        "QToolBar QToolButton::menu-button { border: none; width: 10px; }"
++        "QToolButton::menu-button:enabled:hover { background: #c1dcf1; }"
++        "QToolButton::menu-button:enabled:pressed { background: #a9cee9; }"
++        "QMenuBar::item:selected:enabled,QMenu::item:selected:enabled { background: #d6eafb; color: palette(window-text); }"
++        "QMenuBar::item:pressed:enabled { background: #c1dcf1; }"
++        "QMenu::item:disabled { color: palette(disabled, window-text); }");
++}
++
+ class ApplicationTheme final : public QObject {
+     QApplication &application_;
+     ApplicationThemeMode mode_ = applicationThemeMode();
+@@ -76,7 +112,9 @@
+     }
+ 
+     void apply() {
+-        applying_ = true;
++        if (applying_) { schedule(); return; }
++        const QScopedValueRollback<bool> applying(applying_, true);
++        const bool isDark = dark();
+         // Alcuni temi di piattaforma sostituiscono QStyle durante il cambio OS.
+         // Seguendo la vita dello stile reale funzioniamo anche sotto QStyleSheetStyle.
+         if (!commonStyle_) {
+@@ -88,10 +126,11 @@
+             });
+             trace("install-fusion");
+         }
+-        const auto palette = applicationPalette(dark());
++        const auto palette = applicationPalette(isDark);
+         if (application_.palette() != palette) application_.setPalette(palette);
++        const auto sheet = applicationStyleSheet(isDark);
++        if (application_.styleSheet() != sheet) application_.setStyleSheet(sheet);
+         trace("apply-palette");
+-        applying_ = false;
+     }
+ 
+     void trace(const char *reason) const {
+--- a/forgeCad2026_gui.cpp
++++ b/forgeCad2026_gui.cpp
+@@ -3966,7 +3966,6 @@
+     });revisionTimer->start();
+     documentRevisionDock_->setVisible(QSettings().value("revisions/modelPanelVisible",true).toBool());
+     refreshDocumentEditAccess();updateWindowTitle();
+-    setTheme(QApplication::palette().color(QPalette::Window).lightness() < 128);
+     connect(recovery_,&ForgeCad::DocumentRecovery::checkpointFinished,this,[this](quint64,bool,const QString &error){
+         if(!error.isEmpty())statusBar()->showMessage(QStringLiteral("Backup automatico non riuscito: %1").arg(error),12000);
+     });
+@@ -4037,8 +4036,7 @@
+ bool PdfWindow::event(QEvent *event) {
+     const bool handled = QMainWindow::event(event);
+     if (event->type() == QEvent::WindowActivate&&viewport_&&documentRevisionStatus_) {refreshDocumentEditAccess();updateWindowTitle();}
+-    if (event->type() == QEvent::ApplicationPaletteChange) {
+-        setTheme(QApplication::palette().color(QPalette::Window).lightness() < 128);
++    if (event->type() == QEvent::PaletteChange || event->type() == QEvent::ApplicationPaletteChange) {
+         // Le icone vettoriali leggono la palette corrente al ridisegno.
+         for (auto *bar : findChildren<QToolBar *>()) bar->update();
+     }
+@@ -5339,40 +5337,3 @@
+     modeStatus_->setText(mode == 0 ? QStringLiteral("Solo linee esterne") : mode == 1 ? QStringLiteral("Mesh") : QStringLiteral("Mesh + linee esterne"));
+ }
+ 
+-void PdfWindow::setTheme(bool dark) {
+-    auto *application = qobject_cast<QApplication *>(QCoreApplication::instance());
+-    if (!application) return;
+-    const QString sheet = dark ? QStringLiteral("QMainWindow { background: #111820; color: #d8e4ea; }QMenuBar,QToolBar,QStatusBar { background: #1b2730; color: #d8e4ea; }QMenu { background: #202d36; color: #d8e4ea; }"
+-        "QToolBar { spacing: 1px; padding: 2px 4px; border: none; }"
+-        "QToolBar::separator { background: #34444f; width: 1px; margin: 5px 3px; }"
+-        "QToolBar QToolButton { border: 1px solid transparent; border-radius: 4px; padding: 2px; }"
+-        "QToolBar QToolButton:checked { background: #24495f; border-color: #4f9fd0; }"
+-        "QToolButton:enabled:hover, QToolBar QToolButton:enabled:hover { background: #365d78; border-color: #80c8f0; color: #ffffff; }"
+-        "QToolButton:enabled:pressed, QToolBar QToolButton:enabled:pressed { background: #1f4258; border-color: #80c8f0; }"
+-        "QToolBar QToolButton[popupMode=\"1\"] { padding-right: 11px; }"
+-        "QToolBar QToolButton::menu-button { border: none; width: 10px; }"
+-        "QToolButton::menu-button:enabled:hover { background: #5089ad; }"
+-        "QToolButton::menu-button:enabled:pressed { background: #1f4258; }"
+-        "QPushButton:enabled:hover { background: #365d78; border-color: #80c8f0; color: #ffffff; }"
+-        "QPushButton:enabled:pressed { background: #1f4258; border-color: #80c8f0; }"
+-        "QMenuBar::item:selected:enabled { background: #365d78; border-color: #80c8f0; color: #ffffff; }"
+-        "QMenuBar::item:pressed:enabled { background: #1f4258; border-color: #80c8f0; color: #ffffff; }"
+-        "QMenu::item:selected:enabled { background: #365d78; border-color: #80c8f0; color: #ffffff; }"
+-        "QMenu::item:disabled { color: #788995; }") : QStringLiteral(
+-        "QMainWindow { background: palette(window); color: palette(window-text); }"
+-        "QMenuBar,QToolBar,QStatusBar,QMenu { background: palette(window); color: palette(window-text); }"
+-        "QToolBar { spacing: 1px; padding: 2px 4px; border: none; }"
+-        "QToolBar::separator { background: #c3cbd2; width: 1px; margin: 5px 3px; }"
+-        "QToolBar QToolButton { background: transparent; border: 1px solid transparent; border-radius: 4px; padding: 2px; }"
+-        "QToolBar QToolButton:checked { background: #d6eafb; border-color: #659dca; }"
+-        "QToolButton:enabled:hover, QToolBar QToolButton:enabled:hover { background: #e2eff9; border-color: #659dca; }"
+-        "QToolButton:enabled:pressed, QToolBar QToolButton:enabled:pressed { background: #c1dcf1; border-color: #427fab; }"
+-        "QToolBar QToolButton[popupMode=\"1\"] { padding-right: 11px; }"
+-        "QToolBar QToolButton::menu-button { border: none; width: 10px; }"
+-        "QToolButton::menu-button:enabled:hover { background: #c1dcf1; }"
+-        "QToolButton::menu-button:enabled:pressed { background: #a9cee9; }"
+-        "QMenuBar::item:selected:enabled,QMenu::item:selected:enabled { background: #d6eafb; color: palette(window-text); }"
+-        "QMenuBar::item:pressed:enabled { background: #c1dcf1; }"
+-        "QMenu::item:disabled { color: palette(disabled, window-text); }");
+-    if (application->styleSheet() != sheet) application->setStyleSheet(sheet);
+-}
+--- a/forgeCad2026_gui.h
++++ b/forgeCad2026_gui.h
+@@ -88,7 +88,6 @@
+     void endBackgroundProgress();
+ 
+     void setDisplayMode(int mode);
+-    void setTheme(bool dark);
+     void rebuildModelTree();
+     void renameTreeItem(QTreeWidgetItem *item);
+     void applyTreeBackground(const QColor &color);
+--- a/cad_drawing_window.cpp
++++ b/cad_drawing_window.cpp
+@@ -1,4 +1,5 @@
+ #include "cad_drawing_window.h"
++#include "forgeCad2026_application_theme.h"
+ #include "cad_document_tabs.h"
+ #include "cad_drawing_template.h"
+ #include "cad_drawing_template_editor.h"
+@@ -29,6 +30,7 @@
+ #include <QEvent>
+ #include <QTabBar>
+ #include <QScopedValueRollback>
++#include <QPointer>
+ #include <stdexcept>
+ 
+ namespace ForgeCad {
+@@ -46,6 +48,7 @@
+     file->addSeparator();addRevisionMenus(file);
+     editMenu_=addCadMenu(menuBar(),QStringLiteral("Modifica"));insertMenu_=addCadMenu(menuBar(),QStringLiteral("Inserisci"));
+     dimensionMenu_=addCadMenu(menuBar(),QStringLiteral("Quote"));viewMenu_=addCadMenu(menuBar(),QStringLiteral("Visualizza"));
++    setupApplicationThemeMenu(*addCadMenu(viewMenu_,QStringLiteral("Tema")));
+     auto *source=addToolBar(QStringLiteral("Documento e modello"));source->setObjectName("drawingDocumentBar");configureCommandBar(source);
+     saveAction->setObjectName("drawingSaveAction");saveAction->setIcon(commandIcon("save"));saveAs->setIcon(commandIcon("drawingSaveAs"));
+     source->addAction(saveAction);source->addAction(exportPdf);source->addSeparator();
+@@ -160,7 +163,10 @@
+     populate(dimensionMenu_,{"drawingDimensionNumberingAction","drawingChangeDimensionNumberAction","drawingToggleDimensionNumberAction","drawingSmartDimensionAction","drawingChainHorizontalAction","drawingChainVerticalAction","drawingOrdinateXAction","drawingOrdinateYAction","drawingRepairDimensionAction","drawingEditDimensionAction","drawingReverseDimensionArrowsAction","drawingEndpointDimensionAction","drawingHorizontalDimensionAction","drawingVerticalDimensionAction","drawingLengthDimensionAction"});
+     auto *references=addCadMenu(dimensionMenu_,QStringLiteral("Riferimenti del piano"));
+     for(auto name:{"drawingOriginReferenceAction","drawingAxisXReferenceAction","drawingAxisYReferenceAction"})references->addAction(next->findChild<QAction *>(name));
++    QPointer<QMenu> themeMenu=viewMenu_->findChild<QMenu *>(QStringLiteral("applicationThemeMenu"),Qt::FindDirectChildrenOnly);
+     populate(viewMenu_,{"drawingHiddenLinesAction","drawingShadedFacesAction","drawingCenterMarksAction","drawingCenterLinesAction","drawingClearCenterMarksAction","drawingCylinderAxesAction","drawingFitAction"});viewMenu_->addSeparator();viewMenu_->addAction(next->findChild<QDockWidget *>("drawingTreeDock")->toggleViewAction());
++    if(themeMenu)viewMenu_->addMenu(themeMenu.data());
++    else setupApplicationThemeMenu(*addCadMenu(viewMenu_,QStringLiteral("Tema")));
+     viewMenu_->addAction(revisionDock_->toggleViewAction());
+     viewMenu_->addAction(next->findChild<QToolBar *>("drawingCommandBar")->toggleViewAction());viewMenu_->addAction(findChild<QToolBar *>("drawingDocumentBar")->toggleViewAction());
+     auto *workspace=next->findChild<QMainWindow *>();

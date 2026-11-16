@@ -1,0 +1,51 @@
+Test project /tmp/forgecad-review-20261115/ctest
+      Start  28: forgecad_document_read_tests
+      Start  50: forgecad_native_revisions_tests
+ 1/23 Test  #50: forgecad_native_revisions_tests ...........   Passed    0.07 sec
+      Start  51: forgecad_workspace_revisions_tests
+ 2/23 Test  #28: forgecad_document_read_tests ..............   Passed    0.13 sec
+      Start  87: forgecad_document_access_tests
+ 3/23 Test  #87: forgecad_document_access_tests ............   Passed    0.32 sec
+      Start  88: forgecad_document_consultation_tests
+ 4/23 Test  #51: forgecad_workspace_revisions_tests ........   Passed    1.29 sec
+      Start 160: forgecad_drawing_scale_tests
+ 5/23 Test  #88: forgecad_document_consultation_tests ......   Passed    0.92 sec
+      Start 161: forgecad_drawing_editor_tests
+ 6/23 Test #161: forgecad_drawing_editor_tests .............   Passed    0.16 sec
+      Start 165: forgecad_drawing_dimensions_tests
+ 7/23 Test #165: forgecad_drawing_dimensions_tests .........   Passed    0.04 sec
+      Start 167: forgecad_drawing_dimension_repair_tests
+ 8/23 Test #167: forgecad_drawing_dimension_repair_tests ...   Passed    0.99 sec
+      Start 169: forgecad_drawing_silhouette_tests
+ 9/23 Test #169: forgecad_drawing_silhouette_tests .........   Passed    0.13 sec
+      Start 170: forgecad_drawing_visibility_tests
+10/23 Test #160: forgecad_drawing_scale_tests ..............   Passed    1.46 sec
+      Start 171: forgecad_drawing_hidden_lines_tests
+11/23 Test #171: forgecad_drawing_hidden_lines_tests .......   Passed    1.64 sec
+      Start 172: forgecad_drawing_page_tests
+12/23 Test #172: forgecad_drawing_page_tests ...............   Passed    0.17 sec
+      Start 173: forgecad_drawing_derived_tests
+13/23 Test #173: forgecad_drawing_derived_tests ............   Passed    2.57 sec
+      Start 174: forgecad_drawing_detail_tests
+14/23 Test #174: forgecad_drawing_detail_tests .............   Passed    1.41 sec
+      Start 175: forgecad_drawing_auxiliary_tests
+15/23 Test #175: forgecad_drawing_auxiliary_tests ..........   Passed    0.53 sec
+      Start 176: forgecad_drawing_break_tests
+16/23 Test #176: forgecad_drawing_break_tests ..............   Passed    0.74 sec
+      Start 177: forgecad_revision_numbers_tests
+17/23 Test #177: forgecad_revision_numbers_tests ...........   Passed    0.01 sec
+      Start 178: forgecad_drawing_presentation_tests
+18/23 Test #178: forgecad_drawing_presentation_tests .......   Passed    0.31 sec
+      Start 180: forgecad_drawing_centers_tests
+19/23 Test #180: forgecad_drawing_centers_tests ............   Passed    0.92 sec
+      Start 181: forgecad_drawing_axes_tests
+20/23 Test #181: forgecad_drawing_axes_tests ...............   Passed    2.42 sec
+      Start 182: forgecad_drawing_ui_controls_tests
+21/23 Test #182: forgecad_drawing_ui_controls_tests ........   Passed    0.12 sec
+      Start 183: forgecad_drawing_focus_tests
+22/23 Test #183: forgecad_drawing_focus_tests ..............   Passed    3.78 sec
+23/23 Test #170: forgecad_drawing_visibility_tests .........   Passed   24.45 sec
+
+100% tests passed out of 23
+
+Total Test time (real) =  27.15 sec

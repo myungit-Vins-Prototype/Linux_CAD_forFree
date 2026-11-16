@@ -1,0 +1,25 @@
+#!/usr/bin/env python3
+# Build privato: non configura/modifica CMake e non scrive nel repository.
+import argparse,pathlib,subprocess,json,time
+p=argparse.ArgumentParser();p.add_argument('root',type=pathlib.Path);p.add_argument('--stage',type=pathlib.Path);p.add_argument('--output',type=pathlib.Path,default=pathlib.Path('/tmp/edge-offset-reproduce'));p.add_argument('--baseline',action='store_true');p.add_argument('--sanitize',action='store_true');a=p.parse_args()
+root=a.root.resolve();stage=(a.stage or root/'kernel').resolve();out=a.output.resolve();out.mkdir(exist_ok=True,parents=True);here=pathlib.Path(__file__).parent
+src=here/'offset_edge_regressions.cpp.txt';src=src if src.exists() else here/'offset_edge_regressions.cpp'
+(out/'test.cpp').write_text(src.read_text());flags=['-std=c++17','-O1','-g','-ffp-contract=off','-fno-fast-math','-I'+str(stage),'-I'+str(root/'kernel')]
+san=['-fsanitize=address,undefined','-fno-omit-frame-pointer'] if a.sanitize else []
+objects=[]
+if a.baseline:
+    baseline=here/'baseline_fk_offset.cpp.txt';baseline=baseline if baseline.exists() else here/'baseline_fk_offset.cpp'
+    (out/'baseline_fk_offset.cpp').write_text(baseline.read_text());sources=[out/'baseline_fk_offset.cpp']
+else:
+    flags+=['-DHAVE_EDGE_PROVIDER'];sources=[stage/'fk_curve_fit_bounds.cpp',stage/'fk_offset.cpp',root/'kernel/fk_affine_surface_fit.cpp']
+start=time.monotonic()
+for source in sources+[out/'test.cpp']:
+    obj=out/(source.stem+'.o');print('compile',source.name,flush=True);subprocess.run(['/usr/bin/c++']+flags+san+['-c',str(source),'-o',str(obj)],check=True);objects.append(obj)
+subprocess.run(['/usr/bin/c++']+san+[str(o) for o in objects]+[str(root/'forgecad-release/kernel/libforgekernel.a'),'-o',str(out/'tests')],check=True)
+print('Run',str(out/'tests'),'(LSan richiede esecuzione fuori ptrace sandbox)',flush=True)
+with (out/'run.log').open('w') as log:result=subprocess.run([str(out/'tests')],stdout=log,stderr=subprocess.STDOUT)
+log=(out/'run.log').read_text();print(log)
+expected='results passed=0 failed=8' if a.baseline else 'results passed=18 failed=0'
+ok=(result.returncode==(1 if a.baseline else 0) and expected in log)
+(out/'result.json').write_text(json.dumps(dict(exit=result.returncode,baseline=a.baseline,sanitizer=a.sanitize,expected=expected,ok=ok,seconds=time.monotonic()-start),indent=2)+'\n')
+raise SystemExit(0 if ok else 1)

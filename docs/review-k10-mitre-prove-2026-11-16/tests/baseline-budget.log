@@ -1,0 +1,9 @@
+[  OK  ] BlendMitreDistinctFitAndCarrierBudgets
+[  OK  ] BlendMitreOverCarrierBudgetRejects
+    /tmp/mitre-review/tests/test_mitre_budget.cpp:42: FK_CHECK(rejected)
+    /tmp/mitre-review/tests/test_mitre_budget.cpp:42: FK_CHECK(rejected)
+    /tmp/mitre-review/tests/test_mitre_budget.cpp:42: FK_CHECK(rejected)
+    /tmp/mitre-review/tests/test_mitre_budget.cpp:42: FK_CHECK(rejected)
+[ FAIL ] BlendMitreInvalidFitToleranceRejectsBeforePublishing (4 controlli falliti)
+[  OK  ] BlendMitreCancellationDoesNotPublishCut
+3/4 test superati

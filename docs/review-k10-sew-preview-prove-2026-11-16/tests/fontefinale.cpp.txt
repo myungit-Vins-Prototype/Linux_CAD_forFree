@@ -1,0 +1,242 @@
+#include "fk_sew.h"
+#include "fk_history.h"
+#include "fk_surface.h"
+#include "fk_bspline.h"
+#include "fk_pcurve.h"
+#include "fk_curve_fit_bounds.h"
+#include "fk_body_check.h"
+#include "fk_body_io.h"
+#include "fk_cancel.h"
+#include <algorithm>
+#include <array>
+#include <fstream>
+#include <iomanip>
+#include <iostream>
+#include <limits>
+#include <stdexcept>
+#include <string>
+#include <sstream>
+using namespace ForgeCad::Kernel;
+namespace {
+void require(bool value,const char *message){if(!value)throw std::runtime_error(message);}
+struct Options {
+    bool affine=false,reverseInputs=false,reverseTarget=false,trim=false;
+    double scale=1;
+    Interval targetRange{0,1};
+    bool rational=false;
+};
+Body sourceSheet(bool upper,const Options &options){
+    const double scale=options.scale,y=upper?0:-scale;
+    const std::vector<Vec3> vertices={{0,y,0},{scale,y,0},{scale,y+scale,0},{0,y+scale,0}};
+    std::vector<Body::BuildEdge> edges;
+    for(int i=0;i<4;++i){
+        int a=i,b=(i+1)%4;
+        if(!upper&&i==2)std::swap(a,b);
+        edges.push_back({a,b,std::make_shared<Line<3>>(vertices[a],vertices[b]-vertices[a]),{0,scale},0});
+    }
+    Body::BuildFace face;face.surface=std::make_shared<Plane>(Frame3());
+    face.loops={{{0,true,nullptr,0},{1,true,nullptr,0},{2,upper,nullptr,0},{3,true,nullptr,0}}};
+    if(upper){
+        const int degree=options.rational?4:128;
+        // A positive, stable Bernstein lobe: peak1.12e-7 at3/128,
+        // maximum at the old64-point grid9.7273e-8. The rest is t or t².
+        constexpr double hiddenPole=4.940214000122462e-7;
+        std::vector<Vec3> poles;std::vector<Vec2> uv;std::vector<double> weights;
+        std::vector<double> knots(degree+1,options.targetRange.lo);
+        knots.insert(knots.end(),degree+1,options.targetRange.hi);
+        for(int i=0;i<=degree;++i){
+            const double base=options.affine?double(i)/degree:double(i)*(i-1)/(degree*(degree-1));
+            const double weight=options.rational?1+.2*i/degree:1.;
+            const double q=scale*(options.rational?1.2*base/weight:base+(i==3?hiddenPole:0));
+            if(options.rational)weights.push_back(weight);
+            poles.emplace_back(q,0,0);uv.emplace_back(q,0);
+        }
+        if(options.reverseTarget){
+            std::reverse(poles.begin(),poles.end());std::reverse(uv.begin(),uv.end());std::reverse(weights.begin(),weights.end());
+            std::swap(edges[0].start,edges[0].end);face.loops[0][0].sense=false;
+        }
+        edges[0].curve=std::make_shared<BSplineCurve<3>>(degree,knots,poles,weights);
+        edges[0].range=options.targetRange;
+        face.loops[0][0].pcurve=std::make_shared<BSplineCurve<2>>(degree,knots,uv,weights);
+        if(options.trim){
+            edges[0].curve=std::make_shared<TrimmedCurve<3>>(edges[0].curve,options.targetRange.lo,options.targetRange.hi);
+            face.loops[0][0].pcurve=std::make_shared<TrimmedCurve<2>>(face.loops[0][0].pcurve,options.targetRange.lo,options.targetRange.hi);
+        }
+    }
+    auto body=Body::buildSheet(vertices,edges,{face});
+    require(computePCurves(body)==0,"original pcurves could not be constructed");
+    return body;
+}
+void hex(std::ostream&s,double x){s<<'"'<<std::hexfloat<<x<<std::defaultfloat<<'"';}
+template<int N>void vec(std::ostream&s,const Vec<N>&v){s<<'[';for(int i=0;i<N;++i){if(i)s<<',';hex(s,v[i]);}s<<']';}
+void numbers(std::ostream&s,const std::vector<double>&a){s<<'[';bool first=true;for(double v:a){if(!first)s<<',';first=false;hex(s,v);}s<<']';}
+template<int N>void curve(std::ostream&s,const CurvePtr<N>&c){
+ s<<'{';
+ if(c->type()==CurveType::Line){auto&l=static_cast<const Line<N>&>(*c);s<<"\"type\":\"line\",\"origin\":";vec(s,l.origin());s<<",\"direction\":";vec(s,l.direction());}
+ else if(c->type()==CurveType::BSpline){auto&b=static_cast<const BSplineCurve<N>&>(*c);s<<"\"type\":\"bspline\",\"degree\":"<<b.degree()<<",\"knots\":";numbers(s,b.knots());s<<",\"weights\":";numbers(s,b.weights());s<<",\"poles\":[";bool first=true;for(auto p:b.poles()){if(!first)s<<',';first=false;vec(s,p);}s<<']';}
+ else if(c->type()==CurveType::Trimmed){auto&t=static_cast<const TrimmedCurve<N>&>(*c);s<<"\"type\":\"trimmed\",\"range\":[";hex(s,t.domain().lo);s<<',';hex(s,t.domain().hi);s<<"],\"basis\":";curve(s,t.basis());}
+ else if constexpr(N==3){if(c->type()==CurveType::Transformed){auto&t=static_cast<const TransformedCurve&>(*c);s<<"\"type\":\"transformed\",\"matrix\":[";for(int i=0;i<3;++i){if(i)s<<',';s<<'[';for(int j=0;j<3;++j){if(j)s<<',';hex(s,t.transform().matrix(i,j));}s<<']';}s<<"],\"translation\":";vec(s,t.transform().translationPart());s<<",\"basis\":";curve(s,t.basis());}else throw std::runtime_error("unsupported exporter curve");}
+ else throw std::runtime_error("unsupported exporter curve");
+ s<<'}';
+}
+void exportFins(std::ostream &s,const Body &body,double legacyCap,int operand=-1,const BodyHistory *history=nullptr,int lowerOperand=-1){
+    s<<'[';bool first=true;
+    for(auto id:body.fins()){
+        const auto &fin=body.fin(id);const auto &edge=body.edge(fin.edge);
+        const auto faceId=body.finFace(id);const auto &face=body.face(faceId);
+        require(face.surface->type()==SurfaceType::Plane,"export requires actual Plane support");
+        int originOperand=operand,originFace=faceId.index;
+        if(history){
+            const auto &origins=history->origins(EntityKind::Face,faceId.index);
+            require(origins.size()==1&&origins.front().kind==EntityKind::Face,"explicit face provenance missing");
+            originOperand=origins.front().operand;originFace=origins.front().index;
+        }
+        const bool migrated=history&&originOperand==lowerOperand&&!body.isLaminar(fin.edge);
+        const auto &frame=static_cast<const Plane&>(*face.surface).frame();
+        if(!first)s<<',';
+        first=false;
+        s<<"{\"fin\":"<<id.index<<",\"edge\":"<<fin.edge.index<<",\"face\":"<<faceId.index
+         <<",\"source_operand\":"<<originOperand<<",\"source_face\":"<<originFace
+         <<",\"migrated\":"<<(migrated?"true":"false")<<",\"sense\":"<<(fin.sense?"true":"false")<<",\"range\":[";
+        hex(s,edge.range.lo);s<<',';hex(s,edge.range.hi);s<<"],\"budget\":";
+        hex(s,history?legacyCap:fin.pcurveTolerance);
+        s<<",\"legacy_cap\":";hex(s,legacyCap);
+        s<<",\"fin_tolerance\":";hex(s,fin.pcurveTolerance);
+        s<<",\"edge_tolerance\":";hex(s,edge.tolerance);
+        s<<",\"standard_resolution\":";hex(s,linearResolution());
+        s<<",\"plane\":{\"origin\":";vec(s,frame.origin());s<<",\"x\":";vec(s,frame.xDir());
+        s<<",\"y\":";vec(s,frame.yDir());s<<",\"z\":";vec(s,frame.zDir());s<<"},\"curve\":";
+        curve(s,edge.curve);s<<",\"pcurve\":";curve(s,fin.pcurve);s<<'}';
+    }
+    s<<']';
+}
+void exportCase(const std::string &directory,const std::string &name,const Body &upper,const Body &lower,const SewResult &result,const BodyHistory &history,const Options &options,double cap,double tolerance){
+    if(directory.empty())return;
+    const int upperOperand=options.reverseInputs?1:0,lowerOperand=1-upperOperand;
+    std::ofstream s(directory+"/"+name+".json");
+    s<<"{\"case\":\""<<name<<"\",\"tolerance\":";hex(s,tolerance);
+    s<<",\"standard_resolution\":";hex(s,linearResolution());s<<",\"legacy_cap\":";hex(s,cap);
+    s<<",\"source\":";
+    std::ostringstream top,bottom;exportFins(top,upper,cap,upperOperand);exportFins(bottom,lower,cap,lowerOperand);
+    auto a=top.str(),b=bottom.str();s<<'['<<a.substr(1,a.size()-2)<<','<<b.substr(1,b.size()-2)<<']';
+    s<<",\"actual\":";exportFins(s,result.body,cap,-1,&history,lowerOperand);s<<"}\n";
+}
+void publicCase(const Options &options,const std::string &name,const std::string &directory){
+    auto upper=sourceSheet(true,options),lower=sourceSheet(false,options);
+    require(checkBody(upper).empty()&&checkBody(lower).empty(),"original sheets fail topology/geometric checker");
+    const auto upperBefore=writeBodyBinary(upper),lowerBefore=writeBodyBinary(lower);
+    const auto upperEdge=upper.edges().front();const auto originalTarget=upper.edge(upperEdge).curve;
+    const auto lowerFin=lower.loopFins(lower.face(lower.faces().front()).loops.front())[2];
+    const auto &sourceFin=lower.fin(lowerFin);const auto &sourceEdge=lower.edge(sourceFin.edge);
+    const auto &sourcePlane=*lower.face(lower.finFace(lowerFin)).surface;
+    const double tolerance=1e-8*options.scale;
+    const double original=pcurveDeviation(sourcePlane,*sourceEdge.curve,*sourceFin.pcurve,sourceEdge.range,16);
+    const double cap=original+std::max(1e-7,10*tolerance);
+    require(original<=linearResolution(),"source original fin is inconsistent before sewing");
+    BodyHistory history;
+    const auto result=options.reverseInputs?sewSheets({&lower,&upper},tolerance,false,&history):sewSheets({&upper,&lower},tolerance,false,&history);
+    require(upperBefore==writeBodyBinary(upper)&&lowerBefore==writeBodyBinary(lower),"sewing mutated an original body");
+    require(result.body.faces().size()==2&&result.body.edges().size()==7&&result.freeEdges==6&&result.shells==1&&!result.closed,"operation omitted the intended shared edge or changed its sheet topology");
+    require(checkBody(result.body).empty(),"assembled result fails original checker");
+    exportCase(directory,name,upper,lower,result,history,options,cap,tolerance);
+    const int lowerOperand=options.reverseInputs?0:1;
+    int migratedCount=0;double worst=0,published=0,edgeTolerance=0,at=0;
+    for(auto id:result.body.fins()){
+        const auto &fin=result.body.fin(id);const auto &edge=result.body.edge(fin.edge);
+        const auto faceId=result.body.finFace(id);const auto &face=result.body.face(faceId);
+        const auto &origins=history.origins(EntityKind::Face,faceId.index);
+        require(origins.size()==1&&origins.front().kind==EntityKind::Face&&origins.front().index==0,"declared face provenance lost");
+        if(result.body.isLaminar(fin.edge))continue;
+        require(edge.curve==originalTarget&&edge.range.lo==options.targetRange.lo&&edge.range.hi==options.targetRange.hi,"sewing changed the chosen target curve or its original parameter");
+        if(origins.front().operand!=lowerOperand)continue;
+        ++migratedCount;
+        const auto evaluate=[&](double t){
+            const auto uv=fin.pcurve->point(t);
+            const double error=distance(face.surface->point(uv.x(),uv.y()),edge.curve->point(t));
+            if(error>worst){worst=error;at=t;published=fin.pcurveTolerance;edgeTolerance=edge.tolerance;}
+        };
+        for(int i=0;i<=256;++i)evaluate(edge.range.lo+edge.range.length()*i/256.);
+        const double peak=options.reverseTarget?1-3./128:3./128;
+        evaluate(edge.range.lo+edge.range.length()*peak);
+#ifdef HAVE_PLANE_SEW_PROVIDER
+        require(fin.pcurveTolerance>0&&fin.pcurveTolerance<=cap,"migrated fin does not publish a finite bound within the fixed legacy cap");
+        const double bound=detail::requirePCurveOnPlane(edge.curve,face.surface,fin.pcurve,edge.range,fin.pcurveTolerance);
+        require(std::isfinite(bound)&&bound<=fin.pcurveTolerance,"actual emitted fin violates its published certificate");
+#endif
+    }
+    require(migratedCount==1,"explicit source face does not identify exactly one remapped fin");
+    std::cout<<" source_original="<<original<<" residual="<<worst<<" legacy_cap="<<cap<<" fin_tolerance="<<published<<" edge_tolerance="<<edgeTolerance<<" witness_t="<<at;
+    require(worst<=cap,"actual remapped fin exceeds the original legacy 3D budget");
+}
+void publicFailures(){
+    auto upper=sourceSheet(true,{}),lower=sourceSheet(false,{});
+    const auto a=writeBodyBinary(upper),b=writeBodyBinary(lower);
+    auto token=std::make_shared<std::atomic<bool>>(true);CancellationScope scope(token);
+    bool cancelled=false;try{sewSheets({&upper,&lower},1e-8,false);}catch(const OperationCancelled&){cancelled=true;}
+    require(cancelled&&a==writeBodyBinary(upper)&&b==writeBodyBinary(lower),"cancelled sewing changed source bodies or returned output");
+}
+#ifdef HAVE_PLANE_SEW_PROVIDER
+void normalResidual(){
+    auto plane=std::make_shared<Plane>(Frame3());
+    auto edge=std::make_shared<Line<3>>(Vec3(0,0,5e-8),Vec3(1,0,0));
+    double deviation=123;
+    const auto pc=detail::fitPCurveOnPlane(edge,plane,{-2,5},1e-8,1e-7,&deviation);
+    require(pc&&deviation>=5e-8&&deviation<=1e-7,"normal target residual was discarded or the legacy cap was raised");
+    require(detail::requirePCurveOnPlane(edge,plane,pc,{-2,5},deviation)<=deviation,"returned final candidate lacks a whole-domain residual bound");
+    auto far=std::make_shared<Line<3>>(Vec3(0,0,2e-7),Vec3(1,0,0));deviation=123;bool rejected=false;
+    try{detail::fitPCurveOnPlane(far,plane,{-2,5},1e-8,1e-7,&deviation);}catch(const std::domain_error&){rejected=true;}
+    require(rejected&&deviation==123,"off-plane rejection published partial deviation or widened the cap");
+}
+void physicalMetric(){
+    auto basis=std::make_shared<BSplineCurve<3>>(4,std::vector<double>{0,0,0,0,0,1,1,1,1,1},std::vector<Vec3>{{0,0,0},{0,0,0},{0,0,0},{0,0,0},{1,0,0}});
+    const Vec3 origin(4,-8,2);
+    auto edge=std::make_shared<TransformedCurve>(std::make_shared<TrimmedCurve<3>>(basis,0,1),Transform3::translation(origin));
+    auto plane=std::make_shared<Plane>(Frame3::fromAxes(origin,{1e-12,0,0},{.25,1,0},{0,0,1}));
+    double deviation=123;
+    const auto pc=detail::fitPCurveOnPlane(edge,plane,{0,1},1e-8,1e-7,&deviation);
+    require(pc&&deviation<=1e-7,"physical Plane metric rejected supported original scaled/sheared axes");
+    double physical=0,parameter=0;
+    for(int i=0;i<=100;++i){const double t=i/100.;const auto uv=pc->point(t);physical=std::max(physical,distance(plane->point(uv.x(),uv.y()),edge->point(t)));parameter=std::max(parameter,std::fabs(uv.x()-1e12*t*t*t*t));}
+    require(physical<=1e-8&&parameter>1.,"test did not distinguish physical mm from UV coordinate error");
+    require(detail::requirePCurveOnPlane(edge,plane,pc,{0,1},deviation)<=deviation,"actual controls lost wrapper or Plane metric provenance");
+    std::cout<<" physical="<<physical<<" uv_coordinate_error="<<parameter;
+}
+void candidateContracts(){
+    auto plane=std::make_shared<Plane>(Frame3());auto edge=std::make_shared<Line<3>>(Vec3(),Vec3(1,0,0));
+    double deviation=123;const auto pc=detail::fitPCurveOnPlane(edge,plane,{-2,5},1e-8,1e-7,&deviation);
+    const auto *spline=dynamic_cast<const BSplineCurve<2>*>(pc.get());require(spline,"expected actual C0 cubic pcurve");
+    auto poles=spline->poles();poles[1][1]+=1e-4;
+    auto wrong=std::make_shared<BSplineCurve<2>>(spline->degree(),spline->knots(),poles,spline->weights());
+    bool rejected=false;try{detail::requirePCurveOnPlane(edge,plane,wrong,{-2,5},1e-7);}catch(const std::domain_error&){rejected=true;}
+    require(rejected,"a corrupted original emitted control was silently accepted");
+    deviation=123;rejected=false;try{detail::fitPCurveOnPlane(edge,plane,{-2,5},1e-8,std::numeric_limits<double>::quiet_NaN(),&deviation);}catch(const std::exception&){rejected=true;}
+    require(rejected&&deviation==123,"recognized invalid budget published a partial bound");
+    auto token=std::make_shared<std::atomic<bool>>(true);CancellationScope scope(token);
+    bool cancelled=false;try{detail::fitPCurveOnPlane(edge,plane,{-2,5},1e-8,1e-7,&deviation);}catch(const OperationCancelled&){cancelled=true;}
+    require(cancelled&&deviation==123,"cancelled Plane construction published partial deviation");
+}
+#endif
+}
+int main(int argc,char **argv){
+    const std::string directory=argc>1?argv[1]:"";int passed=0,failed=0;
+    std::cout<<std::setprecision(17);
+    const auto run=[&](const std::string &name,const auto &fn){std::cout<<name<<std::flush;try{fn();++passed;std::cout<<" PASS\n";}catch(const std::exception &e){++failed;std::cout<<" FAIL "<<e.what()<<'\n';}catch(const OperationCancelled&){++failed;std::cout<<" FAIL unexpected cancellation\n";}};
+    std::vector<std::pair<std::string,Options>> cases={
+        {"nonaffine_polynomial",{}},
+        {"nonaffine_reverse_inputs",{false,true}},
+        {"nonaffine_shift_trim",{false,false,false,true,1,{-3,5}}},
+        {"nonaffine_reverse_target",{false,false,true}},
+        {"nonaffine_scale",{false,false,false,false,1000}},
+        {"reuse_sampled_same_parameter",{true}},
+        {"reuse_affine_range",{true,false,false,false,1,{-3,5}}}
+    };
+    Options rational;rational.rational=true;cases.push_back({"rational_original_weights",rational});
+    for(const auto &entry:cases)run(entry.first,[&]{publicCase(entry.second,entry.first,directory);});
+    run("public_cancellation_atomic",[]{publicFailures();});
+#ifdef HAVE_PLANE_SEW_PROVIDER
+    run("plane_fit_original_normal_and_atomic_budget",[]{normalResidual();});
+    run("plane_actual_controls_invalid_budget_and_cancellation",[]{candidateContracts();});
+    run("plane_fit_physical_metric_original_wrappers",[]{physicalMetric();});
+#endif
+    std::cout<<passed<<" passed "<<failed<<" failed\n";return failed?1:0;
+}

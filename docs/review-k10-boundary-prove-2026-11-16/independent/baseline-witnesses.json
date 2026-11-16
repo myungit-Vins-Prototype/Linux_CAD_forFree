@@ -1,0 +1,94 @@
+{
+  "method": "Exact Fraction source-derived witnesses; grids only establish alias acceptance, never continuous certificates.",
+  "production_execution": false,
+  "records": [
+    {
+      "case": "rational-original-parameter",
+      "original_degree": 1,
+      "original_poles": [
+        0,
+        1
+      ],
+      "original_weights": [
+        1,
+        4
+      ],
+      "parameter": "1/2",
+      "original_x": "4/5",
+      "standard_x": "1/2",
+      "difference_mm": "3/10",
+      "assertion": "The geometrical locus agrees; equality at the original parameter does not."
+    },
+    {
+      "case": "33-point-affine-and-original-alias",
+      "degree": 1,
+      "knots": [
+        0,
+        0,
+        "1/128",
+        "3/256",
+        "1/64",
+        1,
+        1
+      ],
+      "pcurve_Q": "(t,bump(t))",
+      "edge_E": "(t,bump(t),0)",
+      "carrier_S": "(u,v,0)",
+      "guide": "(t,0,0)",
+      "all_33_point_residuals_zero": true,
+      "middle_derivative": [
+        1,
+        0
+      ],
+      "witness_t": "3/256",
+      "witness_original_to_guide_mm": "1/4",
+      "scope": "Proves affine recognition and same-parameter original comparison are sampled; does not alone prove emitted original is lost."
+    },
+    {
+      "case": "opposite-carrier-hidden-extension",
+      "original_range": [
+        0,
+        1
+      ],
+      "extension_range": [
+        1,
+        2
+      ],
+      "iso_guide": "(t,0,0)",
+      "support0": "(u,v,0)",
+      "support1": "(u,v,bump(u))",
+      "u_knots": [
+        0,
+        0,
+        "9/8",
+        "19/16",
+        "5/4",
+        2,
+        2
+      ],
+      "support1_z_controls": [
+        0,
+        0,
+        "1/2",
+        0,
+        0
+      ],
+      "all_five_projection_sample_distances_zero": true,
+      "witness_t": "19/16",
+      "local_quality_cap_mm": "1/10000000",
+      "z_lower_for_all_points_with_u_within_cap": "624999/1250000",
+      "proved_distance_strictly_greater_than_cap": true,
+      "proof": "A closer point must have |u-t|<cap. On that entire strip z>cap, a contradiction.",
+      "scope": "Source-derived production branch acceptance witness; runtime test should separately confirm helper setup."
+    },
+    {
+      "case": "observed-error-budget-ratchet",
+      "kFitTolerance": "1/10000000",
+      "input_edge_tolerance": "1/10000000",
+      "observed_worst": "3/20000000",
+      "admission_threshold": "1/5000000",
+      "output_edge_tolerance": "3/10000000",
+      "scope": "Arithmetic of max(edge.tolerance,2*extensionDeviation); no global maximum inferred from samples."
+    }
+  ]
+}

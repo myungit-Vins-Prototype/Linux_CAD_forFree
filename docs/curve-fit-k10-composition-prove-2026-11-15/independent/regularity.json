@@ -1,0 +1,33 @@
+{
+  "spans": [
+    {
+      "range": [
+        0.0,
+        0.1
+      ],
+      "dx_du_min_bernstein_exact": "3602879701896396/3602879701896397",
+      "dx_du_lower_double_outward": 0.9999999999999997
+    },
+    {
+      "range": [
+        0.1,
+        0.101
+      ],
+      "dx_du_min_bernstein_exact": "36028797018963/36028797018964",
+      "dx_du_lower_double_outward": 0.9999999999999721
+    },
+    {
+      "range": [
+        0.101,
+        1.0
+      ],
+      "dx_du_min_bernstein_exact": "10796629506682864/10796629506682869",
+      "dx_du_lower_double_outward": 0.9999999999999994
+    }
+  ],
+  "global_x_derivative_lower": 0.9999999999999721,
+  "surface": "S(u,v)=(x(u),v,z(u)); ||Su x Sv||=sqrt(x_prime^2+z_prime^2)>=x_prime>0",
+  "profile_geometric_regularity": "monotone regular graph; z and its first two derivatives vanish at the two bump endpoints; no cusp or fold",
+  "peak_z_exact": "36893488147419105/36893488147419103232",
+  "proof": "Piecewise Bezier span control derivative coefficients are strictly positive rational numbers derived from the actual input double poles. Convex-hull property gives the continuous lower bound, not a sampled radius/Jacobian."
+}

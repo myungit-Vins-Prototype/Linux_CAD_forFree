@@ -1,0 +1,8 @@
+[  OK  ] PlanarThickenHiddenPolynomialRationalAllSides
+[  OK  ] PlanarThickenPoseScaleSensePreservesWallGeometryAndPcurves
+[  OK  ] PlanarThickenNestedTrimReverseTransformedHolesAndRoundtrip
+[  OK  ] PlanarThickenDirectionControlRetainsOriginalCurve
+[  OK  ] PlanarThickenInvalidAndCancellationRetainLegacyHistoryReset
+[  OK  ] PlanarThickenClosedNativeNurbsAndAngularCircleCompatibility
+6/6 test superati
+elapsed=1.55 maxrss_kb=6780

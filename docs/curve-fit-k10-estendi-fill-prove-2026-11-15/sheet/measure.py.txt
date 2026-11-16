@@ -1,0 +1,8 @@
+from pathlib import Path
+import json,shlex,subprocess
+r=Path('/home/myungit/Linux_CAD_forFree');o=Path('/tmp/forgecad-k10-next-20261115/sheet');cs=json.loads((r/'forgecad-release/compile_commands.json').read_text());c=next(x for x in cs if x['file'].endswith('/kernel/fk_sheet.cpp'))
+for name in ['fk_sheet.before','measurement']:
+ cmd=shlex.split(c['command']);cmd[cmd.index('-o')+1]=str(o/(name+'.o'));cmd[cmd.index('-c')+1]=str(o/(name+'.cpp'));cmd+=['-I'+str(r/'kernel'),'-I'+str(r/'kernel/tests')];subprocess.run(cmd,cwd=c['directory'],check=True)
+l=r/'forgecad-release/kernel/occt_tests';cmd=shlex.split((l/'CMakeFiles/forgekernel_tests.dir/link.txt').read_text());tail=cmd[cmd.index('../libforgekernel.a'):]
+for mode,obj in [('before','fk_sheet.before.o'),('after','fk_sheet.o')]:
+ args=[cmd[0],'-o',str(o/('measure-'+mode)),str(o/'measurement.o'),'/tmp/forgecad-followup-fix-20261115/kernel/fk_test_main.o',str(o/obj)]+tail;subprocess.run(args,cwd=l,check=True)

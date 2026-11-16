@@ -1,0 +1,3 @@
+CTest completed all 14 selected suites: exit 0, 40.90 seconds.
+Initial post-run wrapper assertion rejected the summary format: expected "100% tests passed, 0 tests failed out of 14", actual "100% tests passed out of 14".
+The assertion could fail only after child exit 0. Corrected the parser, independently counted all 14 Passed lines, and reconstructed ctest-result.json from the completed unchanged log. No suite was rerun, skipped, relaxed, or modified.

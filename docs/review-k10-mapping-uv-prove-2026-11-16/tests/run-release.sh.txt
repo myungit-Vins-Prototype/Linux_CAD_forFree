@@ -1,0 +1,15 @@
+#!/bin/bash
+set -eu
+TASK_TESTS=/tmp/mapping-uv-review/tests
+TASK_CORE=/tmp/mapping-uv-review/core
+cd /home/myungit/Linux_CAD_forFree
+/usr/bin/c++ -std=c++17 -O2 -ffp-contract=off -fno-fast-math -I kernel "$TASK_TESTS/test_mapping_pcurve_validation.cpp" "$TASK_CORE/fk_surface_mapping.cpp.o" "$TASK_CORE/fk_quilt_mapping.cpp.o" "$TASK_TESTS/baseline/libforgekernel.a" -o "$TASK_TESTS/candidate-v3-tests"
+mkdir -p "$TASK_TESTS/exports-v3"
+"$TASK_TESTS/candidate-v3-tests" "$TASK_TESTS/exports-v3" > "$TASK_TESTS/candidate-v3.log"
+/usr/bin/c++ -std=c++17 -O2 -ffp-contract=off -fno-fast-math -DFK_MAPPING_BASELINE_COMPAT -I kernel "$TASK_TESTS/baseline_compat.cpp" "$TASK_TESTS/baseline/libforgekernel.a" -o "$TASK_TESTS/baseline-final-tests"
+set +e
+"$TASK_TESTS/baseline-final-tests" > "$TASK_TESTS/baseline-final.log"
+TASK_BASELINE_EXIT=$?
+set -e
+test "$TASK_BASELINE_EXIT" -eq 1
+sha256sum -c "$TASK_TESTS/final-freeze.sha256"

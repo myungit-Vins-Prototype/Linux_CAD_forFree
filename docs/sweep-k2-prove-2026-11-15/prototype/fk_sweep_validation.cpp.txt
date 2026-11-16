@@ -1,0 +1,644 @@
+#include "fk_sweep_validation.h"
+#include "fk_cancel.h"
+#include <algorithm>
+#include <array>
+#include <cmath>
+#include <limits>
+#include <memory>
+#include <stdexcept>
+
+namespace ForgeCad::Kernel::detail {
+namespace {
+const double inf = std::numeric_limits<double>::infinity();
+// Ogni operazione elementare include l'arrotondamento double. I dati di
+// ingresso sono coefficienti esatti della mappa dichiarata dal chiamante.
+struct I {
+    double lo = 0, hi = 0;
+    I() = default;
+    I(double x) : lo(x), hi(x) {}
+    I(double a, double b) : lo(a), hi(b) {}
+};
+double down(double x) {
+    return std::nextafter(x, -inf);
+}
+double up(double x) {
+    return std::nextafter(x, inf);
+}
+I entire() {
+    return {-inf, inf};
+}
+bool finite(I a) {
+    return std::isfinite(a.lo) && std::isfinite(a.hi) && a.lo <= a.hi;
+}
+I checked(double lo, double hi) {
+    return std::isfinite(lo) && std::isfinite(hi) && lo <= hi ? I(lo, hi) : entire();
+}
+I operator+(I a, I b) {
+    if (!finite(a) || !finite(b))
+        return entire();
+    return checked(down(a.lo + b.lo), up(a.hi + b.hi));
+}
+I operator-(I a, I b) {
+    if (!finite(a) || !finite(b))
+        return entire();
+    return checked(down(a.lo - b.hi), up(a.hi - b.lo));
+}
+I operator*(I a, I b) {
+    if (!finite(a) || !finite(b))
+        return entire();
+    const double x[] = {a.lo * b.lo, a.lo * b.hi, a.hi * b.lo, a.hi * b.hi};
+    for (double y : x)
+        if (!std::isfinite(y))
+            return entire();
+    return checked(down(*std::min_element(x, x + 4)), up(*std::max_element(x, x + 4)));
+}
+I operator/(I a, I b) {
+    if (!finite(a) || !finite(b) || !(b.lo > 0))
+        return entire();
+    return a * checked(down(1 / b.hi), up(1 / b.lo));
+}
+I sqr(I a) {
+    if (!finite(a))
+        return entire();
+    if (a.lo <= 0 && a.hi >= 0)
+        return checked(0, up(std::max(a.lo * a.lo, a.hi * a.hi)));
+    return checked(down(std::min(a.lo * a.lo, a.hi * a.hi)), up(std::max(a.lo * a.lo, a.hi * a.hi)));
+}
+I hull(I a, I b) {
+    if (a.lo > a.hi)
+        return b;
+    if (b.lo > b.hi)
+        return a;
+    if (std::isnan(a.lo) || std::isnan(a.hi) || std::isnan(b.lo) || std::isnan(b.hi))
+        return entire();
+    return {std::min(a.lo, b.lo), std::max(a.hi, b.hi)};
+}
+double mid(I a) {
+    return .5 * a.lo + .5 * a.hi;
+}
+using IV = std::array<I, 3>;
+IV vec(Vec3 p) {
+    return {I(p.x()), I(p.y()), I(p.z())};
+}
+IV operator+(const IV &a, const IV &b) {
+    return {a[0] + b[0], a[1] + b[1], a[2] + b[2]};
+}
+IV operator-(const IV &a, const IV &b) {
+    return {a[0] - b[0], a[1] - b[1], a[2] - b[2]};
+}
+IV operator*(const IV &a, I b) {
+    return {a[0] * b, a[1] * b, a[2] * b};
+}
+IV operator/(const IV &a, I b) {
+    return {a[0] / b, a[1] / b, a[2] / b};
+}
+Vec3 midpoint(const IV &a) {
+    return Vec3(mid(a[0]), mid(a[1]), mid(a[2]));
+}
+I project(const IV &a, Vec3 axis) {
+    return a[0] * I(axis.x()) + a[1] * I(axis.y()) + a[2] * I(axis.z());
+}
+using Field = std::vector<IV>;
+struct DerivativeData {
+    std::array<Field, 3> numerator;
+    I denominator;
+};
+struct Patch {
+    std::array<Field, 3> h;
+    std::vector<I> w;
+    mutable std::shared_ptr<DerivativeData> derivatives;
+};
+Patch inputPatch(const SweepValidationSlab &s) {
+    Patch p;
+    const double scale = s.weights.empty() ? 1 : *std::max_element(s.weights.begin(), s.weights.end());
+    for (std::size_t i = 0; i < s.center.size(); ++i) {
+        I w = s.weights.empty() ? I(1) : I(s.weights[i]) / I(scale);
+        p.w.push_back(w);
+        p.h[0].push_back(vec(s.center[i]) * w);
+        p.h[1].push_back(vec(s.xAxis[i]) * w);
+        p.h[2].push_back(vec(s.yAxis[i]) * w);
+    }
+    return p;
+}
+std::pair<Patch, Patch> split(const Patch &p, I t = I(.5)) {
+    Patch a = p, b = p, tmp = p;
+    a.derivatives.reset();
+    b.derivatives.reset();
+    const std::size_t n = p.w.size();
+    const I one = I(1) - t;
+    for (std::size_t k = 1; k < n; ++k) {
+        for (std::size_t i = 0; i + k < n; ++i) {
+            tmp.w[i] = tmp.w[i] * one + tmp.w[i + 1] * t;
+            for (int f = 0; f < 3; ++f)
+                tmp.h[f][i] = tmp.h[f][i] * one + tmp.h[f][i + 1] * t;
+        }
+        a.w[k] = tmp.w[0];
+        b.w[n - k - 1] = tmp.w[n - k - 1];
+        for (int f = 0; f < 3; ++f) {
+            a.h[f][k] = tmp.h[f][0];
+            b.h[f][n - k - 1] = tmp.h[f][n - k - 1];
+        }
+    }
+    return {std::move(a), std::move(b)};
+}
+Patch trim(Patch p, double lo, double hi) {
+    if (hi < 1)
+        p = split(p, I(hi)).first;
+    if (lo > 0)
+        p = split(p, I(lo) / I(hi)).second;
+    return p;
+}
+IV valueBounds(const Field &h, const std::vector<I> &w) {
+    IV b = h.front() / w.front();
+    for (std::size_t i = 1; i < h.size(); ++i) {
+        const auto v = h[i] / w[i];
+        for (int k = 0; k < 3; ++k)
+            b[k] = hull(b[k], v[k]);
+    }
+    return b;
+}
+// Coefficienti Bernstein del numeratore H'W-HW', grado 2n-1.
+I choose(int n, int k) {
+    if (k < 0 || k > n)
+        return I(0);
+    I v(1);
+    for (int i = 1; i <= k; ++i)
+        v = v * I(n - k + i) / I(i);
+    return v;
+}
+Field derivativeNumerator(Field h, const std::vector<I> &w) {
+    const int n = int(w.size()) - 1;
+    if (n == 0)
+        return {vec(Vec3())};
+    // Sottrarre una costante prima dei prodotti riduce la cancellazione nelle
+    // coordinate traslate; la derivata della funzione razionale e' invariata.
+    const Vec3 origin = midpoint(h.front() / w.front());
+    for (int i = 0; i <= n; ++i)
+        h[std::size_t(i)] = h[std::size_t(i)] - vec(origin) * w[std::size_t(i)];
+    std::vector<IV> dh(static_cast<std::size_t>(n));
+    std::vector<I> dw(static_cast<std::size_t>(n));
+    for (int i = 0; i < n; ++i) {
+        dh[std::size_t(i)] = (h[std::size_t(i + 1)] - h[std::size_t(i)]) * I(n);
+        dw[std::size_t(i)] = (w[std::size_t(i + 1)] - w[std::size_t(i)]) * I(n);
+    }
+    std::vector<IV> numerator(static_cast<std::size_t>(2 * n), vec(Vec3()));
+    for (int i = 0; i < n; ++i)
+        for (int j = 0; j <= n; ++j) {
+            const int k = i + j;
+            const I factor = choose(n - 1, i) * choose(n, j) / choose(2 * n - 1, k);
+            numerator[std::size_t(k)] =
+                numerator[std::size_t(k)] +
+                (dh[std::size_t(i)] * w[std::size_t(j)] - h[std::size_t(j)] * dw[std::size_t(i)]) * factor;
+        }
+    return numerator;
+}
+const DerivativeData &derivatives(const Patch &p) {
+    if (!p.derivatives) {
+        auto d = std::make_shared<DerivativeData>();
+        for (int i = 0; i < 3; ++i)
+            d->numerator[i] = derivativeNumerator(p.h[i], p.w);
+        I weight = p.w.front();
+        for (I w : p.w)
+            weight = hull(weight, w);
+        d->denominator = sqr(weight);
+        p.derivatives = std::move(d);
+    }
+    return *p.derivatives;
+}
+IV mapDerivativeBounds(const Patch &p, Vec2 q) {
+    const auto &d = derivatives(p);
+    IV b;
+    bool first = true;
+    for (std::size_t i = 0; i < d.numerator[0].size(); ++i) {
+        const IV v = d.numerator[0][i] + d.numerator[1][i] * I(q.x()) + d.numerator[2][i] * I(q.y());
+        if (first) {
+            b = v;
+            first = false;
+        } else
+            for (int k = 0; k < 3; ++k)
+                b[k] = hull(b[k], v[k]);
+    }
+    return b / d.denominator;
+}
+
+Field combined(const Patch &p, Vec2 q) {
+    Field f = p.h[0];
+    for (std::size_t i = 0; i < f.size(); ++i)
+        f[i] = f[i] + p.h[1][i] * I(q.x()) + p.h[2][i] * I(q.y());
+    return f;
+}
+IV atMiddle(Field f, std::vector<I> w) {
+    for (std::size_t k = 1; k < f.size(); ++k)
+        for (std::size_t i = 0; i + k < f.size(); ++i) {
+            f[i] = (f[i] + f[i + 1]) * I(.5);
+            w[i] = (w[i] + w[i + 1]) * I(.5);
+        }
+    return f[0] / w[0];
+}
+struct Bounds {
+    IV p{I(inf, -inf), I(inf, -inf), I(inf, -inf)};
+};
+Bounds bounds(const Patch &p, const std::vector<Vec2> &q) {
+    Bounds b;
+    for (Vec2 x : q) {
+        const Field f = combined(p, x);
+        for (std::size_t i = 0; i < f.size(); ++i) {
+            const IV v = f[i] / p.w[i];
+            for (int k = 0; k < 3; ++k)
+                b.p[k] = hull(b.p[k], v[k]);
+        }
+    }
+    return b;
+}
+Bounds combine(Bounds a, const Bounds &b) {
+    for (int k = 0; k < 3; ++k)
+        a.p[k] = hull(a.p[k], b.p[k]);
+    return a;
+}
+bool apart(const Bounds &a, const Bounds &b) {
+    for (int k = 0; k < 3; ++k)
+        if (a.p[k].hi < b.p[k].lo || b.p[k].hi < a.p[k].lo)
+            return true;
+    return false;
+}
+double diagonal(const Bounds &b) {
+    return norm(Vec3(b.p[0].hi - b.p[0].lo, b.p[1].hi - b.p[1].lo, b.p[2].hi - b.p[2].lo));
+}
+
+struct Node {
+    int first = 0, last = 0, depth = 0;
+    double lo = 0, hi = 1;
+    Bounds box;
+    Patch patch;
+    std::unique_ptr<Node> a, b;
+    bool leaf() const {
+        return !a;
+    }
+};
+class Validator {
+  public:
+    Validator(const std::vector<SweepValidationSlab> &s, const std::vector<Vec2> &q, bool closed,
+              const SweepValidationOptions &o)
+        : source(s), hullPoints(q), closed_(closed), options(o) {
+        for (const auto &x : s) {
+            cancellationPoint();
+            roots.push_back(inputPatch(x));
+        }
+        for (const Patch &p : roots)
+            derivatives(p);
+        Vec2 far = q[0];
+        double best = 0;
+        for (Vec2 x : q) {
+            const double size = std::max(std::fabs(x.x() - q[0].x()), std::fabs(x.y() - q[0].y()));
+            if (size > best) {
+                best = size;
+                far = x;
+            }
+        }
+        // Solo uno o due punti distinti autorizzano la riduzione del
+        // dominio. Un predicato di orientamento in double puo' restituire
+        // zero per underflow: non deve trasformare un triangolo in segmento.
+        std::vector<Vec2> distinct;
+        for (Vec2 x : q) {
+            bool found = false;
+            for (Vec2 y : distinct)
+                if (x.x() == y.x() && x.y() == y.y())
+                    found = true;
+            if (!found)
+                distinct.push_back(x);
+            if (distinct.size() >= 3)
+                break;
+        }
+        dimension = distinct.size() >= 3 ? 2 : int(distinct.size()) - 1;
+        if (dimension == 1) {
+            directions[0] = {(I(far.x()) - I(q[0].x())) / I(best), (I(far.y()) - I(q[0].y())) / I(best)};
+        } else if (dimension == 2) {
+            directions[0] = {I(1), I(0)};
+            directions[1] = {I(0), I(1)};
+        }
+        for (Vec2 x : q)
+            centroid += x;
+        centroid /= double(q.size());
+    }
+    SweepValidationResult run() {
+        auto tree = build(0, int(roots.size()) - 1);
+        const bool okay = self(*tree);
+        result.status = okay ? SweepValidationStatus::CertifiedInjective : SweepValidationStatus::Unresolved;
+        if (okay)
+            result.diagnostic = "mappa sweep iniettiva sull'inviluppo dichiarato";
+        else if (result.diagnostic.empty())
+            result.diagnostic = "iniettivita' globale della mappa sweep non certificata";
+        return result;
+    }
+
+  private:
+    const std::vector<SweepValidationSlab> &source;
+    std::vector<Vec2> hullPoints;
+    bool closed_;
+    SweepValidationOptions options;
+    SweepValidationResult result;
+    std::vector<Patch> roots;
+    int dimension = 2;
+    std::array<I, 2> directions[2];
+    Vec2 centroid;
+    bool visit() {
+        cancellationPoint();
+        if (++result.visits > options.maxVisits) {
+            result.diagnostic = "budget del certificato globale sweep esaurito";
+            return false;
+        }
+        return true;
+    }
+    std::unique_ptr<Node> build(int lo, int hi) {
+        cancellationPoint();
+        auto n = std::make_unique<Node>();
+        n->first = lo;
+        n->last = hi;
+        if (lo == hi) {
+            n->patch = roots[std::size_t(lo)];
+            n->box = bounds(n->patch, hullPoints);
+        } else {
+            const int m = (lo + hi) / 2;
+            n->a = build(lo, m);
+            n->b = build(m + 1, hi);
+            n->box = combine(n->a->box, n->b->box);
+        }
+        return n;
+    }
+    bool splitNode(Node &n) {
+        if (!n.leaf())
+            return true;
+        if (n.depth >= options.maxDepth) {
+            result.diagnostic = "profondita' del certificato globale sweep esaurita";
+            return false;
+        }
+        auto halves = split(n.patch);
+        n.a = std::make_unique<Node>();
+        n.b = std::make_unique<Node>();
+        const double m = .5 * n.lo + .5 * n.hi;
+        n.a->first = n.a->last = n.first;
+        n.b->first = n.b->last = n.first;
+        n.a->depth = n.b->depth = n.depth + 1;
+        n.a->lo = n.lo;
+        n.a->hi = m;
+        n.b->lo = m;
+        n.b->hi = n.hi;
+        n.a->patch = std::move(halves.first);
+        n.b->patch = std::move(halves.second);
+        n.a->box = bounds(n.a->patch, hullPoints);
+        n.b->box = bounds(n.b->patch, hullPoints);
+        result.deepestSubdivision = std::max(result.deepestSubdivision, n.depth + 1);
+        return true;
+    }
+    std::vector<Patch> chart(int first, double lo, int last, double hi, bool wrap = false) {
+        std::vector<Patch> out;
+        const int count = int(roots.size());
+        for (int step = 0; step <= count; ++step) {
+            if (out.size() >= options.maxChartSlabs)
+                return {};
+            const int i = (first + step) % count;
+            const bool done = i == last && (!wrap || step > 0);
+            const double a = step == 0 ? lo : 0, b = done ? hi : 1;
+            if (a < b)
+                out.push_back(trim(roots[std::size_t(i)], a, b));
+            if (done)
+                return out;
+        }
+        return {};
+    }
+    // left inverse di J(mid), di dimensione (d+1)x3. Il precondizionatore
+    // calcolato in double e' solo una matrice costante arbitraria: la prova
+    // finale intervallare non dipende dall'esattezza dell'inversione.
+    bool precondition(const Patch &p, double (&left)[3][3]) {
+        const int n = dimension + 1;
+        Vec3 cols[3];
+        for (int j = 0; j < dimension; ++j) {
+            Field f = p.h[1];
+            for (std::size_t i = 0; i < f.size(); ++i)
+                f[i] = p.h[1][i] * directions[j][0] + p.h[2][i] * directions[j][1];
+            cols[j] = midpoint(atMiddle(f, p.w));
+        }
+        const auto half = split(p);
+        const Vec3 tangent = midpoint(mapDerivativeBounds(half.first, centroid));
+        const double speed = norm(tangent);
+        if (!(speed > 0) || !std::isfinite(speed))
+            return false;
+        cols[n - 1] = tangent / speed;
+        double aug[3][6]{};
+        for (int i = 0; i < n; ++i) {
+            for (int j = 0; j < n; ++j)
+                aug[i][j] = dot(cols[i], cols[j]);
+            aug[i][n + i] = 1;
+        }
+        for (int k = 0; k < n; ++k) {
+            int pivot = k;
+            for (int i = k + 1; i < n; ++i)
+                if (std::fabs(aug[i][k]) > std::fabs(aug[pivot][k]))
+                    pivot = i;
+            if (!(std::fabs(aug[pivot][k]) > 1e-20))
+                return false;
+            for (int j = 0; j < 2 * n; ++j)
+                std::swap(aug[k][j], aug[pivot][j]);
+            const double den = aug[k][k];
+            for (int j = 0; j < 2 * n; ++j)
+                aug[k][j] /= den;
+            for (int i = 0; i < n; ++i)
+                if (i != k) {
+                    const double f = aug[i][k];
+                    for (int j = 0; j < 2 * n; ++j)
+                        aug[i][j] -= f * aug[k][j];
+                }
+        }
+        for (int i = 0; i < n; ++i)
+            for (int k = 0; k < 3; ++k) {
+                left[i][k] = 0;
+                for (int j = 0; j < n; ++j)
+                    left[i][k] += aug[i][n + j] * cols[j][k];
+                if (!std::isfinite(left[i][k]))
+                    return false;
+            }
+        return true;
+    }
+    bool positive(I matrix[3][3], int n) {
+        if (!(matrix[0][0].lo > 0))
+            return false;
+        if (n == 1)
+            return true;
+        const I d1 = matrix[1][1] - sqr(matrix[0][1]) / matrix[0][0];
+        if (!(d1.lo > 0))
+            return false;
+        if (n == 2)
+            return true;
+        const I residual = matrix[1][2] - matrix[0][1] * matrix[0][2] / matrix[0][0];
+        const I d2 = matrix[2][2] - sqr(matrix[0][2]) / matrix[0][0] - sqr(residual) / d1;
+        return d2.lo > 0;
+    }
+    bool monotone(const std::vector<Patch> &pieces) {
+        if (pieces.empty())
+            return false;
+        double left[3][3]{};
+        if (!precondition(pieces[pieces.size() / 2], left))
+            return false;
+        const int n = dimension + 1;
+        I total[3][3];
+        for (int i = 0; i < n; ++i)
+            for (int j = 0; j < n; ++j)
+                total[i][j] = I(inf, -inf);
+        for (const Patch &p : pieces) {
+            IV cols[3];
+            for (int j = 0; j < dimension; ++j) {
+                Field f = p.h[1];
+                for (std::size_t i = 0; i < f.size(); ++i)
+                    f[i] = p.h[1][i] * directions[j][0] + p.h[2][i] * directions[j][1];
+                cols[j] = valueBounds(f, p.w);
+            }
+            const IV middleD = mapDerivativeBounds(p, centroid);
+            const double speed = norm(midpoint(middleD));
+            if (!(speed > 0) || !std::isfinite(speed))
+                return false;
+            bool first = true;
+            for (Vec2 q : hullPoints) {
+                const IV d = mapDerivativeBounds(p, q) / I(speed);
+                if (first) {
+                    cols[n - 1] = d;
+                    first = false;
+                } else
+                    for (int k = 0; k < 3; ++k)
+                        cols[n - 1][k] = hull(cols[n - 1][k], d[k]);
+            }
+            for (int i = 0; i < n; ++i)
+                for (int j = 0; j < n; ++j) {
+                    I v;
+                    for (int k = 0; k < 3; ++k)
+                        v = v + I(left[i][k]) * cols[j][k];
+                    total[i][j] = hull(total[i][j], v);
+                }
+        }
+        for (double scale : {1., .1, .01, .001, .0001, .00001, .000001, .0000001, .00000001}) {
+            I symmetric[3][3];
+            for (int i = 0; i < n; ++i)
+                for (int j = 0; j < n; ++j) {
+                    const double a = i < dimension ? scale : 1, b = j < dimension ? scale : 1;
+                    symmetric[i][j] = (I(a) * total[i][j] + I(b) * total[j][i]) * I(.5);
+                }
+            if (positive(symmetric, n))
+                return true;
+        }
+        return false;
+    }
+    bool local(const Node &a, const Node &b) {
+        if (!visit())
+            return false;
+        const auto direct = chart(a.first, a.lo, b.last, b.hi);
+        if (monotone(direct))
+            return true;
+        if (closed_ && &a != &b) {
+            const auto cyclic = chart(b.first, b.lo, a.last, a.hi, true);
+            if (monotone(cyclic))
+                return true;
+        }
+        return false;
+    }
+    bool separated(const Node &a, const Node &b) {
+        if (apart(a.box, b.box))
+            return true;
+        if (!a.leaf() || !b.leaf())
+            return false;
+        Vec3 axes[4];
+        int count = 0;
+        for (const Node *n : {&a, &b}) {
+            const Vec3 u = midpoint(atMiddle(n->patch.h[1], n->patch.w)),
+                       v = midpoint(atMiddle(n->patch.h[2], n->patch.w));
+            axes[count++] = cross(u, v);
+            axes[count++] = midpoint(mapDerivativeBounds(n->patch, centroid));
+        }
+        for (int k = 0; k < count; ++k) {
+            if (!(norm(axes[k]) > 0) || !isFinite(axes[k]))
+                continue;
+            I range[2];
+            int side = 0;
+            for (const Node *n : {&a, &b}) {
+                bool first = true;
+                for (Vec2 q : hullPoints) {
+                    const auto f = combined(n->patch, q);
+                    for (std::size_t i = 0; i < f.size(); ++i) {
+                        const I value = project(f[i] / n->patch.w[i], axes[k]);
+                        range[side] = first ? value : hull(range[side], value);
+                        first = false;
+                    }
+                }
+                ++side;
+            }
+            if (range[0].hi < range[1].lo || range[1].hi < range[0].lo)
+                return true;
+        }
+        return false;
+    }
+    bool pairs(Node &a, Node &b) {
+        if (!visit())
+            return false;
+        if (separated(a, b))
+            return true;
+        if (local(a, b))
+            return true;
+        const bool divideA =
+            (!a.leaf() && b.leaf()) ||
+            (a.leaf() == b.leaf() && (a.depth < b.depth || (a.depth == b.depth && diagonal(a.box) >= diagonal(b.box))));
+        Node &node = divideA ? a : b;
+        if (!splitNode(node))
+            return false;
+        return divideA ? (pairs(*a.a, b) && pairs(*a.b, b)) : (pairs(a, *b.a) && pairs(a, *b.b));
+    }
+    bool self(Node &n) {
+        if (!visit())
+            return false;
+        if (local(n, n))
+            return true;
+        if (!splitNode(n))
+            return false;
+        return self(*n.a) && self(*n.b) && pairs(*n.a, *n.b);
+    }
+};
+} // namespace
+SweepValidationResult validateSweepMap(const std::vector<SweepValidationSlab> &slabs,
+                                       const std::vector<Vec2> &convexHull, bool closed,
+                                       const SweepValidationOptions &options) {
+    SweepValidationResult bad;
+    bad.diagnostic = "dati del certificato globale sweep non validi";
+    if (slabs.empty() || convexHull.empty() || options.maxDepth < 0 || options.maxChartSlabs == 0)
+        return bad;
+    if (options.maxVisits == 0) {
+        bad.diagnostic = "budget del certificato globale sweep esaurito";
+        return bad;
+    }
+    for (Vec2 q : convexHull)
+        if (!isFinite(q))
+            return bad;
+    for (std::size_t s = 0; s < slabs.size(); ++s) {
+        cancellationPoint();
+        const auto &p = slabs[s];
+        const std::size_t n = p.center.size();
+        if (n < 2 || p.xAxis.size() != n || p.yAxis.size() != n || (!p.weights.empty() && p.weights.size() != n) ||
+            !(p.duration > 0) || !std::isfinite(p.duration))
+            return bad;
+        for (std::size_t i = 0; i < n; ++i)
+            if (!isFinite(p.center[i]) || !isFinite(p.xAxis[i]) || !isFinite(p.yAxis[i]) ||
+                (!p.weights.empty() && (!(p.weights[i] > 0) || !std::isfinite(p.weights[i]))))
+                return bad;
+        if (s + 1 < slabs.size() || closed) {
+            const auto &q = slabs[(s + 1) % slabs.size()];
+            if (q.center.empty() || q.xAxis.empty() || q.yAxis.empty())
+                return bad;
+            for (auto pair :
+                 {std::make_pair(p.center.back(), q.center.front()), std::make_pair(p.xAxis.back(), q.xAxis.front()),
+                  std::make_pair(p.yAxis.back(), q.yAxis.front())})
+                for (int k = 0; k < 3; ++k)
+                    if (pair.first[k] != pair.second[k]) {
+                        bad.diagnostic = "confini della mappa sweep non identici";
+                        return bad;
+                    }
+        }
+    }
+    return Validator(slabs, convexHull, closed, options).run();
+}
+} // namespace ForgeCad::Kernel::detail

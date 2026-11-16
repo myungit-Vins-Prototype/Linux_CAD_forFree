@@ -1,0 +1,14 @@
+from pathlib import Path
+import os,subprocess,json
+root=Path('/home/myungit/Linux_CAD_forFree')
+out=Path('/tmp/forgecad-review-followup-20261115/lifetime')
+env=dict(os.environ,QT_QPA_PLATFORM='offscreen',QT_QPA_PLATFORMTHEME='',QT_STYLE_OVERRIDE='Fusion')
+tests=[('async-lifetime',['./forgecad-release/forgecad_view_tests','--async-lifetime']),('document-lifetime',['./forgecad-release/forgecad_view_tests','--document-lifetime']),('drawing-view-edit',['./forgecad-release/forgecad_drawing_view_edit_tests']),('display-cache-memory',['./forgecad-release/forgecad_display_cache_memory_tests'])]
+results=[]
+for name,command in tests:
+ p=subprocess.run(command,cwd=root,env=env,capture_output=True,text=True,timeout=60)
+ (out/(name+'.log')).write_text(p.stdout+p.stderr)
+ results.append(dict(test=name,command=command,exit=p.returncode))
+ print(name,p.returncode)
+(out/'test-results.json').write_text(json.dumps(results,indent=2)+'\n')
+assert all(r['exit']==0 for r in results)

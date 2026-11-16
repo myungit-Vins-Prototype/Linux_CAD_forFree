@@ -1,0 +1,8 @@
+{
+  "exit": 0,
+  "seconds": 0.04422726399934618,
+  "command": [
+    "python3",
+    "/tmp/sheet-join-review/audit/selftest_tensor_fraction.py"
+  ]
+}

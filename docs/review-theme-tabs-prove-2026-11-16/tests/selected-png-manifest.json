@@ -1,0 +1,32 @@
+[
+  {
+    "path": "/tmp/theme-tabs-review/tests/final-candidate-wayland/dark1-model1.png",
+    "sha256": "01669ef6e654ce912ec0064b22dcffb05242b50bedb487b13af97b2ddb9d1c15",
+    "attribution": "Candidate V2, final standalone driver 1469 checks, Wayland; permanent header later adds technical ink checks 1569"
+  },
+  {
+    "path": "/tmp/theme-tabs-review/tests/final-candidate-wayland/light2-model1.png",
+    "sha256": "6dbe6c3f5b7529c07c6670c8e3def72456e2949acd3e727587c53ae324675fc5",
+    "attribution": "Candidate V2, final standalone driver 1469 checks, Wayland; permanent header later adds technical ink checks 1569"
+  },
+  {
+    "path": "/tmp/theme-tabs-review/tests/final-candidate-wayland/dark1-drawing0.png",
+    "sha256": "097f40a46ec0b5fb3bfaf38fccebfddc76870ee5cddfd999bcc760210da29421",
+    "attribution": "Candidate V2, final standalone driver 1469 checks, Wayland; permanent header later adds technical ink checks 1569"
+  },
+  {
+    "path": "/tmp/theme-tabs-review/tests/final-candidate-wayland/light2-drawing0.png",
+    "sha256": "69479bb36e7fbe6a1a98a35cb2dfb4dc50680a7c6ea66b17b73b492563b6b44b",
+    "attribution": "Candidate V2, final standalone driver 1469 checks, Wayland; permanent header later adds technical ink checks 1569"
+  },
+  {
+    "path": "/tmp/theme-tabs-review/tests/final-candidate-wayland/dark1-model1-panel.png",
+    "sha256": "4e489753bfb3df3a2eb9df25bef6b196982473068054e9c322c1b1449cd0c143",
+    "attribution": "Candidate V2, final standalone driver 1469 checks, Wayland; permanent header later adds technical ink checks 1569"
+  },
+  {
+    "path": "/tmp/theme-tabs-review/tests/final-candidate-wayland/light2-model1-panel.png",
+    "sha256": "48af276a91183ffa8a6e737c7446ff552cd04d7771b7b8c0be35f2c7457bdda3",
+    "attribution": "Candidate V2, final standalone driver 1469 checks, Wayland; permanent header later adds technical ink checks 1569"
+  }
+]

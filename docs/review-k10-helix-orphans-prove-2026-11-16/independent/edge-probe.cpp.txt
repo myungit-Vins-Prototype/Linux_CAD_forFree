@@ -1,0 +1,63 @@
+#include "fk_helix_projection.h"
+#include "fk_cancel.h"
+#include <iostream>
+#include <limits>
+#include <functional>
+using namespace ForgeCad::Kernel;
+int main() {
+ int passed=0, failed=0;
+ auto check=[&](bool ok,const char*n){std::cout<<(ok?"PASS ":"FAIL ")<<n<<'\n';(ok?passed:failed)++;};
+ auto rejects=[&](const char*n,auto action){try{action();check(false,n);}catch(const std::domain_error&){check(true,n);}};
+ Frame3 frame({},Vec3(1,0,0),Vec3(0,1,0));HelixSpec spec;spec.turns=.1;spec.radius=1;spec.pitch=.2;
+ CurvePtr<3> source=std::make_shared<HelixCurve>(spec);const auto range=source->domain();double deviation=123;
+ auto fit=detail::projectHelixCertified(source,range,frame,1e-6,&deviation);
+ check(fit&&deviation>=0&&deviation<=1e-6,"valid result and bound");
+ auto data=detail::helixProjectionErrorBound(source,range,frame);std::array<Vec3,4> poles{};
+ check(std::isinf(data.bound({range.lo-1,range.hi},poles)),"bound outside source domain is infinite");
+ check(std::isinf(data.bound({range.lo,range.lo},poles)),"bound degenerate query is infinite");
+ poles[0]={std::numeric_limits<double>::quiet_NaN(),0,0};
+ check(std::isinf(data.bound(range,poles)),"bound nonfinite actual pole is infinite");
+ auto line=std::make_shared<Line<3>>(Vec3(),Vec3(1,0,0));deviation=123;
+ check(!detail::projectHelixCertified(line,{0,1},frame,1e-6,&deviation)&&deviation==123,"unsupported valid source returns null atomically");
+ rejects("unsupported require rejects",[&]{detail::requireHelixProjection(line,{0,1},frame,fit,1e-6);});
+ for(double tol:{0.,-1.,std::numeric_limits<double>::infinity(),std::numeric_limits<double>::quiet_NaN()}){
+ deviation=123;rejects("invalid tolerance rejects",[&]{detail::projectHelixCertified(source,range,frame,tol,&deviation);});check(deviation==123,"invalid tolerance preserves deviation");}
+ rejects("null source rejects",[&]{detail::projectHelixCertified({},range,frame,1e-6,&deviation);});
+ rejects("reversed range rejects",[&]{detail::projectHelixCertified(source,{range.hi,range.lo},frame,1e-6,&deviation);});
+ rejects("nonfinite range rejects",[&]{detail::projectHelixCertified(source,{0,std::numeric_limits<double>::infinity()},frame,1e-6,&deviation);});
+ rejects("outside helix original domain rejects",[&]{detail::projectHelixCertified(source,{range.lo-1,range.hi},frame,1e-6,&deviation);});
+ CurvePtr<3> trimmed=std::make_shared<TrimmedCurve<3>>(source,range.lo,range.hi/2);
+ rejects("outside trimmed wrapper domain rejects",[&]{detail::projectHelixCertified(trimmed,range,frame,1e-6,&deviation);});
+ CurvePtr<3> nested=source;for(int i=0;i<256;++i)nested=std::make_shared<TransformedCurve>(nested,Transform3());
+ check(bool(detail::helixProjectionErrorBound(nested,range,frame).bound),"256 wrappers accepted");
+ nested=std::make_shared<TransformedCurve>(nested,Transform3());
+ rejects("257 wrappers rejected",[&]{detail::helixProjectionErrorBound(nested,range,frame);});
+ double matrix[3][3]={{1,0,0},{0,1,0},{0,0,1}};matrix[0][0]=std::numeric_limits<double>::quiet_NaN();
+ auto invalidTransform=std::make_shared<TransformedCurve>(source,Transform3::fromParts(matrix,Vec3()));deviation=123;
+ rejects("nonfinite original transform rejects",[&]{detail::projectHelixCertified(invalidTransform,range,frame,1e-6,&deviation);});
+ check(deviation==123,"nonfinite transform preserves deviation");
+ HelixSpec phaseSpec=spec;phaseSpec.startAngle=1e20;auto phase=std::make_shared<HelixCurve>(phaseSpec);
+ rejects("unresolved huge phase rejects",[&]{detail::projectHelixCertified(phase,phase->domain(),frame,1e-6,&deviation);});
+ phaseSpec.startAngle=std::numeric_limits<double>::quiet_NaN();phase=std::make_shared<HelixCurve>(phaseSpec);
+ rejects("nonfinite original phase rejects",[&]{detail::projectHelixCertified(phase,phase->domain(),frame,1e-6,&deviation);});
+ HelixSpec hugeSpec=spec;hugeSpec.turns=1e6;auto huge=std::make_shared<HelixCurve>(hugeSpec);deviation=123;
+ rejects("huge recognized helix preflight rejects",[&]{detail::projectHelixCertified(huge,huge->domain(),frame,1e-6,&deviation);});
+ check(deviation==123,"work policy rejection preserves deviation");
+ auto modified=fit->poles();modified[0]=modified[0]+Vec2(1,0);auto wrong=std::make_shared<BSplineCurve<2>>(3,fit->knots(),modified);
+ rejects("tampered finite actual controls reject",[&]{detail::requireHelixProjection(source,range,frame,wrong,1e-6);});
+ auto rational=std::make_shared<BSplineCurve<2>>(3,fit->knots(),fit->poles(),std::vector<double>(fit->poleCount(),1.));
+ rejects("rational actual curve rejects",[&]{detail::requireHelixProjection(source,range,frame,rational,1e-6);});
+ rejects("null actual curve rejects",[&]{detail::requireHelixProjection(source,range,frame,{},1e-6);});
+ std::vector<Vec2> smoothPoles(7,Vec2());std::vector<double> smoothKnots={range.lo,range.lo,range.lo,range.lo,range.hi*.25,range.hi*.5,range.hi*.75,range.hi,range.hi,range.hi,range.hi};
+ auto smooth=std::make_shared<BSplineCurve<2>>(3,smoothKnots,smoothPoles);
+ rejects("valid cubic with simple knots rejects nonBezier schema",[&]{detail::requireHelixProjection(source,range,frame,smooth,1e-6);});
+ auto differentDomain=fit->knots();for(auto &x:differentDomain)x+=1;auto moved=std::make_shared<BSplineCurve<2>>(3,differentDomain,fit->poles());
+ rejects("different actual domain rejects",[&]{detail::requireHelixProjection(source,range,frame,moved,1e-6);});
+ auto token=std::make_shared<std::atomic<bool>>(true);deviation=123;
+ {CancellationScope scope(token);try{detail::projectHelixCertified(source,range,frame,1e-6,&deviation);check(false,"cancelled project propagates distinct exception");}catch(const OperationCancelled&){check(true,"cancelled project propagates distinct exception");}
+ try{detail::requireHelixProjection(source,range,frame,fit,1e-6);check(false,"cancelled require propagates");}catch(const OperationCancelled&){check(true,"cancelled require propagates");}
+ try{data.bound(range,poles);check(false,"owned oracle cancellation propagates");}catch(const OperationCancelled&){check(true,"owned oracle cancellation propagates");}}
+ check(deviation==123,"cancelled project preserves deviation");
+ check(detail::requireHelixProjection(source,range,frame,fit,1e-6)<=1e-6,"operation recovers after cancellation scope");
+ std::cout<<"TOTAL "<<passed<<" PASS "<<failed<<" FAIL\n";return failed?1:0;
+}

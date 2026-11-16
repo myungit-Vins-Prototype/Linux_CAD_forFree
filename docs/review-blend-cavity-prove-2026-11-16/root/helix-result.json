@@ -1,0 +1,8 @@
+{
+  "exit": 0,
+  "seconds": 92.42912481999883,
+  "command": [
+    "forgecad-release/kernel/forgekernel_tests",
+    "Helix"
+  ]
+}

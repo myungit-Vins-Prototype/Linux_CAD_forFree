@@ -248,6 +248,16 @@ std::map<QString, Draw> &registry() {
         dot(p, {12, 12}, c.ink, 1.6);
     };
 
+    icons["ellipseExtremes"] = [](QPainter &p, const IconPalette &c) {
+        line(p, {2.5, 12}, {21.5, 12}, stroke(c.ink, 0.9, Qt::DashLine));
+        line(p, {12, 6}, {12, 18}, stroke(c.ink, 0.9, Qt::DashLine));
+        p.setPen(stroke(c.accent, 1.8));
+        p.setBrush(Qt::NoBrush);
+        p.drawEllipse(QPointF(12, 12), 9.5, 6);
+        for (const QPointF &point : {QPointF(2.5, 12), QPointF(21.5, 12), QPointF(12, 6), QPointF(12, 18)})
+            dot(p, point, c.ink, 1.7);
+    };
+
     // --- Schizzo: modifica -----------------------------------------------------
     icons["toggleConstruction"] = [](QPainter &p, const IconPalette &c) {
         line(p, {3, 14}, {12, 5}, stroke(c.accent, 1.8));

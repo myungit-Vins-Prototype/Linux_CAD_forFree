@@ -1,0 +1,25 @@
+from pathlib import Path
+import subprocess,json,time,hashlib
+from checks import run
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/blend-cavity-review/root');A=Path('/tmp/blend-cavity-review/tests');out=T/'release-results';out.mkdir(exist_ok=True)
+text=(A/'probe_cavity_variants.cpp').read_text();old='std::ofstream output(std::string("/tmp/blend-cavity-review/tests/")';assert text.count(old)==1;text=text.replace(old,'std::ofstream output(std::string("'+str(out)+'/")');source=T/'probe_release.cpp';source.write_text(text)
+flags=['/usr/bin/c++','-O3','-DNDEBUG','-std=gnu++17','-Wall','-Wextra','-Wpedantic','-ffp-contract=off','-I'+str(R/'kernel'),'-I'+str(R/'kernel/tests')]
+run('release-probe-build',flags+[str(source),str(R/'forgecad-release/kernel/libforgekernel.a'),'-o',str(T/'probe-release')])
+run('release-variants',[str(T/'probe-release')],timeout=180)
+cases=[json.loads(line) for line in (T/'release-variants.log').read_text().splitlines() if line.startswith('{')];assert len(cases)==8 and all(c['pass'] for c in cases)
+(T/'release-variants.json').write_text(json.dumps(cases,indent=2)+'\n')
+# Audit the actual final B-rep at each native curve/pcurve common knot span.
+run('release-fin-audit-build',flags+[str(A/'audit_actual_fins.cpp'),str(R/'forgecad-release/kernel/libforgekernel.a'),'-o',str(T/'audit-fins-release')])
+fin_results={}
+for p in sorted(out.glob('*.body')):
+    name=p.name.removesuffix('-actual.body');run('release-fins-'+name,[str(T/'audit-fins-release'),str(p)],timeout=60)
+    fin_results[name]=json.loads((T/('release-fins-'+name+'.log')).read_text())
+assert len(fin_results)==7
+sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+controls={}
+for name in ['r11-control','r1675-control']:
+    b=A/'baseline-results'/(name+'-actual.body');assert b.is_file()
+    controls[name]={'baseline_sha256':sha(b),'release_sha256':sha(out/(name+'-actual.body')),'byte_identical':b.read_bytes()==(out/(name+'-actual.body')).read_bytes()}
+stage={p.name:{'stage_sha256':sha(A/'stage-results'/p.name),'release_sha256':sha(p),'byte_identical':p.read_bytes()==(A/'stage-results'/p.name).read_bytes()} for p in out.glob('*.body')}
+result={'stage_comparison':stage,'library_sha256':sha(R/'forgecad-release/kernel/libforgekernel.a'),'variants':8,'passed':8,'final_body_sha256':{p.name:sha(p) for p in out.glob('*.body')},'fin_audits':fin_results,'control_comparison':controls,'limit':'Native knot span samples and endpoint audit, not a continuous whole-curve certificate'}
+(T/'release-geometry-audit.json').write_text(json.dumps(result,indent=2)+'\n');print(result,flush=True)

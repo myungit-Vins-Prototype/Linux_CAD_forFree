@@ -1,0 +1,91 @@
+--- a/kernel/fk_sweep.cpp
++++ b/kernel/fk_sweep.cpp
+@@ -14,6 +14,7 @@
+ #include "fk_pcurve.h"
+ #include "fk_precision.h"
+ #include "fk_surface_algo.h"
++#include "fk_sweep_map.h"
+ #include "fk_transform.h"
+ 
+ namespace ForgeCad::Kernel {
+@@ -480,6 +481,7 @@
+ struct ProfileData {
+     std::vector<Vec3> vertices;
+     std::vector<ProfilePiece> pieces;
++    std::vector<ProfileSegment> planarPieces;
+     std::vector<std::vector<int>> loops;  // indici dei tratti, nel verso del loop
+     std::vector<int> region;              // regione di ogni loop (-1: catena aperta)
+     std::vector<double> gaps;             // distanza tra la fine del tratto precedente e il vertice
+@@ -519,6 +521,7 @@
+         piece.end = closed ? first + (j + 1) % m : first + j + 1;
+         indices.push_back(int(data.pieces.size()));
+         data.pieces.push_back(piece);
++        data.planarPieces.push_back(segments[std::size_t(j)]);
+     }
+     data.loops.push_back(indices);
+     data.region.push_back(region);
+@@ -558,6 +561,13 @@
+     // Coordinate locali (nel sistema iniziale) e punto mobile.
+     const Vec3 P0 = frames.startPoint(), T0 = frames.T0(), N0 = frames.N0(), B0 = frames.B0();
+     const auto local = [&](const Vec3 &q) { return Vec3(dot(q - P0, T0), dot(q - P0, N0), dot(q - P0, B0)); };
++
++    // Mappa affine di riferimento, con il medesimo fit delle righe del
++    // profilo. Il controllo non sostituisce la validazione geometrica del BRep.
++    std::vector<detail::SweepValidationSlab> sweepMap;
++    const Vec3 profileOrigin = local(profileFrame.origin());
++    const Vec3 profileX(dot(profileFrame.xDir(),T0),dot(profileFrame.xDir(),N0),dot(profileFrame.xDir(),B0));
++    const Vec3 profileY(dot(profileFrame.yDir(),T0),dot(profileFrame.yDir(),N0),dot(profileFrame.yDir(),B0));
+ 
+     // Vertici e spigoli trasversali ai giunti.
+     std::vector<Transform3> transforms;
+@@ -607,6 +617,7 @@
+         };
+         if (motion == Motion::Translation) {
+             const Vec3 a = segment.curve->point(range.lo), b = segment.curve->point(range.hi);
++            detail::appendSweepTranslation(sweepMap,profileFrame,transforms[std::size_t(k)],b-a);
+             const double length = distance(a, b);
+             const Vec3 d = (b - a) / length;
+             for (int v = 0; v < V; ++v) {
+@@ -636,6 +647,7 @@
+             const auto &circle = static_cast<const Circle<3> &>(basisOf(*segment.curve));
+             const Vec3 axis = normalized(cross(circle.xAxis(), circle.yAxis())), center = circle.center();
+             const double angle = range.length();
++            detail::appendSweepRotation(sweepMap,profileFrame,transforms[std::size_t(k)],center,axis,angle);
+             const auto radial = [&](const Vec3 &q, Vec3 &foot) {
+                 foot = center + dot(q - center, axis) * axis;
+                 return distance(q, foot);
+@@ -779,8 +791,18 @@
+                     const JV X = origin + w.x() * frame[0] + w.y() * frame[1] + w.z() * frame[2];
+                     out[3 * r] = X.v, out[3 * r + 1] = X.d1, out[3 * r + 2] = X.d2;
+                 }
++                const JV basis[3] = {
++                    origin + profileOrigin.x()*frame[0]+profileOrigin.y()*frame[1]+profileOrigin.z()*frame[2],
++                    profileX.x()*frame[0]+profileX.y()*frame[1]+profileX.z()*frame[2],
++                    profileY.x()*frame[0]+profileY.y()*frame[1]+profileY.z()*frame[2]};
++                for(int i=0;i<3;++i) {
++                    out[3*(R+i)] = basis[i].v;
++                    out[3*(R+i)+1] = basis[i].d1;
++                    out[3*(R+i)+2] = basis[i].d2;
++                }
+             };
+-            const detail::RowSpline fit = detail::fitQuinticRows(sampler, R, segment.curve->breakpoints(range), tolerance, 0.25 * range.length());
++            const detail::RowSpline fit = detail::fitQuinticRows(sampler, R+3, segment.curve->breakpoints(range), tolerance, 0.25 * range.length());
++            detail::appendSweepQuintic(sweepMap,fit,R,R+1,R+2);
+             for (int v = 0; v < V; ++v) {
+                 Body::BuildEdge edge;
+                 edge.start = vertexIndex(k, v);
+@@ -842,6 +864,14 @@
+         }
+     }
+ 
++    // I giunti conservano l'identita' topologica delle sezioni. Questi sono
++    // i budget preesistenti di connessione del percorso/frame; lo scarto non
++    // viene usato per allargare la soglia dopo la costruzione.
++    detail::joinSweepMap(sweepMap,closedPath,1e-6*std::max(1.0,frames.size()),1e-7);
++    const auto global = detail::validateSweepMap(sweepMap,detail::sweepProfileHull(profile.planarPieces),closedPath);
++    if(global.status != detail::SweepValidationStatus::CertifiedInjective)
++        throw std::domain_error("sweep: verifica globale della mappa non conclusa ("+global.diagnostic+")");
++
+     // Facce di testa (solidi su percorsi aperti): piane, con i loop del profilo.
+     if (!sheet && !closedPath) {
+         const Transform3 &end = transforms.back();

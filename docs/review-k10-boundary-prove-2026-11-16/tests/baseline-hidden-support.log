@@ -1,0 +1,6 @@
+hidden_support_extension_rejected 0
+    /tmp/boundary-review/tests/test_boundary_validation.cpp:207: FK_CHECK(rejected)
+    /tmp/boundary-review/tests/test_boundary_validation.cpp:208: FK_CHECK(writeBodyBinary(f.body) == bodyBefore)
+    /tmp/boundary-review/tests/test_boundary_validation.cpp:209: FK_CHECK(modelBytes(model) == modelBefore)
+[ FAIL ] BoundaryIsoHiddenSupportExtensionRejectsAtomically (3 controlli falliti)
+0/1 test superati

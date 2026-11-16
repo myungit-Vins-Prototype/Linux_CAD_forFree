@@ -1,0 +1,18 @@
+from pathlib import Path
+import hashlib,json
+root=Path('/home/myungit/Linux_CAD_forFree');stage=Path('/tmp/review-next-readonly/stage');(stage/'kernel').mkdir(parents=True,exist_ok=True);(stage/'baseline').mkdir(exist_ok=True)
+hashes={}
+for name in ['fk_curve_fit_bounds.h','fk_curve_fit_bounds.cpp','fk_offset.cpp']:
+ data=(root/'kernel'/name).read_bytes();(stage/'kernel'/name).write_bytes(data);(stage/'baseline'/(name+'.txt')).write_bytes(data);hashes['kernel/'+name]=hashlib.sha256(data).hexdigest()
+(stage/'baseline-sha256.json').write_text(json.dumps(hashes,indent=2)+'\n')
+f=stage/'kernel/fk_curve_fit_bounds.h';s=f.read_text();needle='CurveFitErrorBound extrusionOffsetErrorBound(';i=s.index(needle);s=s[:i]+'''// E(t) + signedDistance * normalize(G'(U(t)) cross D), with independent
+// ORIGINAL edge E, extrusion generator G and affine original pcurve (U,V).
+// Line/positive NURBS E/G with Trimmed/Transformed wrappers; UV Line or
+// equal-weight degree-one NURBS with Trimmed wrappers. No E=S(U,V) identity
+// or zero fin tolerance is assumed. Returns empty only for unsupported
+// families; invalid domains/regularity/resources throw or remain unresolved.
+// Snapshots own all coefficients. breaks are hints, never the certificate.
+SurfaceCurveFitData extrusionEdgeOffsetErrorBound(const CurvePtr<3> &edge, const SurfacePtr &surface,
+                                                  const CurvePtr<2> &pcurve, const Interval &range,
+                                                  double signedDistance);
+'''+s[i:];f.write_text(s)

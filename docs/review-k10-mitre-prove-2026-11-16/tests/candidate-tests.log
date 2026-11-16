@@ -1,0 +1,10 @@
+[  OK  ] BlendMitreIsoHiddenKnotDoesNotPublishOffSupportFit
+[  OK  ] BlendMitreIsoPolynomialPositive
+[  OK  ] BlendMitreIsoRationalPositive
+[  OK  ] BlendMitreIsoRigidPosePositive
+[  OK  ] BlendMitreIsoScaleAndSupportOrderPositive
+[  OK  ] BlendMitreDistinctFitAndCarrierBudgets
+[  OK  ] BlendMitreOverCarrierBudgetRejects
+[  OK  ] BlendMitreInvalidFitToleranceRejectsBeforePublishing
+[  OK  ] BlendMitreCancellationDoesNotPublishCut
+9/9 test superati

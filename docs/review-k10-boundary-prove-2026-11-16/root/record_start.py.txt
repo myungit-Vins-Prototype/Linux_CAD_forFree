@@ -1,0 +1,35 @@
+from pathlib import Path
+import shutil
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/boundary-review/root')
+p=R/'CLAUDE.md';s=p.read_text();(R/'docs/history/claude-prima-k10-boundary-2026-11-16.md').write_text(s)
+a=s.index('**16/11 — Ellisse per estremi');b=s.index('\n\n',a)
+s=s[:a]+'''Ellisse per estremi: tre clic, quattro quote/vincoli, centro derivato e codec70.
+App/24CTest/sanitizer/Wayland/GL/mappa PASS. [Uso e limiti](docs/ellisse-estremi-2026-11-16.md).'''+s[b:]
+a=s.index('**16/11 — K10 giunti estensioni');b=s.index('\n\n',a)
+s=s[:a]+'''**16/11 — K10 giunti estensioni, tre agenti Sol.**
+Via tangente continua/cap fisso; app/22CTest/29sanitizer/41Sheet/Wayland/Fraction PASS.
+Newton trasverso aperto. [Prove/limiti](docs/review-k10-sheet-join-2026-11-16.md).'''+s[b:]
+a=s.index('## Ultimi interventi — esiti consolidati')+len('## Ultimi interventi — esiti consolidati')
+s=s[:a]+'''
+
+**16/11 — K10 continuazioni in revisione con tre agenti Sol.**
+Grafo consultato; ISO campionate e parametro razionale indagati.
+Baseline 4755 file/12 sigilli intatti; produzione invariata.
+[Stato](docs/review-k10-boundary-2026-11-16.md).'''+s[a:]
+assert len(s.encode())<=16384,len(s.encode());assert s.count('\n**16/11 —')<=10
+p.write_text(s)
+p=R/'docs/review-k10-mitre-2026-11-16.md';t=p.read_text();old='`a 36cf93ed20bb44c5cc7127ea4b0ce1d35f37c4047b53d5875a330f8eda68104`';assert old in t;t=t.replace(old,'`a36cf93ed20bb44c5cc7127ea4b0ce1d35f37c4047b53d5875a330f8eda68104`');p.write_text(t)
+(R/'docs/review-k10-boundary-2026-11-16.md').write_text('''# K10 — continuazioni dei bordi spline, 16 novembre 2026
+
+Prosecuzione con tre agenti GPT-6.1 Sol: implementazione, regressioni e audit indipendente. Baseline di 4.755 file congelata, dodici sigilli precedenti intatti. Prima del codice consultati descrizioni e 797 collegamenti incidenti del grafo 777 nodi/11.312 relazioni/389 TU.
+
+Ultimo sito K10 inizialmente del tutto aperto: `extendSplineBoundary`, `boundaryIsoGuide` e `extendBoundaryWindow` in `fk_blend_surface`. La ricostruzione della ISO e il controllo sul secondo appoggio usano campioni; la concatenazione razionale può cambiare il parametro del tratto originale. Questo secondo difetto riguarda la corrispondenza nello stesso parametro, non dimostra da solo una deformazione del luogo geometrico. I test baseline distinguono helper, staging e fin finali.
+
+Correzione circoscritta in preparazione: riconoscimento da coefficienti originali delle ISO supportate, budget fissato prima del fit, verifica continua con provider esistenti e witness cubico ausiliario; concatenazione omogenea che preserva il parametro. Fin installate per identità e ricontrollate sul risultato. Le famiglie non supportate e il percorso Newton restano campionati. La preservazione globale dell'intero carrier esteso non ha un certificato runtime: audit indipendente sul dominio originale dei casi provati.
+
+Produzione invariata. K10 resta 23/24 siti parzialmente trattati e uno interamente aperto; totale 31 rilievi invariato. Nessuna chiusura generale di K10.
+
+Errata documentale: nel rapporto mitre corretto uno spazio spurio nel SHA del sorgente `fk_blend_mitre.cpp`; il sigillo precedente conserva il rapporto storico e non viene modificato.
+''')
+shutil.copy2(R/'forgecad-release/compile_commands.json',T/'compile-commands-before.json')
+print('Recorded phase start; CLAUDE bytes',len(s.encode()))

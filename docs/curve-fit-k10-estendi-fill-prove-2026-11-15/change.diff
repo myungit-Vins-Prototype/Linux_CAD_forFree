@@ -1,0 +1,179 @@
+--- before/CLAUDE.md
++++ after/CLAUDE.md
+@@ -108,15 +108,16 @@
+ 
+ ## Ultimi interventi — esiti consolidati
+ 
+-**15/11 — K10, percorso NURBS integrato con tre agenti GPT-6.1 Sol.**
+-Offset di estrusioni/rivoluzioni: limite continuo Bernstein outward, fit certificato,
+-cuciture periodiche; input finiti e deviation atomica. Spline27: 574tol→0,313tol.
+-Build app completa, 129 casi kernel/145 esecuzioni e 26/26 CTest (11 nuovi test) PASS.
+-13 geometrie/24 query indipendenti e ASan/UBSan/LSan mirati PASS; resto archivio non strumentato.
+-Mappa740/10627/364TU, check/HTML/archi PASS. K10 resta aperto sui22 chiamanti generici;
+-24 rilievi precedenti corretti;22 orfane candidate. Periodo completo conservativo; nessuna prova GL nuova.
+-[Correzione, prove e limiti](docs/curve-fit-k10-2026-11-15.md);
+-[memoria precedente](docs/history/claude-prima-k10-2026-11-15.md).
++**15/11 — K10, Estendi/Fill con tre agenti GPT-6.1 Sol.**
++Due offset planari NURBS con limite continuo; proiezione esatta NURBS/rette e wrapper in Fill.
++Caso avverso Estendi:32,5tol→0,429tol; corretto trim di rette con range parziale.
++Build app completa, 129 casi kernel/145 esecuzioni, 28/28 CTest (7 nuovi gruppi) PASS.
++Audit4proiezioni/8fori e sanitizer mirati5+2 PASS; resto archivio non strumentato.
++Mappa744/10679/367TU, check/HTML/archi PASS. K10 aperto:19 siti ancora da migrare più fallback;
++BoundarySheet accetta bordo fino a10000tol fuori superficie: riproduttore regolare conservato.
++24 rilievi precedenti corretti;22 orfane candidate; nessuna prova GL nuova. CAD/pregresso preservati.
++[Correzioni, prove e prossimi passi](docs/curve-fit-k10-estendi-fill-2026-11-15.md);
++[Memoria prima](docs/history/claude-prima-k10-estendi-fill-2026-11-15.md).
+ 
+ **15/11 — K2 completato in produzione con due agenti GPT-6.1 Sol.**
+ Atlante dei carrier reali, teste/fori/nesting e ponte analitico conservativo; rifiuto se il
+--- before/docs/code-review-2026-11-15.md
++++ after/docs/code-review-2026-11-15.md
+@@ -1,4 +1,6 @@
+ # Review generale ForgeCAD — 15 novembre 2026
++
++**Stato più recente:** [K10 Estendi/Fill](curve-fit-k10-estendi-fill-2026-11-15.md) aggiunge tre percorsi esatti/certificati per famiglie supportate. Cinque dei 24 siti iniziali sono trattati parzialmente; 19 ancora da migrare, oltre ai fallback. Residuo grave confermato in BoundarySheet. Il totale dei 24 rilievi precedenti corretti non aumenta: K10 resta aperto.
+ 
+ **Aggiornamento successivo:** i cinque rilievi della [seconda review](review-followup-2026-11-15.md) K7/K8/K9/PRE4/UI7 sono corretti: **24 difetti precedenti corretti complessivamente**. La [prosecuzione K10](curve-fit-k10-2026-11-15.md) corregge il fit degli offset NURBS di estrusioni/rivoluzioni con controllo continuo, input finiti e fallimenti atomici; build completa e regressioni PASS. **K10 resta aperto per i chiamanti generici ancora campionati**. Le 22 orfane restano candidati distinti. Stato storico della prima review sotto.
+ 
+--- before/docs/curve-fit-k10-2026-11-15.md
++++ after/docs/curve-fit-k10-2026-11-15.md
+@@ -1,4 +1,6 @@
+ # K10 — fit delle curve e offset NURBS, 15 novembre 2026
++
++**Prosecuzione:** il [blocco Estendi/Fill](curve-fit-k10-estendi-fill-2026-11-15.md) migra altri tre siti per le famiglie supportate e documenta un residuo K10 riproducibile in BoundarySheet. I conteggi e le prove sotto descrivono il primo blocco.
+ 
+ ## Esito e perimetro
+ 
+--- before/docs/review-followup-fix-2026-11-15.md
++++ after/docs/review-followup-fix-2026-11-15.md
+@@ -1,4 +1,6 @@
+ # Correzioni della seconda review — 15 novembre 2026
++
++**Prosecuzione più recente:** [K10 Estendi/Fill](curve-fit-k10-estendi-fill-2026-11-15.md): due offset planari NURBS con controllo continuo, proiezioni NURBS/rette esatte; residuo BoundarySheet confermato. K10 resta parzialmente aperto.
+ 
+ **Aggiornamento successivo:** [K10, primo percorso continuo](curve-fit-k10-2026-11-15.md) ora corregge gli offset NURBS di estrusioni/rivoluzioni; resta aperta la migrazione dei fit generici. Gli esiti e il difetto K10 indicati sotto sono la fotografia della passata precedente.
+ 
+--- before/kernel/CMakeLists.txt
++++ after/kernel/CMakeLists.txt
+@@ -134,6 +134,8 @@
+     fk_offset.cpp
+     fk_curve_fit_bounds.h
+     fk_curve_fit_bounds.cpp
++    fk_curve_projection.h
++    fk_curve_projection.cpp
+     fk_open_offset.h
+     fk_open_offset.cpp
+     fk_offset_support.h
+@@ -548,3 +550,17 @@
+ set_target_properties(forgekernel_sweep_validation_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+ add_test(NAME forgekernel_sweep_validation_tests COMMAND forgekernel_sweep_validation_tests)
+ set_tests_properties(forgekernel_sweep_validation_tests PROPERTIES TIMEOUT 300)
++
++add_executable(forgekernel_sheet_fit_validation_tests tests/fk_test_main.cpp tests/test_sheet_fit_validation.cpp)
++target_link_libraries(forgekernel_sheet_fit_validation_tests PRIVATE forgekernel)
++target_compile_options(forgekernel_sheet_fit_validation_tests PRIVATE -Wall -Wextra -Wpedantic)
++set_target_properties(forgekernel_sheet_fit_validation_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
++add_test(NAME forgekernel_sheet_fit_validation_tests COMMAND forgekernel_sheet_fit_validation_tests)
++set_tests_properties(forgekernel_sheet_fit_validation_tests PROPERTIES TIMEOUT 180)
++
++add_executable(forgekernel_curve_projection_tests tests/fk_test_main.cpp tests/test_curve_projection.cpp)
++target_link_libraries(forgekernel_curve_projection_tests PRIVATE forgekernel)
++target_compile_options(forgekernel_curve_projection_tests PRIVATE -Wall -Wextra -Wpedantic)
++set_target_properties(forgekernel_curve_projection_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
++add_test(NAME forgekernel_curve_projection_tests COMMAND forgekernel_curve_projection_tests)
++set_tests_properties(forgekernel_curve_projection_tests PROPERTIES TIMEOUT 180)
+--- before/kernel/fk_fill.cpp
++++ after/kernel/fk_fill.cpp
+@@ -13,6 +13,7 @@
+ #include "fk_bspline_basis.h"
+ #include "fk_bspline_surface.h"
+ #include "fk_curve_algo.h"
++#include "fk_curve_projection.h"
+ #include "fk_exchange.h"
+ #include "fk_offset.h"
+ #include "fk_pcurve.h"
+@@ -1112,15 +1113,22 @@
+         // SP-curve: la proiezione della curva sul piano dei parametri, nello
+         // stesso parametro (i campioni sono stati presi cosi'). Proiettare i
+         // punti sulla superficie potrebbe trovare la parte prolungata oltre il bordo.
+-        std::vector<double> breaks = piece.curve->breakpoints(piece.range);
+-        breaks.erase(std::remove_if(breaks.begin(), breaks.end(), [&](double t) { return t <= piece.range.lo || t >= piece.range.hi; }), breaks.end());
+-        const auto planar = fitCurve([&](double t) {
+-            const Vec2 q = project(piece.curve->point(t));
+-            return Vec3(q.x(), q.y(), 0.0);
+-        }, piece.range, breaks, 1e-10 * scale);
+-        std::vector<Vec2> poles2;
+-        for (const Vec3 &pole : planar->poles()) poles2.emplace_back(pole.x(), pole.y());
+-        const auto pcurve = std::make_shared<BSplineCurve<2>>(planar->degree(), planar->knots(), std::move(poles2));
++        auto pcurve = projectCurveAffine(piece.curve, piece.range, frame);
++        if (!pcurve) {
++            // Angular conics and unknown procedural curves retain the legacy
++            // sampled fit; a conic-to-NURBS conversion changes the parameter.
++            std::vector<double> breaks = piece.curve->breakpoints(piece.range);
++            breaks.erase(std::remove_if(breaks.begin(), breaks.end(), [&](double t) {
++                return t <= piece.range.lo || t >= piece.range.hi;
++            }), breaks.end());
++            const auto planar = fitCurve([&](double t) {
++                const Vec2 q = project(piece.curve->point(t));
++                return Vec3(q.x(), q.y(), 0.0);
++            }, piece.range, breaks, 1e-10 * scale);
++            std::vector<Vec2> poles2;
++            for (const Vec3 &pole : planar->poles()) poles2.emplace_back(pole.x(), pole.y());
++            pcurve = std::make_shared<BSplineCurve<2>>(planar->degree(), planar->knots(), std::move(poles2));
++        }
+         const double gap = pcurveDeviation(*surface, *piece.curve, *pcurve, piece.range);
+         fins.push_back(detail::RawFin(int(model.edges.size()), piece.forward, pcurve, std::max(gap, 1e-12)));
+         model.edges.push_back(edge);
+--- before/kernel/fk_sheet.cpp
++++ after/kernel/fk_sheet.cpp
+@@ -13,6 +13,7 @@
+ #include "fk_curve_algo.h"
+ #include "fk_curve_ops.h"
+ #include "fk_offset.h"
++#include "fk_curve_fit_bounds.h"
+ #include "fk_planar.h"
+ #include "fk_pcurve.h"
+ #include "fk_precision.h"
+@@ -210,8 +211,12 @@
+                     const Vec3 tangent = traversal * edge.curve->derivative(t);
+                     return edge.curve->point(t) + length * normalized(orientation * cross(tangent, planeNormal));
+                 };
+-                piece.curve = fitCurve(parallelPoint, edge.range, edge.curve->breakpoints(edge.range),
+-                                       std::max(tolerance, 1e-8 * scale));
++                const double fitTolerance = std::max(tolerance, 1e-8 * scale);
++                const auto bound = detail::extrusionOffsetErrorBound(edge.curve, edge.range,
++                    length * traversal * orientation, planeNormal);
++                piece.curve = bound
++                    ? fitCurveCertified(parallelPoint, edge.range, edge.curve->breakpoints(edge.range), fitTolerance, bound)
++                    : fitCurve(parallelPoint, edge.range, edge.curve->breakpoints(edge.range), fitTolerance);
+             }
+             piece.start = piece.curve->point(t0);
+             piece.end = piece.curve->point(t1);
+@@ -587,7 +592,11 @@
+                 return edge.curve->point(t) + length * direction;
+             };
+             const std::vector<double> breaks = edge.curve->breakpoints(edge.range);
+-            const CurvePtr<3> parallel = fitCurve(parallelPoint, edge.range, breaks, std::max(tolerance, 1e-8 * scale));
++            const double fitTolerance = std::max(tolerance, 1e-8 * scale);
++            const auto bound = detail::extrusionOffsetErrorBound(edge.curve, edge.range,
++                length * traversal * orientation, planeNormal);
++            const CurvePtr<3> parallel = bound ? fitCurveCertified(parallelPoint, edge.range, breaks, fitTolerance, bound)
++                                             : fitCurve(parallelPoint, edge.range, breaks, fitTolerance);
+             const double parameterA = finData.sense ? edge.range.lo : edge.range.hi;
+             const double parameterB = finData.sense ? edge.range.hi : edge.range.lo;
+             farA = pointAt(parallel->point(parameterA));
+--- before/tools/generate_architecture.py
++++ after/tools/generate_architecture.py
+@@ -289,6 +289,12 @@
+  'kernel/fk_sweep_analytic_bridge.cpp': ('kernel', 'Bounds outward dei coefficienti che collegano i chart razionali ai carrier analitici scelti; seno/coseno Taylor con resto esplicito, fallback dichiarato per input non supportati.'),
+  'kernel/fk_sweep_analytic_bridge.h': ('kernel', 'Errore sui poli/pesi per una parametrizzazione razionale del carrier analitico effettivo dello sweep.'),
+  'kernel/tests/test_sweep_global.cpp': ('tests', 'Sweep globali senza OCCT: spire e regioni sovrapposte, intersezione sulla stessa faccia o con testa, cuciture, lamina curva, tubi intercalati, nesting e atomicita degli alias.'),
++ 'kernel/fk_curve_projection.cpp': ('kernel', 'Proiezione affine esatta di NURBS e rette nel piano: parametri, nodi e pesi conservati, wrapper trim e trasformazioni, nessuna normalizzazione della direzione; tipi non supportati espliciti.'),
++ 'kernel/fk_curve_projection.h': ('kernel', 'Contratto della proiezione nel piano con parametro originale per rette e NURBS; intervallo finito, proiezioni degeneri ammesse e fallback esplicito per coniche/procedurali.'),
++ 'kernel/tests/test_curve_projection.cpp': ('tests', 'Regressioni della proiezione affine senza fit: parametri, NURBS razionali, trasformazioni, trim e integrazione del riempimento; runner senza Qt/OCCT.'),
++ 'kernel/tests/test_sheet_fit_validation.cpp': ('tests', 'Regressioni degli offset NURBS nell’estensione di lamine piane: faccia singola e multifaccia, orientamento e limite continuo del fit; runner senza Qt/OCCT.'),
++ 'kernel/fk_fill.cpp': ('kernel', 'Riempimenti con guide e contatti G0/G1/G2; bordi NURBS e rette proiettati esattamente nel piano dei parametri, fit campionato per tipi restanti; controlli di superficie e continuita.'),
++ 'kernel/fk_sheet.cpp': ('kernel', 'Taglio, rifilo ed estensione di lamine; offset dei bordi NURBS planari con limite continuo del fit per faccia singola e multifaccia; intersezioni e fit impliciti separati.'),
+  'kernel/fk_curve_fit_bounds.cpp': ('kernel', 'Limiti continui del residuo dei fit offset NURBS: estrazione Bernstein dai dati originali con intervalli outward, pesi positivi, trim e trasformazioni; normali di estrusione e rivoluzione, budget finiti e cancellazione.'),
+  'kernel/fk_curve_fit_bounds.h': ('kernel', 'Contratto del fit con certificatore sull’intera campata e provider geometrici per offset di curve NURBS; parametri originali conservati, rifiuto esplicito se il limite non conclude.'),
+  'kernel/tests/test_curve_fit_validation.cpp': ('tests', 'Regressioni del fit con limite continuo: spline27 avversa, NURBS, pose e scale, offset di estrusione/rivoluzione, fallimenti atomici e cancellazione; runner indipendente da Qt/OCCT.'),

@@ -1,0 +1,37 @@
+#include "fk_loft.h"
+#include "fk_primitives.h"
+#include "fk_boolean.h"
+#include "fk_body_check.h"
+#include "fk_body_io.h"
+#include "fk_mass.h"
+#include "fk_history.h"
+#include "fk_surface_algo.h"
+#include "fk_transform.h"
+#include <iostream>
+#include <iomanip>
+#include <cmath>
+using namespace ForgeCad::Kernel;
+static LoftSection section(double x,double a,double b){LoftSection s;s.frame=Frame3(Vec3(x,0,0),Vec3(1,0,0),Vec3(0,0,1));auto ellipse=std::make_shared<Ellipse<2>>(Vec2(),Vec2(1,0),Vec2(0,1),a,b);s.loop.segments={{ellipse,{0,kPi}},{ellipse,{kPi,kTwoPi}}};return s;}
+int main(int argc,char**argv){std::cout<<std::setprecision(17)<<std::unitbuf;const double epsilon=argc>1?std::stod(argv[1]):1e-11;const double r=24.000000000000007,offset=.38882264931473642,capRadius=23.996850146381604;
+ const Body cylinder=makeCylinder(Frame3(Vec3(0,-32.5,0),Vec3(0,1,0),Vec3(1,0,0)),r,65);
+ auto first=section(-60,40,20),last=section(offset,capRadius,10);
+ const double theta=argc>2?std::stod(argv[2]):.25;
+ const Vec3 n(-.96703712679777809,0,.25463541661500666),u(.25463541661500666,0,.96703712679777809);
+ first.frame=Frame3(Vec3(70,0,-110),Vec3(0,0,1),Vec3(1,0,0));last.frame=Frame3(Vec3(-.37600593762954,0,.09900801728884),n,u);
+ const double centerShift=(argc>4?std::stod(argv[4]):.9)*epsilon;
+ const Vec3 firstCenter=first.frame.origin(),lastCenter=last.frame.origin()+centerShift*u;
+ const double du=argc>3?std::stod(argv[3]):100,dv=75;
+ last.frame=Frame3(lastCenter+du*last.frame.xDir()+dv*last.frame.yDir(),n,u);
+ auto shifted=std::make_shared<Ellipse<2>>(Vec2(-du,-dv),Vec2(1,0),Vec2(0,1),capRadius,10);
+ last.loop.segments={{shifted,{0,kPi}},{shifted,{kPi,kTwoPi}}};
+ LoftOptions loftOptions;loftOptions.startContinuity=1;loftOptions.endContinuity=1;
+ const Body loft=loftSolid({first,last},loftOptions);
+ const Vec3 a0=40*first.frame.xDir(),b0=20*first.frame.yDir(),a1=capRadius*last.frame.xDir(),b1=10*last.frame.yDir();
+ const double expectedLoft=std::abs(kPi*dot(lastCenter-firstCenter,(cross(a0,b0)+cross(a1,b1))/3+(cross(a0,b1)+cross(a1,b0))/6));
+ std::cout<<"INPUT epsilon="<<epsilon<<" cap_radius="<<capRadius<<" endpoint_radial_excess="<<std::hypot(offset,capRadius)-r<<" cylinder_issues="<<checkBody(cylinder,{true,true}).size()<<" loft_issues="<<checkBody(loft,{true,true}).size()<<" loft_volume="<<massProperties(loft).volume<<" linear_reference_not_g1_expected="<<expectedLoft<<std::endl;
+ for(bool reverse:{false,true})for(BooleanOperation op:{BooleanOperation::Unite,BooleanOperation::Intersect,BooleanOperation::Subtract}){
+  const Body&a=reverse?loft:cylinder;const Body&b=reverse?cylinder:loft;
+  try{BooleanOptions options;options.threads=1;BodyHistory history;const Body result=booleanOperation(a,b,op,options,&history);const auto m=massProperties(result);std::cout<<"RESULT reverse="<<reverse<<" op="<<int(op)<<" success=1 issues="<<checkBody(result,{true,true}).size()<<" faces="<<result.faces().size()<<" edges="<<result.edges().size()<<" shells="<<result.shells().size()<<" volume="<<m.volume<<" area="<<m.area<<" history_operands="<<history.operandCount()<<std::endl;}
+  catch(const std::exception&e){std::cout<<"RESULT reverse="<<reverse<<" op="<<int(op)<<" success=0 error="<<e.what()<<std::endl;}
+ }
+}

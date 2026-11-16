@@ -1,0 +1,89 @@
+from pathlib import Path
+import json,hashlib
+r=Path('/home/myungit/Linux_CAD_forFree');p=r/'docs/curve-fit-k10-projection-prove-2026-11-16';root=p/'root-replay'
+def read(name):return json.loads((p/name).read_text())
+assert read('root-replay/ctest-result.json')['actual_passed']==24
+assert read('tests-replay/sanitizer-result.json')['exit_code']==0
+assert read('tests-replay/app-result.json')['exit_code']==0
+assert read('root-replay/baseline-result.json')['failed']==30
+assert (p/'independent-replay/README.md').is_file() and (p/'independent-replay/inventory.md').is_file()
+i=read('independent-replay/results.json')
+assert i['geometry_records']==16 and i['geometry_chain_spans']==688 and i['multi_source_join_spans']==264
+assert i['baseline_geometry_witnesses']==16 and i['upper_bound_maximum']<=9.908761802e-8
+report=r/'docs/curve-fit-k10-projection-2026-11-16.md';text=report.read_text()
+start=text.index("L'audit riproduce") if "L'audit riproduce" in text else text.index('Il nuovo audit indipendente riproduce');end=text.index('\n\n## Correzione',start)
+text=text[:start]+'''Il nuovo audit indipendente riproduce il difetto su 16 varianti polinomiali/razionali, sopra e sotto il piano, con direzione normale/obliqua e piano ruotato/traslato. I dati IEEE originali vengono trattati come razionali esatti. Un punto della proiezione esatta viene separato dall’involucro globale dei poli dell’output: il limite inferiore di errore geometrico è almeno **5,4156407e-5 mm** nelle sedici varianti. Il testimone usa un parametro razionale esatto; non dipende dalla ricerca numerica della proiezione più vicina.
+
+Il confronto ricostruito usa `fk_project.cpp/.h` da HEAD precedente alla correzione, collegato al resto del kernel Release corrente; il vecchio modulo non chiama il nuovo provider. Questa baseline di modulo è dichiarata separatamente dall’archivio kernel iniziale, non più disponibile dopo l’interruzione.'''+text[end:]
+start=text.index('## Verifiche finali');end=text.index('## Lavoro ancora aperto',start)
+verification='''## Verifiche finali e ripresa dopo l’interruzione
+
+La prima fase ha implementato e verificato la correzione con tre agenti GPT-6.1 Sol. L’interruzione ha conservato sorgenti, eseguibili e mappa, ma la cartella temporanea non ancora archiviata è andata persa. Due agenti GPT-6.1 Sol e il coordinatore hanno quindi ripetuto i controlli seguenti e salvato direttamente le prove nel repository. I cinque hash di sorgenti kernel/test coincidono con quelli registrati prima dell’interruzione.
+
+| Verifica ripetuta | Esito corrente archiviato |
+|---|---|
+| Build Release | Build completa precedente riuscita; replay incrementale di app e runner PASS, eseguibili successivi ai sorgenti |
+| Regressioni permanenti | **33/33 PASS**; confronto del modulo precedente **3 PASS / 30 FAIL** |
+| CTest pertinenti | **24/24 PASS**, kernel, proiezioni, offset, storia, durata documenti/worker, pannelli e anteprime |
+| Runner kernel generale, filtro `Projected` | **5/5 PASS** |
+| Prove applicative private | **3/3 PASS**, geometria e riepilogo confrontati con la pipeline kernel |
+| ASan/UBSan/LSan mirati | **33/33 PASS**, leak check attivo, nessuna soppressione |
+| Audit geometrico indipendente finale | **16 varianti, 688 campate finali**; controllo separato degli stessi pezzi, senza raddoppiare il numero delle geometrie |
+| Giunti indipendenti aggiuntivi | Due scenari, **264 campate**, compresa fusione della prima e ultima catena |
+| Limite superiore continuo finale | Massimo **9,908761802e-8 mm**, entro 1e-7 mm |
+| Prova esatta del difetto precedente | **16/16 testimoni** separati dall’involucro globale dei poli |
+| Architettura | **758 file, 10958 archi, 378 TU**; zero diagnostica, `--check`, HTML/JSON e collegamenti entranti/uscenti PASS |
+| Conservazione dalla ripresa | **2601/2603 file invariati**, aggiornati solo questo rapporto e CLAUDE; nessuna ulteriore modifica software |
+
+Le 30 asserzioni fallite nel confronto comprendono requisiti della nuova metrica e della provenienza: non sono 30 bug indipendenti. Le regressioni coprono dettagli nascosti, razionali, versi, pose, scale 0,001/1/1000, trim/istanze, nodi C0, parallelismo, sorgenti distrutte, giunti anche primo/ultimo, provenienza sostituita e rifiuto degli spostamenti fuori budget.
+
+Il probe applicativo usa gli oggetti finali della build e un main privato con QApplication offscreen. Nel caso linee con gap 5e-9, il limite prima della giunzione è **6,443778892e-11 mm**, quello finale **2,500008534e-9 mm**, circa 38,8 volte maggiore. Il riepilogo mostra **2,5e-9 mm** e l’asserzione distingue il comportamento precedente. Gli altri due casi verificano NURBS con dettaglio nascosto, con e senza piccolo gap. Struttura e poli coincidono con la pipeline kernel; non è una prova del renderer.
+
+Il sanitizer strumenta soltanto `test_projection_fit_validation.cpp`, `fk_project.cpp` e `fk_curve_fit_bounds.cpp`; il resto del kernel proviene dall’archivio Release corrente non strumentato. Il replay viene eseguito fuori dal sandbox per consentire il leak check. Non certifica ogni istruzione del kernel né l’intera app. Un primo tentativo del probe Qt è fallito prima dei casi per il tema GTK ereditato: il log è preservato, i replay finali usano esplicitamente offscreen e Fusion.
+
+I nuovi certificati indipendenti usano frazioni esatte e coefficienti originali, senza riutilizzare il provider di produzione. Verificano ogni campata anche rispetto alla `deviation` pubblicata. Il massimo dei due scenari di giunzione aggiuntivi è **9,763302787e-8 mm**. Varianti, dati originali, output e script sono archiviati separatamente dalle prove normali.
+
+Il nuovo runner è C++ puro senza Qt/OCCT; anche il link dell’app resta senza OCCT. Il runner generale di confronto conserva le proprie dipendenze opzionali. Il replay incrementale non ricompila i moduli: non viene usato per attribuire nuovi conteggi di warning. Il controllo finale verifica flag floating-point rigorosi, hash dei binari e tempi successivi ai sorgenti.
+
+Il manifest iniziale di 2600 file e i vecchi 67 controlli grezzi non sono recuperabili dalla cartella temporanea. **Il precedente conteggio preliminare 2590/2600 è sostituito dall’audit verificabile della ripresa**, non ricostruito come se fosse ancora disponibile. Sono conservati un nuovo snapshot di 2603 file, hash delle sorgenti identici a prima dell’interruzione, 249 archi incidenti della mappa corrente, `git diff --check` e un manifest dell’archivio. Gli esiti numerici di questa sezione appartengono ai nuovi replay.
+
+'''
+text=text[:start]+verification+text[end:]
+text=text.replace('curve-fit-k10-projection-prove-2026-11-16/independent/inventory.md','curve-fit-k10-projection-prove-2026-11-16/independent-replay/inventory.md')
+report.write_text(text)
+(p/'README.md').write_text('''# Prove K10 proiezioni su Plane, 16 novembre 2026
+
+Archivio dei nuovi replay dopo l’interruzione. Sorgenti e binari del prodotto sono rimasti gli stessi; la vecchia cartella temporanea non ancora archiviata è andata persa. Nessun log qui viene presentato come recupero di quello staging.
+
+- `root-replay/`: build incrementale, 24 CTest, runner 33 casi, filtro Projected, baseline di modulo, grafo, hash iniziali della ripresa e audit finale.
+- `tests-replay/`: 33 casi ASan/UBSan/LSan mirati e tre prove applicative; tentativo GTK fallito conservato accanto ai risultati finali.
+- `independent-replay/`: coefficienti originali e output, certificati continui con Fraction, giunti, 16 testimoni baseline e inventario dei siti aperti.
+
+Le istruzioni specifiche sono nei README dei due agenti. Script e sorgenti hanno suffisso `.txt` per restare fuori dal catalogo C++/CMake. Gli script root possono essere eseguiti direttamente con `python3 <nome>.py.txt`; quelli degli agenti indicano come ricreare lo staging e adattare i percorsi. Oggetti, librerie e binari non sono distribuiti.
+
+Il test permanente si ripete con `ctest --test-dir forgecad-release -R '^forgekernel_projection_fit_validation_tests$' --output-on-failure`. Per il confronto baseline, lo script root estrae solo `fk_project.cpp/.h` dal Git HEAD registrato e collega l’oggetto precedente prima dell’archivio corrente; non ricostruisce l’archivio iniziale perso. Verificare la revisione prima di ripetere il confronto dopo futuri commit. La baseline del modulo è inclusa sotto `root-replay/baseline/`.
+
+Il nuovo snapshot di conservazione parte dalla ripresa e non sostituisce una misura storica non recuperabile. Gli hash dei cinque sorgenti finali coincidono con quelli registrati nella conversazione prima dell’interruzione. Il sanitizer strumenta tre TU e lascia il restante kernel Release; i probe offscreen non certificano OpenGL. I controlli campionati e le prove continue restano distinti.
+
+`SHA256SUMS` copre tutti i file dell’archivio, escluso il manifest stesso. `root-replay/final-audit.json` registra gli hash dei binari correnti e le dipendenze di link. `root-replay/final-sources/` conserva i sorgenti finali. Il rapporto principale riporta campo di validità e limiti della correzione.
+''')
+# Rilettura immediata, sostituendo soltanto la voce tematica K10 condivisa.
+memory=r/'CLAUDE.md';text=memory.read_text();start=text.index('**16/11 — K10, proiezioni');end=text.index('**15/11 — K2',start)
+entry='''**16/11 — K10, proiezioni con tre agenti GPT-6.1 Sol.**
+Plane: limite continuo dagli originali Line/NURBS, verifica dei poli dopo giunta
+e scarto finale nel riepilogo app; baseline circa5,74e-5 mm contro limite1e-7.
+App/runner compilati; staging perso all’interruzione, replay con due agenti Sol:
+33 regressioni,24 CTest,5 kernel,3 probe app e33 sanitizer mirati su3 TU PASS.
+Audit indipendente:16 geometrie/688 campate,264 campate di giunta,16 testimoni
+baseline PASS; max9,908761802e-8. Mappa758/10958/378TU/check/HTML/archi PASS.
+Dalla ripresa2601/2603 file invariati; solo rapporto/memoria aggiornati.
+Manifest iniziale perso: vecchio2590/2600 non ricertificato; sorgenti identiche.
+K10 aperto:14/24 siti parziali,10 da migrare più fallback;24 rilievi precedenti
+corretti,22 orfane candidate e anteprime/pannelli da uniformare. K2 in produzione.
+App ricompilata, riaprire per usarla; nessuna nuova prova renderer.
+[Prove e limiti](docs/curve-fit-k10-projection-2026-11-16.md),
+[memoria conservata](docs/history/claude-prima-k10-projection-2026-11-16.md).
+
+'''
+text=text[:start]+entry+text[end:];assert len(text.encode())<=16384;memory.write_text(text)
+print('Rapporto e memoria aggiornati; CLAUDE',len(text.encode()),'byte')

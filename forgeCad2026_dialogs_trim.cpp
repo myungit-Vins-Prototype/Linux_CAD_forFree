@@ -119,7 +119,7 @@ bool trimDialog(QWidget *parent, CadViewport *viewport, const QString &title, in
                                                    "sulla prima faccia che incontra: le facce sotto restano intere. I tratti che ricalcano bordi "
                                                    "esistenti (anche la corda di un bordo curvo corto, entro 0,001 mm) delimitano la regione senza nuovi tagli."), &dialog);
     auto *projectResult = new FunctionMessage(&dialog);
-    projectResult->setStyleSheet(QStringLiteral("color: #9fc6e8;"));
+    setFunctionMessageRole(projectResult, FunctionMessageRole::Information);
     form->addRow(QStringLiteral("Metodo dello schizzo:"), methodBox);
     form->addRow(QStringLiteral("Taglio:"), projectModeBox);
     form->addRow(QString(), projectReverse);
@@ -130,7 +130,7 @@ bool trimDialog(QWidget *parent, CadViewport *viewport, const QString &title, in
     form->addRow(QStringLiteral("Parte del secondo corpo:"), toolPartBox);
     auto *choiceHelp = new QLabel(QStringLiteral("Passa il mouse sulle regioni: quella verde verra' mantenuta con un clic."), &dialog);
     choiceHelp->setWordWrap(true);
-    choiceHelp->setStyleSheet(QStringLiteral("color: #8ee8a2; font-weight: 600;"));
+    setFunctionMessageRole(choiceHelp, FunctionMessageRole::Success, true);
     choiceHelp->setMaximumWidth(360);
     form->addRow(QStringLiteral("Scelta nella vista:"), choiceHelp);
     const PreviewScope scope(viewport, dialog, form, replaced);

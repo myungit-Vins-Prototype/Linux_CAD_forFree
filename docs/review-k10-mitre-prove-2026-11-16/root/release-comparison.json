@@ -1,0 +1,12 @@
+{
+  "candidate-positive-coefficients.json": {
+    "sha256": "957bfa94195052b815d3268cc90334cd4e2e8f44806904c1c8693f89a5427fad",
+    "byte_identical_to_frozen_v2": true,
+    "cases": 5
+  },
+  "candidate-emitted-sheet-coefficients.json": {
+    "sha256": "6f777a6770e7c84e4b629676a0b18115c06980a3e47007f6d123f29163a365c3",
+    "byte_identical_to_frozen_v2": true,
+    "cases": 1
+  }
+}

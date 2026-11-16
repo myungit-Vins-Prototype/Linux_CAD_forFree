@@ -1,0 +1,72 @@
+UpdateCTestConfiguration  from :/home/myungit/Linux_CAD_forFree/forgecad-release/DartConfiguration.tcl
+Test project /home/myungit/Linux_CAD_forFree/forgecad-release
+Constructing a list of tests
+Done constructing a list of tests
+Updating test list for fixtures
+Added 0 tests to meet fixture requirements
+Checking test dependency graph...
+Checking test dependency graph end
+test 225
+    Start 225: forgekernel_surface_mapping_tests
+
+225: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_surface_mapping_tests
+225: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+225: Test timeout computed to be: 120
+225: PASS sviluppo piano/cilindro/cono, aree/lunghezze, rifiuto doppia curvatura, deformazione cilindrica/volume, genealogia, B-rep, STEP e mesh, appoggio multifaccia continuo/NURBS/vuoti
+1/4 Test #225: forgekernel_surface_mapping_tests ...............   Passed    0.25 sec
+test 237
+    Start 237: forgekernel_mapping_carrier_validation_tests
+
+237: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_mapping_carrier_validation_tests
+237: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+237: Test timeout computed to be: 180
+237: [  OK  ] MappingCarrierHiddenTargetsPolyRationalPoseScale
+237: [  OK  ] MappingCarrierSourceFrameQuarterTurnShiftHolesAndRoundtrip
+237: [  OK  ] MappingCarrierDeclaredLegacyDiagonalPeriodicAndOffset
+237: [  OK  ] MappingCarrierFailureAndCallbackCancellationAreAtomic
+237: [  OK  ] MappingCarrierDegree27SingleSpanAndRoundtrip
+237: [  OK  ] MappingCarrierTolerantSourceDiscrepanciesAreRejectedAtomically
+237: [  OK  ] MappingCarrierSmallSourceVertexDiscrepancyIsReported
+237: [  OK  ] MappingCarrierUnresolvedNaturalBoundaryIsAtomic
+237: [  OK  ] MappingCarrierRecognizedAffineFinBudgetFailsAtomically
+237: 9/9 test superati
+2/4 Test #237: forgekernel_mapping_carrier_validation_tests ....   Passed    1.29 sec
+test 238
+    Start 238: forgekernel_mapping_diagonal_validation_tests
+
+238: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_mapping_diagonal_validation_tests
+238: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+238: Test timeout computed to be: 180
+238: [  OK  ] MappingDiagonalExtrusionHiddenPolynomialRationalPoseScaleReverse
+238: [  OK  ] MappingDiagonalExtrusionNestedGeneratorTrimHolesHistoryRoundtrip
+238: [  OK  ] MappingDiagonalOriginalLineExtrusionSuccess
+238: [  OK  ] MappingDiagonalProviderPullbackKnotsAndWrongCandidate
+238: [  OK  ] MappingDiagonalFailureCancellationAreAtomicAndTensorIsUnsupported
+238: [  OK  ] MappingDiagonalProviderTinyNonzeroUDirectionMustNotSnap
+238: [  OK  ] MappingDiagonalProviderLineConstantUAndClosedJunctionQueries
+238: 7/7 test superati
+3/4 Test #238: forgekernel_mapping_diagonal_validation_tests ...   Passed    0.78 sec
+test 239
+    Start 239: forgekernel_planar_flatten_validation_tests
+
+239: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_planar_flatten_validation_tests
+239: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+239: Test timeout computed to be: 180
+239: [  OK  ] PlanarFlattenHiddenPolynomialRationalPoseScaleSense
+239: [  OK  ] PlanarFlattenNestedPartialTrimReverseHolesAndRoundtrip
+239: [  OK  ] PlanarFlattenInvalidAndCancellationPreserveStatsHistorySource
+239: [  OK  ] PlanarFlattenLineUVFiniteNonunitRangePreservesParameter
+239: [  OK  ] PlanarFlattenAngularConicLegacyCompatibility
+239: [  OK  ] PlanarFlattenFoldPreservesFiniteCarrierWindowAndBoundaryRoundtrip
+239: 6/6 test superati
+4/4 Test #239: forgekernel_planar_flatten_validation_tests .....   Passed    1.35 sec
+
+The following tests passed:
+	forgekernel_surface_mapping_tests
+	forgekernel_mapping_carrier_validation_tests
+	forgekernel_mapping_diagonal_validation_tests
+	forgekernel_planar_flatten_validation_tests
+
+100% tests passed out of 4
+
+Total Test time (real) =   3.67 sec

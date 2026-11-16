@@ -1,0 +1,17 @@
+[
+  {
+    "name": "output_pole",
+    "rejected": true,
+    "reason": "Exact midpoint witness exceeds budget: t=1/2 squared=11963051962064369095168402723593/85070591730234615865843651857942052864"
+  },
+  {
+    "name": "surface_pole",
+    "rejected": true,
+    "reason": "Exact midpoint witness exceeds budget: t=1/2 squared=211365981870463581824633191142358754516421716097097698395651881/1725436586697640946858688965569256363112777243042596638790631055949824"
+  },
+  {
+    "name": "pcurve_anchor",
+    "rejected": true,
+    "reason": "Exact midpoint witness exceeds budget: t=1/2 squared=51922968592554084718960184587405/20769187434139310514121985316880384"
+  }
+]

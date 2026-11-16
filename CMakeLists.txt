@@ -192,6 +192,8 @@ add_executable(forgecad
     cad_overlay_renderer.cpp
     cad_curve_solver.h
     cad_curve_solver.cpp
+    cad_ellipse.h
+    cad_ellipse.cpp
     cad_curve_extract.h
     cad_spatial_sketch.h
     cad_surface_tools.h
@@ -585,7 +587,7 @@ if(FORGECAD_BUILD_VIEW_TESTS)
     # Finestra, viewport, storyboard e dialoghi sono unita' separate anche nei test.
     list(REMOVE_ITEM FORGECAD_VIEW_TEST_SOURCES forgeCad2026.cpp ${FORGE_CAD_CUDA_SOURCE} ${FORGECAD_HASH_HEADER})
     list(REMOVE_ITEM FORGECAD_VIEW_TEST_SOURCES cad_macos_menu.h cad_macos_menu.mm)
-    add_executable(forgecad_view_tests tests/test_viewport.cpp tests/test_declared_history_cache.h tests/test_boolean_history.h tests/test_blend_history.h tests/test_extrusion_history.h tests/test_revolution_history.h tests/test_all_history.h tests/test_native_revisions.h tests/test_workspace_revisions.h tests/test_linked_drawing.h tests/test_drawing_workflow.h tests/test_drawing_revisions.h tests/test_projected_drawing_file.h tests/test_drawing_multisheet.h tests/test_drawing_revision_restore.h tests/test_drawing_release.h tests/test_catalog_recovery_gui.h tests/test_surface_tools_gui.h tests/test_document_units.h tests/test_history_suppression.h tests/test_function_panels.h tests/test_advanced_fillets.h tests/test_fillet_refinements.h tests/test_drawing_mouse.h tests/test_drawing_section_model.h tests/test_drawing_performance.h cuda_support_cpu.cpp ${FORGECAD_VIEW_TEST_SOURCES})
+    add_executable(forgecad_view_tests tests/test_viewport.cpp tests/test_document_theme_tabs.h tests/test_declared_history_cache.h tests/test_boolean_history.h tests/test_blend_history.h tests/test_extrusion_history.h tests/test_revolution_history.h tests/test_all_history.h tests/test_native_revisions.h tests/test_workspace_revisions.h tests/test_linked_drawing.h tests/test_drawing_workflow.h tests/test_drawing_revisions.h tests/test_projected_drawing_file.h tests/test_drawing_multisheet.h tests/test_drawing_revision_restore.h tests/test_drawing_release.h tests/test_catalog_recovery_gui.h tests/test_surface_tools_gui.h tests/test_document_units.h tests/test_history_suppression.h tests/test_function_panels.h tests/test_preview_selection_state.h tests/test_chamfer_preview_editing.h tests/test_sketch_projection_fit_validation.h tests/test_advanced_fillets.h tests/test_fillet_refinements.h tests/test_drawing_mouse.h tests/test_drawing_section_model.h tests/test_drawing_performance.h cuda_support_cpu.cpp ${FORGECAD_VIEW_TEST_SOURCES})
     add_dependencies(forgecad_view_tests forgecad) # genera l'impronta una sola volta, prima dei test
     target_include_directories(forgecad_view_tests PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/generated)
     target_link_libraries(forgecad_view_tests PRIVATE Qt6::Test forgecad_compute Qt6::Widgets Qt6::OpenGL Qt6::OpenGLWidgets OpenGL::GL forgekernel ZLIB::ZLIB ${FORGECAD_ZSTD_TARGET})
@@ -600,6 +602,9 @@ if(FORGECAD_BUILD_VIEW_TESTS)
         set_tests_properties(${name} PROPERTIES
             ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QPA_OFFSCREEN_NO_GLX=1;QT_QPA_PLATFORMTHEME=;QT_STYLE_OVERRIDE=Fusion;FORGECAD_EXAMPLE_DIR=${FORGECAD_EXAMPLE_DIR}")
     endfunction()
+    forgecad_add_view_test(forgecad_document_theme_tabs_tests --theme-tabs)
+    forgecad_add_view_test(forgecad_document_theme_only2d_tests --theme-tabs-only-2d)
+    set_tests_properties(forgecad_document_theme_tabs_tests forgecad_document_theme_only2d_tests PROPERTIES TIMEOUT 90)
     forgecad_add_view_test(forgecad_document_tabs_tests --document-tabs)
     set_tests_properties(forgecad_document_tabs_tests PROPERTIES TIMEOUT 90)
     forgecad_add_view_test(forgecad_gui_3d_review_tests --gui-3d-review)
@@ -608,6 +613,8 @@ if(FORGECAD_BUILD_VIEW_TESTS)
     forgecad_add_view_test(forgecad_revision_access_gui_tests --revision-access-gui)
     forgecad_add_view_test(forgecad_extrusion_next_body_tests --extrusion-next-body)
     forgecad_add_view_test(forgecad_sketch_projection_tests --sketch-projection)
+    forgecad_add_view_test(forgecad_sketch_projection_fit_validation_tests --sketch-projection-fit-validation)
+    set_tests_properties(forgecad_sketch_projection_fit_validation_tests PROPERTIES TIMEOUT 180)
     forgecad_add_view_test(forgecad_projected_curve_reference_tests --projected-curve-references)
     forgecad_add_view_test(forgecad_next_body_union_cache_tests --next-body-union-cache)
     forgecad_add_view_test(forgecad_next_body_union_tests --next-body-union)
@@ -628,6 +635,10 @@ if(FORGECAD_BUILD_VIEW_TESTS)
     forgecad_add_view_test(forgecad_advanced_fillet_tests --advanced-fillets)
     set_tests_properties(forgecad_advanced_fillet_tests PROPERTIES TIMEOUT 60)
     forgecad_add_view_test(forgecad_function_panels_tests --function-panels-review)
+    forgecad_add_view_test(forgecad_chamfer_preview_state_tests --chamfer-preview-editing)
+    set_tests_properties(forgecad_chamfer_preview_state_tests PROPERTIES TIMEOUT 120)
+    forgecad_add_view_test(forgecad_preview_selection_state_tests --preview-selection-state)
+    set_tests_properties(forgecad_preview_selection_state_tests PROPERTIES TIMEOUT 150)
     forgecad_add_view_test(forgecad_storyboard_panel_selection_tests --storyboard-panel-selection)
     set_tests_properties(forgecad_function_panels_tests PROPERTIES TIMEOUT 60)
     forgecad_add_view_test(forgecad_history_suppression_tests --history-suppression)
@@ -776,6 +787,7 @@ if(FORGECAD_BUILD_VIEW_TESTS)
     forgecad_add_view_test(forgecad_fill_surface_tests --fill-document)
     forgecad_add_view_test(forgecad_rebuild_all_tests --rebuild-all)
     forgecad_add_view_test(forgecad_ellipse_trim_tests --ellipse-trim)
+    forgecad_add_view_test(forgecad_ellipse_extremes_tests --ellipse-extremes)
     forgecad_add_view_test(forgecad_sketch_comb_tests --sketch-comb)
     forgecad_add_view_test(forgecad_shape_analysis_ui_tests --shape-analysis)
     forgecad_add_view_test(forgecad_draft_tests --draft)
@@ -1038,3 +1050,15 @@ add_test(NAME forgecad_overlay_uniform_tests COMMAND forgecad_overlay_uniform_te
 set_tests_properties(forgecad_overlay_uniform_tests PROPERTIES
     SKIP_RETURN_CODE 77 LABELS "opengl"
     ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QPA_OFFSCREEN_NO_GLX=1;QT_QPA_PLATFORMTHEME=")
+
+# Offset NURBS dello schizzo: regressioni pubbliche senza viewport o contesto GL.
+set_source_files_properties(cad_sketch_offset.cpp PROPERTIES COMPILE_OPTIONS
+    "$<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang,AppleClang>:-fno-fast-math;-ffp-contract=off>")
+add_executable(forgecad_sketch_offset_validation_tests tests/test_sketch_offset_validation.cpp cad_sketch_offset.cpp cad_curve_solver.cpp cad_ellipse.cpp)
+target_include_directories(forgecad_sketch_offset_validation_tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+target_include_directories(forgecad_sketch_offset_validation_tests SYSTEM PRIVATE "$<TARGET_PROPERTY:Qt6::Gui,INTERFACE_INCLUDE_DIRECTORIES>")
+target_link_libraries(forgecad_sketch_offset_validation_tests PRIVATE forgekernel Qt6::Core)
+target_compile_options(forgecad_sketch_offset_validation_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgecad_sketch_offset_validation_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgecad_sketch_offset_validation_tests COMMAND forgecad_sketch_offset_validation_tests)
+set_tests_properties(forgecad_sketch_offset_validation_tests PROPERTIES TIMEOUT 180)

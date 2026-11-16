@@ -1,0 +1,1134 @@
+--- before/CLAUDE.md
++++ after/CLAUDE.md
+@@ -108,16 +108,25 @@
+ 
+ ## Ultimi interventi — esiti consolidati
+ 
++**16/11 — K10 cucitura e PRE8 verificati con tre agenti Sol.**
++Plane rimappato: parametro originale, bound mm e fin emesse ricontrollate via
++mappa+identitàPC; cap invariato. PRE8 Smusso: Tab aggiorna quote/anteprima.
++29rilievi corretti; K10:18/24parziali+6nonmigrati, più fallback.
++App completa,37CTest,12sanitizer mirati4TU,5guardie e90stati UI
++ancheWayland PASS. Fraction:64fin/169campate,8migrate entro budget;
++8dump Release identici. Mappa769/11127/384,check/HTML/archi PASS.
++Matching/cap sorgente restano campionati; pista Helix solo callback, nonQt.
++[Rapporto/prove/limiti](docs/review-k10-sew-preview-2026-11-16.md);
++[memoria precedente](docs/history/claude-prima-k10-sew-preview-2026-11-16.md).
++
+ **16/11 — K10 UV e PRE7 verificati con tre agenti Sol.**
+-Due ricostruzioni UV Plane certificate in mm, originali/genealogia espliciti,
+-fin effettive ricontrollate. K10:17/24parziali+7nonmigrati,più fallback.
+-PRE7 Mapping/Riempimento pattern: selezione mutata invalida worker/risultato;
+-recupero e cleanup. Totale28rilievi corretti. App completa,30CTest,
+-27Offset/18Shell,10sanitizer mirati e7guardie PASS. Release:8dump identici,
+-192fin/248campate Fraction entro budget;79stati UI ancheWayland PASS.
+-Mappa767/11085/383,check/HTML/archi;3378/3388file preservati.
+-[Rapporto,prove e limiti](docs/review-k10-uv-preview-2026-11-16.md);
+-[memoria precedente](docs/history/claude-prima-k10-uv-preview-2026-11-16.md).
++Due ricostruzioni UV Plane certificate in mm e fin emesse ricontrollate.
++PRE7 Mapping/Riempimento pattern: selezione mutata invalida worker/risultato.
++Totale28rilievi corretti; K10allora17/24parziali+7nonmigrati.
++App/30CTest,27Offset/18Shell,10sanitizer,7guardie e79stati UI Wayland PASS;
++192fin/248campate Fraction,8dump identici; mappa767/11085/383 PASS.
++[Prove/limiti](docs/review-k10-uv-preview-2026-11-16.md);
++[memoria](docs/history/claude-prima-k10-uv-preview-2026-11-16.md).
+ 
+ **16/11 — Supporto.prt, K11 corretto con tre agenti Sol.**
+ Corpo2/Estrusione3–Corpo3/Loft6: clipping asimmetrico, tre edge aperti.
+@@ -139,8 +148,8 @@
+ 17 API senza usi interni, nessuna rimozione. [Prove](docs/review-preview-unification-2026-11-16.md).
+ 
+ **16/11 — Ellisse per estremi completata con tre agenti GPT-6.1 Sol.**
+-Tre clic,4punti reali quotabili/vincolabili,centro derivato,5DOF,conica
+-analitica;drag/anteprima/snap/Taglia. Codec70 legge precedenti eimpronte69.
++Tre clic,4punti quotabili/vincolabili,centro derivato,5DOF;drag/snap/Taglia.
++Codec70 compatibile precedenti/impronte69.
+ App/runner,24CTest,probe core/Taglia/hash69,sanitizer4TU eWayland/GL PASS;
+ mappa/check/HTML/archi e2669/2687file invariati. Riaprire l'app aggiornata.
+ [Uso,prove e limiti](docs/ellisse-estremi-2026-11-16.md),
+@@ -165,27 +174,24 @@
+ Frame ortonormale e cuciture UV: app/runner,42 test kernel e16CTest PASS; mappa724/10414 PASS.
+ K4 e K2 poi corretti; riferimenti sopra. [Rapporto e prove](docs/sweep-review-fix-2026-11-15.md).
+ 
+-**15/11 — Cache B-spline M1/M2 corrette con 3 agenti GPT-6.1 Sol.**
+-Shared_ptr conservato nei loop; copie curve/superfici con cache atomiche, assegnazione snapshot e CAS.
+-Cinque regressioni normale/ASan/TSan PASS; M1 isolata 200×8 thread e riproduttore M2 PASS.
+-Build completa app/runner e 47/47 CTest PASS. Runner generale: 325 casi senza errori, poi timeout300s,
+-non certificazione completa. Mappa724/10410/353TU, check e archi/HTML PASS. Nessun test renderer nuovo.
+-App aggiornata allora; gli altri rilievi iniziali sono stati corretti negli interventi sopra.
+-[Correzioni, prove e limiti](docs/cache-bspline-2026-11-15.md).
++**15/11 — Cache B-spline M1/M2 corrette con tre agenti Sol.**
++Durata shared_ptr e copie/assegnazioni atomiche, snapshot/CAS; cinque regressioni
++normale/ASan/TSan PASS, M1isolata200x8 eM2. App/47CTest e mappa724/10410/353TU PASS.
++Runner325casi poi timeout300s, non completo; nessun GL.
++[Prove e limiti](docs/cache-bspline-2026-11-15.md).
+ 
+ **15/11 — Review iniziale con quattro agenti.** 19difetti e22candidate orfane;
+ 45test mirati,16Sweep,mappa723/10397 PASS; nessunleak permanente certificato.
+ Stato eprove storiche nel [rapporto](docs/code-review-2026-11-15.md) e nella
+ [memoria conservata](docs/history/claude-prima-preview-unification-2026-11-16.md).
+ 
+-**15/11 — exhaustMainfold, sweep e vincoli.** Frame Bishop e tangenza tramite catene Coincidente
+-implementati; 96 casi/scale/pose, codec, Undo/Redo, app e mappa verificati. CAD originale invariato;
+-volume nullo NURBS poi corretto in K3. [Sweep](docs/exhaust-mainfold-sweep-2026-11-15.md),
+-[solver e limiti](docs/vincoli-tangenza-transitiva-2026-11-15.md); dettagli in archivio.
+-
+-Schede documenti14/11: prove e limiti nel [rapporto](docs/schede-documenti-2026-11-14.md) e nella [memoria prima delle ellissi](docs/history/claude-prima-ellisse-estremi-2026-11-16.md).
+-
+-CT0578/template/tavole14/11: codec,misure,app/runner,Wayland/PDF eCTest PASS;
++Sweep/vincoli15/11:96casi,codec/Undo,app/mappa; volumeNURBS poi correttoK3.
++[Geometria](docs/exhaust-mainfold-sweep-2026-11-15.md),
++[solver](docs/vincoli-tangenza-transitiva-2026-11-15.md); dettagli in memoria precedente.
++
++Schede14/11: [prove/limiti](docs/schede-documenti-2026-11-14.md), [memoria](docs/history/claude-prima-ellisse-estremi-2026-11-16.md).
++
++CT0578/tavole14/11: codec,app,Wayland/PDF eCTest PASS;
+ [prestazioni e template](docs/ct0578-tavole-template-2026-11-14.md),
+ [agganci](docs/part23-quote-associative-cache-2026-11-14.md),
+ [sezioni e snap](docs/sezione-locale-snap-profondita-2026-11-14.md).
+--- before/CMakeLists.txt
++++ after/CMakeLists.txt
+@@ -587,7 +587,7 @@
+     # Finestra, viewport, storyboard e dialoghi sono unita' separate anche nei test.
+     list(REMOVE_ITEM FORGECAD_VIEW_TEST_SOURCES forgeCad2026.cpp ${FORGE_CAD_CUDA_SOURCE} ${FORGECAD_HASH_HEADER})
+     list(REMOVE_ITEM FORGECAD_VIEW_TEST_SOURCES cad_macos_menu.h cad_macos_menu.mm)
+-    add_executable(forgecad_view_tests tests/test_viewport.cpp tests/test_declared_history_cache.h tests/test_boolean_history.h tests/test_blend_history.h tests/test_extrusion_history.h tests/test_revolution_history.h tests/test_all_history.h tests/test_native_revisions.h tests/test_workspace_revisions.h tests/test_linked_drawing.h tests/test_drawing_workflow.h tests/test_drawing_revisions.h tests/test_projected_drawing_file.h tests/test_drawing_multisheet.h tests/test_drawing_revision_restore.h tests/test_drawing_release.h tests/test_catalog_recovery_gui.h tests/test_surface_tools_gui.h tests/test_document_units.h tests/test_history_suppression.h tests/test_function_panels.h tests/test_preview_selection_state.h tests/test_advanced_fillets.h tests/test_fillet_refinements.h tests/test_drawing_mouse.h tests/test_drawing_section_model.h tests/test_drawing_performance.h cuda_support_cpu.cpp ${FORGECAD_VIEW_TEST_SOURCES})
++    add_executable(forgecad_view_tests tests/test_viewport.cpp tests/test_declared_history_cache.h tests/test_boolean_history.h tests/test_blend_history.h tests/test_extrusion_history.h tests/test_revolution_history.h tests/test_all_history.h tests/test_native_revisions.h tests/test_workspace_revisions.h tests/test_linked_drawing.h tests/test_drawing_workflow.h tests/test_drawing_revisions.h tests/test_projected_drawing_file.h tests/test_drawing_multisheet.h tests/test_drawing_revision_restore.h tests/test_drawing_release.h tests/test_catalog_recovery_gui.h tests/test_surface_tools_gui.h tests/test_document_units.h tests/test_history_suppression.h tests/test_function_panels.h tests/test_preview_selection_state.h tests/test_chamfer_preview_editing.h tests/test_advanced_fillets.h tests/test_fillet_refinements.h tests/test_drawing_mouse.h tests/test_drawing_section_model.h tests/test_drawing_performance.h cuda_support_cpu.cpp ${FORGECAD_VIEW_TEST_SOURCES})
+     add_dependencies(forgecad_view_tests forgecad) # genera l'impronta una sola volta, prima dei test
+     target_include_directories(forgecad_view_tests PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/generated)
+     target_link_libraries(forgecad_view_tests PRIVATE Qt6::Test forgecad_compute Qt6::Widgets Qt6::OpenGL Qt6::OpenGLWidgets OpenGL::GL forgekernel ZLIB::ZLIB ${FORGECAD_ZSTD_TARGET})
+@@ -630,6 +630,8 @@
+     forgecad_add_view_test(forgecad_advanced_fillet_tests --advanced-fillets)
+     set_tests_properties(forgecad_advanced_fillet_tests PROPERTIES TIMEOUT 60)
+     forgecad_add_view_test(forgecad_function_panels_tests --function-panels-review)
++    forgecad_add_view_test(forgecad_chamfer_preview_state_tests --chamfer-preview-editing)
++    set_tests_properties(forgecad_chamfer_preview_state_tests PROPERTIES TIMEOUT 120)
+     forgecad_add_view_test(forgecad_preview_selection_state_tests --preview-selection-state)
+     set_tests_properties(forgecad_preview_selection_state_tests PROPERTIES TIMEOUT 150)
+     forgecad_add_view_test(forgecad_storyboard_panel_selection_tests --storyboard-panel-selection)
+--- before/docs/code-review-2026-11-15.md
++++ after/docs/code-review-2026-11-15.md
+@@ -1,6 +1,6 @@
+ # Review generale ForgeCAD — 15 novembre 2026
+ 
+-**Stato più recente, 16 novembre:** **28 rilievi confermati corretti complessivamente**. [K10 UV e PRE7](review-k10-uv-preview-2026-11-16.md): due ricostruzioni UV degli offset certificate per Plane con corrispondenza nel parametro originale e controllo delle fin emesse; Mapping e Riempimento pattern invalidano l’anteprima quando la selezione cambia e recuperano al termine. App completa,30CTest,27Offset/18Shell,10gruppi sanitizer mirati e79stati UI ancheWayland PASS;192fin finali verificate con Fraction e8dump Release identici. **K10 resta aperto:17/24 siti iniziali parzialmente trattati,7 interamente da migrare**, oltre ai fallback. Restano anche l’uniformazione completa di anteprime/pannelli/stili e le [candidate orfane](review-orphans-refresh-2026-11-16.md):5 private/locali e17 API senza usi interni, nessuna rimozione. [K11 Supporto.prt](supporto-booleana-2026-11-16.md) e [PRE5/PRE6 e copertura UI2](review-preview-unification-2026-11-16.md) sono corretti. K2 in produzione; [ellisse per estremi](ellisse-estremi-2026-11-16.md) completata con quattro punti quotabili/vincolabili e centro derivato. I conteggi storici delle sezioni successive descrivono le rispettive consegne precedenti.
++**Stato più recente, 16 novembre:** **29 rilievi confermati corretti complessivamente**. [Cucitura Plane e PRE8](review-k10-sew-preview-2026-11-16.md): trasferimento SP-curve certificato nel parametro originale, cap invariato e fin realmente emesse ricontrollate tramite genealogia esplicita; Smusso aggiorna l’anteprima dopo digitazione e Tab. App completa,37CTest pertinenti,12gruppi sanitizer mirati e90stati UI ancheWayland PASS;64fin/169campate verificate con Fraction,8dump Release identici. **K10 resta aperto:18/24siti iniziali parzialmente trattati,6interamente da migrare**, oltre ai fallback e ai limiti del matching/cap sorgente campionati. Precedenti [UV/PRE7](review-k10-uv-preview-2026-11-16.md), [K11 Supporto.prt](supporto-booleana-2026-11-16.md) e [PRE5/PRE6/UI2](review-preview-unification-2026-11-16.md) conservati; K2 in produzione ed [ellisse per estremi](ellisse-estremi-2026-11-16.md) completata. Uniformazione globale UI e [22candidate orfane](review-orphans-refresh-2026-11-16.md) ancora aperte. I conteggi storici successivi descrivono le rispettive consegne precedenti.
+ 
+ **Aggiornamento successivo:** i cinque rilievi della [seconda review](review-followup-2026-11-15.md) K7/K8/K9/PRE4/UI7 sono corretti: **24 difetti precedenti corretti complessivamente**. La [prosecuzione K10](curve-fit-k10-2026-11-15.md) corregge il fit degli offset NURBS di estrusioni/rivoluzioni con controllo continuo, input finiti e fallimenti atomici; build completa e regressioni PASS. **K10 resta aperto per i chiamanti generici ancora campionati**. Le 22 orfane restano candidati distinti. Stato storico della prima review sotto.
+ 
+--- before/forgeCad2026_dialogs_solids.cpp
++++ after/forgeCad2026_dialogs_solids.cpp
+@@ -199,6 +199,8 @@
+     secondBox->setKeyboardTracking(false);
+     sizeBox->onReturn = refresh;
+     secondBox->onReturn = refresh;
++    QObject::connect(sizeBox, &QDoubleSpinBox::editingFinished, &dialog, refresh);
++    QObject::connect(secondBox, &QDoubleSpinBox::editingFinished, &dialog, refresh);
+     QObject::connect(flipBox, &QCheckBox::toggled, &dialog, refresh);
+     QObject::connect(modeBox, &QComboBox::currentIndexChanged, &dialog, [&] {
+         describe();
+--- before/kernel/CMakeLists.txt
++++ after/kernel/CMakeLists.txt
+@@ -655,3 +655,13 @@
+ set_target_properties(forgekernel_offset_pcurve_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+ add_test(NAME forgekernel_offset_pcurve_tests COMMAND forgekernel_offset_pcurve_tests)
+ set_tests_properties(forgekernel_offset_pcurve_tests PROPERTIES TIMEOUT 120)
++
++# Cucitura Plane: parametro originale, bound fisico e fin realmente emesse.
++add_executable(forgekernel_sew_pcurve_tests tests/test_sew_pcurve_validation.cpp)
++target_link_libraries(forgekernel_sew_pcurve_tests PRIVATE forgekernel)
++target_compile_definitions(forgekernel_sew_pcurve_tests PRIVATE HAVE_PLANE_SEW_PROVIDER=1)
++target_compile_options(forgekernel_sew_pcurve_tests PRIVATE -Wall -Wextra -Wpedantic
++    "$<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang,AppleClang>:-fno-fast-math;-ffp-contract=off>")
++set_target_properties(forgekernel_sew_pcurve_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
++add_test(NAME forgekernel_sew_pcurve_tests COMMAND forgekernel_sew_pcurve_tests)
++set_tests_properties(forgekernel_sew_pcurve_tests PROPERTIES TIMEOUT 180)
+--- before/kernel/fk_curve_fit_bounds.h
++++ after/kernel/fk_curve_fit_bounds.h
+@@ -85,6 +85,17 @@
+ };
+ PlanePCurveFitData planePCurveErrorBound(const CurvePtr<3> &edge, const SurfacePtr &surface,
+                                         const Interval &range);
++// Targeted Plane construction: the approximation budget and the returned
++// deviation are physical distances in mm. Unsupported source/support returns
++// null; recognized invalid/unresolved data throw. deviation is transactional.
++CurvePtr<2> fitPCurveOnPlane(const CurvePtr<3> &edge, const SurfacePtr &surface, const Interval &range,
++                            double fitTolerance, double residualBudget, double *deviation = nullptr);
++// Rebuilds the oracle from the actually emitted edge/Plane and checks every
++// ORIGINAL control of a cubic nonrational C0 Bezier pcurve. Throws on unsupported
++// or invalid representation, unresolved bounds or a residual above budget.
++// The return value is the continuous residual upper bound over the whole range.
++double requirePCurveOnPlane(const CurvePtr<3> &edge, const SurfacePtr &surface, const CurvePtr<2> &pcurve,
++                            const Interval &range, double residualBudget);
+ CurveFitErrorBound extrusionOffsetErrorBound(const CurvePtr<3> &source, const Interval &range, double distance,
+                                              const Vec3 &direction);
+ CurveFitErrorBound revolutionOffsetErrorBound(const CurvePtr<3> &source, const Interval &range, double distance,
+--- before/kernel/fk_exchange.cpp
++++ after/kernel/fk_exchange.cpp
+@@ -31,6 +31,7 @@
+ #include "fk_parallel.h"
+ #include "fk_pcurve.h"
+ #include "fk_offset.h"
++#include "fk_curve_fit_bounds.h"
+ #include "fk_surface_algo.h"
+ #include "fk_surface_distance.h"
+ #include "fk_timing.h"
+@@ -330,6 +331,54 @@
+     return BSplineCurve<3>(p, std::move(boundedKnots), std::move(poles), std::move(weights));
+ }
+ 
++namespace {
++void requireSewnPlanePCurves(const RawModel &model,const Body &body,const AssemblyMap &map) {
++    using Key=std::pair<int,int>;
++    using Budgets=std::vector<std::pair<double,double>>;
++    // Shared pcurve object identity is explicit fin provenance through assembly.
++    // Unmigrated representative fins may share this face/edge with a remapped
++    // fin; their distinct pcurve objects do not acquire a certificate by proxy.
++    std::map<Key,std::map<const Curve<2> *,Budgets>> groups;
++    for(std::size_t face=0;face<model.faces.size();++face)for(const auto &loop:model.faces[face].loops)for(const auto &fin:loop) {
++        cancellationPoint();
++        if(fin.certifiedPlanePCurve) {
++            if(!fin.pcurve)throw std::domain_error("cucitura: SP-curve certificata assente");
++            groups[{int(face),fin.edge}][fin.pcurve.get()].push_back({fin.pcurveTolerance,fin.certifiedPlaneBudget});
++        }
++    }
++    for(auto &[key,identities]:groups) {
++        cancellationPoint();const auto [rawFace,rawEdge]=key;
++        if(rawFace<0 || rawEdge<0 || std::size_t(rawFace)>=map.faces.size() || std::size_t(rawEdge)>=map.edges.size()
++            || std::size_t(rawEdge)>=model.edges.size() || !map.faces[rawFace].valid() || !map.edges[rawEdge].valid()
++            || !body.contains(map.faces[rawFace]) || !body.contains(map.edges[rawEdge]))
++            throw std::domain_error("cucitura: provenienza SP-curve certificata persa");
++        const auto &face=body.face(map.faces[rawFace]);const auto &edge=body.edge(map.edges[rawEdge]);
++        if(edge.range.lo!=model.edges[rawEdge].range.lo || edge.range.hi!=model.edges[rawEdge].range.hi)
++            throw std::domain_error("cucitura: parametro SP-curve certificata modificato");
++        std::map<const Curve<2> *,std::vector<double>>actualBudgets;
++        for(auto loop:face.loops)for(auto id:body.loopFins(loop)) {
++            cancellationPoint();const auto &fin=body.fin(id);if(fin.edge!=map.edges[rawEdge])continue;
++            auto identity=identities.find(fin.pcurve.get());if(identity==identities.end())continue;
++            requirePCurveOnPlane(edge.curve,face.surface,fin.pcurve,edge.range,fin.pcurveTolerance);
++            actualBudgets[identity->first].push_back(fin.pcurveTolerance);
++        }
++        for(const auto &[identity,expected]:identities) {
++            std::vector<double>expectedBudgets;
++            for(const auto &[budget,cap]:expected) {
++                cancellationPoint();
++                if(!std::isfinite(budget) || budget<0 || !std::isfinite(cap) || cap<budget)
++                    throw std::domain_error("cucitura: budget SP-curve certificata non valido");
++                expectedBudgets.push_back(budget);
++            }
++            auto found=actualBudgets.find(identity);
++            if(expectedBudgets.empty() || found==actualBudgets.end() || found->second.empty())
++                throw std::domain_error("cucitura: identita' della fin certificata persa");
++            std::sort(found->second.begin(),found->second.end());std::sort(expectedBudgets.begin(),expectedBudgets.end());
++            if(found->second!=expectedBudgets)throw std::domain_error("cucitura: fin o budget certificati modificati");
++        }
++    }
++}
++}
+ Body assembleBody(const RawModel &input, bool solid, std::vector<std::string> *notes, AssemblyMap *map) {
+     if(map)*map={};
+     RawModel model = input;
+@@ -642,12 +691,18 @@
+         issues = checkBody(body);
+     }
+     if (!issues.empty()) throw std::domain_error("corpo non valido: " + describe(issues.front().code) + " (" + issues.front().message + ")");
+-    if(map) {
++    bool certifiedPlane=false;
++    for(const auto &face:input.faces)for(const auto &loop:face.loops)for(const auto &fin:loop) {
++        cancellationPoint();certifiedPlane=certifiedPlane||fin.certifiedPlanePCurve;
++    }
++    if(map || certifiedPlane) {
+         AssemblyMap emitted;emitted.points.resize(input.points.size());emitted.edges.resize(input.edges.size());
+         const auto vs=body.vertices();const auto es=body.edges();
+         for(std::size_t i=0;i<pointIndex.size();++i)if(pointIndex[i]>=0)emitted.points[i]=vs.at(std::size_t(pointIndex[i]));
+         for(std::size_t i=0;i<edgeIndex.size();++i)if(edgeIndex[i]>=0)emitted.edges[i]=es.at(std::size_t(edgeIndex[i]));
+-        emitted.faces=body.faces();*map=std::move(emitted);
++        emitted.faces=body.faces();
++        if(certifiedPlane)requireSewnPlanePCurves(input,body,emitted);
++        if(map)*map=std::move(emitted);
+     }
+     return body;
+ }
+@@ -657,14 +712,27 @@
+ // La fin deve usare il parametro della curva rappresentativa dopo l'unione.
+ // Conservare il ramo UV originale evita una nuova inversione della superficie.
+ CurvePtr<2> sewnPCurve(const RawEdge &source, const RawEdge &target,
+-                       const RawFace &face, const RawFin &fin, bool reverse, double tolerance) {
++                       const RawFace &face, RawFin &fin, bool reverse, double tolerance) {
+     if (!fin.pcurve) return nullptr;
+     if (!source.hasRange || !target.hasRange || !source.range.isFinite() || !target.range.isFinite()
+         || !(source.range.length()>0) || !(target.range.length()>0)) return nullptr;
+-    if (source.curve == target.curve && !reverse) return fin.pcurve;
+     const double original = pcurveDeviation(*face.surface, *source.curve, *fin.pcurve, source.range, 16);
+     if (!std::isfinite(original)) throw std::domain_error("cucitura: SP-curve sorgente non valida");
+     const double budget = original + std::max(1e-7, 10.0 * tolerance);
++    if(face.surface && face.surface->type()==SurfaceType::Plane) {
++        double deviation=0;
++        auto pcurve=fitPCurveOnPlane(target.curve,face.surface,target.range,1e-8,budget,&deviation);
++        if(pcurve) {
++            // New representation, bounded by the already fixed legacy cap.
++            // Neither sampled original residual nor this cap is a certificate
++            // for the source fin; the proof concerns the actual target/Plane.
++            fin.pcurveTolerance=deviation;
++            fin.certifiedPlanePCurve=true;
++            fin.certifiedPlaneBudget=budget;
++            return pcurve;
++        }
++    }
++    if (source.curve == target.curve && !reverse) return fin.pcurve;
+     const auto acceptable = [&](const CurvePtr<2> &curve) {
+         const double error = pcurveDeviation(*face.surface, *target.curve, *curve, target.range, 16);
+         return std::isfinite(error) && error <= budget;
+--- before/kernel/fk_exchange.h
++++ after/kernel/fk_exchange.h
+@@ -46,6 +46,10 @@
+     // parametri delle facce di partenza).
+     CurvePtr<2> pcurve;
+     double pcurveTolerance = 0.0;
++    // Transient proof obligation carried only through RawModel assembly.
++    // It is never persisted and does not establish validity of source pcurves.
++    bool certifiedPlanePCurve = false;
++    double certifiedPlaneBudget = 0.0;
+ };
+ 
+ struct RawFace {
+--- before/kernel/fk_offset.cpp
++++ after/kernel/fk_offset.cpp
+@@ -694,7 +694,7 @@
+     int face = -1, edge = -1;
+     double budget = 0;
+ };
+-void requirePlanePCurve(const CurvePtr<2> &curve, const Interval &range,
++double requirePlanePCurve(const CurvePtr<2> &curve, const Interval &range,
+                        const CurveFitErrorBound &bound, double budget) {
+     cancellationPoint();
+     const auto *spline=dynamic_cast<const BSplineCurve<2> *>(curve.get());
+@@ -708,6 +708,7 @@
+     for (int j=0;j<4;++j)
+         if(knots[j]!=range.lo || knots[knots.size()-1-j]!=range.hi)
+             throw std::domain_error("offset: estremi SP-curve piana non bloccati");
++    double worst=0;
+     for(int k=0;k+3<spline->poleCount();k+=3) {
+         cancellationPoint();
+         const Interval span{knots[k+3],knots[k+4]};
+@@ -718,7 +719,9 @@
+                                        Vec3(p[k+2].x(),p[k+2].y(),0),Vec3(p[k+3].x(),p[k+3].y(),0)});
+         if (!std::isfinite(error) || error<0 || error>budget)
+             throw std::domain_error("offset: SP-curve piana oltre il budget continuo");
+-    }
++        worst=std::max(worst,error);
++    }
++    return worst;
+ }
+ void requireEmittedPlanePCurves(const detail::RawModel &model, const Body &body,
+                                 const detail::AssemblyMap &map, const std::vector<PlanePCurveContract> &contracts,
+@@ -1355,6 +1358,40 @@
+     if (!bound) throw std::domain_error("fit UV piano: certificatore assente");
+     return fitCurveImpl(f,range,breaks,tolerance,nullptr,&bound,true);
+ }
++
++namespace detail {
++CurvePtr<2> fitPCurveOnPlane(const CurvePtr<3> &edge, const SurfacePtr &surface, const Interval &range,
++                            double fitTolerance, double residualBudget, double *deviation) {
++    cancellationPoint();
++    if (!(fitTolerance>0) || !std::isfinite(fitTolerance) || !(residualBudget>=0) || !std::isfinite(residualBudget))
++        throw std::domain_error("fit SP-curve piana: budget non valido");
++    const auto data=planePCurveErrorBound(edge,surface,range);
++    if(!data.projection || !data.residual)return {};
++    const auto frame=static_cast<const Plane &>(*surface).frame();
++    const auto x=frame.xDir(),y=frame.yDir(),origin=frame.origin();
++    const double aa=dot(x,x),ab=dot(x,y),bb=dot(y,y),det=aa*bb-ab*ab;
++    if(!(det>0) || !std::isfinite(det))throw std::domain_error("fit SP-curve piana: inversione non risolta");
++    const auto at=[&](double t) {
++        const Vec3 delta=edge->point(t)-origin;
++        const double ax=dot(x,delta),by=dot(y,delta);
++        return Vec3((bb*ax-ab*by)/det,(aa*by-ab*ax)/det,0);
++    };
++    auto fitted=fitPlanePCurveCertified(at,range,data.breaks,fitTolerance,data.projection);
++    std::vector<Vec2>poles;poles.reserve(fitted->poles().size());
++    for(const Vec3 &p:fitted->poles()) {cancellationPoint();poles.emplace_back(p.x(),p.y());}
++    auto pcurve=std::make_shared<BSplineCurve<2>>(3,fitted->knots(),std::move(poles));
++    const double error=requirePlanePCurve(pcurve,range,data.residual,residualBudget);
++    cancellationPoint();
++    if(deviation)*deviation=error;
++    return pcurve;
++}
++double requirePCurveOnPlane(const CurvePtr<3> &edge, const SurfacePtr &surface, const CurvePtr<2> &pcurve,
++                            const Interval &range, double residualBudget) {
++    const auto data=planePCurveErrorBound(edge,surface,range);
++    if(!data.residual)throw std::domain_error("SP-curve piana certificata: famiglia emessa non riconosciuta");
++    return requirePlanePCurve(pcurve,range,data.residual,residualBudget);
++}
++} // namespace detail
+ 
+ static SurfacePtr offsetSurfaceImpl(const Surface &surface, double d, const Interval &uw, const Interval &vw, double tolerance, bool preserveEndSections, bool checkCurvature = true) {
+     if (!(std::fabs(d) > 0.0)) throw std::domain_error("offset: distanza nulla");
+--- before/tests/test_viewport.cpp
++++ after/tests/test_viewport.cpp
+@@ -330,6 +330,7 @@
+ #include "test_document_units.h"
+ #include "test_function_panels.h"
+ #include "test_preview_selection_state.h"
++#include "test_chamfer_preview_editing.h"
+ #include "test_storyboard_panel_selection.h"
+ #include "test_loft_projected_sections.h"
+ #include "test_loft_points.h"
+@@ -11815,6 +11816,15 @@
+         catch (const std::exception &error) { std::cerr << error.what() << '\n'; return 1; }
+         return 0;
+     }
++    if (app.arguments().contains(QStringLiteral("--chamfer-preview-editing"))) {
++        QTemporaryDir isolatedSettings;
++        if (!isolatedSettings.isValid()) return 1;
++        QSettings::setDefaultFormat(QSettings::IniFormat);
++        QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, isolatedSettings.path());
++        try { ViewportInteractionTest::chamferPreviewEditingReview(); }
++        catch (const std::exception &error) { std::cerr << error.what() << std::endl; return 1; }
++        return 0;
++    }
+     if (app.arguments().contains(QStringLiteral("--preview-selection-state"))) {
+         QTemporaryDir isolatedSettings;
+         if (!isolatedSettings.isValid()) return 1;
+--- before/tools/generate_architecture.py
++++ after/tools/generate_architecture.py
+@@ -42,7 +42,10 @@
+ DESCRIPTIONS = {
+  'kernel/fk_boolean_boundary.cpp': ('kernel', 'Certificati continui outward dei contatti fra retta e bordo ellittico: originali IEEE, monotonia, scarto dai carrier Plane/Cylinder e frame double; pcurve affine nel parametro originale con bound di Peano, input non finiti e famiglie non risolte rifiutati.'),
+  'kernel/fk_boolean_boundary.h': ('kernel', 'Contratti interni dei certificati di contatto ellisse/retta finita e delle immagini UV affini; limite continuo o rifiuto, senza tolleranze aumentate e senza campionamento come autorizzazione.'),
++ 'kernel/fk_exchange.h': ('kernel', 'B-rep grezzo STEP/IGES e cucitura, AssemblyMap esplicita e obblighi transitori per le sole SP-curve Plane rimappate; metadati non persistiti, cap e genealogia di fin.'),
++ 'kernel/tests/test_sew_pcurve_validation.cpp': ('tests', 'Cucitura Plane: sei negativi fra fit nonaffine e riusi, compatibilita di scala e pesi razionali; cancellazione, residuo normale, metrica fisica con wrapper e controlli effettivi; exporter floathex delle fin originali e finali.'),
+  'kernel/tests/test_offset_pcurve_validation.cpp': ('tests', 'Offset: sei regressioni negative della corrispondenza Plane/SP-curve, due compatibilita di rifilatura, atomicita e certificato duale con dati posseduti; exporter dei coefficienti finali.'),
++ 'tests/test_chamfer_preview_editing.h': ('tests', 'Sei scenari Smusso con veri eventi di tastiera: primaria, seconda distanza e angolo, anteprima pronta/worker pendente, Tab/Invio/frecce, annullamento, conferma e cleanup.'),
+  'tests/test_preview_selection_state.h': ('tests', 'Sei scenari reali Mapping e Riempimento pattern: anteprima pronta e worker pendente, mutazione selezione, annullamento del token, generazione, pubblicazione tardiva, recupero e cleanup.'),
+  'kernel/tests/test_boolean_boundary.cpp': ('tests', 'Regressioni indipendenti sui certificati di contatto e pcurve: budget, monotonia, versi, dati non finiti, overflow, parametri originali, pose e scale e famiglie rifiutate.'),
+  'cad_ellipse': ('sketch', 'Definizione analitica delle ellissi da centro o quattro estremi reali: coppie di assi ortogonali, centro derivato, costruzione da tre clic e normalizzazione del trascinamento senza sostituire i riferimenti dei vincoli.'),
+@@ -137,7 +140,7 @@
+  'forgeCad2026_gpu_picker': ('render', 'Picking tramite identificatori GPU e gestione dei buffer necessari.'),
+  'forgeCad2026_glass_compositor': ('render', 'Composizione della trasparenza dei corpi e risorse OpenGL associate.'),
+  'forgeCad2026_storyboard': ('dialogs', 'Albero della storia e cursore; selezione sorgenti delle ripetizioni, integrata con il ponte dei picker di pannello senza modifiche a storia o visibilita.'),
+- 'forgeCad2026_dialogs_solids.cpp': ('dialogs', 'Dialoghi solidi: catalogo ISO metrico M1–M68 con passi fini; ripetizioni con un solo blocco della finestra, storyboard selezionabile nel pannello incorporato e tre passaggi visibili (sorgente, riferimento, parametri); funzioni storiche con bersaglio successivo e sformo a piano neutro. Estrusione priva del riferimento di limite cancella il worker e invalida subito anteprima e chiave. Ripetizioni, estrusione, trasformazioni e filettatura inizializzano preview e picker nel runner comune; Filettatura distingue selezione faccia e calcolo attivo.'),
++ 'forgeCad2026_dialogs_solids.cpp': ('dialogs', 'Dialoghi solidi: catalogo ISO metrico M1–M68 con passi fini; ripetizioni con un solo blocco della finestra, storyboard selezionabile nel pannello incorporato e tre passaggi visibili (sorgente, riferimento, parametri); funzioni storiche con bersaglio successivo e sformo a piano neutro. Estrusione priva del riferimento di limite cancella il worker e invalida subito anteprima e chiave. Ripetizioni, estrusione, trasformazioni e filettatura inizializzano preview e picker nel runner comune; Filettatura distingue selezione faccia e calcolo attivo. Smusso aggiorna chiave, worker e geometria anche al termine editing delle distanze e angoli con Tab/focusout.'),
+  'forgeCad2026_dialogs_surfaces.cpp': ('dialogs', 'Pannelli delle superfici: selezione punti nella vista/storyboard, G1 al piano per primo/ultimo profilo; loft a larghezza ridotta con etichette locali e frecce di riordino laterali; scelta appoggi G1 con indicazione del limite storico contro dipendenze circolari; Estendi si apre prima della selezione e aggiorna bordi, contorni completi e anteprima dalla vista; Cuci superfici offre selezione e deselezione completa sotto il picker della vista. Riempimento con coefficienti adimensionali in tutte le unita; loft incompleta invalida anteprima e mostra attesa delle sezioni. Offset/Shell, rigata, Boundary, Fill e planare condividono il runner protetto fra documenti; Shell invalida il messaggio a spessore zero ed elimina gli errori precedenti al recupero.'),
+  'forgeCad2026_dialogs_sketch.cpp': ('dialogs', 'Dialoghi di schizzi e piani: rimozione/riselezione indipendente dei riferimenti in modifica, anteprima e normale invertibile. Piano di costruzione con picker differito e runner comune protetto fra documenti.'),
+  'forgeCad2026_dialogs_analysis.cpp': ('dialogs', 'Dialoghi per analisi e opzioni di verifica geometrica. Misura usa il runner comune e installa il picker dopo la guardia fra documenti.'),
+@@ -169,7 +172,7 @@
+  'kernel/tests/test_boolean.cpp': ('tests', 'Booleane contro OCCT, contatti e sweep elicoidali; volumi analitici delle lamelle spline sottili fino a 1e-4 mm, topologia e concordanza parallela.'),
+  'tools/benchmark_surface_distance.py': ('build', 'Benchmark riproducibile del predicato di distanza: sonda C++ CPU generata con CMake, casi vicini/misti/esterni, controllo dei risultati e processi alternati; distinto dal CAD completo.'),
+  'fk_surface_distance': ('kernel', 'Controlli di distanza con certificato positivo: punto valido entro meta tolleranza o proiezione globale originale; hint locale, cancellazione e nessuna cache persistente.'),
+- 'kernel/fk_exchange.cpp': ('kernel', 'Importazione B-rep: campioni consecutivi con certificato entro lo scarto gia ignorato; distanza esatta oltre soglia e metadati geometrici invariati.'),
++ 'kernel/fk_exchange.cpp': ('kernel', 'Importazione B-rep: campioni consecutivi con certificato entro lo scarto gia ignorato; distanza esatta oltre soglia e metadati geometrici invariati. Cucitura Plane nel parametro del bordo rappresentativo: pcurve cubiche certificate in mm, cap legacy invariato e ricontrollo postassembly via mappe faccia/edge e identita condivise delle sole fin migrate.'),
+  'kernel/tests/test_face_parameter_classify.cpp': ('tests', 'Classificazione UV ai bordi NURBS entro il budget fisico: domini parametrizzati a scale diverse, fori, punti esterni, parametri non finiti e avvolgimenti periodici; senza OCCT.'),
+  'kernel/tests/test_boolean_seams.cpp': ('tests', 'Loft NURBS chiuso con cucitura e cilindro: volumi delle tre booleane, entrambi gli ordini, UV, genealogia, mesh, STEP e parallelismo.'),
+  'kernel/fk_unify.cpp': ('kernel', 'Unisce facce sullo stesso dominio e bordi compatibili, preservando le cuciture UV necessarie alle superfici chiuse non periodiche.'),
+@@ -327,7 +330,7 @@
+  'kernel/tests/test_boundary_fit_validation.cpp': ('tests', 'Regressioni BoundarySheet contro variazioni NURBS nascoste fra nodi, sorgenti razionali di grado elevato, versi/ritagli e disallineamenti agli angoli; runner indipendente da Qt/OCCT.'),
+  'kernel/tests/test_surface_curve_fit_validation.cpp': ('tests', 'Regressioni della composizione superficie/SP-curve: variazioni NURBS nascoste dopo modifica poli, facce adiacenti coerenti/incoerenti, versi, trim, pesi, istanze e bound diretto; runner senza Qt/OCCT.'),
+  'kernel/fk_curve_fit_bounds.cpp': ('kernel', 'Limiti continui Bernstein outward per posizione, offset NURBS e composizione isoparametrica NURBS e affine anche obliqua su estrusione con SP-curve originale; limiti delle derivate del supporto per il trasferimento UV, coefficienti originali, pesi, istanze, budget e cancellazione. Proiezione affine su Plane dagli originali IEEE, normale da assi del piano e direzione originale, con residuo omogeneo outward. Offset bordi: posizione edge e normale del generatore indipendenti, SP-curve affine originale e controllo continuo dei poli dopo assemblaggio. Doppio certificato Plane/SP-curve: proiezione fisica per il fit e residuo completo della fin, coefficienti originali posseduti e metriche in mm.'),
+- 'kernel/fk_curve_fit_bounds.h': ('kernel', 'Contratti del fit continuo, provider di posizione/offset/composizione superficie-SP-curve e limiti delle derivate U/V del supporto; distingue famiglie supportate, intervalli affini espliciti e rifiuto quando il controllo non conclude. Include il provider della proiezione originale su Plane con dati copiati e durate indipendenti dai chiamanti. Contratto offset edge di estrusione con dati originali posseduti e normale nel parametro del generatore. Contratto duale Plane/SP-curve e distinzione fra dati non supportati, factory invalida e query inconclusiva.'),
++ 'kernel/fk_curve_fit_bounds.h': ('kernel', 'Contratti del fit continuo, provider di posizione/offset/composizione superficie-SP-curve e limiti delle derivate U/V del supporto; distingue famiglie supportate, intervalli affini espliciti e rifiuto quando il controllo non conclude. Include il provider della proiezione originale su Plane con dati copiati e durate indipendenti dai chiamanti. Contratto offset edge di estrusione con dati originali posseduti e normale nel parametro del generatore. Contratto duale Plane/SP-curve e distinzione fra dati non supportati, factory invalida e query inconclusiva. API interne mirate fitPCurveOnPlane/requirePCurveOnPlane: costruzione e ricontrollo del residuo fisico con pubblicazione transazionale.'),
+  'kernel/tests/test_curve_fit_validation.cpp': ('tests', 'Regressioni del fit con limite continuo: spline27 avversa, NURBS, pose e scale, offset di estrusione/rivoluzione, fallimenti atomici e cancellazione; runner indipendente da Qt/OCCT.'),
+  'kernel/tests/test_offset_validation.cpp': ('tests', 'Offset: variazioni locali delle spline, domini toroidali completi/rifilati/periodici, costruzioni circolari ruotate e scalate, ripiego per estrusione obliqua e cancellazione prima, durante e alla fine del fit; eseguibile senza Qt o OCCT.'),
+  'kernel/tests/test_sweep_validation.cpp': ('tests', 'Atlante sweep: superfici regolari e piegate, periodicita reale, collisioni e duplicazioni, underflow/overflow, budget, cancellazione e coefficienti incerti.'),
+@@ -340,11 +343,11 @@
+  'tests/test_pattern_history_repair.h': ('tests', 'Una sola feature per specchi e ripetizioni con corpi distinti: GUI, cursore atomico, modifica, riordino, inserimento, Undo/Redo e codec; compatibilita storica e riparazione riferimenti dal pannello.'),
+  'forgeCad2026_viewport_selection.cpp': ('viewport', 'Selezione e riferimenti: policy comune della costruzione per picking, punti, bordi e selezione rettangolare; priorita alla geometria visibile sulle cache associative nascoste; in creazione e modifica mantiene visibili risultati precedenti e stadi esplicitamente selezionati, anche dopo anteprima fallita o Azzera; Esc ripristina la scena finale.'),
+  'kernel/tests/test_curve_algo.cpp': ('tests', 'Proiezioni contro OCCT, filtro esaustivo e linea analitica4096tratti: range inclusivi/ristretti, estremi e concorrenza; quadratura e cache delle lunghezze.'),
+- 'kernel/fk_exchange.cpp': ('kernel', 'Scambio STEP/IGES: restrizione esatta delle spline conservando nodi e pesi; scelta coerente della chiusura durante la ricostruzione dei bordi, cucitura che conserva le SP-curve piu complesse e proiezioni certificate, eliminazione dei soli bordi collassati entro arrotondamento prima della fusione; numeri indipendenti dal locale con fallback libc++ Apple.'),
++ 'kernel/fk_exchange.cpp': ('kernel', 'Scambio STEP/IGES: restrizione esatta delle spline conservando nodi e pesi; scelta coerente della chiusura durante la ricostruzione dei bordi, cucitura che conserva le SP-curve piu complesse e proiezioni certificate, eliminazione dei soli bordi collassati entro arrotondamento prima della fusione; numeri indipendenti dal locale con fallback libc++ Apple. Cucitura Plane nel parametro del bordo rappresentativo: pcurve cubiche certificate in mm, cap legacy invariato e ricontrollo postassembly via mappe faccia/edge e identita condivise delle sole fin migrate.'),
+  'kernel/fk_shell.cpp': ('kernel', 'Svuotamento: offset interno, giunzioni tolleranti, gusci annidati con aperture planari e chiusura tramite piano di appoggio; controlli geometrici e genealogia.'),
+  'kernel/tests/test_bspline_plane_jets.cpp': ('tests', 'Coordinate costanti e normali di un piano NURBS a quota 200000 mm: gradi 3/34, pesi razionali, ordini 0..3 e domini UV stretti.'),
+  'kernel/tests/test_offset_split_creases.cpp': ('tests', 'Offset con vere pieghe C0 e inserimento esatto di nodi lisci molto vicini: numero facce, distanza, genealogia e immutabilita nelle quattro varianti di segno/cucitura.'),
+- 'kernel/fk_offset.cpp': ('kernel', 'Superfici e bordi a distanza; divisione esatta delle sole pieghe C0, nodi lisci conservati, solve uniforme regolarizzato sui bordi quasi tangenti, intersezioni stabilizzate per bordo con pesi distinti per precisione e arresto sul residuo 3D verificato, budget locali, domini derivati dalle SP-curve esatte senza celle terminali artificiali, sezioni circolari analitiche e vertici di cucitura conservati nei supporti sostitutivi dello sformo, rifilatura e provenienza. Costruzioni analitiche autorizzate dai supporti e da bounds geometrici uniformi, regolarita toroidale sul dominio periodico e raffinamento curve con cancellazione cooperativa e fallimenti atomici; offset di estrusioni/rivoluzioni NURBS con limite continuo, callback generiche ancora campionate. Offset di singola faccia estrusa e SP-curve affine certificato dagli originali separati; provenienza esplicita e ricontrollo delle cubiche realmente emesse. Ricostruzioni UV Plane con metrica certificata in mm, ricontrollo delle fin effettive da AssemblyMap e budget/conteggi invariati.'),
++ 'kernel/fk_offset.cpp': ('kernel', 'Superfici e bordi a distanza; divisione esatta delle sole pieghe C0, nodi lisci conservati, solve uniforme regolarizzato sui bordi quasi tangenti, intersezioni stabilizzate per bordo con pesi distinti per precisione e arresto sul residuo 3D verificato, budget locali, domini derivati dalle SP-curve esatte senza celle terminali artificiali, sezioni circolari analitiche e vertici di cucitura conservati nei supporti sostitutivi dello sformo, rifilatura e provenienza. Costruzioni analitiche autorizzate dai supporti e da bounds geometrici uniformi, regolarita toroidale sul dominio periodico e raffinamento curve con cancellazione cooperativa e fallimenti atomici; offset di estrusioni/rivoluzioni NURBS con limite continuo, callback generiche ancora campionate. Offset di singola faccia estrusa e SP-curve affine certificato dagli originali separati; provenienza esplicita e ricontrollo delle cubiche realmente emesse. Ricostruzioni UV Plane con metrica certificata in mm, ricontrollo delle fin effettive da AssemblyMap e budget/conteggi invariati. Helper interni Plane per costruzione e verifica delle pcurve con metrica fisica, budget transazionali e ricontrollo dei coefficienti effettivi.'),
+  'kernel/tests/test_shell.cpp': ('tests', 'Svuotamento analitico e da superfici cucite quasi tangenti: aperto/chiuso a due spessori, misura esatta delle pareti, topologia, mesh, volumi, storia e input immutato.'),
+  'kernel/tests/test_offset.cpp': ('tests', 'Offset e cuciture: parametrizzazioni/versi diversi, curve chiuse, confine della tolleranza, pcurve dense conservate in entrambi gli ordini e orientamento dei solidi; input immutato.'),
+  'kernel/fk_constraint_linear.h': ('kernel', 'Algebra del solver: componenti, riordino BFS delle righe, Cholesky a banda stretta o densa con regolarizzazione globale, rango per componenti.'),
+--- /dev/null
++++ after/tests/test_chamfer_preview_editing.h
+@@ -0,0 +1,173 @@
++// Included inside ViewportInteractionTest; no changes to user QSettings.
++static void chamferPreviewEditingReview() {
++
++    int passed = 0, failed = 0;
++    const auto check = [&](bool value, const char *message) {
++        std::cout << (value ? "PASS " : "FAIL ") << message << std::endl;
++        (value ? passed : failed)++;
++    };
++    const auto key = [](QWidget *widget, int code, Qt::KeyboardModifiers modifiers = Qt::NoModifier,
++                        const QString &text = QString()) {
++        QKeyEvent press(QEvent::KeyPress, code, modifiers, text);
++        QApplication::sendEvent(widget, &press);
++        QKeyEvent release(QEvent::KeyRelease, code, modifiers, text);
++        QApplication::sendEvent(widget, &release);
++    };
++    const auto type = [&](QDoubleSpinBox *spin, const QString &text, int ending) {
++        spin->setFocus();
++        key(spin, Qt::Key_A, Qt::ControlModifier);
++        for (QChar c : text)
++            key(spin, c.unicode(), Qt::NoModifier, QString(c));
++        key(spin, ending);
++    };
++    for (int mode : {0, 1, 2})
++        for (bool pending : {false, true}) {
++            std::cout << "CASE mode=" << mode << " pending=" << pending << std::endl;
++            QMainWindow owner;
++            CadViewport v;
++            DocumentState doc;
++            ExtrusionObject b;
++            b.feature = BodyFeature::Primitive;
++            b.name = "Box";
++            b.primitive.size[0] = 10;
++            b.primitive.size[1] = 8;
++            b.primitive.size[2] = 6;
++            doc.extrusions = {b};
++            v.loadDocument(doc);
++            auto shape = v.extrusions()[0].forgeBody;
++            auto edge = shape->edges().front();
++            auto range = shape->edge(edge).range;
++            auto point = shape->edge(edge).curve->point((range.lo + range.hi) * .5);
++            auto ref = ForgeCad::edgeReference(*shape, edge, point);
++            ChamferSpec spec;
++            spec.mode = mode;
++            spec.second = mode == 2 ? 45 : .75;
++            QTimer poll, watch;
++            poll.setInterval(10);
++            watch.setSingleShot(true);
++            int phase = 0, edited = 0, applyCalls = 0;
++            bool complete = false, committed = false;
++            QDoubleSpinBox *spin = nullptr;
++            QPlainTextEdit *label = nullptr;
++            QString keyBefore;
++            quint64 generationBefore = 0;
++            std::shared_ptr<std::atomic_bool> token;
++            const double wanted = mode == 2 ? 30 : 1.25;
++            const auto previewValue = [&] {
++                return mode == 0 ? v.preview_.definition.blendSize : v.preview_.definition.chamferSpec.second;
++            };
++            const auto close = [&] {
++                for (auto *d : owner.findChildren<QDialog *>())
++                    d->reject();
++            };
++            QObject::connect(&watch, &QTimer::timeout, &owner, [&] {
++                std::cout << "TIMEOUT phase=" << phase << " error=" << v.preview_.error.toStdString()
++                          << std::endl;
++                check(false, "case bounded by watchdog");
++                close();
++            });
++            QObject::connect(&poll, &QTimer::timeout, &owner, [&] {
++                if (phase == 0 && v.preview_.valid) {
++                    auto boxes = owner.findChildren<QDoubleSpinBox *>();
++                    spin = boxes.value(mode == 0 ? 0 : 1);
++                    label = owner.findChild<QPlainTextEdit *>("functionPreviewMessage");
++                    if (!spin || !label) {
++                        check(false, "actual chamfer controls exist");
++                        close();
++                        return;
++                    }
++                    QObject::connect(spin, &QDoubleSpinBox::editingFinished, &owner, [&] { edited++; });
++                    auto keyBeforeEnter = v.preview_.key;
++                    type(spin, mode == 2 ? "40" : "0.6", Qt::Key_Return);
++                    check(previewValue() == (mode == 2 ? 40 : .6) && v.preview_.key != keyBeforeEnter,
++                          "Enter refreshes typed field without closing dialog");
++                    phase = 10;
++                    return;
++                }
++                if (phase == 10 && v.preview_.valid) {
++                    const double before = spin->value();
++                    auto keyBeforeArrow = v.preview_.key;
++                    key(spin, Qt::Key_Up);
++                    check(spin->value() > before && previewValue() == spin->value() &&
++                              v.preview_.key != keyBeforeArrow,
++                          "Up arrow preserves immediate preview update");
++                    key(spin, Qt::Key_Down);
++                    check(std::fabs(spin->value() - before) < 1e-12 && previewValue() == spin->value(),
++                          "Down arrow restores field and preview definition");
++                    phase = 11;
++                    return;
++                }
++                if (phase == 11 && v.preview_.valid) {
++                    if (pending) {
++                        type(spin, mode == 2 ? "41" : "0.65", Qt::Key_Return);
++                        v.startPreviewJob();
++                        check(v.previewRunning_ && v.previewCancellation_ && !v.previewCancellation_->load(),
++                              "real uncancelled worker before Tab mutation");
++                        token = v.previewCancellation_;
++                    }
++                    keyBefore = v.preview_.key;
++                    generationBefore = v.preview_.generation;
++                    type(spin, QString::number(wanted), Qt::Key_Tab);
++                    check(spin->value() == wanted && edited > 0,
++                          "typed value committed by real Tab focus lifecycle");
++                    check(v.preview_.key != keyBefore && v.preview_.generation > generationBefore,
++                          "Tab refreshes key and generation");
++                    check(!v.preview_.valid && !v.preview_.geometry, "old geometry invalidated after Tab");
++                    check(!label->toPlainText().contains("pronta"),
++                          "label stops declaring old preview ready");
++                    if (pending)
++                        check(token && token->load(), "Tab mutation cancels previous real worker");
++                    phase = 1;
++                    return;
++                }
++                if (phase == 1 && v.preview_.valid) {
++                    std::cout << "VISIBLE ui=" << spin->value() << " preview=" << previewValue()
++                              << " label=" << label->toPlainText().toStdString() << std::endl;
++                    check(previewValue() == wanted, "ready preview matches field after Tab");
++                    check(label->toPlainText().contains("pronta"), "new result becomes ready");
++                    complete = true;
++                    phase = 2;
++                    auto *buttons = owner.findChild<QDialogButtonBox *>();
++                    buttons->button(QDialogButtonBox::Ok)->click();
++                }
++            });
++            watch.start(15000);
++            poll.start();
++            auto result = blendDialog(
++                &owner, &v, "Chamfer regression", 0, -1, {ref}, .5, true, false, spec,
++                [&](int base, const auto &edges, double size, bool chamfer, const auto &parameters) {
++                    ++applyCalls;
++                    const auto oldGeometry = v.preview_.geometry;
++                    const bool matches = previewValue() == wanted;
++                    const double shownVolume =
++                        oldGeometry ? ForgeCad::Kernel::massProperties(*oldGeometry).volume : 0.;
++                    auto error = v.createBlend(base, edges, size, chamfer, "Committed", parameters);
++                    check(error.isEmpty() && v.extrusions().size() == 2, "real confirmation creates chamfer");
++                    if (error.isEmpty() && v.extrusions().size() == 2) {
++                        const auto &actual = v.extrusions().back();
++                        check((mode == 0 ? actual.blendSize : actual.chamferSpec.second) == wanted,
++                              "confirmation uses updated numeric value");
++                        const double actualVolume =
++                            ForgeCad::Kernel::massProperties(*actual.forgeBody).volume;
++                        std::cout << "COMMIT matches_shown=" << matches << " shown_volume=" << shownVolume
++                                  << " actual_volume=" << actualVolume
++                                  << " pointer_same=" << (actual.forgeBody == oldGeometry) << std::endl;
++                        check(matches && std::fabs(shownVolume - actualVolume) < 1e-8,
++                              "confirmed geometry matches updated preview volume");
++                        committed = true;
++                    }
++                    return error;
++                },
++                false);
++            watch.stop();
++            poll.stop();
++            check(result.applied && complete && committed && applyCalls == 1,
++                  "single confirmation applies once and returns");
++            check(!v.preview_.valid && v.preview_.key.isEmpty() && !v.previewCallback_ &&
++                      !v.interactionLocked(),
++                  "dialog cleanup releases preview callback and lock");
++        }
++    std::cout << "PRE8 RESULT passed=" << passed << " failed=" << failed << std::endl;
++    if (failed)
++        throw std::runtime_error("Chamfer preview editing regression failed");
++}
+--- /dev/null
++++ after/kernel/tests/test_sew_pcurve_validation.cpp
+@@ -0,0 +1,510 @@
++#include "fk_body_check.h"
++#include "fk_body_io.h"
++#include "fk_bspline.h"
++#include "fk_cancel.h"
++#include "fk_curve_fit_bounds.h"
++#include "fk_history.h"
++#include "fk_pcurve.h"
++#include "fk_sew.h"
++#include "fk_surface.h"
++#include <algorithm>
++#include <array>
++#include <fstream>
++#include <iomanip>
++#include <iostream>
++#include <limits>
++#include <sstream>
++#include <stdexcept>
++#include <string>
++using namespace ForgeCad::Kernel;
++namespace {
++void require(bool value, const char *message) {
++  if (!value)
++    throw std::runtime_error(message);
++}
++struct Options {
++  bool affine = false, reverseInputs = false, reverseTarget = false,
++       trim = false;
++  double scale = 1;
++  Interval targetRange{0, 1};
++  bool rational = false;
++};
++Body sourceSheet(bool upper, const Options &options) {
++  const double scale = options.scale, y = upper ? 0 : -scale;
++  const std::vector<Vec3> vertices = {
++      {0, y, 0}, {scale, y, 0}, {scale, y + scale, 0}, {0, y + scale, 0}};
++  std::vector<Body::BuildEdge> edges;
++  for (int i = 0; i < 4; ++i) {
++    int a = i, b = (i + 1) % 4;
++    if (!upper && i == 2)
++      std::swap(a, b);
++    edges.push_back(
++        {a,
++         b,
++         std::make_shared<Line<3>>(vertices[a], vertices[b] - vertices[a]),
++         {0, scale},
++         0});
++  }
++  Body::BuildFace face;
++  face.surface = std::make_shared<Plane>(Frame3());
++  face.loops = {{{0, true, nullptr, 0},
++                 {1, true, nullptr, 0},
++                 {2, upper, nullptr, 0},
++                 {3, true, nullptr, 0}}};
++  if (upper) {
++    const int degree = options.rational ? 4 : 128;
++    // A positive, stable Bernstein lobe: peak1.12e-7 at3/128,
++    // maximum at the old64-point grid9.7273e-8. The rest is t or t².
++    constexpr double hiddenPole = 4.940214000122462e-7;
++    std::vector<Vec3> poles;
++    std::vector<Vec2> uv;
++    std::vector<double> weights;
++    std::vector<double> knots(degree + 1, options.targetRange.lo);
++    knots.insert(knots.end(), degree + 1, options.targetRange.hi);
++    for (int i = 0; i <= degree; ++i) {
++      const double base = options.affine
++                              ? double(i) / degree
++                              : double(i) * (i - 1) / (degree * (degree - 1));
++      const double weight = options.rational ? 1 + .2 * i / degree : 1.;
++      const double q =
++          scale * (options.rational ? 1.2 * base / weight
++                                    : base + (i == 3 ? hiddenPole : 0));
++      if (options.rational)
++        weights.push_back(weight);
++      poles.emplace_back(q, 0, 0);
++      uv.emplace_back(q, 0);
++    }
++    if (options.reverseTarget) {
++      std::reverse(poles.begin(), poles.end());
++      std::reverse(uv.begin(), uv.end());
++      std::reverse(weights.begin(), weights.end());
++      std::swap(edges[0].start, edges[0].end);
++      face.loops[0][0].sense = false;
++    }
++    edges[0].curve =
++        std::make_shared<BSplineCurve<3>>(degree, knots, poles, weights);
++    edges[0].range = options.targetRange;
++    face.loops[0][0].pcurve =
++        std::make_shared<BSplineCurve<2>>(degree, knots, uv, weights);
++    if (options.trim) {
++      edges[0].curve = std::make_shared<TrimmedCurve<3>>(
++          edges[0].curve, options.targetRange.lo, options.targetRange.hi);
++      face.loops[0][0].pcurve = std::make_shared<TrimmedCurve<2>>(
++          face.loops[0][0].pcurve, options.targetRange.lo,
++          options.targetRange.hi);
++    }
++  }
++  auto body = Body::buildSheet(vertices, edges, {face});
++  require(computePCurves(body) == 0,
++          "original pcurves could not be constructed");
++  return body;
++}
++void hex(std::ostream &s, double x) {
++  s << '"' << std::hexfloat << x << std::defaultfloat << '"';
++}
++template <int N> void vec(std::ostream &s, const Vec<N> &v) {
++  s << '[';
++  for (int i = 0; i < N; ++i) {
++    if (i)
++      s << ',';
++    hex(s, v[i]);
++  }
++  s << ']';
++}
++void numbers(std::ostream &s, const std::vector<double> &a) {
++  s << '[';
++  bool first = true;
++  for (double v : a) {
++    if (!first)
++      s << ',';
++    first = false;
++    hex(s, v);
++  }
++  s << ']';
++}
++template <int N> void curve(std::ostream &s, const CurvePtr<N> &c) {
++  s << '{';
++  if (c->type() == CurveType::Line) {
++    auto &l = static_cast<const Line<N> &>(*c);
++    s << "\"type\":\"line\",\"origin\":";
++    vec(s, l.origin());
++    s << ",\"direction\":";
++    vec(s, l.direction());
++  } else if (c->type() == CurveType::BSpline) {
++    auto &b = static_cast<const BSplineCurve<N> &>(*c);
++    s << "\"type\":\"bspline\",\"degree\":" << b.degree() << ",\"knots\":";
++    numbers(s, b.knots());
++    s << ",\"weights\":";
++    numbers(s, b.weights());
++    s << ",\"poles\":[";
++    bool first = true;
++    for (auto p : b.poles()) {
++      if (!first)
++        s << ',';
++      first = false;
++      vec(s, p);
++    }
++    s << ']';
++  } else if (c->type() == CurveType::Trimmed) {
++    auto &t = static_cast<const TrimmedCurve<N> &>(*c);
++    s << "\"type\":\"trimmed\",\"range\":[";
++    hex(s, t.domain().lo);
++    s << ',';
++    hex(s, t.domain().hi);
++    s << "],\"basis\":";
++    curve(s, t.basis());
++  } else if constexpr (N == 3) {
++    if (c->type() == CurveType::Transformed) {
++      auto &t = static_cast<const TransformedCurve &>(*c);
++      s << "\"type\":\"transformed\",\"matrix\":[";
++      for (int i = 0; i < 3; ++i) {
++        if (i)
++          s << ',';
++        s << '[';
++        for (int j = 0; j < 3; ++j) {
++          if (j)
++            s << ',';
++          hex(s, t.transform().matrix(i, j));
++        }
++        s << ']';
++      }
++      s << "],\"translation\":";
++      vec(s, t.transform().translationPart());
++      s << ",\"basis\":";
++      curve(s, t.basis());
++    } else
++      throw std::runtime_error("unsupported exporter curve");
++  } else
++    throw std::runtime_error("unsupported exporter curve");
++  s << '}';
++}
++void exportFins(std::ostream &s, const Body &body, double legacyCap,
++                int operand = -1, const BodyHistory *history = nullptr,
++                int lowerOperand = -1) {
++  s << '[';
++  bool first = true;
++  for (auto id : body.fins()) {
++    const auto &fin = body.fin(id);
++    const auto &edge = body.edge(fin.edge);
++    const auto faceId = body.finFace(id);
++    const auto &face = body.face(faceId);
++    require(face.surface->type() == SurfaceType::Plane,
++            "export requires actual Plane support");
++    int originOperand = operand, originFace = faceId.index;
++    if (history) {
++      const auto &origins = history->origins(EntityKind::Face, faceId.index);
++      require(origins.size() == 1 && origins.front().kind == EntityKind::Face,
++              "explicit face provenance missing");
++      originOperand = origins.front().operand;
++      originFace = origins.front().index;
++    }
++    const bool migrated =
++        history && originOperand == lowerOperand && !body.isLaminar(fin.edge);
++    const auto &frame = static_cast<const Plane &>(*face.surface).frame();
++    if (!first)
++      s << ',';
++    first = false;
++    s << "{\"fin\":" << id.index << ",\"edge\":" << fin.edge.index
++      << ",\"face\":" << faceId.index << ",\"source_operand\":" << originOperand
++      << ",\"source_face\":" << originFace
++      << ",\"migrated\":" << (migrated ? "true" : "false")
++      << ",\"sense\":" << (fin.sense ? "true" : "false") << ",\"range\":[";
++    hex(s, edge.range.lo);
++    s << ',';
++    hex(s, edge.range.hi);
++    s << "],\"budget\":";
++    hex(s, history ? legacyCap : fin.pcurveTolerance);
++    s << ",\"legacy_cap\":";
++    hex(s, legacyCap);
++    s << ",\"fin_tolerance\":";
++    hex(s, fin.pcurveTolerance);
++    s << ",\"edge_tolerance\":";
++    hex(s, edge.tolerance);
++    s << ",\"standard_resolution\":";
++    hex(s, linearResolution());
++    s << ",\"plane\":{\"origin\":";
++    vec(s, frame.origin());
++    s << ",\"x\":";
++    vec(s, frame.xDir());
++    s << ",\"y\":";
++    vec(s, frame.yDir());
++    s << ",\"z\":";
++    vec(s, frame.zDir());
++    s << "},\"curve\":";
++    curve(s, edge.curve);
++    s << ",\"pcurve\":";
++    curve(s, fin.pcurve);
++    s << '}';
++  }
++  s << ']';
++}
++void exportCase(const std::string &directory, const std::string &name,
++                const Body &upper, const Body &lower, const SewResult &result,
++                const BodyHistory &history, const Options &options, double cap,
++                double tolerance) {
++  if (directory.empty())
++    return;
++  const int upperOperand = options.reverseInputs ? 1 : 0,
++            lowerOperand = 1 - upperOperand;
++  std::ofstream s(directory + "/" + name + ".json");
++  s << "{\"case\":\"" << name << "\",\"tolerance\":";
++  hex(s, tolerance);
++  s << ",\"standard_resolution\":";
++  hex(s, linearResolution());
++  s << ",\"legacy_cap\":";
++  hex(s, cap);
++  s << ",\"source\":";
++  std::ostringstream top, bottom;
++  exportFins(top, upper, cap, upperOperand);
++  exportFins(bottom, lower, cap, lowerOperand);
++  auto a = top.str(), b = bottom.str();
++  s << '[' << a.substr(1, a.size() - 2) << ',' << b.substr(1, b.size() - 2)
++    << ']';
++  s << ",\"actual\":";
++  exportFins(s, result.body, cap, -1, &history, lowerOperand);
++  s << "}\n";
++}
++void publicCase(const Options &options, const std::string &name,
++                const std::string &directory) {
++  auto upper = sourceSheet(true, options), lower = sourceSheet(false, options);
++  require(checkBody(upper).empty() && checkBody(lower).empty(),
++          "original sheets fail topology/geometric checker");
++  const auto upperBefore = writeBodyBinary(upper),
++             lowerBefore = writeBodyBinary(lower);
++  const auto upperEdge = upper.edges().front();
++  const auto originalTarget = upper.edge(upperEdge).curve;
++  const auto lowerFin =
++      lower.loopFins(lower.face(lower.faces().front()).loops.front())[2];
++  const auto &sourceFin = lower.fin(lowerFin);
++  const auto &sourceEdge = lower.edge(sourceFin.edge);
++  const auto &sourcePlane = *lower.face(lower.finFace(lowerFin)).surface;
++  const double tolerance = 1e-8 * options.scale;
++  const double original = pcurveDeviation(
++      sourcePlane, *sourceEdge.curve, *sourceFin.pcurve, sourceEdge.range, 16);
++  const double cap = original + std::max(1e-7, 10 * tolerance);
++  require(original <= linearResolution(),
++          "source original fin is inconsistent before sewing");
++  BodyHistory history;
++  const auto result =
++      options.reverseInputs
++          ? sewSheets({&lower, &upper}, tolerance, false, &history)
++          : sewSheets({&upper, &lower}, tolerance, false, &history);
++  require(upperBefore == writeBodyBinary(upper) &&
++              lowerBefore == writeBodyBinary(lower),
++          "sewing mutated an original body");
++  require(result.body.faces().size() == 2 && result.body.edges().size() == 7 &&
++              result.freeEdges == 6 && result.shells == 1 && !result.closed,
++          "operation omitted the intended shared edge or changed its sheet "
++          "topology");
++  require(checkBody(result.body).empty(),
++          "assembled result fails original checker");
++  exportCase(directory, name, upper, lower, result, history, options, cap,
++             tolerance);
++  const int lowerOperand = options.reverseInputs ? 0 : 1;
++  int migratedCount = 0;
++  double worst = 0, published = 0, edgeTolerance = 0, at = 0;
++  for (auto id : result.body.fins()) {
++    const auto &fin = result.body.fin(id);
++    const auto &edge = result.body.edge(fin.edge);
++    const auto faceId = result.body.finFace(id);
++    const auto &face = result.body.face(faceId);
++    const auto &origins = history.origins(EntityKind::Face, faceId.index);
++    require(origins.size() == 1 && origins.front().kind == EntityKind::Face &&
++                origins.front().index == 0,
++            "declared face provenance lost");
++    if (result.body.isLaminar(fin.edge))
++      continue;
++    require(edge.curve == originalTarget &&
++                edge.range.lo == options.targetRange.lo &&
++                edge.range.hi == options.targetRange.hi,
++            "sewing changed the chosen target curve or its original parameter");
++    if (origins.front().operand != lowerOperand)
++      continue;
++    ++migratedCount;
++    const auto evaluate = [&](double t) {
++      const auto uv = fin.pcurve->point(t);
++      const double error =
++          distance(face.surface->point(uv.x(), uv.y()), edge.curve->point(t));
++      if (error > worst) {
++        worst = error;
++        at = t;
++        published = fin.pcurveTolerance;
++        edgeTolerance = edge.tolerance;
++      }
++    };
++    for (int i = 0; i <= 256; ++i)
++      evaluate(edge.range.lo + edge.range.length() * i / 256.);
++    const double peak = options.reverseTarget ? 1 - 3. / 128 : 3. / 128;
++    evaluate(edge.range.lo + edge.range.length() * peak);
++#ifdef HAVE_PLANE_SEW_PROVIDER
++    require(fin.pcurveTolerance > 0 && fin.pcurveTolerance <= cap,
++            "migrated fin does not publish a finite bound within the fixed "
++            "legacy cap");
++    const double bound = detail::requirePCurveOnPlane(
++        edge.curve, face.surface, fin.pcurve, edge.range, fin.pcurveTolerance);
++    require(std::isfinite(bound) && bound <= fin.pcurveTolerance,
++            "actual emitted fin violates its published certificate");
++#endif
++  }
++  require(migratedCount == 1,
++          "explicit source face does not identify exactly one remapped fin");
++  std::cout << " source_original=" << original << " residual=" << worst
++            << " legacy_cap=" << cap << " fin_tolerance=" << published
++            << " edge_tolerance=" << edgeTolerance << " witness_t=" << at;
++  require(worst <= cap,
++          "actual remapped fin exceeds the original legacy 3D budget");
++}
++void publicFailures() {
++  auto upper = sourceSheet(true, {}), lower = sourceSheet(false, {});
++  const auto a = writeBodyBinary(upper), b = writeBodyBinary(lower);
++  auto token = std::make_shared<std::atomic<bool>>(true);
++  CancellationScope scope(token);
++  bool cancelled = false;
++  try {
++    sewSheets({&upper, &lower}, 1e-8, false);
++  } catch (const OperationCancelled &) {
++    cancelled = true;
++  }
++  require(cancelled && a == writeBodyBinary(upper) &&
++              b == writeBodyBinary(lower),
++          "cancelled sewing changed source bodies or returned output");
++}
++#ifdef HAVE_PLANE_SEW_PROVIDER
++void normalResidual() {
++  auto plane = std::make_shared<Plane>(Frame3());
++  auto edge = std::make_shared<Line<3>>(Vec3(0, 0, 5e-8), Vec3(1, 0, 0));
++  double deviation = 123;
++  const auto pc =
++      detail::fitPCurveOnPlane(edge, plane, {-2, 5}, 1e-8, 1e-7, &deviation);
++  require(pc && deviation >= 5e-8 && deviation <= 1e-7,
++          "normal target residual was discarded or the legacy cap was raised");
++  require(detail::requirePCurveOnPlane(edge, plane, pc, {-2, 5}, deviation) <=
++              deviation,
++          "returned final candidate lacks a whole-domain residual bound");
++  auto far = std::make_shared<Line<3>>(Vec3(0, 0, 2e-7), Vec3(1, 0, 0));
++  deviation = 123;
++  bool rejected = false;
++  try {
++    detail::fitPCurveOnPlane(far, plane, {-2, 5}, 1e-8, 1e-7, &deviation);
++  } catch (const std::domain_error &) {
++    rejected = true;
++  }
++  require(rejected && deviation == 123,
++          "off-plane rejection published partial deviation or widened the cap");
++}
++void physicalMetric() {
++  auto basis = std::make_shared<BSplineCurve<3>>(
++      4, std::vector<double>{0, 0, 0, 0, 0, 1, 1, 1, 1, 1},
++      std::vector<Vec3>{{0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {1, 0, 0}});
++  const Vec3 origin(4, -8, 2);
++  auto edge = std::make_shared<TransformedCurve>(
++      std::make_shared<TrimmedCurve<3>>(basis, 0, 1),
++      Transform3::translation(origin));
++  auto plane = std::make_shared<Plane>(
++      Frame3::fromAxes(origin, {1e-12, 0, 0}, {.25, 1, 0}, {0, 0, 1}));
++  double deviation = 123;
++  const auto pc =
++      detail::fitPCurveOnPlane(edge, plane, {0, 1}, 1e-8, 1e-7, &deviation);
++  require(
++      pc && deviation <= 1e-7,
++      "physical Plane metric rejected supported original scaled/sheared axes");
++  double physical = 0, parameter = 0;
++  for (int i = 0; i <= 100; ++i) {
++    const double t = i / 100.;
++    const auto uv = pc->point(t);
++    physical = std::max(physical,
++                        distance(plane->point(uv.x(), uv.y()), edge->point(t)));
++    parameter = std::max(parameter, std::fabs(uv.x() - 1e12 * t * t * t * t));
++  }
++  require(physical <= 1e-8 && parameter > 1.,
++          "test did not distinguish physical mm from UV coordinate error");
++  require(detail::requirePCurveOnPlane(edge, plane, pc, {0, 1}, deviation) <=
++              deviation,
++          "actual controls lost wrapper or Plane metric provenance");
++  std::cout << " physical=" << physical << " uv_coordinate_error=" << parameter;
++}
++void candidateContracts() {
++  auto plane = std::make_shared<Plane>(Frame3());
++  auto edge = std::make_shared<Line<3>>(Vec3(), Vec3(1, 0, 0));
++  double deviation = 123;
++  const auto pc =
++      detail::fitPCurveOnPlane(edge, plane, {-2, 5}, 1e-8, 1e-7, &deviation);
++  const auto *spline = dynamic_cast<const BSplineCurve<2> *>(pc.get());
++  require(spline, "expected actual C0 cubic pcurve");
++  auto poles = spline->poles();
++  poles[1][1] += 1e-4;
++  auto wrong = std::make_shared<BSplineCurve<2>>(
++      spline->degree(), spline->knots(), poles, spline->weights());
++  bool rejected = false;
++  try {
++    detail::requirePCurveOnPlane(edge, plane, wrong, {-2, 5}, 1e-7);
++  } catch (const std::domain_error &) {
++    rejected = true;
++  }
++  require(rejected,
++          "a corrupted original emitted control was silently accepted");
++  deviation = 123;
++  rejected = false;
++  try {
++    detail::fitPCurveOnPlane(edge, plane, {-2, 5}, 1e-8,
++                             std::numeric_limits<double>::quiet_NaN(),
++                             &deviation);
++  } catch (const std::exception &) {
++    rejected = true;
++  }
++  require(rejected && deviation == 123,
++          "recognized invalid budget published a partial bound");
++  auto token = std::make_shared<std::atomic<bool>>(true);
++  CancellationScope scope(token);
++  bool cancelled = false;
++  try {
++    detail::fitPCurveOnPlane(edge, plane, {-2, 5}, 1e-8, 1e-7, &deviation);
++  } catch (const OperationCancelled &) {
++    cancelled = true;
++  }
++  require(cancelled && deviation == 123,
++          "cancelled Plane construction published partial deviation");
++}
++#endif
++} // namespace
++int main(int argc, char **argv) {
++  const std::string directory = argc > 1 ? argv[1] : "";
++  int passed = 0, failed = 0;
++  std::cout << std::setprecision(17);
++  const auto run = [&](const std::string &name, const auto &fn) {
++    std::cout << name << std::flush;
++    try {
++      fn();
++      ++passed;
++      std::cout << " PASS\n";
++    } catch (const std::exception &e) {
++      ++failed;
++      std::cout << " FAIL " << e.what() << '\n';
++    } catch (const OperationCancelled &) {
++      ++failed;
++      std::cout << " FAIL unexpected cancellation\n";
++    }
++  };
++  std::vector<std::pair<std::string, Options>> cases = {
++      {"nonaffine_polynomial", {}},
++      {"nonaffine_reverse_inputs", {false, true}},
++      {"nonaffine_shift_trim", {false, false, false, true, 1, {-3, 5}}},
++      {"nonaffine_reverse_target", {false, false, true}},
++      {"nonaffine_scale", {false, false, false, false, 1000}},
++      {"reuse_sampled_same_parameter", {true}},
++      {"reuse_affine_range", {true, false, false, false, 1, {-3, 5}}}};
++  Options rational;
++  rational.rational = true;
++  cases.push_back({"rational_original_weights", rational});
++  for (const auto &entry : cases)
++    run(entry.first, [&] { publicCase(entry.second, entry.first, directory); });
++  run("public_cancellation_atomic", [] { publicFailures(); });
++#ifdef HAVE_PLANE_SEW_PROVIDER
++  run("plane_fit_original_normal_and_atomic_budget", [] { normalResidual(); });
++  run("plane_actual_controls_invalid_budget_and_cancellation",
++      [] { candidateContracts(); });
++  run("plane_fit_physical_metric_original_wrappers", [] { physicalMetric(); });
++#endif
++  std::cout << passed << " passed " << failed << " failed\n";
++  return failed ? 1 : 0;
++}

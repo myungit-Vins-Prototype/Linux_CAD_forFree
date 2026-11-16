@@ -1,0 +1,21 @@
+from pathlib import Path
+import os,subprocess,json,time
+root=Path('/home/myungit/Linux_CAD_forFree')
+out=Path('/tmp/forgecad-review-followup-20261115/lifetime')
+tests=[('revision-store',['./forgecad-release/forgecad_revision_store_tests']),('native-revisions',['./forgecad-release/forgecad_view_tests','--native-revisions']),('workspace-revisions',['./forgecad-release/forgecad_view_tests','--workspace-revisions']),('drawing-revisions',['./forgecad-release/forgecad_view_tests','--drawing-revisions']),('drawing-multisheet',['./forgecad-release/forgecad_view_tests','--drawing-multisheet'])]
+results=[]
+for name,command in tests:
+ env=dict(os.environ,QT_QPA_PLATFORM='offscreen',QT_QPA_PLATFORMTHEME='',QT_STYLE_OVERRIDE='Fusion')
+ envroot=out/'isolated-revisions'/name
+ for variable,leaf in [('XDG_CONFIG_HOME','config'),('XDG_DATA_HOME','data'),('XDG_CACHE_HOME','cache'),('XDG_RUNTIME_DIR','runtime')]:
+  path=envroot/leaf;path.mkdir(parents=True,exist_ok=True);path.chmod(0o700);env[variable]=str(path)
+ started=time.monotonic()
+ try:
+  p=subprocess.run(command,cwd=root,env=env,capture_output=True,text=True,timeout=120)
+  (out/(name+'.log')).write_text(p.stdout+p.stderr)
+  result=dict(test=name,command=command,exit=p.returncode,seconds=round(time.monotonic()-started,3),environment={k:env[k] for k in env if k in {'XDG_CONFIG_HOME','XDG_DATA_HOME','XDG_CACHE_HOME','XDG_RUNTIME_DIR','QT_QPA_PLATFORM','QT_QPA_PLATFORMTHEME','QT_STYLE_OVERRIDE'}})
+ except subprocess.TimeoutExpired as e:
+  result=dict(test=name,command=command,timeout=True,seconds=120)
+ results.append(result);print(name,result.get('exit','TIMEOUT'),flush=True)
+ (out/'revision-test-results.json').write_text(json.dumps(results,indent=2)+'\n')
+assert all(r.get('exit')==0 for r in results)

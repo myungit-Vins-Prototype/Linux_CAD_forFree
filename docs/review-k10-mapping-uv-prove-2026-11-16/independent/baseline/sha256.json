@@ -1,0 +1,17 @@
+{
+  "AGENTS.md": "d98408c6092ae6f02ba2948f47128c138ebf4fbb138b2751bc17550d2d98caac",
+  "CLAUDE.md": "3a78893a519bdb503d5a9bfd433ee3138337aee6ce0f235fed66015e8583b5ac",
+  "docs/tolerance-policy.md": "2cf51f1ef37206a596ececffd3ed2365197ea9531e78e723d45e3426dd4b678c",
+  "kernel/fk_surface_mapping.cpp": "0c76d3b2b19c2c110712348f06f0a2680dd0d5f4ba8fa77f2c90c71ac07306a9",
+  "kernel/fk_quilt_mapping.cpp": "9f2cc08b051e92569dac5081aa558f61e431e332abc652f51a23096ff286b826",
+  "kernel/fk_mapping_fit.h": "21eca96b7e1895e572e6b7feb55874fd1e7316555e893a9eccc215d5849ba8ad",
+  "kernel/fk_curve_fit_bounds.h": "62dcaa3a96ad3a0aad4dc144ca138b3c03e78f44b98da18656b100d916b930a9",
+  "kernel/fk_curve_fit_bounds.cpp": "3faf91d68ee1511dd31c2c6a37a6c51dd1da8a49286c54873739b102b268052e",
+  "kernel/fk_mapping_carrier.cpp": "1c769c5136df3502903afea4771636c939425735a975319e1d68848d0316ab25",
+  "kernel/fk_mapping_carrier.h": "c29783e892974552b681a9c8060f15eb6679077ecc72462988724da667289eb6",
+  "kernel/fk_pcurve.cpp": "ad5e5ce7082274aee5c279772f30caa56b21689b7b4b7331d27543444c58df79",
+  "kernel/fk_intersect.cpp": "8699c8d9cc844aa5cc46dd2801d2c9ce3fc6b3755f84381b3c8febbb830f7d02",
+  "kernel/fk_curve_ops.cpp": "b898e88ec871c0c08f9c2a27b5deed00512f0376f97a391cf7e5404a10b4cd63",
+  "kernel/fk_curve_algo.cpp": "4055c830965fb2c0741ca9292e18166dcec0c2528f3228bc33fa2f297fa2e60e",
+  "kernel/fk_surface_mapping.h": "57ac10496468c15e1423a804a7cb32d012d293e22d3816f1855a3a6f834a5f17"
+}

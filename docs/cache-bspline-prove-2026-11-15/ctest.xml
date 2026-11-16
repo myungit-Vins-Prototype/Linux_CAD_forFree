@@ -1,0 +1,340 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="(empty)"
+	tests="47"
+	failures="0"
+	disabled="0"
+	skipped="0"
+	hostname=""
+	time="73"
+	timestamp="2026-11-15T11:05:58"
+	>
+	<testcase name="forgecad_display_cache_memory_tests" classname="forgecad_display_cache_memory_tests" time="0.032908" status="run">
+		<properties/>
+		<system-out>PASS memoria cache, rilascio al frame e riuso senza GPU
+</system-out>
+	</testcase>
+	<testcase name="forgecad_mesh_export_cpu_tests" classname="forgecad_mesh_export_cpu_tests" time="1.00211" status="run">
+		<properties/>
+		<system-out>PASS automatico NURBS: scarto verticale=0.00118715 mm budget=0.00146969 mm
+PASS export B-spline razionale=0 foro=0 CUDA=0
+PASS export B-spline razionale=1 foro=1 CUDA=0
+Automatico R=0.05 mm: triangoli=13436 -&gt; 52376 scarto=2.98419e-05 -&gt; 7.67305e-06 mm budget=1.73205e-05 mm tentativi=1
+PASS qualita' automatica R=0.05 mm
+Automatico R=5 mm: triangoli=13428 -&gt; 52440 scarto=0.00298405 -&gt; 0.000767341 mm budget=0.00173205 mm tentativi=1
+PASS qualita' automatica R=5 mm
+Automatico R=50 mm: triangoli=13298 -&gt; 65906 scarto=0.0298409 -&gt; 0.00761388 mm budget=0.01 mm tentativi=1
+PASS qualita' automatica R=50 mm
+</system-out>
+	</testcase>
+	<testcase name="forgecad_projected_curve_reference_tests" classname="forgecad_projected_curve_reference_tests" time="0.0409453" status="run">
+		<properties/>
+		<system-out>PASS riferimenti impliciti: cache esatta, altro piano, input interni, PointOnCurve/quote/Pierce, codec, snapshot e genealogia rami
+</system-out>
+	</testcase>
+	<testcase name="forgecad_document_read_tests" classname="forgecad_document_read_tests" time="0.146626" status="run">
+		<properties/>
+		<system-out>parser corrupt: 58 byte, maxRSS delta 0 KiB
+PASS document read
+PASS document read
+</system-out>
+	</testcase>
+	<testcase name="forgecad_drawing_revisions_tests" classname="forgecad_drawing_revisions_tests" time="0.845429" status="run">
+		<properties/>
+		<system-out>PASS drawing revisions, recovery and historical GUI
+</system-out>
+	</testcase>
+	<testcase name="forgecad_drawing_release_tests" classname="forgecad_drawing_release_tests" time="1.06117" status="run">
+		<properties/>
+		<system-out>PASS consegna CAD: modello/tavole multipagina A dopo teste B, payload e dipendenze verificati, UUID/badge, idempotenza, GUI creazione/elenco/apertura3D-2D, readonly, PDF e copie operative mancanti
+</system-out>
+	</testcase>
+	<testcase name="forgecad_drawing_restore_tests" classname="forgecad_drawing_restore_tests" time="1.49473" status="run">
+		<properties/>
+		<system-out>PASS ripristino: A2fogli/10 dopo B1foglio/16, UUID e badge, base/token conservati, errori/annullamento atomici, Undo/Redo tra modelli, GUI/PDF, C discendente B e archivi immutati
+</system-out>
+	</testcase>
+	<testcase name="forgecad_drawing_multisheet_tests" classname="forgecad_drawing_multisheet_tests" time="1.34994" status="run">
+		<properties/>
+		<system-out>PASS pattern cache identity: selective migration, geometry/names invariant, cache16 and archived snapshots
+PASS drawing identity: visibility, exact legacy verification, geometry/precision rejection and native reopen with dimensions
+PASS multisheet preparation: two calculations instead of five, cancellation atomic, presentation/history preserved
+PASS multifoglio: codec1/2, UUID, isolamento datum/quote, schede/riordino, Undo globale, PDF3/1, modello10-&gt;16, revisioni A/B e Salva con nome
+</system-out>
+	</testcase>
+	<testcase name="forgecad_document_precision_tests" classname="forgecad_document_precision_tests" time="0.238818" status="run">
+		<properties/>
+		<system-out>PASS document precision: codec67/66, invalid values, Undo/Redo, windows, workers and UI
+</system-out>
+	</testcase>
+	<testcase name="forgecad_drawing_tests" classname="forgecad_drawing_tests" time="0.0324205" status="run">
+		<properties/>
+		<system-out>PASS lamina aperta, rigenerazione, scala e persistenza
+PASS superficie curva e generatrice tangente
+PASS fori, rami multipli, riferimenti persi e coincidenza
+PASS sezione interna di superficie NURBS razionale
+PASS riferimenti alle versioni e aggiornamento esplicito
+PASS provenienza e rifiuto atomico dei dati incoerenti
+</system-out>
+	</testcase>
+	<testcase name="forgecad_drawing_local_tools_tests" classname="forgecad_drawing_local_tools_tests" time="2.75752" status="run">
+		<properties/>
+		<system-out>PASS centri selettivi, mouse, raggio prima del piazzamento, sezione locale B-rep/profondita', contorno, persistenza, Undo/Redo, PDF, sola lettura
+</system-out>
+	</testcase>
+	<testcase name="forgecad_drawing_local_section_depth_tests" classname="forgecad_drawing_local_section_depth_tests" time="0.350511" status="run">
+		<properties/>
+		<system-out>PASS profondita' locale: piani/scale/frame, viste compatibili e appoggio, guide/clic/annullamento, quote e Undo
+</system-out>
+	</testcase>
+	<testcase name="forgecad_drawing_crop_tests" classname="forgecad_drawing_crop_tests" time="0.744645" status="run">
+		<properties/>
+		<system-out>PASS crop: occludenti attraversanti, cerchi, sezioni, scale e bordi nascosti
+</system-out>
+	</testcase>
+	<testcase name="forgecad_drawing_templates_tests" classname="forgecad_drawing_templates_tests" time="0.114106" status="run">
+		<properties/>
+		<system-out>libpng error: Read Error
+PASS template: codec, immagini, default formato/orientamento, editor, Undo, PDF e icone
+</system-out>
+	</testcase>
+	<testcase name="forgecad_drawing_preparation_tests" classname="forgecad_drawing_preparation_tests" time="3.17265" status="run">
+		<properties/>
+		<system-out>PASS preparazione viste: equivalenza, cache, quote, cancellazione e concorrenza
+</system-out>
+	</testcase>
+	<testcase name="forgecad_drawing_scale_tests" classname="forgecad_drawing_scale_tests" time="1.49528" status="run">
+		<properties/>
+		<system-out>PASS sheet/view/parent scales, geometry and dimensions, legacy codec, schema23/badges, Undo/read-only, section/detail/preview dialogs
+</system-out>
+	</testcase>
+	<testcase name="forgecad_drawing_editor_tests" classname="forgecad_drawing_editor_tests" time="0.162415" status="run">
+		<properties/>
+		<system-out>PASS drawing sheet GUI, metadata bytes=957
+</system-out>
+	</testcase>
+	<testcase name="forgecad_projected_drawing_tests" classname="forgecad_projected_drawing_tests" time="0.141793" status="run">
+		<properties/>
+		<system-out>PASS projected edges, planar dimensions, section references, codec and GUI
+</system-out>
+	</testcase>
+	<testcase name="forgecad_drawing_view_edit_tests" classname="forgecad_drawing_view_edit_tests" time="2.97242" status="run">
+		<properties/>
+		<system-out>PASS dialog preview: piani/corpi/scala/sezioni, cancellazione, richieste obsolete, riuso geometria e Undo
+PASS pan tavola: centrale/tasto 3D+sinistro, zoom alto, cursore/selezioni, quota/taglio/ghost, sola lettura, focus, Undo e cache invariati
+PASS drawing tree, view edit, preserved references and atomic validation
+</system-out>
+	</testcase>
+	<testcase name="forgecad_drawing_layout_history_tests" classname="forgecad_drawing_layout_history_tests" time="0.399234" status="run">
+		<properties/>
+		<system-out>PASS layout alignment, atomic deletion, local history, drag and source barriers
+</system-out>
+	</testcase>
+	<testcase name="forgecad_drawing_dimensions_tests" classname="forgecad_drawing_dimensions_tests" time="0.0279001" status="run">
+		<properties/>
+		<system-out>PASS associative points, line-point, parallel lines, angular/radial dimensions, schema and surface anchors
+</system-out>
+	</testcase>
+	<testcase name="forgecad_drawing_dimensions_gui_tests" classname="forgecad_drawing_dimensions_gui_tests" time="14.8898" status="run">
+		<properties/>
+		<system-out>PASS R profilo da superficie razionale su sezione ellittica, valore analitico, modello aggiornato, codec12/25 e rifiuto downgrade
+PASS testo trasparente con pixel sottostante, frecce H/B indipendenti, spline certificate, serie ripetute da selettore, richiami obliqui mouse/Esc/Undo e codec25
+PASS una vista alla volta: dati reali Controllo numero quote,8+3 quote, otto versi, prima interna/altra vista, vettori invertiti, esclusioni, sovrapposizioni e layout mancante
+PASS vicinanza: percorso foto1/4/11/2/3/5/6/7/10/8/9, otto versi, inserimento, scala, esclusioni e prima interna
+PASS badge persistenti: otto scansioni, rotazione, filtri, scambio, riserve, codec22, frecce e Undo
+PASS vicinanza GUI: clic alto/destra, anteprima11 quote, conferma, codec, PDF, Undo/Redo e Annulla
+PASS GUI una vista alla volta: clic alto/destra, anteprima Vista1=1..8 e sezione=9..11, conferma, codec, PDF, Undo/Redo
+PASS esclusioni: numeri1/3/4 invariati, filtro parentesi facoltativo, selezione multipla/proprieta', codec21/20/standalone, ...
+[This part of the test output was removed since it exceeds the threshold of 1024 bytes.]
+</system-out>
+	</testcase>
+	<testcase name="forgecad_drawing_dimension_repair_tests" classname="forgecad_drawing_dimension_repair_tests" time="1.35693" status="run">
+		<properties/>
+		<system-out>PASS riferimento mancante, snap/Tab, metadata, anteprima/conferma, Undo/Redo, codec e genealogia
+PASS doppio aggancio, vista vincolata, Esc, Backspace, snap medio, clic e sola lettura
+PASS riferimenti singoli, ordinate e origine del piano
+PASS quote radiali, lunghezza/estremi legacy, incompatibili e settore angolare
+PASS ricollegamento quote 2D
+</system-out>
+	</testcase>
+	<testcase name="forgecad_drawing_view_placement_tests" classname="forgecad_drawing_view_placement_tests" time="0.356552" status="run">
+		<properties/>
+		<system-out>PASS view/section placement, mouse preview, cancellation, cached geometry, history and read-only
+</system-out>
+	</testcase>
+	<testcase name="forgecad_drawing_silhouette_tests" classname="forgecad_drawing_silhouette_tests" time="0.158503" status="run">
+		<properties/>
+		<system-out>PASS surface silhouettes, sphere/cylinder bounds, planar degeneracy and seed cache
+</system-out>
+	</testcase>
+	<testcase name="forgecad_drawing_visibility_tests" classname="forgecad_drawing_visibility_tests" time="31.4037" status="run">
+		<properties/>
+		<system-out>FINGERPRINT index=66c5d74a73e69dd76a61d88f8a88c0fa8350c2e2ed9428ef036ad9eb3eded698
+PASS indice occludenti misti: tracciati identici, corpi lontani/posteriori, frame ruotato, tre scale e cucitura
+PASS visible/hidden spans, partial and inter-body occlusion, view direction, sections, surfaces and silhouettes
+</system-out>
+	</testcase>
+	<testcase name="forgecad_drawing_hidden_lines_tests" classname="forgecad_drawing_hidden_lines_tests" time="1.90572" status="run">
+		<properties/>
+		<system-out>PASS default hidden lines, selected-view toggle, exact dimensions, snap exclusion, cached rendering, undo and persistence
+</system-out>
+	</testcase>
+	<testcase name="forgecad_drawing_page_tests" classname="forgecad_drawing_page_tests" time="0.154795" status="run">
+		<properties/>
+		<system-out>PASS page layout, title block, codec/history/read-only, vector PDF, transient overlays and atomic errors
+</system-out>
+	</testcase>
+	<testcase name="forgecad_drawing_derived_tests" classname="forgecad_drawing_derived_tests" time="2.83956" status="run">
+		<properties/>
+		<system-out>PASS gradino: geometria esatta, quote, agganci, assi/richiami, modello, codec, Undo, PDF e protezioni
+PASS gradini multipli: tre piani, ritorno, quote, codec, Undo, UI, PDF e ambiguita conservativa
+PASS sezione allineata: piani angolari, rotazione esatta, quote, cerniera, modello, codec, UI, Undo e PDF
+PASS mouse sezioni composte: centro/rami, gradini multipli, snap bordi, vincoli, correzione, verso, annulla, ridefinizione, storia e codec
+PASS section snaps: medio/centro ingombro, feedback, Maiusc/Alt, scala/zoom, Undo e sola lettura
+PASS centered full cut, endpoints/translation/redraw, preview, Esc, history, half, oblique, persistence, read-only
+PASS section parent from cutting line, direct command, snaps on second view, scale/frame, ambiguity, cancel and undo
+PASS orientamento sezioni, quote/assi/richiami, legacy, riallineamento, derived views, both projection methods, hierarchy, scale, history, codec, technical removed sections, holes, surfaces, cached motion and PDF
+</system-out>
+	</testcase>
+	<testcase name="forgecad_drawing_detail_tests" classname="forgecad_drawing_detail_tests" time="1.49518" status="run">
+		<properties/>
+		<system-out>PASS detail view: GUI circle/preview, true dimensions, crop and scale edits, model update, section hatch, schema10, Undo/Redo, PDF and read-only
+</system-out>
+	</testcase>
+	<testcase name="forgecad_drawing_auxiliary_tests" classname="forgecad_drawing_auxiliary_tests" time="0.505001" status="run">
+		<properties/>
+		<system-out>PASS viste ausiliarie: frame, vera grandezza, quote, gerarchia, allineamento, codec, Undo, sola lettura, dialoghi e PDF
+</system-out>
+	</testcase>
+	<testcase name="forgecad_drawing_break_tests" classname="forgecad_drawing_break_tests" time="0.833766" status="run">
+		<properties/>
+		<system-out>PASS viste interrotte: mapping XY, quote reali, ombreggiatura, codec, Undo, modello, dialogo, sola lettura e PDF
+</system-out>
+	</testcase>
+	<testcase name="forgecad_drawing_presentation_tests" classname="forgecad_drawing_presentation_tests" time="0.366887" status="run">
+		<properties/>
+		<system-out>PASS shaded faces/depth/half-sections, progress/cancel/reentry, codec/history/read-only, revision-table wrap/overflow and PDF
+</system-out>
+	</testcase>
+	<testcase name="forgecad_drawing_complete_sections_tests" classname="forgecad_drawing_complete_sections_tests" time="2.82142" status="run">
+		<properties/>
+		<system-out>PASS complete/half sections, clipped source ranges, rear geometry, removed bodies, cap occlusion/holes, open surfaces, cut anchors, codec, GUI, history and PDF
+</system-out>
+	</testcase>
+	<testcase name="forgecad_drawing_centers_tests" classname="forgecad_drawing_centers_tests" time="1.24915" status="run">
+		<properties/>
+		<system-out>PASS assi principali esatti, coniche degeneri, fusione concentrici, scala, UI, persistenza, Undo/Redo, quote, visibilita', sezioni, aggiornamento modello, PDF e sola lettura
+</system-out>
+	</testcase>
+	<testcase name="forgecad_drawing_axes_tests" classname="forgecad_drawing_axes_tests" time="2.99432" status="run">
+		<properties/>
+		<system-out>PASS quote assi: punto/retta, asse/asse, angoli, raggi/diametri rispetto asse, snap, ridefinizione, proprietà, scala, modello, codec 5, orfani, Undo/Redo e sola lettura
+PASS annotazioni multilinea, richiami topologici e asse, schema 6, snap/anteprima, proprieta', cache, aggiornamento, orfani, Undo e sola lettura
+PASS annotazioni strutturate: sei simboli, datum UUID, rinomina/orfani, geometria, codec19, UI, anteprima, ridefinizione, Undo e PDF vettoriale
+PASS rugosità: Ra/Rz, tre processi, micrometri, codec28/legacy, input invalidi, proprietà, mouse/snap/anteprima, ridefinizione, modello/orfani, Undo/Redo e PDF vettoriale
+PASS tolleranze simmetriche/scostamenti/limiti, prefissi, schema7, aggiornamento, cache, orfani, dialogo, PDF, Undo e sola lettura
+PASS input italiano/inglese/tedesco, opzioni per schede, font/frecce/PDF, schema8, drag madre-figlia e nomi, snap, Undo e sola lettura
+PASS assi associati, mediana, superfici cilindriche, snap mouse, proprieta', codec schema 4, undo, aggiornamento, riferimenti ...
+[This part of the test output was removed since it exceeds the threshold of 1024 bytes.]
+</system-out>
+	</testcase>
+	<testcase name="forgecad_drawing_ui_controls_tests" classname="forgecad_drawing_ui_controls_tests" time="0.12131" status="run">
+		<properties/>
+		<system-out>menu dark=0 pixel=#f2f2f2 alpha=224
+menu dark=1 pixel=#202e36 alpha=224
+PASS themed menus, restored selector, arrow reversal, one-sided axis drag, Undo/Redo, schema11 and PDF
+</system-out>
+	</testcase>
+	<testcase name="forgecad_drawing_focus_tests" classname="forgecad_drawing_focus_tests" time="3.77507" status="run">
+		<properties/>
+		<system-out>PASS progress ownership, input, exception, focus return and inactive owner
+</system-out>
+	</testcase>
+	<testcase name="forgekernel_surface_instances_tests" classname="forgekernel_surface_instances_tests" time="0.801481" status="run">
+		<properties/>
+		<system-out>[  OK  ] SurfaceInstanceExactJetsAndPoles
+[  OK  ] SurfaceInstanceFlattenedAndImmutable
+[  OK  ] SurfaceInstanceSharesBezierPolesAndBounds
+[  OK  ] SurfaceInstanceBinarySharingAndLegacyRead
+[  OK  ] SurfaceInstanceRejectsInvalidPlacementAndRecords
+[  OK  ] SurfaceInstanceStepReplicaRoundTrip
+[  OK  ] SurfaceInstanceStepRejectsCycles
+[  OK  ] SurfaceInstanceStepReadsStandardMirrorAndScale
+[  OK  ] SurfaceInstancePreservesSingularTrimsAndMesh
+[  OK  ] SurfaceInstanceSewPolarWedgesAndCap
+[  OK  ] SurfaceInstanceZeroRadiusAtHighValenceCusp
+[  OK  ] BodyReadPoolExactSharingAndRecordIdentity
+[  OK  ] BodyReadPoolRejectsNearDuplicatesAndSurvivesPool
+[  OK  ] BodyReadPoolConcurrentDocuments
+14/14 test superati
+</system-out>
+	</testcase>
+	<testcase name="forgekernel_face_normal_bounds_tests" classname="forgekernel_face_normal_bounds_tests" time="0.00166008" status="run">
+		<properties/>
+		<system-out>[  OK  ] FaceNormalTrimmedSupportAndNegativeInside
+[  OK  ] FaceNormalPCurveRestrictedToEdgeRange
+[  OK  ] FaceNormalMissingUnknownAndOutOfDomainPCurves
+[  OK  ] FaceNormalHolesComplementAndIsolatedVertex
+[  OK  ] FaceNormalRationalWeightsAndInvalidInput
+[  OK  ] FaceNormalExtrusionSplineGraphAndPeriodicity
+[  OK  ] FaceNormalConicPCurveAndCancellation
+[  OK  ] FaceNormalExtrusionTangentRationalAndEllipse
+8/8 test superati
+</system-out>
+	</testcase>
+	<testcase name="forgekernel_projected_curve_reference_tests" classname="forgekernel_projected_curve_reference_tests" time="0.0166385" status="run">
+		<properties/>
+		<system-out>PASS 39 casi kernel riferimenti esatti, piano, immagine2D e genealogia
+</system-out>
+	</testcase>
+	<testcase name="forgekernel_surface_parameterization_tests" classname="forgekernel_surface_parameterization_tests" time="0.00140862" status="run">
+		<properties/>
+		<system-out>[  OK  ] SurfaceParameterizationBSplineCopiesAndCodec
+[  OK  ] SurfaceParameterizationExtrusionCurveFamilies
+[  OK  ] SurfaceParameterizationAnalyticOriginsAndAxes
+[  OK  ] SurfaceParameterizationUnknownAndCancellation
+4/4 test superati
+</system-out>
+	</testcase>
+	<testcase name="forgekernel_plane_jets_tests" classname="forgekernel_plane_jets_tests" time="0.00309921" status="run">
+		<properties/>
+		<system-out>PASS B-spline plane jets, degrees 3/34, rational weights and narrow UV
+</system-out>
+	</testcase>
+	<testcase name="forgekernel_bspline_derivative_tests" classname="forgekernel_bspline_derivative_tests" time="0.00369296" status="run">
+		<properties/>
+		<system-out>[  OK  ] BSplinePolynomialDerivativesRemainAccurateAfterTranslation
+[  OK  ] BSplinePolynomialDerivativesPreserveOneSidedKnotLimits
+[  OK  ] BSplineDenseTranslatedLengthConvergesWithoutChangingTolerance
+3/3 test superati
+</system-out>
+	</testcase>
+	<testcase name="forgekernel_bspline_cache_tests" classname="forgekernel_bspline_cache_tests" time="0.0281687" status="run">
+		<properties/>
+		<system-out>[  OK  ] BSplineCacheCurveValueSemantics
+[  OK  ] BSplineCacheSurfaceValueSemantics
+[  OK  ] BSplineCacheConcurrentSnapshots
+[  OK  ] BSplineCacheConcurrentCircleRecognition
+[  OK  ] BSplineCacheSurfaceInstanceAndOwnerLifetime
+5/5 test superati
+</system-out>
+	</testcase>
+	<testcase name="forgekernel_bspline_isoline_tests" classname="forgekernel_bspline_isoline_tests" time="0.0210973" status="run">
+		<properties/>
+		<system-out>[  OK  ] BSplineIsolineJetsAndInstances
+[  OK  ] BSplineIsolineRejectsInvalidAndCancels
+[  OK  ] BSplineIsolineMassAnalyticAndParallel
+3/3 test superati
+</system-out>
+	</testcase>
+	<testcase name="forgekernel_nurbs_support_tests" classname="forgekernel_nurbs_support_tests" time="73.6561" status="run">
+		<properties/>
+		<system-out>[  OK  ] NurbsSupportJoinUsesCoefficientsAndHandlesChartOrientations
+[  OK  ] NurbsSupportUnionPreservesTrimGeometryTolerancesAndDeclaredHistory
+[  OK  ] BlendTangentSweepSurvivesRadiiPosesScaleAndFaceRenumbering
+[  OK  ] BlendCertifiedNurbsAtlasEliminatesArtificialTerminalCorners
+[  OK  ] BlendRefinesTangentSupportPassagesAndBoundsMitreIntersections
+[  OK  ] NurbsSupportJetCertificatePreservesCreasesAcrossParameterScales
+6/6 test superati
+</system-out>
+	</testcase>
+</testsuite>

@@ -1,0 +1,11 @@
+from pathlib import Path
+import hashlib,shutil,runpy,json
+r=Path('/home/myungit/Linux_CAD_forFree');p=Path('/tmp/forgecad-k10-sketch-offset-20261116')
+src=p/'implementation/candidate/cad_sketch_offset.cpp';test=p/'tests/test_sketch_offset_validation.cpp'
+assert hashlib.sha256((r/'cad_sketch_offset.cpp').read_bytes()).hexdigest()=='122b6daac7ced186096e52ebdc88655aea1bde774fcc8cbcd4c845cbcb9a6331'
+assert hashlib.sha256(src.read_bytes()).hexdigest()=='62bc7824975f38656f0bbba2279e9bc1f47ca57380c6b5468d1170eba18ad69f'
+assert hashlib.sha256(test.read_bytes()).hexdigest()=='7f687da7f9cca5246b20014bb8a463637a4165256e7b00dcf0cf399c4236aea2'
+assert not (r/'tests'/test.name).exists();shutil.copy2(src,r/src.name);shutil.copy2(test,r/'tests'/test.name)
+runpy.run_path(str(p/'root/prepare-integration.py'))
+(p/'root/integrated-sources.json').write_text(json.dumps({str(f.relative_to(r)):hashlib.sha256(f.read_bytes()).hexdigest() for f in [r/src.name,r/'tests'/test.name]},indent=2))
+print('Frozen core and 27-case test integrated')

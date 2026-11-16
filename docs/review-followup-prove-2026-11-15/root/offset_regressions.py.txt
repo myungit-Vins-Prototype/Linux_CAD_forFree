@@ -1,0 +1,12 @@
+from pathlib import Path
+import subprocess,json
+root=Path('/home/myungit/Linux_CAD_forFree');out=Path('/tmp/forgecad-review-followup-20261115/root')
+tests=['OffsetAnalyticSurfaces','OffsetFreeformSurfaces','OffsetFitCurveSmallSmoothFeature','OffsetInwardBeyondCurvatureIsExplained']
+results=[]
+for test in tests:
+    cmd=[str(root/'forgecad-release/kernel/forgekernel_tests'),test]
+    p=subprocess.run(cmd,cwd=root,capture_output=True,text=True,timeout=90)
+    (out/(test+'.log')).write_text(p.stdout+p.stderr)
+    results.append(dict(test=test,command=cmd,exit=p.returncode));print(test,p.returncode,flush=True)
+(out/'offset-test-results.json').write_text(json.dumps(results,indent=2)+'\n')
+assert all(r['exit']==0 for r in results)

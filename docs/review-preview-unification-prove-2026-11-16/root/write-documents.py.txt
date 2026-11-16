@@ -1,0 +1,76 @@
+from pathlib import Path
+import json
+R=Path('/home/myungit/Linux_CAD_forFree');T=R/'docs/review-preview-unification-prove-2026-11-16/root'
+memory=(R/'CLAUDE.md').read_text()
+g=json.loads((T/'architecture-audit.json').read_text())
+checks=json.loads((T/'ctest-result.json').read_text());assert checks['actual_passed']==24 and checks['exit']==0
+replay=json.loads((T/'replay-final-result.json').read_text())
+assert all(replay[p]['exit']==0 and replay[p]['assertions']==115 for p in ['offscreen','wayland'])
+report='''# Anteprime, pannelli e ricontrollo delle orfane — 16 novembre 2026
+
+Corretti due ulteriori difetti degli stati delle anteprime e completata la copertura della correzione UI2 su undici comandi che usavano ancora un ciclo eventi proprio. Il totale dei rilievi confermati corretti sale da 24 a **26**; l’estensione di UI2 non è contata come un nuovo difetto. K10 resta aperto: 15 dei 24 siti iniziali sono parzialmente trattati, 9 interamente da migrare, oltre ai fallback.
+
+Lavoro svolto con tre agenti GPT-6.1 Sol: implementazione del coordinatore, verifica indipendente dei pannelli e ricontrollo delle 22 candidate orfane. Le modifiche pregresse a ellisse e kernel sono preservate.
+
+## Problemi e comportamento risultante
+
+| Rilievo | Prima | Dopo |
+|---|---|---|
+| PRE5 | Svuotamento con spessore zero cancella geometria e worker ma conserva «pronta»; tornando a uno spessore valido resta il vecchio errore. | Stato esplicito di input non valido, nessuna geometria residua; al recupero si elimina il vecchio errore e si calcola la nuova anteprima. |
+| PRE6 | Filettatura senza faccia o durante la selezione dichiara un calcolo in corso senza worker. | Il testo richiede la faccia o indica l’attesa della selezione nella vista. |
+| UI2, copertura residua | La guardia tra documenti era nel runner comune, ma undici runner manuali la aggiravano. Un comando della scheda A poteva restare bloccato fino alla chiusura del comando in B. | Tutti gli undici passano dal coordinatore comune; setup di picker e anteprima avviene dopo la guardia. Consultare le altre schede resta possibile. |
+
+Runner migrati: Ripetizione, Estrusione, Trasforma, Filettatura; Offset/Svuotamento, Rigata, Boundary, Riempimento, Planare; Datum; Misura. Il coordinatore conserva l’API a tre argomenti e aggiunge un overload con callback di inizializzazione. Collega `finished` prima di `show()` e dell’inizializzazione, evitando un’attesa infinita se uno dei due chiude subito il pannello. I sotto-dialoghi dello stesso documento restano consentiti.
+
+Il messaggio d’anteprima resta nel footer fisso sopra i pulsanti anche quando `PreviewScope` viene creato dopo l’apertura: un helper comune estrae la riga dal form scorrevole sia all’apertura sia alla creazione tardiva. L’operazione è idempotente e conserva i widget. Ripetizione conserva il picking nello storyboard e ne ripristina callback, abilitazione e barra della storia alla chiusura.
+
+## Verifiche effettive
+
+- Build Release completa di applicazione e runner riuscita; **24/24 suite CTest pertinenti PASS**, compresa l’ellisse per estremi.
+- Probe privato con componenti Qt e geometrie effettive: **115 asserzioni PASS**, **11 pannelli realmente aperti e annullati con cleanup verificato**, sia offscreen sia su **Wayland**. Il replay finale collega gli oggetti correnti dell’app sostituendo soltanto il `main`; nessun oggetto di produzione privato sovrapposto.
+- 79 asserzioni verificano stati, recupero dello spessore, filettatura, inizializzazione, callback, picker, lock, annullamento, schede in entrambi i sensi e chiusure sincrone. Altre 36 verificano il footer su nove runner: parent fuori dal form, ordine prima dei pulsanti, scorrimento reale e riapertura. Datum e Misura non creano quel messaggio e sono esplicitamente esclusi dalle sole verifiche del footer.
+- Controlli negativi conservati: sulla baseline precedente 7 asserzioni funzionali falliscono; la variante privata prima della correzione del footer fallisce tutte le 36 asserzioni aggiunte. I tre controlli della nuova API non sono applicabili alla baseline. Non sono 115 difetti distinti.
+- Il primo replay Wayland dava 110 PASS/5 FAIL: il compositor sostituiva le dimensioni richieste dal fixture e cinque form non avevano overflow. La diagnostica conserva dimensioni, esposizione e scroll; la sola attesa dell’esposizione non basta a escludere configure successivi. Il fixture finale limita l’altezza del vero `QScrollArea` di prova, mantenendo le asserzioni su overflow, movimento effettivo del contenuto e posizione del footer. La produzione resta identica. Esiti iniziali, diagnostica e replay finale sono distinti negli artefatti.
+- Mappa rigenerata: **FILES file, EDGES relazioni, UNITS unità C++**, zero diagnostica; `--check`, hash dei sorgenti e della configurazione, HTML/JSON e collegamenti entranti/uscenti verificati. Ricontrollati gli undici passaggi al coordinatore e le due chiamate all’helper del footer.
+- **2929/2938 file iniziali invariati**; nove file esistenti modificati nel blocco. Il kernel e i manifest delle prove precedenti dell’ellisse e dell’offset sono preservati.
+
+Le prove native verificano la vita dei widget e il layout. Non costituiscono una certificazione dei pixel OpenGL, di tutti i temi/sistemi operativi o dell’assenza globale di leak; non è stata aggiunta una nuova campagna sanitizer in questo blocco.
+
+## Funzioni orfane e lavoro aperto
+
+Le **22/22 candidate** restano prive di chiamanti o riferimenti a funzione nel repository controllato: **5 private/locali** candidate concrete alla rimozione e **17 API pubbliche** da valutare separatamente. Nessuna rimozione effettuata; non sono 22 bug funzionali. Il [rapporto delle orfane](review-orphans-refresh-2026-11-16.md) conserva definizioni, visibilità, ricerca sui test anche fuori CMake e limiti dell’analisi statica.
+
+L’uniformazione delle anteprime non è dichiarata esaustiva: restano le differenze documentate fra patch e corpo completo, avvio manuale/automatico e riuso alla conferma nelle altre famiglie. K10 mantiene i limiti indicati in apertura. Su richiesta successiva dell’utente, è ora in indagine la booleana di `Supporto.prt`, in particolare Corpo 2/Corpo 3: questa consegna dei pannelli non ne anticipa l’esito.
+
+## Artefatti e riproduzione
+
+[Prove](review-preview-unification-prove-2026-11-16/README.md), con sorgenti dei probe e script salvati come testo, log, manifest degli agenti e audit del coordinatore. Gli esiti degli agenti descrivono la loro fase privata; il replay in `root/` documenta gli oggetti Release effettivamente integrati. `SHA256SUMS` sigilla gli artefatti del blocco. Nessun CAD originale modificato e nessun processo utente chiuso.
+'''
+for key,value in [('FILES',g['files']),('EDGES',g['edges']),('UNITS',g['units'])]:report=report.replace(key,str(value))
+(R/'docs/review-preview-unification-2026-11-16.md').write_text(report)
+review=R/'docs/code-review-2026-11-15.md';text=review.read_text();start=text.index('**Stato più recente, 16 novembre:**');end=text.index('\n\n',start)
+text=text[:start]+'''**Stato più recente, 16 novembre:** [anteprime e pannelli](review-preview-unification-2026-11-16.md): PRE5/PRE6 corretti e copertura residua di UI2 estesa a undici runner; **26 rilievi confermati corretti complessivamente**. Build completa, 24 CTest e 115 asserzioni su oggetti app effettivi offscreen/Wayland PASS. [Orfane ricontrollate](review-orphans-refresh-2026-11-16.md): 5 private/locali e 17 API pubbliche senza usi interni, nessuna rimozione. [K10 offset dei bordi di estrusione](curve-fit-k10-edge-offset-2026-11-16.md): originali edge/generatore/SP-curve separati, controllo dei poli dopo assemblaggio; **15/24 siti iniziali parzialmente trattati, 9 interamente da migrare**, oltre ai fallback. K10 e l’uniformazione completa delle anteprime restano aperti. K2 in produzione; [ellisse per estremi](ellisse-estremi-2026-11-16.md) completata con quattro punti quotabili/vincolabili e centro derivato.''' + text[end:]
+review.write_text(text)
+start=memory.index('**16/11 — Anteprime');end=memory.index('\n\n**16/11 — Ellisse',start)
+entry='''**16/11 — Anteprime e residuo UI2 completati con tre agenti Sol.**
+Shell zero/recupero e Filettatura: stati corretti (PRE5/PRE6); 26 rilievi corretti.
+Undici runner comuni, setup dopo guardia, footer fisso e chiusura sincrona;
+UI2 esteso senza ricontarlo. App/runner completi, 24 CTest e 115 asserzioni
+su oggetti app offscreen/Wayland PASS. Fixture limita l'area scorrevole;
+primo 110/115 e diagnosi compositor conservati. Mappa FILES/EDGES/UNITS, check/HTML/archi
+e 2929/2938 file invariati. Orfane: 5 private/locali, 17 API senza usi interni;
+nessuna rimozione. [Prove e limiti](docs/review-preview-unification-2026-11-16.md).
+Nuova richiesta: booleana Supporto.prt, Corpo 2/3 loft; indagine su copia,
+originale preservato. Esito geometrico ancora da stabilire.'''
+for key,value in [('FILES',g['files']),('EDGES',g['edges']),('UNITS',g['units'])]:entry=entry.replace(key,str(value))
+memory=memory[:start]+entry+memory[end:]
+# Consolidate old archive pointers without dropping their destinations.
+start=memory.index('Part23/raccordi/storyboard14/11:')
+memory=memory[:start]+'''Archivi precedenti: [Part23/raccordi/storyboard](docs/history/claude-prima-review-next-2026-11-15.md),
+[contorno apparente](docs/history/claude-prima-sweep-review-fix-2026-11-15.md),
+[riferimenti/anteprime](docs/history/claude-prima-schede-2026-11-14.md),
+[Applicatore4, poli, memoria, KnifeHandle e quote2D](docs/history/claude-prima-review-2026-11-15.md).
+'''
+assert len(memory.encode())<=16384,len(memory.encode());(R/'CLAUDE.md').write_text(memory)
+(T/'docs-milestone.json').write_text(json.dumps(dict(claude_bytes=len(memory.encode()),corrected_findings=26,k10_partial_sites=15,k10_unmigrated_sites=9,supporto='Indagine in corso su copia, nessun esito anticipato'),indent=2)+'\n')
+print('Rapporti e memoria aggiornati',len(memory.encode()),'bytes')

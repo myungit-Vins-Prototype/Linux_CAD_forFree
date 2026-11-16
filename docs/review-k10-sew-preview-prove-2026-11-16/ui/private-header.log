@@ -1,0 +1,109 @@
+CASE mode=0 pending=0
+PASS Enter refreshes typed field without closing dialog
+PASS Up arrow preserves immediate preview update
+PASS Down arrow restores field and preview definition
+PASS typed value committed by real Tab focus lifecycle
+PASS Tab refreshes key and generation
+PASS old geometry invalidated after Tab
+PASS label stops declaring old preview ready
+VISIBLE ui=1.25 preview=1.25 label=pronta (in ambra nella vista)
+PASS ready preview matches field after Tab
+PASS new result becomes ready
+PASS real confirmation creates chamfer
+PASS confirmation uses updated numeric value
+COMMIT matches_shown=1 shown_volume=472.188 actual_volume=472.188 pointer_same=1
+PASS confirmed geometry matches updated preview volume
+PASS single confirmation applies once and returns
+PASS dialog cleanup releases preview callback and lock
+CASE mode=0 pending=1
+PASS Enter refreshes typed field without closing dialog
+PASS Up arrow preserves immediate preview update
+PASS Down arrow restores field and preview definition
+PASS real uncancelled worker before Tab mutation
+PASS typed value committed by real Tab focus lifecycle
+PASS Tab refreshes key and generation
+PASS old geometry invalidated after Tab
+PASS label stops declaring old preview ready
+PASS Tab mutation cancels previous real worker
+VISIBLE ui=1.25 preview=1.25 label=pronta (in ambra nella vista)
+PASS ready preview matches field after Tab
+PASS new result becomes ready
+PASS real confirmation creates chamfer
+PASS confirmation uses updated numeric value
+COMMIT matches_shown=1 shown_volume=472.188 actual_volume=472.188 pointer_same=1
+PASS confirmed geometry matches updated preview volume
+PASS single confirmation applies once and returns
+PASS dialog cleanup releases preview callback and lock
+CASE mode=1 pending=0
+PASS Enter refreshes typed field without closing dialog
+PASS Up arrow preserves immediate preview update
+PASS Down arrow restores field and preview definition
+PASS typed value committed by real Tab focus lifecycle
+PASS Tab refreshes key and generation
+PASS old geometry invalidated after Tab
+PASS label stops declaring old preview ready
+VISIBLE ui=1.25 preview=1.25 label=pronta (in ambra nella vista)
+PASS ready preview matches field after Tab
+PASS new result becomes ready
+PASS real confirmation creates chamfer
+PASS confirmation uses updated numeric value
+COMMIT matches_shown=1 shown_volume=476.875 actual_volume=476.875 pointer_same=1
+PASS confirmed geometry matches updated preview volume
+PASS single confirmation applies once and returns
+PASS dialog cleanup releases preview callback and lock
+CASE mode=1 pending=1
+PASS Enter refreshes typed field without closing dialog
+PASS Up arrow preserves immediate preview update
+PASS Down arrow restores field and preview definition
+PASS real uncancelled worker before Tab mutation
+PASS typed value committed by real Tab focus lifecycle
+PASS Tab refreshes key and generation
+PASS old geometry invalidated after Tab
+PASS label stops declaring old preview ready
+PASS Tab mutation cancels previous real worker
+VISIBLE ui=1.25 preview=1.25 label=pronta (in ambra nella vista)
+PASS ready preview matches field after Tab
+PASS new result becomes ready
+PASS real confirmation creates chamfer
+PASS confirmation uses updated numeric value
+COMMIT matches_shown=1 shown_volume=476.875 actual_volume=476.875 pointer_same=1
+PASS confirmed geometry matches updated preview volume
+PASS single confirmation applies once and returns
+PASS dialog cleanup releases preview callback and lock
+CASE mode=2 pending=0
+PASS Enter refreshes typed field without closing dialog
+PASS Up arrow preserves immediate preview update
+PASS Down arrow restores field and preview definition
+PASS typed value committed by real Tab focus lifecycle
+PASS Tab refreshes key and generation
+PASS old geometry invalidated after Tab
+PASS label stops declaring old preview ready
+VISIBLE ui=30 preview=30 label=pronta (in ambra nella vista)
+PASS ready preview matches field after Tab
+PASS new result becomes ready
+PASS real confirmation creates chamfer
+PASS confirmation uses updated numeric value
+COMMIT matches_shown=1 shown_volume=479.278 actual_volume=479.278 pointer_same=1
+PASS confirmed geometry matches updated preview volume
+PASS single confirmation applies once and returns
+PASS dialog cleanup releases preview callback and lock
+CASE mode=2 pending=1
+PASS Enter refreshes typed field without closing dialog
+PASS Up arrow preserves immediate preview update
+PASS Down arrow restores field and preview definition
+PASS real uncancelled worker before Tab mutation
+PASS typed value committed by real Tab focus lifecycle
+PASS Tab refreshes key and generation
+PASS old geometry invalidated after Tab
+PASS label stops declaring old preview ready
+PASS Tab mutation cancels previous real worker
+VISIBLE ui=30 preview=30 label=pronta (in ambra nella vista)
+PASS ready preview matches field after Tab
+PASS new result becomes ready
+PASS real confirmation creates chamfer
+PASS confirmation uses updated numeric value
+COMMIT matches_shown=1 shown_volume=479.278 actual_volume=479.278 pointer_same=1
+PASS confirmed geometry matches updated preview volume
+PASS single confirmation applies once and returns
+PASS dialog cleanup releases preview callback and lock
+PRE8 RESULT passed=90 failed=0

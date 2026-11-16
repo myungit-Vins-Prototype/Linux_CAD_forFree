@@ -1,0 +1,38 @@
+from pathlib import Path
+import os,subprocess,time,json,re
+r=Path('/home/myungit/Linux_CAD_forFree');p=r/'docs/review-preview-unification-prove-2026-11-16/root'
+names="""forgecad_ribbon_preview_tests
+forgecad_function_panels_tests
+forgecad_storyboard_panel_selection_tests
+forgecad_history_suppression_tests
+forgecad_pattern_placement_tests
+forgecad_pattern_result_tests
+forgecad_pattern_variation_tests
+forgecad_pattern_variation_panel_tests
+forgecad_pattern_single_story_tests
+forgecad_preview_performance_tests
+forgecad_edit_preview_reuse_tests
+forgecad_history_preview_mesh_tests
+forgecad_document_lifetime_tests
+forgecad_offset_face_pick_tests
+forgecad_extension_panel_tests
+forgecad_thread_edge_tests
+forgecad_sketch_menu_cancel_tests
+forgecad_blend_preview_reload_tests
+forgecad_surface_pattern_tests
+forgecad_extrude_surface_tests
+forgecad_individual_fill_tests
+forgecad_fill_surface_tests
+forgecad_datum_story_tests
+forgecad_ellipse_extremes_tests""".splitlines()
+registered=''.join(f.read_text() for f in (r/'forgecad-release').rglob('CTestTestfile.cmake'))
+for n in names:assert 'add_test("'+n+'"' in registered,n
+assert len(names)==24
+env=os.environ.copy();env.update(QT_QPA_PLATFORM='offscreen',QT_QPA_PLATFORMTHEME='',QT_QPA_PLATFORMTHEME_QT6='',QT_STYLE_OVERRIDE='Fusion',QT_QPA_OFFSCREEN_NO_GLX='1',LIBGL_ALWAYS_SOFTWARE='1')
+temp=Path('/tmp/preview-final-checks');temp.mkdir(exist_ok=True)
+for key,folder in [('XDG_CONFIG_HOME','settings'),('XDG_DATA_HOME','data'),('XDG_CACHE_HOME','cache')]:
+    target=temp/folder;target.mkdir(exist_ok=True);env[key]=str(target)
+command=['ctest','--test-dir','forgecad-release','--output-on-failure','--parallel','1','-R','^('+'|'.join(names)+')$'];start=time.monotonic()
+with (p/'ctest.log').open('w') as log:ret=subprocess.run(command,cwd=r,env=env,stdout=log,stderr=subprocess.STDOUT).returncode
+text=(p/'ctest.log').read_text();passed=len(re.findall(r'\d+/\d+ Test\s+#\d+:.*?Passed',text));result=dict(exit=ret,seconds=time.monotonic()-start,tests=names,actual_passed=passed,command=command)
+(p/'ctest-result.json').write_text(json.dumps(result,indent=2)+'\n');print(result);print(text[-6000:]);assert ret==0 and passed==24

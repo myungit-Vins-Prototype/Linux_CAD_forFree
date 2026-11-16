@@ -1,0 +1,9 @@
+{
+  "exit": 0,
+  "seconds": 0.3463845950000177,
+  "command": [
+    "python3",
+    "tools/generate_architecture.py",
+    "--check"
+  ]
+}

@@ -1,0 +1,33 @@
+from pathlib import Path
+from fractions import Fraction as F
+from math import comb
+import re,json
+p=Path(__file__).parent
+z=[float(x) for x in re.search(r'z27=\{([^}]+)',(p/'fixtures.h').read_text()).group(1).split(',')]
+def prod(a,b):
+ m,n=len(a)-1,len(b)-1
+ return [sum((a[i]*b[k-i]*F(comb(m,i)*comb(n,k-i),comb(m+n,k)) for i in range(max(0,k-n),min(m,k)+1)),F(0)) for k in range(m+n+1)]
+def derivative(a):return [(len(a)-1)*(a[i+1]-a[i]) for i in range(len(a)-1)]
+def split(a):
+ left=[a[0]];right=[a[-1]]
+ while len(a)>1:
+  a=[(a[i]+a[i+1])/2 for i in range(len(a)-1)];left.append(a[0]);right.append(a[-1])
+ return left,right[::-1]
+def refine(a,depth):
+ if not depth:return [a]
+ x,y=split(a);return refine(x,depth-1)+refine(y,depth-1)
+result=[]
+for rational in [False,True]:
+ x=[];y=[];w=[]
+ for i in range(28):
+  xi=i/27.;wi=1+.5*xi if rational else 1.;numerator=xi+(.5*i*(i-1.)/(27*26.) if rational else 0.)
+  x.append(F(numerator/wi));y.append(F(z[i]/wi));w.append(F(wi))
+ hx=[a*b for a,b in zip(x,w)];hy=[a*b for a,b in zip(y,w)]
+ numerator=[a-b for a,b in zip(prod(derivative(hx),w),prod(hx,derivative(w)))]
+ lower=min(numerator)/(max(w)**2)
+ ys=refine(hy,6);ws=refine(w,6)
+ ybound=max(max(abs(a) for a in ays)/min(aws) for ays,aws in zip(ys,ws))
+ assert lower>F(4,10) and ybound<F(1,1000)
+ assert x[0]==0 and x[-1]==1 and y[0]==0 and y[-1]==0
+ result.append({'rational':rational,'x_derivative_lower_exact':str(lower),'x_derivative_lower_float':float(lower),'abs_y_upper_exact':str(ybound),'abs_y_upper_float':float(ybound),'proof':'Original IEEE poles and weights as exact rationals; positive Bernstein hull for (Hx_prime W-Hx W_prime)/W^2; 64 exact deCasteljau subdivisions for Y/W. Monotone X and |Y|<.001 exclude self-intersection and intersection with sides X=0,1 or topY=1 except intended corners.'})
+(p/'regularity.json').write_text(json.dumps(result,indent=2)+'\n');print(json.dumps(result,indent=2))

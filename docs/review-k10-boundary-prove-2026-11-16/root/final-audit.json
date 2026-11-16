@@ -1,0 +1,53 @@
+{
+  "initial_files": 4755,
+  "preserved_files": 4747,
+  "changed_existing": [
+    "CLAUDE.md",
+    "docs/code-review-2026-11-15.md",
+    "docs/review-k10-mitre-2026-11-16.md",
+    "kernel/CMakeLists.txt",
+    "kernel/fk_blend_section_curve.cpp",
+    "kernel/fk_blend_section_curve.h",
+    "kernel/fk_blend_surface.cpp",
+    "tools/generate_architecture.py"
+  ],
+  "new_files_outside_proofs": [
+    "docs/history/claude-prima-k10-boundary-2026-11-16.md",
+    "docs/review-k10-boundary-2026-11-16.md",
+    "kernel/tests/test_blend_boundary_validation.cpp"
+  ],
+  "source_hashes": {
+    "kernel/fk_blend_section_curve.cpp": "3c2fece62fbf033de91693b520e82055aae2e63a6cac7011b314a1f7f74dbd7d",
+    "kernel/fk_blend_section_curve.h": "13e09f031b0c6acb7f43c47c6f6a9bb2886f3d79c7209372f040f812b5768966",
+    "kernel/fk_blend_surface.cpp": "392bc742f3b5c455938bcc21882ecf57d2ca1459d5b570e56c0d99c8026d0e96",
+    "kernel/tests/test_blend_boundary_validation.cpp": "8d603d500f9c9348ecb9ae8d258a0d557cfc8e0a01fb9128dc027bc3bd328c85",
+    "kernel/CMakeLists.txt": "eb18f15489d274f34d02f6ef321e3b1fdcd202f0e8739e7025a3ea8def0f110c",
+    "tools/generate_architecture.py": "ab3dc8f31f2f8c200e13f740a6aca3031158910d73abc64f180b28643eedbb8f"
+  },
+  "binary_hashes": {
+    "forgecad-release/forgecad": "cc53a0d1ef8b02bf5d948fbbf0ed72b7b412ba23be26aa789f10d630e9810348",
+    "forgecad-release/forgecad_view_tests": "0abbe1024372c912a23f89250b08d65add67fd8ef0f6ee4812a225cf1a7116ca",
+    "forgecad-release/kernel/libforgekernel.a": "6bbbea1da27ee01943529ab2f1c2176728f71d414bb6521d141d38d6e90f25ad",
+    "forgecad-release/kernel/forgekernel_tests": "236ae0102e0affd140c95716834c237364346c9ba3a3a67c5bf0b55e897e3cb0"
+  },
+  "previous_seals": {
+    "ellisse-estremi": 95,
+    "curve-fit-k10-edge-offset": 146,
+    "review-preview-unification": 172,
+    "supporto-booleana": 267,
+    "review-k10-uv-preview": 126,
+    "review-k10-sew-preview": 152,
+    "review-k10-helix-orphans": 208,
+    "review-blend-cavity": 182,
+    "review-theme-tabs": 152,
+    "review-k10-mapping-uv": 131,
+    "review-k10-sheet-join": 177,
+    "review-k10-mitre": 203
+  },
+  "claude_bytes": 16258,
+  "document_hashes": {
+    "CLAUDE.md": "08929cbb8450c497657cd072c91f16b846e84574786a78b5e98d8cb52035f676",
+    "docs/code-review-2026-11-15.md": "4e6efe8884c3a535e0dbfb52e7eda8d59ba0a62afe27940d4df95224e450d8d8",
+    "docs/review-k10-boundary-2026-11-16.md": "28bd1eae3127fe27853686a84db1cb0e7acff232fd8f292de1d38a81134fb19a"
+  }
+}

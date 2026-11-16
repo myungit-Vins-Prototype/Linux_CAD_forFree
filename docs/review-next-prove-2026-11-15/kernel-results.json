@@ -1,0 +1,22 @@
+[
+  {
+    "filter": "Sweep",
+    "exit": 0
+  },
+  {
+    "filter": "Loft",
+    "exit": 0
+  },
+  {
+    "filter": "ReverseEdge",
+    "exit": 0
+  },
+  {
+    "filter": "PCurve",
+    "exit": 0
+  },
+  {
+    "filter": "Euler",
+    "exit": 0
+  }
+]

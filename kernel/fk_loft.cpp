@@ -2047,16 +2047,18 @@ Body loftCore(const std::vector<Section> &sections, const LoftOptions &options, 
 }
 
 
-// Chiusura di una sezione piana (stessa regola di loftSolid).
+// Chiusura delle sezioni: budget di connessione in mm, indipendente
+// dall'origine del modello e del frame della sezione.
 bool sectionClosed(const LoftSection &s) {
+    const double connectionTolerance = scaledAccuracy(1e-6);
     if (!s.path.empty()) {
-        const auto pieces = chainPieces(s.path, 1e-6);
+        const auto pieces = chainPieces(s.path, connectionTolerance);
         const Vec3 a = pieces.front().curve->point(pieces.front().range.lo), b = pieces.back().curve->point(pieces.back().range.hi);
-        return distance(a,b) <= 1e-6 * std::max(1.0,norm(a));
+        return distance(a,b) <= connectionTolerance;
     }
     if (s.loop.segments.empty()) throw std::domain_error("loft: sezione vuota");
     const ProfileSegment &a = s.loop.segments.front(), &b = s.loop.segments.back();
-    return distance(a.start(), b.end()) <= 1e-6 * std::max(1.0, norm(a.start()));
+    return distance(a.start(), b.end()) <= connectionTolerance;
 }
 
 Piece reversedPiece(const Piece &p) { return {reversedCurve(p.curve), {-p.range.hi, -p.range.lo}, p.source}; }

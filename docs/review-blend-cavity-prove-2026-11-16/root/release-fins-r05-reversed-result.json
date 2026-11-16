@@ -1,0 +1,8 @@
+{
+  "exit": 0,
+  "seconds": 0.16394079300152953,
+  "command": [
+    "/tmp/blend-cavity-review/root/audit-fins-release",
+    "/tmp/blend-cavity-review/root/release-results/r05-reversed-actual.body"
+  ]
+}

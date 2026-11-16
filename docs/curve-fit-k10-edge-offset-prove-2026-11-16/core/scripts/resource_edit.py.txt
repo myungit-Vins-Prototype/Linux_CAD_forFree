@@ -1,0 +1,100 @@
+from pathlib import Path
+p=Path('/tmp/review-next-readonly/stage/kernel/fk_curve_fit_bounds.cpp');s=p.read_text();start=s.index('SurfaceCurveFitData edgeOffsetFactory(');stop=s.index('\n} // namespace\nstd::optional<SurfaceParameterBounds>',start);new=s[start:stop]
+needle='''    auto generator = prepareSource(extrusion.curve(), generatorRange, true);
+    const VP axis'''
+repl='''    auto generator = prepareSource(extrusion.curve(), generatorRange, true);
+    // One operation owns both original sources, normal/tangent numerators
+    // and UV anchors. Charge their combined storage before allocating the
+    // extra polynomial arrays, rather than granting each source a full cap.
+    std::size_t coefficients = maps->size() * 8;
+    const auto account = [&](const Source &source, bool normals) {
+        for (const auto &span : source.spans) {
+            cancellationPoint();
+            std::size_t count = span.w.size();
+            for (const auto &axis : span.h) {
+                count += axis.size();
+                for (I value : axis) if (!finite(value))
+                    throw std::domain_error("fit bordo estruso: coefficienti originali non finiti");
+            }
+            for (I value : span.w) if (!finite(value))
+                throw std::domain_error("fit bordo estruso: pesi originali non finiti");
+            // Six vector coordinate polynomials: three tangent and three
+            // normal; each has at most twice the original pole count.
+            if (normals) count += 12 * span.w.size();
+            if (count > 2000000 || coefficients > 2000000 - count)
+                throw std::domain_error("fit bordo estruso: budget complessivo coefficienti esaurito");
+            coefficients += count;
+        }
+    };
+    account(*positions, false);
+    account(*generator, true);
+    const VP axis'''
+assert needle in new;new=new.replace(needle,repl)
+new=new.replace('''    for (auto &span : generator->spans) {
+        VP tangent;''','''    for (auto &span : generator->spans) {
+        cancellationPoint();
+        VP tangent;''')
+needle='''    result.breaks = edge->breakpoints(requested);
+    std::size_t visits = 0;
+    for (const auto &map : *maps) {
+        result.breaks.push_back(map.parameter.lo);
+        result.breaks.push_back(map.parameter.hi);
+        if (constantU(map)) continue;
+        for (const auto &span : generator->spans) {
+            if (++visits > 200000) throw std::domain_error("fit bordo estruso: budget eventi esaurito");
+            const I t = affineInverseU(map, I(span.domain.lo));'''
+repl='''    result.breaks = edge->breakpoints(requested);
+    for (double value : result.breaks) if (!std::isfinite(value))
+        throw std::domain_error("fit bordo estruso: nodi sorgente non finiti");
+    std::size_t visits = 0;
+    for (const auto &map : *maps) {
+        cancellationPoint();
+        if (++visits > 200000 || result.breaks.size() > 200000 - 2)
+            throw std::domain_error("fit bordo estruso: budget eventi esaurito");
+        result.breaks.push_back(map.parameter.lo);
+        result.breaks.push_back(map.parameter.hi);
+        if (constantU(map)) continue;
+        const I first = affineCoordinate(map, 0, map.parameter.lo), last = affineCoordinate(map, 0, map.parameter.hi);
+        const double minU = std::min(first.lo, last.lo), maxU = std::max(first.hi, last.hi);
+        auto begin = std::lower_bound(generator->spans.begin(), generator->spans.end(), minU,
+            [](const Span &span, double value) { return span.domain.lo < value; });
+        for (auto it = begin; it != generator->spans.end() && it->domain.lo <= maxU; ++it) {
+            cancellationPoint();
+            if (++visits > 200000 || result.breaks.size() >= 200000)
+                throw std::domain_error("fit bordo estruso: budget eventi esaurito");
+            const I t = affineInverseU(map, I(it->domain.lo));'''
+assert needle in new;new=new.replace(needle,repl)
+needle='''        for (const auto &map : *maps) {
+            const double mapLo = std::max(query.lo, map.parameter.lo), mapHi = std::min(query.hi, map.parameter.hi);
+            if (mapLo > mapHi) continue;
+            for (const auto &position : positions->spans) {
+                const double edgeLo = std::max(mapLo, position.domain.lo), edgeHi = std::min(mapHi, position.domain.hi);
+                if (edgeLo > edgeHi) continue;'''
+repl='''        auto mapFirst = std::lower_bound(maps->begin(), maps->end(), query.lo,
+            [](const AffineUVSpan &map, double value) { return map.parameter.hi < value; });
+        for (auto mapIt = mapFirst; mapIt != maps->end() && mapIt->parameter.lo <= query.hi; ++mapIt) {
+            cancellationPoint();
+            if (++visits > 200000) return inf;
+            const auto &map = *mapIt;
+            const double mapLo = std::max(query.lo, map.parameter.lo), mapHi = std::min(query.hi, map.parameter.hi);
+            auto positionFirst = std::lower_bound(positions->spans.begin(), positions->spans.end(), mapLo,
+                [](const Span &span, double value) { return span.domain.hi < value; });
+            for (auto positionIt = positionFirst; positionIt != positions->spans.end() && positionIt->domain.lo <= mapHi; ++positionIt) {
+                cancellationPoint();
+                if (++visits > 200000) return inf;
+                const auto &position = *positionIt;
+                const double edgeLo = std::max(mapLo, position.domain.lo), edgeHi = std::min(mapHi, position.domain.hi);'''
+assert needle in new;new=new.replace(needle,repl)
+needle='''                for (std::size_t n = 0; n < generator->spans.size(); ++n) {
+                    const auto &normalSource = generator->spans[n];
+                    if (normalSource.domain.hi < minU || normalSource.domain.lo > maxU) continue;
+                    if (++visits > 200000) return inf;'''
+repl='''                auto normalFirst = std::lower_bound(generator->spans.begin(), generator->spans.end(), minU,
+                    [](const Span &span, double value) { return span.domain.hi < value; });
+                for (auto normalIt = normalFirst; normalIt != generator->spans.end() && normalIt->domain.lo <= maxU; ++normalIt) {
+                    cancellationPoint();
+                    if (++visits > 200000) return inf;
+                    const std::size_t n = std::size_t(normalIt - generator->spans.begin());
+                    const auto &normalSource = *normalIt;'''
+assert needle in new;new=new.replace(needle,repl)
+s=s[:start]+new+s[stop:];p.write_text(s)

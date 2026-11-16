@@ -1,0 +1,11 @@
+{
+  "path": "/home/myungit/Documenti/Cad_Example/Supporto.prt",
+  "sha256": "70e4ec5c218d590d85ebb44a45bd02546155135564d5be3b73847ba9573f1759",
+  "bytes": 589514,
+  "mtime_utc": "2026-11-16T09:26:47.158838+00:00",
+  "analyzed_sha256": "79887e91d75feb748af19fcdb14cd469cc40e74abab03e3cbeaa12e2d3271f7f",
+  "analyzed_bytes": 177161,
+  "matches_analyzed_version": false,
+  "original_written_by_this_review": false,
+  "note": "Observed read-only after the interruption; pre-interruption proofs refer to frozen input. Current original is preserved without overwrite; temporary replay files are no longer present."
+}

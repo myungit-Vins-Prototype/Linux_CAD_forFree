@@ -1,0 +1,24 @@
+#include <algorithm>
+#include "fk_quilt_mapping.h"
+#include "fk_curve_ops.h"
+#include "fk_body_check.h"
+#include "fk_body_io.h"
+#include "fk_curve_algo.h"
+#include "fk_bspline.h"
+#include "fk_cancel.h"
+#include <iostream>
+#include <iomanip>
+using namespace ForgeCad::Kernel;
+#include "fixtures.h"
+CurvePtr<2> straight(Vec2 a,Vec2 b) {return std::make_shared<BSplineCurve<2>>(1,std::vector<double>{0,0,1,1},std::vector<Vec2>{a,b});}
+Body fixture(bool rational) {
+ std::vector<Vec2> poles;std::vector<double> weights;
+ for(int i=0;i<28;++i){double x=i/27.,w=rational?1+.5*x:1;double numerator=x+(rational?.5*i*(i-1.)/(27*26.):0);poles.emplace_back(numerator/w,z27[i]/w);if(rational)weights.push_back(w);}
+ std::vector<double> knots(28,0);knots.insert(knots.end(),28,1);
+ CurvePtr<2> uv=std::make_shared<BSplineCurve<2>>(27,knots,poles,weights);
+ std::vector<CurvePtr<2>> pcs{uv,straight({1,0},{1,1}),straight({1,1},{0,1}),straight({0,1},{0,0})};
+ std::vector<Vec3> vertices{{0,0,0},{1,0,0},{1,1,0},{0,1,0}};std::vector<Body::BuildEdge> edges;Body::BuildFace face;face.surface=std::make_shared<Plane>(Frame3());std::vector<Body::BuildFin> fins;
+ for(int i=0;i<4;++i){edges.push_back({i,(i+1)%4,embedCurve(pcs[i],Frame3()),{0,1},1e-9});fins.push_back({i,true,pcs[i],1e-9});}
+ face.loops={fins};return Body::buildSheet(vertices,edges,{face});
+}
+int main(){std::cout<<std::setprecision(17);for(bool rational:{false,true}){auto source=fixture(rational);const auto before=writeBodyBinary(source);std::cout<<"rational="<<rational<<" source_issues="<<checkBody(source,{true,true}).size()<<std::endl;try{SurfaceQuiltMap map({{&source,source.faces().front()}},{0,0});SurfaceFlattenStats stats;BodyHistory history;const auto result=map.flattenSheet(Frame3(),1e-6,&stats,&history);double error=0,best=0;Vec3 witness;const auto &fin=source.fin(source.fins().front());for(int i=0;i<=10000;++i){double t=i/10000.;const auto uv=fin.pcurve->point(t);const auto q=map.flatten(0,uv);Vec3 exact(q.x(),q.y(),0);double e=distance(exact,result.edge(result.edges().front()).curve->point(t));if(e>error){error=e;best=t;witness=exact;}}double geometry=INFINITY;for(auto id:result.edges()){const auto&e=result.edge(id);geometry=std::min(geometry,projectPoint(*e.curve,witness,e.range).distance);}double hullLower=INFINITY;for(auto id:result.edges()){const auto&e=result.edge(id);const Curve<3>*c=e.curve.get();while(c->type()==CurveType::Trimmed)c=static_cast<const TrimmedCurve<3>*>(c)->basis().get();const auto*b=dynamic_cast<const BSplineCurve<3>*>(c);if(!b)throw std::runtime_error("output not spline");Vec3 lo=b->poles()[0],hi=lo;for(const auto&p:b->poles())for(int j=0;j<3;++j){lo[j]=std::min(lo[j],p[j]);hi[j]=std::max(hi[j],p[j]);}double square=0;for(int j=0;j<3;++j){double delta=std::max({0.,lo[j]-witness[j],witness[j]-hi[j]});square+=delta*delta;}hullLower=std::min(hullLower,std::sqrt(square));}std::cout<<" output_edges="<<result.edges().size()<<" control_hull_geometric_lower="<<hullLower<<"\n";std::cout<<" accepted=1 reported="<<stats.boundaryDeviation<<" same_param_error="<<error<<" geometric_error="<<geometry<<" witness_t="<<best<<" result_issues="<<checkBody(result,{true,true}).size()<<" samples="<<stats.samples<<" min_stretch="<<stats.minimumStretch<<" max_stretch="<<stats.maximumStretch<<" history_faces="<<history.resultSize(EntityKind::Face)<<" source_immutable="<<(before==writeBodyBinary(source))<<std::endl;}catch(const std::exception&e){std::cout<<" accepted=0 reason="<<e.what()<<std::endl;}}}

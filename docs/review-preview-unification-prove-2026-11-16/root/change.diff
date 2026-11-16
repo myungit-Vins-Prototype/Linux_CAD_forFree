@@ -1,0 +1,899 @@
+--- before/CLAUDE.md
++++ after/CLAUDE.md
+@@ -108,14 +108,22 @@
+ 
+ ## Ultimi interventi — esiti consolidati
+ 
++**16/11 — Anteprime e residuo UI2 completati con tre agenti Sol.**
++Shell zero/recupero e Filettatura: stati corretti (PRE5/PRE6); 26 rilievi corretti.
++Undici runner comuni, setup dopo guardia, footer fisso e chiusura sincrona;
++UI2 esteso senza ricontarlo. App/runner completi, 24 CTest e 115 asserzioni
++su oggetti app offscreen/Wayland PASS. Fixture limita l'area scorrevole;
++primo 110/115 e diagnosi compositor conservati. Mappa 762/11023/380, check/HTML/archi
++e 2929/2938 file invariati. Orfane: 5 private/locali, 17 API senza usi interni;
++nessuna rimozione. [Prove e limiti](docs/review-preview-unification-2026-11-16.md).
++Nuova richiesta: booleana Supporto.prt, Corpo 2/3 loft; indagine su copia,
++originale preservato. Esito geometrico ancora da stabilire.
++
+ **16/11 — Ellisse per estremi completata con tre agenti GPT-6.1 Sol.**
+-Nuovo comando Schizzo:3 clic,4 estremi reali quotabili/vincolabili,centro derivato,
+-5 DOF,conica analitica,drag/anteprima/snap eTaglia. Codec70 legge i precedenti;
+-impronte tavole69 riconosciute anche con precisione diversa evisibilita multipla.
+-Build completa app/runner,24 CTest,probe core/Taglia/hash69,sanitizer mirati4TU
+-eWayland/GL PASS; mappa/check/HTML/archi PASS. 2669/2687 file invariati.
+-App aggiornata:riaprire. Poi proseguire i punti aperti della review su richiesta.
+-K10 rimane aperto nel rapporto sotto.
++Tre clic,4punti reali quotabili/vincolabili,centro derivato,5DOF,conica
++analitica;drag/anteprima/snap/Taglia. Codec70 legge precedenti eimpronte69.
++App/runner,24CTest,probe core/Taglia/hash69,sanitizer4TU eWayland/GL PASS;
++mappa/check/HTML/archi e2669/2687file invariati. Riaprire l'app aggiornata.
+ [Uso,prove e limiti](docs/ellisse-estremi-2026-11-16.md),
+ [memoria conservata](docs/history/claude-prima-ellisse-estremi-2026-11-16.md).
+ 
+@@ -159,13 +167,10 @@
+ App aggiornata allora; gli altri rilievi iniziali sono stati corretti negli interventi sopra.
+ [Correzioni, prove e limiti](docs/cache-bspline-2026-11-15.md).
+ 
+-**15/11 — Review con 4 agenti, incluse anteprime.** 19 difetti (5 P1, 12 P2, 2 P3) e 22 orfane
+-ricontrollate. Sweep deformato/sovrapposto e cucitura UV; memoria M1/M2; solver non finito e UI.
+-Tre P2 anteprime: estrusione vecchia pronta, Loft senza worker, sorgenti mapping incoerenti;
+-matrice 15 gruppi. 45 test mirati PASS (recupero fuori sandbox), 16 Sweep correnti PASS; 475 solo baseline
+-precedente. Mappa 723/10397/352TU PASS. Nessun leak permanente certificato né nuovo test OpenGL;
+-review mirata. [Review, prove e limiti](docs/code-review-2026-11-15.md),
+-[anteprime](docs/review-2026-11-15/anteprime.md). Stato successivo sopra.
++**15/11 — Review iniziale con quattro agenti.** 19difetti e22candidate orfane;
++45test mirati,16Sweep,mappa723/10397 PASS; nessunleak permanente certificato.
++Stato eprove storiche nel [rapporto](docs/code-review-2026-11-15.md) e nella
++[memoria conservata](docs/history/claude-prima-preview-unification-2026-11-16.md).
+ 
+ **15/11 — exhaustMainfold, sweep e vincoli.** Frame Bishop e tangenza tramite catene Coincidente
+ implementati; 96 casi/scale/pose, codec, Undo/Redo, app e mappa verificati. CAD originale invariato;
+@@ -180,11 +185,7 @@
+ [sezioni e snap](docs/sezione-locale-snap-profondita-2026-11-14.md).
+ Esiti,limiti eprove estese nella [memoria conservata](docs/history/claude-prima-k10-edge-offset-2026-11-16.md).
+ 
+-Part23/raccordi/storyboard14/11: esiti, limiti e riferimenti nella [memoria prima della prosecuzione review](docs/history/claude-prima-review-next-2026-11-15.md).
+-
+-Contorno apparente13/11: dettagli nella [memoria prima delle correzioni sweep](docs/history/claude-prima-sweep-review-fix-2026-11-15.md).
+-
+-Riferimenti/anteprime13/11: esiti e limiti nell’[archivio prima delle schede](docs/history/claude-prima-schede-2026-11-14.md).
+-
+-Interventi11–12/11 (Applicatore4, poli NURBS, memoria, KnifeHandle e quote2D): esiti, limiti e rapporti
+-conservati nella [memoria precedente alla review](docs/history/claude-prima-review-2026-11-15.md).
++Archivi precedenti: [Part23/raccordi/storyboard](docs/history/claude-prima-review-next-2026-11-15.md),
++[contorno apparente](docs/history/claude-prima-sweep-review-fix-2026-11-15.md),
++[riferimenti/anteprime](docs/history/claude-prima-schede-2026-11-14.md),
++[Applicatore4, poli, memoria, KnifeHandle e quote2D](docs/history/claude-prima-review-2026-11-15.md).
+--- before/docs/code-review-2026-11-15.md
++++ after/docs/code-review-2026-11-15.md
+@@ -1,6 +1,6 @@
+ # Review generale ForgeCAD — 15 novembre 2026
+ 
+-**Stato più recente, 16 novembre:** [K10 offset dei bordi di estrusione](curve-fit-k10-edge-offset-2026-11-16.md) certifica gli originali edge/generatore/SP-curve separati e ricontrolla i poli dopo assemblaggio. App completa,18regressioni,24CTest,sanitizer mirati e40curve/301campate indipendenti PASS. **15/24 siti iniziali parzialmente trattati,9 interamente da migrare**, oltre ai fallback; K10 resta aperto. Restano24 rilievi precedenti corretti e22orfane candidate; uniformazione completa UI/anteprime aperta. K2 in produzione. Aggiunta e verificata anche l’[ellisse per estremi](ellisse-estremi-2026-11-16.md), con quattro punti quotabili/vincolabili e centro derivato.
++**Stato più recente, 16 novembre:** [anteprime e pannelli](review-preview-unification-2026-11-16.md): PRE5/PRE6 corretti e copertura residua di UI2 estesa a undici runner; **26 rilievi confermati corretti complessivamente**. Build completa, 24 CTest e 115 asserzioni su oggetti app effettivi offscreen/Wayland PASS. [Orfane ricontrollate](review-orphans-refresh-2026-11-16.md): 5 private/locali e 17 API pubbliche senza usi interni, nessuna rimozione. [K10 offset dei bordi di estrusione](curve-fit-k10-edge-offset-2026-11-16.md): originali edge/generatore/SP-curve separati, controllo dei poli dopo assemblaggio; **15/24 siti iniziali parzialmente trattati, 9 interamente da migrare**, oltre ai fallback. K10 e l’uniformazione completa delle anteprime restano aperti. K2 in produzione; [ellisse per estremi](ellisse-estremi-2026-11-16.md) completata con quattro punti quotabili/vincolabili e centro derivato.
+ 
+ **Aggiornamento successivo:** i cinque rilievi della [seconda review](review-followup-2026-11-15.md) K7/K8/K9/PRE4/UI7 sono corretti: **24 difetti precedenti corretti complessivamente**. La [prosecuzione K10](curve-fit-k10-2026-11-15.md) corregge il fit degli offset NURBS di estrusioni/rivoluzioni con controllo continuo, input finiti e fallimenti atomici; build completa e regressioni PASS. **K10 resta aperto per i chiamanti generici ancora campionati**. Le 22 orfane restano candidati distinti. Stato storico della prima review sotto.
+ 
+--- before/forgeCad2026_dialogs.h
++++ after/forgeCad2026_dialogs.h
+@@ -96,7 +96,10 @@
+ // Blocco dell'interfaccia durante una finestra "leggera" (non modale, per
+ // lasciare la vista attiva alla scelta dei riferimenti): menu, barre, albero e
+ // tutte le azioni (anche le scorciatoie) spenti; la vista senza menu contestuali.
++// L'overload con setup lo esegue solo dopo la guardia fra documenti, il blocco
++// della finestra e show(); quello a tre argomenti conserva API e simbolo esistenti.
+ bool runModeless(QMainWindow *window, CadViewport *viewport, QDialog &dialog);
++bool runModeless(QMainWindow *window, CadViewport *viewport, QDialog &dialog, const std::function<void()> &onShown);
+ 
+ // Piano di costruzione (nuovo, o al posto del corpo `replaced`): tipo,
+ // riferimenti scelti nella vista (la finestra resta aperta e la vista attiva:
+--- before/forgeCad2026_dialogs_analysis.cpp
++++ after/forgeCad2026_dialogs_analysis.cpp
+@@ -159,20 +159,22 @@
+                                                            -1);
+         if (!error.isEmpty()) results->setText(error);
+     };
+-    viewport->setReferencePickCallback([&](bool picked, GeometryRef ref) {
+-        if (picked) {
+-            int existing = -1;
+-            for (int k = 0; k < refs.size(); ++k)
+-                if (same(refs.at(k), ref)) existing = k;
+-            if (existing >= 0) refs.remove(existing);
+-            else if (refs.size() >= 2) refs = {ref};
+-            else refs.append(ref);
+-        } else {
+-            refs.clear();
+-        }
+-        refresh();
+-        pick();
+-    });
++    const auto installPicker = [&] {
++        viewport->setReferencePickCallback([&](bool picked, GeometryRef ref) {
++            if (picked) {
++                int existing = -1;
++                for (int k = 0; k < refs.size(); ++k)
++                    if (same(refs.at(k), ref)) existing = k;
++                if (existing >= 0) refs.remove(existing);
++                else if (refs.size() >= 2) refs = {ref};
++                else refs.append(ref);
++            } else {
++                refs.clear();
++            }
++            refresh();
++            pick();
++        });
++    };
+     QObject::connect(clearButton, &QPushButton::clicked, &dialog, [&] {
+         refs.clear();
+         refresh();
+@@ -184,15 +186,11 @@
+     QObject::connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+     // Un oggetto selezionato prima del comando e' gia' la prima entita'? No: la
+     // selezione della vista non dice quale spigolo o faccia; si parte da zero.
+-    {
+-        const WindowLock lock(window, viewport, &dialog);
+-        dialog.show();
++    runModeless(window, viewport, dialog, [&] {
++        installPicker();
+         refresh();
+         pick();
+-        QEventLoop loop;
+-        QObject::connect(&dialog, &QDialog::finished, &loop, &QEventLoop::quit);
+-        loop.exec();
+-    }
++    });
+     viewport->cancelReferencePick();
+     viewport->setReferencePickCallback(nullptr);
+     viewport->setReferenceMarks({});
+--- before/forgeCad2026_dialogs_common.cpp
++++ after/forgeCad2026_dialogs_common.cpp
+@@ -232,6 +232,29 @@
+ }
+ 
+ namespace {
++// Anche un'anteprima creata dopo show() resta nel footer fisso. Il controllo
++// della riga rende il passaggio idempotente a riaperture e refresh del layout.
++void movePreviewMessageToFooter(QDialog &dialog, QFormLayout *form) {
++    if (!form) return;
++    auto *preview = dynamic_cast<FunctionMessage *>(dialog.findChild<QPlainTextEdit *>(QStringLiteral("functionPreviewMessage")));
++    auto *root = dynamic_cast<QVBoxLayout *>(dialog.layout());
++    if (!preview || !root) return;
++    int row = -1;
++    QFormLayout::ItemRole role;
++    form->getWidgetPosition(preview, &row, &role);
++    if (row < 0) return;
++    const auto taken = form->takeRow(row);
++    auto *note = new QWidget(&dialog);
++    note->setObjectName(QStringLiteral("functionPreviewFooter"));
++    auto *line = new QHBoxLayout(note);
++    line->setContentsMargins(0, 10, 0, 0);
++    if (taken.labelItem && taken.labelItem->widget()) line->addWidget(taken.labelItem->widget());
++    line->addWidget(preview, 1);
++    delete taken.labelItem;
++    delete taken.fieldItem;
++    root->insertWidget(qMax(0, root->count() - 1), note);
++}
++
+ // Indicatore esplicito: alcuni temi non disegnano CE_SizeGrip nei pannelli figli.
+ class PanelResizeGrip final : public QSizeGrip {
+ public:
+@@ -588,20 +611,7 @@
+             static_cast<QVBoxLayout *>(layout())->addWidget(buttons);
+         }
+     }
+-    if (form_) if (auto *preview = dynamic_cast<FunctionMessage *>(findChild<QPlainTextEdit *>(QStringLiteral("functionPreviewMessage")))) {
+-        int row = -1; QFormLayout::ItemRole role;
+-        form_->getWidgetPosition(preview, &row, &role);
+-        if (row >= 0) {
+-            auto taken = form_->takeRow(row);
+-            auto *note = new QWidget(this); auto *line = new QHBoxLayout(note);
+-            line->setContentsMargins(0, 10, 0, 0);
+-            if (taken.labelItem) line->addWidget(taken.labelItem->widget());
+-            line->addWidget(preview, 1);
+-            delete taken.labelItem; delete taken.fieldItem;
+-            auto *root = static_cast<QVBoxLayout *>(layout());
+-            root->insertWidget(qMax(0, root->count() - 1), note);
+-        }
+-    }
++    movePreviewMessageToFooter(*this, form_);
+     dockSide_ = qBound(0, QSettings().value(QStringLiteral("view/functionPanelDockSide"), 0).toInt(), 2);
+     fullHeight_ = QSettings().value(QStringLiteral("view/functionPanelFullHeight"), false).toBool();
+     initializePanelSize();
+@@ -1253,6 +1263,8 @@
+     } else {
+         form->addRow(QStringLiteral("Anteprima:"), label);
+     }
++    if (!outside && dialog.isVisible() && dynamic_cast<FunctionDialogPanel *>(&dialog))
++        movePreviewMessageToFooter(dialog, form);
+     FunctionMessage *status = label;
+     viewport->setPreviewCallback([status](const QString &error) {
+         status->setText(error.isEmpty() ? QStringLiteral("pronta (in ambra nella vista)") : QStringLiteral("non riuscita: ") + error);
+@@ -1659,6 +1671,10 @@
+ }
+ 
+ bool runModeless(QMainWindow *window, CadViewport *viewport, QDialog &dialog) {
++    return runModeless(window, viewport, dialog, {});
++}
++
++bool runModeless(QMainWindow *window, CadViewport *viewport, QDialog &dialog, const std::function<void()> &onShown) {
+     // I chiamanti mantengono picker/anteprime e cleanup sul proprio stack.
+     // Un loop annidato in un altro documento ne ritarderebbe la distruzione:
+     // finche' i runner sono sincroni, un solo workspace puo' eseguirli.
+@@ -1684,11 +1700,18 @@
+     // anche quando il viewport riceve il focus per ruotare la vista.
+     if (dialog.isWindow()) dialog.setWindowFlag(Qt::Tool, true);
+     dialog.setModal(false);
++    QEventLoop loop;
++    bool finished = false;
++    // showEvent e l'inizializzazione possono confermare/annullare subito.
++    // Registrare finished prima di entrambi evita un'attesa senza eventi.
++    QObject::connect(&dialog, &QDialog::finished, &loop, [&] {
++        finished = true;
++        loop.quit();
++    });
+     const WindowLock lock(window, viewport, &dialog);
+     dialog.show();
+-    QEventLoop loop;
+-    QObject::connect(&dialog, &QDialog::finished, &loop, &QEventLoop::quit);
+-    loop.exec();
++    if (!finished && onShown) onShown();
++    if (!finished) loop.exec();
+     return dialog.result() == QDialog::Accepted;
+ }
+ 
+--- before/forgeCad2026_dialogs_sketch.cpp
++++ after/forgeCad2026_dialogs_sketch.cpp
+@@ -396,16 +396,18 @@
+         for (int k = 0; k < r.size(); ++k)
+             if (d.refs.at(k).kind >= 0 && !(ForgeCad::geometryRefRoles(d.refs.at(k), viewport->sketches()) & r.at(k))) d.refs[k] = GeometryRef();
+     };
+-    viewport->setReferencePickCallback([&](bool picked, GeometryRef ref) {
+-        if (picked && active >= 0 && active < d.refs.size()) {
+-            d.refs[active] = ref;
+-            active = -1;
+-            pickMissing();
+-        } else {
+-            active = -1;
+-            refresh();
+-        }
+-    });
++    const auto installPicker = [&] {
++        viewport->setReferencePickCallback([&](bool picked, GeometryRef ref) {
++            if (picked && active >= 0 && active < d.refs.size()) {
++                d.refs[active] = ref;
++                active = -1;
++                pickMissing();
++            } else {
++                active = -1;
++                refresh();
++            }
++        });
++    };
+     for (int k = 0; k < 3; ++k) {
+         QObject::connect(refButtons.at(k), &QPushButton::clicked, &dialog, [&, k] { pick(k); });
+         QObject::connect(clearButtons.at(k), &QToolButton::clicked, &dialog, [&, k] {
+@@ -435,17 +437,11 @@
+         if (error.isEmpty()) dialog.accept();
+         else setStatus(error, true);
+     });
+-    fitRefs();
+-    bool accepted = false;
+-    {
+-        const WindowLock lock(window, viewport, &dialog);
+-        dialog.show();
++    const bool accepted = runModeless(window, viewport, dialog, [&] {
++        installPicker();
++        fitRefs();
+         pickMissing();
+-        QEventLoop loop;
+-        QObject::connect(&dialog, &QDialog::finished, &loop, &QEventLoop::quit);
+-        loop.exec();
+-        accepted = dialog.result() == QDialog::Accepted;
+-    }
++    });
+     viewport->cancelReferencePick();
+     viewport->setReferencePickCallback(nullptr);
+     viewport->clearDatumPreview();
+--- before/forgeCad2026_dialogs_solids.cpp
++++ after/forgeCad2026_dialogs_solids.cpp
+@@ -500,7 +500,7 @@
+     form->addRow(status);
+     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
+     form->addRow(buttons);
+-    auto scope = std::make_unique<PreviewScope>(viewport, dialog, form, replaced);
++    std::unique_ptr<PreviewScope> scope;
+ 
+     int active = -1;  // riferimento in scelta nella vista
+     const auto roles = [&](int slot) {
+@@ -689,15 +689,17 @@
+         }
+         refresh();
+     };
+-    viewport->setReferencePickCallback([&](bool picked, GeometryRef ref) {
+-        if (picker.handle(picked, ref)) return;
+-        if (picked && active >= 0) {
+-            if (ForgeCad::geometryRefRoles(ref, viewport->sketches()) & roles(active)) p.refs[active] = ref;
+-            else setStatus(QStringLiteral("Questo riferimento non va bene qui."), true);
+-        }
+-        active = -1;
+-        refresh();
+-    });
++    const auto installPicker = [&] {
++        viewport->setReferencePickCallback([&](bool picked, GeometryRef ref) {
++            if (picker.handle(picked, ref)) return;
++            if (picked && active >= 0) {
++                if (ForgeCad::geometryRefRoles(ref, viewport->sketches()) & roles(active)) p.refs[active] = ref;
++                else setStatus(QStringLiteral("Questo riferimento non va bene qui."), true);
++            }
++            active = -1;
++            refresh();
++        });
++    };
+     QObject::connect(sourceStep, &QPushButton::clicked, &dialog, [&] { picker.start(); refresh(); });
+     QObject::connect(referenceStep, &QPushButton::clicked, &dialog, [&] { pick(0); });
+     QObject::connect(parametersStep, &QPushButton::clicked, &dialog, [&] {
+@@ -737,11 +739,12 @@
+         if (error.isEmpty()) dialog.accept();
+         else setStatus(error, true);
+     });
+-    bool accepted = false;
+-    {
+-        const WindowLock lock(window, viewport, &dialog);
+-        QDockWidget *dock = window->findChild<QDockWidget *>(QStringLiteral("modelDock"));
+-        auto *tree = dock ? dynamic_cast<StoryboardTree *>(dock->widget()) : nullptr;
++    QDockWidget *dock = window->findChild<QDockWidget *>(QStringLiteral("modelDock"));
++    auto *tree = dock ? dynamic_cast<StoryboardTree *>(dock->widget()) : nullptr;
++    const bool dockWasEnabled = dock && dock->isEnabled();
++    const bool accepted = runModeless(window, viewport, dialog, [&] {
++        scope = std::make_unique<PreviewScope>(viewport, dialog, form, replaced);
++        installPicker();
+         if (tree) {
+             tree->setSourcePickCallback([&](int index, bool whole) {
+                 if (whole) index = viewport->modelBodyTip(index);
+@@ -755,14 +758,12 @@
+             });
+             dock->setEnabled(true);
+         }
+-        dialog.show();
+         if (replaced < 0 && !preselected) picker.start(true);
+         refresh();
+-        QEventLoop loop;
+-        QObject::connect(&dialog, &QDialog::finished, &loop, &QEventLoop::quit);
+-        loop.exec();
+-        accepted = dialog.result() == QDialog::Accepted;
+-        if (tree) { tree->setSourcePickCallback({}); dock->setEnabled(false); }
++    });
++    if (tree) {
++        tree->setSourcePickCallback({});
++        dock->setEnabled(dockWasEnabled);
+     }
+     viewport->cancelReferencePick();
+     viewport->setReferencePickCallback(nullptr);
+@@ -856,7 +857,7 @@
+     form->addRow(status);
+     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
+     form->addRow(buttons);
+-    auto scope = std::make_unique<PreviewScope>(viewport, dialog, form, replaced);
++    std::unique_ptr<PreviewScope> scope;
+     bool picking = false;
+     const auto roles = [&] {
+         const int extent = extentBox->currentIndex();
+@@ -965,15 +966,17 @@
+         }
+         refresh();
+     };
+-    viewport->setReferencePickCallback([&](bool picked, GeometryRef ref) {
+-        if (picker.handle(picked, ref)) return;
+-        if (picked && picking) {
+-            if (ForgeCad::geometryRefRoles(ref, viewport->sketches()) & roles()) definition.extentRef = ref;
+-            else setStatus(QStringLiteral("Questo riferimento non va bene qui."), true);
+-        }
+-        picking = false;
+-        refresh();
+-    });
++    const auto installPicker = [&] {
++        viewport->setReferencePickCallback([&](bool picked, GeometryRef ref) {
++            if (picker.handle(picked, ref)) return;
++            if (picked && picking) {
++                if (ForgeCad::geometryRefRoles(ref, viewport->sketches()) & roles()) definition.extentRef = ref;
++                else setStatus(QStringLiteral("Questo riferimento non va bene qui."), true);
++            }
++            picking = false;
++            refresh();
++        });
++    };
+     QObject::connect(refButton, &QPushButton::clicked, &dialog, pick);
+     QObject::connect(extentBox, &QComboBox::currentIndexChanged, &dialog, [&](int extent) {
+         if (picking) viewport->cancelReferencePick();
+@@ -1040,16 +1043,11 @@
+         if (error.isEmpty()) dialog.accept();
+         else setStatus(error, true);
+     });
+-    bool accepted = false;
+-    {
+-        const WindowLock lock(window, viewport, &dialog);
+-        dialog.show();
+-        refresh();
+-        QEventLoop loop;
+-        QObject::connect(&dialog, &QDialog::finished, &loop, &QEventLoop::quit);
+-        loop.exec();
+-        accepted = dialog.result() == QDialog::Accepted;
+-    }
++    const bool accepted = runModeless(window, viewport, dialog, [&] {
++        scope = std::make_unique<PreviewScope>(viewport, dialog, form, replaced);
++        installPicker();
++        refresh();
++    });
+     viewport->cancelReferencePick();
+     viewport->setReferencePickCallback(nullptr);
+     viewport->setReferenceMarks({});
+@@ -1113,7 +1111,7 @@
+     form->addRow(status);
+     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
+     form->addRow(buttons);
+-    auto scope = std::make_unique<PreviewScope>(viewport, dialog, form, replaced);
++    std::unique_ptr<PreviewScope> scope;
+     bool picking = false;
+     const auto setStatus = [status](const QString &text, bool error) {
+         setFunctionMessageRole(status, error ? FunctionMessageRole::Error : FunctionMessageRole::Information);
+@@ -1146,15 +1144,17 @@
+     picker.changed = refresh;
+     picker.message = setStatus;
+     picker.starting = [&] { picking = false; };
+-    viewport->setReferencePickCallback([&](bool picked, GeometryRef ref) {
+-        if (picker.handle(picked, ref)) return;
+-        if (picked && picking) {
+-            if (ForgeCad::geometryRefRoles(ref, viewport->sketches()) & ForgeCad::DatumRoleLine) definition.move.axis = ref;
+-            else setStatus(QStringLiteral("Serve una retta."), true);
+-        }
+-        picking = false;
+-        refresh();
+-    });
++    const auto installPicker = [&] {
++        viewport->setReferencePickCallback([&](bool picked, GeometryRef ref) {
++            if (picker.handle(picked, ref)) return;
++            if (picked && picking) {
++                if (ForgeCad::geometryRefRoles(ref, viewport->sketches()) & ForgeCad::DatumRoleLine) definition.move.axis = ref;
++                else setStatus(QStringLiteral("Serve una retta."), true);
++            }
++            picking = false;
++            refresh();
++        });
++    };
+     QObject::connect(axisButton, &QPushButton::clicked, &dialog, [&] {
+         picker.stop();
+         picking = true;
+@@ -1178,17 +1178,12 @@
+         if (error.isEmpty()) dialog.accept();
+         else setStatus(error, true);
+     });
+-    bool accepted = false;
+-    {
+-        const WindowLock lock(window, viewport, &dialog);
+-        dialog.show();
++    const bool accepted = runModeless(window, viewport, dialog, [&] {
++        scope = std::make_unique<PreviewScope>(viewport, dialog, form, replaced);
++        installPicker();
+         if (replaced < 0 && !preselected) picker.start(true);
+         refresh();
+-        QEventLoop loop;
+-        QObject::connect(&dialog, &QDialog::finished, &loop, &QEventLoop::quit);
+-        loop.exec();
+-        accepted = dialog.result() == QDialog::Accepted;
+-    }
++    });
+     viewport->cancelReferencePick();
+     viewport->setReferencePickCallback(nullptr);
+     viewport->setReferenceMarks({});
+@@ -1332,7 +1327,7 @@
+     form->addRow(wrappedNote(QStringLiteral("La geometria usa il profilo nominale. Tolleranze, giochi e maggiorazioni di lavorazione restano a carico del processo produttivo."), &dialog));
+     form->addRow(status);
+     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog); form->addRow(buttons);
+-    const PreviewScope scope(viewport, dialog, form, replaced);
++    std::unique_ptr<PreviewScope> scope;
+ 
+     ForgeCad::ThreadFaceInfo faceInfo;
+     bool faceValid = false, picking = false, initializing = true;
+@@ -1389,10 +1384,10 @@
+         QVector<GeometryRef> marks;
+         if (faceValid) marks.append(GeometryRef{5, candidates.at(bodyBox->currentIndex()), {}, definition.thread.face});
+         viewport->setReferenceMarks(marks);
+-        if (picking) { setStatus(QStringLiteral("Clicca la faccia cilindrica o conica del foro o dell'albero; Esc annulla la scelta."), false); viewport->clearPreview(); return; }
+-        if (!faceValid) { setStatus(QStringLiteral("Seleziona una faccia cilindrica o conica."), true); viewport->clearPreview(); return; }
++        if (picking) { setStatus(QStringLiteral("Clicca la faccia cilindrica o conica del foro o dell'albero; Esc annulla la scelta."), false); scope->label->setText(QStringLiteral("scegli la faccia nella vista")); viewport->clearPreview(); return; }
++        if (!faceValid) { setStatus(QStringLiteral("Seleziona una faccia cilindrica o conica."), true); scope->label->setText(QStringLiteral("seleziona una faccia cilindrica o conica")); viewport->clearPreview(); return; }
+         setStatus(QString(), false);
+-        scope.request(current());
++        scope->request(current());
+     };
+     const auto beginPick = [&] {
+         picking = true; refresh();
+@@ -1400,21 +1395,23 @@
+         if (!error.isEmpty()) { picking = false; setStatus(error, true); }
+         refresh();
+     };
+-    viewport->setReferencePickCallback([&](bool picked, GeometryRef ref) {
+-        picking = false;
+-        if (picked && ref.kind == 5) {
+-            const int body = resultBodyForPick(viewport, candidates, ref.index);
+-            if (body >= 0) {
+-                bodyBox->setCurrentIndex(candidates.indexOf(body));
+-                definition.firstBody = body;
+-                definition.thread.face = ref.point;
+-                const QString error = readFace();
+-                populateSizes();
+-                if (!faceValid) setStatus(error, true);
++    const auto installPicker = [&] {
++        viewport->setReferencePickCallback([&](bool picked, GeometryRef ref) {
++            picking = false;
++            if (picked && ref.kind == 5) {
++                const int body = resultBodyForPick(viewport, candidates, ref.index);
++                if (body >= 0) {
++                    bodyBox->setCurrentIndex(candidates.indexOf(body));
++                    definition.firstBody = body;
++                    definition.thread.face = ref.point;
++                    const QString error = readFace();
++                    populateSizes();
++                    if (!faceValid) setStatus(error, true);
++                }
+             }
+-        }
+-        refresh();
+-    });
++            refresh();
++        });
++    };
+     QObject::connect(faceButton, &QPushButton::clicked, &dialog, [&] { if (picking) { picking = false; viewport->cancelReferencePick(); refresh(); } else beginPick(); });
+     QObject::connect(bodyBox, &QComboBox::currentIndexChanged, &dialog, [&] { definition.thread.face = {}; readFace(); populateSizes(); refresh(); });
+     QObject::connect(standardBox, &QComboBox::currentIndexChanged, &dialog, [&] { definition.thread.designation.clear(); populateSizes(); refresh(); });
+@@ -1429,10 +1426,15 @@
+         QApplication::setOverrideCursor(Qt::WaitCursor); const QString error = apply(current()); QApplication::restoreOverrideCursor();
+         if (error.isEmpty()) dialog.accept(); else setStatus(error, true);
+     });
+-    readFace(); populateSizes(); initializing = false; refresh();
+-    if (!faceValid && replaced < 0) QTimer::singleShot(0, &dialog, beginPick);
+-    bool accepted = false;
+-    { const WindowLock lock(window, viewport, &dialog); dialog.show(); refresh(); QEventLoop loop; QObject::connect(&dialog, &QDialog::finished, &loop, &QEventLoop::quit); loop.exec(); accepted = dialog.result() == QDialog::Accepted; }
++    const bool accepted = runModeless(window, viewport, dialog, [&] {
++        scope = std::make_unique<PreviewScope>(viewport, dialog, form, replaced);
++        installPicker();
++        readFace();
++        populateSizes();
++        initializing = false;
++        if (!faceValid && replaced < 0) beginPick();
++        else refresh();
++    });
+     viewport->cancelReferencePick(); viewport->setReferencePickCallback(nullptr); viewport->setReferenceMarks({});
+     return accepted;
+ }
+--- before/forgeCad2026_dialogs_surfaces.cpp
++++ after/forgeCad2026_dialogs_surfaces.cpp
+@@ -1203,7 +1203,7 @@
+     form->addRow(status);
+     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
+     form->addRow(buttons);
+-    auto scope = std::make_unique<PreviewScope>(viewport, dialog, form, replaced);
++    std::unique_ptr<PreviewScope> scope;
+     bool picking = false;
+     const auto setStatus = [status](const QString &text, bool error) {
+         setFunctionMessageRole(status, error ? FunctionMessageRole::Error : FunctionMessageRole::Information);
+@@ -1262,8 +1262,10 @@
+                 viewport->clearPreview();
+             } else if (shell && !(distanceBox->value() > 0.0)) {
+                 setStatus(QStringLiteral("Lo spessore deve essere maggiore di zero."), true);
++                scope->label->setText(QStringLiteral("scegli uno spessore maggiore di zero"));
+                 viewport->clearPreview();
+             } else {
++                setStatus(QString(), false);
+                 scope->request(current());
+             }
+             return;
+@@ -1275,46 +1277,48 @@
+         picking = error.isEmpty();
+         if (!picking) setStatus(error, true);
+     };
+-    viewport->setReferencePickCallback([&](bool picked, GeometryRef ref) {
+-        if (!picked) {
+-            picking = false;
+-            setStatus(QString(), false);
+-            refresh();
+-            return;
+-        }
+-        const int body = ref.kind == 5 ? resultBodyForPick(viewport, candidates, ref.index) : -1;
+-        if (body < 0) {
+-            setStatus(QStringLiteral("Serve una faccia di un corpo adatto (in questo punto della storia)."), true);
+-        } else {
+-            ref.index = body;
+-            if (waiting) definition.offsetFaces.clear();
+-            waiting = false;
+-            if (ref.index != definition.firstBody && replaced >= 0) {
+-                setStatus(QStringLiteral("In modifica il corpo resta quello della funzione."), true);
+-                startPicking();
++    const auto installPicker = [&] {
++        viewport->setReferencePickCallback([&](bool picked, GeometryRef ref) {
++            if (!picked) {
++                picking = false;
++                setStatus(QString(), false);
+                 refresh();
+                 return;
+             }
+-            if (ref.index != definition.firstBody) {
+-                // Le facce di un altro corpo: la scelta riparte da li'.
+-                definition.offsetFaces.clear();
+-                definition.firstBody = ref.index;
+-                if (bodyBox) {
+-                    const QSignalBlocker blocker(bodyBox);
+-                    bodyBox->setCurrentIndex(int(candidates.indexOf(ref.index)));
++            const int body = ref.kind == 5 ? resultBodyForPick(viewport, candidates, ref.index) : -1;
++            if (body < 0) {
++                setStatus(QStringLiteral("Serve una faccia di un corpo adatto (in questo punto della storia)."), true);
++            } else {
++                ref.index = body;
++                if (waiting) definition.offsetFaces.clear();
++                waiting = false;
++                if (ref.index != definition.firstBody && replaced >= 0) {
++                    setStatus(QStringLiteral("In modifica il corpo resta quello della funzione."), true);
++                    startPicking();
++                    refresh();
++                    return;
+                 }
++                if (ref.index != definition.firstBody) {
++                    // Le facce di un altro corpo: la scelta riparte da li'.
++                    definition.offsetFaces.clear();
++                    definition.firstBody = ref.index;
++                    if (bodyBox) {
++                        const QSignalBlocker blocker(bodyBox);
++                        bodyBox->setCurrentIndex(int(candidates.indexOf(ref.index)));
++                    }
++                }
++                const ForgeCad::Kernel::FaceId face = faceOf(ref.point);
++                int existing = -1;
++                for (int k = 0; k < definition.offsetFaces.size() && existing < 0; ++k)
++                    if (face.valid() && faceOf(definition.offsetFaces.at(k)) == face) existing = k;
++                if (existing >= 0) definition.offsetFaces.remove(existing);
++                else definition.offsetFaces.append(ref.point);
++                setStatus(QString(), false);
+             }
+-            const ForgeCad::Kernel::FaceId face = faceOf(ref.point);
+-            int existing = -1;
+-            for (int k = 0; k < definition.offsetFaces.size() && existing < 0; ++k)
+-                if (face.valid() && faceOf(definition.offsetFaces.at(k)) == face) existing = k;
+-            if (existing >= 0) definition.offsetFaces.remove(existing);
+-            else definition.offsetFaces.append(ref.point);
+-            setStatus(QString(), false);
+-        }
+-        startPicking();  // si continua a scegliere
+-        refresh();
+-    });
++            startPicking();  // si continua a scegliere
++            refresh();
++        });
++    };
+     QObject::connect(pickButton, &QPushButton::clicked, &dialog, [&] {
+         if (picking) {
+             viewport->cancelReferencePick();
+@@ -1364,19 +1368,12 @@
+         if (error.isEmpty()) dialog.accept();
+         else setStatus(error, true);
+     });
+-    bool accepted = false;
+-    {
+-        const WindowLock lock(window, viewport, &dialog);
+-        dialog.show();
+-        // Senza facce scelte si parte subito con la scelta nella vista.
+-        // La scelta nella vista parte subito (corpi e facce).
++    const bool accepted = runModeless(window, viewport, dialog, [&] {
++        scope = std::make_unique<PreviewScope>(viewport, dialog, form, replaced);
++        installPicker();
+         if (replaced < 0) startPicking();
+         refresh();
+-        QEventLoop loop;
+-        QObject::connect(&dialog, &QDialog::finished, &loop, &QEventLoop::quit);
+-        loop.exec();
+-        accepted = dialog.result() == QDialog::Accepted;
+-    }
++    });
+     viewport->cancelReferencePick();
+     viewport->setReferencePickCallback(nullptr);
+     viewport->setReferenceMarks({});
+@@ -1426,7 +1423,7 @@
+     form->addRow(status);
+     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
+     form->addRow(buttons);
+-    auto scope = std::make_unique<PreviewScope>(viewport, dialog, form, replaced);
++    std::unique_ptr<PreviewScope> scope;
+     const auto setStatus = [status](const QString &text, bool error) {
+         setFunctionMessageRole(status, error ? FunctionMessageRole::Error : FunctionMessageRole::Information);
+         status->setText(text);
+@@ -1451,7 +1448,6 @@
+     };
+     picker.changed = refresh;
+     endControls.changed = refresh;
+-    picker.install();
+     for (int k = 0; k < 2; ++k) {
+         QVector<GeometryRef> *list = k == 0 ? &definition.ruledFirst : &definition.ruledSecond;
+         QObject::connect(k == 0 ? firstButton : secondButton, &QPushButton::clicked, &dialog, [&, list] {
+@@ -1478,17 +1474,12 @@
+         if (error.isEmpty()) dialog.accept();
+         else setStatus(error, true);
+     });
+-    bool accepted = false;
+-    {
+-        const WindowLock lock(window, viewport, &dialog);
+-        dialog.show();
++    const bool accepted = runModeless(window, viewport, dialog, [&] {
++        scope = std::make_unique<PreviewScope>(viewport, dialog, form, replaced);
++        picker.install();
+         if (definition.ruledFirst.isEmpty() && replaced < 0) picker.start(&definition.ruledFirst);
+         refresh();
+-        QEventLoop loop;
+-        QObject::connect(&dialog, &QDialog::finished, &loop, &QEventLoop::quit);
+-        loop.exec();
+-        accepted = dialog.result() == QDialog::Accepted;
+-    }
++    });
+     viewport->cancelReferencePick();
+     viewport->setReferencePickCallback(nullptr);
+     viewport->setReferenceMarks({});
+@@ -1530,7 +1521,7 @@
+     form->addRow(status);
+     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
+     form->addRow(buttons);
+-    auto scope = std::make_unique<PreviewScope>(viewport, dialog, form, replaced);
++    std::unique_ptr<PreviewScope> scope;
+     const auto setStatus = [status](const QString &text, bool error) {
+         setFunctionMessageRole(status, error ? FunctionMessageRole::Error : FunctionMessageRole::Information);
+         status->setText(text);
+@@ -1552,7 +1543,6 @@
+         scope->request(definition);
+     };
+     picker.changed = refresh;
+-    picker.install();
+     QObject::connect(pickButton, &QPushButton::clicked, &dialog, [&] {
+         if (picker.active) picker.stop();
+         else picker.start(&definition.planarRefs);
+@@ -1574,17 +1564,12 @@
+         if (error.isEmpty()) dialog.accept();
+         else setStatus(error, true);
+     });
+-    bool accepted = false;
+-    {
+-        const WindowLock lock(window, viewport, &dialog);
+-        dialog.show();
++    const bool accepted = runModeless(window, viewport, dialog, [&] {
++        scope = std::make_unique<PreviewScope>(viewport, dialog, form, replaced);
++        picker.install();
+         if (definition.planarRefs.isEmpty() && replaced < 0) picker.start(&definition.planarRefs);
+         refresh();
+-        QEventLoop loop;
+-        QObject::connect(&dialog, &QDialog::finished, &loop, &QEventLoop::quit);
+-        loop.exec();
+-        accepted = dialog.result() == QDialog::Accepted;
+-    }
++    });
+     viewport->cancelReferencePick();
+     viewport->setReferencePickCallback(nullptr);
+     viewport->setReferenceMarks({});
+@@ -1698,12 +1683,7 @@
+     form->addRow(status);
+     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
+     form->addRow(buttons);
+-    auto scope = std::make_unique<PreviewScope>(viewport, dialog, form, replaced);
+-    FunctionMessage *previewLabel = scope->label;
+-    viewport->setPreviewCallback([previewLabel, result, viewport](const QString &error) {
+-        previewLabel->setText(error.isEmpty() ? QStringLiteral("pronta (in ambra nella vista)") : QStringLiteral("non riuscita: ") + error);
+-        result->setText(error.isEmpty() ? viewport->previewNotice() : QString());
+-    });
++    std::unique_ptr<PreviewScope> scope;
+     const auto setStatus = [status](const QString &text, bool error) {
+         setFunctionMessageRole(status, error ? FunctionMessageRole::Error : FunctionMessageRole::Information);
+         status->setText(text);
+@@ -1798,7 +1778,7 @@
+         definition.fillGuideWeight = weightBox->value();
+         syncFaceControls();
+         if (definition.planarRefs.isEmpty()) {
+-            previewLabel->setText(QStringLiteral("scegli le curve del contorno"));
++            scope->label->setText(QStringLiteral("scegli le curve del contorno"));
+             result->clear();
+             viewport->clearPreview();
+             return;
+@@ -1810,7 +1790,6 @@
+         if (picker.active == &definition.planarRefs && autoFaces) detect();
+         refresh();
+     };
+-    picker.install();
+     const auto toggle = [&](QVector<GeometryRef> *list) {
+         if (picker.active == list) picker.stop();
+         else {
+@@ -1883,17 +1862,17 @@
+         if (error.isEmpty()) dialog.accept();
+         else setStatus(error, true);
+     });
+-    bool accepted = false;
+-    {
+-        const WindowLock lock(window, viewport, &dialog);
+-        dialog.show();
++    const bool accepted = runModeless(window, viewport, dialog, [&] {
++        scope = std::make_unique<PreviewScope>(viewport, dialog, form, replaced);
++        FunctionMessage *previewLabel = scope->label;
++        viewport->setPreviewCallback([previewLabel, result, viewport](const QString &error) {
++            previewLabel->setText(error.isEmpty() ? QStringLiteral("pronta (in ambra nella vista)") : QStringLiteral("non riuscita: ") + error);
++            result->setText(error.isEmpty() ? viewport->previewNotice() : QString());
++        });
++        picker.install();
+         if (definition.planarRefs.isEmpty() && replaced < 0) picker.start(&definition.planarRefs);
+         refresh();
+-        QEventLoop loop;
+-        QObject::connect(&dialog, &QDialog::finished, &loop, &QEventLoop::quit);
+-        loop.exec();
+-        accepted = dialog.result() == QDialog::Accepted;
+-    }
++    });
+     viewport->cancelReferencePick();
+     viewport->setReferencePickCallback(nullptr);
+     viewport->setReferenceMarks({});
+@@ -1942,7 +1921,7 @@
+     form->addRow(status);
+     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
+     form->addRow(buttons);
+-    auto scope = std::make_unique<PreviewScope>(viewport, dialog, form, replaced);
++    std::unique_ptr<PreviewScope> scope;
+     const auto setStatus = [status](const QString &text, bool error) {
+         setFunctionMessageRole(status, error ? FunctionMessageRole::Error : FunctionMessageRole::Information);
+         status->setText(text);
+@@ -1977,7 +1956,6 @@
+         scope->request(current());
+     };
+     picker.changed = refresh;
+-    picker.install();
+     QObject::connect(sourceBox, &QComboBox::currentIndexChanged, &dialog, refresh);
+     QObject::connect(pickButton, &QPushButton::clicked, &dialog, [&] {
+         if (picker.active) picker.stop();
+@@ -2001,17 +1979,12 @@
+         if (error.isEmpty()) dialog.accept();
+         else setStatus(error, true);
+     });
+-    bool accepted = false;
+-    {
+-        const WindowLock lock(window, viewport, &dialog);
+-        dialog.show();
++    const bool accepted = runModeless(window, viewport, dialog, [&] {
++        scope = std::make_unique<PreviewScope>(viewport, dialog, form, replaced);
++        picker.install();
+         if (sourceBox->currentIndex() == edgesItem && definition.planarRefs.isEmpty() && replaced < 0) picker.start(&definition.planarRefs);
+         refresh();
+-        QEventLoop loop;
+-        QObject::connect(&dialog, &QDialog::finished, &loop, &QEventLoop::quit);
+-        loop.exec();
+-        accepted = dialog.result() == QDialog::Accepted;
+-    }
++    });
+     viewport->cancelReferencePick();
+     viewport->setReferencePickCallback(nullptr);
+     viewport->setReferenceMarks({});
+--- before/tools/generate_architecture.py
++++ after/tools/generate_architecture.py
+@@ -132,17 +132,17 @@
+  'forgeCad2026_gpu_picker': ('render', 'Picking tramite identificatori GPU e gestione dei buffer necessari.'),
+  'forgeCad2026_glass_compositor': ('render', 'Composizione della trasparenza dei corpi e risorse OpenGL associate.'),
+  'forgeCad2026_storyboard': ('dialogs', 'Albero della storia e cursore; selezione sorgenti delle ripetizioni, integrata con il ponte dei picker di pannello senza modifiche a storia o visibilita.'),
+- 'forgeCad2026_dialogs_solids.cpp': ('dialogs', 'Dialoghi solidi: catalogo ISO metrico M1–M68 con passi fini; ripetizioni con un solo blocco della finestra, storyboard selezionabile nel pannello incorporato e tre passaggi visibili (sorgente, riferimento, parametri); funzioni storiche con bersaglio successivo e sformo a piano neutro. Estrusione priva del riferimento di limite cancella il worker e invalida subito anteprima e chiave.'),
+- 'forgeCad2026_dialogs_surfaces.cpp': ('dialogs', 'Pannelli delle superfici: selezione punti nella vista/storyboard, G1 al piano per primo/ultimo profilo; loft a larghezza ridotta con etichette locali e frecce di riordino laterali; scelta appoggi G1 con indicazione del limite storico contro dipendenze circolari; Estendi si apre prima della selezione e aggiorna bordi, contorni completi e anteprima dalla vista; Cuci superfici offre selezione e deselezione completa sotto il picker della vista. Riempimento con coefficienti adimensionali in tutte le unita; loft incompleta invalida anteprima e mostra attesa delle sezioni.'),
+- 'forgeCad2026_dialogs_sketch.cpp': ('dialogs', 'Dialoghi di schizzi e piani: rimozione/riselezione indipendente dei riferimenti in modifica, anteprima e normale invertibile.'),
+- 'forgeCad2026_dialogs_analysis.cpp': ('dialogs', 'Dialoghi per analisi e opzioni di verifica geometrica.'),
++ 'forgeCad2026_dialogs_solids.cpp': ('dialogs', 'Dialoghi solidi: catalogo ISO metrico M1–M68 con passi fini; ripetizioni con un solo blocco della finestra, storyboard selezionabile nel pannello incorporato e tre passaggi visibili (sorgente, riferimento, parametri); funzioni storiche con bersaglio successivo e sformo a piano neutro. Estrusione priva del riferimento di limite cancella il worker e invalida subito anteprima e chiave. Ripetizioni, estrusione, trasformazioni e filettatura inizializzano preview e picker nel runner comune; Filettatura distingue selezione faccia e calcolo attivo.'),
++ 'forgeCad2026_dialogs_surfaces.cpp': ('dialogs', 'Pannelli delle superfici: selezione punti nella vista/storyboard, G1 al piano per primo/ultimo profilo; loft a larghezza ridotta con etichette locali e frecce di riordino laterali; scelta appoggi G1 con indicazione del limite storico contro dipendenze circolari; Estendi si apre prima della selezione e aggiorna bordi, contorni completi e anteprima dalla vista; Cuci superfici offre selezione e deselezione completa sotto il picker della vista. Riempimento con coefficienti adimensionali in tutte le unita; loft incompleta invalida anteprima e mostra attesa delle sezioni. Offset/Shell, rigata, Boundary, Fill e planare condividono il runner protetto fra documenti; Shell invalida il messaggio a spessore zero ed elimina gli errori precedenti al recupero.'),
++ 'forgeCad2026_dialogs_sketch.cpp': ('dialogs', 'Dialoghi di schizzi e piani: rimozione/riselezione indipendente dei riferimenti in modifica, anteprima e normale invertibile. Piano di costruzione con picker differito e runner comune protetto fra documenti.'),
++ 'forgeCad2026_dialogs_analysis.cpp': ('dialogs', 'Dialoghi per analisi e opzioni di verifica geometrica. Misura usa il runner comune e installa il picker dopo la guardia fra documenti.'),
+  'fk_blend_paths': ('kernel', 'Percorsi tangenti dei bordi selezionati, ordinamento e verso, lunghezza totale e stazioni equidistanti per leggi di raggio indipendenti.'),
+  'cad_fillet_paths': ('features', 'Associa riferimenti persistenti ai percorsi tangenti, completa esplicitamente i contorni delle cavita estruse e prepara i manipolatori del raggio variabile.'),
+  'forgeCad2026_fillet_handles': ('viewport', 'Marker dei raggi variabili nella vista: hit test, trascinamento lungo la direzione del raggio, quote e sincronizzazione col pannello, incluso lo zero agli estremi aperti.'),
+  'forgeCad2026_dialogs_fillet': ('dialogs', 'Raccordi 3D: quattro schede Costante/Conico/Variabile/Tra facce, illustrazioni originali, selezione nella vista e completamento esplicito del contorno degli incavi, percorsi tangenti con tabelle indipendenti, manipolatori dei raggi e zero agli estremi dei percorsi aperti, anteprima cancellabile, conferma anticipata con pannello nascosto durante il calcolo e parametri persistenti.'),
+- 'forgeCad2026_dialogs_common': ('dialogs', 'Pannelli nel viewport proprietario e blocco limitato al workspace, anche con piu documenti in schede; sotto il ribbon con aggancio/altezza piena e dimensioni preferite e larghezza iniziale per comando senza sovrascrivere il resize manuale; controlli G1/G2 con verso indipendente per profilo. Presentazione Raggio condivisa: titolo, schede con icone, illustrazioni volumetriche, form compatti e footer accessibile; intestazione compatta, aggancio laterale persistente e altezza piena, temi chiaro/scuro, checkbox nativi con palette distinta per testo/spunta ed elenchi con fondo dei campi, vetro e dimensioni persistenti. Conferma opzionale con pannello nascosto e attesa di finished anche nel runner modale; errori reali riaprono i controlli. Un comando modeless fra workspace per evitare cleanup sospesi; selezioni multiple e riga corrente conservate per identita, picker fermati al cambio ruolo G0/G1/piano. Ruoli semantici dei messaggi con contrasto nei temi chiaro e scuro.'),
++ 'forgeCad2026_dialogs_common': ('dialogs', 'Pannelli nel viewport proprietario e blocco limitato al workspace, anche con piu documenti in schede; sotto il ribbon con aggancio/altezza piena e dimensioni preferite e larghezza iniziale per comando senza sovrascrivere il resize manuale; controlli G1/G2 con verso indipendente per profilo. Presentazione Raggio condivisa: titolo, schede con icone, illustrazioni volumetriche, form compatti e footer accessibile; intestazione compatta, aggancio laterale persistente e altezza piena, temi chiaro/scuro, checkbox nativi con palette distinta per testo/spunta ed elenchi con fondo dei campi, vetro e dimensioni persistenti. Conferma opzionale con pannello nascosto e attesa di finished anche nel runner modale; errori reali riaprono i controlli. Un comando modeless fra workspace per evitare cleanup sospesi; selezioni multiple e riga corrente conservate per identita, picker fermati al cambio ruolo G0/G1/piano. Ruoli semantici dei messaggi con contrasto nei temi chiaro e scuro. Tutti gli undici runner storici usano il gestore comune: setup differito dopo guardia fra documenti, overload a tre argomenti preservato, finished sincrono senza attesa irrisolvibile. Messaggio anteprima nel footer fisso anche se creato dopo show, senza duplicazioni.'),
+  'forgeCad2026_operation_illustration': ('dialogs', 'Illustrazioni vettoriali e icone dei comandi: volumi azzurri, materiali sfumati e annotazioni; stessa proiezione e resa della prima anteprima Raggio.'),
+- 'forgeCad2026_dialogs.h': ('dialogs', 'Contratti dei dialoghi di comando per solidi, superfici, sketch e analisi.'),
++ 'forgeCad2026_dialogs.h': ('dialogs', 'Contratti dei dialoghi di comando per solidi, superfici, sketch e analisi. Runner modeless con overload compatibile e callback di inizializzazione dopo la guardia comune.'),
+  'toolbar_editor.h': ('startup', 'Editor della disposizione e dei comandi delle toolbar.'),
+ }
+ 

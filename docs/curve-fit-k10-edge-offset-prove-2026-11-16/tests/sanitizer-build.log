@@ -1,0 +1,4 @@
+compile sanitizer fk_curve_fit_bounds
+compile sanitizer fk_offset
+compile sanitizer fk_affine_surface_fit
+READY /tmp/review-offset-tests/sanitizer/offset_edge_regressions

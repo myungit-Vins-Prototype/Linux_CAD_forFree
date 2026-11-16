@@ -1,0 +1,19 @@
+from pathlib import Path
+import sys,hashlib,json,os,shutil
+sys.path.insert(0,'/tmp/mitre-review/root')
+from checks import run
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/mitre-review/root');S=Path('/tmp/mitre-review/tests');out=T/'release-export';out.mkdir(exist_ok=True)
+run('release-variants',['forgecad-release/kernel/forgekernel_blend_mitre_validation_tests'],timeout=180)
+run('release-general-blend',['forgecad-release/kernel/forgekernel_tests','BlendGeneralMatchesAnalytic'],timeout=180)
+shutil.copy2(S/'json_helpers.inc',out/'json_helpers.inc')
+result={}
+for stem,old in [('export_positive','candidate-positive-coefficients.json'),('export_emitted_sheet','candidate-emitted-sheet-coefficients.json')]:
+ text=(S/(stem+'.cpp')).read_text();assert text.count('/tmp/mitre-review/tests/'+old)==1;text=text.replace('/tmp/mitre-review/tests/'+old,str(out/old));src=out/(stem+'.cpp');src.write_text(text)
+ run('compile-'+stem,['c++','-std=c++17','-O2','-fno-fast-math','-ffp-contract=off','-I',str(R/'kernel'),'-I',str(R/'kernel/tests'),str(src),str(R/'forgecad-release/kernel/libforgekernel.a'),'-o',str(out/stem)],timeout=180)
+ run('run-'+stem,[str(out/stem)],timeout=180)
+ p=out/old;assert p.read_bytes()==(S/old).read_bytes(),old
+ result[old]={'sha256':hashlib.sha256(p.read_bytes()).hexdigest(),'byte_identical_to_frozen_v2':True,'cases':len(json.loads(p.read_text()))}
+(T/'release-comparison.json').write_text(json.dumps(result,indent=2)+'\n');print('Final Release coefficients match V2: five direct cuts and two actual synthetic Body fins',flush=True)
+env=os.environ.copy();env.update(QT_QPA_PLATFORM='wayland',QT_QPA_PLATFORMTHEME='',QT_STYLE_OVERRIDE='Fusion')
+for name,args in [('wayland-fillet',['--advanced-fillets']),('wayland-blend-preview',['--blend-preview-reload']),('wayland-theme',['--theme-tabs'])]:
+ run(name,['forgecad-release/forgecad_view_tests',*args],timeout=180,env=env)

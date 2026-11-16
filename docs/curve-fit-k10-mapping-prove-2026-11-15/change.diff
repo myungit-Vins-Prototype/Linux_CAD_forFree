@@ -1,0 +1,440 @@
+--- before/CLAUDE.md
++++ after/CLAUDE.md
+@@ -108,19 +108,20 @@
+ 
+ ## Ultimi interventi — esiti consolidati
+ 
+-**15/11 — K10, composizione superficie/SP-curve con tre agenti GPT-6.1 Sol.**
+-Modifica poli: corretto bordo fuori tolleranza10000× con limite continuo sui dati NURBS e UV
+-affini isoparametriche originali; fit e controllo di ogni faccia adiacente, sorgente immutata.
+-Build completa app/runner,129casi kernel/145esecuzioni,36CTest,5regressioni normali e
+-ASan/UBSan/LSan mirati PASS; baseline fallisce22controlli. Audit30casi+24query PASS.
+-Mappa746/10743/369TU,diagnostica vuota/check/HTML/archi PASS. K10 ancora aperto:
+-Riepilogo:24 bug chiusi(19+5); K10:7/24 siti parziali,17 restanti più fallback;22orfane candidate.
+-Uniformazione completa anteprime/pannelli ancora proposta; K2 è in produzione.
+-Mapping riprodotto: perde rilievo0,001mm a tolleranza1e-6; da correggere. Nessuna certificazione
+-globale di regolarità/autointersezioni o nuovo test renderer. Riaprire app per usare la build.
+-[Prove e limiti](docs/curve-fit-k10-composition-2026-11-15.md),
+-[Boundary precedente](docs/curve-fit-k10-boundary-2026-11-15.md),
+-[memoria precedente](docs/history/claude-prima-k10-composition-2026-11-15.md).
++**15/11 — K10, mapping con tre agenti GPT-6.1 Sol.**
++Integrata conservazione carrier originale per lamine piane/mappa affine isoparametrica;
++corretto rilievo perso0,001mm a tol1e-6. Bordi certificati, UV/quota/trim/vertici
++originali entro budget invariato, storia/cancellazione atomiche. Corretto e verificato
++limite intervallare troppo largo a scala1000; pose al bordo naturale possono ancora
++fallire conservativamente. Build completa app/runner,129casi kernel/145esecuzioni,
++37CTest,9regressioni e ASan/UBSan/LSan mirati PASS; audit107 PASS.
++Mappa749/10800/371TU,diagnostica vuota/check/HTML/archi PASS. K10 aperto:
++8/24 siti parziali,16restanti più fallback (mapping generale/offset compresi).
++24rilievi precedenti corretti,22orfane candidate; uniformazione anteprime/pannelli
++ancora proposta;K2 in produzione. Nessun nuovo test renderer. Riaprire app aggiornata.
++[Prove e limiti](docs/curve-fit-k10-mapping-2026-11-15.md),
++[blocco precedente](docs/curve-fit-k10-composition-2026-11-15.md),
++[memoria precedente](docs/history/claude-prima-k10-mapping-2026-11-15.md).
+ 
+ **15/11 — K2 completato in produzione con due agenti GPT-6.1 Sol.**
+ Atlante carrier, fori/nesting, ponte analitico conservativo, SP-curve NURBS coerenti,
+--- before/docs/code-review-2026-11-15.md
++++ after/docs/code-review-2026-11-15.md
+@@ -1,6 +1,6 @@
+ # Review generale ForgeCAD — 15 novembre 2026
+ 
+-**Stato più recente:** [K10 Modifica poli](curve-fit-k10-composition-2026-11-15.md) corregge bordi NURBS fuori tolleranza dopo la modifica dei poli e separazioni fra facce adiacenti, con limiti continui per SP-curve affini isoparametriche. Sette dei 24 siti iniziali hanno un percorso esatto/certificato per famiglie supportate; 17 ancora da migrare, oltre ai fallback. Build completa e regressioni PASS. Riprodotto un mapping che perde un rilievo del supporto: resta aperto. Il totale dei 24 rilievi precedenti corretti non aumenta: K10 resta aperto.
++**Stato più recente:** [K10 Mapping](curve-fit-k10-mapping-2026-11-15.md) conserva il supporto originale per lamine piane e mappe riconosciute, correggendo la perdita di un rilievo accettata fuori tolleranza. Certifica bordi e trasferimento UV, controllando anche vertici e trim originali. **8/24 siti iniziali parzialmente trattati, 16 interamente da migrare**, oltre ai fallback. Build completa e regressioni PASS; K10 resta aperto per i casi generali, gli offset e gli altri chiamanti campionati. Il totale dei 24 rilievi precedenti corretti e delle 22 orfane candidate non cambia. Uniformazione completa anteprime/pannelli ancora proposta; K2 in produzione.
+ 
+ **Aggiornamento successivo:** i cinque rilievi della [seconda review](review-followup-2026-11-15.md) K7/K8/K9/PRE4/UI7 sono corretti: **24 difetti precedenti corretti complessivamente**. La [prosecuzione K10](curve-fit-k10-2026-11-15.md) corregge il fit degli offset NURBS di estrusioni/rivoluzioni con controllo continuo, input finiti e fallimenti atomici; build completa e regressioni PASS. **K10 resta aperto per i chiamanti generici ancora campionati**. Le 22 orfane restano candidati distinti. Stato storico della prima review sotto.
+ 
+--- before/docs/curve-fit-k10-composition-2026-11-15.md
++++ after/docs/curve-fit-k10-composition-2026-11-15.md
+@@ -42,3 +42,8 @@
+ ## Stato complessivo
+ 
+ Sette dei 24 siti originari hanno ora un percorso esatto/certificato per famiglie supportate; **17 restano interamente da migrare**, oltre ai fallback dei sette trattati. **K10 resta aperto**. Il mapping descritto sopra è un residuo dello stesso rilievo, senza incremento artificiale del conteggio: 24 rilievi precedenti corretti e 22 orfane candidate. Non sono stati modificati CAD originali o processi dell'app; le prove Qt offscreen non certificano il renderer OpenGL.
++
++
++## Prosecuzione
++
++Il blocco successivo [Mapping con conservazione del supporto](curve-fit-k10-mapping-2026-11-15.md) corregge il rilievo perso per le lamine piane e le mappe riconosciute. Conteggio aggiornato: 8/24 siti parzialmente trattati, 16 interamente da migrare, oltre ai fallback. Il mapping generale e gli offset normali restano aperti; numeri e prove sopra descrivono la consegna Modifica poli.
+--- before/kernel/CMakeLists.txt
++++ after/kernel/CMakeLists.txt
+@@ -127,6 +127,8 @@
+     fk_surface_refit.cpp
+     fk_body_collection.cpp
+     fk_surface_mapping.cpp
++    fk_mapping_carrier.h
++    fk_mapping_carrier.cpp
+     fk_mapping_fit.cpp
+     fk_quilt_mapping.cpp
+     fk_sheet.cpp
+@@ -209,7 +211,7 @@
+ # I validatori usano intervalli outward: niente riassociazioni o assunzioni
+ # di finitezza implicite, anche se una configurazione esterna abilita fast-math.
+ set_source_files_properties(fk_sweep_surface_validation.cpp fk_sweep_caps.cpp
+-    fk_sweep_analytic_bridge.cpp fk_curve_fit_bounds.cpp PROPERTIES COMPILE_OPTIONS
++    fk_sweep_analytic_bridge.cpp fk_curve_fit_bounds.cpp fk_mapping_carrier.cpp PROPERTIES COMPILE_OPTIONS
+     "$<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang,AppleClang>:-fno-fast-math;-ffp-contract=off>")
+ set_target_properties(forgekernel PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+ 
+@@ -578,3 +580,10 @@
+ set_target_properties(forgekernel_surface_curve_fit_validation_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+ add_test(NAME forgekernel_surface_curve_fit_validation_tests COMMAND forgekernel_surface_curve_fit_validation_tests)
+ set_tests_properties(forgekernel_surface_curve_fit_validation_tests PROPERTIES TIMEOUT 180)
++
++add_executable(forgekernel_mapping_carrier_validation_tests tests/fk_test_main.cpp tests/test_mapping_carrier_validation.cpp)
++target_link_libraries(forgekernel_mapping_carrier_validation_tests PRIVATE forgekernel)
++target_compile_options(forgekernel_mapping_carrier_validation_tests PRIVATE -Wall -Wextra -Wpedantic)
++set_target_properties(forgekernel_mapping_carrier_validation_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
++add_test(NAME forgekernel_mapping_carrier_validation_tests COMMAND forgekernel_mapping_carrier_validation_tests)
++set_tests_properties(forgekernel_mapping_carrier_validation_tests PROPERTIES TIMEOUT 180)
+--- before/kernel/fk_curve_fit_bounds.cpp
++++ after/kernel/fk_curve_fit_bounds.cpp
+@@ -399,7 +399,9 @@
+         for (int r = 1; r <= degree; ++r) {
+             const I t = r <= degree - pole ? first : last;
+             for (int j = 0; j <= degree - r; ++j)
+-                work[j] = work[j] * (I(1) - t) + work[j + 1] * t;
++                // Difference form preserves the common translation when t
++                // is an interval from an ill-conditioned inverse parameter.
++                work[j] = work[j] + (work[j + 1] - work[j]) * t;
+         }
+         result[pole] = work.front();
+     }
+@@ -672,6 +674,198 @@
+     return data;
+ }
+ 
++bool positionSourceSupported(const CurvePtr<3> &curve) {
++    const Curve<3> *basis = curve.get();
++    while (basis && (basis->type() == CurveType::Trimmed || basis->type() == CurveType::Transformed)) {
++        cancellationPoint();
++        basis = basis->type() == CurveType::Trimmed ? static_cast<const TrimmedCurve<3> *>(basis)->basis().get()
++            : static_cast<const TransformedCurve *>(basis)->basis().get();
++    }
++    return basis && (basis->type() == CurveType::Line || basis->type() == CurveType::BSpline);
++}
++std::shared_ptr<Source> prepareExtrusionIso(const ExtrusionSurface &surface, bool fixedU, double fixed,
++                                           const Interval &variableRange) {
++    cancellationPoint();
++    if (!positionSourceSupported(surface.curve()))
++        return {};
++    const V direction = vec(surface.direction());
++    if (!fixedU) {
++        auto data = prepareSource(surface.curve(), variableRange, true);
++        for (Span &span : data->spans)
++            for (int axis = 0; axis < 3; ++axis)
++                span.h[axis] = sum(span.h[axis], scaled(span.w, I(fixed) * direction[axis]));
++        return data;
++    }
++    const Interval curveDomain = surface.curve()->domain();
++    const Interval evaluationRange = curveDomain.isFinite() ? curveDomain : Interval{fixed - 1, fixed + 1};
++    if (!evaluationRange.isFinite() || !(evaluationRange.lo < evaluationRange.hi))
++        throw std::domain_error("fit composizione: dominio estrusione non risolto");
++    auto generator = prepareSource(surface.curve(), evaluationRange, true);
++    V point;
++    bool found = false;
++    for (const Span &span : generator->spans) {
++        if (fixed < span.domain.lo || fixed > span.domain.hi)
++            continue;
++        const I parameter = (I(fixed) - I(span.domain.lo)) / (I(span.domain.hi) - I(span.domain.lo));
++        const I weight = span.constantWeight ? I(1) : evaluatePolynomial(span.w, parameter);
++        if (!(weight.lo > 0))
++            throw std::domain_error("fit composizione: peso estrusione non risolto");
++        for (int axis = 0; axis < 3; ++axis)
++            point[axis] = evaluatePolynomial(span.h[axis], parameter) / weight;
++        found = true;
++        break;
++    }
++    if (!found)
++        throw std::domain_error("fit composizione: isoparametro estrusione fuori dominio");
++    auto data = std::make_shared<Source>();
++    data->range = variableRange;
++    Span span;
++    span.domain = variableRange;
++    span.constantWeight = true;
++    span.w = {I(1)};
++    for (double coordinate : {variableRange.lo, variableRange.hi})
++        for (int axis = 0; axis < 3; ++axis)
++            span.h[axis].push_back(point[axis] + I(coordinate) * direction[axis]);
++    data->spans.push_back(std::move(span));
++    return data;
++}
++
++I normInterval(V vector) {
++    I squared(0);
++    for (I component : vector) {
++        if (!finite(component))
++            return {-inf, inf};
++        const double maximum = std::max(std::abs(component.lo), std::abs(component.hi));
++        squared = squared + I(maximum) * I(maximum);
++    }
++    return finite(squared) ? I(0, up(std::sqrt(squared.hi))) : I(-inf, inf);
++}
++double curveParameterBound(const CurvePtr<3> &curve) {
++    auto source = prepareSource(curve, curve->domain().isFinite() ? curve->domain() : Interval{-1, 1}, true);
++    if (!source)
++        return inf;
++    double worst = 0;
++    for (const Span &span : source->spans) {
++        cancellationPoint();
++        const I weight = span.constantWeight ? I(1) : range(span.w);
++        if (!(weight.lo > 0) || !finite(weight))
++            return inf;
++        VP tangent;
++        for (int axis = 0; axis < 3; ++axis) {
++            // Subtract any constant origin before forming the quotient jet.
++            // This changes no derivative and reduces translation conditioning.
++            const I value = span.h[axis].front() / span.w.front();
++            if (!finite(value))
++                return inf;
++            const double origin = value.lo * .5 + value.hi * .5;
++            const P centered = sum(span.h[axis], scaled(span.w, I(origin)), true);
++            tangent[axis] = span.constantWeight ? derivative(centered)
++                : sum(product(derivative(centered), span.w), product(centered, derivative(span.w)), true);
++        }
++        const I denominator = (I(span.domain.hi) - I(span.domain.lo)) * I(weight.lo) * I(weight.lo);
++        const I bound = I(normUpper(tangent)) / denominator;
++        if (!finite(bound))
++            return inf;
++        worst = std::max(worst, bound.hi);
++    }
++    return worst;
++}
++std::optional<SurfaceParameterBounds> parameterBounds(const SurfacePtr &surface) {
++    cancellationPoint();
++    if (!surface)
++        throw std::domain_error("metrica superficie: sorgente assente");
++    if (surface->type() == SurfaceType::Extrusion) {
++        const auto &extrusion = static_cast<const ExtrusionSurface &>(*surface);
++        if (!positionSourceSupported(extrusion.curve()))
++            return {};
++        const double u = curveParameterBound(extrusion.curve());
++        if (!std::isfinite(u))
++            throw std::domain_error("metrica superficie: derivata estrusione non risolta");
++        const I v = normInterval(vec(extrusion.direction()));
++        if (!finite(v))
++            throw std::domain_error("metrica superficie: direzione non risolta");
++        return SurfaceParameterBounds{u, v.hi};
++    }
++    const auto *base = dynamic_cast<const BSplineSurface *>(surface.get());
++    if (!base)
++        return {};
++    std::vector<Transform3> placements;
++    while (base->basis()) {
++        cancellationPoint();
++        placements.push_back(base->placement());
++        base = base->basis().get();
++    }
++    const int nu = base->uPoleCount(), nv = base->vPoleCount();
++    if (nu > 100000 || nv > 100000 || std::size_t(nu) > 1000000 / std::size_t(nv))
++        throw std::domain_error("metrica superficie: budget poli esaurito");
++    double maximumWeight = 0;
++    for (int i = 0; i < nu; ++i) {
++        cancellationPoint();
++        for (int j = 0; j < nv; ++j)
++            maximumWeight = std::max(maximumWeight, base->weight(i, j));
++    }
++    std::vector<V> homogeneous(std::size_t(nu) * nv);
++    std::vector<I> weights(homogeneous.size());
++    const Vec3 origin = base->pole(0, 0);
++    I weightRange(inf, -inf);
++    double maximumHomogeneous = 0;
++    for (int i = 0; i < nu; ++i) {
++        cancellationPoint();
++        for (int j = 0; j < nv; ++j) {
++            const std::size_t index = std::size_t(i) * nv + j;
++            const I weight = I(base->weight(i, j)) / I(maximumWeight);
++            V point;
++            for (int axis = 0; axis < 3; ++axis)
++                point[axis] = I(base->pole(i, j)[axis]) - I(origin[axis]);
++            // Translation cancels identically in derivatives; use only each
++            // original placement's linear part on the recentered controls.
++            for (auto t = placements.rbegin(); t != placements.rend(); ++t) {
++                V transformed{I(0), I(0), I(0)};
++                for (int row = 0; row < 3; ++row)
++                    for (int col = 0; col < 3; ++col)
++                        transformed[row] = transformed[row] + point[col] * I(t->matrix(row, col));
++                point = transformed;
++            }
++            homogeneous[index] = mul(point, weight);
++            weights[index] = weight;
++            weightRange.lo = std::min(weightRange.lo, weight.lo);
++            weightRange.hi = std::max(weightRange.hi, weight.hi);
++            maximumHomogeneous = std::max(maximumHomogeneous, normInterval(homogeneous[index]).hi);
++        }
++    }
++    if (!finite(weightRange) || !(weightRange.lo > 0))
++        throw std::domain_error("metrica superficie: pesi non risolti");
++    const auto derivativeBound = [&](bool alongU) {
++        double derivativeH = 0, derivativeW = 0;
++        const auto &knots = alongU ? base->uKnots() : base->vKnots();
++        const int degree = alongU ? base->uDegree() : base->vDegree();
++        for (int i = 0; i < nu - (alongU ? 1 : 0); ++i) {
++            cancellationPoint();
++            for (int j = 0; j < nv - (alongU ? 0 : 1); ++j) {
++                const int pole = alongU ? i : j;
++                const I factor = I(degree) / (I(knots[pole + degree + 1]) - I(knots[pole + 1]));
++                const std::size_t a = std::size_t(i) * nv + j, b = a + (alongU ? nv : 1);
++                V difference;
++                for (int axis = 0; axis < 3; ++axis)
++                    difference[axis] = (homogeneous[b][axis] - homogeneous[a][axis]) * factor;
++                derivativeH = std::max(derivativeH, normInterval(difference).hi);
++                const I dw = (weights[b] - weights[a]) * factor;
++                if (!finite(dw))
++                    return inf;
++                derivativeW = std::max(derivativeW, std::max(std::abs(dw.lo), std::abs(dw.hi)));
++            }
++        }
++        // H/W quotient derivative, over the FULL natural knot rectangle.
++        const I bound = (I(derivativeH) * I(weightRange.hi) + I(maximumHomogeneous) * I(derivativeW)) /
++                        (I(weightRange.lo) * I(weightRange.lo));
++        return finite(bound) ? bound.hi : inf;
++    };
++    const SurfaceParameterBounds bounds{derivativeBound(true), derivativeBound(false)};
++    if (!std::isfinite(bounds.u) || !std::isfinite(bounds.v))
++        throw std::domain_error("metrica superficie: derivata non risolta");
++    return bounds;
++}
++
+ struct IsoMap {
+     Interval parameter;
+     bool line = false, fixedU = false;
+@@ -714,7 +908,10 @@
+         !std::isfinite(requested.length()))
+         throw std::domain_error("fit composizione: sorgente o dominio non valido");
+     const auto *support = dynamic_cast<const BSplineSurface *>(surface.get());
+-    if (!support)
++    const auto *extrusion = dynamic_cast<const ExtrusionSurface *>(surface.get());
++    if (!support && !extrusion)
++        return {};
++    if (extrusion && !positionSourceSupported(extrusion->curve()))
+         return {};
+     const Curve<2> *basis = pcurve.get();
+     while (basis->type() == CurveType::Trimmed) {
+@@ -769,7 +966,17 @@
+     std::size_t coefficientCount = 0;
+     for (IsoMap &map : *maps) {
+         cancellationPoint();
+-        map.source = prepareIso(*support, map.fixedU, map.fixed);
++        const I firstImage = image(map, map.parameter.lo), lastImage = image(map, map.parameter.hi);
++        if (!finite(firstImage) || !finite(lastImage))
++            throw std::domain_error("fit composizione: immagine UV non risolta");
++        const Interval variableRange{std::min(firstImage.lo, lastImage.lo), std::max(firstImage.hi, lastImage.hi)};
++        const Interval naturalVariable = map.fixedU ? surface->vDomain() : surface->uDomain();
++        const Interval naturalFixed = map.fixedU ? surface->uDomain() : surface->vDomain();
++        if (map.fixed < naturalFixed.lo || map.fixed > naturalFixed.hi ||
++            variableRange.lo < naturalVariable.lo || variableRange.hi > naturalVariable.hi)
++            throw std::domain_error("fit composizione: UV fuori dominio naturale");
++        map.source = support ? prepareIso(*support, map.fixedU, map.fixed)
++            : prepareExtrusionIso(*extrusion, map.fixedU, map.fixed, variableRange);
+         for (const Span &span : map.source->spans)
+             coefficientCount += 3 * span.h[0].size() + span.w.size();
+         if (coefficientCount > 2000000)
+@@ -862,6 +1069,9 @@
+ }
+ 
+ } // namespace
++std::optional<SurfaceParameterBounds> surfaceParameterBounds(const SurfacePtr &surface) {
++    return parameterBounds(surface);
++}
+ SurfaceCurveFitData surfaceCompositionErrorBound(const SurfacePtr &surface, const CurvePtr<2> &pcurve,
+                                                  const Interval &range) {
+     return compositionFactory(surface, pcurve, range);
+--- before/kernel/fk_curve_fit_bounds.h
++++ after/kernel/fk_curve_fit_bounds.h
+@@ -4,6 +4,7 @@
+ #include "fk_surface.h"
+ #include <array>
+ #include <functional>
++#include <optional>
+ namespace ForgeCad::Kernel {
+ // Whole-interval bound on |f(t)-Bezier(poles,t)|, same original parameter.
+ // +infinity means unresolved; it must never mean an accepted segment.
+@@ -16,11 +17,17 @@
+                                                    const std::vector<double> &breaks, double tolerance,
+                                                    const CurveFitErrorBound &bound, double *deviation = nullptr);
+ namespace detail {
++struct SurfaceParameterBounds {
++    double u = 0, v = 0;
++};
++// Upper bounds for ||Su|| and ||Sv|| from ORIGINAL rational controls.
++// Empty for unsupported families; recognized nonfinite/unresolved data throw.
++std::optional<SurfaceParameterBounds> surfaceParameterBounds(const SurfacePtr &surface);
+ struct SurfaceCurveFitData {
+     CurveFitErrorBound bound;
+     std::vector<double> breaks;
+ };
+-// Original BSpline surface data with axis-aligned Line2 or equal-weight
++// Original BSpline/Extrusion(Line/NURBS generator) data with axis-aligned Line2 or equal-weight
+ // degree-one BSpline2 UV spans, including Trimmed wrappers. Other UV kinds
+ // return an empty bound. Recognized spans outside the natural surface domain
+ // (including periodic shifts) or unresolved/resource-limited data throw.
+--- before/kernel/fk_surface_mapping.cpp
++++ after/kernel/fk_surface_mapping.cpp
+@@ -1,4 +1,5 @@
+ #include "fk_surface_mapping.h"
++#include "fk_mapping_carrier.h"
+ #include "fk_mapping_fit.h"
+ #include "fk_quilt_mapping.h"
+ #include "fk_bspline_surface.h"
+@@ -113,7 +114,8 @@
+     checked(result);if(deviation)*deviation=0.;return result;
+ }
+ Body mapBody(const Body &source,const std::function<Vec3(const Vec3 &)> &map,double tolerance,
+-             BodyHistory *history,double *deviation,const std::function<Vec3(const Vec3 &)> &carrierMap={},const std::vector<Plane> &cuts={},double derivativeFraction=.001,int degree=3,const detail::MappingFaceFunction &faceImage={}) {
++             BodyHistory *history,double *deviation,const std::function<Vec3(const Vec3 &)> &carrierMap={},const std::vector<Plane> &cuts={},double derivativeFraction=.001,int degree=3,const detail::MappingFaceFunction &faceImage={},
++             const std::function<std::optional<Body>()> &carrierBody={}) {
+     // Guardie locali sul volume sorgente; le degenerazioni non diventano
+     // corpi validi soltanto perche' il fit riesce.
+     Box box;for(auto e:source.edges())box.add(curveBox(*source.edge(e).curve,source.edge(e).range));
+@@ -138,6 +140,11 @@
+         const auto at=map(p);
+         Vec3 axes[3];for(int a=0;a<3;++a){Vec3 q=p;const double step=p[a]+h<=box.hi[a]||box.hi[a]==box.lo[a]?h:-h;q[a]+=step;axes[a]=(differentialMap(q)-at)/step;}
+         require(dot(cross(axes[0],axes[1]),axes[2])>1e-8,"Deformazione: inversione o collasso del corpo; ridurre spessore o estensione.");
++    }
++    if (carrierBody) {
++        auto exact = carrierBody();
++        if (exact)
++            return std::move(*exact);
+     }
+     std::vector<Vec3> vertices;std::vector<Body::BuildEdge> edges;std::vector<Body::BuildFace> faces;
+     // Il fit deve rispettare anche la connessione edge/superficie del B-rep,
+@@ -319,7 +326,9 @@
+         const auto tangent=(c/scaleU)*derivatives[2]+(s/scaleV)*derivatives[1];
+         return Frame3(derivatives[0]+options.normalOffset*normal,normal,tangent);
+     },history,deviation);
+-    return mapBody(source,map,options.tolerance,history,deviation);
++    return mapBody(source,map,options.tolerance,history,deviation,{}, {},.001,3,{},[&] {
++        return detail::wrapPlanarBodyOnCarrier(source,target,options,scaleU,scaleV,history,deviation);
++    });
+ }
+ bool commonSurfaceWrapAnchor(const std::vector<SurfaceTargetFace> &targets,const Frame3 &plane,Vec2 &anchor) {
+     if(targets.size()<2||!targets.front().body||!targets.front().body->contains(targets.front().face))return false;
+--- before/tools/generate_architecture.py
++++ after/tools/generate_architecture.py
+@@ -213,11 +213,14 @@
+  'kernel/fk_topology.h': ('kernel', 'Entita e costruzione B-rep per regioni solide/lamine; collezione disgiunta con geometria condivisa e genealogia, senza fondere le componenti.'),
+  'kernel/fk_step.cpp': ('kernel', 'Lettura/scrittura STEP propria; distingue shell solide e lamine nelle collezioni miste, mantenendo i tipi nella rappresentazione scambiata.'),
+  'kernel/fk_body_collection.cpp': ('kernel', 'Collezione B-rep disgiunta: preserva regioni solide e lamine, indici topologici, geometria condivisa, tolleranze e genealogia Same; nessuna fusione geometrica.'),
++ 'kernel/fk_mapping_carrier.cpp': ('kernel', 'Mapping di lamine piane su carrier originale NURBS/estrusione: trasferimento affine UV, bordi certificati sui coefficienti originali, budget di arrotondamento e quota, conservazione topologia e pubblicazione atomica; famiglie non supportate distinte.'),
++ 'kernel/fk_mapping_carrier.h': ('kernel', 'Contratto interno della conservazione del carrier nel mapping: risultato opzionale per famiglie supportate, rifiuto esplicito del controllo inconclusivo.'),
++ 'kernel/tests/test_mapping_carrier_validation.cpp': ('tests', 'Regressioni mapping con rilievi del carrier nascosti, bordi e parametri, pesi, scale, pose, fori, genealogia, codec e fallimenti atomici; confronto con il percorso precedente e sanitizer mirati.'),
+  'kernel/fk_mapping_fit.cpp': ('kernel', 'Fit Hermite cubico/quintico adattivo condiviso dalle mappature: celle NURBS con derivate comuni, stencil locali espliciti, controlli dello scarto e budget geometrici prefissati; nessuna mesh di calcolo.'),
+  'kernel/fk_mapping_fit.h': ('kernel', 'Contratti interni del fit parametrico e della trasformazione B-rep tramite corrispondenza analitica; immagine di faccia a carrier conservato e trasferimento UV esplicito.'),
+  'kernel/fk_quilt_mapping.cpp': ('kernel', 'Appiattimento B-rep con bordo topologico comune, fit dei contorni, Jacobiani e deformazione campionata; origine suggerita e genealogia esplicita. Mappa comune e reversibile piano/quilt tramite coordinate di lunghezza d arco sulle isocurve esatte; una faccia o due facce tangenti con giunzione U, trim e piegatura solida lungo le normali. Monotonia dai poli, origine/metrica esatte sulla giunzione, cache per piegatura e nodi espliciti del fit; nessuna proiezione per raggi o isometria generale promessa.'),
+  'kernel/fk_quilt_mapping.h': ('kernel', 'Contratti di appiattimento della lamina, misure della deformazione e corrispondenza condivisa flatten/fold per la piegatura B-rep; destinazioni immutabili con genealogia esplicita.'),
+- 'kernel/fk_surface_mapping.cpp': ('kernel', 'Sviluppo isometrico, posizionamento rigido secondo la normale locale e deformazione su carrier o appoggio unico multifaccia: proiezione normale, controllo trim/vuoti/ambiguita e giunzioni; ricerca limitata di centraggio, conservazione del carrier e offset locale per facce a quota costante con trasferimento UV noto; fit restante separato dal materiale con derivate adattive e budget edge/faccia, controlli locali di inversione, genealogia esplicita e nessuna mesh di calcolo.'),
++ 'kernel/fk_surface_mapping.cpp': ('kernel', 'Sviluppo isometrico, posa rigida e mapping su superficie o appoggio multifaccia: delega la conservazione del carrier per lamine piane supportate, mantiene il fit campionato esplicito per i casi restanti; controlli locali di inversione, trim, genealogia e nessuna mesh di calcolo.'),
+  'kernel/fk_classify_uv.h': ('kernel', 'Classificatore preparato di coordinate UV gia note: trim esatto e budget fisico senza nuova proiezione globale sul carrier; corpo immutabile.'),
+  'kernel/fk_surface_mapping.h': ('kernel', 'Contratti di sviluppo esatto, deformazione o posa rigida per sorgente; appoggio UV o centrato sulla giunzione topologica comune, piano sorgente e budget di fit.'),
+  'kernel/tests/test_surface_mapping.cpp': ('tests', 'Appiattimento NURBS multifaccia, bordo comune, metriche e piano inclinato; sviluppo: aree e lunghezze analitiche piano/cilindro/cono; deformazione volumetrica cilindrica, genealogia, negativi, mesh, binario e STEP.'),
+@@ -298,8 +301,8 @@
+  'kernel/fk_boundary.cpp': ('kernel', 'Superficie tra curve Coons: nodi interni rimappati nei lati, fit continuo delle sorgenti supportate e verifica dei bordi effettivi dopo compatibilizzazione/assemblaggio; rifiuto dei disallineamenti oltre budget.'),
+  'kernel/tests/test_boundary_fit_validation.cpp': ('tests', 'Regressioni BoundarySheet contro variazioni NURBS nascoste fra nodi, sorgenti razionali di grado elevato, versi/ritagli e disallineamenti agli angoli; runner indipendente da Qt/OCCT.'),
+  'kernel/tests/test_surface_curve_fit_validation.cpp': ('tests', 'Regressioni della composizione superficie/SP-curve: variazioni NURBS nascoste dopo modifica poli, facce adiacenti coerenti/incoerenti, versi, trim, pesi, istanze e bound diretto; runner senza Qt/OCCT.'),
+- 'kernel/fk_curve_fit_bounds.cpp': ('kernel', 'Limiti continui Bernstein outward per posizione, offset NURBS e composizione isoparametrica superficie/SP-curve affine: dati originali, pesi positivi, istanze e parametri inversi; nodi attraversati, budget finiti e cancellazione.'),
+- 'kernel/fk_curve_fit_bounds.h': ('kernel', 'Contratti del fit continuo e provider di posizione/offset/composizione superficie-SP-curve; distingue famiglie supportate, intervalli affini espliciti e rifiuto quando il controllo non conclude.'),
++ 'kernel/fk_curve_fit_bounds.cpp': ('kernel', 'Limiti continui Bernstein outward per posizione, offset NURBS e composizione isoparametrica NURBS/estrusione con SP-curve affine; limiti delle derivate del supporto per il trasferimento UV, coefficienti originali, pesi, istanze, budget e cancellazione.'),
++ 'kernel/fk_curve_fit_bounds.h': ('kernel', 'Contratti del fit continuo, provider di posizione/offset/composizione superficie-SP-curve e limiti delle derivate U/V del supporto; distingue famiglie supportate, intervalli affini espliciti e rifiuto quando il controllo non conclude.'),
+  'kernel/tests/test_curve_fit_validation.cpp': ('tests', 'Regressioni del fit con limite continuo: spline27 avversa, NURBS, pose e scale, offset di estrusione/rivoluzione, fallimenti atomici e cancellazione; runner indipendente da Qt/OCCT.'),
+  'kernel/tests/test_offset_validation.cpp': ('tests', 'Offset: variazioni locali delle spline, domini toroidali completi/rifilati/periodici, costruzioni circolari ruotate e scalate, ripiego per estrusione obliqua e cancellazione prima, durante e alla fine del fit; eseguibile senza Qt o OCCT.'),
+  'kernel/tests/test_sweep_validation.cpp': ('tests', 'Atlante sweep: superfici regolari e piegate, periodicita reale, collisioni e duplicazioni, underflow/overflow, budget, cancellazione e coefficienti incerti.'),

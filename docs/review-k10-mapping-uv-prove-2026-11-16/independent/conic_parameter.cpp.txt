@@ -1,0 +1,12 @@
+#include "fk_bspline.h"
+#include <iostream>
+#include <iomanip>
+using namespace ForgeCad::Kernel;
+int main() {
+ Circle<3> circle(Vec3(0,0,0),Vec3(1,0,0),Vec3(0,1,0),1.);
+ const double last=kHalfPi,t=last/4.;
+ auto spline=toBSpline(circle,0,last);
+ const auto a=circle.point(t),b=spline.point(t);
+ std::cout<<std::setprecision(17)<<"{\"parameter\":"<<t<<",\"angular_point\":["<<a.x()<<","<<a.y()<<"],\"nurbs_point\":["<<b.x()<<","<<b.y()<<"],\"same_parameter_error_mm\":"<<distance(a,b)<<"}\n";
+ return distance(a,b)>1e-3?0:1;
+}

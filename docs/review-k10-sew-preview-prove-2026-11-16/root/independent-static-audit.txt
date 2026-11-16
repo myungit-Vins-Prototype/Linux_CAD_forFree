@@ -1,0 +1,78 @@
+Audit statico indipendente K10 sew —16novembre2026
+Esito sulla versione con genealogia per identita' PC: nessun nuovo bloccante
+algoritmico concreto individuato. La V1 con conteggio globale NON e' dichiarata
+conclusa/approvata: il coordinatore e core hanno individuato il falso rifiuto
+mixedpair(certificata+noncertificata nella stessa coppia faccia/edge).
+Questa revisione ha letto e controllato anche la correzione successiva.
+
+Ambito e fonti
+Diff dei5file core rispetto repo:fk_offset.cpp,fk_exchange.cpp/.h,
+fk_curve_fit_bounds.h,fk_sew.cpp(quest'ultimo invariato). Mappa descrizioni+archi:
+fk_sew chiama sewModel/assembleBody; exchange gestisce RawModel/assembly;
+provider duale e costruzione UV in offset. Nessuna modifica fonti altrui o repo.
+Nessuna nuova compilazione o esecuzione dichiarata in questo audit statico.
+
+Contratti del provider (fk_offset.cpp:1363-1392)
+- Budget fit e residual sono finiti/nonnegativi, fit strettamente positivo.
+- Factory Plane duale ricostruita da edge originale e supporto corrente;
+  Line/NURBS riconosciute; unsupported restituisce null, dati nonrisolti throw.
+- Coordinate callback UV da Gram system degli assi originali; sono candidati,
+  non fonti della prova. Il certificato proiezione possiede la metrica mm.
+- Si convertono soltanto x/y dei controlli in pcurve cubica nonrazionale C0;
+  verifica residual continua sui controlli originali prima della pubblicazione.
+- deviation viene assegnata soltanto dopo il controllo e cancellationPoint:
+  fallimenti/unsupported non ne cambiano il valore del chiamante.
+- requirePCurveOnPlane ricrea provider edge+Plane attuali e ricontrolla schema
+  Bezier completo e residuo. Nessuna dipendenza da source pcurve campionata
+  per autorizzare il bound finale. Nessuna linearResolution modificata.
+
+Trasferimento sew (fk_exchange.cpp:713-735)
+Il solo bordo realmente rimappato con supporto Plane usa fit1e-8mm fisso,
+come il precedente fit; residualBudget e' il cap legacy originale:
+original(sampled)+max(1e-7,10*tolerance). Successo: fin pubblica il bound
+continuo effettivo come pcurveTolerance e conserva cap/marker transient.
+L'input Body e' letto e copiato in RawModel; non mutato. Il rappresentante
+nonrimappato conserva la sua pcurve. Reverse cambia traversal sense, non
+il contratto di parametro condiviso di edge e pcurve.
+
+Assemblaggio V2 e mixedpair (fk_exchange.cpp:334-380,693-705)
+- Chiave coppia RAW faccia/edge, riassociata via AssemblyMap effettiva.
+- Sottogruppi per identita' del shared pcurve object (RawFin.pcurve.get()).
+  RawFin->BuildFin->Body::Fin conserva il medesimo shared_ptr:
+  exchange.cpp:489 e topology.cpp:299-300; l'input RawModel resta vivo.
+- Nella coppia mista, pcurve nonmarcate con identita' diverse sono escluse
+  dal certificato, senza diventare certificate per prossimita' o indice.
+- Ogni identita' certificata deve ritrovarsi; numero fin e multinsieme dei
+  budget devono coincidere esattamente. Identita' persa o cap<budget rifiutati.
+- Per ciascuna fin trovata si ricrea oracolo dal suo edge/Plane e si controllano
+  i coefficienti della pcurve veramente emessa; il puntatore non sostituisce
+  la verifica geometrica. Un eventuale mutamento in-place resta controllato.
+- Anche senza richiesta AssemblyMap esterna l'assembly la crea se esistono
+  marker; controllo dopo computePCurves, alignClosedSplineSeams e checkBody,
+  prima di pubblicare Body/map. Modifiche a pointer/range/budget falliscono.
+- Sew invertito riassembla lo stesso RawModel marcato; obblighi persistono.
+
+Limiti concreti, non nuovi bug dimostrati
+1. matching degli edge e original residual usato per il CAP restano campionati.
+   Non sono una prova continua della sorgente o della equivalenza geometrica
+   della coppia scelta. Il nuovo contratto prova la pcurve TARGET emessa.
+2. Fin rappresentanti nonrimappate, source/support unsupported e altri
+   percorsi fallback non acquisiscono certificazione. K10 resta parziale.
+3. Gram determinant calcolato in double puo' essere0/nonrisolto per piani
+   quasi collineari pur non singolari in aritmetica esatta: throw sicuro,
+   coerente con contratto dei rifiuti, nessuna falsa accettazione trovata.
+4. Controlli a campioni precedenti restano nel percorso, ma la pubblicazione
+   marcata richiede successivamente il residual continuo. Nessuna prova
+   globale della validita' di tutto il B-rep derivata dal solo nuovo marker.
+5. RawFin cambia layout con bool+double. Overlay3TU su archivio preesistente
+   non ricertifica TU legacy che costruiscono RawModel/RawFin(es.IGES/STEP)
+   e puo' avere limiti ABI/ODR. Serve la build completa integrata prima di
+   attribuire suite generali; non e' un difetto della build completa nuova.
+
+SHA256 esatti dei sorgenti esaminati nella versione V2:
+62dcaa3a96ad3a0aad4dc144ca138b3c03e78f44b98da18656b100d916b930a9  /tmp/k10-sew-review/core/fk_curve_fit_bounds.h
+1054ddde5160475614f113cea3cd48d05bc93f231afdf5ae4c3ee2a4ff05898f  /tmp/k10-sew-review/core/fk_exchange.cpp
+38d73c86d49e87a28d9508c9b5db55894e80427fe32da1c8e9bb492b954622a8  /tmp/k10-sew-review/core/fk_exchange.h
+239e84e8192e97bbada84b624753bd016cfff96720c14328465c1fc9f9e72fe5  /tmp/k10-sew-review/core/fk_offset.cpp
+d3f35412b91eeef191afb4a205692e950ac6b0f7948d2f7bb81ebdae964b36f5  /tmp/k10-sew-review/core/fk_sew.cpp
+4d38e6d353da4e207fbbb2bacbde1ef6815ad0fb4a3df96e4c1259a282832da3  /tmp/k10-sew-review/core/probe_provenance.cpp

@@ -1,0 +1,6 @@
+#include "fk_helix.h"
+#include "fk_offset.h"
+#include <iomanip>
+#include <iostream>
+using namespace ForgeCad::Kernel;
+int main(){std::cout<<std::setprecision(17);for(double radius:{1e-4,1e-3,.01}){HelixSpec spec;spec.radius=radius;spec.pitch=1e-6;spec.turns=1e6;auto source=std::make_shared<TransformedCurve>(std::make_shared<HelixCurve>(spec),Transform3::translation({}));double dev=123;try{auto fit=fitCurve([&](double t){return source->point(t);},source->domain(),source->breakpoints(source->domain()),1e-7,&dev);double maxError=0;for(int k=0;k<=100;++k){double t=k*kPi/50.;maxError=std::max(maxError,distance(source->point(t),fit->point(t)));}std::cout<<"radius="<<radius<<" poles="<<fit->poleCount()<<" reported="<<dev<<" first_turn_error="<<maxError<<'\n';}catch(std::exception&e){std::cout<<"radius="<<radius<<" FAIL "<<e.what()<<'\n';}}}

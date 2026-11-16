@@ -1,0 +1,19 @@
+#include "fk_offset.h"
+#include "fk_cancel.h"
+#include "fk_surface.h"
+#include <iostream>
+#include <iomanip>
+#include <limits>
+using namespace ForgeCad::Kernel;
+static const std::vector<double> z={0,0,0,.0023926594471666389,-.03158506535957388,.22274247758415189,-1.0588644597919092,3.7068614333740251,-10.150702528319336,22.626599248232065,-42.105538437516088,66.431608164324672,-89.673893632054543,104.07526656293439,-104.07526656293439,89.673893632054543,-66.431608164324672,42.105538437516088,-22.626599248232065,10.150702528319336,-3.7068614333740251,1.0588644597919092,-.22274247758415189,.03158506535957388,-.0023926594471666389,0,0,0};
+static Vec3 rotate(Vec3 p){const Vec3 a=normalized(Vec3(1,2,3));const double c=std::cos(.71),s=std::sin(.71);return c*p+s*cross(a,p)+(1-c)*dot(a,p)*a;}
+static std::shared_ptr<BSplineCurve<3>> source(double scale,bool pose,bool rational){std::vector<Vec3> p;std::vector<double>w;for(int i=0;i<=27;++i){Vec3 q=scale*Vec3(i/27.,0,z[i]);if(pose)q=rotate(q)+scale*Vec3(11,-7,3);p.push_back(q);if(rational)w.push_back(1+.1*std::sin(i*.4));}std::vector<double>k(28,0);k.insert(k.end(),28,1);return std::make_shared<BSplineCurve<3>>(27,k,p,w);}
+static void fitCase(const char *name,const std::function<Vec3(double)>&f,double tol,const std::vector<double>&breaks={}){double dev=-123;std::size_t calls=0;try{auto out=fitCurve([&](double t){++calls;return f(t);},{0,1},breaks,tol,&dev);double err=0;for(int i=0;i<=20000;++i)err=std::max(err,distance(f(i/20000.),out->point(i/20000.)));std::cout<<name<<" accepted=1 measured="<<dev<<" actual="<<err<<" tol="<<tol<<" poles="<<out->poleCount()<<" calls="<<calls<<'\n';}catch(const OperationCancelled&){std::cout<<name<<" cancelled=1 deviation="<<dev<<" calls="<<calls<<'\n';}catch(const std::exception&e){std::cout<<name<<" accepted=0 deviation="<<dev<<" calls="<<calls<<" reason="<<e.what()<<'\n';}}
+int main(){std::cout<<std::setprecision(16);for(double scale:{.001,1.,1000.})for(bool pose:{false,true})for(bool rational:{false,true}){auto curve=source(scale,pose,rational);const auto name="spline27_s"+std::to_string(scale)+(pose?"_pose":"")+(rational?"_rational":"");fitCase((name+"_fit").c_str(),[&](double t){return curve->point(t);},1e-7*scale);ExtrusionSurface surface(curve,pose?rotate(Vec3(0,1,0)):Vec3(0,1,0));try{auto out=offsetSurface(surface,.001*scale,{0,1},{0,1},1e-7*scale);double err=0;for(int i=0;i<=20000;++i){double t=i/20000.;err=std::max(err,distance(out->point(t,.5),surface.point(t,.5)+.001*scale*surface.normal(t,.5)));}std::cout<<name<<"_offset accepted=1 actual="<<err<<" tol="<<1e-7*scale<<'\n';}catch(const std::exception&e){std::cout<<name<<"_offset accepted=0 reason="<<e.what()<<'\n';}}
+fitCase("adversarial",[](double t){double q=1;for(double r:{0.,.25,.5,.75,1.})q*=t-r;return Vec3(t,0,1e4*q*q*q);},1e-7);
+for(double tol:{0.,-1.,std::numeric_limits<double>::quiet_NaN(),std::numeric_limits<double>::infinity()})fitCase("invalid_tolerance",[](double t){return Vec3(t,0,0);},tol);
+for(double bad:{std::numeric_limits<double>::quiet_NaN(),std::numeric_limits<double>::infinity()})fitCase("invalid_callback",[&](double t){return Vec3(t,bad,0);},1e-7);
+fitCase("discontinuous",[](double t){return Vec3(t,t<.314159?0:1,0);},1e-10);
+fitCase("narrow_breaks",[](double t){return Vec3(t,t<.4?0:(t>.400000001?1:(t-.4)/.000000001),0);},1e-9,{.4,.400000001});
+for(int when:{0,1,12}){auto token=std::make_shared<std::atomic<bool>>(when==0);CancellationScope scope(token);int calls=0;fitCase("cancel",[&](double t){if(++calls==when)token->store(true);return Vec3(t,0,0);},1e-7);}
+}

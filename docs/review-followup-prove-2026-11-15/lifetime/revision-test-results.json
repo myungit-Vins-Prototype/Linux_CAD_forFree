@@ -1,0 +1,91 @@
+[
+  {
+    "test": "revision-store",
+    "command": [
+      "./forgecad-release/forgecad_revision_store_tests"
+    ],
+    "exit": 0,
+    "seconds": 3.223,
+    "environment": {
+      "QT_QPA_PLATFORMTHEME": "",
+      "QT_QPA_PLATFORM": "offscreen",
+      "XDG_RUNTIME_DIR": "/tmp/forgecad-review-followup-20261115/lifetime/isolated-revisions/revision-store/runtime",
+      "QT_STYLE_OVERRIDE": "Fusion",
+      "XDG_CONFIG_HOME": "/tmp/forgecad-review-followup-20261115/lifetime/isolated-revisions/revision-store/config",
+      "XDG_DATA_HOME": "/tmp/forgecad-review-followup-20261115/lifetime/isolated-revisions/revision-store/data",
+      "XDG_CACHE_HOME": "/tmp/forgecad-review-followup-20261115/lifetime/isolated-revisions/revision-store/cache"
+    }
+  },
+  {
+    "test": "native-revisions",
+    "command": [
+      "./forgecad-release/forgecad_view_tests",
+      "--native-revisions"
+    ],
+    "exit": 0,
+    "seconds": 0.07,
+    "environment": {
+      "QT_QPA_PLATFORMTHEME": "",
+      "QT_QPA_PLATFORM": "offscreen",
+      "XDG_RUNTIME_DIR": "/tmp/forgecad-review-followup-20261115/lifetime/isolated-revisions/native-revisions/runtime",
+      "QT_STYLE_OVERRIDE": "Fusion",
+      "XDG_CONFIG_HOME": "/tmp/forgecad-review-followup-20261115/lifetime/isolated-revisions/native-revisions/config",
+      "XDG_DATA_HOME": "/tmp/forgecad-review-followup-20261115/lifetime/isolated-revisions/native-revisions/data",
+      "XDG_CACHE_HOME": "/tmp/forgecad-review-followup-20261115/lifetime/isolated-revisions/native-revisions/cache"
+    }
+  },
+  {
+    "test": "workspace-revisions",
+    "command": [
+      "./forgecad-release/forgecad_view_tests",
+      "--workspace-revisions"
+    ],
+    "exit": 0,
+    "seconds": 1.269,
+    "environment": {
+      "QT_QPA_PLATFORMTHEME": "",
+      "QT_QPA_PLATFORM": "offscreen",
+      "XDG_RUNTIME_DIR": "/tmp/forgecad-review-followup-20261115/lifetime/isolated-revisions/workspace-revisions/runtime",
+      "QT_STYLE_OVERRIDE": "Fusion",
+      "XDG_CONFIG_HOME": "/tmp/forgecad-review-followup-20261115/lifetime/isolated-revisions/workspace-revisions/config",
+      "XDG_DATA_HOME": "/tmp/forgecad-review-followup-20261115/lifetime/isolated-revisions/workspace-revisions/data",
+      "XDG_CACHE_HOME": "/tmp/forgecad-review-followup-20261115/lifetime/isolated-revisions/workspace-revisions/cache"
+    }
+  },
+  {
+    "test": "drawing-revisions",
+    "command": [
+      "./forgecad-release/forgecad_view_tests",
+      "--drawing-revisions"
+    ],
+    "exit": 0,
+    "seconds": 0.75,
+    "environment": {
+      "QT_QPA_PLATFORMTHEME": "",
+      "QT_QPA_PLATFORM": "offscreen",
+      "XDG_RUNTIME_DIR": "/tmp/forgecad-review-followup-20261115/lifetime/isolated-revisions/drawing-revisions/runtime",
+      "QT_STYLE_OVERRIDE": "Fusion",
+      "XDG_CONFIG_HOME": "/tmp/forgecad-review-followup-20261115/lifetime/isolated-revisions/drawing-revisions/config",
+      "XDG_DATA_HOME": "/tmp/forgecad-review-followup-20261115/lifetime/isolated-revisions/drawing-revisions/data",
+      "XDG_CACHE_HOME": "/tmp/forgecad-review-followup-20261115/lifetime/isolated-revisions/drawing-revisions/cache"
+    }
+  },
+  {
+    "test": "drawing-multisheet",
+    "command": [
+      "./forgecad-release/forgecad_view_tests",
+      "--drawing-multisheet"
+    ],
+    "exit": 0,
+    "seconds": 1.171,
+    "environment": {
+      "QT_QPA_PLATFORMTHEME": "",
+      "QT_QPA_PLATFORM": "offscreen",
+      "XDG_RUNTIME_DIR": "/tmp/forgecad-review-followup-20261115/lifetime/isolated-revisions/drawing-multisheet/runtime",
+      "QT_STYLE_OVERRIDE": "Fusion",
+      "XDG_CONFIG_HOME": "/tmp/forgecad-review-followup-20261115/lifetime/isolated-revisions/drawing-multisheet/config",
+      "XDG_DATA_HOME": "/tmp/forgecad-review-followup-20261115/lifetime/isolated-revisions/drawing-multisheet/data",
+      "XDG_CACHE_HOME": "/tmp/forgecad-review-followup-20261115/lifetime/isolated-revisions/drawing-multisheet/cache"
+    }
+  }
+]

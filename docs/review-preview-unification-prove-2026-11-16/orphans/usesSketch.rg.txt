@@ -1,0 +1,3 @@
+Command: rg --hidden -n -w usesSketch . --glob !docs/** --glob !archivi-locali/** --glob !.git/**
+./cad_feature_dependencies.h:21:bool usesSketch(const ExtrusionObject &body);
+./cad_feature_dependencies.cpp:205:bool usesSketch(const ExtrusionObject &body) { return !sketchesOf(body).isEmpty(); }

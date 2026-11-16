@@ -1,0 +1,14 @@
+fill during pick=1
+fill after cancel pick=1 lock=0
+surface end during pick=1
+surface end after G0 pick=1 buttonEnabled=0 checked=1
+light normal=#14181d status=#9fc6e8 panel=#e6eef6
+nested A finished visible=0 A locked=1 B visible=0
+nested after B finished A locked=0
+fill coefficient name=fillFaceInfluence isLength=1 text=0.100 cm typed1=10
+fill coefficient name= isLength=1 text=0.100 cm typed1=10
+fill coefficient name=fillShapeWeight isLength=1 text=0.100 cm typed1=10
+multiselect before refresh=2
+multiselect after same references=1
+tabs A cancelled hidden=1 A locked=1 B pending=1
+tabs after B cancelled A locked=0

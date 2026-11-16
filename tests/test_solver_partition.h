@@ -1,10 +1,112 @@
 #ifndef FORGECAD_TEST_SOLVER_PARTITION_H
 #define FORGECAD_TEST_SOLVER_PARTITION_H
 
+#include "test_tangent_contacts.h"
+
+#include "cad_document_read.h"
+#include <limits>
+
+static void solverFiniteNumberTests() {
+    using namespace ForgeCad;
+    const double nan = std::numeric_limits<double>::quiet_NaN(), inf = std::numeric_limits<double>::infinity();
+    const auto source = [] {
+        SketchObject s;
+        s.segments = {{{0,0},{10,0}},{{0,0},{0,10}}};
+        s.geometricConstraints = {makeConstraint(s, ConstraintType::Distance, {{0,0,-1}})};
+        return s;
+    };
+    const auto failAtomic = [&](SketchObject s, const QVector<PointTarget> &targets = {}) {
+        const auto before = s;
+        const auto result = solveSketch(s, targets);
+        require(!result.ok && !result.error.isEmpty() && std::isinf(result.residual), "numeri non finiti: fallimento esplicito");
+        // Il confronto numerico considera uguali anche i NaN originari.
+        const auto samePoint = [](const QPointF &a, const QPointF &b) {
+            return (a.x()==b.x() || (std::isnan(a.x()) && std::isnan(b.x())))
+                && (a.y()==b.y() || (std::isnan(a.y()) && std::isnan(b.y())));
+        };
+        for (int i=0;i<s.segments.size();++i)
+            require(samePoint(s.segments[i].first,before.segments[i].first)
+                && samePoint(s.segments[i].second,before.segments[i].second), "numeri non finiti: geometria atomica");
+    };
+    const bool wasSet=qEnvironmentVariableIsSet("FORGECAD_SOLVER_DENSE"); const auto saved=qgetenv("FORGECAD_SOLVER_DENSE");
+    struct Restore { bool set; QByteArray value; ~Restore() { if(set)qputenv("FORGECAD_SOLVER_DENSE",value);else qunsetenv("FORGECAD_SOLVER_DENSE"); }} restore{wasSet,saved};
+    for (const char *mode : {"0","1"}) {
+        qputenv("FORGECAD_SOLVER_DENSE",mode);
+        for (double bad : {nan, inf, -inf}) {
+            auto s=source(); s.geometricConstraints[0].value=bad;
+            failAtomic(s);
+            require(std::isinf(constraintError(s,s.geometricConstraints[0])), "quota non finita: diagnostica infinita");
+            s=source(); s.geometricConstraints={makeConstraint(s,ConstraintType::Angle,{{0,0,-1},{0,1,-1}})};
+            s.geometricConstraints[0].value=bad; failAtomic(s);
+            s=source(); s.segments[1].second.setX(bad); failAtomic(s);
+            s=source(); failAtomic(s, {{{0,0,0},{bad,0}}});
+            s=source(); auto fix=makeConstraint(s,ConstraintType::Fix,{{0,0,-1}});
+            fix.positions[0].setY(bad);
+            require(std::isinf(constraintError(s,fix)),"Fix esterno non finito: diagnostica");
+            s.geometricConstraints={fix}; failAtomic(s);
+            s=source(); SketchConstraint pattern; pattern.type=ConstraintType::Pattern; pattern.pattern.spacing=bad;
+            require(std::isinf(constraintError(s,pattern)),"pattern esterno non finito: diagnostica");
+            SketchConstraint pierce; pierce.type=ConstraintType::Pierce; auto section=std::make_shared<SketchPierceData>();
+            section->segments={{{0,0},{bad,1}}}; pierce.pierce=section;
+            require(std::isinf(constraintError(s,pierce)),"Pierce esterno non finito: diagnostica");
+            auto other=s.geometricConstraints[0]; other.value=bad; s.geometricConstraints.append(other);
+            require(constraintError(s,s.geometricConstraints[0])==0,"diagnostica valida indipendente da altri vincoli invalidi");
+        }
+        auto curve=source(); CurveObject spline; spline.tool=DrawingTool::Nurbs;
+        spline.controlPoints={{0,0},{1,1}}; spline.degree=1; spline.knots={0,0,1,nan}; curve.curves={spline}; failAtomic(curve);
+        auto pattern=source(); SketchConstraint repeat; repeat.type=ConstraintType::Pattern;
+        repeat.pattern.spacing=inf; pattern.geometricConstraints={repeat}; failAtomic(pattern);
+        auto overflow=source();
+        overflow.segments={{{-1e308,0},{1e308,0}}}; failAtomic(overflow);
+        auto residual=source(); residual.segments={{{0,0},{1e160,1e160}},{{0,0},{1e160,-1e160}}};
+        residual.geometricConstraints={makeConstraint(residual,ConstraintType::Perpendicular,{{0,0,-1},{0,1,-1}})};
+        require(std::isinf(constraintError(residual,residual.geometricConstraints[0])),"residuo NaN da ingressi finiti: diagnostica");
+        failAtomic(residual);
+        residual.geometricConstraints.prepend(makeConstraint(residual,ConstraintType::Fix,{{0,0,-1}}));
+        residual.geometricConstraints.prepend(makeConstraint(residual,ConstraintType::Fix,{{0,1,-1}}));
+        failAtomic(residual);
+        for (double degrees : {1e20,-1e20,std::numeric_limits<double>::max(),-std::numeric_limits<double>::max(),180.0,-180.0,540.0,-540.0,3600000000090.0}) {
+            auto s=source(); const double angle=std::fmod(degrees,360.0)*(3.14159265358979323846/180.0);
+            s.segments[1].second={10*std::cos(angle),10*std::sin(angle)};
+            auto c=makeConstraint(s,ConstraintType::Angle,{{0,0,-1},{0,1,-1}}); c.value=degrees; s.geometricConstraints={c};
+            require(constraintError(s,c)<1e-10 && solveSketch(s).ok,"angoli finiti grandi: modulo coerente e terminazione");
+            DocumentState state; state.sketches={s}; QByteArray bytes; DocumentState restored;
+            require(encodeDocument(state,bytes,false).isEmpty() && decodeDocument(bytes,restored).isEmpty()
+                && solveSketch(restored.sketches[0]).ok,"angoli grandi validi: roundtrip");
+        }
+    }
+    // Una quota riconoscibile permette di corrompere soltanto quel double
+    // nella definizione decompressa, mantenendo intestazione/compressione valide.
+    DocumentState state; state.sketches={source()}; state.sketches[0].geometricConstraints[0].value=123.456789012345;
+    QByteArray valid; require(encodeDocument(state,valid,false).isEmpty(),"fixture codec numeri finiti");
+    quint32 compressedSize=0; QDataStream header(valid); header.skipRawData(7); header>>compressedSize;
+    const quint8 compression=quint8(valid[6]); QByteArray payload;
+    require(DocumentReadDetail::uncompress(valid.mid(11,compressedSize),1000000,payload,compression),"fixture decompressa");
+    QByteArray marker; QDataStream markerOut(&marker,QIODevice::WriteOnly); markerOut<<state.sketches[0].geometricConstraints[0].value;
+    const auto at=payload.indexOf(marker); require(at>=0 && payload.indexOf(marker,at+1)<0,"quota univoca nella fixture");
+    for (double bad : {nan,inf,-inf}) {
+        state.sketches[0].geometricConstraints[0].value=bad; QByteArray bytes="immutato";
+        require(!encodeDocument(state,bytes,false).isEmpty() && bytes=="immutato","writer rifiuta quota non finita atomicamente");
+        QByteArray replacement; QDataStream badOut(&replacement,QIODevice::WriteOnly); badOut<<bad;
+        auto corrupted=payload; corrupted.replace(at,marker.size(),replacement);
+        const auto compressed=DocumentReadDetail::compress(corrupted,compression);
+        QByteArray malformed=valid.left(7); QDataStream sizeOut(&malformed,QIODevice::Append); sizeOut<<quint32(compressed.size()); malformed+=compressed;
+        DocumentState destination; const auto identity=destination.version.documentId;
+        require(!decodeDocument(malformed,destination).isEmpty() && destination.version.documentId==identity
+            && destination.sketches.isEmpty(),"reader rifiuta quota non finita atomicamente");
+    }
+    state.sketches={source()}; state.sketches[0].segments[0].first.setY(nan);
+    QByteArray untouched="immutato";
+    require(!encodeDocument(state,untouched,false).isEmpty() && untouched=="immutato","writer rifiuta coordinate non finite");
+    std::cout<<"solver finite numbers PASS"<<std::endl;
+}
+
 // Confronto differenziale sul solver intero: il percorso denso e' il riferimento
 // precedente; i controlli geometrici restano indipendenti dal confronto.
 static void solverPartitionTests(bool benchmark = false) {
     using namespace ForgeCad;
+    tangentContactTests();
+    solverFiniteNumberTests();
     const bool wasSet = qEnvironmentVariableIsSet("FORGECAD_SOLVER_DENSE");
     const QByteArray saved = qgetenv("FORGECAD_SOLVER_DENSE");
     struct Restore { bool set; QByteArray value; ~Restore() {

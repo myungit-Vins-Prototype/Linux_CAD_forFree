@@ -1,0 +1,49 @@
+from pathlib import Path
+import json,hashlib
+r=Path('/home/myungit/Linux_CAD_forFree');p=Path('/tmp/forgecad-k10-flatten-20261115')
+build=json.loads((p/'root/build-result.json').read_text());ctest=json.loads((p/'root/ctest-result.json').read_text());graph=json.loads((p/'root/architecture-audit.json').read_text());independent=json.loads((p/'independent/results.json').read_text())
+assert build['full_app_and_runner'] and ctest['exit']==0 and len(ctest['tests'])==19
+tests=json.loads((p/'tests/results.json').read_text());assert tests['groups']==6 and tests['top_level_scenarios']==27 and tests['normal']['passed']==6 and tests['sanitizer']['passed']==6 and tests['sanitizer']['exit_code']==0 and tests['sanitizer']['diagnostics']==0
+assert independent['independent_checks']==118 and graph['html_matches'] and not graph['errors']
+assert '100% tests passed' in (p/'root/ctest.log').read_text()
+before=json.loads((p/'hashes-before.json').read_text());allowed={'CLAUDE.md','kernel/CMakeLists.txt','kernel/fk_quilt_mapping.cpp','kernel/fk_quilt_mapping.h','tools/generate_architecture.py','docs/code-review-2026-11-15.md','docs/curve-fit-k10-diagonal-2026-11-15.md'}
+assert all((r/f).is_file() and (hashlib.sha256((r/f).read_bytes()).hexdigest()==h or f in allowed) for f,h in before.items())
+implementation='''La mappa usa le norme double degli assi originali, congelate come coefficienti della trasformazione; non assume assi matematicamente unitari. Flatten, fold, metriche e tagli della piegatura condividono gli stessi fattori. L'inversione mantiene i limiti U/V anche con `carrierOnly`, compreso il margine fisico e il clamp del percorso precedente.
+
+Il nuovo helper `fk_planar_flatten` trasforma i poli originali con aritmetica outward. Fonte e risultato hanno gli stessi pesi positivi, quindi il massimo residuo dei poli limita la differenza continua fra le due curve. Le Line diventano B-spline di grado 1 sul loro intervallo originale. Dati non finiti, domini invalidi, grado oltre 128, oltre 100000 poli o budget inconclusivi vengono rifiutati nel ramo riconosciuto. Solo famiglie non supportate ritornano al percorso precedente. Helper e quilt sono compilati con FP rigoroso.
+
+Dopo `computePCurves`, un ulteriore controllo continuo usa i coefficienti della SP-curve effettivamente memorizzata. Il ponte fra bordo e SP-curve viene sommato outward all'errore già noto e deve restare nel budget. Anche il riuso di un bordo conosciuto nella stessa faccia viene controllato attraverso i coefficienti. La genealogia è preparata localmente; un ultimo punto di cancellazione precede la pubblicazione di genealogia e statistiche.
+
+**Limite dei vertici:** la discrepanza topologica sommata riguarda estremi e vertici numericamente valutati. Non costituisce un enclosure della valutazione NURBS esatta agli estremi. Il certificato continuo riguarda la curva rispetto ai coefficienti UV originali, con i fattori double della mappa interpretati esattamente; non certifica isometria ideale, iniettività globale o tutte le tolleranze preesistenti della geometria sorgente.'''
+verification=f'''## Verifiche finali
+
+- Build completa Release di applicazione, runner e nuovo target: PASS. {build['warnings']} avvisi in file invariati in questo intervento; nessuno nei moduli qui modificati. Eseguibile `forgecad-release/forgecad` aggiornato: riaprire l'applicazione per usarlo.
+- **6/6 nuovi gruppi, 27 scenari**: polinomiali e razionali, pose 3D, scale 0,01/1/1000, senso faccia invertito, trim annidati parziali, parametro non unitario, fori, genealogia, codec, errori/cancellazione atomici, limiti della mappa inversa e compatibilità della conica nel percorso precedente. La baseline congelata passa 3/6 gruppi: due gruppi falliscono anche geometricamente; il gruppo Line fallisce la conservazione della rappresentazione, senza attribuirgli un errore geometrico non dimostrato.
+- Riproduttori finali polinomiale e razionale: **errore misurato 0**, deviazione dichiarata **8,526979e-14 mm**, controllo del corpo senza errori e fonte immutata. Lo zero misurato non è una dichiarazione di errore matematico nullo. La regolarità dei contorni sorgente è stata verificata indipendentemente usando i coefficienti IEEE come razionali esatti e suddivisione Bernstein; la distanza della baseline da tutti i bordi è confermata anche attraverso i rispettivi control net.
+- **19/19 suite CTest PASS**, comprese mapping e piegatura precedenti, kernel, storia, pannelli, anteprime e ciclo di vita Qt offscreen. Non è una nuova prova visiva OpenGL.
+- **ASan/UBSan/LSan: 6/6 gruppi PASS**, senza diagnostiche. Strumentati il nuovo test e le due unità di produzione `fk_planar_flatten` e `fk_quilt_mapping`; il resto dell'archivio kernel e il runner principale sono Release. Controllo mirato, non certificazione globale dell'applicazione.
+- **118/118 controlli indipendenti PASS**, più il target mapping precedente completo. Ripetizione sugli stessi byte finali integrati: 48 immagini affini, 18 contratti estremi, 12 casi non-clamped/Line, 11 controlli SP-curve/vertici, 3 atomicità pubbliche, 24 controlli downstream, 2 riproduttori pubblici.
+- Architettura: **{graph['files']} file / {graph['edges']} archi / {graph['units']} unità C++**, diagnostica vuota, `--check`, uguaglianza HTML/JSON e audit entrante/uscente di chiamate, include e riferimenti PASS.
+- Conservati byte per byte **{len(before)-len(allowed)} dei {len(before)} file preesistenti**; i 7 modificati appartengono allo scope dichiarato. Hash dei sorgenti/binari, FP rigoroso, link kernel senza Qt/OCCT, `git diff --check`, memoria entro 16 KiB e manifest delle prove verificati nell'audit finale.
+'''
+s=(p/'root/report-draft.md').read_text().replace('__IMPLEMENTATION__',implementation).replace('__VERIFICATION__',verification)
+(r/'docs/curve-fit-k10-flatten-2026-11-15.md').write_text(s)
+f=r/'docs/code-review-2026-11-15.md';s=f.read_text();start=s.index('**Stato più recente:**');end=s.index('\n\n',start)
+s=s[:start]+'''**Stato più recente:** [K10 Appiattimento piano](curve-fit-k10-flatten-2026-11-15.md) conserva i contorni Line/NURBS originali di una singola faccia Plane, correggendo una perdita geometrica di 5,74e-5 mm nascosta fra i campioni. Build completa, 6 gruppi/27 scenari, 19 CTest, sanitizer mirati e 118 controlli indipendenti PASS. **9/24 siti iniziali parzialmente trattati, 15 interamente da migrare**, oltre ai fallback: K10 resta aperto per quilt curvi/due facce, altre famiglie e chiamanti campionati. I 24 rilievi precedenti corretti e le 22 orfane candidate non cambiano. Uniformazione completa anteprime/pannelli ancora aperta; K2 in produzione.''' +s[end:];f.write_text(s)
+f=r/'docs/curve-fit-k10-diagonal-2026-11-15.md';s=f.read_text();link='curve-fit-k10-flatten-2026-11-15.md';assert link not in s
+s+='\n\n## Prosecuzione successiva\n\nIl [blocco appiattimento piano](curve-fit-k10-flatten-2026-11-15.md) tratta una famiglia di un nuovo sito: conservazione dei contorni originali su una sola Plane. Il conteggio passa a 9/24 siti parzialmente trattati, 15 interamente da migrare; i risultati di questo rapporto restano storici e K10 rimane aperto.\n';f.write_text(s)
+f=r/'CLAUDE.md';s=f.read_text();start=s.index('**15/11 — K10, appiattimento piano');end=s.index('\n**15/11 — K2',start)
+s=s[:start]+f'''**15/11 — K10, appiattimento piano con tre agenti GPT-6.1 Sol.**
+Singola Plane: coefficienti originali Line/NURBS preservati, bound continuo e
+SP-curve finale; gap numerico vertici distinto. Corretto rilievo perso5,74e-5mm.
+App/runner,6gruppi/27scenari,19CTest,6ASan/UBSan/LSan mirati,118audit PASS.
+Mappa{graph['files']}/{graph['edges']}/{graph['units']}TU/check/HTML/archi PASS;2236file iniziali,7modificati mirati.
+K10 aperto:9/24 siti parziali,15restanti più fallback; quilt curvi/duefacce,
+coniche, tensor diagonali e offset significativi restano fuori dal nuovo ramo.
+24rilievi precedenti corretti,22orfane candidate; anteprime/pannelli da uniformare.
+K2 in produzione. [Rapporto e prove](docs/curve-fit-k10-flatten-2026-11-15.md),
+[obliquo precedente](docs/curve-fit-k10-diagonal-2026-11-15.md),
+[memoria conservata](docs/history/claude-prima-k10-flatten-2026-11-15.md).
+''' +s[end:]
+assert len(s.encode())<=16384;f.write_text(s)
+print('Final docs, review and CLAUDE updated:',len(s.encode()),'bytes')

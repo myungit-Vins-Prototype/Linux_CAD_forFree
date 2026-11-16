@@ -1,0 +1,28 @@
+from pathlib import Path
+import json,hashlib,sys
+sys.path.insert(0,'/tmp/sheet-join-review/root')
+from verify import copy,sha,R,T,P
+assert (T/'final-audit.json').is_file()
+for p in T.rglob('*'):
+ if p.is_file() and not ('release-export' in p.parts):copy(p,P/'root'/p.relative_to(T))
+C=Path('/tmp/sheet-join-review/core')
+for name in ['fk_sheet-v3.cpp','sheet-join-v3.patch','v3-sha.json','CORE_REVIEW.txt','baseline-sha.json','architecture-read.json','archive-member-comparison-v3.json','shared-unchanged-before-integration.json','overlay-test-results-v3.json','forgekernel_history_tests-v3.log','forgekernel_sheet_fit_validation_tests-v3.log','forgekernel_surface_curve_fit_validation_tests-v3.log','forgekernel_surface_tools_tests-v3.log','forgekernel_tolerance_tests-v3.log','forgekernel_sheet_existing_v3.log']:
+ copy(C/name,P/'core'/name)
+A=Path('/tmp/sheet-join-review/audit')
+for f,h in json.loads((A/'SHA256.json').read_text()).items():assert sha(A/f)==h,f
+for p in A.rglob('*'):
+ if p.is_file():copy(p,P/'independent'/p.relative_to(A))
+S=Path('/tmp/sheet-join-review/tests')
+for line in (S/'text-artifacts-sha256.txt').read_text().splitlines():
+ h,f=line.split('  ',1);assert sha(S/f)==h,f
+for f in ['kernel/tests/test_sheet_join_validation.cpp','baseline-compat-final.cpp','baseline-compat-tests.log','baseline-final-tests.log','stage-v3-tests.log','test-summary.json','text-artifacts-sha256.txt','frozen-v3-sha256.txt','v2-v3-coefficients-comparison.json','README.txt','commands.txt','sanitizer/run-v3-untraced.log','sanitizer/compile-v3.log']:
+ if (S/f).is_file():copy(S/f,P/'tests'/f)
+(P/'README.txt').write_text('Prove K10 Estendi 16 novembre 2026. Root: integrazione/build/CTest/Wayland/mappa e conservazione. Core: candidato V3 e regressioni private; tests: suite permanente V3, compatibilità baseline e sanitizzatori mirati; independent: verificatore Fraction e coefficienti effettivi. Sorgenti/script sono inerti con suffisso .txt; per riprodurre copiare fuori dal repository e ripristinare le estensioni. Manifest upstream conservati per provenienza: solo SHA256SUMS alla radice definisce l’esatto contenuto curato consegnato. Nessun binario, oggetto, libreria o CAD originale incluso. Consultare il rapporto per ambito e limiti.\n')
+for p in P.rglob('*'):
+ if p.is_file():
+  assert p.suffix not in ['.cpp','.h','.py','.sh','.o','.a','.prt','.body','.pyc'] and p.name!='CMakeLists.txt',str(p)
+  with p.open('rb') as f:assert f.read(4)!=b'\x7fELF',str(p)
+files=sorted(p for p in P.rglob('*') if p.is_file() and p!=P/'SHA256SUMS')
+(P/'SHA256SUMS').write_text(''.join(sha(p)+'  '+str(p.relative_to(P))+'\n' for p in files))
+for line in (P/'SHA256SUMS').read_text().splitlines():h,f=line.split('  ',1);assert sha(P/f)==h,f
+print('Sealed',len(files),'text artifacts')

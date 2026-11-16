@@ -1,0 +1,2407 @@
+{
+  "app_operations": [
+    {
+      "error": "",
+      "first": 0,
+      "genealogy": {
+        "all_named": true,
+        "faces_with_origins": true,
+        "links": 33,
+        "operand_count": 2,
+        "operand_feature_ids": [
+          1,
+          3
+        ],
+        "original_surface_carriers": 9,
+        "registered_operands": 2,
+        "valid_links": true
+      },
+      "label": "snapshot app pair 0-2",
+      "second": 2,
+      "shape": {
+        "area": 55920.8838161356,
+        "bounds_hi": [
+          1.0855918359145935e-20,
+          150,
+          159
+        ],
+        "bounds_lo": [
+          -154,
+          -1.4508343650386994e-41,
+          0
+        ],
+        "centroid": [
+          -69.10128464435206,
+          75,
+          41.7488421116641
+        ],
+        "edges": 14,
+        "faces": 9,
+        "fins": 28,
+        "geometry": true,
+        "issues": [],
+        "loops": 10,
+        "max_edge_tolerance": 1.0964477542737394e-20,
+        "max_pcurve_tolerance": 0,
+        "max_restored_pcurve_tolerance": 0,
+        "max_vertex_tolerance": 0,
+        "regions": 2,
+        "restored_ellipse_cylinder_fins": [],
+        "sha256": "4351d14c7221cc64104ebf2b2f4413e9a1f3e00dda40090f955f937d9f52bb20",
+        "sheet": false,
+        "shell_genera": [
+          0,
+          0
+        ],
+        "shells": 2,
+        "solid_regions": 1,
+        "surface_types": {
+          "0": 8,
+          "1": 1
+        },
+        "vertices": 10,
+        "volume": 492621.228950402
+      },
+      "success": true,
+      "tools": [],
+      "witnesses": {
+        "continuous_certificate": false,
+        "extra": 0,
+        "input_count": 61,
+        "lost": 0,
+        "output_count": 61
+      }
+    },
+    {
+      "error": "",
+      "first": 0,
+      "genealogy": {
+        "all_named": true,
+        "faces_with_origins": true,
+        "links": 48,
+        "operand_count": 2,
+        "operand_feature_ids": [
+          1,
+          6
+        ],
+        "original_surface_carriers": 9,
+        "registered_operands": 2,
+        "valid_links": true
+      },
+      "label": "snapshot app pair 0-5",
+      "second": 5,
+      "shape": {
+        "area": 62258.10790563772,
+        "bounds_hi": [
+          1.0855918359145935e-20,
+          150,
+          159.09585816367044
+        ],
+        "bounds_lo": [
+          -154.37285608401115,
+          -1.4508343650386994e-41,
+          0
+        ],
+        "centroid": [
+          -58.28420441364207,
+          75.00000000000375,
+          36.01859435669618
+        ],
+        "edges": 21,
+        "faces": 9,
+        "fins": 42,
+        "geometry": true,
+        "issues": [],
+        "loops": 9,
+        "max_edge_tolerance": 6.475626435076265e-10,
+        "max_pcurve_tolerance": 4.228172807864248e-08,
+        "max_restored_pcurve_tolerance": 0,
+        "max_vertex_tolerance": 0,
+        "regions": 2,
+        "restored_ellipse_cylinder_fins": [],
+        "sha256": "74fde4fc30d205829233dc3a80c29c4de22e2dbdce49ac035de64fe6fc2a8f46",
+        "sheet": false,
+        "shell_genera": [
+          0
+        ],
+        "shells": 1,
+        "solid_regions": 1,
+        "surface_types": {
+          "0": 7,
+          "7": 2
+        },
+        "vertices": 14,
+        "volume": 595147.4261758638
+      },
+      "success": true,
+      "tools": [],
+      "witnesses": {
+        "continuous_certificate": false,
+        "extra": 0,
+        "input_count": 76,
+        "lost": 0,
+        "output_count": 86
+      }
+    },
+    {
+      "error": "",
+      "first": 2,
+      "genealogy": {
+        "all_named": true,
+        "faces_with_origins": true,
+        "links": 26,
+        "operand_count": 2,
+        "operand_feature_ids": [
+          3,
+          6
+        ],
+        "original_surface_carriers": 6,
+        "registered_operands": 2,
+        "valid_links": true
+      },
+      "label": "snapshot app pair 2-5",
+      "second": 5,
+      "shape": {
+        "area": 34477.15910976973,
+        "bounds_hi": [
+          -19.999727997524644,
+          131.5,
+          159.09585816367044
+        ],
+        "bounds_lo": [
+          -154.37285608401115,
+          18.499999999999993,
+          -15
+        ],
+        "centroid": [
+          -91.09897715953139,
+          75.00000019712144,
+          94.8467934679925
+        ],
+        "edges": 10,
+        "faces": 6,
+        "fins": 20,
+        "geometry": true,
+        "issues": [],
+        "loops": 8,
+        "max_edge_tolerance": 1.8925516266514557e-05,
+        "max_pcurve_tolerance": 4.228172807864248e-08,
+        "max_restored_pcurve_tolerance": 4.339880124588309e-11,
+        "max_vertex_tolerance": 1.8925516266514557e-05,
+        "regions": 2,
+        "restored_ellipse_cylinder_fins": [
+          {
+            "affine_in_original_parameter": true,
+            "degree": 1,
+            "edge": 3,
+            "face": 2,
+            "fin": 5,
+            "first": 6.28318402221901,
+            "last": 6.283185307179586,
+            "pcurve_first": 6.28318402221901,
+            "pcurve_last": 6.283185307179586,
+            "pcurve_tolerance": 4.339880124588309e-11,
+            "poles": 2
+          },
+          {
+            "affine_in_original_parameter": true,
+            "degree": 1,
+            "edge": 4,
+            "face": 2,
+            "fin": 6,
+            "first": 0,
+            "last": 1.2849605761356105e-06,
+            "pcurve_first": 0,
+            "pcurve_last": 1.2849605761356105e-06,
+            "pcurve_tolerance": 2.883088766789716e-11,
+            "poles": 2
+          }
+        ],
+        "sha256": "f615bd08436886d7ff3affffb1ae925565b598b8d1e516cce1dd15e711252157",
+        "sheet": false,
+        "shell_genera": [
+          0
+        ],
+        "shells": 1,
+        "solid_regions": 1,
+        "surface_types": {
+          "0": 3,
+          "1": 1,
+          "7": 2
+        },
+        "vertices": 8,
+        "volume": 321887.843735136
+      },
+      "success": true,
+      "tools": [],
+      "witnesses": {
+        "continuous_certificate": false,
+        "extra": 0,
+        "input_count": 37,
+        "lost": 0,
+        "output_count": 44
+      }
+    },
+    {
+      "error": "",
+      "first": 5,
+      "genealogy": {
+        "all_named": true,
+        "faces_with_origins": true,
+        "links": 26,
+        "operand_count": 2,
+        "operand_feature_ids": [
+          6,
+          3
+        ],
+        "original_surface_carriers": 6,
+        "registered_operands": 2,
+        "valid_links": true
+      },
+      "label": "snapshot app pair 5-2",
+      "second": 2,
+      "shape": {
+        "area": 34477.15910805261,
+        "bounds_hi": [
+          -19.999727997524644,
+          131.5,
+          159.09585816367044
+        ],
+        "bounds_lo": [
+          -154.37285608401115,
+          18.499999999999993,
+          -15
+        ],
+        "centroid": [
+          -91.09897715934316,
+          75.00000019712145,
+          94.84679346853694
+        ],
+        "edges": 10,
+        "faces": 6,
+        "fins": 20,
+        "geometry": true,
+        "issues": [],
+        "loops": 8,
+        "max_edge_tolerance": 1.89255162741872e-05,
+        "max_pcurve_tolerance": 4.228172807864248e-08,
+        "max_restored_pcurve_tolerance": 4.3398801253300545e-11,
+        "max_vertex_tolerance": 1.89255162741872e-05,
+        "regions": 2,
+        "restored_ellipse_cylinder_fins": [
+          {
+            "affine_in_original_parameter": true,
+            "degree": 1,
+            "edge": 2,
+            "face": 5,
+            "fin": 17,
+            "first": 6.283184022219009,
+            "last": 6.283185307179586,
+            "pcurve_first": 6.283184022219009,
+            "pcurve_last": 6.283185307179586,
+            "pcurve_tolerance": 4.3398801253300545e-11,
+            "poles": 2
+          },
+          {
+            "affine_in_original_parameter": true,
+            "degree": 1,
+            "edge": 7,
+            "face": 5,
+            "fin": 18,
+            "first": 0,
+            "last": 1.2841783501532532e-06,
+            "pcurve_first": 0,
+            "pcurve_last": 1.2841783501532532e-06,
+            "pcurve_tolerance": 2.8824357044819203e-11,
+            "poles": 2
+          }
+        ],
+        "sha256": "34c77a9308bcf81a72e2a401db9298e2ce142b6bf77c30ddb8eb987c1ad624be",
+        "sheet": false,
+        "shell_genera": [
+          0
+        ],
+        "shells": 1,
+        "solid_regions": 1,
+        "surface_types": {
+          "0": 3,
+          "1": 1,
+          "7": 2
+        },
+        "vertices": 8,
+        "volume": 321887.8437276186
+      },
+      "success": true,
+      "tools": [],
+      "witnesses": {
+        "continuous_certificate": false,
+        "extra": 0,
+        "input_count": 37,
+        "lost": 0,
+        "output_count": 44
+      }
+    },
+    {
+      "error": "",
+      "first": 0,
+      "genealogy": {
+        "all_named": true,
+        "faces_with_origins": true,
+        "links": 60,
+        "operand_count": 3,
+        "operand_feature_ids": [
+          1,
+          3,
+          6
+        ],
+        "original_surface_carriers": 11,
+        "registered_operands": 3,
+        "valid_links": true
+      },
+      "label": "snapshot app multi 0-2-5",
+      "second": 2,
+      "shape": {
+        "area": 71950.60886698346,
+        "bounds_hi": [
+          1.0855918359145935e-20,
+          150,
+          159.09585816367044
+        ],
+        "bounds_lo": [
+          -154.37285608401115,
+          -1.4508343650386994e-41,
+          0
+        ],
+        "centroid": [
+          -68.98334272384135,
+          75.00000010695415,
+          50.53543398966709
+        ],
+        "edges": 24,
+        "faces": 11,
+        "fins": 48,
+        "geometry": true,
+        "issues": [],
+        "loops": 13,
+        "max_edge_tolerance": 1.8925516266514557e-05,
+        "max_pcurve_tolerance": 4.22817044243864e-08,
+        "max_restored_pcurve_tolerance": 4.339880124588309e-11,
+        "max_vertex_tolerance": 1.8925516266514557e-05,
+        "regions": 2,
+        "restored_ellipse_cylinder_fins": [
+          {
+            "affine_in_original_parameter": true,
+            "degree": 1,
+            "edge": 20,
+            "face": 8,
+            "fin": 35,
+            "first": 6.28318402221901,
+            "last": 6.283185307179586,
+            "pcurve_first": 6.28318402221901,
+            "pcurve_last": 6.283185307179586,
+            "pcurve_tolerance": 4.339880124588309e-11,
+            "poles": 2
+          }
+        ],
+        "sha256": "3a3b73656aed9c1bc4de1a2f90c706f9c5369a7487b036913694c7239ba92be4",
+        "sheet": false,
+        "shell_genera": [
+          0
+        ],
+        "shells": 1,
+        "solid_regions": 1,
+        "surface_types": {
+          "0": 8,
+          "1": 1,
+          "7": 2
+        },
+        "vertices": 17,
+        "volume": 696887.8306567447
+      },
+      "success": true,
+      "tools": [
+        5
+      ],
+      "witnesses": {
+        "continuous_certificate": false,
+        "extra": 0,
+        "input_count": 87,
+        "lost": 0,
+        "output_count": 100
+      }
+    },
+    {
+      "error": "",
+      "first": 0,
+      "genealogy": {
+        "all_named": true,
+        "faces_with_origins": true,
+        "links": 60,
+        "operand_count": 3,
+        "operand_feature_ids": [
+          1,
+          6,
+          3
+        ],
+        "original_surface_carriers": 11,
+        "registered_operands": 3,
+        "valid_links": true
+      },
+      "label": "snapshot app multi 0-5-2",
+      "second": 5,
+      "shape": {
+        "area": 71950.60886648204,
+        "bounds_hi": [
+          1.0855918359145935e-20,
+          150,
+          159.09585816367044
+        ],
+        "bounds_lo": [
+          -154.37285608401115,
+          -1.4508343650386994e-41,
+          0
+        ],
+        "centroid": [
+          -68.98334272372445,
+          75.00000010695415,
+          50.53543398960947
+        ],
+        "edges": 24,
+        "faces": 11,
+        "fins": 48,
+        "geometry": true,
+        "issues": [],
+        "loops": 13,
+        "max_edge_tolerance": 1.89255162741872e-05,
+        "max_pcurve_tolerance": 4.22817044243864e-08,
+        "max_restored_pcurve_tolerance": 4.3398801253300545e-11,
+        "max_vertex_tolerance": 1.89255162741872e-05,
+        "regions": 2,
+        "restored_ellipse_cylinder_fins": [
+          {
+            "affine_in_original_parameter": true,
+            "degree": 1,
+            "edge": 18,
+            "face": 10,
+            "fin": 46,
+            "first": 6.283184022219009,
+            "last": 6.283185307179586,
+            "pcurve_first": 6.283184022219009,
+            "pcurve_last": 6.283185307179586,
+            "pcurve_tolerance": 4.3398801253300545e-11,
+            "poles": 2
+          }
+        ],
+        "sha256": "7c39b0e5b94053f93e8ea72ba460d3dc7f7349b973007483234da150c47ac76e",
+        "sheet": false,
+        "shell_genera": [
+          0
+        ],
+        "shells": 1,
+        "solid_regions": 1,
+        "surface_types": {
+          "0": 8,
+          "1": 1,
+          "7": 2
+        },
+        "vertices": 17,
+        "volume": 696887.8306536138
+      },
+      "success": true,
+      "tools": [
+        2
+      ],
+      "witnesses": {
+        "continuous_certificate": false,
+        "extra": 0,
+        "input_count": 87,
+        "lost": 0,
+        "output_count": 100
+      }
+    },
+    {
+      "error": "",
+      "first": 0,
+      "genealogy": {
+        "all_named": true,
+        "faces_with_origins": true,
+        "links": 33,
+        "operand_count": 2,
+        "operand_feature_ids": [
+          1,
+          3
+        ],
+        "original_surface_carriers": 9,
+        "registered_operands": 2,
+        "valid_links": true
+      },
+      "label": "rebuilt app pair 0-2",
+      "second": 2,
+      "shape": {
+        "area": 55920.8838161356,
+        "bounds_hi": [
+          1.0855918359145935e-20,
+          150,
+          159
+        ],
+        "bounds_lo": [
+          -154,
+          -1.4508343650386994e-41,
+          0
+        ],
+        "centroid": [
+          -69.10128464435206,
+          75,
+          41.7488421116641
+        ],
+        "edges": 14,
+        "faces": 9,
+        "fins": 28,
+        "geometry": true,
+        "issues": [],
+        "loops": 10,
+        "max_edge_tolerance": 1.0964477542737394e-20,
+        "max_pcurve_tolerance": 0,
+        "max_restored_pcurve_tolerance": 0,
+        "max_vertex_tolerance": 0,
+        "regions": 2,
+        "restored_ellipse_cylinder_fins": [],
+        "sha256": "4351d14c7221cc64104ebf2b2f4413e9a1f3e00dda40090f955f937d9f52bb20",
+        "sheet": false,
+        "shell_genera": [
+          0,
+          0
+        ],
+        "shells": 2,
+        "solid_regions": 1,
+        "surface_types": {
+          "0": 8,
+          "1": 1
+        },
+        "vertices": 10,
+        "volume": 492621.228950402
+      },
+      "success": true,
+      "tools": [],
+      "witnesses": {
+        "continuous_certificate": false,
+        "extra": 0,
+        "input_count": 61,
+        "lost": 0,
+        "output_count": 61
+      }
+    },
+    {
+      "error": "",
+      "first": 0,
+      "genealogy": {
+        "all_named": true,
+        "faces_with_origins": true,
+        "links": 48,
+        "operand_count": 2,
+        "operand_feature_ids": [
+          1,
+          6
+        ],
+        "original_surface_carriers": 9,
+        "registered_operands": 2,
+        "valid_links": true
+      },
+      "label": "rebuilt app pair 0-5",
+      "second": 5,
+      "shape": {
+        "area": 62258.10790563772,
+        "bounds_hi": [
+          1.0855918359145935e-20,
+          150,
+          159.09585816367044
+        ],
+        "bounds_lo": [
+          -154.37285608401115,
+          -1.4508343650386994e-41,
+          0
+        ],
+        "centroid": [
+          -58.28420441364207,
+          75.00000000000375,
+          36.01859435669618
+        ],
+        "edges": 21,
+        "faces": 9,
+        "fins": 42,
+        "geometry": true,
+        "issues": [],
+        "loops": 9,
+        "max_edge_tolerance": 6.475626435076265e-10,
+        "max_pcurve_tolerance": 4.228172807864248e-08,
+        "max_restored_pcurve_tolerance": 0,
+        "max_vertex_tolerance": 0,
+        "regions": 2,
+        "restored_ellipse_cylinder_fins": [],
+        "sha256": "74fde4fc30d205829233dc3a80c29c4de22e2dbdce49ac035de64fe6fc2a8f46",
+        "sheet": false,
+        "shell_genera": [
+          0
+        ],
+        "shells": 1,
+        "solid_regions": 1,
+        "surface_types": {
+          "0": 7,
+          "7": 2
+        },
+        "vertices": 14,
+        "volume": 595147.4261758638
+      },
+      "success": true,
+      "tools": [],
+      "witnesses": {
+        "continuous_certificate": false,
+        "extra": 0,
+        "input_count": 76,
+        "lost": 0,
+        "output_count": 86
+      }
+    },
+    {
+      "error": "",
+      "first": 2,
+      "genealogy": {
+        "all_named": true,
+        "faces_with_origins": true,
+        "links": 26,
+        "operand_count": 2,
+        "operand_feature_ids": [
+          3,
+          6
+        ],
+        "original_surface_carriers": 6,
+        "registered_operands": 2,
+        "valid_links": true
+      },
+      "label": "rebuilt app pair 2-5",
+      "second": 5,
+      "shape": {
+        "area": 34477.15910976973,
+        "bounds_hi": [
+          -19.999727997524644,
+          131.5,
+          159.09585816367044
+        ],
+        "bounds_lo": [
+          -154.37285608401115,
+          18.499999999999993,
+          -15
+        ],
+        "centroid": [
+          -91.09897715953139,
+          75.00000019712144,
+          94.8467934679925
+        ],
+        "edges": 10,
+        "faces": 6,
+        "fins": 20,
+        "geometry": true,
+        "issues": [],
+        "loops": 8,
+        "max_edge_tolerance": 1.8925516266514557e-05,
+        "max_pcurve_tolerance": 4.228172807864248e-08,
+        "max_restored_pcurve_tolerance": 4.339880124588309e-11,
+        "max_vertex_tolerance": 1.8925516266514557e-05,
+        "regions": 2,
+        "restored_ellipse_cylinder_fins": [
+          {
+            "affine_in_original_parameter": true,
+            "degree": 1,
+            "edge": 3,
+            "face": 2,
+            "fin": 5,
+            "first": 6.28318402221901,
+            "last": 6.283185307179586,
+            "pcurve_first": 6.28318402221901,
+            "pcurve_last": 6.283185307179586,
+            "pcurve_tolerance": 4.339880124588309e-11,
+            "poles": 2
+          },
+          {
+            "affine_in_original_parameter": true,
+            "degree": 1,
+            "edge": 4,
+            "face": 2,
+            "fin": 6,
+            "first": 0,
+            "last": 1.2849605761356105e-06,
+            "pcurve_first": 0,
+            "pcurve_last": 1.2849605761356105e-06,
+            "pcurve_tolerance": 2.883088766789716e-11,
+            "poles": 2
+          }
+        ],
+        "sha256": "f615bd08436886d7ff3affffb1ae925565b598b8d1e516cce1dd15e711252157",
+        "sheet": false,
+        "shell_genera": [
+          0
+        ],
+        "shells": 1,
+        "solid_regions": 1,
+        "surface_types": {
+          "0": 3,
+          "1": 1,
+          "7": 2
+        },
+        "vertices": 8,
+        "volume": 321887.843735136
+      },
+      "success": true,
+      "tools": [],
+      "witnesses": {
+        "continuous_certificate": false,
+        "extra": 0,
+        "input_count": 37,
+        "lost": 0,
+        "output_count": 44
+      }
+    },
+    {
+      "error": "",
+      "first": 5,
+      "genealogy": {
+        "all_named": true,
+        "faces_with_origins": true,
+        "links": 26,
+        "operand_count": 2,
+        "operand_feature_ids": [
+          6,
+          3
+        ],
+        "original_surface_carriers": 6,
+        "registered_operands": 2,
+        "valid_links": true
+      },
+      "label": "rebuilt app pair 5-2",
+      "second": 2,
+      "shape": {
+        "area": 34477.15910805261,
+        "bounds_hi": [
+          -19.999727997524644,
+          131.5,
+          159.09585816367044
+        ],
+        "bounds_lo": [
+          -154.37285608401115,
+          18.499999999999993,
+          -15
+        ],
+        "centroid": [
+          -91.09897715934316,
+          75.00000019712145,
+          94.84679346853694
+        ],
+        "edges": 10,
+        "faces": 6,
+        "fins": 20,
+        "geometry": true,
+        "issues": [],
+        "loops": 8,
+        "max_edge_tolerance": 1.89255162741872e-05,
+        "max_pcurve_tolerance": 4.228172807864248e-08,
+        "max_restored_pcurve_tolerance": 4.3398801253300545e-11,
+        "max_vertex_tolerance": 1.89255162741872e-05,
+        "regions": 2,
+        "restored_ellipse_cylinder_fins": [
+          {
+            "affine_in_original_parameter": true,
+            "degree": 1,
+            "edge": 2,
+            "face": 5,
+            "fin": 17,
+            "first": 6.283184022219009,
+            "last": 6.283185307179586,
+            "pcurve_first": 6.283184022219009,
+            "pcurve_last": 6.283185307179586,
+            "pcurve_tolerance": 4.3398801253300545e-11,
+            "poles": 2
+          },
+          {
+            "affine_in_original_parameter": true,
+            "degree": 1,
+            "edge": 7,
+            "face": 5,
+            "fin": 18,
+            "first": 0,
+            "last": 1.2841783501532532e-06,
+            "pcurve_first": 0,
+            "pcurve_last": 1.2841783501532532e-06,
+            "pcurve_tolerance": 2.8824357044819203e-11,
+            "poles": 2
+          }
+        ],
+        "sha256": "34c77a9308bcf81a72e2a401db9298e2ce142b6bf77c30ddb8eb987c1ad624be",
+        "sheet": false,
+        "shell_genera": [
+          0
+        ],
+        "shells": 1,
+        "solid_regions": 1,
+        "surface_types": {
+          "0": 3,
+          "1": 1,
+          "7": 2
+        },
+        "vertices": 8,
+        "volume": 321887.8437276186
+      },
+      "success": true,
+      "tools": [],
+      "witnesses": {
+        "continuous_certificate": false,
+        "extra": 0,
+        "input_count": 37,
+        "lost": 0,
+        "output_count": 44
+      }
+    },
+    {
+      "error": "",
+      "first": 0,
+      "genealogy": {
+        "all_named": true,
+        "faces_with_origins": true,
+        "links": 60,
+        "operand_count": 3,
+        "operand_feature_ids": [
+          1,
+          3,
+          6
+        ],
+        "original_surface_carriers": 11,
+        "registered_operands": 3,
+        "valid_links": true
+      },
+      "label": "rebuilt app multi 0-2-5",
+      "second": 2,
+      "shape": {
+        "area": 71950.60886698346,
+        "bounds_hi": [
+          1.0855918359145935e-20,
+          150,
+          159.09585816367044
+        ],
+        "bounds_lo": [
+          -154.37285608401115,
+          -1.4508343650386994e-41,
+          0
+        ],
+        "centroid": [
+          -68.98334272384135,
+          75.00000010695415,
+          50.53543398966709
+        ],
+        "edges": 24,
+        "faces": 11,
+        "fins": 48,
+        "geometry": true,
+        "issues": [],
+        "loops": 13,
+        "max_edge_tolerance": 1.8925516266514557e-05,
+        "max_pcurve_tolerance": 4.22817044243864e-08,
+        "max_restored_pcurve_tolerance": 4.339880124588309e-11,
+        "max_vertex_tolerance": 1.8925516266514557e-05,
+        "regions": 2,
+        "restored_ellipse_cylinder_fins": [
+          {
+            "affine_in_original_parameter": true,
+            "degree": 1,
+            "edge": 20,
+            "face": 8,
+            "fin": 35,
+            "first": 6.28318402221901,
+            "last": 6.283185307179586,
+            "pcurve_first": 6.28318402221901,
+            "pcurve_last": 6.283185307179586,
+            "pcurve_tolerance": 4.339880124588309e-11,
+            "poles": 2
+          }
+        ],
+        "sha256": "3a3b73656aed9c1bc4de1a2f90c706f9c5369a7487b036913694c7239ba92be4",
+        "sheet": false,
+        "shell_genera": [
+          0
+        ],
+        "shells": 1,
+        "solid_regions": 1,
+        "surface_types": {
+          "0": 8,
+          "1": 1,
+          "7": 2
+        },
+        "vertices": 17,
+        "volume": 696887.8306567447
+      },
+      "success": true,
+      "tools": [
+        5
+      ],
+      "witnesses": {
+        "continuous_certificate": false,
+        "extra": 0,
+        "input_count": 87,
+        "lost": 0,
+        "output_count": 100
+      }
+    },
+    {
+      "error": "",
+      "first": 0,
+      "genealogy": {
+        "all_named": true,
+        "faces_with_origins": true,
+        "links": 60,
+        "operand_count": 3,
+        "operand_feature_ids": [
+          1,
+          6,
+          3
+        ],
+        "original_surface_carriers": 11,
+        "registered_operands": 3,
+        "valid_links": true
+      },
+      "label": "rebuilt app multi 0-5-2",
+      "second": 5,
+      "shape": {
+        "area": 71950.60886648204,
+        "bounds_hi": [
+          1.0855918359145935e-20,
+          150,
+          159.09585816367044
+        ],
+        "bounds_lo": [
+          -154.37285608401115,
+          -1.4508343650386994e-41,
+          0
+        ],
+        "centroid": [
+          -68.98334272372445,
+          75.00000010695415,
+          50.53543398960947
+        ],
+        "edges": 24,
+        "faces": 11,
+        "fins": 48,
+        "geometry": true,
+        "issues": [],
+        "loops": 13,
+        "max_edge_tolerance": 1.89255162741872e-05,
+        "max_pcurve_tolerance": 4.22817044243864e-08,
+        "max_restored_pcurve_tolerance": 4.3398801253300545e-11,
+        "max_vertex_tolerance": 1.89255162741872e-05,
+        "regions": 2,
+        "restored_ellipse_cylinder_fins": [
+          {
+            "affine_in_original_parameter": true,
+            "degree": 1,
+            "edge": 18,
+            "face": 10,
+            "fin": 46,
+            "first": 6.283184022219009,
+            "last": 6.283185307179586,
+            "pcurve_first": 6.283184022219009,
+            "pcurve_last": 6.283185307179586,
+            "pcurve_tolerance": 4.3398801253300545e-11,
+            "poles": 2
+          }
+        ],
+        "sha256": "7c39b0e5b94053f93e8ea72ba460d3dc7f7349b973007483234da150c47ac76e",
+        "sheet": false,
+        "shell_genera": [
+          0
+        ],
+        "shells": 1,
+        "solid_regions": 1,
+        "surface_types": {
+          "0": 8,
+          "1": 1,
+          "7": 2
+        },
+        "vertices": 17,
+        "volume": 696887.8306536138
+      },
+      "success": true,
+      "tools": [
+        2
+      ],
+      "witnesses": {
+        "continuous_certificate": false,
+        "extra": 0,
+        "input_count": 87,
+        "lost": 0,
+        "output_count": 100
+      }
+    }
+  ],
+  "calculation_accuracy": 1e-07,
+  "checks": 424,
+  "definition_equal_after_rebuild": true,
+  "definition_hash_after": "8aaa5d9d4c6eddf0178d9d050212e5eee7bb0f03743b48a223088c258f2fad2d",
+  "definition_hash_before": "8aaa5d9d4c6eddf0178d9d050212e5eee7bb0f03743b48a223088c258f2fad2d",
+  "expected_all_success": true,
+  "failures": 0,
+  "linear_resolution": 1e-07,
+  "operations": [
+    {
+      "error": "",
+      "first": 0,
+      "genealogy": {
+        "all_named": true,
+        "faces_with_origins": true,
+        "links": 33,
+        "operand_count": 2,
+        "operand_feature_ids": [
+          1,
+          3
+        ],
+        "original_surface_carriers": 9,
+        "registered_operands": 2,
+        "valid_links": true
+      },
+      "label": "snapshot pair 0-2",
+      "notice": "",
+      "second": 2,
+      "shape": {
+        "area": 55920.8838161356,
+        "bounds_hi": [
+          1.0855918359145935e-20,
+          150,
+          159
+        ],
+        "bounds_lo": [
+          -154,
+          -1.4508343650386994e-41,
+          0
+        ],
+        "centroid": [
+          -69.10128464435206,
+          75,
+          41.7488421116641
+        ],
+        "edges": 14,
+        "faces": 9,
+        "fins": 28,
+        "geometry": true,
+        "issues": [],
+        "loops": 10,
+        "max_edge_tolerance": 1.0964477542737394e-20,
+        "max_pcurve_tolerance": 0,
+        "max_restored_pcurve_tolerance": 0,
+        "max_vertex_tolerance": 0,
+        "regions": 2,
+        "restored_ellipse_cylinder_fins": [],
+        "sha256": "4351d14c7221cc64104ebf2b2f4413e9a1f3e00dda40090f955f937d9f52bb20",
+        "sheet": false,
+        "shell_genera": [
+          0,
+          0
+        ],
+        "shells": 2,
+        "solid_regions": 1,
+        "surface_types": {
+          "0": 8,
+          "1": 1
+        },
+        "vertices": 10,
+        "volume": 492621.228950402
+      },
+      "success": true,
+      "tools": [],
+      "volume_overlap_implied": -1.1641532182693481e-10,
+      "volume_sum_inputs": 492621.2289504019,
+      "witnesses": {
+        "continuous_certificate": false,
+        "extra": 0,
+        "input_count": 61,
+        "lost": 0,
+        "output_count": 61
+      }
+    },
+    {
+      "error": "",
+      "first": 0,
+      "genealogy": {
+        "all_named": true,
+        "faces_with_origins": true,
+        "links": 48,
+        "operand_count": 2,
+        "operand_feature_ids": [
+          1,
+          6
+        ],
+        "original_surface_carriers": 9,
+        "registered_operands": 2,
+        "valid_links": true
+      },
+      "label": "snapshot pair 0-5",
+      "notice": "",
+      "second": 5,
+      "shape": {
+        "area": 62258.10790563772,
+        "bounds_hi": [
+          1.0855918359145935e-20,
+          150,
+          159.09585816367044
+        ],
+        "bounds_lo": [
+          -154.37285608401115,
+          -1.4508343650386994e-41,
+          0
+        ],
+        "centroid": [
+          -58.28420441364207,
+          75.00000000000375,
+          36.01859435669618
+        ],
+        "edges": 21,
+        "faces": 9,
+        "fins": 42,
+        "geometry": true,
+        "issues": [],
+        "loops": 9,
+        "max_edge_tolerance": 6.475626435076265e-10,
+        "max_pcurve_tolerance": 4.228172807864248e-08,
+        "max_restored_pcurve_tolerance": 0,
+        "max_vertex_tolerance": 0,
+        "regions": 2,
+        "restored_ellipse_cylinder_fins": [],
+        "sha256": "74fde4fc30d205829233dc3a80c29c4de22e2dbdce49ac035de64fe6fc2a8f46",
+        "sheet": false,
+        "shell_genera": [
+          0
+        ],
+        "shells": 1,
+        "solid_regions": 1,
+        "surface_types": {
+          "0": 7,
+          "7": 2
+        },
+        "vertices": 14,
+        "volume": 595147.4261758638
+      },
+      "success": true,
+      "tools": [],
+      "volume_overlap_implied": -1.2188684195280075e-07,
+      "volume_sum_inputs": 595147.426175742,
+      "witnesses": {
+        "continuous_certificate": false,
+        "extra": 0,
+        "input_count": 76,
+        "lost": 0,
+        "output_count": 86
+      }
+    },
+    {
+      "error": "",
+      "first": 2,
+      "genealogy": {
+        "all_named": true,
+        "faces_with_origins": true,
+        "links": 26,
+        "operand_count": 2,
+        "operand_feature_ids": [
+          3,
+          6
+        ],
+        "original_surface_carriers": 6,
+        "registered_operands": 2,
+        "valid_links": true
+      },
+      "label": "snapshot pair 2-5",
+      "notice": "",
+      "second": 5,
+      "shape": {
+        "area": 34477.15910976973,
+        "bounds_hi": [
+          -19.999727997524644,
+          131.5,
+          159.09585816367044
+        ],
+        "bounds_lo": [
+          -154.37285608401115,
+          18.499999999999993,
+          -15
+        ],
+        "centroid": [
+          -91.09897715953139,
+          75.00000019712144,
+          94.8467934679925
+        ],
+        "edges": 10,
+        "faces": 6,
+        "fins": 20,
+        "geometry": true,
+        "issues": [],
+        "loops": 8,
+        "max_edge_tolerance": 1.8925516266514557e-05,
+        "max_pcurve_tolerance": 4.228172807864248e-08,
+        "max_restored_pcurve_tolerance": 4.339880124588309e-11,
+        "max_vertex_tolerance": 1.8925516266514557e-05,
+        "regions": 2,
+        "restored_ellipse_cylinder_fins": [
+          {
+            "affine_in_original_parameter": true,
+            "degree": 1,
+            "edge": 3,
+            "face": 2,
+            "fin": 5,
+            "first": 6.28318402221901,
+            "last": 6.283185307179586,
+            "pcurve_first": 6.28318402221901,
+            "pcurve_last": 6.283185307179586,
+            "pcurve_tolerance": 4.339880124588309e-11,
+            "poles": 2
+          },
+          {
+            "affine_in_original_parameter": true,
+            "degree": 1,
+            "edge": 4,
+            "face": 2,
+            "fin": 6,
+            "first": 0,
+            "last": 1.2849605761356105e-06,
+            "pcurve_first": 0,
+            "pcurve_last": 1.2849605761356105e-06,
+            "pcurve_tolerance": 2.883088766789716e-11,
+            "poles": 2
+          }
+        ],
+        "sha256": "f615bd08436886d7ff3affffb1ae925565b598b8d1e516cce1dd15e711252157",
+        "sheet": false,
+        "shell_genera": [
+          0
+        ],
+        "shells": 1,
+        "solid_regions": 1,
+        "surface_types": {
+          "0": 3,
+          "1": 1,
+          "7": 2
+        },
+        "vertices": 8,
+        "volume": 321887.843735136
+      },
+      "success": true,
+      "tools": [],
+      "volume_overlap_implied": 15880.811391007854,
+      "volume_sum_inputs": 337768.6551261438,
+      "witnesses": {
+        "continuous_certificate": false,
+        "extra": 0,
+        "input_count": 37,
+        "lost": 0,
+        "output_count": 44
+      }
+    },
+    {
+      "error": "",
+      "first": 5,
+      "genealogy": {
+        "all_named": true,
+        "faces_with_origins": true,
+        "links": 26,
+        "operand_count": 2,
+        "operand_feature_ids": [
+          6,
+          3
+        ],
+        "original_surface_carriers": 6,
+        "registered_operands": 2,
+        "valid_links": true
+      },
+      "label": "snapshot pair 5-2",
+      "notice": "",
+      "second": 2,
+      "shape": {
+        "area": 34477.15910805261,
+        "bounds_hi": [
+          -19.999727997524644,
+          131.5,
+          159.09585816367044
+        ],
+        "bounds_lo": [
+          -154.37285608401115,
+          18.499999999999993,
+          -15
+        ],
+        "centroid": [
+          -91.09897715934316,
+          75.00000019712145,
+          94.84679346853694
+        ],
+        "edges": 10,
+        "faces": 6,
+        "fins": 20,
+        "geometry": true,
+        "issues": [],
+        "loops": 8,
+        "max_edge_tolerance": 1.89255162741872e-05,
+        "max_pcurve_tolerance": 4.228172807864248e-08,
+        "max_restored_pcurve_tolerance": 4.3398801253300545e-11,
+        "max_vertex_tolerance": 1.89255162741872e-05,
+        "regions": 2,
+        "restored_ellipse_cylinder_fins": [
+          {
+            "affine_in_original_parameter": true,
+            "degree": 1,
+            "edge": 2,
+            "face": 5,
+            "fin": 17,
+            "first": 6.283184022219009,
+            "last": 6.283185307179586,
+            "pcurve_first": 6.283184022219009,
+            "pcurve_last": 6.283185307179586,
+            "pcurve_tolerance": 4.3398801253300545e-11,
+            "poles": 2
+          },
+          {
+            "affine_in_original_parameter": true,
+            "degree": 1,
+            "edge": 7,
+            "face": 5,
+            "fin": 18,
+            "first": 0,
+            "last": 1.2841783501532532e-06,
+            "pcurve_first": 0,
+            "pcurve_last": 1.2841783501532532e-06,
+            "pcurve_tolerance": 2.8824357044819203e-11,
+            "poles": 2
+          }
+        ],
+        "sha256": "34c77a9308bcf81a72e2a401db9298e2ce142b6bf77c30ddb8eb987c1ad624be",
+        "sheet": false,
+        "shell_genera": [
+          0
+        ],
+        "shells": 1,
+        "solid_regions": 1,
+        "surface_types": {
+          "0": 3,
+          "1": 1,
+          "7": 2
+        },
+        "vertices": 8,
+        "volume": 321887.8437276186
+      },
+      "success": true,
+      "tools": [],
+      "volume_overlap_implied": 15880.811398525257,
+      "volume_sum_inputs": 337768.6551261438,
+      "witnesses": {
+        "continuous_certificate": false,
+        "extra": 0,
+        "input_count": 37,
+        "lost": 0,
+        "output_count": 44
+      }
+    },
+    {
+      "error": "",
+      "first": 0,
+      "genealogy": {
+        "all_named": true,
+        "faces_with_origins": true,
+        "links": 60,
+        "operand_count": 3,
+        "operand_feature_ids": [
+          1,
+          3,
+          6
+        ],
+        "original_surface_carriers": 11,
+        "registered_operands": 3,
+        "valid_links": true
+      },
+      "label": "snapshot multi 0-2-5",
+      "notice": "",
+      "second": 2,
+      "shape": {
+        "area": 71950.60886698346,
+        "bounds_hi": [
+          1.0855918359145935e-20,
+          150,
+          159.09585816367044
+        ],
+        "bounds_lo": [
+          -154.37285608401115,
+          -1.4508343650386994e-41,
+          0
+        ],
+        "centroid": [
+          -68.98334272384135,
+          75.00000010695415,
+          50.53543398966709
+        ],
+        "edges": 24,
+        "faces": 11,
+        "fins": 48,
+        "geometry": true,
+        "issues": [],
+        "loops": 13,
+        "max_edge_tolerance": 1.8925516266514557e-05,
+        "max_pcurve_tolerance": 4.22817044243864e-08,
+        "max_restored_pcurve_tolerance": 4.339880124588309e-11,
+        "max_vertex_tolerance": 1.8925516266514557e-05,
+        "regions": 2,
+        "restored_ellipse_cylinder_fins": [
+          {
+            "affine_in_original_parameter": true,
+            "degree": 1,
+            "edge": 20,
+            "face": 8,
+            "fin": 35,
+            "first": 6.28318402221901,
+            "last": 6.283185307179586,
+            "pcurve_first": 6.28318402221901,
+            "pcurve_last": 6.283185307179586,
+            "pcurve_tolerance": 4.339880124588309e-11,
+            "poles": 2
+          }
+        ],
+        "sha256": "3a3b73656aed9c1bc4de1a2f90c706f9c5369a7487b036913694c7239ba92be4",
+        "sheet": false,
+        "shell_genera": [
+          0
+        ],
+        "shells": 1,
+        "solid_regions": 1,
+        "surface_types": {
+          "0": 8,
+          "1": 1,
+          "7": 2
+        },
+        "vertices": 17,
+        "volume": 696887.8306567447
+      },
+      "success": true,
+      "tools": [
+        5
+      ],
+      "volume_overlap_implied": 15880.824469399173,
+      "volume_sum_inputs": 712768.6551261438,
+      "witnesses": {
+        "continuous_certificate": false,
+        "extra": 0,
+        "input_count": 87,
+        "lost": 0,
+        "output_count": 100
+      }
+    },
+    {
+      "error": "",
+      "first": 0,
+      "genealogy": {
+        "all_named": true,
+        "faces_with_origins": true,
+        "links": 60,
+        "operand_count": 3,
+        "operand_feature_ids": [
+          1,
+          6,
+          3
+        ],
+        "original_surface_carriers": 11,
+        "registered_operands": 3,
+        "valid_links": true
+      },
+      "label": "snapshot multi 0-5-2",
+      "notice": "",
+      "second": 5,
+      "shape": {
+        "area": 71950.60886648204,
+        "bounds_hi": [
+          1.0855918359145935e-20,
+          150,
+          159.09585816367044
+        ],
+        "bounds_lo": [
+          -154.37285608401115,
+          -1.4508343650386994e-41,
+          0
+        ],
+        "centroid": [
+          -68.98334272372445,
+          75.00000010695415,
+          50.53543398960947
+        ],
+        "edges": 24,
+        "faces": 11,
+        "fins": 48,
+        "geometry": true,
+        "issues": [],
+        "loops": 13,
+        "max_edge_tolerance": 1.89255162741872e-05,
+        "max_pcurve_tolerance": 4.22817044243864e-08,
+        "max_restored_pcurve_tolerance": 4.3398801253300545e-11,
+        "max_vertex_tolerance": 1.89255162741872e-05,
+        "regions": 2,
+        "restored_ellipse_cylinder_fins": [
+          {
+            "affine_in_original_parameter": true,
+            "degree": 1,
+            "edge": 18,
+            "face": 10,
+            "fin": 46,
+            "first": 6.283184022219009,
+            "last": 6.283185307179586,
+            "pcurve_first": 6.283184022219009,
+            "pcurve_last": 6.283185307179586,
+            "pcurve_tolerance": 4.3398801253300545e-11,
+            "poles": 2
+          }
+        ],
+        "sha256": "7c39b0e5b94053f93e8ea72ba460d3dc7f7349b973007483234da150c47ac76e",
+        "sheet": false,
+        "shell_genera": [
+          0
+        ],
+        "shells": 1,
+        "solid_regions": 1,
+        "surface_types": {
+          "0": 8,
+          "1": 1,
+          "7": 2
+        },
+        "vertices": 17,
+        "volume": 696887.8306536138
+      },
+      "success": true,
+      "tools": [
+        2
+      ],
+      "volume_overlap_implied": 15880.824472530046,
+      "volume_sum_inputs": 712768.6551261438,
+      "witnesses": {
+        "continuous_certificate": false,
+        "extra": 0,
+        "input_count": 87,
+        "lost": 0,
+        "output_count": 100
+      }
+    },
+    {
+      "error": "",
+      "first": 0,
+      "genealogy": {
+        "all_named": true,
+        "faces_with_origins": true,
+        "links": 33,
+        "operand_count": 2,
+        "operand_feature_ids": [
+          1,
+          3
+        ],
+        "original_surface_carriers": 9,
+        "registered_operands": 2,
+        "valid_links": true
+      },
+      "label": "rebuilt pair 0-2",
+      "notice": "",
+      "second": 2,
+      "shape": {
+        "area": 55920.8838161356,
+        "bounds_hi": [
+          1.0855918359145935e-20,
+          150,
+          159
+        ],
+        "bounds_lo": [
+          -154,
+          -1.4508343650386994e-41,
+          0
+        ],
+        "centroid": [
+          -69.10128464435206,
+          75,
+          41.7488421116641
+        ],
+        "edges": 14,
+        "faces": 9,
+        "fins": 28,
+        "geometry": true,
+        "issues": [],
+        "loops": 10,
+        "max_edge_tolerance": 1.0964477542737394e-20,
+        "max_pcurve_tolerance": 0,
+        "max_restored_pcurve_tolerance": 0,
+        "max_vertex_tolerance": 0,
+        "regions": 2,
+        "restored_ellipse_cylinder_fins": [],
+        "sha256": "4351d14c7221cc64104ebf2b2f4413e9a1f3e00dda40090f955f937d9f52bb20",
+        "sheet": false,
+        "shell_genera": [
+          0,
+          0
+        ],
+        "shells": 2,
+        "solid_regions": 1,
+        "surface_types": {
+          "0": 8,
+          "1": 1
+        },
+        "vertices": 10,
+        "volume": 492621.228950402
+      },
+      "success": true,
+      "tools": [],
+      "volume_overlap_implied": -1.1641532182693481e-10,
+      "volume_sum_inputs": 492621.2289504019,
+      "witnesses": {
+        "continuous_certificate": false,
+        "extra": 0,
+        "input_count": 61,
+        "lost": 0,
+        "output_count": 61
+      }
+    },
+    {
+      "error": "",
+      "first": 0,
+      "genealogy": {
+        "all_named": true,
+        "faces_with_origins": true,
+        "links": 48,
+        "operand_count": 2,
+        "operand_feature_ids": [
+          1,
+          6
+        ],
+        "original_surface_carriers": 9,
+        "registered_operands": 2,
+        "valid_links": true
+      },
+      "label": "rebuilt pair 0-5",
+      "notice": "",
+      "second": 5,
+      "shape": {
+        "area": 62258.10790563772,
+        "bounds_hi": [
+          1.0855918359145935e-20,
+          150,
+          159.09585816367044
+        ],
+        "bounds_lo": [
+          -154.37285608401115,
+          -1.4508343650386994e-41,
+          0
+        ],
+        "centroid": [
+          -58.28420441364207,
+          75.00000000000375,
+          36.01859435669618
+        ],
+        "edges": 21,
+        "faces": 9,
+        "fins": 42,
+        "geometry": true,
+        "issues": [],
+        "loops": 9,
+        "max_edge_tolerance": 6.475626435076265e-10,
+        "max_pcurve_tolerance": 4.228172807864248e-08,
+        "max_restored_pcurve_tolerance": 0,
+        "max_vertex_tolerance": 0,
+        "regions": 2,
+        "restored_ellipse_cylinder_fins": [],
+        "sha256": "74fde4fc30d205829233dc3a80c29c4de22e2dbdce49ac035de64fe6fc2a8f46",
+        "sheet": false,
+        "shell_genera": [
+          0
+        ],
+        "shells": 1,
+        "solid_regions": 1,
+        "surface_types": {
+          "0": 7,
+          "7": 2
+        },
+        "vertices": 14,
+        "volume": 595147.4261758638
+      },
+      "success": true,
+      "tools": [],
+      "volume_overlap_implied": -1.2188684195280075e-07,
+      "volume_sum_inputs": 595147.426175742,
+      "witnesses": {
+        "continuous_certificate": false,
+        "extra": 0,
+        "input_count": 76,
+        "lost": 0,
+        "output_count": 86
+      }
+    },
+    {
+      "error": "",
+      "first": 2,
+      "genealogy": {
+        "all_named": true,
+        "faces_with_origins": true,
+        "links": 26,
+        "operand_count": 2,
+        "operand_feature_ids": [
+          3,
+          6
+        ],
+        "original_surface_carriers": 6,
+        "registered_operands": 2,
+        "valid_links": true
+      },
+      "label": "rebuilt pair 2-5",
+      "notice": "",
+      "second": 5,
+      "shape": {
+        "area": 34477.15910976973,
+        "bounds_hi": [
+          -19.999727997524644,
+          131.5,
+          159.09585816367044
+        ],
+        "bounds_lo": [
+          -154.37285608401115,
+          18.499999999999993,
+          -15
+        ],
+        "centroid": [
+          -91.09897715953139,
+          75.00000019712144,
+          94.8467934679925
+        ],
+        "edges": 10,
+        "faces": 6,
+        "fins": 20,
+        "geometry": true,
+        "issues": [],
+        "loops": 8,
+        "max_edge_tolerance": 1.8925516266514557e-05,
+        "max_pcurve_tolerance": 4.228172807864248e-08,
+        "max_restored_pcurve_tolerance": 4.339880124588309e-11,
+        "max_vertex_tolerance": 1.8925516266514557e-05,
+        "regions": 2,
+        "restored_ellipse_cylinder_fins": [
+          {
+            "affine_in_original_parameter": true,
+            "degree": 1,
+            "edge": 3,
+            "face": 2,
+            "fin": 5,
+            "first": 6.28318402221901,
+            "last": 6.283185307179586,
+            "pcurve_first": 6.28318402221901,
+            "pcurve_last": 6.283185307179586,
+            "pcurve_tolerance": 4.339880124588309e-11,
+            "poles": 2
+          },
+          {
+            "affine_in_original_parameter": true,
+            "degree": 1,
+            "edge": 4,
+            "face": 2,
+            "fin": 6,
+            "first": 0,
+            "last": 1.2849605761356105e-06,
+            "pcurve_first": 0,
+            "pcurve_last": 1.2849605761356105e-06,
+            "pcurve_tolerance": 2.883088766789716e-11,
+            "poles": 2
+          }
+        ],
+        "sha256": "f615bd08436886d7ff3affffb1ae925565b598b8d1e516cce1dd15e711252157",
+        "sheet": false,
+        "shell_genera": [
+          0
+        ],
+        "shells": 1,
+        "solid_regions": 1,
+        "surface_types": {
+          "0": 3,
+          "1": 1,
+          "7": 2
+        },
+        "vertices": 8,
+        "volume": 321887.843735136
+      },
+      "success": true,
+      "tools": [],
+      "volume_overlap_implied": 15880.811391007854,
+      "volume_sum_inputs": 337768.6551261438,
+      "witnesses": {
+        "continuous_certificate": false,
+        "extra": 0,
+        "input_count": 37,
+        "lost": 0,
+        "output_count": 44
+      }
+    },
+    {
+      "error": "",
+      "first": 5,
+      "genealogy": {
+        "all_named": true,
+        "faces_with_origins": true,
+        "links": 26,
+        "operand_count": 2,
+        "operand_feature_ids": [
+          6,
+          3
+        ],
+        "original_surface_carriers": 6,
+        "registered_operands": 2,
+        "valid_links": true
+      },
+      "label": "rebuilt pair 5-2",
+      "notice": "",
+      "second": 2,
+      "shape": {
+        "area": 34477.15910805261,
+        "bounds_hi": [
+          -19.999727997524644,
+          131.5,
+          159.09585816367044
+        ],
+        "bounds_lo": [
+          -154.37285608401115,
+          18.499999999999993,
+          -15
+        ],
+        "centroid": [
+          -91.09897715934316,
+          75.00000019712145,
+          94.84679346853694
+        ],
+        "edges": 10,
+        "faces": 6,
+        "fins": 20,
+        "geometry": true,
+        "issues": [],
+        "loops": 8,
+        "max_edge_tolerance": 1.89255162741872e-05,
+        "max_pcurve_tolerance": 4.228172807864248e-08,
+        "max_restored_pcurve_tolerance": 4.3398801253300545e-11,
+        "max_vertex_tolerance": 1.89255162741872e-05,
+        "regions": 2,
+        "restored_ellipse_cylinder_fins": [
+          {
+            "affine_in_original_parameter": true,
+            "degree": 1,
+            "edge": 2,
+            "face": 5,
+            "fin": 17,
+            "first": 6.283184022219009,
+            "last": 6.283185307179586,
+            "pcurve_first": 6.283184022219009,
+            "pcurve_last": 6.283185307179586,
+            "pcurve_tolerance": 4.3398801253300545e-11,
+            "poles": 2
+          },
+          {
+            "affine_in_original_parameter": true,
+            "degree": 1,
+            "edge": 7,
+            "face": 5,
+            "fin": 18,
+            "first": 0,
+            "last": 1.2841783501532532e-06,
+            "pcurve_first": 0,
+            "pcurve_last": 1.2841783501532532e-06,
+            "pcurve_tolerance": 2.8824357044819203e-11,
+            "poles": 2
+          }
+        ],
+        "sha256": "34c77a9308bcf81a72e2a401db9298e2ce142b6bf77c30ddb8eb987c1ad624be",
+        "sheet": false,
+        "shell_genera": [
+          0
+        ],
+        "shells": 1,
+        "solid_regions": 1,
+        "surface_types": {
+          "0": 3,
+          "1": 1,
+          "7": 2
+        },
+        "vertices": 8,
+        "volume": 321887.8437276186
+      },
+      "success": true,
+      "tools": [],
+      "volume_overlap_implied": 15880.811398525257,
+      "volume_sum_inputs": 337768.6551261438,
+      "witnesses": {
+        "continuous_certificate": false,
+        "extra": 0,
+        "input_count": 37,
+        "lost": 0,
+        "output_count": 44
+      }
+    },
+    {
+      "error": "",
+      "first": 0,
+      "genealogy": {
+        "all_named": true,
+        "faces_with_origins": true,
+        "links": 60,
+        "operand_count": 3,
+        "operand_feature_ids": [
+          1,
+          3,
+          6
+        ],
+        "original_surface_carriers": 11,
+        "registered_operands": 3,
+        "valid_links": true
+      },
+      "label": "rebuilt multi 0-2-5",
+      "notice": "",
+      "second": 2,
+      "shape": {
+        "area": 71950.60886698346,
+        "bounds_hi": [
+          1.0855918359145935e-20,
+          150,
+          159.09585816367044
+        ],
+        "bounds_lo": [
+          -154.37285608401115,
+          -1.4508343650386994e-41,
+          0
+        ],
+        "centroid": [
+          -68.98334272384135,
+          75.00000010695415,
+          50.53543398966709
+        ],
+        "edges": 24,
+        "faces": 11,
+        "fins": 48,
+        "geometry": true,
+        "issues": [],
+        "loops": 13,
+        "max_edge_tolerance": 1.8925516266514557e-05,
+        "max_pcurve_tolerance": 4.22817044243864e-08,
+        "max_restored_pcurve_tolerance": 4.339880124588309e-11,
+        "max_vertex_tolerance": 1.8925516266514557e-05,
+        "regions": 2,
+        "restored_ellipse_cylinder_fins": [
+          {
+            "affine_in_original_parameter": true,
+            "degree": 1,
+            "edge": 20,
+            "face": 8,
+            "fin": 35,
+            "first": 6.28318402221901,
+            "last": 6.283185307179586,
+            "pcurve_first": 6.28318402221901,
+            "pcurve_last": 6.283185307179586,
+            "pcurve_tolerance": 4.339880124588309e-11,
+            "poles": 2
+          }
+        ],
+        "sha256": "3a3b73656aed9c1bc4de1a2f90c706f9c5369a7487b036913694c7239ba92be4",
+        "sheet": false,
+        "shell_genera": [
+          0
+        ],
+        "shells": 1,
+        "solid_regions": 1,
+        "surface_types": {
+          "0": 8,
+          "1": 1,
+          "7": 2
+        },
+        "vertices": 17,
+        "volume": 696887.8306567447
+      },
+      "success": true,
+      "tools": [
+        5
+      ],
+      "volume_overlap_implied": 15880.824469399173,
+      "volume_sum_inputs": 712768.6551261438,
+      "witnesses": {
+        "continuous_certificate": false,
+        "extra": 0,
+        "input_count": 87,
+        "lost": 0,
+        "output_count": 100
+      }
+    },
+    {
+      "error": "",
+      "first": 0,
+      "genealogy": {
+        "all_named": true,
+        "faces_with_origins": true,
+        "links": 60,
+        "operand_count": 3,
+        "operand_feature_ids": [
+          1,
+          6,
+          3
+        ],
+        "original_surface_carriers": 11,
+        "registered_operands": 3,
+        "valid_links": true
+      },
+      "label": "rebuilt multi 0-5-2",
+      "notice": "",
+      "second": 5,
+      "shape": {
+        "area": 71950.60886648204,
+        "bounds_hi": [
+          1.0855918359145935e-20,
+          150,
+          159.09585816367044
+        ],
+        "bounds_lo": [
+          -154.37285608401115,
+          -1.4508343650386994e-41,
+          0
+        ],
+        "centroid": [
+          -68.98334272372445,
+          75.00000010695415,
+          50.53543398960947
+        ],
+        "edges": 24,
+        "faces": 11,
+        "fins": 48,
+        "geometry": true,
+        "issues": [],
+        "loops": 13,
+        "max_edge_tolerance": 1.89255162741872e-05,
+        "max_pcurve_tolerance": 4.22817044243864e-08,
+        "max_restored_pcurve_tolerance": 4.3398801253300545e-11,
+        "max_vertex_tolerance": 1.89255162741872e-05,
+        "regions": 2,
+        "restored_ellipse_cylinder_fins": [
+          {
+            "affine_in_original_parameter": true,
+            "degree": 1,
+            "edge": 18,
+            "face": 10,
+            "fin": 46,
+            "first": 6.283184022219009,
+            "last": 6.283185307179586,
+            "pcurve_first": 6.283184022219009,
+            "pcurve_last": 6.283185307179586,
+            "pcurve_tolerance": 4.3398801253300545e-11,
+            "poles": 2
+          }
+        ],
+        "sha256": "7c39b0e5b94053f93e8ea72ba460d3dc7f7349b973007483234da150c47ac76e",
+        "sheet": false,
+        "shell_genera": [
+          0
+        ],
+        "shells": 1,
+        "solid_regions": 1,
+        "surface_types": {
+          "0": 8,
+          "1": 1,
+          "7": 2
+        },
+        "vertices": 17,
+        "volume": 696887.8306536138
+      },
+      "success": true,
+      "tools": [
+        2
+      ],
+      "volume_overlap_implied": 15880.824472530046,
+      "volume_sum_inputs": 712768.6551261438,
+      "witnesses": {
+        "continuous_certificate": false,
+        "extra": 0,
+        "input_count": 87,
+        "lost": 0,
+        "output_count": 100
+      }
+    }
+  ],
+  "original_sha256": "79887e91d75feb748af19fcdb14cd469cc40e74abab03e3cbeaa12e2d3271f7f",
+  "shapes": [
+    {
+      "exact_binary_equal": true,
+      "feature": 0,
+      "rebuilt": {
+        "area": 42500,
+        "bounds_hi": [
+          1.0855918359145935e-20,
+          150,
+          25
+        ],
+        "bounds_lo": [
+          -100,
+          -1.4508343650386994e-41,
+          0
+        ],
+        "centroid": [
+          -50,
+          75,
+          12.5
+        ],
+        "edges": 12,
+        "faces": 6,
+        "fins": 24,
+        "geometry": true,
+        "issues": [],
+        "loops": 6,
+        "max_edge_tolerance": 0,
+        "max_pcurve_tolerance": 0,
+        "max_restored_pcurve_tolerance": 0,
+        "max_vertex_tolerance": 0,
+        "regions": 2,
+        "restored_ellipse_cylinder_fins": [],
+        "sha256": "b1c869c971618b3da9e85688e5b0b70d4c0e7fbb833208eacd5e2441b13bd0e2",
+        "sheet": false,
+        "shell_genera": [
+          0
+        ],
+        "shells": 1,
+        "solid_regions": 1,
+        "surface_types": {
+          "0": 6
+        },
+        "vertices": 8,
+        "volume": 375000
+      },
+      "snapshot": {
+        "area": 42500,
+        "bounds_hi": [
+          1.0855918359145935e-20,
+          150,
+          25
+        ],
+        "bounds_lo": [
+          -100,
+          -1.4508343650386994e-41,
+          0
+        ],
+        "centroid": [
+          -50,
+          75,
+          12.5
+        ],
+        "edges": 12,
+        "faces": 6,
+        "fins": 24,
+        "geometry": true,
+        "issues": [],
+        "loops": 6,
+        "max_edge_tolerance": 0,
+        "max_pcurve_tolerance": 0,
+        "max_restored_pcurve_tolerance": 0,
+        "max_vertex_tolerance": 0,
+        "regions": 2,
+        "restored_ellipse_cylinder_fins": [],
+        "sha256": "b1c869c971618b3da9e85688e5b0b70d4c0e7fbb833208eacd5e2441b13bd0e2",
+        "sheet": false,
+        "shell_genera": [
+          0
+        ],
+        "shells": 1,
+        "solid_regions": 1,
+        "surface_types": {
+          "0": 6
+        },
+        "vertices": 8,
+        "volume": 375000
+      }
+    },
+    {
+      "exact_binary_equal": true,
+      "feature": 2,
+      "rebuilt": {
+        "area": 13420.883816135602,
+        "bounds_hi": [
+          -106,
+          131.5,
+          159
+        ],
+        "bounds_lo": [
+          -154,
+          18.499999999999993,
+          111
+        ],
+        "centroid": [
+          -130,
+          75,
+          135
+        ],
+        "edges": 2,
+        "faces": 3,
+        "fins": 4,
+        "geometry": true,
+        "issues": [],
+        "loops": 4,
+        "max_edge_tolerance": 0,
+        "max_pcurve_tolerance": 0,
+        "max_restored_pcurve_tolerance": 0,
+        "max_vertex_tolerance": 0,
+        "regions": 2,
+        "restored_ellipse_cylinder_fins": [],
+        "sha256": "b65a96af43b29f090e1538bcac3854cf86f1108646e987d959bbf23ecaa1d324",
+        "sheet": false,
+        "shell_genera": [
+          0
+        ],
+        "shells": 1,
+        "solid_regions": 1,
+        "surface_types": {
+          "0": 2,
+          "1": 1
+        },
+        "vertices": 2,
+        "volume": 117621.22895040191
+      },
+      "snapshot": {
+        "area": 13420.883816135602,
+        "bounds_hi": [
+          -106,
+          131.5,
+          159
+        ],
+        "bounds_lo": [
+          -154,
+          18.499999999999993,
+          111
+        ],
+        "centroid": [
+          -130,
+          75,
+          135
+        ],
+        "edges": 2,
+        "faces": 3,
+        "fins": 4,
+        "geometry": true,
+        "issues": [],
+        "loops": 4,
+        "max_edge_tolerance": 0,
+        "max_pcurve_tolerance": 0,
+        "max_restored_pcurve_tolerance": 0,
+        "max_vertex_tolerance": 0,
+        "regions": 2,
+        "restored_ellipse_cylinder_fins": [],
+        "sha256": "b65a96af43b29f090e1538bcac3854cf86f1108646e987d959bbf23ecaa1d324",
+        "sheet": false,
+        "shell_genera": [
+          0
+        ],
+        "shells": 1,
+        "solid_regions": 1,
+        "surface_types": {
+          "0": 2,
+          "1": 1
+        },
+        "vertices": 2,
+        "volume": 117621.22895040191
+      }
+    },
+    {
+      "exact_binary_equal": true,
+      "feature": 5,
+      "rebuilt": {
+        "area": 24784.656151388164,
+        "bounds_hi": [
+          -19.999727997524644,
+          115,
+          159.09585816367044
+        ],
+        "bounds_lo": [
+          -154.37285608401115,
+          35,
+          -15
+        ],
+        "centroid": [
+          -72.39555111018578,
+          75.00000000000006,
+          76.08026138123027
+        ],
+        "edges": 6,
+        "faces": 4,
+        "fins": 12,
+        "geometry": true,
+        "issues": [],
+        "loops": 4,
+        "max_edge_tolerance": 0,
+        "max_pcurve_tolerance": 4.228172807864248e-08,
+        "max_restored_pcurve_tolerance": 0,
+        "max_vertex_tolerance": 0,
+        "regions": 2,
+        "restored_ellipse_cylinder_fins": [],
+        "sha256": "86850cdf4f6c918bceb20a268796f856106106a706918ca7c5be5df4dd633bd3",
+        "sheet": false,
+        "shell_genera": [
+          0
+        ],
+        "shells": 1,
+        "solid_regions": 1,
+        "surface_types": {
+          "0": 2,
+          "7": 2
+        },
+        "vertices": 4,
+        "volume": 220147.42617574192
+      },
+      "snapshot": {
+        "area": 24784.656151388164,
+        "bounds_hi": [
+          -19.999727997524644,
+          115,
+          159.09585816367044
+        ],
+        "bounds_lo": [
+          -154.37285608401115,
+          35,
+          -15
+        ],
+        "centroid": [
+          -72.39555111018578,
+          75.00000000000006,
+          76.08026138123027
+        ],
+        "edges": 6,
+        "faces": 4,
+        "fins": 12,
+        "geometry": true,
+        "issues": [],
+        "loops": 4,
+        "max_edge_tolerance": 0,
+        "max_pcurve_tolerance": 4.228172807864248e-08,
+        "max_restored_pcurve_tolerance": 0,
+        "max_vertex_tolerance": 0,
+        "regions": 2,
+        "restored_ellipse_cylinder_fins": [],
+        "sha256": "86850cdf4f6c918bceb20a268796f856106106a706918ca7c5be5df4dd633bd3",
+        "sheet": false,
+        "shell_genera": [
+          0
+        ],
+        "shells": 1,
+        "solid_regions": 1,
+        "surface_types": {
+          "0": 2,
+          "7": 2
+        },
+        "vertices": 4,
+        "volume": 220147.42617574192
+      }
+    }
+  ],
+  "exit_code": 0,
+  "private_overlay_objects": [],
+  "source_sha256": "88aff1de9f11976577778da75f73fe365fbd8fa4b8af7799ac13f6cbe0ffcdf5",
+  "kernel_archive_sha256": "f30bb32fada9b3def11f858885f8ca70cf28f3f90fce3b605deb8ca1fcb8dfcb",
+  "application_binary_sha256": "02b3e2aaea07737137f8355b04f4a345b2ece436177a2f60b28d7f7d20bd8c07",
+  "frozen_sources": {
+    "kernel/fk_boolean.cpp": "3b8e21c9133627c99cf51df712d8b638cc466f7d2d6442f2c43c1ba47f1feda2",
+    "kernel/fk_boolean_boundary.h": "2d268df2dd61d4d36aacc6e24853ec3148390c85d27b79f671b04eedc9387fec",
+    "kernel/fk_boolean_boundary.cpp": "9d0234bfdcd029cea584f0e47ecfe650e404a33aeb2981b027b3b0024e3bc2d4"
+  }
+}

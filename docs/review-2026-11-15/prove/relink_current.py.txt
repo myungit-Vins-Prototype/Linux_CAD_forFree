@@ -1,0 +1,18 @@
+import json,shlex,subprocess,os
+root='/home/myungit/Linux_CAD_forFree';out='/tmp/forgecad-review-20261115/kernel'
+commands=json.load(open(root+'/forgecad-release/compile_commands.json'))
+replacements={}
+for c in commands:
+ if '/kernel/tests/' not in c['file'] or 'forgekernel_tests.dir' not in c['command']:continue
+ args=shlex.split(c['command']);j=args.index('-o');old=os.path.normpath(os.path.join(c['directory'],args[j+1]))
+ if os.path.exists(old) and os.stat(c['file']).st_mtime<=os.stat(old).st_mtime:continue
+ new=out+'/'+os.path.basename(c['file'])+'.o';args[j+1]=new;replacements[old]=new
+ print('compile',c['file'],flush=True);subprocess.run(args,cwd=c['directory'],check=True)
+directory=root+'/forgecad-release/kernel/occt_tests';args=shlex.split(open(directory+'/CMakeFiles/forgekernel_tests.dir/link.txt').read());result=[]
+for i,arg in enumerate(args):
+ if arg.startswith('-Wl,--dependency-file='):continue
+ if arg.endswith(('.o','.a','.so')) and not arg.startswith('/'):
+  arg=os.path.normpath(os.path.join(directory,arg));arg=replacements.get(arg,arg)
+ result.append(arg)
+result[result.index('-o')+1]=out+'/forgekernel_tests_current'
+print('link',flush=True);subprocess.run(result,cwd=directory,check=True)

@@ -1,0 +1,8 @@
+from pathlib import Path
+import subprocess,shlex,hashlib,json,time
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/k10-helix-review/root');B=R/'forgecad-release/kernel';old=Path('/tmp/k10-sketch-review/tests/baseline/libforgekernel.a');out=T/'baseline-cavity'
+cmd=shlex.split((B/'CMakeFiles/forgekernel_blend_cavity_tests.dir/link.txt').read_text());cmd=[x for x in cmd if not x.startswith('-Wl,--dependency-file=')];i=cmd.index('-o');cmd[i+1]=str(out);cmd=[str(old) if x=='libforgekernel.a' else x for x in cmd]
+with (T/'baseline-cavity-link.log').open('w') as f:subprocess.run(cmd,cwd=B,check=True,stdout=f,stderr=subprocess.STDOUT)
+start=time.monotonic()
+with (T/'baseline-cavity.log').open('w') as f:code=subprocess.run([str(out)],cwd=B,stdout=f,stderr=subprocess.STDOUT).returncode
+result={'exit':code,'seconds':time.monotonic()-start,'baseline_kernel_sha256':hashlib.sha256(old.read_bytes()).hexdigest(),'link_command':cmd,'same_test_objects':True,'output':(T/'baseline-cavity.log').read_text()};(T/'baseline-cavity-result.json').write_text(json.dumps(result,indent=2)+'\n');print(result['output']);print('Baseline exit',code,flush=True)

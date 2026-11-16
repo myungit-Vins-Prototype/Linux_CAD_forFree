@@ -1,0 +1,107 @@
+PASS frozen original SHA256
+PASS snapshot 0 strict checkBody including loop crossings
+PASS snapshot 0 finite positive exact-BRep volume
+SHAPE snapshot 0 F=6 E=12 V=8 shells=1 solid_regions=1 volume=375000 area=42500 sha=b1c869c971618b3da9e85688e5b0b70d4c0e7fbb833208eacd5e2441b13bd0e2
+PASS snapshot 2 strict checkBody including loop crossings
+PASS snapshot 2 finite positive exact-BRep volume
+SHAPE snapshot 2 F=3 E=2 V=2 shells=1 solid_regions=1 volume=117621.22895040191 area=13420.883816135602 sha=b65a96af43b29f090e1538bcac3854cf86f1108646e987d959bbf23ecaa1d324
+PASS snapshot 5 strict checkBody including loop crossings
+PASS snapshot 5 finite positive exact-BRep volume
+SHAPE snapshot 5 F=4 E=6 V=4 shells=1 solid_regions=1 volume=220147.42617574192 area=24784.656151388164 sha=86850cdf4f6c918bceb20a268796f856106106a706918ca7c5be5df4dd633bd3
+PASS encode parametric definition
+PASS full viewport rebuild without geometry cache succeeds
+PASS encode parametric definition
+PASS rebuilt 0 strict checkBody including loop crossings
+PASS rebuilt 0 finite positive exact-BRep volume
+SHAPE rebuilt 0 F=6 E=12 V=8 shells=1 solid_regions=1 volume=375000 area=42500 sha=b1c869c971618b3da9e85688e5b0b70d4c0e7fbb833208eacd5e2441b13bd0e2
+PASS snapshot/rebuilt exact B-rep bytes equal for feature 0
+PASS rebuilt feature owns newly constructed B-rep 0
+PASS rebuilt 2 strict checkBody including loop crossings
+PASS rebuilt 2 finite positive exact-BRep volume
+SHAPE rebuilt 2 F=3 E=2 V=2 shells=1 solid_regions=1 volume=117621.22895040191 area=13420.883816135602 sha=b65a96af43b29f090e1538bcac3854cf86f1108646e987d959bbf23ecaa1d324
+PASS snapshot/rebuilt exact B-rep bytes equal for feature 2
+PASS rebuilt feature owns newly constructed B-rep 2
+PASS rebuilt 5 strict checkBody including loop crossings
+PASS rebuilt 5 finite positive exact-BRep volume
+SHAPE rebuilt 5 F=4 E=6 V=4 shells=1 solid_regions=1 volume=220147.42617574192 area=24784.656151388164 sha=86850cdf4f6c918bceb20a268796f856106106a706918ca7c5be5df4dd633bd3
+PASS snapshot/rebuilt exact B-rep bytes equal for feature 5
+PASS rebuilt feature owns newly constructed B-rep 5
+PASS encode regenerated copy in tests directory only
+PASS snapshot pair 0-2 input B-reps immutable
+OPERATION snapshot pair 0-2 success=1 error=
+PASS snapshot pair 0-2 strict checkBody including loop crossings
+PASS snapshot pair 0-2 finite positive exact-BRep volume
+SHAPE snapshot pair 0-2 F=9 E=14 V=10 shells=2 solid_regions=1 volume=492621.228950402 area=55920.883816135603 sha=4351d14c7221cc64104ebf2b2f4413e9a1f3e00dda40090f955f937d9f52bb20
+PASS snapshot pair 0-2 registered history and persistent names
+PASS snapshot pair 0-2 history links refer to live operand entities
+PASS snapshot pair 0-2 all live face/edge/vertex names nonempty
+PASS snapshot pair 0-2 every resulting face has operand provenance
+PASS snapshot pair 0-2 every face preserves an original surface carrier
+PASS snapshot pair 0-2 source boundary witnesses retained by union
+PASS snapshot pair 0-2 output boundary witnesses belong to input union
+WITNESS snapshot pair 0-2 inputs=61 lost=0 outputs=61 extra=0
+PASS snapshot pair 0-2 union volume is between maximum operand and sum
+PASS snapshot pair 0-2 disjoint union conserves additive exact-BRep volume
+PASS snapshot pair 0-2 disconnected solids retain two shells
+PASS snapshot pair 0-5 input B-reps immutable
+OPERATION snapshot pair 0-5 success=1 error=
+PASS snapshot pair 0-5 strict checkBody including loop crossings
+PASS snapshot pair 0-5 finite positive exact-BRep volume
+SHAPE snapshot pair 0-5 F=9 E=21 V=14 shells=1 solid_regions=1 volume=595147.42617586383 area=62258.10790563772 sha=74fde4fc30d205829233dc3a80c29c4de22e2dbdce49ac035de64fe6fc2a8f46
+PASS snapshot pair 0-5 registered history and persistent names
+PASS snapshot pair 0-5 history links refer to live operand entities
+PASS snapshot pair 0-5 all live face/edge/vertex names nonempty
+PASS snapshot pair 0-5 every resulting face has operand provenance
+PASS snapshot pair 0-5 every face preserves an original surface carrier
+PASS snapshot pair 0-5 source boundary witnesses retained by union
+PASS snapshot pair 0-5 output boundary witnesses belong to input union
+WITNESS snapshot pair 0-5 inputs=76 lost=0 outputs=86 extra=0
+PASS snapshot pair 0-5 union volume is between maximum operand and sum
+PASS snapshot pair 2-5 input B-reps immutable
+OPERATION snapshot pair 2-5 success=0 error=Con "Loft 6": L'operazione booleana non e' riuscita: booleanOperation: risultato non chiuso (Body::build: l'edge 2 non ha due fin opposte)
+PASS snapshot pair 5-2 input B-reps immutable
+OPERATION snapshot pair 5-2 success=0 error=Con "Estrusione 3": L'operazione booleana non e' riuscita: booleanOperation: risultato non chiuso (Body::build: l'edge 3 non ha due fin opposte)
+PASS snapshot multi 0-2-5 input B-reps immutable
+OPERATION snapshot multi 0-2-5 success=0 error=Con "Loft 6": L'operazione booleana non e' riuscita: booleanOperation: risultato non chiuso (Body::build: l'edge 3 non ha due fin opposte)
+PASS snapshot multi 0-5-2 input B-reps immutable
+OPERATION snapshot multi 0-5-2 success=0 error=Con "Estrusione 3": L'operazione booleana non e' riuscita: booleanOperation: risultato non chiuso (Body::build: l'edge 3 non ha due fin opposte)
+PASS rebuilt pair 0-2 input B-reps immutable
+OPERATION rebuilt pair 0-2 success=1 error=
+PASS rebuilt pair 0-2 strict checkBody including loop crossings
+PASS rebuilt pair 0-2 finite positive exact-BRep volume
+SHAPE rebuilt pair 0-2 F=9 E=14 V=10 shells=2 solid_regions=1 volume=492621.228950402 area=55920.883816135603 sha=4351d14c7221cc64104ebf2b2f4413e9a1f3e00dda40090f955f937d9f52bb20
+PASS rebuilt pair 0-2 registered history and persistent names
+PASS rebuilt pair 0-2 history links refer to live operand entities
+PASS rebuilt pair 0-2 all live face/edge/vertex names nonempty
+PASS rebuilt pair 0-2 every resulting face has operand provenance
+PASS rebuilt pair 0-2 every face preserves an original surface carrier
+PASS rebuilt pair 0-2 source boundary witnesses retained by union
+PASS rebuilt pair 0-2 output boundary witnesses belong to input union
+WITNESS rebuilt pair 0-2 inputs=61 lost=0 outputs=61 extra=0
+PASS rebuilt pair 0-2 union volume is between maximum operand and sum
+PASS rebuilt pair 0-2 disjoint union conserves additive exact-BRep volume
+PASS rebuilt pair 0-2 disconnected solids retain two shells
+PASS rebuilt pair 0-5 input B-reps immutable
+OPERATION rebuilt pair 0-5 success=1 error=
+PASS rebuilt pair 0-5 strict checkBody including loop crossings
+PASS rebuilt pair 0-5 finite positive exact-BRep volume
+SHAPE rebuilt pair 0-5 F=9 E=21 V=14 shells=1 solid_regions=1 volume=595147.42617586383 area=62258.10790563772 sha=74fde4fc30d205829233dc3a80c29c4de22e2dbdce49ac035de64fe6fc2a8f46
+PASS rebuilt pair 0-5 registered history and persistent names
+PASS rebuilt pair 0-5 history links refer to live operand entities
+PASS rebuilt pair 0-5 all live face/edge/vertex names nonempty
+PASS rebuilt pair 0-5 every resulting face has operand provenance
+PASS rebuilt pair 0-5 every face preserves an original surface carrier
+PASS rebuilt pair 0-5 source boundary witnesses retained by union
+PASS rebuilt pair 0-5 output boundary witnesses belong to input union
+WITNESS rebuilt pair 0-5 inputs=76 lost=0 outputs=86 extra=0
+PASS rebuilt pair 0-5 union volume is between maximum operand and sum
+PASS rebuilt pair 2-5 input B-reps immutable
+OPERATION rebuilt pair 2-5 success=0 error=Con "Loft 6": L'operazione booleana non e' riuscita: booleanOperation: risultato non chiuso (Body::build: l'edge 2 non ha due fin opposte)
+PASS rebuilt pair 5-2 input B-reps immutable
+OPERATION rebuilt pair 5-2 success=0 error=Con "Estrusione 3": L'operazione booleana non e' riuscita: booleanOperation: risultato non chiuso (Body::build: l'edge 3 non ha due fin opposte)
+PASS rebuilt multi 0-2-5 input B-reps immutable
+OPERATION rebuilt multi 0-2-5 success=0 error=Con "Loft 6": L'operazione booleana non e' riuscita: booleanOperation: risultato non chiuso (Body::build: l'edge 3 non ha due fin opposte)
+PASS rebuilt multi 0-5-2 input B-reps immutable
+OPERATION rebuilt multi 0-5-2 success=0 error=Con "Estrusione 3": L'operazione booleana non e' riuscita: booleanOperation: risultato non chiuso (Body::build: l'edge 3 non ha due fin opposte)
+PASS frozen original unchanged after all operations
+RESULT checks=80 failures=0

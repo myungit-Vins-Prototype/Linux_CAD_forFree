@@ -1,4 +1,6 @@
 #include "fk_sweep.h"
+#include "fk_sweep_atlas.h"
+#include "fk_sweep_analytic_bridge.h"
 
 #include <algorithm>
 #include <cmath>
@@ -13,7 +15,6 @@
 #include "fk_nurbs.h"
 #include "fk_pcurve.h"
 #include "fk_precision.h"
-#include "fk_quadrature.h"
 #include "fk_surface_algo.h"
 #include "fk_transform.h"
 
@@ -25,7 +26,6 @@ struct J {
     double v = 0.0, d1 = 0.0, d2 = 0.0;
 };
 J operator+(const J &a, const J &b) { return {a.v + b.v, a.d1 + b.d1, a.d2 + b.d2}; }
-J operator*(const J &a, const J &b) { return {a.v * b.v, a.d1 * b.v + a.v * b.d1, a.d2 * b.v + 2.0 * a.d1 * b.d1 + a.v * b.d2}; }
 J inverse(const J &a) {
     const double i = 1.0 / a.v;
     return {i, -a.d1 * i * i, (2.0 * a.d1 * a.d1 - a.v * a.d2) * i * i * i};
@@ -63,6 +63,44 @@ Vec3 anyPerpendicular(const Vec3 &t) {
     return normalized(axis - dot(axis, t) * t);
 }
 
+// Punti che generano l'inviluppo affine della rappresentazione esatta.
+// Per le curve senza un certificato geometrico disponibile si usa Bishop:
+// una griglia di valori/derivate non puo' certificare la planarita'.
+bool affineSupport(const Curve<3> &curve, const Interval &range, std::vector<Vec3> &points) {
+    switch (curve.type()) {
+    case CurveType::Trimmed:
+        return affineSupport(*static_cast<const TrimmedCurve<3> &>(curve).basis(), range, points);
+    case CurveType::Transformed: {
+        const auto &c = static_cast<const TransformedCurve &>(curve);
+        std::vector<Vec3> local;
+        if (!affineSupport(*c.basis(), range, local)) return false;
+        for (const Vec3 &p : local) points.push_back(c.transform().applyToPoint(p));
+        return true;
+    }
+    case CurveType::Line:
+        points.push_back(curve.point(range.lo));
+        points.push_back(curve.point(range.hi));
+        return true;
+    case CurveType::Circle: {
+        const auto &c = static_cast<const Circle<3> &>(curve);
+        points.insert(points.end(), {c.center(), c.center() + c.radius() * c.xAxis(), c.center() + c.radius() * c.yAxis()});
+        return true;
+    }
+    case CurveType::Ellipse: {
+        const auto &c = static_cast<const Ellipse<3> &>(curve);
+        points.insert(points.end(), {c.center(), c.center() + c.xRadius() * c.xAxis(), c.center() + c.yRadius() * c.yAxis()});
+        return true;
+    }
+    case CurveType::BSpline: {
+        const auto &c = static_cast<const BSplineCurve<3> &>(curve);
+        points.insert(points.end(), c.poles().begin(), c.poles().end());
+        return true;
+    }
+    default:
+        return false;
+    }
+}
+
 enum class Motion { General, Translation, Rotation };
 
 // Sistema mobile lungo il percorso.
@@ -74,6 +112,13 @@ public:
         for (const PathSegment &s : path) {
             if (!s.curve || !(s.range.length() > 0.0) || !s.range.isFinite()) throw std::domain_error("sweep: tratto del percorso non valido");
             for (int i = 0; i <= 16; ++i) box.add(s.curve->point(s.range.lo + s.range.length() * i / 16.0));
+            for (double v : s.curve->breakpoints(s.range)) if (v > s.range.lo && v < s.range.hi) {
+                Vec3 before[2], after[2];
+                s.curve->evaluateLeft(v, 1, before);
+                s.curve->evaluate(v, 1, after);
+                if (!sameTangent(normalized(before[1]), normalized(after[1])))
+                    throw std::domain_error("sweep: il percorso ha un angolo vivo interno (i tratti devono essere tangenti)");
+            }
         }
         size_ = std::max(box.diagonal(), 1e-9);
         const double gapTolerance = 1e-6 * std::max(1.0, size_);
@@ -86,39 +131,41 @@ public:
         closed_ = distance(endPoint(K - 1), startPoint(0)) <= gapTolerance;
         if (closed_ && !sameTangent(endTangent(K - 1), startTangent(0)))
             throw std::domain_error("sweep: il percorso chiuso ha un angolo vivo nel punto di partenza");
-        // Percorso piano? Piano per il punto iniziale, il piu' lontano e quello piu' fuori dalla loro retta.
-        std::vector<Vec3> samples;
+        // Certifica il piano sull'inviluppo affine, mai su una griglia finita.
+        std::vector<Vec3> support;
+        bool certified = true;
         for (const PathSegment &s : path)
-            for (int i = 0; i <= 16; ++i) samples.push_back(s.curve->point(s.range.lo + s.range.length() * i / 16.0));
-        const Vec3 p0 = samples.front();
-        Vec3 far = p0;
-        for (const Vec3 &p : samples)
-            if (distance(p, p0) > distance(far, p0)) far = p;
-        const Vec3 d = far - p0;
-        Vec3 normal;
-        double best = 0.0;
-        for (const Vec3 &p : samples) {
-            const Vec3 c = cross(d, p - p0);
-            if (norm(c) > best) best = norm(c), normal = c;
-        }
-        const double planarTolerance = 1e-9 * std::max(1.0, size_);
-        if (best <= planarTolerance * std::max(norm(d), 1e-300)) {
-            planar_ = true;  // rettilineo
-            normal_ = anyPerpendicular(startTangent(0));
-            const Vec3 h = hint - dot(hint, startTangent(0)) * startTangent(0);
-            if (norm(h) > 1e-6) normal_ = normalized(h);
-        } else {
-            normal_ = normalized(normal);
-            planar_ = true;
-            for (const PathSegment &s : path)
-                for (int i = 0; i <= 32 && planar_; ++i)
-                    planar_ = std::fabs(dot(s.curve->point(s.range.lo + s.range.length() * i / 32.0) - p0, normal_)) <= planarTolerance;
+            if (!affineSupport(*s.curve, s.range, support)) certified = false;
+        if (certified) {
+            const Vec3 p0 = support.front();
+            Vec3 far = p0;
+            for (const Vec3 &p : support)
+                if (distance(p, p0) > distance(far, p0)) far = p;
+            const Vec3 d = far - p0;
+            Vec3 normal;
+            double best = 0.0;
+            for (const Vec3 &p : support) {
+                const Vec3 c = cross(d, p - p0);
+                if (norm(c) > best) best = norm(c), normal = c;
+            }
+            // Budget geometrico esistente; il certificato sui poli e' conservativo
+            // anche per un sottointervallo di una curva non planare.
+            const double planarTolerance = 1e-9 * std::max(1.0, size_);
+            if (best <= planarTolerance * std::max(norm(d), 1e-300)) {
+                planar_ = true;
+                normal_ = anyPerpendicular(startTangent(0));
+                const Vec3 h = hint - dot(hint, startTangent(0)) * startTangent(0);
+                if (norm(h) > 1e-6) normal_ = normalized(h);
+            } else {
+                normal_ = normalized(normal);
+                planar_ = true;
+                for (const Vec3 &p : support)
+                    if (std::fabs(dot(p - p0, normal_)) > planarTolerance) planar_ = false;
+            }
         }
         kinds_.resize(std::size_t(K));
-        phi_.assign(std::size_t(K), 0.0);
         carriedN_.resize(std::size_t(K));
-        carriedB_.resize(std::size_t(K));
-        thetaCache_.resize(std::size_t(K));
+        transportCache_.resize(std::size_t(K));
         for (int k = 0; k < K; ++k) {
             const CurveType type = basisOf(*path[std::size_t(k)].curve).type();
             kinds_[std::size_t(k)] = type;
@@ -132,7 +179,7 @@ public:
             B0_ = normal_ - dot(normal_, T0_) * T0_;
             B0_ = normalized(B0_);
             N0_ = cross(B0_, T0_);
-        } else if (mode == SweepOrientation::Fixed || kinds_[0] == CurveType::Line) {
+        } else if (mode != SweepOrientation::Frenet) {
             const Vec3 h = hint - dot(hint, T0_) * T0_;
             B0_ = norm(h) > 1e-6 ? normalized(h) : anyPerpendicular(T0_);
             N0_ = cross(B0_, T0_);
@@ -143,18 +190,18 @@ public:
             B0_ = B.v;
         }
         carriedN_[0] = N0_;
-        carriedB_[0] = B0_;
-        // Torsione minima su un percorso non piano: ogni tratto riparte dal sistema con cui e' finito il precedente.
+        // Il trasporto di Bishop resta definito anche a curvatura nulla.
+        // Cache ai nodi: l'integrazione non attraversa discontinuita' delle derivate.
         if (mode == SweepOrientation::MinimalTwist && !planar_) {
-            for (int k = 1; k < K; ++k) {
-                JV P, T, N, B;
-                evaluate(k - 1, path[std::size_t(k - 1)].range.hi, true, P, T, N, B);
-                carriedN_[std::size_t(k)] = N.v;
-                carriedB_[std::size_t(k)] = B.v;
-                if (kinds_[std::size_t(k)] != CurveType::Line) {
-                    JV P2, T2, N2, B2;
-                    frenet(k, path[std::size_t(k)].range.lo, false, P2, T2, N2, B2);
-                    phi_[std::size_t(k)] = std::atan2(::ForgeCad::Kernel::dot(N.v, B2.v), ::ForgeCad::Kernel::dot(N.v, N2.v));
+            for (int k = 0; k < K; ++k) {
+                const auto &segment = path[std::size_t(k)];
+                transportCache_[std::size_t(k)][segment.range.lo] = carriedN_[std::size_t(k)];
+                for (double v : segment.curve->breakpoints(segment.range))
+                    if (v > segment.range.lo) transport(k, v);
+                if (k + 1 < K) {
+                    const Vec3 tangent = startTangent(k + 1);
+                    const Vec3 normal = transport(k, segment.range.hi);
+                    carriedN_[std::size_t(k + 1)] = normalized(normal - ::ForgeCad::Kernel::dot(normal, tangent) * tangent);
                 }
             }
         }
@@ -212,19 +259,19 @@ public:
             frenetFrom(D, T, N, B);
         } else if (planar_) {
             T = unit(D1);
-            B = constant(B0_);
+            // Proiezione con getti: conserva anche le derivate della base
+            // ortonormale quando il certificato risente dell'arrotondamento.
+            const JV seed = constant(B0_);
+            B = unit(seed + J{-1.0, 0.0, 0.0} * (dot(seed, T) * T));
             N = cross(B, T);
-        } else if (kinds_[std::size_t(k)] == CurveType::Line) {
-            T = unit(D1);
-            N = constant(carriedN_[std::size_t(k)]);
-            B = constant(carriedB_[std::size_t(k)]);
         } else {
-            frenetFrom(D, T, N, B);
-            // theta' = -tau |P'|: il getto di tau |P'| dalle derivate fino alla quinta.
-            const JV D2{D[2], D[3], D[4]}, D3{D[3], D[4], D[5]};
-            const JV A = cross(D1, D2);
-            const J rate = dot(A, D3) * inverse(dot(A, A)) * squareRoot(dot(D1, D1));
-            alpha = {phi_[std::size_t(k)] + theta(k, v), -rate.v, -rate.d1};
+            T = unit(D1);
+            N.v = transport(k, v);
+            N.v = normalized(N.v - ::ForgeCad::Kernel::dot(N.v, T.v) * T.v);
+            const double bending = ::ForgeCad::Kernel::dot(N.v, T.d1);
+            N.d1 = -bending * T.v;
+            N.d2 = -::ForgeCad::Kernel::dot(N.v, T.d2) * T.v - bending * T.d1;
+            B = cross(T, N);
         }
         if (psiRate_ != 0.0) alpha = alpha + J{psiRate_ * (offsets_[std::size_t(k)] + v - s.range.lo), psiRate_, 0.0};
         if (alpha.v != 0.0 || alpha.d1 != 0.0 || alpha.d2 != 0.0) {
@@ -282,24 +329,69 @@ private:
         if (distance(N.v, N2.v) > 1e-7)
             throw std::domain_error("sweep: con Frenet la normale del percorso salta tra due tratti (flesso): usa la torsione minima");
     }
-    // theta(v) = -\int_lo^v tau |P'| dt, dalla quadratura adattiva (con una cache dei valori gia' calcolati).
-    double theta(int k, double v) const {
-        const PathSegment &s = path_[std::size_t(k)];
-        std::map<double, double> &cache = thetaCache_[std::size_t(k)];
-        if (cache.empty()) cache[s.range.lo] = 0.0;
+    // N' = -(T' . N) T. RK4 con raddoppio del passo e controllo locale
+    // dell'errore: nessuna divisione per la curvatura o per la torsione.
+    // Il budget angolare e' separato da quello geometrico del fit delle righe.
+    Vec3 transport(int k, double v) const {
+        const auto &segment = path_[std::size_t(k)];
+        auto &cache = transportCache_[std::size_t(k)];
         auto above = cache.lower_bound(v);
         if (above != cache.end() && above->first == v) return above->second;
-        const auto below = above == cache.begin() ? above : std::prev(above);
-        const auto from = (above != cache.end() && std::fabs(above->first - v) < std::fabs(below->first - v)) ? above : below;
-        const auto rate = [&](double t) {
-            Vec3 D[4];
-            s.curve->evaluate(t, 3, D);
-            const Vec3 A = ::ForgeCad::Kernel::cross(D[1], D[2]);
-            return -::ForgeCad::Kernel::dot(A, D[3]) / squaredNorm(A) * norm(D[1]);
+        const auto from = std::prev(above);
+        const double start = from->first;
+        Vec3 normal = from->second;
+        double t = start, h = v - start;
+        const auto tangentJet = [&](double u) {
+            Vec3 d[3];
+            if (u == v) segment.curve->evaluateLeft(u, 2, d);
+            else segment.curve->evaluate(u, 2, d);
+            const double speed = norm(d[1]);
+            if (!(speed > 0.0)) throw std::domain_error("sweep: tangente del percorso non definita");
+            const Vec3 tangent = d[1] / speed;
+            const Vec3 derivative = (d[2] - ::ForgeCad::Kernel::dot(d[2], tangent) * tangent) / speed;
+            return JV{tangent, derivative, Vec3()};
         };
-        const double value = from->second + detail::adaptiveIntegral(rate, from->first, v, 1e-14 * std::max(1.0, std::fabs(v - from->first)), 0);
-        cache[v] = value;
-        return value;
+        const auto rate = [&](double u, const Vec3 &n) {
+            const auto tangent = tangentJet(u);
+            return -::ForgeCad::Kernel::dot(tangent.d1, n) * tangent.v;
+        };
+        const auto step = [&](double u, double dt, const Vec3 &n) {
+            const Vec3 a = rate(u, n);
+            const Vec3 b = rate(u + dt * 0.5, n + (dt * 0.5) * a);
+            const Vec3 c = rate(u + dt * 0.5, n + (dt * 0.5) * b);
+            const Vec3 d = rate(u + dt, n + dt * c);
+            return n + (dt / 6.0) * (a + 2.0 * b + 2.0 * c + d);
+        };
+        int guard = 0;
+        while (t < v) {
+            if (++guard > 200000) throw std::domain_error("sweep: trasporto a torsione minima non convergente");
+            h = std::min(h, v - t);
+            if (!(t + h > t)) throw std::domain_error("sweep: passo del trasporto troppo piccolo");
+            // Evita l'aliasing di un passo che copre giri completi: sui
+            // percorsi periodici due stime RK possono coincidere per caso.
+            const double turn = h * std::max({norm(tangentJet(t).d1), norm(tangentJet(t + h * 0.5).d1), norm(tangentJet(t + h).d1)});
+            if (turn > 0.25) { h *= std::max(0.1, 0.25 / turn); continue; }
+            const Vec3 whole = step(t, h, normal);
+            const Vec3 half = step(t, h * 0.5, normal);
+            const Vec3 refined = step(t + h * 0.5, h * 0.5, half);
+            const double error = distance(whole, refined) / 15.0;
+            // Sotto pochi ulp la differenza fra i due passi misura soltanto
+            // l'arrotondamento dei vettori unitari, non l'errore RK4.
+            const double budget = std::max(1e-12 * h / segment.range.length(), 8.0 * kMachineEpsilon);
+            if (!std::isfinite(error)) throw std::domain_error("sweep: trasporto a torsione minima non finito");
+            if (error <= budget) {
+                normal = refined + (refined - whole) / 15.0;
+                t = h == v - t ? v : t + h;
+            }
+            const double factor = error > 0.0 ? std::clamp(0.9 * std::pow(budget / error, 0.2), 0.2, 2.0) : 2.0;
+            h *= factor;
+        }
+        Vec3 d[2];
+        segment.curve->evaluateLeft(v, 1, d);
+        const Vec3 tangent = normalized(d[1]);
+        normal = normalized(normal - ::ForgeCad::Kernel::dot(normal, tangent) * tangent);
+        cache[v] = normal;
+        return normal;
     }
 
     std::vector<PathSegment> path_;
@@ -309,15 +401,100 @@ private:
     Vec3 normal_;
     Vec3 P0_, T0_, N0_, B0_;
     std::vector<CurveType> kinds_;
-    std::vector<double> phi_;
-    std::vector<Vec3> carriedN_, carriedB_;
+    std::vector<Vec3> carriedN_;
     std::vector<double> offsets_;
     double psiRate_ = 0.0, total_ = 0.0;
-    mutable std::vector<std::map<double, double>> thetaCache_;
+    mutable std::vector<std::map<double, Vec3>> transportCache_;
 };
 
 // Curva del profilo come B-spline esatta (tratti di Bezier in forma standard).
 BSplineCurve<3> profileNurbs(const Curve<3> &curve, const Interval &range) { return joinBezierPieces(standardBezierPieces(curve, range)); }
+
+// Conserva il ramo v noto del bordo trasversale di una pezza tensoriale.
+// Il parametro u(t) puo' non essere affine (ad esempio cerchio -> NURBS).
+CurvePtr<2> sectionPCurve(const Surface &surface, const Body::BuildEdge &edge, double v, double &budget) {
+    const double tolerance = std::max(pCurveTolerance(), edge.tolerance);
+    CurvePtr<2> projected = exactPCurve(surface, edge.curve, edge.range, tolerance);
+    budget = 0.0;
+    if (!projected) projected = fitPCurve(surface, edge.curve, edge.range, tolerance, &budget);
+    if (!projected) throw std::domain_error("sweep: SP-curve trasversale non costruibile");
+    CurvePtr<2> result;
+    if (projected->type() == CurveType::Line) {
+        const auto &line = static_cast<const Line<2> &>(*projected);
+        result = std::make_shared<BSplineCurve<2>>(1,
+            std::vector<double>{edge.range.lo, edge.range.lo, edge.range.hi, edge.range.hi},
+            std::vector<Vec2>{Vec2(line.point(edge.range.lo).x(), v), Vec2(line.point(edge.range.hi).x(), v)});
+    } else if (projected->type() == CurveType::BSpline) {
+        const auto &spline = static_cast<const BSplineCurve<2> &>(*projected);
+        std::vector<Vec2> poles = spline.poles();
+        for (Vec2 &pole : poles) pole = Vec2(pole.x(), v);
+        result = std::make_shared<BSplineCurve<2>>(spline.degree(), spline.knots(), poles, spline.weights());
+    }
+    const double deviation = result ? pcurveDeviation(surface, *edge.curve, *result, edge.range) : tolerance + 1.0;
+    if (!result || !(deviation <= tolerance))
+        throw std::domain_error("sweep: SP-curve trasversale fuori dal bordo della pezza");
+    if (budget > 0.0) budget = std::max(budget, deviation);
+    return result;
+}
+
+CurvePtr<2> longitudinalPCurve(const Surface &surface, const Body::BuildEdge &edge, double u, double &budget) {
+    const double tolerance = std::max(pCurveTolerance(), edge.tolerance);
+    CurvePtr<2> projected = exactPCurve(surface, edge.curve, edge.range, tolerance);
+    budget = 0.0;
+    if (!projected) projected = fitPCurve(surface, edge.curve, edge.range, tolerance, &budget);
+    if (!projected) throw std::domain_error("sweep: SP-curve longitudinale non costruibile");
+    CurvePtr<2> result;
+    if (projected->type() == CurveType::Line) {
+        const auto &line = static_cast<const Line<2> &>(*projected);
+        result = std::make_shared<BSplineCurve<2>>(1,
+            std::vector<double>{edge.range.lo, edge.range.lo, edge.range.hi, edge.range.hi},
+            std::vector<Vec2>{Vec2(u, line.point(edge.range.lo).y()), Vec2(u, line.point(edge.range.hi).y())});
+    } else if (projected->type() == CurveType::BSpline) {
+        const auto &spline = static_cast<const BSplineCurve<2> &>(*projected);
+        std::vector<Vec2> poles = spline.poles();
+        for (Vec2 &pole : poles) pole = Vec2(u, pole.y());
+        result = std::make_shared<BSplineCurve<2>>(spline.degree(), spline.knots(), poles, spline.weights());
+    }
+    const double deviation = result ? pcurveDeviation(surface, *edge.curve, *result, edge.range) : tolerance + 1.0;
+    if (!result || !(deviation <= tolerance))
+        throw std::domain_error("sweep: SP-curve longitudinale fuori dal bordo della pezza");
+    if (budget > 0.0) budget = std::max(budget, deviation);
+    return result;
+}
+
+// q(X)=dot(dX/dv,T) e' affine nel punto della sezione. Su una curva
+// razionale a pesi positivi il suo segno e' quello del numeratore Bernstein.
+// Un polo negativo e' solo un bound incerto: si suddivide il polinomio,
+// senza confondere l'inviluppo dei poli con la geometria del profilo.
+void requirePositiveSection(std::vector<double> coefficients, double uncertainty, int depth = 0) {
+    cancellationPoint();
+    double minimum = coefficients.front(), magnitude = 0.0;
+    for (double x : coefficients) {
+        if (!std::isfinite(x)) throw std::domain_error("sweep: controllo locale della sezione non finito");
+        minimum = std::min(minimum, x);
+        magnitude = std::max(magnitude, std::fabs(x));
+    }
+    // Budget nella stessa unita' del funzionale (avanzamento o
+    // distanza radiale): margine di arrotondamento, non tolleranza geometrica aggiuntiva.
+    uncertainty += 4.0 * kMachineEpsilon * magnitude;
+    if (minimum > uncertainty) return;
+    if (coefficients.front() < -uncertainty || coefficients.back() < -uncertainty)
+        throw std::domain_error("sweep: il raggio di curvatura del percorso e' minore della distanza del profilo (le sezioni si incrociano)");
+    if (coefficients.front() <= uncertainty || coefficients.back() <= uncertainty || depth >= 48)
+        throw std::domain_error("sweep: positivita' locale della sezione non certificabile alla precisione numerica");
+    const std::size_t n = coefficients.size();
+    std::vector<double> first(n), second(n);
+    first[0] = coefficients.front();
+    second[n - 1] = coefficients.back();
+    for (std::size_t level = 1; level < n; ++level) {
+        for (std::size_t i = 0; i + level < n; ++i)
+            coefficients[i] = 0.5 * coefficients[i] + 0.5 * coefficients[i + 1];
+        first[level] = coefficients[0];
+        second[n - level - 1] = coefficients[n - level - 1];
+    }
+    requirePositiveSection(std::move(first), uncertainty, depth + 1);
+    requirePositiveSection(std::move(second), uncertainty, depth + 1);
+}
 
 // Tratto del profilo nello spazio.
 struct ProfilePiece {
@@ -331,6 +508,7 @@ struct ProfileData {
     std::vector<Vec3> vertices;
     std::vector<ProfilePiece> pieces;
     std::vector<std::vector<int>> loops;  // indici dei tratti, nel verso del loop
+    std::vector<ProfileLoop> planarLoops;
     std::vector<int> region;              // regione di ogni loop (-1: catena aperta)
     std::vector<double> gaps;             // distanza tra la fine del tratto precedente e il vertice
 };
@@ -370,6 +548,7 @@ void addLoop(ProfileData &data, const Frame3 &frame, const ProfileLoop &loop, bo
         indices.push_back(int(data.pieces.size()));
         data.pieces.push_back(piece);
     }
+    data.planarLoops.push_back(loop);
     data.loops.push_back(indices);
     data.region.push_back(region);
 }
@@ -442,12 +621,19 @@ Body sweep(const Frame3 &profileFrame, const ProfileData &profile, bool sheet, c
 
     // Tratti del percorso: spigoli longitudinali e facce laterali.
     std::vector<Body::BuildFace> faces;
+    std::vector<detail::SweepSurfaceChart> charts;
+    std::vector<detail::SweepCap> caps;
+    std::vector<int> ordinal(std::size_t(P), 0);
+    for (const auto &loop : profile.loops)
+        for (std::size_t i = 0; i < loop.size(); ++i) ordinal[std::size_t(loop[i])] = int(i);
     for (int k = 0; k < K; ++k) {
         const PathSegment &segment = frames.segment(k);
         const Interval range = segment.range;
         const Motion motion = frames.motion(k);
         std::vector<int> longitudinal(static_cast<std::size_t>(V));
         std::vector<SurfacePtr> surfaces(static_cast<std::size_t>(P));
+        std::vector<std::shared_ptr<const BSplineSurface>> chartSurfaces(static_cast<std::size_t>(P));
+        std::vector<detail::SweepAnalyticBridge> chartErrors(static_cast<std::size_t>(P));
         // Punto mobile: getto di X(v) per il punto q del profilo (posizione iniziale).
         const auto moving = [&](double v, bool left, const Vec3 &w, JV *frameOut = nullptr) {
             JV Pj, T, N, B;
@@ -470,16 +656,25 @@ Body sweep(const Frame3 &profileFrame, const ProfileData &profile, bool sheet, c
             }
             for (int p = 0; p < P; ++p) {
                 const Body::BuildEdge &section = edges[std::size_t(sectionEdge[std::size_t(k * P + p)])];
+                chartSurfaces[std::size_t(p)] = detail::translationChart(*section.curve, section.range, b - a);
                 const Curve<3> &basis = basisOf(*section.curve);
                 if (basis.type() == CurveType::Line) {
                     const Vec3 x = static_cast<const Line<3> &>(basis).direction();
                     surfaces[std::size_t(p)] = std::make_shared<Plane>(Frame3(section.curve->point(section.range.lo), normalized(cross(x, d)), x));
                 } else if (basis.type() == CurveType::Circle
-                           && norm(cross(normalized(cross(static_cast<const Circle<3> &>(basis).xAxis(), static_cast<const Circle<3> &>(basis).yAxis())), d)) < 1e-12) {
+                           && norm(cross(normalized(cross(static_cast<const Circle<3> &>(basis).xAxis(), static_cast<const Circle<3> &>(basis).yAxis())), d)) <= 64.0 * kMachineEpsilon) {
                     const auto &c = static_cast<const Circle<3> &>(basis);
                     surfaces[std::size_t(p)] = std::make_shared<CylindricalSurface>(Frame3(c.center(), d, c.xAxis()), c.radius());
                 } else {
-                    surfaces[std::size_t(p)] = std::make_shared<ExtrusionSurface>(section.curve, d);
+                    // Conversioni generiche non hanno qui un ponte certificato verso
+                    // il carrier analitico: il carrier validato e quello B-rep coincidono.
+                    surfaces[std::size_t(p)] = chartSurfaces[std::size_t(p)];
+                }
+                if (surfaces[std::size_t(p)] != chartSurfaces[std::size_t(p)]) {
+                    auto bridge = detail::boundSweepAnalyticBridge(*section.curve, section.range,
+                        *chartSurfaces[std::size_t(p)], b - a, false, {}, {}, 0, surfaces[std::size_t(p)].get());
+                    if (bridge.bounded) chartErrors[std::size_t(p)] = bridge;
+                    else surfaces[std::size_t(p)] = chartSurfaces[std::size_t(p)];
                 }
             }
         } else if (motion == Motion::Rotation) {
@@ -506,15 +701,29 @@ Body sweep(const Frame3 &profileFrame, const ProfileData &profile, bool sheet, c
             }
             for (int p = 0; p < P; ++p) {
                 const Body::BuildEdge &section = edges[std::size_t(sectionEdge[std::size_t(k * P + p)])];
+                chartSurfaces[std::size_t(p)] = detail::rotationChart(*section.curve, section.range, center, axis, angle);
                 // Il profilo resta dalla parte del percorso rispetto all'asse dell'arco.
                 {
                     const Vec3 pathPoint = segment.curve->point(range.lo);
                     Vec3 foot;
                     radial(pathPoint, foot);
                     const Vec3 outward = normalized(pathPoint - foot);
-                    for (int i = 0; i <= 32; ++i)
-                        if (!(dot(section.curve->point(section.range.lo + section.range.length() * i / 32.0) - center, outward) > 1e-7 * scale))
-                            throw std::domain_error("sweep: il raggio di un arco del percorso e' minore della distanza del profilo");
+                    // Stesso funzionale affine anche nel ramo analitico:
+                    // nessuna griglia finita puo' escludere un minimo stretto.
+                    for (const BSplineCurve<3> &piece : rationalBezierPieces(*section.curve, section.range)) {
+                        std::vector<double> coefficients;
+                        double uncertainty = 0.0;
+                        const double weightScale = piece.isRational()
+                            ? *std::max_element(piece.weights().begin(), piece.weights().end()) : 1.0;
+                        for (int i = 0; i < piece.poleCount(); ++i) {
+                            const double weight = piece.weight(i) / weightScale;
+                            const Vec3 relative = piece.poles()[std::size_t(i)] - center;
+                            coefficients.push_back(weight * (dot(relative, outward) - 1e-7 * scale));
+                            uncertainty = std::max(uncertainty, 64.0 * kMachineEpsilon * weight
+                                * (norm(piece.poles()[std::size_t(i)]) + norm(center) + 1e-7 * scale));
+                        }
+                        requirePositiveSection(std::move(coefficients), uncertainty);
+                    }
                 }
                 const Curve<3> &basis = basisOf(*section.curve);
                 const Vec3 a = section.curve->point(section.range.lo), b = section.curve->point(section.range.hi);
@@ -525,13 +734,13 @@ Body sweep(const Frame3 &profileFrame, const ProfileData &profile, bool sheet, c
                 SurfacePtr surface;
                 if (basis.type() == CurveType::Line) {
                     const Vec3 dir = b - a, c = cross(dir, axis);
-                    const bool coplanar = norm(c) <= 1e-12 * norm(dir) || std::fabs(dot(a - center, c / norm(c))) <= 1e-9 * scale;
+                    const bool coplanar = norm(c) <= 64.0 * kMachineEpsilon * norm(dir) || std::fabs(dot(a - center, c / norm(c))) <= 64.0 * kMachineEpsilon * (norm(a) + norm(center) + norm(dir));
                     if (coplanar) {
                         Vec3 footB;
                         const double rhoB = radial(b, footB), zB = dot(b - center, axis);
                         const Vec2 d2(rhoB - rhoA, zB - zA);
-                        if (std::fabs(d2.x()) <= 1e-12 * norm(d2)) surface = std::make_shared<CylindricalSurface>(Frame3(center, axis, xRef), rhoA);
-                        else if (std::fabs(d2.y()) <= 1e-12 * norm(d2)) surface = std::make_shared<Plane>(Frame3(center + zA * axis, axis, xRef));
+                        if (std::fabs(d2.x()) <= 64.0 * kMachineEpsilon * norm(d2)) surface = std::make_shared<CylindricalSurface>(Frame3(center, axis, xRef), rhoA);
+                        else if (std::fabs(d2.y()) <= 64.0 * kMachineEpsilon * norm(d2)) surface = std::make_shared<Plane>(Frame3(center + zA * axis, axis, xRef));
                         else {
                             const Vec2 g = d2.y() > 0.0 ? d2 : -d2;
                             surface = std::make_shared<ConicalSurface>(Frame3(center + zA * axis, axis, xRef), std::atan2(g.x(), g.y()), rhoA);
@@ -540,23 +749,25 @@ Body sweep(const Frame3 &profileFrame, const ProfileData &profile, bool sheet, c
                 } else if (basis.type() == CurveType::Circle) {
                     const auto &c = static_cast<const Circle<3> &>(basis);
                     const Vec3 normal = normalized(cross(c.xAxis(), c.yAxis()));
-                    if (std::fabs(dot(normal, axis)) <= 1e-12 && std::fabs(dot(c.center() - center, normal)) <= 1e-9 * scale) {
+                    if (std::fabs(dot(normal, axis)) <= 64.0 * kMachineEpsilon && std::fabs(dot(c.center() - center, normal)) <= 64.0 * kMachineEpsilon * (norm(c.center()) + norm(center) + c.radius())) {
                         Vec3 foot;
                         const double rhoC = radial(c.center(), foot);
-                        const Vec3 x = rhoC > 1e-9 * scale ? (c.center() - foot) / rhoC : xRef;
+                        const Vec3 x = rhoC > 64.0 * kMachineEpsilon * (norm(c.center()) + norm(center) + c.radius()) ? (c.center() - foot) / rhoC : xRef;
                         const Frame3 f(center + dot(c.center() - center, axis) * axis, axis, x);
-                        if (rhoC <= 1e-9 * scale) surface = std::make_shared<SphericalSurface>(f, c.radius());
+                        if (rhoC <= 64.0 * kMachineEpsilon * (norm(c.center()) + norm(center) + c.radius())) surface = std::make_shared<SphericalSurface>(f, c.radius());
                         else if (c.radius() < rhoC) surface = std::make_shared<ToroidalSurface>(f, rhoC, c.radius());
                     }
                 }
                 if (!surface) {
-                    // La curva geometrica del profilo puo' essere illimitata
-                    // (in particolare una retta), mentre lo schizzo ne usa
-                    // soltanto `section.range`. La superficie deve conservare
-                    // quel dominio finito: projectPoint e le p-curve non
-                    // possono cercare su un meridiano infinito.
-                    const CurvePtr<3> meridian = std::make_shared<TrimmedCurve<3>>(section.curve, section.range.lo, section.range.hi);
-                    surface = std::make_shared<RevolutionSurface>(meridian, center, axis);
+                    // Nessuna promozione approssimata a fitTolerance: un moto
+                    // generico conserva direttamente il carrier tensoriale validato.
+                    surface = chartSurfaces[std::size_t(p)];
+                }
+                if (surface != chartSurfaces[std::size_t(p)]) {
+                    auto bridge = detail::boundSweepAnalyticBridge(*section.curve, section.range,
+                        *chartSurfaces[std::size_t(p)], {}, true, center, axis, angle, surface.get());
+                    if (bridge.bounded) chartErrors[std::size_t(p)] = bridge;
+                    else surface = chartSurfaces[std::size_t(p)];
                 }
                 surfaces[std::size_t(p)] = surface;
             }
@@ -579,14 +790,41 @@ Body sweep(const Frame3 &profileFrame, const ProfileData &profile, bool sheet, c
                     }
                 }
             }
+            // Pezze della sezione reale, distinte dai poli usati dal fit.
+            struct SectionPole { Vec3 local; double weight; };
+            std::vector<std::vector<SectionPole>> sectionPieces;
+            for (const BSplineCurve<3> &c : nurbs) {
+                const auto pieces = c.cachedBezierSegments();
+                for (const BSplineCurve<3> &piece : *pieces) {
+                    std::vector<SectionPole> poles;
+                    const double weightScale = piece.isRational()
+                        ? *std::max_element(piece.weights().begin(), piece.weights().end()) : 1.0;
+                    for (int i = 0; i < piece.poleCount(); ++i)
+                        poles.push_back({local(piece.poles()[std::size_t(i)]), piece.weight(i) / weightScale});
+                    sectionPieces.push_back(std::move(poles));
+                }
+            }
             const int R = int(rows.size());
             const detail::RowSampler sampler = [&](double v, bool left, Vec3 *out) {
                 JV frame[3];
+                const JV origin = moving(v, left, Vec3(), frame);
+                const double advance = dot(origin.d1, frame[0].v);
+                const Vec3 linear(dot(frame[0].d1, frame[0].v), dot(frame[1].d1, frame[0].v), dot(frame[2].d1, frame[0].v));
+                for (const auto &piece : sectionPieces) {
+                    std::vector<double> coefficients;
+                    double uncertainty = 0.0;
+                    for (const SectionPole &pole : piece) {
+                        const double q = advance + dot(linear, pole.local);
+                        coefficients.push_back(pole.weight * q);
+                        const double arithmeticScale = std::fabs(advance) + std::fabs(linear.x() * pole.local.x())
+                            + std::fabs(linear.y() * pole.local.y()) + std::fabs(linear.z() * pole.local.z());
+                        uncertainty = std::max(uncertainty, 64.0 * kMachineEpsilon * pole.weight * arithmeticScale);
+                    }
+                    requirePositiveSection(std::move(coefficients), uncertainty);
+                }
                 for (int r = 0; r < R; ++r) {
-                    const JV X = moving(v, left, rows[std::size_t(r)], r == 0 ? frame : nullptr);
-                    // Le sezioni non devono tornare indietro lungo il percorso.
-                    if (!(dot(X.d1, frame[0].v) > 0.0))
-                        throw std::domain_error("sweep: il raggio di curvatura del percorso e' minore della distanza del profilo (le sezioni si incrociano)");
+                    const Vec3 &w = rows[std::size_t(r)];
+                    const JV X = origin + w.x() * frame[0] + w.y() * frame[1] + w.z() * frame[2];
                     out[3 * r] = X.v, out[3 * r + 1] = X.d1, out[3 * r + 2] = X.d2;
                 }
             };
@@ -613,13 +851,27 @@ Body sweep(const Frame3 &profileFrame, const ProfileData &profile, bool sheet, c
                         if (c.isRational()) weights[std::size_t(i * vCount + j)] = c.weight(i);
                     }
                 surfaces[std::size_t(p)] = std::make_shared<BSplineSurface>(c.degree(), 5, c.knots(), fit.knots, uCount, vCount, poles, weights);
-                // Pezze piane (un lato del profilo nel piano di un percorso piano): il piano esatto.
-                if (SurfacePtr plane = planarEquivalent(*surfaces[std::size_t(p)])) surfaces[std::size_t(p)] = plane;
+                // Il controllo globale usa lo stesso carrier tensoriale della faccia.
+                chartSurfaces[std::size_t(p)] = std::static_pointer_cast<const BSplineSurface>(surfaces[std::size_t(p)]);
             }
         }
         // Facce laterali: verso dalla normale uscente s (X_u x X_v) a meta' della faccia.
         for (int p = 0; p < P; ++p) {
             const ProfilePiece &piece = profile.pieces[std::size_t(p)];
+            const auto &loop = profile.loops[std::size_t(piece.loop)];
+            const bool closedLoop = profile.pieces[std::size_t(loop.front())].start
+                == profile.pieces[std::size_t(loop.back())].end;
+            detail::SweepSurfaceChart chart;
+            chart.surface = chartSurfaces[std::size_t(p)];
+            chart.family = piece.loop;
+            chart.u = {double(ordinal[std::size_t(p)]), double(ordinal[std::size_t(p)] + 1)};
+            chart.v = {double(k), double(k + 1)};
+            chart.uPeriod = closedLoop ? double(loop.size()) : 0.0;
+            chart.vPeriod = closedPath ? double(K) : 0.0;
+            chart.tolerance = linearResolution();
+            chart.poleError = chartErrors[std::size_t(p)].poleError;
+            chart.weightError = chartErrors[std::size_t(p)].weightError;
+            charts.push_back(std::move(chart));
             const double tm = 0.5 * (piece.range.lo + piece.range.hi), vm = 0.5 * (range.lo + range.hi);
             Vec3 dq[2];
             piece.curve->evaluate(tm, 1, dq);
@@ -636,8 +888,22 @@ Body sweep(const Frame3 &profileFrame, const ProfileData &profile, bool sheet, c
             face.sense = dot(surfaces[std::size_t(p)]->normal(onSurface.u, onSurface.v), outward) > 0.0;
             const int lower = sectionEdge[std::size_t(k * P + p)], upper = sectionEdge[std::size_t(jointOf(k + 1) * P + p)];
             const int first = longitudinal[std::size_t(piece.start)], last = longitudinal[std::size_t(piece.end)];
-            if (sp > 0.0) face.loops.push_back({{lower, true, nullptr, 0.0}, {last, true, nullptr, 0.0}, {upper, false, nullptr, 0.0}, {first, false, nullptr, 0.0}});
-            else face.loops.push_back({{first, true, nullptr, 0.0}, {upper, true, nullptr, 0.0}, {last, false, nullptr, 0.0}, {lower, false, nullptr, 0.0}});
+            CurvePtr<2> bottom, top, left, right;
+            double bottomBudget = 0.0, topBudget = 0.0, leftBudget = 0.0, rightBudget = 0.0;
+            if (face.surface->type() == SurfaceType::BSpline) {
+                const Interval u = face.surface->uDomain(), v = face.surface->vDomain();
+                bottom = sectionPCurve(*face.surface, edges[std::size_t(lower)], v.lo, bottomBudget);
+                top = sectionPCurve(*face.surface, edges[std::size_t(upper)], v.hi, topBudget);
+                if (motion == Motion::General) {
+                    left = std::make_shared<Line<2>>(Vec2(u.lo, 0), Vec2(0, 1));
+                    right = std::make_shared<Line<2>>(Vec2(u.hi, 0), Vec2(0, 1));
+                } else {
+                    left = longitudinalPCurve(*face.surface, edges[std::size_t(first)], u.lo, leftBudget);
+                    right = longitudinalPCurve(*face.surface, edges[std::size_t(last)], u.hi, rightBudget);
+                }
+            }
+            if (sp > 0.0) face.loops.push_back({{lower, true, bottom, bottomBudget}, {last, true, right, rightBudget}, {upper, false, top, topBudget}, {first, false, left, leftBudget}});
+            else face.loops.push_back({{first, true, left, leftBudget}, {upper, true, top, topBudget}, {last, false, right, rightBudget}, {lower, false, bottom, bottomBudget}});
             if(labels)labels->push_back({"side.L"+std::to_string(piece.loop)+".P"+std::to_string(piece.source)+".path"+std::to_string(k)});
             faces.push_back(std::move(face));
         }
@@ -666,16 +932,27 @@ Body sweep(const Frame3 &profileFrame, const ProfileData &profile, bool sheet, c
             }
             for (auto &entry : byRegion) {
                 if(labels)labels->push_back({std::string(cap==0?"cap.start.R":"cap.end.R")+std::to_string(entry.first)});
+                detail::SweepCap capInfo;
+                capInfo.face = FaceId(int(faces.size()));
+                capInfo.boundaryV = cap == 0 ? 0.0 : double(K);
+                for (std::size_t l = 0; l < profile.region.size(); ++l)
+                    if (profile.region[l] == entry.first) capInfo.families.push_back(int(l));
+                caps.push_back(std::move(capInfo));
                 faces.push_back(std::move(entry.second));
             }
         }
     }
 
+    const auto validation = detail::validateSweepSurfaces(charts);
+    if (validation.status != detail::SweepSurfaceValidationStatus::Certified)
+        throw std::domain_error("sweep: controllo globale delle superfici non risolto (" + validation.diagnostic + ")");
+    if (!sheet) detail::requireProfileNesting(profile.planarLoops, profile.region, profileFrame);
     Body body = sheet ? Body::buildSheet(vertices, edges, faces) : Body::build(vertices, edges, faces);
     for (int j = 0; j < joints; ++j)
         for (int v = 0; v < V; ++v)
             if (profile.gaps[std::size_t(v)] > linearResolution()) body.vertex(VertexId(vertexIndex(j, v))).tolerance = 1.01 * profile.gaps[std::size_t(v)];
     computePCurves(body);
+    detail::requireDisjointSweepCaps(body, charts, caps);
     const std::vector<CheckIssue> issues = checkBody(body);
     if (!issues.empty()) throw std::domain_error("sweep: risultato non valido (" + describe(issues.front().code) + ": " + issues.front().message + ")");
     return body;

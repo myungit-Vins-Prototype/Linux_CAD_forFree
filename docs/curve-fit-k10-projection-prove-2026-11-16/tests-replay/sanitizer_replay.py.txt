@@ -1,0 +1,19 @@
+import pathlib,subprocess,hashlib,json,os,time
+root=pathlib.Path('/home/myungit/Linux_CAD_forFree');work=pathlib.Path('/tmp/projection-replay-tests')
+sources=['kernel/tests/test_projection_fit_validation.cpp','kernel/fk_project.cpp','kernel/fk_curve_fit_bounds.cpp']
+flags=['/usr/bin/c++','-std=gnu++17','-O1','-g','-DNDEBUG','-fno-fast-math','-ffp-contract=off','-fno-omit-frame-pointer','-fsanitize=address,undefined,leak','-ffunction-sections','-fdata-sections','-I'+str(root/'kernel')]
+commands=[]
+with (work/'sanitizer-build.log').open('w') as log:
+ for src in sources:
+  obj=work/(pathlib.Path(src).stem+'.asan.o');cmd=flags+['-c',str(root/src),'-o',str(obj)];commands.append(cmd);subprocess.run(cmd,stdout=log,stderr=log,check=True)
+ cmd=flags+[str(work/(pathlib.Path(s).stem+'.asan.o')) for s in sources]+[str(root/'forgecad-release/kernel/libforgekernel.a'),'-pthread','-Wl,--gc-sections','-o',str(work/'projection-sanitizer')];commands.append(cmd);subprocess.run(cmd,stdout=log,stderr=log,check=True)
+(work/'sanitizer-commands.json').write_text(json.dumps(commands,indent=2)+'\n')
+files=[root/s for s in sources]+[root/'kernel/fk_project.h',root/'kernel/fk_curve_fit_bounds.h',root/'forgecad-release/kernel/libforgekernel.a',work/'projection-sanitizer']
+(work/'sanitizer-hashes.txt').write_text(''.join(hashlib.sha256(p.read_bytes()).hexdigest()+'  '+str(p)+'\n' for p in files))
+print('sanitizer build OK',flush=True)
+env=os.environ.copy();env.pop('LSAN_OPTIONS',None);env['ASAN_OPTIONS']='detect_leaks=1:halt_on_error=1:abort_on_error=1';env['UBSAN_OPTIONS']='halt_on_error=1:print_stacktrace=1';env['LSAN_OPTIONS']='exitcode=23:report_objects=1'
+(work/'sanitizer-environment.json').write_text(json.dumps({k:env[k] for k in ['ASAN_OPTIONS','UBSAN_OPTIONS','LSAN_OPTIONS']},indent=2)+'\n')
+start=time.time()
+with (work/'sanitizer-run.log').open('w') as log: result=subprocess.run([str(work/'projection-sanitizer')],env=env,stdout=log,stderr=log)
+(work/'sanitizer-result.json').write_text(json.dumps({'exit_code':result.returncode,'elapsed_seconds':time.time()-start,'new_replay':True},indent=2)+'\n')
+print((work/'sanitizer-run.log').read_text());raise SystemExit(result.returncode)

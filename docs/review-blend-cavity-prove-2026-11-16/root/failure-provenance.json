@@ -1,0 +1,6 @@
+{
+  "body_sha256": "350c5418904e23177a8910b91747a168cc189f9472ac901c60512fc7df623b97",
+  "json_sha256": "c46f7f6b5f74e85c9f990f0c9be019994fd5afe6af945e9beec477ca105b8d1f",
+  "scope": "Exact IEEE coefficients read from the saved intermediate B-rep; not extracted/pre-fitted Bezier proxies",
+  "body_archived": false
+}

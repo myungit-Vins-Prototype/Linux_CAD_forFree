@@ -1,0 +1,13 @@
+{
+  "/tmp/theme-tabs-review/audit/baseline-theme.cpp": "286ac4a4a2aa29fec625e8938f73bfc1c0e5408aa22dc44c8be44d77e1d58e7d",
+  "/tmp/theme-tabs-review/audit/candidate-v1-theme.cpp": "f5b9d044181d2a66ed1de97a7866b1d6812e21216c44c98ae2ed05a6954a7d24",
+  "cad_icons.cpp": "066493060482d8cd90bfd4e1153471403b625c3acf7be85f250da2178a87cceb",
+  "forgeCad2026_menu.cpp": "91146ad428515d62e95a65f2c73563f2473001b03758d646f33d775d187e88ed",
+  "forgeCad2026_ui_glass.cpp": "c1152273c2e285357a74a4e1bf05aed28bca8f4405ed374654c24c7d2600224f",
+  "forgeCad2026_dialogs_common.cpp": "bd1006cc5689982ed183b6499292ce3efe956daf8028cc73ca7258036ad9ba82",
+  "forgeCad2026_ribbon_preview.cpp": "7b89b2685382ee69bb195289c1cf11bce2b10ee5f02b35dae346ee519ddb3e24",
+  "cad_drawing_editor.cpp": "01da076e44b8d1786b1505ac50aa36f484083d78653bc0138b890262195cf54c",
+  "cad_document_tabs.cpp": "a4cea33529b363f12d53236984a2603c185131836ce91d4a086fe1b9c8ee0b39",
+  "cad_drawing_window.cpp": "ae45ebbd095999471c2b69c89c2f014107f58e2aefc5be3f2bbee1bb4467da6a",
+  "/tmp/theme-tabs-review/audit/candidate-v2-theme.cpp": "618b68b483952fac10852632b20f735fedb8e41b7dae1dfd06f676cee59582cc"
+}

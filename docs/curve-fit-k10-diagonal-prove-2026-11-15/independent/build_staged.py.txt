@@ -1,0 +1,17 @@
+from pathlib import Path
+import json,shlex,subprocess,hashlib
+r=Path('/home/myungit/Linux_CAD_forFree');p=Path(__file__).parent;s=p.parent/'implementation';f=p/'first-sources';f.mkdir(exist_ok=True)
+for n in ['fk_curve_fit_bounds.cpp','fk_curve_fit_bounds.h','fk_affine_surface_fit.cpp','fk_affine_surface_fit.h','fk_mapping_carrier.cpp','fk_mapping_carrier.h']:
+ source=s/n if (s/n).exists() else r/'kernel'/n;(f/n).write_bytes(source.read_bytes())
+for n in ['fk_curve_fit_bounds.h','fk_affine_surface_fit.h']:(p/n).write_bytes((f/n).read_bytes())
+cs=json.loads((r/'forgecad-release/compile_commands.json').read_text())
+def compile(name,src):
+ c=next(x for x in cs if x['file'].endswith('/kernel/fk_offset.cpp'));cmd=shlex.split(c['command']);cmd[cmd.index('-o')+1]=str(p/(name+'.first.o'));cmd[cmd.index('-c')+1]=str(src);cmd+=['-I'+str(f),'-I'+str(r/'kernel'),'-fno-fast-math','-ffp-contract=off'];subprocess.run(cmd,cwd=c['directory'],check=True)
+for n in ['fk_curve_fit_bounds','fk_affine_surface_fit','fk_mapping_carrier']:compile(n,f/(n+'.cpp'))
+for n in ['diagonal','typed','baseline']:
+ compile(n,p/(n+'.cpp'));objects=[str(p/(n+'.first.o')),str(p/'fk_curve_fit_bounds.first.o'),str(p/'fk_affine_surface_fit.first.o')]
+ if n=='baseline':objects += [str(p/'fk_mapping_carrier.first.o'),'/tmp/forgecad-k10-mapping-20261115/independent/fk_surface_mapping.final.o']
+ subprocess.run(['/usr/bin/c++','-o',str(p/(n+'-first')),*objects,str(r/'forgecad-release/kernel/libforgekernel.a'),'-lpthread'],check=True)
+ with (p/(n+'-first.log')).open('w') as out:subprocess.run([str(p/(n+'-first'))],stdout=out,check=True)
+ print(n+' first PASS',flush=True)
+(p/'first-manifest.json').write_text(json.dumps({'kernel/'+x.name:hashlib.sha256(x.read_bytes()).hexdigest() for x in f.iterdir()},indent=2)+'\n')

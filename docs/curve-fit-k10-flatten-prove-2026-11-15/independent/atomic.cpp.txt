@@ -1,0 +1,24 @@
+#include <algorithm>
+#include "fk_quilt_mapping.h"
+#include "fk_curve_ops.h"
+#include "fk_body_check.h"
+#include "fk_body_io.h"
+#include "fk_curve_algo.h"
+#include "fk_bspline.h"
+#include "fk_cancel.h"
+#include <iostream>
+#include <iomanip>
+using namespace ForgeCad::Kernel;
+#include "fixtures.h"
+CurvePtr<2> straight(Vec2 a,Vec2 b) {return std::make_shared<BSplineCurve<2>>(1,std::vector<double>{0,0,1,1},std::vector<Vec2>{a,b});}
+Body fixture(bool rational) {
+ std::vector<Vec2> poles;std::vector<double> weights;
+ for(int i=0;i<28;++i){double x=i/27.,w=rational?1+.5*x:1;double numerator=x+(rational?.5*i*(i-1.)/(27*26.):0);poles.emplace_back(numerator/w,z27[i]/w);if(rational)weights.push_back(w);}
+ std::vector<double> knots(28,0);knots.insert(knots.end(),28,1);
+ CurvePtr<2> uv=std::make_shared<BSplineCurve<2>>(27,knots,poles,weights);
+ std::vector<CurvePtr<2>> pcs{uv,straight({1,0},{1,1}),straight({1,1},{0,1}),straight({0,1},{0,0})};
+ std::vector<Vec3> vertices{{0,0,0},{1,0,0},{1,1,0},{0,1,0}};std::vector<Body::BuildEdge> edges;Body::BuildFace face;face.surface=std::make_shared<Plane>(Frame3());std::vector<Body::BuildFin> fins;
+ for(int i=0;i<4;++i){edges.push_back({i,(i+1)%4,embedCurve(pcs[i],Frame3()),{0,1},1e-9});fins.push_back({i,true,pcs[i],1e-9});}
+ face.loops={fins};return Body::buildSheet(vertices,edges,{face});
+}
+int main(){int n=0;for(int kind=0;kind<3;++kind){auto source=fixture(false);auto bytes=writeBodyBinary(source);SurfaceQuiltMap map({{&source,source.faces().front()}},{0,0});SurfaceFlattenStats stats;stats.minimumStretch=123;stats.maximumStretch=456;stats.minimumAreaRatio=789;stats.maximumAreaRatio=321;stats.boundaryDeviation=654;stats.samples=987;BodyHistory history(1,{1},{4},{4},2,3,4);bool failed=false;try{auto token=std::make_shared<std::atomic<bool>>(kind==1);CancellationScope scope(token);auto frame=kind==0?Frame3(Vec3(1e16,1e16,1e16),Vec3(0,0,1),Vec3(1,0,0)):Frame3();map.flattenSheet(frame,kind==2?0:1e-6,&stats,&history);}catch(const OperationCancelled&){failed=true;std::cout<<"kind="<<kind<<" cancelled=1\n";}catch(const std::exception&e){failed=true;std::cout<<"kind="<<kind<<" failed="<<e.what()<<"\n";}if(!failed||stats.minimumStretch!=123||stats.maximumStretch!=456||stats.minimumAreaRatio!=789||stats.maximumAreaRatio!=321||stats.boundaryDeviation!=654||stats.samples!=987||history.resultSize(EntityKind::Face)!=2||bytes!=writeBodyBinary(source))throw std::runtime_error("atomicity");++n;}std::cout<<"checks="<<n<<" PASS\n";}

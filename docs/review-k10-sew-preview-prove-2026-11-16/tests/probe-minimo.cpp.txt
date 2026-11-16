@@ -1,0 +1,39 @@
+#include "fk_sew.h"
+#include "fk_surface.h"
+#include "fk_bspline.h"
+#include "fk_pcurve.h"
+#include "fk_body_check.h"
+#include "fk_body_io.h"
+#include <iomanip>
+#include <iostream>
+using namespace ForgeCad::Kernel;
+Body sheet(bool upper){
+ const double y=upper?0:-1;
+ std::vector<Vec3> v={{0,y,0},{1,y,0},{1,y+1,0},{0,y+1,0}};
+ std::vector<Body::BuildEdge> e;
+ for(int i=0;i<4;++i){int a=i,b=(i+1)%4;if(!upper&&i==2)std::swap(a,b);e.push_back({a,b,std::make_shared<Line<3>>(v[a],v[b]-v[a]),{0,1},0});}
+ Body::BuildFace f;f.surface=std::make_shared<Plane>(Frame3());
+ f.loops={{{0,true},{1,true},{2,upper},{3,true}}};
+ if(upper){
+  constexpr int n=128;constexpr double c=4.940214000122462e-7;
+  std::vector<Vec3>p;std::vector<Vec2>u;std::vector<double>k(n+1,0);k.insert(k.end(),n+1,1);
+  for(int i=0;i<=n;++i){double q=double(i)*(i-1)/(n*(n-1))+(i==3?c:0);p.emplace_back(q,0,0);u.emplace_back(q,0);}
+  e[0].curve=std::make_shared<BSplineCurve<3>>(n,k,p);
+  f.loops[0][0].pcurve=std::make_shared<BSplineCurve<2>>(n,k,u);
+ }
+ Body b=Body::buildSheet(v,e,{f});if(computePCurves(b))throw std::runtime_error("PC failed");return b;
+}
+int main(){std::cout<<std::setprecision(17);try{
+ Body a=sheet(true),b=sheet(false);const auto ba=writeBodyBinary(a),bb=writeBodyBinary(b);
+ std::cout<<"input_checks="<<checkBody(a).size()<<","<<checkBody(b).size()<<std::endl;
+ const double tol=1e-8;auto out=sewSheets({&a,&b},tol,false);
+ std::cout<<"output_check="<<checkBody(out.body).size()<<" edges="<<out.body.edges().size()<<" unchanged="<<(ba==writeBodyBinary(a)&&bb==writeBodyBinary(b))<<std::endl;
+ double worst=0,edgeTol=0,finTol=0;int fid=-1;
+ for(auto id:out.body.fins()){
+  auto&f=out.body.fin(id);auto&e=out.body.edge(f.edge);auto&s=*out.body.face(out.body.finFace(id)).surface;
+  double t=3./128;auto uv=f.pcurve->point(t);double error=distance(s.point(uv.x(),uv.y()),e.curve->point(t));
+  if(error>worst){worst=error;fid=id.index;edgeTol=e.tolerance;finTol=f.pcurveTolerance;}
+ }
+ std::cout<<"witness="<<worst<<" hard_budget="<<std::max(1e-7,10*tol)<<" fin="<<fid<<" edge_tol="<<edgeTol<<" fin_tol="<<finTol<<std::endl;
+ return worst>std::max(1e-7,10*tol)?1:0;
+ }catch(std::exception&e){std::cout<<"FAIL "<<e.what()<<std::endl;return 2;}}

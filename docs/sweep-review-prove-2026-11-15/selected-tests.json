@@ -1,0 +1,18 @@
+[
+  "forgecad_document_read_tests",
+  "forgecad_pattern_placement_tests",
+  "forgecad_pattern_result_tests",
+  "forgecad_all_history_tests",
+  "forgecad_surface_tools_tests",
+  "forgecad_revolution_history_tests",
+  "forgecad_extrusion_history_tests",
+  "forgecad_sweep_reference_tests",
+  "forgekernel_surface_instances_tests",
+  "forgekernel_surface_tools_tests",
+  "forgekernel_bspline_isoline_tests",
+  "forgecad_document_precision_tests",
+  "forgecad_history_preview_mesh_tests",
+  "forgecad_boolean_history_tests",
+  "forgekernel_surface_parameterization_tests",
+  "forgekernel_face_normal_bounds_tests"
+]

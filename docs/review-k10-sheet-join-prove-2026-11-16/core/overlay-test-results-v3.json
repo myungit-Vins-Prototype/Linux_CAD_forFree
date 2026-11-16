@@ -1,0 +1,37 @@
+[
+  {
+    "target": "forgekernel_sheet_fit_validation_tests",
+    "exit": 0,
+    "seconds": 1.4043385940021835,
+    "tail": "[  OK  ] SheetFitPlanarNurbsOrientationsAndPose\n[  OK  ] SheetFitHiddenFeatureBothBranchesAndScale\n2/2 test superati\n"
+  },
+  {
+    "target": "forgekernel_surface_tools_tests",
+    "exit": 0,
+    "seconds": 5.081392911000876,
+    "tail": "] FillIgnoredGuidesPreserveLocalInfluence\n[  OK  ] FillDirectionalProfilePreservesContacts\n[  OK  ] FillDirectionalProfileRejectsInvalidSelection\n[  OK  ] FillUnequalCompoundBoundarySpans\n[  OK  ] FillReportsBoundaryContactConflictAtCorner\n[  OK  ] FillPerFaceContinuityOverrides\n40/40 test superati\n"
+  },
+  {
+    "target": "forgekernel_history_tests",
+    "exit": 0,
+    "seconds": 0.37556949299687403,
+    "tail": "Outputs\n[  OK  ] HistorySweepAndLoftKeepSectionSources\n[  OK  ] HistoryPrimitivesAndSurfaceRootsEmitLabels\n[  OK  ] HistoryTransformsDraftAndExtractedEdgesAreExplicit\n[  OK  ] HistoryTrimExtendShellAndProjectionComposeOrigins\n[  OK  ] HistoryTransportDoesNotInventMissingBranches\n38/38 test superati\n"
+  },
+  {
+    "target": "forgekernel_tolerance_tests",
+    "exit": 0,
+    "seconds": 0.3235112680013117,
+    "tail": "[  OK  ] ToleranceDefaults\n[  OK  ] ToleranceInvalidMetadata\n[  OK  ] ToleranceVertexBudget\n[  OK  ] TolerancePCurveBudget\n[  OK  ] ToleranceEdgeFaceBudget\n[  OK  ] ToleranceDocumentScopesAndWorkers\n[  OK  ] ToleranceDocumentOffsetAccuracy\n7/7 test superati\n"
+  },
+  {
+    "target": "forgekernel_surface_curve_fit_validation_tests",
+    "exit": 0,
+    "seconds": 0.5906088779993297,
+    "tail": "SupportPoseScaleAndParameters\n[  OK  ] SurfaceCurveFitSharedHiddenNeighborRejectedAndCoherentAccepted\n[  OK  ] SurfaceCurveFitDirectOracleKnotCrossingsAndUnsupportedUV\n[  OK  ] SurfaceCurveFitInstancedSurfaceAndMaterializedAffine\n[  OK  ] SurfaceCurveFitInvalidInputAndCancellation\n5/5 test superati\n"
+  },
+  {
+    "target": "forgekernel_sheet_existing_v3",
+    "exit": 0,
+    "output": "[  OK  ] SheetExtendBSplineKeepsCurve\n[  OK  ] SheetSplitAndTrim\n[  OK  ] SheetExtend\n[  OK  ] SheetSectionKeepsExactSplineBoundary\n4/4 test superati\n"
+  }
+]

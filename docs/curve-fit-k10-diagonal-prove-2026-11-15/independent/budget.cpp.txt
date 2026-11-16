@@ -1,0 +1,12 @@
+#include "fk_mapping_carrier.h"
+#include "fk_surface_mapping.h"
+#include "fk_bspline_surface.h"
+#include "fk_body_check.h"
+#include "fk_pcurve.h"
+#include "fk_cancel.h"
+#include <iostream>
+#include <iomanip>
+using namespace ForgeCad::Kernel;
+CurvePtr<3> profile(bool rational,double scale,double start=.1){std::vector<double>k(7,0);k.insert(k.end(),6,start);k.insert(k.end(),6,start+.001);k.insert(k.end(),7,1);std::vector<Vec3>p;std::vector<double>w;for(int i=0;i<19;++i){double x=0;for(int j=1;j<=6;++j)x+=k[i+j]/6;p.emplace_back(scale*x,0,i==9?.0032:0);if(rational)w.push_back(1+.1*i/18.);}return std::make_shared<BSplineCurve<3>>(6,k,p,w);}
+Body sheet(Frame3 f,double width,double height){std::vector<Vec3>v;for(auto q:std::vector<Vec3>{{0,0,0},{width,0,0},{width,height,0},{0,height,0}})v.push_back(f.toGlobal(q));std::vector<Body::BuildEdge>e;for(int i=0;i<4;++i){auto a=v[i],b=v[(i+1)%4];e.push_back({i,(i+1)%4,std::make_shared<Line<3>>(a,b-a),{0,distance(a,b)},0});}Body::BuildFace face;face.surface=std::make_shared<Plane>(f);face.loops={{{0,true,nullptr,0},{1,true,nullptr,0},{2,true,nullptr,0},{3,true,nullptr,0}}};auto result=Body::buildSheet(v,e,{face});if(computePCurves(result))throw std::runtime_error("source pcurve");return result;}
+int main(){auto source=sheet(Frame3(),1,1);auto f=source.fins().front();auto&fin=source.fin(f);const auto&e=source.edge(fin.edge);const auto a=fin.pcurve->point(e.range.lo),b=fin.pcurve->point(e.range.hi);const int n=100001;std::vector<Vec2>p;std::vector<double>knots{0,0};for(int i=0;i<n;++i){double t=double(i)/(n-1);p.push_back(a+(b-a)*t);if(i>0&&i<n-1)knots.push_back(t);}knots.push_back(1);knots.push_back(1);fin.pcurve=std::make_shared<BSplineCurve<2>>(1,knots,p);std::cout<<"source_issues="<<checkBody(source,{true,true}).size()<<" poles="<<n;ExtrusionSurface target(std::make_shared<Line<3>>(Vec3(),Vec3(1,0,0)),Vec3(0,1,0));SurfaceWrapOptions o;o.tolerance=1e-6;double deviation=123;BodyHistory history(1,{1},{4},{4},2,3,4);try{auto result=detail::wrapPlanarBodyOnCarrier(source,target,o,1,1,&history,&deviation);std::cout<<" optional="<<bool(result);}catch(const std::exception&e){std::cout<<" rejected="<<e.what();}std::cout<<" deviation="<<deviation<<" history_faces="<<history.resultSize(EntityKind::Face)<<"\n";return 0;}

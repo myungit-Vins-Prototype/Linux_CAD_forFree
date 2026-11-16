@@ -1,0 +1,336 @@
+UpdateCTestConfiguration  from :/home/myungit/Linux_CAD_forFree/forgecad-release/DartConfiguration.tcl
+Test project /home/myungit/Linux_CAD_forFree/forgecad-release
+Constructing a list of tests
+Done constructing a list of tests
+Updating test list for fixtures
+Added 0 tests to meet fixture requirements
+Checking test dependency graph...
+Checking test dependency graph end
+test 15
+      Start  15: forgecad_document_theme_tabs_tests
+
+15: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_view_tests "--theme-tabs"
+15: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release
+15: Environment variables: 
+15:  QT_QPA_PLATFORM=offscreen
+15:  QT_QPA_OFFSCREEN_NO_GLX=1
+15:  QT_QPA_PLATFORMTHEME=
+15:  QT_STYLE_OVERRIDE=Fusion
+15:  FORGECAD_EXAMPLE_DIR=/home/myungit/Documenti/File_Esempio
+15: Test timeout computed to be: 90
+15: PASS Estendi: comando reale, pannello prima dei bordi, mouse, contorni, anteprima, Invio/Esc/chiusura e Undo/Redo
+15: Estensione: scelta del contorno completo OK
+15: Taglio: hover, clic e regioni parziali OK
+15: Rimozione durante scelta spigoli: OK
+15: Selezione facce offset e cache cucitura: OK
+15: B-rep finale di Applicatore nello snapshot
+ 1/21 Test  #15: forgecad_document_theme_tabs_tests ..........***Failed    9.19 sec
+PASS Estendi: comando reale, pannello prima dei bordi, mouse, contorni, anteprima, Invio/Esc/chiusura e Undo/Redo
+Estensione: scelta del contorno completo OK
+Taglio: hover, clic e regioni parziali OK
+Rimozione durante scelta spigoli: OK
+Selezione facce offset e cache cucitura: OK
+B-rep finale di Applicatore nello snapshot
+
+test 16
+      Start  16: forgecad_document_theme_only2d_tests
+
+16: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_view_tests "--theme-tabs-only-2d"
+16: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release
+16: Environment variables: 
+16:  QT_QPA_PLATFORM=offscreen
+16:  QT_QPA_OFFSCREEN_NO_GLX=1
+16:  QT_QPA_PLATFORMTHEME=
+16:  QT_STYLE_OVERRIDE=Fusion
+16:  FORGECAD_EXAMPLE_DIR=/home/myungit/Documenti/File_Esempio
+16: Test timeout computed to be: 90
+16: PASS Estendi: comando reale, pannello prima dei bordi, mouse, contorni, anteprima, Invio/Esc/chiusura e Undo/Redo
+16: Estensione: scelta del contorno completo OK
+16: Taglio: hover, clic e regioni parziali OK
+16: Rimozione durante scelta spigoli: OK
+16: Selezione facce offset e cache cucitura: OK
+16: B-rep finale di Applicatore nello snapshot
+ 2/21 Test  #16: forgecad_document_theme_only2d_tests ........***Failed    9.05 sec
+PASS Estendi: comando reale, pannello prima dei bordi, mouse, contorni, anteprima, Invio/Esc/chiusura e Undo/Redo
+Estensione: scelta del contorno completo OK
+Taglio: hover, clic e regioni parziali OK
+Rimozione durante scelta spigoli: OK
+Selezione facce offset e cache cucitura: OK
+B-rep finale di Applicatore nello snapshot
+
+test 17
+      Start  17: forgecad_document_tabs_tests
+
+17: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_view_tests "--document-tabs"
+17: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release
+17: Environment variables: 
+17:  QT_QPA_PLATFORM=offscreen
+17:  QT_QPA_OFFSCREEN_NO_GLX=1
+17:  QT_QPA_PLATFORMTHEME=
+17:  QT_STYLE_OVERRIDE=Fusion
+17:  FORGECAD_EXAMPLE_DIR=/home/myungit/Documenti/File_Esempio
+17: Test timeout computed to be: 90
+17: PASS document tabs: 3D/2D, reuse, state/Undo, shortcuts, position, sheets, floating panels, cancel, asynchronous close
+ 3/21 Test  #17: forgecad_document_tabs_tests ................   Passed    0.90 sec
+test 18
+      Start  18: forgecad_gui_3d_review_tests
+
+18: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_view_tests "--gui-3d-review"
+18: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release
+18: Environment variables: 
+18:  QT_QPA_PLATFORM=offscreen
+18:  QT_QPA_OFFSCREEN_NO_GLX=1
+18:  QT_QPA_PLATFORMTHEME=
+18:  QT_STYLE_OVERRIDE=Fusion
+18:  FORGECAD_EXAMPLE_DIR=/home/myungit/Documenti/File_Esempio
+18: Test timeout computed to be: 120
+18: PASS GUI review: palette e tasto pan; OpenGL non richiesto
+ 4/21 Test  #18: forgecad_gui_3d_review_tests ................   Passed    0.02 sec
+test 19
+      Start  19: forgecad_storyboard_review_tests
+
+19: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_view_tests "--storyboard-review"
+19: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release
+19: Environment variables: 
+19:  QT_QPA_PLATFORM=offscreen
+19:  QT_QPA_OFFSCREEN_NO_GLX=1
+19:  QT_QPA_PLATFORMTHEME=
+19:  QT_STYLE_OVERRIDE=Fusion
+19:  FORGECAD_EXAMPLE_DIR=/home/myungit/Documenti/File_Esempio
+19: Test timeout computed to be: 120
+19: PASS storyboard review: rimappatura estrazioni, riferimenti a copie, Undo/Redo, persistenza e detach iniettato
+ 5/21 Test  #19: forgecad_storyboard_review_tests ............   Passed    0.43 sec
+test 29
+      Start  29: forgecad_fillet_selection_review_tests
+
+29: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_view_tests "--fillet-selection-review"
+29: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release
+29: Environment variables: 
+29:  QT_QPA_PLATFORM=offscreen
+29:  QT_QPA_OFFSCREEN_NO_GLX=1
+29:  QT_QPA_PLATFORMTHEME=
+29:  QT_STYLE_OVERRIDE=Fusion
+29:  FORGECAD_EXAMPLE_DIR=/home/myungit/Documenti/File_Esempio
+29: Test timeout computed to be: 120
+29: PASS raccordi review: occlusione facce, X-ray, scena editata, evidenziazioni, Esc/Annulla/chiusura/conferma e Undo/Redo
+ 6/21 Test  #29: forgecad_fillet_selection_review_tests ......   Passed    0.53 sec
+test 35
+      Start  35: forgecad_function_panels_tests
+
+35: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_view_tests "--function-panels-review"
+35: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release
+35: Environment variables: 
+35:  QT_QPA_PLATFORM=offscreen
+35:  QT_QPA_OFFSCREEN_NO_GLX=1
+35:  QT_QPA_PLATFORMTHEME=
+35:  QT_STYLE_OVERRIDE=Fusion
+35:  FORGECAD_EXAMPLE_DIR=/home/myungit/Documenti/File_Esempio
+35: Test timeout computed to be: 60
+35: PASS extrusion action preconditions: warnings and valid active/selected profiles
+ 7/21 Test  #35: forgecad_function_panels_tests ..............   Passed    1.45 sec
+test 36
+      Start  36: forgecad_chamfer_preview_state_tests
+
+36: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_view_tests "--chamfer-preview-editing"
+36: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release
+36: Environment variables: 
+36:  QT_QPA_PLATFORM=offscreen
+36:  QT_QPA_OFFSCREEN_NO_GLX=1
+36:  QT_QPA_PLATFORMTHEME=
+36:  QT_STYLE_OVERRIDE=Fusion
+36:  FORGECAD_EXAMPLE_DIR=/home/myungit/Documenti/File_Esempio
+36: Test timeout computed to be: 120
+36: CASE mode=0 pending=0
+36: PASS Enter refreshes typed field without closing dialog
+36: PASS Up arrow preserves immediate preview update
+36: PASS Down arrow restores field and preview definition
+36: PASS typed value committed by real Tab focus lifecycle
+36: PASS Tab refreshes key and generation
+36: PASS old geometry invalidated after Tab
+36: PASS label stops declaring old preview ready
+36: VISIBLE ui=1.25 preview=1.25 label=pronta (in ambra nella vista)
+36: PASS ready preview matches field after Tab
+36: PASS new result becomes ready
+36: PASS real confirmation creates chamfer
+36: PASS confirmation uses updated numeric value
+36: COMMIT matches_shown=1 shown_volume=472.188 actual_volume=472.188 pointer_same=1
+36: PASS confirmed geometry matches updated preview volume
+36: PASS single confirmation applies once and returns
+36: PASS dialog cleanup releases preview callback and lock
+36: CASE mode=0 pending=1
+36: PASS Enter refreshes typed field without closing dialog
+36: PASS Up arrow preserves immediate preview update
+36: PASS Down arrow restores field and preview definition
+36: PASS real uncancelled worker before Tab mutation
+36: PASS typed value committed by real Tab focus lifecycle
+36: PASS Tab refreshes key and generation
+36: PASS old geometry invalidated after Tab
+36: PASS label stops declaring old preview ready
+36: PASS Tab mutation cancels previous real worker
+36: VISIBLE ui=1.25 preview=1.25 label=pronta (in ambra nella vista)
+36: PASS ready preview matches field after Tab
+36: PASS new result becomes ready
+36: PASS real confirmation creates chamfer
+36: PASS confirmation uses updated numeric value
+36: COMMIT matches_shown=1 shown_volume=472.188 actual_volume=472.188 pointer_same=1
+36: PASS confirmed geometry matches updated preview volume
+36: PASS single confirmation applies once and returns
+36: PASS dialog cleanup releases preview callback and lock
+36: CASE mode=1 pending=0
+36: PASS Enter refreshes typed field without closing dialog
+36: PASS Up arrow preserves immediate preview update
+36: PASS Down arrow restores field and preview definition
+36: PASS typed value committed by real Tab focus lifecycle
+36: PASS Tab refreshes key and generation
+36: PASS old geometry invalidated after Tab
+36: PASS label stops declaring old preview ready
+36: VISIBLE ui=1.25 preview=1.25 label=pronta (in ambra nella vista)
+36: PASS ready preview matches field after Tab
+36: PASS new result becomes ready
+36: PASS real confirmation creates chamfer
+36: PASS confirmation uses updated numeric value
+36: COMMIT matches_shown=1 shown_volume=476.875 actual_volume=476.875 pointer_same=1
+36: PASS confirmed geometry matches updated preview volume
+36: PASS single confirmation applies once and returns
+36: PASS dialog cleanup releases preview callback and lock
+36: CASE mode=1 pending=1
+36: PASS Enter refreshes typed field without closing dialog
+36: PASS Up arrow preserves immediate preview update
+36: PASS Down arrow restores field and preview definition
+36: PASS real uncancelled worker before Tab mutation
+36: PASS typed value committed by real Tab focus lifecycle
+36: PASS Tab refreshes key and generation
+36: PASS old geometry invalidated after Tab
+36: PASS label stops declaring old preview ready
+36: PASS Tab mutation cancels previous real worker
+36: VISIBLE ui=1.25 preview=1.25 label=pronta (in ambra nella vista)
+36: PASS ready preview matches field after Tab
+36: PASS new result becomes ready
+36: PASS real confirmation creates chamfer
+36: PASS confirmation uses updated numeric value
+36: COMMIT matches_shown=1 shown_volume=476.875 actual_volume=476.875 pointer_same=1
+36: PASS confirmed geometry matches updated preview volume
+36: PASS single confirmation applies once and returns
+36: PASS dialog cleanup releases preview callback and lock
+36: CASE mode=2 pending=0
+36: PASS Enter refreshes typed field without closing dialog
+36: PASS Up arrow preserves immediate preview update
+36: PASS Down arrow restores field and preview definition
+36: PASS typed value committed by real Tab focus lifecycle
+36: PASS Tab refreshes key and generation
+36: PASS old geometry invalidated after Tab
+36: PASS label stops declaring old preview ready
+36: VISIBLE ui=30 preview=30 label=pronta (in ambra nella vista)
+36: PASS ready preview matches field after Tab
+36: PASS new result becomes ready
+36: PASS real confirmation creates chamfer
+36: PASS confirmation uses updated numeric value
+36: COMMIT matches_shown=1 shown_volume=479.278 actual_volume=479.278 pointer_same=1
+36: PASS confirmed geometry matches updated preview volume
+36: PASS single confirmation applies once and returns
+36: PASS dialog cleanup releases preview callback and lock
+36: CASE mode=2 pending=1
+36: PASS Enter refreshes typed field without closing dialog
+36: PASS Up arrow preserves immediate preview update
+36: PASS Down arrow restores field and preview definition
+36: PASS real uncancelled worker before Tab mutation
+36: PASS typed value committed by real Tab focus lifecycle
+36: PASS Tab refreshes key and generation
+36: PASS old geometry invalidated after Tab
+36: PASS label stops declaring old preview ready
+36: PASS Tab mutation cancels previous real worker
+36: VISIBLE ui=30 preview=30 label=pronta (in ambra nella vista)
+36: PASS ready preview matches field after Tab
+36: PASS new result becomes ready
+36: PASS real confirmation creates chamfer
+36: PASS confirmation uses updated numeric value
+36: COMMIT matches_shown=1 shown_volume=479.278 actual_volume=479.278 pointer_same=1
+36: PASS confirmed geometry matches updated preview volume
+36: PASS single confirmation applies once and returns
+36: PASS dialog cleanup releases preview callback and lock
+36: PRE8 RESULT passed=90 failed=0
+ 8/21 Test  #36: forgecad_chamfer_preview_state_tests ........   Passed    1.80 sec
+test 37
+      Start  37: forgecad_preview_selection_state_tests
+
+37: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_view_tests "--preview-selection-state"
+37: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release
+37: Environment variables: 
+37:  QT_QPA_PLATFORM=offscreen
+37:  QT_QPA_OFFSCREEN_NO_GLX=1
+37:  QT_QPA_PLATFORMTHEME=
+37:  QT_STYLE_OVERRIDE=Fusion
+37:  FORGECAD_EXAMPLE_DIR=/home/myungit/Documenti/File_Esempio
+37: Test timeout computed to be: 150
+37: CASE 0 pending=0
+37: PASS real ready geometry before mutation
+37: PASS opening picker preserves unchanged preview policy
+37: PASS continuous picking remains active after mutation
+37: PASS mutated selection invalidates key and geometry
+37: PASS mutation increments generation
+37: PASS mutated selection reports waiting
+37: PASS mapping removes its only selected face
+37: PASS mapping clears previous notice
+37: PASS cancelled completion cannot publish obsolete preview
+37: PASS finishing selection restarts request
+37: PASS preview recovers after selection
+37: PASS case reaches recovered preview
+37: PASS cancel cleans picker lock callback preview
+37: CASE 0 pending=1
+37: PASS real worker running before mutation
+37: PASS opening picker preserves unchanged preview policy
+37: PASS continuous picking remains active after mutation
+37: PASS mutated selection invalidates key and geometry
+37: PASS mutation increments generation
+37: PASS mutated selection reports waiting
+37: PASS mutation cancels real worker token
+37: PASS mapping removes its only selected face
+37: PASS mapping clears previous notice
+37: PASS cancelled completion cannot publish obsolete preview
+37: PASS finishing selection restarts request
+37: PASS preview recovers after selection
+37: PASS case reaches recovered preview
+37: PASS cancel cleans picker lock callback preview
+37: CASE 1 pending=0
+37: PASS real ready geometry before mutation
+37: PASS opening picker preserves unchanged preview policy
+37: PASS continuous picking remains active after mutation
+37: PASS mutated selection invalidates key and geometry
+37: PASS mutation increments generation
+37: PASS mutated selection reports waiting
+37: PASS mapping removes its only selected face
+37: PASS mapping clears previous notice
+37: PASS cancelled completion cannot publish obsolete preview
+37: PASS finishing selection restarts request
+37: PASS preview recovers after selection
+37: PASS case reaches recovered preview
+37: PASS cancel cleans picker lock callback preview
+37: CASE 1 pending=1
+37: PASS real worker running before mutation
+37: PASS opening picker preserves unchanged preview policy
+37: PASS continuous picking remains active after mutation
+37: PASS mutated selection invalidates key and geometry
+37: PASS mutation increments generation
+37: PASS mutated selection reports waiting
+37: PASS mutation cancels real worker token
+37: PASS mapping removes its only selected face
+37: PASS mapping clears previous notice
+37: PASS cancelled completion cannot publish obsolete preview
+37: PASS finishing selection restarts request
+37: PASS preview recovers after selection
+37: PASS case reaches recovered preview
+37: PASS cancel cleans picker lock callback preview
+37: CASE 2 pending=0
+37: PASS real ready geometry before mutation
+37: PASS opening picker preserves unchanged preview policy
+37: PASS continuous picking remains active after mutation
+37: PASS mutated selection invalidates key and geometry
+37: PASS mutation increments generation
+37: PASS mutated selection reports waiting
+37: PASS fill replaces sketch contour with picked face
+37: PASS cancelled completion cannot publish obsolete preview
+37: PASS finishing selection restarts request
+37: PASS preview recovers after selection
+37: PASS case reaches recovered preview
+37: PASS cancel cleans picker lock callback preview
+37: CASE 2 pending=1

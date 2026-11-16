@@ -1,0 +1,19 @@
+PRE4/UI7 fixes — 2026-11-15
+
+Production ownership respected: viewport_scene.cpp, dialogs_mapping.cpp, tests/test_function_panels.h only. All earlier dirty changes preserved, patch is relative to per-file start snapshots. Root owns test registration.
+
+PRE4: creation reference picking now uses input scene before historyPosition; editing keeps owner cutoff. Explicit eligible consumed shape operands may be drawn; curve visibility retains isBodyDrawn. Ready preview remains valid and immutable. Leaving picker restores preview scene; cancel restores original scene/model.
+UI7: switching to associated mapping terminates only destination picking (choosing==2), before disabling destination. Applicable source-face selection remains active.
+
+Regressions: previewPickerContextReview and mappingLinkedPickerReview. True Qt production dialogs, actual asynchronous fill preview, topology ray pick, ready geometry/key stability, source and contour picker exit/Esc/cancel, history rollback with explicit candidates, edit owner cutoff, hidden explicit input, 3D curve visibility during point picking; real flatten feature plus mapping destination cancellation/OK and preserved source/Esc. Model and cleanup assertions included.
+
+Build: python3 /tmp/forgecad-followup-fix-20261115/ui/build.py
+Uses exact forgecad-release compile_commands/link flags, replacing only three objects; outputs all in staging. build.log: success; warnings are existing LoftContact initializer warnings.
+Run: QT_QPA_PLATFORM=offscreen QT_QPA_PLATFORMTHEME=generic QT_STYLE_OVERRIDE=Fusion QT_XCB_GL_INTEGRATION=none LIBGL_ALWAYS_SOFTWARE=1 XDG_CONFIG_HOME=/tmp/forgecad-followup-fix-20261115/ui/settings timeout 90s /tmp/forgecad-followup-fix-20261115/ui/tests --function-panels-review
+Result: exit0 run.log. Entire path also includes existing previewConsistencyReview, functionPanelsLifecycleReview, extrusionActionPreconditions.
+
+Counterchecks: baseline.py compiles exact original snapshots for each changed production file, relinks one at a time with new tests and other fixed object. Both exit1:
+- baseline_scene.log: creazione mostra input selezionabile durante picker
+- baseline_mapping.log: collegamento termina solo selezione destinazione
+
+Limits: offscreen Qt software path verifies scene predicates and actual topology ray picking; no desktop OpenGL raster screenshot. Future bodies are intentionally excluded by scene history cutoff even if an explicit pickBodies list erroneously contains them; referenceBodyEligible's preexisting owner=-1 size semantics were not changed. No global build/settings/docs/CLAUDE edits performed.

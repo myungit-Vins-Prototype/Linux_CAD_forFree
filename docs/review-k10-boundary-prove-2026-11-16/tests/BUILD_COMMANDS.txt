@@ -1,0 +1,29 @@
+All commands run with /bin/bash, login=false, cwd=/home/myungit/Linux_CAD_forFree.
+No repository, original CAD, running CAD process, or CMake file was changed by this agent.
+
+Permanent test, final V2 (fk_test_main is a separate translation unit):
+c++ -std=c++17 -O1 -DNDEBUG -I /tmp/boundary-review/core/kernel -I kernel -I kernel/tests /tmp/boundary-review/tests/test_boundary_validation.cpp kernel/tests/fk_test_main.cpp /tmp/boundary-review/core/libforgekernel-boundary.a -pthread -o /tmp/boundary-review/tests/candidate-tests-v2
+BOUNDARY_EXPORT_DIR=/tmp/boundary-review/tests/export-final /tmp/boundary-review/tests/candidate-tests-v2
+
+ASan/UBSan instrumentation, two changed production translation units:
+c++ -std=c++17 -O1 -g -ffp-contract=off -fno-omit-frame-pointer -fsanitize=address,undefined -I /tmp/boundary-review/core/kernel -I kernel -c /tmp/boundary-review/core/kernel/fk_blend_section_curve.cpp -o /tmp/boundary-review/tests/section-san-v2.o
+c++ -std=c++17 -O1 -g -ffp-contract=off -fno-omit-frame-pointer -fsanitize=address,undefined -I /tmp/boundary-review/core/kernel -I kernel -c /tmp/boundary-review/core/kernel/fk_blend_surface.cpp -o /tmp/boundary-review/tests/surface-san.o
+c++ -std=c++17 -O1 -g -ffp-contract=off -fno-omit-frame-pointer -fsanitize=address,undefined -I /tmp/boundary-review/core/kernel -I kernel -I kernel/tests /tmp/boundary-review/tests/test_boundary_validation.cpp kernel/tests/fk_test_main.cpp /tmp/boundary-review/tests/section-san-v2.o /tmp/boundary-review/tests/surface-san.o /tmp/boundary-review/tests/baseline/libforgekernel.a -pthread -o /tmp/boundary-review/tests/sanitizer-tests-v2
+
+Final execution was explicitly launched using exec_command sandbox_permissions=require_escalated, outside sandbox ptrace:
+ASAN_OPTIONS=detect_leaks=1:halt_on_error=1:abort_on_error=1:strict_string_checks=1 UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1 LSAN_OPTIONS=exitcode=23 /tmp/boundary-review/tests/sanitizer-tests-v2
+Result: 15/15 PASS, exit0. Remaining kernel/provider archive is frozen Release, not sanitizer-instrumented.
+
+Leak detector calibration, separate intentional 19-byte leak (same outside-ptrace launcher):
+c++ -O1 -g -fsanitize=address /tmp/boundary-review/tests/leak_calibration.cpp -o /tmp/boundary-review/tests/leak-calibration
+ASAN_OPTIONS=detect_leaks=1:halt_on_error=1 LSAN_OPTIONS=exitcode=23 /tmp/boundary-review/tests/leak-calibration
+Expected and actual: detected direct 19-byte leak, exit23. This is calibration, not a kernel leak.
+
+Earlier sandbox V1 attempt: 14/14 framework tests passed but LeakSanitizer failed under ptrace, overall exit1. It is not a successful LSan run. A first outside-ptrace call was interrupted while awaiting the tool, before a result; final V2 call above is the completed evidence.
+
+Public diagnostic runner:
+c++ -std=c++17 -O1 -DNDEBUG -DFORGECAD_SOURCE_DIR='"/home/myungit/Linux_CAD_forFree"' -I kernel -I kernel/tests -I kernel/occt -isystem /usr/include/opencascade -c kernel/tests/test_blend.cpp -o /tmp/boundary-review/tests/baseline/test_blend.o
+c++ -std=c++17 -O1 -I kernel/tests -c kernel/tests/fk_test_main.cpp -o /tmp/boundary-review/tests/fk_test_main.o
+The link commands are separately recorded in public-link-command.txt and public-candidate-link-command.txt. Only private source copies contain diagnostic prints. The public runner links current occt_tests support archive and OCCT libraries for this existing test translation unit; the three selected filters do not execute an OCCT comparison.
+Filters: BlendOpenChainsAtTangentSplineSeams; BlendPlanarCapOnTangentSplineSupports; BlendConsumedTerminalReachesTangentSupport.
+A preliminary full-suite relink mistakenly used stale objects under kernel/CMakeFiles (October ABI); it failed and was discarded. The current project suite uses kernel/occt_tests/CMakeFiles. No conclusion about the existing current runner follows from this discarded link.

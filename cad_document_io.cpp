@@ -24,6 +24,7 @@
 #include <QSaveFile>
 
 #include "cad_constraints.h"
+#include "cad_ellipse.h"
 #include "cad_model_history.h"
 #include "cad_element_names.h"
 #include "cad_snapshot_chunks.h"
@@ -85,6 +86,7 @@ constexpr char kMagic[4] = {'F', 'C', 'A', 'D'};
 // 61 verso normale indipendente per i profili iniziale/finale del loft.
 // 68 nomi leggibili delle sorgenti associative, conservati dopo eliminazione.
 // 69 contorni apparenti associativi: faccia e lato analitico nel GeometryRef dello schizzo.
+// 70 ellisse definita dai quattro estremi quotabili dei due assi (EllipseExtremes).
 // 62 condizioni trasversali alle guide e riferimenti ai loro appoggi.
 constexpr quint16 kVersion = kDocumentFormatVersion;
 constexpr quint8 kZlib = 1;
@@ -110,6 +112,16 @@ void write(QDataStream &out, const CurveObject &curve) {
     out << curve.tangentLinked;                  // formato 16
 }
 
+bool validStoredEllipse(const CurveObject &curve, quint16 version, bool geometry) {
+    if (curve.tool != DrawingTool::EllipseExtremes) return true;
+    if (version < 70 || curve.controlPoints.size() != 4 || !curve.weights.isEmpty() || !curve.knots.isEmpty()
+        || !curve.tangentHandles.isEmpty() || !curve.tangentLinked.isEmpty()) return false;
+    for (const auto &point : curve.controlPoints)
+        if (!std::isfinite(point.x()) || !std::isfinite(point.y())) return false;
+    QPointF center, axisA, axisB;
+    return !geometry || ellipseAxes(curve, center, axisA, axisB);
+}
+
 void read(ReadStream &in, CurveObject &curve, quint16 version) {
     qint32 tool = 0, sides = 0;
     in >> tool >> curve.controlPoints >> curve.weights >> curve.tangentHandles >> sides >> curve.construction;
@@ -121,6 +133,10 @@ void read(ReadStream &in, CurveObject &curve, quint16 version) {
         curve.degree = degree;
     }
     if (version >= 16) in >> curve.tangentLinked;
+    // Il profilo del documento arriva dopo gli schizzi nel payload: qui
+    // solo struttura/numeri; la geometria viene validata dopo averlo letto.
+    if (tool < int(DrawingTool::Line) || tool > int(DrawingTool::EllipseExtremes)
+        || !validStoredEllipse(curve, version, false)) in.setStatus(QDataStream::ReadCorruptData);
 }
 
 void write(QDataStream &out, const CoincidentConstraint &c) {
@@ -393,6 +409,7 @@ bool read(ReadStream &in, SketchObject &sketch, quint16 version) {
     sketch.segmentLengths.resize(segments);
     sketch.segmentAngles.resize(segments);
     if (in.status() != QDataStream::Ok) return false;
+    if (!finiteSketchNumbers(sketch)) return false;
     migrateLegacyConstraints(sketch);  // i file vecchi: codici, quote e coincidenze diventano vincoli
     return true;
 }
@@ -1453,6 +1470,25 @@ QString encodeDocumentVersion(const DocumentState &state, QByteArray &bytes, boo
     try {
         if (!Kernel::validCalculationAccuracy(state.calculationAccuracy))
             return QStringLiteral("Precisione di calcolo del documento non valida.");
+        Kernel::PrecisionScope precision(state.calculationAccuracy);
+        const auto ellipseError = [&](const CurveObject &curve) -> QString {
+            if (curve.tool != DrawingTool::EllipseExtremes) return {};
+            if (version < 70) return QStringLiteral("L'ellisse per estremi richiede il formato 70.");
+            return validStoredEllipse(curve, version, true) ? QString()
+                : QStringLiteral("Definizione dell'ellisse per estremi non valida.");
+        };
+        for (const auto &sketch : state.sketches) {
+            if (!finiteSketchNumbers(sketch)) return QStringLiteral("Lo schizzo contiene valori numerici non finiti.");
+            for (const auto &curve : sketch.curves) {
+                const auto error = ellipseError(curve);
+                if (!error.isEmpty()) return error;
+            }
+            for (const auto &constraint : sketch.geometricConstraints) if (constraint.pierce)
+                for (const auto &curve : constraint.pierce->curves) {
+                    const auto error = ellipseError(curve);
+                    if (!error.isEmpty()) return error;
+                }
+        }
         if (version < 67 && state.calculationAccuracy != Kernel::kLinearResolution)
             return QStringLiteral("La precisione personalizzata richiede il formato 67.");
         if (state.version.documentId.isNull() || (!state.version.checkinId.isNull() && state.version.checkinId == state.baseCheckinId))
@@ -1550,6 +1586,10 @@ QString encodeDocumentVersion(const DocumentState &state, QByteArray &bytes, boo
 
 QString encodeDocument(const DocumentState &state, QByteArray &bytes, bool bodies, int compressionLevel) {
     return encodeDocumentVersion(state, bytes, bodies, compressionLevel, kVersion);
+}
+
+QString encodeDocumentDefinition69ForHash(const DocumentState &state, QByteArray &bytes) {
+    return encodeDocumentVersion(state, bytes, false, 9, 69);
 }
 
 QString encodeDocumentDefinition66ForHash(const DocumentState &state, QByteArray &bytes) {
@@ -1700,6 +1740,16 @@ QString parsePayload(const QByteArray &payload, quint16 version, int extras, Doc
     }
     if(version>=53){QByteArray extras;if(!buffer.atEnd()){quint32 tag=0;in>>tag>>extras;if(in.status()!=QDataStream::Ok||tag!=0x53524631)return QStringLiteral("Estensioni superfici danneggiate.");}const auto error=applySurfaceToolsExtras(extras,loaded.extrusions);if(!error.isEmpty())return error;}
     if (!buffer.atEnd()) return QStringLiteral("Il file e' danneggiato (dati in piu' alla fine).");
+    {
+        Kernel::PrecisionScope precision(loaded.calculationAccuracy);
+        for (const auto &sketch : loaded.sketches) {
+            for (const auto &curve : sketch.curves)
+                if (!validStoredEllipse(curve, version, true)) return QStringLiteral("Il file contiene un'ellisse per estremi non valida.");
+            for (const auto &constraint : sketch.geometricConstraints) if (constraint.pierce)
+                for (const auto &curve : constraint.pierce->curves)
+                    if (!validStoredEllipse(curve, version, true)) return QStringLiteral("Il file contiene un'ellisse per estremi non valida.");
+        }
+    }
     normalizeModelHistory(loaded);
     return {};
 }

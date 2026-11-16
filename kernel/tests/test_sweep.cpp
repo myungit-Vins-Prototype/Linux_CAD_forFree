@@ -9,7 +9,9 @@
 #include "fk_curve_ops.h"
 #include "fk_helix.h"
 #include "fk_mass.h"
+#include "fk_nurbs.h"
 #include "fk_sweep.h"
+#include "fk_pcurve.h"
 #include "fk_tessellate.h"
 #include "fk_test_profiles.h"
 
@@ -62,6 +64,64 @@ std::vector<PathSegment> planarPath() {
     return {{embedCurve(line, plane), {0.0, 4.0}}, {embedCurve(arc, plane), {-kHalfPi, 0.0}}, {embedCurve(spline, plane), {0.0, 1.0}}};
 }
 
+}
+
+FK_TEST(SweepMinimalTwistJoinedSpatialPathWithStraightSpans) {
+    // Stessa geometria come catena analitica e come un'unica NURBS razionale.
+    // Due pieghe in piani diversi, separate da rettilinei: Frenet non esiste.
+    const auto first = std::make_shared<Circle<3>>(Vec3(2, 4, 0), Vec3(0, -1, 0), Vec3(1, 0, 0), 4.0);
+    const auto second = std::make_shared<Circle<3>>(Vec3(6, 6, 4), Vec3(0, 0, -1), Vec3(0, 1, 0), 4.0);
+    const std::vector<PathSegment> path{
+        {std::make_shared<Line<3>>(Vec3(0, 0, 0), Vec3(1, 0, 0)), {0, 2}}, {first, {0, kHalfPi}},
+        {std::make_shared<Line<3>>(Vec3(6, 4, 0), Vec3(0, 1, 0)), {0, 2}}, {second, {0, kHalfPi}},
+        {std::make_shared<Line<3>>(Vec3(6, 10, 4), Vec3(0, 0, 1)), {0, 2}}};
+    std::vector<BSplineCurve<3>> pieces;
+    for (const auto &segment : path) {
+        const auto parts = standardBezierPieces(*segment.curve, segment.range, 3);
+        pieces.insert(pieces.end(), parts.begin(), parts.end());
+    }
+    const auto joined = std::make_shared<BSplineCurve<3>>(joinBezierPieces(pieces));
+    const Frame3 start(Vec3(0, 0, 0), Vec3(1, 0, 0), Vec3(0, 1, 0));
+    const auto profile = squareRegion(0.4);
+    const Body reference = sweepRegions(start, {profile}, path);
+    const Body solid = sweepRegions(start, {profile}, {{joined, joined->domain()}});
+    const auto mass = checkedSolid(solid);
+    FK_CHECK_NEAR(mass.volume, 0.16 * (6.0 + 4.0 * kPi), 1e-7);
+    FK_CHECK_NEAR(mass.volume, checkedSolid(reference).volume, 1e-7);
+    // Il quadrato rende visibile la rotazione: confronta i vertici finali,
+    // non soltanto volume o sezione circolare invarianti rispetto alla torsione.
+    int endVertices = 0;
+    for (auto v : solid.vertices()) if (std::abs(solid.vertex(v).point.z() - 6.0) < 1e-8) {
+        ++endVertices;
+        double gap = 1e100;
+        for (auto w : reference.vertices()) gap = std::min(gap, distance(solid.vertex(v).point, reference.vertex(w).point));
+        FK_CHECK(gap < 1e-8);
+    }
+    FK_CHECK(endVertices == 4);
+    FK_CHECK_THROWS(sweepRegions(start, {profile}, {{joined, joined->domain()}}, SweepOrientation::Frenet));
+}
+
+FK_TEST(SweepMinimalTwistSpatialInflection) {
+    // P(u)=(t,t^3,t^4), t=u-1/2: tangente regolare e curvatura nulla
+    // all'interno, su una curva che non giace in un piano.
+    const auto spline = std::make_shared<BSplineCurve<3>>(4, std::vector<double>{0,0,0,0,0,1,1,1,1,1},
+        std::vector<Vec3>{{-.5,-.125,.0625},{-.25,.0625,-.0625},{0,0,.0625},{.25,-.0625,-.0625},{.5,.125,.0625}});
+    const std::vector<PathSegment> path{{spline, {0,1}}};
+    const Frame3 start = normalFrame(spline->point(0), normalized(spline->derivative(0)));
+    const Body solid = sweepRegions(start, {circleRegion(.01)}, path);
+    FK_CHECK_NEAR(checkedSolid(solid).volume, kPi * .0001 * pathLength(path), 1e-10);
+    FK_CHECK_THROWS(sweepRegions(start, {circleRegion(.01)}, path, SweepOrientation::Frenet));
+}
+
+FK_TEST(SweepMinimalTwistClosedSpatialSpline) {
+    const auto spline = std::make_shared<BSplineCurve<3>>(3,
+        std::vector<double>{0,0,0,0,.2,.4,.6,.8,1,1,1,1},
+        std::vector<Vec3>{{4,0,0},{4,3,0},{0,5,1},{-4,3,-1},{-4,-3,1},{0,-5,-1},{4,-3,0},{4,0,0}});
+    const std::vector<PathSegment> path{{spline,{0,.5}},{spline,{.5,1}}};
+    const Frame3 start = normalFrame(spline->point(0), spline->derivative(0));
+    const Body solid = sweepRegions(start, {circleRegion(.1)}, path);
+    FK_CHECK_NEAR(checkedSolid(solid).volume, kPi * .01 * pathLength(path), 1e-8);
+    for (auto edge : solid.edges()) FK_CHECK(!solid.isLaminar(edge));
 }
 
 FK_TEST(SweepLineAndArcAreExact) {
@@ -189,4 +249,115 @@ FK_TEST(SweepClosedPathAndSheet) {
     const double c = spec.pitch / kTwoPi;
     const auto primitive = [c](double rho) { const double q = std::sqrt(rho * rho + c * c); return 0.5 * (rho * q + c * c * std::log(rho + q)); };
     FK_CHECK_NEAR(area, kTwoPi * spec.turns * (primitive(4.0) - primitive(2.0)), 1e-8 * area);
+}
+
+FK_TEST(SweepMinimalTwistHelixAvoidsUniformGridAliasing) {
+    // 16 turns put all 17 old classification samples on one generator.
+    // Adjacent turn counts and a rigid pose guard against a grid-specific fix.
+    for (double turns : {15.0, 16.0, 17.0}) {
+        HelixSpec spec;
+        spec.radius = 4.0;
+        spec.pitch = 1.0;
+        spec.turns = turns;
+        if (turns == 17.0)
+            spec.frame = Frame3(Vec3(12, -7, 3), normalized(Vec3(1, 2, 3)), Vec3(0, 1, 0));
+        const auto helix = std::make_shared<HelixCurve>(spec);
+        const Frame3 section = normalFrame(helix->point(0), helix->derivative(0));
+        const Body tube = sweepRegions(section, {circleRegion(0.2)}, {{helix, helix->domain()}}, SweepOrientation::MinimalTwist);
+        FK_CHECK(checkBody(tube).empty());
+        const MassProperties m = massProperties(tube, 1e-11);
+        const double expected = kPi * 0.04 * helix->length();
+        FK_CHECK_NEAR(m.volume, expected, expected * 1e-8);
+        FK_CHECK_NEAR(m.area, kTwoPi * 0.2 * helix->length() + 2 * kPi * 0.04, m.area * 1e-8);
+    }
+}
+
+
+FK_TEST(SweepClosedSpatialSplineExplicitSeamParameters) {
+    const auto spline = std::make_shared<BSplineCurve<3>>(3,
+        std::vector<double>{0,0,0,0,.2,.4,.6,.8,1,1,1,1},
+        std::vector<Vec3>{{4,0,0},{4,3,0},{0,5,1},{-4,3,-1},{-4,-3,1},{0,-5,-1},{4,-3,0},{4,0,0}});
+    const Frame3 start = normalFrame(spline->point(0), spline->derivative(0));
+    const double length = arcLength(*spline, {0,1}, 1e-13);
+    for (const auto &profile : {circleRegion(.1), squareRegion(.2)}) {
+        const Body whole = sweepRegions(start, {profile}, {{spline,{0,1}}});
+        const Body split = sweepRegions(start, {profile}, {{spline,{0,.5}},{spline,{.5,1}}});
+        const auto a = checkedSolid(whole), b = checkedSolid(split);
+        // Budget deliberatamente sopra il limite 1e-8 della quadratura:
+        // il fallback deve rifinire dall'SP-curve e conservarne il ramo.
+        Body loose = whole;
+        for (FaceId f : loose.faces()) for (LoopId l : loose.face(f).loops)
+            for (FinId fin : loose.loopFins(l))
+                loose.fin(fin).pcurveTolerance = std::max(loose.fin(fin).pcurveTolerance, 2e-8);
+        const auto refined = massProperties(loose, 1e-11);
+        FK_CHECK_NEAR(refined.volume, a.volume, 1e-8);
+        FK_CHECK_NEAR(refined.area, a.area, 1e-7);
+        FK_CHECK_NEAR(a.volume, b.volume, 1e-8);
+        FK_CHECK_NEAR(a.area, b.area, 1e-7);
+        int seams = 0;
+        for (FaceId f : whole.faces()) {
+            const Surface &surface = *whole.face(f).surface;
+            if (surface.type() != SurfaceType::BSpline) continue;
+            for (LoopId loop : whole.face(f).loops) {
+                const auto fins = whole.loopFins(loop);
+                for (std::size_t i = 0; i < fins.size(); ++i) {
+                    const Fin &fin = whole.fin(fins[i]);
+                    const Fin &next = whole.fin(fins[(i + 1) % fins.size()]);
+                    const Edge &edge = whole.edge(fin.edge), &nextEdge = whole.edge(next.edge);
+                    FK_CHECK(bool(fin.pcurve)); FK_CHECK(bool(next.pcurve));
+                    if (!fin.pcurve || !next.pcurve) continue;
+                    const Vec2 end = fin.pcurve->point(fin.sense ? edge.range.hi : edge.range.lo);
+                    const Vec2 begin = next.pcurve->point(next.sense ? nextEdge.range.lo : nextEdge.range.hi);
+                    FK_CHECK(distance(end, begin) < 1e-10);
+                    FK_CHECK(pcurveDeviation(surface, *edge.curve, *fin.pcurve, edge.range) <=
+                        std::max(linearResolution(), edge.tolerance) + fin.pcurveTolerance);
+                    for (std::size_t j = i + 1; j < fins.size(); ++j) {
+                        const Fin &other = whole.fin(fins[j]);
+                        if (other.edge != fin.edge || !other.pcurve) continue;
+                        ++seams;
+                        const double t = .5 * (edge.range.lo + edge.range.hi);
+                        const double v = fin.pcurve->point(t).y(), w = other.pcurve->point(t).y();
+                        FK_CHECK_NEAR(std::abs(v - w), surface.vDomain().length(), 1e-12);
+                    }
+                }
+            }
+        }
+        FK_CHECK(seams > 0);
+    }
+    const auto disk = checkedSolid(sweepRegions(start, {circleRegion(.1)}, {{spline,{0,1}}}));
+    FK_CHECK_NEAR(disk.volume, kPi * .01 * length, 1e-8);
+    FK_CHECK_NEAR(disk.area, kTwoPi * .1 * length, 1e-7);
+    const auto open = checkedSolid(sweepRegions(start, {circleRegion(.1)}, {{spline,{0,.75}}}));
+    FK_CHECK_NEAR(open.volume, kPi * .01 * arcLength(*spline,{0,.75},1e-13), 1e-8);
+}
+
+FK_TEST(SweepLocalFoldUsesSectionGeometry) {
+    // A rotated circle has NURBS poles outside its true radius. Those poles
+    // may cross the curvature axis while the entire circle remains valid.
+    for (double scale : {0.1, 1.0, 10.0}) for (int rotated = 0; rotated < 2; ++rotated) {
+        const Frame3 pose(Vec3(13, -7, 5), normalized(Vec3(1, 2, 3)), Vec3(0, 1, 0));
+        const double R = 10 * scale, r = 8 * scale;
+        const auto pathCircle = std::make_shared<Circle<3>>(pose.origin(), pose.xDir(), pose.yDir(), R);
+        const Interval range{0, kHalfPi};
+        const auto pathNurbs = std::make_shared<BSplineCurve<3>>(toBSpline(*pathCircle, range.lo, range.hi));
+        const Frame3 section(pathCircle->point(0), pathCircle->derivative(0),
+            rotated ? normalized(pose.xDir() + pose.zDir()) : pose.xDir());
+        for (int representation = 0; representation < 3; ++representation) {
+            ProfileRegion disk = circleRegion(r);
+            CurvePtr<3> path = representation ? std::static_pointer_cast<const Curve<3>>(pathNurbs) : pathCircle;
+            if (representation == 2) {
+                const Circle<2> circle = makeCircle(Vec2(), r);
+                const auto c = std::make_shared<BSplineCurve<2>>(toBSpline(circle, 0, kTwoPi));
+                disk.outer.segments = {{c, c->domain()}};
+            }
+            const Body tube = sweepRegions(section, {disk}, {{path, range}});
+            FK_CHECK(checkBody(tube).empty());
+            const double expected = kPi * r * r * R * kHalfPi;
+            FK_CHECK_NEAR(massProperties(tube).volume, expected, expected * 2e-8);
+        }
+        // A genuine fold stays rejected, independently of representation.
+        for (CurvePtr<3> path : {std::static_pointer_cast<const Curve<3>>(pathCircle),
+                                std::static_pointer_cast<const Curve<3>>(pathNurbs)})
+            FK_CHECK_THROWS(sweepRegions(section, {circleRegion(11 * scale)}, {{path, range}}));
+    }
 }

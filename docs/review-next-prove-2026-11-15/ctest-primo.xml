@@ -1,0 +1,281 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="(empty)"
+	tests="34"
+	failures="1"
+	disabled="0"
+	skipped="0"
+	hostname=""
+	time="5"
+	timestamp="2026-11-15T11:50:51"
+	>
+	<testcase name="forgecad_constraint_linear_tests" classname="forgecad_constraint_linear_tests" time="0.00553504" status="run">
+		<properties/>
+		<system-out>constraint-linear: PASS (banda, riordino, fill-in, ridondanza, scale, ripiego e input)
+</system-out>
+	</testcase>
+	<testcase name="forgecad_document_tabs_tests" classname="forgecad_document_tabs_tests" time="1.29429" status="run">
+		<properties/>
+		<system-out>PASS document tabs: 3D/2D, reuse, state/Undo, shortcuts, position, sheets, floating panels, cancel, asynchronous close
+</system-out>
+	</testcase>
+	<testcase name="forgecad_document_read_tests" classname="forgecad_document_read_tests" time="0.146714" status="run">
+		<properties/>
+		<system-out>parser corrupt: 58 byte, maxRSS delta 0 KiB
+PASS document read
+PASS document read
+</system-out>
+	</testcase>
+	<testcase name="forgecad_document_units_tests" classname="forgecad_document_units_tests" time="0.148697" status="run">
+		<properties/>
+		<system-out></system-out>
+	</testcase>
+	<testcase name="forgecad_function_panels_tests" classname="forgecad_function_panels_tests" time="1.58889" status="run">
+		<properties/>
+		<system-out>PASS extrusion action preconditions: warnings and valid active/selected profiles
+</system-out>
+	</testcase>
+	<testcase name="forgecad_loft_correspondence_tests" classname="forgecad_loft_correspondence_tests" time="0.1418" status="run">
+		<properties/>
+		<system-out>PASS corrispondenze: kernel, UI, riordino, codec, Undo/Redo, drag, annulla
+</system-out>
+	</testcase>
+	<testcase name="forgecad_all_history_tests" classname="forgecad_all_history_tests" time="0.614877" status="run">
+		<properties/>
+		<system-out></system-out>
+	</testcase>
+	<testcase name="forgecad_workspace_revisions_tests" classname="forgecad_workspace_revisions_tests" time="1.32246" status="run">
+		<properties/>
+		<system-out>PASS workspace document revisions and GUI
+</system-out>
+	</testcase>
+	<testcase name="forgecad_surface_tools_tests" classname="forgecad_surface_tools_tests" time="0.827722" status="run">
+		<properties/>
+		<system-out>PASS individual fill influence, picking identity and persistence
+PASS superfici: rete/estensione/poli, dipendenze, rigenerazione, Undo/Redo, UI/mouse, formato53, errori atomici, revisioni e sola lettura
+</system-out>
+	</testcase>
+	<testcase name="forgecad_history_preview_mesh_tests" classname="forgecad_history_preview_mesh_tests" time="0.0361131" status="run">
+		<properties/>
+		<system-out>{"bodies":[{"drawn":true,"edges":12,"geometry":true,"hi":[8,6,5],"index":0,"later":false,"lo":[0,0,0],"name":"","normals":24,"quality":1,"restored":false,"vertices":24},{"drawn":true,"edges":4,"geometry":true,"hi":[8,6,0],"index":1,"later":false,"lo":[0,0,0],"name":"","normals":6,"quality":1,"restored":false,"vertices":6},{"drawn":false,"edges":0,"geometry":false,"hi":[0,0,0],"index":2,"later":false,"lo":[0,0,0],"name":"","normals":0,"quality":-1,"restored":false,"vertices":0},{"drawn":false,"edges":0,"geometry":false,"hi":[0,0,0],"index":3,"later":false,"lo":[0,0,0],"name":"","normals":0,"quality":-1,"restored":false,"vertices":0}],"phase":"loaded","preview_error":"","preview_valid":false,"preview_vertices":0}
+{"bodies":[{"drawn":true,"edges":12,"geometry":true,"hi":[8,6,5],"index":0,"later":false,"lo":[0,0,0],"name":"","normals":24,"quality":1,"restored":true,"vertices":24},{"drawn":true,"edges":4,"geometry":true,"hi":[8,6,0],"index":1,"later":false,"lo":[0,0,0],"name":"","normals":6,"quality":1,"restored":...
+[This part of the test output was removed since it exceeds the threshold of 1024 bytes.]
+</system-out>
+	</testcase>
+	<testcase name="forgecad_sweep_reference_tests" classname="forgecad_sweep_reference_tests" time="0.100927" status="run">
+		<properties/>
+		<system-out>Sweep references PASS
+</system-out>
+	</testcase>
+	<testcase name="forgecad_handle_constraints_tests" classname="forgecad_handle_constraints_tests" time="0.0354299" status="run">
+		<properties/>
+		<system-out>handle constraints PASS
+</system-out>
+	</testcase>
+	<testcase name="forgecad_solver_partition_tests" classname="forgecad_solver_partition_tests" time="3.30227" status="run">
+		<properties/>
+		<system-out>PASS contatti tangenti: 96 casi, conflitti, vicinanza, codec e Undo/Redo
+solver finite numbers PASS
+</system-out>
+	</testcase>
+	<testcase name="forgecad_connected_solver_tests" classname="forgecad_connected_solver_tests" time="0.151049" status="run">
+		<properties/>
+		<system-out>{"cases":[{"constraint_rows":190,"geometry":[[0,0.2,1,0.2],[1,0.2,2,0.2],[2,0.2,3,0.2],[3,0.2,4,0.2],[4,0.2,5,0.2],[5,0.2,6,0.2],[6,0.2,7,0.2],[7,0.2,8,0.2],[8,0.2,9,0.2],[9,0.2,10,0.2],[10,0.2,11,0.2],[11,0.2,12,0.2],[12,0.2,13,0.19999999999999998],[13,0.19999999999999998,14,0.19999999999999998],[14,0.19999999999999998,15,0.19999999999999998],[15,0.19999999999999998,16,0.19999999999999998],[16,0.19999999999999998,17,0.19999999999999998],[17,0.19999999999999998,18,0.19999999999999998],[18,0.19999999999999998,19,0.19999999999999998],[19,0.19999999999999998,20,0.19999999999999998],[20,0.19999999999999998,21,0.19999999999999998],[21,0.19999999999999998,22,0.19999999999999998],[22,0.19999999999999998,23,0.19999999999999998],[23,0.19999999999999998,24,0.19999999999999998],[24,0.19999999999999998,25,0.19999999999999998],[25,0.19999999999999998,26,0.19999999999999998],[26,0.19999999999999998,27,0.19999999999999998],[27,0.19999999999999998,28,0.19999999999999998],[28,0.19999999999999998,29,0.19999999999999998],[29,0....
+[This part of the test output was removed since it exceeds the threshold of 1024 bytes.]
+</system-out>
+	</testcase>
+	<testcase name="forgecad_reference_list_highlight_tests" classname="forgecad_reference_list_highlight_tests" time="0.208468" status="run">
+		<properties/>
+		<system-out>Reference list highlight PASS
+</system-out>
+	</testcase>
+	<testcase name="forgecad_surface_mapping_tests" classname="forgecad_surface_mapping_tests" time="1.41789" status="run">
+		<properties/>
+		<system-out>PASS riempimento4pattern/fori/limiti, storia, Undo/Redo, codec, sviluppo associativo e icone GUI
+</system-out>
+	</testcase>
+	<testcase name="forgecad_loft_point_tests" classname="forgecad_loft_point_tests" time="0.511802" status="run">
+		<properties/>
+		<system-out>PASS punti e piani loft: associazione, rigenerazione, Undo/Redo, codec, picker e storyboard
+</system-out>
+	</testcase>
+	<testcase name="forgecad_edge_loft_tests" classname="forgecad_edge_loft_tests" time="0.188798" status="fail">
+		<failure message="Failed"/>
+		<properties/>
+		<system-out>selected guide restores its own controls
+</system-out>
+	</testcase>
+	<testcase name="forgecad_loft_projected_section_tests" classname="forgecad_loft_projected_section_tests" time="0.954486" status="run">
+		<properties/>
+		<system-out>PASS loft da proiezioni/estrazioni: sorgenti esatte, forma, dipendenze, Undo/Redo, cache e rigenerazione
+</system-out>
+	</testcase>
+	<testcase name="forgecad_open_loft_tangency_tests" classname="forgecad_open_loft_tangency_tests" time="0.0843376" status="run">
+		<properties/>
+		<system-out>PASS open loft and surface tangency
+</system-out>
+	</testcase>
+	<testcase name="forgecad_application_theme_tests" classname="forgecad_application_theme_tests" time="0.0990199" status="run">
+		<properties/>
+		<system-out>PASS Fusion, quattro transizioni chiaro/scuro, finestre aperte, campi, disabilitati, metriche e stabilità eventi (Qt 6.12.0); richieste native=0, segnali simulati=9; fallback palette, menu, preferenze e override manuale PASS
+</system-out>
+	</testcase>
+	<testcase name="forgecad_expression_tests" classname="forgecad_expression_tests" time="0.041008" status="run">
+		<properties/>
+		<system-out>PASS espressioni: numeri malformati rifiutati, annidamento limitato
+</system-out>
+	</testcase>
+	<testcase name="forgecad_document_compression_tests" classname="forgecad_document_compression_tests" time="0.0285251" status="run">
+		<properties/>
+		<system-out></system-out>
+	</testcase>
+	<testcase name="forgecad_workspace_tests" classname="forgecad_workspace_tests" time="0.011795" status="run">
+		<properties/>
+		<system-out>PASS workspace
+</system-out>
+	</testcase>
+	<testcase name="forgekernel_loft_knots_tests" classname="forgekernel_loft_knots_tests" time="0.0647178" status="run">
+		<properties/>
+		<system-out>[  OK  ] SharpKnotLinesRespectSplineContinuityAtAdjacentDoubles
+[  OK  ] LoftGuideKnotUnionPreservesCurveWithinRounding
+[  OK  ] LoftGuideKnotUnionPreservesDistinctDetailsAndVetoesLargeChanges
+[  OK  ] OffsetOfRefinedSmoothStripIsInvariant
+[  OK  ] OffsetPreservesSeamsThroughNearlyTangentSections
+5/5 test superati
+</system-out>
+	</testcase>
+	<testcase name="forgekernel_surface_tools_tests" classname="forgekernel_surface_tools_tests" time="5.73118" status="run">
+		<properties/>
+		<system-out>[  OK  ] SurfaceNetworkCrossingFamilies
+[  OK  ] SurfaceExtendUntilPlaneAndCurvedFace
+[  OK  ] SurfaceExtendUntilFacetedTarget
+[  OK  ] SurfaceExtendUntilSplineExtrusion
+[  OK  ] SurfacePolesPreserveTrimsAndTopology
+[  OK  ] SurfacePolesRefitControlCounts
+[  OK  ] SurfacePolesMultipleConnectedFaces
+[  OK  ] SurfacePolesMultipleFacesOfSolid
+[  OK  ] SurfacePolesPreserveDeclaredVertexTolerance
+[  OK  ] SurfacePolesAutomaticConnectionAndTangency
+[  OK  ] SurfacePolesContinuitySwappedReversedRationalAndSharp
+[  OK  ] SurfacePolesContinuityRefitAndProtection
+[  OK  ] SurfacePolesTrimProtectionLeavesInteriorFree
+[  OK  ] SurfacePolesNeutralTolerantConnections
+[  OK  ] SurfacePolesSphereInternalG1AndG2
+[  OK  ] SurfacePolesG2AcrossFacesAndRigidPoses
+[  OK  ] SurfacePolesExactAnalyticConversion
+[  OK  ] SurfacePolesAnalyticEditsHolesAndClosure
+[  OK  ] SurfacePolesMixedAnalyticAndNurbsTangency
+[  OK  ] SurfacePolesCurvedAnalyticTrimmedHoles
+[  OK  ] SurfacePolesPeriodicHelicalTrims
+[  OK  ] SurfacePolesSphericalCapAt...
+[This part of the test output was removed since it exceeds the threshold of 1024 bytes.]
+</system-out>
+	</testcase>
+	<testcase name="forgekernel_loft_projected_guide_tests" classname="forgekernel_loft_projected_guide_tests" time="0.980186" status="run">
+		<properties/>
+		<system-out>CASE base
+CASE multi
+CASE transform
+CASE reverse
+CASE rank1
+CASE rank1 coincident plane
+CASE missing
+CASE ambiguous
+CASE warped
+CASE far
+PASS 10 gruppi loft guide implicite: sezioni esatte, guida entro budget, orientamento, verso, rank1, ambiguita', nonplanare, origine lontana, BodyIO
+</system-out>
+	</testcase>
+	<testcase name="forgekernel_loft_shape_tests" classname="forgekernel_loft_shape_tests" time="0.575446" status="run">
+		<properties/>
+		<system-out>CASE polynomial-knot-invariance
+ knot rational=0 guides=0 maxDistance=2.71039981919e-15
+ knot rational=0 guides=1 maxDistance=3.14018491737e-15
+ knot rational=0 guides=2 maxDistance=5.34754222183e-15
+CASE rational-knot-invariance
+ knot rational=1 guides=0 maxDistance=4.46304132367e-15
+ knot rational=1 guides=1 maxDistance=3.89686700126e-15
+ knot rational=1 guides=2 maxDistance=5.12148661021e-15
+CASE polynomial-nonuniform-G1-sections
+ G1 rational=0 guides=0 Ujump=2.82329683354e-09
+ G1 rational=0 guides=1 Ujump=3.15882277383e-09
+ G1 rational=0 guides=2 Ujump=5.60786320508e-09
+CASE rational-nonuniform-G1-sections
+ G1 rational=1 guides=0 Ujump=2.89961984352e-09
+ G1 rational=1 guides=1 Ujump=3.18524927476e-09
+ G1 rational=1 guides=2 Ujump=5.58278858746e-09
+CASE nonuniform-G1-guides
+ guide G1 count=1 Vjump=1.07162890607e-09
+ maxDistance=0
+ guide G1 count=2 Vjump=1.06909619247e-09
+ maxDistance=0
+ maxDistance=0
+CASE source-corner
+ corner=0.0499583957219
+CASE three-guide-continuity
+CASE perpendicular-G1-chord
+CASE tol...
+[This part of the test output was removed since it exceeds the threshold of 1024 bytes.]
+</system-out>
+	</testcase>
+	<testcase name="forgekernel_loft_projected_section_tests" classname="forgekernel_loft_projected_section_tests" time="1.16109" status="run">
+		<properties/>
+		<system-out>CASE two sectionError=9.52475e-11
+CASE three sectionError=9.52475e-11
+CASE ruled sectionError=9.52479e-11
+CASE trimmed transformed sectionError=4.32982e-11
+CASE affine sectionError=3.96256e-11
+CASE sketch reference sectionError=6.65981e-11
+CASE composite corner sectionError=8.84371e-11
+CASE trim at corner sectionError=1.01058e-10
+CASE section order sectionError=9.52467e-11
+CASE G1 sectionError=9.52475e-11
+CASE G2 sectionError=9.52475e-11
+CASE guided sectionError=9.52477e-11
+PASS 15 gruppi sezioni implicite: proiezione, estrazione, trim/trasformazioni, G1/G2, guide, budget, sorgenti e BodyIO
+</system-out>
+	</testcase>
+	<testcase name="forgekernel_loft_complexity_tests" classname="forgekernel_loft_complexity_tests" time="0.10659" status="run">
+		<properties/>
+		<system-out>[  OK  ] LoftMixedProfilesPreserveSectionsGuidesAndSmoothKnots
+[  OK  ] LoftGridReductionPreservesActualGuideCorners
+2/2 test superati
+</system-out>
+	</testcase>
+	<testcase name="forgekernel_loft_guide_constraint_tests" classname="forgekernel_loft_guide_constraint_tests" time="0.210615" status="run">
+		<properties/>
+		<system-out> degreeInvariantError=2.07408e-14
+ tangentMaxSine=2.65325e-10
+ normalJump=1.64358e-08
+ jetC2=1.63396e-12 homogeneousC2=3.40748e-12 weightC2=0
+ jetC2=4.70318e-12 homogeneousC2=9.45194e-12 weightC2=5.68434e-13
+PASS loft guide normal, reverse, adjacent-face tangency, sections and invalid inputs
+</system-out>
+	</testcase>
+	<testcase name="forgekernel_loft_correspondence_tests" classname="forgekernel_loft_correspondence_tests" time="0.288581" status="run">
+		<properties/>
+		<system-out>[  OK  ] LoftCorrespondenceOpenInterior
+[  OK  ] LoftCorrespondenceClosedSeamAndGuides
+[  OK  ] LoftCorrespondenceReverseAndFractions
+[  OK  ] LoftCorrespondencePeriodicNearOriginalSeam
+[  OK  ] LoftCorrespondenceDuplicateGuidesRejected
+[  OK  ] LoftCorrespondenceClosedNurbsNearOriginalSeam
+[  OK  ] LoftCorrespondenceEndpointsMustMatchDirection
+[  OK  ] LoftGuidedReturningPathOrientation
+[  OK  ] LoftMergeTangentFacesPreservesShapeAndLabels
+[  OK  ] LoftMergePreservesRealCorners
+[  OK  ] LoftIncompatibleContactIdentifiesGuideAndSection
+[  OK  ] LoftSectionLengthKeepsExistingKnots
+12/12 test superati
+</system-out>
+	</testcase>
+	<testcase name="forgekernel_loft_point_tests" classname="forgekernel_loft_point_tests" time="0.0941154" status="run">
+		<properties/>
+		<system-out>PASS loft puntuali: solidi/superfici, volume, topologia, mesh, guide, corrispondenze, G1 piano e negativi
+</system-out>
+	</testcase>
+	<testcase name="forgekernel_surface_mapping_tests" classname="forgekernel_surface_mapping_tests" time="0.246094" status="run">
+		<properties/>
+		<system-out>PASS sviluppo piano/cilindro/cono, aree/lunghezze, rifiuto doppia curvatura, deformazione cilindrica/volume, genealogia, B-rep, STEP e mesh, appoggio multifaccia continuo/NURBS/vuoti
+</system-out>
+	</testcase>
+</testsuite>

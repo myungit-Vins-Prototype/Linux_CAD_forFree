@@ -1,0 +1,17 @@
+{"name": "apply-prototype", "exit": 0, "elapsed": 0.0160627810000733}
+{"name": "compile-fk_sweep", "exit": 0, "elapsed": 3.571087010001065}
+{"name": "compile-fk_sweep_map", "exit": 0, "elapsed": 0.9155579069993109}
+{"name": "compile-fk_sweep_validation", "exit": 0, "elapsed": 1.3163936560013099}
+{"name": "build-overlap", "exit": 0, "elapsed": 1.0661825719980698}
+{"name": "overlap", "exit": 0, "elapsed": 0.11432095399868558}
+{"name": "build-witness_probe", "exit": 0, "elapsed": 1.2159172059982666}
+{"name": "witness_probe", "exit": 0, "elapsed": 0.03228502300044056}
+{"name": "build-valid-counterexamples", "exit": 0, "elapsed": 1.115513421002106}
+{"name": "valid-counterexamples", "exit": 0, "elapsed": 0.016047858000092674}
+{"name": "build-map", "exit": 0, "elapsed": 1.266302538002492}
+{"name": "map-tests", "exit": 0, "elapsed": 0.11407506999967154}
+{"name": "compile-sweep-tests", "exit": 0, "elapsed": 4.372195267002098}
+{"name": "link-sweep-tests", "exit": 0, "elapsed": 1.166193804001523}
+{"name": "baseline-sweep", "exit": 0, "elapsed": 2.7692547619990364}
+{"name": "prototype-sweep", "exit": 1, "elapsed": 28.367915580001863}
+Prove completate. I due rifiuti errati attesi impediscono la promozione. Output: /tmp/forgecad-k2-20261115/final-reproduction

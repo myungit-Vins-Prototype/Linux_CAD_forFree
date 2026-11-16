@@ -1,0 +1,14 @@
+{
+  "forgecad-release/kernel/libforgekernel.a": {
+    "sha256": "a45c97a1faeaf0fdb735d429cb3f9cf40acee6c0e48f670bcc3ee7c330fb07e8",
+    "bytes": 175541340
+  },
+  "forgecad-release/forgecad": {
+    "sha256": "f23d4ab7e55d0b5fe368f574e8c0c2372ed7796e93bbe39adf625d6ae6be4ee9",
+    "bytes": 130621696
+  },
+  "forgecad-release/forgecad_view_tests": {
+    "sha256": "60c5bfce310f675c0a143505fb4f8c007279f539ca87a5d4a7fac6e28d80b218",
+    "bytes": 135243008
+  }
+}

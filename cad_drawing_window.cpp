@@ -1,4 +1,5 @@
 #include "cad_drawing_window.h"
+#include "forgeCad2026_application_theme.h"
 #include "cad_document_tabs.h"
 #include "cad_drawing_template.h"
 #include "cad_drawing_template_editor.h"
@@ -29,6 +30,7 @@
 #include <QEvent>
 #include <QTabBar>
 #include <QScopedValueRollback>
+#include <QPointer>
 #include <stdexcept>
 
 namespace ForgeCad {
@@ -46,6 +48,7 @@ DrawingWindow::DrawingWindow(QWidget *parent):QMainWindow(parent,documentTabsWin
     file->addSeparator();addRevisionMenus(file);
     editMenu_=addCadMenu(menuBar(),QStringLiteral("Modifica"));insertMenu_=addCadMenu(menuBar(),QStringLiteral("Inserisci"));
     dimensionMenu_=addCadMenu(menuBar(),QStringLiteral("Quote"));viewMenu_=addCadMenu(menuBar(),QStringLiteral("Visualizza"));
+    setupApplicationThemeMenu(*addCadMenu(viewMenu_,QStringLiteral("Tema")));
     auto *source=addToolBar(QStringLiteral("Documento e modello"));source->setObjectName("drawingDocumentBar");configureCommandBar(source);
     saveAction->setObjectName("drawingSaveAction");saveAction->setIcon(commandIcon("save"));saveAs->setIcon(commandIcon("drawingSaveAs"));
     source->addAction(saveAction);source->addAction(exportPdf);source->addSeparator();
@@ -160,7 +163,10 @@ void DrawingWindow::installEditor(DrawingSheetEditor *prepared){
     populate(dimensionMenu_,{"drawingDimensionNumberingAction","drawingChangeDimensionNumberAction","drawingToggleDimensionNumberAction","drawingSmartDimensionAction","drawingChainHorizontalAction","drawingChainVerticalAction","drawingOrdinateXAction","drawingOrdinateYAction","drawingRepairDimensionAction","drawingEditDimensionAction","drawingReverseDimensionArrowsAction","drawingEndpointDimensionAction","drawingHorizontalDimensionAction","drawingVerticalDimensionAction","drawingLengthDimensionAction"});
     auto *references=addCadMenu(dimensionMenu_,QStringLiteral("Riferimenti del piano"));
     for(auto name:{"drawingOriginReferenceAction","drawingAxisXReferenceAction","drawingAxisYReferenceAction"})references->addAction(next->findChild<QAction *>(name));
+    QPointer<QMenu> themeMenu=viewMenu_->findChild<QMenu *>(QStringLiteral("applicationThemeMenu"),Qt::FindDirectChildrenOnly);
     populate(viewMenu_,{"drawingHiddenLinesAction","drawingShadedFacesAction","drawingCenterMarksAction","drawingCenterLinesAction","drawingClearCenterMarksAction","drawingCylinderAxesAction","drawingFitAction"});viewMenu_->addSeparator();viewMenu_->addAction(next->findChild<QDockWidget *>("drawingTreeDock")->toggleViewAction());
+    if(themeMenu)viewMenu_->addMenu(themeMenu.data());
+    else setupApplicationThemeMenu(*addCadMenu(viewMenu_,QStringLiteral("Tema")));
     viewMenu_->addAction(revisionDock_->toggleViewAction());
     viewMenu_->addAction(next->findChild<QToolBar *>("drawingCommandBar")->toggleViewAction());viewMenu_->addAction(findChild<QToolBar *>("drawingDocumentBar")->toggleViewAction());
     auto *workspace=next->findChild<QMainWindow *>();

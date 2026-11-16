@@ -1,0 +1,6 @@
+{
+  "kernel/fk_helix.h": "26d9aa6f8d25f3f992557da30ca758204355c2e606ff95397a66c3202be4a18e",
+  "kernel/fk_helix_projection.h": null,
+  "kernel/fk_helix_projection.cpp": null,
+  "cad_sketch_refs.cpp": "f29ef4181fcb13c1c835064007ef5f70e0521ab9ae044ea24fa7622e523250a4"
+}

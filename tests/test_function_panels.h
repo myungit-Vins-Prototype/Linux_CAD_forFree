@@ -57,6 +57,16 @@ static void functionPanelsReview() {
         auto *face = new QListWidgetItem(QStringLiteral("F0"), faces); face->setCheckState(Qt::Unchecked);
         fields->addRow(QStringLiteral("Facce"), faces);
         fields->addRow(QStringLiteral("Valore"), amount); fields->addRow(disabled); fields->addRow(enabled);
+        QVector<FunctionMessage *> messages;
+        for (auto role : {FunctionMessageRole::Information, FunctionMessageRole::Success, FunctionMessageRole::Error, FunctionMessageRole::Hint}) {
+            auto *message = new FunctionMessage(QStringLiteral("Stato della funzione"), &panel);
+            setFunctionMessageRole(message,role);
+            fields->addRow(message); messages.append(message);
+        }
+        const auto luminance = [](const QColor &c) {
+            const auto linear = [](double v) {return v <= .04045 ? v/12.92 : std::pow((v+.055)/1.055,2.4);};
+            return .2126*linear(c.redF())+.7152*linear(c.greenF())+.0722*linear(c.blueF());
+        };
         auto *actions = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &panel);
         fields->addRow(actions);
         panel.setPanelOpacity(100);
@@ -73,6 +83,12 @@ static void functionPanelsReview() {
             require(disabled->palette().color(QPalette::Disabled, QPalette::Text)
                     != amount->palette().color(QPalette::Active, QPalette::Text), "campi disabilitati distinguibili");
             require(faces->palette().color(QPalette::Base) == amount->palette().color(QPalette::Base), "elenchi con lo stesso fondo dei campi");
+            for (auto *message : messages) {
+                const double foreground=luminance(message->palette().color(QPalette::Text));
+                const double background=luminance(panel.panelColor());
+                require((std::max(foreground,background)+.05)/(std::min(foreground,background)+.05) >= 4.5,
+                        "messaggi semantici leggibili e aggiornati al cambio tema");
+            }
             // Confronta pixel realmente disegnati, non la sola palette: il bug
             // produceva nero su nero negli elenchi e bianco su bianco nei box.
             const auto readableCheck = [&](auto capture, auto setState) {
@@ -311,5 +327,202 @@ static void functionPanelsReview() {
     });
     require(!loftDialog(&window,&viewport,QStringLiteral("Modifica loft"),0,viewport.extrusions()[0],[](const auto &){return QString();})
         &&viewport.extrusions()[0].loftStartReverse,"Annulla non cambia il verso memorizzato");
+    {
+        QMainWindow owner; CadViewport view;
+        for (auto unit : {LengthUnit::Millimeter,LengthUnit::Centimeter,LengthUnit::Meter,LengthUnit::Inch,LengthUnit::Foot}) {
+            view.setLengthUnit(unit);
+            ExtrusionObject fill;fill.feature=BodyFeature::FillSurface;
+            QTimer::singleShot(0,&owner,[&] {
+                auto *dialog=owner.findChild<QDialog *>("fillDialog");require(dialog,"pannello riempimento aperto");
+                for (const auto &name : {"fillFaceInfluence","fillGuideWeight","fillShapeWeight"}) {
+                    auto *spin=dynamic_cast<ExpressionSpinBox *>(dialog->findChild<QDoubleSpinBox *>(name));
+                    require(spin && !spin->isLengthMeasurement(),"coefficiente riempimento adimensionale");
+                    require(std::abs(spin->valueFromText(QStringLiteral("1"))-1.0)<1e-12,"coefficiente non convertito dalle unita");
+                }
+                dialog->reject();
+            });
+            require(!fillDialog(&owner,&view,QStringLiteral("Riempimento"),-1,fill,[](const auto &){return QString();}),"annullamento riempimento senza modifiche");
+        }
+    }
+    previewConsistencyReview();
+    functionPanelsLifecycleReview();
     require(!timedOut, "pannelli completati senza intervento del watchdog");
+}
+
+static void previewConsistencyReview() {
+    QMainWindow owner; CadViewport view;
+    DocumentState doc;
+    for (double z : {0.,3.}) {
+        SketchObject sketch;sketch.name=QStringLiteral("Profilo %1").arg(z);sketch.customFrame=true;sketch.frame.origin[2]=z;
+        sketch.segments={{{2,0},{4,0}},{{4,0},{4,2}},{{4,2},{2,2}},{{2,2},{2,0}}};doc.sketches.append(sketch);
+    }
+    ExtrusionObject box;box.feature=BodyFeature::Primitive;doc.extrusions={box,box};view.loadDocument(doc);
+    ExtrusionObject ext;ext.feature=BodyFeature::Extrusion;ext.sketchIndex=0;ext.distance=5;ext.mergeOperation=0;
+    QTimer poll;poll.setInterval(10);bool checked=false;
+    QObject::connect(&poll,&QTimer::timeout,&owner,[&] {
+        if (!view.preview_.valid) return;
+        poll.stop();
+        auto *combo=owner.findChild<QComboBox *>("extrusionExtent");require(combo,"limite estrusione presente");
+        QWidget *ancestor=combo->parentWidget();
+        while(ancestor && !dynamic_cast<QDialog *>(ancestor)) ancestor=ancestor->parentWidget();
+        auto *panel=dynamic_cast<QDialog *>(ancestor);
+        require(panel,"dialogo estrusione presente");
+        auto *label=panel->findChild<QPlainTextEdit *>("functionPreviewMessage");
+        auto changed=ext;changed.distance=7;view.requestPreview(changed,-1);
+        combo->setCurrentIndex(3);
+        require(!view.preview_.valid && view.preview_.key.isEmpty() && !view.preview_.geometry,"limite mancante invalida subito forma e chiave");
+        require(label->toPlainText().contains(QStringLiteral("seleziona")),"anteprima attende riferimento");
+        QTimer::singleShot(150,panel,[&,panel,label] {
+            require(!view.preview_.valid && view.preview_.key.isEmpty(),"worker precedente non ripubblica forma superata");
+            require(label->toPlainText().contains(QStringLiteral("seleziona")),"stato attesa resta coerente");
+            checked=true;panel->reject();
+        });
+    });
+    poll.start();extrusionDialog(&owner,&view,QStringLiteral("Estrusione"),-1,ext,[](const auto &){return QString();});poll.stop();
+    require(checked,"regressione estrusione completata");
+    QObject::disconnect(&poll,nullptr,&owner,nullptr);
+    ExtrusionObject loft;loft.feature=BodyFeature::Loft;loft.loftSketches={0};
+    checked=false;
+    QTimer::singleShot(0,&owner,[&] {
+        auto *panel=owner.findChild<QDialog *>("loftDialog");require(panel,"dialogo loft presente");
+        auto *label=panel->findChild<QPlainTextEdit *>("functionPreviewMessage");
+        auto *sections=panel->findChild<QListWidget *>("loftSections");
+        require(!view.preview_.valid && view.preview_.key.isEmpty() && label->toPlainText().contains(QStringLiteral("almeno due")),"una sezione non mostra calcolo inesistente");
+        require(sections && sections->count()==2,"due sezioni disponibili");sections->item(1)->setCheckState(Qt::Checked);
+        QObject::connect(&poll,&QTimer::timeout,panel,[&,panel,label,sections] {
+            if(!view.preview_.valid)return;
+            poll.stop();sections->item(1)->setCheckState(Qt::Unchecked);
+            require(!view.preview_.valid && view.preview_.key.isEmpty() && label->toPlainText().contains(QStringLiteral("almeno due")),"loft pronta torna in attesa quando manca una sezione");
+            checked=true;panel->reject();
+        });poll.start();
+    });
+    loftDialog(&owner,&view,QStringLiteral("Loft"),-1,loft,[](const auto &){return QString();});poll.stop();
+    require(checked,"regressione loft completata");
+    for(int mode:{3,4})for(bool copy:{false,true})for(bool multiple:{false,true}) {
+        ExtrusionObject map;map.feature=BodyFeature::SurfaceTools;map.firstBody=0;map.surfaceTool.mode=mode;map.surfaceTool.mappingCopy=copy;
+        if(multiple)for(int i:{0,1}){GeometryRef ref;ref.kind=11;ref.index=i;map.surfaceTool.sources.append(ref);}
+        view.requestPreview(map,-1);
+        require(view.preview_.replaced==ForgeCad::hiddenOperands(map),"mapping anteprima e risultato conservano le stesse sorgenti");
+        view.clearPreview();
+    }
+}
+
+static void functionPanelsLifecycleReview() {
+ const auto check = [](bool value, const char *name) { require(value, name); };
+ QMainWindow a,b;auto *va=new CadViewport(&a);a.setCentralWidget(va);auto *vb=new CadViewport(&b);b.setCentralWidget(vb);
+ DocumentState doc;ExtrusionObject box;box.feature=BodyFeature::Primitive;box.name="Box";doc.extrusions.append(box);va->loadDocument(doc);vb->loadDocument(doc);
+ {
+ FunctionDialogPanel panel(&a,false);panel.setObjectName("loftDialog");auto *form=panel.createScrollableForm();ExtrusionObject loft;SurfaceEndControls controls(panel,*form,va,-1,loft);
+ auto *mode=panel.findChild<QComboBox*>("surfaceStartContinuity");auto *pick=panel.findChild<QPushButton*>("surfaceStartFacesPick");
+ mode->setCurrentIndex(3);pick->click();check(va->referencePicking(),"G1 faces picking");mode->setCurrentIndex(0);check(!va->referencePicking()&&!pick->isEnabled()&&!pick->isChecked(),"G0 cancels and unchecks picker");
+ mode->setCurrentIndex(4);pick->click();check(va->referencePicking(),"plane picking");mode->setCurrentIndex(3);check(!va->referencePicking()&&!pick->isChecked(),"plane to faces cancels stale role");pick->click();check(va->referencePicking(),"new face picker can start");controls.stop();
+ }
+ {
+ FunctionDialogPanel panel(&a,false);GeometryReferenceList list(panel,va,"multiple");list.setSelectionMode(QAbstractItemView::ExtendedSelection);
+ GeometryRef x;x.kind=5;x.index=0;x.point.subshape=0;GeometryRef y=x;y.point.subshape=1;GeometryRef z=x;z.point.subshape=2;
+ list.setReferences({x,y,z});list.setCurrentRow(1);list.item(0)->setSelected(true);list.setReferences({x,y,z});check(list.selectedItems().size()==2&&list.currentRow()==1,"multiselection refresh");
+ list.setReferences({z,x,y});check(list.selectedItems().size()==2&&list.item(1)->isSelected()&&list.item(2)->isSelected()&&list.currentRow()==2,"selection follows reordered identities");
+ list.setCurrentRow(0,QItemSelectionModel::NoUpdate);list.setReferences({y,z,x});check(list.currentRow()==1&&!list.currentItem()->isSelected()&&list.selectedItems().size()==2,"current stays separate from selection");
+ list.setReferences({z,x});check(list.currentRow()==0&&list.selectedItems().size()==1&&list.item(1)->isSelected(),"removed references are discarded");
+ x.point.x=37;list.setReferences({z,x});check(list.selectedItems().size()==1&&list.item(1)->isSelected(),"same face identity survives changed pick point");
+ }
+ {
+ ExtrusionObject fill;fill.feature=BodyFeature::Pattern;fill.firstBody=0;
+ QTimer::singleShot(0,&a,[&]{auto *pick=a.findChild<QPushButton*>("fillPatternBoundaryPick");check(bool(pick),"fill picker exists");if(!pick)return;pick->click();check(va->referencePicking(),"fill boundary picking");for(auto *d:a.findChildren<QDialog*>())if(d->findChild<QPushButton*>("fillPatternBoundaryPick"))d->reject();});
+ check(!fillPatternDialog(&a,va,"Fill",-1,fill,[](const auto&){return QString();}),"fill cancel result");check(!va->referencePicking()&&!va->interactionLocked(),"fill cancel clears picker and lock");
+ }
+ for (int mode : {0,3}) {
+ ExtrusionObject mapping;mapping.feature=BodyFeature::SurfaceTools;mapping.firstBody=0;mapping.surfaceTool.mode=mode;
+ QTimer::singleShot(0,&a,[&]{auto *pick=a.findChild<QPushButton*>(mode==3?"mappingFacePick":"mappingSourceFacePick");check(bool(pick),"mapping picker exists");if(!pick)return;pick->click();check(va->referencePicking(),"mapping face picking");for(auto *d:a.findChildren<QDialog*>())if(d->findChild<QPushButton*>(mode==3?"mappingFacePick":"mappingSourceFacePick")) {QObject::connect(d,&QDialog::finished,d,[&]{check(!va->referencePicking(),"mapping picker cleared synchronously at finished");});d->reject();}});
+ check(!surfaceMappingDialog(&a,va,"Mapping",-1,mapping,[](const auto&){return QString();}),"mapping cancel result");check(!va->referencePicking()&&!va->interactionLocked(),"mapping cancel clears picker and lock");
+ }
+ {
+ FunctionDialogPanel pa(&a,false);bool rejected=false;
+ QTimer::singleShot(0,&a,[&]{
+ FunctionDialogPanel pb(&b,false);auto *form=pb.createScrollableForm();PreviewScope preview(vb,pb,form,-1);preview.request(box);vb->beginReferencePick(ForgeCad::DatumRoleFace,-1);vb->setReferencePickCallback([](bool,GeometryRef){});
+ check(!runModeless(&b,vb,pb),"cross workspace runner rejected");rejected=true;check(!vb->referencePicking()&&!vb->interactionLocked()&&!vb->previewPending()&&pb.isHidden(),"second runner leaves no picker lock or panel");check(va->interactionLocked()&&!pa.isHidden(),"first runner remains active");check(!b.statusBar()->currentMessage().isEmpty(),"second workspace explains restriction");pa.reject();
+ });
+ check(!runModeless(&a,va,pa)&&rejected&&!va->interactionLocked(),"first runner closes and unlocks immediately");
+ FunctionDialogPanel pb(&b,false);QTimer::singleShot(0,&pb,&QDialog::reject);check(!runModeless(&b,vb,pb)&&!vb->interactionLocked(),"second workspace opens after first closes");
+ }
+ {
+ ForgeCad::DocumentTabsWindow host;auto *da=new QMainWindow;auto *db=new QMainWindow;
+ da->setProperty("documentWorkspace",true);db->setProperty("documentWorkspace",true);
+ auto *vda=new CadViewport(da);auto *vdb=new CadViewport(db);da->setCentralWidget(vda);db->setCentralWidget(vdb);
+ host.addDocument(da,false);host.addDocument(db,false);host.activateDocument(da);FunctionDialogPanel pa(da,false);
+ QTimer::singleShot(0,&host,[&]{host.activateDocument(db);FunctionDialogPanel pb(db,false);check(!runModeless(db,vdb,pb),"real tabs second runner rejected");host.activateDocument(da);pa.reject();});
+ check(!runModeless(da,vda,pa)&&!vda->interactionLocked(),"real tabs original runner unlocked");
+ }
+ {
+ FunctionDialogPanel pa(&a,false);
+ QTimer::singleShot(0,&a,[&]{FunctionDialogPanel nested(&a,false);QTimer::singleShot(0,&nested,&QDialog::reject);check(!runModeless(&a,va,nested)&&va->interactionLocked(),"same workspace nesting preserves outer lock");pa.reject();});
+ check(!runModeless(&a,va,pa)&&!va->interactionLocked(),"same workspace nested runner restores lock");
+ }
+}
+
+static void previewPickerContextReview() {
+    QMainWindow owner; CadViewport view;
+    DocumentState state; SketchObject boundary;
+    boundary.segments={{{0,0},{20,0}},{{20,0},{20,12}},{{20,12},{0,12}},{{0,12},{0,0}}};state.sketches={boundary};
+    ExtrusionObject seed;seed.feature=BodyFeature::Primitive;seed.primitive.origin[0]=-50;state.extrusions={seed};view.loadDocument(state);
+    const auto original=view.extrusions()[0].forgeBody;
+    GeometryRef contour;contour.kind=7;contour.index=0;ExtrusionObject fill;fill.feature=BodyFeature::Pattern;fill.firstBody=0;
+    fill.pattern.kind=3;fill.pattern.refs={contour};fill.pattern.spacing=4;fill.pattern.spacing2=4;
+    QTimer poll;poll.setInterval(20);QElapsedTimer elapsed;elapsed.start();bool checked=false;
+    QObject::connect(&poll,&QTimer::timeout,&owner,[&] {
+        auto *source=owner.findChild<QComboBox*>("fillPatternSource");if(!source)return;
+        QDialog *panel=nullptr;for(auto *d:owner.findChildren<QDialog*>())if(d->findChild<QComboBox*>("fillPatternSource"))panel=d;
+        if(!view.preview_.valid){if(elapsed.elapsed()>15000){poll.stop();panel->reject();}return;}
+        poll.stop();require(!view.isBodyVisibleInScene(0),"anteprima pronta sostituisce sorgente");
+        const auto geometry=view.preview_.geometry;const auto key=view.preview_.key;
+        QPushButton *pick=nullptr;for(auto *b:source->parentWidget()->findChildren<QPushButton*>())if(b->text()==QStringLiteral("Dalla vista"))pick=b;
+        require(pick,"picker sorgente presente");pick->click();
+        require(view.referencePicking()&&view.refPickOwner_==-1&&view.isBodyVisibleInScene(0),"creazione mostra input selezionabile durante picker");
+        GeometryRef hit;require(view.pickReference(view.projectWorldPoint(QVector3D(-49.5,.5,.5)).toPoint(),hit)&&hit.index==0,"raggio sceglie sorgente visibile");
+        require(view.preview_.valid&&view.preview_.geometry==geometry&&view.preview_.key==key,"picker conserva anteprima pronta");
+        pick->click();require(!view.referencePicking()&&!view.isBodyVisibleInScene(0),"uscita picker ripristina anteprima");
+        auto *edges=panel->findChild<QPushButton*>("fillPatternBoundaryPick");edges->click();
+        require(view.referencePicking()&&view.isBodyVisibleInScene(0),"picker contorni mostra scena input");
+        QKeyEvent escape(QEvent::KeyPress,Qt::Key_Escape,Qt::NoModifier);QApplication::sendEvent(&view,&escape);
+        require(!view.referencePicking(),"Esc termina picker contorni");checked=true;panel->reject();
+    });poll.start();fillPatternDialog(&owner,&view,"Fill picker",-1,fill,[](const auto&){return QString();});poll.stop();
+    require(checked&&!view.referencePicking()&&!view.interactionLocked()&&view.preview_.key.isEmpty(),"annulla ripulisce picker e anteprima");
+    require(view.extrusions().size()==1&&view.extrusions()[0].forgeBody==original&&view.isBodyVisibleInScene(0),"annulla conserva modello e visibilita'");
+    // La storia futura rimane esclusa anche con una lista di candidati esplicita.
+    DocumentState history;history.extrusions={seed,seed};view.loadDocument(history);view.setHistoryPosition(1);
+    view.setPickBodies({0,1});view.beginReferencePick(ForgeCad::DatumRoleFace,-1);
+    require(view.isBodyVisibleInScene(0)&&!view.isBodyVisibleInScene(1),"rollback non mostra candidati futuri");view.cancelReferencePick();view.setPickBodies({});
+    view.setHistoryPosition(2);view.beginReferencePick(ForgeCad::DatumRoleFace,1);
+    require(view.isBodyVisibleInScene(0)&&!view.isBodyVisibleInScene(1),"modifica usa scena precedente alla feature");view.cancelReferencePick();
+    view.extrusions_[0].visible=false;view.setPickBodies({0});view.beginReferencePick(ForgeCad::DatumRoleFace,-1);
+    require(view.referenceBodyEligible(0)&&view.isBodyVisibleInScene(0),"operando consumato esplicito resta visibile e selezionabile");view.cancelReferencePick();view.setPickBodies({});
+    ExtrusionObject curve;curve.feature=BodyFeature::Helix;
+    auto line=std::make_shared<ForgeCad::Kernel::Line<3>>(ForgeCad::Kernel::Vec3(),ForgeCad::Kernel::Vec3(0,0,1));
+    curve.curve=std::make_shared<ForgeCad::Kernel::TrimmedCurve<3>>(line,0,3);view.extrusions_.append(curve);view.setHistoryPosition(3);
+    view.beginReferencePick(ForgeCad::DatumRolePoint,-1);require(view.isBodyDrawn(2)&&view.isBodyVisibleInScene(2),"curva 3D visibile durante scelta punto");view.cancelReferencePick();
+}
+
+static void mappingLinkedPickerReview() {
+    QMainWindow owner;CadViewport view;DocumentState state;ExtrusionObject box;box.feature=BodyFeature::Primitive;box.primitive.size[0]=4;box.primitive.size[1]=2;state.extrusions={box};view.loadDocument(state);
+    const auto body=view.extrusions()[0].forgeBody;const auto face=body->faces()[0];ForgeCad::Kernel::Vec3 point;ForgeCad::Kernel::Vec2 anchor;
+    require(ForgeCad::Kernel::faceInteriorPoint(*body,face,point,&anchor),"punto faccia per mappa");GeometryRef ref;ref.kind=5;ref.index=0;ref.point.subshape=face.index;ref.point.geometry=int(body->face(face).surface->type());ref.point.x=point.x();ref.point.y=point.y();ref.point.z=point.z();GeometryRef plane;plane.kind=1;plane.index=0;
+    ExtrusionObject flat;flat.feature=BodyFeature::SurfaceTools;flat.firstBody=0;flat.surfaceTool.mode=3;flat.surfaceTool.mappingQuilt=true;flat.surfaceTool.targets={ref,plane};flat.surfaceTool.sources={ref};flat.surfaceTool.mappingU=anchor.x();flat.surfaceTool.mappingV=anchor.y();
+    require(view.createBody(flat).isEmpty()&&view.createBody(box).isEmpty(),"mappa associata reale e sorgente wrap");
+    ExtrusionObject wrap;wrap.feature=BodyFeature::SurfaceTools;wrap.firstBody=2;wrap.surfaceTool.mode=4;wrap.surfaceTool.mappingQuilt=true;wrap.surfaceTool.targets={ref,plane};
+    for(bool source:{false,true}) {
+        int applied=0;bool checked=false;QTimer::singleShot(0,&owner,[&] {
+            auto *target=owner.findChild<QPushButton*>("mappingFacePick");auto *pick=owner.findChild<QPushButton*>(source?"mappingSourceFacePick":"mappingFacePick");auto *planes=owner.findChild<QComboBox*>("mappingPlane");
+            QDialog *panel=nullptr;for(auto *d:owner.findChildren<QDialog*>())if(d->findChild<QComboBox*>("mappingPlane"))panel=d;
+            require(target&&pick&&planes&&panel,"controlli mapping presenti");pick->click();require(view.referencePicking(),"picker mapping avviato");
+            int linked=-1;for(int i=0;i<planes->count();++i)if(planes->itemText(i).startsWith(QStringLiteral("Mappa di")))linked=i;
+            require(linked>=0,"mappa associata disponibile");planes->setCurrentIndex(linked);
+            require(!target->isEnabled()&&view.referencePicking()==source,"collegamento termina solo selezione destinazione");
+            if(source){require(pick->isEnabled(),"sorgente ancora applicabile");QKeyEvent escape(QEvent::KeyPress,Qt::Key_Escape,Qt::NoModifier);QApplication::sendEvent(&view,&escape);require(!view.referencePicking(),"Esc termina sorgente conservata");panel->reject();}
+            else panel->findChild<QDialogButtonBox*>()->button(QDialogButtonBox::Ok)->click();
+            checked=true;
+        });
+        surfaceMappingDialog(&owner,&view,"Mapping linked",-1,wrap,[&](const auto&){++applied;return QString();});
+        require(checked&&applied==(source?0:1),"mapping collegato confermabile senza picker obsoleto");
+        require(!view.referencePicking()&&!view.interactionLocked()&&view.preview_.key.isEmpty()&&view.extrusions().size()==3,"mapping ripulisce stato senza mutare modello");
+    }
 }

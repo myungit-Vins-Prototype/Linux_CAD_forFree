@@ -1,0 +1,162 @@
+{
+  "candidate-positive-coefficients.json": {
+    "input_sha256": "957bfa94195052b815d3268cc90334cd4e2e8f44806904c1c8693f89a5427fad",
+    "maps": 10,
+    "cells": 736,
+    "max_upper_mm": 5.000003783880121e-08,
+    "rows": [
+      {
+        "fin": null,
+        "edge": null,
+        "face": null,
+        "budget": 1e-07,
+        "pass": true,
+        "upper_mm": 6.15132632273897e-11,
+        "cells": 1,
+        "leaves": 1,
+        "branches": 1,
+        "max_depth": 0
+      },
+      {
+        "fin": null,
+        "edge": null,
+        "face": null,
+        "budget": 1e-07,
+        "pass": true,
+        "upper_mm": 6.15132632273897e-11,
+        "cells": 1,
+        "leaves": 1,
+        "branches": 1,
+        "max_depth": 0
+      },
+      {
+        "fin": null,
+        "edge": null,
+        "face": null,
+        "budget": 1e-07,
+        "pass": true,
+        "upper_mm": 9.419333538373795e-10,
+        "cells": 120,
+        "leaves": 120,
+        "branches": 120,
+        "max_depth": 0
+      },
+      {
+        "fin": null,
+        "edge": null,
+        "face": null,
+        "budget": 1e-07,
+        "pass": true,
+        "upper_mm": 9.419333538373795e-10,
+        "cells": 120,
+        "leaves": 120,
+        "branches": 120,
+        "max_depth": 0
+      },
+      {
+        "fin": null,
+        "edge": null,
+        "face": null,
+        "budget": 1e-07,
+        "pass": true,
+        "upper_mm": 9.422179106173454e-10,
+        "cells": 120,
+        "leaves": 120,
+        "branches": 120,
+        "max_depth": 0
+      },
+      {
+        "fin": null,
+        "edge": null,
+        "face": null,
+        "budget": 1e-07,
+        "pass": true,
+        "upper_mm": 9.422179106173454e-10,
+        "cells": 120,
+        "leaves": 120,
+        "branches": 120,
+        "max_depth": 0
+      },
+      {
+        "fin": null,
+        "edge": null,
+        "face": null,
+        "budget": 1e-07,
+        "pass": true,
+        "upper_mm": 5.289713229795414e-10,
+        "cells": 126,
+        "leaves": 126,
+        "branches": 126,
+        "max_depth": 0
+      },
+      {
+        "fin": null,
+        "edge": null,
+        "face": null,
+        "budget": 1e-07,
+        "pass": true,
+        "upper_mm": 5.289713229795414e-10,
+        "cells": 126,
+        "leaves": 126,
+        "branches": 126,
+        "max_depth": 0
+      },
+      {
+        "fin": null,
+        "edge": null,
+        "face": null,
+        "budget": 1e-07,
+        "pass": true,
+        "upper_mm": 6.15132632273897e-11,
+        "cells": 1,
+        "leaves": 1,
+        "branches": 1,
+        "max_depth": 0
+      },
+      {
+        "fin": null,
+        "edge": null,
+        "face": null,
+        "budget": 1e-07,
+        "pass": true,
+        "upper_mm": 5.000003783880121e-08,
+        "cells": 1,
+        "leaves": 1,
+        "branches": 1,
+        "max_depth": 0
+      }
+    ]
+  },
+  "candidate-emitted-sheet-coefficients.json": {
+    "input_sha256": "6f777a6770e7c84e4b629676a0b18115c06980a3e47007f6d123f29163a365c3",
+    "maps": 2,
+    "cells": 2,
+    "max_upper_mm": 6.725652854973881e-11,
+    "rows": [
+      {
+        "fin": 0,
+        "edge": null,
+        "face": null,
+        "budget": 1e-07,
+        "pass": true,
+        "upper_mm": 6.725652854973881e-11,
+        "cells": 1,
+        "leaves": 1,
+        "branches": 1,
+        "max_depth": 0
+      },
+      {
+        "fin": 4,
+        "edge": null,
+        "face": null,
+        "budget": 1e-07,
+        "pass": true,
+        "upper_mm": 6.725652854973881e-11,
+        "cells": 1,
+        "leaves": 1,
+        "branches": 1,
+        "max_depth": 0
+      }
+    ]
+  }
+}

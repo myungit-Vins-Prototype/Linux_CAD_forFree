@@ -1,0 +1,13 @@
+{
+  "exit": 0,
+  "seconds": 23.66984884499834,
+  "command": [
+    "ctest",
+    "--test-dir",
+    "forgecad-release",
+    "--output-on-failure",
+    "-V",
+    "-R",
+    "^forgekernel_(blend_profile|blend_contact_break|blend_cavity_regression|sheet_join_validation)_tests$"
+  ]
+}

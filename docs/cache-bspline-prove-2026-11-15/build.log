@@ -1,0 +1,795 @@
+[  0%] Built target forgecad_display_cache_memory_tests_autogen_timestamp_deps
+[  0%] Built target forgecad_cuda_pool_tests_autogen_timestamp_deps
+[  0%] Built target forgecad_constraint_linear_tests_autogen_timestamp_deps
+[  0%] Built target forgecad_expression_tests_autogen_timestamp_deps
+[  0%] Built target forgecad_application_theme_tests_autogen_timestamp_deps
+[  0%] Built target forgecad_document_compression_tests_autogen_timestamp_deps
+[  0%] Built target forgecad_revision_store_tests_autogen_timestamp_deps
+[  0%] Built target forgecad_snapshot_chunks_tests_autogen_timestamp_deps
+[  0%] Built target forgecad_revision_release_tests_autogen_timestamp_deps
+[  0%] Built target forgecad_geometry_refs_tests_autogen_timestamp_deps
+[  0%] Built target forgecad_feature_dependencies_tests_autogen_timestamp_deps
+[  0%] Built target forgecad_catalog_recovery_tests_autogen_timestamp_deps
+[  0%] Built target forgecad_revision_numbers_tests_autogen_timestamp_deps
+[  0%] Built target forgecad_workspace_tests_autogen_timestamp_deps
+[  0%] Built target forgecad_drawing_menus_autogen_timestamp_deps
+[  0%] Built target forgecad_overlay_uniform_tests_autogen_timestamp_deps
+[  0%] Automatic MOC and UIC for target forgecad_cuda_pool_tests
+[  0%] Built target forgecad_cuda_pool_tests_autogen
+[  0%] Automatic MOC and UIC for target forgecad_constraint_linear_tests
+[  0%] Built target forgecad_constraint_linear_tests_autogen
+[  0%] Automatic MOC and UIC for target forgecad_display_cache_memory_tests
+[  0%] Built target forgecad_display_cache_memory_tests_autogen
+[  0%] Automatic MOC and UIC for target forgecad_application_theme_tests
+[  0%] Built target forgecad_application_theme_tests_autogen
+[  0%] Automatic MOC and UIC for target forgecad_expression_tests
+[  0%] Built target forgecad_expression_tests_autogen
+[  0%] Automatic MOC and UIC for target forgecad_document_compression_tests
+[  0%] Built target forgecad_document_compression_tests_autogen
+[  1%] Automatic MOC and UIC for target forgecad_snapshot_chunks_tests
+[  1%] Built target forgecad_snapshot_chunks_tests_autogen
+[  1%] Automatic MOC and UIC for target forgecad_revision_store_tests
+[  1%] Built target forgecad_revision_store_tests_autogen
+[  1%] Automatic MOC and UIC for target forgecad_revision_release_tests
+[  1%] Built target forgecad_revision_release_tests_autogen
+[  1%] Automatic MOC and UIC for target forgecad_catalog_recovery_tests
+[  1%] Built target forgecad_catalog_recovery_tests_autogen
+[  0%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_curve_ops.cpp.o
+[  1%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_curve_algo.cpp.o
+[  0%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_bspline.cpp.o
+[  0%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_bspline_surface.cpp.o
+[  1%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_face_normal_bounds.cpp.o
+[  1%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_surface_distance.cpp.o
+[  1%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_surface_algo.cpp.o
+[  1%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_bspline_isoline.cpp.o
+[  1%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_pcurve.cpp.o
+[  1%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_sketch_projection.cpp.o
+[  1%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_mass.cpp.o
+[  1%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_intersect.cpp.o
+[  1%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_classify.cpp.o
+[  1%] Automatic MOC and UIC for target forgecad_feature_dependencies_tests
+[  1%] Built target forgecad_feature_dependencies_tests_autogen
+[  1%] Automatic MOC and UIC for target forgecad_geometry_refs_tests
+[  1%] Built target forgecad_geometry_refs_tests_autogen
+[  1%] Automatic MOC and UIC for target forgecad_workspace_tests
+[  2%] Built target forgecad_workspace_tests_autogen
+[  2%] Automatic MOC and UIC for target forgecad_drawing_menus
+[  2%] Built target forgecad_drawing_menus_autogen
+[  2%] Automatic MOC and UIC for target forgecad_revision_numbers_tests
+[  2%] Automatic MOC and UIC for target forgecad_overlay_uniform_tests
+[  2%] Built target forgecad_revision_numbers_tests_autogen
+[  2%] Built target forgecad_overlay_uniform_tests_autogen
+[  2%] Built target forgecad_cuda_pool_tests
+[  3%] Built target forgecad_constraint_linear_tests
+[  3%] Built target forgecad_display_cache_memory_tests
+[  4%] Built target forgecad_application_theme_tests
+[  1%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_body_io.cpp.o
+[  5%] Built target forgecad_expression_tests
+[  1%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_marching.cpp.o
+[  4%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_unify.cpp.o
+[  5%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_nurbs.cpp.o
+[  8%] Built target forgecad_document_compression_tests
+[  5%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_history.cpp.o
+[  7%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_nurbs_join.cpp.o
+[  8%] Built target forgecad_snapshot_chunks_tests
+[  9%] Built target forgecad_revision_store_tests
+[  9%] Built target forgecad_revision_release_tests
+[ 10%] Built target forgecad_catalog_recovery_tests
+[  8%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_curve_surface.cpp.o
+[ 10%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_blend_polar.cpp.o
+[ 11%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_blend_mitre.cpp.o
+[ 11%] Built target forgecad_feature_dependencies_tests
+[  8%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_blend_loop.cpp.o
+[ 11%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_blend_contact_breaks.cpp.o
+[ 11%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_blend_section_curve.cpp.o
+[ 12%] Built target forgecad_geometry_refs_tests
+[ 12%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_surface_poles.cpp.o
+[ 11%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_surface_tools.cpp.o
+[ 12%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_surface_poles_influence.cpp.o
+[  4%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_boolean.cpp.o
+[ 14%] Built target forgecad_workspace_tests
+[ 12%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_surface_poles_jets.cpp.o
+[ 15%] Built target forgecad_revision_numbers_tests
+[ 16%] Built target forgecad_overlay_uniform_tests
+[ 14%] Building CXX object CMakeFiles/forgecad_drawing_menus.dir/forgeCad2026_menu.cpp.o
+[ 16%] Linking CXX static library libforgecad_drawing_menus.a
+[ 16%] Built target forgecad_drawing_menus
+[ 16%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_surface_poles_conversion.cpp.o
+[ 12%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_surface_poles_constraints.cpp.o
+[ 17%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_surface_refit.cpp.o
+[ 17%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_mapping_fit.cpp.o
+[ 17%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_surface_mapping.cpp.o
+[ 17%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_quilt_mapping.cpp.o
+[ 17%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_sheet.cpp.o
+[ 17%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_open_offset.cpp.o
+[ 10%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_blend_surface.cpp.o
+[ 17%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_offset_support.cpp.o
+[ 18%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_sew.cpp.o
+[ 18%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_planar.cpp.o
+[ 18%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_boundary.cpp.o
+[ 18%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_project.cpp.o
+[ 18%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_fill.cpp.o
+[ 18%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_thicken.cpp.o
+[ 18%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_shell.cpp.o
+[ 17%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_offset.cpp.o
+/home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp: In function ‘ForgeCad::Kernel::SurfacePtr ForgeCad::Kernel::{anonymous}::offsetBSplineC2(const ForgeCad::Kernel::Surface&, double, const ForgeCad::Kernel::Interval&, const ForgeCad::Kernel::Interval&, double, bool, bool)’:
+/home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:293:151: warning: unused parameter ‘checkCurvature’ [-Wunused-parameter]
+  293 | SurfacePtr offsetBSplineC2(const Surface &surface, double d, const Interval &uw, const Interval &vw, double tolerance, bool preserveEndSections, bool checkCurvature = true) {
+      |                                                                                                                                                  ~~~~~^~~~~~~~~~~~~~~~~~~~~
+/home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp: In function ‘ForgeCad::Kernel::SurfacePtr ForgeCad::Kernel::{anonymous}::offsetBSpline(const ForgeCad::Kernel::Surface&, double, const ForgeCad::Kernel::Interval&, const ForgeCad::Kernel::Interval&, double, bool, bool)’:
+/home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:520:149: warning: unused parameter ‘checkCurvature’ [-Wunused-parameter]
+  520 | SurfacePtr offsetBSpline(const Surface &surface, double d, const Interval &uw, const Interval &vw, double tolerance, bool preserveEndSections, bool checkCurvature = true) {
+      |                                                                                                                                                ~~~~~^~~~~~~~~~~~~~~~~~~~~
+[ 18%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_draft.cpp.o
+[ 20%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_helix.cpp.o
+[ 18%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_transform.cpp.o
+[ 18%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_hermite.cpp.o
+[ 20%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_loft_knots.cpp.o
+[ 20%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_loft_guide_constraints.cpp.o
+[ 20%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_loft_merge.cpp.o
+[ 20%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_loft_sections.cpp.o
+[ 20%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_loft_profiles.cpp.o
+[ 20%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_sweep.cpp.o
+[ 20%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_exchange.cpp.o
+[ 20%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_loft.cpp.o
+[ 21%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_step.cpp.o
+[ 21%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_iges.cpp.o
+[ 21%] Linking CXX static library libforgekernel.a
+[ 24%] Built target forgekernel
+[ 24%] Built target forgecad_mesh_export_backend_tests_autogen_timestamp_deps
+[ 24%] Built target forgecad_cuda_tests_autogen_timestamp_deps
+[ 24%] Built target forgecad_compute_autogen_timestamp_deps
+[ 24%] Built target forgecad_tessellation_availability_tests_autogen_timestamp_deps
+[ 24%] Built target forgecad_drawing_test_support_autogen_timestamp_deps
+[ 24%] Built target forgecad_drawing_tests_autogen_timestamp_deps
+[ 24%] Built target forgecad_selection_benchmark_autogen_timestamp_deps
+[ 24%] Built target forgecad_shape_analysis_tests_autogen_timestamp_deps
+[ 24%] Built target forgecad_drawing_silhouette_tests_autogen_timestamp_deps
+[ 24%] Built target forgecad_drawing_focus_tests_autogen_timestamp_deps
+[ 24%] Built target forgecad_drawing_visibility_tests_autogen_timestamp_deps
+[ 24%] Built target forgecad_drawing_dimensions_tests_autogen_timestamp_deps
+[ 24%] Building CXX object kernel/CMakeFiles/forgekernel_polar_blend_tests.dir/tests/test_polar_blend.cpp.o
+[ 24%] Building CXX object kernel/CMakeFiles/forgekernel_loft_knots_tests.dir/tests/test_loft_knots.cpp.o
+[ 24%] Linking CXX executable forgekernel_polar_blend_tests
+[ 24%] Built target forgekernel_polar_blend_tests
+[ 24%] Building CXX object kernel/CMakeFiles/forgekernel_open_offset_tests.dir/tests/test_open_offset.cpp.o
+[ 24%] Linking CXX executable forgekernel_loft_knots_tests
+[ 25%] Built target forgekernel_loft_knots_tests
+[ 25%] Linking CXX executable forgekernel_open_offset_tests
+[ 25%] Built target forgekernel_open_offset_tests
+[ 24%] Building CXX object kernel/CMakeFiles/forgekernel_surface_instances_tests.dir/tests/test_surface_instances.cpp.o
+/home/myungit/Linux_CAD_forFree/kernel/tests/test_surface_instances.cpp: In function ‘void SurfaceInstanceSewPolarWedgesAndCap()’:
+/home/myungit/Linux_CAD_forFree/kernel/tests/test_surface_instances.cpp:319:14: warning: unused variable ‘reverse’ [-Wunused-variable]
+  319 |     for(bool reverse:{false,true}){
+      |              ^~~~~~~
+[ 25%] Linking CXX executable forgekernel_surface_instances_tests
+[ 25%] Built target forgekernel_surface_instances_tests
+[ 25%] Building CXX object kernel/CMakeFiles/forgekernel_exchange_robustness_tests.dir/tests/test_exchange_robustness.cpp.o
+[ 25%] Linking CXX executable forgekernel_exchange_robustness_tests
+[ 25%] Built target forgekernel_exchange_robustness_tests
+[ 25%] Building CXX object kernel/CMakeFiles/forgekernel_tolerance_tests.dir/tests/test_tolerance.cpp.o
+[ 25%] Linking CXX executable forgekernel_tolerance_tests
+[ 25%] Built target forgekernel_tolerance_tests
+[ 25%] Building CXX object kernel/CMakeFiles/forgekernel_blend_probe.dir/tests/probe_blend_candidates.cpp.o
+[ 25%] Linking CXX executable forgekernel_blend_probe
+[ 25%] Built target forgekernel_blend_probe
+[ 25%] Building CXX object kernel/CMakeFiles/forgekernel_surface_tools_tests.dir/tests/test_fill.cpp.o
+[ 25%] Building CXX object kernel/CMakeFiles/forgekernel_blend_profile_tests.dir/tests/test_blend_profiles.cpp.o
+[ 25%] Linking CXX executable forgekernel_blend_profile_tests
+[ 25%] Built target forgekernel_blend_profile_tests
+[ 25%] Building CXX object kernel/CMakeFiles/forgekernel_face_normal_bounds_tests.dir/tests/test_face_normal_bounds.cpp.o
+[ 27%] Linking CXX executable forgekernel_face_normal_bounds_tests
+[ 27%] Built target forgekernel_face_normal_bounds_tests
+[ 25%] Building CXX object kernel/CMakeFiles/forgekernel_history_tests.dir/tests/test_history.cpp.o
+/home/myungit/Linux_CAD_forFree/kernel/tests/test_history.cpp: In function ‘void HistorySweepAndLoftKeepSectionSources()’:
+/home/myungit/Linux_CAD_forFree/kernel/tests/test_history.cpp:977:136: warning: missing initializer for member ‘ForgeCad::Kernel::LoftSection::point’ [-Wmissing-field-initializers]
+  977 |     std::vector<LoftSection> sections{{Frame3(),region.outer,{}},{Frame3(Vec3(0,0,3),Vec3(0,0,1),Vec3(1,0,0)),reversed(round.outer),{}}};
+      |                                                                                                                                        ^
+/home/myungit/Linux_CAD_forFree/kernel/tests/test_history.cpp:977:136: warning: missing initializer for member ‘ForgeCad::Kernel::LoftSection::point’ [-Wmissing-field-initializers]
+[ 25%] Building CXX object kernel/CMakeFiles/forgekernel_surface_tools_tests.dir/tests/test_surface_poles_constraints.cpp.o
+[ 27%] Linking CXX executable forgekernel_history_tests
+[ 27%] Building CXX object kernel/CMakeFiles/forgekernel_projected_curve_reference_tests.dir/tests/test_projected_curve_references.cpp.o
+[ 27%] Built target forgekernel_history_tests
+[ 27%] Linking CXX executable forgekernel_projected_curve_reference_tests
+[ 28%] Built target forgekernel_projected_curve_reference_tests
+[ 25%] Building CXX object kernel/CMakeFiles/forgekernel_sketch_projection_tests.dir/tests/test_sketch_projection.cpp.o
+[ 29%] Linking CXX executable forgekernel_sketch_projection_tests
+[ 29%] Built target forgekernel_sketch_projection_tests
+[ 28%] Building CXX object kernel/CMakeFiles/forgekernel_surface_parameterization_tests.dir/tests/test_surface_parameterization.cpp.o
+[ 29%] Linking CXX executable forgekernel_surface_parameterization_tests
+[ 29%] Built target forgekernel_surface_parameterization_tests
+[ 27%] Building CXX object kernel/CMakeFiles/forgekernel_surface_tools_tests.dir/tests/test_surface_poles_conversion.cpp.o
+[ 28%] Building CXX object kernel/CMakeFiles/forgekernel_disjoint_union_tests.dir/tests/test_disjoint_union.cpp.o
+[ 29%] Linking CXX executable forgekernel_disjoint_union_tests
+[ 29%] Built target forgekernel_disjoint_union_tests
+[ 29%] Building CXX object kernel/CMakeFiles/forgekernel_surface_tools_tests.dir/tests/test_surface_poles_influence.cpp.o
+[ 29%] Building CXX object kernel/CMakeFiles/forgekernel_loft_projected_guide_tests.dir/tests/test_loft_projected_guides.cpp.o
+[ 29%] Linking CXX executable forgekernel_loft_projected_guide_tests
+[ 29%] Built target forgekernel_loft_projected_guide_tests
+[ 29%] Building CXX object kernel/CMakeFiles/forgekernel_loft_shape_tests.dir/tests/test_loft_shape.cpp.o
+[ 29%] Linking CXX executable forgekernel_loft_shape_tests
+[ 29%] Built target forgekernel_loft_shape_tests
+[ 29%] Building CXX object kernel/CMakeFiles/forgekernel_loft_projected_section_tests.dir/tests/test_loft_projected_sections.cpp.o
+[ 29%] Linking CXX executable forgekernel_loft_projected_section_tests
+[ 29%] Built target forgekernel_loft_projected_section_tests
+[ 29%] Building CXX object kernel/CMakeFiles/forgekernel_loft_complexity_tests.dir/tests/test_loft_complexity.cpp.o
+[ 29%] Building CXX object kernel/CMakeFiles/forgekernel_surface_tools_tests.dir/tests/test_surface_tools.cpp.o
+[ 30%] Linking CXX executable forgekernel_loft_complexity_tests
+[ 30%] Built target forgekernel_loft_complexity_tests
+[ 30%] Linking CXX executable forgekernel_surface_tools_tests
+[ 30%] Built target forgekernel_surface_tools_tests
+[ 30%] Building CXX object kernel/CMakeFiles/forgekernel_plane_jets_tests.dir/tests/test_bspline_plane_jets.cpp.o
+[ 30%] Linking CXX executable forgekernel_plane_jets_tests
+[ 30%] Built target forgekernel_plane_jets_tests
+[ 29%] Building CXX object kernel/CMakeFiles/forgekernel_loft_guide_constraint_tests.dir/tests/test_loft_guide_constraints.cpp.o
+/home/myungit/Linux_CAD_forFree/kernel/tests/test_loft_guide_constraints.cpp: In function ‘void {anonymous}::transverseShapeIndependentOfDegree()’:
+/home/myungit/Linux_CAD_forFree/kernel/tests/test_loft_guide_constraints.cpp:92:107: warning: missing initializer for member ‘ForgeCad::Kernel::LoftContact::plane’ [-Wmissing-field-initializers]
+   92 |     LoftGuideCondition condition;condition.crossMode=2;condition.faces={{support,support->faces().front()}};
+      |                                                                                                           ^
+/home/myungit/Linux_CAD_forFree/kernel/tests/test_loft_guide_constraints.cpp: In function ‘void {anonymous}::tangentFaces()’:
+/home/myungit/Linux_CAD_forFree/kernel/tests/test_loft_guide_constraints.cpp:120:101: warning: missing initializer for member ‘ForgeCad::Kernel::LoftContact::plane’ [-Wmissing-field-initializers]
+  120 |     LoftGuideCondition control;control.crossMode=2;control.faces={{support,support->faces().front()}};options.guideConditions={control};
+      |                                                                                                     ^
+/home/myungit/Linux_CAD_forFree/kernel/tests/test_loft_guide_constraints.cpp:159:69: warning: missing initializer for member ‘ForgeCad::Kernel::LoftContact::plane’ [-Wmissing-field-initializers]
+  159 |     options.guideConditions[0].faces={{wrong,wrong->faces().front()}};bool rejected=false;
+      |                                                                     ^
+[ 30%] Linking CXX executable forgekernel_loft_guide_constraint_tests
+[ 30%] Built target forgekernel_loft_guide_constraint_tests
+[ 29%] Building CXX object kernel/CMakeFiles/forgekernel_offset_split_crease_tests.dir/tests/test_offset_split_creases.cpp.o
+[ 30%] Building CXX object kernel/CMakeFiles/forgekernel_blend_contact_break_tests.dir/tests/test_blend_contact_breaks.cpp.o
+[ 30%] Building CXX object kernel/CMakeFiles/forgekernel_bspline_cache_tests.dir/tests/fk_test_main.cpp.o
+[ 30%] Linking CXX executable forgekernel_offset_split_crease_tests
+[ 32%] Built target forgekernel_offset_split_crease_tests
+[ 31%] Linking CXX executable forgekernel_blend_contact_break_tests
+[ 32%] Built target forgekernel_blend_contact_break_tests
+[ 30%] Building CXX object kernel/CMakeFiles/forgekernel_bspline_derivative_tests.dir/tests/test_bspline_derivatives.cpp.o
+[ 32%] Linking CXX executable forgekernel_bspline_derivative_tests
+[ 32%] Built target forgekernel_bspline_derivative_tests
+[ 32%] Building CXX object kernel/CMakeFiles/forgekernel_face_parameter_tests.dir/tests/test_face_parameter_classify.cpp.o
+[ 32%] Linking CXX executable forgekernel_face_parameter_tests
+[ 32%] Built target forgekernel_face_parameter_tests
+[ 32%] Building CXX object kernel/CMakeFiles/forgekernel_bspline_isoline_tests.dir/tests/test_bspline_isoline.cpp.o
+[ 32%] Building CXX object kernel/CMakeFiles/forgekernel_bspline_cache_tests.dir/tests/test_bspline_cache.cpp.o
+[ 34%] Linking CXX executable forgekernel_bspline_cache_tests
+[ 34%] Built target forgekernel_bspline_cache_tests
+[ 34%] Linking CXX executable forgekernel_bspline_isoline_tests
+[ 34%] Built target forgekernel_bspline_isoline_tests
+[ 34%] Building CXX object kernel/CMakeFiles/forgekernel_marching_seed_grid_tests.dir/tests/test_marching_seed_grid.cpp.o
+[ 34%] Building CXX object kernel/CMakeFiles/forgekernel_loft_point_tests.dir/tests/test_loft_points.cpp.o
+[ 35%] Linking CXX executable forgekernel_marching_seed_grid_tests
+[ 35%] Built target forgekernel_marching_seed_grid_tests
+[ 32%] Building CXX object kernel/CMakeFiles/forgekernel_loft_correspondence_tests.dir/tests/test_loft_correspondence.cpp.o
+/home/myungit/Linux_CAD_forFree/kernel/tests/test_loft_correspondence.cpp: In function ‘void LoftIncompatibleContactIdentifiesGuideAndSection()’:
+/home/myungit/Linux_CAD_forFree/kernel/tests/test_loft_correspondence.cpp:282:62: warning: missing initializer for member ‘ForgeCad::Kernel::LoftContact::plane’ [-Wmissing-field-initializers]
+  282 |     for(auto face:support->faces())options.endFaces.push_back({support,face});
+      |                                    ~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~
+[ 35%] Linking CXX executable forgekernel_loft_point_tests
+[ 35%] Built target forgekernel_loft_point_tests
+[ 34%] Building CXX object kernel/CMakeFiles/forgekernel_boolean_seam_tests.dir/tests/test_boolean_seams.cpp.o
+[ 35%] Linking CXX executable forgekernel_loft_correspondence_tests
+[ 35%] Built target forgekernel_loft_correspondence_tests
+[ 35%] Linking CXX executable forgekernel_boolean_seam_tests
+[ 35%] Built target forgekernel_boolean_seam_tests
+[ 36%] Linking CXX executable forgekernel_cone_rays_tests
+[ 36%] Built target forgekernel_cone_rays_tests
+[ 35%] Building CXX object kernel/CMakeFiles/forgekernel_solid_trim_tests.dir/tests/test_solid_trim.cpp.o
+[ 36%] Linking CXX executable forgekernel_solid_trim_tests
+[ 36%] Built target forgekernel_solid_trim_tests
+[ 36%] Building CXX object kernel/CMakeFiles/forgekernel_blend_cavity_tests.dir/tests/test_blend_cavity.cpp.o
+[ 35%] Building CXX object kernel/CMakeFiles/forgekernel_trimmed_face_bounds_tests.dir/tests/test_trimmed_face_bounds.cpp.o
+[ 37%] Linking CXX executable forgekernel_trimmed_face_bounds_tests
+[ 37%] Built target forgekernel_trimmed_face_bounds_tests
+[ 35%] Building CXX object kernel/CMakeFiles/forgekernel_surface_mapping_tests.dir/tests/test_surface_mapping.cpp.o
+[ 36%] Building CXX object kernel/CMakeFiles/forgekernel_blend_cavity_tests.dir/tests/test_blend_transitions.cpp.o
+[ 37%] Linking CXX executable forgekernel_surface_mapping_tests
+[ 37%] Built target forgekernel_surface_mapping_tests
+[ 37%] Automatic MOC and UIC for target forgecad_compute
+[ 37%] Built target forgecad_compute_autogen
+[ 37%] Automatic MOC and UIC for target forgecad_cuda_tests
+[ 37%] Built target forgecad_cuda_tests_autogen
+[ 37%] Automatic MOC and UIC for target forgecad_tessellation_availability_tests
+[ 37%] Built target forgecad_tessellation_availability_tests_autogen
+[ 37%] Automatic MOC and UIC for target forgecad_mesh_export_backend_tests
+[ 37%] Built target forgecad_mesh_export_backend_tests_autogen
+[ 37%] Automatic MOC and UIC for target forgecad_selection_benchmark
+[ 37%] Built target forgecad_selection_benchmark_autogen
+[ 37%] Automatic MOC and UIC for target forgecad_shape_analysis_tests
+[ 37%] Linking CXX executable forgekernel_blend_cavity_tests
+[ 37%] Built target forgecad_shape_analysis_tests_autogen
+[ 37%] Built target forgekernel_blend_cavity_tests
+[ 37%] Automatic MOC and UIC for target forgecad_drawing_tests
+[ 38%] Automatic MOC and UIC for target forgecad_drawing_test_support
+[ 38%] Built target forgecad_drawing_tests_autogen
+[ 38%] Built target forgecad_drawing_test_support_autogen
+[ 38%] Automatic MOC and UIC for target forgecad_drawing_dimensions_tests
+[ 38%] Built target forgecad_drawing_dimensions_tests_autogen
+[ 38%] Automatic MOC and UIC for target forgecad_drawing_silhouette_tests
+[ 38%] Built target forgecad_drawing_silhouette_tests_autogen
+[ 38%] Automatic MOC and UIC for target forgecad_drawing_visibility_tests
+[ 38%] Automatic MOC and UIC for target forgecad_drawing_focus_tests
+[ 38%] Built target forgecad_drawing_visibility_tests_autogen
+[ 38%] Built target forgecad_drawing_focus_tests_autogen
+[ 38%] Built target forgecad_compute
+[ 36%] Building CXX object kernel/CMakeFiles/forgekernel_nurbs_support_tests.dir/tests/test_nurbs_supports.cpp.o
+[ 40%] Building CXX object CMakeFiles/forgecad_tessellation_availability_tests.dir/cad_cuda_tessellation.cpp.o
+[ 40%] Building CXX object CMakeFiles/forgecad_cuda_tests.dir/cad_cuda_tessellation.cpp.o
+[ 40%] Linking CXX executable forgecad_tessellation_availability_tests
+[ 40%] Built target forgecad_tessellation_availability_tests
+[ 40%] Linking CXX executable forgekernel_nurbs_support_tests
+[ 40%] Built target forgekernel_nurbs_support_tests
+[ 40%] Building CXX object CMakeFiles/forgecad_mesh_export_backend_tests.dir/cad_cuda_tessellation.cpp.o
+[ 40%] Linking CXX executable forgecad_selection_benchmark
+[ 40%] Built target forgecad_selection_benchmark
+[ 40%] Linking CXX executable forgecad_shape_analysis_tests
+[ 41%] Built target forgecad_shape_analysis_tests
+[ 37%] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_occt.dir/__/occt/fk_occt_import.cpp.o
+[ 41%] Linking CXX static library libforgekernel_occt.a
+[ 41%] Built target forgekernel_occt
+[ 40%] Building CXX object CMakeFiles/forgecad_cuda_tests.dir/tests/test_cuda_tessellation.cpp.o
+[ 41%] Linking CXX executable forgecad_cuda_tests
+[ 41%] Built target forgecad_cuda_tests
+[ 40%] Building CXX object CMakeFiles/forgecad_mesh_export_backend_tests.dir/tests/test_mesh_export_backends.cpp.o
+[ 41%] Linking CXX executable forgecad_mesh_export_backend_tests
+[ 41%] Built target forgecad_mesh_export_backend_tests
+[ 41%] Building CXX object CMakeFiles/forgecad_drawing_tests.dir/cad_drawing.cpp.o
+[ 41%] Building CXX object CMakeFiles/forgecad_drawing_dimensions_tests.dir/cad_drawing.cpp.o
+[ 42%] Building CXX object CMakeFiles/forgecad_drawing_tests.dir/cad_drawing_dimension.cpp.o
+[ 42%] Building CXX object CMakeFiles/forgecad_drawing_test_support.dir/cad_drawing.cpp.o
+[ 42%] Building CXX object CMakeFiles/forgecad_drawing_dimensions_tests.dir/cad_drawing_dimension.cpp.o
+[ 42%] Building CXX object CMakeFiles/forgecad_drawing_tests.dir/tests/test_drawing.cpp.o
+[ 42%] Building CXX object CMakeFiles/forgecad_drawing_test_support.dir/cad_drawing_dimension.cpp.o
+[ 43%] Linking CXX executable forgecad_drawing_tests
+[ 43%] Built target forgecad_drawing_tests
+[ 44%] Building CXX object CMakeFiles/forgecad_drawing_silhouette_tests.dir/tests/test_drawing_silhouette.cpp.o
+[ 44%] Linking CXX executable forgecad_drawing_silhouette_tests
+[ 44%] Built target forgecad_drawing_silhouette_tests
+[ 43%] Building CXX object CMakeFiles/forgecad_drawing_dimensions_tests.dir/tests/test_drawing_dimensions.cpp.o
+[ 44%] Linking CXX executable forgecad_drawing_dimensions_tests
+[ 44%] Built target forgecad_drawing_dimensions_tests
+[ 44%] Linking CXX executable forgecad_drawing_focus_tests
+[ 44%] Built target forgecad_drawing_focus_tests
+[ 43%] Building CXX object CMakeFiles/forgecad_drawing_test_support.dir/cad_drawing_visibility.cpp.o
+[ 44%] Building CXX object CMakeFiles/forgecad_drawing_visibility_tests.dir/cad_drawing_dimension.cpp.o
+[ 44%] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_bernstein.cpp.o
+[ 44%] Building CXX object CMakeFiles/forgecad_drawing_visibility_tests.dir/cad_drawing.cpp.o
+[ 44%] Building CXX object CMakeFiles/forgecad_drawing_visibility_tests.dir/cad_drawing_visibility.cpp.o
+[ 44%] Built target forgecad_gpu_broad_phase_tests_autogen_timestamp_deps
+[ 44%] Impronta dei sorgenti della geometria
+[ 44%] Built target forgecad_autogen_timestamp_deps
+[ 45%] Automatic MOC and UIC for target forgecad_gpu_broad_phase_tests
+[ 45%] Built target forgecad_gpu_broad_phase_tests_autogen
+[ 44%] Building CXX object CMakeFiles/forgecad_drawing_visibility_tests.dir/tests/test_drawing_visibility.cpp.o
+[ 45%] Linking CXX executable forgecad_drawing_visibility_tests
+[ 45%] Built target forgecad_drawing_visibility_tests
+[ 45%] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_blend_contact_breaks.cpp.o
+[ 45%] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_blend_features.cpp.o
+[ 45%] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_body_io.cpp.o
+[ 44%] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_blend.cpp.o
+[ 45%] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_boundary.cpp.o
+[ 47%] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_bspline_surface.cpp.o
+[ 45%] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_bspline.cpp.o
+[ 41%] Building CXX object CMakeFiles/forgecad_drawing_test_support.dir/cad_drawing_editor.cpp.o
+/home/myungit/Linux_CAD_forFree/cad_drawing_editor.cpp: In member function ‘bool ForgeCad::DrawingSheetEditor::Impl::numberingPointer(QPointF, bool)’:
+/home/myungit/Linux_CAD_forFree/cad_drawing_editor.cpp:449:9: warning: this ‘if’ clause does not guard... [-Wmisleading-indentation]
+  449 |         if(!numberingPanel)return false;if(!click)return true;
+      |         ^~
+/home/myungit/Linux_CAD_forFree/cad_drawing_editor.cpp:449:41: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the ‘if’
+  449 |         if(!numberingPanel)return false;if(!click)return true;
+      |                                         ^~
+/home/myungit/Linux_CAD_forFree/cad_drawing_editor.cpp: In member function ‘void ForgeCad::DrawingSheetEditor::Impl::clearOverlay(bool)’:
+/home/myungit/Linux_CAD_forFree/cad_drawing_editor.cpp:1381:9: warning: this ‘for’ clause does not guard... [-Wmisleading-indentation]
+ 1381 |         for(auto *item:overlay)delete item;overlay.clear();
+      |         ^~~
+/home/myungit/Linux_CAD_forFree/cad_drawing_editor.cpp:1381:44: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the ‘for’
+ 1381 |         for(auto *item:overlay)delete item;overlay.clear();
+      |                                            ^~~~~~~
+/home/myungit/Linux_CAD_forFree/cad_drawing_editor.cpp: In member function ‘void ForgeCad::DrawingSheetEditor::Impl::numberingDialog()’:
+/home/myungit/Linux_CAD_forFree/cad_drawing_editor.cpp:2705:9: warning: this ‘if’ clause does not guard... [-Wmisleading-indentation]
+ 2705 |         if(readOnly||computing)return;if(numberingPanel){numberingPanel->raise();return;}
+      |         ^~
+/home/myungit/Linux_CAD_forFree/cad_drawing_editor.cpp:2705:39: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the ‘if’
+ 2705 |         if(readOnly||computing)return;if(numberingPanel){numberingPanel->raise();return;}
+      |                                       ^~
+/home/myungit/Linux_CAD_forFree/cad_drawing_editor.cpp: In member function ‘QString ForgeCad::DrawingSheetEditor::clearCenterMarks(const QUuid&)’:
+/home/myungit/Linux_CAD_forFree/cad_drawing_editor.cpp:3357:5: warning: this ‘if’ clause does not guard... [-Wmisleading-indentation]
+ 3357 |     if(impl_->computing||impl_->readOnly)return QStringLiteral("Tavola occupata o in sola lettura.");if(!impl_->viewFor(id))return QStringLiteral("Seleziona una vista.");
+      |     ^~
+/home/myungit/Linux_CAD_forFree/cad_drawing_editor.cpp:3357:102: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the ‘if’
+ 3357 |     if(impl_->computing||impl_->readOnly)return QStringLiteral("Tavola occupata o in sola lettura.");if(!impl_->viewFor(id))return QStringLiteral("Seleziona una vista.");
+      |                                                                                                      ^~
+[ 47%] Linking CXX static library libforgecad_drawing_test_support.a
+[ 48%] Built target forgecad_drawing_test_support
+[ 48%] Automatic MOC and UIC for target forgecad
+[ 48%] Built target forgecad_autogen
+[ 48%] Built target forgecad_drawing_local_tools_tests_autogen_timestamp_deps
+[ 48%] Built target forgecad_drawing_local_section_depth_tests_autogen_timestamp_deps
+[ 48%] Built target forgecad_drawing_crop_tests_autogen_timestamp_deps
+[ 48%] Built target forgecad_drawing_templates_tests_autogen_timestamp_deps
+[ 48%] Built target forgecad_drawing_preparation_tests_autogen_timestamp_deps
+[ 48%] Built target forgecad_drawing_scale_tests_autogen_timestamp_deps
+[ 48%] Built target forgecad_drawing_editor_tests_autogen_timestamp_deps
+[ 48%] Built target forgecad_projected_drawing_tests_autogen_timestamp_deps
+[ 48%] Built target forgecad_drawing_view_edit_tests_autogen_timestamp_deps
+[ 48%] Built target forgecad_drawing_layout_history_tests_autogen_timestamp_deps
+[ 48%] Built target forgecad_drawing_dimensions_gui_tests_autogen_timestamp_deps
+[ 48%] Built target forgecad_drawing_dimension_repair_tests_autogen_timestamp_deps
+[ 48%] Built target forgecad_drawing_view_placement_tests_autogen_timestamp_deps
+[ 48%] Built target forgecad_drawing_hidden_lines_tests_autogen_timestamp_deps
+[ 48%] Built target forgecad_drawing_page_tests_autogen_timestamp_deps
+[ 45%] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_boolean.cpp.o
+[ 48%] Built target forgecad_drawing_derived_tests_autogen_timestamp_deps
+[ 47%] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_curve_surface.cpp.o
+[ 48%] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_curves.cpp.o
+[ 47%] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_curve_algo.cpp.o
+[ 48%] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_helix.cpp.o
+[ 48%] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_extrude.cpp.o
+[ 48%] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_fill.cpp.o
+[ 48%] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_iges.cpp.o
+/home/myungit/Linux_CAD_forFree/kernel/tests/test_iges.cpp: In function ‘void IgesRejectsInvalidSplineParameters()’:
+/home/myungit/Linux_CAD_forFree/kernel/tests/test_iges.cpp:420:40: warning: missing initializer for member ‘ForgeCad::Kernel::ExchangeBody::curve’ [-Wmissing-field-initializers]
+  420 |     const std::string valid = writeIges({{"cilindro", cylinder}}, options);
+      |                               ~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/myungit/Linux_CAD_forFree/kernel/tests/test_iges.cpp:420:40: warning: missing initializer for member ‘ForgeCad::Kernel::ExchangeBody::curveRange’ [-Wmissing-field-initializers]
+/home/myungit/Linux_CAD_forFree/kernel/tests/test_iges.cpp: In function ‘void IgesRejectsCyclicCompositeCurves()’:
+/home/myungit/Linux_CAD_forFree/kernel/tests/test_iges.cpp:438:40: warning: missing initializer for member ‘ForgeCad::Kernel::ExchangeBody::curve’ [-Wmissing-field-initializers]
+  438 |     const std::string valid = writeIges({{"cilindro", cylinder}}, options);
+      |                               ~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/myungit/Linux_CAD_forFree/kernel/tests/test_iges.cpp:438:40: warning: missing initializer for member ‘ForgeCad::Kernel::ExchangeBody::curveRange’ [-Wmissing-field-initializers]
+[ 48%] Built target forgecad_drawing_detail_tests_autogen_timestamp_deps
+[ 48%] Built target forgecad_drawing_auxiliary_tests_autogen_timestamp_deps
+[ 48%] Built target forgecad_drawing_break_tests_autogen_timestamp_deps
+[ 48%] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_intersect.cpp.o
+[ 48%] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_history.cpp.o
+/home/myungit/Linux_CAD_forFree/kernel/tests/test_history.cpp: In function ‘void HistorySweepAndLoftKeepSectionSources()’:
+/home/myungit/Linux_CAD_forFree/kernel/tests/test_history.cpp:977:136: warning: missing initializer for member ‘ForgeCad::Kernel::LoftSection::point’ [-Wmissing-field-initializers]
+  977 |     std::vector<LoftSection> sections{{Frame3(),region.outer,{}},{Frame3(Vec3(0,0,3),Vec3(0,0,1),Vec3(1,0,0)),reversed(round.outer),{}}};
+      |                                                                                                                                        ^
+/home/myungit/Linux_CAD_forFree/kernel/tests/test_history.cpp:977:136: warning: missing initializer for member ‘ForgeCad::Kernel::LoftSection::point’ [-Wmissing-field-initializers]
+[ 49%] Built target forgecad_drawing_presentation_tests_autogen_timestamp_deps
+[ 49%] Built target forgecad_drawing_complete_sections_tests_autogen_timestamp_deps
+[ 48%] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_loft_surfaces.cpp.o
+[ 49%] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_math.cpp.o
+[ 49%] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_marching.cpp.o
+[ 48%] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_loft.cpp.o
+/home/myungit/Linux_CAD_forFree/kernel/tests/test_loft.cpp: In function ‘void LoftOpenGuidesAndNeighborFaces()’:
+/home/myungit/Linux_CAD_forFree/kernel/tests/test_loft.cpp:251:61: warning: missing initializer for member ‘ForgeCad::Kernel::LoftContact::plane’ [-Wmissing-field-initializers]
+  251 |     options.startFaces={{adjacent,adjacent->faces().front()}};
+      |                                                             ^
+/home/myungit/Linux_CAD_forFree/kernel/tests/test_loft.cpp:252:49: warning: missing initializer for member ‘ForgeCad::Kernel::LoftContact::plane’ [-Wmissing-field-initializers]
+  252 |     options.endFaces={{end,end->faces().front()}};
+      |                                                 ^
+/home/myungit/Linux_CAD_forFree/kernel/tests/test_loft.cpp: In function ‘void LoftContactAtCoincidentEndpoint()’:
+/home/myungit/Linux_CAD_forFree/kernel/tests/test_loft.cpp:311:67: warning: missing initializer for member ‘ForgeCad::Kernel::LoftContact::plane’ [-Wmissing-field-initializers]
+  311 |         options.startFaces = {{adjacent,adjacent->faces().front()}};
+      |                                                                   ^
+/home/myungit/Linux_CAD_forFree/kernel/tests/test_loft.cpp:331:53: warning: missing initializer for member ‘ForgeCad::Kernel::LoftContact::plane’ [-Wmissing-field-initializers]
+  331 |     options.startFaces={{wide,wide->faces().front()}};
+      |                                                     ^
+/home/myungit/Linux_CAD_forFree/kernel/tests/test_loft.cpp: In function ‘void LoftG1RoundoffTrimPiece()’:
+/home/myungit/Linux_CAD_forFree/kernel/tests/test_loft.cpp:433:96: warning: missing initializer for member ‘ForgeCad::Kernel::LoftContact::plane’ [-Wmissing-field-initializers]
+  433 |         if(reverse) {options.endContinuity=1;options.endFaces={{source,source->faces().front()}};}
+      |                                                                                                ^
+/home/myungit/Linux_CAD_forFree/kernel/tests/test_loft.cpp:434:93: warning: missing initializer for member ‘ForgeCad::Kernel::LoftContact::plane’ [-Wmissing-field-initializers]
+  434 |         else {options.startContinuity=1;options.startFaces={{source,source->faces().front()}};}
+      |                                                                                             ^
+/home/myungit/Linux_CAD_forFree/kernel/tests/test_loft.cpp: In function ‘void LoftMultipleGuidesDoNotCreateRibbons()’:
+/home/myungit/Linux_CAD_forFree/kernel/tests/test_loft.cpp:462:103: warning: missing initializer for member ‘ForgeCad::Kernel::LoftContact::plane’ [-Wmissing-field-initializers]
+  462 |             if(reverse){options.endContinuity=1;options.endFaces={{neighbor,neighbor->faces().front()}};}
+      |                                                                                                       ^
+/home/myungit/Linux_CAD_forFree/kernel/tests/test_loft.cpp:463:101: warning: missing initializer for member ‘ForgeCad::Kernel::LoftContact::plane’ [-Wmissing-field-initializers]
+  463 |             else {options.startContinuity=1;options.startFaces={{neighbor,neighbor->faces().front()}};}
+      |                                                                                                     ^
+/home/myungit/Linux_CAD_forFree/kernel/tests/test_loft.cpp: In function ‘void LoftFollowsEntireCircularGuides()’:
+/home/myungit/Linux_CAD_forFree/kernel/tests/test_loft.cpp:495:100: warning: missing initializer for member ‘ForgeCad::Kernel::LoftContact::plane’ [-Wmissing-field-initializers]
+  495 |         if(reverse) {options.endContinuity=1;options.endFaces={{neighbor,neighbor->faces().front()}};}
+      |                                                                                                    ^
+/home/myungit/Linux_CAD_forFree/kernel/tests/test_loft.cpp:496:97: warning: missing initializer for member ‘ForgeCad::Kernel::LoftContact::plane’ [-Wmissing-field-initializers]
+  496 |         else {options.startContinuity=1;options.startFaces={{neighbor,neighbor->faces().front()}};}
+      |                                                                                                 ^
+/home/myungit/Linux_CAD_forFree/kernel/tests/test_loft.cpp: In function ‘void LoftGuideNearSectionPreservesContactPlane()’:
+/home/myungit/Linux_CAD_forFree/kernel/tests/test_loft.cpp:635:102: warning: missing initializer for member ‘ForgeCad::Kernel::LoftContact::plane’ [-Wmissing-field-initializers]
+  635 |         if(reverse) {options.startContinuity=1;options.startFaces={{support,support->faces().front()}};}
+      |                                                                                                      ^
+/home/myungit/Linux_CAD_forFree/kernel/tests/test_loft.cpp:636:91: warning: missing initializer for member ‘ForgeCad::Kernel::LoftContact::plane’ [-Wmissing-field-initializers]
+  636 |         else {options.endContinuity=1;options.endFaces={{support,support->faces().front()}};}
+      |                                                                                           ^
+/home/myungit/Linux_CAD_forFree/kernel/tests/test_loft.cpp: In function ‘void LoftUnequalGuideSpansPreserveGeometryAndContact()’:
+/home/myungit/Linux_CAD_forFree/kernel/tests/test_loft.cpp:681:73: warning: missing initializer for member ‘ForgeCad::Kernel::LoftContact::plane’ [-Wmissing-field-initializers]
+  681 |         if(reverse){options.endFaces={{support,support->faces().front()}};options.endContinuity=1;}
+      |                                                                         ^
+/home/myungit/Linux_CAD_forFree/kernel/tests/test_loft.cpp:682:69: warning: missing initializer for member ‘ForgeCad::Kernel::LoftContact::plane’ [-Wmissing-field-initializers]
+  682 |         else {options.startFaces={{support,support->faces().front()}};options.startContinuity=1;}
+      |                                                                     ^
+/home/myungit/Linux_CAD_forFree/kernel/tests/test_loft.cpp: In function ‘void LoftG1SingleUlpSpanKeepsDistinctCollocationPoints()’:
+/home/myungit/Linux_CAD_forFree/kernel/tests/test_loft.cpp:721:108: warning: missing initializer for member ‘ForgeCad::Kernel::LoftContact::plane’ [-Wmissing-field-initializers]
+  721 |             if (reverse) { options.endContinuity = 1; options.endFaces = {{source, source->faces().front()}}; }
+      |                                                                                                            ^
+/home/myungit/Linux_CAD_forFree/kernel/tests/test_loft.cpp:722:104: warning: missing initializer for member ‘ForgeCad::Kernel::LoftContact::plane’ [-Wmissing-field-initializers]
+  722 |             else { options.startContinuity = 1; options.startFaces = {{source, source->faces().front()}}; }
+      |                                                                                                        ^
+[ 49%] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_nurbs.cpp.o
+[ 49%] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_occt_import.cpp.o
+[ 49%] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_mass.cpp.o
+[ 49%] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_predicates.cpp.o
+[ 49%] Built target forgecad_drawing_centers_tests_autogen_timestamp_deps
+[ 49%] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_pcurve.cpp.o
+[ 49%] Built target forgecad_drawing_axes_tests_autogen_timestamp_deps
+[ 49%] Built target forgecad_drawing_ui_controls_tests_autogen_timestamp_deps
+[ 49%] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_planar.cpp.o
+[ 49%] Linking CXX executable forgecad_gpu_broad_phase_tests
+[ 49%] Built target forgecad_gpu_broad_phase_tests
+[ 49%] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_primitives.cpp.o
+[ 49%] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_offset.cpp.o
+[ 49%] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_project.cpp.o
+[ 49%] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_revolve.cpp.o
+[ 51%] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_shell.cpp.o
+[ 50%] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_sheet.cpp.o
+[ 52%] Building CXX object CMakeFiles/forgecad.dir/cad_circular_pattern_fit.cpp.o
+[ 52%] Building CXX object CMakeFiles/forgecad.dir/cad_cuda_tessellation.cpp.o
+[ 52%] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_surface_algo.cpp.o
+[ 52%] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_surface_tools.cpp.o
+[ 52%] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_surfaces.cpp.o
+[ 52%] Building CXX object CMakeFiles/forgecad.dir/cad_curve_extract.cpp.o
+[ 52%] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_step.cpp.o
+/home/myungit/Linux_CAD_forFree/kernel/tests/test_step.cpp: In function ‘std::string {anonymous}::cylinderStep()’:
+/home/myungit/Linux_CAD_forFree/kernel/tests/test_step.cpp:866:21: warning: missing initializer for member ‘ForgeCad::Kernel::ExchangeBody::curve’ [-Wmissing-field-initializers]
+  866 |     return writeStep({{"cilindro", makeCylinder(Frame3(Vec3(0, 0, 0), Vec3(0, 0, 1), Vec3(1, 0, 0)), 5.0, 12.0)}});
+      |            ~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/myungit/Linux_CAD_forFree/kernel/tests/test_step.cpp:866:21: warning: missing initializer for member ‘ForgeCad::Kernel::ExchangeBody::curveRange’ [-Wmissing-field-initializers]
+[ 52%] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_sweep.cpp.o
+[ 52%] Building CXX object CMakeFiles/forgecad.dir/cad_curve_solver.cpp.o
+[ 52%] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_sweep_surfaces.cpp.o
+[ 52%] Automatic MOC and UIC for target forgecad_drawing_local_tools_tests
+[ 52%] Built target forgecad_drawing_local_tools_tests_autogen
+[ 52%] Automatic MOC and UIC for target forgecad_drawing_local_section_depth_tests
+[ 52%] Built target forgecad_drawing_local_section_depth_tests_autogen
+[ 54%] Automatic MOC and UIC for target forgecad_drawing_crop_tests
+[ 54%] Built target forgecad_drawing_crop_tests_autogen
+[ 54%] Automatic MOC and UIC for target forgecad_drawing_templates_tests
+[ 54%] Built target forgecad_drawing_templates_tests_autogen
+[ 54%] Automatic MOC and UIC for target forgecad_drawing_preparation_tests
+[ 54%] Built target forgecad_drawing_preparation_tests_autogen
+[ 54%] Automatic MOC and UIC for target forgecad_drawing_scale_tests
+[ 54%] Built target forgecad_drawing_scale_tests_autogen
+[ 54%] Automatic MOC and UIC for target forgecad_drawing_editor_tests
+[ 54%] Built target forgecad_drawing_editor_tests_autogen
+[ 54%] Automatic MOC and UIC for target forgecad_projected_drawing_tests
+[ 54%] Built target forgecad_projected_drawing_tests_autogen
+[ 52%] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_tessellate.cpp.o
+[ 54%] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_thicken.cpp.o
+[ 54%] Building CXX object CMakeFiles/forgecad.dir/cad_drawing_dimension.cpp.o
+[ 54%] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_tolerance.cpp.o
+[ 52%] Building CXX object CMakeFiles/forgecad.dir/cad_drawing.cpp.o
+[ 54%] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_topology.cpp.o
+[ 54%] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_transform.cpp.o
+[ 54%] Building CXX object CMakeFiles/forgecad.dir/cad_drawing_visibility.cpp.o
+[ 52%] Building CXX object CMakeFiles/forgecad.dir/cad_document_io.cpp.o
+[ 54%] Building CXX object CMakeFiles/forgecad.dir/cad_extrude.cpp.o
+[ 54%] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_unify.cpp.o
+[ 54%] Building CXX object CMakeFiles/forgecad.dir/cad_features.cpp.o
+[ 54%] Linking CXX executable ../forgekernel_tests
+[ 55%] Built target forgekernel_tests
+[ 55%] Automatic MOC and UIC for target forgecad_drawing_view_edit_tests
+[ 55%] Built target forgecad_drawing_view_edit_tests_autogen
+[ 55%] Automatic MOC and UIC for target forgecad_drawing_layout_history_tests
+[ 55%] Built target forgecad_drawing_layout_history_tests_autogen
+[ 54%] Building CXX object CMakeFiles/forgecad.dir/cad_sketch_edit.cpp.o
+[ 55%] Building CXX object CMakeFiles/forgecad.dir/cad_spatial_sketch.cpp.o
+[ 55%] Building CXX object CMakeFiles/forgecad.dir/cad_sketch_offset.cpp.o
+[ 55%] Building CXX object CMakeFiles/forgecad.dir/cad_sketch_refs.cpp.o
+[ 55%] Building CXX object CMakeFiles/forgecad.dir/cad_surface_poles_interaction.cpp.o
+[ 56%] Building CXX object CMakeFiles/forgecad.dir/cad_surface_poles_model.cpp.o
+[ 54%] Building CXX object CMakeFiles/forgecad.dir/cad_forge.cpp.o
+/home/myungit/Linux_CAD_forFree/cad_forge.cpp: In function ‘std::vector<ForgeCad::Kernel::LoftContact> ForgeCad::loftContacts(QVector<std::pair<std::shared_ptr<const Kernel::Body>, EdgePoint> >&)’:
+/home/myungit/Linux_CAD_forFree/cad_forge.cpp:1528:27: warning: missing initializer for member ‘ForgeCad::Kernel::LoftContact::plane’ [-Wmissing-field-initializers]
+ 1528 |         contacts.push_back({body, face});
+      |         ~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~
+[ 56%] Automatic MOC and UIC for target forgecad_drawing_dimensions_gui_tests
+[ 56%] Built target forgecad_drawing_dimensions_gui_tests_autogen
+[ 56%] Automatic MOC and UIC for target forgecad_drawing_dimension_repair_tests
+[ 56%] Built target forgecad_drawing_dimension_repair_tests_autogen
+[ 57%] Automatic MOC and UIC for target forgecad_drawing_view_placement_tests
+[ 57%] Built target forgecad_drawing_view_placement_tests_autogen
+[ 57%] Automatic MOC and UIC for target forgecad_drawing_hidden_lines_tests
+[ 57%] Built target forgecad_drawing_hidden_lines_tests_autogen
+[ 57%] Automatic MOC and UIC for target forgecad_drawing_page_tests
+[ 57%] Built target forgecad_drawing_page_tests_autogen
+[ 57%] Automatic MOC and UIC for target forgecad_drawing_derived_tests
+[ 57%] Built target forgecad_drawing_derived_tests_autogen
+[ 57%] Automatic MOC and UIC for target forgecad_drawing_detail_tests
+[ 56%] Building CXX object CMakeFiles/forgecad.dir/cad_surface_poles_session.cpp.o
+[ 57%] Built target forgecad_drawing_detail_tests_autogen
+[ 57%] Automatic MOC and UIC for target forgecad_drawing_auxiliary_tests
+[ 57%] Automatic MOC and UIC for target forgecad_drawing_break_tests
+[ 57%] Built target forgecad_drawing_auxiliary_tests_autogen
+[ 57%] Built target forgecad_drawing_break_tests_autogen
+[ 57%] Automatic MOC and UIC for target forgecad_drawing_presentation_tests
+[ 57%] Automatic MOC and UIC for target forgecad_drawing_complete_sections_tests
+[ 57%] Built target forgecad_drawing_presentation_tests_autogen
+[ 57%] Built target forgecad_drawing_complete_sections_tests_autogen
+[ 57%] Automatic MOC and UIC for target forgecad_drawing_centers_tests
+[ 57%] Automatic MOC and UIC for target forgecad_drawing_axes_tests
+[ 57%] Built target forgecad_drawing_centers_tests_autogen
+[ 57%] Built target forgecad_drawing_axes_tests_autogen
+[ 57%] Automatic MOC and UIC for target forgecad_drawing_ui_controls_tests
+[ 57%] Built target forgecad_drawing_ui_controls_tests_autogen
+[ 57%] Linking CXX executable forgecad_drawing_local_tools_tests
+[ 58%] Built target forgecad_drawing_local_tools_tests
+[ 58%] Linking CXX executable forgecad_drawing_local_section_depth_tests
+[ 58%] Built target forgecad_drawing_local_section_depth_tests
+[ 58%] Linking CXX executable forgecad_drawing_crop_tests
+[ 58%] Built target forgecad_drawing_crop_tests
+[ 58%] Linking CXX executable forgecad_drawing_templates_tests
+[ 58%] Built target forgecad_drawing_templates_tests
+[ 58%] Linking CXX executable forgecad_drawing_preparation_tests
+[ 58%] Built target forgecad_drawing_preparation_tests
+[ 58%] Linking CXX executable forgecad_drawing_scale_tests
+[ 58%] Built target forgecad_drawing_scale_tests
+[ 56%] Building CXX object CMakeFiles/forgecad.dir/cad_surface_tools.cpp.o
+[ 58%] Linking CXX executable forgecad_drawing_view_edit_tests
+[ 58%] Built target forgecad_drawing_view_edit_tests
+[ 58%] Linking CXX executable forgecad_drawing_layout_history_tests
+[ 58%] Built target forgecad_drawing_layout_history_tests
+[ 58%] Building CXX object CMakeFiles/forgecad_drawing_editor_tests.dir/tests/test_drawing_editor.cpp.o
+[ 58%] Linking CXX executable forgecad_drawing_editor_tests
+[ 60%] Built target forgecad_drawing_editor_tests
+[ 60%] Linking CXX executable forgecad_drawing_dimension_repair_tests
+[ 61%] Built target forgecad_drawing_dimension_repair_tests
+[ 58%] Building CXX object CMakeFiles/forgecad_projected_drawing_tests.dir/tests/test_projected_drawing.cpp.o
+/home/myungit/Linux_CAD_forFree/tests/test_projected_drawing.cpp: In function ‘int main(int, char**)’:
+/home/myungit/Linux_CAD_forFree/tests/test_projected_drawing.cpp:89:113: warning: missing initializer for member ‘ForgeCad::DrawingEditorModel::legacySnapshotNames’ [-Wmissing-field-initializers]
+   89 |         DrawingSheet page;page.drawing.model=model.version;DrawingEditorModel editorModel{model,{{1,"Corpo"}},{}};DrawingSheetEditor editor(page,editorModel);editor.resize(1450,850);editor.show();QApplication::processEvents();bool dialogSeen=false;
+      |                                                                                                                 ^
+[ 61%] Linking CXX executable forgecad_projected_drawing_tests
+[ 61%] Built target forgecad_projected_drawing_tests
+[ 61%] Linking CXX executable forgecad_drawing_hidden_lines_tests
+[ 62%] Built target forgecad_drawing_hidden_lines_tests
+[ 62%] Linking CXX executable forgecad_drawing_page_tests
+[ 62%] Built target forgecad_drawing_page_tests
+[ 56%] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_dialogs_surface_tools.cpp.o
+[ 62%] Linking CXX executable forgecad
+[ 77%] Built target forgecad
+[ 61%] Building CXX object CMakeFiles/forgecad_drawing_view_placement_tests.dir/tests/test_drawing_view_placement.cpp.o
+/home/myungit/Linux_CAD_forFree/tests/test_drawing_view_placement.cpp: In function ‘int main(int, char**)’:
+/home/myungit/Linux_CAD_forFree/tests/test_drawing_view_placement.cpp:28:389: warning: missing initializer for member ‘ForgeCad::DrawingEditorModel::legacySnapshotNames’ [-Wmissing-field-initializers]
+   28 |  auto count=std::make_shared<int>(0);auto body=std::make_shared<Body>(makeBox(Frame3(),10,6,4));for(auto edge:body->edges())body->edge(edge).curve=std::make_shared<Counted>(body->edge(edge).curve,count);auto names=std::make_shared<ElementNames>(propagateNames(*body,makeHistory({},*body),{},"preview"));DrawingEditorModel model{{{QUuid::createUuid(),{}},{{1,body,names}}},{{1,"Corpo"}},{}};
+      |                                                                                                                                                                                                                                                                                                                                                                                                     ^
+[ 77%] Linking CXX executable forgecad_drawing_detail_tests
+[ 77%] Built target forgecad_drawing_detail_tests
+[ 77%] Linking CXX executable forgecad_drawing_view_placement_tests
+[ 77%] Built target forgecad_drawing_view_placement_tests
+[ 77%] Linking CXX executable forgecad_drawing_auxiliary_tests
+[ 77%] Built target forgecad_drawing_auxiliary_tests
+[ 77%] Linking CXX executable forgecad_drawing_break_tests
+[ 77%] Built target forgecad_drawing_break_tests
+[ 77%] Building CXX object CMakeFiles/forgecad_drawing_presentation_tests.dir/tests/test_drawing_presentation.cpp.o
+[ 77%] Linking CXX executable forgecad_drawing_presentation_tests
+[ 78%] Built target forgecad_drawing_presentation_tests
+[ 77%] Building CXX object CMakeFiles/forgecad_drawing_complete_sections_tests.dir/tests/test_drawing_complete_sections.cpp.o
+/home/myungit/Linux_CAD_forFree/tests/test_drawing_complete_sections.cpp: In function ‘int main(int, char**)’:
+/home/myungit/Linux_CAD_forFree/tests/test_drawing_complete_sections.cpp:88:49: warning: missing initializer for member ‘ForgeCad::DrawingEditorModel::legacySnapshotNames’ [-Wmissing-field-initializers]
+   88 |  DrawingEditorModel ui{centered,{{1,"Corpo"}},{}};DrawingSheet drawing;drawing.drawing.model=centered.version;drawing.title="Sezioni complete";DrawingSheetEditor editor(drawing,ui);editor.resize(1250,820);editor.show();QApplication::processEvents();editor.fitSheet();ok(editor.insertView(half,{half.id,"Mezza sezione",{100,95},{1}}));require(count(editor,"sectionAxis")==1&&count(editor,"sectionHatch")==1,"asse e tratteggio grafico della mezza sezione indipendente");auto dimension=dimensionOfCurve(half,*axisEdge,DrawingMeasure::SectionLength);dimension.references={drawingAttachment(half,*axisEdge,centered,DrawingPointRole::Curve)};dimension.section=dimension.references[0].curve;ok(editor.addDimension(dimension,{150,80}));close(editor.dimensionResult(dimension.id).value,10,"misura solo del bordo trattenuto");DrawingAttachment origin;origin.role=DrawingPointRole::Origin;auto fromAxis=drawingDimensionBetween(half,centered,h.curves,{axis,origin},DrawingMeasure::Distance,{20,20});ok(editor.addDimension(fromAxis,{150,105}));auto before=bytes(editor.sheet());DrawingSheet decoded;ok(decodeDrawingSheet(before,decoded));require(decoded.drawing.views[0].sectionStyle==DrawingSectionStyle::HalfRight&&QJsonDocument::fromJson(before).object()["schema"].toInt()==3,"schema 3 salva mezza sezione");require(decoded.drawing.dimensions.back().references[0].clipBoundary==2,"origine di taglio persistita nel codec");auto innerDocument=QJsonDocument::fromJson(before).object()["drawing"].toObject();require(innerDocument["schema"].toInt()==4,"schema geometrico 4");
+      |                                                 ^
+[ 80%] Linking CXX executable forgecad_drawing_centers_tests
+[ 80%] Built target forgecad_drawing_centers_tests
+[ 80%] Linking CXX executable forgecad_drawing_complete_sections_tests
+[ 80%] Built target forgecad_drawing_complete_sections_tests
+[ 80%] Linking CXX executable forgecad_drawing_axes_tests
+[ 82%] Built target forgecad_drawing_axes_tests
+[ 82%] Built target forgecad_view_tests_autogen_timestamp_deps
+[ 82%] Automatic MOC and UIC for target forgecad_view_tests
+[ 82%] Built target forgecad_view_tests_autogen
+[ 81%] Linking CXX executable forgecad_drawing_ui_controls_tests
+[ 82%] Built target forgecad_drawing_ui_controls_tests
+[ 84%] Building CXX object CMakeFiles/forgecad_view_tests.dir/cad_cuda_tessellation.cpp.o
+[ 62%] Building CXX object CMakeFiles/forgecad_drawing_derived_tests.dir/tests/test_drawing_derived.cpp.o
+[ 83%] Building CXX object CMakeFiles/forgecad_view_tests.dir/cad_circular_pattern_fit.cpp.o
+[ 84%] Linking CXX executable forgecad_drawing_derived_tests
+[ 84%] Built target forgecad_drawing_derived_tests
+[ 84%] Building CXX object CMakeFiles/forgecad_view_tests.dir/cad_curve_extract.cpp.o
+[ 84%] Building CXX object CMakeFiles/forgecad_view_tests.dir/cad_curve_solver.cpp.o
+[ 84%] Building CXX object CMakeFiles/forgecad_view_tests.dir/cad_drawing_dimension.cpp.o
+[ 58%] Building CXX object CMakeFiles/forgecad_drawing_dimensions_gui_tests.dir/tests/test_drawing_dimensions_gui.cpp.o
+In file included from /home/myungit/Linux_CAD_forFree/tests/test_drawing_dimensions_gui.cpp:64:
+/home/myungit/Linux_CAD_forFree/tests/test_drawing_dimension_numbering.h: In function ‘void {anonymous}::nearbyNumberingTests()’:
+/home/myungit/Linux_CAD_forFree/tests/test_drawing_dimension_numbering.h:55:3: warning: this ‘for’ clause does not guard... [-Wmisleading-indentation]
+   55 |   for(auto &d:trial.dimensions)d.position=d.position*2+QPointF(10,-20);require(drawingNumberingOrder(trial)==order,"vicinanza indipendente da traslazione e scala uniforme");
+      |   ^~~
+/home/myungit/Linux_CAD_forFree/tests/test_drawing_dimension_numbering.h:55:72: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the ‘for’
+   55 |   for(auto &d:trial.dimensions)d.position=d.position*2+QPointF(10,-20);require(drawingNumberingOrder(trial)==order,"vicinanza indipendente da traslazione e scala uniforme");
+      |                                                                        ^~~~~~~
+/home/myungit/Linux_CAD_forFree/tests/test_drawing_dimension_numbering.h:60:3: warning: this ‘for’ clause does not guard... [-Wmisleading-indentation]
+   60 |   for(int j=0;j<grid.size();++j)trial.dimensions[j].position=grid[j];const auto order=drawingNumberingOrder(trial);
+      |   ^~~
+/home/myungit/Linux_CAD_forFree/tests/test_drawing_dimension_numbering.h:60:70: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the ‘for’
+   60 |   for(int j=0;j<grid.size();++j)trial.dimensions[j].position=grid[j];const auto order=drawingNumberingOrder(trial);
+      |                                                                      ^~~~~
+/home/myungit/Linux_CAD_forFree/tests/test_drawing_dimension_numbering.h: In function ‘void {anonymous}::drawingDimensionNumberingTests()’:
+/home/myungit/Linux_CAD_forFree/tests/test_drawing_dimension_numbering.h:213:254: warning: missing initializer for member ‘ForgeCad::DrawingDimensionNumbering::firstDimension’ [-Wmissing-field-initializers]
+  213 |  e.fitSheet();QApplication::processEvents();require(items(e,"dimensionBadge")==0,"fogli precedenti senza badge");e.markSaved();const auto legacy=encoded(e);const auto *curve=e.curves(v.id).front().curve.get();DrawingDimensionNumbering setting{true,1,6,3};ok(e.setDimensionNumbering(setting));QApplication::processEvents();const auto numbered=encoded(e);
+      |                                                                                                                                                                                                                                                              ^
+/home/myungit/Linux_CAD_forFree/tests/test_drawing_dimension_numbering.h:213:254: warning: missing initializer for member ‘ForgeCad::DrawingDimensionNumbering::excludePatterns’ [-Wmissing-field-initializers]
+/home/myungit/Linux_CAD_forFree/tests/test_drawing_dimension_numbering.h:213:254: warning: missing initializer for member ‘ForgeCad::DrawingDimensionNumbering::assignments’ [-Wmissing-field-initializers]
+[ 84%] Building CXX object CMakeFiles/forgecad_view_tests.dir/cad_drawing.cpp.o
+[ 84%] Linking CXX executable forgecad_drawing_dimensions_gui_tests
+[ 84%] Built target forgecad_drawing_dimensions_gui_tests
+[ 84%] Building CXX object CMakeFiles/forgecad_view_tests.dir/cad_features.cpp.o
+[ 84%] Building CXX object CMakeFiles/forgecad_view_tests.dir/cad_document_io.cpp.o
+[ 84%] Building CXX object CMakeFiles/forgecad_view_tests.dir/cad_drawing_visibility.cpp.o
+[ 84%] Building CXX object CMakeFiles/forgecad_view_tests.dir/cad_extrude.cpp.o
+[ 85%] Building CXX object CMakeFiles/forgecad_view_tests.dir/cad_sketch_edit.cpp.o
+[ 85%] Building CXX object CMakeFiles/forgecad_view_tests.dir/cad_sketch_offset.cpp.o
+[ 85%] Building CXX object CMakeFiles/forgecad_view_tests.dir/cad_sketch_refs.cpp.o
+[ 85%] Building CXX object CMakeFiles/forgecad_view_tests.dir/cad_spatial_sketch.cpp.o
+[ 87%] Building CXX object CMakeFiles/forgecad_view_tests.dir/cad_surface_poles_interaction.cpp.o
+[ 87%] Building CXX object CMakeFiles/forgecad_view_tests.dir/cad_surface_poles_session.cpp.o
+[ 87%] Building CXX object CMakeFiles/forgecad_view_tests.dir/cad_surface_poles_model.cpp.o
+[ 85%] Building CXX object CMakeFiles/forgecad_view_tests.dir/cad_forge.cpp.o
+/home/myungit/Linux_CAD_forFree/cad_forge.cpp: In function ‘std::vector<ForgeCad::Kernel::LoftContact> ForgeCad::loftContacts(QVector<std::pair<std::shared_ptr<const Kernel::Body>, EdgePoint> >&)’:
+/home/myungit/Linux_CAD_forFree/cad_forge.cpp:1528:27: warning: missing initializer for member ‘ForgeCad::Kernel::LoftContact::plane’ [-Wmissing-field-initializers]
+ 1528 |         contacts.push_back({body, face});
+      |         ~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~
+[ 87%] Building CXX object CMakeFiles/forgecad_view_tests.dir/cad_surface_tools.cpp.o
+[ 87%] Building CXX object CMakeFiles/forgecad_view_tests.dir/forgeCad2026_dialogs_surface_tools.cpp.o
+[ 87%] Building CXX object CMakeFiles/forgecad_view_tests.dir/tests/test_viewport.cpp.o
+In file included from /home/myungit/Linux_CAD_forFree/tests/test_viewport.cpp:152:
+/home/myungit/Linux_CAD_forFree/tests/test_drawing_multisheet.h: In function ‘void {anonymous}::multisheetTests()’:
+/home/myungit/Linux_CAD_forFree/tests/test_drawing_multisheet.h:169:49: warning: missing initializer for member ‘ForgeCad::DrawingDimensionNumbering::firstDimension’ [-Wmissing-field-initializers]
+  169 |  clientOk(window.editor()->setDimensionNumbering({true,7,6,3,true}));
+      |           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~
+/home/myungit/Linux_CAD_forFree/tests/test_drawing_multisheet.h:169:49: warning: missing initializer for member ‘ForgeCad::DrawingDimensionNumbering::excludePatterns’ [-Wmissing-field-initializers]
+/home/myungit/Linux_CAD_forFree/tests/test_drawing_multisheet.h:169:49: warning: missing initializer for member ‘ForgeCad::DrawingDimensionNumbering::assignments’ [-Wmissing-field-initializers]
+In file included from /home/myungit/Linux_CAD_forFree/tests/test_viewport.cpp:153:
+/home/myungit/Linux_CAD_forFree/tests/test_drawing_revision_restore.h: In function ‘void {anonymous}::drawingRevisionRestoreTests()’:
+/home/myungit/Linux_CAD_forFree/tests/test_drawing_revision_restore.h:12:375: warning: missing initializer for member ‘ForgeCad::DrawingDimensionNumbering::firstDimension’ [-Wmissing-field-initializers]
+   12 |  DrawingDimension dimension;bool have=false;for(const auto &c:window.editor()->curves(view.id))if(std::abs(arcLength(*c.curve,c.range)-10)<1e-7){dimension=dimensionOfCurve(view,c,DrawingMeasure::EndpointDistance);have=true;break;}require(have,"curva per ripristino");clientOk(window.editor()->addDimension(dimension,{85,140}));clientOk(window.editor()->setDimensionNumbering({true,7,6,3,true}));auto presentation=window.editor()->sheet().dimensions[0].presentation;presentation.numberingExcluded=true;presentation.prefix="(";presentation.suffix=")";clientOk(window.editor()->updateDimension(dimension,presentation));
+      |                                                                                                                                                                                                                                                                                                                                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~
+/home/myungit/Linux_CAD_forFree/tests/test_drawing_revision_restore.h:12:375: warning: missing initializer for member ‘ForgeCad::DrawingDimensionNumbering::excludePatterns’ [-Wmissing-field-initializers]
+/home/myungit/Linux_CAD_forFree/tests/test_drawing_revision_restore.h:12:375: warning: missing initializer for member ‘ForgeCad::DrawingDimensionNumbering::assignments’ [-Wmissing-field-initializers]
+In file included from /home/myungit/Linux_CAD_forFree/tests/test_viewport.cpp:154:
+/home/myungit/Linux_CAD_forFree/tests/test_drawing_release.h: In lambda function:
+/home/myungit/Linux_CAD_forFree/tests/test_drawing_release.h:9:161: warning: missing initializer for member ‘ForgeCad::DrawingDimensionNumbering::firstDimension’ [-Wmissing-field-initializers]
+    9 |  const auto archiveDrawing=[&](DrawingFile &file,const QString &path,const QString &title){file.sheet.title=title;file.sheet.dimensionNumbering={true,7,6,3,true};file.sheet.dimensions[0].presentation.numberingExcluded=true;file.sheet.dimensions[0].presentation.prefix="(";file.sheet.dimensions[0].presentation.suffix=")";file.sheet.dimensions[0].position={90,140};DrawingSheet copy;clientOk(cloneDrawingSheet(file.sheet,copy));copy.title="Secondo foglio";file.otherSheets={copy};file.sheetIds={QUuid::createUuid(),QUuid::createUuid()};clientOk(pinWorkspaceDrawingModel(path,file,ma.version));clientOk(checkoutWorkspaceDrawing(path,file,"qa"));RevisionRecord record;clientOk(checkinWorkspaceDrawing(path,file,{},"Tavola A",record));return record;};
+      |                                                                                                                                                                 ^
+/home/myungit/Linux_CAD_forFree/tests/test_drawing_release.h:9:161: warning: missing initializer for member ‘ForgeCad::DrawingDimensionNumbering::excludePatterns’ [-Wmissing-field-initializers]
+/home/myungit/Linux_CAD_forFree/tests/test_drawing_release.h:9:161: warning: missing initializer for member ‘ForgeCad::DrawingDimensionNumbering::assignments’ [-Wmissing-field-initializers]
+In file included from /home/myungit/Linux_CAD_forFree/tests/test_viewport.cpp:170:
+/home/myungit/Linux_CAD_forFree/tests/test_document_tabs.h: In static member function ‘static void ViewportInteractionTest::documentTabsTests()’:
+/home/myungit/Linux_CAD_forFree/tests/test_document_tabs.h:54:56: warning: ‘static void QApplication::setActiveWindow(QWidget*)’ is deprecated: Use QWidget::activateWindow() instead. [-Wdeprecated-declarations]
+   54 |     host.activateWindow();QApplication::setActiveWindow(&host);
+      |                           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~
+In file included from /usr/include/qt6/QtTest/qtestkeyboard.h:27,
+                 from /usr/include/qt6/QtTest/qtestevent.h:14,
+                 from /usr/include/qt6/QtTest/qtest_gui.h:17,
+                 from /usr/include/qt6/QtTest/qtest_widgets.h:15,
+                 from /usr/include/qt6/QtTest/qtest.h:283,
+                 from /usr/include/qt6/QtTest/QTest:1,
+                 from /home/myungit/Linux_CAD_forFree/tests/test_viewport.cpp:1:
+/usr/include/qt6/QtWidgets/qapplication.h:85:17: note: declared here
+   85 |     static void setActiveWindow(QWidget* act);
+      |                 ^~~~~~~~~~~~~~~
+/home/myungit/Linux_CAD_forFree/tests/test_document_tabs.h:91:56: warning: ‘static void QApplication::setActiveWindow(QWidget*)’ is deprecated: Use QWidget::activateWindow() instead. [-Wdeprecated-declarations]
+   91 |     host.activateWindow();QApplication::setActiveWindow(&host);
+      |                           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~
+/usr/include/qt6/QtWidgets/qapplication.h:85:17: note: declared here
+   85 |     static void setActiveWindow(QWidget* act);
+      |                 ^~~~~~~~~~~~~~~
+In file included from /home/myungit/Linux_CAD_forFree/tests/test_viewport.cpp:316:
+/home/myungit/Linux_CAD_forFree/tests/test_sketch_apparent.h: In static member function ‘static void ViewportInteractionTest::sketchApparent(bool)’:
+/home/myungit/Linux_CAD_forFree/tests/test_sketch_apparent.h:47:97: warning: missing initializer for member ‘ForgeCad::Kernel::ExchangeBody::curve’ [-Wmissing-field-initializers]
+   47 |     source.importData=QByteArray::fromStdString(writeStep({ExchangeBody{"Parte raggiata",rounded}}));
+      |                                                                                                 ^
+/home/myungit/Linux_CAD_forFree/tests/test_sketch_apparent.h:47:97: warning: missing initializer for member ‘ForgeCad::Kernel::ExchangeBody::curveRange’ [-Wmissing-field-initializers]
+/home/myungit/Linux_CAD_forFree/tests/test_viewport.cpp: In static member function ‘static void ViewportInteractionTest::edgeLoftWorkflow()’:
+/home/myungit/Linux_CAD_forFree/tests/test_viewport.cpp:1917:109: warning: missing initializer for member ‘ForgeCad::Kernel::LoftContact::plane’ [-Wmissing-field-initializers]
+ 1917 |         LoftOptions tangent; tangent.startContinuity=1; tangent.startFaces={{source,source->faces().front()}};
+      |                                                                                                             ^
+/home/myungit/Linux_CAD_forFree/tests/test_viewport.cpp: In static member function ‘static void ViewportInteractionTest::openLoftTangency(const QString&)’:
+/home/myungit/Linux_CAD_forFree/tests/test_viewport.cpp:2350:54: warning: missing initializer for member ‘ForgeCad::Kernel::LoftContact::plane’ [-Wmissing-field-initializers]
+ 2350 |         tangentOptions.startFaces = {{adjacent, face}}; tangentOptions.endFaces = {{adjacentEnd, endFace}};
+      |                                                      ^
+/home/myungit/Linux_CAD_forFree/tests/test_viewport.cpp:2350:106: warning: missing initializer for member ‘ForgeCad::Kernel::LoftContact::plane’ [-Wmissing-field-initializers]
+ 2350 |         tangentOptions.startFaces = {{adjacent, face}}; tangentOptions.endFaces = {{adjacentEnd, endFace}};
+      |                                                                                                          ^
+[ 87%] Linking CXX executable forgecad_view_tests
+[100%] Built target forgecad_view_tests

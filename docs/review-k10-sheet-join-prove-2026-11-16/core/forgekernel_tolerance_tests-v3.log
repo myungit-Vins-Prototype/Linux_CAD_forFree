@@ -1,0 +1,8 @@
+[  OK  ] ToleranceDefaults
+[  OK  ] ToleranceInvalidMetadata
+[  OK  ] ToleranceVertexBudget
+[  OK  ] TolerancePCurveBudget
+[  OK  ] ToleranceEdgeFaceBudget
+[  OK  ] ToleranceDocumentScopesAndWorkers
+[  OK  ] ToleranceDocumentOffsetAccuracy
+7/7 test superati

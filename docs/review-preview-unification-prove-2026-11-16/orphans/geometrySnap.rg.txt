@@ -1,0 +1,6 @@
+Command: rg --hidden -n -w geometrySnap . --glob !docs/** --glob !archivi-locali/** --glob !.git/**
+./forgeCad2026_viewport.h:105:    bool geometrySnap() const;
+./forgeCad2026_gui.cpp:2956:    snapAction->setCheckable(true); snapAction->setChecked(QSettings().value(QStringLiteral("sketch/geometrySnap"), true).toBool());
+./forgeCad2026_gui.cpp:3263:        QSettings().setValue(QStringLiteral("sketch/geometrySnap"), enabled);
+./forgeCad2026_gui.cpp:3841:                                   QStringLiteral("sketch/geometrySnap"), QStringLiteral("sketch/gridSnap"),
+./forgeCad2026_viewport.cpp:76:bool CadViewport::geometrySnap() const { return geometrySnap_; }

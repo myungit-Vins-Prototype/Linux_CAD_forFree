@@ -1,0 +1,14 @@
+{
+  "cases": 8,
+  "actual_fins": 64,
+  "source_fins": 64,
+  "migrated_fins": 8,
+  "actual_complete_cells": 169,
+  "max_upper_mm": 8.672619653801143e-09,
+  "negative_cases": 6,
+  "negative_fins": 6,
+  "altered_original_output_pole_rejected": true,
+  "release_exports_identical": 8,
+  "source_budget_mm": 1e-07,
+  "metric": "original IEEE values as exact rational numbers, original knots and weights, every homogeneous Bernstein span, outward rational sqrt; no production certificate called"
+}

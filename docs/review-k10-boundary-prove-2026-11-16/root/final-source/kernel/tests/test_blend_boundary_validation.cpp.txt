@@ -1,0 +1,381 @@
+#include "fk_test.h"
+#include "fk_blend.h"
+#include "fk_bspline.h"
+#include "fk_bspline_surface.h"
+#include "fk_blend_model.h"
+#include "fk_body_check.h"
+#include "fk_body_io.h"
+#include "fk_cancel.h"
+#include "fk_pcurve.h"
+#include "fk_precision.h"
+#include "fk_primitives.h"
+#include <cstdlib>
+#include "fk_transform.h"
+#include <fstream>
+#include <iomanip>
+#include <iostream>
+#include <string>
+#include <limits>
+#include "fk_blend_section_curve.h"
+
+using namespace ForgeCad::Kernel;
+namespace {
+void extendForTest(Body &body, detail::BlendModel &model, EdgeId edge, const Interval &window, bool tangent) {
+    std::vector<detail::BlendBoundaryUse> certificates;
+    detail::extendBlendBoundary(body, model, edge, window, tangent, certificates);
+}
+CurvePtr<2> affineUV(Vec2 a, Vec2 b, Interval r = {0, 1}) {
+    return std::make_shared<BSplineCurve<2>>(1, std::vector<double>{r.lo, r.lo, r.hi, r.hi}, std::vector<Vec2>{a, b});
+}
+struct Fixture {
+    Body body;
+    EdgeId seam{0};
+};
+Fixture fixture(bool rational = true, bool posed = false, double scale = 1, bool negative = false, bool trimmed = false) {
+    const Transform3 pose = (posed ? Transform3::translation({7, -4, 2}) * Transform3::rotation({}, Vec3(1, 2, 3), .42) : Transform3())
+        * Transform3::scaling({}, scale);
+    const std::vector<double> uk{0, 0, 0, 1, 1, 1};
+    const Interval trim = trimmed ? Interval{.1, .9} : Interval{0, 1};
+    auto surface = [&](double a, double b) {
+        std::vector<Vec3> p;
+        std::vector<double> w;
+        for (int i = 0; i < 3; ++i) for (double v : {a, b}) {
+            p.push_back(pose.applyToPoint({i / 2.0, v, .2 * (i == 1)}));
+            w.push_back(rational ? (i == 0 ? 1 : i == 1 ? .8 : 4) : 1);
+        }
+        return std::make_shared<BSplineSurface>(2, 1, uk, std::vector<double>{a, a, b, b}, 3, 2, p, w);
+    };
+    const auto a = surface(-1, 0), b = surface(0, 1);
+    auto seam = std::make_shared<BSplineCurve<3>>(a->vIsoCurve(0));
+    if (negative) {
+        auto p = seam->poles(); auto w = seam->weights();
+        std::reverse(p.begin(), p.end()); std::reverse(w.begin(), w.end());
+        seam = std::make_shared<BSplineCurve<3>>(2, uk, p, w);
+    }
+    const double u0 = negative ? 1 - trim.lo : trim.lo, u1 = negative ? 1 - trim.hi : trim.hi;
+    const std::vector<Vec3> points{seam->point(trim.lo), seam->point(trim.hi), a->point(u1, -1), a->point(u0, -1), b->point(u0, 1), b->point(u1, 1)};
+    std::vector<Body::BuildEdge> edges{{0, 1, seam, trim, 3e-9}};
+    std::vector<CurvePtr<2>> maps{affineUV({u0, 0}, {u1, 0}, trim)};
+    auto add = [&](int x, int y, Vec2 uv0, Vec2 uv1, const std::shared_ptr<BSplineSurface> &s) {
+        CurvePtr<3> curve;
+        Interval range{0, 1};
+        if (uv0.x() == uv1.x()) curve = std::make_shared<BSplineCurve<3>>(1, std::vector<double>{0, 0, 1, 1}, std::vector<Vec3>{points[x], points[y]});
+        else {
+            auto original = s->vIsoCurve(uv0.y());
+            auto p = original.poles(); auto w = original.weights();
+            if (uv1.x() < uv0.x()) { std::reverse(p.begin(), p.end()); std::reverse(w.begin(), w.end()); }
+            curve = std::make_shared<BSplineCurve<3>>(2, uk, p, w);
+            range = trim;
+        }
+        edges.push_back({x, y, curve, range, 0});
+        maps.push_back(affineUV(uv0, uv1, range));
+    };
+    add(1, 2, {u1, 0}, {u1, -1}, a);
+    add(2, 3, {u1, -1}, {u0, -1}, a);
+    add(3, 0, {u0, -1}, {u0, 0}, a);
+    add(0, 4, {u0, 0}, {u0, 1}, b);
+    add(4, 5, {u0, 1}, {u1, 1}, b);
+    add(5, 1, {u1, 1}, {u1, 0}, b);
+    Body::BuildFace fa{a, true, {{{0, true, maps[0], 0}, {1, true, maps[1], 0}, {2, true, maps[2], 0}, {3, true, maps[3], 0}}}};
+    Body::BuildFace fb{b, true, {{{0, false, maps[0], 0}, {4, true, maps[4], 0}, {5, true, maps[5], 0}, {6, true, maps[6], 0}}}};
+    return {Body::buildSheet(points, edges, {fa, fb})};
+}
+std::string modelBytes(const detail::BlendModel &m) {
+    return writeBodyBinary(m.build());
+}
+template<int N> void exportCurve(std::ostream &out, const CurvePtr<N> &curve) {
+    const auto *s = dynamic_cast<const BSplineCurve<N> *>(curve.get());
+    if (!s) throw std::runtime_error("export richiede BSpline");
+    out << "{\"degree\":" << s->degree() << ",\"knots\":[";
+    bool first = true; for (double k : s->knots()) { if (!first) out << ','; first = false; out << k; }
+    out << "],\"poles\":[";
+    first = true; for (const auto &p : s->poles()) { if (!first) out << ','; first = false; out << '['; for (int i = 0; i < N; ++i) { if (i) out << ','; out << p[i]; } out << ']'; }
+    out << "],\"weights\":[";
+    for (int i = 0; i < s->poleCount(); ++i) { if (i) out << ','; out << s->weight(i); }
+    out << "]}";
+}
+void exportSurface(std::ostream &out, const SurfacePtr &surface) {
+    const auto &s = dynamic_cast<const BSplineSurface &>(*surface);
+    out << "{\"uDegree\":" << s.uDegree() << ",\"vDegree\":" << s.vDegree() << ",\"uCount\":" << s.uPoleCount() << ",\"vCount\":" << s.vPoleCount();
+    for (int axis = 0; axis < 2; ++axis) { out << (axis ? ",\"vKnots\":[" : ",\"uKnots\":["); bool first = true; for (double k : axis ? s.vKnots() : s.uKnots()) { if (!first) out << ','; first = false; out << k; } out << ']'; }
+    out << ",\"poles\":[";
+    for (int i = 0; i < s.uPoleCount(); ++i) for (int j = 0; j < s.vPoleCount(); ++j) { if (i || j) out << ','; const auto p = s.pole(i, j); out << '[' << p.x() << ',' << p.y() << ',' << p.z() << ']'; }
+    out << "],\"weights\":[";
+    for (int i = 0; i < s.uPoleCount(); ++i) for (int j = 0; j < s.vPoleCount(); ++j) { if (i || j) out << ','; out << s.weight(i, j); }
+    out << "]}";
+}
+void exportCase(const std::string &name, const Body &before, const Body &after) {
+    const char *dir = std::getenv("BOUNDARY_EXPORT_DIR"); if (!dir) return;
+    std::ofstream out(std::string(dir) + "/" + name + ".json");
+    out << std::setprecision(17) << "{\"scope\":\"synthetic-production-helper\",\"originalRange\":[" << before.edge(EdgeId(0)).range.lo << ',' << before.edge(EdgeId(0)).range.hi << "],\"finalRange\":[" << after.edge(EdgeId(0)).range.lo << ',' << after.edge(EdgeId(0)).range.hi << "],\"budget\":" << after.fin(after.edge(EdgeId(0)).forward).pcurveTolerance << ",\"originalEdgeTolerance\":" << before.edge(EdgeId(0)).tolerance << ",\"edgeTolerance\":" << after.edge(EdgeId(0)).tolerance << ",\"edgeOriginal\":";
+    exportCurve(out, before.edge(EdgeId(0)).curve); out << ",\"edgeFinal\":"; exportCurve(out, after.edge(EdgeId(0)).curve);
+    out << ",\"finUses\":[";
+    for (int i = 0; i < 2; ++i) {
+        if (i) out << ',';
+        const FinId fin = i ? after.edge(EdgeId(0)).backward : after.edge(EdgeId(0)).forward;
+        out << "{\"sense\":" << (after.fin(fin).sense ? "true" : "false") << ",\"pcurveTolerance\":" << after.fin(fin).pcurveTolerance << ",\"surfaceOriginal\":"; exportSurface(out, before.face(before.finFace(fin)).surface);
+        out << ",\"surfaceFinal\":"; exportSurface(out, after.face(after.finFace(fin)).surface);
+        out << ",\"pcurve\":"; exportCurve(out, after.fin(fin).pcurve); out << '}';
+    }
+    out << "]}";
+}
+void preserveOriginal(bool rational, bool posed, double scale, bool negative, bool trimmed, const std::string &name) {
+    auto f = fixture(rational, posed, scale, negative, trimmed);
+    const Body original = f.body;
+    const auto bytes = writeBodyBinary(original);
+    FK_CHECK(checkBody(original, {true, true}).empty());
+    detail::BlendModel model(f.body, &original);
+    const Interval window{original.edge(f.seam).range.lo - .05, original.edge(f.seam).range.hi + .05};
+    std::vector<detail::BlendBoundaryUse> certificates;
+    detail::extendBlendBoundary(f.body, model, f.seam, window, true, certificates);
+    FK_CHECK(certificates.size() == 2);
+    FK_CHECK(f.body.edge(f.seam).curve == model.edges[0].curve);
+    double worst = 0;
+    for (int i = 0; i <= 1024; ++i) {
+        const double t = original.edge(f.seam).range.lo + original.edge(f.seam).range.length() * i / 1024.;
+        worst = std::max(worst, distance(original.edge(f.seam).curve->point(t), f.body.edge(f.seam).curve->point(t)));
+    }
+    std::cout << "original_parametric_deviation " << name << ' ' << std::setprecision(17) << worst << '\n';
+    FK_CHECK(worst <= linearResolution());
+    FK_CHECK_NEAR(f.body.edge(f.seam).tolerance, original.edge(f.seam).tolerance, 0);
+    FK_CHECK(writeBodyBinary(original) == bytes);
+    detail::installBlendBoundaryCertificates(model, certificates);
+    BodyHistory history;
+    Body emitted = model.build(&history);
+    computePCurves(emitted);
+    detail::requireEmittedBlendBoundaries(emitted, certificates);
+    FK_CHECK(checkBody(emitted, {true, true}).empty());
+    for (EdgeId e : emitted.edges()) FK_CHECK(history.isDeclared(EntityKind::Edge, e.index));
+    for (FaceId face : emitted.faces()) FK_CHECK(history.isDeclared(EntityKind::Face, face.index));
+    for (VertexId vertex : emitted.vertices()) FK_CHECK(history.isDeclared(EntityKind::Vertex, vertex.index));
+    for (FinId fin : {emitted.edge(f.seam).forward, emitted.edge(f.seam).backward}) {
+        FK_CHECK(emitted.fin(fin).pcurveTolerance == certificates.front().budget);
+        for (double t : {emitted.edge(f.seam).range.lo, .5, emitted.edge(f.seam).range.hi}) {
+            const Vec2 uv = emitted.fin(fin).pcurve->point(t);
+            FK_CHECK(distance(emitted.edge(f.seam).curve->point(t), emitted.face(emitted.finFace(fin)).surface->point(uv.x(), uv.y())) <= certificates.front().budget);
+        }
+    }
+    exportCase(name, original, emitted);
+}
+}
+FK_TEST(BoundaryOriginalPolynomialPositive) { preserveOriginal(false, false, 1, false, false, "polynomial"); }
+FK_TEST(BoundaryOriginalRationalParameter) { preserveOriginal(true, false, 1, false, false, "rational"); }
+FK_TEST(BoundaryOriginalRationalPoseScale) { preserveOriginal(true, true, 2.5, false, false, "rational-pose-scale"); }
+FK_TEST(BoundaryOriginalRationalReverse) { preserveOriginal(true, false, 1, true, false, "rational-negative-uv"); }
+FK_TEST(BoundaryOriginalRationalTrim) { preserveOriginal(true, false, 1, false, true, "rational-trim"); }
+FK_TEST(BoundaryFailureBodyAndModelAtomicity) {
+    auto f = fixture(); detail::BlendModel model(f.body, &f.body);
+    f.body.fin(f.body.edge(f.seam).backward).pcurve.reset();
+    const auto bodyBefore = writeBodyBinary(f.body), modelBefore = modelBytes(model);
+    FK_CHECK_THROWS(extendForTest(f.body, model, f.seam, {-.05, 1.05}, true));
+    FK_CHECK(writeBodyBinary(f.body) == bodyBefore);
+    FK_CHECK(modelBytes(model) == modelBefore);
+}
+FK_TEST(BoundaryCancellationBodyAndModelAtomicity) {
+    auto f = fixture(); detail::BlendModel model(f.body, &f.body);
+    const auto bodyBefore = writeBodyBinary(f.body), modelBefore = modelBytes(model);
+    bool cancelled = false;
+    {
+        CancellationScope scope(std::make_shared<std::atomic<bool>>(true));
+        try { extendForTest(f.body, model, f.seam, {-.05, 1.05}, true); }
+        catch (const OperationCancelled &) { cancelled = true; }
+    }
+    FK_CHECK(cancelled);
+    FK_CHECK(writeBodyBinary(f.body) == bodyBefore);
+    FK_CHECK(modelBytes(model) == modelBefore);
+}
+FK_TEST(BoundaryIsoHiddenPcurveAndCurveSpan) {
+    auto f = fixture(false);
+    const double a = 1. / 512, b = 2. / 512, c = 3. / 512;
+    const std::vector<double> k{0, 0, a, b, c, 1, 1};
+    const std::vector<Vec2> uv{{0, 0}, {a, 0}, {b, .01}, {c, 0}, {1, 0}};
+    // Synthetic valid edge/SP-curve pair in a planar chart; its small knot span
+    // lies entirely between the old recognizer's 33 sample positions.
+    auto surface = std::make_shared<BSplineSurface>(1, 1, std::vector<double>{0, 0, 1, 1}, std::vector<double>{-1, -1, 1, 1}, 2, 2, std::vector<Vec3>{{0,-1,0},{0,1,0},{1,-1,0},{1,1,0}});
+    std::vector<Vec3> p; for (const auto &v : uv) p.push_back({v.x(), v.y(), 0});
+    f.body.edge(f.seam).curve = std::make_shared<BSplineCurve<3>>(1, k, p);
+    const auto pc = std::make_shared<BSplineCurve<2>>(1, k, uv);
+    for (FinId fin : {f.body.edge(f.seam).forward, f.body.edge(f.seam).backward}) {
+        f.body.fin(fin).pcurve = pc; f.body.face(f.body.finFace(fin)).surface = surface;
+    }
+    const std::array<SurfacePtr, 2> supports{surface, surface};
+    const std::array<CurvePtr<2>, 2> maps{pc, pc};
+    const auto guide = detail::blendBoundaryIsoGuide(f.body.edge(f.seam).curve, maps, supports, {0,1}, {0,1.1}, 1e-9, 3e-9);
+    FK_CHECK(!guide.curve && guide.budget == 0);
+    detail::BlendModel model(f.body);
+    std::vector<detail::BlendBoundaryUse> certificates;
+    detail::extendBlendBoundary(f.body, model, f.seam, {0,1.1}, true, certificates);
+    FK_CHECK(certificates.empty()); // This unsupported family retains sampled compatibility.
+
+}
+
+FK_TEST(BoundaryIsoHiddenSupportExtensionRejectsAtomically) {
+    auto f = fixture(false);
+    const std::vector<double> u{0, 9. / 8, 19. / 16, 5. / 4, 2};
+    auto surface = [&](bool bump) {
+        if (!bump) return std::make_shared<BSplineSurface>(1, 1, std::vector<double>{0,0,2,2}, std::vector<double>{-1,-1,1,1}, 2, 2, std::vector<Vec3>{{0,-1,0},{0,1,0},{2,-1,0},{2,1,0}});
+        std::vector<Vec3> poles;
+        for (int i = 0; i < 5; ++i) for (double v : {-1., 1.}) poles.push_back({u[i], v, bump && i == 2 ? .5 : 0});
+        return std::make_shared<BSplineSurface>(1, 1, std::vector<double>{0,0,9./8,19./16,5./4,2,2}, std::vector<double>{-1,-1,1,1}, 5, 2, poles);
+    };
+    f.body.edge(f.seam).curve = std::make_shared<BSplineCurve<3>>(1, std::vector<double>{0,0,1,1}, std::vector<Vec3>{{0,0,0},{1,0,0}});
+    int i = 0;
+    for (FinId fin : {f.body.edge(f.seam).forward, f.body.edge(f.seam).backward}) {
+        f.body.fin(fin).pcurve = affineUV({0,0},{1,0});
+        f.body.face(f.body.finFace(fin)).surface = surface(i++ == 1);
+    }
+    detail::BlendModel model(f.body, &f.body);
+    const auto bodyBefore = writeBodyBinary(f.body), modelBefore = modelBytes(model);
+    bool rejected = false;
+    try { extendForTest(f.body, model, f.seam, {0,2}, true); }
+    catch (const std::domain_error &) { rejected = true; }
+    std::cout << "hidden_support_extension_rejected " << rejected << '\n';
+    FK_CHECK(rejected);
+    FK_CHECK(writeBodyBinary(f.body) == bodyBefore);
+    FK_CHECK(modelBytes(model) == modelBefore);
+}
+
+namespace {
+struct ExtendedEmission {
+    Body original;
+    Body emitted;
+    std::vector<detail::BlendBoundaryUse> certificates;
+};
+ExtendedEmission extendedEmission() {
+    auto f = fixture(true);
+    const Body source = f.body;
+    detail::BlendModel model(f.body, &source);
+    const Interval window{-.05, 1.05};
+    std::vector<detail::BlendBoundaryUse> certificates;
+    detail::extendBlendBoundary(f.body, model, f.seam, window, true, certificates);
+    const auto a = f.body.face(f.body.finFace(f.body.edge(f.seam).forward)).surface;
+    const auto b = f.body.face(f.body.finFace(f.body.edge(f.seam).backward)).surface;
+    model.points = {a->point(window.lo,0), a->point(window.hi,0), a->point(window.hi,-1),
+                    a->point(window.lo,-1), b->point(window.lo,1), b->point(window.hi,1)};
+    const std::vector<std::pair<Vec2,Vec2>> maps{
+        {{window.lo,0},{window.hi,0}}, {{window.hi,0},{window.hi,-1}},
+        {{window.hi,-1},{window.lo,-1}}, {{window.lo,-1},{window.lo,0}},
+        {{window.lo,0},{window.lo,1}}, {{window.lo,1},{window.hi,1}},
+        {{window.hi,1},{window.hi,0}}};
+    model.edges[0].range = window;
+    for (int i : {1,3,4,6}) {
+        auto &edge = model.edges[i];
+        edge.curve = std::make_shared<BSplineCurve<3>>(1,std::vector<double>{0,0,1,1},
+            std::vector<Vec3>{model.points[edge.start],model.points[edge.end]});
+    }
+    for (int i : {2,5}) {
+        const auto surface = i == 2 ? a : b;
+        auto curve = dynamic_cast<const BSplineSurface &>(*surface).vIsoCurve(i == 2 ? -1 : 1);
+        if (i == 2) {
+            auto knots = curve.knots(); auto poles = curve.poles(); auto weights = curve.weights();
+            std::reverse(knots.begin(),knots.end()); for (double &k : knots) k = 1-k;
+            std::reverse(poles.begin(),poles.end()); std::reverse(weights.begin(),weights.end());
+            curve = BSplineCurve<3>(curve.degree(),knots,poles,weights);
+        }
+        model.edges[i].curve = std::make_shared<BSplineCurve<3>>(curve);
+        model.edges[i].range = window;
+    }
+    for (auto &face : model.faces) for (auto &loop : face.loops) for (auto &fin : loop) {
+        if (fin.edge) fin.pcurve = affineUV(maps[fin.edge].first,maps[fin.edge].second,model.edges[fin.edge].range);
+    }
+    detail::installBlendBoundaryCertificates(model,certificates);
+    Body output = model.build();
+    computePCurves(output);
+    detail::requireEmittedBlendBoundaries(output,certificates);
+    FK_CHECK(checkBody(output,{true,true}).empty());
+    return {source,output,certificates};
+}
+}
+FK_TEST(BoundaryActualExtendedFinUsesFullCertifiedWindow) {
+    const auto f = extendedEmission();
+    FK_CHECK_NEAR(f.emitted.edge(EdgeId(0)).range.lo,-.05,0);
+    FK_CHECK_NEAR(f.emitted.edge(EdgeId(0)).range.hi,1.05,0);
+    FK_CHECK(f.certificates.size() == 2);
+    for (FinId fin : {f.emitted.edge(EdgeId(0)).forward,f.emitted.edge(EdgeId(0)).backward}) {
+        FK_CHECK(f.emitted.fin(fin).pcurveTolerance == 3e-9);
+        for (double t : {-.05,0.,.25,.5,.75,1.,1.05}) {
+            const auto uv = f.emitted.fin(fin).pcurve->point(t);
+            FK_CHECK(distance(f.emitted.edge(EdgeId(0)).curve->point(t),f.emitted.face(f.emitted.finFace(fin)).surface->point(uv.x(),uv.y())) <= 3e-9);
+        }
+    }
+    exportCase("actual-extended-fins",f.original,f.emitted);
+}
+FK_TEST(BoundaryActualEmissionRejectsChangedContracts) {
+    for (int mode = 0; mode < 5; ++mode) {
+        auto f = extendedEmission();
+        auto &edge = f.emitted.edge(EdgeId(0));
+        auto &fin = f.emitted.fin(edge.forward);
+        switch (mode) {
+        case 0: fin.pcurve = affineUV({.001,0},{1.001,0}); break;
+        case 1: fin.pcurveTolerance = 1e-6; break;
+        case 2: edge.tolerance = 1e-6; break;
+        case 3: edge.range.hi = 1.1; break;
+        case 4: f.emitted.face(f.emitted.finFace(edge.forward)).surface = f.original.face(f.original.finFace(f.original.edge(EdgeId(0)).forward)).surface; break;
+        }
+        FK_CHECK_THROWS(detail::requireEmittedBlendBoundaries(f.emitted,f.certificates));
+    }
+}
+
+FK_TEST(BoundaryIsoAffineParameterAndSupportOrder) {
+    for (bool reverse : {false,true}) {
+        auto f = fixture(true,false,1,reverse,false);
+        auto curve = dynamic_cast<const BSplineCurve<3> &>(*f.body.edge(f.seam).curve);
+        auto knots = curve.knots(); for (double &k : knots) k = 5*k-3;
+        const CurvePtr<3> original = std::make_shared<BSplineCurve<3>>(curve.degree(),knots,curve.poles(),curve.weights());
+        const auto pc = affineUV({reverse ? 1. : 0.,0},{reverse ? 0. : 1.,0},{-3,2});
+        const std::array<CurvePtr<2>,2> pcs{pc,pc};
+        const std::array<SurfacePtr,2> supports{
+            f.body.face(f.body.finFace(f.body.edge(f.seam).backward)).surface,
+            f.body.face(f.body.finFace(f.body.edge(f.seam).forward)).surface};
+        const auto guide = detail::blendBoundaryIsoGuide(original,pcs,supports,{-3,2},{-3,2},1e-9,3e-9);
+        FK_CHECK(guide.curve && guide.budget == 3e-9);
+        if (guide.curve) for (double t : {-3.,-2.,0.,1.,2.}) FK_CHECK(distance(original->point(t),guide.curve->point(t)) <= 3e-9);
+    }
+}
+FK_TEST(BoundaryIsoLineMapVaryingV) {
+    const SurfacePtr s = std::make_shared<BSplineSurface>(1,1,std::vector<double>{0,0,1,1},std::vector<double>{0,0,1,1},2,2,
+        std::vector<Vec3>{{0,0,0},{0,1,0},{1,0,0},{1,1,0}});
+    const CurvePtr<3> original = std::make_shared<BSplineCurve<3>>(1,std::vector<double>{-3,-3,-2,-2},std::vector<Vec3>{{.3,0,0},{.3,1,0}});
+    const CurvePtr<2> pc = std::make_shared<Line<2>>(Vec2(.3,3),Vec2(0,1));
+    const auto guide = detail::blendBoundaryIsoGuide(original,{pc,pc},{s,s},{-3,-2},{-3,-2},1e-9,3e-9);
+    FK_CHECK(guide.curve && guide.budget == 3e-9);
+}
+FK_TEST(BoundaryInvalidBudgetsAndRangeRejectBeforeMutation) {
+    for (int mode = 0; mode < 5; ++mode) {
+        auto f = fixture();
+        if (mode == 0) f.body.edge(f.seam).tolerance = -1;
+        if (mode == 1) f.body.edge(f.seam).tolerance = std::numeric_limits<double>::quiet_NaN();
+        if (mode == 2) f.body.fin(f.body.edge(f.seam).forward).pcurveTolerance = -1;
+        if (mode == 3) f.body.fin(f.body.edge(f.seam).forward).pcurveTolerance = std::numeric_limits<double>::infinity();
+        detail::BlendModel model(f.body);
+        const auto bodyBefore = writeBodyBinary(f.body), modelBefore = modelBytes(model);
+        FK_CHECK_THROWS(extendForTest(f.body,model,f.seam,mode == 4 ? Interval{.2,.8} : Interval{-.05,1.05},true));
+        FK_CHECK(writeBodyBinary(f.body) == bodyBefore);
+        FK_CHECK(modelBytes(model) == modelBefore);
+    }
+}
+
+FK_TEST(BoundaryActualEmissionKeepsDistinctFacesOnSharedCarrier) {
+    auto f = fixture(true);
+    const auto &old = dynamic_cast<const BSplineSurface &>(*f.body.face(f.body.finFace(f.body.edge(f.seam).forward)).surface);
+    std::vector<Vec3> poles;
+    std::vector<double> weights;
+    for (int i = 0; i < old.uPoleCount(); ++i) {
+        poles.push_back(old.pole(i,0));
+        poles.push_back(old.pole(i,0) + Vec3(0,2,0));
+        weights.push_back(old.weight(i,0));
+        weights.push_back(old.weight(i,0));
+    }
+    const SurfacePtr shared = std::make_shared<BSplineSurface>(2,1,old.uKnots(),std::vector<double>{-1,-1,1,1},3,2,poles,weights);
+    for (FaceId face : f.body.faces()) f.body.face(face).surface = shared;
+    FK_CHECK(checkBody(f.body,{true,true}).empty());
+    detail::BlendModel model(f.body,&f.body);
+    std::vector<detail::BlendBoundaryUse> certificates;
+    detail::extendBlendBoundary(f.body,model,f.seam,{0,1},true,certificates);
+    FK_CHECK(certificates.size() == 2);
+    detail::installBlendBoundaryCertificates(model,certificates);
+    Body emitted = model.build();
+    computePCurves(emitted);
+    detail::requireEmittedBlendBoundaries(emitted,certificates);
+    FK_CHECK(checkBody(emitted,{true,true}).empty());
+}

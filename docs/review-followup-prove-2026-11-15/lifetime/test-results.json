@@ -1,0 +1,32 @@
+[
+  {
+    "test": "async-lifetime",
+    "command": [
+      "./forgecad-release/forgecad_view_tests",
+      "--async-lifetime"
+    ],
+    "exit": 0
+  },
+  {
+    "test": "document-lifetime",
+    "command": [
+      "./forgecad-release/forgecad_view_tests",
+      "--document-lifetime"
+    ],
+    "exit": 0
+  },
+  {
+    "test": "drawing-view-edit",
+    "command": [
+      "./forgecad-release/forgecad_drawing_view_edit_tests"
+    ],
+    "exit": 0
+  },
+  {
+    "test": "display-cache-memory",
+    "command": [
+      "./forgecad-release/forgecad_display_cache_memory_tests"
+    ],
+    "exit": 0
+  }
+]

@@ -1,0 +1,33 @@
+#include "cad_document_io.h"
+#include "cad_forge.h"
+#include "cad_model_history.h"
+#include "fk_boolean.h"
+#include "fk_body_check.h"
+#include "fk_body_io.h"
+#include "fk_curve_algo.h"
+#include "fk_mass.h"
+#include "fk_intersect.h"
+#include "fk_precision.h"
+#include <QCoreApplication>
+#include <QFile>
+#include <QCryptographicHash>
+#include <iostream>
+#include <iomanip>
+#include <fstream>
+#include <chrono>
+using namespace ForgeCad;
+namespace K=ForgeCad::Kernel;
+void dump(int index,const K::Body&body){std::string bytes=K::writeBodyBinary(body);std::ofstream f("/tmp/supporto-review/body-"+std::to_string(index)+".bin",std::ios::binary);f.write(bytes.data(),bytes.size());}
+void describe(const K::Body&b){K::Box box;for(auto id:b.edges()){const auto&e=b.edge(id);if(e.curve)box.add(K::curveBox(*e.curve,e.range));}std::cout<<" F="<<b.faces().size()<<" E="<<b.edges().size()<<" V="<<b.vertices().size()<<" solid="<<!b.isSheet()<<" shells="<<b.shells().size()<<" sheet="<<b.isSheet()<<" box=["<<box.lo.x()<<","<<box.lo.y()<<","<<box.lo.z()<<"]-["<<box.hi.x()<<","<<box.hi.y()<<","<<box.hi.z()<<"]";auto issues=K::checkBody(b);std::cout<<" check="<<issues.size();for(auto&i:issues)std::cout<<" ISSUE:"<<K::describe(i.code)<<":"<<i.message;std::cout<<"\n";}
+int main(int argc,char**argv){QCoreApplication app(argc,argv);std::cout<<std::setprecision(17)<<std::unitbuf;DocumentState doc;QString error=loadDocumentFile(QStringLiteral("/tmp/supporto-review/Supporto.original.prt"),doc);if(!error.isEmpty()){std::cerr<<error.toStdString()<<"\n";return 2;}K::PrecisionScope precision(doc.calculationAccuracy);
+std::cout<<"Loaded precision="<<doc.calculationAccuracy<<" sketches="<<doc.sketches.size()<<" features="<<doc.extrusions.size()<<" modelBodies="<<doc.modelBodies.size()<<"\n";
+if(argc<2||std::string(argv[1])=="inventory"){
+for(int i=0;i<doc.modelBodies.size();++i){auto&m=doc.modelBodies[i];std::cout<<"MODEL "<<i<<" name="<<m.name.toStdString()<<" id="<<m.id<<" tip="<<m.tipFeatureId<<" visible="<<m.visible<<"\n";}
+for(int i=0;i<doc.sketches.size();++i){auto&s=doc.sketches[i];std::cout<<"SKETCH "<<i<<" name="<<s.name.toStdString()<<" story="<<s.storyId<<" plane="<<s.plane<<" segments="<<s.segments.size()<<" curves="<<s.curves.size()<<"\n";}
+for(int i=0;i<doc.extrusions.size();++i){auto&f=doc.extrusions[i];std::cout<<"FEATURE "<<i<<" name="<<f.name.toStdString()<<" fid="<<f.featureId<<" mb="<<f.modelBodyId<<" type="<<int(f.feature)<<" operation="<<f.operation<<" first="<<f.firstBody<<" second="<<f.secondBody<<" solid="<<f.solid<<" cached="<<f.cachedGeometry<<" suppressed="<<f.suppressed<<" visible="<<f.visible<<" sketch="<<f.sketchIndex<<" error="<<f.error.toStdString()<<" notice="<<f.notice.toStdString()<<"\n";std::cout<<"  loft sketches=";for(auto k:f.loftSketches)std::cout<<k<<",";std::cout<<" sections="<<f.loftSections.size()<<" guides="<<f.loftGuides.size()<<" edgeguides="<<f.loftEdgeGuides.size()<<" ruled="<<f.loftRuled<<" mergeTangents="<<f.loftMergeTangentFaces<<" continuities="<<f.loftStartContinuity<<","<<f.loftEndContinuity<<"\n";if(f.forgeBody){describe(*f.forgeBody);dump(i,*f.forgeBody);}else std::cout<<"  NO GEOMETRY\n";}return 0;}
+if(argc<4)return 3;int a=std::stoi(argv[2]),b=std::stoi(argv[3]);if(a<0||a>=doc.extrusions.size()||b<0||b>=doc.extrusions.size())return 3;auto first=doc.extrusions[a].forgeBody,second=doc.extrusions[b].forgeBody;if(!first||!second)return 4;std::cout<<"UNION "<<argv[1]<<" "<<a<<"="<<doc.extrusions[a].name.toStdString()<<" / "<<b<<"="<<doc.extrusions[b].name.toStdString()<<"\n";
+auto start=std::chrono::steady_clock::now();try{ForgeBody result;
+if(std::string(argv[1])=="app"){QString err;result=forgeBoolean(first,second,::BooleanOperation::Union,&err);if(!result)throw std::runtime_error(err.toStdString());}
+else result=std::make_shared<const K::Body>(K::booleanOperation(*first,*second,K::BooleanOperation::Unite));
+std::cout<<"SUCCESS elapsed="<<std::chrono::duration<double>(std::chrono::steady_clock::now()-start).count();describe(*result);dump(100+a*10+b,*result);
+}catch(const std::exception&e){std::cout<<"FAILURE elapsed="<<std::chrono::duration<double>(std::chrono::steady_clock::now()-start).count()<<" error="<<e.what()<<"\n";return 5;}return 0;}

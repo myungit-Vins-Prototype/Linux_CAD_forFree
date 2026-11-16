@@ -1,0 +1,15 @@
+{
+  "forgecad-release/forgecad": "8a4c7a347480ad7ca2519bb83d15c9e617e173c7648276a790b04c38bc51bc2e",
+  "forgecad-release/forgecad_view_tests": "0e880ae72f966a6d7290e5e5bbcc61ce39cb4a130625c2df933c6f26a63949f8",
+  "forgecad-release/kernel/forgekernel_tests": "ae8a053a889bdf5283d6ffb6290a20f0fa434ab767bbc34825602bec16e070a4",
+  "forgecad-release/kernel/forgekernel_offset_validation_tests": "fa525f97f0b133175ab6c4d6f017a5cb1ae1909f90bc3068e91963b16b8078bb",
+  "kernel/fk_offset.cpp": "08ac51e6fd3fd99d262fe8d0363c7437744b7714b34166dac7e74589bcf018e9",
+  "kernel/fk_offset.h": "eef6b745c078aea58a14d8e544e9cecd0cc98a5126a8ca8fa1e39c46141e676e",
+  "kernel/CMakeLists.txt": "8b1b4d47908e99639117a2b1c9e9750c51b1170b57056373357633f9b4597f29",
+  "kernel/tests/test_offset_validation.cpp": "7d70490b069ca9fb23f14089181baa809367611bd6a20d36282ee668b9bc8f30",
+  "forgeCad2026_viewport_scene.cpp": "00db869bae00baa5e28880b411044598ed21238ddbae8b86d2dd9d1bbf9f4c49",
+  "forgeCad2026_dialogs_mapping.cpp": "5754a395a027c8b8dce961aeb573e7dae36af847dcd270406e4b89a0939e4b59",
+  "tests/test_function_panels.h": "cc6439102a904712eac4b96f181961f99fbac49a55c492b1d56094d7b69a2949",
+  "tests/test_viewport.cpp": "7f6f0a244e23c13dec1dd0d35e2ee98831a4b378dcd1ae26b8471795a0836f19",
+  "tools/generate_architecture.py": "b4e5d3ade863f8e6c35ca3580daca3f2fef9e4141d939937231d939e90f06655"
+}

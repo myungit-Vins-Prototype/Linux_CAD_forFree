@@ -1,0 +1,1 @@
+Controllo visivo del coordinatore sui quattro PNG Wayland del runner integrato: dark1/light2 di drawing0 e model1. Toolbar, ribbon, albero predefinito, pannello funzione, campi e dock revisioni cambiano coerentemente. Carta, bordo e cartiglio restano leggibili e invariati. Sfondo 3D personalizzato resta conservato. Nessun difetto aggiuntivo osservato.

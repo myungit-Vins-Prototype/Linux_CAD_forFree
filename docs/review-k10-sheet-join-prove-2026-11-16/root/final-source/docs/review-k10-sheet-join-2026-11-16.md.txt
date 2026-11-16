@@ -1,0 +1,75 @@
+# K10 — giunzione delle superfici estese, 16 novembre 2026
+
+Corretto e verificato il ramo quasi tangente di `joinSplineExtensions` in `kernel/fk_sheet.cpp`, con tre agenti GPT-6.1 Sol per implementazione, regressioni e audit indipendente. La build completa dell’app è aggiornata; occorre riaprirla. **K10 passa a 22/24 siti iniziali parzialmente trattati, con due siti interamente aperti. Il totale resta 31 rilievi corretti: questa consegna estende K10, senza contare varianti come nuovi difetti.** Il Newton trasversale nello stesso sito resta campionato.
+
+## Difetti riprodotti
+
+Il recupero tangente precedente seguiva due isoparametriche, misurava il gap durante il fit e in 65 punti uniformi, quindi assegnava `max(tolerance,2*seamGap)` al nuovo bordo. Le superfici potevano separarsi fra i campioni oppure ricevere una tolleranza ricavata proprio dallo scarto da verificare. Anche il dominio UV era ampliato per campioni; dopo assemblaggio e unificazione mancava un controllo continuo delle fin effettive.
+
+Due famiglie riprodotte attraverso l’API pubblica `extendSheet`, senza usare CAD originali:
+
+- Picco NURBS alto 0,001 mm e largo 0,0001 nel tratto oltre il rifilo originale. La baseline restituisce successo e `checkBody` senza errori, ma un testimone razionale sul giunto misura circa **0,000984827 mm**, oltre la tolleranza pubblicata di 0,0000001 mm. Provate fasi del nodo, pose, scale e selezione inversa.
+- Divaricazione tangente: la baseline aumenta il budget del bordo fino a circa 0,0000118977 mm; un testimone razionale supera il cap originario di 0,0000001 mm. La nuova via rifiuta il risultato invece di pubblicarlo con una tolleranza maggiore.
+
+La baseline con tutte le nuove asserzioni passa 11/29 gruppi; dieci falliscono soltanto requisiti nuovi di provider/pcurve e cap, e **non sono dieci bug precedenti**. Una variante diagnostica privata che omette soltanto quelle asserzioni passa 21/29: falliscono gli otto gruppi geometrici negativi, nove corpi. La suite permanente non contiene macro di esclusione.
+
+`OperationCancelled` è un tipo distinto da `std::exception`: nessun bug di cancellazione assorbita dai catch è stato dimostrato. `extendSheet` già azzera la storia in ingresso; i test rispettano questo contratto, chiedendo storia vuota su errore/cancellazione e sorgente/output del chiamante invariati.
+
+## Correzione integrata
+
+La soglia angolare iniziale esistente, seno inferiore a 0,001, seleziona la via affine/isoparametrica. La via richiede una verifica continua oppure fallisce: un certificato non risolto non può essere recuperato dal vecchio Newton campionato. La soglia seleziona l’algoritmo e non prova la tangenza globale.
+
+Il budget fisico è fissato **prima** della costruzione a `max(1e-7,1e-9*scale)`, la stessa allocazione base già presente. Il fit sul supporto A usa un quarto del cap; la curva cubica risultante viene confrontata su tutto l’intervallo con entrambi i supporti effettivamente estesi, usando `surfaceCompositionErrorBound`. Bordo e pcurve ricevono ciascuno il cap prefissato; il residuo verificato è inferiore al singolo cap, più stretto della loro somma nel controllo ordinario. Nessun aumento dopo la misura.
+
+Le pcurve sono B-spline grado uno esplicite, conservano gli estremi parametrici originali e i tagli dei lati. Il dominio esteso deriva dall’inviluppo dei poli UV originali. Estremi noti della medesima cucitura possono essere unificati entro il cap esistente, evitando microintervalli; non viene introdotta una riassociazione per sola vicinanza.
+
+Dopo `Model::build` e `computePCurves` si controllano identità di curve e pcurve, range, budget e numero esatto delle fin pianificate, oltre ai coefficienti cubici effettivi. Dopo `unifySameDomain` si seguono i discendenti Face/Edge nella storia dichiarata e si ricertifica il carrier finale: rappresentazioni cambiate o genealogie ambigue sono rifiutate. La cancellazione viene controllata anche all’ingresso e prima della pubblicazione della storia.
+
+Una sola TU kernel modificata; nessun nuovo header, API pubblica, formato documento o comportamento UI. CMake aggiunge il test indipendente e le opzioni rigorose `-fno-fast-math -ffp-contract=off` per sheet. Il catalogo architetturale descrive esplicitamente il campo certificato e quello ancora campionato.
+
+## Verifiche sui byte finali
+
+| Prova | Esito e campo |
+| --- | --- |
+| Build completa | PASS, 312,06 s; app e runner ricompilati |
+| CTest selezionati | **22/22 PASS**, 70,42 s: kernel, superfici, estensione, anteprime, storia/cache, schede/tema ed ellisse |
+| Suite nuova integrata | **29/29 PASS**: 19 corpi positivi, otto gruppi negativi/nove corpi, cancellazione e lunghezze invalide; codec/range/tolleranze/genealogia |
+| Suite generale lamine | **41/41 PASS**, dopo la build; baseline stessa suite 41/41 |
+| Export finali | **19 JSON dei coefficienti effettivi identici byte per byte** al candidato V3 auditato; non è un confronto byte per byte dei file Body |
+| Regressioni private core V3 | **96/96 PASS**, distinte dai runner integrati; varianti V1/V2 sono storiche |
+| ASan/UBSan/LSan V3 | **29/29 PASS**, exit 0 e nessuna diagnostica; driver, test main e due TU kernel `fk_sheet`/`fk_curve_fit_bounds` strumentati, resto Release |
+| Wayland | Superfici e pannello Estendi PASS, incluse anteprima/Invio/Esc/Undo; tema nelle schede **1.569 controlli PASS** |
+| Avvio app | Processo isolato vivo dopo 5 s; `/proc/pid/exe` coincide con il binario atteso; terminato solo il processo di prova |
+| Architettura | **776 file / 11.282 archi / 388 TU**, zero errori; `--check`, hash sorgenti/compile DB, HTML e chiamate/include/riferimenti in entrambi i versi verificati |
+| Libreria kernel | 93 membri: cambia solo `fk_sheet.cpp.o`, **92 oggetti identici** alla libreria iniziale |
+
+La prima prova LSan V2 nel sandbox terminava per incompatibilità con ptrace ed è esclusa dal PASS leak. La prova finale V3 è stata eseguita fuori ptrace con leak detection attiva e senza soppressioni. È una verifica mirata, non dell’intero kernel o di ogni stato di cancellazione.
+
+Il confronto Wayland verifica i percorsi reali e le asserzioni UI; l’avvio isolato non certifica i pixel OpenGL né prova nuovi CAD. I collegamenti desktop sono stati riletti e puntano alla build Release aggiornata. Nessun processo utente chiuso.
+
+## Audit geometrico indipendente
+
+Il verificatore Python ricostruisce da coefficienti IEEE originali la base tensoriale omogenea, la compone con le pcurve finali e usa aritmetica `Fraction`, inviluppi Bernstein e suddivisione de Casteljau. Non usa una griglia come prova continua e non riutilizza i coefficienti estratti dal provider C++.
+
+- **30/30 nuove fin**, dieci varianti tangenti, 36 celle: residui sotto il cap proprio prefissato. Rapporto massimo upper/cap **0,7219956**; upper assoluto massimo circa 1,79444e-7 mm nel caso scalato, con cap anch’esso scalato.
+- **38/38 supporti**, 19 casi, 46 celle: conservazione sul dominio originale tramite genealogia Face dichiarata; upper massimo circa **2,279e-13 mm**. Non è una pretesa di identità algebrica o bitwise dopo estensione numerica.
+- Esame più ampio: **214/247 fin finali e 125/152 sorgenti** certificate. Le restanti **33+27 non sono certificate**: i loro inviluppi UV superano di poco il dominio naturale; questo non dimostra un errore fisico della curva. Non vengono assimilate alle 30 nuove fin interamente certificate.
+- Due testimoni baseline esatti, un polo edge alterato e un supporto alterato sono rifiutati dal verificatore. I selftest aritmetici passano.
+
+L’audit ha confrontato direttamente i 19 export V2/V3 e rieseguito i certificati sui finali. Root ha rieseguito selftest, 30 fin target e 38 conservazioni con gli stessi risultati; la build integrata esporta i medesimi byte. Log e manifest distinguono le esecuzioni dai risultati riferiti fra agenti.
+
+## Limiti e prosecuzione
+
+La continuazione implicita **trasversale Newton resta campionata**, inclusi fit e inviluppo UV: non è dimostrata l’esistenza/unicità globale dell’intersezione. Un giunto quasi tangente valido ma non affine può ora essere rifiutato conservativamente; lo stesso vale per rimappature operate dall’unificazione, tagli non allineati, casi multiway o risorse insufficienti. Il certificato riguarda residui sui supporti effettivamente estesi, non la fedeltà continua dell’intera nuova zona alla superficie prima dell’estensione.
+
+Nessun certificato globale di topologia, appartenenza ai rifili, iniettività, volume, G1/G2 o assenza di autointersezioni. `checkBody` resta un controllo aggiuntivo campionato. Gli altri due siti iniziali ancora interamente aperti sono i giunti in `fk_blend_mitre.cpp` e la continuazione implicita in `fk_blend_surface.cpp`; restano inoltre fallback parziali di K10, 17 API pubbliche candidate orfane e uniformazione dei colori letterali UI.
+
+## Conservazione e prove
+
+Baseline di **4.367 file** congelata prima delle modifiche; **4.362 invariati** e cinque file esistenti cambiati come previsto: `fk_sheet.cpp`, CMake kernel, generatore, memoria e registro review. Nuovi: test, rapporto, archivio memoria e prove. Dieci sigilli precedenti verificati nuovamente e intatti. Nessuna modifica ai CAD originali, nessun commit/branch/PR/worktree.
+
+Prima del codice consultate descrizioni e **1.133 relazioni incidenti** del grafo775/11246/387, poi il vero header del modello Blend; sorgenti e collegamenti usati per individuare assemblaggio, pcurve e unificazione. Dopo la modifica controllate 328 relazioni nel focus finale, distinte call/include/reference, incluse sheet→fit certificato, provider, unify e test→extendSheet. HTML/JSON locali restano ignorati da Git.
+
+[Prove e SHA256SUMS](review-k10-sheet-join-prove-2026-11-16/README.txt). Solo testo, JSON e sorgenti/script inerti con suffisso `.txt`; nessun ELF, oggetto, libreria o CAD. I manifest upstream indicano provenienza; il sigillo alla radice descrive l’esatto pacchetto curato. [Memoria precedente completa](history/claude-prima-k10-sheet-join-2026-11-16.md).
+
+App finale SHA256 `80428d73963a9186755afb24be4f0249d4d88d27699e0e650bf156b184dbe1e2`; sorgente sheet `8e9bd9d6c1d61bf9e8a189e783d6803510c3c61f07ed28c8e5b82f2efa457e2f`; test `6f107960db76d10bb652cba60e591758b2789533056b5a5c38340754d859f5d6`.

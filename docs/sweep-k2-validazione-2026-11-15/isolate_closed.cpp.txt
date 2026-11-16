@@ -1,0 +1,12 @@
+#include "fk_sweep.h"
+#include "fk_bspline.h"
+#include "fk_nurbs.h"
+#include "fk_body_check.h"
+#include "fk_mass.h"
+#include <chrono>
+#include <iostream>
+using namespace ForgeCad::Kernel;
+int main(){const auto circle=std::make_shared<Circle<3>>(Vec3(),Vec3(1,0,0),Vec3(0,1,0),3);
+const Frame3 start(circle->point(0),circle->derivative(0),Vec3(1,0,0));const auto nurbs=std::make_shared<BSplineCurve<3>>(toBSpline(*circle,0,kTwoPi));
+ProfileRegion p;p.outer={{{std::make_shared<Circle<2>>(Vec2(),Vec2(1,0),Vec2(0,1),.5),{0,kTwoPi}}}};p.holes={reversed(ProfileLoop{{{std::make_shared<Circle<2>>(Vec2(),Vec2(1,0),Vec2(0,1),.2),{0,kTwoPi}}}})};
+for(int r=0;r<2;++r)for(int split=0;split<2;++split){CurvePtr<3> path=r?std::static_pointer_cast<const Curve<3>>(nurbs):circle;std::vector<PathSegment> pieces;if(split)pieces={{path,{0,kPi}},{path,{kPi,kTwoPi}}};else pieces={{path,{0,kTwoPi}}};std::cout<<"START representation="<<r<<" split="<<split<<std::endl;const auto t=std::chrono::steady_clock::now();try{const auto b=sweepRegions(start,{p},pieces);std::cout<<"PASS rep="<<r<<" split="<<split<<" issues="<<checkBody(b).size()<<" volume="<<massProperties(b).volume;}catch(const std::exception&e){std::cout<<"FAIL rep="<<r<<" split="<<split<<" "<<e.what();}std::cout<<" seconds="<<std::chrono::duration<double>(std::chrono::steady_clock::now()-t).count()<<std::endl;}}

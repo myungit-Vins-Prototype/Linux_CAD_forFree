@@ -1,0 +1,39 @@
+from pathlib import Path
+import json
+r=Path('/home/myungit/Linux_CAD_forFree');p=Path('/tmp/forgecad-k10-boundary-20261115/root')
+t=json.loads((p/'test-summary.json').read_text());g=json.loads((p/'architecture-audit.json').read_text())
+report=r/'docs/curve-fit-k10-boundary-2026-11-15.md'
+s=report.read_text().replace('Implementazione e verifiche in corso; non è ancora una dichiarazione di completamento.','Implementazione integrata e verificata per le famiglie supportate. [Prove, riproduttori e manifest](curve-fit-k10-boundary-prove-2026-11-15/README.md).').replace('## Correzione prevista e criteri di accettazione','## Correzione integrata').replace('Il limite sui poli della superficie deve impedire allocazioni incontrollate senza aumentare la tolleranza.','Il limite di un milione di poli della superficie impedisce allocazioni incontrollate senza aumentare la tolleranza. Le SP-curve dei lati riconosciuti sono affini sul parametro originale: evitano una seconda approssimazione per inversione della superficie.')
+s=s.replace('## Esiti finali', """L'audit indipendente ha inoltre individuato un caso limite del nuovo provider: una query chiusa che iniziava esattamente alla giunzione poteva omettere il valore dell'altro tratto. Il controllo include ora entrambi i valori agli estremi della query con aritmetica verso l'esterno. La regressione diretta copre rette/NURBS, entrambi i versi e le due query adiacenti; prima della correzione fallivano tutti gli otto controlli. Non è stata osservata una falsa accettazione di un corpo causata da questo caso.
+
+Aggiunti punti di cancellazione nell'allineamento dei nodi e nella costruzione della griglia Coons. Il certificato riguarda la posizione; non promette continuità C1 nei nodi delle sorgenti.
+
+## Esiti finali""")
+s=s.replace('In attesa della validazione sui sorgenti definitivi.',f'''- **Build completa Release app e runner: PASS**. Eseguibile su disco aggiornato; un'app già aperta deve essere riavviata per caricarlo.
+- **9/9 nuovi gruppi permanenti PASS**. Gli otto gruppi di integrazione erano 3/8 sulla versione precedente; il nono verifica direttamente la nuova API alle giunzioni. Coprono tre curve avverse, sorgenti razionali, ritagli annidati/parziali, lati composti, trasformazioni e scale, tutti i quattro lati e versi, coniche compatibili, cancellazione, input invalidi e angoli Coons. Non viene usata una SP-curve ottenuta per fit come riferimento per il confronto.
+- Sui tre riproduttori, gli scarti densi passano da 0,001 / 0,000952154249 / 0,000057424751 mm a circa **1,17e-8 / 3,29e-8 / 3,12e-8 mm**, con budget invariato 1e-7 mm. Queste misure verificano i casi di regressione; la garanzia continua deriva dal provider Bernstein, non dal campionamento.
+- Disallineamenti angolari 0 e 0,25 volte la tolleranza restano ammessi; 2 e 5 volte vengono rifiutati con alias vuoti. Un divario di 20 volte resta rifiutato già come contorno aperto.
+- **{t['kernel_distinct']} casi kernel distinti / {t['kernel_executions']} esecuzioni PASS**, includendo Offset, Shell, Sheet, BoundarySheet, Fill, Projected, Sew, Thicken e sette gruppi Blend. La riesecuzione copre anche il refactoring condiviso del provider offset precedente.
+- **{t['ctest_suites']}/{t['ctest_suites']} gruppi CTest PASS**, inclusi i nuovi nove casi e gli undici del fitter precedente. Test Qt con impostazioni isolate e piattaforma offscreen.
+- **Audit indipendente: 27 controlli oracle e 9 sulle giunzioni PASS**, oltre ai tre riproduttori e ai cinque casi angolari. Verificate anche superficie e SP-curve risultanti; risultati e hash delle versioni verificate nel rapporto `independent/audit.md` delle prove.
+- **ASan/UBSan/LSan mirati: 9/9 PASS**, senza segnalazioni. Strumentati test, boundary e bounds; framework main e resto dell'archivio non strumentati. Dettagli nel rapporto `tests/report.md` delle prove; nessuna certificazione sanitizer completa dell'app.
+- **Mappa {g['files']} file / {g['edges']} relazioni / {g['units']} unità PASS**, zero diagnostica; controllo aggiornamento, HTML/JSON identici e archi in ingresso/uscita verificati separando call/include/reference.
+- Confronto degli hash con lo snapshot iniziale di 1630 file e `git diff --check`: esiti nel controllo finale delle prove. Modifiche preesistenti preservate fuori dal perimetro dichiarato.''')
+s=s.replace('K10 resta parziale negli altri chiamanti e nei fallback.','Dei 24 siti originari, sei hanno un percorso esatto/certificato per famiglie supportate; **18 siti restano interamente da migrare**, oltre ai fallback dei sei trattati. K10 resta pertanto aperto. I lati misti con coniche/procedurali non hanno un certificato continuo. Budget finiti, pesi non validi o limiti numerici non conclusivi possono produrre un rifiuto esplicito anche per geometrie valide.')
+s=s.replace('Le 22 orfane restano candidate manutentive;', 'La prosecuzione proposta riguarda i bordi ricostruiti da superficie e SP-curve in modifica poli e mapping: richiedono un limite della composizione, oltre al provider di posizione introdotto qui. Le 22 orfane restano candidate manutentive;')
+report.write_text(s)
+past=r/'docs/curve-fit-k10-estendi-fill-2026-11-15.md';s=past.read_text();mark='## Residuo K10 confermato in Superficie tra curve\n';s=s.replace(mark,mark+'\n**Aggiornamento successivo:** il residuo descritto sotto è stato corretto per lati di rette/NURBS nel [blocco BoundarySheet](curve-fit-k10-boundary-2026-11-15.md), con controllo continuo dei bordi finali. I dati seguenti documentano lo stato precedente.\n');past.write_text(s)
+review=r/'docs/code-review-2026-11-15.md';s=review.read_text();a=s.index('**Stato più recente:**');b=s.index('\n\n',a);s=s[:a]+'''**Stato più recente:** [K10 BoundarySheet](curve-fit-k10-boundary-2026-11-15.md) corregge le variazioni NURBS perse e gli angoli Coons fuori tolleranza, con controllo continuo dei bordi finali. Sei dei 24 siti iniziali hanno un percorso esatto/certificato per famiglie supportate; 18 ancora da migrare, oltre ai fallback. Build completa e regressioni PASS. Il totale dei 24 rilievi precedenti corretti non aumenta: K10 resta aperto.'''+s[b:];review.write_text(s)
+mem=r/'CLAUDE.md';s=mem.read_text();a=s.index('**15/11 — K10, BoundarySheet');b=s.index('**15/11 — K2',a);s=s[:a]+f'''**15/11 — K10, BoundarySheet con tre agenti GPT-6.1 Sol: blocco integrato/verificato.**
+Provider continuo posizione, nodi rimappati, quattro bordi Coons ricontrollati e SP-curve affini.
+Regressioni9/9PASS (8 integrazione:baseline3/8): variazioni nascoste entro budget; angoli2/5tol rifiutati.
+Build completa app/runner,{t['kernel_distinct']} casi kernel/{t['kernel_executions']} esecuzioni,{t['ctest_suites']}/{t['ctest_suites']}CTest PASS.
+Audit indipendente e sanitizer mirati documentati; nessun nuovo test OpenGL.
+Mappa{g['files']}/{g['edges']}/{g['units']}TU,zero diagnostica,check/HTML/archi PASS.
+K10 parziale:6/24 siti trattati per famiglie supportate,18 restanti più fallback.
+24 rilievi precedenti corretti,22 orfane candidate; nessuna certificazione globale dell'interno Coons.
+[Rapporto e prove](docs/curve-fit-k10-boundary-2026-11-15.md);
+[memoria precedente](docs/history/claude-prima-k10-boundary-2026-11-15.md).
+
+'''+s[b:];assert len(s.encode())<=16384;mem.write_text(s)
+print('Documenti finalizzati con i risultati effettivi')

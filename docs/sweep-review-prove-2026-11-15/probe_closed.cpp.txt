@@ -1,0 +1,20 @@
+#include "fk_sweep.h"
+#include "fk_bspline.h"
+#include "fk_mass.h"
+#include "fk_curve_algo.h"
+#include "fk_body_check.h"
+#include "fk_tessellate.h"
+#include <iostream>
+#include <iomanip>
+using namespace ForgeCad::Kernel;
+int main(){
+ const auto spline=std::make_shared<BSplineCurve<3>>(3,std::vector<double>{0,0,0,0,.2,.4,.6,.8,1,1,1,1},std::vector<Vec3>{{4,0,0},{4,3,0},{0,5,1},{-4,3,-1},{-4,-3,1},{0,-5,-1},{4,-3,0},{4,0,0}});
+ const Frame3 frame(spline->point(0),normalized(spline->derivative(0)),Vec3(.3,.7,.2));
+ ProfileRegion disk;disk.outer.segments={{std::make_shared<Circle<2>>(Vec2(),Vec2(1,0),Vec2(0,1),.1),{0,kTwoPi}}};
+ for(int split=0;split<2;++split)try{
+  const std::vector<PathSegment> path=split?std::vector<PathSegment>{{spline,{0,.5}},{spline,{.5,1}}}:std::vector<PathSegment>{{spline,{0,1}}};
+  const Body body=sweepRegions(frame,{disk},path);
+  const auto props=massProperties(body);const auto mesh=tessellate(body,{});size_t triangles=0;for(auto &f:mesh.faces)triangles+=f.triangles.size();
+  std::cout<<std::setprecision(15)<<"split="<<split<<" faces="<<body.faces().size()<<" checks="<<checkBody(body).size()<<" volume="<<props.volume<<" expected="<<kPi*.01*arcLength(*spline,{0,1},1e-13)<<" area="<<props.area<<" failedFaces="<<mesh.failedFaces<<" triangles="<<triangles<<std::endl;
+ }catch(const std::exception&e){std::cout<<"split="<<split<<" error="<<e.what()<<std::endl;}
+}

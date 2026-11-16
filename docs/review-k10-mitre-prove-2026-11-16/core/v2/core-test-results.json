@@ -1,0 +1,88 @@
+[
+  {
+    "target": "forgekernel_curve_fit_validation_tests",
+    "link_command": [
+      "/usr/bin/c++",
+      "-O3",
+      "-DNDEBUG",
+      "/home/myungit/Linux_CAD_forFree/forgecad-release/kernel/CMakeFiles/forgekernel_curve_fit_validation_tests.dir/tests/fk_test_main.cpp.o",
+      "/home/myungit/Linux_CAD_forFree/forgecad-release/kernel/CMakeFiles/forgekernel_curve_fit_validation_tests.dir/tests/test_curve_fit_validation.cpp.o",
+      "-o",
+      "/tmp/mitre-review/core/v2/forgekernel_curve_fit_validation_tests",
+      "/tmp/mitre-review/core/v2/libforgekernel.a"
+    ],
+    "link_rc": 0,
+    "rc": 0,
+    "seconds": 17.93777842000054,
+    "sha256": "9b1fc150c8295d7a4b38ad62b7c4f4b941040a02dcffe9d07fbd9b9d22b6361f"
+  },
+  {
+    "target": "forgekernel_tolerance_tests",
+    "link_command": [
+      "/usr/bin/c++",
+      "-O3",
+      "-DNDEBUG",
+      "/home/myungit/Linux_CAD_forFree/forgecad-release/kernel/CMakeFiles/forgekernel_tolerance_tests.dir/tests/fk_test_main.cpp.o",
+      "/home/myungit/Linux_CAD_forFree/forgecad-release/kernel/CMakeFiles/forgekernel_tolerance_tests.dir/tests/test_tolerance.cpp.o",
+      "-o",
+      "/tmp/mitre-review/core/v2/forgekernel_tolerance_tests",
+      "/tmp/mitre-review/core/v2/libforgekernel.a"
+    ],
+    "link_rc": 0,
+    "rc": 0,
+    "seconds": 0.660342181003216,
+    "sha256": "e21e046586b76c6d9c2d261aac37aea45e0a933b496218b8140d47eb4405ca6e"
+  },
+  {
+    "target": "forgekernel_blend_cavity_tests",
+    "link_command": [
+      "/usr/bin/c++",
+      "-O3",
+      "-DNDEBUG",
+      "/home/myungit/Linux_CAD_forFree/forgecad-release/kernel/CMakeFiles/forgekernel_blend_cavity_tests.dir/tests/fk_test_main.cpp.o",
+      "/home/myungit/Linux_CAD_forFree/forgecad-release/kernel/CMakeFiles/forgekernel_blend_cavity_tests.dir/tests/test_blend_cavity.cpp.o",
+      "/home/myungit/Linux_CAD_forFree/forgecad-release/kernel/CMakeFiles/forgekernel_blend_cavity_tests.dir/tests/test_blend_transitions.cpp.o",
+      "-o",
+      "/tmp/mitre-review/core/v2/forgekernel_blend_cavity_tests",
+      "/tmp/mitre-review/core/v2/libforgekernel.a"
+    ],
+    "link_rc": 0,
+    "rc": 0,
+    "seconds": 21.742341466000653,
+    "sha256": "dcdabb81607445b5adbe82079ed4325cc03a405d73e20fef7cd4fb260e788d13"
+  },
+  {
+    "target": "forgekernel_blend_contact_break_tests",
+    "link_command": [
+      "/usr/bin/c++",
+      "-O3",
+      "-DNDEBUG",
+      "/home/myungit/Linux_CAD_forFree/forgecad-release/kernel/CMakeFiles/forgekernel_blend_contact_break_tests.dir/tests/fk_test_main.cpp.o",
+      "/home/myungit/Linux_CAD_forFree/forgecad-release/kernel/CMakeFiles/forgekernel_blend_contact_break_tests.dir/tests/test_blend_contact_breaks.cpp.o",
+      "-o",
+      "/tmp/mitre-review/core/v2/forgekernel_blend_contact_break_tests",
+      "/tmp/mitre-review/core/v2/libforgekernel.a"
+    ],
+    "link_rc": 0,
+    "rc": 0,
+    "seconds": 0.9174919090000913,
+    "sha256": "bf6e2dec2f270370777ee20fbfe0fda9fb62e9a98730d85f7851989409dd6f68"
+  },
+  {
+    "target": "forgekernel_history_tests",
+    "link_command": [
+      "/usr/bin/c++",
+      "-O3",
+      "-DNDEBUG",
+      "/home/myungit/Linux_CAD_forFree/forgecad-release/kernel/CMakeFiles/forgekernel_history_tests.dir/tests/fk_test_main.cpp.o",
+      "/home/myungit/Linux_CAD_forFree/forgecad-release/kernel/CMakeFiles/forgekernel_history_tests.dir/tests/test_history.cpp.o",
+      "-o",
+      "/tmp/mitre-review/core/v2/forgekernel_history_tests",
+      "/tmp/mitre-review/core/v2/libforgekernel.a"
+    ],
+    "link_rc": 0,
+    "rc": 0,
+    "seconds": 0.9921242770033132,
+    "sha256": "99f032f6658265fc35106ac8f8ddc00fab57d9e0192ffb286fa1e81ca083fb36"
+  }
+]

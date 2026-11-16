@@ -1,0 +1,6 @@
+actual-extended-fins {'pass': True, 'upper_mm': 3.6866425104568984e-16, 'cells': 1, 'leaves': 1, 'max_depth': 0}
+polynomial {'pass': True, 'upper_mm': 5.661048867003676e-17, 'cells': 1, 'leaves': 1, 'max_depth': 0}
+rational-negative-uv {'pass': True, 'upper_mm': 3.697998822800364e-16, 'cells': 1, 'leaves': 1, 'max_depth': 0}
+rational-pose-scale {'pass': True, 'upper_mm': 9.561278618102041e-15, 'cells': 1, 'leaves': 1, 'max_depth': 0}
+rational-trim {'pass': True, 'upper_mm': 1.6561987770460884e-16, 'cells': 1, 'leaves': 1, 'max_depth': 0}
+rational {'pass': True, 'upper_mm': 3.6866425104568984e-16, 'cells': 1, 'leaves': 1, 'max_depth': 0}

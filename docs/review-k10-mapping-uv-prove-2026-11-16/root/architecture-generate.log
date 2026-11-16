@@ -1,0 +1,5 @@
+384 unità da cache, 3 da analizzare.
+[385/387] kernel/fk_surface_mapping.cpp
+[386/387] kernel/fk_quilt_mapping.cpp
+[387/387] kernel/tests/test_mapping_pcurve_validation.cpp
+Generati 775 file, 11246 relazioni, 0 TUs con diagnostica.

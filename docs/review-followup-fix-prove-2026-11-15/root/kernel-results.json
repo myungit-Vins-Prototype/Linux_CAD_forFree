@@ -1,0 +1,47 @@
+[
+  {
+    "filter": "Offset",
+    "exit": 0,
+    "seconds": 29.266179392001504
+  },
+  {
+    "filter": "Shell",
+    "exit": 0,
+    "seconds": 43.34591371600254
+  },
+  {
+    "filter": "BlendSurfaceNonAnalyticEdges",
+    "exit": 0,
+    "seconds": 3.1689540409970505
+  },
+  {
+    "filter": "BlendFreeformClosedEdges",
+    "exit": 0,
+    "seconds": 8.830483530000492
+  },
+  {
+    "filter": "BlendFreeformOpenEdges",
+    "exit": 0,
+    "seconds": 4.672634443002607
+  },
+  {
+    "filter": "BlendSurfaceMatchesExactPlanarCases",
+    "exit": 0,
+    "seconds": 1.366195049999078
+  },
+  {
+    "filter": "BlendSurfaceMatchesCircularCases",
+    "exit": 0,
+    "seconds": 0.4644571070020902
+  },
+  {
+    "filter": "BlendOpenChainsAtTangentSplineSeams",
+    "exit": 0,
+    "seconds": 47.600807204999
+  },
+  {
+    "filter": "BlendPlanarCapOnTangentSplineSupports",
+    "exit": 0,
+    "seconds": 13.939876628002821
+  }
+]

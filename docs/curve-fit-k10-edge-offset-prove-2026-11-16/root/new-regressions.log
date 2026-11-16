@@ -1,0 +1,35 @@
+236/237 Testing: forgekernel_edge_offset_fit_validation_tests
+236/237 Test: forgekernel_edge_offset_fit_validation_tests
+Command: "/home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_edge_offset_fit_validation_tests"
+Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+"forgekernel_edge_offset_fit_validation_tests" start time: Nov 16 09:17 CET
+Output:
+----------------------------------------------------------
+public polynomial forward U source_valid=1 output_valid=1 source_unchanged=1 measured_error=3.9268195303456287e-08 PASS
+public polynomial reverse U source_valid=1 output_valid=1 source_unchanged=1 measured_error=3.9268390254746936e-08 PASS
+public rational forward U source_valid=1 output_valid=1 source_unchanged=1 measured_error=3.9132587044196241e-08 PASS
+public rational reverse U source_valid=1 output_valid=1 source_unchanged=1 measured_error=3.9132578544510023e-08 PASS
+public baseline witness source_valid=1 output_valid=1 source_unchanged=1 measured_error=3.9268195100032008e-08 geometric_hull_lower=-5.1526807000627436e-08 PASS
+public reversed face sense source_valid=1 output_valid=1 source_unchanged=1 measured_error=3.9268101099314918e-08 PASS
+public trim wrappers source_valid=1 output_valid=1 source_unchanged=1 measured_error=3.7642738061981442e-08 PASS
+public transformed wrappers source_valid=1 output_valid=1 source_unchanged=1 measured_error=3.9273038055405043e-08 PASS
+provider polynomial forward U spans=12 measured_error=3.9268818862258153e-08 reported=9.3832130908917741e-08 final_bound=9.3832130908917741e-08 PASS
+provider polynomial reverse U spans=12 measured_error=3.926835799420235e-08 reported=9.3839119779291572e-08 final_bound=9.3839119779291572e-08 PASS
+provider rational forward U spans=12 measured_error=3.9132627521658615e-08 reported=9.4081119170816981e-08 final_bound=9.4081119170816981e-08 PASS
+provider rational reverse U spans=12 measured_error=3.913256234735095e-08 reported=9.4080455627953582e-08 final_bound=9.4080455627953582e-08 PASS
+provider negative distance spans=12 measured_error=3.9268328123589191e-08 reported=9.3826423924421181e-08 final_bound=9.3826423924421181e-08 PASS
+provider trim wrappers spans=11 measured_error=3.7642527665042201e-08 reported=8.1926808256648e-08 final_bound=8.1926808256648e-08 PASS
+provider transformed wrappers spans=12 measured_error=3.9274881950515503e-08 reported=9.3850755219574309e-08 final_bound=9.3850755219574309e-08 PASS
+provider shifted edge parameters spans=12 measured_error=3.9132646036542394e-08 reported=9.4081340270282956e-08 final_bound=9.4081340270282956e-08 PASS
+provider knots and lifetime mapped_breaks=4 reported=8.563447405855369e-08 PASS
+provider reject and cancellation PASS
+results passed=18 failed=0
+<end of output>
+Test time =  11.11 sec
+----------------------------------------------------------
+Test Passed.
+"forgekernel_edge_offset_fit_validation_tests" end time: Nov 16 09:17 CET
+"forgekernel_edge_offset_fit_validation_tests" time elapsed: 00:00:11
+----------------------------------------------------------
+
+End testing: Nov 16 09:17 CET

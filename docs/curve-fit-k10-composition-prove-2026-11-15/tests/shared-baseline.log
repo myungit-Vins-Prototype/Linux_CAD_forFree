@@ -1,0 +1,8 @@
+rational=0 both=0 source_issues=0 source_gap=3.3306690738754696e-16
+accepted=1 gap=0.001 issues=0
+rational=0 both=1 source_issues=0 source_gap=3.3306690738754696e-16
+accepted=1 gap=0.001 issues=0
+rational=1 both=0 source_issues=0 source_gap=3.5108334685767012e-16
+accepted=1 gap=0.0009760771244941679 issues=0
+rational=1 both=1 source_issues=0 source_gap=3.5108334685767012e-16
+accepted=1 gap=0.0009760771244941679 issues=0

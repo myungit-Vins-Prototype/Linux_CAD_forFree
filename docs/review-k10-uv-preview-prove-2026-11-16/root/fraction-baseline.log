@@ -1,0 +1,9 @@
+faces_trim_polynomial.json source 24 actual 24 projection 24 worst 1.7725949839435334e-10
+faces_trim_rational.json source 24 actual 24 projection 24 worst 3.390856179175395e-10
+joined_polynomial.json source 24 actual 22 projection 22 worst 2.775556451339867e-11
+joined_pose.json source 24 actual 22 projection 22 worst 4.014619673235568e-10
+joined_rational.json source 24 actual 22 projection 22 worst 2.775556451339867e-11
+joined_reverse.json source 24 actual 22 projection 22 worst 2.8073470426168844e-11
+joined_scale.json source 24 actual 22 projection 22 worst 1.0413702966616257e-08
+joined_shift_trim.json source 24 actual 22 projection 22 worst 2.775556451339867e-11
+CASES 2 / 8

@@ -1,0 +1,57 @@
+from pathlib import Path
+import shutil,json
+R=Path('/home/myungit/Linux_CAD_forFree');P=R/'docs/review-k10-uv-preview-prove-2026-11-16';T=P/'root';D=Path('/tmp/k10-uv-review/root')
+m=(R/'CLAUDE.md').read_text();a=R/'docs/history/claude-prima-k10-uv-preview-2026-11-16.md';assert not a.exists() or a.read_text()==m
+if not a.exists(): a.write_text(m)
+T.mkdir(parents=True,exist_ok=True)
+for p in D.rglob('*'):
+ if p.is_file():
+  q=T/p.relative_to(D);q=q.with_name(q.name+'.txt') if q.suffix in ['.py','.cpp','.h','.sh'] else q;q.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(p,q)
+start=m.index('**16/11 — K10, offset di bordi di estrusione');end=m.index('**15/11 — K2 completato',start);m=m[:start]+m[end:]
+marker='## Ultimi interventi — esiti consolidati\n\n'
+entry='''**16/11 — Prosecuzione K10 e anteprime, in prova con tre agenti Sol.**
+Due ricostruzioni UV offset: negativo pubblico su piano, residuo7,5e-6 contro
+budget1e-6 con checker valido. Prototipo certifica proiezione e residuo finali,
+provenienza AssemblyMap e fin emesse;10gruppi privati PASS, integrazione pendente.
+PRE7: Mapping/Riempimento pattern mantengono pronta dopo mutazione selezione;
+prototipo invalida worker/risultato e recupera;79controlli offscreen/Wayland PASS.
+K10 resta15/24parziali+9nonmigrati finché integrato; precedente offset bordi,
+18regressioni/24CTest/sanitizer eFraction nel [rapporto](docs/curve-fit-k10-edge-offset-2026-11-16.md).
+[Stato corrente](docs/review-k10-uv-preview-2026-11-16.md);
+[memoria precedente](docs/history/claude-prima-k10-uv-preview-2026-11-16.md).
+
+'''
+m=m.replace(marker,marker+entry,1)
+# Keep operational memory under16KiB; full paragraph archived above.
+start=m.index('**15/11 — Altri14rilievi');end=m.index('**15/11 — Sweep K1/K3',start)
+m=m[:start]+'''**15/11 — Altri14rilievi corretti con agenti GPT-6.1 Sol.**
+K4/K5/K6,S1/S2,UI1–6,PRE1–3: sweep/loft/lamine, nonfiniti/angoli, picker,
+selezioni,unità/colori e anteprime; un comando modeless fra workspace.
+App/runner,74test kernel distinti/75esecuzioni e34/34CTest PASS. Primo33/34:
+confronto double errato anche baseline, corretto nel test. Mappa724/10429/353TU,
+check/HTML/archi PASS;18/19allora risolti,K2poi completato. Nessun nuovo GL.
+[Prove e limiti](docs/review-fix-next-2026-11-15.md).
+
+'''+m[end:]
+assert len(m.encode())<=16384,len(m.encode());(R/'CLAUDE.md').write_text(m)
+(R/'docs/review-k10-uv-preview-2026-11-16.md').write_text('''# Review: ricostruzioni UV degli offset e selezione anteprime — 16 novembre 2026
+
+**Stato: difetti confermati, prototipi privati verificati, integrazione e controlli finali ancora da eseguire.** Tre agenti GPT-6.1 Sol proseguono dall’elenco aperto dopo Supporto.prt. Nessun CAD originale modificato.
+
+## K10: due ricostruzioni UV
+
+`offsetFaces` con rifilatura e `offsetJoinedFaces` ricostruiscono le SP-curve da proiezioni locali con fit e controlli campionati. Nel secondo percorso, un box con un bordo rettilineo riparametrizzato esattamente da NURBS, e pcurve sorgenti corrispondenti, produce un risultato valido al checker ma con residuo `||S(PC(t))-E(t)||` circa7,5e-6mm contro budget fin1e-6mm. La geometria del bordo resta rettilinea: il difetto riguarda la corrispondenza nel medesimo parametro, richiesta dal contratto della fin, e non è presentato come volume mancante.
+
+Il prototipo distingue il fit della proiezione sul piano (mm) dal residuo completo dell’associazione alla curva3D effettiva. Usa dati originali, limiti Bernstein continui e mapping esplicito dei bordi/facce per ricontrollare tutte le fin realmente emesse dopo assemblaggio. Famiglia iniziale Plane con edge Line/NURBS positivi e wrapper; gli altri casi restano fallback dichiarati. Sei varianti negative passano dopo la correzione; due prove del primo percorso erano già positive sulla baseline. Invalidità/cancellazione e contratti duali sono gruppi separati.
+
+## PRE7: risultato superato durante selezione continua
+
+In Mapping e Riempimento pattern, modificare i riferimenti e rimanere nella selezione continua sospende nuove richieste ma non invalida la precedente. Togliendo l’unica faccia in Mapping, lista vuota e vecchia geometria rimangono etichettate «pronta», con chiave e generazione invariate.
+
+La mera apertura del picker senza modifiche conserva la politica corrente. Il prototipo invalida chiave/risultato e cancella il worker appena cambiano gli input; indica di terminare la selezione, impedisce pubblicazioni tardive e riprende al termine. Probe privato con oggetti app effettivi:79/79controlli offscreen/Wayland; stesso probe baseline51PASS/28FAIL. Il fixture è ancora in irrobustimento per richiedere token di cancellazione inizialmente falso. Nessuna anticipazione della verifica permanente o della build finale.
+
+## Conservazione
+
+Baseline3388file e625archi architetturali incidenti consultati e congelati prima delle modifiche. Prove iniziali in [root](review-k10-uv-preview-prove-2026-11-16/root/); [memoria precedente](history/claude-prima-k10-uv-preview-2026-11-16.md). K10 resta aperto e i27rilievi precedentemente corretti non sono ancora aggiornati per il prototipo PRE7.
+''')
+print('Memoria',len(m.encode()),'byte; baseline archiviata')

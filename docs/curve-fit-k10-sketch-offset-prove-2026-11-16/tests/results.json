@@ -1,0 +1,60 @@
+{
+  "baseline": {
+    "passed": 6,
+    "failed": 21
+  },
+  "fixed": {
+    "passed": 27,
+    "failed": 0
+  },
+  "production_candidate_sha256": "62bc7824975f38656f0bbba2279e9bc1f47ca57380c6b5468d1170eba18ad69f",
+  "test_sha256": "7f687da7f9cca5246b20014bb8a463637a4165256e7b00dcf0cf399c4236aea2",
+  "reproduction": {
+    "degree": 27,
+    "ordinate_scale": 0.01,
+    "distance": 0.001,
+    "fit_tolerance": 1e-07,
+    "baseline_polynomial_sampled_geometric_max": 5.74190020337503e-07,
+    "baseline_rational_sampled_geometric_max": 5.414093718109254e-07,
+    "candidate_hidden_parameter_max": 3.927014673101413e-08,
+    "candidate_C0_parameter_max": 7.019046123490913e-08
+  },
+  "sanitizer_sandbox": {
+    "passed": 27,
+    "failed": 0,
+    "exit_code": 1,
+    "scan_error": "LeakSanitizer does not work under ptrace; ASan/UBSan cases complete"
+  },
+  "sanitizer_modules": [
+    "test_sketch_offset_validation",
+    "cad_sketch_offset",
+    "cad_curve_solver",
+    "fk_curve_fit_bounds",
+    "fk_curve_ops",
+    "fk_offset"
+  ],
+  "sanitizer_unrestricted_qtwidgets": {
+    "passed": 27,
+    "failed": 0,
+    "exit_code": 1,
+    "leaks": {
+      "bytes": 183,
+      "allocations": 4,
+      "library": "libnvidia-glcore.so.620.70.06"
+    },
+    "product_stack": false
+  },
+  "sanitizer_final_core": {
+    "passed": 27,
+    "failed": 0,
+    "exit_code": 0,
+    "asan": "PASS",
+    "ubsan": "PASS",
+    "leak_check": "PASS",
+    "leak_suppressions": false,
+    "qt_link": [
+      "Qt6Core"
+    ],
+    "same_six_instrumented_objects": true
+  }
+}

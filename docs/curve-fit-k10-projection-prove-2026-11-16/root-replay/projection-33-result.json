@@ -1,0 +1,7 @@
+{
+  "exit": 0,
+  "seconds": 3.2763694349999923,
+  "command": [
+    "./forgecad-release/kernel/forgekernel_projection_fit_validation_tests"
+  ]
+}

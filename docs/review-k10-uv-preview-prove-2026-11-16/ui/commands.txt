@@ -1,0 +1,19 @@
+Comandi effettivi finali (workspace /home/myungit/Linux_CAD_forFree):
+python3 /tmp/preview-next-review/build-regression.py --private --header
+python3 /tmp/preview-next-review/build-regression.py --header
+QT_QPA_PLATFORM=wayland QT_QPA_PLATFORMTHEME= QT_STYLE_OVERRIDE=Fusion /tmp/preview-next-review/regression-private-header
+/tmp/k10-uv-review/core/probe_guard
+/tmp/k10-uv-review/tests/test_uv_offset_validation_stage_v2
+
+Il build script compila il wrapper prendendo la compile command tests/test_viewport.cpp,
+e la sola copia privata mapping con la propria compile command; linka dagli oggetti app.
+Ogni comando+argomento linker e' registrato in link-*-header.json.
+Il replay Wayland accede alla sessione fuori sandbox con autorizzazione auto-review.
+Per ricostruire dall'archivio: copiare i quattro sorgenti/script terminanti .txt in
+/tmp/preview-next-review, eliminando solo il suffisso .txt dai loro nomi; adattare il
+root nello script se cambia il checkout. Conservare il nome test_preview_selection_state.h.
+Il primo repro.cpp.txt e' il probe minimo storico; il wrapper permanente e l'header
+sono le fonti finali usate dai due link e dai tre log finali.
+
+Verifica manifest dall'interno di questa cartella:
+sha256sum --check SHA256SUMS

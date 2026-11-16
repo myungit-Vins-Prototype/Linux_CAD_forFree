@@ -1,0 +1,4 @@
+case=0 source_issues=0 accepted=0 deviation=123 history_faces=2 reason=Deformazione: bordo sorgente non collegato ai vertici.
+case=1 source_issues=0 accepted=0 deviation=123 history_faces=2 reason=Faccia F0: Deformazione: corpo oltre il dominio della superficie destinazione.
+case=2 source_issues=0 cancelled=1 deviation=123 history_faces=2
+case=3 source_issues=0 accepted=1 deviation=2.8207991498163665e-11 vertex_error=0 history_faces=1 issues=0

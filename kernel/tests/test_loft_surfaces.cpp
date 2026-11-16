@@ -236,3 +236,40 @@ FK_TEST(RuledSurfaceClosedChainsKeepCorners) {
     // Due facce verticali 2 x 3 sghembe di 1.5 lungo x (area 2 * sqrt(9 + 2.25)) e due 2 x 3.
     FK_CHECK_NEAR(totalArea(prism), 2.0 * 2.0 * std::sqrt(9.0 + 2.25) + 2.0 * 2.0 * 3.0, 1e-9);
 }
+
+FK_TEST(LoftSectionClosureIgnoresPosition) {
+    // Stessa catena aperta, sia nel piano 2D sia come percorso 3D.
+    for (double x : {0.0, 1e4, 1e6}) for (double size : {.1, 1.0, 10.0}) for (bool spatial : {false,true}) {
+        std::vector<LoftSection> sections(2);
+        for (int i = 0; i < 2; ++i) {
+            sections[i].frame = Frame3(Vec3(0,0,size*i),Vec3(0,0,1),Vec3(1,0,0));
+            sections[i].loop.segments = {lineSegment(Vec2(x,0),Vec2(x+.5*size,0))};
+            if (spatial) { sections[i].path = chainOf(sections[i]); sections[i].loop.segments.clear(); }
+        }
+        const auto corr = loftCorrespondenceDefaults(sections);
+        FK_CHECK(corr.size() == 2 && corr[0].size() == 2 && corr[1].size() == 2);
+        const Body body = loftSheet(sections,true);
+        FK_CHECK(body.faces().size() == 1);
+        FK_CHECK(checkBody(body).empty());
+        FK_CHECK_NEAR(totalArea(body), .5*size*size, 1e-7*size*size);
+        FK_CHECK_THROWS(loftSolid(sections,true));
+    }
+    // Chiusura sotto/sopra il budget, indipendente dalla scala e dall'origine.
+    for (double accuracy : {1e-7,1e-8}) {
+        PrecisionScope precision(accuracy);
+        for (double x : {0.0,1e4}) for (double size : {.1,10.0}) for (double factor : {.5,2.0}) {
+            std::vector<LoftSection> sections(2);
+            const double gap = factor*scaledAccuracy(1e-6);
+            for (int i = 0; i < 2; ++i) {
+                sections[i].frame = Frame3(Vec3(0,0,i),Vec3(0,0,1),Vec3(1,0,0));
+                const std::vector<Vec2> v{{x,0},{x+size,0},{x+size,size},{x,size},{x,gap}};
+                for (std::size_t j=1;j<v.size();++j) sections[i].loop.segments.push_back(lineSegment(v[j-1],v[j]));
+            }
+            const auto corr = loftCorrespondenceDefaults(sections);
+            FK_CHECK(corr[0].size() == (factor < 1 ? 1 : 2));
+            for (auto &section : sections) {section.path = chainOf(section);section.loop.segments.clear();}
+            const auto spatial = loftCorrespondenceDefaults(sections);
+            FK_CHECK(spatial[0].size() == corr[0].size());
+        }
+    }
+}

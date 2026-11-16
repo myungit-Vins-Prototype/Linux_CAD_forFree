@@ -1,0 +1,24 @@
+from pathlib import Path
+import os,subprocess,json,time,shutil,hashlib
+r=Path('/home/myungit/Linux_CAD_forFree');p=r/'docs/review-preview-unification-prove-2026-11-16';root=p/'root';sha=lambda f:hashlib.sha256(f.read_bytes()).hexdigest()
+frozen=json.loads((root/'frozen-source-hashes.json').read_text())
+for f,h in frozen.items():assert sha(r/f)==h,f
+assert (r/'forgecad-release/forgecad').stat().st_mtime>max((r/f).stat().st_mtime for f in frozen if f.endswith(('.cpp','.h')))
+script=p/'tests/build_regressions.py.txt';results={}
+for platform in ['offscreen','wayland']:
+    env=os.environ.copy();env.update(QT_QPA_PLATFORM=platform,QT_QPA_PLATFORMTHEME='',QT_QPA_PLATFORMTHEME_QT6='',QT_STYLE_OVERRIDE='Fusion')
+    for key in ['QT_QPA_OFFSCREEN_NO_GLX','LIBGL_ALWAYS_SOFTWARE']:env.pop(key,None)
+    if platform=='offscreen':env.update(QT_QPA_OFFSCREEN_NO_GLX='1',LIBGL_ALWAYS_SOFTWARE='1')
+    temp=Path('/tmp/preview-release-'+platform);temp.mkdir(exist_ok=True)
+    for key,folder in [('XDG_CONFIG_HOME','settings'),('XDG_DATA_HOME','data'),('XDG_CACHE_HOME','cache')]:
+        target=temp/folder;target.mkdir(exist_ok=True);env[key]=str(target)
+    command=['python3',str(script),'--app-release'] if platform=='offscreen' else ['/tmp/review-previews-refresh/regressions-app-release']
+    start=time.monotonic()
+    with (root/('replay-'+platform+'.log')).open('w') as log:
+        try:ret=subprocess.run(command,cwd=r,env=env,stdout=log,stderr=subprocess.STDOUT,timeout=120).returncode
+        except subprocess.TimeoutExpired:ret=124
+    text=(root/('replay-'+platform+'.log')).read_text();result=dict(exit=ret,seconds=time.monotonic()-start,command=command,platform=platform,assertions=115 if 'RESULT passed=115 failed=0' in text else None,panels=text.count('BEGIN smoke '),binary_sha256=sha(Path('/tmp/review-previews-refresh/regressions-app-release')));results[platform]=result
+    (root/'replay-result.json').write_text(json.dumps(results,indent=2)+'\n');print(result)
+    assert ret==0 and result['assertions']==115 and result['panels']==11
+link=Path('/tmp/review-previews-refresh/link-app-release.json');data=json.loads(link.read_text());assert not data['private_overlay_objects'];shutil.copy2(link,root/'link-app-release.json')
+print('Oggetti app finali:115asserzioni/11pannelli siaoffscreen siaWayland PASS')

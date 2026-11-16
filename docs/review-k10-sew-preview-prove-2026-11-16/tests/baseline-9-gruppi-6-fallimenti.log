@@ -1,0 +1,10 @@
+nonaffine_polynomial source_original=0 residual=1.1200111041322243e-07 legacy_cap=9.9999999999999995e-08 fin_tolerance=0 edge_tolerance=0 witness_t=0.0234375 FAIL actual remapped fin exceeds the original legacy 3D budget
+nonaffine_reverse_inputs source_original=0 residual=1.1200111041322243e-07 legacy_cap=9.9999999999999995e-08 fin_tolerance=0 edge_tolerance=0 witness_t=0.0234375 FAIL actual remapped fin exceeds the original legacy 3D budget
+nonaffine_shift_trim source_original=0 residual=1.1200111041571609e-07 legacy_cap=9.9999999999999995e-08 fin_tolerance=0 edge_tolerance=0 witness_t=-2.8125 FAIL actual remapped fin exceeds the original legacy 3D budget
+nonaffine_reverse_target source_original=0 residual=1.1200682788095433e-07 legacy_cap=9.9999999999999995e-08 fin_tolerance=0 edge_tolerance=0 witness_t=0.9765625 FAIL actual remapped fin exceeds the original legacy 3D budget
+nonaffine_scale source_original=0 residual=9.9581231038925466e-09 legacy_cap=0.0001 fin_tolerance=0 edge_tolerance=0 witness_t=0.02734375 PASS
+reuse_sampled_same_parameter source_original=0 residual=1.119999999896204e-07 legacy_cap=9.9999999999999995e-08 fin_tolerance=0 edge_tolerance=0 witness_t=0.0234375 FAIL actual remapped fin exceeds the original legacy 3D budget
+reuse_affine_range source_original=0 residual=1.119999999896204e-07 legacy_cap=9.9999999999999995e-08 fin_tolerance=0 edge_tolerance=0 witness_t=-2.8125 FAIL actual remapped fin exceeds the original legacy 3D budget
+rational_original_weights source_original=0 residual=2.8167877181130632e-09 legacy_cap=9.9999999999999995e-08 fin_tolerance=0 edge_tolerance=0 witness_t=0.015625 PASS
+public_cancellation_atomic PASS
+3 passed 6 failed

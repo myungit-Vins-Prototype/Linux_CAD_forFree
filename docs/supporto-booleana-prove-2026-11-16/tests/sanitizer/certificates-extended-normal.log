@@ -1,0 +1,81 @@
+PASS short original ellipse and finite tangent chord certified at 1e-9
+PASS same supported geometry certified at document resolution
+PASS reversing both source traversal and line direction preserves a valid monotone match
+PASS wrong source traversal cannot authorize reversed correspondence
+PASS chord shifted 2e-7 beyond the 1e-7 budget is rejected
+PASS wrong original line endpoint parameters rejected
+PASS second independent carrier must also lie within budget
+PASS invalid budget cannot authorize substitution
+PASS invalid budget cannot authorize substitution
+PASS invalid budget cannot authorize substitution
+PASS invalid budget cannot authorize substitution
+PASS invalid or uncertifiable angular domain rejected
+PASS invalid or uncertifiable angular domain rejected
+PASS invalid or uncertifiable angular domain rejected
+PASS invalid or uncertifiable angular domain rejected
+PASS invalid or uncertifiable angular domain rejected
+PASS invalid finite segment parameter range rejected
+PASS invalid finite segment parameter range rejected
+PASS invalid finite segment parameter range rejected
+PASS invalid finite segment parameter range rejected
+PASS projected path with actual turning points rejected even with sufficient geometric error budget
+PASS unsupported second carrier rejected
+PASS unsupported first carrier rejected
+PASS coefficient overflow never authorizes a segment
+BOUND plane=5.6523424331285235e-13 observed=5.0004445029117051e-13
+PASS plane pullback gives finite continuous bound above independent witness error
+PASS cylinder pullback uses original ellipse parameters and endpoint UV
+PASS UV endpoint offset above budget cannot appear certified below budget
+PASS reversed UV endpoint correspondence cannot preserve original t
+PASS native Line2 parameterization supported without arbitrary rescaling
+PASS tiny original t span stays finite without division by its width squared
+PASS affine pcurve outside its stored domain is rejected
+PASS non-unit rational weights are outside the affine family
+PASS non-unit rational weights are outside the affine family
+PASS unsupported nonlinear pcurve rejected
+PASS unsupported surface image rejected
+PASS invalid image interval rejected without a finite bound
+PASS invalid image interval rejected without a finite bound
+PASS invalid image interval rejected without a finite bound
+PASS invalid image interval rejected without a finite bound
+PASS invalid image interval rejected without a finite bound
+PASS overflow in image coefficients yields an unresolved bound
+PASS certification preserves original ellipse and pcurve coefficients
+PASS posed and scaled originals retain certificate within unchanged budget
+PASS posed plane image is certified with original geometry
+PASS posed cylinder image is certified with original geometry
+PASS posed and scaled originals retain certificate within unchanged budget
+PASS posed plane image is certified with original geometry
+PASS posed cylinder image is certified with original geometry
+PASS posed and scaled originals retain certificate within unchanged budget
+PASS posed plane image is certified with original geometry
+PASS posed cylinder image is certified with original geometry
+RESULT checks=51 failures=0
+PASS private imprint fixture has an actual upper face
+PASS private public imprint line splits the chosen face and keeps a valid closed solid
+PASS private imprint preserves the analytical box volume
+PASS private imprint history keeps one real operand
+PASS private imprint retains provenance for every result face
+PASS private invalid imprint face preserves invalid_argument rather than domain retry
+PASS private valid and rejected imprint leave the source immutable
+PASS private elliptical compatibility sources are valid exact B-reps
+PASS private elliptical union/intersection/subtraction compatibility is topologically valid
+PASS private elliptical compatibility volume respects the operation bounds
+PASS private elliptical compatibility preserves face provenance
+PASS private elliptical union/intersection/subtraction compatibility is topologically valid
+PASS private elliptical compatibility volume respects the operation bounds
+PASS private elliptical compatibility preserves face provenance
+PASS private elliptical union/intersection/subtraction compatibility is topologically valid
+PASS private elliptical compatibility volume respects the operation bounds
+PASS private elliptical compatibility preserves face provenance
+PASS private elliptical union/intersection/subtraction compatibility is topologically valid
+PASS private elliptical compatibility volume respects the operation bounds
+PASS private elliptical compatibility preserves face provenance
+PASS private elliptical union/intersection/subtraction compatibility is topologically valid
+PASS private elliptical compatibility volume respects the operation bounds
+PASS private elliptical compatibility preserves face provenance
+PASS private elliptical union/intersection/subtraction compatibility is topologically valid
+PASS private elliptical compatibility volume respects the operation bounds
+PASS private elliptical compatibility preserves face provenance
+PASS private elliptical compatibility preserves both original source geometries
+PRIVATE_RESULT checks=78 failures=0

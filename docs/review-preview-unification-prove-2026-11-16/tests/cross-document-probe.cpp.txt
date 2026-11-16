@@ -1,0 +1,32 @@
+#include "forgeCad2026_gui.h"
+#include "forgeCad2026_viewport.h"
+#include "forgeCad2026_dialogs.h"
+#include <QApplication>
+#include <QTimer>
+#include <QDialog>
+#include <QSettings>
+#include <QTemporaryDir>
+#include <iostream>
+class ViewportInteractionTest {
+public:
+ static void probe() {
+  QMainWindow a,b;CadViewport va,vb;DocumentState doc;ExtrusionObject box;box.feature=BodyFeature::Primitive;box.name="Box";doc.extrusions={box,box};va.loadDocument(doc);vb.loadDocument(doc);
+  ExtrusionObject boolean;boolean.operation=0;boolean.firstBody=0;boolean.secondBody=-1;
+  ExtrusionObject shell;shell.feature=BodyFeature::Shell;shell.firstBody=0;shell.distance=.5;
+  bool nestedOpened=false,lockDelayed=false,outerFinished=false,innerReturned=false;
+  QTimer::singleShot(0,&a,[&]{
+   QTimer::singleShot(20,&b,[&]{
+    QDialog*inner=nullptr,*outer=nullptr;for(auto*d:b.findChildren<QDialog*>())if(d->windowTitle()=="Inner shell")inner=d;for(auto*d:a.findChildren<QDialog*>())if(d->windowTitle()=="Outer boolean")outer=d;
+    nestedOpened=inner&&!inner->isHidden();std::cout<<"CROSS nested_opened="<<nestedOpened<<" first_locked="<<va.interactionLocked()<<" second_locked="<<vb.interactionLocked()<<std::endl;
+    if(outer){QObject::connect(outer,&QDialog::finished,&a,[&]{outerFinished=true;});outer->reject();}
+    QTimer::singleShot(20,&b,[&]{lockDelayed=outerFinished&&va.interactionLocked()&&!innerReturned;std::cout<<"CROSS outer_finished="<<outerFinished<<" first_still_locked="<<va.interactionLocked()<<" inner_returned="<<innerReturned<<" delayed_cleanup="<<lockDelayed<<std::endl;for(auto*d:b.findChildren<QDialog*>())d->reject();});
+   });
+   offsetDialog(&b,&vb,"Inner shell",-1,shell,[](const auto&){return QString();});innerReturned=true;
+  });
+  QTimer::singleShot(2000,&a,[&]{for(auto*d:b.findChildren<QDialog*>())d->reject();for(auto*d:a.findChildren<QDialog*>())d->reject();});
+  booleanDialog(&a,&va,"Outer boolean",-1,boolean,[](const auto&){return QString();});
+  std::cout<<"CROSS final_first_locked="<<va.interactionLocked()<<" final_second_locked="<<vb.interactionLocked()<<" reproduced="<<(nestedOpened&&lockDelayed)<<std::endl;
+  if(!nestedOpened||!lockDelayed)throw std::runtime_error("cross-document residue not reproduced");
+ }
+};
+int main(int argc,char**argv){QApplication app(argc,argv);QTemporaryDir d;QSettings::setPath(QSettings::IniFormat,QSettings::UserScope,d.path());QSettings::setDefaultFormat(QSettings::IniFormat);try{ViewportInteractionTest::probe();return 0;}catch(const std::exception&e){std::cerr<<e.what()<<std::endl;return 1;}}

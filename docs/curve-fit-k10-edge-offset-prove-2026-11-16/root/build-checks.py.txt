@@ -1,0 +1,7 @@
+from pathlib import Path
+import subprocess,time,json
+r=Path('/home/myungit/Linux_CAD_forFree');p=r/'docs/curve-fit-k10-edge-offset-prove-2026-11-16/root'
+command=['cmake','--build','forgecad-release','--parallel','2'];start=time.monotonic()
+with (p/'build.log').open('w') as log:ret=subprocess.run(command,cwd=r,stdout=log,stderr=subprocess.STDOUT).returncode
+(p/'build-result.json').write_text(json.dumps(dict(exit=ret,seconds=time.monotonic()-start,command=command),indent=2)+'\n');print('Build completa:',ret);assert ret==0
+subprocess.run(['python3',str(p/'run-checks.py.txt')],cwd=r,check=True)

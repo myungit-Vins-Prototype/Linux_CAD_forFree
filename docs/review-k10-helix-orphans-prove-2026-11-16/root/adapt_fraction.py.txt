@@ -1,0 +1,43 @@
+from pathlib import Path
+p=Path('/tmp/k10-helix-review/root/helix_fraction.py');s=p.read_text()
+pos=s.index('def check(record):')
+s=s[:pos]+'''def normalize_source(j):
+ d=copy.deepcopy(j);d['type']={'trim':'trimmed','transform':'transformed'}.get(d.pop('kind'),j['kind'])
+ if 'basis' in d:d['basis']=normalize_source(d['basis'])
+ if d['type']=='helix':d['radialSlope']=d['stored_slope'];d['risePerRadian']=d['stored_rise']
+ return d
+
+def normalize(record):
+ d=copy.deepcopy(record);d['case']=d['label'];d['source']=normalize_source(d['source']);d['targetFrame']=d['projection']
+ if d['actual']:assert len(d['actual'])==1;d['actual']=d['actual'][0]
+ return d
+
+'''+s[pos:]
+s=s.replace("record=json.loads(path.read_text())\n  if not record.get('migrated',False):continue", "record=normalize(json.loads(path.read_text()))\n  if not record.get('migrated',False) or record['expected_rejection']:continue")
+s=s.replace("first=next(json.loads(p.read_text()) for p in sorted(Path(folder).glob('*.json')) if json.loads(p.read_text()).get('migrated',False))", "first=next(normalize(json.loads(p.read_text())) for p in sorted(Path(folder).glob('*.json')) if json.loads(p.read_text()).get('migrated',False) and not json.loads(p.read_text())['expected_rejection'])")
+s=s.replace("if __name__=='__main__':\n result=run(sys.argv[1]);Path(sys.argv[2]).write_text(json.dumps(result,indent=2)+'\\n')", '''def witness_negative(record):
+ record=normalize(record);source=Source(record['source'],record['targetFrame']);budget=exact(record['budget'])
+ assert record['expected_rejection'] and not record['rejected'] and record['created_count']==1
+ if record['actual']:
+  actual=record['actual'];assert actual['degree']==3 and len(actual['poles'])==4 and not actual['weights']
+  lo,hi=map(exact,record['range']);t=exact(float(3.141592653589793/2).hex());u=(t-lo)/(hi-lo)
+  poles=[vec(v) for v in actual['poles']]
+  while len(poles)>1:poles=[add(scale(a,1-u),scale(b,u)) for a,b in zip(poles,poles[1:])]
+  residual=sub(source.jet(t)[0],poles[0])
+ else:
+  # XZ published a vertical segment: the exact projected X source at t=pi
+  # lies outside the segment's constant X by about twice the original radius.
+  assert len(record['actual_segments'])==1
+  ends=record['actual_segments'][0];assert ends[0][0]==ends[1][0]
+  t=exact(float(3.141592653589793).hex());p=source.jet(t)[0]
+  residual=[p[0]-I(exact(ends[0][0]))]
+ lower2=sum((v.lo if v.lo>0 else v.hi if v.hi<0 else F())**2 for v in residual)
+ assert lower2>budget**2
+ return dict(case=record['case'],parameter=str(t),lower_squared=str(lower2),budget=float(budget),ratio_over_budget_at_least=float(lower2/budget**2)**.5)
+
+if __name__=='__main__':
+ if len(sys.argv)>3 and sys.argv[3]=='--baseline':
+  result=[witness_negative(json.loads(p.read_text())) for p in sorted(Path(sys.argv[1]).glob('*.json')) if json.loads(p.read_text())['expected_rejection']];assert len(result)==2;print('Two exact negative witnesses PASS',flush=True)
+ else:result=run(sys.argv[1])
+ Path(sys.argv[2]).write_text(json.dumps(result,indent=2)+'\\n')''')
+p.write_text(s)

@@ -1,0 +1,26 @@
+/tmp/supporto-review/tests/retry/probe.cpp: In function ‘int main()’:
+/tmp/supporto-review/tests/retry/probe.cpp:54:55: error: no matching function for call to ‘ForgeCad::Kernel::Frame3::Frame3(ForgeCad::Kernel::Vec3)’
+   54 |         const Body boxB = makeBox(Frame3(Vec3(1, 0, 0)), 2, 2, 2);
+      |                                                       ^
+  • there are 4 candidates
+In file included from kernel/fk_curve.h:9,
+                 from kernel/fk_topology.h:7,
+                 from kernel/fk_boolean.h:8,
+                 from /tmp/supporto-review/tests/retry/probe.cpp:1:
+    • candidate 1: ‘ForgeCad::Kernel::Frame3::Frame3(const ForgeCad::Kernel::Vec3&, const ForgeCad::Kernel::Vec3&, const ForgeCad::Kernel::Vec3&)’
+      kernel/fk_math.h:98:5:
+         98 |     Frame3(const Vec3 &origin, const Vec3 &zDirection, const Vec3 &xReference);
+            |     ^~~~~~
+      • candidate expects 3 arguments, 1 provided
+    • candidate 2: ‘ForgeCad::Kernel::Frame3::Frame3()’
+      kernel/fk_math.h:96:5:
+         96 |     Frame3();
+            |     ^~~~~~
+      • candidate expects 0 arguments, 1 provided
+    • candidate 3: ‘constexpr ForgeCad::Kernel::Frame3::Frame3(const ForgeCad::Kernel::Frame3&)’
+      kernel/fk_math.h:94:7:
+         94 | class Frame3 {
+            |       ^~~~~~
+      • no known conversion for argument 1 from ‘ForgeCad::Kernel::Vec3’ {aka ‘ForgeCad::Kernel::Vec<3>’} to ‘const ForgeCad::Kernel::Frame3&’
+    • candidate 4: ‘constexpr ForgeCad::Kernel::Frame3::Frame3(ForgeCad::Kernel::Frame3&&)’
+      • no known conversion for argument 1 from ‘ForgeCad::Kernel::Vec3’ {aka ‘ForgeCad::Kernel::Vec<3>’} to ‘ForgeCad::Kernel::Frame3&&’

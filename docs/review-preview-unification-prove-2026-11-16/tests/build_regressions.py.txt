@@ -1,0 +1,17 @@
+from pathlib import Path
+import json,shlex,subprocess,os,sys
+root=Path('/home/myungit/Linux_CAD_forFree');out=Path('/tmp/review-previews-refresh');out.mkdir(parents=True,exist_ok=True);stage=out/'stage'
+baseline='--baseline' in sys.argv;release='--app-release' in sys.argv;before='--before-footer' in sys.argv
+entries=json.loads((root/'forgecad-release/compile_commands.json').read_text());flags=shlex.split(next(x for x in entries if x['file'].endswith('/tests/test_viewport.cpp'))['command']);flags=flags[:flags.index('-o')];flags=[x for x in flags if x!='-O3']+['-O0']
+if not baseline:flags=flags[:1]+['-DPREVIEW_ON_SHOWN_API']+([] if release else ['-I'+str(stage)])+flags[1:]
+mode='app-release' if release else 'baseline' if baseline else 'before-footer' if before else 'stage'
+source=out/'regressions.cpp.txt'
+if not source.exists():source=Path(__file__).resolve().with_name('regressions.cpp.txt')
+obj=out/('regressions-'+mode+'.o');subprocess.run(flags+['-x','c++','-c',str(source),'-o',str(obj)],check=True)
+link=shlex.split((root/'forgecad-release/CMakeFiles/forgecad.dir/link.txt').read_text());stageobjs=[] if baseline or release else sorted(stage.glob('*.cpp.o'))
+if before:stageobjs=[out/'before-footer'/p.name if p.name=='forgeCad2026_dialogs_common.cpp.o' else p for p in stageobjs]
+excluded={'forgeCad2026.cpp.o'}|{p.name for p in stageobjs};link=[v for v in link if not v.startswith('-Wl,--dependency-file=') and not any(v.endswith('/'+e) for e in excluded)];i=link.index('-o');name=out/('regressions-'+mode);link[i+1]=str(name);link[1:1]=[str(obj)]+[str(x) for x in stageobjs];subprocess.run(link,cwd=root/'forgecad-release',check=True)
+(out/('link-'+mode+'.json')).write_text(json.dumps({'mode':mode,'private_overlay_objects':[str(x) for x in stageobjs],'command':link},indent=2)+'\n')
+env=os.environ.copy()
+if '--keep-platform' not in sys.argv:env.update(QT_QPA_PLATFORM='offscreen',QT_QPA_OFFSCREEN_NO_GLX='1',LIBGL_ALWAYS_SOFTWARE='1')
+env.update(QT_QPA_PLATFORMTHEME='',QT_QPA_PLATFORMTHEME_QT6='',QT_STYLE_OVERRIDE='Fusion');raise SystemExit(subprocess.run([str(name)],env=env).returncode)

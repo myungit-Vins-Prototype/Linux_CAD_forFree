@@ -268,12 +268,20 @@ FaceIntegrator::FaceIntegrator(const Body &body, FaceId faceId, const Vec3 &refe
                 const Vec3 p = edge.curve->point(t);
                 Sample sample{t, Vec2()};
                 if (first) {
-                    const SurfaceProjection projection = projectPoint(*base_, p);
-                    sample.uv = swapped_ ? Vec2(projection.v, projection.u) : Vec2(projection.u, projection.v);
-                    v0_ = projection.v;
+                    if (pcurve) {
+                        // Una SP-curve approssimata conserva comunque il ramo
+                        // della fin su una cucitura; rifinire da quel parametro.
+                        sample.uv = invert(p, pcurve->point(t), track.acceptance);
+                    } else {
+                        const SurfaceProjection projection = projectPoint(*base_, p);
+                        sample.uv = swapped_ ? Vec2(projection.v, projection.u) : Vec2(projection.u, projection.v);
+                    }
+                    v0_ = sample.uv[1];
                     first = false;
                 } else {
-                    sample.uv = invert(p, previous, track.acceptance);
+                    Vec2 guess = pcurve ? pcurve->point(t) : previous;
+                    unwrap(guess, previous);
+                    sample.uv = invert(p, guess, track.acceptance);
                 }
                 if (!samples.empty()) refine(track, samples.back(), sample, 0, samples);
                 samples.push_back(sample);

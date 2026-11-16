@@ -1,0 +1,20 @@
+#include "fk_surface_tools.h"
+#include "fk_body_check.h"
+#include "fk_body_io.h"
+#include "fk_pcurve.h"
+#include <iostream>
+#include <iomanip>
+using namespace ForgeCad::Kernel;
+Body fixture(bool flat=false) {
+    const int degree=6;std::vector<double> knots(7,0);knots.insert(knots.end(),6,.1);knots.insert(knots.end(),6,.101);knots.insert(knots.end(),7,1);
+    std::vector<Vec3> poles,bottom;
+    for(int i=0;i<19;++i){double x=0;for(int j=1;j<=degree;++j)x+=knots[i+j]/degree;const double z=!flat&&i==9?.0016:0;bottom.emplace_back(x,0,z);poles.emplace_back(x,0,z);poles.emplace_back(x,1,0);}
+    auto support=std::make_shared<BSplineSurface>(6,1,knots,std::vector<double>{0,0,1,1},19,2,poles);
+    std::vector<Vec3> points{{0,0,0},{1,0,0},{1,1,0},{0,1,0}};
+    std::vector<Body::BuildEdge> edges;
+    for(int i=0;i<4;++i){const Vec3 a=points[i],b=points[(i+1)%4];CurvePtr<3> curve=i==0?CurvePtr<3>(std::make_shared<BSplineCurve<3>>(6,knots,bottom)):CurvePtr<3>(std::make_shared<Line<3>>(a,b-a));edges.push_back({i,(i+1)%4,curve,{0,1},1e-9});}
+    Body::BuildFace face;face.surface=support;std::vector<Body::BuildFin> fins;
+    for(int i=0;i<4;++i){const Vec3 a=points[i],b=points[(i+1)%4];auto uv=std::make_shared<Line<2>>(Vec2(a.x(),a.y()),Vec2(b.x()-a.x(),b.y()-a.y()));fins.push_back({i,true,uv,1e-9});}face.loops={fins};return Body::buildSheet(points,edges,{face});
+}
+double denseGap(const Body &body) {double worst=0;for(auto id:body.fins()){const auto&fin=body.fin(id);const auto&edge=body.edge(fin.edge);const auto support=body.face(body.finFace(id)).surface;for(int i=0;i<=10000;++i){const double t=i/10000.;const auto q=fin.pcurve->point(t);worst=std::max(worst,distance(edge.curve->point(t),support->point(q.x(),q.y())));}}return worst;}
+int main(){std::cout<<std::setprecision(17);for(bool flat:{false,true}){const Body source=fixture(flat);const auto bytes=writeBodyBinary(source);const auto face=source.faces().front();std::cout<<"flat="<<flat<<" source_issues="<<checkBody(source,{true,true}).size()<<" source_dense_gap="<<denseGap(source)<<" pcurve_break_count="<<source.fin(source.fins()[0]).pcurve->breakpoints({0,1}).size()<<"\n";try{const Body result=editBodyFacesPoles(source,{{face,{{9,0,{0,0,.0016},1}},{}}},1e-7);const auto s=result.face(face).surface;std::cout<<"accepted=1 output_issues="<<checkBody(result,{true,true}).size()<<" output_dense_gap="<<denseGap(result)<<" source_unchanged="<<(bytes==writeBodyBinary(source))<<" support_change_at_peak="<<distance(s->point(.1005,0),source.face(face).surface->point(.1005,0))<<"\n";}catch(const std::exception&e){std::cout<<"accepted=0 source_unchanged="<<(bytes==writeBodyBinary(source))<<" reason="<<e.what()<<"\n";}}}

@@ -1,0 +1,170 @@
+{
+    "calculation_accuracy": 1e-07,
+    "checks": 65,
+    "failures": 0,
+    "final_shape": {
+        "area": 71950.60886698346,
+        "bounds_hi": [
+            1.0855918359145935e-20,
+            150,
+            159.09585816367044
+        ],
+        "bounds_lo": [
+            -154.37285608401115,
+            -1.4508343650386994e-41,
+            0
+        ],
+        "centroid": [
+            -68.98334272384135,
+            75.00000010695415,
+            50.53543398966709
+        ],
+        "edges": 24,
+        "faces": 11,
+        "fins": 48,
+        "geometry": true,
+        "issues": [
+        ],
+        "loops": 13,
+        "max_edge_tolerance": 1.8925516266514557e-05,
+        "max_pcurve_tolerance": 4.22817044243864e-08,
+        "max_restored_pcurve_tolerance": 4.339880124588309e-11,
+        "max_vertex_tolerance": 1.8925516266514557e-05,
+        "regions": 2,
+        "restored_ellipse_cylinder_fins": [
+            {
+                "affine_in_original_parameter": true,
+                "degree": 1,
+                "edge": 20,
+                "face": 8,
+                "fin": 35,
+                "first": 6.28318402221901,
+                "last": 6.283185307179586,
+                "pcurve_first": 6.28318402221901,
+                "pcurve_last": 6.283185307179586,
+                "pcurve_tolerance": 4.339880124588309e-11,
+                "poles": 2
+            }
+        ],
+        "sha256": "3a3b73656aed9c1bc4de1a2f90c706f9c5369a7487b036913694c7239ba92be4",
+        "sheet": false,
+        "shell_genera": [
+            0
+        ],
+        "shells": 1,
+        "solid_regions": 1,
+        "surface_types": {
+            "0": 8,
+            "1": 1,
+            "7": 2
+        },
+        "vertices": 17,
+        "volume": 696887.8306567447
+    },
+    "genealogy": {
+        "all_named": true,
+        "faces_with_origins": true,
+        "links": 60,
+        "operand_count": 3,
+        "operand_feature_ids": [
+            1,
+            3,
+            6
+        ],
+        "original_surface_carriers": 11,
+        "registered_operands": 3,
+        "valid_links": true
+    },
+    "original_document_id": "{077d8e3b-2483-4083-bfac-4db9c646e904}",
+    "original_sha256": "79887e91d75feb748af19fcdb14cd469cc40e74abab03e3cbeaa12e2d3271f7f",
+    "output_document_id": "{3a1ae096-e6b7-454f-aa58-9acf9cf84323}",
+    "output_path": "/tmp/supporto-review/tests/delivery/Supporto_unito.prt",
+    "output_sha256": "95bdb2d2d27f4db6f8ef6461b39c2a59394024c7fc15238af706394c7e8bb3b6",
+    "rebuilt_genealogy": {
+        "all_named": true,
+        "faces_with_origins": true,
+        "links": 60,
+        "operand_count": 3,
+        "operand_feature_ids": [
+            1,
+            3,
+            6
+        ],
+        "original_surface_carriers": 11,
+        "registered_operands": 3,
+        "valid_links": true
+    },
+    "rebuilt_shape": {
+        "area": 71950.60886698346,
+        "bounds_hi": [
+            1.0855918359145935e-20,
+            150,
+            159.09585816367044
+        ],
+        "bounds_lo": [
+            -154.37285608401115,
+            -1.4508343650386994e-41,
+            0
+        ],
+        "centroid": [
+            -68.98334272384135,
+            75.00000010695415,
+            50.53543398966709
+        ],
+        "edges": 24,
+        "faces": 11,
+        "fins": 48,
+        "geometry": true,
+        "issues": [
+        ],
+        "loops": 13,
+        "max_edge_tolerance": 1.8925516266514557e-05,
+        "max_pcurve_tolerance": 4.22817044243864e-08,
+        "max_restored_pcurve_tolerance": 4.339880124588309e-11,
+        "max_vertex_tolerance": 1.8925516266514557e-05,
+        "regions": 2,
+        "restored_ellipse_cylinder_fins": [
+            {
+                "affine_in_original_parameter": true,
+                "degree": 1,
+                "edge": 20,
+                "face": 8,
+                "fin": 35,
+                "first": 6.28318402221901,
+                "last": 6.283185307179586,
+                "pcurve_first": 6.28318402221901,
+                "pcurve_last": 6.283185307179586,
+                "pcurve_tolerance": 4.339880124588309e-11,
+                "poles": 2
+            }
+        ],
+        "sha256": "3a3b73656aed9c1bc4de1a2f90c706f9c5369a7487b036913694c7239ba92be4",
+        "sheet": false,
+        "shell_genera": [
+            0
+        ],
+        "shells": 1,
+        "solid_regions": 1,
+        "surface_types": {
+            "0": 8,
+            "1": 1,
+            "7": 2
+        },
+        "vertices": 17,
+        "volume": 696887.8306567447
+    },
+    "rebuilt_witnesses": {
+        "continuous_certificate": false,
+        "extra": 0,
+        "input_count": 87,
+        "lost": 0,
+        "output_count": 100
+    },
+    "witnesses": {
+        "continuous_certificate": false,
+        "extra": 0,
+        "input_count": 87,
+        "lost": 0,
+        "output_count": 100
+    }
+}

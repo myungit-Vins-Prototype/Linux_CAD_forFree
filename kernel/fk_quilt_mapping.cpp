@@ -1,4 +1,5 @@
 #include "fk_quilt_mapping.h"
+#include "fk_planar_flatten.h"
 #include "fk_mapping_fit.h"
 #include "fk_bspline_surface.h"
 #include "fk_classify_uv.h"
@@ -11,6 +12,7 @@
 #include "fk_body_check.h"
 #include <algorithm>
 #include <map>
+#include <limits>
 #include <tuple>
 #include <stdexcept>
 namespace ForgeCad::Kernel {
@@ -124,14 +126,26 @@ struct Chart {
     Interval u, v;
     double u0 = 0, sign = 1, vScale = 1, vOffset = 0;
     SurfacePtr flat;
+    bool affinePlane = false;
+    double planeSpeedU = 0, planeSpeedV = 0;
     FaceParameterClassifier classifier;
-    Chart(SurfaceTargetFace t, Interval uw, Interval vw, double origin)
+    Chart(SurfaceTargetFace t, Interval uw, Interval vw, double origin, bool useAffinePlane = false)
         : target(t)
         , u(uw)
         , v(vw)
         , u0(origin)
         , classifier(*t.body, t.face, linearResolution() * .1) {
         const auto &surface = *t.body->face(t.face).surface;
+        affinePlane = useAffinePlane && surface.type() == SurfaceType::Plane;
+        if (affinePlane) {
+            const auto &frame = static_cast<const Plane &>(surface).frame();
+            planeSpeedU = norm(frame.xDir());
+            planeSpeedV = norm(frame.yDir());
+            require(std::isfinite(planeSpeedU) && planeSpeedU > 0
+                    && std::isfinite(planeSpeedV) && planeSpeedV > 0,
+                "Appiattimento: metrica piana degenere.");
+            return;
+        }
         std::map<double, std::shared_ptr<ArcSlice>> slices;
         std::size_t cachedIntervals = 0;
         const auto slice = [&](double value) {
@@ -168,10 +182,19 @@ struct Chart {
         return { d[0].x(), norm(s[2]) / d[2].x() };
     }
     double xAt(double a, double b) const {
+        if (affinePlane)
+            return sign * planeSpeedU * (a - u0);
         const auto at = originAndScale(b);
         return sign * at.second * (flat->point(a, b).x() - at.first);
     }
     double parameter(double x, double b) const {
+        if (affinePlane) {
+            const double result = u0 + sign * x / planeSpeedU;
+            const double margin = linearResolution() / planeSpeedU;
+            require(std::isfinite(result) && std::isfinite(margin) && u.contains(result, margin),
+                "Insieme di superfici: punto oltre lo sviluppo trasversale.");
+            return std::clamp(result, u.lo, u.hi);
+        }
         if (x == 0)
             return u0;
         double lo = u.lo, hi = u.hi;
@@ -202,9 +225,11 @@ struct Chart {
 struct SurfaceQuiltMap::Data {
     std::vector<Chart> charts;
     std::shared_ptr<Meridian> meridian;
-    double sense = 1, primarySide = 1;
+    double sense = 1, primarySide = 1, planeAnchorY = 0;
     Vec2 flatPoint(std::size_t patch, const Vec2 &uv) const {
         const auto &c = charts[patch];
+        if (c.affinePlane)
+            return Vec2(c.xAt(uv.x(), uv.y()), sense * c.planeSpeedV * (uv.y() - planeAnchorY));
         return Vec2(c.xAt(uv.x(), uv.y()),
             sense * (meridian->lengthAt((uv.y() - c.vOffset) / c.vScale) - meridian->zero));
     }
@@ -218,7 +243,16 @@ struct SurfaceQuiltMap::Data {
         require(isFinite(flat), "Insieme di superfici: punto non finito.");
         double v;
         const auto found = parameters ? parameters->find(flat.y()) : std::map<double, double>::iterator { };
-        if (parameters && found != parameters->end())
+        if (charts.front().affinePlane) {
+            const auto &chart = charts.front();
+            v = planeAnchorY + sense * flat.y() / chart.planeSpeedV;
+            const double margin = linearResolution() / chart.planeSpeedV;
+            // Preserve the finite longitudinal window even for carrierOnly,
+            // just as Meridian::parameter did before the affine specialization.
+            require(std::isfinite(v) && std::isfinite(margin) && chart.v.contains(v, margin),
+                "Insieme di superfici: lunghezza fuori dominio.");
+            v = std::clamp(v, chart.v.lo, chart.v.hi);
+        } else if (parameters && found != parameters->end())
             v = found->second;
         else {
             v = meridian->parameter(sense * flat.y());
@@ -333,7 +367,8 @@ SurfaceQuiltMap::SurfaceQuiltMap(const std::vector<SurfaceTargetFace> &targets, 
     require(
         wa.first.contains(originA, 1e-12) && wa.second.contains(anchor.y(), 1e-12), "Insieme di superfici: ancoraggio fuori dominio.");
     data->meridian = std::make_shared<Meridian>(a.surface->uIso(originA), wa.second, anchor.y());
-    data->charts.emplace_back(targets[0], wa.first, wa.second, originA);
+    data->planeAnchorY = anchor.y();
+    data->charts.emplace_back(targets[0], wa.first, wa.second, originA, targets.size() == 1);
     if (targets.size() == 2) {
         const auto w = window(first, targets[1].face);
         data->charts.emplace_back(targets[1], w.first, w.second, originB);
@@ -366,6 +401,7 @@ Body SurfaceQuiltMap::flattenSheet(const Frame3 &plane, double tolerance,
     std::vector<Body::BuildFace> faces;
     std::map<int, int> vertexIndices, edgeIndices;
     std::vector<int> vertexOrigins, edgeOrigins, faceOrigins;
+    std::vector<double> edgeErrors;
     SurfaceFlattenStats measured;
     measured.minimumStretch = measured.minimumAreaRatio = INFINITY;
     measured.maximumStretch = measured.maximumAreaRatio = 0;
@@ -408,21 +444,58 @@ Body SurfaceQuiltMap::flattenSheet(const Frame3 &plane, double tolerance,
                 auto old = edgeIndices.find(fin.edge.index);
                 if (old == edgeIndices.end()) {
                     double deviation = 0;
-                    auto curve = fitCurve(mapped, edge.range, fin.pcurve->breakpoints(edge.range), budget, &deviation);
+                    CurvePtr<3> curve;
+                    if (chart.affinePlane) {
+                        const auto image = detail::planarFlattenImage(fin.pcurve, edge.range,
+                            Vec2(chart.u0, data_->planeAnchorY), chart.sign * chart.planeSpeedU,
+                            data_->sense * chart.planeSpeedV, plane, budget);
+                        if (image) {
+                            curve = image->curve;
+                            deviation = image->error;
+                            // This is the gap between numerically evaluated endpoints,
+                            // not an enclosure of exact NURBS endpoint evaluation.
+                            // Charge it in addition to the continuous curve bound.
+                            const double endpointGap = std::max(
+                                detail::planarFlattenVertexError(curve->point(edge.range.lo), points[start]),
+                                detail::planarFlattenVertexError(curve->point(edge.range.hi), points[end]));
+                            deviation = std::nextafter(image->error + endpointGap,
+                                std::numeric_limits<double>::infinity());
+                            require(std::isfinite(deviation) && deviation <= budget,
+                                "Appiattimento: curva e vertici oltre budget.");
+                        }
+                    }
+                    if (!curve)
+                        curve = fitCurve(mapped, edge.range, fin.pcurve->breakpoints(edge.range), budget, &deviation);
                     require(deviation <= budget, "Appiattimento: approssimazione del contorno fuori dal budget.");
                     measured.boundaryDeviation = std::max(measured.boundaryDeviation, deviation);
                     const int index = int(edges.size());
                     edges.push_back({start, end, curve, edge.range, connection});
                     edgeOrigins.push_back(fin.edge.index);
+                    edgeErrors.push_back(deviation);
                     old = edgeIndices.emplace(fin.edge.index, index).first;
                 } else {
                     // Il bordo comune e' unico per identita' topologica.
                     // Il secondo uso deve concordare con la stessa curva.
                     const auto &common = edges[old->second];
-                    for (int k = 0; k <= 32; ++k) {
-                        const double t = edge.range.lo + (edge.range.hi - edge.range.lo) * k / 32.;
-                        require(distance(common.curve->point(t), mapped(t)) <= connection,
-                            "Appiattimento: contorni incompatibili sulla giunzione comune.");
+                    std::optional<detail::PlanarFlattenImage> image;
+                    if (chart.affinePlane)
+                        image = detail::planarFlattenImage(fin.pcurve, edge.range,
+                            Vec2(chart.u0, data_->planeAnchorY), chart.sign * chart.planeSpeedU,
+                            data_->sense * chart.planeSpeedV, plane, budget);
+                    if (image) {
+                        const double residual = detail::planarFlattenCurveError(common.curve, image->curve);
+                        const double combined = std::nextafter(residual + image->error,
+                            std::numeric_limits<double>::infinity());
+                        require(std::isfinite(combined) && combined <= budget,
+                            "Appiattimento: contorno riutilizzato oltre budget.");
+                        edgeErrors[old->second] = std::max(edgeErrors[old->second], combined);
+                        measured.boundaryDeviation = std::max(measured.boundaryDeviation, combined);
+                    } else {
+                        for (int k = 0; k <= 32; ++k) {
+                            const double t = edge.range.lo + (edge.range.hi - edge.range.lo) * k / 32.;
+                            require(distance(common.curve->point(t), mapped(t)) <= connection,
+                                "Appiattimento: contorni incompatibili sulla giunzione comune.");
+                        }
                     }
                 }
                 fins.push_back({old->second, fin.sense, nullptr, 0});
@@ -436,8 +509,17 @@ Body SurfaceQuiltMap::flattenSheet(const Frame3 &plane, double tolerance,
             Vec3 a[9], origin[9], h[9], h0[9];
             face.surface->evaluate(uv.x(), uv.y(), 2, a);
             face.surface->evaluate(chart.u0, uv.y(), 2, origin);
-            chart.flat->evaluate(uv.x(), uv.y(), 2, h);
-            chart.flat->evaluate(chart.u0, uv.y(), 2, h0);
+            if (chart.affinePlane) {
+                for (int i = 0; i < 9; ++i)
+                    h[i] = h0[i] = Vec3();
+                h[0] = Vec3(chart.planeSpeedU * (uv.x() - chart.u0), uv.y(), 0);
+                h0[0] = Vec3(0, uv.y(), 0);
+                h[3] = h0[3] = Vec3(chart.planeSpeedU, 0, 0);
+                h[1] = h0[1] = Vec3(0, 1, 0);
+            } else {
+                chart.flat->evaluate(uv.x(), uv.y(), 2, h);
+                chart.flat->evaluate(chart.u0, uv.y(), 2, h0);
+            }
             const double speed = norm(origin[3]), scale = speed / h0[3].x();
             const double scaleV = dot(origin[3], origin[4]) / (speed * h0[3].x())
                 - speed * h0[4].x() / (h0[3].x() * h0[3].x());
@@ -445,7 +527,8 @@ Body SurfaceQuiltMap::flattenSheet(const Frame3 &plane, double tolerance,
             const double xv = chart.sign * (scaleV * (h[0].x() - h0[0].x()) + scale * (h[1].x() - h0[1].x()));
             Vec3 meridian[2];
             data_->meridian->curve->evaluate((uv.y() - chart.vOffset) / chart.vScale, 1, meridian);
-            const double yv = data_->sense * norm(meridian[1]) / chart.vScale;
+            const double yv = chart.affinePlane ? data_->sense * chart.planeSpeedV
+                : data_->sense * norm(meridian[1]) / chart.vScale;
             const double E = dot(a[3], a[3]), F = dot(a[3], a[1]), G = dot(a[1], a[1]);
             const double determinant = dot(cross(a[3], a[1]), cross(a[3], a[1]));
             require(determinant > 0 && std::isfinite(determinant), "Appiattimento: metrica sorgente degenere.");
@@ -479,20 +562,52 @@ Body SurfaceQuiltMap::flattenSheet(const Frame3 &plane, double tolerance,
     }
     auto result = Body::buildSheet(points, edges, faces);
     require(computePCurves(result) == 0, "Appiattimento: contorni piani non rappresentabili.");
+    if (data_->charts.front().affinePlane) {
+        std::map<int, double> finalEdgeErrors;
+        const auto finalEdges = result.edges();
+        require(finalEdges.size() == edgeErrors.size(), "Appiattimento: bordi finali incompatibili.");
+        for (std::size_t i = 0; i < finalEdges.size(); ++i)
+            finalEdgeErrors.emplace(finalEdges[i].index, edgeErrors[i]);
+        for (auto faceId : result.faces())
+            for (auto loopId : result.face(faceId).loops)
+                for (auto finId : result.loopFins(loopId)) {
+                    cancellationPoint();
+                    const auto &fin = result.fin(finId);
+                    // Conics remain explicit legacy fallback; the recognized
+                    // direct images and fitted cubics are checked from their
+                    // final, stored coefficients after planarCurve conversion.
+                    auto basis = result.edge(fin.edge).curve;
+                    while (basis->type() == CurveType::Trimmed)
+                        basis = static_cast<const TrimmedCurve<3> &>(*basis).basis();
+                    if (basis->type() == CurveType::BSpline) {
+                        const double bridge = detail::planarFlattenPCurveError(result.edge(fin.edge).curve,
+                            fin.pcurve, plane, budget);
+                        const double combined = std::nextafter(finalEdgeErrors.at(fin.edge.index) + bridge,
+                            std::numeric_limits<double>::infinity());
+                        require(std::isfinite(combined) && combined <= budget,
+                            "Appiattimento: contorno e SP-curve oltre budget.");
+                        measured.boundaryDeviation = std::max(measured.boundaryDeviation, combined);
+                    }
+                }
+    }
     const auto issues = checkBody(result, {true, true});
     if (!issues.empty())
         throw std::domain_error("Appiattimento: " + issues.front().message);
+    BodyHistory preparedHistory;
     if (history) {
-        *history = makeHistory({&source}, result);
+        preparedHistory = makeHistory({&source}, result);
         const auto declare = [&](EntityKind kind, const auto &ids, const std::vector<int> &origins) {
             require(ids.size() == origins.size(), "Appiattimento: genealogia incoerente.");
             for (std::size_t i = 0; i < ids.size(); ++i)
-                history->declareOrigins(kind, ids[i].index, {{0, kind, origins[i], HistoryRelation::Modified}});
+                preparedHistory.declareOrigins(kind, ids[i].index, {{0, kind, origins[i], HistoryRelation::Modified}});
         };
         declare(EntityKind::Vertex, result.vertices(), vertexOrigins);
         declare(EntityKind::Edge, result.edges(), edgeOrigins);
         declare(EntityKind::Face, result.faces(), faceOrigins);
     }
+    cancellationPoint();
+    if (history)
+        *history = std::move(preparedHistory);
     if (stats)
         *stats = measured;
     return result;
@@ -546,14 +661,20 @@ Body SurfaceQuiltMap::bend(
     // Il fit deve conservarle; raffinare attraverso tali discontinuita'
     // di derivata produce griglie enormi senza raggiungere il budget.
     std::vector<double> longitudinal=data_->meridian->cuts;
-    for(const auto &chart:data_->charts)for(double v:chart.flat->vBreakpoints(chart.v))
-        longitudinal.push_back((v-chart.vOffset)/chart.vScale);
+    for (const auto &chart : data_->charts) {
+        if (chart.affinePlane)
+            continue;
+        for (double v : chart.flat->vBreakpoints(chart.v))
+            longitudinal.push_back((v-chart.vOffset)/chart.vScale);
+    }
     std::sort(longitudinal.begin(),longitudinal.end());
     longitudinal.erase(std::unique(longitudinal.begin(),longitudinal.end()),longitudinal.end());
     const auto along=s*options.sourcePlane.xDir()+c*options.sourcePlane.yDir();
     for(double v:longitudinal) {
         if(v<data_->meridian->cuts.front()||v>data_->meridian->cuts.back())continue;
-        const double y=data_->sense*(data_->meridian->lengthAt(v)-data_->meridian->zero);
+        const double y = data_->charts.front().affinePlane
+            ? data_->sense * data_->charts.front().planeSpeedV * (v-data_->planeAnchorY)
+            : data_->sense*(data_->meridian->lengthAt(v)-data_->meridian->zero);
         cuts.emplace_back(Frame3(options.sourcePlane.origin()+(y-options.shift.y())*along,along,options.sourcePlane.zDir()));
     }
     const auto faceImage=[&](FaceId id) {
@@ -587,14 +708,22 @@ Body SurfaceQuiltMap::bend(
         if(std::fabs(height)>roundoff) {
             Box uvBounds;
             const double budget=.1*std::min(options.tolerance,linearResolution());
-            for(auto loop:face.loops)for(auto use:source.loopFins(loop)) {
-                const auto &edge=source.edge(source.fin(use).edge);
-                const auto uvCurve=fitCurve([&](double t){const auto uv=image.parameters(edge.curve->point(t));return Vec3(uv.x(),uv.y(),0);},
-                    edge.range,edge.curve->breakpoints(edge.range),1e-12);
-                uvBounds.add(curveBox(*uvCurve,edge.range));
+            if (carrier.surface->type() == SurfaceType::Plane) {
+                // L'offset Plane e' una traslazione esatta del carrier e non
+                // usa finestre UV. Nessun fit dei contorni serve a costruirlo.
+                const auto &chart = data_->charts[patch];
+                image.surface = offsetSurface(*carrier.surface, (carrier.sense ? 1. : -1.) * height,
+                    chart.u, chart.v, budget);
+            } else {
+                for(auto loop:face.loops)for(auto use:source.loopFins(loop)) {
+                    const auto &edge=source.edge(source.fin(use).edge);
+                    const auto uvCurve=fitCurve([&](double t){const auto uv=image.parameters(edge.curve->point(t));return Vec3(uv.x(),uv.y(),0);},
+                        edge.range,edge.curve->breakpoints(edge.range),1e-12);
+                    uvBounds.add(curveBox(*uvCurve,edge.range));
+                }
+                image.surface=offsetSurface(*carrier.surface,(carrier.sense?1.:-1.)*height,
+                    {uvBounds.lo.x(),uvBounds.hi.x()},{uvBounds.lo.y(),uvBounds.hi.y()},budget);
             }
-            image.surface=offsetSurface(*carrier.surface,(carrier.sense?1.:-1.)*height,
-                {uvBounds.lo.x(),uvBounds.hi.x()},{uvBounds.lo.y(),uvBounds.hi.y()},budget);
         }
         return image;
     };

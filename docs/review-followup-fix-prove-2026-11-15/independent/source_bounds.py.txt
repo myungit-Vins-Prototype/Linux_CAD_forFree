@@ -1,0 +1,22 @@
+from pathlib import Path
+from fractions import Fraction as F
+import json,re,math
+out=Path('/tmp/forgecad-followup-fix-20261115/independent')
+s=(out/'probe.cpp').read_text();raw=re.search(r'const std::vector<double> z=\{([^}]+)\}',s).group(1)
+z=[F(float(t)) for t in raw.split(',')];x=[F(i/27.) for i in range(28)]
+def derivative(c):return [(len(c)-1)*(b-a) for a,b in zip(c,c[1:])]
+def split(c):
+ left=[c[0]];right=[c[-1]]
+ while len(c)>1:
+  c=[(a+b)/2 for a,b in zip(c,c[1:])];left.append(c[0]);right.append(c[-1])
+ return left,right[::-1]
+def tightened_bound(c,depth):
+ curves=[c]
+ for _ in range(depth):curves=[part for old in curves for part in split(old)]
+ return max(abs(v) for old in curves for v in old)
+x1=derivative(x);x2=derivative(x1);z1=derivative(z);z2=derivative(z1)
+a=min(x1);b=max(abs(t) for t in x1);c=max(abs(t) for t in x2);d=tightened_bound(z1,7);e=tightened_bound(z2,7)
+curvature=(b*e+d*c)/(a*a*a)
+result={'degree':27,'poles':28,'maximum_abs_z_control':float(max(abs(v) for v in z)),'minimum_x_derivative':float(a),'maximum_abs_x_second_derivative':float(c),'maximum_abs_z_first_derivative_bound':float(d),'maximum_abs_z_second_derivative_bound':float(e),'curvature_upper_bound':float(curvature),'curvature_radius_lower_bound':float(1/curvature),'offset':.001,'distance_times_curvature_bound':float(F(.001)*curvature),'method':'Exact Fraction arithmetic on actual binary-double controls; derivative Bernstein coefficients, 7 midpoint subdivisions, convex-hull bounds; k<= (max|xprime| max|zsecond|+max|zprime| max|xsecond|)/min(xprime)^3'}
+(out/'source-bounds.json').write_text(json.dumps(result,indent=2)+'\n');print(json.dumps(result,indent=2))
+assert F(.001)*curvature<1

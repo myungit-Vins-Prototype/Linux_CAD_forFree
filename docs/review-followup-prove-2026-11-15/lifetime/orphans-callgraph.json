@@ -1,0 +1,90 @@
+[
+  {
+    "symbol": "CadViewport::setSelectedPointPosition",
+    "incoming_calls_or_references": []
+  },
+  {
+    "symbol": "CadViewport::setEdgePickLinear",
+    "incoming_calls_or_references": []
+  },
+  {
+    "symbol": "CadViewport::setExtendPickCallback",
+    "incoming_calls_or_references": []
+  },
+  {
+    "symbol": "CadViewport::resumeExtendPick",
+    "incoming_calls_or_references": []
+  },
+  {
+    "symbol": "CadViewport::constraintsVisible",
+    "incoming_calls_or_references": []
+  },
+  {
+    "symbol": "CadViewport::sectionEnabled",
+    "incoming_calls_or_references": []
+  },
+  {
+    "symbol": "CadViewport::geometrySnap",
+    "incoming_calls_or_references": []
+  },
+  {
+    "symbol": "CadViewport::gridSnap",
+    "incoming_calls_or_references": []
+  },
+  {
+    "symbol": "CadViewport::basisMatrix",
+    "incoming_calls_or_references": []
+  },
+  {
+    "symbol": "CadViewport::normalizedViewAngle",
+    "incoming_calls_or_references": []
+  },
+  {
+    "symbol": "CadViewport::extrusionNames",
+    "incoming_calls_or_references": []
+  },
+  {
+    "symbol": "StoryboardTree::firstFeature",
+    "incoming_calls_or_references": []
+  },
+  {
+    "symbol": "ForgeCad::DrawingSheetEditor::setModelProvider",
+    "incoming_calls_or_references": []
+  },
+  {
+    "symbol": "ForgeCad::forgeIntersectRay",
+    "incoming_calls_or_references": []
+  },
+  {
+    "symbol": "ForgeCad::modelBodyFeatures",
+    "incoming_calls_or_references": []
+  },
+  {
+    "symbol": "ForgeCad::usesSketch",
+    "incoming_calls_or_references": []
+  },
+  {
+    "symbol": "ForgeCad::commandIconNames",
+    "incoming_calls_or_references": []
+  },
+  {
+    "symbol": "ForgeCad::nearestBodyEdge",
+    "incoming_calls_or_references": []
+  },
+  {
+    "symbol": "ForgeCad::appendFixedReferenceLine",
+    "incoming_calls_or_references": []
+  },
+  {
+    "symbol": "ForgeCad::Kernel::Corner::otherFace",
+    "incoming_calls_or_references": []
+  },
+  {
+    "symbol": "ForgeCad::Kernel::ChainEdge::inPlane",
+    "incoming_calls_or_references": []
+  },
+  {
+    "symbol": "ForgeCad::Kernel::BandMatrix::band",
+    "incoming_calls_or_references": []
+  }
+]

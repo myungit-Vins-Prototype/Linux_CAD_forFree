@@ -1,0 +1,11 @@
+from pathlib import Path
+import subprocess,shlex,json,hashlib,time
+p=Path('/tmp/blend-cavity-review/tests');repo=Path('/home/myungit/Linux_CAD_forFree');core=p.parent/'core';out=p/'sanitizer';out.mkdir(exist_ok=True)
+flags=['/usr/bin/c++','-O1','-g','-DNDEBUG','-std=gnu++17','-Wall','-Wextra','-Wpedantic','-ffp-contract=off','-fsanitize=address,undefined','-fno-omit-frame-pointer','-I'+str(repo/'kernel'),'-I'+str(repo/'kernel/tests'),'-DFORGECAD_SOURCE_DIR="'+str(repo)+'"']
+sources={'blend':core/'fk_blend_surface.cpp','probe':p/'probe_cavity_variants.cpp','test_main':repo/'kernel/tests/fk_test_main.cpp','regressions':p/'test_blend_cavity_regressions.cpp'}
+meta={'instrumented_sources':{str(s):hashlib.sha256(s.read_bytes()).hexdigest() for s in sources.values()},'baseline_library':hashlib.sha256((p/'baseline/libforgekernel.a').read_bytes()).hexdigest(),'scope':'four instrumented source TUs; each executable links two/three of them; all remaining kernel Release','leak_check':True,'commands':[]}
+for label,source in sources.items():
+ command=flags+['-c',str(source),'-o',str(out/(label+'.o'))];meta['commands'].append(command);print(shlex.join(command),flush=True);subprocess.run(command,check=True)
+for label,objects in [('probe',['probe','blend']),('regressions',['test_main','regressions','blend'])]:
+ command=flags+[str(out/(obj+'.o')) for obj in objects]+[str(p/'baseline/libforgekernel.a'),'-o',str(out/label)];meta['commands'].append(command);print(shlex.join(command),flush=True);subprocess.run(command,check=True)
+(out/'build-metadata.json').write_text(json.dumps(meta,indent=2)+'\n')

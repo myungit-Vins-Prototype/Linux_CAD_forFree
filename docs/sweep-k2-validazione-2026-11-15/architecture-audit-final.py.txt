@@ -1,0 +1,47 @@
+from pathlib import Path
+import hashlib,json,re
+root=Path('/home/myungit/Linux_CAD_forFree');out=Path('/tmp/forgecad-k2-production-20261115/seam/bridge')
+g=json.loads((root/'docs/architecture/graph.json').read_text());html=(root/'docs/architecture/index.html').read_text()
+embedded=json.loads(re.search(r'<script id="graph-data" type="application/json">(.*?)</script>',html,re.S).group(1))
+ids=['kernel/fk_sweep.cpp','kernel/fk_sweep.h','kernel/fk_sweep_surface_validation.cpp','kernel/fk_sweep_surface_validation.h','kernel/fk_sweep_caps.cpp','kernel/fk_sweep_caps.h','kernel/fk_sweep_atlas.cpp','kernel/fk_sweep_atlas.h','kernel/fk_sweep_analytic_bridge.cpp','kernel/fk_sweep_analytic_bridge.h','kernel/tests/test_sweep.cpp','kernel/tests/test_sweep_global.cpp','kernel/tests/test_sweep_validation.cpp','kernel/tests/test_sweep_caps.cpp','kernel/tests/test_sweep_analytic_bridge.cpp','kernel/fk_bspline_surface.cpp','kernel/fk_nurbs.cpp','kernel/fk_pcurve.cpp','kernel/fk_profile.cpp','kernel/fk_body_check.cpp']
+nodes={n['id']:n for n in g['nodes']};edges={(e['source'],e['target'],e['kind']):e for e in g['edges']};fail=[];checks=[];warnings=[]
+def check(ok,msg):
+ checks.append({'pass':bool(ok),'check':msg})
+ if not ok:fail.append(msg)
+check(embedded==g,'HTML embedded graph structurally equals graph.json')
+check(len(nodes)==len(g['nodes']),'Node IDs unique')
+check(not g['analysis']['errors'],'AST diagnostics empty')
+check(all(e['source'] in nodes and e['target'] in nodes for e in g['edges']),'Every edge endpoint exists')
+node_report=[]
+for name in ids:
+ check(name in nodes,'Focus node '+name)
+ if name not in nodes:continue
+ n=nodes[name];data=(root/name).read_bytes();check(g['hashes'].get(name)==hashlib.sha256(data).hexdigest(),'Current hash '+name)
+ actual_lines=len(data.decode().splitlines());check(n['lines']==actual_lines,'Current line count '+name)
+ check(bool(n['description'].strip()),'Description '+name)
+ incoming={kind:[e['source'] for e in g['edges'] if e['target']==name and e['kind']==kind] for kind in ('call','include')}
+ outgoing={kind:[e['target'] for e in g['edges'] if e['source']==name and e['kind']==kind] for kind in ('call','include')}
+ node_report.append({'id':name,'description':n['description'],'incoming':incoming,'outgoing':outgoing,'symbols':n['symbols']})
+pairs=[('kernel/fk_sweep.cpp','kernel/fk_sweep_atlas.cpp'),('kernel/fk_sweep.cpp','kernel/fk_sweep_surface_validation.cpp'),('kernel/fk_sweep.cpp','kernel/fk_sweep_analytic_bridge.cpp'),('kernel/fk_sweep.cpp','kernel/fk_pcurve.cpp'),('kernel/fk_sweep.cpp','kernel/fk_body_check.cpp'),('kernel/fk_sweep_atlas.cpp','kernel/fk_sweep_caps.cpp'),('kernel/fk_sweep_caps.cpp','kernel/fk_sweep_surface_validation.cpp'),('kernel/tests/test_sweep_validation.cpp','kernel/fk_sweep_surface_validation.cpp'),('kernel/tests/test_sweep_caps.cpp','kernel/fk_sweep_caps.cpp'),('kernel/tests/test_sweep_caps.cpp','kernel/fk_sweep.cpp'),('kernel/tests/test_sweep_analytic_bridge.cpp','kernel/fk_sweep_analytic_bridge.cpp'),('kernel/tests/test_sweep_analytic_bridge.cpp','kernel/fk_sweep_atlas.cpp'),('kernel/tests/test_sweep_analytic_bridge.cpp','kernel/fk_sweep.cpp'),('kernel/tests/test_sweep_global.cpp','kernel/fk_sweep.cpp'),('kernel/tests/test_sweep_global.cpp','kernel/fk_body_check.cpp'),('kernel/tests/test_sweep_global.cpp','kernel/fk_mass.cpp')]
+for a,b in pairs:
+ check((a,b,'call') in edges,'Call incoming/outgoing '+a+' -> '+b)
+includes=[('kernel/fk_sweep.cpp','kernel/fk_sweep_atlas.h'),('kernel/fk_sweep.cpp','kernel/fk_sweep_analytic_bridge.h'),('kernel/fk_sweep_atlas.h','kernel/fk_sweep_surface_validation.h'),('kernel/fk_sweep_atlas.h','kernel/fk_sweep_caps.h'),('kernel/fk_sweep_caps.h','kernel/fk_sweep_surface_validation.h'),('kernel/fk_sweep_caps.h','kernel/fk_profile.h'),('kernel/fk_sweep_caps.h','kernel/fk_topology.h'),('kernel/fk_sweep_analytic_bridge.h','kernel/fk_bspline_surface.h')]
+for stem in ['surface_validation','caps','atlas','analytic_bridge']:includes.append(('kernel/fk_sweep_'+stem+'.cpp','kernel/fk_sweep_'+stem+'.h'))
+for a,b in includes:check((a,b,'include') in edges,'Include separate from call '+a+' -> '+b)
+required={'kernel/fk_sweep.cpp':['longitudinalPCurve','sectionPCurve'],'kernel/fk_sweep_surface_validation.cpp':['SweepSurfaceQuery::Data::Data','SweepSurfaceQuery::SweepSurfaceQuery','SweepSurfaceQuery::projection','SweepSurfaceQuery::capContact','geometryNet','splitNet','derivative','projectedDerivative','prepare','Validator::local','Validator::monotone','Validator::coverage'],'kernel/fk_sweep_caps.cpp':['CapDomainIndex::classifyBoxBudget','capDomainsDisjoint','validateSweepSurfaceCap'],'kernel/fk_sweep_analytic_bridge.cpp':['boundSweepAnalyticBridge','analyticProfile','trig']}
+for name,symbols in required.items():
+ for s in symbols:check(any(x.endswith('::'+s) for x in nodes[name]['symbols']),'Symbol '+name+': '+s)
+for name in ids[11:15]:
+ source=(root/name).read_text();check(not re.search(r'#include\s*[<"](?:BRep|GProp|TopoDS|Standard|gp_)',source),'No OCCT dependency '+name)
+ if name.endswith('test_sweep_global.cpp'):
+  helpers=['circleRegion','arcSegment','lineSegment','k2Disk']
+  check(all(any(x==h or x.endswith('::'+h) for x in nodes[name]['symbols']) for h in helpers),'Global tests resolve local helper definitions')
+check(('kernel/tests/test_sweep_global.cpp','kernel/tests/test_sweep.cpp','call') not in edges,'Global helpers do not call OCCT sweep test TU')
+check('non certifica autointersezioni globali' not in nodes['kernel/fk_sweep.cpp']['description'],'Old local-only sweep disclaimer removed')
+if 'Prima del B-rep' in nodes['kernel/fk_sweep.cpp']['description']:warnings.append('Sweep description says cap validation occurs before B-rep construction; actual cap validation uses the built Body. Prefer prima di pubblicare il risultato.')
+queryedge=edges.get(('kernel/fk_sweep_caps.cpp','kernel/fk_sweep_surface_validation.cpp','call'),{})
+check(any('SweepSurfaceQuery::projection' in s['symbol'] for s in queryedge.get('sites',[])) and any('SweepSurfaceQuery::capContact' in s['symbol'] for s in queryedge.get('sites',[])),'Cached Query projection/contact calls present')
+result={'pass':not fail,'nodes':len(g['nodes']),'edges':len(g['edges']),'translationUnits':len(g['analysis']['units']),'focusCount':len(ids),'checks':checks,'failures':fail,'warnings':warnings,'focusNodes':node_report,'graphSha256':hashlib.sha256((root/'docs/architecture/graph.json').read_bytes()).hexdigest()}
+(out/'architecture-audit-final.json').write_text(json.dumps(result,indent=2,ensure_ascii=False)+'\n')
+lines=[f"Architecture audit: {'PASS' if not fail else 'FAIL'}",f"{len(ids)} focus nodes; {len(g['nodes'])} total nodes; {len(g['edges'])} relations; {len(g['analysis']['units'])} translation units",f"{sum(c['pass'] for c in checks)}/{len(checks)} checks passed"]+['FAIL '+x for x in fail]+['NOTE '+x for x in warnings]
+(out/'architecture-audit-final.log').write_text('\n'.join(lines)+'\n');print('\n'.join(lines))

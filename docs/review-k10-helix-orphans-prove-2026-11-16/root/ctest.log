@@ -1,0 +1,397 @@
+UpdateCTestConfiguration  from :/home/myungit/Linux_CAD_forFree/forgecad-release/DartConfiguration.tcl
+Test project /home/myungit/Linux_CAD_forFree/forgecad-release
+Constructing a list of tests
+Done constructing a list of tests
+Updating test list for fixtures
+Added 0 tests to meet fixture requirements
+Checking test dependency graph...
+Checking test dependency graph end
+test 17
+      Start  17: forgecad_storyboard_review_tests
+
+17: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_view_tests "--storyboard-review"
+17: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release
+17: Environment variables: 
+17:  QT_QPA_PLATFORM=offscreen
+17:  QT_QPA_OFFSCREEN_NO_GLX=1
+17:  QT_QPA_PLATFORMTHEME=
+17:  QT_STYLE_OVERRIDE=Fusion
+17:  FORGECAD_EXAMPLE_DIR=/home/myungit/Documenti/File_Esempio
+17: Test timeout computed to be: 120
+17: PASS storyboard review: rimappatura estrazioni, riferimenti a copie, Undo/Redo, persistenza e detach iniettato
+ 1/21 Test  #17: forgecad_storyboard_review_tests ..................   Passed    0.61 sec
+test 20
+      Start  20: forgecad_sketch_projection_tests
+
+20: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_view_tests "--sketch-projection"
+20: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release
+20: Environment variables: 
+20:  QT_QPA_PLATFORM=offscreen
+20:  QT_QPA_OFFSCREEN_NO_GLX=1
+20:  QT_QPA_PLATFORMTHEME=
+20:  QT_STYLE_OVERRIDE=Fusion
+20:  FORGECAD_EXAMPLE_DIR=/home/myungit/Documenti/File_Esempio
+20: Test timeout computed to be: 60
+20: PASS GUI doppia proiezione: selezione precisa, anteprima, Undo/Redo, dipendenze, due rigenerazioni, codec cache/no-cache, errori e guardie senza fit
+ 2/21 Test  #20: forgecad_sketch_projection_tests ..................   Passed    0.05 sec
+test 21
+      Start  21: forgecad_sketch_projection_fit_validation_tests
+
+21: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_view_tests "--sketch-projection-fit-validation"
+21: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release
+21: Environment variables: 
+21:  QT_QPA_PLATFORM=offscreen
+21:  QT_QPA_OFFSCREEN_NO_GLX=1
+21:  QT_QPA_PLATFORMTHEME=
+21:  QT_STYLE_OVERRIDE=Fusion
+21:  FORGECAD_EXAMPLE_DIR=/home/myungit/Documenti/File_Esempio
+21: Test timeout computed to be: 180
+21: wrapped-cylinder witness=7.25784e-08 budget=1e-07 poles=97 PASS
+21: wrapped-rigid-pose witness=2.95275e-08 budget=1e-07 poles=385 PASS
+21: nested-trim-conical-left witness=1.82928e-08 budget=1e-07 poles=193 PASS
+21: spiral-custom-frame witness=1.12783e-08 budget=1e-07 poles=385 PASS
+21: affine-shear witness=5.02038e-08 budget=1e-07 poles=193 PASS
+21: absolute-parameter-trim witness=1.29004e-08 budget=1e-07 poles=193 PASS
+21: small-affine-scale witness=6.31644e-08 budget=1e-07 poles=49 PASS
+21: tight-accuracy witness=2.90609e-09 budget=1e-08 poles=385 PASS
+21: naked-legacy-compatibility witness=1.16722e-08 budget=1e-07 poles=27 PASS
+21: alias-million-turns-YZ PASS
+21: alias-million-turns-XZ-trim PASS
+21: public-failure-cancellation-atomicity PASS
+21: original-provider-contracts PASS
+21: groups=13 pass=13 fail=0
+ 3/21 Test  #21: forgecad_sketch_projection_fit_validation_tests ...   Passed    0.06 sec
+test 22
+      Start  22: forgecad_projected_curve_reference_tests
+
+22: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_view_tests "--projected-curve-references"
+22: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release
+22: Environment variables: 
+22:  QT_QPA_PLATFORM=offscreen
+22:  QT_QPA_OFFSCREEN_NO_GLX=1
+22:  QT_QPA_PLATFORMTHEME=
+22:  QT_STYLE_OVERRIDE=Fusion
+22:  FORGECAD_EXAMPLE_DIR=/home/myungit/Documenti/File_Esempio
+22: Test timeout computed to be: 60
+22: PASS riferimenti impliciti: cache esatta, altro piano, input interni, PointOnCurve/quote/Pierce, codec, snapshot e genealogia rami
+ 4/21 Test  #22: forgecad_projected_curve_reference_tests ..........   Passed    0.03 sec
+test 36
+      Start  36: forgecad_storyboard_panel_selection_tests
+
+36: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_view_tests "--storyboard-panel-selection"
+36: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release
+36: Environment variables: 
+36:  QT_QPA_PLATFORM=offscreen
+36:  QT_QPA_OFFSCREEN_NO_GLX=1
+36:  QT_QPA_PLATFORMTHEME=
+36:  QT_STYLE_OVERRIDE=Fusion
+36:  FORGECAD_EXAMPLE_DIR=/home/myungit/Documenti/File_Esempio
+36: Test timeout computed to be: 10000000
+36: PASS storyboard panel selection
+36: PASS loft failure diagnostics
+36: PASS mirror deletion once with linked sketches
+ 5/21 Test  #36: forgecad_storyboard_panel_selection_tests .........   Passed    0.08 sec
+test 51
+      Start  51: forgecad_blend_history_tests
+
+51: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_view_tests "--blend-history"
+51: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release
+51: Environment variables: 
+51:  QT_QPA_PLATFORM=offscreen
+51:  QT_QPA_OFFSCREEN_NO_GLX=1
+51:  QT_QPA_PLATFORMTHEME=
+51:  QT_STYLE_OVERRIDE=Fusion
+51:  FORGECAD_EXAMPLE_DIR=/home/myungit/Documenti/File_Esempio
+51: Test timeout computed to be: 60
+ 6/21 Test  #51: forgecad_blend_history_tests ......................   Passed    0.05 sec
+test 73
+      Start  73: forgecad_sketch_tools_refs_tests
+
+73: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_view_tests "--sketch-tools-refs"
+73: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release
+73: Environment variables: 
+73:  QT_QPA_PLATFORM=offscreen
+73:  QT_QPA_OFFSCREEN_NO_GLX=1
+73:  QT_QPA_PLATFORMTHEME=
+73:  QT_STYLE_OVERRIDE=Fusion
+73:  FORGECAD_EXAMPLE_DIR=/home/myungit/Documenti/File_Esempio
+73: Test timeout computed to be: 60
+73: PASS sketch tools, unique point attachments, circular face origin, source labels, broken references, codec and Undo/Redo
+ 7/21 Test  #73: forgecad_sketch_tools_refs_tests ..................   Passed    0.08 sec
+test 83
+      Start  83: forgecad_sketch_reference_usage_tests
+
+83: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_view_tests "--sketch-reference-usage"
+83: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release
+83: Environment variables: 
+83:  QT_QPA_PLATFORM=offscreen
+83:  QT_QPA_OFFSCREEN_NO_GLX=1
+83:  QT_QPA_PLATFORMTHEME=
+83:  QT_STYLE_OVERRIDE=Fusion
+83:  FORGECAD_EXAMPLE_DIR=/home/myungit/Documenti/File_Esempio
+83: Test timeout computed to be: 10000000
+83: PASS uso riferimenti: clic temporanei, nessun falso Undo/dirty, orfani, vincoli, consumatori, Offset/Pattern, codec ed eliminazione Undo/Redo
+ 8/21 Test  #83: forgecad_sketch_reference_usage_tests .............   Passed    0.02 sec
+test 85
+      Start  85: forgecad_sketch_construction_tests
+
+85: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_view_tests "--sketch-construction"
+85: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release
+85: Environment variables: 
+85:  QT_QPA_PLATFORM=offscreen
+85:  QT_QPA_OFFSCREEN_NO_GLX=1
+85:  QT_QPA_PLATFORMTHEME=
+85:  QT_STYLE_OVERRIDE=Fusion
+85:  FORGECAD_EXAMPLE_DIR=/home/myungit/Documenti/File_Esempio
+85: Test timeout computed to be: 10000000
+85: PASS costruzione: menu persistente, on/off, rendering, bounds, picking, storyboard, cache nascoste, documento e loft invariati
+ 9/21 Test  #85: forgecad_sketch_construction_tests ................   Passed    0.17 sec
+test 89
+      Start  89: forgecad_sketch_reference_workflow_tests
+
+89: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_view_tests "--sketch-reference-workflow"
+89: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release
+89: Environment variables: 
+89:  QT_QPA_PLATFORM=offscreen
+89:  QT_QPA_OFFSCREEN_NO_GLX=1
+89:  QT_QPA_PLATFORMTHEME=
+89:  QT_STYLE_OVERRIDE=Fusion
+89:  FORGECAD_EXAMPLE_DIR=/home/myungit/Documenti/File_Esempio
+89: Test timeout computed to be: 30
+89: PASS sketch reference workflow
+10/21 Test  #89: forgecad_sketch_reference_workflow_tests ..........   Passed    0.38 sec
+test 102
+      Start 102: forgecad_sketch_editing_tests
+
+102: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_view_tests "--sketch-editing"
+102: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release
+102: Environment variables: 
+102:  QT_QPA_PLATFORM=offscreen
+102:  QT_QPA_OFFSCREEN_NO_GLX=1
+102:  QT_QPA_PLATFORMTHEME=
+102:  QT_STYLE_OVERRIDE=Fusion
+102:  FORGECAD_EXAMPLE_DIR=/home/myungit/Documenti/File_Esempio
+102: Test timeout computed to be: 60
+102: PASS sketch DOF drag, circle center/radius/hover, closed spline seam and deferred rebuild/save/Undo/Redo
+11/21 Test #102: forgecad_sketch_editing_tests .....................   Passed    0.04 sec
+test 103
+      Start 103: forgecad_helix_start_angle_tests
+
+103: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_view_tests "--helix-start-angle"
+103: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release
+103: Environment variables: 
+103:  QT_QPA_PLATFORM=offscreen
+103:  QT_QPA_OFFSCREEN_NO_GLX=1
+103:  QT_QPA_PLATFORMTHEME=
+103:  QT_STYLE_OVERRIDE=Fusion
+103:  FORGECAD_EXAMPLE_DIR=/home/myungit/Documenti/File_Esempio
+103: Test timeout computed to be: 60
+103: PASS helix start angle: 1440 combinazioni, rigenerazione e Salva/riapertura
+12/21 Test #103: forgecad_helix_start_angle_tests ..................   Passed    0.02 sec
+test 125
+      Start 125: forgecad_individual_fill_tests
+
+125: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_view_tests "--individual-fill"
+125: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release
+125: Environment variables: 
+125:  QT_QPA_PLATFORM=offscreen
+125:  QT_QPA_OFFSCREEN_NO_GLX=1
+125:  QT_QPA_PLATFORMTHEME=
+125:  QT_STYLE_OVERRIDE=Fusion
+125:  FORGECAD_EXAMPLE_DIR=/home/myungit/Documenti/File_Esempio
+125: Test timeout computed to be: 10000000
+125: PASS individual fill influence, picking identity and persistence
+13/21 Test #125: forgecad_individual_fill_tests ....................   Passed    0.09 sec
+test 126
+      Start 126: forgecad_fill_surface_tests
+
+126: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_view_tests "--fill-document"
+126: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release
+126: Environment variables: 
+126:  QT_QPA_PLATFORM=offscreen
+126:  QT_QPA_OFFSCREEN_NO_GLX=1
+126:  QT_QPA_PLATFORMTHEME=
+126:  QT_STYLE_OVERRIDE=Fusion
+126:  FORGECAD_EXAMPLE_DIR=/home/myungit/Documenti/File_Esempio
+126: Test timeout computed to be: 10000000
+126: continuita' 0: 897 ms, contorno entro 6.9e-08 mm, guide entro 1e-07 mm.
+126: continuita' 1: 1038 ms, contorno entro 2.1e-07 mm, guide entro 2.3e-07 mm, 0.033 mm vicino ai bordi in tangenza, tangenza entro 0.00091°.
+126: la curva guida 1 arriva sul bordo a 15.86 gradi dal piano tangente della faccia adiacente: guida e tangenza non sono compatibili
+126: la curva guida 2 arriva sul bordo a 15.86 gradi dal piano tangente della faccia adiacente: guida e tangenza non sono compatibili
+126: continuita' 2: 1647 ms, contorno entro 2.7e-07 mm, guide entro 2.6e-07 mm, 0.036 mm vicino ai bordi in tangenza, tangenza entro 0.0009°, curvatura entro 0.013 1/mm.
+126: la curva guida 1 arriva sul bordo a 15.86 gradi dal piano tangente della faccia adiacente: guida e tangenza non sono compatibili
+126: la curva guida 2 arriva sul bordo a 15.86 gradi dal piano tangente della faccia adiacente: guida e tangenza non sono compatibili
+126: PASS fill surface
+14/21 Test #126: forgecad_fill_surface_tests .......................   Passed    3.91 sec
+test 129
+      Start 129: forgecad_ellipse_extremes_tests
+
+129: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_view_tests "--ellipse-extremes"
+129: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release
+129: Environment variables: 
+129:  QT_QPA_PLATFORM=offscreen
+129:  QT_QPA_OFFSCREEN_NO_GLX=1
+129:  QT_QPA_PLATFORMTHEME=
+129:  QT_STYLE_OVERRIDE=Fusion
+129:  FORGECAD_EXAMPLE_DIR=/home/myungit/Documenti/File_Esempio
+129: Test timeout computed to be: 10000000
+129: PASS ellipse extremes: exact geometry, 5 DOF, all four references, constraints, mouse, snap, Undo/Redo, codec70/legacy and command
+15/21 Test #129: forgecad_ellipse_extremes_tests ...................   Passed    0.09 sec
+test 195
+      Start 195: forgekernel_history_tests
+
+195: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_history_tests
+195: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+195: Test timeout computed to be: 10000000
+195: [  OK  ] HistoryInteriorPointOfFaces
+195: [  OK  ] HistorySubtractCylinderThroughBox
+195: [  OK  ] HistorySplitFaceKeepsAmbiguousName
+195: [  OK  ] HistoryUniteMergesCoplanarFaces
+195: [  OK  ] HistoryBlendFaceGeneratedFromEdge
+195: [  OK  ] HistoryComposeAcrossOperations
+195: [  OK  ] HistorySameIndexTransform
+195: [  OK  ] HistoryLabelledFacesAndLongNames
+195: [  OK  ] HistoryPreservesNamesAfterReload
+195: [  OK  ] HistoryRootWithNullOperands
+195: [  OK  ] HistoryDeclaredOriginsOverrideGeometry
+195: [  OK  ] HistoryRejectsInvalidDeclarations
+195: [  OK  ] HistoryDeclaredCompositionCoverage
+195: [  OK  ] HistoryOffsetKeepsFaceNamesAcrossSurfaceChanges
+195: [  OK  ] HistoryOffsetComposesRectangularAndTrimmedCreases
+195: [  OK  ] HistoryBooleanDeclaresCutSplitAndUnchangedFaces
+195: [  OK  ] HistoryBooleanAndUnifyComposeEveryMergedFace
+195: [  OK  ] HistoryBooleanRetainsBothCoincidentOperands
+195: [  OK  ] HistoryBooleanEmptyDisjointAndFailureOutputs
+195: [  OK  ] HistoryImprintDeclaresBeforeAndAfterUnify
+195: [  OK  ] HistoryBooleanDeclarationsAreThreadDeterministic
+195: [  OK  ] HistoryBlendDeclaresTrimmedFacesAndGeneratedEdge
+195: [  OK  ] HistoryBlendCornerComesFromOriginalVertex
+195: [  OK  ] HistoryBlendClosedPlanarEdgeKeepsOriginalSource
+195: [  OK  ] HistoryBlendGeneralChainsAndOpenSheet
+195: [  OK  ] HistoryAsymmetricChamferAndRejectedOutputs
+195: [  OK  ] HistoryExtrusionSourcesSurviveLoopOrderingAndReversal
+195: [  OK  ] HistoryExtrusionClosedCurvesAndOpenChains
+195: [  OK  ] HistoryDeclaredFaceAliasesOverrideGeometricLabels
+195: [  OK  ] HistoryExtractAndSewFacesPreserveDeclaredSources
+195: [  OK  ] HistoryRevolutionLoopSourcesAndAxis
+195: [  OK  ] HistoryRevolutionSignedAngularCaps
+195: [  OK  ] HistoryRevolutionCurvesSheetsAndRejectedOutputs
+195: [  OK  ] HistorySweepAndLoftKeepSectionSources
+195: [  OK  ] HistoryPrimitivesAndSurfaceRootsEmitLabels
+195: [  OK  ] HistoryTransformsDraftAndExtractedEdgesAreExplicit
+195: [  OK  ] HistoryTrimExtendShellAndProjectionComposeOrigins
+195: [  OK  ] HistoryTransportDoesNotInventMissingBranches
+195: 38/38 test superati
+16/21 Test #195: forgekernel_history_tests .........................   Passed    0.43 sec
+test 199
+      Start 199: forgekernel_blend_profile_tests
+
+199: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_blend_profile_tests
+199: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+199: Test timeout computed to be: 60
+199: [  OK  ] BlendProfilesConicFamilies
+199: [  OK  ] BlendProfilesVariableArcLength
+199: [  OK  ] BlendProfilesValidationAndNoPropagation
+199: [  OK  ] BlendProfilesTangentPropagationToggle
+199: [  OK  ] BlendProfilesTangentPathStations
+199: [  OK  ] BlendProfilesIndependentPaths
+199: 6/6 test superati
+17/21 Test #199: forgekernel_blend_profile_tests ...................   Passed    0.66 sec
+test 201
+      Start 201: forgekernel_sketch_projection_tests
+
+201: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_sketch_projection_tests
+201: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+201: Test timeout computed to be: 60
+201: PASS 21 gruppi proiezione schizzo su schizzo
+18/21 Test #201: forgekernel_sketch_projection_tests ...............   Passed    0.06 sec
+test 211
+      Start 211: forgekernel_curve_fit_validation_tests
+
+211: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_curve_fit_validation_tests
+211: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+211: Test timeout computed to be: 120
+211: [  OK  ] CurveFitCertifiedDegree27OffsetPoseScaleRational
+211: [  OK  ] CurveFitCertifiedNestedTrims
+211: [  OK  ] CurveFitCertifiedInvalidAndAtomic
+211: [  OK  ] CurveFitCertifiedUnresolvedAndCancellation
+211: [  OK  ] CurveFitCertifiedConicParameterNotAssumedPolynomial
+211: [  OK  ] CurveFitCertifiedRevolutionMeridian
+211: [  OK  ] CurveFitLegacyInvalidInputAndAtomic
+211: [  OK  ] CurveFitCertifiedRescaledWeightsTrimTransform
+211: [  OK  ] CurveFitCertifiedMultipleSpansUnclamped
+211: [  OK  ] CurveFitCertifiedProviderDomainAndCancellation
+211: [  OK  ] CurveFitCertifiedClosedNurbsAcrossSeam
+211: 11/11 test superati
+19/21 Test #211: forgekernel_curve_fit_validation_tests ............   Passed   18.58 sec
+test 227
+      Start 227: forgekernel_blend_cavity_tests
+
+227: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_blend_cavity_tests
+227: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+227: Test timeout computed to be: 90
+227: [  OK  ] BlendCavityContourIsClosedAndIndependentOfSeed
+227:     /home/myungit/Linux_CAD_forFree/kernel/tests/fk_test_main.cpp:36: eccezione: blendEdges: il contatto esce dal dominio del fianco F0; il passaggio su un altro supporto non e' ancora gestito per questo raggio
+227: [ FAIL ] BlendCavityWholeRimKeepsRadiusHistoryAndClosedTrims (1 controlli falliti)
+227: [  OK  ] BlendMitreReverseSupportsPreservesRationalSurface
+227: [  OK  ] BlendSectionExtensionKeepsOriginalGeometry
+227: [  OK  ] BlendCavityRejectsConsumedSideFacesBeforeDocument
+227: [  OK  ] BlendOpposedSplitsAllSeedsAndWrap
+227: [  OK  ] BlendOpposedSplitsMirrorScalePoseAndRadius
+227: [  OK  ] BlendClosedPlanarTangentContourUsesLocalTrims
+227: 7/8 test superati
+20/21 Test #227: forgekernel_blend_cavity_tests ....................***Failed   26.30 sec
+[  OK  ] BlendCavityContourIsClosedAndIndependentOfSeed
+    /home/myungit/Linux_CAD_forFree/kernel/tests/fk_test_main.cpp:36: eccezione: blendEdges: il contatto esce dal dominio del fianco F0; il passaggio su un altro supporto non e' ancora gestito per questo raggio
+[ FAIL ] BlendCavityWholeRimKeepsRadiusHistoryAndClosedTrims (1 controlli falliti)
+[  OK  ] BlendMitreReverseSupportsPreservesRationalSurface
+[  OK  ] BlendSectionExtensionKeepsOriginalGeometry
+[  OK  ] BlendCavityRejectsConsumedSideFacesBeforeDocument
+[  OK  ] BlendOpposedSplitsAllSeedsAndWrap
+[  OK  ] BlendOpposedSplitsMirrorScalePoseAndRadius
+[  OK  ] BlendClosedPlanarTangentContourUsesLocalTrims
+7/8 test superati
+
+test 231
+      Start 231: forgekernel_curve_projection_tests
+
+231: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_curve_projection_tests
+231: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+231: Test timeout computed to be: 180
+231: [  OK  ] CurveProjectionRationalKnotsWeightsAndJets
+231: [  OK  ] CurveProjectionAffineShearNestedWrappers
+231: [  OK  ] CurveProjectionLinesDegenerateAndUnsupportedConics
+231: [  OK  ] CurveProjectionInvalidAndCancellation
+231: [  OK  ] CurveProjectionFillRationalAndBodyRoundtrip
+231: 5/5 test superati
+21/21 Test #231: forgekernel_curve_projection_tests ................   Passed    0.02 sec
+
+The following tests passed:
+	forgecad_storyboard_review_tests
+	forgecad_sketch_projection_tests
+	forgecad_sketch_projection_fit_validation_tests
+	forgecad_projected_curve_reference_tests
+	forgecad_storyboard_panel_selection_tests
+	forgecad_blend_history_tests
+	forgecad_sketch_tools_refs_tests
+	forgecad_sketch_reference_usage_tests
+	forgecad_sketch_construction_tests
+	forgecad_sketch_reference_workflow_tests
+	forgecad_sketch_editing_tests
+	forgecad_helix_start_angle_tests
+	forgecad_individual_fill_tests
+	forgecad_fill_surface_tests
+	forgecad_ellipse_extremes_tests
+	forgekernel_history_tests
+	forgekernel_blend_profile_tests
+	forgekernel_sketch_projection_tests
+	forgekernel_curve_fit_validation_tests
+	forgekernel_curve_projection_tests
+
+95% tests passed, 1 tests failed out of 21
+
+Total Test time (real) =  51.74 sec
+
+The following tests FAILED:
+	227 - forgekernel_blend_cavity_tests (Failed)
+Errors while running CTest

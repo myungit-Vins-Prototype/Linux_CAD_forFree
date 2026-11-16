@@ -1,0 +1,9 @@
+from pathlib import Path
+import json,shlex,subprocess,hashlib
+r=Path('/home/myungit/Linux_CAD_forFree');p=Path(__file__).parent;s=p.parent/'implementation';c=next(x for x in json.loads((r/'forgecad-release/compile_commands.json').read_text()) if x['file'].endswith('/kernel/fk_offset.cpp'))
+for n in ['fk_curve_fit_bounds.cpp','fk_curve_fit_bounds.h']:(p/(n if n.endswith('.h') else n+'.metric-snapshot')).write_bytes((s/n).read_bytes())
+for n,src in [('fk_curve_fit_bounds',p/'fk_curve_fit_bounds.cpp.metric-snapshot'),('metric',p/'metric.cpp')]:
+ cmd=shlex.split(c['command']);cmd[cmd.index('-o')+1]=str(p/(n+'.o'));cmd[cmd.index('-c')+1]=str(src);cmd+=['-x','c++','-I'+str(r/'kernel')];cmd.insert(cmd.index('-c'),'-x');cmd.insert(cmd.index('-c'),'c++');subprocess.run(cmd,cwd=c['directory'],check=True)
+subprocess.run(['/usr/bin/c++','-o',str(p/'metric'),str(p/'metric.o'),str(p/'fk_curve_fit_bounds.o'),str(r/'forgecad-release/kernel/libforgekernel.a'),'-lpthread'],check=True)
+with (p/'metric.log').open('w') as f:subprocess.run([str(p/'metric')],stdout=f,check=True)
+(p/'metric-source.sha256').write_text(hashlib.sha256((p/'fk_curve_fit_bounds.cpp.metric-snapshot').read_bytes()).hexdigest()+' kernel/fk_curve_fit_bounds.cpp\n')

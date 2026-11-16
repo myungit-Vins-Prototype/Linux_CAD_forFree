@@ -1,0 +1,23 @@
+{
+  "all_baseline_files_unchanged": true,
+  "before": {
+    "kernel/fk_blend_mitre.cpp": "d8906658ec8aebff65c70a6f916c673b2e1341546ba3d4abcba5276efd5607a1",
+    "kernel/fk_blend_mitre.h": "0a6a7b706d4800aefe05b07802be8791985d6a0574c6d2e8fa3a4703ae0229e6",
+    "kernel/fk_blend_surface.cpp": "dfad2aa7ca0996210a2882a349d518e9746989ea19b132ed8a459dfe53909ca8",
+    "kernel/fk_blend.cpp": "7836d93a0ded90a0917733bad0acfa72d8d94955c68c28e28517cd5ee787c807",
+    "kernel/fk_curve_fit_bounds.cpp": "3faf91d68ee1511dd31c2c6a37a6c51dd1da8a49286c54873739b102b268052e",
+    "kernel/fk_curve_fit_bounds.h": "62dcaa3a96ad3a0aad4dc144ca138b3c03e78f44b98da18656b100d916b930a9",
+    "kernel/fk_affine_surface_fit.cpp": "4f00481ed10f996cc45d339f70283b5d2ecbcd41efc9f9d4dd2399c2bbb4cfea",
+    "kernel/fk_affine_surface_fit.h": "112bc1720e2049e0f99ddff182c75748312d1838b786a6c0e8d68705f850f4fa"
+  },
+  "now": {
+    "kernel/fk_blend_mitre.cpp": "d8906658ec8aebff65c70a6f916c673b2e1341546ba3d4abcba5276efd5607a1",
+    "kernel/fk_blend_mitre.h": "0a6a7b706d4800aefe05b07802be8791985d6a0574c6d2e8fa3a4703ae0229e6",
+    "kernel/fk_blend_surface.cpp": "dfad2aa7ca0996210a2882a349d518e9746989ea19b132ed8a459dfe53909ca8",
+    "kernel/fk_blend.cpp": "7836d93a0ded90a0917733bad0acfa72d8d94955c68c28e28517cd5ee787c807",
+    "kernel/fk_curve_fit_bounds.cpp": "3faf91d68ee1511dd31c2c6a37a6c51dd1da8a49286c54873739b102b268052e",
+    "kernel/fk_curve_fit_bounds.h": "62dcaa3a96ad3a0aad4dc144ca138b3c03e78f44b98da18656b100d916b930a9",
+    "kernel/fk_affine_surface_fit.cpp": "4f00481ed10f996cc45d339f70283b5d2ecbcd41efc9f9d4dd2399c2bbb4cfea",
+    "kernel/fk_affine_surface_fit.h": "112bc1720e2049e0f99ddff182c75748312d1838b786a6c0e8d68705f850f4fa"
+  }
+}

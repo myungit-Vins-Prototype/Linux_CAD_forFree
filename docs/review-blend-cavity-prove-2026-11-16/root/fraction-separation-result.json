@@ -1,0 +1,24 @@
+{
+  "pass": true,
+  "scope": "all closed parameter cells of frozen original carrier, exact rational arithmetic; single bad curve point only",
+  "input_sha256": "c46f7f6b5f74e85c9f990f0c9be019994fd5afe6af945e9beec477ca105b8d1f",
+  "curve_point": [
+    "-331936038284855231/9007199254740992",
+    "171009602989581285/18014398509481984",
+    "432374851913958259/9007199254740992"
+  ],
+  "edge_budget_exact": "1800116110564053/4722366482869645213696",
+  "threshold_exact": "9000580552820265/2361183241434822606848",
+  "global_lower_bound_exact": "1371391383451268488865613639420779/340282366920938463463374607431768211456",
+  "global_lower_bound_display_mm": 4.030157060033319e-06,
+  "threshold_display_mm": 3.8118941363275445e-06,
+  "on_carrier_corner_sensitivity": true,
+  "clamped_endpoint_checks": true,
+  "initial_patches": 602,
+  "visited": 618,
+  "accepted_leaves": 610,
+  "max_depth": 8,
+  "v_knot_insertions": 586,
+  "seconds": 3.003889177000019,
+  "limitations": "Frozen intermediate serialized B-rep coefficients, not a certificate for every point of either old or corrected curve. Test direction is arbitrary; no projector optimality assumed."
+}

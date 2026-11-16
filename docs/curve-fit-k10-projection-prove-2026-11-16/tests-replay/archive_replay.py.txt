@@ -1,0 +1,14 @@
+from pathlib import Path
+import shutil,hashlib,json,datetime,subprocess
+r=Path('/home/myungit/Linux_CAD_forFree');w=Path('/tmp/projection-replay-tests');dest=r/'docs/curve-fit-k10-projection-prove-2026-11-16/tests-replay';dest.mkdir(parents=True,exist_ok=True)
+for p in w.iterdir():
+ if p.is_file() and p.suffix in ['.py','.cpp','.log','.json','.txt','.md']:
+  target=dest/(p.name+'.txt' if p.suffix in ['.py','.cpp'] else p.name);shutil.copy2(p,target)
+for rel in ['kernel/tests/test_projection_fit_validation.cpp','kernel/fk_project.cpp','kernel/fk_project.h','kernel/fk_curve_fit_bounds.cpp','kernel/fk_curve_fit_bounds.h','cad_forge.cpp','cad_forge.h']:
+ shutil.copy2(r/rel,dest/(rel.replace('/','__')+'.txt'))
+shutil.copy2(r/'forgecad-release/CMakeFiles/forgecad.dir/link.txt',dest/'app-original-link.txt')
+files=[p for p in w.iterdir() if p.is_file()]+[r/'forgecad-release/kernel/libforgekernel.a']
+(dest/'all-input-output-hashes.txt').write_text(''.join(hashlib.sha256(p.read_bytes()).hexdigest()+'  '+str(p)+'\n' for p in sorted(files)))
+(dest/'environment.json').write_text(json.dumps({'utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'compiler':subprocess.check_output(['/usr/bin/c++','--version'],text=True).splitlines()[0],'uname':subprocess.check_output(['uname','-a'],text=True).strip(),'repository':str(r),'staging':str(w)},indent=2)+'\n')
+(dest/'archive-hashes.txt').write_text(''.join(hashlib.sha256(p.read_bytes()).hexdigest()+'  '+p.name+'\n' for p in sorted(dest.iterdir()) if p.is_file() and p.name!='archive-hashes.txt'))
+print(dest);print('archived',len(list(dest.iterdir())),'files')

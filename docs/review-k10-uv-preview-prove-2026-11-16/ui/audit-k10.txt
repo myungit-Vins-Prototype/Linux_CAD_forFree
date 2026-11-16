@@ -1,0 +1,70 @@
+Audit indipendente READ-ONLY K10 PlaneUV, 16/11/2026
+Esito: nessun nuovo difetto concreto o bloccante individuato nello scope controllato.
+Non equivale a prova globale di correttezza del kernel o dei fallback non migrati.
+
+Fonti controllate: tre file privati confrontati col repository, senza modificarli.
+Nessuna modifica al repository, ai tre sorgenti privati o ai rapporti sigillati.
+
+1. Duale proiezione / residuo (fk_curve_fit_bounds.cpp:1669-1736).
+La costruzione conserva gli intervalli omogenei originali H,W da prepareSource.
+Per n=X cross Y e n2=n dot n, la proiezione usa H-n*(n dot(H-O*W))/n2;
+la curva candidata UV e' sollevata con O+X*u+Y*v, usando aritmetica I outward.
+La divisione per W e il limite normato sono quelli di positionOnOriginal:413-441.
+projection confronta con la proiezione ortogonale geometrica, residual con E originale;
+il secondo include dunque scarti normali preesistenti. Non viene sostituito con
+un surrogato gia' arrotondato o con un massimo su campioni.
+
+2. Snapshot, domini e rifiuti (bounds.cpp:238-321,1671-1696,1723-1729).
+prepareSource possiede coefficienti, trasformazioni applicate sotto intervalli;
+le callback catturano shared_ptr<Source>, O/X/Y copiati e intervallo richiesto.
+Non trattengono curve/superfici utente. BSpline richiesta contenuta nel dominio;
+Line ammette intervallo finito. Il controllo esplicito attraversa ogni wrapper
+Trimmed/Transformed e rifiuta richieste esterne. Query fuori range/nonfinite e
+candidati nonfiniti restituiscono infinito; input riconosciuti invalidi falliscono.
+Plane non ha dominio UV finito; non manca una guardia di dominio della superficie.
+La conservazione dei coefficienti originali+proiettati e' contata prima della copia,
+con cap2milioni, evitando sottrazioni size_t sottozero tramite guardia count<=1milione.
+Le discontinuita' interne spline non sono un buco agli estremi: il costruttore
+validateKnotVector le proibisce (fk_bspline_basis.cpp:25-29).
+
+3. Metrica UV separata (fk_offset.cpp:1259-1357).
+certificateOwnsMetric ha default false; fitCurve e fitCurveCertified pubblici
+continuano a usare massimo campioni euclidei + bound. Il solo helper privato
+fitPlanePCurveCertified attiva true. Le valutazioni campione restano controllate
+per finitezza, ma il loro errore in unita' UV non entra nel budget mm del piano.
+I due siti migrati usano il certificato projection con budget0.1*tolerance;
+residual viene verificato separatamente contro il budget fin finale. Nessuna
+alterazione delle soglie linearResolution o delle tolleranze pubblicate osservata.
+
+4. Schema cubico e nodi (fk_offset.cpp:697-721).
+Oltre a grado3/nonrazionale/numero poli3n+1 e dominio identico, sono controllati
+numero nodi, quattro estremi bloccati, ogni campata crescente finita e tutte
+le ripetizioni interne triple. Non basta il numero di poli per fingere Bezier.
+La verifica oracle riceve i quattro poli effettivi di ciascuna campata.
+
+5. Assemblaggio (fk_offset.cpp:723-750, offsetFaces e offsetJoinedFaces).
+I contratti registrano indici RAW faccia/edge e budget per ogni fin prima
+assemblaggio; AssemblyMap da fk_exchange.cpp:645-650 riassocia gli ID effettivi.
+Il range edge emesso deve coincidere col RAW. Si ricostruiscono entrambi gli
+oracoli dal supporto/edge effettivi e si ricontrollano tutte le fin emesse della
+coppia faccia/edge. Il multinsieme ordinato dei budget verifica anche numero fin,
+perdita/duplicazione o allargamento del budget, senza riaggancio per vicinanza.
+Il senso fin non richiede un'inversione del parametro: il contratto S(Q(t))-E(t)
+usa il parametro edge comune indipendentemente dal verso di percorrenza del loop.
+I budget sono gli stessi del codice precedente: finOld+10*tolerance e,
+nel joined, finOld+max(edgeBudget,10*tolerance).
+
+Prove ripetute, senza ricompilare/modificare sorgenti altrui:
+- /tmp/k10-uv-review/core/probe_guard: exit0,6guard cases passed.
+- /tmp/k10-uv-review/tests/test_uv_offset_validation_stage_v2: exit0,10passed0failed.
+Log separati k10-guards.log e k10-existing-validation.log nella stessa cartella.
+I binari preesistenti risultano temporalmente successivi agli ultimi sorgenti
+ispezionati; non e' stata ricostruita indipendentemente la loro intera link provenance.
+Le prove pubbliche/providerguard erano gia' dell'altro agente: questo replay non
+e' una seconda campagna indipendente ne' un controllo aggiuntivo Fraction.
+L'audit indipendente qui e' la revisione dei contratti e delle implementazioni.
+
+SHA256 dei sorgenti privati ispezionati:
+d170150fbf55dd68415d800baac04cd2f2a6182ec3ea6f6d53f0fabad49a5b41  /tmp/k10-uv-review/core/fk_curve_fit_bounds.h
+3faf91d68ee1511dd31c2c6a37a6c51dd1da8a49286c54873739b102b268052e  /tmp/k10-uv-review/core/fk_curve_fit_bounds.cpp
+acc3fbd56d2a7abfb3eb91004b9defe9dbe088537b0066f783537f0f7d0bdbcf  /tmp/k10-uv-review/core/fk_offset.cpp

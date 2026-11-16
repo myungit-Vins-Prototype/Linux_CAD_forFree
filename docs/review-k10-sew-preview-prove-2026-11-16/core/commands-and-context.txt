@@ -1,0 +1,39 @@
+Comandi eseguiti — prototipo privato cucitura Plane
+Directory: /home/myungit/Linux_CAD_forFree
+
+c++ -std=c++17 -O2 -g -Wall -Wextra -Wpedantic -fno-fast-math -ffp-contract=off -DFORGEKERNEL_HAS_FLOAT_FROM_CHARS=1 -I/tmp/k10-sew-review/core -Ikernel -c /tmp/k10-sew-review/core/fk_exchange.cpp -o /tmp/k10-sew-review/core/fk_exchange.o
+c++ -std=c++17 -O2 -g -Wall -Wextra -Wpedantic -fno-fast-math -ffp-contract=off -I/tmp/k10-sew-review/core -Ikernel -c /tmp/k10-sew-review/core/fk_offset.cpp -o /tmp/k10-sew-review/core/fk_offset.o
+cp kernel/fk_sew.cpp /tmp/k10-sew-review/core/fk_sew.cpp
+c++ -std=c++17 -O2 -g -Wall -Wextra -Wpedantic -fno-fast-math -ffp-contract=off -I/tmp/k10-sew-review/core -Ikernel -c /tmp/k10-sew-review/core/fk_sew.cpp -o /tmp/k10-sew-review/core/fk_sew.o
+
+La copia sew.cpp è invariata. La ricompilazione serve perché RawFin ha nuovi
+metadati temporanei: una libreria ibrida con sew compilato sul vecchio layout
+sarebbe una prova invalida. I tre oggetti espliciti sostituiscono i rispettivi
+simboli prima dell'archivio kernel Release nella riga di collegamento.
+
+c++ -std=c++17 -O2 -g -fno-fast-math -ffp-contract=off -I/tmp/k10-sew-review/core -Ikernel /tmp/k10-sew-review/tests/probe_sew.cpp /tmp/k10-sew-review/core/fk_sew.o /tmp/k10-sew-review/core/fk_exchange.o /tmp/k10-sew-review/core/fk_offset.o forgecad-release/kernel/libforgekernel.a -pthread -o /tmp/k10-sew-review/core/probe_sew
+/tmp/k10-sew-review/core/probe_sew
+
+Il primo probe pubblico corretto emette checker0,7edge,input invariati;
+a t=3/128 misura7.541253639348905e-10mm controcap1e-7mm,
+finTolerance4.236443986235251e-9mm ededgeTolerance0. La suite finale e gli
+export sono gestiti dall'agente test; i loro log non sono duplicati qui.
+
+Il probe seguente include exchange.cpp nello stesso TU per raggiungere
+l'helper privato postassembly senza API o macro aggiuntive di produzione.
+
+c++ -std=c++17 -O2 -g -Wall -Wextra -Wpedantic -fno-fast-math -ffp-contract=off -DFORGEKERNEL_HAS_FLOAT_FROM_CHARS=1 -I/tmp/k10-sew-review/core -Ikernel /tmp/k10-sew-review/core/probe_provenance.cpp /tmp/k10-sew-review/core/fk_offset.o /tmp/k10-sew-review/core/fk_sew.o forgecad-release/kernel/libforgekernel.a -pthread -o /tmp/k10-sew-review/core/probe_provenance
+/tmp/k10-sew-review/core/probe_provenance > /tmp/k10-sew-review/core/probe_provenance.log
+
+Provider continuo invariato, già nella libreria kernel. Nessun nuovo warning
+nelle modifiche exchange; offset conserva i due warning preesistenti relativi
+al parametro checkCurvature inutilizzato. Queste prove private non sono una
+build completa dell'app e non sostituiscono sanitizer/Fraction del root.
+
+Riproduzione: copiare i quattro snapshot .txt nei rispettivi nomi .cpp/.h
+sotto /tmp/k10-sew-review/core; ripristinare probe_provenance.cpp.txt come
+probe_provenance.cpp, ricopiare sew.cpp invariato e ricompilare i tre TU.
+Non rinominare i file archiviati nel repository: il suffisso .txt impedisce
+false TU nella mappa architetturale. Nessun binario o CAD è incluso qui.
+
+Compilatore: c++ (GCC) 16.2.1 20260810

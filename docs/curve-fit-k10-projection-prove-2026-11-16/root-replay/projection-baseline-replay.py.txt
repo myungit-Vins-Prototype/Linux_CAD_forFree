@@ -1,0 +1,19 @@
+from pathlib import Path
+import subprocess,shutil,hashlib,json,time
+r=Path('/home/myungit/Linux_CAD_forFree');p=r/'docs/curve-fit-k10-projection-prove-2026-11-16/root-replay';d=Path('/tmp/projection-root-replay/baseline');d.mkdir(parents=True,exist_ok=True)
+revision=subprocess.check_output(['git','rev-parse','HEAD'],cwd=r).decode().strip()
+for name in ['fk_project.cpp','fk_project.h']:
+    data=subprocess.check_output(['git','show','HEAD:kernel/'+name],cwd=r);(d/name).write_bytes(data)
+    target=p/'baseline'/(name+'.txt');target.parent.mkdir(exist_ok=True);target.write_bytes(data)
+shutil.copy2(r/'kernel/tests/test_projection_fit_validation.cpp',d/'test_projection_fit_validation.cpp')
+flags=['c++','-std=c++17','-O2','-fno-fast-math','-ffp-contract=off','-ffunction-sections','-fdata-sections','-I'+str(d),'-I'+str(r/'kernel')]
+commands=[];start=time.monotonic()
+with (p/'baseline-build.log').open('w') as log:
+    for name in ['fk_project.cpp','test_projection_fit_validation.cpp']:
+        command=flags+['-c',str(d/name),'-o',str(d/(name+'.o'))];commands.append(command);subprocess.run(command,cwd=r,stdout=log,stderr=subprocess.STDOUT,check=True)
+    library=r/'forgecad-release/kernel/libforgekernel.a';command=['c++','-Wl,--gc-sections',str(d/'test_projection_fit_validation.cpp.o'),str(d/'fk_project.cpp.o'),str(library),'-lpthread','-o',str(d/'baseline-tests')];commands.append(command);subprocess.run(command,cwd=r,stdout=log,stderr=subprocess.STDOUT,check=True)
+with (p/'baseline-tests.log').open('w') as log:result=subprocess.run([str(d/'baseline-tests')],stdout=log,stderr=subprocess.STDOUT)
+text=(p/'baseline-tests.log').read_text();print(text[-2000:])
+assert result.returncode==1 and 'RESULT passed=3 failed=30' in text
+data=dict(exit=result.returncode,passed=3,failed=30,seconds=time.monotonic()-start,baseline_revision=revision,baseline_module_sha256={f:hashlib.sha256((d/f).read_bytes()).hexdigest() for f in ['fk_project.cpp','fk_project.h']},current_test_sha256=hashlib.sha256((d/'test_projection_fit_validation.cpp').read_bytes()).hexdigest(),current_archive_sha256=hashlib.sha256(library.read_bytes()).hexdigest(),commands=commands,limits='Replay of Git HEAD project module with current remaining Release kernel; not the lost frozen initial archive. The old module never calls the new provider. Failures include new contract assertions, not 30 independent bugs.')
+(p/'baseline-result.json').write_text(json.dumps(data,indent=2)+'\n');print('Baseline replay 3 PASS / 30 FAIL as expected')

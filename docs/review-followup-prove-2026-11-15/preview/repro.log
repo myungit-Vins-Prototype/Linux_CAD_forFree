@@ -1,0 +1,8 @@
+FILL ready=1 before_source_visible=0 replaced=1
+FILL source_pick_active=1 owner=-1 source_visible=0 preview_still_valid=1 source_eligible=1 ray_picked_body=0
+MAP flat_created=1 error=
+MAP before_link pick=1 target_enabled=1
+MAP after_link row=3 pick=1 target_enabled=0 target_text=Termina selezione
+MAP after_ok applied=0 panel_hidden=0 error=Termina la scelta dei riferimenti.
+Correggi i valori e riprova, oppure Annulla.
+MAP after_escape pick=0

@@ -1,0 +1,10 @@
+{
+  "exit": 0,
+  "seconds": 0.21432511200009685,
+  "command": [
+    "/home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_view_tests",
+    "--ellipse-extremes",
+    "--gl"
+  ],
+  "platform": "wayland"
+}

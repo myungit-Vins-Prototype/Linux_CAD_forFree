@@ -1,0 +1,40 @@
+#include "cad_document_io.h"
+#include "cad_forge.h"
+#include "cad_model_history.h"
+#include "fk_boolean.h"
+#include "fk_body_check.h"
+#include "fk_body_io.h"
+#include "fk_curve_algo.h"
+#include "fk_mass.h"
+#include "fk_intersect.h"
+#include "fk_precision.h"
+#include <QApplication>
+#include "forgeCad2026_viewport.h"
+#include "cad_pattern.h"
+#include "fk_surface.h"
+#include "fk_bspline_surface.h"
+#include <QFile>
+#include <QCryptographicHash>
+#include <iostream>
+#include <iomanip>
+#include <fstream>
+#include <chrono>
+using namespace ForgeCad;
+namespace K=ForgeCad::Kernel;
+void dump(int index,const K::Body&body){std::string bytes=K::writeBodyBinary(body);std::ofstream f("/tmp/supporto-review/body-"+std::to_string(index)+".bin",std::ios::binary);f.write(bytes.data(),bytes.size());}
+void describe(const K::Body&b){K::Box box;for(auto id:b.edges()){const auto&e=b.edge(id);if(e.curve)box.add(K::curveBox(*e.curve,e.range));}std::cout<<" F="<<b.faces().size()<<" E="<<b.edges().size()<<" V="<<b.vertices().size()<<" solid="<<!b.isSheet()<<" shells="<<b.shells().size()<<" sheet="<<b.isSheet()<<" box=["<<box.lo.x()<<","<<box.lo.y()<<","<<box.lo.z()<<"]-["<<box.hi.x()<<","<<box.hi.y()<<","<<box.hi.z()<<"]";auto issues=K::checkBody(b);std::cout<<" check="<<issues.size();for(auto&i:issues)std::cout<<" ISSUE:"<<K::describe(i.code)<<":"<<i.message;std::cout<<"\n";}
+int main(int argc,char**argv){QApplication app(argc,argv);std::cout<<std::setprecision(17)<<std::unitbuf;DocumentState doc;QString error=loadDocumentFile(QStringLiteral("/tmp/supporto-review/Supporto.original.prt"),doc);if(!error.isEmpty()){std::cerr<<error.toStdString()<<"\n";return 2;}if(argc>1&&std::string(argv[1])=="regenerate"){CadViewport view;view.loadDocument(doc);int failed=view.rebuildAllFeatures();doc=view.recoveryDocument();std::cout<<"REGENERATE failed="<<failed<<"\n";QByteArray bytes;QString save=encodeDocument(doc,bytes);if(!save.isEmpty()){std::cerr<<save.toStdString();return 8;}QFile output("/tmp/supporto-review/Supporto.regenerated.prt");if(!output.open(QIODevice::WriteOnly))return 9;output.write(bytes);output.close();for(int i:{0,2,5}){auto&f=doc.extrusions[i];std::cout<<"REBUILT "<<i<<" error="<<f.error.toStdString()<<" cached="<<f.cachedGeometry<<"\n";if(f.forgeBody){describe(*f.forgeBody);dump(200+i,*f.forgeBody);}}for(auto pair:std::vector<std::pair<int,int>>{{2,5},{5,2},{0,2},{0,5}}){try{auto result=K::booleanOperation(*doc.extrusions[pair.first].forgeBody,*doc.extrusions[pair.second].forgeBody,K::BooleanOperation::Unite);std::cout<<"REGEN_UNION "<<pair.first<<","<<pair.second<<" PASS";describe(result);}catch(const std::exception&e){std::cout<<"REGEN_UNION "<<pair.first<<","<<pair.second<<" FAIL "<<e.what()<<"\n";}}return 0;}
+K::PrecisionScope precision(doc.calculationAccuracy);
+if(argc>1&&std::string(argv[1])=="geometry"){auto&cbody=*doc.extrusions[2].forgeBody;const auto&c=static_cast<const K::CylindricalSurface&>(*cbody.face(K::FaceId(2)).surface);auto print=[](K::Vec3 p){std::cout<<"["<<p.x()<<","<<p.y()<<","<<p.z()<<"]";};std::cout<<std::hexfloat;std::cout<<"CYL origin=";print(c.frame().origin());std::cout<<" axis=";print(c.frame().zDir());std::cout<<" R="<<c.radius()<<"\n";auto&b=*doc.extrusions[5].forgeBody;for(auto id:b.faces()){auto&f=b.face(id);std::cout<<"FACE "<<id.index<<" type="<<int(f.surface->type())<<" sense="<<f.sense;if(f.surface->type()==K::SurfaceType::Plane){auto&p=static_cast<const K::Plane&>(*f.surface);std::cout<<" origin=";print(p.frame().origin());std::cout<<" normal=";print(p.frame().zDir());double axisDot=K::dot(p.frame().zDir(),c.frame().zDir());double dist=K::dot(c.frame().origin()-p.frame().origin(),p.frame().zDir());std::cout<<" cylAxisDot="<<axisDot<<" signedAxisDist="<<dist<<" absDistMinusR="<<std::abs(dist)-c.radius();}std::cout<<"\n";}for(auto id:b.edges()){auto&e=b.edge(id);double mn=1e300,mx=-1e300;int imn=0,imx=0;for(int i=0;i<=100000;++i){double t=e.range.lo+e.range.length()*i/100000.;auto p=c.frame().toLocal(e.curve->point(t));double r=std::hypot(p.x(),p.y())-c.radius();if(r<mn){mn=r;imn=i;}if(r>mx){mx=r;imx=i;}}std::cout<<"EDGE "<<id.index<<" type="<<int(e.curve->type())<<" range="<<e.range.lo<<","<<e.range.hi<<" radialMin="<<mn<<" at="<<e.range.lo+e.range.length()*imn/100000.<<" max="<<mx<<" at="<<e.range.lo+e.range.length()*imx/100000.<<" endpoints=";print(e.curve->point(e.range.lo));print(e.curve->point(e.range.hi));if(e.curve->type()==K::CurveType::Ellipse){auto&a=static_cast<const K::Ellipse<3>&>(*e.curve);std::cout<<" center=";print(a.center());std::cout<<" xAxis=";print(a.xAxis());std::cout<<" yAxis=";print(a.yAxis());std::cout<<" radii="<<a.xRadius()<<","<<a.yRadius();}std::cout<<"\n";}return 0;}
+if(argc>1&&std::string(argv[1])=="multi"){QString error;auto result=forgePatternBodies({doc.extrusions[2].forgeBody,doc.extrusions[5].forgeBody},&error);std::cout<<"MULTITOOL "<<bool(result)<<" "<<error.toStdString()<<"\n";auto first=forgeBoolean(doc.extrusions[0].forgeBody,doc.extrusions[2].forgeBody,::BooleanOperation::Union,&error);std::cout<<"SEQUENTIAL AB "<<bool(first)<<" "<<error.toStdString()<<"\n";if(first){auto second=forgeBoolean(first,doc.extrusions[5].forgeBody,::BooleanOperation::Union,&error);std::cout<<"SEQUENTIAL ABC "<<bool(second)<<" "<<error.toStdString()<<"\n";}return 0;}
+std::cout<<"Loaded precision="<<doc.calculationAccuracy<<" sketches="<<doc.sketches.size()<<" features="<<doc.extrusions.size()<<" modelBodies="<<doc.modelBodies.size()<<"\n";
+if(argc<2||std::string(argv[1])=="inventory"){
+for(int i=0;i<doc.modelBodies.size();++i){auto&m=doc.modelBodies[i];std::cout<<"MODEL "<<i<<" name="<<m.name.toStdString()<<" id="<<m.id<<" tip="<<m.tipFeatureId<<" visible="<<m.visible<<"\n";}
+for(int i=0;i<doc.sketches.size();++i){auto&s=doc.sketches[i];std::cout<<"SKETCH "<<i<<" name="<<s.name.toStdString()<<" story="<<s.storyId<<" plane="<<s.plane<<" segments="<<s.segments.size()<<" curves="<<s.curves.size()<<"\n";}
+for(int i=0;i<doc.extrusions.size();++i){auto&f=doc.extrusions[i];std::cout<<"FEATURE "<<i<<" name="<<f.name.toStdString()<<" fid="<<f.featureId<<" mb="<<f.modelBodyId<<" type="<<int(f.feature)<<" operation="<<f.operation<<" first="<<f.firstBody<<" second="<<f.secondBody<<" solid="<<f.solid<<" cached="<<f.cachedGeometry<<" suppressed="<<f.suppressed<<" visible="<<f.visible<<" sketch="<<f.sketchIndex<<" error="<<f.error.toStdString()<<" notice="<<f.notice.toStdString()<<"\n";std::cout<<"  loft sketches=";for(auto k:f.loftSketches)std::cout<<k<<",";std::cout<<" sections="<<f.loftSections.size()<<" guides="<<f.loftGuides.size()<<" edgeguides="<<f.loftEdgeGuides.size()<<" ruled="<<f.loftRuled<<" mergeTangents="<<f.loftMergeTangentFaces<<" continuities="<<f.loftStartContinuity<<","<<f.loftEndContinuity<<"\n";if(f.forgeBody){describe(*f.forgeBody);dump(i,*f.forgeBody);}else std::cout<<"  NO GEOMETRY\n";}return 0;}
+if(argc<4)return 3;int a=std::stoi(argv[2]),b=std::stoi(argv[3]);if(a<0||a>=doc.extrusions.size()||b<0||b>=doc.extrusions.size())return 3;auto first=doc.extrusions[a].forgeBody,second=doc.extrusions[b].forgeBody;if(!first||!second)return 4;std::cout<<"UNION "<<argv[1]<<" "<<a<<"="<<doc.extrusions[a].name.toStdString()<<" / "<<b<<"="<<doc.extrusions[b].name.toStdString()<<"\n";
+auto start=std::chrono::steady_clock::now();try{ForgeBody result;
+if(std::string(argv[1])=="app"){QString err;result=forgeBoolean(first,second,::BooleanOperation::Union,&err);if(!result)throw std::runtime_error(err.toStdString());}
+else result=std::make_shared<const K::Body>(K::booleanOperation(*first,*second,K::BooleanOperation::Unite));
+std::cout<<"SUCCESS elapsed="<<std::chrono::duration<double>(std::chrono::steady_clock::now()-start).count();describe(*result);dump(100+a*10+b,*result);
+}catch(const std::exception&e){std::cout<<"FAILURE elapsed="<<std::chrono::duration<double>(std::chrono::steady_clock::now()-start).count()<<" error="<<e.what()<<"\n";return 5;}return 0;}

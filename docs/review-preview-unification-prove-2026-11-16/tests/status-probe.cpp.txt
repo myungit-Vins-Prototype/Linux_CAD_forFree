@@ -1,0 +1,48 @@
+#include "forgeCad2026_gui.h"
+#include "forgeCad2026_viewport.h"
+#include "forgeCad2026_dialogs.h"
+#include "forgeCad2026_dialogs_common.h"
+#include <QApplication>
+#include <QTimer>
+#include <QPlainTextEdit>
+#include <QDialog>
+#include <QDoubleSpinBox>
+#include <QPushButton>
+#include <QSettings>
+#include <QTemporaryDir>
+#include <iostream>
+class ViewportInteractionTest {
+public:
+ static void probe() {
+  QMainWindow owner;CadViewport view;DocumentState doc;ExtrusionObject box;box.feature=BodyFeature::Primitive;box.name="Scatola";box.primitive.size[0]=10;box.primitive.size[1]=8;box.primitive.size[2]=6;doc.extrusions={box};view.loadDocument(doc);
+  ExtrusionObject shell;shell.feature=BodyFeature::Shell;shell.firstBody=0;shell.distance=.5;
+  QTimer poll,watchdog;poll.setInterval(10);watchdog.setSingleShot(true);bool shellChecked=false,threadChecked=false;int exitCode=0;int phase=0;
+  QObject::connect(&watchdog,&QTimer::timeout,&owner,[&]{std::cerr<<"WATCHDOG shell preview error="<<view.preview_.error.toStdString()<<std::endl;exitCode=1;for(auto*p:owner.findChildren<QDialog*>())p->reject();});
+  QObject::connect(&poll,&QTimer::timeout,&owner,[&]{
+   if(!view.preview_.valid)return;
+   poll.stop();
+   auto*spin=owner.findChild<QDoubleSpinBox*>("offsetDistance");auto*label=owner.findChild<QPlainTextEdit*>("functionPreviewMessage");QDialog*d=nullptr;for(auto*p:owner.findChildren<QDialog*>())if(p->findChild<QDoubleSpinBox*>("offsetDistance"))d=p;
+   if(!spin||!label||!d){std::cerr<<"missing shell controls"<<std::endl;exitCode=1;for(auto*p:owner.findChildren<QDialog*>())p->reject();return;}
+   if(phase==1){std::cout<<"SHELL recovered_label="<<label->toPlainText().toStdString()<<" valid="<<view.preview_.valid<<" value="<<spin->value()<<std::endl;for(auto*message:d->findChildren<QPlainTextEdit*>())if(message!=label&&!message->toPlainText().isEmpty())std::cout<<"SHELL recovered_status="<<message->toPlainText().toStdString()<<std::endl;shellChecked=true;d->reject();return;}
+   const auto before=label->toPlainText();spin->setValue(0);
+   std::cout<<"SHELL before="<<before.toStdString()<<" after="<<label->toPlainText().toStdString()<<" valid="<<view.preview_.valid<<" pending="<<view.previewPending()<<" key_empty="<<view.preview_.key.isEmpty()<<" geometry="<<bool(view.preview_.geometry)<<" value="<<spin->value()<<std::endl;
+   for(auto*message:d->findChildren<QPlainTextEdit*>())if(message!=label&&message->toPlainText().contains("maggiore"))std::cout<<"SHELL status="<<message->toPlainText().toStdString()<<std::endl;
+   QTimer::singleShot(150,d,[&,d,label,spin]{std::cout<<"SHELL delayed_label="<<label->toPlainText().toStdString()<<" valid="<<view.preview_.valid<<" pending="<<view.previewPending()<<std::endl;phase=1;spin->setValue(.6);poll.start();});
+  });
+  QTimer::singleShot(0,&owner,[&]{QKeyEvent escape(QEvent::KeyPress,Qt::Key_Escape,Qt::NoModifier);view.keyPressEvent(&escape);});
+  watchdog.start(12000);poll.start();offsetDialog(&owner,&view,"Shell probe",-1,shell,[](const auto&){return QString();});poll.stop();watchdog.stop();QObject::disconnect(&poll,nullptr,&owner,nullptr);
+  ExtrusionObject thread;thread.feature=BodyFeature::Thread;thread.firstBody=0;
+  QTimer::singleShot(0,&owner,[&]{
+   QDialog*d=nullptr;for(auto*p:owner.findChildren<QDialog*>())if(p->windowTitle()=="Thread probe")d=p;
+   if(!d){std::cerr<<"missing thread dialog"<<std::endl;exitCode=1;return;}
+   auto*label=d->findChild<QPlainTextEdit*>("functionPreviewMessage");
+   std::cout<<"THREAD label="<<(label?label->toPlainText().toStdString():"missing")<<" valid="<<view.preview_.valid<<" pending="<<view.previewPending()<<" key_empty="<<view.preview_.key.isEmpty()<<" picking="<<view.referencePicking()<<std::endl;
+   for(auto*message:d->findChildren<QPlainTextEdit*>())if(message!=label&&!message->toPlainText().isEmpty())std::cout<<"THREAD status="<<message->toPlainText().toStdString()<<std::endl;
+   QTimer::singleShot(20,d,[&,d,label]{std::cout<<"THREAD picking_label="<<(label?label->toPlainText().toStdString():"missing")<<" pending="<<view.previewPending()<<" picking="<<view.referencePicking()<<std::endl;threadChecked=true;d->reject();});
+  });
+  watchdog.start(12000);threadDialog(&owner,&view,"Thread probe",-1,thread,[](const auto&){return QString();});watchdog.stop();
+  std::cout<<"completion shell="<<shellChecked<<" thread="<<threadChecked<<" exit="<<exitCode<<std::endl;
+  if(!shellChecked||!threadChecked||exitCode)throw std::runtime_error("probe incomplete");
+ }
+};
+int main(int argc,char**argv){QApplication app(argc,argv);QTemporaryDir d;QSettings::setPath(QSettings::IniFormat,QSettings::UserScope,d.path());QSettings::setDefaultFormat(QSettings::IniFormat);try{ViewportInteractionTest::probe();return 0;}catch(const std::exception&e){std::cerr<<e.what()<<std::endl;return 1;}}

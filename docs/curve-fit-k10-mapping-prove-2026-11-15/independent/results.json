@@ -1,0 +1,170 @@
+{
+  "verified_final_sources": {
+    "kernel/fk_surface_mapping.cpp": "0c76d3b2b19c2c110712348f06f0a2680dd0d5f4ba8fa77f2c90c71ac07306a9",
+    "kernel/fk_mapping_carrier.h": "02683cb1b48900c5a711c60a671f27a426d8526d96825c6a943cc5a86bf393a3",
+    "kernel/fk_mapping_carrier.cpp": "a98eb1941657e929c9ad18c7c9bd9918f1b2b13e7fc77e35bb7242713c831b68",
+    "kernel/fk_curve_fit_bounds.h": "44629c36150e39b1e48c962b0c1191ce0b37a905e0f3f33efd9477bf8cee1908",
+    "kernel/fk_curve_fit_bounds.cpp": "ee02df4e2d8e2f920afaf06835d9eb49ffb1ce659425d8e0517a163bad83303a",
+    "kernel/tests/test_mapping_carrier_validation.cpp": "403a1ac55bf1d4d1b11308cbb8aaef5c2c09b4698e6c9d58ff06dca00752765d"
+  },
+  "passed_supported_and_contract_checks": 107,
+  "legacy_residual_controls": 2,
+  "supported_public_wrap_variants": 8,
+  "public_wrap_final": {
+    "native_identity": {
+      "accepted": "1",
+      "deviation": "1.6232661779043149e-08",
+      "edge_error": "1.8026729685697266e-11",
+      "carrier_type": "5",
+      "carrier_absZ": "0",
+      "sense": "1",
+      "issues": "0",
+      "history_faces": "1"
+    },
+    "native_rational": {
+      "accepted": "1",
+      "deviation": "1.3523310111446419e-08",
+      "edge_error": "2.3907021397262529e-09",
+      "carrier_type": "5",
+      "carrier_absZ": "0",
+      "sense": "1",
+      "issues": "0",
+      "history_faces": "1"
+    },
+    "native_metric": {
+      "accepted": "1",
+      "deviation": "1.6232661863298628e-08",
+      "edge_error": "1.3975009228299491e-11",
+      "carrier_type": "5",
+      "carrier_absZ": "0",
+      "sense": "1",
+      "issues": "0",
+      "history_faces": "1"
+    },
+    "native_obliqueD": {
+      "accepted": "1",
+      "deviation": "1.623266177905513e-08",
+      "edge_error": "4.8499119186008566e-11",
+      "carrier_type": "5",
+      "carrier_absZ": "0",
+      "sense": "1",
+      "issues": "0",
+      "history_faces": "1"
+    },
+    "native_sourcepose": {
+      "accepted": "1",
+      "deviation": "1.6705554825445599e-08",
+      "edge_error": "3.0315941763693112e-11",
+      "carrier_type": "5",
+      "carrier_absZ": "0",
+      "sense": "1",
+      "issues": "0",
+      "history_faces": "1"
+    },
+    "native_opposite_frame": {
+      "accepted": "1",
+      "deviation": "1.6232661779043149e-08",
+      "edge_error": "1.8026729685697266e-11",
+      "carrier_type": "5",
+      "carrier_absZ": "0",
+      "sense": "0",
+      "issues": "0",
+      "history_faces": "1"
+    },
+    "native_rotation_shift": {
+      "accepted": "1",
+      "deviation": "4.2489214391262393e-11",
+      "edge_error": "0.001",
+      "carrier_type": "7",
+      "carrier_absZ": "0",
+      "sense": "1",
+      "issues": "0",
+      "history_faces": "1"
+    },
+    "native_height_cancel": {
+      "accepted": "1",
+      "deviation": "1.6232661779043149e-08",
+      "edge_error": "1.8026729685697266e-11",
+      "carrier_type": "5",
+      "carrier_absZ": "0",
+      "sense": "1",
+      "issues": "0",
+      "history_faces": "1"
+    },
+    "tensor_identity": {
+      "accepted": "1",
+      "deviation": "1.6232661779034934e-08",
+      "edge_error": "1.0063521879032323e-10",
+      "carrier_type": "7",
+      "carrier_absZ": "0.0032000000000000002",
+      "sense": "1",
+      "issues": "0",
+      "history_faces": "1"
+    },
+    "native_normaloffset": {
+      "accepted": "1",
+      "deviation": "2.8208799094229007e-11",
+      "edge_error": "0.011718353468606611",
+      "carrier_type": "7",
+      "carrier_absZ": "0.01",
+      "sense": "1",
+      "issues": "0",
+      "history_faces": "1"
+    }
+  },
+  "tolerant_and_atomic": [
+    {
+      "case": "0",
+      "source_issues": "0",
+      "accepted": "0",
+      "deviation": "123",
+      "history_faces": "2",
+      "reason": "Mappatura"
+    },
+    {
+      "case": "1",
+      "source_issues": "0",
+      "accepted": "0",
+      "deviation": "123",
+      "history_faces": "2",
+      "reason": "Mappatura"
+    },
+    {
+      "case": "2",
+      "source_issues": "0",
+      "cancelled": "1",
+      "deviation": "123",
+      "history_faces": "2"
+    },
+    {
+      "case": "3",
+      "source_issues": "0",
+      "accepted": "1",
+      "deviation": "1.9000000000000005e-08",
+      "vertex_error": "1.8999999999999998e-08",
+      "history_faces": "1",
+      "issues": "0"
+    }
+  ],
+  "metric_checks": 16,
+  "direct_extrusion_fit_checks": 24,
+  "prior_surface_composition_checks": 30,
+  "prior_direct_oracle_queries": 24,
+  "note": "Independent dense comparisons are regression evidence; the continuous certificate uses original coefficients and outward arithmetic, not sample density.",
+  "resource_budget_check": {
+    "poles": 100001,
+    "source_issues": 0,
+    "v5_outcome": "optional empty, sampled fallback eligible",
+    "v6_outcome": "domain_error, budget exhausted",
+    "output_deviation_unchanged": 123,
+    "output_history_faces_unchanged": 2
+  },
+  "v5_v6_replay_logs_identical": {
+    "metric-final.log": true,
+    "extrusion-final.log": true,
+    "baseline-final.log": true,
+    "tolerant-final.log": true,
+    "provider-final.log": true,
+    "provider_queries-final.log": true
+  }
+}

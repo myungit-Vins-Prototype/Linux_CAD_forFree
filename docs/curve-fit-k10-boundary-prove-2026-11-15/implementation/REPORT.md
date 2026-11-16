@@ -1,0 +1,11 @@
+# K10 boundary: final delivery
+
+Four owned core files integrated and frozen. SHA256SUMS records their identities; changes.patch is relative to the pre-task snapshots. No shared build, CMake, generator or shared documentation was changed by this agent.
+
+The position oracle supports original Line/NURBS geometry and nested Trimmed/Transformed wrappers. Original homogeneous data are extracted with outward arithmetic; affine source/fit maps, reversed ranges, partial queries and source knots are enclosed. Position residual is bounded as norm(H-QW)/min(W). Unsupported angular conics and mixed unsupported sides explicitly retain the legacy sampled path. A supported oracle that cannot establish its bound never falls back.
+
+Both initial side fitting and the four actual final Coons boundary rows are checked, so compatibility knot insertion, corner assembly and floating arithmetic are included. Known sides receive affine pcurves in the original edge parameter. This certifies the supported boundary approximation, not interior surface regularity or injectivity. The output grid is limited to one million poles before allocation; cancellation checkpoints cover compatibility knots and Coons rows.
+
+Closed-query audit found a public-oracle compound-junction defect: a query beginning exactly at a discontinuous mapped join omitted the previous endpoint. The final oracle encloses both neighboring endpoint values, including reversed maps. No false accepted body was observed; the direct oracle contract was defective. Original BSpline internal discontinuities are impossible under the existing constructor multiplicity contract.
+
+Validation: nine permanent regression groups PASS, including all three adversarial reproductions, rational data, scale/pose, partial/reversed/compound sides, all four boundary rows, finite input checks, corner budgets, and eight closed-junction endpoint combinations. The prior sanitizer object fails those eight junction assertions. Final ASan/UBSan/LSan: 9/9 PASS without diagnostics; instrumented test, boundary.cpp and bounds.cpp, remaining archive/framework uninstrumented. See sibling tests/sanitizer.log and tests manifests. Independent review reported 27 mapping checks plus nine junction checks PASS. Private compilation and git diff --check PASS. Parent owns final application build and broad regression suite.

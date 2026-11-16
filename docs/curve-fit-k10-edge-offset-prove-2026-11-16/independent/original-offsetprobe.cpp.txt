@@ -1,0 +1,18 @@
+#include "fk_offset.h"
+#include "fk_bspline.h"
+#include "fk_surface.h"
+#include "fk_curve_ops.h"
+#include "fk_body_check.h"
+#include <iostream>
+using namespace ForgeCad::Kernel;
+CurvePtr<2> uv(Vec2 p,Vec2 d){return std::make_shared<Line<2>>(p,d);}
+int main(){try{
+const double z[]={0,0,0,0.0023926594471666389,-0.03158506535957388,0.22274247758415186,-1.0588644597919092,3.7068614333740251,-10.150702528319338,22.626599248232061,-42.105538437516088,66.431608164324672,-89.673893632054558,104.07526656293437,-104.07526656293437,89.673893632054558,-66.431608164324672,42.105538437516088,-22.626599248232061,10.150702528319338,-3.7068614333740251,1.0588644597919092,-0.22274247758415186,0.03158506535957388,-0.0023926594471666389,0,0,0};std::vector<Vec3>p;for(int i=0;i<28;++i)p.emplace_back(i/27.,0,.01*z[i]);std::vector<double>k(28,0);k.insert(k.end(),28,1);auto curve=std::make_shared<BSplineCurve<3>>(27,k,p);auto surf=std::make_shared<ExtrusionSurface>(curve,Vec3(0,1,0));
+std::vector<Vec3>v={curve->point(0),curve->point(1),curve->point(1)+Vec3(0,1,0),curve->point(0)+Vec3(0,1,0)};
+std::vector<Body::BuildEdge>edges={{0,1,curve,{0,1},0},{1,2,std::make_shared<Line<3>>(v[1],Vec3(0,1,0)),{0,1},0},{3,2,std::make_shared<TransformedCurve>(curve,Transform3::translation(Vec3(0,1,0))),{0,1},0},{0,3,std::make_shared<Line<3>>(v[0],Vec3(0,1,0)),{0,1},0}};
+Body::BuildFace f;f.surface=surf;f.loops={{{0,true,uv({0,0},{1,0}),0},{1,true,uv({1,0},{0,1}),0},{2,false,uv({0,1},{1,0}),0},{3,false,uv({0,0},{0,1}),0}}};
+auto source=Body::buildSheet(v,edges,{f});std::cout<<"source valid "<<checkBody(source).empty()<<"\n";
+auto out=offsetFaces(source,source.faces(),.001,1e-7,false).body;std::cout<<"out valid "<<checkBody(out).empty()<<" edges "<<out.edges().size()<<"\n";
+double targetMax=-1e100,outMax=-1e100;for(int i=0;i<=10000;++i){double t=i/10000.;targetMax=std::max(targetMax,(curve->point(t)+.001*surf->normal(t,0)).z());}for(auto id:out.edges()){const auto*bs=dynamic_cast<const BSplineCurve<3>*>(out.edge(id).curve.get());if(bs)for(auto q:bs->poles())outMax=std::max(outMax,q.z());}std::cout.precision(17);std::cout<<"original exact offset max witness z "<<targetMax<<" all output poles max z "<<outMax<<" geometric lower witness "<<targetMax-outMax<<"\n";
+for(auto id:out.edges()){auto&e=out.edge(id);double best=1e100;for(double h:{0.,1.}){double err=0;for(int i=0;i<=10000;++i){double t=i/10000.;Vec3 expected=curve->point(t)+h*Vec3(0,1,0)+.001*surf->normal(t,h);err=std::max(err,distance(e.curve->point(t),expected));}best=std::min(best,err);}std::cout<<"edge "<<id.index<<" type "<<int(e.curve->type())<<" sameParamErr "<<best<<"\n";}
+}catch(std::exception&e){std::cout<<"error "<<e.what()<<"\n";return 2;}}

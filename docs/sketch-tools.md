@@ -21,6 +21,28 @@ alle geometrie restano disponibili.
 I comandi **Asola** e **Punto** si trovano in **Schizzo → Strumento geometrico**,
 nella scheda Schizzo della ribbon e nella toolbar di disegno.
 
+## Ellisse per estremi
+
+In **Schizzo → Strumento geometrico → Ellisse per estremi**, scegli i due estremi
+opposti del primo asse, poi un estremo del secondo asse. Il terzo clic viene
+proiettato sulla perpendicolare passante per il punto medio del primo asse;
+il quarto estremo si ricava per simmetria. L’anteprima mostra assi e quattro punti.
+Il comando resta attivo per disegnare altre ellissi; **Esc** annulla la costruzione
+in corso.
+
+I quattro estremi sono punti effettivi dello schizzo: con **Quota** puoi scegliere
+un estremo e un riferimento per assegnare distanze, comprese le coordinate X/Y.
+In **Selezione**, usa **Ctrl + clic** sugli estremi e il pannello **Vincoli** per
+coincidenze, allineamenti e Fisso. Il doppio clic sulla curva attiva Quota.
+Il centro deriva dai punti opposti e si aggiorna con quote, vincoli e trascinamenti.
+Le coppie conservano lo stesso punto medio e gli assi restano perpendicolari;
+queste relazioni lasciano cinque gradi di libertà all’ellisse libera.
+
+La modalità **Ellisse** dal centro rimane disponibile. La nuova definizione e i
+riferimenti ai quattro estremi sono conservati nei documenti nativi dal formato 70;
+i documenti precedenti restano leggibili. Taglia/Spezza usano la conica esatta e
+rappresentano gli archi risultanti come NURBS razionali.
+
 ## Asola rettilinea
 
 1. Scegli il centro della prima estremità.

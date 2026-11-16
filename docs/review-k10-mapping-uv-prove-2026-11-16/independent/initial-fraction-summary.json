@@ -1,0 +1,16 @@
+{
+  "baseline": {
+    "cases": 18,
+    "fins": 72,
+    "cells": 6866,
+    "max_upper_mm": 1.9791802729768676e-08,
+    "all_pass": true
+  },
+  "candidate": {
+    "cases": 18,
+    "fins": 72,
+    "cells": 1733,
+    "max_upper_mm": 6.713497983889833e-09,
+    "all_pass": true
+  }
+}

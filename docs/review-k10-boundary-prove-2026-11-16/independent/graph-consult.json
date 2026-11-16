@@ -1,0 +1,1199 @@
+{
+  "nodes": [
+    {
+      "id": "kernel/fk_blend_surface.cpp",
+      "group": "kernel",
+      "description": "Raccordi e smussi a palla rotolante: riordino delle transizioni tangenti su supporti opposti con consumo dei tratti corti e continuazione sulle guide adiacenti in entrambi i versi, raffinamento 3D del contatto sulle cuciture tangenti, copertura del fit e intersezioni locali smorzate entro il dominio delle pezze; consumo topologico di una frontiera terminale corta verso una quarta faccia e pezze d angolo, provenienza di bordi e vertici nuovi dichiarata per incidenza; sezioni normali e guida intrinseca per coperchi piani su fianchi B-spline tangenti, continuazione delle cuciture tangenti e raffinamento dei contatti accoppiati entro la risoluzione sorgente, chiusure terminali tangenti con Newton smorzato e continuazione unilaterale anche per bordi analitici, derivate unilaterali su tutti i nodi e scarto laterale misurato entro la risoluzione sorgente, tentativi atomici, limiti unilaterali a raggio zero con sezione collassata esatta anche a cuspidi di alta valenza, raffinamento presso le punte singolari, pezze intrinseche costanti tra collassi G1 dei ventagli polari e controllo dei contorni; curve terminali con quarto vincolo verificato, rifiuto dei tratti minimi fuori budget e continuazione alternativa lungo U sugli stessi supporti, estremi conservati e lavoro limitato cancellabile. Mitre ISO: delega costruzione e controllo delle fin al modulo dedicato, preserva pcurve e cap prefissati escludendole dall aumento delle tolleranze; altri rami restano campionati.",
+      "lines": 4107,
+      "symbols": [
+        "ForgeCad::Kernel::EdgeBlend::EdgeBlend",
+        "ForgeCad::Kernel::EdgeBlend::fit",
+        "ForgeCad::Kernel::EdgeBlend::fitImpl",
+        "ForgeCad::Kernel::EdgeBlend::section",
+        "ForgeCad::Kernel::EdgeBlend::seed",
+        "ForgeCad::Kernel::EdgeBlend::surface",
+        "ForgeCad::Kernel::Piece::rangeOf",
+        "ForgeCad::Kernel::RadiusLaw::RadiusLaw",
+        "ForgeCad::Kernel::RadiusLaw::at",
+        "ForgeCad::Kernel::RadiusLaw::knots",
+        "ForgeCad::Kernel::RadiusLaw::range",
+        "ForgeCad::Kernel::RadiusLaw::zeroEndpoint",
+        "ForgeCad::Kernel::SectionSolver::SectionSolver",
+        "ForgeCad::Kernel::SectionSolver::chamfer",
+        "ForgeCad::Kernel::SectionSolver::coherent",
+        "ForgeCad::Kernel::SectionSolver::contactBreaks",
+        "ForgeCad::Kernel::SectionSolver::follow",
+        "ForgeCad::Kernel::SectionSolver::intrinsicGuide",
+        "ForgeCad::Kernel::SectionSolver::profileBreaks",
+        "ForgeCad::Kernel::SectionSolver::setProfile",
+        "ForgeCad::Kernel::SectionSolver::size",
+        "ForgeCad::Kernel::SectionSolver::solve",
+        "ForgeCad::Kernel::SectionSolver::solveChamfer",
+        "ForgeCad::Kernel::SectionSolver::solveFillet",
+        "ForgeCad::Kernel::SectionSolver::zeroEndpoint",
+        "ForgeCad::Kernel::blendSurfaceChains",
+        "ForgeCad::Kernel::blendSurfaceChainsAttempts",
+        "ForgeCad::Kernel::blendSurfaceChainsWithGuide",
+        "ForgeCad::Kernel::boundaryIsoGuide",
+        "ForgeCad::Kernel::chainAlong",
+        "ForgeCad::Kernel::chainFin",
+        "ForgeCad::Kernel::chainOf",
+        "ForgeCad::Kernel::checkGuidedCap",
+        "ForgeCad::Kernel::clampToDomain",
+        "ForgeCad::Kernel::classifyJoint",
+        "ForgeCad::Kernel::crossContinuation",
+        "ForgeCad::Kernel::detail::polarBlendPatch",
+        "ForgeCad::Kernel::edgesAtVertex",
+        "ForgeCad::Kernel::extendBoundaryWindow",
+        "ForgeCad::Kernel::extendSplineBoundary",
+        "ForgeCad::Kernel::faceNormal",
+        "ForgeCad::Kernel::facePoint",
+        "ForgeCad::Kernel::finTangent",
+        "ForgeCad::Kernel::kFitTolerance",
+        "ForgeCad::Kernel::operator*",
+        "ForgeCad::Kernel::operator+",
+        "ForgeCad::Kernel::operator-",
+        "ForgeCad::Kernel::seamChain",
+        "ForgeCad::Kernel::sectionPoint",
+        "ForgeCad::Kernel::solveLinear",
+        "ForgeCad::Kernel::splitAContinuation",
+        "ForgeCad::Kernel::surfaceBoundaryMeet",
+        "ForgeCad::Kernel::surfaceChainGroups",
+        "ForgeCad::Kernel::surfaceChainRuns",
+        "ForgeCad::Kernel::surfaceCurveMeet",
+        "ForgeCad::Kernel::surfaceMeet",
+        "ForgeCad::Kernel::surfaceUV",
+        "ForgeCad::Kernel::traceAlongSurfaceU",
+        "ForgeCad::Kernel::traceBetween"
+      ]
+    }
+  ],
+  "incident_edges": [
+    {
+      "source": "kernel/fk_blend.cpp",
+      "target": "kernel/fk_blend_surface.cpp",
+      "kind": "call",
+      "count": 9,
+      "sites": []
+    },
+    {
+      "source": "kernel/fk_blend_polar.cpp",
+      "target": "kernel/fk_blend_surface.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": []
+    },
+    {
+      "source": "kernel/fk_blend_surface.cpp",
+      "target": "kernel/fk_blend.h",
+      "kind": "call",
+      "count": 5,
+      "sites": []
+    },
+    {
+      "source": "kernel/fk_blend_surface.cpp",
+      "target": "kernel/fk_blend_contact_breaks.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": []
+    },
+    {
+      "source": "kernel/fk_blend_surface.cpp",
+      "target": "kernel/fk_blend_contact_breaks.h",
+      "kind": "include",
+      "count": 1,
+      "sites": []
+    },
+    {
+      "source": "kernel/fk_blend_surface.cpp",
+      "target": "kernel/fk_blend_contour.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": []
+    },
+    {
+      "source": "kernel/fk_blend_surface.cpp",
+      "target": "kernel/fk_blend_contour.h",
+      "kind": "include",
+      "count": 1,
+      "sites": []
+    },
+    {
+      "source": "kernel/fk_blend_surface.cpp",
+      "target": "kernel/fk_blend_mitre.cpp",
+      "kind": "call",
+      "count": 12,
+      "sites": []
+    },
+    {
+      "source": "kernel/fk_blend_surface.cpp",
+      "target": "kernel/fk_blend_mitre.h",
+      "kind": "call",
+      "count": 16,
+      "sites": []
+    },
+    {
+      "source": "kernel/fk_blend_surface.cpp",
+      "target": "kernel/fk_blend_mitre.h",
+      "kind": "include",
+      "count": 1,
+      "sites": []
+    },
+    {
+      "source": "kernel/fk_blend_surface.cpp",
+      "target": "kernel/fk_blend_model.h",
+      "kind": "call",
+      "count": 43,
+      "sites": [
+        {
+          "line": 1794,
+          "symbol": "ForgeCad::Kernel::detail::BlendModel::BlendModel",
+          "owner": "ForgeCad::Kernel::extendBoundaryWindow"
+        },
+        {
+          "line": 1796,
+          "symbol": "ForgeCad::Kernel::detail::BlendModel::BlendModel",
+          "owner": "ForgeCad::Kernel::extendBoundaryWindow"
+        },
+        {
+          "line": 1801,
+          "symbol": "ForgeCad::Kernel::detail::BlendModel::BlendModel",
+          "owner": "ForgeCad::Kernel::extendBoundaryWindow"
+        },
+        {
+          "line": 1805,
+          "symbol": "ForgeCad::Kernel::detail::BlendModel::operator=",
+          "owner": "ForgeCad::Kernel::extendBoundaryWindow"
+        },
+        {
+          "line": 1832,
+          "symbol": "ForgeCad::Kernel::detail::BlendModel::operator=",
+          "owner": "ForgeCad::Kernel::extendBoundaryWindow"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_blend_surface.cpp",
+      "target": "kernel/fk_blend_model.h",
+      "kind": "include",
+      "count": 1,
+      "sites": []
+    },
+    {
+      "source": "kernel/fk_blend_surface.cpp",
+      "target": "kernel/fk_blend_paths.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": []
+    },
+    {
+      "source": "kernel/fk_blend_surface.cpp",
+      "target": "kernel/fk_blend_section_curve.cpp",
+      "kind": "call",
+      "count": 3,
+      "sites": [
+        {
+          "line": 1659,
+          "symbol": "ForgeCad::Kernel::detail::blendSectionCurve",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_blend_surface.cpp",
+      "target": "kernel/fk_blend_section_curve.h",
+      "kind": "include",
+      "count": 1,
+      "sites": []
+    },
+    {
+      "source": "kernel/fk_blend_surface.cpp",
+      "target": "kernel/fk_blend_surface.cpp",
+      "kind": "call",
+      "count": 493,
+      "sites": [
+        {
+          "line": 1649,
+          "symbol": "ForgeCad::Kernel::kFitTolerance",
+          "owner": "ForgeCad::Kernel::boundaryIsoGuide"
+        },
+        {
+          "line": 1687,
+          "symbol": "ForgeCad::Kernel::boundaryIsoGuide",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        },
+        {
+          "line": 1698,
+          "symbol": "ForgeCad::Kernel::kFitTolerance",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        },
+        {
+          "line": 1737,
+          "symbol": "ForgeCad::Kernel::solveLinear",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        },
+        {
+          "line": 1742,
+          "symbol": "ForgeCad::Kernel::kFitTolerance",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        },
+        {
+          "line": 1748,
+          "symbol": "ForgeCad::Kernel::extendSplineBoundary::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_blend_surface.cpp:1689:28)::operator()",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        },
+        {
+          "line": 1754,
+          "symbol": "ForgeCad::Kernel::extendSplineBoundary::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_blend_surface.cpp:1689:28)::operator()",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        },
+        {
+          "line": 1803,
+          "symbol": "ForgeCad::Kernel::extendSplineBoundary",
+          "owner": "ForgeCad::Kernel::extendBoundaryWindow"
+        },
+        {
+          "line": 1812,
+          "symbol": "ForgeCad::Kernel::extendBoundaryWindow::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_blend_surface.cpp:1798:30)::operator()",
+          "owner": "ForgeCad::Kernel::extendBoundaryWindow"
+        },
+        {
+          "line": 1816,
+          "symbol": "ForgeCad::Kernel::extendBoundaryWindow::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_blend_surface.cpp:1798:30)::operator()",
+          "owner": "ForgeCad::Kernel::extendBoundaryWindow"
+        },
+        {
+          "line": 1825,
+          "symbol": "ForgeCad::Kernel::extendBoundaryWindow::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_blend_surface.cpp:1798:30)::operator()",
+          "owner": "ForgeCad::Kernel::extendBoundaryWindow"
+        },
+        {
+          "line": 2820,
+          "symbol": "ForgeCad::Kernel::extendBoundaryWindow",
+          "owner": "ForgeCad::Kernel::blendSurfaceChainsWithGuide"
+        },
+        {
+          "line": 2822,
+          "symbol": "ForgeCad::Kernel::extendSplineBoundary",
+          "owner": "ForgeCad::Kernel::blendSurfaceChainsWithGuide"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_blend_surface.cpp",
+      "target": "kernel/fk_blend_surface.h",
+      "kind": "include",
+      "count": 1,
+      "sites": []
+    },
+    {
+      "source": "kernel/fk_blend_surface.cpp",
+      "target": "kernel/fk_body_check.cpp",
+      "kind": "call",
+      "count": 2,
+      "sites": []
+    },
+    {
+      "source": "kernel/fk_blend_surface.cpp",
+      "target": "kernel/fk_body_check.h",
+      "kind": "call",
+      "count": 1,
+      "sites": []
+    },
+    {
+      "source": "kernel/fk_blend_surface.cpp",
+      "target": "kernel/fk_body_check.h",
+      "kind": "include",
+      "count": 1,
+      "sites": []
+    },
+    {
+      "source": "kernel/fk_blend_surface.cpp",
+      "target": "kernel/fk_bspline.h",
+      "kind": "call",
+      "count": 13,
+      "sites": [
+        {
+          "line": 1637,
+          "symbol": "ForgeCad::Kernel::BSplineCurve::knots",
+          "owner": "ForgeCad::Kernel::boundaryIsoGuide"
+        },
+        {
+          "line": 1637,
+          "symbol": "ForgeCad::Kernel::BSplineCurve::weights",
+          "owner": "ForgeCad::Kernel::boundaryIsoGuide"
+        },
+        {
+          "line": 1638,
+          "symbol": "ForgeCad::Kernel::BSplineCurve::poles",
+          "owner": "ForgeCad::Kernel::boundaryIsoGuide"
+        },
+        {
+          "line": 1645,
+          "symbol": "ForgeCad::Kernel::BSplineCurve::degree",
+          "owner": "ForgeCad::Kernel::boundaryIsoGuide"
+        },
+        {
+          "line": 1757,
+          "symbol": "ForgeCad::Kernel::BSplineCurve::degree",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        },
+        {
+          "line": 1763,
+          "symbol": "ForgeCad::Kernel::BSplineCurve::domain",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_blend_surface.cpp",
+      "target": "kernel/fk_bspline.h",
+      "kind": "include",
+      "count": 1,
+      "sites": []
+    },
+    {
+      "source": "kernel/fk_blend_surface.cpp",
+      "target": "kernel/fk_bspline_surface.cpp",
+      "kind": "call",
+      "count": 12,
+      "sites": []
+    },
+    {
+      "source": "kernel/fk_blend_surface.cpp",
+      "target": "kernel/fk_bspline_surface.h",
+      "kind": "include",
+      "count": 1,
+      "sites": []
+    },
+    {
+      "source": "kernel/fk_blend_surface.cpp",
+      "target": "kernel/fk_cancel.h",
+      "kind": "call",
+      "count": 5,
+      "sites": []
+    },
+    {
+      "source": "kernel/fk_blend_surface.cpp",
+      "target": "kernel/fk_classify.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": []
+    },
+    {
+      "source": "kernel/fk_blend_surface.cpp",
+      "target": "kernel/fk_classify.h",
+      "kind": "include",
+      "count": 1,
+      "sites": []
+    },
+    {
+      "source": "kernel/fk_blend_surface.cpp",
+      "target": "kernel/fk_curve.h",
+      "kind": "call",
+      "count": 80,
+      "sites": [
+        {
+          "line": 1622,
+          "symbol": "ForgeCad::Kernel::Curve::derivative",
+          "owner": "ForgeCad::Kernel::boundaryIsoGuide"
+        },
+        {
+          "line": 1622,
+          "symbol": "ForgeCad::Kernel::Curve::point",
+          "owner": "ForgeCad::Kernel::boundaryIsoGuide"
+        },
+        {
+          "line": 1630,
+          "symbol": "ForgeCad::Kernel::Curve::point",
+          "owner": "ForgeCad::Kernel::boundaryIsoGuide"
+        },
+        {
+          "line": 1649,
+          "symbol": "ForgeCad::Kernel::Curve::point",
+          "owner": "ForgeCad::Kernel::boundaryIsoGuide"
+        },
+        {
+          "line": 1673,
+          "symbol": "ForgeCad::Kernel::Curve::derivative",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        },
+        {
+          "line": 1673,
+          "symbol": "ForgeCad::Kernel::Curve::point",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        },
+        {
+          "line": 1692,
+          "symbol": "ForgeCad::Kernel::Curve::breakpoints",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        },
+        {
+          "line": 1695,
+          "symbol": "ForgeCad::Kernel::Curve::point",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        },
+        {
+          "line": 1706,
+          "symbol": "ForgeCad::Kernel::Curve::evaluate",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        },
+        {
+          "line": 1708,
+          "symbol": "ForgeCad::Kernel::Curve::evaluateLeft",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        },
+        {
+          "line": 1709,
+          "symbol": "ForgeCad::Kernel::Curve::point",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        },
+        {
+          "line": 1714,
+          "symbol": "ForgeCad::Kernel::Curve::evaluate",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        },
+        {
+          "line": 1716,
+          "symbol": "ForgeCad::Kernel::Curve::evaluateLeft",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_blend_surface.cpp",
+      "target": "kernel/fk_curve_algo.h",
+      "kind": "call",
+      "count": 22,
+      "sites": []
+    },
+    {
+      "source": "kernel/fk_blend_surface.cpp",
+      "target": "kernel/fk_curve_algo.h",
+      "kind": "include",
+      "count": 1,
+      "sites": []
+    },
+    {
+      "source": "kernel/fk_blend_surface.cpp",
+      "target": "kernel/fk_history.cpp",
+      "kind": "call",
+      "count": 6,
+      "sites": []
+    },
+    {
+      "source": "kernel/fk_blend_surface.cpp",
+      "target": "kernel/fk_history.h",
+      "kind": "call",
+      "count": 10,
+      "sites": []
+    },
+    {
+      "source": "kernel/fk_blend_surface.cpp",
+      "target": "kernel/fk_intersect.cpp",
+      "kind": "call",
+      "count": 6,
+      "sites": []
+    },
+    {
+      "source": "kernel/fk_blend_surface.cpp",
+      "target": "kernel/fk_intersect.h",
+      "kind": "call",
+      "count": 3,
+      "sites": []
+    },
+    {
+      "source": "kernel/fk_blend_surface.cpp",
+      "target": "kernel/fk_intersect.h",
+      "kind": "include",
+      "count": 1,
+      "sites": []
+    },
+    {
+      "source": "kernel/fk_blend_surface.cpp",
+      "target": "kernel/fk_math.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": []
+    },
+    {
+      "source": "kernel/fk_blend_surface.cpp",
+      "target": "kernel/fk_math.h",
+      "kind": "call",
+      "count": 608,
+      "sites": [
+        {
+          "line": 1623,
+          "symbol": "ForgeCad::Kernel::Vec::x",
+          "owner": "ForgeCad::Kernel::boundaryIsoGuide"
+        },
+        {
+          "line": 1623,
+          "symbol": "ForgeCad::Kernel::Vec::y",
+          "owner": "ForgeCad::Kernel::boundaryIsoGuide"
+        },
+        {
+          "line": 1625,
+          "symbol": "ForgeCad::Kernel::Vec::operator[]",
+          "owner": "ForgeCad::Kernel::boundaryIsoGuide"
+        },
+        {
+          "line": 1629,
+          "symbol": "ForgeCad::Kernel::Interval::length",
+          "owner": "ForgeCad::Kernel::boundaryIsoGuide"
+        },
+        {
+          "line": 1631,
+          "symbol": "ForgeCad::Kernel::Vec::operator[]",
+          "owner": "ForgeCad::Kernel::boundaryIsoGuide"
+        },
+        {
+          "line": 1634,
+          "symbol": "ForgeCad::Kernel::Vec::x",
+          "owner": "ForgeCad::Kernel::boundaryIsoGuide"
+        },
+        {
+          "line": 1634,
+          "symbol": "ForgeCad::Kernel::Vec::y",
+          "owner": "ForgeCad::Kernel::boundaryIsoGuide"
+        },
+        {
+          "line": 1648,
+          "symbol": "ForgeCad::Kernel::Interval::length",
+          "owner": "ForgeCad::Kernel::boundaryIsoGuide"
+        },
+        {
+          "line": 1649,
+          "symbol": "ForgeCad::Kernel::distance",
+          "owner": "ForgeCad::Kernel::boundaryIsoGuide"
+        },
+        {
+          "line": 1669,
+          "symbol": "ForgeCad::Kernel::Interval::Interval",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        },
+        {
+          "line": 1671,
+          "symbol": "ForgeCad::Kernel::Interval::length",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        },
+        {
+          "line": 1673,
+          "symbol": "ForgeCad::Kernel::operator*",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        },
+        {
+          "line": 1673,
+          "symbol": "ForgeCad::Kernel::operator+",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        },
+        {
+          "line": 1674,
+          "symbol": "ForgeCad::Kernel::Vec::x",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        },
+        {
+          "line": 1675,
+          "symbol": "ForgeCad::Kernel::Vec::y",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        },
+        {
+          "line": 1679,
+          "symbol": "ForgeCad::Kernel::Interval::length",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        },
+        {
+          "line": 1680,
+          "symbol": "ForgeCad::Kernel::Interval::length",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        },
+        {
+          "line": 1681,
+          "symbol": "ForgeCad::Kernel::Interval::length",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        },
+        {
+          "line": 1682,
+          "symbol": "ForgeCad::Kernel::Interval::length",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        },
+        {
+          "line": 1704,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        },
+        {
+          "line": 1709,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        },
+        {
+          "line": 1709,
+          "symbol": "ForgeCad::Kernel::normalized",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        },
+        {
+          "line": 1710,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        },
+        {
+          "line": 1720,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        },
+        {
+          "line": 1720,
+          "symbol": "ForgeCad::Kernel::operator*",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        },
+        {
+          "line": 1720,
+          "symbol": "ForgeCad::Kernel::operator+",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        },
+        {
+          "line": 1721,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        },
+        {
+          "line": 1721,
+          "symbol": "ForgeCad::Kernel::operator*",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        },
+        {
+          "line": 1721,
+          "symbol": "ForgeCad::Kernel::operator+",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        },
+        {
+          "line": 1722,
+          "symbol": "ForgeCad::Kernel::Vec::x",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        },
+        {
+          "line": 1722,
+          "symbol": "ForgeCad::Kernel::Vec::y",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        },
+        {
+          "line": 1724,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        },
+        {
+          "line": 1727,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        },
+        {
+          "line": 1727,
+          "symbol": "ForgeCad::Kernel::operator-",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        },
+        {
+          "line": 1728,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        },
+        {
+          "line": 1728,
+          "symbol": "ForgeCad::Kernel::dot",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        },
+        {
+          "line": 1728,
+          "symbol": "ForgeCad::Kernel::operator-",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        },
+        {
+          "line": 1729,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        },
+        {
+          "line": 1729,
+          "symbol": "ForgeCad::Kernel::norm",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        },
+        {
+          "line": 1729,
+          "symbol": "ForgeCad::Kernel::operator*",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        },
+        {
+          "line": 1729,
+          "symbol": "ForgeCad::Kernel::operator+",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        },
+        {
+          "line": 1731,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        },
+        {
+          "line": 1731,
+          "symbol": "ForgeCad::Kernel::operator-",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        },
+        {
+          "line": 1732,
+          "symbol": "ForgeCad::Kernel::Vec::x",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        },
+        {
+          "line": 1733,
+          "symbol": "ForgeCad::Kernel::Vec::y",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        },
+        {
+          "line": 1734,
+          "symbol": "ForgeCad::Kernel::Vec::z",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        },
+        {
+          "line": 1735,
+          "symbol": "ForgeCad::Kernel::dot",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        },
+        {
+          "line": 1736,
+          "symbol": "ForgeCad::Kernel::Vec::x",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        },
+        {
+          "line": 1736,
+          "symbol": "ForgeCad::Kernel::Vec::y",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        },
+        {
+          "line": 1736,
+          "symbol": "ForgeCad::Kernel::Vec::z",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        },
+        {
+          "line": 1792,
+          "symbol": "ForgeCad::Kernel::Interval::Interval",
+          "owner": "ForgeCad::Kernel::extendBoundaryWindow"
+        },
+        {
+          "line": 1797,
+          "symbol": "ForgeCad::Kernel::Interval::Interval",
+          "owner": "ForgeCad::Kernel::extendBoundaryWindow"
+        },
+        {
+          "line": 1806,
+          "symbol": "ForgeCad::Kernel::Interval::operator=",
+          "owner": "ForgeCad::Kernel::extendBoundaryWindow"
+        },
+        {
+          "line": 1822,
+          "symbol": "ForgeCad::Kernel::Interval::Interval",
+          "owner": "ForgeCad::Kernel::extendBoundaryWindow"
+        },
+        {
+          "line": 1833,
+          "symbol": "ForgeCad::Kernel::Interval::Interval",
+          "owner": "ForgeCad::Kernel::extendBoundaryWindow"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_blend_surface.cpp",
+      "target": "kernel/fk_nurbs.cpp",
+      "kind": "call",
+      "count": 3,
+      "sites": [
+        {
+          "line": 1761,
+          "symbol": "ForgeCad::Kernel::standardBezierPieces",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        },
+        {
+          "line": 1765,
+          "symbol": "ForgeCad::Kernel::joinBezierPieces",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_blend_surface.cpp",
+      "target": "kernel/fk_nurbs.h",
+      "kind": "include",
+      "count": 1,
+      "sites": []
+    },
+    {
+      "source": "kernel/fk_blend_surface.cpp",
+      "target": "kernel/fk_offset.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 1742,
+          "symbol": "ForgeCad::Kernel::fitCurve",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_blend_surface.cpp",
+      "target": "kernel/fk_offset.h",
+      "kind": "include",
+      "count": 1,
+      "sites": []
+    },
+    {
+      "source": "kernel/fk_blend_surface.cpp",
+      "target": "kernel/fk_parallel.h",
+      "kind": "call",
+      "count": 4,
+      "sites": []
+    },
+    {
+      "source": "kernel/fk_blend_surface.cpp",
+      "target": "kernel/fk_parallel.h",
+      "kind": "include",
+      "count": 1,
+      "sites": []
+    },
+    {
+      "source": "kernel/fk_blend_surface.cpp",
+      "target": "kernel/fk_pcurve.cpp",
+      "kind": "call",
+      "count": 3,
+      "sites": []
+    },
+    {
+      "source": "kernel/fk_blend_surface.cpp",
+      "target": "kernel/fk_pcurve.h",
+      "kind": "include",
+      "count": 1,
+      "sites": []
+    },
+    {
+      "source": "kernel/fk_blend_surface.cpp",
+      "target": "kernel/fk_precision.h",
+      "kind": "call",
+      "count": 21,
+      "sites": []
+    },
+    {
+      "source": "kernel/fk_blend_surface.cpp",
+      "target": "kernel/fk_precision.h",
+      "kind": "include",
+      "count": 1,
+      "sites": []
+    },
+    {
+      "source": "kernel/fk_blend_surface.cpp",
+      "target": "kernel/fk_sheet.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 1685,
+          "symbol": "ForgeCad::Kernel::extendBSplineSurface",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_blend_surface.cpp",
+      "target": "kernel/fk_sheet.h",
+      "kind": "include",
+      "count": 1,
+      "sites": []
+    },
+    {
+      "source": "kernel/fk_blend_surface.cpp",
+      "target": "kernel/fk_surface.cpp",
+      "kind": "call",
+      "count": 19,
+      "sites": []
+    },
+    {
+      "source": "kernel/fk_blend_surface.cpp",
+      "target": "kernel/fk_surface.h",
+      "kind": "call",
+      "count": 47,
+      "sites": [
+        {
+          "line": 1619,
+          "symbol": "ForgeCad::Kernel::Surface::type",
+          "owner": "ForgeCad::Kernel::boundaryIsoGuide"
+        },
+        {
+          "line": 1634,
+          "symbol": "ForgeCad::Kernel::Surface::uIso",
+          "owner": "ForgeCad::Kernel::boundaryIsoGuide"
+        },
+        {
+          "line": 1634,
+          "symbol": "ForgeCad::Kernel::Surface::vIso",
+          "owner": "ForgeCad::Kernel::boundaryIsoGuide"
+        },
+        {
+          "line": 1667,
+          "symbol": "ForgeCad::Kernel::Surface::type",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        },
+        {
+          "line": 1668,
+          "symbol": "ForgeCad::Kernel::Surface::uDomain",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        },
+        {
+          "line": 1668,
+          "symbol": "ForgeCad::Kernel::Surface::vDomain",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        },
+        {
+          "line": 1725,
+          "symbol": "ForgeCad::Kernel::Surface::evaluate",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        },
+        {
+          "line": 1726,
+          "symbol": "ForgeCad::Kernel::Surface::evaluate",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        },
+        {
+          "line": 1730,
+          "symbol": "ForgeCad::Kernel::Surface::derivativeIndex",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        },
+        {
+          "line": 1731,
+          "symbol": "ForgeCad::Kernel::Surface::derivativeIndex",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_blend_surface.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 16,
+      "sites": [
+        {
+          "line": 1696,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_blend_surface.cpp",
+      "target": "kernel/fk_surface_algo.h",
+      "kind": "include",
+      "count": 1,
+      "sites": []
+    },
+    {
+      "source": "kernel/fk_blend_surface.cpp",
+      "target": "kernel/fk_topology.cpp",
+      "kind": "call",
+      "count": 191,
+      "sites": [
+        {
+          "line": 1616,
+          "symbol": "ForgeCad::Kernel::Body::edge",
+          "owner": "ForgeCad::Kernel::boundaryIsoGuide"
+        },
+        {
+          "line": 1620,
+          "symbol": "ForgeCad::Kernel::Body::fin",
+          "owner": "ForgeCad::Kernel::boundaryIsoGuide"
+        },
+        {
+          "line": 1657,
+          "symbol": "ForgeCad::Kernel::Body::edge",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        },
+        {
+          "line": 1663,
+          "symbol": "ForgeCad::Kernel::Body::face",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        },
+        {
+          "line": 1664,
+          "symbol": "ForgeCad::Kernel::Body::fin",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        },
+        {
+          "line": 1712,
+          "symbol": "ForgeCad::Kernel::Body::fin",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        },
+        {
+          "line": 1769,
+          "symbol": "ForgeCad::Kernel::Body::edge",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        },
+        {
+          "line": 1770,
+          "symbol": "ForgeCad::Kernel::Body::edge",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        },
+        {
+          "line": 1773,
+          "symbol": "ForgeCad::Kernel::Body::edge",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        },
+        {
+          "line": 1776,
+          "symbol": "ForgeCad::Kernel::Body::face",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        },
+        {
+          "line": 1792,
+          "symbol": "ForgeCad::Kernel::Body::edge",
+          "owner": "ForgeCad::Kernel::extendBoundaryWindow"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_blend_surface.cpp",
+      "target": "kernel/fk_topology.h",
+      "kind": "call",
+      "count": 710,
+      "sites": [
+        {
+          "line": 1616,
+          "symbol": "ForgeCad::Kernel::Id::Id",
+          "owner": "ForgeCad::Kernel::boundaryIsoGuide"
+        },
+        {
+          "line": 1620,
+          "symbol": "ForgeCad::Kernel::Id::Id",
+          "owner": "ForgeCad::Kernel::boundaryIsoGuide"
+        },
+        {
+          "line": 1657,
+          "symbol": "ForgeCad::Kernel::Id::Id",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        },
+        {
+          "line": 1663,
+          "symbol": "ForgeCad::Kernel::Body::finFace",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        },
+        {
+          "line": 1663,
+          "symbol": "ForgeCad::Kernel::Id::Id",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        },
+        {
+          "line": 1664,
+          "symbol": "ForgeCad::Kernel::Id::Id",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        },
+        {
+          "line": 1687,
+          "symbol": "ForgeCad::Kernel::Id::Id",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        },
+        {
+          "line": 1712,
+          "symbol": "ForgeCad::Kernel::Id::Id",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        },
+        {
+          "line": 1769,
+          "symbol": "ForgeCad::Kernel::Id::Id",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        },
+        {
+          "line": 1770,
+          "symbol": "ForgeCad::Kernel::Id::Id",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        },
+        {
+          "line": 1773,
+          "symbol": "ForgeCad::Kernel::Id::Id",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        },
+        {
+          "line": 1775,
+          "symbol": "ForgeCad::Kernel::Body::finFace",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        },
+        {
+          "line": 1775,
+          "symbol": "ForgeCad::Kernel::Id::Id",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        },
+        {
+          "line": 1776,
+          "symbol": "ForgeCad::Kernel::Id::Id",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        },
+        {
+          "line": 1792,
+          "symbol": "ForgeCad::Kernel::Id::Id",
+          "owner": "ForgeCad::Kernel::extendBoundaryWindow"
+        },
+        {
+          "line": 1793,
+          "symbol": "ForgeCad::Kernel::Body::Body",
+          "owner": "ForgeCad::Kernel::extendBoundaryWindow"
+        },
+        {
+          "line": 1795,
+          "symbol": "ForgeCad::Kernel::Body::Body",
+          "owner": "ForgeCad::Kernel::extendBoundaryWindow"
+        },
+        {
+          "line": 1800,
+          "symbol": "ForgeCad::Kernel::Body::Body",
+          "owner": "ForgeCad::Kernel::extendBoundaryWindow"
+        },
+        {
+          "line": 1803,
+          "symbol": "ForgeCad::Kernel::Id::Id",
+          "owner": "ForgeCad::Kernel::extendBoundaryWindow"
+        },
+        {
+          "line": 1804,
+          "symbol": "ForgeCad::Kernel::Body::operator=",
+          "owner": "ForgeCad::Kernel::extendBoundaryWindow"
+        },
+        {
+          "line": 1831,
+          "symbol": "ForgeCad::Kernel::Body::operator=",
+          "owner": "ForgeCad::Kernel::extendBoundaryWindow"
+        }
+      ]
+    },
+    {
+      "source": "kernel/tests/test_blend.cpp",
+      "target": "kernel/fk_blend_surface.cpp",
+      "kind": "call",
+      "count": 6,
+      "sites": []
+    },
+    {
+      "source": "kernel/tests/test_blend_features.cpp",
+      "target": "kernel/fk_blend_surface.cpp",
+      "kind": "call",
+      "count": 3,
+      "sites": []
+    },
+    {
+      "source": "kernel/tests/test_history.cpp",
+      "target": "kernel/fk_blend_surface.cpp",
+      "kind": "call",
+      "count": 3,
+      "sites": []
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "kernel/fk_blend_surface.cpp",
+      "kind": "call",
+      "count": 2,
+      "sites": []
+    }
+  ]
+}

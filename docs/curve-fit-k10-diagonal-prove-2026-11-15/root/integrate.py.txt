@@ -1,0 +1,13 @@
+from pathlib import Path
+import hashlib,shutil,subprocess,json
+r=Path('/home/myungit/Linux_CAD_forFree');p=Path('/tmp/forgecad-k10-diagonal-20261115')
+files=['fk_affine_surface_fit.cpp','fk_affine_surface_fit.h','fk_curve_fit_bounds.cpp','fk_mapping_carrier.cpp','fk_mapping_carrier.h','fk_curve_fit_bounds.h']
+for n in files:
+ q=p/'implementation/final'/n;assert q.is_file(),q
+ old=p/'before/kernel'/n
+ if old.exists():assert (r/'kernel'/n).read_bytes()==old.read_bytes(),n
+ shutil.copy2(q,r/'kernel'/n)
+t=p/'tests/test_mapping_diagonal_validation.cpp';assert t.exists();shutil.copy2(t,r/'kernel/tests'/t.name)
+subprocess.run(['python3',str(p/'root/prepare-integration.py')],check=True)
+manifest={str(x.relative_to(r)):hashlib.sha256(x.read_bytes()).hexdigest() for x in [*(r/'kernel'/n for n in files),r/'kernel/tests'/t.name]}
+(p/'root/integrated-manifest.json').write_text(json.dumps(manifest,indent=2));print(json.dumps(manifest,indent=2))

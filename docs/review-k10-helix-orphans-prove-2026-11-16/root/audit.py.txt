@@ -1,0 +1,93 @@
+from pathlib import Path
+import json,hashlib,subprocess,difflib,shutil,re,sys
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/k10-helix-review/root');P=R/'docs/review-k10-helix-orphans-prove-2026-11-16';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+FOCUS=set(json.loads((T/'frozen-source-hashes.json').read_text()))
+NEW_SOURCE={'kernel/fk_helix_projection.cpp','kernel/fk_helix_projection.h','tests/test_sketch_projection_fit_validation.h'}
+EXPECTED=FOCUS-NEW_SOURCE|{'CLAUDE.md','docs/code-review-2026-11-15.md','docs/review-orphans-refresh-2026-11-16.md'}
+def architecture():
+ g=json.loads((R/'docs/architecture/graph.json').read_text());nodes={n['id']:n for n in g['nodes']};assert not g['analysis']['errors'];assert g['analysis']['configurationDigest']==sha(R/'forgecad-release/compile_commands.json')
+ for f,h in g['hashes'].items():assert sha(R/f)==h,f
+ html=(R/'docs/architecture/index.html').read_text();assert json.loads(re.search(r'<script id="graph-data" type="application/json">(.*?)</script>',html,re.S).group(1))==g
+ required=[('cad_sketch_refs.cpp','kernel/fk_helix_projection.cpp','projectHelixCertified'),('cad_sketch_refs.cpp','kernel/fk_helix_projection.cpp','requireHelixProjection'),('kernel/fk_helix_projection.cpp','kernel/fk_offset.cpp','fitCurveCertified'),('kernel/fk_helix_projection.cpp','kernel/fk_helix.h','radialSlope'),('kernel/fk_helix_projection.cpp','kernel/fk_helix.h','risePerRadian'),('tests/test_sketch_projection_fit_validation.h','cad_sketch_refs.cpp','appendProjectedCurve')]
+ for a,b,symbol in required:assert any(e['source']==a and e['target']==b and e['kind']=='call' and any(symbol in s['symbol'] for s in e['sites']) for e in g['edges']),(a,b,symbol)
+ for a,b in [('tests/test_viewport.cpp','tests/test_sketch_projection_fit_validation.h'),('cad_sketch_refs.cpp','kernel/fk_helix_projection.h')]:assert any(e['source']==a and e['target']==b and e['kind']=='include' for e in g['edges']),(a,b)
+ assert 'Hermite' in nodes['kernel/fk_helix_projection.cpp']['description'];assert 'Transformed' in nodes['cad_sketch_refs.cpp']['description']
+ removed={'forgeCad2026_viewport_selection.cpp':'setSelectedPointPosition','forgeCad2026_storyboard.cpp':'firstFeature','kernel/fk_blend.cpp':'Corner::otherFace','kernel/fk_blend_loop.cpp':'ChainEdge::inPlane','kernel/fk_fill.cpp':'BandMatrix::band'}
+ for f,symbol in removed.items():assert not any(symbol in s for s in nodes[f]['symbols']),(f,symbol)
+ incident=[e for e in g['edges'] if e['source'] in FOCUS or e['target'] in FOCUS]
+ result={'files':len(nodes),'edges':len(g['edges']),'units':len(g['analysis']['units']),'errors':g['analysis']['errors'],'html_matches':True,'incident_edges':len(incident),'required_calls':required,'removed_symbols':removed,'focus':{f:{'description':nodes[f]['description'],'incoming':{k:sum(e['target']==f and e['kind']==k for e in incident) for k in ['call','include','reference']},'outgoing':{k:sum(e['source']==f and e['kind']==k for e in incident) for k in ['call','include','reference']}} for f in sorted(FOCUS)}}
+ (T/'architecture-audit.json').write_text(json.dumps(result,indent=2)+'\n');(T/'architecture-incident.json').write_text(json.dumps(incident,indent=2)+'\n')
+ with (T/'architecture-check.log').open('w') as log:subprocess.run(['python3','tools/generate_architecture.py','--check'],cwd=R,check=True,stdout=log,stderr=subprocess.STDOUT)
+ print({k:v for k,v in result.items() if k!='focus'},flush=True)
+def preserve():
+ initial=json.loads((T/'hashes-before.json').read_text());frozen=json.loads((T/'frozen-source-hashes.json').read_text());changed=sorted(f for f,h in initial.items() if not (R/f).is_file() or sha(R/f)!=h);assert set(changed)==EXPECTED,changed
+ for f,h in frozen.items():assert sha(R/f)==h,f
+ for name in ['build','helix','fill','blend','release-export','fraction-release']:assert json.loads((T/(name+'-result.json')).read_text())['exit']==0,name
+ ctest=json.loads((T/'ctest-result.json').read_text());assert ctest['exit']==8 and ctest['actual_passed']==20 and ctest['actual_failed']==1 and len(ctest['tests'])==21 and ctest['baseline_failed_same_case']
+ baseline=json.loads((T/'baseline-cavity-result.json').read_text());assert baseline['exit']==1 and '7/8 test superati' in baseline['output']
+ startup=json.loads((T/'app-startup-result.json').read_text());assert startup['alive'] and startup['actual_executable']==str(R/'forgecad-release/forgecad')
+ assert 'groups=13 pass=13 fail=0' in (T/'ctest.log').read_text()
+ for key in ['core','tests','independent']:
+  manifest={'core':'MANIFEST.original.sha256.txt','tests':'SHA256SUMS','independent':'SHA256SUMS'}[key];folder=P/key
+  if key!='core':
+   for line in (folder/manifest).read_text().splitlines():h,f=line.split('  ',1);assert sha(folder/f)==h,(key,f)
+ meta=json.loads((P/'tests/metadata.json').read_text());assert meta['sanitizer']['exit']==0 and meta['sanitizer']['groups']==13 and meta['sanitizer']['diagnostics']==0 and not meta['sanitizer']['suppressions'] and meta['sanitizer']['TU_count']==3
+ text=(P/'tests/sanitizer-run-final.log').read_text();assert 'groups=13 pass=13 fail=0' in text and not re.search(r'AddressSanitizer:|runtime error:|ERROR: LeakSanitizer',text)
+ assert sha(R/'tests/test_sketch_projection_fit_validation.h')==sha(P/'tests/test_sketch_projection_fit_validation.h.txt')
+ for f,h in json.loads((P/'core/stage-hashes.json').read_text()).items():assert sha(R/f)==h==sha(P/'core'/(f+'.txt')),f
+ orphans=json.loads((T/'orphan-stage-hashes.json').read_text())
+ for f,h in orphans.items():
+  if f=='forgeCad2026_storyboard.cpp':assert (R/f).read_bytes().rstrip()==(P/'orphans/stage'/(f+'.txt')).read_bytes().rstrip()
+  else:assert sha(R/f)==h,f
+ fraction=json.loads((T/'fraction-release.json').read_text());assert len(fraction['cases'])==8 and all(p['pass_'] for p in fraction['cases']) and sum(p['spans'] for p in fraction['cases'])==624 and not fraction['altered_pole']['pass_']
+ assert len(json.loads((T/'fraction-baseline-negative.json').read_text()))==2
+ names=subprocess.check_output(['git','ls-files','--cached','--others','--exclude-standard','-z'],cwd=R).decode().split('\0');new=sorted(f for f in set(names)-set(initial) if f and (R/f).is_file() and not (R/f).is_symlink())
+ allowed=NEW_SOURCE|{'docs/review-k10-helix-orphans-2026-11-16.md','docs/history/claude-prima-k10-helix-orphans-2026-11-16.md'};assert all(f in allowed or f.startswith(str(P.relative_to(R))+'/') for f in new),new
+ memory=(R/'CLAUDE.md').read_text();assert len(memory.encode())<=16384 and len(re.findall(r'^\*\*',memory,re.M))<=10
+ binaries=['forgecad-release/forgecad','forgecad-release/forgecad_view_tests','forgecad-release/kernel/forgekernel_tests'];latestprod=max((R/f).stat().st_mtime for f in frozen if f.endswith(('.cpp','.h')) and not f.startswith('tests/'));latesttest=max((R/f).stat().st_mtime for f in frozen if f.endswith(('.cpp','.h')))
+ assert (R/binaries[0]).stat().st_mtime>=latestprod and (R/binaries[1]).stat().st_mtime>=latesttest
+ db=json.loads((R/'forgecad-release/compile_commands.json').read_text());commands=[e for e in db if e['file'].endswith('/kernel/fk_helix_projection.cpp')];assert len(commands)==1
+ for e in commands:assert '-fno-fast-math' in e['command'] and '-ffp-contract=off' in e['command'] and 'opencascade' not in e['command'].lower() and 'Qt6' not in e['command']
+ for f in ['forgecad-release/CMakeFiles/forgecad.dir/link.txt','forgecad-release/CMakeFiles/forgecad_view_tests.dir/link.txt']:
+  link=(R/f).read_text();assert 'opencascade' not in link.lower() and 'libTK' not in link
+ subprocess.run(['git','diff','--check'],cwd=R,check=True)
+ manifests={}
+ for d in ['ellisse-estremi','curve-fit-k10-edge-offset','review-preview-unification','supporto-booleana','review-k10-uv-preview','review-k10-sew-preview']:
+  directory=R/'docs'/(d+'-prove-2026-11-16');lines=(directory/'SHA256SUMS').read_text().splitlines()
+  for line in lines:h,f=line.split('  ',1);assert sha(directory/f)==h,(d,f)
+  manifests[d]=len(lines)
+ result={'initial_files':len(initial),'preserved_files':len(initial)-len(changed),'changed_existing':changed,'new_files':new,'source_hashes':frozen,'binary_hashes':{f:sha(R/f) for f in binaries},'kernel_sha256':sha(R/'forgecad-release/kernel/libforgekernel.a'),'strict_commands':commands,'preserved_manifests':manifests,'claude_bytes':len(memory.encode())}
+ (T/'final-audit.json').write_text(json.dumps(result,indent=2)+'\n')
+ diff=[]
+ for f in changed:
+  p=T/'before'/f;assert p.is_file(),f;diff+=list(difflib.unified_diff(p.read_text().splitlines(True),(R/f).read_text().splitlines(True),fromfile='before/'+f,tofile='after/'+f))
+ for f in NEW_SOURCE:diff+=list(difflib.unified_diff([],(R/f).read_text().splitlines(True),fromfile='/dev/null',tofile='after/'+f))
+ (T/'change.diff').write_text(''.join(diff))
+ for f in frozen|{'CLAUDE.md':'','docs/code-review-2026-11-15.md':'','docs/review-orphans-refresh-2026-11-16.md':''}:
+  q=T/'final-source'/(f+'.txt');q.parent.mkdir(parents=True,exist_ok=True);q.write_bytes((R/f).read_bytes())
+ print('Preservation',result['preserved_files'],'/',len(initial),'manifests',manifests,flush=True)
+def copy_delivery():
+ for label,folder in [('core',Path('/tmp/k10-sketch-review/core/delivery')),('tests',Path('/tmp/k10-sketch-review/tests/delivery')),('independent',Path('/tmp/helix-independent-audit/delivery'))]:
+  for p in folder.rglob('*'):
+   if not p.is_file():continue
+   q=P/label/p.relative_to(folder)
+   if q.suffix in ['.cpp','.h','.py','.sh'] or q.name=='CMakeLists.txt':q=q.with_name(q.name+'.txt')
+   if label=='core' and q.name=='MANIFEST.sha256':q=q.with_name('MANIFEST.original.sha256.txt')
+   q.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(p,q)
+ print('Deliveries copied',flush=True)
+def archive():
+ for p in T.rglob('*'):
+  if p.is_file() and '__pycache__' not in p.parts:
+   with p.open('rb') as stream:magic=stream.read(4)
+   if magic==b'\x7fELF':continue
+   q=P/'root'/p.relative_to(T)
+   if q.suffix in ['.cpp','.h','.py','.sh'] or q.name=='CMakeLists.txt':q=q.with_name(q.name+'.txt')
+   q.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(p,q)
+ assert not any(p.suffix in ['.cpp','.h','.py','.sh','.o','.a','.prt','.pyc'] or p.name=='CMakeLists.txt' for p in P.rglob('*') if p.is_file())
+ for p in P.rglob('*'):
+  if p.is_file():
+   with p.open('rb') as stream:assert stream.read(4)!=b'\x7fELF',str(p)
+ files=sorted(f for f in P.rglob('*') if f.is_file() and f!=P/'SHA256SUMS');(P/'SHA256SUMS').write_text(''.join(sha(f)+'  '+str(f.relative_to(P))+'\n' for f in files))
+ for line in (P/'SHA256SUMS').read_text().splitlines():h,f=line.split('  ',1);assert sha(P/f)==h,f
+ print('Sealed',len(files),'artefacts',flush=True)
+if __name__=='__main__':globals()[sys.argv[1]]()

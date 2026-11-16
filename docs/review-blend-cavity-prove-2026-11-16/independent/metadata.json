@@ -1,0 +1,10 @@
+{
+  "baseline": {
+    "verified": 11,
+    "manifest_sha256": "51010cd95ee1d02ad825a1e6960f23aaef4629754324056f926b93c6b86e0297"
+  },
+  "candidate": {
+    "verified": 9,
+    "manifest_sha256": "913cd4c86e6c39972a2d86f1376cb08422297c89e65f9948b1861787bf3c0661"
+  }
+}

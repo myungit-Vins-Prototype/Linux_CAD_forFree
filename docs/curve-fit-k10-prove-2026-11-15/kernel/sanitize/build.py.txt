@@ -1,0 +1,8 @@
+from pathlib import Path
+import json,shlex,subprocess
+r=Path('/home/myungit/Linux_CAD_forFree');o=Path('/tmp/forgecad-k10-20261115/kernel/sanitize');cs=json.loads((r/'forgecad-release/compile_commands.json').read_text());template=next(x for x in cs if x['file'].endswith('/kernel/fk_offset.cpp'));flags=['-O1','-g','-fsanitize=address,undefined','-fno-omit-frame-pointer','-I'+str(r/'kernel/tests'),'-I'+str(r/'kernel')];objects={}
+for source in [r/'kernel/fk_offset.cpp',r/'kernel/fk_curve_fit_bounds.cpp',r/'kernel/tests/fk_test_main.cpp',Path('/tmp/forgecad-k10-20261115/kernel/test_curve_fit_bounds.cpp'),Path('/tmp/forgecad-k10-20261115/tests/test_curve_fit_validation.cpp')]:
+ cmd=shlex.split(template['command']);cmd[cmd.index('-c')+1]=str(source);obj=o/(source.stem+'.o');cmd[cmd.index('-o')+1]=str(obj);cmd+=flags;print(shlex.join(cmd),flush=True);subprocess.run(cmd,cwd=template['directory'],check=True);objects[source.stem]=obj
+l=r/'forgecad-release/kernel/occt_tests';cmd=shlex.split((l/'CMakeFiles/forgekernel_tests.dir/link.txt').read_text());tail=cmd[cmd.index('../libforgekernel.a'):]
+for test in ['test_curve_fit_bounds','test_curve_fit_validation']:
+ cmd=[cmd[0],'-fsanitize=address,undefined','-o',str(o/test),str(objects[test]),str(objects['fk_test_main']),str(objects['fk_offset']),str(objects['fk_curve_fit_bounds'])]+tail;print(shlex.join(cmd),flush=True);subprocess.run(cmd,cwd=l,check=True)

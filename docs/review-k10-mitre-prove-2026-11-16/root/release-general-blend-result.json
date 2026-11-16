@@ -1,0 +1,8 @@
+{
+  "exit": 0,
+  "seconds": 0.6147754400008125,
+  "command": [
+    "forgecad-release/kernel/forgekernel_tests",
+    "BlendGeneralMatchesAnalytic"
+  ]
+}

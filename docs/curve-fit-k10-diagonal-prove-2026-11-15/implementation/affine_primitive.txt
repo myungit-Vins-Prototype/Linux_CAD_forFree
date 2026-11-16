@@ -1,0 +1,205 @@
+I affineCoordinate(const AffineUVSpan &map, int axis, double parameter) {
+    if (map.line) {
+        const double direction = map.last[axis];
+        if (direction == 0)
+            return I(map.first[axis]);
+        if (direction == 1 || direction == -1)
+            return exactSum(map.first[axis], direction * parameter);
+        if (parameter == 0)
+            return I(map.first[axis]);
+        return I(map.first[axis]) + I(direction) * I(parameter);
+    }
+    if (parameter == map.anchor.lo)
+        return I(map.first[axis]);
+    if (parameter == map.anchor.hi)
+        return I(map.last[axis]);
+    if (map.first[axis] == map.last[axis])
+        return I(map.first[axis]);
+    return I(map.first[axis]) + (I(map.last[axis]) - I(map.first[axis])) *
+           ((I(parameter) - I(map.anchor.lo)) / (I(map.anchor.hi) - I(map.anchor.lo)));
+}
+I affineInverseU(const AffineUVSpan &map, I coordinate) {
+    if (map.line)
+        return map.last.x() > 0 ? (coordinate - I(map.first.x())) / I(map.last.x())
+                               : (I(map.first.x()) - coordinate) / I(-map.last.x());
+    const I fraction = map.last.x() > map.first.x()
+        ? (coordinate - I(map.first.x())) / (I(map.last.x()) - I(map.first.x()))
+        : (I(map.first.x()) - coordinate) / (I(map.first.x()) - I(map.last.x()));
+    return I(map.anchor.lo) + fraction * (I(map.anchor.hi) - I(map.anchor.lo));
+}
+bool constantU(const AffineUVSpan &map) {
+    return map.line ? map.last.x() == 0 : map.first.x() == map.last.x();
+}
+V sourcePointEnclosure(const Source &source, I parameter) {
+    V result{I(inf, -inf), I(inf, -inf), I(inf, -inf)};
+    if (!finite(parameter))
+        return {I(-inf, inf), I(-inf, inf), I(-inf, inf)};
+    parameter.lo = std::max(parameter.lo, source.range.lo);
+    parameter.hi = std::min(parameter.hi, source.range.hi);
+    bool covered = false;
+    auto first = std::lower_bound(source.spans.begin(), source.spans.end(), parameter.lo,
+                                  [](const Span &span, double value) { return span.domain.hi < value; });
+    for (auto it = first; it != source.spans.end() && it->domain.lo <= parameter.hi; ++it) {
+        cancellationPoint();
+        const I local(std::max(parameter.lo, it->domain.lo), std::min(parameter.hi, it->domain.hi));
+        if (!finite(local))
+            continue;
+        const I t = (local - I(it->domain.lo)) / (I(it->domain.hi) - I(it->domain.lo));
+        const I weight = it->constantWeight ? I(1) : evaluatePolynomial(it->w, t);
+        if (!(weight.lo > 0) || !finite(weight))
+            return {I(-inf, inf), I(-inf, inf), I(-inf, inf)};
+        for (int axis = 0; axis < 3; ++axis) {
+            const I point = evaluatePolynomial(it->h[axis], t) / weight;
+            if (!finite(point))
+                return {I(-inf, inf), I(-inf, inf), I(-inf, inf)};
+            result[axis].lo = std::min(result[axis].lo, point.lo);
+            result[axis].hi = std::max(result[axis].hi, point.hi);
+        }
+        covered = true;
+    }
+    return covered ? result : V{I(-inf, inf), I(-inf, inf), I(-inf, inf)};
+}
+SurfaceCurveFitData extrusionAffineFactory(const SurfacePtr &surface, const std::vector<AffineUVSpan> &input,
+                                           const Interval &requested) {
+    cancellationPoint();
+    if (!surface || !requested.isFinite() || !(requested.lo < requested.hi) ||
+        !std::isfinite(requested.length()))
+        throw std::domain_error("fit UV affine: intervallo o superficie non valido");
+    if (surface->type() != SurfaceType::Extrusion)
+        return {};
+    const auto &extrusion = static_cast<const ExtrusionSurface &>(*surface);
+    if (!positionSourceSupported(extrusion.curve()))
+        return {};
+    if (input.empty() || input.size() > 100000)
+        throw std::domain_error("fit UV affine: numero campate non valido");
+    auto maps = std::make_shared<std::vector<AffineUVSpan>>(input);
+    Interval uRange{inf, -inf};
+    double next = requested.lo;
+    for (const AffineUVSpan &map : *maps) {
+        cancellationPoint();
+        if (!map.parameter.isFinite() || !(map.parameter.lo < map.parameter.hi) ||
+            !std::isfinite(map.parameter.length()) || map.parameter.lo != next ||
+            map.parameter.lo < requested.lo || map.parameter.hi > requested.hi ||
+            !isFinite(map.first) || !isFinite(map.last) ||
+            (!map.line && (!map.anchor.isFinite() || !(map.anchor.lo < map.anchor.hi) ||
+                !std::isfinite(map.anchor.length()) || map.parameter.lo < map.anchor.lo ||
+                map.parameter.hi > map.anchor.hi)))
+            throw std::domain_error("fit UV affine: ancore o copertura non valide");
+        next = map.parameter.hi;
+        for (double parameter : {map.parameter.lo, map.parameter.hi}) {
+            const I u = affineCoordinate(map, 0, parameter), v = affineCoordinate(map, 1, parameter);
+            if (!finite(u) || !finite(v) || u.lo < surface->uDomain().lo || u.hi > surface->uDomain().hi ||
+                v.lo < surface->vDomain().lo || v.hi > surface->vDomain().hi)
+                throw std::domain_error("fit UV affine: immagine fuori dominio naturale o non risolta");
+            uRange.lo = std::min(uRange.lo, u.lo);
+            uRange.hi = std::max(uRange.hi, u.hi);
+        }
+    }
+    if (next != requested.hi)
+        throw std::domain_error("fit UV affine: copertura incompleta");
+    Interval extractionRange = uRange;
+    if (!(extractionRange.lo < extractionRange.hi)) {
+        const Interval natural = extrusion.curve()->domain();
+        extractionRange = natural.isFinite() ? natural : Interval{uRange.lo - 1, uRange.hi + 1};
+    }
+    auto source = prepareSource(extrusion.curve(), extractionRange, true);
+    const V direction = vec(extrusion.direction());
+    SurfaceCurveFitData result;
+    result.breaks = {requested.lo, requested.hi};
+    std::size_t preparationVisits = 0;
+    for (const AffineUVSpan &map : *maps) {
+        cancellationPoint();
+        result.breaks.push_back(map.parameter.lo);
+        result.breaks.push_back(map.parameter.hi);
+        if (result.breaks.size() > 200000)
+            throw std::domain_error("fit UV affine: budget nodi esaurito");
+        if (constantU(map))
+            continue;
+        const I firstU = affineCoordinate(map, 0, map.parameter.lo), lastU = affineCoordinate(map, 0, map.parameter.hi);
+        const double lo = std::min(firstU.lo, lastU.lo), hi = std::max(firstU.hi, lastU.hi);
+        auto first = std::lower_bound(source->spans.begin(), source->spans.end(), lo,
+                                      [](const Span &span, double value) { return span.domain.lo < value; });
+        for (auto it = first; it != source->spans.end() && it->domain.lo <= hi; ++it) {
+            cancellationPoint();
+            if (++preparationVisits > 200000 || result.breaks.size() >= 200000)
+                throw std::domain_error("fit UV affine: budget eventi esaurito");
+            const I parameter = affineInverseU(map, I(it->domain.lo));
+            if (!finite(parameter))
+                throw std::domain_error("fit UV affine: preimmagine non risolta");
+            const double cut = parameter.lo * .5 + parameter.hi * .5;
+            if (cut > map.parameter.lo && cut < map.parameter.hi)
+                result.breaks.push_back(cut);
+        }
+    }
+    std::sort(result.breaks.begin(), result.breaks.end());
+    result.breaks.erase(std::unique(result.breaks.begin(), result.breaks.end()), result.breaks.end());
+    result.bound = [source, maps, direction, requested](const Interval &query, const std::array<Vec3, 4> &poles) {
+        cancellationPoint();
+        if (!query.isFinite() || !(query.lo < query.hi) || !std::isfinite(query.length()) ||
+            query.lo < requested.lo || query.hi > requested.hi)
+            return inf;
+        for (const Vec3 &pole : poles)
+            if (!isFinite(pole))
+                return inf;
+        double worst = 0;
+        bool covered = false;
+        std::size_t queryVisits = 0;
+        auto first = std::lower_bound(maps->begin(), maps->end(), query.lo,
+                                      [](const AffineUVSpan &map, double value) { return map.parameter.hi < value; });
+        for (auto it = first; it != maps->end() && it->parameter.lo <= query.hi; ++it) {
+            cancellationPoint();
+            const AffineUVSpan &map = *it;
+            const double lo = std::max(query.lo, map.parameter.lo), hi = std::min(query.hi, map.parameter.hi);
+            if (lo > hi)
+                continue;
+            if (++queryVisits > 200000)
+                return inf;
+            // The subtraction is performed in the ORIGINAL query parameter.
+            // No v(u) slope is formed, including for almost vertical UV paths.
+            const I va = affineCoordinate(map, 1, query.lo), vb = affineCoordinate(map, 1, query.hi);
+            VP adjusted;
+            for (int pole = 0; pole < 4; ++pole) {
+                const I v = va + (vb - va) * (I(pole) / I(3));
+                for (int axis = 0; axis < 3; ++axis)
+                    adjusted[axis].push_back(I(poles[pole][axis]) - v * direction[axis]);
+            }
+            if (lo == hi || constantU(map)) {
+                const V point = sourcePointEnclosure(*source, affineCoordinate(map, 0, lo));
+                const I a = (I(lo) - I(query.lo)) / (I(query.hi) - I(query.lo));
+                const I b = (I(hi) - I(query.lo)) / (I(query.hi) - I(query.lo));
+                VP residual;
+                for (int axis = 0; axis < 3; ++axis)
+                    residual[axis] = sum(P{point[axis]}, affineBezier(adjusted[axis], a, b), true);
+                const double error = normUpper(residual);
+                if (!std::isfinite(error))
+                    return inf;
+                worst = std::max(worst, error);
+            } else {
+                const I ua = affineCoordinate(map, 0, lo), ub = affineCoordinate(map, 0, hi);
+                const Interval sourceQuery{std::max(source->range.lo, std::min(ua.lo, ub.lo)),
+                                           std::min(source->range.hi, std::max(ua.hi, ub.hi))};
+                if (!(sourceQuery.lo < sourceQuery.hi))
+                    return inf;
+                const auto sourceFirst = std::lower_bound(source->spans.begin(), source->spans.end(), sourceQuery.lo,
+                    [](const Span &span, double value) { return span.domain.hi <= value; });
+                const auto sourceLast = std::lower_bound(sourceFirst, source->spans.end(), sourceQuery.hi,
+                    [](const Span &span, double value) { return span.domain.lo < value; });
+                queryVisits += std::size_t(sourceLast - sourceFirst);
+                if (queryVisits > 200000)
+                    return inf;
+                VP pulledBack;
+                for (int axis = 0; axis < 3; ++axis)
+                    pulledBack[axis] = affineBezier(adjusted[axis],
+                        (affineInverseU(map, I(sourceQuery.lo)) - I(query.lo)) / (I(query.hi) - I(query.lo)),
+                        (affineInverseU(map, I(sourceQuery.hi)) - I(query.lo)) / (I(query.hi) - I(query.lo)));
+                const double error = positionOnOriginal(*source, sourceQuery, pulledBack);
+                if (!std::isfinite(error))
+                    return inf;
+                worst = std::max(worst, error);
+            }
+            covered = true;
+        }
+        return covered ? worst : inf;
+    };
+    return result;
+}

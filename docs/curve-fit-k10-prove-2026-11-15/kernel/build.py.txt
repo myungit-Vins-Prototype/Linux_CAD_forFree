@@ -1,0 +1,5 @@
+from pathlib import Path
+import json,shlex,subprocess
+root=Path('/home/myungit/Linux_CAD_forFree');out=Path('/tmp/forgecad-k10-20261115/kernel');cs=json.loads((root/'forgecad-release/compile_commands.json').read_text());c=next(x for x in cs if x['file'].endswith('/kernel/fk_offset.cpp'))
+for name in ['fk_curve_fit_bounds','fk_offset']:
+ cmd=shlex.split(c['command']);cmd[cmd.index('-o')+1]=str(out/(name+'.o'));cmd[cmd.index('-c')+1]=str(out/(name+'.cpp'));cmd+=['-I'+str(root/'kernel'),'-I'+str(out)];subprocess.run(cmd,cwd=c['directory'],check=True)

@@ -140,3 +140,13 @@ tangente dei raccordi smorza i passi Newton e usa la continuazione stabile anche
 per bordi analitici, con gli stessi limiti di scarto; una rotazione perturbata
 di 1e-14 rad riproduce il problema anche su Linux.
 [Diagnosi, correzione ed esiti](ci-riparazione-2026-11-10.md).
+
+
+### Raccordo cavità: fallimenti del 12–14 novembre 2026
+
+I quattro run falliti compilavano correttamente su Linux e macOS. Falliva
+`BlendCavityWholeRimKeepsRadiusHistoryAndClosedTrims` per il contatto fuori dal
+dominio del fianco F0. La correzione K12 mantiene invariati test, fixture e
+soglie; suite cavity8/8 e controlli locali correnti PASS. La conferma sul nuovo
+commit remoto è distinta dalle verifiche locali.
+[Diagnosi e stato della verifica](ci-verifica-2026-11-16.md).

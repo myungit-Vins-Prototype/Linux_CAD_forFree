@@ -1,0 +1,92 @@
+{
+  "files": 745,
+  "edges": 10708,
+  "units": 368,
+  "errors": {},
+  "html_matches": true,
+  "incident_edges": 71,
+  "required": [
+    [
+      "kernel/fk_boundary.cpp",
+      "kernel/fk_curve_fit_bounds.cpp",
+      "call"
+    ],
+    [
+      "kernel/fk_boundary.cpp",
+      "kernel/fk_curve_fit_bounds.h",
+      "include"
+    ],
+    [
+      "kernel/tests/test_boundary_fit_validation.cpp",
+      "kernel/fk_boundary.cpp",
+      "call"
+    ]
+  ],
+  "files_audited": {
+    "kernel/fk_boundary.cpp": {
+      "description": "Superficie tra curve Coons: nodi interni rimappati nei lati, fit continuo delle sorgenti supportate e verifica dei bordi effettivi dopo compatibilizzazione/assemblaggio; rifiuto dei disallineamenti oltre budget.",
+      "incoming": {
+        "call": 6,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 11,
+        "include": 8,
+        "reference": 0
+      }
+    },
+    "kernel/fk_boundary.h": {
+      "description": "Superficie tra curve (patch di Coons bilineare): una lamina di una faccia delimitata da un contorno chiuso di curve 3D qualsiasi, anche sghembo.",
+      "incoming": {
+        "call": 0,
+        "include": 6,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 1,
+        "include": 4,
+        "reference": 0
+      }
+    },
+    "kernel/fk_curve_fit_bounds.cpp": {
+      "description": "Limiti continui Bernstein outward per fit di posizione e offset NURBS: dati originali, pesi positivi, trim, trasformazioni e parametri affini anche inversi; normali di estrusione/rivoluzione, budget finiti e cancellazione.",
+      "incoming": {
+        "call": 6,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 5,
+        "include": 2,
+        "reference": 0
+      }
+    },
+    "kernel/fk_curve_fit_bounds.h": {
+      "description": "Fit con limite sull\u2019intera campata e provider di posizione/offset delle curve NURBS: parametrizzazione affine esplicita, rifiuto se il controllo non conclude.",
+      "incoming": {
+        "call": 0,
+        "include": 6,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 0,
+        "include": 1,
+        "reference": 0
+      }
+    },
+    "kernel/tests/test_boundary_fit_validation.cpp": {
+      "description": "Regressioni BoundarySheet contro variazioni NURBS nascoste fra nodi, sorgenti razionali di grado elevato, versi/ritagli e disallineamenti agli angoli; runner indipendente da Qt/OCCT.",
+      "incoming": {
+        "call": 1,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 16,
+        "include": 9,
+        "reference": 0
+      }
+    }
+  }
+}

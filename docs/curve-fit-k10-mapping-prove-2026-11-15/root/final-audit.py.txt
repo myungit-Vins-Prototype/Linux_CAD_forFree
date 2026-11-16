@@ -1,0 +1,27 @@
+from pathlib import Path
+import hashlib,json,subprocess
+r=Path('/home/myungit/Linux_CAD_forFree');p=Path('/tmp/forgecad-k10-mapping-20261115');before=json.loads((p/'hashes-before.json').read_text())
+changed=[]
+for f,h in before.items():
+ q=r/f
+ if not q.exists() or hashlib.sha256(q.read_bytes()).hexdigest()!=h:changed.append(f)
+allowed={'CLAUDE.md','kernel/CMakeLists.txt','kernel/fk_surface_mapping.cpp','kernel/fk_curve_fit_bounds.cpp','kernel/fk_curve_fit_bounds.h','tools/generate_architecture.py','docs/code-review-2026-11-15.md','docs/curve-fit-k10-composition-2026-11-15.md'}
+assert set(changed)<=allowed,changed
+names=subprocess.check_output(['git','ls-files','--cached','--others','--exclude-standard','-z'],cwd=r).decode().split('\0')
+new_files=sorted(f for f in set(names)-set(before) if f and (r/f).is_file() and not (r/f).is_symlink())
+expected_new={'kernel/tests/test_mapping_carrier_validation.cpp','docs/curve-fit-k10-mapping-2026-11-15.md','docs/history/claude-prima-k10-mapping-2026-11-15.md','kernel/fk_mapping_carrier.cpp','kernel/fk_mapping_carrier.h'}
+assert all(f in expected_new or f.startswith('docs/curve-fit-k10-mapping-prove-2026-11-15/') for f in new_files),new_files
+source=['kernel/fk_mapping_carrier.cpp','kernel/fk_mapping_carrier.h','kernel/fk_surface_mapping.cpp','kernel/fk_curve_fit_bounds.cpp','kernel/fk_curve_fit_bounds.h','kernel/tests/test_mapping_carrier_validation.cpp','kernel/CMakeLists.txt','tools/generate_architecture.py']
+binaries=['forgecad-release/forgecad','forgecad-release/forgecad_view_tests','forgecad-release/kernel/forgekernel_tests','forgecad-release/kernel/forgekernel_mapping_carrier_validation_tests','forgecad-release/kernel/libforgekernel.a']
+for f in binaries:assert (r/f).stat().st_mtime>max((r/x).stat().st_mtime for x in source if x.endswith('.cpp'))
+assert (r/'CLAUDE.md').stat().st_size<=16384
+cmds=json.loads((r/'forgecad-release/compile_commands.json').read_text());bound=next(x for x in cmds if x['file'].endswith('/kernel/fk_curve_fit_bounds.cpp'))
+assert '-fno-fast-math' in bound['command'] and '-ffp-contract=off' in bound['command']
+helper=next(x for x in cmds if x['file'].endswith('/kernel/fk_mapping_carrier.cpp'))
+assert '-fno-fast-math' in helper['command'] and '-ffp-contract=off' in helper['command']
+link=(r/'forgecad-release/kernel/CMakeFiles/forgekernel_mapping_carrier_validation_tests.dir/link.txt').read_text();assert 'Qt' not in link and 'libTK' not in link
+for f,h in json.loads((p/'independent/manifest.json').read_text()).items():
+ assert hashlib.sha256((r/f).read_bytes()).hexdigest()==h,f
+subprocess.run(['git','diff','--check'],cwd=r,check=True)
+result=dict(baseline_files=len(before),preserved_files=len(before)-len(changed),changed_existing=changed,new_files=new_files,source_hashes={f:hashlib.sha256((r/f).read_bytes()).hexdigest() for f in source},binary_hashes={f:hashlib.sha256((r/f).read_bytes()).hexdigest() for f in binaries},claude_bytes=(r/'CLAUDE.md').stat().st_size,bounds_compile_command=bound['command'],helper_compile_command=helper['command'],test_link_command=link)
+(p/'root/final-audit.json').write_text(json.dumps(result,indent=2));print(json.dumps(result,indent=2))

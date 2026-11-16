@@ -1,0 +1,17 @@
+Audit locale CI, 16 novembre 2026, read-only repository.
+
+Workflow: Ubuntu 26.04 CPU; macOS 15 CPU/Metal; CMake Release, CUDA OFF, VIEW_TESTS OFF, RIBBON_PREVIEW OFF. Kernel OCCT ON e tutti gli autonomi configurati; nessuna modifica CI proposta.
+
+Configurazione pulita Clang23 Linux in /tmp/boundary-review/ci/clang-build: PASS. Quattordici TU correnti (8 kernel, 6 applicazione) syntax-only:14/14PASS. Nessun errore; warning non bloccanti in fk_offset. Risultati per-file e log in clang-syntax-results.json e *.clang.log. Non e' compilazione macOS/Metal: SDK Apple assente.
+
+I log GitHub ricevuti dal coordinatore identificano fallimenti dei TEST, non della compilazione: BlendCavityWholeRimKeepsRadiusHistoryAndClosedTrims con contatto fuori dominio fianco F0. La correzione K12 corrente interessa lo stesso percorso/fixture senza alterare questa regressione.
+
+Verifica esatta contro HEAD ce03a6d:
+- kernel/tests/test_blend_cavity.cpp byte-identico, SHA256 0e0cc0c8cfbeb77a6e43d83d29c51cdc258adb6e3a06ac5e429a0547379b73a5.
+- funzione BlendCavityWholeRimKeepsRadiusHistoryAndClosedTrims identica; tutti i raggi .5,1.1,1.675, controlli di raggio 1e-7,18facce, genealogia10blend, checkBody, codec e tassellazione conservati.
+- kernel/tests/data/blend_cavity_loft.body byte-identico, SHA256 8d7d8d50e0bcbfb7e392cb86a17516547f874ee6a355954601f3a473164d39bc.
+- kernel/CMakeLists.txt registra forgekernel_blend_cavity_tests incondizionatamente e con timeout90s (test_blend_cavity.cpp+test_blend_transitions.cpp), e la suite aggiuntiva regressioni K12.
+
+Presenza/committabilita': tutte387 TU uniche nella configurazione pulita esistono; zero TU nontracked ignorate;38TU nuove nontracked ma aggiungibili. Closure include locali e nuovi header verificata separatamente in committable-dependency-closure.json. HEAD non ha include/file CMake locali mancanti, salvo header fingerprint e moc generati intenzionalmente. Il coordinatore dovra' includere tutti i sorgenti nuovi nel commit autorizzato.
+
+Nessun repository/file CI/CMake/docs modificato da questo agente. I PASS CTest K12 correnti restano attribuiti alle esecuzioni del coordinatore, non alla presente verifica sintattica.

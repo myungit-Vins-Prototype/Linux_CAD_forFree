@@ -1,0 +1,10 @@
+[  OK  ] BoundaryFitHiddenSpansAndDegree27FinalSurface
+[  OK  ] BoundaryFitCompoundSidesPoseScaleAndReversals
+[  OK  ] BoundaryFitPartialNestedTrimAndAutomaticSubpieces
+[  OK  ] BoundaryFitConicCompatibilityAndCancellation
+[  OK  ] BoundaryFitReversedKnownSide
+[  OK  ] BoundaryFitKnownSideAllRowsAndTraversalDirections
+[  OK  ] BoundaryFitInvalidTolerance
+[  OK  ] BoundaryFitFinalCoonsEndpointMismatchBudget
+[  OK  ] BoundaryFitOracleClosedJunctionEndpoints
+9/9 test superati

@@ -1,0 +1,62 @@
+{
+  "actual-extended-fins.json": {
+    "sha256": "decd31d7d2d63c322a15373a748c9272df815d26cfccd93dddaee88c79f213b6",
+    "byte_identical_to_frozen_v2": true,
+    "budget": 3e-09,
+    "range": [
+      -0.05,
+      1.05
+    ],
+    "finUses": 2
+  },
+  "polynomial.json": {
+    "sha256": "e2d85bb5ab4e38bd180924968df800c2f8f28ffaa73d9f2e99016a61ae1dde43",
+    "byte_identical_to_frozen_v2": true,
+    "budget": 3e-09,
+    "range": [
+      0,
+      1
+    ],
+    "finUses": 2
+  },
+  "rational-negative-uv.json": {
+    "sha256": "bf343acf4bb26611009d85585ad276357f95226c921c91538ae8fb7816d76f8e",
+    "byte_identical_to_frozen_v2": true,
+    "budget": 3e-09,
+    "range": [
+      0,
+      1
+    ],
+    "finUses": 2
+  },
+  "rational-pose-scale.json": {
+    "sha256": "a7f57df729833b0aba0616af9ca1f8b1ff0c6dd7cd81fa3e492a912d7a28139a",
+    "byte_identical_to_frozen_v2": true,
+    "budget": 3e-09,
+    "range": [
+      0,
+      1
+    ],
+    "finUses": 2
+  },
+  "rational-trim.json": {
+    "sha256": "6cfd0334ccc86a7b6888e03c129504880f9268ea4fad03d06381464328de1e4c",
+    "byte_identical_to_frozen_v2": true,
+    "budget": 3e-09,
+    "range": [
+      0.1,
+      0.9
+    ],
+    "finUses": 2
+  },
+  "rational.json": {
+    "sha256": "7fd11f3a612cb42d5598044eb3cfec1f0037a61e939b501bf6c55cd2e5458673",
+    "byte_identical_to_frozen_v2": true,
+    "budget": 3e-09,
+    "range": [
+      0,
+      1
+    ],
+    "finUses": 2
+  }
+}

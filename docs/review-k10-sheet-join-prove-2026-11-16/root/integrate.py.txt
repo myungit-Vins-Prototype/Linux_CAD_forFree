@@ -1,0 +1,27 @@
+from pathlib import Path
+import json,hashlib,shutil
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/sheet-join-review');sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();memory=(R/'CLAUDE.md').read_text();initial=json.loads((T/'root/hashes-before.json').read_text())
+core=T/'core/fk_sheet-v3.cpp';test=T/'tests/kernel/tests/test_sheet_join_validation.cpp';assert sha(core)=='8e9bd9d6c1d61bf9e8a189e783d6803510c3c61f07ed28c8e5b82f2efa457e2f';assert sha(test)=='6f107960db76d10bb652cba60e591758b2789533056b5a5c38340754d859f5d6'
+assert sha(R/'kernel/fk_sheet.cpp')==initial['kernel/fk_sheet.cpp'];shutil.copy2(core,R/'kernel/fk_sheet.cpp');shutil.copy2(test,R/'kernel/tests/test_sheet_join_validation.cpp')
+files=['kernel/fk_sheet.cpp','kernel/tests/test_sheet_join_validation.cpp'];p=R/'kernel/CMakeLists.txt';s=p.read_text();assert sha(p)==initial['kernel/CMakeLists.txt'];needle='fk_mapping_carrier.cpp fk_surface_mapping.cpp';assert s.count(needle)==1;s=s.replace(needle,'fk_mapping_carrier.cpp fk_surface_mapping.cpp fk_sheet.cpp')
+marker='add_executable(forgekernel_curve_projection_tests';assert s.count(marker)==1
+new='''# Giunzioni tangenti estese: certificato continuo sui due supporti e fin finali.
+add_executable(forgekernel_sheet_join_validation_tests tests/fk_test_main.cpp tests/test_sheet_join_validation.cpp)
+target_link_libraries(forgekernel_sheet_join_validation_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_sheet_join_validation_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_sheet_join_validation_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_sheet_join_validation_tests COMMAND forgekernel_sheet_join_validation_tests)
+set_tests_properties(forgekernel_sheet_join_validation_tests PROPERTIES TIMEOUT 180)
+
+''';s=s.replace(marker,new+marker);p.write_text(s);files.append('kernel/CMakeLists.txt')
+p=R/'tools/generate_architecture.py';s=p.read_text();assert sha(p)==initial['tools/generate_architecture.py'];s=s.replace(" 'kernel/tests/test_sheet_fit_validation.cpp':", " 'kernel/tests/test_sheet_join_validation.cpp': ('tests', 'Estensioni NURBS adiacenti: giunti tangenti con controllo continuo e cap fisso, positivi trasversali e regressioni per picchi stretti/gap, pose/scale/pesi/versi, genealogia dopo unificazione, codec e cancellazione.'),\n 'kernel/tests/test_sheet_fit_validation.cpp':",1)
+s=s.replace('Taglio, rifilo ed estensione di lamine; offset dei bordi NURBS planari con limite continuo del fit per faccia singola e multifaccia; intersezioni e fit impliciti separati.', 'Taglio, rifilo ed estensione di lamine; offset NURBS planari certificati. Giunti tangenti isoparametrici con fit continuo sui due supporti, dominio da poli UV originali e cap fisso; fin effettive ricontrollate dopo assemblaggio/unificazione tramite identita e genealogia. Continuazione Newton trasversa e altri fallback restano campionati.')
+p.write_text(s);files.append('tools/generate_architecture.py')
+a=memory.index('**16/11 — K10 giunzione estensioni');b=memory.index('**16/11 — K10 Mapping',a);entry='''**16/11 — K10 giunzione estensioni integrata con tre agenti Sol.**
+Via tangente continua e cap fisso, verifica postbuild/unify; falsi successi
+alias/gap riprodotti. Build/app/prove finali pendenti,31rilievi invariati.
+[Stato](docs/review-k10-sheet-join-2026-11-16.md).
+
+''';memory=memory[:a]+entry+memory[b:];assert len(memory.encode())<=16384;(R/'CLAUDE.md').write_text(memory)
+p=R/'docs/review-k10-sheet-join-2026-11-16.md';s=p.read_text();s+='\n## Integrazione\n\nIntegrata V3 congelata: una TU kernel, nessun header/API nuovo; giunti tangenti con affine/certificato obbligatorio, senza ritorno al campionamento in caso di verifica fallita. Cap `max(1e-7,1e-9*scale)` fissato prima, fit su A a un quarto del cap e residuo completo su entrambi. Pcurve esplicite, conteggi fin pianificati/emessi esatti e ricontrollo dei discendenti dopo `unifySameDomain`. Dominio affine da poli originali, cancellazione prima delle pubblicazioni. Ramo Newton trasverso ancora campionato. CMake include nuova regressione e compilazione rigorosa per sheet, catalogo aggiornato. Build completa, runner e verifiche finali ancora pendenti.\n';p.write_text(s)
+(T/'root/integrated-sources.json').write_text(json.dumps({f:sha(R/f) for f in files},indent=2)+'\n');print('Integrated',len(files),'source/config files; memory',len(memory.encode()),'bytes')

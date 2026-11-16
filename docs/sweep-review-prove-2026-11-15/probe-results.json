@@ -1,0 +1,22 @@
+[
+  {
+    "name": "probe_alias",
+    "exit": 0
+  },
+  {
+    "name": "probe_closed",
+    "exit": 0
+  },
+  {
+    "name": "probe_closed_seams",
+    "exit": 0
+  },
+  {
+    "name": "probe_overlap",
+    "exit": 0
+  },
+  {
+    "name": "probe_sweep",
+    "exit": 0
+  }
+]

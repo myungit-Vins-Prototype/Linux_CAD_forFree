@@ -1,0 +1,5823 @@
+[
+  {
+    "source": "cad_surface_mapping.cpp",
+    "target": "kernel/fk_quilt_mapping.cpp",
+    "kind": "call",
+    "count": 3,
+    "sites": [
+      {
+        "line": 173,
+        "symbol": "ForgeCad::Kernel::SurfaceQuiltMap::SurfaceQuiltMap",
+        "owner": "ForgeCad::buildSurfaceMapping"
+      },
+      {
+        "line": 175,
+        "symbol": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet",
+        "owner": "ForgeCad::buildSurfaceMapping"
+      },
+      {
+        "line": 229,
+        "symbol": "ForgeCad::Kernel::SurfaceQuiltMap::bend",
+        "owner": "ForgeCad::buildSurfaceMapping"
+      }
+    ]
+  },
+  {
+    "source": "cad_surface_mapping.cpp",
+    "target": "kernel/fk_quilt_mapping.h",
+    "kind": "call",
+    "count": 1,
+    "sites": [
+      {
+        "line": 174,
+        "symbol": "ForgeCad::Kernel::SurfaceFlattenStats::SurfaceFlattenStats",
+        "owner": "ForgeCad::buildSurfaceMapping"
+      }
+    ]
+  },
+  {
+    "source": "cad_surface_mapping.cpp",
+    "target": "kernel/fk_quilt_mapping.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 7,
+        "symbol": "fk_quilt_mapping.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "forgeCad2026_dialogs_mapping.cpp",
+    "target": "kernel/fk_quilt_mapping.cpp",
+    "kind": "call",
+    "count": 1,
+    "sites": [
+      {
+        "line": 243,
+        "symbol": "ForgeCad::Kernel::surfaceQuiltAnchor",
+        "owner": "surfaceMappingDialog"
+      }
+    ]
+  },
+  {
+    "source": "forgeCad2026_dialogs_mapping.cpp",
+    "target": "kernel/fk_quilt_mapping.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 15,
+        "symbol": "fk_quilt_mapping.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_planar_flatten.cpp",
+    "target": "kernel/fk_bspline.h",
+    "kind": "call",
+    "count": 23,
+    "sites": [
+      {
+        "line": 69,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::degree",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenImage"
+      },
+      {
+        "line": 69,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::poles",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenImage"
+      },
+      {
+        "line": 71,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::domain",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenImage"
+      },
+      {
+        "line": 73,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::degree",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenImage"
+      },
+      {
+        "line": 74,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::knots",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenImage"
+      },
+      {
+        "line": 75,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::weights",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenImage"
+      },
+      {
+        "line": 76,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::poles",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenImage"
+      },
+      {
+        "line": 149,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::degree",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenCurveError"
+      },
+      {
+        "line": 149,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::knots",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenCurveError"
+      },
+      {
+        "line": 149,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::weights",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenCurveError"
+      },
+      {
+        "line": 150,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::poles",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenCurveError"
+      },
+      {
+        "line": 153,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::weights",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenCurveError"
+      },
+      {
+        "line": 157,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::poles",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenCurveError"
+      },
+      {
+        "line": 159,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::poles",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenCurveError"
+      },
+      {
+        "line": 182,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::degree",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenPCurveError"
+      },
+      {
+        "line": 182,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::knots",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenPCurveError"
+      },
+      {
+        "line": 183,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::poles",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenPCurveError"
+      },
+      {
+        "line": 183,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::weights",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenPCurveError"
+      },
+      {
+        "line": 184,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::poles",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenPCurveError"
+      },
+      {
+        "line": 186,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::weights",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenPCurveError"
+      },
+      {
+        "line": 191,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::poles",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenPCurveError"
+      },
+      {
+        "line": 193,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::poles",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenPCurveError"
+      },
+      {
+        "line": 198,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::poles",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenPCurveError"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_planar_flatten.cpp",
+    "target": "kernel/fk_bspline.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 2,
+        "symbol": "fk_bspline.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_planar_flatten.cpp",
+    "target": "kernel/fk_cancel.h",
+    "kind": "call",
+    "count": 16,
+    "sites": [
+      {
+        "line": 38,
+        "symbol": "ForgeCad::Kernel::cancellationPoint",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenImage"
+      },
+      {
+        "line": 48,
+        "symbol": "ForgeCad::Kernel::cancellationPoint",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenImage"
+      },
+      {
+        "line": 78,
+        "symbol": "ForgeCad::Kernel::cancellationPoint",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenImage"
+      },
+      {
+        "line": 82,
+        "symbol": "ForgeCad::Kernel::cancellationPoint",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenImage"
+      },
+      {
+        "line": 90,
+        "symbol": "ForgeCad::Kernel::cancellationPoint",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenImage"
+      },
+      {
+        "line": 117,
+        "symbol": "ForgeCad::Kernel::cancellationPoint",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenImage"
+      },
+      {
+        "line": 134,
+        "symbol": "ForgeCad::Kernel::cancellationPoint",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenCurveError"
+      },
+      {
+        "line": 138,
+        "symbol": "ForgeCad::Kernel::cancellationPoint",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenCurveError"
+      },
+      {
+        "line": 142,
+        "symbol": "ForgeCad::Kernel::cancellationPoint",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenCurveError"
+      },
+      {
+        "line": 154,
+        "symbol": "ForgeCad::Kernel::cancellationPoint",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenCurveError"
+      },
+      {
+        "line": 158,
+        "symbol": "ForgeCad::Kernel::cancellationPoint",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenCurveError"
+      },
+      {
+        "line": 166,
+        "symbol": "ForgeCad::Kernel::cancellationPoint",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenPCurveError"
+      },
+      {
+        "line": 171,
+        "symbol": "ForgeCad::Kernel::cancellationPoint",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenPCurveError"
+      },
+      {
+        "line": 175,
+        "symbol": "ForgeCad::Kernel::cancellationPoint",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenPCurveError"
+      },
+      {
+        "line": 187,
+        "symbol": "ForgeCad::Kernel::cancellationPoint",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenPCurveError"
+      },
+      {
+        "line": 192,
+        "symbol": "ForgeCad::Kernel::cancellationPoint",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenPCurveError"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_planar_flatten.cpp",
+    "target": "kernel/fk_cancel.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 3,
+        "symbol": "fk_cancel.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_planar_flatten.cpp",
+    "target": "kernel/fk_curve.h",
+    "kind": "call",
+    "count": 21,
+    "sites": [
+      {
+        "line": 47,
+        "symbol": "ForgeCad::Kernel::Curve::type",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenImage"
+      },
+      {
+        "line": 49,
+        "symbol": "ForgeCad::Kernel::Curve::domain",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenImage"
+      },
+      {
+        "line": 51,
+        "symbol": "ForgeCad::Kernel::TrimmedCurve::basis",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenImage"
+      },
+      {
+        "line": 53,
+        "symbol": "ForgeCad::Kernel::Curve::type",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenImage"
+      },
+      {
+        "line": 59,
+        "symbol": "ForgeCad::Kernel::Curve::type",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenImage"
+      },
+      {
+        "line": 63,
+        "symbol": "ForgeCad::Kernel::Curve::point",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenImage"
+      },
+      {
+        "line": 64,
+        "symbol": "ForgeCad::Kernel::Line::direction",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenImage"
+      },
+      {
+        "line": 64,
+        "symbol": "ForgeCad::Kernel::Line::origin",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenImage"
+      },
+      {
+        "line": 65,
+        "symbol": "ForgeCad::Kernel::Line::direction",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenImage"
+      },
+      {
+        "line": 65,
+        "symbol": "ForgeCad::Kernel::Line::origin",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenImage"
+      },
+      {
+        "line": 115,
+        "symbol": "ForgeCad::Kernel::Curve::domain",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenImage"
+      },
+      {
+        "line": 137,
+        "symbol": "ForgeCad::Kernel::Curve::type",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenCurveError"
+      },
+      {
+        "line": 139,
+        "symbol": "ForgeCad::Kernel::TrimmedCurve::basis",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenCurveError"
+      },
+      {
+        "line": 141,
+        "symbol": "ForgeCad::Kernel::Curve::type",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenCurveError"
+      },
+      {
+        "line": 143,
+        "symbol": "ForgeCad::Kernel::TrimmedCurve::basis",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenCurveError"
+      },
+      {
+        "line": 145,
+        "symbol": "ForgeCad::Kernel::Curve::type",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenCurveError"
+      },
+      {
+        "line": 170,
+        "symbol": "ForgeCad::Kernel::Curve::type",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenPCurveError"
+      },
+      {
+        "line": 172,
+        "symbol": "ForgeCad::Kernel::TrimmedCurve::basis",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenPCurveError"
+      },
+      {
+        "line": 174,
+        "symbol": "ForgeCad::Kernel::Curve::type",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenPCurveError"
+      },
+      {
+        "line": 176,
+        "symbol": "ForgeCad::Kernel::TrimmedCurve::basis",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenPCurveError"
+      },
+      {
+        "line": 178,
+        "symbol": "ForgeCad::Kernel::Curve::type",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenPCurveError"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_planar_flatten.cpp",
+    "target": "kernel/fk_math.cpp",
+    "kind": "call",
+    "count": 1,
+    "sites": [
+      {
+        "line": 93,
+        "symbol": "ForgeCad::Kernel::Frame3::toGlobal",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenImage"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_planar_flatten.cpp",
+    "target": "kernel/fk_math.h",
+    "kind": "call",
+    "count": 35,
+    "sites": [
+      {
+        "line": 41,
+        "symbol": "ForgeCad::Kernel::isFinite",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenImage"
+      },
+      {
+        "line": 44,
+        "symbol": "ForgeCad::Kernel::Frame3::origin",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenImage"
+      },
+      {
+        "line": 44,
+        "symbol": "ForgeCad::Kernel::Frame3::xDir",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenImage"
+      },
+      {
+        "line": 44,
+        "symbol": "ForgeCad::Kernel::Frame3::yDir",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenImage"
+      },
+      {
+        "line": 44,
+        "symbol": "ForgeCad::Kernel::isFinite",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenImage"
+      },
+      {
+        "line": 49,
+        "symbol": "ForgeCad::Kernel::Interval::contains",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenImage"
+      },
+      {
+        "line": 64,
+        "symbol": "ForgeCad::Kernel::Vec::x",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenImage"
+      },
+      {
+        "line": 65,
+        "symbol": "ForgeCad::Kernel::Vec::y",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenImage"
+      },
+      {
+        "line": 71,
+        "symbol": "ForgeCad::Kernel::Interval::contains",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenImage"
+      },
+      {
+        "line": 79,
+        "symbol": "ForgeCad::Kernel::Vec::x",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenImage"
+      },
+      {
+        "line": 79,
+        "symbol": "ForgeCad::Kernel::Vec::y",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenImage"
+      },
+      {
+        "line": 91,
+        "symbol": "ForgeCad::Kernel::isFinite",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenImage"
+      },
+      {
+        "line": 92,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenImage"
+      },
+      {
+        "line": 92,
+        "symbol": "ForgeCad::Kernel::Vec::x",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenImage"
+      },
+      {
+        "line": 92,
+        "symbol": "ForgeCad::Kernel::Vec::y",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenImage"
+      },
+      {
+        "line": 93,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenImage"
+      },
+      {
+        "line": 93,
+        "symbol": "ForgeCad::Kernel::Vec::x",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenImage"
+      },
+      {
+        "line": 93,
+        "symbol": "ForgeCad::Kernel::Vec::y",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenImage"
+      },
+      {
+        "line": 94,
+        "symbol": "ForgeCad::Kernel::isFinite",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenImage"
+      },
+      {
+        "line": 95,
+        "symbol": "ForgeCad::Kernel::Vec::x",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenImage"
+      },
+      {
+        "line": 96,
+        "symbol": "ForgeCad::Kernel::Vec::y",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenImage"
+      },
+      {
+        "line": 99,
+        "symbol": "ForgeCad::Kernel::Frame3::origin",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenImage"
+      },
+      {
+        "line": 99,
+        "symbol": "ForgeCad::Kernel::Frame3::xDir",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenImage"
+      },
+      {
+        "line": 99,
+        "symbol": "ForgeCad::Kernel::Frame3::yDir",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenImage"
+      },
+      {
+        "line": 99,
+        "symbol": "ForgeCad::Kernel::Vec::operator[]",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenImage"
+      },
+      {
+        "line": 100,
+        "symbol": "ForgeCad::Kernel::Vec::operator[]",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenImage"
+      },
+      {
+        "line": 123,
+        "symbol": "ForgeCad::Kernel::Vec::operator[]",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenVertexError"
+      },
+      {
+        "line": 196,
+        "symbol": "ForgeCad::Kernel::Frame3::origin",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenPCurveError"
+      },
+      {
+        "line": 196,
+        "symbol": "ForgeCad::Kernel::Frame3::xDir",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenPCurveError"
+      },
+      {
+        "line": 196,
+        "symbol": "ForgeCad::Kernel::Vec::operator[]",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenPCurveError"
+      },
+      {
+        "line": 196,
+        "symbol": "ForgeCad::Kernel::Vec::x",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenPCurveError"
+      },
+      {
+        "line": 197,
+        "symbol": "ForgeCad::Kernel::Frame3::yDir",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenPCurveError"
+      },
+      {
+        "line": 197,
+        "symbol": "ForgeCad::Kernel::Vec::operator[]",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenPCurveError"
+      },
+      {
+        "line": 197,
+        "symbol": "ForgeCad::Kernel::Vec::y",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenPCurveError"
+      },
+      {
+        "line": 198,
+        "symbol": "ForgeCad::Kernel::Vec::operator[]",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenPCurveError"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_planar_flatten.cpp",
+    "target": "kernel/fk_planar_flatten.cpp",
+    "kind": "call",
+    "count": 70,
+    "sites": [
+      {
+        "line": 13,
+        "symbol": "ForgeCad::Kernel::detail::Bound::Bound",
+        "owner": "ForgeCad::Kernel::detail::Bound::Bound"
+      },
+      {
+        "line": 21,
+        "symbol": "ForgeCad::Kernel::detail::Bound::Bound",
+        "owner": "ForgeCad::Kernel::detail::operator+"
+      },
+      {
+        "line": 21,
+        "symbol": "ForgeCad::Kernel::detail::down",
+        "owner": "ForgeCad::Kernel::detail::operator+"
+      },
+      {
+        "line": 21,
+        "symbol": "ForgeCad::Kernel::detail::up",
+        "owner": "ForgeCad::Kernel::detail::operator+"
+      },
+      {
+        "line": 22,
+        "symbol": "ForgeCad::Kernel::detail::Bound::Bound",
+        "owner": "ForgeCad::Kernel::detail::operator-"
+      },
+      {
+        "line": 22,
+        "symbol": "ForgeCad::Kernel::detail::down",
+        "owner": "ForgeCad::Kernel::detail::operator-"
+      },
+      {
+        "line": 22,
+        "symbol": "ForgeCad::Kernel::detail::up",
+        "owner": "ForgeCad::Kernel::detail::operator-"
+      },
+      {
+        "line": 28,
+        "symbol": "ForgeCad::Kernel::detail::Bound::Bound",
+        "owner": "ForgeCad::Kernel::detail::operator*"
+      },
+      {
+        "line": 28,
+        "symbol": "ForgeCad::Kernel::detail::down",
+        "owner": "ForgeCad::Kernel::detail::operator*"
+      },
+      {
+        "line": 28,
+        "symbol": "ForgeCad::Kernel::detail::up",
+        "owner": "ForgeCad::Kernel::detail::operator*"
+      },
+      {
+        "line": 39,
+        "symbol": "ForgeCad::Kernel::detail::require",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenImage"
+      },
+      {
+        "line": 40,
+        "symbol": "ForgeCad::Kernel::detail::require",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenImage"
+      },
+      {
+        "line": 44,
+        "symbol": "ForgeCad::Kernel::detail::require",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenImage"
+      },
+      {
+        "line": 49,
+        "symbol": "ForgeCad::Kernel::detail::require",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenImage"
+      },
+      {
+        "line": 64,
+        "symbol": "ForgeCad::Kernel::detail::Bound::Bound",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenImage"
+      },
+      {
+        "line": 64,
+        "symbol": "ForgeCad::Kernel::detail::operator*",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenImage"
+      },
+      {
+        "line": 64,
+        "symbol": "ForgeCad::Kernel::detail::operator+",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenImage"
+      },
+      {
+        "line": 65,
+        "symbol": "ForgeCad::Kernel::detail::Bound::Bound",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenImage"
+      },
+      {
+        "line": 65,
+        "symbol": "ForgeCad::Kernel::detail::operator*",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenImage"
+      },
+      {
+        "line": 65,
+        "symbol": "ForgeCad::Kernel::detail::operator+",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenImage"
+      },
+      {
+        "line": 69,
+        "symbol": "ForgeCad::Kernel::detail::require",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenImage"
+      },
+      {
+        "line": 71,
+        "symbol": "ForgeCad::Kernel::detail::require",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenImage"
+      },
+      {
+        "line": 79,
+        "symbol": "ForgeCad::Kernel::detail::Bound::Bound",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenImage"
+      },
+      {
+        "line": 83,
+        "symbol": "ForgeCad::Kernel::detail::require",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenImage"
+      },
+      {
+        "line": 91,
+        "symbol": "ForgeCad::Kernel::detail::require",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenImage"
+      },
+      {
+        "line": 94,
+        "symbol": "ForgeCad::Kernel::detail::require",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenImage"
+      },
+      {
+        "line": 95,
+        "symbol": "ForgeCad::Kernel::detail::Bound::Bound",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenImage"
+      },
+      {
+        "line": 95,
+        "symbol": "ForgeCad::Kernel::detail::operator*",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenImage"
+      },
+      {
+        "line": 95,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenImage"
+      },
+      {
+        "line": 96,
+        "symbol": "ForgeCad::Kernel::detail::Bound::Bound",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenImage"
+      },
+      {
+        "line": 96,
+        "symbol": "ForgeCad::Kernel::detail::operator*",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenImage"
+      },
+      {
+        "line": 96,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenImage"
+      },
+      {
+        "line": 99,
+        "symbol": "ForgeCad::Kernel::detail::Bound::Bound",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenImage"
+      },
+      {
+        "line": 99,
+        "symbol": "ForgeCad::Kernel::detail::operator*",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenImage"
+      },
+      {
+        "line": 99,
+        "symbol": "ForgeCad::Kernel::detail::operator+",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenImage"
+      },
+      {
+        "line": 100,
+        "symbol": "ForgeCad::Kernel::detail::Bound::Bound",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenImage"
+      },
+      {
+        "line": 100,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenImage"
+      },
+      {
+        "line": 102,
+        "symbol": "ForgeCad::Kernel::detail::require",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenImage"
+      },
+      {
+        "line": 103,
+        "symbol": "ForgeCad::Kernel::detail::up",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenImage"
+      },
+      {
+        "line": 104,
+        "symbol": "ForgeCad::Kernel::detail::require",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenImage"
+      },
+      {
+        "line": 106,
+        "symbol": "ForgeCad::Kernel::detail::up",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenImage"
+      },
+      {
+        "line": 107,
+        "symbol": "ForgeCad::Kernel::detail::require",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenImage"
+      },
+      {
+        "line": 113,
+        "symbol": "ForgeCad::Kernel::detail::require",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenImage"
+      },
+      {
+        "line": 123,
+        "symbol": "ForgeCad::Kernel::detail::Bound::Bound",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenVertexError"
+      },
+      {
+        "line": 123,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenVertexError"
+      },
+      {
+        "line": 125,
+        "symbol": "ForgeCad::Kernel::detail::up",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenVertexError"
+      },
+      {
+        "line": 126,
+        "symbol": "ForgeCad::Kernel::detail::require",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenVertexError"
+      },
+      {
+        "line": 128,
+        "symbol": "ForgeCad::Kernel::detail::up",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenVertexError"
+      },
+      {
+        "line": 129,
+        "symbol": "ForgeCad::Kernel::detail::require",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenVertexError"
+      },
+      {
+        "line": 136,
+        "symbol": "ForgeCad::Kernel::detail::require",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenCurveError"
+      },
+      {
+        "line": 145,
+        "symbol": "ForgeCad::Kernel::detail::require",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenCurveError"
+      },
+      {
+        "line": 149,
+        "symbol": "ForgeCad::Kernel::detail::require",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenCurveError"
+      },
+      {
+        "line": 155,
+        "symbol": "ForgeCad::Kernel::detail::require",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenCurveError"
+      },
+      {
+        "line": 159,
+        "symbol": "ForgeCad::Kernel::detail::planarFlattenVertexError",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenCurveError"
+      },
+      {
+        "line": 167,
+        "symbol": "ForgeCad::Kernel::detail::require",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenPCurveError"
+      },
+      {
+        "line": 178,
+        "symbol": "ForgeCad::Kernel::detail::require",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenPCurveError"
+      },
+      {
+        "line": 182,
+        "symbol": "ForgeCad::Kernel::detail::require",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenPCurveError"
+      },
+      {
+        "line": 188,
+        "symbol": "ForgeCad::Kernel::detail::require",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenPCurveError"
+      },
+      {
+        "line": 196,
+        "symbol": "ForgeCad::Kernel::detail::Bound::Bound",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenPCurveError"
+      },
+      {
+        "line": 196,
+        "symbol": "ForgeCad::Kernel::detail::operator*",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenPCurveError"
+      },
+      {
+        "line": 196,
+        "symbol": "ForgeCad::Kernel::detail::operator+",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenPCurveError"
+      },
+      {
+        "line": 197,
+        "symbol": "ForgeCad::Kernel::detail::Bound::Bound",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenPCurveError"
+      },
+      {
+        "line": 197,
+        "symbol": "ForgeCad::Kernel::detail::operator*",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenPCurveError"
+      },
+      {
+        "line": 198,
+        "symbol": "ForgeCad::Kernel::detail::Bound::Bound",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenPCurveError"
+      },
+      {
+        "line": 198,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenPCurveError"
+      },
+      {
+        "line": 200,
+        "symbol": "ForgeCad::Kernel::detail::up",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenPCurveError"
+      },
+      {
+        "line": 201,
+        "symbol": "ForgeCad::Kernel::detail::require",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenPCurveError"
+      },
+      {
+        "line": 203,
+        "symbol": "ForgeCad::Kernel::detail::up",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenPCurveError"
+      },
+      {
+        "line": 204,
+        "symbol": "ForgeCad::Kernel::detail::require",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenPCurveError"
+      },
+      {
+        "line": 207,
+        "symbol": "ForgeCad::Kernel::detail::require",
+        "owner": "ForgeCad::Kernel::detail::planarFlattenPCurveError"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_planar_flatten.cpp",
+    "target": "kernel/fk_planar_flatten.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 1,
+        "symbol": "fk_planar_flatten.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_planar_flatten.h",
+    "target": "kernel/fk_curve.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 2,
+        "symbol": "fk_curve.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_quilt_mapping.cpp",
+    "target": "kernel/fk_body_check.cpp",
+    "kind": "call",
+    "count": 1,
+    "sites": [
+      {
+        "line": 593,
+        "symbol": "ForgeCad::Kernel::checkBody",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_quilt_mapping.cpp",
+    "target": "kernel/fk_body_check.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 12,
+        "symbol": "fk_body_check.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_quilt_mapping.cpp",
+    "target": "kernel/fk_bspline_surface.h",
+    "kind": "call",
+    "count": 3,
+    "sites": [
+      {
+        "line": 172,
+        "symbol": "ForgeCad::Kernel::BSplineSurface::uPoleCount",
+        "owner": "ForgeCad::Kernel::Chart::Chart"
+      },
+      {
+        "line": 173,
+        "symbol": "ForgeCad::Kernel::BSplineSurface::vPoleCount",
+        "owner": "ForgeCad::Kernel::Chart::Chart"
+      },
+      {
+        "line": 174,
+        "symbol": "ForgeCad::Kernel::BSplineSurface::pole",
+        "owner": "ForgeCad::Kernel::Chart::Chart"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_quilt_mapping.cpp",
+    "target": "kernel/fk_bspline_surface.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 4,
+        "symbol": "fk_bspline_surface.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_quilt_mapping.cpp",
+    "target": "kernel/fk_cancel.h",
+    "kind": "call",
+    "count": 8,
+    "sites": [
+      {
+        "line": 58,
+        "symbol": "ForgeCad::Kernel::cancellationPoint",
+        "owner": "ForgeCad::Kernel::ArcSlice::ArcSlice"
+      },
+      {
+        "line": 86,
+        "symbol": "ForgeCad::Kernel::cancellationPoint",
+        "owner": "ForgeCad::Kernel::Meridian::Meridian"
+      },
+      {
+        "line": 242,
+        "symbol": "ForgeCad::Kernel::cancellationPoint",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::Data::contact"
+      },
+      {
+        "line": 417,
+        "symbol": "ForgeCad::Kernel::cancellationPoint",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 550,
+        "symbol": "ForgeCad::Kernel::cancellationPoint",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 574,
+        "symbol": "ForgeCad::Kernel::cancellationPoint",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 608,
+        "symbol": "ForgeCad::Kernel::cancellationPoint",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 639,
+        "symbol": "ForgeCad::Kernel::cancellationPoint",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_quilt_mapping.cpp",
+    "target": "kernel/fk_cancel.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 8,
+        "symbol": "fk_cancel.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_quilt_mapping.cpp",
+    "target": "kernel/fk_classify.cpp",
+    "kind": "call",
+    "count": 5,
+    "sites": [
+      {
+        "line": 137,
+        "symbol": "ForgeCad::Kernel::FaceParameterClassifier::FaceParameterClassifier",
+        "owner": "ForgeCad::Kernel::Chart::Chart"
+      },
+      {
+        "line": 165,
+        "symbol": "ForgeCad::Kernel::faceBox",
+        "owner": "ForgeCad::Kernel::Chart::Chart"
+      },
+      {
+        "line": 268,
+        "symbol": "ForgeCad::Kernel::FaceParameterClassifier::classify",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::Data::contact"
+      },
+      {
+        "line": 385,
+        "symbol": "ForgeCad::Kernel::FaceParameterClassifier::classify",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flatten"
+      },
+      {
+        "line": 553,
+        "symbol": "ForgeCad::Kernel::FaceParameterClassifier::classify",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_quilt_mapping.cpp",
+    "target": "kernel/fk_classify_uv.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 5,
+        "symbol": "fk_classify_uv.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_quilt_mapping.cpp",
+    "target": "kernel/fk_curve.cpp",
+    "kind": "call",
+    "count": 1,
+    "sites": [
+      {
+        "line": 692,
+        "symbol": "ForgeCad::Kernel::TransformedCurve::TransformedCurve",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_quilt_mapping.cpp",
+    "target": "kernel/fk_curve.h",
+    "kind": "call",
+    "count": 26,
+    "sites": [
+      {
+        "line": 51,
+        "symbol": "ForgeCad::Kernel::Curve::breakpoints",
+        "owner": "ForgeCad::Kernel::ArcSlice::ArcSlice"
+      },
+      {
+        "line": 79,
+        "symbol": "ForgeCad::Kernel::Curve::breakpoints",
+        "owner": "ForgeCad::Kernel::Meridian::Meridian"
+      },
+      {
+        "line": 117,
+        "symbol": "ForgeCad::Kernel::Curve::evaluate",
+        "owner": "ForgeCad::Kernel::Meridian::parameter"
+      },
+      {
+        "line": 287,
+        "symbol": "ForgeCad::Kernel::Curve::type",
+        "owner": "ForgeCad::Kernel::surfaceQuiltAnchor"
+      },
+      {
+        "line": 292,
+        "symbol": "ForgeCad::Kernel::Curve::type",
+        "owner": "ForgeCad::Kernel::surfaceQuiltAnchor"
+      },
+      {
+        "line": 296,
+        "symbol": "ForgeCad::Kernel::Line::direction",
+        "owner": "ForgeCad::Kernel::surfaceQuiltAnchor"
+      },
+      {
+        "line": 298,
+        "symbol": "ForgeCad::Kernel::Curve::point",
+        "owner": "ForgeCad::Kernel::surfaceQuiltAnchor"
+      },
+      {
+        "line": 330,
+        "symbol": "ForgeCad::Kernel::Curve::type",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::SurfaceQuiltMap"
+      },
+      {
+        "line": 331,
+        "symbol": "ForgeCad::Kernel::Curve::type",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::SurfaceQuiltMap"
+      },
+      {
+        "line": 335,
+        "symbol": "ForgeCad::Kernel::Line::direction",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::SurfaceQuiltMap"
+      },
+      {
+        "line": 339,
+        "symbol": "ForgeCad::Kernel::Line::origin",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::SurfaceQuiltMap"
+      },
+      {
+        "line": 340,
+        "symbol": "ForgeCad::Kernel::Line::origin",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::SurfaceQuiltMap"
+      },
+      {
+        "line": 341,
+        "symbol": "ForgeCad::Kernel::Line::direction",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::SurfaceQuiltMap"
+      },
+      {
+        "line": 342,
+        "symbol": "ForgeCad::Kernel::Line::origin",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::SurfaceQuiltMap"
+      },
+      {
+        "line": 346,
+        "symbol": "ForgeCad::Kernel::Curve::point",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::SurfaceQuiltMap"
+      },
+      {
+        "line": 425,
+        "symbol": "ForgeCad::Kernel::Curve::point",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 459,
+        "symbol": "ForgeCad::Kernel::Curve::point",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 460,
+        "symbol": "ForgeCad::Kernel::Curve::point",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 468,
+        "symbol": "ForgeCad::Kernel::Curve::breakpoints",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 496,
+        "symbol": "ForgeCad::Kernel::Curve::point",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 529,
+        "symbol": "ForgeCad::Kernel::Curve::evaluate",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 580,
+        "symbol": "ForgeCad::Kernel::Curve::type",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 581,
+        "symbol": "ForgeCad::Kernel::TrimmedCurve::basis",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 582,
+        "symbol": "ForgeCad::Kernel::Curve::type",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 713,
+        "symbol": "ForgeCad::Kernel::Curve::point",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 714,
+        "symbol": "ForgeCad::Kernel::Curve::breakpoints",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_quilt_mapping.cpp",
+    "target": "kernel/fk_curve_algo.h",
+    "kind": "call",
+    "count": 5,
+    "sites": [
+      {
+        "line": 59,
+        "symbol": "ForgeCad::Kernel::arcLength",
+        "owner": "ForgeCad::Kernel::ArcSlice::ArcSlice"
+      },
+      {
+        "line": 68,
+        "symbol": "ForgeCad::Kernel::arcLength",
+        "owner": "ForgeCad::Kernel::ArcSlice::at"
+      },
+      {
+        "line": 87,
+        "symbol": "ForgeCad::Kernel::arcLength",
+        "owner": "ForgeCad::Kernel::Meridian::Meridian"
+      },
+      {
+        "line": 97,
+        "symbol": "ForgeCad::Kernel::arcLength",
+        "owner": "ForgeCad::Kernel::Meridian::lengthAt"
+      },
+      {
+        "line": 109,
+        "symbol": "ForgeCad::Kernel::arcLength",
+        "owner": "ForgeCad::Kernel::Meridian::parameter"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_quilt_mapping.cpp",
+    "target": "kernel/fk_curve_algo.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 7,
+        "symbol": "fk_curve_algo.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_quilt_mapping.cpp",
+    "target": "kernel/fk_curve_ops.cpp",
+    "kind": "call",
+    "count": 1,
+    "sites": [
+      {
+        "line": 30,
+        "symbol": "ForgeCad::Kernel::embedCurve",
+        "owner": "ForgeCad::Kernel::window"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_quilt_mapping.cpp",
+    "target": "kernel/fk_curve_ops.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 6,
+        "symbol": "fk_curve_ops.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_quilt_mapping.cpp",
+    "target": "kernel/fk_history.cpp",
+    "kind": "call",
+    "count": 4,
+    "sites": [
+      {
+        "line": 306,
+        "symbol": "ForgeCad::Kernel::faceInteriorPoint",
+        "owner": "ForgeCad::Kernel::surfaceQuiltAnchor"
+      },
+      {
+        "line": 559,
+        "symbol": "ForgeCad::Kernel::faceInteriorPoint",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 598,
+        "symbol": "ForgeCad::Kernel::makeHistory",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 602,
+        "symbol": "ForgeCad::Kernel::BodyHistory::declareOrigins",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_quilt_mapping.cpp",
+    "target": "kernel/fk_history.h",
+    "kind": "call",
+    "count": 3,
+    "sites": [
+      {
+        "line": 596,
+        "symbol": "ForgeCad::Kernel::BodyHistory::BodyHistory",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 598,
+        "symbol": "ForgeCad::Kernel::BodyHistory::operator=",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 610,
+        "symbol": "ForgeCad::Kernel::BodyHistory::operator=",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_quilt_mapping.cpp",
+    "target": "kernel/fk_intersect.cpp",
+    "kind": "call",
+    "count": 6,
+    "sites": [
+      {
+        "line": 30,
+        "symbol": "ForgeCad::Kernel::Box::add",
+        "owner": "ForgeCad::Kernel::window"
+      },
+      {
+        "line": 30,
+        "symbol": "ForgeCad::Kernel::curveBox",
+        "owner": "ForgeCad::Kernel::window"
+      },
+      {
+        "line": 692,
+        "symbol": "ForgeCad::Kernel::Box::add",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 692,
+        "symbol": "ForgeCad::Kernel::curveBox",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 715,
+        "symbol": "ForgeCad::Kernel::Box::add",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 715,
+        "symbol": "ForgeCad::Kernel::curveBox",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_quilt_mapping.cpp",
+    "target": "kernel/fk_intersect.h",
+    "kind": "call",
+    "count": 6,
+    "sites": [
+      {
+        "line": 25,
+        "symbol": "ForgeCad::Kernel::Box::Box",
+        "owner": "ForgeCad::Kernel::window"
+      },
+      {
+        "line": 32,
+        "symbol": "ForgeCad::Kernel::Box::isEmpty",
+        "owner": "ForgeCad::Kernel::window"
+      },
+      {
+        "line": 165,
+        "symbol": "ForgeCad::Kernel::Box::diagonal",
+        "owner": "ForgeCad::Kernel::Chart::Chart"
+      },
+      {
+        "line": 688,
+        "symbol": "ForgeCad::Kernel::Box::Box",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 694,
+        "symbol": "ForgeCad::Kernel::Box::isEmpty",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 709,
+        "symbol": "ForgeCad::Kernel::Box::Box",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_quilt_mapping.cpp",
+    "target": "kernel/fk_mapping_fit.cpp",
+    "kind": "call",
+    "count": 1,
+    "sites": [
+      {
+        "line": 167,
+        "symbol": "ForgeCad::Kernel::detail::fitMappingSurface",
+        "owner": "ForgeCad::Kernel::Chart::Chart"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_quilt_mapping.cpp",
+    "target": "kernel/fk_mapping_fit.h",
+    "kind": "call",
+    "count": 6,
+    "sites": [
+      {
+        "line": 681,
+        "symbol": "ForgeCad::Kernel::detail::MappingFaceImage::MappingFaceImage",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 683,
+        "symbol": "ForgeCad::Kernel::detail::MappingFaceImage::MappingFaceImage",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 685,
+        "symbol": "ForgeCad::Kernel::detail::MappingFaceImage::MappingFaceImage",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 694,
+        "symbol": "ForgeCad::Kernel::detail::MappingFaceImage::MappingFaceImage",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 696,
+        "symbol": "ForgeCad::Kernel::detail::MappingFaceImage::MappingFaceImage",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 720,
+        "symbol": "ForgeCad::Kernel::detail::MappingFaceImage::MappingFaceImage",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_quilt_mapping.cpp",
+    "target": "kernel/fk_mapping_fit.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 3,
+        "symbol": "fk_mapping_fit.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_quilt_mapping.cpp",
+    "target": "kernel/fk_math.cpp",
+    "kind": "call",
+    "count": 8,
+    "sites": [
+      {
+        "line": 30,
+        "symbol": "ForgeCad::Kernel::Frame3::Frame3",
+        "owner": "ForgeCad::Kernel::window"
+      },
+      {
+        "line": 426,
+        "symbol": "ForgeCad::Kernel::Frame3::toGlobal",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 624,
+        "symbol": "ForgeCad::Kernel::Frame3::toLocal",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 657,
+        "symbol": "ForgeCad::Kernel::Frame3::Frame3",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 678,
+        "symbol": "ForgeCad::Kernel::Frame3::Frame3",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 689,
+        "symbol": "ForgeCad::Kernel::Frame3::Frame3",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 689,
+        "symbol": "ForgeCad::Kernel::Transform3::fromFrame",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 689,
+        "symbol": "ForgeCad::Kernel::Transform3::inverted",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_quilt_mapping.cpp",
+    "target": "kernel/fk_math.h",
+    "kind": "call",
+    "count": 208,
+    "sites": [
+      {
+        "line": 32,
+        "symbol": "ForgeCad::Kernel::Vec::x",
+        "owner": "ForgeCad::Kernel::window"
+      },
+      {
+        "line": 32,
+        "symbol": "ForgeCad::Kernel::Vec::y",
+        "owner": "ForgeCad::Kernel::window"
+      },
+      {
+        "line": 33,
+        "symbol": "ForgeCad::Kernel::Vec::x",
+        "owner": "ForgeCad::Kernel::window"
+      },
+      {
+        "line": 33,
+        "symbol": "ForgeCad::Kernel::Vec::y",
+        "owner": "ForgeCad::Kernel::window"
+      },
+      {
+        "line": 116,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "ForgeCad::Kernel::Meridian::parameter"
+      },
+      {
+        "line": 118,
+        "symbol": "ForgeCad::Kernel::norm",
+        "owner": "ForgeCad::Kernel::Meridian::parameter"
+      },
+      {
+        "line": 134,
+        "symbol": "ForgeCad::Kernel::Interval::Interval",
+        "owner": "ForgeCad::Kernel::Chart::Chart"
+      },
+      {
+        "line": 135,
+        "symbol": "ForgeCad::Kernel::Interval::Interval",
+        "owner": "ForgeCad::Kernel::Chart::Chart"
+      },
+      {
+        "line": 142,
+        "symbol": "ForgeCad::Kernel::Frame3::xDir",
+        "owner": "ForgeCad::Kernel::Chart::Chart"
+      },
+      {
+        "line": 142,
+        "symbol": "ForgeCad::Kernel::norm",
+        "owner": "ForgeCad::Kernel::Chart::Chart"
+      },
+      {
+        "line": 143,
+        "symbol": "ForgeCad::Kernel::Frame3::yDir",
+        "owner": "ForgeCad::Kernel::Chart::Chart"
+      },
+      {
+        "line": 143,
+        "symbol": "ForgeCad::Kernel::norm",
+        "owner": "ForgeCad::Kernel::Chart::Chart"
+      },
+      {
+        "line": 161,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "ForgeCad::Kernel::Chart::Chart"
+      },
+      {
+        "line": 167,
+        "symbol": "ForgeCad::Kernel::Interval::Interval",
+        "owner": "ForgeCad::Kernel::Chart::Chart"
+      },
+      {
+        "line": 174,
+        "symbol": "ForgeCad::Kernel::Vec::x",
+        "owner": "ForgeCad::Kernel::Chart::Chart"
+      },
+      {
+        "line": 178,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "ForgeCad::Kernel::Chart::originAndScale"
+      },
+      {
+        "line": 181,
+        "symbol": "ForgeCad::Kernel::Vec::x",
+        "owner": "ForgeCad::Kernel::Chart::originAndScale"
+      },
+      {
+        "line": 182,
+        "symbol": "ForgeCad::Kernel::Vec::x",
+        "owner": "ForgeCad::Kernel::Chart::originAndScale"
+      },
+      {
+        "line": 182,
+        "symbol": "ForgeCad::Kernel::norm",
+        "owner": "ForgeCad::Kernel::Chart::originAndScale"
+      },
+      {
+        "line": 188,
+        "symbol": "ForgeCad::Kernel::Vec::x",
+        "owner": "ForgeCad::Kernel::Chart::xAt"
+      },
+      {
+        "line": 194,
+        "symbol": "ForgeCad::Kernel::Interval::contains",
+        "owner": "ForgeCad::Kernel::Chart::parameter"
+      },
+      {
+        "line": 202,
+        "symbol": "ForgeCad::Kernel::Vec::x",
+        "owner": "ForgeCad::Kernel::Chart::parameter"
+      },
+      {
+        "line": 208,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "ForgeCad::Kernel::Chart::parameter"
+      },
+      {
+        "line": 210,
+        "symbol": "ForgeCad::Kernel::Vec::x",
+        "owner": "ForgeCad::Kernel::Chart::parameter"
+      },
+      {
+        "line": 211,
+        "symbol": "ForgeCad::Kernel::Vec::x",
+        "owner": "ForgeCad::Kernel::Chart::parameter"
+      },
+      {
+        "line": 218,
+        "symbol": "ForgeCad::Kernel::Vec::x",
+        "owner": "ForgeCad::Kernel::Chart::parameter"
+      },
+      {
+        "line": 232,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::Data::flatPoint"
+      },
+      {
+        "line": 232,
+        "symbol": "ForgeCad::Kernel::Vec::x",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::Data::flatPoint"
+      },
+      {
+        "line": 232,
+        "symbol": "ForgeCad::Kernel::Vec::y",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::Data::flatPoint"
+      },
+      {
+        "line": 233,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::Data::flatPoint"
+      },
+      {
+        "line": 233,
+        "symbol": "ForgeCad::Kernel::Vec::x",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::Data::flatPoint"
+      },
+      {
+        "line": 233,
+        "symbol": "ForgeCad::Kernel::Vec::y",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::Data::flatPoint"
+      },
+      {
+        "line": 234,
+        "symbol": "ForgeCad::Kernel::Vec::y",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::Data::flatPoint"
+      },
+      {
+        "line": 243,
+        "symbol": "ForgeCad::Kernel::isFinite",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::Data::contact"
+      },
+      {
+        "line": 245,
+        "symbol": "ForgeCad::Kernel::Vec::y",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::Data::contact"
+      },
+      {
+        "line": 248,
+        "symbol": "ForgeCad::Kernel::Vec::y",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::Data::contact"
+      },
+      {
+        "line": 252,
+        "symbol": "ForgeCad::Kernel::Interval::contains",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::Data::contact"
+      },
+      {
+        "line": 258,
+        "symbol": "ForgeCad::Kernel::Vec::y",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::Data::contact"
+      },
+      {
+        "line": 262,
+        "symbol": "ForgeCad::Kernel::Vec::y",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::Data::contact"
+      },
+      {
+        "line": 265,
+        "symbol": "ForgeCad::Kernel::Vec::x",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::Data::contact"
+      },
+      {
+        "line": 267,
+        "symbol": "ForgeCad::Kernel::Vec::x",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::Data::contact"
+      },
+      {
+        "line": 268,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::Data::contact"
+      },
+      {
+        "line": 271,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::Data::contact"
+      },
+      {
+        "line": 273,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::Data::contact"
+      },
+      {
+        "line": 273,
+        "symbol": "ForgeCad::Kernel::cross",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::Data::contact"
+      },
+      {
+        "line": 273,
+        "symbol": "ForgeCad::Kernel::normalized",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::Data::contact"
+      },
+      {
+        "line": 273,
+        "symbol": "ForgeCad::Kernel::operator*",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::Data::contact"
+      },
+      {
+        "line": 296,
+        "symbol": "ForgeCad::Kernel::Vec::x",
+        "owner": "ForgeCad::Kernel::surfaceQuiltAnchor"
+      },
+      {
+        "line": 297,
+        "symbol": "ForgeCad::Kernel::Interval::Interval",
+        "owner": "ForgeCad::Kernel::surfaceQuiltAnchor"
+      },
+      {
+        "line": 304,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "ForgeCad::Kernel::surfaceQuiltAnchor"
+      },
+      {
+        "line": 305,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "ForgeCad::Kernel::surfaceQuiltAnchor"
+      },
+      {
+        "line": 307,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "ForgeCad::Kernel::surfaceQuiltAnchor"
+      },
+      {
+        "line": 310,
+        "symbol": "ForgeCad::Kernel::isFinite",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::SurfaceQuiltMap"
+      },
+      {
+        "line": 318,
+        "symbol": "ForgeCad::Kernel::Vec::x",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::SurfaceQuiltMap"
+      },
+      {
+        "line": 335,
+        "symbol": "ForgeCad::Kernel::Vec::x",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::SurfaceQuiltMap"
+      },
+      {
+        "line": 339,
+        "symbol": "ForgeCad::Kernel::Vec::x",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::SurfaceQuiltMap"
+      },
+      {
+        "line": 340,
+        "symbol": "ForgeCad::Kernel::Vec::x",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::SurfaceQuiltMap"
+      },
+      {
+        "line": 341,
+        "symbol": "ForgeCad::Kernel::Vec::y",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::SurfaceQuiltMap"
+      },
+      {
+        "line": 342,
+        "symbol": "ForgeCad::Kernel::Vec::y",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::SurfaceQuiltMap"
+      },
+      {
+        "line": 343,
+        "symbol": "ForgeCad::Kernel::Interval::Interval",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::SurfaceQuiltMap"
+      },
+      {
+        "line": 347,
+        "symbol": "ForgeCad::Kernel::Vec::x",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::SurfaceQuiltMap"
+      },
+      {
+        "line": 347,
+        "symbol": "ForgeCad::Kernel::Vec::y",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::SurfaceQuiltMap"
+      },
+      {
+        "line": 347,
+        "symbol": "ForgeCad::Kernel::distance",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::SurfaceQuiltMap"
+      },
+      {
+        "line": 350,
+        "symbol": "ForgeCad::Kernel::Vec::x",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::SurfaceQuiltMap"
+      },
+      {
+        "line": 350,
+        "symbol": "ForgeCad::Kernel::Vec::y",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::SurfaceQuiltMap"
+      },
+      {
+        "line": 350,
+        "symbol": "ForgeCad::Kernel::distance",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::SurfaceQuiltMap"
+      },
+      {
+        "line": 350,
+        "symbol": "ForgeCad::Kernel::operator*",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::SurfaceQuiltMap"
+      },
+      {
+        "line": 351,
+        "symbol": "ForgeCad::Kernel::Vec::x",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::SurfaceQuiltMap"
+      },
+      {
+        "line": 351,
+        "symbol": "ForgeCad::Kernel::Vec::y",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::SurfaceQuiltMap"
+      },
+      {
+        "line": 351,
+        "symbol": "ForgeCad::Kernel::operator*",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::SurfaceQuiltMap"
+      },
+      {
+        "line": 355,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::SurfaceQuiltMap"
+      },
+      {
+        "line": 356,
+        "symbol": "ForgeCad::Kernel::Vec::y",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::SurfaceQuiltMap"
+      },
+      {
+        "line": 357,
+        "symbol": "ForgeCad::Kernel::Vec::y",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::SurfaceQuiltMap"
+      },
+      {
+        "line": 358,
+        "symbol": "ForgeCad::Kernel::dot",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::SurfaceQuiltMap"
+      },
+      {
+        "line": 364,
+        "symbol": "ForgeCad::Kernel::Vec::x",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::SurfaceQuiltMap"
+      },
+      {
+        "line": 368,
+        "symbol": "ForgeCad::Kernel::Interval::contains",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::SurfaceQuiltMap"
+      },
+      {
+        "line": 368,
+        "symbol": "ForgeCad::Kernel::Vec::y",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::SurfaceQuiltMap"
+      },
+      {
+        "line": 369,
+        "symbol": "ForgeCad::Kernel::Vec::y",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::SurfaceQuiltMap"
+      },
+      {
+        "line": 370,
+        "symbol": "ForgeCad::Kernel::Vec::y",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::SurfaceQuiltMap"
+      },
+      {
+        "line": 383,
+        "symbol": "ForgeCad::Kernel::isFinite",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flatten"
+      },
+      {
+        "line": 389,
+        "symbol": "ForgeCad::Kernel::isFinite",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::fold"
+      },
+      {
+        "line": 390,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::fold"
+      },
+      {
+        "line": 390,
+        "symbol": "ForgeCad::Kernel::Vec::x",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::fold"
+      },
+      {
+        "line": 390,
+        "symbol": "ForgeCad::Kernel::Vec::y",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::fold"
+      },
+      {
+        "line": 391,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::fold"
+      },
+      {
+        "line": 391,
+        "symbol": "ForgeCad::Kernel::Vec::z",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::fold"
+      },
+      {
+        "line": 391,
+        "symbol": "ForgeCad::Kernel::operator*",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::fold"
+      },
+      {
+        "line": 391,
+        "symbol": "ForgeCad::Kernel::operator+",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::fold"
+      },
+      {
+        "line": 426,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 426,
+        "symbol": "ForgeCad::Kernel::Vec::x",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 426,
+        "symbol": "ForgeCad::Kernel::Vec::y",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 432,
+        "symbol": "ForgeCad::Kernel::distance",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 449,
+        "symbol": "ForgeCad::Kernel::Interval::Interval",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 450,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 482,
+        "symbol": "ForgeCad::Kernel::Interval::Interval",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 483,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 496,
+        "symbol": "ForgeCad::Kernel::distance",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 509,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 510,
+        "symbol": "ForgeCad::Kernel::Vec::x",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 510,
+        "symbol": "ForgeCad::Kernel::Vec::y",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 511,
+        "symbol": "ForgeCad::Kernel::Vec::y",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 514,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 514,
+        "symbol": "ForgeCad::Kernel::Vec::operator=",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 515,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 515,
+        "symbol": "ForgeCad::Kernel::Vec::operator=",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 515,
+        "symbol": "ForgeCad::Kernel::Vec::x",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 515,
+        "symbol": "ForgeCad::Kernel::Vec::y",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 516,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 516,
+        "symbol": "ForgeCad::Kernel::Vec::operator=",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 516,
+        "symbol": "ForgeCad::Kernel::Vec::y",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 517,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 517,
+        "symbol": "ForgeCad::Kernel::Vec::operator=",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 518,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 518,
+        "symbol": "ForgeCad::Kernel::Vec::operator=",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 520,
+        "symbol": "ForgeCad::Kernel::Vec::x",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 520,
+        "symbol": "ForgeCad::Kernel::Vec::y",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 521,
+        "symbol": "ForgeCad::Kernel::Vec::y",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 523,
+        "symbol": "ForgeCad::Kernel::Vec::x",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 523,
+        "symbol": "ForgeCad::Kernel::norm",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 524,
+        "symbol": "ForgeCad::Kernel::Vec::x",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 524,
+        "symbol": "ForgeCad::Kernel::dot",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 525,
+        "symbol": "ForgeCad::Kernel::Vec::x",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 526,
+        "symbol": "ForgeCad::Kernel::Vec::x",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 527,
+        "symbol": "ForgeCad::Kernel::Vec::x",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 528,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 529,
+        "symbol": "ForgeCad::Kernel::Vec::y",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 531,
+        "symbol": "ForgeCad::Kernel::norm",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 532,
+        "symbol": "ForgeCad::Kernel::dot",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 533,
+        "symbol": "ForgeCad::Kernel::cross",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 533,
+        "symbol": "ForgeCad::Kernel::dot",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 551,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 557,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 558,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 619,
+        "symbol": "ForgeCad::Kernel::isFinite",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 625,
+        "symbol": "ForgeCad::Kernel::Vec::x",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 625,
+        "symbol": "ForgeCad::Kernel::Vec::y",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 629,
+        "symbol": "ForgeCad::Kernel::Frame3::origin",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 629,
+        "symbol": "ForgeCad::Kernel::Vec::x",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 629,
+        "symbol": "ForgeCad::Kernel::norm",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 632,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 632,
+        "symbol": "ForgeCad::Kernel::Vec::x",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 632,
+        "symbol": "ForgeCad::Kernel::Vec::y",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 632,
+        "symbol": "ForgeCad::Kernel::Vec::z",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 641,
+        "symbol": "ForgeCad::Kernel::Vec::x",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 641,
+        "symbol": "ForgeCad::Kernel::Vec::y",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 647,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 647,
+        "symbol": "ForgeCad::Kernel::Vec::x",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 647,
+        "symbol": "ForgeCad::Kernel::Vec::y",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 652,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 652,
+        "symbol": "ForgeCad::Kernel::Vec::z",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 652,
+        "symbol": "ForgeCad::Kernel::operator*",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 652,
+        "symbol": "ForgeCad::Kernel::operator+",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 656,
+        "symbol": "ForgeCad::Kernel::Frame3::xDir",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 656,
+        "symbol": "ForgeCad::Kernel::Frame3::yDir",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 656,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 656,
+        "symbol": "ForgeCad::Kernel::operator*",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 656,
+        "symbol": "ForgeCad::Kernel::operator-",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 657,
+        "symbol": "ForgeCad::Kernel::Frame3::origin",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 657,
+        "symbol": "ForgeCad::Kernel::Frame3::zDir",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 657,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 657,
+        "symbol": "ForgeCad::Kernel::Vec::x",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 657,
+        "symbol": "ForgeCad::Kernel::operator*",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 657,
+        "symbol": "ForgeCad::Kernel::operator-",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 672,
+        "symbol": "ForgeCad::Kernel::Frame3::xDir",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 672,
+        "symbol": "ForgeCad::Kernel::Frame3::yDir",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 672,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 672,
+        "symbol": "ForgeCad::Kernel::operator*",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 672,
+        "symbol": "ForgeCad::Kernel::operator+",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 678,
+        "symbol": "ForgeCad::Kernel::Frame3::origin",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 678,
+        "symbol": "ForgeCad::Kernel::Frame3::zDir",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 678,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 678,
+        "symbol": "ForgeCad::Kernel::Vec::y",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 678,
+        "symbol": "ForgeCad::Kernel::operator*",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 678,
+        "symbol": "ForgeCad::Kernel::operator+",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 685,
+        "symbol": "ForgeCad::Kernel::Frame3::zDir",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 685,
+        "symbol": "ForgeCad::Kernel::cross",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 685,
+        "symbol": "ForgeCad::Kernel::norm",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 686,
+        "symbol": "ForgeCad::Kernel::Frame3::origin",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 686,
+        "symbol": "ForgeCad::Kernel::norm",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 687,
+        "symbol": "ForgeCad::Kernel::Frame3::origin",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 687,
+        "symbol": "ForgeCad::Kernel::Vec::z",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 689,
+        "symbol": "ForgeCad::Kernel::Frame3::origin",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 689,
+        "symbol": "ForgeCad::Kernel::Frame3::zDir",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 690,
+        "symbol": "ForgeCad::Kernel::Frame3::xDir",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 690,
+        "symbol": "ForgeCad::Kernel::Frame3::yDir",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 690,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 690,
+        "symbol": "ForgeCad::Kernel::operator*",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 690,
+        "symbol": "ForgeCad::Kernel::operator-",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 695,
+        "symbol": "ForgeCad::Kernel::Vec::operator[]",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 695,
+        "symbol": "ForgeCad::Kernel::Vec::x",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 696,
+        "symbol": "ForgeCad::Kernel::Vec::x",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 697,
+        "symbol": "ForgeCad::Kernel::Vec::x",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 700,
+        "symbol": "ForgeCad::Kernel::Frame3::zDir",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 700,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 700,
+        "symbol": "ForgeCad::Kernel::dot",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 700,
+        "symbol": "ForgeCad::Kernel::operator*",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 702,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 702,
+        "symbol": "ForgeCad::Kernel::Vec::x",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 702,
+        "symbol": "ForgeCad::Kernel::Vec::y",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 703,
+        "symbol": "ForgeCad::Kernel::Vec::x",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 704,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 706,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 706,
+        "symbol": "ForgeCad::Kernel::Vec::y",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 713,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 713,
+        "symbol": "ForgeCad::Kernel::Vec::x",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 713,
+        "symbol": "ForgeCad::Kernel::Vec::y",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 718,
+        "symbol": "ForgeCad::Kernel::Vec::x",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 718,
+        "symbol": "ForgeCad::Kernel::Vec::y",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_quilt_mapping.cpp",
+    "target": "kernel/fk_offset.cpp",
+    "kind": "call",
+    "count": 3,
+    "sites": [
+      {
+        "line": 468,
+        "symbol": "ForgeCad::Kernel::fitCurve",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 713,
+        "symbol": "ForgeCad::Kernel::fitCurve",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 717,
+        "symbol": "ForgeCad::Kernel::offsetSurface",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_quilt_mapping.cpp",
+    "target": "kernel/fk_offset.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 10,
+        "symbol": "fk_offset.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_quilt_mapping.cpp",
+    "target": "kernel/fk_pcurve.cpp",
+    "kind": "call",
+    "count": 1,
+    "sites": [
+      {
+        "line": 564,
+        "symbol": "ForgeCad::Kernel::computePCurves",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_quilt_mapping.cpp",
+    "target": "kernel/fk_pcurve.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 11,
+        "symbol": "fk_pcurve.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_quilt_mapping.cpp",
+    "target": "kernel/fk_planar_flatten.cpp",
+    "kind": "call",
+    "count": 6,
+    "sites": [
+      {
+        "line": 449,
+        "symbol": "ForgeCad::Kernel::detail::planarFlattenImage",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 459,
+        "symbol": "ForgeCad::Kernel::detail::planarFlattenVertexError",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 460,
+        "symbol": "ForgeCad::Kernel::detail::planarFlattenVertexError",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 482,
+        "symbol": "ForgeCad::Kernel::detail::planarFlattenImage",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 486,
+        "symbol": "ForgeCad::Kernel::detail::planarFlattenCurveError",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 583,
+        "symbol": "ForgeCad::Kernel::detail::planarFlattenPCurveError",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_quilt_mapping.cpp",
+    "target": "kernel/fk_planar_flatten.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 2,
+        "symbol": "fk_planar_flatten.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_quilt_mapping.cpp",
+    "target": "kernel/fk_precision.h",
+    "kind": "call",
+    "count": 10,
+    "sites": [
+      {
+        "line": 90,
+        "symbol": "ForgeCad::Kernel::linearResolution",
+        "owner": "ForgeCad::Kernel::Meridian::Meridian"
+      },
+      {
+        "line": 101,
+        "symbol": "ForgeCad::Kernel::linearResolution",
+        "owner": "ForgeCad::Kernel::Meridian::parameter"
+      },
+      {
+        "line": 137,
+        "symbol": "ForgeCad::Kernel::linearResolution",
+        "owner": "ForgeCad::Kernel::Chart::Chart"
+      },
+      {
+        "line": 193,
+        "symbol": "ForgeCad::Kernel::linearResolution",
+        "owner": "ForgeCad::Kernel::Chart::parameter"
+      },
+      {
+        "line": 203,
+        "symbol": "ForgeCad::Kernel::linearResolution",
+        "owner": "ForgeCad::Kernel::Chart::parameter"
+      },
+      {
+        "line": 249,
+        "symbol": "ForgeCad::Kernel::linearResolution",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::Data::contact"
+      },
+      {
+        "line": 348,
+        "symbol": "ForgeCad::Kernel::linearResolution",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::SurfaceQuiltMap"
+      },
+      {
+        "line": 397,
+        "symbol": "ForgeCad::Kernel::linearResolution",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 685,
+        "symbol": "ForgeCad::Kernel::angularResolution",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 710,
+        "symbol": "ForgeCad::Kernel::linearResolution",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_quilt_mapping.cpp",
+    "target": "kernel/fk_precision.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 9,
+        "symbol": "fk_precision.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_quilt_mapping.cpp",
+    "target": "kernel/fk_quilt_mapping.cpp",
+    "kind": "call",
+    "count": 88,
+    "sites": [
+      {
+        "line": 29,
+        "symbol": "ForgeCad::Kernel::require",
+        "owner": "ForgeCad::Kernel::window"
+      },
+      {
+        "line": 32,
+        "symbol": "ForgeCad::Kernel::require",
+        "owner": "ForgeCad::Kernel::window"
+      },
+      {
+        "line": 50,
+        "symbol": "ForgeCad::Kernel::require",
+        "owner": "ForgeCad::Kernel::ArcSlice::ArcSlice"
+      },
+      {
+        "line": 62,
+        "symbol": "ForgeCad::Kernel::ArcSlice::at",
+        "owner": "ForgeCad::Kernel::ArcSlice::ArcSlice"
+      },
+      {
+        "line": 70,
+        "symbol": "ForgeCad::Kernel::ArcSlice::at",
+        "owner": "ForgeCad::Kernel::ArcSlice::distanceAt"
+      },
+      {
+        "line": 78,
+        "symbol": "ForgeCad::Kernel::require",
+        "owner": "ForgeCad::Kernel::Meridian::Meridian"
+      },
+      {
+        "line": 90,
+        "symbol": "ForgeCad::Kernel::require",
+        "owner": "ForgeCad::Kernel::Meridian::Meridian"
+      },
+      {
+        "line": 91,
+        "symbol": "ForgeCad::Kernel::Meridian::lengthAt",
+        "owner": "ForgeCad::Kernel::Meridian::Meridian"
+      },
+      {
+        "line": 101,
+        "symbol": "ForgeCad::Kernel::require",
+        "owner": "ForgeCad::Kernel::Meridian::parameter"
+      },
+      {
+        "line": 144,
+        "symbol": "ForgeCad::Kernel::require",
+        "owner": "ForgeCad::Kernel::Chart::Chart"
+      },
+      {
+        "line": 157,
+        "symbol": "ForgeCad::Kernel::require",
+        "owner": "ForgeCad::Kernel::Chart::Chart"
+      },
+      {
+        "line": 161,
+        "symbol": "ForgeCad::Kernel::ArcSlice::distanceAt",
+        "owner": "ForgeCad::Kernel::Chart::Chart"
+      },
+      {
+        "line": 161,
+        "symbol": "ForgeCad::Kernel::Chart::Chart::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_quilt_mapping.cpp:151:28)::operator()",
+        "owner": "ForgeCad::Kernel::Chart::Chart"
+      },
+      {
+        "line": 167,
+        "symbol": "ForgeCad::Kernel::uniform",
+        "owner": "ForgeCad::Kernel::Chart::Chart"
+      },
+      {
+        "line": 174,
+        "symbol": "ForgeCad::Kernel::require",
+        "owner": "ForgeCad::Kernel::Chart::Chart"
+      },
+      {
+        "line": 181,
+        "symbol": "ForgeCad::Kernel::require",
+        "owner": "ForgeCad::Kernel::Chart::originAndScale"
+      },
+      {
+        "line": 187,
+        "symbol": "ForgeCad::Kernel::Chart::originAndScale",
+        "owner": "ForgeCad::Kernel::Chart::xAt"
+      },
+      {
+        "line": 194,
+        "symbol": "ForgeCad::Kernel::require",
+        "owner": "ForgeCad::Kernel::Chart::parameter"
+      },
+      {
+        "line": 201,
+        "symbol": "ForgeCad::Kernel::Chart::originAndScale",
+        "owner": "ForgeCad::Kernel::Chart::parameter"
+      },
+      {
+        "line": 203,
+        "symbol": "ForgeCad::Kernel::require",
+        "owner": "ForgeCad::Kernel::Chart::parameter"
+      },
+      {
+        "line": 211,
+        "symbol": "ForgeCad::Kernel::require",
+        "owner": "ForgeCad::Kernel::Chart::parameter"
+      },
+      {
+        "line": 232,
+        "symbol": "ForgeCad::Kernel::Chart::xAt",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::Data::flatPoint"
+      },
+      {
+        "line": 233,
+        "symbol": "ForgeCad::Kernel::Chart::xAt",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::Data::flatPoint"
+      },
+      {
+        "line": 234,
+        "symbol": "ForgeCad::Kernel::Meridian::lengthAt",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::Data::flatPoint"
+      },
+      {
+        "line": 243,
+        "symbol": "ForgeCad::Kernel::require",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::Data::contact"
+      },
+      {
+        "line": 252,
+        "symbol": "ForgeCad::Kernel::require",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::Data::contact"
+      },
+      {
+        "line": 258,
+        "symbol": "ForgeCad::Kernel::Meridian::parameter",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::Data::contact"
+      },
+      {
+        "line": 267,
+        "symbol": "ForgeCad::Kernel::Chart::parameter",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::Data::contact"
+      },
+      {
+        "line": 268,
+        "symbol": "ForgeCad::Kernel::require",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::Data::contact"
+      },
+      {
+        "line": 277,
+        "symbol": "ForgeCad::Kernel::require",
+        "owner": "ForgeCad::Kernel::surfaceQuiltAnchor"
+      },
+      {
+        "line": 279,
+        "symbol": "ForgeCad::Kernel::require",
+        "owner": "ForgeCad::Kernel::surfaceQuiltAnchor"
+      },
+      {
+        "line": 282,
+        "symbol": "ForgeCad::Kernel::require",
+        "owner": "ForgeCad::Kernel::surfaceQuiltAnchor"
+      },
+      {
+        "line": 306,
+        "symbol": "ForgeCad::Kernel::require",
+        "owner": "ForgeCad::Kernel::surfaceQuiltAnchor"
+      },
+      {
+        "line": 310,
+        "symbol": "ForgeCad::Kernel::require",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::SurfaceQuiltMap"
+      },
+      {
+        "line": 313,
+        "symbol": "ForgeCad::Kernel::require",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::SurfaceQuiltMap"
+      },
+      {
+        "line": 317,
+        "symbol": "ForgeCad::Kernel::window",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::SurfaceQuiltMap"
+      },
+      {
+        "line": 321,
+        "symbol": "ForgeCad::Kernel::require",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::SurfaceQuiltMap"
+      },
+      {
+        "line": 323,
+        "symbol": "ForgeCad::Kernel::window",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::SurfaceQuiltMap"
+      },
+      {
+        "line": 337,
+        "symbol": "ForgeCad::Kernel::require",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::SurfaceQuiltMap"
+      },
+      {
+        "line": 347,
+        "symbol": "ForgeCad::Kernel::require",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::SurfaceQuiltMap"
+      },
+      {
+        "line": 350,
+        "symbol": "ForgeCad::Kernel::require",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::SurfaceQuiltMap"
+      },
+      {
+        "line": 361,
+        "symbol": "ForgeCad::Kernel::require",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::SurfaceQuiltMap"
+      },
+      {
+        "line": 363,
+        "symbol": "ForgeCad::Kernel::require",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::SurfaceQuiltMap"
+      },
+      {
+        "line": 364,
+        "symbol": "ForgeCad::Kernel::require",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::SurfaceQuiltMap"
+      },
+      {
+        "line": 367,
+        "symbol": "ForgeCad::Kernel::require",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::SurfaceQuiltMap"
+      },
+      {
+        "line": 373,
+        "symbol": "ForgeCad::Kernel::window",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::SurfaceQuiltMap"
+      },
+      {
+        "line": 383,
+        "symbol": "ForgeCad::Kernel::require",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flatten"
+      },
+      {
+        "line": 385,
+        "symbol": "ForgeCad::Kernel::require",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flatten"
+      },
+      {
+        "line": 386,
+        "symbol": "ForgeCad::Kernel::SurfaceQuiltMap::Data::flatPoint",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flatten"
+      },
+      {
+        "line": 389,
+        "symbol": "ForgeCad::Kernel::require",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::fold"
+      },
+      {
+        "line": 390,
+        "symbol": "ForgeCad::Kernel::SurfaceQuiltMap::Data::contact",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::fold"
+      },
+      {
+        "line": 395,
+        "symbol": "ForgeCad::Kernel::require",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 406,
+        "symbol": "__builtin_inff",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 420,
+        "symbol": "ForgeCad::Kernel::require",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 425,
+        "symbol": "ForgeCad::Kernel::SurfaceQuiltMap::Data::flatPoint",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 429,
+        "symbol": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_quilt_mapping.cpp:421:37)::operator()",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 432,
+        "symbol": "ForgeCad::Kernel::require",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 442,
+        "symbol": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_quilt_mapping.cpp:428:37)::operator()",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 443,
+        "symbol": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_quilt_mapping.cpp:428:37)::operator()",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 463,
+        "symbol": "ForgeCad::Kernel::require",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 469,
+        "symbol": "ForgeCad::Kernel::require",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 489,
+        "symbol": "ForgeCad::Kernel::require",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 496,
+        "symbol": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_quilt_mapping.cpp:421:37)::operator()",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 496,
+        "symbol": "ForgeCad::Kernel::require",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 534,
+        "symbol": "ForgeCad::Kernel::require",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 539,
+        "symbol": "ForgeCad::Kernel::require",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 554,
+        "symbol": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_quilt_mapping.cpp:508:30)::operator()",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 559,
+        "symbol": "ForgeCad::Kernel::require",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 560,
+        "symbol": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_quilt_mapping.cpp:508:30)::operator()",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 564,
+        "symbol": "ForgeCad::Kernel::require",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 568,
+        "symbol": "ForgeCad::Kernel::require",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 587,
+        "symbol": "ForgeCad::Kernel::require",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 604,
+        "symbol": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_quilt_mapping.cpp:599:30)::operator()",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 605,
+        "symbol": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_quilt_mapping.cpp:599:30)::operator()",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 606,
+        "symbol": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_quilt_mapping.cpp:599:30)::operator()",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 617,
+        "symbol": "ForgeCad::Kernel::require",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 619,
+        "symbol": "ForgeCad::Kernel::require",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 640,
+        "symbol": "ForgeCad::Kernel::SurfaceQuiltMap::bend::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_quilt_mapping.cpp:623:23)::operator()",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 643,
+        "symbol": "ForgeCad::Kernel::SurfaceQuiltMap::Data::Contact::Contact",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 645,
+        "symbol": "ForgeCad::Kernel::SurfaceQuiltMap::Data::Contact::operator=",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 647,
+        "symbol": "ForgeCad::Kernel::SurfaceQuiltMap::Data::Contact::operator=",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 647,
+        "symbol": "ForgeCad::Kernel::SurfaceQuiltMap::Data::contact",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 677,
+        "symbol": "ForgeCad::Kernel::Meridian::lengthAt",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 687,
+        "symbol": "ForgeCad::Kernel::SurfaceQuiltMap::bend::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_quilt_mapping.cpp:623:23)::operator()",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 702,
+        "symbol": "ForgeCad::Kernel::SurfaceQuiltMap::Data::contact",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 702,
+        "symbol": "ForgeCad::Kernel::SurfaceQuiltMap::bend::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_quilt_mapping.cpp:623:23)::operator()",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 703,
+        "symbol": "ForgeCad::Kernel::require",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 723,
+        "symbol": "ForgeCad::Kernel::SurfaceQuiltMap::bend::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_quilt_mapping.cpp:638:25)::operator()",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_quilt_mapping.cpp",
+    "target": "kernel/fk_quilt_mapping.h",
+    "kind": "call",
+    "count": 2,
+    "sites": [
+      {
+        "line": 405,
+        "symbol": "ForgeCad::Kernel::SurfaceFlattenStats::SurfaceFlattenStats",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 612,
+        "symbol": "ForgeCad::Kernel::SurfaceFlattenStats::operator=",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_quilt_mapping.cpp",
+    "target": "kernel/fk_quilt_mapping.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 1,
+        "symbol": "fk_quilt_mapping.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_quilt_mapping.cpp",
+    "target": "kernel/fk_surface.cpp",
+    "kind": "call",
+    "count": 5,
+    "sites": [
+      {
+        "line": 188,
+        "symbol": "ForgeCad::Kernel::Surface::point",
+        "owner": "ForgeCad::Kernel::Chart::xAt"
+      },
+      {
+        "line": 202,
+        "symbol": "ForgeCad::Kernel::Surface::point",
+        "owner": "ForgeCad::Kernel::Chart::parameter"
+      },
+      {
+        "line": 347,
+        "symbol": "ForgeCad::Kernel::Surface::point",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::SurfaceQuiltMap"
+      },
+      {
+        "line": 350,
+        "symbol": "ForgeCad::Kernel::Surface::normal",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::SurfaceQuiltMap"
+      },
+      {
+        "line": 351,
+        "symbol": "ForgeCad::Kernel::Surface::normal",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::SurfaceQuiltMap"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_quilt_mapping.cpp",
+    "target": "kernel/fk_surface.h",
+    "kind": "call",
+    "count": 17,
+    "sites": [
+      {
+        "line": 49,
+        "symbol": "ForgeCad::Kernel::Surface::vIso",
+        "owner": "ForgeCad::Kernel::ArcSlice::ArcSlice"
+      },
+      {
+        "line": 139,
+        "symbol": "ForgeCad::Kernel::Surface::type",
+        "owner": "ForgeCad::Kernel::Chart::Chart"
+      },
+      {
+        "line": 141,
+        "symbol": "ForgeCad::Kernel::Plane::frame",
+        "owner": "ForgeCad::Kernel::Chart::Chart"
+      },
+      {
+        "line": 179,
+        "symbol": "ForgeCad::Kernel::Surface::evaluate",
+        "owner": "ForgeCad::Kernel::Chart::originAndScale"
+      },
+      {
+        "line": 180,
+        "symbol": "ForgeCad::Kernel::Surface::evaluate",
+        "owner": "ForgeCad::Kernel::Chart::originAndScale"
+      },
+      {
+        "line": 209,
+        "symbol": "ForgeCad::Kernel::Surface::evaluate",
+        "owner": "ForgeCad::Kernel::Chart::parameter"
+      },
+      {
+        "line": 272,
+        "symbol": "ForgeCad::Kernel::Surface::evaluate",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::Data::contact"
+      },
+      {
+        "line": 356,
+        "symbol": "ForgeCad::Kernel::Surface::evaluate",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::SurfaceQuiltMap"
+      },
+      {
+        "line": 357,
+        "symbol": "ForgeCad::Kernel::Surface::evaluate",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::SurfaceQuiltMap"
+      },
+      {
+        "line": 369,
+        "symbol": "ForgeCad::Kernel::Surface::uIso",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::SurfaceQuiltMap"
+      },
+      {
+        "line": 510,
+        "symbol": "ForgeCad::Kernel::Surface::evaluate",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 511,
+        "symbol": "ForgeCad::Kernel::Surface::evaluate",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 520,
+        "symbol": "ForgeCad::Kernel::Surface::evaluate",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 521,
+        "symbol": "ForgeCad::Kernel::Surface::evaluate",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 667,
+        "symbol": "ForgeCad::Kernel::Surface::vBreakpoints",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 683,
+        "symbol": "ForgeCad::Kernel::Surface::type",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 684,
+        "symbol": "ForgeCad::Kernel::Plane::frame",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_quilt_mapping.cpp",
+    "target": "kernel/fk_surface_mapping.cpp",
+    "kind": "call",
+    "count": 1,
+    "sites": [
+      {
+        "line": 722,
+        "symbol": "ForgeCad::Kernel::detail::mapBodyByFunction",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_quilt_mapping.cpp",
+    "target": "kernel/fk_surface_mapping.h",
+    "kind": "call",
+    "count": 1,
+    "sites": [
+      {
+        "line": 133,
+        "symbol": "ForgeCad::Kernel::SurfaceTargetFace::SurfaceTargetFace",
+        "owner": "ForgeCad::Kernel::Chart::Chart"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_quilt_mapping.cpp",
+    "target": "kernel/fk_topology.cpp",
+    "kind": "call",
+    "count": 45,
+    "sites": [
+      {
+        "line": 26,
+        "symbol": "ForgeCad::Kernel::Body::face",
+        "owner": "ForgeCad::Kernel::window"
+      },
+      {
+        "line": 27,
+        "symbol": "ForgeCad::Kernel::Body::loopFins",
+        "owner": "ForgeCad::Kernel::window"
+      },
+      {
+        "line": 28,
+        "symbol": "ForgeCad::Kernel::Body::fin",
+        "owner": "ForgeCad::Kernel::window"
+      },
+      {
+        "line": 30,
+        "symbol": "ForgeCad::Kernel::Body::edge",
+        "owner": "ForgeCad::Kernel::window"
+      },
+      {
+        "line": 138,
+        "symbol": "ForgeCad::Kernel::Body::face",
+        "owner": "ForgeCad::Kernel::Chart::Chart"
+      },
+      {
+        "line": 180,
+        "symbol": "ForgeCad::Kernel::Body::face",
+        "owner": "ForgeCad::Kernel::Chart::originAndScale"
+      },
+      {
+        "line": 270,
+        "symbol": "ForgeCad::Kernel::Body::face",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::Data::contact"
+      },
+      {
+        "line": 279,
+        "symbol": "ForgeCad::Kernel::Body::contains",
+        "owner": "ForgeCad::Kernel::surfaceQuiltAnchor"
+      },
+      {
+        "line": 284,
+        "symbol": "ForgeCad::Kernel::Body::face",
+        "owner": "ForgeCad::Kernel::surfaceQuiltAnchor"
+      },
+      {
+        "line": 285,
+        "symbol": "ForgeCad::Kernel::Body::loopFins",
+        "owner": "ForgeCad::Kernel::surfaceQuiltAnchor"
+      },
+      {
+        "line": 286,
+        "symbol": "ForgeCad::Kernel::Body::fin",
+        "owner": "ForgeCad::Kernel::surfaceQuiltAnchor"
+      },
+      {
+        "line": 289,
+        "symbol": "ForgeCad::Kernel::Body::face",
+        "owner": "ForgeCad::Kernel::surfaceQuiltAnchor"
+      },
+      {
+        "line": 290,
+        "symbol": "ForgeCad::Kernel::Body::loopFins",
+        "owner": "ForgeCad::Kernel::surfaceQuiltAnchor"
+      },
+      {
+        "line": 291,
+        "symbol": "ForgeCad::Kernel::Body::fin",
+        "owner": "ForgeCad::Kernel::surfaceQuiltAnchor"
+      },
+      {
+        "line": 297,
+        "symbol": "ForgeCad::Kernel::Body::edge",
+        "owner": "ForgeCad::Kernel::surfaceQuiltAnchor"
+      },
+      {
+        "line": 313,
+        "symbol": "ForgeCad::Kernel::Body::contains",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::SurfaceQuiltMap"
+      },
+      {
+        "line": 316,
+        "symbol": "ForgeCad::Kernel::Body::face",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::SurfaceQuiltMap"
+      },
+      {
+        "line": 322,
+        "symbol": "ForgeCad::Kernel::Body::face",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::SurfaceQuiltMap"
+      },
+      {
+        "line": 326,
+        "symbol": "ForgeCad::Kernel::Body::loopFins",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::SurfaceQuiltMap"
+      },
+      {
+        "line": 328,
+        "symbol": "ForgeCad::Kernel::Body::loopFins",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::SurfaceQuiltMap"
+      },
+      {
+        "line": 329,
+        "symbol": "ForgeCad::Kernel::Body::fin",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::SurfaceQuiltMap"
+      },
+      {
+        "line": 343,
+        "symbol": "ForgeCad::Kernel::Body::edge",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::SurfaceQuiltMap"
+      },
+      {
+        "line": 410,
+        "symbol": "ForgeCad::Kernel::Body::face",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 416,
+        "symbol": "ForgeCad::Kernel::Body::loopFins",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 418,
+        "symbol": "ForgeCad::Kernel::Body::fin",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 419,
+        "symbol": "ForgeCad::Kernel::Body::edge",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 563,
+        "symbol": "ForgeCad::Kernel::Body::buildSheet",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 567,
+        "symbol": "ForgeCad::Kernel::Body::edges",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 571,
+        "symbol": "ForgeCad::Kernel::Body::faces",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 572,
+        "symbol": "ForgeCad::Kernel::Body::face",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 573,
+        "symbol": "ForgeCad::Kernel::Body::loopFins",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 575,
+        "symbol": "ForgeCad::Kernel::Body::fin",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 579,
+        "symbol": "ForgeCad::Kernel::Body::edge",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 583,
+        "symbol": "ForgeCad::Kernel::Body::edge",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 604,
+        "symbol": "ForgeCad::Kernel::Body::vertices",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 605,
+        "symbol": "ForgeCad::Kernel::Body::edges",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 606,
+        "symbol": "ForgeCad::Kernel::Body::faces",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 682,
+        "symbol": "ForgeCad::Kernel::Body::face",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 691,
+        "symbol": "ForgeCad::Kernel::Body::loopFins",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 692,
+        "symbol": "ForgeCad::Kernel::Body::edge",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 692,
+        "symbol": "ForgeCad::Kernel::Body::fin",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 698,
+        "symbol": "ForgeCad::Kernel::Body::face",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 711,
+        "symbol": "ForgeCad::Kernel::Body::loopFins",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 712,
+        "symbol": "ForgeCad::Kernel::Body::edge",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 712,
+        "symbol": "ForgeCad::Kernel::Body::fin",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_quilt_mapping.cpp",
+    "target": "kernel/fk_topology.h",
+    "kind": "call",
+    "count": 60,
+    "sites": [
+      {
+        "line": 26,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::window"
+      },
+      {
+        "line": 27,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::window"
+      },
+      {
+        "line": 28,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::window"
+      },
+      {
+        "line": 30,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::window"
+      },
+      {
+        "line": 137,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::Chart::Chart"
+      },
+      {
+        "line": 138,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::Chart::Chart"
+      },
+      {
+        "line": 165,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::Chart::Chart"
+      },
+      {
+        "line": 180,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::Chart::originAndScale"
+      },
+      {
+        "line": 270,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::Data::contact"
+      },
+      {
+        "line": 279,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::surfaceQuiltAnchor"
+      },
+      {
+        "line": 282,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::surfaceQuiltAnchor"
+      },
+      {
+        "line": 282,
+        "symbol": "ForgeCad::Kernel::operator!=",
+        "owner": "ForgeCad::Kernel::surfaceQuiltAnchor"
+      },
+      {
+        "line": 284,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::surfaceQuiltAnchor"
+      },
+      {
+        "line": 285,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::surfaceQuiltAnchor"
+      },
+      {
+        "line": 286,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::surfaceQuiltAnchor"
+      },
+      {
+        "line": 289,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::surfaceQuiltAnchor"
+      },
+      {
+        "line": 290,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::surfaceQuiltAnchor"
+      },
+      {
+        "line": 291,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::surfaceQuiltAnchor"
+      },
+      {
+        "line": 292,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::surfaceQuiltAnchor"
+      },
+      {
+        "line": 292,
+        "symbol": "ForgeCad::Kernel::operator!=",
+        "owner": "ForgeCad::Kernel::surfaceQuiltAnchor"
+      },
+      {
+        "line": 297,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::surfaceQuiltAnchor"
+      },
+      {
+        "line": 306,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::surfaceQuiltAnchor"
+      },
+      {
+        "line": 313,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::SurfaceQuiltMap"
+      },
+      {
+        "line": 316,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::SurfaceQuiltMap"
+      },
+      {
+        "line": 317,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::SurfaceQuiltMap"
+      },
+      {
+        "line": 322,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::SurfaceQuiltMap"
+      },
+      {
+        "line": 323,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::SurfaceQuiltMap"
+      },
+      {
+        "line": 325,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::SurfaceQuiltMap"
+      },
+      {
+        "line": 326,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::SurfaceQuiltMap"
+      },
+      {
+        "line": 327,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::SurfaceQuiltMap"
+      },
+      {
+        "line": 328,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::SurfaceQuiltMap"
+      },
+      {
+        "line": 329,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::SurfaceQuiltMap"
+      },
+      {
+        "line": 330,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::SurfaceQuiltMap"
+      },
+      {
+        "line": 330,
+        "symbol": "ForgeCad::Kernel::operator!=",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::SurfaceQuiltMap"
+      },
+      {
+        "line": 343,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::SurfaceQuiltMap"
+      },
+      {
+        "line": 373,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::SurfaceQuiltMap"
+      },
+      {
+        "line": 410,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 411,
+        "symbol": "ForgeCad::Kernel::Body::BuildFace::BuildFace",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 414,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 416,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 418,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 419,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 442,
+        "symbol": "ForgeCad::Kernel::Body::edgeStart",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 442,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 443,
+        "symbol": "ForgeCad::Kernel::Body::edgeEnd",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 443,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 559,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 571,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 572,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 573,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 575,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 579,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 583,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 613,
+        "symbol": "ForgeCad::Kernel::Body::Body",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+      },
+      {
+        "line": 682,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 691,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 692,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 698,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 711,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      },
+      {
+        "line": 712,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_quilt_mapping.h",
+    "target": "kernel/fk_surface_mapping.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 2,
+        "symbol": "fk_surface_mapping.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_surface_mapping.cpp",
+    "target": "kernel/fk_quilt_mapping.cpp",
+    "kind": "call",
+    "count": 2,
+    "sites": [
+      {
+        "line": 501,
+        "symbol": "ForgeCad::Kernel::SurfaceQuiltMap::SurfaceQuiltMap",
+        "owner": "ForgeCad::Kernel::fitSurfaceWrapPlacement"
+      },
+      {
+        "line": 502,
+        "symbol": "ForgeCad::Kernel::SurfaceQuiltMap::fold",
+        "owner": "ForgeCad::Kernel::fitSurfaceWrapPlacement"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_surface_mapping.cpp",
+    "target": "kernel/fk_quilt_mapping.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 4,
+        "symbol": "fk_quilt_mapping.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_planar_flatten_validation.cpp",
+    "target": "kernel/fk_body_check.cpp",
+    "kind": "call",
+    "count": 2,
+    "sites": [
+      {
+        "line": 131,
+        "symbol": "ForgeCad::Kernel::checkBody",
+        "owner": "verify"
+      },
+      {
+        "line": 150,
+        "symbol": "ForgeCad::Kernel::checkBody",
+        "owner": "verify"
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_planar_flatten_validation.cpp",
+    "target": "kernel/fk_body_check.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 1,
+        "symbol": "fk_body_check.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_planar_flatten_validation.cpp",
+    "target": "kernel/fk_body_io.cpp",
+    "kind": "call",
+    "count": 6,
+    "sites": [
+      {
+        "line": 133,
+        "symbol": "ForgeCad::Kernel::writeBodyBinary",
+        "owner": "verify"
+      },
+      {
+        "line": 222,
+        "symbol": "ForgeCad::Kernel::readBodyBinary",
+        "owner": "verify"
+      },
+      {
+        "line": 222,
+        "symbol": "ForgeCad::Kernel::writeBodyBinary",
+        "owner": "verify"
+      },
+      {
+        "line": 235,
+        "symbol": "ForgeCad::Kernel::writeBodyBinary",
+        "owner": "verify"
+      },
+      {
+        "line": 297,
+        "symbol": "ForgeCad::Kernel::writeBodyBinary",
+        "owner": "PlanarFlattenInvalidAndCancellationPreserveStatsHistorySource"
+      },
+      {
+        "line": 325,
+        "symbol": "ForgeCad::Kernel::writeBodyBinary",
+        "owner": "PlanarFlattenInvalidAndCancellationPreserveStatsHistorySource"
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_planar_flatten_validation.cpp",
+    "target": "kernel/fk_body_io.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 2,
+        "symbol": "fk_body_io.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_planar_flatten_validation.cpp",
+    "target": "kernel/fk_bspline.h",
+    "kind": "call",
+    "count": 8,
+    "sites": [
+      {
+        "line": 183,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::degree",
+        "owner": "verify"
+      },
+      {
+        "line": 184,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::knots",
+        "owner": "verify"
+      },
+      {
+        "line": 185,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::poleCount",
+        "owner": "verify"
+      },
+      {
+        "line": 186,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::poleCount",
+        "owner": "verify"
+      },
+      {
+        "line": 187,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::weight",
+        "owner": "verify"
+      },
+      {
+        "line": 191,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::degree",
+        "owner": "verify"
+      },
+      {
+        "line": 191,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::poleCount",
+        "owner": "verify"
+      },
+      {
+        "line": 193,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::knots",
+        "owner": "verify"
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_planar_flatten_validation.cpp",
+    "target": "kernel/fk_bspline.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 3,
+        "symbol": "fk_bspline.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_planar_flatten_validation.cpp",
+    "target": "kernel/fk_cancel.h",
+    "kind": "call",
+    "count": 1,
+    "sites": [
+      {
+        "line": 312,
+        "symbol": "ForgeCad::Kernel::CancellationScope::CancellationScope",
+        "owner": "PlanarFlattenInvalidAndCancellationPreserveStatsHistorySource"
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_planar_flatten_validation.cpp",
+    "target": "kernel/fk_cancel.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 4,
+        "symbol": "fk_cancel.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_planar_flatten_validation.cpp",
+    "target": "kernel/fk_curve.h",
+    "kind": "call",
+    "count": 9,
+    "sites": [
+      {
+        "line": 71,
+        "symbol": "ForgeCad::Kernel::Curve::point",
+        "owner": "fixture"
+      },
+      {
+        "line": 167,
+        "symbol": "ForgeCad::Kernel::Curve::type",
+        "owner": "verify"
+      },
+      {
+        "line": 168,
+        "symbol": "ForgeCad::Kernel::TrimmedCurve::basis",
+        "owner": "verify"
+      },
+      {
+        "line": 175,
+        "symbol": "ForgeCad::Kernel::Curve::type",
+        "owner": "verify"
+      },
+      {
+        "line": 176,
+        "symbol": "ForgeCad::Kernel::TrimmedCurve::basis",
+        "owner": "verify"
+      },
+      {
+        "line": 177,
+        "symbol": "ForgeCad::Kernel::Curve::type",
+        "owner": "verify"
+      },
+      {
+        "line": 189,
+        "symbol": "ForgeCad::Kernel::Curve::type",
+        "owner": "verify"
+      },
+      {
+        "line": 201,
+        "symbol": "ForgeCad::Kernel::Curve::point",
+        "owner": "verify"
+      },
+      {
+        "line": 202,
+        "symbol": "ForgeCad::Kernel::Curve::point",
+        "owner": "verify"
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_planar_flatten_validation.cpp",
+    "target": "kernel/fk_curve_algo.h",
+    "kind": "call",
+    "count": 1,
+    "sites": [
+      {
+        "line": 215,
+        "symbol": "ForgeCad::Kernel::projectPoint",
+        "owner": "verify"
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_planar_flatten_validation.cpp",
+    "target": "kernel/fk_curve_algo.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 5,
+        "symbol": "fk_curve_algo.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_planar_flatten_validation.cpp",
+    "target": "kernel/fk_curve_ops.cpp",
+    "kind": "call",
+    "count": 5,
+    "sites": [
+      {
+        "line": 85,
+        "symbol": "ForgeCad::Kernel::embedCurve",
+        "owner": "fixture"
+      },
+      {
+        "line": 89,
+        "symbol": "ForgeCad::Kernel::embedCurve",
+        "owner": "fixture"
+      },
+      {
+        "line": 104,
+        "symbol": "ForgeCad::Kernel::embedCurve",
+        "owner": "fixture"
+      },
+      {
+        "line": 253,
+        "symbol": "ForgeCad::Kernel::embedCurve",
+        "owner": "lineFixture"
+      },
+      {
+        "line": 340,
+        "symbol": "ForgeCad::Kernel::embedCurve",
+        "owner": "PlanarFlattenAngularConicLegacyCompatibility"
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_planar_flatten_validation.cpp",
+    "target": "kernel/fk_curve_ops.h",
+    "kind": "call",
+    "count": 1,
+    "sites": [
+      {
+        "line": 82,
+        "symbol": "ForgeCad::Kernel::reversedCurve",
+        "owner": "fixture"
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_planar_flatten_validation.cpp",
+    "target": "kernel/fk_curve_ops.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 6,
+        "symbol": "fk_curve_ops.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_planar_flatten_validation.cpp",
+    "target": "kernel/fk_history.cpp",
+    "kind": "call",
+    "count": 6,
+    "sites": [
+      {
+        "line": 123,
+        "symbol": "ForgeCad::Kernel::BodyHistory::isDeclared",
+        "owner": "historyStamp"
+      },
+      {
+        "line": 124,
+        "symbol": "ForgeCad::Kernel::BodyHistory::origins",
+        "owner": "historyStamp"
+      },
+      {
+        "line": 144,
+        "symbol": "ForgeCad::Kernel::BodyHistory::isDeclared",
+        "owner": "verify"
+      },
+      {
+        "line": 159,
+        "symbol": "ForgeCad::Kernel::BodyHistory::descendants",
+        "owner": "verify"
+      },
+      {
+        "line": 226,
+        "symbol": "ForgeCad::Kernel::faceInteriorPoint",
+        "owner": "verify"
+      },
+      {
+        "line": 309,
+        "symbol": "ForgeCad::Kernel::BodyHistory::BodyHistory",
+        "owner": "PlanarFlattenInvalidAndCancellationPreserveStatsHistorySource"
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_planar_flatten_validation.cpp",
+    "target": "kernel/fk_history.h",
+    "kind": "call",
+    "count": 5,
+    "sites": [
+      {
+        "line": 119,
+        "symbol": "ForgeCad::Kernel::BodyHistory::operandCount",
+        "owner": "historyStamp"
+      },
+      {
+        "line": 121,
+        "symbol": "ForgeCad::Kernel::BodyHistory::resultSize",
+        "owner": "historyStamp"
+      },
+      {
+        "line": 122,
+        "symbol": "ForgeCad::Kernel::BodyHistory::resultSize",
+        "owner": "historyStamp"
+      },
+      {
+        "line": 136,
+        "symbol": "ForgeCad::Kernel::BodyHistory::BodyHistory",
+        "owner": "verify"
+      },
+      {
+        "line": 143,
+        "symbol": "ForgeCad::Kernel::BodyHistory::resultSize",
+        "owner": "verify"
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_planar_flatten_validation.cpp",
+    "target": "kernel/fk_mass.cpp",
+    "kind": "call",
+    "count": 2,
+    "sites": [
+      {
+        "line": 132,
+        "symbol": "ForgeCad::Kernel::faceArea",
+        "owner": "verify"
+      },
+      {
+        "line": 155,
+        "symbol": "ForgeCad::Kernel::faceArea",
+        "owner": "verify"
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_planar_flatten_validation.cpp",
+    "target": "kernel/fk_mass.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 7,
+        "symbol": "fk_mass.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_planar_flatten_validation.cpp",
+    "target": "kernel/fk_math.cpp",
+    "kind": "call",
+    "count": 19,
+    "sites": [
+      {
+        "line": 75,
+        "symbol": "ForgeCad::Kernel::Frame3::toGlobal",
+        "owner": "fixture"
+      },
+      {
+        "line": 100,
+        "symbol": "ForgeCad::Kernel::Frame3::toGlobal",
+        "owner": "fixture"
+      },
+      {
+        "line": 147,
+        "symbol": "ForgeCad::Kernel::Frame3::toGlobal",
+        "owner": "verify"
+      },
+      {
+        "line": 233,
+        "symbol": "ForgeCad::Kernel::Frame3::toGlobal",
+        "owner": "verify"
+      },
+      {
+        "line": 240,
+        "symbol": "ForgeCad::Kernel::Frame3::Frame3",
+        "owner": "lineFixture"
+      },
+      {
+        "line": 249,
+        "symbol": "ForgeCad::Kernel::Frame3::toGlobal",
+        "owner": "lineFixture"
+      },
+      {
+        "line": 272,
+        "symbol": "ForgeCad::Kernel::Frame3::Frame3",
+        "owner": "PlanarFlattenHiddenPolynomialRationalPoseScaleSense"
+      },
+      {
+        "line": 273,
+        "symbol": "ForgeCad::Kernel::Frame3::Frame3",
+        "owner": "PlanarFlattenHiddenPolynomialRationalPoseScaleSense"
+      },
+      {
+        "line": 288,
+        "symbol": "ForgeCad::Kernel::Frame3::Frame3",
+        "owner": "PlanarFlattenNestedPartialTrimReverseHolesAndRoundtrip"
+      },
+      {
+        "line": 289,
+        "symbol": "ForgeCad::Kernel::Frame3::Frame3",
+        "owner": "PlanarFlattenNestedPartialTrimReverseHolesAndRoundtrip"
+      },
+      {
+        "line": 296,
+        "symbol": "ForgeCad::Kernel::Frame3::Frame3",
+        "owner": "PlanarFlattenInvalidAndCancellationPreserveStatsHistorySource"
+      },
+      {
+        "line": 315,
+        "symbol": "ForgeCad::Kernel::Frame3::Frame3",
+        "owner": "PlanarFlattenInvalidAndCancellationPreserveStatsHistorySource"
+      },
+      {
+        "line": 330,
+        "symbol": "ForgeCad::Kernel::Frame3::Frame3",
+        "owner": "PlanarFlattenLineUVFiniteNonunitRangePreservesParameter"
+      },
+      {
+        "line": 334,
+        "symbol": "ForgeCad::Kernel::Frame3::Frame3",
+        "owner": "PlanarFlattenAngularConicLegacyCompatibility"
+      },
+      {
+        "line": 336,
+        "symbol": "ForgeCad::Kernel::Frame3::toGlobal",
+        "owner": "PlanarFlattenAngularConicLegacyCompatibility"
+      },
+      {
+        "line": 342,
+        "symbol": "ForgeCad::Kernel::Frame3::Frame3",
+        "owner": "PlanarFlattenAngularConicLegacyCompatibility"
+      },
+      {
+        "line": 354,
+        "symbol": "ForgeCad::Kernel::Frame3::toGlobal",
+        "owner": "PlanarFlattenFoldPreservesFiniteCarrierWindowAndBoundaryRoundtrip"
+      },
+      {
+        "line": 358,
+        "symbol": "ForgeCad::Kernel::Frame3::toGlobal",
+        "owner": "PlanarFlattenFoldPreservesFiniteCarrierWindowAndBoundaryRoundtrip"
+      },
+      {
+        "line": 359,
+        "symbol": "ForgeCad::Kernel::Frame3::toGlobal",
+        "owner": "PlanarFlattenFoldPreservesFiniteCarrierWindowAndBoundaryRoundtrip"
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_planar_flatten_validation.cpp",
+    "target": "kernel/fk_math.h",
+    "kind": "call",
+    "count": 69,
+    "sites": [
+      {
+        "line": 65,
+        "symbol": "ForgeCad::Kernel::Interval::Interval",
+        "owner": "fixture"
+      },
+      {
+        "line": 69,
+        "symbol": "ForgeCad::Kernel::Interval::operator=",
+        "owner": "fixture"
+      },
+      {
+        "line": 72,
+        "symbol": "ForgeCad::Kernel::Vec::x",
+        "owner": "fixture"
+      },
+      {
+        "line": 74,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "fixture"
+      },
+      {
+        "line": 75,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "fixture"
+      },
+      {
+        "line": 75,
+        "symbol": "ForgeCad::Kernel::Vec::x",
+        "owner": "fixture"
+      },
+      {
+        "line": 75,
+        "symbol": "ForgeCad::Kernel::Vec::y",
+        "owner": "fixture"
+      },
+      {
+        "line": 83,
+        "symbol": "ForgeCad::Kernel::Interval::operator=",
+        "owner": "fixture"
+      },
+      {
+        "line": 88,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "fixture"
+      },
+      {
+        "line": 99,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "fixture"
+      },
+      {
+        "line": 100,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "fixture"
+      },
+      {
+        "line": 100,
+        "symbol": "ForgeCad::Kernel::Vec::x",
+        "owner": "fixture"
+      },
+      {
+        "line": 100,
+        "symbol": "ForgeCad::Kernel::Vec::y",
+        "owner": "fixture"
+      },
+      {
+        "line": 102,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "fixture"
+      },
+      {
+        "line": 147,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "verify"
+      },
+      {
+        "line": 147,
+        "symbol": "ForgeCad::Kernel::Vec::x",
+        "owner": "verify"
+      },
+      {
+        "line": 147,
+        "symbol": "ForgeCad::Kernel::Vec::y",
+        "owner": "verify"
+      },
+      {
+        "line": 157,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "verify"
+      },
+      {
+        "line": 200,
+        "symbol": "ForgeCad::Kernel::Interval::length",
+        "owner": "verify"
+      },
+      {
+        "line": 202,
+        "symbol": "ForgeCad::Kernel::distance",
+        "owner": "verify"
+      },
+      {
+        "line": 205,
+        "symbol": "ForgeCad::Kernel::Vec::operator=",
+        "owner": "verify"
+      },
+      {
+        "line": 224,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "verify"
+      },
+      {
+        "line": 225,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "verify"
+      },
+      {
+        "line": 231,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "verify"
+      },
+      {
+        "line": 231,
+        "symbol": "ForgeCad::Kernel::Vec::x",
+        "owner": "verify"
+      },
+      {
+        "line": 231,
+        "symbol": "ForgeCad::Kernel::Vec::y",
+        "owner": "verify"
+      },
+      {
+        "line": 231,
+        "symbol": "ForgeCad::Kernel::distance",
+        "owner": "verify"
+      },
+      {
+        "line": 233,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "verify"
+      },
+      {
+        "line": 233,
+        "symbol": "ForgeCad::Kernel::Vec::x",
+        "owner": "verify"
+      },
+      {
+        "line": 233,
+        "symbol": "ForgeCad::Kernel::Vec::y",
+        "owner": "verify"
+      },
+      {
+        "line": 233,
+        "symbol": "ForgeCad::Kernel::distance",
+        "owner": "verify"
+      },
+      {
+        "line": 240,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "lineFixture"
+      },
+      {
+        "line": 243,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "lineFixture"
+      },
+      {
+        "line": 244,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "lineFixture"
+      },
+      {
+        "line": 245,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "lineFixture"
+      },
+      {
+        "line": 246,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "lineFixture"
+      },
+      {
+        "line": 248,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "lineFixture"
+      },
+      {
+        "line": 249,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "lineFixture"
+      },
+      {
+        "line": 249,
+        "symbol": "ForgeCad::Kernel::Vec::x",
+        "owner": "lineFixture"
+      },
+      {
+        "line": 249,
+        "symbol": "ForgeCad::Kernel::Vec::y",
+        "owner": "lineFixture"
+      },
+      {
+        "line": 272,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "PlanarFlattenHiddenPolynomialRationalPoseScaleSense"
+      },
+      {
+        "line": 272,
+        "symbol": "ForgeCad::Kernel::operator*",
+        "owner": "PlanarFlattenHiddenPolynomialRationalPoseScaleSense"
+      },
+      {
+        "line": 273,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "PlanarFlattenHiddenPolynomialRationalPoseScaleSense"
+      },
+      {
+        "line": 273,
+        "symbol": "ForgeCad::Kernel::operator*",
+        "owner": "PlanarFlattenHiddenPolynomialRationalPoseScaleSense"
+      },
+      {
+        "line": 276,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "PlanarFlattenHiddenPolynomialRationalPoseScaleSense"
+      },
+      {
+        "line": 288,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "PlanarFlattenNestedPartialTrimReverseHolesAndRoundtrip"
+      },
+      {
+        "line": 289,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "PlanarFlattenNestedPartialTrimReverseHolesAndRoundtrip"
+      },
+      {
+        "line": 291,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "PlanarFlattenNestedPartialTrimReverseHolesAndRoundtrip"
+      },
+      {
+        "line": 298,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "PlanarFlattenInvalidAndCancellationPreserveStatsHistorySource"
+      },
+      {
+        "line": 330,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "PlanarFlattenLineUVFiniteNonunitRangePreservesParameter"
+      },
+      {
+        "line": 334,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "PlanarFlattenAngularConicLegacyCompatibility"
+      },
+      {
+        "line": 335,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "PlanarFlattenAngularConicLegacyCompatibility"
+      },
+      {
+        "line": 336,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "PlanarFlattenAngularConicLegacyCompatibility"
+      },
+      {
+        "line": 342,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "PlanarFlattenAngularConicLegacyCompatibility"
+      },
+      {
+        "line": 349,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "PlanarFlattenFoldPreservesFiniteCarrierWindowAndBoundaryRoundtrip"
+      },
+      {
+        "line": 352,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "PlanarFlattenFoldPreservesFiniteCarrierWindowAndBoundaryRoundtrip"
+      },
+      {
+        "line": 352,
+        "symbol": "ForgeCad::Kernel::Vec::x",
+        "owner": "PlanarFlattenFoldPreservesFiniteCarrierWindowAndBoundaryRoundtrip"
+      },
+      {
+        "line": 352,
+        "symbol": "ForgeCad::Kernel::Vec::y",
+        "owner": "PlanarFlattenFoldPreservesFiniteCarrierWindowAndBoundaryRoundtrip"
+      },
+      {
+        "line": 353,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "PlanarFlattenFoldPreservesFiniteCarrierWindowAndBoundaryRoundtrip"
+      },
+      {
+        "line": 354,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "PlanarFlattenFoldPreservesFiniteCarrierWindowAndBoundaryRoundtrip"
+      },
+      {
+        "line": 354,
+        "symbol": "ForgeCad::Kernel::Vec::x",
+        "owner": "PlanarFlattenFoldPreservesFiniteCarrierWindowAndBoundaryRoundtrip"
+      },
+      {
+        "line": 354,
+        "symbol": "ForgeCad::Kernel::Vec::y",
+        "owner": "PlanarFlattenFoldPreservesFiniteCarrierWindowAndBoundaryRoundtrip"
+      },
+      {
+        "line": 354,
+        "symbol": "ForgeCad::Kernel::distance",
+        "owner": "PlanarFlattenFoldPreservesFiniteCarrierWindowAndBoundaryRoundtrip"
+      },
+      {
+        "line": 355,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "PlanarFlattenFoldPreservesFiniteCarrierWindowAndBoundaryRoundtrip"
+      },
+      {
+        "line": 356,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "PlanarFlattenFoldPreservesFiniteCarrierWindowAndBoundaryRoundtrip"
+      },
+      {
+        "line": 358,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "PlanarFlattenFoldPreservesFiniteCarrierWindowAndBoundaryRoundtrip"
+      },
+      {
+        "line": 358,
+        "symbol": "ForgeCad::Kernel::distance",
+        "owner": "PlanarFlattenFoldPreservesFiniteCarrierWindowAndBoundaryRoundtrip"
+      },
+      {
+        "line": 359,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "PlanarFlattenFoldPreservesFiniteCarrierWindowAndBoundaryRoundtrip"
+      },
+      {
+        "line": 359,
+        "symbol": "ForgeCad::Kernel::distance",
+        "owner": "PlanarFlattenFoldPreservesFiniteCarrierWindowAndBoundaryRoundtrip"
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_planar_flatten_validation.cpp",
+    "target": "kernel/fk_precision.h",
+    "kind": "call",
+    "count": 4,
+    "sites": [
+      {
+        "line": 138,
+        "symbol": "ForgeCad::Kernel::linearResolution",
+        "owner": "verify"
+      },
+      {
+        "line": 209,
+        "symbol": "ForgeCad::Kernel::linearResolution",
+        "owner": "verify"
+      },
+      {
+        "line": 217,
+        "symbol": "ForgeCad::Kernel::linearResolution",
+        "owner": "verify"
+      },
+      {
+        "line": 357,
+        "symbol": "ForgeCad::Kernel::linearResolution",
+        "owner": "PlanarFlattenFoldPreservesFiniteCarrierWindowAndBoundaryRoundtrip"
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_planar_flatten_validation.cpp",
+    "target": "kernel/fk_quilt_mapping.cpp",
+    "kind": "call",
+    "count": 11,
+    "sites": [
+      {
+        "line": 134,
+        "symbol": "ForgeCad::Kernel::SurfaceQuiltMap::SurfaceQuiltMap",
+        "owner": "verify"
+      },
+      {
+        "line": 137,
+        "symbol": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet",
+        "owner": "verify"
+      },
+      {
+        "line": 230,
+        "symbol": "ForgeCad::Kernel::SurfaceQuiltMap::flatten",
+        "owner": "verify"
+      },
+      {
+        "line": 233,
+        "symbol": "ForgeCad::Kernel::SurfaceQuiltMap::fold",
+        "owner": "verify"
+      },
+      {
+        "line": 298,
+        "symbol": "ForgeCad::Kernel::SurfaceQuiltMap::SurfaceQuiltMap",
+        "owner": "PlanarFlattenInvalidAndCancellationPreserveStatsHistorySource"
+      },
+      {
+        "line": 315,
+        "symbol": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet",
+        "owner": "PlanarFlattenInvalidAndCancellationPreserveStatsHistorySource"
+      },
+      {
+        "line": 351,
+        "symbol": "ForgeCad::Kernel::SurfaceQuiltMap::SurfaceQuiltMap",
+        "owner": "PlanarFlattenFoldPreservesFiniteCarrierWindowAndBoundaryRoundtrip"
+      },
+      {
+        "line": 354,
+        "symbol": "ForgeCad::Kernel::SurfaceQuiltMap::fold",
+        "owner": "PlanarFlattenFoldPreservesFiniteCarrierWindowAndBoundaryRoundtrip"
+      },
+      {
+        "line": 356,
+        "symbol": "ForgeCad::Kernel::SurfaceQuiltMap::fold",
+        "owner": "PlanarFlattenFoldPreservesFiniteCarrierWindowAndBoundaryRoundtrip"
+      },
+      {
+        "line": 358,
+        "symbol": "ForgeCad::Kernel::SurfaceQuiltMap::fold",
+        "owner": "PlanarFlattenFoldPreservesFiniteCarrierWindowAndBoundaryRoundtrip"
+      },
+      {
+        "line": 359,
+        "symbol": "ForgeCad::Kernel::SurfaceQuiltMap::fold",
+        "owner": "PlanarFlattenFoldPreservesFiniteCarrierWindowAndBoundaryRoundtrip"
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_planar_flatten_validation.cpp",
+    "target": "kernel/fk_quilt_mapping.h",
+    "kind": "call",
+    "count": 2,
+    "sites": [
+      {
+        "line": 135,
+        "symbol": "ForgeCad::Kernel::SurfaceFlattenStats::SurfaceFlattenStats",
+        "owner": "verify"
+      },
+      {
+        "line": 302,
+        "symbol": "ForgeCad::Kernel::SurfaceFlattenStats::SurfaceFlattenStats",
+        "owner": "PlanarFlattenInvalidAndCancellationPreserveStatsHistorySource"
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_planar_flatten_validation.cpp",
+    "target": "kernel/fk_quilt_mapping.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 8,
+        "symbol": "fk_quilt_mapping.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_planar_flatten_validation.cpp",
+    "target": "kernel/fk_surface.h",
+    "kind": "call",
+    "count": 2,
+    "sites": [
+      {
+        "line": 223,
+        "symbol": "ForgeCad::Kernel::Plane::frame",
+        "owner": "verify"
+      },
+      {
+        "line": 348,
+        "symbol": "ForgeCad::Kernel::Plane::frame",
+        "owner": "PlanarFlattenFoldPreservesFiniteCarrierWindowAndBoundaryRoundtrip"
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_planar_flatten_validation.cpp",
+    "target": "kernel/fk_topology.cpp",
+    "kind": "call",
+    "count": 28,
+    "sites": [
+      {
+        "line": 115,
+        "symbol": "ForgeCad::Kernel::Body::buildSheet",
+        "owner": "fixture"
+      },
+      {
+        "line": 132,
+        "symbol": "ForgeCad::Kernel::Body::faces",
+        "owner": "verify"
+      },
+      {
+        "line": 134,
+        "symbol": "ForgeCad::Kernel::Body::faces",
+        "owner": "verify"
+      },
+      {
+        "line": 145,
+        "symbol": "ForgeCad::Kernel::Body::face",
+        "owner": "verify"
+      },
+      {
+        "line": 145,
+        "symbol": "ForgeCad::Kernel::Body::faces",
+        "owner": "verify"
+      },
+      {
+        "line": 151,
+        "symbol": "ForgeCad::Kernel::Body::edges",
+        "owner": "verify"
+      },
+      {
+        "line": 151,
+        "symbol": "ForgeCad::Kernel::Body::faces",
+        "owner": "verify"
+      },
+      {
+        "line": 153,
+        "symbol": "ForgeCad::Kernel::Body::face",
+        "owner": "verify"
+      },
+      {
+        "line": 153,
+        "symbol": "ForgeCad::Kernel::Body::faces",
+        "owner": "verify"
+      },
+      {
+        "line": 155,
+        "symbol": "ForgeCad::Kernel::Body::faces",
+        "owner": "verify"
+      },
+      {
+        "line": 158,
+        "symbol": "ForgeCad::Kernel::Body::edges",
+        "owner": "verify"
+      },
+      {
+        "line": 163,
+        "symbol": "ForgeCad::Kernel::Body::edge",
+        "owner": "verify"
+      },
+      {
+        "line": 164,
+        "symbol": "ForgeCad::Kernel::Body::edge",
+        "owner": "verify"
+      },
+      {
+        "line": 169,
+        "symbol": "ForgeCad::Kernel::Body::fins",
+        "owner": "verify"
+      },
+      {
+        "line": 170,
+        "symbol": "ForgeCad::Kernel::Body::fins",
+        "owner": "verify"
+      },
+      {
+        "line": 171,
+        "symbol": "ForgeCad::Kernel::Body::fin",
+        "owner": "verify"
+      },
+      {
+        "line": 173,
+        "symbol": "ForgeCad::Kernel::Body::fin",
+        "owner": "verify"
+      },
+      {
+        "line": 213,
+        "symbol": "ForgeCad::Kernel::Body::edges",
+        "owner": "verify"
+      },
+      {
+        "line": 214,
+        "symbol": "ForgeCad::Kernel::Body::edge",
+        "owner": "verify"
+      },
+      {
+        "line": 223,
+        "symbol": "ForgeCad::Kernel::Body::face",
+        "owner": "verify"
+      },
+      {
+        "line": 223,
+        "symbol": "ForgeCad::Kernel::Body::faces",
+        "owner": "verify"
+      },
+      {
+        "line": 226,
+        "symbol": "ForgeCad::Kernel::Body::faces",
+        "owner": "verify"
+      },
+      {
+        "line": 265,
+        "symbol": "ForgeCad::Kernel::Body::buildSheet",
+        "owner": "lineFixture"
+      },
+      {
+        "line": 298,
+        "symbol": "ForgeCad::Kernel::Body::faces",
+        "owner": "PlanarFlattenInvalidAndCancellationPreserveStatsHistorySource"
+      },
+      {
+        "line": 340,
+        "symbol": "ForgeCad::Kernel::Body::buildSheet",
+        "owner": "PlanarFlattenAngularConicLegacyCompatibility"
+      },
+      {
+        "line": 348,
+        "symbol": "ForgeCad::Kernel::Body::face",
+        "owner": "PlanarFlattenFoldPreservesFiniteCarrierWindowAndBoundaryRoundtrip"
+      },
+      {
+        "line": 348,
+        "symbol": "ForgeCad::Kernel::Body::faces",
+        "owner": "PlanarFlattenFoldPreservesFiniteCarrierWindowAndBoundaryRoundtrip"
+      },
+      {
+        "line": 351,
+        "symbol": "ForgeCad::Kernel::Body::faces",
+        "owner": "PlanarFlattenFoldPreservesFiniteCarrierWindowAndBoundaryRoundtrip"
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_planar_flatten_validation.cpp",
+    "target": "kernel/fk_topology.h",
+    "kind": "call",
+    "count": 21,
+    "sites": [
+      {
+        "line": 77,
+        "symbol": "ForgeCad::Kernel::Body::BuildFace::BuildFace",
+        "owner": "fixture"
+      },
+      {
+        "line": 132,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "verify"
+      },
+      {
+        "line": 145,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "verify"
+      },
+      {
+        "line": 153,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "verify"
+      },
+      {
+        "line": 155,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "verify"
+      },
+      {
+        "line": 158,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "verify"
+      },
+      {
+        "line": 163,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "verify"
+      },
+      {
+        "line": 164,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "verify"
+      },
+      {
+        "line": 169,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "verify"
+      },
+      {
+        "line": 170,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "verify"
+      },
+      {
+        "line": 171,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "verify"
+      },
+      {
+        "line": 171,
+        "symbol": "ForgeCad::Kernel::operator==",
+        "owner": "verify"
+      },
+      {
+        "line": 172,
+        "symbol": "ForgeCad::Kernel::Id::operator=",
+        "owner": "verify"
+      },
+      {
+        "line": 173,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "verify"
+      },
+      {
+        "line": 213,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "verify"
+      },
+      {
+        "line": 214,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "verify"
+      },
+      {
+        "line": 223,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "verify"
+      },
+      {
+        "line": 226,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "verify"
+      },
+      {
+        "line": 256,
+        "symbol": "ForgeCad::Kernel::Body::BuildFace::BuildFace",
+        "owner": "lineFixture"
+      },
+      {
+        "line": 337,
+        "symbol": "ForgeCad::Kernel::Body::BuildFace::BuildFace",
+        "owner": "PlanarFlattenAngularConicLegacyCompatibility"
+      },
+      {
+        "line": 348,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "PlanarFlattenFoldPreservesFiniteCarrierWindowAndBoundaryRoundtrip"
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_planar_flatten_validation.cpp",
+    "target": "kernel/tests/fk_test.h",
+    "kind": "call",
+    "count": 6,
+    "sites": [
+      {
+        "line": 268,
+        "symbol": "fktest::Registrar::Registrar",
+        "owner": ""
+      },
+      {
+        "line": 285,
+        "symbol": "fktest::Registrar::Registrar",
+        "owner": ""
+      },
+      {
+        "line": 295,
+        "symbol": "fktest::Registrar::Registrar",
+        "owner": ""
+      },
+      {
+        "line": 328,
+        "symbol": "fktest::Registrar::Registrar",
+        "owner": ""
+      },
+      {
+        "line": 333,
+        "symbol": "fktest::Registrar::Registrar",
+        "owner": ""
+      },
+      {
+        "line": 345,
+        "symbol": "fktest::Registrar::Registrar",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_planar_flatten_validation.cpp",
+    "target": "kernel/tests/fk_test.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 9,
+        "symbol": "fk_test.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_planar_flatten_validation.cpp",
+    "target": "kernel/tests/fk_test_main.cpp",
+    "kind": "call",
+    "count": 31,
+    "sites": [
+      {
+        "line": 131,
+        "symbol": "fktest::reportFailure",
+        "owner": "verify"
+      },
+      {
+        "line": 132,
+        "symbol": "fktest::reportFailure",
+        "owner": "verify"
+      },
+      {
+        "line": 138,
+        "symbol": "fktest::reportFailure",
+        "owner": "verify"
+      },
+      {
+        "line": 141,
+        "symbol": "fktest::reportFailure",
+        "owner": "verify"
+      },
+      {
+        "line": 144,
+        "symbol": "fktest::reportFailure",
+        "owner": "verify"
+      },
+      {
+        "line": 150,
+        "symbol": "fktest::reportFailure",
+        "owner": "verify"
+      },
+      {
+        "line": 151,
+        "symbol": "fktest::reportFailure",
+        "owner": "verify"
+      },
+      {
+        "line": 153,
+        "symbol": "fktest::reportFailure",
+        "owner": "verify"
+      },
+      {
+        "line": 155,
+        "symbol": "fktest::reportFailure",
+        "owner": "verify"
+      },
+      {
+        "line": 160,
+        "symbol": "fktest::reportFailure",
+        "owner": "verify"
+      },
+      {
+        "line": 165,
+        "symbol": "fktest::reportFailure",
+        "owner": "verify"
+      },
+      {
+        "line": 180,
+        "symbol": "fktest::reportFailure",
+        "owner": "verify"
+      },
+      {
+        "line": 183,
+        "symbol": "fktest::reportFailure",
+        "owner": "verify"
+      },
+      {
+        "line": 184,
+        "symbol": "fktest::reportFailure",
+        "owner": "verify"
+      },
+      {
+        "line": 185,
+        "symbol": "fktest::reportFailure",
+        "owner": "verify"
+      },
+      {
+        "line": 187,
+        "symbol": "fktest::reportFailure",
+        "owner": "verify"
+      },
+      {
+        "line": 191,
+        "symbol": "fktest::reportFailure",
+        "owner": "verify"
+      },
+      {
+        "line": 193,
+        "symbol": "fktest::reportFailure",
+        "owner": "verify"
+      },
+      {
+        "line": 209,
+        "symbol": "fktest::reportFailure",
+        "owner": "verify"
+      },
+      {
+        "line": 217,
+        "symbol": "fktest::reportFailure",
+        "owner": "verify"
+      },
+      {
+        "line": 227,
+        "symbol": "fktest::reportFailure",
+        "owner": "verify"
+      },
+      {
+        "line": 231,
+        "symbol": "fktest::reportFailure",
+        "owner": "verify"
+      },
+      {
+        "line": 233,
+        "symbol": "fktest::reportFailure",
+        "owner": "verify"
+      },
+      {
+        "line": 235,
+        "symbol": "fktest::reportFailure",
+        "owner": "verify"
+      },
+      {
+        "line": 321,
+        "symbol": "fktest::reportFailure",
+        "owner": "PlanarFlattenInvalidAndCancellationPreserveStatsHistorySource"
+      },
+      {
+        "line": 322,
+        "symbol": "fktest::reportFailure",
+        "owner": "PlanarFlattenInvalidAndCancellationPreserveStatsHistorySource"
+      },
+      {
+        "line": 325,
+        "symbol": "fktest::reportFailure",
+        "owner": "PlanarFlattenInvalidAndCancellationPreserveStatsHistorySource"
+      },
+      {
+        "line": 354,
+        "symbol": "fktest::reportFailure",
+        "owner": "PlanarFlattenFoldPreservesFiniteCarrierWindowAndBoundaryRoundtrip"
+      },
+      {
+        "line": 356,
+        "symbol": "fktest::reportFailure",
+        "owner": "PlanarFlattenFoldPreservesFiniteCarrierWindowAndBoundaryRoundtrip"
+      },
+      {
+        "line": 358,
+        "symbol": "fktest::reportFailure",
+        "owner": "PlanarFlattenFoldPreservesFiniteCarrierWindowAndBoundaryRoundtrip"
+      },
+      {
+        "line": 359,
+        "symbol": "fktest::reportFailure",
+        "owner": "PlanarFlattenFoldPreservesFiniteCarrierWindowAndBoundaryRoundtrip"
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_planar_flatten_validation.cpp",
+    "target": "kernel/tests/test_planar_flatten_validation.cpp",
+    "kind": "call",
+    "count": 21,
+    "sites": [
+      {
+        "line": 88,
+        "symbol": "straight",
+        "owner": "fixture"
+      },
+      {
+        "line": 102,
+        "symbol": "straight",
+        "owner": "fixture"
+      },
+      {
+        "line": 201,
+        "symbol": "verify::(lambda at /home/myungit/Linux_CAD_forFree/kernel/tests/test_planar_flatten_validation.cpp:146:28)::operator()",
+        "owner": "verify"
+      },
+      {
+        "line": 212,
+        "symbol": "__builtin_inff",
+        "owner": "verify"
+      },
+      {
+        "line": 220,
+        "symbol": "verify::(lambda at /home/myungit/Linux_CAD_forFree/kernel/tests/test_planar_flatten_validation.cpp:149:24)::operator()",
+        "owner": "verify"
+      },
+      {
+        "line": 222,
+        "symbol": "verify::(lambda at /home/myungit/Linux_CAD_forFree/kernel/tests/test_planar_flatten_validation.cpp:149:24)::operator()",
+        "owner": "verify"
+      },
+      {
+        "line": 274,
+        "symbol": "fixture",
+        "owner": "PlanarFlattenHiddenPolynomialRationalPoseScaleSense"
+      },
+      {
+        "line": 276,
+        "symbol": "verify",
+        "owner": "PlanarFlattenHiddenPolynomialRationalPoseScaleSense"
+      },
+      {
+        "line": 290,
+        "symbol": "fixture",
+        "owner": "PlanarFlattenNestedPartialTrimReverseHolesAndRoundtrip"
+      },
+      {
+        "line": 291,
+        "symbol": "verify",
+        "owner": "PlanarFlattenNestedPartialTrimReverseHolesAndRoundtrip"
+      },
+      {
+        "line": 296,
+        "symbol": "fixture",
+        "owner": "PlanarFlattenInvalidAndCancellationPreserveStatsHistorySource"
+      },
+      {
+        "line": 310,
+        "symbol": "historyStamp",
+        "owner": "PlanarFlattenInvalidAndCancellationPreserveStatsHistorySource"
+      },
+      {
+        "line": 321,
+        "symbol": "historyStamp",
+        "owner": "PlanarFlattenInvalidAndCancellationPreserveStatsHistorySource"
+      },
+      {
+        "line": 329,
+        "symbol": "lineFixture",
+        "owner": "PlanarFlattenLineUVFiniteNonunitRangePreservesParameter"
+      },
+      {
+        "line": 330,
+        "symbol": "verify",
+        "owner": "PlanarFlattenLineUVFiniteNonunitRangePreservesParameter"
+      },
+      {
+        "line": 342,
+        "symbol": "verify",
+        "owner": "PlanarFlattenAngularConicLegacyCompatibility"
+      },
+      {
+        "line": 347,
+        "symbol": "lineFixture",
+        "owner": "PlanarFlattenFoldPreservesFiniteCarrierWindowAndBoundaryRoundtrip"
+      },
+      {
+        "line": 354,
+        "symbol": "PlanarFlattenFoldPreservesFiniteCarrierWindowAndBoundaryRoundtrip::(lambda at /home/myungit/Linux_CAD_forFree/kernel/tests/test_planar_flatten_validation.cpp:352:27)::operator()",
+        "owner": "PlanarFlattenFoldPreservesFiniteCarrierWindowAndBoundaryRoundtrip"
+      },
+      {
+        "line": 356,
+        "symbol": "PlanarFlattenFoldPreservesFiniteCarrierWindowAndBoundaryRoundtrip::(lambda at /home/myungit/Linux_CAD_forFree/kernel/tests/test_planar_flatten_validation.cpp:352:27)::operator()",
+        "owner": "PlanarFlattenFoldPreservesFiniteCarrierWindowAndBoundaryRoundtrip"
+      },
+      {
+        "line": 358,
+        "symbol": "PlanarFlattenFoldPreservesFiniteCarrierWindowAndBoundaryRoundtrip::(lambda at /home/myungit/Linux_CAD_forFree/kernel/tests/test_planar_flatten_validation.cpp:352:27)::operator()",
+        "owner": "PlanarFlattenFoldPreservesFiniteCarrierWindowAndBoundaryRoundtrip"
+      },
+      {
+        "line": 359,
+        "symbol": "PlanarFlattenFoldPreservesFiniteCarrierWindowAndBoundaryRoundtrip::(lambda at /home/myungit/Linux_CAD_forFree/kernel/tests/test_planar_flatten_validation.cpp:352:27)::operator()",
+        "owner": "PlanarFlattenFoldPreservesFiniteCarrierWindowAndBoundaryRoundtrip"
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_surface_mapping.cpp",
+    "target": "kernel/fk_quilt_mapping.cpp",
+    "kind": "call",
+    "count": 22,
+    "sites": [
+      {
+        "line": 51,
+        "symbol": "ForgeCad::Kernel::SurfaceQuiltMap::SurfaceQuiltMap",
+        "owner": "main"
+      },
+      {
+        "line": 53,
+        "symbol": "ForgeCad::Kernel::SurfaceQuiltMap::flatten",
+        "owner": "main"
+      },
+      {
+        "line": 55,
+        "symbol": "ForgeCad::Kernel::SurfaceQuiltMap::fold",
+        "owner": "main"
+      },
+      {
+        "line": 57,
+        "symbol": "ForgeCad::Kernel::SurfaceQuiltMap::bend",
+        "owner": "main"
+      },
+      {
+        "line": 129,
+        "symbol": "ForgeCad::Kernel::surfaceQuiltAnchor",
+        "owner": "main"
+      },
+      {
+        "line": 131,
+        "symbol": "ForgeCad::Kernel::SurfaceQuiltMap::SurfaceQuiltMap",
+        "owner": "main"
+      },
+      {
+        "line": 134,
+        "symbol": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet",
+        "owner": "main"
+      },
+      {
+        "line": 142,
+        "symbol": "ForgeCad::Kernel::SurfaceQuiltMap::SurfaceQuiltMap",
+        "owner": "main"
+      },
+      {
+        "line": 143,
+        "symbol": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet",
+        "owner": "main"
+      },
+      {
+        "line": 145,
+        "symbol": "ForgeCad::Kernel::SurfaceQuiltMap::SurfaceQuiltMap",
+        "owner": "main"
+      },
+      {
+        "line": 145,
+        "symbol": "ForgeCad::Kernel::surfaceQuiltAnchor",
+        "owner": "main"
+      },
+      {
+        "line": 146,
+        "symbol": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet",
+        "owner": "main"
+      },
+      {
+        "line": 150,
+        "symbol": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet",
+        "owner": "main"
+      },
+      {
+        "line": 156,
+        "symbol": "ForgeCad::Kernel::SurfaceQuiltMap::SurfaceQuiltMap",
+        "owner": "main"
+      },
+      {
+        "line": 158,
+        "symbol": "ForgeCad::Kernel::SurfaceQuiltMap::flatten",
+        "owner": "main"
+      },
+      {
+        "line": 159,
+        "symbol": "ForgeCad::Kernel::SurfaceQuiltMap::fold",
+        "owner": "main"
+      },
+      {
+        "line": 161,
+        "symbol": "ForgeCad::Kernel::SurfaceQuiltMap::SurfaceQuiltMap",
+        "owner": "main"
+      },
+      {
+        "line": 163,
+        "symbol": "ForgeCad::Kernel::SurfaceQuiltMap::flatten",
+        "owner": "main"
+      },
+      {
+        "line": 165,
+        "symbol": "ForgeCad::Kernel::SurfaceQuiltMap::fold",
+        "owner": "main"
+      },
+      {
+        "line": 167,
+        "symbol": "ForgeCad::Kernel::SurfaceQuiltMap::flatten",
+        "owner": "main"
+      },
+      {
+        "line": 169,
+        "symbol": "ForgeCad::Kernel::SurfaceQuiltMap::bend",
+        "owner": "main"
+      },
+      {
+        "line": 171,
+        "symbol": "ForgeCad::Kernel::SurfaceQuiltMap::fold",
+        "owner": "main"
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_surface_mapping.cpp",
+    "target": "kernel/fk_quilt_mapping.h",
+    "kind": "call",
+    "count": 1,
+    "sites": [
+      {
+        "line": 132,
+        "symbol": "ForgeCad::Kernel::SurfaceFlattenStats::SurfaceFlattenStats",
+        "owner": "main"
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_surface_mapping.cpp",
+    "target": "kernel/fk_quilt_mapping.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 2,
+        "symbol": "fk_quilt_mapping.h",
+        "owner": ""
+      }
+    ]
+  }
+]

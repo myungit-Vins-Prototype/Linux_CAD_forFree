@@ -1,0 +1,24 @@
+#include "fk_test.h"
+#include "fk_blend_mitre.h"
+#include "fk_bspline.h"
+#include "fk_precision.h"
+using namespace ForgeCad::Kernel;
+FK_TEST(BlendMitreRevalidatesExactEmittedCoefficients) {
+    const auto s = std::make_shared<BSplineSurface>(1, 2, std::vector<double>{0,0,1,1},
+        std::vector<double>{0,0,0,1,1,1}, 2, 3,
+        std::vector<Vec3>{{0,0,0},{0,.5,0},{0,1,0},{1,0,0},{1,.5,0},{1,1,0}});
+    const double endpoint[4]{.3, 1, .3, 1};
+    const auto cut = detail::traceBlendMitre(*s, *s, .3, .3, endpoint, 1, 1e-9);
+    FK_CHECK(cut.certificateBudget == linearResolution());
+    FK_CHECK(cut.pcurveS && cut.pcurveT);
+    FK_CHECK(detail::requireBlendMitreCertificate(cut.curve, s, cut.pcurveS, cut.range, cut.certificateBudget) <= cut.certificateBudget);
+    const auto *curve = dynamic_cast<const BSplineCurve<3> *>(cut.curve.get());
+    FK_CHECK(curve);
+    auto poles = curve->poles();
+    poles[1][2] += .001;
+    const auto changedCurve = std::make_shared<BSplineCurve<3>>(curve->degree(), curve->knots(), poles);
+    FK_CHECK_THROWS(detail::requireBlendMitreCertificate(changedCurve, s, cut.pcurveS, cut.range, cut.certificateBudget));
+    const auto changedUV = std::make_shared<BSplineCurve<2>>(1, std::vector<double>{0,0,1,1}, std::vector<Vec2>{{.4,0},{.4,1}});
+    FK_CHECK_THROWS(detail::requireBlendMitreCertificate(cut.curve, s, changedUV, cut.range, cut.certificateBudget));
+    FK_CHECK_THROWS(detail::requireBlendMitreCertificate(cut.curve, s, cut.pcurveS, {0,.9}, cut.certificateBudget));
+}

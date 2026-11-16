@@ -1,0 +1,5 @@
+input_checks=0,0
+[sewprobe] NONAFFINE FIT source[0,1] target[0,1] reverse0
+[sewprobe] fit returned degree3 poles4 budget9.9999999999999995e-08
+output_check=0 edges=7 unchanged=1
+witness=1.1200111041322243e-07 hard_budget=9.9999999999999995e-08 fin=6 edge_tol=0 fin_tol=0

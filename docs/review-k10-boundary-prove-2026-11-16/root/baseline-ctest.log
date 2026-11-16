@@ -1,0 +1,96 @@
+UpdateCTestConfiguration  from :/home/myungit/Linux_CAD_forFree/forgecad-release/DartConfiguration.tcl
+Test project /home/myungit/Linux_CAD_forFree/forgecad-release
+Constructing a list of tests
+Done constructing a list of tests
+Updating test list for fixtures
+Added 0 tests to meet fixture requirements
+Checking test dependency graph...
+Checking test dependency graph end
+test 201
+    Start 201: forgekernel_blend_profile_tests
+
+201: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_blend_profile_tests
+201: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+201: Test timeout computed to be: 60
+201: [  OK  ] BlendProfilesConicFamilies
+201: [  OK  ] BlendProfilesVariableArcLength
+201: [  OK  ] BlendProfilesValidationAndNoPropagation
+201: [  OK  ] BlendProfilesTangentPropagationToggle
+201: [  OK  ] BlendProfilesTangentPathStations
+201: [  OK  ] BlendProfilesIndependentPaths
+201: 6/6 test superati
+1/4 Test #201: forgekernel_blend_profile_tests .............   Passed    0.61 sec
+test 215
+    Start 215: forgekernel_blend_contact_break_tests
+
+215: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_blend_contact_break_tests
+215: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+215: Test timeout computed to be: 60
+215: [  OK  ] BlendContactKnotCrossingsUseContactParameters
+215: [  OK  ] BlendContactKnotAtFitEndpoints
+215: [  OK  ] BlendContactKnotAtExistingEdgeBreakUsesOneParameter
+215: [  OK  ] BlendContactKnotOnProbeAndRealNormalJump
+215: [  OK  ] BlendContactKnotKeepsRadiusAndAllowsOneMillimeterOffset
+215: 5/5 test superati
+2/4 Test #215: forgekernel_blend_contact_break_tests .......   Passed    0.41 sec
+test 230
+    Start 230: forgekernel_blend_cavity_regression_tests
+
+230: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_blend_cavity_regression_tests
+230: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+230: Test timeout computed to be: 90
+230: [  OK  ] BlendCavitySmallRadiusKeepsForwardContour
+230: [  OK  ] BlendCavitySmallRadiusKeepsDifferentSeed
+230: [  OK  ] BlendCavitySmallRadiusKeepsRigidPose
+230: [  OK  ] BlendCavitySmallRadiusKeepsScaledGeometry
+230: [  OK  ] BlendCavityCancellationPreservesBodyAndClearsOutputHistory
+230: [  OK  ] BlendCavityConsumedSideRejectsWithoutBodyOrPartialHistory
+230: 6/6 test superati
+3/4 Test #230: forgekernel_blend_cavity_regression_tests ...   Passed   22.55 sec
+test 235
+    Start 235: forgekernel_sheet_join_validation_tests
+
+235: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_sheet_join_validation_tests
+235: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+235: Test timeout computed to be: 180
+235: [  OK  ] SheetJoinImplicitPolynomial
+235: [  OK  ] SheetJoinTangentPolynomial
+235: [  OK  ] SheetJoinRigidPose
+235: [  OK  ] SheetJoinSmallScale
+235: [  OK  ] SheetJoinLargeScale
+235: [  OK  ] SheetJoinRational
+235: [  OK  ] SheetJoinReverseSelection
+235: [  OK  ] SheetJoinFaceSense
+235: [  OK  ] SheetJoinCanonicalReversal
+235: [  OK  ] SheetJoinLowerBoundary
+235: [  OK  ] SheetJoinTangentRigidPose
+235: [  OK  ] SheetJoinTangentSmallScale
+235: [  OK  ] SheetJoinTangentLargeScale
+235: [  OK  ] SheetJoinTangentRational
+235: [  OK  ] SheetJoinTangentReverseSelection
+235: [  OK  ] SheetJoinTangentFaceSense
+235: [  OK  ] SheetJoinTangentCanonicalReversal
+235: [  OK  ] SheetJoinTangentLowerBoundary
+235: [  OK  ] SheetJoinHiddenNarrowKnots
+235: [  OK  ] SheetJoinTangentGapBudget
+235: [  OK  ] SheetJoinTangentTrimmedSupport
+235: [  OK  ] SheetJoinHiddenNarrowPhases
+235: [  OK  ] SheetJoinHiddenNarrowPose
+235: [  OK  ] SheetJoinHiddenNarrowSmallScale
+235: [  OK  ] SheetJoinHiddenNarrowLargeScale
+235: [  OK  ] SheetJoinHiddenNarrowReverseSelection
+235: [  OK  ] SheetJoinTangentGapPose
+235: [  OK  ] SheetJoinCancellationAtomic
+235: [  OK  ] SheetJoinInvalidLengthAtomic
+235: 29/29 test superati
+4/4 Test #235: forgekernel_sheet_join_validation_tests .....   Passed    0.08 sec
+
+The following tests passed:
+	forgekernel_blend_profile_tests
+	forgekernel_blend_contact_break_tests
+	forgekernel_blend_cavity_regression_tests
+	forgekernel_sheet_join_validation_tests
+
+100% tests passed out of 4
+
+Total Test time (real) =  23.66 sec

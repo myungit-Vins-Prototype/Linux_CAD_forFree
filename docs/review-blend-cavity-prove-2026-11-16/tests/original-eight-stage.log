@@ -1,0 +1,9 @@
+[  OK  ] BlendCavityContourIsClosedAndIndependentOfSeed
+[  OK  ] BlendCavityWholeRimKeepsRadiusHistoryAndClosedTrims
+[  OK  ] BlendMitreReverseSupportsPreservesRationalSurface
+[  OK  ] BlendSectionExtensionKeepsOriginalGeometry
+[  OK  ] BlendCavityRejectsConsumedSideFacesBeforeDocument
+[  OK  ] BlendOpposedSplitsAllSeedsAndWrap
+[  OK  ] BlendOpposedSplitsMirrorScalePoseAndRadius
+[  OK  ] BlendClosedPlanarTangentContourUsesLocalTrims
+8/8 test superati

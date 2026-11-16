@@ -1,0 +1,29 @@
+{
+  "nodes": [
+    {
+      "id": "kernel/fk_body_check.cpp",
+      "description": "Controllo di validita' di un body (come PK_BODY_check di Parasolid o BRepCheck_Analyzer di OCCT)."
+    },
+    {
+      "id": "kernel/fk_bspline_surface.cpp",
+      "description": "Superfici NURBS con jet locali double e istanze immutabili: estensione periodica opzionale del dominio clamped, isoparametriche e breakpoints coerenti, estremi distinti per la chiusura; copie atomiche delle cache Bezier/proiezione/isoparametriche e pubblicazione unica del risultato concorrente."
+    },
+    {
+      "id": "kernel/fk_hermite.cpp",
+      "description": "Approssimazione di funzioni lisce t -> R^3 (piu' \"righe\" insieme, con gli stessi nodi) con B-spline di grado 5: su ogni tratto il polinomio di Hermite quintico che ha valore, derivata prima e seconda esatte negli estremi."
+    },
+    {
+      "id": "kernel/fk_marching.cpp",
+      "description": "Intersezioni superficie/superficie: riuso delle pezze Bezier e dei parametri noti, gerarchie e testimoni di distanza NURBS; genera tagli solo per coincidenze di area; distingue nodi C1, spigoli e bordi del dominio e rifiuta passi arretrati. Fit e tolleranze invariati."
+    },
+    {
+      "id": "kernel/fk_surface_distance.cpp",
+      "description": "Filtri conservativi di distanza: certificato entro soglia e rigetto tramite BVH dei box Bezier con margine numerico; proiezione globale nei casi incerti."
+    },
+    {
+      "id": "kernel/fk_sweep.cpp",
+      "description": "Sweep con frame Bishop adattivo e piano certificato dal supporto affine; base ortonormale, SP-curve esplicite dei bordi tensoriali e rami distinti delle cuciture chiuse. Il controllo locale non certifica autointersezioni globali. Controllo del piegamento locale sulla curva razionale continua tramite suddivisione Bernstein, senza scambiare i poli esterni per punti del profilo."
+    }
+  ],
+  "incident_edges": 305
+}

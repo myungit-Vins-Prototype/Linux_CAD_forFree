@@ -1,0 +1,57 @@
+from pathlib import Path
+p=Path('/tmp/supporto-review/stage');f=p/'kernel/fk_boolean.cpp';s=f.read_text().replace('boundaryCertificate::piece','detail::certifyEllipseBoundarySegment')
+s=s.replace('''    const auto &body=bodies_[boundary];const auto faceId=arc.face[boundary];
+    if(body.face(faceId).surface->type()!=SurfaceType::Plane)return false;''','''    if(boundary<0||boundary>1)return false;
+    for(int k=0;k<2;++k)if(!bodies_[k].contains(arc.face[k])||!bodies_[k].face(arc.face[k]).surface)return false;
+    const auto &body=bodies_[boundary];const auto faceId=arc.face[boundary];
+    if(body.face(faceId).surface->type()!=SurfaceType::Plane)return false;''')
+s=s.replace('''        std::vector<BoundaryAnchor> boundaryAnchors;''','''        std::vector<BoundaryAnchor> boundaryAnchors;
+        bool anchorBudget=true;''')
+s=s.replace('''                    boundaryAnchors.push_back({k,fp,f,bp.fin(f).edge,p.t,p.s});''','''                    if(anchorBudget&&curve->type()==CurveType::Line&&edge.curve->type()==CurveType::Ellipse) {
+                        if(boundaryAnchors.size()==4096){boundaryAnchors.clear();anchorBudget=false;}
+                        else boundaryAnchors.push_back({k,fp,f,bp.fin(f).edge,p.t,p.s});
+                    }''')
+start=s.index('        for(auto edgeId:result.edges()) {');end=s.index('        const auto built = result.faces();',start)
+s=s[:start]+'''        std::map<int,std::vector<HistoryLink>> mounted;
+        std::set<int> borrowed;
+        for(const auto &use:assemblyOrigins) {
+            const int edge=faces.at(use.face).loops.at(use.loop).at(use.fin).edge;
+            auto &origins=mounted[edge];
+            if(std::none_of(origins.begin(),origins.end(),[&](const auto &link){return link.operand==use.origin.operand&&link.kind==use.origin.kind&&link.index==use.origin.index;}))origins.push_back(use.origin);
+            if(use.boundary)borrowed.insert(edge);
+        }
+        for(int edge:borrowed)declared.declareOrigins(EntityKind::Edge,edge,mounted.at(edge));
+'''+s[end:]
+s=s.replace('''    std::vector<Body::BuildEdge> edges;
+    std::vector<Vec3> edgeMiddles;''',(p/'mapping.inc.txt').read_text()+'''    std::vector<Body::BuildEdge> edges;
+    std::vector<Vec3> edgeMiddles;''',1)
+s=s.replace('''                loop.push_back(fin);
+            }
+            if (!loop.empty()) built.loops.push_back(std::move(loop));''','''                if(history&&piece.source.valid())assemblyOrigins.push_back({faces.size(),built.loops.size(),loop.size(),{subFace.body,EntityKind::Edge,piece.source.index,HistoryRelation::Modified},false});
+                if(piece.boundarySource.body>=0) {
+                    boundaryUses.push_back({faces.size(),built.loops.size(),loop.size(),piece.boundarySource,piece.curve});
+                    if(history)assemblyOrigins.push_back({faces.size(),built.loops.size(),loop.size(),{piece.boundarySource.body,EntityKind::Edge,piece.boundarySource.edge.index,HistoryRelation::Modified},true});
+                }
+                loop.push_back(fin);
+            }
+            if (!loop.empty()) built.loops.push_back(std::move(loop));''',1)
+s=s.replace('''    BodyHistory declared;
+    if (history) {''',(p/'pcurve-install.inc.txt').read_text()+'''    BodyHistory declared;
+    if (history) {''',1)
+s=s.replace('''    tolerantEnds(result);
+    computePCurves(result);''','''    tolerantEnds(result);
+    installBoundaryPCurves(result);
+    computePCurves(result);''',1)
+s=s.replace('''        result = unifySameDomain(result, tolerance_, history ? &unified : nullptr);
+        if (history) declared = BodyHistory::compose(declared, unified, 0);''','''        result = unifySameDomain(result, tolerance_, (history||!boundaryOutputs.empty()) ? &unified : nullptr);
+        std::vector<BoundaryOutput> nextBoundaryOutputs;
+        for(const auto &output:boundaryOutputs)for(int descendant:unified.descendants(EntityKind::Edge,0,output.edge)) {
+            auto next=output;next.edge=descendant;nextBoundaryOutputs.push_back(std::move(next));
+        }
+        boundaryOutputs=std::move(nextBoundaryOutputs);
+        if (history) declared = BodyHistory::compose(declared, unified, 0);''',1)
+s=s.replace('''    tolerantEnds(result);
+    const std::vector<CheckIssue> issues = checkBody(result);''','''    installBoundaryPCurves(result);
+    tolerantEnds(result);
+    const std::vector<CheckIssue> issues = checkBody(result);''',1)
+f.write_text(s)

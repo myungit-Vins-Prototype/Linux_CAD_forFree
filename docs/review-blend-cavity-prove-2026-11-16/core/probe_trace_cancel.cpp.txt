@@ -1,0 +1,24 @@
+#include "/tmp/blend-cavity-review/core/fk_blend_surface.cpp"
+#include <iostream>
+using namespace ForgeCad::Kernel;
+class CancelPlane final : public Surface {
+public:
+    mutable int firstOrderCalls=0;
+    int armAt=0;
+    CancellationToken token;
+    Plane plane{Frame3()};
+    SurfaceType type()const override{return static_cast<SurfaceType>(100);}
+    Interval uDomain()const override{return {-1,1};}
+    Interval vDomain()const override{return {-1,1};}
+    void evaluate(double u,double v,int order,Vec3*out)const override{
+        if(order==1 && ++firstOrderCalls==armAt && token)token->store(true);
+        plane.evaluate(u,v,order,out);
+    }
+    CurvePtr<3> uIso(double u)const override{return plane.uIso(u);}
+    CurvePtr<3> vIso(double v)const override{return plane.vIso(v);}
+};
+int main(){int pass=0;auto token=std::make_shared<std::atomic<bool>>(false);CancellationScope scope(token);CancelPlane S;S.token=token;Plane T(Frame3({},Vec3(0,1,0),Vec3(1,0,0)));Interval u{-.5,.5};bool published=false;
+ token->store(true);try{auto c=traceBetween(S,T,{-.5,0,0},{.5,0,0},1,1e-8,&u,true,true,0);published=bool(c.curve);}catch(const OperationCancelled&){++pass;}if(published)return 1;
+ token->store(false);S.firstOrderCalls=0;S.armAt=5;try{auto c=traceBetween(S,T,{-.5,0,0},{.5,0,0},1,1e-8,&u,true,true,0);published=bool(c.curve);}catch(const OperationCancelled&){if(S.firstOrderCalls>=5)++pass;}if(published)return 2;
+ token->store(false);S.armAt=0;S.firstOrderCalls=0;auto c=traceBetween(S,T,{-.5,0,0},{.5,0,0},1,1e-8,&u,true,true,0);if(c.curve&&distance(c.curve->point(0),{-.5,0,0})==0&&distance(c.curve->point(1),{.5,0,0})==0)++pass;
+ std::cout<<"initial + mid-continuation cancellation + recovery: "<<pass<<"/3 PASS; mid armed at first-order evaluation5 inside trace continuation, no geometry exception substituted\n";return pass==3?0:3;}

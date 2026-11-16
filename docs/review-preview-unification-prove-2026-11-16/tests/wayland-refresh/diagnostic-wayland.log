@@ -1,0 +1,224 @@
+BEGIN smoke Pattern
+PASS Smoke fixture contains real built solids and a cylinder
+PASS Pattern opens its actual function panel after synchronous initialization
+PASS Smoke panel holds its document interaction lock
+PASS Pattern preview belongs to a fixed footer outside the scrolling form
+PASS Pattern fixed footer precedes the persistent confirmation buttons
+DIAG Pattern before_resize panel=507,522 native=507,522 exposed=0 min=400,280 max=16777215,16777215 scroll=467,412 viewport=458,412 content=458,1235 content_min=835 range=823 footer_y=0
+DIAG Pattern immediate_resize panel=430,280 native=430,280 exposed=0 min=400,280 max=16777215,16777215 scroll=390,170 viewport=381,170 content=381,987 content_min=676 range=817 footer_y=0
+DIAG Pattern after_processEvents panel=1274,1401 native=1274,1401 exposed=1 min=400,280 max=16777215,16777215 scroll=1234,1182 viewport=1234,1182 content=1234,1182 content_min=897 range=0 footer_y=1299
+DIAG Pattern after_20ms panel=1274,1401 native=1274,1401 exposed=1 min=400,280 max=16777215,16777215 scroll=1234,1182 viewport=1234,1182 content=1234,1182 content_min=897 range=0 footer_y=1299
+DIAG Pattern after_100ms panel=1274,1401 native=1274,1401 exposed=1 min=400,280 max=16777215,16777215 scroll=1234,1182 viewport=1234,1182 content=1234,1182 content_min=897 range=0 footer_y=1299
+DIAG Pattern second_resize panel=430,280 native=430,280 exposed=1 min=400,280 max=16777215,16777215 scroll=390,61 viewport=390,61 content=390,1208 content_min=897 range=1147 footer_y=178
+DIAG Pattern second_resize_20ms panel=430,280 native=430,280 exposed=1 min=400,280 max=16777215,16777215 scroll=390,61 viewport=381,61 content=381,1208 content_min=897 range=1147 footer_y=178
+FOOTER scroll Pattern maximum=1147 value=1147 preview_y_before=178 preview_y_after=178
+PASS Pattern scrolling the actual form keeps the preview footer fixed
+PASS Pattern hide/show does not duplicate or relocate footer, preview message or buttons
+PASS Pattern enables storyboard picking only while active
+PASS Pattern cancellation clears picker, callbacks, preview and lock
+SMOKE Pattern actual_visible=1 close_and_cleanup=1
+PASS Pattern restores enabled dock, clears its callback and re-enables the history rail
+END smoke Pattern
+BEGIN smoke Extrusion
+PASS Smoke fixture contains real built solids and a cylinder
+PASS Extrusion opens its actual function panel after synchronous initialization
+PASS Smoke panel holds its document interaction lock
+PASS Extrusion preview belongs to a fixed footer outside the scrolling form
+PASS Extrusion fixed footer precedes the persistent confirmation buttons
+DIAG Extrusion before_resize panel=520,522 native=520,522 exposed=0 min=400,280 max=16777215,16777215 scroll=480,412 viewport=471,412 content=471,911 content_min=690 range=499 footer_y=0
+DIAG Extrusion immediate_resize panel=430,280 native=430,280 exposed=0 min=400,280 max=16777215,16777215 scroll=390,170 viewport=381,170 content=381,544 content_min=538 range=374 footer_y=0
+DIAG Extrusion after_processEvents panel=430,280 native=430,280 exposed=0 min=400,280 max=16777215,16777215 scroll=390,61 viewport=381,61 content=381,544 content_min=538 range=483 footer_y=178
+DIAG Extrusion after_20ms panel=1274,1401 native=1274,1401 exposed=1 min=400,280 max=16777215,16777215 scroll=1234,1182 viewport=1234,1182 content=1234,1182 content_min=538 range=0 footer_y=1299
+DIAG Extrusion after_100ms panel=1274,1401 native=1274,1401 exposed=1 min=400,280 max=16777215,16777215 scroll=1234,1182 viewport=1234,1182 content=1234,1182 content_min=538 range=0 footer_y=1299
+DIAG Extrusion second_resize panel=430,280 native=430,280 exposed=1 min=400,280 max=16777215,16777215 scroll=390,61 viewport=390,61 content=390,544 content_min=538 range=483 footer_y=178
+DIAG Extrusion second_resize_20ms panel=430,280 native=430,280 exposed=1 min=400,280 max=16777215,16777215 scroll=390,61 viewport=381,61 content=381,544 content_min=538 range=483 footer_y=178
+FOOTER scroll Extrusion maximum=483 value=483 preview_y_before=178 preview_y_after=178
+PASS Extrusion scrolling the actual form keeps the preview footer fixed
+PASS Extrusion hide/show does not duplicate or relocate footer, preview message or buttons
+PASS Extrusion cancellation clears picker, callbacks, preview and lock
+SMOKE Extrusion actual_visible=1 close_and_cleanup=1
+END smoke Extrusion
+BEGIN smoke Transform
+PASS Smoke fixture contains real built solids and a cylinder
+PASS Transform opens its actual function panel after synchronous initialization
+PASS Smoke panel holds its document interaction lock
+PASS Transform preview belongs to a fixed footer outside the scrolling form
+PASS Transform fixed footer precedes the persistent confirmation buttons
+DIAG Transform before_resize panel=622,472 native=622,472 exposed=0 min=400,280 max=16777215,16777215 scroll=582,362 viewport=573,362 content=582,362 content_min=352 range=0 footer_y=0
+DIAG Transform immediate_resize panel=430,280 native=430,280 exposed=0 min=400,280 max=16777215,16777215 scroll=390,170 viewport=390,170 content=511,352 content_min=352 range=182 footer_y=0
+DIAG Transform after_processEvents panel=1274,1401 native=1274,1401 exposed=1 min=400,280 max=16777215,16777215 scroll=1234,1182 viewport=1234,1182 content=1234,1182 content_min=573 range=0 footer_y=1299
+DIAG Transform after_20ms panel=1274,1401 native=1274,1401 exposed=1 min=400,280 max=16777215,16777215 scroll=1234,1182 viewport=1234,1182 content=1234,1182 content_min=573 range=0 footer_y=1299
+DIAG Transform after_100ms panel=1274,1401 native=1274,1401 exposed=1 min=400,280 max=16777215,16777215 scroll=1234,1182 viewport=1234,1182 content=1234,1182 content_min=573 range=0 footer_y=1299
+DIAG Transform second_resize panel=430,280 native=430,280 exposed=1 min=400,280 max=16777215,16777215 scroll=390,61 viewport=390,61 content=511,573 content_min=573 range=512 footer_y=178
+DIAG Transform second_resize_20ms panel=430,280 native=430,280 exposed=1 min=400,280 max=16777215,16777215 scroll=390,61 viewport=381,52 content=511,573 content_min=573 range=521 footer_y=178
+FOOTER scroll Transform maximum=521 value=521 preview_y_before=178 preview_y_after=178
+PASS Transform scrolling the actual form keeps the preview footer fixed
+PASS Transform hide/show does not duplicate or relocate footer, preview message or buttons
+PASS Transform cancellation clears picker, callbacks, preview and lock
+SMOKE Transform actual_visible=1 close_and_cleanup=1
+END smoke Transform
+BEGIN smoke Thread
+PASS Smoke fixture contains real built solids and a cylinder
+PASS Thread fixture has a resolvable cylindrical face before dialog initialization
+PASS Thread opens its actual function panel after synchronous initialization
+PASS Smoke panel holds its document interaction lock
+PASS Thread preview belongs to a fixed footer outside the scrolling form
+PASS Thread fixed footer precedes the persistent confirmation buttons
+DIAG Thread before_resize panel=400,522 native=400,522 exposed=0 min=400,280 max=16777215,16777215 scroll=360,412 viewport=351,412 content=351,819 content_min=819 range=407 footer_y=0
+DIAG Thread immediate_resize panel=430,280 native=430,280 exposed=0 min=400,280 max=16777215,16777215 scroll=390,170 viewport=381,170 content=381,819 content_min=819 range=649 footer_y=0
+DIAG Thread after_processEvents panel=1274,1401 native=1274,1401 exposed=1 min=400,280 max=16777215,16777215 scroll=1234,1182 viewport=1234,1182 content=1234,1182 content_min=1040 range=0 footer_y=1299
+DIAG Thread after_20ms panel=1274,1401 native=1274,1401 exposed=1 min=400,280 max=16777215,16777215 scroll=1234,1182 viewport=1234,1182 content=1234,1182 content_min=1040 range=0 footer_y=1299
+DIAG Thread after_100ms panel=1274,1401 native=1274,1401 exposed=1 min=400,280 max=16777215,16777215 scroll=1234,1182 viewport=1234,1182 content=1234,1182 content_min=1040 range=0 footer_y=1299
+DIAG Thread second_resize panel=430,280 native=430,280 exposed=1 min=400,280 max=16777215,16777215 scroll=390,61 viewport=390,61 content=390,1040 content_min=1040 range=979 footer_y=178
+DIAG Thread second_resize_20ms panel=430,280 native=430,280 exposed=1 min=400,280 max=16777215,16777215 scroll=390,61 viewport=381,61 content=381,1040 content_min=1040 range=979 footer_y=178
+FOOTER scroll Thread maximum=979 value=979 preview_y_before=178 preview_y_after=178
+PASS Thread scrolling the actual form keeps the preview footer fixed
+PASS Thread hide/show does not duplicate or relocate footer, preview message or buttons
+PASS Thread readFace and populateSizes initialize using valid candidate indices
+PASS Thread standard change repopulates valid sizes
+PASS Thread body selection change and restoration preserve valid indices
+PASS Thread cancellation clears picker, callbacks, preview and lock
+SMOKE Thread actual_visible=1 close_and_cleanup=1
+END smoke Thread
+BEGIN smoke Offset Shell
+PASS Smoke fixture contains real built solids and a cylinder
+PASS Offset Shell opens its actual function panel after synchronous initialization
+PASS Smoke panel holds its document interaction lock
+PASS Offset Shell preview belongs to a fixed footer outside the scrolling form
+PASS Offset Shell fixed footer precedes the persistent confirmation buttons
+DIAG Offset Shell before_resize panel=400,471 native=400,471 exposed=0 min=400,280 max=16777215,16777215 scroll=360,361 viewport=351,361 content=360,361 content_min=338 range=0 footer_y=0
+DIAG Offset Shell immediate_resize panel=430,280 native=430,280 exposed=0 min=400,280 max=16777215,16777215 scroll=390,170 viewport=390,170 content=390,338 content_min=338 range=168 footer_y=0
+DIAG Offset Shell after_processEvents panel=1274,1401 native=1274,1401 exposed=1 min=400,280 max=16777215,16777215 scroll=1234,1182 viewport=1234,1182 content=1234,1182 content_min=559 range=0 footer_y=1299
+DIAG Offset Shell after_20ms panel=1274,1401 native=1274,1401 exposed=1 min=400,280 max=16777215,16777215 scroll=1234,1182 viewport=1234,1182 content=1234,1182 content_min=559 range=0 footer_y=1299
+DIAG Offset Shell after_100ms panel=1274,1401 native=1274,1401 exposed=1 min=400,280 max=16777215,16777215 scroll=1234,1182 viewport=1234,1182 content=1234,1182 content_min=559 range=0 footer_y=1299
+DIAG Offset Shell second_resize panel=430,280 native=430,280 exposed=1 min=400,280 max=16777215,16777215 scroll=390,61 viewport=390,61 content=390,559 content_min=559 range=498 footer_y=178
+DIAG Offset Shell second_resize_20ms panel=430,280 native=430,280 exposed=1 min=400,280 max=16777215,16777215 scroll=390,61 viewport=381,61 content=381,559 content_min=559 range=498 footer_y=178
+FOOTER scroll Offset Shell maximum=498 value=498 preview_y_before=178 preview_y_after=178
+PASS Offset Shell scrolling the actual form keeps the preview footer fixed
+PASS Offset Shell hide/show does not duplicate or relocate footer, preview message or buttons
+PASS Offset Shell cancellation clears picker, callbacks, preview and lock
+SMOKE Offset Shell actual_visible=1 close_and_cleanup=1
+END smoke Offset Shell
+BEGIN smoke Ruled
+PASS Smoke fixture contains real built solids and a cylinder
+PASS Ruled opens its actual function panel after synchronous initialization
+PASS Smoke panel holds its document interaction lock
+PASS Ruled preview belongs to a fixed footer outside the scrolling form
+PASS Ruled fixed footer precedes the persistent confirmation buttons
+DIAG Ruled before_resize panel=434,522 native=434,522 exposed=0 min=400,280 max=16777215,16777215 scroll=394,412 viewport=385,412 content=385,1024 content_min=855 range=612 footer_y=0
+DIAG Ruled immediate_resize panel=430,280 native=430,280 exposed=0 min=400,280 max=16777215,16777215 scroll=390,170 viewport=381,170 content=381,1024 content_min=855 range=854 footer_y=0
+DIAG Ruled after_processEvents panel=1274,1401 native=1274,1401 exposed=1 min=400,280 max=16777215,16777215 scroll=1234,1182 viewport=1234,1182 content=1234,1182 content_min=1076 range=0 footer_y=1299
+DIAG Ruled after_20ms panel=1274,1401 native=1274,1401 exposed=1 min=400,280 max=16777215,16777215 scroll=1234,1182 viewport=1234,1182 content=1234,1182 content_min=1076 range=0 footer_y=1299
+DIAG Ruled after_100ms panel=1274,1401 native=1274,1401 exposed=1 min=400,280 max=16777215,16777215 scroll=1234,1182 viewport=1234,1182 content=1234,1182 content_min=1076 range=0 footer_y=1299
+DIAG Ruled second_resize panel=430,280 native=430,280 exposed=1 min=400,280 max=16777215,16777215 scroll=390,61 viewport=390,61 content=390,1228 content_min=1076 range=1167 footer_y=178
+DIAG Ruled second_resize_20ms panel=430,280 native=430,280 exposed=1 min=400,280 max=16777215,16777215 scroll=390,61 viewport=381,61 content=381,1245 content_min=1076 range=1184 footer_y=178
+FOOTER scroll Ruled maximum=1184 value=1184 preview_y_before=178 preview_y_after=178
+PASS Ruled scrolling the actual form keeps the preview footer fixed
+PASS Ruled hide/show does not duplicate or relocate footer, preview message or buttons
+PASS Ruled cancellation clears picker, callbacks, preview and lock
+SMOKE Ruled actual_visible=1 close_and_cleanup=1
+END smoke Ruled
+BEGIN smoke Boundary
+PASS Smoke fixture contains real built solids and a cylinder
+PASS Boundary opens its actual function panel after synchronous initialization
+PASS Smoke panel holds its document interaction lock
+PASS Boundary preview belongs to a fixed footer outside the scrolling form
+PASS Boundary fixed footer precedes the persistent confirmation buttons
+DIAG Boundary before_resize panel=400,520 native=400,520 exposed=0 min=400,280 max=16777215,16777215 scroll=360,410 viewport=351,410 content=360,410 content_min=344 range=0 footer_y=0
+DIAG Boundary immediate_resize panel=430,280 native=430,280 exposed=0 min=400,280 max=16777215,16777215 scroll=390,170 viewport=390,170 content=390,359 content_min=344 range=189 footer_y=0
+DIAG Boundary after_processEvents panel=1274,1401 native=1274,1401 exposed=1 min=400,280 max=16777215,16777215 scroll=1234,1182 viewport=1234,1182 content=1234,1182 content_min=565 range=0 footer_y=1299
+DIAG Boundary after_20ms panel=1274,1401 native=1274,1401 exposed=1 min=400,280 max=16777215,16777215 scroll=1234,1182 viewport=1234,1182 content=1234,1182 content_min=565 range=0 footer_y=1299
+DIAG Boundary after_100ms panel=1274,1401 native=1274,1401 exposed=1 min=400,280 max=16777215,16777215 scroll=1234,1182 viewport=1234,1182 content=1234,1182 content_min=565 range=0 footer_y=1299
+DIAG Boundary second_resize panel=430,280 native=430,280 exposed=1 min=400,280 max=16777215,16777215 scroll=390,61 viewport=390,61 content=390,580 content_min=565 range=519 footer_y=178
+DIAG Boundary second_resize_20ms panel=430,280 native=430,280 exposed=1 min=400,280 max=16777215,16777215 scroll=390,61 viewport=381,61 content=381,580 content_min=565 range=519 footer_y=178
+FOOTER scroll Boundary maximum=519 value=519 preview_y_before=178 preview_y_after=178
+PASS Boundary scrolling the actual form keeps the preview footer fixed
+PASS Boundary hide/show does not duplicate or relocate footer, preview message or buttons
+PASS Boundary cancellation clears picker, callbacks, preview and lock
+SMOKE Boundary actual_visible=1 close_and_cleanup=1
+END smoke Boundary
+BEGIN smoke Fill
+PASS Smoke fixture contains real built solids and a cylinder
+PASS Fill opens its actual function panel after synchronous initialization
+PASS Smoke panel holds its document interaction lock
+PASS Fill preview belongs to a fixed footer outside the scrolling form
+PASS Fill fixed footer precedes the persistent confirmation buttons
+DIAG Fill before_resize panel=485,522 native=485,522 exposed=0 min=400,280 max=16777215,16777215 scroll=445,412 viewport=436,412 content=436,1175 content_min=1013 range=763 footer_y=0
+DIAG Fill immediate_resize panel=430,280 native=430,280 exposed=0 min=400,280 max=16777215,16777215 scroll=390,170 viewport=381,170 content=381,1209 content_min=1013 range=1039 footer_y=0
+DIAG Fill after_processEvents panel=1274,1401 native=1274,1401 exposed=1 min=400,280 max=16777215,16777215 scroll=1234,1182 viewport=1225,1182 content=1225,1345 content_min=1234 range=163 footer_y=1299
+DIAG Fill after_20ms panel=1274,1401 native=1274,1401 exposed=1 min=400,280 max=16777215,16777215 scroll=1234,1182 viewport=1225,1182 content=1225,1345 content_min=1234 range=163 footer_y=1299
+DIAG Fill after_100ms panel=1274,1401 native=1274,1401 exposed=1 min=400,280 max=16777215,16777215 scroll=1234,1182 viewport=1225,1182 content=1225,1345 content_min=1234 range=163 footer_y=1299
+DIAG Fill second_resize panel=430,280 native=430,280 exposed=1 min=400,280 max=16777215,16777215 scroll=390,61 viewport=381,61 content=381,1430 content_min=1234 range=1369 footer_y=178
+DIAG Fill second_resize_20ms panel=430,280 native=430,280 exposed=1 min=400,280 max=16777215,16777215 scroll=390,61 viewport=381,61 content=381,1430 content_min=1234 range=1369 footer_y=178
+FOOTER scroll Fill maximum=1369 value=1369 preview_y_before=178 preview_y_after=178
+PASS Fill scrolling the actual form keeps the preview footer fixed
+PASS Fill hide/show does not duplicate or relocate footer, preview message or buttons
+PASS Fill cancellation clears picker, callbacks, preview and lock
+SMOKE Fill actual_visible=1 close_and_cleanup=1
+END smoke Fill
+BEGIN smoke Planar
+PASS Smoke fixture contains real built solids and a cylinder
+PASS Planar opens its actual function panel after synchronous initialization
+PASS Smoke panel holds its document interaction lock
+PASS Planar preview belongs to a fixed footer outside the scrolling form
+PASS Planar fixed footer precedes the persistent confirmation buttons
+DIAG Planar before_resize panel=400,522 native=400,522 exposed=0 min=400,280 max=16777215,16777215 scroll=360,412 viewport=351,412 content=360,412 content_min=336 range=0 footer_y=0
+DIAG Planar immediate_resize panel=430,280 native=430,280 exposed=0 min=400,280 max=16777215,16777215 scroll=390,170 viewport=390,170 content=390,368 content_min=336 range=198 footer_y=0
+DIAG Planar after_processEvents panel=1274,1401 native=1274,1401 exposed=1 min=400,280 max=16777215,16777215 scroll=1234,1182 viewport=1234,1182 content=1234,1182 content_min=557 range=0 footer_y=1299
+DIAG Planar after_20ms panel=1274,1401 native=1274,1401 exposed=1 min=400,280 max=16777215,16777215 scroll=1234,1182 viewport=1234,1182 content=1234,1182 content_min=557 range=0 footer_y=1299
+DIAG Planar after_100ms panel=1274,1401 native=1274,1401 exposed=1 min=400,280 max=16777215,16777215 scroll=1234,1182 viewport=1234,1182 content=1234,1182 content_min=557 range=0 footer_y=1299
+DIAG Planar second_resize panel=430,280 native=430,280 exposed=1 min=400,280 max=16777215,16777215 scroll=390,61 viewport=390,61 content=390,589 content_min=557 range=528 footer_y=178
+DIAG Planar second_resize_20ms panel=430,280 native=430,280 exposed=1 min=400,280 max=16777215,16777215 scroll=390,61 viewport=381,61 content=381,589 content_min=557 range=528 footer_y=178
+FOOTER scroll Planar maximum=528 value=528 preview_y_before=178 preview_y_after=178
+PASS Planar scrolling the actual form keeps the preview footer fixed
+PASS Planar hide/show does not duplicate or relocate footer, preview message or buttons
+PASS Planar cancellation clears picker, callbacks, preview and lock
+SMOKE Planar actual_visible=1 close_and_cleanup=1
+END smoke Planar
+BEGIN smoke Datum
+PASS Smoke fixture contains real built solids and a cylinder
+PASS Datum opens its actual function panel after synchronous initialization
+PASS Smoke panel holds its document interaction lock
+SKIP footer Datum reason=no PreviewScope message in this runner
+PASS Datum cancellation clears picker, callbacks, preview and lock
+SMOKE Datum actual_visible=1 close_and_cleanup=1
+END smoke Datum
+BEGIN smoke Measure
+PASS Smoke fixture contains real built solids and a cylinder
+PASS Measure opens its actual function panel after synchronous initialization
+PASS Smoke panel holds its document interaction lock
+SKIP footer Measure reason=no PreviewScope message in this runner
+PASS Measure cancellation clears picker, callbacks, preview and lock
+SMOKE Measure actual_visible=1 close_and_cleanup=1
+END smoke Measure
+SMOKE TOTAL actual_visible=11 close_and_cleanup=11 expected=11
+PASS Shell starts with a real ready worker result
+PASS Shell zero thickness cancels geometry and pending work
+PASS Shell zero thickness has an explicit unavailable preview state
+PASS Shell invalid state remains stable after queued work
+PASS Shell valid preview recovers after zero thickness
+PASS Shell clears the old thickness error on recovery
+PASS Shell closes without picker, worker or interaction lock
+PASS Thread without a cylindrical face does not claim a running calculation
+PASS Thread picker has an explicit waiting state
+PASS Thread cancellation clears picker, preview and lock
+PASS The first real command owns its document lock
+PASS The second real command is rejected before it is shown
+PASS Rejected second command leaves no picker, preview or lock
+PASS Rejected second command preserves the first panel and picker
+PASS The first command releases immediately after cancellation
+PASS A real command in the other document opens after the first closes
+PASS The first real command owns its document lock
+PASS Consulting another document tab remains allowed
+PASS The second real command is rejected before it is shown
+PASS Rejected second command leaves no picker, preview or lock
+PASS Rejected second command preserves the first panel and picker
+PASS The first command releases immediately after cancellation
+PASS A real command in the other document opens after the first closes
+PASS A subdialog in the same document remains allowed
+PASS Same-document subdialog preserves the outer lock and picker
+PASS Nested command cleanup restores the document
+PASS Synchronous accept/reject in onShown does not enter a dead event loop
+PASS Synchronous accept/reject in onShown does not enter a dead event loop
+PASS A rejected cross-document command does not execute onShown
+RESULT passed=115 failed=0

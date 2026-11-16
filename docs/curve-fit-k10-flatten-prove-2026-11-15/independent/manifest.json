@@ -1,0 +1,10 @@
+{
+  "kernel/fk_quilt_mapping.cpp": "9f2cc08b051e92569dac5081aa558f61e431e332abc652f51a23096ff286b826",
+  "kernel/fk_planar_flatten.h": "2379037d4404c5cc778ae38ea264e5fc27cb7eb81238506e97037ec02bd0adac",
+  "kernel/fk_planar_flatten.cpp": "fa746a9dfbe1f722e0590a60899f2a651efffee2beb1bb5b912034d47ca6c30f",
+  "kernel/fk_quilt_mapping.h": "f2caaaca17d8b5083bc00a919fa6c6eaedc8a72ad7c97aa3ab95000e1a735c54",
+  "kernel/fk_pcurve.cpp": "ad5e5ce7082274aee5c279772f30caa56b21689b7b4b7331d27543444c58df79",
+  "kernel/fk_curve_ops.cpp": "b898e88ec871c0c08f9c2a27b5deed00512f0376f97a391cf7e5404a10b4cd63",
+  "kernel/fk_math.cpp": "dd3e697be5cdb47ad3bd6629d71a86eba9c1655b024ea3798dcb09ebf274c16d",
+  "kernel/tests/test_planar_flatten_validation.cpp": "6a95304ed60f2bdbc05ecc5a41e38baf2a34373af3918c84f47943241d03d211"
+}

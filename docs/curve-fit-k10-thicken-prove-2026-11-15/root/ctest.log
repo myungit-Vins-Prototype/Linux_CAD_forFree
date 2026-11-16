@@ -1,0 +1,41 @@
+Test project /home/myungit/Linux_CAD_forFree/forgecad-release
+      Start  32: forgecad_function_panels_tests
+ 1/18 Test  #32: forgecad_function_panels_tests ................   Passed    1.32 sec
+      Start  34: forgecad_history_suppression_tests
+ 2/18 Test  #34: forgecad_history_suppression_tests ............   Passed    0.03 sec
+      Start  60: forgecad_surface_tools_tests
+ 3/18 Test  #60: forgecad_surface_tools_tests ..................   Passed    0.78 sec
+      Start  76: forgecad_document_lifetime_tests
+ 4/18 Test  #76: forgecad_document_lifetime_tests ..............   Passed    0.04 sec
+      Start 104: forgecad_blend_preview_reload_tests
+ 5/18 Test #104: forgecad_blend_preview_reload_tests ...........   Passed    0.06 sec
+      Start 130: forgecad_thicken_tests
+ 6/18 Test #130: forgecad_thicken_tests ........................   Passed    0.07 sec
+      Start 134: forgecad_body_owner_history_tests
+ 7/18 Test #134: forgecad_body_owner_history_tests .............   Passed    0.15 sec
+      Start 138: forgecad_history_position_tests
+ 8/18 Test #138: forgecad_history_position_tests ...............   Passed    0.21 sec
+      Start 139: forgecad_async_lifetime_tests
+ 9/18 Test #139: forgecad_async_lifetime_tests .................   Passed    0.03 sec
+      Start 185: forgekernel_open_offset_tests
+10/18 Test #185: forgekernel_open_offset_tests .................   Passed   84.28 sec
+      Start 190: forgekernel_history_tests
+11/18 Test #190: forgekernel_history_tests .....................   Passed    0.38 sec
+      Start 192: forgekernel_tolerance_tests
+12/18 Test #192: forgekernel_tolerance_tests ...................   Passed    0.33 sec
+      Start 193: forgekernel_surface_tools_tests
+13/18 Test #193: forgekernel_surface_tools_tests ...............   Passed    4.88 sec
+      Start 205: forgekernel_offset_validation_tests
+14/18 Test #205: forgekernel_offset_validation_tests ...........   Passed    0.05 sec
+      Start 206: forgekernel_curve_fit_validation_tests
+15/18 Test #206: forgekernel_curve_fit_validation_tests ........   Passed   18.23 sec
+      Start 218: forgekernel_surface_mapping_tests
+16/18 Test #218: forgekernel_surface_mapping_tests .............   Passed    0.23 sec
+      Start 231: forgekernel_planar_flatten_validation_tests
+17/18 Test #231: forgekernel_planar_flatten_validation_tests ...   Passed    1.30 sec
+      Start 232: forgekernel_planar_thicken_validation_tests
+18/18 Test #232: forgekernel_planar_thicken_validation_tests ...   Passed    1.57 sec
+
+100% tests passed out of 18
+
+Total Test time (real) = 113.94 sec

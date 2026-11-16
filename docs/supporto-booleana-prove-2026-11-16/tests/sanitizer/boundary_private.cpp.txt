@@ -1,0 +1,90 @@
+#define main boundaryCertificateTests
+#include "test_boolean_boundary.cpp"
+#undef main
+#include "fk_boolean.h"
+#include "fk_body_check.h"
+#include "fk_body_io.h"
+#include "fk_primitives.h"
+#include "fk_loft.h"
+#include "fk_mass.h"
+#include "fk_history.h"
+#include <stdexcept>
+static void imprintCompatibility() {
+    const Body source = makeBox(Frame3(), 4, 4, 2);
+    const auto snapshot = writeBodyBinary(source);
+    FaceId top;
+    for (auto f : source.faces()) {
+        Vec3 p;
+        if (faceInteriorPoint(source, f, p) && p.z() == 2) top = f;
+    }
+    require(top.valid(), "private imprint fixture has an actual upper face");
+    ImprintCurve cut;
+    cut.face = top;
+    cut.curve = std::make_shared<Line<3>>(Vec3(0, 2, 2), Vec3(1, 0, 0));
+    cut.range = {0, 4};
+    BooleanOptions options;
+    options.unifySameDomain = false;
+    BodyHistory history;
+    const Body result = imprintCurves(source, {cut}, {}, options, nullptr, &history);
+    require(checkBody(result, {true, true}).empty() && result.faces().size() == 7,
+            "private public imprint line splits the chosen face and keeps a valid closed solid");
+    require(std::abs(massProperties(result).volume - 32) <= 1e-9,
+            "private imprint preserves the analytical box volume");
+    require(history.operandCount() == 1, "private imprint history keeps one real operand");
+    bool declared = true;
+    for (auto f : result.faces()) declared = declared && !history.origins(EntityKind::Face, f.index).empty();
+    require(declared, "private imprint retains provenance for every result face");
+    cut.face = FaceId(999);
+    bool invalidArgument = false;
+    try { (void)imprintCurves(source, {cut}, {}, options); }
+    catch (const std::invalid_argument &) { invalidArgument = true; }
+    require(invalidArgument, "private invalid imprint face preserves invalid_argument rather than domain retry");
+    require(writeBodyBinary(source) == snapshot, "private valid and rejected imprint leave the source immutable");
+}
+static LoftSection ellipticalSection(double x, double a, double b) {
+    LoftSection s;
+    s.frame = Frame3(Vec3(x, 0, 0), Vec3(1, 0, 0), Vec3(0, 0, 1));
+    auto ellipse = std::make_shared<Ellipse<2>>(Vec2(), Vec2(1, 0), Vec2(0, 1), a, b);
+    s.loop.segments = {{ellipse, {0, kPi}}, {ellipse, {kPi, kTwoPi}}};
+    return s;
+}
+static void ellipticalCompatibility() {
+    const double radius = 24, offset = .4;
+    const double capRadius = std::sqrt(radius * radius - offset * offset) + 1e-11;
+    const Body cylinder = makeCylinder(Frame3(Vec3(0, -56, 0), Vec3(0, 1, 0), Vec3(1, 0, 0)), radius, 112);
+    const Body loft = loftSolid({ellipticalSection(-60, 40, 20), ellipticalSection(offset, capRadius, 10)});
+    const auto savedCylinder = writeBodyBinary(cylinder), savedLoft = writeBodyBinary(loft);
+    require(checkBody(cylinder, {true, true}).empty() && checkBody(loft, {true, true}).empty(),
+            "private elliptical compatibility sources are valid exact B-reps");
+    const double vc = massProperties(cylinder).volume, vl = massProperties(loft).volume;
+    for (bool reverse : {false, true}) {
+        const Body &a = reverse ? loft : cylinder, &b = reverse ? cylinder : loft;
+        for (auto op : {BooleanOperation::Unite, BooleanOperation::Intersect, BooleanOperation::Subtract}) {
+            BooleanOptions options;
+            options.threads = 1;
+            BodyHistory history;
+            const Body result = booleanOperation(a, b, op, options, &history);
+            require(checkBody(result, {true, true}).empty(),
+                    "private elliptical union/intersection/subtraction compatibility is topologically valid");
+            const double v = massProperties(result).volume, va = reverse ? vl : vc, vb = reverse ? vc : vl;
+            const double quadratureBudget = 1e-10 * (vc + vl);
+            bool volume = std::isfinite(v) && v > 0;
+            if (op == BooleanOperation::Unite) volume = volume && v >= std::max(va, vb) - quadratureBudget && v <= va + vb + quadratureBudget;
+            if (op == BooleanOperation::Intersect) volume = volume && v <= std::min(va, vb) + quadratureBudget;
+            if (op == BooleanOperation::Subtract) volume = volume && v <= va + quadratureBudget;
+            require(volume, "private elliptical compatibility volume respects the operation bounds");
+            bool provenance = history.operandCount() == 2;
+            for (auto f : result.faces()) provenance = provenance && !history.origins(EntityKind::Face, f.index).empty();
+            require(provenance, "private elliptical compatibility preserves face provenance");
+        }
+    }
+    require(writeBodyBinary(cylinder) == savedCylinder && writeBodyBinary(loft) == savedLoft,
+            "private elliptical compatibility preserves both original source geometries");
+}
+int main() {
+    (void)boundaryCertificateTests();
+    try { imprintCompatibility(); ellipticalCompatibility(); }
+    catch (const std::exception &e) { ++failed; std::cerr << "PRIVATE_EXCEPTION " << e.what() << std::endl; }
+    std::cout << "PRIVATE_RESULT checks=" << checks << " failures=" << failed << std::endl;
+    return failed ? 1 : 0;
+}

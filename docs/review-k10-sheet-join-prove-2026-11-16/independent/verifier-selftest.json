@@ -1,0 +1,8 @@
+{
+  "pass": true,
+  "cases": [
+    "bilinear with crossed original internal knot",
+    "positive rational tensor composition",
+    "altered output pole rejected by exact rational witness"
+  ]
+}

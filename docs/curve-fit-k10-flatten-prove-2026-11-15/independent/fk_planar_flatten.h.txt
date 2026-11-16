@@ -1,0 +1,25 @@
+#pragma once
+#include "fk_curve.h"
+#include <optional>
+
+namespace ForgeCad::Kernel::detail {
+struct PlanarFlattenImage {
+    CurvePtr<3> curve;
+    double error = 0;
+};
+// Affine chart F(u,v)=O + X*scaleU*(u-anchor.x) + Y*scaleV*(v-anchor.y),
+// using the supplied frame axes/origin and IEEE constants interpreted exactly.
+// Line and positive-weight NURBS (including Trimmed) retain their parameter.
+// The returned control net is explicit, and error bounds its continuous
+// positional roundoff relative to ORIGINAL UV coefficients. Unsupported is
+// empty; recognized invalid/unresolved/resource-limited input throws.
+std::optional<PlanarFlattenImage> planarFlattenImage(const CurvePtr<2> &source,
+    Interval range, const Vec2 &anchor, double scaleU, double scaleV,
+    const Frame3 &frame, double budget);
+// Continuous round-trip residual of the ACTUAL planar SP-curve and 3D edge.
+// Requires matching positive-weight B-spline representations (Trimmed allowed).
+double planarFlattenPCurveError(const CurvePtr<3> &edge, const CurvePtr<2> &pcurve,
+    const Frame3 &frame, double budget);
+double planarFlattenCurveError(const CurvePtr<3> &a, const CurvePtr<3> &b);
+double planarFlattenVertexError(const Vec3 &a, const Vec3 &b);
+}

@@ -1,0 +1,3449 @@
+{
+  "nodes": [
+    {
+      "id": "cad_sketch_edit.cpp",
+      "group": "sketch",
+      "description": "Operazioni di modifica della geometria dello sketch.",
+      "lines": 1162,
+      "symbols": [
+        "ForgeCad::Geometry::bounded",
+        "ForgeCad::Geometry::closed",
+        "ForgeCad::Geometry::point",
+        "ForgeCad::Geometry::valid",
+        "ForgeCad::Geometry::value",
+        "ForgeCad::PlaneMap::apply",
+        "ForgeCad::appendMappedCopies",
+        "ForgeCad::appendSegment",
+        "ForgeCad::bezierPart",
+        "ForgeCad::blendSketchSegments",
+        "ForgeCad::connectionTolerance",
+        "ForgeCad::constraintPoint",
+        "ForgeCad::copiableConstraints",
+        "ForgeCad::cross",
+        "ForgeCad::crossings",
+        "ForgeCad::cutters",
+        "ForgeCad::distance",
+        "ForgeCad::editSketchPattern",
+        "ForgeCad::endPoints",
+        "ForgeCad::explodePolygon",
+        "ForgeCad::extendSketchEntity",
+        "ForgeCad::geometryOf",
+        "ForgeCad::isEntityOf",
+        "ForgeCad::length",
+        "ForgeCad::mappedCurve",
+        "ForgeCad::mirrorMap",
+        "ForgeCad::mix",
+        "ForgeCad::moveSketchEntities",
+        "ForgeCad::parameterOf",
+        "ForgeCad::patternSketchEntities",
+        "ForgeCad::pieceOf",
+        "ForgeCad::project",
+        "ForgeCad::refreshCoincidences",
+        "ForgeCad::removeSketchEntities",
+        "ForgeCad::replaceWithPieces",
+        "ForgeCad::rotationMap",
+        "ForgeCad::sketchCornerAt",
+        "ForgeCad::splineRange",
+        "ForgeCad::splitBezier",
+        "ForgeCad::splitSketchEntity",
+        "ForgeCad::toPoint",
+        "ForgeCad::toVec",
+        "ForgeCad::translationMap",
+        "ForgeCad::trimPreview",
+        "ForgeCad::trimSketchEntity",
+        "ForgeCad::trimSpan",
+        "ForgeCad::unsupported",
+        "ForgeCad::validEntities",
+        "ForgeCad::wrapAngle"
+      ]
+    },
+    {
+      "id": "cad_sketch_edit.h",
+      "group": "sketch",
+      "description": "Operazioni di modifica della geometria dello sketch.",
+      "lines": 129,
+      "symbols": []
+    },
+    {
+      "id": "cad_snap.cpp",
+      "group": "sketch",
+      "description": "Scelta univoca del riferimento di un punto condivisa fra badge e conferma, origine prioritaria, materializzazione della sola sorgente scelta; intersezioni esatte e conferma atomica delle due curve con PointOnCurve.",
+      "lines": 258,
+      "symbols": [
+        "ForgeCad::constrainIntersection",
+        "ForgeCad::distance",
+        "ForgeCad::pointAttachment",
+        "ForgeCad::resolvePointAttachment",
+        "ForgeCad::snapIntersection",
+        "ForgeCad::snapSegments"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "source": "cad_pattern_variation.cpp",
+      "target": "cad_sketch_edit.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 401,
+          "symbol": "ForgeCad::editSketchPattern",
+          "owner": "ForgeCad::resizeVariantPatterns"
+        }
+      ]
+    },
+    {
+      "source": "cad_sketch_edit.cpp",
+      "target": "cad_constraints.cpp",
+      "kind": "call",
+      "count": 3,
+      "sites": [
+        {
+          "line": 355,
+          "symbol": "ForgeCad::constraintError",
+          "owner": "ForgeCad::refreshCoincidences"
+        },
+        {
+          "line": 417,
+          "symbol": "ForgeCad::remapConstraints",
+          "owner": "ForgeCad::replaceWithPieces"
+        },
+        {
+          "line": 571,
+          "symbol": "ForgeCad::remapConstraints",
+          "owner": "ForgeCad::removeSketchEntities"
+        }
+      ]
+    },
+    {
+      "source": "cad_sketch_edit.cpp",
+      "target": "cad_constraints.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 5,
+          "symbol": "cad_constraints.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "cad_sketch_edit.cpp",
+      "target": "cad_curve_solver.cpp",
+      "kind": "call",
+      "count": 4,
+      "sites": [
+        {
+          "line": 113,
+          "symbol": "ForgeCad::curveGeometry",
+          "owner": "ForgeCad::geometryOf"
+        },
+        {
+          "line": 124,
+          "symbol": "ForgeCad::curveGeometry",
+          "owner": "ForgeCad::geometryOf"
+        },
+        {
+          "line": 152,
+          "symbol": "ForgeCad::curveGeometry",
+          "owner": "ForgeCad::cutters"
+        },
+        {
+          "line": 461,
+          "symbol": "ForgeCad::curveGeometry",
+          "owner": "ForgeCad::explodePolygon"
+        }
+      ]
+    },
+    {
+      "source": "cad_sketch_edit.cpp",
+      "target": "cad_curve_solver.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 12,
+          "symbol": "cad_curve_solver.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "cad_sketch_edit.cpp",
+      "target": "cad_kernel.h",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 23,
+          "symbol": "ForgeCad::sketchConnectionTolerance",
+          "owner": "ForgeCad::connectionTolerance"
+        }
+      ]
+    },
+    {
+      "source": "cad_sketch_edit.cpp",
+      "target": "cad_kernel.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 13,
+          "symbol": "cad_kernel.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "cad_sketch_edit.cpp",
+      "target": "cad_sketch_edit.cpp",
+      "kind": "call",
+      "count": 221,
+      "sites": [
+        {
+          "line": 27,
+          "symbol": "ForgeCad::length",
+          "owner": "ForgeCad::distance"
+        },
+        {
+          "line": 54,
+          "symbol": "ForgeCad::toPoint",
+          "owner": "ForgeCad::Geometry::value"
+        },
+        {
+          "line": 57,
+          "symbol": "ForgeCad::Geometry::closed",
+          "owner": "ForgeCad::Geometry::point"
+        },
+        {
+          "line": 58,
+          "symbol": "ForgeCad::Geometry::closed",
+          "owner": "ForgeCad::Geometry::point"
+        },
+        {
+          "line": 59,
+          "symbol": "ForgeCad::Geometry::value",
+          "owner": "ForgeCad::Geometry::point"
+        },
+        {
+          "line": 65,
+          "symbol": "ForgeCad::Geometry::Geometry",
+          "owner": "ForgeCad::geometryOf"
+        },
+        {
+          "line": 69,
+          "symbol": "ForgeCad::distance",
+          "owner": "ForgeCad::geometryOf"
+        },
+        {
+          "line": 70,
+          "symbol": "ForgeCad::Geometry::Geometry",
+          "owner": "ForgeCad::geometryOf"
+        },
+        {
+          "line": 70,
+          "symbol": "ForgeCad::connectionTolerance",
+          "owner": "ForgeCad::geometryOf"
+        },
+        {
+          "line": 73,
+          "symbol": "ForgeCad::toVec",
+          "owner": "ForgeCad::geometryOf"
+        },
+        {
+          "line": 78,
+          "symbol": "ForgeCad::Geometry::Geometry",
+          "owner": "ForgeCad::geometryOf"
+        },
+        {
+          "line": 80,
+          "symbol": "ForgeCad::Geometry::Geometry",
+          "owner": "ForgeCad::geometryOf"
+        },
+        {
+          "line": 85,
+          "symbol": "ForgeCad::distance",
+          "owner": "ForgeCad::geometryOf"
+        },
+        {
+          "line": 86,
+          "symbol": "ForgeCad::Geometry::Geometry",
+          "owner": "ForgeCad::geometryOf"
+        },
+        {
+          "line": 86,
+          "symbol": "ForgeCad::connectionTolerance",
+          "owner": "ForgeCad::geometryOf"
+        },
+        {
+          "line": 86,
+          "symbol": "ForgeCad::distance",
+          "owner": "ForgeCad::geometryOf"
+        },
+        {
+          "line": 91,
+          "symbol": "ForgeCad::toVec",
+          "owner": "ForgeCad::geometryOf"
+        },
+        {
+          "line": 97,
+          "symbol": "ForgeCad::Geometry::value",
+          "owner": "ForgeCad::geometryOf"
+        },
+        {
+          "line": 98,
+          "symbol": "ForgeCad::Geometry::Geometry",
+          "owner": "ForgeCad::geometryOf"
+        },
+        {
+          "line": 102,
+          "symbol": "ForgeCad::distance",
+          "owner": "ForgeCad::geometryOf"
+        },
+        {
+          "line": 103,
+          "symbol": "ForgeCad::Geometry::Geometry",
+          "owner": "ForgeCad::geometryOf"
+        },
+        {
+          "line": 103,
+          "symbol": "ForgeCad::connectionTolerance",
+          "owner": "ForgeCad::geometryOf"
+        },
+        {
+          "line": 105,
+          "symbol": "ForgeCad::toVec",
+          "owner": "ForgeCad::geometryOf"
+        },
+        {
+          "line": 110,
+          "symbol": "ForgeCad::Geometry::Geometry",
+          "owner": "ForgeCad::geometryOf"
+        },
+        {
+          "line": 114,
+          "symbol": "ForgeCad::Geometry::Geometry",
+          "owner": "ForgeCad::geometryOf"
+        },
+        {
+          "line": 119,
+          "symbol": "ForgeCad::Geometry::value",
+          "owner": "ForgeCad::geometryOf"
+        },
+        {
+          "line": 120,
+          "symbol": "ForgeCad::Geometry::value",
+          "owner": "ForgeCad::geometryOf"
+        },
+        {
+          "line": 121,
+          "symbol": "ForgeCad::Geometry::Geometry",
+          "owner": "ForgeCad::geometryOf"
+        },
+        {
+          "line": 125,
+          "symbol": "ForgeCad::Geometry::Geometry",
+          "owner": "ForgeCad::geometryOf"
+        },
+        {
+          "line": 132,
+          "symbol": "ForgeCad::Geometry::Geometry",
+          "owner": "ForgeCad::geometryOf"
+        },
+        {
+          "line": 137,
+          "symbol": "ForgeCad::Geometry::Geometry",
+          "owner": "ForgeCad::geometryOf"
+        },
+        {
+          "line": 146,
+          "symbol": "ForgeCad::distance",
+          "owner": "ForgeCad::cutters"
+        },
+        {
+          "line": 147,
+          "symbol": "ForgeCad::connectionTolerance",
+          "owner": "ForgeCad::cutters"
+        },
+        {
+          "line": 148,
+          "symbol": "ForgeCad::toVec",
+          "owner": "ForgeCad::cutters"
+        },
+        {
+          "line": 161,
+          "symbol": "ForgeCad::distance",
+          "owner": "ForgeCad::parameterOf"
+        },
+        {
+          "line": 166,
+          "symbol": "ForgeCad::wrapAngle",
+          "owner": "ForgeCad::parameterOf"
+        },
+        {
+          "line": 176,
+          "symbol": "ForgeCad::Geometry::bounded",
+          "owner": "ForgeCad::crossings"
+        },
+        {
+          "line": 180,
+          "symbol": "ForgeCad::parameterOf",
+          "owner": "ForgeCad::crossings"
+        },
+        {
+          "line": 180,
+          "symbol": "ForgeCad::toPoint",
+          "owner": "ForgeCad::crossings"
+        },
+        {
+          "line": 187,
+          "symbol": "ForgeCad::Geometry::value",
+          "owner": "ForgeCad::crossings"
+        },
+        {
+          "line": 188,
+          "symbol": "ForgeCad::Geometry::closed",
+          "owner": "ForgeCad::crossings"
+        },
+        {
+          "line": 188,
+          "symbol": "ForgeCad::connectionTolerance",
+          "owner": "ForgeCad::crossings"
+        },
+        {
+          "line": 188,
+          "symbol": "ForgeCad::distance",
+          "owner": "ForgeCad::crossings"
+        },
+        {
+          "line": 189,
+          "symbol": "ForgeCad::Geometry::value",
+          "owner": "ForgeCad::crossings"
+        },
+        {
+          "line": 189,
+          "symbol": "ForgeCad::connectionTolerance",
+          "owner": "ForgeCad::crossings"
+        },
+        {
+          "line": 189,
+          "symbol": "ForgeCad::distance",
+          "owner": "ForgeCad::crossings"
+        },
+        {
+          "line": 193,
+          "symbol": "ForgeCad::Geometry::closed",
+          "owner": "ForgeCad::crossings"
+        },
+        {
+          "line": 193,
+          "symbol": "ForgeCad::Geometry::value",
+          "owner": "ForgeCad::crossings"
+        },
+        {
+          "line": 193,
+          "symbol": "ForgeCad::connectionTolerance",
+          "owner": "ForgeCad::crossings"
+        },
+        {
+          "line": 193,
+          "symbol": "ForgeCad::distance",
+          "owner": "ForgeCad::crossings"
+        },
+        {
+          "line": 201,
+          "symbol": "ForgeCad::parameterOf",
+          "owner": "ForgeCad::project"
+        },
+        {
+          "line": 203,
+          "symbol": "ForgeCad::parameterOf",
+          "owner": "ForgeCad::project"
+        },
+        {
+          "line": 205,
+          "symbol": "ForgeCad::parameterOf",
+          "owner": "ForgeCad::project"
+        },
+        {
+          "line": 211,
+          "symbol": "ForgeCad::distance",
+          "owner": "ForgeCad::project"
+        },
+        {
+          "line": 212,
+          "symbol": "ForgeCad::distance",
+          "owner": "ForgeCad::project"
+        },
+        {
+          "line": 214,
+          "symbol": "ForgeCad::toVec",
+          "owner": "ForgeCad::project"
+        },
+        {
+          "line": 230,
+          "symbol": "ForgeCad::mix",
+          "owner": "ForgeCad::splitBezier"
+        },
+        {
+          "line": 231,
+          "symbol": "ForgeCad::mix",
+          "owner": "ForgeCad::splitBezier"
+        },
+        {
+          "line": 232,
+          "symbol": "ForgeCad::mix",
+          "owner": "ForgeCad::splitBezier"
+        },
+        {
+          "line": 239,
+          "symbol": "ForgeCad::splitBezier",
+          "owner": "ForgeCad::bezierPart"
+        },
+        {
+          "line": 241,
+          "symbol": "ForgeCad::splitBezier",
+          "owner": "ForgeCad::bezierPart"
+        },
+        {
+          "line": 255,
+          "symbol": "ForgeCad::bezierPart",
+          "owner": "ForgeCad::splineRange"
+        },
+        {
+          "line": 283,
+          "symbol": "ForgeCad::Piece::Piece",
+          "owner": "ForgeCad::pieceOf"
+        },
+        {
+          "line": 285,
+          "symbol": "ForgeCad::Geometry::point",
+          "owner": "ForgeCad::pieceOf"
+        },
+        {
+          "line": 286,
+          "symbol": "ForgeCad::Piece::Piece",
+          "owner": "ForgeCad::pieceOf"
+        },
+        {
+          "line": 291,
+          "symbol": "ForgeCad::splineRange",
+          "owner": "ForgeCad::pieceOf"
+        },
+        {
+          "line": 292,
+          "symbol": "ForgeCad::Piece::Piece",
+          "owner": "ForgeCad::pieceOf"
+        },
+        {
+          "line": 312,
+          "symbol": "ForgeCad::Piece::Piece",
+          "owner": "ForgeCad::pieceOf"
+        },
+        {
+          "line": 316,
+          "symbol": "ForgeCad::Geometry::point",
+          "owner": "ForgeCad::pieceOf"
+        },
+        {
+          "line": 317,
+          "symbol": "ForgeCad::Piece::Piece",
+          "owner": "ForgeCad::pieceOf"
+        },
+        {
+          "line": 355,
+          "symbol": "ForgeCad::connectionTolerance",
+          "owner": "ForgeCad::refreshCoincidences"
+        },
+        {
+          "line": 355,
+          "symbol": "ForgeCad::refreshCoincidences::(lambda at /home/myungit/Linux_CAD_forFree/cad_sketch_edit.cpp:348:22)::operator()",
+          "owner": "ForgeCad::refreshCoincidences"
+        },
+        {
+          "line": 364,
+          "symbol": "ForgeCad::endPoints",
+          "owner": "ForgeCad::refreshCoincidences"
+        },
+        {
+          "line": 366,
+          "symbol": "ForgeCad::constraintPoint",
+          "owner": "ForgeCad::refreshCoincidences"
+        },
+        {
+          "line": 369,
+          "symbol": "ForgeCad::refreshCoincidences::(lambda at /home/myungit/Linux_CAD_forFree/cad_sketch_edit.cpp:358:19)::operator()",
+          "owner": "ForgeCad::refreshCoincidences"
+        },
+        {
+          "line": 380,
+          "symbol": "ForgeCad::connectionTolerance",
+          "owner": "ForgeCad::refreshCoincidences"
+        },
+        {
+          "line": 380,
+          "symbol": "ForgeCad::distance",
+          "owner": "ForgeCad::refreshCoincidences"
+        },
+        {
+          "line": 380,
+          "symbol": "ForgeCad::refreshCoincidences::(lambda at /home/myungit/Linux_CAD_forFree/cad_sketch_edit.cpp:368:24)::operator()",
+          "owner": "ForgeCad::refreshCoincidences"
+        },
+        {
+          "line": 389,
+          "symbol": "ForgeCad::connectionTolerance",
+          "owner": "ForgeCad::refreshCoincidences"
+        },
+        {
+          "line": 389,
+          "symbol": "ForgeCad::distance",
+          "owner": "ForgeCad::refreshCoincidences"
+        },
+        {
+          "line": 389,
+          "symbol": "ForgeCad::refreshCoincidences::(lambda at /home/myungit/Linux_CAD_forFree/cad_sketch_edit.cpp:368:24)::operator()",
+          "owner": "ForgeCad::refreshCoincidences"
+        },
+        {
+          "line": 410,
+          "symbol": "ForgeCad::removeSketchEntities",
+          "owner": "ForgeCad::replaceWithPieces"
+        },
+        {
+          "line": 428,
+          "symbol": "ForgeCad::appendSegment",
+          "owner": "ForgeCad::replaceWithPieces"
+        },
+        {
+          "line": 466,
+          "symbol": "ForgeCad::toPoint",
+          "owner": "ForgeCad::explodePolygon"
+        },
+        {
+          "line": 467,
+          "symbol": "ForgeCad::appendSegment",
+          "owner": "ForgeCad::explodePolygon"
+        },
+        {
+          "line": 475,
+          "symbol": "ForgeCad::removeSketchEntities",
+          "owner": "ForgeCad::explodePolygon"
+        },
+        {
+          "line": 476,
+          "symbol": "ForgeCad::refreshCoincidences",
+          "owner": "ForgeCad::explodePolygon"
+        },
+        {
+          "line": 482,
+          "symbol": "ForgeCad::distance",
+          "owner": "ForgeCad::explodePolygon"
+        },
+        {
+          "line": 508,
+          "symbol": "ForgeCad::crossings",
+          "owner": "ForgeCad::trimSpan"
+        },
+        {
+          "line": 508,
+          "symbol": "ForgeCad::cutters",
+          "owner": "ForgeCad::trimSpan"
+        },
+        {
+          "line": 509,
+          "symbol": "ForgeCad::project",
+          "owner": "ForgeCad::trimSpan"
+        },
+        {
+          "line": 510,
+          "symbol": "ForgeCad::TrimSpan::TrimSpan",
+          "owner": "ForgeCad::trimSpan"
+        },
+        {
+          "line": 511,
+          "symbol": "ForgeCad::Geometry::closed",
+          "owner": "ForgeCad::trimSpan"
+        },
+        {
+          "line": 513,
+          "symbol": "ForgeCad::TrimSpan::operator=",
+          "owner": "ForgeCad::trimSpan"
+        },
+        {
+          "line": 514,
+          "symbol": "ForgeCad::TrimSpan::TrimSpan",
+          "owner": "ForgeCad::trimSpan"
+        },
+        {
+          "line": 526,
+          "symbol": "ForgeCad::TrimSpan::TrimSpan",
+          "owner": "ForgeCad::trimSpan"
+        },
+        {
+          "line": 538,
+          "symbol": "ForgeCad::TrimSpan::TrimSpan",
+          "owner": "ForgeCad::trimSpan"
+        },
+        {
+          "line": 551,
+          "symbol": "ForgeCad::removeSketchEntities::(lambda at /home/myungit/Linux_CAD_forFree/cad_sketch_edit.cpp:544:18)::operator()",
+          "owner": "ForgeCad::removeSketchEntities"
+        },
+        {
+          "line": 558,
+          "symbol": "ForgeCad::removeSketchEntities::(lambda at /home/myungit/Linux_CAD_forFree/cad_sketch_edit.cpp:552:20)::operator()",
+          "owner": "ForgeCad::removeSketchEntities"
+        },
+        {
+          "line": 559,
+          "symbol": "ForgeCad::removeSketchEntities::(lambda at /home/myungit/Linux_CAD_forFree/cad_sketch_edit.cpp:552:20)::operator()",
+          "owner": "ForgeCad::removeSketchEntities"
+        },
+        {
+          "line": 560,
+          "symbol": "ForgeCad::removeSketchEntities::(lambda at /home/myungit/Linux_CAD_forFree/cad_sketch_edit.cpp:552:20)::operator()",
+          "owner": "ForgeCad::removeSketchEntities"
+        },
+        {
+          "line": 561,
+          "symbol": "ForgeCad::removeSketchEntities::(lambda at /home/myungit/Linux_CAD_forFree/cad_sketch_edit.cpp:552:20)::operator()",
+          "owner": "ForgeCad::removeSketchEntities"
+        },
+        {
+          "line": 562,
+          "symbol": "ForgeCad::removeSketchEntities::(lambda at /home/myungit/Linux_CAD_forFree/cad_sketch_edit.cpp:552:20)::operator()",
+          "owner": "ForgeCad::removeSketchEntities"
+        },
+        {
+          "line": 578,
+          "symbol": "ForgeCad::explodePolygon",
+          "owner": "ForgeCad::trimSketchEntity"
+        },
+        {
+          "line": 580,
+          "symbol": "ForgeCad::geometryOf",
+          "owner": "ForgeCad::trimSketchEntity"
+        },
+        {
+          "line": 581,
+          "symbol": "ForgeCad::Geometry::valid",
+          "owner": "ForgeCad::trimSketchEntity"
+        },
+        {
+          "line": 581,
+          "symbol": "ForgeCad::unsupported",
+          "owner": "ForgeCad::trimSketchEntity"
+        },
+        {
+          "line": 582,
+          "symbol": "ForgeCad::trimSpan",
+          "owner": "ForgeCad::trimSketchEntity"
+        },
+        {
+          "line": 585,
+          "symbol": "ForgeCad::Geometry::closed",
+          "owner": "ForgeCad::trimSketchEntity"
+        },
+        {
+          "line": 586,
+          "symbol": "ForgeCad::pieceOf",
+          "owner": "ForgeCad::trimSketchEntity"
+        },
+        {
+          "line": 588,
+          "symbol": "ForgeCad::pieceOf",
+          "owner": "ForgeCad::trimSketchEntity"
+        },
+        {
+          "line": 589,
+          "symbol": "ForgeCad::pieceOf",
+          "owner": "ForgeCad::trimSketchEntity"
+        },
+        {
+          "line": 593,
+          "symbol": "ForgeCad::replaceWithPieces",
+          "owner": "ForgeCad::trimSketchEntity"
+        },
+        {
+          "line": 594,
+          "symbol": "ForgeCad::refreshCoincidences",
+          "owner": "ForgeCad::trimSketchEntity"
+        },
+        {
+          "line": 601,
+          "symbol": "ForgeCad::explodePolygon",
+          "owner": "ForgeCad::trimPreview"
+        },
+        {
+          "line": 602,
+          "symbol": "ForgeCad::geometryOf",
+          "owner": "ForgeCad::trimPreview"
+        },
+        {
+          "line": 603,
+          "symbol": "ForgeCad::Geometry::valid",
+          "owner": "ForgeCad::trimPreview"
+        },
+        {
+          "line": 604,
+          "symbol": "ForgeCad::trimSpan",
+          "owner": "ForgeCad::trimPreview"
+        },
+        {
+          "line": 607,
+          "symbol": "ForgeCad::Geometry::value",
+          "owner": "ForgeCad::trimPreview"
+        },
+        {
+          "line": 614,
+          "symbol": "ForgeCad::explodePolygon",
+          "owner": "ForgeCad::extendSketchEntity"
+        },
+        {
+          "line": 616,
+          "symbol": "ForgeCad::geometryOf",
+          "owner": "ForgeCad::extendSketchEntity"
+        },
+        {
+          "line": 617,
+          "symbol": "ForgeCad::Geometry::valid",
+          "owner": "ForgeCad::extendSketchEntity"
+        },
+        {
+          "line": 617,
+          "symbol": "ForgeCad::unsupported",
+          "owner": "ForgeCad::extendSketchEntity"
+        },
+        {
+          "line": 618,
+          "symbol": "ForgeCad::Geometry::closed",
+          "owner": "ForgeCad::extendSketchEntity"
+        },
+        {
+          "line": 620,
+          "symbol": "ForgeCad::distance",
+          "owner": "ForgeCad::extendSketchEntity"
+        },
+        {
+          "line": 621,
+          "symbol": "ForgeCad::cutters",
+          "owner": "ForgeCad::extendSketchEntity"
+        },
+        {
+          "line": 625,
+          "symbol": "ForgeCad::Geometry::Geometry",
+          "owner": "ForgeCad::extendSketchEntity"
+        },
+        {
+          "line": 627,
+          "symbol": "ForgeCad::toVec",
+          "owner": "ForgeCad::extendSketchEntity"
+        },
+        {
+          "line": 631,
+          "symbol": "ForgeCad::Geometry::value",
+          "owner": "ForgeCad::extendSketchEntity"
+        },
+        {
+          "line": 632,
+          "symbol": "ForgeCad::crossings",
+          "owner": "ForgeCad::extendSketchEntity"
+        },
+        {
+          "line": 639,
+          "symbol": "ForgeCad::Geometry::Geometry",
+          "owner": "ForgeCad::extendSketchEntity"
+        },
+        {
+          "line": 643,
+          "symbol": "ForgeCad::crossings",
+          "owner": "ForgeCad::extendSketchEntity"
+        },
+        {
+          "line": 645,
+          "symbol": "ForgeCad::connectionTolerance",
+          "owner": "ForgeCad::extendSketchEntity"
+        },
+        {
+          "line": 649,
+          "symbol": "ForgeCad::wrapAngle",
+          "owner": "ForgeCad::extendSketchEntity"
+        },
+        {
+          "line": 657,
+          "symbol": "ForgeCad::Geometry::value",
+          "owner": "ForgeCad::extendSketchEntity"
+        },
+        {
+          "line": 658,
+          "symbol": "ForgeCad::Geometry::value",
+          "owner": "ForgeCad::extendSketchEntity"
+        },
+        {
+          "line": 660,
+          "symbol": "ForgeCad::refreshCoincidences",
+          "owner": "ForgeCad::extendSketchEntity"
+        },
+        {
+          "line": 668,
+          "symbol": "ForgeCad::explodePolygon",
+          "owner": "ForgeCad::splitSketchEntity"
+        },
+        {
+          "line": 670,
+          "symbol": "ForgeCad::geometryOf",
+          "owner": "ForgeCad::splitSketchEntity"
+        },
+        {
+          "line": 671,
+          "symbol": "ForgeCad::Geometry::valid",
+          "owner": "ForgeCad::splitSketchEntity"
+        },
+        {
+          "line": 671,
+          "symbol": "ForgeCad::unsupported",
+          "owner": "ForgeCad::splitSketchEntity"
+        },
+        {
+          "line": 672,
+          "symbol": "ForgeCad::project",
+          "owner": "ForgeCad::splitSketchEntity"
+        },
+        {
+          "line": 674,
+          "symbol": "ForgeCad::crossings",
+          "owner": "ForgeCad::splitSketchEntity"
+        },
+        {
+          "line": 674,
+          "symbol": "ForgeCad::cutters",
+          "owner": "ForgeCad::splitSketchEntity"
+        },
+        {
+          "line": 677,
+          "symbol": "ForgeCad::Geometry::value",
+          "owner": "ForgeCad::splitSketchEntity"
+        },
+        {
+          "line": 679,
+          "symbol": "ForgeCad::Geometry::value",
+          "owner": "ForgeCad::splitSketchEntity"
+        },
+        {
+          "line": 679,
+          "symbol": "ForgeCad::distance",
+          "owner": "ForgeCad::splitSketchEntity"
+        },
+        {
+          "line": 686,
+          "symbol": "ForgeCad::Geometry::closed",
+          "owner": "ForgeCad::splitSketchEntity"
+        },
+        {
+          "line": 687,
+          "symbol": "ForgeCad::pieceOf",
+          "owner": "ForgeCad::splitSketchEntity"
+        },
+        {
+          "line": 689,
+          "symbol": "ForgeCad::Geometry::value",
+          "owner": "ForgeCad::splitSketchEntity"
+        },
+        {
+          "line": 690,
+          "symbol": "ForgeCad::connectionTolerance",
+          "owner": "ForgeCad::splitSketchEntity"
+        },
+        {
+          "line": 690,
+          "symbol": "ForgeCad::distance",
+          "owner": "ForgeCad::splitSketchEntity"
+        },
+        {
+          "line": 692,
+          "symbol": "ForgeCad::pieceOf",
+          "owner": "ForgeCad::splitSketchEntity"
+        },
+        {
+          "line": 693,
+          "symbol": "ForgeCad::pieceOf",
+          "owner": "ForgeCad::splitSketchEntity"
+        },
+        {
+          "line": 700,
+          "symbol": "ForgeCad::replaceWithPieces",
+          "owner": "ForgeCad::splitSketchEntity"
+        },
+        {
+          "line": 701,
+          "symbol": "ForgeCad::refreshCoincidences",
+          "owner": "ForgeCad::splitSketchEntity"
+        },
+        {
+          "line": 715,
+          "symbol": "ForgeCad::length",
+          "owner": "ForgeCad::blendSketchSegments"
+        },
+        {
+          "line": 716,
+          "symbol": "ForgeCad::connectionTolerance",
+          "owner": "ForgeCad::blendSketchSegments"
+        },
+        {
+          "line": 717,
+          "symbol": "ForgeCad::cross",
+          "owner": "ForgeCad::blendSketchSegments"
+        },
+        {
+          "line": 721,
+          "symbol": "ForgeCad::cross",
+          "owner": "ForgeCad::blendSketchSegments"
+        },
+        {
+          "line": 726,
+          "symbol": "ForgeCad::connectionTolerance",
+          "owner": "ForgeCad::blendSketchSegments"
+        },
+        {
+          "line": 726,
+          "symbol": "ForgeCad::distance",
+          "owner": "ForgeCad::blendSketchSegments"
+        },
+        {
+          "line": 737,
+          "symbol": "ForgeCad::connectionTolerance",
+          "owner": "ForgeCad::blendSketchSegments"
+        },
+        {
+          "line": 747,
+          "symbol": "ForgeCad::appendSegment",
+          "owner": "ForgeCad::blendSketchSegments"
+        },
+        {
+          "line": 750,
+          "symbol": "ForgeCad::length",
+          "owner": "ForgeCad::blendSketchSegments"
+        },
+        {
+          "line": 756,
+          "symbol": "ForgeCad::cross",
+          "owner": "ForgeCad::blendSketchSegments"
+        },
+        {
+          "line": 761,
+          "symbol": "ForgeCad::refreshCoincidences",
+          "owner": "ForgeCad::blendSketchSegments"
+        },
+        {
+          "line": 783,
+          "symbol": "ForgeCad::distance",
+          "owner": "ForgeCad::sketchCornerAt"
+        },
+        {
+          "line": 789,
+          "symbol": "ForgeCad::connectionTolerance",
+          "owner": "ForgeCad::sketchCornerAt"
+        },
+        {
+          "line": 789,
+          "symbol": "ForgeCad::distance",
+          "owner": "ForgeCad::sketchCornerAt"
+        },
+        {
+          "line": 790,
+          "symbol": "ForgeCad::connectionTolerance",
+          "owner": "ForgeCad::sketchCornerAt"
+        },
+        {
+          "line": 790,
+          "symbol": "ForgeCad::distance",
+          "owner": "ForgeCad::sketchCornerAt"
+        },
+        {
+          "line": 791,
+          "symbol": "ForgeCad::connectionTolerance",
+          "owner": "ForgeCad::sketchCornerAt"
+        },
+        {
+          "line": 791,
+          "symbol": "ForgeCad::distance",
+          "owner": "ForgeCad::sketchCornerAt"
+        },
+        {
+          "line": 816,
+          "symbol": "ForgeCad::PlaneMap::PlaneMap",
+          "owner": "ForgeCad::translationMap"
+        },
+        {
+          "line": 818,
+          "symbol": "ForgeCad::PlaneMap::PlaneMap",
+          "owner": "ForgeCad::translationMap"
+        },
+        {
+          "line": 822,
+          "symbol": "ForgeCad::PlaneMap::PlaneMap",
+          "owner": "ForgeCad::rotationMap"
+        },
+        {
+          "line": 826,
+          "symbol": "ForgeCad::PlaneMap::PlaneMap",
+          "owner": "ForgeCad::rotationMap"
+        },
+        {
+          "line": 830,
+          "symbol": "ForgeCad::PlaneMap::PlaneMap",
+          "owner": "ForgeCad::mirrorMap"
+        },
+        {
+          "line": 831,
+          "symbol": "ForgeCad::length",
+          "owner": "ForgeCad::mirrorMap"
+        },
+        {
+          "line": 837,
+          "symbol": "ForgeCad::PlaneMap::PlaneMap",
+          "owner": "ForgeCad::mirrorMap"
+        },
+        {
+          "line": 842,
+          "symbol": "ForgeCad::PlaneMap::apply",
+          "owner": "ForgeCad::mappedCurve"
+        },
+        {
+          "line": 843,
+          "symbol": "ForgeCad::PlaneMap::apply",
+          "owner": "ForgeCad::mappedCurve"
+        },
+        {
+          "line": 874,
+          "symbol": "ForgeCad::isEntityOf",
+          "owner": "ForgeCad::copiableConstraints"
+        },
+        {
+          "line": 896,
+          "symbol": "ForgeCad::PlaneMap::apply",
+          "owner": "ForgeCad::appendMappedCopies"
+        },
+        {
+          "line": 896,
+          "symbol": "ForgeCad::appendSegment",
+          "owner": "ForgeCad::appendMappedCopies"
+        },
+        {
+          "line": 900,
+          "symbol": "ForgeCad::mappedCurve",
+          "owner": "ForgeCad::appendMappedCopies"
+        },
+        {
+          "line": 915,
+          "symbol": "ForgeCad::appendMappedCopies::(lambda at /home/myungit/Linux_CAD_forFree/cad_sketch_edit.cpp:906:29)::operator()",
+          "owner": "ForgeCad::appendMappedCopies"
+        },
+        {
+          "line": 916,
+          "symbol": "ForgeCad::appendMappedCopies::(lambda at /home/myungit/Linux_CAD_forFree/cad_sketch_edit.cpp:906:29)::operator()",
+          "owner": "ForgeCad::appendMappedCopies"
+        },
+        {
+          "line": 929,
+          "symbol": "ForgeCad::validEntities",
+          "owner": "ForgeCad::patternSketchEntities"
+        },
+        {
+          "line": 935,
+          "symbol": "ForgeCad::length",
+          "owner": "ForgeCad::patternSketchEntities"
+        },
+        {
+          "line": 939,
+          "symbol": "ForgeCad::connectionTolerance",
+          "owner": "ForgeCad::patternSketchEntities"
+        },
+        {
+          "line": 944,
+          "symbol": "ForgeCad::translationMap",
+          "owner": "ForgeCad::patternSketchEntities"
+        },
+        {
+          "line": 952,
+          "symbol": "ForgeCad::rotationMap",
+          "owner": "ForgeCad::patternSketchEntities"
+        },
+        {
+          "line": 957,
+          "symbol": "ForgeCad::length",
+          "owner": "ForgeCad::patternSketchEntities"
+        },
+        {
+          "line": 958,
+          "symbol": "ForgeCad::mirrorMap",
+          "owner": "ForgeCad::patternSketchEntities"
+        },
+        {
+          "line": 968,
+          "symbol": "ForgeCad::copiableConstraints",
+          "owner": "ForgeCad::patternSketchEntities"
+        },
+        {
+          "line": 969,
+          "symbol": "ForgeCad::appendMappedCopies",
+          "owner": "ForgeCad::patternSketchEntities"
+        },
+        {
+          "line": 999,
+          "symbol": "ForgeCad::length",
+          "owner": "ForgeCad::patternSketchEntities"
+        },
+        {
+          "line": 1003,
+          "symbol": "ForgeCad::patternSketchEntities::(lambda at /home/myungit/Linux_CAD_forFree/cad_sketch_edit.cpp:986:32)::operator()",
+          "owner": "ForgeCad::patternSketchEntities"
+        },
+        {
+          "line": 1004,
+          "symbol": "ForgeCad::patternSketchEntities::(lambda at /home/myungit/Linux_CAD_forFree/cad_sketch_edit.cpp:986:32)::operator()",
+          "owner": "ForgeCad::patternSketchEntities"
+        },
+        {
+          "line": 1013,
+          "symbol": "ForgeCad::refreshCoincidences",
+          "owner": "ForgeCad::patternSketchEntities"
+        },
+        {
+          "line": 1021,
+          "symbol": "ForgeCad::validEntities",
+          "owner": "ForgeCad::moveSketchEntities"
+        },
+        {
+          "line": 1026,
+          "symbol": "ForgeCad::rotationMap",
+          "owner": "ForgeCad::moveSketchEntities"
+        },
+        {
+          "line": 1028,
+          "symbol": "ForgeCad::length",
+          "owner": "ForgeCad::moveSketchEntities"
+        },
+        {
+          "line": 1032,
+          "symbol": "ForgeCad::appendMappedCopies",
+          "owner": "ForgeCad::moveSketchEntities"
+        },
+        {
+          "line": 1032,
+          "symbol": "ForgeCad::copiableConstraints",
+          "owner": "ForgeCad::moveSketchEntities"
+        },
+        {
+          "line": 1040,
+          "symbol": "ForgeCad::PlaneMap::apply",
+          "owner": "ForgeCad::moveSketchEntities"
+        },
+        {
+          "line": 1046,
+          "symbol": "ForgeCad::mappedCurve",
+          "owner": "ForgeCad::moveSketchEntities"
+        },
+        {
+          "line": 1052,
+          "symbol": "ForgeCad::PlaneMap::apply",
+          "owner": "ForgeCad::moveSketchEntities"
+        },
+        {
+          "line": 1052,
+          "symbol": "ForgeCad::isEntityOf",
+          "owner": "ForgeCad::moveSketchEntities"
+        },
+        {
+          "line": 1054,
+          "symbol": "ForgeCad::refreshCoincidences",
+          "owner": "ForgeCad::moveSketchEntities"
+        },
+        {
+          "line": 1075,
+          "symbol": "ForgeCad::connectionTolerance",
+          "owner": "ForgeCad::editSketchPattern"
+        },
+        {
+          "line": 1090,
+          "symbol": "ForgeCad::removeSketchEntities",
+          "owner": "ForgeCad::editSketchPattern"
+        },
+        {
+          "line": 1111,
+          "symbol": "ForgeCad::editSketchPattern::(lambda at /home/myungit/Linux_CAD_forFree/cad_sketch_edit.cpp:1094:24)::operator()",
+          "owner": "ForgeCad::editSketchPattern"
+        },
+        {
+          "line": 1118,
+          "symbol": "ForgeCad::editSketchPattern::(lambda at /home/myungit/Linux_CAD_forFree/cad_sketch_edit.cpp:1110:32)::operator()",
+          "owner": "ForgeCad::editSketchPattern"
+        },
+        {
+          "line": 1119,
+          "symbol": "ForgeCad::editSketchPattern::(lambda at /home/myungit/Linux_CAD_forFree/cad_sketch_edit.cpp:1110:32)::operator()",
+          "owner": "ForgeCad::editSketchPattern"
+        },
+        {
+          "line": 1121,
+          "symbol": "ForgeCad::editSketchPattern::(lambda at /home/myungit/Linux_CAD_forFree/cad_sketch_edit.cpp:1094:24)::operator()",
+          "owner": "ForgeCad::editSketchPattern"
+        },
+        {
+          "line": 1132,
+          "symbol": "ForgeCad::editSketchPattern::(lambda at /home/myungit/Linux_CAD_forFree/cad_sketch_edit.cpp:1094:24)::operator()",
+          "owner": "ForgeCad::editSketchPattern"
+        },
+        {
+          "line": 1142,
+          "symbol": "ForgeCad::editSketchPattern::(lambda at /home/myungit/Linux_CAD_forFree/cad_sketch_edit.cpp:1094:24)::operator()",
+          "owner": "ForgeCad::editSketchPattern"
+        },
+        {
+          "line": 1147,
+          "symbol": "ForgeCad::patternSketchEntities",
+          "owner": "ForgeCad::editSketchPattern"
+        }
+      ]
+    },
+    {
+      "source": "cad_sketch_edit.cpp",
+      "target": "cad_sketch_edit.h",
+      "kind": "call",
+      "count": 39,
+      "sites": [
+        {
+          "line": 364,
+          "symbol": "ForgeCad::SketchEntity::SketchEntity",
+          "owner": "ForgeCad::refreshCoincidences"
+        },
+        {
+          "line": 485,
+          "symbol": "ForgeCad::SketchEntity::operator=",
+          "owner": "ForgeCad::explodePolygon"
+        },
+        {
+          "line": 508,
+          "symbol": "ForgeCad::SketchEntity::SketchEntity",
+          "owner": "ForgeCad::trimSpan"
+        },
+        {
+          "line": 577,
+          "symbol": "ForgeCad::SketchEditResult::SketchEditResult",
+          "owner": "ForgeCad::trimSketchEntity"
+        },
+        {
+          "line": 579,
+          "symbol": "ForgeCad::SketchEditResult::SketchEditResult",
+          "owner": "ForgeCad::trimSketchEntity"
+        },
+        {
+          "line": 580,
+          "symbol": "ForgeCad::SketchEntity::SketchEntity",
+          "owner": "ForgeCad::trimSketchEntity"
+        },
+        {
+          "line": 581,
+          "symbol": "ForgeCad::SketchEntity::SketchEntity",
+          "owner": "ForgeCad::trimSketchEntity"
+        },
+        {
+          "line": 582,
+          "symbol": "ForgeCad::SketchEntity::SketchEntity",
+          "owner": "ForgeCad::trimSketchEntity"
+        },
+        {
+          "line": 586,
+          "symbol": "ForgeCad::SketchEntity::SketchEntity",
+          "owner": "ForgeCad::trimSketchEntity"
+        },
+        {
+          "line": 588,
+          "symbol": "ForgeCad::SketchEntity::SketchEntity",
+          "owner": "ForgeCad::trimSketchEntity"
+        },
+        {
+          "line": 589,
+          "symbol": "ForgeCad::SketchEntity::SketchEntity",
+          "owner": "ForgeCad::trimSketchEntity"
+        },
+        {
+          "line": 593,
+          "symbol": "ForgeCad::SketchEntity::SketchEntity",
+          "owner": "ForgeCad::trimSketchEntity"
+        },
+        {
+          "line": 596,
+          "symbol": "ForgeCad::SketchEditResult::SketchEditResult",
+          "owner": "ForgeCad::trimSketchEntity"
+        },
+        {
+          "line": 602,
+          "symbol": "ForgeCad::SketchEntity::SketchEntity",
+          "owner": "ForgeCad::trimPreview"
+        },
+        {
+          "line": 604,
+          "symbol": "ForgeCad::SketchEntity::SketchEntity",
+          "owner": "ForgeCad::trimPreview"
+        },
+        {
+          "line": 613,
+          "symbol": "ForgeCad::SketchEditResult::SketchEditResult",
+          "owner": "ForgeCad::extendSketchEntity"
+        },
+        {
+          "line": 615,
+          "symbol": "ForgeCad::SketchEditResult::SketchEditResult",
+          "owner": "ForgeCad::extendSketchEntity"
+        },
+        {
+          "line": 616,
+          "symbol": "ForgeCad::SketchEntity::SketchEntity",
+          "owner": "ForgeCad::extendSketchEntity"
+        },
+        {
+          "line": 617,
+          "symbol": "ForgeCad::SketchEntity::SketchEntity",
+          "owner": "ForgeCad::extendSketchEntity"
+        },
+        {
+          "line": 621,
+          "symbol": "ForgeCad::SketchEntity::SketchEntity",
+          "owner": "ForgeCad::extendSketchEntity"
+        },
+        {
+          "line": 662,
+          "symbol": "ForgeCad::SketchEditResult::SketchEditResult",
+          "owner": "ForgeCad::extendSketchEntity"
+        },
+        {
+          "line": 667,
+          "symbol": "ForgeCad::SketchEditResult::SketchEditResult",
+          "owner": "ForgeCad::splitSketchEntity"
+        },
+        {
+          "line": 669,
+          "symbol": "ForgeCad::SketchEditResult::SketchEditResult",
+          "owner": "ForgeCad::splitSketchEntity"
+        },
+        {
+          "line": 670,
+          "symbol": "ForgeCad::SketchEntity::SketchEntity",
+          "owner": "ForgeCad::splitSketchEntity"
+        },
+        {
+          "line": 671,
+          "symbol": "ForgeCad::SketchEntity::SketchEntity",
+          "owner": "ForgeCad::splitSketchEntity"
+        },
+        {
+          "line": 674,
+          "symbol": "ForgeCad::SketchEntity::SketchEntity",
+          "owner": "ForgeCad::splitSketchEntity"
+        },
+        {
+          "line": 687,
+          "symbol": "ForgeCad::SketchEntity::SketchEntity",
+          "owner": "ForgeCad::splitSketchEntity"
+        },
+        {
+          "line": 692,
+          "symbol": "ForgeCad::SketchEntity::SketchEntity",
+          "owner": "ForgeCad::splitSketchEntity"
+        },
+        {
+          "line": 693,
+          "symbol": "ForgeCad::SketchEntity::SketchEntity",
+          "owner": "ForgeCad::splitSketchEntity"
+        },
+        {
+          "line": 700,
+          "symbol": "ForgeCad::SketchEntity::SketchEntity",
+          "owner": "ForgeCad::splitSketchEntity"
+        },
+        {
+          "line": 703,
+          "symbol": "ForgeCad::SketchEditResult::SketchEditResult",
+          "owner": "ForgeCad::splitSketchEntity"
+        },
+        {
+          "line": 891,
+          "symbol": "ForgeCad::SketchEntity::SketchEntity",
+          "owner": "ForgeCad::appendMappedCopies"
+        },
+        {
+          "line": 898,
+          "symbol": "ForgeCad::SketchEntity::operator=",
+          "owner": "ForgeCad::appendMappedCopies"
+        },
+        {
+          "line": 901,
+          "symbol": "ForgeCad::SketchEntity::operator=",
+          "owner": "ForgeCad::appendMappedCopies"
+        },
+        {
+          "line": 928,
+          "symbol": "ForgeCad::SketchEditResult::SketchEditResult",
+          "owner": "ForgeCad::patternSketchEntities"
+        },
+        {
+          "line": 1016,
+          "symbol": "ForgeCad::SketchEditResult::SketchEditResult",
+          "owner": "ForgeCad::patternSketchEntities"
+        },
+        {
+          "line": 1099,
+          "symbol": "ForgeCad::SketchPattern::SketchPattern",
+          "owner": "ForgeCad::editSketchPattern"
+        },
+        {
+          "line": 1148,
+          "symbol": "ForgeCad::SketchEditResult::SketchEditResult",
+          "owner": "ForgeCad::editSketchPattern"
+        },
+        {
+          "line": 1159,
+          "symbol": "ForgeCad::SketchEditResult::SketchEditResult",
+          "owner": "ForgeCad::editSketchPattern"
+        }
+      ]
+    },
+    {
+      "source": "cad_sketch_edit.cpp",
+      "target": "cad_sketch_edit.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 1,
+          "symbol": "cad_sketch_edit.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "cad_sketch_edit.cpp",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 67,
+      "sites": [
+        {
+          "line": 257,
+          "symbol": "CurveObject::CurveObject",
+          "owner": "ForgeCad::splineRange"
+        },
+        {
+          "line": 271,
+          "symbol": "CurveObject::CurveObject",
+          "owner": "ForgeCad::splineRange"
+        },
+        {
+          "line": 291,
+          "symbol": "CurveObject::operator=",
+          "owner": "ForgeCad::pieceOf"
+        },
+        {
+          "line": 360,
+          "symbol": "ConstraintRef::operator==",
+          "owner": "ForgeCad::refreshCoincidences"
+        },
+        {
+          "line": 370,
+          "symbol": "SketchConstraint::SketchConstraint",
+          "owner": "ForgeCad::refreshCoincidences"
+        },
+        {
+          "line": 372,
+          "symbol": "ConstraintRef::operator=",
+          "owner": "ForgeCad::refreshCoincidences"
+        },
+        {
+          "line": 373,
+          "symbol": "ConstraintRef::operator=",
+          "owner": "ForgeCad::refreshCoincidences"
+        },
+        {
+          "line": 429,
+          "symbol": "SketchObject::isConstructionSegment",
+          "owner": "ForgeCad::replaceWithPieces"
+        },
+        {
+          "line": 434,
+          "symbol": "SketchConstraint::SketchConstraint",
+          "owner": "ForgeCad::replaceWithPieces"
+        },
+        {
+          "line": 437,
+          "symbol": "ConstraintRef::operator!=",
+          "owner": "ForgeCad::replaceWithPieces"
+        },
+        {
+          "line": 438,
+          "symbol": "ConstraintRef::operator=",
+          "owner": "ForgeCad::replaceWithPieces"
+        },
+        {
+          "line": 438,
+          "symbol": "ConstraintRef::operator==",
+          "owner": "ForgeCad::replaceWithPieces"
+        },
+        {
+          "line": 439,
+          "symbol": "ConstraintRef::operator=",
+          "owner": "ForgeCad::replaceWithPieces"
+        },
+        {
+          "line": 445,
+          "symbol": "CurveObject::operator=",
+          "owner": "ForgeCad::replaceWithPieces"
+        },
+        {
+          "line": 459,
+          "symbol": "CurveObject::CurveObject",
+          "owner": "ForgeCad::explodePolygon"
+        },
+        {
+          "line": 576,
+          "symbol": "SketchObject::SketchObject",
+          "owner": "ForgeCad::trimSketchEntity"
+        },
+        {
+          "line": 595,
+          "symbol": "SketchObject::operator=",
+          "owner": "ForgeCad::trimSketchEntity"
+        },
+        {
+          "line": 600,
+          "symbol": "SketchObject::SketchObject",
+          "owner": "ForgeCad::trimPreview"
+        },
+        {
+          "line": 612,
+          "symbol": "SketchObject::SketchObject",
+          "owner": "ForgeCad::extendSketchEntity"
+        },
+        {
+          "line": 661,
+          "symbol": "SketchObject::operator=",
+          "owner": "ForgeCad::extendSketchEntity"
+        },
+        {
+          "line": 666,
+          "symbol": "SketchObject::SketchObject",
+          "owner": "ForgeCad::splitSketchEntity"
+        },
+        {
+          "line": 702,
+          "symbol": "SketchObject::operator=",
+          "owner": "ForgeCad::splitSketchEntity"
+        },
+        {
+          "line": 712,
+          "symbol": "SketchObject::SketchObject",
+          "owner": "ForgeCad::blendSketchSegments"
+        },
+        {
+          "line": 744,
+          "symbol": "SketchObject::isConstructionSegment",
+          "owner": "ForgeCad::blendSketchSegments"
+        },
+        {
+          "line": 752,
+          "symbol": "CurveObject::CurveObject",
+          "owner": "ForgeCad::blendSketchSegments"
+        },
+        {
+          "line": 765,
+          "symbol": "SketchConstraint::SketchConstraint",
+          "owner": "ForgeCad::blendSketchSegments"
+        },
+        {
+          "line": 767,
+          "symbol": "ConstraintRef::operator=",
+          "owner": "ForgeCad::blendSketchSegments"
+        },
+        {
+          "line": 768,
+          "symbol": "ConstraintRef::operator=",
+          "owner": "ForgeCad::blendSketchSegments"
+        },
+        {
+          "line": 772,
+          "symbol": "SketchObject::operator=",
+          "owner": "ForgeCad::blendSketchSegments"
+        },
+        {
+          "line": 841,
+          "symbol": "CurveObject::CurveObject",
+          "owner": "ForgeCad::mappedCurve"
+        },
+        {
+          "line": 847,
+          "symbol": "CurveObject::CurveObject",
+          "owner": "ForgeCad::mappedCurve"
+        },
+        {
+          "line": 897,
+          "symbol": "SketchObject::isConstructionSegment",
+          "owner": "ForgeCad::appendMappedCopies"
+        },
+        {
+          "line": 912,
+          "symbol": "ConstraintRef::ConstraintRef",
+          "owner": "ForgeCad::appendMappedCopies"
+        },
+        {
+          "line": 914,
+          "symbol": "SketchConstraint::SketchConstraint",
+          "owner": "ForgeCad::appendMappedCopies"
+        },
+        {
+          "line": 915,
+          "symbol": "ConstraintRef::ConstraintRef",
+          "owner": "ForgeCad::appendMappedCopies"
+        },
+        {
+          "line": 915,
+          "symbol": "ConstraintRef::operator=",
+          "owner": "ForgeCad::appendMappedCopies"
+        },
+        {
+          "line": 916,
+          "symbol": "ConstraintRef::ConstraintRef",
+          "owner": "ForgeCad::appendMappedCopies"
+        },
+        {
+          "line": 916,
+          "symbol": "ConstraintRef::operator=",
+          "owner": "ForgeCad::appendMappedCopies"
+        },
+        {
+          "line": 966,
+          "symbol": "SketchObject::SketchObject",
+          "owner": "ForgeCad::patternSketchEntities"
+        },
+        {
+          "line": 971,
+          "symbol": "SketchConstraint::SketchConstraint",
+          "owner": "ForgeCad::patternSketchEntities"
+        },
+        {
+          "line": 988,
+          "symbol": "ConstraintRef::ConstraintRef",
+          "owner": "ForgeCad::patternSketchEntities"
+        },
+        {
+          "line": 988,
+          "symbol": "ConstraintRef::operator=",
+          "owner": "ForgeCad::patternSketchEntities"
+        },
+        {
+          "line": 1000,
+          "symbol": "ConstraintRef::operator=",
+          "owner": "ForgeCad::patternSketchEntities"
+        },
+        {
+          "line": 1005,
+          "symbol": "ConstraintRef::operator=",
+          "owner": "ForgeCad::patternSketchEntities"
+        },
+        {
+          "line": 1007,
+          "symbol": "ConstraintRef::operator=",
+          "owner": "ForgeCad::patternSketchEntities"
+        },
+        {
+          "line": 1010,
+          "symbol": "ConstraintRef::operator=",
+          "owner": "ForgeCad::patternSketchEntities"
+        },
+        {
+          "line": 1014,
+          "symbol": "SketchObject::operator=",
+          "owner": "ForgeCad::patternSketchEntities"
+        },
+        {
+          "line": 1029,
+          "symbol": "SketchObject::SketchObject",
+          "owner": "ForgeCad::moveSketchEntities"
+        },
+        {
+          "line": 1046,
+          "symbol": "CurveObject::operator=",
+          "owner": "ForgeCad::moveSketchEntities"
+        },
+        {
+          "line": 1055,
+          "symbol": "SketchObject::operator=",
+          "owner": "ForgeCad::moveSketchEntities"
+        },
+        {
+          "line": 1063,
+          "symbol": "SketchPatternData::SketchPatternData",
+          "owner": "ForgeCad::editSketchPattern"
+        },
+        {
+          "line": 1064,
+          "symbol": "SketchPatternData::SketchPatternData",
+          "owner": "ForgeCad::editSketchPattern"
+        },
+        {
+          "line": 1077,
+          "symbol": "SketchPatternData::instances",
+          "owner": "ForgeCad::editSketchPattern"
+        },
+        {
+          "line": 1078,
+          "symbol": "SketchPatternData::instances",
+          "owner": "ForgeCad::editSketchPattern"
+        },
+        {
+          "line": 1079,
+          "symbol": "SketchPatternData::operator=",
+          "owner": "ForgeCad::editSketchPattern"
+        },
+        {
+          "line": 1084,
+          "symbol": "SketchObject::SketchObject",
+          "owner": "ForgeCad::editSketchPattern"
+        },
+        {
+          "line": 1097,
+          "symbol": "ConstraintRef::ConstraintRef",
+          "owner": "ForgeCad::editSketchPattern"
+        },
+        {
+          "line": 1111,
+          "symbol": "ConstraintRef::ConstraintRef",
+          "owner": "ForgeCad::editSketchPattern"
+        },
+        {
+          "line": 1111,
+          "symbol": "ConstraintRef::operator=",
+          "owner": "ForgeCad::editSketchPattern"
+        },
+        {
+          "line": 1115,
+          "symbol": "ConstraintRef::ConstraintRef",
+          "owner": "ForgeCad::editSketchPattern"
+        },
+        {
+          "line": 1115,
+          "symbol": "ConstraintRef::operator=",
+          "owner": "ForgeCad::editSketchPattern"
+        },
+        {
+          "line": 1121,
+          "symbol": "ConstraintRef::ConstraintRef",
+          "owner": "ForgeCad::editSketchPattern"
+        },
+        {
+          "line": 1121,
+          "symbol": "ConstraintRef::operator=",
+          "owner": "ForgeCad::editSketchPattern"
+        },
+        {
+          "line": 1132,
+          "symbol": "ConstraintRef::ConstraintRef",
+          "owner": "ForgeCad::editSketchPattern"
+        },
+        {
+          "line": 1132,
+          "symbol": "ConstraintRef::operator=",
+          "owner": "ForgeCad::editSketchPattern"
+        },
+        {
+          "line": 1142,
+          "symbol": "ConstraintRef::ConstraintRef",
+          "owner": "ForgeCad::editSketchPattern"
+        },
+        {
+          "line": 1157,
+          "symbol": "SketchObject::operator=",
+          "owner": "ForgeCad::editSketchPattern"
+        }
+      ]
+    },
+    {
+      "source": "cad_sketch_edit.cpp",
+      "target": "kernel/fk_bspline.h",
+      "kind": "call",
+      "count": 12,
+      "sites": [
+        {
+          "line": 298,
+          "symbol": "ForgeCad::Kernel::toBSpline",
+          "owner": "ForgeCad::pieceOf"
+        },
+        {
+          "line": 299,
+          "symbol": "ForgeCad::Kernel::BSplineCurve::BSplineCurve",
+          "owner": "ForgeCad::pieceOf"
+        },
+        {
+          "line": 301,
+          "symbol": "ForgeCad::Kernel::BSplineCurve::poles",
+          "owner": "ForgeCad::pieceOf"
+        },
+        {
+          "line": 302,
+          "symbol": "ForgeCad::Kernel::BSplineCurve::BSplineCurve",
+          "owner": "ForgeCad::pieceOf"
+        },
+        {
+          "line": 302,
+          "symbol": "ForgeCad::Kernel::BSplineCurve::degree",
+          "owner": "ForgeCad::pieceOf"
+        },
+        {
+          "line": 302,
+          "symbol": "ForgeCad::Kernel::BSplineCurve::knots",
+          "owner": "ForgeCad::pieceOf"
+        },
+        {
+          "line": 302,
+          "symbol": "ForgeCad::Kernel::BSplineCurve::weights",
+          "owner": "ForgeCad::pieceOf"
+        },
+        {
+          "line": 304,
+          "symbol": "ForgeCad::Kernel::BSplineCurve::domain",
+          "owner": "ForgeCad::pieceOf"
+        },
+        {
+          "line": 308,
+          "symbol": "ForgeCad::Kernel::BSplineCurve::degree",
+          "owner": "ForgeCad::pieceOf"
+        },
+        {
+          "line": 309,
+          "symbol": "ForgeCad::Kernel::BSplineCurve::poles",
+          "owner": "ForgeCad::pieceOf"
+        },
+        {
+          "line": 310,
+          "symbol": "ForgeCad::Kernel::BSplineCurve::weights",
+          "owner": "ForgeCad::pieceOf"
+        },
+        {
+          "line": 311,
+          "symbol": "ForgeCad::Kernel::BSplineCurve::knots",
+          "owner": "ForgeCad::pieceOf"
+        }
+      ]
+    },
+    {
+      "source": "cad_sketch_edit.cpp",
+      "target": "kernel/fk_bspline.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 17,
+          "symbol": "fk_bspline.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "cad_sketch_edit.cpp",
+      "target": "kernel/fk_curve.h",
+      "kind": "call",
+      "count": 3,
+      "sites": [
+        {
+          "line": 54,
+          "symbol": "ForgeCad::Kernel::Curve::point",
+          "owner": "ForgeCad::Geometry::value"
+        },
+        {
+          "line": 91,
+          "symbol": "ForgeCad::Kernel::makeCircle",
+          "owner": "ForgeCad::geometryOf"
+        },
+        {
+          "line": 105,
+          "symbol": "ForgeCad::Kernel::makeCircle",
+          "owner": "ForgeCad::geometryOf"
+        }
+      ]
+    },
+    {
+      "source": "cad_sketch_edit.cpp",
+      "target": "kernel/fk_curve.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 14,
+          "symbol": "fk_curve.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "cad_sketch_edit.cpp",
+      "target": "kernel/fk_curve_algo.h",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 214,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::project"
+        }
+      ]
+    },
+    {
+      "source": "cad_sketch_edit.cpp",
+      "target": "kernel/fk_curve_algo.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 15,
+          "symbol": "fk_curve_algo.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "cad_sketch_edit.cpp",
+      "target": "kernel/fk_intersect.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 179,
+          "symbol": "ForgeCad::Kernel::intersectCurves",
+          "owner": "ForgeCad::crossings"
+        }
+      ]
+    },
+    {
+      "source": "cad_sketch_edit.cpp",
+      "target": "kernel/fk_intersect.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 16,
+          "symbol": "fk_intersect.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "cad_sketch_edit.cpp",
+      "target": "kernel/fk_math.h",
+      "kind": "call",
+      "count": 7,
+      "sites": [
+        {
+          "line": 29,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::toVec"
+        },
+        {
+          "line": 30,
+          "symbol": "ForgeCad::Kernel::Vec::x",
+          "owner": "ForgeCad::toPoint"
+        },
+        {
+          "line": 30,
+          "symbol": "ForgeCad::Kernel::Vec::y",
+          "owner": "ForgeCad::toPoint"
+        },
+        {
+          "line": 301,
+          "symbol": "ForgeCad::Kernel::Vec::x",
+          "owner": "ForgeCad::pieceOf"
+        },
+        {
+          "line": 301,
+          "symbol": "ForgeCad::Kernel::Vec::y",
+          "owner": "ForgeCad::pieceOf"
+        },
+        {
+          "line": 309,
+          "symbol": "ForgeCad::Kernel::Vec::x",
+          "owner": "ForgeCad::pieceOf"
+        },
+        {
+          "line": 309,
+          "symbol": "ForgeCad::Kernel::Vec::y",
+          "owner": "ForgeCad::pieceOf"
+        }
+      ]
+    },
+    {
+      "source": "cad_sketch_edit.cpp",
+      "target": "kernel/fk_nurbs.cpp",
+      "kind": "call",
+      "count": 2,
+      "sites": [
+        {
+          "line": 303,
+          "symbol": "ForgeCad::Kernel::joinBezierPieces",
+          "owner": "ForgeCad::pieceOf"
+        },
+        {
+          "line": 303,
+          "symbol": "ForgeCad::Kernel::standardBezierPieces",
+          "owner": "ForgeCad::pieceOf"
+        }
+      ]
+    },
+    {
+      "source": "cad_sketch_edit.cpp",
+      "target": "kernel/fk_nurbs.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 18,
+          "symbol": "fk_nurbs.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "cad_sketch_edit.cpp",
+      "target": "kernel/fk_profile.h",
+      "kind": "call",
+      "count": 2,
+      "sites": [
+        {
+          "line": 466,
+          "symbol": "ForgeCad::Kernel::ProfileSegment::end",
+          "owner": "ForgeCad::explodePolygon"
+        },
+        {
+          "line": 466,
+          "symbol": "ForgeCad::Kernel::ProfileSegment::start",
+          "owner": "ForgeCad::explodePolygon"
+        }
+      ]
+    },
+    {
+      "source": "cad_sketch_edit.h",
+      "target": "cad_types.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 9,
+          "symbol": "cad_types.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "cad_sketch_offset.cpp",
+      "target": "cad_sketch_edit.h",
+      "kind": "call",
+      "count": 7,
+      "sites": [
+        {
+          "line": 207,
+          "symbol": "ForgeCad::SketchEntity::operator=",
+          "owner": "ForgeCad::offsetOf"
+        },
+        {
+          "line": 514,
+          "symbol": "ForgeCad::SketchEditResult::SketchEditResult",
+          "owner": "ForgeCad::offsetSketchEntities"
+        },
+        {
+          "line": 517,
+          "symbol": "ForgeCad::SketchEditResult::SketchEditResult",
+          "owner": "ForgeCad::offsetSketchEntities"
+        },
+        {
+          "line": 522,
+          "symbol": "ForgeCad::SketchEditResult::SketchEditResult",
+          "owner": "ForgeCad::offsetSketchEntities"
+        },
+        {
+          "line": 685,
+          "symbol": "ForgeCad::SketchEditResult::SketchEditResult",
+          "owner": "ForgeCad::offsetSketchEntities"
+        },
+        {
+          "line": 704,
+          "symbol": "ForgeCad::SketchEditResult::SketchEditResult",
+          "owner": "ForgeCad::offsetSketchEntities"
+        },
+        {
+          "line": 734,
+          "symbol": "ForgeCad::SketchEntity::SketchEntity",
+          "owner": "ForgeCad::refreshSketchOffsets"
+        }
+      ]
+    },
+    {
+      "source": "cad_sketch_offset.h",
+      "target": "cad_sketch_edit.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 6,
+          "symbol": "cad_sketch_edit.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "cad_sketch_reference_usage.cpp",
+      "target": "cad_sketch_edit.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 80,
+          "symbol": "ForgeCad::removeSketchEntities",
+          "owner": "ForgeCad::pruneUnusedSketchReferences"
+        }
+      ]
+    },
+    {
+      "source": "cad_sketch_reference_usage.cpp",
+      "target": "cad_sketch_edit.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 3,
+          "symbol": "cad_sketch_edit.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "cad_sketch_refs.h",
+      "target": "cad_sketch_edit.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 7,
+          "symbol": "cad_sketch_edit.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "cad_snap.cpp",
+      "target": "cad_curve_solver.cpp",
+      "kind": "call",
+      "count": 3,
+      "sites": [
+        {
+          "line": 59,
+          "symbol": "ForgeCad::curveQuadrants",
+          "owner": "ForgeCad::pointAttachment"
+        },
+        {
+          "line": 63,
+          "symbol": "ForgeCad::curveGeometry",
+          "owner": "ForgeCad::pointAttachment"
+        },
+        {
+          "line": 121,
+          "symbol": "ForgeCad::curveGeometry",
+          "owner": "ForgeCad::snapIntersection"
+        }
+      ]
+    },
+    {
+      "source": "cad_snap.cpp",
+      "target": "cad_curve_solver.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 4,
+          "symbol": "cad_curve_solver.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "cad_snap.cpp",
+      "target": "cad_kernel.h",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 113,
+          "symbol": "ForgeCad::sketchConnectionTolerance",
+          "owner": "ForgeCad::snapIntersection"
+        }
+      ]
+    },
+    {
+      "source": "cad_snap.cpp",
+      "target": "cad_kernel.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 5,
+          "symbol": "cad_kernel.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "cad_snap.cpp",
+      "target": "cad_sketch_refs.cpp",
+      "kind": "call",
+      "count": 2,
+      "sites": [
+        {
+          "line": 83,
+          "symbol": "ForgeCad::appendLinkedSketchReference",
+          "owner": "ForgeCad::resolvePointAttachment"
+        },
+        {
+          "line": 169,
+          "symbol": "ForgeCad::appendLinkedSketchReference",
+          "owner": "ForgeCad::constrainIntersection"
+        }
+      ]
+    },
+    {
+      "source": "cad_snap.cpp",
+      "target": "cad_sketch_refs.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 6,
+          "symbol": "cad_sketch_refs.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "cad_snap.cpp",
+      "target": "cad_snap.cpp",
+      "kind": "call",
+      "count": 28,
+      "sites": [
+        {
+          "line": 19,
+          "symbol": "ForgeCad::distance",
+          "owner": "ForgeCad::pointAttachment"
+        },
+        {
+          "line": 39,
+          "symbol": "ForgeCad::pointAttachment::(lambda at /home/myungit/Linux_CAD_forFree/cad_snap.cpp:23:25)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/cad_snap.cpp:25:27)::operator()",
+          "owner": "ForgeCad::pointAttachment"
+        },
+        {
+          "line": 41,
+          "symbol": "ForgeCad::distance",
+          "owner": "ForgeCad::pointAttachment"
+        },
+        {
+          "line": 41,
+          "symbol": "ForgeCad::pointAttachment::(lambda at /home/myungit/Linux_CAD_forFree/cad_snap.cpp:23:25)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/cad_snap.cpp:31:31)::operator()",
+          "owner": "ForgeCad::pointAttachment"
+        },
+        {
+          "line": 42,
+          "symbol": "ForgeCad::distance",
+          "owner": "ForgeCad::pointAttachment"
+        },
+        {
+          "line": 42,
+          "symbol": "ForgeCad::pointAttachment::(lambda at /home/myungit/Linux_CAD_forFree/cad_snap.cpp:23:25)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/cad_snap.cpp:31:31)::operator()",
+          "owner": "ForgeCad::pointAttachment"
+        },
+        {
+          "line": 43,
+          "symbol": "ForgeCad::distance",
+          "owner": "ForgeCad::pointAttachment"
+        },
+        {
+          "line": 43,
+          "symbol": "ForgeCad::pointAttachment::(lambda at /home/myungit/Linux_CAD_forFree/cad_snap.cpp:23:25)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/cad_snap.cpp:31:31)::operator()",
+          "owner": "ForgeCad::pointAttachment"
+        },
+        {
+          "line": 48,
+          "symbol": "ForgeCad::distance",
+          "owner": "ForgeCad::pointAttachment"
+        },
+        {
+          "line": 48,
+          "symbol": "ForgeCad::pointAttachment::(lambda at /home/myungit/Linux_CAD_forFree/cad_snap.cpp:23:25)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/cad_snap.cpp:31:31)::operator()",
+          "owner": "ForgeCad::pointAttachment"
+        },
+        {
+          "line": 52,
+          "symbol": "ForgeCad::pointAttachment::(lambda at /home/myungit/Linux_CAD_forFree/cad_snap.cpp:23:25)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/cad_snap.cpp:25:27)::operator()",
+          "owner": "ForgeCad::pointAttachment"
+        },
+        {
+          "line": 57,
+          "symbol": "ForgeCad::distance",
+          "owner": "ForgeCad::pointAttachment"
+        },
+        {
+          "line": 57,
+          "symbol": "ForgeCad::pointAttachment::(lambda at /home/myungit/Linux_CAD_forFree/cad_snap.cpp:23:25)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/cad_snap.cpp:31:31)::operator()",
+          "owner": "ForgeCad::pointAttachment"
+        },
+        {
+          "line": 60,
+          "symbol": "ForgeCad::distance",
+          "owner": "ForgeCad::pointAttachment"
+        },
+        {
+          "line": 60,
+          "symbol": "ForgeCad::pointAttachment::(lambda at /home/myungit/Linux_CAD_forFree/cad_snap.cpp:23:25)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/cad_snap.cpp:31:31)::operator()",
+          "owner": "ForgeCad::pointAttachment"
+        },
+        {
+          "line": 64,
+          "symbol": "ForgeCad::pointAttachment::(lambda at /home/myungit/Linux_CAD_forFree/cad_snap.cpp:23:25)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/cad_snap.cpp:31:31)::operator()",
+          "owner": "ForgeCad::pointAttachment"
+        },
+        {
+          "line": 69,
+          "symbol": "ForgeCad::pointAttachment::(lambda at /home/myungit/Linux_CAD_forFree/cad_snap.cpp:23:25)::operator()",
+          "owner": "ForgeCad::pointAttachment"
+        },
+        {
+          "line": 112,
+          "symbol": "ForgeCad::distance",
+          "owner": "ForgeCad::snapIntersection"
+        },
+        {
+          "line": 114,
+          "symbol": "ForgeCad::snapIntersection::(lambda at /home/myungit/Linux_CAD_forFree/cad_snap.cpp:101:25)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/cad_snap.cpp:102:26)::operator()",
+          "owner": "ForgeCad::snapIntersection"
+        },
+        {
+          "line": 121,
+          "symbol": "ForgeCad::snapIntersection::(lambda at /home/myungit/Linux_CAD_forFree/cad_snap.cpp:101:25)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/cad_snap.cpp:102:26)::operator()",
+          "owner": "ForgeCad::snapIntersection"
+        },
+        {
+          "line": 125,
+          "symbol": "ForgeCad::snapIntersection::(lambda at /home/myungit/Linux_CAD_forFree/cad_snap.cpp:101:25)::operator()",
+          "owner": "ForgeCad::snapIntersection"
+        },
+        {
+          "line": 142,
+          "symbol": "ForgeCad::snapIntersection::(lambda at /home/myungit/Linux_CAD_forFree/cad_snap.cpp:138:36)::operator()",
+          "owner": "ForgeCad::snapIntersection"
+        },
+        {
+          "line": 144,
+          "symbol": "ForgeCad::distance",
+          "owner": "ForgeCad::snapIntersection"
+        },
+        {
+          "line": 179,
+          "symbol": "ForgeCad::constrainIntersection::(lambda at /home/myungit/Linux_CAD_forFree/cad_snap.cpp:162:26)::operator()",
+          "owner": "ForgeCad::constrainIntersection"
+        },
+        {
+          "line": 210,
+          "symbol": "ForgeCad::distance",
+          "owner": "ForgeCad::snapSegments"
+        },
+        {
+          "line": 219,
+          "symbol": "ForgeCad::distance",
+          "owner": "ForgeCad::snapSegments"
+        },
+        {
+          "line": 227,
+          "symbol": "ForgeCad::distance",
+          "owner": "ForgeCad::snapSegments"
+        },
+        {
+          "line": 243,
+          "symbol": "ForgeCad::distance",
+          "owner": "ForgeCad::snapSegments"
+        }
+      ]
+    },
+    {
+      "source": "cad_snap.cpp",
+      "target": "cad_snap.h",
+      "kind": "call",
+      "count": 10,
+      "sites": [
+        {
+          "line": 21,
+          "symbol": "ForgeCad::PointAttachment::PointAttachment",
+          "owner": "ForgeCad::pointAttachment"
+        },
+        {
+          "line": 36,
+          "symbol": "ForgeCad::PointAttachment::operator=",
+          "owner": "ForgeCad::pointAttachment"
+        },
+        {
+          "line": 70,
+          "symbol": "ForgeCad::PointAttachment::PointAttachment",
+          "owner": "ForgeCad::pointAttachment"
+        },
+        {
+          "line": 126,
+          "symbol": "ForgeCad::IntersectionSnap::IntersectionSnap",
+          "owner": "ForgeCad::snapIntersection"
+        },
+        {
+          "line": 150,
+          "symbol": "ForgeCad::IntersectionSnap::operator=",
+          "owner": "ForgeCad::snapIntersection"
+        },
+        {
+          "line": 154,
+          "symbol": "ForgeCad::IntersectionSnap::IntersectionSnap",
+          "owner": "ForgeCad::snapIntersection"
+        },
+        {
+          "line": 198,
+          "symbol": "ForgeCad::SnapResult::SnapResult",
+          "owner": "ForgeCad::snapSegments"
+        },
+        {
+          "line": 205,
+          "symbol": "ForgeCad::SnapResult::SnapResult",
+          "owner": "ForgeCad::snapSegments"
+        },
+        {
+          "line": 236,
+          "symbol": "ForgeCad::SnapResult::SnapResult",
+          "owner": "ForgeCad::snapSegments"
+        },
+        {
+          "line": 255,
+          "symbol": "ForgeCad::SnapResult::SnapResult",
+          "owner": "ForgeCad::snapSegments"
+        }
+      ]
+    },
+    {
+      "source": "cad_snap.cpp",
+      "target": "cad_snap.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 1,
+          "symbol": "cad_snap.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "cad_snap.cpp",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 15,
+      "sites": [
+        {
+          "line": 76,
+          "symbol": "ConstraintRef::ConstraintRef",
+          "owner": "ForgeCad::resolvePointAttachment"
+        },
+        {
+          "line": 77,
+          "symbol": "ConstraintRef::ConstraintRef",
+          "owner": "ForgeCad::resolvePointAttachment"
+        },
+        {
+          "line": 83,
+          "symbol": "GeometryRef::GeometryRef",
+          "owner": "ForgeCad::resolvePointAttachment"
+        },
+        {
+          "line": 130,
+          "symbol": "ConstraintRef::operator==",
+          "owner": "ForgeCad::snapIntersection"
+        },
+        {
+          "line": 161,
+          "symbol": "SketchObject::SketchObject",
+          "owner": "ForgeCad::constrainIntersection"
+        },
+        {
+          "line": 163,
+          "symbol": "ConstraintRef::operator=",
+          "owner": "ForgeCad::constrainIntersection"
+        },
+        {
+          "line": 169,
+          "symbol": "GeometryRef::GeometryRef",
+          "owner": "ForgeCad::constrainIntersection"
+        },
+        {
+          "line": 172,
+          "symbol": "ConstraintRef::operator=",
+          "owner": "ForgeCad::constrainIntersection"
+        },
+        {
+          "line": 178,
+          "symbol": "ConstraintRef::ConstraintRef",
+          "owner": "ForgeCad::constrainIntersection"
+        },
+        {
+          "line": 179,
+          "symbol": "ConstraintRef::ConstraintRef",
+          "owner": "ForgeCad::constrainIntersection"
+        },
+        {
+          "line": 180,
+          "symbol": "ConstraintRef::operator==",
+          "owner": "ForgeCad::constrainIntersection"
+        },
+        {
+          "line": 185,
+          "symbol": "ConstraintRef::operator==",
+          "owner": "ForgeCad::constrainIntersection"
+        },
+        {
+          "line": 187,
+          "symbol": "ConstraintRef::operator=",
+          "owner": "ForgeCad::constrainIntersection"
+        },
+        {
+          "line": 187,
+          "symbol": "SketchConstraint::SketchConstraint",
+          "owner": "ForgeCad::constrainIntersection"
+        },
+        {
+          "line": 191,
+          "symbol": "SketchObject::operator=",
+          "owner": "ForgeCad::constrainIntersection"
+        }
+      ]
+    },
+    {
+      "source": "cad_snap.cpp",
+      "target": "kernel/fk_curve_algo.h",
+      "kind": "call",
+      "count": 4,
+      "sites": [
+        {
+          "line": 65,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::pointAttachment"
+        },
+        {
+          "line": 107,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::snapIntersection"
+        },
+        {
+          "line": 147,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::snapIntersection"
+        },
+        {
+          "line": 148,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::snapIntersection"
+        }
+      ]
+    },
+    {
+      "source": "cad_snap.cpp",
+      "target": "kernel/fk_curve_algo.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 7,
+          "symbol": "fk_curve_algo.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "cad_snap.cpp",
+      "target": "kernel/fk_intersect.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 132,
+          "symbol": "ForgeCad::Kernel::intersectCurves",
+          "owner": "ForgeCad::snapIntersection"
+        }
+      ]
+    },
+    {
+      "source": "cad_snap.cpp",
+      "target": "kernel/fk_intersect.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 8,
+          "symbol": "fk_intersect.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "cad_snap.cpp",
+      "target": "kernel/fk_math.h",
+      "kind": "call",
+      "count": 12,
+      "sites": [
+        {
+          "line": 65,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::pointAttachment"
+        },
+        {
+          "line": 100,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::snapIntersection"
+        },
+        {
+          "line": 114,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::snapIntersection"
+        },
+        {
+          "line": 115,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::snapIntersection"
+        },
+        {
+          "line": 139,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::snapIntersection"
+        },
+        {
+          "line": 139,
+          "symbol": "ForgeCad::Kernel::norm",
+          "owner": "ForgeCad::snapIntersection"
+        },
+        {
+          "line": 139,
+          "symbol": "ForgeCad::Kernel::operator-",
+          "owner": "ForgeCad::snapIntersection"
+        },
+        {
+          "line": 140,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::snapIntersection"
+        },
+        {
+          "line": 140,
+          "symbol": "ForgeCad::Kernel::norm",
+          "owner": "ForgeCad::snapIntersection"
+        },
+        {
+          "line": 140,
+          "symbol": "ForgeCad::Kernel::operator-",
+          "owner": "ForgeCad::snapIntersection"
+        },
+        {
+          "line": 143,
+          "symbol": "ForgeCad::Kernel::Vec::x",
+          "owner": "ForgeCad::snapIntersection"
+        },
+        {
+          "line": 143,
+          "symbol": "ForgeCad::Kernel::Vec::y",
+          "owner": "ForgeCad::snapIntersection"
+        }
+      ]
+    },
+    {
+      "source": "cad_snap.cpp",
+      "target": "kernel/fk_profile.h",
+      "kind": "call",
+      "count": 2,
+      "sites": [
+        {
+          "line": 139,
+          "symbol": "ForgeCad::Kernel::ProfileSegment::start",
+          "owner": "ForgeCad::snapIntersection"
+        },
+        {
+          "line": 140,
+          "symbol": "ForgeCad::Kernel::ProfileSegment::end",
+          "owner": "ForgeCad::snapIntersection"
+        }
+      ]
+    },
+    {
+      "source": "forgeCad2026_dialogs_analysis.cpp",
+      "target": "cad_sketch_edit.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 48,
+          "symbol": "cad_sketch_edit.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "forgeCad2026_dialogs_common.cpp",
+      "target": "cad_sketch_edit.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 51,
+          "symbol": "cad_sketch_edit.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "forgeCad2026_dialogs_sketch.cpp",
+      "target": "cad_sketch_edit.h",
+      "kind": "call",
+      "count": 6,
+      "sites": [
+        {
+          "line": 612,
+          "symbol": "ForgeCad::SketchPattern::SketchPattern",
+          "owner": "sketchPatternDialog"
+        },
+        {
+          "line": 651,
+          "symbol": "ForgeCad::SketchPattern::SketchPattern",
+          "owner": "sketchPatternDialog"
+        },
+        {
+          "line": 797,
+          "symbol": "ForgeCad::SketchMove::SketchMove",
+          "owner": "sketchMoveDialog"
+        },
+        {
+          "line": 845,
+          "symbol": "ForgeCad::SketchMove::SketchMove",
+          "owner": "sketchMoveDialog"
+        },
+        {
+          "line": 850,
+          "symbol": "ForgeCad::SketchMove::SketchMove",
+          "owner": "sketchMoveDialog"
+        },
+        {
+          "line": 886,
+          "symbol": "ForgeCad::SketchMove::operator=",
+          "owner": "sketchMoveDialog"
+        }
+      ]
+    },
+    {
+      "source": "forgeCad2026_dialogs_sketch.cpp",
+      "target": "cad_sketch_edit.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 48,
+          "symbol": "cad_sketch_edit.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "forgeCad2026_dialogs_solids.cpp",
+      "target": "cad_sketch_edit.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 53,
+          "symbol": "cad_sketch_edit.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "forgeCad2026_dialogs_surfaces.cpp",
+      "target": "cad_sketch_edit.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 50,
+          "symbol": "cad_sketch_edit.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "forgeCad2026_gui.cpp",
+      "target": "cad_sketch_edit.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 63,
+          "symbol": "cad_sketch_edit.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "forgeCad2026_viewport.h",
+      "target": "cad_sketch_edit.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 23,
+          "symbol": "cad_sketch_edit.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "forgeCad2026_viewport_interaction.cpp",
+      "target": "cad_sketch_edit.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 1162,
+          "symbol": "ForgeCad::trimPreview",
+          "owner": "CadViewport::mouseMoveEvent"
+        }
+      ]
+    },
+    {
+      "source": "forgeCad2026_viewport_interaction.cpp",
+      "target": "cad_snap.cpp",
+      "kind": "call",
+      "count": 3,
+      "sites": [
+        {
+          "line": 1347,
+          "symbol": "ForgeCad::snapIntersection",
+          "owner": "CadViewport::mouseReleaseEvent"
+        },
+        {
+          "line": 1352,
+          "symbol": "ForgeCad::pointAttachment",
+          "owner": "CadViewport::mouseReleaseEvent"
+        },
+        {
+          "line": 1355,
+          "symbol": "ForgeCad::constrainIntersection",
+          "owner": "CadViewport::mouseReleaseEvent"
+        }
+      ]
+    },
+    {
+      "source": "forgeCad2026_viewport_internal.h",
+      "target": "cad_sketch_edit.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 50,
+          "symbol": "cad_sketch_edit.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "forgeCad2026_viewport_selection.cpp",
+      "target": "cad_snap.cpp",
+      "kind": "call",
+      "count": 2,
+      "sites": [
+        {
+          "line": 877,
+          "symbol": "ForgeCad::snapSegments",
+          "owner": "CadViewport::snapPoint"
+        },
+        {
+          "line": 903,
+          "symbol": "ForgeCad::snapIntersection",
+          "owner": "CadViewport::snapPoint"
+        }
+      ]
+    },
+    {
+      "source": "forgeCad2026_viewport_sketch.cpp",
+      "target": "cad_sketch_edit.cpp",
+      "kind": "call",
+      "count": 13,
+      "sites": [
+        {
+          "line": 764,
+          "symbol": "ForgeCad::patternSketchEntities",
+          "owner": "CadViewport::previewSketchPattern"
+        },
+        {
+          "line": 770,
+          "symbol": "ForgeCad::patternSketchEntities",
+          "owner": "CadViewport::applySketchPattern"
+        },
+        {
+          "line": 816,
+          "symbol": "ForgeCad::removeSketchEntities",
+          "owner": "CadViewport::applySketchOffset"
+        },
+        {
+          "line": 840,
+          "symbol": "ForgeCad::moveSketchEntities",
+          "owner": "CadViewport::previewSketchMove"
+        },
+        {
+          "line": 846,
+          "symbol": "ForgeCad::moveSketchEntities",
+          "owner": "CadViewport::applySketchMove"
+        },
+        {
+          "line": 1031,
+          "symbol": "ForgeCad::editSketchPattern",
+          "owner": "CadViewport::setSketchPatternValues"
+        },
+        {
+          "line": 1574,
+          "symbol": "ForgeCad::sketchCornerAt",
+          "owner": "CadViewport::applyEditTool"
+        },
+        {
+          "line": 1575,
+          "symbol": "ForgeCad::blendSketchSegments",
+          "owner": "CadViewport::applyEditTool"
+        },
+        {
+          "line": 1585,
+          "symbol": "ForgeCad::blendSketchSegments",
+          "owner": "CadViewport::applyEditTool"
+        },
+        {
+          "line": 1594,
+          "symbol": "ForgeCad::trimSketchEntity",
+          "owner": "CadViewport::applyEditTool"
+        },
+        {
+          "line": 1595,
+          "symbol": "ForgeCad::extendSketchEntity",
+          "owner": "CadViewport::applyEditTool"
+        },
+        {
+          "line": 1596,
+          "symbol": "ForgeCad::splitSketchEntity",
+          "owner": "CadViewport::applyEditTool"
+        },
+        {
+          "line": 2632,
+          "symbol": "ForgeCad::removeSketchEntities",
+          "owner": "CadViewport::deleteSketchElements"
+        }
+      ]
+    },
+    {
+      "source": "forgeCad2026_viewport_sketch.cpp",
+      "target": "cad_sketch_edit.h",
+      "kind": "call",
+      "count": 9,
+      "sites": [
+        {
+          "line": 1568,
+          "symbol": "ForgeCad::SketchEditResult::SketchEditResult",
+          "owner": "CadViewport::applyEditTool"
+        },
+        {
+          "line": 1575,
+          "symbol": "ForgeCad::SketchEditResult::operator=",
+          "owner": "CadViewport::applyEditTool"
+        },
+        {
+          "line": 1585,
+          "symbol": "ForgeCad::SketchEditResult::operator=",
+          "owner": "CadViewport::applyEditTool"
+        },
+        {
+          "line": 1594,
+          "symbol": "ForgeCad::SketchEditResult::operator=",
+          "owner": "CadViewport::applyEditTool"
+        },
+        {
+          "line": 1594,
+          "symbol": "ForgeCad::SketchEntity::SketchEntity",
+          "owner": "CadViewport::applyEditTool"
+        },
+        {
+          "line": 1595,
+          "symbol": "ForgeCad::SketchEditResult::operator=",
+          "owner": "CadViewport::applyEditTool"
+        },
+        {
+          "line": 1595,
+          "symbol": "ForgeCad::SketchEntity::SketchEntity",
+          "owner": "CadViewport::applyEditTool"
+        },
+        {
+          "line": 1596,
+          "symbol": "ForgeCad::SketchEditResult::operator=",
+          "owner": "CadViewport::applyEditTool"
+        },
+        {
+          "line": 1596,
+          "symbol": "ForgeCad::SketchEntity::SketchEntity",
+          "owner": "CadViewport::applyEditTool"
+        }
+      ]
+    },
+    {
+      "source": "forgeCad2026_viewport_sketch.cpp",
+      "target": "cad_snap.cpp",
+      "kind": "call",
+      "count": 10,
+      "sites": [
+        {
+          "line": 1469,
+          "symbol": "ForgeCad::snapSegments",
+          "owner": "CadViewport::dragSnapPoint"
+        },
+        {
+          "line": 1486,
+          "symbol": "ForgeCad::snapIntersection",
+          "owner": "CadViewport::dragSnapPoint"
+        },
+        {
+          "line": 1672,
+          "symbol": "ForgeCad::snapIntersection",
+          "owner": "CadViewport::updateSnapReferenceNote"
+        },
+        {
+          "line": 1679,
+          "symbol": "ForgeCad::pointAttachment",
+          "owner": "CadViewport::updateSnapReferenceNote"
+        },
+        {
+          "line": 1855,
+          "symbol": "ForgeCad::pointAttachment",
+          "owner": "CadViewport::recordPointCoincidences"
+        },
+        {
+          "line": 1858,
+          "symbol": "ForgeCad::snapIntersection",
+          "owner": "CadViewport::recordPointCoincidences"
+        },
+        {
+          "line": 1859,
+          "symbol": "ForgeCad::constrainIntersection",
+          "owner": "CadViewport::recordPointCoincidences"
+        },
+        {
+          "line": 1862,
+          "symbol": "ForgeCad::resolvePointAttachment",
+          "owner": "CadViewport::recordPointCoincidences"
+        },
+        {
+          "line": 1991,
+          "symbol": "ForgeCad::pointAttachment",
+          "owner": "CadViewport::finalizeThreePointCircle"
+        },
+        {
+          "line": 1994,
+          "symbol": "ForgeCad::resolvePointAttachment",
+          "owner": "CadViewport::finalizeThreePointCircle"
+        }
+      ]
+    },
+    {
+      "source": "forgeCad2026_viewport_sketch_reference.cpp",
+      "target": "cad_snap.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 160,
+          "symbol": "ForgeCad::pointAttachment",
+          "owner": "CadViewport::updateSketchReferenceHover"
+        }
+      ]
+    },
+    {
+      "source": "tests/test_pattern_variation.h",
+      "target": "cad_sketch_edit.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 145,
+          "symbol": "ForgeCad::patternSketchEntities",
+          "owner": "patternVariationTests"
+        }
+      ]
+    },
+    {
+      "source": "tests/test_pattern_variation.h",
+      "target": "cad_sketch_edit.h",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 143,
+          "symbol": "ForgeCad::SketchPattern::SketchPattern",
+          "owner": "patternVariationTests"
+        }
+      ]
+    },
+    {
+      "source": "tests/test_pattern_variation.h",
+      "target": "cad_sketch_edit.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 4,
+          "symbol": "../cad_sketch_edit.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "tests/test_sketch_intersections.h",
+      "target": "cad_sketch_edit.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 59,
+          "symbol": "ForgeCad::removeSketchEntities",
+          "owner": "ViewportInteractionTest::intersectionSnaps"
+        }
+      ]
+    },
+    {
+      "source": "tests/test_sketch_intersections.h",
+      "target": "cad_snap.cpp",
+      "kind": "call",
+      "count": 13,
+      "sites": [
+        {
+          "line": 8,
+          "symbol": "ForgeCad::snapIntersection",
+          "owner": "ViewportInteractionTest::intersectionSnaps"
+        },
+        {
+          "line": 10,
+          "symbol": "ForgeCad::snapIntersection",
+          "owner": "ViewportInteractionTest::intersectionSnaps"
+        },
+        {
+          "line": 12,
+          "symbol": "ForgeCad::snapIntersection",
+          "owner": "ViewportInteractionTest::intersectionSnaps"
+        },
+        {
+          "line": 14,
+          "symbol": "ForgeCad::snapIntersection",
+          "owner": "ViewportInteractionTest::intersectionSnaps"
+        },
+        {
+          "line": 18,
+          "symbol": "ForgeCad::snapIntersection",
+          "owner": "ViewportInteractionTest::intersectionSnaps"
+        },
+        {
+          "line": 19,
+          "symbol": "ForgeCad::snapIntersection",
+          "owner": "ViewportInteractionTest::intersectionSnaps"
+        },
+        {
+          "line": 22,
+          "symbol": "ForgeCad::snapIntersection",
+          "owner": "ViewportInteractionTest::intersectionSnaps"
+        },
+        {
+          "line": 25,
+          "symbol": "ForgeCad::snapIntersection",
+          "owner": "ViewportInteractionTest::intersectionSnaps"
+        },
+        {
+          "line": 26,
+          "symbol": "ForgeCad::snapIntersection",
+          "owner": "ViewportInteractionTest::intersectionSnaps"
+        },
+        {
+          "line": 29,
+          "symbol": "ForgeCad::snapIntersection",
+          "owner": "ViewportInteractionTest::intersectionSnaps"
+        },
+        {
+          "line": 41,
+          "symbol": "ForgeCad::snapIntersection",
+          "owner": "ViewportInteractionTest::intersectionSnaps"
+        },
+        {
+          "line": 45,
+          "symbol": "ForgeCad::constrainIntersection",
+          "owner": "ViewportInteractionTest::intersectionSnaps"
+        },
+        {
+          "line": 47,
+          "symbol": "ForgeCad::constrainIntersection",
+          "owner": "ViewportInteractionTest::intersectionSnaps"
+        }
+      ]
+    },
+    {
+      "source": "tests/test_sketch_linked_refs.h",
+      "target": "cad_sketch_edit.cpp",
+      "kind": "call",
+      "count": 3,
+      "sites": [
+        {
+          "line": 543,
+          "symbol": "ForgeCad::removeSketchEntities",
+          "owner": "ViewportInteractionTest::sectionReferenceSubsets"
+        },
+        {
+          "line": 580,
+          "symbol": "ForgeCad::removeSketchEntities",
+          "owner": "ViewportInteractionTest::sectionReferenceSubsets"
+        },
+        {
+          "line": 582,
+          "symbol": "ForgeCad::removeSketchEntities",
+          "owner": "ViewportInteractionTest::sectionReferenceSubsets"
+        }
+      ]
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_sketch_edit.cpp",
+      "kind": "call",
+      "count": 11,
+      "sites": [
+        {
+          "line": 3903,
+          "symbol": "ForgeCad::trimPreview",
+          "owner": "ViewportInteractionTest::sketchReferenceWorkflow"
+        },
+        {
+          "line": 3904,
+          "symbol": "ForgeCad::trimSketchEntity",
+          "owner": "ViewportInteractionTest::sketchReferenceWorkflow"
+        },
+        {
+          "line": 3929,
+          "symbol": "ForgeCad::trimSketchEntity",
+          "owner": "ViewportInteractionTest::sketchReferenceWorkflow"
+        },
+        {
+          "line": 4075,
+          "symbol": "ForgeCad::trimSketchEntity",
+          "owner": "ViewportInteractionTest::derivedCurveEntity"
+        },
+        {
+          "line": 6541,
+          "symbol": "ForgeCad::trimPreview",
+          "owner": "ViewportInteractionTest::ellipseTrim"
+        },
+        {
+          "line": 6543,
+          "symbol": "ForgeCad::trimSketchEntity",
+          "owner": "ViewportInteractionTest::ellipseTrim"
+        },
+        {
+          "line": 6570,
+          "symbol": "ForgeCad::trimSketchEntity",
+          "owner": "ViewportInteractionTest::ellipseTrim"
+        },
+        {
+          "line": 6580,
+          "symbol": "ForgeCad::trimSketchEntity",
+          "owner": "ViewportInteractionTest::ellipseTrim"
+        },
+        {
+          "line": 6588,
+          "symbol": "ForgeCad::trimSketchEntity",
+          "owner": "ViewportInteractionTest::ellipseTrim"
+        },
+        {
+          "line": 9579,
+          "symbol": "ForgeCad::moveSketchEntities",
+          "owner": "ViewportInteractionTest::run"
+        },
+        {
+          "line": 9594,
+          "symbol": "ForgeCad::moveSketchEntities",
+          "owner": "ViewportInteractionTest::run"
+        }
+      ]
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_sketch_edit.h",
+      "kind": "call",
+      "count": 4,
+      "sites": [
+        {
+          "line": 6570,
+          "symbol": "ForgeCad::SketchEditResult::operator=",
+          "owner": "ViewportInteractionTest::ellipseTrim"
+        },
+        {
+          "line": 6580,
+          "symbol": "ForgeCad::SketchEditResult::operator=",
+          "owner": "ViewportInteractionTest::ellipseTrim"
+        },
+        {
+          "line": 9576,
+          "symbol": "ForgeCad::SketchMove::SketchMove",
+          "owner": "ViewportInteractionTest::run"
+        },
+        {
+          "line": 9591,
+          "symbol": "ForgeCad::SketchMove::SketchMove",
+          "owner": "ViewportInteractionTest::run"
+        }
+      ]
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_snap.cpp",
+      "kind": "call",
+      "count": 4,
+      "sites": [
+        {
+          "line": 9608,
+          "symbol": "ForgeCad::snapSegments",
+          "owner": "ViewportInteractionTest::run"
+        },
+        {
+          "line": 9609,
+          "symbol": "ForgeCad::snapSegments",
+          "owner": "ViewportInteractionTest::run"
+        },
+        {
+          "line": 9610,
+          "symbol": "ForgeCad::snapSegments",
+          "owner": "ViewportInteractionTest::run"
+        },
+        {
+          "line": 9611,
+          "symbol": "ForgeCad::snapSegments",
+          "owner": "ViewportInteractionTest::run"
+        }
+      ]
+    }
+  ]
+}

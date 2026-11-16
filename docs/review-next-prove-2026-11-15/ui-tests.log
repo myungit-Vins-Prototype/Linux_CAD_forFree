@@ -1,0 +1,35 @@
+PASS G1 faces picking
+PASS G0 cancels and unchecks picker
+PASS plane picking
+PASS plane to faces cancels stale role
+PASS new face picker can start
+PASS multiselection refresh
+PASS selection follows reordered identities
+PASS current stays separate from selection
+PASS removed references are discarded
+PASS same face identity survives changed pick point
+PASS fill picker exists
+PASS fill boundary picking
+PASS fill cancel result
+PASS fill cancel clears picker and lock
+PASS mapping picker exists
+PASS mapping face picking
+PASS mapping picker cleared synchronously at finished
+PASS mapping cancel result
+PASS mapping cancel clears picker and lock
+PASS mapping picker exists
+PASS mapping face picking
+PASS mapping picker cleared synchronously at finished
+PASS mapping cancel result
+PASS mapping cancel clears picker and lock
+PASS cross workspace runner rejected
+PASS second runner leaves no picker lock or panel
+PASS first runner remains active
+PASS second workspace explains restriction
+PASS first runner closes and unlocks immediately
+PASS second workspace opens after first closes
+PASS real tabs second runner rejected
+PASS real tabs original runner unlocked
+PASS same workspace nesting preserves outer lock
+PASS same workspace nested runner restores lock
+failures=0

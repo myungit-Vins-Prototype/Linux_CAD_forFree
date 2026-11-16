@@ -1,0 +1,15 @@
+{
+  "/home/myungit/Linux_CAD_forFree/CLAUDE.md": "8b80d1a5301a25d7b5b0797bd819426778722d77830d431089e102b9f66e653c",
+  "/home/myungit/Linux_CAD_forFree/AGENTS.md": "d98408c6092ae6f02ba2948f47128c138ebf4fbb138b2751bc17550d2d98caac",
+  "/home/myungit/Linux_CAD_forFree/docs/architecture/graph.json": "a6dca48781f49300e37c873032f95d3460e60b03499e42da9534497163b2c098",
+  "/home/myungit/Linux_CAD_forFree/kernel/fk_surface_algo.cpp": "216592a617cbd8f49b5c61d0f08c19bfa80d605af1e3710a2c819f9a8e6eec0e",
+  "/home/myungit/Linux_CAD_forFree/kernel/fk_surface_algo.h": "4330c9f9e04a034015ab392c77fb2d4e75cf5194c87a4c0a753685d1acd1d2b4",
+  "/home/myungit/Linux_CAD_forFree/kernel/fk_pcurve.cpp": "ad5e5ce7082274aee5c279772f30caa56b21689b7b4b7331d27543444c58df79",
+  "/home/myungit/Linux_CAD_forFree/kernel/fk_blend_surface.cpp": "13c601f3783ee769c128f35dcce8ea12bc28784235ea73134e6599902c06cf8a",
+  "/home/myungit/Linux_CAD_forFree/kernel/fk_surface.h": "0f43043bb786c3761c19161bd3952a69f82554c1accead030f0d30a5141daee0",
+  "/home/myungit/Linux_CAD_forFree/kernel/fk_surface.cpp": "795306b2532f63501cfa5ce6e356bee31f37e396a2c5def2e0e829fe0acff51c",
+  "/home/myungit/Linux_CAD_forFree/kernel/tests/test_blend_cavity.cpp": "0e0cc0c8cfbeb77a6e43d83d29c51cdc258adb6e3a06ac5e429a0547379b73a5",
+  "/home/myungit/Linux_CAD_forFree/kernel/tests/data/blend_cavity_loft.body": "8d7d8d50e0bcbfb7e392cb86a17516547f874ee6a355954601f3a473164d39bc",
+  "/tmp/blend-cavity-review/tests/baseline/libforgekernel.a": "9eccfa56f36268d8d6680cf0b0db292cb827ec2f2ed1af08c111d394bcbc4554",
+  "/tmp/blend-cavity-review/core/failure.body": "350c5418904e23177a8910b91747a168cc189f9472ac901c60512fc7df623b97"
+}

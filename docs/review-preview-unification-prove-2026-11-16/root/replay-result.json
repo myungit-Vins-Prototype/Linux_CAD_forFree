@@ -1,0 +1,26 @@
+{
+  "offscreen": {
+    "exit": 0,
+    "seconds": 9.432144979999975,
+    "command": [
+      "python3",
+      "/home/myungit/Linux_CAD_forFree/docs/review-preview-unification-prove-2026-11-16/tests/build_regressions.py.txt",
+      "--app-release"
+    ],
+    "platform": "offscreen",
+    "assertions": 115,
+    "panels": 11,
+    "binary_sha256": "0109c2212e6391cd78b643f7c992045ad67cf911c01db6e768252e8765647e24"
+  },
+  "wayland": {
+    "exit": 1,
+    "seconds": 1.3678547379995507,
+    "command": [
+      "/tmp/review-previews-refresh/regressions-app-release"
+    ],
+    "platform": "wayland",
+    "assertions": null,
+    "panels": 11,
+    "binary_sha256": "0109c2212e6391cd78b643f7c992045ad67cf911c01db6e768252e8765647e24"
+  }
+}

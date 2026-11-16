@@ -1,0 +1,17 @@
+import json,re
+from pathlib import Path
+root=Path('/home/myungit/Linux_CAD_forFree');out=Path('/tmp/forgecad-k10-mapping-20261115/root')
+g=json.loads((root/'docs/architecture/graph.json').read_text())
+h=(root/'docs/architecture/index.html').read_text()
+e=json.loads(re.search(r'<script id="graph-data" type="application/json">(.*?)</script>',h,re.S).group(1))
+assert g==e
+focus=['kernel/fk_surface_mapping.cpp','kernel/fk_mapping_carrier.cpp','kernel/fk_mapping_carrier.h','kernel/fk_curve_fit_bounds.cpp','kernel/fk_curve_fit_bounds.h','kernel/tests/test_mapping_carrier_validation.cpp']
+nodes={n['id']:n for n in g['nodes']};assert set(focus)<=set(nodes)
+incident=[e for e in g['edges'] if e['source'] in focus or e['target'] in focus]
+required=[('kernel/fk_surface_mapping.cpp','kernel/fk_mapping_carrier.cpp','call'),('kernel/fk_mapping_carrier.cpp','kernel/fk_curve_fit_bounds.cpp','call'),('kernel/fk_mapping_carrier.cpp','kernel/fk_mapping_carrier.h','include'),('kernel/tests/test_mapping_carrier_validation.cpp','kernel/fk_surface_mapping.cpp','call')]
+for key in required: assert any((e['source'],e['target'],e['kind'])==key for e in g['edges']),key
+for sym in ['fitCurveCertified','surfaceCompositionErrorBound']:
+ assert any(sym in site['symbol'] for edge in incident for site in edge['sites']),sym
+assert not g['analysis']['errors']
+r=dict(files=len(nodes),edges=len(g['edges']),units=len(g['analysis']['units']),errors=g['analysis']['errors'],html_matches=True,incident_edges=len(incident),required=required,files_audited={f:{'description':nodes[f]['description'],'incoming':{kind:sum(x['target']==f and x['kind']==kind for x in incident) for kind in ['call','include','reference']},'outgoing':{kind:sum(x['source']==f and x['kind']==kind for x in incident) for kind in ['call','include','reference']}} for f in focus})
+(out/'architecture-audit.json').write_text(json.dumps(r,indent=2));(out/'architecture-incident.json').write_text(json.dumps(incident,indent=2));print(json.dumps({k:v for k,v in r.items() if k!='files_audited'},indent=2))

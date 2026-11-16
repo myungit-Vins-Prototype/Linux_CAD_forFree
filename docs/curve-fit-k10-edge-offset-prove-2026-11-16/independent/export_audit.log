@@ -1,0 +1,16 @@
+export public-polynomial-forward all 4 final edges PASS
+export public-polynomial-reverse all 4 final edges PASS
+export public-rational-forward all 4 final edges PASS
+export public-rational-reverse all 4 final edges PASS
+export public-baseline all 4 final edges PASS
+export public-sense all 4 final edges PASS
+export public-trim all 4 final edges PASS
+export public-pose all 4 final edges PASS
+export direct-polynomial-forward PASS
+export direct-polynomial-reverse PASS
+export direct-rational-forward PASS
+export direct-rational-reverse PASS
+export direct-negative PASS
+export direct-trim PASS
+export direct-pose PASS
+export direct-shifted PASS

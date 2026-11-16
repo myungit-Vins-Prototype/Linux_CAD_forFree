@@ -16,6 +16,21 @@ BSplineCurve<N>::BSplineCurve(int degree, std::vector<double> knots, std::vector
 }
 
 template <int N>
+BSplineCurve<N>::BSplineCurve(const BSplineCurve &other)
+    : Curve<N>(other), degree_(other.degree_), knots_(other.knots_), poles_(other.poles_), weights_(other.weights_),
+      bezierCache_(std::atomic_load(&other.bezierCache_)) {
+}
+
+template <int N>
+BSplineCurve<N> &BSplineCurve<N>::operator=(const BSplineCurve &other) {
+    if (this != &other) {
+        BSplineCurve snapshot(other);
+        *this = std::move(snapshot);
+    }
+    return *this;
+}
+
+template <int N>
 void BSplineCurve<N>::validate() const {
     detail::validateKnotVector(knots_, degree_, poleCount(), "BSplineCurve");
     for (const Vec<N> &pole : poles_)
@@ -221,7 +236,8 @@ std::shared_ptr<const std::vector<BSplineCurve<N>>> BSplineCurve<N>::cachedBezie
     std::shared_ptr<const std::vector<BSplineCurve>> segments = std::atomic_load(&bezierCache_);
     if (!segments) {
         segments = std::make_shared<const std::vector<BSplineCurve>>(bezierSegments());
-        std::atomic_store(&bezierCache_, segments);
+        std::shared_ptr<const std::vector<BSplineCurve>> expected;
+        if (!std::atomic_compare_exchange_strong(&bezierCache_, &expected, segments)) segments = std::move(expected);
     }
     return segments;
 }

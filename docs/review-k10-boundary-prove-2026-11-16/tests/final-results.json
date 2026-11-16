@@ -1,0 +1,48 @@
+{
+  "baseline": {
+    "tests": 9,
+    "passed": 3,
+    "failed": 6,
+    "scope": "synthetic frozen anonymous-helper diagnostics, narrow-family historical defects distinguished from retained unsupported alias"
+  },
+  "final_v2": {
+    "tests": 15,
+    "passed": 15,
+    "exit_code": 0,
+    "test_sha256": "8d603d500f9c9348ecb9ae8d258a0d557cfc8e0a01fb9128dc027bc3bd328c85"
+  },
+  "sanitizer_v2": {
+    "tests": 15,
+    "passed": 15,
+    "exit_code": 0,
+    "outside_ptrace": true,
+    "ASAN_OPTIONS": "detect_leaks=1:halt_on_error=1:abort_on_error=1:strict_string_checks=1",
+    "UBSAN_OPTIONS": "halt_on_error=1:print_stacktrace=1",
+    "LSAN_OPTIONS": "exitcode=23",
+    "instrumented": [
+      "fk_blend_section_curve.cpp",
+      "fk_blend_surface.cpp",
+      "test_boundary_validation.cpp",
+      "fk_test_main.cpp"
+    ],
+    "remaining_kernel": "Release frozen library",
+    "calibration_intentional_leak_bytes": 19,
+    "calibration_exit_code": 23
+  },
+  "public_v1": {
+    "filters": 3,
+    "passed": 3,
+    "open_attempts": 2876,
+    "certified_iso": 0,
+    "legacy": 2876,
+    "note": "Final V2 root command tests are separately recorded by root"
+  },
+  "json_exports": [
+    "/tmp/boundary-review/tests/export-final/actual-extended-fins.json",
+    "/tmp/boundary-review/tests/export-final/polynomial.json",
+    "/tmp/boundary-review/tests/export-final/rational-negative-uv.json",
+    "/tmp/boundary-review/tests/export-final/rational-pose-scale.json",
+    "/tmp/boundary-review/tests/export-final/rational-trim.json",
+    "/tmp/boundary-review/tests/export-final/rational.json"
+  ]
+}

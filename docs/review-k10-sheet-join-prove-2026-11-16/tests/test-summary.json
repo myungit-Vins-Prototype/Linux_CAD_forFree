@@ -1,0 +1,31 @@
+{
+  "test_source": "kernel/tests/test_sheet_join_validation.cpp",
+  "test_sha256": "6f107960db76d10bb652cba60e591758b2789533056b5a5c38340754d859f5d6",
+  "candidate_sheet_sha256": "8e9bd9d6c1d61bf9e8a189e783d6803510c3c61f07ed28c8e5b82f2efa457e2f",
+  "baseline_sheet_sha256": "fdf2810ae1777d376fd80719e9fa8210cdfda810e450c706f6e05963129f098c",
+  "baseline_lib_sha256": "6df225c9536c2e6aed13c83313fea8a58ea766cf3de7246f945e50193f3807f1",
+  "baseline_object_sha256": "0d05e9f8673e4e16327a7f2397abf3bcf5c980e00d7a50c78dc88bf594b943b5",
+  "stage_lib_sha256": "a739561386cea5c0509a8f4113046824a3e9670b1b9c8d61024f7ec6cc69fea3",
+  "stage_result": "29/29",
+  "baseline_full": "11/29",
+  "baseline_compat": "21/29",
+  "positive_bodies": 19,
+  "negative_bodies": 9,
+  "negative_groups": 8,
+  "sanitizer_result": "29/29; ASan/UBSan/LSan exit0 untraced",
+  "sanitizer_instrumented": [
+    "test_sheet_join_validation.cpp",
+    "fk_test_main.cpp",
+    "fk_sheet-v3.cpp",
+    "fk_curve_fit_bounds.cpp"
+  ],
+  "limits": [
+    "Other kernel translation units remain Release.",
+    "Initial sandbox sanitizer run completed 29 tests but LSan failed under ptrace; excluded from leak success.",
+    "Implicit non-affine continuation remains sampled.",
+    "Source preservation in test samples original UV; independent Fraction audit supplied separately.",
+    "No app build or GUI verification by tests agent."
+  ],
+  "final_stage": "V3",
+  "v2_v3_json_byte_identical": 19
+}

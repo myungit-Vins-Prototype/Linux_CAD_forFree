@@ -1,0 +1,19 @@
+{
+  "exit": 0,
+  "seconds": 2.2177756679993763,
+  "command": [
+    "c++",
+    "-std=c++17",
+    "-O2",
+    "-fno-fast-math",
+    "-ffp-contract=off",
+    "-I",
+    "/home/myungit/Linux_CAD_forFree/kernel",
+    "-I",
+    "/home/myungit/Linux_CAD_forFree/kernel/tests",
+    "/tmp/mitre-review/root/release-export/export_emitted_sheet.cpp",
+    "/home/myungit/Linux_CAD_forFree/forgecad-release/kernel/libforgekernel.a",
+    "-o",
+    "/tmp/mitre-review/root/release-export/export_emitted_sheet"
+  ]
+}

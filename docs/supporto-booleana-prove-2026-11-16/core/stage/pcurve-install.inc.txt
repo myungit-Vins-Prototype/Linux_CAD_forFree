@@ -1,0 +1,40 @@
+    // Il mapping nasce dalla fin realmente montata. Body::build conserva
+    // l'indice BuildEdge; pairRadially puo' cambiarlo e viene quindi letto
+    // soltanto dopo pairing/splitVertices, senza cercare curve vicine.
+    for(const auto &use:boundaryUses) {
+        const int edge=faces.at(use.face).loops.at(use.loop).at(use.fin).edge;
+        const auto &built=edges.at(std::size_t(edge));
+        if(built.curve.get()!=use.curve.get()||built.range.lo>use.source.range.lo||built.range.hi<use.source.range.hi)
+            throw std::domain_error("booleanOperation: geometria del bordo condiviso modificata durante l'assemblaggio");
+        boundaryOutputs.push_back({edge,faces.at(use.face).surface,use.curve,use.source.range});
+    }
+    const auto installBoundaryPCurves=[&](Body &body) {
+        for(const auto &output:boundaryOutputs) {
+            cancellationPoint();
+            const EdgeId edgeId(output.edge);
+            if(!body.contains(edgeId))throw std::domain_error("booleanOperation: bordo condiviso non conservato");
+            const auto &edge=body.edge(edgeId);
+            if(edge.curve.get()!=output.original.get()||edge.curve->type()!=CurveType::Ellipse
+                ||edge.range.lo>output.originalRange.lo||edge.range.hi<output.originalRange.hi)
+                throw std::domain_error("booleanOperation: parametro originale del bordo condiviso non conservato");
+            const auto &ellipse=static_cast<const Ellipse<3>&>(*edge.curve);
+            bool found=false;
+            for(FinId finId:{edge.forward,edge.backward}) {
+                if(!finId.valid()||body.face(body.finFace(finId)).surface.get()!=output.surface.get())continue;
+                const auto first=projectPoint(*output.surface,edge.curve->point(edge.range.lo));
+                const auto last=projectPoint(*output.surface,edge.curve->point(edge.range.hi));
+                Vec2 a(first.u,first.v),b(last.u,last.v);
+                if(output.surface->isUPeriodic()) {
+                    const double period=output.surface->uPeriod();
+                    b[0]+=std::nearbyint((a[0]-b[0])/period)*period;
+                }
+                auto pcurve=std::make_shared<BSplineCurve<2>>(1,std::vector<double>{edge.range.lo,edge.range.lo,edge.range.hi,edge.range.hi},std::vector<Vec2>{a,b});
+                const double bound=detail::ellipseAffinePCurveError(ellipse,edge.range,*output.surface,*pcurve);
+                if(!std::isfinite(bound)||bound<0||bound>std::min(tolerance_,linearResolution()))
+                    throw std::domain_error("booleanOperation: immagine UV del bordo condiviso non certificabile");
+                auto &fin=body.fin(finId);fin.pcurve=std::move(pcurve);fin.pcurveTolerance=std::max(bound,std::numeric_limits<double>::min());
+                found=true;
+            }
+            if(!found)throw std::domain_error("booleanOperation: faccia del bordo condiviso non conservata");
+        }
+    };

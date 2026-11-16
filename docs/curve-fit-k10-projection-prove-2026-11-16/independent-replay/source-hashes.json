@@ -1,0 +1,34 @@
+{
+  "kernel/fk_project.cpp": {
+    "sha256": "9f38b0098f98b3947bc00bd31179a29668df1d10a21119a2d1f75ee42f9b7223",
+    "bytes": 36946
+  },
+  "kernel/fk_project.h": {
+    "sha256": "adb573c37010035a59d3d9e814d57d5b8d7bf298d73969bbb22affc8a6b74e88",
+    "bytes": 5800
+  },
+  "kernel/fk_curve_fit_bounds.cpp": {
+    "sha256": "09e112784fd06d5da34b2676708fc8453e74adcbf9ca644cefea3522dd8d6a62",
+    "bytes": 67572
+  },
+  "kernel/tests/test_projection_fit_validation.cpp": {
+    "sha256": "b33ccb834514a7f348782cf9a9e171c0e78bb0ce14e919b2936ddbae3721427b",
+    "bytes": 10741
+  },
+  "forgecad-release/kernel/libforgekernel.a": {
+    "sha256": "fde7076d2cde820df08723c045bd7866aaadefbb890aca6c5ed280d8eba47eeb",
+    "bytes": 173450310
+  },
+  "baseline/fk_project.cpp": {
+    "sha256": "e6a485ffca68ce326b137856821b4e5408f41f4459f333e243364739bb5a194a",
+    "bytes": 31405
+  },
+  "baseline/fk_project.h": {
+    "sha256": "ba305acc2a01a329b878a55e238f1062be4a4042632616cd496e8534102552ee",
+    "bytes": 4928
+  },
+  "baseline/fk_project.cpp.o": {
+    "sha256": "a98d8deeb9d2202d0fb1912075421ca87defc17ac65d4dc37ae4efeda0141cbb",
+    "bytes": 223952
+  }
+}

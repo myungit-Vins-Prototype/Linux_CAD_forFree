@@ -1,0 +1,18 @@
+from pathlib import Path
+from fractions import Fraction as F
+from math import comb
+import json
+p=Path('/tmp/forgecad-k10-boundary-20261115/independent')
+def product(a,b):
+ m,n=len(a)-1,len(b)-1;c=[F(0)]*(m+n+1)
+ for i,x in enumerate(a):
+  for j,y in enumerate(b):c[i+j]+=x*y*F(comb(m,i)*comb(n,j),comb(m+n,i+j))
+ return c
+def deriv(a):return [(a[i+1]-a[i])*(len(a)-1) for i in range(len(a)-1)]
+rows={}
+for name in ['polynomial_internal_knot','rational_internal_knot']:
+ poles=[[F(float(x)) for x in line.split(',')] for line in (p/(name+'.csv')).read_text().splitlines()];bounds=[]
+ for start,length in [(0,F(float(.1))),(6,F(float(.101))-F(float(.1))),(12,F(1)-F(float(.101)))]:
+  points=poles[start:start+7];w=[v[2] for v in points];h=[v[0]*v[2] for v in points];a=product(deriv(h),w);b=product(h,deriv(w));j=[x-y for x,y in zip(a,b)];lower=min(j)/(max(w)**2*length);bounds.append(float(lower));assert lower>0
+ rows[name]={'x_derivative_lower_by_span':bounds,'minimum':min(bounds)}
+(p/'regularity.json').write_text(json.dumps(rows,indent=2)+'\n');print(json.dumps(rows,indent=2))

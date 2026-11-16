@@ -1,0 +1,122 @@
+[
+  {
+    "file": "kernel/fk_boundary.cpp",
+    "line": 216,
+    "call": "return *fitCurve(f, {0.0, 1.0}, breaks, tolerance);"
+  },
+  {
+    "file": "kernel/fk_fill.cpp",
+    "line": 1117,
+    "call": "const auto planar = fitCurve([&](double t) {"
+  },
+  {
+    "file": "kernel/fk_project.cpp",
+    "line": 449,
+    "call": "piece.curve = fitCurve(f, Interval{lo, hi}, inner, options_.tolerance, &deviation);"
+  },
+  {
+    "file": "kernel/fk_thicken.cpp",
+    "line": 312,
+    "call": "f0 = fitCurve(at(s0), range, breaks, fit);"
+  },
+  {
+    "file": "kernel/fk_thicken.cpp",
+    "line": 313,
+    "call": "f1 = fitCurve(at(s1), range, breaks, fit);"
+  },
+  {
+    "file": "kernel/fk_sheet.cpp",
+    "line": 213,
+    "call": "piece.curve = fitCurve(parallelPoint, edge.range, edge.curve->breakpoints(edge.range),"
+  },
+  {
+    "file": "kernel/fk_sheet.cpp",
+    "line": 402,
+    "call": "curve = fitCurve([&](double t) { return sample(t).point; }, {0.0, end},"
+  },
+  {
+    "file": "kernel/fk_sheet.cpp",
+    "line": 590,
+    "call": "const CurvePtr<3> parallel = fitCurve(parallelPoint, edge.range, breaks, std::max(tolerance, 1e-8 * scale));"
+  },
+  {
+    "file": "kernel/fk_blend_surface.cpp",
+    "line": 1655,
+    "call": "return fitCurve(continuation, range, {}, kFitTolerance());"
+  },
+  {
+    "file": "kernel/fk_exchange.cpp",
+    "line": 740,
+    "call": "const auto fitted=fitCurve([&](double t) {"
+  },
+  {
+    "file": "kernel/fk_surface_mapping.cpp",
+    "line": 152,
+    "call": "auto curve=fitCurve([&](double t){return map(edge.curve->point(t));},edge.range,edge.curve->breakpoints(edge.range),fitBudget,&error);"
+  },
+  {
+    "file": "kernel/fk_surface_mapping.cpp",
+    "line": 182,
+    "call": "const auto curve=fitCurve([&](double t){const auto uv=image.parameters(original.curve->point(t));return Vec3(uv.x(),uv.y(),0);},original.range,"
+  },
+  {
+    "file": "kernel/fk_quilt_mapping.cpp",
+    "line": 411,
+    "call": "auto curve = fitCurve(mapped, edge.range, fin.pcurve->breakpoints(edge.range), budget, &deviation);"
+  },
+  {
+    "file": "kernel/fk_quilt_mapping.cpp",
+    "line": 592,
+    "call": "const auto uvCurve=fitCurve([&](double t){const auto uv=image.parameters(edge.curve->point(t));return Vec3(uv.x(),uv.y(),0);},"
+  },
+  {
+    "file": "kernel/fk_blend_mitre.cpp",
+    "line": 129,
+    "call": "const auto curve = fitCurve([&](double f) { return 0.5 * (pointOn(S, t0, X[0], X[1], f) + pointOn(T, s0, X[2], X[3], f)); },"
+  },
+  {
+    "file": "kernel/fk_offset.cpp",
+    "line": 680,
+    "call": "return fitCurve(f, range, breaks, tolerance);"
+  },
+  {
+    "file": "kernel/fk_offset.cpp",
+    "line": 1350,
+    "call": ": fitCurve(f, domain, e.curve()->breakpoints(domain), tolerance);"
+  },
+  {
+    "file": "kernel/fk_offset.cpp",
+    "line": 1373,
+    "call": ": fitCurve(f, domain, r.meridian()->breakpoints(domain), tolerance);"
+  },
+  {
+    "file": "kernel/fk_offset.cpp",
+    "line": 1899,
+    "call": "const auto fitted = fitCurve(uvAt, edge.range, fin.pcurve->breakpoints(edge.range), 0.1 * tolerance / rate);"
+  },
+  {
+    "file": "kernel/fk_offset.cpp",
+    "line": 2392,
+    "call": "const auto curve = fitCurve(uvAt, targetEdge.range, {}, 0.1 * tolerance / rate);"
+  },
+  {
+    "file": "kernel/fk_surface_poles.cpp",
+    "line": 107,
+    "call": "boundary.curve = fitCurve("
+  },
+  {
+    "file": "cad_sketch_offset.cpp",
+    "line": 401,
+    "call": "const auto fitted = Kernel::fitCurve(f3, range, piece.breaks, kFitTolerance);"
+  },
+  {
+    "file": "cad_sketch_offset.cpp",
+    "line": 602,
+    "call": "const auto fitted = trimOffsetLoops(Kernel::fitCurve(f3, range, breaks, kFitTolerance));"
+  },
+  {
+    "file": "cad_sketch_refs.cpp",
+    "line": 218,
+    "call": "spline=*fitCurve([&](double t){return curve->point(t);},range,curve->breakpoints(range),linearResolution());"
+  }
+]

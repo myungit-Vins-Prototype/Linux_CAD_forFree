@@ -1,0 +1,30 @@
+Independent optimized-core audit.
+
+adversarial 7/7 PASS: audit_core_cached.log.
+Cached derivative propagation: audit_cache_propagation.cpp includes an isolated
+copy of the optimized core TU, compares cached restricted derivative enclosures
+against 3168 sampled derivatives from 48 original BSplineSurface nets, degrees
+1..4 in each direction, polynomial and rational weights, including poses1e8.
+Zero failures. Sampling is a regression check, not a mathematical proof.
+
+Manual cache proof check: rational du Bernstein numerator dimensions are
+(2pu)*(2pv+1), dv (2pu+1)*(2pv); independent weights reduce these to
+pu*(pv+1) and (pu+1)*pv. De Casteljau restriction preserves the numerator
+polynomial, with the positive interval subrange scale applied only when splitting
+its derivative axis. Child denominator W or W^2 is recomputed from child weights.
+geometryNet drops caches; netMiddle explicitly clears ready before changing
+geometry dimensions; cached split's auxiliary polynomial fields start unprepared
+and cannot recursively reuse stale derivative fields. No concrete cache bug found.
+
+SweepSurfaceQuery::Data owns entries before constructing Validator's reference
+to them; Data never moves (owned by shared_ptr), entries are never mutated. The
+surface shared_ptr is also retained. Query methods see extraction already done,
+copy/restrict local nets, and do not mutate derivative caches of the stored nets.
+Failed extraction leaves ready=false and query methods return unresolved.
+Cancellation checkpoints persist per extracted cell, projection/contact cell,
+prepare and outer traversal. Degree cap32 bounds one derivative-product loop.
+
+Remaining resource accounting note sent to frame agent: periodic coverage
+candidate edgeGap computations were not charged maxVisits in audited snapshot
+(though seam low/high prefilter and per-pair cancellation bound/interrupt work).
+Add visit for actual overlapping seam candidates to honor common budget.

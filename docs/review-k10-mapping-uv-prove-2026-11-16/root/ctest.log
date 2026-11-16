@@ -1,0 +1,610 @@
+UpdateCTestConfiguration  from :/home/myungit/Linux_CAD_forFree/forgecad-release/DartConfiguration.tcl
+Test project /home/myungit/Linux_CAD_forFree/forgecad-release
+Constructing a list of tests
+Done constructing a list of tests
+Updating test list for fixtures
+Added 0 tests to meet fixture requirements
+Checking test dependency graph...
+Checking test dependency graph end
+test 15
+      Start  15: forgecad_document_theme_tabs_tests
+
+15: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_view_tests "--theme-tabs"
+15: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release
+15: Environment variables: 
+15:  QT_QPA_PLATFORM=offscreen
+15:  QT_QPA_OFFSCREEN_NO_GLX=1
+15:  QT_QPA_PLATFORMTHEME=
+15:  QT_STYLE_OVERRIDE=Fusion
+15:  FORGECAD_EXAMPLE_DIR=/home/myungit/Documenti/File_Esempio
+15: Test timeout computed to be: 90
+15: PASS document theme tabs: 1569 checks
+ 1/26 Test  #15: forgecad_document_theme_tabs_tests ...............   Passed    9.69 sec
+test 16
+      Start  16: forgecad_document_theme_only2d_tests
+
+16: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_view_tests "--theme-tabs-only-2d"
+16: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release
+16: Environment variables: 
+16:  QT_QPA_PLATFORM=offscreen
+16:  QT_QPA_OFFSCREEN_NO_GLX=1
+16:  QT_QPA_PLATFORMTHEME=
+16:  QT_STYLE_OVERRIDE=Fusion
+16:  FORGECAD_EXAMPLE_DIR=/home/myungit/Documenti/File_Esempio
+16: Test timeout computed to be: 90
+16: PASS document theme tabs: 898 checks
+ 2/26 Test  #16: forgecad_document_theme_only2d_tests .............   Passed    4.79 sec
+test 17
+      Start  17: forgecad_document_tabs_tests
+
+17: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_view_tests "--document-tabs"
+17: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release
+17: Environment variables: 
+17:  QT_QPA_PLATFORM=offscreen
+17:  QT_QPA_OFFSCREEN_NO_GLX=1
+17:  QT_QPA_PLATFORMTHEME=
+17:  QT_STYLE_OVERRIDE=Fusion
+17:  FORGECAD_EXAMPLE_DIR=/home/myungit/Documenti/File_Esempio
+17: Test timeout computed to be: 90
+17: PASS document tabs: 3D/2D, reuse, state/Undo, shortcuts, position, sheets, floating panels, cancel, asynchronous close
+ 3/26 Test  #17: forgecad_document_tabs_tests .....................   Passed    0.92 sec
+test 19
+      Start  19: forgecad_storyboard_review_tests
+
+19: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_view_tests "--storyboard-review"
+19: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release
+19: Environment variables: 
+19:  QT_QPA_PLATFORM=offscreen
+19:  QT_QPA_OFFSCREEN_NO_GLX=1
+19:  QT_QPA_PLATFORMTHEME=
+19:  QT_STYLE_OVERRIDE=Fusion
+19:  FORGECAD_EXAMPLE_DIR=/home/myungit/Documenti/File_Esempio
+19: Test timeout computed to be: 120
+19: PASS storyboard review: rimappatura estrazioni, riferimenti a copie, Undo/Redo, persistenza e detach iniettato
+ 4/26 Test  #19: forgecad_storyboard_review_tests .................   Passed    0.51 sec
+test 35
+      Start  35: forgecad_function_panels_tests
+
+35: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_view_tests "--function-panels-review"
+35: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release
+35: Environment variables: 
+35:  QT_QPA_PLATFORM=offscreen
+35:  QT_QPA_OFFSCREEN_NO_GLX=1
+35:  QT_QPA_PLATFORMTHEME=
+35:  QT_STYLE_OVERRIDE=Fusion
+35:  FORGECAD_EXAMPLE_DIR=/home/myungit/Documenti/File_Esempio
+35: Test timeout computed to be: 60
+35: PASS extrusion action preconditions: warnings and valid active/selected profiles
+ 5/26 Test  #35: forgecad_function_panels_tests ...................   Passed    1.40 sec
+test 36
+      Start  36: forgecad_chamfer_preview_state_tests
+
+36: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_view_tests "--chamfer-preview-editing"
+36: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release
+36: Environment variables: 
+36:  QT_QPA_PLATFORM=offscreen
+36:  QT_QPA_OFFSCREEN_NO_GLX=1
+36:  QT_QPA_PLATFORMTHEME=
+36:  QT_STYLE_OVERRIDE=Fusion
+36:  FORGECAD_EXAMPLE_DIR=/home/myungit/Documenti/File_Esempio
+36: Test timeout computed to be: 120
+36: CASE mode=0 pending=0
+36: PASS Enter refreshes typed field without closing dialog
+36: PASS Up arrow preserves immediate preview update
+36: PASS Down arrow restores field and preview definition
+36: PASS typed value committed by real Tab focus lifecycle
+36: PASS Tab refreshes key and generation
+36: PASS old geometry invalidated after Tab
+36: PASS label stops declaring old preview ready
+36: VISIBLE ui=1.25 preview=1.25 label=pronta (in ambra nella vista)
+36: PASS ready preview matches field after Tab
+36: PASS new result becomes ready
+36: PASS real confirmation creates chamfer
+36: PASS confirmation uses updated numeric value
+36: COMMIT matches_shown=1 shown_volume=472.188 actual_volume=472.188 pointer_same=1
+36: PASS confirmed geometry matches updated preview volume
+36: PASS single confirmation applies once and returns
+36: PASS dialog cleanup releases preview callback and lock
+36: CASE mode=0 pending=1
+36: PASS Enter refreshes typed field without closing dialog
+36: PASS Up arrow preserves immediate preview update
+36: PASS Down arrow restores field and preview definition
+36: PASS real uncancelled worker before Tab mutation
+36: PASS typed value committed by real Tab focus lifecycle
+36: PASS Tab refreshes key and generation
+36: PASS old geometry invalidated after Tab
+36: PASS label stops declaring old preview ready
+36: PASS Tab mutation cancels previous real worker
+36: VISIBLE ui=1.25 preview=1.25 label=pronta (in ambra nella vista)
+36: PASS ready preview matches field after Tab
+36: PASS new result becomes ready
+36: PASS real confirmation creates chamfer
+36: PASS confirmation uses updated numeric value
+36: COMMIT matches_shown=1 shown_volume=472.188 actual_volume=472.188 pointer_same=1
+36: PASS confirmed geometry matches updated preview volume
+36: PASS single confirmation applies once and returns
+36: PASS dialog cleanup releases preview callback and lock
+36: CASE mode=1 pending=0
+36: PASS Enter refreshes typed field without closing dialog
+36: PASS Up arrow preserves immediate preview update
+36: PASS Down arrow restores field and preview definition
+36: PASS typed value committed by real Tab focus lifecycle
+36: PASS Tab refreshes key and generation
+36: PASS old geometry invalidated after Tab
+36: PASS label stops declaring old preview ready
+36: VISIBLE ui=1.25 preview=1.25 label=pronta (in ambra nella vista)
+36: PASS ready preview matches field after Tab
+36: PASS new result becomes ready
+36: PASS real confirmation creates chamfer
+36: PASS confirmation uses updated numeric value
+36: COMMIT matches_shown=1 shown_volume=476.875 actual_volume=476.875 pointer_same=1
+36: PASS confirmed geometry matches updated preview volume
+36: PASS single confirmation applies once and returns
+36: PASS dialog cleanup releases preview callback and lock
+36: CASE mode=1 pending=1
+36: PASS Enter refreshes typed field without closing dialog
+36: PASS Up arrow preserves immediate preview update
+36: PASS Down arrow restores field and preview definition
+36: PASS real uncancelled worker before Tab mutation
+36: PASS typed value committed by real Tab focus lifecycle
+36: PASS Tab refreshes key and generation
+36: PASS old geometry invalidated after Tab
+36: PASS label stops declaring old preview ready
+36: PASS Tab mutation cancels previous real worker
+36: VISIBLE ui=1.25 preview=1.25 label=pronta (in ambra nella vista)
+36: PASS ready preview matches field after Tab
+36: PASS new result becomes ready
+36: PASS real confirmation creates chamfer
+36: PASS confirmation uses updated numeric value
+36: COMMIT matches_shown=1 shown_volume=476.875 actual_volume=476.875 pointer_same=1
+36: PASS confirmed geometry matches updated preview volume
+36: PASS single confirmation applies once and returns
+36: PASS dialog cleanup releases preview callback and lock
+36: CASE mode=2 pending=0
+36: PASS Enter refreshes typed field without closing dialog
+36: PASS Up arrow preserves immediate preview update
+36: PASS Down arrow restores field and preview definition
+36: PASS typed value committed by real Tab focus lifecycle
+36: PASS Tab refreshes key and generation
+36: PASS old geometry invalidated after Tab
+36: PASS label stops declaring old preview ready
+36: VISIBLE ui=30 preview=30 label=pronta (in ambra nella vista)
+36: PASS ready preview matches field after Tab
+36: PASS new result becomes ready
+36: PASS real confirmation creates chamfer
+36: PASS confirmation uses updated numeric value
+36: COMMIT matches_shown=1 shown_volume=479.278 actual_volume=479.278 pointer_same=1
+36: PASS confirmed geometry matches updated preview volume
+36: PASS single confirmation applies once and returns
+36: PASS dialog cleanup releases preview callback and lock
+36: CASE mode=2 pending=1
+36: PASS Enter refreshes typed field without closing dialog
+36: PASS Up arrow preserves immediate preview update
+36: PASS Down arrow restores field and preview definition
+36: PASS real uncancelled worker before Tab mutation
+36: PASS typed value committed by real Tab focus lifecycle
+36: PASS Tab refreshes key and generation
+36: PASS old geometry invalidated after Tab
+36: PASS label stops declaring old preview ready
+36: PASS Tab mutation cancels previous real worker
+36: VISIBLE ui=30 preview=30 label=pronta (in ambra nella vista)
+36: PASS ready preview matches field after Tab
+36: PASS new result becomes ready
+36: PASS real confirmation creates chamfer
+36: PASS confirmation uses updated numeric value
+36: COMMIT matches_shown=1 shown_volume=479.278 actual_volume=479.278 pointer_same=1
+36: PASS confirmed geometry matches updated preview volume
+36: PASS single confirmation applies once and returns
+36: PASS dialog cleanup releases preview callback and lock
+36: PRE8 RESULT passed=90 failed=0
+ 6/26 Test  #36: forgecad_chamfer_preview_state_tests .............   Passed    1.84 sec
+test 37
+      Start  37: forgecad_preview_selection_state_tests
+
+37: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_view_tests "--preview-selection-state"
+37: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release
+37: Environment variables: 
+37:  QT_QPA_PLATFORM=offscreen
+37:  QT_QPA_OFFSCREEN_NO_GLX=1
+37:  QT_QPA_PLATFORMTHEME=
+37:  QT_STYLE_OVERRIDE=Fusion
+37:  FORGECAD_EXAMPLE_DIR=/home/myungit/Documenti/File_Esempio
+37: Test timeout computed to be: 150
+37: CASE 0 pending=0
+37: PASS real ready geometry before mutation
+37: PASS opening picker preserves unchanged preview policy
+37: PASS continuous picking remains active after mutation
+37: PASS mutated selection invalidates key and geometry
+37: PASS mutation increments generation
+37: PASS mutated selection reports waiting
+37: PASS mapping removes its only selected face
+37: PASS mapping clears previous notice
+37: PASS cancelled completion cannot publish obsolete preview
+37: PASS finishing selection restarts request
+37: PASS preview recovers after selection
+37: PASS case reaches recovered preview
+37: PASS cancel cleans picker lock callback preview
+37: CASE 0 pending=1
+37: PASS real worker running before mutation
+37: PASS opening picker preserves unchanged preview policy
+37: PASS continuous picking remains active after mutation
+37: PASS mutated selection invalidates key and geometry
+37: PASS mutation increments generation
+37: PASS mutated selection reports waiting
+37: PASS mutation cancels real worker token
+37: PASS mapping removes its only selected face
+37: PASS mapping clears previous notice
+37: PASS cancelled completion cannot publish obsolete preview
+37: PASS finishing selection restarts request
+37: PASS preview recovers after selection
+37: PASS case reaches recovered preview
+37: PASS cancel cleans picker lock callback preview
+37: CASE 1 pending=0
+37: PASS real ready geometry before mutation
+37: PASS opening picker preserves unchanged preview policy
+37: PASS continuous picking remains active after mutation
+37: PASS mutated selection invalidates key and geometry
+37: PASS mutation increments generation
+37: PASS mutated selection reports waiting
+37: PASS mapping removes its only selected face
+37: PASS mapping clears previous notice
+37: PASS cancelled completion cannot publish obsolete preview
+37: PASS finishing selection restarts request
+37: PASS preview recovers after selection
+37: PASS case reaches recovered preview
+37: PASS cancel cleans picker lock callback preview
+37: CASE 1 pending=1
+37: PASS real worker running before mutation
+37: PASS opening picker preserves unchanged preview policy
+37: PASS continuous picking remains active after mutation
+37: PASS mutated selection invalidates key and geometry
+37: PASS mutation increments generation
+37: PASS mutated selection reports waiting
+37: PASS mutation cancels real worker token
+37: PASS mapping removes its only selected face
+37: PASS mapping clears previous notice
+37: PASS cancelled completion cannot publish obsolete preview
+37: PASS finishing selection restarts request
+37: PASS preview recovers after selection
+37: PASS case reaches recovered preview
+37: PASS cancel cleans picker lock callback preview
+37: CASE 2 pending=0
+37: PASS real ready geometry before mutation
+37: PASS opening picker preserves unchanged preview policy
+37: PASS continuous picking remains active after mutation
+37: PASS mutated selection invalidates key and geometry
+37: PASS mutation increments generation
+37: PASS mutated selection reports waiting
+37: PASS fill replaces sketch contour with picked face
+37: PASS cancelled completion cannot publish obsolete preview
+37: PASS finishing selection restarts request
+37: PASS preview recovers after selection
+37: PASS case reaches recovered preview
+37: PASS cancel cleans picker lock callback preview
+37: CASE 2 pending=1
+37: PASS real worker running before mutation
+37: PASS opening picker preserves unchanged preview policy
+37: PASS continuous picking remains active after mutation
+37: PASS mutated selection invalidates key and geometry
+37: PASS mutation increments generation
+37: PASS mutated selection reports waiting
+37: PASS mutation cancels real worker token
+37: PASS fill replaces sketch contour with picked face
+37: PASS cancelled completion cannot publish obsolete preview
+37: PASS finishing selection restarts request
+37: PASS preview recovers after selection
+37: PASS case reaches recovered preview
+37: PASS cancel cleans picker lock callback preview
+37: PRE7 RESULT passed=79 failed=0
+ 7/26 Test  #37: forgecad_preview_selection_state_tests ...........   Passed    1.40 sec
+test 38
+      Start  38: forgecad_storyboard_panel_selection_tests
+
+38: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_view_tests "--storyboard-panel-selection"
+38: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release
+38: Environment variables: 
+38:  QT_QPA_PLATFORM=offscreen
+38:  QT_QPA_OFFSCREEN_NO_GLX=1
+38:  QT_QPA_PLATFORMTHEME=
+38:  QT_STYLE_OVERRIDE=Fusion
+38:  FORGECAD_EXAMPLE_DIR=/home/myungit/Documenti/File_Esempio
+38: Test timeout computed to be: 10000000
+38: PASS storyboard panel selection
+38: PASS loft failure diagnostics
+38: PASS mirror deletion once with linked sketches
+ 8/26 Test  #38: forgecad_storyboard_panel_selection_tests ........   Passed    0.07 sec
+test 39
+      Start  39: forgecad_history_suppression_tests
+
+39: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_view_tests "--history-suppression"
+39: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release
+39: Environment variables: 
+39:  QT_QPA_PLATFORM=offscreen
+39:  QT_QPA_OFFSCREEN_NO_GLX=1
+39:  QT_QPA_PLATFORMTHEME=
+39:  QT_STYLE_OVERRIDE=Fusion
+39:  FORGECAD_EXAMPLE_DIR=/home/myungit/Documenti/File_Esempio
+39: Test timeout computed to be: 10000000
+ 9/26 Test  #39: forgecad_history_suppression_tests ...............   Passed    0.02 sec
+test 50
+      Start  50: forgecad_declared_history_cache_tests
+
+50: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_view_tests "--declared-history-cache"
+50: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release
+50: Environment variables: 
+50:  QT_QPA_PLATFORM=offscreen
+50:  QT_QPA_OFFSCREEN_NO_GLX=1
+50:  QT_QPA_PLATFORMTHEME=
+50:  QT_STYLE_OVERRIDE=Fusion
+50:  FORGECAD_EXAMPLE_DIR=/home/myungit/Documenti/File_Esempio
+50: Test timeout computed to be: 60
+50: PASS declared history cache
+10/26 Test  #50: forgecad_declared_history_cache_tests ............   Passed    0.06 sec
+test 113
+      Start 113: forgecad_surface_pattern_tests
+
+113: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_view_tests "--surface-patterns"
+113: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release
+113: Environment variables: 
+113:  QT_QPA_PLATFORM=offscreen
+113:  QT_QPA_OFFSCREEN_NO_GLX=1
+113:  QT_QPA_PLATFORMTHEME=
+113:  QT_STYLE_OVERRIDE=Fusion
+113:  FORGECAD_EXAMPLE_DIR=/home/myungit/Documenti/File_Esempio
+113: Test timeout computed to be: 10000000
+113: Surface patterns PASS
+11/26 Test #113: forgecad_surface_pattern_tests ...................   Passed    0.11 sec
+test 119
+      Start 119: forgecad_surface_mapping_tests
+
+119: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_view_tests "--surface-mapping"
+119: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release
+119: Environment variables: 
+119:  QT_QPA_PLATFORM=offscreen
+119:  QT_QPA_OFFSCREEN_NO_GLX=1
+119:  QT_QPA_PLATFORMTHEME=
+119:  QT_STYLE_OVERRIDE=Fusion
+119:  FORGECAD_EXAMPLE_DIR=/home/myungit/Documenti/File_Esempio
+119: Test timeout computed to be: 120
+119: PASS riempimento4pattern/fori/limiti, storia, Undo/Redo, codec, sviluppo associativo e icone GUI
+12/26 Test #119: forgecad_surface_mapping_tests ...................   Passed    1.28 sec
+test 131
+      Start 131: forgecad_ellipse_extremes_tests
+
+131: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_view_tests "--ellipse-extremes"
+131: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release
+131: Environment variables: 
+131:  QT_QPA_PLATFORM=offscreen
+131:  QT_QPA_OFFSCREEN_NO_GLX=1
+131:  QT_QPA_PLATFORMTHEME=
+131:  QT_STYLE_OVERRIDE=Fusion
+131:  FORGECAD_EXAMPLE_DIR=/home/myungit/Documenti/File_Esempio
+131: Test timeout computed to be: 10000000
+131: PASS ellipse extremes: exact geometry, 5 DOF, all four references, constraints, mouse, snap, Undo/Redo, codec70/legacy and command
+13/26 Test #131: forgecad_ellipse_extremes_tests ..................   Passed    0.09 sec
+test 149
+      Start 149: forgecad_application_theme_tests
+
+149: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_application_theme_tests
+149: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release
+149: Environment variables: 
+149:  QT_QPA_PLATFORM=offscreen
+149: Test timeout computed to be: 15
+149: PASS Fusion, quattro transizioni chiaro/scuro, finestre aperte, campi, disabilitati, metriche e stabilità eventi (Qt 6.12.0); richieste native=0, segnali simulati=9; fallback palette, menu, preferenze e override manuale PASS
+14/26 Test #149: forgecad_application_theme_tests .................   Passed    0.09 sec
+test 199
+      Start 199: forgekernel_tolerance_tests
+
+199: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_tolerance_tests
+199: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+199: Test timeout computed to be: 10000000
+199: [  OK  ] ToleranceDefaults
+199: [  OK  ] ToleranceInvalidMetadata
+199: [  OK  ] ToleranceVertexBudget
+199: [  OK  ] TolerancePCurveBudget
+199: [  OK  ] ToleranceEdgeFaceBudget
+199: [  OK  ] ToleranceDocumentScopesAndWorkers
+199: [  OK  ] ToleranceDocumentOffsetAccuracy
+199: 7/7 test superati
+15/26 Test #199: forgekernel_tolerance_tests ......................   Passed    0.31 sec
+test 213
+      Start 213: forgekernel_curve_fit_validation_tests
+
+213: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_curve_fit_validation_tests
+213: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+213: Test timeout computed to be: 120
+213: [  OK  ] CurveFitCertifiedDegree27OffsetPoseScaleRational
+213: [  OK  ] CurveFitCertifiedNestedTrims
+213: [  OK  ] CurveFitCertifiedInvalidAndAtomic
+213: [  OK  ] CurveFitCertifiedUnresolvedAndCancellation
+213: [  OK  ] CurveFitCertifiedConicParameterNotAssumedPolynomial
+213: [  OK  ] CurveFitCertifiedRevolutionMeridian
+213: [  OK  ] CurveFitLegacyInvalidInputAndAtomic
+213: [  OK  ] CurveFitCertifiedRescaledWeightsTrimTransform
+213: [  OK  ] CurveFitCertifiedMultipleSpansUnclamped
+213: [  OK  ] CurveFitCertifiedProviderDomainAndCancellation
+213: [  OK  ] CurveFitCertifiedClosedNurbsAcrossSeam
+213: 11/11 test superati
+16/26 Test #213: forgekernel_curve_fit_validation_tests ...........   Passed   17.23 sec
+test 225
+      Start 225: forgekernel_surface_mapping_tests
+
+225: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_surface_mapping_tests
+225: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+225: Test timeout computed to be: 120
+225: PASS sviluppo piano/cilindro/cono, aree/lunghezze, rifiuto doppia curvatura, deformazione cilindrica/volume, genealogia, B-rep, STEP e mesh, appoggio multifaccia continuo/NURBS/vuoti
+17/26 Test #225: forgekernel_surface_mapping_tests ................   Passed    0.24 sec
+test 230
+      Start 230: forgekernel_blend_cavity_regression_tests
+
+230: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_blend_cavity_regression_tests
+230: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+230: Test timeout computed to be: 90
+230: [  OK  ] BlendCavitySmallRadiusKeepsForwardContour
+230: [  OK  ] BlendCavitySmallRadiusKeepsDifferentSeed
+230: [  OK  ] BlendCavitySmallRadiusKeepsRigidPose
+230: [  OK  ] BlendCavitySmallRadiusKeepsScaledGeometry
+230: [  OK  ] BlendCavityCancellationPreservesBodyAndClearsOutputHistory
+230: [  OK  ] BlendCavityConsumedSideRejectsWithoutBodyOrPartialHistory
+230: 6/6 test superati
+18/26 Test #230: forgekernel_blend_cavity_regression_tests ........   Passed   22.30 sec
+test 233
+      Start 233: forgekernel_sheet_fit_validation_tests
+
+233: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_sheet_fit_validation_tests
+233: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+233: Test timeout computed to be: 180
+233: [  OK  ] SheetFitPlanarNurbsOrientationsAndPose
+233: [  OK  ] SheetFitHiddenFeatureBothBranchesAndScale
+233: 2/2 test superati
+19/26 Test #233: forgekernel_sheet_fit_validation_tests ...........   Passed    1.27 sec
+test 234
+      Start 234: forgekernel_curve_projection_tests
+
+234: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_curve_projection_tests
+234: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+234: Test timeout computed to be: 180
+234: [  OK  ] CurveProjectionRationalKnotsWeightsAndJets
+234: [  OK  ] CurveProjectionAffineShearNestedWrappers
+234: [  OK  ] CurveProjectionLinesDegenerateAndUnsupportedConics
+234: [  OK  ] CurveProjectionInvalidAndCancellation
+234: [  OK  ] CurveProjectionFillRationalAndBodyRoundtrip
+234: 5/5 test superati
+20/26 Test #234: forgekernel_curve_projection_tests ...............   Passed    0.02 sec
+test 235
+      Start 235: forgekernel_boundary_fit_validation_tests
+
+235: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_boundary_fit_validation_tests
+235: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+235: Test timeout computed to be: 180
+235: [  OK  ] BoundaryFitHiddenSpansAndDegree27FinalSurface
+235: [  OK  ] BoundaryFitCompoundSidesPoseScaleAndReversals
+235: [  OK  ] BoundaryFitPartialNestedTrimAndAutomaticSubpieces
+235: [  OK  ] BoundaryFitConicCompatibilityAndCancellation
+235: [  OK  ] BoundaryFitReversedKnownSide
+235: [  OK  ] BoundaryFitKnownSideAllRowsAndTraversalDirections
+235: [  OK  ] BoundaryFitInvalidTolerance
+235: [  OK  ] BoundaryFitFinalCoonsEndpointMismatchBudget
+235: [  OK  ] BoundaryFitOracleClosedJunctionEndpoints
+235: 9/9 test superati
+21/26 Test #235: forgekernel_boundary_fit_validation_tests ........   Passed    0.34 sec
+test 236
+      Start 236: forgekernel_surface_curve_fit_validation_tests
+
+236: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_surface_curve_fit_validation_tests
+236: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+236: Test timeout computed to be: 180
+236: [  OK  ] SurfaceCurveFitPolesHiddenSupportPoseScaleAndParameters
+236: [  OK  ] SurfaceCurveFitSharedHiddenNeighborRejectedAndCoherentAccepted
+236: [  OK  ] SurfaceCurveFitDirectOracleKnotCrossingsAndUnsupportedUV
+236: [  OK  ] SurfaceCurveFitInstancedSurfaceAndMaterializedAffine
+236: [  OK  ] SurfaceCurveFitInvalidInputAndCancellation
+236: 5/5 test superati
+22/26 Test #236: forgekernel_surface_curve_fit_validation_tests ...   Passed    0.60 sec
+test 237
+      Start 237: forgekernel_mapping_carrier_validation_tests
+
+237: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_mapping_carrier_validation_tests
+237: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+237: Test timeout computed to be: 180
+237: [  OK  ] MappingCarrierHiddenTargetsPolyRationalPoseScale
+237: [  OK  ] MappingCarrierSourceFrameQuarterTurnShiftHolesAndRoundtrip
+237: [  OK  ] MappingCarrierDeclaredLegacyDiagonalPeriodicAndOffset
+237: [  OK  ] MappingCarrierFailureAndCallbackCancellationAreAtomic
+237: [  OK  ] MappingCarrierDegree27SingleSpanAndRoundtrip
+237: [  OK  ] MappingCarrierTolerantSourceDiscrepanciesAreRejectedAtomically
+237: [  OK  ] MappingCarrierSmallSourceVertexDiscrepancyIsReported
+237: [  OK  ] MappingCarrierUnresolvedNaturalBoundaryIsAtomic
+237: [  OK  ] MappingCarrierRecognizedAffineFinBudgetFailsAtomically
+237: 9/9 test superati
+23/26 Test #237: forgekernel_mapping_carrier_validation_tests .....   Passed    1.25 sec
+test 238
+      Start 238: forgekernel_mapping_uv_validation_tests
+
+238: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_mapping_uv_validation_tests
+238: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+238: Test timeout computed to be: 180
+238: mapping_polynomial source=0 residual=2.21233e-11 ratio=0.417834 map_error=2.1222e-11 deviation=5.99703e-11 PASS
+238: mapping_rational source=0 residual=3.98348e-11 ratio=0.577316 map_error=1.75739e-08 deviation=1.75002e-08 PASS
+238: mapping_trim_range source=0 residual=4.87976e-11 ratio=0.577215 map_error=1.75739e-08 deviation=1.75002e-08 PASS
+238: mapping_reverse source=0 residual=4.06494e-11 ratio=0.577229 map_error=1.75739e-08 deviation=1.75002e-08 PASS
+238: mapping_pose_wrapper source=1.33227e-15 residual=1.35851e-10 ratio=0.950994 map_error=1.75739e-08 deviation=1.75002e-08 PASS
+238: mapping_scale1000 source=2.29143e-13 residual=6.63743e-09 ratio=0.990916 map_error=1.97452e-08 deviation=1.89836e-08 PASS
+238: mapping_scale001 source=1.08779e-15 residual=9.9004e-11 ratio=0.939807 map_error=5.97713e-09 deviation=5.95052e-09 PASS
+238: mapping_height source=5.55112e-17 residual=3.98348e-11 ratio=0.577316 map_error=1.75739e-08 deviation=1.75002e-08 PASS
+238: mapping_normal_offset source=5.55112e-17 residual=3.98348e-11 ratio=0.577316 map_error=1.75739e-08 deviation=1.75002e-08 PASS
+238: quilt_polynomial source=0 residual=2.21233e-11 ratio=0.417834 map_error=2.1222e-11 deviation=5.99703e-11 PASS
+238: quilt_rational source=0 residual=3.98348e-11 ratio=0.577316 map_error=1.75739e-08 deviation=1.75002e-08 PASS
+238: quilt_trim_range source=0 residual=4.87976e-11 ratio=0.577215 map_error=1.75739e-08 deviation=1.75002e-08 PASS
+238: quilt_reverse source=0 residual=4.06494e-11 ratio=0.577229 map_error=1.75739e-08 deviation=1.75002e-08 PASS
+238: quilt_pose_wrapper source=1.33227e-15 residual=1.2318e-10 ratio=0.94292 map_error=1.75739e-08 deviation=1.75002e-08 PASS
+238: quilt_scale1000 source=2.29143e-13 residual=6.63743e-09 ratio=0.990916 map_error=1.97452e-08 deviation=1.89836e-08 PASS
+238: quilt_scale001 source=1.08779e-15 residual=5.71195e-11 ratio=0.668689 map_error=5.97712e-09 deviation=5.95051e-09 PASS
+238: quilt_height source=5.55112e-17 residual=3.98348e-11 ratio=0.577316 map_error=1.75739e-08 deviation=1.75002e-08 PASS
+238: quilt_normal_offset source=5.55112e-17 residual=3.98348e-11 ratio=0.577316 map_error=1.75739e-08 deviation=1.75002e-08 PASS
+238: quilt_faruv10000_identity source=5.55112e-17 residual=5.60684e-11 ratio=0.561034 map_error=1.75739e-08 deviation=1.75002e-08 PASS
+238: quilt_faruv10000_pose source=2.03507e-15 residual=1.67554e-08 ratio=0.99596 map_error=1.91676e-08 deviation=1.91555e-08 PASS
+238: atomic_failures PASS
+238: passed=21 failed=0
+24/26 Test #238: forgekernel_mapping_uv_validation_tests ..........   Passed    3.69 sec
+test 239
+      Start 239: forgekernel_mapping_diagonal_validation_tests
+
+239: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_mapping_diagonal_validation_tests
+239: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+239: Test timeout computed to be: 180
+239: [  OK  ] MappingDiagonalExtrusionHiddenPolynomialRationalPoseScaleReverse
+239: [  OK  ] MappingDiagonalExtrusionNestedGeneratorTrimHolesHistoryRoundtrip
+239: [  OK  ] MappingDiagonalOriginalLineExtrusionSuccess
+239: [  OK  ] MappingDiagonalProviderPullbackKnotsAndWrongCandidate
+239: [  OK  ] MappingDiagonalFailureCancellationAreAtomicAndTensorIsUnsupported
+239: [  OK  ] MappingDiagonalProviderTinyNonzeroUDirectionMustNotSnap
+239: [  OK  ] MappingDiagonalProviderLineConstantUAndClosedJunctionQueries
+239: 7/7 test superati
+25/26 Test #239: forgekernel_mapping_diagonal_validation_tests ....   Passed    0.74 sec
+test 240
+      Start 240: forgekernel_planar_flatten_validation_tests
+
+240: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_planar_flatten_validation_tests
+240: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+240: Test timeout computed to be: 180
+240: [  OK  ] PlanarFlattenHiddenPolynomialRationalPoseScaleSense
+240: [  OK  ] PlanarFlattenNestedPartialTrimReverseHolesAndRoundtrip
+240: [  OK  ] PlanarFlattenInvalidAndCancellationPreserveStatsHistorySource
+240: [  OK  ] PlanarFlattenLineUVFiniteNonunitRangePreservesParameter
+240: [  OK  ] PlanarFlattenAngularConicLegacyCompatibility
+240: [  OK  ] PlanarFlattenFoldPreservesFiniteCarrierWindowAndBoundaryRoundtrip
+240: 6/6 test superati
+26/26 Test #240: forgekernel_planar_flatten_validation_tests ......   Passed    1.36 sec
+
+The following tests passed:
+	forgecad_document_theme_tabs_tests
+	forgecad_document_theme_only2d_tests
+	forgecad_document_tabs_tests
+	forgecad_storyboard_review_tests
+	forgecad_function_panels_tests
+	forgecad_chamfer_preview_state_tests
+	forgecad_preview_selection_state_tests
+	forgecad_storyboard_panel_selection_tests
+	forgecad_history_suppression_tests
+	forgecad_declared_history_cache_tests
+	forgecad_surface_pattern_tests
+	forgecad_surface_mapping_tests
+	forgecad_ellipse_extremes_tests
+	forgecad_application_theme_tests
+	forgekernel_tolerance_tests
+	forgekernel_curve_fit_validation_tests
+	forgekernel_surface_mapping_tests
+	forgekernel_blend_cavity_regression_tests
+	forgekernel_sheet_fit_validation_tests
+	forgekernel_curve_projection_tests
+	forgekernel_boundary_fit_validation_tests
+	forgekernel_surface_curve_fit_validation_tests
+	forgekernel_mapping_carrier_validation_tests
+	forgekernel_mapping_uv_validation_tests
+	forgekernel_mapping_diagonal_validation_tests
+	forgekernel_planar_flatten_validation_tests
+
+100% tests passed out of 26
+
+Total Test time (real) =  71.64 sec

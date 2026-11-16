@@ -1,0 +1,7 @@
+[  OK  ] BlendCavitySmallRadiusKeepsForwardContour
+[  OK  ] BlendCavitySmallRadiusKeepsDifferentSeed
+[  OK  ] BlendCavitySmallRadiusKeepsRigidPose
+[  OK  ] BlendCavitySmallRadiusKeepsScaledGeometry
+[  OK  ] BlendCavityCancellationPreservesBodyAndClearsOutputHistory
+[  OK  ] BlendCavityConsumedSideRejectsWithoutBodyOrPartialHistory
+6/6 test superati

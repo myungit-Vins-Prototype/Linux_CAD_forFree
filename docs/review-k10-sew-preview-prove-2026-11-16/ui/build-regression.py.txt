@@ -1,0 +1,10 @@
+from pathlib import Path
+import json,shlex,subprocess,os,sys
+r=Path('/home/myungit/Linux_CAD_forFree');o=Path('/tmp/preview-next-review/next');private='--private' in sys.argv;mode=('private' if private else 'baseline')+('-header' if '--header' in sys.argv else '')
+db=json.load(open(r/'forgecad-release/compile_commands.json'))
+def compile(src,template,obj):
+ e=next(e for e in db if e['file'].endswith('/'+template));a=shlex.split(e['command']);a=a[:a.index('-o')];a=[x for x in a if x!='-O3']+['-O0','-I'+str(r),'-c',str(src),'-o',str(obj)];subprocess.run(a,cwd=e['directory'],check=True)
+compile(o/('permanent-replay.cpp' if '--header' in sys.argv else 'regression.cpp'),'tests/test_viewport.cpp',o/'regression.o')
+if private and '--reuse-overlay' not in sys.argv:compile(o/'forgeCad2026_dialogs_solids.cpp','forgeCad2026_dialogs_solids.cpp',o/'solids.o')
+a=shlex.split((r/'forgecad-release/CMakeFiles/forgecad.dir/link.txt').read_text());exclude=['forgeCad2026.cpp.o']+(['forgeCad2026_dialogs_solids.cpp.o'] if private else []);a=[x for x in a if not x.startswith('-Wl,--dependency-file=') and not any(x.endswith('/'+n) for n in exclude)];a[a.index('-o')+1]=str(o/('regression-'+mode));a[1:1]=[str(o/'regression.o')]+([str(o/'solids.o')] if private else []);(o/('link-'+mode+'.json')).write_text(json.dumps(a,indent=2));subprocess.run(a,cwd=r/'forgecad-release',check=True)
+env=os.environ.copy();env.update(QT_QPA_PLATFORM='offscreen',QT_QPA_PLATFORMTHEME='',QT_STYLE_OVERRIDE='Fusion',QT_QPA_OFFSCREEN_NO_GLX='1',LIBGL_ALWAYS_SOFTWARE='1');raise SystemExit(subprocess.run([str(o/('regression-'+mode))],env=env).returncode)

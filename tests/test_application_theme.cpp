@@ -24,6 +24,13 @@ void require(bool condition, const char *message) {
     if (!condition) throw std::runtime_error(message);
 }
 
+bool fusionMetrics(QApplication &app) {
+    std::unique_ptr<QStyle> fusion(QStyleFactory::create(QStringLiteral("Fusion")));
+    for (auto metric : {QStyle::PM_MenuPanelWidth, QStyle::PM_DefaultFrameWidth, QStyle::PM_ButtonMargin})
+        if (app.style()->pixelMetric(metric) != fusion->pixelMetric(metric)) return false;
+    return true;
+}
+
 void settle() {
     for (int i = 0; i < 8; ++i) QApplication::processEvents();
 }
@@ -85,7 +92,7 @@ int main(int argc, char **argv) {
         ForgeCad::initializeApplicationTheme(app);
         require(app.findChildren<QObject *>(QStringLiteral("forgecadApplicationTheme"), Qt::FindDirectChildrenOnly).size() == 1,
                 "una sola gestione del tema per applicazione");
-        require(app.style()->objectName().compare(QStringLiteral("fusion"), Qt::CaseInsensitive) == 0,
+        require(fusionMetrics(app),
                 "stile Fusion senza argomenti da terminale");
 
         QWidget window;
@@ -154,7 +161,7 @@ int main(int argc, char **argv) {
         for (const auto &styleName : QStyleFactory::keys()) {
             if (styleName.compare(QStringLiteral("Windows"),Qt::CaseInsensitive)!=0 && styleName.compare(QStringLiteral("Breeze"),Qt::CaseInsensitive)!=0) continue;
             QPointer<QStyle> replacement=QStyleFactory::create(styleName);app.setStyle(replacement.data());settle();
-            require(app.style()->objectName().compare(QStringLiteral("fusion"),Qt::CaseInsensitive)==0,
+            require(fusionMetrics(app),
                     "Fusion ripristinato dopo sostituzione esterna dello stile");
             require(replacement.isNull(),"stile esterno rilasciato senza conservare filtri sui widget");
             app.setStyleSheet(QStringLiteral("QToolButton { color: palette(button-text); }"));
@@ -164,7 +171,7 @@ int main(int argc, char **argv) {
                     "Fusion conservato anche sotto il wrapper del foglio di stile");
             require(app.palette()==commonPalette,"palette comune conservata dopo sostituzione di stile");
             app.setStyleSheet(QString());settle();
-            require(app.style()->objectName().compare(QStringLiteral("fusion"),Qt::CaseInsensitive)==0,"rimozione stylesheet non cambia lo stile comune");
+            require(fusionMetrics(app),"rimozione stylesheet non cambia lo stile comune");
         }
 
 #if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)

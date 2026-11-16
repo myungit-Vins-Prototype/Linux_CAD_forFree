@@ -1,0 +1,71 @@
+{
+  "files": 757,
+  "edges": 10943,
+  "units": 377,
+  "errors": {},
+  "html_matches": true,
+  "incident_edges": 60,
+  "required": [
+    [
+      "cad_sketch_offset.cpp",
+      "kernel/fk_curve_fit_bounds.cpp",
+      "call"
+    ],
+    [
+      "cad_sketch_offset.cpp",
+      "kernel/fk_curve_fit_bounds.h",
+      "include"
+    ],
+    [
+      "tests/test_sketch_offset_validation.cpp",
+      "cad_sketch_offset.cpp",
+      "call"
+    ],
+    [
+      "cad_constraints.cpp",
+      "cad_sketch_offset.cpp",
+      "call"
+    ]
+  ],
+  "files_audited": {
+    "cad_sketch_offset.cpp": {
+      "description": "Offset dello schizzo: fit NURBS certificato da coefficienti originali nei giunti e nelle copie finali, ricertificazione dei poli effettivi dopo rifilo con domini sorgente conservati, vincoli associativi e fallimenti atomici; altri tipi mantengono il fit campionato.",
+      "incoming": {
+        "call": 5,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 18,
+        "include": 11,
+        "reference": 1
+      }
+    },
+    "cad_sketch_offset.h": {
+      "description": "Contratto offset schizzo: catene e lati, copie associative, limite continuo per NURBS supportate anche dopo il rifilo e limiti campionati delle altre famiglie.",
+      "incoming": {
+        "call": 4,
+        "include": 11,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 0,
+        "include": 2,
+        "reference": 0
+      }
+    },
+    "tests/test_sketch_offset_validation.cpp": {
+      "description": "Regressioni offset schizzo con dettagli NURBS nascosti, versi e segni, giunti concavi, nodi angolosi, rifilo e rigenerazione associativa; input invalidi e pubblicazione atomica.",
+      "incoming": {
+        "call": 1,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 9,
+        "include": 5,
+        "reference": 0
+      }
+    }
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "exit": 0,
+  "seconds": 2.117095237000285,
+  "command": [
+    "/home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_view_tests",
+    "--chamfer-preview-editing"
+  ],
+  "production_overlays": [],
+  "assertions": 90,
+  "binary_sha256": "752eb3654357420040ed44c61ea49eb8d0a3c004739d5fc8a2fd23a5a4aa0ca3",
+  "source_sha256": "e1d32b51f8467e89116109d6004edf0d8acd5446aa3a99553d9bb36bc5e4a2ec",
+  "platform": "Wayland",
+  "gl_renderer_certified": false
+}

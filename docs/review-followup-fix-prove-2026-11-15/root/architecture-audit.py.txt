@@ -1,0 +1,17 @@
+import json,re
+from pathlib import Path
+root=Path('/home/myungit/Linux_CAD_forFree');out=Path('/tmp/forgecad-followup-fix-20261115/root')
+g=json.loads((root/'docs/architecture/graph.json').read_text())
+h=(root/'docs/architecture/index.html').read_text()
+e=json.loads(re.search(r'<script id="graph-data" type="application/json">(.*?)</script>',h,re.S).group(1))
+assert g==e
+focus=['kernel/fk_offset.cpp','kernel/fk_offset.h','kernel/tests/test_offset_validation.cpp','forgeCad2026_viewport_scene.cpp','forgeCad2026_dialogs_mapping.cpp','tests/test_function_panels.h','tests/test_viewport.cpp']
+nodes={n['id']:n for n in g['nodes']};assert set(focus)<=set(nodes)
+incident=[e for e in g['edges'] if e['source'] in focus or e['target'] in focus]
+required=[('kernel/tests/test_offset_validation.cpp','kernel/fk_offset.cpp','call'),('tests/test_viewport.cpp','tests/test_function_panels.h','call'),('forgeCad2026_viewport_scene.cpp','forgeCad2026_viewport_selection.cpp','call'),('kernel/fk_offset.cpp','kernel/fk_offset.h','include')]
+for key in required: assert any((e['source'],e['target'],e['kind'])==key for e in g['edges']),key
+for sym in ['previewPickerContextReview','mappingLinkedPickerReview']:
+ assert any(sym in site['symbol'] for edge in incident for site in edge['sites']),sym
+assert not g['analysis']['errors']
+r=dict(files=len(nodes),edges=len(g['edges']),units=len(g['analysis']['units']),errors=g['analysis']['errors'],html_matches=True,incident_edges=len(incident),required=required,files_audited={f:{'description':nodes[f]['description'],'incoming':{kind:sum(x['target']==f and x['kind']==kind for x in incident) for kind in ['call','include','reference']},'outgoing':{kind:sum(x['source']==f and x['kind']==kind for x in incident) for kind in ['call','include','reference']}} for f in focus})
+(out/'architecture-audit.json').write_text(json.dumps(r,indent=2));(out/'architecture-incident.json').write_text(json.dumps(incident,indent=2));print(json.dumps({k:v for k,v in r.items() if k!='files_audited'},indent=2))

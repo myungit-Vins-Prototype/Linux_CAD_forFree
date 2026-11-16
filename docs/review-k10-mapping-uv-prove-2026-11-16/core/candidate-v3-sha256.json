@@ -1,0 +1,8 @@
+{
+  "kernel/fk_surface_mapping.cpp": "c830c1c802657b50dd1cafa223af91263dba185cdf109524a16c602b6986f707",
+  "kernel/fk_quilt_mapping.cpp": "21a41fb7513ba6ca48987956632aa2d2bbdf57c49c4f9681907a4c512668df05",
+  "fk_surface_mapping.cpp.o": "77a1afd3fde4d063be824eedd4fb48d9e0a93cf3b0ffc75a2b27e3ffdf0e039a",
+  "fk_quilt_mapping.cpp.o": "3c1ae0eac247d44380a4b0bc0881ab3a44f9f4cb307d1a00e10cccb91544de78",
+  "surface_mapping_tests": "c5f8991bf1ca9fac07d168d1e6e5caa536fd40ae0e38dff40ae77d497f3495c2",
+  "surface-mapping-v3.log": "54b00f33ac5fe0a0f2598281e58b5dc83555f5ac33aa76ca3715b1d6ef08b0b1"
+}

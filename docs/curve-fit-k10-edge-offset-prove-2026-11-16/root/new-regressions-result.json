@@ -1,0 +1,6 @@
+{
+  "exit": 0,
+  "passed": 18,
+  "source": "CTest LastTest.log",
+  "test": "forgekernel_edge_offset_fit_validation_tests"
+}

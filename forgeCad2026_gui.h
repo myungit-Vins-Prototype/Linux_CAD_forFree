@@ -88,7 +88,6 @@ private:
     void endBackgroundProgress();
 
     void setDisplayMode(int mode);
-    void setTheme(bool dark);
     void rebuildModelTree();
     void renameTreeItem(QTreeWidgetItem *item);
     void applyTreeBackground(const QColor &color);

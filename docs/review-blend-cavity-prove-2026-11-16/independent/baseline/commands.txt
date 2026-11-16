@@ -1,0 +1,7 @@
+# Tutti eseguiti; shell /bin/bash. Comandi di lettura memoria/mappa e sorgenti nel turno.
+c++ -std=c++17 -O2 -fno-fast-math -ffp-contract=off -I/home/myungit/Linux_CAD_forFree/kernel /tmp/blend-cavity-review/audit/known-point-probe.cpp /tmp/blend-cavity-review/tests/baseline/libforgekernel.a -pthread -o /tmp/blend-cavity-review/audit/known-point-probe
+/tmp/blend-cavity-review/audit/known-point-probe > /tmp/blend-cavity-review/audit/known-point-results.log
+c++ -std=c++17 -O2 -fno-fast-math -ffp-contract=off -I/home/myungit/Linux_CAD_forFree/kernel /tmp/blend-cavity-review/audit/trace-probe.cpp /tmp/blend-cavity-review/audit/instrumented-surface-algo.cpp /tmp/blend-cavity-review/tests/baseline/libforgekernel.a -pthread -o /tmp/blend-cavity-review/audit/trace-probe
+/tmp/blend-cavity-review/audit/trace-probe > /tmp/blend-cavity-review/audit/trace-results.log 2>&1
+c++ -std=c++17 -O2 -fno-fast-math -ffp-contract=off -I/home/myungit/Linux_CAD_forFree/kernel /tmp/blend-cavity-review/audit/trace-probe.cpp /tmp/blend-cavity-review/audit/deeper-surface-algo.cpp /tmp/blend-cavity-review/tests/baseline/libforgekernel.a -pthread -o /tmp/blend-cavity-review/audit/deeper-probe
+/tmp/blend-cavity-review/audit/deeper-probe > /tmp/blend-cavity-review/audit/deeper-results.log 2>&1

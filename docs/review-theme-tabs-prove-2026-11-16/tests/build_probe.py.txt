@@ -1,0 +1,17 @@
+from pathlib import Path
+import json,shlex,subprocess,sys
+r=Path('/home/myungit/Linux_CAD_forFree');o=Path('/tmp/theme-tabs-review/tests');f=o/'baseline';b=r/'forgecad-release';mode=sys.argv[1] if len(sys.argv)>1 else 'baseline';target=o/mode;target.mkdir(exist_ok=True)
+commands=json.loads((f/'sources/forgecad-release/compile_commands.json').read_text());c=next(x for x in commands if x['file'].endswith('/tests/test_viewport.cpp'));args=shlex.split(c['command']);idx=args.index('-o');args[idx+1]=str(target/'theme_probe.o');args[-1]=str(o/'theme_probe.cpp');args=[x for x in args if x not in ['-MD','-MT','-MF']];args[args.index('-O3')]='-O0'
+(target/'compile-command.json').write_text(json.dumps(args,indent=2));subprocess.run(args,cwd=b,check=True)
+link=shlex.split((f/'sources/forgecad-release/CMakeFiles/forgecad_view_tests.dir/link.txt').read_text());new=[];skip=False
+for i,x in enumerate(link):
+ if skip:skip=False;continue
+ if x=='-o':new+=['-o',str(target/'theme_probe')];skip=True
+ elif '--dependency-file=' in x:continue
+ elif x.endswith('/tests/test_viewport.cpp.o'):new.append(str(target/'theme_probe.o'))
+ elif x.endswith('.o') or x.endswith('.a'):new.append(str(f/x))
+ else:new.append(x)
+if mode!='baseline':
+ for name in ['forgeCad2026_application_theme.cpp','forgeCad2026_gui.cpp','cad_drawing_window.cpp']:
+  src=Path('/tmp/theme-tabs-review/core')/name;obj=target/(name+'.o');entry=next(x for x in commands if x['file']==str(r/name));a=shlex.split(entry['command']);a[a.index('-o')+1]=str(obj);a[-1]=str(src);a.insert(a.index('-o'),'-I/tmp/theme-tabs-review/core');subprocess.run(a,cwd=b,check=True);new=[str(obj) if x.endswith('/'+name+'.o') else x for x in new]
+(target/'link-command.json').write_text(json.dumps(new,indent=2));subprocess.run(new,cwd=b,check=True)

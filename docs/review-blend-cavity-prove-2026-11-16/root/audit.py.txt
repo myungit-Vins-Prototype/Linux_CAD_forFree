@@ -1,0 +1,94 @@
+from pathlib import Path
+import json,hashlib,subprocess,difflib,shutil,re,sys
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/blend-cavity-review/root');P=R/'docs/review-blend-cavity-prove-2026-11-16';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+PRODUCTION={'kernel/fk_blend_surface.cpp','kernel/CMakeLists.txt','tools/generate_architecture.py'}
+NEW={'kernel/tests/test_blend_cavity_regressions.cpp'}
+EXPECTED=PRODUCTION|{'CLAUDE.md','docs/code-review-2026-11-15.md'}
+def architecture():
+    g=json.loads((R/'docs/architecture/graph.json').read_text());nodes={n['id']:n for n in g['nodes']};assert not g['analysis']['errors'];assert g['analysis']['configurationDigest']==sha(R/'forgecad-release/compile_commands.json')
+    for f,h in g['hashes'].items():assert sha(R/f)==h,f
+    html=(R/'docs/architecture/index.html').read_text();assert json.loads(re.search(r'<script id="graph-data" type="application/json">(.*?)</script>',html,re.S).group(1))==g
+    focus=PRODUCTION|NEW|{'kernel/fk_blend.cpp','kernel/tests/test_blend_cavity.cpp','kernel/fk_cancel.h'}
+    required=[('kernel/tests/test_blend_cavity_regressions.cpp','kernel/fk_blend.cpp','blendEdges'),('kernel/fk_blend.cpp','kernel/fk_blend_surface.cpp','blendSurfaceChains'),('kernel/fk_blend_surface.cpp','kernel/fk_blend_surface.cpp','traceAlongSurfaceU'),('kernel/fk_blend_surface.cpp','kernel/fk_cancel.h','cancellationPoint')]
+    for a,b,symbol in required:assert any(e['source']==a and e['target']==b and e['kind']=='call' and any(symbol in s['symbol'] for s in e['sites']) for e in g['edges']),(a,b,symbol)
+    assert 'quarto vincolo' in nodes['kernel/fk_blend_surface.cpp']['description'];assert 'cancellazione' in nodes['kernel/tests/test_blend_cavity_regressions.cpp']['description']
+    incident=[e for e in g['edges'] if e['source'] in focus or e['target'] in focus]
+    result={'files':len(nodes),'edges':len(g['edges']),'units':len(g['analysis']['units']),'errors':g['analysis']['errors'],'html_matches':True,'incident_edges':len(incident),'required_calls':required,'focus':{f:{'description':nodes[f]['description'],'incoming':{k:sum(e['target']==f and e['kind']==k for e in incident) for k in ['call','include','reference']},'outgoing':{k:sum(e['source']==f and e['kind']==k for e in incident) for k in ['call','include','reference']}} for f in sorted(focus) if f in nodes}}
+    (T/'architecture-audit.json').write_text(json.dumps(result,indent=2)+'\n');(T/'architecture-incident.json').write_text(json.dumps(incident,indent=2)+'\n')
+    with (T/'architecture-check.log').open('w') as log:subprocess.run(['python3','tools/generate_architecture.py','--check'],cwd=R,check=True,stdout=log,stderr=subprocess.STDOUT)
+    print({k:v for k,v in result.items() if k!='focus'},flush=True)
+def preserve():
+    initial=json.loads((T/'hashes-before.json').read_text());frozen=json.loads((T/'frozen-source-hashes.json').read_text());changed=sorted(f for f,h in initial.items() if not (R/f).is_file() or sha(R/f)!=h);assert set(changed)==EXPECTED,changed
+    for f,h in frozen.items():assert sha(R/f)==h,f
+    for name in ['build','blend','helix','fill','release-variants']:assert json.loads((T/(name+'-result.json')).read_text())['exit']==0,name
+    ctest=json.loads((T/'ctest-result.json').read_text());assert ctest['exit']==0 and ctest['actual_passed']==len(ctest['tests'])
+    startup=json.loads((T/'app-startup-result.json').read_text());assert startup['alive'] and startup['actual_executable']==str(R/'forgecad-release/forgecad')
+    assert 'groups=13 pass=13 fail=0' in (T/'ctest.log').read_text()
+    f=json.loads((T/'fraction-separation-result.json').read_text());assert f['pass'] and f['initial_patches']==602 and f['on_carrier_corner_sensitivity']
+    delivery_checks={}
+    for label,folder,manifest in [('core',Path('/tmp/blend-cavity-review/core/delivery'),'MANIFEST.sha256'),('tests',Path('/tmp/blend-cavity-review/tests/delivery'),'SHA256SUMS'),('independent-baseline',Path('/tmp/blend-cavity-review/audit/delivery/baseline'),'SHA256SUMS'),('independent-candidate',Path('/tmp/blend-cavity-review/audit/delivery/candidate'),'SHA256SUMS')]:
+        lines=(folder/manifest).read_text().splitlines()
+        for line in lines:h,path=line.split('  ',1);assert sha(folder/path)==h,(label,path)
+        delivery_checks[label]={'artifacts':len(lines),'manifest_sha256':sha(folder/manifest)}
+    assert sha(R/'kernel/fk_blend_surface.cpp')==sha(Path('/tmp/blend-cavity-review/core/delivery/fk_blend_surface.cpp.txt'))==sha(Path('/tmp/blend-cavity-review/audit/delivery/candidate/fk_blend_surface.cpp.txt'))
+    assert sha(R/'kernel/tests/test_blend_cavity_regressions.cpp')==sha(Path('/tmp/blend-cavity-review/tests/delivery/test_blend_cavity_regressions.cpp.txt'))
+    san=json.loads(Path('/tmp/blend-cavity-review/tests/sanitizer-run-final.json').read_text());assert all(v['exit']==0 for v in san['runs'].values()) and 'detect_leaks=1' in san['ASAN_OPTIONS']
+    names=subprocess.check_output(['git','ls-files','--cached','--others','--exclude-standard','-z'],cwd=R).decode().split('\0');new=sorted(f for f in set(names)-set(initial) if f and (R/f).is_file() and not (R/f).is_symlink())
+    allowed=NEW|{'docs/review-blend-cavity-2026-11-16.md','docs/history/claude-prima-blend-cavity-2026-11-16.md'};assert all(f in allowed or f.startswith(str(P.relative_to(R))+'/') for f in new),new
+    memory=(R/'CLAUDE.md').read_text();assert len(memory.encode())<=16384 and len(re.findall(r'^\*\*',memory,re.M))<=10
+    binaries=['forgecad-release/forgecad','forgecad-release/forgecad_view_tests','forgecad-release/kernel/forgekernel_tests','forgecad-release/kernel/forgekernel_blend_cavity_tests','forgecad-release/kernel/forgekernel_blend_cavity_regression_tests'];latestprod=(R/'kernel/fk_blend_surface.cpp').stat().st_mtime
+    assert (R/binaries[0]).stat().st_mtime>=latestprod and (R/binaries[-1]).stat().st_mtime>=(R/'kernel/tests/test_blend_cavity_regressions.cpp').stat().st_mtime
+    db=json.loads((R/'forgecad-release/compile_commands.json').read_text());commands=[e for e in db if e['file'].endswith('/kernel/fk_blend_surface.cpp')];assert len(commands)==1
+    for e in commands:assert '-ffp-contract=off' in e['command'] and 'opencascade' not in e['command'].lower() and 'Qt6' not in e['command']
+    for f in ['forgecad-release/CMakeFiles/forgecad.dir/link.txt','forgecad-release/CMakeFiles/forgecad_view_tests.dir/link.txt']:
+        link=(R/f).read_text();assert 'opencascade' not in link.lower() and 'libTK' not in link
+    subprocess.run(['git','diff','--check'],cwd=R,check=True)
+    manifests={}
+    for d in ['ellisse-estremi','curve-fit-k10-edge-offset','review-preview-unification','supporto-booleana','review-k10-uv-preview','review-k10-sew-preview','review-k10-helix-orphans']:
+        directory=R/'docs'/(d+'-prove-2026-11-16');lines=(directory/'SHA256SUMS').read_text().splitlines()
+        for line in lines:h,f=line.split('  ',1);assert sha(directory/f)==h,(d,f)
+        manifests[d]=len(lines)
+    result={'document_hashes':{f:sha(R/f) for f in ['CLAUDE.md','docs/code-review-2026-11-15.md','docs/review-blend-cavity-2026-11-16.md','docs/history/claude-prima-blend-cavity-2026-11-16.md']},'delivery_checks':delivery_checks,'initial_files':len(initial),'preserved_files':len(initial)-len(changed),'changed_existing':changed,'new_files':new,'source_hashes':frozen,'binary_hashes':{f:sha(R/f) for f in binaries},'kernel_sha256':sha(R/'forgecad-release/kernel/libforgekernel.a'),'compile_command':commands,'preserved_manifests':manifests,'claude_bytes':len(memory.encode())}
+    (T/'final-audit.json').write_text(json.dumps(result,indent=2)+'\n')
+    diff=[]
+    for f in changed:
+        p=T/'before'/f;assert p.is_file(),f;diff+=list(difflib.unified_diff(p.read_text().splitlines(True),(R/f).read_text().splitlines(True),fromfile='before/'+f,tofile='after/'+f))
+    for f in NEW:diff+=list(difflib.unified_diff([],(R/f).read_text().splitlines(True),fromfile='/dev/null',tofile='after/'+f))
+    (T/'change.diff').write_text(''.join(diff))
+    for f in frozen|{'CLAUDE.md':'','docs/code-review-2026-11-15.md':'','docs/review-blend-cavity-2026-11-16.md':'','docs/history/claude-prima-blend-cavity-2026-11-16.md':''}:
+        q=T/'final-source'/(f+'.txt');q.parent.mkdir(parents=True,exist_ok=True);q.write_bytes((R/f).read_bytes())
+    print('Preservation',result['preserved_files'],'/',len(initial),'manifests',manifests,flush=True)
+def copy_folder(label,folder):
+    for p in folder.rglob('*'):
+        if not p.is_file() or '__pycache__' in p.parts or p.suffix in ['.o','.a','.body','.prt','.pyc']:continue
+        with p.open('rb') as stream:
+            if stream.read(4)==b'\x7fELF':continue
+        q=P/label/p.relative_to(folder)
+        if q.suffix in ['.cpp','.h','.py','.sh'] or q.name=='CMakeLists.txt':q=q.with_name(q.name+'.txt')
+        q.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(p,q)
+    # Adapt embedded manifests when proof sources gain the archival .txt suffix.
+    for manifest in folder.rglob('SHA256SUMS'):
+        target=P/label/manifest.relative_to(folder)
+        lines=[]
+        for line in manifest.read_text().splitlines():
+            h,f=line.split('  ',1);assert sha(manifest.parent/f)==h,(label,f)
+            archived=Path(f)
+            if archived.suffix in ['.cpp','.h','.py','.sh'] or archived.name=='CMakeLists.txt':archived=archived.with_name(archived.name+'.txt')
+            assert sha(target.parent/archived)==h,(label,archived)
+            lines.append(h+'  '+str(archived)+'\n')
+        if ''.join(lines)!=manifest.read_text():
+            target.with_name('SHA256SUMS.original.txt').write_bytes(manifest.read_bytes())
+            target.write_text(''.join(lines))
+def archive():
+    copy_folder('root',T)
+    copy_folder('core',Path('/tmp/blend-cavity-review/core/delivery'))
+    copy_folder('tests',Path('/tmp/blend-cavity-review/tests/delivery'))
+    copy_folder('independent',Path('/tmp/blend-cavity-review/audit/delivery'))
+    assert not any(p.suffix in ['.cpp','.h','.py','.sh','.o','.a','.prt','.pyc','.body'] or p.name=='CMakeLists.txt' for p in P.rglob('*') if p.is_file())
+    for p in P.rglob('*'):
+        if p.is_file():
+            with p.open('rb') as stream:assert stream.read(4)!=b'\x7fELF',str(p)
+    files=sorted(f for f in P.rglob('*') if f.is_file() and f!=P/'SHA256SUMS');(P/'SHA256SUMS').write_text(''.join(sha(f)+'  '+str(f.relative_to(P))+'\n' for f in files))
+    for line in (P/'SHA256SUMS').read_text().splitlines():h,f=line.split('  ',1);assert sha(P/f)==h,f
+    print('Sealed',len(files),'artefacts',flush=True)
+if __name__=='__main__':globals()[sys.argv[1]]()

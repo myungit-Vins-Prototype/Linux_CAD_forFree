@@ -1,0 +1,9 @@
+from pathlib import Path
+old=Path('/tmp/forgecad-k10-flatten-20261115/root');p=Path('/tmp/forgecad-k10-thicken-20261115/root')
+for name in ['run-ctest.py','verify-evidence.py','collect-evidence.py']:
+ s=(old/name).read_text().replace('forgecad-k10-flatten-20261115','forgecad-k10-thicken-20261115').replace('curve-fit-k10-flatten-prove-2026-11-15','curve-fit-k10-thicken-prove-2026-11-15')
+ s=s.replace('Prove K10 appiattimento di contorni su piano','Prove K10 pareti di Spessore su piano').replace('provider continuo, integrazione e misure','riuso della traslazione/estrusione originali, integrazione e misure')
+ (p/name).write_text(s)
+names=(old/'ctest-names.txt').read_text().splitlines();names=[n for n in names if n not in ['forgecad_surface_pattern_tests','forgecad_linked_reference_visibility_tests','forgecad_surface_mapping_tests','forgekernel_mapping_carrier_validation_tests','forgekernel_mapping_diagonal_validation_tests','forgekernel_surface_curve_fit_validation_tests']]
+names+=['forgecad_thicken_tests','forgecad_surface_tools_tests','forgekernel_open_offset_tests','forgekernel_offset_validation_tests','forgekernel_planar_thicken_validation_tests']
+(p/'ctest-names.txt').write_text('\n'.join(dict.fromkeys(names))+'\n')

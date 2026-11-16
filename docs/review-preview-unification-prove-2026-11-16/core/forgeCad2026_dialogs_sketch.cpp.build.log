@@ -1,0 +1,14 @@
+/tmp/review-previews-refresh/stage/forgeCad2026_dialogs_sketch.cpp: In function ‘bool spatialSketchDialog(QMainWindow*, CadViewport*, const QString&, int, const ExtrusionObject&, const std::function<QString(const ExtrusionObject&)>&)’:
+/tmp/review-previews-refresh/stage/forgeCad2026_dialogs_sketch.cpp:896:5: warning: this ‘if’ clause does not guard... [-Wmisleading-indentation]
+  896 |     if (viewport) ForgeCad::setDisplayLengthUnit(viewport->lengthUnit(), &dialog);dialog.setObjectName(QStringLiteral("spatialSketchDialog"));dialog.setWindowTitle(title);
+      |     ^~
+/tmp/review-previews-refresh/stage/forgeCad2026_dialogs_sketch.cpp:896:83: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the ‘if’
+  896 |     if (viewport) ForgeCad::setDisplayLengthUnit(viewport->lengthUnit(), &dialog);dialog.setObjectName(QStringLiteral("spatialSketchDialog"));dialog.setWindowTitle(title);
+      |                                                                                   ^~~~~~
+/tmp/review-previews-refresh/stage/forgeCad2026_dialogs_sketch.cpp: In function ‘bool extractedCurveDialog(QMainWindow*, CadViewport*, const QString&, int, const ExtrusionObject&, const std::function<QString(const ExtrusionObject&)>&)’:
+/tmp/review-previews-refresh/stage/forgeCad2026_dialogs_sketch.cpp:1023:5: warning: this ‘if’ clause does not guard... [-Wmisleading-indentation]
+ 1023 |     if (viewport) ForgeCad::setDisplayLengthUnit(viewport->lengthUnit(), &dialog);dialog.setObjectName(QStringLiteral("extractedCurveDialog"));dialog.setWindowTitle(title);dialog.setModal(false);
+      |     ^~
+/tmp/review-previews-refresh/stage/forgeCad2026_dialogs_sketch.cpp:1023:83: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the ‘if’
+ 1023 |     if (viewport) ForgeCad::setDisplayLengthUnit(viewport->lengthUnit(), &dialog);dialog.setObjectName(QStringLiteral("extractedCurveDialog"));dialog.setWindowTitle(title);dialog.setModal(false);
+      |                                                                                   ^~~~~~

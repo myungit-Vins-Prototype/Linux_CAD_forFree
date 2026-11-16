@@ -1,0 +1,106 @@
+// Insert inside namespace boundaryCertificate, after the existing outward I/V
+// arithmetic, trig(double,bool), ellipsePoint and acceleration helpers.
+// No production evaluator or sampled deviation authorizes this certificate.
+using UVInterval = std::array<I, 2>;
+
+bool affineParameters(const Curve<2> &pcurve, double t, UVInterval &uv) {
+    if (!std::isfinite(t)) return false;
+    if (pcurve.type() == CurveType::Line) {
+        const auto &line = static_cast<const Line<2> &>(pcurve);
+        for (int k = 0; k < 2; ++k)
+            uv[k] = I(line.origin()[k]) + I(line.direction()[k]) * I(t);
+    } else if (pcurve.type() == CurveType::BSpline) {
+        const auto &spline = static_cast<const BSplineCurve<2> &>(pcurve);
+        if (spline.degree() != 1 || spline.poleCount() != 2 || spline.knots().size() != 4)
+            return false;
+        const auto &knots = spline.knots();
+        if (!std::isfinite(knots[0]) || !std::isfinite(knots[2]) ||
+            !(knots[0] < knots[2]) || knots[0] != knots[1] || knots[2] != knots[3] ||
+            t < knots[0] || t > knots[2])
+            return false;
+        // The supported image is polynomial affine UV, not a rational map.
+        if (!spline.weights().empty() &&
+            (spline.weights().size() != 2 || spline.weights()[0] != 1.0 || spline.weights()[1] != 1.0))
+            return false;
+        const auto &poles = spline.poles();
+        if (!isFinite(poles[0]) || !isFinite(poles[1])) return false;
+        if (t == knots[0] || t == knots[2]) {
+            const auto &pole = poles[t == knots[0] ? 0 : 1];
+            uv = {I(pole.x()), I(pole.y())};
+        } else {
+            const I denominator = I(knots[2]) - I(knots[0]);
+            if (!finite(denominator) || !(denominator.lo > 0.0)) return false;
+            const I lambda = (I(t) - I(knots[0])) / denominator;
+            if (!finite(lambda)) return false;
+            for (int k = 0; k < 2; ++k)
+                uv[k] = I(poles[0][k]) * (I(1.0) - lambda) + I(poles[1][k]) * lambda;
+        }
+    } else {
+        return false;
+    }
+    return finite(uv[0]) && finite(uv[1]);
+}
+
+// Endpoint UV coordinates may themselves be intervals because their affine
+// parameter map is evaluated outward. Sin/cos are globally 1-Lipschitz; this
+// expands the existing rigorous Taylor enclosure without relying on libm.
+I affineTrig(I angle, bool sine) {
+    if (!finite(angle) || absMax(angle) > 8.0) return unresolved();
+    const double mid = angle.lo * 0.5 + angle.hi * 0.5;
+    if (!std::isfinite(mid)) return unresolved();
+    const double reach = absMax(angle - I(mid));
+    if (!std::isfinite(reach)) return unresolved();
+    return trig(mid, sine) + I(-reach, reach);
+}
+
+V affineSurfacePoint(const Surface &surface, const UVInterval &uv) {
+    if (!finite(uv[0]) || !finite(uv[1]))
+        return {unresolved(), unresolved(), unresolved()};
+    if (surface.type() == SurfaceType::Plane) {
+        const auto &frame = static_cast<const Plane &>(surface).frame();
+        return vector(frame.origin()) + vector(frame.xDir()) * uv[0] + vector(frame.yDir()) * uv[1];
+    }
+    if (surface.type() == SurfaceType::Cylinder) {
+        const auto &cylinder = static_cast<const CylindricalSurface &>(surface);
+        if (!std::isfinite(cylinder.radius()) || !(cylinder.radius() > 0.0))
+            return {unresolved(), unresolved(), unresolved()};
+        const auto &frame = cylinder.frame();
+        return vector(frame.origin()) +
+            (vector(frame.xDir()) * affineTrig(uv[0], false) +
+             vector(frame.yDir()) * affineTrig(uv[0], true)) * I(cylinder.radius()) +
+            vector(frame.zDir()) * uv[1];
+    }
+    return {unresolved(), unresolved(), unresolved()};
+}
+
+double affinePCurveError(const Ellipse<3> &ellipse, Interval range,
+                        const Surface &surface, const Curve<2> &pcurve) {
+    if (!range.isFinite() || !(range.lo < range.hi) ||
+        (surface.type() != SurfaceType::Plane && surface.type() != SurfaceType::Cylinder))
+        return INFINITY;
+    UVInterval uv0, uv1;
+    if (!affineParameters(pcurve, range.lo, uv0) || !affineParameters(pcurve, range.hi, uv1))
+        return INFINITY;
+    const V e0 = ellipsePoint(ellipse, range.lo), e1 = ellipsePoint(ellipse, range.hi);
+    const V s0 = affineSurfacePoint(surface, uv0), s1 = affineSurfacePoint(surface, uv1);
+    if (!finite(e0) || !finite(e1) || !finite(s0) || !finite(s1)) return INFINITY;
+    const I gap0 = norm(e0 - s0), gap1 = norm(e1 - s1);
+    const I width = I(range.hi) - I(range.lo), m = acceleration(ellipse);
+    if (!finite(gap0) || !finite(gap1) || !finite(width) || !finite(m) || !(width.hi > 0.0))
+        return INFINITY;
+    I error = I(std::max(gap0.hi, gap1.hi)) + m * square(width) / I(8.0);
+    if (surface.type() == SurfaceType::Cylinder) {
+        const auto &cylinder = static_cast<const CylindricalSurface &>(surface);
+        const auto &frame = cylinder.frame();
+        const I xLength = norm(vector(frame.xDir())), yLength = norm(vector(frame.yDir()));
+        const I uWidth = uv1[0] - uv0[0];
+        if (!finite(xLength) || !finite(yLength) || !finite(uWidth)) return INFINITY;
+        // For affine U(t), S'' = -R*(U')^2*(cos(U)X+sin(U)Y).
+        // Thus Mcomposition*DeltaT^2 = R*(||X||+||Y||)*DeltaU^2.
+        // This avoids dividing by a tiny DeltaT, including subnormal spans.
+        error = error + I(cylinder.radius()) * (xLength + yLength) * square(uWidth) / I(8.0);
+    }
+    // Peano interpolation error for BOTH original curves, plus their two
+    // corresponding endpoint gaps, bounds the difference at every t.
+    return finite(error) && error.hi >= 0.0 ? error.hi : INFINITY;
+}

@@ -1,0 +1,11 @@
+[  OK  ] CurveFitCertifiedDegree27OffsetPoseScaleRational
+[  OK  ] CurveFitCertifiedNestedTrims
+[  OK  ] CurveFitCertifiedInvalidAndAtomic
+[  OK  ] CurveFitCertifiedUnresolvedAndCancellation
+[  OK  ] CurveFitCertifiedConicParameterNotAssumedPolynomial
+[  OK  ] CurveFitCertifiedRevolutionMeridian
+[  OK  ] CurveFitLegacyInvalidInputAndAtomic
+7/7 test superati
+==6==LeakSanitizer has encountered a fatal error.
+==6==HINT: For debugging, try setting environment variable LSAN_OPTIONS=verbosity=1:log_threads=1
+==6==HINT: LeakSanitizer does not work under ptrace (strace, gdb, etc)

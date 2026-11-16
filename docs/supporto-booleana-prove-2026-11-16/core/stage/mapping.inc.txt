@@ -1,0 +1,19 @@
+    struct AssemblyOrigin {
+        std::size_t face,loop,fin;
+        HistoryLink origin;
+        bool boundary=false;
+    };
+    struct BoundaryUse {
+        std::size_t face,loop,fin;
+        BoundarySource source;
+        CurvePtr<3> curve;
+    };
+    struct BoundaryOutput {
+        int edge;
+        SurfacePtr surface;
+        CurvePtr<3> original;
+        Interval originalRange;
+    };
+    std::vector<AssemblyOrigin> assemblyOrigins;
+    std::vector<BoundaryUse> boundaryUses;
+    std::vector<BoundaryOutput> boundaryOutputs;

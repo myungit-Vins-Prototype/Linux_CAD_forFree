@@ -1,0 +1,14 @@
+from pathlib import Path
+import hashlib
+P=Path('/home/myungit/Linux_CAD_forFree/docs/review-k10-helix-orphans-prove-2026-11-16');sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+for label,original in [('core','MANIFEST.original.sha256.txt'),('independent','SHA256SUMS.original.txt'),('orphans','SHA256SUMS.original.txt')]:
+ folder=P/label;old=folder/original
+ if not old.exists():(folder/'SHA256SUMS').rename(old)
+ mapped=[]
+ for line in old.read_text().splitlines():
+  h,f=line.split('  ',1);p=folder/f
+  if not p.exists():p=p.with_name(p.name+'.txt')
+  assert sha(p)==h,(label,f)
+  mapped.append(h+'  '+str(p.relative_to(folder)))
+ (folder/'SHA256SUMS').write_text('\n'.join(mapped)+'\n');print(label,len(mapped),'mapped OK')
+p=P/'README.txt';s=p.read_text();s=s.replace('MANIFEST.original.sha256.txt conserva nomi della consegna core originaria;\ni quattro percorsi sorgente sono qui aggiunti di.txt, hash byte invariati.','I manifest *.original*.txt conservano i nomi delle consegne originarie.\nI manifest SHA256SUMS locali mappano i nomi aggiunti di.txt;hash byte invariati.');p.write_text(s)

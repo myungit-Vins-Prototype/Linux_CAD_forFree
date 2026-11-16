@@ -1,0 +1,10 @@
+sign forward=0 s=-0.3 poles=403 PASS
+sign forward=0 s=0.3 poles=403 PASS
+sign forward=1 s=-0.3 poles=403 PASS
+sign forward=1 s=0.3 poles=403 PASS
+trim poles=193 retained=64 finalcoeff/reject PASS
+C0 wrapped=0 window=0,0.5 PASS
+C0 wrapped=0 window=0.5,1 PASS
+C0 wrapped=1 window=0,0.5 PASS
+C0 wrapped=1 window=0.5,1 PASS
+unsupported returns empty PASS

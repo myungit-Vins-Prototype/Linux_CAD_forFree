@@ -1,0 +1,59 @@
+from pathlib import Path
+import json,hashlib,shutil
+R=Path('/home/myungit/Linux_CAD_forFree');S=Path('/tmp/supporto-review');P=R/'docs/supporto-booleana-prove-2026-11-16';T=P/'root'
+memory=(R/'CLAUDE.md').read_text()
+names=['inventory.log','pair-results.json','raw-2-5.log','raw-5-2.log','app-2-5.log','app-5-2.log','geometry.log','geometry-hex.log','regenerate.log','multi.log','trace-2-5.log','trace-5-2.log','trace-raw-2-5.log','trace-raw-5-2.log','app-path-audit.md','diagnosis.md','source-hashes.json','cap-radial-fraction.py','cap-radial-fraction.json','cap-radial-fraction.log','probe.cpp','probe-hex.cpp','build_probe.py','build_hex.py','run_pairs.py','instrument_boolean.py','build-commands.json','boolean-trace-build.log','boolean-trace-link.log']
+for name in names:
+ f=S/name
+ if f.is_file():
+  target=P/'initial'/(name+'.txt' if f.suffix in ['.cpp','.h','.py','.sh'] else name);target.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(f,target)
+for name in ['body-0.bin','body-2.bin','body-5.bin']:
+ assert (S/name).is_file(),name
+(P/'initial/body-snapshot-hashes.json').write_text(json.dumps({name:hashlib.sha256((S/name).read_bytes()).hexdigest() for name in ['body-0.bin','body-2.bin','body-5.bin']},indent=2)+'\n')
+report='''# Supporto.prt: unione Corpo 2 / Corpo 3 — 16 novembre 2026
+
+**Stato: causa riprodotta e misurata; correzione generale in prototipo privato, non ancora integrata.** L’originale non è stato modificato. SHA256 della copia congelata e del file originale: `79887e91d75feb748af19fcdb14cd469cc40e74abab03e3cbeaa12e2d3271f7f`.
+
+Corpo 1 corrisponde a Estrusione 1 (indice funzione 0), Corpo 2 a Estrusione 3 (indice 2), Corpo 3 a Loft 6 (indice 5). I tre B-rep salvati superano il checker; la rigenerazione senza cache non produce errori e ricostruisce B-rep su nuovi puntatori, byte-identici agli originali salvati.
+
+L’unione Corpo 2/3 fallisce in entrambi gli ordini nel kernel e nell’app. Anche il comando applicativo di unione dei tre fallisce: il retry inverso già presente non risolve. Corpo 1+2 riesce come due shell disgiunte; Corpo 1+3 produce una sola shell valida. Il controllo indipendente include topologia, loop crossing, genealogia e volumi nei casi riusciti.
+
+La corda di intersezione fra cilindro e piano del cap finale è quasi tangente al bordo ellittico della faccia ritagliata. **I carrier piano e cilindro si intersecano trasversalmente**: non è una tangenza fra le due superfici. Dagli originali coefficienti double esportati in esadecimale, un limite continuo con Fraction e radice quadrata arrotondata verso l’esterno dà una sporgenza massima dell’intera ellisse **≤1,97910812234e-11 mm** rispetto al cilindro. La risoluzione del documento è 1e-7 mm, la connessione booleana 1e-6 mm; nessuna è stata modificata.
+
+Il percorso tratta la piccola zona in modo asimmetrico: la corda di circa 2,57e-5 mm è classificata interna al cilindro e sul bordo del cap. Divide soltanto il cilindro; il cap resta indiviso ed è rimosso perché interno. Le facce laterali della loft mantengono due microarchi ellittici. In assemblaggio restano quindi tre edge con un solo uso, invariati prima/dopo il pairing radiale e lo split dei vertici. Non sono due fin orientate nello stesso verso. `Body::build` rifiuta correttamente il risultato aperto; la proiezione finale delle pcurve non è ancora stata eseguita.
+
+Il prototipo conserva gli eventi di intersezione con identità di body, face, fin, edge e parametri; segue la catena originale del bordo della faccia. L’obiettivo è una rappresentazione condivisa del contatto entro i budget esistenti, con limite continuo e monotonia verificati. Non basta eliminare la corda: resterebbero i due microarchi orfani. La provenienza da un altro operando deve restare distinta dagli indici locali già presenti in Piece. Candidati ambigui o non certificati devono mantenere il percorso attuale.
+
+[Diagnosi e prove iniziali](supporto-booleana-prove-2026-11-16/initial/diagnosis.md), [audit del percorso app](supporto-booleana-prove-2026-11-16/initial/app-path-audit.md), [limite continuo indipendente](supporto-booleana-prove-2026-11-16/initial/cap-radial-fraction.json). Le prove del prototipo e della produzione saranno aggiunte soltanto dopo la loro esecuzione. Questo stato non dichiara la booleana già corretta.
+'''
+(R/'docs/supporto-booleana-2026-11-16.md').write_text(report)
+start=memory.index('**16/11 — Anteprime');end=memory.index('\n\n**16/11 — Ellisse',start)
+entry='''**16/11 — Supporto.prt, diagnosi confermata; prototipo privato in corso.**
+Corpo 2=Estrusione 3, Corpo 3=Loft 6: unione fallisce nei due ordini e nei tre
+corpi anche senza cache; B-rep rigenerati identici. Corda/intersezione quasi
+tangente al trim ellittico: massimo continuo di sporgenza <=1,97911e-11 mm;
+tre edge restano con una sola fin per clipping Boundary asimmetrico.
+Nessuna correzione produzione ancora integrata. Originale SHA79887e91 invariato;
+prototipo generale con eventi e catena sorgente espliciti, bound continuo,
+nessun aumento budget. Tre agenti Sol. [Diagnosi](docs/supporto-booleana-2026-11-16.md).
+
+**16/11 — Anteprime e residuo UI2 completati con tre agenti Sol.**
+PRE5/PRE6 corretti; 26 rilievi corretti. Undici runner comuni, setup differito,
+footer fisso e chiusura sincrona; UI2 esteso senza ricontarlo. App/runner,
+24 CTest e 115 asserzioni su oggetti app offscreen/Wayland PASS; fixture scroll
+corretto, primo esito e diagnosi conservati. Mappa762/11023/380, check/HTML/archi,
+2929/2938 file invariati; 172 artefatti sigillati. Orfane:5 private/locali,
+17 API senza usi interni, nessuna rimozione. [Prove](docs/review-preview-unification-2026-11-16.md).'''
+memory=memory[:start]+entry+memory[end:]
+start=memory.index('**16/11 — K10, offset');end=memory.index('\n\n**15/11 — K2',start)
+entry='''**16/11 — K10, offset di bordi di estrusione completato per le famiglie supportate.**
+Tre agenti Sol: edge/generatore/UV originali separati, bound continuo e controllo
+postassembly. App,18 regressioni,24 CTest,23 pregressi e sanitizer3TU PASS.
+40 curve/943 poli/301 campate Fraction <=4,365e-8 (budget1e-7), dump Release
+identici; baseline >=5,742e-7. Mappa/check/HTML/archi e2781/2788 file invariati.
+K10 aperto:15/24 siti parziali,9 da migrare più fallback. [Prove e limiti](docs/curve-fit-k10-edge-offset-2026-11-16.md);
+[memoria conservata](docs/history/claude-prima-k10-edge-offset-2026-11-16.md).'''
+memory=memory[:start]+entry+memory[end:]
+assert len(memory.encode())<=16384,len(memory.encode());(R/'CLAUDE.md').write_text(memory)
+shutil.copy2('/tmp/supporto-baseline.py',T/'baseline.py.txt');shutil.copy2('/tmp/supporto-record.py',T/'record-diagnosis.py.txt')
+print('Diagnosi archiviata, memoria',len(memory.encode()),'bytes')

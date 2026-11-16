@@ -1,0 +1,55 @@
+bool positionSourceSupported(const CurvePtr<3> &curve) {
+    const Curve<3> *basis = curve.get();
+    while (basis && (basis->type() == CurveType::Trimmed || basis->type() == CurveType::Transformed)) {
+        cancellationPoint();
+        basis = basis->type() == CurveType::Trimmed ? static_cast<const TrimmedCurve<3> *>(basis)->basis().get()
+            : static_cast<const TransformedCurve *>(basis)->basis().get();
+    }
+    return basis && (basis->type() == CurveType::Line || basis->type() == CurveType::BSpline);
+}
+std::shared_ptr<Source> prepareExtrusionIso(const ExtrusionSurface &surface, bool fixedU, double fixed,
+                                           const Interval &variableRange) {
+    cancellationPoint();
+    if (!positionSourceSupported(surface.curve()))
+        return {};
+    const V direction = vec(surface.direction());
+    if (!fixedU) {
+        auto data = prepareSource(surface.curve(), variableRange, true);
+        for (Span &span : data->spans)
+            for (int axis = 0; axis < 3; ++axis)
+                span.h[axis] = sum(span.h[axis], scaled(span.w, I(fixed) * direction[axis]));
+        return data;
+    }
+    const Interval curveDomain = surface.curve()->domain();
+    const Interval evaluationRange = curveDomain.isFinite() ? curveDomain : Interval{fixed - 1, fixed + 1};
+    if (!evaluationRange.isFinite() || !(evaluationRange.lo < evaluationRange.hi))
+        throw std::domain_error("fit composizione: dominio estrusione non risolto");
+    auto generator = prepareSource(surface.curve(), evaluationRange, true);
+    V point;
+    bool found = false;
+    for (const Span &span : generator->spans) {
+        if (fixed < span.domain.lo || fixed > span.domain.hi)
+            continue;
+        const I parameter = (I(fixed) - I(span.domain.lo)) / (I(span.domain.hi) - I(span.domain.lo));
+        const I weight = span.constantWeight ? I(1) : evaluatePolynomial(span.w, parameter);
+        if (!(weight.lo > 0))
+            throw std::domain_error("fit composizione: peso estrusione non risolto");
+        for (int axis = 0; axis < 3; ++axis)
+            point[axis] = evaluatePolynomial(span.h[axis], parameter) / weight;
+        found = true;
+        break;
+    }
+    if (!found)
+        throw std::domain_error("fit composizione: isoparametro estrusione fuori dominio");
+    auto data = std::make_shared<Source>();
+    data->range = variableRange;
+    Span span;
+    span.domain = variableRange;
+    span.constantWeight = true;
+    span.w = {I(1)};
+    for (double coordinate : {variableRange.lo, variableRange.hi})
+        for (int axis = 0; axis < 3; ++axis)
+            span.h[axis].push_back(point[axis] + I(coordinate) * direction[axis]);
+    data->spans.push_back(std::move(span));
+    return data;
+}

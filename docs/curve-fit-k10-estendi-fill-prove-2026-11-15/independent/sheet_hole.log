@@ -1,0 +1,9 @@
+multiple=0 reverse=0 faceSense=0 endpoint_score=0 max_error=8.324756915805479e-08
+multiple=0 reverse=0 faceSense=1 endpoint_score=0 max_error=8.3247568552778982e-08
+multiple=0 reverse=1 faceSense=0 endpoint_score=0 max_error=8.3244773924424679e-08
+multiple=0 reverse=1 faceSense=1 endpoint_score=0 max_error=8.3244773789156006e-08
+multiple=1 reverse=0 faceSense=0 endpoint_score=0 max_error=8.324756915805479e-08
+multiple=1 reverse=0 faceSense=1 endpoint_score=0 max_error=8.324756915805479e-08
+multiple=1 reverse=1 faceSense=0 endpoint_score=0 max_error=8.3244773789156006e-08
+multiple=1 reverse=1 faceSense=1 endpoint_score=0 max_error=8.3244773789156006e-08
+checks=8 PASS

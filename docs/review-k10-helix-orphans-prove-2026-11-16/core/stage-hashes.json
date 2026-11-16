@@ -1,0 +1,6 @@
+{
+  "kernel/fk_helix.h": "a5d529885c067a671d09491c037f3e71ab1adb11095b7796ada3d28e9bb904ea",
+  "kernel/fk_helix_projection.h": "159edd57dc4dce09592cc90f5369fb963f95436c8d6b3f1412fb42ade8e902d9",
+  "kernel/fk_helix_projection.cpp": "ffa39b649457abb46ed5641444ecb21772e165a0b45e1f5e87e5a7d89b453e30",
+  "cad_sketch_refs.cpp": "d13ec3cedff473b9df99a47f2f2d30bf8e5df7aee08033aa7db4ba73c453139e"
+}

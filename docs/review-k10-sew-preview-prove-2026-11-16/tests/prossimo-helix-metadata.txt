@@ -1,0 +1,11 @@
+Pista per un prossimo blocco K10, non un nuovo rilievo contato.
+Il probe esegue solo Kernel::fitCurve sul callback di un originale
+TransformedCurve(HelixCurve,identity). Non esegue appendProjectedCurve Qt.
+needsProjectionFit riconosce il wrapper comeOther; basisOf elimina solo
+Trimmed, quindi il wrapper non entra nello specialcase Helix diretto.
+HelixSpec:turns1e6,pitch1e-6,radius1e-4/1e-3/.01. Per radius1e-4 il fit
+produce4poli, deviation9.9667e-9 e scarto al primo giro2e-4. La scala
+h=1e-6*range coincide con2π e le derivate numeriche aliasano la rotazione.
+È un limite dimostrato del fitter con questo callback e una pista precisa
+per la proiezione nello schizzo. Non si dichiara un fallimento applicativo
+verificato né si modifica quel sito in questo intervento.

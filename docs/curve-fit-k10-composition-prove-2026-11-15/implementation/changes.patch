@@ -1,0 +1,402 @@
+--- a/kernel/fk_curve_fit_bounds.cpp
++++ b/kernel/fk_curve_fit_bounds.cpp
+@@ -1,5 +1,7 @@
+ #include "fk_curve_fit_bounds.h"
+ #include "fk_cancel.h"
++#include "fk_bspline_surface.h"
++#include "fk_bspline_basis.h"
+ #include <algorithm>
+ #include <cmath>
+ #include <limits>
+@@ -573,7 +575,297 @@
+     };
+ }
+ 
++// An isocurve is formed from original homogeneous tensor poles. No rounded
++// ordinary curve is introduced between the surface and the residual proof.
++std::shared_ptr<Source> prepareIso(const BSplineSurface &surface, bool fixedU, double fixed) {
++    cancellationPoint();
++    const BSplineSurface *base = &surface;
++    std::vector<Transform3> transforms;
++    while (base->basis()) {
++        cancellationPoint();
++        transforms.push_back(base->placement());
++        base = base->basis().get();
++    }
++    const auto &fixedKnots = fixedU ? base->uKnots() : base->vKnots();
++    const auto &knots = fixedU ? base->vKnots() : base->uKnots();
++    const int fixedDegree = fixedU ? base->uDegree() : base->vDegree();
++    const int degree = fixedU ? base->vDegree() : base->uDegree();
++    const int fixedCount = fixedU ? base->uPoleCount() : base->vPoleCount();
++    const int count = fixedU ? base->vPoleCount() : base->uPoleCount();
++    const Interval fixedDomain = fixedU ? base->uDomain() : base->vDomain();
++    if (degree > 128 || fixedDegree > 128 || count > 100000 || fixedCount > 100000 ||
++        std::size_t(count) > 2000000 / (4 * std::size_t(degree + 1)))
++        throw std::domain_error("fit composizione: budget coefficienti esaurito");
++    if (!std::isfinite(fixed) || fixed < fixedDomain.lo || fixed > fixedDomain.hi)
++        throw std::domain_error("fit composizione: isoparametro fuori dominio naturale");
++    const int fs = findSpan(fixedKnots, fixedDegree, fixedCount, fixed);
++    double maximumWeight = 0;
++    bool equalWeight = true;
++    const auto weight = [&](int i, int j) { return fixedU ? base->weight(i, j) : base->weight(j, i); };
++    for (int i = fs - fixedDegree; i <= fs; ++i) {
++        cancellationPoint();
++        for (int j = 0; j < count; ++j) {
++            const double w = weight(i, j);
++            maximumWeight = std::max(maximumWeight, w);
++            equalWeight = equalWeight && w == weight(fs - fixedDegree, 0);
++        }
++    }
++    std::vector<V> original(count);
++    std::vector<I> originalWeights(count);
++    for (int j = 0; j < count; ++j) {
++        cancellationPoint();
++        std::vector<V> values(fixedDegree + 1);
++        std::vector<I> weights(fixedDegree + 1);
++        for (int i = 0; i <= fixedDegree; ++i) {
++            const int row = fs - fixedDegree + i;
++            const I w = equalWeight ? I(1) : I(weight(row, j)) / I(maximumWeight);
++            V point = mul(vec(fixedU ? base->pole(row, j) : base->pole(j, row)), w);
++            for (auto t = transforms.rbegin(); t != transforms.rend(); ++t) {
++                V transformed = mul(vec(t->translationPart()), w);
++                for (int r = 0; r < 3; ++r)
++                    for (int c = 0; c < 3; ++c)
++                        transformed[r] = transformed[r] + point[c] * I(t->matrix(r, c));
++                point = transformed;
++            }
++            values[i] = point;
++            weights[i] = w;
++        }
++        for (int r = 1; r <= fixedDegree; ++r)
++            for (int i = fixedDegree; i >= r; --i) {
++                const I alpha = (I(fixed) - I(fixedKnots[fs - fixedDegree + i])) /
++                                (I(fixedKnots[fs + i - r + 1]) - I(fixedKnots[fs - fixedDegree + i]));
++                values[i] = add(mul(values[i - 1], I(1) - alpha), mul(values[i], alpha));
++                if (!equalWeight)
++                    weights[i] = weights[i - 1] * (I(1) - alpha) + weights[i] * alpha;
++            }
++        original[j] = values.back();
++        originalWeights[j] = equalWeight ? I(1) : weights.back();
++    }
++    auto data = std::make_shared<Source>();
++    data->range = fixedU ? base->vDomain() : base->uDomain();
++    for (int k = degree; k < count; ++k) {
++        cancellationPoint();
++        if (!(knots[k] < knots[k + 1]))
++            continue;
++        Span span;
++        span.domain = {knots[k], knots[k + 1]};
++        span.constantWeight = equalWeight;
++        for (int pole = 0; pole <= degree; ++pole) {
++            std::vector<V> values(original.begin() + k - degree, original.begin() + k + 1);
++            P weights(originalWeights.begin() + k - degree, originalWeights.begin() + k + 1);
++            for (int r = 1; r <= degree; ++r) {
++                const double argument = r <= degree - pole ? span.domain.lo : span.domain.hi;
++                for (int i = degree; i >= r; --i) {
++                    const I alpha = (I(argument) - I(knots[k - degree + i])) /
++                                    (I(knots[k + i - r + 1]) - I(knots[k - degree + i]));
++                    values[i] = add(mul(values[i - 1], I(1) - alpha), mul(values[i], alpha));
++                    if (!equalWeight)
++                        weights[i] = weights[i - 1] * (I(1) - alpha) + weights[i] * alpha;
++                }
++            }
++            for (int axis = 0; axis < 3; ++axis)
++                span.h[axis].push_back(values.back()[axis]);
++            span.w.push_back(equalWeight ? I(1) : weights.back());
++        }
++        data->spans.push_back(std::move(span));
++    }
++    return data;
++}
++
++struct IsoMap {
++    Interval parameter;
++    bool line = false, fixedU = false;
++    double fixed = 0, first = 0, last = 0, origin = 0, direction = 0;
++    Interval anchor;
++    std::shared_ptr<Source> source;
++};
++I exactSum(double a, double b) {
++    const double sum = a + b;
++    if (!std::isfinite(sum))
++        return {-inf, inf};
++    const double tail = sum - a;
++    const double error = (a - (sum - tail)) + (b - tail);
++    return error == 0 ? I(sum) : I(dn(sum), up(sum));
++}
++I image(const IsoMap &map, double parameter) {
++    if (map.line) {
++        // An isoparametric unit Line2 has its varying direction exactly +/-1.
++        return exactSum(map.origin, map.direction * parameter);
++    }
++    if (parameter == map.anchor.lo)
++        return I(map.first);
++    if (parameter == map.anchor.hi)
++        return I(map.last);
++    return I(map.first) + (I(map.last) - I(map.first)) *
++           ((I(parameter) - I(map.anchor.lo)) / (I(map.anchor.hi) - I(map.anchor.lo)));
++}
++I preimage(const IsoMap &map, I coordinate) {
++    if (map.line)
++        return map.direction > 0 ? coordinate - I(map.origin) : I(map.origin) - coordinate;
++    const bool reversed = map.last < map.first;
++    const I fraction = reversed ? (I(map.first) - coordinate) / (I(map.first) - I(map.last))
++                                : (coordinate - I(map.first)) / (I(map.last) - I(map.first));
++    return I(map.anchor.lo) + fraction * (I(map.anchor.hi) - I(map.anchor.lo));
++}
++SurfaceCurveFitData compositionFactory(const SurfacePtr &surface, const CurvePtr<2> &pcurve,
++                                      const Interval &requested) {
++    cancellationPoint();
++    if (!surface || !pcurve || !requested.isFinite() || !(requested.lo < requested.hi) ||
++        !std::isfinite(requested.length()))
++        throw std::domain_error("fit composizione: sorgente o dominio non valido");
++    const auto *support = dynamic_cast<const BSplineSurface *>(surface.get());
++    if (!support)
++        return {};
++    const Curve<2> *basis = pcurve.get();
++    while (basis->type() == CurveType::Trimmed) {
++        cancellationPoint();
++        basis = static_cast<const TrimmedCurve<2> *>(basis)->basis().get();
++    }
++    auto maps = std::make_shared<std::vector<IsoMap>>();
++    if (basis->type() == CurveType::Line) {
++        const auto &line = static_cast<const Line<2> &>(*basis);
++        const auto d = line.direction(), o = line.origin();
++        if ((d.x() == 0) == (d.y() == 0))
++            return {};
++        IsoMap map;
++        map.line = true;
++        map.fixedU = d.x() == 0;
++        map.fixed = o[map.fixedU ? 0 : 1];
++        map.origin = o[map.fixedU ? 1 : 0];
++        map.direction = d[map.fixedU ? 1 : 0];
++        if (std::abs(map.direction) != 1)
++            return {};
++        map.parameter = requested;
++        maps->push_back(map);
++    } else if (basis->type() == CurveType::BSpline) {
++        const auto &curve = static_cast<const BSplineCurve<2> &>(*basis);
++        if (curve.degree() != 1)
++            return {};
++        if (curve.poleCount() > 100000 || requested.lo < curve.domain().lo || requested.hi > curve.domain().hi)
++            throw std::domain_error("fit composizione: dominio UV o budget non valido");
++        for (int i = 1; i < curve.poleCount(); ++i) {
++            cancellationPoint();
++            const Interval anchor{curve.knots()[i], curve.knots()[i + 1]};
++            if (!(anchor.lo < anchor.hi) || anchor.hi <= requested.lo || anchor.lo >= requested.hi)
++                continue;
++            const Vec2 a = curve.poles()[i - 1], b = curve.poles()[i];
++            // Equal weights make the original degree-one map affine in t.
++            if (curve.weight(i - 1) != curve.weight(i) || (a.x() == b.x()) == (a.y() == b.y()))
++                return {};
++            IsoMap map;
++            map.fixedU = a.x() == b.x();
++            map.fixed = a[map.fixedU ? 0 : 1];
++            map.first = a[map.fixedU ? 1 : 0];
++            map.last = b[map.fixedU ? 1 : 0];
++            map.anchor = anchor;
++            map.parameter = {std::max(requested.lo, anchor.lo), std::min(requested.hi, anchor.hi)};
++            maps->push_back(map);
++        }
++    } else {
++        return {};
++    }
++    SurfaceCurveFitData result;
++    result.breaks = {requested.lo, requested.hi};
++    std::size_t coefficientCount = 0;
++    for (IsoMap &map : *maps) {
++        cancellationPoint();
++        map.source = prepareIso(*support, map.fixedU, map.fixed);
++        for (const Span &span : map.source->spans)
++            coefficientCount += 3 * span.h[0].size() + span.w.size();
++        if (coefficientCount > 2000000)
++            throw std::domain_error("fit composizione: budget totale coefficienti esaurito");
++        const I a = image(map, map.parameter.lo), b = image(map, map.parameter.hi);
++        if (!finite(a) || !finite(b) || std::min(a.lo, b.lo) < map.source->range.lo ||
++            std::max(a.hi, b.hi) > map.source->range.hi)
++            throw std::domain_error("fit composizione: UV fuori dominio naturale o non risolto");
++        result.breaks.push_back(map.parameter.lo);
++        result.breaks.push_back(map.parameter.hi);
++        for (const Span &span : map.source->spans) {
++            const I t = preimage(map, I(span.domain.lo));
++            if (finite(t)) {
++                // A nominal cut only aids refinement. The interval query
++                // independently covers the full true preimage and its slivers.
++                const double cut = t.lo + (t.hi - t.lo) * .5;
++                if (cut > map.parameter.lo && cut < map.parameter.hi)
++                    result.breaks.push_back(cut);
++            }
++        }
++    }
++    if (maps->empty())
++        throw std::domain_error("fit composizione: copertura UV vuota");
++    std::sort(result.breaks.begin(), result.breaks.end());
++    result.breaks.erase(std::unique(result.breaks.begin(), result.breaks.end()), result.breaks.end());
++    result.bound = [maps, requested](const Interval &query, const std::array<Vec3, 4> &poles) {
++        cancellationPoint();
++        if (!query.isFinite() || !(query.lo < query.hi) || query.lo < requested.lo || query.hi > requested.hi)
++            return inf;
++        VP candidate;
++        for (const Vec3 &point : poles)
++            for (int axis = 0; axis < 3; ++axis) {
++                if (!std::isfinite(point[axis]))
++                    return inf;
++                candidate[axis].push_back(I(point[axis]));
++            }
++        double worst = 0;
++        bool covered = false;
++        auto first = std::lower_bound(maps->begin(), maps->end(), query.lo,
++                                      [](const IsoMap &map, double t) { return map.parameter.hi < t; });
++        for (auto it = first; it != maps->end() && it->parameter.lo <= query.hi; ++it) {
++            const IsoMap &map = *it;
++            const double lo = std::max(query.lo, map.parameter.lo), hi = std::min(query.hi, map.parameter.hi);
++            if (lo > hi)
++                continue;
++            cancellationPoint();
++            // Include BOTH closed endpoint values at piece junctions.
++            if (lo == hi) {
++                const I coordinate = image(map, lo);
++                const I fraction = (I(lo) - I(query.lo)) / (I(query.hi) - I(query.lo));
++                VP residual;
++                bool endpointCovered = false;
++                for (const Span &span : map.source->spans) {
++                    if (span.domain.hi < coordinate.lo || span.domain.lo > coordinate.hi)
++                        continue;
++                    endpointCovered = true;
++                    const I t = (coordinate - I(span.domain.lo)) / (I(span.domain.hi) - I(span.domain.lo));
++                    const I w = span.constantWeight ? I(1) : evaluatePolynomial(span.w, t);
++                    if (!(w.lo > 0))
++                        return inf;
++                    for (int axis = 0; axis < 3; ++axis)
++                        residual[axis] = {evaluatePolynomial(span.h[axis], t) / w -
++                                          evaluatePolynomial(candidate[axis], fraction)};
++                    worst = std::max(worst, normUpper(residual));
++                }
++                if (!endpointCovered)
++                    return inf;
++                covered = true;
++                continue;
++            }
++            const I a = image(map, lo), b = image(map, hi);
++            const Interval sourceQuery{std::max(map.source->range.lo, std::min(a.lo, b.lo)),
++                                       std::min(map.source->range.hi, std::max(a.hi, b.hi))};
++            if (!(sourceQuery.lo < sourceQuery.hi))
++                return inf;
++            VP pulledBack;
++            for (int axis = 0; axis < 3; ++axis)
++                pulledBack[axis] = affineBezier(candidate[axis],
++                    (preimage(map, I(sourceQuery.lo)) - I(query.lo)) / (I(query.hi) - I(query.lo)),
++                    (preimage(map, I(sourceQuery.hi)) - I(query.lo)) / (I(query.hi) - I(query.lo)));
++            const double error = positionOnOriginal(*map.source, sourceQuery, pulledBack);
++            if (!std::isfinite(error))
++                return inf;
++            worst = std::max(worst, error);
++            covered = true;
++        }
++        return covered ? worst : inf;
++    };
++    return result;
++}
++
+ } // namespace
++SurfaceCurveFitData surfaceCompositionErrorBound(const SurfacePtr &surface, const CurvePtr<2> &pcurve,
++                                                 const Interval &range) {
++    return compositionFactory(surface, pcurve, range);
++}
+ CurveFitErrorBound curvePositionErrorBound(const std::vector<CurveFitSourceSpan> &spans) {
+     return positionFactory(spans);
+ }
+--- a/kernel/fk_curve_fit_bounds.h
++++ b/kernel/fk_curve_fit_bounds.h
+@@ -1,6 +1,7 @@
+ #ifndef FORGECAD_FK_CURVE_FIT_BOUNDS_H
+ #define FORGECAD_FK_CURVE_FIT_BOUNDS_H
+ #include "fk_bspline.h"
++#include "fk_surface.h"
+ #include <array>
+ #include <functional>
+ namespace ForgeCad::Kernel {
+@@ -15,6 +16,17 @@
+                                                    const std::vector<double> &breaks, double tolerance,
+                                                    const CurveFitErrorBound &bound, double *deviation = nullptr);
+ namespace detail {
++struct SurfaceCurveFitData {
++    CurveFitErrorBound bound;
++    std::vector<double> breaks;
++};
++// Original BSpline surface data with axis-aligned Line2 or equal-weight
++// degree-one BSpline2 UV spans, including Trimmed wrappers. Other UV kinds
++// return an empty bound. Recognized spans outside the natural surface domain
++// (including periodic shifts) or unresolved/resource-limited data throw.
++// Surface instances are enclosed from their original basis and placements.
++SurfaceCurveFitData surfaceCompositionErrorBound(const SurfacePtr &surface, const CurvePtr<2> &pcurve,
++                                                 const Interval &range);
+ // One explicit affine source map on fitRange. sourceRange is ordered;
+ // reversed maps its upper endpoint to the lower fit endpoint.
+ struct CurveFitSourceSpan {
+--- a/kernel/fk_surface_poles.cpp
++++ b/kernel/fk_surface_poles.cpp
+@@ -1,6 +1,7 @@
+ #include "fk_body_check.h"
+ #include "fk_cancel.h"
+ #include "fk_offset.h"
++#include "fk_curve_fit_bounds.h"
+ #include "fk_pcurve.h"
+ #include "fk_surface_tools.h"
+ #include "fk_surface_poles_conversion.h"
+@@ -104,12 +105,14 @@
+         const auto uv = result.fin(chosen).pcurve;
+         demand(bool(uv), "poli: bordo senza rifilatura UV");
+         const auto support = result.face(result.finFace(chosen)).surface;
+-        boundary.curve = fitCurve(
+-            [&](double t) {
+-                const auto q = uv->point(t);
+-                return support->point(q.x(), q.y());
+-            },
+-            boundary.range, uv->breakpoints(boundary.range), tolerance * .25);
++        const auto composition = detail::surfaceCompositionErrorBound(support, uv, boundary.range);
++        const auto evaluate = [&](double t) {
++            const auto q = uv->point(t);
++            return support->point(q.x(), q.y());
++        };
++        boundary.curve = composition.bound
++            ? fitCurveCertified(evaluate, boundary.range, composition.breaks, tolerance * .25, composition.bound)
++            : fitCurve(evaluate, boundary.range, uv->breakpoints(boundary.range), tolerance * .25);
+         boundary.tolerance = std::max(boundary.tolerance, tolerance);
+         // Conserva le connessioni: uno spostamento incompatibile con l'altra
+         // faccia viene rifiutato, senza scollegare o allargare le tolleranze.
+@@ -121,7 +124,33 @@
+             const auto adjacent = result.face(result.finFace(fin)).surface;
+             const double allowed =
+                 std::max({tolerance, source.edge(edge).tolerance, uvSource.fin(fin).pcurveTolerance});
+-            demand(pcurveDeviation(*adjacent, *boundary.curve, *use.pcurve, boundary.range, 64) <= allowed,
++            const auto adjacentComposition = detail::surfaceCompositionErrorBound(adjacent, use.pcurve, boundary.range);
++            bool compatible = true;
++            if (adjacentComposition.bound) {
++                // Validate the actual output coefficients on EVERY supported
++                // adjacent carrier, even if the chosen carrier used fallback.
++                const auto *curve = dynamic_cast<const BSplineCurve<3> *>(boundary.curve.get());
++                demand(curve && curve->degree() == 3, "poli: fit bordo non cubico");
++                for (int i = 3; i < curve->poleCount(); ++i) {
++                    cancellationPoint();
++                    const auto &knots = curve->knots();
++                    if (!(knots[i] < knots[i + 1]))
++                        continue;
++                    demand((i == 3 || knots[i - 2] == knots[i]) &&
++                               (i + 1 == curve->poleCount() || knots[i + 1] == knots[i + 3]),
++                           "poli: campata cubica non Bezier");
++                    const std::array<Vec3, 4> poles{curve->poles()[i - 3], curve->poles()[i - 2],
++                                                  curve->poles()[i - 1], curve->poles()[i]};
++                    const double error = adjacentComposition.bound({knots[i], knots[i + 1]}, poles);
++                    if (!std::isfinite(error) || error > allowed) {
++                        compatible = false;
++                        break;
++                    }
++                }
++            } else {
++                compatible = pcurveDeviation(*adjacent, *boundary.curve, *use.pcurve, boundary.range, 64) <= allowed;
++            }
++            demand(compatible,
+                    "poli: le modifiche separano un bordo condiviso; spostare insieme i poli corrispondenti delle facce "
+                    "adiacenti");
+         }

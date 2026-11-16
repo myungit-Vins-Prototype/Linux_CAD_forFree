@@ -1,0 +1,5 @@
+[  OK  ] BoundarySheetSkewQuad
+[  OK  ] BoundarySheetPlanarRegions
+[  OK  ] BoundarySheetHalfCylinder
+[  OK  ] BoundarySheetRejectsBadContours
+4/4 test superati

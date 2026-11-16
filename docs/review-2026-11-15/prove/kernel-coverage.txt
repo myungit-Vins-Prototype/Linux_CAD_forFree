@@ -1,0 +1,17 @@
+Review kernel 15/11/2026; sorgenti e documenti progetto non modificati.
+Letti AGENTS.md, CLAUDE.md, descrizioni e archi rilevanti docs/architecture/graph.json.
+Analisi mirata: fk_math, fk_curve, fk_bspline, fk_bspline_basis, fk_bspline_surface, fk_topology, fk_body_check, fk_profile, fk_sweep, fk_hermite, fk_loft, fk_loft_sections, fk_loft_profiles, fk_boolean, fk_shell, fk_offset, fk_pcurve; lettura contratti e percorsi principali; non audit riga per riga dell'intero kernel.
+475/475 test PASS: runner ESISTENTE del14/11 08:50, baseline storica, non certifica kernel15/11.
+16/16 test filtro Sweep PASS: runner corrente ricostruito in /tmp con unico object sorgente obsoleto test_sweep.cpp ricompilato, tutti object kernel/occt_tests e libforgekernel.a correnti; relink_current.py/.log tracciano la procedura.
+libforgekernel.a verificata più recente di tutti i sorgenti kernel.
+Riproduttori compilati C++17 -O2 -I kernel e libforgekernel.a -pthread, eseguiti senza Qt/OCCT.
+probe_sweep: falso rifiuto profilo circolare ruotato su medesimo arco rappresentato NURBS.
+probe_misc: reverseEdge su lamina corrompe dopo eccezione; loft confonde catena aperta con chiusa in funzione della traslazione; operazioni con Body vuoto corrette.
+probe_closed: spline spaziale chiusa unico tratto V=0 e area=0; due tratti V/area corretti. Difetto già documentato nella memoria di progetto, qui ricertificato.
+probe_overlap: elica con spire sovrapposte accettata e volume eccede massimo del box contenitore.
+probe_alias: elica16giri aliasa campionamento piano/retta, torsione minima deforma profilo e dimezza volume; Frenet controlla stessa geometria.
+Nessuna verifica GUI né build app. Nessun test sanitizer/memory nel mio sottocompito.
+probe_closed_seams: causa confermata da stampa UV; edge di sezione lower e upper usata due volte per faccia ma entrambe SP-curve a v=1; superficie nonperiodica; longitudinali v0..1. Loop UV non chiuso; checkBody non lo segnala.
+probe_alias risultato: MinimalTwist V25.3261477033291 invece50.5723587146619; Frenet50.5723586572154; entrambe checkBody0. R4 passo1 giri16 rprofilo.2, spire disgiunte.
+SHA256 libforgekernel.a e8d74ac6ce262059ee9b2c2dde89ce750fdbf908f33469f6918ef55ba4802ff7
+SHA256 forgekernel_tests_current 8f19b707407e1ec72cc942ce223d87dfad149b70f7dd52441feea7a754ba6eae

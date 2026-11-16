@@ -1,0 +1,21 @@
+from pathlib import Path
+r=Path('/home/myungit/Linux_CAD_forFree')
+f=r/'kernel/CMakeLists.txt';s=f.read_text();assert 'fk_planar_flatten.cpp' not in s
+s=s.replace('    fk_quilt_mapping.cpp','    fk_planar_flatten.h\n    fk_planar_flatten.cpp\n    fk_quilt_mapping.cpp',1)
+s=s.replace('fk_affine_surface_fit.cpp PROPERTIES','fk_affine_surface_fit.cpp fk_planar_flatten.cpp fk_quilt_mapping.cpp PROPERTIES',1)
+s+='''
+# Conservazione dei contorni originali nell'appiattimento piano.
+add_executable(forgekernel_planar_flatten_validation_tests tests/fk_test_main.cpp tests/test_planar_flatten_validation.cpp)
+target_link_libraries(forgekernel_planar_flatten_validation_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_planar_flatten_validation_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_planar_flatten_validation_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_planar_flatten_validation_tests COMMAND forgekernel_planar_flatten_validation_tests)
+set_tests_properties(forgekernel_planar_flatten_validation_tests PROPERTIES TIMEOUT 180)
+''';assert '    fk_planar_flatten.cpp' in s;f.write_text(s)
+f=r/'tools/generate_architecture.py';s=f.read_text();anchor=" 'kernel/fk_quilt_mapping.cpp':";assert anchor in s
+s=s.replace(anchor,""" 'kernel/fk_planar_flatten.cpp': ('kernel', 'Trasformazione affine dei contorni UV originali per appiattimento di una faccia Plane: coefficienti e parametro conservati, limiti continui di arrotondamento, risorse e cancellazione.'),
+ 'kernel/fk_planar_flatten.h': ('kernel', 'Contratto del percorso affine per appiattimento piano: mappa condivisa, curve originali supportate e errore continuo dichiarato.'),
+ 'kernel/tests/test_planar_flatten_validation.cpp': ('tests', 'Regressioni appiattimento piano con dettagli NURBS nascosti tra campioni: pesi, pose, scale, trim, fori, inversione della mappa, codec, genealogia e atomicita degli output.'),
+"""+anchor,1)
+s=s.replace("Appiattimento B-rep con bordo topologico comune, fit dei contorni,", "Appiattimento B-rep con bordo topologico comune; una faccia Plane conserva i coefficienti dei contorni tramite mappa affine e limite di arrotondamento, altri casi usano fit; ")
+f.write_text(s)

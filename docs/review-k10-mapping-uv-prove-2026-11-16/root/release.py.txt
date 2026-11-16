@@ -1,0 +1,16 @@
+from pathlib import Path
+import sys,hashlib,json,os
+sys.path.insert(0,'/tmp/mapping-uv-review/root')
+from checks import run
+T=Path('/tmp/mapping-uv-review/root');S=Path('/tmp/mapping-uv-review/tests/exports-v3');output=T/'release-export';output.mkdir(exist_ok=True)
+run('release-variants',['forgecad-release/kernel/forgekernel_mapping_uv_validation_tests',str(output)],timeout=180)
+sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+expected=sorted(S.glob('*.actual.body'));assert len(expected)==20
+result={}
+for p in expected:
+ q=output/p.name;assert q.is_file() and q.read_bytes()==p.read_bytes(),p.name
+ result[p.name]={'sha256':sha(q),'byte_identical_to_private_v3':True}
+(T/'release-comparison.json').write_text(json.dumps({'cases':len(result),'bodies':result},indent=2)+'\n');print('20 actual Release bodies byte-identical to private frozen V3',flush=True)
+env=os.environ.copy();env.update(QT_QPA_PLATFORM='wayland',QT_QPA_PLATFORMTHEME='',QT_STYLE_OVERRIDE='Fusion')
+for name,args in [('wayland-mapping',['--surface-mapping']),('wayland-preview',['--preview-selection-state']),('wayland-theme',['--theme-tabs'])]:
+ run(name,['forgecad-release/forgecad_view_tests',*args],timeout=180,env=env)

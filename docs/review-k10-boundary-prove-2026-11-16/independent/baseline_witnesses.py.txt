@@ -1,0 +1,55 @@
+#!/usr/bin/env python3
+"""Source-derived exact witnesses, not production executions or sample certificates."""
+from fractions import Fraction as F
+from pathlib import Path
+import json
+
+def bump(t,a,b,c,height):
+ if t<a or t>c:return F(0)
+ return height*(t-a)/(b-a) if t<=b else height*(c-t)/(c-b)
+
+def fs(x):return str(x)
+def emit(x):
+ if isinstance(x,F):return str(x)
+ raise TypeError(type(x).__name__)
+# standardBezierPieces normalizes rational endpoint weights through a Moebius
+# map, so the subsequent join cannot retain original t even after elevation.
+t=F(1,2); original=4*t/(1+3*t); standard=t
+preservation={'case':'rational-original-parameter','original_degree':1,'original_poles':[0,1],'original_weights':[1,4],
+ 'parameter':t,'original_x':original,'standard_x':standard,'difference_mm':original-standard,
+ 'assertion':'The geometrical locus agrees; equality at the original parameter does not.'}
+assert original-standard==F(3,10)
+# A linear B-spline bump strictly inside the first grid cell is zero at all
+# 33 t_i and has zero derivative at t=1/2. Both old recognition checks pass.
+a,b,c=F(1,128),F(3,256),F(1,64)
+grid=[F(i,32) for i in range(33)]
+assert all(bump(x,a,b,c,F(1,4))==0 for x in grid)
+alias={'case':'33-point-affine-and-original-alias','degree':1,'knots':[0,0,a,b,c,1,1],
+ 'pcurve_Q':'(t,bump(t))','edge_E':'(t,bump(t),0)','carrier_S':'(u,v,0)',
+ 'guide':'(t,0,0)','all_33_point_residuals_zero':True,'middle_derivative':[1,0],
+ 'witness_t':b,'witness_original_to_guide_mm':F(1,4),
+ 'scope':'Proves affine recognition and same-parameter original comparison are sampled; does not alone prove emitted original is lost.'}
+# The selected ISO has one broad segment; the opposite carrier has a hidden
+# crease between all five extension samples. Original [0,1] is consistent.
+a,b,c=F(9,8),F(19,16),F(5,4);height=F(1,2);cap=F(1,10**7)
+samples=[1+F(i,4) for i in range(5)]
+assert all(bump(x,a,b,c,height)==0 for x in samples)
+# All points closer than cap must have |u-b|<cap, while the actual tensor
+# carrier has z>=height-height*cap/(b-a)>cap throughout that UV strip.
+lower_z=height-height*cap/(b-a);assert lower_z>cap
+hidden={'case':'opposite-carrier-hidden-extension','original_range':[0,1],'extension_range':[1,2],
+ 'iso_guide':'(t,0,0)','support0':'(u,v,0)','support1':'(u,v,bump(u))',
+ 'u_knots':[0,0,a,b,c,2,2],'support1_z_controls':[0,0,height,0,0],
+ 'all_five_projection_sample_distances_zero':True,'witness_t':b,'local_quality_cap_mm':cap,
+ 'z_lower_for_all_points_with_u_within_cap':lower_z,
+ 'proved_distance_strictly_greater_than_cap':True,
+ 'proof':'A closer point must have |u-t|<cap. On that entire strip z>cap, a contradiction.',
+ 'scope':'Source-derived production branch acceptance witness; runtime test should separately confirm helper setup.'}
+# Existing rule grows tolerance after observing worst. At worst=1.5 cap,
+# admission under 2*kFit is allowed and metadata becomes 3 cap.
+ratchet={'case':'observed-error-budget-ratchet','kFitTolerance':cap,'input_edge_tolerance':cap,
+ 'observed_worst':F(3,2)*cap,'admission_threshold':2*cap,'output_edge_tolerance':3*cap,
+ 'scope':'Arithmetic of max(edge.tolerance,2*extensionDeviation); no global maximum inferred from samples.'}
+out={'method':'Exact Fraction source-derived witnesses; grids only establish alias acceptance, never continuous certificates.',
+ 'production_execution':False,'records':[preservation,alias,hidden,ratchet]}
+p=Path('/tmp/boundary-review/audit/baseline-witnesses.json');p.write_text(json.dumps(out,default=emit,indent=2)+'\n');print(p)

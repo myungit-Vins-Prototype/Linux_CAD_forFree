@@ -1,0 +1,28 @@
+Loaded precision=9.9999999999999995e-08 sketches=6 features=6 modelBodies=3
+MODEL 0 name=Corpo 1 id=1 tip=1 visible=1
+MODEL 1 name=Corpo 2 id=2 tip=3 visible=1
+MODEL 2 name=Corpo 3 id=3 tip=6 visible=1
+SKETCH 0 name=Schizzo 1 story=1 plane=0 segments=6 curves=0
+SKETCH 1 name=Schizzo 2 story=2 plane=3 segments=2 curves=1
+SKETCH 2 name=Schizzo 3 story=3 plane=3 segments=3 curves=5
+SKETCH 3 name=Schizzo 5 story=5 plane=1 segments=0 curves=2
+SKETCH 4 name=Schizzo 6 story=7 plane=3 segments=3 curves=3
+SKETCH 5 name=Schizzo 6 story=8 plane=3 segments=2 curves=1
+FEATURE 0 name=Estrusione 1 fid=1 mb=1 type=0 operation=-1 first=-1 second=-1 solid=1 cached=1 suppressed=0 visible=1 sketch=0 error= notice=
+  loft sketches= sections=0 guides=0 edgeguides=0 ruled=0 mergeTangents=0 continuities=0,0
+ F=6 E=12 V=8 solid=1 shells=1 sheet=0 box=[-100,-1.4508343650386994e-41,0]-[1.0855918359145935e-20,150,25] check=0
+FEATURE 1 name=Piano 1 fid=2 mb=0 type=11 operation=-1 first=-1 second=-1 solid=0 cached=0 suppressed=0 visible=1 sketch=-1 error= notice=
+  loft sketches= sections=0 guides=0 edgeguides=0 ruled=0 mergeTangents=0 continuities=0,0
+  NO GEOMETRY
+FEATURE 2 name=Estrusione 3 fid=3 mb=2 type=0 operation=-1 first=-1 second=-1 solid=1 cached=1 suppressed=0 visible=1 sketch=1 error= notice=
+  loft sketches= sections=0 guides=0 edgeguides=0 ruled=0 mergeTangents=0 continuities=0,0
+ F=3 E=2 V=2 solid=1 shells=1 sheet=0 box=[-154,18.499999999999993,111]-[-106,131.5,159] check=0
+FEATURE 3 name=Curva estratta 3D 1 fid=4 mb=0 type=26 operation=-1 first=-1 second=-1 solid=0 cached=0 suppressed=0 visible=1 sketch=-1 error= notice=
+  loft sketches= sections=0 guides=0 edgeguides=0 ruled=0 mergeTangents=0 continuities=0,0
+  NO GEOMETRY
+FEATURE 4 name=Piano 2 fid=5 mb=0 type=11 operation=-1 first=-1 second=-1 solid=0 cached=0 suppressed=0 visible=0 sketch=-1 error= notice=
+  loft sketches= sections=0 guides=0 edgeguides=0 ruled=0 mergeTangents=0 continuities=0,0
+  NO GEOMETRY
+FEATURE 5 name=Loft 6 fid=6 mb=3 type=9 operation=-1 first=-1 second=-1 solid=1 cached=1 suppressed=0 visible=1 sketch=4 error= notice=
+  loft sketches=4,5, sections=2 guides=0 edgeguides=2 ruled=0 mergeTangents=0 continuities=1,1
+ F=4 E=6 V=4 solid=1 shells=1 sheet=0 box=[-154.37285608401115,35,-15]-[-19.999727997524644,115,159.09585816367044] check=0

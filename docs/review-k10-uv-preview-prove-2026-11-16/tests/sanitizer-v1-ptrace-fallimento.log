@@ -1,0 +1,12 @@
+joined_polynomial source_residual=2.2204460492503131e-16 actual_residual=2.0559776105022461e-11 fin_budget=9.9999999999999995e-07 at=0.33295000000000002 fin=16 ratio=2.0559776105022463e-05 PASS
+joined_rational source_residual=2.2204460492503131e-16 actual_residual=8.0662809764930898e-11 fin_budget=9.9999999999999995e-07 at=0.10125000000000001 fin=10 ratio=8.0662809764930898e-05 PASS
+joined_shift_trim source_residual=2.2204460492503131e-16 actual_residual=2.0559776105022461e-11 fin_budget=9.9999999999999995e-07 at=0.33295000000000002 fin=16 ratio=2.0559776105022463e-05 PASS
+joined_reverse source_residual=3.3306690738754696e-16 actual_residual=2.0559776105022461e-11 fin_budget=9.9999999999999995e-07 at=0.33295000000000002 fin=16 ratio=2.0559776105022463e-05 PASS
+joined_pose source_residual=2.9457545650361182e-15 actual_residual=2.9169558047977757e-10 fin_budget=9.9999999999999995e-07 at=0.54225000000000001 fin=13 ratio=0.0002916955804797776 PASS
+joined_scale source_residual=2.2737367544323206e-13 actual_residual=1.7974514321394963e-08 fin_budget=0.001 at=0.40050000000000002 fin=10 ratio=1.7974514321394963e-05 PASS
+faces_trim_polynomial source_residual=2.2204460492503131e-16 actual_residual=1.3948072545286034e-10 fin_budget=9.9999999999999995e-07 at=0.51870000000000005 fin=2 ratio=0.00013948072545286034 PASS
+faces_trim_rational source_residual=2.2204460492503131e-16 actual_residual=1.3948072545286034e-10 fin_budget=9.9999999999999995e-07 at=0.51870000000000005 fin=2 ratio=0.00013948072545286034 PASS
+public_atomic_invalid_cancel PASS
+provider_original_plane_residual_lifetime_rejection_cancel==28==LeakSanitizer has encountered a fatal error.
+==28==HINT: For debugging, try setting environment variable LSAN_OPTIONS=verbosity=1:log_threads=1
+==28==HINT: LeakSanitizer does not work under ptrace (strace, gdb, etc)

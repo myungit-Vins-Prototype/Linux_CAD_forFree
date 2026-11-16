@@ -1,0 +1,4769 @@
+[
+  {
+    "source": "kernel/fk_curve_fit_bounds.cpp",
+    "target": "kernel/fk_curve_fit_bounds.cpp",
+    "kind": "call",
+    "count": 522,
+    "sites": [
+      {
+        "line": 22,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::check"
+      },
+      {
+        "line": 31,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::operator+"
+      },
+      {
+        "line": 31,
+        "symbol": "ForgeCad::Kernel::detail::check",
+        "owner": "ForgeCad::Kernel::detail::operator+"
+      },
+      {
+        "line": 31,
+        "symbol": "ForgeCad::Kernel::detail::dn",
+        "owner": "ForgeCad::Kernel::detail::operator+"
+      },
+      {
+        "line": 31,
+        "symbol": "ForgeCad::Kernel::detail::finite",
+        "owner": "ForgeCad::Kernel::detail::operator+"
+      },
+      {
+        "line": 31,
+        "symbol": "ForgeCad::Kernel::detail::up",
+        "owner": "ForgeCad::Kernel::detail::operator+"
+      },
+      {
+        "line": 34,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::operator-"
+      },
+      {
+        "line": 34,
+        "symbol": "ForgeCad::Kernel::detail::check",
+        "owner": "ForgeCad::Kernel::detail::operator-"
+      },
+      {
+        "line": 34,
+        "symbol": "ForgeCad::Kernel::detail::dn",
+        "owner": "ForgeCad::Kernel::detail::operator-"
+      },
+      {
+        "line": 34,
+        "symbol": "ForgeCad::Kernel::detail::finite",
+        "owner": "ForgeCad::Kernel::detail::operator-"
+      },
+      {
+        "line": 34,
+        "symbol": "ForgeCad::Kernel::detail::up",
+        "owner": "ForgeCad::Kernel::detail::operator-"
+      },
+      {
+        "line": 37,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::operator*"
+      },
+      {
+        "line": 37,
+        "symbol": "ForgeCad::Kernel::detail::finite",
+        "owner": "ForgeCad::Kernel::detail::operator*"
+      },
+      {
+        "line": 38,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::operator*"
+      },
+      {
+        "line": 42,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::operator*"
+      },
+      {
+        "line": 43,
+        "symbol": "ForgeCad::Kernel::detail::check",
+        "owner": "ForgeCad::Kernel::detail::operator*"
+      },
+      {
+        "line": 43,
+        "symbol": "ForgeCad::Kernel::detail::dn",
+        "owner": "ForgeCad::Kernel::detail::operator*"
+      },
+      {
+        "line": 43,
+        "symbol": "ForgeCad::Kernel::detail::up",
+        "owner": "ForgeCad::Kernel::detail::operator*"
+      },
+      {
+        "line": 46,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::operator/"
+      },
+      {
+        "line": 46,
+        "symbol": "ForgeCad::Kernel::detail::finite",
+        "owner": "ForgeCad::Kernel::detail::operator/"
+      },
+      {
+        "line": 47,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::operator/"
+      },
+      {
+        "line": 48,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::operator/"
+      },
+      {
+        "line": 48,
+        "symbol": "ForgeCad::Kernel::detail::check",
+        "owner": "ForgeCad::Kernel::detail::operator/"
+      },
+      {
+        "line": 48,
+        "symbol": "ForgeCad::Kernel::detail::dn",
+        "owner": "ForgeCad::Kernel::detail::operator/"
+      },
+      {
+        "line": 48,
+        "symbol": "ForgeCad::Kernel::detail::operator*",
+        "owner": "ForgeCad::Kernel::detail::operator/"
+      },
+      {
+        "line": 48,
+        "symbol": "ForgeCad::Kernel::detail::up",
+        "owner": "ForgeCad::Kernel::detail::operator/"
+      },
+      {
+        "line": 52,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::vec"
+      },
+      {
+        "line": 55,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::add"
+      },
+      {
+        "line": 55,
+        "symbol": "ForgeCad::Kernel::detail::operator+",
+        "owner": "ForgeCad::Kernel::detail::add"
+      },
+      {
+        "line": 58,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::mul"
+      },
+      {
+        "line": 58,
+        "symbol": "ForgeCad::Kernel::detail::operator*",
+        "owner": "ForgeCad::Kernel::detail::mul"
+      },
+      {
+        "line": 63,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::choose"
+      },
+      {
+        "line": 65,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::choose"
+      },
+      {
+        "line": 65,
+        "symbol": "ForgeCad::Kernel::detail::I::operator=",
+        "owner": "ForgeCad::Kernel::detail::choose"
+      },
+      {
+        "line": 65,
+        "symbol": "ForgeCad::Kernel::detail::operator*",
+        "owner": "ForgeCad::Kernel::detail::choose"
+      },
+      {
+        "line": 65,
+        "symbol": "ForgeCad::Kernel::detail::operator/",
+        "owner": "ForgeCad::Kernel::detail::choose"
+      },
+      {
+        "line": 66,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::choose"
+      },
+      {
+        "line": 76,
+        "symbol": "ForgeCad::Kernel::detail::I::operator=",
+        "owner": "ForgeCad::Kernel::detail::product"
+      },
+      {
+        "line": 76,
+        "symbol": "ForgeCad::Kernel::detail::choose",
+        "owner": "ForgeCad::Kernel::detail::product"
+      },
+      {
+        "line": 78,
+        "symbol": "ForgeCad::Kernel::detail::I::operator=",
+        "owner": "ForgeCad::Kernel::detail::product"
+      },
+      {
+        "line": 78,
+        "symbol": "ForgeCad::Kernel::detail::choose",
+        "owner": "ForgeCad::Kernel::detail::product"
+      },
+      {
+        "line": 80,
+        "symbol": "ForgeCad::Kernel::detail::I::operator=",
+        "owner": "ForgeCad::Kernel::detail::product"
+      },
+      {
+        "line": 80,
+        "symbol": "ForgeCad::Kernel::detail::choose",
+        "owner": "ForgeCad::Kernel::detail::product"
+      },
+      {
+        "line": 84,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::product"
+      },
+      {
+        "line": 84,
+        "symbol": "ForgeCad::Kernel::detail::I::operator=",
+        "owner": "ForgeCad::Kernel::detail::product"
+      },
+      {
+        "line": 84,
+        "symbol": "ForgeCad::Kernel::detail::operator*",
+        "owner": "ForgeCad::Kernel::detail::product"
+      },
+      {
+        "line": 84,
+        "symbol": "ForgeCad::Kernel::detail::operator+",
+        "owner": "ForgeCad::Kernel::detail::product"
+      },
+      {
+        "line": 84,
+        "symbol": "ForgeCad::Kernel::detail::operator/",
+        "owner": "ForgeCad::Kernel::detail::product"
+      },
+      {
+        "line": 93,
+        "symbol": "ForgeCad::Kernel::detail::I::operator=",
+        "owner": "ForgeCad::Kernel::detail::elevated"
+      },
+      {
+        "line": 94,
+        "symbol": "ForgeCad::Kernel::detail::I::operator=",
+        "owner": "ForgeCad::Kernel::detail::elevated"
+      },
+      {
+        "line": 96,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::elevated"
+      },
+      {
+        "line": 96,
+        "symbol": "ForgeCad::Kernel::detail::operator/",
+        "owner": "ForgeCad::Kernel::detail::elevated"
+      },
+      {
+        "line": 97,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::elevated"
+      },
+      {
+        "line": 97,
+        "symbol": "ForgeCad::Kernel::detail::I::operator=",
+        "owner": "ForgeCad::Kernel::detail::elevated"
+      },
+      {
+        "line": 97,
+        "symbol": "ForgeCad::Kernel::detail::operator*",
+        "owner": "ForgeCad::Kernel::detail::elevated"
+      },
+      {
+        "line": 97,
+        "symbol": "ForgeCad::Kernel::detail::operator+",
+        "owner": "ForgeCad::Kernel::detail::elevated"
+      },
+      {
+        "line": 97,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::elevated"
+      },
+      {
+        "line": 105,
+        "symbol": "ForgeCad::Kernel::detail::elevated",
+        "owner": "ForgeCad::Kernel::detail::sum"
+      },
+      {
+        "line": 106,
+        "symbol": "ForgeCad::Kernel::detail::elevated",
+        "owner": "ForgeCad::Kernel::detail::sum"
+      },
+      {
+        "line": 108,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::sum"
+      },
+      {
+        "line": 108,
+        "symbol": "ForgeCad::Kernel::detail::I::operator=",
+        "owner": "ForgeCad::Kernel::detail::sum"
+      },
+      {
+        "line": 108,
+        "symbol": "ForgeCad::Kernel::detail::operator+",
+        "owner": "ForgeCad::Kernel::detail::sum"
+      },
+      {
+        "line": 108,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::sum"
+      },
+      {
+        "line": 113,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::scaled"
+      },
+      {
+        "line": 113,
+        "symbol": "ForgeCad::Kernel::detail::I::operator=",
+        "owner": "ForgeCad::Kernel::detail::scaled"
+      },
+      {
+        "line": 113,
+        "symbol": "ForgeCad::Kernel::detail::operator*",
+        "owner": "ForgeCad::Kernel::detail::scaled"
+      },
+      {
+        "line": 119,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::derivative"
+      },
+      {
+        "line": 119,
+        "symbol": "ForgeCad::Kernel::detail::I::operator=",
+        "owner": "ForgeCad::Kernel::detail::derivative"
+      },
+      {
+        "line": 119,
+        "symbol": "ForgeCad::Kernel::detail::operator*",
+        "owner": "ForgeCad::Kernel::detail::derivative"
+      },
+      {
+        "line": 119,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::derivative"
+      },
+      {
+        "line": 123,
+        "symbol": "ForgeCad::Kernel::detail::product",
+        "owner": "ForgeCad::Kernel::detail::cross"
+      },
+      {
+        "line": 123,
+        "symbol": "ForgeCad::Kernel::detail::sum",
+        "owner": "ForgeCad::Kernel::detail::cross"
+      },
+      {
+        "line": 124,
+        "symbol": "ForgeCad::Kernel::detail::product",
+        "owner": "ForgeCad::Kernel::detail::cross"
+      },
+      {
+        "line": 124,
+        "symbol": "ForgeCad::Kernel::detail::sum",
+        "owner": "ForgeCad::Kernel::detail::cross"
+      },
+      {
+        "line": 127,
+        "symbol": "ForgeCad::Kernel::detail::product",
+        "owner": "ForgeCad::Kernel::detail::dot"
+      },
+      {
+        "line": 127,
+        "symbol": "ForgeCad::Kernel::detail::sum",
+        "owner": "ForgeCad::Kernel::detail::dot"
+      },
+      {
+        "line": 131,
+        "symbol": "ForgeCad::Kernel::detail::I::operator=",
+        "owner": "ForgeCad::Kernel::detail::split"
+      },
+      {
+        "line": 132,
+        "symbol": "ForgeCad::Kernel::detail::I::operator=",
+        "owner": "ForgeCad::Kernel::detail::split"
+      },
+      {
+        "line": 135,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::split"
+      },
+      {
+        "line": 135,
+        "symbol": "ForgeCad::Kernel::detail::I::operator=",
+        "owner": "ForgeCad::Kernel::detail::split"
+      },
+      {
+        "line": 135,
+        "symbol": "ForgeCad::Kernel::detail::operator*",
+        "owner": "ForgeCad::Kernel::detail::split"
+      },
+      {
+        "line": 135,
+        "symbol": "ForgeCad::Kernel::detail::operator+",
+        "owner": "ForgeCad::Kernel::detail::split"
+      },
+      {
+        "line": 135,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::split"
+      },
+      {
+        "line": 136,
+        "symbol": "ForgeCad::Kernel::detail::I::operator=",
+        "owner": "ForgeCad::Kernel::detail::split"
+      },
+      {
+        "line": 137,
+        "symbol": "ForgeCad::Kernel::detail::I::operator=",
+        "owner": "ForgeCad::Kernel::detail::split"
+      },
+      {
+        "line": 145,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::restrictP"
+      },
+      {
+        "line": 145,
+        "symbol": "ForgeCad::Kernel::detail::split",
+        "owner": "ForgeCad::Kernel::detail::restrictP"
+      },
+      {
+        "line": 147,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::restrictP"
+      },
+      {
+        "line": 147,
+        "symbol": "ForgeCad::Kernel::detail::operator/",
+        "owner": "ForgeCad::Kernel::detail::restrictP"
+      },
+      {
+        "line": 147,
+        "symbol": "ForgeCad::Kernel::detail::split",
+        "owner": "ForgeCad::Kernel::detail::restrictP"
+      },
+      {
+        "line": 152,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::range"
+      },
+      {
+        "line": 153,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::range"
+      },
+      {
+        "line": 153,
+        "symbol": "ForgeCad::Kernel::detail::finite",
+        "owner": "ForgeCad::Kernel::detail::range"
+      },
+      {
+        "line": 154,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::range"
+      },
+      {
+        "line": 158,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::range"
+      },
+      {
+        "line": 161,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::normUpper"
+      },
+      {
+        "line": 163,
+        "symbol": "ForgeCad::Kernel::detail::range",
+        "owner": "ForgeCad::Kernel::detail::normUpper"
+      },
+      {
+        "line": 164,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::normUpper"
+      },
+      {
+        "line": 164,
+        "symbol": "ForgeCad::Kernel::detail::finite",
+        "owner": "ForgeCad::Kernel::detail::normUpper"
+      },
+      {
+        "line": 167,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::normUpper"
+      },
+      {
+        "line": 167,
+        "symbol": "ForgeCad::Kernel::detail::I::operator=",
+        "owner": "ForgeCad::Kernel::detail::normUpper"
+      },
+      {
+        "line": 167,
+        "symbol": "ForgeCad::Kernel::detail::operator*",
+        "owner": "ForgeCad::Kernel::detail::normUpper"
+      },
+      {
+        "line": 167,
+        "symbol": "ForgeCad::Kernel::detail::operator+",
+        "owner": "ForgeCad::Kernel::detail::normUpper"
+      },
+      {
+        "line": 169,
+        "symbol": "ForgeCad::Kernel::detail::up",
+        "owner": "ForgeCad::Kernel::detail::normUpper"
+      },
+      {
+        "line": 172,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::normLower"
+      },
+      {
+        "line": 174,
+        "symbol": "ForgeCad::Kernel::detail::range",
+        "owner": "ForgeCad::Kernel::detail::normLower"
+      },
+      {
+        "line": 175,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::normLower"
+      },
+      {
+        "line": 175,
+        "symbol": "ForgeCad::Kernel::detail::finite",
+        "owner": "ForgeCad::Kernel::detail::normLower"
+      },
+      {
+        "line": 178,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::normLower"
+      },
+      {
+        "line": 178,
+        "symbol": "ForgeCad::Kernel::detail::I::operator=",
+        "owner": "ForgeCad::Kernel::detail::normLower"
+      },
+      {
+        "line": 178,
+        "symbol": "ForgeCad::Kernel::detail::operator*",
+        "owner": "ForgeCad::Kernel::detail::normLower"
+      },
+      {
+        "line": 178,
+        "symbol": "ForgeCad::Kernel::detail::operator+",
+        "owner": "ForgeCad::Kernel::detail::normLower"
+      },
+      {
+        "line": 180,
+        "symbol": "ForgeCad::Kernel::detail::dn",
+        "owner": "ForgeCad::Kernel::detail::normLower"
+      },
+      {
+        "line": 198,
+        "symbol": "ForgeCad::Kernel::detail::Span::Span",
+        "owner": "ForgeCad::Kernel::detail::extract"
+      },
+      {
+        "line": 205,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::extract"
+      },
+      {
+        "line": 205,
+        "symbol": "ForgeCad::Kernel::detail::operator/",
+        "owner": "ForgeCad::Kernel::detail::extract"
+      },
+      {
+        "line": 206,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::extract"
+      },
+      {
+        "line": 206,
+        "symbol": "ForgeCad::Kernel::detail::mul",
+        "owner": "ForgeCad::Kernel::detail::extract"
+      },
+      {
+        "line": 206,
+        "symbol": "ForgeCad::Kernel::detail::vec",
+        "owner": "ForgeCad::Kernel::detail::extract"
+      },
+      {
+        "line": 208,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::extract"
+      },
+      {
+        "line": 208,
+        "symbol": "ForgeCad::Kernel::detail::mul",
+        "owner": "ForgeCad::Kernel::detail::extract"
+      },
+      {
+        "line": 208,
+        "symbol": "ForgeCad::Kernel::detail::vec",
+        "owner": "ForgeCad::Kernel::detail::extract"
+      },
+      {
+        "line": 211,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::extract"
+      },
+      {
+        "line": 211,
+        "symbol": "ForgeCad::Kernel::detail::I::operator=",
+        "owner": "ForgeCad::Kernel::detail::extract"
+      },
+      {
+        "line": 211,
+        "symbol": "ForgeCad::Kernel::detail::operator*",
+        "owner": "ForgeCad::Kernel::detail::extract"
+      },
+      {
+        "line": 211,
+        "symbol": "ForgeCad::Kernel::detail::operator+",
+        "owner": "ForgeCad::Kernel::detail::extract"
+      },
+      {
+        "line": 224,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::extract"
+      },
+      {
+        "line": 224,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::extract"
+      },
+      {
+        "line": 224,
+        "symbol": "ForgeCad::Kernel::detail::operator/",
+        "owner": "ForgeCad::Kernel::detail::extract"
+      },
+      {
+        "line": 225,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::extract"
+      },
+      {
+        "line": 225,
+        "symbol": "ForgeCad::Kernel::detail::add",
+        "owner": "ForgeCad::Kernel::detail::extract"
+      },
+      {
+        "line": 225,
+        "symbol": "ForgeCad::Kernel::detail::mul",
+        "owner": "ForgeCad::Kernel::detail::extract"
+      },
+      {
+        "line": 225,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::extract"
+      },
+      {
+        "line": 227,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::extract"
+      },
+      {
+        "line": 227,
+        "symbol": "ForgeCad::Kernel::detail::I::operator=",
+        "owner": "ForgeCad::Kernel::detail::extract"
+      },
+      {
+        "line": 227,
+        "symbol": "ForgeCad::Kernel::detail::operator*",
+        "owner": "ForgeCad::Kernel::detail::extract"
+      },
+      {
+        "line": 227,
+        "symbol": "ForgeCad::Kernel::detail::operator+",
+        "owner": "ForgeCad::Kernel::detail::extract"
+      },
+      {
+        "line": 227,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::extract"
+      },
+      {
+        "line": 232,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::extract"
+      },
+      {
+        "line": 234,
+        "symbol": "ForgeCad::Kernel::detail::Span::Span",
+        "owner": "ForgeCad::Kernel::detail::extract"
+      },
+      {
+        "line": 258,
+        "symbol": "ForgeCad::Kernel::detail::Span::Span",
+        "owner": "ForgeCad::Kernel::detail::prepareSource"
+      },
+      {
+        "line": 261,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::prepareSource"
+      },
+      {
+        "line": 263,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::prepareSource"
+      },
+      {
+        "line": 263,
+        "symbol": "ForgeCad::Kernel::detail::add",
+        "owner": "ForgeCad::Kernel::detail::prepareSource"
+      },
+      {
+        "line": 263,
+        "symbol": "ForgeCad::Kernel::detail::mul",
+        "owner": "ForgeCad::Kernel::detail::prepareSource"
+      },
+      {
+        "line": 263,
+        "symbol": "ForgeCad::Kernel::detail::vec",
+        "owner": "ForgeCad::Kernel::detail::prepareSource"
+      },
+      {
+        "line": 265,
+        "symbol": "ForgeCad::Kernel::detail::vec",
+        "owner": "ForgeCad::Kernel::detail::prepareSource"
+      },
+      {
+        "line": 268,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::prepareSource"
+      },
+      {
+        "line": 268,
+        "symbol": "ForgeCad::Kernel::detail::I::operator=",
+        "owner": "ForgeCad::Kernel::detail::prepareSource"
+      },
+      {
+        "line": 268,
+        "symbol": "ForgeCad::Kernel::detail::operator*",
+        "owner": "ForgeCad::Kernel::detail::prepareSource"
+      },
+      {
+        "line": 268,
+        "symbol": "ForgeCad::Kernel::detail::operator+",
+        "owner": "ForgeCad::Kernel::detail::prepareSource"
+      },
+      {
+        "line": 311,
+        "symbol": "ForgeCad::Kernel::detail::extract",
+        "owner": "ForgeCad::Kernel::detail::prepareSource"
+      },
+      {
+        "line": 323,
+        "symbol": "ForgeCad::Kernel::detail::prepareSource",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 330,
+        "symbol": "ForgeCad::Kernel::detail::derivative",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 331,
+        "symbol": "ForgeCad::Kernel::detail::derivative",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 331,
+        "symbol": "ForgeCad::Kernel::detail::product",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 331,
+        "symbol": "ForgeCad::Kernel::detail::sum",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 332,
+        "symbol": "ForgeCad::Kernel::detail::derivative",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 332,
+        "symbol": "ForgeCad::Kernel::detail::product",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 333,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 337,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 337,
+        "symbol": "ForgeCad::Kernel::detail::scaled",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 337,
+        "symbol": "ForgeCad::Kernel::detail::sum",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 338,
+        "symbol": "ForgeCad::Kernel::detail::cross",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 340,
+        "symbol": "ForgeCad::Kernel::detail::cross",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 358,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 358,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 358,
+        "symbol": "ForgeCad::Kernel::detail::operator/",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 359,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 359,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 359,
+        "symbol": "ForgeCad::Kernel::detail::operator/",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 361,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 361,
+        "symbol": "ForgeCad::Kernel::detail::restrictP",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 363,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 363,
+        "symbol": "ForgeCad::Kernel::detail::restrictP",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 364,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 364,
+        "symbol": "ForgeCad::Kernel::detail::restrictP",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 367,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 368,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 368,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 368,
+        "symbol": "ForgeCad::Kernel::detail::operator/",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 368,
+        "symbol": "ForgeCad::Kernel::detail::restrictP",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 369,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 369,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 369,
+        "symbol": "ForgeCad::Kernel::detail::operator/",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 370,
+        "symbol": "ForgeCad::Kernel::detail::product",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 370,
+        "symbol": "ForgeCad::Kernel::detail::sum",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 372,
+        "symbol": "ForgeCad::Kernel::detail::normLower",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 372,
+        "symbol": "ForgeCad::Kernel::detail::range",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 377,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 377,
+        "symbol": "ForgeCad::Kernel::detail::dot",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 377,
+        "symbol": "ForgeCad::Kernel::detail::scaled",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 378,
+        "symbol": "ForgeCad::Kernel::detail::range",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 380,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 380,
+        "symbol": "ForgeCad::Kernel::detail::dot",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 380,
+        "symbol": "ForgeCad::Kernel::detail::operator*",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 380,
+        "symbol": "ForgeCad::Kernel::detail::product",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 380,
+        "symbol": "ForgeCad::Kernel::detail::scaled",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 380,
+        "symbol": "ForgeCad::Kernel::detail::sum",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 381,
+        "symbol": "ForgeCad::Kernel::detail::range",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 382,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 382,
+        "symbol": "ForgeCad::Kernel::detail::cross",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 382,
+        "symbol": "ForgeCad::Kernel::detail::normUpper",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 382,
+        "symbol": "ForgeCad::Kernel::detail::operator*",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 382,
+        "symbol": "ForgeCad::Kernel::detail::operator/",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 383,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 383,
+        "symbol": "ForgeCad::Kernel::detail::operator*",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 383,
+        "symbol": "ForgeCad::Kernel::detail::operator/",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 384,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 384,
+        "symbol": "ForgeCad::Kernel::detail::operator*",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 384,
+        "symbol": "ForgeCad::Kernel::detail::operator+",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 384,
+        "symbol": "ForgeCad::Kernel::detail::operator/",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 385,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 385,
+        "symbol": "ForgeCad::Kernel::detail::finite",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 400,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::affineBezier"
+      },
+      {
+        "line": 404,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::affineBezier"
+      },
+      {
+        "line": 404,
+        "symbol": "ForgeCad::Kernel::detail::I::operator=",
+        "owner": "ForgeCad::Kernel::detail::affineBezier"
+      },
+      {
+        "line": 404,
+        "symbol": "ForgeCad::Kernel::detail::operator*",
+        "owner": "ForgeCad::Kernel::detail::affineBezier"
+      },
+      {
+        "line": 404,
+        "symbol": "ForgeCad::Kernel::detail::operator+",
+        "owner": "ForgeCad::Kernel::detail::affineBezier"
+      },
+      {
+        "line": 404,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::affineBezier"
+      },
+      {
+        "line": 406,
+        "symbol": "ForgeCad::Kernel::detail::I::operator=",
+        "owner": "ForgeCad::Kernel::detail::affineBezier"
+      },
+      {
+        "line": 421,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::positionOnOriginal"
+      },
+      {
+        "line": 421,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::positionOnOriginal"
+      },
+      {
+        "line": 421,
+        "symbol": "ForgeCad::Kernel::detail::operator/",
+        "owner": "ForgeCad::Kernel::detail::positionOnOriginal"
+      },
+      {
+        "line": 422,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::positionOnOriginal"
+      },
+      {
+        "line": 422,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::positionOnOriginal"
+      },
+      {
+        "line": 422,
+        "symbol": "ForgeCad::Kernel::detail::operator/",
+        "owner": "ForgeCad::Kernel::detail::positionOnOriginal"
+      },
+      {
+        "line": 423,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::positionOnOriginal"
+      },
+      {
+        "line": 423,
+        "symbol": "ForgeCad::Kernel::detail::restrictP",
+        "owner": "ForgeCad::Kernel::detail::positionOnOriginal"
+      },
+      {
+        "line": 424,
+        "symbol": "ForgeCad::Kernel::detail::range",
+        "owner": "ForgeCad::Kernel::detail::positionOnOriginal"
+      },
+      {
+        "line": 429,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::positionOnOriginal"
+      },
+      {
+        "line": 429,
+        "symbol": "ForgeCad::Kernel::detail::affineBezier",
+        "owner": "ForgeCad::Kernel::detail::positionOnOriginal"
+      },
+      {
+        "line": 429,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::positionOnOriginal"
+      },
+      {
+        "line": 429,
+        "symbol": "ForgeCad::Kernel::detail::operator/",
+        "owner": "ForgeCad::Kernel::detail::positionOnOriginal"
+      },
+      {
+        "line": 430,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::positionOnOriginal"
+      },
+      {
+        "line": 430,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::positionOnOriginal"
+      },
+      {
+        "line": 430,
+        "symbol": "ForgeCad::Kernel::detail::operator/",
+        "owner": "ForgeCad::Kernel::detail::positionOnOriginal"
+      },
+      {
+        "line": 431,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::positionOnOriginal"
+      },
+      {
+        "line": 431,
+        "symbol": "ForgeCad::Kernel::detail::product",
+        "owner": "ForgeCad::Kernel::detail::positionOnOriginal"
+      },
+      {
+        "line": 431,
+        "symbol": "ForgeCad::Kernel::detail::restrictP",
+        "owner": "ForgeCad::Kernel::detail::positionOnOriginal"
+      },
+      {
+        "line": 431,
+        "symbol": "ForgeCad::Kernel::detail::sum",
+        "owner": "ForgeCad::Kernel::detail::positionOnOriginal"
+      },
+      {
+        "line": 433,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::positionOnOriginal"
+      },
+      {
+        "line": 433,
+        "symbol": "ForgeCad::Kernel::detail::normUpper",
+        "owner": "ForgeCad::Kernel::detail::positionOnOriginal"
+      },
+      {
+        "line": 433,
+        "symbol": "ForgeCad::Kernel::detail::operator/",
+        "owner": "ForgeCad::Kernel::detail::positionOnOriginal"
+      },
+      {
+        "line": 434,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::positionOnOriginal"
+      },
+      {
+        "line": 434,
+        "symbol": "ForgeCad::Kernel::detail::finite",
+        "owner": "ForgeCad::Kernel::detail::positionOnOriginal"
+      },
+      {
+        "line": 445,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::evaluatePolynomial"
+      },
+      {
+        "line": 445,
+        "symbol": "ForgeCad::Kernel::detail::I::operator=",
+        "owner": "ForgeCad::Kernel::detail::evaluatePolynomial"
+      },
+      {
+        "line": 445,
+        "symbol": "ForgeCad::Kernel::detail::operator*",
+        "owner": "ForgeCad::Kernel::detail::evaluatePolynomial"
+      },
+      {
+        "line": 445,
+        "symbol": "ForgeCad::Kernel::detail::operator+",
+        "owner": "ForgeCad::Kernel::detail::evaluatePolynomial"
+      },
+      {
+        "line": 445,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::evaluatePolynomial"
+      },
+      {
+        "line": 446,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::evaluatePolynomial"
+      },
+      {
+        "line": 456,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::positionPointBound"
+      },
+      {
+        "line": 456,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::positionPointBound"
+      },
+      {
+        "line": 456,
+        "symbol": "ForgeCad::Kernel::detail::operator/",
+        "owner": "ForgeCad::Kernel::detail::positionPointBound"
+      },
+      {
+        "line": 457,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::positionPointBound"
+      },
+      {
+        "line": 457,
+        "symbol": "ForgeCad::Kernel::detail::evaluatePolynomial",
+        "owner": "ForgeCad::Kernel::detail::positionPointBound"
+      },
+      {
+        "line": 462,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::positionPointBound"
+      },
+      {
+        "line": 462,
+        "symbol": "ForgeCad::Kernel::detail::evaluatePolynomial",
+        "owner": "ForgeCad::Kernel::detail::positionPointBound"
+      },
+      {
+        "line": 462,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::positionPointBound"
+      },
+      {
+        "line": 462,
+        "symbol": "ForgeCad::Kernel::detail::operator/",
+        "owner": "ForgeCad::Kernel::detail::positionPointBound"
+      },
+      {
+        "line": 463,
+        "symbol": "ForgeCad::Kernel::detail::normUpper",
+        "owner": "ForgeCad::Kernel::detail::positionPointBound"
+      },
+      {
+        "line": 497,
+        "symbol": "ForgeCad::Kernel::detail::prepareSource",
+        "owner": "ForgeCad::Kernel::detail::positionFactory"
+      },
+      {
+        "line": 516,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::positionFactory"
+      },
+      {
+        "line": 527,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::positionFactory"
+      },
+      {
+        "line": 527,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::positionFactory"
+      },
+      {
+        "line": 528,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::positionFactory"
+      },
+      {
+        "line": 528,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::positionFactory"
+      },
+      {
+        "line": 531,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::positionFactory"
+      },
+      {
+        "line": 533,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::positionFactory"
+      },
+      {
+        "line": 534,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::positionFactory"
+      },
+      {
+        "line": 534,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::positionFactory"
+      },
+      {
+        "line": 534,
+        "symbol": "ForgeCad::Kernel::detail::operator/",
+        "owner": "ForgeCad::Kernel::detail::positionFactory"
+      },
+      {
+        "line": 535,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::positionFactory"
+      },
+      {
+        "line": 535,
+        "symbol": "ForgeCad::Kernel::detail::operator*",
+        "owner": "ForgeCad::Kernel::detail::positionFactory"
+      },
+      {
+        "line": 535,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::positionFactory"
+      },
+      {
+        "line": 536,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::positionFactory"
+      },
+      {
+        "line": 536,
+        "symbol": "ForgeCad::Kernel::detail::operator*",
+        "owner": "ForgeCad::Kernel::detail::positionFactory"
+      },
+      {
+        "line": 536,
+        "symbol": "ForgeCad::Kernel::detail::operator+",
+        "owner": "ForgeCad::Kernel::detail::positionFactory"
+      },
+      {
+        "line": 538,
+        "symbol": "ForgeCad::Kernel::detail::positionFactory::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_curve_fit_bounds.cpp:506:12)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_curve_fit_bounds.cpp:529:35)::operator()",
+        "owner": "ForgeCad::Kernel::detail::positionFactory"
+      },
+      {
+        "line": 539,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::positionFactory"
+      },
+      {
+        "line": 539,
+        "symbol": "ForgeCad::Kernel::detail::finite",
+        "owner": "ForgeCad::Kernel::detail::positionFactory"
+      },
+      {
+        "line": 548,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::positionFactory"
+      },
+      {
+        "line": 548,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::positionFactory"
+      },
+      {
+        "line": 548,
+        "symbol": "ForgeCad::Kernel::detail::operator/",
+        "owner": "ForgeCad::Kernel::detail::positionFactory"
+      },
+      {
+        "line": 549,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::positionFactory"
+      },
+      {
+        "line": 549,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::positionFactory"
+      },
+      {
+        "line": 549,
+        "symbol": "ForgeCad::Kernel::detail::operator/",
+        "owner": "ForgeCad::Kernel::detail::positionFactory"
+      },
+      {
+        "line": 550,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::positionFactory"
+      },
+      {
+        "line": 550,
+        "symbol": "ForgeCad::Kernel::detail::operator*",
+        "owner": "ForgeCad::Kernel::detail::positionFactory"
+      },
+      {
+        "line": 550,
+        "symbol": "ForgeCad::Kernel::detail::operator+",
+        "owner": "ForgeCad::Kernel::detail::positionFactory"
+      },
+      {
+        "line": 550,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::positionFactory"
+      },
+      {
+        "line": 550,
+        "symbol": "ForgeCad::Kernel::detail::operator/",
+        "owner": "ForgeCad::Kernel::detail::positionFactory"
+      },
+      {
+        "line": 554,
+        "symbol": "ForgeCad::Kernel::detail::affineBezier",
+        "owner": "ForgeCad::Kernel::detail::positionFactory"
+      },
+      {
+        "line": 554,
+        "symbol": "ForgeCad::Kernel::detail::positionFactory::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_curve_fit_bounds.cpp:506:12)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_curve_fit_bounds.cpp:547:38)::operator()",
+        "owner": "ForgeCad::Kernel::detail::positionFactory"
+      },
+      {
+        "line": 555,
+        "symbol": "ForgeCad::Kernel::detail::positionOnOriginal",
+        "owner": "ForgeCad::Kernel::detail::positionFactory"
+      },
+      {
+        "line": 570,
+        "symbol": "ForgeCad::Kernel::detail::positionPointBound",
+        "owner": "ForgeCad::Kernel::detail::positionFactory"
+      },
+      {
+        "line": 610,
+        "symbol": "ForgeCad::Kernel::detail::prepareIso::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_curve_fit_bounds.cpp:606:25)::operator()",
+        "owner": "ForgeCad::Kernel::detail::prepareIso"
+      },
+      {
+        "line": 612,
+        "symbol": "ForgeCad::Kernel::detail::prepareIso::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_curve_fit_bounds.cpp:606:25)::operator()",
+        "owner": "ForgeCad::Kernel::detail::prepareIso"
+      },
+      {
+        "line": 623,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::prepareIso"
+      },
+      {
+        "line": 623,
+        "symbol": "ForgeCad::Kernel::detail::operator/",
+        "owner": "ForgeCad::Kernel::detail::prepareIso"
+      },
+      {
+        "line": 623,
+        "symbol": "ForgeCad::Kernel::detail::prepareIso::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_curve_fit_bounds.cpp:606:25)::operator()",
+        "owner": "ForgeCad::Kernel::detail::prepareIso"
+      },
+      {
+        "line": 624,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::prepareIso"
+      },
+      {
+        "line": 624,
+        "symbol": "ForgeCad::Kernel::detail::mul",
+        "owner": "ForgeCad::Kernel::detail::prepareIso"
+      },
+      {
+        "line": 624,
+        "symbol": "ForgeCad::Kernel::detail::vec",
+        "owner": "ForgeCad::Kernel::detail::prepareIso"
+      },
+      {
+        "line": 626,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::prepareIso"
+      },
+      {
+        "line": 626,
+        "symbol": "ForgeCad::Kernel::detail::mul",
+        "owner": "ForgeCad::Kernel::detail::prepareIso"
+      },
+      {
+        "line": 626,
+        "symbol": "ForgeCad::Kernel::detail::vec",
+        "owner": "ForgeCad::Kernel::detail::prepareIso"
+      },
+      {
+        "line": 629,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::prepareIso"
+      },
+      {
+        "line": 629,
+        "symbol": "ForgeCad::Kernel::detail::I::operator=",
+        "owner": "ForgeCad::Kernel::detail::prepareIso"
+      },
+      {
+        "line": 629,
+        "symbol": "ForgeCad::Kernel::detail::operator*",
+        "owner": "ForgeCad::Kernel::detail::prepareIso"
+      },
+      {
+        "line": 629,
+        "symbol": "ForgeCad::Kernel::detail::operator+",
+        "owner": "ForgeCad::Kernel::detail::prepareIso"
+      },
+      {
+        "line": 633,
+        "symbol": "ForgeCad::Kernel::detail::I::operator=",
+        "owner": "ForgeCad::Kernel::detail::prepareIso"
+      },
+      {
+        "line": 637,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::prepareIso"
+      },
+      {
+        "line": 637,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::prepareIso"
+      },
+      {
+        "line": 637,
+        "symbol": "ForgeCad::Kernel::detail::operator/",
+        "owner": "ForgeCad::Kernel::detail::prepareIso"
+      },
+      {
+        "line": 638,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::prepareIso"
+      },
+      {
+        "line": 638,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::prepareIso"
+      },
+      {
+        "line": 639,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::prepareIso"
+      },
+      {
+        "line": 639,
+        "symbol": "ForgeCad::Kernel::detail::add",
+        "owner": "ForgeCad::Kernel::detail::prepareIso"
+      },
+      {
+        "line": 639,
+        "symbol": "ForgeCad::Kernel::detail::mul",
+        "owner": "ForgeCad::Kernel::detail::prepareIso"
+      },
+      {
+        "line": 639,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::prepareIso"
+      },
+      {
+        "line": 641,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::prepareIso"
+      },
+      {
+        "line": 641,
+        "symbol": "ForgeCad::Kernel::detail::I::operator=",
+        "owner": "ForgeCad::Kernel::detail::prepareIso"
+      },
+      {
+        "line": 641,
+        "symbol": "ForgeCad::Kernel::detail::operator*",
+        "owner": "ForgeCad::Kernel::detail::prepareIso"
+      },
+      {
+        "line": 641,
+        "symbol": "ForgeCad::Kernel::detail::operator+",
+        "owner": "ForgeCad::Kernel::detail::prepareIso"
+      },
+      {
+        "line": 641,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::prepareIso"
+      },
+      {
+        "line": 644,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::prepareIso"
+      },
+      {
+        "line": 644,
+        "symbol": "ForgeCad::Kernel::detail::I::operator=",
+        "owner": "ForgeCad::Kernel::detail::prepareIso"
+      },
+      {
+        "line": 652,
+        "symbol": "ForgeCad::Kernel::detail::Span::Span",
+        "owner": "ForgeCad::Kernel::detail::prepareIso"
+      },
+      {
+        "line": 661,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::prepareIso"
+      },
+      {
+        "line": 661,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::prepareIso"
+      },
+      {
+        "line": 661,
+        "symbol": "ForgeCad::Kernel::detail::operator/",
+        "owner": "ForgeCad::Kernel::detail::prepareIso"
+      },
+      {
+        "line": 662,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::prepareIso"
+      },
+      {
+        "line": 662,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::prepareIso"
+      },
+      {
+        "line": 663,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::prepareIso"
+      },
+      {
+        "line": 663,
+        "symbol": "ForgeCad::Kernel::detail::add",
+        "owner": "ForgeCad::Kernel::detail::prepareIso"
+      },
+      {
+        "line": 663,
+        "symbol": "ForgeCad::Kernel::detail::mul",
+        "owner": "ForgeCad::Kernel::detail::prepareIso"
+      },
+      {
+        "line": 663,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::prepareIso"
+      },
+      {
+        "line": 665,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::prepareIso"
+      },
+      {
+        "line": 665,
+        "symbol": "ForgeCad::Kernel::detail::I::operator=",
+        "owner": "ForgeCad::Kernel::detail::prepareIso"
+      },
+      {
+        "line": 665,
+        "symbol": "ForgeCad::Kernel::detail::operator*",
+        "owner": "ForgeCad::Kernel::detail::prepareIso"
+      },
+      {
+        "line": 665,
+        "symbol": "ForgeCad::Kernel::detail::operator+",
+        "owner": "ForgeCad::Kernel::detail::prepareIso"
+      },
+      {
+        "line": 665,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::prepareIso"
+      },
+      {
+        "line": 670,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::prepareIso"
+      },
+      {
+        "line": 689,
+        "symbol": "ForgeCad::Kernel::detail::positionSourceSupported",
+        "owner": "ForgeCad::Kernel::detail::prepareExtrusionIso"
+      },
+      {
+        "line": 691,
+        "symbol": "ForgeCad::Kernel::detail::vec",
+        "owner": "ForgeCad::Kernel::detail::prepareExtrusionIso"
+      },
+      {
+        "line": 693,
+        "symbol": "ForgeCad::Kernel::detail::prepareSource",
+        "owner": "ForgeCad::Kernel::detail::prepareExtrusionIso"
+      },
+      {
+        "line": 696,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::prepareExtrusionIso"
+      },
+      {
+        "line": 696,
+        "symbol": "ForgeCad::Kernel::detail::operator*",
+        "owner": "ForgeCad::Kernel::detail::prepareExtrusionIso"
+      },
+      {
+        "line": 696,
+        "symbol": "ForgeCad::Kernel::detail::scaled",
+        "owner": "ForgeCad::Kernel::detail::prepareExtrusionIso"
+      },
+      {
+        "line": 696,
+        "symbol": "ForgeCad::Kernel::detail::sum",
+        "owner": "ForgeCad::Kernel::detail::prepareExtrusionIso"
+      },
+      {
+        "line": 703,
+        "symbol": "ForgeCad::Kernel::detail::prepareSource",
+        "owner": "ForgeCad::Kernel::detail::prepareExtrusionIso"
+      },
+      {
+        "line": 709,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::prepareExtrusionIso"
+      },
+      {
+        "line": 709,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::prepareExtrusionIso"
+      },
+      {
+        "line": 709,
+        "symbol": "ForgeCad::Kernel::detail::operator/",
+        "owner": "ForgeCad::Kernel::detail::prepareExtrusionIso"
+      },
+      {
+        "line": 710,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::prepareExtrusionIso"
+      },
+      {
+        "line": 710,
+        "symbol": "ForgeCad::Kernel::detail::evaluatePolynomial",
+        "owner": "ForgeCad::Kernel::detail::prepareExtrusionIso"
+      },
+      {
+        "line": 714,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::prepareExtrusionIso"
+      },
+      {
+        "line": 714,
+        "symbol": "ForgeCad::Kernel::detail::I::operator=",
+        "owner": "ForgeCad::Kernel::detail::prepareExtrusionIso"
+      },
+      {
+        "line": 714,
+        "symbol": "ForgeCad::Kernel::detail::evaluatePolynomial",
+        "owner": "ForgeCad::Kernel::detail::prepareExtrusionIso"
+      },
+      {
+        "line": 714,
+        "symbol": "ForgeCad::Kernel::detail::operator/",
+        "owner": "ForgeCad::Kernel::detail::prepareExtrusionIso"
+      },
+      {
+        "line": 722,
+        "symbol": "ForgeCad::Kernel::detail::Span::Span",
+        "owner": "ForgeCad::Kernel::detail::prepareExtrusionIso"
+      },
+      {
+        "line": 725,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::prepareExtrusionIso"
+      },
+      {
+        "line": 728,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::prepareExtrusionIso"
+      },
+      {
+        "line": 728,
+        "symbol": "ForgeCad::Kernel::detail::operator*",
+        "owner": "ForgeCad::Kernel::detail::prepareExtrusionIso"
+      },
+      {
+        "line": 728,
+        "symbol": "ForgeCad::Kernel::detail::operator+",
+        "owner": "ForgeCad::Kernel::detail::prepareExtrusionIso"
+      },
+      {
+        "line": 734,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::normInterval"
+      },
+      {
+        "line": 735,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::normInterval"
+      },
+      {
+        "line": 736,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::normInterval"
+      },
+      {
+        "line": 736,
+        "symbol": "ForgeCad::Kernel::detail::finite",
+        "owner": "ForgeCad::Kernel::detail::normInterval"
+      },
+      {
+        "line": 737,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::normInterval"
+      },
+      {
+        "line": 739,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::normInterval"
+      },
+      {
+        "line": 739,
+        "symbol": "ForgeCad::Kernel::detail::I::operator=",
+        "owner": "ForgeCad::Kernel::detail::normInterval"
+      },
+      {
+        "line": 739,
+        "symbol": "ForgeCad::Kernel::detail::operator*",
+        "owner": "ForgeCad::Kernel::detail::normInterval"
+      },
+      {
+        "line": 739,
+        "symbol": "ForgeCad::Kernel::detail::operator+",
+        "owner": "ForgeCad::Kernel::detail::normInterval"
+      },
+      {
+        "line": 741,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::normInterval"
+      },
+      {
+        "line": 741,
+        "symbol": "ForgeCad::Kernel::detail::finite",
+        "owner": "ForgeCad::Kernel::detail::normInterval"
+      },
+      {
+        "line": 741,
+        "symbol": "ForgeCad::Kernel::detail::up",
+        "owner": "ForgeCad::Kernel::detail::normInterval"
+      },
+      {
+        "line": 744,
+        "symbol": "ForgeCad::Kernel::detail::prepareSource",
+        "owner": "ForgeCad::Kernel::detail::curveParameterBound"
+      },
+      {
+        "line": 750,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::curveParameterBound"
+      },
+      {
+        "line": 750,
+        "symbol": "ForgeCad::Kernel::detail::range",
+        "owner": "ForgeCad::Kernel::detail::curveParameterBound"
+      },
+      {
+        "line": 751,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::curveParameterBound"
+      },
+      {
+        "line": 751,
+        "symbol": "ForgeCad::Kernel::detail::finite",
+        "owner": "ForgeCad::Kernel::detail::curveParameterBound"
+      },
+      {
+        "line": 757,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::curveParameterBound"
+      },
+      {
+        "line": 757,
+        "symbol": "ForgeCad::Kernel::detail::operator/",
+        "owner": "ForgeCad::Kernel::detail::curveParameterBound"
+      },
+      {
+        "line": 758,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::curveParameterBound"
+      },
+      {
+        "line": 758,
+        "symbol": "ForgeCad::Kernel::detail::finite",
+        "owner": "ForgeCad::Kernel::detail::curveParameterBound"
+      },
+      {
+        "line": 761,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::curveParameterBound"
+      },
+      {
+        "line": 761,
+        "symbol": "ForgeCad::Kernel::detail::scaled",
+        "owner": "ForgeCad::Kernel::detail::curveParameterBound"
+      },
+      {
+        "line": 761,
+        "symbol": "ForgeCad::Kernel::detail::sum",
+        "owner": "ForgeCad::Kernel::detail::curveParameterBound"
+      },
+      {
+        "line": 762,
+        "symbol": "ForgeCad::Kernel::detail::derivative",
+        "owner": "ForgeCad::Kernel::detail::curveParameterBound"
+      },
+      {
+        "line": 763,
+        "symbol": "ForgeCad::Kernel::detail::derivative",
+        "owner": "ForgeCad::Kernel::detail::curveParameterBound"
+      },
+      {
+        "line": 763,
+        "symbol": "ForgeCad::Kernel::detail::product",
+        "owner": "ForgeCad::Kernel::detail::curveParameterBound"
+      },
+      {
+        "line": 763,
+        "symbol": "ForgeCad::Kernel::detail::sum",
+        "owner": "ForgeCad::Kernel::detail::curveParameterBound"
+      },
+      {
+        "line": 765,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::curveParameterBound"
+      },
+      {
+        "line": 765,
+        "symbol": "ForgeCad::Kernel::detail::operator*",
+        "owner": "ForgeCad::Kernel::detail::curveParameterBound"
+      },
+      {
+        "line": 765,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::curveParameterBound"
+      },
+      {
+        "line": 766,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::curveParameterBound"
+      },
+      {
+        "line": 766,
+        "symbol": "ForgeCad::Kernel::detail::normUpper",
+        "owner": "ForgeCad::Kernel::detail::curveParameterBound"
+      },
+      {
+        "line": 766,
+        "symbol": "ForgeCad::Kernel::detail::operator/",
+        "owner": "ForgeCad::Kernel::detail::curveParameterBound"
+      },
+      {
+        "line": 767,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::curveParameterBound"
+      },
+      {
+        "line": 767,
+        "symbol": "ForgeCad::Kernel::detail::finite",
+        "owner": "ForgeCad::Kernel::detail::curveParameterBound"
+      },
+      {
+        "line": 779,
+        "symbol": "ForgeCad::Kernel::detail::positionSourceSupported",
+        "owner": "ForgeCad::Kernel::detail::parameterBounds"
+      },
+      {
+        "line": 781,
+        "symbol": "ForgeCad::Kernel::detail::curveParameterBound",
+        "owner": "ForgeCad::Kernel::detail::parameterBounds"
+      },
+      {
+        "line": 784,
+        "symbol": "ForgeCad::Kernel::detail::normInterval",
+        "owner": "ForgeCad::Kernel::detail::parameterBounds"
+      },
+      {
+        "line": 784,
+        "symbol": "ForgeCad::Kernel::detail::vec",
+        "owner": "ForgeCad::Kernel::detail::parameterBounds"
+      },
+      {
+        "line": 785,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::parameterBounds"
+      },
+      {
+        "line": 785,
+        "symbol": "ForgeCad::Kernel::detail::finite",
+        "owner": "ForgeCad::Kernel::detail::parameterBounds"
+      },
+      {
+        "line": 810,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::parameterBounds"
+      },
+      {
+        "line": 816,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::parameterBounds"
+      },
+      {
+        "line": 816,
+        "symbol": "ForgeCad::Kernel::detail::operator/",
+        "owner": "ForgeCad::Kernel::detail::parameterBounds"
+      },
+      {
+        "line": 819,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::parameterBounds"
+      },
+      {
+        "line": 819,
+        "symbol": "ForgeCad::Kernel::detail::I::operator=",
+        "owner": "ForgeCad::Kernel::detail::parameterBounds"
+      },
+      {
+        "line": 819,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::parameterBounds"
+      },
+      {
+        "line": 823,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::parameterBounds"
+      },
+      {
+        "line": 826,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::parameterBounds"
+      },
+      {
+        "line": 826,
+        "symbol": "ForgeCad::Kernel::detail::I::operator=",
+        "owner": "ForgeCad::Kernel::detail::parameterBounds"
+      },
+      {
+        "line": 826,
+        "symbol": "ForgeCad::Kernel::detail::operator*",
+        "owner": "ForgeCad::Kernel::detail::parameterBounds"
+      },
+      {
+        "line": 826,
+        "symbol": "ForgeCad::Kernel::detail::operator+",
+        "owner": "ForgeCad::Kernel::detail::parameterBounds"
+      },
+      {
+        "line": 829,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::parameterBounds"
+      },
+      {
+        "line": 829,
+        "symbol": "ForgeCad::Kernel::detail::mul",
+        "owner": "ForgeCad::Kernel::detail::parameterBounds"
+      },
+      {
+        "line": 830,
+        "symbol": "ForgeCad::Kernel::detail::I::operator=",
+        "owner": "ForgeCad::Kernel::detail::parameterBounds"
+      },
+      {
+        "line": 833,
+        "symbol": "ForgeCad::Kernel::detail::normInterval",
+        "owner": "ForgeCad::Kernel::detail::parameterBounds"
+      },
+      {
+        "line": 836,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::parameterBounds"
+      },
+      {
+        "line": 836,
+        "symbol": "ForgeCad::Kernel::detail::finite",
+        "owner": "ForgeCad::Kernel::detail::parameterBounds"
+      },
+      {
+        "line": 846,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::parameterBounds"
+      },
+      {
+        "line": 846,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::parameterBounds"
+      },
+      {
+        "line": 846,
+        "symbol": "ForgeCad::Kernel::detail::operator/",
+        "owner": "ForgeCad::Kernel::detail::parameterBounds"
+      },
+      {
+        "line": 850,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::parameterBounds"
+      },
+      {
+        "line": 850,
+        "symbol": "ForgeCad::Kernel::detail::I::operator=",
+        "owner": "ForgeCad::Kernel::detail::parameterBounds"
+      },
+      {
+        "line": 850,
+        "symbol": "ForgeCad::Kernel::detail::operator*",
+        "owner": "ForgeCad::Kernel::detail::parameterBounds"
+      },
+      {
+        "line": 850,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::parameterBounds"
+      },
+      {
+        "line": 851,
+        "symbol": "ForgeCad::Kernel::detail::normInterval",
+        "owner": "ForgeCad::Kernel::detail::parameterBounds"
+      },
+      {
+        "line": 852,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::parameterBounds"
+      },
+      {
+        "line": 852,
+        "symbol": "ForgeCad::Kernel::detail::operator*",
+        "owner": "ForgeCad::Kernel::detail::parameterBounds"
+      },
+      {
+        "line": 852,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::parameterBounds"
+      },
+      {
+        "line": 853,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::parameterBounds"
+      },
+      {
+        "line": 853,
+        "symbol": "ForgeCad::Kernel::detail::finite",
+        "owner": "ForgeCad::Kernel::detail::parameterBounds"
+      },
+      {
+        "line": 859,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::parameterBounds"
+      },
+      {
+        "line": 859,
+        "symbol": "ForgeCad::Kernel::detail::operator*",
+        "owner": "ForgeCad::Kernel::detail::parameterBounds"
+      },
+      {
+        "line": 859,
+        "symbol": "ForgeCad::Kernel::detail::operator+",
+        "owner": "ForgeCad::Kernel::detail::parameterBounds"
+      },
+      {
+        "line": 859,
+        "symbol": "ForgeCad::Kernel::detail::operator/",
+        "owner": "ForgeCad::Kernel::detail::parameterBounds"
+      },
+      {
+        "line": 860,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::parameterBounds"
+      },
+      {
+        "line": 860,
+        "symbol": "ForgeCad::Kernel::detail::operator*",
+        "owner": "ForgeCad::Kernel::detail::parameterBounds"
+      },
+      {
+        "line": 861,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::parameterBounds"
+      },
+      {
+        "line": 861,
+        "symbol": "ForgeCad::Kernel::detail::finite",
+        "owner": "ForgeCad::Kernel::detail::parameterBounds"
+      },
+      {
+        "line": 863,
+        "symbol": "ForgeCad::Kernel::detail::parameterBounds::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_curve_fit_bounds.cpp:838:34)::operator()",
+        "owner": "ForgeCad::Kernel::detail::parameterBounds"
+      },
+      {
+        "line": 879,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::exactSum"
+      },
+      {
+        "line": 882,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::exactSum"
+      },
+      {
+        "line": 882,
+        "symbol": "ForgeCad::Kernel::detail::dn",
+        "owner": "ForgeCad::Kernel::detail::exactSum"
+      },
+      {
+        "line": 882,
+        "symbol": "ForgeCad::Kernel::detail::up",
+        "owner": "ForgeCad::Kernel::detail::exactSum"
+      },
+      {
+        "line": 887,
+        "symbol": "ForgeCad::Kernel::detail::exactSum",
+        "owner": "ForgeCad::Kernel::detail::image"
+      },
+      {
+        "line": 890,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::image"
+      },
+      {
+        "line": 892,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::image"
+      },
+      {
+        "line": 893,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::image"
+      },
+      {
+        "line": 893,
+        "symbol": "ForgeCad::Kernel::detail::operator*",
+        "owner": "ForgeCad::Kernel::detail::image"
+      },
+      {
+        "line": 893,
+        "symbol": "ForgeCad::Kernel::detail::operator+",
+        "owner": "ForgeCad::Kernel::detail::image"
+      },
+      {
+        "line": 893,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::image"
+      },
+      {
+        "line": 894,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::image"
+      },
+      {
+        "line": 894,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::image"
+      },
+      {
+        "line": 894,
+        "symbol": "ForgeCad::Kernel::detail::operator/",
+        "owner": "ForgeCad::Kernel::detail::image"
+      },
+      {
+        "line": 898,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::preimage"
+      },
+      {
+        "line": 898,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::preimage"
+      },
+      {
+        "line": 900,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::preimage"
+      },
+      {
+        "line": 900,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::preimage"
+      },
+      {
+        "line": 900,
+        "symbol": "ForgeCad::Kernel::detail::operator/",
+        "owner": "ForgeCad::Kernel::detail::preimage"
+      },
+      {
+        "line": 901,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::preimage"
+      },
+      {
+        "line": 901,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::preimage"
+      },
+      {
+        "line": 901,
+        "symbol": "ForgeCad::Kernel::detail::operator/",
+        "owner": "ForgeCad::Kernel::detail::preimage"
+      },
+      {
+        "line": 902,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::preimage"
+      },
+      {
+        "line": 902,
+        "symbol": "ForgeCad::Kernel::detail::operator*",
+        "owner": "ForgeCad::Kernel::detail::preimage"
+      },
+      {
+        "line": 902,
+        "symbol": "ForgeCad::Kernel::detail::operator+",
+        "owner": "ForgeCad::Kernel::detail::preimage"
+      },
+      {
+        "line": 902,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::preimage"
+      },
+      {
+        "line": 914,
+        "symbol": "ForgeCad::Kernel::detail::positionSourceSupported",
+        "owner": "ForgeCad::Kernel::detail::compositionFactory"
+      },
+      {
+        "line": 927,
+        "symbol": "ForgeCad::Kernel::detail::IsoMap::IsoMap",
+        "owner": "ForgeCad::Kernel::detail::compositionFactory"
+      },
+      {
+        "line": 952,
+        "symbol": "ForgeCad::Kernel::detail::IsoMap::IsoMap",
+        "owner": "ForgeCad::Kernel::detail::compositionFactory"
+      },
+      {
+        "line": 969,
+        "symbol": "ForgeCad::Kernel::detail::image",
+        "owner": "ForgeCad::Kernel::detail::compositionFactory"
+      },
+      {
+        "line": 970,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::compositionFactory"
+      },
+      {
+        "line": 970,
+        "symbol": "ForgeCad::Kernel::detail::finite",
+        "owner": "ForgeCad::Kernel::detail::compositionFactory"
+      },
+      {
+        "line": 978,
+        "symbol": "ForgeCad::Kernel::detail::prepareIso",
+        "owner": "ForgeCad::Kernel::detail::compositionFactory"
+      },
+      {
+        "line": 979,
+        "symbol": "ForgeCad::Kernel::detail::prepareExtrusionIso",
+        "owner": "ForgeCad::Kernel::detail::compositionFactory"
+      },
+      {
+        "line": 984,
+        "symbol": "ForgeCad::Kernel::detail::image",
+        "owner": "ForgeCad::Kernel::detail::compositionFactory"
+      },
+      {
+        "line": 985,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::compositionFactory"
+      },
+      {
+        "line": 985,
+        "symbol": "ForgeCad::Kernel::detail::finite",
+        "owner": "ForgeCad::Kernel::detail::compositionFactory"
+      },
+      {
+        "line": 991,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::compositionFactory"
+      },
+      {
+        "line": 991,
+        "symbol": "ForgeCad::Kernel::detail::preimage",
+        "owner": "ForgeCad::Kernel::detail::compositionFactory"
+      },
+      {
+        "line": 992,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::compositionFactory"
+      },
+      {
+        "line": 992,
+        "symbol": "ForgeCad::Kernel::detail::finite",
+        "owner": "ForgeCad::Kernel::detail::compositionFactory"
+      },
+      {
+        "line": 1014,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::compositionFactory"
+      },
+      {
+        "line": 1028,
+        "symbol": "ForgeCad::Kernel::detail::image",
+        "owner": "ForgeCad::Kernel::detail::compositionFactory"
+      },
+      {
+        "line": 1029,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::compositionFactory"
+      },
+      {
+        "line": 1029,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::compositionFactory"
+      },
+      {
+        "line": 1029,
+        "symbol": "ForgeCad::Kernel::detail::operator/",
+        "owner": "ForgeCad::Kernel::detail::compositionFactory"
+      },
+      {
+        "line": 1036,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::compositionFactory"
+      },
+      {
+        "line": 1036,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::compositionFactory"
+      },
+      {
+        "line": 1036,
+        "symbol": "ForgeCad::Kernel::detail::operator/",
+        "owner": "ForgeCad::Kernel::detail::compositionFactory"
+      },
+      {
+        "line": 1037,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::compositionFactory"
+      },
+      {
+        "line": 1037,
+        "symbol": "ForgeCad::Kernel::detail::evaluatePolynomial",
+        "owner": "ForgeCad::Kernel::detail::compositionFactory"
+      },
+      {
+        "line": 1041,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::compositionFactory"
+      },
+      {
+        "line": 1041,
+        "symbol": "ForgeCad::Kernel::detail::evaluatePolynomial",
+        "owner": "ForgeCad::Kernel::detail::compositionFactory"
+      },
+      {
+        "line": 1041,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::compositionFactory"
+      },
+      {
+        "line": 1041,
+        "symbol": "ForgeCad::Kernel::detail::operator/",
+        "owner": "ForgeCad::Kernel::detail::compositionFactory"
+      },
+      {
+        "line": 1042,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::compositionFactory"
+      },
+      {
+        "line": 1042,
+        "symbol": "ForgeCad::Kernel::detail::evaluatePolynomial",
+        "owner": "ForgeCad::Kernel::detail::compositionFactory"
+      },
+      {
+        "line": 1043,
+        "symbol": "ForgeCad::Kernel::detail::normUpper",
+        "owner": "ForgeCad::Kernel::detail::compositionFactory"
+      },
+      {
+        "line": 1050,
+        "symbol": "ForgeCad::Kernel::detail::image",
+        "owner": "ForgeCad::Kernel::detail::compositionFactory"
+      },
+      {
+        "line": 1057,
+        "symbol": "ForgeCad::Kernel::detail::affineBezier",
+        "owner": "ForgeCad::Kernel::detail::compositionFactory"
+      },
+      {
+        "line": 1058,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::compositionFactory"
+      },
+      {
+        "line": 1058,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::compositionFactory"
+      },
+      {
+        "line": 1058,
+        "symbol": "ForgeCad::Kernel::detail::operator/",
+        "owner": "ForgeCad::Kernel::detail::compositionFactory"
+      },
+      {
+        "line": 1058,
+        "symbol": "ForgeCad::Kernel::detail::preimage",
+        "owner": "ForgeCad::Kernel::detail::compositionFactory"
+      },
+      {
+        "line": 1059,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::compositionFactory"
+      },
+      {
+        "line": 1059,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::compositionFactory"
+      },
+      {
+        "line": 1059,
+        "symbol": "ForgeCad::Kernel::detail::operator/",
+        "owner": "ForgeCad::Kernel::detail::compositionFactory"
+      },
+      {
+        "line": 1059,
+        "symbol": "ForgeCad::Kernel::detail::preimage",
+        "owner": "ForgeCad::Kernel::detail::compositionFactory"
+      },
+      {
+        "line": 1060,
+        "symbol": "ForgeCad::Kernel::detail::positionOnOriginal",
+        "owner": "ForgeCad::Kernel::detail::compositionFactory"
+      },
+      {
+        "line": 1073,
+        "symbol": "ForgeCad::Kernel::detail::parameterBounds",
+        "owner": "ForgeCad::Kernel::detail::surfaceParameterBounds"
+      },
+      {
+        "line": 1077,
+        "symbol": "ForgeCad::Kernel::detail::compositionFactory",
+        "owner": "ForgeCad::Kernel::detail::surfaceCompositionErrorBound"
+      },
+      {
+        "line": 1080,
+        "symbol": "ForgeCad::Kernel::detail::positionFactory",
+        "owner": "ForgeCad::Kernel::detail::curvePositionErrorBound"
+      },
+      {
+        "line": 1083,
+        "symbol": "ForgeCad::Kernel::detail::make",
+        "owner": "ForgeCad::Kernel::detail::extrusionOffsetErrorBound"
+      },
+      {
+        "line": 1087,
+        "symbol": "ForgeCad::Kernel::detail::make",
+        "owner": "ForgeCad::Kernel::detail::revolutionOffsetErrorBound"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_mapping_carrier.cpp",
+    "target": "kernel/fk_body_check.cpp",
+    "kind": "call",
+    "count": 1,
+    "sites": [
+      {
+        "line": 444,
+        "symbol": "ForgeCad::Kernel::checkBody",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_mapping_carrier.cpp",
+    "target": "kernel/fk_body_check.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 4,
+        "symbol": "fk_body_check.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_mapping_carrier.cpp",
+    "target": "kernel/fk_bspline.h",
+    "kind": "call",
+    "count": 5,
+    "sites": [
+      {
+        "line": 323,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::poleCount",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 325,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::knots",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 329,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::poleCount",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 331,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::poles",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 332,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::poles",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_mapping_carrier.cpp",
+    "target": "kernel/fk_bspline_surface.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 3,
+        "symbol": "fk_bspline_surface.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_mapping_carrier.cpp",
+    "target": "kernel/fk_cancel.h",
+    "kind": "call",
+    "count": 11,
+    "sites": [
+      {
+        "line": 92,
+        "symbol": "ForgeCad::Kernel::cancellationPoint",
+        "owner": "ForgeCad::Kernel::detail::basis"
+      },
+      {
+        "line": 108,
+        "symbol": "ForgeCad::Kernel::cancellationPoint",
+        "owner": "ForgeCad::Kernel::detail::affinePieces"
+      },
+      {
+        "line": 115,
+        "symbol": "ForgeCad::Kernel::cancellationPoint",
+        "owner": "ForgeCad::Kernel::detail::affinePoint"
+      },
+      {
+        "line": 165,
+        "symbol": "ForgeCad::Kernel::cancellationPoint",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 214,
+        "symbol": "ForgeCad::Kernel::cancellationPoint",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 256,
+        "symbol": "ForgeCad::Kernel::cancellationPoint",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 324,
+        "symbol": "ForgeCad::Kernel::cancellationPoint",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 350,
+        "symbol": "ForgeCad::Kernel::cancellationPoint",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 396,
+        "symbol": "ForgeCad::Kernel::cancellationPoint",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 442,
+        "symbol": "ForgeCad::Kernel::cancellationPoint",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 446,
+        "symbol": "ForgeCad::Kernel::cancellationPoint",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_mapping_carrier.cpp",
+    "target": "kernel/fk_cancel.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 5,
+        "symbol": "fk_cancel.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_mapping_carrier.cpp",
+    "target": "kernel/fk_curve.h",
+    "kind": "call",
+    "count": 7,
+    "sites": [
+      {
+        "line": 231,
+        "symbol": "ForgeCad::Kernel::Curve::breakpoints",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 258,
+        "symbol": "ForgeCad::Kernel::Curve::breakpoints",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 269,
+        "symbol": "ForgeCad::Kernel::Curve::point",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 318,
+        "symbol": "ForgeCad::Kernel::Curve::point",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 354,
+        "symbol": "ForgeCad::Kernel::Curve::breakpoints",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 355,
+        "symbol": "ForgeCad::Kernel::Curve::breakpoints",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 401,
+        "symbol": "ForgeCad::Kernel::Curve::point",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_mapping_carrier.cpp",
+    "target": "kernel/fk_curve_fit_bounds.cpp",
+    "kind": "call",
+    "count": 2,
+    "sites": [
+      {
+        "line": 186,
+        "symbol": "ForgeCad::Kernel::detail::surfaceParameterBounds",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 313,
+        "symbol": "ForgeCad::Kernel::detail::surfaceCompositionErrorBound",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_mapping_carrier.cpp",
+    "target": "kernel/fk_curve_fit_bounds.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 2,
+        "symbol": "fk_curve_fit_bounds.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_mapping_carrier.cpp",
+    "target": "kernel/fk_history.cpp",
+    "kind": "call",
+    "count": 2,
+    "sites": [
+      {
+        "line": 150,
+        "symbol": "ForgeCad::Kernel::makeHistory",
+        "owner": "ForgeCad::Kernel::detail::historyFor"
+      },
+      {
+        "line": 154,
+        "symbol": "ForgeCad::Kernel::BodyHistory::declareOrigins",
+        "owner": "ForgeCad::Kernel::detail::historyFor"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_mapping_carrier.cpp",
+    "target": "kernel/fk_history.h",
+    "kind": "call",
+    "count": 2,
+    "sites": [
+      {
+        "line": 159,
+        "symbol": "ForgeCad::Kernel::BodyHistory::BodyHistory",
+        "owner": "ForgeCad::Kernel::detail::historyFor"
+      },
+      {
+        "line": 448,
+        "symbol": "ForgeCad::Kernel::BodyHistory::operator=",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_mapping_carrier.cpp",
+    "target": "kernel/fk_mapping_carrier.cpp",
+    "kind": "call",
+    "count": 178,
+    "sites": [
+      {
+        "line": 26,
+        "symbol": "ForgeCad::Kernel::detail::Bound::Bound",
+        "owner": "ForgeCad::Kernel::detail::checked"
+      },
+      {
+        "line": 29,
+        "symbol": "ForgeCad::Kernel::detail::Bound::Bound",
+        "owner": "ForgeCad::Kernel::detail::operator+"
+      },
+      {
+        "line": 30,
+        "symbol": "ForgeCad::Kernel::detail::Bound::Bound",
+        "owner": "ForgeCad::Kernel::detail::operator+"
+      },
+      {
+        "line": 34,
+        "symbol": "ForgeCad::Kernel::detail::Bound::Bound",
+        "owner": "ForgeCad::Kernel::detail::operator+"
+      },
+      {
+        "line": 36,
+        "symbol": "ForgeCad::Kernel::detail::checked",
+        "owner": "ForgeCad::Kernel::detail::operator+"
+      },
+      {
+        "line": 36,
+        "symbol": "ForgeCad::Kernel::detail::lower",
+        "owner": "ForgeCad::Kernel::detail::operator+"
+      },
+      {
+        "line": 36,
+        "symbol": "ForgeCad::Kernel::detail::upper",
+        "owner": "ForgeCad::Kernel::detail::operator+"
+      },
+      {
+        "line": 39,
+        "symbol": "ForgeCad::Kernel::detail::Bound::Bound",
+        "owner": "ForgeCad::Kernel::detail::operator-"
+      },
+      {
+        "line": 39,
+        "symbol": "ForgeCad::Kernel::detail::operator+",
+        "owner": "ForgeCad::Kernel::detail::operator-"
+      },
+      {
+        "line": 42,
+        "symbol": "ForgeCad::Kernel::detail::Bound::Bound",
+        "owner": "ForgeCad::Kernel::detail::operator*"
+      },
+      {
+        "line": 42,
+        "symbol": "ForgeCad::Kernel::detail::finite",
+        "owner": "ForgeCad::Kernel::detail::operator*"
+      },
+      {
+        "line": 43,
+        "symbol": "ForgeCad::Kernel::detail::Bound::Bound",
+        "owner": "ForgeCad::Kernel::detail::operator*"
+      },
+      {
+        "line": 44,
+        "symbol": "ForgeCad::Kernel::detail::Bound::Bound",
+        "owner": "ForgeCad::Kernel::detail::operator*"
+      },
+      {
+        "line": 45,
+        "symbol": "ForgeCad::Kernel::detail::Bound::Bound",
+        "owner": "ForgeCad::Kernel::detail::operator*"
+      },
+      {
+        "line": 46,
+        "symbol": "ForgeCad::Kernel::detail::Bound::Bound",
+        "owner": "ForgeCad::Kernel::detail::operator*"
+      },
+      {
+        "line": 47,
+        "symbol": "ForgeCad::Kernel::detail::Bound::Bound",
+        "owner": "ForgeCad::Kernel::detail::operator*"
+      },
+      {
+        "line": 48,
+        "symbol": "ForgeCad::Kernel::detail::Bound::Bound",
+        "owner": "ForgeCad::Kernel::detail::operator*"
+      },
+      {
+        "line": 52,
+        "symbol": "ForgeCad::Kernel::detail::Bound::Bound",
+        "owner": "ForgeCad::Kernel::detail::operator*"
+      },
+      {
+        "line": 53,
+        "symbol": "ForgeCad::Kernel::detail::checked",
+        "owner": "ForgeCad::Kernel::detail::operator*"
+      },
+      {
+        "line": 53,
+        "symbol": "ForgeCad::Kernel::detail::lower",
+        "owner": "ForgeCad::Kernel::detail::operator*"
+      },
+      {
+        "line": 53,
+        "symbol": "ForgeCad::Kernel::detail::upper",
+        "owner": "ForgeCad::Kernel::detail::operator*"
+      },
+      {
+        "line": 56,
+        "symbol": "ForgeCad::Kernel::detail::Bound::Bound",
+        "owner": "ForgeCad::Kernel::detail::operator/"
+      },
+      {
+        "line": 57,
+        "symbol": "ForgeCad::Kernel::detail::Bound::Bound",
+        "owner": "ForgeCad::Kernel::detail::operator/"
+      },
+      {
+        "line": 58,
+        "symbol": "ForgeCad::Kernel::detail::Bound::Bound",
+        "owner": "ForgeCad::Kernel::detail::operator/"
+      },
+      {
+        "line": 58,
+        "symbol": "ForgeCad::Kernel::detail::finite",
+        "owner": "ForgeCad::Kernel::detail::operator/"
+      },
+      {
+        "line": 59,
+        "symbol": "ForgeCad::Kernel::detail::Bound::Bound",
+        "owner": "ForgeCad::Kernel::detail::operator/"
+      },
+      {
+        "line": 59,
+        "symbol": "ForgeCad::Kernel::detail::checked",
+        "owner": "ForgeCad::Kernel::detail::operator/"
+      },
+      {
+        "line": 59,
+        "symbol": "ForgeCad::Kernel::detail::finite",
+        "owner": "ForgeCad::Kernel::detail::operator/"
+      },
+      {
+        "line": 59,
+        "symbol": "ForgeCad::Kernel::detail::lower",
+        "owner": "ForgeCad::Kernel::detail::operator/"
+      },
+      {
+        "line": 59,
+        "symbol": "ForgeCad::Kernel::detail::operator*",
+        "owner": "ForgeCad::Kernel::detail::operator/"
+      },
+      {
+        "line": 59,
+        "symbol": "ForgeCad::Kernel::detail::upper",
+        "owner": "ForgeCad::Kernel::detail::operator/"
+      },
+      {
+        "line": 62,
+        "symbol": "ForgeCad::Kernel::detail::Bound::Bound",
+        "owner": "ForgeCad::Kernel::detail::magnitude"
+      },
+      {
+        "line": 62,
+        "symbol": "ForgeCad::Kernel::detail::finite",
+        "owner": "ForgeCad::Kernel::detail::magnitude"
+      },
+      {
+        "line": 65,
+        "symbol": "ForgeCad::Kernel::detail::Bound::Bound",
+        "owner": "ForgeCad::Kernel::detail::exact"
+      },
+      {
+        "line": 67,
+        "symbol": "ForgeCad::Kernel::detail::Bound::Bound",
+        "owner": "ForgeCad::Kernel::detail::dotBounds"
+      },
+      {
+        "line": 69,
+        "symbol": "ForgeCad::Kernel::detail::Bound::Bound",
+        "owner": "ForgeCad::Kernel::detail::dotBounds"
+      },
+      {
+        "line": 69,
+        "symbol": "ForgeCad::Kernel::detail::Bound::operator=",
+        "owner": "ForgeCad::Kernel::detail::dotBounds"
+      },
+      {
+        "line": 69,
+        "symbol": "ForgeCad::Kernel::detail::operator*",
+        "owner": "ForgeCad::Kernel::detail::dotBounds"
+      },
+      {
+        "line": 69,
+        "symbol": "ForgeCad::Kernel::detail::operator+",
+        "owner": "ForgeCad::Kernel::detail::dotBounds"
+      },
+      {
+        "line": 70,
+        "symbol": "ForgeCad::Kernel::detail::Bound::Bound",
+        "owner": "ForgeCad::Kernel::detail::dotBounds"
+      },
+      {
+        "line": 73,
+        "symbol": "ForgeCad::Kernel::detail::Bound::Bound",
+        "owner": "ForgeCad::Kernel::detail::distanceUpper"
+      },
+      {
+        "line": 75,
+        "symbol": "ForgeCad::Kernel::detail::Bound::Bound",
+        "owner": "ForgeCad::Kernel::detail::distanceUpper"
+      },
+      {
+        "line": 75,
+        "symbol": "ForgeCad::Kernel::detail::magnitude",
+        "owner": "ForgeCad::Kernel::detail::distanceUpper"
+      },
+      {
+        "line": 75,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::distanceUpper"
+      },
+      {
+        "line": 76,
+        "symbol": "ForgeCad::Kernel::detail::Bound::Bound",
+        "owner": "ForgeCad::Kernel::detail::distanceUpper"
+      },
+      {
+        "line": 76,
+        "symbol": "ForgeCad::Kernel::detail::Bound::operator=",
+        "owner": "ForgeCad::Kernel::detail::distanceUpper"
+      },
+      {
+        "line": 76,
+        "symbol": "ForgeCad::Kernel::detail::operator*",
+        "owner": "ForgeCad::Kernel::detail::distanceUpper"
+      },
+      {
+        "line": 76,
+        "symbol": "ForgeCad::Kernel::detail::operator+",
+        "owner": "ForgeCad::Kernel::detail::distanceUpper"
+      },
+      {
+        "line": 78,
+        "symbol": "ForgeCad::Kernel::detail::Bound::Bound",
+        "owner": "ForgeCad::Kernel::detail::distanceUpper"
+      },
+      {
+        "line": 78,
+        "symbol": "ForgeCad::Kernel::detail::finite",
+        "owner": "ForgeCad::Kernel::detail::distanceUpper"
+      },
+      {
+        "line": 78,
+        "symbol": "ForgeCad::Kernel::detail::upper",
+        "owner": "ForgeCad::Kernel::detail::distanceUpper"
+      },
+      {
+        "line": 82,
+        "symbol": "ForgeCad::Kernel::detail::Bound::Bound",
+        "owner": "ForgeCad::Kernel::detail::difference"
+      },
+      {
+        "line": 82,
+        "symbol": "ForgeCad::Kernel::detail::Bound::operator=",
+        "owner": "ForgeCad::Kernel::detail::difference"
+      },
+      {
+        "line": 82,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::difference"
+      },
+      {
+        "line": 121,
+        "symbol": "ForgeCad::Kernel::detail::Bound::Bound",
+        "owner": "ForgeCad::Kernel::detail::affinePoint"
+      },
+      {
+        "line": 121,
+        "symbol": "ForgeCad::Kernel::detail::operator*",
+        "owner": "ForgeCad::Kernel::detail::affinePoint"
+      },
+      {
+        "line": 121,
+        "symbol": "ForgeCad::Kernel::detail::operator+",
+        "owner": "ForgeCad::Kernel::detail::affinePoint"
+      },
+      {
+        "line": 136,
+        "symbol": "ForgeCad::Kernel::detail::Bound::Bound",
+        "owner": "ForgeCad::Kernel::detail::affinePoint"
+      },
+      {
+        "line": 136,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::affinePoint"
+      },
+      {
+        "line": 136,
+        "symbol": "ForgeCad::Kernel::detail::operator/",
+        "owner": "ForgeCad::Kernel::detail::affinePoint"
+      },
+      {
+        "line": 137,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::affinePoint"
+      },
+      {
+        "line": 139,
+        "symbol": "ForgeCad::Kernel::detail::Bound::Bound",
+        "owner": "ForgeCad::Kernel::detail::affinePoint"
+      },
+      {
+        "line": 139,
+        "symbol": "ForgeCad::Kernel::detail::operator*",
+        "owner": "ForgeCad::Kernel::detail::affinePoint"
+      },
+      {
+        "line": 139,
+        "symbol": "ForgeCad::Kernel::detail::operator+",
+        "owner": "ForgeCad::Kernel::detail::affinePoint"
+      },
+      {
+        "line": 140,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::affinePoint"
+      },
+      {
+        "line": 156,
+        "symbol": "ForgeCad::Kernel::detail::historyFor::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_mapping_carrier.cpp:151:25)::operator()",
+        "owner": "ForgeCad::Kernel::detail::historyFor"
+      },
+      {
+        "line": 157,
+        "symbol": "ForgeCad::Kernel::detail::historyFor::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_mapping_carrier.cpp:151:25)::operator()",
+        "owner": "ForgeCad::Kernel::detail::historyFor"
+      },
+      {
+        "line": 158,
+        "symbol": "ForgeCad::Kernel::detail::historyFor::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_mapping_carrier.cpp:151:25)::operator()",
+        "owner": "ForgeCad::Kernel::detail::historyFor"
+      },
+      {
+        "line": 180,
+        "symbol": "ForgeCad::Kernel::detail::affinePieces",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 184,
+        "symbol": "ForgeCad::Kernel::detail::affinePieces",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 189,
+        "symbol": "ForgeCad::Kernel::detail::require",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 195,
+        "symbol": "ForgeCad::Kernel::detail::difference",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 196,
+        "symbol": "ForgeCad::Kernel::detail::dotBounds",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 197,
+        "symbol": "ForgeCad::Kernel::detail::dotBounds",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 198,
+        "symbol": "ForgeCad::Kernel::detail::Bound::Bound",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 198,
+        "symbol": "ForgeCad::Kernel::detail::operator+",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 199,
+        "symbol": "ForgeCad::Kernel::detail::Bound::Bound",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 199,
+        "symbol": "ForgeCad::Kernel::detail::operator*",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 199,
+        "symbol": "ForgeCad::Kernel::detail::operator+",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 199,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 199,
+        "symbol": "ForgeCad::Kernel::detail::operator/",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 200,
+        "symbol": "ForgeCad::Kernel::detail::Bound::Bound",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 200,
+        "symbol": "ForgeCad::Kernel::detail::operator+",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 201,
+        "symbol": "ForgeCad::Kernel::detail::Bound::Bound",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 201,
+        "symbol": "ForgeCad::Kernel::detail::operator*",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 201,
+        "symbol": "ForgeCad::Kernel::detail::operator+",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 201,
+        "symbol": "ForgeCad::Kernel::detail::operator/",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 226,
+        "symbol": "ForgeCad::Kernel::detail::Bound::Bound",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 232,
+        "symbol": "ForgeCad::Kernel::detail::affinePoint",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 237,
+        "symbol": "ForgeCad::Kernel::detail::Bound::Bound",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 237,
+        "symbol": "ForgeCad::Kernel::detail::finite",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 237,
+        "symbol": "ForgeCad::Kernel::detail::require",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 238,
+        "symbol": "ForgeCad::Kernel::detail::difference",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 238,
+        "symbol": "ForgeCad::Kernel::detail::dotBounds",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 238,
+        "symbol": "ForgeCad::Kernel::detail::exact",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 238,
+        "symbol": "ForgeCad::Kernel::detail::operator+",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 239,
+        "symbol": "ForgeCad::Kernel::detail::Bound::Bound",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 240,
+        "symbol": "ForgeCad::Kernel::detail::Bound::Bound",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 240,
+        "symbol": "ForgeCad::Kernel::detail::Bound::operator=",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 240,
+        "symbol": "ForgeCad::Kernel::detail::dotBounds",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 240,
+        "symbol": "ForgeCad::Kernel::detail::exact",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 240,
+        "symbol": "ForgeCad::Kernel::detail::operator*",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 240,
+        "symbol": "ForgeCad::Kernel::detail::operator+",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 241,
+        "symbol": "ForgeCad::Kernel::detail::Bound::Bound",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 241,
+        "symbol": "ForgeCad::Kernel::detail::dotBounds",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 241,
+        "symbol": "ForgeCad::Kernel::detail::exact",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 241,
+        "symbol": "ForgeCad::Kernel::detail::operator*",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 242,
+        "symbol": "ForgeCad::Kernel::detail::Bound::Bound",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 242,
+        "symbol": "ForgeCad::Kernel::detail::magnitude",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 243,
+        "symbol": "ForgeCad::Kernel::detail::dotBounds",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 243,
+        "symbol": "ForgeCad::Kernel::detail::exact",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 251,
+        "symbol": "ForgeCad::Kernel::detail::require",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 259,
+        "symbol": "ForgeCad::Kernel::detail::require",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 260,
+        "symbol": "ForgeCad::Kernel::detail::EdgeImage::EdgeImage",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 265,
+        "symbol": "ForgeCad::Kernel::detail::affinePoint",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 267,
+        "symbol": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_mapping_carrier.cpp:194:32)::operator()",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 269,
+        "symbol": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_mapping_carrier.cpp:203:36)::operator()",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 285,
+        "symbol": "ForgeCad::Kernel::detail::Bound::Bound",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 285,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 286,
+        "symbol": "ForgeCad::Kernel::detail::Bound::Bound",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 286,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 287,
+        "symbol": "ForgeCad::Kernel::detail::difference",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 287,
+        "symbol": "ForgeCad::Kernel::detail::dotBounds",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 287,
+        "symbol": "ForgeCad::Kernel::detail::operator+",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 288,
+        "symbol": "ForgeCad::Kernel::detail::Bound::Bound",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 289,
+        "symbol": "ForgeCad::Kernel::detail::Bound::Bound",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 289,
+        "symbol": "ForgeCad::Kernel::detail::magnitude",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 289,
+        "symbol": "ForgeCad::Kernel::detail::operator*",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 289,
+        "symbol": "ForgeCad::Kernel::detail::operator+",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 290,
+        "symbol": "ForgeCad::Kernel::detail::Bound::Bound",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 290,
+        "symbol": "ForgeCad::Kernel::detail::magnitude",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 293,
+        "symbol": "ForgeCad::Kernel::detail::Bound::Bound",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 295,
+        "symbol": "ForgeCad::Kernel::detail::Bound::Bound",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 297,
+        "symbol": "ForgeCad::Kernel::detail::Bound::Bound",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 297,
+        "symbol": "ForgeCad::Kernel::detail::finite",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 297,
+        "symbol": "ForgeCad::Kernel::detail::require",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 305,
+        "symbol": "ForgeCad::Kernel::detail::require",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 328,
+        "symbol": "ForgeCad::Kernel::detail::require",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 334,
+        "symbol": "ForgeCad::Kernel::detail::require",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 339,
+        "symbol": "ForgeCad::Kernel::detail::upper",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 340,
+        "symbol": "ForgeCad::Kernel::detail::require",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 361,
+        "symbol": "ForgeCad::Kernel::detail::affinePoint",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 362,
+        "symbol": "ForgeCad::Kernel::detail::exact",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 364,
+        "symbol": "ForgeCad::Kernel::detail::Bound::Bound",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 364,
+        "symbol": "ForgeCad::Kernel::detail::Bound::operator=",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 364,
+        "symbol": "ForgeCad::Kernel::detail::operator*",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 364,
+        "symbol": "ForgeCad::Kernel::detail::operator+",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 365,
+        "symbol": "ForgeCad::Kernel::detail::Bound::Bound",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 365,
+        "symbol": "ForgeCad::Kernel::detail::operator*",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 366,
+        "symbol": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_mapping_carrier.cpp:194:32)::operator()",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 367,
+        "symbol": "ForgeCad::Kernel::detail::affinePoint",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 368,
+        "symbol": "ForgeCad::Kernel::detail::difference",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 368,
+        "symbol": "ForgeCad::Kernel::detail::dotBounds",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 368,
+        "symbol": "ForgeCad::Kernel::detail::operator+",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 369,
+        "symbol": "ForgeCad::Kernel::detail::Bound::Bound",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 370,
+        "symbol": "ForgeCad::Kernel::detail::Bound::Bound",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 370,
+        "symbol": "ForgeCad::Kernel::detail::magnitude",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 370,
+        "symbol": "ForgeCad::Kernel::detail::operator*",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 370,
+        "symbol": "ForgeCad::Kernel::detail::operator+",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 370,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 371,
+        "symbol": "ForgeCad::Kernel::detail::Bound::Bound",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 371,
+        "symbol": "ForgeCad::Kernel::detail::magnitude",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 371,
+        "symbol": "ForgeCad::Kernel::detail::operator*",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 371,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 372,
+        "symbol": "ForgeCad::Kernel::detail::Bound::Bound",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 372,
+        "symbol": "ForgeCad::Kernel::detail::magnitude",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 373,
+        "symbol": "ForgeCad::Kernel::detail::Bound::Bound",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 373,
+        "symbol": "ForgeCad::Kernel::detail::finite",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 373,
+        "symbol": "ForgeCad::Kernel::detail::require",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 377,
+        "symbol": "ForgeCad::Kernel::detail::require",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 382,
+        "symbol": "ForgeCad::Kernel::detail::upper",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 383,
+        "symbol": "ForgeCad::Kernel::detail::require",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 404,
+        "symbol": "ForgeCad::Kernel::detail::require",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 418,
+        "symbol": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_mapping_carrier.cpp:203:36)::operator()",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 422,
+        "symbol": "ForgeCad::Kernel::detail::distanceUpper",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 423,
+        "symbol": "ForgeCad::Kernel::detail::require",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 445,
+        "symbol": "ForgeCad::Kernel::detail::require",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 448,
+        "symbol": "ForgeCad::Kernel::detail::historyFor",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_mapping_carrier.cpp",
+    "target": "kernel/fk_mapping_carrier.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 1,
+        "symbol": "fk_mapping_carrier.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_mapping_carrier.cpp",
+    "target": "kernel/fk_math.cpp",
+    "kind": "call",
+    "count": 2,
+    "sites": [
+      {
+        "line": 204,
+        "symbol": "ForgeCad::Kernel::Frame3::toLocal",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 419,
+        "symbol": "ForgeCad::Kernel::Frame3::toLocal",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_mapping_carrier.cpp",
+    "target": "kernel/fk_math.h",
+    "kind": "call",
+    "count": 67,
+    "sites": [
+      {
+        "line": 65,
+        "symbol": "ForgeCad::Kernel::Vec::x",
+        "owner": "ForgeCad::Kernel::detail::exact"
+      },
+      {
+        "line": 65,
+        "symbol": "ForgeCad::Kernel::Vec::y",
+        "owner": "ForgeCad::Kernel::detail::exact"
+      },
+      {
+        "line": 65,
+        "symbol": "ForgeCad::Kernel::Vec::z",
+        "owner": "ForgeCad::Kernel::detail::exact"
+      },
+      {
+        "line": 69,
+        "symbol": "ForgeCad::Kernel::Vec::operator[]",
+        "owner": "ForgeCad::Kernel::detail::dotBounds"
+      },
+      {
+        "line": 75,
+        "symbol": "ForgeCad::Kernel::Vec::operator[]",
+        "owner": "ForgeCad::Kernel::detail::distanceUpper"
+      },
+      {
+        "line": 82,
+        "symbol": "ForgeCad::Kernel::Vec::operator[]",
+        "owner": "ForgeCad::Kernel::detail::difference"
+      },
+      {
+        "line": 195,
+        "symbol": "ForgeCad::Kernel::Frame3::origin",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 196,
+        "symbol": "ForgeCad::Kernel::Frame3::xDir",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 197,
+        "symbol": "ForgeCad::Kernel::Frame3::yDir",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 198,
+        "symbol": "ForgeCad::Kernel::Vec::x",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 199,
+        "symbol": "ForgeCad::Kernel::Vec::x",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 200,
+        "symbol": "ForgeCad::Kernel::Vec::y",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 201,
+        "symbol": "ForgeCad::Kernel::Vec::y",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 205,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 205,
+        "symbol": "ForgeCad::Kernel::Vec::x",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 205,
+        "symbol": "ForgeCad::Kernel::Vec::y",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 206,
+        "symbol": "ForgeCad::Kernel::Vec::x",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 206,
+        "symbol": "ForgeCad::Kernel::Vec::y",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 217,
+        "symbol": "ForgeCad::Kernel::Frame3::zDir",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 217,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 220,
+        "symbol": "ForgeCad::Kernel::Frame3::zDir",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 220,
+        "symbol": "ForgeCad::Kernel::Vec::operator[]",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 221,
+        "symbol": "ForgeCad::Kernel::Frame3::zDir",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 221,
+        "symbol": "ForgeCad::Kernel::Vec::operator[]",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 225,
+        "symbol": "ForgeCad::Kernel::Frame3::origin",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 225,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 225,
+        "symbol": "ForgeCad::Kernel::dot",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 225,
+        "symbol": "ForgeCad::Kernel::operator-",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 238,
+        "symbol": "ForgeCad::Kernel::Frame3::origin",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 238,
+        "symbol": "ForgeCad::Kernel::Frame3::zDir",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 240,
+        "symbol": "ForgeCad::Kernel::Frame3::xDir",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 240,
+        "symbol": "ForgeCad::Kernel::Frame3::zDir",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 241,
+        "symbol": "ForgeCad::Kernel::Frame3::yDir",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 241,
+        "symbol": "ForgeCad::Kernel::Frame3::zDir",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 243,
+        "symbol": "ForgeCad::Kernel::Frame3::zDir",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 271,
+        "symbol": "ForgeCad::Kernel::Vec::operator[]",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 272,
+        "symbol": "ForgeCad::Kernel::Vec::operator[]",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 276,
+        "symbol": "ForgeCad::Kernel::Vec::operator[]",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 284,
+        "symbol": "ForgeCad::Kernel::Vec::operator[]",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 285,
+        "symbol": "ForgeCad::Kernel::Vec::x",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 286,
+        "symbol": "ForgeCad::Kernel::Vec::y",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 287,
+        "symbol": "ForgeCad::Kernel::Frame3::origin",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 288,
+        "symbol": "ForgeCad::Kernel::Frame3::zDir",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 293,
+        "symbol": "ForgeCad::Kernel::Vec::x",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 294,
+        "symbol": "ForgeCad::Kernel::Vec::x",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 295,
+        "symbol": "ForgeCad::Kernel::Vec::y",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 296,
+        "symbol": "ForgeCad::Kernel::Vec::y",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 319,
+        "symbol": "ForgeCad::Kernel::Vec::x",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 319,
+        "symbol": "ForgeCad::Kernel::Vec::y",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 362,
+        "symbol": "ForgeCad::Kernel::Frame3::origin",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 364,
+        "symbol": "ForgeCad::Kernel::Frame3::xDir",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 364,
+        "symbol": "ForgeCad::Kernel::Vec::operator[]",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 365,
+        "symbol": "ForgeCad::Kernel::Frame3::yDir",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 365,
+        "symbol": "ForgeCad::Kernel::Vec::operator[]",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 368,
+        "symbol": "ForgeCad::Kernel::Frame3::origin",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 369,
+        "symbol": "ForgeCad::Kernel::Frame3::zDir",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 390,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 404,
+        "symbol": "ForgeCad::Kernel::distance",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 407,
+        "symbol": "ForgeCad::Kernel::Vec::operator=",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 417,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 420,
+        "symbol": "ForgeCad::Kernel::Vec::x",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 420,
+        "symbol": "ForgeCad::Kernel::Vec::y",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 420,
+        "symbol": "ForgeCad::Kernel::operator+",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 421,
+        "symbol": "ForgeCad::Kernel::Vec::x",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 421,
+        "symbol": "ForgeCad::Kernel::Vec::y",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 421,
+        "symbol": "ForgeCad::Kernel::Vec::z",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 421,
+        "symbol": "ForgeCad::Kernel::operator*",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_mapping_carrier.cpp",
+    "target": "kernel/fk_offset.cpp",
+    "kind": "call",
+    "count": 1,
+    "sites": [
+      {
+        "line": 317,
+        "symbol": "ForgeCad::Kernel::fitCurveCertified",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_mapping_carrier.cpp",
+    "target": "kernel/fk_precision.h",
+    "kind": "call",
+    "count": 1,
+    "sites": [
+      {
+        "line": 191,
+        "symbol": "ForgeCad::Kernel::linearResolution",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_mapping_carrier.cpp",
+    "target": "kernel/fk_surface.cpp",
+    "kind": "call",
+    "count": 3,
+    "sites": [
+      {
+        "line": 319,
+        "symbol": "ForgeCad::Kernel::Surface::point",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 420,
+        "symbol": "ForgeCad::Kernel::Surface::point",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 421,
+        "symbol": "ForgeCad::Kernel::Surface::normal",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_mapping_carrier.cpp",
+    "target": "kernel/fk_surface.h",
+    "kind": "call",
+    "count": 11,
+    "sites": [
+      {
+        "line": 169,
+        "symbol": "ForgeCad::Kernel::Surface::type",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 171,
+        "symbol": "ForgeCad::Kernel::Surface::type",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 176,
+        "symbol": "ForgeCad::Kernel::Surface::type",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 216,
+        "symbol": "ForgeCad::Kernel::Plane::frame",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 297,
+        "symbol": "ForgeCad::Kernel::Surface::uDomain",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 298,
+        "symbol": "ForgeCad::Kernel::Surface::uDomain",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 298,
+        "symbol": "ForgeCad::Kernel::Surface::vDomain",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 299,
+        "symbol": "ForgeCad::Kernel::Surface::vDomain",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 347,
+        "symbol": "ForgeCad::Kernel::Plane::frame",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 376,
+        "symbol": "ForgeCad::Kernel::Surface::uDomain",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 376,
+        "symbol": "ForgeCad::Kernel::Surface::vDomain",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_mapping_carrier.cpp",
+    "target": "kernel/fk_topology.cpp",
+    "kind": "call",
+    "count": 34,
+    "sites": [
+      {
+        "line": 156,
+        "symbol": "ForgeCad::Kernel::Body::faces",
+        "owner": "ForgeCad::Kernel::detail::historyFor"
+      },
+      {
+        "line": 157,
+        "symbol": "ForgeCad::Kernel::Body::edges",
+        "owner": "ForgeCad::Kernel::detail::historyFor"
+      },
+      {
+        "line": 158,
+        "symbol": "ForgeCad::Kernel::Body::vertices",
+        "owner": "ForgeCad::Kernel::detail::historyFor"
+      },
+      {
+        "line": 166,
+        "symbol": "ForgeCad::Kernel::Body::isSheet",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 175,
+        "symbol": "ForgeCad::Kernel::Body::faces",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 176,
+        "symbol": "ForgeCad::Kernel::Body::face",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 178,
+        "symbol": "ForgeCad::Kernel::Body::face",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 179,
+        "symbol": "ForgeCad::Kernel::Body::loopFins",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 180,
+        "symbol": "ForgeCad::Kernel::Body::fin",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 183,
+        "symbol": "ForgeCad::Kernel::Body::edges",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 184,
+        "symbol": "ForgeCad::Kernel::Body::edge",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 213,
+        "symbol": "ForgeCad::Kernel::Body::faces",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 215,
+        "symbol": "ForgeCad::Kernel::Body::face",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 228,
+        "symbol": "ForgeCad::Kernel::Body::loopFins",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 229,
+        "symbol": "ForgeCad::Kernel::Body::fin",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 230,
+        "symbol": "ForgeCad::Kernel::Body::edge",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 255,
+        "symbol": "ForgeCad::Kernel::Body::edges",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 257,
+        "symbol": "ForgeCad::Kernel::Body::edge",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 346,
+        "symbol": "ForgeCad::Kernel::Body::faces",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 347,
+        "symbol": "ForgeCad::Kernel::Body::face",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 348,
+        "symbol": "ForgeCad::Kernel::Body::face",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 349,
+        "symbol": "ForgeCad::Kernel::Body::loopFins",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 351,
+        "symbol": "ForgeCad::Kernel::Body::fin",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 352,
+        "symbol": "ForgeCad::Kernel::Body::edge",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 388,
+        "symbol": "ForgeCad::Kernel::Body::vertices",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 395,
+        "symbol": "ForgeCad::Kernel::Body::edges",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 397,
+        "symbol": "ForgeCad::Kernel::Body::edge",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 416,
+        "symbol": "ForgeCad::Kernel::Body::vertices",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 417,
+        "symbol": "ForgeCad::Kernel::Body::vertex",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 427,
+        "symbol": "ForgeCad::Kernel::Body::faces",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 431,
+        "symbol": "ForgeCad::Kernel::Body::face",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 433,
+        "symbol": "ForgeCad::Kernel::Body::loopFins",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 434,
+        "symbol": "ForgeCad::Kernel::Body::fin",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 443,
+        "symbol": "ForgeCad::Kernel::Body::buildSheet",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_mapping_carrier.cpp",
+    "target": "kernel/fk_topology.h",
+    "kind": "call",
+    "count": 38,
+    "sites": [
+      {
+        "line": 175,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 176,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 178,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 179,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 180,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 183,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 184,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 213,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 215,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 227,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 228,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 229,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 230,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 255,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 257,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 346,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 347,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 348,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 349,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 351,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 352,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 388,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 395,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 397,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 399,
+        "symbol": "ForgeCad::Kernel::Body::edgeStart",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 399,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 400,
+        "symbol": "ForgeCad::Kernel::Body::edgeEnd",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 400,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 412,
+        "symbol": "ForgeCad::Kernel::Body::edgeEnd",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 412,
+        "symbol": "ForgeCad::Kernel::Body::edgeStart",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 412,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 416,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 417,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 427,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 428,
+        "symbol": "ForgeCad::Kernel::Body::BuildFace::BuildFace",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 431,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 433,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      },
+      {
+        "line": 434,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_mapping_carrier.h",
+    "target": "kernel/fk_surface_mapping.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 2,
+        "symbol": "fk_surface_mapping.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_surface_mapping.cpp",
+    "target": "kernel/fk_mapping_carrier.cpp",
+    "kind": "call",
+    "count": 1,
+    "sites": [
+      {
+        "line": 330,
+        "symbol": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier",
+        "owner": "ForgeCad::Kernel::wrapBodyOnSurface"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_surface_mapping.cpp",
+    "target": "kernel/fk_mapping_carrier.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 2,
+        "symbol": "fk_mapping_carrier.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_surface_poles.cpp",
+    "target": "kernel/fk_curve_fit_bounds.cpp",
+    "kind": "call",
+    "count": 2,
+    "sites": [
+      {
+        "line": 108,
+        "symbol": "ForgeCad::Kernel::detail::surfaceCompositionErrorBound",
+        "owner": "ForgeCad::Kernel::editBodyFacesPoles"
+      },
+      {
+        "line": 127,
+        "symbol": "ForgeCad::Kernel::detail::surfaceCompositionErrorBound",
+        "owner": "ForgeCad::Kernel::editBodyFacesPoles"
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_mapping_carrier_validation.cpp",
+    "target": "kernel/fk_mapping_carrier.cpp",
+    "kind": "call",
+    "count": 2,
+    "sites": [
+      {
+        "line": 143,
+        "symbol": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier",
+        "owner": "checkMapped"
+      },
+      {
+        "line": 495,
+        "symbol": "ForgeCad::Kernel::detail::wrapPlanarBodyOnCarrier",
+        "owner": "MappingCarrierRecognizedAffineFinBudgetFailsAtomically"
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_mapping_carrier_validation.cpp",
+    "target": "kernel/fk_mapping_carrier.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 6,
+        "symbol": "fk_mapping_carrier.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_surface_curve_fit_validation.cpp",
+    "target": "kernel/fk_curve_fit_bounds.cpp",
+    "kind": "call",
+    "count": 7,
+    "sites": [
+      {
+        "line": 167,
+        "symbol": "ForgeCad::Kernel::detail::surfaceCompositionErrorBound",
+        "owner": "SurfaceCurveFitDirectOracleKnotCrossingsAndUnsupportedUV"
+      },
+      {
+        "line": 212,
+        "symbol": "ForgeCad::Kernel::detail::surfaceCompositionErrorBound",
+        "owner": "SurfaceCurveFitInstancedSurfaceAndMaterializedAffine"
+      },
+      {
+        "line": 227,
+        "symbol": "ForgeCad::Kernel::detail::surfaceCompositionErrorBound",
+        "owner": "SurfaceCurveFitInvalidInputAndCancellation"
+      },
+      {
+        "line": 228,
+        "symbol": "ForgeCad::Kernel::detail::surfaceCompositionErrorBound",
+        "owner": "SurfaceCurveFitInvalidInputAndCancellation"
+      },
+      {
+        "line": 233,
+        "symbol": "ForgeCad::Kernel::detail::surfaceCompositionErrorBound",
+        "owner": "SurfaceCurveFitInvalidInputAndCancellation"
+      },
+      {
+        "line": 234,
+        "symbol": "ForgeCad::Kernel::detail::surfaceCompositionErrorBound",
+        "owner": "SurfaceCurveFitInvalidInputAndCancellation"
+      },
+      {
+        "line": 241,
+        "symbol": "ForgeCad::Kernel::detail::surfaceCompositionErrorBound",
+        "owner": "SurfaceCurveFitInvalidInputAndCancellation"
+      }
+    ]
+  }
+]

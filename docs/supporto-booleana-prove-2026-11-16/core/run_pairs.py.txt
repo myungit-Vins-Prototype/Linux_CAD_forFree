@@ -1,0 +1,15 @@
+from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor
+import subprocess,time,json
+out=Path('/tmp/supporto-review');cases=[('raw',2,5),('raw',5,2),('app',2,5),('app',5,2)]
+def run(case):
+ name='-'.join(map(str,case));start=time.time()
+ try:
+  r=subprocess.run([str(out/'probe'),*map(str,case)],stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,timeout=240)
+  (out/(name+'.log')).write_text(r.stdout);return {'case':case,'exit':r.returncode,'elapsed':time.time()-start,'output':r.stdout}
+ except subprocess.TimeoutExpired as e:
+  text=(e.stdout or b'').decode() if isinstance(e.stdout,bytes) else e.stdout or '';(out/(name+'.log')).write_text(text+'\nTIMEOUT240\n');return {'case':case,'timeout':240,'elapsed':time.time()-start,'output':text}
+with ThreadPoolExecutor(max_workers=2) as ex:
+ results=[]
+ for result in ex.map(run,cases):results.append(result);print(json.dumps(result),flush=True)
+(out/'pair-results.json').write_text(json.dumps(results,indent=2)+'\n')

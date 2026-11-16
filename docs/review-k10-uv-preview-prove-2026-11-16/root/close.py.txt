@@ -1,0 +1,90 @@
+from pathlib import Path
+import json,hashlib,re,subprocess,difflib,shutil,sys
+R=Path('/home/myungit/Linux_CAD_forFree');P=R/'docs/review-k10-uv-preview-prove-2026-11-16';T=P/'root'
+sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+FOCUS={'kernel/fk_offset.cpp','kernel/fk_curve_fit_bounds.h','kernel/fk_curve_fit_bounds.cpp','kernel/tests/test_offset_pcurve_validation.cpp','forgeCad2026_dialogs_mapping.cpp','tests/test_preview_selection_state.h','tests/test_viewport.cpp'}
+EXPECTED={'CLAUDE.md','CMakeLists.txt','kernel/CMakeLists.txt','kernel/fk_offset.cpp','kernel/fk_curve_fit_bounds.cpp','kernel/fk_curve_fit_bounds.h','forgeCad2026_dialogs_mapping.cpp','tests/test_viewport.cpp','tools/generate_architecture.py','docs/code-review-2026-11-15.md'}
+def memory():
+ s=(R/'CLAUDE.md').read_text();assert len(s.encode())<=16384 and len(re.findall(r'^\*\*',s,re.M))<=10
+ return s
+def architecture():
+ memory();g=json.loads((R/'docs/architecture/graph.json').read_text());nodes={n['id']:n for n in g['nodes']};assert FOCUS<=nodes.keys()
+ html=(R/'docs/architecture/index.html').read_text();assert json.loads(re.search(r'<script id="graph-data" type="application/json">(.*?)</script>',html,re.S).group(1))==g
+ assert not g['analysis']['errors'] and g['analysis']['configurationDigest']==sha(R/'forgecad-release/compile_commands.json')
+ for f,h in g['hashes'].items():assert sha(R/f)==h,f
+ incident=[e for e in g['edges'] if e['source'] in FOCUS or e['target'] in FOCUS]
+ required=[('kernel/fk_offset.cpp','kernel/fk_curve_fit_bounds.cpp','planePCurveErrorBound'),('kernel/fk_offset.cpp','kernel/fk_offset.cpp','fitPlanePCurveCertified'),('kernel/fk_offset.cpp','kernel/fk_exchange.cpp','assembleBody'),('kernel/tests/test_offset_pcurve_validation.cpp','kernel/fk_curve_fit_bounds.cpp','planePCurveErrorBound'),('kernel/tests/test_offset_pcurve_validation.cpp','kernel/fk_offset.cpp','offsetJoinedFaces'),('kernel/tests/test_offset_pcurve_validation.cpp','kernel/fk_offset.cpp','offsetFaces'),('forgeCad2026_dialogs_mapping.cpp','forgeCad2026_feature_preview.cpp','previewKey'),('tests/test_preview_selection_state.h','forgeCad2026_dialogs_mapping.cpp','surfaceMappingDialog'),('tests/test_preview_selection_state.h','forgeCad2026_dialogs_mapping.cpp','fillPatternDialog'),('tests/test_viewport.cpp','tests/test_preview_selection_state.h','previewSelectionMutationReview')]
+ for a,b,s in required:assert any(e['source']==a and e['target']==b and e['kind']=='call' and any(s in t['symbol'] for t in e['sites']) for e in incident),(a,b,s)
+ for a,b in [('forgeCad2026_dialogs_mapping.cpp','forgeCad2026_feature_preview.h'),('tests/test_viewport.cpp','tests/test_preview_selection_state.h'),('kernel/tests/test_offset_pcurve_validation.cpp','kernel/fk_curve_fit_bounds.h')]:assert any(e['source']==a and e['target']==b and e['kind']=='include' for e in incident),(a,b)
+ result=dict(files=len(nodes),edges=len(g['edges']),units=len(g['analysis']['units']),errors=g['analysis']['errors'],html_matches=True,incident_edges=len(incident),required_calls=required,focus={f:dict(description=nodes[f]['description'],incoming={k:sum(e['target']==f and e['kind']==k for e in incident) for k in ['call','include','reference']},outgoing={k:sum(e['source']==f and e['kind']==k for e in incident) for k in ['call','include','reference']}) for f in sorted(FOCUS)})
+ (T/'architecture-audit.json').write_text(json.dumps(result,indent=2)+'\n');(T/'architecture-incident.json').write_text(json.dumps(incident,indent=2)+'\n')
+ with (T/'architecture-check.log').open('w') as log:subprocess.run(['python3','tools/generate_architecture.py','--check'],cwd=R,check=True,stdout=log)
+ print({k:v for k,v in result.items() if k!='focus'})
+def cpp_tokens(s):
+ pattern=r'//[^\n]*|/\*.*?\*/|"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'|[A-Za-z_]\w*|[^\s]'
+ return [x.group() for x in re.finditer(pattern,s,re.S) if not x.group().startswith(('//','/*'))]
+def audit():
+ memory();before=json.loads((T/'hashes-before.json').read_text());changed=sorted(f for f,h in before.items() if not (R/f).is_file() or sha(R/f)!=h);assert set(changed)==EXPECTED,changed
+ names=subprocess.check_output(['git','ls-files','--cached','--others','--exclude-standard','-z'],cwd=R).decode().split('\0')
+ new=sorted(f for f in set(names)-set(before) if f and (R/f).is_file() and not (R/f).is_symlink())
+ allowed={'kernel/tests/test_offset_pcurve_validation.cpp','tests/test_preview_selection_state.h','docs/review-k10-uv-preview-2026-11-16.md','docs/history/claude-prima-k10-uv-preview-2026-11-16.md'}
+ assert all(f in allowed or f.startswith(str(P.relative_to(R))+'/') for f in new),new
+ frozen=json.loads((T/'frozen-source-hashes.json').read_text())
+ for f,h in frozen.items():assert sha(R/f)==h,f
+ for name in ['build','ctest','offset','shell']:assert json.loads((T/(name+'-result.json')).read_text())['exit']==0,name
+ tests=json.loads((T/'ctest-result.json').read_text());assert tests['actual_passed']==30 and tests['new_pcurve_groups']==10 and tests['new_preview_assertions']==79
+ replay=json.loads((T/'release-replay.json').read_text());assert replay['exit']==0 and replay['passed_groups']==10 and replay['identical_exports']==8 and not replay['production_overlays']
+ wayland=json.loads((T/'wayland-result.json').read_text());assert wayland['exit']==0 and wayland['assertions']==79 and not wayland['production_overlays']
+ cert=json.loads((T/'fraction-summary.json').read_text());assert cert['actual_fins']==192 and cert['source_fins']==192 and cert['negative_cases']==6 and cert['actual_passed']==192 and cert['projection_passed']==192 and cert['altered_pole_rejected']
+ meta=json.loads((P/'tests/metadata.txt').read_text());assert meta['sanitizer_v2']['exit_code']==0 and meta['sanitizer_v2']['passes']==10 and not meta['sanitizer_v2']['suppressions']
+ text=(P/'tests/sanitizer-v2-10-pass.log').read_text();assert '10 passed 0 failed' in text and not re.search(r'AddressSanitizer:|runtime error:|ERROR: LeakSanitizer',text)
+ # Header changes only clarify factory/query failure; test changes are formatting.
+ assert cpp_tokens((R/'kernel/fk_curve_fit_bounds.h').read_text())==cpp_tokens((P/'core/fk_curve_fit_bounds.h.txt').read_text())
+ formatted=subprocess.check_output(['clang-format','--assume-filename='+str(R/'kernel/tests/test_offset_pcurve_validation.cpp')],input=(P/'tests/fontefinale.txt').read_bytes())
+ assert formatted==(R/'kernel/tests/test_offset_pcurve_validation.cpp').read_bytes()
+ assert sha(R/'forgeCad2026_dialogs_mapping.cpp')==sha(P/'ui/forgeCad2026_dialogs_mapping.cpp.txt')
+ assert sha(R/'tests/test_preview_selection_state.h')==sha(P/'ui/test_preview_selection_state.h.txt')
+ for f in ['fk_offset.cpp','fk_curve_fit_bounds.cpp']:assert sha(R/'kernel'/f)==meta['final_sources']['offset' if f=='fk_offset.cpp' else 'bounds_cpp']
+ binaries=['forgecad-release/forgecad','forgecad-release/forgecad_view_tests','forgecad-release/kernel/forgekernel_tests','forgecad-release/kernel/forgekernel_offset_pcurve_tests']
+ latest=max((R/f).stat().st_mtime for f in frozen if f.endswith(('.h','.cpp')))
+ for f in binaries:assert (R/f).stat().st_mtime>latest,f
+ link=(R/'forgecad-release/CMakeFiles/forgecad.dir/link.txt').read_text();assert 'opencascade' not in link.lower() and 'libTK' not in link
+ link=(R/'forgecad-release/kernel/CMakeFiles/forgekernel_offset_pcurve_tests.dir/link.txt').read_text();assert 'libTK' not in link and 'Qt' not in link
+ db=json.loads((R/'forgecad-release/compile_commands.json').read_text());strict=[]
+ for f in ['kernel/fk_curve_fit_bounds.cpp','kernel/tests/test_offset_pcurve_validation.cpp']:
+  entries=[x for x in db if Path(x['file'])==R/f];assert entries,f
+  for e in entries:assert '-fno-fast-math' in e['command'] and '-ffp-contract=off' in e['command'];strict.append(e)
+ entries=[x for x in db if Path(x['file'])==R/'kernel/fk_offset.cpp'];assert entries
+ for e in entries:assert '-ffp-contract=off' in e['command'] and '-ffast-math' not in e['command']
+ g=json.loads((R/'docs/architecture/graph.json').read_text());assert not g['analysis']['errors'] and g['analysis']['configurationDigest']==sha(R/'forgecad-release/compile_commands.json')
+ for f,h in g['hashes'].items():assert sha(R/f)==h,f
+ subprocess.run(['git','diff','--check'],cwd=R,check=True)
+ diff=[]
+ for f in changed:
+  old=T/'before'/(f+'.txt');assert old.is_file(),f;diff.extend(difflib.unified_diff(old.read_text().splitlines(True),(R/f).read_text().splitlines(True),fromfile='before/'+f,tofile='after/'+f))
+ for f in ['kernel/tests/test_offset_pcurve_validation.cpp','tests/test_preview_selection_state.h']:diff.extend(difflib.unified_diff([],(R/f).read_text().splitlines(True),fromfile='/dev/null',tofile='after/'+f))
+ (T/'change.diff').write_text(''.join(diff))
+ for f in set(frozen)|EXPECTED:
+  dest=T/'final-source'/(f+'.txt');dest.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(R/f,dest)
+ manifests={}
+ for directory in ['docs/ellisse-estremi-prove-2026-11-16','docs/curve-fit-k10-edge-offset-prove-2026-11-16','docs/review-preview-unification-prove-2026-11-16','docs/supporto-booleana-prove-2026-11-16']:
+  lines=(R/directory/'SHA256SUMS').read_text().splitlines()
+  for line in lines:h,f=line.split('  ',1);assert sha(R/directory/f)==h,(directory,f)
+  manifests[directory]=len(lines)
+ groups={}
+ for directory,manifest in [('ui','SHA256SUMS'),('tests','SHA256SUMS.txt')]:
+  lines=(P/directory/manifest).read_text().splitlines()
+  for line in lines:h,f=line.split('  ',1);assert sha(P/directory/f)==h,(directory,f)
+  groups[directory]=len(lines)
+ entries=json.loads((P/'core/manifest.json').read_text())['files']
+ for e in entries:assert sha(P/'core'/e['path'])==e['sha256'] and (P/'core'/e['path']).stat().st_size==e['bytes']
+ groups['core']=len(entries)
+ assert not any(f.suffix in ['.cpp','.h','.py','.sh','.prt','.o','.a'] for f in P.rglob('*') if f.is_file())
+ result=dict(initial_files=len(before),preserved_files=len(before)-len(changed),changed_existing=changed,new_files=new,source_hashes=frozen,binary_hashes={f:sha(R/f) for f in binaries},kernel_sha256=sha(R/'forgecad-release/kernel/libforgekernel.a'),strict_fp_commands=strict,claude_bytes=(R/'CLAUDE.md').stat().st_size,preserved_manifests=manifests,verified_subgroups=groups)
+ (T/'final-audit.json').write_text(json.dumps(result,indent=2)+'\n');print('Conservazione',result['preserved_files'],'/',len(before),'manifest',manifests,'PASS')
+def seal():
+ memory();files=sorted(f for f in P.rglob('*') if f.is_file() and f!=P/'SHA256SUMS')
+ (P/'SHA256SUMS').write_text(''.join(sha(f)+'  '+str(f.relative_to(P))+'\n' for f in files))
+ for line in (P/'SHA256SUMS').read_text().splitlines():h,f=line.split('  ',1);assert sha(P/f)==h,f
+ print('Manifest',len(files),'artefatti PASS')
+if __name__=='__main__':globals()[sys.argv[1]]()

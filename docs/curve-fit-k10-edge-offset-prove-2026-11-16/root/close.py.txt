@@ -1,0 +1,9 @@
+from pathlib import Path
+import subprocess,hashlib
+r=Path('/home/myungit/Linux_CAD_forFree');p=r/'docs/curve-fit-k10-edge-offset-prove-2026-11-16';root=p/'root'
+with (root/'architecture-check.log').open('w') as log:subprocess.run(['python3','tools/generate_architecture.py','--check'],cwd=r,stdout=log,stderr=subprocess.STDOUT,check=True)
+for name in ['audit-architecture.py.txt','finalize-docs.py.txt','audit-final.py.txt','seal-evidence.py.txt','audit-final.py.txt','seal-evidence.py.txt']:
+    subprocess.run(['python3',str(root/name)],cwd=r,check=True)
+for line in (p/'SHA256SUMS').read_text().splitlines():
+    h,name=line.split('  ',1);assert hashlib.sha256((p/name).read_bytes()).hexdigest()==h,name
+print('K10 edge offset: verifiche, conservazione, manifest e documentazione PASS')

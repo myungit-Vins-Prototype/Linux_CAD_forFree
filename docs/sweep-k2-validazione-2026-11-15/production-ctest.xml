@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="(empty)"
+	tests="8"
+	failures="0"
+	disabled="0"
+	skipped="0"
+	hostname=""
+	time="1"
+	timestamp="2026-11-15T13:51:59"
+	>
+	<testcase name="forgecad_document_read_tests" classname="forgecad_document_read_tests" time="0.130259" status="run">
+		<properties/>
+		<system-out>parser corrupt: 58 byte, maxRSS delta 0 KiB
+PASS document read
+PASS document read
+</system-out>
+	</testcase>
+	<testcase name="forgecad_document_units_tests" classname="forgecad_document_units_tests" time="0.124872" status="run">
+		<properties/>
+		<system-out></system-out>
+	</testcase>
+	<testcase name="forgecad_function_panels_tests" classname="forgecad_function_panels_tests" time="1.21239" status="run">
+		<properties/>
+		<system-out>PASS extrusion action preconditions: warnings and valid active/selected profiles
+</system-out>
+	</testcase>
+	<testcase name="forgecad_all_history_tests" classname="forgecad_all_history_tests" time="1.52452" status="run">
+		<properties/>
+		<system-out></system-out>
+	</testcase>
+	<testcase name="forgecad_surface_tools_tests" classname="forgecad_surface_tools_tests" time="0.764284" status="run">
+		<properties/>
+		<system-out>PASS individual fill influence, picking identity and persistence
+PASS superfici: rete/estensione/poli, dipendenze, rigenerazione, Undo/Redo, UI/mouse, formato53, errori atomici, revisioni e sola lettura
+</system-out>
+	</testcase>
+	<testcase name="forgecad_history_preview_mesh_tests" classname="forgecad_history_preview_mesh_tests" time="0.0326019" status="run">
+		<properties/>
+		<system-out>{"bodies":[{"drawn":true,"edges":12,"geometry":true,"hi":[8,6,5],"index":0,"later":false,"lo":[0,0,0],"name":"","normals":24,"quality":1,"restored":false,"vertices":24},{"drawn":true,"edges":4,"geometry":true,"hi":[8,6,0],"index":1,"later":false,"lo":[0,0,0],"name":"","normals":6,"quality":1,"restored":false,"vertices":6},{"drawn":false,"edges":0,"geometry":false,"hi":[0,0,0],"index":2,"later":false,"lo":[0,0,0],"name":"","normals":0,"quality":-1,"restored":false,"vertices":0},{"drawn":false,"edges":0,"geometry":false,"hi":[0,0,0],"index":3,"later":false,"lo":[0,0,0],"name":"","normals":0,"quality":-1,"restored":false,"vertices":0}],"phase":"loaded","preview_error":"","preview_valid":false,"preview_vertices":0}
+{"bodies":[{"drawn":true,"edges":12,"geometry":true,"hi":[8,6,5],"index":0,"later":false,"lo":[0,0,0],"name":"","normals":24,"quality":1,"restored":true,"vertices":24},{"drawn":true,"edges":4,"geometry":true,"hi":[8,6,0],"index":1,"later":false,"lo":[0,0,0],"name":"","normals":6,"quality":1,"restored":...
+[This part of the test output was removed since it exceeds the threshold of 1024 bytes.]
+</system-out>
+	</testcase>
+	<testcase name="forgecad_sweep_reference_tests" classname="forgecad_sweep_reference_tests" time="0.0883345" status="run">
+		<properties/>
+		<system-out>Sweep references PASS
+</system-out>
+	</testcase>
+	<testcase name="forgecad_workspace_tests" classname="forgecad_workspace_tests" time="0.00767967" status="run">
+		<properties/>
+		<system-out>PASS workspace
+</system-out>
+	</testcase>
+</testsuite>

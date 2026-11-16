@@ -1,0 +1,14 @@
+from pathlib import Path
+import json,subprocess,time,os,hashlib
+r=Path('/home/myungit/Linux_CAD_forFree');p=r/'docs/ellisse-estremi-prove-2026-11-16/root'
+expected=json.loads((p/'frozen-source-hashes.json').read_text())
+for name,h in expected.items():assert hashlib.sha256((r/name).read_bytes()).hexdigest()==h,name
+# I file finali sono stati completati durante la prima compilazione: imporre
+# la rilettura dei TU coinvolti, anche se un compilatore ha scritto l'oggetto
+# dopo una modifica all'header che aveva gia' letto.
+for name in ['cad_document_io.h','cad_document_io.cpp','cad_drawing_file.cpp','tests/test_ellipse_extremes.h']:os.utime(r/name,None)
+start=time.monotonic();command=['cmake','--build','forgecad-release','--parallel','2']
+with (p/'build-final.log').open('w') as output:process=subprocess.run(command,cwd=r,stdout=output,stderr=subprocess.STDOUT)
+result=dict(exit=process.returncode,seconds=time.monotonic()-start,command=command)
+(p/'build-final-result.json').write_text(json.dumps(result,indent=2)+'\n');print(result,flush=True);assert process.returncode==0
+subprocess.run(['python3',str(p/'ellipse-run-checks.py.txt')],cwd=r,check=True)

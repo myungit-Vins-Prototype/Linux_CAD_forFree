@@ -18,8 +18,8 @@
 // con P(0) l'inizio del percorso. Il sistema:
 //  - MinimalTwist: a torsione minima (rotation minimizing frame; come il
 //    CorrectedFrenet di OCCT): sui percorsi piani N = b x T con b la normale
-//    del piano (esatto), altrimenti Frenet ruotato di -\int tau ds attorno a T
-//    (sull'elica in forma chiusa, altrove con la quadratura adattiva); sui
+//    del piano (esatto), altrimenti trasporto di Bishop integrato con
+//    controllo adattivo dell'errore, definito anche su rettilinei e flessi; sui
 //    percorsi chiusi lo scarto di rotazione alla fine si distribuisce lungo il
 //    percorso;
 //  - Frenet: T, N normale principale, B binormale (servono curvatura
@@ -30,7 +30,9 @@
 // Superfici esatte dove il moto e' semplice: sui tratti rettilinei il
 // profilo trasla (piani, cilindri, superfici estruse); sugli archi con
 // MinimalTwist o Frenet ruota attorno all'asse dell'arco (piani, cilindri,
-// coni, sfere, tori, superfici di rivoluzione). Sugli altri tratti ogni
+// coni, sfere, tori). Se il ponte conservativo al carrier analitico non e'
+// disponibile, si usa direttamente la parametrizzazione NURBS del moto.
+// Sugli altri tratti ogni
 // curva del profilo, come NURBS esatta con poli Q_i e pesi w_i, genera la
 // superficie con righe X_i(v) (pesi costanti lungo v) approssimate da
 // quintiche di Hermite C2 entro 1e-9 (scala del percorso), come i raccordi e
@@ -39,10 +41,18 @@
 // stesso tipo). Facce di testa piane. Un loop di una sola curva chiusa si
 // divide in due tratti (facce senza cucitura).
 //
+// Prima di pubblicare il B-rep vengono controllate anche le superfici laterali,
+// le teste con i loro fori e il nesting delle regioni. La verifica globale usa
+// limiti conservativi sui carrier razionali effettivi e, per i carrier analitici,
+// sui coefficienti di una parametrizzazione equivalente. Le cuciture dichiarate
+// ammettono soltanto contatti confinati entro linearResolution(). Un budget
+// esaurito o una separazione non dimostrata restituiscono std::domain_error;
+// non sono interpretati come prova di validita'. Il calcolo e' cancellabile.
+//
 // std::domain_error: percorso non continuo o con angoli vivi, profilo
 // parallelo al percorso all'inizio, raggio di curvatura del percorso minore
 // della distanza del profilo (le sezioni si incrocerebbero), Frenet su tratti
-// rettilinei o flessi, risultato non valido.
+// rettilinei o flessi, risultato non valido o controllo globale non concluso.
 namespace ForgeCad::Kernel {
 
 enum class SweepOrientation { MinimalTwist = 0, Frenet = 1, Fixed = 2 };

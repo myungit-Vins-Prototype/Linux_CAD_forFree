@@ -325,7 +325,7 @@ bool datumDialog(QMainWindow *window, CadViewport *viewport, const QString &titl
     int active = -1;  // riferimento in scelta nella vista
     const auto roles = [&] { return modes.at(d.mode).roles; };
     const auto setStatus = [status](const QString &text, bool error) {
-        status->setStyleSheet(error ? QStringLiteral("color: #ff7a6a;") : QStringLiteral("color: #9fc6e8;"));
+        setFunctionMessageRole(status, error ? FunctionMessageRole::Error : FunctionMessageRole::Information);
         status->setText(text);
     };
     const auto refresh = [&] {
@@ -396,16 +396,18 @@ bool datumDialog(QMainWindow *window, CadViewport *viewport, const QString &titl
         for (int k = 0; k < r.size(); ++k)
             if (d.refs.at(k).kind >= 0 && !(ForgeCad::geometryRefRoles(d.refs.at(k), viewport->sketches()) & r.at(k))) d.refs[k] = GeometryRef();
     };
-    viewport->setReferencePickCallback([&](bool picked, GeometryRef ref) {
-        if (picked && active >= 0 && active < d.refs.size()) {
-            d.refs[active] = ref;
-            active = -1;
-            pickMissing();
-        } else {
-            active = -1;
-            refresh();
-        }
-    });
+    const auto installPicker = [&] {
+        viewport->setReferencePickCallback([&](bool picked, GeometryRef ref) {
+            if (picked && active >= 0 && active < d.refs.size()) {
+                d.refs[active] = ref;
+                active = -1;
+                pickMissing();
+            } else {
+                active = -1;
+                refresh();
+            }
+        });
+    };
     for (int k = 0; k < 3; ++k) {
         QObject::connect(refButtons.at(k), &QPushButton::clicked, &dialog, [&, k] { pick(k); });
         QObject::connect(clearButtons.at(k), &QToolButton::clicked, &dialog, [&, k] {
@@ -435,17 +437,11 @@ bool datumDialog(QMainWindow *window, CadViewport *viewport, const QString &titl
         if (error.isEmpty()) dialog.accept();
         else setStatus(error, true);
     });
-    fitRefs();
-    bool accepted = false;
-    {
-        const WindowLock lock(window, viewport, &dialog);
-        dialog.show();
+    const bool accepted = runModeless(window, viewport, dialog, [&] {
+        installPicker();
+        fitRefs();
         pickMissing();
-        QEventLoop loop;
-        QObject::connect(&dialog, &QDialog::finished, &loop, &QEventLoop::quit);
-        loop.exec();
-        accepted = dialog.result() == QDialog::Accepted;
-    }
+    });
     viewport->cancelReferencePick();
     viewport->setReferencePickCallback(nullptr);
     viewport->clearDatumPreview();
@@ -664,7 +660,7 @@ bool sketchPatternDialog(QWidget *parent, CadViewport *viewport, int kind) {
             centerY->setEnabled(custom);
         }
         const QString error = viewport->previewSketchPattern(current(), excluded);
-        status->setStyleSheet(error.isEmpty() ? QStringLiteral("color: #9fc6e8;") : QStringLiteral("color: #ff7a6a;"));
+        setFunctionMessageRole(status, error.isEmpty() ? FunctionMessageRole::Information : FunctionMessageRole::Error);
         status->setText(error.isEmpty() ? QStringLiteral("le copie in arancio nella vista") : error);
     };
     for (QComboBox *box : {first.box, second.box, centerBox, axisBox})
@@ -745,7 +741,7 @@ bool sketchOffsetDialog(QWidget *parent, CadViewport *viewport) {
         const QString error = count ? viewport->previewSketchOffset(current()) : QString();
         if (!count) viewport->clearSketchPatternPreview();
         buttons->button(QDialogButtonBox::Ok)->setEnabled(count > 0 && error.isEmpty());
-        status->setStyleSheet(error.isEmpty() ? QStringLiteral("color: #9fc6e8;") : QStringLiteral("color: #ff7a6a;"));
+        setFunctionMessageRole(status, error.isEmpty() ? FunctionMessageRole::Information : FunctionMessageRole::Error);
         status->setText(!count ? QStringLiteral("Seleziona curve dello schizzo o bordi del modello. I bordi saranno copiati come riferimenti di costruzione.")
                              : error.isEmpty() ? QStringLiteral("le copie in arancio nella vista") : error);
     };
@@ -851,7 +847,7 @@ bool sketchMoveDialog(QWidget *parent, CadViewport *viewport) {
     };
     const auto refresh = [&] {
         const QString error = viewport->previewSketchMove(current());
-        status->setStyleSheet(error.isEmpty() ? QStringLiteral("color: #9fc6e8;") : QStringLiteral("color: #ff7a6a;"));
+        setFunctionMessageRole(status, error.isEmpty() ? FunctionMessageRole::Information : FunctionMessageRole::Error);
         status->setText(error.isEmpty() ? QStringLiteral("la posizione nuova in arancio nella vista") : error);
     };
     QObject::connect(centerBox, &QComboBox::currentIndexChanged, &dialog, [&] {

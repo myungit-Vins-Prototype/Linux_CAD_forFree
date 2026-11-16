@@ -1,0 +1,62 @@
+#include "fk_boolean.h"
+#include "fk_body_check.h"
+#include "fk_body_io.h"
+#include "fk_primitives.h"
+#include "fk_history.h"
+#include "fk_cancel.h"
+#include <fstream>
+#include <iostream>
+#include <iterator>
+#include <stdexcept>
+using namespace ForgeCad::Kernel;
+extern int supportoProbeMode, supportoProbeUsed, supportoProbeRetries;
+extern bool supportoProbeHistoryReset, supportoProbeOptionsSame;
+extern double supportoProbeExpectedTolerance;
+extern bool supportoProbeExpectedUnify;
+extern int supportoProbeExpectedThreads;
+int checks = 0, failures = 0;
+void require(bool ok, const char *name) { ++checks; failures += !ok; std::cout << (ok ? "PASS " : "FAIL ") << name << std::endl; }
+Body read(const char *name) { std::ifstream f(name, std::ios::binary); const std::string s((std::istreambuf_iterator<char>(f)), {}); return readBodyBinary(s); }
+void reset(int mode) { supportoProbeMode = mode; supportoProbeUsed = supportoProbeRetries = 0; supportoProbeHistoryReset = supportoProbeOptionsSame = false; }
+int main() {
+    try {
+        const Body a = read("/tmp/supporto-review/body-202.bin"), b = read("/tmp/supporto-review/body-205.bin");
+        const auto as = writeBodyBinary(a), bs = writeBodyBinary(b);
+        BooleanOptions options; options.threads = 1;
+        supportoProbeExpectedTolerance = options.tolerance;
+        supportoProbeExpectedUnify = options.unifySameDomain;
+        supportoProbeExpectedThreads = options.threads;
+        reset(0); BodyHistory baseline;
+        const auto result = booleanOperation(a, b, BooleanOperation::Unite, options, &baseline);
+        require(checkBody(result, {true, true}).empty() && baseline.operandCount() == 2,
+                "ordinary certified build is valid with complete history");
+        require(supportoProbeUsed == 1 && supportoProbeRetries == 0,
+                "real original operands exercise the new chain without fallback");
+        for (int mode : {1, 2, 3}) {
+            reset(mode); BodyHistory history = baseline;
+            bool expected = false;
+            try { (void)booleanOperation(a, b, BooleanOperation::Unite, options, &history); }
+            catch (const OperationCancelled &) { expected = mode == 3; }
+            catch (const std::domain_error &e) { expected = mode == 1; std::cout << "GEOMETRIC_REJECTION " << e.what() << std::endl; }
+            catch (const std::logic_error &) { expected = mode == 2; }
+            require(expected && supportoProbeUsed == 1, "injected failure propagates with its exact exception family");
+            require(supportoProbeRetries == (mode == 1 ? 1 : 0), "only domain_error after new-chain use attempts one legacy rebuild");
+            if (mode == 1) {
+                require(supportoProbeHistoryReset, "failed certified attempt clears its partially declared history before fallback");
+                require(history.operandCount() == 0, "failed legacy fallback publishes no partial history");
+                require(supportoProbeOptionsSame, "legacy fallback receives unchanged tolerance, unify and thread options");
+            }
+            require(writeBodyBinary(a) == as && writeBodyBinary(b) == bs,
+                    "success and injected failures preserve exact original operand bytes");
+        }
+        reset(1);
+        const Body boxA = makeBox(Frame3(), 2, 2, 2);
+        const Body boxB = makeBox(Frame3(Vec3(1, 0, 0), Vec3(0, 0, 1), Vec3(1, 0, 0)), 2, 2, 2);
+        BodyHistory history;
+        const auto ordinary = booleanOperation(boxA, boxB, BooleanOperation::Unite, options, &history);
+        require(checkBody(ordinary, {true, true}).empty() && supportoProbeUsed == 0 && supportoProbeRetries == 0,
+                "unrelated planar boolean never enters substitution or recovery");
+    } catch (const std::exception &e) { ++failures; std::cerr << "EXCEPTION " << e.what() << std::endl; }
+    std::cout << "RETRY_RESULT checks=" << checks << " failures=" << failures << std::endl;
+    return failures ? 1 : 0;
+}

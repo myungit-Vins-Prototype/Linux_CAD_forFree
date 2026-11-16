@@ -1,0 +1,8 @@
+compile 1 /tmp/supporto-review/tests/output_copy.cpp: In function ‘void sceneOnlyUnion(const CadViewport&, const std::string&)’:
+/tmp/supporto-review/tests/output_copy.cpp:32:77: error: ‘isShapeBody’ is not a member of ‘F’
+   32 |         std::cout << "SCENE " << label << " index=" << i << " shape=" << F::isShapeBody(f)
+      |                                                                             ^~~~~~~~~~~
+/tmp/supporto-review/tests/output_copy.cpp:34:16: error: ‘isShapeBody’ is not a member of ‘F’
+   34 |         if (F::isShapeBody(f)) drawn += view.isBodyDrawn(i);
+      |                ^~~~~~~~~~~
+

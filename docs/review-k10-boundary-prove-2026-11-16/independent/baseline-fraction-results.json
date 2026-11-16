@@ -1,0 +1,321 @@
+{
+  "method": "Exact Fraction original IEEE coefficients; whole-interval homogeneous Cox/de Boor plus Bernstein hull; independent of production providers",
+  "records": [
+    {
+      "case": "polynomial",
+      "scope": "synthetic-production-helper",
+      "sha256": "0ce2402bebe0bcc8641b6fba1b3f2132b2759ac52799b92f12abeb9cbd3fe28d",
+      "original_same_parameter": {
+        "pass": true,
+        "upper_mm": 5.675065065267143e-17,
+        "cells": 1,
+        "leaves": 1,
+        "max_depth": 0
+      },
+      "finUses": [
+        {
+          "sense": true,
+          "range": [
+            "0x0.0p+0",
+            "0x1.0000000000000p+0"
+          ],
+          "carrier_original_domain": {
+            "pass": true,
+            "cells": 1,
+            "upper_mm": 1.0173610093110238e-16,
+            "original_domain": [
+              "0",
+              "1",
+              "-1",
+              "0"
+            ],
+            "budget": 1e-07
+          },
+          "edge_vs_effective_carrier_and_pcurve": {
+            "fin": 0,
+            "edge": null,
+            "face": null,
+            "budget": 1e-07,
+            "pass": true,
+            "upper_mm": 4.9428237430864963e-17,
+            "cells": 1,
+            "leaves": 1,
+            "branches": 1,
+            "max_depth": 0
+          }
+        },
+        {
+          "sense": false,
+          "range": [
+            "0x0.0p+0",
+            "0x1.0000000000000p+0"
+          ],
+          "carrier_original_domain": {
+            "pass": true,
+            "cells": 1,
+            "upper_mm": 1.0173610093110238e-16,
+            "original_domain": [
+              "0",
+              "1",
+              "0",
+              "1"
+            ],
+            "budget": 1e-07
+          },
+          "edge_vs_effective_carrier_and_pcurve": {
+            "fin": 1,
+            "edge": null,
+            "face": null,
+            "budget": 1e-07,
+            "pass": true,
+            "upper_mm": 4.9428237430864963e-17,
+            "cells": 1,
+            "leaves": 1,
+            "branches": 1,
+            "max_depth": 0
+          }
+        }
+      ]
+    },
+    {
+      "case": "rational-negative-uv",
+      "scope": "synthetic-production-helper",
+      "sha256": "9d490244fc103856aa5de5718d7f0f5b229be0516f8f6a9c2367c9b204ad4038",
+      "original_same_parameter": {
+        "pass": false,
+        "error": "Original parameter curve witness exceeds cap: t=1/2 squared=2414943525232926553082801831039540247606144946483480188798372674240378532608062099834838022167017673/46685554370058529860473655290131215488036867064581753717234548290535814358713688888045180228626022400",
+        "exception": "RuntimeError"
+      },
+      "finUses": [
+        {
+          "sense": true,
+          "range": [
+            "0x0.0p+0",
+            "0x1.0000000000000p+0"
+          ],
+          "carrier_original_domain": {
+            "pass": true,
+            "cells": 1,
+            "upper_mm": 2.9726378892448176e-16,
+            "original_domain": [
+              "0",
+              "1",
+              "-1",
+              "0"
+            ],
+            "budget": 1e-07
+          },
+          "edge_vs_effective_carrier_and_pcurve": {
+            "pass": false,
+            "error": "Exact midpoint witness exceeds budget: t=1/2 squared=3987634510549187464615862003037343516033175694065284607167016877263126179288549616555722164644715731553520636101094729613027534008824445079201787724684399434271513/77088729324305721529458427960794420297798473947278189286456034756738335266836761112473033510492089747949565362431306854636541992965918202109860373686773745084006400",
+            "exception": "RuntimeError"
+          }
+        },
+        {
+          "sense": false,
+          "range": [
+            "0x0.0p+0",
+            "0x1.0000000000000p+0"
+          ],
+          "carrier_original_domain": {
+            "pass": true,
+            "cells": 1,
+            "upper_mm": 2.9726378892448176e-16,
+            "original_domain": [
+              "0",
+              "1",
+              "0",
+              "1"
+            ],
+            "budget": 1e-07
+          },
+          "edge_vs_effective_carrier_and_pcurve": {
+            "pass": false,
+            "error": "Exact midpoint witness exceeds budget: t=1/2 squared=3987634510549187464615862003037343516033175694065284607167016877263126179288549616555722164644715731553520636101094729613027534008824445079201787724684399434271513/77088729324305721529458427960794420297798473947278189286456034756738335266836761112473033510492089747949565362431306854636541992965918202109860373686773745084006400",
+            "exception": "RuntimeError"
+          }
+        }
+      ]
+    },
+    {
+      "case": "rational-pose-scale",
+      "scope": "synthetic-production-helper",
+      "sha256": "dc372019e59c072ac6466681d06fc47cc307ba21a878f83a3a1bba538f979ce1",
+      "original_same_parameter": {
+        "pass": false,
+        "error": "Original parameter curve witness exceeds cap: t=1/2 squared=57576740389655135052649300852799985322000738741577665164529687064565750028633370266893969429129/178091256599649543229956265602612363769671886690451636189401810800688989100317721893482895769600",
+        "exception": "RuntimeError"
+      },
+      "finUses": [
+        {
+          "sense": true,
+          "range": [
+            "0x0.0p+0",
+            "0x1.0000000000000p+0"
+          ],
+          "carrier_original_domain": {
+            "pass": true,
+            "cells": 1,
+            "upper_mm": 2.0442056072430988e-14,
+            "original_domain": [
+              "0",
+              "1",
+              "-1",
+              "0"
+            ],
+            "budget": 1e-07
+          },
+          "edge_vs_effective_carrier_and_pcurve": {
+            "pass": false,
+            "error": "Exact midpoint witness exceeds budget: t=1/2 squared=1571669173300652733547963254417848696834432182398818964459000691288594729290935784588278670705752567281871528152831060539863632437200541275832670838802817849997/4861347414560046604951382618918567185971202294187874596104697428437728945518500638427034703384977743551979905314308318500549956914805224574613182997991312588800",
+            "exception": "RuntimeError"
+          }
+        },
+        {
+          "sense": false,
+          "range": [
+            "0x0.0p+0",
+            "0x1.0000000000000p+0"
+          ],
+          "carrier_original_domain": {
+            "pass": true,
+            "cells": 1,
+            "upper_mm": 4.874831182328089e-14,
+            "original_domain": [
+              "0",
+              "1",
+              "0",
+              "1"
+            ],
+            "budget": 1e-07
+          },
+          "edge_vs_effective_carrier_and_pcurve": {
+            "pass": false,
+            "error": "Exact midpoint witness exceeds budget: t=1/2 squared=1571669173300652733547963254417848696834432182398818964459000691288594729290935784588278670705752567281871528152831060539863632437200541275832670838802817849997/4861347414560046604951382618918567185971202294187874596104697428437728945518500638427034703384977743551979905314308318500549956914805224574613182997991312588800",
+            "exception": "RuntimeError"
+          }
+        }
+      ]
+    },
+    {
+      "case": "rational-trim",
+      "scope": "synthetic-production-helper",
+      "sha256": "6ee9e39fa2c5709e05d70ae103e1f6d5cd4084d90fe994ae63fdd35804dc0735",
+      "original_same_parameter": {
+        "pass": false,
+        "error": "Original parameter curve witness exceeds cap: t=36028797018963969/72057594037927936 squared=1490689287671116872696380101270191708351027405115609753051101417317915842152242778078514667991896775674492605228058401289458248670574200698539326328889066633025/62880053122698631914772558600732151241894654387834914858814871054364096285756800819499679128049259258071878542579687443178492352804995989091751015478581530722304",
+        "exception": "RuntimeError"
+      },
+      "finUses": [
+        {
+          "sense": true,
+          "range": [
+            "0x1.999999999999ap-4",
+            "0x1.ccccccccccccdp-1"
+          ],
+          "carrier_original_domain": {
+            "pass": true,
+            "cells": 1,
+            "upper_mm": 0.0,
+            "original_domain": [
+              "0",
+              "1",
+              "-1",
+              "0"
+            ],
+            "budget": 1e-07
+          },
+          "edge_vs_effective_carrier_and_pcurve": {
+            "pass": false,
+            "error": "Exact midpoint witness exceeds budget: t=36028797018963969/72057594037927936 squared=37267232191777921982199171314853001250871402232145925296947162145889951104031806982085446347070939417042851739690390544072354377336184614849793555387187756177569/1572001328067465797869313965018303781047366359695872871470371776359102407143920020487491978201231481451796963564492186079462308820124899727293775386964538268057600",
+            "exception": "RuntimeError"
+          }
+        },
+        {
+          "sense": false,
+          "range": [
+            "0x1.999999999999ap-4",
+            "0x1.ccccccccccccdp-1"
+          ],
+          "carrier_original_domain": {
+            "pass": true,
+            "cells": 1,
+            "upper_mm": 0.0,
+            "original_domain": [
+              "0",
+              "1",
+              "0",
+              "1"
+            ],
+            "budget": 1e-07
+          },
+          "edge_vs_effective_carrier_and_pcurve": {
+            "pass": false,
+            "error": "Exact midpoint witness exceeds budget: t=36028797018963969/72057594037927936 squared=37267232191777921982199171314853001250871402232145925296947162145889951104031806982085446347070939417042851739690390544072354377336184614849793555387187756177569/1572001328067465797869313965018303781047366359695872871470371776359102407143920020487491978201231481451796963564492186079462308820124899727293775386964538268057600",
+            "exception": "RuntimeError"
+          }
+        }
+      ]
+    },
+    {
+      "case": "rational",
+      "scope": "synthetic-production-helper",
+      "sha256": "84ca8ccdebb86bc8311e0902188131c3b81f88845e68cfd787d3725a3535ac52",
+      "original_same_parameter": {
+        "pass": false,
+        "error": "Original parameter curve witness exceeds cap: t=1/2 squared=9433373145441111395364184446195786814923010922244503287938127750201409164888041308667742517588453/182365446758041132267475215977075060500144011971022475457947454259905524838725347218926485268070400",
+        "exception": "RuntimeError"
+      },
+      "finUses": [
+        {
+          "sense": true,
+          "range": [
+            "0x0.0p+0",
+            "0x1.0000000000000p+0"
+          ],
+          "carrier_original_domain": {
+            "pass": true,
+            "cells": 1,
+            "upper_mm": 2.4145986894519057e-16,
+            "original_domain": [
+              "0",
+              "1",
+              "-1",
+              "0"
+            ],
+            "budget": 1e-07
+          },
+          "edge_vs_effective_carrier_and_pcurve": {
+            "pass": false,
+            "error": "Exact midpoint witness exceeds budget: t=1/2 squared=2060018218828630658243941616388322807188596402061234578573990162756891262650333322266954161970637046656862569531679348218344909897964312012559835578800320675009857/39824158020075901787761726414180902387476089193987068691289681333761875521687557229994268290129737675177819384334813745156505247046084399715231195119544832727449600",
+            "exception": "RuntimeError"
+          }
+        },
+        {
+          "sense": false,
+          "range": [
+            "0x0.0p+0",
+            "0x1.0000000000000p+0"
+          ],
+          "carrier_original_domain": {
+            "pass": true,
+            "cells": 1,
+            "upper_mm": 2.4145986894519057e-16,
+            "original_domain": [
+              "0",
+              "1",
+              "0",
+              "1"
+            ],
+            "budget": 1e-07
+          },
+          "edge_vs_effective_carrier_and_pcurve": {
+            "pass": false,
+            "error": "Exact midpoint witness exceeds budget: t=1/2 squared=2060018218828630658243941616388322807188596402061234578573990162756891262650333322266954161970637046656862569531679348218344909897964312012559835578800320675009857/39824158020075901787761726414180902387476089193987068691289681333761875521687557229994268290129737675177819384334813745156505247046084399715231195119544832727449600",
+            "exception": "RuntimeError"
+          }
+        }
+      ]
+    }
+  ]
+}

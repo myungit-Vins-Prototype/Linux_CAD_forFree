@@ -1,0 +1,110 @@
+{
+  "files": 749,
+  "edges": 10800,
+  "units": 371,
+  "errors": {},
+  "html_matches": true,
+  "incident_edges": 134,
+  "required": [
+    [
+      "kernel/fk_surface_mapping.cpp",
+      "kernel/fk_mapping_carrier.cpp",
+      "call"
+    ],
+    [
+      "kernel/fk_mapping_carrier.cpp",
+      "kernel/fk_curve_fit_bounds.cpp",
+      "call"
+    ],
+    [
+      "kernel/fk_mapping_carrier.cpp",
+      "kernel/fk_mapping_carrier.h",
+      "include"
+    ],
+    [
+      "kernel/tests/test_mapping_carrier_validation.cpp",
+      "kernel/fk_surface_mapping.cpp",
+      "call"
+    ]
+  ],
+  "files_audited": {
+    "kernel/fk_surface_mapping.cpp": {
+      "description": "Sviluppo isometrico, posa rigida e mapping su superficie o appoggio multifaccia: delega la conservazione del carrier per lamine piane supportate, mantiene il fit campionato esplicito per i casi restanti; controlli locali di inversione, trim, genealogia e nessuna mesh di calcolo.",
+      "incoming": {
+        "call": 6,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 28,
+        "include": 18,
+        "reference": 0
+      }
+    },
+    "kernel/fk_mapping_carrier.cpp": {
+      "description": "Mapping di lamine piane su carrier originale NURBS/estrusione: trasferimento affine UV, bordi certificati sui coefficienti originali, budget di arrotondamento e quota, conservazione topologia e pubblicazione atomica; famiglie non supportate distinte.",
+      "incoming": {
+        "call": 3,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 16,
+        "include": 5,
+        "reference": 0
+      }
+    },
+    "kernel/fk_mapping_carrier.h": {
+      "description": "Contratto interno della conservazione del carrier nel mapping: risultato opzionale per famiglie supportate, rifiuto esplicito del controllo inconclusivo.",
+      "incoming": {
+        "call": 0,
+        "include": 3,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 0,
+        "include": 1,
+        "reference": 0
+      }
+    },
+    "kernel/fk_curve_fit_bounds.cpp": {
+      "description": "Limiti continui Bernstein outward per posizione, offset NURBS e composizione isoparametrica NURBS/estrusione con SP-curve affine; limiti delle derivate del supporto per il trasferimento UV, coefficienti originali, pesi, istanze, budget e cancellazione.",
+      "incoming": {
+        "call": 9,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 10,
+        "include": 4,
+        "reference": 0
+      }
+    },
+    "kernel/fk_curve_fit_bounds.h": {
+      "description": "Contratti del fit continuo, provider di posizione/offset/composizione superficie-SP-curve e limiti delle derivate U/V del supporto; distingue famiglie supportate, intervalli affini espliciti e rifiuto quando il controllo non conclude.",
+      "incoming": {
+        "call": 1,
+        "include": 9,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 0,
+        "include": 2,
+        "reference": 0
+      }
+    },
+    "kernel/tests/test_mapping_carrier_validation.cpp": {
+      "description": "Regressioni mapping con rilievi del carrier nascosti, bordi e parametri, pesi, scale, pose, fori, genealogia, codec e fallimenti atomici; confronto con il percorso precedente e sanitizer mirati.",
+      "incoming": {
+        "call": 1,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 22,
+        "include": 10,
+        "reference": 0
+      }
+    }
+  }
+}

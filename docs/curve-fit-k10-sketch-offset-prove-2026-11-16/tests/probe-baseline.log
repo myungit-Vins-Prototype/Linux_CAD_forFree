@@ -1,0 +1,8 @@
+rational=0 reverse=0 both=0 error= created=1 output0 poles=4 max_same=5.7424599688773376e-07 geometric=5.7419002033750298e-07
+rational=0 reverse=0 both=1 error= created=2 output0 poles=4 max_same=5.7424599688773376e-07 geometric=5.7419002033750298e-07 output1 poles=4 max_same=5.7424598501178053e-07 geometric=5.7419002033771982e-07
+rational=0 reverse=1 both=0 error= created=1 output0 poles=4 max_same=5.7424598501178053e-07 geometric=5.7419002033771982e-07
+rational=0 reverse=1 both=1 error= created=2 output0 poles=4 max_same=5.7424598501178053e-07 geometric=5.7419002033771982e-07 output1 poles=4 max_same=5.7424599688773376e-07 geometric=5.7419002033750298e-07
+rational=1 reverse=0 both=0 error= created=1 output0 poles=37 max_same=4.004742067568645e-08 geometric=4.0028938819863347e-08
+rational=1 reverse=0 both=1 error= created=2 output0 poles=37 max_same=4.004742067568645e-08 geometric=4.0028938819863347e-08 output1 poles=37 max_same=4.0059382933566764e-08 geometric=4.0028928547698284e-08
+rational=1 reverse=1 both=0 error= created=1 output0 poles=37 max_same=4.0059382933566764e-08 geometric=4.0028928547698284e-08
+rational=1 reverse=1 both=1 error= created=2 output0 poles=37 max_same=4.0059382933566764e-08 geometric=4.0028928547698284e-08 output1 poles=37 max_same=4.004742067568645e-08 geometric=4.0028938819863347e-08

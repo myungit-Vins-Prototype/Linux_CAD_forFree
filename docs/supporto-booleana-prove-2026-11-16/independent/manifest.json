@@ -1,0 +1,71 @@
+{
+  "reviewed_source_hashes": {
+    "kernel/fk_boolean.cpp": "3b8e21c9133627c99cf51df712d8b638cc466f7d2d6442f2c43c1ba47f1feda2",
+    "kernel/fk_boolean_boundary.h": "2d268df2dd61d4d36aacc6e24853ec3148390c85d27b79f671b04eedc9387fec",
+    "kernel/fk_boolean_boundary.cpp": "9d0234bfdcd029cea584f0e47ecfe650e404a33aeb2981b027b3b0024e3bc2d4"
+  },
+  "bytewise_intermediate_aacb_available": false,
+  "content_policy": "Text only; own audit artifacts; no CAD/binaries/objects",
+  "files": [
+    {
+      "file": "app-path-audit.md",
+      "bytes": 13760,
+      "sha256": "bb02efbb01ff3e70c773d7645ac3a0ef4d05579aeed3a0eaef673139f91d9a62"
+    },
+    {
+      "file": "affine-pcurve-certificate.inc.txt",
+      "bytes": 5674,
+      "sha256": "13e82df23c9e45f3e85f115fd7e443b53a67f45496b2043c5b43e55065a62227"
+    },
+    {
+      "file": "cap-radial-fraction.py.txt",
+      "bytes": 6324,
+      "sha256": "dc1495229a3ecd4bc722cdc85ea192ada8e6684b2f79610c94de7a958d00cddd"
+    },
+    {
+      "file": "cap-radial-fraction.json",
+      "bytes": 5243,
+      "sha256": "1865ee49471dda4788fd96a6a39e64fb4302579e79250103443d14b9e6443fca"
+    },
+    {
+      "file": "cap-chain-fraction.json",
+      "bytes": 4284,
+      "sha256": "73de929f7c88db711d0f3ac8a22fcd11198e889e88bf8ff327aaa6999c258b21"
+    },
+    {
+      "file": "cap-radial-fraction.log",
+      "bytes": 742,
+      "sha256": "2d4b5887bcf4dd96e41f48c09ad44b1e05228650baf532b9861274aab076627e"
+    },
+    {
+      "file": "affine-certificate-syntax.cpp.txt",
+      "bytes": 335,
+      "sha256": "504ecaf8142650ebda2c5cdc20bf58a3bc4170a8fc3b55456a01ada015e8c7fe"
+    },
+    {
+      "file": "affine-certificate-syntax.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "file": "final-contract-audit.md",
+      "bytes": 4404,
+      "sha256": "e09f6dbb6f145ebad4a94738f8aeba8d65ee3e05ecc328c9495f765ed6c636de"
+    },
+    {
+      "file": "final-contract-audit.json",
+      "bytes": 757,
+      "sha256": "712cd60d2fc5be7df116bdea8023af5ad83a48e04f2b9b11a9b081e788b99994"
+    },
+    {
+      "file": "mathematical-audit.md",
+      "bytes": 3924,
+      "sha256": "569843cf9200a775bdd006deaed8c46f7f34f1b14f1b50cfe804cf4050a36290"
+    },
+    {
+      "file": "README.md",
+      "bytes": 1778,
+      "sha256": "756393706e651c522bb651ee5959095fffaa4664ece9fd221ba2a1a1d9ee9314"
+    }
+  ]
+}

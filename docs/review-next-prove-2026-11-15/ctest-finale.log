@@ -1,0 +1,73 @@
+Test project /home/myungit/Linux_CAD_forFree/forgecad-release
+      Start 116: forgecad_edge_loft_tests
+      Start  15: forgecad_document_tabs_tests
+      Start  93: forgecad_solver_partition_tests
+      Start 193: forgekernel_surface_tools_tests
+ 1/34 Test #116: forgecad_edge_loft_tests ...................   Passed    0.24 sec
+      Start  51: forgecad_workspace_revisions_tests
+ 2/34 Test  #15: forgecad_document_tabs_tests ...............   Passed    0.92 sec
+      Start 115: forgecad_loft_point_tests
+ 3/34 Test #115: forgecad_loft_point_tests ..................   Passed    0.49 sec
+      Start  94: forgecad_connected_solver_tests
+ 4/34 Test  #51: forgecad_workspace_revisions_tests .........   Passed    1.29 sec
+      Start 202: forgekernel_loft_projected_section_tests
+ 5/34 Test  #94: forgecad_connected_solver_tests ............   Passed    0.15 sec
+      Start 117: forgecad_loft_projected_section_tests
+ 6/34 Test #117: forgecad_loft_projected_section_tests ......   Passed    0.69 sec
+      Start  49: forgecad_all_history_tests
+ 7/34 Test #202: forgekernel_loft_projected_section_tests ...   Passed    0.98 sec
+      Start 114: forgecad_surface_mapping_tests
+ 8/34 Test  #49: forgecad_all_history_tests .................   Passed    0.51 sec
+      Start 200: forgekernel_loft_projected_guide_tests
+ 9/34 Test  #93: forgecad_solver_partition_tests ............   Passed    2.90 sec
+      Start 107: forgecad_reference_list_highlight_tests
+10/34 Test #107: forgecad_reference_list_highlight_tests ....   Passed    0.19 sec
+      Start 186: forgekernel_loft_knots_tests
+11/34 Test #186: forgekernel_loft_knots_tests ...............   Passed    0.05 sec
+      Start  32: forgecad_function_panels_tests
+12/34 Test #200: forgekernel_loft_projected_guide_tests .....   Passed    0.79 sec
+      Start 201: forgekernel_loft_shape_tests
+13/34 Test #114: forgecad_surface_mapping_tests .............   Passed    1.39 sec
+      Start 212: forgekernel_loft_correspondence_tests
+14/34 Test #201: forgekernel_loft_shape_tests ...............   Passed    0.50 sec
+      Start 203: forgekernel_loft_complexity_tests
+15/34 Test #203: forgekernel_loft_complexity_tests ..........   Passed    0.11 sec
+      Start  60: forgecad_surface_tools_tests
+16/34 Test #212: forgekernel_loft_correspondence_tests ......   Passed    0.27 sec
+      Start  89: forgecad_sweep_reference_tests
+17/34 Test  #89: forgecad_sweep_reference_tests .............   Passed    0.09 sec
+      Start 213: forgekernel_loft_point_tests
+18/34 Test #213: forgekernel_loft_point_tests ...............   Passed    0.10 sec
+      Start 216: forgekernel_surface_mapping_tests
+19/34 Test  #32: forgecad_function_panels_tests .............   Passed    1.28 sec
+      Start 204: forgekernel_loft_guide_constraint_tests
+20/34 Test #216: forgekernel_surface_mapping_tests ..........   Passed    0.23 sec
+      Start  37: forgecad_loft_correspondence_tests
+21/34 Test #204: forgekernel_loft_guide_constraint_tests ....   Passed    0.20 sec
+      Start  29: forgecad_document_units_tests
+22/34 Test  #37: forgecad_loft_correspondence_tests .........   Passed    0.13 sec
+      Start 144: forgecad_expression_tests
+23/34 Test  #29: forgecad_document_units_tests ..............   Passed    0.13 sec
+      Start 143: forgecad_application_theme_tests
+24/34 Test #144: forgecad_expression_tests ..................   Passed    0.06 sec
+      Start  28: forgecad_document_read_tests
+25/34 Test #143: forgecad_application_theme_tests ...........   Passed    0.09 sec
+      Start  67: forgecad_history_preview_mesh_tests
+26/34 Test  #67: forgecad_history_preview_mesh_tests ........   Passed    0.03 sec
+      Start  92: forgecad_handle_constraints_tests
+27/34 Test  #92: forgecad_handle_constraints_tests ..........   Passed    0.03 sec
+      Start 154: forgecad_workspace_tests
+28/34 Test  #28: forgecad_document_read_tests ...............   Passed    0.14 sec
+      Start 146: forgecad_document_compression_tests
+29/34 Test #154: forgecad_workspace_tests ...................   Passed    0.01 sec
+      Start 118: forgecad_open_loft_tangency_tests
+30/34 Test #146: forgecad_document_compression_tests ........   Passed    0.03 sec
+      Start   9: forgecad_constraint_linear_tests
+31/34 Test   #9: forgecad_constraint_linear_tests ...........   Passed    0.01 sec
+32/34 Test  #60: forgecad_surface_tools_tests ...............   Passed    0.80 sec
+33/34 Test #118: forgecad_open_loft_tangency_tests ..........   Passed    0.08 sec
+34/34 Test #193: forgekernel_surface_tools_tests ............   Passed    5.01 sec
+
+100% tests passed out of 34
+
+Total Test time (real) =   5.01 sec

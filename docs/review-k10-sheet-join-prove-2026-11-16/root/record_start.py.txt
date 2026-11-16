@@ -1,0 +1,40 @@
+from pathlib import Path
+import re
+R=Path('/home/myungit/Linux_CAD_forFree');p=R/'CLAUDE.md';s=p.read_text();a=R/'docs/history/claude-prima-k10-sheet-join-2026-11-16.md';assert not a.exists();a.write_text(s)
+old='''Palette/QSS nel controller unico; menu Tema2D conservato al cambio foglio.
+App completa,21CTest e Wayland misto1569/solo2D898 PASS; carta e colori utente
+invariati. APItema completa PASS; sanitizer mirati,senza leak detection.
+31rilievi corretti; sigillo152 e mappa PASS. K10 invariato. [Prove/limiti](docs/review-theme-tabs-2026-11-16.md).
+''';new='''Controller palette/QSS e Tema2D;carta/colori invariati. App/21CTest/Wayland/
+APItema PASS; sanitizer senza LSan,sigillo152. [Prove](docs/review-theme-tabs-2026-11-16.md).
+''';assert old in s;s=s.replace(old,new)
+old='''Tre clic,4punti quotabili/vincolabili,centro derivato,5DOF;drag/snap/Taglia.
+Codec70 compatibile precedenti/impronte69.
+App/runner,24CTest,probe core/Taglia/hash69,sanitizer4TU eWayland/GL PASS;
+mappa/check/HTML/archi e2669/2687file invariati. Riaprire l'app aggiornata.
+[Uso,prove e limiti](docs/ellisse-estremi-2026-11-16.md),
+[memoria conservata](docs/history/claude-prima-ellisse-estremi-2026-11-16.md).
+''';new='''Tre clic,4estremi quotabili/vincolabili,centro derivato5DOF;drag/snap/Taglia.
+Codec70 compatibile,app/24CTest/sanitizer4TU/Wayland/GL/mappa PASS.
+[Uso,prove/limiti](docs/ellisse-estremi-2026-11-16.md);dettagli in memoria precedente.
+''';assert old in s;s=s.replace(old,new)
+s=s.replace('**15/11 — Altri14rilievi corretti con agenti Sol.**','15/11 — Altri14rilievi corretti con agenti Sol.')
+marker='## Ultimi interventi — esiti consolidati\n\n';entry='''**16/11 — K10 giunzione estensioni, analisi con tre agenti Sol.**
+Giunzione implicita/fallback isoparametrico in diagnosi, copie private;
+nessun edit software. Baseline4367 e grafico consultati,10sigilli PASS.
+[Stato](docs/review-k10-sheet-join-2026-11-16.md).
+
+''';s=s.replace(marker,marker+entry,1);assert len(s.encode())<=16384;assert len(re.findall(r'^\*\*',s,re.M))<=10;p.write_text(s)
+(R/'docs/review-k10-sheet-join-2026-11-16.md').write_text('''# K10 — giunzione delle superfici estese, 16 novembre 2026
+
+Analisi con tre agenti GPT-6.1 Sol. Baseline di 4.367 file congelata; dieci sigilli precedenti verificati, incluso Mapping/Quilt con 131 artefatti. Prima del codice consultate descrizioni e 1.133 relazioni incidenti del grafo775/11246/387.
+
+Il sito aperto è `joinSplineExtensions` in `kernel/fk_sheet.cpp`: continuazione implicita con fit campionato e fallback tangente `followSeam`. Quest’ultimo misura il gap in 65 punti e pubblica `2*seamGap`; il dominio dei supporti è anch’esso aggiornato per campioni. Si studia una via affine/isoparametrica con controllo continuo del residuo e budget fissati prima della costruzione, lasciando espliciti i limiti del Newton generale. Dopo assemblaggio e `unifySameDomain` occorrerà controllare gli elementi effettivi.
+
+`OperationCancelled` è un tipo distinto, non derivato da `std::exception`: non è stato dimostrato che i catch geometrici lo intercettino. `extendSheet` azzera la storia in ingresso: il test di fallimento deve rispettare questo contratto, senza pretendere una sentinella preservata.
+
+Produzione invariata; candidati e prove solo in `/tmp/sheet-join-review`. K10 resta21/24 siti iniziali parzialmente trattati e tre interamente aperti. Totale31rilievi invariato.
+
+[Memoria precedente completa](history/claude-prima-k10-sheet-join-2026-11-16.md).
+''')
+print('Memory',len(s.encode()),'bytes')

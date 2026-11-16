@@ -1,0 +1,104 @@
+--- a/forgeCad2026_viewport_scene.cpp
++++ b/forgeCad2026_viewport_scene.cpp
+@@ -6,9 +6,10 @@
+     // operandi ripristinati dall'anteprima possono invece appartenere a
+     // stadi successivi: mostrarli farebbe scegliere la faccia sottostante.
+     // Anche la base sostituita deve restare visibile se e' selezionabile.
+-    if (refPicking_ && refPickOwner_ >= 0 && !sketchMode_) {
+-        if (index >= refPickOwner_ || (!pickBodies_.isEmpty() && !pickBodies_.contains(index))) return false;
+-        return isBodyDrawn(index);
++    if (refPicking_ && !sketchMode_) {
++        const int owner = refPickOwner_ >= 0 ? refPickOwner_ : historyPosition();
++        if (index >= owner || (!pickBodies_.isEmpty() && !pickBodies_.contains(index))) return false;
++        return isBodyDrawn(index) || (!pickBodies_.isEmpty() && referenceBodyEligible(index));
+     }
+     const bool previewing = (!sketchMode_ || sketchViewUnlocked_) && !preview_.key.isEmpty();
+     const bool replaced = previewing && preview_.replaced.contains(index);
+--- a/forgeCad2026_dialogs_mapping.cpp
++++ b/forgeCad2026_dialogs_mapping.cpp
+@@ -248,6 +248,12 @@
+     const auto refresh=[&] {
+         const bool linked=!unroll&&planes[plane->currentIndex()].kind==11;
+         if(linked) {
++            // La destinazione ora proviene dalla mappa: il suo picker non e'
++            // piu' applicabile. La scelta delle sorgenti resta invece valida.
++            if (choosing == 2) {
++                choosing = 0;
++                view->cancelReferencePick();
++            }
+             const auto &flat=view->extrusions()[planes[plane->currentIndex()].index].surfaceTool;
+             targetFaces=flat.sources;
+             auto params=current().surfaceTool;GeometryRef basePlane;QString reason;
+--- a/tests/test_function_panels.h
++++ b/tests/test_function_panels.h
+@@ -459,3 +459,70 @@
+  check(!runModeless(&a,va,pa)&&!va->interactionLocked(),"same workspace nested runner restores lock");
+  }
+ }
++
++static void previewPickerContextReview() {
++    QMainWindow owner; CadViewport view;
++    DocumentState state; SketchObject boundary;
++    boundary.segments={{{0,0},{20,0}},{{20,0},{20,12}},{{20,12},{0,12}},{{0,12},{0,0}}};state.sketches={boundary};
++    ExtrusionObject seed;seed.feature=BodyFeature::Primitive;seed.primitive.origin[0]=-50;state.extrusions={seed};view.loadDocument(state);
++    const auto original=view.extrusions()[0].forgeBody;
++    GeometryRef contour;contour.kind=7;contour.index=0;ExtrusionObject fill;fill.feature=BodyFeature::Pattern;fill.firstBody=0;
++    fill.pattern.kind=3;fill.pattern.refs={contour};fill.pattern.spacing=4;fill.pattern.spacing2=4;
++    QTimer poll;poll.setInterval(20);QElapsedTimer elapsed;elapsed.start();bool checked=false;
++    QObject::connect(&poll,&QTimer::timeout,&owner,[&] {
++        auto *source=owner.findChild<QComboBox*>("fillPatternSource");if(!source)return;
++        QDialog *panel=nullptr;for(auto *d:owner.findChildren<QDialog*>())if(d->findChild<QComboBox*>("fillPatternSource"))panel=d;
++        if(!view.preview_.valid){if(elapsed.elapsed()>15000){poll.stop();panel->reject();}return;}
++        poll.stop();require(!view.isBodyVisibleInScene(0),"anteprima pronta sostituisce sorgente");
++        const auto geometry=view.preview_.geometry;const auto key=view.preview_.key;
++        QPushButton *pick=nullptr;for(auto *b:source->parentWidget()->findChildren<QPushButton*>())if(b->text()==QStringLiteral("Dalla vista"))pick=b;
++        require(pick,"picker sorgente presente");pick->click();
++        require(view.referencePicking()&&view.refPickOwner_==-1&&view.isBodyVisibleInScene(0),"creazione mostra input selezionabile durante picker");
++        GeometryRef hit;require(view.pickReference(view.projectWorldPoint(QVector3D(-49.5,.5,.5)).toPoint(),hit)&&hit.index==0,"raggio sceglie sorgente visibile");
++        require(view.preview_.valid&&view.preview_.geometry==geometry&&view.preview_.key==key,"picker conserva anteprima pronta");
++        pick->click();require(!view.referencePicking()&&!view.isBodyVisibleInScene(0),"uscita picker ripristina anteprima");
++        auto *edges=panel->findChild<QPushButton*>("fillPatternBoundaryPick");edges->click();
++        require(view.referencePicking()&&view.isBodyVisibleInScene(0),"picker contorni mostra scena input");
++        QKeyEvent escape(QEvent::KeyPress,Qt::Key_Escape,Qt::NoModifier);QApplication::sendEvent(&view,&escape);
++        require(!view.referencePicking(),"Esc termina picker contorni");checked=true;panel->reject();
++    });poll.start();fillPatternDialog(&owner,&view,"Fill picker",-1,fill,[](const auto&){return QString();});poll.stop();
++    require(checked&&!view.referencePicking()&&!view.interactionLocked()&&view.preview_.key.isEmpty(),"annulla ripulisce picker e anteprima");
++    require(view.extrusions().size()==1&&view.extrusions()[0].forgeBody==original&&view.isBodyVisibleInScene(0),"annulla conserva modello e visibilita'");
++    // La storia futura rimane esclusa anche con una lista di candidati esplicita.
++    DocumentState history;history.extrusions={seed,seed};view.loadDocument(history);view.setHistoryPosition(1);
++    view.setPickBodies({0,1});view.beginReferencePick(ForgeCad::DatumRoleFace,-1);
++    require(view.isBodyVisibleInScene(0)&&!view.isBodyVisibleInScene(1),"rollback non mostra candidati futuri");view.cancelReferencePick();view.setPickBodies({});
++    view.setHistoryPosition(2);view.beginReferencePick(ForgeCad::DatumRoleFace,1);
++    require(view.isBodyVisibleInScene(0)&&!view.isBodyVisibleInScene(1),"modifica usa scena precedente alla feature");view.cancelReferencePick();
++    view.extrusions_[0].visible=false;view.setPickBodies({0});view.beginReferencePick(ForgeCad::DatumRoleFace,-1);
++    require(view.referenceBodyEligible(0)&&view.isBodyVisibleInScene(0),"operando consumato esplicito resta visibile e selezionabile");view.cancelReferencePick();view.setPickBodies({});
++    ExtrusionObject curve;curve.feature=BodyFeature::Helix;
++    auto line=std::make_shared<ForgeCad::Kernel::Line<3>>(ForgeCad::Kernel::Vec3(),ForgeCad::Kernel::Vec3(0,0,1));
++    curve.curve=std::make_shared<ForgeCad::Kernel::TrimmedCurve<3>>(line,0,3);view.extrusions_.append(curve);view.setHistoryPosition(3);
++    view.beginReferencePick(ForgeCad::DatumRolePoint,-1);require(view.isBodyDrawn(2)&&view.isBodyVisibleInScene(2),"curva 3D visibile durante scelta punto");view.cancelReferencePick();
++}
++
++static void mappingLinkedPickerReview() {
++    QMainWindow owner;CadViewport view;DocumentState state;ExtrusionObject box;box.feature=BodyFeature::Primitive;box.primitive.size[0]=4;box.primitive.size[1]=2;state.extrusions={box};view.loadDocument(state);
++    const auto body=view.extrusions()[0].forgeBody;const auto face=body->faces()[0];ForgeCad::Kernel::Vec3 point;ForgeCad::Kernel::Vec2 anchor;
++    require(ForgeCad::Kernel::faceInteriorPoint(*body,face,point,&anchor),"punto faccia per mappa");GeometryRef ref;ref.kind=5;ref.index=0;ref.point.subshape=face.index;ref.point.geometry=int(body->face(face).surface->type());ref.point.x=point.x();ref.point.y=point.y();ref.point.z=point.z();GeometryRef plane;plane.kind=1;plane.index=0;
++    ExtrusionObject flat;flat.feature=BodyFeature::SurfaceTools;flat.firstBody=0;flat.surfaceTool.mode=3;flat.surfaceTool.mappingQuilt=true;flat.surfaceTool.targets={ref,plane};flat.surfaceTool.sources={ref};flat.surfaceTool.mappingU=anchor.x();flat.surfaceTool.mappingV=anchor.y();
++    require(view.createBody(flat).isEmpty()&&view.createBody(box).isEmpty(),"mappa associata reale e sorgente wrap");
++    ExtrusionObject wrap;wrap.feature=BodyFeature::SurfaceTools;wrap.firstBody=2;wrap.surfaceTool.mode=4;wrap.surfaceTool.mappingQuilt=true;wrap.surfaceTool.targets={ref,plane};
++    for(bool source:{false,true}) {
++        int applied=0;bool checked=false;QTimer::singleShot(0,&owner,[&] {
++            auto *target=owner.findChild<QPushButton*>("mappingFacePick");auto *pick=owner.findChild<QPushButton*>(source?"mappingSourceFacePick":"mappingFacePick");auto *planes=owner.findChild<QComboBox*>("mappingPlane");
++            QDialog *panel=nullptr;for(auto *d:owner.findChildren<QDialog*>())if(d->findChild<QComboBox*>("mappingPlane"))panel=d;
++            require(target&&pick&&planes&&panel,"controlli mapping presenti");pick->click();require(view.referencePicking(),"picker mapping avviato");
++            int linked=-1;for(int i=0;i<planes->count();++i)if(planes->itemText(i).startsWith(QStringLiteral("Mappa di")))linked=i;
++            require(linked>=0,"mappa associata disponibile");planes->setCurrentIndex(linked);
++            require(!target->isEnabled()&&view.referencePicking()==source,"collegamento termina solo selezione destinazione");
++            if(source){require(pick->isEnabled(),"sorgente ancora applicabile");QKeyEvent escape(QEvent::KeyPress,Qt::Key_Escape,Qt::NoModifier);QApplication::sendEvent(&view,&escape);require(!view.referencePicking(),"Esc termina sorgente conservata");panel->reject();}
++            else panel->findChild<QDialogButtonBox*>()->button(QDialogButtonBox::Ok)->click();
++            checked=true;
++        });
++        surfaceMappingDialog(&owner,&view,"Mapping linked",-1,wrap,[&](const auto&){++applied;return QString();});
++        require(checked&&applied==(source?0:1),"mapping collegato confermabile senza picker obsoleto");
++        require(!view.referencePicking()&&!view.interactionLocked()&&view.preview_.key.isEmpty()&&view.extrusions().size()==3,"mapping ripulisce stato senza mutare modello");
++    }
++}

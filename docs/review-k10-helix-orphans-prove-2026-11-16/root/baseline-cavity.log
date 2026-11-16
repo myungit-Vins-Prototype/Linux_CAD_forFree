@@ -1,0 +1,10 @@
+[  OK  ] BlendCavityContourIsClosedAndIndependentOfSeed
+    /home/myungit/Linux_CAD_forFree/kernel/tests/fk_test_main.cpp:36: eccezione: blendEdges: il contatto esce dal dominio del fianco F0; il passaggio su un altro supporto non e' ancora gestito per questo raggio
+[ FAIL ] BlendCavityWholeRimKeepsRadiusHistoryAndClosedTrims (1 controlli falliti)
+[  OK  ] BlendMitreReverseSupportsPreservesRationalSurface
+[  OK  ] BlendSectionExtensionKeepsOriginalGeometry
+[  OK  ] BlendCavityRejectsConsumedSideFacesBeforeDocument
+[  OK  ] BlendOpposedSplitsAllSeedsAndWrap
+[  OK  ] BlendOpposedSplitsMirrorScalePoseAndRadius
+[  OK  ] BlendClosedPlanarTangentContourUsesLocalTrims
+7/8 test superati

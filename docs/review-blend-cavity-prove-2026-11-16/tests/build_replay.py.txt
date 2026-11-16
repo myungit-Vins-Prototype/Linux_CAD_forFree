@@ -1,0 +1,13 @@
+from pathlib import Path
+import argparse,subprocess,shlex,json,hashlib,time
+p=Path('/tmp/blend-cavity-review/tests');repo=Path('/home/myungit/Linux_CAD_forFree')
+a=argparse.ArgumentParser();a.add_argument('--label',default='stage');a.add_argument('--overlay',action='append',default=[]);a.add_argument('--run',action='store_true');args=a.parse_args()
+flags=['/usr/bin/c++','-O3','-DNDEBUG','-std=gnu++17','-Wall','-Wextra','-Wpedantic','-ffp-contract=off','-I'+str(repo/'kernel'),'-I'+str(repo/'kernel/tests'),'-DFORGECAD_SOURCE_DIR="'+str(repo)+'"']
+manifest={'library':hashlib.sha256((p/'baseline/libforgekernel.a').read_bytes()).hexdigest(),'fixture':hashlib.sha256((p/'baseline/blend_cavity_loft.body').read_bytes()).hexdigest(),'overlays':{x:hashlib.sha256(Path(x).read_bytes()).hexdigest() for x in args.overlay},'commands':[]}
+for name,sources in [('probe',[p/'probe_cavity_variants.cpp']),('regressions',[repo/'kernel/tests/fk_test_main.cpp',p/'test_blend_cavity_regressions.cpp'])]:
+ output=p/(name+'-'+args.label);command=flags+list(map(str,sources))+args.overlay+[str(p/'baseline/libforgekernel.a'),'-o',str(output)];manifest['commands'].append(command);print(shlex.join(command),flush=True);subprocess.run(command,check=True)
+ if args.run:
+  start=time.monotonic()
+  with open(p/(name+'-'+args.label+'.log'),'w') as f:result=subprocess.run([str(output)],stdout=f,stderr=subprocess.STDOUT)
+  manifest[name]={'exit':result.returncode,'seconds':time.monotonic()-start}
+(p/('replay-'+args.label+'.json')).write_text(json.dumps(manifest,indent=2)+'\n')

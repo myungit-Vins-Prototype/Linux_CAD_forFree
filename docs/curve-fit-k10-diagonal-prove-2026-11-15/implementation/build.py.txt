@@ -1,0 +1,6 @@
+from pathlib import Path
+import json,shlex,subprocess
+r=Path('/home/myungit/Linux_CAD_forFree');p=Path('/tmp/forgecad-k10-diagonal-20261115/implementation');cs=json.loads((r/'forgecad-release/compile_commands.json').read_text())
+for name in ['fk_curve_fit_bounds','fk_affine_surface_fit','fk_mapping_carrier']:
+ template='fk_curve_fit_bounds' if name=='fk_affine_surface_fit' else name
+ c=next(x for x in cs if x['file'].endswith('/kernel/'+template+'.cpp'));cmd=shlex.split(c['command']);cmd.insert(1,'-I'+str(p));cmd[cmd.index('-o')+1]=str(p/(name+'.o'));cmd[cmd.index('-c')+1]=str(p/(name+'.cpp'));cmd+=['-fno-fast-math','-ffp-contract=off'];subprocess.run(cmd,cwd=c['directory'],check=True)

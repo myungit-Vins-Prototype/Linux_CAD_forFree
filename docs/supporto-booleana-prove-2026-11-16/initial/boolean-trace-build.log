@@ -1,0 +1,4 @@
+/tmp/supporto-review/kernel/fk_boolean.cpp: In member function ‘ForgeCad::Kernel::Body ForgeCad::Kernel::{anonymous}::BooleanBuilder::run(ForgeCad::Kernel::BodyHistory*)’:
+/tmp/supporto-review/kernel/fk_boolean.cpp:2292:66: warning: missing initializer for member ‘ForgeCad::Kernel::{anonymous}::BooleanBuilder::run(ForgeCad::Kernel::BodyHistory*)::FaceResult::diagnostic’ [-Wmissing-field-initializers]
+ 2292 |         for (FaceId f : bodies_[k].faces()) faceResults.push_back({k, f, {}, {}});
+      |                                             ~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~

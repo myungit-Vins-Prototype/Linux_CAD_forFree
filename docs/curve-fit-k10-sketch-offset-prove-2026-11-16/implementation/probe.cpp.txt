@@ -1,0 +1,46 @@
+#include "candidate/cad_sketch_offset.cpp"
+#include <iostream>
+#include <limits>
+using namespace ForgeCad;
+using namespace ForgeCad::Kernel;
+void require(bool condition,const char *message) {if(!condition) throw std::runtime_error(message);}
+int main() {
+ try {
+  for(bool forward:{false,true}) for(double s:{-0.3,0.3}) {
+   auto c=std::make_shared<BSplineCurve<2>>(2,std::vector<double>{0,0,0,1,1,1},std::vector<Vec2>{{-2,4},{0,-4},{2,4}});
+   SketchObject sketch;CurveObject source;source.tool=DrawingTool::Converted;sketch.curves.append(source);
+   Piece p{{1,0},c,{0,1},forward};auto piece=offsetOf(sketch,p,s);auto bound=freeOffsetErrorBound(piece,{0,1});
+   auto f3=[&](double t){auto p=piece.f(t);return Vec3(p.x(),p.y(),0);};
+   auto fit=fitCurveCertified(f3,{0,1},piece.breaks,1e-7,bound);
+   auto e=extended(piece);require(bool(e.first),"extended missing");
+   require(distance(fit->point(.5),f3(.5))<1e-7,"signed offset mismatch");
+   std::cout<<"sign forward="<<forward<<" s="<<s<<" poles="<<fit->poleCount()<<" PASS\n";
+  }
+  auto c=std::make_shared<BSplineCurve<2>>(2,std::vector<double>{0,0,0,1,1,1},std::vector<Vec2>{{-2,4},{0,-4},{2,4}});
+  SketchObject sketch;CurveObject source;source.tool=DrawingTool::Converted;sketch.curves.append(source);
+  Piece p{{1,0},c,{0,1},true};auto piece=offsetOf(sketch,p,1);auto bound=freeOffsetErrorBound(piece,{0,1});
+  auto f3=[&](double t){auto p=piece.f(t);return Vec3(p.x(),p.y(),0);};
+  auto fit=fitCurveCertified(f3,{0,1},piece.breaks,1e-7,bound);
+  std::vector<Interval> origins;std::vector<std::array<Vec3,4>> coefficients;
+  CurveFitErrorBound spy=[&](const Interval &r,const std::array<Vec3,4> &q) {origins.push_back(r);coefficients.push_back(q);return bound(r,q);};
+  auto trimmed=trimOffsetLoops(fit,spy);require(trimmed!=fit && !origins.empty(),"trim branch not reached");
+  require(trimmed->poles().size()==3*origins.size()+1,"origin count mismatch");
+  for(std::size_t k=0;k<origins.size();++k) for(int j=0;j<4;++j) require(distance(coefficients[k][j],trimmed->poles()[3*k+j])==0,"validation uses stale coefficients");
+  bool rejected=false;try {trimOffsetLoops(fit,[](const Interval &,const std::array<Vec3,4> &){return 1e-6;});} catch(const std::domain_error &){rejected=true;}
+  require(rejected,"posttrim did not reject bound failure");
+  std::cout<<"trim poles="<<trimmed->poleCount()<<" retained="<<origins.size()<<" finalcoeff/reject PASS\n";
+  auto corner=std::make_shared<BSplineCurve<2>>(2,std::vector<double>{0,0,0,.5,.5,1,1,1},std::vector<Vec2>{{-2,0},{-1,0},{0,0},{0,1},{0,2}});
+  for(bool wrapped:{false,true}) for(Interval window:std::vector<Interval>{{0,.5},{.5,1}}) {
+   CurvePtr<2> input=wrapped ? CurvePtr<2>(std::make_shared<TrimmedCurve<2>>(corner,window.lo,window.hi)):CurvePtr<2>(corner);
+   Piece part{{1,0},input,window,true};auto parallel=offsetOf(sketch,part,.3);auto cert=freeOffsetErrorBound(parallel,window);
+   auto fn=[&](double t){auto v=parallel.f(t);return Vec3(v.x(),v.y(),0);};
+   auto spline=fitCurveCertified(fn,window,parallel.breaks,1e-7,cert);
+   require(distance(spline->point(window.hi),fn(window.hi))<1e-7,"C0 left endpoint mismatch");
+   require(distance(spline->point(window.lo),fn(window.lo))<1e-7,"C0 right endpoint mismatch");
+   std::cout<<"C0 wrapped="<<wrapped<<" window="<<window.lo<<","<<window.hi<<" PASS\n";
+  }
+  struct Other final:Curve<2>{CurveType type()const override{return CurveType::Other;}Interval domain()const override{return {0,1};}void evaluate(double t,int n,Vec2*out)const override{out[0]=Vec2(t,0);if(n)out[1]=Vec2(1,0);}};
+  piece.sourceCurve=std::make_shared<Other>();require(!freeOffsetErrorBound(piece,{0,1}),"unsupported family rejected before legacy");
+  std::cout<<"unsupported returns empty PASS\n";
+ } catch(const std::exception&e){std::cerr<<"FAIL "<<e.what()<<'\n';return 1;}
+}

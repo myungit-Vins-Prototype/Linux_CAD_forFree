@@ -1,0 +1,104 @@
+CORE K10 traceBlendMitre — 16 novembre 2026
+
+Perimetro di questo agente: copie private /tmp/mitre-review/core soltanto.
+Nessun sorgente/documento/CMake condiviso modificato; nessun CAD originale,
+processo utente, commit, worktree o applicazione modificato/ricompilato.
+CLAUDE.md e grafo finale spettano a root. Letti prima del codice: AGENTS.md,
+CLAUDE.md, docs/tolerance-policy.md e descrizioni+archi bidirezionali di
+architecture/graph.json; selezione salvata in architecture-read.json.
+
+Baseline frozen:
+HEAD ce03a6d5941840886416aafe055763fb98209e94.
+fk_blend_mitre.cpp d8906658ec8aebff65c70a6f916c673b2e1341546ba3d4abcba5276efd5607a1
+fk_blend_surface.cpp dfad2aa7ca0996210a2882a349d518e9746989ea19b132ed8a459dfe53909ca8
+fk_sheet.cpp 8e9bd9d6c1d61bf9e8a189e783d6803510c3c61f07ed28c8e5b82f2efa457e2f
+libforgekernel.a 963124d476b460e4c0afc226a563ee790a0cd1ff97264a46f23d828449ae7eab
+Tutti in baseline/, baseline-sha.json; shared-unchanged-before-integration.json
+confronta i cinque file prima dell'integrazione: tutti uguali al congelamento.
+
+V2 FROZEN, candidato finale core:
+fk_blend_mitre.cpp a36cf93ed20bb44c5cc7127ea4b0ce1d35f37c4047b53d5875a330f8eda68104
+fk_blend_surface.cpp 0fd41f22575881c8317a2a41696f0645e6f73a1ccecf687adaa84f35dce833c5
+fk_blend_mitre.h 9b7c65b9d03097ec50274ece69dcd243e32b44aae209d3794078c6a1cf2bc460
+libforgekernel.a db372de78785fc80f705df5c4e2ff15f558f55ae99a298ca1ac5badb7496aae8
+Dettagli byte/oggetti in v2/sha256.json e diff in v2/*.patch.
+Libreria overlay: stessi 93 membri della baseline, modificati ESCLUSIVAMENTE
+fk_blend_mitre.cpp.o e fk_blend_surface.cpp.o; attestazione completa in
+v2/archive-member-comparison.json. Header/entrambe TU aggiornati insieme:
+BlendCut ha dimensione nuova, non collegare vecchio surface col nuovo mitre.
+
+Implementazione V2:
+- Ingressi fitTolerance/scale/t0/s0/X finiti, fitTolerance/scale/gX positivi;
+  nessun ramo aggira il rifiuto di una mitra degenere. Cancellazione esplicita
+  all'ingresso e nei loop Newton/nodeAt/pending/controlli del certificato.
+- I 65 campioni e le normali legacy scelgono solo l'algoritmo quasi coincidente.
+  NON sono una prova di quasi-tangenza globale o del massimo residuo.
+- Quando entrambi i supporti sono BSplineSurface e ambedue le mappe UV affini
+  sono isoparametriche non costanti, si usano i dati ORIGINALI del provider
+  surfaceCompositionErrorBound. Le UV grado1 sono dichiarate sui nodi 0,0,1,1
+  coi poli originali (start,0),(end,vX), pesi uguali.
+- Fit certificato su S al target min(fitTolerance,0.25*linearResolution()).
+  Poi il candidato effettivo viene verificato su S e T al CAP FISSO
+  linearResolution(), deciso prima della costruzione. Gap .5cap può passare
+  senza forzarlo sotto il target nominale del solo fit su S.
+- Una composizione ISO riconosciuta ma fallita/non risolta NON ha catch che
+  recupera il vecchio fit o Newton nello stesso traceBlendMitre.
+- cut.certificateBudget>0 identifica SOLO questa via; pcurveS/T conservano i
+  coefficienti affini originali. gap è il bound continuo, non un budget gonfiato.
+- requireBlendMitreCertificate ricrea il provider su carrier/UV effettivi e
+  controlla tutte le cubiche non razionali C0 ORIGINALI del bordo, copertura,
+  nodi e range; niente estrazione arrotondata dichiarata esatta.
+- originalBlendMitreUV riflette V con la stessa somma del dominio ORIGINALE
+  usata da orientBlendMitre. Il caller ricertifica poi le surface finali
+  a.surface/b.surface con le UV effettive, non i soli supporti orientati.
+- Edge/vertici/fin certificati ricevono budget fisso cap; se metadati preesistenti
+  del vertice nuovo o scarti degli estremi superano cap, rifiuto senza allargare.
+- Piani fin identificati da indice edge pianificato + pointer surface originale;
+  installati dopo relink prima di build/computePCurves. Richiesta esattamente
+  una fin per ciascuno dei due supporti. Nessun matching per vicinanza.
+- Dopo build e dopo tutti computePCurves/checkBody, requireEmittedBlendMitres
+  ritrova curva+surface+UV per identità, verifica budget/range/estremi e ricrea
+  provider sui coefficienti ORIGINALI effettivamente emessi.
+- Edge certificati esclusi dal loop legacy che alza edge.tolerance a1.01*gap.
+- Piano+installazione+check+conversione UV stanno nel modulo mitre esistente,
+  accessibili ai test sintetici sulle STESSE funzioni produzione, senza hook.
+- In questo percorso effettivo non c'è unifySameDomain: risultato viene restituito
+  direttamente da blendSurfaceChains. Le chiamate unify nel modulo blend.cpp
+  appartengono al percorso distinto sewTools. Niente claim post-unify inventato.
+
+Compatibilità e limiti RIMASTI:
+- Per famiglie non supportate (in particolare diagonali UV su BSpline) è stato
+  conservato il fastpath medio fitCurve +129campioni, esplicitamente SAMPLED
+  e certificateBudget=0. Serve compatibilità: baseline S=T affine(f,f) riusciva,
+  V1 priva di fastpath lo rifiutava per Newton singolare; V2 lo ripristina.
+- Il testimone diagonale con spike fra i campioni può restare falso positivo:
+  NON è risolto da questa migrazione ISO. K10 resta parziale e quel limite aperto.
+- Continuazione Newton/Hermite, minspan e inizio singolare restano campionati,
+  con i budget legacy; nessun provider Newton generale o prova globale inventata.
+- Altre curve/contatti generati, trim membership, auto-intersezioni e correttezza
+  topologica non ricevono da questo provider una prova globale.
+- Il selettore campionato potrebbe scegliere Newton per una famiglia ISO non
+  quasi coincidente; quel risultato rimane fuori dal certificato continuo.
+- Famiglie riconosciute/non risolte, estrazioni/range/UV trasformati fuori forma,
+  coperture perse/ambigue e budget risorse insufficienti sono rifiutati nel ramo
+  certificato. Non sono stati aumentati budget geometrici o limiti risorse.
+- Nessuna prova pubblica del ramo ISO è qui attribuita ai soli test diretti.
+  Tests cerca fixture pubblica e usa inoltre Body::buildSheet sintetico sulle
+  funzioni di installazione/ricontrollo, dichiarando distinta questa copertura.
+
+Build riproducibile (eseguita per entrambe TU):
+/usr/bin/c++ -I/tmp/mitre-review/core -I/home/myungit/Linux_CAD_forFree/kernel -O3 -DNDEBUG -std=gnu++17 -Wall -Wextra -Wpedantic -O2 -g -fno-fast-math -ffp-contract=off -c /tmp/mitre-review/core/fk_blend_mitre.cpp -o /tmp/mitre-review/core/fk_blend_mitre.cpp.o
+/usr/bin/c++ -I/tmp/mitre-review/core -I/home/myungit/Linux_CAD_forFree/kernel -O3 -DNDEBUG -std=gnu++17 -Wall -Wextra -Wpedantic -O2 -g -fno-fast-math -ffp-contract=off -c /tmp/mitre-review/core/fk_blend_surface.cpp -o /tmp/mitre-review/core/fk_blend_surface.cpp.o
+Copy baseline library + replace ONLY these two objects via /usr/bin/ar r.
+Nessun warning compilatore. Per integrazione valutare TU strict in CMake come
+per gli altri consumatori di certificati; core non modifica il file CMake.
+
+Verifiche core autonome:
+V1: curve_fit_validation11/11, tolerance7/7, blend_cavity8/8,
+blend_contact_break5/5, history38/38 PASS (69 gruppi). Storiche solo V1.
+V2: stessi cinque runner ricompilati/ricollegati sulla libreria V2:69/69 gruppi PASS; log distinti
+in v2/ e comandi/output/hash in v2/core-test-results.json.
+Regressioni nuove dirette/pubbliche/sintetiche, sanitizer e Fraction indipendenti
+sono responsabilità tests/audit: non attribuirli ai core finché non riportati.
+Root integra, aggiunge test/CMake necessario, aggiorna app/mappa/docs/CLAUDE e
+verifica CTest/UI finale. Kernel overlay NON aggiorna l'app aperta.

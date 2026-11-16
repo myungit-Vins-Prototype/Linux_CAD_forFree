@@ -1,0 +1,29 @@
+from pathlib import Path
+R=Path('/home/myungit/Linux_CAD_forFree')
+p=R/'CLAUDE.md';s=p.read_text();(R/'docs/history/claude-prima-k10-mitre-2026-11-16.md').write_text(s)
+a=s.index('**16/11 — K10 Mapping/Quilt');b=s.index('\n\n',a)
+s=s[:a]+'''**16/11 — K10 Mapping/Quilt UV, tre agenti Sol.**
+Plane/offset:app/26CTest/Wayland/21sanitizer/Fraction80fin PASS; altri carrier campionati.
+[Prove/limiti](docs/review-k10-mapping-uv-2026-11-16.md).'''+s[b:]
+a=s.index('**15/11 — K2 completato');b=s.index('\n\n',a)
+s=s[:a]+'''K2 in produzione:app/54kernel/8CTest/22sanitizer PASS; risorsefinite possono rifiutarecurvevalide.
+[Prove/limiti](docs/sweep-k2-completamento-2026-11-15.md).'''+s[b:]
+a=s.index('## Ultimi interventi — esiti consolidati')+len('## Ultimi interventi — esiti consolidati')
+s=s[:a]+'''
+
+**16/11 — K10 mitre in revisione con tre agenti Sol.**
+Grafo consultato; fit quasi coincidente e budget da misura indagati.
+Via ISO in studio,
+Newton diagonale aperto. Produzione invariata. [Stato](docs/review-k10-mitre-2026-11-16.md).'''+s[a:]
+assert len(s.encode())<=16384,len(s.encode());p.write_text(s)
+(R/'docs/review-k10-mitre-2026-11-16.md').write_text('''# K10 — giunti dei raccordi a mitra, 16 novembre 2026
+
+Prosecuzione con tre agenti GPT-6.1 Sol: implementazione, regressioni e audit indipendente. Baseline di4.548 file congelata e undici sigilli precedenti intatti. Consultati prima del codice descrizioni e892 relazioni incidenti del grafo776/11282/388: chiamante `fk_blend_surface`, modello, pcurve, provider e validazione finale.
+
+Il ramo quasi coincidente di `traceBlendMitre` decide e controlla con65+129 campioni. La curva perde poi la mappa UV originale e il chiamante può aumentare la tolleranza dopo la misura. Il provider già presente supporta B-spline isoparametriche, non tutte le diagonali affini: si studia una correzione circoscritta con cap prefissato e fin effettive verificate fino al risultato. Il percorso effettivo qui non chiama `unifySameDomain`.
+
+Riproduttore sintetico diretto in corso di verifica, distinto dal percorso pubblico: una proiezione numerica non è un certificato globale del minimo. La cancellazione non va inventata come difetto di catch: `OperationCancelled` non deriva da `std::exception`.
+
+Produzione invariata. K10 resta22/24 siti parzialmente trattati, due interamente aperti; totale31rilievi invariato. [Memoria precedente](history/claude-prima-k10-mitre-2026-11-16.md).
+''')
+print('Recorded start; CLAUDE bytes',len(s.encode()))

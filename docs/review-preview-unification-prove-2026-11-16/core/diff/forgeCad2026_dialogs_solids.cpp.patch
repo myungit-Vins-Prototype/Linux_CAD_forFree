@@ -1,0 +1,272 @@
+--- forgeCad2026_dialogs_solids.cpp
++++ stage/forgeCad2026_dialogs_solids.cpp
+@@ -500,7 +500,7 @@
+     form->addRow(status);
+     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
+     form->addRow(buttons);
+-    auto scope = std::make_unique<PreviewScope>(viewport, dialog, form, replaced);
++    std::unique_ptr<PreviewScope> scope;
+ 
+     int active = -1;  // riferimento in scelta nella vista
+     const auto roles = [&](int slot) {
+@@ -689,15 +689,17 @@
+         }
+         refresh();
+     };
+-    viewport->setReferencePickCallback([&](bool picked, GeometryRef ref) {
+-        if (picker.handle(picked, ref)) return;
+-        if (picked && active >= 0) {
+-            if (ForgeCad::geometryRefRoles(ref, viewport->sketches()) & roles(active)) p.refs[active] = ref;
+-            else setStatus(QStringLiteral("Questo riferimento non va bene qui."), true);
+-        }
+-        active = -1;
+-        refresh();
+-    });
++    const auto installPicker = [&] {
++        viewport->setReferencePickCallback([&](bool picked, GeometryRef ref) {
++            if (picker.handle(picked, ref)) return;
++            if (picked && active >= 0) {
++                if (ForgeCad::geometryRefRoles(ref, viewport->sketches()) & roles(active)) p.refs[active] = ref;
++                else setStatus(QStringLiteral("Questo riferimento non va bene qui."), true);
++            }
++            active = -1;
++            refresh();
++        });
++    };
+     QObject::connect(sourceStep, &QPushButton::clicked, &dialog, [&] { picker.start(); refresh(); });
+     QObject::connect(referenceStep, &QPushButton::clicked, &dialog, [&] { pick(0); });
+     QObject::connect(parametersStep, &QPushButton::clicked, &dialog, [&] {
+@@ -737,11 +739,12 @@
+         if (error.isEmpty()) dialog.accept();
+         else setStatus(error, true);
+     });
+-    bool accepted = false;
+-    {
+-        const WindowLock lock(window, viewport, &dialog);
+-        QDockWidget *dock = window->findChild<QDockWidget *>(QStringLiteral("modelDock"));
+-        auto *tree = dock ? dynamic_cast<StoryboardTree *>(dock->widget()) : nullptr;
++    QDockWidget *dock = window->findChild<QDockWidget *>(QStringLiteral("modelDock"));
++    auto *tree = dock ? dynamic_cast<StoryboardTree *>(dock->widget()) : nullptr;
++    const bool dockWasEnabled = dock && dock->isEnabled();
++    const bool accepted = runModeless(window, viewport, dialog, [&] {
++        scope = std::make_unique<PreviewScope>(viewport, dialog, form, replaced);
++        installPicker();
+         if (tree) {
+             tree->setSourcePickCallback([&](int index, bool whole) {
+                 if (whole) index = viewport->modelBodyTip(index);
+@@ -755,14 +758,12 @@
+             });
+             dock->setEnabled(true);
+         }
+-        dialog.show();
+         if (replaced < 0 && !preselected) picker.start(true);
+         refresh();
+-        QEventLoop loop;
+-        QObject::connect(&dialog, &QDialog::finished, &loop, &QEventLoop::quit);
+-        loop.exec();
+-        accepted = dialog.result() == QDialog::Accepted;
+-        if (tree) { tree->setSourcePickCallback({}); dock->setEnabled(false); }
++    });
++    if (tree) {
++        tree->setSourcePickCallback({});
++        dock->setEnabled(dockWasEnabled);
+     }
+     viewport->cancelReferencePick();
+     viewport->setReferencePickCallback(nullptr);
+@@ -856,7 +857,7 @@
+     form->addRow(status);
+     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
+     form->addRow(buttons);
+-    auto scope = std::make_unique<PreviewScope>(viewport, dialog, form, replaced);
++    std::unique_ptr<PreviewScope> scope;
+     bool picking = false;
+     const auto roles = [&] {
+         const int extent = extentBox->currentIndex();
+@@ -965,15 +966,17 @@
+         }
+         refresh();
+     };
+-    viewport->setReferencePickCallback([&](bool picked, GeometryRef ref) {
+-        if (picker.handle(picked, ref)) return;
+-        if (picked && picking) {
+-            if (ForgeCad::geometryRefRoles(ref, viewport->sketches()) & roles()) definition.extentRef = ref;
+-            else setStatus(QStringLiteral("Questo riferimento non va bene qui."), true);
+-        }
+-        picking = false;
+-        refresh();
+-    });
++    const auto installPicker = [&] {
++        viewport->setReferencePickCallback([&](bool picked, GeometryRef ref) {
++            if (picker.handle(picked, ref)) return;
++            if (picked && picking) {
++                if (ForgeCad::geometryRefRoles(ref, viewport->sketches()) & roles()) definition.extentRef = ref;
++                else setStatus(QStringLiteral("Questo riferimento non va bene qui."), true);
++            }
++            picking = false;
++            refresh();
++        });
++    };
+     QObject::connect(refButton, &QPushButton::clicked, &dialog, pick);
+     QObject::connect(extentBox, &QComboBox::currentIndexChanged, &dialog, [&](int extent) {
+         if (picking) viewport->cancelReferencePick();
+@@ -1040,16 +1043,11 @@
+         if (error.isEmpty()) dialog.accept();
+         else setStatus(error, true);
+     });
+-    bool accepted = false;
+-    {
+-        const WindowLock lock(window, viewport, &dialog);
+-        dialog.show();
+-        refresh();
+-        QEventLoop loop;
+-        QObject::connect(&dialog, &QDialog::finished, &loop, &QEventLoop::quit);
+-        loop.exec();
+-        accepted = dialog.result() == QDialog::Accepted;
+-    }
++    const bool accepted = runModeless(window, viewport, dialog, [&] {
++        scope = std::make_unique<PreviewScope>(viewport, dialog, form, replaced);
++        installPicker();
++        refresh();
++    });
+     viewport->cancelReferencePick();
+     viewport->setReferencePickCallback(nullptr);
+     viewport->setReferenceMarks({});
+@@ -1113,7 +1111,7 @@
+     form->addRow(status);
+     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
+     form->addRow(buttons);
+-    auto scope = std::make_unique<PreviewScope>(viewport, dialog, form, replaced);
++    std::unique_ptr<PreviewScope> scope;
+     bool picking = false;
+     const auto setStatus = [status](const QString &text, bool error) {
+         setFunctionMessageRole(status, error ? FunctionMessageRole::Error : FunctionMessageRole::Information);
+@@ -1146,15 +1144,17 @@
+     picker.changed = refresh;
+     picker.message = setStatus;
+     picker.starting = [&] { picking = false; };
+-    viewport->setReferencePickCallback([&](bool picked, GeometryRef ref) {
+-        if (picker.handle(picked, ref)) return;
+-        if (picked && picking) {
+-            if (ForgeCad::geometryRefRoles(ref, viewport->sketches()) & ForgeCad::DatumRoleLine) definition.move.axis = ref;
+-            else setStatus(QStringLiteral("Serve una retta."), true);
+-        }
+-        picking = false;
+-        refresh();
+-    });
++    const auto installPicker = [&] {
++        viewport->setReferencePickCallback([&](bool picked, GeometryRef ref) {
++            if (picker.handle(picked, ref)) return;
++            if (picked && picking) {
++                if (ForgeCad::geometryRefRoles(ref, viewport->sketches()) & ForgeCad::DatumRoleLine) definition.move.axis = ref;
++                else setStatus(QStringLiteral("Serve una retta."), true);
++            }
++            picking = false;
++            refresh();
++        });
++    };
+     QObject::connect(axisButton, &QPushButton::clicked, &dialog, [&] {
+         picker.stop();
+         picking = true;
+@@ -1178,17 +1178,12 @@
+         if (error.isEmpty()) dialog.accept();
+         else setStatus(error, true);
+     });
+-    bool accepted = false;
+-    {
+-        const WindowLock lock(window, viewport, &dialog);
+-        dialog.show();
++    const bool accepted = runModeless(window, viewport, dialog, [&] {
++        scope = std::make_unique<PreviewScope>(viewport, dialog, form, replaced);
++        installPicker();
+         if (replaced < 0 && !preselected) picker.start(true);
+         refresh();
+-        QEventLoop loop;
+-        QObject::connect(&dialog, &QDialog::finished, &loop, &QEventLoop::quit);
+-        loop.exec();
+-        accepted = dialog.result() == QDialog::Accepted;
+-    }
++    });
+     viewport->cancelReferencePick();
+     viewport->setReferencePickCallback(nullptr);
+     viewport->setReferenceMarks({});
+@@ -1332,7 +1327,7 @@
+     form->addRow(wrappedNote(QStringLiteral("La geometria usa il profilo nominale. Tolleranze, giochi e maggiorazioni di lavorazione restano a carico del processo produttivo."), &dialog));
+     form->addRow(status);
+     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog); form->addRow(buttons);
+-    const PreviewScope scope(viewport, dialog, form, replaced);
++    std::unique_ptr<PreviewScope> scope;
+ 
+     ForgeCad::ThreadFaceInfo faceInfo;
+     bool faceValid = false, picking = false, initializing = true;
+@@ -1389,10 +1384,10 @@
+         QVector<GeometryRef> marks;
+         if (faceValid) marks.append(GeometryRef{5, candidates.at(bodyBox->currentIndex()), {}, definition.thread.face});
+         viewport->setReferenceMarks(marks);
+-        if (picking) { setStatus(QStringLiteral("Clicca la faccia cilindrica o conica del foro o dell'albero; Esc annulla la scelta."), false); viewport->clearPreview(); return; }
+-        if (!faceValid) { setStatus(QStringLiteral("Seleziona una faccia cilindrica o conica."), true); viewport->clearPreview(); return; }
++        if (picking) { setStatus(QStringLiteral("Clicca la faccia cilindrica o conica del foro o dell'albero; Esc annulla la scelta."), false); scope->label->setText(QStringLiteral("scegli la faccia nella vista")); viewport->clearPreview(); return; }
++        if (!faceValid) { setStatus(QStringLiteral("Seleziona una faccia cilindrica o conica."), true); scope->label->setText(QStringLiteral("seleziona una faccia cilindrica o conica")); viewport->clearPreview(); return; }
+         setStatus(QString(), false);
+-        scope.request(current());
++        scope->request(current());
+     };
+     const auto beginPick = [&] {
+         picking = true; refresh();
+@@ -1400,21 +1395,23 @@
+         if (!error.isEmpty()) { picking = false; setStatus(error, true); }
+         refresh();
+     };
+-    viewport->setReferencePickCallback([&](bool picked, GeometryRef ref) {
+-        picking = false;
+-        if (picked && ref.kind == 5) {
+-            const int body = resultBodyForPick(viewport, candidates, ref.index);
+-            if (body >= 0) {
+-                bodyBox->setCurrentIndex(candidates.indexOf(body));
+-                definition.firstBody = body;
+-                definition.thread.face = ref.point;
+-                const QString error = readFace();
+-                populateSizes();
+-                if (!faceValid) setStatus(error, true);
++    const auto installPicker = [&] {
++        viewport->setReferencePickCallback([&](bool picked, GeometryRef ref) {
++            picking = false;
++            if (picked && ref.kind == 5) {
++                const int body = resultBodyForPick(viewport, candidates, ref.index);
++                if (body >= 0) {
++                    bodyBox->setCurrentIndex(candidates.indexOf(body));
++                    definition.firstBody = body;
++                    definition.thread.face = ref.point;
++                    const QString error = readFace();
++                    populateSizes();
++                    if (!faceValid) setStatus(error, true);
++                }
+             }
+-        }
+-        refresh();
+-    });
++            refresh();
++        });
++    };
+     QObject::connect(faceButton, &QPushButton::clicked, &dialog, [&] { if (picking) { picking = false; viewport->cancelReferencePick(); refresh(); } else beginPick(); });
+     QObject::connect(bodyBox, &QComboBox::currentIndexChanged, &dialog, [&] { definition.thread.face = {}; readFace(); populateSizes(); refresh(); });
+     QObject::connect(standardBox, &QComboBox::currentIndexChanged, &dialog, [&] { definition.thread.designation.clear(); populateSizes(); refresh(); });
+@@ -1429,10 +1426,15 @@
+         QApplication::setOverrideCursor(Qt::WaitCursor); const QString error = apply(current()); QApplication::restoreOverrideCursor();
+         if (error.isEmpty()) dialog.accept(); else setStatus(error, true);
+     });
+-    readFace(); populateSizes(); initializing = false; refresh();
+-    if (!faceValid && replaced < 0) QTimer::singleShot(0, &dialog, beginPick);
+-    bool accepted = false;
+-    { const WindowLock lock(window, viewport, &dialog); dialog.show(); refresh(); QEventLoop loop; QObject::connect(&dialog, &QDialog::finished, &loop, &QEventLoop::quit); loop.exec(); accepted = dialog.result() == QDialog::Accepted; }
++    const bool accepted = runModeless(window, viewport, dialog, [&] {
++        scope = std::make_unique<PreviewScope>(viewport, dialog, form, replaced);
++        installPicker();
++        readFace();
++        populateSizes();
++        initializing = false;
++        if (!faceValid && replaced < 0) beginPick();
++        else refresh();
++    });
+     viewport->cancelReferencePick(); viewport->setReferencePickCallback(nullptr); viewport->setReferenceMarks({});
+     return accepted;
+ }

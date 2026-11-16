@@ -1,0 +1,119 @@
+--- a/cad_sketch_offset.cpp
++++ b/cad_sketch_offset.cpp
+@@ -9,6 +9,8 @@
+ #include "cad_kernel.h"
+ #include "fk_bspline.h"
+ #include "fk_curve.h"
++#include "fk_curve_fit_bounds.h"
++#include "fk_curve_ops.h"
+ #include "fk_intersect.h"
+ #include "fk_offset.h"
+ #include "fk_nurbs.h"
+@@ -67,7 +69,7 @@
+     Vec2 center;                // Arc, Circle
+     double radius = 0.0, a0 = 0.0, a1 = 0.0;  // Arc: angoli di inizio e fine (a1 - a0 con segno: il verso)
+     Kernel::CurvePtr<2> sourceCurve;
+-    double distance = 0.0;
++    double distance = 0.0, signedDistance = 0.0;
+     std::function<Vec2(double)> f;            // Free: la curva a distanza
+     std::vector<double> breaks;
+     double t0 = 0.0, t1 = 0.0;                // Free: parametri di inizio e fine
+@@ -237,6 +239,7 @@
+     const bool forward = piece.forward;
+     result.kind = OffsetPiece::Free;
+     result.sourceCurve=curve;result.distance=std::fabs(s);
++    result.signedDistance=(forward ? 1.0 : -1.0)*s;
+     const double end=piece.range.hi;
+     result.f = [curve, forward, s, end](double t) {
+         Vec2 d[2];
+@@ -252,10 +255,26 @@
+     return result;
+ }
+ 
++// Il provider lavora sui coefficienti originali e sul parametro sorgente.
++// Le altre famiglie restano sul percorso storico; dati NURBS riconosciuti
++// ma non risolvibili devono invece propagare il rifiuto del certificatore.
++Kernel::CurveFitErrorBound freeOffsetErrorBound(const OffsetPiece &piece, const Kernel::Interval &range) {
++    const Kernel::Curve<2> *basis=piece.sourceCurve.get();
++    while(basis && basis->type()==Kernel::CurveType::Trimmed) {
++        Kernel::cancellationPoint();
++        basis=static_cast<const Kernel::TrimmedCurve<2> *>(basis)->basis().get();
++    }
++    if(!basis || basis->type()!=Kernel::CurveType::BSpline) return {};
++    // T x Z punta a destra, mentre signedDistance e' positiva a sinistra.
++    return Kernel::detail::extrusionOffsetErrorBound(Kernel::embedCurve(piece.sourceCurve,Kernel::Frame3()),
++                                                     range,-piece.signedDistance,Vec3(0,0,1));
++}
++
+ // Rimuove gli anelli della parallela: suddivide in Bezier monotoni,
+ // trova le auto-intersezioni sulle curve (non sulle corde visualizzate) e
+ // conserva i tratti esterni agli intervalli che tornano sullo stesso punto.
+-std::shared_ptr<Kernel::BSplineCurve<3>> trimOffsetLoops(const std::shared_ptr<Kernel::BSplineCurve<3>> &curve) {
++std::shared_ptr<Kernel::BSplineCurve<3>> trimOffsetLoops(const std::shared_ptr<Kernel::BSplineCurve<3>> &curve,
++                                                       const Kernel::CurveFitErrorBound &bound) {
+     struct Span { Kernel::BSplineCurve<2> curve; Kernel::Box box; };
+     std::vector<Span> spans;
+     std::function<void(const Kernel::BSplineCurve<3> &,int)> append;
+@@ -378,7 +397,25 @@
+         retained.insert(retained.end(),parts.begin(),parts.end());
+     }
+     if(retained.empty()) throw std::domain_error("l'offset interno non conserva un tratto utilizzabile");
+-    return std::make_shared<Kernel::BSplineCurve<3>>(Kernel::joinBezierPieces(retained));
++    auto joined=std::make_shared<Kernel::BSplineCurve<3>>(Kernel::joinBezierPieces(retained));
++    if(bound) {
++        // Ogni retained conserva il dominio ORIGINALE; join lo rimappa su
++        // [k,k+1] e puo' sostituire il primo polo con quello del giunto.
++        // Controllare quindi le cubiche effettivamente emesse, non i poli
++        // intermedi arrotondati durante estrazione/taglio. I parametri sono
++        // legati dalla mappa affine normalizzata di ciascun tratto.
++        if(joined->degree()!=3 || joined->isRational()
++            || joined->poles().size()!=3*retained.size()+1)
++            throw std::domain_error("offset: struttura della curva rifilata non certificabile");
++        for(std::size_t k=0;k<retained.size();++k) {
++            Kernel::cancellationPoint();
++            const auto &poles=joined->poles();
++            const double error=bound(retained[k].domain(),{poles[3*k],poles[3*k+1],poles[3*k+2],poles[3*k+3]});
++            if(!std::isfinite(error) || error<0 || error>kFitTolerance)
++                throw std::domain_error("offset: tolleranza della curva rifilata non certificata");
++        }
++    }
++    return joined;
+ }
+ 
+ // Curva del kernel della copia (per le intersezioni negli angoli concavi),
+@@ -398,7 +435,9 @@
+             const Vec2 p = piece.f(t);
+             return Vec3(p.x(), p.y(), 0.0);
+         };
+-        const auto fitted = Kernel::fitCurve(f3, range, piece.breaks, kFitTolerance);
++        const auto bound=freeOffsetErrorBound(piece,range);
++        const auto fitted = bound ? Kernel::fitCurveCertified(f3,range,piece.breaks,kFitTolerance,bound)
++                                  : Kernel::fitCurve(f3,range,piece.breaks,kFitTolerance);
+         std::vector<Vec2> poles;
+         for (const Vec3 &p : fitted->poles()) poles.push_back(Vec2(p.x(), p.y()));
+         return {std::make_shared<Kernel::BSplineCurve<2>>(3, fitted->knots(), poles), range};
+@@ -599,7 +638,9 @@
+                             const Vec2 p = copy.f(t);
+                             return Vec3(p.x(), p.y(), 0.0);
+                         };
+-                        const auto fitted = trimOffsetLoops(Kernel::fitCurve(f3, range, breaks, kFitTolerance));
++                        const auto bound=freeOffsetErrorBound(copy,range);
++                        const auto fitted = trimOffsetLoops(bound ? Kernel::fitCurveCertified(f3,range,breaks,kFitTolerance,bound)
++                                                                  : Kernel::fitCurve(f3,range,breaks,kFitTolerance),bound);
+                         // Un offset completamente collassato puo' riapparire
+                         // dall'altra parte della sorgente senza auto-intersezioni
+                         // (es. un cerchio rappresentato come NURBS): non e' un
+@@ -611,9 +652,10 @@
+                             if(projected.distance<copy.distance-10*kFitTolerance)
+                                 throw std::domain_error("l'offset interno collassa o conserva tratti piu' vicini della distanza richiesta");
+                         }
+-                        // Curva derivata (Converted): B-spline esatta entro
+-                        // kFitTolerance, ma un'entita' unica: poli nascosti e
+-                        // rigidi, solo gli estremi come punti dei vincoli.
++                        // Curva derivata (Converted): fit entro kFitTolerance,
++                        // certificato sulle famiglie supportate anche dopo il
++                        // taglio. Un'entita' unica: poli nascosti e rigidi,
++                        // solo gli estremi come punti dei vincoli.
+                         CurveObject curve;
+                         curve.tool = DrawingTool::Converted;
+                         curve.degree = 3;

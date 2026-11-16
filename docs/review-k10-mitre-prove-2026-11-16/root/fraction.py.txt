@@ -1,0 +1,20 @@
+from pathlib import Path
+import sys,json,hashlib
+T=Path('/tmp/mitre-review/root');A=Path('/tmp/mitre-review/audit');D=T/'fraction-runtime';D.mkdir(exist_ok=True)
+for name in ['verify_tensor_fraction.py','fraction_common.py']:(D/name).write_bytes((A/(name+'.txt')).read_bytes())
+sys.path.insert(0,str(D));from verify_tensor_fraction import verify
+h=lambda a:[h(x) for x in a] if isinstance(a,list) else float(a).hex()
+def curve(c):return dict(type='bspline',degree=c['degree'],**{k:h(c[k]) for k in ['knots','poles','weights']})
+def surface(s):return dict(uDegree=s['u_degree'],vDegree=s['v_degree'],uPoleCount=s['u_count'],vPoleCount=s['v_count'],**{n:h(s[k]) for n,k in [('uKnots','u_knots'),('vKnots','v_knots'),('poles','poles'),('weights','weights')]})
+result={}
+for name,expected in [('candidate-positive-coefficients.json',10),('candidate-emitted-sheet-coefficients.json',2)]:
+ p=T/'release-export'/name;rows=[]
+ for c in json.loads(p.read_text()):
+  for side in ['s','t']:
+   record={'range':h(c['range']),'budget':h(c['budget']),'curve':curve(c['curve']),'pcurve':curve(c['pcurve_'+side]),'surface':surface(c['surface_'+side])}
+   if 'fin_forward' in c:record['fin']=c['fin_forward' if side=='s' else 'fin_backward']
+   rows.append(verify(record))
+ assert len(rows)==expected and all(r['pass'] for r in rows)
+ result[name]={'input_sha256':hashlib.sha256(p.read_bytes()).hexdigest(),'maps':len(rows),'cells':sum(r['cells'] for r in rows),'max_upper_mm':max(r['upper_mm'] for r in rows),'rows':rows}
+ print(name,len(rows),'PASS',result[name]['cells'],'cells',flush=True)
+(T/'fraction-final.json').write_text(json.dumps(result,indent=2)+'\n')

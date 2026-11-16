@@ -17,29 +17,37 @@
 // N = Su x Sv unitaria, e ha la stessa parametrizzazione (u, v) di S:
 //  - piani, cilindri, coni, sfere e tori restano dello stesso tipo (esatti:
 //    piano spostato, raggio R + d, cono con il raggio R + d cos(a) e l'origine
-//    spostata di -d sin(a) lungo l'asse, raggio minore r + d);
+//    spostata di -d sin(a) lungo l'asse; per il toro r + sigma*d, con
+//    sigma segno di R+r*cos(v) costante sulla finestra regolare);
 //  - estrusioni e rivoluzioni restano estrusioni (della curva base a distanza)
 //    e rivoluzioni (del meridiano a distanza): la normale non dipende da v
 //    (estrusione) e ruota con u (rivoluzione), quindi basta la curva;
 //  - le B-spline diventano B-spline bicubiche C1 (Hermite a tratti con nodi
 //    tripli, la stessa costruzione delle SP-curve) raffinate finche' lo scarto
 //    da O nello stesso (u, v) e' sotto la tolleranza.
-// Le curve a distanza (curva base, meridiano, bordi delle facce) sono esatte
-// quando lo sono (rette, cerchi, curve traslate su un piano), altrimenti
-// cubiche di Hermite C1 nello stesso parametro entro la tolleranza (come le
-// parallele dei raccordi e le curve del marching).
+// Le curve a distanza (curva base, meridiano, bordi delle facce) conservano
+// forme esatte quando giustificate dai supporti geometrici riconosciuti;
+// altrimenti usano cubiche di Hermite nello stesso parametro. Gli offset di
+// estrusioni/rivoluzioni con sorgente NURBS usano un limite continuo del residuo
+// (fk_curve_fit_bounds.h), con rifiuto se non conclude entro il budget.
+// Gli altri fit e le verifiche campionate non certificano l'errore sul continuo
+// per callback arbitrarie (migrazione K10 ancora da completare).
 namespace ForgeCad::Kernel {
 
 // La superficie a distanza `distance` lungo Su x Sv, sulla finestra `u` x `v`
-// (serve alle B-spline; le altre valgono su tutto il dominio).
+// (limita anche la verifica di regolarita' dei supporti toroidali).
 // std::domain_error se degenera (raggio nullo o negativo, punti singolari,
 // cuspidi: la distanza supera il raggio di curvatura).
 SurfacePtr offsetSurface(const Surface &surface, double distance, const Interval &u, const Interval &v, double tolerance = linearResolution());
 
-// B-spline cubica C1 (nodi interni tripli) che approssima f su `range` entro
-// `tolerance`, con lo stesso parametro; `breaks` (dentro range) sono punti in
+// B-spline cubica C1 (nodi interni tripli) che approssima f su `range` con
+// obiettivo `tolerance`, con lo stesso parametro; `breaks` (dentro range) sono punti in
 // cui f puo' avere un angolo (nodi delle curve di partenza). `deviation`
-// riceve lo scarto misurato. std::domain_error se non si arriva alla tolleranza.
+// riceve lo scarto campionato, non un limite globale certificato.
+// std::domain_error se il raffinamento fallisce; OperationCancelled se il
+// token corrente e' attivo, anche dopo l'ultimo callback. Tolleranza positiva e
+// finita e callback finiti richiesti; deviation resta invariata su ogni fallimento.
+// Per un limite sull'intera campata usare fitCurveCertified e un provider valido.
 std::shared_ptr<BSplineCurve<3>> fitCurve(const std::function<Vec3(double)> &f, const Interval &range,
                                           const std::vector<double> &breaks, double tolerance, double *deviation = nullptr);
 

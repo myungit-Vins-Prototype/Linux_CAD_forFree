@@ -1,0 +1,17 @@
+rat=0 up=0 posed=0 oblique=0 5.742474706407474e-05
+rat=0 up=0 posed=0 oblique=1 5.742474706407474e-05
+rat=0 up=0 posed=1 oblique=0 5.742475172825207e-05
+rat=0 up=0 posed=1 oblique=1 5.7424751728072935e-05
+rat=0 up=1 posed=0 oblique=0 5.742474706407474e-05
+rat=0 up=1 posed=0 oblique=1 5.742474706407474e-05
+rat=0 up=1 posed=1 oblique=0 5.7424751727931135e-05
+rat=0 up=1 posed=1 oblique=1 5.7424751728229704e-05
+rat=1 up=0 posed=0 oblique=0 5.415640758484547e-05
+rat=1 up=0 posed=0 oblique=1 5.415640758484547e-05
+rat=1 up=0 posed=1 oblique=0 5.415641224892865e-05
+rat=1 up=0 posed=1 oblique=1 5.415641224874951e-05
+rat=1 up=1 posed=0 oblique=0 5.415640758484547e-05
+rat=1 up=1 posed=0 oblique=1 5.415640758484547e-05
+rat=1 up=1 posed=1 oblique=0 5.41564122486782e-05
+rat=1 up=1 posed=1 oblique=1 5.415641224897677e-05
+SUMMARY {"module_baseline_scope": "Git fk_project.cpp/h snapshot relinked before current Release kernel archive; not the historical whole-kernel archive", "geometry_witnesses": 16, "minimum_geometric_distance_lower": 5.415640758484547e-05}

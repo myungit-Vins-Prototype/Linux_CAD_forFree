@@ -1,0 +1,57 @@
+{
+  "method": "Exact IEEE Fractions; homogeneous residual Bernstein hull; positive W and abs(n.d); exact squared comparisons against published bounds and tolerance",
+  "geometry_records": 16,
+  "geometry_source_property_checks": 16,
+  "geometry_piece_certificates": 16,
+  "geometry_chain_certificates": 16,
+  "multi_source_join_scenarios": 2,
+  "piece_spans": 688,
+  "geometry_chain_spans": 688,
+  "multi_source_join_spans": 264,
+  "upper_bound_maximum": 9.908761801215598e-08,
+  "tolerance_hex": "0x1.ad7f29abcaf48p-24",
+  "seconds": 27.493559689999984,
+  "baseline_geometry_witnesses": 16,
+  "baseline_minimum_geometric_distance_lower": 5.415640758484547e-05,
+  "baseline_scope": "Git fk_project.cpp/h snapshot relinked before current Release kernel archive; not the historical whole-kernel archive",
+  "maximum_bound_printed_upward": 9.908761802e-08,
+  "independent_bound_subdivision_depth_maximum": 0,
+  "baseline_historical_67_reproduced": false,
+  "python": "3.14.10",
+  "compiler": "c++ (GCC) 16.2.1 20260810",
+  "joins": [
+    {
+      "join_name": "three",
+      "chains": [
+        {
+          "spans": 132,
+          "upper_bound": 9.763302772613996e-08,
+          "max_depth": 0,
+          "leaves": 132
+        }
+      ]
+    },
+    {
+      "join_name": "first_last",
+      "chains": [
+        {
+          "spans": 88,
+          "upper_bound": 9.763302772082809e-08,
+          "max_depth": 0,
+          "leaves": 88
+        },
+        {
+          "spans": 44,
+          "upper_bound": 9.763302786519937e-08,
+          "max_depth": 0,
+          "leaves": 44
+        }
+      ]
+    }
+  ],
+  "all_current_certificates_pass": true,
+  "all_baseline_witnesses_pass": true,
+  "documented_replay_exit_code": 0,
+  "current_output_recompiled_byte_identical": true,
+  "baseline_output_recompiled_byte_identical": true
+}

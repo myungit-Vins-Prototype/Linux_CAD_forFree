@@ -1,0 +1,4 @@
+from pathlib import Path
+import json,shlex,subprocess
+r=Path('/home/myungit/Linux_CAD_forFree');p=Path(__file__).parent;c=next(x for x in json.loads((r/'forgecad-release/compile_commands.json').read_text()) if x['file'].endswith('/kernel/fk_offset.cpp'));cmd=shlex.split(c['command']);cmd[cmd.index('-o')+1]=str(p/'tolerant.o');cmd[cmd.index('-c')+1]=str(p/'tolerant.cpp');subprocess.run(cmd,cwd=c['directory'],check=True);subprocess.run(['/usr/bin/c++','-o',str(p/'tolerant'),str(p/'tolerant.o'),str(r/'forgecad-release/kernel/libforgekernel.a'),'-lpthread'],check=True)
+with (p/'tolerant.log').open('w') as f:subprocess.run([str(p/'tolerant')],stdout=f,check=True)

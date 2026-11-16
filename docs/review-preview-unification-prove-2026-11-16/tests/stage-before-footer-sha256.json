@@ -1,0 +1,8 @@
+{
+  "forgeCad2026_dialogs_common.cpp": "e6e5a88d25dcc8e70b9bc3e7cba65cdb90a38cbe7d11dc7b9abc989fcc2d70fd",
+  "forgeCad2026_dialogs.h": "35a16e9e136ec7fb4efb80a2906e79e906f4ba70676a1cabe1135f8480a31ef8",
+  "forgeCad2026_dialogs_solids.cpp": "79e8b454b0aa8db8e20484c0472dacc4f8f9285056fecc504a66feb1ebfd2624",
+  "forgeCad2026_dialogs_surfaces.cpp": "3e1a52dbd703f3d875b28feac751966b95defebc10975a78fb6adeb8f56d32bc",
+  "forgeCad2026_dialogs_sketch.cpp": "2eeb38e9c17dd2605de2783ae72adf78e618bd48252d356d44ae044fb82229df",
+  "forgeCad2026_dialogs_analysis.cpp": "6d4cb332ce0618bdc2fd930667384ea6a6ee7ba943308804b97affc16fb6b0fd"
+}

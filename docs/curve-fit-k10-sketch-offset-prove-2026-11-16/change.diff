@@ -1,0 +1,226 @@
+--- before/CLAUDE.md
++++ after/CLAUDE.md
+@@ -1,6 +1,6 @@
+ # CLAUDE.md — memoria operativa ForgeCAD
+ 
+-Aggiornato **15 novembre 2026**.
++Aggiornato **16 novembre 2026**.
+ 
+ [Cronologia](docs/history/claude-2026-11-02.md); [stato prima di Part23](docs/history/claude-prima-part23-2026-11-14.md).
+ 
+@@ -108,17 +108,16 @@
+ 
+ ## Ultimi interventi — esiti consolidati
+ 
+-**15/11 — K10, pareti di Spessore con tre agenti GPT-6.1 Sol.**
+-Bordi su Plane: traslazione/estrusione originali, caps e cucitura preservati;
+-corretta perdita5,74e-5mm. App/runner,6gruppi/31scenari,18CTest,
+-6ASan/UBSan/LSan mirati,37audit e precedenti6thicken/38history PASS.
+-Mappa756/10923/376TU/check/HTML/archi PASS;2372fileiniziali,7modificatimirati.
+-K10 aperto:11/24 siti parziali,13restanti più fallback; normali variabili,
+-quiltcurvi/duefacce, tensor diagonali e offset significativi ancora aperti.
+-Rappresentazione conservata con roundoffordinario, nessun nuovooracle globale.
++**16/11 — K10, offset schizzo con tre agenti GPT-6.1 Sol.**
++Due fit NURBS certificati dagli originali e poli effettivi ricontrollati dopo
++rifilo sui domini sorgente. Scarto5,74e-7→3,93e-8mm entro1e-7.
++App/runner,27regressioni,14CTest,27ASan/UBSan/LSan mirati,36audit PASS.
++Mappa757/10943/377TU/check/HTML/archi PASS;2484fileiniziali,7modificatimirati.
++K10 aperto:13/24 siti parziali,11restanti più fallback; anelli/collasso e
++famiglie non supportate ancora campionati, nessuna prova topologica globale.
+ 24rilievi precedenti corretti,22orfane candidate; anteprime/pannelli da uniformare.
+-K2 in produzione. [Rapporto e prove](docs/curve-fit-k10-thicken-2026-11-15.md),
+-[memoria conservata](docs/history/claude-prima-k10-thicken-2026-11-15.md).
++K2 in produzione. [Rapporto e prove](docs/curve-fit-k10-sketch-offset-2026-11-16.md),
++[memoria conservata](docs/history/claude-prima-k10-sketch-offset-2026-11-16.md).
+ 
+ **15/11 — K2 completato in produzione con due agenti GPT-6.1 Sol.**
+ Atlante carrier, fori/nesting, ponte analitico conservativo, SP-curve NURBS coerenti,
+--- before/CMakeLists.txt
++++ after/CMakeLists.txt
+@@ -1038,3 +1038,15 @@
+ set_tests_properties(forgecad_overlay_uniform_tests PROPERTIES
+     SKIP_RETURN_CODE 77 LABELS "opengl"
+     ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QPA_OFFSCREEN_NO_GLX=1;QT_QPA_PLATFORMTHEME=")
++
++# Offset NURBS dello schizzo: regressioni pubbliche senza viewport o contesto GL.
++set_source_files_properties(cad_sketch_offset.cpp PROPERTIES COMPILE_OPTIONS
++    "$<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang,AppleClang>:-fno-fast-math;-ffp-contract=off>")
++add_executable(forgecad_sketch_offset_validation_tests tests/test_sketch_offset_validation.cpp cad_sketch_offset.cpp cad_curve_solver.cpp)
++target_include_directories(forgecad_sketch_offset_validation_tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
++target_include_directories(forgecad_sketch_offset_validation_tests SYSTEM PRIVATE "$<TARGET_PROPERTY:Qt6::Gui,INTERFACE_INCLUDE_DIRECTORIES>")
++target_link_libraries(forgecad_sketch_offset_validation_tests PRIVATE forgekernel Qt6::Core)
++target_compile_options(forgecad_sketch_offset_validation_tests PRIVATE -Wall -Wextra -Wpedantic)
++set_target_properties(forgecad_sketch_offset_validation_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
++add_test(NAME forgecad_sketch_offset_validation_tests COMMAND forgecad_sketch_offset_validation_tests)
++set_tests_properties(forgecad_sketch_offset_validation_tests PROPERTIES TIMEOUT 180)
+--- before/cad_sketch_offset.cpp
++++ after/cad_sketch_offset.cpp
+@@ -9,6 +9,8 @@
+ #include "cad_kernel.h"
+ #include "fk_bspline.h"
+ #include "fk_curve.h"
++#include "fk_curve_fit_bounds.h"
++#include "fk_curve_ops.h"
+ #include "fk_intersect.h"
+ #include "fk_offset.h"
+ #include "fk_nurbs.h"
+@@ -67,7 +69,7 @@
+     Vec2 center;                // Arc, Circle
+     double radius = 0.0, a0 = 0.0, a1 = 0.0;  // Arc: angoli di inizio e fine (a1 - a0 con segno: il verso)
+     Kernel::CurvePtr<2> sourceCurve;
+-    double distance = 0.0;
++    double distance = 0.0, signedDistance = 0.0;
+     std::function<Vec2(double)> f;            // Free: la curva a distanza
+     std::vector<double> breaks;
+     double t0 = 0.0, t1 = 0.0;                // Free: parametri di inizio e fine
+@@ -237,6 +239,7 @@
+     const bool forward = piece.forward;
+     result.kind = OffsetPiece::Free;
+     result.sourceCurve=curve;result.distance=std::fabs(s);
++    result.signedDistance=(forward ? 1.0 : -1.0)*s;
+     const double end=piece.range.hi;
+     result.f = [curve, forward, s, end](double t) {
+         Vec2 d[2];
+@@ -252,10 +255,26 @@
+     return result;
+ }
+ 
++// Il provider lavora sui coefficienti originali e sul parametro sorgente.
++// Le altre famiglie restano sul percorso storico; dati NURBS riconosciuti
++// ma non risolvibili devono invece propagare il rifiuto del certificatore.
++Kernel::CurveFitErrorBound freeOffsetErrorBound(const OffsetPiece &piece, const Kernel::Interval &range) {
++    const Kernel::Curve<2> *basis=piece.sourceCurve.get();
++    while(basis && basis->type()==Kernel::CurveType::Trimmed) {
++        Kernel::cancellationPoint();
++        basis=static_cast<const Kernel::TrimmedCurve<2> *>(basis)->basis().get();
++    }
++    if(!basis || basis->type()!=Kernel::CurveType::BSpline) return {};
++    // T x Z punta a destra, mentre signedDistance e' positiva a sinistra.
++    return Kernel::detail::extrusionOffsetErrorBound(Kernel::embedCurve(piece.sourceCurve,Kernel::Frame3()),
++                                                     range,-piece.signedDistance,Vec3(0,0,1));
++}
++
+ // Rimuove gli anelli della parallela: suddivide in Bezier monotoni,
+ // trova le auto-intersezioni sulle curve (non sulle corde visualizzate) e
+ // conserva i tratti esterni agli intervalli che tornano sullo stesso punto.
+-std::shared_ptr<Kernel::BSplineCurve<3>> trimOffsetLoops(const std::shared_ptr<Kernel::BSplineCurve<3>> &curve) {
++std::shared_ptr<Kernel::BSplineCurve<3>> trimOffsetLoops(const std::shared_ptr<Kernel::BSplineCurve<3>> &curve,
++                                                       const Kernel::CurveFitErrorBound &bound) {
+     struct Span { Kernel::BSplineCurve<2> curve; Kernel::Box box; };
+     std::vector<Span> spans;
+     std::function<void(const Kernel::BSplineCurve<3> &,int)> append;
+@@ -378,7 +397,25 @@
+         retained.insert(retained.end(),parts.begin(),parts.end());
+     }
+     if(retained.empty()) throw std::domain_error("l'offset interno non conserva un tratto utilizzabile");
+-    return std::make_shared<Kernel::BSplineCurve<3>>(Kernel::joinBezierPieces(retained));
++    auto joined=std::make_shared<Kernel::BSplineCurve<3>>(Kernel::joinBezierPieces(retained));
++    if(bound) {
++        // Ogni retained conserva il dominio ORIGINALE; join lo rimappa su
++        // [k,k+1] e puo' sostituire il primo polo con quello del giunto.
++        // Controllare quindi le cubiche effettivamente emesse, non i poli
++        // intermedi arrotondati durante estrazione/taglio. I parametri sono
++        // legati dalla mappa affine normalizzata di ciascun tratto.
++        if(joined->degree()!=3 || joined->isRational()
++            || joined->poles().size()!=3*retained.size()+1)
++            throw std::domain_error("offset: struttura della curva rifilata non certificabile");
++        for(std::size_t k=0;k<retained.size();++k) {
++            Kernel::cancellationPoint();
++            const auto &poles=joined->poles();
++            const double error=bound(retained[k].domain(),{poles[3*k],poles[3*k+1],poles[3*k+2],poles[3*k+3]});
++            if(!std::isfinite(error) || error<0 || error>kFitTolerance)
++                throw std::domain_error("offset: tolleranza della curva rifilata non certificata");
++        }
++    }
++    return joined;
+ }
+ 
+ // Curva del kernel della copia (per le intersezioni negli angoli concavi),
+@@ -398,7 +435,9 @@
+             const Vec2 p = piece.f(t);
+             return Vec3(p.x(), p.y(), 0.0);
+         };
+-        const auto fitted = Kernel::fitCurve(f3, range, piece.breaks, kFitTolerance);
++        const auto bound=freeOffsetErrorBound(piece,range);
++        const auto fitted = bound ? Kernel::fitCurveCertified(f3,range,piece.breaks,kFitTolerance,bound)
++                                  : Kernel::fitCurve(f3,range,piece.breaks,kFitTolerance);
+         std::vector<Vec2> poles;
+         for (const Vec3 &p : fitted->poles()) poles.push_back(Vec2(p.x(), p.y()));
+         return {std::make_shared<Kernel::BSplineCurve<2>>(3, fitted->knots(), poles), range};
+@@ -599,7 +638,9 @@
+                             const Vec2 p = copy.f(t);
+                             return Vec3(p.x(), p.y(), 0.0);
+                         };
+-                        const auto fitted = trimOffsetLoops(Kernel::fitCurve(f3, range, breaks, kFitTolerance));
++                        const auto bound=freeOffsetErrorBound(copy,range);
++                        const auto fitted = trimOffsetLoops(bound ? Kernel::fitCurveCertified(f3,range,breaks,kFitTolerance,bound)
++                                                                  : Kernel::fitCurve(f3,range,breaks,kFitTolerance),bound);
+                         // Un offset completamente collassato puo' riapparire
+                         // dall'altra parte della sorgente senza auto-intersezioni
+                         // (es. un cerchio rappresentato come NURBS): non e' un
+@@ -611,9 +652,10 @@
+                             if(projected.distance<copy.distance-10*kFitTolerance)
+                                 throw std::domain_error("l'offset interno collassa o conserva tratti piu' vicini della distanza richiesta");
+                         }
+-                        // Curva derivata (Converted): B-spline esatta entro
+-                        // kFitTolerance, ma un'entita' unica: poli nascosti e
+-                        // rigidi, solo gli estremi come punti dei vincoli.
++                        // Curva derivata (Converted): fit entro kFitTolerance,
++                        // certificato sulle famiglie supportate anche dopo il
++                        // taglio. Un'entita' unica: poli nascosti e rigidi,
++                        // solo gli estremi come punti dei vincoli.
+                         CurveObject curve;
+                         curve.tool = DrawingTool::Converted;
+                         curve.degree = 3;
+--- before/cad_sketch_offset.h
++++ after/cad_sketch_offset.h
+@@ -11,10 +11,12 @@
+ //  - Segmenti -> segmenti paralleli (vincolo Parallelo con l'originale);
+ //    archi e cerchi -> archi e cerchi concentrici (vincolo Concentrico), con
+ //    il raggio R -/+ d: esatti.
+-//  - Spline, NURBS, ellissi e riferimenti convertiti -> B-spline cubiche C1
+-//    (curve NURBS modificabili) nello stesso parametro entro 1e-7 dalla curva a
+-//    distanza vera (come le parallele dei raccordi del kernel): la curva a
+-//    distanza di una spline non e' una spline.
++//  - Spline, NURBS, ellissi e riferimenti convertiti -> B-spline cubiche.
++//    Le NURBS supportate hanno un limite continuo di posizione entro 1e-7
++//    dall'offset parametrico originale, anche sui tratti dopo il rifilo;
++//    le altre famiglie mantengono il fit campionato. I tratti rifilati
++//    conservano una corrispondenza affine con il parametro sorgente.
++//    Le copie sono curve derivate con poli interni rigidi.
+ //  - Negli angoli vivi della catena le copie si prolungano o si accorciano
+ //    fino al loro punto comune (come in SolidWorks); con `roundCorners` negli
+ //    angoli convessi c'e' un arco di raggio d attorno al vertice. Tra tratti
+--- before/docs/code-review-2026-11-15.md
++++ after/docs/code-review-2026-11-15.md
+@@ -1,6 +1,6 @@
+ # Review generale ForgeCAD — 15 novembre 2026
+ 
+-**Stato più recente:** [K10 Pareti di Spessore su Plane](curve-fit-k10-thicken-2026-11-15.md) conserva le curve originali nelle pareti, correggendo un dettaglio di 5,74e-5 mm perso dal fit campionato. Build completa, 6 gruppi/31 scenari, 18 CTest, sanitizer mirati e audit indipendente PASS. **11/24 siti iniziali parzialmente trattati, 13 interamente da migrare**, oltre ai fallback: K10 resta aperto per normali variabili e altri chiamanti campionati. I 24 rilievi precedenti corretti e le 22 orfane candidate non cambiano. Uniformazione completa anteprime/pannelli ancora aperta; K2 in produzione.
++**Stato più recente, 16 novembre:** [K10 Offset NURBS dello schizzo](curve-fit-k10-sketch-offset-2026-11-16.md) certifica i due fit applicativi e ricontrolla i poli finali dopo il taglio degli anelli, correggendo scarti oltre cinque volte il limite dichiarato. Build completa, 27 regressioni, 14 CTest, sanitizer mirati e audit indipendente PASS. **13/24 siti iniziali parzialmente trattati, 11 interamente da migrare**, oltre ai fallback; K10 resta aperto per le altre famiglie e gli algoritmi ancora campionati. I 24 rilievi precedenti corretti e le 22 orfane candidate non cambiano. Uniformazione completa anteprime/pannelli ancora aperta; K2 in produzione.
+ 
+ **Aggiornamento successivo:** i cinque rilievi della [seconda review](review-followup-2026-11-15.md) K7/K8/K9/PRE4/UI7 sono corretti: **24 difetti precedenti corretti complessivamente**. La [prosecuzione K10](curve-fit-k10-2026-11-15.md) corregge il fit degli offset NURBS di estrusioni/rivoluzioni con controllo continuo, input finiti e fallimenti atomici; build completa e regressioni PASS. **K10 resta aperto per i chiamanti generici ancora campionati**. Le 22 orfane restano candidati distinti. Stato storico della prima review sotto.
+ 
+--- before/docs/curve-fit-k10-thicken-2026-11-15.md
++++ after/docs/curve-fit-k10-thicken-2026-11-15.md
+@@ -39,3 +39,8 @@
+ L'API `thickenSheet` conserva il comportamento preesistente che azzera la genealogia all'ingresso. Non viene dichiarato un nuovo contratto di atomicità su errore/cancellazione. I **24 rilievi precedenti corretti** e le **22 funzioni candidate orfane** mantengono il conteggio; K2 resta in produzione. Uniformazione di anteprime, pannelli e stili ancora aperta. Nessuna nuova prova visiva OpenGL o certificazione globale dell'assenza di leak.
+ 
+ [Prove riproducibili e manifest](curve-fit-k10-thicken-prove-2026-11-15/README.md).
++
++
++## Prosecuzione successiva
++
++Il [blocco offset dello schizzo](curve-fit-k10-sketch-offset-2026-11-16.md) tratta due ulteriori siti per le NURBS riconosciute, con verifica continua prima e dopo il rifilo. Conteggio aggiornato: 13/24 siti parzialmente trattati, 11 interamente da migrare, oltre ai fallback. I risultati sopra descrivono la consegna precedente di Spessore.
+--- before/tools/generate_architecture.py
++++ after/tools/generate_architecture.py
+@@ -221,6 +221,9 @@
+  'kernel/tests/test_mapping_carrier_validation.cpp': ('tests', 'Regressioni mapping con rilievi del carrier nascosti, bordi e parametri, pesi, scale, pose, fori, genealogia, codec e fallimenti atomici; confronto con il percorso precedente e sanitizer mirati.'),
+  'kernel/fk_mapping_fit.cpp': ('kernel', 'Fit Hermite cubico/quintico adattivo condiviso dalle mappature: celle NURBS con derivate comuni, stencil locali espliciti, controlli dello scarto e budget geometrici prefissati; nessuna mesh di calcolo.'),
+  'kernel/fk_mapping_fit.h': ('kernel', 'Contratti interni del fit parametrico e della trasformazione B-rep tramite corrispondenza analitica; immagine di faccia a carrier conservato e trasferimento UV esplicito.'),
++ 'cad_sketch_offset.cpp': ('sketch', 'Offset dello schizzo: fit NURBS certificato da coefficienti originali nei giunti e nelle copie finali, ricertificazione dei poli effettivi dopo rifilo con domini sorgente conservati, vincoli associativi e fallimenti atomici; altri tipi mantengono il fit campionato.'),
++ 'cad_sketch_offset.h': ('sketch', 'Contratto offset schizzo: catene e lati, copie associative, limite continuo per NURBS supportate anche dopo il rifilo e limiti campionati delle altre famiglie.'),
++ 'tests/test_sketch_offset_validation.cpp': ('tests', 'Regressioni offset schizzo con dettagli NURBS nascosti, versi e segni, giunti concavi, nodi angolosi, rifilo e rigenerazione associativa; input invalidi e pubblicazione atomica.'),
+  'kernel/fk_thicken.cpp': ('kernel', 'Spessore lungo normale o direzione: su bordi di facce Plane le pareti conservano curve e parametri originali con traslazione ed estrusione; caps offset e genealogia conservati, superfici curve ancora con fit campionato e controlli locali.'),
+  'kernel/fk_thicken.h': ('kernel', 'Contratto dello spessore di lamine: lato, normale o direzione, budget offset e conservazione dei bordi nelle pareti di facce Plane; limiti dei percorsi curvi.'),
+  'kernel/tests/test_planar_thicken_validation.cpp': ('tests', 'Regressioni pareti di Spessore su Plane: dettagli NURBS nascosti, pesi e parametri originali, pose e lati, trim, fori, rappresentazioni finali, genealogia e codec.'),

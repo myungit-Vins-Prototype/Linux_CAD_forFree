@@ -1,0 +1,91 @@
+PASS frozen original SHA256 before delivery probe
+PASS target path differs from frozen original
+PASS load frozen original definition and snapshots
+PASS SaveAs fork has independent document identity and no archived base
+PASS rebuild fork inputs without cache
+PASS actual app entrypoint creates three-body union
+PASS created final feature is the intended three-body parametric union
+PASS created one closed shell and one solid region
+PASS created no failed features anywhere in history
+SCENE created index=0 shape=1 drawn=0 visible=0
+SCENE created index=1 shape=0 drawn=1 visible=1
+SCENE created index=2 shape=1 drawn=0 visible=0
+SCENE created index=3 shape=0 drawn=1 visible=1
+SCENE created index=4 shape=0 drawn=0 visible=0
+SCENE created index=5 shape=1 drawn=0 visible=0
+SCENE created index=6 shape=1 drawn=1 visible=1
+PASS created scene draws only final solid union, consumed operands remain historical
+PASS created only final union is an available independent body
+PASS delivery created strict checkBody including loop crossings
+PASS delivery created restored ellipse/cylinder fin owns affine pcurve in original parameter
+PASS delivery created restored pcurve carries finite positive certified error within document budget
+PASS delivery created finite positive exact-BRep volume
+SHAPE delivery created F=11 E=24 V=17 shells=1 solid_regions=1 volume=696887.83065674466 area=71950.608866983457 sha=3a3b73656aed9c1bc4de1a2f90c706f9c5369a7487b036913694c7239ba92be4
+PASS delivery created registered history and persistent names
+PASS delivery created history links refer to live operand entities
+PASS delivery created all live face/edge/vertex names nonempty
+PASS delivery created every resulting face has operand provenance
+PASS delivery created every face preserves an original surface carrier
+PASS delivery created source boundary witnesses retained by union
+PASS delivery created output boundary witnesses belong to input union
+WITNESS delivery created inputs=87 lost=0 outputs=100 extra=0
+PASS encode parametric definition
+PASS actual app creation records Undo
+PASS Undo removes only final boolean feature
+PASS Undo restores original body visibility and exact operand geometry
+PASS Redo restores identical final union
+PASS Undo and Redo retain fork document identity
+PASS output directory available
+PASS new output path is unoccupied
+PASS normal atomic Save writes independent output copy
+PASS saved output reopens through normal native loader
+PASS reopened copy preserves independent identity
+PASS saved snapshot final feature is the intended three-body parametric union
+PASS saved snapshot one closed shell and one solid region
+PASS saved snapshot no failed features anywhere in history
+PASS saved final snapshot retains exact B-rep bytes
+SCENE reopened index=0 shape=1 drawn=0 visible=0
+SCENE reopened index=1 shape=0 drawn=1 visible=1
+SCENE reopened index=2 shape=1 drawn=0 visible=0
+SCENE reopened index=3 shape=0 drawn=1 visible=1
+SCENE reopened index=4 shape=0 drawn=0 visible=0
+SCENE reopened index=5 shape=1 drawn=0 visible=0
+SCENE reopened index=6 shape=1 drawn=1 visible=1
+PASS reopened scene draws only final solid union, consumed operands remain historical
+PASS reopened only final union is an available independent body
+PASS encode parametric definition
+PASS reopened output rebuilds all seven features without cache
+PASS reopened rebuilt final feature is the intended three-body parametric union
+PASS reopened rebuilt one closed shell and one solid region
+PASS reopened rebuilt no failed features anywhere in history
+SCENE reopened rebuilt index=0 shape=1 drawn=0 visible=0
+SCENE reopened rebuilt index=1 shape=0 drawn=1 visible=1
+SCENE reopened rebuilt index=2 shape=1 drawn=0 visible=0
+SCENE reopened rebuilt index=3 shape=0 drawn=1 visible=1
+SCENE reopened rebuilt index=4 shape=0 drawn=0 visible=0
+SCENE reopened rebuilt index=5 shape=1 drawn=0 visible=0
+SCENE reopened rebuilt index=6 shape=1 drawn=1 visible=1
+PASS reopened rebuilt scene draws only final solid union, consumed operands remain historical
+PASS reopened rebuilt only final union is an available independent body
+PASS delivery reopened rebuilt strict checkBody including loop crossings
+PASS delivery reopened rebuilt restored ellipse/cylinder fin owns affine pcurve in original parameter
+PASS delivery reopened rebuilt restored pcurve carries finite positive certified error within document budget
+PASS delivery reopened rebuilt finite positive exact-BRep volume
+SHAPE delivery reopened rebuilt F=11 E=24 V=17 shells=1 solid_regions=1 volume=696887.83065674466 area=71950.608866983457 sha=3a3b73656aed9c1bc4de1a2f90c706f9c5369a7487b036913694c7239ba92be4
+PASS delivery rebuilt registered history and persistent names
+PASS delivery rebuilt history links refer to live operand entities
+PASS delivery rebuilt all live face/edge/vertex names nonempty
+PASS delivery rebuilt every resulting face has operand provenance
+PASS delivery rebuilt every face preserves an original surface carrier
+PASS delivery rebuilt source boundary witnesses retained by union
+PASS delivery rebuilt output boundary witnesses belong to input union
+WITNESS delivery rebuilt inputs=87 lost=0 outputs=100 extra=0
+PASS cache-free rebuilt output is byte-identical to delivered geometry
+PASS encode parametric definition
+PASS Save, reopen and cache-free rebuild preserve parametric definition
+PASS rebuild itself records Undo after reopening
+PASS Undo rebuilt output restores valid saved snapshot
+PASS Redo rebuilt output restores identical union
+PASS reopening, rebuild and Undo leave delivered file unchanged
+PASS frozen original remains byte-identical
+DELIVERY_RESULT checks=65 failures=0

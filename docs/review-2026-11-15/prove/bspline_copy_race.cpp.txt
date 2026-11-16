@@ -1,0 +1,15 @@
+#include "fk_bspline.h"
+#include <atomic>
+#include <thread>
+#include <iostream>
+using namespace ForgeCad::Kernel;
+int main(){
+ auto base=conicArcToBSpline<3>(Vec3(0,0,0),Vec3(10,0,0),Vec3(0,10,0),0,kTwoPi);
+ for(int i=1;i<200;i++){double t=kTwoPi*i/200; if(i%50)base=base.insertKnot(t);}
+ for(int round=0;round<100;round++){
+  const auto curve=std::make_shared<const BSplineCurve<3>>(base);std::atomic<bool> go{false};
+  std::thread build([&]{while(!go.load()){};const auto seg=curve->cachedBezierSegments();});
+  std::thread copy([&]{while(!go.load()){};for(int i=0;i<100;i++){auto snapshot=curve->clamped();if(snapshot.poleCount()!=curve->poleCount())std::abort();}});
+  go=true;build.join();copy.join();
+ }
+}

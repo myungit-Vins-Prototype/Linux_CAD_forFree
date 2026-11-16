@@ -1,0 +1,21 @@
+Syntax verified for all three source translation units with flags:
+/usr/bin/c++ -std=c++17 -O3 -DNDEBUG -fPIC -ffp-contract=off -DQT_CORE_LIB
+-I/home/myungit/Linux_CAD_forFree -I/home/myungit/Linux_CAD_forFree/kernel
+-isystem /usr/include/qt6 -isystem /usr/include/qt6/QtCore
+-isystem /usr/include/qt6/QtGui -isystem /usr/lib/qt6/mkspecs/linux-g++ -fsyntax-only
+
+PASS test_sketch_offset_validation.cpp
+PASS candidate/cad_sketch_offset.cpp
+PASS baseline/cad_curve_solver.cpp
+
+Sanitizer link: six unchanged instrumented object files, frozen libforgekernel.a,
+-lQt6Core -lpthread, -fsanitize=address,undefined. No QtGui/QtWidgets library needed.
+ldd confirmed only libQt6Core among Qt/GL/NVIDIA libraries.
+ASAN_OPTIONS=detect_leaks=1 UBSAN_OPTIONS=halt_on_error=1 tests-core
+outside sandbox: 27 cases PASS; no ASan, UBSan, or LSan diagnostic; exit code 0.
+
+CMake equivalent:
+target_include_directories(target PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
+  ${CMAKE_CURRENT_SOURCE_DIR}/kernel
+  "$<TARGET_PROPERTY:Qt6::Gui,INTERFACE_INCLUDE_DIRECTORIES>")
+target_link_libraries(target PRIVATE forgekernel Qt6::Core)

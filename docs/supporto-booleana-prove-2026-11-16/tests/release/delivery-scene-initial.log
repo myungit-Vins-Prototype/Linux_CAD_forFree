@@ -1,0 +1,32 @@
+PASS frozen original SHA256 before delivery probe
+PASS target path differs from frozen original
+PASS load frozen original definition and snapshots
+PASS SaveAs fork has independent document identity and no archived base
+PASS rebuild fork inputs without cache
+PASS actual app entrypoint creates three-body union
+PASS created final feature is the intended three-body parametric union
+PASS created one closed shell and one solid region
+PASS created no failed features anywhere in history
+FAIL created scene draws only final union, consumed operands remain historical
+PASS created only final union is an available independent body
+PASS delivery created strict checkBody including loop crossings
+PASS delivery created restored ellipse/cylinder fin owns affine pcurve in original parameter
+PASS delivery created restored pcurve carries finite positive certified error within document budget
+PASS delivery created finite positive exact-BRep volume
+SHAPE delivery created F=11 E=24 V=17 shells=1 solid_regions=1 volume=696887.83065674466 area=71950.608866983457 sha=3a3b73656aed9c1bc4de1a2f90c706f9c5369a7487b036913694c7239ba92be4
+PASS delivery created registered history and persistent names
+PASS delivery created history links refer to live operand entities
+PASS delivery created all live face/edge/vertex names nonempty
+PASS delivery created every resulting face has operand provenance
+PASS delivery created every face preserves an original surface carrier
+PASS delivery created source boundary witnesses retained by union
+PASS delivery created output boundary witnesses belong to input union
+WITNESS delivery created inputs=87 lost=0 outputs=100 extra=0
+PASS encode parametric definition
+PASS actual app creation records Undo
+PASS Undo removes only final boolean feature
+PASS Undo restores original body visibility and exact operand geometry
+PASS Redo restores identical final union
+PASS Undo and Redo retain fork document identity
+PASS output directory available
+PASS new output path is unoccupied

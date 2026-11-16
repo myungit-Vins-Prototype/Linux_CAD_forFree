@@ -1,0 +1,41 @@
+{
+  "exit": 0,
+  "seconds": 15.815474313999857,
+  "tests": [
+    "forgecad_ellipse_extremes_tests",
+    "forgecad_ellipse_trim_tests",
+    "forgecad_sketch_editing_tests",
+    "forgecad_sketch_tools_refs_tests",
+    "forgecad_automatic_snap_tests",
+    "forgecad_intersection_snap_tests",
+    "forgecad_handle_constraints_tests",
+    "forgecad_solver_partition_tests",
+    "forgecad_connected_solver_tests",
+    "forgecad_document_precision_tests",
+    "forgecad_document_read_tests",
+    "forgecad_document_units_tests",
+    "forgecad_document_compression_tests",
+    "forgecad_native_revisions_tests",
+    "forgecad_workspace_revisions_tests",
+    "forgecad_linked_drawing_tests",
+    "forgecad_drawing_revisions_tests",
+    "forgecad_document_access_tests",
+    "forgecad_document_consultation_tests",
+    "forgecad_history_suppression_tests",
+    "forgecad_document_lifetime_tests",
+    "forgecad_sketch_offset_validation_tests",
+    "forgecad_geometry_sources_tests",
+    "forgekernel_projection_fit_validation_tests"
+  ],
+  "actual_passed": 24,
+  "command": [
+    "ctest",
+    "--test-dir",
+    "forgecad-release",
+    "--output-on-failure",
+    "--parallel",
+    "1",
+    "-R",
+    "^(forgecad_ellipse_extremes_tests|forgecad_ellipse_trim_tests|forgecad_sketch_editing_tests|forgecad_sketch_tools_refs_tests|forgecad_automatic_snap_tests|forgecad_intersection_snap_tests|forgecad_handle_constraints_tests|forgecad_solver_partition_tests|forgecad_connected_solver_tests|forgecad_document_precision_tests|forgecad_document_read_tests|forgecad_document_units_tests|forgecad_document_compression_tests|forgecad_native_revisions_tests|forgecad_workspace_revisions_tests|forgecad_linked_drawing_tests|forgecad_drawing_revisions_tests|forgecad_document_access_tests|forgecad_document_consultation_tests|forgecad_history_suppression_tests|forgecad_document_lifetime_tests|forgecad_sketch_offset_validation_tests|forgecad_geometry_sources_tests|forgekernel_projection_fit_validation_tests)$"
+  ]
+}

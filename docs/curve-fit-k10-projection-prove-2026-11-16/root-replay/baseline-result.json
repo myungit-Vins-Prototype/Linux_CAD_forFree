@@ -1,0 +1,56 @@
+{
+  "exit": 1,
+  "passed": 3,
+  "failed": 30,
+  "seconds": 4.715463056999965,
+  "baseline_revision": "ce03a6d5941840886416aafe055763fb98209e94",
+  "baseline_module_sha256": {
+    "fk_project.cpp": "e6a485ffca68ce326b137856821b4e5408f41f4459f333e243364739bb5a194a",
+    "fk_project.h": "ba305acc2a01a329b878a55e238f1062be4a4042632616cd496e8534102552ee"
+  },
+  "current_test_sha256": "b33ccb834514a7f348782cf9a9e171c0e78bb0ce14e919b2936ddbae3721427b",
+  "current_archive_sha256": "fde7076d2cde820df08723c045bd7866aaadefbb890aca6c5ed280d8eba47eeb",
+  "commands": [
+    [
+      "c++",
+      "-std=c++17",
+      "-O2",
+      "-fno-fast-math",
+      "-ffp-contract=off",
+      "-ffunction-sections",
+      "-fdata-sections",
+      "-I/tmp/projection-root-replay/baseline",
+      "-I/home/myungit/Linux_CAD_forFree/kernel",
+      "-c",
+      "/tmp/projection-root-replay/baseline/fk_project.cpp",
+      "-o",
+      "/tmp/projection-root-replay/baseline/fk_project.cpp.o"
+    ],
+    [
+      "c++",
+      "-std=c++17",
+      "-O2",
+      "-fno-fast-math",
+      "-ffp-contract=off",
+      "-ffunction-sections",
+      "-fdata-sections",
+      "-I/tmp/projection-root-replay/baseline",
+      "-I/home/myungit/Linux_CAD_forFree/kernel",
+      "-c",
+      "/tmp/projection-root-replay/baseline/test_projection_fit_validation.cpp",
+      "-o",
+      "/tmp/projection-root-replay/baseline/test_projection_fit_validation.cpp.o"
+    ],
+    [
+      "c++",
+      "-Wl,--gc-sections",
+      "/tmp/projection-root-replay/baseline/test_projection_fit_validation.cpp.o",
+      "/tmp/projection-root-replay/baseline/fk_project.cpp.o",
+      "/home/myungit/Linux_CAD_forFree/forgecad-release/kernel/libforgekernel.a",
+      "-lpthread",
+      "-o",
+      "/tmp/projection-root-replay/baseline/baseline-tests"
+    ]
+  ],
+  "limits": "Replay of Git HEAD project module with current remaining Release kernel; not the lost frozen initial archive. The old module never calls the new provider. Failures include new contract assertions, not 30 independent bugs."
+}

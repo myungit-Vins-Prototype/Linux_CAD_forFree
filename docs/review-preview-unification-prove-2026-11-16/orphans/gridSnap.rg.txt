@@ -1,0 +1,8 @@
+Command: rg --hidden -n -w gridSnap . --glob !docs/** --glob !archivi-locali/** --glob !.git/**
+./forgeCad2026_viewport.h:107:    bool gridSnap() const;
+./forgeCad2026_gui.cpp:2959:    gridSnapAction->setCheckable(true); gridSnapAction->setChecked(QSettings().value(QStringLiteral("sketch/gridSnap"), true).toBool());
+./forgeCad2026_gui.cpp:3267:        QSettings().setValue(QStringLiteral("sketch/gridSnap"), enabled);
+./forgeCad2026_gui.cpp:3488:        {angleConstraint, QStringLiteral("constraintAngle")}, {snapAction, QStringLiteral("snap")}, {gridSnapAction, QStringLiteral("gridSnap")}, {originSnapAction, QStringLiteral("originSnap")},
+./forgeCad2026_gui.cpp:3841:                                   QStringLiteral("sketch/geometrySnap"), QStringLiteral("sketch/gridSnap"),
+./cad_icons.cpp:413:    icons["gridSnap"] = [](QPainter &p, const IconPalette &c) {
+./forgeCad2026_viewport.cpp:80:bool CadViewport::gridSnap() const { return gridSnap_; }

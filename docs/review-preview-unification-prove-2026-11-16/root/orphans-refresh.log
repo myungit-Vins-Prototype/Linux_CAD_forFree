@@ -1,0 +1,23 @@
+22 candidates verified; private/local= 5 public= 17 scanned source files= 763
+CadViewport::setSelectedPointPosition forgeCad2026_viewport_selection.cpp:746 forgeCad2026_viewport.h:1256 privata
+CadViewport::setEdgePickLinear forgeCad2026_viewport_selection.cpp:232 forgeCad2026_viewport.h:458 pubblica
+CadViewport::setExtendPickCallback forgeCad2026_viewport_selection.cpp:230 forgeCad2026_viewport.h:456 pubblica
+CadViewport::resumeExtendPick forgeCad2026_viewport_selection.cpp:237 forgeCad2026_viewport.h:460 pubblica
+CadViewport::constraintsVisible forgeCad2026_viewport_sketch.cpp:1259 forgeCad2026_viewport.h:799 pubblica
+CadViewport::sectionEnabled forgeCad2026_viewport.cpp:456 forgeCad2026_viewport.h:750 pubblica
+CadViewport::geometrySnap forgeCad2026_viewport.cpp:76 forgeCad2026_viewport.h:105 pubblica
+CadViewport::gridSnap forgeCad2026_viewport.cpp:80 forgeCad2026_viewport.h:107 pubblica
+CadViewport::basisMatrix forgeCad2026_viewport_scene.cpp:48 forgeCad2026_viewport.h:823 pubblica
+CadViewport::normalizedViewAngle forgeCad2026_viewport_scene.cpp:83 forgeCad2026_viewport.h:844 pubblica statica
+CadViewport::extrusionNames forgeCad2026_viewport_document.cpp:914 forgeCad2026_viewport.h:318 pubblica
+StoryboardTree::firstFeature forgeCad2026_storyboard.cpp:549 forgeCad2026_storyboard.h:94 privata statica
+ForgeCad::DrawingSheetEditor::setModelProvider cad_drawing_editor.cpp:3649 cad_drawing_editor.h:104 pubblica
+ForgeCad::forgeIntersectRay cad_forge.cpp:2407 cad_forge.h:228 pubblica libera
+ForgeCad::modelBodyFeatures cad_model_history.cpp:75 cad_model_history.h:42 pubblica libera
+ForgeCad::usesSketch cad_feature_dependencies.cpp:205 cad_feature_dependencies.h:21 pubblica libera
+ForgeCad::commandIconNames cad_icons.cpp:1634 cad_icons.h:15 pubblica libera
+ForgeCad::nearestBodyEdge cad_sketch_refs.cpp:151 cad_sketch_refs.h:66 pubblica libera
+ForgeCad::appendFixedReferenceLine cad_sketch_refs.cpp:576 cad_sketch_refs.h:57 pubblica libera
+ForgeCad::Kernel::Corner::otherFace kernel/fk_blend.cpp:369 kernel/fk_blend.cpp:369 locale TU
+ForgeCad::Kernel::ChainEdge::inPlane kernel/fk_blend_loop.cpp:107 kernel/fk_blend_loop.cpp:107 locale TU
+ForgeCad::Kernel::BandMatrix::band kernel/fk_fill.cpp:240 kernel/fk_fill.cpp:240 locale TU

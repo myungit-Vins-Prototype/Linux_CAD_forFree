@@ -1,0 +1,9 @@
+from pathlib import Path
+import subprocess,hashlib
+r=Path('/home/myungit/Linux_CAD_forFree');p=r/'docs/ellisse-estremi-prove-2026-11-16';root=p/'root'
+with (root/'architecture-check-final.log').open('w') as log:subprocess.run(['python3','tools/generate_architecture.py','--check'],cwd=r,stdout=log,stderr=subprocess.STDOUT,check=True)
+for name in ['ellipse-architecture-audit.py.txt','ellipse-finalize-docs.py.txt','ellipse-final-audit.py.txt','ellipse-seal-evidence.py.txt','ellipse-final-audit.py.txt','ellipse-seal-evidence.py.txt']:
+    subprocess.run(['python3',str(root/name)],cwd=r,check=True)
+for line in (p/'SHA256SUMS').read_text().splitlines():
+    h,name=line.split('  ',1);assert hashlib.sha256((p/name).read_bytes()).hexdigest()==h,name
+print('Ellisse: build completa,24CTest,GL,architettura,conservazione e manifest PASS')

@@ -1,0 +1,133 @@
+--- before/CLAUDE.md
++++ after/CLAUDE.md
+@@ -108,17 +108,17 @@
+ 
+ ## Ultimi interventi — esiti consolidati
+ 
+-**15/11 — K10, appiattimento piano con tre agenti GPT-6.1 Sol.**
+-Singola Plane: coefficienti originali Line/NURBS preservati, bound continuo e
+-SP-curve finale; gap numerico vertici distinto. Corretto rilievo perso5,74e-5mm.
+-App/runner,6gruppi/27scenari,19CTest,6ASan/UBSan/LSan mirati,118audit PASS.
+-Mappa755/10888/375TU/check/HTML/archi PASS;2236file iniziali,7modificati mirati.
+-K10 aperto:9/24 siti parziali,15restanti più fallback; quilt curvi/duefacce,
+-coniche, tensor diagonali e offset significativi restano fuori dal nuovo ramo.
++**15/11 — K10, pareti di Spessore con tre agenti GPT-6.1 Sol.**
++Bordi su Plane: traslazione/estrusione originali, caps e cucitura preservati;
++corretta perdita5,74e-5mm. App/runner,6gruppi/31scenari,18CTest,
++6ASan/UBSan/LSan mirati,37audit e precedenti6thicken/38history PASS.
++Mappa756/10923/376TU/check/HTML/archi PASS;2372fileiniziali,7modificatimirati.
++K10 aperto:11/24 siti parziali,13restanti più fallback; normali variabili,
++quiltcurvi/duefacce, tensor diagonali e offset significativi ancora aperti.
++Rappresentazione conservata con roundoffordinario, nessun nuovooracle globale.
+ 24rilievi precedenti corretti,22orfane candidate; anteprime/pannelli da uniformare.
+-K2 in produzione. [Rapporto e prove](docs/curve-fit-k10-flatten-2026-11-15.md),
+-[obliquo precedente](docs/curve-fit-k10-diagonal-2026-11-15.md),
+-[memoria conservata](docs/history/claude-prima-k10-flatten-2026-11-15.md).
++K2 in produzione. [Rapporto e prove](docs/curve-fit-k10-thicken-2026-11-15.md),
++[memoria conservata](docs/history/claude-prima-k10-thicken-2026-11-15.md).
+ 
+ **15/11 — K2 completato in produzione con due agenti GPT-6.1 Sol.**
+ Atlante carrier, fori/nesting, ponte analitico conservativo, SP-curve NURBS coerenti,
+--- before/docs/code-review-2026-11-15.md
++++ after/docs/code-review-2026-11-15.md
+@@ -1,6 +1,6 @@
+ # Review generale ForgeCAD — 15 novembre 2026
+ 
+-**Stato più recente:** [K10 Appiattimento piano](curve-fit-k10-flatten-2026-11-15.md) conserva i contorni Line/NURBS originali di una singola faccia Plane, correggendo una perdita geometrica di 5,74e-5 mm nascosta fra i campioni. Build completa, 6 gruppi/27 scenari, 19 CTest, sanitizer mirati e 118 controlli indipendenti PASS. **9/24 siti iniziali parzialmente trattati, 15 interamente da migrare**, oltre ai fallback: K10 resta aperto per quilt curvi/due facce, altre famiglie e chiamanti campionati. I 24 rilievi precedenti corretti e le 22 orfane candidate non cambiano. Uniformazione completa anteprime/pannelli ancora aperta; K2 in produzione.
++**Stato più recente:** [K10 Pareti di Spessore su Plane](curve-fit-k10-thicken-2026-11-15.md) conserva le curve originali nelle pareti, correggendo un dettaglio di 5,74e-5 mm perso dal fit campionato. Build completa, 6 gruppi/31 scenari, 18 CTest, sanitizer mirati e audit indipendente PASS. **11/24 siti iniziali parzialmente trattati, 13 interamente da migrare**, oltre ai fallback: K10 resta aperto per normali variabili e altri chiamanti campionati. I 24 rilievi precedenti corretti e le 22 orfane candidate non cambiano. Uniformazione completa anteprime/pannelli ancora aperta; K2 in produzione.
+ 
+ **Aggiornamento successivo:** i cinque rilievi della [seconda review](review-followup-2026-11-15.md) K7/K8/K9/PRE4/UI7 sono corretti: **24 difetti precedenti corretti complessivamente**. La [prosecuzione K10](curve-fit-k10-2026-11-15.md) corregge il fit degli offset NURBS di estrusioni/rivoluzioni con controllo continuo, input finiti e fallimenti atomici; build completa e regressioni PASS. **K10 resta aperto per i chiamanti generici ancora campionati**. Le 22 orfane restano candidati distinti. Stato storico della prima review sotto.
+ 
+--- before/docs/curve-fit-k10-flatten-2026-11-15.md
++++ after/docs/curve-fit-k10-flatten-2026-11-15.md
+@@ -37,3 +37,8 @@
+ Questo blocco tratta una famiglia di un nuovo punto iniziale: **9/24 siti parzialmente trattati, 15 interamente da migrare**, oltre ai fallback dei siti già affrontati. K10 resta aperto. Appiattimenti di due facce, supporti curvi e altre famiglie non riconosciute mantengono il percorso precedente; le relative misure campionate non sono certificati globali. Restano aperti anche mapping tensoriali diagonali e offset normali significativi del blocco precedente.
+ 
+ Il totale dei **24 rilievi precedenti corretti** non aumenta. **K2 è in produzione**; restano **22 candidate orfane** e l'uniformazione completa di anteprime, pannelli e stili. Non si afferma assenza globale di leak o difetti; nessuna nuova prova OpenGL in questo intervento. Le [prove e il manifest](curve-fit-k10-flatten-prove-2026-11-15/README.md) distinguono baseline, risultati finali e verifiche mirate.
++
++
++## Prosecuzione successiva
++
++Il [blocco Spessore su facce piane](curve-fit-k10-thicken-2026-11-15.md) conserva le curve originali delle pareti tramite traslazione ed estrusione. Copre due ulteriori siti iniziali per questa famiglia: 11/24 parzialmente trattati, 13 interamente da migrare, oltre ai fallback. I risultati sopra descrivono la precedente consegna di appiattimento.
+--- before/kernel/CMakeLists.txt
++++ after/kernel/CMakeLists.txt
+@@ -607,3 +607,11 @@
+ set_target_properties(forgekernel_planar_flatten_validation_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+ add_test(NAME forgekernel_planar_flatten_validation_tests COMMAND forgekernel_planar_flatten_validation_tests)
+ set_tests_properties(forgekernel_planar_flatten_validation_tests PROPERTIES TIMEOUT 180)
++
++# Conservazione delle curve originali nelle pareti piane di Spessore.
++add_executable(forgekernel_planar_thicken_validation_tests tests/fk_test_main.cpp tests/test_planar_thicken_validation.cpp)
++target_link_libraries(forgekernel_planar_thicken_validation_tests PRIVATE forgekernel)
++target_compile_options(forgekernel_planar_thicken_validation_tests PRIVATE -Wall -Wextra -Wpedantic)
++set_target_properties(forgekernel_planar_thicken_validation_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
++add_test(NAME forgekernel_planar_thicken_validation_tests COMMAND forgekernel_planar_thicken_validation_tests)
++set_tests_properties(forgekernel_planar_thicken_validation_tests PROPERTIES TIMEOUT 180)
+--- before/kernel/fk_thicken.cpp
++++ after/kernel/fk_thicken.cpp
+@@ -1,4 +1,5 @@
+ #include "fk_thicken.h"
++#include "fk_cancel.h"
+ #include "fk_history_tools.h"
+ 
+ #include <algorithm>
+@@ -282,6 +283,33 @@
+                                          std::make_shared<Plane>(Frame3(pa, normalized(cross(direction, na)), direction))),item.edge);
+                     continue;
+                 }
++            }
++            bool directPlaneWall = false;
++            if (sheet.face(item.face).surface->type() == SurfaceType::Plane) {
++                auto wallBasis = edge.curve;
++                while (wallBasis->type() == CurveType::Trimmed || wallBasis->type() == CurveType::Transformed) {
++                    cancellationPoint();
++                    wallBasis = wallBasis->type() == CurveType::Trimmed
++                        ? static_cast<const TrimmedCurve<3> &>(*wallBasis).basis()
++                        : static_cast<const TransformedCurve &>(*wallBasis).basis();
++                }
++                // Other remains the explicitly unsupported legacy fit path.
++                directPlaneWall = wallBasis->type() != CurveType::Other;
++            }
++            if (directPlaneWall) {
++                // The oriented normal of a Plane is structurally constant.
++                // Preserve the ORIGINAL curve, parameter and rational weights;
++                // two sampled cubic fits can silently erase source detail.
++                // Keep the existing offset caps and their sewing/history path.
++                const Vec3 normal = faceNormalAt(sheet, item.face, edge.curve->point(range.lo));
++                const auto shifted = [&](double s) -> CurvePtr<3> {
++                    return s == 0.0 ? edge.curve
++                        : transformCurve(edge.curve, Transform3::translation(s * normal));
++                };
++                const CurvePtr<3> base = shifted(s0), top = shifted(s1);
++                addWall(wall(base, top, range,
++                    std::make_shared<ExtrusionSurface>(base, normal)), item.edge);
++                continue;
+             }
+             // I due fit adattivi visitano spesso gli stessi parametri. Conserva
+             // le normali per tratto: la proiezione sulla superficie e' il costo
+--- before/kernel/fk_thicken.h
++++ after/kernel/fk_thicken.h
+@@ -20,7 +20,10 @@
+     double thickness = 1.0;  // > 0
+     ThickenSide side = ThickenSide::Forward;
+     // Lungo la normale (useDirection falso): superficie a distanza (fk_offset)
+-    // e pareti rigate lungo la normale ai bordi. Le facce devono essere unite
++    // e pareti rigate lungo la normale ai bordi. Su una faccia Plane le
++    // pareti dei bordi supportati conservano curve e parametri originali
++    // mediante traslazione ed estrusione, con arrotondamenti ordinari.
++    // Le facce devono essere unite
+     // da spigoli tangenti; lo spessore non puo' superare il raggio di
+     // curvatura dalla parte in cui va.
+     // Lungo una direzione (useDirection vero): copia traslata della superficie
+--- before/tools/generate_architecture.py
++++ after/tools/generate_architecture.py
+@@ -221,6 +221,9 @@
+  'kernel/tests/test_mapping_carrier_validation.cpp': ('tests', 'Regressioni mapping con rilievi del carrier nascosti, bordi e parametri, pesi, scale, pose, fori, genealogia, codec e fallimenti atomici; confronto con il percorso precedente e sanitizer mirati.'),
+  'kernel/fk_mapping_fit.cpp': ('kernel', 'Fit Hermite cubico/quintico adattivo condiviso dalle mappature: celle NURBS con derivate comuni, stencil locali espliciti, controlli dello scarto e budget geometrici prefissati; nessuna mesh di calcolo.'),
+  'kernel/fk_mapping_fit.h': ('kernel', 'Contratti interni del fit parametrico e della trasformazione B-rep tramite corrispondenza analitica; immagine di faccia a carrier conservato e trasferimento UV esplicito.'),
++ 'kernel/fk_thicken.cpp': ('kernel', 'Spessore lungo normale o direzione: su bordi di facce Plane le pareti conservano curve e parametri originali con traslazione ed estrusione; caps offset e genealogia conservati, superfici curve ancora con fit campionato e controlli locali.'),
++ 'kernel/fk_thicken.h': ('kernel', 'Contratto dello spessore di lamine: lato, normale o direzione, budget offset e conservazione dei bordi nelle pareti di facce Plane; limiti dei percorsi curvi.'),
++ 'kernel/tests/test_planar_thicken_validation.cpp': ('tests', 'Regressioni pareti di Spessore su Plane: dettagli NURBS nascosti, pesi e parametri originali, pose e lati, trim, fori, rappresentazioni finali, genealogia e codec.'),
+  'kernel/fk_planar_flatten.cpp': ('kernel', 'Trasformazione affine dei contorni UV originali per appiattimento di una faccia Plane: coefficienti e parametro conservati, limiti continui di arrotondamento, risorse e cancellazione.'),
+  'kernel/fk_planar_flatten.h': ('kernel', 'Contratto del percorso affine per appiattimento piano: mappa condivisa, curve originali supportate e errore continuo dichiarato.'),
+  'kernel/tests/test_planar_flatten_validation.cpp': ('tests', 'Regressioni appiattimento piano con dettagli NURBS nascosti tra campioni: pesi, pose, scale, trim, fori, inversione della mappa, codec, genealogia e atomicita degli output.'),

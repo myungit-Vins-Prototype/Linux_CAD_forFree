@@ -1,0 +1,88 @@
+{
+  "scope": "single structural Plane SurfaceQuiltMap flatten/fold; other carriers and two-face quilt legacy",
+  "groups": 6,
+  "top_level_scenarios": 27,
+  "scenario_partition": {
+    "hidden_poly_rational_pose_scale_sense": 12,
+    "nested_partial_trim_reverse_hole_roundtrip": 4,
+    "invalid_tolerance_and_cancellation": 7,
+    "line_uv_nonunit_range": 1,
+    "angular_conic_legacy": 1,
+    "fold_window_sense_variants": 2
+  },
+  "fold_subchecks_per_variant": {
+    "corners_roundtrip": 4,
+    "outside_window_rejections": 4,
+    "physical_margin_clamps": 2
+  },
+  "normal": {
+    "passed": 6,
+    "total": 6,
+    "elapsed_seconds": 1.26,
+    "maxrss_kib": 6508,
+    "log": "test-fixed-final.log"
+  },
+  "baseline": {
+    "passed": 3,
+    "total": 6,
+    "elapsed_seconds": 1.25,
+    "log": "test-before-final.log",
+    "method": "before/fk_quilt_mapping.o + before/fk_mapping_fit.o + before/fk_offset.o override current archive; source/object hashes frozen before root builds",
+    "geometric_failure_groups": 2,
+    "representation_only_failure_groups": 1
+  },
+  "sanitizer": {
+    "passed": 6,
+    "total": 6,
+    "elapsed_seconds": 3.36,
+    "maxrss_kib": 474688,
+    "diagnostics": 0,
+    "ASAN": true,
+    "UBSAN": true,
+    "LSAN": true,
+    "exit_code": 0,
+    "log": "sanitizer-final.log",
+    "instrumented_TUs": [
+      "fk_planar_flatten.cpp",
+      "fk_quilt_mapping.cpp",
+      "test_planar_flatten_validation.cpp"
+    ],
+    "uninstrumented": "remaining Release archive and test main",
+    "environment": {
+      "ASAN_OPTIONS": "detect_leaks=1:halt_on_error=1",
+      "UBSAN_OPTIONS": "halt_on_error=1"
+    },
+    "outside_sandbox_ptrace_limit": true
+  },
+  "repro": {
+    "operation_tolerance": 1e-06,
+    "boundary_budget": 2e-08,
+    "source_issues": 0,
+    "result_issues": 0,
+    "source_binary_immutable": true,
+    "polynomial": {
+      "baseline_reported": 2.4765581702771594e-10,
+      "baseline_nearest_all_edges_error": 5.7424751730650314e-05,
+      "fixed_reported": 8.526979022893637e-14,
+      "fixed_nearest_all_edges_error": 0
+    },
+    "rational_positive_variable_weights": {
+      "baseline_reported": 2.894104106389075e-10,
+      "baseline_nearest_all_edges_error": 5.4162191958084804e-05,
+      "fixed_reported": 8.526979022893637e-14,
+      "fixed_nearest_all_edges_error": 0
+    }
+  },
+  "final_sha256": {
+    "test": "6a95304ed60f2bdbc05ecc5a41e38baf2a34373af3918c84f47943241d03d211",
+    "helper": "fa746a9dfbe1f722e0590a60899f2a651efffee2beb1bb5b912034d47ca6c30f",
+    "header": "2379037d4404c5cc778ae38ea264e5fc27cb7eb81238506e97037ec02bd0adac",
+    "quilt": "9f2cc08b051e92569dac5081aa558f61e431e332abc652f51a23096ff286b826"
+  },
+  "not_claimed": [
+    "global injectivity",
+    "continuous certification of legacy curved/two-face paths",
+    "whole-archive sanitizer coverage",
+    "app/renderer/globalCTest verification from this private runner"
+  ]
+}

@@ -1,0 +1,7 @@
+#include <cstdlib>
+#include <cstdio>
+__attribute__((noinline)) void intentionalLeak() {
+    void *p = std::malloc(19);
+    std::fprintf(stderr,"calibration allocation %p\n",p);
+}
+int main() { intentionalLeak(); return 0; }

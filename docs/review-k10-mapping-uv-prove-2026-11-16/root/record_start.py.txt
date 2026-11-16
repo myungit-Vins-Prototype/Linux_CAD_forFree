@@ -1,0 +1,39 @@
+from pathlib import Path
+R=Path('/home/myungit/Linux_CAD_forFree');p=R/'CLAUDE.md';s=p.read_text();a=R/'docs/history/claude-prima-k10-mapping-uv-2026-11-16.md';assert not a.exists() or a.read_text()==s;a.write_text(s)
+old='''**15/11 — Cache B-spline M1/M2 corrette con tre agenti Sol.**
+Snapshot/CAS,copie atomiche e durata shared_ptr:5regressioni ASan/TSan PASS.
+App/47CTest/mappa PASS;runner325casi poi timeout300s,nessun GL.
+[Prove e limiti](docs/cache-bspline-2026-11-15.md).
+'''
+new='''Cache M1/M2: snapshot/CAS, copie atomiche e shared_ptr; app/47CTest/5ASan/TSan PASS,
+runner325 poi timeout300s,nessun GL. [Prove](docs/cache-bspline-2026-11-15.md); dettagli in memoria precedente.
+''';assert old in s;s=s.replace(old,new)
+marker='## Ultimi interventi — esiti consolidati\n\n';entry='''**16/11 — K10 Mapping/Quilt UV, analisi con tre agenti Sol.**
+Due trasferimenti ancora campionati; candidato Plane in copie private, con
+provider continuo esistente e offset senza fitUV superfluo. Nessuna modifica
+software integrata;31rilievi corretti invariati. [Stato](docs/review-k10-mapping-uv-2026-11-16.md).
+
+''';assert marker in s;s=s.replace(marker,marker+entry,1)
+old_k12='''R0,5:quarto vincolo efit minimo verificati,continuazioneU sugli stessi
+supporti/endpoint,budget invariati;looplimitati/cancellabili. App completa e
+Wayland,34CTest,8varianti/6regressioni,sanitizer4TU PASS.
+Fraction prova vecchiopunto>10edgeTol;audit734fin/426917campate campionato PASS.
+30rilievi corretti;K10resta19/24parziali+5aperti,fitimpliciticampionati.
+'''
+new_k12='''R0,5:quarto vincolo/fit minimo e continuazioneU; supporti e budget invariati.
+App/Wayland/34CTest,8varianti/6regressioni/sanitizer4TU/Fraction PASS;
+audit734fin campionato. K10 resta19/24parziali+5aperti.
+''';assert old_k12 in s;s=s.replace(old_k12,new_k12)
+# Keep compact memory while archiving the old detailed cache block intact.
+assert len(s.encode())<=16384,(len(s.encode()));p.write_text(s)
+(R/'docs/review-k10-mapping-uv-2026-11-16.md').write_text('''# K10 — trasferimenti UV Mapping/Quilt, 16 novembre 2026
+
+Analisi con tre agenti GPT-6.1 Sol. Baseline di 4.232 file congelata prima delle modifiche; nove sigilli precedenti verificati, compreso UI8 con 152 artefatti. Consultate descrizioni e 1.001 relazioni incidenti del grafo 774/11215/386.
+
+I due siti aperti trasferiscono SP-curve sul carrier conservato e calcolano il dominio dell’offset. La prima famiglia affrontabile è Plane: riuso di `fitPCurveOnPlane`/`requirePCurveOnPlane` sul bordo effettivamente emesso, conservando parametro e budget fisico; nel Quilt l’offset Plane ignora i bounds UV, quindi il relativo fit può essere evitato. Il fit dei bordi 3D rimane campionato e questa correzione non deve certificare la mappa geometrica completa. Le famiglie non Plane restano fuori dal nuovo controllo continuo.
+
+Sorgenti di produzione ancora invariati; candidati, riproduttori, prove e audit solo in `/tmp/mapping-uv-review`. Non si dichiarano nuovi bug riprodotti né un nuovo totale: 31 rilievi corretti. K10 resta 19/24 siti parzialmente trattati e cinque interamente da migrare finché l’integrazione non è verificata.
+
+[Memoria precedente](history/claude-prima-k10-mapping-uv-2026-11-16.md).
+''')
+print('Memory',len(s.encode()),'bytes')

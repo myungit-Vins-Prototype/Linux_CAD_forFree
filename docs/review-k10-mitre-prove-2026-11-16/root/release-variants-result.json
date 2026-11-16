@@ -1,0 +1,7 @@
+{
+  "exit": 0,
+  "seconds": 0.06378904600205715,
+  "command": [
+    "forgecad-release/kernel/forgekernel_blend_mitre_validation_tests"
+  ]
+}

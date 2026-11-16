@@ -1,0 +1,66 @@
+{
+  "qt-friend": {
+    "command": [
+      "rg",
+      "-n",
+      "Q_OBJECT|Q_INVOKABLE|Q_PROPERTY|slots:|signals:|friend",
+      "forgeCad2026_viewport.h",
+      "forgeCad2026_storyboard.h"
+    ],
+    "exit": 0,
+    "output": "forgeCad2026_viewport.h:82:    friend class ViewportInteractionTest;\n",
+    "stderr": ""
+  },
+  "cpp-direct-includes": {
+    "command": [
+      "rg",
+      "-n",
+      "#[ \\t]*include[ \\t]*[<\\\"][^\\\">]*(fk_blend\\.cpp|fk_blend_loop\\.cpp|fk_fill\\.cpp)",
+      "CMakeLists.txt",
+      "cad_circular_pattern_fit.cpp",
+      "cad_circular_pattern_fit.h",
+      "... explicit scanned files"
+    ],
+    "exit": 1,
+    "output": "",
+    "stderr": ""
+  },
+  "test-private-five": {
+    "command": [
+      "rg",
+      "-n",
+      "\\b(setSelectedPointPosition|firstFeature|Corner::otherFace|ChainEdge::inPlane|BandMatrix::band)\\b",
+      "kernel/occt_tests/CMakeLists.txt",
+      "kernel/tests/fk_test.h",
+      "kernel/tests/fk_test_main.cpp",
+      "... explicit scanned files"
+    ],
+    "exit": 1,
+    "output": "",
+    "stderr": ""
+  },
+  "function-pointer-uses": {
+    "command": [
+      "rg",
+      "-n",
+      "((Corner|ChainEdge|BandMatrix)[ \\t]*::|&[ \\t]*(CadViewport::setSelectedPointPosition|StoryboardTree::firstFeature|otherFace|inPlane|band)\\b)",
+      "CMakeLists.txt",
+      "cad_circular_pattern_fit.cpp",
+      "cad_circular_pattern_fit.h",
+      "... explicit scanned files"
+    ],
+    "exit": 0,
+    "output": "kernel/fk_constraint_linear.h:156:                      const BandOrder &band, std::vector<double> &z) {\ntests/test_viewport.cpp:10277:            const ExtrusionObject &band = surfaces.extrusions_.back();\n",
+    "stderr": ""
+  },
+  "scope": {
+    "active_files": 767,
+    "test_files": 275,
+    "test_roots": {
+      "tests": 163,
+      "kernel/tests": 111,
+      "kernel/occt_tests": 1
+    },
+    "not_dependent_on_cmake": true
+  }
+}

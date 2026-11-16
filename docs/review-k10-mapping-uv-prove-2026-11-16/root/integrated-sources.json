@@ -1,0 +1,7 @@
+{
+  "kernel/fk_surface_mapping.cpp": "c830c1c802657b50dd1cafa223af91263dba185cdf109524a16c602b6986f707",
+  "kernel/fk_quilt_mapping.cpp": "21a41fb7513ba6ca48987956632aa2d2bbdf57c49c4f9681907a4c512668df05",
+  "kernel/tests/test_mapping_pcurve_validation.cpp": "df459b846a422ebe6d2bd56ea5eb6c136d573a0700413c2fbc8397143119224a",
+  "kernel/CMakeLists.txt": "969b1c32368e4811a0b8c623d1e1562f16e1b5c702285f31eb6f641ee325e109",
+  "tools/generate_architecture.py": "1fbebe9a7879ffd0e0a9ab35b7e9395b7188ac56304980f071ec6eb59826f4bb"
+}

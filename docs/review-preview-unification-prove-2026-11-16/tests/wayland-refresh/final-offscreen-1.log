@@ -1,0 +1,161 @@
+BEGIN smoke Pattern
+PASS Smoke fixture contains real built solids and a cylinder
+PASS Pattern opens its actual function panel after synchronous initialization
+PASS Smoke panel holds its document interaction lock
+PASS Pattern preview belongs to a fixed footer outside the scrolling form
+PASS Pattern fixed footer precedes the persistent confirmation buttons
+FOOTER scroll Pattern maximum=1147 value=1147 scroll_height=61 exposed=1 exposure_wait_ms=13 panel=430,280 preview_y_before=178 preview_y_after=178
+PASS Pattern scrolling the actual form keeps the preview footer fixed
+PASS Pattern hide/show does not duplicate or relocate footer, preview message or buttons
+PASS Pattern enables storyboard picking only while active
+PASS Pattern cancellation clears picker, callbacks, preview and lock
+SMOKE Pattern actual_visible=1 close_and_cleanup=1
+PASS Pattern restores enabled dock, clears its callback and re-enables the history rail
+END smoke Pattern
+BEGIN smoke Extrusion
+PASS Smoke fixture contains real built solids and a cylinder
+PASS Extrusion opens its actual function panel after synchronous initialization
+PASS Smoke panel holds its document interaction lock
+PASS Extrusion preview belongs to a fixed footer outside the scrolling form
+PASS Extrusion fixed footer precedes the persistent confirmation buttons
+FOOTER scroll Extrusion maximum=483 value=483 scroll_height=61 exposed=1 exposure_wait_ms=7 panel=430,280 preview_y_before=178 preview_y_after=178
+PASS Extrusion scrolling the actual form keeps the preview footer fixed
+PASS Extrusion hide/show does not duplicate or relocate footer, preview message or buttons
+PASS Extrusion cancellation clears picker, callbacks, preview and lock
+SMOKE Extrusion actual_visible=1 close_and_cleanup=1
+END smoke Extrusion
+BEGIN smoke Transform
+PASS Smoke fixture contains real built solids and a cylinder
+PASS Transform opens its actual function panel after synchronous initialization
+PASS Smoke panel holds its document interaction lock
+PASS Transform preview belongs to a fixed footer outside the scrolling form
+PASS Transform fixed footer precedes the persistent confirmation buttons
+FOOTER scroll Transform maximum=521 value=521 scroll_height=61 exposed=1 exposure_wait_ms=7 panel=430,280 preview_y_before=178 preview_y_after=178
+PASS Transform scrolling the actual form keeps the preview footer fixed
+PASS Transform hide/show does not duplicate or relocate footer, preview message or buttons
+PASS Transform cancellation clears picker, callbacks, preview and lock
+SMOKE Transform actual_visible=1 close_and_cleanup=1
+END smoke Transform
+BEGIN smoke Thread
+PASS Smoke fixture contains real built solids and a cylinder
+PASS Thread fixture has a resolvable cylindrical face before dialog initialization
+PASS Thread opens its actual function panel after synchronous initialization
+PASS Smoke panel holds its document interaction lock
+PASS Thread preview belongs to a fixed footer outside the scrolling form
+PASS Thread fixed footer precedes the persistent confirmation buttons
+FOOTER scroll Thread maximum=979 value=979 scroll_height=61 exposed=1 exposure_wait_ms=7 panel=430,280 preview_y_before=178 preview_y_after=178
+PASS Thread scrolling the actual form keeps the preview footer fixed
+PASS Thread hide/show does not duplicate or relocate footer, preview message or buttons
+PASS Thread readFace and populateSizes initialize using valid candidate indices
+PASS Thread standard change repopulates valid sizes
+PASS Thread body selection change and restoration preserve valid indices
+PASS Thread cancellation clears picker, callbacks, preview and lock
+SMOKE Thread actual_visible=1 close_and_cleanup=1
+END smoke Thread
+BEGIN smoke Offset Shell
+PASS Smoke fixture contains real built solids and a cylinder
+PASS Offset Shell opens its actual function panel after synchronous initialization
+PASS Smoke panel holds its document interaction lock
+PASS Offset Shell preview belongs to a fixed footer outside the scrolling form
+PASS Offset Shell fixed footer precedes the persistent confirmation buttons
+FOOTER scroll Offset Shell maximum=498 value=498 scroll_height=61 exposed=1 exposure_wait_ms=6 panel=430,280 preview_y_before=178 preview_y_after=178
+PASS Offset Shell scrolling the actual form keeps the preview footer fixed
+PASS Offset Shell hide/show does not duplicate or relocate footer, preview message or buttons
+PASS Offset Shell cancellation clears picker, callbacks, preview and lock
+SMOKE Offset Shell actual_visible=1 close_and_cleanup=1
+END smoke Offset Shell
+BEGIN smoke Ruled
+PASS Smoke fixture contains real built solids and a cylinder
+PASS Ruled opens its actual function panel after synchronous initialization
+PASS Smoke panel holds its document interaction lock
+PASS Ruled preview belongs to a fixed footer outside the scrolling form
+PASS Ruled fixed footer precedes the persistent confirmation buttons
+FOOTER scroll Ruled maximum=1184 value=1184 scroll_height=61 exposed=1 exposure_wait_ms=7 panel=430,280 preview_y_before=178 preview_y_after=178
+PASS Ruled scrolling the actual form keeps the preview footer fixed
+PASS Ruled hide/show does not duplicate or relocate footer, preview message or buttons
+PASS Ruled cancellation clears picker, callbacks, preview and lock
+SMOKE Ruled actual_visible=1 close_and_cleanup=1
+END smoke Ruled
+BEGIN smoke Boundary
+PASS Smoke fixture contains real built solids and a cylinder
+PASS Boundary opens its actual function panel after synchronous initialization
+PASS Smoke panel holds its document interaction lock
+PASS Boundary preview belongs to a fixed footer outside the scrolling form
+PASS Boundary fixed footer precedes the persistent confirmation buttons
+FOOTER scroll Boundary maximum=519 value=519 scroll_height=61 exposed=1 exposure_wait_ms=6 panel=430,280 preview_y_before=178 preview_y_after=178
+PASS Boundary scrolling the actual form keeps the preview footer fixed
+PASS Boundary hide/show does not duplicate or relocate footer, preview message or buttons
+PASS Boundary cancellation clears picker, callbacks, preview and lock
+SMOKE Boundary actual_visible=1 close_and_cleanup=1
+END smoke Boundary
+BEGIN smoke Fill
+PASS Smoke fixture contains real built solids and a cylinder
+PASS Fill opens its actual function panel after synchronous initialization
+PASS Smoke panel holds its document interaction lock
+PASS Fill preview belongs to a fixed footer outside the scrolling form
+PASS Fill fixed footer precedes the persistent confirmation buttons
+FOOTER scroll Fill maximum=1369 value=1369 scroll_height=61 exposed=1 exposure_wait_ms=8 panel=430,280 preview_y_before=178 preview_y_after=178
+PASS Fill scrolling the actual form keeps the preview footer fixed
+PASS Fill hide/show does not duplicate or relocate footer, preview message or buttons
+PASS Fill cancellation clears picker, callbacks, preview and lock
+SMOKE Fill actual_visible=1 close_and_cleanup=1
+END smoke Fill
+BEGIN smoke Planar
+PASS Smoke fixture contains real built solids and a cylinder
+PASS Planar opens its actual function panel after synchronous initialization
+PASS Smoke panel holds its document interaction lock
+PASS Planar preview belongs to a fixed footer outside the scrolling form
+PASS Planar fixed footer precedes the persistent confirmation buttons
+FOOTER scroll Planar maximum=528 value=528 scroll_height=61 exposed=1 exposure_wait_ms=6 panel=430,280 preview_y_before=178 preview_y_after=178
+PASS Planar scrolling the actual form keeps the preview footer fixed
+PASS Planar hide/show does not duplicate or relocate footer, preview message or buttons
+PASS Planar cancellation clears picker, callbacks, preview and lock
+SMOKE Planar actual_visible=1 close_and_cleanup=1
+END smoke Planar
+BEGIN smoke Datum
+PASS Smoke fixture contains real built solids and a cylinder
+PASS Datum opens its actual function panel after synchronous initialization
+PASS Smoke panel holds its document interaction lock
+SKIP footer Datum reason=no PreviewScope message in this runner
+PASS Datum cancellation clears picker, callbacks, preview and lock
+SMOKE Datum actual_visible=1 close_and_cleanup=1
+END smoke Datum
+BEGIN smoke Measure
+PASS Smoke fixture contains real built solids and a cylinder
+PASS Measure opens its actual function panel after synchronous initialization
+PASS Smoke panel holds its document interaction lock
+SKIP footer Measure reason=no PreviewScope message in this runner
+PASS Measure cancellation clears picker, callbacks, preview and lock
+SMOKE Measure actual_visible=1 close_and_cleanup=1
+END smoke Measure
+SMOKE TOTAL actual_visible=11 close_and_cleanup=11 expected=11
+PASS Shell starts with a real ready worker result
+PASS Shell zero thickness cancels geometry and pending work
+PASS Shell zero thickness has an explicit unavailable preview state
+PASS Shell invalid state remains stable after queued work
+PASS Shell valid preview recovers after zero thickness
+PASS Shell clears the old thickness error on recovery
+PASS Shell closes without picker, worker or interaction lock
+PASS Thread without a cylindrical face does not claim a running calculation
+PASS Thread picker has an explicit waiting state
+PASS Thread cancellation clears picker, preview and lock
+PASS The first real command owns its document lock
+PASS The second real command is rejected before it is shown
+PASS Rejected second command leaves no picker, preview or lock
+PASS Rejected second command preserves the first panel and picker
+PASS The first command releases immediately after cancellation
+PASS A real command in the other document opens after the first closes
+PASS The first real command owns its document lock
+PASS Consulting another document tab remains allowed
+PASS The second real command is rejected before it is shown
+PASS Rejected second command leaves no picker, preview or lock
+PASS Rejected second command preserves the first panel and picker
+PASS The first command releases immediately after cancellation
+PASS A real command in the other document opens after the first closes
+PASS A subdialog in the same document remains allowed
+PASS Same-document subdialog preserves the outer lock and picker
+PASS Nested command cleanup restores the document
+PASS Synchronous accept/reject in onShown does not enter a dead event loop
+PASS Synchronous accept/reject in onShown does not enter a dead event loop
+PASS A rejected cross-document command does not execute onShown
+RESULT passed=115 failed=0

@@ -1,0 +1,22 @@
+    /tmp/forgecad-followup-fix-20261115/kernel/test_offset_validation.cpp:17: FK_CHECK(worst<2e-7)
+    /tmp/forgecad-followup-fix-20261115/kernel/test_offset_validation.cpp:17: FK_CHECK(worst<2e-7)
+[ FAIL ] OffsetValidationHiddenSpanAndScale (2 controlli falliti)
+    /tmp/forgecad-followup-fix-20261115/kernel/test_offset_validation.cpp:23: nessuna eccezione da offsetSurface(ring,4,{0,kTwoPi},{0,kTwoPi})
+    /tmp/forgecad-followup-fix-20261115/kernel/test_offset_validation.cpp:24: nessuna eccezione da offsetSurface(ring,5,{0,kTwoPi},{0,kTwoPi})
+    /tmp/forgecad-followup-fix-20261115/kernel/test_offset_validation.cpp:26: nessuna eccezione da offsetSurface(horn,-.1,{0,kTwoPi},{0,kTwoPi})
+    /tmp/forgecad-followup-fix-20261115/kernel/test_offset_validation.cpp:31: nessuna eccezione da offsetSurface(ring,5,{0,kTwoPi},{shift+kPi-.2,shift+kPi+.2})
+    /tmp/forgecad-followup-fix-20261115/kernel/test_offset_validation.cpp:31: nessuna eccezione da offsetSurface(ring,5,{0,kTwoPi},{shift+kPi-.2,shift+kPi+.2})
+    /tmp/forgecad-followup-fix-20261115/kernel/test_offset_validation.cpp:31: nessuna eccezione da offsetSurface(ring,5,{0,kTwoPi},{shift+kPi-.2,shift+kPi+.2})
+    /home/myungit/Linux_CAD_forFree/kernel/tests/fk_test_main.cpp:36: eccezione: offset: la superficie a distanza non segue la superficie di partenza
+[ FAIL ] OffsetValidationToroidalDomain (7 controlli falliti)
+    /tmp/forgecad-followup-fix-20261115/kernel/test_offset_validation.cpp:42: FK_CHECK(cancelled)
+    /tmp/forgecad-followup-fix-20261115/kernel/test_offset_validation.cpp:42: FK_CHECK(calls==0)
+    /tmp/forgecad-followup-fix-20261115/kernel/test_offset_validation.cpp:42: FK_CHECK(deviation==123.)
+    /tmp/forgecad-followup-fix-20261115/kernel/test_offset_validation.cpp:45: FK_CHECK(cancelled)
+    /tmp/forgecad-followup-fix-20261115/kernel/test_offset_validation.cpp:45: FK_CHECK(deviation==123.)
+    /tmp/forgecad-followup-fix-20261115/kernel/test_offset_validation.cpp:48: FK_CHECK(cancelled)
+    /tmp/forgecad-followup-fix-20261115/kernel/test_offset_validation.cpp:48: FK_CHECK(calls==20)
+    /tmp/forgecad-followup-fix-20261115/kernel/test_offset_validation.cpp:48: FK_CHECK(deviation==123.)
+[ FAIL ] OffsetValidationCancellationAndReset (8 controlli falliti)
+[  OK  ] OffsetValidationAnalyticExtrusionAndRevolution
+1/4 test superati

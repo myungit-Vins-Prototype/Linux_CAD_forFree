@@ -1,0 +1,12 @@
+from pathlib import Path
+R=Path('/home/myungit/Linux_CAD_forFree');p=R/'CLAUDE.md';s=p.read_text();a=s.index('**16/11 — K10 continuazioni');b=s.index('\n\n',a);s=s[:a]+'''**16/11 — K10 continuazioni integrate con tre agenti Sol.**
+Parametro razionale/ISO e fin:15 test, sanitizer e Fraction PASS.
+App compilata; verifiche integrate in corso. [Stato](docs/review-k10-boundary-2026-11-16.md).'''+s[b:];assert len(s.encode())<=16384;p.write_text(s)
+p=R/'docs/review-k10-boundary-2026-11-16.md';s=p.read_text();s+='''
+## Build completa
+
+Build completa terminata con exit0 in 341,27 secondi, incluso eseguibile e runner UI. Le 28 suite selezionate e le verifiche sulla libreria integrata sono in corso. La libreria contiene 93 oggetti: 90 identici alla baseline, due TU modificate, un terzo (`fk_nurbs_join.cpp.o`) differente soltanto nelle informazioni debug per l'header incluso. Eliminando il debug con objcopy, quest'ultimo è identico byte per byte, SHA256 `a71d687530317789abf94dd21db8f360d3e616a21a165e3c1b487e728c992474`. Sorgente e comando di compilazione di quel terzo modulo invariati.
+
+Sanitizer finali V2 su due TU più driver:15/15PASS, ASan/UBSan/LSan fuori ptrace; provider/resto kernel Release. Leak detection attiva e calibrata con perdita intenzionale separata di19byte, exit23. L'esecuzione V1 dentro ptrace aveva fallito alla chiusura LSan e non è considerata PASS complessiva. Nessuna certificazione di assenza di leak in tutta l'app.
+''';p.write_text(s)
+print('Recorded full build; CLAUDE',len((R/'CLAUDE.md').read_bytes()))

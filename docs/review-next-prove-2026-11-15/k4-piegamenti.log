@@ -1,0 +1,4 @@
+nurbs=0 rotated=0 error=sweep: il raggio di un arco del percorso e' minore della distanza del profilo
+nurbs=0 rotated=1 error=sweep: il raggio di un arco del percorso e' minore della distanza del profilo
+nurbs=1 rotated=0 error=sweep: il raggio di curvatura del percorso e' minore della distanza del profilo (le sezioni si incrociano)
+nurbs=1 rotated=1 error=sweep: il raggio di curvatura del percorso e' minore della distanza del profilo (le sezioni si incrociano)

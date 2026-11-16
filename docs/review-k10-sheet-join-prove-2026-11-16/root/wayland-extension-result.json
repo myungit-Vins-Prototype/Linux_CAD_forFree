@@ -1,0 +1,8 @@
+{
+  "exit": 0,
+  "seconds": 1.0657902659986576,
+  "command": [
+    "forgecad-release/forgecad_view_tests",
+    "--extend-contour-pick"
+  ]
+}

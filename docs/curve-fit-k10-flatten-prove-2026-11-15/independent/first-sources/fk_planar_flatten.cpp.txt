@@ -1,0 +1,177 @@
+#include "fk_planar_flatten.h"
+#include "fk_bspline.h"
+#include "fk_cancel.h"
+#include <algorithm>
+#include <cmath>
+#include <limits>
+#include <stdexcept>
+
+namespace ForgeCad::Kernel::detail {
+namespace {
+struct Bound {
+    double lo, hi;
+    explicit Bound(double x) : Bound(x, x) {}
+    Bound(double a, double b) : lo(a), hi(b) {
+        if (!std::isfinite(a) || !std::isfinite(b) || a > b)
+            throw std::domain_error("Appiattimento affine: intervallo non risolto.");
+    }
+};
+double down(double x) { return std::nextafter(x, -std::numeric_limits<double>::infinity()); }
+double up(double x) { return std::nextafter(x, std::numeric_limits<double>::infinity()); }
+Bound operator+(Bound a, Bound b) { return {down(a.lo+b.lo), up(a.hi+b.hi)}; }
+Bound operator-(Bound a, Bound b) { return {down(a.lo-b.hi), up(a.hi-b.lo)}; }
+Bound operator*(Bound a, Bound b) {
+    const double p[] = {a.lo*b.lo,a.lo*b.hi,a.hi*b.lo,a.hi*b.hi};
+    for (double x : p)
+        if (!std::isfinite(x))
+            throw std::domain_error("Appiattimento affine: prodotto non risolto.");
+    return {down(*std::min_element(p,p+4)),up(*std::max_element(p,p+4))};
+}
+void require(bool ok, const char *message) {
+    if (!ok)
+        throw std::domain_error(message);
+}
+}
+std::optional<PlanarFlattenImage> planarFlattenImage(const CurvePtr<2> &source,
+    Interval range, const Vec2 &anchor, double scaleU, double scaleV,
+    const Frame3 &frame, double budget) {
+    cancellationPoint();
+    require(bool(source), "Appiattimento affine: curva nulla.");
+    require(std::isfinite(range.lo) && std::isfinite(range.hi) && range.lo < range.hi
+        && std::isfinite(range.hi - range.lo) && isFinite(anchor) && std::isfinite(scaleU) && std::isfinite(scaleV)
+        && scaleU != 0 && scaleV != 0 && std::isfinite(budget) && budget > 0,
+        "Appiattimento affine: parametri non validi.");
+    require(isFinite(frame.origin()) && isFinite(frame.xDir()) && isFinite(frame.yDir()),
+        "Appiattimento affine: frame non finito.");
+    auto basis = source;
+    while (basis->type() == CurveType::Trimmed) {
+        cancellationPoint();
+        require(basis->domain().contains(range.lo) && basis->domain().contains(range.hi),
+            "Appiattimento affine: intervallo fuori trim.");
+        basis = static_cast<const TrimmedCurve<2> &>(*basis).basis();
+    }
+    if (basis->type() != CurveType::Line && basis->type() != CurveType::BSpline)
+        return {};
+    int degree = 1;
+    std::vector<double> knots, weights;
+    std::vector<Vec2> uvPoles;
+    std::vector<std::pair<Bound,Bound>> exactPoles;
+    if (basis->type() == CurveType::Line) {
+        const auto &line = static_cast<const Line<2> &>(*basis);
+        knots = {range.lo,range.lo,range.hi,range.hi};
+        for (double t : {range.lo, range.hi}) {
+            uvPoles.push_back(line.point(t));
+            exactPoles.emplace_back(Bound(line.origin().x())+Bound(t)*Bound(line.direction().x()),
+                Bound(line.origin().y())+Bound(t)*Bound(line.direction().y()));
+        }
+    } else {
+        const auto &spline = static_cast<const BSplineCurve<2> &>(*basis);
+        require(spline.poles().size() <= 100000 && spline.degree() <= 128,
+            "Appiattimento affine: budget poli superato.");
+        require(spline.domain().contains(range.lo) && spline.domain().contains(range.hi),
+            "Appiattimento affine: intervallo fuori dominio naturale.");
+        degree = spline.degree();
+        knots = spline.knots();
+        weights = spline.weights();
+        uvPoles = spline.poles();
+        for (const auto &p : uvPoles) {
+            cancellationPoint();
+            exactPoles.emplace_back(Bound(p.x()),Bound(p.y()));
+        }
+        for (double w : weights) {
+            cancellationPoint();
+            require(std::isfinite(w) && w > 0, "Appiattimento affine: peso non positivo.");
+        }
+    }
+    std::vector<Vec3> poles;
+    poles.reserve(uvPoles.size());
+    double error = 0;
+    for (std::size_t i = 0; i < uvPoles.size(); ++i) {
+        cancellationPoint();
+        require(isFinite(uvPoles[i]), "Appiattimento affine: polo non finito.");
+        const Vec2 q(scaleU*(uvPoles[i].x()-anchor.x()),scaleV*(uvPoles[i].y()-anchor.y()));
+        const Vec3 p = frame.toGlobal(Vec3(q.x(),q.y(),0));
+        require(isFinite(p), "Appiattimento affine: immagine non finita.");
+        const Bound x = Bound(scaleU)*(exactPoles[i].first-Bound(anchor.x()));
+        const Bound y = Bound(scaleV)*(exactPoles[i].second-Bound(anchor.y()));
+        double squared = 0;
+        for (int j = 0; j < 3; ++j) {
+            const Bound exact = Bound(frame.origin()[j])+Bound(frame.xDir()[j])*x+Bound(frame.yDir()[j])*y;
+            const Bound residual = exact-Bound(p[j]);
+            const double e = std::max(std::fabs(residual.lo),std::fabs(residual.hi));
+            require(std::isfinite(e), "Appiattimento affine: residuo non risolto.");
+            squared = up(squared+up(e*e));
+            require(std::isfinite(squared), "Appiattimento affine: norma non risolta.");
+        }
+        const double poleError = up(std::sqrt(squared));
+        require(std::isfinite(poleError), "Appiattimento affine: errore non risolto.");
+        error = std::max(error, poleError);
+        poles.push_back(p);
+    }
+    // Identical positive weights make the affine-image error a convex
+    // combination of these pole residuals, including nonclamped spans.
+    require(std::isfinite(error) && error <= budget, "Appiattimento affine: errore oltre budget.");
+    CurvePtr<3> image = std::make_shared<BSplineCurve<3>>(degree,std::move(knots),std::move(poles),std::move(weights));
+    if (range.lo != image->domain().lo || range.hi != image->domain().hi)
+        image = std::make_shared<TrimmedCurve<3>>(image,range.lo,range.hi);
+    cancellationPoint();
+    return PlanarFlattenImage{std::move(image),error};
+}
+double planarFlattenVertexError(const Vec3 &a, const Vec3 &b) {
+    double squared = 0;
+    for (int j = 0; j < 3; ++j) {
+        const Bound residual = Bound(a[j]) - Bound(b[j]);
+        const double e = std::max(std::fabs(residual.lo), std::fabs(residual.hi));
+        squared = up(squared + up(e * e));
+        require(std::isfinite(squared), "Appiattimento affine: vertice non risolto.");
+    }
+    const double error = up(std::sqrt(squared));
+    require(std::isfinite(error), "Appiattimento affine: vertice non risolto.");
+    return error;
+}
+
+double planarFlattenPCurveError(const CurvePtr<3> &edge, const CurvePtr<2> &pcurve,
+    const Frame3 &frame, double budget) {
+    cancellationPoint();
+    require(edge && pcurve, "Appiattimento affine: bordo/SP-curve assente.");
+    auto e = edge;
+    auto uv = pcurve;
+    while (e->type() == CurveType::Trimmed) {
+        cancellationPoint();
+        e = static_cast<const TrimmedCurve<3> &>(*e).basis();
+    }
+    while (uv->type() == CurveType::Trimmed) {
+        cancellationPoint();
+        uv = static_cast<const TrimmedCurve<2> &>(*uv).basis();
+    }
+    require(e->type() == CurveType::BSpline && uv->type() == CurveType::BSpline,
+        "Appiattimento affine: rappresentazione finale non risolta.");
+    const auto &spline = static_cast<const BSplineCurve<3> &>(*e);
+    const auto &parameterSpline = static_cast<const BSplineCurve<2> &>(*uv);
+    require(spline.degree() == parameterSpline.degree() && spline.knots() == parameterSpline.knots()
+        && spline.weights() == parameterSpline.weights() && spline.poles().size() == parameterSpline.poles().size()
+        && spline.poles().size() <= 100000,
+        "Appiattimento affine: basi finali incompatibili.");
+    double error = 0;
+    for (std::size_t i = 0; i < spline.poles().size(); ++i) {
+        cancellationPoint();
+        const auto &q = parameterSpline.poles()[i];
+        double squared = 0;
+        for (int j = 0; j < 3; ++j) {
+            const Bound p = Bound(frame.origin()[j]) + Bound(frame.xDir()[j]) * Bound(q.x())
+                + Bound(frame.yDir()[j]) * Bound(q.y());
+            const Bound residual = p - Bound(spline.poles()[i][j]);
+            const double component = std::max(std::fabs(residual.lo), std::fabs(residual.hi));
+            squared = up(squared + up(component * component));
+            require(std::isfinite(squared), "Appiattimento affine: SP-curve non risolta.");
+        }
+        const double poleError = up(std::sqrt(squared));
+        require(std::isfinite(poleError), "Appiattimento affine: SP-curve non risolta.");
+        error = std::max(error, poleError);
+    }
+    require(std::isfinite(budget) && budget > 0 && error <= budget,
+        "Appiattimento affine: SP-curve oltre budget.");
+    return error;
+}
+
+}

@@ -1,0 +1,31 @@
+hidden rational=0 polesReverse=0 reverse=0 both=0 max_parameter=3.9268195099815187e-08 max_geometry=3.9174121852003746e-08 PASS
+hidden rational=0 polesReverse=0 reverse=0 both=1 max_parameter=3.9268195099815187e-08 max_geometry=3.9174121852003746e-08 max_parameter=3.9268100771855349e-08 max_geometry=3.9174121846149081e-08 PASS
+hidden rational=0 polesReverse=0 reverse=1 both=0 max_parameter=3.9268100771855349e-08 max_geometry=3.9174121846149081e-08 PASS
+hidden rational=0 polesReverse=0 reverse=1 both=1 max_parameter=3.9268100771855349e-08 max_geometry=3.9174121846149081e-08 max_parameter=3.9268195099815187e-08 max_geometry=3.9174121852003746e-08 PASS
+hidden rational=0 polesReverse=1 reverse=0 both=0 max_parameter=3.926810529977686e-08 max_geometry=3.9174121846582722e-08 PASS
+hidden rational=0 polesReverse=1 reverse=0 both=1 max_parameter=3.926810529977686e-08 max_geometry=3.9174121846582722e-08 max_parameter=3.926838991979722e-08 max_geometry=3.9174121863930056e-08 PASS
+hidden rational=0 polesReverse=1 reverse=1 both=0 max_parameter=3.926838991979722e-08 max_geometry=3.9174121863930056e-08 PASS
+hidden rational=0 polesReverse=1 reverse=1 both=1 max_parameter=3.926838991979722e-08 max_geometry=3.9174121863930056e-08 max_parameter=3.926810529977686e-08 max_geometry=3.9174121846582722e-08 PASS
+hidden rational=1 polesReverse=0 reverse=0 both=0 max_parameter=3.913258704333647e-08 max_geometry=3.9036914150422298e-08 PASS
+hidden rational=1 polesReverse=0 reverse=0 both=1 max_parameter=3.913258704333647e-08 max_geometry=3.9036914150422298e-08 max_parameter=3.9132597515998222e-08 max_geometry=3.9036926023737123e-08 PASS
+hidden rational=1 polesReverse=0 reverse=1 both=0 max_parameter=3.9132597515998222e-08 max_geometry=3.9036926023737123e-08 PASS
+hidden rational=1 polesReverse=0 reverse=1 both=1 max_parameter=3.9132597515998222e-08 max_geometry=3.9036926023737123e-08 max_parameter=3.913258704333647e-08 max_geometry=3.9036914150422298e-08 PASS
+hidden rational=1 polesReverse=1 reverse=0 both=0 max_parameter=3.9132606041051694e-08 max_geometry=3.9036926024604458e-08 PASS
+hidden rational=1 polesReverse=1 reverse=0 both=1 max_parameter=3.9132606041051694e-08 max_geometry=3.9036926024604458e-08 max_parameter=3.9132578530410061e-08 max_geometry=3.9036914151072832e-08 PASS
+hidden rational=1 polesReverse=1 reverse=1 both=0 max_parameter=3.9132578530410061e-08 max_geometry=3.9036914151072832e-08 PASS
+hidden rational=1 polesReverse=1 reverse=1 both=1 max_parameter=3.9132578530410061e-08 max_geometry=3.9036914151072832e-08 max_parameter=3.9132606041051694e-08 max_geometry=3.9036926024604458e-08 PASS
+chain back=0 round=0 max_trimmed_parameter=3.9072070304216307e-08 PASS
+chain back=0 round=1 max_trimmed_parameter=3.9072070304216307e-08 PASS
+chain back=1 round=0 max_trimmed_parameter=3.9012793815736327e-08 PASS
+chain back=1 round=1 max_trimmed_parameter=3.9012793815736327e-08 PASS
+knot_corner reverse=0 max_one_sided=7.0072855185010496e-08 PASS
+knot_corner reverse=1 max_one_sided=7.0190461234909129e-08 PASS
+zero_speed_failure PASS
+associative max_parameter=3.927014673101413e-08 max_geometry=3.9174774601342722e-08 PASS
+trimmed_loops trimmed_distance_error=1.3642763807553138e-08 trimmed_distance_error=1.0763050228845827e-08 PASS
+atomic_failure PASS
+analytic_controls PASS
+RESULT passed=27 failed=0
+==26==LeakSanitizer has encountered a fatal error.
+==26==HINT: For debugging, try setting environment variable LSAN_OPTIONS=verbosity=1:log_threads=1
+==26==HINT: LeakSanitizer does not work under ptrace (strace, gdb, etc)

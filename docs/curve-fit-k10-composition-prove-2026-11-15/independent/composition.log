@@ -1,0 +1,4 @@
+degree27 edge_composition_deviation=1.1333915278307987e-10 dense_error=5.7424750601786093e-05 edge_budget=2e-08
+degree27 wrap_accepted=0 reason=Deformazione: SP-curve fuori tolleranza.
+narrow_degree6 edge_composition_deviation=1.9374946091943457e-11 dense_error=0.001 edge_budget=2e-08
+narrow_degree6 wrap_accepted=1 reported=2.8207991498163665e-11 carrier_error=0.001 surface_pole_absZ=0 peak_targetZ=0.001 issues=0

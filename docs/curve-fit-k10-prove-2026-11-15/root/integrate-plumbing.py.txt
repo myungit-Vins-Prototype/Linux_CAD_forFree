@@ -1,0 +1,29 @@
+from pathlib import Path
+root=Path('/home/myungit/Linux_CAD_forFree')
+p=root/'kernel/CMakeLists.txt';s=p.read_text();s=s.replace('    fk_offset.cpp\n','    fk_offset.cpp\n    fk_curve_fit_bounds.h\n    fk_curve_fit_bounds.cpp\n',1)
+s=s.replace('fk_sweep_analytic_bridge.cpp PROPERTIES COMPILE_OPTIONS','fk_sweep_analytic_bridge.cpp fk_curve_fit_bounds.cpp PROPERTIES COMPILE_OPTIONS',1)
+anchor='set_tests_properties(forgekernel_offset_validation_tests PROPERTIES TIMEOUT 60)\n'
+s=s.replace(anchor,anchor+'''
+# Fit con limite continuo del residuo geometrico e fallimenti atomici, senza Qt/OCCT.
+add_executable(forgekernel_curve_fit_validation_tests tests/fk_test_main.cpp tests/test_curve_fit_validation.cpp)
+target_link_libraries(forgekernel_curve_fit_validation_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_curve_fit_validation_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_curve_fit_validation_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_curve_fit_validation_tests COMMAND forgekernel_curve_fit_validation_tests)
+set_tests_properties(forgekernel_curve_fit_validation_tests PROPERTIES TIMEOUT 120)
+''',1);p.write_text(s)
+p=root/'tools/generate_architecture.py';s=p.read_text();anchor=" 'kernel/tests/test_offset_validation.cpp':"
+entries=""" 'kernel/fk_curve_fit_bounds.cpp': ('kernel', 'Limiti continui del residuo dei fit offset NURBS: estrazione Bernstein dai dati originali con intervalli outward, pesi positivi, trim e trasformazioni; normali di estrusione e rivoluzione, budget finiti e cancellazione.'),
+ 'kernel/fk_curve_fit_bounds.h': ('kernel', 'Contratto del fit con certificatore sull’intera campata e provider geometrici per offset di curve NURBS; parametri originali conservati, rifiuto esplicito se il limite non conclude.'),
+ 'kernel/tests/test_curve_fit_validation.cpp': ('tests', 'Regressioni del fit con limite continuo: spline27 avversa, NURBS, pose e scale, offset di estrusione/rivoluzione, fallimenti atomici e cancellazione; runner indipendente da Qt/OCCT.'),
+"""
+assert anchor in s;s=s.replace(anchor,entries+anchor,1)
+s=s.replace('raffinamento curve con cancellazione cooperativa; fit generale campionato, limite K10 ancora aperto.', 'raffinamento curve con cancellazione cooperativa e fallimenti atomici; offset di estrusioni/rivoluzioni NURBS con limite continuo, callback generiche ancora campionate.')
+p.write_text(s)
+p=root/'kernel/fk_offset.h';s=p.read_text();s=s.replace('// altrimenti usano cubiche di Hermite C1 nello stesso parametro. Il fit e\n// la sua verifica sono campionati: non certificano l\'errore sul continuo\n// per callback arbitrarie (limite K10, review del 15 novembre 2026).', '''// altrimenti usano cubiche di Hermite nello stesso parametro. Gli offset di
+// estrusioni/rivoluzioni con sorgente NURBS usano un limite continuo del residuo
+// (fk_curve_fit_bounds.h), con rifiuto se non conclude entro il budget.
+// Gli altri fit e le verifiche campionate non certificano l'errore sul continuo
+// per callback arbitrarie (migrazione K10 ancora da completare).''')
+s=s.replace("// token corrente e' attivo, anche dopo l'ultimo callback, senza scrivere deviation.","// token corrente e' attivo, anche dopo l'ultimo callback. Tolleranza positiva e\n// finita e callback finiti richiesti; deviation resta invariata su ogni fallimento.\n// Per un limite sull'intera campata usare fitCurveCertified e un provider valido.")
+p.write_text(s)

@@ -1,0 +1,5 @@
+import json,shlex,subprocess,pathlib
+root=pathlib.Path('/home/myungit/Linux_CAD_forFree');tmp=pathlib.Path('/tmp/forgecad-followup-fix-20261115/ui');ccs=json.loads((root/'forgecad-release/compile_commands.json').read_text());repl={}
+for name in ['forgeCad2026_viewport_scene.cpp','forgeCad2026_dialogs_mapping.cpp','tests/test_viewport.cpp']:
+ cc=next(c for c in ccs if c['file'].endswith('/'+name) and 'forgecad_view_tests.dir' in c['command']);cmd=shlex.split(cc['command']);old=cmd[cmd.index('-o')+1];out=tmp/(pathlib.Path(name).stem+'.o');cmd[cmd.index('-o')+1]=str(out);cmd=[x for x in cmd if x!='-O3'];cmd.append('-O0');subprocess.run(cmd,cwd=cc['directory'],check=True);repl[old]=str(out)
+cmd=shlex.split((root/'forgecad-release/CMakeFiles/forgecad_view_tests.dir/link.txt').read_text());cmd=[repl.get(x,x) for x in cmd if not x.startswith('-Wl,--dependency-file')];cmd[cmd.index('-o')+1]=str(tmp/'tests');subprocess.run(cmd,cwd=root/'forgecad-release',check=True)

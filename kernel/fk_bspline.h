@@ -19,6 +19,14 @@ public:
     // Dominio [knots[degree], knots[poles.size()]]; molteplicita' interne <= degree.
     BSplineCurve(int degree, std::vector<double> knots, std::vector<Vec<N>> poles, std::vector<double> weights = {});
 
+    // La copia puo' concorrere con le letture e la costruzione delle cache
+    // della sorgente immutabile. Assegnazione, move e distruzione richiedono
+    // accesso esclusivo all'oggetto modificato (anche alla sorgente del move).
+    BSplineCurve(const BSplineCurve &other);
+    BSplineCurve &operator=(const BSplineCurve &other);
+    BSplineCurve(BSplineCurve &&other) noexcept = default;
+    BSplineCurve &operator=(BSplineCurve &&other) noexcept = default;
+
     CurveType type() const override { return CurveType::BSpline; }
     Interval domain() const override;
     // Fuori dal dominio prolunga il polinomio del primo/ultimo tratto.

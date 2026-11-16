@@ -1,0 +1,7 @@
+df459b846a422ebe6d2bd56ea5eb6c136d573a0700413c2fbc8397143119224a  /tmp/mapping-uv-review/tests/test_mapping_pcurve_validation.cpp
+23a66a327d83cada8060cc923c928c81bb71bbcc8d63bc28781373a4795486fd  /tmp/mapping-uv-review/tests/baseline_compat.cpp
+77a1afd3fde4d063be824eedd4fb48d9e0a93cf3b0ffc75a2b27e3ffdf0e039a  /tmp/mapping-uv-review/core/fk_surface_mapping.cpp.o
+3c1ae0eac247d44380a4b0bc0881ab3a44f9f4cb307d1a00e10cccb91544de78  /tmp/mapping-uv-review/core/fk_quilt_mapping.cpp.o
+c830c1c802657b50dd1cafa223af91263dba185cdf109524a16c602b6986f707  /tmp/mapping-uv-review/core/candidate/kernel/fk_surface_mapping.cpp
+21a41fb7513ba6ca48987956632aa2d2bbdf57c49c4f9681907a4c512668df05  /tmp/mapping-uv-review/core/candidate/kernel/fk_quilt_mapping.cpp
+e30b40c55b27f0702a2a1e95279b627643679b1823368e3c60ebc4d8c67f2a72  /tmp/mapping-uv-review/tests/baseline/libforgekernel.a

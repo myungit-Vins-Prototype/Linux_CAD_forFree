@@ -1,0 +1,8 @@
+{
+  "metric-final.log": true,
+  "extrusion-final.log": true,
+  "baseline-final.log": true,
+  "tolerant-final.log": true,
+  "provider-final.log": true,
+  "provider_queries-final.log": true
+}

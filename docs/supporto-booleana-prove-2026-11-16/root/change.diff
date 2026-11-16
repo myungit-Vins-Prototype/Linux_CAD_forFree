@@ -1,0 +1,1126 @@
+--- before/CLAUDE.md
++++ after/CLAUDE.md
+@@ -108,16 +108,24 @@
+ 
+ ## Ultimi interventi — esiti consolidati
+ 
++**16/11 — Supporto.prt, K11 corretto con tre agenti Sol.**
++Corpo2/Estrusione3–Corpo3/Loft6: clipping asimmetrico, tre edge aperti.
++Catena/genealogia, bound continuo e UV proprie, ricontrollo
++postassembly/unify, retry transazionale; budget invariati. App,24CTest,38Boolean,
++424controlli Release,78sanitizer mirati,15retry e65Save/riapri/rebuild/Undo PASS.
++Coppia nei due ordini e tre corpi uniti; output/Supporto_unito.prt, nuovo UUID.
++Input prove SHA79887e91; alla ripresa originale diverso(SHA70e4ec5c), preservato,
++non ricertificato. Mappa765/11045/382,check/HTML/archi,3110/3115file invariati;
++27rilievi corretti. [Rapporto,prove e limiti](docs/supporto-booleana-2026-11-16.md);
++[memoria conservata](docs/history/claude-prima-supporto-booleana-2026-11-16.md).
++
+ **16/11 — Anteprime e residuo UI2 completati con tre agenti Sol.**
+-Shell zero/recupero e Filettatura: stati corretti (PRE5/PRE6); 26 rilievi corretti.
+-Undici runner comuni, setup dopo guardia, footer fisso e chiusura sincrona;
+-UI2 esteso senza ricontarlo. App/runner completi, 24 CTest e 115 asserzioni
+-su oggetti app offscreen/Wayland PASS. Fixture limita l'area scorrevole;
+-primo 110/115 e diagnosi compositor conservati. Mappa 762/11023/380, check/HTML/archi
+-e 2929/2938 file invariati. Orfane: 5 private/locali, 17 API senza usi interni;
+-nessuna rimozione. [Prove e limiti](docs/review-preview-unification-2026-11-16.md).
+-Nuova richiesta: booleana Supporto.prt, Corpo 2/3 loft; indagine su copia,
+-originale preservato. Esito geometrico ancora da stabilire.
++PRE5/PRE6 corretti; 26 rilievi corretti. Undici runner comuni, setup differito,
++footer fisso e chiusura sincrona; UI2 esteso senza ricontarlo. App/runner,
++24 CTest e 115 asserzioni su oggetti app offscreen/Wayland PASS; fixture scroll
++corretto, primo esito e diagnosi conservati. Mappa762/11023/380, check/HTML/archi,
++2929/2938 file invariati; 172 artefatti sigillati. Orfane:5 private/locali,
++17 API senza usi interni, nessuna rimozione. [Prove](docs/review-preview-unification-2026-11-16.md).
+ 
+ **16/11 — Ellisse per estremi completata con tre agenti GPT-6.1 Sol.**
+ Tre clic,4punti reali quotabili/vincolabili,centro derivato,5DOF,conica
+@@ -127,24 +135,20 @@
+ [Uso,prove e limiti](docs/ellisse-estremi-2026-11-16.md),
+ [memoria conservata](docs/history/claude-prima-ellisse-estremi-2026-11-16.md).
+ 
+-**16/11 — K10, offset dei bordi di estrusione completato per le famiglie supportate.**
+-Tre agenti Sol:originali edge/generatore/UV separati,limite continuo econtrollo
+-postassembly. App,18regressioni,24CTest,23pregressi e18sanitizer mirati3TU PASS.
+-40curve/943poli/301campate Fraction <=4,365e-8 con budget1e-7; dump Release
+-identici. Baseline geometrica >=5,742e-7. Mappa/check/HTML/archi PASS;
+-2781/2788file invariati. K10 aperto:15/24siti parziali,9da migrare piùfallback;
+-24rilievi precedenti corretti,22orfane candidate,UI/anteprime da uniformare.
+-Proiezioni Plane precedenti e manifest ricostruiti: prove e limiti in archivio.
+-[Rapporto](docs/curve-fit-k10-edge-offset-2026-11-16.md),
++**16/11 — K10, offset di bordi di estrusione completato per le famiglie supportate.**
++Tre agenti Sol: edge/generatore/UV originali separati, bound continuo e controllo
++postassembly. App,18 regressioni,24 CTest,23 pregressi e sanitizer3TU PASS.
++40 curve/943 poli/301 campate Fraction <=4,365e-8 (budget1e-7), dump Release
++identici; baseline >=5,742e-7. Mappa/check/HTML/archi e2781/2788 file invariati.
++K10 aperto:15/24 siti parziali,9 da migrare più fallback. [Prove e limiti](docs/curve-fit-k10-edge-offset-2026-11-16.md);
+ [memoria conservata](docs/history/claude-prima-k10-edge-offset-2026-11-16.md).
+ 
+-**15/11 — K2 completato in produzione con due agenti GPT-6.1 Sol.**
+-Atlante carrier, fori/nesting, ponte analitico conservativo, SP-curve NURBS coerenti,
+-alias atomici/cancellazione; corretti i falsi rifiuti. App/runner,54test kernel,8CTest,
+-22ASan/UBSan/LSan mirati e mappa736/10570/361TU PASS.19/19rilievi iniziali corretti;
+-22orfane candidate. Budget finiti possono rifiutare casi validi; nessun nuovo test renderer.
+-[Prove,30regressioni e limiti](docs/sweep-k2-completamento-2026-11-15.md);
+-[stato conservato](docs/history/claude-prima-k10-composition-2026-11-15.md).
++**15/11 — K2 completato in produzione con due agenti Sol.**
++Atlante carrier, nesting, ponte analitico e SP-curve NURBS; alias atomici,
++cancellazione e falsi rifiuti corretti. App,54 test kernel,8 CTest,22 sanitizer
++mirati e mappa736/10570/361 PASS. Budget finiti possono rifiutare casi validi.
++[Prove e limiti](docs/sweep-k2-completamento-2026-11-15.md);
++[memoria](docs/history/claude-prima-k10-composition-2026-11-15.md).
+ 
+ **15/11 — Altri14rilievi corretti con agenti GPT-6.1 Sol.**
+ K4/K5/K6, S1/S2, UI1–6 e PRE1–3: sweep/loft/lamine, numeri nonfiniti e angoli enormi,
+--- before/docs/code-review-2026-11-15.md
++++ after/docs/code-review-2026-11-15.md
+@@ -1,6 +1,6 @@
+ # Review generale ForgeCAD — 15 novembre 2026
+ 
+-**Stato più recente, 16 novembre:** [anteprime e pannelli](review-preview-unification-2026-11-16.md): PRE5/PRE6 corretti e copertura residua di UI2 estesa a undici runner; **26 rilievi confermati corretti complessivamente**. Build completa, 24 CTest e 115 asserzioni su oggetti app effettivi offscreen/Wayland PASS. [Orfane ricontrollate](review-orphans-refresh-2026-11-16.md): 5 private/locali e 17 API pubbliche senza usi interni, nessuna rimozione. [K10 offset dei bordi di estrusione](curve-fit-k10-edge-offset-2026-11-16.md): originali edge/generatore/SP-curve separati, controllo dei poli dopo assemblaggio; **15/24 siti iniziali parzialmente trattati, 9 interamente da migrare**, oltre ai fallback. K10 e l’uniformazione completa delle anteprime restano aperti. K2 in produzione; [ellisse per estremi](ellisse-estremi-2026-11-16.md) completata con quattro punti quotabili/vincolabili e centro derivato.
++**Stato più recente, 16 novembre:** **27 rilievi confermati corretti complessivamente**. K11, [booleana di Supporto.prt](supporto-booleana-2026-11-16.md): clipping del contatto ellisse/cilindro corretto con catena originale, genealogia esplicita e limite continuo entro i budget esistenti; coppia 2/3 e tre corpi riusciti nei due ordini, copia nativa salvata/riaperta/rigenerata. App completa, 24 CTest, 38 Boolean e 424 controlli worker/app PASS; sanitizer mirati positivi. [Anteprime e pannelli](review-preview-unification-2026-11-16.md): PRE5/PRE6 corretti e copertura residua di UI2 estesa a undici runner; allora 26 rilievi corretti, 115 asserzioni offscreen/Wayland PASS. [Orfane ricontrollate](review-orphans-refresh-2026-11-16.md): 5 private/locali e 17 API pubbliche senza usi interni, nessuna rimozione. [K10 offset dei bordi di estrusione](curve-fit-k10-edge-offset-2026-11-16.md): **15/24 siti iniziali parzialmente trattati, 9 interamente da migrare**, oltre ai fallback. K10 e l’uniformazione completa delle anteprime restano aperti. K2 in produzione; [ellisse per estremi](ellisse-estremi-2026-11-16.md) completata con quattro punti quotabili/vincolabili e centro derivato.
+ 
+ **Aggiornamento successivo:** i cinque rilievi della [seconda review](review-followup-2026-11-15.md) K7/K8/K9/PRE4/UI7 sono corretti: **24 difetti precedenti corretti complessivamente**. La [prosecuzione K10](curve-fit-k10-2026-11-15.md) corregge il fit degli offset NURBS di estrusioni/rivoluzioni con controllo continuo, input finiti e fallimenti atomici; build completa e regressioni PASS. **K10 resta aperto per i chiamanti generici ancora campionati**. Le 22 orfane restano candidati distinti. Stato storico della prima review sotto.
+ 
+--- before/kernel/CMakeLists.txt
++++ after/kernel/CMakeLists.txt
+@@ -77,6 +77,8 @@
+     fk_body_io.cpp
+     fk_boolean.h
+     fk_boolean.cpp
++    fk_boolean_boundary.h
++    fk_boolean_boundary.cpp
+     fk_solid_trim.cpp
+     fk_solid_trim.h
+     fk_unify.h
+@@ -215,7 +217,7 @@
+ # I validatori usano intervalli outward: niente riassociazioni o assunzioni
+ # di finitezza implicite, anche se una configurazione esterna abilita fast-math.
+ set_source_files_properties(fk_sweep_surface_validation.cpp fk_sweep_caps.cpp
+-    fk_sweep_analytic_bridge.cpp fk_curve_fit_bounds.cpp fk_project.cpp fk_mapping_carrier.cpp fk_affine_surface_fit.cpp fk_planar_flatten.cpp fk_quilt_mapping.cpp PROPERTIES COMPILE_OPTIONS
++    fk_sweep_analytic_bridge.cpp fk_curve_fit_bounds.cpp fk_project.cpp fk_mapping_carrier.cpp fk_affine_surface_fit.cpp fk_planar_flatten.cpp fk_quilt_mapping.cpp fk_boolean_boundary.cpp PROPERTIES COMPILE_OPTIONS
+     "$<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang,AppleClang>:-fno-fast-math;-ffp-contract=off>")
+ set_target_properties(forgekernel PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+ 
+@@ -634,3 +636,12 @@
+ set_target_properties(forgekernel_edge_offset_fit_validation_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+ add_test(NAME forgekernel_edge_offset_fit_validation_tests COMMAND forgekernel_edge_offset_fit_validation_tests)
+ set_tests_properties(forgekernel_edge_offset_fit_validation_tests PROPERTIES TIMEOUT 180)
++
++# Contatti quasi coincidenti sul trim: certificati continui di geometria e UV.
++add_executable(forgekernel_boolean_boundary_tests tests/test_boolean_boundary.cpp)
++target_link_libraries(forgekernel_boolean_boundary_tests PRIVATE forgekernel)
++target_compile_options(forgekernel_boolean_boundary_tests PRIVATE -Wall -Wextra -Wpedantic
++    "$<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang,AppleClang>:-fno-fast-math;-ffp-contract=off>")
++set_target_properties(forgekernel_boolean_boundary_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
++add_test(NAME forgekernel_boolean_boundary_tests COMMAND forgekernel_boolean_boundary_tests)
++set_tests_properties(forgekernel_boolean_boundary_tests PROPERTIES TIMEOUT 60)
+--- before/kernel/fk_boolean.cpp
++++ after/kernel/fk_boolean.cpp
+@@ -1,4 +1,5 @@
+ #include "fk_boolean.h"
++#include "fk_boolean_boundary.h"
+ #include "fk_solid_trim.h"
+ #include "fk_history.h"
+ 
+@@ -6,6 +7,7 @@
+ #include "fk_curve_surface.h"
+ 
+ #include <algorithm>
++#include <array>
+ #include <exception>
+ #include <cmath>
+ #include <functional>
+@@ -37,10 +39,29 @@
+ namespace {
+ 
+ // Tratto di un arco d'intersezione che sta in entrambe le facce (o sul loro bordo).
++struct BoundaryAnchor {
++    int body = -1;
++    FaceId face;
++    FinId fin;
++    EdgeId edge;
++    double edgeParameter = 0, arcParameter = 0;
++};
++struct BoundarySource {
++    int body = -1;
++    FaceId face;
++    FinId fin;
++    EdgeId edge;
++    Interval range;
++    bool forward = true;
++    CurvePtr<3> intersection = {};
++    Interval intersectionRange = {};
++};
++
+ struct Arc {
+     CurvePtr<3> curve;
+     Interval range;
+     FaceId face[2];
++    std::vector<BoundaryAnchor> anchors;
+     bool cut[2] = {false, false};  // divide l'interno della faccia del body 0 / 1
+     bool coplanar = false;         // viene da due facce sulla stessa superficie (complanari, cilindri coassiali, ...)
+     bool tangent = false;          // contatto senza attraversamento, solo per sezioni con provenienza
+@@ -62,6 +83,8 @@
+ 
+ // Tratto di curva percorso in un verso: pezzo di bordo o taglio.
+ struct Piece {
++    BoundarySource boundarySource; // foreign witness, never a local source/pcurve
++
+     FinId sourceFin;  // distingue i due usi di una cucitura nella stessa faccia
+     CurvePtr<2> sourcePCurve;  // parametro originale: i due lati possono avere UV diversi
+     EdgeId source;  // bordo originale, noto durante la suddivisione (invalido per i tagli nuovi)
+@@ -220,8 +243,10 @@
+ 
+ class BooleanBuilder {
+ public:
+-    BooleanBuilder(const Body &a, const Body &b, BooleanOperation operation, const BooleanOptions &options)
++    BooleanBuilder(const Body &a, const Body &b, BooleanOperation operation, const BooleanOptions &options,
++                   bool enableBoundary = false)
+         : operation_(operation), tolerance_(options.tolerance), unify_(options.unifySameDomain), threads_(options.threads) {
++        enableBoundary_ = enableBoundary;
+         bodies_[0] = a;
+         bodies_[1] = b;
+         Box all;
+@@ -254,6 +279,7 @@
+     }
+ 
+     Body run(BodyHistory *history);
++    bool usedBoundarySubstitution() const { return usedBoundary_; }
+     Body clipFace(bool positive, BodyHistory *history);
+     Body adjacentRun(BodyHistory *history) { adjacentOnly_ = true; return run(history); }
+     std::vector<BodySectionCurve> section(bool preserveFacePairs = false);
+@@ -270,6 +296,8 @@
+     // I contatti di area sono su carrier coincidenti: nessun attraversamento
+     // trasversale va ricercato sui supporti estesi fuori dalle facce.
+     bool adjacentOnly_ = false;
++    bool enableBoundary_ = false;
++    bool usedBoundary_ = false;
+     unsigned workers(std::size_t count) const {
+         // I piccoli lavori fra piani non ammortizzano il lancio dei thread.
+         // Le richieste esplicite e le superfici curve conservano il parallelismo.
+@@ -301,6 +329,7 @@
+     void computeCuts(std::map<int, std::vector<Piece>> (&cuts)[2]);
+     // Dagli archi di arcs_ ai tagli di ogni faccia (seconda parte di computeCuts).
+     void collectCuts(std::map<int, std::vector<Piece>> (&cuts)[2]);
++    bool boundaryChain(const Arc &, const Interval &, int, std::vector<Piece> &) const;
+     // Un punto interno del pezzo di faccia accettato da `accept`, vicino ai
+     // tratti piu' lunghi del bordo; falso se nessuno va bene.
+     bool interiorPoint(const SubFace &subFace, const std::function<bool(const Vec3 &)> &accept) const;
+@@ -466,14 +495,26 @@
+         const Interval &range = intersection.ranges[i];
+         std::vector<double> parameters;
+         std::vector<Snap> snaps;
++        std::multimap<double, BoundaryAnchor> boundaryAnchors;
++        bool anchorBudget = true;
+         // Attraversamenti del bordo della faccia piana (nel piano).
+         const CurvePtr<2> planar = exactPCurve(plane, curve, range, std::max(tolerance_, 1e-9 * scale_));
+         if (!planar) throw std::logic_error("booleanOperation: curva d'intersezione fuori dal piano");
+         for (LoopId l : bp.face(fp).loops)
+             for (FinId f : bp.loopFins(l)) {
+                 const Edge &edge = bp.edge(bp.fin(f).edge);
+-                for (const CurveCurvePoint &p : intersectCurves(*planar, range, *bp.fin(f).pcurve, edge.range, tolerance_).points)
++                for (const CurveCurvePoint &p :
++                     intersectCurves(*planar, range, *bp.fin(f).pcurve, edge.range, tolerance_).points) {
+                     parameters.push_back(p.s);
++                    if (enableBoundary_ && anchorBudget && curve->type() == CurveType::Line &&
++                        edge.curve->type() == CurveType::Ellipse) {
++                        if (boundaryAnchors.size() == 4096) {
++                            boundaryAnchors.clear();
++                            anchorBudget = false;
++                        } else
++                            boundaryAnchors.emplace(p.s, BoundaryAnchor{k, fp, f, bp.fin(f).edge, p.t, p.s});
++                    }
++                }
+             }
+         // Attraversamenti del bordo dell'altra faccia: i suoi edge sul piano.
+         for (LoopId l : bq.face(fq).loops)
+@@ -497,6 +538,12 @@
+             }
+         const std::size_t previous = out.arcs.size();
+         addArcs(curve, range, parameters, fa, fb, out, nullptr, snaps);
++        for (std::size_t j = previous; j < out.arcs.size(); ++j)
++            for (double endpoint : {out.arcs[j].range.lo, out.arcs[j].range.hi}) {
++                const auto events = boundaryAnchors.equal_range(endpoint);
++                for (auto event = events.first; event != events.second; ++event)
++                    out.arcs[j].anchors.push_back(event->second);
++            }
+         if (i >= crossingCount) for (std::size_t j = previous; j < out.arcs.size(); ++j) out.arcs[j].tangent = true;
+     }
+ }
+@@ -1970,6 +2017,127 @@
+     collectCuts(cuts);
+ }
+ 
++bool BooleanBuilder::boundaryChain(const Arc &arc, const Interval &range, int boundary,
++                                   std::vector<Piece> &result) const {
++    if (!arc.curve || arc.curve->type() != CurveType::Line || arc.loTolerance != 0 || arc.hiTolerance != 0 ||
++        range.lo != arc.range.lo || range.hi != arc.range.hi)
++        return false;
++    if (boundary < 0 || boundary > 1)
++        return false;
++    for (int k = 0; k < 2; ++k)
++        if (!bodies_[k].contains(arc.face[k]) || !bodies_[k].face(arc.face[k]).surface)
++            return false;
++    const auto &body = bodies_[boundary];
++    const auto faceId = arc.face[boundary];
++    if (body.face(faceId).surface->type() != SurfaceType::Plane)
++        return false;
++    const auto &line = static_cast<const Line<3> &>(*arc.curve);
++    const double budget = std::min(tolerance_, linearResolution());
++    std::vector<std::vector<Piece>> candidates;
++    std::size_t work = 0;
++    for (const auto &first : arc.anchors)
++        for (const auto &last : arc.anchors) {
++            cancellationPoint();
++            if (++work > 4096)
++                return false;
++            if (first.body != boundary || last.body != boundary || first.face != faceId || last.face != faceId ||
++                first.arcParameter != range.lo || last.arcParameter != range.hi)
++                continue;
++            if (!body.contains(first.fin) || !body.contains(last.fin) || body.fin(first.fin).edge != first.edge ||
++                body.fin(last.fin).edge != last.edge || body.fin(first.fin).loop != body.fin(last.fin).loop)
++                continue;
++            for (bool reverse : {false, true}) {
++                cancellationPoint();
++                std::vector<Piece> chain;
++                FinId current = first.fin;
++                double parameter = first.edgeParameter;
++                bool complete = false;
++                bool wrapped = false;
++                for (std::size_t steps = 0; steps < 4096; ++steps) {
++                    cancellationPoint();
++                    if (++work > 16384)
++                        return false;
++                    const auto &fin = body.fin(current);
++                    const auto &edge = body.edge(fin.edge);
++                    if (!edge.curve || edge.curve->type() != CurveType::Ellipse || !edge.range.contains(parameter))
++                        break;
++                    const bool forward = fin.sense != reverse;
++                    const double end = forward ? edge.range.hi : edge.range.lo;
++                    bool reaches = current == last.fin && edge.range.contains(last.edgeParameter) &&
++                                   (forward ? last.edgeParameter >= parameter : last.edgeParameter <= parameter);
++                    const double stop = reaches ? last.edgeParameter : end;
++                    if (stop != parameter) {
++                        if (!(forward ? stop > parameter : stop < parameter))
++                            break;
++                        Piece piece;
++                        piece.curve = edge.curve;
++                        piece.range = {std::min(parameter, stop), std::max(parameter, stop)};
++                        piece.forward = forward;
++                        piece.cut = true;
++                        piece.partner = faceId;
++                        piece.partnerCrosses = false;
++                        piece.tolerance = edge.tolerance;
++                        piece.boundarySource = {boundary, faceId, current, fin.edge, piece.range, forward};
++                        chain.push_back(std::move(piece));
++                    }
++                    if (reaches) {
++                        complete = true;
++                        break;
++                    }
++                    const FinId next = reverse ? fin.previous : fin.next;
++                    if (!next.valid())
++                        break;
++                    if (next == first.fin) {
++                        if (wrapped)
++                            break;
++                        wrapped = true;
++                    }
++                    // Both paths use original loop incidence, never a nearest edge.
++                    const VertexId at = reverse ? body.finStart(current) : body.finEnd(current);
++                    const VertexId other = reverse ? body.finEnd(next) : body.finStart(next);
++                    if (at != other)
++                        break;
++                    current = next;
++                    const auto &nextFin = body.fin(current);
++                    const auto &nextEdge = body.edge(nextFin.edge);
++                    parameter = (nextFin.sense != reverse) ? nextEdge.range.lo : nextEdge.range.hi;
++                }
++                if (!complete || chain.empty())
++                    continue;
++                double ta = range.lo;
++                bool certified = true;
++                for (std::size_t n = 0; n < chain.size(); ++n) {
++                    const auto &piece = chain[n];
++                    double tb = range.hi;
++                    if (n + 1 < chain.size()) {
++                        // The topological shared vertex supplies the intermediate
++                        // line parameter; the interval proof covers its rounding.
++                        const auto &w = piece.boundarySource;
++                        const auto &fin = body.fin(w.fin);
++                        const auto vertex = piece.forward ? body.edgeEnd(fin.edge) : body.edgeStart(fin.edge);
++                        tb = projectPoint(line, body.vertex(vertex).point, range).parameter;
++                    }
++                    if (!(ta < tb && tb <= range.hi) ||
++                        !detail::certifyEllipseBoundarySegment(
++                            static_cast<const Ellipse<3> &>(*piece.curve), piece.range, piece.forward, line, ta, tb,
++                            *bodies_[0].face(arc.face[0]).surface, *bodies_[1].face(arc.face[1]).surface, budget)) {
++                        certified = false;
++                        break;
++                    }
++                    chain[n].boundarySource.intersection = arc.curve;
++                    chain[n].boundarySource.intersectionRange = {ta, tb};
++                    ta = tb;
++                }
++                if (certified)
++                    candidates.push_back(std::move(chain));
++            }
++        }
++    if (candidates.size() != 1)
++        return false;
++    result = std::move(candidates.front());
++    return true;
++}
++
+ void BooleanBuilder::collectCuts(std::map<int, std::vector<Piece>> (&cuts)[2]) {
+     // Gli estremi sono immutabili finche' un doppione viene sostituito.
+     // Ricalcolarli per ogni confronto rivalutava milioni di volte le
+@@ -2021,6 +2189,24 @@
+             const auto in0=insideTrim(0,arc.face[0],arc.curve,parameter,middle);
+             if(in0==PointLocation::Outside)continue;
+             const PointLocation locations[2]={in0,in1};
++            bool substituted = false;
++            for (int boundary = 0; boundary < 2; ++boundary)
++                if (enableBoundary_ && locations[boundary] == PointLocation::Boundary &&
++                    locations[1 - boundary] == PointLocation::Inside) {
++                    std::vector<Piece> chain;
++                    if (boundaryChain(arc, range, boundary, chain)) {
++                        auto &list = cuts[1 - boundary][arc.face[1 - boundary].index];
++                        auto &ends = endPoints[1 - boundary][arc.face[1 - boundary].index];
++                        for (auto &piece : chain) {
++                            ends.emplace_back(piece.startNode(), piece.endNode());
++                            list.push_back(std::move(piece));
++                        }
++                        substituted = true;
++                        usedBoundary_ = true;
++                    }
++                }
++            if (substituted)
++                continue;
+             for (int k = 0; k < 2; ++k) {
+                 if(locations[k]!=PointLocation::Inside)continue;
+                 // Pezzi di un arco che esce appena dalla superficie (seme su un edge
+@@ -2519,6 +2705,25 @@
+         std::stable_sort(tolerant.begin(), tolerant.end(), [](const auto &a, const auto &b) { return a.first > b.first; });
+         for (const auto &[tolerance, point] : tolerant) vertexOf(point, tolerance);
+     }
++    struct AssemblyOrigin {
++        std::size_t face, loop, fin;
++        HistoryLink origin;
++        bool boundary = false;
++    };
++    struct BoundaryUse {
++        std::size_t face, loop, fin;
++        BoundarySource source;
++        CurvePtr<3> curve;
++    };
++    struct BoundaryOutput {
++        int edge;
++        SurfacePtr surface;
++        CurvePtr<3> original;
++        BoundarySource source;
++    };
++    std::vector<AssemblyOrigin> assemblyOrigins;
++    std::vector<BoundaryUse> boundaryUses;
++    std::vector<BoundaryOutput> boundaryOutputs;
+     std::vector<Body::BuildEdge> edges;
+     std::vector<Vec3> edgeMiddles;
+     std::vector<std::vector<const Surface *>> edgeSurfaces;
+@@ -2662,6 +2867,24 @@
+                         }
+                     }
+                 }
++                if (history && piece.source.valid())
++                    assemblyOrigins.push_back(
++                        {faces.size(),
++                         built.loops.size(),
++                         loop.size(),
++                         {subFace.body, EntityKind::Edge, piece.source.index, HistoryRelation::Modified},
++                         false});
++                if (piece.boundarySource.body >= 0) {
++                    boundaryUses.push_back(
++                        {faces.size(), built.loops.size(), loop.size(), piece.boundarySource, piece.curve});
++                    if (history)
++                        assemblyOrigins.push_back({faces.size(),
++                                                   built.loops.size(),
++                                                   loop.size(),
++                                                   {piece.boundarySource.body, EntityKind::Edge,
++                                                    piece.boundarySource.edge.index, HistoryRelation::Modified},
++                                                   true});
++                }
+                 loop.push_back(fin);
+             }
+             if (!loop.empty()) built.loops.push_back(std::move(loop));
+@@ -2676,11 +2899,82 @@
+     } catch (const std::invalid_argument &error) {
+         throw std::domain_error(std::string("booleanOperation: risultato non chiuso (") + error.what() + ")");
+     }
++    // Il mapping nasce dalla fin realmente montata. Body::build conserva
++    // l'indice BuildEdge; pairRadially puo' cambiarlo e viene quindi letto
++    // soltanto dopo pairing/splitVertices, senza cercare curve vicine.
++    for (const auto &use : boundaryUses) {
++        const int edge = faces.at(use.face).loops.at(use.loop).at(use.fin).edge;
++        const auto &built = edges.at(std::size_t(edge));
++        if (built.curve.get() != use.curve.get())
++            throw std::domain_error(
++                "booleanOperation: geometria originale del bordo condiviso modificata durante l'assemblaggio");
++        boundaryOutputs.push_back({edge, faces.at(use.face).surface, use.curve, use.source});
++    }
++    const auto installBoundaryPCurves = [&](Body &body) {
++        for (const auto &output : boundaryOutputs) {
++            cancellationPoint();
++            const EdgeId edgeId(output.edge);
++            if (!body.contains(edgeId))
++                throw std::domain_error("booleanOperation: bordo condiviso non conservato");
++            const auto &edge = body.edge(edgeId);
++            if (edge.curve.get() != output.original.get() || edge.curve->type() != CurveType::Ellipse)
++                throw std::domain_error("booleanOperation: curva originale del bordo condiviso non conservata");
++            const auto &source = output.source;
++            const auto &originalEdge = bodies_[source.body].edge(source.edge);
++            const auto &ellipse = static_cast<const Ellipse<3> &>(*edge.curve);
++            if (!originalEdge.range.contains(edge.range.lo) || !originalEdge.range.contains(edge.range.hi) ||
++                !source.intersection || source.intersection->type() != CurveType::Line ||
++                !detail::certifyEllipseBoundarySegment(
++                    ellipse, edge.range, source.forward, static_cast<const Line<3> &>(*source.intersection),
++                    source.intersectionRange.lo, source.intersectionRange.hi, *output.surface,
++                    *bodies_[source.body].face(source.face).surface, std::min(tolerance_, linearResolution())))
++                throw std::domain_error("booleanOperation: intervallo finale del bordo condiviso non certificabile");
++            bool found = false;
++            for (FinId finId : {edge.forward, edge.backward}) {
++                if (!finId.valid() || body.face(body.finFace(finId)).surface.get() != output.surface.get())
++                    continue;
++                const auto first = projectPoint(*output.surface, edge.curve->point(edge.range.lo));
++                const auto last = projectPoint(*output.surface, edge.curve->point(edge.range.hi));
++                Vec2 a(first.u, first.v), b(last.u, last.v);
++                if (output.surface->isUPeriodic()) {
++                    const double period = output.surface->uPeriod();
++                    b[0] += std::nearbyint((a[0] - b[0]) / period) * period;
++                }
++                auto pcurve = std::make_shared<BSplineCurve<2>>(
++                    1, std::vector<double>{edge.range.lo, edge.range.lo, edge.range.hi, edge.range.hi},
++                    std::vector<Vec2>{a, b});
++                const double bound = detail::ellipseAffinePCurveError(ellipse, edge.range, *output.surface, *pcurve);
++                if (!std::isfinite(bound) || bound < 0 || bound > std::min(tolerance_, linearResolution()))
++                    throw std::domain_error("booleanOperation: immagine UV del bordo condiviso non certificabile");
++                auto &fin = body.fin(finId);
++                fin.pcurve = std::move(pcurve);
++                fin.pcurveTolerance = std::max(bound, std::numeric_limits<double>::min());
++                found = true;
++            }
++            if (!found)
++                throw std::domain_error("booleanOperation: faccia del bordo condiviso non conservata");
++        }
++    };
+     BodyHistory declared;
+     if (history) {
+         std::vector<const Body *> operands{&bodies_[0]};
+         if (operandCount == 2) operands.push_back(&bodies_[1]);
+         declared = makeHistory(operands, result);
++        std::map<int, std::vector<HistoryLink>> mounted;
++        std::set<int> borrowed;
++        for (const auto &use : assemblyOrigins) {
++            const int edge = faces.at(use.face).loops.at(use.loop).at(use.fin).edge;
++            auto &origins = mounted[edge];
++            if (std::none_of(origins.begin(), origins.end(), [&](const auto &link) {
++                    return link.operand == use.origin.operand && link.kind == use.origin.kind &&
++                           link.index == use.origin.index;
++                }))
++                origins.push_back(use.origin);
++            if (use.boundary)
++                borrowed.insert(edge);
++        }
++        for (int edge : borrowed)
++            declared.declareOrigins(EntityKind::Edge, edge, mounted.at(edge));
+         const auto built = result.faces();
+         if (built.size() != kept.size()) throw std::logic_error("booleanOperation: mappa delle facce incoerente");
+         for (std::size_t i = 0; i < built.size(); ++i) {
+@@ -2730,12 +3024,26 @@
+         }
+     };
+     tolerantEnds(result);
++    installBoundaryPCurves(result);
+     computePCurves(result);
+     if (unify_) {
+         BodyHistory unified;
+-        result = unifySameDomain(result, tolerance_, history ? &unified : nullptr);
++        result = unifySameDomain(result, tolerance_, (history || !boundaryOutputs.empty()) ? &unified : nullptr);
++        std::vector<BoundaryOutput> nextBoundaryOutputs;
++        for (const auto &output : boundaryOutputs) {
++            const auto descendants = unified.descendants(EntityKind::Edge, 0, output.edge);
++            if (descendants.empty())
++                throw std::domain_error("booleanOperation: genealogia finale del bordo condiviso mancante");
++            for (int descendant : descendants) {
++                auto next = output;
++                next.edge = descendant;
++                nextBoundaryOutputs.push_back(std::move(next));
++            }
++        }
++        boundaryOutputs = std::move(nextBoundaryOutputs);
+         if (history) declared = BodyHistory::compose(declared, unified, 0);
+     }
++    installBoundaryPCurves(result);
+     tolerantEnds(result);
+     const std::vector<CheckIssue> issues = checkBody(result);
+     if (!issues.empty())
+@@ -2756,7 +3064,21 @@
+ 
+ Body booleanOperation(const Body &a, const Body &b, BooleanOperation operation, const BooleanOptions &options, BodyHistory *history) {
+     if (history) *history = BodyHistory();
+-    return BooleanBuilder(a, b, operation, options).run(history);
++    BooleanBuilder builder(a, b, operation, options, true);
++    try {
++        return builder.run(history);
++    } catch (const OperationCancelled &) {
++        throw;
++    } catch (const std::domain_error &) {
++        if (!builder.usedBoundarySubstitution())
++            throw;
++        // La sostituzione e' transazionale: se l'output reale non conserva il
++        // certificato, riprova il percorso precedente su nuove copie, con le
++        // medesime opzioni. Cancellazioni e logic_error non sono recuperati.
++        if (history)
++            *history = BodyHistory();
++        return BooleanBuilder(a, b, operation, options).run(history);
++    }
+ }
+ 
+ Body clipSolidByFace(const Body &solid,const Body &face,bool positive,const BooleanOptions &options,BodyHistory *history) {
+--- before/tools/generate_architecture.py
++++ after/tools/generate_architecture.py
+@@ -40,6 +40,9 @@
+  ('build', 'Build e strumenti', 'Configurazione, generazione e confezionamento del software.')]
+ # Descrizioni curate: aggiornare queste voci quando cambia il confine di un modulo.
+ DESCRIPTIONS = {
++ 'kernel/fk_boolean_boundary.cpp': ('kernel', 'Certificati continui outward dei contatti fra retta e bordo ellittico: originali IEEE, monotonia, scarto dai carrier Plane/Cylinder e frame double; pcurve affine nel parametro originale con bound di Peano, input non finiti e famiglie non risolte rifiutati.'),
++ 'kernel/fk_boolean_boundary.h': ('kernel', 'Contratti interni dei certificati di contatto ellisse/retta finita e delle immagini UV affini; limite continuo o rifiuto, senza tolleranze aumentate e senza campionamento come autorizzazione.'),
++ 'kernel/tests/test_boolean_boundary.cpp': ('tests', 'Regressioni indipendenti sui certificati di contatto e pcurve: budget, monotonia, versi, dati non finiti, overflow, parametri originali, pose e scale e famiglie rifiutate.'),
+  'cad_ellipse': ('sketch', 'Definizione analitica delle ellissi da centro o quattro estremi reali: coppie di assi ortogonali, centro derivato, costruzione da tre clic e normalizzazione del trascinamento senza sostituire i riferimenti dei vincoli.'),
+  'tests/test_ellipse_extremes.h': ('tests', 'Ellisse per estremi: geometria esatta, quattro punti quotabili e vincolabili, centro derivato, gradi di liberta, anteprima e creazione, trascinamento, codec70, compatibilita e Undo/Redo.'),
+  'kernel/fk_project.cpp': ('kernel', 'Proiezione direzionale su corpi: fit cubico con limite continuo dagli originali Line/NURBS su una sola Plane; certificati immutabili senza riferimenti ai chiamanti, verifica dei poli effettivi dopo giunti e fusione primo/ultimo e scarto finale propagato. Scelta delle facce e famiglie non supportate restano campionate.'),
+@@ -196,7 +199,7 @@
+  'kernel/fk_surface_poles.cpp': ('kernel', 'Modifica poli NURBS con topologia e trim conservati: fit continuo dei bordi isoparametrici affini supportati e verifica delle cubiche effettive su ogni faccia adiacente; fallback campionato esplicito per le altre composizioni.'),
+  'tests/test_surface_poles_multi.h': ('tests', 'Poli multifaccia: checklist e clic reali sulle facce, mesh ombreggiata durante scelta in creazione/modifica anche su stadi consumati, Esc/Termina e ripristino anteprima; gabbie, gruppo, spinner/scarto, Undo/Redo, codec e rigenerazione senza cache; regressione OpenGL della profondita, selezione dei poli esposti/X-ray, preview, rotazione, calotte di sezione e segmenti occultati.'),
+  'cad_surface_tools.cpp': ('features', 'Funzioni superficie: conversione analitica e poli multifaccia, refit e vincoli G0/G1/G2 interni e fra facce, stato risolto del trascinamento morbido con raggi U/V e codec16, nessuna riapplicazione dell influenza durante la rigenerazione.'),
+- 'kernel/fk_boolean.cpp': ('kernel', 'Booleane B-rep: dispatch esatto delle sezioni meridiane di rivoluzione; filtri conservativi sui ritagli e sugli spigoli; classificazione UV sui carrier identici, tagli, ritaglio prima della validazione degli archi e riuso dei soli agganci necessari; riclassificazione di ogni sottoarco nei ritagli, scelta della curva condivisa compatibile con tutte le facce, indice UV dei vertici per i fori e diagnostica delle facce; taglio di solidi su un lato di una faccia finita e chiusure orientate.'),
++ 'kernel/fk_boolean.cpp': ('kernel', 'Booleane B-rep: dispatch esatto delle sezioni meridiane di rivoluzione; filtri conservativi sui ritagli e sugli spigoli; classificazione UV sui carrier identici, tagli, ritaglio prima della validazione degli archi e riuso dei soli agganci necessari; riclassificazione di ogni sottoarco nei ritagli, scelta della curva condivisa compatibile con tutte le facce, indice UV dei vertici per i fori e diagnostica delle facce; taglio di solidi su un lato di una faccia finita e chiusure orientate. Contatti Line/trim ellittico: eventi e catena sorgente espliciti, limiti continui e UV affine certificata, mapping dal montaggio e ricontrollo dopo unify; retry transazionale conservativo.'),
+  'kernel/tests/test_surface_algo.cpp': ('tests', 'Proiezioni OCCT e certificati di distanza: piano analitico, confini della tolleranza, curve libere, hint, degenerazioni, concorrenza e cancellazione.'),
+  'kernel/fk_intersect.cpp': ('kernel', 'Sezioni meridiane esatte delle rivoluzioni NURBS, con riconoscimento del piano dai poli e rotazione parametrica; raggi sui coni con quadratica centrata e sin/cos, senza perdere le falde quasi coincidenti; intersezioni esatte: gerarchie Bezier2D e scarto conservativo dei candidati; box B-spline limitati esattamente al tratto richiesto. Newton, budget e tolleranze invariati.'),
+  'kernel/fk_surface_algo.cpp': ('kernel', 'Proiezioni globali NURBS: ricerca Bezier del minimo prima dei bordi del dominio; inviluppi conservativi delle isoparametriche escludono solo minimi impossibili. Bordi, nodi C0 e finestre limitate restano candidati.'),
+--- /dev/null
++++ after/kernel/fk_boolean_boundary.h
+@@ -0,0 +1,16 @@
++#ifndef FORGECAD_FK_BOOLEAN_BOUNDARY_H
++#define FORGECAD_FK_BOOLEAN_BOUNDARY_H
++#include "fk_surface.h"
++namespace ForgeCad::Kernel::detail {
++// Certificato continuo della corrispondenza monotona ellisse/retta finita e
++// dello scarto da entrambi i carrier originali. False include i casi non
++// supportati, non finiti e non risolti; non autorizza alcun ripiego campionato.
++bool certifyEllipseBoundarySegment(const Ellipse<3> &ellipse, Interval range, bool forward, const Line<3> &line,
++                                   double first, double last, const Surface &firstSurface, const Surface &secondSurface,
++                                   double budget);
++// Immagine UV affine nel parametro ORIGINALE dell'ellisse. Restituisce un
++// limite continuo, oppure infinito se dati/famiglia/budget non sono risolti.
++double ellipseAffinePCurveError(const Ellipse<3> &ellipse, Interval range, const Surface &surface,
++                                const Curve<2> &pcurve);
++} // namespace ForgeCad::Kernel::detail
++#endif
+--- /dev/null
++++ after/kernel/fk_boolean_boundary.cpp
+@@ -0,0 +1,334 @@
++#include "fk_boolean_boundary.h"
++#include "fk_bspline.h"
++#include <algorithm>
++#include <array>
++#include <cmath>
++#include <limits>
++namespace ForgeCad::Kernel::detail {
++namespace {
++// Original IEEE coefficients, enclosed after every operation. Unsupported or
++// unresolved inputs never authorize a boundary substitution.
++namespace boundaryCertificate {
++struct I {
++    double lo = 0, hi = 0;
++    I() = default;
++    I(double x) : lo(x), hi(x) {}
++    I(double a, double b) : lo(a), hi(b) {}
++};
++bool finite(I a) { return std::isfinite(a.lo) && std::isfinite(a.hi) && a.lo <= a.hi; }
++I unresolved() { return {-INFINITY, INFINITY}; }
++double down(double x) { return std::nextafter(x, -std::numeric_limits<double>::infinity()); }
++double up(double x) { return std::nextafter(x, std::numeric_limits<double>::infinity()); }
++I operator+(I a, I b) {
++    if (!finite(a) || !finite(b))
++        return unresolved();
++    return {down(a.lo + b.lo), up(a.hi + b.hi)};
++}
++I operator-(I a, I b) {
++    if (!finite(a) || !finite(b))
++        return unresolved();
++    return {down(a.lo - b.hi), up(a.hi - b.lo)};
++}
++I operator-(I a) {
++    if (!finite(a))
++        return unresolved();
++    return {-a.hi, -a.lo};
++}
++I operator*(I a, I b) {
++    if (!finite(a) || !finite(b))
++        return unresolved();
++    const double p[] = {a.lo * b.lo, a.lo * b.hi, a.hi * b.lo, a.hi * b.hi};
++    return {down(*std::min_element(p, p + 4)), up(*std::max_element(p, p + 4))};
++}
++I operator/(I a, I b) {
++    if (!finite(a) || !finite(b))
++        return unresolved();
++    if (b.lo <= 0 && b.hi >= 0)
++        return {-INFINITY, INFINITY};
++    return a * I(down(1 / b.hi), up(1 / b.lo));
++}
++I square(I a) {
++    if (!finite(a))
++        return unresolved();
++    if (a.lo >= 0)
++        return {std::max(0., down(a.lo * a.lo)), up(a.hi * a.hi)};
++    if (a.hi <= 0)
++        return square(-a);
++    return {0, up(std::max(a.lo * a.lo, a.hi * a.hi))};
++}
++I root(I a) {
++    if (!finite(a))
++        return unresolved();
++    if (a.hi < 0)
++        return {-INFINITY, INFINITY};
++    return {std::max(0., down(std::sqrt(std::max(0., a.lo)))), up(std::sqrt(a.hi))};
++}
++double absMax(I a) {
++    if (!finite(a))
++        return INFINITY;
++    return std::max(std::abs(a.lo), std::abs(a.hi));
++}
++using V = std::array<I, 3>;
++bool finite(V v) {
++    return std::all_of(v.begin(), v.end(), [](I x) { return finite(x); });
++}
++V vector(const Vec3 &p) { return {I(p.x()), I(p.y()), I(p.z())}; }
++V operator+(V a, V b) {
++    for (int i = 0; i < 3; ++i)
++        a[i] = a[i] + b[i];
++    return a;
++}
++V operator-(V a, V b) {
++    for (int i = 0; i < 3; ++i)
++        a[i] = a[i] - b[i];
++    return a;
++}
++V operator*(V a, I b) {
++    for (auto &x : a)
++        x = x * b;
++    return a;
++}
++V operator/(V a, I b) {
++    for (auto &x : a)
++        x = x / b;
++    return a;
++}
++I dot(V a, V b) {
++    I s;
++    for (int i = 0; i < 3; ++i)
++        s = s + a[i] * b[i];
++    return s;
++}
++V cross(V a, V b) { return {a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]}; }
++I norm(V a) {
++    I s;
++    for (auto x : a)
++        s = s + square(x);
++    return root(s);
++}
++// Taylor on |theta|<=8: cosine degree 96, sine degree 97.
++// |R|<=8^97/97! is conservative for both polynomials.
++// No libm trigonometric value is used as a certificate.
++I trig(double theta, bool sine) {
++    if (!std::isfinite(theta) || std::abs(theta) > 8)
++        return {-INFINITY, INFINITY};
++    I x(theta), xx = square(x), term = sine ? x : I(1), sum = term;
++    for (int k = 1; k <= 48; ++k) {
++        const int n = 2 * k + (sine ? 1 : 0);
++        term = -(term * xx) / I(double(n * (n - 1)));
++        sum = sum + term;
++    }
++    I remainder(1);
++    for (int i = 1; i <= 97; ++i)
++        remainder = remainder * I(8) / I(double(i));
++    return sum + I(-remainder.hi, remainder.hi);
++}
++V ellipsePoint(const Ellipse<3> &e, double t) {
++    return vector(e.center()) + vector(e.xAxis()) * (I(e.xRadius()) * trig(t, false)) +
++           vector(e.yAxis()) * (I(e.yRadius()) * trig(t, true));
++}
++V ellipseDerivative(const Ellipse<3> &e, double t) {
++    return vector(e.xAxis()) * (-I(e.xRadius()) * trig(t, true)) +
++           vector(e.yAxis()) * (I(e.yRadius()) * trig(t, false));
++}
++I acceleration(const Ellipse<3> &e) {
++    const auto a = vector(e.xAxis()) * I(e.xRadius()), b = vector(e.yAxis()) * I(e.yRadius());
++    return root(square(norm(a)) + square(norm(b)));
++}
++V linePoint(const Line<3> &line, double t) { return vector(line.origin()) + vector(line.direction()) * I(t); }
++// Bound distance of every point of the finite line segment to the ORIGINAL
++// plane or cylinder carrier. The latter includes original frame defects.
++double carrier(const Surface &s, V a, V b) {
++    if (!finite(a) || !finite(b))
++        return INFINITY;
++    if (s.type() == SurfaceType::Plane) {
++        const auto &f = static_cast<const Plane &>(s).frame();
++        auto n = cross(vector(f.xDir()), vector(f.yDir()));
++        auto length = norm(n);
++        if (!(length.lo > 0))
++            return INFINITY;
++        return (I(std::max(absMax(dot(a - vector(f.origin()), n)), absMax(dot(b - vector(f.origin()), n)))) / length)
++            .hi;
++    }
++    if (s.type() != SurfaceType::Cylinder)
++        return INFINITY;
++    const auto &c = static_cast<const CylindricalSurface &>(s);
++    if (!(c.radius() > 0) || !std::isfinite(c.radius()))
++        return INFINITY;
++    const auto &f = c.frame();
++    auto z = vector(f.zDir());
++    auto zz = dot(z, z);
++    if (!(zz.lo > 0))
++        return INFINITY;
++    auto zu = z / root(zz);
++    auto x = vector(f.xDir());
++    auto xu = x - zu * dot(x, zu);
++    auto nx = norm(xu);
++    if (!(nx.lo > 0))
++        return INFINITY;
++    xu = xu / nx;
++    auto yu = cross(zu, xu);
++    const I frameError = I(c.radius()) * (norm(x - xu) + norm(vector(f.yDir()) - yu));
++    auto radial = [&](V p) {
++        auto d = p - vector(f.origin());
++        return d - z * (dot(d, z) / zz);
++    };
++    auto ra = radial(a), rb = radial(b);
++    I rr = square(I(c.radius()));
++    I q0 = dot(ra, ra) - rr, q1 = dot(ra, rb) - rr, q2 = dot(rb, rb) - rr;
++    // Quadratic Bernstein hull encloses squared radial distance minus R^2.
++    const double q = std::max({absMax(q0), absMax(q1), absMax(q2)});
++    return (I(q) / I(c.radius()) + frameError).hi;
++}
++bool piece(const Ellipse<3> &e, Interval range, bool forward, const Line<3> &line, double ta, double tb,
++           const Surface &sa, const Surface &sb, double budget) {
++    if (!(range.isFinite() && range.lo < range.hi && std::isfinite(ta) && std::isfinite(tb) && ta < tb &&
++          std::isfinite(budget) && budget > 0))
++        return false;
++    if (!finite(vector(e.center())) || !finite(vector(e.xAxis())) || !finite(vector(e.yAxis())) ||
++        !finite(vector(line.origin())) || !finite(vector(line.direction())) || !std::isfinite(e.xRadius()) ||
++        !std::isfinite(e.yRadius()))
++        return false;
++    I width = I(range.hi) - I(range.lo), m = acceleration(e);
++    double mid = range.lo * .5 + range.hi * .5;
++    I reach(std::max(absMax(I(mid) - I(range.lo)), absMax(I(range.hi) - I(mid))));
++    auto d = vector(line.direction());
++    I slope = dot(ellipseDerivative(e, mid), d) * (forward ? I(1) : I(-1));
++    I variation = m * reach * norm(d);
++    if (!finite(slope) || !(slope.lo > variation.hi))
++        return false;
++    auto a = ellipsePoint(e, forward ? range.lo : range.hi), b = ellipsePoint(e, forward ? range.hi : range.lo),
++         la = linePoint(line, ta), lb = linePoint(line, tb);
++    I endpoints(std::max(norm(a - la).hi, norm(b - lb).hi));
++    I gap = endpoints + m * square(width) / I(8);
++    if (!finite(gap) || gap.hi > budget)
++        return false;
++    const double ca = carrier(sa, la, lb), cb = carrier(sb, la, lb);
++    return finite(I(ca)) && finite(I(cb)) && (gap + I(std::max(ca, cb))).hi <= budget;
++}
++// Insert inside namespace boundaryCertificate, after the existing outward I/V
++// arithmetic, trig(double,bool), ellipsePoint and acceleration helpers.
++// No production evaluator or sampled deviation authorizes this certificate.
++using UVInterval = std::array<I, 2>;
++
++bool affineParameters(const Curve<2> &pcurve, double t, UVInterval &uv) {
++    if (!std::isfinite(t))
++        return false;
++    if (pcurve.type() == CurveType::Line) {
++        const auto &line = static_cast<const Line<2> &>(pcurve);
++        for (int k = 0; k < 2; ++k)
++            uv[k] = I(line.origin()[k]) + I(line.direction()[k]) * I(t);
++    } else if (pcurve.type() == CurveType::BSpline) {
++        const auto &spline = static_cast<const BSplineCurve<2> &>(pcurve);
++        if (spline.degree() != 1 || spline.poleCount() != 2 || spline.knots().size() != 4)
++            return false;
++        const auto &knots = spline.knots();
++        if (!std::isfinite(knots[0]) || !std::isfinite(knots[2]) || !(knots[0] < knots[2]) || knots[0] != knots[1] ||
++            knots[2] != knots[3] || t < knots[0] || t > knots[2])
++            return false;
++        // The supported image is polynomial affine UV, not a rational map.
++        if (!spline.weights().empty() &&
++            (spline.weights().size() != 2 || spline.weights()[0] != 1.0 || spline.weights()[1] != 1.0))
++            return false;
++        const auto &poles = spline.poles();
++        if (!isFinite(poles[0]) || !isFinite(poles[1]))
++            return false;
++        if (t == knots[0] || t == knots[2]) {
++            const auto &pole = poles[t == knots[0] ? 0 : 1];
++            uv = {I(pole.x()), I(pole.y())};
++        } else {
++            const I denominator = I(knots[2]) - I(knots[0]);
++            if (!finite(denominator) || !(denominator.lo > 0.0))
++                return false;
++            const I lambda = (I(t) - I(knots[0])) / denominator;
++            if (!finite(lambda))
++                return false;
++            for (int k = 0; k < 2; ++k)
++                uv[k] = I(poles[0][k]) * (I(1.0) - lambda) + I(poles[1][k]) * lambda;
++        }
++    } else {
++        return false;
++    }
++    return finite(uv[0]) && finite(uv[1]);
++}
++
++// Endpoint UV coordinates may themselves be intervals because their affine
++// parameter map is evaluated outward. Sin/cos are globally 1-Lipschitz; this
++// expands the existing rigorous Taylor enclosure without relying on libm.
++I affineTrig(I angle, bool sine) {
++    if (!finite(angle) || absMax(angle) > 8.0)
++        return unresolved();
++    const double mid = angle.lo * 0.5 + angle.hi * 0.5;
++    if (!std::isfinite(mid))
++        return unresolved();
++    const double reach = absMax(angle - I(mid));
++    if (!std::isfinite(reach))
++        return unresolved();
++    return trig(mid, sine) + I(-reach, reach);
++}
++
++V affineSurfacePoint(const Surface &surface, const UVInterval &uv) {
++    if (!finite(uv[0]) || !finite(uv[1]))
++        return {unresolved(), unresolved(), unresolved()};
++    if (surface.type() == SurfaceType::Plane) {
++        const auto &frame = static_cast<const Plane &>(surface).frame();
++        return vector(frame.origin()) + vector(frame.xDir()) * uv[0] + vector(frame.yDir()) * uv[1];
++    }
++    if (surface.type() == SurfaceType::Cylinder) {
++        const auto &cylinder = static_cast<const CylindricalSurface &>(surface);
++        if (!std::isfinite(cylinder.radius()) || !(cylinder.radius() > 0.0))
++            return {unresolved(), unresolved(), unresolved()};
++        const auto &frame = cylinder.frame();
++        return vector(frame.origin()) +
++               (vector(frame.xDir()) * affineTrig(uv[0], false) + vector(frame.yDir()) * affineTrig(uv[0], true)) *
++                   I(cylinder.radius()) +
++               vector(frame.zDir()) * uv[1];
++    }
++    return {unresolved(), unresolved(), unresolved()};
++}
++
++double affinePCurveError(const Ellipse<3> &ellipse, Interval range, const Surface &surface, const Curve<2> &pcurve) {
++    if (!range.isFinite() || !(range.lo < range.hi) ||
++        (surface.type() != SurfaceType::Plane && surface.type() != SurfaceType::Cylinder))
++        return INFINITY;
++    UVInterval uv0, uv1;
++    if (!affineParameters(pcurve, range.lo, uv0) || !affineParameters(pcurve, range.hi, uv1))
++        return INFINITY;
++    const V e0 = ellipsePoint(ellipse, range.lo), e1 = ellipsePoint(ellipse, range.hi);
++    const V s0 = affineSurfacePoint(surface, uv0), s1 = affineSurfacePoint(surface, uv1);
++    if (!finite(e0) || !finite(e1) || !finite(s0) || !finite(s1))
++        return INFINITY;
++    const I gap0 = norm(e0 - s0), gap1 = norm(e1 - s1);
++    const I width = I(range.hi) - I(range.lo), m = acceleration(ellipse);
++    if (!finite(gap0) || !finite(gap1) || !finite(width) || !finite(m) || !(width.hi > 0.0))
++        return INFINITY;
++    I error = I(std::max(gap0.hi, gap1.hi)) + m * square(width) / I(8.0);
++    if (surface.type() == SurfaceType::Cylinder) {
++        const auto &cylinder = static_cast<const CylindricalSurface &>(surface);
++        const auto &frame = cylinder.frame();
++        const I xLength = norm(vector(frame.xDir())), yLength = norm(vector(frame.yDir()));
++        const I uWidth = uv1[0] - uv0[0];
++        if (!finite(xLength) || !finite(yLength) || !finite(uWidth))
++            return INFINITY;
++        // For affine U(t), S'' = -R*(U')^2*(cos(U)X+sin(U)Y).
++        // Thus Mcomposition*DeltaT^2 = R*(||X||+||Y||)*DeltaU^2.
++        // This avoids dividing by a tiny DeltaT, including subnormal spans.
++        error = error + I(cylinder.radius()) * (xLength + yLength) * square(uWidth) / I(8.0);
++    }
++    // Peano interpolation error for BOTH original curves, plus their two
++    // corresponding endpoint gaps, bounds the difference at every t.
++    return finite(error) && error.hi >= 0.0 ? error.hi : INFINITY;
++}
++
++} // namespace boundaryCertificate
++
++} // namespace
++bool certifyEllipseBoundarySegment(const Ellipse<3> &ellipse, Interval range, bool forward, const Line<3> &line,
++                                   double first, double last, const Surface &sa, const Surface &sb, double budget) {
++    return boundaryCertificate::piece(ellipse, range, forward, line, first, last, sa, sb, budget);
++}
++double ellipseAffinePCurveError(const Ellipse<3> &ellipse, Interval range, const Surface &surface,
++                                const Curve<2> &pcurve) {
++    return boundaryCertificate::affinePCurveError(ellipse, range, surface, pcurve);
++}
++} // namespace ForgeCad::Kernel::detail
+--- /dev/null
++++ after/kernel/tests/test_boolean_boundary.cpp
+@@ -0,0 +1,159 @@
++#include "fk_boolean_boundary.h"
++#include "fk_bspline.h"
++#include "fk_precision.h"
++#include "fk_surface.h"
++#include <cmath>
++#include <iomanip>
++#include <iostream>
++#include <limits>
++#include <sstream>
++using namespace ForgeCad::Kernel;
++namespace D = ForgeCad::Kernel::detail;
++static int checks = 0, failed = 0;
++static void require(bool ok, const char *message) {
++    ++checks;
++    failed += !ok;
++    std::cout << (ok ? "PASS " : "FAIL ") << message << std::endl;
++}
++static std::shared_ptr<BSplineCurve<2>> affine(Interval r, Vec2 a, Vec2 b, std::vector<double> w = {}) {
++    return std::make_shared<BSplineCurve<2>>(1, std::vector<double>{r.lo, r.lo, r.hi, r.hi}, std::vector<Vec2>{a, b},
++                                             w);
++}
++static bool unresolved(double v) { return std::isinf(v) && v > 0; }
++static double observed(const Ellipse<3> &e, Interval r, const Surface &s, const Curve<2> &pc) {
++    double error = 0;
++    for (int i = 0; i <= 32; ++i) {
++        const double t = r.lo + (r.hi - r.lo) * i / 32.;
++        const auto uv = pc.point(t);
++        error = std::max(error, distance(e.point(t), s.point(uv.x(), uv.y())));
++    }
++    return error;
++}
++static std::string coefficients(const Ellipse<3> &e, const BSplineCurve<2> &pc) {
++    std::ostringstream s;
++    s << std::hexfloat;
++    for (int k = 0; k < 3; ++k)
++        s << e.center()[k] << e.xAxis()[k] << e.yAxis()[k];
++    s << e.xRadius() << e.yRadius() << pc.degree();
++    for (const auto &p : pc.poles())
++        s << p.x() << p.y();
++    for (auto x : pc.knots())
++        s << x;
++    for (auto x : pc.weights())
++        s << x;
++    return s.str();
++}
++int main() {
++    std::cout << std::setprecision(17) << std::unitbuf;
++    const double delta = 1e-6, sine = .5 * std::sin(delta), nan = std::numeric_limits<double>::quiet_NaN(),
++                 inf = std::numeric_limits<double>::infinity();
++    const Interval r{-delta, delta};
++    const Frame3 xy;
++    const Plane plane(xy);
++    const CylindricalSurface cylinder(Frame3(Vec3(), Vec3(0, 1, 0), Vec3(1, 0, 0)), 1);
++    const Ellipse<3> e(Vec3(), Vec3(1, 0, 0), Vec3(0, 1, 0), 1, .5);
++    const Line<3> line(Vec3(1, 0, 0), Vec3(0, 1, 0));
++    const auto certify = [&](double budget) {
++        return D::certifyEllipseBoundarySegment(e, r, true, line, -sine, sine, plane, cylinder, budget);
++    };
++    require(certify(1e-9), "short original ellipse and finite tangent chord certified at 1e-9");
++    require(certify(1e-7), "same supported geometry certified at document resolution");
++    const Line<3> reversed(Vec3(1, 0, 0), Vec3(0, -1, 0));
++    require(D::certifyEllipseBoundarySegment(e, r, false, reversed, -sine, sine, plane, cylinder, 1e-9),
++            "reversing both source traversal and line direction preserves a valid monotone match");
++    require(!D::certifyEllipseBoundarySegment(e, r, false, line, -sine, sine, plane, cylinder, 1e-7),
++            "wrong source traversal cannot authorize reversed correspondence");
++    require(!D::certifyEllipseBoundarySegment(e, r, true, Line<3>(Vec3(1 + 2e-7, 0, 0), Vec3(0, 1, 0)), -sine, sine,
++                                              plane, cylinder, 1e-7),
++            "chord shifted 2e-7 beyond the 1e-7 budget is rejected");
++    require(!D::certifyEllipseBoundarySegment(e, r, true, line, -sine + 1e-4, sine + 1e-4, plane, cylinder, 1e-7),
++            "wrong original line endpoint parameters rejected");
++    require(!D::certifyEllipseBoundarySegment(e, r, true, line, -sine, sine,
++                                              Plane(Frame3(Vec3(0, 0, 2e-7), Vec3(0, 0, 1), Vec3(1, 0, 0))), cylinder,
++                                              1e-7),
++            "second independent carrier must also lie within budget");
++    for (double budget : {0., -1., nan, inf})
++        require(!certify(budget), "invalid budget cannot authorize substitution");
++    for (Interval range : std::vector<Interval>{{0, 0}, {delta, -delta}, {nan, delta}, {-delta, inf}, {10, 10 + delta}})
++        require(!D::certifyEllipseBoundarySegment(e, range, true, line, -sine, sine, plane, cylinder, 1e-7),
++                "invalid or uncertifiable angular domain rejected");
++    for (auto ends : std::vector<std::pair<double, double>>{{sine, -sine}, {0, 0}, {nan, sine}, {-sine, inf}})
++        require(!D::certifyEllipseBoundarySegment(e, r, true, line, ends.first, ends.second, plane, cylinder, 1e-7),
++                "invalid finite segment parameter range rejected");
++    const Interval folded{-2, 2};
++    const double y = .5 * std::sin(2.);
++    require(!D::certifyEllipseBoundarySegment(e, folded, true, Line<3>(Vec3(std::cos(2.), 0, 0), Vec3(0, 1, 0)), -y, y,
++                                              plane, plane, 10),
++            "projected path with actual turning points rejected even with sufficient geometric error budget");
++    const SphericalSurface sphere(Frame3(), 1);
++    require(!D::certifyEllipseBoundarySegment(e, r, true, line, -sine, sine, plane, sphere, 1e-7),
++            "unsupported second carrier rejected");
++    require(!D::certifyEllipseBoundarySegment(e, r, true, line, -sine, sine, sphere, cylinder, 1e-7),
++            "unsupported first carrier rejected");
++    const Ellipse<3> huge(Vec3(1e308, 1e308, 1e308), Vec3(1, 0, 0), Vec3(0, 1, 0), 1e308, 1e308);
++    require(!D::certifyEllipseBoundarySegment(huge, r, true, line, -sine, sine, plane, cylinder, 1e-7),
++            "coefficient overflow never authorizes a segment");
++    auto pc = affine(r, Vec2(std::cos(delta), -sine), Vec2(std::cos(delta), sine));
++    const auto before = coefficients(e, *pc);
++    double bound = D::ellipseAffinePCurveError(e, r, plane, *pc);
++    const double witness = observed(e, r, plane, *pc);
++    std::cout << "BOUND plane=" << bound << " observed=" << witness << std::endl;
++    require(std::isfinite(bound) && bound <= 1e-9 && bound >= witness,
++            "plane pullback gives finite continuous bound above independent witness error");
++    auto cylpc = affine(r, Vec2(0, -sine), Vec2(0, sine));
++    bound = D::ellipseAffinePCurveError(e, r, cylinder, *cylpc);
++    require(std::isfinite(bound) && bound <= 1e-9 && bound >= observed(e, r, cylinder, *cylpc),
++            "cylinder pullback uses original ellipse parameters and endpoint UV");
++    auto wrong = affine(r, Vec2(std::cos(delta) + 2e-7, -sine), Vec2(std::cos(delta) + 2e-7, sine));
++    bound = D::ellipseAffinePCurveError(e, r, plane, *wrong);
++    require(!std::isfinite(bound) || bound > 1e-7,
++            "UV endpoint offset above budget cannot appear certified below budget");
++    auto backwards = affine(r, Vec2(std::cos(delta), sine), Vec2(std::cos(delta), -sine));
++    bound = D::ellipseAffinePCurveError(e, r, plane, *backwards);
++    require(!std::isfinite(bound) || bound > 1e-7, "reversed UV endpoint correspondence cannot preserve original t");
++    const Ellipse<3> circle(Vec3(), Vec3(1, 0, 0), Vec3(0, 1, 0), 1, 1);
++    const Line<2> pcLine(Vec2(1, 0), Vec2(0, 1));
++    bound = D::ellipseAffinePCurveError(circle, r, plane, pcLine);
++    require(std::isfinite(bound) && bound <= 1e-9 && bound >= observed(circle, r, plane, pcLine),
++            "native Line2 parameterization supported without arbitrary rescaling");
++    const Interval tiny{-1e-150, 1e-150};
++    auto tinyPc = affine(tiny, Vec2(1, -.5e-150), Vec2(1, .5e-150));
++    bound = D::ellipseAffinePCurveError(e, tiny, plane, *tinyPc);
++    require(std::isfinite(bound) && bound <= 1e-9,
++            "tiny original t span stays finite without division by its width squared");
++    require(unresolved(D::ellipseAffinePCurveError(e, {-2 * delta, delta}, plane, *pc)),
++            "affine pcurve outside its stored domain is rejected");
++    for (auto w : std::vector<std::vector<double>>{{1, 2}, {2, 2}}) {
++        auto rat = affine(r, Vec2(1, -sine), Vec2(1, sine), w);
++        require(unresolved(D::ellipseAffinePCurveError(e, r, plane, *rat)),
++                "non-unit rational weights are outside the affine family");
++    }
++    const Circle<2> uvCircle(Vec2(), Vec2(1, 0), Vec2(0, 1), 1);
++    require(unresolved(D::ellipseAffinePCurveError(e, r, plane, uvCircle)), "unsupported nonlinear pcurve rejected");
++    require(unresolved(D::ellipseAffinePCurveError(e, r, sphere, *pc)), "unsupported surface image rejected");
++    for (Interval bad : std::vector<Interval>{{0, 0}, {delta, -delta}, {nan, delta}, {-delta, inf}, {10, 10 + delta}})
++        require(unresolved(D::ellipseAffinePCurveError(e, bad, plane, *pc)),
++                "invalid image interval rejected without a finite bound");
++    require(unresolved(D::ellipseAffinePCurveError(huge, r, plane, *pc)),
++            "overflow in image coefficients yields an unresolved bound");
++    require(before == coefficients(e, *pc), "certification preserves original ellipse and pcurve coefficients");
++    for (double scale : {.1, 1., 10.}) {
++        const Frame3 pose(Vec3(3, -5, 7), Vec3(.2, .3, .9), Vec3(1, .1, 0));
++        const Plane posed(pose);
++        const Ellipse<3> pe(pose.origin(), pose.xDir(), pose.yDir(), scale, .5 * scale);
++        const Line<3> pl(pose.origin() + scale * pose.xDir(), pose.yDir());
++        const CylindricalSurface cy(Frame3(pose.origin(), pose.yDir(), pose.xDir()), scale);
++        require(D::certifyEllipseBoundarySegment(pe, r, true, pl, -sine * scale, sine * scale, posed, cy, 1e-7),
++                "posed and scaled originals retain certificate within unchanged budget");
++        auto uv = affine(r, Vec2(scale * std::cos(delta), -scale * sine), Vec2(scale * std::cos(delta), scale * sine));
++        bound = D::ellipseAffinePCurveError(pe, r, posed, *uv);
++        require(std::isfinite(bound) && bound <= 1e-7 && bound >= observed(pe, r, posed, *uv),
++                "posed plane image is certified with original geometry");
++        auto cuv = affine(r, Vec2(0, -scale * sine), Vec2(0, scale * sine));
++        bound = D::ellipseAffinePCurveError(pe, r, cy, *cuv);
++        require(std::isfinite(bound) && bound <= 1e-7 && bound >= observed(pe, r, cy, *cuv),
++                "posed cylinder image is certified with original geometry");
++    }
++    std::cout << "RESULT checks=" << checks << " failures=" << failed << std::endl;
++    return failed ? 1 : 0;
++}

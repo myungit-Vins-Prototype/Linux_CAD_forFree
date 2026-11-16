@@ -1,0 +1,23 @@
+#include "fk_helix_projection.h"
+#include <iostream>
+#include <iomanip>
+using namespace ForgeCad::Kernel;
+int main() {
+    HelixSpec spec;spec.turns=2;spec.pitch=.2;spec.radius=1;
+    CurvePtr<3> source=std::make_shared<TransformedCurve>(std::make_shared<HelixCurve>(spec),Transform3::translation({2,3,4}));
+    Frame3 target({},Vec3(1,0,0),Vec3(0,1,0));
+    auto data=detail::helixProjectionErrorBound(source,source->domain(),target);
+    double deviation=-1;auto fit=detail::projectHelixCertified(source,source->domain(),target,1e-7,&deviation);
+    double measured=0;
+    for(int i=0;i<=10000;++i){double t=source->domain().hi*i/10000;auto p=target.toLocal(source->point(t));measured=std::max(measured,distance(fit->point(t),Vec2(p.x(),p.y())));}
+    const auto bound=detail::requireHelixProjection(source,source->domain(),target,fit,1e-7);
+    std::cout<<std::setprecision(17)<<"positive poles="<<fit->poleCount()<<" measured="<<measured<<" bound="<<bound<<" deviation="<<deviation<<"\n";
+    if(measured>bound || bound>1e-7)return 1;
+    std::weak_ptr<const Curve<3>>weak=source;source.reset();if(!weak.expired())return 2;
+    if(!isFinite(data.value(.1)))return 3;
+    spec.turns=1e6;spec.radius=1e-4;spec.pitch=1e-6;
+    source=std::make_shared<TransformedCurve>(std::make_shared<HelixCurve>(spec),Transform3());deviation=123;
+    try{detail::projectHelixCertified(source,source->domain(),target,1e-7,&deviation);return 4;}
+    catch(const std::domain_error &e){std::cout<<"huge rejected="<<e.what()<<" deviation="<<deviation<<"\n";}
+    return deviation==123?0:5;
+}

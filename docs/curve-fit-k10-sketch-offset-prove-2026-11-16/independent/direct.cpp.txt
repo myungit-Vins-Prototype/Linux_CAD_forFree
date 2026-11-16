@@ -1,0 +1,21 @@
+#ifndef SKETCH_OFFSET_SOURCE
+#define SKETCH_OFFSET_SOURCE "cad_sketch_offset.cpp"
+#endif
+#include SKETCH_OFFSET_SOURCE
+#include <iostream>
+#include <iomanip>
+using namespace ForgeCad;
+using namespace ForgeCad::Kernel;
+void require(bool v,const char*s){if(!v)throw std::runtime_error(s);}
+CurvePtr<2> source(){return std::make_shared<BSplineCurve<2>>(1,std::vector<double>{0,0,1,1},std::vector<Vec2>{{0,0},{1,0}});}
+int main(){std::cout<<std::unitbuf<<std::setprecision(17);
+ int passed=0;
+ for(bool upper:{false,true})for(bool reverse:{false,true}){SketchObject s;CurveObject c;c.tool=DrawingTool::Converted;s.curves.append(c);Piece piece;piece.entity={1,0};piece.curve=std::make_shared<BSplineCurve<2>>(1,std::vector<double>{0,0,.5,1,1},std::vector<Vec2>{{0,0},{.5,0},{.5,.5}});piece.range=upper?Interval{.5,1}:Interval{0,.5};piece.forward=!reverse;auto p=offsetOf(s,piece,.01);auto q=extended(p);auto expected=upper?Vec2(reverse?.51:.49,0):Vec2(.5,reverse?-.01:.01);require(distance(p.f(.5),expected)<1e-14,"endpoint side mismatch");require(distance(q.first->point(.5),p.f(.5))<1e-14,"extended endpoint mismatch");std::cout<<"C0 side upper="<<upper<<" reverse="<<reverse<<" PASS\n";++passed;}
+ OffsetPiece p;p.kind=OffsetPiece::Free;p.sourceCurve=source();p.signedDistance=.01;p.t0=0;p.t1=1;p.breaks={};p.f=[](double t){return Vec2(t,.01);};auto b=freeOffsetErrorBound(p,{0,1});require(bool(b),"provider absent");std::array<Vec3,4> q{{{0,.01,0},{1./3,.01,0},{2./3,.01,0},{1,.01,0}}};double good=b({0,1},q);require(std::isfinite(good)&&good<1e-7,"line positive failed");auto altered=q;altered.front()[1]+=.001;double bad=b({0,1},altered);require(!std::isfinite(bad)||bad>1e-7,"altered endpoint accepted");auto wrong=q;for(auto&v:wrong)v[1]=-.01;bad=b({0,1},wrong);require(!std::isfinite(bad)||bad>1e-7,"wrong sign accepted");std::cout<<"original oracle positive="<<good<<" altered endpoint and opposite sign PASS\n";passed+=3;
+ p.sourceCurve=std::make_shared<BSplineCurve<2>>(1,std::vector<double>{0,0,.5,.50000000001,1,1},std::vector<Vec2>{{0,0},{.5,0},{.50000000001,0},{1,0}});p.breaks={.5,.50000000001};auto ex=extended(p);require(distance(ex.first->point(.500000000005),Vec2(.500000000005,.01))<1e-7,"narrow spans failed");std::cout<<"narrow source span PASS\n";++passed;
+ p.sourceCurve=std::make_shared<TrimmedCurve<2>>(source(),.2,.8);p.t0=.2;p.t1=.8;p.breaks={};ex=extended(p);require(ex.second.lo==.2&&ex.second.hi==.8,"trimmed original domain changed");std::cout<<"Trimmed original domain PASS\n";++passed;
+ bool threw=false;try{p.sourceCurve=std::make_shared<BSplineCurve<2>>(1,std::vector<double>{0,0,1,1},std::vector<Vec2>{{0,0},{1,0}},std::vector<double>{1,-1});(void)freeOffsetErrorBound(p,{0,1});}catch(const std::exception&){threw=true;}require(threw,"invalid weights fell back");std::cout<<"recognized invalid weights fail closed PASS\n";++passed;
+ std::vector<Vec3> points{{0,0,0},{2,2,0},{0,2,0},{2,0,0},{3,0,0}};std::vector<BSplineCurve<3>> pieces;for(int i=0;i<4;++i){std::vector<Vec3> cp;for(int j=0;j<4;++j)cp.push_back(points[i]+(j/3.)*(points[i+1]-points[i]));pieces.emplace_back(3,std::vector<double>{double(i),double(i),double(i),double(i),double(i+1),double(i+1),double(i+1),double(i+1)},cp);}auto loop=std::make_shared<BSplineCurve<3>>(joinBezierPieces(pieces,{0,1,2,3,4}));std::vector<Interval> seen;std::vector<std::array<Vec3,4>> actual;auto result=trimOffsetLoops(loop,[&](const Interval&r,const std::array<Vec3,4>&p){seen.push_back(r);actual.push_back(p);return 0.;});require(seen.size()==3&&result->domain().hi==3,"trim provenance count/mapping");require(std::abs(seen[0].lo)<1e-12&&std::abs(seen[0].hi-.5)<1e-8&&std::abs(seen[1].lo-2.5)<1e-8&&std::abs(seen[1].hi-3)<1e-12&&seen[2].lo==3&&seen[2].hi==4,"trim provenance domains");for(std::size_t i=0;i<seen.size();++i)for(int j=0;j<4;++j)require(distance(actual[i][j],result->poles()[3*i+j])==0,"postjoin oracle saw intermediate poles");std::cout<<"loop provenance original [0,.5],[2.5,3],[3,4] and actual final poles PASS\n";++passed;
+ threw=false;try{(void)trimOffsetLoops(loop,[](const Interval&,const std::array<Vec3,4>&){return 2e-7;});}catch(const std::exception&){threw=true;}require(threw,"postjoin excess failed open");std::cout<<"loop postjoin above unchanged1e-7 rejected PASS\n";++passed;
+ std::cout<<"RESULT "<<passed<<" checks PASS\n";
+}

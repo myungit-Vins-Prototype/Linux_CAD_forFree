@@ -1,0 +1,5 @@
+u=0.1 error=0 scale=1 radius_bound=0.0208333 d=0.001
+u=0.1125 error=0.000220863 scale=1 radius_bound=0.0208333 d=0.001
+u=0.125 error=8.67362e-19 scale=1 radius_bound=0.0208333 d=0.001
+u=0.1375 error=0.000220863 scale=1 radius_bound=0.0208333 d=0.001
+u=0.15 error=0 scale=1 radius_bound=0.0208333 d=0.001

@@ -1,0 +1,16 @@
+from pathlib import Path
+import json,hashlib
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/k10-helix-review/root');memory=(R/'CLAUDE.md').read_text()
+p=R/'tests/test_viewport.cpp';s=p.read_text();needle='#include "test_sketch_projection_fit_validation.h"\n';assert s.count(needle)==1;s=s.replace(needle,'');s=needle+s;p.write_text(s)
+p=R/'tools/generate_architecture.py';s=p.read_text();lines=s.splitlines(True);hits=[i for i,line in enumerate(lines) if line.startswith(" 'cad_sketch_refs':")];assert len(hits)==2
+new=lines[hits[0]];suffix=new.split("('sketch', '",1)[1].rsplit("'),",1)[0]
+old=lines[hits[1]];lines[hits[1]]=old.rstrip('\n')[:-3]+' '+suffix+"'),\n";del lines[hits[0]];s=''.join(lines)
+import ast;ast.parse(s);p.write_text(s)
+freeze=json.loads((T/'frozen-source-hashes.json').read_text())
+for f in ['tests/test_viewport.cpp','tools/generate_architecture.py']:freeze[f]=hashlib.sha256((R/f).read_bytes()).hexdigest()
+(T/'frozen-source-hashes.json').write_text(json.dumps(freeze,indent=2)+'\n')
+for name in ['build.log','build-result.json','architecture-generate.log']:
+ p=T/name
+ if p.exists():p.rename(p.with_name('first-integration-'+name))
+(T/'integration-repair.json').write_text(json.dumps({'cause':'Standalone namespace test header inserted at an include site inside ViewportInteractionTest class','fix':'Move include to global scope; test header and core sources unchanged','catalog':'Preserve existing cad_sketch_refs description and append new scope instead of a shadowed duplicate key'},indent=2)+'\n')
+assert len(memory.encode())<=16384

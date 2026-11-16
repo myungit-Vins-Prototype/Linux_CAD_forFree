@@ -1,0 +1,5 @@
+#!/bin/sh
+set -eu
+stage=/tmp/forgecad-review-followup-20261115/preview
+python3 "$stage/build.py"
+QT_QPA_PLATFORM=offscreen QT_QPA_PLATFORMTHEME=generic QT_STYLE_OVERRIDE=Fusion QT_XCB_GL_INTEGRATION=none LIBGL_ALWAYS_SOFTWARE=1 timeout 40s "$stage/repro"

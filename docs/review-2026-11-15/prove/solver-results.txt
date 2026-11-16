@@ -1,0 +1,13 @@
+nan: exit 0
+encode='' decode='' bytes=130
+loaded value=nan; solving
+ok=1 residual=0 iterations=0 constraintError=0
+
+inf: TIMEOUT after 3s
+encode='' decode='' bytes=131
+loaded value=inf; solving
+
+huge: TIMEOUT after 3s
+encode='' decode='' bytes=139
+loaded value=1e+20; solving
+

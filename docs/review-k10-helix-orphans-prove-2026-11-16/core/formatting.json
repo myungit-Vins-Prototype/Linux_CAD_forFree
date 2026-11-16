@@ -1,0 +1,92 @@
+{
+  "clang_format_version": "clang-format version 23.1.5",
+  "scope": "new files complete, existing files changed lines only; real destination assume-filename",
+  "records": [
+    {
+      "name": "fk_helix.h",
+      "destination": "kernel/fk_helix.h",
+      "command": [
+        "clang-format",
+        "--style={BasedOnStyle: LLVM, IndentWidth: 4, ColumnLimit: 140, BreakBeforeBraces: Attach}",
+        "--sort-includes=false",
+        "--assume-filename=/home/myungit/Linux_CAD_forFree/kernel/fk_helix.h",
+        "--lines=48:51"
+      ],
+      "before_sha256": "a5d529885c067a671d09491c037f3e71ab1adb11095b7796ada3d28e9bb904ea",
+      "formatted_sha256": "a5d529885c067a671d09491c037f3e71ab1adb11095b7796ada3d28e9bb904ea",
+      "non_comment_non_whitespace_bytes_identical": true
+    },
+    {
+      "name": "fk_helix_projection.h",
+      "destination": "kernel/fk_helix_projection.h",
+      "command": [
+        "clang-format",
+        "--style={BasedOnStyle: LLVM, IndentWidth: 4, ColumnLimit: 140, BreakBeforeBraces: Attach}",
+        "--sort-includes=false",
+        "--assume-filename=/home/myungit/Linux_CAD_forFree/kernel/fk_helix_projection.h"
+      ],
+      "before_sha256": "edef851f90b0ea4175a3c9085c852cabab0bf18a07d980ae199920c12127d89d",
+      "formatted_sha256": "159edd57dc4dce09592cc90f5369fb963f95436c8d6b3f1412fb42ade8e902d9",
+      "non_comment_non_whitespace_bytes_identical": true
+    },
+    {
+      "name": "fk_helix_projection.cpp",
+      "destination": "kernel/fk_helix_projection.cpp",
+      "command": [
+        "clang-format",
+        "--style={BasedOnStyle: LLVM, IndentWidth: 4, ColumnLimit: 140, BreakBeforeBraces: Attach}",
+        "--sort-includes=false",
+        "--assume-filename=/home/myungit/Linux_CAD_forFree/kernel/fk_helix_projection.cpp"
+      ],
+      "before_sha256": "16349e7a279d78b97bcd5e0153b696d3b0e84bfa426d24919310555145529568",
+      "formatted_sha256": "cd8f10cda40ec1014f503ad9071802f1b983a9f8d6ed7090ad2d3d3da1814f73",
+      "non_comment_non_whitespace_bytes_identical": true
+    },
+    {
+      "name": "cad_sketch_refs.cpp",
+      "destination": "cad_sketch_refs.cpp",
+      "command": [
+        "clang-format",
+        "--style={BasedOnStyle: LLVM, IndentWidth: 4, ColumnLimit: 140, BreakBeforeBraces: Attach}",
+        "--sort-includes=false",
+        "--assume-filename=/home/myungit/Linux_CAD_forFree/cad_sketch_refs.cpp",
+        "--lines=23:23",
+        "--lines=216:236"
+      ],
+      "before_sha256": "aaee01004cc9942bd207ae366a5da25625d60224f6e5677d296912837c318e5c",
+      "formatted_sha256": "37a840455fc0e6f897b123f21cb375b974fae85192878701d5c7e4da61a16be3",
+      "non_comment_non_whitespace_bytes_identical": true
+    }
+  ],
+  "final_guard_formatting": [
+    {
+      "name": "fk_helix_projection.cpp",
+      "command": [
+        "clang-format",
+        "--style={BasedOnStyle: LLVM, IndentWidth: 4, ColumnLimit: 140, BreakBeforeBraces: Attach}",
+        "--sort-includes=false",
+        "--assume-filename=/home/myungit/Linux_CAD_forFree/kernel/fk_helix_projection.cpp"
+      ],
+      "before_sha256": "ffa39b649457abb46ed5641444ecb21772e165a0b45e1f5e87e5a7d89b453e30",
+      "formatted_sha256": "ffa39b649457abb46ed5641444ecb21772e165a0b45e1f5e87e5a7d89b453e30",
+      "change": "bounded wrapper traversal, including pre-implicit UI query"
+    },
+    {
+      "name": "cad_sketch_refs.cpp",
+      "command": [
+        "clang-format",
+        "--style={BasedOnStyle: LLVM, IndentWidth: 4, ColumnLimit: 140, BreakBeforeBraces: Attach}",
+        "--sort-includes=false",
+        "--assume-filename=/home/myungit/Linux_CAD_forFree/cad_sketch_refs.cpp",
+        "--lines=23:23",
+        "--lines=124:139",
+        "--lines=141:141",
+        "--lines=186:187",
+        "--lines=229:251"
+      ],
+      "before_sha256": "40b22af1448647503027fbd6e064003707f566d86a911f35acd2c2f7118b88ab",
+      "formatted_sha256": "d13ec3cedff473b9df99a47f2f2d30bf8e5df7aee08033aa7db4ba73c453139e",
+      "change": "bounded wrapper traversal, including pre-implicit UI query"
+    }
+  ]
+}

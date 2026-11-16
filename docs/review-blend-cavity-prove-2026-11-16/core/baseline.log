@@ -1,0 +1,3 @@
+radius=0.5 REJECT blendEdges: il contatto esce dal dominio del fianco F0; il passaggio su un altro supporto non e' ancora gestito per questo raggio
+radius=1.1 OK faces=18 check=0
+radius=1.675 OK faces=18 check=0

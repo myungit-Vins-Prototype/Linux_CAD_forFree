@@ -199,6 +199,8 @@ BlendDialogResult blendDialog(QWidget *parent, CadViewport *viewport, const QStr
     secondBox->setKeyboardTracking(false);
     sizeBox->onReturn = refresh;
     secondBox->onReturn = refresh;
+    QObject::connect(sizeBox, &QDoubleSpinBox::editingFinished, &dialog, refresh);
+    QObject::connect(secondBox, &QDoubleSpinBox::editingFinished, &dialog, refresh);
     QObject::connect(flipBox, &QCheckBox::toggled, &dialog, refresh);
     QObject::connect(modeBox, &QComboBox::currentIndexChanged, &dialog, [&] {
         describe();
@@ -500,7 +502,7 @@ bool patternDialog(QMainWindow *window, CadViewport *viewport, const QString &ti
     form->addRow(status);
     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
     form->addRow(buttons);
-    auto scope = std::make_unique<PreviewScope>(viewport, dialog, form, replaced);
+    std::unique_ptr<PreviewScope> scope;
 
     int active = -1;  // riferimento in scelta nella vista
     const auto roles = [&](int slot) {
@@ -508,7 +510,7 @@ bool patternDialog(QMainWindow *window, CadViewport *viewport, const QString &ti
         return p.kind == 0 ? int(ForgeCad::DatumRoleLine | ForgeCad::DatumRolePlane) : p.kind == 1 ? int(ForgeCad::DatumRoleLine) : int(ForgeCad::DatumRolePlane);
     };
     const auto setStatus = [status](const QString &text, bool error) {
-        status->setStyleSheet(error ? QStringLiteral("color: #ff7a6a;") : QStringLiteral("color: #9fc6e8;"));
+        setFunctionMessageRole(status, error ? FunctionMessageRole::Error : FunctionMessageRole::Information);
         status->setText(text);
         status->setVisible(error && !text.isEmpty());
     };
@@ -689,15 +691,17 @@ bool patternDialog(QMainWindow *window, CadViewport *viewport, const QString &ti
         }
         refresh();
     };
-    viewport->setReferencePickCallback([&](bool picked, GeometryRef ref) {
-        if (picker.handle(picked, ref)) return;
-        if (picked && active >= 0) {
-            if (ForgeCad::geometryRefRoles(ref, viewport->sketches()) & roles(active)) p.refs[active] = ref;
-            else setStatus(QStringLiteral("Questo riferimento non va bene qui."), true);
-        }
-        active = -1;
-        refresh();
-    });
+    const auto installPicker = [&] {
+        viewport->setReferencePickCallback([&](bool picked, GeometryRef ref) {
+            if (picker.handle(picked, ref)) return;
+            if (picked && active >= 0) {
+                if (ForgeCad::geometryRefRoles(ref, viewport->sketches()) & roles(active)) p.refs[active] = ref;
+                else setStatus(QStringLiteral("Questo riferimento non va bene qui."), true);
+            }
+            active = -1;
+            refresh();
+        });
+    };
     QObject::connect(sourceStep, &QPushButton::clicked, &dialog, [&] { picker.start(); refresh(); });
     QObject::connect(referenceStep, &QPushButton::clicked, &dialog, [&] { pick(0); });
     QObject::connect(parametersStep, &QPushButton::clicked, &dialog, [&] {
@@ -737,11 +741,12 @@ bool patternDialog(QMainWindow *window, CadViewport *viewport, const QString &ti
         if (error.isEmpty()) dialog.accept();
         else setStatus(error, true);
     });
-    bool accepted = false;
-    {
-        const WindowLock lock(window, viewport, &dialog);
-        QDockWidget *dock = window->findChild<QDockWidget *>(QStringLiteral("modelDock"));
-        auto *tree = dock ? dynamic_cast<StoryboardTree *>(dock->widget()) : nullptr;
+    QDockWidget *dock = window->findChild<QDockWidget *>(QStringLiteral("modelDock"));
+    auto *tree = dock ? dynamic_cast<StoryboardTree *>(dock->widget()) : nullptr;
+    const bool dockWasEnabled = dock && dock->isEnabled();
+    const bool accepted = runModeless(window, viewport, dialog, [&] {
+        scope = std::make_unique<PreviewScope>(viewport, dialog, form, replaced);
+        installPicker();
         if (tree) {
             tree->setSourcePickCallback([&](int index, bool whole) {
                 if (whole) index = viewport->modelBodyTip(index);
@@ -755,14 +760,12 @@ bool patternDialog(QMainWindow *window, CadViewport *viewport, const QString &ti
             });
             dock->setEnabled(true);
         }
-        dialog.show();
         if (replaced < 0 && !preselected) picker.start(true);
         refresh();
-        QEventLoop loop;
-        QObject::connect(&dialog, &QDialog::finished, &loop, &QEventLoop::quit);
-        loop.exec();
-        accepted = dialog.result() == QDialog::Accepted;
-        if (tree) { tree->setSourcePickCallback({}); dock->setEnabled(false); }
+    });
+    if (tree) {
+        tree->setSourcePickCallback({});
+        dock->setEnabled(dockWasEnabled);
     }
     viewport->cancelReferencePick();
     viewport->setReferencePickCallback(nullptr);
@@ -856,7 +859,7 @@ bool extrusionDialog(QMainWindow *window, CadViewport *viewport, const QString &
     form->addRow(status);
     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
     form->addRow(buttons);
-    auto scope = std::make_unique<PreviewScope>(viewport, dialog, form, replaced);
+    std::unique_ptr<PreviewScope> scope;
     bool picking = false;
     const auto roles = [&] {
         const int extent = extentBox->currentIndex();
@@ -865,7 +868,7 @@ bool extrusionDialog(QMainWindow *window, CadViewport *viewport, const QString &
                            : int(ForgeCad::DatumRolePlane | ForgeCad::DatumRoleFace);
     };
     const auto setStatus = [status](const QString &text, bool error) {
-        status->setStyleSheet(error ? QStringLiteral("color: #ff7a6a;") : QStringLiteral("color: #9fc6e8;"));
+        setFunctionMessageRole(status, error ? FunctionMessageRole::Error : FunctionMessageRole::Information);
         status->setText(text);
     };
     const auto current = [&] {
@@ -944,7 +947,11 @@ bool extrusionDialog(QMainWindow *window, CadViewport *viewport, const QString &
                 refresh();
             });
         } else viewport->clearFeatureHandle();
-        if (referenceExtent && d.extentRef.kind < 0) return;
+        if (referenceExtent && d.extentRef.kind < 0) {
+            viewport->clearPreview();
+            scope->label->setText(QStringLiteral("seleziona il riferimento di fine estrusione"));
+            return;
+        }
         scope->request(viewport->withMergeCandidates(d, replaced >= 0 ? replaced : int(bodies.size())));
     };
     picker.changed = refresh;
@@ -961,15 +968,17 @@ bool extrusionDialog(QMainWindow *window, CadViewport *viewport, const QString &
         }
         refresh();
     };
-    viewport->setReferencePickCallback([&](bool picked, GeometryRef ref) {
-        if (picker.handle(picked, ref)) return;
-        if (picked && picking) {
-            if (ForgeCad::geometryRefRoles(ref, viewport->sketches()) & roles()) definition.extentRef = ref;
-            else setStatus(QStringLiteral("Questo riferimento non va bene qui."), true);
-        }
-        picking = false;
-        refresh();
-    });
+    const auto installPicker = [&] {
+        viewport->setReferencePickCallback([&](bool picked, GeometryRef ref) {
+            if (picker.handle(picked, ref)) return;
+            if (picked && picking) {
+                if (ForgeCad::geometryRefRoles(ref, viewport->sketches()) & roles()) definition.extentRef = ref;
+                else setStatus(QStringLiteral("Questo riferimento non va bene qui."), true);
+            }
+            picking = false;
+            refresh();
+        });
+    };
     QObject::connect(refButton, &QPushButton::clicked, &dialog, pick);
     QObject::connect(extentBox, &QComboBox::currentIndexChanged, &dialog, [&](int extent) {
         if (picking) viewport->cancelReferencePick();
@@ -1036,16 +1045,11 @@ bool extrusionDialog(QMainWindow *window, CadViewport *viewport, const QString &
         if (error.isEmpty()) dialog.accept();
         else setStatus(error, true);
     });
-    bool accepted = false;
-    {
-        const WindowLock lock(window, viewport, &dialog);
-        dialog.show();
+    const bool accepted = runModeless(window, viewport, dialog, [&] {
+        scope = std::make_unique<PreviewScope>(viewport, dialog, form, replaced);
+        installPicker();
         refresh();
-        QEventLoop loop;
-        QObject::connect(&dialog, &QDialog::finished, &loop, &QEventLoop::quit);
-        loop.exec();
-        accepted = dialog.result() == QDialog::Accepted;
-    }
+    });
     viewport->cancelReferencePick();
     viewport->setReferencePickCallback(nullptr);
     viewport->setReferenceMarks({});
@@ -1109,10 +1113,10 @@ bool transformDialog(QMainWindow *window, CadViewport *viewport, const QString &
     form->addRow(status);
     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
     form->addRow(buttons);
-    auto scope = std::make_unique<PreviewScope>(viewport, dialog, form, replaced);
+    std::unique_ptr<PreviewScope> scope;
     bool picking = false;
     const auto setStatus = [status](const QString &text, bool error) {
-        status->setStyleSheet(error ? QStringLiteral("color: #ff7a6a;") : QStringLiteral("color: #9fc6e8;"));
+        setFunctionMessageRole(status, error ? FunctionMessageRole::Error : FunctionMessageRole::Information);
         status->setText(text);
     };
     const auto current = [&] {
@@ -1142,15 +1146,17 @@ bool transformDialog(QMainWindow *window, CadViewport *viewport, const QString &
     picker.changed = refresh;
     picker.message = setStatus;
     picker.starting = [&] { picking = false; };
-    viewport->setReferencePickCallback([&](bool picked, GeometryRef ref) {
-        if (picker.handle(picked, ref)) return;
-        if (picked && picking) {
-            if (ForgeCad::geometryRefRoles(ref, viewport->sketches()) & ForgeCad::DatumRoleLine) definition.move.axis = ref;
-            else setStatus(QStringLiteral("Serve una retta."), true);
-        }
-        picking = false;
-        refresh();
-    });
+    const auto installPicker = [&] {
+        viewport->setReferencePickCallback([&](bool picked, GeometryRef ref) {
+            if (picker.handle(picked, ref)) return;
+            if (picked && picking) {
+                if (ForgeCad::geometryRefRoles(ref, viewport->sketches()) & ForgeCad::DatumRoleLine) definition.move.axis = ref;
+                else setStatus(QStringLiteral("Serve una retta."), true);
+            }
+            picking = false;
+            refresh();
+        });
+    };
     QObject::connect(axisButton, &QPushButton::clicked, &dialog, [&] {
         picker.stop();
         picking = true;
@@ -1174,17 +1180,12 @@ bool transformDialog(QMainWindow *window, CadViewport *viewport, const QString &
         if (error.isEmpty()) dialog.accept();
         else setStatus(error, true);
     });
-    bool accepted = false;
-    {
-        const WindowLock lock(window, viewport, &dialog);
-        dialog.show();
+    const bool accepted = runModeless(window, viewport, dialog, [&] {
+        scope = std::make_unique<PreviewScope>(viewport, dialog, form, replaced);
+        installPicker();
         if (replaced < 0 && !preselected) picker.start(true);
         refresh();
-        QEventLoop loop;
-        QObject::connect(&dialog, &QDialog::finished, &loop, &QEventLoop::quit);
-        loop.exec();
-        accepted = dialog.result() == QDialog::Accepted;
-    }
+    });
     viewport->cancelReferencePick();
     viewport->setReferencePickCallback(nullptr);
     viewport->setReferenceMarks({});
@@ -1328,12 +1329,12 @@ bool threadDialog(QMainWindow *window, CadViewport *viewport, const QString &tit
     form->addRow(wrappedNote(QStringLiteral("La geometria usa il profilo nominale. Tolleranze, giochi e maggiorazioni di lavorazione restano a carico del processo produttivo."), &dialog));
     form->addRow(status);
     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog); form->addRow(buttons);
-    const PreviewScope scope(viewport, dialog, form, replaced);
+    std::unique_ptr<PreviewScope> scope;
 
     ForgeCad::ThreadFaceInfo faceInfo;
     bool faceValid = false, picking = false, initializing = true;
     const auto angle = [&] { const int s = standardBox->currentIndex(); return (s == 3 || s == 4) ? 55.0 : s == 6 ? 30.0 : s == 7 ? 29.0 : 60.0; };
-    const auto setStatus = [status](const QString &text, bool error) { status->setStyleSheet(error ? QStringLiteral("color:#ff7a6a;") : QStringLiteral("color:#9fc6e8;")); status->setText(text); };
+    const auto setStatus = [status](const QString &text, bool error) { setFunctionMessageRole(status, error ? FunctionMessageRole::Error : FunctionMessageRole::Information); status->setText(text); };
     const auto readFace = [&] {
         faceValid = false;
         const int body = candidates.at(bodyBox->currentIndex());
@@ -1385,10 +1386,10 @@ bool threadDialog(QMainWindow *window, CadViewport *viewport, const QString &tit
         QVector<GeometryRef> marks;
         if (faceValid) marks.append(GeometryRef{5, candidates.at(bodyBox->currentIndex()), {}, definition.thread.face});
         viewport->setReferenceMarks(marks);
-        if (picking) { setStatus(QStringLiteral("Clicca la faccia cilindrica o conica del foro o dell'albero; Esc annulla la scelta."), false); viewport->clearPreview(); return; }
-        if (!faceValid) { setStatus(QStringLiteral("Seleziona una faccia cilindrica o conica."), true); viewport->clearPreview(); return; }
+        if (picking) { setStatus(QStringLiteral("Clicca la faccia cilindrica o conica del foro o dell'albero; Esc annulla la scelta."), false); scope->label->setText(QStringLiteral("scegli la faccia nella vista")); viewport->clearPreview(); return; }
+        if (!faceValid) { setStatus(QStringLiteral("Seleziona una faccia cilindrica o conica."), true); scope->label->setText(QStringLiteral("seleziona una faccia cilindrica o conica")); viewport->clearPreview(); return; }
         setStatus(QString(), false);
-        scope.request(current());
+        scope->request(current());
     };
     const auto beginPick = [&] {
         picking = true; refresh();
@@ -1396,21 +1397,23 @@ bool threadDialog(QMainWindow *window, CadViewport *viewport, const QString &tit
         if (!error.isEmpty()) { picking = false; setStatus(error, true); }
         refresh();
     };
-    viewport->setReferencePickCallback([&](bool picked, GeometryRef ref) {
-        picking = false;
-        if (picked && ref.kind == 5) {
-            const int body = resultBodyForPick(viewport, candidates, ref.index);
-            if (body >= 0) {
-                bodyBox->setCurrentIndex(candidates.indexOf(body));
-                definition.firstBody = body;
-                definition.thread.face = ref.point;
-                const QString error = readFace();
-                populateSizes();
-                if (!faceValid) setStatus(error, true);
+    const auto installPicker = [&] {
+        viewport->setReferencePickCallback([&](bool picked, GeometryRef ref) {
+            picking = false;
+            if (picked && ref.kind == 5) {
+                const int body = resultBodyForPick(viewport, candidates, ref.index);
+                if (body >= 0) {
+                    bodyBox->setCurrentIndex(candidates.indexOf(body));
+                    definition.firstBody = body;
+                    definition.thread.face = ref.point;
+                    const QString error = readFace();
+                    populateSizes();
+                    if (!faceValid) setStatus(error, true);
+                }
             }
-        }
-        refresh();
-    });
+            refresh();
+        });
+    };
     QObject::connect(faceButton, &QPushButton::clicked, &dialog, [&] { if (picking) { picking = false; viewport->cancelReferencePick(); refresh(); } else beginPick(); });
     QObject::connect(bodyBox, &QComboBox::currentIndexChanged, &dialog, [&] { definition.thread.face = {}; readFace(); populateSizes(); refresh(); });
     QObject::connect(standardBox, &QComboBox::currentIndexChanged, &dialog, [&] { definition.thread.designation.clear(); populateSizes(); refresh(); });
@@ -1425,10 +1428,15 @@ bool threadDialog(QMainWindow *window, CadViewport *viewport, const QString &tit
         QApplication::setOverrideCursor(Qt::WaitCursor); const QString error = apply(current()); QApplication::restoreOverrideCursor();
         if (error.isEmpty()) dialog.accept(); else setStatus(error, true);
     });
-    readFace(); populateSizes(); initializing = false; refresh();
-    if (!faceValid && replaced < 0) QTimer::singleShot(0, &dialog, beginPick);
-    bool accepted = false;
-    { const WindowLock lock(window, viewport, &dialog); dialog.show(); refresh(); QEventLoop loop; QObject::connect(&dialog, &QDialog::finished, &loop, &QEventLoop::quit); loop.exec(); accepted = dialog.result() == QDialog::Accepted; }
+    const bool accepted = runModeless(window, viewport, dialog, [&] {
+        scope = std::make_unique<PreviewScope>(viewport, dialog, form, replaced);
+        installPicker();
+        readFace();
+        populateSizes();
+        initializing = false;
+        if (!faceValid && replaced < 0) beginPick();
+        else refresh();
+    });
     viewport->cancelReferencePick(); viewport->setReferencePickCallback(nullptr); viewport->setReferenceMarks({});
     return accepted;
 }
@@ -1501,7 +1509,7 @@ bool booleanDialog(QMainWindow *parent, CadViewport *viewport, const QString &ti
     form->addRow(status);
     const PreviewScope scope(viewport, dialog, form, replaced);
     const auto setStatus = [status](const QString &text, bool error) {
-        status->setStyleSheet(error ? QStringLiteral("color: #ff7a6a;") : QStringLiteral("color: #9fc6e8;"));
+        setFunctionMessageRole(status, error ? FunctionMessageRole::Error : FunctionMessageRole::Information);
         status->setText(text);
     };
     const auto current = [&] {
@@ -1856,7 +1864,7 @@ bool revolutionDialog(QWidget *parent, CadViewport *viewport, const QString &tit
     BodyPicker picker(dialog, viewport, replaced, fillMergeBodyList(bodyList, viewport, replaced, initial.mergeBodies), nullptr, bodyList);
     QWidget *bodyRow = picker.row(bodyList);
     auto *pickStatus = new FunctionMessage(&dialog);
-    pickStatus->setStyleSheet(QStringLiteral("color: #8aa0b4;"));
+    setFunctionMessageRole(pickStatus, FunctionMessageRole::Hint);
     form->addRow(QStringLiteral("Schizzo:"), sketchBox);
     form->addRow(QStringLiteral("Asse:"), axisBox);
     form->addRow(QString(), pickButton);

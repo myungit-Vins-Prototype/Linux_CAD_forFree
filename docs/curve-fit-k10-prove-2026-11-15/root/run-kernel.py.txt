@@ -1,0 +1,16 @@
+from pathlib import Path
+import subprocess,time,json
+p=Path('/tmp/forgecad-k10-20261115/root')
+filters=['Offset','Shell','Sheet','BoundarySheet','Fill','Projected','Sew','Thicken','BlendSurfaceNonAnalyticEdges','BlendFreeformClosedEdges','BlendFreeformOpenEdges','BlendSurfaceMatchesExactPlanarCases','BlendSurfaceMatchesCircularCases','BlendOpenChainsAtTangentSplineSeams','BlendPlanarCapOnTangentSplineSupports']
+results=[]
+for arg in filters:
+ t=time.monotonic(); f=p/('kernel-'+arg+'.log')
+ try:
+  with f.open('w') as log:
+   r=subprocess.run(['forgecad-release/kernel/forgekernel_tests',arg],stdout=log,stderr=subprocess.STDOUT,timeout=300)
+  code=r.returncode
+ except subprocess.TimeoutExpired: code=124
+ results.append(dict(filter=arg,exit=code,seconds=time.monotonic()-t))
+ print(arg,'exit',code,'seconds',round(time.monotonic()-t,2),f.read_text().splitlines()[-1:],flush=True)
+ (p/'kernel-results.json').write_text(json.dumps(results,indent=2))
+raise SystemExit(any(r['exit'] for r in results))

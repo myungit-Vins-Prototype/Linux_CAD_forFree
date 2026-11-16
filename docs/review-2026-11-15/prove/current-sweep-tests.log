@@ -1,0 +1,17 @@
+[  OK  ] SweepMinimalTwistJoinedSpatialPathWithStraightSpans
+[  OK  ] SweepMinimalTwistSpatialInflection
+[  OK  ] SweepMinimalTwistClosedSpatialSpline
+[  OK  ] SweepLineAndArcAreExact
+[  OK  ] SweepObliqueProfileAlongArcUsesFiniteMeridians
+[  OK  ] SweepPlanarPathIsTube
+[  OK  ] SweepAlongHelixIsSpring
+[  OK  ] SweepClosedPathAndSheet
+[  OK  ] BlendSweepAcrossPathJoint
+[  OK  ] SweepSheetCircleAlongLineAndArc
+[  OK  ] SweepSheetSquareAlongSplineMatchesSolid
+[  OK  ] SweepSheetRoundedRectangleAlongHelix
+[  OK  ] SweepSheetMixedProfileAndChains
+[  OK  ] SweepSheetClosedPathIsClosedShell
+[  OK  ] SweepSheetMixedChainKeepsChainSense
+[  OK  ] HistorySweepAndLoftKeepSectionSources
+16/16 test superati

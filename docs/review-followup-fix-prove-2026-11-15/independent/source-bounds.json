@@ -1,0 +1,15 @@
+{
+  "degree": 27,
+  "poles": 28,
+  "maximum_abs_z_control": 104.07526656293439,
+  "minimum_x_derivative": 0.9999999999999984,
+  "maximum_abs_x_second_derivative": 7.793765632868599e-14,
+  "maximum_abs_z_first_derivative_bound": 0.0014723991627257414,
+  "maximum_abs_z_second_derivative_bound": 0.0686309870442156,
+  "curvature_upper_bound": 0.06863098704421612,
+  "curvature_radius_lower_bound": 14.570677809948167,
+  "offset": 0.001,
+  "distance_times_curvature_bound": 6.863098704421612e-05,
+  "method": "Exact Fraction arithmetic on actual binary-double controls; derivative Bernstein coefficients, 7 midpoint subdivisions, convex-hull bounds; k<= (max|xprime| max|zsecond|+max|zprime| max|xsecond|)/min(xprime)^3",
+  "maximum_pole_norm": 104.07655822326129
+}

@@ -1,0 +1,9 @@
+f9187aa9903c07096fe029dad8f271cf850d12d6c6a273b9ed538c2afc5a8b27  /tmp/forgecad-k10-flatten-20261115/tests/before/fk_mapping_fit.cpp
+21eca96b7e1895e572e6b7feb55874fd1e7316555e893a9eccc215d5849ba8ad  /tmp/forgecad-k10-flatten-20261115/tests/before/fk_mapping_fit.h
+0ea8766d59679e76412400720e00f5885f19be370a2ca13c69e407ddd5df0b45  /tmp/forgecad-k10-flatten-20261115/tests/before/fk_mapping_fit.o
+7c8a22480b028b1c460e41ef5e9c1c6e49bad1bdba99d6417b3668c3d6560185  /tmp/forgecad-k10-flatten-20261115/tests/before/fk_offset.cpp
+709e5b525b2cae5605863df19b1f310350fbdbf93e48846c13262b2cc86be56a  /tmp/forgecad-k10-flatten-20261115/tests/before/fk_offset.h
+0e83218ca41abf31a42f86cc0a5727c1ae39a256c824b0bd38941d8b9687d4b0  /tmp/forgecad-k10-flatten-20261115/tests/before/fk_offset.o
+a787eeff31c1c7552b54579c7db83d76b40c97f924e943dc808fbbac83748022  /tmp/forgecad-k10-flatten-20261115/tests/before/fk_quilt_mapping.cpp
+c1a6ca4a2b6895f3d800188d141fa5a80ba09888f13a7a0fd2eac31a259f6d2e  /tmp/forgecad-k10-flatten-20261115/tests/before/fk_quilt_mapping.h
+5e576c0eee76abc60e248240a812d1029c5724b5da6a6c90bc4942c149c6dea2  /tmp/forgecad-k10-flatten-20261115/tests/before/fk_quilt_mapping.o

@@ -1,0 +1,7 @@
+{
+  "command": "cmake --build forgecad-release --parallel 2",
+  "exit": 0,
+  "application": "forgecad-release/forgecad",
+  "runner": "forgecad-release/forgecad_view_tests",
+  "scope": "full default target"
+}

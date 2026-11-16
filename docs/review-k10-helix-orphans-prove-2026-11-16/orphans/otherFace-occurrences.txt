@@ -1,0 +1,7 @@
+kernel/fk_boolean.cpp:686:    auto collect = [&](int k, FaceId self, FaceId otherFace) {
+kernel/fk_boolean.cpp:688:        const Surface &otherSurface = *other.face(otherFace).surface;
+kernel/fk_boolean.cpp:694:                    !curveBox(*edge.curve,edge.range).padded(tolerance_+vertexTolerance_+edgeTolerance).overlaps(boxes_[1-k].at(otherFace.index)))continue;
+kernel/fk_boolean.cpp:696:                    if (classifyPointOnFace(other, otherFace, x, tolerance_) == PointLocation::Outside) return;
+kernel/fk_boolean.cpp:2361:                const FaceId planarFace = k == 0 ? a : b, otherFace = k == 0 ? b : a;
+kernel/fk_boolean.cpp:2365:                for (LoopId loop : otherBody.face(otherFace).loops)
+kernel/fk_blend.cpp:369:    int otherFace(int k) const { return 3 - edgeFaces[k][0] - edgeFaces[k][1]; }

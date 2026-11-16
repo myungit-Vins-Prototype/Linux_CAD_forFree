@@ -743,22 +743,6 @@ QPointF CadViewport::selectedPointPosition(const SelectedPoint &point) const {
     return curve.controlPoints.at(point.point);
 }
 
-void CadViewport::setSelectedPointPosition(const SelectedPoint &point, const QPointF &position) {
-    if (point.kind == 0) {
-        auto &segment = sketches_[activeSketch_].segments[point.element];
-        if (point.point == 0) segment.first = position;
-        else segment.second = position;
-    } else {
-        CurveObject &curve = sketches_[activeSketch_].curves[point.element];
-        const QPointF delta = position - curve.controlPoints.at(point.point);
-        curve.controlPoints[point.point] = position;
-        if (curve.tool == DrawingTool::Spline && curve.tangentHandles.size() == curve.controlPoints.size()) {
-            curve.tangentHandles[point.point].first += delta;
-            curve.tangentHandles[point.point].second += delta;
-        }
-    }
-}
-
 QVector<CadViewport::TopologyLabelItem> CadViewport::topologyLabelItems() const {
     QVector<TopologyLabelItem> result;
     if (!topologyIdsVisible_ || sketchMode_) return result;
@@ -838,7 +822,8 @@ QVector<QPointF> CadViewport::snapCandidates(const SketchObject &sketch) const {
         if ((curve.tool == DrawingTool::Circle || curve.tool == DrawingTool::Arc
              || curve.tool == DrawingTool::Polygon) && !curve.controlPoints.isEmpty())
             points.append(curve.controlPoints.first());
-        if (curve.tool == DrawingTool::Spline || curve.tool == DrawingTool::Nurbs || curve.tool == DrawingTool::Point)
+        if (curve.tool == DrawingTool::Spline || curve.tool == DrawingTool::Nurbs || curve.tool == DrawingTool::Point
+            || curve.tool == DrawingTool::EllipseExtremes)
             points += curve.controlPoints;
         if (curve.tool == DrawingTool::Ellipse && curve.controlPoints.size() >= 3) {
             const QPointF c = curve.controlPoints.at(0);

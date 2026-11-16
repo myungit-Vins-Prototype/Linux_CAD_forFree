@@ -45,7 +45,8 @@ inline std::optional<DrawingRecognizedCircle> drawingRecognizeCircle(const Kerne
         for(int row=1;row<=degree;++row){for(int i=0;i<=degree-row;++i)for(int k=0;k<4;++k)work[i][k]=(work[i][k]+work[i+1][k])*.5;left[row]=work[0];right[degree-row]=work[degree-row];}
         return self(self,left,depth+1)&&self(self,right,depth+1);
     };
-    for(const auto &segment:*curve.cachedBezierSegments()){
+    const auto segments=curve.cachedBezierSegments();
+    for(const auto &segment:*segments){
         std::vector<Pole> poles;for(int i=0;i<segment.poleCount();++i){const double w=segment.weight(i);const auto p=(segment.poles()[i]-center)*w;poles.push_back(Pole{p.x(),p.y(),p.z(),w});}
         if(!certify(certify,poles,0))return {};
     }
@@ -78,7 +79,8 @@ inline std::optional<std::array<Kernel::Vec2,2>> drawingRecognizeProjectedLineUn
     direction/=length;
     for(int i=0;i<spline.poleCount();++i)if(spline.weight(i)<=0||std::abs((spline.poles()[i]-origin).x()*direction.y()-(spline.poles()[i]-origin).y()*direction.x())>tolerance)return {};
     double low=std::numeric_limits<double>::infinity(),high=-low;
-    for(const auto &segment:*spline.cachedBezierSegments()){
+    const auto segments=spline.cachedBezierSegments();
+    for(const auto &segment:*segments){
         const auto domain=segment.domain();const double a=std::max(domain.lo,image.range.lo),b=std::min(domain.hi,image.range.hi);if(b<a)continue;
         std::vector<double> values,weights;for(int i=0;i<segment.poleCount();++i){weights.push_back(segment.weight(i));values.push_back(dot(segment.poles()[i]-origin,direction)*segment.weight(i));}
         const BernsteinPolynomial numerator(values),denominator(weights);const auto derivative=numerator.derivative()*denominator-numerator*denominator.derivative();

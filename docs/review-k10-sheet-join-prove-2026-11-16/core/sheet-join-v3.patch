@@ -1,0 +1,357 @@
+--- a/kernel/fk_sheet.cpp
++++ b/kernel/fk_sheet.cpp
+@@ -10,6 +10,7 @@
+ #include "fk_body_check.h"
+ #include "fk_boolean.h"
+ #include "fk_classify.h"
++#include "fk_cancel.h"
+ #include "fk_curve_algo.h"
+ #include "fk_curve_ops.h"
+ #include "fk_offset.h"
+@@ -307,11 +308,115 @@
+     double end;
+ };
+ 
++// A planned seam keeps the original cubic coefficients and affine UV map.
++// The same pointers identify its emitted fins; no geometric proximity lookup.
++struct SplineJoinCertificate {
++    CurvePtr<3> curve;
++    CurvePtr<2> pcurve;
++    double budget;
++    int expectedUses;
++};
++
++void requireSplineJoin(const CurvePtr<3> &curve, const SurfacePtr &surface,
++                       const CurvePtr<2> &pcurve, const Interval &range, double budget) {
++    cancellationPoint();
++    const auto *spline = dynamic_cast<const BSplineCurve<3> *>(curve.get());
++    if (!spline || spline->degree() != 3 || spline->isRational())
++        throw std::domain_error("extendSheet: rappresentazione della giunzione certificata modificata");
++    const auto data = detail::surfaceCompositionErrorBound(surface, pcurve, range);
++    if (!data.bound)
++        throw std::domain_error("extendSheet: supporto della giunzione certificata non riconosciuto");
++    const auto &knots = spline->knots();
++    const auto &poles = spline->poles();
++    if (poles.size() < 4 || (poles.size() - 1) % 3 || knots.size() != poles.size() + 4)
++        throw std::domain_error("extendSheet: campate della giunzione non riconosciute");
++    double covered = range.lo;
++    for (std::size_t k = 0; k + 3 < poles.size(); k += 3) {
++        cancellationPoint();
++        const Interval span{knots[k + 3], knots[k + 4]};
++        for (int j = 0; j < 3; ++j)
++            if (knots[k + j + 1] != span.lo || knots[k + j + 4] != span.hi)
++                throw std::domain_error("extendSheet: nodi della giunzione non riconosciuti");
++        if (span.hi <= range.lo || span.lo >= range.hi) continue;
++        // Trims must coincide with the planned breaks. Do not certify rounded
++        // Bezier extraction as though its controls were the original edge.
++        if (span.lo != covered || span.hi > range.hi || !(span.lo < span.hi))
++            throw std::domain_error("extendSheet: parametro della giunzione certificata modificato");
++        const double error = data.bound(span, {poles[k], poles[k + 1], poles[k + 2], poles[k + 3]});
++        if (!std::isfinite(error) || !(error >= 0) || error > budget)
++            throw std::domain_error("extendSheet: giunzione fuori dal budget continuo");
++        covered = span.hi;
++    }
++    if (covered != range.hi)
++        throw std::domain_error("extendSheet: copertura della giunzione certificata incompleta");
++}
++
++struct EmittedSplineJoin {
++    FaceId face;
++    EdgeId edge;
++    CurvePtr<3> curve;
++    CurvePtr<2> pcurve;
++    Interval range;
++    double budget;
++};
++
++std::vector<EmittedSplineJoin> emittedSplineJoins(const Body &body,
++                                                const std::vector<SplineJoinCertificate> &plans) {
++    std::vector<EmittedSplineJoin> result;
++    for (const auto &plan : plans) {
++        int uses = 0;
++        for (FaceId face : body.faces())
++            for (LoopId loop : body.face(face).loops)
++                for (FinId finId : body.loopFins(loop)) {
++                    const Fin &fin = body.fin(finId);
++                    if (fin.pcurve != plan.pcurve) continue;
++                    const Edge &edge = body.edge(fin.edge);
++                    if (edge.curve != plan.curve || edge.tolerance != plan.budget
++                        || fin.pcurveTolerance != plan.budget)
++                        throw std::domain_error("extendSheet: contratto della giunzione emessa modificato");
++                    requireSplineJoin(edge.curve, body.face(face).surface, fin.pcurve, edge.range, plan.budget);
++                    result.push_back({face, fin.edge, edge.curve, fin.pcurve, edge.range, plan.budget});
++                    ++uses;
++                }
++        if (uses != plan.expectedUses || uses == 0)
++            throw std::domain_error("extendSheet: copertura delle fin pianificate modificata");
++    }
++    return result;
++}
++
++void requireUnifiedSplineJoins(const Body &body, const BodyHistory &history,
++                              const std::vector<EmittedSplineJoin> &plans) {
++    for (const auto &plan : plans) {
++        cancellationPoint();
++        const auto faces = history.descendants(EntityKind::Face, 0, plan.face.index);
++        const auto edges = history.descendants(EntityKind::Edge, 0, plan.edge.index);
++        int uses = 0;
++        for (int faceIndex : faces) {
++            const FaceId face(faceIndex);
++            for (LoopId loop : body.face(face).loops)
++                for (FinId finId : body.loopFins(loop)) {
++                    const Fin &fin = body.fin(finId);
++                    if (std::find(edges.begin(), edges.end(), fin.edge.index) == edges.end()) continue;
++                    const Edge &edge = body.edge(fin.edge);
++                    if (edge.curve != plan.curve || fin.pcurve != plan.pcurve
++                        || edge.range.lo != plan.range.lo || edge.range.hi != plan.range.hi
++                        || edge.tolerance != plan.budget || fin.pcurveTolerance != plan.budget)
++                        throw std::domain_error("extendSheet: unificazione della giunzione certificata non supportata");
++                    requireSplineJoin(edge.curve, body.face(face).surface, fin.pcurve, edge.range, plan.budget);
++                    ++uses;
++                }
++        }
++        if (uses != 1)
++            throw std::domain_error("extendSheet: genealogia della giunzione certificata ambigua");
++    }
++}
++
+ void joinSplineExtensions(Model &model, const Body &body, const std::vector<SplineExtensionSide> &sides,
+-                          double scale) {
++                          double scale, std::vector<SplineJoinCertificate> &certificates) {
+     const double tolerance = std::max(1e-7, 1e-9 * scale);
+     for (std::size_t i = 0; i < sides.size(); ++i)
+         for (std::size_t j = i + 1; j < sides.size(); ++j) {
++            cancellationPoint();
+             const auto &a = sides[i], &b = sides[j];
+             if (a.vertex != b.vertex || a.face == b.face || a.edge == b.edge) continue;
+             bool adjacent = false;
+@@ -340,19 +445,20 @@
+             // followSeam: le due facce proseguono lungo le loro isoparametriche
+             // della cucitura (vedi sotto, giunzioni quasi tangenti).
+             bool followSeam = false;
+-            double seamGap = 0.0;
++            CurvePtr<2> affineA, affineB;
++            SurfacePtr certifiedA, certifiedB;
+             const auto sample = [&](double t) {
++                cancellationPoint();
+                 Sample q{a.start, b.start, {}};
+                 q.a[da] += sign * t;
+                 q.b[db] += signB * rate * t;
+                 if (followSeam) {
+-                    const Vec3 pa = sa->point(q.a.x(), q.a.y()), pb = sb->point(q.b.x(), q.b.y());
+-                    q.point = pa;
+-                    // Lato B sul punto di B piu' vicino lungo la sua isoparametrica.
+-                    seamGap = std::max(seamGap, distance(pa, pb));
++                    q.a = affineA->point(t); q.b = affineB->point(t);
++                    q.point = certifiedA->point(q.a.x(), q.a.y());
+                     return q;
+                 }
+                 for (int iteration = 0; iteration < 32; ++iteration) {
++                    cancellationPoint();
+                     Vec3 ja[4], jb[4];
+                     sa->evaluate(q.a.x(), q.a.y(), 1, ja);
+                     sb->evaluate(q.b.x(), q.b.y(), 1, jb);
+@@ -407,46 +513,94 @@
+                 curve = fitCurve([&](double t) { return sample(t).point; }, {0.0, end},
+                                  {0.0, std::min(endA, endB), end}, tolerance);
+             };
+-            try {
++            const auto affineJoin = [&]() {
++                endB = std::fabs(b.end - b.start[db]) / rate;
++                if (!(endA > 0 && endB > 0) || !std::isfinite(endB))
++                    throw std::domain_error("extendSheet: intervallo affine della giunzione non valido");
++                Vec2 farA = a.start, farB = b.start;
++                farA[da] = a.end; farB[db] = b.end;
++                if (distance(sa->point(farA.x(), farA.y()), sb->point(farB.x(), farB.y())) <= tolerance)
++                    endB = endA;
++                end = std::max(endA, endB);
++                std::vector<double> cuts{0.0, std::min(endA, endB), end};
++                cuts.erase(std::unique(cuts.begin(), cuts.end()), cuts.end());
++                const auto uvCurve = [&](const SplineExtensionSide &side, int axis, double speed, double finish) {
++                    std::vector<Vec2> poles;
++                    for (double t : cuts) {
++                        Vec2 uv = side.start;
++                        uv[axis] = t == finish ? side.end : side.start[axis] + speed * t;
++                        if (!isFinite(uv)) throw std::domain_error("extendSheet: dominio affine non finito");
++                        poles.push_back(uv);
++                    }
++                    auto knots = cuts;
++                    knots.insert(knots.begin(), cuts.front()); knots.push_back(cuts.back());
++                    return std::make_shared<BSplineCurve<2>>(1, knots, poles);
++                };
++                affineA = uvCurve(a, da, sign, endA);
++                affineB = uvCurve(b, db, signB * rate, endB);
++                const auto extendedSupport = [&](const SurfacePtr &surface, const CurvePtr<2> &pc) -> SurfacePtr {
++                    Interval u = surface->uDomain(), v = surface->vDomain();
++                    // An affine span stays in the convex hull of its ORIGINAL
++                    // UV endpoints. No sampling is needed to bound its domain.
++                    const auto &uv = static_cast<const BSplineCurve<2> &>(*pc);
++                    for (const Vec2 &p : uv.poles()) {
++                        u.lo = std::min(u.lo, p.x()); u.hi = std::max(u.hi, p.x());
++                        v.lo = std::min(v.lo, p.y()); v.hi = std::max(v.hi, p.y());
++                    }
++                    return std::make_shared<BSplineSurface>(extendBSplineSurface(
++                        static_cast<const BSplineSurface &>(*surface), u, v));
++                };
++                certifiedA = extendedSupport(sa, affineA);
++                certifiedB = extendedSupport(sb, affineB);
++                const auto boundA = detail::surfaceCompositionErrorBound(certifiedA, affineA, {0.0, end});
++                const auto boundB = detail::surfaceCompositionErrorBound(certifiedB, affineB, {0.0, end});
++                if (!boundA.bound || !boundB.bound)
++                    throw std::domain_error("extendSheet: giunzione affine non certificabile");
++                cuts.insert(cuts.end(), boundA.breaks.begin(), boundA.breaks.end());
++                cuts.insert(cuts.end(), boundB.breaks.begin(), boundB.breaks.end());
++                // Fit and connection allocations are fixed before construction.
++                // The independent B residual must fit the same connection cap.
++                curve = fitCurveCertified([&](double t) {
++                    const Vec2 uv = affineA->point(t);
++                    return certifiedA->point(uv.x(), uv.y());
++                }, {0.0, end}, cuts, 0.25 * tolerance, boundA.bound);
++                requireSplineJoin(curve, certifiedA, affineA, {0.0, end}, tolerance);
++                requireSplineJoin(curve, certifiedB, affineB, {0.0, end}, tolerance);
++                followSeam = true;
++            };
++            const Vec3 normalA = normalized(cross(startA[1], startA[2]));
++            const Vec3 normalB = normalized(cross(startB[1], startB[2]));
++            const double sine = norm(cross(normalA, normalB));
++            if (!std::isfinite(sine))
++                throw std::domain_error("extendSheet: normale della giunzione non valida");
++            if (sine < 1e-3) {
++                // The legacy near-tangent recovery followed the two affine
++                // isoparametric seams. Recognized failures are terminal:
++                // sampled Newton must never re-admit an unresolved seam.
++                affineJoin();
++            } else {
++                // Transverse implicit Newton continuation is retained as an
++                // explicitly sampled fallback, outside this certificate.
+                 join();
+-            } catch (const std::exception &failure) {
+-                // Facce unite tangenti (le meta' di un loft e i loro offset): la
+-                // loro intersezione oltre la cucitura e' mal condizionata e i
+-                // punti seguono lo scarto delle approssimazioni, la curva non si
+-                // approssima. Le due superfici prolungano la cucitura con le
+-                // loro isoparametriche: se restano entro 1e-5 la giunzione e' la
+-                // isoparametrica di A, con l'edge tollerante per lo scarto.
+-                Vec3 na[4], nb[4];
+-                sa->evaluate(a.start.x(), a.start.y(), 1, na);
+-                sb->evaluate(b.start.x(), b.start.y(), 1, nb);
+-                const double sine = norm(cross(normalized(cross(na[1], na[2])), normalized(cross(nb[1], nb[2]))));
+-                bool joined = false;
+-                if (sine < 1e-3) {
+-                    followSeam = true;
+-                    seamGap = 0.0;
+-                    try {
+-                        join();
+-                        for (int k = 0; k <= 64; ++k) sample(end * k / 64.0);
+-                        joined = seamGap <= 1e-5 * std::max(1.0, scale);
+-                    } catch (const std::exception &) {
+-                    }
+-                }
+-                if (!joined)
+-                    throw std::domain_error("extendSheet: giunzione facce " + std::to_string(a.face) + "/" + std::to_string(b.face) + ": " + failure.what());
+-            }
+-            const double joinTolerance = followSeam ? std::max(tolerance, 2.0 * seamGap) : tolerance;
++            }
++            const double joinTolerance = tolerance;
+             // Le superfici restano identiche sul dominio originale. Espandiamo
+             // solo il loro dominio per includere il nuovo bordo rifilato.
+             Interval au = sa->uDomain(), av = sa->vDomain(), bu = sb->uDomain(), bv = sb->vDomain();
+-            for (int k = 0; k <= 64; ++k) {
+-                const auto q = sample(end * k / 64.0);
+-                au.lo = std::min(au.lo, q.a.x()); au.hi = std::max(au.hi, q.a.x());
+-                av.lo = std::min(av.lo, q.a.y()); av.hi = std::max(av.hi, q.a.y());
+-                bu.lo = std::min(bu.lo, q.b.x()); bu.hi = std::max(bu.hi, q.b.x());
+-                bv.lo = std::min(bv.lo, q.b.y()); bv.hi = std::max(bv.hi, q.b.y());
+-            }
+-            const SurfacePtr newA = std::make_shared<BSplineSurface>(extendBSplineSurface(static_cast<const BSplineSurface &>(*sa), au, av));
+-            const SurfacePtr newB = std::make_shared<BSplineSurface>(extendBSplineSurface(static_cast<const BSplineSurface &>(*sb), bu, bv));
++            if (!followSeam) {
++                // Explicitly sampled legacy domain envelope for Newton joins.
++                for (int k = 0; k <= 64; ++k) {
++                    const auto q = sample(end * k / 64.0);
++                    au.lo = std::min(au.lo, q.a.x()); au.hi = std::max(au.hi, q.a.x());
++                    av.lo = std::min(av.lo, q.a.y()); av.hi = std::max(av.hi, q.a.y());
++                    bu.lo = std::min(bu.lo, q.b.x()); bu.hi = std::max(bu.hi, q.b.x());
++                    bv.lo = std::min(bv.lo, q.b.y()); bv.hi = std::max(bv.hi, q.b.y());
++                }
++            }
++            const SurfacePtr newA = followSeam ? certifiedA : std::make_shared<BSplineSurface>(
++                extendBSplineSurface(static_cast<const BSplineSurface &>(*sa), au, av));
++            const SurfacePtr newB = followSeam ? certifiedB : std::make_shared<BSplineSurface>(
++                extendBSplineSurface(static_cast<const BSplineSurface &>(*sb), bu, bv));
+             for (auto &face : model.faces) {
+                 if (face.surface == sa) face.surface = newA;
+                 else if (face.surface == sb) face.surface = newB;
+@@ -464,9 +618,10 @@
+             setFar(a, sample(endA), endA, true);
+             setFar(b, sample(endB), endB, false);
+             const double startError = distance(curve->point(0.0), model.points[a.vertex]);
+-            if (startError > std::max(10.0 * tolerance, 1.01 * model.pointTolerance[a.vertex]))
++            if (startError > (followSeam ? std::max(tolerance, model.pointTolerance[a.vertex])
++                                        : std::max(10.0 * tolerance, 1.01 * model.pointTolerance[a.vertex])))
+                 throw std::domain_error("extendSheet: il prolungamento non incontra la giunzione originale");
+-            model.pointTolerance[a.vertex] = std::max(model.pointTolerance[a.vertex], 1.01 * startError);
++            if (!followSeam) model.pointTolerance[a.vertex] = std::max(model.pointTolerance[a.vertex], 1.01 * startError);
+             const auto &shorter = endA <= endB ? a : b;
+             const auto &longer = endA <= endB ? b : a;
+             const double shortEnd = std::min(endA, endB);
+@@ -484,6 +639,7 @@
+                     if (edge.end == b.farVertex) edge.end = a.farVertex;
+                 }
+             }
++            int usesA = 0, usesB = 0;
+             for (const auto *side : {&a, &b}) {
+                 const bool fromBase = model.edges[side->edge].start == a.vertex;
+                 for (auto &face : model.faces)
+@@ -492,13 +648,20 @@
+                         for (const auto &fin : loop) {
+                             if (fin.edge != side->edge) { rebuilt.push_back(fin); continue; }
+                             const bool forward = fin.sense == fromBase;
+-                            if (side == &longer && extra >= 0 && !forward) rebuilt.push_back({extra, false, nullptr, 0.0});
+-                            rebuilt.push_back({common, forward, nullptr, 0.0});
+-                            if (side == &longer && extra >= 0 && forward) rebuilt.push_back({extra, true, nullptr, 0.0});
++                            const CurvePtr<2> pc = followSeam ? (side == &a ? affineA : affineB) : nullptr;
++                            const double pcBudget = followSeam ? tolerance : 0.0;
++                            if (followSeam) (side == &a ? usesA : usesB) += side == &longer && extra >= 0 ? 2 : 1;
++                            if (side == &longer && extra >= 0 && !forward) rebuilt.push_back({extra, false, pc, pcBudget});
++                            rebuilt.push_back({common, forward, pc, pcBudget});
++                            if (side == &longer && extra >= 0 && forward) rebuilt.push_back({extra, true, pc, pcBudget});
+                         }
+                         loop = std::move(rebuilt);
+                     }
+             }
++            if (followSeam) {
++                certificates.push_back({curve, affineA, tolerance, usesA});
++                certificates.push_back({curve, affineB, tolerance, usesB});
++            }
+         }
+ }
+ 
+@@ -506,6 +669,7 @@
+ 
+ Body extendSheet(const Body &input, const std::vector<EdgeId> &selected, double length, bool linear, BodyHistory *history) {
+     if(history)*history={};
++    cancellationPoint();
+     if (!input.isSheet()) throw std::domain_error("extendSheet: si estendono solo le superfici (lamine)");
+     if (!(length > linearResolution())) throw std::domain_error("extendSheet: distanza non valida");
+     Body body = input;
+@@ -719,13 +883,17 @@
+             splineSides.push_back({B, farB, sideB, far, modelFace, vIso, uvB, splineEnd});
+         }
+     }
+-    joinSplineExtensions(model, body, splineSides, scale);
++    std::vector<SplineJoinCertificate> certificates;
++    joinSplineExtensions(model, body, splineSides, scale, certificates);
+     BodyHistory built,unified;
+     Body result = model.build(history?&built:nullptr);
+     computePCurves(result);
+-    result = unifySameDomain(result,1e-6,history?&unified:nullptr);
++    const auto emitted = emittedSplineJoins(result, certificates);
++    result = unifySameDomain(result,1e-6,(history || !emitted.empty())?&unified:nullptr);
++    requireUnifiedSplineJoins(result, unified, emitted);
+     const std::vector<CheckIssue> issues = checkBody(result);
+     if (!issues.empty()) throw std::domain_error("extendSheet: superficie estesa non valida (" + describe(issues.front().code) + ": " + issues.front().message + ")");
++    cancellationPoint();
+     if(history)*history=BodyHistory::compose(built,unified,0);
+     return result;
+ }

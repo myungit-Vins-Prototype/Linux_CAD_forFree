@@ -1,0 +1,13 @@
+from pathlib import Path
+import json,re,hashlib
+r=Path('/home/myungit/Linux_CAD_forFree');p=r/'docs/curve-fit-k10-edge-offset-prove-2026-11-16/root'
+g=json.loads((r/'docs/architecture/graph.json').read_text());html=(r/'docs/architecture/index.html').read_text();assert json.loads(re.search(r'<script id="graph-data" type="application/json">(.*?)</script>',html,re.S).group(1))==g
+focus={'kernel/fk_curve_fit_bounds.cpp','kernel/fk_curve_fit_bounds.h','kernel/fk_offset.cpp','kernel/tests/test_edge_offset_fit_validation.cpp','kernel/fk_affine_surface_fit.cpp','kernel/fk_exchange.cpp'};nodes={n['id']:n for n in g['nodes']};assert focus<=set(nodes)
+incident=[e for e in g['edges'] if e['source'] in focus or e['target'] in focus]
+required=[('kernel/fk_offset.cpp','kernel/fk_curve_fit_bounds.cpp','extrusionEdgeOffsetErrorBound'),('kernel/fk_offset.cpp','kernel/fk_offset.cpp','requireCertifiedOffsetCurve'),('kernel/fk_offset.cpp','kernel/fk_exchange.cpp','assembleBody'),('kernel/tests/test_edge_offset_fit_validation.cpp','kernel/fk_curve_fit_bounds.cpp','extrusionEdgeOffsetErrorBound'),('kernel/tests/test_edge_offset_fit_validation.cpp','kernel/fk_offset.cpp','offsetFaces')]
+for a,b,symbol in required:assert any(e['source']==a and e['target']==b and e['kind']=='call' and any(symbol in site['symbol'] for site in e['sites']) for e in incident),(a,b,symbol)
+assert any(e['source']=='kernel/fk_curve_fit_bounds.cpp' and e['target']=='kernel/fk_curve_fit_bounds.h' and e['kind']=='include' for e in incident)
+assert not g['analysis']['errors'];assert g['analysis']['configurationDigest']==hashlib.sha256((r/'forgecad-release/compile_commands.json').read_bytes()).hexdigest()
+for f,h in g['hashes'].items():assert hashlib.sha256((r/f).read_bytes()).hexdigest()==h,f
+result=dict(files=len(nodes),edges=len(g['edges']),units=len(g['analysis']['units']),errors=g['analysis']['errors'],html_matches=True,incident_edges=len(incident),required=required,focus={f:dict(description=nodes[f]['description'],incoming={k:sum(e['target']==f and e['kind']==k for e in incident) for k in ['call','include','reference']},outgoing={k:sum(e['source']==f and e['kind']==k for e in incident) for k in ['call','include','reference']}) for f in sorted(focus)})
+(p/'architecture-audit.json').write_text(json.dumps(result,indent=2)+'\n');(p/'architecture-incident.json').write_text(json.dumps(incident,indent=2)+'\n');print({k:v for k,v in result.items() if k!='focus'})

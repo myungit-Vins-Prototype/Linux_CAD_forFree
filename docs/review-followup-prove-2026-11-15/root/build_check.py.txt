@@ -1,0 +1,7 @@
+from pathlib import Path
+import json,shlex,subprocess
+root=Path('/home/myungit/Linux_CAD_forFree');out=Path('/tmp/forgecad-review-followup-20261115/root')
+c=next(x for x in json.loads((root/'forgecad-release/compile_commands.json').read_text()) if x['file'].endswith('/kernel/tests/test_offset.cpp') and 'occt_tests' in x['directory'])
+a=shlex.split(c['command']);a[a.index('-o')+1]=str(out/'check_offset.o');a[a.index('-c')+1]=str(out/'check_offset.cpp');subprocess.run(a,cwd=c['directory'],check=True)
+l=root/'forgecad-release/kernel/occt_tests';a=shlex.split((l/'CMakeFiles/forgekernel_tests.dir/link.txt').read_text());a=[a[0],'-o',str(out/'check_offset'),str(out/'check_offset.o')]+a[a.index('../libforgekernel.a'):];subprocess.run(a,cwd=l,check=True)
+p=subprocess.run([str(out/'check_offset')],capture_output=True,text=True);(out/'check-offset.log').write_text(p.stdout+p.stderr);print(p.stdout+p.stderr);raise SystemExit(p.returncode)

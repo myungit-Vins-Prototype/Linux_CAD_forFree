@@ -1,0 +1,17 @@
+from pathlib import Path
+import json, shlex, subprocess
+root = Path('/home/myungit/Linux_CAD_forFree')
+stage = Path('/tmp/forgecad-k10-mapping-20261115')
+out = stage / 'tests'
+commands = json.loads((root / 'forgecad-release/compile_commands.json').read_text())
+entry = next(c for c in commands if c['file'].endswith('/kernel/fk_surface_mapping.cpp'))
+command = shlex.split(entry['command'])
+command[command.index('-o') + 1] = str(out / 'fk_surface_mapping-before.o')
+command[command.index('-c') + 1] = str(stage / 'before/kernel/fk_surface_mapping.cpp')
+subprocess.run(command, cwd=entry['directory'], check=True)
+subprocess.run(['/usr/bin/c++', '-o', str(out / 'tests-baseline-before-v6'),
+    str(out / 'test_mapping_carrier_validation.o'), str(out / 'fk_surface_mapping-before.o'),
+    str(stage / 'implementation/fk_mapping_carrier.o'),
+    str(stage / 'implementation/fk_curve_fit_bounds.o'),
+    str(root / 'forgecad-release/kernel/CMakeFiles/forgekernel_offset_validation_tests.dir/tests/fk_test_main.cpp.o'),
+    str(root / 'forgecad-release/kernel/libforgekernel.a'), '-lpthread'], check=True)

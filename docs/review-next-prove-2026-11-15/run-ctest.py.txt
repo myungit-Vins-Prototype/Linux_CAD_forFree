@@ -1,0 +1,16 @@
+from pathlib import Path
+import os,subprocess,json,sys
+root=Path('/home/myungit/Linux_CAD_forFree');work=Path('/tmp/forgecad-review-next-20261115')
+selected=['forgecad_constraint_linear_tests','forgecad_document_tabs_tests','forgecad_document_read_tests','forgecad_document_units_tests','forgecad_function_panels_tests','forgecad_loft_correspondence_tests','forgecad_workspace_revisions_tests','forgecad_surface_tools_tests','forgecad_history_preview_mesh_tests','forgecad_sweep_reference_tests','forgecad_handle_constraints_tests','forgecad_solver_partition_tests','forgecad_connected_solver_tests','forgecad_reference_list_highlight_tests','forgecad_surface_mapping_tests','forgecad_loft_point_tests','forgecad_edge_loft_tests','forgecad_loft_projected_section_tests','forgecad_open_loft_tangency_tests','forgecad_application_theme_tests','forgecad_expression_tests','forgecad_document_compression_tests','forgecad_workspace_tests','forgecad_all_history_tests','forgekernel_loft_knots_tests','forgekernel_surface_tools_tests','forgekernel_loft_projected_guide_tests','forgekernel_loft_shape_tests','forgekernel_loft_projected_section_tests','forgekernel_loft_complexity_tests','forgekernel_loft_guide_constraint_tests','forgekernel_loft_correspondence_tests','forgekernel_loft_point_tests','forgekernel_surface_mapping_tests']
+listing=subprocess.run(['ctest','--test-dir','forgecad-release','--show-only=json-v1'],cwd=root,capture_output=True,check=True,text=True)
+(work/'ctest-list.json').write_text(listing.stdout)
+known={t['name'] for t in json.loads(listing.stdout)['tests']};assert set(selected)<=known
+(work/'selected-tests.json').write_text(json.dumps(selected,indent=2)+'\n')
+env=os.environ.copy()
+for key,folder in [('XDG_CONFIG_HOME','config'),('XDG_CACHE_HOME','cache'),('XDG_DATA_HOME','data')]:
+ p=work/'test-environment'/folder;p.mkdir(parents=True,exist_ok=True);env[key]=str(p)
+env.update(QT_QPA_PLATFORM='offscreen',QT_QPA_PLATFORMTHEME='generic',QT_STYLE_OVERRIDE='Fusion',QT_QPA_OFFSCREEN_NO_GLX='1',FORGECAD_PANEL_REVIEW_OUTPUT=str(work/'screenshots'))
+command=['ctest','--test-dir','forgecad-release','--output-on-failure','--parallel','4','-R','^('+'|'.join(selected)+')$','--output-junit',str(work/'ctest.xml')]
+with (work/'ctest.log').open('w') as f:result=subprocess.run(command,cwd=root,env=env,stdout=f,stderr=subprocess.STDOUT)
+(work/'ctest-exit.txt').write_text(str(result.returncode)+'\n')
+sys.exit(result.returncode)

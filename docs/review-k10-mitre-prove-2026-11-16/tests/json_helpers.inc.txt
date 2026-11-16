@@ -1,0 +1,39 @@
+#include "fk_blend_mitre.h"
+#include "fk_bspline.h"
+#include "fk_precision.h"
+#include <fstream>
+#include <iomanip>
+#include <iostream>
+using namespace ForgeCad::Kernel;
+void surfaceJson(std::ostream &out, const BSplineSurface &s) {
+    out << "{\"u_degree\":" << s.uDegree() << ",\"v_degree\":" << s.vDegree()
+        << ",\"u_count\":" << s.uPoleCount() << ",\"v_count\":" << s.vPoleCount() << ",\"u_knots\":[";
+    for (std::size_t i = 0; i < s.uKnots().size(); ++i) out << (i ? "," : "") << s.uKnots()[i];
+    out << "],\"v_knots\":[";
+    for (std::size_t i = 0; i < s.vKnots().size(); ++i) out << (i ? "," : "") << s.vKnots()[i];
+    out << "],\"poles\":[";
+    for (int i = 0; i < s.uPoleCount(); ++i)
+        for (int j = 0; j < s.vPoleCount(); ++j) {
+            const Vec3 p = s.pole(i, j);
+            out << (i || j ? "," : "") << '[' << p.x() << ',' << p.y() << ',' << p.z() << ']';
+        }
+    out << "],\"weights\":[";
+    for (int i = 0; i < s.uPoleCount(); ++i)
+        for (int j = 0; j < s.vPoleCount(); ++j)
+            out << (i || j ? "," : "") << s.weight(i, j);
+    out << "]}";
+}
+template<int N> void curveJson(std::ostream &out, const CurvePtr<N> &ptr) {
+    const auto &c = dynamic_cast<const BSplineCurve<N> &>(*ptr);
+    out << "{\"degree\":" << c.degree() << ",\"knots\":[";
+    for (std::size_t i = 0; i < c.knots().size(); ++i) out << (i ? "," : "") << c.knots()[i];
+    out << "],\"poles\":[";
+    for (std::size_t i = 0; i < c.poles().size(); ++i) {
+        out << (i ? "," : "") << '[';
+        for (int k = 0; k < N; ++k) out << (k ? "," : "") << c.poles()[i][k];
+        out << ']';
+    }
+    out << "],\"weights\":[";
+    for (std::size_t i = 0; i < c.weights().size(); ++i) out << (i ? "," : "") << c.weights()[i];
+    out << "]}";
+}

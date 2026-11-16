@@ -1,0 +1,18 @@
+baseline-probe
+100 constraints,10 passes 2.19474 ms worst=0
+1000 constraints,10 passes 161.339 ms worst=0
+probe
+100 constraints,10 passes 2.39553 ms worst=0
+1000 constraints,10 passes 209.327 ms worst=0
+baseline-probe
+100 constraints,10 passes 2.68646 ms worst=0
+1000 constraints,10 passes 161.485 ms worst=0
+probe
+100 constraints,10 passes 2.69121 ms worst=0
+1000 constraints,10 passes 210.855 ms worst=0
+baseline-probe
+100 constraints,10 passes 2.19574 ms worst=0
+1000 constraints,10 passes 164.578 ms worst=0
+probe
+100 constraints,10 passes 2.42272 ms worst=0
+1000 constraints,10 passes 206.941 ms worst=0

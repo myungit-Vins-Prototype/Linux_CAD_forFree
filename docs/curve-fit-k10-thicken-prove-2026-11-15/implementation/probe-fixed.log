@@ -1,0 +1,8 @@
+rational=0 direction=0 source_issues=0
+ accepted=1 result_issues=0 solid=1 generated_walls=1 wall_same_param_error=0 wall_geometric_error=2.3618943543665635e-16 witness_t=0.1207 hidden_height=5.7424751728328231e-05 source_immutable=1
+rational=0 direction=1 source_issues=0
+ accepted=1 result_issues=0 solid=1 generated_walls=1 wall_same_param_error=0 wall_geometric_error=2.3618943543665635e-16 witness_t=0.1207 hidden_height=5.7424751728328231e-05 source_immutable=1
+rational=1 direction=0 source_issues=0
+ accepted=1 result_issues=0 solid=1 generated_walls=1 wall_same_param_error=0 wall_geometric_error=1.4816730699805633e-17 witness_t=0.1203 hidden_height=5.4162191962066483e-05 source_immutable=1
+rational=1 direction=1 source_issues=0
+ accepted=1 result_issues=0 solid=1 generated_walls=1 wall_same_param_error=0 wall_geometric_error=1.4816730699805633e-17 witness_t=0.1203 hidden_height=5.4162191962066483e-05 source_immutable=1

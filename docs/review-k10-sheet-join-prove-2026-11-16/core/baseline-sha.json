@@ -1,0 +1,8 @@
+{
+  "kernel/fk_bspline_surface.cpp": "a1b4769fff26a4d8399dc46f2084ab52dd6a9a6e8b3a01791857c9261453af7e",
+  "kernel/fk_curve_fit_bounds.h": "62dcaa3a96ad3a0aad4dc144ca138b3c03e78f44b98da18656b100d916b930a9",
+  "kernel/fk_curve_fit_bounds.cpp": "3faf91d68ee1511dd31c2c6a37a6c51dd1da8a49286c54873739b102b268052e",
+  "kernel/fk_sheet.cpp": "fdf2810ae1777d376fd80719e9fa8210cdfda810e450c706f6e05963129f098c",
+  "forgecad-release/kernel/libforgekernel.a": "6df225c9536c2e6aed13c83313fea8a58ea766cf3de7246f945e50193f3807f1",
+  "forgecad-release/kernel/CMakeFiles/forgekernel.dir/fk_sheet.cpp.o": "0d05e9f8673e4e16327a7f2397abf3bcf5c980e00d7a50c78dc88bf594b943b5"
+}

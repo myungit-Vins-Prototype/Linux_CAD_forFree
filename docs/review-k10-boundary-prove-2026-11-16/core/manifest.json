@@ -1,0 +1,8 @@
+{
+  "kernel/fk_blend_section_curve.cpp": "3c2fece62fbf033de91693b520e82055aae2e63a6cac7011b314a1f7f74dbd7d",
+  "kernel/fk_blend_section_curve.h": "13e09f031b0c6acb7f43c47c6f6a9bb2886f3d79c7209372f040f812b5768966",
+  "kernel/fk_blend_surface.cpp": "392bc742f3b5c455938bcc21882ecf57d2ca1459d5b570e56c0d99c8026d0e96",
+  "boundary-core.patch": "dbc828938289bb1079ace802d8e02fc2ef19835ce2859ee62f5f3d4fc991c511",
+  "section.o": "bde9eab6dbb042bbfc03244f4a34490a7c50990b9a0d30e2311fb85c4b089b62",
+  "surface.o": "a426288cb39fee857abef255582c4b5513df1f274296c66ece7a1e92e6472372"
+}

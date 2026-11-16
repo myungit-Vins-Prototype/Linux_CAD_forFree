@@ -1,0 +1,300 @@
+#include <cmath>
+
+#include "fk_body_check.h"
+#include "fk_boolean.h"
+#include "fk_curve_algo.h"
+#include "fk_extrude.h"
+#include "fk_mass.h"
+#include "fk_loft.h"
+#include "fk_sew.h"
+#include "fk_revolve.h"
+#include "fk_intersect.h"
+#include "fk_primitives.h"
+#include "fk_profile.h"
+#include "fk_sheet.h"
+#include "fk_tessellate.h"
+#include "fk_test_profiles.h"
+
+using namespace fktest;
+
+namespace {
+
+double sheetArea(const Body &body) {
+    double area = 0.0;
+    for (FaceId f : body.faces()) area += faceArea(body, f);
+    return area;
+}
+
+// Lamina valida e visualizzabile, con l'area attesa (se > 0). Restituisce l'area.
+double checkedSheet(const Body &body, double expected, double relative = 1e-10) {
+    FK_CHECK(body.isSheet());
+    for (const CheckIssue &issue : checkBody(body)) reportFailure(__FILE__, __LINE__, describe(issue.code) + ": " + issue.message);
+    const double area = sheetArea(body);
+    if (expected > 0.0) FK_CHECK_NEAR(area, expected, relative * expected);
+    TessellationOptions options;
+    options.deflection = 0.01;
+    FK_CHECK(tessellate(body, options).failedFaces == 0);
+    return area;
+}
+
+// Lamina estrusa lungo Z da una catena aperta di tratti nel piano XY.
+Body sheetOf(const std::vector<ProfileSegment> &segments, double height, double z = 0.0) {
+    const Profile profile = buildProfile(segments, 1e-9);
+    return makeSheetExtrusion(Frame3(Vec3(0, 0, z), Vec3(0, 0, 1), Vec3(1, 0, 0)), profile.chains, height);
+}
+
+EdgeId edgeNear(const Body &body, const Vec3 &p) {
+    EdgeId best;
+    double closest = 1e300;
+    for (EdgeId e : body.edges()) {
+        const Edge &edge = body.edge(e);
+        const double d = projectPoint(*edge.curve, p, edge.range).distance;
+        if (d < closest) closest = d, best = e;
+    }
+    return best;
+}
+
+std::shared_ptr<BSplineCurve<2>> openSpline() {
+    return std::make_shared<BSplineCurve<2>>(3, std::vector<double>{0, 0, 0, 0, 0.5, 1, 1, 1, 1},
+                                             std::vector<Vec2>{Vec2(0, 0), Vec2(1, 2), Vec2(3, -1), Vec2(4, 1), Vec2(6, 0)});
+}
+
+}
+
+FK_TEST(SheetExtendBSplineKeepsCurve) {
+    // La curva prolungata coincide con l'originale sul suo dominio (anche razionale).
+    for (bool rational : {false, true}) {
+        const BSplineCurve<3> curve(3, {0, 0, 0, 0, 0.3, 0.7, 1, 1, 1, 1}, {Vec3(0, 0, 0), Vec3(1, 2, 0), Vec3(2, -1, 1), Vec3(3, 1, 0), Vec3(4, 0, 2), Vec3(5, 1, 1)},
+                                    rational ? std::vector<double>{1, 0.8, 1.3, 0.9, 1.1, 1} : std::vector<double>{});
+        // Sulle NURBS il polinomio dei pesi, prolungato, prima o poi si annulla: li' non si va.
+        const double lo = rational ? -0.1 : -0.4, hi = rational ? 1.1 : 1.5;
+        const BSplineCurve<3> longer = extendBSpline(curve, lo, hi);
+        FK_CHECK_NEAR(longer.domain().lo, lo, 0.0);
+        FK_CHECK_NEAR(longer.domain().hi, hi, 0.0);
+        double worst = 0.0;
+        for (double t = 0.0; t <= 1.0; t += 0.01) worst = std::max(worst, distance(curve.point(t), longer.point(t)));
+        // Fuori dal dominio: lo stesso polinomio con cui la curva di partenza si prolunga.
+        for (double t : {lo, 0.5 * lo, 1.0 + 0.5 * (hi - 1.0), hi}) worst = std::max(worst, distance(curve.point(t), longer.point(t)));
+        if (rational) FK_CHECK_THROWS(extendBSpline(curve, -0.4, 1.5));
+        FK_CHECK(worst < 1e-12);
+    }
+}
+
+FK_TEST(SheetSplitAndTrim) {
+    // Piano 20 x 20 tagliato da un cilindro (solido): disco e lastra forata.
+    const Body plate = makePlaneSheet(Frame3(), 10.0);
+    const Body rod = makeCylinder(Frame3(Vec3(1, 2, -3), Vec3(0, 0, 1), Vec3(1, 0, 0)), 2.5, 6.0);
+    const std::vector<Body> pieces = splitSheet(plate, rod);
+    FK_CHECK(pieces.size() == 2);
+    double total = 0.0;
+    for (const Body &piece : pieces) total += checkedSheet(piece, 0.0);
+    FK_CHECK_NEAR(total, 400.0, 1e-10 * 400.0);
+    checkedSheet(trimSheet(plate, rod, Vec3(8, 8, 0)), 400.0 - kPi * 2.5 * 2.5);
+    checkedSheet(trimSheet(plate, rod, Vec3(1, 2, 0)), kPi * 2.5 * 2.5);
+    // Lamina con lamina: il piano diviso da un piano verticale (x = 2).
+    const Body wall = makePlaneSheet(Frame3(Vec3(2, 0, 0), Vec3(1, 0, 0), Vec3(0, 1, 0)), 30.0);
+    checkedSheet(trimSheet(plate, wall, Vec3(-5, 0, 0)), 12.0 * 20.0);
+    checkedSheet(trimSheet(plate, wall, Vec3(6, 0, 0)), 8.0 * 20.0);
+    // Una spline estrusa (alta 3) tagliata da un piano orizzontale a quota 1.
+    const auto spline = openSpline();
+    const Body curtain = sheetOf({{spline, spline->domain()}}, 3.0);
+    const double L = arcLength(*spline, spline->domain());
+    const Body level = makePlaneSheet(Frame3(Vec3(3, 0, 1), Vec3(0, 0, 1), Vec3(1, 0, 0)), 20.0);
+    checkedSheet(trimSheet(curtain, level, Vec3(3, 0.2, 0.2)), L * 1.0, 1e-9);
+    checkedSheet(trimSheet(curtain, level, Vec3(3, 0.2, 2.5)), L * 2.0, 1e-9);
+    // Lamina piegata (due facce) e cilindro con l'asse sullo spigolo comune: i
+    // pezzi fuori dal cilindro restano separati (l'angolo che li univa e' tolto).
+    const Body folded = sheetOf({lineSegment(Vec2(-6, 0), Vec2(-1, 0)), lineSegment(Vec2(-1, 0), Vec2(-1, 4))}, 2.0);
+    const Body post = makeCylinder(Frame3(Vec3(-1, 0, -1), Vec3(0, 0, 1), Vec3(1, 0, 0)), 1.0, 4.0);
+    FK_CHECK(splitSheet(folded, post).size() == 3);
+    checkedSheet(trimSheet(folded, post, Vec3(-5, 0, 1)), (5.0 - 1.0) * 2.0);
+    checkedSheet(trimSheet(folded, post, Vec3(-1, 3, 1)), (4.0 - 1.0) * 2.0);
+    checkedSheet(trimSheet(folded, post, Vec3(-1.5, 0, 1)), 2.0 * 2.0);
+    // Uno strumento che non divide la lamina.
+    FK_CHECK_THROWS(trimSheet(plate, makeCylinder(Frame3(Vec3(50, 0, -1), Vec3(0, 0, 1), Vec3(1, 0, 0)), 1.0, 2.0), Vec3(0, 0, 0)));
+}
+
+FK_TEST(SheetExtend) {
+    const double h = 3.0, d = 1.25;
+    // Piano: bordo in alto e bordo all'estremo (la faccia resta una).
+    const Body flat = sheetOf({lineSegment(Vec2(0, 0), Vec2(4, 0))}, h);
+    const Body taller = extendSheet(flat, {edgeNear(flat, Vec3(2, 0, h))}, d);
+    checkedSheet(taller, 4.0 * (h + d));
+    FK_CHECK(taller.faces().size() == 1);
+    const Body wider = extendSheet(flat, {edgeNear(flat, Vec3(4, 0, 1))}, d);
+    checkedSheet(wider, (4.0 + d) * h);
+    FK_CHECK(wider.faces().size() == 1);
+    // Piano rifilato da due archi: il bordo non segue una isoparametrica del
+    // piano. E' il caso delle facce piane offset ricavate da un loft.
+    const double diskRadius = 4.0;
+    const auto circle = std::make_shared<Circle<3>>(Vec3(), Vec3(1, 0, 0), Vec3(0, 1, 0), diskRadius);
+    std::vector<Body::BuildEdge> diskEdges{
+        {0, 1, circle, {0.0, kPi}, 0.0},
+        {1, 0, circle, {kPi, kTwoPi}, 0.0}
+    };
+    Body::BuildFace diskFace;
+    diskFace.surface = std::make_shared<Plane>(Frame3());
+    diskFace.loops.push_back({{0, true, nullptr, 0.0}, {1, true, nullptr, 0.0}});
+    const Body disk = Body::buildSheet({Vec3(diskRadius, 0, 0), Vec3(-diskRadius, 0, 0)}, diskEdges, {diskFace});
+    const Body enlargedHalf = extendSheet(disk, {disk.edges().front()}, d);
+    const double expectedDiskArea = kPi * diskRadius * diskRadius
+                                  + 0.5 * kPi * ((diskRadius + d) * (diskRadius + d) - diskRadius * diskRadius);
+    checkedSheet(enlargedHalf, expectedDiskArea, 1e-7);
+    // La seconda meta' raggiunge esattamente gli estremi della prima: i due
+    // connettori precedenti vanno consumati, senza bordi sovrapposti.
+    const Body enlargedDisk = extendSheet(enlargedHalf, {edgeNear(enlargedHalf, Vec3(0, -diskRadius, 0))}, d);
+    checkedSheet(enlargedDisk, kPi * (diskRadius + d) * (diskRadius + d), 2e-7);
+    FK_CHECK(enlargedDisk.edges().size() == 2);
+    std::vector<EdgeId> wholeBoundary;
+    for (EdgeId edge : enlargedHalf.edges())
+        if (enlargedHalf.isLaminar(edge)) wholeBoundary.push_back(edge);
+    const Body extendedWholeFace = extendSheet(enlargedHalf, wholeBoundary, d);
+    FK_CHECK(checkedSheet(extendedWholeFace, 0.0) > expectedDiskArea);
+    // Cilindro (arco di 90 gradi): in alto, e all'estremo lungo l'arco o tangente (piano).
+    const double R = 2.0;
+    const Body arc = sheetOf({arcSegment(Vec2(0, 0), R, 0.0, kPi / 2)}, h);
+    checkedSheet(extendSheet(arc, {edgeNear(arc, Vec3(R * std::sqrt(0.5), R * std::sqrt(0.5), 0.0))}, d), R * kPi / 2 * (h + d));
+    const Body around = extendSheet(arc, {edgeNear(arc, Vec3(R, 0, 1))}, d);
+    checkedSheet(around, (R * kPi / 2 + d) * h);
+    FK_CHECK(around.faces().size() == 1);
+    const Body tangent = extendSheet(arc, {edgeNear(arc, Vec3(R, 0, 1))}, d, true);
+    checkedSheet(tangent, (R * kPi / 2 + d) * h);
+    FK_CHECK(tangent.faces().size() == 2);
+    // Spline: all'estremo il polinomio prosegue (una faccia sola), in alto la striscia.
+    const auto spline = openSpline();
+    const double L = arcLength(*spline, spline->domain());
+    const Body curtain = sheetOf({{spline, spline->domain()}}, h);
+    const Vec3 end(6, 0, 1), start(0, 0, 1);
+    const Body longer = extendSheet(curtain, {edgeNear(curtain, end)}, d);
+    checkedSheet(longer, (L + d) * h, 1e-9);
+    FK_CHECK(longer.faces().size() == 1);
+    checkedSheet(extendSheet(curtain, {edgeNear(curtain, end), edgeNear(curtain, start)}, d), (L + 2.0 * d) * h, 1e-9);
+    checkedSheet(extendSheet(curtain, {edgeNear(curtain, end)}, d, true), (L + d) * h, 1e-9);
+    checkedSheet(extendSheet(curtain, {edgeNear(curtain, Vec3(3, 0.2, h))}, d), L * (h + d), 1e-9);
+    // Lamina a piu' facce: tutti i bordi in alto insieme (le strisce si uniscono sugli spigoli comuni).
+    const Body folded = sheetOf({lineSegment(Vec2(-6, 0), Vec2(0, 0)), arcSegment(Vec2(0, 2), 2.0, -kPi / 2, 0.0), lineSegment(Vec2(2, 2), Vec2(2, 5))}, h);
+    const double lengthFolded = 6.0 + kPi + 3.0;
+    std::vector<EdgeId> tops;
+    for (EdgeId e : folded.edges()) {
+        const Edge &edge = folded.edge(e);
+        if (std::fabs(edge.curve->point(0.5 * (edge.range.lo + edge.range.hi)).z() - h) < 1e-9 && folded.isLaminar(e)) tops.push_back(e);
+    }
+    FK_CHECK(tops.size() == 3);
+    const Body raised = extendSheet(folded, tops, d);
+    checkedSheet(raised, lengthFolded * (h + d), 1e-9);
+    FK_CHECK(raised.faces().size() == folded.faces().size());
+    // Bordi non isoparametrici e bordi interni non si estendono.
+    FK_CHECK_THROWS(extendSheet(folded, {edgeNear(folded, Vec3(0, 0, 1))}, d));
+}
+
+
+FK_TEST(SheetSectionKeepsExactSplineBoundary) {
+    const std::vector<double> knots{0, 0, 0, 0, 0.3, 0.7, 1, 1, 1, 1};
+    const std::vector<Vec3> poles{{-4, 0, 0}, {-3, 0, 2}, {-1, 0, -1},
+                                 {1, 0, 3}, {3, 0, 1}, {4, 0, 0}};
+    const auto first = std::make_shared<BSplineCurve<3>>(3, knots, poles);
+    auto shifted = poles;
+    for (Vec3 &p : shifted) p[1] = 3;
+    const auto second = std::make_shared<BSplineCurve<3>>(3, knots, shifted);
+    const Body sheet = ruledSurface({{first, first->domain()}}, {{second, second->domain()}});
+    const EdgeId boundary = edgeNear(sheet, first->point(0.5));
+    const auto exact = sheet.edge(boundary).curve;
+    for (double half : {10.0, 1000.0}) {
+        const Body plane = makePlaneSheet(Frame3(Vec3(), Vec3(0, 1, 0), Vec3(1, 0, 0)), half);
+        for (bool swapped : {false, true}) {
+            const auto curves = swapped ? bodySectionCurves(sheet, plane) : bodySectionCurves(plane, sheet);
+            FK_CHECK(curves.size() == 1);
+            if (curves.size() != 1) continue;
+            FK_CHECK(curves.front().curve == exact);
+            FK_CHECK_NEAR(curves.front().range.lo, exact->domain().lo, 1e-12);
+            FK_CHECK_NEAR(curves.front().range.hi, exact->domain().hi, 1e-12);
+        }
+    }
+    // A finite planar face clips the boundary rather than returning the full edge.
+    const Body small = makePlaneSheet(Frame3(Vec3(), Vec3(0, 1, 0), Vec3(1, 0, 0)), 2.0);
+    const auto clipped = bodySectionCurves(small, sheet);
+    FK_CHECK(!clipped.empty());
+    for (const auto &curve : clipped) {
+        FK_CHECK(curve.curve == exact);
+        for (int i = 0; i <= 20; ++i) {
+            const Vec3 p = curve.curve->point(curve.range.lo + curve.range.length() * i / 20.0);
+            FK_CHECK(std::fabs(p[0]) <= 2.0 + 1e-6);
+            FK_CHECK(std::fabs(p[2]) <= 2.0 + 1e-6);
+        }
+    }
+    // An interior section continues to use surface intersection.
+    const Body middle = makePlaneSheet(Frame3(Vec3(0, 1.5, 0), Vec3(0, 1, 0), Vec3(1, 0, 0)), 10.0);
+    const auto interior = bodySectionCurves(middle, sheet);
+    FK_CHECK(!interior.empty());
+    for (const auto &curve : interior)
+        FK_CHECK_NEAR(curve.curve->point(curve.range.lo + curve.range.length() * 0.5)[1], 1.5, 1e-6);
+    // Close but different boundaries are not merged by widening the tolerance.
+    auto raised = poles;
+    for (Vec3 &p : raised) p[2] += 0.01;
+    auto far = raised;
+    for (Vec3 &p : far) p[1] = 3;
+    const auto third = std::make_shared<BSplineCurve<3>>(3, knots, raised);
+    const auto fourth = std::make_shared<BSplineCurve<3>>(3, knots, far);
+    const Body neighbor = ruledSurface({{third, third->domain()}}, {{fourth, fourth->domain()}});
+    const Body joined = sewSheets({&sheet, &neighbor}, 1e-6, false).body;
+    const Body plane = makePlaneSheet(Frame3(Vec3(), Vec3(0, 1, 0), Vec3(1, 0, 0)), 10.0);
+    FK_CHECK(bodySectionCurves(plane, joined).size() == 2);
+}
+
+// La sezione assiale di una rivoluzione NURBS termina anche al polo:
+// il marching generico falliva proprio alla punta di Onion2.
+FK_TEST(SheetRevolutionMeridianSection) {
+    for (bool rational : {false, true}) {
+        auto profile = std::make_shared<BSplineCurve<2>>(3, std::vector<double>{0,0,0,0,1,1,1,1},
+            std::vector<Vec2>{{4,0},{10,1},{7,10},{0,12}},
+            rational ? std::vector<double>{1,.7,1.3,1} : std::vector<double>{});
+        ProfileLoop chain; chain.segments.push_back({profile, profile->domain()});
+        for (const auto &frame : {Frame3(), Frame3(Vec3(12,-7,3), Vec3(1,2,3), Vec3(1,0,0))}) {
+            const Body sheet = makeSheetRevolution(frame, {chain}, kTwoPi);
+            const auto &surface = static_cast<const RevolutionSurface &>(*sheet.face(sheet.faces().front()).surface);
+            for (double angle : {-kPi/18, kPi/18, .7}) {
+                const Vec3 radial = std::cos(angle)*frame.xDir()+std::sin(angle)*frame.yDir();
+                const Vec3 normal = cross(frame.zDir(), radial);
+                const Plane plane(Frame3(frame.origin()+6*frame.zDir(), normal, radial));
+                double u = 0;
+                FK_CHECK(revolutionMeridianAngle(plane, surface, 1e-9, u));
+                Box box; box.add(frame.origin()-Vec3(30,30,30)); box.add(frame.origin()+Vec3(30,30,30));
+                const auto analytic = intersectPlaneSurface(plane, surface, box, 1e-9);
+                FK_CHECK(analytic.curves.size() == 2);
+                const Body tool = makePlaneSheet(plane.frame(), 30);
+                for (bool swapped : {false,true}) {
+                    const auto curves = swapped ? bodySectionCurves(sheet, tool) : bodySectionCurves(tool, sheet);
+                    FK_CHECK(curves.size() == 2);
+                    for (const auto &curve : curves) for (int i=0;i<=40;++i) {
+                        const double t = curve.range.lo+curve.range.length()*i/40.;
+                        const Vec3 p = curve.curve->point(t);
+                        FK_CHECK(std::fabs(dot(normal,p-plane.frame().origin())) < 1e-9);
+                        FK_CHECK(projectPoint(*analytic.curves[0],p,analytic.ranges[0]).distance < 1e-9
+                              || projectPoint(*analytic.curves[1],p,analytic.ranges[1]).distance < 1e-9);
+                    }
+                }
+                // Il piano finito deve rifilare i meridiani, non restituirli interi.
+                const Frame3 finiteFrame(plane.frame().origin()+6*radial, normal, radial);
+                const Body finite = makePlaneSheet(finiteFrame, 2);
+                const auto clipped = bodySectionCurves(finite, sheet);
+                FK_CHECK(!clipped.empty());
+                for (const auto &curve : clipped) for (int i=0;i<=20;++i) {
+                    const Vec3 p = finiteFrame.toLocal(curve.curve->point(curve.range.lo+curve.range.length()*i/20.));
+                    FK_CHECK(std::fabs(p.x()) <= 2+1e-6 && std::fabs(p.y()) <= 2+1e-6);
+                }
+                FK_CHECK(!revolutionMeridianAngle(Plane(Frame3(plane.frame().origin()+.01*normal,normal,radial)),surface,1e-9,u));
+                FK_CHECK(!revolutionMeridianAngle(Plane(Frame3(frame.origin(),normal+.001*frame.zDir(),radial)),surface,1e-9,u));
+            }
+            // Anche una faccia di rivoluzione parziale conserva i soli rami nel ritaglio.
+            const Body partial = makeSheetRevolution(frame, {chain}, kHalfPi);
+            const Vec3 radial = normalized(frame.xDir()+frame.yDir());
+            const Body tool = makePlaneSheet(Frame3(frame.origin(),cross(frame.zDir(),radial),radial),30);
+            FK_CHECK(bodySectionCurves(tool,partial).size() == 1);
+        }
+    }
+    // Un meridiano sghembo non produce due semplici copie ruotate.
+    auto skew = std::make_shared<BSplineCurve<3>>(3, std::vector<double>{0,0,0,0,1,1,1,1},
+        std::vector<Vec3>{{4,0,0},{10,.1,1},{7,0,10},{0,0,12}});
+    const RevolutionSurface surface(skew,Vec3(),Vec3(0,0,1)); double angle=0;
+    FK_CHECK(!revolutionMeridianAngle(Plane(Frame3(Vec3(),Vec3(0,1,0),Vec3(1,0,0))),surface,1e-9,angle));
+}

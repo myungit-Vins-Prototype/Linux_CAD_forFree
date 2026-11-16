@@ -1,0 +1,11 @@
+#include "fk_history.h"
+#include "fk_blend.h"
+#include "fk_blend_contour.h"
+#include "fk_body_io.h"
+#include "fk_body_check.h"
+#include <algorithm>
+#include <fstream>
+#include <iterator>
+#include <iostream>
+using namespace ForgeCad::Kernel;
+int main(){std::ifstream f("/home/myungit/Linux_CAD_forFree/kernel/tests/data/blend_cavity_loft.body",std::ios::binary);auto body=readBodyBinary(std::string(std::istreambuf_iterator<char>(f),{}));const auto before=writeBodyBinary(body);auto contour=blendCavityContour(body,EdgeId(10));for(double r:{.5,1.1,1.675}){std::reverse(contour.begin(),contour.end());try{BodyHistory h;auto result=blendEdges(body,contour,r,false,&h,r>1.5);std::cout<<"radius="<<r<<" OK faces="<<result.faces().size()<<" check="<<checkBody(result,{true,true}).size()<<"\n";}catch(const std::exception&e){std::cout<<"radius="<<r<<" REJECT "<<e.what()<<"\n";}if(writeBodyBinary(body)!=before)return 2;}return 0;}

@@ -1,0 +1,10 @@
+face=0 edge=0 sense=1 uv_start=0,1 uv_end=2,1 vPeriodic=0
+face=0 edge=3 sense=1 uv_start=2,0 uv_end=2,1 vPeriodic=0
+face=0 edge=0 sense=0 uv_start=2,1 uv_end=0,1 vPeriodic=0
+face=0 edge=2 sense=0 uv_start=0,1 uv_end=0,0 vPeriodic=0
+face=1 edge=1 sense=1 uv_start=0,1 uv_end=2,1 vPeriodic=0
+face=1 edge=2 sense=1 uv_start=2,0 uv_end=2,1 vPeriodic=0
+face=1 edge=1 sense=0 uv_start=2,1 uv_end=0,1 vPeriodic=0
+face=1 edge=3 sense=0 uv_start=0,1 uv_end=0,0 vPeriodic=0
+split=0 faces=2 checks=0 volume=0 expected=0.822445218850813 area=0 failedFaces=0 triangles=44572
+split=1 faces=4 checks=0 volume=0.822445219580419 expected=0.822445218850813 area=16.4489043843124 failedFaces=0 triangles=64050

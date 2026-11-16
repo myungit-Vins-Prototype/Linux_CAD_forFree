@@ -1,0 +1,3 @@
+from pathlib import Path
+import json,shlex,subprocess
+root=Path('/home/myungit/Linux_CAD_forFree');out=Path('/tmp/forgecad-k10-composition-20261115/tests');cs=json.loads((root/'forgecad-release/compile_commands.json').read_text());c=next(x for x in cs if x['file'].endswith('/kernel/tests/test_curve_fit_validation.cpp'));cmd=shlex.split(c['command']);cmd[cmd.index('-o')+1]=str(out/'poles-probe.o');cmd[cmd.index('-c')+1]=str(out/'poles-probe.cpp');subprocess.run(cmd,cwd=c['directory'],check=True);subprocess.run(['/usr/bin/c++','-o',str(out/'poles-probe'),str(out/'poles-probe.o'),str(root/'forgecad-release/kernel/libforgekernel.a'),'-lpthread'],check=True)

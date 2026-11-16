@@ -1,4 +1,5 @@
 #include "cad_constraints.h"
+#include "cad_ellipse.h"
 #include "cad_sketch_offset.h"
 #include "cad_sketch_section_selection.h"
 
@@ -57,6 +58,7 @@ Shape shapeOf(const SketchObject &sketch, const ConstraintRef &ref) {
     case DrawingTool::Arc:
     case DrawingTool::Polygon: return curve.controlPoints.size() >= 2 ? Shape::Circle : Shape::None;
     case DrawingTool::Ellipse: return curve.controlPoints.size() >= 3 ? Shape::Ellipse : Shape::None;
+    case DrawingTool::EllipseExtremes: return curve.controlPoints.size() == 4 ? Shape::Ellipse : Shape::None;
     default: return curve.controlPoints.size() >= 2 ? Shape::Curve : Shape::None;
     }
 }
@@ -194,9 +196,19 @@ public:
         center = point(curvePoint(ref.element, 0));
         radius = length(point(curvePoint(ref.element, 1)) - center);
     }
+    QPointF center(const ConstraintRef &ref) const {
+        const QPointF first = point(curvePoint(ref.element, 0));
+        return sketch_.curves.at(ref.element).tool == DrawingTool::EllipseExtremes
+            ? 0.5 * first + 0.5 * point(curvePoint(ref.element, 1)) : first;
+    }
+    void centerDependencies(const ConstraintRef &ref, QVector<int> &out) const {
+        out << curvePoint(ref.element, 0);
+        if (sketch_.curves.at(ref.element).tool == DrawingTool::EllipseExtremes) out << curvePoint(ref.element, 1);
+    }
     void ellipse(const ConstraintRef &ref, QPointF &center, QPointF &u, double &a, double &b) const {
-        center = point(curvePoint(ref.element, 0));
-        const QPointF major = point(curvePoint(ref.element, 1)) - center;
+        center = this->center(ref);
+        const bool extremes = sketch_.curves.at(ref.element).tool == DrawingTool::EllipseExtremes;
+        const QPointF major = point(curvePoint(ref.element, extremes ? 0 : 1)) - center;
         a = length(major);
         b = length(point(curvePoint(ref.element, 2)) - center);
         u = a > 0.0 ? major / a : QPointF(1.0, 0.0);
@@ -233,10 +245,15 @@ private:
 };
 
 double wrapAngle(double angle) {
-    while (angle > kPi) angle -= 2.0 * kPi;
-    while (angle < -kPi) angle += 2.0 * kPi;
+    if (!std::isfinite(angle)) return std::numeric_limits<double>::quiet_NaN();
+    angle = std::fmod(angle, 2.0 * kPi);
+    if (angle > kPi) angle -= 2.0 * kPi;
+    if (angle < -kPi) angle += 2.0 * kPi;
     return angle;
 }
+
+// Ridurre in gradi prima della conversione evita overflow anche a DBL_MAX.
+double angleRadians(double degrees) { return std::fmod(degrees, 360.0) * (kPi / 180.0); }
 
 // Direzioni delle due rette di una quota d'angolo nel suo settore (angleSides).
 void sectorDirections(const SketchConstraint &c, QPointF &d, QPointF &e) {
@@ -297,6 +314,37 @@ TangentContact tangentContact(const SketchObject &sketch, const SketchConstraint
         if (onTangentShape(sketch, k.second, c.first) && onTangentShape(sketch, k.first, c.second)) {
             contact = {true, k.second, k.first};
             return contact;
+        }
+    }
+    // La coincidenza e' transitiva: gli estremi possono condividere un punto
+    // di costruzione senza un vincolo diretto fra le due entita'. Si segue
+    // soltanto il grafo dei vincoli espliciti, mai la vicinanza geometrica.
+    using PointKey = QPair<int, QPair<int, int>>;
+    const auto key = [](const ConstraintRef &r) { return PointKey{r.kind, {r.element, r.point}}; };
+    QHash<PointKey, QVector<ConstraintRef>> neighbors;
+    struct Reached { ConstraintRef point, source; };
+    QVector<Reached> pending;
+    QSet<PointKey> visited;
+    for (const SketchConstraint &k : sketch.geometricConstraints) {
+        if (k.type != ConstraintType::Coincident || shapeOf(sketch, k.first) != Shape::Point
+            || shapeOf(sketch, k.second) != Shape::Point) continue;
+        neighbors[key(k.first)].append(k.second);
+        neighbors[key(k.second)].append(k.first);
+        for (const auto &point : {k.first, k.second})
+            if (onTangentShape(sketch, point, c.first) && !visited.contains(key(point))) {
+                visited.insert(key(point));
+                pending.append({point, point});
+            }
+    }
+    for (qsizetype i = 0; i < pending.size(); ++i) {
+        const Reached reached = pending.at(i);
+        if (onTangentShape(sketch, reached.point, c.second))
+            return {true, reached.source, reached.point};
+        const auto found = neighbors.constFind(key(reached.point));
+        if (found == neighbors.cend()) continue;
+        for (const auto &point : found.value()) if (!visited.contains(key(point))) {
+            visited.insert(key(point));
+            pending.append({point, reached.source});
         }
     }
     return contact;
@@ -476,7 +524,7 @@ QPointF patternDirection(const System &s, const ConstraintRef &ref, double degre
         const double l = length(b - a);
         return l > 0.0 ? (b - a) / l : QPointF(1.0, 0.0);
     }
-    const double angle = degrees * kPi / 180.0;
+    const double angle = angleRadians(degrees);
     return QPointF(std::cos(angle), std::sin(angle));
 }
 
@@ -502,7 +550,7 @@ QVector<PlaneMotion> patternMotions(const System &s, const SketchPatternData &p,
             }
     } else if (p.kind == 1) {
         const QPointF center = p.center.kind >= 0 ? s.refPoint(p.center) : p.centerPoint;
-        const double step = patternStep(p, first) * kPi / 180.0;
+        const double step = angleRadians(patternStep(p, first));
         for (int i = 1; i < p.count; ++i) {
             PlaneMotion m;
             const double cs = std::cos(i * step), sn = std::sin(i * step);
@@ -660,7 +708,7 @@ void equations(const System &s, const SketchConstraint &c, QVector<double> &out,
         return;
     }
     case ConstraintType::Concentric: {
-        const QPointF d = s.point(s.curvePoint(c.first.element, 0)) - s.point(s.curvePoint(c.second.element, 0));
+        const QPointF d = s.center(c.first) - s.center(c.second);
         out << d.x() << d.y();
         return;
     }
@@ -855,7 +903,7 @@ void equations(const System &s, const SketchConstraint &c, QVector<double> &out,
         sectorDirections(c, d, e);
         const double angle = std::atan2(cross(d, e), dot(d, e));
         const double scale = 0.5 * ((c.first.kind == 2 ? 0.0 : length(d)) + (c.second.kind == 2 ? 0.0 : length(e)));
-        out << wrapAngle(angle - c.value * kPi / 180.0) * std::max(scale, 1e-3);
+        out << wrapAngle(angle - angleRadians(c.value)) * std::max(scale, 1e-3);
         return;
     }
     case ConstraintType::Radius:
@@ -939,6 +987,12 @@ void implicitEquations(const System &s, int curve, QVector<double> &out) {
     if (object.tool == DrawingTool::Arc && object.controlPoints.size() >= 3) {
         const QPointF c = s.point(s.curvePoint(curve, 0));
         out << length(s.point(s.curvePoint(curve, 2)) - c) - length(s.point(s.curvePoint(curve, 1)) - c);
+    } else if (object.tool == DrawingTool::EllipseExtremes && object.controlPoints.size() == 4) {
+        const QPointF a0 = s.point(s.curvePoint(curve, 0)), a1 = s.point(s.curvePoint(curve, 1));
+        const QPointF b0 = s.point(s.curvePoint(curve, 2)), b1 = s.point(s.curvePoint(curve, 3));
+        const QPointF d = (0.5 * a0 + 0.5 * a1) - (0.5 * b0 + 0.5 * b1);
+        const QPointF a = 0.5 * a0 - 0.5 * a1, b = 0.5 * b0 - 0.5 * b1;
+        out << d.x() << d.y() << dot(a / std::max(length(a), 1e-300), b);
     } else if (object.tool == DrawingTool::Ellipse && object.controlPoints.size() >= 3) {
         const QPointF c = s.point(s.curvePoint(curve, 0)), u = s.point(s.curvePoint(curve, 1)) - c;
         out << dot(u, s.point(s.curvePoint(curve, 2)) - c) / std::max(length(u), 1e-300);
@@ -949,6 +1003,8 @@ void implicitDependencies(const System &s, int curve, QVector<int> &out) {
     const CurveObject &object = s.sketch().curves.at(curve);
     if ((object.tool == DrawingTool::Arc || object.tool == DrawingTool::Ellipse) && object.controlPoints.size() >= 3)
         out << s.curvePoint(curve, 0) << s.curvePoint(curve, 1) << s.curvePoint(curve, 2);
+    else if (object.tool == DrawingTool::EllipseExtremes && object.controlPoints.size() == 4)
+        for (int k = 0; k < 4; ++k) out << s.curvePoint(curve, k);
 }
 
 QString curveName(const CurveObject &curve) {
@@ -958,6 +1014,7 @@ QString curveName(const CurveObject &curve) {
     case DrawingTool::Arc: return QStringLiteral("Arco");
     case DrawingTool::Polygon: return QStringLiteral("Poligono");
     case DrawingTool::Ellipse: return QStringLiteral("Ellisse");
+    case DrawingTool::EllipseExtremes: return QStringLiteral("Ellisse per estremi");
     case DrawingTool::Nurbs: return QStringLiteral("NURBS");
     case DrawingTool::Converted: return QStringLiteral("Curva derivata");
     default: return QStringLiteral("Spline");
@@ -996,6 +1053,51 @@ bool symmetryRoles(const SketchObject &sketch, const QVector<ConstraintRef> &ref
     return sa == Shape::Point || (sa == Shape::Line && a.kind == 0 && b.kind == 0) || sa == Shape::Circle;
 }
 
+}
+
+namespace {
+
+bool finitePoint(const QPointF &p) { return std::isfinite(p.x()) && std::isfinite(p.y()); }
+
+template <class Values> bool finiteNumbers(const Values &values) {
+    return std::all_of(std::begin(values), std::end(values), [](double v) { return std::isfinite(v); });
+}
+
+template <class Segments> bool finiteSegments(const Segments &values) {
+    for (const auto &v : values) if (!finitePoint(v.first) || !finitePoint(v.second)) return false;
+    return true;
+}
+
+template <class Curves> bool finiteCurves(const Curves &values) {
+    for (const auto &v : values) {
+        for (const auto &p : v.controlPoints) if (!finitePoint(p)) return false;
+        if (!finiteSegments(v.tangentHandles) || !finiteNumbers(v.weights) || !finiteNumbers(v.knots)) return false;
+    }
+    return true;
+}
+
+bool finiteConstraintNumbers(const SketchConstraint &c) {
+    if (!std::isfinite(c.value) || !finitePoint(c.placement)) return false;
+    for (const auto &p : c.positions) if (!finitePoint(p)) return false;
+    if (c.type == ConstraintType::Pattern) {
+        const auto &p = c.pattern;
+        for (double value : {p.spacing, p.spacing2, p.angle, p.directionAngle, p.directionAngle2})
+            if (!std::isfinite(value)) return false;
+        if (!finitePoint(p.centerPoint) || !finitePoint(p.axisPoint) || !finitePoint(p.axisDirection)) return false;
+    }
+    return !c.pierce || (finiteSegments(c.pierce->segments) && finiteCurves(c.pierce->curves));
+}
+
+bool finiteSketchGeometry(const SketchObject &sketch) {
+    return finiteSegments(sketch.segments) && finiteCurves(sketch.curves)
+        && finiteNumbers(sketch.segmentLengths) && finiteNumbers(sketch.segmentAngles)
+        && finiteNumbers(sketch.frame.origin) && finiteNumbers(sketch.frame.xAxis) && finiteNumbers(sketch.frame.normal);
+}
+
+}
+
+bool finiteSketchNumbers(const SketchObject &sketch) {
+    return finiteSketchGeometry(sketch) && std::all_of(sketch.geometricConstraints.begin(), sketch.geometricConstraints.end(), finiteConstraintNumbers);
 }
 
 QString constraintName(ConstraintType type) {
@@ -1374,9 +1476,10 @@ bool chooseAngleSector(const SketchObject &sketch, SketchConstraint &constraint,
 }
 
 double constraintError(const SketchObject &sketch, const SketchConstraint &constraint) {
+    if (!finiteSketchGeometry(sketch) || !finiteConstraintNumbers(constraint)) return std::numeric_limits<double>::infinity();
     if(constraint.type==ConstraintType::Offset) {
         SketchObject expected=sketch;expected.geometricConstraints={constraint};
-        if(!refreshSketchOffsets(expected).isEmpty()) return std::numeric_limits<double>::infinity();
+        if(!refreshSketchOffsets(expected).isEmpty() || !finiteSketchNumbers(expected)) return std::numeric_limits<double>::infinity();
         double worst=0;
         for(const auto &r:constraint.offset.copies) {
             if(r.kind==0) {
@@ -1395,7 +1498,10 @@ double constraintError(const SketchObject &sketch, const SketchConstraint &const
     QVector<double> r;
     equations(s, constraint, r);
     double worst = 0.0;
-    for (double v : r) worst = std::max(worst, std::fabs(v));
+    for (double v : r) {
+        if (!std::isfinite(v)) return std::numeric_limits<double>::infinity();
+        worst = std::max(worst, std::fabs(v));
+    }
     return worst;
 }
 
@@ -1459,10 +1565,14 @@ QVector<ConstraintAnchor> constraintAnchors(const SketchObject &sketch, const Sk
             anchor.direction = QPointF(-std::sin(angle), std::cos(angle));
             break;
         }
-        case Shape::Ellipse:
-            anchor.point = s.point(s.curvePoint(ref.element, 1));
-            anchor.direction = s.point(s.curvePoint(ref.element, 2)) - s.point(s.curvePoint(ref.element, 0));
+        case Shape::Ellipse: {
+            QPointF center, u;
+            double a, b;
+            s.ellipse(ref, center, u, a, b);
+            anchor.point = center + a * u;
+            anchor.direction = QPointF(-u.y(), u.x());
             break;
+        }
         case Shape::Curve: {
             const QVector<QPointF> &samples = sketch.curves.at(ref.element).samples;
             if (samples.size() >= 2) {
@@ -1512,6 +1622,13 @@ void lineDerivative(const System &system,const ConstraintRef &ref,int endpoint,i
     } else pointDerivative(system,{0,ref.element,endpoint},axis,factor,row);
 }
 
+void centerDerivative(const System &system, const ConstraintRef &ref, int axis, double factor,
+                      Kernel::ConstraintLinear::Row &row) {
+    const bool extremes = system.sketch().curves.at(ref.element).tool == DrawingTool::EllipseExtremes;
+    pointDerivative(system, {1, ref.element, 0}, axis, extremes ? 0.5 * factor : factor, row);
+    if (extremes) pointDerivative(system, {1, ref.element, 1}, axis, 0.5 * factor, row);
+}
+
 Kernel::ConstraintLinear::Rows linearDerivatives(const System &system,const SketchConstraint &c) {
     using namespace Kernel::ConstraintLinear;
     Rows rows;
@@ -1522,8 +1639,8 @@ Kernel::ConstraintLinear::Rows linearDerivatives(const System &system,const Sket
         rows.resize(2);
         for(int axis=0;axis<2;++axis) {
             if(c.type==ConstraintType::Concentric) {
-                pointDerivative(system,{1,c.first.element,0},axis,1,rows[axis]);
-                pointDerivative(system,{1,c.second.element,0},axis,-1,rows[axis]);
+                centerDerivative(system,c.first,axis,1,rows[axis]);
+                centerDerivative(system,c.second,axis,-1,rows[axis]);
             } else {
                 pointDerivative(system,c.first,axis,1,rows[axis]);
                 if(c.type==ConstraintType::Coincident)pointDerivative(system,c.second,axis,-1,rows[axis]);
@@ -1612,7 +1729,9 @@ QVector<Block> buildBlocks(const System &system, const SketchObject &sketch, con
         system.dependencies(c->second, block.points);
         system.dependencies(c->third, block.points);
         if (c->type == ConstraintType::Concentric) {
-            block.points << system.curvePoint(c->first.element, 0) << system.curvePoint(c->second.element, 0);
+            block.points.clear();
+            system.centerDependencies(c->first, block.points);
+            system.centerDependencies(c->second, block.points);
         }
         const TangentContact contact = tangentContact(sketch, *c);
         block.evaluate = [&system, c, contact](QVector<double> &out) { equations(system, *c, out, &contact); };
@@ -2020,6 +2139,19 @@ SketchAnalysis analyzeSketch(const SketchObject &sketch) {
 }
 
 SolveResult solveSketch(SketchObject &sketch, const QVector<PointTarget> &targets) {
+    SolveResult result;
+    const auto nonFinite = [&] {
+        result.ok = false;
+        result.residual = std::numeric_limits<double>::infinity();
+        result.error = QStringLiteral("Lo schizzo contiene valori numerici non finiti o il calcolo non e' rappresentabile.");
+        return result;
+    };
+    const auto finite = [](const auto &values) {
+        return std::all_of(std::begin(values), std::end(values), [](double v) { return std::isfinite(v); });
+    };
+    if (!finiteSketchNumbers(sketch)) return nonFinite();
+    for (const auto &target : targets)
+        if (!std::isfinite(target.position.x()) || !std::isfinite(target.position.y())) return nonFinite();
     for(const auto &curve:sketch.curves) if(curve.tool==DrawingTool::Converted && curve.degree==0 && !curve.referenceCurve) {
         SolveResult result;result.ok=false;result.error=QStringLiteral("Il riferimento esatto dello schizzo deve essere rigenerato dalla sorgente.");return result;
     }
@@ -2067,12 +2199,13 @@ SolveResult solveSketch(SketchObject &sketch, const QVector<PointTarget> &target
         }
         result.ok=false;result.error=QStringLiteral("I vincoli collegati all'offset non convergono.");return result;
     }
-    SolveResult result;
     System system(sketch);
     if (system.values().isEmpty()) return result;
     const double scale = sketchScale(system);
     const double tolerance = 1e-13 * scale, step = 1e-6 * scale;
+    if (!std::isfinite(scale) || !std::isfinite(step)) return nonFinite();
     QVector<double> &x = system.values();
+    if (!finite(x)) return nonFinite();
     const QVector<double> original = x;
     const auto conflict = [&] {
         result.ok = false;
@@ -2100,6 +2233,7 @@ SolveResult solveSketch(SketchObject &sketch, const QVector<PointTarget> &target
             }
         }
     }
+    if (!finite(x)) return nonFinite();
     // Le cache associative sono dati della sorgente: nessuna incognita libera
     // e nessuna equazione Fix salvata nel documento.
     for (const auto &link : sketch.linkedReferences) if (link)
@@ -2133,8 +2267,10 @@ SolveResult solveSketch(SketchObject &sketch, const QVector<PointTarget> &target
         else if (touchesRigid && b < constraintBlocks) continue;
         else {
             QVector<double> values; block.evaluate(values);
-            for (double value : values)
+            for (double value : values) {
+                if (!std::isfinite(value)) return nonFinite();
                 if (std::fabs(value) > 1e-9 * scale) return conflict();
+            }
         }
     }
     const auto residuals = [&](QVector<double> &r) {
@@ -2143,7 +2279,10 @@ SolveResult solveSketch(SketchObject &sketch, const QVector<PointTarget> &target
     };
     const auto norm = [](const QVector<double> &r) {
         double worst = 0.0;
-        for (double v : r) worst = std::max(worst, std::fabs(v));
+        for (double v : r) {
+            if (!std::isfinite(v)) return std::numeric_limits<double>::infinity();
+            worst = std::max(worst, std::fabs(v));
+        }
         return worst;
     };
     QVector<double> r;
@@ -2152,6 +2291,7 @@ SolveResult solveSketch(SketchObject &sketch, const QVector<PointTarget> &target
     for (int iteration = 0; iteration < 100; ++iteration) {
         result.iterations = iteration;
         const double current = norm(r);
+        if (!std::isfinite(current)) return nonFinite();
         if (current <= tolerance) {
             result.residual = current;
             break;
@@ -2159,6 +2299,7 @@ SolveResult solveSketch(SketchObject &sketch, const QVector<PointTarget> &target
         QVector<double> dx(n, 0.0);
         if (qEnvironmentVariableIntValue("FORGECAD_SOLVER_DENSE") == 1) {
             const QVector<double> J = jacobian(blocks, x, m, step, &columnMap, n);
+            if (!finite(J)) return nonFinite();
             // Passo di norma minima: dx = -J^T (J J^T + mu I)^-1 r.
             QVector<double> A(m * m, 0.0);
             double trace = 0.0;
@@ -2169,6 +2310,7 @@ SolveResult solveSketch(SketchObject &sketch, const QVector<PointTarget> &target
                     A[i * m + j] = A[j * m + i] = sum;
                     if (i == j) trace += sum;
                 }
+            if (!finite(A) || !std::isfinite(trace)) return nonFinite();
             const double mu = 1e-12 * std::max(trace / std::max(m, 1), 1e-300);
             for (int i = 0; i < m; ++i) A[i * m + i] += mu;
             // Cholesky (A e' simmetrica definita positiva grazie a mu).
@@ -2207,10 +2349,13 @@ SolveResult solveSketch(SketchObject &sketch, const QVector<PointTarget> &target
             }
         } else {
             const auto rows = sparseJacobian(blocks, x, m, step, columnMap);
+            for (const auto &row : rows) for (const auto &entry : row)
+                if (!std::isfinite(entry.value)) return nonFinite();
             std::vector<double> delta;
             if (!Kernel::ConstraintLinear::minimumNormStep(rows, r.constData(), n, delta)) break;
             std::copy(delta.begin(), delta.end(), dx.begin());
         }
+        if (!finite(dx)) return nonFinite();
         // Ricerca lineare: il passo si dimezza finche' lo scarto non scende.
         const QVector<double> before = x;
         double lambda = 1.0;
@@ -2218,7 +2363,9 @@ SolveResult solveSketch(SketchObject &sketch, const QVector<PointTarget> &target
         QVector<double> trial;
         for (int attempt = 0; attempt < 12; ++attempt) {
             for (int k = 0; k < n; ++k) x[freeColumns[k]] = before[freeColumns[k]] + lambda * dx[k];
+            if (!finite(x)) return nonFinite();
             residuals(trial);
+            if (!finite(trial)) return nonFinite();
             if (norm(trial) < current) {
                 improved = true;
                 break;
@@ -2233,20 +2380,22 @@ SolveResult solveSketch(SketchObject &sketch, const QVector<PointTarget> &target
         result.residual = norm(r);
     }
     result.residual = norm(r);
+    if (!std::isfinite(result.residual) || !finite(x)) return nonFinite();
     if (result.residual > 1e-9 * scale) {
         x = original;
         result.ok = false;
         result.error = QStringLiteral("I vincoli non si possono soddisfare insieme (sono in conflitto).");
         return result;
     }
+    SketchObject solved = sketch;
     // I punti nuovi nello schizzo; le maniglie delle spline con i loro scarti.
-    for (int i = 0; i < sketch.segments.size(); ++i) {
+    for (int i = 0; i < solved.segments.size(); ++i) {
         const int base = system.pointIndex({0, i, 0});
-        sketch.segments[i].first = system.point(base);
-        sketch.segments[i].second = system.point(base + 1);
+        solved.segments[i].first = system.point(base);
+        solved.segments[i].second = system.point(base + 1);
     }
-    for (int curve = 0; curve < sketch.curves.size(); ++curve) {
-        CurveObject &object = sketch.curves[curve];
+    for (int curve = 0; curve < solved.curves.size(); ++curve) {
+        CurveObject &object = solved.curves[curve];
         const int handles = system.handleBase(curve);
         for (int k = 0; k < object.controlPoints.size(); ++k) {
             const QPointF moved = system.point(system.curvePoint(curve, k));
@@ -2262,15 +2411,26 @@ SolveResult solveSketch(SketchObject &sketch, const QVector<PointTarget> &target
         }
     }
     // I parametri liberi delle ripetizioni (passo, angolo) dove li ha portati il risolutore.
-    for (int i = 0; i < sketch.geometricConstraints.size(); ++i) {
+    for (int i = 0; i < solved.geometricConstraints.size(); ++i) {
         const int base = system.patternBase(i);
         if (base < 0) continue;
-        SketchPatternData &p = sketch.geometricConstraints[i].pattern;
+        SketchPatternData &p = solved.geometricConstraints[i].pattern;
         const QPointF value = system.point(base);
         if (!p.dimensioned && p.kind == 0) p.spacing = value.x();
         if (!p.dimensioned && p.kind == 1) p.angle = value.x();
         if (!p.dimensioned2 && p.kind == 0) p.spacing2 = value.y();
     }
+    if (!finiteSketchNumbers(solved)) return nonFinite();
+    for (const auto &object : solved.curves) {
+        if (object.tool != DrawingTool::EllipseExtremes) continue;
+        QPointF center, axisA, axisB;
+        if (!ellipseAxes(object, center, axisA, axisB)) {
+            result.ok = false;
+            result.error = QStringLiteral("L'ellisse per estremi risulta degenere o supera la precisione del documento.");
+            return result;
+        }
+    }
+    sketch = std::move(solved);
     return result;
 }
 

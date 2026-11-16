@@ -1,0 +1,11 @@
+[  OK  ] MappingCarrierHiddenTargetsPolyRationalPoseScale
+[  OK  ] MappingCarrierSourceFrameQuarterTurnShiftHolesAndRoundtrip
+[  OK  ] MappingCarrierDeclaredLegacyDiagonalPeriodicAndOffset
+[  OK  ] MappingCarrierFailureAndCallbackCancellationAreAtomic
+[  OK  ] MappingCarrierDegree27SingleSpanAndRoundtrip
+[  OK  ] MappingCarrierTolerantSourceDiscrepanciesAreRejectedAtomically
+[  OK  ] MappingCarrierSmallSourceVertexDiscrepancyIsReported
+[  OK  ] MappingCarrierUnresolvedNaturalBoundaryIsAtomic
+[  OK  ] MappingCarrierRecognizedAffineFinBudgetFailsAtomically
+9/9 test superati
+elapsed=9.08 maxrss_kb=725956

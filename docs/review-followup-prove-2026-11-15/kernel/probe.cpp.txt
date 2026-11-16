@@ -1,0 +1,90 @@
+#include "fk_body_check.h"
+#include "fk_cancel.h"
+#include "fk_offset.h"
+#include "fk_revolve.h"
+#include "fk_surface.h"
+#include <cmath>
+#include <iostream>
+#include <limits>
+using namespace ForgeCad::Kernel;
+int main(int argc, char **argv) {
+  std::string mode = argc > 1 ? argv[1] : "torus";
+  try {
+    if (mode == "bump") {
+      const double scale = argc > 2 ? std::stod(argv[2]) : 1.;
+      const double d = .001 * scale;
+      std::vector<double> knots(5, 0);
+      knots.insert(knots.end(), 4, .1);
+      knots.insert(knots.end(), 4, .15);
+      knots.insert(knots.end(), 5, 1.);
+      std::vector<Vec3> poles;
+      for (int i = 0; i < 13; ++i) {
+        double x = 0;
+        for (int j = 1; j <= 4; ++j)
+          x += knots[i + j] / 4.;
+        poles.emplace_back(x * scale, 0, i == 6 ? .01 * scale : 0.);
+      }
+      auto c = std::make_shared<BSplineCurve<3>>(4, knots, poles);
+      ExtrusionSurface source(c, Vec3(0, 1, 0));
+      auto out = offsetSurface(source, d, {0, 1}, {0, scale}, 1e-7);
+      for (double u : {.1, .1125, .125, .1375, .15}) {
+        const auto expected =
+            source.point(u, .5 * scale) + d * source.normal(u, .5 * scale);
+        std::cout << "u=" << u
+                  << " error=" << distance(out->point(u, .5 * scale), expected)
+                  << " scale=" << scale << " radius_bound=" << scale / 48.
+                  << " d=" << d << '\n';
+      }
+    }
+    if (mode == "torus") {
+      const ToroidalSurface source(Frame3(), 5, 1);
+      for (double d : {3., 4., 5.}) {
+        auto out = offsetSurface(source, d, {0, kTwoPi}, {0, kTwoPi});
+        Vec3 jet[4];
+        out->evaluate(0, kPi, 1, jet);
+        const auto jac = cross(jet[2], jet[1]);
+        std::cout << "d=" << d << " accepted minor="
+                  << static_cast<const ToroidalSurface &>(*out).minorRadius()
+                  << " jacobian=" << norm(jac) << '\n';
+      }
+    }
+    if (mode == "torus-body") {
+      const auto source = makeTorus(Frame3(), 5, 1);
+      auto out = offsetFaces(source, source.faces(), 5);
+      std::cout << "offsetFaces accepted faces=" << out.body.faces().size()
+                << " issues=" << checkBody(out.body).size() << '\n';
+      for (auto f : out.body.faces()) {
+        const auto &s = *out.body.face(f).surface;
+        std::cout << "normal=" << s.normal(0, kPi).x() << ","
+                  << s.normal(0, kPi).y() << "," << s.normal(0, kPi).z()
+                  << '\n';
+      }
+    }
+    if (mode == "fitcancel") {
+      auto token = std::make_shared<std::atomic<bool>>(false);
+      CancellationScope scope(token);
+      size_t calls = 0;
+      double error = -1;
+      auto c = fitCurve(
+          [&](double t) {
+            if (++calls == 20)
+              token->store(true);
+            return Vec3(t, std::sin(100 * t), 0);
+          },
+          {0, 1}, {}, 1e-7, &error);
+      std::cout << "returned despite cancellation calls=" << calls
+                << " poles=" << c->poleCount() << " measured=" << error << '\n';
+    }
+    if (mode == "inf") {
+      Plane source(Frame3{});
+      auto out = offsetSurface(source, std::numeric_limits<double>::infinity(),
+                               {0, 1}, {0, 1});
+      std::cout << "accepted inf offset finite=" << isFinite(out->point(.5, .5))
+                << '\n';
+    }
+  } catch (const OperationCancelled &) {
+    std::cout << "OperationCancelled\n";
+  } catch (const std::exception &e) {
+    std::cout << "EXCEPTION " << e.what() << '\n';
+  }
+}

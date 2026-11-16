@@ -1,0 +1,11 @@
+import json,shlex,subprocess,sys
+from pathlib import Path
+repo=Path('/home/myungit/Linux_CAD_forFree');out=Path('/tmp/k10-sketch-review/tests');core=out.parent/'core';build=repo/'forgecad-release';san=out/'sanitizer';san.mkdir(exist_ok=True)
+entry=next(e for e in json.loads((build/'compile_commands.json').read_text()) if e['file']==str(repo/'cad_sketch_refs.cpp') and 'forgecad_view_tests.dir' in e['command'])
+base=shlex.split(entry['command']);i=base.index('-o');del base[i:i+2];base.remove('-c');base.remove(str(repo/'cad_sketch_refs.cpp'));base=[x for x in base if x not in ['-O3','-DNDEBUG']];flags=['-O1','-g','-fsanitize=address,undefined','-fno-omit-frame-pointer'];base[1:1]=['-I'+str(core),'-DHAVE_HELIX_PROJECTION=1']+flags
+objects=[]
+for name,source in [('refs',core/'cad_sketch_refs.cpp'),('provider',core/'fk_helix_projection.cpp'),('driver',out/'test_sketch_projection_fit_validation.cpp')]:
+ obj=san/(name+'.o');objects.append(obj);
+ if '--driver-only' in sys.argv and name!='driver':continue
+ a=base+['-c',str(source),'-o',str(obj)];print(shlex.join(a),flush=True);subprocess.run(a,cwd=repo,check=True)
+a=shlex.split((out/'link-stage.txt').read_text());a=[x for x in a if x not in [str(out/'suite-stage.o'),str(core/'fk_helix_projection.o')]];a=[str(objects[0]) if x==str(core/'cad_sketch_refs.o') else x for x in a];i=a.index('-o');a[i+1]=str(san/'suite');a[1:1]=[str(objects[1]),str(objects[2])]+flags;print(shlex.join(a),flush=True);subprocess.run(a,cwd=build,check=True)

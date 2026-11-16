@@ -1,0 +1,8 @@
+Command: rg --hidden -n -w normalizedViewAngle . --glob !docs/** --glob !archivi-locali/** --glob !.git/**
+./forgeCad2026_camera.cpp:63:float ViewportCamera::normalizedViewAngle(float degrees) {
+./forgeCad2026_camera.cpp:70:    yaw_ = normalizedViewAngle(yaw_ + delta.x()*kOrbitDegreesPerPixel);
+./forgeCad2026_camera.cpp:71:    pitch_ = normalizedViewAngle(pitch_ + delta.y()*kOrbitDegreesPerPixel);
+./forgeCad2026_camera.h:26:    static float normalizedViewAngle(float degrees);
+./forgeCad2026_viewport_scene.cpp:83:float CadViewport::normalizedViewAngle(float degrees) {
+./forgeCad2026_viewport_scene.cpp:84:    return ForgeCad::Gui::ViewportCamera::normalizedViewAngle(degrees);
+./forgeCad2026_viewport.h:844:    static float normalizedViewAngle(float degrees);

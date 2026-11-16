@@ -1,0 +1,7 @@
+414919c2ba924d6a8991a1587617184c61cf6e05cd06b709548f3b905bda0703  /tmp/blend-cavity-review/tests/stage-results/r05-forward-actual.body
+414919c2ba924d6a8991a1587617184c61cf6e05cd06b709548f3b905bda0703  /tmp/blend-cavity-review/tests/stage-results/r05-reversed-actual.body
+0362d640e1f7a4152e7bfcb5a1a078fdebdc15a28826c457042044c7895d68e0  /tmp/blend-cavity-review/tests/stage-results/r05-rigid-pose-actual.body
+5c048f6a5c106416a63c9183bb0d4307862071b59a36fc502910e380157ba3fc  /tmp/blend-cavity-review/tests/stage-results/r05-scale25-actual.body
+414919c2ba924d6a8991a1587617184c61cf6e05cd06b709548f3b905bda0703  /tmp/blend-cavity-review/tests/stage-results/r05-seed17-actual.body
+2fc0a3f88e471ff813da18c5c288104cec673e82bb99b272f9491c0347971d51  /tmp/blend-cavity-review/tests/stage-results/r11-control-actual.body
+ee9f7682c05041e7f82e257b488aa111065018713a0db32e192454f961a80d51  /tmp/blend-cavity-review/tests/stage-results/r1675-control-actual.body

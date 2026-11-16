@@ -1,0 +1,8 @@
+/tmp/review-next-readonly/stage/kernel/fk_offset.cpp: In function ‘ForgeCad::Kernel::SurfacePtr ForgeCad::Kernel::{anonymous}::offsetBSplineC2(const ForgeCad::Kernel::Surface&, double, const ForgeCad::Kernel::Interval&, const ForgeCad::Kernel::Interval&, double, bool, bool)’:
+/tmp/review-next-readonly/stage/kernel/fk_offset.cpp:294:151: warning: unused parameter ‘checkCurvature’ [-Wunused-parameter]
+  294 | SurfacePtr offsetBSplineC2(const Surface &surface, double d, const Interval &uw, const Interval &vw, double tolerance, bool preserveEndSections, bool checkCurvature = true) {
+      |                                                                                                                                                  ~~~~~^~~~~~~~~~~~~~~~~~~~~
+/tmp/review-next-readonly/stage/kernel/fk_offset.cpp: In function ‘ForgeCad::Kernel::SurfacePtr ForgeCad::Kernel::{anonymous}::offsetBSpline(const ForgeCad::Kernel::Surface&, double, const ForgeCad::Kernel::Interval&, const ForgeCad::Kernel::Interval&, double, bool, bool)’:
+/tmp/review-next-readonly/stage/kernel/fk_offset.cpp:521:149: warning: unused parameter ‘checkCurvature’ [-Wunused-parameter]
+  521 | SurfacePtr offsetBSpline(const Surface &surface, double d, const Interval &uw, const Interval &vw, double tolerance, bool preserveEndSections, bool checkCurvature = true) {
+      |                                                                                                                                                ~~~~~^~~~~~~~~~~~~~~~~~~~~

@@ -1,0 +1,62 @@
+{
+  "scope": "Due TU modificati fk_offset.cpp/fk_curve_fit_bounds.cpp e main test; resto kernel Release non strumentato. Non sanitizer integrale del kernel o app.",
+  "final_sources": {
+    "offset": "acc3fbd56d2a7abfb3eb91004b9defe9dbe088537b0066f783537f0f7d0bdbcf",
+    "bounds_cpp": "3faf91d68ee1511dd31c2c6a37a6c51dd1da8a49286c54873739b102b268052e",
+    "bounds_h": "d170150fbf55dd68415d800baac04cd2f2a6182ec3ea6f6d53f0fabad49a5b41",
+    "main": "270088817756e68dc721103ce2862b5c60d1b125b9021282d69bafe78c3e5411"
+  },
+  "v1_ptrace_sources": {
+    "offset": "39b7a9247d7543deef626e00164253b1c47a2b606a96c3678060a5b46bd2b988",
+    "bounds_cpp": "3faf91d68ee1511dd31c2c6a37a6c51dd1da8a49286c54873739b102b268052e",
+    "bounds_h": "d170150fbf55dd68415d800baac04cd2f2a6182ec3ea6f6d53f0fabad49a5b41",
+    "main": "5ceb7c7184df98ddb666bfc548773f0d5dbc5b8e106b4772566dd7e1463aa125"
+  },
+  "baseline_runner": {
+    "sha256": "c68158de4612839cd9d7e4d3906b7a70ab4e07c675ff0d369ad8c204a84119f2",
+    "main_before_newlines": "5ceb7c7184df98ddb666bfc548773f0d5dbc5b8e106b4772566dd7e1463aa125",
+    "provider_macro": false,
+    "geometric_failures": 6,
+    "passes": 3,
+    "exit_code": 1,
+    "export_replay": "Tutti8JSON identici alla prima esportazione baseline"
+  },
+  "v2_normal_runner": {
+    "sha256": "411987857b846c3d455be572c4a44d1566c84eadd60baafd1b1c1a477dc1b743",
+    "provider_macro": "HAVE_PLANE_PCURVE_PROVIDER",
+    "passes": 10,
+    "exit_code": 0,
+    "export_replay": "Tutti8JSON identici V1/V2"
+  },
+  "rest_kernel_release_sha256": "f30bb32fada9b3def11f858885f8ca70cf28f3f90fce3b605deb8ca1fcb8dfcb",
+  "sanitizer_v2": {
+    "ASAN_OPTIONS": "detect_leaks=1:halt_on_error=1",
+    "UBSAN_OPTIONS": "halt_on_error=1",
+    "outside_sandbox": true,
+    "suppressions": false,
+    "passes": 10,
+    "exit_code": 0,
+    "instrumented_TUs": [
+      "fk_offset.cpp",
+      "fk_curve_fit_bounds.cpp",
+      "test_uv_offset_validation.cpp"
+    ],
+    "bounds_object_reused_from_v1": true
+  },
+  "exports": {
+    "baseline_files": 8,
+    "v2_final_files": 8,
+    "fins_per_file": {
+      "source": 24,
+      "actual": 24
+    },
+    "actual_fins_per_version": 192,
+    "source_contract": "Originali IEEE, roundoff~2e-16; pose~3e-15,scala1000~2e-13. Budgetsource0 con risoluzioneinputesplicita1e-7 nel verificatore root, non uguaglianza razionale0."
+  },
+  "limits": [
+    "Misure dense: regressioni, non certificati globali. VerificatoreFraction indipendente root sui JSON.",
+    "Baseline dimostra associazione parametrica fin fuori budget, non volume mancante o distanza fra insiemi.",
+    "V1 ptrace fatal distinto daV2 fuori sandbox, nessuna soppressione.",
+    "Nessuna nuova prova renderer, fullapp/targetpermanenteRelease verificati da root."
+  ]
+}

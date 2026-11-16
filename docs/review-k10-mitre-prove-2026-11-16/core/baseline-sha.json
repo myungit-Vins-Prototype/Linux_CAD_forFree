@@ -1,0 +1,7 @@
+{
+  "kernel/fk_blend_mitre.cpp": "d8906658ec8aebff65c70a6f916c673b2e1341546ba3d4abcba5276efd5607a1",
+  "kernel/fk_blend_mitre.h": "0a6a7b706d4800aefe05b07802be8791985d6a0574c6d2e8fa3a4703ae0229e6",
+  "kernel/fk_blend_surface.cpp": "dfad2aa7ca0996210a2882a349d518e9746989ea19b132ed8a459dfe53909ca8",
+  "kernel/fk_sheet.cpp": "8e9bd9d6c1d61bf9e8a189e783d6803510c3c61f07ed28c8e5b82f2efa457e2f",
+  "forgecad-release/kernel/libforgekernel.a": "963124d476b460e4c0afc226a563ee790a0cd1ff97264a46f23d828449ae7eab"
+}

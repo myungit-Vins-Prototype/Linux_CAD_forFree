@@ -1,0 +1,53 @@
+Test project /home/myungit/Linux_CAD_forFree/forgecad-release
+      Start  20: forgecad_sketch_projection_tests
+ 1/24 Test  #20: forgecad_sketch_projection_tests .................   Passed    0.09 sec
+      Start  21: forgecad_projected_curve_reference_tests
+ 2/24 Test  #21: forgecad_projected_curve_reference_tests .........   Passed    0.03 sec
+      Start  32: forgecad_function_panels_tests
+ 3/24 Test  #32: forgecad_function_panels_tests ...................   Passed    1.36 sec
+      Start  34: forgecad_history_suppression_tests
+ 4/24 Test  #34: forgecad_history_suppression_tests ...............   Passed    0.03 sec
+      Start  66: forgecad_edit_preview_reuse_tests
+ 5/24 Test  #66: forgecad_edit_preview_reuse_tests ................   Passed    0.38 sec
+      Start  70: forgecad_sketch_tools_refs_tests
+ 6/24 Test  #70: forgecad_sketch_tools_refs_tests .................   Passed    0.08 sec
+      Start  76: forgecad_document_lifetime_tests
+ 7/24 Test  #76: forgecad_document_lifetime_tests .................   Passed    0.04 sec
+      Start  86: forgecad_sketch_reference_workflow_tests
+ 8/24 Test  #86: forgecad_sketch_reference_workflow_tests .........   Passed    0.34 sec
+      Start  93: forgecad_solver_partition_tests
+ 9/24 Test  #93: forgecad_solver_partition_tests ..................   Passed    2.74 sec
+      Start  99: forgecad_sketch_editing_tests
+10/24 Test  #99: forgecad_sketch_editing_tests ....................   Passed    0.04 sec
+      Start 131: forgecad_projection_tests
+11/24 Test #131: forgecad_projection_tests ........................   Passed    0.11 sec
+      Start 132: forgecad_workflow_ui_tests
+12/24 Test #132: forgecad_workflow_ui_tests .......................   Passed    0.27 sec
+      Start 139: forgecad_async_lifetime_tests
+13/24 Test #139: forgecad_async_lifetime_tests ....................   Passed    0.03 sec
+      Start 185: forgecad_sketch_offset_validation_tests
+14/24 Test #185: forgecad_sketch_offset_validation_tests ..........   Passed    4.08 sec
+      Start 193: forgekernel_tolerance_tests
+15/24 Test #193: forgekernel_tolerance_tests ......................   Passed    0.31 sec
+      Start 197: forgekernel_sketch_projection_tests
+16/24 Test #197: forgekernel_sketch_projection_tests ..............   Passed    0.06 sec
+      Start 198: forgekernel_projected_curve_reference_tests
+17/24 Test #198: forgekernel_projected_curve_reference_tests ......   Passed    0.02 sec
+      Start 207: forgekernel_curve_fit_validation_tests
+18/24 Test #207: forgekernel_curve_fit_validation_tests ...........   Passed   17.24 sec
+      Start 227: forgekernel_curve_projection_tests
+19/24 Test #227: forgekernel_curve_projection_tests ...............   Passed    0.02 sec
+      Start 228: forgekernel_boundary_fit_validation_tests
+20/24 Test #228: forgekernel_boundary_fit_validation_tests ........   Passed    0.36 sec
+      Start 229: forgekernel_surface_curve_fit_validation_tests
+21/24 Test #229: forgekernel_surface_curve_fit_validation_tests ...   Passed    0.60 sec
+      Start 230: forgekernel_mapping_carrier_validation_tests
+22/24 Test #230: forgekernel_mapping_carrier_validation_tests .....   Passed    1.27 sec
+      Start 231: forgekernel_mapping_diagonal_validation_tests
+23/24 Test #231: forgekernel_mapping_diagonal_validation_tests ....   Passed    0.76 sec
+      Start 234: forgekernel_projection_fit_validation_tests
+24/24 Test #234: forgekernel_projection_fit_validation_tests ......   Passed    3.35 sec
+
+100% tests passed out of 24
+
+Total Test time (real) =  33.66 sec

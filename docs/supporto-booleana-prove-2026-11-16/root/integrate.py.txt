@@ -1,0 +1,59 @@
+from pathlib import Path
+import json,hashlib,shutil,subprocess,sys
+R=Path('/home/myungit/Linux_CAD_forFree');S=Path('/tmp/supporto-review/stage');P=R/'docs/supporto-booleana-prove-2026-11-16';T=P/'root'
+memory=(R/'CLAUDE.md').read_text();sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+assert sha(R/'kernel/fk_boolean.cpp')=='c325db71e6b55547253b9e27ebc365185aeccdcb71f543840fd8463b9ac934b9'
+freeze=json.loads((S/'final-freeze.json').read_text())
+for f in ['kernel/fk_boolean.cpp','kernel/fk_boolean_boundary.h','kernel/fk_boolean_boundary.cpp']:
+ source=S/'kernel'/Path(f).name;assert sha(source)==freeze[f],f;shutil.copy2(source,R/f)
+test=Path(sys.argv[1]);assert test.is_file();dest=R/'kernel/tests/test_boolean_boundary.cpp';shutil.copy2(test,dest)
+style='{BasedOnStyle: LLVM, IndentWidth: 4, ColumnLimit: 120, BreakBeforeBraces: Attach, SortIncludes: Never}'
+subprocess.run(['/usr/bin/clang-format','-i','-style='+style,str(dest)],check=True)
+cmake=R/'kernel/CMakeLists.txt';text=cmake.read_text();needle='    fk_boolean.h\n    fk_boolean.cpp\n';assert text.count(needle)==1
+text=text.replace(needle,needle+'    fk_boolean_boundary.h\n    fk_boolean_boundary.cpp\n')
+needle='fk_affine_surface_fit.cpp fk_planar_flatten.cpp fk_quilt_mapping.cpp PROPERTIES COMPILE_OPTIONS';assert text.count(needle)==1
+text=text.replace(needle,'fk_affine_surface_fit.cpp fk_planar_flatten.cpp fk_quilt_mapping.cpp fk_boolean_boundary.cpp PROPERTIES COMPILE_OPTIONS')
+text+='''
+# Contatti quasi coincidenti sul trim: certificati continui di geometria e UV.
+add_executable(forgekernel_boolean_boundary_tests tests/test_boolean_boundary.cpp)
+target_link_libraries(forgekernel_boolean_boundary_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_boolean_boundary_tests PRIVATE -Wall -Wextra -Wpedantic
+    "$<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang,AppleClang>:-fno-fast-math;-ffp-contract=off>")
+set_target_properties(forgekernel_boolean_boundary_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_boolean_boundary_tests COMMAND forgekernel_boolean_boundary_tests)
+set_tests_properties(forgekernel_boolean_boundary_tests PROPERTIES TIMEOUT 60)
+'''
+cmake.write_text(text)
+catalog=R/'tools/generate_architecture.py';text=catalog.read_text();needle=" 'kernel/fk_boolean.cpp': ('kernel', '"
+start=text.index(needle);end=text.index("'),",start)
+text=text[:end]+" Contatti Line/trim ellittico: eventi e catena sorgente espliciti, limiti continui e UV affine certificata, mapping dal montaggio e ricontrollo dopo unify; retry transazionale conservativo."+text[end:]
+needle='DESCRIPTIONS = {' if 'DESCRIPTIONS = {' in text else 'DESCRIPTIONS={'
+assert needle in text
+extra='''
+ 'kernel/fk_boolean_boundary.cpp': ('kernel', 'Certificati continui outward dei contatti fra retta e bordo ellittico: originali IEEE, monotonia, scarto dai carrier Plane/Cylinder e frame double; pcurve affine nel parametro originale con bound di Peano, input non finiti e famiglie non risolte rifiutati.'),
+ 'kernel/fk_boolean_boundary.h': ('kernel', 'Contratti interni dei certificati di contatto ellisse/retta finita e delle immagini UV affini; limite continuo o rifiuto, senza tolleranze aumentate e senza campionamento come autorizzazione.'),
+ 'kernel/tests/test_boolean_boundary.cpp': ('tests', 'Regressioni indipendenti sui certificati di contatto e pcurve: budget, monotonia, versi, dati non finiti, overflow, parametri originali, pose e scale e famiglie rifiutate.'),'''
+text=text.replace(needle,needle+extra,1);catalog.write_text(text)
+start=memory.index('**16/11 — Supporto.prt');end=memory.index('\n\n**16/11 — Anteprime',start)
+memory=memory[:start]+'''**16/11 — Supporto.prt, correzione integrata; verifiche finali in corso.**
+Corpo 2=Estrusione 3, Corpo 3=Loft 6: clipping Boundary asimmetrico produceva
+tre edge aperti. Scarto continuo originale <=1,97911e-11 mm. Tre agenti Sol:
+catena sorgente e genealogia esplicite, bound continuo e UV affine propria,
+ricontrollo dopo montaggio/unify, retry transazionale, budget invariati.
+Prototipo: coppia nei due ordini e unione dei tre PASS, 424 controlli app;
+51 asserzioni pure PASS. Nuovo modulo kernel e regressione permanente integrati;
+app/mappa/CTest/sanitizer finali ancora in corso. Originale SHA79887e91 invariato.
+[Diagnosi e prove](docs/supporto-booleana-2026-11-16.md).''' +memory[end:]
+# Keep compact memory within the agreed size; full prior entry is archived.
+start=memory.index('**15/11 — K2 completato');end=memory.index('\n\n**15/11 — Altri14',start)
+memory=memory[:start]+'''**15/11 — K2 completato in produzione con due agenti Sol.**
+Atlante carrier, nesting, ponte analitico e SP-curve NURBS; alias atomici,
+cancellazione e falsi rifiuti corretti. App,54 test kernel,8 CTest,22 sanitizer
+mirati e mappa736/10570/361 PASS. Budget finiti possono rifiutare casi validi.
+[Prove e limiti](docs/sweep-k2-completamento-2026-11-15.md);
+[memoria](docs/history/claude-prima-k10-composition-2026-11-15.md).''' +memory[end:]
+assert len(memory.encode())<=16384,len(memory.encode());(R/'CLAUDE.md').write_text(memory)
+files=['kernel/fk_boolean.cpp','kernel/fk_boolean_boundary.h','kernel/fk_boolean_boundary.cpp','kernel/tests/test_boolean_boundary.cpp','kernel/CMakeLists.txt','tools/generate_architecture.py']
+(T/'frozen-source-hashes.json').write_text(json.dumps({f:sha(R/f) for f in files},indent=2)+'\n')
+shutil.copy2('/tmp/supporto-integrate.py',T/'integrate.py.txt')
+print('Integrati',files,'memoria',len(memory.encode()))

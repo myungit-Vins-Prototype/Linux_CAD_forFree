@@ -1,0 +1,15 @@
+{
+  "source_sha256": "16349e7a279d78b97bcd5e0153b696d3b0e84bfa426d24919310555145529568",
+  "machin_half_pi_between_binary_endpoints": true,
+  "machin_terms": [
+    24,
+    8
+  ],
+  "sin_terms": 16,
+  "cos_terms": 16,
+  "tail_1_over_32factorial_below_2pow_minus100": true,
+  "lower_pi_bracket_margin_approx": 6.123233995736766e-17,
+  "upper_pi_bracket_margin_approx": 1.6081226496766366e-16,
+  "factorial32_inverse_approx": 3.8003907548547434e-36,
+  "tail_approx": 7.888609052210118e-31
+}

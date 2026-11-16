@@ -1,0 +1,40 @@
+{
+  "exit": 0,
+  "seconds": 70.41517998199924,
+  "command": [
+    "ctest",
+    "--test-dir",
+    "forgecad-release",
+    "--output-on-failure",
+    "--parallel",
+    "1",
+    "-V",
+    "-R",
+    "^(forgekernel_sheet_join_validation_tests|forgekernel_sheet_fit_validation_tests|forgekernel_surface_tools_tests|forgekernel_curve_fit_validation_tests|forgekernel_surface_curve_fit_validation_tests|forgekernel_mapping_uv_validation_tests|forgekernel_tolerance_tests|forgekernel_blend_cavity_regression_tests|forgecad_surface_tools_tests|forgecad_extension_panel_tests|forgecad_preview_selection_state_tests|forgecad_chamfer_preview_state_tests|forgecad_function_panels_tests|forgecad_storyboard_review_tests|forgecad_storyboard_panel_selection_tests|forgecad_history_suppression_tests|forgecad_declared_history_cache_tests|forgecad_document_tabs_tests|forgecad_document_theme_tabs_tests|forgecad_document_theme_only2d_tests|forgecad_application_theme_tests|forgecad_ellipse_extremes_tests)$"
+  ],
+  "tests": [
+    "forgekernel_sheet_join_validation_tests",
+    "forgekernel_sheet_fit_validation_tests",
+    "forgekernel_surface_tools_tests",
+    "forgekernel_curve_fit_validation_tests",
+    "forgekernel_surface_curve_fit_validation_tests",
+    "forgekernel_mapping_uv_validation_tests",
+    "forgekernel_tolerance_tests",
+    "forgekernel_blend_cavity_regression_tests",
+    "forgecad_surface_tools_tests",
+    "forgecad_extension_panel_tests",
+    "forgecad_preview_selection_state_tests",
+    "forgecad_chamfer_preview_state_tests",
+    "forgecad_function_panels_tests",
+    "forgecad_storyboard_review_tests",
+    "forgecad_storyboard_panel_selection_tests",
+    "forgecad_history_suppression_tests",
+    "forgecad_declared_history_cache_tests",
+    "forgecad_document_tabs_tests",
+    "forgecad_document_theme_tabs_tests",
+    "forgecad_document_theme_only2d_tests",
+    "forgecad_application_theme_tests",
+    "forgecad_ellipse_extremes_tests"
+  ],
+  "actual_passed": 22
+}

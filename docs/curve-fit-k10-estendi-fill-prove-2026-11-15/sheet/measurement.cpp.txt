@@ -1,0 +1,172 @@
+#include "fk_classify.h"
+#include "fk_curve_ops.h"
+#include "fk_pcurve.h"
+#include "fk_sheet.h"
+#include "fk_test.h"
+#include <algorithm>
+#include <cstdio>
+using namespace ForgeCad::Kernel;
+namespace {
+const std::vector<double> hiddenPoles{0,
+                                      0,
+                                      0,
+                                      .0023926594471666389,
+                                      -.03158506535957388,
+                                      .22274247758415186,
+                                      -1.0588644597919092,
+                                      3.7068614333740251,
+                                      -10.150702528319338,
+                                      22.626599248232061,
+                                      -42.105538437516088,
+                                      66.431608164324672,
+                                      -89.673893632054558,
+                                      104.07526656293437,
+                                      -104.07526656293437,
+                                      89.673893632054558,
+                                      -66.431608164324672,
+                                      42.105538437516088,
+                                      -22.626599248232061,
+                                      10.150702528319338,
+                                      -3.7068614333740251,
+                                      1.0588644597919092,
+                                      -.22274247758415186,
+                                      .03158506535957388,
+                                      -.0023926594471666389,
+                                      0,
+                                      0,
+                                      0};
+struct Fixture {
+    Body body;
+    EdgeId selected;
+    CurvePtr<3> source;
+    Interval range;
+    double signedLength;
+    Vec3 normal;
+};
+Fixture fixture(bool multiple, bool reverseCanonical, bool faceSense, const Frame3 &frame, double scale,
+                bool adversarial) {
+    const int degree = adversarial ? 27 : 3;
+    std::vector<double> weights, knots(degree + 1, 0.);
+    knots.insert(knots.end(), degree + 1, 1.);
+    std::vector<Vec3> poles;
+    for (int i = 0; i <= degree; ++i) {
+        const double w = 1. + .5 * i / degree;
+        const double ax = double(i) / degree + .5 * i * (i - 1) / (degree * (degree - 1));
+        const double bump = adversarial ? hiddenPoles[i] : (i == 1 ? .1 : i == 2 ? .12 : 0.);
+        poles.push_back(frame.toGlobal(Vec3(scale * ax / w, scale * (.2 * ax + bump) / w, 0)));
+        weights.push_back(w);
+    }
+    CurvePtr<3> curve = std::make_shared<BSplineCurve<3>>(degree, knots, poles, weights);
+    const Vec3 a = curve->point(0), b = curve->point(1);
+    if (reverseCanonical)
+        curve = reversedCurve<3>(curve);
+    const Interval range = reverseCanonical ? Interval{-1, 0} : Interval{0, 1};
+    std::vector<Vec3> vertices{a, b, frame.toGlobal(Vec3(scale, 1.2 * scale, 0)), frame.toGlobal(Vec3(0, scale, 0))};
+    std::vector<Body::BuildEdge> edges{{reverseCanonical ? 1 : 0, reverseCanonical ? 0 : 1, curve, range, 0}};
+    auto line = [&](int from, int to) {
+        edges.push_back({from,
+                         to,
+                         std::make_shared<Line<3>>(vertices[from], vertices[to] - vertices[from]),
+                         {0, distance(vertices[from], vertices[to])},
+                         0});
+    };
+    line(1, 2);
+    line(2, 3);
+    line(3, 0);
+    Body::BuildFace face;
+    face.surface = std::make_shared<Plane>(frame);
+    face.sense = faceSense;
+    std::vector<Body::BuildFin> loop{
+        {0, !reverseCanonical, nullptr, 0}, {1, true, nullptr, 0}, {2, true, nullptr, 0}, {3, true, nullptr, 0}};
+    if (!faceSense) {
+        std::reverse(loop.begin(), loop.end());
+        for (auto &fin : loop)
+            fin.sense = !fin.sense;
+    }
+    face.loops.push_back(loop);
+    std::vector<Body::BuildFace> faces{face};
+    if (multiple) {
+        int base = vertices.size(), first = edges.size();
+        for (Vec3 p : {Vec3(3, 3, 0), Vec3(4, 3, 0), Vec3(4, 4, 0), Vec3(3, 4, 0)})
+            vertices.push_back(frame.toGlobal(scale * p));
+        for (int i = 0; i < 4; ++i)
+            line(base + i, base + (i + 1) % 4);
+        Body::BuildFace other;
+        other.surface = face.surface;
+        other.loops.push_back({{first, true, nullptr, 0},
+                               {first + 1, true, nullptr, 0},
+                               {first + 2, true, nullptr, 0},
+                               {first + 3, true, nullptr, 0}});
+        faces.push_back(other);
+    }
+    Body body = Body::buildSheet(vertices, edges, faces);
+    computePCurves(body);
+    const bool traversal = faceSense ? !reverseCanonical : reverseCanonical;
+    const double distance = .001 * scale * (traversal ? 1 : -1) * (faceSense ? 1 : -1);
+    return {body, body.edges().front(), curve, range, distance, frame.zDir()};
+}
+void checkFixture(const Fixture &f) {
+    Box box;
+    for (VertexId v : f.body.vertices())
+        box.add(f.body.vertex(v).point);
+    for (FaceId face : f.body.faces())
+        box.add(faceBox(f.body, face));
+    const double fitTolerance = 1e-8 * std::max(box.diagonal(), 1.);
+    const auto expected = [&](double t) {
+        return f.source->point(t) + f.signedLength * normalized(cross(f.source->derivative(t), f.normal));
+    };
+    if (f.body.faces().size() > 1) {
+        const Edge &selected = f.body.edge(f.selected);
+        const FinId finId = selected.forward.valid() ? selected.forward : selected.backward;
+        const CurvePtr<2> &pcurve = f.body.fin(finId).pcurve;
+        const Vec2 uv0 = pcurve->point(f.range.lo), uv1 = pcurve->point(f.range.hi);
+        const Vec2 uvm = pcurve->point(.5 * (f.range.lo + f.range.hi));
+        const double flat = 1e-9 * (1.0 + std::fabs(uv0.x()) + std::fabs(uv0.y()));
+        std::fprintf(stderr,"generalPlanar du=%.17g dv=%.17g flat=%.17g\n",std::fabs(uv1.x()-uv0.x())+std::fabs(uvm.x()-uv0.x()),std::fabs(uv1.y()-uv0.y())+std::fabs(uvm.y()-uv0.y()),flat);
+        // The multiple-face fixture must enter generalPlanar, not an iso branch.
+        FK_CHECK(std::fabs(uv1.x() - uv0.x()) + std::fabs(uvm.x() - uv0.x()) > flat);
+        FK_CHECK(std::fabs(uv1.y() - uv0.y()) + std::fabs(uvm.y() - uv0.y()) > flat);
+    }
+    const Body result = extendSheet(f.body, {f.selected}, std::fabs(f.signedLength));
+    FK_CHECK(result.isSheet());
+    const Vec3 start = expected(f.range.lo), end = expected(f.range.hi);
+    EdgeId far;
+    bool reversed = false;
+    double score = 1e100;
+    for (EdgeId e : result.edges()) {
+        const Edge &edge = result.edge(e);
+        const Vec3 a = edge.curve->point(edge.range.lo), b = edge.curve->point(edge.range.hi);
+        double direct = distance(a, start) + distance(b, end), reverse = distance(a, end) + distance(b, start);
+        if (std::min(direct, reverse) < score) {
+            score = std::min(direct, reverse);
+            far = e;
+            reversed = reverse < direct;
+        }
+    }
+    FK_CHECK(far.valid());
+    if (!far.valid())
+        return;
+    const Edge &edge = result.edge(far);
+    FK_CHECK(score < fitTolerance * 2);
+    double worst = 0;
+    for (int i = 0; i <= 1000; ++i) {
+        double s = double(i) / 1000, t = f.range.lo + s * f.range.length();
+        double q = edge.range.lo + (reversed ? 1 - s : s) * edge.range.length();
+        worst = std::max(worst, distance(edge.curve->point(q), expected(t)));
+    }
+    std::fprintf(stderr,"faces=%zu degree=%d length=%.9g worst=%.17g budget=%.17g ratio=%.9g\n", f.body.faces().size(), static_cast<const BSplineCurve<3>&>(*f.source).degree(),std::fabs(f.signedLength),worst,fitTolerance,worst/fitTolerance);
+    FK_CHECK(worst <= fitTolerance);
+}
+} // namespace
+FK_TEST(SheetFitPlanarNurbsOrientationsAndPose) {
+    for (bool multiple : {false, true})
+        for (bool reversed : {false, true})
+            for (bool sense : {false, true})
+                checkFixture(fixture(multiple, reversed, sense, Frame3(Vec3(1, -2, 3), Vec3(.2, .3, 1), Vec3(1, 0, 0)),
+                                     1, false));
+}
+FK_TEST(SheetFitHiddenFeatureBothBranchesAndScale) {
+    for (bool multiple : {false, true})
+        for (double scale : {1., 1000.})
+            checkFixture(fixture(multiple, false, true, Frame3(), scale, true));
+}

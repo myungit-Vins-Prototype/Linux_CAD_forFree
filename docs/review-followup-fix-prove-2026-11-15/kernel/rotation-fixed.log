@@ -1,0 +1,9 @@
+rounded pose=0 d=0.40000000000000002 areaerror=0 threshold=1e-9
+rounded pose=0 d=-0.40000000000000002 areaerror=0 threshold=1e-9
+extrusion pose=0 basetype=1 worst=4.5775667985222375e-16 threshold=1e-7
+rounded pose=1 d=0.40000000000000002 areaerror=0 threshold=1e-9
+rounded pose=1 d=-0.40000000000000002 areaerror=1.4210854715202004e-14 threshold=1e-9
+extrusion pose=1 basetype=1 worst=1.0877919644084146e-15 threshold=1e-7
+rounded pose=2 d=0.40000000000000002 areaerror=0 threshold=1e-9
+rounded pose=2 d=-0.40000000000000002 areaerror=0 threshold=1e-9
+extrusion pose=2 basetype=1 worst=6.6613381477509392e-16 threshold=1e-7

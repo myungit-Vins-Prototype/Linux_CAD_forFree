@@ -1,0 +1,16 @@
+Test project /tmp/forgecad-review-20261115/ctest
+    Start 102: forgecad_document_recovery_tests
+1/2 Test #102: forgecad_document_recovery_tests ...***Failed   13.35 sec
+RECOVERY 32MiB dati ripetuti: 14ms, UI timer 10, 1856 byte
+timeout recupero asincrono
+
+    Start 144: forgecad_expression_tests
+2/2 Test #144: forgecad_expression_tests ..........   Passed    0.04 sec
+
+50% tests passed, 1 tests failed out of 2
+
+Total Test time (real) =  13.40 sec
+
+The following tests FAILED:
+	102 - forgecad_document_recovery_tests (Failed)
+Errors while running CTest

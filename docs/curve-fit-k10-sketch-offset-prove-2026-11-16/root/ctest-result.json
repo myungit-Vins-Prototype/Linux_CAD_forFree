@@ -1,0 +1,22 @@
+{
+  "exit": 0,
+  "seconds": 40.9,
+  "tests": [
+    "forgecad_sketch_editing_tests",
+    "forgecad_sketch_reference_workflow_tests",
+    "forgecad_workflow_ui_tests",
+    "forgecad_sketch_tools_refs_tests",
+    "forgecad_function_panels_tests",
+    "forgecad_history_suppression_tests",
+    "forgecad_document_lifetime_tests",
+    "forgecad_async_lifetime_tests",
+    "forgecad_edit_preview_reuse_tests",
+    "forgecad_sketch_offset_validation_tests",
+    "forgekernel_curve_fit_validation_tests",
+    "forgekernel_curve_projection_tests",
+    "forgekernel_tolerance_tests",
+    "forgecad_solver_partition_tests"
+  ],
+  "wrapper_initial_exit": 1,
+  "wrapper_note": "CTest child exited 0; initial wrapper assertion expected legacy comma/zero-failure summary. Current CTest reports 100% tests passed out of 14. All fourteen Passed lines verified, wrapper pattern corrected without rerunning or changing any test."
+}

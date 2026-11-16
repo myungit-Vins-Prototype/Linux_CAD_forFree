@@ -1,0 +1,43 @@
+{
+  "candidate": "core/v2",
+  "final_test_sha256": "73811bf286bd01217092d662cbc34a98e614bdba453d6dff05ebac8d1e1235ba",
+  "release_targeted": {
+    "passed": 13,
+    "total": 13,
+    "exit_code": 0
+  },
+  "release_public": {
+    "passed": 16,
+    "total": 16,
+    "exit_code": 0
+  },
+  "sanitizer": {
+    "passed": 19,
+    "total": 19,
+    "exit_code": 0,
+    "instrumented_production_tus": [
+      "fk_blend_mitre.cpp",
+      "fk_blend_surface.cpp"
+    ],
+    "remaining_kernel": "frozen Release baseline",
+    "ASAN_OPTIONS": "detect_leaks=1:halt_on_error=1:abort_on_error=1:strict_string_checks=1",
+    "UBSAN_OPTIONS": "halt_on_error=1:print_stacktrace=1",
+    "LSAN_OPTIONS": "exitcode=23",
+    "outside_ptrace": true,
+    "leak_calibration_bytes": 19,
+    "leak_calibration_exit": 23
+  },
+  "public_diagnostic_v1": {
+    "trace_calls": 121,
+    "iso": 0,
+    "newton": 121
+  },
+  "limits": [
+    "Synthetic internal negative, not reproduced through public blendEdges",
+    "Current public rolling-blend carrier has one V span; ISO negative uses multiple V spans",
+    "Unsupported diagonal sampled path remains explicitly uncertified",
+    "Sheet output is synthetic Body using actual production install/revalidation helpers",
+    "V reflection checked as helper, not a reflected-carrier Body",
+    "No codec or app build by this agent"
+  ]
+}

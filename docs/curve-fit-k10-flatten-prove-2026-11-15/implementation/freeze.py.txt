@@ -1,0 +1,9 @@
+from pathlib import Path
+import hashlib,json,difflib,shutil
+root=Path('/home/myungit/Linux_CAD_forFree');out=Path(__file__).parent;final=out/'final'
+names=['fk_planar_flatten.h','fk_planar_flatten.cpp','fk_quilt_mapping.cpp'];m={};patch=[]
+for n in names:
+ shutil.copy2(out/n,final/n);p=final/n;data=p.read_bytes();old=root/'kernel'/n;baseline=old.read_bytes() if old.exists() else b''
+ m[n]={'sha256':hashlib.sha256(data).hexdigest(),'before':hashlib.sha256(baseline).hexdigest() if old.exists() else None}
+ patch.extend(difflib.unified_diff(baseline.decode().splitlines(True),data.decode().splitlines(True),fromfile='a/kernel/'+n if old.exists() else '/dev/null',tofile='b/kernel/'+n))
+(final/'manifest.json').write_text(json.dumps(m,indent=2)+'\n');(final/'changes.patch').write_text(''.join(patch));print(json.dumps(m,indent=2))

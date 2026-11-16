@@ -1,0 +1,4 @@
+case=0 source_issues=0 accepted=0 deviation=123 history_faces=2 reason=Mappatura carrier: vertice sorgente non collegato ai bordi.
+case=1 source_issues=0 accepted=0 deviation=123 history_faces=2 reason=Mappatura carrier: corridoio trim fuori dominio naturale.
+case=2 source_issues=0 cancelled=1 deviation=123 history_faces=2
+case=3 source_issues=0 accepted=1 deviation=1.9000000000000005e-08 vertex_error=1.8999999999999998e-08 history_faces=1 issues=0

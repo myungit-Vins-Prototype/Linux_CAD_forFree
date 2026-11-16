@@ -41,7 +41,7 @@ using ForgeCurve = std::shared_ptr<const Kernel::Curve<3>>;
 // grado in CurveObject); ConvertEdges: lo strumento che le crea con un clic.
 // Dimension: lo strumento Quota (prima si scelgono le entita', poi si mette la quota).
 enum class DrawingTool { Line, Polyline, Spline, Nurbs, Circle, Arc, Polygon, ConstructionLine, Trim, Extend, Split, Fillet, Chamfer, Select,
-                         Rectangle, CenterRectangle, Ellipse, ThreePointArc, TangentArc, Converted, ConvertEdges, Dimension, Slot, Point, ThreePointCircle };
+                         Rectangle, CenterRectangle, Ellipse, ThreePointArc, TangentArc, Converted, ConvertEdges, Dimension, Slot, Point, ThreePointCircle, EllipseExtremes };
 enum class SnapKind { None, Endpoint, Midpoint, Nearest, Intersection };
 
 enum class ReferencePlane { XY, XZ, YZ };
@@ -61,6 +61,8 @@ using SketchSegment = QPair<QPointF, QPointF>;
 //  - Ellipse: centro, estremo di un semiasse (lunghezza e direzione), punto
 //    sull'altro semiasse (la sua lunghezza e' la distanza dal centro: il
 //    punto sta sulla perpendicolare)
+//  - EllipseExtremes: quattro estremi A0,A1,B0,B1; coppie opposte dei due
+//    assi ortogonali con lo stesso punto medio, che determina il centro
 //  - Rectangle / CenterRectangle: due angoli / centro e angolo (solo per
 //    l'anteprima: il rettangolo diventa quattro segmenti)
 //  - ThreePointArc / TangentArc: solo strumenti di disegno, creano un Arc

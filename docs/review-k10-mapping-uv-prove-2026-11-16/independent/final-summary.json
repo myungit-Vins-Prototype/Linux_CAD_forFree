@@ -1,0 +1,16 @@
+{
+  "cases": 20,
+  "source_fins": 80,
+  "actual_fins": 80,
+  "actual_spans": 27089,
+  "actual_max_upper_mm": 1.678182363074691e-08,
+  "source_max_upper_mm": 4.163336342344337e-14,
+  "source_resolution_mm": 1e-07,
+  "fit_max_upper_mm": 7.5803980688009e-11,
+  "fit_cap_mm": 1e-10,
+  "all_pass": true,
+  "core_sha256": {
+    "fk_surface_mapping.cpp": "c830c1c802657b50dd1cafa223af91263dba185cdf109524a16c602b6986f707",
+    "fk_quilt_mapping.cpp": "21a41fb7513ba6ca48987956632aa2d2bbdf57c49c4f9681907a4c512668df05"
+  }
+}

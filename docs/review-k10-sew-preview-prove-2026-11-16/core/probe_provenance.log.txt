@@ -1,0 +1,6 @@
+mixed-pair-certified-cubic-and-legacy-line PASS
+actual-PC-object-replaced-with-identical-copy PASS
+actual-PC-budget-increased PASS
+actual-PC-pole-changed-same-object PASS
+actual-edge-range-changed PASS
+5 provenance cases passed

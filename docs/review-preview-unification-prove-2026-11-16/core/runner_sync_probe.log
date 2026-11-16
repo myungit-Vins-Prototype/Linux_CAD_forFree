@@ -1,0 +1,1 @@
+PASS runner synchronous accept/reject, finished in showEvent, guard before setup, outer cleanup, three-argument API

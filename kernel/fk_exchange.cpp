@@ -31,6 +31,7 @@
 #include "fk_parallel.h"
 #include "fk_pcurve.h"
 #include "fk_offset.h"
+#include "fk_curve_fit_bounds.h"
 #include "fk_surface_algo.h"
 #include "fk_surface_distance.h"
 #include "fk_timing.h"
@@ -330,6 +331,54 @@ BSplineCurve<3> boundedExchangeSpline(const BSplineCurve<3> &spline, const Inter
     return BSplineCurve<3>(p, std::move(boundedKnots), std::move(poles), std::move(weights));
 }
 
+namespace {
+void requireSewnPlanePCurves(const RawModel &model,const Body &body,const AssemblyMap &map) {
+    using Key=std::pair<int,int>;
+    using Budgets=std::vector<std::pair<double,double>>;
+    // Shared pcurve object identity is explicit fin provenance through assembly.
+    // Unmigrated representative fins may share this face/edge with a remapped
+    // fin; their distinct pcurve objects do not acquire a certificate by proxy.
+    std::map<Key,std::map<const Curve<2> *,Budgets>> groups;
+    for(std::size_t face=0;face<model.faces.size();++face)for(const auto &loop:model.faces[face].loops)for(const auto &fin:loop) {
+        cancellationPoint();
+        if(fin.certifiedPlanePCurve) {
+            if(!fin.pcurve)throw std::domain_error("cucitura: SP-curve certificata assente");
+            groups[{int(face),fin.edge}][fin.pcurve.get()].push_back({fin.pcurveTolerance,fin.certifiedPlaneBudget});
+        }
+    }
+    for(auto &[key,identities]:groups) {
+        cancellationPoint();const auto [rawFace,rawEdge]=key;
+        if(rawFace<0 || rawEdge<0 || std::size_t(rawFace)>=map.faces.size() || std::size_t(rawEdge)>=map.edges.size()
+            || std::size_t(rawEdge)>=model.edges.size() || !map.faces[rawFace].valid() || !map.edges[rawEdge].valid()
+            || !body.contains(map.faces[rawFace]) || !body.contains(map.edges[rawEdge]))
+            throw std::domain_error("cucitura: provenienza SP-curve certificata persa");
+        const auto &face=body.face(map.faces[rawFace]);const auto &edge=body.edge(map.edges[rawEdge]);
+        if(edge.range.lo!=model.edges[rawEdge].range.lo || edge.range.hi!=model.edges[rawEdge].range.hi)
+            throw std::domain_error("cucitura: parametro SP-curve certificata modificato");
+        std::map<const Curve<2> *,std::vector<double>>actualBudgets;
+        for(auto loop:face.loops)for(auto id:body.loopFins(loop)) {
+            cancellationPoint();const auto &fin=body.fin(id);if(fin.edge!=map.edges[rawEdge])continue;
+            auto identity=identities.find(fin.pcurve.get());if(identity==identities.end())continue;
+            requirePCurveOnPlane(edge.curve,face.surface,fin.pcurve,edge.range,fin.pcurveTolerance);
+            actualBudgets[identity->first].push_back(fin.pcurveTolerance);
+        }
+        for(const auto &[identity,expected]:identities) {
+            std::vector<double>expectedBudgets;
+            for(const auto &[budget,cap]:expected) {
+                cancellationPoint();
+                if(!std::isfinite(budget) || budget<0 || !std::isfinite(cap) || cap<budget)
+                    throw std::domain_error("cucitura: budget SP-curve certificata non valido");
+                expectedBudgets.push_back(budget);
+            }
+            auto found=actualBudgets.find(identity);
+            if(expectedBudgets.empty() || found==actualBudgets.end() || found->second.empty())
+                throw std::domain_error("cucitura: identita' della fin certificata persa");
+            std::sort(found->second.begin(),found->second.end());std::sort(expectedBudgets.begin(),expectedBudgets.end());
+            if(found->second!=expectedBudgets)throw std::domain_error("cucitura: fin o budget certificati modificati");
+        }
+    }
+}
+}
 Body assembleBody(const RawModel &input, bool solid, std::vector<std::string> *notes, AssemblyMap *map) {
     if(map)*map={};
     RawModel model = input;
@@ -642,12 +691,18 @@ Body assembleBody(const RawModel &input, bool solid, std::vector<std::string> *n
         issues = checkBody(body);
     }
     if (!issues.empty()) throw std::domain_error("corpo non valido: " + describe(issues.front().code) + " (" + issues.front().message + ")");
-    if(map) {
+    bool certifiedPlane=false;
+    for(const auto &face:input.faces)for(const auto &loop:face.loops)for(const auto &fin:loop) {
+        cancellationPoint();certifiedPlane=certifiedPlane||fin.certifiedPlanePCurve;
+    }
+    if(map || certifiedPlane) {
         AssemblyMap emitted;emitted.points.resize(input.points.size());emitted.edges.resize(input.edges.size());
         const auto vs=body.vertices();const auto es=body.edges();
         for(std::size_t i=0;i<pointIndex.size();++i)if(pointIndex[i]>=0)emitted.points[i]=vs.at(std::size_t(pointIndex[i]));
         for(std::size_t i=0;i<edgeIndex.size();++i)if(edgeIndex[i]>=0)emitted.edges[i]=es.at(std::size_t(edgeIndex[i]));
-        emitted.faces=body.faces();*map=std::move(emitted);
+        emitted.faces=body.faces();
+        if(certifiedPlane)requireSewnPlanePCurves(input,body,emitted);
+        if(map)*map=std::move(emitted);
     }
     return body;
 }
@@ -657,14 +712,27 @@ namespace {
 // La fin deve usare il parametro della curva rappresentativa dopo l'unione.
 // Conservare il ramo UV originale evita una nuova inversione della superficie.
 CurvePtr<2> sewnPCurve(const RawEdge &source, const RawEdge &target,
-                       const RawFace &face, const RawFin &fin, bool reverse, double tolerance) {
+                       const RawFace &face, RawFin &fin, bool reverse, double tolerance) {
     if (!fin.pcurve) return nullptr;
     if (!source.hasRange || !target.hasRange || !source.range.isFinite() || !target.range.isFinite()
         || !(source.range.length()>0) || !(target.range.length()>0)) return nullptr;
-    if (source.curve == target.curve && !reverse) return fin.pcurve;
     const double original = pcurveDeviation(*face.surface, *source.curve, *fin.pcurve, source.range, 16);
     if (!std::isfinite(original)) throw std::domain_error("cucitura: SP-curve sorgente non valida");
     const double budget = original + std::max(1e-7, 10.0 * tolerance);
+    if(face.surface && face.surface->type()==SurfaceType::Plane) {
+        double deviation=0;
+        auto pcurve=fitPCurveOnPlane(target.curve,face.surface,target.range,1e-8,budget,&deviation);
+        if(pcurve) {
+            // New representation, bounded by the already fixed legacy cap.
+            // Neither sampled original residual nor this cap is a certificate
+            // for the source fin; the proof concerns the actual target/Plane.
+            fin.pcurveTolerance=deviation;
+            fin.certifiedPlanePCurve=true;
+            fin.certifiedPlaneBudget=budget;
+            return pcurve;
+        }
+    }
+    if (source.curve == target.curve && !reverse) return fin.pcurve;
     const auto acceptable = [&](const CurvePtr<2> &curve) {
         const double error = pcurveDeviation(*face.surface, *target.curve, *curve, target.range, 16);
         return std::isfinite(error) && error <= budget;

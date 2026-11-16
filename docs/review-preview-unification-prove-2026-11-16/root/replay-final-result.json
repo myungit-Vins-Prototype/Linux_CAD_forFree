@@ -1,0 +1,26 @@
+{
+  "offscreen": {
+    "exit": 0,
+    "seconds": 0.966815742000108,
+    "command": [
+      "/tmp/review-previews-wayland/regressions-app-release"
+    ],
+    "platform": "offscreen",
+    "assertions": 115,
+    "panels": 11,
+    "binary_sha256": "abe0ed50e8aec81e0449870d34475c92af159cd64770f34d0276c506e2621ba8",
+    "source_sha256": "5b273897ba9bf229c73af586db0f133471768148cfca64c5e147b00854a7504c"
+  },
+  "wayland": {
+    "exit": 0,
+    "seconds": 1.11713545099974,
+    "command": [
+      "/tmp/review-previews-wayland/regressions-app-release"
+    ],
+    "platform": "wayland",
+    "assertions": 115,
+    "panels": 11,
+    "binary_sha256": "abe0ed50e8aec81e0449870d34475c92af159cd64770f34d0276c506e2621ba8",
+    "source_sha256": "5b273897ba9bf229c73af586db0f133471768148cfca64c5e147b00854a7504c"
+  }
+}

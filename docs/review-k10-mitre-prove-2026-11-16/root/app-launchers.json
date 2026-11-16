@@ -1,0 +1,14 @@
+{
+  "/home/myungit/.local/share/applications/forgecad.desktop": {
+    "sha256": "d6a8ee6efeca96fc75355abf639716710eec0d46d70b0ce2bc2cf04b24e99398",
+    "exec": [
+      "Exec=/home/myungit/Linux_CAD_forFree/forgecad-release/forgecad %f"
+    ]
+  },
+  "/home/myungit/.local/share/applications/forgecad-2.desktop": {
+    "sha256": "738fdd596a0479f9617c09273fe7a6df674b86fe4c01bdfd5ce884071dd835eb",
+    "exec": [
+      "Exec=/home/myungit/Linux_CAD_forFree/forgecad-release/forgecad %f"
+    ]
+  }
+}

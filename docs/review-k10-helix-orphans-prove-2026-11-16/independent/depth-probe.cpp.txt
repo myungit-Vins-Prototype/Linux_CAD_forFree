@@ -1,0 +1,7 @@
+#include "fk_helix_projection.h"
+#include <sys/resource.h>
+#include <sys/wait.h>
+#include <unistd.h>
+#include <iostream>
+using namespace ForgeCad::Kernel;
+int main(){pid_t child=fork();if(child==0){rlimit limit{256*1024,256*1024};setrlimit(RLIMIT_STACK,&limit);HelixSpec s;s.turns=.1;CurvePtr<3> p=std::make_shared<HelixCurve>(s);for(int i=0;i<20000;i++)p=std::make_shared<TransformedCurve>(p,Transform3());try{detail::helixProjectionErrorBound(p,{0,.1},Frame3());_exit(2);}catch(const std::domain_error&){_exit(0);}catch(...){_exit(3);}}int status=0;waitpid(child,&status,0);if(WIFSIGNALED(status)){std::cout<<"FAIL expected budget domain_error, child signal="<<WTERMSIG(status)<<" for20000 wrappers stack256KiB\n";return 1;}std::cout<<"child exit="<<WEXITSTATUS(status)<<" (0 means budget rejection)\n";return WEXITSTATUS(status);}

@@ -1,0 +1,55 @@
+{
+  "recorded_utc": "2026-11-16T10:25:13.770959+00:00",
+  "stage": "private-freeze-v2",
+  "source_directory": "/tmp/k10-uv-review/core",
+  "integration_owner": "root; archival subtask does not edit production",
+  "sources": [
+    {
+      "name": "fk_offset.cpp",
+      "archive": "fk_offset.cpp.txt",
+      "sha256": "acc3fbd56d2a7abfb3eb91004b9defe9dbe088537b0066f783537f0f7d0bdbcf"
+    },
+    {
+      "name": "fk_curve_fit_bounds.cpp",
+      "archive": "fk_curve_fit_bounds.cpp.txt",
+      "sha256": "3faf91d68ee1511dd31c2c6a37a6c51dd1da8a49286c54873739b102b268052e"
+    },
+    {
+      "name": "fk_curve_fit_bounds.h",
+      "archive": "fk_curve_fit_bounds.h.txt",
+      "sha256": "d170150fbf55dd68415d800baac04cd2f2a6182ec3ea6f6d53f0fabad49a5b41"
+    }
+  ],
+  "probe": {
+    "source": "probe_guard.cpp.txt",
+    "sha256": "7d5f3a2b18ae986891f74ca53d08b0806c7ef19df5d31d9dcf4d5b9bab4cd1e1",
+    "passed": 7,
+    "failed": 0,
+    "log": "probe_guard-v2.log.txt"
+  },
+  "public_validation": {
+    "passed_groups": 10,
+    "failed_groups": 0,
+    "log": "validation-v2.log.txt",
+    "scope": "private two-TU overlay over existing Release kernel archive; not full app build"
+  },
+  "superseded_v1": {
+    "preserved_at": "/tmp/k10-uv-review/core/frozen-v1",
+    "offset_sha256": "39b7a9247d7543deef626e00164253b1c47a2b606a96c3678060a5b46bd2b988",
+    "issue": "sampled UV error was also compared to mm tolerance; V2 private helper accepts exclusively the continuous physical bound"
+  },
+  "production_hashes_at_archive_time": [
+    {
+      "name": "fk_offset.cpp",
+      "sha256": "acc3fbd56d2a7abfb3eb91004b9defe9dbe088537b0066f783537f0f7d0bdbcf"
+    },
+    {
+      "name": "fk_curve_fit_bounds.cpp",
+      "sha256": "3faf91d68ee1511dd31c2c6a37a6c51dd1da8a49286c54873739b102b268052e"
+    },
+    {
+      "name": "fk_curve_fit_bounds.h",
+      "sha256": "8e065d50411cd5137fbe4834186278feedf3d07c1c7171e81eaaaf5807dafa10"
+    }
+  ]
+}

@@ -1,0 +1,39 @@
+{
+  "exit": 0,
+  "seconds": 50.26804247799737,
+  "command": [
+    "ctest",
+    "--test-dir",
+    "forgecad-release",
+    "--output-on-failure",
+    "--parallel",
+    "1",
+    "-V",
+    "-R",
+    "^(forgecad_document_theme_tabs_tests|forgecad_document_theme_only2d_tests|forgecad_document_tabs_tests|forgecad_application_theme_tests|forgecad_function_panels_tests|forgecad_gui_3d_review_tests|forgecad_storyboard_review_tests|forgecad_storyboard_panel_selection_tests|forgecad_fillet_selection_review_tests|forgecad_chamfer_preview_state_tests|forgecad_preview_selection_state_tests|forgecad_history_suppression_tests|forgecad_drawing_ui_controls_tests|forgecad_drawing_page_tests|forgecad_drawing_multisheet_tests|forgecad_drawing_revisions_tests|forgecad_drawing_restore_tests|forgecad_drawing_release_tests|forgecad_ellipse_extremes_tests|forgecad_blend_history_tests|forgekernel_blend_cavity_regression_tests)$"
+  ],
+  "tests": [
+    "forgecad_document_theme_tabs_tests",
+    "forgecad_document_theme_only2d_tests",
+    "forgecad_document_tabs_tests",
+    "forgecad_application_theme_tests",
+    "forgecad_function_panels_tests",
+    "forgecad_gui_3d_review_tests",
+    "forgecad_storyboard_review_tests",
+    "forgecad_storyboard_panel_selection_tests",
+    "forgecad_fillet_selection_review_tests",
+    "forgecad_chamfer_preview_state_tests",
+    "forgecad_preview_selection_state_tests",
+    "forgecad_history_suppression_tests",
+    "forgecad_drawing_ui_controls_tests",
+    "forgecad_drawing_page_tests",
+    "forgecad_drawing_multisheet_tests",
+    "forgecad_drawing_revisions_tests",
+    "forgecad_drawing_restore_tests",
+    "forgecad_drawing_release_tests",
+    "forgecad_ellipse_extremes_tests",
+    "forgecad_blend_history_tests",
+    "forgekernel_blend_cavity_regression_tests"
+  ],
+  "actual_passed": 21
+}

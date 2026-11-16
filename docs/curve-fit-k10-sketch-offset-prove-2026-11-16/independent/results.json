@@ -1,0 +1,48 @@
+{
+  "public_final_scenarios": 16,
+  "public_all_success_required": true,
+  "public_diagnostic_worst_gap": 3.013585770338971e-08,
+  "direct_final_checks": 12,
+  "exact_fraction_proofs": 8,
+  "baseline_violations": [
+    {
+      "rational": false,
+      "amplitude": 0.01,
+      "reverse": false,
+      "geometric_error_lower": 5.742472281607346e-07,
+      "regular_x_derivative_lower": 0.9999999999999999,
+      "offset_curvature_product_upper": 7.156817933139498e-06
+    },
+    {
+      "rational": false,
+      "amplitude": 0.01,
+      "reverse": true,
+      "geometric_error_lower": 5.742475172842813e-07,
+      "regular_x_derivative_lower": 0.9999999999999999,
+      "offset_curvature_product_upper": 7.156817933139498e-06
+    },
+    {
+      "rational": true,
+      "amplitude": 0.01,
+      "reverse": false,
+      "geometric_error_lower": 5.41621919622379e-07,
+      "regular_x_derivative_lower": 0.4444444444444445,
+      "offset_curvature_product_upper": 0.00014085975725738347
+    },
+    {
+      "rational": true,
+      "amplitude": 0.01,
+      "reverse": true,
+      "geometric_error_lower": 5.416216304976894e-07,
+      "regular_x_derivative_lower": 0.4444444444444445,
+      "offset_curvature_product_upper": 0.00014085975725738347
+    }
+  ],
+  "blocking_findings": [],
+  "limits": [
+    "unsupported source families remain legacy",
+    "retained source intervals only after loop removal",
+    "no global proof of loop classification or sampled collapse test",
+    "no new UI/renderer checks"
+  ]
+}

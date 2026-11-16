@@ -1,0 +1,9 @@
+from pathlib import Path
+import json,hashlib
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/k10-helix-review/root');memory=(R/'CLAUDE.md').read_text()
+p=R/'forgeCad2026_storyboard.cpp';before=p.read_bytes();after=before.rstrip()+b'\n';assert before.rstrip()==after.rstrip() and len(before)==len(after)+1
+p.write_bytes(after)
+freeze=json.loads((T/'frozen-source-hashes.json').read_text());freeze[str(p.relative_to(R))]=hashlib.sha256(after).hexdigest();(T/'frozen-source-hashes.json').write_text(json.dumps(freeze,indent=2)+'\n')
+(T/'orphan-formatting.json').write_text(json.dumps({'file':str(p.relative_to(R)),'stage_sha256':hashlib.sha256(before).hexdigest(),'final_sha256':hashlib.sha256(after).hexdigest(),'difference':'One extra trailing blank line removed after deleting the final private function; non-whitespace bytes identical','removed_lines_total':35},indent=2)+'\n')
+p=R/'docs/review-k10-helix-orphans-2026-11-16.md';p.write_text(p.read_text().replace('34righe eliminate','35righe eliminate, inclusa la riga vuota finale'))
+assert len(memory.encode())<=16384

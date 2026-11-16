@@ -1,0 +1,46 @@
+#!/usr/bin/env python3
+"""Independent ORIGINAL same-parameter curve comparison, exact IEEE Fractions.
+No production extractor is read. Coverage and all knot spans are required.
+"""
+import sys,types
+from pathlib import Path
+for name in ['fraction_common','verify_tensor_fraction']:
+ if name not in sys.modules:
+  mod=types.ModuleType(name);sys.modules[name]=mod
+  exec(compile(Path(__file__).with_name(name+'.py.txt').read_text(),name+'.py.txt','exec'),mod.__dict__)
+from verify_tensor_fraction import *
+
+def span_coverage(S,lo,hi):
+ assert S and S[0]['lo']==lo and S[-1]['hi']==hi,'Incomplete source coverage'
+ assert all(a['hi']==b['lo'] for a,b in zip(S,S[1:])),'Gap in source coverage'
+
+def verify_curve(source,target,requested,budget,maxdepth=24):
+ lo,hi=map(exact,requested);budget=exact(budget);assert lo<hi and budget>=0
+ A=source_spans(normalize(source),(lo,hi));B=source_spans(normalize(target),(lo,hi));span_coverage(A,lo,hi);span_coverage(B,lo,hi)
+ cuts=sorted({lo,hi}|{x for s in A+B for x in [s['lo'],s['hi']] if lo<x<hi})
+ ai=bi=0;worst=F(0);leaves=depthmax=0
+ for lo,hi in zip(cuts,cuts[1:]):
+  while A[ai]['hi']<=lo:ai+=1
+  while B[bi]['hi']<=lo:bi+=1
+  stack=[(subspan(A[ai],lo,hi),subspan(B[bi],lo,hi),0)]
+  while stack:
+   a,b,depth=stack.pop();w=mul(a['w'],b['w']);assert min(w)>0
+   r=[add(mul(x,b['w']),mul(y,a['w']),-1) for x,y in zip(a['h'],b['h'])]
+   bound=norm_upper(r)/min(w)
+   if bound<=budget:
+    worst=max(worst,bound);leaves+=1;depthmax=max(depthmax,depth);continue
+   def midpoint(x):
+    while len(x)>1:x=[(u+v)/2 for u,v in zip(x,x[1:])]
+    return x[0]
+   witness=sum(midpoint(x)**2 for x in r)/midpoint(w)**2
+   if witness>budget**2:raise RuntimeError('Original parameter curve witness exceeds cap: t='+str((a['lo']+a['hi'])/2)+' squared='+str(witness))
+   assert depth<maxdepth,('Unresolved original parameter residual',float(bound))
+   mid=(a['lo']+a['hi'])/2
+   for l,h in [(a['lo'],mid),(mid,a['hi'])]:stack.append((subspan(a,l,h),subspan(b,l,h),depth+1))
+ return {'pass':True,'upper_mm':outward(worst),'cells':len(cuts)-1,'leaves':leaves,'max_depth':depthmax}
+
+if __name__=='__main__':
+ j=json.loads(Path(sys.argv[1]).read_text());out=[]
+ for r in j['preservation']:
+  v=verify_curve(r['source'],r['curve'],r['range'],r['budget']);out.append(dict(v,label=r.get('label')));print(out[-1],flush=True)
+ Path(sys.argv[2]).write_text(json.dumps({'input':sys.argv[1],'method':'Exact rational original Cox/de Boor curves, common parameter, complete knot partition and homogeneous Bernstein hull','records':out},indent=2)+'\n')

@@ -1,0 +1,3 @@
+Loaded precision=9.9999999999999995e-08 sketches=6 features=6 modelBodies=3
+UNION app 5=Loft 6 / 2=Estrusione 3
+FAILURE elapsed=0.16901540300000001 error=L'operazione booleana non e' riuscita: booleanOperation: risultato non chiuso (Body::build: l'edge 3 non ha due fin opposte)

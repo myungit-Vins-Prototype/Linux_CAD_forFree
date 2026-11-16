@@ -1,0 +1,9 @@
+START cells=2048
+STATS cells=22536 visits=168090 depth=3
+START cells=2048
+STATS cells=22536 visits=161382 depth=3
+START cells=2048
+STATS cells=19874 visits=163865 depth=3
+[  OK  ] SweepMinimalTwistHelixAvoidsUniformGridAliasing
+1/1 test superati
+ELAPSED 63.85

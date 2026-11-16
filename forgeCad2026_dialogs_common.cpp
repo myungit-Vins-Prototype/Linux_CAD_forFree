@@ -1,6 +1,7 @@
 #include "forgeCad2026_dialogs.h"
 #include "cad_widget_context.h"
 #include <QDynamicPropertyChangeEvent>
+#include <QStatusBar>
 #include "cad_drawing_browser.h"
 #include "cad_drawing_window.h"
 #include "cad_toolbar.h"
@@ -231,6 +232,29 @@ WindowLock::~WindowLock() {
 }
 
 namespace {
+// Anche un'anteprima creata dopo show() resta nel footer fisso. Il controllo
+// della riga rende il passaggio idempotente a riaperture e refresh del layout.
+void movePreviewMessageToFooter(QDialog &dialog, QFormLayout *form) {
+    if (!form) return;
+    auto *preview = dynamic_cast<FunctionMessage *>(dialog.findChild<QPlainTextEdit *>(QStringLiteral("functionPreviewMessage")));
+    auto *root = dynamic_cast<QVBoxLayout *>(dialog.layout());
+    if (!preview || !root) return;
+    int row = -1;
+    QFormLayout::ItemRole role;
+    form->getWidgetPosition(preview, &row, &role);
+    if (row < 0) return;
+    const auto taken = form->takeRow(row);
+    auto *note = new QWidget(&dialog);
+    note->setObjectName(QStringLiteral("functionPreviewFooter"));
+    auto *line = new QHBoxLayout(note);
+    line->setContentsMargins(0, 10, 0, 0);
+    if (taken.labelItem && taken.labelItem->widget()) line->addWidget(taken.labelItem->widget());
+    line->addWidget(preview, 1);
+    delete taken.labelItem;
+    delete taken.fieldItem;
+    root->insertWidget(qMax(0, root->count() - 1), note);
+}
+
 // Indicatore esplicito: alcuni temi non disegnano CE_SizeGrip nei pannelli figli.
 class PanelResizeGrip final : public QSizeGrip {
 public:
@@ -244,6 +268,20 @@ protected:
             painter.drawLine(QPointF(width()-offset,height()-4),QPointF(width()-4,height()-offset));
     }
 };
+}
+
+void setFunctionMessageRole(QWidget *widget, FunctionMessageRole role, bool emphasized) {
+    const QString value = role == FunctionMessageRole::Information ? QStringLiteral("information")
+        : role == FunctionMessageRole::Success ? QStringLiteral("success")
+        : role == FunctionMessageRole::Error ? QStringLiteral("error")
+        : role == FunctionMessageRole::Hint ? QStringLiteral("hint") : QStringLiteral("normal");
+    if (widget->property("functionMessageRole").toString() == value
+        && widget->property("functionMessageEmphasized").toBool() == emphasized) return;
+    widget->setProperty("functionMessageRole", value);
+    widget->setProperty("functionMessageEmphasized", emphasized);
+    widget->style()->unpolish(widget);
+    widget->style()->polish(widget);
+    widget->update();
 }
 
 FunctionMessage::FunctionMessage(QWidget *parent) : QPlainTextEdit(parent) {
@@ -573,20 +611,7 @@ void FunctionDialogPanel::showEvent(QShowEvent *event) {
             static_cast<QVBoxLayout *>(layout())->addWidget(buttons);
         }
     }
-    if (form_) if (auto *preview = dynamic_cast<FunctionMessage *>(findChild<QPlainTextEdit *>(QStringLiteral("functionPreviewMessage")))) {
-        int row = -1; QFormLayout::ItemRole role;
-        form_->getWidgetPosition(preview, &row, &role);
-        if (row >= 0) {
-            auto taken = form_->takeRow(row);
-            auto *note = new QWidget(this); auto *line = new QHBoxLayout(note);
-            line->setContentsMargins(0, 10, 0, 0);
-            if (taken.labelItem) line->addWidget(taken.labelItem->widget());
-            line->addWidget(preview, 1);
-            delete taken.labelItem; delete taken.fieldItem;
-            auto *root = static_cast<QVBoxLayout *>(layout());
-            root->insertWidget(qMax(0, root->count() - 1), note);
-        }
-    }
+    movePreviewMessageToFooter(*this, form_);
     dockSide_ = qBound(0, QSettings().value(QStringLiteral("view/functionPanelDockSide"), 0).toInt(), 2);
     fullHeight_ = QSettings().value(QStringLiteral("view/functionPanelFullHeight"), false).toBool();
     initializePanelSize();
@@ -778,6 +803,7 @@ void FunctionDialogPanel::applyTransparentStyle() {
     // la spunta: lasciare WindowText e Text distinti nella palette. Le liste
     // richiedono Base opaco, altrimenti l'indicatore nativo diventa nero.
     const auto color = [this](QPalette::ColorRole role) { return palette().color(QPalette::Active, role).name(QColor::HexRgb); };
+    const bool light = palette().color(QPalette::WindowText).lightness() < 128;
     const QString sheet = QStringLiteral(R"(
         QDialog#functionDialogPanel, QScrollArea#functionDialogScroll,
         QScrollArea#functionDialogScroll > QWidget > QWidget, QWidget#functionDialogContents,
@@ -813,10 +839,16 @@ void FunctionDialogPanel::applyTransparentStyle() {
         QScrollBar::add-line, QScrollBar::sub-line { width: 0; height: 0; }
         QScrollBar::add-page, QScrollBar::sub-page { background: transparent; }
         QSizeGrip#functionPanelResizeGrip { background: transparent; }
+        QWidget[functionMessageRole="information"] { color: %12; }
+        QWidget[functionMessageRole="success"] { color: %13; }
+        QWidget[functionMessageRole="error"] { color: %14; }
+        QWidget[functionMessageRole="hint"] { color: %3; }
+        QWidget[functionMessageEmphasized="true"] { font-weight: 600; }
     )").arg(color(QPalette::WindowText), color(QPalette::Text), color(QPalette::PlaceholderText),
            color(QPalette::Base), color(QPalette::Mid), color(QPalette::Highlight),
            color(QPalette::HighlightedText), color(QPalette::AlternateBase), color(QPalette::Midlight))
-           .arg(color(QPalette::Link), palette().color(QPalette::Disabled, QPalette::Text).name(QColor::HexRgb));
+           .arg(color(QPalette::Link), palette().color(QPalette::Disabled, QPalette::Text).name(QColor::HexRgb))
+           .arg(light ? "#205781" : "#9fc6e8", light ? "#216330" : "#8ee8a2", light ? "#a32620" : "#ff8a80");
     if (styleSheet() != sheet) setStyleSheet(sheet);
 }
 
@@ -1132,7 +1164,7 @@ void FeatureOperationDiagram::paintEvent(QPaintEvent *) {
 bool ForgeCad::Gui::runUntilApplied(QDialog &dialog, QFormLayout *form, QDialogButtonBox *buttons, const std::function<QString()> &apply, bool hideWhileApplying) {
     auto *errorLabel = new FunctionMessage(&dialog);
     errorLabel->setObjectName(QStringLiteral("functionApplyError"));
-    errorLabel->setStyleSheet(QStringLiteral("color: #ff7b72; font-weight: 600;"));
+    setFunctionMessageRole(errorLabel, FunctionMessageRole::Error, true);
     errorLabel->hide();
     int row = -1;
     QFormLayout::ItemRole role;
@@ -1180,7 +1212,7 @@ bool runUntilAppliedModeless(QMainWindow *window, CadViewport *viewport, QDialog
                                     const std::function<QString()> &apply, bool hideWhileApplying) {
     auto *errorLabel = new FunctionMessage(&dialog);
     errorLabel->setObjectName(QStringLiteral("functionApplyError"));
-    errorLabel->setStyleSheet(QStringLiteral("color: #ff7b72; font-weight: 600;"));
+    setFunctionMessageRole(errorLabel, FunctionMessageRole::Error, true);
     errorLabel->hide();
     int row = -1;
     QFormLayout::ItemRole role;
@@ -1231,6 +1263,8 @@ PreviewScope::PreviewScope(CadViewport *target, QDialog &dialog, QFormLayout *fo
     } else {
         form->addRow(QStringLiteral("Anteprima:"), label);
     }
+    if (!outside && dialog.isVisible() && dynamic_cast<FunctionDialogPanel *>(&dialog))
+        movePreviewMessageToFooter(dialog, form);
     FunctionMessage *status = label;
     viewport->setPreviewCallback([status](const QString &error) {
         status->setText(error.isEmpty() ? QStringLiteral("pronta (in ambra nella vista)") : QStringLiteral("non riuscita: ") + error);
@@ -1278,23 +1312,38 @@ GeometryReferenceList::GeometryReferenceList(QDialog &dialog, CadViewport *viewp
 void GeometryReferenceList::setReferences(const QVector<GeometryRef> &refs) {
     const bool highlighted = viewport_->referenceListHighlighted(this);
     const int oldRow = currentRow();
-    const bool selected = oldRow >= 0 && oldRow < refs_.size() && currentItem()->isSelected();
-    const GeometryRef previous = selected ? refs_.at(oldRow) : GeometryRef();
+    const bool hasCurrent = oldRow >= 0 && oldRow < refs_.size();
+    const GeometryRef previous = hasCurrent ? refs_.at(oldRow) : GeometryRef();
+    QVector<GeometryRef> selected;
+    for (QListWidgetItem *item : selectedItems()) {
+        const int index = row(item);
+        if (index >= 0 && index < refs_.size()) selected.append(refs_.at(index));
+    }
     const QSignalBlocker blocker(this);
     refs_ = refs;
     clear();
-    int selectedRow = -1;
+    int current = -1;
+    QVector<GeometryRef> highlights;
     for (int i = 0; i < refs.size(); ++i) {
         const GeometryRef &ref = refs.at(i);
         QString label = ForgeCad::geometryRefText(ref, viewport_->sketches(), viewport_->extrusions());
         if (ref.kind == 4 && ref.point.subshape >= 0) label += QStringLiteral(" — E%1").arg(ref.point.subshape);
         addItem(QStringLiteral("%1. %2").arg(i + 1).arg(label));
-        if (selected && sameReference(previous, ref)) selectedRow = i;
+        if (hasCurrent && current < 0 && sameReference(previous, ref)) current = i;
+        for (int j = 0; j < selected.size(); ++j)
+            if (sameReference(selected.at(j), ref)) {
+                item(i)->setSelected(true);
+                selected.removeAt(j);
+                highlights.append(ref);
+                break;
+            }
     }
-    setCurrentRow(selectedRow);
+    // Il riferimento corrente e la selezione sono stati indipendenti:
+    // cambiare current non deve cancellare la selezione multipla ripristinata.
+    setCurrentRow(current, QItemSelectionModel::NoUpdate);
     if (highlighted)
-        viewport_->setReferenceListHighlight(this, isEnabled() && selectedRow >= 0
-            ? QVector<GeometryRef>{refs.at(selectedRow)} : QVector<GeometryRef>());
+        viewport_->setReferenceListHighlight(this, isEnabled() ? highlights : QVector<GeometryRef>());
+
 }
 
 void GeometryReferenceList::setEdges(int body, const QVector<EdgePoint> &edges) {
@@ -1320,9 +1369,12 @@ void GeometryReferenceList::hideEvent(QHideEvent *event) {
 }
 
 bool GeometryReferenceList::sameReference(const GeometryRef &a, const GeometryRef &b) {
-    return a.kind == b.kind && a.index == b.index && a.element == b.element
-        && a.point.subshape == b.point.subshape && a.point.geometry == b.point.geometry
-        && a.point.role == b.point.role && a.point.x == b.point.x && a.point.y == b.point.y && a.point.z == b.point.z;
+    if (a.kind != b.kind || a.index != b.index || a.element != b.element
+        || a.point.subshape != b.point.subshape || a.point.geometry != b.point.geometry || a.point.role != b.point.role) return false;
+    // Un punto di appoggio diverso non cambia l'identita' della stessa
+    // faccia/edge; i riferimenti a punti liberi richiedono invece le coordinate.
+    if ((a.kind == 4 || a.kind == 5) && a.point.subshape >= 0) return true;
+    return a.point.x == b.point.x && a.point.y == b.point.y && a.point.z == b.point.z;
 }
 
 BodyPicker::BodyPicker(QDialog &dialog, CadViewport *viewport, int replaced, const QVector<int> &candidates, QComboBox *combo,
@@ -1552,7 +1604,11 @@ SurfaceEndControls::SurfaceEndControls(QDialog &dialog, QFormLayout &form, CadVi
 
 SurfaceEndControls::~SurfaceEndControls() { viewport_->cancelReferencePick(); viewport_->setReferencePickCallback({}); viewport_->setReferenceMarks({}); }
 
-void SurfaceEndControls::stop() { viewport_->cancelReferencePick(); active_ = -1; }
+void SurfaceEndControls::stop() {
+    viewport_->cancelReferencePick();
+    active_ = -1;
+    for (QPushButton *pick : picks_) if (pick) pick->setChecked(false);
+}
 
 void SurfaceEndControls::copyTo(ExtrusionObject &d) const {
     d.loftStartContinuity = definition_.loftStartContinuity; d.loftEndContinuity = definition_.loftEndContinuity;
@@ -1564,6 +1620,13 @@ void SurfaceEndControls::copyTo(ExtrusionObject &d) const {
 QVector<GeometryRef> &SurfaceEndControls::refs(int side) { return side == 0 ? definition_.loftStartFaces : definition_.loftEndFaces; }
 
 void SurfaceEndControls::sync() {
+    if (active_ >= 0) {
+        const int previous = active_ == 0 ? definition_.loftStartContinuity : definition_.loftEndContinuity;
+        if (modes_[active_]->currentIndex() != previous) {
+            stop();
+            viewport_->setReferencePickCallback({});
+        }
+    }
     definition_.loftStartContinuity = modes_[0]->currentIndex(); definition_.loftEndContinuity = modes_[1]->currentIndex();
     for (int side = 0; side < 2; ++side) {
         const bool plane=modes_[side]->currentIndex()==4;
@@ -1600,7 +1663,7 @@ void SurfaceEndControls::start(int side) {
         if (existing < 0) {if(plane)list.clear();list.append(ref);} else list.removeAt(existing);
         viewport_->setReferenceMarks(definition_.loftStartFaces + definition_.loftEndFaces);
         sync();
-        viewport_->beginReferencePick(modes_[active_]->currentIndex()==4?ForgeCad::DatumRolePlane:ForgeCad::DatumRoleFace, owner_);
+        if (active_ >= 0) viewport_->beginReferencePick(modes_[active_]->currentIndex()==4?ForgeCad::DatumRolePlane:ForgeCad::DatumRoleFace, owner_);
     });
     const QString error = viewport_->beginReferencePick(modes_[active_]->currentIndex()==4?ForgeCad::DatumRolePlane:ForgeCad::DatumRoleFace, owner_);
     status_->setText(error.isEmpty() ? QStringLiteral("Scegli il riferimento nella vista o nella storyboard; un secondo clic lo toglie. Esc termina la scelta.") : error);
@@ -1608,15 +1671,47 @@ void SurfaceEndControls::start(int side) {
 }
 
 bool runModeless(QMainWindow *window, CadViewport *viewport, QDialog &dialog) {
+    return runModeless(window, viewport, dialog, {});
+}
+
+bool runModeless(QMainWindow *window, CadViewport *viewport, QDialog &dialog, const std::function<void()> &onShown) {
+    // I chiamanti mantengono picker/anteprime e cleanup sul proprio stack.
+    // Un loop annidato in un altro documento ne ritarderebbe la distruzione:
+    // finche' i runner sono sincroni, un solo workspace puo' eseguirli.
+    struct RunnerState { QPointer<QMainWindow> window; QPointer<QDialog> dialog; };
+    static RunnerState running;
+    if (running.dialog && running.window && running.window != window) {
+        viewport->cancelReferencePick();
+        viewport->setReferencePickCallback({});
+        viewport->setReferenceMarks({});
+        viewport->setPreviewCallback({});
+        viewport->clearPreview();
+        dialog.reject();
+        window->statusBar()->showMessage(QStringLiteral("Termina il comando aperto nell'altro documento prima di avviarne uno qui."), 8000);
+        return false;
+    }
+    struct RestoreRunner {
+        RunnerState &state;
+        RunnerState previous;
+        ~RestoreRunner() { state = previous; }
+    } restore{running, running};
+    running = {window, &dialog};
     // Le opzioni non incorporate (STL/OBJ) restano sopra la finestra madre
     // anche quando il viewport riceve il focus per ruotare la vista.
     if (dialog.isWindow()) dialog.setWindowFlag(Qt::Tool, true);
     dialog.setModal(false);
+    QEventLoop loop;
+    bool finished = false;
+    // showEvent e l'inizializzazione possono confermare/annullare subito.
+    // Registrare finished prima di entrambi evita un'attesa senza eventi.
+    QObject::connect(&dialog, &QDialog::finished, &loop, [&] {
+        finished = true;
+        loop.quit();
+    });
     const WindowLock lock(window, viewport, &dialog);
     dialog.show();
-    QEventLoop loop;
-    QObject::connect(&dialog, &QDialog::finished, &loop, &QEventLoop::quit);
-    loop.exec();
+    if (!finished && onShown) onShown();
+    if (!finished) loop.exec();
     return dialog.result() == QDialog::Accepted;
 }
 

@@ -1,0 +1,39 @@
+from pathlib import Path
+import json,hashlib
+r=Path('/home/myungit/Linux_CAD_forFree');p=Path('/tmp/forgecad-k10-thicken-20261115')
+build=json.loads((p/'root/build-result.json').read_text());ctest=json.loads((p/'root/ctest-result.json').read_text());graph=json.loads((p/'root/architecture-audit.json').read_text());independent=json.loads((p/'independent/results.json').read_text());tests=json.loads((p/'tests/results.json').read_text())
+assert build['full_app_and_runner'] and ctest['exit']==0 and len(ctest['tests'])==18 and '100% tests passed' in (p/'root/ctest.log').read_text()
+assert graph['html_matches'] and not graph['errors']
+assert tests['groups']==6 and tests['top_level_scenarios']==31 and tests['normal']['passed']==6 and tests['sanitizer']['passed']==6 and tests['sanitizer']['exit_code']==0 and tests['sanitizer']['diagnostics']==0
+before=json.loads((p/'hashes-before.json').read_text());allowed={'CLAUDE.md','kernel/CMakeLists.txt','kernel/fk_thicken.cpp','kernel/fk_thicken.h','tools/generate_architecture.py','docs/code-review-2026-11-15.md','docs/curve-fit-k10-flatten-2026-11-15.md'}
+assert all((r/f).is_file() and (hashlib.sha256((r/f).read_bytes()).hexdigest()==h or f in allowed) for f,h in before.items())
+independent_count=independent['independent_checks'];assert independent_count>=34
+details='''Il riconoscimento riguarda la faccia di ciascun bordo libero, quindi vale anche nelle lamine con più facce piane che soddisfano i controlli preesistenti sulle giunzioni. Il ramo attraversa i wrapper Trimmed/Transformed per riconoscere le famiglie gestite; una base `Other` mantiene il comportamento precedente. Le coniche native usano la loro rappresentazione analitica e mantengono il parametro angolare. Sono presenti punti di cancellazione nell'ispezione dei wrapper. I normali arrotondamenti della trasformazione e della normalizzazione interna della direzione del carrier rimangono espliciti nei limiti sotto.'''
+verification=f'''- Build completa Release di applicazione, runner e nuovo target: PASS. {build['warnings']} avvisi in file invariati in questo intervento; nessuno nel modulo o nel test nuovi/modificati qui. Eseguibile `forgecad-release/forgecad` aggiornato: riaprire l'applicazione per usarlo.
+- **6/6 nuovi gruppi, 31 scenari PASS**: 6 polinomiali/razionali nei tre lati, 12 pose/scale/sensi, 4 trim annidati/inversi/istanze/fori con codec, 2 controlli direzionali, 5 input invalidi/cancellazione col reset storico della genealogia, 2 curve chiuse NURBS/conica. Geometria della parete associata al bordo testato e SP-curve effettive di ogni suo fin verificate densamente entro 1e-9 mm, oltre alla conservazione di grado/nodi/pesi. La baseline passa 2/6 gruppi: quattro si fermano sul requisito di conservazione della rappresentazione; la prova geometrica del difetto è nei due riproduttori separati. I confronti densi sono prove di regressione.
+- Riproduttori finali: errore nello stesso parametro **0**; distanza geometrica dalla parete **2,361894e-16 mm** (polinomiale) e **1,481673e-17 mm** (razionale). Sorgente immutata, risultato solido, controllo del corpo senza errori, origine genealogica del bordo preservata. Prima: circa 5,74e-5/5,42e-5 mm accettati. Nessuna dichiarazione di errore matematico nullo.
+- Test precedenti ricompilati privatamente sugli header correnti: **6/6 Spessore e 38/38 genealogia PASS**. Il report dell'implementatore distingue questi eseguibili privati dagli oggetti generici precedenti con ABI datata.
+- **18/18 suite CTest PASS**, comprese Spessore e strumenti superfici Qt, storia, pannelli, ciclo di vita, offset e controlli kernel. Impostazioni isolate e Qt offscreen; nessuna nuova prova visiva OpenGL.
+- **ASan/UBSan/LSan: 6/6 gruppi PASS**, senza diagnostiche. Strumentati `fk_thicken.cpp` e il nuovo test; main e resto dell'archivio kernel sono Release. Verifica mirata, non copertura integrale dell'applicazione.
+- **{independent_count} controlli indipendenti finali PASS**, con replay sugli stessi byte integrati e hash nel manifest. Dettagli, esclusioni e confronto delle famiglie procedurali sono nell'[audit](curve-fit-k10-thicken-prove-2026-11-15/independent/audit.md).
+- Architettura: **{graph['files']} file / {graph['edges']} archi / {graph['units']} unità C++**, diagnostica vuota, `--check`, uguaglianza HTML/JSON e audit bidirezionale di chiamate/include/riferimenti PASS.
+- Conservati byte per byte **{len(before)-len(allowed)} dei {len(before)} file preesistenti**; i 7 modificati appartengono allo scope dichiarato. Hash sorgenti/binari, link kernel senza Qt/OCCT, `git diff --check`, memoria entro 16 KiB e manifest delle prove verificati nell'audit finale.'''
+s=(p/'root/report-draft.md').read_text().replace('__DETAILS__',details).replace('__VERIFICATION__',verification);(r/'docs/curve-fit-k10-thicken-2026-11-15.md').write_text(s)
+f=r/'docs/code-review-2026-11-15.md';s=f.read_text();start=s.index('**Stato più recente:**');end=s.index('\n\n',start)
+s=s[:start]+'''**Stato più recente:** [K10 Pareti di Spessore su Plane](curve-fit-k10-thicken-2026-11-15.md) conserva le curve originali nelle pareti, correggendo un dettaglio di 5,74e-5 mm perso dal fit campionato. Build completa, 6 gruppi/31 scenari, 18 CTest, sanitizer mirati e audit indipendente PASS. **11/24 siti iniziali parzialmente trattati, 13 interamente da migrare**, oltre ai fallback: K10 resta aperto per normali variabili e altri chiamanti campionati. I 24 rilievi precedenti corretti e le 22 orfane candidate non cambiano. Uniformazione completa anteprime/pannelli ancora aperta; K2 in produzione.''' +s[end:];f.write_text(s)
+f=r/'docs/curve-fit-k10-flatten-2026-11-15.md';s=f.read_text();link='curve-fit-k10-thicken-2026-11-15.md';assert link not in s
+s+='\n\n## Prosecuzione successiva\n\nIl [blocco Spessore su facce piane](curve-fit-k10-thicken-2026-11-15.md) conserva le curve originali delle pareti tramite traslazione ed estrusione. Copre due ulteriori siti iniziali per questa famiglia: 11/24 parzialmente trattati, 13 interamente da migrare, oltre ai fallback. I risultati sopra descrivono la precedente consegna di appiattimento.\n';f.write_text(s)
+f=r/'CLAUDE.md';s=f.read_text();start=s.index('**15/11 — K10, pareti di Spessore');end=s.index('\n**15/11 — K2',start)
+s=s[:start]+f'''**15/11 — K10, pareti di Spessore con tre agenti GPT-6.1 Sol.**
+Bordi su Plane: traslazione/estrusione originali, caps e cucitura preservati;
+corretta perdita5,74e-5mm. App/runner,6gruppi/31scenari,18CTest,
+6ASan/UBSan/LSan mirati,{independent_count}audit e precedenti6thicken/38history PASS.
+Mappa{graph['files']}/{graph['edges']}/{graph['units']}TU/check/HTML/archi PASS;2372fileiniziali,7modificatimirati.
+K10 aperto:11/24 siti parziali,13restanti più fallback; normali variabili,
+quiltcurvi/duefacce, tensor diagonali e offset significativi ancora aperti.
+Rappresentazione conservata con roundoffordinario, nessun nuovooracle globale.
+24rilievi precedenti corretti,22orfane candidate; anteprime/pannelli da uniformare.
+K2 in produzione. [Rapporto e prove](docs/curve-fit-k10-thicken-2026-11-15.md),
+[memoria conservata](docs/history/claude-prima-k10-thicken-2026-11-15.md).
+''' +s[end:];assert len(s.encode())<=16384;f.write_text(s)
+print('Final docs, review and CLAUDE updated:',len(s.encode()),'bytes')

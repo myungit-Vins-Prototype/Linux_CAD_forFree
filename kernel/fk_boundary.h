@@ -18,8 +18,13 @@
 // a quattro lati (un cerchio: quattro quarti). Piu' di quattro angoli: errore.
 //
 // Ogni lato, nel parametro s in [0, 1] proporzionale alla lunghezza dei suoi
-// tratti, si approssima con una cubica di Hermite C1 entro `tolerance` (fitCurve
-// di fk_offset); la superficie
+// tratti, si approssima con cubiche di Hermite a tratti. Per lati composti solo
+// da rette o NURBS a pesi positivi (anche limitate/trasformate), il fit usa
+// un limite continuo del residuo Bernstein e meta' del budget `tolerance`;
+// i nodi interni della sorgente sono rimappati nel parametro del lato.
+// Per famiglie non supportate, incluse le coniche nel parametro angolare,
+// resta il fit campionato: `tolerance` e' un obiettivo non certificato sul continuo.
+// La superficie
 //   S(u, v) = (1 - v) C0(u) + v C1(u) + (1 - u) D0(v) + u D1(v) - B(u, v)
 // (B il bilineare degli angoli) e' una B-spline bicubica esatta di quelle
 // curve: dopo aver reso compatibili i nodi delle coppie opposte, i poli sono
@@ -29,9 +34,16 @@
 // faccia ha un lato degenere (un polo nell'angolo).
 //
 // Gli edge della lamina sono le curve date (esatte); la superficie le
-// interpola entro `tolerance` (edge tolleranti se serve, come negli STEP).
+// interpola entro `tolerance` sui lati certificati: le quattro righe reali
+// della Coons sono ricontrollate dopo compatibilita' dei nodi e assemblaggio,
+// includendo scarti degli angoli e arrotondamento. Una verifica non conclusiva
+// fallisce senza ripiego campionato. Su quei lati le SP-curve affini conservano
+// esplicitamente il parametro delle curve originali e il budget certificato.
+// Un lato misto con famiglie non supportate conserva il percorso campionato.
 // std::domain_error: contorno aperto o ramificato, piu' di quattro angoli,
-// lati di lunghezza nulla, risultato non valido.
+// lati di lunghezza nulla, tolleranza non positiva/finita, budget di calcolo
+// esaurito o bordo finale non certificabile. Il certificato dei bordi non
+// dimostra regolarita' o iniettivita' dell'interno della pezza.
 namespace ForgeCad::Kernel {
 
 Body boundarySheet(const std::vector<PathSegment> &pieces, double tolerance = scaledAccuracy(1e-9), FaceAliases *labels = nullptr);

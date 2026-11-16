@@ -1,0 +1,46 @@
+from pathlib import Path
+import hashlib,json,re,subprocess,difflib
+r=Path('/home/myungit/Linux_CAD_forFree');p=r/'docs/curve-fit-k10-edge-offset-prove-2026-11-16';root=p/'root';sha=lambda f:hashlib.sha256(f.read_bytes()).hexdigest()
+before=json.loads((root/'hashes-before.json').read_text());changed=[f for f,h in before.items() if not (r/f).is_file() or sha(r/f)!=h]
+allowed={'CLAUDE.md','kernel/fk_offset.cpp','kernel/fk_curve_fit_bounds.cpp','kernel/fk_curve_fit_bounds.h','kernel/CMakeLists.txt','tools/generate_architecture.py','docs/code-review-2026-11-15.md'}
+assert set(changed)==allowed,changed
+names=subprocess.check_output(['git','ls-files','--cached','--others','--exclude-standard','-z'],cwd=r).decode().split('\0');new=sorted(f for f in set(names)-set(before) if f and (r/f).is_file() and not (r/f).is_symlink())
+expected={'kernel/tests/test_edge_offset_fit_validation.cpp','docs/curve-fit-k10-edge-offset-2026-11-16.md','docs/history/claude-prima-k10-edge-offset-2026-11-16.md'}
+assert all(f in expected or f.startswith('docs/curve-fit-k10-edge-offset-prove-2026-11-16/') for f in new),new
+frozen=json.loads((root/'frozen-source-hashes.json').read_text())
+for f,h in frozen.items():assert sha(r/f)==h,f
+build=json.loads((root/'build-result.json').read_text());assert build['exit']==0
+c=json.loads((root/'ctest-result.json').read_text());assert c['exit']==0 and c['actual_passed']==24
+n=json.loads((root/'new-regressions-result.json').read_text());assert n['exit']==0 and n['passed']==18
+m=json.loads((p/'tests/test-manifest.json').read_text());assert m['sanitizer_status']=='PASS' and m['sanitizer']['passed']==18 and m['sanitizer']['exit']==0 and m['sanitizer']['diagnostics']==0 and not m['sanitizer']['suppressions']
+assert sha(r/'kernel/tests/test_edge_offset_fit_validation.cpp')==m['test_sha256']
+for f,h in m['production_stage'].items():assert sha(r/f)==h,f
+ind=json.loads((p/'independent/final-summary.json').read_text());assert (ind['cases'],ind['final_bezier_spans'],ind['final_output_poles'])==(40,301,943) and ind['independent_continuous_upper']<=1e-7
+release=json.loads((p/'independent/release-comparison.json').read_text());assert release['different_cases']==0 and release['all_bytes_identical'] and release['cases']==40
+assert sha(r/'forgecad-release/kernel/libforgekernel.a')==release['hashes'][str(r/'forgecad-release/kernel/libforgekernel.a')]
+assert (r/'CLAUDE.md').stat().st_size<=16384
+binaries=['forgecad-release/forgecad','forgecad-release/forgecad_view_tests','forgecad-release/kernel/forgekernel_edge_offset_fit_validation_tests']
+latest=max((r/f).stat().st_mtime for f in ['kernel/fk_offset.cpp','kernel/fk_curve_fit_bounds.cpp','kernel/fk_curve_fit_bounds.h'])
+for f in binaries:assert (r/f).stat().st_mtime>latest,f
+assert (r/binaries[2]).stat().st_mtime>(r/'kernel/tests/test_edge_offset_fit_validation.cpp').stat().st_mtime
+link=(r/'forgecad-release/CMakeFiles/forgecad.dir/link.txt').read_text();assert 'libTK' not in link and 'opencascade' not in link.lower()
+testlink=(r/'forgecad-release/kernel/CMakeFiles/forgekernel_edge_offset_fit_validation_tests.dir/link.txt').read_text();assert not any(k in testlink for k in ['libTK','Qt6','Qt5'])
+commands=json.loads((r/'forgecad-release/compile_commands.json').read_text());flagcommands=[]
+for f in ['kernel/fk_offset.cpp','kernel/fk_curve_fit_bounds.cpp','kernel/tests/test_edge_offset_fit_validation.cpp']:
+    entries=[c for c in commands if Path(c['file'])==r/f];assert entries,f
+    for item in entries:
+        command=item['command'];assert '-ffp-contract=off' in command,command
+        assert not any(flag in command.split() for flag in ['-ffast-math','-Ofast','-funsafe-math-optimizations','-ffinite-math-only','-freciprocal-math']),command
+        if f!='kernel/fk_offset.cpp':assert '-fno-fast-math' in command,command
+        if 'test_edge_offset_fit_validation' in f:assert '-DHAVE_EDGE_PROVIDER' in command
+        flagcommands.append(item)
+g=json.loads((r/'docs/architecture/graph.json').read_text());assert g['analysis']['configurationDigest']==sha(r/'forgecad-release/compile_commands.json') and not g['analysis']['errors']
+for f,h in g['hashes'].items():assert sha(r/f)==h,f
+subprocess.run(['git','diff','--check'],cwd=r,check=True)
+diff=[]
+for f in changed:
+    old=root/'before'/(f+'.txt');assert old.is_file(),f
+    diff.extend(difflib.unified_diff(old.read_text().splitlines(True),(r/f).read_text().splitlines(True),fromfile='before/'+f,tofile='after/'+f))
+f='kernel/tests/test_edge_offset_fit_validation.cpp';diff.extend(difflib.unified_diff([],(r/f).read_text().splitlines(True),fromfile='/dev/null',tofile='after/'+f));(root/'change.diff').write_text(''.join(diff))
+result=dict(initial_files=len(before),preserved_files=len(before)-len(changed),changed_existing=changed,new_files=new,source_hashes=frozen,binary_hashes={f:sha(r/f) for f in binaries},claude_bytes=(r/'CLAUDE.md').stat().st_size,app_link_command=link,test_link_command=testlink,strict_fp_commands=flagcommands,independent_summary=ind)
+(root/'final-audit.json').write_text(json.dumps(result,indent=2)+'\n');print('Conservazione',result['preserved_files'],'/',len(before),'PASS')

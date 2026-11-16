@@ -1,0 +1,278 @@
+{
+  "scope": "Independent K10 boundary audit; source-derived baseline negatives, frozen V2 code review, actual synthetic Body fin coefficients, exact Fraction bounds and fresh private test execution. No public command ISO certificate claimed.",
+  "contents": "Only UTF-8 text, JSON, inert source/script copies and logs; no ELF, objects, archives or CAD files.",
+  "final_source_section_sha256": "3c2fece62fbf033de91693b520e82055aae2e63a6cac7011b314a1f7f74dbd7d",
+  "files": [
+    {
+      "path": "README.txt",
+      "bytes": 1517,
+      "sha256": "61766c320ea58f9ef80024a96b73ebd747bd9363487c74891319886c3603fc34"
+    },
+    {
+      "path": "audit-notes.md",
+      "bytes": 9537,
+      "sha256": "24dcec7fbec982b9b7b99be407240cef9b524c60de93ef9a3c0ba8a6ca0c1169"
+    },
+    {
+      "path": "baseline-fk_blend_surface.cpp.txt",
+      "bytes": 246318,
+      "sha256": "0fd41f22575881c8317a2a41696f0645e6f73a1ccecf687adaa84f35dce833c5"
+    },
+    {
+      "path": "baseline-fk_nurbs.cpp.txt",
+      "bytes": 13326,
+      "sha256": "34be71dd69027a84c5a9d2a86e700dfa97cc99a79c8c1f92944cf73197847032"
+    },
+    {
+      "path": "baseline-fraction-results.json",
+      "bytes": 12458,
+      "sha256": "5917fea5f2b242e0e5d75c7689981c3065b903cbcee4dbeb7dce55ec02251f63"
+    },
+    {
+      "path": "baseline-fraction-results.json.converted.json",
+      "bytes": 44252,
+      "sha256": "18e3bf0d1c78472fb0ab8290b2098379512689a47fef6d90cc53c513aaba1505"
+    },
+    {
+      "path": "baseline-hashes.json",
+      "bytes": 669,
+      "sha256": "cb684412a0852e4bc05f3207ab7eff940aef4754cfce0294b74d51992c37414e"
+    },
+    {
+      "path": "baseline-witnesses.json",
+      "bytes": 2573,
+      "sha256": "7711e57f1e10cd2ecb5d556fa7536bf545fed1de8e8f6ee11cca4695f974fac8"
+    },
+    {
+      "path": "baseline_witnesses.py.txt",
+      "bytes": 3545,
+      "sha256": "83dcddbe41ed3e8ba00a06f798a5eaa327d714cace47d169327c7761813e6508"
+    },
+    {
+      "path": "candidate-fraction-results.json",
+      "bytes": 12410,
+      "sha256": "f7290441ddfcc29afb8f6f6bb75ee056b52f1254c481280a90d303bef0ab6a99"
+    },
+    {
+      "path": "candidate-fraction-results.json.converted.json",
+      "bytes": 183573,
+      "sha256": "50b59b2a8f51e2f348854426460d637e0b479c069d2ae949680eef359edd1bcb"
+    },
+    {
+      "path": "candidate-independent-tests.log",
+      "bytes": 1066,
+      "sha256": "67bfd630e1e83981d5f1aef57f8790753916c22e7cced74fa58265da14df269a"
+    },
+    {
+      "path": "candidate-negative-controls.json",
+      "bytes": 1523,
+      "sha256": "2c940b27541fa4912e437805b1d2efe45850f2406bda45e709c3d84bca2a9434"
+    },
+    {
+      "path": "check_exports.py.txt",
+      "bytes": 2827,
+      "sha256": "66cdc9a481d760d974402c3708727996898684b7f6d0a3536bf68560d2174719"
+    },
+    {
+      "path": "curve-verifier-selftest.json",
+      "bytes": 281,
+      "sha256": "bf0de829dfc4b70cc3c7ec9a47f4b4e61de616969095b8bf2762cc64adbfe826"
+    },
+    {
+      "path": "exports-baseline/polynomial.json",
+      "bytes": 2643,
+      "sha256": "0ce2402bebe0bcc8641b6fba1b3f2132b2759ac52799b92f12abeb9cbd3fe28d"
+    },
+    {
+      "path": "exports-baseline/rational-negative-uv.json",
+      "bytes": 2925,
+      "sha256": "9d490244fc103856aa5de5718d7f0f5b229be0516f8f6a9c2367c9b204ad4038"
+    },
+    {
+      "path": "exports-baseline/rational-pose-scale.json",
+      "bytes": 3779,
+      "sha256": "dc372019e59c072ac6466681d06fc47cc307ba21a878f83a3a1bba538f979ce1"
+    },
+    {
+      "path": "exports-baseline/rational-trim.json",
+      "bytes": 2645,
+      "sha256": "6ee9e39fa2c5709e05d70ae103e1f6d5cd4084d90fe994ae63fdd35804dc0735"
+    },
+    {
+      "path": "exports-baseline/rational.json",
+      "bytes": 2925,
+      "sha256": "84ca8ccdebb86bc8311e0902188131c3b81f88845e68cfd787d3725a3535ac52"
+    },
+    {
+      "path": "exports-candidate/actual-extended-fins.json",
+      "bytes": 7653,
+      "sha256": "decd31d7d2d63c322a15373a748c9272df815d26cfccd93dddaee88c79f213b6"
+    },
+    {
+      "path": "exports-candidate/polynomial.json",
+      "bytes": 2914,
+      "sha256": "e2d85bb5ab4e38bd180924968df800c2f8f28ffaa73d9f2e99016a61ae1dde43"
+    },
+    {
+      "path": "exports-candidate/rational-negative-uv.json",
+      "bytes": 7624,
+      "sha256": "bf343acf4bb26611009d85585ad276357f95226c921c91538ae8fb7816d76f8e"
+    },
+    {
+      "path": "exports-candidate/rational-pose-scale.json",
+      "bytes": 9252,
+      "sha256": "a7f57df729833b0aba0616af9ca1f8b1ff0c6dd7cd81fa3e492a912d7a28139a"
+    },
+    {
+      "path": "exports-candidate/rational-trim.json",
+      "bytes": 7705,
+      "sha256": "6cfd0334ccc86a7b6888e03c129504880f9268ea4fad03d06381464328de1e4c"
+    },
+    {
+      "path": "exports-candidate/rational.json",
+      "bytes": 7630,
+      "sha256": "7fd11f3a612cb42d5598044eb3cfec1f0037a61e939b501bf6c55cd2e5458673"
+    },
+    {
+      "path": "fraction_common.py.txt",
+      "bytes": 4133,
+      "sha256": "6c201bca580c820cbedb5ba4e2b5b397af7958046266fe96528bb9de3aafe2cb"
+    },
+    {
+      "path": "graph-consult.json",
+      "bytes": 36823,
+      "sha256": "ae4173e12b95852b4e605d827d90162d1abcaa528d581b2ef49446eb88ac8005"
+    },
+    {
+      "path": "hidden-support-fraction-result.json",
+      "bytes": 114,
+      "sha256": "b8ef87420f81863e13cae30585aae358ada438643de958e9c5cda4cd3ca29561"
+    },
+    {
+      "path": "hidden-support-original-map.json",
+      "bytes": 2700,
+      "sha256": "6baa986df999ad28550df4685cd6b2d3780cb1679e6c061f70931fad372dc624"
+    },
+    {
+      "path": "negative_controls.py.txt",
+      "bytes": 1332,
+      "sha256": "57013c4c31e3343955d60bca2aef9ae53920511501ac4e148c5d378ca3113e25"
+    },
+    {
+      "path": "reviewed-candidate-fk_blend_section_curve.cpp.txt",
+      "bytes": 31128,
+      "sha256": "73e6e130afa8fcfb804a90fcc4c34080261f09a159dbb9a8a6178238e5d5f639"
+    },
+    {
+      "path": "reviewed-candidate-fk_blend_section_curve.h.txt",
+      "bytes": 1814,
+      "sha256": "13e09f031b0c6acb7f43c47c6f6a9bb2886f3d79c7209372f040f812b5768966"
+    },
+    {
+      "path": "reviewed-candidate-fk_blend_surface.cpp.txt",
+      "bytes": 237089,
+      "sha256": "392bc742f3b5c455938bcc21882ecf57d2ca1459d5b570e56c0d99c8026d0e96"
+    },
+    {
+      "path": "reviewed-candidate-hashes.json",
+      "bytes": 540,
+      "sha256": "f91bc672c35bcb5bd25d5b3ca806f286eddfd6fd364fee5c711f0f093f1c8cd5"
+    },
+    {
+      "path": "reviewed-candidate-test_boundary_validation.cpp.txt",
+      "bytes": 20842,
+      "sha256": "54d42c58efb1d140a44e259b059d0d07538cc78feb9a09988523189799a0d38f"
+    },
+    {
+      "path": "reviewed-v2-fk_blend_section_curve.cpp.txt",
+      "bytes": 31697,
+      "sha256": "3c2fece62fbf033de91693b520e82055aae2e63a6cac7011b314a1f7f74dbd7d"
+    },
+    {
+      "path": "reviewed-v2-test_boundary_validation.cpp.txt",
+      "bytes": 22093,
+      "sha256": "8d603d500f9c9348ecb9ae8d258a0d557cfc8e0a01fb9128dc027bc3bd328c85"
+    },
+    {
+      "path": "selftest_tensor_fraction.py.txt",
+      "bytes": 1476,
+      "sha256": "8c65db600077731074a1f22dc8fec46bc27dde5fddd7692c1de896cb5a1f183d"
+    },
+    {
+      "path": "summary-final.json",
+      "bytes": 1229,
+      "sha256": "82ae692a9ef390df568c9e64b62118eeb9841c3a0fd45d9751357ba4855cf5b0"
+    },
+    {
+      "path": "v1-v2-export-byte-comparison.json",
+      "bytes": 1353,
+      "sha256": "e5e1617ab9d2d43320a4d60b29e4f2e27a89f163f02b1f10d3f98f03e5aeb0bb"
+    },
+    {
+      "path": "v1-v2-verifier.diff.txt",
+      "bytes": 1662,
+      "sha256": "12c3a2a5ee80b9970f452934f862f127ec4c1d7c0da3172b1dd30309ef86fb86"
+    },
+    {
+      "path": "v2-fraction-results.json",
+      "bytes": 12410,
+      "sha256": "f7290441ddfcc29afb8f6f6bb75ee056b52f1254c481280a90d303bef0ab6a99"
+    },
+    {
+      "path": "v2-fraction-results.json.converted.json",
+      "bytes": 183573,
+      "sha256": "50b59b2a8f51e2f348854426460d637e0b479c069d2ae949680eef359edd1bcb"
+    },
+    {
+      "path": "v2-independent-tests.log",
+      "bytes": 1131,
+      "sha256": "444c79c5bf93dedb647dc2a9b1d4186d89aa80bf25ae94353c7296b5fdd83428"
+    },
+    {
+      "path": "v2-integrated-source-byte-comparison.json",
+      "bytes": 730,
+      "sha256": "2e2c67e7b819edee5a2d2345f10593d41f137bc0e60739e3cbb5c4c213437dae"
+    },
+    {
+      "path": "v2-integrated-test-byte-comparison.json",
+      "bytes": 204,
+      "sha256": "fdd30857ba372f1717767d7908a93d3cce397a17d4da01e731f6bb058f178fa7"
+    },
+    {
+      "path": "v2-negative-controls.json",
+      "bytes": 1516,
+      "sha256": "c25905d7816b8000d54b6a60e09d3c994214fbd06b2849e56023aeaac3cde58c"
+    },
+    {
+      "path": "v2-reviewed-execution-hashes.json",
+      "bytes": 642,
+      "sha256": "ba69f92a3239e02338fb5604d6245baceeeeed38efc03941bdc8002977d9e0d6"
+    },
+    {
+      "path": "v2-source-hashes.json",
+      "bytes": 295,
+      "sha256": "0060b975f902dbe7414281f784cabe38d43ec6dafa0fd56eb02eff407dcc928f"
+    },
+    {
+      "path": "verifier-selftest.json",
+      "bytes": 193,
+      "sha256": "8c62cad079efd09eb7c861c6104d8a018332efa8ced084c6010bf9ef7d20c100"
+    },
+    {
+      "path": "verify_curve_preservation.py.txt",
+      "bytes": 2563,
+      "sha256": "91bb1bdda0f9151d1a68bace9c6f803c0736f1dfee2e31b51d62a93d7c5e6085"
+    },
+    {
+      "path": "verify_surface_preservation.py.txt",
+      "bytes": 3136,
+      "sha256": "b834ec84792f75cbe3cfa5ac289361eab92ff313d1201bdb06faf7d33150a361"
+    },
+    {
+      "path": "verify_tensor_fraction.py.txt",
+      "bytes": 5760,
+      "sha256": "08fccbe94b071f2c478e0d268f6a8b3fb60ea663f0a7c456033d826e44b63cf3"
+    }
+  ],
+  "file_count_excluding_manifest_and_seal": 54
+}

@@ -1,0 +1,6 @@
+from pathlib import Path
+import json,shlex,subprocess
+p=Path('/tmp/theme-tabs-review/tests');r=Path('/home/myungit/Linux_CAD_forFree');b=r/'forgecad-release';f=p/'baseline';t=p/'sanitizer';t.mkdir(exist_ok=True);commands=json.loads((f/'sources/forgecad-release/compile_commands.json').read_text());link=json.loads((p/'candidate/link-command.json').read_text());record=[]
+for source,name in [(p/'theme_probe.cpp','theme_probe'),(Path('/tmp/theme-tabs-review/core/forgeCad2026_application_theme.cpp'),'forgeCad2026_application_theme.cpp')]:
+ original='tests/test_viewport.cpp' if name=='theme_probe' else name;c=next(x for x in commands if x['file']==str(r/original));a=shlex.split(c['command']);a[a.index('-o')+1]=str(t/(name+'.o'));a[-1]=str(source);a[a.index('-O3')]='-O1';a[1:1]=['-fsanitize=address,undefined','-fno-omit-frame-pointer','-g1'];record.append(a);subprocess.run(a,cwd=b,check=True);link=[str(t/(name+'.o')) if (x==str(p/'candidate/theme_probe.o') if name=='theme_probe' else x==str(p/'candidate/forgeCad2026_application_theme.cpp.o')) else x for x in link]
+link[link.index('-o')+1]=str(t/'theme_probe');link[1:1]=['-fsanitize=address,undefined','-fno-omit-frame-pointer'];record.append(link);(t/'commands.json').write_text(json.dumps(record,indent=2));subprocess.run(link,cwd=b,check=True)

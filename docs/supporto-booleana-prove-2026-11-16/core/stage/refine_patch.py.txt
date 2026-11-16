@@ -1,0 +1,6 @@
+from pathlib import Path
+p=Path('/tmp/supporto-review/stage');s=(p/'patch_stage.py').read_text()
+s=s.replace("s=s.replace('class BooleanBuilder {',(p/'certificate.inc.txt').read_text()+'\\nclass BooleanBuilder {',1)","s=s.replace('#include \\\"fk_boolean.h\\\"','#include \\\"fk_boolean.h\\\"\\n#include \\\"fk_boolean_boundary.h\\\"',1)")
+# Instead of manipulating the generation program extensively, retain its output
+# and apply the following deterministic postprocessing in a second stage.
+(p/'patch_stage.py').write_text(s)

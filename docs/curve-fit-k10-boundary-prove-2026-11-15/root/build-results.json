@@ -1,0 +1,13 @@
+{
+  "initial_exit": 0,
+  "final_exit": 0,
+  "command": "cmake --build forgecad-release --parallel 2",
+  "final_log": "build-final.log",
+  "final_targets": [
+    "forgecad",
+    "forgecad_view_tests",
+    "forgekernel_tests",
+    "forgekernel_boundary_fit_validation_tests"
+  ],
+  "source_freeze": "independent/manifest.json"
+}

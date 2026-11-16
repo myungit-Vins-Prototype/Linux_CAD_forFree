@@ -211,6 +211,15 @@ void CadViewport::drawCurvePreview(QPainter &painter, const SketchObject &sketch
         painter.drawLine(projectWorldPoint(mapSketchPoint(curve.controlPoints.first(), sketch)),
                          projectWorldPoint(mapSketchPoint(cursorSketchPoint_, sketch)));
     }
+    if (drawingTool_ == DrawingTool::EllipseExtremes && curve.controlPoints.size() == 4) {
+        const auto screenPoint = [&](const QPointF &point) { return projectWorldPoint(mapSketchPoint(point, sketch)); };
+        painter.setPen(QPen(QColor(255, 190, 100, 190), 1.2, Qt::DotLine));
+        painter.drawLine(screenPoint(curve.controlPoints.at(0)), screenPoint(curve.controlPoints.at(1)));
+        painter.drawLine(screenPoint(curve.controlPoints.at(2)), screenPoint(curve.controlPoints.at(3)));
+        painter.setBrush(QColor(255, 190, 100));
+        for (const QPointF &point : curve.controlPoints) painter.drawEllipse(screenPoint(point), 3.5, 3.5);
+        painter.setBrush(Qt::NoBrush);
+    }
     const bool radiusOnly = drawingTool_ == DrawingTool::Arc && curveControlPoints_.size() == 1;
     const bool spline = curve.tool == DrawingTool::Spline;
     painter.setPen(QPen(spline ? QColor(242, 166, 255) : QColor(255, 150, 60, radiusOnly ? 110 : 230),

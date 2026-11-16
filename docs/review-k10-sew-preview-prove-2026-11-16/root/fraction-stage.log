@@ -1,0 +1,8 @@
+nonaffine_polynomial source 8 / 8 actual cap 8 / 8 fin 1 projection 1
+nonaffine_reverse_inputs source 8 / 8 actual cap 8 / 8 fin 1 projection 1
+nonaffine_reverse_target source 8 / 8 actual cap 8 / 8 fin 1 projection 1
+nonaffine_scale source 8 / 8 actual cap 8 / 8 fin 1 projection 1
+nonaffine_shift_trim source 8 / 8 actual cap 8 / 8 fin 1 projection 1
+rational_original_weights source 8 / 8 actual cap 8 / 8 fin 1 projection 1
+reuse_affine_range source 8 / 8 actual cap 8 / 8 fin 1 projection 1
+reuse_sampled_same_parameter source 8 / 8 actual cap 8 / 8 fin 1 projection 1

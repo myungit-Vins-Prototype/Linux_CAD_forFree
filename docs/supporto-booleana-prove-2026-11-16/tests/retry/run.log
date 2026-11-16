@@ -1,0 +1,17 @@
+PASS ordinary certified build is valid with complete history
+PASS real original operands exercise the new chain without fallback
+GEOMETRIC_REJECTION booleanOperation: risultato non chiuso (Body::build: l'edge 3 non ha due fin opposte)
+PASS injected failure propagates with its exact exception family
+PASS only domain_error after new-chain use attempts one legacy rebuild
+PASS failed certified attempt clears its partially declared history before fallback
+PASS failed legacy fallback publishes no partial history
+PASS legacy fallback receives unchanged tolerance, unify and thread options
+PASS success and injected failures preserve exact original operand bytes
+PASS injected failure propagates with its exact exception family
+PASS only domain_error after new-chain use attempts one legacy rebuild
+PASS success and injected failures preserve exact original operand bytes
+PASS injected failure propagates with its exact exception family
+PASS only domain_error after new-chain use attempts one legacy rebuild
+PASS success and injected failures preserve exact original operand bytes
+PASS unrelated planar boolean never enters substitution or recovery
+RETRY_RESULT checks=15 failures=0

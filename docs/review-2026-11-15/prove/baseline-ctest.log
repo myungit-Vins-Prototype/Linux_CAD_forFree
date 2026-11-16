@@ -1,0 +1,62 @@
+Test project /tmp/forgecad-review-20261115/ctest
+      Start   9: forgecad_constraint_linear_tests
+      Start  10: forgecad_display_cache_memory_tests
+ 1/23 Test   #9: forgecad_constraint_linear_tests ..............   Passed    0.02 sec
+      Start  15: forgecad_document_tabs_tests
+ 2/23 Test  #10: forgecad_display_cache_memory_tests ...........   Passed    0.03 sec
+      Start  16: forgecad_gui_3d_review_tests
+ 3/23 Test  #16: forgecad_gui_3d_review_tests ..................   Passed    0.03 sec
+      Start  17: forgecad_storyboard_review_tests
+ 4/23 Test  #17: forgecad_storyboard_review_tests ..............   Passed    0.46 sec
+      Start  28: forgecad_document_read_tests
+ 5/23 Test  #28: forgecad_document_read_tests ..................   Passed    0.14 sec
+      Start  32: forgecad_function_panels_tests
+ 6/23 Test  #15: forgecad_document_tabs_tests ..................   Passed    0.91 sec
+      Start  75: forgecad_document_precision_tests
+ 7/23 Test  #75: forgecad_document_precision_tests .............   Passed    0.21 sec
+      Start  93: forgecad_solver_partition_tests
+ 8/23 Test  #32: forgecad_function_panels_tests ................   Passed    0.92 sec
+      Start  99: forgecad_sketch_editing_tests
+ 9/23 Test  #99: forgecad_sketch_editing_tests .................   Passed    0.04 sec
+      Start 102: forgecad_document_recovery_tests
+10/23 Test  #93: forgecad_solver_partition_tests ...............   Passed    2.67 sec
+      Start 144: forgecad_expression_tests
+11/23 Test #144: forgecad_expression_tests .....................***Failed    0.04 sec
+
+(forgecad_expression_tests:2363): Gtk-WARNING **: 10:25:47.709: cannot open display: :0
+
+      Start 186: forgekernel_loft_knots_tests
+12/23 Test #186: forgekernel_loft_knots_tests ..................   Passed    0.06 sec
+      Start 188: forgekernel_surface_instances_tests
+13/23 Test #188: forgekernel_surface_instances_tests ...........   Passed    0.69 sec
+      Start 189: forgekernel_exchange_robustness_tests
+14/23 Test #189: forgekernel_exchange_robustness_tests .........   Passed    0.04 sec
+      Start 190: forgekernel_history_tests
+15/23 Test #190: forgekernel_history_tests .....................   Passed    0.38 sec
+      Start 192: forgekernel_tolerance_tests
+16/23 Test #192: forgekernel_tolerance_tests ...................   Passed    0.32 sec
+      Start 195: forgekernel_face_normal_bounds_tests
+17/23 Test #195: forgekernel_face_normal_bounds_tests ..........   Passed    0.02 sec
+      Start 196: forgekernel_sketch_projection_tests
+18/23 Test #196: forgekernel_sketch_projection_tests ...........   Passed    0.06 sec
+      Start 197: forgekernel_projected_curve_reference_tests
+19/23 Test #197: forgekernel_projected_curve_reference_tests ...   Passed    0.01 sec
+      Start 198: forgekernel_surface_parameterization_tests
+20/23 Test #198: forgekernel_surface_parameterization_tests ....   Passed    0.00 sec
+      Start 199: forgekernel_disjoint_union_tests
+21/23 Test #199: forgekernel_disjoint_union_tests ..............   Passed    0.03 sec
+      Start 220: forgekernel_nurbs_support_tests
+22/23 Test #102: forgecad_document_recovery_tests ..............***Failed   13.45 sec
+RECOVERY 32MiB dati ripetuti: 15ms, UI timer 11, 1857 byte
+timeout recupero asincrono
+
+23/23 Test #220: forgekernel_nurbs_support_tests ...............   Passed   67.75 sec
+
+91% tests passed, 2 tests failed out of 23
+
+Total Test time (real) =  73.21 sec
+
+The following tests FAILED:
+	102 - forgecad_document_recovery_tests (Failed)
+	144 - forgecad_expression_tests (Failed)
+Errors while running CTest

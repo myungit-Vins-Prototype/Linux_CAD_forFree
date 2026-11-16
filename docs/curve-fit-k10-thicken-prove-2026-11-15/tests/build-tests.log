@@ -1,0 +1,30 @@
+/tmp/forgecad-k10-thicken-20261115/tests/test_planar_thicken_validation.cpp: In function ‘void {anonymous}::verify(const ForgeCad::Kernel::Body&, ForgeCad::Kernel::ThickenOptions, bool)’:
+/tmp/forgecad-k10-thicken-20261115/tests/test_planar_thicken_validation.cpp:147:17: error: aggregate ‘ForgeCad::Kernel::BodyHistory history’ has incomplete type and cannot be defined
+  147 |     BodyHistory history;
+      |                 ^~~~~~~
+In file included from /tmp/forgecad-k10-thicken-20261115/tests/test_planar_thicken_validation.cpp:9:
+/tmp/forgecad-k10-thicken-20261115/tests/test_planar_thicken_validation.cpp: In lambda function:
+/tmp/forgecad-k10-thicken-20261115/tests/test_planar_thicken_validation.cpp:160:41: error: ‘EntityKind’ has not been declared
+  160 |             FK_CHECK(history.isDeclared(EntityKind::Face, id.index));
+      |                                         ^~~~~~~~~~
+/home/myungit/Linux_CAD_forFree/kernel/tests/fk_test.h:34:15: note: in definition of macro ‘FK_CHECK’
+   34 |         if (!(condition)) fktest::reportFailure(__FILE__, __LINE__, "FK_CHECK(" #condition ")"); \
+      |               ^~~~~~~~~
+/tmp/forgecad-k10-thicken-20261115/tests/test_planar_thicken_validation.cpp:161:48: error: ‘EntityKind’ has not been declared
+  161 |             for (auto origin : history.origins(EntityKind::Face, id.index))
+      |                                                ^~~~~~~~~~
+/tmp/forgecad-k10-thicken-20261115/tests/test_planar_thicken_validation.cpp:162:36: error: ‘EntityKind’ has not been declared
+  162 |                 if (origin.kind == EntityKind::Edge && origin.index == source.edges().front().index) {
+      |                                    ^~~~~~~~~~
+/tmp/forgecad-k10-thicken-20261115/tests/test_planar_thicken_validation.cpp: In function ‘void PlanarThickenInvalidAndCancellationRetainLegacyHistoryReset()’:
+/tmp/forgecad-k10-thicken-20261115/tests/test_planar_thicken_validation.cpp:298:28: error: variable ‘ForgeCad::Kernel::BodyHistory history’ has initializer but incomplete type
+  298 |         BodyHistory history(1, {1}, {4}, {4}, 2, 3, 4);
+      |                            ^
+Traceback (most recent call last):
+  File "/tmp/forgecad-k10-thicken-20261115/tests/build-tests.py", line 5, in <module>
+    command=shlex.split(entry['command']);command.insert(1,'-I'+str(impl));command[command.index('-o')+1]=str(out/'test_planar_thicken_validation.o');command[command.index('-c')+1]=str(out/'test_planar_thicken_validation.cpp');command+=['-I'+str(root/'kernel/tests'),'-fno-fast-math','-ffp-contract=off'];subprocess.run(command,cwd=entry['directory'],check=True)
+                                                                                                                                                                                                                                                                                                                 ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.14/subprocess.py", line 578, in run
+    raise CalledProcessError(retcode, process.args,
+                             output=stdout, stderr=stderr)
+subprocess.CalledProcessError: Command '['/usr/bin/c++', '-I/tmp/forgecad-k10-thicken-20261115/implementation', '-I/home/myungit/Linux_CAD_forFree/kernel', '-O3', '-DNDEBUG', '-std=gnu++17', '-Wall', '-Wextra', '-Wpedantic', '-ffp-contract=off', '-o', '/tmp/forgecad-k10-thicken-20261115/tests/test_planar_thicken_validation.o', '-c', '/tmp/forgecad-k10-thicken-20261115/tests/test_planar_thicken_validation.cpp', '-I/home/myungit/Linux_CAD_forFree/kernel/tests', '-fno-fast-math', '-ffp-contract=off']' returned non-zero exit status 1.

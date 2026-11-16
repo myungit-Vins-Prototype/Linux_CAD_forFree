@@ -1,0 +1,133 @@
+{
+  "files": 744,
+  "edges": 10679,
+  "units": 367,
+  "errors": {},
+  "html_matches": true,
+  "incident_edges": 170,
+  "required": [
+    [
+      "kernel/fk_fill.cpp",
+      "kernel/fk_curve_projection.cpp",
+      "call"
+    ],
+    [
+      "kernel/fk_fill.cpp",
+      "kernel/fk_curve_projection.h",
+      "include"
+    ],
+    [
+      "kernel/fk_sheet.cpp",
+      "kernel/fk_curve_fit_bounds.cpp",
+      "call"
+    ],
+    [
+      "kernel/fk_sheet.cpp",
+      "kernel/fk_curve_fit_bounds.h",
+      "include"
+    ],
+    [
+      "kernel/tests/test_curve_projection.cpp",
+      "kernel/fk_curve_projection.cpp",
+      "call"
+    ],
+    [
+      "kernel/tests/test_sheet_fit_validation.cpp",
+      "kernel/fk_sheet.cpp",
+      "call"
+    ]
+  ],
+  "files_audited": {
+    "kernel/fk_fill.cpp": {
+      "description": "Riempimenti con guide e contatti G0/G1/G2; bordi NURBS e rette proiettati esattamente nel piano dei parametri, fit campionato per tipi restanti; controlli di superficie e continuita.",
+      "incoming": {
+        "call": 5,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 20,
+        "include": 10,
+        "reference": 0
+      }
+    },
+    "kernel/fk_sheet.cpp": {
+      "description": "Taglio, rifilo ed estensione di lamine; offset dei bordi NURBS planari con limite continuo del fit per faccia singola e multifaccia; intersezioni e fit impliciti separati.",
+      "incoming": {
+        "call": 37,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 30,
+        "include": 15,
+        "reference": 0
+      }
+    },
+    "kernel/fk_curve_projection.cpp": {
+      "description": "Proiezione affine esatta di NURBS e rette nel piano: parametri, nodi e pesi conservati, wrapper trim e trasformazioni, nessuna normalizzazione della direzione; tipi non supportati espliciti.",
+      "incoming": {
+        "call": 3,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 6,
+        "include": 2,
+        "reference": 0
+      }
+    },
+    "kernel/fk_curve_projection.h": {
+      "description": "Contratto della proiezione nel piano con parametro originale per rette e NURBS; intervallo finito, proiezioni degeneri ammesse e fallback esplicito per coniche/procedurali.",
+      "incoming": {
+        "call": 0,
+        "include": 3,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 0,
+        "include": 1,
+        "reference": 0
+      }
+    },
+    "kernel/tests/test_curve_projection.cpp": {
+      "description": "Regressioni della proiezione affine senza fit: parametri, NURBS razionali, trasformazioni, trim e integrazione del riempimento; runner senza Qt/OCCT.",
+      "incoming": {
+        "call": 1,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 14,
+        "include": 6,
+        "reference": 0
+      }
+    },
+    "kernel/tests/test_sheet_fit_validation.cpp": {
+      "description": "Regressioni degli offset NURBS nell\u2019estensione di lamine piane: faccia singola e multifaccia, orientamento e limite continuo del fit; runner senza Qt/OCCT.",
+      "incoming": {
+        "call": 1,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 14,
+        "include": 5,
+        "reference": 0
+      }
+    },
+    "kernel/fk_curve_fit_bounds.cpp": {
+      "description": "Limiti continui del residuo dei fit offset NURBS: estrazione Bernstein dai dati originali con intervalli outward, pesi positivi, trim e trasformazioni; normali di estrusione e rivoluzione, budget finiti e cancellazione.",
+      "incoming": {
+        "call": 4,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 5,
+        "include": 2,
+        "reference": 0
+      }
+    }
+  }
+}

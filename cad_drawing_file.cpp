@@ -146,10 +146,18 @@ QString drawingModelDefinitionMatches(const DocumentState &document,const QByteA
     for(auto &feature:normalized.extrusions)feature.forgeBody.reset();
     const auto legacyMatch=[&](const DocumentState &candidate){
         Kernel::cancellationPoint();QByteArray bytes;
-        return encodeDocument(candidate,bytes,false).isEmpty()
+        if(encodeDocument(candidate,bytes,false).isEmpty()
+            &&QCryptographicHash::hash(bytes,QCryptographicHash::Sha256)==expected)return true;
+        return encodeDocumentDefinition69ForHash(candidate,bytes).isEmpty()
             &&QCryptographicHash::hash(bytes,QCryptographicHash::Sha256)==expected;
     };
-    if(legacyMatch(normalized)){matches=true;return {};}
+    // Il formato69 gia' escludeva la visibilita' dalle nuove impronte:
+    // riprodurre anche la forma canonica quando piu' entita' sono nascoste.
+    auto visible=normalized;
+    for(auto &sketch:visible.sketches)sketch.visible=true;
+    for(auto &feature:visible.extrusions)feature.visible=true;
+    for(auto &body:visible.modelBodies)body.visible=true;
+    if(legacyMatch(visible)||legacyMatch(normalized)){matches=true;return {};}
     // Le vecchie impronte includevano la visibilita'. La compatibilita'
     // verifica l'intera definizione contro l'impronta salvata: nessuna
     // inferenza geometrica e nessuna modifica dello stato del documento.
@@ -162,6 +170,16 @@ QString drawingModelDefinitionMatches(const DocumentState &document,const QByteA
     for(int i=0;i<normalized.modelBodies.size();++i){auto candidate=normalized;
         candidate.modelBodies[i].visible=!candidate.modelBodies[i].visible;
         if(legacyMatch(candidate)){matches=true;return {};}}
+    // I quattro estremi sono rappresentabili soltanto dal formato70.
+    // Falliti i confronti completi, nessuna firma precedente puo' coincidere:
+    // e' una modifica del modello, non un errore di lettura della tavola.
+    for(const auto &sketch:document.sketches){
+        for(const auto &curve:sketch.curves)
+            if(curve.tool==DrawingTool::EllipseExtremes)return {};
+        for(const auto &constraint:sketch.geometricConstraints)if(constraint.pierce)
+            for(const auto &curve:constraint.pierce->curves)
+                if(curve.tool==DrawingTool::EllipseExtremes)return {};
+    }
     // Le impronte precedenti al formato67 rappresentano solo il profilo
     // standard: una precisione diversa resta una modifica.
     if(document.calculationAccuracy!=Kernel::kLinearResolution)return {};

@@ -1,0 +1,927 @@
+--- before/CLAUDE.md
++++ after/CLAUDE.md
+@@ -40,7 +40,7 @@
+ | Schizzi e vincoli | `cad_types.h`, `cad_constraints*`, `cad_sketch_refs*`, `cad_expression*`: schizzi 2D/3D, cerchio3/asole/punti, polilinee, quote e solver, snap univoci e riferimenti associativi a piani/assi/bordi/curve. Cache automatiche nascoste; conversioni esplicite conservate; costruzione fuori modifica opzionale. Le entità locali visibili hanno priorità nella quotatura. |
+ | Solidi e superfici | `cad_forge*`, `kernel/fk_*`: primitive, estrusione (anche fino al prossimo corpo), rivoluzione, sweep/loft, booleane, sformo, svuotamento/spessore, filettatura, cucitura, taglio/estensione, reti U/V e poli NURBS. Estendi apre il pannello prima della scelta dei bordi. Raccordi costanti, conici, variabili e tra facce; percorsi tangenti con leggi indipendenti e maniglie R. |
+ | Storia e genealogia | `cad_history*`, `cad_element_names*`, viewport e storyboard: schizzi/piani come passi autonomi, riordino, rollback, soppressione, riparazione e Undo/Redo. Specchi/ripetizioni sono un evento con corpi separati ed esclusioni; conservano identità e dipendenze. |
+-| Documenti/revisioni | `cad_document_io*`, `cad_document_read*`, `cad_native_revisions*`, `cad_workspace*`: `.prt` con firma FCAD, formato 69 (contorni apparenti associativi; 68:nomi sorgenti; 67:precisione; 66:piani; 65: unione loft; 64: corrispondenze; 63: variazioni quote); Zstandard dal 56 e lettura legacy zlib. Definizione e cache B-rep/mesh distinte, salvataggio atomico, recupero, consultazione concorrente e lock della modifica. Check-out/check-in, ripristino, rilascio coordinato e recupero catalogo. |
++| Documenti/revisioni | `cad_document_io*`, `cad_document_read*`, `cad_native_revisions*`, `cad_workspace*`: `.prt` con firma FCAD, formato 70 (ellisse per estremi; 69:contorni apparenti associativi; 68:nomi sorgenti; 67:precisione; 66:piani; 65: unione loft; 64: corrispondenze; 63: variazioni quote); Zstandard dal 56 e lettura legacy zlib. Definizione e cache B-rep/mesh distinte, salvataggio atomico, recupero, consultazione concorrente e lock della modifica. Check-out/check-in, ripristino, rilascio coordinato e recupero catalogo. |
+ | Tavole 2D | `cad_drawing_*`: `.drw`, viste proiettate/ausiliarie, sezioni composte/locali con contorno e profondita’, centri sui bordi scelti, dettagli e viste interrotte, più fogli, scale foglio/vista, quote e tolleranze, datum/GD&T, badge persistenti, rugosità Ra/Rz e PDF vettoriale. Agganci alle geometrie esatte e nomi genealogici; portabilità senza cache del modello nei casi migrabili. |
+ | Scambio e analisi | `kernel/fk_step*`, `fk_iges*`, `fk_exchange*`, `fk_mass*`: STEP/IGES propri, esportazione STL/OBJ, misure/massa, zebra e curvatura. Parsing numerico indipendente dal locale, controlli di cicli/profondità e dimensioni dei dati importati. |
+ 
+@@ -108,20 +108,26 @@
+ 
+ ## Ultimi interventi — esiti consolidati
+ 
+-**16/11 — K10, proiezioni con tre agenti GPT-6.1 Sol.**
+-Plane: limite continuo dagli originali Line/NURBS, verifica dei poli dopo giunta
+-e scarto finale nel riepilogo app; baseline circa5,74e-5 mm contro limite1e-7.
+-App/runner compilati; staging perso all’interruzione, replay con due agenti Sol:
+-33 regressioni,24 CTest,5 kernel,3 probe app e33 sanitizer mirati su3 TU PASS.
+-Audit indipendente:16 geometrie/688 campate,264 campate di giunta,16 testimoni
+-baseline PASS; max9,908761802e-8. Mappa758/10958/378TU/check/HTML/archi PASS.
+-Dalla ripresa2601/2603 file invariati; solo rapporto/memoria aggiornati.
+-Manifest iniziale perso: vecchio2590/2600 non ricertificato; sorgenti identiche.
+-K10 aperto:14/24 siti parziali,10 da migrare più fallback;24 rilievi precedenti
+-corretti,22 orfane candidate e anteprime/pannelli da uniformare. K2 in produzione.
+-App ricompilata, riaprire per usarla; nessuna nuova prova renderer.
+-[Prove e limiti](docs/curve-fit-k10-projection-2026-11-16.md),
+-[memoria conservata](docs/history/claude-prima-k10-projection-2026-11-16.md).
++**16/11 — Ellisse per estremi completata con tre agenti GPT-6.1 Sol.**
++Nuovo comando Schizzo:3 clic,4 estremi reali quotabili/vincolabili,centro derivato,
++5 DOF,conica analitica,drag/anteprima/snap eTaglia. Codec70 legge i precedenti;
++impronte tavole69 riconosciute anche con precisione diversa evisibilita multipla.
++Build completa app/runner,24 CTest,probe core/Taglia/hash69,sanitizer mirati4TU
++eWayland/GL PASS; mappa/check/HTML/archi PASS. 2669/2687 file invariati.
++App aggiornata:riaprire. Poi proseguire i punti aperti della review su richiesta.
++K10 rimane aperto nel rapporto sotto.
++[Uso,prove e limiti](docs/ellisse-estremi-2026-11-16.md),
++[memoria conservata](docs/history/claude-prima-ellisse-estremi-2026-11-16.md).
++
++**16/11 — K10, proiezioni Plane.**
++Tre agenti Sol: limite continuo Line/NURBS e poli postgiunta; app usa scarto finale.
++App ricompilata. Dopo perdita staging:33 regressioni,24 CTest,5 kernel,3 app,
++33 sanitizer su3 TU;16 geometrie/688 campate+264 di giunta PASS entro1e-7.
++Mappa758/10958/378TU PASS; ripresa2601/2603 file invariati, sorgenti identiche.
++Manifest iniziale perso, vecchio2590/2600 non ricertificato. K10 aperto:14/24 siti
++parziali,10 da migrare più fallback;24 rilievi corretti,22 orfane candidate,
++anteprime/pannelli da uniformare. K2 in produzione; nessuna nuova prova renderer.
++[Prove e limiti](docs/curve-fit-k10-projection-2026-11-16.md).
+ 
+ **15/11 — K2 completato in produzione con due agenti GPT-6.1 Sol.**
+ Atlante carrier, fori/nesting, ponte analitico conservativo, SP-curve NURBS coerenti,
+@@ -165,11 +171,7 @@
+ volume nullo NURBS poi corretto in K3. [Sweep](docs/exhaust-mainfold-sweep-2026-11-15.md),
+ [solver e limiti](docs/vincoli-tangenza-transitiva-2026-11-15.md); dettagli in archivio.
+ 
+-**14/11 — Schede documenti.** Contenitore 3D/2D, posizione/ordine persistenti, workspace
+-isolati e chiusura con preflight. Build app/runner,43/43CTest e Wayland PASS; copiePart23/CT0578,
+-80cambi/2594ms, GL e originali invariati. Mappa722/10384/352TU PASS. Focusdesktop fallisce
+-ancheprima. Pubblicato su main su richiesta. [Rapporto](docs/schede-documenti-2026-11-14.md);
+-[cronologia conservata](docs/history/claude-prima-sweep-k2-prototype-2026-11-15.md).
++Schede documenti14/11: prove e limiti nel [rapporto](docs/schede-documenti-2026-11-14.md) e nella [memoria prima delle ellissi](docs/history/claude-prima-ellisse-estremi-2026-11-16.md).
+ 
+ **14/11 — CT0578, template e tavole 2D.** Cache ottimizzate: totale17,96→14,54s; restano~6s genealogia.
+ Template .drwt, cartigli e applicazione Undo; centri/assi selettivi, sezioni locali, snap esatti e controlli
+--- before/CMakeLists.txt
++++ after/CMakeLists.txt
+@@ -192,6 +192,8 @@
+     cad_overlay_renderer.cpp
+     cad_curve_solver.h
+     cad_curve_solver.cpp
++    cad_ellipse.h
++    cad_ellipse.cpp
+     cad_curve_extract.h
+     cad_spatial_sketch.h
+     cad_surface_tools.h
+@@ -776,6 +778,7 @@
+     forgecad_add_view_test(forgecad_fill_surface_tests --fill-document)
+     forgecad_add_view_test(forgecad_rebuild_all_tests --rebuild-all)
+     forgecad_add_view_test(forgecad_ellipse_trim_tests --ellipse-trim)
++    forgecad_add_view_test(forgecad_ellipse_extremes_tests --ellipse-extremes)
+     forgecad_add_view_test(forgecad_sketch_comb_tests --sketch-comb)
+     forgecad_add_view_test(forgecad_shape_analysis_ui_tests --shape-analysis)
+     forgecad_add_view_test(forgecad_draft_tests --draft)
+@@ -1042,7 +1045,7 @@
+ # Offset NURBS dello schizzo: regressioni pubbliche senza viewport o contesto GL.
+ set_source_files_properties(cad_sketch_offset.cpp PROPERTIES COMPILE_OPTIONS
+     "$<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang,AppleClang>:-fno-fast-math;-ffp-contract=off>")
+-add_executable(forgecad_sketch_offset_validation_tests tests/test_sketch_offset_validation.cpp cad_sketch_offset.cpp cad_curve_solver.cpp)
++add_executable(forgecad_sketch_offset_validation_tests tests/test_sketch_offset_validation.cpp cad_sketch_offset.cpp cad_curve_solver.cpp cad_ellipse.cpp)
+ target_include_directories(forgecad_sketch_offset_validation_tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+ target_include_directories(forgecad_sketch_offset_validation_tests SYSTEM PRIVATE "$<TARGET_PROPERTY:Qt6::Gui,INTERFACE_INCLUDE_DIRECTORIES>")
+ target_link_libraries(forgecad_sketch_offset_validation_tests PRIVATE forgekernel Qt6::Core)
+--- before/cad_constraints.cpp
++++ after/cad_constraints.cpp
+@@ -1,4 +1,5 @@
+ #include "cad_constraints.h"
++#include "cad_ellipse.h"
+ #include "cad_sketch_offset.h"
+ #include "cad_sketch_section_selection.h"
+ 
+@@ -57,6 +58,7 @@
+     case DrawingTool::Arc:
+     case DrawingTool::Polygon: return curve.controlPoints.size() >= 2 ? Shape::Circle : Shape::None;
+     case DrawingTool::Ellipse: return curve.controlPoints.size() >= 3 ? Shape::Ellipse : Shape::None;
++    case DrawingTool::EllipseExtremes: return curve.controlPoints.size() == 4 ? Shape::Ellipse : Shape::None;
+     default: return curve.controlPoints.size() >= 2 ? Shape::Curve : Shape::None;
+     }
+ }
+@@ -194,9 +196,19 @@
+         center = point(curvePoint(ref.element, 0));
+         radius = length(point(curvePoint(ref.element, 1)) - center);
+     }
++    QPointF center(const ConstraintRef &ref) const {
++        const QPointF first = point(curvePoint(ref.element, 0));
++        return sketch_.curves.at(ref.element).tool == DrawingTool::EllipseExtremes
++            ? 0.5 * first + 0.5 * point(curvePoint(ref.element, 1)) : first;
++    }
++    void centerDependencies(const ConstraintRef &ref, QVector<int> &out) const {
++        out << curvePoint(ref.element, 0);
++        if (sketch_.curves.at(ref.element).tool == DrawingTool::EllipseExtremes) out << curvePoint(ref.element, 1);
++    }
+     void ellipse(const ConstraintRef &ref, QPointF &center, QPointF &u, double &a, double &b) const {
+-        center = point(curvePoint(ref.element, 0));
+-        const QPointF major = point(curvePoint(ref.element, 1)) - center;
++        center = this->center(ref);
++        const bool extremes = sketch_.curves.at(ref.element).tool == DrawingTool::EllipseExtremes;
++        const QPointF major = point(curvePoint(ref.element, extremes ? 0 : 1)) - center;
+         a = length(major);
+         b = length(point(curvePoint(ref.element, 2)) - center);
+         u = a > 0.0 ? major / a : QPointF(1.0, 0.0);
+@@ -696,7 +708,7 @@
+         return;
+     }
+     case ConstraintType::Concentric: {
+-        const QPointF d = s.point(s.curvePoint(c.first.element, 0)) - s.point(s.curvePoint(c.second.element, 0));
++        const QPointF d = s.center(c.first) - s.center(c.second);
+         out << d.x() << d.y();
+         return;
+     }
+@@ -975,6 +987,12 @@
+     if (object.tool == DrawingTool::Arc && object.controlPoints.size() >= 3) {
+         const QPointF c = s.point(s.curvePoint(curve, 0));
+         out << length(s.point(s.curvePoint(curve, 2)) - c) - length(s.point(s.curvePoint(curve, 1)) - c);
++    } else if (object.tool == DrawingTool::EllipseExtremes && object.controlPoints.size() == 4) {
++        const QPointF a0 = s.point(s.curvePoint(curve, 0)), a1 = s.point(s.curvePoint(curve, 1));
++        const QPointF b0 = s.point(s.curvePoint(curve, 2)), b1 = s.point(s.curvePoint(curve, 3));
++        const QPointF d = (0.5 * a0 + 0.5 * a1) - (0.5 * b0 + 0.5 * b1);
++        const QPointF a = 0.5 * a0 - 0.5 * a1, b = 0.5 * b0 - 0.5 * b1;
++        out << d.x() << d.y() << dot(a / std::max(length(a), 1e-300), b);
+     } else if (object.tool == DrawingTool::Ellipse && object.controlPoints.size() >= 3) {
+         const QPointF c = s.point(s.curvePoint(curve, 0)), u = s.point(s.curvePoint(curve, 1)) - c;
+         out << dot(u, s.point(s.curvePoint(curve, 2)) - c) / std::max(length(u), 1e-300);
+@@ -985,6 +1003,8 @@
+     const CurveObject &object = s.sketch().curves.at(curve);
+     if ((object.tool == DrawingTool::Arc || object.tool == DrawingTool::Ellipse) && object.controlPoints.size() >= 3)
+         out << s.curvePoint(curve, 0) << s.curvePoint(curve, 1) << s.curvePoint(curve, 2);
++    else if (object.tool == DrawingTool::EllipseExtremes && object.controlPoints.size() == 4)
++        for (int k = 0; k < 4; ++k) out << s.curvePoint(curve, k);
+ }
+ 
+ QString curveName(const CurveObject &curve) {
+@@ -994,6 +1014,7 @@
+     case DrawingTool::Arc: return QStringLiteral("Arco");
+     case DrawingTool::Polygon: return QStringLiteral("Poligono");
+     case DrawingTool::Ellipse: return QStringLiteral("Ellisse");
++    case DrawingTool::EllipseExtremes: return QStringLiteral("Ellisse per estremi");
+     case DrawingTool::Nurbs: return QStringLiteral("NURBS");
+     case DrawingTool::Converted: return QStringLiteral("Curva derivata");
+     default: return QStringLiteral("Spline");
+@@ -1544,10 +1565,14 @@
+             anchor.direction = QPointF(-std::sin(angle), std::cos(angle));
+             break;
+         }
+-        case Shape::Ellipse:
+-            anchor.point = s.point(s.curvePoint(ref.element, 1));
+-            anchor.direction = s.point(s.curvePoint(ref.element, 2)) - s.point(s.curvePoint(ref.element, 0));
++        case Shape::Ellipse: {
++            QPointF center, u;
++            double a, b;
++            s.ellipse(ref, center, u, a, b);
++            anchor.point = center + a * u;
++            anchor.direction = QPointF(-u.y(), u.x());
+             break;
++        }
+         case Shape::Curve: {
+             const QVector<QPointF> &samples = sketch.curves.at(ref.element).samples;
+             if (samples.size() >= 2) {
+@@ -1595,6 +1620,13 @@
+         const ConstraintRef point=endpoint?ref:ConstraintRef{1,ref.element,(ref.point-kHandlePoint)/2};
+         pointDerivative(system,point,axis,factor,row);
+     } else pointDerivative(system,{0,ref.element,endpoint},axis,factor,row);
++}
++
++void centerDerivative(const System &system, const ConstraintRef &ref, int axis, double factor,
++                      Kernel::ConstraintLinear::Row &row) {
++    const bool extremes = system.sketch().curves.at(ref.element).tool == DrawingTool::EllipseExtremes;
++    pointDerivative(system, {1, ref.element, 0}, axis, extremes ? 0.5 * factor : factor, row);
++    if (extremes) pointDerivative(system, {1, ref.element, 1}, axis, 0.5 * factor, row);
+ }
+ 
+ Kernel::ConstraintLinear::Rows linearDerivatives(const System &system,const SketchConstraint &c) {
+@@ -1607,8 +1639,8 @@
+         rows.resize(2);
+         for(int axis=0;axis<2;++axis) {
+             if(c.type==ConstraintType::Concentric) {
+-                pointDerivative(system,{1,c.first.element,0},axis,1,rows[axis]);
+-                pointDerivative(system,{1,c.second.element,0},axis,-1,rows[axis]);
++                centerDerivative(system,c.first,axis,1,rows[axis]);
++                centerDerivative(system,c.second,axis,-1,rows[axis]);
+             } else {
+                 pointDerivative(system,c.first,axis,1,rows[axis]);
+                 if(c.type==ConstraintType::Coincident)pointDerivative(system,c.second,axis,-1,rows[axis]);
+@@ -1697,7 +1729,9 @@
+         system.dependencies(c->second, block.points);
+         system.dependencies(c->third, block.points);
+         if (c->type == ConstraintType::Concentric) {
+-            block.points << system.curvePoint(c->first.element, 0) << system.curvePoint(c->second.element, 0);
++            block.points.clear();
++            system.centerDependencies(c->first, block.points);
++            system.centerDependencies(c->second, block.points);
+         }
+         const TangentContact contact = tangentContact(sketch, *c);
+         block.evaluate = [&system, c, contact](QVector<double> &out) { equations(system, *c, out, &contact); };
+@@ -2387,6 +2421,15 @@
+         if (!p.dimensioned2 && p.kind == 0) p.spacing2 = value.y();
+     }
+     if (!finiteSketchNumbers(solved)) return nonFinite();
++    for (const auto &object : solved.curves) {
++        if (object.tool != DrawingTool::EllipseExtremes) continue;
++        QPointF center, axisA, axisB;
++        if (!ellipseAxes(object, center, axisA, axisB)) {
++            result.ok = false;
++            result.error = QStringLiteral("L'ellisse per estremi risulta degenere o supera la precisione del documento.");
++            return result;
++        }
++    }
+     sketch = std::move(solved);
+     return result;
+ }
+--- before/cad_curve_solver.cpp
++++ after/cad_curve_solver.cpp
+@@ -1,4 +1,5 @@
+ #include "cad_curve_solver.h"
++#include "cad_ellipse.h"
+ #include "cad_kernel.h"
+ 
+ #include <algorithm>
+@@ -173,6 +174,15 @@
+             result.push_back({std::make_shared<Circle<2>>(makeCircle(center, radius)), {startAngle, endAngle}});
+             break;
+         }
++        case DrawingTool::EllipseExtremes: {
++            QPointF center, axisA, axisB;
++            if (!ellipseAxes(curve, center, axisA, axisB)) break;
++            const double a = std::hypot(axisA.x(), axisA.y()), b = std::hypot(axisB.x(), axisB.y());
++            const Vec2 u = toVec(axisA) / a;
++            const Vec2 x = a >= b ? u : Vec2(-u.y(), u.x()), y(-x.y(), x.x());
++            result.push_back({std::make_shared<Ellipse<2>>(toVec(center), x, y, std::max(a, b), std::min(a, b)), {0.0, kTwoPi}});
++            break;
++        }
+         case DrawingTool::Ellipse: {
+             if (count < 3) break;
+             const Vec2 center = toVec(curve.controlPoints.at(0));
+--- before/cad_document_io.cpp
++++ after/cad_document_io.cpp
+@@ -24,6 +24,7 @@
+ #include <QSaveFile>
+ 
+ #include "cad_constraints.h"
++#include "cad_ellipse.h"
+ #include "cad_model_history.h"
+ #include "cad_element_names.h"
+ #include "cad_snapshot_chunks.h"
+@@ -85,6 +86,7 @@
+ // 61 verso normale indipendente per i profili iniziale/finale del loft.
+ // 68 nomi leggibili delle sorgenti associative, conservati dopo eliminazione.
+ // 69 contorni apparenti associativi: faccia e lato analitico nel GeometryRef dello schizzo.
++// 70 ellisse definita dai quattro estremi quotabili dei due assi (EllipseExtremes).
+ // 62 condizioni trasversali alle guide e riferimenti ai loro appoggi.
+ constexpr quint16 kVersion = kDocumentFormatVersion;
+ constexpr quint8 kZlib = 1;
+@@ -110,6 +112,16 @@
+     out << curve.tangentLinked;                  // formato 16
+ }
+ 
++bool validStoredEllipse(const CurveObject &curve, quint16 version, bool geometry) {
++    if (curve.tool != DrawingTool::EllipseExtremes) return true;
++    if (version < 70 || curve.controlPoints.size() != 4 || !curve.weights.isEmpty() || !curve.knots.isEmpty()
++        || !curve.tangentHandles.isEmpty() || !curve.tangentLinked.isEmpty()) return false;
++    for (const auto &point : curve.controlPoints)
++        if (!std::isfinite(point.x()) || !std::isfinite(point.y())) return false;
++    QPointF center, axisA, axisB;
++    return !geometry || ellipseAxes(curve, center, axisA, axisB);
++}
++
+ void read(ReadStream &in, CurveObject &curve, quint16 version) {
+     qint32 tool = 0, sides = 0;
+     in >> tool >> curve.controlPoints >> curve.weights >> curve.tangentHandles >> sides >> curve.construction;
+@@ -121,6 +133,10 @@
+         curve.degree = degree;
+     }
+     if (version >= 16) in >> curve.tangentLinked;
++    // Il profilo del documento arriva dopo gli schizzi nel payload: qui
++    // solo struttura/numeri; la geometria viene validata dopo averlo letto.
++    if (tool < int(DrawingTool::Line) || tool > int(DrawingTool::EllipseExtremes)
++        || !validStoredEllipse(curve, version, false)) in.setStatus(QDataStream::ReadCorruptData);
+ }
+ 
+ void write(QDataStream &out, const CoincidentConstraint &c) {
+@@ -1452,10 +1468,27 @@
+ namespace {
+ QString encodeDocumentVersion(const DocumentState &state, QByteArray &bytes, bool bodies, int compressionLevel, quint16 version) {
+     try {
+-        for (const auto &sketch : state.sketches)
+-            if (!finiteSketchNumbers(sketch)) return QStringLiteral("Lo schizzo contiene valori numerici non finiti.");
+         if (!Kernel::validCalculationAccuracy(state.calculationAccuracy))
+             return QStringLiteral("Precisione di calcolo del documento non valida.");
++        Kernel::PrecisionScope precision(state.calculationAccuracy);
++        const auto ellipseError = [&](const CurveObject &curve) -> QString {
++            if (curve.tool != DrawingTool::EllipseExtremes) return {};
++            if (version < 70) return QStringLiteral("L'ellisse per estremi richiede il formato 70.");
++            return validStoredEllipse(curve, version, true) ? QString()
++                : QStringLiteral("Definizione dell'ellisse per estremi non valida.");
++        };
++        for (const auto &sketch : state.sketches) {
++            if (!finiteSketchNumbers(sketch)) return QStringLiteral("Lo schizzo contiene valori numerici non finiti.");
++            for (const auto &curve : sketch.curves) {
++                const auto error = ellipseError(curve);
++                if (!error.isEmpty()) return error;
++            }
++            for (const auto &constraint : sketch.geometricConstraints) if (constraint.pierce)
++                for (const auto &curve : constraint.pierce->curves) {
++                    const auto error = ellipseError(curve);
++                    if (!error.isEmpty()) return error;
++                }
++        }
+         if (version < 67 && state.calculationAccuracy != Kernel::kLinearResolution)
+             return QStringLiteral("La precisione personalizzata richiede il formato 67.");
+         if (state.version.documentId.isNull() || (!state.version.checkinId.isNull() && state.version.checkinId == state.baseCheckinId))
+@@ -1555,6 +1588,10 @@
+     return encodeDocumentVersion(state, bytes, bodies, compressionLevel, kVersion);
+ }
+ 
++QString encodeDocumentDefinition69ForHash(const DocumentState &state, QByteArray &bytes) {
++    return encodeDocumentVersion(state, bytes, false, 9, 69);
++}
++
+ QString encodeDocumentDefinition66ForHash(const DocumentState &state, QByteArray &bytes) {
+     return encodeDocumentVersion(state, bytes, false, 9, 66);
+ }
+@@ -1703,6 +1740,16 @@
+     }
+     if(version>=53){QByteArray extras;if(!buffer.atEnd()){quint32 tag=0;in>>tag>>extras;if(in.status()!=QDataStream::Ok||tag!=0x53524631)return QStringLiteral("Estensioni superfici danneggiate.");}const auto error=applySurfaceToolsExtras(extras,loaded.extrusions);if(!error.isEmpty())return error;}
+     if (!buffer.atEnd()) return QStringLiteral("Il file e' danneggiato (dati in piu' alla fine).");
++    {
++        Kernel::PrecisionScope precision(loaded.calculationAccuracy);
++        for (const auto &sketch : loaded.sketches) {
++            for (const auto &curve : sketch.curves)
++                if (!validStoredEllipse(curve, version, true)) return QStringLiteral("Il file contiene un'ellisse per estremi non valida.");
++            for (const auto &constraint : sketch.geometricConstraints) if (constraint.pierce)
++                for (const auto &curve : constraint.pierce->curves)
++                    if (!validStoredEllipse(curve, version, true)) return QStringLiteral("Il file contiene un'ellisse per estremi non valida.");
++        }
++    }
+     normalizeModelHistory(loaded);
+     return {};
+ }
+--- before/cad_document_io.h
++++ after/cad_document_io.h
+@@ -54,7 +54,7 @@
+ namespace ForgeCad {
+ 
+ inline constexpr const char *kDocumentSuffix = "prt";
+-inline constexpr quint16 kDocumentFormatVersion = 69;
++inline constexpr quint16 kDocumentFormatVersion = 70;
+ 
+ // Budget in byte, indipendenti dal numero di feature. I chiamanti che devono
+ // aprire documenti piu' grandi possono passarne di espliciti agli overload.
+@@ -80,6 +80,8 @@
+ // Non usare per salvataggi o pubblicazioni di nuovi documenti.
+ // Firma storica 60: rifiuta inversioni G1/G2 che quel formato non rappresenta.
+ // Firma storica 61: rifiuta condizioni trasversali alle guide.
++// Firma storica 69: conserva precisione e riferimenti, rifiuta EllipseExtremes.
++QString encodeDocumentDefinition69ForHash(const DocumentState &state, QByteArray &bytes);
+ QString encodeDocumentDefinition66ForHash(const DocumentState &state, QByteArray &bytes);
+ QString encodeDocumentDefinition65ForHash(const DocumentState &state, QByteArray &bytes);
+ QString encodeDocumentDefinition64ForHash(const DocumentState &state, QByteArray &bytes);
+--- before/cad_drawing_file.cpp
++++ after/cad_drawing_file.cpp
+@@ -146,10 +146,18 @@
+     for(auto &feature:normalized.extrusions)feature.forgeBody.reset();
+     const auto legacyMatch=[&](const DocumentState &candidate){
+         Kernel::cancellationPoint();QByteArray bytes;
+-        return encodeDocument(candidate,bytes,false).isEmpty()
++        if(encodeDocument(candidate,bytes,false).isEmpty()
++            &&QCryptographicHash::hash(bytes,QCryptographicHash::Sha256)==expected)return true;
++        return encodeDocumentDefinition69ForHash(candidate,bytes).isEmpty()
+             &&QCryptographicHash::hash(bytes,QCryptographicHash::Sha256)==expected;
+     };
+-    if(legacyMatch(normalized)){matches=true;return {};}
++    // Il formato69 gia' escludeva la visibilita' dalle nuove impronte:
++    // riprodurre anche la forma canonica quando piu' entita' sono nascoste.
++    auto visible=normalized;
++    for(auto &sketch:visible.sketches)sketch.visible=true;
++    for(auto &feature:visible.extrusions)feature.visible=true;
++    for(auto &body:visible.modelBodies)body.visible=true;
++    if(legacyMatch(visible)||legacyMatch(normalized)){matches=true;return {};}
+     // Le vecchie impronte includevano la visibilita'. La compatibilita'
+     // verifica l'intera definizione contro l'impronta salvata: nessuna
+     // inferenza geometrica e nessuna modifica dello stato del documento.
+@@ -162,6 +170,16 @@
+     for(int i=0;i<normalized.modelBodies.size();++i){auto candidate=normalized;
+         candidate.modelBodies[i].visible=!candidate.modelBodies[i].visible;
+         if(legacyMatch(candidate)){matches=true;return {};}}
++    // I quattro estremi sono rappresentabili soltanto dal formato70.
++    // Falliti i confronti completi, nessuna firma precedente puo' coincidere:
++    // e' una modifica del modello, non un errore di lettura della tavola.
++    for(const auto &sketch:document.sketches){
++        for(const auto &curve:sketch.curves)
++            if(curve.tool==DrawingTool::EllipseExtremes)return {};
++        for(const auto &constraint:sketch.geometricConstraints)if(constraint.pierce)
++            for(const auto &curve:constraint.pierce->curves)
++                if(curve.tool==DrawingTool::EllipseExtremes)return {};
++    }
+     // Le impronte precedenti al formato67 rappresentano solo il profilo
+     // standard: una precisione diversa resta una modifica.
+     if(document.calculationAccuracy!=Kernel::kLinearResolution)return {};
+--- before/cad_icons.cpp
++++ after/cad_icons.cpp
+@@ -246,6 +246,16 @@
+         p.setBrush(Qt::NoBrush);
+         p.drawEllipse(QPointF(12, 12), 9.5, 6);
+         dot(p, {12, 12}, c.ink, 1.6);
++    };
++
++    icons["ellipseExtremes"] = [](QPainter &p, const IconPalette &c) {
++        line(p, {2.5, 12}, {21.5, 12}, stroke(c.ink, 0.9, Qt::DashLine));
++        line(p, {12, 6}, {12, 18}, stroke(c.ink, 0.9, Qt::DashLine));
++        p.setPen(stroke(c.accent, 1.8));
++        p.setBrush(Qt::NoBrush);
++        p.drawEllipse(QPointF(12, 12), 9.5, 6);
++        for (const QPointF &point : {QPointF(2.5, 12), QPointF(21.5, 12), QPointF(12, 6), QPointF(12, 18)})
++            dot(p, point, c.ink, 1.7);
+     };
+ 
+     // --- Schizzo: modifica -----------------------------------------------------
+--- before/cad_sketch_edit.cpp
++++ after/cad_sketch_edit.cpp
+@@ -109,10 +109,11 @@
+             g.radius = r;
+             return g;
+         }
+-        if (curve.tool == DrawingTool::Ellipse || curve.tool == DrawingTool::Nurbs || curve.tool == DrawingTool::Converted) {
++        const bool ellipse = curve.tool == DrawingTool::Ellipse || curve.tool == DrawingTool::EllipseExtremes;
++        if (ellipse || curve.tool == DrawingTool::Nurbs || curve.tool == DrawingTool::Converted) {
+             const auto pieces = curveGeometry(curve);
+             if (pieces.size() != 1) return g;
+-            g.shape = curve.tool == DrawingTool::Ellipse ? Shape::Ellipse : Shape::Nurbs;
++            g.shape = ellipse ? Shape::Ellipse : Shape::Nurbs;
+             g.basis = pieces.front().curve;
+             g.first = pieces.front().range.lo;
+             g.last = pieces.front().range.hi;
+@@ -493,7 +494,8 @@
+         return QStringLiteral("%1: NURBS non valida.").arg(operation);
+     if (entity.kind == 1 && entity.index >= 0 && entity.index < sketch.curves.size() && sketch.curves.at(entity.index).tool == DrawingTool::Converted)
+         return QStringLiteral("%1: curva derivata non valida.").arg(operation);
+-    if (entity.kind == 1 && entity.index >= 0 && entity.index < sketch.curves.size() && sketch.curves.at(entity.index).tool == DrawingTool::Ellipse)
++    if (entity.kind == 1 && entity.index >= 0 && entity.index < sketch.curves.size()
++        && (sketch.curves.at(entity.index).tool == DrawingTool::Ellipse || sketch.curves.at(entity.index).tool == DrawingTool::EllipseExtremes))
+         return QStringLiteral("%1: ellisse non valida.").arg(operation);
+     return QStringLiteral("%1: entita' non valida.").arg(operation);
+ }
+--- before/cad_types.h
++++ after/cad_types.h
+@@ -41,7 +41,7 @@
+ // grado in CurveObject); ConvertEdges: lo strumento che le crea con un clic.
+ // Dimension: lo strumento Quota (prima si scelgono le entita', poi si mette la quota).
+ enum class DrawingTool { Line, Polyline, Spline, Nurbs, Circle, Arc, Polygon, ConstructionLine, Trim, Extend, Split, Fillet, Chamfer, Select,
+-                         Rectangle, CenterRectangle, Ellipse, ThreePointArc, TangentArc, Converted, ConvertEdges, Dimension, Slot, Point, ThreePointCircle };
++                         Rectangle, CenterRectangle, Ellipse, ThreePointArc, TangentArc, Converted, ConvertEdges, Dimension, Slot, Point, ThreePointCircle, EllipseExtremes };
+ enum class SnapKind { None, Endpoint, Midpoint, Nearest, Intersection };
+ 
+ enum class ReferencePlane { XY, XZ, YZ };
+@@ -61,6 +61,8 @@
+ //  - Ellipse: centro, estremo di un semiasse (lunghezza e direzione), punto
+ //    sull'altro semiasse (la sua lunghezza e' la distanza dal centro: il
+ //    punto sta sulla perpendicolare)
++//  - EllipseExtremes: quattro estremi A0,A1,B0,B1; coppie opposte dei due
++//    assi ortogonali con lo stesso punto medio, che determina il centro
+ //  - Rectangle / CenterRectangle: due angoli / centro e angolo (solo per
+ //    l'anteprima: il rettangolo diventa quattro segmenti)
+ //  - ThreePointArc / TangentArc: solo strumenti di disegno, creano un Arc
+--- before/docs/sketch-tools.md
++++ after/docs/sketch-tools.md
+@@ -20,6 +20,28 @@
+ 
+ I comandi **Asola** e **Punto** si trovano in **Schizzo → Strumento geometrico**,
+ nella scheda Schizzo della ribbon e nella toolbar di disegno.
++
++## Ellisse per estremi
++
++In **Schizzo → Strumento geometrico → Ellisse per estremi**, scegli i due estremi
++opposti del primo asse, poi un estremo del secondo asse. Il terzo clic viene
++proiettato sulla perpendicolare passante per il punto medio del primo asse;
++il quarto estremo si ricava per simmetria. L’anteprima mostra assi e quattro punti.
++Il comando resta attivo per disegnare altre ellissi; **Esc** annulla la costruzione
++in corso.
++
++I quattro estremi sono punti effettivi dello schizzo: con **Quota** puoi scegliere
++un estremo e un riferimento per assegnare distanze, comprese le coordinate X/Y.
++In **Selezione**, usa **Ctrl + clic** sugli estremi e il pannello **Vincoli** per
++coincidenze, allineamenti e Fisso. Il doppio clic sulla curva attiva Quota.
++Il centro deriva dai punti opposti e si aggiorna con quote, vincoli e trascinamenti.
++Le coppie conservano lo stesso punto medio e gli assi restano perpendicolari;
++queste relazioni lasciano cinque gradi di libertà all’ellisse libera.
++
++La modalità **Ellisse** dal centro rimane disponibile. La nuova definizione e i
++riferimenti ai quattro estremi sono conservati nei documenti nativi dal formato 70;
++i documenti precedenti restano leggibili. Taglia/Spezza usano la conica esatta e
++rappresentano gli archi risultanti come NURBS razionali.
+ 
+ ## Asola rettilinea
+ 
+--- before/forgeCad2026_gui.cpp
++++ after/forgeCad2026_gui.cpp
+@@ -316,6 +316,7 @@
+     QAction * rectangleTool{};
+     QAction * centerRectangleTool{};
+     QAction * ellipseTool{};
++    QAction * ellipseExtremesTool{};
+     QAction * constructionTool{};
+     QAction * polygonSidesAction{};
+     QAction * trimTool{};
+@@ -2812,6 +2813,7 @@
+     auto &rectangleTool = setup.rectangleTool;
+     auto &centerRectangleTool = setup.centerRectangleTool;
+     auto &ellipseTool = setup.ellipseTool;
++    auto &ellipseExtremesTool = setup.ellipseExtremesTool;
+     auto &constructionTool = setup.constructionTool;
+     auto &polygonSidesAction = setup.polygonSidesAction;
+     auto &trimTool = setup.trimTool;
+@@ -2914,6 +2916,9 @@
+     centerRectangleTool->setToolTip(QStringLiteral("Rettangolo: centro e un angolo (Maiusc: quadrato)"));
+     ellipseTool = addTool(QStringLiteral("Ellisse"), DrawingTool::Ellipse, false);
+     ellipseTool->setToolTip(QStringLiteral("Ellisse: centro, estremo del primo semiasse, punto per il secondo semiasse"));
++    ellipseExtremesTool = addTool(QStringLiteral("Ellisse per estremi"), DrawingTool::EllipseExtremes, false);
++    ellipseExtremesTool->setToolTip(QStringLiteral("Ellisse per estremi: due estremi opposti del primo asse, poi un estremo del secondo asse. "
++                                                  "Quattro estremi quotabili e vincolabili; centro derivato automaticamente"));
+     constructionTool = addTool(QStringLiteral("Linea di costruzione"), DrawingTool::ConstructionLine, false);
+     polygonSidesAction = toolMenu->addAction(QStringLiteral("Numero lati poligono..."));
+     auto *editToolMenu = addCadMenu(sketchMenu, QStringLiteral("Modifica entita'"));
+@@ -3407,6 +3412,7 @@
+     auto &rectangleTool = setup.rectangleTool;
+     auto &centerRectangleTool = setup.centerRectangleTool;
+     auto &ellipseTool = setup.ellipseTool;
++    auto &ellipseExtremesTool = setup.ellipseExtremesTool;
+     auto &constructionTool = setup.constructionTool;
+     auto &polygonSidesAction = setup.polygonSidesAction;
+     auto &trimTool = setup.trimTool;
+@@ -3469,7 +3475,7 @@
+         {constructionTool, QStringLiteral("constructionLine")}, {splineTool, QStringLiteral("spline")}, {nurbsTool, QStringLiteral("nurbs")},
+         {circleTool, QStringLiteral("circle")}, {threePointCircleTool, QStringLiteral("circleThreePoint")}, {arcTool, QStringLiteral("arcCenter")}, {threePointArcTool, QStringLiteral("arcThreePoint")},
+         {tangentArcTool, QStringLiteral("arcTangent")}, {polygonTool, QStringLiteral("polygon")}, {polygonSidesAction, QStringLiteral("polygonSides")},
+-        {slotTool, QStringLiteral("slot")}, {pointTool, QStringLiteral("point")}, {rectangleTool, QStringLiteral("rectangle")}, {centerRectangleTool, QStringLiteral("centerRectangle")}, {ellipseTool, QStringLiteral("ellipse")},
++        {slotTool, QStringLiteral("slot")}, {pointTool, QStringLiteral("point")}, {rectangleTool, QStringLiteral("rectangle")}, {centerRectangleTool, QStringLiteral("centerRectangle")}, {ellipseTool, QStringLiteral("ellipse")}, {ellipseExtremesTool, QStringLiteral("ellipseExtremes")},
+         {trimTool, QStringLiteral("trim")}, {extendTool, QStringLiteral("extend")}, {splitTool, QStringLiteral("split")},
+         {sketchFilletTool, QStringLiteral("sketchFillet")}, {sketchChamferTool, QStringLiteral("sketchChamfer")},
+         {toggleConstruction, QStringLiteral("toggleConstruction")}, {symmetryAxisAction, QStringLiteral("symmetryAxis")}, {constraintsAction, QStringLiteral("constraints")},
+@@ -3718,6 +3724,7 @@
+     flyout(drawingToolbar, {arcTool, threePointArcTool, tangentArcTool}, QStringLiteral("Archi: la freccia per gli altri"));
+     flyout(drawingToolbar, {polygonTool, polygonSidesAction}, QStringLiteral("Poligono: la freccia per il numero di lati"));
+     drawingToolbar->addAction(ellipseTool);
++    drawingToolbar->addAction(ellipseExtremesTool);
+     flyout(drawingToolbar, {splineTool, nurbsTool}, QStringLiteral("Curve: la freccia per le altre"));
+     drawingToolbar->addSeparator();
+     flyout(drawingToolbar, {trimTool, extendTool, splitTool}, QStringLiteral("Taglia, estendi, spezza: la freccia per gli altri"));
+--- before/forgeCad2026_viewport_interaction.cpp
++++ after/forgeCad2026_viewport_interaction.cpp
+@@ -546,6 +546,22 @@
+                 if (drawingTool_==DrawingTool::ThreePointCircle) finalizeThreePointCircle();
+                 else finalizeDrawnArc();
+             }
++            update();
++            return;
++        }
++        if (drawingTool_ == DrawingTool::EllipseExtremes) {
++            const QPointF point = snapPoint(rawPoint);
++            if (curveControlPoints_.size() == 1
++                && pointDistance(point, curveControlPoints_.first()) <= ForgeCad::sketchConnectionTolerance()) {
++                showStatus(QStringLiteral("Ellisse per estremi: i due estremi del primo asse devono essere distinti"));
++                return;
++            }
++            curveControlPoints_.append(point);
++            hasPendingPoint_ = true;
++            if (curveControlPoints_.size() >= 3) finalizePrimitive();
++            if (curveControlPoints_.isEmpty()) showStatus(QStringLiteral("Ellisse per estremi: scegli il primo estremo del primo asse; Esc per terminare"));
++            else if (curveControlPoints_.size() == 1) showStatus(QStringLiteral("Ellisse per estremi: scegli l'estremo opposto del primo asse"));
++            else if (curveControlPoints_.size() == 2) showStatus(QStringLiteral("Ellisse per estremi: scegli un estremo del secondo asse fuori dal primo asse"));
+             update();
+             return;
+         }
+@@ -677,7 +693,7 @@
+         }
+         if (hit.kind == 1 && hit.index < sketches_.at(activeSketch_).curves.size()) {
+             const DrawingTool tool = sketches_.at(activeSketch_).curves.at(hit.index).tool;
+-            if (tool == DrawingTool::Circle || tool == DrawingTool::Arc || tool == DrawingTool::Polygon || tool == DrawingTool::Ellipse) {
++            if (tool == DrawingTool::Circle || tool == DrawingTool::Arc || tool == DrawingTool::Polygon || tool == DrawingTool::Ellipse || tool == DrawingTool::EllipseExtremes) {
+                 hasPendingPoint_ = false;
+                 curveControlPoints_.clear();
+                 const QString error = editCurveDimension(hit.index);
+--- before/forgeCad2026_viewport_render.cpp
++++ after/forgeCad2026_viewport_render.cpp
+@@ -210,6 +210,15 @@
+         painter.setPen(QPen(QColor(255, 170, 90, 170), 1.2, Qt::DotLine));
+         painter.drawLine(projectWorldPoint(mapSketchPoint(curve.controlPoints.first(), sketch)),
+                          projectWorldPoint(mapSketchPoint(cursorSketchPoint_, sketch)));
++    }
++    if (drawingTool_ == DrawingTool::EllipseExtremes && curve.controlPoints.size() == 4) {
++        const auto screenPoint = [&](const QPointF &point) { return projectWorldPoint(mapSketchPoint(point, sketch)); };
++        painter.setPen(QPen(QColor(255, 190, 100, 190), 1.2, Qt::DotLine));
++        painter.drawLine(screenPoint(curve.controlPoints.at(0)), screenPoint(curve.controlPoints.at(1)));
++        painter.drawLine(screenPoint(curve.controlPoints.at(2)), screenPoint(curve.controlPoints.at(3)));
++        painter.setBrush(QColor(255, 190, 100));
++        for (const QPointF &point : curve.controlPoints) painter.drawEllipse(screenPoint(point), 3.5, 3.5);
++        painter.setBrush(Qt::NoBrush);
+     }
+     const bool radiusOnly = drawingTool_ == DrawingTool::Arc && curveControlPoints_.size() == 1;
+     const bool spline = curve.tool == DrawingTool::Spline;
+--- before/forgeCad2026_viewport_selection.cpp
++++ after/forgeCad2026_viewport_selection.cpp
+@@ -838,7 +838,8 @@
+         if ((curve.tool == DrawingTool::Circle || curve.tool == DrawingTool::Arc
+              || curve.tool == DrawingTool::Polygon) && !curve.controlPoints.isEmpty())
+             points.append(curve.controlPoints.first());
+-        if (curve.tool == DrawingTool::Spline || curve.tool == DrawingTool::Nurbs || curve.tool == DrawingTool::Point)
++        if (curve.tool == DrawingTool::Spline || curve.tool == DrawingTool::Nurbs || curve.tool == DrawingTool::Point
++            || curve.tool == DrawingTool::EllipseExtremes)
+             points += curve.controlPoints;
+         if (curve.tool == DrawingTool::Ellipse && curve.controlPoints.size() >= 3) {
+             const QPointF c = curve.controlPoints.at(0);
+--- before/forgeCad2026_viewport_sketch.cpp
++++ after/forgeCad2026_viewport_sketch.cpp
+@@ -1,6 +1,8 @@
+ #include "forgeCad2026_viewport_internal.h"
+ #include "cad_geometry_refs.h"
++#include "cad_ellipse.h"
+ #include "cad_sketch_reference_usage.h"
++#include <QMap>
+ 
+ 
+ void CadViewport::setSplineShapeOptions(const ForgeCad::SplineShapeOptions &options) { splineShapeOptions_ = options; update(); }
+@@ -24,6 +26,7 @@
+     sketchReferenceHoverLabels_.clear(); sketchReferenceHoverSource_ = {};
+     if(tool==DrawingTool::Slot)showStatus(QStringLiteral("Asola: primo centro, secondo centro, poi larghezza"));
+     if(tool==DrawingTool::ThreePointCircle)showStatus(QStringLiteral("Cerchio per tre punti: scegli tre punti distinti sulla circonferenza"));
++    if(tool==DrawingTool::EllipseExtremes)showStatus(QStringLiteral("Ellisse per estremi: scegli il primo estremo del primo asse"));
+     if(tool==DrawingTool::Point)showStatus(QStringLiteral("Punto: clic per inserire un punto; Esc per terminare"));
+     dimensionPreviewValid_ = false;
+     dimensionHover_ = {};
+@@ -2057,6 +2060,16 @@
+         if (curve.controlPoints.size() != 1) return false;
+         curve.controlPoints.append(rectangleCorner(curve.controlPoints.first(), cursor));
+         break;
++    case DrawingTool::EllipseExtremes:
++        if (curve.controlPoints.size() == 1) {
++            curve.tool = DrawingTool::Line;
++            curve.controlPoints.append(cursor);
++            curve.samples = curve.controlPoints;
++            return pointDistance(curve.samples.at(0), cursor) > ForgeCad::sketchConnectionTolerance();
++        }
++        if (curve.controlPoints.size() != 2) return false;
++        curve = ForgeCad::ellipseFromExtremes(curve.controlPoints.at(0), curve.controlPoints.at(1), cursor);
++        break;
+     case DrawingTool::Ellipse:
+         // Dopo il centro il cerchio del primo semiasse, poi l'ellisse fino al cursore.
+         if (curve.controlPoints.size() == 1) {
+@@ -2100,6 +2113,12 @@
+         const QPointF a = curve.tool == DrawingTool::Rectangle ? p.at(0) : 2.0 * p.at(0) - p.at(1);
+         return {QStringLiteral("L = %1   H = %2").arg(number(std::abs(p.at(1).x() - a.x())), number(std::abs(p.at(1).y() - a.y()))),
+                 QStringLiteral("Maiusc: quadrato")};
++    }
++    case DrawingTool::EllipseExtremes: {
++        QPointF center, first, second;
++        if (!ForgeCad::ellipseAxes(curve, center, first, second)) return {};
++        return {QStringLiteral("Primo asse = %1   Secondo asse = %2").arg(number(2.0 * pointLength(first)), number(2.0 * pointLength(second))),
++                QStringLiteral("Quattro estremi quotabili e vincolabili; centro derivato")};
+     }
+     case DrawingTool::Ellipse: {
+         const double angle = std::atan2(p.at(1).y() - p.at(0).y(), p.at(1).x() - p.at(0).x()) * 180.0 / M_PI;
+@@ -2193,6 +2212,13 @@
+     const SketchObject &before = sketches_.at(activeSketch_);
+     if (index < 0 || index >= before.curves.size()) return QStringLiteral("Seleziona prima un cerchio, un arco o un poligono.");
+     const CurveObject curve = before.curves.at(index);
++    if (curve.tool == DrawingTool::EllipseExtremes) {
++        sketchSelections_.clear();
++        selectedPoints_.clear();
++        beginDimensionTool();
++        return QStringLiteral("Ellisse per estremi: scegli uno dei quattro estremi e un riferimento, poi posiziona la quota. "
++                              "Per i vincoli: Selezione, Ctrl+clic sugli estremi, poi Vincoli.");
++    }
+     if (curve.tool == DrawingTool::Ellipse) return editEllipseDimension(index);
+     const bool circle = curve.tool == DrawingTool::Circle, arc = curve.tool == DrawingTool::Arc, polygon = curve.tool == DrawingTool::Polygon;
+     if (!(circle || arc || polygon) || curve.controlPoints.size() < (arc ? 3 : 2))
+@@ -2664,7 +2690,7 @@
+     QVector<Move> pending;for(const auto &from:origins)pending.append({from,delta});
+     QVector<QPointF> done;
+     QVector<QPair<QPointF *, QPointF>> updates;
+-    QSet<int> movedCurves;
++    QMap<int, QVector<QPointF>> ellipseBefore;
+     for (int guard = 0; guard < 1000 && !pending.isEmpty(); ++guard) {
+         const Move move = pending.takeFirst();
+         if (pointLength(move.delta) <= 1e-15) continue;
+@@ -2691,6 +2717,8 @@
+                 // Le curve derivate sono rigide: chi vi e' collegato si adatta a loro.
+                 if (sketch.curves.at(curve).tool == DrawingTool::Converted) break;
+                 if(sketch.curves.at(curve).tool==DrawingTool::Circle&&control>0)continue;
++                if (sketch.curves.at(curve).tool == DrawingTool::EllipseExtremes && !ellipseBefore.contains(curve))
++                    ellipseBefore.insert(curve, sketch.curves.at(curve).controlPoints);
+                 QPointF &point = sketch.curves[curve].controlPoints[control];
+                 if (pointDistance(point, move.from) <= tolerance) {
+                     updates.append({&point, point + move.delta});
+@@ -2700,12 +2728,19 @@
+                         updates.append({&object.tangentHandles[control].first, object.tangentHandles.at(control).first + move.delta});
+                         updates.append({&object.tangentHandles[control].second, object.tangentHandles.at(control).second + move.delta});
+                     }
+-                    movedCurves.insert(curve);
+                 }
+             }
+     }
+     for (const auto &[point, value] : updates) *point = value;
+-    (void)movedCurves;
++    // Un estremo condiviso con un segmento usa lo stesso gesto del drag
++    // diretto. Con piu' estremi mossi e' il solver a ricostruire i due assi.
++    for (auto it = ellipseBefore.cbegin(); it != ellipseBefore.cend(); ++it) {
++        CurveObject &curve = sketch.curves[it.key()];
++        int moved = -1, count = 0;
++        for (int k = 0; k < curve.controlPoints.size(); ++k)
++            if (curve.controlPoints.at(k) != it.value().at(k)) { moved = k; ++count; }
++        if (count == 1) ForgeCad::normalizeEllipseExtremes(curve, moved, it.value().at(moved));
++    }
+ }
+ 
+ QVector<QPointF> CadViewport::curveEditMarkers(const CurveObject &curve,bool hover) {
+@@ -3135,17 +3170,27 @@
+     CurveObject primitive;
+     primitive.tool = drawingTool_;
+     primitive.controlPoints = curveControlPoints_;
++    if (drawingTool_ == DrawingTool::EllipseExtremes) {
++        if (curveControlPoints_.size() != 3) return;
++        primitive = ForgeCad::ellipseFromExtremes(curveControlPoints_.at(0), curveControlPoints_.at(1), curveControlPoints_.at(2));
++    }
+     if (drawingTool_ == DrawingTool::Polygon) primitive.sides = polygonSides_;
+     if (drawingTool_ == DrawingTool::Ellipse && primitive.controlPoints.size() >= 3)
+         primitive.controlPoints[2] = ellipseMinorPoint(primitive.controlPoints.at(0), primitive.controlPoints.at(1), primitive.controlPoints.at(2));
+     ForgeCad::recalculateCurve(primitive, tessellationQuality_);
++    if (drawingTool_ == DrawingTool::EllipseExtremes && !primitive.numericallyValid) {
++        curveControlPoints_.removeLast();
++        showStatus(QStringLiteral("Ellisse per estremi: scegli un estremo del secondo asse fuori dal primo asse"));
++        update();
++        return;
++    }
+     if (primitive.numericallyValid) {
+         recordUndo();
+         SketchObject &sketch = sketches_[activeSketch_];
+         sketch.curves.append(primitive);
+         const int index = int(sketch.curves.size()) - 1;
+         for (int k = 0; k < primitive.controlPoints.size(); ++k)
+-            recordPointCoincidences(sketch, {1,index,k}, curveControlPoints_.at(k));
++            recordPointCoincidences(sketch, {1,index,k}, primitive.controlPoints.at(k));
+         sketchEdited();
+     }
+     curveControlPoints_.clear();
+@@ -3226,6 +3271,10 @@
+ }
+ 
+ void CadViewport::normalizeEllipse(CurveObject &curve, int moved, const QPointF &previous) {
++    if (curve.tool == DrawingTool::EllipseExtremes) {
++        ForgeCad::normalizeEllipseExtremes(curve, moved, previous);
++        return;
++    }
+     if (curve.tool != DrawingTool::Ellipse || curve.controlPoints.size() < 3) return;
+     QVector<QPointF> &p = curve.controlPoints;
+     if (moved == 0) {
+--- before/tests/test_viewport.cpp
++++ after/tests/test_viewport.cpp
+@@ -26,6 +26,7 @@
+ #include "../forgeCad2026_storyboard.h"
+ #include "../forgeCad2026_dialogs.h"
+ #include "../cad_expression.h"
++#include "../cad_ellipse.h"
+ #include "../cad_features.h"
+ #include "../cad_feature_build.h"
+ #include "../cad_feature_dependencies.h"
+@@ -312,6 +313,7 @@
+ #include "test_sketch_linked_refs.h"
+ #include "test_sketch_construction.h"
+ #include "test_sketch_slot_point.h"
++#include "test_ellipse_extremes.h"
+ #include "test_sketch_tools_refs.h"
+ #include "test_sketch_reference_hover.h"
+ #include "test_sketch_apparent.h"
+@@ -12109,6 +12111,11 @@
+         catch(const std::exception &e){std::cerr<<e.what()<<std::endl;return 1;}
+         return 0;
+     }
++    if (app.arguments().contains(QStringLiteral("--ellipse-extremes"))) {
++        try { ViewportInteractionTest::ellipseExtremes(app.arguments().contains(QStringLiteral("--gl"))); }
++        catch(const std::exception &error){std::cerr<<error.what()<<std::endl;return 1;}
++        return 0;
++    }
+     if (app.arguments().contains(QStringLiteral("--sketch-slot-point"))) {
+         try { ViewportInteractionTest::sketchSlotPoint(app.arguments().contains(QStringLiteral("--gl"))); }
+         catch(const std::exception &e){std::cerr<<e.what()<<std::endl;return 1;}
+--- before/tools/generate_architecture.py
++++ after/tools/generate_architecture.py
+@@ -40,6 +40,8 @@
+  ('build', 'Build e strumenti', 'Configurazione, generazione e confezionamento del software.')]
+ # Descrizioni curate: aggiornare queste voci quando cambia il confine di un modulo.
+ DESCRIPTIONS = {
++ 'cad_ellipse': ('sketch', 'Definizione analitica delle ellissi da centro o quattro estremi reali: coppie di assi ortogonali, centro derivato, costruzione da tre clic e normalizzazione del trascinamento senza sostituire i riferimenti dei vincoli.'),
++ 'tests/test_ellipse_extremes.h': ('tests', 'Ellisse per estremi: geometria esatta, quattro punti quotabili e vincolabili, centro derivato, gradi di liberta, anteprima e creazione, trascinamento, codec70, compatibilita e Undo/Redo.'),
+  'kernel/fk_project.cpp': ('kernel', 'Proiezione direzionale su corpi: fit cubico con limite continuo dagli originali Line/NURBS su una sola Plane; certificati immutabili senza riferimenti ai chiamanti, verifica dei poli effettivi dopo giunti e fusione primo/ultimo e scarto finale propagato. Scelta delle facce e famiglie non supportate restano campionate.'),
+  'kernel/fk_project.h': ('kernel', 'Contratti della proiezione e delle catene: distinzione tra limite continuo Plane e fit campionato, provenienza opaca opzionale e scarto dopo giunta; rifiuto quando i poli finali superano il budget originale, nessuna promessa globale C1 o topologica.'),
+  'kernel/tests/test_projection_fit_validation.cpp': ('tests', 'Proiezioni Plane polinomiali e razionali con dettagli nascosti: pose, versi, scale, parametri, trim/istanze, nodi, parallelismo, durata dei certificati, giunti finali e rifiuto delle modifiche fuori budget; runner senza Qt/OCCT.'),
+@@ -293,7 +295,7 @@
+  'kernel/fk_sketch_projection.cpp': ('kernel', 'Doppia proiezione esatta degli schizzi: rami razionali e impliciti, immagini associative, radici curva/piano con budget del contributo quasi parallelo e verifica del residuo 3D.'),
+  'kernel/tests/test_loft_projected_guides.cpp': ('tests', 'Guide implicite nei loft: sezioni piane da bordi, rotazione/traslazione e versi, rango uno, incroci mancanti/multipli, rifiuto nonplanare, fedelta geometrica e codec.'),
+  'kernel/tests/test_loft.cpp': ('tests', 'Loft, contatto e degenerazioni; campate di un ulp con profili razionali/polinomiali in entrambi i versi.'),
+- 'cad_constraints': ('sketch', 'Vincoli geometrici con Jacobiano sparso e rango per componenti; contatti tangenti riconosciuti tramite catene esplicite di coincidenze, senza riaggancio per vicinanza; cache associative costanti escluse dalle incognite libere senza vincoli Fix. Numeri della definizione validati con guardia condivisa dal codec, residui e passi non finiti rifiutati e commit atomico; riduzione angolare in gradi in tempo costante anche ai limiti double.'),
++ 'cad_constraints': ('sketch', 'Vincoli geometrici con Jacobiano sparso e rango per componenti; contatti tangenti riconosciuti tramite catene esplicite di coincidenze, senza riaggancio per vicinanza; cache associative costanti escluse dalle incognite libere senza vincoli Fix. Numeri della definizione validati con guardia condivisa dal codec, residui e passi non finiti rifiutati e commit atomico; riduzione angolare in gradi in tempo costante anche ai limiti double. Ellisse per estremi: tre equazioni intrinseche e centro derivato per concentricita, quattro punti reali senza vincolo implicito al centro.'),
+  'fk_bspline_isoline': ('kernel', 'Jet NURBS a u fisso per quadrature: contrazione delle basi U una sola volta, coordinate locali per colonna, pesi razionali e istanze esatte; dati immutabili e fallback fuori finestra.'),
+  'kernel/fk_bspline.cpp': ('kernel', 'Curve B-spline/NURBS: basi e derivate, valutazione polinomiale in coordinate locali, inserimento nodi, pezze Bezier e coniche esatte; copie atomiche delle cache e pubblicazione unica del risultato concorrente.'),
+  'kernel/tests/test_bspline_cache.cpp': ('tests', 'Cache NURBS senza OCCT/Qt: copie, assegnazioni e move di curve/superfici, istanze e periodicita, durata dei risultati e riconoscimento cerchi concorrente; stress utilizzabile con ASan/TSan.'),
+@@ -381,7 +383,7 @@
+                        'Estrae curve 3D associative dalla geometria sorgente e dai riferimenti della '
+                        'feature.'),
+  'cad_curve_solver': ('sketch',
+-                      'Costruisce e ricalcola curve esatte dello sketch, comprese immagini affini associative di rami impliciti e derivate per il solver. Riusa le NURBS convertite immutabili per thread con invalidazione copy-on-write e cache limitata.'),
++                      'Costruisce e ricalcola curve esatte dello sketch, comprese immagini affini associative di rami impliciti e derivate per il solver. Riusa le NURBS convertite immutabili per thread con invalidazione copy-on-write e cache limitata. Le ellissi dai quattro estremi conservano una curva analitica con centro derivato.'),
+  'cad_datum': ('features', 'Risoluzione di piani, assi, facce e curve; appoggi nominati degli schizzi risolti per genealogia univoca, senza ripiego silenzioso per indice o prossimita.'),
+  'cad_display_cache': ('render', 'Cache CPU/VBO dei display: riuso nel frame e rilascio delle risorse non usate a fine frame, statistiche di storage referenziato; facce, spigoli e istanze.'),
+  'cad_memory': ('render', 'Stima della memoria disponibile Linux/macOS (limite cgroup v2 su Linux) per il budget di apertura; rilascio best effort delle pagine libere glibc dopo riduzioni delle mesh, senza modificare oggetti vivi o Undo.'),
+@@ -390,7 +392,7 @@
+  'tests/test_mesh_memory.h': ('tests', 'Sonda RAM bassa/massima/bassa su documenti: RSS, arene, storage mesh e cache GL, frame reali e trim solo diagnostico; nessun salvataggio CAD.'),
+  'tests/test_thread_edges.h': ('tests', 'Regressioni bordi dopo filettatura: base rettangolare, cuciture G1, spigoli B-spline, riapertura e invalidazione cache; framebuffer corpo/anteprima e wireframe opzionali.'),
+  'tests/test_display_cache_memory.cpp': ('tests', 'Durata cache CPU/VBO: rilascio nel primo frame sostitutivo o vuoto, riuso senza crescita, risorse condivise e variante nativa OpenGL.'),
+- 'cad_document_io': ('documents', 'Budget interattivo di cache proporzionato alla RAM e alla preferenza utente; Codec nativo69 con identita dei contorni apparenti, nomi sorgenti associative e precisione persistenti; pool di lettura di superfici identiche fra snapshot. Zstandard/legacy, leggi di raggio con zero terminale; cache16 migra selettivamente la genealogia delle ripetizioni di funzione e i derivati delle vecchie copie di lavoro (15: loft guidati); pose e cuciture singolari, check-in immutabili, altre cache portabili, genealogia e definizioni associative preservati. Lettura e scrittura rifiutano atomicamente definizioni di schizzo con numeri non finiti tramite finiteSketchNumbers.'),
++ 'cad_document_io': ('documents', 'Budget interattivo di cache proporzionato alla RAM e alla preferenza utente; Codec nativo70 con ellissi definite da quattro estremi, identita dei contorni apparenti, nomi sorgenti associative e precisione persistenti; pool di lettura di superfici identiche fra snapshot. Zstandard/legacy, leggi di raggio con zero terminale; cache16 migra selettivamente la genealogia delle ripetizioni di funzione e i derivati delle vecchie copie di lavoro (15: loft guidati); pose e cuciture singolari, check-in immutabili, altre cache portabili, genealogia e definizioni associative preservati. Lettura e scrittura rifiutano atomicamente definizioni di schizzo con numeri non finiti tramite finiteSketchNumbers.'),
+  'cad_document_precision': ('documents', 'Dialogo del profilo numerico del documento: accuratezza persistente, ricalcolo esplicito, Undo/Redo, separazione dalla mesh e dalle tolleranze importate.'),
+  'cad_document_read': ('documents', 'Compressione Zstandard con checksum e finestra limitata; decompressione streaming zlib/Zstd con budget/output atomico e decodifica mesh/indici a blocchi con endian e precisione Qt preservati.'),
+  'cad_document_recovery': ('documents',
+@@ -538,7 +540,7 @@
+                       'rigenerazione; riferimenti dei vertici in una scansione degli spigoli.'),
+  'cad_types.h': ('model',
+                  'Tipi applicativi condivisi: sketch, entità, feature, display, riferimenti e stato del '
+-                 'documento.'),
++                 'documento; EllipseExtremes aggiunto in coda ai valori persistenti, quattro estremi referenziabili.'),
+  'cad_workspace': ('documents',
+                    'Individua e inizializza il workspace del documento e le cartelle delle revisioni.'),
+  'cuda_support.cu': ('analysis', 'Backend CUDA double B-spline/NURBS, kernel generico e specializzati, upload sincronizzati e pool con prenotazioni attive 128 MiB/4 richieste, cache 64 MiB e fallback temporaneo sotto pressione.'),
+@@ -550,6 +552,65 @@
+                                    'Compositore dei fondali sfocati dei pannelli, con maschera arrotondata '
+                                    'analitica e antialias per pixel, shader e framebuffer propri.'),
+  'kernel/CMakeLists.txt': ('build', 'Definisce libreria geometrica, test, rilevamento from_chars decimale e arrotondamento coerente senza contrazione FMA implicita nei chiamanti CPU C++/Objective-C++.')})
++
++# Ellisse per estremi: responsabilita dei chiamanti aggiornate.
++DESCRIPTIONS.update({'forgeCad2026_gui.cpp': ('startup',
++                          'PdfWindow: sette fasi di inizializzazione di scena, menu, comandi, opzioni e '
++                          'toolbar, preferenze persistenti per normali al mouse e costruzione degli schizzi '
++                          'fuori modifica; workspace 3D incorporabile con apertura instradata alle schede e '
++                          'chiusura asincrona del recupero; modelli archiviati in sola lettura; storyboard '
++                          'con trascinamento dei creatori di corpi autonomi a uno stadio. Aggiunge Ellisse '
++                          'per estremi a menu e toolbar e ne espone azione e icona alla ribbon.'),
++ 'forgeCad2026_viewport_sketch.cpp': ('viewport',
++                                      'Comandi schizzo, quote, snap e inferenze associative; scarta alla '
++                                      'chiusura solo nuovi schizzi vuoti senza utilizzatori, conserva punti '
++                                      'e costruzione; selezione esterna transitoria senza falso Undo/dirty, '
++                                      'pulizia conservativa delle cache non usate alla '
++                                      'modifica/deselezione/uscita e rimappatura delle selezioni. Ellisse '
++                                      'per estremi: preview e conferma da tre clic condividono la '
++                                      'definizione, quattro punti effettivi per quote, snap e trascinamento '
++                                      'con centro derivato.'),
++ 'forgeCad2026_viewport_interaction.cpp': ('viewport',
++                                           'Eventi Qt di mouse, tastiera, ruota e menu contestuali; proposte '
++                                           'associative soltanto nei comandi attivi, Quota e snap di '
++                                           'disegno; nessuna proposta al passaggio in Selezione; una sola '
++                                           'richiesta snap per movimento di disegno, clic esterno esplicito '
++                                           'separato dalla creazione dei vincoli. Gestisce i tre clic della '
++                                           'nuova ellisse, retry dei casi degeneri e trascinamento di tutti '
++                                           'i quattro estremi.'),
++ 'forgeCad2026_viewport_selection.cpp': ('viewport',
++                                         'Selezione e riferimenti: policy comune della costruzione per '
++                                         'picking, punti, bordi e selezione rettangolare; priorita alla '
++                                         'geometria visibile sulle cache associative nascoste; in creazione '
++                                         'e modifica mantiene visibili risultati precedenti e stadi '
++                                         'esplicitamente selezionati, anche dopo anteprima fallita o Azzera; '
++                                         'Esc ripristina la scena finale. Rende tutti i quattro estremi '
++                                         'della nuova ellisse selezionabili e candidati snap.'),
++ 'forgeCad2026_viewport_render.cpp': ('viewport',
++                                      'Nasconde sempre le cache automatiche e mostra la costruzione '
++                                      'esplicita in modifica oppure tramite opzione Visualizza, con '
++                                      'highlight coerenti; prepara le mesh prima delle passate GL, protegge '
++                                      'il paint rientrante e ripristina il contesto del widget; risultato '
++                                      'completo senza ridisegnare la base disponibile al picker dei bordi; '
++                                      'frame e overlay con normali uscenti dei piani nelle anteprime e, se '
++                                      'abilitate nel menu Visualizza, al passaggio del mouse anche nella '
++                                      'scelta dei riferimenti, gabbia NURBS, poli selezionati e gizmo '
++                                      'colorato globale/locale; visibilita storica in schizzo, anteprime '
++                                      'feature anche nello schizzo con vista sbloccata e prepass di '
++                                      'profondita per trasparenza a singolo strato; sospende la superficie '
++                                      'in anteprima nella scelta delle facce storiche. Mostra assi e quattro '
++                                      'estremi della nuova ellisse durante la costruzione.'),
++ 'cad_icons.cpp': ('startup',
++                   'Icone vettoriali adattate al tema; sezioni normale/a gradini/allineata/locale, '
++                   'riparazione/numerazione quote e annotazioni tecniche distinte. Incluse estensione fino a '
++                   'riferimento, rete di curve e manipolazione dei poli NURBS distinte da loft/spline. Icona '
++                   'distinta per Ellisse per estremi.'),
++ 'cad_sketch_edit.cpp': ('sketch',
++                         'Operazioni di modifica della geometria dello sketch. Taglio e divisione '
++                         'riconoscono anche le ellissi definite dai quattro estremi conservando il supporto '
++                         'analitico.')})
++
++DESCRIPTIONS.update({'cad_drawing_file.cpp': ('drawing', 'Contenitore .drw mono/multifoglio, impronta geometrica indipendente dalla visibilita con compatibilita esatta delle vecchie firme, identita e riferimenti delle copie; preparazione da documento valutato senza costruire feature mancanti; genealogia coerente fra cache e rigenerazione, migrazione dei nomi legacy sullo snapshot verificato con identita di curva e punto; consumo dei derivati di aggregati legacy e compatibilita delle impronte53. Confronta le impronte complete dei formati70/69 anche con precisione personalizzata e visibilita canonica; esclude EllipseExtremes dai confronti con formati non rappresentabili senza riagganci geometrici.')})
+ 
+ TOKEN_DESCRIPTIONS = {
+  'viewport':'Vista e interazione', 'constraint':'Vincoli geometrici', 'solver':'Risoluzione numerica',

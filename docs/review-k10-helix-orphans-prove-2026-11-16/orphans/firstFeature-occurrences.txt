@@ -1,0 +1,2 @@
+forgeCad2026_storyboard.h:94:    static QTreeWidgetItem *firstFeature(QTreeWidgetItem *body);
+forgeCad2026_storyboard.cpp:549:QTreeWidgetItem *StoryboardTree::firstFeature(QTreeWidgetItem *body) {

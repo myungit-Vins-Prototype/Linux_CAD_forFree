@@ -1,0 +1,10 @@
+# All source edits are confined to /tmp/boundary-review/core/kernel.
+# Baseline kernel library and affected sources are in before/ with SHA256.
+/usr/bin/c++ -I/tmp/boundary-review/core/kernel -I/home/myungit/Linux_CAD_forFree/kernel -std=c++17 -Wall -Wextra -Wpedantic -O2 -g -ffp-contract=off -fno-fast-math -c /tmp/boundary-review/core/kernel/fk_blend_section_curve.cpp -o /tmp/boundary-review/core/section.o
+/usr/bin/c++ -I/tmp/boundary-review/core/kernel -I/home/myungit/Linux_CAD_forFree/kernel -std=c++17 -Wall -Wextra -Wpedantic -O2 -g -ffp-contract=off -fno-fast-math -c /tmp/boundary-review/core/kernel/fk_blend_surface.cpp -o /tmp/boundary-review/core/surface.o
+cp /tmp/boundary-review/core/section.o /tmp/boundary-review/core/objects/fk_blend_section_curve.cpp.o
+cp /tmp/boundary-review/core/surface.o /tmp/boundary-review/core/objects/fk_blend_surface.cpp.o
+cp /tmp/boundary-review/core/before/libforgekernel.a /tmp/boundary-review/core/libforgekernel-boundary.a
+ar rcs /tmp/boundary-review/core/libforgekernel-boundary.a /tmp/boundary-review/core/objects/fk_blend_section_curve.cpp.o /tmp/boundary-review/core/objects/fk_blend_surface.cpp.o
+/usr/bin/c++ -I/tmp/boundary-review/core/kernel -I/home/myungit/Linux_CAD_forFree/kernel -I/home/myungit/Linux_CAD_forFree/kernel/tests -DFORGECAD_SOURCE_DIR='"/home/myungit/Linux_CAD_forFree"' -std=c++17 -O2 -ffp-contract=off -fno-fast-math /home/myungit/Linux_CAD_forFree/kernel/tests/test_blend_cavity.cpp /home/myungit/Linux_CAD_forFree/forgecad-release/kernel/CMakeFiles/forgekernel_tests.dir/tests/fk_test_main.cpp.o /tmp/boundary-review/core/libforgekernel-boundary.a -lpthread -o /tmp/boundary-review/core/cavity-tests
+/tmp/boundary-review/core/cavity-tests BlendSectionExtensionKeepsOriginalGeometry

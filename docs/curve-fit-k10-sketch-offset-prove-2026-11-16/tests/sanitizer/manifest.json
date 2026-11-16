@@ -1,0 +1,26 @@
+[
+  {
+    "source": "/tmp/forgecad-k10-sketch-offset-20261116/tests/test_sketch_offset_validation.cpp",
+    "sha256": "7f687da7f9cca5246b20014bb8a463637a4165256e7b00dcf0cf399c4236aea2"
+  },
+  {
+    "source": "/tmp/forgecad-k10-sketch-offset-20261116/implementation/candidate/cad_sketch_offset.cpp",
+    "sha256": "62bc7824975f38656f0bbba2279e9bc1f47ca57380c6b5468d1170eba18ad69f"
+  },
+  {
+    "source": "/tmp/forgecad-k10-sketch-offset-20261116/tests/baseline/cad_curve_solver.cpp",
+    "sha256": "63175f77d133ba55fc3960df701e148e41cbec5c7e3281dd0eeed99ef81a9259"
+  },
+  {
+    "source": "/home/myungit/Linux_CAD_forFree/kernel/fk_curve_fit_bounds.cpp",
+    "sha256": "e2f4d46b0650b4f8e17556cecfe2fb7d11a8d186cf7c04377ed9bbb1224956a0"
+  },
+  {
+    "source": "/home/myungit/Linux_CAD_forFree/kernel/fk_curve_ops.cpp",
+    "sha256": "b898e88ec871c0c08f9c2a27b5deed00512f0376f97a391cf7e5404a10b4cd63"
+  },
+  {
+    "source": "/home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp",
+    "sha256": "7c8a22480b028b1c460e41ef5e9c1c6e49bad1bdba99d6417b3668c3d6560185"
+  }
+]

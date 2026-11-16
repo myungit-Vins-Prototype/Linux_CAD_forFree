@@ -1,0 +1,90 @@
+[
+  {
+    "rational": false,
+    "amplitude": 0.01,
+    "reverse": false,
+    "positive_weight_min": 1.0,
+    "regular_x_derivative_lower": 0.9999999999999999,
+    "curvature_upper": 0.0007156817933139498,
+    "offset_curvature_product_upper": 7.156817933139498e-06,
+    "geometric_error_lower": 5.742472281607346e-07,
+    "output_control_count": 4
+  },
+  {
+    "rational": false,
+    "amplitude": 0.01,
+    "reverse": true,
+    "positive_weight_min": 1.0,
+    "regular_x_derivative_lower": 0.9999999999999999,
+    "curvature_upper": 0.0007156817933139498,
+    "offset_curvature_product_upper": 7.156817933139498e-06,
+    "geometric_error_lower": 5.742475172842813e-07,
+    "output_control_count": 4
+  },
+  {
+    "rational": false,
+    "amplitude": 0.001,
+    "reverse": false,
+    "positive_weight_min": 1.0,
+    "regular_x_derivative_lower": 0.9999999999999999,
+    "curvature_upper": 7.156817933139497e-05,
+    "offset_curvature_product_upper": 7.156817933139497e-07,
+    "geometric_error_lower": 5.7424462607148327e-08,
+    "output_control_count": 4
+  },
+  {
+    "rational": false,
+    "amplitude": 0.001,
+    "reverse": true,
+    "positive_weight_min": 1.0,
+    "regular_x_derivative_lower": 0.9999999999999999,
+    "curvature_upper": 7.156817933139497e-05,
+    "offset_curvature_product_upper": 7.156817933139497e-07,
+    "geometric_error_lower": 5.7424751728329786e-08,
+    "output_control_count": 4
+  },
+  {
+    "rational": true,
+    "amplitude": 0.01,
+    "reverse": false,
+    "positive_weight_min": 1.0,
+    "regular_x_derivative_lower": 0.4444444444444445,
+    "curvature_upper": 0.014085975725738347,
+    "offset_curvature_product_upper": 0.00014085975725738347,
+    "geometric_error_lower": 5.41621919622379e-07,
+    "output_control_count": 4
+  },
+  {
+    "rational": true,
+    "amplitude": 0.01,
+    "reverse": true,
+    "positive_weight_min": 1.0,
+    "regular_x_derivative_lower": 0.4444444444444445,
+    "curvature_upper": 0.014085975725738347,
+    "offset_curvature_product_upper": 0.00014085975725738347,
+    "geometric_error_lower": 5.416216304976894e-07,
+    "output_control_count": 4
+  },
+  {
+    "rational": true,
+    "amplitude": 0.001,
+    "reverse": false,
+    "positive_weight_min": 1.0,
+    "regular_x_derivative_lower": 0.4444444444444445,
+    "curvature_upper": 0.0014085975725738398,
+    "offset_curvature_product_upper": 1.4085975725738399e-05,
+    "geometric_error_lower": 5.416219196209832e-08,
+    "output_control_count": 4
+  },
+  {
+    "rational": true,
+    "amplitude": 0.001,
+    "reverse": true,
+    "positive_weight_min": 1.0,
+    "regular_x_derivative_lower": 0.4444444444444445,
+    "curvature_upper": 0.0014085975725738398,
+    "offset_curvature_product_upper": 1.4085975725738399e-05,
+    "geometric_error_lower": 5.416190284090543e-08,
+    "output_control_count": 4
+  }
+]

@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+set -eu
+cd /home/myungit/Linux_CAD_forFree
+flags=(-std=c++17 -O1 -g1 -ffp-contract=off -fno-fast-math -fsanitize=address,undefined -fno-omit-frame-pointer -I /tmp/k10-sew-review/core -I kernel)
+for unit in fk_exchange fk_offset fk_sew;do
+ c++ "${flags[@]}" -c "/tmp/k10-sew-review/core/$unit.cpp" -o "/tmp/k10-sew-review/tests/sanitizer/$unit.o"
+done
+c++ "${flags[@]}" -DHAVE_PLANE_SEW_PROVIDER /tmp/k10-sew-review/tests/test_sew_pcurve_validation.cpp /tmp/k10-sew-review/tests/sanitizer/fk_exchange.o /tmp/k10-sew-review/tests/sanitizer/fk_offset.o /tmp/k10-sew-review/tests/sanitizer/fk_sew.o /tmp/k10-sew-review/tests/baseline-libforgekernel.a -o /tmp/k10-sew-review/tests/sanitizer/test_sew_pcurve_validation

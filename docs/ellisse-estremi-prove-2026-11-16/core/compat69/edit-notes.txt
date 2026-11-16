@@ -1,0 +1,4 @@
+cad_drawing_file.cpp before SHA256 matches root 2687-file baseline.
+Add exact format69 hash comparison before pre67 precision guard, preserving current visibility fallbacks.
+Canonical all-visible format69 comparison also handles multiple hidden entities.
+No geometric reassociation.

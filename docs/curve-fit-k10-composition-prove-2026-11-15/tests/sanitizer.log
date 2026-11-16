@@ -1,0 +1,6 @@
+[  OK  ] SurfaceCurveFitPolesHiddenSupportPoseScaleAndParameters
+[  OK  ] SurfaceCurveFitSharedHiddenNeighborRejectedAndCoherentAccepted
+[  OK  ] SurfaceCurveFitDirectOracleKnotCrossingsAndUnsupportedUV
+[  OK  ] SurfaceCurveFitInstancedSurfaceAndMaterializedAffine
+[  OK  ] SurfaceCurveFitInvalidInputAndCancellation
+5/5 test superati

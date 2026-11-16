@@ -1,0 +1,7 @@
+[  OK  ] ThickenPlanarFaceSides
+[  OK  ] ThickenCylindricalSheetAlongNormal
+[  OK  ] ThickenAlongDirection
+[  OK  ] ThickenSharpCreaseAlongDirection
+[  OK  ] ThickenTrimmedFaceWithInternalCrease
+[  OK  ] ThickenSmoothBSplineSheet
+6/6 test superati

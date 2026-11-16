@@ -1,0 +1,63 @@
+{
+  "date": "2026-11-16",
+  "scope": "actual Qt appendProjectedCurve wrapped Helix branch; naked/Trimmed-only naked Helix legacy compatibility only",
+  "sources": {
+    "/tmp/k10-sketch-review/core/fk_helix.h": "a5d529885c067a671d09491c037f3e71ab1adb11095b7796ada3d28e9bb904ea",
+    "/tmp/k10-sketch-review/core/fk_helix_projection.h": "159edd57dc4dce09592cc90f5369fb963f95436c8d6b3f1412fb42ade8e902d9",
+    "/tmp/k10-sketch-review/core/fk_helix_projection.cpp": "ffa39b649457abb46ed5641444ecb21772e165a0b45e1f5e87e5a7d89b453e30",
+    "/tmp/k10-sketch-review/core/cad_sketch_refs.cpp": "d13ec3cedff473b9df99a47f2f2d30bf8e5df7aee08033aa7db4ba73c453139e",
+    "/tmp/k10-sketch-review/tests/test_sketch_projection_fit_validation.cpp": "970cff2f74b9aec6475b8e79b03872a23e76d5da6dcd57f606b2e980f78479f9",
+    "/tmp/k10-sketch-review/tests/test_sketch_projection_fit_validation.h": "ee479598579c2fb0a2951cc1564838fb7c4741f76c6c1c91132c4e8d4e1934f4"
+  },
+  "baseline": {
+    "groups": 12,
+    "pass": 9,
+    "fail": 3,
+    "exit": 1,
+    "distinct_negative_geometries": 2,
+    "note": "third failure repeats huge trigger on populated sketch; not a third bug"
+  },
+  "stage": {
+    "groups": 13,
+    "pass": 13,
+    "fail": 0,
+    "exit": 0
+  },
+  "thin_header": {
+    "groups": 13,
+    "pass": 13,
+    "exit": 0,
+    "json_byte_identical_to_stage": 11
+  },
+  "exports": {
+    "per_version": 11,
+    "migrated_accepted": 8,
+    "naked_legacy_accepted": 1,
+    "huge_rejected_stage": 2,
+    "all_double_values": "original IEEE hex strings",
+    "samples_are_certificate": false
+  },
+  "sanitizer": {
+    "modified_instrumented_TUs": [
+      "cad_sketch_refs.cpp",
+      "fk_helix_projection.cpp",
+      "test_sketch_projection_fit_validation.cpp"
+    ],
+    "TU_count": 3,
+    "rest": "real application and kernel baseline Release objects; Qt/dependency libraries uninstrumented",
+    "flags": "-O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -ffp-contract=off",
+    "run": "QT_QPA_PLATFORM=offscreen ASAN_OPTIONS=detect_leaks=1:halt_on_error=1 UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1",
+    "exit": 0,
+    "groups": 13,
+    "diagnostics": 0,
+    "suppressions": false,
+    "initial_sandbox_run": "exit1 LeakSanitizer fatal ptrace; preserved separately; final run outside sandbox exit0"
+  },
+  "atomicity": "serialized persistent document bytes (same identity), existing segment/construction/Fix, preexisting created entry, all unchanged on initial cancellation, midcallback cancellation, callback exception, huge resource rejection, 257-wrapper rejection",
+  "budget": "original linearResolution 1e-7 mm, tight profile 1e-8 mm; never enlarged",
+  "negative_witness_mm": {
+    "YZ": 0.0001,
+    "XZ": 0.0002
+  },
+  "unsupported_other": "sampled generic fallback remains; no claim to certify arbitrary Other or naked legacy quintic"
+}

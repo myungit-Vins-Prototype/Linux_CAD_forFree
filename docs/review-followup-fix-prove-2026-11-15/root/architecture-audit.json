@@ -1,0 +1,123 @@
+{
+  "files": 737,
+  "edges": 10600,
+  "units": 362,
+  "errors": {},
+  "html_matches": true,
+  "incident_edges": 678,
+  "required": [
+    [
+      "kernel/tests/test_offset_validation.cpp",
+      "kernel/fk_offset.cpp",
+      "call"
+    ],
+    [
+      "tests/test_viewport.cpp",
+      "tests/test_function_panels.h",
+      "call"
+    ],
+    [
+      "forgeCad2026_viewport_scene.cpp",
+      "forgeCad2026_viewport_selection.cpp",
+      "call"
+    ],
+    [
+      "kernel/fk_offset.cpp",
+      "kernel/fk_offset.h",
+      "include"
+    ]
+  ],
+  "files_audited": {
+    "kernel/fk_offset.cpp": {
+      "description": "Superfici e bordi a distanza; divisione esatta delle sole pieghe C0, nodi lisci conservati, solve uniforme regolarizzato sui bordi quasi tangenti, intersezioni stabilizzate per bordo con pesi distinti per precisione e arresto sul residuo 3D verificato, budget locali, domini derivati dalle SP-curve esatte senza celle terminali artificiali, sezioni circolari analitiche e vertici di cucitura conservati nei supporti sostitutivi dello sformo, rifilatura e provenienza. Costruzioni analitiche autorizzate dai supporti e da bounds geometrici uniformi, regolarita toroidale sul dominio periodico e raffinamento curve con cancellazione cooperativa; fit generale campionato, limite K10 ancora aperto.",
+      "incoming": {
+        "call": 28,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 34,
+        "include": 19,
+        "reference": 0
+      }
+    },
+    "kernel/fk_offset.h": {
+      "description": "Superfici a distanza costante (offset) e lamine a distanza dalle facce di un corpo.",
+      "incoming": {
+        "call": 3,
+        "include": 29,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 1,
+        "include": 4,
+        "reference": 0
+      }
+    },
+    "kernel/tests/test_offset_validation.cpp": {
+      "description": "Offset: variazioni locali delle spline, domini toroidali completi/rifilati/periodici, costruzioni circolari ruotate e scalate, ripiego per estrusione obliqua e cancellazione prima, durante e alla fine del fit; eseguibile senza Qt o OCCT.",
+      "incoming": {
+        "call": 1,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 16,
+        "include": 7,
+        "reference": 0
+      }
+    },
+    "forgeCad2026_viewport_scene.cpp": {
+      "description": "Coordinate scena/schermo, raggi e bounds: conserva la base interrogabile dal picker dei bordi mentre il renderer mostra solo il risultato completo; costruzione inclusa in modifica o tramite preferenza visiva, policy condivisa con rendering/picking; in scelta riferimenti storici esclude gli operandi futuri ripristinati dalla preview e mantiene visibili le basi selezionabili; zoom al cursore e piani di riferimento. Scena sorgente coerente con il reference picker anche in creazione, con storia futura esclusa, operandi espliciti e curve 3D visibili.",
+      "incoming": {
+        "call": 42,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 14,
+        "include": 1,
+        "reference": 0
+      }
+    },
+    "forgeCad2026_dialogs_mapping.cpp": {
+      "description": "Pannelli riempimento con4icone, sviluppo esatto/appiattimento e deformazione, testi italiani e misure nell esito: selezione delle copie di una ripetizione, centratura e allineamento dal piano sorgente, contorni multifaccia e liste di sorgenti/destinazioni multiple, mappa sorgente associativa senza ricentratura, scelta deformazione/posa rigida, appoggio sulla giunzione comune con ricerca di piccola traslazione valida, evidenze corpi/piano, aggiunta/rimozione continua e confronto delle identita topologiche anche con nomi genealogici condivisi. Cleanup idempotente dei picker collegato a finished per mapping e riempimento pattern. Il passaggio alla mappa collegata termina il picker destinazione divenuto inapplicabile e conserva quello sorgente.",
+      "incoming": {
+        "call": 6,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 31,
+        "include": 15,
+        "reference": 0
+      }
+    },
+    "tests/test_function_panels.h": {
+      "description": "Pannelli: tema e contrasto delle spunte native nei checkbox e negli elenchi, messaggi copiabili e dimensioni; modifica dei tre punti con rollback/storia e verso G1/G2 persistente, compatibilita delle firme tavola60. Regressioni unita dei coefficienti, contrasto messaggi, cleanup picker e runner fra schede, selezione multipla e stati anteprima estrusione/loft/mapping. Regressioni del picker con anteprima pronta, creazione/modifica/rollback, curve 3D e cambio Mapping verso mappa collegata.",
+      "incoming": {
+        "call": 2,
+        "include": 1,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 30,
+        "include": 0,
+        "reference": 0
+      }
+    },
+    "tests/test_viewport.cpp": {
+      "description": "Verifica: Vista e interazione.",
+      "incoming": {
+        "call": 74,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 191,
+        "include": 145,
+        "reference": 0
+      }
+    }
+  }
+}

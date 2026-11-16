@@ -1,0 +1,7 @@
+torus preserveSeams=0 d=3 accepted=1 J=4 issues=0
+torus preserveSeams=0 d=4 rejected=faccia 1: offset: il dominio del toro a distanza si ripiega o diventa singolare
+torus preserveSeams=0 d=5 rejected=faccia 1: offset: il dominio del toro a distanza si ripiega o diventa singolare
+torus preserveSeams=1 d=3 accepted=1 J=4 issues=0
+torus preserveSeams=1 d=4 rejected=faccia 1: offset: il dominio del toro a distanza si ripiega o diventa singolare
+torus preserveSeams=1 d=5 rejected=faccia 1: offset: il dominio del toro a distanza si ripiega o diventa singolare
+bump measured_error=0 baseline_analytic_error=0.000220863052149693 tolerance=1e-07 ratio=0 curvature_radius_lower_bound=0.0208333333333333

@@ -1,0 +1,7 @@
+{
+  "exit": 0,
+  "seconds": 3.5707227860002604,
+  "command": [
+    "forgecad-release/kernel/forgekernel_blend_boundary_validation_tests"
+  ]
+}

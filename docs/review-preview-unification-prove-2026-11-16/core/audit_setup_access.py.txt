@@ -1,0 +1,21 @@
+from pathlib import Path
+import re,json
+root=Path('/tmp/review-previews-refresh/stage');targets={'solids':['patternDialog','extrusionDialog','transformDialog','threadDialog'],'surfaces':['offsetDialog','ruledDialog','boundaryDialog','fillDialog','planarDialog'],'sketch':['datumDialog'],'analysis':['measureDialog']};rows=[]
+for group,names in targets.items():
+ path=root/('forgeCad2026_dialogs_'+group+'.cpp');text=path.read_text();masked=re.sub(r'//[^\n]*|/\*[\s\S]*?\*/|"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'',lambda m:''.join('\n' if c=='\n' else ' ' for c in m.group()),text)
+ for name in names:
+  start=masked.index(('void ' if name=='measureDialog' else 'bool ')+name+'(');a=masked.index('{',start);depth=1;b=a+1
+  while depth:
+   if masked[b]=='{':depth+=1
+   elif masked[b]=='}':depth-=1
+   b+=1
+  end=masked.index('runModeless(window, viewport, dialog,',a,b);fragment=masked[a:end];stack=[]
+  regex=r'\{|\}|viewport->(?:setReferencePickCallback|setPreviewCallback|setReferenceMarks|setParameterDimensions|clearPreview|requestPreview|beginReferencePick|cancelReferencePick|setMeasureOverlay|clearDatumPreview)\s*\(|picker\.install\s*\(|\brefresh\s*\(\s*\)'
+  for m in re.finditer(regex,fragment):
+   if m.group()=='{':stack.append(m.start())
+   elif m.group()=='}':stack.pop()
+   else:
+    in_lambda=any(re.search(r'\[[^\[\]]*\]\s*(?:\([^{};]*\))?\s*(?:mutable\s*)?(?:->[^{};]*)?$',fragment[max(0,brace-220):brace]) for brace in stack)
+    rows.append({'file':path.name,'function':name,'line':text.count('\n',0,a+m.start())+1,'operation':m.group(),'inside_lambda':bool(in_lambda)})
+assert rows and all(r['inside_lambda'] for r in rows),[r for r in rows if not r['inside_lambda']]
+(root/'setup-access-audit.json').write_text(json.dumps(rows,indent=2)+'\n');print('PASS all',len(rows),'pre-run setup/preview/picker operations are deferred lambda bodies across 11 runners')

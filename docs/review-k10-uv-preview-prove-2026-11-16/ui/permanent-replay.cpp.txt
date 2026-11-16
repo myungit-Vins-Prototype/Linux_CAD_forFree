@@ -1,0 +1,22 @@
+#include "forgeCad2026_dialogs.h"
+#include "cad_topology_ref.h"
+#include "fk_topology.h"
+#include "fk_surface.h"
+#include <QApplication>
+#include <QTimer>
+#include <QPlainTextEdit>
+#include <QSettings>
+#include <QTemporaryDir>
+#include <iostream>
+class ViewportInteractionTest {
+public:
+#include "test_preview_selection_state.h"
+};
+int main(int argc,char **argv) {
+    QApplication app(argc,argv);
+    QTemporaryDir temporary;
+    QSettings::setDefaultFormat(QSettings::IniFormat);
+    QSettings::setPath(QSettings::IniFormat,QSettings::UserScope,temporary.path());
+    try {ViewportInteractionTest::previewSelectionMutationReview();return 0;}
+    catch(const std::exception &error) {std::cerr<<error.what()<<std::endl;return 1;}
+}

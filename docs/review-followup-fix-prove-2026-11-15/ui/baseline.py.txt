@@ -1,0 +1,9 @@
+exec(open('/tmp/forgecad-followup-fix-20261115/ui/build.py').read().split('for name in ')[0])
+for name in ['forgeCad2026_viewport_scene.cpp','forgeCad2026_dialogs_mapping.cpp']:
+ cc=next(c for c in ccs if c['file'].endswith('/'+name) and 'forgecad_view_tests.dir' in c['command']);cmd=shlex.split(cc['command']);src=tmp/('baseline_'+name);src.write_text((tmp/(name+'.original')).read_text());out=tmp/('baseline_'+name+'.o');cmd[cmd.index('-o')+1]=str(out);cmd[cmd.index('-c')+1]=str(src);cmd.extend(['-I'+str(root),'-O0']);subprocess.run(cmd,cwd=cc['directory'],check=True)
+for mode in ['scene','mapping']:
+ cmd=shlex.split((root/'forgecad-release/CMakeFiles/forgecad_view_tests.dir/link.txt').read_text());cmd=[x for x in cmd if not x.startswith('-Wl,--dependency-file')];cmd[cmd.index('-o')+1]=str(tmp/('baseline_'+mode));
+ for i,x in enumerate(cmd):
+  for name in ['forgeCad2026_viewport_scene.cpp','forgeCad2026_dialogs_mapping.cpp','tests/test_viewport.cpp']:
+   if x.endswith('/'+name+'.o'):cmd[i]=str(tmp/('baseline_'+pathlib.Path(name).name+'.o')) if mode in name else str(tmp/(pathlib.Path(name).stem+'.o'))
+ subprocess.run(cmd,cwd=root/'forgecad-release',check=True)

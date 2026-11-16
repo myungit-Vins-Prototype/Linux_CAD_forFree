@@ -1,0 +1,43 @@
+K10 MITRE - TEST REVIEW (private work, no repository edits)
+
+Scope and evidence
+- Read AGENTS.md, CLAUDE.md, docs/tolerance-policy.md and architecture descriptions + incoming/outgoing call edges. Snapshot: graph-consult.json.
+- Baseline kernel source snapshots + SHA256/head/library hash: baseline/manifest.json. Frozen baseline library used only for private builds, not included in evidence archive.
+- Final permanent-test proposal: test_blend_mitre_validation.cpp; 13 FK_TEST, separate fk_test_main.cpp; 4-space indentation, no tabs. SHA256 73811bf286bd01217092d662cbc34a98e614bdba453d6dff05ebac8d1e1235ba.
+- Final candidate under test: core/v2, frozen by implementation agent, with both fk_blend_mitre and fk_blend_surface objects compiled against the same new BlendCut header. No mixed ABI return-value testing.
+
+Reproduced preexisting geometric defect
+- The original shortcut observes 65 positions/normals then checks 129 positions on an averaged fit. A narrow real B-spline knot span can escape both grids while the published gap is far smaller than the original affine support composition residual.
+- Direct diagonal U3/V2 reproducer probe.cpp: baseline gap 6.0243662598582149e-12; actual same-UV witness 0.13868557289242744 at f=0.004638671875; kernel numerical point projection returned distance 0.0012206807745941324. Projection output is not a certified global minimum. Original IEEE coefficients + emitted actual curve are in baseline-alias-coefficients.json; Fraction audit is owned by audit agent.
+- Direct isoU narrow-V-knot regression in test_blend_mitre_validation.cpp: baseline reports success with off-support affine fit; candidate rejects. This targets the existing admitted geometric budget, rather than declaring a new continuous-proof requirement to be an old bug.
+- These are synthetic surfaces supplied to the actual internal traceBlendMitre API. They were not obtained by calling public blendEdges on a production CAD model. The isoU negative has multiple V knot spans, whereas the current rolling-blend caller builds a single rational quadratic V span; that public generation route is not reproduced by this negative. The diagonal U3/V2 negative uses the same bidegree as the current caller but remains in the explicitly uncertified compatibility branch.
+
+Baseline comparisons
+- Initial 5-case geometric test: 4/5 pass; hidden iso knot fails (baseline-tests.log).
+- Carrier half-cap case with fitTol 1e-9, over-cap rejection and cancellation already pass baseline. Invalid fitTol rejection (-1/0/inf/NaN) is new input robustness; it is not counted as a separately reproduced geometric bug (baseline-budget.log).
+- Six public cavity regressions already pass baseline, including input immutability and resetting output history on failure/cancellation (public-baseline.log).
+- Valid coincident diagonal S=T: baseline succeeds, V1 initially rejected through singular Newton. Root explicitly chose to preserve the unsupported legacy sampled shortcut; V2 permanent diagonal compatibility test passes with certificateBudget==0. The hidden diagonal defect therefore remains an explicit K10 limit, not a falsely claimed fix.
+
+Final Release results
+- V2 targeted proposal: 13/13 PASS (v2-tests.log).
+- Includes polynomial/rational positives, rigid pose, scale 2.5, exchanged support order, independent fit/carrier budget half-cap, over-cap, invalid fitTol, cancellation, exact coefficient revalidation and curve/UV/range mutations.
+- Production install/require helpers tested on actual Body::buildSheet output with two neighboring planar faces: common edge has forward/backward fins retaining ORIGINAL parameter maps. Seven mutation types are rejected: UV provenance, fin budget, edge budget, range, carrier, endpoint and absent pcurve.
+- Surface-V reflection helper is tested separately; no claim is made of a reflected-carrier Body fixture or codec roundtrip for this synthetic Body.
+- V2 public regressions: 16/16 PASS, using six cavity regressions and ten existing blend_features cases (box/frustum analytic volume comparisons, sweeps, lofts, sheet). Source includes OCCT headers through existing test helpers, but these tests link kernel-only and execute no OCCT comparator.
+- Private V1 branch diagnostic, same public cases: 16/16 PASS, 121 traceBlendMitre calls, all NEWTON and coincident==false; no ISO-certified public path was observed. Thus public tests prove regression preservation, not public emission of certificateBudget>0. Diagnostic source is separate from production.
+
+Coefficient audit exports
+- candidate-positive-coefficients.json: five original-support cases with actual emitted curve and actual cut.pcurveS/T, 17 significant digits, range and cap. V2 SHA256 957bfa94195052b815d3268cc90334cd4e2e8f44806904c1c8693f89a5427fad. Cases: polynomial, rational, rational rigid pose, rational pose/scale2.5, second carrier offset by half-cap.
+- candidate-emitted-sheet-coefficients.json: actual final Body fins 0 and 4, actual edge curve and carrier pointers' ORIGINAL coefficients, edge range/budget and actual fin budgets. Source explicitly identifies syntheticBody_after_production_install_and_buildSheet_not_public_blend. No provider-derived replacement support was exported.
+- Independent Fraction validation is performed by the audit agent; its results are not reimplemented or substituted by these tests.
+
+Sanitizers
+- Instrumented translation units: final core/v2/fk_blend_mitre.cpp and fk_blend_surface.cpp plus test runner/tests, GCC -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -ffp-contract=off. Remaining kernel objects are the frozen Release baseline, not a whole-kernel sanitizer build.
+- V1 instrumentation passed 16/16 assertions but LeakSanitizer aborted under sandbox ptrace: that attempt is NOT a leak-check pass (v1-sanitizer.log).
+- Final V2 process is launched with require_escalated outside sandbox ptrace, ASAN_OPTIONS=detect_leaks=1:halt_on_error=1:abort_on_error=1:strict_string_checks=1 UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1 LSAN_OPTIONS=exitcode=23.
+- Leak detector calibrated in an independent executable outside ptrace: intentional 19-byte leak was detected with exit23 (lsan-calibration.log). This is a tool calibration, not a kernel leak.
+- Final V2 sanitizer completion: 19/19 PASS, exit0, no ASan/UBSan/LSan diagnostic, leak detection enabled outside ptrace (v2-sanitizer.log). Includes final13 targeted tests and six public cavity regressions. Absence of leaks is scoped to this process; it is not a permanent whole-application leak guarantee.
+
+Delivery
+- evidence/ contains only text/source/JSON logs; no executable, .a/.o, original CAD or binary Body fixture is archived.
+- No repository, CMake, documentation, CAD or user process was modified. Parent owns integration, complete app build, documentation and final audit reconciliation.

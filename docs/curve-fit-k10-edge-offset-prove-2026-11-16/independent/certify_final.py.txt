@@ -1,0 +1,175 @@
+#!/usr/bin/env python3
+"""Independent whole-interval rational Bernstein verification of exported final curves.
+All source/output values are exact Fractions of original IEEE inputs. This code
+never imports, calls, or reads a production error oracle or its extracted controls.
+"""
+from fractions import Fraction as F
+from math import comb,isqrt,nextafter,inf
+from pathlib import Path
+import json,time,sys,hashlib
+BASE=Path('/tmp/review-offset-proof')
+def exact(x):return F.from_float(float.fromhex(x))
+def add(a,b,sign=1):
+ n=max(len(a),len(b))-1;a=elevate(a,n);b=elevate(b,n)
+ return [x+sign*y for x,y in zip(a,b)]
+def scale(a,x):return [v*x for v in a]
+def elevate(a,n):
+ a=list(a)
+ while len(a)<=n:
+  d=len(a);a=[a[0]]+[F(i,d)*a[i-1]+F(d-i,d)*a[i] for i in range(1,d)]+[a[-1]]
+ return a
+def mul(a,b):
+ if all(x==0 for x in a) or all(x==0 for x in b):return [F(0)]
+ m,n=len(a)-1,len(b)-1
+ return [sum((a[i]*b[k-i]*F(comb(m,i)*comb(n,k-i),comb(m+n,k)) for i in range(max(0,k-n),min(m,k)+1)),F(0)) for k in range(m+n+1)]
+def derivative(a):return scale([a[i+1]-a[i] for i in range(len(a)-1)],len(a)-1) if len(a)>1 else [F(0)]
+def split(a,t=F(1,2)):
+ l=[a[0]];r=[a[-1]]
+ for k in range(1,len(a)):
+  a=[(1-t)*a[i]+t*a[i+1] for i in range(len(a)-1)];l.append(a[0]);r.append(a[-1])
+ return l,r[::-1]
+def restrict(a,u,v):
+ if u>v:return restrict(a,v,u)[::-1]
+ if u==v:
+  x=a
+  while len(x)>1:x=[(1-u)*x[i]+u*x[i+1] for i in range(len(x)-1)]
+  return [x[0]]*len(a)
+ assert 0<=u<=v<=1,(u,v)
+ if v<1:a=split(a,v)[0]
+ if u>0:a=split(a,u/v)[1]
+ return a
+def dot(a,b):
+ r=[F(0)]
+ for x,y in zip(a,b):r=add(r,mul(x,y))
+ return r
+def cross(a,b):return [add(mul(a[1],b[2]),mul(a[2],b[1]),-1),add(mul(a[2],b[0]),mul(a[0],b[2]),-1),add(mul(a[0],b[1]),mul(a[1],b[0]),-1)]
+def sqrt_hi(q):
+ assert q>=0
+ if q==0:return F(0)
+ bits=128;d=1<<bits;k=isqrt((q.numerator<<(2*bits))//q.denominator)
+ out=F(k+1,d);assert out*out>=q
+ return out
+def norm_upper(v):return sqrt_hi(sum(max(abs(a) for a in c)**2 for c in v))
+def norm_lower2(v):
+ return sum((min(c) if min(c)>0 else max(c) if max(c)<0 else F(0))**2 for c in v)
+def subspan(s,lo,hi):
+ a=(lo-s['lo'])/(s['hi']-s['lo']);b=(hi-s['lo'])/(s['hi']-s['lo'])
+ return {'lo':lo,'hi':hi,'h':[restrict(c,a,b) for c in s['h']],'w':restrict(s['w'],a,b)}
+def trimspans(spans,lo,hi):return [subspan(s,max(lo,s['lo']),min(hi,s['hi'])) for s in spans if s['lo']<hi and s['hi']>lo]
+def source_spans(j,requested):
+ kind=j['kind']
+ if kind=='trim':
+  lo,hi=map(exact,j['range']);return source_spans(j['basis'],(max(lo,requested[0]),min(hi,requested[1])))
+ if kind=='transform':
+  spans=source_spans(j['basis'],requested);M=[[exact(x) for x in row] for row in j['matrix']];t=list(map(exact,j['translation']))
+  for s in spans:
+   h=[]
+   for row,shift in zip(M,t):
+    c=scale(s['w'],shift)
+    for a,v in zip(row,s['h']):c=add(c,scale(v,a))
+    h.append(c)
+   s['h']=h
+  return spans
+ if kind=='line':
+  p=list(map(exact,j['origin']));d=list(map(exact,j['direction']));lo,hi=requested
+  return [{'lo':lo,'hi':hi,'h':[[a+lo*b,a+hi*b] for a,b in zip(p,d)],'w':[F(1),F(1)]}]
+ assert kind=='spline'
+ p=j['degree'];U=list(map(exact,j['knots']));w=list(map(exact,j['weights']));points=[[exact(x)*weight for x in q]+[weight] for q,weight in zip(j['poles'],w)]
+ assert len(U)==len(points)+p+1 and min(w)>0
+ lo=max(requested[0],U[p]);hi=min(requested[1],U[len(points)])
+ assert lo<hi
+ # Exact knot insertion until each internal junction has degree multiplicity.
+ for knot in sorted(set(U[p+1:len(points)])):
+  while U.count(knot)<p:
+   k=max(i for i in range(len(U)-1) if U[i]<=knot and U[i+1]>knot);s=U.count(knot);n=len(points)-1
+   Q=[None]*(n+2)
+   for i in range(k-p+1):Q[i]=points[i]
+   for i in range(k-s+1,n+2):Q[i]=points[i-1]
+   for i in range(k-p+1,k-s+1):
+    a=(knot-U[i])/(U[i+p]-U[i]);Q[i]=[a*x+(1-a)*y for x,y in zip(points[i],points[i-1])]
+   assert all(x is not None for x in Q)
+   points=Q;U=U[:k+1]+[knot]+U[k+1:]
+ spans=[]
+ for k in range(p,len(points)):
+  if U[k]>=U[k+1]:continue
+  cp=points[k-p:k+1];spans.append({'lo':U[k],'hi':U[k+1],'h':[[q[a] for q in cp] for a in range(len(cp[0])-1)],'w':[q[-1] for q in cp]})
+ return trimspans(spans,lo,hi)
+def bound_cell(v,w,normal,normal_residual,d):
+ # w = W_E * W_G^2 >0. Residual polynomial v/w = E-Q+d*n,
+ # n = (G' cross D); normal_residual = |A|^2 - W_G^4.
+ # Exact identity: ||unit(n)-n|| = |1-||n||| <= abs(||n||^2-1).
+ we,wg=w
+ if min(we)<=0 or min(wg)<=0 or norm_lower2(normal)<=0:return None
+ first=norm_upper(v)/(min(we)*min(wg)**2)
+ second=abs(d)*max(abs(x) for x in normal_residual)/min(wg)**4
+ return first+second
+
+def certify_piece(e,g,q,lo,hi,u0,u1,d,max_depth=18):
+ e=subspan(e,lo,hi);q=subspan(q,lo,hi)
+ assert all(w==1 for w in q['w']),'Final output rational weights require generalized residual formula'
+ glength=g['hi']-g['lo'];gw=g['w']
+ tangent=[scale(add(mul(derivative(h),gw),mul(h,derivative(gw)),-1),1/glength) for h in g['h']]
+ a=(u0-g['lo'])/glength;b=(u1-g['lo'])/glength
+ tangent=[restrict(c,a,b) for c in tangent];gw=restrict(gw,a,b)
+ normal=cross(tangent,[[x] for x in DIRECTION]);gw2=mul(gw,gw)
+ j=[add(h,mul(c,e['w']),-1) for h,c in zip(e['h'],q['h'])]
+ residual=[add(mul(c,gw2),scale(mul(e['w'],n),d)) for c,n in zip(j,normal)]
+ normal_residual=add(dot(normal,normal),mul(gw2,gw2),-1)
+ # Subdivide coefficient arrays together, retaining exact controls.
+ stack=[(residual,e['w'],gw,normal,normal_residual,0)];worst=F(0);leaves=0;depthmax=0
+ while stack:
+  r,we,wg,n,nr,depth=stack.pop();value=bound_cell(r,(we,wg),n,nr,d)
+  if value is not None and value<=TOLERANCE:
+   worst=max(worst,value);leaves+=1;depthmax=max(depthmax,depth);continue
+  if depth>=max_depth:raise RuntimeError('independent bound unresolved '+str(float(value))+' depth '+str(depth))
+  arrays=r+[we,wg]+n+[nr];halves=[split(c) for c in arrays]
+  for side in [0,1]:
+   h=[pair[side] for pair in halves];stack.append((h[:3],h[3],h[4],h[5:8],h[8],depth+1))
+ return worst,leaves,depthmax
+
+def verify(path):
+ global DIRECTION,TOLERANCE
+ begin=time.monotonic();j=json.load(open(path));lo,hi=map(exact,j['range']);d=exact(j['distance']);TOLERANCE=exact(j['tolerance']);DIRECTION=list(map(exact,j['direction']))
+ E=source_spans(j['edge'],(lo,hi));Q=source_spans(j['output'],(lo,hi));UV=source_spans(j['pcurve'],(lo,hi))
+ # Generator original domain is preserved by wrappers, never fitted/extracted in C++.
+ def domain(j):
+  if j['kind']=='trim':return tuple(map(exact,j['range']))
+  if j['kind']=='transform':return domain(j['basis'])
+  if j['kind']=='line':return (F(-1000),F(1000))
+  p=j['degree'];u=list(map(exact,j['knots']));return u[p],u[len(j['poles'])]
+ G=source_spans(j['generator'],domain(j['generator']))
+ worst=F(0);pieces=leaves=depth=0;covered=F(0)
+ for q in Q:
+  for e in E:
+   for uv in UV:
+    a=max(q['lo'],e['lo'],uv['lo']);b=min(q['hi'],e['hi'],uv['hi'])
+    if a>=b:continue
+    assert len(uv['h'][0])==2 and all(w==uv['w'][0] for w in uv['w'])
+    ustart=uv['h'][0][0]/uv['w'][0];uend=uv['h'][0][1]/uv['w'][-1]
+    slope=(uend-ustart)/(uv['hi']-uv['lo'])
+    U=lambda t:ustart+slope*(t-uv['lo'])
+    breaks={a,b}
+    if slope:
+     for g in G:
+      for bound in [g['lo'],g['hi']]:
+       t=uv['lo']+(bound-ustart)/slope
+       if a<t<b:breaks.add(t)
+    partition=sorted(breaks)
+    for left,right in zip(partition,partition[1:]):
+     u0,u1=U(left),U(right);gs=[g for g in G if g['lo']<=min(u0,u1) and max(u0,u1)<=g['hi']]
+     assert gs,'map outside generator'
+     for g in gs:
+      value,count,dep=certify_piece(e,g,q,left,right,u0,u1,d)
+      worst=max(worst,value);pieces+=1;leaves+=count;depth=max(depth,dep)
+     covered+=right-left
+ assert covered==hi-lo,(covered,hi-lo)
+ return {'name':j['name'],'status':'PASS','public_post_assembly':j['public_post_assembly'],'source_edge':j['source_edge'],'output_edge':j['output_edge'],'output_control_count':len(j['output']['poles']),'final_bezier_spans':len(Q),'original_partition_pieces':pieces,'certified_cells':leaves,'maximum_bisection_depth':depth,'independent_continuous_upper':nextafter(float(worst),inf),'independent_upper_exact':[str(worst.numerator),str(worst.denominator)],'tolerance':float(TOLERANCE),'seconds':round(time.monotonic()-begin,3),'fixture_sha256':hashlib.sha256(path.read_bytes()).hexdigest()}
+if __name__=='__main__':
+ paths=[Path(x) for x in sys.argv[1:]] if len(sys.argv)>1 else sorted((BASE/'cases').glob('*.json'))
+ results=[]
+ for path in paths:
+  try:r=verify(path)
+  except Exception as e:r={'name':path.stem,'status':'FAIL','error':repr(e)}
+  results.append(r);print(json.dumps(r),flush=True)
+ (BASE/('single-results.json' if len(sys.argv)>1 else 'continuous-results.json')).write_text(json.dumps({'method':'Independent exact Fraction extraction, original E/G/UV/transform inputs, unit-normal residual identity and Bernstein subdivision; no production oracle read/called.','results':results},indent=2)+'\n')
+ sys.exit(any(r['status']!='PASS' for r in results))

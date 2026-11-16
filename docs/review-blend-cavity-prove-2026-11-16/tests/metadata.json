@@ -1,0 +1,62 @@
+{
+  "date": "2026-11-16",
+  "frozen_sources_artifacts": {
+    "/tmp/blend-cavity-review/core/fk_blend_surface.cpp": "dfad2aa7ca0996210a2882a349d518e9746989ea19b132ed8a459dfe53909ca8",
+    "/tmp/blend-cavity-review/core/fk_blend_surface.o": "917db40ef854a86c33d173cfa47dc409f235230f4f549b15c947a032fd02c7e0",
+    "/tmp/blend-cavity-review/tests/probe_cavity_variants.cpp": "93892d9ac863d57e6ca66e25f4cb016f8a5fdb3adf49b7e3dd9df28dc47084fd",
+    "/tmp/blend-cavity-review/tests/test_blend_cavity_regressions.cpp": "626a8f4223d2428555f8d9a26a6d6ff9096bcaef0cc724cb59707cb4fdc89b97",
+    "/tmp/blend-cavity-review/tests/audit_actual_fins.cpp": "9bf9b24e5fca49512ba5fc463718b4fc5f878f9c03ad21771d74f6ec7aa19e37",
+    "/tmp/blend-cavity-review/tests/baseline/libforgekernel.a": "9eccfa56f36268d8d6680cf0b0db292cb827ec2f2ed1af08c111d394bcbc4554",
+    "/tmp/blend-cavity-review/tests/baseline/blend_cavity_loft.body": "8d7d8d50e0bcbfb7e392cb86a17516547f874ee6a355954601f3a473164d39bc"
+  },
+  "baseline": {
+    "original_tests": "7/8 PASS",
+    "probe": "3/8 PASS, five geometrically equivalent small-radius cases FAIL hard",
+    "final_new_tests": "2/6 PASS, four expected-success geometry regressions FAIL hard",
+    "history_assumption": "superseded sentinel-preservation expectation was an invalid test assumption, not a confirmed production bug; final API history output is empty on throw"
+  },
+  "stage": {
+    "original_tests": "8/8 PASS",
+    "original_seconds": 22.09099712600073,
+    "probe": "8/8 PASS",
+    "probe_seconds": 29.50006897899948,
+    "new_tests": "6/6 PASS",
+    "new_tests_seconds": 23.643503884000893,
+    "registered_geometric_budget_widened_by_tests": false,
+    "radius_assertion_mm": 1e-07,
+    "source_immutability": true,
+    "input_geometry_immutable_and_actual_edge_pcurve_same_parameter_checked": true
+  },
+  "actual_audit": {
+    "bodies": 7,
+    "fins": 734,
+    "common_native_intervals": 426917,
+    "sample_evaluations": 2134585,
+    "pcurve_over_original_budget": 0,
+    "endpoints_over_original_budget": 0,
+    "continuous_certificate": false,
+    "budget": "same as original checkBody: max(linearResolution,edgeTol)+finTol for pcurve; max(linearResolution,vertexTol,edgeTol) for endpoints",
+    "existing_approximation": "r0.5 max endpoint gap about0.003393mm, scale2.5 about0.008482mm; registered tolerant construction, not a claim of global1e-7mm accuracy"
+  },
+  "sanitizer": {
+    "scope": "ASan/UBSan/LSan targeted four compiled source TUs; remaining kernel Release; no whole-kernel memory certificate",
+    "ASAN_OPTIONS": "detect_leaks=1:halt_on_error=1",
+    "UBSAN_OPTIONS": "halt_on_error=1:print_stacktrace=1",
+    "LSAN_OPTIONS": null,
+    "runs": {
+      "probe": {
+        "exit": 0,
+        "seconds": 539.2544191069992
+      },
+      "regressions": {
+        "exit": 0,
+        "seconds": 340.35342893300003
+      }
+    }
+  },
+  "scope_note": "four unique instrumented source TUs; probe executable2, regression executable3, remaining kernel Release; targeted executed paths only, no whole-kernel memory certificate",
+  "no_suppressions": true,
+  "repository_written_by_this_agent": false,
+  "source_test_final_sha256": "626a8f4223d2428555f8d9a26a6d6ff9096bcaef0cc724cb59707cb4fdc89b97",
+  "stage_core_final_sha256": "dfad2aa7ca0996210a2882a349d518e9746989ea19b132ed8a459dfe53909ca8"
+}

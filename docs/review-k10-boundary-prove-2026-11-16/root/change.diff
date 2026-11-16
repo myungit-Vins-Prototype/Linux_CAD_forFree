@@ -1,0 +1,1322 @@
+--- before/CLAUDE.md
++++ after/CLAUDE.md
+@@ -108,15 +108,20 @@
+ 
+ ## Ultimi interventi — esiti consolidati
+ 
++**16/11 — K10 continuazioni verificate con tre agenti Sol.**
++Parametro razionale/ISO e fin: app/28CTest/15mirati/sanitizer/Wayland/Fraction PASS.
++Pubbliche3/3 legacy, zero ISO certificate. K10:24/24parziali,31rilievi invariati;
++Newton/unsupported/carrier globale runtime aperti. Commit/push richiesti,
++prima verifica CI GitHub. [Prove/limiti](docs/review-k10-boundary-2026-11-16.md).
++
+ **16/11 — K10 mitre ISO verificate con tre agenti Sol.**
+ App/27CTest/13mirati/19sanitizer/Wayland/Fraction PASS; fin sintetiche reali.
+ Pubbliche16/16 senzaISO; diagonali/Newton campionati. K10:23/24parziali+1aperto.
+ [Prove/limiti](docs/review-k10-mitre-2026-11-16.md).
+ 
+-**16/11 — K10 giunti estensioni verificati con tre agenti Sol.**
+-Via tangente continua/cap fisso e postbuild/unify; Newton trasverso campionato.
+-App/22CTest/29sanitizer/41Sheet/Wayland/Fraction30fin e38supporti PASS.
+-K10:22/24parziali+2aperti,31rilievi invariati. [Prove/limiti](docs/review-k10-sheet-join-2026-11-16.md).
++**16/11 — K10 giunti estensioni, tre agenti Sol.**
++Via tangente continua/cap fisso; app/22CTest/29sanitizer/41Sheet/Wayland/Fraction PASS.
++Newton trasverso aperto. [Prove/limiti](docs/review-k10-sheet-join-2026-11-16.md).
+ 
+ **16/11 — K10 Mapping/Quilt UV, tre agenti Sol.**
+ Plane/offset:app/26CTest/Wayland/21sanitizer/Fraction80fin PASS; altri carrier campionati.
+@@ -151,25 +156,20 @@
+ [memoria](docs/history/claude-prima-k10-uv-preview-2026-11-16.md).
+ 
+ **16/11 — Supporto.prt, K11 corretto con tre agenti Sol.**
+-Corpo2/Estrusione3–Corpo3/Loft6: clipping asimmetrico, tre edge aperti.
+-Catena/genealogia, bound continuo e UV proprie, ricontrollo
+-postassembly/unify, retry transazionale; budget invariati. App,24CTest,38Boolean,
+-424controlli Release,78sanitizer mirati,15retry e65Save/riapri/rebuild/Undo PASS.
+-Coppia nei due ordini e tre corpi uniti; output/Supporto_unito.prt, nuovo UUID.
+-Input prove SHA79887e91; alla ripresa originale diverso(SHA70e4ec5c), preservato,
+-non ricertificato. Mappa765/11045/382,check/HTML/archi,3110/3115file invariati;
+-27rilievi corretti. [Rapporto,prove e limiti](docs/supporto-booleana-2026-11-16.md);
+-[memoria conservata](docs/history/claude-prima-supporto-booleana-2026-11-16.md).
++Corpo2/Estrusione3–Corpo3/Loft6: clipping asimmetrico corretto con genealogia,
++bound continuo e retry atomico; coppia nei due ordini/tre corpi PASS.
++App/24CTest/38Boolean/424Release/78sanitizer/15retry/65storia PASS.
++output/Supporto_unito.prt con nuovo UUID; input prove SHA79887e91,
++originale successivo SHA70e4ec5c preservato, non ricertificato. Mappa PASS.
++[Prove/limiti](docs/supporto-booleana-2026-11-16.md);27rilievi alla consegna storica.
+ 
+ **16/11 — PRE5/PRE6 e UI2 completati con tre agenti Sol.**
+ Undici runner comuni,setup differito/footer/chiusura sincrona;26rilievi corretti.
+ App/24CTest/115asserzioni offscreen/Wayland e mappa762/11023/380 PASS.
+ Fixture scroll iniziale corretto;172artefatti. [Prove/limiti](docs/review-preview-unification-2026-11-16.md).
+ 
+-**16/11 — Ellisse per estremi completata con tre agenti GPT-6.1 Sol.**
+-Tre clic,4estremi quotabili/vincolabili,centro derivato5DOF;drag/snap/Taglia.
+-Codec70 compatibile,app/24CTest/sanitizer4TU/Wayland/GL/mappa PASS.
+-[Uso,prove/limiti](docs/ellisse-estremi-2026-11-16.md);dettagli in memoria precedente.
++Ellisse per estremi: tre clic, quattro quote/vincoli, centro derivato e codec70.
++App/24CTest/sanitizer/Wayland/GL/mappa PASS. [Uso e limiti](docs/ellisse-estremi-2026-11-16.md).
+ 
+ K2 in produzione:app/54kernel/8CTest/22sanitizer PASS; risorsefinite possono rifiutarecurvevalide.
+ [Prove/limiti](docs/sweep-k2-completamento-2026-11-15.md).
+--- before/docs/code-review-2026-11-15.md
++++ after/docs/code-review-2026-11-15.md
+@@ -1,6 +1,8 @@
+ # Review generale ForgeCAD — 15 novembre 2026
+ 
+-**Stato più recente, 16 novembre:** proseguito [K10, mitre ISO](review-k10-mitre-2026-11-16.md) con tre agenti GPT-6.1 Sol. Corretto un falso successo nell’API interna sintetica: residuoZ=1/2 mm esatto contro gap dichiarato≈4,26e-12 mm. ViaISO con fit e residui continui, cap prefissato, mappe originali, fin effettive verificate ed escluse dall’aumento delle tolleranze. App completa,27/27CTest,13/13 mirati,19/19sanitizer,Wayland/tema e Fraction10 mappe+2 fin PASS. Le16 regressioni pubbliche passano ma non esercitanoISO; nessun documento pubblico dichiarato risolto. Diagonali e Newton restano campionati: un testimone negativo diagonale è ancora aperto. **K10 passa a 23/24 siti iniziali parzialmente trattati e uno interamente aperto; totale31 rilievi invariato.** Restano17API pubbliche candidate orfane e colori letterali UI.
++**Stato più recente, 16 novembre:** proseguito [K10, continuazioni dei bordi](review-k10-boundary-2026-11-16.md) con tre agenti GPT-6.1 Sol. Parametro razionale originale preservato e ISO riconosciute dai coefficienti originali verificate su entrambi i supporti; cap prefissato e fin effettive ricontrollate dopo build. App completa,28/28CTest,15/15mirati/sanitizer,Wayland e Fraction6originali/12fin/12carrier PASS. Le3regressioni pubbliche passano sul percorso legacy; zero ISO certificate osservate. **K10:24/24 siti iniziali parzialmente trattati, nessuno rimasto del tutto intatto; totale31rilievi invariato.** Newton, ISO non supportate e preservazione runtime globale dei carrier restano aperti;17API pubbliche candidate orfane e colori letterali UI da valutare. Commit/push richiesti, controllo CI GitHub in corso.
++
++**Stato precedente mitre ISO:** proseguito [K10, mitre ISO](review-k10-mitre-2026-11-16.md) con tre agenti GPT-6.1 Sol. Corretto un falso successo nell’API interna sintetica: residuoZ=1/2 mm esatto contro gap dichiarato≈4,26e-12 mm. ViaISO con fit e residui continui, cap prefissato, mappe originali, fin effettive verificate ed escluse dall’aumento delle tolleranze. App completa,27/27CTest,13/13 mirati,19/19sanitizer,Wayland/tema e Fraction10 mappe+2 fin PASS. Le16 regressioni pubbliche passano ma non esercitanoISO; nessun documento pubblico dichiarato risolto. Diagonali e Newton restano campionati: un testimone negativo diagonale è ancora aperto. **K10 passa a 23/24 siti iniziali parzialmente trattati e uno interamente aperto; totale31 rilievi invariato.** Restano17API pubbliche candidate orfane e colori letterali UI.
+ 
+ **Stato precedente giunti estensioni:** proseguito [K10, giunti delle estensioni](review-k10-sheet-join-2026-11-16.md) con tre agenti GPT-6.1 Sol. La via quasi tangente usa pcurve affini e residui continui su entrambi i supporti, cap fissati prima del fit, verifica delle fin dopo assemblaggio/unificazione e genealogia esplicita. Riprodotti picchi fra campioni e tolleranze ricavate dopo la misura; otto gruppi negativi ora rifiutati. App completa, 22/22 CTest, 29/29 regressioni e sanitizer mirati, 41/41 Sheet, Wayland/tema e audit Fraction30fin/38supporti PASS. **K10 passa a22/24 siti iniziali parzialmente trattati e due interamente aperti; il totale resta31rilievi corretti.** Newton trasversale resta campionato; giunti tangenti non affini possono essere rifiutati conservativamente. Restano17API pubbliche candidate orfane e uniformazione dei colori letterali UI.
+ 
+--- before/docs/review-k10-mitre-2026-11-16.md
++++ after/docs/review-k10-mitre-2026-11-16.md
+@@ -84,4 +84,4 @@
+ 
+ Restano il sito iniziale `extendSplineBoundary`, i fallback parziali di K10,17API pubbliche candidate orfane e l’uniformazione dei colori letterali dell’interfaccia.
+ 
+-App finale SHA256 `5e24ac6fab52d7ed2256af643b86d488dfbd2fafcc61169b2a237bde1742f270`; mitre `a 36cf93ed20bb44c5cc7127ea4b0ce1d35f37c4047b53d5875a330f8eda68104`; surface `0fd41f22575881c8317a2a41696f0645e6f73a1ccecf687adaa84f35dce833c5`; test `73811bf286bd01217092d662cbc34a98e614bdba453d6dff05ebac8d1e1235ba`.
++App finale SHA256 `5e24ac6fab52d7ed2256af643b86d488dfbd2fafcc61169b2a237bde1742f270`; mitre `a36cf93ed20bb44c5cc7127ea4b0ce1d35f37c4047b53d5875a330f8eda68104`; surface `0fd41f22575881c8317a2a41696f0645e6f73a1ccecf687adaa84f35dce833c5`; test `73811bf286bd01217092d662cbc34a98e614bdba453d6dff05ebac8d1e1235ba`.
+--- before/kernel/CMakeLists.txt
++++ after/kernel/CMakeLists.txt
+@@ -219,7 +219,7 @@
+ # I validatori usano intervalli outward: niente riassociazioni o assunzioni
+ # di finitezza implicite, anche se una configurazione esterna abilita fast-math.
+ set_source_files_properties(fk_sweep_surface_validation.cpp fk_sweep_caps.cpp
+-    fk_sweep_analytic_bridge.cpp fk_curve_fit_bounds.cpp fk_helix_projection.cpp fk_project.cpp fk_mapping_carrier.cpp fk_surface_mapping.cpp fk_sheet.cpp fk_blend_mitre.cpp fk_blend_surface.cpp fk_affine_surface_fit.cpp fk_planar_flatten.cpp fk_quilt_mapping.cpp fk_boolean_boundary.cpp PROPERTIES COMPILE_OPTIONS
++    fk_sweep_analytic_bridge.cpp fk_curve_fit_bounds.cpp fk_helix_projection.cpp fk_project.cpp fk_mapping_carrier.cpp fk_surface_mapping.cpp fk_sheet.cpp fk_blend_mitre.cpp fk_blend_surface.cpp fk_blend_section_curve.cpp fk_affine_surface_fit.cpp fk_planar_flatten.cpp fk_quilt_mapping.cpp fk_boolean_boundary.cpp PROPERTIES COMPILE_OPTIONS
+     "$<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang,AppleClang>:-fno-fast-math;-ffp-contract=off>")
+ set_target_properties(forgekernel PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+ 
+@@ -557,6 +557,15 @@
+ add_test(NAME forgekernel_blend_mitre_validation_tests COMMAND forgekernel_blend_mitre_validation_tests)
+ set_tests_properties(forgekernel_blend_mitre_validation_tests PROPERTIES TIMEOUT 180)
+ 
++# Continuazioni dei bordi: parametro razionale, ISO e fin effettive, senza Qt/OCCT.
++add_executable(forgekernel_blend_boundary_validation_tests tests/fk_test_main.cpp tests/test_blend_boundary_validation.cpp)
++target_link_libraries(forgekernel_blend_boundary_validation_tests PRIVATE forgekernel)
++target_compile_options(forgekernel_blend_boundary_validation_tests PRIVATE -Wall -Wextra -Wpedantic)
++set_target_properties(forgekernel_blend_boundary_validation_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
++add_test(NAME forgekernel_blend_boundary_validation_tests COMMAND forgekernel_blend_boundary_validation_tests)
++set_tests_properties(forgekernel_blend_boundary_validation_tests PROPERTIES TIMEOUT 180)
++
++
+ 
+ 
+ # Atlanti NURBS G1 e raccordi oltre le suddivisioni artificiali dei supporti.
+--- before/kernel/fk_blend_section_curve.cpp
++++ after/kernel/fk_blend_section_curve.cpp
+@@ -3,6 +3,13 @@
+ #include "fk_curve_algo.h"
+ #include "fk_sheet.h"
+ #include "fk_precision.h"
++#include "fk_blend_model.h"
++#include "fk_curve_fit_bounds.h"
++#include "fk_nurbs.h"
++#include "fk_offset.h"
++#include "fk_surface_algo.h"
++#include <limits>
++#include <stdexcept>
+ #include <algorithm>
+ #include <cmath>
+ #include <exception>
+@@ -90,4 +97,484 @@
+         return curve;
+     }
+ }
++
++
++namespace {
++// A cubic witness is auxiliary only: neither the original edge nor the
++// emitted curve is replaced. Both oracles own ORIGINAL coefficient snapshots.
++// Their outward sum bounds the actual curve/carrier residual by the triangle
++// inequality, independently of how the witness was sampled for construction.
++double outwardSum(double a, double b) {
++    if (!std::isfinite(a) || !std::isfinite(b) || a < 0.0 || b < 0.0)
++        return std::numeric_limits<double>::infinity();
++    return std::nextafter(a + b, std::numeric_limits<double>::infinity());
++}
++void requireCurveAgreement(const CurvePtr<3> &actual, const CurvePtr<3> &original,
++                           const Interval &range, double budget) {
++    const auto a = curvePositionErrorBound({{actual, range, range, false}});
++    const auto b = curvePositionErrorBound({{original, range, range, false}});
++    if (!a || !b) throw std::domain_error("blendEdges: preservazione del parametro non certificabile");
++    auto breaks = actual->breakpoints(range);
++    const auto extra = original->breakpoints(range);
++    breaks.insert(breaks.end(), extra.begin(), extra.end());
++    fitCurveCertified([&](double t) { return 0.5 * actual->point(t) + 0.5 * original->point(t); }, range, breaks,
++                      budget, [&](const Interval &span, const std::array<Vec3, 4> &poles) {
++                          return outwardSum(a(span, poles), b(span, poles));
++                      });
++}
++void requireBoundaryComposition(const CurvePtr<3> &curve, const SurfacePtr &surface, const CurvePtr<2> &pcurve,
++                                const Interval &range, double budget) {
++    const auto position = curvePositionErrorBound({{curve, range, range, false}});
++    const auto composition = surfaceCompositionErrorBound(surface, pcurve, range);
++    if (!position || !composition.bound)
++        throw std::domain_error("blendEdges: composizione della frontiera ISO non certificabile");
++    auto breaks = curve->breakpoints(range);
++    breaks.insert(breaks.end(), composition.breaks.begin(), composition.breaks.end());
++    fitCurveCertified([&](double t) {
++        const Vec2 uv = pcurve->point(t);
++        return 0.5 * curve->point(t) + 0.5 * surface->point(uv.x(), uv.y());
++    }, range, breaks, budget, [&](const Interval &span, const std::array<Vec3, 4> &poles) {
++        return outwardSum(position(span, poles), composition.bound(span, poles));
++    });
++}
++// Retain the original two poles and their original knot interval. Generated
++// exterior spans get their own anchors; no rounded global slope/intercept is
++// substituted for the original map. Providers later read these actual poles.
++CurvePtr<2> extendedIsoMap(const CurvePtr<2> &input, const Interval &window) {
++    const Curve<2> *basis = input.get();
++    while (basis && basis->type() == CurveType::Trimmed)
++        basis = static_cast<const TrimmedCurve<2> *>(basis)->basis().get();
++    if (!basis) throw std::domain_error("blendEdges: mappa ISO mancante");
++    if (basis->type() == CurveType::Line) {
++        const auto &line = static_cast<const Line<2> &>(*basis);
++        const Vec2 d = line.direction();
++        if ((d.x() == 0.0) == (d.y() == 0.0)) return {};
++        return std::make_shared<Line<2>>(line);
++    }
++    const auto *s = dynamic_cast<const BSplineCurve<2> *>(basis);
++    if (!s || s->degree() != 1 || s->poleCount() != 2 || !s->isClamped() || s->weight(0) != s->weight(1)) return {};
++    const auto &p = s->poles();
++    if ((p[0].x() == p[1].x()) == (p[0].y() == p[1].y())) return {};
++    const Interval anchor = s->domain();
++    std::vector<Vec2> poles;
++    std::vector<double> knots;
++    if (window.lo < anchor.lo) {
++        poles.push_back(s->point(window.lo));
++        knots = {window.lo, window.lo, anchor.lo};
++    } else knots = {anchor.lo, anchor.lo};
++    poles.push_back(p[0]); poles.push_back(p[1]);
++    if (window.hi > anchor.hi) {
++        knots.push_back(anchor.hi);
++        poles.push_back(s->point(window.hi));
++        knots.push_back(window.hi); knots.push_back(window.hi);
++    } else { knots.push_back(anchor.hi); knots.push_back(anchor.hi); }
++    return std::make_shared<BSplineCurve<2>>(1, knots, poles);
++}
++// Homogeneous degree elevation with ONE common scale per Bezier piece.
++// Unlike standardBezierPieces this never applies a Moebius parameter change.
++CurvePtr<3> concatenateBoundary(const std::vector<CurvePtr<3>> &curves,
++                               const std::vector<Interval> &ranges, std::size_t originalPiece) {
++    int degree = 3;
++    for (const auto &curve : curves) {
++        const auto *s = dynamic_cast<const BSplineCurve<3> *>(curve.get());
++        if (!s) throw std::domain_error("blendEdges: frontiera non B-spline");
++        degree = std::max(degree, s->degree());
++    }
++    std::vector<Vec3> poles;
++    std::vector<double> weights, knots;
++    double previousWeight = 1.0;
++    std::size_t visits = 0;
++    for (std::size_t k = 0; k < curves.size(); ++k) {
++        for (const auto &segment : rationalBezierPieces(*curves[k], ranges[k])) {
++            cancellationPoint();
++            if (++visits > 100000 || poles.size() + std::size_t(degree + 1) > 2000000)
++                throw std::domain_error("blendEdges: budget concatenazione frontiera esaurito");
++            std::vector<Vec3> hp;
++            std::vector<double> hw;
++            for (int i = 0; i <= segment.degree(); ++i) {
++                hw.push_back(segment.weight(i));
++                hp.push_back(segment.weight(i) * segment.poles()[std::size_t(i)]);
++            }
++            for (int p = segment.degree(); p < degree; ++p) {
++                std::vector<Vec3> np(std::size_t(p + 2));
++                std::vector<double> nw(std::size_t(p + 2));
++                for (int i = 0; i <= p + 1; ++i) {
++                    const double a = double(i) / double(p + 1);
++                    if (i) { np[std::size_t(i)] += a * hp[std::size_t(i - 1)]; nw[std::size_t(i)] += a * hw[std::size_t(i - 1)]; }
++                    if (i <= p) { np[std::size_t(i)] += (1.0 - a) * hp[std::size_t(i)]; nw[std::size_t(i)] += (1.0 - a) * hw[std::size_t(i)]; }
++                }
++                hp = std::move(np); hw = std::move(nw);
++            }
++            const double factor = poles.empty() ? 1.0 : previousWeight / hw.front();
++            if (!std::isfinite(factor) || !(factor > 0.0))
++                throw std::domain_error("blendEdges: pesi della frontiera non risolti");
++            if (poles.empty()) knots.assign(std::size_t(degree + 1), segment.domain().lo);
++            // Preserve the source endpoint at the head seam. The actual
++            // resulting exterior polynomial is then checked on both carriers.
++            if (!poles.empty() && k == originalPiece && ranges[k].lo == segment.domain().lo)
++                poles.back() = segment.poles().front();
++            for (int i = poles.empty() ? 0 : 1; i <= degree; ++i) {
++                poles.push_back(hp[std::size_t(i)] / hw[std::size_t(i)]);
++                weights.push_back(factor * hw[std::size_t(i)]);
++            }
++            previousWeight = weights.back();
++            knots.insert(knots.end(), std::size_t(degree), segment.domain().hi);
++        }
++    }
++    knots.push_back(ranges.back().hi);
++    return std::make_shared<BSplineCurve<3>>(degree, knots, poles, weights);
++}
++} // namespace
++
++BlendBoundaryGuide blendBoundaryIsoGuide(const CurvePtr<3> &original,
++    const std::array<CurvePtr<2>, 2> &pcurves, const std::array<SurfacePtr, 2> &supports,
++    const Interval &originalRange, const Interval &window, double fitTolerance, double budget) {
++    cancellationPoint();
++    if (!original || !originalRange.isFinite() || !(originalRange.lo < originalRange.hi) || !window.isFinite()
++        || window.lo > originalRange.lo || window.hi < originalRange.hi || !std::isfinite(window.length())
++        || !std::isfinite(fitTolerance) || !(fitTolerance > 0.0) || !std::isfinite(budget) || !(budget > 0.0))
++        throw std::domain_error("blendEdges: contratto della guida ISO non valido");
++    BlendBoundaryGuide guide;
++    for (int side = 0; side < 2; ++side) {
++        if (!pcurves[side]) throw std::domain_error("blendEdges: mappa originale della frontiera assente");
++        const Interval natural = pcurves[side]->domain();
++        if (originalRange.lo < natural.lo || originalRange.hi > natural.hi)
++            throw std::domain_error("blendEdges: parametro della frontiera fuori dalla mappa originale");
++        guide.pcurves[side] = extendedIsoMap(pcurves[side], window);
++        if (!guide.pcurves[side] || !supports[side] || supports[side]->type() != SurfaceType::BSpline) return {};
++    }
++    // Only after all families are recognized may any proof be attempted.
++    // Failures below are terminal for this branch.
++    const auto data = surfaceCompositionErrorBound(supports[0], guide.pcurves[0], window);
++    const auto other = surfaceCompositionErrorBound(supports[1], guide.pcurves[1], window);
++    if (!data.bound || !other.bound) return {};
++    for (int side = 0; side < 2; ++side)
++        requireBoundaryComposition(original, supports[side], guide.pcurves[side], originalRange, budget);
++    auto breaks = data.breaks;
++    breaks.insert(breaks.end(), other.breaks.begin(), other.breaks.end());
++    breaks.push_back(originalRange.lo); breaks.push_back(originalRange.hi);
++    guide.curve = fitCurveCertified([&](double t) {
++        const Vec2 uv = guide.pcurves[0]->point(t);
++        return supports[0]->point(uv.x(), uv.y());
++    }, window, breaks, std::min(fitTolerance, 0.25 * budget), data.bound);
++    for (int side = 0; side < 2; ++side)
++        requireBoundaryComposition(guide.curve, supports[side], guide.pcurves[side], window, budget);
++    guide.budget = budget;
++    return guide;
++}
++
++
++
++namespace {
++template <int N> bool solveLinear(double (&a)[N][N], double (&b)[N]) {
++    for (int col = 0; col < N; ++col) {
++        int pivot = col;
++        for (int row = col + 1; row < N; ++row)
++            if (std::fabs(a[row][col]) > std::fabs(a[pivot][col]))
++                pivot = row;
++        if (!(std::fabs(a[pivot][col]) > 0.0))
++            return false;
++        if (pivot != col) {
++            for (int k = 0; k < N; ++k)
++                std::swap(a[col][k], a[pivot][k]);
++            std::swap(b[col], b[pivot]);
++        }
++        for (int row = col + 1; row < N; ++row) {
++            const double f = a[row][col] / a[col][col];
++            for (int k = col; k < N; ++k)
++                a[row][k] -= f * a[col][k];
++            b[row] -= f * b[col];
++        }
++    }
++    for (int row = N - 1; row >= 0; --row) {
++        double s = b[row];
++        for (int k = row + 1; k < N; ++k)
++            s -= a[row][k] * b[k];
++        b[row] = s / a[row][row];
++    }
++    return true;
++}
++
++}
++
++static CurvePtr<3> sampledBoundaryIsoGuide(const Body &body, EdgeId id, const std::array<SurfacePtr, 2> &supports) {
++    const Edge &edge = body.edge(id);
++    const FinId fins[2] = {edge.forward, edge.backward};
++    for (int side = 0; side < 2; ++side) {
++        if (supports[side]->type() != SurfaceType::BSpline) continue;
++        const auto pc = body.fin(fins[side]).pcurve;
++        const double middle = 0.5 * (edge.range.lo + edge.range.hi);
++        const Vec2 uv = pc->point(middle), d = pc->derivative(middle);
++        const int varying = std::fabs(d.x()) >= std::fabs(d.y()) ? 0 : 1;
++        const int fixed = 1 - varying;
++        const double slope = d[varying], offset = uv[varying] - slope * middle;
++        if (!(std::fabs(slope) > 0.0)) continue;
++        bool affine = true;
++        for (int i = 0; i <= 32; ++i) {
++            const double t = edge.range.lo + edge.range.length() * i / 32.0;
++            const Vec2 p = pc->point(t);
++            if (std::fabs(p[fixed] - uv[fixed]) > 1e-10 || std::fabs(p[varying] - (offset + slope * t)) > 1e-10) affine = false;
++        }
++        if (!affine) continue;
++        const auto iso = varying == 0 ? supports[side]->vIso(uv.y()) : supports[side]->uIso(uv.x());
++        const auto *spline = dynamic_cast<const BSplineCurve<3> *>(iso.get());
++        if (!spline) continue;
++        std::vector<double> knots = spline->knots(), weights = spline->weights();
++        std::vector<Vec3> poles = spline->poles();
++        for (double &k : knots) k = (k - offset) / slope;
++        if (slope < 0.0) {
++            std::reverse(knots.begin(), knots.end());
++            std::reverse(poles.begin(), poles.end());
++            std::reverse(weights.begin(), weights.end());
++        }
++        auto candidate = std::make_shared<BSplineCurve<3>>(spline->degree(), knots, poles, weights);
++        bool agrees = true;
++        for (int i = 0; i <= 32; ++i) {
++            const double t = edge.range.lo + edge.range.length() * i / 32.0;
++            if (distance(candidate->point(t), edge.curve->point(t)) > std::max(2 * scaledAccuracy(1e-9), 2 * edge.tolerance)) agrees = false;
++        }
++        if (agrees) return candidate;
++    }
++    return {};
++}
++
++void extendBlendBoundary(Body &body, BlendModel &model, EdgeId id, const Interval &window, bool tangentSeams, std::vector<BlendBoundaryUse> &certificates) {
++    cancellationPoint();
++    const Edge &edge = body.edge(id);
++    if (!edge.curve || !edge.range.isFinite() || !(edge.range.lo < edge.range.hi)
++        || !window.isFinite() || !std::isfinite(window.length())
++        || window.lo > edge.range.lo || window.hi < edge.range.hi
++        || !std::isfinite(edge.tolerance) || edge.tolerance < 0.0
++        || !edge.forward.valid() || !edge.backward.valid())
++        throw std::domain_error("blendEdges: dati della frontiera da prolungare non validi");
++    const auto validTolerance = [](double value) { return std::isfinite(value) && value >= 0.0; };
++    if (!validTolerance(body.vertex(body.edgeStart(id)).tolerance)
++        || !validTolerance(body.vertex(body.edgeEnd(id)).tolerance)
++        || !validTolerance(body.fin(edge.forward).pcurveTolerance)
++        || !validTolerance(body.fin(edge.backward).pcurveTolerance))
++        throw std::domain_error("blendEdges: budget sorgente della frontiera non valido");
++    // Validate planned provenance before any commit to body or model.
++    (void)model.edges.at(std::size_t(model.edgeIndex.at(id.index)));
++    for (FinId fin : {edge.forward, edge.backward})
++        (void)model.faces.at(std::size_t(model.faceIndex.at(body.finFace(fin).index)));
++    const CurvePtr<3> original = edge.curve;
++    const CurvePtr<3> predictor = detail::blendSectionCurve(original, edge.range);
++    const FinId fins[2] = {edge.forward, edge.backward};
++    std::array<SurfacePtr, 2> supports;
++    std::array<CurvePtr<2>, 2> originalUV;
++    for (int side = 0; side < 2; ++side) {
++        const Face &face = body.face(body.finFace(fins[side]));
++        const auto pc = body.fin(fins[side]).pcurve;
++        if (!pc) throw std::domain_error("blendEdges: SP-curve mancante nel prolungamento del bordo");
++        supports[side] = face.surface;
++        originalUV[side] = pc;
++        if (face.surface->type() != SurfaceType::BSpline) continue;
++        const Interval oldU = face.surface->uDomain(), oldV = face.surface->vDomain();
++        Interval u = oldU, v = oldV;
++        for (int sample = 0; sample <= 32; ++sample) {
++            const double t = window.lo + window.length() * sample / 32.0;
++            const double end = std::clamp(t, edge.range.lo, edge.range.hi);
++            const Vec2 uv = pc->point(end) + (t - end) * pc->derivative(end);
++            u.lo = std::min(u.lo, uv.x()); u.hi = std::max(u.hi, uv.x());
++            v.lo = std::min(v.lo, uv.y()); v.hi = std::max(v.hi, uv.y());
++        }
++        // Existing polynomial carrier extension, with refinement margin.
++        // The continuous certificate below covers the actual edge/fin uses;
++        // it is not a runtime preservation proof on the whole old UV rectangle.
++        if (u.lo < oldU.lo) u.lo -= 0.05 * oldU.length();
++        if (u.hi > oldU.hi) u.hi += 0.05 * oldU.length();
++        if (v.lo < oldV.lo) v.lo -= 0.05 * oldV.length();
++        if (v.hi > oldV.hi) v.hi += 0.05 * oldV.length();
++        if (u.lo != oldU.lo || u.hi != oldU.hi || v.lo != oldV.lo || v.hi != oldV.hi)
++            supports[side] = std::make_shared<BSplineSurface>(
++                extendBSplineSurface(static_cast<const BSplineSurface &>(*face.surface), u, v));
++    }
++    // This physical cap is fixed before constructing any extension. The
++    // recognized branch never increases the source edge tolerance.
++    const double budget = std::max(2 * scaledAccuracy(1e-9), edge.tolerance);
++    const BlendBoundaryGuide certified = tangentSeams ? blendBoundaryIsoGuide(original, originalUV, supports,
++        edge.range, window, scaledAccuracy(1e-9), budget) : BlendBoundaryGuide{};
++    // Unsupported compositions retain the historical sampled branch; a
++    // failed recognized proof has already thrown and cannot arrive here.
++    const CurvePtr<3> isoGuide = certified.curve ? certified.curve
++        : tangentSeams ? sampledBoundaryIsoGuide(body, id, supports) : CurvePtr<3>();
++    double extensionDeviation = 0.0;
++    const auto extension = [&](const Interval &range, bool head) -> CurvePtr<3> {
++        if (certified.curve) return certified.curve;
++        if (isoGuide) {
++            double worst = 0.0;
++            const auto breaks = isoGuide->breakpoints(range);
++            for (std::size_t k = 1; k < breaks.size(); ++k)
++                for (double fraction : {0.0, 0.25, 0.5, 0.75, 1.0}) {
++                    const Vec3 p = isoGuide->point(breaks[k - 1] + fraction * (breaks[k] - breaks[k - 1]));
++                    for (int side = 0; side < 2; ++side) worst = std::max(worst, projectPoint(*supports[side], p).distance);
++                }
++            if (worst > std::max(2 * scaledAccuracy(1e-9), edge.tolerance))
++                throw std::domain_error("blendEdges: il prolungamento della cucitura tangente supera il supporto entro tolleranza");
++            extensionDeviation = std::max(extensionDeviation, worst);
++            return isoGuide;
++        }
++        const double endpoint = head ? edge.range.lo : edge.range.hi;
++        Vec3 jet[2];
++        if (head)
++            predictor->evaluate(endpoint, 1, jet);
++        else
++            predictor->evaluateLeft(endpoint, 1, jet);
++        const Vec3 origin = original->point(endpoint), tangent = normalized(jet[1]), velocity = jet[1];
++        Vec2 uv[2][2];
++        for (int side = 0; side < 2; ++side) {
++            const auto pc = body.fin(fins[side]).pcurve;
++            if (head)
++                pc->evaluate(endpoint, 1, uv[side]);
++            else
++                pc->evaluateLeft(endpoint, 1, uv[side]);
++        }
++        const auto continuation = [&](double t) {
++            const double dt = t - endpoint;
++            const Vec3 anchor = origin + dt * velocity;
++            const Vec2 pa = uv[0][0] + dt * uv[0][1], pb = uv[1][0] + dt * uv[1][1];
++            double x[4] = {pa.x(), pa.y(), pb.x(), pb.y()};
++            for (int iteration = 0; iteration < 30; ++iteration) {
++                cancellationPoint();
++                Vec3 a[4], b[4];
++                supports[0]->evaluate(x[0], x[1], 1, a);
++                supports[1]->evaluate(x[2], x[3], 1, b);
++                const Vec3 f = a[0] - b[0];
++                const double plane = dot(a[0] - anchor, tangent);
++                if (norm(f) < 1e-11 && std::fabs(plane) < 1e-11) return 0.5 * (a[0] + b[0]);
++                const Vec3 c[4] = {a[Surface::derivativeIndex(1, 0, 1)], a[Surface::derivativeIndex(0, 1, 1)],
++                                   -b[Surface::derivativeIndex(1, 0, 1)], -b[Surface::derivativeIndex(0, 1, 1)]};
++                double J[4][4] = {{c[0].x(), c[1].x(), c[2].x(), c[3].x()},
++                                  {c[0].y(), c[1].y(), c[2].y(), c[3].y()},
++                                  {c[0].z(), c[1].z(), c[2].z(), c[3].z()},
++                                  {dot(c[0], tangent), dot(c[1], tangent), 0.0, 0.0}};
++                double r[4] = {-f.x(), -f.y(), -f.z(), -plane};
++                if (!solveLinear<4>(J, r)) break;
++                for (int k = 0; k < 4; ++k) x[k] += r[k];
++            }
++            throw std::domain_error("blendEdges: prolungamento dell'intersezione non convergente");
++        };
++        return fitCurve(continuation, range, {}, scaledAccuracy(1e-9));
++    };
++    std::vector<CurvePtr<3>> curves;
++    std::vector<Interval> ranges;
++    if (window.lo < edge.range.lo) {
++        ranges.push_back({window.lo, edge.range.lo});
++        curves.push_back(extension(ranges.back(), true));
++    }
++    curves.push_back(original);
++    ranges.push_back(edge.range);
++    if (window.hi > edge.range.hi) {
++        ranges.push_back({edge.range.hi, window.hi});
++        curves.push_back(extension(ranges.back(), false));
++    }
++    const std::size_t originalPiece = window.lo < edge.range.lo ? 1 : 0;
++    const auto expanded = concatenateBoundary(curves, ranges, originalPiece);
++    requireCurveAgreement(expanded, original, edge.range, budget);
++    if (certified.curve)
++        for (int side = 0; side < 2; ++side)
++            requireBoundaryComposition(expanded, supports[side], certified.pcurves[side], window, budget);
++    // Prepare provenance storage before mutating either representation.
++    const int modelEdge = model.edgeIndex.at(id.index);
++    auto nextCertificates = certificates;
++    if (certified.curve) {
++        const double vertexBudget = std::max({linearResolution(), edge.tolerance,
++            body.vertex(body.edgeStart(id)).tolerance, body.vertex(body.edgeEnd(id)).tolerance});
++        for (int side = 0; side < 2; ++side) {
++            const int face = model.faceIndex.at(body.finFace(fins[side]).index);
++            nextCertificates.erase(std::remove_if(nextCertificates.begin(), nextCertificates.end(), [&](const BlendBoundaryUse &use) {
++                return use.edge == modelEdge && use.face == face;
++            }), nextCertificates.end());
++            nextCertificates.push_back({modelEdge, face, expanded, supports[side], certified.pcurves[side], window,
++                                       budget, edge.tolerance, vertexBudget});
++        }
++    }
++    // Commit only after construction and all proofs. Old SP-curves are reset
++    // for the sampled branch; recognized plans reinstall their actual UV maps
++    // after moveEnd has determined the final edge range.
++    body.edge(id).curve = expanded;
++    if (!certified.curve) // Legacy sampled compatibility, outside the certificate.
++        body.edge(id).tolerance = std::max(body.edge(id).tolerance, 2 * extensionDeviation);
++    model.edges[std::size_t(modelEdge)].curve = expanded;
++    model.edges[std::size_t(modelEdge)].tolerance = body.edge(id).tolerance;
++    for (int side = 0; side < 2; ++side) {
++        const FaceId face = body.finFace(fins[side]);
++        body.face(face).surface = supports[side];
++        model.faces[std::size_t(model.faceIndex.at(face.index))].surface = supports[side];
++    }
++    certificates.swap(nextCertificates);
++    for (auto &face : model.faces)
++        for (auto &loop : face.loops)
++            for (auto &fin : loop)
++                if (fin.edge == modelEdge) { fin.pcurve.reset(); fin.pcurveTolerance = 0.0; }
++}
++
++
+ } // namespace ForgeCad::Kernel::detail
++
++namespace ForgeCad::Kernel::detail {
++void installBlendBoundaryCertificates(BlendModel &model, std::vector<BlendBoundaryUse> &plans) {
++    // Explicitly consumed edges no longer have an output fin obligation.
++    plans.erase(std::remove_if(plans.begin(), plans.end(), [&](const BlendBoundaryUse &plan) {
++        return !model.edgeAlive.at(std::size_t(plan.edge));
++    }), plans.end());
++    for (auto &plan : plans) {
++        cancellationPoint();
++        const auto &edge = model.edges.at(std::size_t(plan.edge));
++        auto &face = model.faces.at(std::size_t(plan.face));
++        if (edge.curve != plan.curve || edge.tolerance != plan.edgeTolerance
++            || !edge.range.isFinite() || !(edge.range.lo < edge.range.hi)
++            || edge.range.lo < plan.window.lo || edge.range.hi > plan.window.hi)
++            throw std::domain_error("blendEdges: parametro o budget della frontiera pianificata modificato");
++        // A later extension of this same source face may enlarge its carrier.
++        // Its face index is explicit provenance; prove the final carrier anew.
++        requireBoundaryComposition(edge.curve, face.surface, plan.pcurve, edge.range, plan.budget);
++        plan.surface = face.surface;
++        int uses = 0;
++        for (auto &loop : face.loops) for (auto &fin : loop) if (fin.edge == plan.edge) {
++            fin.pcurve = plan.pcurve;
++            fin.pcurveTolerance = plan.budget;
++            ++uses;
++        }
++        if (uses != 1)
++            throw std::domain_error("blendEdges: incidenza della frontiera pianificata persa o ambigua");
++    }
++}
++void requireEmittedBlendBoundaries(const Body &body, const std::vector<BlendBoundaryUse> &plans) {
++    for (const auto &plan : plans) {
++        cancellationPoint();
++        // BlendModel::build preserves face order (the same map used by its
++        // declared face history). Shared carrier pointers are therefore not
++        // ambiguous: this ordinal is construction provenance, never proximity.
++        const auto faces = body.faces();
++        if (plan.face < 0 || std::size_t(plan.face) >= faces.size())
++            throw std::domain_error("blendEdges: faccia della frontiera emessa non presente");
++        const FaceId face = faces[std::size_t(plan.face)];
++        if (body.face(face).surface != plan.surface)
++            throw std::domain_error("blendEdges: supporto della frontiera emessa modificato");
++        int uses = 0;
++        for (LoopId loop : body.face(face).loops)
++            for (FinId id : body.loopFins(loop)) {
++                const Fin &fin = body.fin(id);
++                const Edge &edge = body.edge(fin.edge);
++                if (edge.curve != plan.curve) continue;
++                if (fin.pcurve != plan.pcurve || fin.pcurveTolerance != plan.budget || edge.tolerance != plan.edgeTolerance
++                    || !edge.range.isFinite() || !(edge.range.lo < edge.range.hi)
++                    || edge.range.lo < plan.window.lo || edge.range.hi > plan.window.hi)
++                    throw std::domain_error("blendEdges: contratto della frontiera emessa modificato");
++                requireBoundaryComposition(edge.curve, body.face(face).surface, fin.pcurve, edge.range, plan.budget);
++                for (const auto &end : {std::make_pair(body.edgeStart(fin.edge), edge.range.lo),
++                                       std::make_pair(body.edgeEnd(fin.edge), edge.range.hi)}) {
++                    const Vertex &vertex = body.vertex(end.first);
++                    if (!isFinite(vertex.point) || !std::isfinite(vertex.tolerance) || vertex.tolerance < 0.0
++                        || vertex.tolerance > plan.vertexBudget
++                        || distance(vertex.point, edge.curve->point(end.second)) > plan.vertexBudget)
++                        throw std::domain_error("blendEdges: estremo della frontiera oltre il budget prefissato");
++                }
++                ++uses;
++            }
++        if (uses != 1)
++            throw std::domain_error("blendEdges: genealogia della frontiera emessa persa o ambigua");
++    }
++}
++} // namespace ForgeCad::Kernel::detail
+--- before/kernel/fk_blend_section_curve.h
++++ after/kernel/fk_blend_section_curve.h
+@@ -1,7 +1,36 @@
+ #pragma once
+ #include "fk_curve.h"
++#include "fk_surface.h"
++#include "fk_topology.h"
++#include <array>
+ namespace ForgeCad::Kernel::detail {
+ // Curva di riferimento del piano normale: il B-rep originale resta immutato.
+ // reach e' la distanza fisica massima delle ricerche oltre gli estremi.
+ CurvePtr<3> blendSectionCurve(const CurvePtr<3> &curve, const Interval &range, double reach = 0.0);
++struct BlendModel;
++struct BlendBoundaryGuide {
++    CurvePtr<3> curve;
++    std::array<CurvePtr<2>, 2> pcurves;
++    double budget = 0.0;
++};
++// Empty only for unsupported families. ISO maps are recognized on original
++// coefficients. Recognized invalid/unresolved proofs throw, never downgrade.
++BlendBoundaryGuide blendBoundaryIsoGuide(const CurvePtr<3> &original,
++    const std::array<CurvePtr<2>, 2> &pcurves, const std::array<SurfacePtr, 2> &supports,
++    const Interval &originalRange, const Interval &window, double fitTolerance, double budget);
++struct BlendBoundaryUse {
++    int edge = -1, face = -1;
++    CurvePtr<3> curve;
++    SurfacePtr surface;
++    CurvePtr<2> pcurve;
++    Interval window;
++    double budget = 0.0, edgeTolerance = 0.0, vertexBudget = 0.0;
++};
++// Curves and carriers are committed only after the recognized ISO branch
++// proves both actual carrier compositions and the preserved source parameter.
++// Other families retain the explicitly sampled Newton/legacy continuation.
++void extendBlendBoundary(Body &body, BlendModel &model, EdgeId edge, const Interval &window,
++                         bool tangentSeams, std::vector<BlendBoundaryUse> &certificates);
++void installBlendBoundaryCertificates(BlendModel &model, std::vector<BlendBoundaryUse> &certificates);
++void requireEmittedBlendBoundaries(const Body &body, const std::vector<BlendBoundaryUse> &certificates);
+ } // namespace ForgeCad::Kernel::detail
+--- before/kernel/fk_blend_surface.cpp
++++ after/kernel/fk_blend_surface.cpp
+@@ -1602,194 +1602,17 @@
+     return true;
+ }
+ 
+-// Un estremo concavo puo' richiedere il prolungamento del bordo terminale.
+-// Per una B-spline di intersezione non basta estrapolare l'ultimo polinomio:
+-// il nuovo tratto deve restare su entrambe le superfici. Conserva il tratto
+-// originale e traccia solo la continuazione, in piani normali alla tangente
+-// nel vertice (parametro regolare anche quando il vecchio trim ha rumore).
+-// Una cucitura tangente non e' un'intersezione trasversa: il sistema di
+-// Newton sui due appoggi e' singolare. Se la SP-curve identifica un'iso con
+-// parametro affine, quella curva e' gia' definita esattamente dal supporto.
+-// Si cambia solo il parametro della NURBS; il tratto originale viene
+-// confrontato prima di usare la guida per la continuazione.
+-CurvePtr<3> boundaryIsoGuide(const Body &body, EdgeId id, const SurfacePtr (&supports)[2]) {
+-    const Edge &edge = body.edge(id);
+-    const FinId fins[2] = {edge.forward, edge.backward};
+-    for (int side = 0; side < 2; ++side) {
+-        if (supports[side]->type() != SurfaceType::BSpline) continue;
+-        const auto pc = body.fin(fins[side]).pcurve;
+-        const double middle = 0.5 * (edge.range.lo + edge.range.hi);
+-        const Vec2 uv = pc->point(middle), d = pc->derivative(middle);
+-        const int varying = std::fabs(d.x()) >= std::fabs(d.y()) ? 0 : 1;
+-        const int fixed = 1 - varying;
+-        const double slope = d[varying], offset = uv[varying] - slope * middle;
+-        if (!(std::fabs(slope) > 0.0)) continue;
+-        bool affine = true;
+-        for (int i = 0; i <= 32; ++i) {
+-            const double t = edge.range.lo + edge.range.length() * i / 32.0;
+-            const Vec2 p = pc->point(t);
+-            if (std::fabs(p[fixed] - uv[fixed]) > 1e-10 || std::fabs(p[varying] - (offset + slope * t)) > 1e-10) affine = false;
+-        }
+-        if (!affine) continue;
+-        const auto iso = varying == 0 ? supports[side]->vIso(uv.y()) : supports[side]->uIso(uv.x());
+-        const auto *spline = dynamic_cast<const BSplineCurve<3> *>(iso.get());
+-        if (!spline) continue;
+-        std::vector<double> knots = spline->knots(), weights = spline->weights();
+-        std::vector<Vec3> poles = spline->poles();
+-        for (double &k : knots) k = (k - offset) / slope;
+-        if (slope < 0.0) {
+-            std::reverse(knots.begin(), knots.end());
+-            std::reverse(poles.begin(), poles.end());
+-            std::reverse(weights.begin(), weights.end());
+-        }
+-        auto candidate = std::make_shared<BSplineCurve<3>>(spline->degree(), knots, poles, weights);
+-        bool agrees = true;
+-        for (int i = 0; i <= 32; ++i) {
+-            const double t = edge.range.lo + edge.range.length() * i / 32.0;
+-            if (distance(candidate->point(t), edge.curve->point(t)) > std::max(2 * kFitTolerance(), 2 * edge.tolerance)) agrees = false;
+-        }
+-        if (agrees) return candidate;
+-    }
+-    return {};
+-}
+-
+-void extendSplineBoundary(Body &body, Model &model, EdgeId id, const Interval &window, bool tangentSeams = false) {
+-    const Edge &edge = body.edge(id);
+-    const CurvePtr<3> original = edge.curve;
+-    const CurvePtr<3> predictor = detail::blendSectionCurve(original, edge.range);
+-    const FinId fins[2] = {edge.forward, edge.backward};
+-    SurfacePtr supports[2];
+-    for (int side = 0; side < 2; ++side) {
+-        const Face &face = body.face(body.finFace(fins[side]));
+-        const auto pc = body.fin(fins[side]).pcurve;
+-        if (!pc) throw std::domain_error("blendEdges: SP-curve mancante nel prolungamento del bordo");
+-        supports[side] = face.surface;
+-        if (face.surface->type() != SurfaceType::BSpline) continue;
+-        const Interval oldU = face.surface->uDomain(), oldV = face.surface->vDomain();
+-        Interval u = oldU, v = oldV;
+-        for (int sample = 0; sample <= 32; ++sample) {
+-            const double t = window.lo + window.length() * sample / 32.0;
+-            const double end = std::clamp(t, edge.range.lo, edge.range.hi);
+-            const Vec2 uv = pc->point(end) + (t - end) * pc->derivative(end);
+-            u.lo = std::min(u.lo, uv.x()); u.hi = std::max(u.hi, uv.x());
+-            v.lo = std::min(v.lo, uv.y()); v.hi = std::max(v.hi, uv.y());
+-        }
+-        // Margine per il raffinamento dell'intersezione; le pezze originarie
+-        // restano identiche, si aggiungono soltanto campate all'esterno.
+-        if (u.lo < oldU.lo) u.lo -= 0.05 * oldU.length();
+-        if (u.hi > oldU.hi) u.hi += 0.05 * oldU.length();
+-        if (v.lo < oldV.lo) v.lo -= 0.05 * oldV.length();
+-        if (v.hi > oldV.hi) v.hi += 0.05 * oldV.length();
+-        if (u.lo != oldU.lo || u.hi != oldU.hi || v.lo != oldV.lo || v.hi != oldV.hi)
+-            supports[side] = std::make_shared<BSplineSurface>(
+-                extendBSplineSurface(static_cast<const BSplineSurface &>(*face.surface), u, v));
+-    }
+-    const CurvePtr<3> isoGuide = tangentSeams ? boundaryIsoGuide(body, id, supports) : CurvePtr<3>();
+-    double extensionDeviation = 0.0;
+-    const auto extension = [&](const Interval &range, bool head) -> CurvePtr<3> {
+-        if (isoGuide) {
+-            double worst = 0.0;
+-            const auto breaks = isoGuide->breakpoints(range);
+-            for (std::size_t k = 1; k < breaks.size(); ++k)
+-                for (double fraction : {0.0, 0.25, 0.5, 0.75, 1.0}) {
+-                    const Vec3 p = isoGuide->point(breaks[k - 1] + fraction * (breaks[k] - breaks[k - 1]));
+-                    for (int side = 0; side < 2; ++side) worst = std::max(worst, projectPoint(*supports[side], p).distance);
+-                }
+-            if (worst > std::max(2 * kFitTolerance(), edge.tolerance))
+-                throw std::domain_error("blendEdges: il prolungamento della cucitura tangente supera il supporto entro tolleranza");
+-            extensionDeviation = std::max(extensionDeviation, worst);
+-            return isoGuide;
+-        }
+-        const double endpoint = head ? edge.range.lo : edge.range.hi;
+-        Vec3 jet[2];
+-        if (head)
+-            predictor->evaluate(endpoint, 1, jet);
+-        else
+-            predictor->evaluateLeft(endpoint, 1, jet);
+-        const Vec3 origin = original->point(endpoint), tangent = normalized(jet[1]), velocity = jet[1];
+-        Vec2 uv[2][2];
+-        for (int side = 0; side < 2; ++side) {
+-            const auto pc = body.fin(fins[side]).pcurve;
+-            if (head)
+-                pc->evaluate(endpoint, 1, uv[side]);
+-            else
+-                pc->evaluateLeft(endpoint, 1, uv[side]);
+-        }
+-        const auto continuation = [&](double t) {
+-            const double dt = t - endpoint;
+-            const Vec3 anchor = origin + dt * velocity;
+-            const Vec2 pa = uv[0][0] + dt * uv[0][1], pb = uv[1][0] + dt * uv[1][1];
+-            double x[4] = {pa.x(), pa.y(), pb.x(), pb.y()};
+-            for (int iteration = 0; iteration < 30; ++iteration) {
+-                Vec3 a[4], b[4];
+-                supports[0]->evaluate(x[0], x[1], 1, a);
+-                supports[1]->evaluate(x[2], x[3], 1, b);
+-                const Vec3 f = a[0] - b[0];
+-                const double plane = dot(a[0] - anchor, tangent);
+-                if (norm(f) < 1e-11 && std::fabs(plane) < 1e-11) return 0.5 * (a[0] + b[0]);
+-                const Vec3 c[4] = {a[Surface::derivativeIndex(1, 0, 1)], a[Surface::derivativeIndex(0, 1, 1)],
+-                                   -b[Surface::derivativeIndex(1, 0, 1)], -b[Surface::derivativeIndex(0, 1, 1)]};
+-                double J[4][4] = {{c[0].x(), c[1].x(), c[2].x(), c[3].x()},
+-                                  {c[0].y(), c[1].y(), c[2].y(), c[3].y()},
+-                                  {c[0].z(), c[1].z(), c[2].z(), c[3].z()},
+-                                  {dot(c[0], tangent), dot(c[1], tangent), 0.0, 0.0}};
+-                double r[4] = {-f.x(), -f.y(), -f.z(), -plane};
+-                if (!solveLinear<4>(J, r)) break;
+-                for (int k = 0; k < 4; ++k) x[k] += r[k];
+-            }
+-            throw std::domain_error("blendEdges: prolungamento dell'intersezione non convergente");
+-        };
+-        return fitCurve(continuation, range, {}, kFitTolerance());
+-    };
+-    std::vector<CurvePtr<3>> curves;
+-    std::vector<Interval> ranges;
+-    if (window.lo < edge.range.lo) {
+-        ranges.push_back({window.lo, edge.range.lo});
+-        curves.push_back(extension(ranges.back(), true));
+-    }
+-    curves.push_back(original);
+-    ranges.push_back(edge.range);
+-    if (window.hi > edge.range.hi) {
+-        ranges.push_back({edge.range.hi, window.hi});
+-        curves.push_back(extension(ranges.back(), false));
+-    }
+-    int degree = 3;
+-    for (const auto &curve : curves) degree = std::max(degree, static_cast<const BSplineCurve<3> &>(*curve).degree());
+-    std::vector<BSplineCurve<3>> pieces;
+-    std::vector<double> breaks{window.lo};
+-    for (std::size_t k = 0; k < curves.size(); ++k)
+-        for (const auto &piece : standardBezierPieces(*curves[k], ranges[k], degree)) {
+-            pieces.push_back(piece);
+-            breaks.push_back(piece.domain().hi);
+-        }
+-    const auto expanded = std::make_shared<BSplineCurve<3>>(joinBezierPieces(pieces, breaks));
+-    // Commit solo dopo la costruzione: body e modello devono usare la stessa
+-    // curva e gli stessi appoggi. Le SP-curve vecchie non valgono nel tratto
+-    // aggiunto e vengono ricalcolate sul range finale dopo moveEnd.
+-    body.edge(id).curve = expanded;
+-    body.edge(id).tolerance = std::max(body.edge(id).tolerance, 2 * extensionDeviation);
+-    const int modelEdge = model.edgeIndex.at(id.index);
+-    model.edges[std::size_t(modelEdge)].curve = expanded;
+-    model.edges[std::size_t(modelEdge)].tolerance = body.edge(id).tolerance;
+-    for (int side = 0; side < 2; ++side) {
+-        const FaceId face = body.finFace(fins[side]);
+-        body.face(face).surface = supports[side];
+-        model.faces[std::size_t(model.faceIndex.at(face.index))].surface = supports[side];
+-    }
+-    for (auto &face : model.faces)
+-        for (auto &loop : face.loops)
+-            for (auto &fin : loop)
+-                if (fin.edge == modelEdge) { fin.pcurve.reset(); fin.pcurveTolerance = 0.0; }
+-}
+-
+ // La finestra richiesta e' preventiva (5 volte il raggio), non il tratto
+ // effettivamente usato dalla chiusura. Un polo razionale o la fine del
+ // supporto lontano dal contatto non devono far fallire tutto il raccordo.
+ // Cerca la continuazione valida piu' lunga nella finestra, senza cambiare
+ // appoggi/tolleranze dopo un tentativo fallito. La chiusura finale deve
+ // comunque raggiungere il bordo costruito e superare tutti i controlli.
+-Interval extendBoundaryWindow(Body &body, Model &model, EdgeId id, const Interval &requested) {
++Interval extendBoundaryWindow(Body &body, Model &model, EdgeId id, const Interval &requested,
++                              std::vector<detail::BlendBoundaryUse> &certificates) {
+     const Interval original = body.edge(id).range;
++    const auto beforeCertificates = certificates;
++    auto bestCertificates = certificates;
+     const Body beforeBody = body;
+     const Model beforeModel = model;
+     Body bestBody = body;
+@@ -1799,8 +1622,10 @@
+         const Interval proposed{original.lo + fraction * (requested.lo - original.lo), original.hi + fraction * (requested.hi - original.hi)};
+         Body trial = beforeBody;
+         Model trialModel = beforeModel;
++        auto trialCertificates = beforeCertificates;
+         try {
+-            extendSplineBoundary(trial, trialModel, id, proposed, true);
++            detail::extendBlendBoundary(trial, trialModel, id, proposed, true, trialCertificates);
++            bestCertificates = std::move(trialCertificates);
+             bestBody = std::move(trial);
+             bestModel = std::move(trialModel);
+             best = proposed;
+@@ -1828,6 +1653,7 @@
+                 high = middle;
+         }
+     }
++    certificates = std::move(bestCertificates);
+     body = std::move(bestBody);
+     model = std::move(bestModel);
+     return best;
+@@ -1966,6 +1792,7 @@
+     }
+     Model model(body, history ? &input : nullptr, edgeSources);
+     std::vector<detail::BlendMitreUse> mitreCertificates;
++    std::vector<detail::BlendBoundaryUse> boundaryCertificates;
+     std::set<const Curve<3> *> certifiedMitreCurves;
+     // Modifiche delle facce esistenti: edge tolti, fin nuove (con il verso) e
+     // edge nuovi senza verso; alla fine i loop si ricollegano per i vertici.
+@@ -2817,9 +2644,9 @@
+                     }
+                     if (spline && (window.lo < edge.range.lo || window.hi > edge.range.hi)) {
+                         if (boundaryMode)
+-                            window = extendBoundaryWindow(body, model, id, window);
++                            window = extendBoundaryWindow(body, model, id, window, boundaryCertificates);
+                         else
+-                            extendSplineBoundary(body, model, id, window);
++                            detail::extendBlendBoundary(body, model, id, window, false, boundaryCertificates);
+                     }
+                     return window;
+                 };
+@@ -3895,10 +3722,12 @@
+     }
+     for (auto &[face, edit] : newFaces) relink(face, edit.fixed, edit.free);
+     // Preserve planned UV before automatic projection/refitting.
++    detail::installBlendBoundaryCertificates(model, boundaryCertificates);
+     detail::installBlendMitreCertificates(model.faces, mitreCertificates);
+     BodyHistory declared;
+     Body result = model.build(history ? &declared : nullptr);
+     detail::requireEmittedBlendMitres(result, mitreCertificates);
++    detail::requireEmittedBlendBoundaries(result, boundaryCertificates);
+     if (history) {
+         // I contatti e le chiusure nuovi provengono dalle pezze che li
+         // usano. Dichiarali tramite l'incidenza, senza riassegnazioni per
+@@ -3928,7 +3757,8 @@
+     // limite relativo al raggio impedisce di nascondere costruzioni errate.
+     for (EdgeId edgeId : result.edges()) {
+         Edge &edge = result.edge(edgeId);
+-        if (certifiedMitreCurves.count(edge.curve.get())) continue;
++        if (certifiedMitreCurves.count(edge.curve.get()) || std::any_of(boundaryCertificates.begin(), boundaryCertificates.end(),
++            [&](const detail::BlendBoundaryUse &use) { return use.curve == edge.curve; })) continue;
+         double gap = std::max(distance(result.vertex(result.edgeStart(edgeId)).point, edge.curve->point(edge.range.lo)),
+                               distance(result.vertex(result.edgeEnd(edgeId)).point, edge.curve->point(edge.range.hi)));
+         for (FinId fin : {edge.forward, edge.backward}) {
+@@ -3983,6 +3813,7 @@
+     // computePCurves and all later checks must preserve actual controls,
+     // parameter, UV maps and fixed budgets. This path performs no unify.
+     detail::requireEmittedBlendMitres(result, mitreCertificates);
++    detail::requireEmittedBlendBoundaries(result, boundaryCertificates);
+     if (history) *history = std::move(declared);
+     return result;
+ }
+--- before/tools/generate_architecture.py
++++ after/tools/generate_architecture.py
+@@ -106,12 +106,13 @@
+  'fk_nurbs_join': ('kernel', 'Concatenazione omogenea di carte NURBS G1: certificati sui coefficienti, propagazione del roundoff nei jet grado/campata e invarianza rispetto alla scala UV, scambio U/V e versi, elevazione esatta del grado e concatenazione dei trim polinomiali entro budget Bernstein.'),
+  'kernel/tests/test_nurbs_supports.cpp': ('tests', 'Carte NURBS G1 e trim certificati, raggi intermedi e passaggi tangenti con intersezioni entro il fit, pose/scala/rinumerazione, eliminazione degli angoli artificiali tramite atlante completo e pieghe preservate con scale UV estreme; B-rep, genealogia per incidenza, sezioni circolari, persistenza e mesh.'),
+  'fk_blend_mitre': ('kernel', 'Intersezioni dei raccordi a mitra: via quasi coincidente ISO con fit continuo sui due supporti originali, mappe UV esplicite e cap prefissato; installazione per identita delle fin pianificate e ricontrollo dei coefficienti realmente emessi. Newton e composizioni diagonali non supportate restano campionati; cancellazione e fallimenti del certificato terminali.'),
+- 'fk_blend_section_curve': ('kernel', 'Curva di riferimento numerica delle sezioni: microcampate entro risoluzione e prolungamento polinomiale B-spline esatto sul dominio di ricerca; B-rep sorgente immutato.'),
++ 'fk_blend_section_curve': ('kernel', 'Curve di riferimento delle sezioni e continuazioni dei bordi spline: concatenazione omogenea con parametro originale preservato; ISO riconosciute dai coefficienti originali e verificate continuamente su entrambi i supporti con cap prefissato. Installazione delle mappe per identita e ricontrollo delle fin emesse; famiglie non supportate e Newton restano campionati. Preservazione globale dei carrier estesi non certificata a runtime.'),
+  'kernel/tests/test_blend_transitions.cpp': ('tests', 'Passaggi tangenti su supporti opposti: consumo dei tratti corti, tutti i semi e chiusura ciclica, specchio, scala e pose; raggio esatto, genealogia, codec e triangolazione. Contorni piani chiusi instradati al rifilo locale.'),
+  'kernel/tests/test_blend_cavity.cpp': ('tests', 'Regressione del contorno a otto bordi su loft con piccole creste reali: selezione da ogni bordo, raggio costante, genealogia, persistenza, triangolazione e prolungamento esatto.'),
+  'kernel/tests/test_blend_cavity_regressions.cpp': ('tests', 'Raccordo della cavita a raggio piccolo nei due ordini, con semi diversi, posa rigida e scala: raggio analitico, genealogia, input immutato, persistenza, SP-curve e triangolazione; consumo specifico e cancellazione transazionale.'),
+  'kernel/tests/test_blend_mitre_validation.cpp': ('tests', 'Mitre ISO: picchi NURBS fra campioni, pose/pesi/versi e budget distinti; fin reali Body::buildSheet e mutazioni di carrier, UV, range, budget e incidenza. Diagonale coincidente valida conservata fuori certificazione; cancellazione.'),
+- 'fk_blend_surface': ('kernel', 'Raccordi e smussi a palla rotolante: riordino delle transizioni tangenti su supporti opposti con consumo dei tratti corti e continuazione sulle guide adiacenti in entrambi i versi, raffinamento 3D del contatto sulle cuciture tangenti, copertura del fit e intersezioni locali smorzate entro il dominio delle pezze; consumo topologico di una frontiera terminale corta verso una quarta faccia e pezze d angolo, provenienza di bordi e vertici nuovi dichiarata per incidenza; sezioni normali e guida intrinseca per coperchi piani su fianchi B-spline tangenti, continuazione delle cuciture tangenti e raffinamento dei contatti accoppiati entro la risoluzione sorgente, chiusure terminali tangenti con Newton smorzato e continuazione unilaterale anche per bordi analitici, derivate unilaterali su tutti i nodi e scarto laterale misurato entro la risoluzione sorgente, tentativi atomici, limiti unilaterali a raggio zero con sezione collassata esatta anche a cuspidi di alta valenza, raffinamento presso le punte singolari, pezze intrinseche costanti tra collassi G1 dei ventagli polari e controllo dei contorni; curve terminali con quarto vincolo verificato, rifiuto dei tratti minimi fuori budget e continuazione alternativa lungo U sugli stessi supporti, estremi conservati e lavoro limitato cancellabile. Mitre ISO: delega costruzione e controllo delle fin al modulo dedicato, preserva pcurve e cap prefissati escludendole dall aumento delle tolleranze; altri rami restano campionati.'),
++ 'kernel/tests/test_blend_boundary_validation.cpp': ('tests', 'Continuazioni dei bordi: parametro razionale originale, pose/scale/trim e mappe ISO affini; picco nascosto sul secondo supporto rifiutato atomicamente, cancellazione, budget invalidi, fin reali sul tratto aggiunto e mutazioni dei contratti. Famiglie non supportate esplicitamente campionate.'),
++ 'fk_blend_surface': ('kernel', 'Raccordi e smussi a palla rotolante: riordino delle transizioni tangenti su supporti opposti con consumo dei tratti corti e continuazione sulle guide adiacenti in entrambi i versi, raffinamento 3D del contatto sulle cuciture tangenti, copertura del fit e intersezioni locali smorzate entro il dominio delle pezze; consumo topologico di una frontiera terminale corta verso una quarta faccia e pezze d angolo, provenienza di bordi e vertici nuovi dichiarata per incidenza; sezioni normali e guida intrinseca per coperchi piani su fianchi B-spline tangenti, continuazione delle cuciture tangenti e raffinamento dei contatti accoppiati entro la risoluzione sorgente, chiusure terminali tangenti con Newton smorzato e continuazione unilaterale anche per bordi analitici, derivate unilaterali su tutti i nodi e scarto laterale misurato entro la risoluzione sorgente, tentativi atomici, limiti unilaterali a raggio zero con sezione collassata esatta anche a cuspidi di alta valenza, raffinamento presso le punte singolari, pezze intrinseche costanti tra collassi G1 dei ventagli polari e controllo dei contorni; curve terminali con quarto vincolo verificato, rifiuto dei tratti minimi fuori budget e continuazione alternativa lungo U sugli stessi supporti, estremi conservati e lavoro limitato cancellabile. Mitre ISO: delega costruzione e controllo delle fin al modulo dedicato, preserva pcurve e cap prefissati escludendole dall aumento delle tolleranze; altri rami restano campionati. Continuazioni dei bordi delegate al modulo section_curve con ledger transazionale, mappe pianificate e verifica delle fin finali; budget delle ISO certificate esclusi dagli aumenti.'),
+  'fk_blend': ('kernel', 'Raccordi e smussi analitici: priorita al rifilo locale dei contorni piani chiusi e tangenti, preparazione anticipata degli appoggi NURBS G1 certificati per le facce selezionate, riuso della composizione e genealogia esplicita, ripiego sulle carte originali senza ripetere i tentativi composti; sezioni, utensili su appoggi curvi, catene tangenti, contorni misti, pezze terminali e raggi zero agli estremi aperti.'),
+  'kernel/tests/test_blend_contact_breaks.cpp': ('tests', 'Eventi G1 nei due assi e versi, estremi e nodi del bordo a un ULP; rifiuto di creste reali, raggio R2 e offset interno 1 mm anche con perturbazioni entro risoluzione.'),
+  'kernel/tests/test_blend.cpp': ('tests', 'Regressioni geometriche dei raccordi: volumi analitici indipendenti e confronti OCCT, piastre con contorno misto e 18 fori rettangolari, tangenze, assenza di anelli residui su appoggi sferici singoli, cuciture, supporti consumati, coperchi piani anche ruotati/traslati e catene aperte su cuciture tangenti elicoidali anche con perturbazione della rotazione di 1e-14 rad, con controlli di raggio, topologia e persistenza.'),
+--- /dev/null
++++ after/kernel/tests/test_blend_boundary_validation.cpp
+@@ -0,0 +1,381 @@
++#include "fk_test.h"
++#include "fk_blend.h"
++#include "fk_bspline.h"
++#include "fk_bspline_surface.h"
++#include "fk_blend_model.h"
++#include "fk_body_check.h"
++#include "fk_body_io.h"
++#include "fk_cancel.h"
++#include "fk_pcurve.h"
++#include "fk_precision.h"
++#include "fk_primitives.h"
++#include <cstdlib>
++#include "fk_transform.h"
++#include <fstream>
++#include <iomanip>
++#include <iostream>
++#include <string>
++#include <limits>
++#include "fk_blend_section_curve.h"
++
++using namespace ForgeCad::Kernel;
++namespace {
++void extendForTest(Body &body, detail::BlendModel &model, EdgeId edge, const Interval &window, bool tangent) {
++    std::vector<detail::BlendBoundaryUse> certificates;
++    detail::extendBlendBoundary(body, model, edge, window, tangent, certificates);
++}
++CurvePtr<2> affineUV(Vec2 a, Vec2 b, Interval r = {0, 1}) {
++    return std::make_shared<BSplineCurve<2>>(1, std::vector<double>{r.lo, r.lo, r.hi, r.hi}, std::vector<Vec2>{a, b});
++}
++struct Fixture {
++    Body body;
++    EdgeId seam{0};
++};
++Fixture fixture(bool rational = true, bool posed = false, double scale = 1, bool negative = false, bool trimmed = false) {
++    const Transform3 pose = (posed ? Transform3::translation({7, -4, 2}) * Transform3::rotation({}, Vec3(1, 2, 3), .42) : Transform3())
++        * Transform3::scaling({}, scale);
++    const std::vector<double> uk{0, 0, 0, 1, 1, 1};
++    const Interval trim = trimmed ? Interval{.1, .9} : Interval{0, 1};
++    auto surface = [&](double a, double b) {
++        std::vector<Vec3> p;
++        std::vector<double> w;
++        for (int i = 0; i < 3; ++i) for (double v : {a, b}) {
++            p.push_back(pose.applyToPoint({i / 2.0, v, .2 * (i == 1)}));
++            w.push_back(rational ? (i == 0 ? 1 : i == 1 ? .8 : 4) : 1);
++        }
++        return std::make_shared<BSplineSurface>(2, 1, uk, std::vector<double>{a, a, b, b}, 3, 2, p, w);
++    };
++    const auto a = surface(-1, 0), b = surface(0, 1);
++    auto seam = std::make_shared<BSplineCurve<3>>(a->vIsoCurve(0));
++    if (negative) {
++        auto p = seam->poles(); auto w = seam->weights();
++        std::reverse(p.begin(), p.end()); std::reverse(w.begin(), w.end());
++        seam = std::make_shared<BSplineCurve<3>>(2, uk, p, w);
++    }
++    const double u0 = negative ? 1 - trim.lo : trim.lo, u1 = negative ? 1 - trim.hi : trim.hi;
++    const std::vector<Vec3> points{seam->point(trim.lo), seam->point(trim.hi), a->point(u1, -1), a->point(u0, -1), b->point(u0, 1), b->point(u1, 1)};
++    std::vector<Body::BuildEdge> edges{{0, 1, seam, trim, 3e-9}};
++    std::vector<CurvePtr<2>> maps{affineUV({u0, 0}, {u1, 0}, trim)};
++    auto add = [&](int x, int y, Vec2 uv0, Vec2 uv1, const std::shared_ptr<BSplineSurface> &s) {
++        CurvePtr<3> curve;
++        Interval range{0, 1};
++        if (uv0.x() == uv1.x()) curve = std::make_shared<BSplineCurve<3>>(1, std::vector<double>{0, 0, 1, 1}, std::vector<Vec3>{points[x], points[y]});
++        else {
++            auto original = s->vIsoCurve(uv0.y());
++            auto p = original.poles(); auto w = original.weights();
++            if (uv1.x() < uv0.x()) { std::reverse(p.begin(), p.end()); std::reverse(w.begin(), w.end()); }
++            curve = std::make_shared<BSplineCurve<3>>(2, uk, p, w);
++            range = trim;
++        }
++        edges.push_back({x, y, curve, range, 0});
++        maps.push_back(affineUV(uv0, uv1, range));
++    };
++    add(1, 2, {u1, 0}, {u1, -1}, a);
++    add(2, 3, {u1, -1}, {u0, -1}, a);
++    add(3, 0, {u0, -1}, {u0, 0}, a);
++    add(0, 4, {u0, 0}, {u0, 1}, b);
++    add(4, 5, {u0, 1}, {u1, 1}, b);
++    add(5, 1, {u1, 1}, {u1, 0}, b);
++    Body::BuildFace fa{a, true, {{{0, true, maps[0], 0}, {1, true, maps[1], 0}, {2, true, maps[2], 0}, {3, true, maps[3], 0}}}};
++    Body::BuildFace fb{b, true, {{{0, false, maps[0], 0}, {4, true, maps[4], 0}, {5, true, maps[5], 0}, {6, true, maps[6], 0}}}};
++    return {Body::buildSheet(points, edges, {fa, fb})};
++}
++std::string modelBytes(const detail::BlendModel &m) {
++    return writeBodyBinary(m.build());
++}
++template<int N> void exportCurve(std::ostream &out, const CurvePtr<N> &curve) {
++    const auto *s = dynamic_cast<const BSplineCurve<N> *>(curve.get());
++    if (!s) throw std::runtime_error("export richiede BSpline");
++    out << "{\"degree\":" << s->degree() << ",\"knots\":[";
++    bool first = true; for (double k : s->knots()) { if (!first) out << ','; first = false; out << k; }
++    out << "],\"poles\":[";
++    first = true; for (const auto &p : s->poles()) { if (!first) out << ','; first = false; out << '['; for (int i = 0; i < N; ++i) { if (i) out << ','; out << p[i]; } out << ']'; }
++    out << "],\"weights\":[";
++    for (int i = 0; i < s->poleCount(); ++i) { if (i) out << ','; out << s->weight(i); }
++    out << "]}";
++}
++void exportSurface(std::ostream &out, const SurfacePtr &surface) {
++    const auto &s = dynamic_cast<const BSplineSurface &>(*surface);
++    out << "{\"uDegree\":" << s.uDegree() << ",\"vDegree\":" << s.vDegree() << ",\"uCount\":" << s.uPoleCount() << ",\"vCount\":" << s.vPoleCount();
++    for (int axis = 0; axis < 2; ++axis) { out << (axis ? ",\"vKnots\":[" : ",\"uKnots\":["); bool first = true; for (double k : axis ? s.vKnots() : s.uKnots()) { if (!first) out << ','; first = false; out << k; } out << ']'; }
++    out << ",\"poles\":[";
++    for (int i = 0; i < s.uPoleCount(); ++i) for (int j = 0; j < s.vPoleCount(); ++j) { if (i || j) out << ','; const auto p = s.pole(i, j); out << '[' << p.x() << ',' << p.y() << ',' << p.z() << ']'; }
++    out << "],\"weights\":[";
++    for (int i = 0; i < s.uPoleCount(); ++i) for (int j = 0; j < s.vPoleCount(); ++j) { if (i || j) out << ','; out << s.weight(i, j); }
++    out << "]}";
++}
++void exportCase(const std::string &name, const Body &before, const Body &after) {
++    const char *dir = std::getenv("BOUNDARY_EXPORT_DIR"); if (!dir) return;
++    std::ofstream out(std::string(dir) + "/" + name + ".json");
++    out << std::setprecision(17) << "{\"scope\":\"synthetic-production-helper\",\"originalRange\":[" << before.edge(EdgeId(0)).range.lo << ',' << before.edge(EdgeId(0)).range.hi << "],\"finalRange\":[" << after.edge(EdgeId(0)).range.lo << ',' << after.edge(EdgeId(0)).range.hi << "],\"budget\":" << after.fin(after.edge(EdgeId(0)).forward).pcurveTolerance << ",\"originalEdgeTolerance\":" << before.edge(EdgeId(0)).tolerance << ",\"edgeTolerance\":" << after.edge(EdgeId(0)).tolerance << ",\"edgeOriginal\":";
++    exportCurve(out, before.edge(EdgeId(0)).curve); out << ",\"edgeFinal\":"; exportCurve(out, after.edge(EdgeId(0)).curve);
++    out << ",\"finUses\":[";
++    for (int i = 0; i < 2; ++i) {
++        if (i) out << ',';
++        const FinId fin = i ? after.edge(EdgeId(0)).backward : after.edge(EdgeId(0)).forward;
++        out << "{\"sense\":" << (after.fin(fin).sense ? "true" : "false") << ",\"pcurveTolerance\":" << after.fin(fin).pcurveTolerance << ",\"surfaceOriginal\":"; exportSurface(out, before.face(before.finFace(fin)).surface);
++        out << ",\"surfaceFinal\":"; exportSurface(out, after.face(after.finFace(fin)).surface);
++        out << ",\"pcurve\":"; exportCurve(out, after.fin(fin).pcurve); out << '}';
++    }
++    out << "]}";
++}
++void preserveOriginal(bool rational, bool posed, double scale, bool negative, bool trimmed, const std::string &name) {
++    auto f = fixture(rational, posed, scale, negative, trimmed);
++    const Body original = f.body;
++    const auto bytes = writeBodyBinary(original);
++    FK_CHECK(checkBody(original, {true, true}).empty());
++    detail::BlendModel model(f.body, &original);
++    const Interval window{original.edge(f.seam).range.lo - .05, original.edge(f.seam).range.hi + .05};
++    std::vector<detail::BlendBoundaryUse> certificates;
++    detail::extendBlendBoundary(f.body, model, f.seam, window, true, certificates);
++    FK_CHECK(certificates.size() == 2);
++    FK_CHECK(f.body.edge(f.seam).curve == model.edges[0].curve);
++    double worst = 0;
++    for (int i = 0; i <= 1024; ++i) {
++        const double t = original.edge(f.seam).range.lo + original.edge(f.seam).range.length() * i / 1024.;
++        worst = std::max(worst, distance(original.edge(f.seam).curve->point(t), f.body.edge(f.seam).curve->point(t)));
++    }
++    std::cout << "original_parametric_deviation " << name << ' ' << std::setprecision(17) << worst << '\n';
++    FK_CHECK(worst <= linearResolution());
++    FK_CHECK_NEAR(f.body.edge(f.seam).tolerance, original.edge(f.seam).tolerance, 0);
++    FK_CHECK(writeBodyBinary(original) == bytes);
++    detail::installBlendBoundaryCertificates(model, certificates);
++    BodyHistory history;
++    Body emitted = model.build(&history);
++    computePCurves(emitted);
++    detail::requireEmittedBlendBoundaries(emitted, certificates);
++    FK_CHECK(checkBody(emitted, {true, true}).empty());
++    for (EdgeId e : emitted.edges()) FK_CHECK(history.isDeclared(EntityKind::Edge, e.index));
++    for (FaceId face : emitted.faces()) FK_CHECK(history.isDeclared(EntityKind::Face, face.index));
++    for (VertexId vertex : emitted.vertices()) FK_CHECK(history.isDeclared(EntityKind::Vertex, vertex.index));
++    for (FinId fin : {emitted.edge(f.seam).forward, emitted.edge(f.seam).backward}) {
++        FK_CHECK(emitted.fin(fin).pcurveTolerance == certificates.front().budget);
++        for (double t : {emitted.edge(f.seam).range.lo, .5, emitted.edge(f.seam).range.hi}) {
++            const Vec2 uv = emitted.fin(fin).pcurve->point(t);
++            FK_CHECK(distance(emitted.edge(f.seam).curve->point(t), emitted.face(emitted.finFace(fin)).surface->point(uv.x(), uv.y())) <= certificates.front().budget);
++        }
++    }
++    exportCase(name, original, emitted);
++}
++}
++FK_TEST(BoundaryOriginalPolynomialPositive) { preserveOriginal(false, false, 1, false, false, "polynomial"); }
++FK_TEST(BoundaryOriginalRationalParameter) { preserveOriginal(true, false, 1, false, false, "rational"); }
++FK_TEST(BoundaryOriginalRationalPoseScale) { preserveOriginal(true, true, 2.5, false, false, "rational-pose-scale"); }
++FK_TEST(BoundaryOriginalRationalReverse) { preserveOriginal(true, false, 1, true, false, "rational-negative-uv"); }
++FK_TEST(BoundaryOriginalRationalTrim) { preserveOriginal(true, false, 1, false, true, "rational-trim"); }
++FK_TEST(BoundaryFailureBodyAndModelAtomicity) {
++    auto f = fixture(); detail::BlendModel model(f.body, &f.body);
++    f.body.fin(f.body.edge(f.seam).backward).pcurve.reset();
++    const auto bodyBefore = writeBodyBinary(f.body), modelBefore = modelBytes(model);
++    FK_CHECK_THROWS(extendForTest(f.body, model, f.seam, {-.05, 1.05}, true));
++    FK_CHECK(writeBodyBinary(f.body) == bodyBefore);
++    FK_CHECK(modelBytes(model) == modelBefore);
++}
++FK_TEST(BoundaryCancellationBodyAndModelAtomicity) {
++    auto f = fixture(); detail::BlendModel model(f.body, &f.body);
++    const auto bodyBefore = writeBodyBinary(f.body), modelBefore = modelBytes(model);
++    bool cancelled = false;
++    {
++        CancellationScope scope(std::make_shared<std::atomic<bool>>(true));
++        try { extendForTest(f.body, model, f.seam, {-.05, 1.05}, true); }
++        catch (const OperationCancelled &) { cancelled = true; }
++    }
++    FK_CHECK(cancelled);
++    FK_CHECK(writeBodyBinary(f.body) == bodyBefore);
++    FK_CHECK(modelBytes(model) == modelBefore);
++}
++FK_TEST(BoundaryIsoHiddenPcurveAndCurveSpan) {
++    auto f = fixture(false);
++    const double a = 1. / 512, b = 2. / 512, c = 3. / 512;
++    const std::vector<double> k{0, 0, a, b, c, 1, 1};
++    const std::vector<Vec2> uv{{0, 0}, {a, 0}, {b, .01}, {c, 0}, {1, 0}};
++    // Synthetic valid edge/SP-curve pair in a planar chart; its small knot span
++    // lies entirely between the old recognizer's 33 sample positions.
++    auto surface = std::make_shared<BSplineSurface>(1, 1, std::vector<double>{0, 0, 1, 1}, std::vector<double>{-1, -1, 1, 1}, 2, 2, std::vector<Vec3>{{0,-1,0},{0,1,0},{1,-1,0},{1,1,0}});
++    std::vector<Vec3> p; for (const auto &v : uv) p.push_back({v.x(), v.y(), 0});
++    f.body.edge(f.seam).curve = std::make_shared<BSplineCurve<3>>(1, k, p);
++    const auto pc = std::make_shared<BSplineCurve<2>>(1, k, uv);
++    for (FinId fin : {f.body.edge(f.seam).forward, f.body.edge(f.seam).backward}) {
++        f.body.fin(fin).pcurve = pc; f.body.face(f.body.finFace(fin)).surface = surface;
++    }
++    const std::array<SurfacePtr, 2> supports{surface, surface};
++    const std::array<CurvePtr<2>, 2> maps{pc, pc};
++    const auto guide = detail::blendBoundaryIsoGuide(f.body.edge(f.seam).curve, maps, supports, {0,1}, {0,1.1}, 1e-9, 3e-9);
++    FK_CHECK(!guide.curve && guide.budget == 0);
++    detail::BlendModel model(f.body);
++    std::vector<detail::BlendBoundaryUse> certificates;
++    detail::extendBlendBoundary(f.body, model, f.seam, {0,1.1}, true, certificates);
++    FK_CHECK(certificates.empty()); // This unsupported family retains sampled compatibility.
++
++}
++
++FK_TEST(BoundaryIsoHiddenSupportExtensionRejectsAtomically) {
++    auto f = fixture(false);
++    const std::vector<double> u{0, 9. / 8, 19. / 16, 5. / 4, 2};
++    auto surface = [&](bool bump) {
++        if (!bump) return std::make_shared<BSplineSurface>(1, 1, std::vector<double>{0,0,2,2}, std::vector<double>{-1,-1,1,1}, 2, 2, std::vector<Vec3>{{0,-1,0},{0,1,0},{2,-1,0},{2,1,0}});
++        std::vector<Vec3> poles;
++        for (int i = 0; i < 5; ++i) for (double v : {-1., 1.}) poles.push_back({u[i], v, bump && i == 2 ? .5 : 0});
++        return std::make_shared<BSplineSurface>(1, 1, std::vector<double>{0,0,9./8,19./16,5./4,2,2}, std::vector<double>{-1,-1,1,1}, 5, 2, poles);
++    };
++    f.body.edge(f.seam).curve = std::make_shared<BSplineCurve<3>>(1, std::vector<double>{0,0,1,1}, std::vector<Vec3>{{0,0,0},{1,0,0}});
++    int i = 0;
++    for (FinId fin : {f.body.edge(f.seam).forward, f.body.edge(f.seam).backward}) {
++        f.body.fin(fin).pcurve = affineUV({0,0},{1,0});
++        f.body.face(f.body.finFace(fin)).surface = surface(i++ == 1);
++    }
++    detail::BlendModel model(f.body, &f.body);
++    const auto bodyBefore = writeBodyBinary(f.body), modelBefore = modelBytes(model);
++    bool rejected = false;
++    try { extendForTest(f.body, model, f.seam, {0,2}, true); }
++    catch (const std::domain_error &) { rejected = true; }
++    std::cout << "hidden_support_extension_rejected " << rejected << '\n';
++    FK_CHECK(rejected);
++    FK_CHECK(writeBodyBinary(f.body) == bodyBefore);
++    FK_CHECK(modelBytes(model) == modelBefore);
++}
++
++namespace {
++struct ExtendedEmission {
++    Body original;
++    Body emitted;
++    std::vector<detail::BlendBoundaryUse> certificates;
++};
++ExtendedEmission extendedEmission() {
++    auto f = fixture(true);
++    const Body source = f.body;
++    detail::BlendModel model(f.body, &source);
++    const Interval window{-.05, 1.05};
++    std::vector<detail::BlendBoundaryUse> certificates;
++    detail::extendBlendBoundary(f.body, model, f.seam, window, true, certificates);
++    const auto a = f.body.face(f.body.finFace(f.body.edge(f.seam).forward)).surface;
++    const auto b = f.body.face(f.body.finFace(f.body.edge(f.seam).backward)).surface;
++    model.points = {a->point(window.lo,0), a->point(window.hi,0), a->point(window.hi,-1),
++                    a->point(window.lo,-1), b->point(window.lo,1), b->point(window.hi,1)};
++    const std::vector<std::pair<Vec2,Vec2>> maps{
++        {{window.lo,0},{window.hi,0}}, {{window.hi,0},{window.hi,-1}},
++        {{window.hi,-1},{window.lo,-1}}, {{window.lo,-1},{window.lo,0}},
++        {{window.lo,0},{window.lo,1}}, {{window.lo,1},{window.hi,1}},
++        {{window.hi,1},{window.hi,0}}};
++    model.edges[0].range = window;
++    for (int i : {1,3,4,6}) {
++        auto &edge = model.edges[i];
++        edge.curve = std::make_shared<BSplineCurve<3>>(1,std::vector<double>{0,0,1,1},
++            std::vector<Vec3>{model.points[edge.start],model.points[edge.end]});
++    }
++    for (int i : {2,5}) {
++        const auto surface = i == 2 ? a : b;
++        auto curve = dynamic_cast<const BSplineSurface &>(*surface).vIsoCurve(i == 2 ? -1 : 1);
++        if (i == 2) {
++            auto knots = curve.knots(); auto poles = curve.poles(); auto weights = curve.weights();
++            std::reverse(knots.begin(),knots.end()); for (double &k : knots) k = 1-k;
++            std::reverse(poles.begin(),poles.end()); std::reverse(weights.begin(),weights.end());
++            curve = BSplineCurve<3>(curve.degree(),knots,poles,weights);
++        }
++        model.edges[i].curve = std::make_shared<BSplineCurve<3>>(curve);
++        model.edges[i].range = window;
++    }
++    for (auto &face : model.faces) for (auto &loop : face.loops) for (auto &fin : loop) {
++        if (fin.edge) fin.pcurve = affineUV(maps[fin.edge].first,maps[fin.edge].second,model.edges[fin.edge].range);
++    }
++    detail::installBlendBoundaryCertificates(model,certificates);
++    Body output = model.build();
++    computePCurves(output);
++    detail::requireEmittedBlendBoundaries(output,certificates);
++    FK_CHECK(checkBody(output,{true,true}).empty());
++    return {source,output,certificates};
++}
++}
++FK_TEST(BoundaryActualExtendedFinUsesFullCertifiedWindow) {
++    const auto f = extendedEmission();
++    FK_CHECK_NEAR(f.emitted.edge(EdgeId(0)).range.lo,-.05,0);
++    FK_CHECK_NEAR(f.emitted.edge(EdgeId(0)).range.hi,1.05,0);
++    FK_CHECK(f.certificates.size() == 2);
++    for (FinId fin : {f.emitted.edge(EdgeId(0)).forward,f.emitted.edge(EdgeId(0)).backward}) {
++        FK_CHECK(f.emitted.fin(fin).pcurveTolerance == 3e-9);
++        for (double t : {-.05,0.,.25,.5,.75,1.,1.05}) {
++            const auto uv = f.emitted.fin(fin).pcurve->point(t);
++            FK_CHECK(distance(f.emitted.edge(EdgeId(0)).curve->point(t),f.emitted.face(f.emitted.finFace(fin)).surface->point(uv.x(),uv.y())) <= 3e-9);
++        }
++    }
++    exportCase("actual-extended-fins",f.original,f.emitted);
++}
++FK_TEST(BoundaryActualEmissionRejectsChangedContracts) {
++    for (int mode = 0; mode < 5; ++mode) {
++        auto f = extendedEmission();
++        auto &edge = f.emitted.edge(EdgeId(0));
++        auto &fin = f.emitted.fin(edge.forward);
++        switch (mode) {
++        case 0: fin.pcurve = affineUV({.001,0},{1.001,0}); break;
++        case 1: fin.pcurveTolerance = 1e-6; break;
++        case 2: edge.tolerance = 1e-6; break;
++        case 3: edge.range.hi = 1.1; break;
++        case 4: f.emitted.face(f.emitted.finFace(edge.forward)).surface = f.original.face(f.original.finFace(f.original.edge(EdgeId(0)).forward)).surface; break;
++        }
++        FK_CHECK_THROWS(detail::requireEmittedBlendBoundaries(f.emitted,f.certificates));
++    }
++}
++
++FK_TEST(BoundaryIsoAffineParameterAndSupportOrder) {
++    for (bool reverse : {false,true}) {
++        auto f = fixture(true,false,1,reverse,false);
++        auto curve = dynamic_cast<const BSplineCurve<3> &>(*f.body.edge(f.seam).curve);
++        auto knots = curve.knots(); for (double &k : knots) k = 5*k-3;
++        const CurvePtr<3> original = std::make_shared<BSplineCurve<3>>(curve.degree(),knots,curve.poles(),curve.weights());
++        const auto pc = affineUV({reverse ? 1. : 0.,0},{reverse ? 0. : 1.,0},{-3,2});
++        const std::array<CurvePtr<2>,2> pcs{pc,pc};
++        const std::array<SurfacePtr,2> supports{
++            f.body.face(f.body.finFace(f.body.edge(f.seam).backward)).surface,
++            f.body.face(f.body.finFace(f.body.edge(f.seam).forward)).surface};
++        const auto guide = detail::blendBoundaryIsoGuide(original,pcs,supports,{-3,2},{-3,2},1e-9,3e-9);
++        FK_CHECK(guide.curve && guide.budget == 3e-9);
++        if (guide.curve) for (double t : {-3.,-2.,0.,1.,2.}) FK_CHECK(distance(original->point(t),guide.curve->point(t)) <= 3e-9);
++    }
++}
++FK_TEST(BoundaryIsoLineMapVaryingV) {
++    const SurfacePtr s = std::make_shared<BSplineSurface>(1,1,std::vector<double>{0,0,1,1},std::vector<double>{0,0,1,1},2,2,
++        std::vector<Vec3>{{0,0,0},{0,1,0},{1,0,0},{1,1,0}});
++    const CurvePtr<3> original = std::make_shared<BSplineCurve<3>>(1,std::vector<double>{-3,-3,-2,-2},std::vector<Vec3>{{.3,0,0},{.3,1,0}});
++    const CurvePtr<2> pc = std::make_shared<Line<2>>(Vec2(.3,3),Vec2(0,1));
++    const auto guide = detail::blendBoundaryIsoGuide(original,{pc,pc},{s,s},{-3,-2},{-3,-2},1e-9,3e-9);
++    FK_CHECK(guide.curve && guide.budget == 3e-9);
++}
++FK_TEST(BoundaryInvalidBudgetsAndRangeRejectBeforeMutation) {
++    for (int mode = 0; mode < 5; ++mode) {
++        auto f = fixture();
++        if (mode == 0) f.body.edge(f.seam).tolerance = -1;
++        if (mode == 1) f.body.edge(f.seam).tolerance = std::numeric_limits<double>::quiet_NaN();
++        if (mode == 2) f.body.fin(f.body.edge(f.seam).forward).pcurveTolerance = -1;
++        if (mode == 3) f.body.fin(f.body.edge(f.seam).forward).pcurveTolerance = std::numeric_limits<double>::infinity();
++        detail::BlendModel model(f.body);
++        const auto bodyBefore = writeBodyBinary(f.body), modelBefore = modelBytes(model);
++        FK_CHECK_THROWS(extendForTest(f.body,model,f.seam,mode == 4 ? Interval{.2,.8} : Interval{-.05,1.05},true));
++        FK_CHECK(writeBodyBinary(f.body) == bodyBefore);
++        FK_CHECK(modelBytes(model) == modelBefore);
++    }
++}
++
++FK_TEST(BoundaryActualEmissionKeepsDistinctFacesOnSharedCarrier) {
++    auto f = fixture(true);
++    const auto &old = dynamic_cast<const BSplineSurface &>(*f.body.face(f.body.finFace(f.body.edge(f.seam).forward)).surface);
++    std::vector<Vec3> poles;
++    std::vector<double> weights;
++    for (int i = 0; i < old.uPoleCount(); ++i) {
++        poles.push_back(old.pole(i,0));
++        poles.push_back(old.pole(i,0) + Vec3(0,2,0));
++        weights.push_back(old.weight(i,0));
++        weights.push_back(old.weight(i,0));
++    }
++    const SurfacePtr shared = std::make_shared<BSplineSurface>(2,1,old.uKnots(),std::vector<double>{-1,-1,1,1},3,2,poles,weights);
++    for (FaceId face : f.body.faces()) f.body.face(face).surface = shared;
++    FK_CHECK(checkBody(f.body,{true,true}).empty());
++    detail::BlendModel model(f.body,&f.body);
++    std::vector<detail::BlendBoundaryUse> certificates;
++    detail::extendBlendBoundary(f.body,model,f.seam,{0,1},true,certificates);
++    FK_CHECK(certificates.size() == 2);
++    detail::installBlendBoundaryCertificates(model,certificates);
++    Body emitted = model.build();
++    computePCurves(emitted);
++    detail::requireEmittedBlendBoundaries(emitted,certificates);
++    FK_CHECK(checkBody(emitted,{true,true}).empty());
++}

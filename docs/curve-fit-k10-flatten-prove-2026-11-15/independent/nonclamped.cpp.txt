@@ -1,0 +1,7 @@
+#include "fk_planar_flatten.h"
+#include "fk_bspline.h"
+#include <iostream>
+#include <iomanip>
+#include <stdexcept>
+using namespace ForgeCad::Kernel;
+int main(){std::cout<<std::setprecision(17);int n=0;for(int kind=0;kind<3;++kind)for(int sense:{-1,1})for(bool posed:{false,true}){CurvePtr<2> source;Interval range{.1,.9};if(kind==0)source=std::make_shared<BSplineCurve<2>>(3,std::vector<double>{-3,-2,-1,0,1,2,3,4},std::vector<Vec2>{{-1,.2},{0,1},{1,-.4},{2,.3}},std::vector<double>{1,.8,1.4,1.1});if(kind==1){source=std::make_shared<Line<2>>(Vec2(5,-2),Vec2(.4,1));range={-2,3};}if(kind==2){source=std::make_shared<BSplineCurve<2>>(1,std::vector<double>{-2,-2,0,3,3},std::vector<Vec2>{{-1,.2},{0,1},{2,-.3}},std::vector<double>{1,.6,1.3});source=std::make_shared<TrimmedCurve<2>>(source,-1.8,2.8);range={-1.5,2.5};}auto frame=posed?Frame3({2,-3,.4},{.2,.3,1},{1,.2,-.1}):Frame3();auto image=detail::planarFlattenImage(source,range,{.37,.43},.8,sense*1.2,frame,2e-8);if(!image)throw std::runtime_error("unsupported");double error=0;for(int i=0;i<=2000;++i){double t=range.lo+range.length()*i/2000.;auto p=source->point(t);auto q=frame.toGlobal({.8*(p.x()-.37),sense*1.2*(p.y()-.43),0});error=std::max(error,distance(q,image->curve->point(t)));}if(!(error<=image->error&&image->error<=2e-8))throw std::runtime_error("bound");std::cout<<"kind="<<kind<<" sense="<<sense<<" posed="<<posed<<" error="<<error<<" bound="<<image->error<<"\n";++n;}std::cout<<"checks="<<n<<" PASS\n";}

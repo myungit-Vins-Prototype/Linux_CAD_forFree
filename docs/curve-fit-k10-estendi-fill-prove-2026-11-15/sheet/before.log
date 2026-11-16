@@ -1,0 +1,7 @@
+[  OK  ] SheetFitPlanarNurbsOrientationsAndPose
+    /tmp/forgecad-k10-next-20261115/sheet/test_sheet_fit_validation.cpp:144: FK_CHECK(worst <= fitTolerance)
+    /tmp/forgecad-k10-next-20261115/sheet/test_sheet_fit_validation.cpp:144: FK_CHECK(worst <= fitTolerance)
+    /tmp/forgecad-k10-next-20261115/sheet/test_sheet_fit_validation.cpp:144: FK_CHECK(worst <= fitTolerance)
+    /tmp/forgecad-k10-next-20261115/sheet/test_sheet_fit_validation.cpp:144: FK_CHECK(worst <= fitTolerance)
+[ FAIL ] SheetFitHiddenFeatureBothBranchesAndScale (4 controlli falliti)
+1/2 test superati

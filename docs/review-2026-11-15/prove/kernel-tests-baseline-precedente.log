@@ -1,0 +1,604 @@
+[  OK  ] cancel_scope_and_evaluation
+[  OK  ] cancel_running_parallel_workers
+[  OK  ] VecBasics
+[  OK  ] FrameMatchesGpAx3
+[  OK  ] TransformMatchesGpTrsf
+[  OK  ] ReflectionRejectsDegenerateNormal
+[  OK  ] Orient2dBasic
+[  OK  ] Orient2dNearDegenerate
+[  OK  ] Orient3dBasic
+[  OK  ] Orient3dNearDegenerate
+[  OK  ] PredicatesPermutationConsistency
+[  OK  ] BernsteinArithmetic
+[  OK  ] BernsteinHighDegreeProduct
+[  OK  ] BernsteinRoots
+[  OK  ] BernsteinRootsDegenerate
+[  OK  ] LineMatchesOcct
+[  OK  ] CircleMatchesOcct
+[  OK  ] Circle2dMatchesOcct
+[  OK  ] EllipseMatchesOcct
+[  OK  ] TrimmedCurveOnPeriodicBasis
+[  OK  ] BSplineEvaluateMatchesOcct3d
+[  OK  ] BSplineEvaluateMatchesOcct2d
+[  OK  ] BSplineKnotInsertionMatchesOcct
+[  OK  ] BSplineBezierSegments
+[  OK  ] BSplineUnclampedAndLeftLimit
+[  OK  ] ConicArcsAreExact
+[  OK  ] BSplineValidation
+[  OK  ] BSplineLowOrdersMatchOcctAndFullEvaluation
+[  OK  ] BSplineBasisBernsteinAndBufferBounds
+[  OK  ] BSplineBasisConcurrentAndCancelled
+[  OK  ] BSplineRepeatedKnotOneSidedDerivatives
+[  OK  ] ProjectOnLineAndCircle
+[  OK  ] ProjectOnBSplineMatchesOcct
+[  OK  ] ProjectOnEllipseMatchesOcct
+[  OK  ] ArcLengthExact
+[  OK  ] ArcLengthMatchesOcct
+[  OK  ] ProjectOnTransformedCurve
+[  OK  ] ProjectBoundedCandidatesRetainEveryBranch
+[  OK  ] ProjectBoundedCandidatesTransformsAndLimits
+[  OK  ] CurveLengthCachePreservesQuadratureAndIdentity
+[  OK  ] ProjectBoundedCandidatesHighDegreeAndNarrowSpans
+[  OK  ] ProjectMinimumRestrictedRangesMatchesExhaustive
+[  OK  ] ProjectMinimumManySpansAnalytic
+[  OK  ] ProjectBoundedRangeKnotEndpoints
+[  OK  ] PlaneMatchesOcct
+[  OK  ] CylinderMatchesOcct
+[  OK  ] ConeMatchesOcct
+[  OK  ] SphereMatchesOcct
+[  OK  ] TorusMatchesOcct
+[  OK  ] ExtrusionMatchesOcct
+[  OK  ] RevolutionMatchesOcct
+[  OK  ] BSplineSurfaceMatchesOcct
+[  OK  ] BSplineSurfaceBezierPatches
+[  OK  ] BSplineSurfaceValidation
+[  OK  ] BSplineSurfaceLowOrdersBernstein
+[  OK  ] BSplineSurfaceLowOrdersBoundsConcurrentAndCancelled
+[  OK  ] InvertPointKeepsClosedBSplineBranch
+[  OK  ] ProjectOnPlaneAndCylinder
+[  OK  ] ProjectOnConeSphereTorus
+[  OK  ] ProjectOnBSplineSurface
+[  OK  ] PlanarEquivalentOfBSplineSurface
+[  OK  ] ProjectOnExtrusionAndRevolution
+[  OK  ] ProjectOnPlanarRevolution
+[  OK  ] ProjectOnInfiniteExtrusion
+[  OK  ] ProjectOnSkewRevolutionWindows
+[  OK  ] SameExtrusionSurfaceRequiresWholeCurveCertificate
+[  OK  ] SurfaceDeviationCertificateAnalytic
+[  OK  ] SurfaceDeviationCertificateCurvedAndHints
+[  OK  ] SurfaceDeviationCertificateDegenerateConcurrentAndCancelled
+[  OK  ] SurfaceToleranceConservativeBounds
+[  OK  ] ToleranceDefaults
+[  OK  ] ToleranceInvalidMetadata
+[  OK  ] ToleranceVertexBudget
+[  OK  ] TolerancePCurveBudget
+[  OK  ] ToleranceEdgeFaceBudget
+[  OK  ] ToleranceDocumentScopesAndWorkers
+[  OK  ] ToleranceDocumentOffsetAccuracy
+[  OK  ] MvfsKvfs
+[  OK  ] RandomEulerSequences
+[  OK  ] FaceRingOperators
+[  OK  ] SemvSplitsGeometry
+[  OK  ] CheckerDetectsDamage
+[  OK  ] BoxMatchesOcct
+[  OK  ] PrismWithHolesMatchesOcct
+[  OK  ] CylinderWithoutSeam
+[  OK  ] ProfileAreaAndWinding
+[  OK  ] ProfileChainingAndNesting
+[  OK  ] ExtrusionMatchesOcct
+[  OK  ] ExtrusionWithTolerantVertices
+[  OK  ] SheetExtrusion
+[  OK  ] PCurvesOfExtrusions
+[  OK  ] PCurveTypes
+[  OK  ] ExactPCurvesOnAnalyticSurfaces
+[  OK  ] FittedPCurves
+[  OK  ] FittedPCurvesFromDegenerateSide
+[  OK  ] FittedPCurveNearCollapsedSplineSide
+[  OK  ] PCurvesSurviveEdgeOperations
+[  OK  ] MassWithAndWithoutPCurves
+[  OK  ] PCurveExtendedPoleNeighbourhood
+[  OK  ] MassOfBoxes
+[  OK  ] MassOfCylinders
+[  OK  ] MassOfPrismsMatchesOcct
+[  OK  ] MassOfExtrusions
+[  OK  ] MassOfConeFrustum
+[  OK  ] MassWithPolesAndTori
+[  OK  ] FaceAreas
+[  OK  ] QuadratureStopsOnIntegrandNoise
+[  OK  ] MassEdgeCases
+[  OK  ] MassVerticalSplineSkipsNullFlux
+[  OK  ] MassParallelPreservesResultsAndInput
+[  OK  ] MassParallelPreservesFirstFailureAndCancellation
+[  OK  ] PlanarImageTransformedCurves
+[  OK  ] PlaneRootsOfCurves
+[  OK  ] CurveCurveIntersectionsMatchOcct
+[  OK  ] PlaneSurfaceIntersections
+[  OK  ] PlaneTorusMeridianIntersections
+[  OK  ] PlaneRootsHullKeepsContacts
+[  OK  ] PlaneRootsManySpans
+[  OK  ] CurveCurveManySpansAnalytic
+[  OK  ] CurveCurveSmallEndpointContacts
+[  OK  ] CurveCurveManySpansContactsAndConcurrency
+[  OK  ] MarchingPerpendicularCylinders
+[  OK  ] MarchingCylindersAgainstOcct
+[  OK  ] MarchingExtrusionSurfaces
+[  OK  ] MarchingParallelDirections
+[  OK  ] MarchingCurveSurface
+[  OK  ] MarchingSingularPoints
+[  OK  ] MarchingGeneralSurfacesAgainstOcct
+[  OK  ] MarchingHigherOrderContactBranches
+[  OK  ] MarchingMixedTermSingularBranches
+[  OK  ] MarchingProjectionCacheOverflow
+[  OK  ] BooleanBoxesGeneralPosition
+[  OK  ] BooleanCoplanarBoxes
+[  OK  ] BooleanNestedAndDisjoint
+[  OK  ] BooleanBoxAndCylinder
+[  OK  ] BooleanExtrusionAndBox
+[  OK  ] BooleanChained
+[  OK  ] BooleanCylinderCylinder
+[  OK  ] BooleanCurvedExtrusions
+[  OK  ] BooleanRevolvedSolids
+[  OK  ] BooleanCoincidentSurfaces
+[  OK  ] BooleanStressGrid
+[  OK  ] BooleanCylinderFourthOrderCapContact
+[  OK  ] BooleanStressCylinderGrid
+[  OK  ] BooleanTangentContacts
+[  OK  ] BooleanStressCylinders
+[  OK  ] BooleanStressGeneral
+[  OK  ] BooleanTangentCurves
+[  OK  ] BooleanThroughPoles
+[  OK  ] BooleanSheets
+[  OK  ] BooleanPartialCoincidence
+[  OK  ] BooleanVillarceau
+[  OK  ] BooleanHigherOrderContacts
+[  OK  ] BooleanCoaxialRevolutions
+[  OK  ] BooleanCoplanarClosedCircleWithTangentTorus
+[  OK  ] BooleanPartialSplineCoincidence
+[  OK  ] BooleanParallelMatchesSequential
+[  OK  ] BooleanDisjointValidationAndUnification
+[  OK  ] BooleanTolerantVertices
+[  OK  ] BooleanShellSlabsThroughHoleVertex
+[  OK  ] BooleanPartialClosedSplineRevolution
+[  OK  ] BooleanThinSplineSlivers
+[  OK  ] UnifyBoxes
+[  OK  ] UnifyCylinders
+[  OK  ] UnifyIdempotent
+[  OK  ] TessellateTriangulatePolygon
+[  OK  ] TessellatePrimitives
+[  OK  ] TessellateSelectedFaces
+[  OK  ] TessellateMaximumEdgeLength
+[  OK  ] TessellatePolesAndTori
+[  OK  ] TessellateBooleans
+[  OK  ] TessellateRayHits
+[  OK  ] TessellateCachedRayHits
+[  OK  ] TessellateFaceThinnerThanDeflection
+[  OK  ] TessellateThinBandAcrossPeriods
+[  OK  ] TessellateThreadsAndBatchEvaluator
+[  OK  ] PreparedFaceClassification
+[  OK  ] NurbsFormsOfSurfaces
+[  OK  ] NurbsPiecesOfCurves
+[  OK  ] NurbsTrimmedSplineSurfaceWindows
+[  OK  ] CurveSurfaceIntersectionsMatchOcct
+[  OK  ] LineSurfaceIntersectionsOnNewSurfaces
+[  OK  ] BezierPatchSubdivisionPreservesGeometry
+[  OK  ] RevolutionArcCenterAcrossAxis
+[  OK  ] RevolutionSolids
+[  OK  ] RevolutionPartial
+[  OK  ] RevolutionPartialClosedClampedSpline
+[  OK  ] RevolutionPrimitives
+[  OK  ] RevolutionSheets
+[  OK  ] BlendBoxEdges
+[  OK  ] BlendConcaveAndCurvedEdges
+[  OK  ] BlendSphericalSupportLeavesNoDetachedRing
+[  OK  ] BlendTangentChains
+[  OK  ] BlendRoundedPlateWithPolygonalHoles
+[  OK  ] BlendRadiusEqualsCornerRadius
+[  OK  ] BlendOpenArcsAndObliqueEnds
+[  OK  ] BlendFreeformClosedEdges
+[  OK  ] BlendFreeformOpenEdges
+[  OK  ] BlendChainsMatchBooleanPath
+[  OK  ] BlendSurfaceMatchesExactPlanarCases
+[  OK  ] BlendSurfaceMatchesCircularCases
+[  OK  ] BlendSurfaceNonAnalyticEdges
+[  OK  ] BlendSurfaceTeeIsExactRollingBall
+[  OK  ] ChamferTwoDistances
+[  OK  ] BlendSmallRadiusOnLargeRims
+[  OK  ] BlendLoftCircularCapsSplitIntoPatches
+[  OK  ] BlendEdgeEndingOnExistingFilletCornerPatch
+[  OK  ] BlendPlanarChainConcaveCornersBetweenLongArcs
+[  OK  ] BlendArcsIntoConcaveCornersAreExact
+[  OK  ] BlendVanishingAtTangentMitreEnd
+[  OK  ] BlendArcsMeetingSegments
+[  OK  ] BlendShortFaceJoinsTangentNeighbour
+[  OK  ] BlendShortFaceOnRevolution
+[  OK  ] BlendConcaveCornerPocket
+[  OK  ] BlendConcaveCornerPolygons
+[  OK  ] BlendConcaveCornerLens
+[  OK  ] BlendConcaveCornerRoundedPocket
+[  OK  ] BlendSurfaceEndsOnConcaveCircularWall
+[  OK  ] BlendHelicalGrooveEnds
+[  OK  ] BlendSurfaceAcrossSplitSeam
+[  OK  ] BlendOffsetLoftTrimmedTopOneMillimeter
+[  OK  ] BlendRegeneratedLoftOffsetCaps
+[  OK  ] MicroFeaturesOfLoftOffsetBodies
+[  OK  ] BlendSplitSeamPreservesKnotCorner
+[  OK  ] BlendTopContourWithCornerRadiusEqualToFillet
+[  OK  ] BlendCapOverlappingPocketFillet
+[  OK  ] BlendAlternatingTangentSupports
+[  OK  ] BlendConsumedTerminalReachesTangentSupport
+[  OK  ] BlendApplicatoreRevolutionEnds
+[  OK  ] BlendMouseInternalNormalJump
+[  OK  ] BlendPlanarCapOnTangentSplineSupports
+[  OK  ] BlendOpenChainsAtTangentSplineSeams
+[  OK  ] BlendContactKnotCrossingsUseContactParameters
+[  OK  ] BlendContactKnotAtFitEndpoints
+[  OK  ] BlendContactKnotAtExistingEdgeBreakUsesOneParameter
+[  OK  ] BlendContactKnotOnProbeAndRealNormalJump
+[  OK  ] BlendContactKnotKeepsRadiusAndAllowsOneMillimeterOffset
+[  OK  ] SheetExtendBSplineKeepsCurve
+[  OK  ] SheetSplitAndTrim
+[  OK  ] SheetExtend
+[  OK  ] SheetSectionKeepsExactSplineBoundary
+[  OK  ] SheetRevolutionMeridianSection
+[  OK  ] TransformScaleBodies
+[  OK  ] TransformMirrorBodies
+[  OK  ] TransformMirrorRetainsSplineBoundaryParameters
+[  OK  ] TransformMirrorRecalculatesScaledLineParameters
+[  OK  ] DraftBoxNeutralPlane
+[  OK  ] DraftRotatedAndInvalid
+[  OK  ] SheetDraftAndBlend
+[  OK  ] DraftCurvedAndConcaveSolids
+[  OK  ] DraftCircularSectionsStayAnalytic
+[  OK  ] BodyIORoundTrip
+[  OK  ] BodyIORejectsBadData
+[  OK  ] HelixDerivativesAndOcctReference
+[  OK  ] HelixBSplineWithinTolerance
+[  OK  ] SweepLineAndArcAreExact
+[  OK  ] SweepObliqueProfileAlongArcUsesFiniteMeridians
+[  OK  ] SweepPlanarPathIsTube
+[  OK  ] SweepAlongHelixIsSpring
+[  OK  ] SweepClosedPathAndSheet
+[  OK  ] LoftRuledFrustums
+[  OK  ] LoftSmoothThroughCircles
+[  OK  ] LoftEllipsePreservesSmoothOffsetFaces
+[  OK  ] LoftCircleToSquare
+[  OK  ] LoftGuideCrossesEverySection
+[  OK  ] LoftGuideInfluenceAndEndContinuity
+[  OK  ] LoftGuideG0DoesNotEnableDerivativeConstraints
+[  OK  ] LoftTangencyAppliesToEveryGuide
+[  OK  ] LoftOpenGuidesAndNeighborFaces
+[  OK  ] LoftOpenGuideNearPlaneEndpoint
+[  OK  ] LoftContactAtCoincidentEndpoint
+[  OK  ] LoftNonparallelLongitudinalParameters
+[  OK  ] LoftSheet
+[  OK  ] LoftPreservesDistinctNearbyKnots
+[  OK  ] LoftG1RoundoffTrimPiece
+[  OK  ] LoftMultipleGuidesDoNotCreateRibbons
+[  OK  ] LoftFollowsEntireCircularGuides
+[  OK  ] LoftIndependentGuideConditions
+[  OK  ] LoftGuideNearSectionPreservesContactPlane
+[  OK  ] LoftUnequalGuideSpansPreserveGeometryAndContact
+[  OK  ] LoftG1SingleUlpSpanKeepsDistinctCollocationPoints
+[  OK  ] OcctImportPrimitives
+[  OK  ] OcctImportModelled
+[  OK  ] OcctImportSplineSurfaces
+[  OK  ] OcctImportSheet
+[  OK  ] OcctImportUnboundedBases
+[32;1m
+*******************************************************************
+******        Statistics on Transfer (Write)                 ******[0m
+[32;1m
+*******************************************************************
+******        Transfer Mode = 0  I.E.  As Is       ******[0m
+[32;1m******        Transferring Shape, ShapeType = 0                      ******[0m
+[32;1m** WorkSession : Sending all data[0m
+[32;1m Step File Name : /tmp/forgekernel_occt_import_test.step(410 ents)  Write  Done[0m
+[  OK  ] OcctImportStepRoundTrip
+[  OK  ] BlendGeneralMatchesAnalytic
+[  OK  ] BlendSequentialNearbyEdges
+[  OK  ] BlendSweptTubeCap
+[  OK  ] BlendRuledLoftCone
+[  OK  ] BlendSweepAcrossPathJoint
+[  OK  ] BlendLoftCircleToSquare
+[  OK  ] BlendSmoothLoftPolygonCap
+[  OK  ] BlendConcaveSmoothLoftEdge
+[  OK  ] BlendSmoothLoftSplitSidePatches
+[  OK  ] SheetBlendCurvedLoft
+[  OK  ] StepWriteReadByOcct
+[  OK  ] StepRoundTrip
+[32;1m
+*******************************************************************
+******        Statistics on Transfer (Write)                 ******[0m
+[32;1m
+*******************************************************************
+******        Transfer Mode = 0  I.E.  As Is       ******[0m
+[32;1m******        Transferring Shape, ShapeType = 0                      ******[0m
+[32;1m** WorkSession : Sending all data[0m
+[32;1m Step File Name : /tmp/forgekernel_step_occt.step(434 ents)  Write  Done[0m
+[32;1m
+*******************************************************************
+******        Statistics on Transfer (Write)                 ******[0m
+[32;1m
+*******************************************************************
+******        Transfer Mode = 0  I.E.  As Is       ******[0m
+[32;1m******        Transferring Shape, ShapeType = 2                      ******[0m
+[32;1m** WorkSession : Sending all data[0m
+[32;1m Step File Name : /tmp/forgekernel_step_occt.step(32 ents)  Write  Done[0m
+[32;1m
+*******************************************************************
+******        Statistics on Transfer (Write)                 ******[0m
+[32;1m
+*******************************************************************
+******        Transfer Mode = 0  I.E.  As Is       ******[0m
+[32;1m******        Transferring Shape, ShapeType = 2                      ******[0m
+[32;1m** WorkSession : Sending all data[0m
+[32;1m Step File Name : /tmp/forgekernel_step_occt.step(78 ents)  Write  Done[0m
+[32;1m
+*******************************************************************
+******        Statistics on Transfer (Write)                 ******[0m
+[32;1m
+*******************************************************************
+******        Transfer Mode = 0  I.E.  As Is       ******[0m
+[32;1m******        Transferring Shape, ShapeType = 0                      ******[0m
+[32;1m** WorkSession : Sending all data[0m
+[32;1m Step File Name : /tmp/forgekernel_step_occt.step(770 ents)  Write  Done[0m
+[32;1m
+*******************************************************************
+******        Statistics on Transfer (Write)                 ******[0m
+[32;1m
+*******************************************************************
+******        Transfer Mode = 0  I.E.  As Is       ******[0m
+[32;1m******        Transferring Shape, ShapeType = 2                      ******[0m
+[32;1m** WorkSession : Sending all data[0m
+[32;1m Step File Name : /tmp/forgekernel_step_occt.step(213 ents)  Write  Done[0m
+[32;1m
+*******************************************************************
+******        Statistics on Transfer (Write)                 ******[0m
+[32;1m
+*******************************************************************
+******        Transfer Mode = 0  I.E.  As Is       ******[0m
+[32;1m******        Transferring Shape, ShapeType = 2                      ******[0m
+[32;1m** WorkSession : Sending all data[0m
+[32;1m Step File Name : /tmp/forgekernel_step_occt.step(372 ents)  Write  Done[0m
+[32;1m
+*******************************************************************
+******        Statistics on Transfer (Write)                 ******[0m
+[32;1m
+*******************************************************************
+******        Transfer Mode = 0  I.E.  As Is       ******[0m
+[32;1m******        Transferring Shape, ShapeType = 2                      ******[0m
+[32;1m** WorkSession : Sending all data[0m
+[32;1m Step File Name : /tmp/forgekernel_step_occt.step(198 ents)  Write  Done[0m
+[32;1m
+*******************************************************************
+******        Statistics on Transfer (Write)                 ******[0m
+[32;1m
+*******************************************************************
+******        Transfer Mode = 0  I.E.  As Is       ******[0m
+[32;1m******        Transferring Shape, ShapeType = 2                      ******[0m
+[32;1m** WorkSession : Sending all data[0m
+[32;1m Step File Name : /tmp/forgekernel_step_occt.step(353 ents)  Write  Done[0m
+[  OK  ] StepReadOcctFiles
+[32;1m
+*******************************************************************
+******        Statistics on Transfer (Write)                 ******[0m
+[32;1m
+*******************************************************************
+******        Transfer Mode = 0  I.E.  As Is       ******[0m
+[32;1m******        Transferring Shape, ShapeType = 0                      ******[0m
+[32;1m** WorkSession : Sending all data[0m
+[32;1m Step File Name : /tmp/forgekernel_step_assembly.step(512 ents)  Write  Done[0m
+[  OK  ] StepReadAssembly
+[  OK  ] StepCurveByOcct
+[  OK  ] StepNumbersIgnoreLocale
+[  OK  ] StepNumbersRespectBufferAndRange
+[  OK  ] StepReadSolidWorksFile
+[  OK  ] ExchangeClosedSplineSeamClosesFaceDomain
+[  OK  ] StepReadD250227SolidWorksFile
+[  OK  ] StepReadD260320SolidWorksAssembly
+[  OK  ] StepReadSignedMajorTorus
+[  OK  ] StepReadAP0730SolidWorksFile
+[  OK  ] StepReadSphereEdgeNearPole
+[  OK  ] StepReadRepairsFaceSense
+[  OK  ] StepReadL407SolidWorksFile
+[  OK  ] StepParallelBodiesAndEntityOrder
+[  OK  ] StepWritesRestrictedSplineEdges
+[  OK  ] ExchangeClosedSplineKeepsEndSpan
+[  OK  ] ExchangeSplineRestrictionPreservesGeometry
+[  OK  ] StepRejectsCyclicOrientedEdges
+[  OK  ] StepRejectsSelfReferencingGeometry
+[  OK  ] StepWriteSplineInstancesPortableByOcct
+[  OK  ] StepWriteDirectSplineReplicaByOcct
+[32;1mTotal number of loaded entities 54.
+[0m
+[32;1mTotal number of loaded entities 68.
+[0m
+[32;1mTotal number of loaded entities 27.
+[0m
+[32;1mTotal number of loaded entities 29.
+[0m
+[32;1mTotal number of loaded entities 15.
+[0m
+[32;1mTotal number of loaded entities 14.
+[0m
+[32;1mTotal number of loaded entities 18.
+[0m
+[32;1mTotal number of loaded entities 20.
+[0m
+[32;1mTotal number of loaded entities 27.
+[0m
+[32;1mTotal number of loaded entities 29.
+[0m
+[32;1mTotal number of loaded entities 65.
+[0m
+[32;1mTotal number of loaded entities 85.
+[0m
+[32;1mTotal number of loaded entities 105.
+[0m
+[32;1mTotal number of loaded entities 140.
+[0m
+[32;1mTotal number of loaded entities 48.
+[0m
+[32;1mTotal number of loaded entities 66.
+[0m
+[  OK  ] IgesWriteReadByOcct
+[  OK  ] IgesRoundTrip
+[  OK  ] IgesReadOcctFiles
+[32;1mTotal number of loaded entities 2.
+[0m
+[  OK  ] IgesCurveByOcct
+[  OK  ] IgesParallelComponents
+[  OK  ] IgesSewSpatialRepresentatives
+[  OK  ] IgesPreservesNonUniformSplineEdgeParameters
+[  OK  ] IgesRejectsInvalidSplineParameters
+[  OK  ] IgesRejectsCyclicCompositeCurves
+[  OK  ] OffsetAnalyticSurfaces
+[  OK  ] OffsetFreeformSurfaces
+[  OK  ] OffsetFacesJoinsTangentFaces
+[  OK  ] OffsetFacesCurvedAndFreeform
+[  OK  ] OffsetFacesLoft
+[  OK  ] SewSheetsIntoSolid
+[  OK  ] OffsetThenSewSolid
+[  OK  ] OffsetFacesSpring
+[  OK  ] OffsetFacesImportedParts
+[  OK  ] OffsetPreservesSharpSeams
+[  OK  ] OffsetLoftExtension
+[  OK  ] OffsetLoftMixedSections
+[  OK  ] OffsetLoftSewnCaps
+[  OK  ] OffsetFitCurveSmallSmoothFeature
+[  OK  ] OffsetReportsInternalNormalDiscontinuity
+[  OK  ] OffsetLoftInternalCreasesOneMillimeter
+[  OK  ] OffsetLoftExtendedSeamsTrimBoth
+[  OK  ] OffsetDenseBSplineIsC2
+[  OK  ] OffsetInwardBeyondCurvatureIsExplained
+[  OK  ] OffsetLoftSeamExtensionFollowsTangentSeam
+[  OK  ] SewFillPreservesKnownBoundaryCurves
+[  OK  ] SewPreservesBoundaryWithDifferentParameters
+[  OK  ] SewClosedEdgesWithUnequalParameters
+[  OK  ] SewDoesNotMergeDifferentCurvesWithSameMidpoint
+[  OK  ] SewThinSolidRetainsOutwardOrientation
+[  OK  ] SewMappedSamplesRetainDistanceLimit
+[  OK  ] SewPreservesDensePCurveRegardlessOfOperandOrder
+[  OK  ] PlanarSheetRectangleWithHole
+[  OK  ] PlanarSheetTwoRegions
+[  OK  ] PlanarSheetIslandInHole
+[  OK  ] PlanarSheetFromCylinderEdge
+[  OK  ] PlanarSheetClosedSpline
+[  OK  ] PlanarSheetShuffledSegments
+[  OK  ] PlanarSheetRejectsInvalidLoops
+[  OK  ] PlanarSheetFromProfileMatchesExtrusionBase
+[  OK  ] PlanarSheetHoleNearCurvedBoundary
+[  OK  ] PlanarSheetRejectsTouchingLoops
+[  OK  ] BoundarySheetSkewQuad
+[  OK  ] BoundarySheetPlanarRegions
+[  OK  ] BoundarySheetHalfCylinder
+[  OK  ] BoundarySheetRejectsBadContours
+[  OK  ] FillPlanarSquare
+[  OK  ] FillSphericalCapThroughGuides
+[  OK  ] FillTangentToCylinder
+cono: celle 64, contorno 2.13e-07, guide 2.32e-07, tangenza 0.000912 gradi
+cono senza guide: celle 32, contorno 1.77e-07, tangenza 0.000319 gradi
+[  OK  ] FillConeWithConflictingGuides
+sfera G2: celle 32, contorno 1.98e-07, guide 1.81e-07, tangenza 0.00149 gradi, curvatura 0.003, dalla sfera 0.00668
+[  OK  ] FillCapContinuesSphereInCurvature
+[  OK  ] FillObliqueContactsPreserveInterior
+[  OK  ] FillInfluencePreservesProjectionAndTangency
+sfera G1 naturale: scarto curvatura 0.00897 1/mm
+[  OK  ] FillNaturalG1FollowsSupportCurvature
+[  OK  ] FillRejectsInvalidShapeParameters
+[  OK  ] FillIndependentContactInfluences
+[  OK  ] FillIgnoredGuidesPreserveLocalInfluence
+[  OK  ] FillDirectionalProfilePreservesContacts
+[  OK  ] FillDirectionalProfileRejectsInvalidSelection
+[  OK  ] FillUnequalCompoundBoundarySpans
+[  OK  ] FillReportsBoundaryContactConflictAtCorner
+[  OK  ] FillPerFaceContinuityOverrides
+[  OK  ] SurfaceNetworkCrossingFamilies
+[  OK  ] SurfaceExtendUntilPlaneAndCurvedFace
+[  OK  ] SurfaceExtendUntilFacetedTarget
+[  OK  ] SurfaceExtendUntilSplineExtrusion
+[  OK  ] SurfacePolesPreserveTrimsAndTopology
+[  OK  ] SurfacePolesRefitControlCounts
+[  OK  ] SurfacePolesMultipleConnectedFaces
+[  OK  ] SurfacePolesMultipleFacesOfSolid
+[  OK  ] SurfacePolesPreserveDeclaredVertexTolerance
+[  OK  ] ProjectedCutPlanarHole
+[  OK  ] ProjectedCutBandAlongExistingEdges
+[  OK  ] ProjectedCutChordOfCurvedEdge
+[  OK  ] ProjectedCutOnCylinderFirstFaceOnly
+[  OK  ] ProjectedCurveClosedOnCylinder
+[  OK  ] ThickenPlanarFaceSides
+[  OK  ] ThickenCylindricalSheetAlongNormal
+[  OK  ] ThickenAlongDirection
+[  OK  ] ThickenSharpCreaseAlongDirection
+[  OK  ] ThickenTrimmedFaceWithInternalCrease
+[  OK  ] ThickenSmoothBSplineSheet
+[  OK  ] ShellOpenBox
+[  OK  ] ShellCup
+[  OK  ] ShellConcaveEdge
+[  OK  ] ShellFilletedBox
+[  OK  ] ShellRoundedPrism
+[  OK  ] ShellNotchAndFilletedHole
+[  OK  ] ShellRejectsBadInput
+[  OK  ] ShellCollapsedConvexFillet
+[  OK  ] ShellCollapsedRoundedPrism
+[  OK  ] ShellCollapsedToroidalFillet
+[  OK  ] ShellCollapsedSphericalCorner
+[  OK  ] ShellCollapsedAllBoxFillets
+[  OK  ] ShellRectangularCutKeepsSharpCorners
+[  OK  ] ShellRejectsInvalidAndInvertedCavities
+[  OK  ] ShellStitchedTolerantTangencies
+[  OK  ] LoftSheetTubeOfCylinder
+[  OK  ] LoftSheetTubeMatchesSolidSides
+[  OK  ] LoftSheetMixedSectionsThrow
+[  OK  ] RuledSurfaceFrustumOfCone
+[  OK  ] RuledSurfaceHyperbolicParaboloid
+[  OK  ] RuledSurfaceHelicoid
+[  OK  ] RuledSurfaceSquareToCircle
+[  OK  ] RuledSurfaceMixedChainsThrow
+[  OK  ] RuledSurfaceClosedChainsKeepCorners
+[  OK  ] SweepSheetCircleAlongLineAndArc
+[  OK  ] SweepSheetSquareAlongSplineMatchesSolid
+[  OK  ] SweepSheetRoundedRectangleAlongHelix
+[  OK  ] SweepSheetMixedProfileAndChains
+[  OK  ] SweepSheetClosedPathIsClosedShell
+[  OK  ] SweepSheetMixedChainKeepsChainSense
+[  OK  ] HistoryInteriorPointOfFaces
+[  OK  ] HistorySubtractCylinderThroughBox
+[  OK  ] HistorySplitFaceKeepsAmbiguousName
+[  OK  ] HistoryUniteMergesCoplanarFaces
+[  OK  ] HistoryBlendFaceGeneratedFromEdge
+[  OK  ] HistoryComposeAcrossOperations
+[  OK  ] HistorySameIndexTransform
+[  OK  ] HistoryLabelledFacesAndLongNames
+[  OK  ] HistoryPreservesNamesAfterReload
+[  OK  ] HistoryRootWithNullOperands
+[  OK  ] HistoryDeclaredOriginsOverrideGeometry
+[  OK  ] HistoryRejectsInvalidDeclarations
+[  OK  ] HistoryDeclaredCompositionCoverage
+[  OK  ] HistoryOffsetKeepsFaceNamesAcrossSurfaceChanges
+[  OK  ] HistoryOffsetComposesRectangularAndTrimmedCreases
+[  OK  ] HistoryBooleanDeclaresCutSplitAndUnchangedFaces
+[  OK  ] HistoryBooleanAndUnifyComposeEveryMergedFace
+[  OK  ] HistoryBooleanRetainsBothCoincidentOperands
+[  OK  ] HistoryBooleanEmptyDisjointAndFailureOutputs
+[  OK  ] HistoryImprintDeclaresBeforeAndAfterUnify
+[  OK  ] HistoryBooleanDeclarationsAreThreadDeterministic
+[  OK  ] HistoryBlendDeclaresTrimmedFacesAndGeneratedEdge
+[  OK  ] HistoryBlendCornerComesFromOriginalVertex
+[  OK  ] HistoryBlendClosedPlanarEdgeKeepsOriginalSource
+[  OK  ] HistoryBlendGeneralChainsAndOpenSheet
+[  OK  ] HistoryAsymmetricChamferAndRejectedOutputs
+[  OK  ] HistoryExtrusionSourcesSurviveLoopOrderingAndReversal
+[  OK  ] HistoryExtrusionClosedCurvesAndOpenChains
+[  OK  ] HistoryDeclaredFaceAliasesOverrideGeometricLabels
+[  OK  ] HistoryExtractAndSewFacesPreserveDeclaredSources
+[  OK  ] HistoryRevolutionLoopSourcesAndAxis
+[  OK  ] HistoryRevolutionSignedAngularCaps
+[  OK  ] HistoryRevolutionCurvesSheetsAndRejectedOutputs
+[  OK  ] HistorySweepAndLoftKeepSectionSources
+[  OK  ] HistoryPrimitivesAndSurfaceRootsEmitLabels
+[  OK  ] HistoryTransformsDraftAndExtractedEdgesAreExplicit
+[  OK  ] HistoryTrimExtendShellAndProjectionComposeOrigins
+[  OK  ] HistoryTransportDoesNotInventMissingBranches
+475/475 test superati

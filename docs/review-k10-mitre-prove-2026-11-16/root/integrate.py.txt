@@ -1,0 +1,33 @@
+from pathlib import Path
+import hashlib,json,re
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/mitre-review/root');C=Path('/tmp/mitre-review/core/v2');sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+initial=json.loads((T/'hashes-before.json').read_text());expected=json.loads((C/'sha256.json').read_text())
+for name in ['fk_blend_mitre.cpp','fk_blend_mitre.h','fk_blend_surface.cpp']:
+ assert sha(C/name)==expected[name],name
+ assert sha(R/'kernel'/name)==initial['kernel/'+name],name
+for f in ['kernel/CMakeLists.txt','tools/generate_architecture.py']:
+ assert sha(R/f)==initial[f],f
+p=Path('/tmp/mitre-review/tests/test_blend_mitre_validation.cpp');assert sha(p)=='73811bf286bd01217092d662cbc34a98e614bdba453d6dff05ebac8d1e1235ba'
+assert not(R/'kernel/tests/test_blend_mitre_validation.cpp').exists()
+for name in ['fk_blend_mitre.cpp','fk_blend_mitre.h','fk_blend_surface.cpp']:(R/'kernel'/name).write_bytes((C/name).read_bytes())
+(R/'kernel/tests/test_blend_mitre_validation.cpp').write_bytes(p.read_bytes())
+p=R/'kernel/CMakeLists.txt';s=p.read_text();old='fk_surface_mapping.cpp fk_sheet.cpp fk_affine_surface_fit.cpp';assert s.count(old)==1;s=s.replace(old,'fk_surface_mapping.cpp fk_sheet.cpp fk_blend_mitre.cpp fk_blend_surface.cpp fk_affine_surface_fit.cpp');anchor='set_tests_properties(forgekernel_blend_cavity_regression_tests PROPERTIES TIMEOUT 90)';assert s.count(anchor)==1;s=s.replace(anchor,anchor+'''
+
+# Mitre ISO: fit continuo, budget prefissati e fin effettive, senza Qt/OCCT.
+add_executable(forgekernel_blend_mitre_validation_tests tests/fk_test_main.cpp tests/test_blend_mitre_validation.cpp)
+target_link_libraries(forgekernel_blend_mitre_validation_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_blend_mitre_validation_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_blend_mitre_validation_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_blend_mitre_validation_tests COMMAND forgekernel_blend_mitre_validation_tests)
+set_tests_properties(forgekernel_blend_mitre_validation_tests PROPERTIES TIMEOUT 180)
+''');p.write_text(s)
+p=R/'tools/generate_architecture.py';s=p.read_text();old=" 'fk_blend_mitre': ('kernel', 'Intersezioni accoppiate dei raccordi a mitra: contatti con Newton smorzato, orientamento razionale dei due supporti e tracciamento del ramo vicino alla faccia comune.'),";assert old in s;s=s.replace(old," 'fk_blend_mitre': ('kernel', 'Intersezioni dei raccordi a mitra: via quasi coincidente ISO con fit continuo sui due supporti originali, mappe UV esplicite e cap prefissato; installazione per identita delle fin pianificate e ricontrollo dei coefficienti realmente emessi. Newton e composizioni diagonali non supportate restano campionati; cancellazione e fallimenti del certificato terminali.'),")
+anchor=" 'kernel/tests/test_blend_cavity_regressions.cpp':";a=s.index(anchor);end=s.index('\n',a);s=s[:end]+"\n 'kernel/tests/test_blend_mitre_validation.cpp': ('tests', 'Mitre ISO: picchi NURBS fra campioni, pose/pesi/versi e budget distinti; fin reali Body::buildSheet e mutazioni di carrier, UV, range, budget e incidenza. Diagonale coincidente valida conservata fuori certificazione; cancellazione e codec.'),"+s[end:]
+a=s.index(" 'fk_blend_surface':");end=s.index('\n',a);line=s[a:end];assert line.endswith("'),");s=s[:a]+line[:-3]+" Mitre ISO: delega costruzione e controllo delle fin al modulo dedicato, preserva pcurve e cap prefissati escludendole dall aumento delle tolleranze; altri rami restano campionati.'),"+s[end:];p.write_text(s)
+files=['kernel/fk_blend_mitre.cpp','kernel/fk_blend_mitre.h','kernel/fk_blend_surface.cpp','kernel/tests/test_blend_mitre_validation.cpp','kernel/CMakeLists.txt','tools/generate_architecture.py'];(T/'integrated-sources.json').write_text(json.dumps({f:sha(R/f) for f in files},indent=2)+'\n')
+p=R/'CLAUDE.md';s=p.read_text();a=s.index('**16/11 — K10 mitre');b=s.index('\n\n',a);s=s[:a]+'''**16/11 — K10 mitre integrate con tre agenti Sol.**
+Via ISO continua/cap fisso e fin effettive; diagonali/Newton campionati.
+13test diretti/69regressioni private PASS; build/app pendenti.
+[Stato/limiti](docs/review-k10-mitre-2026-11-16.md).'''+s[b:];assert len(s.encode())<=16384;p.write_text(s)
+p=R/'docs/review-k10-mitre-2026-11-16.md';s=p.read_text();s+='''\n## Integrazione V2\n\nIntegrati tre sorgenti congelati V2 (due TU/header), test permanente13FK_TEST, CMake con opzioni rigorose e catalogo. ViaISO: cap linearResolution prefissato, fitS a min(fitTolerance,.25cap), verificaS/T al cap; mappe originali e fin installate prima di assemblare, escluse dal rialzo del budget e ricontrollate fino al risultato. Helper nel modulo mitre, coordinatore chiama i contratti mirati. Ramo diagonale valido ripristinato senza certificato. Prove13/13 private e69/69 regressioni coreV2 PASS; build completa/app/verifiche integrate ancora pendenti.\n''';p.write_text(s)
+print('Integrated frozen V2 and test13; CLAUDE',len((R/'CLAUDE.md').read_bytes()),'bytes')

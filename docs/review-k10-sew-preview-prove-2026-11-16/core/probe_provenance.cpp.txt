@@ -1,0 +1,49 @@
+#include "/tmp/k10-sew-review/core/fk_exchange.cpp"
+#include <iostream>
+using namespace ForgeCad::Kernel;
+using namespace ForgeCad::Kernel::detail;
+int main() {
+    RawModel model;
+    model.points={{0,0,0},{4,0,0},{4,4,0},{0,4,0},{1,1,0},{1,3,0},{3,3,0},{3,1,0}};
+    const std::vector<std::pair<int,int>> ends={{0,1},{1,2},{2,3},{3,0},{4,5},{5,6},{6,7},{7,4},{0,4}};
+    for(auto [a,b]:ends) model.edges.push_back({a,b,std::make_shared<Line<3>>(model.points[a],model.points[b]-model.points[a]),true,{0,norm(model.points[b]-model.points[a])}});
+    RawFace raw;raw.surface=std::make_shared<Plane>(Frame3());
+    std::vector<RawFin> loop;
+    for(int e:{0,1,2,3,8,4,5,6,7,8}) {
+        const auto &edge=model.edges[e];const auto a=model.points[edge.start],b=model.points[edge.end];
+        loop.push_back({e,e!=8 || loop.size()==4,std::make_shared<Line<2>>(Vec2(a.x(),a.y()),Vec2(b.x()-a.x(),b.y()-a.y())),0});
+    }
+    double deviation=-1;
+    auto certified=fitPCurveOnPlane(model.edges[8].curve,raw.surface,model.edges[8].range,1e-8,1e-7,&deviation);
+    loop[4].pcurve=certified;loop[4].pcurveTolerance=deviation;loop[4].certifiedPlanePCurve=true;loop[4].certifiedPlaneBudget=1e-7;
+    raw.loops={loop};model.faces={raw};
+    std::vector<Body::BuildEdge> edges;
+    for(const auto &e:model.edges)edges.push_back({e.start,e.end,e.curve,e.range,0});
+    Body::BuildFace face;face.surface=raw.surface;std::vector<Body::BuildFin> fins;
+    for(const auto &f:loop)fins.push_back({f.edge,f.sense,f.pcurve,f.pcurveTolerance});
+    face.loops={fins};
+    Body body=Body::buildSheet(model.points,edges,{face});
+    if(!checkBody(body).empty()){for(auto issue:checkBody(body))std::cerr<<describe(issue.code)<<" "<<issue.message<<"\n";return 1;}
+    AssemblyMap map;map.points=body.vertices();map.edges=body.edges();map.faces=body.faces();
+    requireSewnPlanePCurves(model,body,map);
+    int passed=1;std::cout<<"mixed-pair-certified-cubic-and-legacy-line PASS\n";
+    auto reject=[&](auto work,const char *name) {
+        try {work();std::cerr<<name<<" incorrectly accepted\n";return false;}
+        catch(const std::domain_error &){++passed;std::cout<<name<<" PASS\n";return true;}
+    };
+    FinId emitted;
+    for(auto id:body.fins())if(body.fin(id).pcurve==certified)emitted=id;
+    if(!emitted.valid())return 2;
+    auto &fin=body.fin(emitted);const auto &spline=static_cast<const BSplineCurve<2> &>(*certified);
+    fin.pcurve=std::make_shared<BSplineCurve<2>>(spline);
+    if(!reject([&]{requireSewnPlanePCurves(model,body,map);},"actual-PC-object-replaced-with-identical-copy"))return 3;
+    fin.pcurve=certified;fin.pcurveTolerance*=2;
+    if(!reject([&]{requireSewnPlanePCurves(model,body,map);},"actual-PC-budget-increased"))return 4;
+    fin.pcurveTolerance=deviation;
+    auto &poles=const_cast<std::vector<Vec2> &>(spline.poles());const Vec2 original=poles[1];poles[1][0]+=.01;
+    if(!reject([&]{requireSewnPlanePCurves(model,body,map);},"actual-PC-pole-changed-same-object"))return 5;
+    poles[1]=original;
+    body.edge(map.edges[8]).range.hi=2;
+    if(!reject([&]{requireSewnPlanePCurves(model,body,map);},"actual-edge-range-changed"))return 6;
+    std::cout<<passed<<" provenance cases passed\n";
+}

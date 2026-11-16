@@ -1,0 +1,37 @@
+    /tmp/forgecad-k10-diagonal-20261115/tests/test_mapping_diagonal_validation.cpp:160: FK_CHECK(bool(direct))
+    /tmp/forgecad-k10-diagonal-20261115/tests/test_mapping_diagonal_validation.cpp:181: targetError = 1.0093032078380131, atteso 0 (differenza 1.0093032078380131 > 1e-08)
+    /tmp/forgecad-k10-diagonal-20261115/tests/test_mapping_diagonal_validation.cpp:183: FK_CHECK(projectPoint(*carrier, peak, {0, 1}, {0, norm(jet[2])}).distance <= options.tolerance)
+    /tmp/forgecad-k10-diagonal-20261115/tests/test_mapping_diagonal_validation.cpp:209: edgeError = 9.9999999971371565e-06, atteso 0 (differenza 9.9999999971371565e-06 > 1e-08)
+    /tmp/forgecad-k10-diagonal-20261115/tests/test_mapping_diagonal_validation.cpp:160: FK_CHECK(bool(direct))
+    /tmp/forgecad-k10-diagonal-20261115/tests/test_mapping_diagonal_validation.cpp:181: targetError = 1.0093032078380131, atteso 0 (differenza 1.0093032078380131 > 1e-08)
+    /tmp/forgecad-k10-diagonal-20261115/tests/test_mapping_diagonal_validation.cpp:183: FK_CHECK(projectPoint(*carrier, peak, {0, 1}, {0, norm(jet[2])}).distance <= options.tolerance)
+    /tmp/forgecad-k10-diagonal-20261115/tests/test_mapping_diagonal_validation.cpp:209: edgeError = 9.9999999262405869e-06, atteso 0 (differenza 9.9999999262405869e-06 > 1e-08)
+    /tmp/forgecad-k10-diagonal-20261115/tests/test_mapping_diagonal_validation.cpp:160: FK_CHECK(bool(direct))
+    /tmp/forgecad-k10-diagonal-20261115/tests/test_mapping_diagonal_validation.cpp:181: targetError = 1.0066433751989752, atteso 0 (differenza 1.0066433751989752 > 1e-08)
+    (altri fallimenti omessi)
+[ FAIL ] MappingDiagonalExtrusionHiddenPolynomialRationalPoseScaleReverse (34 controlli falliti)
+    /tmp/forgecad-k10-diagonal-20261115/tests/test_mapping_diagonal_validation.cpp:160: FK_CHECK(bool(direct))
+    /tmp/forgecad-k10-diagonal-20261115/tests/test_mapping_diagonal_validation.cpp:181: targetError = 0.39906265669149521, atteso 0 (differenza 0.39906265669149521 > 9.9999999999999995e-07)
+    /tmp/forgecad-k10-diagonal-20261115/tests/test_mapping_diagonal_validation.cpp:183: FK_CHECK(projectPoint(*carrier, peak, {0, 1}, {0, norm(jet[2])}).distance <= options.tolerance)
+    /tmp/forgecad-k10-diagonal-20261115/tests/test_mapping_diagonal_validation.cpp:209: edgeError = 0.00099999999212382418, atteso 0 (differenza 0.00099999999212382418 > 9.9999999999999995e-07)
+    /tmp/forgecad-k10-diagonal-20261115/tests/test_mapping_diagonal_validation.cpp:181: targetError = 0.39906265669149521, atteso 0 (differenza 0.39906265669149521 > 9.9999999999999995e-07)
+    /tmp/forgecad-k10-diagonal-20261115/tests/test_mapping_diagonal_validation.cpp:183: FK_CHECK(projectPoint(*carrier, peak, {0, 1}, {0, norm(jet[2])}).distance <= options.tolerance)
+    /tmp/forgecad-k10-diagonal-20261115/tests/test_mapping_diagonal_validation.cpp:209: edgeError = 0.00099999999212382418, atteso 0 (differenza 0.00099999999212382418 > 9.9999999999999995e-07)
+    /tmp/forgecad-k10-diagonal-20261115/tests/test_mapping_diagonal_validation.cpp:160: FK_CHECK(bool(direct))
+    /tmp/forgecad-k10-diagonal-20261115/tests/test_mapping_diagonal_validation.cpp:181: targetError = 0.39906259918395287, atteso 0 (differenza 0.39906259918395287 > 9.9999999999999995e-07)
+    /tmp/forgecad-k10-diagonal-20261115/tests/test_mapping_diagonal_validation.cpp:183: FK_CHECK(projectPoint(*carrier, peak, {0, 1}, {0, norm(jet[2])}).distance <= options.tolerance)
+    (altri fallimenti omessi)
+[ FAIL ] MappingDiagonalExtrusionNestedGeneratorTrimHolesHistoryRoundtrip (14 controlli falliti)
+    /tmp/forgecad-k10-diagonal-20261115/tests/test_mapping_diagonal_validation.cpp:160: FK_CHECK(bool(direct))
+    /tmp/forgecad-k10-diagonal-20261115/tests/test_mapping_diagonal_validation.cpp:181: targetError = 0.43983154782011769, atteso 0 (differenza 0.43983154782011769 > 9.9999999999999995e-07)
+    /tmp/forgecad-k10-diagonal-20261115/tests/test_mapping_diagonal_validation.cpp:183: FK_CHECK(projectPoint(*carrier, peak, {0, 1}, {0, norm(jet[2])}).distance <= options.tolerance)
+    /tmp/forgecad-k10-diagonal-20261115/tests/test_mapping_diagonal_validation.cpp:181: targetError = 0.43983154782011769, atteso 0 (differenza 0.43983154782011769 > 9.9999999999999995e-07)
+    /tmp/forgecad-k10-diagonal-20261115/tests/test_mapping_diagonal_validation.cpp:183: FK_CHECK(projectPoint(*carrier, peak, {0, 1}, {0, norm(jet[2])}).distance <= options.tolerance)
+[ FAIL ] MappingDiagonalOriginalLineExtrusionSuccess (5 controlli falliti)
+[  OK  ] MappingDiagonalProviderPullbackKnotsAndWrongCandidate
+[  OK  ] MappingDiagonalFailureCancellationAreAtomicAndTensorIsUnsupported
+[  OK  ] MappingDiagonalProviderTinyNonzeroUDirectionMustNotSnap
+[  OK  ] MappingDiagonalProviderLineConstantUAndClosedJunctionQueries
+4/7 test superati
+Command exited with non-zero status 1
+elapsed=0.88 maxrss_kb=22208

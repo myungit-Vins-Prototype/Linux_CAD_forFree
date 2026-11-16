@@ -1,0 +1,12 @@
+from pathlib import Path
+import difflib,subprocess
+p=Path('/tmp/supporto-review/stage');f=p/'kernel/fk_boolean.cpp';s=f.read_text().replace('CurvePtr<3> intersection;','CurvePtr<3> intersection={};').replace('Interval intersectionRange;','Interval intersectionRange={};');f.write_text(s)
+style='{BasedOnStyle: LLVM, IndentWidth: 4, ColumnLimit: 120, BreakBeforeBraces: Attach, SortIncludes: Never}'
+for name in ['fk_boolean_boundary.h','fk_boolean_boundary.cpp']:
+ subprocess.run(['/usr/bin/clang-format','-i','-style='+style,str(p/'kernel'/name)],check=True)
+a=(p/'fk_boolean.before.cpp.txt').read_text().splitlines();b=f.read_text().splitlines();ranges=[]
+for tag,i,j,k,l in difflib.SequenceMatcher(None,a,b,autojunk=False).get_opcodes():
+ if tag!='equal' and l>k:ranges.append(f'--lines={k+1}:{l}')
+subprocess.run(['/usr/bin/clang-format','-i','-style='+style,*ranges,str(f)],check=True)
+(p/'format-commands.txt').write_text('\n'.join(ranges)+'\n')
+(p/'delta.diff.txt').write_text(''.join(difflib.unified_diff((p/'fk_boolean.before.cpp.txt').read_text().splitlines(True),f.read_text().splitlines(True),fromfile='kernel/fk_boolean.cpp baseline',tofile='kernel/fk_boolean.cpp private stage')))

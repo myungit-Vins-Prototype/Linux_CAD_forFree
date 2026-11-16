@@ -1,0 +1,484 @@
+#include "fk_bspline_surface.h"
+
+#include <algorithm>
+#include <atomic>
+#include <functional>
+#include <memory>
+
+#include "fk_bspline_basis.h"
+
+namespace ForgeCad::Kernel {
+namespace {
+double wrapped(double t, Interval domain, bool periodic) {
+    if (!periodic || (t >= domain.lo && t <= domain.hi)) return t;
+    double local = std::fmod(t - domain.lo, domain.length());
+    if (local < 0) local += domain.length();
+    return domain.lo + local;
+}
+std::vector<double> breaks(const std::vector<double> &knots, Interval range, Interval domain, bool periodic) {
+    if (!periodic) return detail::knotBreakpoints(knots, range);
+    const double first = std::floor((range.lo - domain.lo) / domain.length());
+    const double last = std::ceil((range.hi - domain.lo) / domain.length());
+    if (!range.isFinite() || !std::isfinite(first) || !std::isfinite(last) || last - first > 100000)
+        throw std::invalid_argument("BSplineSurface: intervallo periodico troppo esteso");
+    std::vector<double> result{range.lo, range.hi};
+    for (int k = 0; k <= int(last - first); ++k)
+        for (double t : knots) {
+            const double shifted = t + (first + k) * domain.length();
+            if (t >= domain.lo && t <= domain.hi && shifted > range.lo && shifted < range.hi)
+                result.push_back(shifted);
+        }
+    std::sort(result.begin(), result.end());
+    result.erase(std::unique(result.begin(), result.end()), result.end());
+    return result;
+}
+} // namespace
+
+BSplineSurface::BSplineSurface(int uDegree, int vDegree, std::vector<double> uKnots, std::vector<double> vKnots,
+                               int uPoleCount, int vPoleCount, std::vector<Vec3> poles, std::vector<double> weights,
+                               bool periodicU, bool periodicV)
+    : periodicU_(periodicU), periodicV_(periodicV), uDegree_(uDegree), vDegree_(vDegree), uKnots_(std::move(uKnots)), vKnots_(std::move(vKnots)),
+      uPoleCount_(uPoleCount), vPoleCount_(vPoleCount), poles_(std::move(poles)), weights_(std::move(weights)) {
+    detail::validateKnotVector(uKnots_, uDegree_, uPoleCount_, "BSplineSurface (u)");
+    detail::validateKnotVector(vKnots_, vDegree_, vPoleCount_, "BSplineSurface (v)");
+    if (int(poles_.size()) != uPoleCount_ * vPoleCount_) throw std::invalid_argument("BSplineSurface: numero di poli errato");
+    for (const Vec3 &pole : poles_)
+        if (!isFinite(pole)) throw std::invalid_argument("BSplineSurface: polo non finito");
+    if (!weights_.empty()) {
+        if (weights_.size() != poles_.size()) throw std::invalid_argument("BSplineSurface: numero di pesi errato");
+        for (double w : weights_)
+            if (!(w > 0.0) || !std::isfinite(w)) throw std::invalid_argument("BSplineSurface: pesi non positivi");
+    }
+}
+
+BSplineSurface::BSplineSurface(const BSplineSurface &other)
+    : Surface(other), periodicU_(other.periodicU_), periodicV_(other.periodicV_),
+      uDegree_(other.uDegree_), vDegree_(other.vDegree_), uKnots_(other.uKnots_), vKnots_(other.vKnots_),
+      uPoleCount_(other.uPoleCount_), vPoleCount_(other.vPoleCount_), poles_(other.poles_), weights_(other.weights_),
+      basis_(other.basis_), placement_(other.placement_), patchCache_(std::atomic_load(&other.patchCache_)),
+      sharpCache_(std::atomic_load(&other.sharpCache_)), treeCache_(std::atomic_load(&other.treeCache_)),
+      isoCache_(std::atomic_load(&other.isoCache_)) {
+}
+
+BSplineSurface &BSplineSurface::operator=(const BSplineSurface &other) {
+    if (this != &other) {
+        BSplineSurface snapshot(other);
+        *this = std::move(snapshot);
+    }
+    return *this;
+}
+
+BSplineSurface::BSplineSurface(std::shared_ptr<const BSplineSurface> basis, const Transform3 &placement)
+    : uDegree_(0), vDegree_(0), uPoleCount_(0), vPoleCount_(0), basis_(std::move(basis)), placement_(placement) {
+    const auto valid = [](const Transform3 &t) {
+        if (!isFinite(t.translationPart())) return false;
+        for (int i = 0; i < 3; ++i)
+            for (int j = 0; j < 3; ++j)
+                if (!std::isfinite(t.matrix(i, j))) return false;
+        double scale = 0;
+        return t.isSimilarity(&scale) && std::isfinite(scale) && scale > 0;
+    };
+    if (!basis_ || !valid(placement_))
+        throw std::invalid_argument("BSplineSurface: base o similitudine non valida");
+    // Una sola base, anche dopo piu' trasformazioni: niente catene ricorsive
+    // durante valutazione, serializzazione o lettura di dati non fidati.
+    if (basis_->basis_) {
+        placement_ = placement_ * basis_->placement_;
+        basis_ = basis_->basis_;
+        if (!valid(placement_)) throw std::invalid_argument("BSplineSurface: trasformazione composta non valida");
+    }
+    periodicU_ = basis_->periodicU_;
+    periodicV_ = basis_->periodicV_;
+    uDegree_ = basis_->uDegree_;
+    vDegree_ = basis_->vDegree_;
+    uPoleCount_ = basis_->uPoleCount_;
+    vPoleCount_ = basis_->vPoleCount_;
+}
+
+Interval BSplineSurface::uDomain() const { return {uKnots()[uDegree_], uKnots()[uPoleCount_]}; }
+Interval BSplineSurface::vDomain() const { return {vKnots()[vDegree_], vKnots()[vPoleCount_]}; }
+
+std::vector<double> BSplineSurface::uBreakpoints(const Interval &range) const {
+    return breaks(uKnots(), range, uDomain(), periodicU_);
+}
+
+std::vector<double> BSplineSurface::vBreakpoints(const Interval &range) const {
+    return breaks(vKnots(), range, vDomain(), periodicV_);
+}
+
+void BSplineSurface::evaluate(double u, double v, int order, Vec3 *out) const {
+    if (basis_) {
+        basis_->evaluate(u, v, order, out);
+        // Il contratto di Surface scrive soltanto i jet k+l <= order.
+        for (int k = 0; k <= order; ++k)
+            for (int l = 0; l + k <= order; ++l) {
+                Vec3 &jet = out[k * (order + 1) + l];
+                jet = k == 0 && l == 0 ? placement_.applyToPoint(jet) : placement_.applyToVector(jet);
+            }
+        return;
+    }
+    u = wrapped(u, uDomain(), periodicU_);
+    v = wrapped(v, vDomain(), periodicV_);
+    const int pu = uDegree_, pv = vDegree_;
+    const int du = std::min(order, pu), dv = std::min(order, pv);
+    const int su = detail::findSpan(uKnots(), pu, uPoleCount_, u);
+    const int sv = detail::findSpan(vKnots(), pv, vPoleCount_, v);
+    detail::ScratchBuffer<double> nu((du + 1) * (pu + 1)), nv((dv + 1) * (pv + 1));
+    detail::basisFunctionDerivatives(uKnots(), su, u, pu, du, nu.data());
+    detail::basisFunctionDerivatives(vKnots(), sv, v, pv, dv, nv.data());
+
+    // Coordinate locali del blocco attivo: le somme delle derivate della
+    // base sono nulle, ma sommarle sulle coordinate mondo amplifica la
+    // cancellazione ai nodi stretti e nei gradi elevati.
+    const Vec3 origin = pole(su-pu,sv-pv);
+    // Il solo punto usa gli stessi termini e lo stesso ordine di somma,
+    // senza preparare i buffer e la ricorrenza delle derivate A4.4.
+    if (order == 0) {
+        Vec3 sum;
+        double weightSum = 0.0;
+        for (int i = 0; i <= pu; ++i) {
+            const double bu = nu[i];
+            if (bu == 0.0) continue;
+            for (int j = 0; j <= pv; ++j) {
+                const int row = su - pu + i, column = sv - pv + j;
+                const double b = bu * nv[j] * weight(row, column);
+                sum += b * (pole(row,column)-origin);
+                weightSum += b;
+            }
+        }
+        out[0] = origin + (isRational() ? sum / weightSum : sum);
+        return;
+    }
+
+    // Derivate del numeratore omogeneo A = sum N N w P e del denominatore w.
+    const int size = order + 1;
+    detail::ScratchBuffer<Vec3, 16> a(size * size);
+    detail::ScratchBuffer<double, 16> w(size * size);
+    for (int k = 0; k <= du; ++k) {
+        for (int l = 0; l <= dv && k + l <= order; ++l) {
+            Vec3 sum;
+            double weightSum = 0.0;
+            for (int i = 0; i <= pu; ++i) {
+                const double bu = nu[k * (pu + 1) + i];
+                if (bu == 0.0) continue;
+                for (int j = 0; j <= pv; ++j) {
+                    const int row = su - pu + i, column = sv - pv + j;
+                    const double b = bu * nv[l * (pv + 1) + j] * weight(row, column);
+                    sum += b * (pole(row,column)-origin);
+                    weightSum += b;
+                }
+            }
+            a[k * size + l] = sum;
+            w[k * size + l] = weightSum;
+        }
+    }
+
+    for (int i = 0; i < size * size; ++i) out[i] = Vec3();
+    if (!isRational()) {
+        for (int k = 0; k <= order; ++k)
+            for (int l = 0; k + l <= order; ++l) out[derivativeIndex(k, l, order)] = a[k * size + l];
+        out[0] += origin;
+        return;
+    }
+    // A4.4: S_kl = (A_kl - sum_j C(l,j) w_0j S_k,l-j - sum_i C(k,i) w_i0 S_k-i,l
+    //               - sum_i C(k,i) sum_j C(l,j) w_ij S_k-i,l-j) / w_00.
+    auto S = [&](int k, int l) -> Vec3 & { return out[derivativeIndex(k, l, order)]; };
+    for (int k = 0; k <= order; ++k) {
+        for (int l = 0; k + l <= order; ++l) {
+            Vec3 value = a[k * size + l];
+            for (int j = 1; j <= l; ++j) value -= detail::binomial(l, j) * w[j] * S(k, l - j);
+            for (int i = 1; i <= k; ++i) {
+                value -= detail::binomial(k, i) * w[i * size] * S(k - i, l);
+                Vec3 inner;
+                for (int j = 1; j <= l; ++j) inner += detail::binomial(l, j) * w[i * size + j] * S(k - i, l - j);
+                value -= detail::binomial(k, i) * inner;
+            }
+            S(k, l) = value / w[0];
+        }
+    }
+    out[0] += origin;
+}
+
+// Poli della curva a u costante: Q_j = sum_i N_i(u) w_ij P_ij / W_j, W_j = sum_i N_i(u) w_ij.
+BSplineCurve<3> BSplineSurface::uIsoCurve(double u) const {
+    u = wrapped(u, uDomain(), periodicU_);
+    const int pu = uDegree_;
+    const int su = detail::findSpan(uKnots(), pu, uPoleCount_, u);
+    detail::ScratchBuffer<double> nu(pu + 1);
+    detail::basisFunctionDerivatives(uKnots(), su, u, pu, 0, nu.data());
+    std::vector<Vec3> poles(vPoleCount_);
+    std::vector<double> weights(vPoleCount_, 0.0);
+    for (int j = 0; j < vPoleCount_; ++j) {
+        Vec3 sum;
+        for (int i = 0; i <= pu; ++i) {
+            const int row = su - pu + i;
+            const double b = nu[i] * weight(row, j);
+            sum += b * pole(row, j);
+            weights[j] += b;
+        }
+        poles[j] = sum / weights[j];
+    }
+    if (!isRational()) weights.clear();
+    return BSplineCurve<3>(vDegree_, vKnots(), std::move(poles), std::move(weights));
+}
+
+BSplineCurve<3> BSplineSurface::vIsoCurve(double v) const {
+    v = wrapped(v, vDomain(), periodicV_);
+    const int pv = vDegree_;
+    const int sv = detail::findSpan(vKnots(), pv, vPoleCount_, v);
+    detail::ScratchBuffer<double> nv(pv + 1);
+    detail::basisFunctionDerivatives(vKnots(), sv, v, pv, 0, nv.data());
+    std::vector<Vec3> poles(uPoleCount_);
+    std::vector<double> weights(uPoleCount_, 0.0);
+    for (int i = 0; i < uPoleCount_; ++i) {
+        Vec3 sum;
+        for (int j = 0; j <= pv; ++j) {
+            const int column = sv - pv + j;
+            const double b = nv[j] * weight(i, column);
+            sum += b * pole(i, column);
+            weights[i] += b;
+        }
+        poles[i] = sum / weights[i];
+    }
+    if (!isRational()) weights.clear();
+    return BSplineCurve<3>(uDegree_, uKnots(), std::move(poles), std::move(weights));
+}
+
+// Prima ogni colonna (curva in u) viene divisa nei tratti di Bezier, poi ogni
+// riga di ciascun tratto (curva in v). Le curve razionali lavorano gia' in
+// coordinate omogenee, quindi pesi e poli restano coerenti.
+std::shared_ptr<const std::vector<BSplineSurface>> BSplineSurface::cachedBezierPatches() const {
+    std::shared_ptr<const std::vector<BSplineSurface>> patches = std::atomic_load(&patchCache_);
+    if (!patches) {
+        patches = std::make_shared<const std::vector<BSplineSurface>>(bezierPatches());
+        std::shared_ptr<const std::vector<BSplineSurface>> expected;
+        if (!std::atomic_compare_exchange_strong(&patchCache_, &expected, patches)) patches = std::move(expected);
+    }
+    return patches;
+}
+
+std::shared_ptr<const BSplineSurface::PatchTree> BSplineSurface::cachedPatchTree() const {
+    std::shared_ptr<const PatchTree> tree = std::atomic_load(&treeCache_);
+    if (tree) return tree;
+    const std::shared_ptr<const std::vector<BSplineSurface>> patches = cachedBezierPatches();
+    auto result = std::make_shared<PatchTree>();
+    // Griglia delle pezze: [iu * nv + iv], nv = pezze con lo stesso intervallo u della prima.
+    std::size_t nv = 0;
+    while (nv < patches->size() && (*patches)[nv].uDomain().lo == patches->front().uDomain().lo) ++nv;
+    if (nv > 0 && patches->size() % nv == 0) {
+        const std::size_t nu = patches->size() / nv;
+        std::vector<PatchTree::Node> leaves(patches->size());
+        for (std::size_t k = 0; k < patches->size(); ++k) {
+            const BSplineSurface &patch = (*patches)[k];
+            PatchTree::Node &node = leaves[k];
+            node.lo = node.hi = patch.pole(0, 0);
+            for (int i = 0; i < patch.uPoleCount(); ++i)
+                for (int j = 0; j < patch.vPoleCount(); ++j)
+                    for (int c = 0; c < 3; ++c) {
+                        node.lo[c] = std::min(node.lo[c], patch.pole(i, j)[c]);
+                        node.hi[c] = std::max(node.hi[c], patch.pole(i, j)[c]);
+                    }
+            node.u = patch.uDomain();
+            node.v = patch.vDomain();
+            node.leaf = int(k);
+            result->largestPatchDiagonal = std::max(result->largestPatchDiagonal, distance(node.lo, node.hi));
+        }
+        // Rettangolo [u0, u1) x [v0, v1) di pezze: foglia o due meta'.
+        std::function<int(std::size_t, std::size_t, std::size_t, std::size_t)> build =
+            [&](std::size_t u0, std::size_t u1, std::size_t v0, std::size_t v1) -> int {
+            const int index = int(result->nodes.size());
+            if (u1 - u0 == 1 && v1 - v0 == 1) {
+                result->nodes.push_back(leaves[u0 * nv + v0]);
+                return index;
+            }
+            result->nodes.emplace_back();
+            int first, second;
+            if (u1 - u0 >= v1 - v0) {
+                const std::size_t m = (u0 + u1) / 2;
+                first = build(u0, m, v0, v1);
+                second = build(m, u1, v0, v1);
+            } else {
+                const std::size_t m = (v0 + v1) / 2;
+                first = build(u0, u1, v0, m);
+                second = build(u0, u1, m, v1);
+            }
+            PatchTree::Node &node = result->nodes[std::size_t(index)];
+            const PatchTree::Node &a = result->nodes[std::size_t(first)], &b = result->nodes[std::size_t(second)];
+            for (int c = 0; c < 3; ++c) {
+                node.lo[c] = std::min(a.lo[c], b.lo[c]);
+                node.hi[c] = std::max(a.hi[c], b.hi[c]);
+            }
+            node.u = {std::min(a.u.lo, b.u.lo), std::max(a.u.hi, b.u.hi)};
+            node.v = {std::min(a.v.lo, b.v.lo), std::max(a.v.hi, b.v.hi)};
+            node.first = first;
+            node.second = second;
+            return index;
+        };
+        result->nodes.reserve(2 * patches->size());
+        build(0, nu, 0, nv);
+    }
+    tree = result;
+    std::shared_ptr<const PatchTree> expected;
+    if (!std::atomic_compare_exchange_strong(&treeCache_, &expected, tree)) tree = std::move(expected);
+    return tree;
+}
+
+std::shared_ptr<const BSplineSurface::SharpKnotLines> BSplineSurface::cachedSharpKnotLines() const {
+    std::shared_ptr<const SharpKnotLines> lines = std::atomic_load(&sharpCache_);
+    if (lines) return lines;
+    const std::shared_ptr<const std::vector<BSplineSurface>> patches = cachedBezierPatches();
+    const std::vector<double> us = uBreakpoints(uDomain()), vs = vBreakpoints(vDomain());
+    const std::size_t nu = us.size() - 1, nv = vs.size() - 1;
+    auto result = std::make_shared<SharpKnotLines>();
+    // Derivata prima omogenea (w P, w) lungo u o v sul lato di una pezza di Bezier.
+    struct Homogeneous {
+        Vec3 p;
+        double w;
+    };
+    const auto homogeneous = [](const BSplineSurface &patch, int i, int j) { return Homogeneous{patch.weight(i, j) * patch.pole(i, j), patch.weight(i, j)}; };
+    const auto differs = [](const Homogeneous &a, const Homogeneous &b) {
+        const double size = std::max({norm(a.p), norm(b.p), std::fabs(a.w), std::fabs(b.w)});
+        return norm(a.p - b.p) > 1e-9 * size || std::fabs(a.w - b.w) > 1e-9 * size;
+    };
+    if (patches->size() == nu * nv) {
+        for (std::size_t i = 0; i + 1 < nu; ++i) {
+            // La molteplicita' certifica C1 o migliore: il confronto di jet
+            // Bezier su campate a pochi ULP amplifica l'arrotondamento e
+            // non puo' trasformare un nodo liscio in una piega reale.
+            if (std::count(uKnots().begin(),uKnots().end(),us[i+1]) < uDegree()) continue;
+            bool sharp = false;
+            for (std::size_t j = 0; j < nv && !sharp; ++j) {
+                const BSplineSurface &left = (*patches)[i * nv + j], &right = (*patches)[(i + 1) * nv + j];
+                const int p = left.uDegree();
+                const double hl = us[i + 1] - us[i], hr = us[i + 2] - us[i + 1];
+                for (int k = 0; k < left.vPoleCount() && !sharp; ++k) {
+                    const Homogeneous l0 = homogeneous(left, p - 1, k), l1 = homogeneous(left, p, k);
+                    const Homogeneous r0 = homogeneous(right, 0, k), r1 = homogeneous(right, 1, k);
+                    sharp = differs({(l1.p - l0.p) / hl, (l1.w - l0.w) / hl}, {(r1.p - r0.p) / hr, (r1.w - r0.w) / hr});
+                }
+            }
+            if (sharp) result->u.push_back(us[i + 1]);
+        }
+        for (std::size_t j = 0; j + 1 < nv; ++j) {
+            if (std::count(vKnots().begin(),vKnots().end(),vs[j+1]) < vDegree()) continue;
+            bool sharp = false;
+            for (std::size_t i = 0; i < nu && !sharp; ++i) {
+                const BSplineSurface &low = (*patches)[i * nv + j], &high = (*patches)[i * nv + j + 1];
+                const int q = low.vDegree();
+                const double hl = vs[j + 1] - vs[j], hr = vs[j + 2] - vs[j + 1];
+                for (int k = 0; k < low.uPoleCount() && !sharp; ++k) {
+                    const Homogeneous l0 = homogeneous(low, k, q - 1), l1 = homogeneous(low, k, q);
+                    const Homogeneous r0 = homogeneous(high, k, 0), r1 = homogeneous(high, k, 1);
+                    sharp = differs({(l1.p - l0.p) / hl, (l1.w - l0.w) / hl}, {(r1.p - r0.p) / hr, (r1.w - r0.w) / hr});
+                }
+            }
+            if (sharp) result->v.push_back(vs[j + 1]);
+        }
+    } else {
+        // Disposizione inattesa: solo le linee che possono essere C0.
+        for (auto it = us.begin()+1; it != us.end()-1; ++it)
+            if (std::count(uKnots().begin(),uKnots().end(),*it) >= uDegree()) result->u.push_back(*it);
+        for (auto it = vs.begin()+1; it != vs.end()-1; ++it)
+            if (std::count(vKnots().begin(),vKnots().end(),*it) >= vDegree()) result->v.push_back(*it);
+    }
+    lines = result;
+    std::shared_ptr<const SharpKnotLines> expected;
+    if (!std::atomic_compare_exchange_strong(&sharpCache_, &expected, lines)) lines = std::move(expected);
+    return lines;
+}
+
+std::vector<BSplineSurface> BSplineSurface::bezierPatches() const {
+    if (basis_) {
+        const auto source = basis_->cachedBezierPatches();
+        std::vector<BSplineSurface> result;
+        result.reserve(source->size());
+        for (const auto &patch : *source)
+            result.emplace_back(std::shared_ptr<const BSplineSurface>(source, &patch), placement_);
+        return result;
+    }
+    const int pu = uDegree_, pv = vDegree_;
+    std::vector<std::vector<BSplineCurve<3>>> columns;
+    for (int j = 0; j < vPoleCount_; ++j) {
+        std::vector<Vec3> poles(uPoleCount_);
+        std::vector<double> weights;
+        for (int i = 0; i < uPoleCount_; ++i) {
+            poles[i] = pole(i, j);
+            if (isRational()) weights.push_back(weight(i, j));
+        }
+        columns.push_back(BSplineCurve<3>(pu, uKnots(), std::move(poles), std::move(weights)).bezierSegments());
+    }
+    const std::size_t uSpans = columns.front().size();
+
+    std::vector<BSplineSurface> result;
+    for (std::size_t k = 0; k < uSpans; ++k) {
+        // Righe del tratto k: per ogni i, curva in v con i poli i-esimi delle colonne.
+        std::vector<std::vector<BSplineCurve<3>>> rows;
+        for (int i = 0; i <= pu; ++i) {
+            std::vector<Vec3> poles(vPoleCount_);
+            std::vector<double> weights;
+            for (int j = 0; j < vPoleCount_; ++j) {
+                poles[j] = columns[j][k].poles()[i];
+                if (isRational()) weights.push_back(columns[j][k].weight(i));
+            }
+            rows.push_back(BSplineCurve<3>(pv, vKnots(), std::move(poles), std::move(weights)).bezierSegments());
+        }
+        const Interval uSpan = columns.front()[k].domain();
+        for (std::size_t m = 0; m < rows.front().size(); ++m) {
+            const Interval vSpan = rows.front()[m].domain();
+            std::vector<Vec3> poles;
+            std::vector<double> weights;
+            for (int i = 0; i <= pu; ++i)
+                for (int j = 0; j <= pv; ++j) {
+                    poles.push_back(rows[i][m].poles()[j]);
+                    if (isRational()) weights.push_back(rows[i][m].weight(j));
+                }
+            std::vector<double> uKnots(pu + 1, uSpan.lo), vKnots(pv + 1, vSpan.lo);
+            uKnots.insert(uKnots.end(), pu + 1, uSpan.hi);
+            vKnots.insert(vKnots.end(), pv + 1, vSpan.hi);
+            result.emplace_back(pu, pv, std::move(uKnots), std::move(vKnots), pu + 1, pv + 1, std::move(poles),
+                                std::move(weights));
+        }
+    }
+    return result;
+}
+
+struct BSplineSurface::IsoCache {
+    std::vector<double> uValues, vValues;
+    std::vector<CurvePtr<3>> uCurves, vCurves;
+};
+
+CurvePtr<3> BSplineSurface::knotIso(bool fixedU, double value) const {
+    std::shared_ptr<const IsoCache> cache = std::atomic_load(&isoCache_);
+    if (!cache) {
+        // Un parametro interno a un tratto non usa la cache dei nodi: non
+        // costruire tutte le isoparametriche per una curva che non vi compare.
+        // A cache pronta il percorso di lookup resta quello originale.
+        const std::vector<double> &knots = fixedU ? uKnots() : vKnots();
+        const auto knot = std::lower_bound(knots.begin(), knots.end(), value);
+        const Interval domain = fixedU ? uDomain() : vDomain();
+        if (knot == knots.end() || *knot != value || value < domain.lo || value > domain.hi) return nullptr;
+        auto built = std::make_shared<IsoCache>();
+        built->uValues = uBreakpoints(uDomain());
+        built->vValues = vBreakpoints(vDomain());
+        for (double u : built->uValues) built->uCurves.push_back(std::make_shared<BSplineCurve<3>>(uIsoCurve(u)));
+        for (double v : built->vValues) built->vCurves.push_back(std::make_shared<BSplineCurve<3>>(vIsoCurve(v)));
+        cache = built;
+        std::shared_ptr<const IsoCache> expected;
+        if (!std::atomic_compare_exchange_strong(&isoCache_, &expected, cache)) cache = std::move(expected);
+    }
+    const std::vector<double> &values = fixedU ? cache->uValues : cache->vValues;
+    const auto found = std::lower_bound(values.begin(), values.end(), value);
+    if (found == values.end() || *found != value) return nullptr;
+    return (fixedU ? cache->uCurves : cache->vCurves)[std::size_t(found - values.begin())];
+}
+
+CurvePtr<3> BSplineSurface::uIso(double u) const {
+    if (CurvePtr<3> cached = knotIso(true, u)) return cached;
+    return std::make_shared<BSplineCurve<3>>(uIsoCurve(u));
+}
+CurvePtr<3> BSplineSurface::vIso(double v) const {
+    if (CurvePtr<3> cached = knotIso(false, v)) return cached;
+    return std::make_shared<BSplineCurve<3>>(vIsoCurve(v));
+}
+
+}

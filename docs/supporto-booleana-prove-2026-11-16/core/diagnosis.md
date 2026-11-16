@@ -1,0 +1,61 @@
+# Supporto: riproduzione e diagnosi privata
+
+Originale e copia congelata: SHA256 `79887e91d75feb748af19fcdb14cd469cc40e74abab03e3cbeaa12e2d3271f7f`. L'originale non è stato modificato e lo stesso hash è stato verificato nuovamente dopo tutte le prove.
+
+Repository e documentazione non sono stati modificati. Le due unità compilate privatamente sono il main di prova e una copia strumentata di fk_boolean.cpp. Tutte le altre unità sono gli oggetti Release dell'applicazione corrente. La strumentazione registra le scelte esistenti; non cambia la geometria né le tolleranze.
+
+## Identità
+
+| Corpo | Feature | Indice feature | ID feature | F/E/V | Controllo B-rep |
+|---|---|---:|---:|---|---|
+| Corpo 1 | Estrusione 1 | 0 | 1 | 6/12/8 | 0 problemi |
+| Corpo 2 | Estrusione 3 | 2 | 3 | 3/2/2 | 0 problemi |
+| Corpo 3 | Loft 6 | 5 | 6 | 4/6/4 | 0 problemi |
+
+Precisione documento: 1e-7 mm. Tolleranza booleana effettiva già esistente: 1e-6 mm. Nessuna tolleranza è stata cambiata. Il loft ha due sezioni, due guide riferite a edge, continuità G1/G1, mergeTangents=false. Nessun errore è salvato nelle feature.
+
+## Riproduzione
+
+`python3 /tmp/supporto-review/build_probe.py` compila il main QtCore e riusa il comando di link dell'applicazione, senza il main dell'applicazione.
+
+`/tmp/supporto-review/probe raw 2 5` fallisce con `Body::build: l'edge 3 non ha due fin opposte`.
+
+`/tmp/supporto-review/probe raw 5 2` fallisce con lo stesso messaggio per edge 2.
+
+`probe app 2 5` e `probe app 5 2` confermano: forgeBoolean prova entrambi gli ordini e mostra l'errore del secondo tentativo. Gli indici dell'errore sono edge del vettore di assemblaggio, non ID degli edge originali.
+
+`python3 /tmp/supporto-review/build_extended.py` aggiunge geometria e rigenerazione tramite viewport. Avvio necessario su questa macchina: `QT_QPA_PLATFORM=offscreen QT_QPA_PLATFORMTHEME= QT_QPA_PLATFORMTHEME_QT6= /tmp/supporto-review/probe-extended regenerate`.
+
+La rigenerazione usa loadDocument, rebuildAllFeatures (che azzera cachedGeometry per tutte le feature), recoveryDocument. Risultato: zero errori; tutti i tre B-rep rigenerati hanno binary SHA256 IDENTICI ai B-rep salvati. L'unione 2/5 fallisce uguale in entrambi gli ordini. È quindi escluso un disallineamento delle cache rispetto alla storia corrente.
+
+Le unioni 0/2 e 0/5 passano il checker: la prima ha due shell solide disgiunte, la seconda una shell. L'unione multitool B+C e la sequenza (A+B)+C falliscono nella stessa zona 2/5. Log separati: inventory.log, pair-results.json, regenerate.log, multi.log.
+
+## Localizzazione della perdita topologica
+
+La copia privata fk_boolean.cpp registra ogni subface PRIMA della decisione keep, i pezzi source/cut, e ogni fin output. Registra inoltre conteggi degli usi di tutti gli edge prima e dopo pairRadially e splitVertices.
+
+Nel caso 2/5, il cilindro conserva un taglio con partner cap loft F3 e partnerCrosses=false, tra Y=74.999987150394233 e 75.000012849605767. La faccia cap F3 non è suddivisa; è classificata In e scartata nell'unione. I laterali loft F0/F1 conservano invece due piccoli archi ellittici che raggiungono il vertice comune Y=75.
+
+Restano tre edge con un solo uso: E3 (corda di circa 2.57e-5 mm), E7 ed E10 (i due archi ellittici di circa 1.285e-5 mm). Gli altri edge hanno una fin avanti e una indietro. PairRadially e splitVertices lasciano questi conteggi invariati: non è un problema di versi né duplicazione radiale.
+
+Il ramo dimostrabile è collectCuts: un sottoarco classificato Inside su un operando e Boundary sull'altro viene inserito SOLO sul primo. Il classificatore Boundary del cap considera correttamente la distanza al contorno prima del winding. Il semplice conteggio locale non preserva però una rappresentazione condivisa del contatto. La booleana fallisce al primo Body::build, prima di computePCurves finale/unify/checkBody.
+
+## Geometria reale
+
+Getter originali, anche in esadecimale esatto: geometry.log e geometry-hex.log. Cilindro: origine [-130,42.5,135], asse [0,1,0], raggio 24.000000000000007. Il piano del cap è SECANTE, non tangente al cilindro: distanza dell'asse dal piano circa .3888226493 mm.
+
+La quasi tangenza riguarda il bordo ellittico del cap e le rette d'intersezione piano/cilindro. Gli estremi del cap hanno eccesso radiale circa 1.98e-11 mm e 1.66e-12 mm; l'interno del cap entra nel cilindro fino a 23.611177 mm. Non è quindi un semplice contatto tra solidi. I box dei poli loft che sporgono di decimi non rappresentano lo scarto reale del bordo cap.
+
+Il centro della minuscola corda inferiore dista dal vertice ellittico comune soltanto circa 1.98e-11 mm in direzione normale. La separazione tangenziale dei due attraversamenti è invece circa 2.57e-5 mm. Questa differenza di ordini di grandezza è quella prevista da una radice quasi tangente. Il campionamento della curva intera è diagnostico; il certificato continuo indipendente è preparato dall'agente UI con Fraction sui coefficienti originali.
+
+## Proposta generale minima, non implementata
+
+Preservare nel produttore pairArcs le origini già note di intersectCurves: p.s è il parametro della retta d'intersezione, p.t il parametro dell'edge del cap; fin/edge/body/face sono noti in quel ciclo. Oggi si conserva solo p.s.
+
+Aggiungere metadata privati BoundaryAnchor{body,face,fin,edge,edgeParameter,arcParameter}, mantenuti correttamente dopo split. Per un arco Inside/Boundary, seguire la catena nel loop ORIGINALE tra gli anchor, includendo il vertice condiviso per identità topologica. Esaminare entrambi i percorsi; accettare solo una catena univoca con certificato CONTINUO di vicinanza all'arco e alle superfici entro il budget esistente, con mapping monotono. Sostituire quindi la corda sul cilindro con i due tratti originali dell'ellisse. Il cap resta correttamente scartato, e i laterali trovano gli usi opposti degli stessi edge.
+
+È necessario distinguere la provenienza cross-body: Piece.source/sourceFin oggi si interpretano nel body della subface; sourcePCurve è un suggerimento per la superficie della subface e non può ricevere la pcurve del cap sul cilindro. La nuova provenienza deve conservare esplicitamente il proprietario originale, riusare la pcurve solo sulla faccia corretta e dichiarare la genealogia del bordo. Qualunque mapping ambiguo o certificato non risolto deve mantenere il comportamento attuale, non introdurre un riconoscimento per sola prossimità.
+
+Un primo fastpath generale può limitarsi a rette d'intersezione e bordi ellittici analitici, inclusa una catena di due fin consecutive. Il bound deve utilizzare coefficienti originali e aritmetica outward; prove campionate, curveOnSurface campionato e semplice ignora-corda non sono sufficienti.
+
+Nessuna modifica di produzione o workaround specifico per questo file è stata applicata.

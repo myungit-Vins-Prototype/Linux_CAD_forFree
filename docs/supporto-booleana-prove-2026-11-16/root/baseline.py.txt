@@ -1,0 +1,22 @@
+from pathlib import Path
+import json,subprocess,hashlib,shutil
+R=Path('/home/myungit/Linux_CAD_forFree');P=R/'docs/supporto-booleana-prove-2026-11-16';T=P/'root'
+memory=(R/'CLAUDE.md').read_text()
+assert not P.exists(),'Baseline gia presente'
+names=subprocess.check_output(['git','ls-files','--cached','--others','--exclude-standard','-z'],cwd=R).decode().split('\0')
+sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+before={f:sha(R/f) for f in sorted(set(names)) if f and (R/f).is_file() and not (R/f).is_symlink()}
+T.mkdir(parents=True)
+(T/'hashes-before.json').write_text(json.dumps(before,indent=2)+'\n')
+g=json.loads((R/'docs/architecture/graph.json').read_text())
+focus={'kernel/fk_boolean.cpp','kernel/fk_boolean.h','kernel/fk_topology.cpp','kernel/fk_exchange.cpp','kernel/fk_intersect.cpp','kernel/fk_marching.cpp','kernel/fk_loft.cpp','kernel/fk_body_check.cpp','cad_forge.cpp','cad_feature_build.cpp','cad_pattern.cpp','cad_document_io.cpp'}
+context=dict(nodes=[n for n in g['nodes'] if n['id'] in focus],edges=[e for e in g['edges'] if e['source'] in focus or e['target'] in focus],graph_sha256=sha(R/'docs/architecture/graph.json'))
+(T/'architecture-before.json').write_text(json.dumps(context,indent=2,ensure_ascii=False)+'\n')
+for f in sorted(focus|{'CLAUDE.md','tools/generate_architecture.py','kernel/CMakeLists.txt','docs/code-review-2026-11-15.md'}):
+ if (R/f).is_file():
+  target=T/'before'/(f+'.txt');target.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(R/f,target)
+(R/'docs/history/claude-prima-supporto-booleana-2026-11-16.md').write_text(memory)
+original=Path('/home/myungit/Documenti/Cad_Example/Supporto.prt');copy=Path('/tmp/supporto-review/Supporto.original.prt')
+assert sha(original)==sha(copy)=='79887e91d75feb748af19fcdb14cd469cc40e74abab03e3cbeaa12e2d3271f7f'
+(T/'input-manifest.json').write_text(json.dumps(dict(original=str(original),copy=str(copy),sha256=sha(copy),bytes=copy.stat().st_size,original_mtime=original.stat().st_mtime,precision_mm=1e-7,model_bodies={'Corpo 1':{'feature_index':0,'name':'Estrusione 1'},'Corpo 2':{'feature_index':2,'name':'Estrusione 3'},'Corpo 3':{'feature_index':5,'name':'Loft 6'}}),indent=2)+'\n')
+print('Baseline Supporto',len(before),'file; contesto',len(context['edges']),'archi; CAD originale invariato')

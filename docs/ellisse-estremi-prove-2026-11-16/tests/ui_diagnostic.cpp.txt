@@ -1,0 +1,17 @@
+#include "forgeCad2026_gui.h"
+#include "forgeCad2026_viewport.h"
+#include <QApplication>
+#include <QMouseEvent>
+#include <QSettings>
+#include <QTemporaryDir>
+#include <iostream>
+class ViewportInteractionTest {
+public:
+ static void diagnostic() {
+  CadViewport v;v.resize(1000,750);v.createSketch(0,QStringLiteral("Ellisse dagli estremi"));v.geometrySnap_=v.gridSnap_=v.originSnap_=false;v.history_.clear();v.setDrawingTool(DrawingTool::EllipseExtremes);
+  const auto click=[&](QPointF p){const auto pixel=v.projectWorldPoint(v.mapSketchPoint(p,v.sketches_[0]));const auto raw=v.screenToSketchPoint(pixel.toPoint());std::cout<<"intent "<<p.x()<<","<<p.y()<<" screen "<<pixel.x()<<","<<pixel.y()<<" integer "<<pixel.toPoint().x()<<","<<pixel.toPoint().y()<<" raw "<<raw.x()<<","<<raw.y()<<std::endl;QMouseEvent press(QEvent::MouseButtonPress,pixel,pixel,Qt::LeftButton,Qt::LeftButton,Qt::NoModifier);v.mousePressEvent(&press);QMouseEvent release(QEvent::MouseButtonRelease,pixel,pixel,Qt::LeftButton,Qt::NoButton,Qt::NoModifier);v.mouseReleaseEvent(&release);};
+  std::cout.precision(17);click({10,11});click({10,11});click({18,11});v.cursorSketchPoint_={16,8};CurveObject preview;v.previewCurve(preview);click({16,11});click({16,8});
+  for(const auto &p:v.sketches_[0].curves[0].controlPoints)std::cout<<"actual "<<p.x()<<","<<p.y()<<std::endl;
+ }
+};
+int main(int argc,char **argv){QApplication app(argc,argv);QTemporaryDir d;QSettings::setPath(QSettings::IniFormat,QSettings::UserScope,d.path());QSettings::setDefaultFormat(QSettings::IniFormat);ViewportInteractionTest::diagnostic();}

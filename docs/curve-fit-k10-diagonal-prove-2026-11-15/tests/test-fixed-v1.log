@@ -1,0 +1,12 @@
+    /home/myungit/Linux_CAD_forFree/kernel/tests/fk_test_main.cpp:36: eccezione: Mappatura carrier: trim originale oltre budget. scale=1000.000000 rational=0 reverse=0
+[ FAIL ] MappingDiagonalExtrusionHiddenPolynomialRationalPoseScaleReverse (1 controlli falliti)
+[  OK  ] MappingDiagonalExtrusionNestedGeneratorTrimHolesHistoryRoundtrip
+    /home/myungit/Linux_CAD_forFree/kernel/tests/fk_test_main.cpp:36: eccezione: intervallo non finito o vuoto
+[ FAIL ] MappingDiagonalOriginalLineExtrusionSuccess (1 controlli falliti)
+[  OK  ] MappingDiagonalProviderPullbackKnotsAndWrongCandidate
+[  OK  ] MappingDiagonalFailureCancellationAreAtomicAndTensorIsUnsupported
+[  OK  ] MappingDiagonalProviderTinyNonzeroUDirectionMustNotSnap
+[  OK  ] MappingDiagonalProviderLineConstantUAndClosedJunctionQueries
+5/7 test superati
+Command exited with non-zero status 1
+elapsed=0.36 maxrss_kb=6580

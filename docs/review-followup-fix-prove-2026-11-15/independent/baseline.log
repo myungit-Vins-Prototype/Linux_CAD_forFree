@@ -1,0 +1,15 @@
+ring_valid accepted=1 error=1.77635683940025e-15 min_normal_dot=0.9999999999999998
+ring_horn_full accepted=1 error=1.986027322597818e-15 min_normal_dot=-2
+ring_spindle_full accepted=1 error=3.554447978966673e-15 min_normal_dot=-1
+ring_outer_trim accepted=1 error=2.03507241945104e-15 min_normal_dot=0.9999999999999998
+ring_outer_shifted accepted=1 error=2.51214793389404e-15 min_normal_dot=0.9999999999999997
+ring_inner_shifted accepted=1 error=1.807312143953211e-15 min_normal_dot=-1
+spindle_outer accepted=1 error=3.972078888619242e-15 min_normal_dot=0.9999999999999998
+spindle_inner accepted=0 reason=offset: la superficie a distanza non segue la superficie di partenza
+horn_outer accepted=1 error=1.998401444325282e-15 min_normal_dot=0.9999999999999997
+horn_full accepted=1 error=1.88411095042053e-15 min_normal_dot=-2
+cancel initially=0 returned=1 calls=12 deviation=1.185007647563907e-11
+cancel initially=1 returned=1 calls=12 deviation=1.185007647563907e-11
+fit_hidden_polynomial measured=1.195034862935397e-11 actual=0.000445999063689424 poles=4
+source_evaluation max_position_error=8.50551903282021e-15 max_first_derivative_error=3.506119650275447e-13 max_second_derivative_error=2.072560876556896e-11
+real_spline_degree27 accepted=1 actual_error=5.74247506152284e-05 original_peak=5.742475172830043e-05 minimum_sampled_curvature_radius=14.57813293419594

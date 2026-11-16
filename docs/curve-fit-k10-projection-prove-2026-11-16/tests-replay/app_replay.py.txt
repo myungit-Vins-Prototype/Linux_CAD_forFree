@@ -1,0 +1,12 @@
+import pathlib,subprocess,shlex,json,os,hashlib,time
+root=pathlib.Path('/home/myungit/Linux_CAD_forFree');build=root/'forgecad-release';work=pathlib.Path('/tmp/projection-replay-tests')
+c=next(c for c in json.loads((build/'compile_commands.json').read_text()) if c['file']==str(root/'cad_forge.cpp') and 'CMakeFiles/forgecad.dir/' in c['command']);cmd=shlex.split(c['command']);cmd[cmd.index('-o')+1]=str(work/'app_projection_probe.o');cmd[cmd.index('-c')+1]=str(work/'app_projection_probe.cpp')
+link=shlex.split((build/'CMakeFiles/forgecad.dir/link.txt').read_text());link=[v for v in link if not v.startswith('-Wl,--dependency-file=')];main='CMakeFiles/forgecad.dir/forgeCad2026.cpp.o';assert link.count(main)==1;link[link.index(main)]=str(work/'app_projection_probe.o');link[link.index('-o')+1]=str(work/'app_projection_probe')
+(work/'app-commands.json').write_text(json.dumps({'cwd':str(build),'compile':cmd,'link':link},indent=2)+'\n')
+with (work/'app-build.log').open('w') as log:
+ subprocess.run(cmd,cwd=build,stdout=log,stderr=log,check=True);subprocess.run(link,cwd=build,stdout=log,stderr=log,check=True)
+files=[root/'cad_forge.cpp',root/'cad_forge.h',root/'kernel/tests/test_projection_fit_validation.cpp',build/'CMakeFiles/forgecad.dir/cad_forge.cpp.o',build/'kernel/libforgekernel.a',work/'app_projection_probe.cpp',work/'app_projection_probe.o',work/'app_projection_probe'];files += [build/v for v in link if v.endswith(('.o','.a')) and not v.startswith('/tmp') and (build/v).is_file()]
+files=list(dict.fromkeys(files));(work/'app-hashes.txt').write_text(''.join(hashlib.sha256(p.read_bytes()).hexdigest()+'  '+str(p)+'\n' for p in files))
+env=os.environ.copy();env['QT_QPA_PLATFORM']='offscreen';env['QT_QPA_PLATFORMTHEME']='';env['QT_QPA_PLATFORMTHEME_QT6']='';env['QT_STYLE_OVERRIDE']='Fusion';start=time.time()
+with (work/'app-run.log').open('w') as log: result=subprocess.run([str(work/'app_projection_probe')],cwd=work,env=env,stdout=log,stderr=log)
+(work/'app-result.json').write_text(json.dumps({'exit_code':result.returncode,'elapsed_seconds':time.time()-start,'QT_QPA_PLATFORM':'offscreen','QT_QPA_PLATFORMTHEME':'','QT_QPA_PLATFORMTHEME_QT6':'','QT_STYLE_OVERRIDE':'Fusion','new_replay':True},indent=2)+'\n');print((work/'app-run.log').read_text());raise SystemExit(result.returncode)

@@ -1,0 +1,26 @@
+#include "forgeCad2026_dialogs.h"
+#include <QApplication>
+#include <QShowEvent>
+#include <iostream>
+#include <stdexcept>
+void require(bool condition,const char *message){if(!condition)throw std::runtime_error(message);}
+class FinishOnShow final:public QDialog{
+ bool accept_;
+public:explicit FinishOnShow(bool accept):accept_(accept){}
+protected:void showEvent(QShowEvent *event)override{QDialog::showEvent(event);if(accept_)accept();else reject();}
+};
+int main(int argc,char**argv){QApplication app(argc,argv);try{
+ QMainWindow a,b;CadViewport va,vb;
+ QDialog accept;bool called=false;require(runModeless(&a,&va,accept,[&]{called=true;require(va.interactionLocked(),"callback before lock");require(accept.isVisible(),"callback before show");accept.accept();}),"synchronous accept lost");require(called&&!va.interactionLocked(),"accept cleanup missing");
+ QDialog reject;called=false;require(!runModeless(&a,&va,reject,[&]{called=true;reject.reject();}),"synchronous reject lost");require(called&&!va.interactionLocked(),"reject cleanup missing");
+ FinishOnShow showAccept(true);called=false;require(runModeless(&a,&va,showAccept,[&]{called=true;}),"showEvent accept lost");require(!called&&!va.interactionLocked(),"callback after synchronous finish");
+ FinishOnShow showReject(false);called=false;require(!runModeless(&a,&va,showReject,[&]{called=true;}),"showEvent reject lost");require(!called&&!va.interactionLocked(),"showEvent reject cleanup missing");
+ QDialog outer,inner;bool secondSetup=false;
+ require(!runModeless(&a,&va,outer,[&]{
+  require(!runModeless(&b,&vb,inner,[&]{secondSetup=true;}),"cross-document second runner accepted");
+  require(!secondSetup&&!inner.isVisible()&&!vb.interactionLocked(),"cross-document setup leaked");
+  require(va.interactionLocked(),"outer lock removed too early");outer.reject();
+ }),"outer result wrong");require(!va.interactionLocked()&&!vb.interactionLocked(),"cross-document cleanup delayed");
+ bool(*oldAPI)(QMainWindow*,CadViewport*,QDialog&)=&runModeless;(void)oldAPI;
+ std::cout<<"PASS runner synchronous accept/reject, finished in showEvent, guard before setup, outer cleanup, three-argument API\n";return 0;
+ }catch(std::exception&e){std::cerr<<"FAIL "<<e.what()<<'\n';return 1;}}

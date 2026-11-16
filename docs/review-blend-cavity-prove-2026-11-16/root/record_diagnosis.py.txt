@@ -1,0 +1,58 @@
+from pathlib import Path
+import re,shutil
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/blend-cavity-review/root');memory=(R/'CLAUDE.md').read_text();archive=R/'docs/history/claude-prima-blend-cavity-2026-11-16.md';assert not archive.exists()
+old=memory
+# Retain previous detailed results in their dedicated reports and full archive.
+a=memory.index('**16/11 — K10 cucitura');b=memory.index('UV/PRE7:',a)
+memory=memory[:a]+'''**16/11 — K10 cucitura e PRE8 verificati con tre agenti Sol.**
+Plane rimappato: parametro originale e fin effettive via genealogia,cap invariato;
+Smusso aggiorna anteprima dopo Tab.29rilievi;app/37CTest/12sanitizer/90statiUI
+Wayland/Fraction64fin e mappa PASS. Matching/cap sorgente campionati restano.
+[Prove e limiti](docs/review-k10-sew-preview-2026-11-16.md).
+
+'''+memory[b:]
+memory=memory.replace('**15/11 — Review iniziale con quattro agenti.**','Review iniziale con quattro agenti (15/11):')
+needle='## Ultimi interventi — esiti consolidati\n\n';assert memory.count(needle)==1
+entry='''**16/11 — Cavità raccordata, diagnosi in corso con tre agenti Sol.**
+Baseline3890file e sigillo precedente208/208 preservati,mappa1195archi consultati.
+R0,5 fallisce in5varianti;1,1/1,675 econsumo2,1 conservati. Proiettore non causa
+osservata:traceBetween accetta errore0,273mm oltre budget4e-9 su span minimo;
+solve finale omette quarto vincolo. Prototipo solo/tmp: guardie strette e
+alternativa sulla stessa intersezione,nessuna tolleranza aumentata.
+Produzione invariata;build/regressioni finali pendenti.29rilievi corretti,
+K10 ancora19/24parziali+5nonmigrati. [Stato](docs/review-blend-cavity-2026-11-16.md).
+
+'''
+memory=memory.replace(needle,needle+entry)
+memory=memory.replace('CTest20/21: cavita raccordata fallisce anche sul kernel precedente congelato,\nraggio0,5mm;1,1/1,675riescono. Diagnosi aperta, nessun test indebolito.','CTest20/21:cavita rinviata alla diagnosi sopra,nessun test indebolito.')
+memory=memory.replace('Baseline3890file e sigillo precedente208/208 preservati,mappa1195archi consultati.\n','')
+memory=memory.replace('Produzione invariata;build/regressioni finali pendenti.29rilievi corretti,\nK10 ancora19/24parziali+5nonmigrati.','Produzione invariata;verifiche finali pendenti.')
+a=memory.index('**15/11 — K2 completato');b=memory.index('**15/11 — Altri14',a)
+memory=memory[:a]+'''**15/11 — K2 completato in produzione con due agenti Sol.**
+Atlante, nesting eSP-curve NURBS:app/54testkernel/8CTest/22sanitizer PASS.
+Risorsefinite possono rifiutarecurvevalide.
+[Prove e limiti](docs/sweep-k2-completamento-2026-11-15.md).
+
+'''+memory[b:]
+assert len(memory.encode())<=16384 and len(re.findall(r'^\*\*',memory,re.M))<=10,len(memory.encode())
+report='''# Raccordo della cavità: diagnosi e correzione — 16 novembre 2026
+
+**In corso con tre agenti GPT-6.1 Sol. Nessuna modifica di produzione ancora integrata.** Baseline3890file congelata;sigillo precedente208/208verificato,descrizioni e1195archi incidenti della mappa consultati.
+
+Il test `BlendCavityWholeRimKeepsRadiusHistoryAndClosedTrims` rifiuta il raggio0,5mm sulla fixture `blend_cavity_loft.body`. Riprodotto nei due ordini del contorno,con altro seed,posa rigida e scala2,5/raggio1,25. I controlli positivi1,1/1,675mm e il rifiuto per consumo2,1mm sono preservati.
+
+L'intermedio conserva un punto del bordo3 a distanza2,019223322e-5mm dal carrierF0,contro tolleranzaedge3,811894136e-7. Ricerca del minimo approfondita e tracciamento degli iterati non dimostrano un falso rifiuto del proiettore;il lowerbound numerico non è ancora una prova outward.
+
+Causa nel costruttore `traceBetween`: una campata parametrica sotto1e-9 può essere accettata anche con errore0,272740619754mm controfitTolerance3,974664670e-9. Il risultato passa lungo un ramo finale quasi degenere in uno span9,3e-10. `solve` verifica alla fine la coincidenza sui due supporti ma omette il quarto vincolo che definisce la sezione/parametrizzazione. Le guardie strette private rifiutano prima la costruzione errata;si prova un'alternativa lungo la corda della stessa intersezione,con identici supporti,endpoint e budget.
+
+Non viene aumentata alcuna tolleranza per fare passare il corpo. L'oracolo rimane campionato per le intersezioni implicite:questa correzione non costituisce la migrazione generale K10. App,regressioni e mappa finali sono pendenti;stato precedente29rilievi corretti,K10:19/24parziali+5interamenteaperti.
+
+[Prove](review-blend-cavity-prove-2026-11-16/),[memoria precedente](history/claude-prima-blend-cavity-2026-11-16.md).
+'''
+archive.write_text(old);(R/'CLAUDE.md').write_text(memory);(R/'docs/review-blend-cavity-2026-11-16.md').write_text(report);P=R/'docs/review-blend-cavity-prove-2026-11-16';P.mkdir(exist_ok=True);(P/'README.txt').write_text('Prove in corso;nessun sigillo finale ancora dichiarato. Baseline e copie sorgenti in root/.\n')
+for p in T.rglob('*'):
+ if p.is_file() and '__pycache__' not in p.parts:
+  q=P/'root'/p.relative_to(T)
+  if q.suffix in ['.cpp','.h','.py','.sh'] or q.name=='CMakeLists.txt':q=q.with_name(q.name+'.txt')
+  q.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(p,q)
+print('Diagnosis recorded; memory',len(memory.encode()),'bytes')

@@ -1,0 +1,4 @@
+from pathlib import Path
+import json,shlex,subprocess,sys
+root=Path('/home/myungit/Linux_CAD_forFree');out=Path('/tmp/forgecad-k10-boundary-20261115/tests');cs=json.loads((root/'forgecad-release/compile_commands.json').read_text());c=next(x for x in cs if x['file'].endswith('/kernel/tests/test_curve_fit_validation.cpp'));cmd=shlex.split(c['command']);cmd[cmd.index('-o')+1]=str(out/'test_boundary_fit_validation.o');cmd[cmd.index('-c')+1]=str(out/'test_boundary_fit_validation.cpp');cmd+=['-I'+str(root/'kernel/tests')];subprocess.run(cmd,cwd=c['directory'],check=True)
+extra=sys.argv[1:];subprocess.run(['/usr/bin/c++','-o',str(out/('tests-fixed' if extra else 'tests-baseline')),str(out/'test_boundary_fit_validation.o')]+extra+[str(root/'forgecad-release/kernel/CMakeFiles/forgekernel_offset_validation_tests.dir/tests/fk_test_main.cpp.o'),str(root/'forgecad-release/kernel/libforgekernel.a'),'-lpthread'],check=True)

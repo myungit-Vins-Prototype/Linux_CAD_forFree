@@ -1,0 +1,156 @@
+[
+  {
+    "symbol": "CadViewport::setSelectedPointPosition",
+    "file": "forgeCad2026_viewport_selection.cpp",
+    "line": 746,
+    "classification": "internal_gui_safe",
+    "incoming": []
+  },
+  {
+    "symbol": "CadViewport::setEdgePickLinear",
+    "file": "forgeCad2026_viewport_selection.cpp",
+    "line": 232,
+    "classification": "internal_gui_safe",
+    "incoming": []
+  },
+  {
+    "symbol": "CadViewport::setExtendPickCallback",
+    "file": "forgeCad2026_viewport_selection.cpp",
+    "line": 230,
+    "classification": "internal_gui_safe",
+    "incoming": []
+  },
+  {
+    "symbol": "CadViewport::resumeExtendPick",
+    "file": "forgeCad2026_viewport_selection.cpp",
+    "line": 237,
+    "classification": "internal_gui_safe",
+    "incoming": []
+  },
+  {
+    "symbol": "CadViewport::constraintsVisible",
+    "file": "forgeCad2026_viewport_sketch.cpp",
+    "line": 1256,
+    "classification": "internal_gui_safe",
+    "incoming": []
+  },
+  {
+    "symbol": "CadViewport::sectionEnabled",
+    "file": "forgeCad2026_viewport.cpp",
+    "line": 456,
+    "classification": "internal_gui_safe",
+    "incoming": []
+  },
+  {
+    "symbol": "CadViewport::geometrySnap",
+    "file": "forgeCad2026_viewport.cpp",
+    "line": 76,
+    "classification": "internal_gui_safe",
+    "incoming": []
+  },
+  {
+    "symbol": "CadViewport::gridSnap",
+    "file": "forgeCad2026_viewport.cpp",
+    "line": 80,
+    "classification": "internal_gui_safe",
+    "incoming": []
+  },
+  {
+    "symbol": "CadViewport::basisMatrix",
+    "file": "forgeCad2026_viewport_scene.cpp",
+    "line": 47,
+    "classification": "internal_gui_safe",
+    "incoming": []
+  },
+  {
+    "symbol": "CadViewport::normalizedViewAngle",
+    "file": "forgeCad2026_viewport_scene.cpp",
+    "line": 82,
+    "classification": "internal_gui_safe",
+    "incoming": []
+  },
+  {
+    "symbol": "CadViewport::extrusionNames",
+    "file": "forgeCad2026_viewport_document.cpp",
+    "line": 914,
+    "classification": "internal_gui_safe",
+    "incoming": []
+  },
+  {
+    "symbol": "StoryboardTree::firstFeature",
+    "file": "forgeCad2026_storyboard.cpp",
+    "line": 549,
+    "classification": "internal_gui_safe",
+    "incoming": []
+  },
+  {
+    "symbol": "ForgeCad::DrawingSheetEditor::setModelProvider",
+    "file": "cad_drawing_editor.cpp",
+    "line": 3649,
+    "classification": "obsolete_provider_chain",
+    "incoming": []
+  },
+  {
+    "symbol": "ForgeCad::forgeIntersectRay",
+    "file": "cad_forge.cpp",
+    "line": 2405,
+    "classification": "namespace_api_decision",
+    "incoming": []
+  },
+  {
+    "symbol": "ForgeCad::modelBodyFeatures",
+    "file": "cad_model_history.cpp",
+    "line": 75,
+    "classification": "namespace_api_decision",
+    "incoming": []
+  },
+  {
+    "symbol": "ForgeCad::usesSketch",
+    "file": "cad_feature_dependencies.cpp",
+    "line": 205,
+    "classification": "namespace_api_decision",
+    "incoming": []
+  },
+  {
+    "symbol": "ForgeCad::commandIconNames",
+    "file": "cad_icons.cpp",
+    "line": 1624,
+    "classification": "namespace_api_decision",
+    "incoming": []
+  },
+  {
+    "symbol": "ForgeCad::nearestBodyEdge",
+    "file": "cad_sketch_refs.cpp",
+    "line": 151,
+    "classification": "namespace_api_decision",
+    "incoming": []
+  },
+  {
+    "symbol": "ForgeCad::appendFixedReferenceLine",
+    "file": "cad_sketch_refs.cpp",
+    "line": 576,
+    "classification": "namespace_api_decision",
+    "incoming": []
+  },
+  {
+    "symbol": "ForgeCad::Kernel::Corner::otherFace",
+    "file": "kernel/fk_blend.cpp",
+    "line": 369,
+    "classification": "local_cpp_safe",
+    "incoming": []
+  },
+  {
+    "symbol": "ForgeCad::Kernel::ChainEdge::inPlane",
+    "file": "kernel/fk_blend_loop.cpp",
+    "line": 107,
+    "classification": "local_cpp_safe",
+    "incoming": []
+  },
+  {
+    "symbol": "ForgeCad::Kernel::BandMatrix::band",
+    "file": "kernel/fk_fill.cpp",
+    "line": 239,
+    "classification": "local_cpp_safe",
+    "incoming": []
+  }
+]

@@ -1,0 +1,10 @@
+{
+  "exit": 0,
+  "seconds": 0.2642845150003268,
+  "command": [
+    "python3",
+    "/tmp/sheet-join-review/audit/check_exports.py",
+    "/tmp/sheet-join-review/audit/final-strict",
+    "/tmp/sheet-join-review/root/fraction-target.json"
+  ]
+}

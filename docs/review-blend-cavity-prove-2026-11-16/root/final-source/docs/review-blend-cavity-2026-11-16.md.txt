@@ -1,0 +1,59 @@
+# K12/P2 — raccordo della cavità corretto, 16 novembre 2026
+
+**Implementato e verificato con tre agenti GPT-6.1 Sol.** Il raccordo dell'intero bordo della cavità a raggio **0,5 mm** ora riesce anche cambiando ordine, seme, posa rigida e scala. Restano validi i raggi 1,1 e 1,675 mm e il rifiuto specifico del raggio 2,1 mm, che consuma o inverte la faccia F5. L'app completa è stata ricompilata e avviata con un profilo Wayland isolato.
+
+Il totale sale a **30 rilievi corretti**. K10 resta aperto: 19 dei 24 siti iniziali sono trattati parzialmente e cinque sono interamente da migrare, oltre ai fallback. K12 corregge un costruttore distinto e non incrementa quel conteggio.
+
+## Causa e correzione
+
+Il test esistente `BlendCavityWholeRimKeepsRadiusHistoryAndClosedTrims` falliva sia sul kernel precedente sia su quello della fase Helix: 7/8 test superati. Cinque varianti geometricamente equivalenti del raggio 0,5 mm fallivano; i due controlli positivi e il rifiuto per consumo a 2,1 mm passavano. Nessun test esistente è stato indebolito.
+
+`traceBetween` costruiva la chiusura seguendo il parametro V della pezza. La curva reale torna indietro in V: quella coordinata non può parametrizzare l'intera connessione. Il risolutore controllava alla fine la coincidenza sui due supporti, ma ometteva il quarto vincolo che definisce la sezione del tracciamento. Il raffinamento accettava inoltre una campata sotto 1e-9 anche con un errore noto di 0,272740619754 mm, contro un budget di 3,974664670e-9 mm. Nell'ultimo intervallo di 9,3e-10 erano compressi circa 0,323 mm di movimento geometrico. L'errore non entrava nello scarto pubblicato.
+
+Ora la coordinata fissata resta esatta durante Newton e il controllo finale richiede entrambi i residui, con soglie e unità originarie. Una campata minima fuori budget viene rifiutata. Il tentativo alternativo segue U originale sugli stessi supporti S/T, senza trasporli, approssimare nuovi carrier o riassociare entità per prossimità.
+
+Il nuovo tentativo conserva gli estremi originali. Quattro misure diagnostiche mostrano spostamento nullo e massimo scarto S/T di 1,017e-11 mm, entro il budget di fit. I minimi V misurati sono 0,997869001 e 0,997694486, inferiori ai valori iniziali 0,999768269 e 0,999748677; il massimo è 1. Il filtro del dominio intrinseco [0,1] riusa quello della kappa. Il controllo `Cut.sV` riguarda i nodi e non certifica l'assenza di altri estremi fra essi.
+
+Controlli di finitezza precedono le aggregazioni dei residui. Un limite cumulativo di 200.000 passi di continuazione, midpoint distinti e avanzamento verso il target impediscono iterazioni senza progresso. I cicli Newton, continuazione e raffinamento verificano la cancellazione; `OperationCancelled` attraversa i fallback senza diventare un errore geometrico. Il limite conta passi e non garantisce un tempo globale. La curva viene assegnata al modello soltanto dopo la riuscita.
+
+È modificato un solo sorgente di produzione: `kernel/fk_blend_surface.cpp`. Il nuovo `kernel/tests/test_blend_cavity_regressions.cpp` ha un target CTest separato da 90 secondi in `kernel/CMakeLists.txt`; il catalogo architetturale è aggiornato in `tools/generate_architecture.py`. Nessuna API pubblica, formato persistito o costante di precisione è cambiata. Prima delle modifiche sono stati congelati 3.890 file e consultati descrizioni e 1.195 archi incidenti del grafo.
+
+## Verifiche effettive
+
+| Verifica | Esito |
+| --- | --- |
+| Build completa app e runner | PASS in 234.33 s |
+| CTest selezionati | 34/34 PASS in 87.99 s, inclusa la batteria precedente che esponeva il fallimento |
+| Test cavità esistenti | 8/8 PASS sul candidato e nel runner integrato |
+| Nuove regressioni permanenti | 6/6 PASS: ordine, seme, posa, scala, cancellazione e consumo specifico; baseline 4 geometriche FAIL e 2 controlli PASS |
+| Varianti sul kernel Release integrato | 8/8 PASS: 18 facce, 10 raccordi generati, genealogia dichiarata delle facce, raggio entro 1e-7 mm, checkBody con loop, codec, SP-curve e triangolazione |
+| Geometria effettiva finale | 7 corpi, 734 fin, 426.917 intervalli comuni dei nodi, 2.134.585 valutazioni; nessun residuo PC o endpoint oltre il budget originale |
+| Cancellazione nel helper privato | 3/3 PASS: token iniziale, armato durante la continuazione alla quinta evaluate(order1), recupero; inclusa la fonte finale |
+| ASan / UBSan / LSan | Probe 8/8 e regressioni 6/6 PASS, leak detection attiva e nessuna soppressione; quattro TU strumentate, resto kernel Release |
+| Runner kernel generale | Blend 62/62, Helix 5/5 e Fill 25/25 PASS; gli scenari comuni a CTest non sono sommati come indipendenti |
+| App effettiva | Avvio Wayland isolato per cinque secondi, percorso `/proc/.../exe` e launcher controllati; nessun CAD aperto o processo utente toccato |
+| Architettura | 773 file, 11195 relazioni, 386 TU; check, hash sorgenti/compileDB, HTML e collegamenti nei due versi PASS |
+
+SHA256 dell'app: `a6b91c7060b2db8814ca9341e37b710bd82a76c0b145c9e08039b55825ea5a1f`.
+
+Il controllo del raggio a 1e-7 mm **non implica una precisione globale di 1e-7 mm del B-rep**. La costruzione tollerante della fixture e dei raccordi più grandi porta già budget locali più ampi. Le verifiche usano esattamente le formule di `checkBody`, senza aumentarle per far passare il nuovo caso. Il massimo scarto endpoint del raggio 0,5 mm è circa 0,003393 mm e nella variante scalata circa 0,008482 mm, entrambi entro i budget dichiarati. L'audit dei nodi aggiunge copertura, ma resta campionato.
+
+Il controllo da 1,1 mm è byte-identico alla baseline. Quello da 1,675 mm conserva i contratti numerici, ma ha una serializzazione diversa e non viene dichiarato byte-identico. Tutti i sette output Release sono invece byte-identici agli snapshot del candidato, con hash separati nei log.
+
+Due nuovi test negativi inizialmente presumevano che il parametro di OUTPUT `history` conservasse una sentinella dopo eccezione. Il wrapper lo svuotava già esplicitamente all'ingresso. È stata corretta l'assunzione del test: output vuoto, nessuna storia parziale, input immutato e cancellazione/consumo specifici. `fk_blend.cpp` non è stato modificato e questo comportamento non è conteggiato come bug. Fonti e log iniziali sono conservati separatamente.
+
+## Prova indipendente della causa
+
+Nel vecchio intermedio un punto di edge3, sulla fin3/F0, ha residuo numerico di 2,019223322e-5 mm contro una tolleranza edge di 3,811894136e-7 mm. Ricerche del proiettore più profonde e tracciamento degli iterati non mostrano un falso rifiuto.
+
+Il verificatore indipendente Python `Fraction` parte dai coefficienti IEEE originali letti dalla B-rep intermedia congelata. Valuta il punto con de Boor razionale, esegue 586 inserzioni esatte dei nodi V ed esamina tutte le 602 celle Bézier razionali del carrier F0. I pesi positivi permettono limiti convex hull; box e piani di supporto, con una direzione razionale arbitraria, forniscono limiti inferiori senza assumere ottima la proiezione.
+
+Con 618 visite, 610 foglie e profondità massima 8, la prova sull'**intero carrier** stabilisce uno scarto di almeno **4,030157060e-6 mm**, oltre dieci volte il budget edge. La prova di sensibilità con un punto realmente sulla superficie blocca correttamente la separazione. L'auditor ha controllato indipendentemente schema, positività, nodi e punto de Boor, oltre alla correttezza matematica.
+
+La prova riguarda quel singolo punto contro il carrier intero congelato: non tutti i punti della curva corretta né il produttore prima della serializzazione. Non sostituisce una certificazione continua delle intersezioni implicite.
+
+## Prove conservate e limiti
+
+L'[archivio verificabile](review-blend-cavity-prove-2026-11-16/) contiene fonti `.txt`, patch, baseline, manifest, comandi, log, hash, mappa e verificatore Fraction. La [memoria precedente completa](history/claude-prima-blend-cavity-2026-11-16.md) resta conservata. I CAD originali, binari e archivi oggetto non sono copiati nel pacchetto. I sette sigilli delle fasi precedenti sono verificati e preservati.
+
+Restano la migrazione K10 dei cinque siti iniziali aperti e dei fallback campionati, `Superfici.prt` trasformato, 17 API pubbliche senza usi interni e l'uniformazione globale dei pannelli e delle anteprime. Non è certificata l'assenza globale di leak, auto-intersezioni o regressioni in ogni configurazione. I sanitizer coprono le unità e i percorsi indicati; l'avvio Wayland non certifica i pixel OpenGL. macOS e Windows non sono ricertificati. **Riaprire l'app per usare il binario aggiornato.**

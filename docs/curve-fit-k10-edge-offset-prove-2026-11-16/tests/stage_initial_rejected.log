@@ -1,0 +1,19 @@
+public polynomial forward U FAIL: bordo 1: fitCurve: impossibile rispettare la tolleranza entro il limite di raffinamento
+public polynomial reverse U FAIL: bordo 1: fitCurve: impossibile rispettare la tolleranza entro il limite di raffinamento
+public rational forward U FAIL: bordo 1: fitCurve: impossibile rispettare la tolleranza entro il limite di raffinamento
+public rational reverse U FAIL: bordo 1: fitCurve: impossibile rispettare la tolleranza entro il limite di raffinamento
+public baseline witness FAIL: bordo 1: fitCurve: impossibile rispettare la tolleranza entro il limite di raffinamento
+public reversed face sense FAIL: bordo 1: fitCurve: impossibile rispettare la tolleranza entro il limite di raffinamento
+public trim wrappers FAIL: bordo 1: fitCurve: impossibile rispettare la tolleranza entro il limite di raffinamento
+public transformed wrappers FAIL: bordo 1: fitCurve: impossibile rispettare la tolleranza entro il limite di raffinamento
+provider polynomial forward U FAIL: fitCurve: impossibile rispettare la tolleranza entro il limite di raffinamento
+provider polynomial reverse U FAIL: fitCurve: impossibile rispettare la tolleranza entro il limite di raffinamento
+provider rational forward U FAIL: fitCurve: impossibile rispettare la tolleranza entro il limite di raffinamento
+provider rational reverse U FAIL: fitCurve: impossibile rispettare la tolleranza entro il limite di raffinamento
+provider negative distance FAIL: fitCurve: impossibile rispettare la tolleranza entro il limite di raffinamento
+provider trim wrappers FAIL: fitCurve: impossibile rispettare la tolleranza entro il limite di raffinamento
+provider transformed wrappers FAIL: fitCurve: impossibile rispettare la tolleranza entro il limite di raffinamento
+provider shifted edge parameters FAIL: fitCurve: impossibile rispettare la tolleranza entro il limite di raffinamento
+provider knots and lifetime mapped_breaks=4 reported=8.5634476964753815e-08 PASS
+provider reject and cancellation PASS
+results passed=2 failed=16

@@ -1,0 +1,14 @@
+[  OK  ] BlendMitreIsoHiddenKnotDoesNotPublishOffSupportFit
+[  OK  ] BlendMitreIsoPolynomialPositive
+[  OK  ] BlendMitreIsoRationalPositive
+[  OK  ] BlendMitreIsoRigidPosePositive
+[  OK  ] BlendMitreIsoScaleAndSupportOrderPositive
+[  OK  ] BlendMitreDistinctFitAndCarrierBudgets
+[  OK  ] BlendMitreOverCarrierBudgetRejects
+[  OK  ] BlendMitreInvalidFitToleranceRejectsBeforePublishing
+[  OK  ] BlendMitreCancellationDoesNotPublishCut
+[  OK  ] BlendMitreRevalidatesExactEmittedCoefficients
+[  OK  ] BlendMitreCoincidentDiagonalRetainsUncertifiedCompatibility
+[  OK  ] BlendMitreEmittedFinKeepsOriginalUVInBothSenses
+[  OK  ] BlendMitreEmissionRejectsChangedProvenanceAndBudgets
+13/13 test superati

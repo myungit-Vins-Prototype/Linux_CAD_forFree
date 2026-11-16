@@ -1,0 +1,17 @@
+{
+  "exit": 0,
+  "seconds": 1.0154536980007833,
+  "command": [
+    "c++",
+    "-std=c++17",
+    "-O2",
+    "-I",
+    "/tmp/mitre-review/core/baseline",
+    "-I",
+    "/home/myungit/Linux_CAD_forFree/kernel",
+    "/tmp/mitre-review/root/baseline-iso/export.cpp",
+    "/tmp/mitre-review/core/baseline/libforgekernel.a",
+    "-o",
+    "/tmp/mitre-review/root/baseline-iso/export"
+  ]
+}

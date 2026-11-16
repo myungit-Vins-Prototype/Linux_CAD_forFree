@@ -1,0 +1,27 @@
+kind=0 factor=1e-100 placed=0 bound=7.4949907886719564e-08 error=4.5261498427935475e-08 breaks=3
+kind=1 factor=1e-100 placed=0 bound=1.2628228517938496e-08 error=7.7190640011538707e-09 breaks=3
+kind=2 factor=1e-100 placed=0 bound=2.2460131912412277e-08 error=1.3962626146949366e-08 breaks=3
+kind=3 factor=1e-100 placed=0 bound=8.9366001497793294e-08 error=5.3894429713341595e-08 breaks=5
+kind=0 factor=1e-100 placed=1 bound=8.9914249584159115e-08 error=5.4293153457259997e-08 breaks=3
+kind=1 factor=1e-100 placed=1 bound=1.5009131845057671e-08 error=9.1446339374781814e-09 breaks=3
+kind=2 factor=1e-100 placed=1 bound=2.6936480353749051e-08 error=1.6744349432832946e-08 breaks=3
+kind=3 factor=1e-100 placed=1 bound=2.4856984542217894e-08 error=1.5456876234717175e-08 breaks=5
+kind=0 factor=1 placed=0 bound=7.4940053053084311e-08 error=4.5253553620494603e-08 breaks=3
+kind=1 factor=1 placed=0 bound=1.2570804783328747e-08 error=7.6722224966258349e-09 breaks=3
+kind=2 factor=1 placed=0 bound=2.2476720936125762e-08 error=1.3974120950463231e-08 breaks=3
+kind=3 factor=1 placed=0 bound=8.9409674505554354e-08 error=5.3929838442550259e-08 breaks=5
+kind=0 factor=1 placed=1 bound=8.9945466632884091e-08 error=5.4318446251493803e-08 breaks=3
+kind=1 factor=1 placed=1 bound=1.4946371880553032e-08 error=9.093860101263206e-09 breaks=3
+kind=2 factor=1 placed=1 bound=2.6943977511414448e-08 error=1.6751566306640301e-08 breaks=3
+kind=3 factor=1 placed=1 bound=2.4864521913179594e-08 error=1.5462951222208263e-08 breaks=5
+kind=0 factor=1e+100 placed=0 bound=7.5037798727148584e-08 error=4.5332596066948323e-08 breaks=3
+kind=1 factor=1e+100 placed=0 bound=1.2516915451491469e-08 error=7.6283010179064243e-09 breaks=3
+kind=2 factor=1e+100 placed=0 bound=2.247593557325041e-08 error=1.3973152033617643e-08 breaks=3
+kind=3 factor=1e+100 placed=0 bound=8.9403576777800731e-08 error=5.3924734197530296e-08 breaks=5
+kind=0 factor=1e+100 placed=1 bound=8.9980574821562885e-08 error=5.4346851428422355e-08 breaks=3
+kind=1 factor=1e+100 placed=1 bound=1.491718186454072e-08 error=9.0697369138437774e-09 breaks=3
+kind=2 factor=1e+100 placed=1 bound=2.6943975592492196e-08 error=1.6751331672367989e-08 breaks=3
+kind=3 factor=1e+100 placed=1 bound=2.4855862692186331e-08 error=1.5456401697072638e-08 breaks=5
+periodic_outside kind=0 rejected=fit composizione: UV fuori dominio naturale
+periodic_outside kind=1 rejected=fit composizione: UV fuori dominio naturale
+checks=30 PASS

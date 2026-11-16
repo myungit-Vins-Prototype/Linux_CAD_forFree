@@ -11,10 +11,12 @@
 //  - Segmenti -> segmenti paralleli (vincolo Parallelo con l'originale);
 //    archi e cerchi -> archi e cerchi concentrici (vincolo Concentrico), con
 //    il raggio R -/+ d: esatti.
-//  - Spline, NURBS, ellissi e riferimenti convertiti -> B-spline cubiche C1
-//    (curve NURBS modificabili) nello stesso parametro entro 1e-7 dalla curva a
-//    distanza vera (come le parallele dei raccordi del kernel): la curva a
-//    distanza di una spline non e' una spline.
+//  - Spline, NURBS, ellissi e riferimenti convertiti -> B-spline cubiche.
+//    Le NURBS supportate hanno un limite continuo di posizione entro 1e-7
+//    dall'offset parametrico originale, anche sui tratti dopo il rifilo;
+//    le altre famiglie mantengono il fit campionato. I tratti rifilati
+//    conservano una corrispondenza affine con il parametro sorgente.
+//    Le copie sono curve derivate con poli interni rigidi.
 //  - Negli angoli vivi della catena le copie si prolungano o si accorciano
 //    fino al loro punto comune (come in SolidWorks); con `roundCorners` negli
 //    angoli convessi c'e' un arco di raggio d attorno al vertice. Tra tratti

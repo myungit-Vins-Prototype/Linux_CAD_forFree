@@ -1,0 +1,8 @@
+{
+  "exit": 0,
+  "seconds": 23.613237174999995,
+  "command": [
+    "forgecad-release/kernel/forgekernel_tests",
+    "Offset"
+  ]
+}

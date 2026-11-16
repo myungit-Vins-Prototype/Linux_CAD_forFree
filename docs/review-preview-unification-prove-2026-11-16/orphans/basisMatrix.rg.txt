@@ -1,0 +1,14 @@
+Command: rg --hidden -n -w basisMatrix . --glob !docs/** --glob !archivi-locali/** --glob !.git/**
+./forgeCad2026_viewport_scene.cpp:48:QMatrix4x4 CadViewport::basisMatrix() const {
+./forgeCad2026_viewport_scene.cpp:49:    return camera_.basisMatrix();
+./tests/test_boolean_box.h:60:        const auto camera = view->camera_.basisMatrix();
+./tests/test_boolean_box.h:90:                require(view->camera_.basisMatrix() == camera && view->selection() == sceneSelection
+./forgeCad2026_viewport.h:823:    QMatrix4x4 basisMatrix() const;
+./forgeCad2026_camera.h:20:    QMatrix4x4 basisMatrix() const;
+./forgeCad2026_camera.cpp:6:QMatrix4x4 ViewportCamera::basisMatrix() const {
+./forgeCad2026_camera.cpp:30:    modelView *= basisMatrix();
+./forgeCad2026_camera.cpp:51:    const QMatrix4x4 basis = basisMatrix();
+./forgeCad2026_camera.cpp:85:    rotation *= basisMatrix();
+./forgeCad2026_camera.cpp:110:        projectionMatrix_ *= basisMatrix();
+./forgeCad2026_camera.cpp:124:    rotation *= basisMatrix();
+./forgeCad2026_camera.cpp:138:    rotation *= basisMatrix();

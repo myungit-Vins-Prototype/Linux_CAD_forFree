@@ -13,11 +13,15 @@
 // Proiezione di curve su un body lungo una direzione: ogni punto C(t) va nel
 // primo punto della semiretta C(t) + s d (s >= 0) che sta su una faccia (la
 // prima faccia incontrata, come le "curve proiettate" e le "linee di
-// divisione" degli altri CAD). Sulla faccia il punto e' esatto (Newton sulla
-// superficie); la curva risultante e' una cubica di Hermite C1 nello stesso
-// parametro della curva di partenza, entro la tolleranza.
+// divisione" degli altri CAD). I punti sulla superficie si risolvono con
+// Newton; il risultato e' una B-spline cubica non razionale. Per gruppi su
+// una sola faccia Plane e sorgenti Line/NURBS supportate, il limite continuo
+// di posizione rispetto alla proiezione parametrica originale e' entro la
+// tolleranza. Le altre famiglie conservano il fit campionato; la scelta del
+// primo impatto, i bordi della faccia e le transizioni non sono certificati.
 namespace ForgeCad::Kernel {
 class BodyHistory;
+struct ProjectedFitCertificate;  // provenienza immutabile, opaca e senza riferimenti ai chiamanti
 
 struct ProjectionOptions {
     double tolerance = scaledAccuracy(1e-8);      // scarto massimo delle curve proiettate dalla proiezione vera
@@ -47,6 +51,7 @@ struct ProjectedPiece {
     double edgeGap = 0.0;
     bool loOnEdge = false, hiOnEdge = false;
     Vec3 loPoint, hiPoint;
+    std::shared_ptr<const ProjectedFitCertificate> fitCertificate = {};
 };
 
 // `direction` non nulla (si normalizza). I tratti in cui la semiretta non
@@ -65,10 +70,16 @@ std::vector<std::vector<ProjectedPiece>> projectCurves(const Body &body, const s
 
 // Tratti consecutivi (estremi entro 1e-6) uniti in curve: una B-spline cubica
 // per ogni catena, con nodi C0 nei passaggi tra i tratti. `closed` dice se la
-// catena si chiude.
+// catena si chiude. Le parti certificate conservano una mappa affine per
+// ogni cubica verso il parametro originale; un giunto che non rispetta il
+// rispettivo limite di fit viene rifiutato, anche nella fusione primo/ultimo.
 struct ProjectedChain {
     std::shared_ptr<const BSplineCurve<3>> curve;
     bool closed = false;
+    // Limite finale per parti certificate; metrica campionata per parti
+    // legacy. Le medie ai giunti sono incluse e non ampliano la tolleranza.
+    double deviation = 0.0;
+    std::shared_ptr<const ProjectedFitCertificate> fitCertificate = {};
 };
 std::vector<ProjectedChain> joinProjectedPieces(const std::vector<ProjectedPiece> &pieces, double tolerance = scaledAccuracy(1e-6));
 

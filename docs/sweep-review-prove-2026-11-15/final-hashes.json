@@ -1,0 +1,9 @@
+{
+  "kernel/fk_sweep.cpp": "abecaba529de8fa7151d67e02fc765dddc196b7032d80099a223aa9a2a17fdaf",
+  "kernel/fk_mass.cpp": "29d7223df812f3747d51fd07c5e966b798b6d488d3c77e4207fe32312f45621c",
+  "kernel/tests/test_sweep.cpp": "07546ee08f2bc750f6dca1ff9d96a06ac98481889db160269cdb17c352e8e97c",
+  "tools/generate_architecture.py": "04f0bb036f71e8c34e5ba5b507ea72c6687199d9d2c0a0600bae58b3a3dc46fb",
+  "forgecad-release/forgecad": "a13f1d566087991500ead01346f69105ff817d53c8488d19b83d749a93e1b044",
+  "forgecad-release/kernel/libforgekernel.a": "6df2ca392b8cdc3c35dfb717c10c7c2a5d5f0ad2f7d35c76a2f520d45cfa9942",
+  "forgecad-release/kernel/forgekernel_tests": "c59cde7e79ed06347d1a1ea0f3026fe534a9847379902e69b10ebe498affdd55"
+}

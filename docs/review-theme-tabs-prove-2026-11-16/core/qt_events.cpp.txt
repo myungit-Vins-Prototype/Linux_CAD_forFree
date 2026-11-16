@@ -1,0 +1,32 @@
+#include <QApplication>
+#include <QMainWindow>
+#include <QTabWidget>
+#include <QToolBar>
+#include <QStyle>
+#include <iostream>
+class Window final : public QMainWindow {
+public:
+ int appChanges=0, changes=0;
+ using QMainWindow::QMainWindow;
+ bool event(QEvent *e) override {
+  bool b=QMainWindow::event(e);
+  if(e->type()==QEvent::ApplicationPaletteChange) ++appChanges;
+  if(e->type()==QEvent::PaletteChange) ++changes;
+  return b;
+ }
+};
+int main(int argc,char**argv) {
+ QApplication app(argc,argv); app.setStyle("Fusion");
+ Window host, top;
+ auto *tabs=new QTabWidget(&host);host.setCentralWidget(tabs);
+ auto *embedded=new Window(tabs,Qt::Widget), *hidden=new Window(tabs,Qt::Widget);
+ tabs->addTab(embedded,"visible");tabs->addTab(hidden,"hidden");
+ auto *bar=embedded->addToolBar("toolbar");host.show();top.show();app.processEvents();
+ host.appChanges=host.changes=top.appChanges=top.changes=0;
+ embedded->appChanges=embedded->changes=hidden->appChanges=hidden->changes=0;
+ auto pal=app.palette();pal.setColor(QPalette::Window,QColor("#111820"));app.setPalette(pal);
+ for(int i=0;i<8;++i)app.processEvents();
+ for(auto *w:{&host,&top,embedded,hidden})std::cout<<(w==&host?"host":w==&top?"top":w==embedded?"embedded":"hidden")<<" app="<<w->appChanges<<" palette="<<w->changes<<" window="<<w->palette().color(QPalette::Window).name().toStdString()<<'\n';
+ std::cout<<"bar="<<bar->palette().color(QPalette::Window).name().toStdString()<<'\n';
+ return embedded->appChanges==0&&embedded->changes>0&&hidden->appChanges==0&&hidden->changes>0?0:1;
+}

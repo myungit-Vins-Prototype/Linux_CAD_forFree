@@ -1,0 +1,121 @@
+{
+  "tracked_compared": 1037,
+  "changed_this_intervention": [
+    {
+      "file": "CLAUDE.md",
+      "before": "e33e8e34f2689f0d7d3a483e7e6bf22c66d05e4b37c949f9fc8c30d261c1e417",
+      "after": "a778af93b1b9440f8fb48d1c56dc2ea8a1d7c1fd47120b02811f1379228324f2"
+    },
+    {
+      "file": "cad_constraints.cpp",
+      "before": "630442a8f938fbad526874e33ac28c9ee4bf82032892cf1d8f90883de5cb957f",
+      "after": "a9b34e3858798b19cfc0e611d4c7a1d9fee94206a87930bc30ee4844eaad265f"
+    },
+    {
+      "file": "cad_constraints.h",
+      "before": "0a85f747c0b0f68415e27be45f2a706dc47ac7e90ddf9c7fc9ed56f6c7d24de5",
+      "after": "dfc793601e0882f1b7870b493b8b77459c1ad01930649347a11534c306cc8062"
+    },
+    {
+      "file": "cad_document_io.cpp",
+      "before": "42df088b7dc04f4c034b8b37bf1642380d2ef1959726f8419d69f123d4226afd",
+      "after": "ccfa907aadc518bf5f5d1c57348332b1e950ac0b52c3a9aa514d99905fbf0667"
+    },
+    {
+      "file": "forgeCad2026_dialogs_analysis.cpp",
+      "before": "14f831761e456db62a25a4567c9034d77a8778c2d0ec3c765f2d2fa02129bc43",
+      "after": "7f2237fe3e061e58629010ee9a66360be3bbc76456c6f8964c1aa0bd75b7ec34"
+    },
+    {
+      "file": "forgeCad2026_dialogs_common.cpp",
+      "before": "6393faf637e2d4030c007506b45e234b4475c1f0aea9961d013e17055a912780",
+      "after": "5a69a50938c181a3b094fef630e7f0f0e53bc904765c8767ed8ab011fb54a17f"
+    },
+    {
+      "file": "forgeCad2026_dialogs_common.h",
+      "before": "8f00173b5ebe69d1abd2eb35c9253c486cd3f2162aa220049e87f3a2bb0ba076",
+      "after": "bd1c89f4d518766ac35a7a5a7cff36b01ed3a276b7d2777a64794830687dd5fd"
+    },
+    {
+      "file": "forgeCad2026_dialogs_mapping.cpp",
+      "before": "60f6536006e5cb8ac2ab37c18357661408bcf27d6473597a3ced9283f1a935a6",
+      "after": "2dc3b2e2ca98d6901898abdd8c5f4e028509dfdfc64b61c17fe6f454bd5f4e0d"
+    },
+    {
+      "file": "forgeCad2026_dialogs_sketch.cpp",
+      "before": "c4bdc8d7c0fc4463149f75cb8087a807588895e3a27e2a5f78a5e63fd74c19bf",
+      "after": "bdc257712d1b97ab9c1466fc197b9f27fab83d603647aa2b9a221494517c275f"
+    },
+    {
+      "file": "forgeCad2026_dialogs_solids.cpp",
+      "before": "54364b37edb53df985b270775d74fc881e97e1308d5decfd147bddf08aa44b72",
+      "after": "ead22811fb1b68a93a54f3ebda4389f55843c0d7f2c85ec210b23d36a515e936"
+    },
+    {
+      "file": "forgeCad2026_dialogs_surfaces.cpp",
+      "before": "4a488c3a46de7377f030b93cfa8bb20bb2deaaf77944573bcf3cf998da84e650",
+      "after": "6d4125d8e5c3ee745d7b51220d94a8505ca66685f1f3f7f7ec73dcff5decfb40"
+    },
+    {
+      "file": "forgeCad2026_dialogs_trim.cpp",
+      "before": "e3bb77bc8adb8a6480f4182b4354fb51d89f13e11374414c7d06fac0765495d4",
+      "after": "d1e4704f6994598e43590822ee0bee1b31acad57b96bc228e7d852b5e40ef3ba"
+    },
+    {
+      "file": "forgeCad2026_viewport_preview.cpp",
+      "before": "ca4fda3960de3ccf5a98fed7e3070cf4fa5fd6ece68eaaee5b0ebc98f06317e8",
+      "after": "189603185301b494d3545ad78e3e07ea565d12d5de3b095c0bff9edf3ec7c944"
+    },
+    {
+      "file": "kernel/fk_loft.cpp",
+      "before": "cd32af88338cf18af10734b5b41dd1111f94c3e8338c7f7e9a3542483b437c4d",
+      "after": "f1b85656b1e52dd0fcb9868f5e69733beece01d89621b43a7bbba7ebe2b99245"
+    },
+    {
+      "file": "kernel/fk_sweep.cpp",
+      "before": "abecaba529de8fa7151d67e02fc765dddc196b7032d80099a223aa9a2a17fdaf",
+      "after": "fe2b433f3cd3af959a8682435b997eda0e4771b28ea3db455fd50b6d940993bb"
+    },
+    {
+      "file": "kernel/fk_topology.cpp",
+      "before": "79d3f503b3840db47a0dc96fd1e6021cabbcb3107965a1d37f38b6165d5fde25",
+      "after": "615fe071b4a4fb5e29e7d3d3c7d95193db286b30dac67e680eb1eb7bbe766c58"
+    },
+    {
+      "file": "kernel/tests/test_loft_surfaces.cpp",
+      "before": "a4bfe52d49a43839b9de16d2753fb0bbd8b3a4781e99cba257f222aa4ad701c5",
+      "after": "e9400b0d0ac3170f83c86dd7fff1683d99eaa987a5d480e8fcfef68a1961c45c"
+    },
+    {
+      "file": "kernel/tests/test_sweep.cpp",
+      "before": "07546ee08f2bc750f6dca1ff9d96a06ac98481889db160269cdb17c352e8e97c",
+      "after": "3bbea2c265c28ac0c5dc57b6fa5db2312592b299dd238f2fc15bf5c53bb2a51b"
+    },
+    {
+      "file": "kernel/tests/test_topology.cpp",
+      "before": "31b10937b6c7cb7af81395a4018d39e3b20020102b27128f68591122e27ce32f",
+      "after": "7ca54fe10a69915c11ba818c932a5449fd45622a748ee0ba8481427198045894"
+    },
+    {
+      "file": "tests/test_function_panels.h",
+      "before": "b39982742cbee54411445c0de4fde8ce73b4700a1f8fe05d16400ebef826bbe5",
+      "after": "9f5445b45e8dbfc19da78f4e969ebec3af3e7db410e2422181be99dd278e4b09"
+    },
+    {
+      "file": "tests/test_solver_partition.h",
+      "before": "0657fc66c6082727a7ef915d7313e2ed54a7e2cd0bc64f10d7f59f447f639e2d",
+      "after": "54844a98585f64df486478d7a86a493de40eedd3e23d3598d6a7ef5836e3438f"
+    },
+    {
+      "file": "tests/test_viewport.cpp",
+      "before": "4f294f216c0b7008ff2557874eaa2180f39b13b17c39b97b41a9a237acba8542",
+      "after": "cb704e8b1c206213bfed41f9fb62607f4ae14ce7372d6f2d7f2c8d3e1f6a4961"
+    },
+    {
+      "file": "tools/generate_architecture.py",
+      "before": "04f0bb036f71e8c34e5ba5b507ea72c6687199d9d2c0a0600bae58b3a3dc46fb",
+      "after": "c14f60a14a0ea1dc008edfeef9ef887704ac7a0f1661f71606b93e2029c3787e"
+    }
+  ],
+  "unexpected_changes": []
+}

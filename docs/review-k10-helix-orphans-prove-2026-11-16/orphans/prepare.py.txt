@@ -1,0 +1,53 @@
+from pathlib import Path
+import subprocess,json,hashlib,re,difflib
+r=Path('/home/myungit/Linux_CAD_forFree');p=Path('/tmp/orphan-five-review');stage=p/'stage';before=p/'before';stage.mkdir(exist_ok=True);before.mkdir(exist_ok=True)
+paths=['forgeCad2026_viewport_selection.cpp','forgeCad2026_viewport.h','forgeCad2026_storyboard.cpp','forgeCad2026_storyboard.h','kernel/fk_blend.cpp','kernel/fk_blend_loop.cpp','kernel/fk_fill.cpp']
+sha=lambda b:hashlib.sha256(b).hexdigest()
+source={f:(r/f).read_text() for f in paths};changed=source.copy()
+def remove_function(s,signature):
+ assert s.count(signature)==1,signature
+ a=s.index(signature);b=s.index('{',a);depth=1;i=b+1
+ while depth:
+  depth+=(s[i]=='{')-(s[i]=='}');i+=1
+ if s[i:i+1]=='\n':i+=1
+ if s[i:i+1]=='\n':i+=1
+ return s[:a]+s[i:]
+changed[paths[0]]=remove_function(changed[paths[0]],'void CadViewport::setSelectedPointPosition(')
+changed[paths[1]]=changed[paths[1]].replace('    void setSelectedPointPosition(const SelectedPoint &point, const QPointF &position);\n\n','')
+changed[paths[2]]=remove_function(changed[paths[2]],'QTreeWidgetItem *StoryboardTree::firstFeature(')
+changed[paths[3]]=changed[paths[3]].replace('    static QTreeWidgetItem *firstFeature(QTreeWidgetItem *body);\n\n','')
+changed[paths[4]]=changed[paths[4]].replace('    // Per ogni spigolo, la faccia che non lo contiene.\n    int otherFace(int k) const { return 3 - edgeFaces[k][0] - edgeFaces[k][1]; }\n','')
+changed[paths[5]]=remove_function(changed[paths[5]],'    Vec3 inPlane(double t) const {')
+changed[paths[6]]=changed[paths[6]].replace('    int band() const { return b_; }\n','')
+patch=''
+for f in paths:
+ assert changed[f]!=source[f],f
+ for folder,text in [(before,source[f]),(stage,changed[f])]:
+  target=folder/f;target.parent.mkdir(parents=True,exist_ok=True);target.write_text(text)
+ patch+=''.join(difflib.unified_diff(source[f].splitlines(True),changed[f].splitlines(True),fromfile='a/'+f,tofile='b/'+f))
+(p/'change.patch').write_text(patch)
+(p/'base-hashes.json').write_text(json.dumps({f:sha(source[f].encode()) for f in paths},indent=2)+'\n')
+(p/'stage-hashes.json').write_text(json.dumps({f:sha(changed[f].encode()) for f in paths},indent=2)+'\n')
+# Enumerate active source/configuration, including test files independently of CMake.
+args=['rg','--files','-g','*.cpp','-g','*.h','-g','*.hpp','-g','*.cc','-g','*.cxx','-g','*.c','-g','*.cu','-g','*.mm','-g','*.py','-g','*.sh','-g','*.cmake','-g','CMakeLists.txt']
+files=subprocess.check_output(args,cwd=r,text=True).splitlines();(p/'scanned-files.txt').write_text('\n'.join(sorted(files))+'\n')
+(p/'scanned-hashes.json').write_text(json.dumps({f:sha((r/f).read_bytes()) for f in sorted(files)},indent=2)+'\n')
+names=['setSelectedPointPosition','firstFeature','otherFace','inPlane','band']
+for name in names:
+ q=subprocess.run(['rg','-n','-w',name,*files],cwd=r,text=True,capture_output=True);assert q.returncode in [0,1];(p/(name+'-occurrences.txt')).write_text(q.stdout)
+# Use graph descriptions and call/reference sites; homonymous functions excluded by scope.
+graph=json.loads((r/'docs/architecture/graph.json').read_text());symbols=['CadViewport::setSelectedPointPosition','StoryboardTree::firstFeature','Corner::otherFace','ChainEdge::inPlane','BandMatrix::band']
+def matches(value,symbol):return value==symbol or value.endswith('::'+symbol)
+rows=[]
+for symbol in symbols:
+ incoming=[];outgoing=[]
+ for edge in graph['edges']:
+  if edge['kind'] not in ['call','reference']:continue
+  for site in edge.get('sites',[]):
+   if matches(site.get('symbol',''),symbol):incoming.append(dict(source=edge['source'],target=edge['target'],kind=edge['kind'],**site))
+   if matches(site.get('owner',''),symbol):outgoing.append(dict(source=edge['source'],target=edge['target'],kind=edge['kind'],**site))
+ rows.append(dict(symbol=symbol,incoming=incoming,outgoing=outgoing))
+proof=dict(graph_sha256=sha((r/'docs/architecture/graph.json').read_bytes()),nodes=len(graph['nodes']),edges=len(graph['edges']),descriptions=[n for n in graph['nodes'] if n['id'] in paths],source_hash_matches={f:graph['hashes'].get(f)==sha((r/f).read_bytes()) for f in paths},symbols=rows)
+(p/'graph-audit.json').write_text(json.dumps(proof,indent=2)+'\n')
+print('Prepared',len(paths),'files; deleted',sum(len(source[f].splitlines())-len(changed[f].splitlines()) for f in paths),'lines; scanned',len(files),'active files')
+print([(x['symbol'],len(x['incoming']),len(x['outgoing'])) for x in rows]);print('Graph source hash matches',proof['source_hash_matches'])

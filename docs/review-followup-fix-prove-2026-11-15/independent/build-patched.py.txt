@@ -1,0 +1,9 @@
+from pathlib import Path
+import hashlib,json,shlex,subprocess
+root=Path('/home/myungit/Linux_CAD_forFree');out=Path('/tmp/forgecad-followup-fix-20261115/independent')
+source=Path('/tmp/forgecad-followup-fix-20261115/kernel/fk_offset.cpp')
+(out/'fk_offset.staged.cpp').write_bytes(source.read_bytes());(out/'staged-source.sha256').write_text(hashlib.sha256(source.read_bytes()).hexdigest()+'\n')
+cmds=json.loads((root/'forgecad-release/compile_commands.json').read_text())
+c=next(x for x in cmds if x['file'].endswith('/kernel/fk_offset.cpp'));cmd=shlex.split(c['command']);cmd[cmd.index('-o')+1]=str(out/'fk_offset.o');cmd[cmd.index('-c')+1]=str(out/'fk_offset.staged.cpp');cmd+=['-I'+str(root/'kernel')];subprocess.run(cmd,cwd=c['directory'],check=True)
+c=next(x for x in cmds if x['file'].endswith('/kernel/tests/test_offset.cpp') and 'occt_tests' in x['directory']);cmd=shlex.split(c['command']);cmd[cmd.index('-o')+1]=str(out/'probe.o');cmd[cmd.index('-c')+1]=str(out/'probe.cpp');subprocess.run(cmd,cwd=c['directory'],check=True)
+l=root/'forgecad-release/kernel/occt_tests';cmd=shlex.split((l/'CMakeFiles/forgekernel_tests.dir/link.txt').read_text());args=[cmd[0],'-o',str(out/'probe-patched'),str(out/'probe.o'),str(out/'fk_offset.o')]+cmd[cmd.index('../libforgekernel.a'):];subprocess.run(args,cwd=l,check=True)

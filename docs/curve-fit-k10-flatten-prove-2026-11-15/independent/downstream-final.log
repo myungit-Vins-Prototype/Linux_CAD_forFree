@@ -1,0 +1,25 @@
+rational=0 scale=0.01 posed=0 trimmed=0 degree=6 error=0 peak=1.0000000000000003e-05
+rational=0 scale=0.01 posed=0 trimmed=1 degree=6 error=0 peak=1.0000000000000003e-05
+rational=0 scale=0.01 posed=1 trimmed=0 degree=6 error=3.6687068998374881e-18 peak=1.0000000000000152e-05
+rational=0 scale=0.01 posed=1 trimmed=1 degree=6 error=3.6687068998374881e-18 peak=1.0000000000000152e-05
+rational=0 scale=1 posed=0 trimmed=0 degree=6 error=0 peak=0.001
+rational=0 scale=1 posed=0 trimmed=1 degree=6 error=0 peak=0.001
+rational=0 scale=1 posed=1 trimmed=0 degree=6 error=3.3317351763340565e-16 peak=0.00099999999999995622
+rational=0 scale=1 posed=1 trimmed=1 degree=6 error=3.3317351763340565e-16 peak=0.00099999999999995622
+rational=0 scale=1000 posed=0 trimmed=0 degree=6 error=0 peak=1
+rational=0 scale=1000 posed=0 trimmed=1 degree=6 error=0 peak=1
+rational=0 scale=1000 posed=1 trimmed=0 degree=6 error=2.3111101695862269e-13 peak=0.99999999999998568
+rational=0 scale=1000 posed=1 trimmed=1 degree=6 error=2.3111101695862269e-13 peak=0.99999999999998568
+rational=1 scale=0.01 posed=0 trimmed=0 degree=6 error=0 peak=1.0000000000000001e-05
+rational=1 scale=0.01 posed=0 trimmed=1 degree=6 error=0 peak=1.0000000000000001e-05
+rational=1 scale=0.01 posed=1 trimmed=0 degree=6 error=5.3180159959869433e-18 peak=1.0000000000000152e-05
+rational=1 scale=0.01 posed=1 trimmed=1 degree=6 error=5.3180159959869433e-18 peak=1.0000000000000152e-05
+rational=1 scale=1 posed=0 trimmed=0 degree=6 error=0 peak=0.001
+rational=1 scale=1 posed=0 trimmed=1 degree=6 error=0 peak=0.001
+rational=1 scale=1 posed=1 trimmed=0 degree=6 error=2.4557086569942844e-16 peak=0.00099999999999995579
+rational=1 scale=1 posed=1 trimmed=1 degree=6 error=2.4557086569942844e-16 peak=0.00099999999999995579
+rational=1 scale=1000 posed=0 trimmed=0 degree=6 error=0 peak=1
+rational=1 scale=1000 posed=0 trimmed=1 degree=6 error=0 peak=1
+rational=1 scale=1000 posed=1 trimmed=0 degree=6 error=2.3110727695246038e-13 peak=0.99999999999998579
+rational=1 scale=1000 posed=1 trimmed=1 degree=6 error=2.3110727695246038e-13 peak=0.99999999999998579
+checks=24 PASS

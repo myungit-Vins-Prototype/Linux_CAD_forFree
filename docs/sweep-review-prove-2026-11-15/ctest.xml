@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="(empty)"
+	tests="16"
+	failures="0"
+	disabled="0"
+	skipped="0"
+	hostname=""
+	time="4"
+	timestamp="2026-11-15T11:24:41"
+	>
+	<testcase name="forgecad_document_read_tests" classname="forgecad_document_read_tests" time="0.140522" status="run">
+		<properties/>
+		<system-out>parser corrupt: 58 byte, maxRSS delta 0 KiB
+PASS document read
+PASS document read
+</system-out>
+	</testcase>
+	<testcase name="forgecad_pattern_placement_tests" classname="forgecad_pattern_placement_tests" time="0.133764" status="run">
+		<properties/>
+		<system-out>PASS circular border fit: NURBS completi, assi, scale, negativi, pannello, esclusioni, Undo/Redo, codec
+PASS pattern placements: limiti, overflow, output, griglie, rotazioni e simmetria
+</system-out>
+	</testcase>
+	<testcase name="forgecad_pattern_result_tests" classname="forgecad_pattern_result_tests" time="0.983652" status="run">
+		<properties/>
+		<system-out>PASS sweep feature pattern: Y, volumi analitici, pannello, esclusioni, codec, Undo/Redo
+PASS pattern results: corpi solidi/superfici, esclusioni, storia, cavita' e persistenza
+</system-out>
+	</testcase>
+	<testcase name="forgecad_boolean_history_tests" classname="forgecad_boolean_history_tests" time="0.0721992" status="run">
+		<properties/>
+		<system-out>PASS boolean history
+</system-out>
+	</testcase>
+	<testcase name="forgecad_all_history_tests" classname="forgecad_all_history_tests" time="0.499929" status="run">
+		<properties/>
+		<system-out></system-out>
+	</testcase>
+	<testcase name="forgecad_surface_tools_tests" classname="forgecad_surface_tools_tests" time="0.79438" status="run">
+		<properties/>
+		<system-out>PASS individual fill influence, picking identity and persistence
+PASS superfici: rete/estensione/poli, dipendenze, rigenerazione, Undo/Redo, UI/mouse, formato53, errori atomici, revisioni e sola lettura
+</system-out>
+	</testcase>
+	<testcase name="forgecad_history_preview_mesh_tests" classname="forgecad_history_preview_mesh_tests" time="0.0342464" status="run">
+		<properties/>
+		<system-out>{"bodies":[{"drawn":true,"edges":12,"geometry":true,"hi":[8,6,5],"index":0,"later":false,"lo":[0,0,0],"name":"","normals":24,"quality":1,"restored":false,"vertices":24},{"drawn":true,"edges":4,"geometry":true,"hi":[8,6,0],"index":1,"later":false,"lo":[0,0,0],"name":"","normals":6,"quality":1,"restored":false,"vertices":6},{"drawn":false,"edges":0,"geometry":false,"hi":[0,0,0],"index":2,"later":false,"lo":[0,0,0],"name":"","normals":0,"quality":-1,"restored":false,"vertices":0},{"drawn":false,"edges":0,"geometry":false,"hi":[0,0,0],"index":3,"later":false,"lo":[0,0,0],"name":"","normals":0,"quality":-1,"restored":false,"vertices":0}],"phase":"loaded","preview_error":"","preview_valid":false,"preview_vertices":0}
+{"bodies":[{"drawn":true,"edges":12,"geometry":true,"hi":[8,6,5],"index":0,"later":false,"lo":[0,0,0],"name":"","normals":24,"quality":1,"restored":true,"vertices":24},{"drawn":true,"edges":4,"geometry":true,"hi":[8,6,0],"index":1,"later":false,"lo":[0,0,0],"name":"","normals":6,"quality":1,"restored":...
+[This part of the test output was removed since it exceeds the threshold of 1024 bytes.]
+</system-out>
+	</testcase>
+	<testcase name="forgecad_revolution_history_tests" classname="forgecad_revolution_history_tests" time="0.353288" status="run">
+		<properties/>
+		<system-out></system-out>
+	</testcase>
+	<testcase name="forgecad_extrusion_history_tests" classname="forgecad_extrusion_history_tests" time="0.0990587" status="run">
+		<properties/>
+		<system-out></system-out>
+	</testcase>
+	<testcase name="forgecad_document_precision_tests" classname="forgecad_document_precision_tests" time="0.210805" status="run">
+		<properties/>
+		<system-out>PASS document precision: codec67/66, invalid values, Undo/Redo, windows, workers and UI
+</system-out>
+	</testcase>
+	<testcase name="forgecad_sweep_reference_tests" classname="forgecad_sweep_reference_tests" time="0.0885234" status="run">
+		<properties/>
+		<system-out>Sweep references PASS
+</system-out>
+	</testcase>
+	<testcase name="forgekernel_surface_instances_tests" classname="forgekernel_surface_instances_tests" time="0.824695" status="run">
+		<properties/>
+		<system-out>[  OK  ] SurfaceInstanceExactJetsAndPoles
+[  OK  ] SurfaceInstanceFlattenedAndImmutable
+[  OK  ] SurfaceInstanceSharesBezierPolesAndBounds
+[  OK  ] SurfaceInstanceBinarySharingAndLegacyRead
+[  OK  ] SurfaceInstanceRejectsInvalidPlacementAndRecords
+[  OK  ] SurfaceInstanceStepReplicaRoundTrip
+[  OK  ] SurfaceInstanceStepRejectsCycles
+[  OK  ] SurfaceInstanceStepReadsStandardMirrorAndScale
+[  OK  ] SurfaceInstancePreservesSingularTrimsAndMesh
+[  OK  ] SurfaceInstanceSewPolarWedgesAndCap
+[  OK  ] SurfaceInstanceZeroRadiusAtHighValenceCusp
+[  OK  ] BodyReadPoolExactSharingAndRecordIdentity
+[  OK  ] BodyReadPoolRejectsNearDuplicatesAndSurvivesPool
+[  OK  ] BodyReadPoolConcurrentDocuments
+14/14 test superati
+</system-out>
+	</testcase>
+	<testcase name="forgekernel_surface_tools_tests" classname="forgekernel_surface_tools_tests" time="4.96774" status="run">
+		<properties/>
+		<system-out>[  OK  ] SurfaceNetworkCrossingFamilies
+[  OK  ] SurfaceExtendUntilPlaneAndCurvedFace
+[  OK  ] SurfaceExtendUntilFacetedTarget
+[  OK  ] SurfaceExtendUntilSplineExtrusion
+[  OK  ] SurfacePolesPreserveTrimsAndTopology
+[  OK  ] SurfacePolesRefitControlCounts
+[  OK  ] SurfacePolesMultipleConnectedFaces
+[  OK  ] SurfacePolesMultipleFacesOfSolid
+[  OK  ] SurfacePolesPreserveDeclaredVertexTolerance
+[  OK  ] SurfacePolesAutomaticConnectionAndTangency
+[  OK  ] SurfacePolesContinuitySwappedReversedRationalAndSharp
+[  OK  ] SurfacePolesContinuityRefitAndProtection
+[  OK  ] SurfacePolesTrimProtectionLeavesInteriorFree
+[  OK  ] SurfacePolesNeutralTolerantConnections
+[  OK  ] SurfacePolesSphereInternalG1AndG2
+[  OK  ] SurfacePolesG2AcrossFacesAndRigidPoses
+[  OK  ] SurfacePolesExactAnalyticConversion
+[  OK  ] SurfacePolesAnalyticEditsHolesAndClosure
+[  OK  ] SurfacePolesMixedAnalyticAndNurbsTangency
+[  OK  ] SurfacePolesCurvedAnalyticTrimmedHoles
+[  OK  ] SurfacePolesPeriodicHelicalTrims
+[  OK  ] SurfacePolesSphericalCapAt...
+[This part of the test output was removed since it exceeds the threshold of 1024 bytes.]
+</system-out>
+	</testcase>
+	<testcase name="forgekernel_face_normal_bounds_tests" classname="forgekernel_face_normal_bounds_tests" time="0.00180106" status="run">
+		<properties/>
+		<system-out>[  OK  ] FaceNormalTrimmedSupportAndNegativeInside
+[  OK  ] FaceNormalPCurveRestrictedToEdgeRange
+[  OK  ] FaceNormalMissingUnknownAndOutOfDomainPCurves
+[  OK  ] FaceNormalHolesComplementAndIsolatedVertex
+[  OK  ] FaceNormalRationalWeightsAndInvalidInput
+[  OK  ] FaceNormalExtrusionSplineGraphAndPeriodicity
+[  OK  ] FaceNormalConicPCurveAndCancellation
+[  OK  ] FaceNormalExtrusionTangentRationalAndEllipse
+8/8 test superati
+</system-out>
+	</testcase>
+	<testcase name="forgekernel_surface_parameterization_tests" classname="forgekernel_surface_parameterization_tests" time="0.0012303" status="run">
+		<properties/>
+		<system-out>[  OK  ] SurfaceParameterizationBSplineCopiesAndCodec
+[  OK  ] SurfaceParameterizationExtrusionCurveFamilies
+[  OK  ] SurfaceParameterizationAnalyticOriginsAndAxes
+[  OK  ] SurfaceParameterizationUnknownAndCancellation
+4/4 test superati
+</system-out>
+	</testcase>
+	<testcase name="forgekernel_bspline_isoline_tests" classname="forgekernel_bspline_isoline_tests" time="0.0129808" status="run">
+		<properties/>
+		<system-out>[  OK  ] BSplineIsolineJetsAndInstances
+[  OK  ] BSplineIsolineRejectsInvalidAndCancels
+[  OK  ] BSplineIsolineMassAnalyticAndParallel
+3/3 test superati
+</system-out>
+	</testcase>
+</testsuite>

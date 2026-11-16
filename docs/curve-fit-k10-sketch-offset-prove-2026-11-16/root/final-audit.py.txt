@@ -1,0 +1,17 @@
+from pathlib import Path
+import hashlib,json,subprocess
+r=Path('/home/myungit/Linux_CAD_forFree');p=Path('/tmp/forgecad-k10-sketch-offset-20261116');before=json.loads((p/'hashes-before.json').read_text());changed=[f for f,h in before.items() if not (r/f).is_file() or hashlib.sha256((r/f).read_bytes()).hexdigest()!=h]
+allowed={'CLAUDE.md','CMakeLists.txt','cad_sketch_offset.cpp','cad_sketch_offset.h','tools/generate_architecture.py','docs/code-review-2026-11-15.md','docs/curve-fit-k10-thicken-2026-11-15.md'};assert set(changed)==allowed,changed
+names=subprocess.check_output(['git','ls-files','--cached','--others','--exclude-standard','-z'],cwd=r).decode().split('\0');new_files=sorted(f for f in set(names)-set(before) if f and (r/f).is_file() and not (r/f).is_symlink())
+expected={'tests/test_sketch_offset_validation.cpp','docs/curve-fit-k10-sketch-offset-2026-11-16.md','docs/history/claude-prima-k10-sketch-offset-2026-11-16.md'};assert all(f in expected or f.startswith('docs/curve-fit-k10-sketch-offset-prove-2026-11-16/') for f in new_files),new_files
+source=['cad_sketch_offset.cpp','cad_sketch_offset.h','tests/test_sketch_offset_validation.cpp','CMakeLists.txt','tools/generate_architecture.py'];binaries=['forgecad-release/forgecad','forgecad-release/forgecad_view_tests','forgecad-release/forgecad_sketch_offset_validation_tests']
+for f in binaries:assert (r/f).stat().st_mtime>max((r/x).stat().st_mtime for x in source if x.endswith(('.cpp','.h')) or x=='CMakeLists.txt')
+assert (r/'CLAUDE.md').stat().st_size<=16384
+link=(r/'forgecad-release/CMakeFiles/forgecad_sketch_offset_validation_tests.dir/link.txt').read_text();assert 'Qt6Core' in link and 'libTK' not in link and 'Qt6Widgets' not in link and 'Qt6Gui' not in link
+db=r/'forgecad-release/compile_commands.json';graph=json.loads((r/'docs/architecture/graph.json').read_text());assert graph['analysis']['configurationDigest']==hashlib.sha256(db.read_bytes()).hexdigest(),'Architecture uses stale compile commands'
+commands=json.loads(db.read_text());strict=[x['command'] for x in commands if x['file'].endswith('/cad_sketch_offset.cpp')];assert len(strict)>=3 and all('-fno-fast-math' in x and '-ffp-contract=off' in x for x in strict)
+for f,h in json.loads((p/'independent/manifest.json').read_text())['sources_sha256'].items():assert hashlib.sha256((r/f).read_bytes()).hexdigest()==h,f
+t=json.loads((p/'tests/results.json').read_text());assert hashlib.sha256((r/'tests/test_sketch_offset_validation.cpp').read_bytes()).hexdigest()==t['test_sha256'];assert hashlib.sha256((r/'cad_sketch_offset.cpp').read_bytes()).hexdigest()==t['production_candidate_sha256']
+subprocess.run(['git','diff','--check'],cwd=r,check=True)
+result=dict(baseline_files=len(before),preserved_files=len(before)-len(changed),changed_existing=changed,new_files=new_files,source_hashes={f:hashlib.sha256((r/f).read_bytes()).hexdigest() for f in source},binary_hashes={f:hashlib.sha256((r/f).read_bytes()).hexdigest() for f in binaries},claude_bytes=(r/'CLAUDE.md').stat().st_size,test_link_command=link,strict_fp_commands=strict)
+(p/'root/final-audit.json').write_text(json.dumps(result,indent=2));print('Preservation',len(before)-len(changed),'/',len(before),'PASS')

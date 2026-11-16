@@ -1,0 +1,54 @@
+#ifndef FORGECAD_FK_CURVE_FIT_BOUNDS_H
+#define FORGECAD_FK_CURVE_FIT_BOUNDS_H
+#include "fk_bspline.h"
+#include "fk_surface.h"
+#include <array>
+#include <functional>
+namespace ForgeCad::Kernel {
+// Whole-interval bound on |f(t)-Bezier(poles,t)|, same original parameter.
+// +infinity means unresolved; it must never mean an accepted segment.
+using CurveFitErrorBound = std::function<double(const Interval &, const std::array<Vec3, 4> &)>;
+
+// Requires an oracle. Every output span must have a finite bound <=tolerance.
+// Resource exhaustion, nonfinite input/output or an unresolved terminal span
+// throws; deviation is published only after successful output construction.
+std::shared_ptr<BSplineCurve<3>> fitCurveCertified(const std::function<Vec3(double)> &f, const Interval &range,
+                                                   const std::vector<double> &breaks, double tolerance,
+                                                   const CurveFitErrorBound &bound, double *deviation = nullptr);
+namespace detail {
+struct SurfaceCurveFitData {
+    CurveFitErrorBound bound;
+    std::vector<double> breaks;
+};
+// Original BSpline surface data with axis-aligned Line2 or equal-weight
+// degree-one BSpline2 UV spans, including Trimmed wrappers. Other UV kinds
+// return an empty bound. Recognized spans outside the natural surface domain
+// (including periodic shifts) or unresolved/resource-limited data throw.
+// Surface instances are enclosed from their original basis and placements.
+SurfaceCurveFitData surfaceCompositionErrorBound(const SurfacePtr &surface, const CurvePtr<2> &pcurve,
+                                                 const Interval &range);
+// One explicit affine source map on fitRange. sourceRange is ordered;
+// reversed maps its upper endpoint to the lower fit endpoint.
+struct CurveFitSourceSpan {
+    CurvePtr<3> source;
+    Interval sourceRange;
+    Interval fitRange;
+    bool reversed = false;
+};
+// Whole-domain position residual for a contiguous partition of fit ranges.
+// Closed queries at a compound junction enclose both neighboring values.
+// Line/NURBS and their Trimmed/Transformed wrappers preserve their original
+// parameter. Empty if any source kind is unsupported; never a partial bound.
+CurveFitErrorBound curvePositionErrorBound(const std::vector<CurveFitSourceSpan> &spans);
+
+// Empty only for unsupported source kinds. NURBS/Trimmed/Transformed inputs
+// retain their original parameter; positive rational weights are required.
+// Extraction and subsequent coefficient arithmetic enclose the original
+// IEEE input data with outward rounding, including trims and transforms.
+CurveFitErrorBound extrusionOffsetErrorBound(const CurvePtr<3> &source, const Interval &range, double distance,
+                                             const Vec3 &direction);
+CurveFitErrorBound revolutionOffsetErrorBound(const CurvePtr<3> &source, const Interval &range, double distance,
+                                              const Vec3 &axisPoint, const Vec3 &axisDirection);
+} // namespace detail
+} // namespace ForgeCad::Kernel
+#endif

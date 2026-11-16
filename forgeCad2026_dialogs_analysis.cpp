@@ -129,11 +129,11 @@ void measureDialog(QMainWindow *window, CadViewport *viewport) {
         viewport->setMeasureOverlay(false);
         report.clear();
         if (!error.isEmpty()) {
-            results->setStyleSheet(QStringLiteral("color: #ff7a6a;"));
+            setFunctionMessageRole(results, FunctionMessageRole::Error);
             results->setText(error);
             return;
         }
-        results->setStyleSheet(QString());
+        setFunctionMessageRole(results, FunctionMessageRole::Normal);
         if (entities.isEmpty()) {
             results->clear();
             return;
@@ -142,7 +142,7 @@ void measureDialog(QMainWindow *window, CadViewport *viewport) {
         const ForgeCad::MeasureReport measure = ForgeCad::measureEntities(entities, &dialog);
         QApplication::restoreOverrideCursor();
         if (!measure.ok) {
-            results->setStyleSheet(QStringLiteral("color: #ff7a6a;"));
+            setFunctionMessageRole(results, FunctionMessageRole::Error);
             results->setText(measure.error);
             return;
         }
@@ -159,20 +159,22 @@ void measureDialog(QMainWindow *window, CadViewport *viewport) {
                                                            -1);
         if (!error.isEmpty()) results->setText(error);
     };
-    viewport->setReferencePickCallback([&](bool picked, GeometryRef ref) {
-        if (picked) {
-            int existing = -1;
-            for (int k = 0; k < refs.size(); ++k)
-                if (same(refs.at(k), ref)) existing = k;
-            if (existing >= 0) refs.remove(existing);
-            else if (refs.size() >= 2) refs = {ref};
-            else refs.append(ref);
-        } else {
-            refs.clear();
-        }
-        refresh();
-        pick();
-    });
+    const auto installPicker = [&] {
+        viewport->setReferencePickCallback([&](bool picked, GeometryRef ref) {
+            if (picked) {
+                int existing = -1;
+                for (int k = 0; k < refs.size(); ++k)
+                    if (same(refs.at(k), ref)) existing = k;
+                if (existing >= 0) refs.remove(existing);
+                else if (refs.size() >= 2) refs = {ref};
+                else refs.append(ref);
+            } else {
+                refs.clear();
+            }
+            refresh();
+            pick();
+        });
+    };
     QObject::connect(clearButton, &QPushButton::clicked, &dialog, [&] {
         refs.clear();
         refresh();
@@ -184,15 +186,11 @@ void measureDialog(QMainWindow *window, CadViewport *viewport) {
     QObject::connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
     // Un oggetto selezionato prima del comando e' gia' la prima entita'? No: la
     // selezione della vista non dice quale spigolo o faccia; si parte da zero.
-    {
-        const WindowLock lock(window, viewport, &dialog);
-        dialog.show();
+    runModeless(window, viewport, dialog, [&] {
+        installPicker();
         refresh();
         pick();
-        QEventLoop loop;
-        QObject::connect(&dialog, &QDialog::finished, &loop, &QEventLoop::quit);
-        loop.exec();
-    }
+    });
     viewport->cancelReferencePick();
     viewport->setReferencePickCallback(nullptr);
     viewport->setReferenceMarks({});

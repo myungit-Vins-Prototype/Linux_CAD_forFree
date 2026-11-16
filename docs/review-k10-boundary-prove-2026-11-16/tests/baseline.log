@@ -1,0 +1,25 @@
+original_parametric_deviation polynomial 5.7219584981527968e-17
+[  OK  ] BoundaryOriginalPolynomialPositive
+original_parametric_deviation rational 0.24205035881783771
+    /tmp/boundary-review/tests/test_boundary_validation.cpp:133: FK_CHECK(worst <= linearResolution())
+[ FAIL ] BoundaryOriginalRationalParameter (1 controlli falliti)
+original_parametric_deviation rational-pose-scale 0.60512589704459341
+    /tmp/boundary-review/tests/test_boundary_validation.cpp:133: FK_CHECK(worst <= linearResolution())
+[ FAIL ] BoundaryOriginalRationalPoseScale (1 controlli falliti)
+original_parametric_deviation rational-negative-uv 0.24205035881783765
+    /tmp/boundary-review/tests/test_boundary_validation.cpp:133: FK_CHECK(worst <= linearResolution())
+[ FAIL ] BoundaryOriginalRationalReverse (1 controlli falliti)
+original_parametric_deviation rational-trim 0.16362001441188559
+    /tmp/boundary-review/tests/test_boundary_validation.cpp:133: FK_CHECK(worst <= linearResolution())
+[ FAIL ] BoundaryOriginalRationalTrim (1 controlli falliti)
+[  OK  ] BoundaryFailureBodyAndModelAtomicity
+[  OK  ] BoundaryCancellationBodyAndModelAtomicity
+hidden_span_guide 1 gap 0.01
+    /tmp/boundary-review/tests/test_boundary_validation.cpp:183: FK_CHECK(!guide)
+[ FAIL ] BoundaryIsoHiddenPcurveAndCurveSpan (1 controlli falliti)
+hidden_support_extension_rejected 0
+    /tmp/boundary-review/tests/test_boundary_validation.cpp:207: FK_CHECK(rejected)
+    /tmp/boundary-review/tests/test_boundary_validation.cpp:208: FK_CHECK(writeBodyBinary(f.body) == bodyBefore)
+    /tmp/boundary-review/tests/test_boundary_validation.cpp:209: FK_CHECK(modelBytes(model) == modelBefore)
+[ FAIL ] BoundaryIsoHiddenSupportExtensionRejectsAtomically (3 controlli falliti)
+3/9 test superati

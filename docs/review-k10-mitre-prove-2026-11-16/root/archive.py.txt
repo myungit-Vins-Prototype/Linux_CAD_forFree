@@ -1,0 +1,29 @@
+from pathlib import Path
+import json,sys
+sys.path.insert(0,'/tmp/mitre-review/root')
+from verify import copy,sha,R,T,P
+assert (T/'final-audit.json').is_file()
+for p in T.rglob('*'):
+ if p.is_file():copy(p,P/'root'/p.relative_to(T))
+C=Path('/tmp/mitre-review/core')
+for f in ['CORE_REVIEW.txt','baseline-sha.json','architecture-read.json']:
+ copy(C/f,P/'core'/f)
+for p in (C/'v2').iterdir():
+ if p.is_file():copy(p,P/'core/v2'/p.name)
+A=Path('/tmp/mitre-review/audit')
+for line in (A/'SHA256SUMS').read_text().splitlines():
+ h,f=line.split('  ',1);assert sha(A/f)==h,f
+for p in A.rglob('*'):
+ if p.is_file():copy(p,P/'independent'/p.relative_to(A))
+S=Path('/tmp/mitre-review/tests/evidence')
+for f,h in json.loads((S/'SHA256.json').read_text()).items():assert sha(S/f)==h,f
+for p in S.rglob('*'):
+ if p.is_file():copy(p,P/'tests'/p.relative_to(S))
+(P/'README.txt').write_text('Prove K10 mitre ISO,16 novembre2026. Root: integrazione,buildcompleta,27CTest,Wayland,coefficienti finali,Fraction,architettura e conservazione; core:V2 congelata/regressioni; tests:13mirati,16pubblici,19sanitizer mirati; independent:Fraction e lettura statica. Distinguere cut interni e Body sintetici dai risultati pubblici:nessun ramo ISO osservato nei121trace pubblici diagnosticati. Il negativo diagonale resta aperto. Sorgenti/script sono inerti con suffisso.txt; per riprodurre copiarli fuori dal repository e ripristinare le estensioni e i percorsi locali. Nessun binario,oggetto,libreria o CAD incluso. I manifest upstream documentano provenienza; solo SHA256SUMS alla radice definisce l’esatto contenuto curato. Rapporto esteso in docs/review-k10-mitre-2026-11-16.md.\n')
+for p in P.rglob('*'):
+ if p.is_file():
+  assert p.suffix not in ['.cpp','.h','.py','.sh','.inc','.o','.a','.prt','.body','.pyc'] and p.name!='CMakeLists.txt',str(p)
+  with p.open('rb') as f:assert f.read(4)!=b'\x7fELF',str(p)
+files=sorted(p for p in P.rglob('*') if p.is_file() and p!=P/'SHA256SUMS');(P/'SHA256SUMS').write_text(''.join(sha(p)+'  '+str(p.relative_to(P))+'\n' for p in files))
+for line in(P/'SHA256SUMS').read_text().splitlines():h,f=line.split('  ',1);assert sha(P/f)==h,f
+print('Sealed',len(files),'text artifacts')

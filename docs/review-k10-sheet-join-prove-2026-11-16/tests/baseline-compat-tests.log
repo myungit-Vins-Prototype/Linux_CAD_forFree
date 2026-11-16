@@ -1,0 +1,39 @@
+[  OK  ] SheetJoinImplicitPolynomial
+[  OK  ] SheetJoinTangentPolynomial
+[  OK  ] SheetJoinRigidPose
+[  OK  ] SheetJoinSmallScale
+[  OK  ] SheetJoinLargeScale
+[  OK  ] SheetJoinRational
+[  OK  ] SheetJoinReverseSelection
+[  OK  ] SheetJoinFaceSense
+[  OK  ] SheetJoinCanonicalReversal
+[  OK  ] SheetJoinLowerBoundary
+[  OK  ] SheetJoinTangentRigidPose
+[  OK  ] SheetJoinTangentSmallScale
+[  OK  ] SheetJoinTangentLargeScale
+[  OK  ] SheetJoinTangentRational
+[  OK  ] SheetJoinTangentReverseSelection
+[  OK  ] SheetJoinTangentFaceSense
+[  OK  ] SheetJoinTangentCanonicalReversal
+[  OK  ] SheetJoinTangentLowerBoundary
+    /tmp/sheet-join-review/tests/baseline-compat-final.cpp:439: FK_CHECK(rejected)
+[ FAIL ] SheetJoinHiddenNarrowKnots (1 controlli falliti)
+    /tmp/sheet-join-review/tests/baseline-compat-final.cpp:439: FK_CHECK(rejected)
+[ FAIL ] SheetJoinTangentGapBudget (1 controlli falliti)
+[  OK  ] SheetJoinTangentTrimmedSupport
+    /tmp/sheet-join-review/tests/baseline-compat-final.cpp:439: FK_CHECK(rejected)
+    /tmp/sheet-join-review/tests/baseline-compat-final.cpp:439: FK_CHECK(rejected)
+[ FAIL ] SheetJoinHiddenNarrowPhases (2 controlli falliti)
+    /tmp/sheet-join-review/tests/baseline-compat-final.cpp:439: FK_CHECK(rejected)
+[ FAIL ] SheetJoinHiddenNarrowPose (1 controlli falliti)
+    /tmp/sheet-join-review/tests/baseline-compat-final.cpp:439: FK_CHECK(rejected)
+[ FAIL ] SheetJoinHiddenNarrowSmallScale (1 controlli falliti)
+    /tmp/sheet-join-review/tests/baseline-compat-final.cpp:439: FK_CHECK(rejected)
+[ FAIL ] SheetJoinHiddenNarrowLargeScale (1 controlli falliti)
+    /tmp/sheet-join-review/tests/baseline-compat-final.cpp:439: FK_CHECK(rejected)
+[ FAIL ] SheetJoinHiddenNarrowReverseSelection (1 controlli falliti)
+    /tmp/sheet-join-review/tests/baseline-compat-final.cpp:439: FK_CHECK(rejected)
+[ FAIL ] SheetJoinTangentGapPose (1 controlli falliti)
+[  OK  ] SheetJoinCancellationAtomic
+[  OK  ] SheetJoinInvalidLengthAtomic
+21/29 test superati

@@ -1,0 +1,29 @@
+from pathlib import Path
+import hashlib,json,shutil
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/k10-next-review/root');S=Path('/tmp/preview-next-review/next/delivery');sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();before=json.loads((T/'hashes-before.json').read_text());memory=(R/'CLAUDE.md').read_text()
+for f in ['forgeCad2026_dialogs_solids.cpp','CMakeLists.txt','tests/test_viewport.cpp','tools/generate_architecture.py']:assert sha(R/f)==before[f],f
+assert sha(S/'forgeCad2026_dialogs_solids.cpp')=='11304bbf3f096b36b2ecefcd43b80c07cfb4dd457567b2983a3e86529de36b06'
+assert sha(S/'test_chamfer_preview_editing.h')=='e1d32b51f8467e89116109d6004edf0d8acd5446aa3a99553d9bb36bc5e4a2ec'
+assert not (R/'tests/test_chamfer_preview_editing.h').exists()
+shutil.copy2(S/'forgeCad2026_dialogs_solids.cpp',R/'forgeCad2026_dialogs_solids.cpp');shutil.copy2(S/'test_chamfer_preview_editing.h',R/'tests/test_chamfer_preview_editing.h')
+p=R/'CMakeLists.txt';s=p.read_text();anchor='    forgecad_add_view_test(forgecad_preview_selection_state_tests --preview-selection-state)';assert s.count(anchor)==1;s=s.replace(anchor,'    forgecad_add_view_test(forgecad_chamfer_preview_state_tests --chamfer-preview-editing)\n    set_tests_properties(forgecad_chamfer_preview_state_tests PROPERTIES TIMEOUT 120)\n'+anchor,1)
+anchor='tests/test_preview_selection_state.h tests/test_advanced_fillets.h';assert anchor in s;s=s.replace(anchor,'tests/test_preview_selection_state.h tests/test_chamfer_preview_editing.h tests/test_advanced_fillets.h',1);p.write_text(s)
+p=R/'tests/test_viewport.cpp';s=p.read_text();anchor='#include "test_preview_selection_state.h"';assert s.count(anchor)==1;s=s.replace(anchor,anchor+'\n#include "test_chamfer_preview_editing.h"',1)
+anchor='    if (app.arguments().contains(QStringLiteral("--preview-selection-state"))) {';assert s.count(anchor)==1;s=s.replace(anchor,'''    if (app.arguments().contains(QStringLiteral("--chamfer-preview-editing"))) {
+        QTemporaryDir isolatedSettings;
+        if (!isolatedSettings.isValid()) return 1;
+        QSettings::setDefaultFormat(QSettings::IniFormat);
+        QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, isolatedSettings.path());
+        try { ViewportInteractionTest::chamferPreviewEditingReview(); }
+        catch (const std::exception &error) { std::cerr << error.what() << std::endl; return 1; }
+        return 0;
+    }
+'''+anchor,1);p.write_text(s)
+p=R/'tools/generate_architecture.py';s=p.read_text();lines=s.splitlines()
+for i,line in enumerate(lines):
+ if line.startswith(" 'forgeCad2026_dialogs_solids.cpp':"):
+  assert line.endswith("'),");lines[i]=line[:-3]+' Smusso aggiorna chiave, worker e geometria anche al termine editing delle distanze e angoli con Tab/focusout.'+"'),"
+s='\n'.join(lines)+'\n';anchor=" 'tests/test_preview_selection_state.h':";assert s.count(anchor)==1;s=s.replace(anchor," 'tests/test_chamfer_preview_editing.h': ('tests', 'Sei scenari Smusso con veri eventi di tastiera: primaria, seconda distanza e angolo, anteprima pronta/worker pendente, Tab/Invio/frecce, annullamento, conferma e cleanup.'),\n"+anchor,1);p.write_text(s)
+memory=memory.replace('PRE8 confermato su Smusso: digitazione+Tab lascia anteprima e stato sul vecchio\nvalore; la conferma calcola invece il valore corretto. Correzione non ancora\nintegrata.', 'PRE8 Smusso: digitazione+Tab lasciava vecchia anteprima; conferma corretta.\nDue connessioni e regressione integrate;90stati privati PASS ancheWayland,\n63PASS/27FAIL sullo stesso fixture baseline. Build e prove finali pendenti.')
+assert len(memory.encode())<=16384,len(memory.encode());(R/'CLAUDE.md').write_text(memory)
+files=['forgeCad2026_dialogs_solids.cpp','tests/test_chamfer_preview_editing.h','CMakeLists.txt','tests/test_viewport.cpp','tools/generate_architecture.py'];(T/'ui-source-hashes.json').write_text(json.dumps({f:sha(R/f) for f in files},indent=2)+'\n');print('PRE8 integrato; memoria',len(memory.encode()))

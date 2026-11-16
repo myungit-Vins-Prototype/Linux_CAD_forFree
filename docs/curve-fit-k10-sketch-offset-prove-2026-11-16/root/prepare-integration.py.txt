@@ -1,0 +1,30 @@
+from pathlib import Path
+r=Path('/home/myungit/Linux_CAD_forFree')
+f=r/'CMakeLists.txt';s=f.read_text();assert 'forgecad_sketch_offset_validation_tests' not in s
+s+='''
+# Offset NURBS dello schizzo: regressioni pubbliche senza viewport o contesto GL.
+set_source_files_properties(cad_sketch_offset.cpp PROPERTIES COMPILE_OPTIONS
+    "$<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang,AppleClang>:-fno-fast-math;-ffp-contract=off>")
+add_executable(forgecad_sketch_offset_validation_tests tests/test_sketch_offset_validation.cpp cad_sketch_offset.cpp cad_curve_solver.cpp)
+target_include_directories(forgecad_sketch_offset_validation_tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+target_include_directories(forgecad_sketch_offset_validation_tests SYSTEM PRIVATE "$<TARGET_PROPERTY:Qt6::Gui,INTERFACE_INCLUDE_DIRECTORIES>")
+target_link_libraries(forgecad_sketch_offset_validation_tests PRIVATE forgekernel Qt6::Core)
+target_compile_options(forgecad_sketch_offset_validation_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgecad_sketch_offset_validation_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgecad_sketch_offset_validation_tests COMMAND forgecad_sketch_offset_validation_tests)
+set_tests_properties(forgecad_sketch_offset_validation_tests PROPERTIES TIMEOUT 180)
+''';f.write_text(s)
+f=r/'cad_sketch_offset.h';s=f.read_text();start=s.index('//  - Spline, NURBS, ellissi');end=s.index('//  - Negli angoli vivi',start)
+s=s[:start]+'''//  - Spline, NURBS, ellissi e riferimenti convertiti -> B-spline cubiche.
+//    Le NURBS supportate hanno un limite continuo di posizione entro 1e-7
+//    dall'offset parametrico originale, anche sui tratti dopo il rifilo;
+//    le altre famiglie mantengono il fit campionato. I tratti rifilati
+//    conservano una corrispondenza affine con il parametro sorgente.
+//    Le copie sono curve derivate con poli interni rigidi.
+''' +s[end:];f.write_text(s)
+f=r/'tools/generate_architecture.py';s=f.read_text();anchor=" 'kernel/fk_thicken.cpp':";assert anchor in s
+s=s.replace(anchor,""" 'cad_sketch_offset.cpp': ('sketch', 'Offset dello schizzo: fit NURBS certificato da coefficienti originali nei giunti e nelle copie finali, ricertificazione dei poli effettivi dopo rifilo con domini sorgente conservati, vincoli associativi e fallimenti atomici; altri tipi mantengono il fit campionato.'),
+ 'cad_sketch_offset.h': ('sketch', 'Contratto offset schizzo: catene e lati, copie associative, limite continuo per NURBS supportate anche dopo il rifilo e limiti campionati delle altre famiglie.'),
+ 'tests/test_sketch_offset_validation.cpp': ('tests', 'Regressioni offset schizzo con dettagli NURBS nascosti, versi e segni, giunti concavi, nodi angolosi, rifilo e rigenerazione associativa; input invalidi e pubblicazione atomica.'),
+"""+anchor,1);f.write_text(s)
+print('CMake, public header and architecture catalog updated')

@@ -1,0 +1,85 @@
+{
+  "cases": 20,
+  "bodies": {
+    "mapping_height.actual.body": {
+      "sha256": "57b813e0f6c25c28f5b0ad80c153eda96590e1c037df33057952e964af10d267",
+      "byte_identical_to_private_v3": true
+    },
+    "mapping_normal_offset.actual.body": {
+      "sha256": "028b20732295998956bfcd892943669d53e253558ffe06ac49bb42d37278c07c",
+      "byte_identical_to_private_v3": true
+    },
+    "mapping_polynomial.actual.body": {
+      "sha256": "669545c93e42c0a1fc3fd3c8ff6b12a57ecc72934800c96a36cef5bf2b67d071",
+      "byte_identical_to_private_v3": true
+    },
+    "mapping_pose_wrapper.actual.body": {
+      "sha256": "2b8b06e8a34e9d4fd80ccd73bd4ed7ef9eeb6560e102939142c22142dd9fda16",
+      "byte_identical_to_private_v3": true
+    },
+    "mapping_rational.actual.body": {
+      "sha256": "fdcd64b7b331d64356030dd448066d18441e1985c9a227c7ed9b27bc2885185f",
+      "byte_identical_to_private_v3": true
+    },
+    "mapping_reverse.actual.body": {
+      "sha256": "af3b95cd89152b029bb02fef6701fca04ea3c306f80d6cb75d7d78c3b2644bd3",
+      "byte_identical_to_private_v3": true
+    },
+    "mapping_scale001.actual.body": {
+      "sha256": "9a64048f9f9aacd7abeaa3bd7bf757c1f2c0374455f62c76304e1a08fb1ef397",
+      "byte_identical_to_private_v3": true
+    },
+    "mapping_scale1000.actual.body": {
+      "sha256": "b34edcb34f5c13876fa459ad0e608bb551497f77ad952175f441add1a035c612",
+      "byte_identical_to_private_v3": true
+    },
+    "mapping_trim_range.actual.body": {
+      "sha256": "740e2eccf64078cfd3d57c7d3cb27667487c88b1179eaaf90826e1856793b463",
+      "byte_identical_to_private_v3": true
+    },
+    "quilt_faruv10000_identity.actual.body": {
+      "sha256": "97e51b75bd335423a374ff49a1014d853ffd3e753acbc84adb4e73acf50c6a92",
+      "byte_identical_to_private_v3": true
+    },
+    "quilt_faruv10000_pose.actual.body": {
+      "sha256": "1ba991086ab00bc65ffcccb85e2aea96a6a465cdeb3605dc0d8dc835422068ba",
+      "byte_identical_to_private_v3": true
+    },
+    "quilt_height.actual.body": {
+      "sha256": "57b813e0f6c25c28f5b0ad80c153eda96590e1c037df33057952e964af10d267",
+      "byte_identical_to_private_v3": true
+    },
+    "quilt_normal_offset.actual.body": {
+      "sha256": "028b20732295998956bfcd892943669d53e253558ffe06ac49bb42d37278c07c",
+      "byte_identical_to_private_v3": true
+    },
+    "quilt_polynomial.actual.body": {
+      "sha256": "669545c93e42c0a1fc3fd3c8ff6b12a57ecc72934800c96a36cef5bf2b67d071",
+      "byte_identical_to_private_v3": true
+    },
+    "quilt_pose_wrapper.actual.body": {
+      "sha256": "d76fdf86f01db205303070f7110bec08ed919f49805c498696346ec139eba6af",
+      "byte_identical_to_private_v3": true
+    },
+    "quilt_rational.actual.body": {
+      "sha256": "fdcd64b7b331d64356030dd448066d18441e1985c9a227c7ed9b27bc2885185f",
+      "byte_identical_to_private_v3": true
+    },
+    "quilt_reverse.actual.body": {
+      "sha256": "af3b95cd89152b029bb02fef6701fca04ea3c306f80d6cb75d7d78c3b2644bd3",
+      "byte_identical_to_private_v3": true
+    },
+    "quilt_scale001.actual.body": {
+      "sha256": "94f7a267cc68297a7b91efd0093434204cf244ae246f2aac8c94570494939df9",
+      "byte_identical_to_private_v3": true
+    },
+    "quilt_scale1000.actual.body": {
+      "sha256": "7cfb68651bb52e194d6931e46d707f44f10e65d0433c60506728b28a91956934",
+      "byte_identical_to_private_v3": true
+    },
+    "quilt_trim_range.actual.body": {
+      "sha256": "740e2eccf64078cfd3d57c7d3cb27667487c88b1179eaaf90826e1856793b463",
+      "byte_identical_to_private_v3": true
+    }
+  }
+}

@@ -1,0 +1,86 @@
+CASE 0 pending=0
+PASS real ready geometry before mutation
+PASS opening picker preserves unchanged preview policy
+PASS continuous picking remains active after mutation
+PASS mutated selection invalidates key and geometry
+PASS mutation increments generation
+PASS mutated selection reports waiting
+PASS mapping removes its only selected face
+PASS mapping clears previous notice
+PASS cancelled completion cannot publish obsolete preview
+PASS finishing selection restarts request
+PASS preview recovers after selection
+PASS case reaches recovered preview
+PASS cancel cleans picker lock callback preview
+CASE 0 pending=1
+PASS real worker running before mutation
+PASS opening picker preserves unchanged preview policy
+PASS continuous picking remains active after mutation
+PASS mutated selection invalidates key and geometry
+PASS mutation increments generation
+PASS mutated selection reports waiting
+PASS mutation cancels real worker token
+PASS mapping removes its only selected face
+PASS mapping clears previous notice
+PASS cancelled completion cannot publish obsolete preview
+PASS finishing selection restarts request
+PASS preview recovers after selection
+PASS case reaches recovered preview
+PASS cancel cleans picker lock callback preview
+CASE 1 pending=0
+PASS real ready geometry before mutation
+PASS opening picker preserves unchanged preview policy
+PASS continuous picking remains active after mutation
+PASS mutated selection invalidates key and geometry
+PASS mutation increments generation
+PASS mutated selection reports waiting
+PASS mapping removes its only selected face
+PASS mapping clears previous notice
+PASS cancelled completion cannot publish obsolete preview
+PASS finishing selection restarts request
+PASS preview recovers after selection
+PASS case reaches recovered preview
+PASS cancel cleans picker lock callback preview
+CASE 1 pending=1
+PASS real worker running before mutation
+PASS opening picker preserves unchanged preview policy
+PASS continuous picking remains active after mutation
+PASS mutated selection invalidates key and geometry
+PASS mutation increments generation
+PASS mutated selection reports waiting
+PASS mutation cancels real worker token
+PASS mapping removes its only selected face
+PASS mapping clears previous notice
+PASS cancelled completion cannot publish obsolete preview
+PASS finishing selection restarts request
+PASS preview recovers after selection
+PASS case reaches recovered preview
+PASS cancel cleans picker lock callback preview
+CASE 2 pending=0
+PASS real ready geometry before mutation
+PASS opening picker preserves unchanged preview policy
+PASS continuous picking remains active after mutation
+PASS mutated selection invalidates key and geometry
+PASS mutation increments generation
+PASS mutated selection reports waiting
+PASS fill replaces sketch contour with picked face
+PASS cancelled completion cannot publish obsolete preview
+PASS finishing selection restarts request
+PASS preview recovers after selection
+PASS case reaches recovered preview
+PASS cancel cleans picker lock callback preview
+CASE 2 pending=1
+PASS real worker running before mutation
+PASS opening picker preserves unchanged preview policy
+PASS continuous picking remains active after mutation
+PASS mutated selection invalidates key and geometry
+PASS mutation increments generation
+PASS mutated selection reports waiting
+PASS mutation cancels real worker token
+PASS fill replaces sketch contour with picked face
+PASS cancelled completion cannot publish obsolete preview
+PASS finishing selection restarts request
+PASS preview recovers after selection
+PASS case reaches recovered preview
+PASS cancel cleans picker lock callback preview
+PRE7 RESULT passed=79 failed=0

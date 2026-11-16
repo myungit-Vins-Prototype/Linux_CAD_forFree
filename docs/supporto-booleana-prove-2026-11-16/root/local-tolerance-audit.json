@@ -1,0 +1,8 @@
+{
+  "tolerant_ends_source_unchanged": true,
+  "source_sha256": "b2314227232aba64a9306febeb696e07ed8bd4e8146513f4c1ae0143c4ce953e",
+  "output_max_edge_tolerance_mm": 1.8925516266514557e-05,
+  "output_max_vertex_tolerance_mm": 1.8925516266514557e-05,
+  "new_contact_budget": "min(BooleanOptions.tolerance,linearResolution())",
+  "scope": "Existing local B-rep tolerances are distinct from the new contact certificate; no assertion that every output tolerance is below document resolution."
+}

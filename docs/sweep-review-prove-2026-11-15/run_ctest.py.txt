@@ -1,0 +1,16 @@
+from pathlib import Path
+import os,subprocess,json,sys
+root=Path('/home/myungit/Linux_CAD_forFree');work=Path('/tmp/forgecad-sweep-fix-20261115')
+selected=['forgecad_document_read_tests','forgecad_pattern_placement_tests','forgecad_pattern_result_tests','forgecad_all_history_tests','forgecad_surface_tools_tests','forgecad_revolution_history_tests','forgecad_extrusion_history_tests','forgecad_sweep_reference_tests','forgekernel_surface_instances_tests','forgekernel_surface_tools_tests','forgekernel_bspline_isoline_tests','forgecad_document_precision_tests','forgecad_history_preview_mesh_tests','forgecad_boolean_history_tests','forgekernel_surface_parameterization_tests','forgekernel_face_normal_bounds_tests']
+known={t['name'] for t in json.loads((work/'ctest-list.json').read_text())['tests']}
+assert set(selected)<=known
+(work/'selected-tests.json').write_text(json.dumps(selected,indent=2)+'\n')
+env=os.environ.copy()
+for key,folder in [('XDG_CONFIG_HOME','config'),('XDG_CACHE_HOME','cache'),('XDG_DATA_HOME','data')]:
+    p=work/'test-environment'/folder;p.mkdir(parents=True,exist_ok=True);env[key]=str(p)
+env.update(QT_QPA_PLATFORM='offscreen',QT_QPA_PLATFORMTHEME='generic',QT_STYLE_OVERRIDE='Fusion',QT_QPA_OFFSCREEN_NO_GLX='1')
+command=['ctest','--test-dir','forgecad-release','--output-on-failure','--parallel','4','-R','^('+'|'.join(selected)+')$','--output-junit',str(work/'ctest.xml')]
+with (work/'ctest.log').open('w') as f:
+    result=subprocess.run(command,cwd=root,env=env,stdout=f,stderr=subprocess.STDOUT)
+(work/'ctest-exit.txt').write_text(str(result.returncode)+'\n')
+sys.exit(result.returncode)

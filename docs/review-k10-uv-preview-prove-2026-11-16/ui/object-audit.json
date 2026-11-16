@@ -1,0 +1,20 @@
+{
+  "forgeCad2026_dialogs_mapping.cpp": {
+    "source_sha256": "5754a395a027c8b8dce961aeb573e7dae36af847dcd270406e4b89a0939e4b59",
+    "source_mtime": 1794752514.6856873,
+    "object_mtime": 1794818087.5424662,
+    "object_fresh": true
+  },
+  "forgeCad2026_dialogs_common.cpp": {
+    "source_sha256": "bd1006cc5689982ed183b6499292ce3efe956daf8028cc73ca7258036ad9ba82",
+    "source_mtime": 1794817974.0901458,
+    "object_mtime": 1794818080.021445,
+    "object_fresh": true
+  },
+  "forgeCad2026_viewport_preview.cpp": {
+    "source_sha256": "189603185301b494d3545ad78e3e07ea565d12d5de3b095c0bff9edf3ec7c944",
+    "source_mtime": 1794739102.848224,
+    "object_mtime": 1794815111.8744752,
+    "object_fresh": true
+  }
+}

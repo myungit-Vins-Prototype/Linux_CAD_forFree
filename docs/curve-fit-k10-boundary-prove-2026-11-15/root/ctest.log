@@ -1,0 +1,63 @@
+Test project /home/myungit/Linux_CAD_forFree/forgecad-release
+      Start  20: forgecad_sketch_projection_tests
+ 1/29 Test  #20: forgecad_sketch_projection_tests .............   Passed    0.08 sec
+      Start  21: forgecad_projected_curve_reference_tests
+ 2/29 Test  #21: forgecad_projected_curve_reference_tests .....   Passed    0.04 sec
+      Start  32: forgecad_function_panels_tests
+ 3/29 Test  #32: forgecad_function_panels_tests ...............   Passed    1.37 sec
+      Start  34: forgecad_history_suppression_tests
+ 4/29 Test  #34: forgecad_history_suppression_tests ...........   Passed    0.04 sec
+      Start  76: forgecad_document_lifetime_tests
+ 5/29 Test  #76: forgecad_document_lifetime_tests .............   Passed    0.04 sec
+      Start  78: forgecad_offset_face_pick_tests
+ 6/29 Test  #78: forgecad_offset_face_pick_tests ..............   Passed    0.14 sec
+      Start  83: forgecad_linked_reference_visibility_tests
+ 7/29 Test  #83: forgecad_linked_reference_visibility_tests ...   Passed    0.05 sec
+      Start 104: forgecad_blend_preview_reload_tests
+ 8/29 Test #104: forgecad_blend_preview_reload_tests ..........   Passed    0.06 sec
+      Start 107: forgecad_reference_list_highlight_tests
+ 9/29 Test #107: forgecad_reference_list_highlight_tests ......   Passed    0.19 sec
+      Start 108: forgecad_surface_pattern_tests
+10/29 Test #108: forgecad_surface_pattern_tests ...............   Passed    0.11 sec
+      Start 114: forgecad_surface_mapping_tests
+11/29 Test #114: forgecad_surface_mapping_tests ...............   Passed    1.31 sec
+      Start 134: forgecad_body_owner_history_tests
+12/29 Test #134: forgecad_body_owner_history_tests ............   Passed    0.16 sec
+      Start 138: forgecad_history_position_tests
+13/29 Test #138: forgecad_history_position_tests ..............   Passed    0.23 sec
+      Start 139: forgecad_async_lifetime_tests
+14/29 Test #139: forgecad_async_lifetime_tests ................   Passed    0.03 sec
+      Start 185: forgekernel_open_offset_tests
+15/29 Test #185: forgekernel_open_offset_tests ................   Passed   83.74 sec
+      Start 190: forgekernel_history_tests
+16/29 Test #190: forgekernel_history_tests ....................   Passed    0.37 sec
+      Start 192: forgekernel_tolerance_tests
+17/29 Test #192: forgekernel_tolerance_tests ..................   Passed    0.33 sec
+      Start 193: forgekernel_surface_tools_tests
+18/29 Test #193: forgekernel_surface_tools_tests ..............   Passed    4.78 sec
+      Start 205: forgekernel_offset_validation_tests
+19/29 Test #205: forgekernel_offset_validation_tests ..........   Passed    0.05 sec
+      Start 206: forgekernel_curve_fit_validation_tests
+20/29 Test #206: forgekernel_curve_fit_validation_tests .......   Passed   17.63 sec
+      Start 207: forgekernel_offset_split_crease_tests
+21/29 Test #207: forgekernel_offset_split_crease_tests ........   Passed    1.65 sec
+      Start 208: forgekernel_blend_contact_break_tests
+22/29 Test #208: forgekernel_blend_contact_break_tests ........   Passed    0.43 sec
+      Start 210: forgekernel_bspline_derivative_tests
+23/29 Test #210: forgekernel_bspline_derivative_tests .........   Passed    0.00 sec
+      Start 213: forgekernel_bspline_isoline_tests
+24/29 Test #213: forgekernel_bspline_isoline_tests ............   Passed    0.01 sec
+      Start 218: forgekernel_surface_mapping_tests
+25/29 Test #218: forgekernel_surface_mapping_tests ............   Passed    0.23 sec
+      Start 223: forgekernel_nurbs_support_tests
+26/29 Test #223: forgekernel_nurbs_support_tests ..............   Passed   67.70 sec
+      Start 225: forgekernel_sheet_fit_validation_tests
+27/29 Test #225: forgekernel_sheet_fit_validation_tests .......   Passed    1.31 sec
+      Start 226: forgekernel_curve_projection_tests
+28/29 Test #226: forgekernel_curve_projection_tests ...........   Passed    0.00 sec
+      Start 227: forgekernel_boundary_fit_validation_tests
+29/29 Test #227: forgekernel_boundary_fit_validation_tests ....   Passed    0.37 sec
+
+100% tests passed out of 29
+
+Total Test time (real) = 182.46 sec

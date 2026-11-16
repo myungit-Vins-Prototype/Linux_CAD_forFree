@@ -1,0 +1,13 @@
+from pathlib import Path
+import json,re,hashlib
+r=Path('/home/myungit/Linux_CAD_forFree');p=r/'docs/curve-fit-k10-projection-prove-2026-11-16/root-replay'
+g=json.loads((r/'docs/architecture/graph.json').read_text());h=(r/'docs/architecture/index.html').read_text()
+assert json.loads(re.search(r'<script id="graph-data" type="application/json">(.*?)</script>',h,re.S).group(1))==g
+focus=['cad_forge.cpp','kernel/fk_project.cpp','kernel/fk_project.h','kernel/fk_curve_fit_bounds.cpp','kernel/fk_curve_fit_bounds.h','kernel/tests/test_projection_fit_validation.cpp'];nodes={n['id']:n for n in g['nodes']};assert set(focus)<=set(nodes)
+incident=[e for e in g['edges'] if e['source'] in focus or e['target'] in focus]
+required=[('kernel/fk_project.cpp','kernel/fk_curve_fit_bounds.cpp','call'),('kernel/fk_project.cpp','kernel/fk_curve_fit_bounds.h','include'),('kernel/tests/test_projection_fit_validation.cpp','kernel/fk_project.cpp','call'),('cad_forge.cpp','kernel/fk_project.cpp','call')]
+for key in required:assert any((e['source'],e['target'],e['kind'])==key for e in incident),key
+assert not g['analysis']['errors']
+assert g['analysis']['configurationDigest']==hashlib.sha256((r/'forgecad-release/compile_commands.json').read_bytes()).hexdigest()
+a=dict(files=len(nodes),edges=len(g['edges']),units=len(g['analysis']['units']),errors=g['analysis']['errors'],html_matches=True,incident_edges=len(incident),required=required,files_audited={f:dict(description=nodes[f]['description'],incoming={k:sum(e['target']==f and e['kind']==k for e in incident) for k in ['call','include','reference']},outgoing={k:sum(e['source']==f and e['kind']==k for e in incident) for k in ['call','include','reference']}) for f in focus})
+(p/'architecture-audit.json').write_text(json.dumps(a,indent=2)+'\n');(p/'architecture-incident.json').write_text(json.dumps(incident,indent=2)+'\n');print({k:v for k,v in a.items() if k!='files_audited'})

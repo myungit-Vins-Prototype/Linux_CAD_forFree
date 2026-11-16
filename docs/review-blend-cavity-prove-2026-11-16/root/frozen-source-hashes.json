@@ -1,0 +1,6 @@
+{
+  "kernel/fk_blend_surface.cpp": "dfad2aa7ca0996210a2882a349d518e9746989ea19b132ed8a459dfe53909ca8",
+  "kernel/tests/test_blend_cavity_regressions.cpp": "626a8f4223d2428555f8d9a26a6d6ff9096bcaef0cc724cb59707cb4fdc89b97",
+  "kernel/CMakeLists.txt": "d69f75ee9c5604354aee5c675848e60b9c6335aea0f7087186d821b6ef75a604",
+  "tools/generate_architecture.py": "f591f41d23bdc88f9e74bda6a69141df01c3e6008d0a9bd64cb091f9ec49cdf1"
+}

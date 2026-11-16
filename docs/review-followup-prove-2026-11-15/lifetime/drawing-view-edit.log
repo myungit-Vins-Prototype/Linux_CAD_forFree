@@ -1,0 +1,3 @@
+PASS dialog preview: piani/corpi/scala/sezioni, cancellazione, richieste obsolete, riuso geometria e Undo
+PASS pan tavola: centrale/tasto 3D+sinistro, zoom alto, cursore/selezioni, quota/taglio/ghost, sola lettura, focus, Undo e cache invariati
+PASS drawing tree, view edit, preserved references and atomic validation

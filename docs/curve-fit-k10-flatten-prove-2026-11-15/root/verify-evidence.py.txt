@@ -1,0 +1,7 @@
+from pathlib import Path
+import hashlib
+p=Path('/home/myungit/Linux_CAD_forFree/docs/curve-fit-k10-flatten-prove-2026-11-15')
+lines=(p/'SHA256SUMS').read_text().splitlines()
+for line in lines:
+ expected,name=line.split('  ',1);assert hashlib.sha256((p/name).read_bytes()).hexdigest()==expected,name
+print('Manifest PASS:',len(lines),'files')

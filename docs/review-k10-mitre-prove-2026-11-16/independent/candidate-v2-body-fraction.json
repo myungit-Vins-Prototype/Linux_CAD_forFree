@@ -1,0 +1,31 @@
+{
+  "input": "/tmp/mitre-review/audit/candidate-v2-body-fins.json",
+  "sha256": "37c650c0f567127b306c18934304b8b114668b029f10504ae40b40650ddbe7d9",
+  "method": "exact rational homogeneous Cox/de Boor composition and Bernstein hull, all intersected knot branches",
+  "records": [
+    {
+      "fin": 0,
+      "edge": null,
+      "face": null,
+      "budget": 1e-07,
+      "pass": true,
+      "upper_mm": 6.725652854973881e-11,
+      "cells": 1,
+      "leaves": 1,
+      "branches": 1,
+      "max_depth": 0
+    },
+    {
+      "fin": 4,
+      "edge": null,
+      "face": null,
+      "budget": 1e-07,
+      "pass": true,
+      "upper_mm": 6.725652854973881e-11,
+      "cells": 1,
+      "leaves": 1,
+      "branches": 1,
+      "max_depth": 0
+    }
+  ]
+}

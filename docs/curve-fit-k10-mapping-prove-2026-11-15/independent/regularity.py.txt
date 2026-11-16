@@ -1,0 +1,10 @@
+from pathlib import Path
+from fractions import Fraction as F
+import json,math
+p=Path(__file__).parent
+fixture=json.loads((p/'mapping-input.json').read_text())['target']['profile'];xs=[F(q[0]) for q in fixture['poles']];knots=fixture['knots'];rows=[]
+for start,lo,hi in [(0,0.,.1),(6,.1,.101),(12,.101,1.)]:
+ length=F(hi)-F(lo);coeff=[6*(xs[i+1]-xs[i])/length for i in range(start,start+6)];bound=min(coeff);assert bound>0
+ rows.append({'range':[lo,hi],'dx_du_min_bernstein_exact':str(bound),'dx_du_lower_double_outward':math.nextafter(float(bound),-math.inf)})
+result={'spans':rows,'global_x_derivative_lower':min(q['dx_du_lower_double_outward'] for q in rows),'surface':'S(u,v)=(x(u),v,z(u)); ||Su x Sv||=sqrt(x_prime^2+z_prime^2)>=x_prime>0','profile_geometric_regularity':'monotone regular graph; z and its first two derivatives vanish at the two bump endpoints; no cusp or fold','peak_z_exact':str(F(fixture['poles'][9][2])*F(20,64)),'proof':'Piecewise Bezier span control derivative coefficients are strictly positive rational numbers derived from the actual input double poles. Convex-hull property gives the continuous lower bound, not a sampled radius/Jacobian.'}
+(p/'regularity.json').write_text(json.dumps(result,indent=2)+'\n');print(json.dumps(result,indent=2))

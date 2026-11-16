@@ -1,0 +1,6 @@
+[  OK  ] BSplineCacheCurveValueSemantics
+[  OK  ] BSplineCacheSurfaceValueSemantics
+[  OK  ] BSplineCacheConcurrentSnapshots
+[  OK  ] BSplineCacheConcurrentCircleRecognition
+[  OK  ] BSplineCacheSurfaceInstanceAndOwnerLifetime
+5/5 test superati

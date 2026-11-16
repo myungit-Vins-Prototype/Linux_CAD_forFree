@@ -7,6 +7,7 @@
 #include "cad_feature_dependencies.h"
 #include "cad_surface_tools.h"
 #include "cad_surface_mapping.h"
+#include "forgeCad2026_feature_preview.h"
 #include "cad_topology_ref.h"
 #include "fk_surface_algo.h"
 #include "fk_curve_ops.h"
@@ -27,6 +28,25 @@ bool samePickedFace(const GeometryRef &a,const GeometryRef &b) {
     // puo' essere comune a piu' discendenti: non identifica da solo la faccia.
     if(a.point.subshape>=0&&b.point.subshape>=0)return a.point.subshape==b.point.subshape;
     return !a.point.name.isEmpty()&&a.point.name==b.point.name&&a.point.x==b.point.x&&a.point.y==b.point.y&&a.point.z==b.point.z;
+}
+
+// Conserva l'anteprima quando si apre soltanto il picker; invalida invece
+// il risultato appena i valori cambiano durante una selezione continua.
+bool refreshSelectionPreview(const PreviewScope &scope, const ExtrusionObject &definition,
+                             bool selecting, QString &requestedKey) {
+    const QString key = ForgeCad::Gui::FeaturePreviewBuilder::previewKey(definition, scope.index);
+    if (!selecting) {
+        requestedKey = key;
+        scope.request(definition);
+        return false;
+    }
+    const bool invalidated = !requestedKey.isEmpty() && requestedKey != key;
+    if (invalidated) {
+        scope.viewport->clearPreview();
+        requestedKey.clear();
+    }
+    if (requestedKey.isEmpty()) scope.label->setText(QStringLiteral("Termina la scelta dei riferimenti."));
+    return invalidated;
 }
 
 QVector<int> sources(CadViewport *view,int replaced,bool features) {
@@ -67,11 +87,13 @@ bool fillPatternDialog(QMainWindow *window,CadViewport *view,const QString &titl
     PreviewScope scope(view,dialog,form,replaced);auto *buttons=new QDialogButtonBox(QDialogButtonBox::Ok|QDialogButtonBox::Cancel,&dialog);form->addRow(buttons);
     QObject::connect(buttons,&QDialogButtonBox::rejected,&dialog,&QDialog::reject);
     bool choosing=false;
+    QString requestedPreviewKey;
     const auto current=[&]{auto d=definition;d.firstBody=body->currentIndex()<0?-1:candidates[body->currentIndex()];d.secondBody=-1;d.pattern.kind=kind->currentIndex()+3;d.pattern.refs=boundaries;d.pattern.spacing=stepX->value();d.pattern.spacing2=stepY->value();d.pattern.angle=angle->value();d.pattern.featureOnly=what->currentIndex()==1;d.pattern.keepOriginal=false;d.pattern.excluded.clear();d.pattern.variations.clear();d.patternComponent=-1;return d;};
     const auto refresh=[&]{
         stepY->setEnabled(kind->currentIndex()!=2);boundaryList->setReferences(boundaries);
         pick->setText(choosing?QStringLiteral("Termina selezione"):QStringLiteral("Scegli contorno nella vista"));
-        view->setReferenceMarks(boundaries);if(!choosing&&!picker.active())scope.request(current());
+        view->setReferenceMarks(boundaries);
+        refreshSelectionPreview(scope,current(),choosing||picker.active(),requestedPreviewKey);
     };
     picker.changed=refresh;picker.starting=[&]{choosing=false;};
     picker.resolve=[&](const GeometryRef &ref){if(ref.kind!=5)return -1;const int index=what->currentIndex()==1?view->sourceFeatureForFace(ref):resultBodyForPick(view,candidates,ref.index);return candidates.contains(index)?index:-1;};
@@ -96,8 +118,19 @@ bool fillPatternDialog(QMainWindow *window,CadViewport *view,const QString &titl
     QObject::connect(sketch,&QComboBox::currentIndexChanged,&dialog,[&](int i){if(i>0){GeometryRef ref;ref.kind=7;ref.index=i-1;boundaries={ref};choosing=false;view->cancelReferencePick();refresh();}});
     for(auto *box:{kind,what,body})QObject::connect(box,&QComboBox::currentIndexChanged,&dialog,[&]{refresh();});
     for(auto *box:{stepX,stepY,angle})QObject::connect(box,&QDoubleSpinBox::valueChanged,&dialog,[&]{refresh();});
+    bool cleaned = false;
+    const auto cleanup = [&] {
+        if (cleaned) return;
+        cleaned = true;
+        choosing = false;
+        picker.stop();
+        view->cancelReferencePick();
+        view->setReferencePickCallback(nullptr);
+        view->setReferenceMarks({});
+    };
+    QObject::connect(&dialog, &QDialog::finished, &dialog, cleanup);
     refresh();const bool applied=runUntilAppliedModeless(window,view,dialog,form,buttons,[&]{if(choosing||picker.active())return QStringLiteral("Termina la scelta dei riferimenti.");auto d=current();d.patternComponent=0;return apply(d);});
-    view->setReferencePickCallback(nullptr);view->setReferenceMarks({});return applied;
+    cleanup();return applied;
 }
 bool surfaceMappingDialog(QMainWindow *window,CadViewport *view,const QString &title,int replaced,const ExtrusionObject &initial,
                            const std::function<QString(const ExtrusionObject&)> &apply) {
@@ -197,6 +230,7 @@ bool surfaceMappingDialog(QMainWindow *window,CadViewport *view,const QString &t
     auto *buttons=new QDialogButtonBox(QDialogButtonBox::Ok|QDialogButtonBox::Cancel,&dialog);form->addRow(buttons);
     QObject::connect(buttons,&QDialogButtonBox::rejected,&dialog,&QDialog::reject);
     int choosing=0; // 1 facce sorgenti, 2 destinazione
+    QString requestedPreviewKey;
     const auto current=[&] {
         auto d=definition;d.operation=-1;d.feature=BodyFeature::SurfaceTools;auto &p=d.surfaceTool;
         p.sources=sourceFaces;
@@ -237,6 +271,12 @@ bool surfaceMappingDialog(QMainWindow *window,CadViewport *view,const QString &t
     const auto refresh=[&] {
         const bool linked=!unroll&&planes[plane->currentIndex()].kind==11;
         if(linked) {
+            // La destinazione ora proviene dalla mappa: il suo picker non e'
+            // piu' applicabile. La scelta delle sorgenti resta invece valida.
+            if (choosing == 2) {
+                choosing = 0;
+                view->cancelReferencePick();
+            }
             const auto &flat=view->extrusions()[planes[plane->currentIndex()].index].surfaceTool;
             targetFaces=flat.sources;
             auto params=current().surfaceTool;GeometryRef basePlane;QString reason;
@@ -279,7 +319,7 @@ bool surfaceMappingDialog(QMainWindow *window,CadViewport *view,const QString &t
             marks.append(planeMark);
         }
         view->setReferenceMarks(marks);
-        if(!choosing&&!picker.active())scope.request(current());
+        if(refreshSelectionPreview(scope,current(),choosing||picker.active(),requestedPreviewKey)) result->clear();
     };
     picker.changed=[&]{useFlattening();refresh();};picker.starting=[&]{choosing=0;};
     const auto begin=[&](int step){picker.stop();view->cancelReferencePick();choosing=step;view->beginReferencePick(DatumRoleFace,replaced);refresh();};
@@ -442,6 +482,17 @@ bool surfaceMappingDialog(QMainWindow *window,CadViewport *view,const QString &t
         centerFlat();refresh();
     });
     QObject::connect(copy,&QCheckBox::toggled,&dialog,[&]{refresh();});
+    bool cleaned = false;
+    const auto cleanup = [&] {
+        if (cleaned) return;
+        cleaned = true;
+        choosing = false;
+        picker.stop();
+        view->cancelReferencePick();
+        view->setReferencePickCallback(nullptr);
+        view->setReferenceMarks({});
+    };
+    QObject::connect(&dialog, &QDialog::finished, &dialog, cleanup);
     refresh();const bool applied=runUntilAppliedModeless(window,view,dialog,form,buttons,[&]{if(choosing||picker.active())return QStringLiteral("Termina la scelta dei riferimenti.");return apply(current());});
-    view->setReferencePickCallback(nullptr);view->setReferenceMarks({});return applied;
+    cleanup();return applied;
 }

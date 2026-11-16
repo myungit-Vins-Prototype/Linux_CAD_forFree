@@ -1,0 +1,161 @@
+{
+    "actual": [
+        {
+            "construction": true,
+            "degree": 3,
+            "kind": "spline",
+            "knots": [
+                "0x0p+0",
+                "0x0p+0",
+                "0x0p+0",
+                "0x0p+0",
+                "0x1.7f7ec53a8d491p+22",
+                "0x1.7f7ec53a8d491p+22",
+                "0x1.7f7ec53a8d491p+22",
+                "0x1.7f7ec53a8d491p+22"
+            ],
+            "poles": [
+                [
+                    "0x0p+0",
+                    "0x0p+0"
+                ],
+                [
+                    "0x1.5555555555554p-2",
+                    "-0x1.543449d4d4d4dp-45"
+                ],
+                [
+                    "0x1.5555555591a2ap-1",
+                    "0x1.95def6ef1adf1p-26"
+                ],
+                [
+                    "0x1.fffffffffffffp-1",
+                    "-0x1.9210c831e61f5p-45"
+                ]
+            ],
+            "qt_control_points": [
+                [
+                    "0x0p+0",
+                    "0x0p+0"
+                ],
+                [
+                    "0x1.5555555555554p-2",
+                    "-0x1.543449d4d4d4dp-45"
+                ],
+                [
+                    "0x1.5555555591a2ap-1",
+                    "0x1.95def6ef1adf1p-26"
+                ],
+                [
+                    "0x1.fffffffffffffp-1",
+                    "-0x1.9210c831e61f5p-45"
+                ]
+            ],
+            "range": [
+                "0x0p+0",
+                "0x1.7f7ec53a8d491p+22"
+            ],
+            "valid": true,
+            "weights": [
+            ]
+        }
+    ],
+    "actual_segments": [
+    ],
+    "budget": "0x1.ad7f29abcaf48p-24",
+    "created_count": 1,
+    "error": "",
+    "expected_rejection": true,
+    "label": "alias-million-turns-YZ",
+    "migrated": true,
+    "projection": {
+        "origin": [
+            "0x0p+0",
+            "0x0p+0",
+            "0x0p+0"
+        ],
+        "x": [
+            "0x0p+0",
+            "0x0p+0",
+            "0x1p+0"
+        ],
+        "y": [
+            "0x0p+0",
+            "0x1p+0",
+            "-0x0p+0"
+        ],
+        "z": [
+            "-0x1p+0",
+            "0x0p+0",
+            "0x0p+0"
+        ]
+    },
+    "range": [
+        "0x0p+0",
+        "0x1.7f7ec53a8d491p+22"
+    ],
+    "rejected": false,
+    "sample_witness": "0x1.a36e2eb1c432fp-14",
+    "sample_witness_is_certificate": false,
+    "source": {
+        "basis": {
+            "coefficient_attribution": "replayed original constructor IEEE operations (baseline lacks getters)",
+            "frame": {
+                "origin": [
+                    "0x0p+0",
+                    "0x0p+0",
+                    "0x0p+0"
+                ],
+                "x": [
+                    "0x1p+0",
+                    "0x0p+0",
+                    "0x0p+0"
+                ],
+                "y": [
+                    "0x0p+0",
+                    "0x1p+0",
+                    "0x0p+0"
+                ],
+                "z": [
+                    "0x0p+0",
+                    "0x0p+0",
+                    "0x1p+0"
+                ]
+            },
+            "kind": "helix",
+            "leftHanded": false,
+            "pitch": "0x1.0c6f7a0b5ed8dp-20",
+            "radius": "0x1.a36e2eb1c432dp-14",
+            "sense": "0x1p+0",
+            "spiral": false,
+            "startAngle": "0x0p+0",
+            "stored_rise": "0x1.55c85af339002p-23",
+            "stored_slope": "0x0p+0",
+            "taper": "0x0p+0",
+            "turns": "0x1.e848p+19"
+        },
+        "kind": "transform",
+        "matrix": [
+            [
+                "0x1p+0",
+                "0x0p+0",
+                "0x0p+0"
+            ],
+            [
+                "0x0p+0",
+                "0x1p+0",
+                "0x0p+0"
+            ],
+            [
+                "0x0p+0",
+                "0x0p+0",
+                "0x1p+0"
+            ]
+        ],
+        "translation": [
+            "0x0p+0",
+            "0x0p+0",
+            "0x0p+0"
+        ]
+    },
+    "state_unchanged": false
+}

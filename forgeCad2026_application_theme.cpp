@@ -15,6 +15,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QDateTime>
+#include <QScopedValueRollback>
 
 namespace ForgeCad {
 namespace {
@@ -55,6 +56,41 @@ QPalette applicationPalette(bool dark) {
     return palette;
 }
 
+QString applicationStyleSheet(bool dark) {
+    return dark ? QStringLiteral("QMainWindow { background: #111820; color: #d8e4ea; }QMenuBar,QToolBar,QStatusBar { background: #1b2730; color: #d8e4ea; }QMenu { background: #202d36; color: #d8e4ea; }"
+        "QToolBar { spacing: 1px; padding: 2px 4px; border: none; }"
+        "QToolBar::separator { background: #34444f; width: 1px; margin: 5px 3px; }"
+        "QToolBar QToolButton { border: 1px solid transparent; border-radius: 4px; padding: 2px; }"
+        "QToolBar QToolButton:checked { background: #24495f; border-color: #4f9fd0; }"
+        "QToolButton:enabled:hover, QToolBar QToolButton:enabled:hover { background: #365d78; border-color: #80c8f0; color: #ffffff; }"
+        "QToolButton:enabled:pressed, QToolBar QToolButton:enabled:pressed { background: #1f4258; border-color: #80c8f0; }"
+        "QToolBar QToolButton[popupMode=\"1\"] { padding-right: 11px; }"
+        "QToolBar QToolButton::menu-button { border: none; width: 10px; }"
+        "QToolButton::menu-button:enabled:hover { background: #5089ad; }"
+        "QToolButton::menu-button:enabled:pressed { background: #1f4258; }"
+        "QPushButton:enabled:hover { background: #365d78; border-color: #80c8f0; color: #ffffff; }"
+        "QPushButton:enabled:pressed { background: #1f4258; border-color: #80c8f0; }"
+        "QMenuBar::item:selected:enabled { background: #365d78; border-color: #80c8f0; color: #ffffff; }"
+        "QMenuBar::item:pressed:enabled { background: #1f4258; border-color: #80c8f0; color: #ffffff; }"
+        "QMenu::item:selected:enabled { background: #365d78; border-color: #80c8f0; color: #ffffff; }"
+        "QMenu::item:disabled { color: #788995; }") : QStringLiteral(
+        "QMainWindow { background: palette(window); color: palette(window-text); }"
+        "QMenuBar,QToolBar,QStatusBar,QMenu { background: palette(window); color: palette(window-text); }"
+        "QToolBar { spacing: 1px; padding: 2px 4px; border: none; }"
+        "QToolBar::separator { background: #c3cbd2; width: 1px; margin: 5px 3px; }"
+        "QToolBar QToolButton { background: transparent; border: 1px solid transparent; border-radius: 4px; padding: 2px; }"
+        "QToolBar QToolButton:checked { background: #d6eafb; border-color: #659dca; }"
+        "QToolButton:enabled:hover, QToolBar QToolButton:enabled:hover { background: #e2eff9; border-color: #659dca; }"
+        "QToolButton:enabled:pressed, QToolBar QToolButton:enabled:pressed { background: #c1dcf1; border-color: #427fab; }"
+        "QToolBar QToolButton[popupMode=\"1\"] { padding-right: 11px; }"
+        "QToolBar QToolButton::menu-button { border: none; width: 10px; }"
+        "QToolButton::menu-button:enabled:hover { background: #c1dcf1; }"
+        "QToolButton::menu-button:enabled:pressed { background: #a9cee9; }"
+        "QMenuBar::item:selected:enabled,QMenu::item:selected:enabled { background: #d6eafb; color: palette(window-text); }"
+        "QMenuBar::item:pressed:enabled { background: #c1dcf1; }"
+        "QMenu::item:disabled { color: palette(disabled, window-text); }");
+}
+
 class ApplicationTheme final : public QObject {
     QApplication &application_;
     ApplicationThemeMode mode_ = applicationThemeMode();
@@ -76,7 +112,9 @@ class ApplicationTheme final : public QObject {
     }
 
     void apply() {
-        applying_ = true;
+        if (applying_) { schedule(); return; }
+        const QScopedValueRollback<bool> applying(applying_, true);
+        const bool isDark = dark();
         // Alcuni temi di piattaforma sostituiscono QStyle durante il cambio OS.
         // Seguendo la vita dello stile reale funzioniamo anche sotto QStyleSheetStyle.
         if (!commonStyle_) {
@@ -88,10 +126,11 @@ class ApplicationTheme final : public QObject {
             });
             trace("install-fusion");
         }
-        const auto palette = applicationPalette(dark());
+        const auto palette = applicationPalette(isDark);
         if (application_.palette() != palette) application_.setPalette(palette);
+        const auto sheet = applicationStyleSheet(isDark);
+        if (application_.styleSheet() != sheet) application_.setStyleSheet(sheet);
         trace("apply-palette");
-        applying_ = false;
     }
 
     void trace(const char *reason) const {

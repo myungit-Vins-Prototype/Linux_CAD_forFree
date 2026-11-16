@@ -1,0 +1,9 @@
+{
+  "pass": true,
+  "exact_deboor_matches_parent": true,
+  "schema_clamped_sorted_positive_checked": true,
+  "input_sha256": "c46f7f6b5f74e85c9f990f0c9be019994fd5afe6af945e9beec477ca105b8d1f",
+  "source_script_sha256": "9d628a3ecc0c148e6cd86436d3c11449e5404e7f820f0b594a5ec3c9c00d530e",
+  "exact_vs_IEEE_point_max_component": 5.662137425588298e-15,
+  "scope": "independent input/schema/deBoor checks; subdivision proof reviewed statically, not rerun"
+}

@@ -1,0 +1,7 @@
+from pathlib import Path
+import subprocess,shlex
+out=Path('/tmp/helix-independent-audit');core=Path('/tmp/k10-sketch-review/core');repo=Path('/home/myungit/Linux_CAD_forFree')
+commands=[['c++','-std=c++17','-O1','-fno-fast-math','-ffp-contract=off','-I'+str(core),'-I'+str(repo/'kernel'),'-c',str(core/'fk_helix_projection.cpp'),'-o',str(out/'provider.o')],['c++','-std=c++17','-O1','-fno-fast-math','-ffp-contract=off','-I'+str(core),'-I'+str(repo/'kernel'),str(out/'edge-probe.cpp'),str(out/'provider.o'),str(repo/'forgecad-release/kernel/libforgekernel.a'),'-pthread','-o',str(out/'edge-probe')]]
+for command in commands:
+ print(shlex.join(command),flush=True);subprocess.run(command,check=True)
+subprocess.run([str(out/'edge-probe')],check=True)

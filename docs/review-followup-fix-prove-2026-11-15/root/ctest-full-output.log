@@ -1,0 +1,381 @@
+Start testing: Nov 15 15:43 CET
+----------------------------------------------------------
+32/224 Testing: forgecad_function_panels_tests
+32/224 Test: forgecad_function_panels_tests
+Command: "/home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_view_tests" "--function-panels-review"
+Directory: /home/myungit/Linux_CAD_forFree/forgecad-release
+"forgecad_function_panels_tests" start time: Nov 15 15:43 CET
+Output:
+----------------------------------------------------------
+PASS extrusion action preconditions: warnings and valid active/selected profiles
+<end of output>
+Test time =   1.28 sec
+----------------------------------------------------------
+Test Passed.
+"forgecad_function_panels_tests" end time: Nov 15 15:43 CET
+"forgecad_function_panels_tests" time elapsed: 00:00:01
+----------------------------------------------------------
+
+34/224 Testing: forgecad_history_suppression_tests
+34/224 Test: forgecad_history_suppression_tests
+Command: "/home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_view_tests" "--history-suppression"
+Directory: /home/myungit/Linux_CAD_forFree/forgecad-release
+"forgecad_history_suppression_tests" start time: Nov 15 15:43 CET
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.03 sec
+----------------------------------------------------------
+Test Passed.
+"forgecad_history_suppression_tests" end time: Nov 15 15:43 CET
+"forgecad_history_suppression_tests" time elapsed: 00:00:00
+----------------------------------------------------------
+
+76/224 Testing: forgecad_document_lifetime_tests
+76/224 Test: forgecad_document_lifetime_tests
+Command: "/home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_view_tests" "--document-lifetime"
+Directory: /home/myungit/Linux_CAD_forFree/forgecad-release
+"forgecad_document_lifetime_tests" start time: Nov 15 15:43 CET
+Output:
+----------------------------------------------------------
+PASS durata documenti: drag reale, pannelli, Undo/Redo, preview e selezione in coda, secondo viewport
+<end of output>
+Test time =   0.04 sec
+----------------------------------------------------------
+Test Passed.
+"forgecad_document_lifetime_tests" end time: Nov 15 15:43 CET
+"forgecad_document_lifetime_tests" time elapsed: 00:00:00
+----------------------------------------------------------
+
+78/224 Testing: forgecad_offset_face_pick_tests
+78/224 Test: forgecad_offset_face_pick_tests
+Command: "/home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_view_tests" "--offset-pick"
+Directory: /home/myungit/Linux_CAD_forFree/forgecad-release
+"forgecad_offset_face_pick_tests" start time: Nov 15 15:43 CET
+Output:
+----------------------------------------------------------
+Selezione facce offset e cache cucitura: OK
+<end of output>
+Test time =   0.12 sec
+----------------------------------------------------------
+Test Passed.
+"forgecad_offset_face_pick_tests" end time: Nov 15 15:43 CET
+"forgecad_offset_face_pick_tests" time elapsed: 00:00:00
+----------------------------------------------------------
+
+83/224 Testing: forgecad_linked_reference_visibility_tests
+83/224 Test: forgecad_linked_reference_visibility_tests
+Command: "/home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_view_tests" "--linked-reference-visibility"
+Directory: /home/myungit/Linux_CAD_forFree/forgecad-release
+"forgecad_linked_reference_visibility_tests" start time: Nov 15 15:43 CET
+Output:
+----------------------------------------------------------
+PASS linked reference visibility raster
+<end of output>
+Test time =   0.04 sec
+----------------------------------------------------------
+Test Passed.
+"forgecad_linked_reference_visibility_tests" end time: Nov 15 15:43 CET
+"forgecad_linked_reference_visibility_tests" time elapsed: 00:00:00
+----------------------------------------------------------
+
+104/224 Testing: forgecad_blend_preview_reload_tests
+104/224 Test: forgecad_blend_preview_reload_tests
+Command: "/home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_view_tests" "--blend-preview-reload"
+Directory: /home/myungit/Linux_CAD_forFree/forgecad-release
+"forgecad_blend_preview_reload_tests" start time: Nov 15 15:43 CET
+Output:
+----------------------------------------------------------
+mouse invariato: 0 vertici evidenziati
+PASS blend preview reload
+<end of output>
+Test time =   0.05 sec
+----------------------------------------------------------
+Test Passed.
+"forgecad_blend_preview_reload_tests" end time: Nov 15 15:43 CET
+"forgecad_blend_preview_reload_tests" time elapsed: 00:00:00
+----------------------------------------------------------
+
+107/224 Testing: forgecad_reference_list_highlight_tests
+107/224 Test: forgecad_reference_list_highlight_tests
+Command: "/home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_view_tests" "--reference-list-highlight"
+Directory: /home/myungit/Linux_CAD_forFree/forgecad-release
+"forgecad_reference_list_highlight_tests" start time: Nov 15 15:43 CET
+Output:
+----------------------------------------------------------
+Reference list highlight PASS
+<end of output>
+Test time =   0.18 sec
+----------------------------------------------------------
+Test Passed.
+"forgecad_reference_list_highlight_tests" end time: Nov 15 15:43 CET
+"forgecad_reference_list_highlight_tests" time elapsed: 00:00:00
+----------------------------------------------------------
+
+108/224 Testing: forgecad_surface_pattern_tests
+108/224 Test: forgecad_surface_pattern_tests
+Command: "/home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_view_tests" "--surface-patterns"
+Directory: /home/myungit/Linux_CAD_forFree/forgecad-release
+"forgecad_surface_pattern_tests" start time: Nov 15 15:43 CET
+Output:
+----------------------------------------------------------
+Surface patterns PASS
+<end of output>
+Test time =   0.10 sec
+----------------------------------------------------------
+Test Passed.
+"forgecad_surface_pattern_tests" end time: Nov 15 15:43 CET
+"forgecad_surface_pattern_tests" time elapsed: 00:00:00
+----------------------------------------------------------
+
+114/224 Testing: forgecad_surface_mapping_tests
+114/224 Test: forgecad_surface_mapping_tests
+Command: "/home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_view_tests" "--surface-mapping"
+Directory: /home/myungit/Linux_CAD_forFree/forgecad-release
+"forgecad_surface_mapping_tests" start time: Nov 15 15:43 CET
+Output:
+----------------------------------------------------------
+PASS riempimento4pattern/fori/limiti, storia, Undo/Redo, codec, sviluppo associativo e icone GUI
+<end of output>
+Test time =   1.29 sec
+----------------------------------------------------------
+Test Passed.
+"forgecad_surface_mapping_tests" end time: Nov 15 15:43 CET
+"forgecad_surface_mapping_tests" time elapsed: 00:00:01
+----------------------------------------------------------
+
+134/224 Testing: forgecad_body_owner_history_tests
+134/224 Test: forgecad_body_owner_history_tests
+Command: "/home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_view_tests" "--body-owner-history"
+Directory: /home/myungit/Linux_CAD_forFree/forgecad-release
+"forgecad_body_owner_history_tests" start time: Nov 15 15:43 CET
+Output:
+----------------------------------------------------------
+PASS proprieta' corpo nella storia: cache, riapertura, risultato, modifica, cascata e Undo/Redo
+<end of output>
+Test time =   0.15 sec
+----------------------------------------------------------
+Test Passed.
+"forgecad_body_owner_history_tests" end time: Nov 15 15:43 CET
+"forgecad_body_owner_history_tests" time elapsed: 00:00:00
+----------------------------------------------------------
+
+138/224 Testing: forgecad_history_position_tests
+138/224 Test: forgecad_history_position_tests
+Command: "/home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_view_tests" "--history-position"
+Directory: /home/myungit/Linux_CAD_forFree/forgecad-release
+"forgecad_history_position_tests" start time: Nov 15 15:43 CET
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.20 sec
+----------------------------------------------------------
+Test Passed.
+"forgecad_history_position_tests" end time: Nov 15 15:43 CET
+"forgecad_history_position_tests" time elapsed: 00:00:00
+----------------------------------------------------------
+
+139/224 Testing: forgecad_async_lifetime_tests
+139/224 Test: forgecad_async_lifetime_tests
+Command: "/home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_view_tests" "--async-lifetime"
+Directory: /home/myungit/Linux_CAD_forFree/forgecad-release
+"forgecad_async_lifetime_tests" start time: Nov 15 15:43 CET
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.03 sec
+----------------------------------------------------------
+Test Passed.
+"forgecad_async_lifetime_tests" end time: Nov 15 15:43 CET
+"forgecad_async_lifetime_tests" time elapsed: 00:00:00
+----------------------------------------------------------
+
+190/224 Testing: forgekernel_history_tests
+190/224 Test: forgekernel_history_tests
+Command: "/home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_history_tests"
+Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+"forgekernel_history_tests" start time: Nov 15 15:43 CET
+Output:
+----------------------------------------------------------
+[  OK  ] HistoryInteriorPointOfFaces
+[  OK  ] HistorySubtractCylinderThroughBox
+[  OK  ] HistorySplitFaceKeepsAmbiguousName
+[  OK  ] HistoryUniteMergesCoplanarFaces
+[  OK  ] HistoryBlendFaceGeneratedFromEdge
+[  OK  ] HistoryComposeAcrossOperations
+[  OK  ] HistorySameIndexTransform
+[  OK  ] HistoryLabelledFacesAndLongNames
+[  OK  ] HistoryPreservesNamesAfterReload
+[  OK  ] HistoryRootWithNullOperands
+[  OK  ] HistoryDeclaredOriginsOverrideGeometry
+[  OK  ] HistoryRejectsInvalidDeclarations
+[  OK  ] HistoryDeclaredCompositionCoverage
+[  OK  ] HistoryOffsetKeepsFaceNamesAcrossSurfaceChanges
+[  OK  ] HistoryOffsetComposesRectangularAndTrimmedCreases
+[  OK  ] HistoryBooleanDeclaresCutSplitAndUnchangedFaces
+[  OK  ] HistoryBooleanAndUnifyComposeEveryMergedFace
+[  OK  ] HistoryBooleanRetainsBothCoincidentOperands
+[  OK  ] HistoryBooleanEmptyDisjointAndFailureOutputs
+[  OK  ] HistoryImprintDeclaresBeforeAndAfterUnify
+[  OK  ] HistoryBooleanDeclarationsAreThreadDeterministic
+[  OK  ] HistoryBlendDeclaresTrimmedFacesAndGeneratedEdge
+[  OK  ] HistoryBlendCornerComesFromOriginalVertex
+[  OK  ] HistoryBlendClosedPlanarEdgeKeepsOriginalSource
+[  OK  ] HistoryBlendGeneralChainsAndOpenSheet
+[  OK  ] HistoryAsymmetricChamferAndRejectedOutputs
+[  OK  ] HistoryExtrusionSourcesSurviveLoopOrderingAndReversal
+[  OK  ] HistoryExtrusionClosedCurvesAndOpenChains
+[  OK  ] HistoryDeclaredFaceAliasesOverrideGeometricLabels
+[  OK  ] HistoryExtractAndSewFacesPreserveDeclaredSources
+[  OK  ] HistoryRevolutionLoopSourcesAndAxis
+[  OK  ] HistoryRevolutionSignedAngularCaps
+[  OK  ] HistoryRevolutionCurvesSheetsAndRejectedOutputs
+[  OK  ] HistorySweepAndLoftKeepSectionSources
+[  OK  ] HistoryPrimitivesAndSurfaceRootsEmitLabels
+[  OK  ] HistoryTransformsDraftAndExtractedEdgesAreExplicit
+[  OK  ] HistoryTrimExtendShellAndProjectionComposeOrigins
+[  OK  ] HistoryTransportDoesNotInventMissingBranches
+38/38 test superati
+<end of output>
+Test time =   0.36 sec
+----------------------------------------------------------
+Test Passed.
+"forgekernel_history_tests" end time: Nov 15 15:43 CET
+"forgekernel_history_tests" time elapsed: 00:00:00
+----------------------------------------------------------
+
+193/224 Testing: forgekernel_surface_tools_tests
+193/224 Test: forgekernel_surface_tools_tests
+Command: "/home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_surface_tools_tests"
+Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+"forgekernel_surface_tools_tests" start time: Nov 15 15:43 CET
+Output:
+----------------------------------------------------------
+[  OK  ] SurfaceNetworkCrossingFamilies
+[  OK  ] SurfaceExtendUntilPlaneAndCurvedFace
+[  OK  ] SurfaceExtendUntilFacetedTarget
+[  OK  ] SurfaceExtendUntilSplineExtrusion
+[  OK  ] SurfacePolesPreserveTrimsAndTopology
+[  OK  ] SurfacePolesRefitControlCounts
+[  OK  ] SurfacePolesMultipleConnectedFaces
+[  OK  ] SurfacePolesMultipleFacesOfSolid
+[  OK  ] SurfacePolesPreserveDeclaredVertexTolerance
+[  OK  ] SurfacePolesAutomaticConnectionAndTangency
+[  OK  ] SurfacePolesContinuitySwappedReversedRationalAndSharp
+[  OK  ] SurfacePolesContinuityRefitAndProtection
+[  OK  ] SurfacePolesTrimProtectionLeavesInteriorFree
+[  OK  ] SurfacePolesNeutralTolerantConnections
+[  OK  ] SurfacePolesSphereInternalG1AndG2
+[  OK  ] SurfacePolesG2AcrossFacesAndRigidPoses
+[  OK  ] SurfacePolesExactAnalyticConversion
+[  OK  ] SurfacePolesAnalyticEditsHolesAndClosure
+[  OK  ] SurfacePolesMixedAnalyticAndNurbsTangency
+[  OK  ] SurfacePolesCurvedAnalyticTrimmedHoles
+[  OK  ] SurfacePolesPeriodicHelicalTrims
+[  OK  ] SurfacePolesSphericalCapAtConstantLatitude
+[  OK  ] SurfacePolesSoftInfluenceLocalAndOverlap
+[  OK  ] SurfacePolesSoftInfluencePeriodAndBudget
+[  OK  ] FillPlanarSquare
+[  OK  ] FillSphericalCapThroughGuides
+[  OK  ] FillTangentToCylinder
+cono: celle 64, contorno 2.13e-07, guide 2.32e-07, tangenza 0.000912 gradi
+cono senza guide: celle 32, contorno 1.77e-07, tangenza 0.000319 gradi
+[  OK  ] FillConeWithConflictingGuides
+sfera G2: celle 32, contorno 1.98e-07, guide 1.81e-07, tangenza 0.00149 gradi, curvatura 0.003, dalla sfera 0.00668
+[  OK  ] FillCapContinuesSphereInCurvature
+[  OK  ] FillObliqueContactsPreserveInterior
+[  OK  ] FillInfluencePreservesProjectionAndTangency
+sfera G1 naturale: scarto curvatura 0.00897 1/mm
+[  OK  ] FillNaturalG1FollowsSupportCurvature
+[  OK  ] FillRejectsInvalidShapeParameters
+[  OK  ] FillIndependentContactInfluences
+[  OK  ] FillIgnoredGuidesPreserveLocalInfluence
+[  OK  ] FillDirectionalProfilePreservesContacts
+[  OK  ] FillDirectionalProfileRejectsInvalidSelection
+[  OK  ] FillUnequalCompoundBoundarySpans
+[  OK  ] FillReportsBoundaryContactConflictAtCorner
+[  OK  ] FillPerFaceContinuityOverrides
+40/40 test superati
+<end of output>
+Test time =   4.51 sec
+----------------------------------------------------------
+Test Passed.
+"forgekernel_surface_tools_tests" end time: Nov 15 15:43 CET
+"forgekernel_surface_tools_tests" time elapsed: 00:00:04
+----------------------------------------------------------
+
+205/224 Testing: forgekernel_offset_validation_tests
+205/224 Test: forgekernel_offset_validation_tests
+Command: "/home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_offset_validation_tests"
+Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+"forgekernel_offset_validation_tests" start time: Nov 15 15:43 CET
+Output:
+----------------------------------------------------------
+[  OK  ] OffsetValidationHiddenSpanAndScale
+[  OK  ] OffsetValidationToroidalDomain
+[  OK  ] OffsetValidationCancellationAndReset
+[  OK  ] OffsetValidationAnalyticExtrusionAndRevolution
+[  OK  ] OffsetValidationRotatedCircularConstructions
+5/5 test superati
+<end of output>
+Test time =   0.02 sec
+----------------------------------------------------------
+Test Passed.
+"forgekernel_offset_validation_tests" end time: Nov 15 15:43 CET
+"forgekernel_offset_validation_tests" time elapsed: 00:00:00
+----------------------------------------------------------
+
+206/224 Testing: forgekernel_offset_split_crease_tests
+206/224 Test: forgekernel_offset_split_crease_tests
+Command: "/home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_offset_split_crease_tests"
+Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+"forgekernel_offset_split_crease_tests" start time: Nov 15 15:43 CET
+Output:
+----------------------------------------------------------
+PASS offset: pieghe reali, nodi lisci stretti, distanze, genealogia e input immutato
+<end of output>
+Test time =   1.60 sec
+----------------------------------------------------------
+Test Passed.
+"forgekernel_offset_split_crease_tests" end time: Nov 15 15:43 CET
+"forgekernel_offset_split_crease_tests" time elapsed: 00:00:01
+----------------------------------------------------------
+
+207/224 Testing: forgekernel_blend_contact_break_tests
+207/224 Test: forgekernel_blend_contact_break_tests
+Command: "/home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_blend_contact_break_tests"
+Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+"forgekernel_blend_contact_break_tests" start time: Nov 15 15:43 CET
+Output:
+----------------------------------------------------------
+[  OK  ] BlendContactKnotCrossingsUseContactParameters
+[  OK  ] BlendContactKnotAtFitEndpoints
+[  OK  ] BlendContactKnotAtExistingEdgeBreakUsesOneParameter
+[  OK  ] BlendContactKnotOnProbeAndRealNormalJump
+[  OK  ] BlendContactKnotKeepsRadiusAndAllowsOneMillimeterOffset
+5/5 test superati
+<end of output>
+Test time =   0.44 sec
+----------------------------------------------------------
+Test Passed.
+"forgekernel_blend_contact_break_tests" end time: Nov 15 15:43 CET
+"forgekernel_blend_contact_break_tests" time elapsed: 00:00:00
+----------------------------------------------------------
+
+217/224 Testing: forgekernel_surface_mapping_tests
+217/224 Test: forgekernel_surface_mapping_tests
+Command: "/home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_surface_mapping_tests"
+Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+"forgekernel_surface_mapping_tests" start time: Nov 15 15:43 CET
+Output:
+----------------------------------------------------------
+PASS sviluppo piano/cilindro/cono, aree/lunghezze, rifiuto doppia curvatura, deformazione cilindrica/volume, genealogia, B-rep, STEP e mesh, appoggio multifaccia continuo/NURBS/vuoti
+<end of output>
+Test time =   0.22 sec
+----------------------------------------------------------
+Test Passed.
+"forgekernel_surface_mapping_tests" end time: Nov 15 15:43 CET
+"forgekernel_surface_mapping_tests" time elapsed: 00:00:00
+----------------------------------------------------------
+
+End testing: Nov 15 15:43 CET

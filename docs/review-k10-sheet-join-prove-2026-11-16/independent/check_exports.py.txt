@@ -1,0 +1,13 @@
+from verify_tensor_fraction import *
+import argparse,traceback
+ap=argparse.ArgumentParser();ap.add_argument('folder');ap.add_argument('output');ap.add_argument('--cases',nargs='*');ap.add_argument('--strict-seam',action='store_true');a=ap.parse_args();out=[]
+for path in sorted(Path(a.folder).glob('*.json')):
+ if a.cases and path.stem not in a.cases:continue
+ j=json.loads(path.read_text());print('BEGIN',path.stem,flush=True);case={'case':path.stem,'input_sha256':hashlib.sha256(path.read_bytes()).hexdigest(),'actual':[],'source':[]}
+ for family in ['source','actual']:
+  for rec in j.get(family,[]):
+   try:r=verify(rec)
+   except Exception as e:r={'fin':rec.get('fin'),'edge':rec.get('edge'),'face':rec.get('face'),'pass':False,'reason':str(e),'kind':'exact witness' if 'witness' in str(e) else 'unresolved or unsupported'}
+   case[family].append(r)
+  print(path.stem,family,sum(x['pass'] for x in case[family]),'/',len(case[family]),flush=True)
+ out.append(case);Path(a.output).write_text(json.dumps(out,indent=2)+'\n')

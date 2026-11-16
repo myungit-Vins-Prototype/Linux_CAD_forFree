@@ -1,0 +1,8 @@
+from pathlib import Path
+import json,shlex,subprocess
+root=Path('/home/myungit/Linux_CAD_forFree');out=Path(__file__).parent
+entries=json.loads((root/'forgecad-release/compile_commands.json').read_text())
+base=next(x for x in entries if x['file'].endswith('/kernel/fk_quilt_mapping.cpp'))
+for name in ['fk_planar_flatten','fk_quilt_mapping']:
+ c=shlex.split(base['command']);c.insert(1,'-I'+str(out));c[c.index('-c')+1]=str(out/(name+'.cpp'));c[c.index('-o')+1]=str(out/(name+'.o'));c+=['-fno-fast-math','-ffp-contract=off'];subprocess.run(c,cwd=base['directory'],check=True)
+subprocess.run(['/usr/bin/c++','-o',str(out/'flatten-fixed'),str(out.parent/'tests/flatten_probe.o'),str(out/'fk_quilt_mapping.o'),str(out/'fk_planar_flatten.o'),str(out.parent/'tests/before/fk_mapping_fit.o'),str(out.parent/'tests/before/fk_offset.o'),str(root/'forgecad-release/kernel/libforgekernel.a'),'-lpthread'],check=True)

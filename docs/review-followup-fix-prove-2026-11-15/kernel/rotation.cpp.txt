@@ -1,0 +1,19 @@
+#include "fk_offset.h"
+#include "fk_extrude.h"
+#include "fk_mass.h"
+#include "fk_curve_ops.h"
+#include <iostream>
+#include <iomanip>
+using namespace ForgeCad::Kernel;
+int main(){std::cout<<std::setprecision(17);
+for(int pose=0;pose<3;++pose){
+ Frame3 frame=pose==0?Frame3():pose==1?Frame3(Vec3(1,-2,3),Vec3(.2,.3,1),Vec3(1,0,0)):Frame3(Vec3(),Vec3(1,1,1),Vec3(1,-1,0));
+ auto line=[](Vec2 a,Vec2 b){return ProfileSegment{std::make_shared<Line<2>>(a,b-a),{0,distance(a,b)}};};
+ auto arc=[](Vec2 c,double a,double b){return ProfileSegment{std::make_shared<Circle<2>>(makeCircle(c,1.5)),{a,b}};};
+ std::vector<ProfileSegment> seg{line({1.5,0},{6.5,0}),arc({6.5,1.5},-kHalfPi,0),line({8,1.5},{8,3.5}),arc({6.5,3.5},0,kHalfPi),line({6.5,5},{1.5,5}),arc({1.5,3.5},kHalfPi,kPi),line({0,3.5},{0,1.5}),arc({1.5,1.5},kPi,1.5*kPi)};
+ auto region=buildProfile(seg,1e-9).regions.front();auto prism=makeExtrusion(frame,region,3.);std::vector<FaceId>sides;
+ for(auto f:prism.faces())if(prism.face(f).surface->type()!=SurfaceType::Plane||std::fabs(dot(prism.face(f).surface->normal(0,0),frame.zDir()))<.5)sides.push_back(f);
+ for(double d:{.4,-.4})try{auto result=offsetFaces(prism,sides,d);double area=0;for(auto f:result.body.faces())area+=faceArea(result.body,f);double target=(2*(8+5-4*1.5)+kTwoPi*(1.5+d))*3;std::cout<<"rounded pose="<<pose<<" d="<<d<<" areaerror="<<area-target<<" threshold=1e-9\n";}catch(const std::exception&e){std::cout<<"rounded EXCEPTION "<<e.what()<<'\n';}
+ auto circle=std::make_shared<Circle<3>>(frame.origin(),frame.xDir(),frame.yDir(),2.);ExtrusionSurface cyl(circle,frame.zDir());
+ try{auto out=offsetSurface(cyl,.1,{0,kTwoPi},{0,3},1e-7);double worst=0;for(int i=0;i<=1000;++i){double u=kTwoPi*i/1000.;worst=std::max(worst,distance(out->point(u,1),cyl.point(u,1)+.1*cyl.normal(u,1)));}std::cout<<"extrusion pose="<<pose<<" basetype="<<int(static_cast<const ExtrusionSurface&>(*out).curve()->type())<<" worst="<<worst<<" threshold=1e-7\n";}catch(const std::exception&e){std::cout<<"extrusion EXCEPTION "<<e.what()<<'\n';}
+}}

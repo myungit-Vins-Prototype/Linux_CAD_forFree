@@ -1,0 +1,49 @@
+FAIL origin menu exists
+FAIL light0 drawing0 theme menu present
+FAIL light0 drawing1 theme menu present
+FAIL origin menu exists
+FAIL dark1 drawing0 theme menu present
+FAIL dark1 drawing1 theme menu present
+FAIL origin menu exists
+FAIL light2 drawing0 theme menu present
+FAIL light2 drawing1 theme menu present
+FAIL origin menu exists
+FAIL dark3 drawing0 theme menu present
+FAIL dark3 drawing1 theme menu present
+FAIL dark-new drawing0 theme menu present
+FAIL dark-new drawing1 theme menu present
+FAIL dark-new detached-drawing theme menu present
+FAIL dark-new new-drawing-dark theme menu present
+FAIL origin menu exists
+FAIL desktop-light drawing0 theme menu present
+FAIL desktop-light drawing1 theme menu present
+FAIL desktop-light detached-drawing theme menu present
+FAIL desktop-light new-drawing-dark theme menu present
+FAIL desktop-dark drawing0 theme menu present
+FAIL desktop-dark drawing1 theme menu present
+FAIL desktop-dark detached-drawing theme menu present
+FAIL desktop-dark new-drawing-dark theme menu present
+FAIL desktop-light drawing0 theme menu present
+FAIL desktop-light drawing1 theme menu present
+FAIL desktop-light detached-drawing theme menu present
+FAIL desktop-light new-drawing-dark theme menu present
+FAIL exactly one 2D theme menu after sheet rebuild
+FAIL exactly one 2D theme menu after sheet rebuild
+FAIL exactly one 2D theme menu after sheet rebuild
+FAIL exactly one 2D theme menu after sheet rebuild
+FAIL origin menu exists
+FAIL sheets-dark drawing0 theme menu present
+FAIL sheets-dark drawing1 theme menu present
+FAIL sheets-dark detached-drawing theme menu present
+FAIL sheets-dark new-drawing-dark theme menu present
+FAIL origin menu exists
+FAIL only2d-light drawing0 theme menu present
+FAIL only2d-light drawing1 theme menu present
+FAIL only2d-light detached-drawing theme menu present
+FAIL only2d-light new-drawing-dark theme menu present
+FAIL origin menu exists
+FAIL only2d-dark drawing0 theme menu present
+FAIL only2d-dark drawing1 theme menu present
+FAIL only2d-dark detached-drawing theme menu present
+FAIL only2d-dark new-drawing-dark theme menu present
+tema coerente in tutte le schede 3D/2D e nei pixel raster

@@ -1,0 +1,97 @@
+{
+  "files": 755,
+  "edges": 10888,
+  "units": 375,
+  "errors": {},
+  "html_matches": true,
+  "incident_edges": 92,
+  "required": [
+    [
+      "kernel/fk_quilt_mapping.cpp",
+      "kernel/fk_planar_flatten.cpp",
+      "call"
+    ],
+    [
+      "kernel/fk_planar_flatten.cpp",
+      "kernel/fk_planar_flatten.h",
+      "include"
+    ],
+    [
+      "kernel/tests/test_planar_flatten_validation.cpp",
+      "kernel/fk_quilt_mapping.cpp",
+      "call"
+    ],
+    [
+      "cad_surface_mapping.cpp",
+      "kernel/fk_quilt_mapping.cpp",
+      "call"
+    ]
+  ],
+  "files_audited": {
+    "kernel/fk_planar_flatten.cpp": {
+      "description": "Trasformazione affine dei contorni UV originali per appiattimento di una faccia Plane: coefficienti e parametro conservati, limiti continui di arrotondamento, risorse e cancellazione.",
+      "incoming": {
+        "call": 2,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 6,
+        "include": 3,
+        "reference": 0
+      }
+    },
+    "kernel/fk_planar_flatten.h": {
+      "description": "Contratto del percorso affine per appiattimento piano: mappa condivisa, curve originali supportate e errore continuo dichiarato.",
+      "incoming": {
+        "call": 0,
+        "include": 2,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 0,
+        "include": 1,
+        "reference": 0
+      }
+    },
+    "kernel/fk_quilt_mapping.cpp": {
+      "description": "Appiattimento B-rep con bordo topologico comune; una faccia Plane conserva i coefficienti dei contorni tramite mappa affine e limite di arrotondamento, altri casi usano fit;  Jacobiani e deformazione campionata; origine suggerita e genealogia esplicita. Mappa comune e reversibile piano/quilt tramite coordinate di lunghezza d arco sulle isocurve esatte; una faccia o due facce tangenti con giunzione U, trim e piegatura solida lungo le normali. Monotonia dai poli, origine/metrica esatte sulla giunzione, cache per piegatura e nodi espliciti del fit; nessuna proiezione per raggi o isometria generale promessa.",
+      "incoming": {
+        "call": 6,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 28,
+        "include": 12,
+        "reference": 0
+      }
+    },
+    "kernel/fk_quilt_mapping.h": {
+      "description": "Contratti di appiattimento della lamina, misure della deformazione e corrispondenza condivisa flatten/fold per la piegatura B-rep; destinazioni immutabili con genealogia esplicita.",
+      "incoming": {
+        "call": 4,
+        "include": 6,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 0,
+        "include": 1,
+        "reference": 0
+      }
+    },
+    "kernel/tests/test_planar_flatten_validation.cpp": {
+      "description": "Regressioni appiattimento piano con dettagli NURBS nascosti tra campioni: pesi, pose, scale, trim, fori, inversione della mappa, codec, genealogia e atomicita degli output.",
+      "incoming": {
+        "call": 1,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 22,
+        "include": 9,
+        "reference": 0
+      }
+    }
+  }
+}

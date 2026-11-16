@@ -1,0 +1,6 @@
+#include <cstdlib>
+__attribute__((noinline)) void leaveLeak() {
+    void *memory = std::malloc(19);
+    asm volatile("" : : "r"(memory) : "memory");
+}
+int main() { leaveLeak(); }

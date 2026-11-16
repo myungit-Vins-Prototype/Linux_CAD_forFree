@@ -1,0 +1,8 @@
+from pathlib import Path
+import subprocess
+r=Path('/home/myungit/Linux_CAD_forFree');s=Path('/tmp/forgecad-k2-production-20261115');p=r/'kernel';f=r/'kernel'
+args=['/usr/bin/c++','-std=c++17','-O1','-g','-ffp-contract=off','-fno-fast-math','-fsanitize=address,undefined','-fno-omit-frame-pointer']
+args+=['-I'+str(x) for x in [r/'kernel',r/'kernel/tests',f,p,s/'seam']]
+args+=[str(x) for x in [r/'kernel/tests/fk_test_main.cpp',p/'tests/test_sweep_validation.cpp',p/'tests/test_sweep_caps.cpp',p/'tests/test_sweep_analytic_bridge.cpp',p/'fk_sweep.cpp',p/'fk_sweep_atlas.cpp',p/'fk_sweep_caps.cpp',p/'fk_sweep_analytic_bridge.cpp',f/'fk_sweep_surface_validation.cpp']]
+args += [str(r/'forgecad-release/kernel/libforgekernel.a'),'-lpthread','-o',str(s/'parent/production-unit-sanitizer')]
+subprocess.run(args,check=True)

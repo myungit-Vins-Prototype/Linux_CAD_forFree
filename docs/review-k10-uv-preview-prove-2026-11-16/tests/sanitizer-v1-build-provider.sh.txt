@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+set -eu
+cd /home/myungit/Linux_CAD_forFree
+flags=(-std=c++17 -O1 -g1 -ffp-contract=off -fno-fast-math -fsanitize=address,undefined -fno-omit-frame-pointer -I /tmp/k10-uv-review/core -I kernel)
+c++ "${flags[@]}" -c /tmp/k10-uv-review/core/fk_offset.cpp -o /tmp/k10-uv-review/tests/sanitizer/fk_offset.o
+c++ "${flags[@]}" -c /tmp/k10-uv-review/core/fk_curve_fit_bounds.cpp -o /tmp/k10-uv-review/tests/sanitizer/fk_curve_fit_bounds.o
+c++ "${flags[@]}" -DHAVE_PLANE_PCURVE_PROVIDER /tmp/k10-uv-review/tests/test_uv_offset_validation.cpp /tmp/k10-uv-review/tests/sanitizer/fk_offset.o /tmp/k10-uv-review/tests/sanitizer/fk_curve_fit_bounds.o forgecad-release/kernel/libforgekernel.a -o /tmp/k10-uv-review/tests/sanitizer/test_uv_offset_validation
+ASAN_OPTIONS=detect_leaks=1:halt_on_error=1 UBSAN_OPTIONS=halt_on_error=1 /tmp/k10-uv-review/tests/sanitizer/test_uv_offset_validation > /tmp/k10-uv-review/tests/sanitizer/validation.log 2>&1

@@ -1,0 +1,22 @@
+mapping_polynomial source=0 residual=2.21233e-11 ratio=0.417834 map_error=2.1222e-11 deviation=5.99703e-11 PASS
+mapping_rational source=0 residual=3.98348e-11 ratio=0.577316 map_error=1.75739e-08 deviation=1.75002e-08 PASS
+mapping_trim_range source=0 residual=4.87976e-11 ratio=0.577215 map_error=1.75739e-08 deviation=1.75002e-08 PASS
+mapping_reverse source=0 residual=4.06494e-11 ratio=0.577229 map_error=1.75739e-08 deviation=1.75002e-08 PASS
+mapping_pose_wrapper source=1.33227e-15 residual=1.35851e-10 ratio=0.950994 map_error=1.75739e-08 deviation=1.75002e-08 PASS
+mapping_scale1000 source=2.29143e-13 residual=6.63743e-09 ratio=0.990916 map_error=1.97452e-08 deviation=1.89836e-08 PASS
+mapping_scale001 source=1.08779e-15 residual=9.9004e-11 ratio=0.939807 map_error=5.97713e-09 deviation=5.95052e-09 PASS
+mapping_height source=5.55112e-17 residual=3.98348e-11 ratio=0.577316 map_error=1.75739e-08 deviation=1.75002e-08 PASS
+mapping_normal_offset source=5.55112e-17 residual=3.98348e-11 ratio=0.577316 map_error=1.75739e-08 deviation=1.75002e-08 PASS
+quilt_polynomial source=0 residual=2.21233e-11 ratio=0.417834 map_error=2.1222e-11 deviation=5.99703e-11 PASS
+quilt_rational source=0 residual=3.98348e-11 ratio=0.577316 map_error=1.75739e-08 deviation=1.75002e-08 PASS
+quilt_trim_range source=0 residual=4.87976e-11 ratio=0.577215 map_error=1.75739e-08 deviation=1.75002e-08 PASS
+quilt_reverse source=0 residual=4.06494e-11 ratio=0.577229 map_error=1.75739e-08 deviation=1.75002e-08 PASS
+quilt_pose_wrapper source=1.33227e-15 residual=1.2318e-10 ratio=0.94292 map_error=1.75739e-08 deviation=1.75002e-08 PASS
+quilt_scale1000 source=2.29143e-13 residual=6.63743e-09 ratio=0.990916 map_error=1.97452e-08 deviation=1.89836e-08 PASS
+quilt_scale001 source=1.08779e-15 residual=5.71195e-11 ratio=0.668689 map_error=5.97712e-09 deviation=5.95051e-09 PASS
+quilt_height source=5.55112e-17 residual=3.98348e-11 ratio=0.577316 map_error=1.75739e-08 deviation=1.75002e-08 PASS
+quilt_normal_offset source=5.55112e-17 residual=3.98348e-11 ratio=0.577316 map_error=1.75739e-08 deviation=1.75002e-08 PASS
+quilt_faruv10000_identity source=5.55112e-17 residual=5.60684e-11 ratio=0.561034 map_error=1.75739e-08 deviation=1.75002e-08 PASS
+quilt_faruv10000_pose source=2.03507e-15 residual=1.67554e-08 ratio=0.99596 map_error=1.91676e-08 deviation=1.91555e-08 PASS
+atomic_failures PASS
+passed=21 failed=0

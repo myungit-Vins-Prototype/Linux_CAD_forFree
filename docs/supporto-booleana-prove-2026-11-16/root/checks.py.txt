@@ -1,0 +1,29 @@
+from pathlib import Path
+import subprocess,json,os,time,re,hashlib
+R=Path('/home/myungit/Linux_CAD_forFree');T=R/'docs/supporto-booleana-prove-2026-11-16/root'
+(R/'CLAUDE.md').read_text()
+frozen=json.loads((T/'frozen-source-hashes.json').read_text())
+for f,h in frozen.items():assert hashlib.sha256((R/f).read_bytes()).hexdigest()==h,f
+def run(name,cmd,env=None,timeout=600):
+ start=time.monotonic()
+ with (T/(name+'.log')).open('w') as log:
+  try:code=subprocess.run(cmd,cwd=R,env=env,stdout=log,stderr=subprocess.STDOUT,timeout=timeout).returncode
+  except subprocess.TimeoutExpired:code=124
+ result=dict(exit=code,seconds=time.monotonic()-start,command=cmd)
+ (T/(name+'-result.json')).write_text(json.dumps(result,indent=2)+'\n');print(name,result,flush=True)
+ assert code==0,(name,(T/(name+'.log')).read_text()[-2500:])
+ return result,(T/(name+'.log')).read_text()
+run('build',['cmake','--build','forgecad-release','--parallel','2'])
+env=os.environ.copy();env.update(QT_QPA_PLATFORM='offscreen',QT_QPA_OFFSCREEN_NO_GLX='1',LIBGL_ALWAYS_SOFTWARE='1',QT_QPA_PLATFORMTHEME='',QT_QPA_PLATFORMTHEME_QT6='',QT_STYLE_OVERRIDE='Fusion')
+root=Path('/tmp/supporto-final-checks');root.mkdir(exist_ok=True)
+for key,folder in [('XDG_CONFIG_HOME','settings'),('XDG_DATA_HOME','data'),('XDG_CACHE_HOME','cache')]:
+ path=root/folder;path.mkdir(exist_ok=True);env[key]=str(path)
+names=['forgekernel_boolean_boundary_tests','forgekernel_boolean_seam_tests','forgekernel_history_tests','forgekernel_tolerance_tests','forgekernel_loft_guide_constraint_tests','forgekernel_loft_shape_tests','forgekernel_curve_fit_validation_tests','forgekernel_surface_curve_fit_validation_tests','forgekernel_edge_offset_fit_validation_tests','forgekernel_loft_correspondence_tests','forgecad_boolean_history_tests','forgecad_boolean_box_tests','forgecad_topology_label_tests','forgecad_document_precision_tests','forgecad_body_owner_history_tests','forgecad_history_position_tests','forgecad_pattern_placement_tests','forgecad_pattern_result_tests','forgecad_all_history_tests','forgecad_edge_loft_tests','forgecad_loft_correspondence_tests','forgecad_document_lifetime_tests','forgecad_edit_preview_reuse_tests','forgecad_history_preview_mesh_tests']
+result,log=run('ctest',['ctest','--test-dir','forgecad-release','--output-on-failure','--parallel','1','-V','-R','^('+'|'.join(names)+')$'],env,600)
+actual=len(re.findall(r'\d+/\d+ Test\s+#\d+: .*Passed',log));assert actual==len(names),(actual,len(names))
+assert 'RESULT checks=51 failures=0' in log
+result.update(actual_passed=actual,tests=names,new_boundary_assertions=51)
+(T/'ctest-result.json').write_text(json.dumps(result,indent=2)+'\n')
+result,log=run('boolean',[str(R/'forgecad-release/kernel/forgekernel_tests'),'Boolean'],timeout=240)
+result.update(passed=log.count('[  OK  ]'),failed=log.count('[ FAIL ]'));assert result['passed']==38 and result['failed']==0,result
+(T/'boolean-result.json').write_text(json.dumps(result,indent=2)+'\n');print('App completa,24CTest,51asserzioni e38Boolean PASS',flush=True)

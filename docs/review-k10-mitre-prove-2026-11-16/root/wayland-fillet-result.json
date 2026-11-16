@@ -1,0 +1,8 @@
+{
+  "exit": 0,
+  "seconds": 1.7669439540004532,
+  "command": [
+    "forgecad-release/forgecad_view_tests",
+    "--advanced-fillets"
+  ]
+}

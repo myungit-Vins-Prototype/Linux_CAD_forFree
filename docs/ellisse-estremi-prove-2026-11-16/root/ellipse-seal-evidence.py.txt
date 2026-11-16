@@ -1,0 +1,11 @@
+from pathlib import Path
+import hashlib,json,shutil
+r=Path('/home/myungit/Linux_CAD_forFree');p=r/'docs/ellisse-estremi-prove-2026-11-16';root=p/'root'
+names=list(json.loads((root/'frozen-source-hashes.json').read_text()))+['CLAUDE.md','docs/sketch-tools.md','docs/ellisse-estremi-2026-11-16.md']
+for name in names:
+    target=root/'final-sources'/(name+'.txt');target.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(r/name,target)
+files=sorted(f for f in p.rglob('*') if f.is_file() and f!=p/'SHA256SUMS')
+(p/'SHA256SUMS').write_text(''.join(hashlib.sha256(f.read_bytes()).hexdigest()+'  '+str(f.relative_to(p))+'\n' for f in files))
+for line in (p/'SHA256SUMS').read_text().splitlines():
+    h,name=line.split('  ',1);assert hashlib.sha256((p/name).read_bytes()).hexdigest()==h,name
+print('Manifest',len(files),'file PASS')

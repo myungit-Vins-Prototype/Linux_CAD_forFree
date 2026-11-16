@@ -6,9 +6,10 @@ bool CadViewport::isBodyVisibleInScene(int index) const {
     // operandi ripristinati dall'anteprima possono invece appartenere a
     // stadi successivi: mostrarli farebbe scegliere la faccia sottostante.
     // Anche la base sostituita deve restare visibile se e' selezionabile.
-    if (refPicking_ && refPickOwner_ >= 0 && !sketchMode_) {
-        if (index >= refPickOwner_ || (!pickBodies_.isEmpty() && !pickBodies_.contains(index))) return false;
-        return isBodyDrawn(index);
+    if (refPicking_ && !sketchMode_) {
+        const int owner = refPickOwner_ >= 0 ? refPickOwner_ : historyPosition();
+        if (index >= owner || (!pickBodies_.isEmpty() && !pickBodies_.contains(index))) return false;
+        return isBodyDrawn(index) || (!pickBodies_.isEmpty() && referenceBodyEligible(index));
     }
     const bool previewing = (!sketchMode_ || sketchViewUnlocked_) && !preview_.key.isEmpty();
     const bool replaced = previewing && preview_.replaced.contains(index);

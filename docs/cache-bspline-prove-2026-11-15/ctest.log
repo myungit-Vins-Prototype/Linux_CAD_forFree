@@ -1,0 +1,99 @@
+Test project /home/myungit/Linux_CAD_forFree/forgecad-release
+      Start 221: forgekernel_nurbs_support_tests
+      Start 170: forgecad_drawing_visibility_tests
+      Start 166: forgecad_drawing_dimensions_gui_tests
+      Start 173: forgecad_drawing_derived_tests
+ 1/47 Test #173: forgecad_drawing_derived_tests ................   Passed    2.84 sec
+      Start 179: forgecad_drawing_complete_sections_tests
+ 2/47 Test #179: forgecad_drawing_complete_sections_tests ......   Passed    2.82 sec
+      Start 163: forgecad_drawing_view_edit_tests
+ 3/47 Test #163: forgecad_drawing_view_edit_tests ..............   Passed    2.97 sec
+      Start 159: forgecad_drawing_preparation_tests
+ 4/47 Test #159: forgecad_drawing_preparation_tests ............   Passed    3.17 sec
+      Start 174: forgecad_drawing_detail_tests
+ 5/47 Test #174: forgecad_drawing_detail_tests .................   Passed    1.50 sec
+      Start 181: forgecad_drawing_axes_tests
+ 6/47 Test #166: forgecad_drawing_dimensions_gui_tests .........   Passed   14.89 sec
+      Start 167: forgecad_drawing_dimension_repair_tests
+ 7/47 Test #167: forgecad_drawing_dimension_repair_tests .......   Passed    1.36 sec
+      Start 171: forgecad_drawing_hidden_lines_tests
+ 8/47 Test #181: forgecad_drawing_axes_tests ...................   Passed    2.99 sec
+      Start 160: forgecad_drawing_scale_tests
+ 9/47 Test #160: forgecad_drawing_scale_tests ..................   Passed    1.50 sec
+      Start 176: forgecad_drawing_break_tests
+10/47 Test #171: forgecad_drawing_hidden_lines_tests ...........   Passed    1.91 sec
+      Start  63: forgecad_drawing_restore_tests
+11/47 Test #176: forgecad_drawing_break_tests ..................   Passed    0.83 sec
+      Start 180: forgecad_drawing_centers_tests
+12/47 Test  #63: forgecad_drawing_restore_tests ................   Passed    1.49 sec
+      Start 157: forgecad_drawing_crop_tests
+13/47 Test #180: forgecad_drawing_centers_tests ................   Passed    1.25 sec
+      Start 175: forgecad_drawing_auxiliary_tests
+14/47 Test #157: forgecad_drawing_crop_tests ...................   Passed    0.74 sec
+      Start  11: forgecad_mesh_export_cpu_tests
+15/47 Test #175: forgecad_drawing_auxiliary_tests ..............   Passed    0.51 sec
+      Start  62: forgecad_drawing_release_tests
+16/47 Test  #11: forgecad_mesh_export_cpu_tests ................   Passed    1.00 sec
+      Start  64: forgecad_drawing_multisheet_tests
+17/47 Test  #62: forgecad_drawing_release_tests ................   Passed    1.06 sec
+      Start 183: forgecad_drawing_focus_tests
+18/47 Test  #64: forgecad_drawing_multisheet_tests .............   Passed    1.35 sec
+      Start  53: forgecad_drawing_revisions_tests
+19/47 Test  #53: forgecad_drawing_revisions_tests ..............   Passed    0.85 sec
+      Start 155: forgecad_drawing_local_tools_tests
+20/47 Test #183: forgecad_drawing_focus_tests ..................   Passed    3.78 sec
+      Start 168: forgecad_drawing_view_placement_tests
+21/47 Test #168: forgecad_drawing_view_placement_tests .........   Passed    0.36 sec
+      Start 164: forgecad_drawing_layout_history_tests
+22/47 Test #164: forgecad_drawing_layout_history_tests .........   Passed    0.40 sec
+      Start 178: forgecad_drawing_presentation_tests
+23/47 Test #155: forgecad_drawing_local_tools_tests ............   Passed    2.76 sec
+      Start 169: forgecad_drawing_silhouette_tests
+24/47 Test #178: forgecad_drawing_presentation_tests ...........   Passed    0.37 sec
+      Start 161: forgecad_drawing_editor_tests
+25/47 Test #169: forgecad_drawing_silhouette_tests .............   Passed    0.16 sec
+      Start 162: forgecad_projected_drawing_tests
+26/47 Test #161: forgecad_drawing_editor_tests .................   Passed    0.16 sec
+      Start 156: forgecad_drawing_local_section_depth_tests
+27/47 Test #162: forgecad_projected_drawing_tests ..............   Passed    0.14 sec
+      Start 158: forgecad_drawing_templates_tests
+28/47 Test #158: forgecad_drawing_templates_tests ..............   Passed    0.11 sec
+      Start 182: forgecad_drawing_ui_controls_tests
+29/47 Test #156: forgecad_drawing_local_section_depth_tests ....   Passed    0.35 sec
+      Start 172: forgecad_drawing_page_tests
+30/47 Test #182: forgecad_drawing_ui_controls_tests ............   Passed    0.12 sec
+      Start 188: forgekernel_surface_instances_tests
+31/47 Test #172: forgecad_drawing_page_tests ...................   Passed    0.15 sec
+      Start 148: forgecad_drawing_tests
+32/47 Test #148: forgecad_drawing_tests ........................   Passed    0.03 sec
+      Start  75: forgecad_document_precision_tests
+33/47 Test  #75: forgecad_document_precision_tests .............   Passed    0.24 sec
+      Start 197: forgekernel_projected_curve_reference_tests
+34/47 Test #197: forgekernel_projected_curve_reference_tests ...   Passed    0.02 sec
+      Start  10: forgecad_display_cache_memory_tests
+35/47 Test  #10: forgecad_display_cache_memory_tests ...........   Passed    0.03 sec
+      Start 165: forgecad_drawing_dimensions_tests
+36/47 Test #165: forgecad_drawing_dimensions_tests .............   Passed    0.03 sec
+      Start 195: forgekernel_face_normal_bounds_tests
+37/47 Test #195: forgekernel_face_normal_bounds_tests ..........   Passed    0.00 sec
+      Start  21: forgecad_projected_curve_reference_tests
+38/47 Test  #21: forgecad_projected_curve_reference_tests ......   Passed    0.04 sec
+      Start  28: forgecad_document_read_tests
+39/47 Test  #28: forgecad_document_read_tests ..................   Passed    0.15 sec
+      Start 207: forgekernel_plane_jets_tests
+40/47 Test #207: forgekernel_plane_jets_tests ..................   Passed    0.00 sec
+      Start 211: forgekernel_bspline_isoline_tests
+41/47 Test #211: forgekernel_bspline_isoline_tests .............   Passed    0.02 sec
+      Start 208: forgekernel_bspline_derivative_tests
+42/47 Test #208: forgekernel_bspline_derivative_tests ..........   Passed    0.00 sec
+      Start 198: forgekernel_surface_parameterization_tests
+43/47 Test #198: forgekernel_surface_parameterization_tests ....   Passed    0.00 sec
+      Start 209: forgekernel_bspline_cache_tests
+44/47 Test #209: forgekernel_bspline_cache_tests ...............   Passed    0.03 sec
+45/47 Test #188: forgekernel_surface_instances_tests ...........   Passed    0.80 sec
+46/47 Test #170: forgecad_drawing_visibility_tests .............   Passed   31.40 sec
+47/47 Test #221: forgekernel_nurbs_support_tests ...............   Passed   73.66 sec
+
+100% tests passed out of 47
+
+Total Test time (real) =  73.66 sec

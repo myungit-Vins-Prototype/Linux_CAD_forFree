@@ -1,0 +1,10 @@
+{
+  "exit": 0,
+  "seconds": 0.1139342479982588,
+  "environment": {
+    "QT_QPA_PLATFORM": "offscreen",
+    "QT_QPA_PLATFORMTHEME": "",
+    "QT_STYLE_OVERRIDE": "Fusion"
+  },
+  "binary": "baseline current production"
+}

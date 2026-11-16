@@ -1,0 +1,11 @@
+compile 0 /tmp/supporto-review/tests/regeneration.cpp: In function ‘int main(int, char**)’:
+/tmp/supporto-review/tests/regeneration.cpp:85:269: warning: ignoring return value of ‘virtual bool QFile::open(QIODeviceBase::OpenMode)’, declared with attribute ‘nodiscard’ [-Wunused-result]
+   85 |  result["operations"]=operations;result["checks"]=checks;result["failures"]=failures;check(fileHash(original)==fileBefore,"frozen original unchanged after all operations");result["checks"]=checks;result["failures"]=failures;QFile report(base+"result.json");report.open(QIODevice::WriteOnly);report.write(QJsonDocument(result).toJson(QJsonDocument::Indented));std::cout<<"RESULT checks="<<checks<<" failures="<<failures<<std::endl;return failures?1:0;}
+      |                                                                                                                                                                                                                                                                  ~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~
+In file included from /usr/include/qt6/QtCore/QFile:1,
+                 from /tmp/supporto-review/tests/regeneration.cpp:15:
+/usr/include/qt6/QtCore/qfile.h:271:32: note: declared here
+  271 |     QFILE_MAYBE_NODISCARD bool open(OpenMode flags) override;
+      |                                ^~~~
+
+link 0 

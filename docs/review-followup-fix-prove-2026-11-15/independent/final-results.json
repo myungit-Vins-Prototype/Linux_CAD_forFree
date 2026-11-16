@@ -1,0 +1,87 @@
+{
+  "production_source_sha256": "08ac51e6fd3fd99d262fe8d0363c7437744b7714b34166dac7e74589bcf018e9",
+  "staged_source_sha256": "08ac51e6fd3fd99d262fe8d0363c7437744b7714b34166dac7e74589bcf018e9",
+  "production_test_sha256": "7d70490b069ca9fb23f14089181baa809367611bd6a20d36282ee668b9bc8f30",
+  "runs": [
+    {
+      "binary": "probe-patched",
+      "sha256": "b0c9812e5e8e4ea689204a2ed96b7e52e9d20a33c8d16806a5c9ded0a8fd0cf4",
+      "exit": 0,
+      "log": "final-torus-cancel-k10.log"
+    },
+    {
+      "binary": "edge_probe",
+      "sha256": "3a4bf121975fa8bb6afa220bd22d10e5791676a762f19efde858f1b8d544f5ad",
+      "exit": 0,
+      "log": "final-edges-extrusion.log"
+    }
+  ],
+  "torus_and_cancellation_checks": [
+    {
+      "case": "ring_valid",
+      "pass": true,
+      "log": "ring_valid accepted=1 error=1.77635683940025e-15 min_normal_dot=0.9999999999999998"
+    },
+    {
+      "case": "ring_horn_full",
+      "pass": true,
+      "log": "ring_horn_full accepted=0 reason=offset: il dominio del toro a distanza si ripiega o diventa singolare"
+    },
+    {
+      "case": "ring_spindle_full",
+      "pass": true,
+      "log": "ring_spindle_full accepted=0 reason=offset: il dominio del toro a distanza si ripiega o diventa singolare"
+    },
+    {
+      "case": "ring_outer_trim",
+      "pass": true,
+      "log": "ring_outer_trim accepted=1 error=2.03507241945104e-15 min_normal_dot=0.9999999999999998"
+    },
+    {
+      "case": "ring_outer_shifted",
+      "pass": true,
+      "log": "ring_outer_shifted accepted=1 error=2.51214793389404e-15 min_normal_dot=0.9999999999999997"
+    },
+    {
+      "case": "ring_inner_shifted",
+      "pass": true,
+      "log": "ring_inner_shifted accepted=0 reason=offset: il dominio del toro a distanza si ripiega o diventa singolare"
+    },
+    {
+      "case": "spindle_outer",
+      "pass": true,
+      "log": "spindle_outer accepted=1 error=3.972078888619242e-15 min_normal_dot=0.9999999999999998"
+    },
+    {
+      "case": "spindle_inner",
+      "pass": true,
+      "log": "spindle_inner accepted=1 error=1.195746792056363e-15 min_normal_dot=0.9999999999999998"
+    },
+    {
+      "case": "horn_outer",
+      "pass": true,
+      "log": "horn_outer accepted=1 error=1.998401444325282e-15 min_normal_dot=0.9999999999999997"
+    },
+    {
+      "case": "horn_full",
+      "pass": true,
+      "log": "horn_full accepted=0 reason=offset: il dominio del toro sorgente contiene una singolarita'"
+    },
+    {
+      "case": "cancel_initial_0",
+      "pass": true,
+      "log": "cancel initially=0 cancelled=1 calls=12 deviation=-123"
+    },
+    {
+      "case": "cancel_initial_1",
+      "pass": true,
+      "log": "cancel initially=1 cancelled=1 calls=0 deviation=-123"
+    }
+  ],
+  "torus_and_cancellation_pass": 12,
+  "edges_extrusion_pass": 48,
+  "total_pass": 60,
+  "known_open_K10": "real_spline_degree27 accepted=1 actual_error=5.74247506152284e-05 original_peak=5.742475172830043e-05 minimum_sampled_curvature_radius=14.57813293419594",
+  "source_bounds": "source-bounds.json",
+  "no_shared_build": true
+}

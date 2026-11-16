@@ -1,0 +1,95 @@
+{
+  "dark1_vs_light2_page_bbox": null,
+  "entries": [
+    {
+      "file": "dark-new-drawing0.png",
+      "size": [
+        1320,
+        868
+      ],
+      "page_black": 298,
+      "page_nonwhite": 8635
+    },
+    {
+      "file": "dark1-drawing0.png",
+      "size": [
+        1320,
+        868
+      ],
+      "page_black": 298,
+      "page_nonwhite": 8635
+    },
+    {
+      "file": "dark3-drawing0.png",
+      "size": [
+        1320,
+        868
+      ],
+      "page_black": 298,
+      "page_nonwhite": 8635
+    },
+    {
+      "file": "desktop-dark-drawing0.png",
+      "size": [
+        1320,
+        868
+      ],
+      "page_black": 298,
+      "page_nonwhite": 8635
+    },
+    {
+      "file": "desktop-light-drawing0.png",
+      "size": [
+        1320,
+        868
+      ],
+      "page_black": 298,
+      "page_nonwhite": 8635
+    },
+    {
+      "file": "light0-drawing0.png",
+      "size": [
+        1320,
+        868
+      ],
+      "page_black": 298,
+      "page_nonwhite": 8635
+    },
+    {
+      "file": "light2-drawing0.png",
+      "size": [
+        1320,
+        868
+      ],
+      "page_black": 298,
+      "page_nonwhite": 8635
+    },
+    {
+      "file": "only2d-dark-drawing0.png",
+      "size": [
+        1320,
+        868
+      ],
+      "page_black": 295,
+      "page_nonwhite": 8641
+    },
+    {
+      "file": "only2d-light-drawing0.png",
+      "size": [
+        1320,
+        868
+      ],
+      "page_black": 295,
+      "page_nonwhite": 8641
+    },
+    {
+      "file": "sheets-dark-drawing0.png",
+      "size": [
+        1320,
+        868
+      ],
+      "page_black": 295,
+      "page_nonwhite": 8641
+    }
+  ]
+}

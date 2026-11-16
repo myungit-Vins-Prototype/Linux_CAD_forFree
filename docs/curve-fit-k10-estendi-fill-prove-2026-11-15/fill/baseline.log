@@ -1,0 +1,8 @@
+[  OK  ] CurveProjectionRationalKnotsWeightsAndJets
+[  OK  ] CurveProjectionAffineShearNestedWrappers
+[  OK  ] CurveProjectionLinesDegenerateAndUnsupportedConics
+[  OK  ] CurveProjectionInvalidAndCancellation
+    /tmp/forgecad-k10-next-20261115/fill/test_curve_projection.cpp:134: FK_CHECK(uv->degree() == 3 && uv->knots() == side->knots() && uv->weights() == side->weights())
+    /tmp/forgecad-k10-next-20261115/fill/test_curve_projection.cpp:134: FK_CHECK(uv->degree() == 3 && uv->knots() == side->knots() && uv->weights() == side->weights())
+[ FAIL ] CurveProjectionFillRationalAndBodyRoundtrip (2 controlli falliti)
+4/5 test superati

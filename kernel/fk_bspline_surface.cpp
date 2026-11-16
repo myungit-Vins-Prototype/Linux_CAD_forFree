@@ -51,6 +51,23 @@ BSplineSurface::BSplineSurface(int uDegree, int vDegree, std::vector<double> uKn
     }
 }
 
+BSplineSurface::BSplineSurface(const BSplineSurface &other)
+    : Surface(other), periodicU_(other.periodicU_), periodicV_(other.periodicV_),
+      uDegree_(other.uDegree_), vDegree_(other.vDegree_), uKnots_(other.uKnots_), vKnots_(other.vKnots_),
+      uPoleCount_(other.uPoleCount_), vPoleCount_(other.vPoleCount_), poles_(other.poles_), weights_(other.weights_),
+      basis_(other.basis_), placement_(other.placement_), patchCache_(std::atomic_load(&other.patchCache_)),
+      sharpCache_(std::atomic_load(&other.sharpCache_)), treeCache_(std::atomic_load(&other.treeCache_)),
+      isoCache_(std::atomic_load(&other.isoCache_)) {
+}
+
+BSplineSurface &BSplineSurface::operator=(const BSplineSurface &other) {
+    if (this != &other) {
+        BSplineSurface snapshot(other);
+        *this = std::move(snapshot);
+    }
+    return *this;
+}
+
 BSplineSurface::BSplineSurface(std::shared_ptr<const BSplineSurface> basis, const Transform3 &placement)
     : uDegree_(0), vDegree_(0), uPoleCount_(0), vPoleCount_(0), basis_(std::move(basis)), placement_(placement) {
     const auto valid = [](const Transform3 &t) {
@@ -234,7 +251,8 @@ std::shared_ptr<const std::vector<BSplineSurface>> BSplineSurface::cachedBezierP
     std::shared_ptr<const std::vector<BSplineSurface>> patches = std::atomic_load(&patchCache_);
     if (!patches) {
         patches = std::make_shared<const std::vector<BSplineSurface>>(bezierPatches());
-        std::atomic_store(&patchCache_, patches);
+        std::shared_ptr<const std::vector<BSplineSurface>> expected;
+        if (!std::atomic_compare_exchange_strong(&patchCache_, &expected, patches)) patches = std::move(expected);
     }
     return patches;
 }
@@ -300,7 +318,8 @@ std::shared_ptr<const BSplineSurface::PatchTree> BSplineSurface::cachedPatchTree
         build(0, nu, 0, nv);
     }
     tree = result;
-    std::atomic_store(&treeCache_, tree);
+    std::shared_ptr<const PatchTree> expected;
+    if (!std::atomic_compare_exchange_strong(&treeCache_, &expected, tree)) tree = std::move(expected);
     return tree;
 }
 
@@ -363,7 +382,8 @@ std::shared_ptr<const BSplineSurface::SharpKnotLines> BSplineSurface::cachedShar
             if (std::count(vKnots().begin(),vKnots().end(),*it) >= vDegree()) result->v.push_back(*it);
     }
     lines = result;
-    std::atomic_store(&sharpCache_, lines);
+    std::shared_ptr<const SharpKnotLines> expected;
+    if (!std::atomic_compare_exchange_strong(&sharpCache_, &expected, lines)) lines = std::move(expected);
     return lines;
 }
 
@@ -443,7 +463,8 @@ CurvePtr<3> BSplineSurface::knotIso(bool fixedU, double value) const {
         for (double u : built->uValues) built->uCurves.push_back(std::make_shared<BSplineCurve<3>>(uIsoCurve(u)));
         for (double v : built->vValues) built->vCurves.push_back(std::make_shared<BSplineCurve<3>>(vIsoCurve(v)));
         cache = built;
-        std::atomic_store(&isoCache_, cache);
+        std::shared_ptr<const IsoCache> expected;
+        if (!std::atomic_compare_exchange_strong(&isoCache_, &expected, cache)) cache = std::move(expected);
     }
     const std::vector<double> &values = fixedU ? cache->uValues : cache->vValues;
     const auto found = std::lower_bound(values.begin(), values.end(), value);

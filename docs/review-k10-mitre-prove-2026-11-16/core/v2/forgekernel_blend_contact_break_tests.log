@@ -1,0 +1,6 @@
+[  OK  ] BlendContactKnotCrossingsUseContactParameters
+[  OK  ] BlendContactKnotAtFitEndpoints
+[  OK  ] BlendContactKnotAtExistingEdgeBreakUsesOneParameter
+[  OK  ] BlendContactKnotOnProbeAndRealNormalJump
+[  OK  ] BlendContactKnotKeepsRadiusAndAllowsOneMillimeterOffset
+5/5 test superati

@@ -1,0 +1,57 @@
+BEGIN canonical-reversal
+canonical-reversal source 8 / 8
+canonical-reversal actual 10 / 13
+BEGIN face-sense
+face-sense source 6 / 8
+face-sense actual 9 / 13
+BEGIN implicit-polynomial
+implicit-polynomial source 6 / 8
+implicit-polynomial actual 9 / 13
+BEGIN large-scale
+large-scale source 7 / 8
+large-scale actual 11 / 13
+BEGIN lower-boundary
+lower-boundary source 6 / 8
+lower-boundary actual 11 / 13
+BEGIN rational
+rational source 8 / 8
+rational actual 11 / 13
+BEGIN reverse-selection
+reverse-selection source 6 / 8
+reverse-selection actual 11 / 13
+BEGIN rigid-pose
+rigid-pose source 5 / 8
+rigid-pose actual 11 / 13
+BEGIN small-scale
+small-scale source 5 / 8
+small-scale actual 9 / 13
+BEGIN tangent-canonical-reversal
+tangent-canonical-reversal source 8 / 8
+tangent-canonical-reversal actual 13 / 13
+BEGIN tangent-face-sense
+tangent-face-sense source 7 / 8
+tangent-face-sense actual 13 / 13
+BEGIN tangent-large-scale
+tangent-large-scale source 7 / 8
+tangent-large-scale actual 13 / 13
+BEGIN tangent-lower-boundary
+tangent-lower-boundary source 7 / 8
+tangent-lower-boundary actual 11 / 13
+BEGIN tangent-polynomial
+tangent-polynomial source 7 / 8
+tangent-polynomial actual 13 / 13
+BEGIN tangent-rational
+tangent-rational source 8 / 8
+tangent-rational actual 13 / 13
+BEGIN tangent-reverse-selection
+tangent-reverse-selection source 7 / 8
+tangent-reverse-selection actual 13 / 13
+BEGIN tangent-rigid-pose
+tangent-rigid-pose source 5 / 8
+tangent-rigid-pose actual 11 / 13
+BEGIN tangent-small-scale
+tangent-small-scale source 5 / 8
+tangent-small-scale actual 9 / 13
+BEGIN tangent-trimmed-support
+tangent-trimmed-support source 7 / 8
+tangent-trimmed-support actual 13 / 13

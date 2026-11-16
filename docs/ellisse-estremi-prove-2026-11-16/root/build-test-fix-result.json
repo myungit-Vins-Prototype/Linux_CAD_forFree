@@ -1,0 +1,11 @@
+{
+  "exit": 0,
+  "seconds": 138.8133172949997,
+  "command": [
+    "cmake",
+    "--build",
+    "forgecad-release",
+    "--parallel",
+    "2"
+  ]
+}

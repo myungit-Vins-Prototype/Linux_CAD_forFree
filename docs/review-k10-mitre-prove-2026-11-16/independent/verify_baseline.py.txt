@@ -1,0 +1,18 @@
+from verify_tensor_fraction import *
+import json,traceback
+path=Path('/tmp/mitre-review/audit/baseline-diagonal-expected-map.json')
+j=json.loads(path.read_text());out=[]
+for record in j['records']:
+ try:r=verify(record)
+ except Exception as e:r={'pass':False,'reason':str(e)}
+ r['label']=record['label'];out.append(r)
+# Exact witness at the tester's IEEE parameter, using original Cox basis on its true knot cell.
+r=j['records'][1];t=F.from_float(json.load(open('/tmp/mitre-review/tests/baseline-alias-coefficients.json'))['witness_f']);s=surface_data(r['surface'])
+e=source_spans(normalize(r['curve']),(F(0),F(1)))[0];uv=source_spans(normalize(r['pcurve']),(F(0),F(1)))[0]
+def at(poly,t):
+ while len(poly)>1:poly=[(1-t)*a+t*b for a,b in zip(poly,poly[1:])]
+ return poly[0]
+ku=next(k for k in range(s[0],s[4]) if s[2][k]<=t<s[2][k+1]);kv=next(k for k in range(s[1],s[5]) if s[3][k]<=t<s[3][k+1])
+sh,sw=compose(s,uv,ku,kv);diff=[at(sh[d],t)/at(sw,t)-at(e['h'][d],t)/at(e['w'],t) for d in range(3)]
+cert={'parameter':str(t),'difference_fractions':[str(v) for v in diff],'absolute_z_lower_mm':float(abs(diff[2])),'squared_distance_fraction':str(sum(v*v for v in diff)),'exceeds_budget':sum(v*v for v in diff)>exact(r['budget'])**2}
+result={'scope':j['scope'],'records':out,'exact_original_coefficient_witness':cert};Path('/tmp/mitre-review/audit/baseline-fraction-results.json').write_text(json.dumps(result,indent=2)+'\n');print(json.dumps(result,indent=2))

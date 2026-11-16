@@ -1,0 +1,73 @@
+Audit indipendente matematico/provider Helix —16novembre2026
+Snapshot dei file privati identificati in source-hashes.json; nessuna modifica
+alle fonti core, produzione, CLAUDE o archivi sigillati. Nessuna esecuzione
+provider/kernel o compilazione attribuita; analisi statica e verifica razionale
+indipendente delle costanti. Non prova immutabile di eventuali versioni successive.
+Esito: nessun difetto concreto/bloccante individuato nello snapshot controllato.
+
+SIN/COS OUTWARD
+Riduzione tramite quarter intero: r=theta-q*(pi/2). nearbyint(center/kHalfPi)
+serve soltanto a ottenere un r ristretto; non assume kHalfPi esattamente pi/2.
+L'intervallo successivo usa [0x1.921fb54442d18p+0,0x1.921fb54442d19p+0] e|r|<=1.
+|q|<=2^50 garantisce conversione esatta a int64_t e quadrante corretto.
+Aritmetica I nextafter su entrambi gli estremi; overflow/nonfiniti danno inf.
+Recurrence16termini: sin31/cos30. Resto per|r|<=1 <=1/32!<2^-100: padding
++/-2^-100 sicuro oltre agli arrotondamenti intermedi. constants.py/json verifica
+con Fraction e senza libm Machin pi/2=8atan(1/5)-2atan(1/239),24/8termini
+alternati racchiusi strettamente nel bracket binario, e la disuguaglianza del resto.
+Non e' la campagna Fraction sui risultati finali, affidata all'altro agente.
+I decimali del JSON sono riepiloghi, non fonti della prova.
+
+M4 E HERMITE
+Getters slope_/rise_ usano i coefficienti IEEE memorizzati, senza ricomputare tan
+o divisioni dallo spec. Per theta=start+s*t,s=+/-1,r=r0+slope*t:
+F(4)=r*E4+4*slope*E3; origine e termine assiale lineare hanno derivata quarta0.
+Dopo trasformazioni e proiezione ogni En radiale ha norma <=normA+normB:
+(max|r|+4|slope|)*(normA+normB) e' valido anche per conica/spirale/mancina.
+Radius,norme e prodotti sono racchiusi outward.
+Oracle costruisce il jet ideale sin/cos e i controlli Hermite ideali:
+H0=F(a),H1=F(a)+h/3F'(a),H2=F(b)-h/3F'(b),H3=F(b).
+Confronta TUTTI i4poli candidati double reali con questi intervalli. Bernstein
+nonnegativi con somma1 limitano Q-H con il massimo dei4errori di controllo.
+Il Peano kernel Hermite e' nonnegativo,integrale (t-a)^2(t-b)^2/4!,max h^4/384.
+Per funzione vettoriale il limite di norma segue dall'integrale, senza assumere
+un unico xi per tutte le coordinate. La somma outward dei due termini include
+errori endpoint,derivate FD e callback. evaluate(t,n) con n*kHalfPi arrotondato
+non viene assunto algebricamente esatto.
+
+AFFINI ORIGINALI, DOMINI E OWNERSHIP
+Wrapper Trimmed/Transformed con cap256,range interno a ogni wrapper e all'Helix
+originale. Dati nonfiniti/noncrescenti rifiutati. Matrici originali copiate,
+applicate dentro->fuori; origine come punto,assi come vettori,poi dot con gli
+assi XY originali del Frame target. Non si certifica una matrice double composta
+intermedia. Data possiede spec,coefficienti,frame,trasformazioni e intervalli;
+callback catturano shared_ptr<Data>, senza sorgenti geometriche pendenti.
+value usa libm soltanto per generare candidati; il bound indipendente decide.
+Query invalid/outside restano fail-closed; cancellazione attraversa i cicli.
+
+POLI EFFETTIVI DOPO RECALC
+projectHelixCertified converte in2D e rivalida grado3,nonrazionale,3n+1poli,
+range,nodi totali,4estremi bloccati,campate crescenti e ripetizioni triple.
+Una7poli liscia non passa per Bezier. requireHelixProjection ricrea l'oracolo
+sui dati originali e controlla i poli effettivi da curveGeometry DOPO
+recalculateCurve nella copia cad_sketch_refs.cpp. Append solo dopo esito valido;
+goto done salta la scorciatoia collineare campionata e conserva bookkeeping
+fixed/created. Fallimento prima dell'append non pubblica nuova geometria.
+
+PREFLIGHT E LIMITI
+estimate=length*(M4/(192*tolerance))^(1/4),cap16384: politica conservativa del
+lavoro uniforme, non lower bound di impossibilita' matematica del fit.
+Il resto Hermite da solo richiede tale ordine per budgettol/2; endpoint possono
+richiedere ulteriore raffinamento. L'adattivo conserva i propri cap/rifiuti.
+Overflow/inconclusione causano throw; possono essere rifiutate curve valide.
+Fasi enormi/irrisolte,assi/origini enormi e budget finiti restano limiti espliciti.
+Nessun allargamento di tolleranza osservato.
+
+COPERTURA PARZIALE
+appendProjectedCurve intercetta ancora Helix diretta/Trimmed senza Transformed
+nel ramo helixBSpline preesistente prima del nuovo provider. La nuova copertura
+riguarda Helix wrappata nel sito generico needsProjectionFit; altre Other restano
+fallback campionato. Non certifica globalmente helixBSpline o tutte le conversioni.
+La ricorsione needsProjectionFit preesistente non cambia; il provider ha un cap
+esplicito di wrapper. Questo audit statico non sostituisce test Qt reali,
+sanitizer o verifica indipendente dei risultati esportati.

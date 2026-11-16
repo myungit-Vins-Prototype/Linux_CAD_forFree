@@ -1,0 +1,703 @@
+--- a/kernel/fk_offset.cpp
++++ b/kernel/fk_offset.cpp
+@@ -617,58 +617,49 @@
+     return std::make_shared<BSplineSurface>(3, 3, knots(us), knots(vs), uCount, vCount, std::move(poles));
+ }
+ 
+-// Retta, cerchio o curva traslata, se la curva a distanza lo e' (verificato
+-// sui campioni entro l'arrotondamento); altrimenti nullptr.
+-CurvePtr<3> exactOffsetCurve(const CurvePtr<3> &curve, const Interval &range, const std::function<Vec3(double)> &f, double scale) {
+-    const double eps = 1e-11 * std::max(1.0, scale);
+-    std::vector<double> ts;
+-    for (int k = 0; k <= 8; ++k) ts.push_back(range.lo + range.length() * k / 8.0);
+-    std::vector<Vec3> values;
+-    for (double t : ts) values.push_back(f(t));
+-    // Traslazione (curve di una faccia piana).
+-    const Vec3 shift = values.front() - curve->point(ts.front());
+-    bool translated = true;
+-    for (std::size_t k = 0; k < ts.size() && translated; ++k) translated = distance(values[k], curve->point(ts[k]) + shift) <= eps;
+-    if (translated) {
+-        double parameterScale = 1.0;
+-        CurvePtr<3> moved = transformCurve(curve, Transform3::translation(shift), &parameterScale);
+-        if (std::fabs(parameterScale - 1.0) < 1e-15) return moved;
+-    }
+-    // Curva limitata: conta la curva di base (stesso parametro).
+-    const Curve<3> *basis = curve.get();
+-    while (basis->type() == CurveType::Trimmed) basis = static_cast<const TrimmedCurve<3> *>(basis)->basis().get();
++// Exact offsets require a geometric construction at the caller. A finite set
++// of callback values cannot establish that an arbitrary offset is analytic.
++// The following bounds apply to the complete circle, not selected values
++// of its parameter. Primitive frames are normalized on construction; the
++// padding covers those normalizations and the dot/cross/norm evaluations.
++double circleConstructionRoundoff(const Circle<3> &circle, const Vec3 &origin, double d) {
++    return 128.0 * std::numeric_limits<double>::epsilon()
++        * (1.0 + norm(circle.center()) + norm(origin) + circle.radius() + std::fabs(d));
++}
++
++double circleAxialError(const Circle<3> &circle, const Vec3 &axis) {
++    return std::fabs(dot(axis, circle.xAxis())) + std::fabs(dot(axis, circle.yAxis()))
++        + 128.0 * std::numeric_limits<double>::epsilon();
++}
++
++CurvePtr<3> exactExtrusionOffset(const ExtrusionSurface &surface, double d, double tolerance) {
++    const Curve<3> *basis = surface.curve().get();
++    while (basis->type() == CurveType::Trimmed)
++        basis = static_cast<const TrimmedCurve<3> *>(basis)->basis().get();
+     if (basis->type() == CurveType::Line) {
+         const auto &line = static_cast<const Line<3> &>(*basis);
+-        const Vec3 origin = values.front() - ts.front() * line.direction();
+-        bool straight = true;
+-        for (std::size_t k = 0; k < ts.size() && straight; ++k) straight = distance(values[k], origin + ts[k] * line.direction()) <= eps;
+-        if (straight) return std::make_shared<Line<3>>(origin, line.direction());
++        const Vec3 normal = normalized(cross(line.direction(), surface.direction()));
++        return transformCurve(surface.curve(), Transform3::translation(d * normal));
+     }
+     if (basis->type() == CurveType::Circle) {
+         const auto &circle = static_cast<const Circle<3> &>(*basis);
+-        // Cerchio per tre campioni, con l'asse dalla parte di quello di partenza.
+-        const Vec3 &a = values[0], &b = values[4], &c = values[8];
+-        const Vec3 ab = b - a, ac = c - a;
+-        Vec3 n = cross(ab, ac);
+-        const double nn = squaredNorm(n);
+-        if (nn > 0.0) {
+-            const Vec3 center = a + (squaredNorm(ac) * cross(n, ab) + squaredNorm(ab) * cross(ac, n)) / (2.0 * nn);
+-            n = n / std::sqrt(nn);
+-            if (dot(n, cross(circle.xAxis(), circle.yAxis())) < 0.0) n = -n;
+-            const double r = distance(a, center);
+-            if (r > eps) {
+-                const Vec3 p = (a - center) / r, q = cross(n, p);
+-                const double t0 = ts.front();
+-                const Vec3 x = std::cos(t0) * p - std::sin(t0) * q;
+-                const Vec3 y = cross(n, x);
+-                bool round = true;
+-                for (std::size_t k = 0; k < ts.size() && round; ++k)
+-                    round = distance(values[k], center + r * (std::cos(ts[k]) * x + std::sin(ts[k]) * y)) <= eps;
+-                if (round) return std::make_shared<Circle<3>>(center, x, y, r);
+-            }
+-        }
+-    }
+-    return nullptr;
++        const Vec3 axis = cross(circle.xAxis(), circle.yAxis());
++        const double padding = 128.0 * std::numeric_limits<double>::epsilon();
++        const double axial = std::fabs(dot(axis, surface.direction())) - padding;
++        const double transverse = circleAxialError(circle, surface.direction());
++        // T(u) x D differs from its radial axial component by at most the
++        // in-plane component of D. Normalization costs <=2e/(a-e).
++        const double error = axial > transverse
++            ? std::fabs(d) * (2.0 * transverse / (axial - transverse) + padding)
++                + circleConstructionRoundoff(circle, circle.center(), d)
++            : std::numeric_limits<double>::infinity();
++        if (error <= 0.01 * tolerance) {
++            const double radius = circle.radius() + (dot(axis, surface.direction()) > 0.0 ? d : -d);
++            if (!(radius > linearResolution())) throw std::domain_error("offset: raggio della sezione non positivo");
++            return std::make_shared<Circle<3>>(circle.center(), circle.xAxis(), circle.yAxis(), radius);
++        }
++    }
++    return {};
+ }
+ 
+ // Una curva chiusa con un angolo nel punto di chiusura (spline chiusa non
+@@ -682,8 +673,7 @@
+ }
+ 
+ CurvePtr<3> offsetCurve(const CurvePtr<3> &curve, const Interval &range, const std::function<Vec3(double)> &f,
+-                        std::vector<double> breaks, double scale, double tolerance) {
+-    if (CurvePtr<3> exact = exactOffsetCurve(curve, range, f, scale)) return exact;
++                        std::vector<double> breaks, double tolerance) {
+     const std::vector<double> own = curve->breakpoints(range);
+     breaks.insert(breaks.end(), own.begin(), own.end());
+     return fitCurve(f, range, breaks, tolerance);
+@@ -1187,6 +1177,13 @@
+ 
+ std::shared_ptr<BSplineCurve<3>> fitCurve(const std::function<Vec3(double)> &f, const Interval &range, const std::vector<double> &breaks,
+                                           double tolerance, double *deviation) {
++    cancellationPoint();
++    const auto checked = [&](double t) {
++        cancellationPoint();
++        const Vec3 value = f(t);
++        cancellationPoint();
++        return value;
++    };
+     if (!range.isFinite() || !(range.lo < range.hi)) throw std::domain_error("fitCurve: intervallo non valido");
+     const double h = 1e-6 * range.length();
+     // Il passo delle derivate non e' la risoluzione minima della curva:
+@@ -1196,16 +1193,17 @@
+         double t;
+         Vec3 p, d;
+     };
+-    std::vector<Vec3> poles{f(range.lo)};
++    std::vector<Vec3> poles{checked(range.lo)};
+     std::vector<double> knots(4, range.lo);
+     double worst = 0.0;
+     std::size_t visited = 0;
+     const std::function<void(const Node &, const Node &, int)> piece = [&](const Node &a, const Node &b, int depth) {
++        cancellationPoint();
+         if (++visited > 32768) throw std::domain_error("offset: curva a distanza non approssimabile entro il limite di raffinamento");
+         const double span = b.t - a.t;
+         const Vec3 p1 = a.p + (span / 3.0) * a.d, p2 = b.p - (span / 3.0) * b.d;
+         double error = 0.0;
+-        for (double s : {0.25, 0.5, 0.75}) error = std::max(error, distance(bezier(a.p, p1, p2, b.p, s), f(a.t + s * span)));
++        for (double s : {0.25, 0.5, 0.75}) error = std::max(error, distance(bezier(a.p, p1, p2, b.p, s), checked(a.t + s * span)));
+         if (error <= tolerance || depth >= 40 || span < 1e-12 * range.length()) {
+             poles.push_back(p1);
+             poles.push_back(p2);
+@@ -1215,17 +1213,18 @@
+             return;
+         }
+         const double mid = 0.5 * (a.t + b.t);
+-        const Node m{mid, f(mid), derivative(f, mid, std::min(h, 0.01 * span), 0)};
++        const Node m{mid, checked(mid), derivative(checked, mid, std::min(h, 0.01 * span), 0)};
+         piece(a, m, depth + 1);
+         piece(m, b, depth + 1);
+     };
+     for (std::size_t k = 0; k + 1 < cuts.size(); ++k) {
+         const double a = cuts[k], b = cuts[k + 1];
+         const double step = std::min(h, 0.01 * (b - a));
+-        piece(Node{a, f(a), derivative(f, a, step, 1)}, Node{b, f(b), derivative(f, b, step, -1)}, 0);
++        piece(Node{a, checked(a), derivative(checked, a, step, 1)}, Node{b, checked(b), derivative(checked, b, step, -1)}, 0);
+     }
+     knots.push_back(range.hi);
+     if (worst > 100.0 * tolerance) throw std::domain_error("offset: curva a distanza non approssimabile (cuspidi?)");
++    cancellationPoint();
+     if (deviation) *deviation = worst;
+     return std::make_shared<BSplineCurve<3>>(3, std::move(knots), std::move(poles));
+ }
+@@ -1261,8 +1260,36 @@
+     }
+     case SurfaceType::Torus: {
+         const auto &t = static_cast<const ToroidalSurface &>(surface);
+-        if (!(t.minorRadius() + d > tolerance)) throw std::domain_error("offset: il raggio minore del toro diventa nullo o negativo");
+-        result = std::make_shared<ToroidalSurface>(t.frame(), t.majorRadius(), t.minorRadius() + d);
++        double lowCos = -1.0, highCos = 1.0;
++        if (vw.isFinite() && vw.lo <= vw.hi && vw.length() < kTwoPi) {
++            // Reduction and transcendental evaluation uncertainty, measured in
++            // radians; cosine is 1-Lipschitz. Large phases fall back to a full
++            // period, rather than silently losing a critical point.
++            const double phaseError = 64.0 * std::numeric_limits<double>::epsilon()
++                * std::max({1.0, std::fabs(vw.lo), std::fabs(vw.hi)});
++            if (phaseError < 0.01) {
++                double lo = std::remainder(vw.lo, kTwoPi), hi = lo + vw.length();
++                lowCos = std::min(std::cos(lo), std::cos(hi)) - phaseError;
++                highCos = std::max(std::cos(lo), std::cos(hi)) + phaseError;
++                if (std::ceil((lo - phaseError) / kTwoPi) * kTwoPi <= hi + phaseError) highCos = 1.0;
++                if (std::ceil((lo - kPi - phaseError) / kTwoPi) * kTwoPi + kPi <= hi + phaseError) lowCos = -1.0;
++                lowCos = std::max(-1.0, lowCos);
++                highCos = std::min(1.0, highCos);
++            }
++        }
++        const auto radialSign = [&](double radius) {
++            const double roundoff = 32.0 * std::numeric_limits<double>::epsilon()
++                * (t.majorRadius() + std::fabs(radius));
++            if (t.majorRadius() + radius * lowCos > roundoff) return 1;
++            if (t.majorRadius() + radius * highCos < -roundoff) return -1;
++            return 0;
++        };
++        const int sign = radialSign(t.minorRadius());
++        if (!sign) throw std::domain_error("offset: il dominio del toro sorgente contiene una singolarita'");
++        const double radius = t.minorRadius() + sign * d;
++        if (!(radius > tolerance) || radialSign(radius) != sign)
++            throw std::domain_error("offset: il dominio del toro a distanza si ripiega o diventa singolare");
++        result = std::make_shared<ToroidalSurface>(t.frame(), t.majorRadius(), radius);
+         break;
+     }
+     case SurfaceType::Extrusion: {
+@@ -1280,7 +1307,7 @@
+         const auto f = [&](double u) { return surface.point(u, v0) + d * surface.normal(u, v0) - v0 * e.direction(); };
+         requireClosed(*e.curve(), domain, f, tolerance);
+         // Retta o cerchio a distanza: esatti (stesso parametro).
+-        CurvePtr<3> base = exactOffsetCurve(e.curve(), domain, f, std::max(1.0, norm(surface.point(domain.lo, v0))));
++        CurvePtr<3> base = exactExtrusionOffset(e, d, tolerance);
+         if (!base) base = fitCurve(f, domain, e.curve()->breakpoints(domain), tolerance);
+         result = std::make_shared<ExtrusionSurface>(base, e.direction());
+         break;
+@@ -1298,8 +1325,8 @@
+         }
+         const auto f = [&](double v) { return surface.point(0.0, v) + d * surface.normal(0.0, v); };
+         requireClosed(*r.meridian(), domain, f, tolerance);
+-        // Meridiano retta o cerchio (il toro scritto come rivoluzione nei file): esatto.
+-        CurvePtr<3> meridian = exactOffsetCurve(r.meridian(), domain, f, std::max(1.0, norm(surface.point(0.0, domain.lo))));
++        // Un meridiano analitico non basta a rendere analitica la sua curva a distanza.
++        CurvePtr<3> meridian;
+         if (!meridian) meridian = fitCurve(f, domain, r.meridian()->breakpoints(domain), tolerance);
+         result = std::make_shared<RevolutionSurface>(meridian, r.axisPoint(), r.axisDirection());
+         break;
+@@ -1697,9 +1724,53 @@
+         }
+         raw.hasRange = true;
+         raw.range = edge.range;
++        // With plane supports the summed normal is constant on the whole
++        // edge. This geometric fact authorizes a translation, independently
++        // of the source curve's degree or its representation.
++        const Curve<3> *basis = edge.curve.get();
++        while (basis->type() == CurveType::Trimmed)
++            basis = static_cast<const TrimmedCurve<3> *>(basis)->basis().get();
++        const auto equalDirection = [](const Vec3 &a, const Vec3 &b) {
++            return (a.x() == b.x() && a.y() == b.y() && a.z() == b.z())
++                || (a.x() == -b.x() && a.y() == -b.y() && a.z() == -b.z());
++        };
++        const bool constantNormal = !trimSeams && std::all_of(used.begin(), used.end(), [&](FinId u) {
++            const auto &support = *body.face(body.finFace(u)).surface;
++            if (support.type() == SurfaceType::Plane) return true;
++            return support.type() == SurfaceType::Cylinder && body.fin(u).pcurveTolerance == 0.0
++                && basis->type() == CurveType::Line
++                && equalDirection(static_cast<const Line<3> &>(*basis).direction(),
++                                  static_cast<const CylindricalSurface &>(support).frame().zDir());
++        });
++        if (constantNormal) {
++            const Vec3 shift = f(edge.range.lo) - edge.curve->point(edge.range.lo);
++            raw.curve = transformCurve(edge.curve, Transform3::translation(shift));
++        } else if (!trimSeams && used.size() == 1 && basis->type() == CurveType::Circle) {
++            const Face &face = body.face(body.finFace(used.front()));
++            if (face.surface->type() == SurfaceType::Cylinder) {
++                const auto &cylinder = static_cast<const CylindricalSurface &>(*face.surface);
++                const auto &circle = static_cast<const Circle<3> &>(*basis);
++                const double padding = circleConstructionRoundoff(circle, cylinder.frame().origin(), distanceValue);
++                // P(C-O)+r*P(e) differs from r*e by <=delta for every
++                // angle. Normalized radial directions differ by at most
++                // 2*delta/(r-delta); this also proves a nonzero denominator.
++                // The fin contract bounds S(pcurve(t))-curve(t) in 3D;
++                // include that whole-domain error in the radial bound.
++                const double delta = norm(cross(circle.center() - cylinder.frame().origin(), cylinder.frame().zDir()))
++                    + circle.radius() * circleAxialError(circle, cylinder.frame().zDir()) + padding
++                    + body.fin(used.front()).pcurveTolerance;
++                const double error = delta < circle.radius()
++                    ? 2.0 * std::fabs(distanceValue) * delta / (circle.radius() - delta) + padding
++                    : std::numeric_limits<double>::infinity();
++                if (error <= 0.01 * tolerance) {
++                    const double radius = circle.radius() + (face.sense ? distanceValue : -distanceValue);
++                    raw.curve = std::make_shared<Circle<3>>(circle.center(), circle.xAxis(), circle.yAxis(), radius);
++                }
++            }
++        }
+         model.edges.push_back(raw);
+         // La curva si calcola dopo, in parallelo con le altre.
+-        curveJobs.push_back({int(model.edges.size()) - 1, edge.curve, edge.range, f, breaks, {}});
++        if (!raw.curve) curveJobs.push_back({int(model.edges.size()) - 1, edge.curve, edge.range, f, breaks, {}});
+         return rawEdge[key] = int(model.edges.size()) - 1;
+     };
+     std::vector<FaceId> faceSources;
+@@ -1743,7 +1814,7 @@
+     parallelFor(curveJobs.size(), threadCount(0), [&](std::size_t k) {
+         CurveJob &job = curveJobs[k];
+         try {
+-            model.edges[std::size_t(job.edge)].curve = offsetCurve(job.curve, job.range, job.offset, job.breaks, scale, tolerance);
++            model.edges[std::size_t(job.edge)].curve = offsetCurve(job.curve, job.range, job.offset, job.breaks, tolerance);
+         } catch (const std::exception &e) {
+             job.failure = e.what();
+         }
+@@ -2206,7 +2277,7 @@
+             // vertici: in quel caso resta il percorso generale parametrico.
+             if (raw.curve && (distance(raw.curve->point(edge.range.lo), model.points[std::size_t(raw.start)]) > localTolerance
+                 || distance(raw.curve->point(edge.range.hi), model.points[std::size_t(raw.end)]) > localTolerance)) raw.curve.reset();
+-            if (!raw.curve) raw.curve = offsetCurve(edge.curve, edge.range, at, edge.curve->breakpoints(edge.range), scale, tolerance);
++            if (!raw.curve) raw.curve = offsetCurve(edge.curve, edge.range, at, edge.curve->breakpoints(edge.range), tolerance);
+         }
+         // Un bordo che inverte il proprio verso segnala una cavita' che ha
+         // superato le pareti opposte: non accettare un volume ripiegato.
+--- a/kernel/fk_offset.h
++++ b/kernel/fk_offset.h
+@@ -17,29 +17,33 @@
+ // N = Su x Sv unitaria, e ha la stessa parametrizzazione (u, v) di S:
+ //  - piani, cilindri, coni, sfere e tori restano dello stesso tipo (esatti:
+ //    piano spostato, raggio R + d, cono con il raggio R + d cos(a) e l'origine
+-//    spostata di -d sin(a) lungo l'asse, raggio minore r + d);
++//    spostata di -d sin(a) lungo l'asse; per il toro r + sigma*d, con
++//    sigma segno di R+r*cos(v) costante sulla finestra regolare);
+ //  - estrusioni e rivoluzioni restano estrusioni (della curva base a distanza)
+ //    e rivoluzioni (del meridiano a distanza): la normale non dipende da v
+ //    (estrusione) e ruota con u (rivoluzione), quindi basta la curva;
+ //  - le B-spline diventano B-spline bicubiche C1 (Hermite a tratti con nodi
+ //    tripli, la stessa costruzione delle SP-curve) raffinate finche' lo scarto
+ //    da O nello stesso (u, v) e' sotto la tolleranza.
+-// Le curve a distanza (curva base, meridiano, bordi delle facce) sono esatte
+-// quando lo sono (rette, cerchi, curve traslate su un piano), altrimenti
+-// cubiche di Hermite C1 nello stesso parametro entro la tolleranza (come le
+-// parallele dei raccordi e le curve del marching).
++// Le curve a distanza (curva base, meridiano, bordi delle facce) conservano
++// forme esatte quando giustificate dai supporti geometrici riconosciuti;
++// altrimenti usano cubiche di Hermite C1 nello stesso parametro. Il fit e
++// la sua verifica sono campionati: non certificano l'errore sul continuo
++// per callback arbitrarie (limite K10, review del 15 novembre 2026).
+ namespace ForgeCad::Kernel {
+ 
+ // La superficie a distanza `distance` lungo Su x Sv, sulla finestra `u` x `v`
+-// (serve alle B-spline; le altre valgono su tutto il dominio).
++// (limita anche la verifica di regolarita' dei supporti toroidali).
+ // std::domain_error se degenera (raggio nullo o negativo, punti singolari,
+ // cuspidi: la distanza supera il raggio di curvatura).
+ SurfacePtr offsetSurface(const Surface &surface, double distance, const Interval &u, const Interval &v, double tolerance = linearResolution());
+ 
+-// B-spline cubica C1 (nodi interni tripli) che approssima f su `range` entro
+-// `tolerance`, con lo stesso parametro; `breaks` (dentro range) sono punti in
++// B-spline cubica C1 (nodi interni tripli) che approssima f su `range` con
++// obiettivo `tolerance`, con lo stesso parametro; `breaks` (dentro range) sono punti in
+ // cui f puo' avere un angolo (nodi delle curve di partenza). `deviation`
+-// riceve lo scarto misurato. std::domain_error se non si arriva alla tolleranza.
++// riceve lo scarto campionato, non un limite globale certificato.
++// std::domain_error se il raffinamento fallisce; OperationCancelled se il
++// token corrente e' attivo, anche dopo l'ultimo callback, senza scrivere deviation.
+ std::shared_ptr<BSplineCurve<3>> fitCurve(const std::function<Vec3(double)> &f, const Interval &range,
+                                           const std::vector<double> &breaks, double tolerance, double *deviation = nullptr);
+ 
+--- a/kernel/CMakeLists.txt
++++ b/kernel/CMakeLists.txt
+@@ -387,6 +387,14 @@
+ add_test(NAME forgekernel_loft_guide_constraint_tests COMMAND forgekernel_loft_guide_constraint_tests)
+ set_tests_properties(forgekernel_loft_guide_constraint_tests PROPERTIES TIMEOUT 120)
+ 
++# Regolarita degli offset, riconoscimento esatto e cancellazione: solo kernel proprio.
++add_executable(forgekernel_offset_validation_tests tests/fk_test_main.cpp tests/test_offset_validation.cpp)
++target_link_libraries(forgekernel_offset_validation_tests PRIVATE forgekernel)
++target_compile_options(forgekernel_offset_validation_tests PRIVATE -Wall -Wextra -Wpedantic)
++set_target_properties(forgekernel_offset_validation_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
++add_test(NAME forgekernel_offset_validation_tests COMMAND forgekernel_offset_validation_tests)
++set_tests_properties(forgekernel_offset_validation_tests PROPERTIES TIMEOUT 60)
++
+ add_executable(forgekernel_offset_split_crease_tests tests/test_offset_split_creases.cpp)
+ target_link_libraries(forgekernel_offset_split_crease_tests PRIVATE forgekernel)
+ target_compile_definitions(forgekernel_offset_split_crease_tests PRIVATE FORGECAD_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+--- /dev/null
++++ b/kernel/tests/test_offset_validation.cpp
+@@ -0,0 +1,176 @@
++#include "fk_cancel.h"
++#include "fk_curve_ops.h"
++#include "fk_extrude.h"
++#include "fk_mass.h"
++#include "fk_offset.h"
++#include "fk_surface.h"
++#include "fk_test.h"
++using namespace ForgeCad::Kernel;
++
++FK_TEST(OffsetValidationHiddenSpanAndScale) {
++    for (double scale : {1., 1000.}) {
++        std::vector<double> knots(5, 0.);
++        knots.insert(knots.end(), 4, .1);
++        knots.insert(knots.end(), 4, .15);
++        knots.insert(knots.end(), 5, 1.);
++        std::vector<Vec3> poles;
++        for (int i = 0; i < 13; ++i) {
++            double x = 0;
++            for (int j = 1; j <= 4; ++j)
++                x += knots[i + j] / 4.;
++            poles.emplace_back(scale * x, 0, i == 6 ? .01 * scale : 0.);
++        }
++        ExtrusionSurface source(std::make_shared<BSplineCurve<3>>(4, knots, poles), Vec3(0, 1, 0));
++        const double d = .001 * scale;
++        auto out = offsetSurface(source, d, {0, 1}, {0, scale}, 1e-7);
++        double worst = 0.;
++        for (int i = 0; i <= 1000; ++i) {
++            double u = .1 + .05 * i / 1000.;
++            worst = std::max(worst, distance(out->point(u, 0), source.point(u, 0) + d * source.normal(u, 0)));
++        }
++        FK_CHECK(worst < 1e-7);
++    }
++}
++FK_TEST(OffsetValidationToroidalDomain) {
++    ToroidalSurface ring(Frame3(), 5, 1);
++    FK_CHECK(offsetSurface(ring, 3, {0, kTwoPi}, {0, kTwoPi}) != nullptr);
++    FK_CHECK_THROWS(offsetSurface(ring, 4, {0, kTwoPi}, {0, kTwoPi}));
++    FK_CHECK_THROWS(offsetSurface(ring, 5, {0, kTwoPi}, {0, kTwoPi}));
++    ToroidalSurface horn(Frame3(), 5, 5);
++    FK_CHECK_THROWS(offsetSurface(horn, -.1, {0, kTwoPi}, {0, kTwoPi}));
++    for (double shift : {0., -4 * kTwoPi, 7 * kTwoPi}) {
++        auto outer = offsetSurface(ring, 5, {0, kTwoPi}, {shift - .2, shift + .2});
++        for (double v : {shift - .2, shift, shift + .2})
++            FK_CHECK(distance(outer->point(.4, v), ring.point(.4, v) + 5 * ring.normal(.4, v)) < 1e-10);
++        FK_CHECK_THROWS(offsetSurface(ring, 5, {0, kTwoPi}, {shift + kPi - .2, shift + kPi + .2}));
++    }
++    ToroidalSurface spindle(Frame3(), 1, 2);
++    auto inner = offsetSurface(spindle, .1, {0, kTwoPi}, {kPi - .2, kPi + .2});
++    for (double v : {kPi - .2, kPi, kPi + .2})
++        FK_CHECK(distance(inner->point(.3, v), spindle.point(.3, v) + .1 * spindle.normal(.3, v)) < 1e-10);
++}
++FK_TEST(OffsetValidationCancellationAndReset) {
++    auto token = std::make_shared<std::atomic<bool>>(true);
++    CancellationScope scope(token);
++    int calls = 0;
++    double deviation = 123.;
++    bool cancelled = false;
++    try {
++        fitCurve(
++            [&](double t) {
++                ++calls;
++                return Vec3(t, 0, 0);
++            },
++            {0, 1}, {}, 1e-7, &deviation);
++    } catch (const OperationCancelled &) {
++        cancelled = true;
++    }
++    FK_CHECK(cancelled);
++    FK_CHECK(calls == 0);
++    FK_CHECK(deviation == 123.);
++    token->store(false);
++    cancelled = false;
++    try {
++        fitCurve(
++            [&](double t) {
++                ++calls;
++                if (t == .75)
++                    token->store(true);
++                return Vec3(t, 0, 0);
++            },
++            {0, 1}, {}, 1e-7, &deviation);
++    } catch (const OperationCancelled &) {
++        cancelled = true;
++    }
++    FK_CHECK(cancelled);
++    FK_CHECK(deviation == 123.);
++    token->store(false);
++    calls = 0;
++    cancelled = false;
++    try {
++        fitCurve(
++            [&](double t) {
++                if (++calls == 20)
++                    token->store(true);
++                return Vec3(t, std::sin(100 * t), 0);
++            },
++            {0, 1}, {}, 1e-7, &deviation);
++    } catch (const OperationCancelled &) {
++        cancelled = true;
++    }
++    FK_CHECK(cancelled);
++    FK_CHECK(calls == 20);
++    FK_CHECK(deviation == 123.);
++    token->store(false);
++    FK_CHECK(fitCurve([](double t) { return Vec3(t, 0, 0); }, {0, 1}, {}, 1e-7, &deviation) != nullptr);
++    FK_CHECK(deviation < 1e-7);
++}
++FK_TEST(OffsetValidationAnalyticExtrusionAndRevolution) {
++    auto circle = std::make_shared<Circle<3>>(Vec3(), Vec3(1, 0, 0), Vec3(0, 1, 0), 2.);
++    ExtrusionSurface cylinder(circle, Vec3(0, 0, 1));
++    auto exact = offsetSurface(cylinder, .1, {0, kTwoPi}, {0, 1});
++    FK_CHECK(static_cast<const ExtrusionSurface &>(*exact).curve()->type() == CurveType::Circle);
++    // A circular meridian of a regular torus, represented as a revolution.
++    auto meridian = std::make_shared<Circle<3>>(Vec3(5, 0, 0), Vec3(1, 0, 0), Vec3(0, 0, -1), 1.);
++    RevolutionSurface torus(meridian, Vec3(), Vec3(0, 0, 1));
++    auto out = offsetSurface(torus, .1, {0, kTwoPi}, {0, kTwoPi}, 1e-7);
++    for (int i = 0; i < 100; ++i) {
++        double v = kTwoPi * i / 100.;
++        FK_CHECK(distance(out->point(.3, v), torus.point(.3, v) + .1 * torus.normal(.3, v)) < 1e-7);
++    }
++    auto line = std::make_shared<Line<3>>(Vec3(2, 0, 0), Vec3(0, 0, 1));
++    RevolutionSurface revLine(line, Vec3(), Vec3(0, 0, 1));
++    auto lineOut = offsetSurface(revLine, .1, {0, kTwoPi}, {-1, 1}, 1e-7);
++    FK_CHECK(distance(lineOut->point(.2, .4), revLine.point(.2, .4) + .1 * revLine.normal(.2, .4)) < 1e-7);
++}
++
++FK_TEST(OffsetValidationRotatedCircularConstructions) {
++    for (double scale : {1., 1000.}) {
++        for (const Vec3 &axis : {Vec3(0, 0, 1), Vec3(.2, .3, 1), Vec3(1, 1, 1)}) {
++            const Frame3 frame(Vec3(), axis, Vec3(1, -.1, 0));
++            auto line = [&](const Vec2 &a, const Vec2 &b) {
++                return ProfileSegment{std::make_shared<Line<2>>(scale * a, scale * (b - a)),
++                                      {0, scale * distance(a, b)}};
++            };
++            auto arc = [&](const Vec2 &center, double from, double to) {
++                return ProfileSegment{std::make_shared<Circle<2>>(makeCircle(scale * center, 1.5 * scale)), {from, to}};
++            };
++            const std::vector<ProfileSegment> segments{line({1.5, 0}, {6.5, 0}), arc({6.5, 1.5}, -kHalfPi, 0),
++                                                       line({8, 1.5}, {8, 3.5}), arc({6.5, 3.5}, 0, kHalfPi),
++                                                       line({6.5, 5}, {1.5, 5}), arc({1.5, 3.5}, kHalfPi, kPi),
++                                                       line({0, 3.5}, {0, 1.5}), arc({1.5, 1.5}, kPi, 1.5 * kPi)};
++            const auto region = buildProfile(segments, 1e-9).regions.front();
++            const Body prism = makeExtrusion(frame, region, 3 * scale);
++            std::vector<FaceId> sides;
++            for (FaceId f : prism.faces())
++                if (prism.face(f).surface->type() != SurfaceType::Plane ||
++                    std::fabs(dot(prism.face(f).surface->normal(0, 0), frame.zDir())) < .5)
++                    sides.push_back(f);
++            for (double d : {.4, -.4}) {
++                const auto out = offsetFaces(prism, sides, d * scale);
++                double area = 0;
++                for (FaceId f : out.body.faces())
++                    area += faceArea(out.body, f);
++                const double expected = (2 * (8 + 5 - 4 * 1.5) + kTwoPi * (1.5 + d)) * 3;
++                FK_CHECK_NEAR(area / (scale * scale), expected, 1e-9);
++            }
++            auto circle = std::make_shared<Circle<3>>(Vec3(), frame.xDir(), frame.yDir(), 2 * scale);
++            ExtrusionSurface cylinder(circle, frame.zDir());
++            const auto out = offsetSurface(cylinder, .1 * scale, {0, kTwoPi}, {0, 3 * scale}, 1e-7);
++            FK_CHECK(static_cast<const ExtrusionSurface &>(*out).curve()->type() == CurveType::Circle);
++            for (int i = 0; i < 100; ++i) {
++                double u = kTwoPi * i / 100.;
++                FK_CHECK(distance(out->point(u, scale),
++                                  cylinder.point(u, scale) + .1 * scale * cylinder.normal(u, scale)) < 1e-7);
++            }
++        }
++    }
++    auto circle = std::make_shared<Circle<3>>(Vec3(), Vec3(1, 0, 0), Vec3(0, 1, 0), 2.);
++    ExtrusionSurface oblique(circle, Vec3(.2, .1, 1));
++    const auto out = offsetSurface(oblique, .1, {0, kTwoPi}, {0, 1}, 1e-7);
++    FK_CHECK(static_cast<const ExtrusionSurface &>(*out).curve()->type() == CurveType::BSpline);
++    for (int i = 0; i < 100; ++i) {
++        double u = kTwoPi * i / 100.;
++        FK_CHECK(distance(out->point(u, .5), oblique.point(u, .5) + .1 * oblique.normal(u, .5)) < 1e-7);
++    }
++}
+--- a/forgeCad2026_viewport_scene.cpp
++++ b/forgeCad2026_viewport_scene.cpp
+@@ -6,9 +6,10 @@
+     // operandi ripristinati dall'anteprima possono invece appartenere a
+     // stadi successivi: mostrarli farebbe scegliere la faccia sottostante.
+     // Anche la base sostituita deve restare visibile se e' selezionabile.
+-    if (refPicking_ && refPickOwner_ >= 0 && !sketchMode_) {
+-        if (index >= refPickOwner_ || (!pickBodies_.isEmpty() && !pickBodies_.contains(index))) return false;
+-        return isBodyDrawn(index);
++    if (refPicking_ && !sketchMode_) {
++        const int owner = refPickOwner_ >= 0 ? refPickOwner_ : historyPosition();
++        if (index >= owner || (!pickBodies_.isEmpty() && !pickBodies_.contains(index))) return false;
++        return isBodyDrawn(index) || (!pickBodies_.isEmpty() && referenceBodyEligible(index));
+     }
+     const bool previewing = (!sketchMode_ || sketchViewUnlocked_) && !preview_.key.isEmpty();
+     const bool replaced = previewing && preview_.replaced.contains(index);
+--- a/forgeCad2026_dialogs_mapping.cpp
++++ b/forgeCad2026_dialogs_mapping.cpp
+@@ -248,6 +248,12 @@
+     const auto refresh=[&] {
+         const bool linked=!unroll&&planes[plane->currentIndex()].kind==11;
+         if(linked) {
++            // La destinazione ora proviene dalla mappa: il suo picker non e'
++            // piu' applicabile. La scelta delle sorgenti resta invece valida.
++            if (choosing == 2) {
++                choosing = 0;
++                view->cancelReferencePick();
++            }
+             const auto &flat=view->extrusions()[planes[plane->currentIndex()].index].surfaceTool;
+             targetFaces=flat.sources;
+             auto params=current().surfaceTool;GeometryRef basePlane;QString reason;
+--- a/tests/test_function_panels.h
++++ b/tests/test_function_panels.h
+@@ -459,3 +459,70 @@
+  check(!runModeless(&a,va,pa)&&!va->interactionLocked(),"same workspace nested runner restores lock");
+  }
+ }
++
++static void previewPickerContextReview() {
++    QMainWindow owner; CadViewport view;
++    DocumentState state; SketchObject boundary;
++    boundary.segments={{{0,0},{20,0}},{{20,0},{20,12}},{{20,12},{0,12}},{{0,12},{0,0}}};state.sketches={boundary};
++    ExtrusionObject seed;seed.feature=BodyFeature::Primitive;seed.primitive.origin[0]=-50;state.extrusions={seed};view.loadDocument(state);
++    const auto original=view.extrusions()[0].forgeBody;
++    GeometryRef contour;contour.kind=7;contour.index=0;ExtrusionObject fill;fill.feature=BodyFeature::Pattern;fill.firstBody=0;
++    fill.pattern.kind=3;fill.pattern.refs={contour};fill.pattern.spacing=4;fill.pattern.spacing2=4;
++    QTimer poll;poll.setInterval(20);QElapsedTimer elapsed;elapsed.start();bool checked=false;
++    QObject::connect(&poll,&QTimer::timeout,&owner,[&] {
++        auto *source=owner.findChild<QComboBox*>("fillPatternSource");if(!source)return;
++        QDialog *panel=nullptr;for(auto *d:owner.findChildren<QDialog*>())if(d->findChild<QComboBox*>("fillPatternSource"))panel=d;
++        if(!view.preview_.valid){if(elapsed.elapsed()>15000){poll.stop();panel->reject();}return;}
++        poll.stop();require(!view.isBodyVisibleInScene(0),"anteprima pronta sostituisce sorgente");
++        const auto geometry=view.preview_.geometry;const auto key=view.preview_.key;
++        QPushButton *pick=nullptr;for(auto *b:source->parentWidget()->findChildren<QPushButton*>())if(b->text()==QStringLiteral("Dalla vista"))pick=b;
++        require(pick,"picker sorgente presente");pick->click();
++        require(view.referencePicking()&&view.refPickOwner_==-1&&view.isBodyVisibleInScene(0),"creazione mostra input selezionabile durante picker");
++        GeometryRef hit;require(view.pickReference(view.projectWorldPoint(QVector3D(-49.5,.5,.5)).toPoint(),hit)&&hit.index==0,"raggio sceglie sorgente visibile");
++        require(view.preview_.valid&&view.preview_.geometry==geometry&&view.preview_.key==key,"picker conserva anteprima pronta");
++        pick->click();require(!view.referencePicking()&&!view.isBodyVisibleInScene(0),"uscita picker ripristina anteprima");
++        auto *edges=panel->findChild<QPushButton*>("fillPatternBoundaryPick");edges->click();
++        require(view.referencePicking()&&view.isBodyVisibleInScene(0),"picker contorni mostra scena input");
++        QKeyEvent escape(QEvent::KeyPress,Qt::Key_Escape,Qt::NoModifier);QApplication::sendEvent(&view,&escape);
++        require(!view.referencePicking(),"Esc termina picker contorni");checked=true;panel->reject();
++    });poll.start();fillPatternDialog(&owner,&view,"Fill picker",-1,fill,[](const auto&){return QString();});poll.stop();
++    require(checked&&!view.referencePicking()&&!view.interactionLocked()&&view.preview_.key.isEmpty(),"annulla ripulisce picker e anteprima");
++    require(view.extrusions().size()==1&&view.extrusions()[0].forgeBody==original&&view.isBodyVisibleInScene(0),"annulla conserva modello e visibilita'");
++    // La storia futura rimane esclusa anche con una lista di candidati esplicita.
++    DocumentState history;history.extrusions={seed,seed};view.loadDocument(history);view.setHistoryPosition(1);
++    view.setPickBodies({0,1});view.beginReferencePick(ForgeCad::DatumRoleFace,-1);
++    require(view.isBodyVisibleInScene(0)&&!view.isBodyVisibleInScene(1),"rollback non mostra candidati futuri");view.cancelReferencePick();view.setPickBodies({});
++    view.setHistoryPosition(2);view.beginReferencePick(ForgeCad::DatumRoleFace,1);
++    require(view.isBodyVisibleInScene(0)&&!view.isBodyVisibleInScene(1),"modifica usa scena precedente alla feature");view.cancelReferencePick();
++    view.extrusions_[0].visible=false;view.setPickBodies({0});view.beginReferencePick(ForgeCad::DatumRoleFace,-1);
++    require(view.referenceBodyEligible(0)&&view.isBodyVisibleInScene(0),"operando consumato esplicito resta visibile e selezionabile");view.cancelReferencePick();view.setPickBodies({});
++    ExtrusionObject curve;curve.feature=BodyFeature::Helix;
++    auto line=std::make_shared<ForgeCad::Kernel::Line<3>>(ForgeCad::Kernel::Vec3(),ForgeCad::Kernel::Vec3(0,0,1));
++    curve.curve=std::make_shared<ForgeCad::Kernel::TrimmedCurve<3>>(line,0,3);view.extrusions_.append(curve);view.setHistoryPosition(3);
++    view.beginReferencePick(ForgeCad::DatumRolePoint,-1);require(view.isBodyDrawn(2)&&view.isBodyVisibleInScene(2),"curva 3D visibile durante scelta punto");view.cancelReferencePick();
++}
++
++static void mappingLinkedPickerReview() {
++    QMainWindow owner;CadViewport view;DocumentState state;ExtrusionObject box;box.feature=BodyFeature::Primitive;box.primitive.size[0]=4;box.primitive.size[1]=2;state.extrusions={box};view.loadDocument(state);
++    const auto body=view.extrusions()[0].forgeBody;const auto face=body->faces()[0];ForgeCad::Kernel::Vec3 point;ForgeCad::Kernel::Vec2 anchor;
++    require(ForgeCad::Kernel::faceInteriorPoint(*body,face,point,&anchor),"punto faccia per mappa");GeometryRef ref;ref.kind=5;ref.index=0;ref.point.subshape=face.index;ref.point.geometry=int(body->face(face).surface->type());ref.point.x=point.x();ref.point.y=point.y();ref.point.z=point.z();GeometryRef plane;plane.kind=1;plane.index=0;
++    ExtrusionObject flat;flat.feature=BodyFeature::SurfaceTools;flat.firstBody=0;flat.surfaceTool.mode=3;flat.surfaceTool.mappingQuilt=true;flat.surfaceTool.targets={ref,plane};flat.surfaceTool.sources={ref};flat.surfaceTool.mappingU=anchor.x();flat.surfaceTool.mappingV=anchor.y();
++    require(view.createBody(flat).isEmpty()&&view.createBody(box).isEmpty(),"mappa associata reale e sorgente wrap");
++    ExtrusionObject wrap;wrap.feature=BodyFeature::SurfaceTools;wrap.firstBody=2;wrap.surfaceTool.mode=4;wrap.surfaceTool.mappingQuilt=true;wrap.surfaceTool.targets={ref,plane};
++    for(bool source:{false,true}) {
++        int applied=0;bool checked=false;QTimer::singleShot(0,&owner,[&] {
++            auto *target=owner.findChild<QPushButton*>("mappingFacePick");auto *pick=owner.findChild<QPushButton*>(source?"mappingSourceFacePick":"mappingFacePick");auto *planes=owner.findChild<QComboBox*>("mappingPlane");
++            QDialog *panel=nullptr;for(auto *d:owner.findChildren<QDialog*>())if(d->findChild<QComboBox*>("mappingPlane"))panel=d;
++            require(target&&pick&&planes&&panel,"controlli mapping presenti");pick->click();require(view.referencePicking(),"picker mapping avviato");
++            int linked=-1;for(int i=0;i<planes->count();++i)if(planes->itemText(i).startsWith(QStringLiteral("Mappa di")))linked=i;
++            require(linked>=0,"mappa associata disponibile");planes->setCurrentIndex(linked);
++            require(!target->isEnabled()&&view.referencePicking()==source,"collegamento termina solo selezione destinazione");
++            if(source){require(pick->isEnabled(),"sorgente ancora applicabile");QKeyEvent escape(QEvent::KeyPress,Qt::Key_Escape,Qt::NoModifier);QApplication::sendEvent(&view,&escape);require(!view.referencePicking(),"Esc termina sorgente conservata");panel->reject();}
++            else panel->findChild<QDialogButtonBox*>()->button(QDialogButtonBox::Ok)->click();
++            checked=true;
++        });
++        surfaceMappingDialog(&owner,&view,"Mapping linked",-1,wrap,[&](const auto&){++applied;return QString();});
++        require(checked&&applied==(source?0:1),"mapping collegato confermabile senza picker obsoleto");
++        require(!view.referencePicking()&&!view.interactionLocked()&&view.preview_.key.isEmpty()&&view.extrusions().size()==3,"mapping ripulisce stato senza mutare modello");
++    }
++}
+--- a/tests/test_viewport.cpp
++++ b/tests/test_viewport.cpp
+@@ -11813,7 +11813,12 @@
+         return 0;
+     }
+     if (app.arguments().contains(QStringLiteral("--function-panels-review"))) {
+-        try { ViewportInteractionTest::functionPanelsReview(); ViewportInteractionTest::extrusionActionPreconditions(); }
++        try {
++            ViewportInteractionTest::functionPanelsReview();
++            ViewportInteractionTest::previewPickerContextReview();
++            ViewportInteractionTest::mappingLinkedPickerReview();
++            ViewportInteractionTest::extrusionActionPreconditions();
++        }
+         catch (const std::exception &error) { std::cerr << error.what() << std::endl; return 1; }
+         return 0;
+     }
+--- a/tools/generate_architecture.py
++++ b/tools/generate_architecture.py
+@@ -116,7 +116,7 @@
+  'forgeCad2026_ribbon_editor': ('dialogs', 'Editor modale della ribbon: sezioni, comandi, separatori e ripristino su copia confermabile.'),
+  'forgeCad2026_ribbon_preview_main.cpp': ('startup', 'Avvio separato della prova ribbon, preferenze isolate, cattura e regressione apertura documento/Blocco.'),
+  'forgeCad2026_zoom': ('viewport', 'Normalizzazione input per backend, preferenze condivise e animazione temporale dello zoom per vista 3D e tavole.'),
+- 'forgeCad2026_viewport_scene.cpp': ('viewport', 'Coordinate scena/schermo, raggi e bounds: conserva la base interrogabile dal picker dei bordi mentre il renderer mostra solo il risultato completo; costruzione inclusa in modifica o tramite preferenza visiva, policy condivisa con rendering/picking; in scelta riferimenti storici esclude gli operandi futuri ripristinati dalla preview e mantiene visibili le basi selezionabili; zoom al cursore e piani di riferimento.'),
++ 'forgeCad2026_viewport_scene.cpp': ('viewport', 'Coordinate scena/schermo, raggi e bounds: conserva la base interrogabile dal picker dei bordi mentre il renderer mostra solo il risultato completo; costruzione inclusa in modifica o tramite preferenza visiva, policy condivisa con rendering/picking; in scelta riferimenti storici esclude gli operandi futuri ripristinati dalla preview e mantiene visibili le basi selezionabili; zoom al cursore e piani di riferimento. Scena sorgente coerente con il reference picker anche in creazione, con storia futura esclusa, operandi espliciti e curve 3D visibili.'),
+  'forgeCad2026_feature_preview': ('features', 'FeaturePreviewBuilder: chiave dei parametri e anteprime modificate da snapshot; in modifica invariata condivide i risultati esistenti e prepara soltanto le mesh mancanti o di qualita diversa, comprese curve e ripetizioni multirisultato; nessuna ricostruzione geometrica o estrazione patch/U-V al riuso.'),
+  'forgeCad2026_sketch_curvature': ('sketch', 'SketchCurvatureCache: possiede e invalida i pettini di curvatura al cambio di curva o scala.'),
+  'forgeCad2026_camera': ('render', 'Stato e trasformazioni della camera 3D.'),
+@@ -226,7 +226,7 @@
+  'cad_fill_pattern.h': ('features', 'Collocazioni del riempimento rettangolare, sfalsato, esagonale e concentrico con sorgente esplicita e contorno associativo.'),
+  'cad_surface_mapping.cpp': ('features', 'Sviluppo esatto oppure appiattimento con deformazione misurata, mappa comune piano/superfici e posa rigida secondo normali locali, con sorgenti e destinazioni multiple associative: appoggio unico su facce rifilate, isole piane separate, collezioni solide/lamine, diagnostica per faccia e genealogia esplicita; inversa associativa dell appiattimento con ordine delle facce, piano, rotazione e traslazione originali.'),
+  'cad_surface_mapping.h': ('features', 'Contratti di sviluppo/deformazione e risoluzione associativa della mappa di appiattimento: riconoscimento dal contorno delle ripetizioni e inversa completa piano/superfici.'),
+- 'forgeCad2026_dialogs_mapping.cpp': ('dialogs', 'Pannelli riempimento con4icone, sviluppo esatto/appiattimento e deformazione, testi italiani e misure nell esito: selezione delle copie di una ripetizione, centratura e allineamento dal piano sorgente, contorni multifaccia e liste di sorgenti/destinazioni multiple, mappa sorgente associativa senza ricentratura, scelta deformazione/posa rigida, appoggio sulla giunzione comune con ricerca di piccola traslazione valida, evidenze corpi/piano, aggiunta/rimozione continua e confronto delle identita topologiche anche con nomi genealogici condivisi. Cleanup idempotente dei picker collegato a finished per mapping e riempimento pattern.'),
++ 'forgeCad2026_dialogs_mapping.cpp': ('dialogs', 'Pannelli riempimento con4icone, sviluppo esatto/appiattimento e deformazione, testi italiani e misure nell esito: selezione delle copie di una ripetizione, centratura e allineamento dal piano sorgente, contorni multifaccia e liste di sorgenti/destinazioni multiple, mappa sorgente associativa senza ricentratura, scelta deformazione/posa rigida, appoggio sulla giunzione comune con ricerca di piccola traslazione valida, evidenze corpi/piano, aggiunta/rimozione continua e confronto delle identita topologiche anche con nomi genealogici condivisi. Cleanup idempotente dei picker collegato a finished per mapping e riempimento pattern. Il passaggio alla mappa collegata termina il picker destinazione divenuto inapplicabile e conserva quello sorgente.'),
+  'tests/test_surface_mapping.h': ('tests', 'Riempimenti4pattern, fori e budget; storia/Undo/Redo/codec; sviluppo/appiattimento associativi, schema8 per inversa associativa, contorno multifaccia, anteprima con piano indiretto e downgrade atomico, rigenerazione e metodi GUI in italiano.'),
+  'kernel/fk_marching.cpp': ('kernel', 'Intersezioni superficie/superficie: riuso delle pezze Bezier e dei parametri noti, gerarchie e testimoni di distanza NURBS; genera tagli solo per coincidenze di area; distingue nodi C1, spigoli e bordi del dominio e rifiuta passi arretrati. Fit e tolleranze invariati.'),
+  'kernel/fk_surface_distance.cpp': ('kernel', 'Filtri conservativi di distanza: certificato entro soglia e rigetto tramite BVH dei box Bezier con margine numerico; proiezione globale nei casi incerti.'),
+@@ -258,7 +258,7 @@
+  'tests/test_drawing_multisheet.h': ('tests', 'Contenitore multifoglio: identita geometrica indipendente dalla visibilita, verifica delle impronte storiche, migrazione selettiva cache16 con nomi e B-rep invariati; aggiornamento, annullamento, presentazioni e storia.'),
+  'tests/test_document_units.h': ('tests', 'Isolamento delle unita fra due finestre, quote, misure, campi numerici, anteprime e ripristino; valori interni invariati.'),
+  'tests/test_history_suppression.h': ('tests', 'Soppressione con appoggio/Pierce invalidi, continuita della catena e rifiuto alla riattivazione.'),
+- 'tests/test_function_panels.h': ('tests', 'Pannelli: tema e contrasto delle spunte native nei checkbox e negli elenchi, messaggi copiabili e dimensioni; modifica dei tre punti con rollback/storia e verso G1/G2 persistente, compatibilita delle firme tavola60. Regressioni unita dei coefficienti, contrasto messaggi, cleanup picker e runner fra schede, selezione multipla e stati anteprima estrusione/loft/mapping.'),
++ 'tests/test_function_panels.h': ('tests', 'Pannelli: tema e contrasto delle spunte native nei checkbox e negli elenchi, messaggi copiabili e dimensioni; modifica dei tre punti con rollback/storia e verso G1/G2 persistente, compatibilita delle firme tavola60. Regressioni unita dei coefficienti, contrasto messaggi, cleanup picker e runner fra schede, selezione multipla e stati anteprima estrusione/loft/mapping. Regressioni del picker con anteprima pronta, creazione/modifica/rollback, curve 3D e cambio Mapping verso mappa collegata.'),
+  'fk_surface_algo': ('kernel', 'Algoritmi sulle superfici: coincidenza delle estrusioni certificata e identita stretta della parametrizzazione UV da dati esatti, per riutilizzare SP-curve senza riproiezione.'),
+  'fk_loft': ('kernel', 'Corrispondenze manuali tra sezioni, cucitura e verso per profilo; ascisse esatte e diagnostica di collegamenti incrociati. Loft con contatti G1/G2 e sezioni 3D razionali o implicite: adatta soltanto le copie di costruzione delle proiezioni tramite fk_loft_sections; basi/derivate locali e unione dei nodi con molteplicita minime sufficienti, senza duplicare i poli C2.'),
+  'kernel/tests/test_surface_algo.cpp': ('tests', 'Algoritmi di superficie e certificato coincidenza delle estrusioni: onde, NURBS, verso inverso e suddivisione dei nodi.'),
+@@ -289,6 +289,7 @@
+  'kernel/fk_sweep_analytic_bridge.cpp': ('kernel', 'Bounds outward dei coefficienti che collegano i chart razionali ai carrier analitici scelti; seno/coseno Taylor con resto esplicito, fallback dichiarato per input non supportati.'),
+  'kernel/fk_sweep_analytic_bridge.h': ('kernel', 'Errore sui poli/pesi per una parametrizzazione razionale del carrier analitico effettivo dello sweep.'),
+  'kernel/tests/test_sweep_global.cpp': ('tests', 'Sweep globali senza OCCT: spire e regioni sovrapposte, intersezione sulla stessa faccia o con testa, cuciture, lamina curva, tubi intercalati, nesting e atomicita degli alias.'),
++ 'kernel/tests/test_offset_validation.cpp': ('tests', 'Offset: variazioni locali delle spline, domini toroidali completi/rifilati/periodici, costruzioni circolari ruotate e scalate, ripiego per estrusione obliqua e cancellazione prima, durante e alla fine del fit; eseguibile senza Qt o OCCT.'),
+  'kernel/tests/test_sweep_validation.cpp': ('tests', 'Atlante sweep: superfici regolari e piegate, periodicita reale, collisioni e duplicazioni, underflow/overflow, budget, cancellazione e coefficienti incerti.'),
+  'kernel/tests/test_sweep_caps.cpp': ('tests', 'Teste sweep: fori e isole, trim razionali con nodi interni, pose, contatti fra teste e lati, genealogia, budget e cancellazione.'),
+  'kernel/tests/test_sweep_analytic_bridge.cpp': ('tests', 'Ponte dei carrier sweep: limiti dei coefficienti, cilindri/coni/tori, conservazione dei tipi analitici, massa e fallback espliciti.'),
+@@ -303,7 +304,7 @@
+  'kernel/fk_shell.cpp': ('kernel', 'Svuotamento: offset interno, giunzioni tolleranti, gusci annidati con aperture planari e chiusura tramite piano di appoggio; controlli geometrici e genealogia.'),
+  'kernel/tests/test_bspline_plane_jets.cpp': ('tests', 'Coordinate costanti e normali di un piano NURBS a quota 200000 mm: gradi 3/34, pesi razionali, ordini 0..3 e domini UV stretti.'),
+  'kernel/tests/test_offset_split_creases.cpp': ('tests', 'Offset con vere pieghe C0 e inserimento esatto di nodi lisci molto vicini: numero facce, distanza, genealogia e immutabilita nelle quattro varianti di segno/cucitura.'),
+- 'kernel/fk_offset.cpp': ('kernel', 'Superfici e bordi a distanza; divisione esatta delle sole pieghe C0, nodi lisci conservati, solve uniforme regolarizzato sui bordi quasi tangenti, intersezioni stabilizzate per bordo con pesi distinti per precisione e arresto sul residuo 3D verificato, budget locali, domini derivati dalle SP-curve esatte senza celle terminali artificiali, sezioni circolari analitiche e vertici di cucitura conservati nei supporti sostitutivi dello sformo, rifilatura e provenienza.'),
++ 'kernel/fk_offset.cpp': ('kernel', 'Superfici e bordi a distanza; divisione esatta delle sole pieghe C0, nodi lisci conservati, solve uniforme regolarizzato sui bordi quasi tangenti, intersezioni stabilizzate per bordo con pesi distinti per precisione e arresto sul residuo 3D verificato, budget locali, domini derivati dalle SP-curve esatte senza celle terminali artificiali, sezioni circolari analitiche e vertici di cucitura conservati nei supporti sostitutivi dello sformo, rifilatura e provenienza. Costruzioni analitiche autorizzate dai supporti e da bounds geometrici uniformi, regolarita toroidale sul dominio periodico e raffinamento curve con cancellazione cooperativa; fit generale campionato, limite K10 ancora aperto.'),
+  'kernel/tests/test_shell.cpp': ('tests', 'Svuotamento analitico e da superfici cucite quasi tangenti: aperto/chiuso a due spessori, misura esatta delle pareti, topologia, mesh, volumi, storia e input immutato.'),
+  'kernel/tests/test_offset.cpp': ('tests', 'Offset e cuciture: parametrizzazioni/versi diversi, curve chiuse, confine della tolleranza, pcurve dense conservate in entrambi gli ordini e orientamento dei solidi; input immutato.'),
+  'kernel/fk_constraint_linear.h': ('kernel', 'Algebra del solver: componenti, riordino BFS delle righe, Cholesky a banda stretta o densa con regolarizzazione globale, rango per componenti.'),

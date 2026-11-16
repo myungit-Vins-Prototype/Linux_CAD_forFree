@@ -786,8 +786,10 @@ QVector<ForgeCurve> forgeProjectedCurves(const ForgeBody &target, const SketchOb
         for (std::size_t end : loopEnd) {
             std::vector<ProjectedPiece> pieces;
             for (; next < end; ++next) pieces.insert(pieces.end(), projected[next].begin(), projected[next].end());
-            for (const ProjectedPiece &piece : pieces) deviation = std::max(deviation, piece.deviation);
-            for (const ProjectedChain &chain : joinProjectedPieces(pieces)) result.append(chain.curve);
+            for (const ProjectedChain &chain : joinProjectedPieces(pieces)) {
+                deviation = std::max(deviation, chain.deviation);
+                result.append(chain.curve);
+            }
         }
         if (result.isEmpty()) throw std::domain_error("la proiezione dello schizzo non incontra il corpo");
         if (summary)

@@ -1,0 +1,13 @@
+#include "fk_body_io.h"
+#include "fk_bspline.h"
+#include "fk_bspline_surface.h"
+#include "fk_surface_algo.h"
+#include <fstream>
+#include <iostream>
+#include <iterator>
+#include <stdexcept>
+using namespace ForgeCad::Kernel;
+void number(double x){std::cout<<'"'<<std::hexfloat<<x<<'"';}
+void vector(const Vec3 &v){std::cout<<'[';for(int i=0;i<3;++i){if(i)std::cout<<',';number(v[i]);}std::cout<<']';}
+void values(const std::vector<double>&v){std::cout<<'[';for(std::size_t i=0;i<v.size();++i){if(i)std::cout<<',';number(v[i]);}std::cout<<']';}
+int main(int argc,char**argv){if(argc!=2)return 2;std::ifstream f(argv[1],std::ios::binary);auto body=readBodyBinary(std::string(std::istreambuf_iterator<char>(f),{}));const auto*s=dynamic_cast<const BSplineSurface*>(body.face(FaceId(0)).surface.get());const auto*c=dynamic_cast<const BSplineCurve<3>*>(body.edge(EdgeId(3)).curve.get());if(!s||!c)throw std::runtime_error("expected original B-spline data");double t=0.99999999930150807;auto p=c->point(t);auto q=projectPoint(*s,p);std::cout<<"{\"parameter\":";number(t);std::cout<<",\"tolerance\":";number(body.edge(EdgeId(3)).tolerance);std::cout<<",\"projectedPoint\":";vector(q.point);std::cout<<",\"pointEvaluated\":";vector(p);std::cout<<",\"surface\":{\"uDegree\":"<<s->uDegree()<<",\"vDegree\":"<<s->vDegree()<<",\"uKnots\":";values(s->uKnots());std::cout<<",\"vKnots\":";values(s->vKnots());std::cout<<",\"poles\":[";for(int i=0;i<s->uPoleCount();++i){if(i)std::cout<<',';std::cout<<'[';for(int j=0;j<s->vPoleCount();++j){if(j)std::cout<<',';vector(s->pole(i,j));}std::cout<<']';}std::cout<<"],\"weights\":[";for(int i=0;i<s->uPoleCount();++i){if(i)std::cout<<',';std::cout<<'[';for(int j=0;j<s->vPoleCount();++j){if(j)std::cout<<',';number(s->weight(i,j));}std::cout<<']';}std::cout<<"]},\"curve\":{\"degree\":"<<c->degree()<<",\"knots\":";values(c->knots());std::cout<<",\"weights\":";values(c->weights());std::cout<<",\"poles\":[";for(int i=0;i<c->poleCount();++i){if(i)std::cout<<',';vector(c->poles()[i]);}std::cout<<"]}}\n";}

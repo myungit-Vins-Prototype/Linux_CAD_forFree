@@ -1,0 +1,53 @@
+from pathlib import Path
+import os,subprocess,time,json,re,hashlib
+r=Path('/home/myungit/Linux_CAD_forFree');p=r/'docs/curve-fit-k10-projection-prove-2026-11-16/root-replay'
+p.mkdir(parents=True,exist_ok=True)
+names='''forgecad_sketch_editing_tests
+forgecad_sketch_reference_workflow_tests
+forgecad_workflow_ui_tests
+forgecad_sketch_tools_refs_tests
+forgecad_function_panels_tests
+forgecad_history_suppression_tests
+forgecad_document_lifetime_tests
+forgecad_async_lifetime_tests
+forgecad_edit_preview_reuse_tests
+forgecad_sketch_offset_validation_tests
+forgekernel_projection_fit_validation_tests
+forgekernel_curve_fit_validation_tests
+forgekernel_curve_projection_tests
+forgekernel_tolerance_tests
+forgekernel_boundary_fit_validation_tests
+forgekernel_surface_curve_fit_validation_tests
+forgekernel_mapping_carrier_validation_tests
+forgekernel_mapping_diagonal_validation_tests
+forgecad_solver_partition_tests
+forgekernel_projected_curve_reference_tests
+forgekernel_sketch_projection_tests
+forgecad_sketch_projection_tests
+forgecad_projected_curve_reference_tests
+forgecad_projection_tests'''.splitlines()
+env=os.environ.copy();temp=Path('/tmp/projection-root-replay');temp.mkdir(exist_ok=True)
+env.update(QT_QPA_PLATFORM='offscreen',QT_QPA_PLATFORMTHEME='generic',QT_STYLE_OVERRIDE='Fusion',QT_QPA_OFFSCREEN_NO_GLX='1',LIBGL_ALWAYS_SOFTWARE='1')
+for key,folder in [('XDG_CONFIG_HOME','settings'),('XDG_DATA_HOME','data'),('XDG_CACHE_HOME','cache')]:
+    target=temp/folder;target.mkdir(exist_ok=True);env[key]=str(target)
+def run(label,command):
+    start=time.monotonic()
+    with (p/(label+'.log')).open('w') as output:
+        process=subprocess.run(command,cwd=r,env=env,stdout=output,stderr=subprocess.STDOUT)
+    result={'exit':process.returncode,'seconds':time.monotonic()-start,'command':command}
+    (p/(label+'-result.json')).write_text(json.dumps(result,indent=2)+'\n')
+    print(label,result,flush=True)
+    assert process.returncode==0,(p/(label+'.log')).read_text()[-5000:]
+    return result
+expected={'kernel/fk_project.cpp':'9f38b0098f98b3947bc00bd31179a29668df1d10a21119a2d1f75ee42f9b7223','kernel/fk_project.h':'adb573c37010035a59d3d9e814d57d5b8d7bf298d73969bbb22affc8a6b74e88','kernel/fk_curve_fit_bounds.cpp':'09e112784fd06d5da34b2676708fc8453e74adcbf9ca644cefea3522dd8d6a62','kernel/fk_curve_fit_bounds.h':'834e452343f6ad5e81ef97c2269c723477be873bc56cc23169b79101ad70d90e','kernel/tests/test_projection_fit_validation.cpp':'b33ccb834514a7f348782cf9a9e171c0e78bb0ce14e919b2936ddbae3721427b'}
+for name,h in expected.items():assert hashlib.sha256((r/name).read_bytes()).hexdigest()==h,name
+(p/'historical-final-source-hashes.json').write_text(json.dumps(expected,indent=2)+'\n')
+run('build',['cmake','--build','forgecad-release','--parallel','2'])
+result=run('ctest',['ctest','--test-dir','forgecad-release','--output-on-failure','--parallel','1','-R','^('+'|'.join(names)+')$'])
+log=(p/'ctest.log').read_text();passed=len(re.findall(r'\d+/\d+ Test\s+#\d+:.*?Passed',log))
+assert re.search(r'100% tests passed(?:, 0 tests failed)? out of 24\b',log) and passed==24
+result.update(actual_passed=passed,tests=names);(p/'ctest-result.json').write_text(json.dumps(result,indent=2)+'\n')
+run('projection-33',['./forgecad-release/kernel/forgekernel_projection_fit_validation_tests'])
+run('kernel-Projected',['./forgecad-release/kernel/forgekernel_tests','Projected'])
+run('architecture-check',['python3','tools/generate_architecture.py','--check'])
+print('Replay root completo PASS',flush=True)

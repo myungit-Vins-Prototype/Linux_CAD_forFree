@@ -1,0 +1,5 @@
+{
+  "pass": false,
+  "expected": true,
+  "reason": "Exact midpoint witness exceeds budget: t=19/16 squared=1/4"
+}

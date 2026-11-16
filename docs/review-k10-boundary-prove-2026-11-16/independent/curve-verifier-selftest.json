@@ -1,0 +1,12 @@
+{
+  "pass": true,
+  "identity": {
+    "upper_mm": 0
+  },
+  "negative_moebius": {
+    "rejected": true,
+    "exact_parameter": "1/2",
+    "squared_difference": "9/100"
+  },
+  "method": "Exact Fraction original homogeneous coefficients and common parameter; no production oracle."
+}

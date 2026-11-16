@@ -1,0 +1,208 @@
+{
+  "baselineFrozenFiles": 158,
+  "baselineVerification": "158/158 SHA256 unchanged",
+  "candidate": "core V2 4 files",
+  "qt": "6.12.0",
+  "finalHeaderSha256": "5ee295338bd353e9333a6331c44f6a0b285ffbea3f550da743375f73eb2a4da6",
+  "results": {
+    "candidateOffscreenMixed": {
+      "checks": 1569,
+      "failures": 0
+    },
+    "candidateOffscreenOnly2D": {
+      "checks": 898,
+      "failures": 0
+    },
+    "candidateWaylandMixed": {
+      "checks": 1569,
+      "failures": 0
+    },
+    "candidateWaylandOnly2D": {
+      "checks": 898,
+      "failures": 0
+    },
+    "baselineOffscreenMixedFailures": 173,
+    "baselineOffscreenOnly2DFailures": 48,
+    "ASanUBSanTargeted": {
+      "checks": 1569,
+      "failures": 0,
+      "instrumented": "application_theme.cpp and final header driver",
+      "uninstrumented": "Qt and remaining application/kernel Release objects",
+      "leaks": "detect_leaks=0"
+    },
+    "applicationThemeFull": "baseline and candidate timeout20s exit124 in preexisting Breeze replacement branch",
+    "applicationThemeWindowsOnlyDiagnostic": "private diagnostic only, PASS9 simulated transitions; permanent source retains Breeze checks"
+  },
+  "files": [
+    {
+      "path": "/tmp/theme-tabs-review/tests/test_document_theme_tabs.h",
+      "bytes": 18772,
+      "sha256": "5ee295338bd353e9333a6331c44f6a0b285ffbea3f550da743375f73eb2a4da6"
+    },
+    {
+      "path": "/tmp/theme-tabs-review/tests/test_application_theme.cpp",
+      "bytes": 11271,
+      "sha256": "c0d73a0f6e9e8510a5e64ae0b692839b5a1bf781235965a212450d5801a39271"
+    },
+    {
+      "path": "/tmp/theme-tabs-review/tests/header_runner.cpp",
+      "bytes": 1136,
+      "sha256": "a89eb1c9b07d2695b5b5600c5ebcc32764a37edc3fccfc1d9a3c5e6d64f125da"
+    },
+    {
+      "path": "/tmp/theme-tabs-review/tests/header_runner.o",
+      "bytes": 1077784,
+      "sha256": "c20a19171db10e88e70ef59a57a9a67d73c4c48ed4ee8cf5545e0295b1b65765"
+    },
+    {
+      "path": "/tmp/theme-tabs-review/tests/header-compile-command.json",
+      "bytes": 1258,
+      "sha256": "533fa1079054d0a50db31e634181787565ba7d0d292e7b21c1ed66aa2b69f2a8"
+    },
+    {
+      "path": "/tmp/theme-tabs-review/tests/build_header_runner.py",
+      "bytes": 1566,
+      "sha256": "70a70f28396f079f4122907ca61ba31b4b465a298b5ddb606e2e31a41134f764"
+    },
+    {
+      "path": "/tmp/theme-tabs-review/tests/generate_header.py",
+      "bytes": 2071,
+      "sha256": "b9d975e6d7925e060249f611afd8bb407ca02b813a8a09ad96581859dc640552"
+    },
+    {
+      "path": "/tmp/theme-tabs-review/tests/baseline-manifest.json",
+      "bytes": 54810,
+      "sha256": "f4091aec6e384dda68b64a6a46c7789deb6e159575e6ede29d929763355faa2d"
+    },
+    {
+      "path": "/tmp/theme-tabs-review/tests/graph-consult.json",
+      "bytes": 817409,
+      "sha256": "972a96906ab17a687c9bfc2a562a67a57fc7c117c6598bdbf8386d0dc3b95b31"
+    },
+    {
+      "path": "/tmp/theme-tabs-review/tests/baseline/header_runner",
+      "bytes": 130537616,
+      "sha256": "52f244a1f62c7922fe5cf825ea30031da40d08a1f1d6485e441f04b5d7200191"
+    },
+    {
+      "path": "/tmp/theme-tabs-review/tests/baseline/header-link-command.json",
+      "bytes": 14987,
+      "sha256": "261d23f415a249c628db7f94152f703c3b201d19502356a7ba0fa01947697376"
+    },
+    {
+      "path": "/tmp/theme-tabs-review/tests/candidate/header_runner",
+      "bytes": 130533280,
+      "sha256": "10e5f7d98653d5011490f64d4c362db22dffef20c44ac1f19aa0fcf5f2e30a4a"
+    },
+    {
+      "path": "/tmp/theme-tabs-review/tests/candidate/header-link-command.json",
+      "bytes": 14886,
+      "sha256": "b820b3f74fe36197bfeb93ee1511f8d5dddf82dffcf46368242f60605e91ef27"
+    },
+    {
+      "path": "/tmp/theme-tabs-review/tests/sanitizer/header_runner",
+      "bytes": 135255704,
+      "sha256": "193589c36562b98b318832d811ce4b4e681232979a1dbb9cabba65dc06a36c38"
+    },
+    {
+      "path": "/tmp/theme-tabs-review/tests/sanitizer/header-commands.json",
+      "bytes": 16727,
+      "sha256": "12825759ebed0cbcbf4c786cd8ffd857a5cf64152204031a2a1249bb604ab6d2"
+    },
+    {
+      "path": "/tmp/theme-tabs-review/tests/sanitizer/commands.json",
+      "bytes": 17899,
+      "sha256": "4bb1b785c427bb9c6780b78ecac43bbb7b045985c3e75fe1029b1dbcb18728ce"
+    },
+    {
+      "path": "/tmp/theme-tabs-review/tests/header-candidate-mixed-offscreen.log",
+      "bytes": 38,
+      "sha256": "5b0b79041889e3f9c69cb60c91672d704f07c97f3962b06a6bc171ccde3d56f5"
+    },
+    {
+      "path": "/tmp/theme-tabs-review/tests/header-candidate-only2d-offscreen.log",
+      "bytes": 37,
+      "sha256": "7b957a523a1c5fa2648ccf7844c13f9fc201c8e6aab964f0503494b0b661af43"
+    },
+    {
+      "path": "/tmp/theme-tabs-review/tests/header-candidate-mixed-wayland.log",
+      "bytes": 38,
+      "sha256": "5b0b79041889e3f9c69cb60c91672d704f07c97f3962b06a6bc171ccde3d56f5"
+    },
+    {
+      "path": "/tmp/theme-tabs-review/tests/header-candidate-only2d-wayland.log",
+      "bytes": 37,
+      "sha256": "7b957a523a1c5fa2648ccf7844c13f9fc201c8e6aab964f0503494b0b661af43"
+    },
+    {
+      "path": "/tmp/theme-tabs-review/tests/header-baseline-mixed-offscreen.log",
+      "bytes": 8272,
+      "sha256": "a07fad86d9d95f353248c9831bfa8271c8a75ed3a77fc0b793221608eb2d5de4"
+    },
+    {
+      "path": "/tmp/theme-tabs-review/tests/header-baseline-only2d-offscreen.log",
+      "bytes": 2154,
+      "sha256": "0138391b755c68c4c94069f0b06926e1255917f46ef47c77cfae4934cd5bd8f7"
+    },
+    {
+      "path": "/tmp/theme-tabs-review/tests/header-sanitizer.log",
+      "bytes": 38,
+      "sha256": "5b0b79041889e3f9c69cb60c91672d704f07c97f3962b06a6bc171ccde3d56f5"
+    },
+    {
+      "path": "/tmp/theme-tabs-review/tests/application-theme-candidate.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/tmp/theme-tabs-review/tests/application-theme-baseline.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/tmp/theme-tabs-review/tests/application-theme-windows-diagnostic.log",
+      "bytes": 226,
+      "sha256": "5c64cce55d0725d1fc131c62c4dfbbb87fbe40804ef4ece8d376a3f656251375"
+    },
+    {
+      "path": "/tmp/theme-tabs-review/tests/build-header-runner.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/tmp/theme-tabs-review/core/forgeCad2026_application_theme.cpp",
+      "bytes": 11913,
+      "sha256": "618b68b483952fac10852632b20f735fedb8e41b7dae1dfd06f676cee59582cc"
+    },
+    {
+      "path": "/tmp/theme-tabs-review/core/forgeCad2026_gui.cpp",
+      "bytes": 363134,
+      "sha256": "e481484361ea21e6ab59d9a6510cfc57fc57ac4736249d83899c5e733a628ee1"
+    },
+    {
+      "path": "/tmp/theme-tabs-review/core/forgeCad2026_gui.h",
+      "bytes": 5059,
+      "sha256": "3176ac69ee884f6ee286157c95608284412bc2871d76414bf9a43d779a7b05fd"
+    },
+    {
+      "path": "/tmp/theme-tabs-review/core/cad_drawing_window.cpp",
+      "bytes": 36807,
+      "sha256": "e860794266cf804e6f6e90428998b74171b0e7166819f66d6523ee00f1067726"
+    },
+    {
+      "path": "/tmp/theme-tabs-review/tests/candidate/forgeCad2026_application_theme.cpp.o",
+      "bytes": 50144,
+      "sha256": "e23d6afdbe73e094d30a736e4df54642fa91fe6c300971bc010752e30569d25f"
+    },
+    {
+      "path": "/tmp/theme-tabs-review/tests/candidate/forgeCad2026_gui.cpp.o",
+      "bytes": 2132904,
+      "sha256": "339fdaa2b404ee3f4fd96df31f023f93d9ca7f7cd4439cf846a712349ffb584a"
+    },
+    {
+      "path": "/tmp/theme-tabs-review/tests/candidate/cad_drawing_window.cpp.o",
+      "bytes": 563880,
+      "sha256": "66219388225a44cc9a1f711d681cf4e896c14ad39d2c5c1495905ca6acf8d523"
+    }
+  ]
+}

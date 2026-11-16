@@ -1,0 +1,3 @@
+Command: rg --hidden -n -w setModelProvider . --glob !docs/** --glob !archivi-locali/** --glob !.git/**
+./cad_drawing_editor.h:104:    void setModelProvider(std::function<DrawingEditorModel()> provider);
+./cad_drawing_editor.cpp:3649:void DrawingSheetEditor::setModelProvider(std::function<DrawingEditorModel()> provider){impl_->provider=std::move(provider);impl_->updateAction->setEnabled(bool(impl_->provider)&&!impl_->readOnly);}

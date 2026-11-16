@@ -1,0 +1,12 @@
+[  OK  ] MassWithAndWithoutPCurves
+[  OK  ] MassOfBoxes
+[  OK  ] MassOfCylinders
+[  OK  ] MassOfPrismsMatchesOcct
+[  OK  ] MassOfExtrusions
+[  OK  ] MassOfConeFrustum
+[  OK  ] MassWithPolesAndTori
+[  OK  ] MassEdgeCases
+[  OK  ] MassVerticalSplineSkipsNullFlux
+[  OK  ] MassParallelPreservesResultsAndInput
+[  OK  ] MassParallelPreservesFirstFailureAndCancellation
+11/11 test superati

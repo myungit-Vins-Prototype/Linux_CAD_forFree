@@ -1,0 +1,2 @@
+#include "test_sketch_projection_fit_validation.h"
+int main(int argc,char **argv){QApplication app(argc,argv);return K10SketchProjectionTests::run(argc>1?QString::fromLocal8Bit(argv[1]):QString());}

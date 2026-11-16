@@ -1,0 +1,16 @@
+from fractions import Fraction as F
+from math import factorial
+from pathlib import Path
+import json,hashlib
+source=Path('/tmp/k10-sketch-review/core/fk_helix_projection.cpp')
+def atan_interval(n,terms):
+ x=F(1,n);s=sum(((-1)**k*x**(2*k+1)/F(2*k+1) for k in range(terms)),F(0));next_term=x**(2*terms+1)/F(2*terms+1)
+ return (s,s+next_term) if terms%2==0 else (s-next_term,s)
+a,b=atan_interval(5,24);c,d=atan_interval(239,8)
+lo=8*a-2*d;hi=8*b-2*c
+binary_lo=F.from_float(float.fromhex('0x1.921fb54442d18p+0'));binary_hi=F.from_float(float.fromhex('0x1.921fb54442d19p+0'))
+assert binary_lo<lo<=hi<binary_hi
+assert F(1,factorial(32))<F(1,2**100)
+s=source.read_text();assert '0x1.921fb54442d18p+0,0x1.921fb54442d19p+0' in s;assert 'k<16' in s;assert '0x1p-100' in s
+result={'source_sha256':hashlib.sha256(source.read_bytes()).hexdigest(),'machin_half_pi_between_binary_endpoints':True,'machin_terms':[24,8],'sin_terms':16,'cos_terms':16,'tail_1_over_32factorial_below_2pow_minus100':True,'lower_pi_bracket_margin_approx':float(lo-binary_lo),'upper_pi_bracket_margin_approx':float(binary_hi-hi),'factorial32_inverse_approx':float(F(1,factorial(32))),'tail_approx':float(F(1,2**100))}
+Path('/tmp/helix-independent-audit/constants.json').write_text(json.dumps(result,indent=2)+'\n');print(json.dumps(result,indent=2))

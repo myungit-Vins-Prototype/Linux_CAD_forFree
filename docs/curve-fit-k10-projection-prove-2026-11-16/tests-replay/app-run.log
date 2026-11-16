@@ -1,0 +1,4 @@
+two_lines_gap_5e-9 PASS piece_max=6.4437788920586767e-11 chain_max=2.500008533536046e-09 chain_over_piece=38.797242664813659 geometry_error=0 summary=1 curve proiettate; scarto massimo 2.5e-09 mm. piece_summary=1 curve proiettate; scarto massimo 6.44e-11 mm.
+degree27_gap0 PASS piece_max=8.813376176316891e-09 chain_max=8.813376176316891e-09 chain_over_piece=1 geometry_error=0 summary=1 curve proiettate; scarto massimo 8.81e-09 mm. piece_summary=1 curve proiettate; scarto massimo 8.81e-09 mm.
+degree27_gap_5e-9 PASS piece_max=8.8133761763021755e-09 chain_max=8.8133761763021755e-09 chain_over_piece=1 geometry_error=0 summary=1 curve proiettate; scarto massimo 8.81e-09 mm. piece_summary=1 curve proiettate; scarto massimo 8.81e-09 mm.
+RESULT passed=3 failed=0

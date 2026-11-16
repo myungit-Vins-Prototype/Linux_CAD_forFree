@@ -1,0 +1,22 @@
+{
+  "command": [
+    "/usr/bin/c++",
+    "-std=c++17",
+    "-O0",
+    "-g",
+    "-fno-fast-math",
+    "-ffp-contract=off",
+    "-I/tmp/supporto-review/stage/kernel",
+    "-I/home/myungit/Linux_CAD_forFree/kernel",
+    "/tmp/supporto-review/tests/boundary_private.cpp",
+    "/tmp/supporto-review/stage/fk_boolean.o",
+    "/tmp/supporto-review/stage/fk_boolean_boundary.o",
+    "/home/myungit/Linux_CAD_forFree/forgecad-release/kernel/libforgekernel.a",
+    "-pthread",
+    "-o",
+    "/tmp/supporto-review/tests/boundary-certificates-extended-normal"
+  ],
+  "boundary_source_sha256": "9d0234bfdcd029cea584f0e47ecfe650e404a33aeb2981b027b3b0024e3bc2d4",
+  "header_sha256": "2d268df2dd61d4d36aacc6e24853ec3148390c85d27b79f671b04eedc9387fec",
+  "instrumented": []
+}

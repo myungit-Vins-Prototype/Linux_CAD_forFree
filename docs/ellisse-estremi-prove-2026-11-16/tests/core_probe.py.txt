@@ -1,0 +1,22 @@
+#!/usr/bin/env python3
+# Ricostruisce solo i quattro moduli interessati e il probe; non modifica la build CMake.
+# Uso: python3 core_probe.py.txt /percorso/repository [/tmp/probe-dir] [--sanitize]
+import json, pathlib, shlex, subprocess, sys
+root=pathlib.Path(sys.argv[1]).resolve()
+sanitize='--sanitize' in sys.argv[2:]
+paths=[a for a in sys.argv[2:] if a!='--sanitize']
+dest=pathlib.Path(paths[0] if paths else '/tmp/ellipse-extremes-private-probe');dest.mkdir(exist_ok=True)
+fixture=pathlib.Path(__file__).with_name('core_probe.cpp.txt')
+(dest/'core_probe.cpp').write_text(fixture.read_text())
+entries=json.loads((root/'forgecad-release/compile_commands.json').read_text())
+args=shlex.split(next(x for x in entries if x['file'].endswith('/tests/test_viewport.cpp'))['command'])
+out=args.index('-o');del args[out:out+2];args=args[:args.index('-c')]
+args=[x for x in args if x!='-O3']+['-O1','-g','-ffunction-sections','-fdata-sections']
+flags=['-fsanitize=address,undefined','-fno-omit-frame-pointer'] if sanitize else []
+for src in ['cad_ellipse.cpp','cad_curve_solver.cpp','cad_constraints.cpp','cad_sketch_edit.cpp',str(dest/'core_probe.cpp')]:
+    name=pathlib.Path(src).stem
+    command=args+flags+['-c',str(root/src) if not src.startswith('/') else src,'-o',str(dest/(name+'.o'))]
+    print('compile',name,flush=True);subprocess.run(command,check=True)
+link=['/usr/bin/c++']+flags+['-Wl,--gc-sections']+[str(dest/(v+'.o')) for v in ['core_probe','cad_ellipse','cad_curve_solver','cad_constraints','cad_sketch_edit']]+[str(root/'forgecad-release/CMakeFiles/forgecad_view_tests.dir/cad_sketch_offset.cpp.o'),str(root/'forgecad-release/kernel/libforgekernel.a'),'-lQt6Core','-o',str(dest/'core_probe')]
+print('link private probe',flush=True);subprocess.run(link,cwd=root/'forgecad-release',check=True)
+subprocess.run([str(dest/'core_probe')],check=True)

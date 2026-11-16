@@ -1,0 +1,33 @@
+{
+  "status": "PASS with explicit remaining sampled families",
+  "source_version": "core-v2",
+  "source_section_sha256": "3c2fece62fbf033de91693b520e82055aae2e63a6cac7011b314a1f7f74dbd7d",
+  "executed_independently": {
+    "private_tests": 15,
+    "passed": 15,
+    "exit_code": 0,
+    "shared_carrier_regression": true
+  },
+  "candidate_fraction": {
+    "originals": 6,
+    "original_upper_max_mm": 9.561278618102041e-15,
+    "actual_fins": 12,
+    "cells": 60,
+    "actual_fin_upper_max_mm": 1.1916127230620075e-10,
+    "cap_mm": 3e-09,
+    "actual_extended_fins": 2,
+    "extended_fin_cells": 50,
+    "preserved_carriers": 12,
+    "carrier_upper_max_mm": 4.874831182328089e-14,
+    "negative_controls": 3
+  },
+  "scope": "Synthetic production helpers and actual Body/fin coefficients, not public command ISO evidence",
+  "remaining_limits": [
+    "Unsupported ISO and Newton continuation explicitly sampled",
+    "Global carrier preservation verified only for exported cases; no new runtime full-rectangle provider",
+    "No topological or trim-membership guarantee from local position certificate"
+  ],
+  "v1_v2_exports_identical": 6,
+  "integrated_sources_identical": 3,
+  "final_results_file": "v2-fraction-results.json"
+}

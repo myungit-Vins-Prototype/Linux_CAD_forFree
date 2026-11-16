@@ -1,0 +1,10 @@
+[
+  "forgecad_function_panels_tests",
+  "forgecad_history_preview_mesh_tests",
+  "forgecad_sweep_reference_tests",
+  "forgecad_surface_tools_tests",
+  "forgecad_document_units_tests",
+  "forgecad_all_history_tests",
+  "forgecad_document_read_tests",
+  "forgecad_workspace_tests"
+]

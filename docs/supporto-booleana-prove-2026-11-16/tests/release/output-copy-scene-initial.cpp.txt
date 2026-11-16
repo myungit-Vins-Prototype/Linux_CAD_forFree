@@ -1,0 +1,149 @@
+// Probe privato: nessun percorso di produzione modificato.
+#define main supportoRegenerationReferenceMain
+#include "regeneration.cpp"
+#undef main
+#include <QDir>
+#include <QFileInfo>
+
+static bool finalUnion(const DocumentState &state) {
+    if (state.extrusions.size() != 7) return false;
+    const auto &f = state.extrusions.back();
+    return f.operation == int(BooleanOperation::Union) && f.firstBody == 0 && f.secondBody == 2
+        && f.booleanTools == QVector<int>{5} && f.featureId == 7 && bool(f.forgeBody)
+        && f.error.isEmpty() && f.visible;
+}
+static void singleSolid(const DocumentState &state, const std::string &label) {
+    check(finalUnion(state), label + " final feature is the intended three-body parametric union");
+    if (!finalUnion(state)) return;
+    const auto &b = *state.extrusions.back().forgeBody;
+    int solid = 0;
+    for (auto r : b.regions()) solid += b.region(r).solid;
+    check(!b.isSheet() && b.shells().size() == 1 && solid == 1,
+          label + " one closed shell and one solid region");
+    bool errors = false;
+    for (const auto &f : state.extrusions) errors = errors || !f.error.isEmpty();
+    check(!errors, label + " no failed features anywhere in history");
+}
+static void sceneOnlyUnion(const CadViewport &view, const std::string &label) {
+    int drawn = 0;
+    for (int i = 0; i < view.extrusions().size(); ++i) drawn += view.isBodyDrawn(i);
+    check(drawn == 1 && view.isBodyDrawn(6) && !view.isBodyDrawn(0)
+              && !view.isBodyDrawn(2) && !view.isBodyDrawn(5),
+          label + " scene draws only final union, consumed operands remain historical");
+    check(view.resultBodiesBefore(-1) == QVector<int>{6},
+          label + " only final union is an available independent body");
+}
+int main(int argc, char **argv) {
+    QApplication app(argc, argv);
+    std::cout << std::setprecision(17) << std::unitbuf;
+    const QString original = QStringLiteral("/tmp/supporto-review/Supporto.original.prt");
+    const QString target = argc > 1 ? QString::fromLocal8Bit(argv[1])
+                                   : QStringLiteral("/home/myungit/Linux_CAD_forFree/output/Supporto_unito.prt");
+    const auto originalHash = fileHash(original);
+    check(originalHash == QStringLiteral("79887e91d75feb748af19fcdb14cd469cc40e74abab03e3cbeaa12e2d3271f7f"),
+          "frozen original SHA256 before delivery probe");
+    check(QFileInfo(original).absoluteFilePath() != QFileInfo(target).absoluteFilePath(),
+          "target path differs from frozen original");
+    if (failures) return 2;
+    DocumentState source;
+    QString error = F::loadDocumentFile(original, source);
+    check(error.isEmpty(), "load frozen original definition and snapshots");
+    if (!error.isEmpty()) return 2;
+    K::PrecisionScope precision(source.calculationAccuracy);
+    DocumentState fork = source;
+    F::forkDocumentIdentity(fork);
+    check(fork.version.documentId != source.version.documentId && !fork.version.documentId.isNull()
+              && fork.version.checkinId.isNull() && fork.baseCheckinId.isNull(),
+          "SaveAs fork has independent document identity and no archived base");
+    CadViewport view;
+    view.loadDocument(fork);
+    check(view.rebuildAllFeatures() == 0, "rebuild fork inputs without cache");
+    const auto before = view.recoveryDocument();
+    error = view.createBoolean(BooleanOperation::Union, 0, {2, 5}, QStringLiteral("Unione 3 corpi"));
+    check(error.isEmpty(), "actual app entrypoint creates three-body union");
+    if (!error.isEmpty()) { std::cerr << error.toStdString() << std::endl; return 2; }
+    auto created = view.currentDocument();
+    singleSolid(created, "created");
+    sceneOnlyUnion(view, "created");
+    auto shapeReport = shape(created.extrusions.back().forgeBody, "delivery created");
+    std::vector<F::ForgeBody> operands;
+    for (int i : {0, 2, 5}) operands.push_back(created.extrusions[i].forgeBody);
+    auto genealogyReport = genealogy(created.extrusions.back().forgeBody, operands, "delivery created");
+    auto witnessReport = geometricWitnesses(created.extrusions.back().forgeBody, operands, "delivery created");
+    const auto geometryHash = shapeHash(*created.extrusions.back().forgeBody);
+    const auto createdDefinition = definitionHash(created);
+    check(view.canUndo(), "actual app creation records Undo");
+    view.undo();
+    auto undone = view.recoveryDocument();
+    check(undone.extrusions.size() == before.extrusions.size(), "Undo removes only final boolean feature");
+    bool preserved = true;
+    for (int i : {0, 2, 5}) preserved = preserved && undone.extrusions[i].visible == before.extrusions[i].visible
+        && shapeHash(*undone.extrusions[i].forgeBody) == shapeHash(*before.extrusions[i].forgeBody);
+    check(preserved, "Undo restores original body visibility and exact operand geometry");
+    view.redo();
+    created = view.currentDocument();
+    check(finalUnion(created) && shapeHash(*created.extrusions.back().forgeBody) == geometryHash,
+          "Redo restores identical final union");
+    check(created.version.documentId == fork.version.documentId,
+          "Undo and Redo retain fork document identity");
+    check(QDir().mkpath(QFileInfo(target).absolutePath()), "output directory available");
+    check(!QFile::exists(target), "new output path is unoccupied");
+    if (failures) return 2;
+    error = F::saveDocumentFile(target, created, true);
+    check(error.isEmpty(), "normal atomic Save writes independent output copy");
+    if (!error.isEmpty()) { std::cerr << error.toStdString() << std::endl; return 2; }
+    const auto outputHash = fileHash(target);
+    DocumentState reopened;
+    error = F::loadDocumentFile(target, reopened);
+    check(error.isEmpty(), "saved output reopens through normal native loader");
+    if (!error.isEmpty()) return 2;
+    check(reopened.version.documentId == fork.version.documentId
+              && reopened.version.documentId != source.version.documentId
+              && reopened.version.checkinId.isNull() && reopened.baseCheckinId.isNull(),
+          "reopened copy preserves independent identity");
+    singleSolid(reopened, "saved snapshot");
+    check(shapeHash(*reopened.extrusions.back().forgeBody) == geometryHash,
+          "saved final snapshot retains exact B-rep bytes");
+    CadViewport reopenedView;
+    reopenedView.loadDocument(reopened);
+    sceneOnlyUnion(reopenedView, "reopened");
+    const auto cacheState = reopenedView.recoveryDocument();
+    const auto savedDefinition = definitionHash(cacheState);
+    check(reopenedView.rebuildAllFeatures() == 0, "reopened output rebuilds all seven features without cache");
+    auto rebuilt = reopenedView.currentDocument();
+    singleSolid(rebuilt, "reopened rebuilt");
+    sceneOnlyUnion(reopenedView, "reopened rebuilt");
+    auto rebuiltShape = shape(rebuilt.extrusions.back().forgeBody, "delivery reopened rebuilt");
+    std::vector<F::ForgeBody> rebuiltOperands;
+    for (int i : {0, 2, 5}) rebuiltOperands.push_back(rebuilt.extrusions[i].forgeBody);
+    auto rebuiltGenealogy = genealogy(rebuilt.extrusions.back().forgeBody, rebuiltOperands, "delivery rebuilt");
+    auto rebuiltWitness = geometricWitnesses(rebuilt.extrusions.back().forgeBody, rebuiltOperands, "delivery rebuilt");
+    check(shapeHash(*rebuilt.extrusions.back().forgeBody) == geometryHash,
+          "cache-free rebuilt output is byte-identical to delivered geometry");
+    check(definitionHash(rebuilt) == savedDefinition && savedDefinition == createdDefinition,
+          "Save, reopen and cache-free rebuild preserve parametric definition");
+    check(reopenedView.canUndo(), "rebuild itself records Undo after reopening");
+    reopenedView.undo();
+    check(finalUnion(reopenedView.recoveryDocument())
+              && shapeHash(*reopenedView.extrusions().back().forgeBody) == geometryHash,
+          "Undo rebuilt output restores valid saved snapshot");
+    reopenedView.redo();
+    check(finalUnion(reopenedView.recoveryDocument())
+              && shapeHash(*reopenedView.extrusions().back().forgeBody) == geometryHash,
+          "Redo rebuilt output restores identical union");
+    check(fileHash(target) == outputHash, "reopening, rebuild and Undo leave delivered file unchanged");
+    check(fileHash(original) == originalHash, "frozen original remains byte-identical");
+    QJsonObject report{{"checks", checks}, {"failures", failures}, {"original_sha256", originalHash},
+                       {"output_path", target}, {"output_sha256", outputHash},
+                       {"original_document_id", source.version.documentId.toString()},
+                       {"output_document_id", fork.version.documentId.toString()},
+                       {"final_shape", shapeReport}, {"rebuilt_shape", rebuiltShape},
+                       {"genealogy", genealogyReport}, {"rebuilt_genealogy", rebuiltGenealogy},
+                       {"witnesses", witnessReport}, {"rebuilt_witnesses", rebuiltWitness},
+                       {"calculation_accuracy", source.calculationAccuracy}};
+    QFile result(base + "delivery-app-release.json");
+    if (!result.open(QIODevice::WriteOnly)) return 3;
+    result.write(QJsonDocument(report).toJson(QJsonDocument::Indented));
+    std::cout << "DELIVERY_RESULT checks=" << checks << " failures=" << failures << std::endl;
+    return failures ? 1 : 0;
+}

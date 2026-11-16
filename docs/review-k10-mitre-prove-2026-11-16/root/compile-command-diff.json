@@ -1,0 +1,38 @@
+{
+  "old_entries": 807,
+  "new_entries": 809,
+  "removed": [
+    [
+      "/home/myungit/Linux_CAD_forFree/forgecad-release/kernel",
+      "/home/myungit/Linux_CAD_forFree/kernel/fk_blend_surface.cpp",
+      "/usr/bin/c++  -I/home/myungit/Linux_CAD_forFree/kernel -O3 -DNDEBUG -std=gnu++17 -Wall -Wextra -Wpedantic -O2 -g -ffp-contract=off -o CMakeFiles/forgekernel.dir/fk_blend_surface.cpp.o -c /home/myungit/Linux_CAD_forFree/kernel/fk_blend_surface.cpp"
+    ],
+    [
+      "/home/myungit/Linux_CAD_forFree/forgecad-release/kernel",
+      "/home/myungit/Linux_CAD_forFree/kernel/fk_blend_mitre.cpp",
+      "/usr/bin/c++  -I/home/myungit/Linux_CAD_forFree/kernel -O3 -DNDEBUG -std=gnu++17 -Wall -Wextra -Wpedantic -O2 -g -ffp-contract=off -o CMakeFiles/forgekernel.dir/fk_blend_mitre.cpp.o -c /home/myungit/Linux_CAD_forFree/kernel/fk_blend_mitre.cpp"
+    ]
+  ],
+  "added": [
+    [
+      "/home/myungit/Linux_CAD_forFree/forgecad-release/kernel",
+      "/home/myungit/Linux_CAD_forFree/kernel/fk_blend_surface.cpp",
+      "/usr/bin/c++  -I/home/myungit/Linux_CAD_forFree/kernel -O3 -DNDEBUG -std=gnu++17 -Wall -Wextra -Wpedantic -O2 -g -ffp-contract=off -fno-fast-math -ffp-contract=off -o CMakeFiles/forgekernel.dir/fk_blend_surface.cpp.o -c /home/myungit/Linux_CAD_forFree/kernel/fk_blend_surface.cpp"
+    ],
+    [
+      "/home/myungit/Linux_CAD_forFree/forgecad-release/kernel",
+      "/home/myungit/Linux_CAD_forFree/kernel/fk_blend_mitre.cpp",
+      "/usr/bin/c++  -I/home/myungit/Linux_CAD_forFree/kernel -O3 -DNDEBUG -std=gnu++17 -Wall -Wextra -Wpedantic -O2 -g -ffp-contract=off -fno-fast-math -ffp-contract=off -o CMakeFiles/forgekernel.dir/fk_blend_mitre.cpp.o -c /home/myungit/Linux_CAD_forFree/kernel/fk_blend_mitre.cpp"
+    ],
+    [
+      "/home/myungit/Linux_CAD_forFree/forgecad-release/kernel",
+      "/home/myungit/Linux_CAD_forFree/kernel/tests/fk_test_main.cpp",
+      "/usr/bin/c++  -I/home/myungit/Linux_CAD_forFree/kernel -O3 -DNDEBUG -std=gnu++17 -Wall -Wextra -Wpedantic -ffp-contract=off -o CMakeFiles/forgekernel_blend_mitre_validation_tests.dir/tests/fk_test_main.cpp.o -c /home/myungit/Linux_CAD_forFree/kernel/tests/fk_test_main.cpp"
+    ],
+    [
+      "/home/myungit/Linux_CAD_forFree/forgecad-release/kernel",
+      "/home/myungit/Linux_CAD_forFree/kernel/tests/test_blend_mitre_validation.cpp",
+      "/usr/bin/c++  -I/home/myungit/Linux_CAD_forFree/kernel -O3 -DNDEBUG -std=gnu++17 -Wall -Wextra -Wpedantic -ffp-contract=off -o CMakeFiles/forgekernel_blend_mitre_validation_tests.dir/tests/test_blend_mitre_validation.cpp.o -c /home/myungit/Linux_CAD_forFree/kernel/tests/test_blend_mitre_validation.cpp"
+    ]
+  ]
+}

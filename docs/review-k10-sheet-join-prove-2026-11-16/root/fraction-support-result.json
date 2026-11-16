@@ -1,0 +1,10 @@
+{
+  "exit": 0,
+  "seconds": 0.3644481179981085,
+  "command": [
+    "python3",
+    "/tmp/sheet-join-review/audit/verify_surface_preservation.py",
+    "/tmp/sheet-join-review/audit/exports-final",
+    "/tmp/sheet-join-review/root/fraction-support.json"
+  ]
+}

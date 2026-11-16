@@ -1,0 +1,18 @@
+{
+  "baseline": {
+    "cad_sketch_offset.cpp": "122b6daac7ced186096e52ebdc88655aea1bde774fcc8cbcd4c845cbcb9a6331"
+  },
+  "candidate": {
+    "cad_sketch_offset.cpp": "62bc7824975f38656f0bbba2279e9bc1f47ca57380c6b5468d1170eba18ad69f"
+  },
+  "production_modified": false,
+  "source_root": "/home/myungit/Linux_CAD_forFree",
+  "scope": "Due fit curve libere offset schizzo, provider NURBS originale, ricertificazione dopo trim sui poli finali e domini originali",
+  "checks": {
+    "syntax": 0,
+    "probe_build": 0,
+    "probe_run": 0
+  },
+  "new_kernel_api": false,
+  "tolerance": 1e-07
+}

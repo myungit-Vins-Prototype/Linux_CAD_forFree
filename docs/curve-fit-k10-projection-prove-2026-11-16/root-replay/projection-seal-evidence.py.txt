@@ -1,0 +1,11 @@
+from pathlib import Path
+import hashlib,json,shutil
+r=Path('/home/myungit/Linux_CAD_forFree');p=r/'docs/curve-fit-k10-projection-prove-2026-11-16'
+root=p/'root-replay'
+for name in ['kernel/fk_project.cpp','kernel/fk_project.h','kernel/fk_curve_fit_bounds.cpp','kernel/fk_curve_fit_bounds.h','kernel/tests/test_projection_fit_validation.cpp','cad_forge.cpp','kernel/CMakeLists.txt','tools/generate_architecture.py']:
+    target=root/'final-sources'/(name+'.txt');target.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(r/name,target)
+files=sorted(f for f in p.rglob('*') if f.is_file() and f!=p/'SHA256SUMS')
+(p/'SHA256SUMS').write_text(''.join(hashlib.sha256(f.read_bytes()).hexdigest()+'  '+str(f.relative_to(p))+'\n' for f in files))
+for line in (p/'SHA256SUMS').read_text().splitlines():
+    h,name=line.split('  ',1);assert hashlib.sha256((p/name).read_bytes()).hexdigest()==h,name
+print('Manifest',len(files),'file PASS')

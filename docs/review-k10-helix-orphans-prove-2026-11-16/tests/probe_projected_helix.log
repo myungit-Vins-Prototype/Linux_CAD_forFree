@@ -1,0 +1,4 @@
+plane=1 radius=0.0001 error= segments=1 curves=0 created=1 first_turn_error=0.00020000000000000001 budget=9.9999999999999995e-08
+plane=1 radius=0.001 error= segments=1 curves=0 created=1 first_turn_error=0.002 budget=9.9999999999999995e-08
+plane=2 radius=0.0001 error= segments=0 curves=1 created=1 poles=4 degree=3 first_turn_error=0.00010000000000000003 budget=9.9999999999999995e-08
+plane=2 radius=0.001 error= segments=0 curves=1 created=1 poles=4 degree=3 first_turn_error=0.0010000000000000002 budget=9.9999999999999995e-08

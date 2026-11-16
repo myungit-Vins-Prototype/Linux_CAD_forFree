@@ -1,0 +1,39 @@
+START cells=4
+STATS cells=202 visits=1277 depth=6
+START cells=64
+STATS cells=1390 visits=10489 depth=4
+START cells=64
+STATS cells=1390 visits=10489 depth=4
+START cells=4
+STATS cells=184 visits=1251 depth=5
+START cells=64
+STATS cells=1396 visits=12040 depth=4
+START cells=64
+STATS cells=1396 visits=12040 depth=4
+START cells=4
+STATS cells=202 visits=1277 depth=6
+START cells=64
+STATS cells=1390 visits=10489 depth=4
+START cells=64
+STATS cells=1390 visits=10489 depth=4
+START cells=4
+STATS cells=184 visits=1251 depth=5
+START cells=64
+STATS cells=1396 visits=12040 depth=4
+START cells=64
+STATS cells=1396 visits=12040 depth=4
+START cells=4
+STATS cells=202 visits=1277 depth=6
+START cells=64
+STATS cells=1390 visits=10489 depth=4
+START cells=64
+STATS cells=1390 visits=10489 depth=4
+START cells=4
+STATS cells=184 visits=1251 depth=5
+START cells=64
+STATS cells=1396 visits=12040 depth=4
+START cells=64
+STATS cells=1396 visits=12040 depth=4
+[  OK  ] SweepLocalFoldUsesSectionGeometry
+1/1 test superati
+ELAPSED 17.00

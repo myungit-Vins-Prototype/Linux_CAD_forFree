@@ -1,0 +1,40 @@
+c++ -std=c++17 -O1 -fno-fast-math -ffp-contract=off -I/tmp/k10-sketch-review/core -I/home/myungit/Linux_CAD_forFree/kernel -c /tmp/k10-sketch-review/core/fk_helix_projection.cpp -o /tmp/helix-independent-audit/provider.o
+c++ -std=c++17 -O1 -fno-fast-math -ffp-contract=off -I/tmp/k10-sketch-review/core -I/home/myungit/Linux_CAD_forFree/kernel /tmp/helix-independent-audit/edge-probe.cpp /tmp/helix-independent-audit/provider.o /home/myungit/Linux_CAD_forFree/forgecad-release/kernel/libforgekernel.a -pthread -o /tmp/helix-independent-audit/edge-probe
+PASS valid result and bound
+PASS bound outside source domain is infinite
+PASS bound degenerate query is infinite
+PASS bound nonfinite actual pole is infinite
+PASS unsupported valid source returns null atomically
+PASS unsupported require rejects
+PASS invalid tolerance rejects
+PASS invalid tolerance preserves deviation
+PASS invalid tolerance rejects
+PASS invalid tolerance preserves deviation
+PASS invalid tolerance rejects
+PASS invalid tolerance preserves deviation
+PASS invalid tolerance rejects
+PASS invalid tolerance preserves deviation
+PASS null source rejects
+PASS reversed range rejects
+PASS nonfinite range rejects
+PASS outside helix original domain rejects
+PASS outside trimmed wrapper domain rejects
+PASS 256 wrappers accepted
+PASS 257 wrappers rejected
+PASS nonfinite original transform rejects
+PASS nonfinite transform preserves deviation
+PASS unresolved huge phase rejects
+PASS nonfinite original phase rejects
+PASS huge recognized helix preflight rejects
+PASS work policy rejection preserves deviation
+PASS tampered finite actual controls reject
+PASS rational actual curve rejects
+PASS null actual curve rejects
+PASS valid cubic with simple knots rejects nonBezier schema
+PASS different actual domain rejects
+PASS cancelled project propagates distinct exception
+PASS cancelled require propagates
+PASS owned oracle cancellation propagates
+PASS cancelled project preserves deviation
+PASS operation recovers after cancellation scope
+TOTAL 37 PASS 0 FAIL

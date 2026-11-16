@@ -1,0 +1,31 @@
+from pathlib import Path
+import shutil,hashlib,json,subprocess
+r=Path('/home/myungit/Linux_CAD_forFree');p=r/'docs/ellisse-estremi-prove-2026-11-16/root'
+for name in ['cad_document_io.h']:
+    target=p/'before'/(name+'.txt')
+    if not target.exists():
+        expected=json.loads((p/'hashes-before.json').read_text())[name]
+        data=(r/name).read_bytes()
+        if hashlib.sha256(data).hexdigest()!=expected:
+            data=subprocess.check_output(['git','show','HEAD:'+name],cwd=r)
+        assert hashlib.sha256(data).hexdigest()==expected,name
+        target.write_bytes(data)
+cmake=r/'CMakeLists.txt';text=cmake.read_text()
+assert text.count('    cad_curve_solver.cpp\n')==1
+if '    cad_ellipse.cpp\n' not in text:text=text.replace('    cad_curve_solver.cpp\n','    cad_curve_solver.cpp\n    cad_ellipse.h\n    cad_ellipse.cpp\n')
+if 'forgecad_add_view_test(forgecad_ellipse_extremes_tests' not in text:text=text.replace('    forgecad_add_view_test(forgecad_ellipse_trim_tests --ellipse-trim)\n','    forgecad_add_view_test(forgecad_ellipse_trim_tests --ellipse-trim)\n    forgecad_add_view_test(forgecad_ellipse_extremes_tests --ellipse-extremes)\n')
+old='add_executable(forgecad_sketch_offset_validation_tests tests/test_sketch_offset_validation.cpp cad_sketch_offset.cpp cad_curve_solver.cpp)'
+if old in text:text=text.replace(old,old[:-1]+' cad_ellipse.cpp)')
+cmake.write_text(text)
+catalog=r/'tools/generate_architecture.py';text=catalog.read_text();marker='\nDESCRIPTIONS = {\n';assert text.count(marker)==1
+entries={'cad_ellipse':('sketch','Definizione analitica delle ellissi da centro o quattro estremi reali: coppie di assi ortogonali, centro derivato, costruzione da tre clic e normalizzazione del trascinamento senza sostituire i riferimenti dei vincoli.'),'tests/test_ellipse_extremes.h':('tests','Ellisse per estremi: geometria esatta, quattro punti quotabili e vincolabili, centro derivato, gradi di liberta, anteprima e creazione, trascinamento, codec70, compatibilita e Undo/Redo.')}
+text=text.replace(marker,marker+''.join(' '+repr(k)+': '+repr(v)+',\n' for k,v in entries.items()))
+old='Riusa le NURBS convertite immutabili per thread con invalidazione copy-on-write e cache limitata.'
+assert old in text;text=text.replace(old,old+' Le ellissi dai quattro estremi conservano una curva analitica con centro derivato.')
+old='riduzione angolare in gradi in tempo costante anche ai limiti double.'
+assert old in text;text=text.replace(old,old+' Ellisse per estremi: tre equazioni intrinseche e centro derivato per concentricita, quattro punti reali senza vincolo implicito al centro.')
+text=text.replace('Codec nativo69 con identita dei contorni apparenti','Codec nativo70 con ellissi definite da quattro estremi, identita dei contorni apparenti')
+old='Tipi applicativi condivisi: sketch, entità, feature, display, riferimenti e stato del '
+assert old in text;text=text.replace("'documento.'),\n 'cad_workspace'","'documento; EllipseExtremes aggiunto in coda ai valori persistenti, quattro estremi referenziabili.'),\n 'cad_workspace'")
+catalog.write_text(text)
+print('Nuovo modulo collegato ai target app, test e offset; catalogo aggiornato')

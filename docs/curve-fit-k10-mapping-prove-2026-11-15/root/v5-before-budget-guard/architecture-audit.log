@@ -1,0 +1,30 @@
+{
+  "files": 749,
+  "edges": 10800,
+  "units": 371,
+  "errors": {},
+  "html_matches": true,
+  "incident_edges": 134,
+  "required": [
+    [
+      "kernel/fk_surface_mapping.cpp",
+      "kernel/fk_mapping_carrier.cpp",
+      "call"
+    ],
+    [
+      "kernel/fk_mapping_carrier.cpp",
+      "kernel/fk_curve_fit_bounds.cpp",
+      "call"
+    ],
+    [
+      "kernel/fk_mapping_carrier.cpp",
+      "kernel/fk_mapping_carrier.h",
+      "include"
+    ],
+    [
+      "kernel/tests/test_mapping_carrier_validation.cpp",
+      "kernel/fk_surface_mapping.cpp",
+      "call"
+    ]
+  ]
+}

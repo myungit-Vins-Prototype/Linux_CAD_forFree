@@ -1,0 +1,18 @@
+{
+  "exit": 1,
+  "seconds": 27.862113213001066,
+  "baseline_kernel_sha256": "7550466e240451022b647a192017f1b5f85bb07971407e7651de618542040b7f",
+  "link_command": [
+    "/usr/bin/c++",
+    "-O3",
+    "-DNDEBUG",
+    "CMakeFiles/forgekernel_blend_cavity_tests.dir/tests/fk_test_main.cpp.o",
+    "CMakeFiles/forgekernel_blend_cavity_tests.dir/tests/test_blend_cavity.cpp.o",
+    "CMakeFiles/forgekernel_blend_cavity_tests.dir/tests/test_blend_transitions.cpp.o",
+    "-o",
+    "/tmp/k10-helix-review/root/baseline-cavity",
+    "/tmp/k10-sketch-review/tests/baseline/libforgekernel.a"
+  ],
+  "same_test_objects": true,
+  "output": "[  OK  ] BlendCavityContourIsClosedAndIndependentOfSeed\n    /home/myungit/Linux_CAD_forFree/kernel/tests/fk_test_main.cpp:36: eccezione: blendEdges: il contatto esce dal dominio del fianco F0; il passaggio su un altro supporto non e' ancora gestito per questo raggio\n[ FAIL ] BlendCavityWholeRimKeepsRadiusHistoryAndClosedTrims (1 controlli falliti)\n[  OK  ] BlendMitreReverseSupportsPreservesRationalSurface\n[  OK  ] BlendSectionExtensionKeepsOriginalGeometry\n[  OK  ] BlendCavityRejectsConsumedSideFacesBeforeDocument\n[  OK  ] BlendOpposedSplitsAllSeedsAndWrap\n[  OK  ] BlendOpposedSplitsMirrorScalePoseAndRadius\n[  OK  ] BlendClosedPlanarTangentContourUsesLocalTrims\n7/8 test superati\n"
+}

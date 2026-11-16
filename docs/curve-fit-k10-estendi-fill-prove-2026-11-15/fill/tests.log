@@ -1,0 +1,6 @@
+[  OK  ] CurveProjectionRationalKnotsWeightsAndJets
+[  OK  ] CurveProjectionAffineShearNestedWrappers
+[  OK  ] CurveProjectionLinesDegenerateAndUnsupportedConics
+[  OK  ] CurveProjectionInvalidAndCancellation
+[  OK  ] CurveProjectionFillRationalAndBodyRoundtrip
+5/5 test superati

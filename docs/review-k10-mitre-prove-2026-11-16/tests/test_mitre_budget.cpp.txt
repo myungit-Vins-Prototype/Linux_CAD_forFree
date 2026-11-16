@@ -1,0 +1,57 @@
+#include "fk_test.h"
+#include "fk_blend_mitre.h"
+#include "fk_bspline_surface.h"
+#include "fk_precision.h"
+#include "fk_cancel.h"
+#include <limits>
+using namespace ForgeCad::Kernel;
+namespace {
+std::shared_ptr<BSplineSurface> planeAt(double z) {
+    return std::make_shared<BSplineSurface>(1, 2, std::vector<double>{0,0,1,1},
+        std::vector<double>{0,0,0,1,1,1}, 2, 3,
+        std::vector<Vec3>{{0,0,z},{0,.5,z},{0,1,z},{1,0,z},{1,.5,z},{1,1,z}});
+}
+}
+FK_TEST(BlendMitreDistinctFitAndCarrierBudgets) {
+    const auto s = planeAt(0), t = planeAt(.5 * linearResolution());
+    const double endpoint[4]{.3, 1, .3, 1};
+    const auto cut = detail::traceBlendMitre(*s, *t, .3, .3, endpoint, 1, 1e-9);
+    FK_CHECK(cut.curve);
+    FK_CHECK(cut.gap <= linearResolution());
+    for (int i = 0; i <= 128; ++i) {
+        const double f = i / 128.0;
+        FK_CHECK(distance(cut.curve->point(f), s->point(.3, f)) <= linearResolution());
+        FK_CHECK(distance(cut.curve->point(f), t->point(.3, f)) <= linearResolution());
+    }
+}
+FK_TEST(BlendMitreOverCarrierBudgetRejects) {
+    const auto s = planeAt(0), t = planeAt(2 * linearResolution());
+    const double endpoint[4]{.3, 1, .3, 1};
+    bool rejected = false;
+    try { (void)detail::traceBlendMitre(*s, *t, .3, .3, endpoint, 1, 1e-9); }
+    catch (const std::domain_error &) { rejected = true; }
+    FK_CHECK(rejected);
+}
+FK_TEST(BlendMitreInvalidFitToleranceRejectsBeforePublishing) {
+    const auto s = planeAt(0);
+    const double endpoint[4]{.3, 1, .3, 1};
+    for (double value : {-1., 0., std::numeric_limits<double>::infinity(), std::numeric_limits<double>::quiet_NaN()}) {
+        bool rejected = false;
+        try { (void)detail::traceBlendMitre(*s, *s, .3, .3, endpoint, 1, value); }
+        catch (const std::domain_error &) { rejected = true; }
+        FK_CHECK(rejected);
+    }
+}
+FK_TEST(BlendMitreCancellationDoesNotPublishCut) {
+    const auto s = planeAt(0);
+    const double endpoint[4]{.3, 1, .3, 1};
+    const auto previous = currentCancellation;
+    bool cancelled = false, published = false;
+    {
+        CancellationScope scope(std::make_shared<std::atomic<bool>>(true));
+        try { const auto cut = detail::traceBlendMitre(*s, *s, .3, .3, endpoint, 1, 1e-9); (void)cut; published = true; }
+        catch (const OperationCancelled &) { cancelled = true; }
+    }
+    FK_CHECK(cancelled && !published);
+    FK_CHECK(currentCancellation == previous);
+}

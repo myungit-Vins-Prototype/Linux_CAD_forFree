@@ -1,0 +1,48 @@
+{
+  "recorded_utc": "2026-11-16T10:50:52.880068+00:00",
+  "freeze": "K10 sew Plane private final",
+  "sources": [
+    {
+      "name": "fk_exchange.cpp",
+      "snapshot": "fk_exchange.cpp.txt",
+      "sha256": "3bb3f3d3c5c3b7d34124355b5b10c282cc4dc63e79796b04513e0e30397a05e3"
+    },
+    {
+      "name": "fk_exchange.h",
+      "snapshot": "fk_exchange.h.txt",
+      "sha256": "38d73c86d49e87a28d9508c9b5db55894e80427fe32da1c8e9bb492b954622a8"
+    },
+    {
+      "name": "fk_offset.cpp",
+      "snapshot": "fk_offset.cpp.txt",
+      "sha256": "239e84e8192e97bbada84b624753bd016cfff96720c14328465c1fc9f9e72fe5"
+    },
+    {
+      "name": "fk_curve_fit_bounds.h",
+      "snapshot": "fk_curve_fit_bounds.h.txt",
+      "sha256": "62dcaa3a96ad3a0aad4dc144ca138b3c03e78f44b98da18656b100d916b930a9"
+    }
+  ],
+  "unchanged_overlay_sew_cpp_sha256": "d3f35412b91eeef191afb4a205692e950ac6b0f7948d2f7bb81ebdae964b36f5",
+  "provenance_probe": {
+    "source": "probe_provenance.cpp.txt",
+    "sha256": "66c21b41beeb12f5c51f298c0071de1c417917918064b793509795569fd58fb3",
+    "log": "probe_provenance.log.txt",
+    "passed": 5,
+    "failed": 0
+  },
+  "production_edits_by_this_agent": [],
+  "integration_owner": "root; full build and final attribution are recorded separately",
+  "public_validation_reported_by_test_agent": {
+    "passed_groups": 12,
+    "failed_groups": 0,
+    "source_directory": "/tmp/k10-sew-review/tests",
+    "log": "stage-validation.log"
+  },
+  "limitations": [
+    "source fin validity is not certified; original sampled residual only fixes the identical legacy cap",
+    "only Plane with target Line/positive NURBS and Trimmed/Transformed wrappers is migrated",
+    "same-face/edge unmarked representative fins with a distinct shared pcurve object are outside this certificate",
+    "replaced pcurve identity is rejected even if geometrically identical"
+  ]
+}

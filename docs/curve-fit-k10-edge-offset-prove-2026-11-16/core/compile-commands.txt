@@ -1,0 +1,50 @@
+[
+  {
+    "file": "fk_curve_fit_bounds.cpp",
+    "directory": "/home/myungit/Linux_CAD_forFree/forgecad-release/kernel",
+    "arguments": [
+      "/usr/bin/c++",
+      "-I/home/myungit/Linux_CAD_forFree/kernel",
+      "-O3",
+      "-DNDEBUG",
+      "-std=gnu++17",
+      "-Wall",
+      "-Wextra",
+      "-Wpedantic",
+      "-O2",
+      "-g",
+      "-ffp-contract=off",
+      "-fno-fast-math",
+      "-ffp-contract=off",
+      "-I/tmp/review-next-readonly/stage/kernel",
+      "-I/home/myungit/Linux_CAD_forFree/kernel",
+      "-c",
+      "/tmp/review-next-readonly/stage/kernel/fk_curve_fit_bounds.cpp",
+      "-o",
+      "/tmp/review-next-readonly/stage/fk_curve_fit_bounds.cpp.o"
+    ]
+  },
+  {
+    "file": "fk_offset.cpp",
+    "directory": "/home/myungit/Linux_CAD_forFree/forgecad-release/kernel",
+    "arguments": [
+      "/usr/bin/c++",
+      "-I/home/myungit/Linux_CAD_forFree/kernel",
+      "-O3",
+      "-DNDEBUG",
+      "-std=gnu++17",
+      "-Wall",
+      "-Wextra",
+      "-Wpedantic",
+      "-O2",
+      "-g",
+      "-ffp-contract=off",
+      "-I/tmp/review-next-readonly/stage/kernel",
+      "-I/home/myungit/Linux_CAD_forFree/kernel",
+      "-c",
+      "/tmp/review-next-readonly/stage/kernel/fk_offset.cpp",
+      "-o",
+      "/tmp/review-next-readonly/stage/fk_offset.cpp.o"
+    ]
+  }
+]

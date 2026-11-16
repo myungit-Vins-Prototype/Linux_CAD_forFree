@@ -1,0 +1,4120 @@
+[
+  {
+    "source": "cad_forge.cpp",
+    "target": "kernel/fk_boundary.cpp",
+    "kind": "call",
+    "count": 1,
+    "sites": [
+      {
+        "line": 1830,
+        "symbol": "ForgeCad::Kernel::boundarySheet",
+        "owner": "ForgeCad::forgeBoundarySurface"
+      }
+    ]
+  },
+  {
+    "source": "cad_forge.cpp",
+    "target": "kernel/fk_boundary.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 46,
+        "symbol": "fk_boundary.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_boundary.cpp",
+    "target": "kernel/fk_boundary.cpp",
+    "kind": "call",
+    "count": 39,
+    "sites": [
+      {
+        "line": 31,
+        "symbol": "ForgeCad::Kernel::Piece::parameter",
+        "owner": "ForgeCad::Kernel::Piece::at"
+      },
+      {
+        "line": 34,
+        "symbol": "ForgeCad::Kernel::Piece::at",
+        "owner": "ForgeCad::Kernel::Piece::start"
+      },
+      {
+        "line": 37,
+        "symbol": "ForgeCad::Kernel::Piece::at",
+        "owner": "ForgeCad::Kernel::Piece::end"
+      },
+      {
+        "line": 42,
+        "symbol": "ForgeCad::Kernel::Piece::parameter",
+        "owner": "ForgeCad::Kernel::Piece::tangent"
+      },
+      {
+        "line": 51,
+        "symbol": "ForgeCad::Kernel::Piece::parameter",
+        "owner": "ForgeCad::Kernel::Piece::lengthTo"
+      },
+      {
+        "line": 84,
+        "symbol": "ForgeCad::Kernel::Piece::end",
+        "owner": "ForgeCad::Kernel::chainLoop"
+      },
+      {
+        "line": 90,
+        "symbol": "ForgeCad::Kernel::Piece::start",
+        "owner": "ForgeCad::Kernel::chainLoop"
+      },
+      {
+        "line": 91,
+        "symbol": "ForgeCad::Kernel::Piece::end",
+        "owner": "ForgeCad::Kernel::chainLoop"
+      },
+      {
+        "line": 101,
+        "symbol": "ForgeCad::Kernel::Piece::Piece",
+        "owner": "ForgeCad::Kernel::chainLoop"
+      },
+      {
+        "line": 106,
+        "symbol": "ForgeCad::Kernel::Piece::end",
+        "owner": "ForgeCad::Kernel::chainLoop"
+      },
+      {
+        "line": 106,
+        "symbol": "ForgeCad::Kernel::Piece::start",
+        "owner": "ForgeCad::Kernel::chainLoop"
+      },
+      {
+        "line": 200,
+        "symbol": "ForgeCad::Kernel::chainLoop",
+        "owner": "ForgeCad::Kernel::boundarySheet"
+      },
+      {
+        "line": 207,
+        "symbol": "ForgeCad::Kernel::Piece::lengthTo",
+        "owner": "ForgeCad::Kernel::boundarySheet"
+      },
+      {
+        "line": 213,
+        "symbol": "ForgeCad::Kernel::Piece::tangent",
+        "owner": "ForgeCad::Kernel::boundarySheet"
+      },
+      {
+        "line": 233,
+        "symbol": "ForgeCad::Kernel::boundarySheet::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_boundary.cpp:206:27)::operator()",
+        "owner": "ForgeCad::Kernel::boundarySheet"
+      },
+      {
+        "line": 234,
+        "symbol": "ForgeCad::Kernel::boundarySheet::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_boundary.cpp:206:27)::operator()",
+        "owner": "ForgeCad::Kernel::boundarySheet"
+      },
+      {
+        "line": 240,
+        "symbol": "ForgeCad::Kernel::boundarySheet::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_boundary.cpp:206:27)::operator()",
+        "owner": "ForgeCad::Kernel::boundarySheet"
+      },
+      {
+        "line": 251,
+        "symbol": "ForgeCad::Kernel::Piece::lengthTo",
+        "owner": "ForgeCad::Kernel::boundarySheet"
+      },
+      {
+        "line": 262,
+        "symbol": "ForgeCad::Kernel::Mark::Mark",
+        "owner": "ForgeCad::Kernel::boundarySheet"
+      },
+      {
+        "line": 263,
+        "symbol": "ForgeCad::Kernel::Mark::Mark",
+        "owner": "ForgeCad::Kernel::boundarySheet"
+      },
+      {
+        "line": 271,
+        "symbol": "ForgeCad::Kernel::Mark::operator=",
+        "owner": "ForgeCad::Kernel::boundarySheet"
+      },
+      {
+        "line": 284,
+        "symbol": "ForgeCad::Kernel::SideFit::SideFit",
+        "owner": "ForgeCad::Kernel::boundarySheet"
+      },
+      {
+        "line": 288,
+        "symbol": "ForgeCad::Kernel::Piece::lengthTo",
+        "owner": "ForgeCad::Kernel::boundarySheet"
+      },
+      {
+        "line": 298,
+        "symbol": "ForgeCad::Kernel::Piece::parameter",
+        "owner": "ForgeCad::Kernel::boundarySheet"
+      },
+      {
+        "line": 299,
+        "symbol": "ForgeCad::Kernel::Piece::parameter",
+        "owner": "ForgeCad::Kernel::boundarySheet"
+      },
+      {
+        "line": 329,
+        "symbol": "ForgeCad::Kernel::SideFit::SideFit",
+        "owner": "ForgeCad::Kernel::boundarySheet"
+      },
+      {
+        "line": 333,
+        "symbol": "ForgeCad::Kernel::SideFit::operator=",
+        "owner": "ForgeCad::Kernel::boundarySheet"
+      },
+      {
+        "line": 333,
+        "symbol": "ForgeCad::Kernel::boundarySheet::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_boundary.cpp:283:31)::operator()",
+        "owner": "ForgeCad::Kernel::boundarySheet"
+      },
+      {
+        "line": 339,
+        "symbol": "ForgeCad::Kernel::boundarySheet::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_boundary.cpp:331:22)::operator()",
+        "owner": "ForgeCad::Kernel::boundarySheet"
+      },
+      {
+        "line": 340,
+        "symbol": "ForgeCad::Kernel::makeCompatible",
+        "owner": "ForgeCad::Kernel::boundarySheet"
+      },
+      {
+        "line": 343,
+        "symbol": "ForgeCad::Kernel::boundarySheet::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_boundary.cpp:331:22)::operator()",
+        "owner": "ForgeCad::Kernel::boundarySheet"
+      },
+      {
+        "line": 344,
+        "symbol": "ForgeCad::Kernel::makeCompatible",
+        "owner": "ForgeCad::Kernel::boundarySheet"
+      },
+      {
+        "line": 351,
+        "symbol": "ForgeCad::Kernel::greville",
+        "owner": "ForgeCad::Kernel::boundarySheet"
+      },
+      {
+        "line": 381,
+        "symbol": "ForgeCad::Kernel::boundarySheet::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_boundary.cpp:370:22)::operator()",
+        "owner": "ForgeCad::Kernel::boundarySheet"
+      },
+      {
+        "line": 381,
+        "symbol": "ForgeCad::Kernel::certifyFinalRow",
+        "owner": "ForgeCad::Kernel::boundarySheet"
+      },
+      {
+        "line": 398,
+        "symbol": "ForgeCad::Kernel::Piece::at",
+        "owner": "ForgeCad::Kernel::boundarySheet"
+      },
+      {
+        "line": 409,
+        "symbol": "ForgeCad::Kernel::Piece::parameter",
+        "owner": "ForgeCad::Kernel::boundarySheet"
+      },
+      {
+        "line": 415,
+        "symbol": "ForgeCad::Kernel::sideUV",
+        "owner": "ForgeCad::Kernel::boundarySheet"
+      },
+      {
+        "line": 416,
+        "symbol": "ForgeCad::Kernel::sideUV",
+        "owner": "ForgeCad::Kernel::boundarySheet"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_boundary.cpp",
+    "target": "kernel/fk_boundary.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 1,
+        "symbol": "fk_boundary.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_boundary.cpp",
+    "target": "kernel/fk_bspline.h",
+    "kind": "call",
+    "count": 30,
+    "sites": [
+      {
+        "line": 115,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::knots",
+        "owner": "ForgeCad::Kernel::makeCompatible"
+      },
+      {
+        "line": 116,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::degree",
+        "owner": "ForgeCad::Kernel::makeCompatible"
+      },
+      {
+        "line": 116,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::poleCount",
+        "owner": "ForgeCad::Kernel::makeCompatible"
+      },
+      {
+        "line": 123,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::multiplicity",
+        "owner": "ForgeCad::Kernel::makeCompatible"
+      },
+      {
+        "line": 124,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::multiplicity",
+        "owner": "ForgeCad::Kernel::makeCompatible"
+      },
+      {
+        "line": 125,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::insertKnot",
+        "owner": "ForgeCad::Kernel::makeCompatible"
+      },
+      {
+        "line": 125,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::multiplicity",
+        "owner": "ForgeCad::Kernel::makeCompatible"
+      },
+      {
+        "line": 125,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::operator=",
+        "owner": "ForgeCad::Kernel::makeCompatible"
+      },
+      {
+        "line": 126,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::multiplicity",
+        "owner": "ForgeCad::Kernel::makeCompatible"
+      },
+      {
+        "line": 127,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::insertKnot",
+        "owner": "ForgeCad::Kernel::makeCompatible"
+      },
+      {
+        "line": 127,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::multiplicity",
+        "owner": "ForgeCad::Kernel::makeCompatible"
+      },
+      {
+        "line": 127,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::operator=",
+        "owner": "ForgeCad::Kernel::makeCompatible"
+      },
+      {
+        "line": 132,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::knots",
+        "owner": "ForgeCad::Kernel::greville"
+      },
+      {
+        "line": 133,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::degree",
+        "owner": "ForgeCad::Kernel::greville"
+      },
+      {
+        "line": 134,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::poleCount",
+        "owner": "ForgeCad::Kernel::greville"
+      },
+      {
+        "line": 135,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::poleCount",
+        "owner": "ForgeCad::Kernel::greville"
+      },
+      {
+        "line": 157,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::knots",
+        "owner": "ForgeCad::Kernel::certifyFinalRow"
+      },
+      {
+        "line": 158,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::poles",
+        "owner": "ForgeCad::Kernel::certifyFinalRow"
+      },
+      {
+        "line": 162,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::poleCount",
+        "owner": "ForgeCad::Kernel::certifyFinalRow"
+      },
+      {
+        "line": 334,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::BSplineCurve",
+        "owner": "ForgeCad::Kernel::boundarySheet"
+      },
+      {
+        "line": 347,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::knots",
+        "owner": "ForgeCad::Kernel::boundarySheet"
+      },
+      {
+        "line": 348,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::poleCount",
+        "owner": "ForgeCad::Kernel::boundarySheet"
+      },
+      {
+        "line": 348,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::poles",
+        "owner": "ForgeCad::Kernel::boundarySheet"
+      },
+      {
+        "line": 350,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::poles",
+        "owner": "ForgeCad::Kernel::boundarySheet"
+      },
+      {
+        "line": 352,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::poleCount",
+        "owner": "ForgeCad::Kernel::boundarySheet"
+      },
+      {
+        "line": 364,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::poles",
+        "owner": "ForgeCad::Kernel::boundarySheet"
+      },
+      {
+        "line": 365,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::poles",
+        "owner": "ForgeCad::Kernel::boundarySheet"
+      },
+      {
+        "line": 378,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::BSplineCurve",
+        "owner": "ForgeCad::Kernel::boundarySheet"
+      },
+      {
+        "line": 378,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::knots",
+        "owner": "ForgeCad::Kernel::boundarySheet"
+      },
+      {
+        "line": 382,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::knots",
+        "owner": "ForgeCad::Kernel::boundarySheet"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_boundary.cpp",
+    "target": "kernel/fk_bspline.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 8,
+        "symbol": "fk_bspline.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_boundary.cpp",
+    "target": "kernel/fk_bspline_surface.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 9,
+        "symbol": "fk_bspline_surface.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_boundary.cpp",
+    "target": "kernel/fk_cancel.h",
+    "kind": "call",
+    "count": 6,
+    "sites": [
+      {
+        "line": 122,
+        "symbol": "ForgeCad::Kernel::cancellationPoint",
+        "owner": "ForgeCad::Kernel::makeCompatible"
+      },
+      {
+        "line": 165,
+        "symbol": "ForgeCad::Kernel::cancellationPoint",
+        "owner": "ForgeCad::Kernel::certifyFinalRow"
+      },
+      {
+        "line": 167,
+        "symbol": "ForgeCad::Kernel::cancellationPoint",
+        "owner": "ForgeCad::Kernel::certifyFinalRow"
+      },
+      {
+        "line": 190,
+        "symbol": "ForgeCad::Kernel::cancellationPoint",
+        "owner": "ForgeCad::Kernel::boundarySheet"
+      },
+      {
+        "line": 353,
+        "symbol": "ForgeCad::Kernel::cancellationPoint",
+        "owner": "ForgeCad::Kernel::boundarySheet"
+      },
+      {
+        "line": 358,
+        "symbol": "ForgeCad::Kernel::cancellationPoint",
+        "owner": "ForgeCad::Kernel::boundarySheet"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_boundary.cpp",
+    "target": "kernel/fk_cancel.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 10,
+        "symbol": "fk_cancel.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_boundary.cpp",
+    "target": "kernel/fk_curve.h",
+    "kind": "call",
+    "count": 5,
+    "sites": [
+      {
+        "line": 31,
+        "symbol": "ForgeCad::Kernel::Curve::point",
+        "owner": "ForgeCad::Kernel::Piece::at"
+      },
+      {
+        "line": 42,
+        "symbol": "ForgeCad::Kernel::Curve::evaluate",
+        "owner": "ForgeCad::Kernel::Piece::tangent"
+      },
+      {
+        "line": 198,
+        "symbol": "ForgeCad::Kernel::Curve::point",
+        "owner": "ForgeCad::Kernel::boundarySheet"
+      },
+      {
+        "line": 308,
+        "symbol": "ForgeCad::Kernel::Curve::breakpoints",
+        "owner": "ForgeCad::Kernel::boundarySheet"
+      },
+      {
+        "line": 326,
+        "symbol": "ForgeCad::Kernel::Curve::point",
+        "owner": "ForgeCad::Kernel::boundarySheet"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_boundary.cpp",
+    "target": "kernel/fk_curve_algo.h",
+    "kind": "call",
+    "count": 2,
+    "sites": [
+      {
+        "line": 52,
+        "symbol": "ForgeCad::Kernel::arcLength",
+        "owner": "ForgeCad::Kernel::Piece::lengthTo"
+      },
+      {
+        "line": 73,
+        "symbol": "ForgeCad::Kernel::arcLength",
+        "owner": "ForgeCad::Kernel::chainLoop"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_boundary.cpp",
+    "target": "kernel/fk_curve_algo.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 11,
+        "symbol": "fk_curve_algo.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_boundary.cpp",
+    "target": "kernel/fk_curve_fit_bounds.cpp",
+    "kind": "call",
+    "count": 1,
+    "sites": [
+      {
+        "line": 328,
+        "symbol": "ForgeCad::Kernel::detail::curvePositionErrorBound",
+        "owner": "ForgeCad::Kernel::boundarySheet"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_boundary.cpp",
+    "target": "kernel/fk_curve_fit_bounds.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 12,
+        "symbol": "fk_curve_fit_bounds.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_boundary.cpp",
+    "target": "kernel/fk_exchange.cpp",
+    "kind": "call",
+    "count": 1,
+    "sites": [
+      {
+        "line": 427,
+        "symbol": "ForgeCad::Kernel::detail::assembleBody",
+        "owner": "ForgeCad::Kernel::boundarySheet"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_boundary.cpp",
+    "target": "kernel/fk_exchange.h",
+    "kind": "call",
+    "count": 5,
+    "sites": [
+      {
+        "line": 385,
+        "symbol": "ForgeCad::Kernel::detail::RawModel::RawModel",
+        "owner": "ForgeCad::Kernel::boundarySheet"
+      },
+      {
+        "line": 386,
+        "symbol": "ForgeCad::Kernel::detail::RawFace::RawFace",
+        "owner": "ForgeCad::Kernel::boundarySheet"
+      },
+      {
+        "line": 403,
+        "symbol": "ForgeCad::Kernel::detail::RawEdge::RawEdge",
+        "owner": "ForgeCad::Kernel::boundarySheet"
+      },
+      {
+        "line": 420,
+        "symbol": "ForgeCad::Kernel::detail::RawFin::RawFin",
+        "owner": "ForgeCad::Kernel::boundarySheet"
+      },
+      {
+        "line": 422,
+        "symbol": "ForgeCad::Kernel::detail::RawFin::RawFin",
+        "owner": "ForgeCad::Kernel::boundarySheet"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_boundary.cpp",
+    "target": "kernel/fk_exchange.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 13,
+        "symbol": "fk_exchange.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_boundary.cpp",
+    "target": "kernel/fk_math.h",
+    "kind": "call",
+    "count": 33,
+    "sites": [
+      {
+        "line": 28,
+        "symbol": "ForgeCad::Kernel::Interval::length",
+        "owner": "ForgeCad::Kernel::Piece::parameter"
+      },
+      {
+        "line": 41,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "ForgeCad::Kernel::Piece::tangent"
+      },
+      {
+        "line": 43,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "ForgeCad::Kernel::Piece::tangent"
+      },
+      {
+        "line": 43,
+        "symbol": "ForgeCad::Kernel::operator-",
+        "owner": "ForgeCad::Kernel::Piece::tangent"
+      },
+      {
+        "line": 71,
+        "symbol": "ForgeCad::Kernel::Interval::length",
+        "owner": "ForgeCad::Kernel::chainLoop"
+      },
+      {
+        "line": 90,
+        "symbol": "ForgeCad::Kernel::distance",
+        "owner": "ForgeCad::Kernel::chainLoop"
+      },
+      {
+        "line": 91,
+        "symbol": "ForgeCad::Kernel::distance",
+        "owner": "ForgeCad::Kernel::chainLoop"
+      },
+      {
+        "line": 106,
+        "symbol": "ForgeCad::Kernel::distance",
+        "owner": "ForgeCad::Kernel::chainLoop"
+      },
+      {
+        "line": 175,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "ForgeCad::Kernel::sideUV"
+      },
+      {
+        "line": 177,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "ForgeCad::Kernel::sideUV"
+      },
+      {
+        "line": 179,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "ForgeCad::Kernel::sideUV"
+      },
+      {
+        "line": 181,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "ForgeCad::Kernel::sideUV"
+      },
+      {
+        "line": 198,
+        "symbol": "ForgeCad::Kernel::norm",
+        "owner": "ForgeCad::Kernel::boundarySheet"
+      },
+      {
+        "line": 214,
+        "symbol": "ForgeCad::Kernel::norm",
+        "owner": "ForgeCad::Kernel::boundarySheet"
+      },
+      {
+        "line": 219,
+        "symbol": "ForgeCad::Kernel::cross",
+        "owner": "ForgeCad::Kernel::boundarySheet"
+      },
+      {
+        "line": 219,
+        "symbol": "ForgeCad::Kernel::dot",
+        "owner": "ForgeCad::Kernel::boundarySheet"
+      },
+      {
+        "line": 219,
+        "symbol": "ForgeCad::Kernel::norm",
+        "owner": "ForgeCad::Kernel::boundarySheet"
+      },
+      {
+        "line": 310,
+        "symbol": "ForgeCad::Kernel::Interval::length",
+        "owner": "ForgeCad::Kernel::boundarySheet"
+      },
+      {
+        "line": 323,
+        "symbol": "ForgeCad::Kernel::Interval::length",
+        "owner": "ForgeCad::Kernel::boundarySheet"
+      },
+      {
+        "line": 324,
+        "symbol": "ForgeCad::Kernel::Interval::length",
+        "owner": "ForgeCad::Kernel::boundarySheet"
+      },
+      {
+        "line": 325,
+        "symbol": "ForgeCad::Kernel::Interval::length",
+        "owner": "ForgeCad::Kernel::boundarySheet"
+      },
+      {
+        "line": 350,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "ForgeCad::Kernel::boundarySheet"
+      },
+      {
+        "line": 362,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "ForgeCad::Kernel::boundarySheet"
+      },
+      {
+        "line": 362,
+        "symbol": "ForgeCad::Kernel::operator*",
+        "owner": "ForgeCad::Kernel::boundarySheet"
+      },
+      {
+        "line": 362,
+        "symbol": "ForgeCad::Kernel::operator+",
+        "owner": "ForgeCad::Kernel::boundarySheet"
+      },
+      {
+        "line": 363,
+        "symbol": "ForgeCad::Kernel::Vec::operator=",
+        "owner": "ForgeCad::Kernel::boundarySheet"
+      },
+      {
+        "line": 364,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "ForgeCad::Kernel::boundarySheet"
+      },
+      {
+        "line": 364,
+        "symbol": "ForgeCad::Kernel::operator*",
+        "owner": "ForgeCad::Kernel::boundarySheet"
+      },
+      {
+        "line": 364,
+        "symbol": "ForgeCad::Kernel::operator+",
+        "owner": "ForgeCad::Kernel::boundarySheet"
+      },
+      {
+        "line": 364,
+        "symbol": "ForgeCad::Kernel::operator-",
+        "owner": "ForgeCad::Kernel::boundarySheet"
+      },
+      {
+        "line": 365,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "ForgeCad::Kernel::boundarySheet"
+      },
+      {
+        "line": 365,
+        "symbol": "ForgeCad::Kernel::operator*",
+        "owner": "ForgeCad::Kernel::boundarySheet"
+      },
+      {
+        "line": 410,
+        "symbol": "ForgeCad::Kernel::Interval::operator=",
+        "owner": "ForgeCad::Kernel::boundarySheet"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_boundary.cpp",
+    "target": "kernel/fk_offset.cpp",
+    "kind": "call",
+    "count": 2,
+    "sites": [
+      {
+        "line": 334,
+        "symbol": "ForgeCad::Kernel::fitCurveCertified",
+        "owner": "ForgeCad::Kernel::boundarySheet"
+      },
+      {
+        "line": 335,
+        "symbol": "ForgeCad::Kernel::fitCurve",
+        "owner": "ForgeCad::Kernel::boundarySheet"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_boundary.cpp",
+    "target": "kernel/fk_offset.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 14,
+        "symbol": "fk_offset.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_boundary.cpp",
+    "target": "kernel/fk_topology.h",
+    "kind": "call",
+    "count": 1,
+    "sites": [
+      {
+        "line": 430,
+        "symbol": "ForgeCad::Kernel::Body::Body",
+        "owner": "ForgeCad::Kernel::boundarySheet"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_boundary.h",
+    "target": "kernel/fk_history.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 9,
+        "symbol": "fk_history.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_boundary.h",
+    "target": "kernel/fk_precision.h",
+    "kind": "call",
+    "count": 2,
+    "sites": [
+      {
+        "line": 49,
+        "symbol": "ForgeCad::Kernel::scaledAccuracy",
+        "owner": ""
+      },
+      {
+        "line": 49,
+        "symbol": "ForgeCad::Kernel::scaledAccuracy",
+        "owner": "ForgeCad::Kernel::boundarySheet"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_boundary.h",
+    "target": "kernel/fk_precision.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 1,
+        "symbol": "fk_precision.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_boundary.h",
+    "target": "kernel/fk_sweep.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 7,
+        "symbol": "fk_sweep.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_boundary.h",
+    "target": "kernel/fk_topology.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 8,
+        "symbol": "fk_topology.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_curve_fit_bounds.cpp",
+    "target": "kernel/fk_bspline.h",
+    "kind": "call",
+    "count": 21,
+    "sites": [
+      {
+        "line": 195,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::degree",
+        "owner": "ForgeCad::Kernel::detail::extract"
+      },
+      {
+        "line": 197,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::knots",
+        "owner": "ForgeCad::Kernel::detail::extract"
+      },
+      {
+        "line": 203,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::weight",
+        "owner": "ForgeCad::Kernel::detail::extract"
+      },
+      {
+        "line": 204,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::poles",
+        "owner": "ForgeCad::Kernel::detail::extract"
+      },
+      {
+        "line": 222,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::knots",
+        "owner": "ForgeCad::Kernel::detail::extract"
+      },
+      {
+        "line": 278,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::degree",
+        "owner": "ForgeCad::Kernel::detail::prepareSource"
+      },
+      {
+        "line": 278,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::poleCount",
+        "owner": "ForgeCad::Kernel::detail::prepareSource"
+      },
+      {
+        "line": 280,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::domain",
+        "owner": "ForgeCad::Kernel::detail::prepareSource"
+      },
+      {
+        "line": 281,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::domain",
+        "owner": "ForgeCad::Kernel::detail::prepareSource"
+      },
+      {
+        "line": 285,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::poleCount",
+        "owner": "ForgeCad::Kernel::detail::prepareSource"
+      },
+      {
+        "line": 287,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::weight",
+        "owner": "ForgeCad::Kernel::detail::prepareSource"
+      },
+      {
+        "line": 289,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::weight",
+        "owner": "ForgeCad::Kernel::detail::prepareSource"
+      },
+      {
+        "line": 290,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::weight",
+        "owner": "ForgeCad::Kernel::detail::prepareSource"
+      },
+      {
+        "line": 292,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::poles",
+        "owner": "ForgeCad::Kernel::detail::prepareSource"
+      },
+      {
+        "line": 296,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::degree",
+        "owner": "ForgeCad::Kernel::detail::prepareSource"
+      },
+      {
+        "line": 296,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::poleCount",
+        "owner": "ForgeCad::Kernel::detail::prepareSource"
+      },
+      {
+        "line": 297,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::knots",
+        "owner": "ForgeCad::Kernel::detail::prepareSource"
+      },
+      {
+        "line": 301,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::degree",
+        "owner": "ForgeCad::Kernel::detail::prepareSource"
+      },
+      {
+        "line": 305,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::degree",
+        "owner": "ForgeCad::Kernel::detail::prepareSource"
+      },
+      {
+        "line": 305,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::poleCount",
+        "owner": "ForgeCad::Kernel::detail::prepareSource"
+      },
+      {
+        "line": 307,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::knots",
+        "owner": "ForgeCad::Kernel::detail::prepareSource"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_curve_fit_bounds.cpp",
+    "target": "kernel/fk_cancel.h",
+    "kind": "call",
+    "count": 16,
+    "sites": [
+      {
+        "line": 67,
+        "symbol": "ForgeCad::Kernel::cancellationPoint",
+        "owner": "ForgeCad::Kernel::detail::product"
+      },
+      {
+        "line": 80,
+        "symbol": "ForgeCad::Kernel::cancellationPoint",
+        "owner": "ForgeCad::Kernel::detail::product"
+      },
+      {
+        "line": 88,
+        "symbol": "ForgeCad::Kernel::cancellationPoint",
+        "owner": "ForgeCad::Kernel::detail::elevated"
+      },
+      {
+        "line": 216,
+        "symbol": "ForgeCad::Kernel::cancellationPoint",
+        "owner": "ForgeCad::Kernel::detail::extract"
+      },
+      {
+        "line": 235,
+        "symbol": "ForgeCad::Kernel::cancellationPoint",
+        "owner": "ForgeCad::Kernel::detail::prepareSource"
+      },
+      {
+        "line": 239,
+        "symbol": "ForgeCad::Kernel::cancellationPoint",
+        "owner": "ForgeCad::Kernel::detail::prepareSource"
+      },
+      {
+        "line": 286,
+        "symbol": "ForgeCad::Kernel::cancellationPoint",
+        "owner": "ForgeCad::Kernel::detail::prepareSource"
+      },
+      {
+        "line": 306,
+        "symbol": "ForgeCad::Kernel::cancellationPoint",
+        "owner": "ForgeCad::Kernel::detail::prepareSource"
+      },
+      {
+        "line": 315,
+        "symbol": "ForgeCad::Kernel::cancellationPoint",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 341,
+        "symbol": "ForgeCad::Kernel::cancellationPoint",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 413,
+        "symbol": "ForgeCad::Kernel::cancellationPoint",
+        "owner": "ForgeCad::Kernel::detail::positionOnOriginal"
+      },
+      {
+        "line": 450,
+        "symbol": "ForgeCad::Kernel::cancellationPoint",
+        "owner": "ForgeCad::Kernel::detail::positionPointBound"
+      },
+      {
+        "line": 471,
+        "symbol": "ForgeCad::Kernel::cancellationPoint",
+        "owner": "ForgeCad::Kernel::detail::positionFactory"
+      },
+      {
+        "line": 488,
+        "symbol": "ForgeCad::Kernel::cancellationPoint",
+        "owner": "ForgeCad::Kernel::detail::positionFactory"
+      },
+      {
+        "line": 503,
+        "symbol": "ForgeCad::Kernel::cancellationPoint",
+        "owner": "ForgeCad::Kernel::detail::positionFactory"
+      },
+      {
+        "line": 519,
+        "symbol": "ForgeCad::Kernel::cancellationPoint",
+        "owner": "ForgeCad::Kernel::detail::positionFactory"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_curve_fit_bounds.cpp",
+    "target": "kernel/fk_cancel.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 2,
+        "symbol": "fk_cancel.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_curve_fit_bounds.cpp",
+    "target": "kernel/fk_curve.h",
+    "kind": "call",
+    "count": 9,
+    "sites": [
+      {
+        "line": 238,
+        "symbol": "ForgeCad::Kernel::Curve::type",
+        "owner": "ForgeCad::Kernel::detail::prepareSource"
+      },
+      {
+        "line": 240,
+        "symbol": "ForgeCad::Kernel::Curve::type",
+        "owner": "ForgeCad::Kernel::detail::prepareSource"
+      },
+      {
+        "line": 241,
+        "symbol": "ForgeCad::Kernel::TrimmedCurve::basis",
+        "owner": "ForgeCad::Kernel::detail::prepareSource"
+      },
+      {
+        "line": 244,
+        "symbol": "ForgeCad::Kernel::TransformedCurve::transform",
+        "owner": "ForgeCad::Kernel::detail::prepareSource"
+      },
+      {
+        "line": 245,
+        "symbol": "ForgeCad::Kernel::TransformedCurve::basis",
+        "owner": "ForgeCad::Kernel::detail::prepareSource"
+      },
+      {
+        "line": 250,
+        "symbol": "ForgeCad::Kernel::Curve::type",
+        "owner": "ForgeCad::Kernel::detail::prepareSource"
+      },
+      {
+        "line": 261,
+        "symbol": "ForgeCad::Kernel::Line::direction",
+        "owner": "ForgeCad::Kernel::detail::prepareSource"
+      },
+      {
+        "line": 261,
+        "symbol": "ForgeCad::Kernel::Line::origin",
+        "owner": "ForgeCad::Kernel::detail::prepareSource"
+      },
+      {
+        "line": 275,
+        "symbol": "ForgeCad::Kernel::Curve::type",
+        "owner": "ForgeCad::Kernel::detail::prepareSource"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_curve_fit_bounds.cpp",
+    "target": "kernel/fk_curve_fit_bounds.cpp",
+    "kind": "call",
+    "count": 300,
+    "sites": [
+      {
+        "line": 20,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::check"
+      },
+      {
+        "line": 29,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::operator+"
+      },
+      {
+        "line": 29,
+        "symbol": "ForgeCad::Kernel::detail::check",
+        "owner": "ForgeCad::Kernel::detail::operator+"
+      },
+      {
+        "line": 29,
+        "symbol": "ForgeCad::Kernel::detail::dn",
+        "owner": "ForgeCad::Kernel::detail::operator+"
+      },
+      {
+        "line": 29,
+        "symbol": "ForgeCad::Kernel::detail::finite",
+        "owner": "ForgeCad::Kernel::detail::operator+"
+      },
+      {
+        "line": 29,
+        "symbol": "ForgeCad::Kernel::detail::up",
+        "owner": "ForgeCad::Kernel::detail::operator+"
+      },
+      {
+        "line": 32,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::operator-"
+      },
+      {
+        "line": 32,
+        "symbol": "ForgeCad::Kernel::detail::check",
+        "owner": "ForgeCad::Kernel::detail::operator-"
+      },
+      {
+        "line": 32,
+        "symbol": "ForgeCad::Kernel::detail::dn",
+        "owner": "ForgeCad::Kernel::detail::operator-"
+      },
+      {
+        "line": 32,
+        "symbol": "ForgeCad::Kernel::detail::finite",
+        "owner": "ForgeCad::Kernel::detail::operator-"
+      },
+      {
+        "line": 32,
+        "symbol": "ForgeCad::Kernel::detail::up",
+        "owner": "ForgeCad::Kernel::detail::operator-"
+      },
+      {
+        "line": 35,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::operator*"
+      },
+      {
+        "line": 35,
+        "symbol": "ForgeCad::Kernel::detail::finite",
+        "owner": "ForgeCad::Kernel::detail::operator*"
+      },
+      {
+        "line": 36,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::operator*"
+      },
+      {
+        "line": 40,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::operator*"
+      },
+      {
+        "line": 41,
+        "symbol": "ForgeCad::Kernel::detail::check",
+        "owner": "ForgeCad::Kernel::detail::operator*"
+      },
+      {
+        "line": 41,
+        "symbol": "ForgeCad::Kernel::detail::dn",
+        "owner": "ForgeCad::Kernel::detail::operator*"
+      },
+      {
+        "line": 41,
+        "symbol": "ForgeCad::Kernel::detail::up",
+        "owner": "ForgeCad::Kernel::detail::operator*"
+      },
+      {
+        "line": 44,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::operator/"
+      },
+      {
+        "line": 44,
+        "symbol": "ForgeCad::Kernel::detail::finite",
+        "owner": "ForgeCad::Kernel::detail::operator/"
+      },
+      {
+        "line": 45,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::operator/"
+      },
+      {
+        "line": 46,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::operator/"
+      },
+      {
+        "line": 46,
+        "symbol": "ForgeCad::Kernel::detail::check",
+        "owner": "ForgeCad::Kernel::detail::operator/"
+      },
+      {
+        "line": 46,
+        "symbol": "ForgeCad::Kernel::detail::dn",
+        "owner": "ForgeCad::Kernel::detail::operator/"
+      },
+      {
+        "line": 46,
+        "symbol": "ForgeCad::Kernel::detail::operator*",
+        "owner": "ForgeCad::Kernel::detail::operator/"
+      },
+      {
+        "line": 46,
+        "symbol": "ForgeCad::Kernel::detail::up",
+        "owner": "ForgeCad::Kernel::detail::operator/"
+      },
+      {
+        "line": 50,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::vec"
+      },
+      {
+        "line": 53,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::add"
+      },
+      {
+        "line": 53,
+        "symbol": "ForgeCad::Kernel::detail::operator+",
+        "owner": "ForgeCad::Kernel::detail::add"
+      },
+      {
+        "line": 56,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::mul"
+      },
+      {
+        "line": 56,
+        "symbol": "ForgeCad::Kernel::detail::operator*",
+        "owner": "ForgeCad::Kernel::detail::mul"
+      },
+      {
+        "line": 61,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::choose"
+      },
+      {
+        "line": 63,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::choose"
+      },
+      {
+        "line": 63,
+        "symbol": "ForgeCad::Kernel::detail::I::operator=",
+        "owner": "ForgeCad::Kernel::detail::choose"
+      },
+      {
+        "line": 63,
+        "symbol": "ForgeCad::Kernel::detail::operator*",
+        "owner": "ForgeCad::Kernel::detail::choose"
+      },
+      {
+        "line": 63,
+        "symbol": "ForgeCad::Kernel::detail::operator/",
+        "owner": "ForgeCad::Kernel::detail::choose"
+      },
+      {
+        "line": 64,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::choose"
+      },
+      {
+        "line": 74,
+        "symbol": "ForgeCad::Kernel::detail::I::operator=",
+        "owner": "ForgeCad::Kernel::detail::product"
+      },
+      {
+        "line": 74,
+        "symbol": "ForgeCad::Kernel::detail::choose",
+        "owner": "ForgeCad::Kernel::detail::product"
+      },
+      {
+        "line": 76,
+        "symbol": "ForgeCad::Kernel::detail::I::operator=",
+        "owner": "ForgeCad::Kernel::detail::product"
+      },
+      {
+        "line": 76,
+        "symbol": "ForgeCad::Kernel::detail::choose",
+        "owner": "ForgeCad::Kernel::detail::product"
+      },
+      {
+        "line": 78,
+        "symbol": "ForgeCad::Kernel::detail::I::operator=",
+        "owner": "ForgeCad::Kernel::detail::product"
+      },
+      {
+        "line": 78,
+        "symbol": "ForgeCad::Kernel::detail::choose",
+        "owner": "ForgeCad::Kernel::detail::product"
+      },
+      {
+        "line": 82,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::product"
+      },
+      {
+        "line": 82,
+        "symbol": "ForgeCad::Kernel::detail::I::operator=",
+        "owner": "ForgeCad::Kernel::detail::product"
+      },
+      {
+        "line": 82,
+        "symbol": "ForgeCad::Kernel::detail::operator*",
+        "owner": "ForgeCad::Kernel::detail::product"
+      },
+      {
+        "line": 82,
+        "symbol": "ForgeCad::Kernel::detail::operator+",
+        "owner": "ForgeCad::Kernel::detail::product"
+      },
+      {
+        "line": 82,
+        "symbol": "ForgeCad::Kernel::detail::operator/",
+        "owner": "ForgeCad::Kernel::detail::product"
+      },
+      {
+        "line": 91,
+        "symbol": "ForgeCad::Kernel::detail::I::operator=",
+        "owner": "ForgeCad::Kernel::detail::elevated"
+      },
+      {
+        "line": 92,
+        "symbol": "ForgeCad::Kernel::detail::I::operator=",
+        "owner": "ForgeCad::Kernel::detail::elevated"
+      },
+      {
+        "line": 94,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::elevated"
+      },
+      {
+        "line": 94,
+        "symbol": "ForgeCad::Kernel::detail::operator/",
+        "owner": "ForgeCad::Kernel::detail::elevated"
+      },
+      {
+        "line": 95,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::elevated"
+      },
+      {
+        "line": 95,
+        "symbol": "ForgeCad::Kernel::detail::I::operator=",
+        "owner": "ForgeCad::Kernel::detail::elevated"
+      },
+      {
+        "line": 95,
+        "symbol": "ForgeCad::Kernel::detail::operator*",
+        "owner": "ForgeCad::Kernel::detail::elevated"
+      },
+      {
+        "line": 95,
+        "symbol": "ForgeCad::Kernel::detail::operator+",
+        "owner": "ForgeCad::Kernel::detail::elevated"
+      },
+      {
+        "line": 95,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::elevated"
+      },
+      {
+        "line": 103,
+        "symbol": "ForgeCad::Kernel::detail::elevated",
+        "owner": "ForgeCad::Kernel::detail::sum"
+      },
+      {
+        "line": 104,
+        "symbol": "ForgeCad::Kernel::detail::elevated",
+        "owner": "ForgeCad::Kernel::detail::sum"
+      },
+      {
+        "line": 106,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::sum"
+      },
+      {
+        "line": 106,
+        "symbol": "ForgeCad::Kernel::detail::I::operator=",
+        "owner": "ForgeCad::Kernel::detail::sum"
+      },
+      {
+        "line": 106,
+        "symbol": "ForgeCad::Kernel::detail::operator+",
+        "owner": "ForgeCad::Kernel::detail::sum"
+      },
+      {
+        "line": 106,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::sum"
+      },
+      {
+        "line": 111,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::scaled"
+      },
+      {
+        "line": 111,
+        "symbol": "ForgeCad::Kernel::detail::I::operator=",
+        "owner": "ForgeCad::Kernel::detail::scaled"
+      },
+      {
+        "line": 111,
+        "symbol": "ForgeCad::Kernel::detail::operator*",
+        "owner": "ForgeCad::Kernel::detail::scaled"
+      },
+      {
+        "line": 117,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::derivative"
+      },
+      {
+        "line": 117,
+        "symbol": "ForgeCad::Kernel::detail::I::operator=",
+        "owner": "ForgeCad::Kernel::detail::derivative"
+      },
+      {
+        "line": 117,
+        "symbol": "ForgeCad::Kernel::detail::operator*",
+        "owner": "ForgeCad::Kernel::detail::derivative"
+      },
+      {
+        "line": 117,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::derivative"
+      },
+      {
+        "line": 121,
+        "symbol": "ForgeCad::Kernel::detail::product",
+        "owner": "ForgeCad::Kernel::detail::cross"
+      },
+      {
+        "line": 121,
+        "symbol": "ForgeCad::Kernel::detail::sum",
+        "owner": "ForgeCad::Kernel::detail::cross"
+      },
+      {
+        "line": 122,
+        "symbol": "ForgeCad::Kernel::detail::product",
+        "owner": "ForgeCad::Kernel::detail::cross"
+      },
+      {
+        "line": 122,
+        "symbol": "ForgeCad::Kernel::detail::sum",
+        "owner": "ForgeCad::Kernel::detail::cross"
+      },
+      {
+        "line": 125,
+        "symbol": "ForgeCad::Kernel::detail::product",
+        "owner": "ForgeCad::Kernel::detail::dot"
+      },
+      {
+        "line": 125,
+        "symbol": "ForgeCad::Kernel::detail::sum",
+        "owner": "ForgeCad::Kernel::detail::dot"
+      },
+      {
+        "line": 129,
+        "symbol": "ForgeCad::Kernel::detail::I::operator=",
+        "owner": "ForgeCad::Kernel::detail::split"
+      },
+      {
+        "line": 130,
+        "symbol": "ForgeCad::Kernel::detail::I::operator=",
+        "owner": "ForgeCad::Kernel::detail::split"
+      },
+      {
+        "line": 133,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::split"
+      },
+      {
+        "line": 133,
+        "symbol": "ForgeCad::Kernel::detail::I::operator=",
+        "owner": "ForgeCad::Kernel::detail::split"
+      },
+      {
+        "line": 133,
+        "symbol": "ForgeCad::Kernel::detail::operator*",
+        "owner": "ForgeCad::Kernel::detail::split"
+      },
+      {
+        "line": 133,
+        "symbol": "ForgeCad::Kernel::detail::operator+",
+        "owner": "ForgeCad::Kernel::detail::split"
+      },
+      {
+        "line": 133,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::split"
+      },
+      {
+        "line": 134,
+        "symbol": "ForgeCad::Kernel::detail::I::operator=",
+        "owner": "ForgeCad::Kernel::detail::split"
+      },
+      {
+        "line": 135,
+        "symbol": "ForgeCad::Kernel::detail::I::operator=",
+        "owner": "ForgeCad::Kernel::detail::split"
+      },
+      {
+        "line": 143,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::restrictP"
+      },
+      {
+        "line": 143,
+        "symbol": "ForgeCad::Kernel::detail::split",
+        "owner": "ForgeCad::Kernel::detail::restrictP"
+      },
+      {
+        "line": 145,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::restrictP"
+      },
+      {
+        "line": 145,
+        "symbol": "ForgeCad::Kernel::detail::operator/",
+        "owner": "ForgeCad::Kernel::detail::restrictP"
+      },
+      {
+        "line": 145,
+        "symbol": "ForgeCad::Kernel::detail::split",
+        "owner": "ForgeCad::Kernel::detail::restrictP"
+      },
+      {
+        "line": 150,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::range"
+      },
+      {
+        "line": 151,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::range"
+      },
+      {
+        "line": 151,
+        "symbol": "ForgeCad::Kernel::detail::finite",
+        "owner": "ForgeCad::Kernel::detail::range"
+      },
+      {
+        "line": 152,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::range"
+      },
+      {
+        "line": 156,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::range"
+      },
+      {
+        "line": 159,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::normUpper"
+      },
+      {
+        "line": 161,
+        "symbol": "ForgeCad::Kernel::detail::range",
+        "owner": "ForgeCad::Kernel::detail::normUpper"
+      },
+      {
+        "line": 162,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::normUpper"
+      },
+      {
+        "line": 162,
+        "symbol": "ForgeCad::Kernel::detail::finite",
+        "owner": "ForgeCad::Kernel::detail::normUpper"
+      },
+      {
+        "line": 165,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::normUpper"
+      },
+      {
+        "line": 165,
+        "symbol": "ForgeCad::Kernel::detail::I::operator=",
+        "owner": "ForgeCad::Kernel::detail::normUpper"
+      },
+      {
+        "line": 165,
+        "symbol": "ForgeCad::Kernel::detail::operator*",
+        "owner": "ForgeCad::Kernel::detail::normUpper"
+      },
+      {
+        "line": 165,
+        "symbol": "ForgeCad::Kernel::detail::operator+",
+        "owner": "ForgeCad::Kernel::detail::normUpper"
+      },
+      {
+        "line": 167,
+        "symbol": "ForgeCad::Kernel::detail::up",
+        "owner": "ForgeCad::Kernel::detail::normUpper"
+      },
+      {
+        "line": 170,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::normLower"
+      },
+      {
+        "line": 172,
+        "symbol": "ForgeCad::Kernel::detail::range",
+        "owner": "ForgeCad::Kernel::detail::normLower"
+      },
+      {
+        "line": 173,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::normLower"
+      },
+      {
+        "line": 173,
+        "symbol": "ForgeCad::Kernel::detail::finite",
+        "owner": "ForgeCad::Kernel::detail::normLower"
+      },
+      {
+        "line": 176,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::normLower"
+      },
+      {
+        "line": 176,
+        "symbol": "ForgeCad::Kernel::detail::I::operator=",
+        "owner": "ForgeCad::Kernel::detail::normLower"
+      },
+      {
+        "line": 176,
+        "symbol": "ForgeCad::Kernel::detail::operator*",
+        "owner": "ForgeCad::Kernel::detail::normLower"
+      },
+      {
+        "line": 176,
+        "symbol": "ForgeCad::Kernel::detail::operator+",
+        "owner": "ForgeCad::Kernel::detail::normLower"
+      },
+      {
+        "line": 178,
+        "symbol": "ForgeCad::Kernel::detail::dn",
+        "owner": "ForgeCad::Kernel::detail::normLower"
+      },
+      {
+        "line": 196,
+        "symbol": "ForgeCad::Kernel::detail::Span::Span",
+        "owner": "ForgeCad::Kernel::detail::extract"
+      },
+      {
+        "line": 203,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::extract"
+      },
+      {
+        "line": 203,
+        "symbol": "ForgeCad::Kernel::detail::operator/",
+        "owner": "ForgeCad::Kernel::detail::extract"
+      },
+      {
+        "line": 204,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::extract"
+      },
+      {
+        "line": 204,
+        "symbol": "ForgeCad::Kernel::detail::mul",
+        "owner": "ForgeCad::Kernel::detail::extract"
+      },
+      {
+        "line": 204,
+        "symbol": "ForgeCad::Kernel::detail::vec",
+        "owner": "ForgeCad::Kernel::detail::extract"
+      },
+      {
+        "line": 206,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::extract"
+      },
+      {
+        "line": 206,
+        "symbol": "ForgeCad::Kernel::detail::mul",
+        "owner": "ForgeCad::Kernel::detail::extract"
+      },
+      {
+        "line": 206,
+        "symbol": "ForgeCad::Kernel::detail::vec",
+        "owner": "ForgeCad::Kernel::detail::extract"
+      },
+      {
+        "line": 209,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::extract"
+      },
+      {
+        "line": 209,
+        "symbol": "ForgeCad::Kernel::detail::I::operator=",
+        "owner": "ForgeCad::Kernel::detail::extract"
+      },
+      {
+        "line": 209,
+        "symbol": "ForgeCad::Kernel::detail::operator*",
+        "owner": "ForgeCad::Kernel::detail::extract"
+      },
+      {
+        "line": 209,
+        "symbol": "ForgeCad::Kernel::detail::operator+",
+        "owner": "ForgeCad::Kernel::detail::extract"
+      },
+      {
+        "line": 222,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::extract"
+      },
+      {
+        "line": 222,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::extract"
+      },
+      {
+        "line": 222,
+        "symbol": "ForgeCad::Kernel::detail::operator/",
+        "owner": "ForgeCad::Kernel::detail::extract"
+      },
+      {
+        "line": 223,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::extract"
+      },
+      {
+        "line": 223,
+        "symbol": "ForgeCad::Kernel::detail::add",
+        "owner": "ForgeCad::Kernel::detail::extract"
+      },
+      {
+        "line": 223,
+        "symbol": "ForgeCad::Kernel::detail::mul",
+        "owner": "ForgeCad::Kernel::detail::extract"
+      },
+      {
+        "line": 223,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::extract"
+      },
+      {
+        "line": 225,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::extract"
+      },
+      {
+        "line": 225,
+        "symbol": "ForgeCad::Kernel::detail::I::operator=",
+        "owner": "ForgeCad::Kernel::detail::extract"
+      },
+      {
+        "line": 225,
+        "symbol": "ForgeCad::Kernel::detail::operator*",
+        "owner": "ForgeCad::Kernel::detail::extract"
+      },
+      {
+        "line": 225,
+        "symbol": "ForgeCad::Kernel::detail::operator+",
+        "owner": "ForgeCad::Kernel::detail::extract"
+      },
+      {
+        "line": 225,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::extract"
+      },
+      {
+        "line": 230,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::extract"
+      },
+      {
+        "line": 232,
+        "symbol": "ForgeCad::Kernel::detail::Span::Span",
+        "owner": "ForgeCad::Kernel::detail::extract"
+      },
+      {
+        "line": 256,
+        "symbol": "ForgeCad::Kernel::detail::Span::Span",
+        "owner": "ForgeCad::Kernel::detail::prepareSource"
+      },
+      {
+        "line": 259,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::prepareSource"
+      },
+      {
+        "line": 261,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::prepareSource"
+      },
+      {
+        "line": 261,
+        "symbol": "ForgeCad::Kernel::detail::add",
+        "owner": "ForgeCad::Kernel::detail::prepareSource"
+      },
+      {
+        "line": 261,
+        "symbol": "ForgeCad::Kernel::detail::mul",
+        "owner": "ForgeCad::Kernel::detail::prepareSource"
+      },
+      {
+        "line": 261,
+        "symbol": "ForgeCad::Kernel::detail::vec",
+        "owner": "ForgeCad::Kernel::detail::prepareSource"
+      },
+      {
+        "line": 263,
+        "symbol": "ForgeCad::Kernel::detail::vec",
+        "owner": "ForgeCad::Kernel::detail::prepareSource"
+      },
+      {
+        "line": 266,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::prepareSource"
+      },
+      {
+        "line": 266,
+        "symbol": "ForgeCad::Kernel::detail::I::operator=",
+        "owner": "ForgeCad::Kernel::detail::prepareSource"
+      },
+      {
+        "line": 266,
+        "symbol": "ForgeCad::Kernel::detail::operator*",
+        "owner": "ForgeCad::Kernel::detail::prepareSource"
+      },
+      {
+        "line": 266,
+        "symbol": "ForgeCad::Kernel::detail::operator+",
+        "owner": "ForgeCad::Kernel::detail::prepareSource"
+      },
+      {
+        "line": 309,
+        "symbol": "ForgeCad::Kernel::detail::extract",
+        "owner": "ForgeCad::Kernel::detail::prepareSource"
+      },
+      {
+        "line": 321,
+        "symbol": "ForgeCad::Kernel::detail::prepareSource",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 328,
+        "symbol": "ForgeCad::Kernel::detail::derivative",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 329,
+        "symbol": "ForgeCad::Kernel::detail::derivative",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 329,
+        "symbol": "ForgeCad::Kernel::detail::product",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 329,
+        "symbol": "ForgeCad::Kernel::detail::sum",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 330,
+        "symbol": "ForgeCad::Kernel::detail::derivative",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 330,
+        "symbol": "ForgeCad::Kernel::detail::product",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 331,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 335,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 335,
+        "symbol": "ForgeCad::Kernel::detail::scaled",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 335,
+        "symbol": "ForgeCad::Kernel::detail::sum",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 336,
+        "symbol": "ForgeCad::Kernel::detail::cross",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 338,
+        "symbol": "ForgeCad::Kernel::detail::cross",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 356,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 356,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 356,
+        "symbol": "ForgeCad::Kernel::detail::operator/",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 357,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 357,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 357,
+        "symbol": "ForgeCad::Kernel::detail::operator/",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 359,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 359,
+        "symbol": "ForgeCad::Kernel::detail::restrictP",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 361,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 361,
+        "symbol": "ForgeCad::Kernel::detail::restrictP",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 362,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 362,
+        "symbol": "ForgeCad::Kernel::detail::restrictP",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 365,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 366,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 366,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 366,
+        "symbol": "ForgeCad::Kernel::detail::operator/",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 366,
+        "symbol": "ForgeCad::Kernel::detail::restrictP",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 367,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 367,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 367,
+        "symbol": "ForgeCad::Kernel::detail::operator/",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 368,
+        "symbol": "ForgeCad::Kernel::detail::product",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 368,
+        "symbol": "ForgeCad::Kernel::detail::sum",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 370,
+        "symbol": "ForgeCad::Kernel::detail::normLower",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 370,
+        "symbol": "ForgeCad::Kernel::detail::range",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 375,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 375,
+        "symbol": "ForgeCad::Kernel::detail::dot",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 375,
+        "symbol": "ForgeCad::Kernel::detail::scaled",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 376,
+        "symbol": "ForgeCad::Kernel::detail::range",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 378,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 378,
+        "symbol": "ForgeCad::Kernel::detail::dot",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 378,
+        "symbol": "ForgeCad::Kernel::detail::operator*",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 378,
+        "symbol": "ForgeCad::Kernel::detail::product",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 378,
+        "symbol": "ForgeCad::Kernel::detail::scaled",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 378,
+        "symbol": "ForgeCad::Kernel::detail::sum",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 379,
+        "symbol": "ForgeCad::Kernel::detail::range",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 380,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 380,
+        "symbol": "ForgeCad::Kernel::detail::cross",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 380,
+        "symbol": "ForgeCad::Kernel::detail::normUpper",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 380,
+        "symbol": "ForgeCad::Kernel::detail::operator*",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 380,
+        "symbol": "ForgeCad::Kernel::detail::operator/",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 381,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 381,
+        "symbol": "ForgeCad::Kernel::detail::operator*",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 381,
+        "symbol": "ForgeCad::Kernel::detail::operator/",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 382,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 382,
+        "symbol": "ForgeCad::Kernel::detail::operator*",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 382,
+        "symbol": "ForgeCad::Kernel::detail::operator+",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 382,
+        "symbol": "ForgeCad::Kernel::detail::operator/",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 383,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 383,
+        "symbol": "ForgeCad::Kernel::detail::finite",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 398,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::affineBezier"
+      },
+      {
+        "line": 400,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::affineBezier"
+      },
+      {
+        "line": 400,
+        "symbol": "ForgeCad::Kernel::detail::I::operator=",
+        "owner": "ForgeCad::Kernel::detail::affineBezier"
+      },
+      {
+        "line": 400,
+        "symbol": "ForgeCad::Kernel::detail::operator*",
+        "owner": "ForgeCad::Kernel::detail::affineBezier"
+      },
+      {
+        "line": 400,
+        "symbol": "ForgeCad::Kernel::detail::operator+",
+        "owner": "ForgeCad::Kernel::detail::affineBezier"
+      },
+      {
+        "line": 400,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::affineBezier"
+      },
+      {
+        "line": 402,
+        "symbol": "ForgeCad::Kernel::detail::I::operator=",
+        "owner": "ForgeCad::Kernel::detail::affineBezier"
+      },
+      {
+        "line": 417,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::positionOnOriginal"
+      },
+      {
+        "line": 417,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::positionOnOriginal"
+      },
+      {
+        "line": 417,
+        "symbol": "ForgeCad::Kernel::detail::operator/",
+        "owner": "ForgeCad::Kernel::detail::positionOnOriginal"
+      },
+      {
+        "line": 418,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::positionOnOriginal"
+      },
+      {
+        "line": 418,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::positionOnOriginal"
+      },
+      {
+        "line": 418,
+        "symbol": "ForgeCad::Kernel::detail::operator/",
+        "owner": "ForgeCad::Kernel::detail::positionOnOriginal"
+      },
+      {
+        "line": 419,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::positionOnOriginal"
+      },
+      {
+        "line": 419,
+        "symbol": "ForgeCad::Kernel::detail::restrictP",
+        "owner": "ForgeCad::Kernel::detail::positionOnOriginal"
+      },
+      {
+        "line": 420,
+        "symbol": "ForgeCad::Kernel::detail::range",
+        "owner": "ForgeCad::Kernel::detail::positionOnOriginal"
+      },
+      {
+        "line": 425,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::positionOnOriginal"
+      },
+      {
+        "line": 425,
+        "symbol": "ForgeCad::Kernel::detail::affineBezier",
+        "owner": "ForgeCad::Kernel::detail::positionOnOriginal"
+      },
+      {
+        "line": 425,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::positionOnOriginal"
+      },
+      {
+        "line": 425,
+        "symbol": "ForgeCad::Kernel::detail::operator/",
+        "owner": "ForgeCad::Kernel::detail::positionOnOriginal"
+      },
+      {
+        "line": 426,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::positionOnOriginal"
+      },
+      {
+        "line": 426,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::positionOnOriginal"
+      },
+      {
+        "line": 426,
+        "symbol": "ForgeCad::Kernel::detail::operator/",
+        "owner": "ForgeCad::Kernel::detail::positionOnOriginal"
+      },
+      {
+        "line": 427,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::positionOnOriginal"
+      },
+      {
+        "line": 427,
+        "symbol": "ForgeCad::Kernel::detail::product",
+        "owner": "ForgeCad::Kernel::detail::positionOnOriginal"
+      },
+      {
+        "line": 427,
+        "symbol": "ForgeCad::Kernel::detail::restrictP",
+        "owner": "ForgeCad::Kernel::detail::positionOnOriginal"
+      },
+      {
+        "line": 427,
+        "symbol": "ForgeCad::Kernel::detail::sum",
+        "owner": "ForgeCad::Kernel::detail::positionOnOriginal"
+      },
+      {
+        "line": 429,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::positionOnOriginal"
+      },
+      {
+        "line": 429,
+        "symbol": "ForgeCad::Kernel::detail::normUpper",
+        "owner": "ForgeCad::Kernel::detail::positionOnOriginal"
+      },
+      {
+        "line": 429,
+        "symbol": "ForgeCad::Kernel::detail::operator/",
+        "owner": "ForgeCad::Kernel::detail::positionOnOriginal"
+      },
+      {
+        "line": 430,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::positionOnOriginal"
+      },
+      {
+        "line": 430,
+        "symbol": "ForgeCad::Kernel::detail::finite",
+        "owner": "ForgeCad::Kernel::detail::positionOnOriginal"
+      },
+      {
+        "line": 441,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::evaluatePolynomial"
+      },
+      {
+        "line": 441,
+        "symbol": "ForgeCad::Kernel::detail::I::operator=",
+        "owner": "ForgeCad::Kernel::detail::evaluatePolynomial"
+      },
+      {
+        "line": 441,
+        "symbol": "ForgeCad::Kernel::detail::operator*",
+        "owner": "ForgeCad::Kernel::detail::evaluatePolynomial"
+      },
+      {
+        "line": 441,
+        "symbol": "ForgeCad::Kernel::detail::operator+",
+        "owner": "ForgeCad::Kernel::detail::evaluatePolynomial"
+      },
+      {
+        "line": 441,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::evaluatePolynomial"
+      },
+      {
+        "line": 442,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::evaluatePolynomial"
+      },
+      {
+        "line": 452,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::positionPointBound"
+      },
+      {
+        "line": 452,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::positionPointBound"
+      },
+      {
+        "line": 452,
+        "symbol": "ForgeCad::Kernel::detail::operator/",
+        "owner": "ForgeCad::Kernel::detail::positionPointBound"
+      },
+      {
+        "line": 453,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::positionPointBound"
+      },
+      {
+        "line": 453,
+        "symbol": "ForgeCad::Kernel::detail::evaluatePolynomial",
+        "owner": "ForgeCad::Kernel::detail::positionPointBound"
+      },
+      {
+        "line": 458,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::positionPointBound"
+      },
+      {
+        "line": 458,
+        "symbol": "ForgeCad::Kernel::detail::evaluatePolynomial",
+        "owner": "ForgeCad::Kernel::detail::positionPointBound"
+      },
+      {
+        "line": 458,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::positionPointBound"
+      },
+      {
+        "line": 458,
+        "symbol": "ForgeCad::Kernel::detail::operator/",
+        "owner": "ForgeCad::Kernel::detail::positionPointBound"
+      },
+      {
+        "line": 459,
+        "symbol": "ForgeCad::Kernel::detail::normUpper",
+        "owner": "ForgeCad::Kernel::detail::positionPointBound"
+      },
+      {
+        "line": 493,
+        "symbol": "ForgeCad::Kernel::detail::prepareSource",
+        "owner": "ForgeCad::Kernel::detail::positionFactory"
+      },
+      {
+        "line": 512,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::positionFactory"
+      },
+      {
+        "line": 523,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::positionFactory"
+      },
+      {
+        "line": 523,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::positionFactory"
+      },
+      {
+        "line": 524,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::positionFactory"
+      },
+      {
+        "line": 524,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::positionFactory"
+      },
+      {
+        "line": 527,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::positionFactory"
+      },
+      {
+        "line": 529,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::positionFactory"
+      },
+      {
+        "line": 530,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::positionFactory"
+      },
+      {
+        "line": 530,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::positionFactory"
+      },
+      {
+        "line": 530,
+        "symbol": "ForgeCad::Kernel::detail::operator/",
+        "owner": "ForgeCad::Kernel::detail::positionFactory"
+      },
+      {
+        "line": 531,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::positionFactory"
+      },
+      {
+        "line": 531,
+        "symbol": "ForgeCad::Kernel::detail::operator*",
+        "owner": "ForgeCad::Kernel::detail::positionFactory"
+      },
+      {
+        "line": 531,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::positionFactory"
+      },
+      {
+        "line": 532,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::positionFactory"
+      },
+      {
+        "line": 532,
+        "symbol": "ForgeCad::Kernel::detail::operator*",
+        "owner": "ForgeCad::Kernel::detail::positionFactory"
+      },
+      {
+        "line": 532,
+        "symbol": "ForgeCad::Kernel::detail::operator+",
+        "owner": "ForgeCad::Kernel::detail::positionFactory"
+      },
+      {
+        "line": 534,
+        "symbol": "ForgeCad::Kernel::detail::positionFactory::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_curve_fit_bounds.cpp:502:12)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_curve_fit_bounds.cpp:525:35)::operator()",
+        "owner": "ForgeCad::Kernel::detail::positionFactory"
+      },
+      {
+        "line": 535,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::positionFactory"
+      },
+      {
+        "line": 535,
+        "symbol": "ForgeCad::Kernel::detail::finite",
+        "owner": "ForgeCad::Kernel::detail::positionFactory"
+      },
+      {
+        "line": 544,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::positionFactory"
+      },
+      {
+        "line": 544,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::positionFactory"
+      },
+      {
+        "line": 544,
+        "symbol": "ForgeCad::Kernel::detail::operator/",
+        "owner": "ForgeCad::Kernel::detail::positionFactory"
+      },
+      {
+        "line": 545,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::positionFactory"
+      },
+      {
+        "line": 545,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::positionFactory"
+      },
+      {
+        "line": 545,
+        "symbol": "ForgeCad::Kernel::detail::operator/",
+        "owner": "ForgeCad::Kernel::detail::positionFactory"
+      },
+      {
+        "line": 546,
+        "symbol": "ForgeCad::Kernel::detail::I::I",
+        "owner": "ForgeCad::Kernel::detail::positionFactory"
+      },
+      {
+        "line": 546,
+        "symbol": "ForgeCad::Kernel::detail::operator*",
+        "owner": "ForgeCad::Kernel::detail::positionFactory"
+      },
+      {
+        "line": 546,
+        "symbol": "ForgeCad::Kernel::detail::operator+",
+        "owner": "ForgeCad::Kernel::detail::positionFactory"
+      },
+      {
+        "line": 546,
+        "symbol": "ForgeCad::Kernel::detail::operator-",
+        "owner": "ForgeCad::Kernel::detail::positionFactory"
+      },
+      {
+        "line": 546,
+        "symbol": "ForgeCad::Kernel::detail::operator/",
+        "owner": "ForgeCad::Kernel::detail::positionFactory"
+      },
+      {
+        "line": 550,
+        "symbol": "ForgeCad::Kernel::detail::affineBezier",
+        "owner": "ForgeCad::Kernel::detail::positionFactory"
+      },
+      {
+        "line": 550,
+        "symbol": "ForgeCad::Kernel::detail::positionFactory::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_curve_fit_bounds.cpp:502:12)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_curve_fit_bounds.cpp:543:38)::operator()",
+        "owner": "ForgeCad::Kernel::detail::positionFactory"
+      },
+      {
+        "line": 551,
+        "symbol": "ForgeCad::Kernel::detail::positionOnOriginal",
+        "owner": "ForgeCad::Kernel::detail::positionFactory"
+      },
+      {
+        "line": 566,
+        "symbol": "ForgeCad::Kernel::detail::positionPointBound",
+        "owner": "ForgeCad::Kernel::detail::positionFactory"
+      },
+      {
+        "line": 578,
+        "symbol": "ForgeCad::Kernel::detail::positionFactory",
+        "owner": "ForgeCad::Kernel::detail::curvePositionErrorBound"
+      },
+      {
+        "line": 581,
+        "symbol": "ForgeCad::Kernel::detail::make",
+        "owner": "ForgeCad::Kernel::detail::extrusionOffsetErrorBound"
+      },
+      {
+        "line": 585,
+        "symbol": "ForgeCad::Kernel::detail::make",
+        "owner": "ForgeCad::Kernel::detail::revolutionOffsetErrorBound"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_curve_fit_bounds.cpp",
+    "target": "kernel/fk_curve_fit_bounds.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 1,
+        "symbol": "fk_curve_fit_bounds.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_curve_fit_bounds.cpp",
+    "target": "kernel/fk_math.h",
+    "kind": "call",
+    "count": 35,
+    "sites": [
+      {
+        "line": 50,
+        "symbol": "ForgeCad::Kernel::Vec::x",
+        "owner": "ForgeCad::Kernel::detail::vec"
+      },
+      {
+        "line": 50,
+        "symbol": "ForgeCad::Kernel::Vec::y",
+        "owner": "ForgeCad::Kernel::detail::vec"
+      },
+      {
+        "line": 50,
+        "symbol": "ForgeCad::Kernel::Vec::z",
+        "owner": "ForgeCad::Kernel::detail::vec"
+      },
+      {
+        "line": 197,
+        "symbol": "ForgeCad::Kernel::Interval::operator=",
+        "owner": "ForgeCad::Kernel::detail::extract"
+      },
+      {
+        "line": 206,
+        "symbol": "ForgeCad::Kernel::Transform3::translationPart",
+        "owner": "ForgeCad::Kernel::detail::extract"
+      },
+      {
+        "line": 209,
+        "symbol": "ForgeCad::Kernel::Transform3::matrix",
+        "owner": "ForgeCad::Kernel::detail::extract"
+      },
+      {
+        "line": 251,
+        "symbol": "ForgeCad::Kernel::Interval::isFinite",
+        "owner": "ForgeCad::Kernel::detail::prepareSource"
+      },
+      {
+        "line": 251,
+        "symbol": "ForgeCad::Kernel::Interval::length",
+        "owner": "ForgeCad::Kernel::detail::prepareSource"
+      },
+      {
+        "line": 255,
+        "symbol": "ForgeCad::Kernel::Interval::operator=",
+        "owner": "ForgeCad::Kernel::detail::prepareSource"
+      },
+      {
+        "line": 257,
+        "symbol": "ForgeCad::Kernel::Interval::operator=",
+        "owner": "ForgeCad::Kernel::detail::prepareSource"
+      },
+      {
+        "line": 263,
+        "symbol": "ForgeCad::Kernel::Transform3::translationPart",
+        "owner": "ForgeCad::Kernel::detail::prepareSource"
+      },
+      {
+        "line": 266,
+        "symbol": "ForgeCad::Kernel::Transform3::matrix",
+        "owner": "ForgeCad::Kernel::detail::prepareSource"
+      },
+      {
+        "line": 280,
+        "symbol": "ForgeCad::Kernel::Interval::isFinite",
+        "owner": "ForgeCad::Kernel::detail::prepareSource"
+      },
+      {
+        "line": 280,
+        "symbol": "ForgeCad::Kernel::Interval::length",
+        "owner": "ForgeCad::Kernel::detail::prepareSource"
+      },
+      {
+        "line": 292,
+        "symbol": "ForgeCad::Kernel::Vec::operator[]",
+        "owner": "ForgeCad::Kernel::detail::prepareSource"
+      },
+      {
+        "line": 304,
+        "symbol": "ForgeCad::Kernel::Interval::operator=",
+        "owner": "ForgeCad::Kernel::detail::prepareSource"
+      },
+      {
+        "line": 317,
+        "symbol": "ForgeCad::Kernel::Vec::operator[]",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 331,
+        "symbol": "ForgeCad::Kernel::Vec::x",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 331,
+        "symbol": "ForgeCad::Kernel::Vec::y",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 331,
+        "symbol": "ForgeCad::Kernel::Vec::z",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 335,
+        "symbol": "ForgeCad::Kernel::Vec::operator[]",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 342,
+        "symbol": "ForgeCad::Kernel::Interval::isFinite",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 346,
+        "symbol": "ForgeCad::Kernel::Vec::operator[]",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 365,
+        "symbol": "ForgeCad::Kernel::Vec::operator[]",
+        "owner": "ForgeCad::Kernel::detail::make"
+      },
+      {
+        "line": 458,
+        "symbol": "ForgeCad::Kernel::Vec::operator[]",
+        "owner": "ForgeCad::Kernel::detail::positionPointBound"
+      },
+      {
+        "line": 482,
+        "symbol": "ForgeCad::Kernel::Interval::Interval",
+        "owner": "ForgeCad::Kernel::detail::positionFactory"
+      },
+      {
+        "line": 483,
+        "symbol": "ForgeCad::Kernel::Interval::isFinite",
+        "owner": "ForgeCad::Kernel::detail::positionFactory"
+      },
+      {
+        "line": 483,
+        "symbol": "ForgeCad::Kernel::Interval::length",
+        "owner": "ForgeCad::Kernel::detail::positionFactory"
+      },
+      {
+        "line": 489,
+        "symbol": "ForgeCad::Kernel::Interval::isFinite",
+        "owner": "ForgeCad::Kernel::detail::positionFactory"
+      },
+      {
+        "line": 489,
+        "symbol": "ForgeCad::Kernel::Interval::length",
+        "owner": "ForgeCad::Kernel::detail::positionFactory"
+      },
+      {
+        "line": 504,
+        "symbol": "ForgeCad::Kernel::Interval::isFinite",
+        "owner": "ForgeCad::Kernel::detail::positionFactory"
+      },
+      {
+        "line": 510,
+        "symbol": "ForgeCad::Kernel::Vec::operator[]",
+        "owner": "ForgeCad::Kernel::detail::positionFactory"
+      },
+      {
+        "line": 512,
+        "symbol": "ForgeCad::Kernel::Vec::operator[]",
+        "owner": "ForgeCad::Kernel::detail::positionFactory"
+      },
+      {
+        "line": 581,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "ForgeCad::Kernel::detail::extrusionOffsetErrorBound"
+      },
+      {
+        "line": 585,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "ForgeCad::Kernel::detail::revolutionOffsetErrorBound"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_curve_fit_bounds.h",
+    "target": "kernel/fk_bspline.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 3,
+        "symbol": "fk_bspline.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_offset.cpp",
+    "target": "kernel/fk_curve_fit_bounds.cpp",
+    "kind": "call",
+    "count": 2,
+    "sites": [
+      {
+        "line": 1354,
+        "symbol": "ForgeCad::Kernel::detail::extrusionOffsetErrorBound",
+        "owner": "ForgeCad::Kernel::offsetSurfaceImpl"
+      },
+      {
+        "line": 1377,
+        "symbol": "ForgeCad::Kernel::detail::revolutionOffsetErrorBound",
+        "owner": "ForgeCad::Kernel::offsetSurfaceImpl"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_offset.cpp",
+    "target": "kernel/fk_curve_fit_bounds.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 3,
+        "symbol": "fk_curve_fit_bounds.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_sheet.cpp",
+    "target": "kernel/fk_curve_fit_bounds.cpp",
+    "kind": "call",
+    "count": 2,
+    "sites": [
+      {
+        "line": 215,
+        "symbol": "ForgeCad::Kernel::detail::extrusionOffsetErrorBound",
+        "owner": "ForgeCad::Kernel::extendPlanarFace"
+      },
+      {
+        "line": 596,
+        "symbol": "ForgeCad::Kernel::detail::extrusionOffsetErrorBound",
+        "owner": "ForgeCad::Kernel::extendSheet"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_sheet.cpp",
+    "target": "kernel/fk_curve_fit_bounds.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 16,
+        "symbol": "fk_curve_fit_bounds.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_surface_tools.cpp",
+    "target": "kernel/fk_boundary.cpp",
+    "kind": "call",
+    "count": 1,
+    "sites": [
+      {
+        "line": 95,
+        "symbol": "ForgeCad::Kernel::boundarySheet",
+        "owner": "ForgeCad::Kernel::curveNetworkSheet"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_surface_tools.h",
+    "target": "kernel/fk_boundary.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 3,
+        "symbol": "fk_boundary.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_boundary.cpp",
+    "target": "kernel/fk_boundary.cpp",
+    "kind": "call",
+    "count": 3,
+    "sites": [
+      {
+        "line": 33,
+        "symbol": "ForgeCad::Kernel::boundarySheet",
+        "owner": "checkSheet"
+      },
+      {
+        "line": 92,
+        "symbol": "ForgeCad::Kernel::boundarySheet",
+        "owner": "BoundarySheetRejectsBadContours"
+      },
+      {
+        "line": 99,
+        "symbol": "ForgeCad::Kernel::boundarySheet",
+        "owner": "BoundarySheetRejectsBadContours"
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_boundary.cpp",
+    "target": "kernel/fk_boundary.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 4,
+        "symbol": "fk_boundary.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_boundary_fit_validation.cpp",
+    "target": "kernel/fk_body_check.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 1,
+        "symbol": "fk_body_check.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_boundary_fit_validation.cpp",
+    "target": "kernel/fk_boundary.cpp",
+    "kind": "call",
+    "count": 11,
+    "sites": [
+      {
+        "line": 134,
+        "symbol": "ForgeCad::Kernel::boundarySheet",
+        "owner": "BoundaryFitHiddenSpansAndDegree27FinalSurface"
+      },
+      {
+        "line": 161,
+        "symbol": "ForgeCad::Kernel::boundarySheet",
+        "owner": "BoundaryFitCompoundSidesPoseScaleAndReversals"
+      },
+      {
+        "line": 167,
+        "symbol": "ForgeCad::Kernel::boundarySheet",
+        "owner": "BoundaryFitPartialNestedTrimAndAutomaticSubpieces"
+      },
+      {
+        "line": 171,
+        "symbol": "ForgeCad::Kernel::boundarySheet",
+        "owner": "BoundaryFitPartialNestedTrimAndAutomaticSubpieces"
+      },
+      {
+        "line": 175,
+        "symbol": "ForgeCad::Kernel::boundarySheet",
+        "owner": "BoundaryFitConicCompatibilityAndCancellation"
+      },
+      {
+        "line": 181,
+        "symbol": "ForgeCad::Kernel::boundarySheet",
+        "owner": "BoundaryFitConicCompatibilityAndCancellation"
+      },
+      {
+        "line": 191,
+        "symbol": "ForgeCad::Kernel::boundarySheet",
+        "owner": "BoundaryFitReversedKnownSide"
+      },
+      {
+        "line": 209,
+        "symbol": "ForgeCad::Kernel::boundarySheet",
+        "owner": "BoundaryFitKnownSideAllRowsAndTraversalDirections"
+      },
+      {
+        "line": 230,
+        "symbol": "ForgeCad::Kernel::boundarySheet",
+        "owner": "BoundaryFitInvalidTolerance"
+      },
+      {
+        "line": 243,
+        "symbol": "ForgeCad::Kernel::boundarySheet",
+        "owner": "BoundaryFitFinalCoonsEndpointMismatchBudget"
+      },
+      {
+        "line": 253,
+        "symbol": "ForgeCad::Kernel::boundarySheet",
+        "owner": "BoundaryFitFinalCoonsEndpointMismatchBudget"
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_boundary_fit_validation.cpp",
+    "target": "kernel/fk_boundary.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 2,
+        "symbol": "fk_boundary.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_boundary_fit_validation.cpp",
+    "target": "kernel/fk_bspline.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 3,
+        "symbol": "fk_bspline.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_boundary_fit_validation.cpp",
+    "target": "kernel/fk_cancel.h",
+    "kind": "call",
+    "count": 1,
+    "sites": [
+      {
+        "line": 178,
+        "symbol": "ForgeCad::Kernel::CancellationScope::CancellationScope",
+        "owner": "BoundaryFitConicCompatibilityAndCancellation"
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_boundary_fit_validation.cpp",
+    "target": "kernel/fk_cancel.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 4,
+        "symbol": "fk_cancel.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_boundary_fit_validation.cpp",
+    "target": "kernel/fk_curve.h",
+    "kind": "call",
+    "count": 8,
+    "sites": [
+      {
+        "line": 78,
+        "symbol": "ForgeCad::Kernel::Curve::point",
+        "owner": "rectangle"
+      },
+      {
+        "line": 107,
+        "symbol": "ForgeCad::Kernel::Curve::point",
+        "owner": "checkC0"
+      },
+      {
+        "line": 140,
+        "symbol": "ForgeCad::Kernel::Curve::point",
+        "owner": "BoundaryFitHiddenSpansAndDegree27FinalSurface"
+      },
+      {
+        "line": 168,
+        "symbol": "ForgeCad::Kernel::Circle::Circle",
+        "owner": "BoundaryFitPartialNestedTrimAndAutomaticSubpieces"
+      },
+      {
+        "line": 207,
+        "symbol": "ForgeCad::Kernel::Curve::point",
+        "owner": "BoundaryFitKnownSideAllRowsAndTraversalDirections"
+      },
+      {
+        "line": 219,
+        "symbol": "ForgeCad::Kernel::Curve::point",
+        "owner": "BoundaryFitKnownSideAllRowsAndTraversalDirections"
+      },
+      {
+        "line": 275,
+        "symbol": "ForgeCad::Kernel::Curve::point",
+        "owner": "BoundaryFitOracleClosedJunctionEndpoints"
+      },
+      {
+        "line": 282,
+        "symbol": "ForgeCad::Kernel::Curve::point",
+        "owner": "BoundaryFitOracleClosedJunctionEndpoints"
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_boundary_fit_validation.cpp",
+    "target": "kernel/fk_curve_algo.h",
+    "kind": "call",
+    "count": 2,
+    "sites": [
+      {
+        "line": 98,
+        "symbol": "ForgeCad::Kernel::arcLength",
+        "owner": "checkC0"
+      },
+      {
+        "line": 99,
+        "symbol": "ForgeCad::Kernel::arcLength",
+        "owner": "checkC0"
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_boundary_fit_validation.cpp",
+    "target": "kernel/fk_curve_algo.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 5,
+        "symbol": "fk_curve_algo.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_boundary_fit_validation.cpp",
+    "target": "kernel/fk_curve_fit_bounds.cpp",
+    "kind": "call",
+    "count": 1,
+    "sites": [
+      {
+        "line": 272,
+        "symbol": "ForgeCad::Kernel::detail::curvePositionErrorBound",
+        "owner": "BoundaryFitOracleClosedJunctionEndpoints"
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_boundary_fit_validation.cpp",
+    "target": "kernel/fk_curve_fit_bounds.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 6,
+        "symbol": "fk_curve_fit_bounds.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_boundary_fit_validation.cpp",
+    "target": "kernel/fk_curve_ops.h",
+    "kind": "call",
+    "count": 2,
+    "sites": [
+      {
+        "line": 157,
+        "symbol": "ForgeCad::Kernel::reversedCurve",
+        "owner": "BoundaryFitCompoundSidesPoseScaleAndReversals"
+      },
+      {
+        "line": 190,
+        "symbol": "ForgeCad::Kernel::reversedCurve",
+        "owner": "BoundaryFitReversedKnownSide"
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_boundary_fit_validation.cpp",
+    "target": "kernel/fk_curve_ops.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 7,
+        "symbol": "fk_curve_ops.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_boundary_fit_validation.cpp",
+    "target": "kernel/fk_math.cpp",
+    "kind": "call",
+    "count": 6,
+    "sites": [
+      {
+        "line": 149,
+        "symbol": "ForgeCad::Kernel::Transform3::operator*",
+        "owner": "BoundaryFitCompoundSidesPoseScaleAndReversals"
+      },
+      {
+        "line": 149,
+        "symbol": "ForgeCad::Kernel::Transform3::translation",
+        "owner": "BoundaryFitCompoundSidesPoseScaleAndReversals"
+      },
+      {
+        "line": 150,
+        "symbol": "ForgeCad::Kernel::Transform3::rotation",
+        "owner": "BoundaryFitCompoundSidesPoseScaleAndReversals"
+      },
+      {
+        "line": 151,
+        "symbol": "ForgeCad::Kernel::Transform3::fromParts",
+        "owner": "BoundaryFitCompoundSidesPoseScaleAndReversals"
+      },
+      {
+        "line": 151,
+        "symbol": "ForgeCad::Kernel::Transform3::scaling",
+        "owner": "BoundaryFitCompoundSidesPoseScaleAndReversals"
+      },
+      {
+        "line": 153,
+        "symbol": "ForgeCad::Kernel::Transform3::applyToVector",
+        "owner": "BoundaryFitCompoundSidesPoseScaleAndReversals"
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_boundary_fit_validation.cpp",
+    "target": "kernel/fk_math.h",
+    "kind": "call",
+    "count": 39,
+    "sites": [
+      {
+        "line": 75,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "segment"
+      },
+      {
+        "line": 75,
+        "symbol": "ForgeCad::Kernel::distance",
+        "owner": "segment"
+      },
+      {
+        "line": 75,
+        "symbol": "ForgeCad::Kernel::operator-",
+        "owner": "segment"
+      },
+      {
+        "line": 85,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "rectangle"
+      },
+      {
+        "line": 85,
+        "symbol": "ForgeCad::Kernel::operator+",
+        "owner": "rectangle"
+      },
+      {
+        "line": 86,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "rectangle"
+      },
+      {
+        "line": 86,
+        "symbol": "ForgeCad::Kernel::operator+",
+        "owner": "rectangle"
+      },
+      {
+        "line": 87,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "rectangle"
+      },
+      {
+        "line": 87,
+        "symbol": "ForgeCad::Kernel::operator+",
+        "owner": "rectangle"
+      },
+      {
+        "line": 103,
+        "symbol": "ForgeCad::Kernel::Interval::length",
+        "owner": "checkC0"
+      },
+      {
+        "line": 107,
+        "symbol": "ForgeCad::Kernel::distance",
+        "owner": "checkC0"
+      },
+      {
+        "line": 110,
+        "symbol": "ForgeCad::Kernel::Interval::length",
+        "owner": "checkC0"
+      },
+      {
+        "line": 126,
+        "symbol": "ForgeCad::Kernel::Vec::x",
+        "owner": "checkCircularRows"
+      },
+      {
+        "line": 126,
+        "symbol": "ForgeCad::Kernel::Vec::y",
+        "owner": "checkCircularRows"
+      },
+      {
+        "line": 126,
+        "symbol": "ForgeCad::Kernel::Vec::z",
+        "owner": "checkCircularRows"
+      },
+      {
+        "line": 134,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "BoundaryFitHiddenSpansAndDegree27FinalSurface"
+      },
+      {
+        "line": 140,
+        "symbol": "ForgeCad::Kernel::distance",
+        "owner": "BoundaryFitHiddenSpansAndDegree27FinalSurface"
+      },
+      {
+        "line": 149,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "BoundaryFitCompoundSidesPoseScaleAndReversals"
+      },
+      {
+        "line": 149,
+        "symbol": "ForgeCad::Kernel::operator*",
+        "owner": "BoundaryFitCompoundSidesPoseScaleAndReversals"
+      },
+      {
+        "line": 150,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "BoundaryFitCompoundSidesPoseScaleAndReversals"
+      },
+      {
+        "line": 151,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "BoundaryFitCompoundSidesPoseScaleAndReversals"
+      },
+      {
+        "line": 153,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "BoundaryFitCompoundSidesPoseScaleAndReversals"
+      },
+      {
+        "line": 158,
+        "symbol": "ForgeCad::Kernel::Interval::operator=",
+        "owner": "BoundaryFitCompoundSidesPoseScaleAndReversals"
+      },
+      {
+        "line": 167,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "BoundaryFitPartialNestedTrimAndAutomaticSubpieces"
+      },
+      {
+        "line": 168,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "BoundaryFitPartialNestedTrimAndAutomaticSubpieces"
+      },
+      {
+        "line": 174,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "BoundaryFitConicCompatibilityAndCancellation"
+      },
+      {
+        "line": 176,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "BoundaryFitConicCompatibilityAndCancellation"
+      },
+      {
+        "line": 191,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "BoundaryFitReversedKnownSide"
+      },
+      {
+        "line": 200,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "BoundaryFitKnownSideAllRowsAndTraversalDirections"
+      },
+      {
+        "line": 219,
+        "symbol": "ForgeCad::Kernel::distance",
+        "owner": "BoundaryFitKnownSideAllRowsAndTraversalDirections"
+      },
+      {
+        "line": 227,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "BoundaryFitInvalidTolerance"
+      },
+      {
+        "line": 239,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "BoundaryFitFinalCoonsEndpointMismatchBudget"
+      },
+      {
+        "line": 240,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "BoundaryFitFinalCoonsEndpointMismatchBudget"
+      },
+      {
+        "line": 248,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "BoundaryFitFinalCoonsEndpointMismatchBudget"
+      },
+      {
+        "line": 248,
+        "symbol": "ForgeCad::Kernel::distance",
+        "owner": "BoundaryFitFinalCoonsEndpointMismatchBudget"
+      },
+      {
+        "line": 264,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "BoundaryFitOracleClosedJunctionEndpoints"
+      },
+      {
+        "line": 265,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "BoundaryFitOracleClosedJunctionEndpoints"
+      },
+      {
+        "line": 275,
+        "symbol": "ForgeCad::Kernel::distance",
+        "owner": "BoundaryFitOracleClosedJunctionEndpoints"
+      },
+      {
+        "line": 282,
+        "symbol": "ForgeCad::Kernel::Vec::operator=",
+        "owner": "BoundaryFitOracleClosedJunctionEndpoints"
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_boundary_fit_validation.cpp",
+    "target": "kernel/fk_nurbs.cpp",
+    "kind": "call",
+    "count": 2,
+    "sites": [
+      {
+        "line": 170,
+        "symbol": "ForgeCad::Kernel::joinBezierPieces",
+        "owner": "BoundaryFitPartialNestedTrimAndAutomaticSubpieces"
+      },
+      {
+        "line": 170,
+        "symbol": "ForgeCad::Kernel::rationalBezierPieces",
+        "owner": "BoundaryFitPartialNestedTrimAndAutomaticSubpieces"
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_boundary_fit_validation.cpp",
+    "target": "kernel/fk_nurbs.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 8,
+        "symbol": "fk_nurbs.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_boundary_fit_validation.cpp",
+    "target": "kernel/fk_surface.cpp",
+    "kind": "call",
+    "count": 10,
+    "sites": [
+      {
+        "line": 107,
+        "symbol": "ForgeCad::Kernel::Surface::point",
+        "owner": "checkC0"
+      },
+      {
+        "line": 122,
+        "symbol": "ForgeCad::Kernel::Surface::point",
+        "owner": "checkCircularRows"
+      },
+      {
+        "line": 123,
+        "symbol": "ForgeCad::Kernel::Surface::point",
+        "owner": "checkCircularRows"
+      },
+      {
+        "line": 124,
+        "symbol": "ForgeCad::Kernel::Surface::point",
+        "owner": "checkCircularRows"
+      },
+      {
+        "line": 125,
+        "symbol": "ForgeCad::Kernel::Surface::point",
+        "owner": "checkCircularRows"
+      },
+      {
+        "line": 140,
+        "symbol": "ForgeCad::Kernel::Surface::point",
+        "owner": "BoundaryFitHiddenSpansAndDegree27FinalSurface"
+      },
+      {
+        "line": 216,
+        "symbol": "ForgeCad::Kernel::Surface::point",
+        "owner": "BoundaryFitKnownSideAllRowsAndTraversalDirections"
+      },
+      {
+        "line": 217,
+        "symbol": "ForgeCad::Kernel::Surface::point",
+        "owner": "BoundaryFitKnownSideAllRowsAndTraversalDirections"
+      },
+      {
+        "line": 218,
+        "symbol": "ForgeCad::Kernel::Surface::point",
+        "owner": "BoundaryFitKnownSideAllRowsAndTraversalDirections"
+      },
+      {
+        "line": 248,
+        "symbol": "ForgeCad::Kernel::Surface::point",
+        "owner": "BoundaryFitFinalCoonsEndpointMismatchBudget"
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_boundary_fit_validation.cpp",
+    "target": "kernel/fk_sweep.h",
+    "kind": "call",
+    "count": 1,
+    "sites": [
+      {
+        "line": 206,
+        "symbol": "ForgeCad::Kernel::PathSegment::operator=",
+        "owner": "BoundaryFitKnownSideAllRowsAndTraversalDirections"
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_boundary_fit_validation.cpp",
+    "target": "kernel/fk_topology.cpp",
+    "kind": "call",
+    "count": 14,
+    "sites": [
+      {
+        "line": 92,
+        "symbol": "ForgeCad::Kernel::Body::faces",
+        "owner": "checkC0"
+      },
+      {
+        "line": 92,
+        "symbol": "ForgeCad::Kernel::Body::isSheet",
+        "owner": "checkC0"
+      },
+      {
+        "line": 93,
+        "symbol": "ForgeCad::Kernel::Body::face",
+        "owner": "checkC0"
+      },
+      {
+        "line": 93,
+        "symbol": "ForgeCad::Kernel::Body::faces",
+        "owner": "checkC0"
+      },
+      {
+        "line": 116,
+        "symbol": "ForgeCad::Kernel::Body::faces",
+        "owner": "checkCircularRows"
+      },
+      {
+        "line": 116,
+        "symbol": "ForgeCad::Kernel::Body::isSheet",
+        "owner": "checkCircularRows"
+      },
+      {
+        "line": 117,
+        "symbol": "ForgeCad::Kernel::Body::face",
+        "owner": "checkCircularRows"
+      },
+      {
+        "line": 117,
+        "symbol": "ForgeCad::Kernel::Body::faces",
+        "owner": "checkCircularRows"
+      },
+      {
+        "line": 136,
+        "symbol": "ForgeCad::Kernel::Body::face",
+        "owner": "BoundaryFitHiddenSpansAndDegree27FinalSurface"
+      },
+      {
+        "line": 136,
+        "symbol": "ForgeCad::Kernel::Body::faces",
+        "owner": "BoundaryFitHiddenSpansAndDegree27FinalSurface"
+      },
+      {
+        "line": 210,
+        "symbol": "ForgeCad::Kernel::Body::face",
+        "owner": "BoundaryFitKnownSideAllRowsAndTraversalDirections"
+      },
+      {
+        "line": 210,
+        "symbol": "ForgeCad::Kernel::Body::faces",
+        "owner": "BoundaryFitKnownSideAllRowsAndTraversalDirections"
+      },
+      {
+        "line": 244,
+        "symbol": "ForgeCad::Kernel::Body::face",
+        "owner": "BoundaryFitFinalCoonsEndpointMismatchBudget"
+      },
+      {
+        "line": 244,
+        "symbol": "ForgeCad::Kernel::Body::faces",
+        "owner": "BoundaryFitFinalCoonsEndpointMismatchBudget"
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_boundary_fit_validation.cpp",
+    "target": "kernel/fk_topology.h",
+    "kind": "call",
+    "count": 5,
+    "sites": [
+      {
+        "line": 93,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "checkC0"
+      },
+      {
+        "line": 117,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "checkCircularRows"
+      },
+      {
+        "line": 136,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "BoundaryFitHiddenSpansAndDegree27FinalSurface"
+      },
+      {
+        "line": 210,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "BoundaryFitKnownSideAllRowsAndTraversalDirections"
+      },
+      {
+        "line": 244,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "BoundaryFitFinalCoonsEndpointMismatchBudget"
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_boundary_fit_validation.cpp",
+    "target": "kernel/tests/fk_test.h",
+    "kind": "call",
+    "count": 9,
+    "sites": [
+      {
+        "line": 131,
+        "symbol": "fktest::Registrar::Registrar",
+        "owner": ""
+      },
+      {
+        "line": 145,
+        "symbol": "fktest::Registrar::Registrar",
+        "owner": ""
+      },
+      {
+        "line": 164,
+        "symbol": "fktest::Registrar::Registrar",
+        "owner": ""
+      },
+      {
+        "line": 173,
+        "symbol": "fktest::Registrar::Registrar",
+        "owner": ""
+      },
+      {
+        "line": 188,
+        "symbol": "fktest::Registrar::Registrar",
+        "owner": ""
+      },
+      {
+        "line": 195,
+        "symbol": "fktest::Registrar::Registrar",
+        "owner": ""
+      },
+      {
+        "line": 226,
+        "symbol": "fktest::Registrar::Registrar",
+        "owner": ""
+      },
+      {
+        "line": 234,
+        "symbol": "fktest::Registrar::Registrar",
+        "owner": ""
+      },
+      {
+        "line": 259,
+        "symbol": "fktest::Registrar::Registrar",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_boundary_fit_validation.cpp",
+    "target": "kernel/tests/fk_test.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 9,
+        "symbol": "fk_test.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_boundary_fit_validation.cpp",
+    "target": "kernel/tests/fk_test_main.cpp",
+    "kind": "call",
+    "count": 14,
+    "sites": [
+      {
+        "line": 92,
+        "symbol": "fktest::reportFailure",
+        "owner": "checkC0"
+      },
+      {
+        "line": 113,
+        "symbol": "fktest::reportFailure",
+        "owner": "checkC0"
+      },
+      {
+        "line": 116,
+        "symbol": "fktest::reportFailure",
+        "owner": "checkCircularRows"
+      },
+      {
+        "line": 128,
+        "symbol": "fktest::reportFailure",
+        "owner": "checkCircularRows"
+      },
+      {
+        "line": 142,
+        "symbol": "fktest::reportFailure",
+        "owner": "BoundaryFitHiddenSpansAndDegree27FinalSurface"
+      },
+      {
+        "line": 185,
+        "symbol": "fktest::reportFailure",
+        "owner": "BoundaryFitConicCompatibilityAndCancellation"
+      },
+      {
+        "line": 221,
+        "symbol": "fktest::reportFailure",
+        "owner": "BoundaryFitKnownSideAllRowsAndTraversalDirections"
+      },
+      {
+        "line": 230,
+        "symbol": "fktest::reportFailure",
+        "owner": "BoundaryFitInvalidTolerance"
+      },
+      {
+        "line": 250,
+        "symbol": "fktest::reportFailure",
+        "owner": "BoundaryFitFinalCoonsEndpointMismatchBudget"
+      },
+      {
+        "line": 251,
+        "symbol": "fktest::reportFailure",
+        "owner": "BoundaryFitFinalCoonsEndpointMismatchBudget"
+      },
+      {
+        "line": 253,
+        "symbol": "fktest::reportFailure",
+        "owner": "BoundaryFitFinalCoonsEndpointMismatchBudget"
+      },
+      {
+        "line": 254,
+        "symbol": "fktest::reportFailure",
+        "owner": "BoundaryFitFinalCoonsEndpointMismatchBudget"
+      },
+      {
+        "line": 274,
+        "symbol": "fktest::reportFailure",
+        "owner": "BoundaryFitOracleClosedJunctionEndpoints"
+      },
+      {
+        "line": 284,
+        "symbol": "fktest::reportFailure",
+        "owner": "BoundaryFitOracleClosedJunctionEndpoints"
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_boundary_fit_validation.cpp",
+    "target": "kernel/tests/test_boundary_fit_validation.cpp",
+    "kind": "call",
+    "count": 29,
+    "sites": [
+      {
+        "line": 85,
+        "symbol": "segment",
+        "owner": "rectangle"
+      },
+      {
+        "line": 86,
+        "symbol": "segment",
+        "owner": "rectangle"
+      },
+      {
+        "line": 87,
+        "symbol": "segment",
+        "owner": "rectangle"
+      },
+      {
+        "line": 110,
+        "symbol": "checkC0::(lambda at /home/myungit/Linux_CAD_forFree/kernel/tests/test_boundary_fit_validation.cpp:102:25)::operator()",
+        "owner": "checkC0"
+      },
+      {
+        "line": 112,
+        "symbol": "checkC0::(lambda at /home/myungit/Linux_CAD_forFree/kernel/tests/test_boundary_fit_validation.cpp:102:25)::operator()",
+        "owner": "checkC0"
+      },
+      {
+        "line": 132,
+        "symbol": "hiddenDegree27",
+        "owner": "BoundaryFitHiddenSpansAndDegree27FinalSurface"
+      },
+      {
+        "line": 132,
+        "symbol": "hiddenSpan",
+        "owner": "BoundaryFitHiddenSpansAndDegree27FinalSurface"
+      },
+      {
+        "line": 134,
+        "symbol": "rectangle",
+        "owner": "BoundaryFitHiddenSpansAndDegree27FinalSurface"
+      },
+      {
+        "line": 135,
+        "symbol": "checkC0",
+        "owner": "BoundaryFitHiddenSpansAndDegree27FinalSurface"
+      },
+      {
+        "line": 152,
+        "symbol": "hiddenSpan",
+        "owner": "BoundaryFitCompoundSidesPoseScaleAndReversals"
+      },
+      {
+        "line": 153,
+        "symbol": "rectangle",
+        "owner": "BoundaryFitCompoundSidesPoseScaleAndReversals"
+      },
+      {
+        "line": 161,
+        "symbol": "checkC0",
+        "owner": "BoundaryFitCompoundSidesPoseScaleAndReversals"
+      },
+      {
+        "line": 165,
+        "symbol": "hiddenSpan",
+        "owner": "BoundaryFitPartialNestedTrimAndAutomaticSubpieces"
+      },
+      {
+        "line": 167,
+        "symbol": "checkC0",
+        "owner": "BoundaryFitPartialNestedTrimAndAutomaticSubpieces"
+      },
+      {
+        "line": 167,
+        "symbol": "rectangle",
+        "owner": "BoundaryFitPartialNestedTrimAndAutomaticSubpieces"
+      },
+      {
+        "line": 171,
+        "symbol": "checkCircularRows",
+        "owner": "BoundaryFitPartialNestedTrimAndAutomaticSubpieces"
+      },
+      {
+        "line": 175,
+        "symbol": "checkCircularRows",
+        "owner": "BoundaryFitConicCompatibilityAndCancellation"
+      },
+      {
+        "line": 176,
+        "symbol": "hiddenSpan",
+        "owner": "BoundaryFitConicCompatibilityAndCancellation"
+      },
+      {
+        "line": 176,
+        "symbol": "rectangle",
+        "owner": "BoundaryFitConicCompatibilityAndCancellation"
+      },
+      {
+        "line": 190,
+        "symbol": "hiddenSpan",
+        "owner": "BoundaryFitReversedKnownSide"
+      },
+      {
+        "line": 191,
+        "symbol": "checkC0",
+        "owner": "BoundaryFitReversedKnownSide"
+      },
+      {
+        "line": 191,
+        "symbol": "rectangle",
+        "owner": "BoundaryFitReversedKnownSide"
+      },
+      {
+        "line": 197,
+        "symbol": "hiddenSpan",
+        "owner": "BoundaryFitKnownSideAllRowsAndTraversalDirections"
+      },
+      {
+        "line": 200,
+        "symbol": "rectangle",
+        "owner": "BoundaryFitKnownSideAllRowsAndTraversalDirections"
+      },
+      {
+        "line": 207,
+        "symbol": "segment",
+        "owner": "BoundaryFitKnownSideAllRowsAndTraversalDirections"
+      },
+      {
+        "line": 227,
+        "symbol": "hiddenSpan",
+        "owner": "BoundaryFitInvalidTolerance"
+      },
+      {
+        "line": 227,
+        "symbol": "rectangle",
+        "owner": "BoundaryFitInvalidTolerance"
+      },
+      {
+        "line": 239,
+        "symbol": "segment",
+        "owner": "BoundaryFitFinalCoonsEndpointMismatchBudget"
+      },
+      {
+        "line": 240,
+        "symbol": "segment",
+        "owner": "BoundaryFitFinalCoonsEndpointMismatchBudget"
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_curve_fit_validation.cpp",
+    "target": "kernel/fk_curve_fit_bounds.cpp",
+    "kind": "call",
+    "count": 6,
+    "sites": [
+      {
+        "line": 56,
+        "symbol": "ForgeCad::Kernel::detail::extrusionOffsetErrorBound",
+        "owner": "checkFit"
+      },
+      {
+        "line": 193,
+        "symbol": "ForgeCad::Kernel::detail::revolutionOffsetErrorBound",
+        "owner": "CurveFitCertifiedRevolutionMeridian"
+      },
+      {
+        "line": 266,
+        "symbol": "ForgeCad::Kernel::detail::revolutionOffsetErrorBound",
+        "owner": "checkExtractedOffset"
+      },
+      {
+        "line": 267,
+        "symbol": "ForgeCad::Kernel::detail::extrusionOffsetErrorBound",
+        "owner": "checkExtractedOffset"
+      },
+      {
+        "line": 317,
+        "symbol": "ForgeCad::Kernel::detail::extrusionOffsetErrorBound",
+        "owner": "CurveFitCertifiedProviderDomainAndCancellation"
+      },
+      {
+        "line": 324,
+        "symbol": "ForgeCad::Kernel::detail::extrusionOffsetErrorBound",
+        "owner": "CurveFitCertifiedProviderDomainAndCancellation"
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_curve_fit_validation.cpp",
+    "target": "kernel/fk_curve_fit_bounds.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 2,
+        "symbol": "fk_curve_fit_bounds.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_history.cpp",
+    "target": "kernel/fk_boundary.cpp",
+    "kind": "call",
+    "count": 2,
+    "sites": [
+      {
+        "line": 996,
+        "symbol": "ForgeCad::Kernel::boundarySheet",
+        "owner": "HistoryPrimitivesAndSurfaceRootsEmitLabels"
+      },
+      {
+        "line": 998,
+        "symbol": "ForgeCad::Kernel::boundarySheet",
+        "owner": "HistoryPrimitivesAndSurfaceRootsEmitLabels"
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_history.cpp",
+    "target": "kernel/fk_boundary.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 19,
+        "symbol": "fk_boundary.h",
+        "owner": ""
+      }
+    ]
+  }
+]

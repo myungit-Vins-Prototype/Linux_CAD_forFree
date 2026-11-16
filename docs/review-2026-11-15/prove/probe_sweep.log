@@ -1,0 +1,4 @@
+nurbs=0 rotated=0 success volume=3158.27340834859 expected=3158.27340834859 checks=0
+nurbs=0 rotated=1 success volume=3158.27340834859 expected=3158.27340834859 checks=0
+nurbs=1 rotated=0 success volume=3158.27340755945 expected=3158.27340834859 checks=0
+nurbs=1 rotated=1 error=sweep: il raggio di curvatura del percorso e' minore della distanza del profilo (le sezioni si incrociano)

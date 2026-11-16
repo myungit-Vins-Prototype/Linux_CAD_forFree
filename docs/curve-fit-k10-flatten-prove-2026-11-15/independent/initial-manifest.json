@@ -1,0 +1,8 @@
+{
+  "kernel/fk_quilt_mapping.cpp": "a787eeff31c1c7552b54579c7db83d76b40c97f924e943dc808fbbac83748022",
+  "kernel/fk_quilt_mapping.h": "c1a6ca4a2b6895f3d800188d141fa5a80ba09888f13a7a0fd2eac31a259f6d2e",
+  "kernel/fk_pcurve.cpp": "ad5e5ce7082274aee5c279772f30caa56b21689b7b4b7331d27543444c58df79",
+  "kernel/fk_curve_ops.cpp": "b898e88ec871c0c08f9c2a27b5deed00512f0376f97a391cf7e5404a10b4cd63",
+  "kernel/fk_curve_projection.cpp": "3ac3894a7994099e54df297417dc7cf7d7c77e253f6dbee3f18817051a886dda",
+  "kernel/fk_math.cpp": "dd3e697be5cdb47ad3bd6629d71a86eba9c1655b024ea3798dcb09ebf274c16d"
+}

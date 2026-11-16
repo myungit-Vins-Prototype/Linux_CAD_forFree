@@ -1,0 +1,16 @@
+Regressioni cache B-spline, 15 novembre 2026
+
+Integrare test_bspline_cache.cpp in kernel/tests/ e accodare CMake.append.txt a kernel/CMakeLists.txt (parent owner integrazione). SHA256 originale CMake in original-sha256.txt, file test nuovo. Consultati nodi architetturali e archi call, estratto architecture-consulted.json.
+
+Cinque casi: curve2D3D cold/warm copy/assignment/move/selfassignment, destinazione con cache estranea; superficie e quattro cache, stress const/copy/assignment concorrente; cerchio NURBS reale con 4 worker; basis/placement/periodicità; proprietari cache conservati dopo sostituzione/distruzione sorgente. Nessuna assunzione identità cache fra copie. Destinazioni thread private, controlli finali su thread principale.
+
+Verificato realmente: compilazione manuale C++17 -Wall -Wextra -Wpedantic; runtime 5/5; ASan5/5 exit0, TSan5/5 exit0 usando TU staged curve+superficie e recognition header staged. Ultimo delta commenti/static_assert nuovamente syntax PASS. Resto archivio kernel baseline non strumentato, nessuna certificazione full-ASan/full-TSan o LeakSanitizer. Non build app né CAD utente.
+
+Comando usato dalla root (SAN = address o thread, out = asan o tsan):
+g++ -std=c++17 -O1 -g -fsanitize=$SAN -fno-omit-frame-pointer -ffp-contract=off -I/tmp/forgecad-cache-fix-20261115/copy -I/tmp/forgecad-cache-fix-20261115/lifetime -I. -Ikernel -Ikernel/tests /tmp/forgecad-cache-fix-20261115/tests/test_bspline_cache.cpp kernel/tests/fk_test_main.cpp /tmp/forgecad-cache-fix-20261115/copy/fk_bspline.cpp /tmp/forgecad-cache-fix-20261115/copy/fk_bspline_surface.cpp forgecad-release/kernel/libforgekernel.a -pthread -o /tmp/forgecad-cache-fix-20261115/tests/cache_tests_$out
+ASAN_OPTIONS=detect_leaks=0:halt_on_error=1 /tmp/forgecad-cache-fix-20261115/tests/cache_tests_asan
+TSAN_OPTIONS=halt_on_error=1 /tmp/forgecad-cache-fix-20261115/tests/cache_tests_tsan
+
+Dopo integrazione: cmake --build forgecad-release --target forgekernel_bspline_cache_tests --parallel 2; ctest --test-dir forgecad-release -R '^forgekernel_bspline_cache_tests$' --output-on-failure. Parent gestisce build completa e mappa/CLAUDE.
+
+integrated-source-tsan.log: PASS1/1 ConcurrentSnapshots compilato contro sorgenti repo ormai modificati dal parent; NON baseline pre-fix. Riproduttori storici pre-fix già documentati, non rieseguiti qui.

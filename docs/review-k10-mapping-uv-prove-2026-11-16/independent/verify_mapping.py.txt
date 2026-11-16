@@ -1,0 +1,17 @@
+#!/usr/bin/env python3
+"""Continuous physical fin and fit contracts from final original IEEE coefficients."""
+from verify_fraction import *
+
+def run(folder,out):
+ results=[]
+ for path in sorted(Path(folder).glob('*.json')):
+  data=json.loads(path.read_text());tol=exact(data['tolerance']);cap=F.from_float(.8)*min(tol,F.from_float(1e-7));fit=min(F.from_float(1e-10),F.from_float(.05)*F.from_float(.2)*min(tol,F.from_float(1e-7)));record={'case':data['case'],'input_sha256':hashlib.sha256(path.read_bytes()).hexdigest(),'physical_cap':str(cap),'projection_fit':str(fit),'actual':[],'fit':[]}
+  for fin in data['actual']:
+   assert 0<=exact(fin['budget'])<=cap,(path.name,fin['fin'],'invalid publication budget')
+   record['actual'].append(verify_record(fin,exact(fin['budget'])))
+   record['fit'].append(verify_record(fin,fit,True))
+  results.append(record)
+  print(path.name,all(r['pass_'] for r in record['actual']),all(r['pass_'] for r in record['fit']),flush=True)
+ Path(out).write_text(json.dumps(results,indent=2)+'\n')
+ assert all(r['pass_'] for d in results for family in ['actual','fit'] for r in d[family])
+if __name__=='__main__':run(sys.argv[1],sys.argv[2])

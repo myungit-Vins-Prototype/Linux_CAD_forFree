@@ -1,0 +1,5 @@
+factor=0 accepted=1 bottom_error=1.2483014621977873e-11 lower_right_surfaceZ=0 issues=0
+factor=0.25 accepted=1 bottom_error=2.4999999999999999e-08 lower_right_surfaceZ=2.4999999999999999e-08 issues=0
+factor=2 accepted=0 reason=superficie tra curve: il bordo finale non rispetta la tolleranza certificata
+factor=5 accepted=0 reason=superficie tra curve: il bordo finale non rispetta la tolleranza certificata
+factor=20 accepted=0 reason=superficie tra curve: le curve non formano un contorno chiuso

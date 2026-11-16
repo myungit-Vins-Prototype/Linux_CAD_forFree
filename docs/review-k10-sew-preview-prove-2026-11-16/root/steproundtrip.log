@@ -1,0 +1,12 @@
+[32;1m
+*******************************************************************
+******        Statistics on Transfer (Write)                 ******[0m
+[32;1m
+*******************************************************************
+******        Transfer Mode = 0  I.E.  As Is       ******[0m
+[32;1m******        Transferring Shape, ShapeType = 0                      ******[0m
+[32;1m** WorkSession : Sending all data[0m
+[32;1m Step File Name : /tmp/forgekernel_occt_import_test.step(410 ents)  Write  Done[0m
+[  OK  ] OcctImportStepRoundTrip
+[  OK  ] StepRoundTrip
+2/2 test superati

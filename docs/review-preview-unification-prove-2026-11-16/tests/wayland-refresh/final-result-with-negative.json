@@ -1,0 +1,67 @@
+{
+  "binary_sha256": "abe0ed50e8aec81e0449870d34475c92af159cd64770f34d0276c506e2621ba8",
+  "source_sha256": "5b273897ba9bf229c73af586db0f133471768148cfca64c5e147b00854a7504c",
+  "private_overlay_objects": [],
+  "runs": [
+    {
+      "platform": "wayland",
+      "iteration": 1,
+      "exit": 0,
+      "seconds": 1.3302306349996798,
+      "result_line": "RESULT passed=115 failed=0",
+      "panels_line": "SMOKE TOTAL actual_visible=11 close_and_cleanup=11 expected=11",
+      "log": "/tmp/review-previews-wayland/final-wayland-1.log"
+    },
+    {
+      "platform": "offscreen",
+      "iteration": 1,
+      "exit": 0,
+      "seconds": 1.0954514909999489,
+      "result_line": "RESULT passed=115 failed=0",
+      "panels_line": "SMOKE TOTAL actual_visible=11 close_and_cleanup=11 expected=11",
+      "log": "/tmp/review-previews-wayland/final-offscreen-1.log"
+    },
+    {
+      "platform": "wayland",
+      "iteration": 2,
+      "exit": 0,
+      "seconds": 1.171573575000366,
+      "result_line": "RESULT passed=115 failed=0",
+      "panels_line": "SMOKE TOTAL actual_visible=11 close_and_cleanup=11 expected=11",
+      "log": "/tmp/review-previews-wayland/final-wayland-2.log"
+    },
+    {
+      "platform": "wayland",
+      "iteration": 3,
+      "exit": 0,
+      "seconds": 1.2098379250001017,
+      "result_line": "RESULT passed=115 failed=0",
+      "panels_line": "SMOKE TOTAL actual_visible=11 close_and_cleanup=11 expected=11",
+      "log": "/tmp/review-previews-wayland/final-wayland-3.log"
+    }
+  ],
+  "negative": {
+    "platform": "wayland",
+    "exit": 1,
+    "assertions_pass": 79,
+    "assertions_fail": 36,
+    "panels": 11,
+    "binary_sha256": "89576659646b6d990246f27e8b13605d5e68f4cdf343c1d32b1f312f9d1fa1b9",
+    "link": "link-negative.json",
+    "old_common_source_sha256": "e6e5a88d25dcc8e70b9bc3e7cba65cdb90a38cbe7d11dc7b9abc989fcc2d70fd"
+  },
+  "original_fixture_sha256": "65d4e472d5f88a9559852e17271cc67b7603bd0aca8651bf41f97ad0318844f9",
+  "production_sources_sha256": {
+    "forgeCad2026_dialogs.h": "35a16e9e136ec7fb4efb80a2906e79e906f4ba70676a1cabe1135f8480a31ef8",
+    "forgeCad2026_dialogs_common.cpp": "bd1006cc5689982ed183b6499292ce3efe956daf8028cc73ca7258036ad9ba82",
+    "forgeCad2026_dialogs_solids.cpp": "79e8b454b0aa8db8e20484c0472dacc4f8f9285056fecc504a66feb1ebfd2624",
+    "forgeCad2026_dialogs_surfaces.cpp": "3e1a52dbd703f3d875b28feac751966b95defebc10975a78fb6adeb8f56d32bc",
+    "forgeCad2026_dialogs_sketch.cpp": "2eeb38e9c17dd2605de2783ae72adf78e618bd48252d356d44ae044fb82229df",
+    "forgeCad2026_dialogs_analysis.cpp": "6d4cb332ce0618bdc2fd930667384ea6a6ee7ba943308804b97affc16fb6b0fd"
+  },
+  "preserved_initial_root_files_sha256": {
+    "initial-replay-result.json": "f8981bc9081d3a0b59228161ab6e5e964757dbb66168d1c10e7d20ee9f4a86fb",
+    "initial-replay-wayland.log": "37d30473c0f93671a93a096c114d78b16abfa1cdbc0dc2319e7b1828c16d5bea",
+    "initial-replay-offscreen.log": "b214f67cc756b9f5013ebc50a0c99592ff00590bdeca9820bc2f499b862e62f7"
+  }
+}

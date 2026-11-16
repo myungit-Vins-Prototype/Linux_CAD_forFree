@@ -1,0 +1,25 @@
+#include "test_boundary_validation.cpp"
+FK_TEST(BoundaryActualEmissionKeepsDistinctFacesOnSharedCarrier) {
+    auto f = fixture(true);
+    const auto &old = dynamic_cast<const BSplineSurface &>(*f.body.face(f.body.finFace(f.body.edge(f.seam).forward)).surface);
+    std::vector<Vec3> poles;
+    std::vector<double> weights;
+    for (int i = 0; i < old.uPoleCount(); ++i) {
+        poles.push_back(old.pole(i,0));
+        poles.push_back(old.pole(i,0) + Vec3(0,2,0));
+        weights.push_back(old.weight(i,0));
+        weights.push_back(old.weight(i,0));
+    }
+    const SurfacePtr shared = std::make_shared<BSplineSurface>(2,1,old.uKnots(),std::vector<double>{-1,-1,1,1},3,2,poles,weights);
+    for (FaceId face : f.body.faces()) f.body.face(face).surface = shared;
+    FK_CHECK(checkBody(f.body,{true,true}).empty());
+    detail::BlendModel model(f.body,&f.body);
+    std::vector<detail::BlendBoundaryUse> certificates;
+    detail::extendBlendBoundary(f.body,model,f.seam,{0,1},true,certificates);
+    FK_CHECK(certificates.size() == 2);
+    detail::installBlendBoundaryCertificates(model,certificates);
+    Body emitted = model.build();
+    computePCurves(emitted);
+    detail::requireEmittedBlendBoundaries(emitted,certificates);
+    FK_CHECK(checkBody(emitted,{true,true}).empty());
+}

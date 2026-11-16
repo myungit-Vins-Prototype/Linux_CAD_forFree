@@ -1,0 +1,73 @@
+CORE K10 giunzione estensione lamine — 16 novembre 2026
+
+Perimetro: esclusivamente copie private in /tmp/sheet-join-review/core.
+Nessuna modifica condivisa, build applicazione, processo utente, CAD originale,
+commit, PR o worktree da questo agente. La documentazione condivisa resta a root.
+
+Consultazioni prima della modifica: AGENTS.md, CLAUDE.md, tolerance-policy.md,
+review-k10-mapping-uv-2026-11-16.md e architecture graph.json; descrizioni, archi
+call/include/reference bidirezionali salvati in architecture-read.json.
+Baseline sorgenti, libreria Release e oggetto fk_sheet congelati in baseline/,
+con baseline-sha.json. shared-unchanged-before-integration.json conferma tutti
+sei file condivisi identici prima dell'integrazione root.
+
+Implementato V3 frozen:
+- Le superfici inizialmente quasi tangenti (sine <1e-3, criterio legacy) passano
+  al ramo affine/isoparametrico esplicito e obbligatorio. Il criterio locale
+  sceglie un algoritmo: non certifica tangenza dell'intero supporto.
+- Fit A continuo su coefficienti originali del carrier effettivamente esteso,
+  target fisico 0.25*tolerance. La curva emessa è ricontrollata contro A e B,
+  entrambi con cap fisso tolerance=max(1e-7,1e-9*scale). Budget deciso PRIMA fit.
+- Nessun seamGap64, nessuna crescita 2*scarto misurato, nessun catch che possa
+  recuperare un certificato fallito con il vecchio campionamento.
+- Mappe UV B-spline grado1 con coordinata fissa, pesi uguali e nodi agli estremi
+  distinti dei due lati; parametri 0..end e tagli short/end conservati. Gli UV
+  estremi di ciascun lato coincidono con il proprio side.end originale.
+- Domini affini via inviluppo dei poli UV originali: un segmento affine resta
+  nel loro inviluppo convesso. Dopo ulteriore estensione si certificano i dati
+  del nuovo carrier, non una isoparametrica estratta arrotondata.
+- Fin con SP-curve affine esplicita e budget fisso tolerance; edge nuovo stesso
+  budget, vertici/far edge allocazione fissa invariata dopo la misura. Gli
+  scarti entro risoluzione non si dichiarano esattezza algebrica.
+- Dopo model.build: identità curva/SP-curve, range, budget e conteggio esatto
+  delle fin pianificate; controllo di tutte le campate dei coefficienti emessi.
+- Dopo unifySameDomain: discendenti dichiarati Face+Edge dal suo BodyHistory,
+  esattamente una fin per obbligo, stessi curve/SP-curve/range/budget, nuovo
+  provider sul carrier EFFETTIVO. Nessuna associazione per vicinanza.
+- Cancellazione esplicita all'ingresso, nei loop della giunzione, ai controlli e
+  prima pubblicare la storia. OperationCancelled non deriva std::exception:
+  la baseline non la catturava già; non attribuiamo questo difetto ai vecchi catch.
+- Non occorre nuova storia se non ci sono obblighi certificati e caller non la
+  chiede. Con obblighi ma senza richiesta caller si ottiene solo la storia
+  locale di unify per certificare il risultato. Storia output segue contratto
+  già presente: azzerata all'ingresso, pubblicata solo dopo successo.
+
+Limiti dichiarati:
+- Giunti trasversi iniziali: mantenuti Newton, fit e busta dominio UV campionati.
+  Nessun provider globale Newton inventato; il sito K10 è soltanto parzialmente
+  migrato, non completamente chiuso. Un nuovo falso positivo in questi fallback
+  non è escluso dalla prova affine.
+- Normali iniziali non provano transversality/tangency globale; scelta ramo
+  invariata nella soglia, indipendente dalla verifica continua del ramo affine.
+- L'estensione polinomiale e le altre nuove frontiere/costruzioni non ricevono
+  qui una prova globale di fedeltà al carrier input prima dell'estensione.
+- Multiway seam, trasformazioni unify che sostituiscono parametro/curva/SP-curve,
+  tagli non coincidenti con nodi originali, famiglie non riconosciute e risorse
+  insufficienti vengono rifiutati conservativamente nel ramo certificato.
+- Nessuna prova globale di trim membership, iniettività o topologia da soli
+  provider; checkBody finale rimane controllo aggiuntivo campionato.
+
+Prove autonome core:
+- V1 e V2 sei runner precedenti 98/98 gruppi PASS (log e json distinti).
+- V2 quattro test Sheet della suite generale PASS.
+- V1/V2 fixture pubblica normale e tangente PASS; V1 tre alias spike .001
+  stretti fuori trim respinti. Questi non vanno attribuiti ai byte V3.
+- V3 cinque runner rapidi e quattro Sheet: risultati in
+  overlay-test-results-v3.json; NURBS support V2 è soltanto storico.
+- Suite permanente, esportazioni e sanitizer finali V3: responsabile tests.
+- Fraction indipendente dei coefficienti finali: responsabile audit.
+- App completa, integrazione, CTest/Wayland, architettura e memoria: root.
+
+File finali e hash: v3-sha.json. TU compilata con -fno-fast-math e
+-ffp-contract=off, resto della libreria Release congelata. V1/V2 sono candidati
+superati e i loro report sono esplicitamente separati.

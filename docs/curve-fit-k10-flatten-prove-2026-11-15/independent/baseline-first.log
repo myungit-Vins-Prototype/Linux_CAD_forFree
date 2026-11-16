@@ -1,0 +1,6 @@
+rational=0 source_issues=0
+ output_edges=4 control_hull_geometric_lower=0
+ accepted=1 reported=8.5269790228936357e-14 same_param_error=0 geometric_error=0 witness_t=0 result_issues=0 samples=7 min_stretch=1 max_stretch=1 history_faces=1 source_immutable=1
+rational=1 source_issues=0
+ output_edges=4 control_hull_geometric_lower=0
+ accepted=1 reported=8.5269790228936357e-14 same_param_error=0 geometric_error=0 witness_t=0 result_issues=0 samples=17 min_stretch=1 max_stretch=1 history_faces=1 source_immutable=1

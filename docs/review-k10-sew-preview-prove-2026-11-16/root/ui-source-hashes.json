@@ -1,0 +1,7 @@
+{
+  "forgeCad2026_dialogs_solids.cpp": "11304bbf3f096b36b2ecefcd43b80c07cfb4dd457567b2983a3e86529de36b06",
+  "tests/test_chamfer_preview_editing.h": "e1d32b51f8467e89116109d6004edf0d8acd5446aa3a99553d9bb36bc5e4a2ec",
+  "CMakeLists.txt": "800c41808ec939873b590244d80e8a91689a77e35c44ed5a30c0e885e37551d4",
+  "tests/test_viewport.cpp": "c9c5d130fe1c837de53eb6924b912fcace3530095bf761781cef0d8543ac1111",
+  "tools/generate_architecture.py": "b2dd201929b0068a36592573c653441283231c8b368173b6a561f71202ae316a"
+}

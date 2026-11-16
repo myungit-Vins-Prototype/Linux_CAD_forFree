@@ -1,0 +1,23 @@
+#include "forgeCad2026_gui.h"
+#include "forgeCad2026_viewport.h"
+#include "cad_ellipse.h"
+#include "cad_drawing_file.h"
+#include "cad_model_history.h"
+#include <QApplication>
+#include <QMouseEvent>
+#include <QAction>
+#include <QKeyEvent>
+#include <QSettings>
+#include <QTemporaryDir>
+#include <QCryptographicHash>
+#include <QtEndian>
+#include <iostream>
+#include <stdexcept>
+#include <limits>
+using ForgeCad::Gui::pointLength;
+using ForgeCad::Gui::pointDistance;
+static void require(bool ok,const char *message){if(!ok)throw std::runtime_error(message);}
+class ViewportInteractionTest { public:
+#include "ellipse_extremes_fixture.h"
+};
+int main(int argc,char **argv){QApplication app(argc,argv);QTemporaryDir d;QSettings::setPath(QSettings::IniFormat,QSettings::UserScope,d.path());QSettings::setDefaultFormat(QSettings::IniFormat);try{ViewportInteractionTest::ellipseExtremes(false);}catch(const std::exception &e){std::cerr<<e.what()<<std::endl;return 1;}}

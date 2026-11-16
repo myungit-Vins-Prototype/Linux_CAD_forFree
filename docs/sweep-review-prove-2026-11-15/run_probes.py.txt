@@ -1,0 +1,16 @@
+from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor
+import subprocess, json
+root=Path('/home/myungit/Linux_CAD_forFree'); work=Path('/tmp/forgecad-sweep-fix-20261115')
+def probe(name):
+    source=work/(name+'.cpp')
+    source.write_bytes((root/'docs/review-2026-11-15/prove'/(name+'.cpp.txt')).read_bytes())
+    with (work/(name+'-compile.log')).open('w') as log:
+        subprocess.run(['g++','-std=c++17','-O2','-ffp-contract=off','-I'+str(root/'kernel'),str(source),str(root/'forgecad-release/kernel/libforgekernel.a'),'-pthread','-o',str(work/name)],stdout=log,stderr=subprocess.STDOUT,check=True)
+    with (work/(name+'.log')).open('w') as log:
+        p=subprocess.run([str(work/name)],cwd=work,stdout=log,stderr=subprocess.STDOUT,timeout=120)
+    return {'name':name,'exit':p.returncode}
+with ThreadPoolExecutor(max_workers=3) as pool:
+    results=list(pool.map(probe,['probe_alias','probe_closed','probe_closed_seams','probe_overlap','probe_sweep']))
+(work/'probe-results.json').write_text(json.dumps(results,indent=2)+'\n')
+print(json.dumps(results))

@@ -1,0 +1,34 @@
+hidden rational=0 upward=0 wrapper=0 max_error=9.0904691164021468e-08 global_hull_lower=-8.3362710478825395e-07 PASS
+hidden rational=0 upward=0 wrapper=1 max_error=7.0582403822325971e-08 PASS
+hidden rational=0 upward=0 wrapper=2 max_error=9.0904697770323915e-08 PASS
+hidden rational=0 upward=1 wrapper=0 max_error=9.0904691164021468e-08 global_hull_lower=-8.3362710478825395e-07 PASS
+hidden rational=0 upward=1 wrapper=1 max_error=7.0582403822325971e-08 PASS
+hidden rational=0 upward=1 wrapper=2 max_error=9.0904697770323915e-08 PASS
+hidden rational=1 upward=0 wrapper=0 max_error=9.1736642561139205e-08 PASS
+hidden rational=1 upward=0 wrapper=1 max_error=9.25880359633826e-08 PASS
+hidden rational=1 upward=0 wrapper=2 max_error=9.1736657770181181e-08 PASS
+hidden rational=1 upward=1 wrapper=0 max_error=9.1736642561139205e-08 PASS
+hidden rational=1 upward=1 wrapper=1 max_error=9.25880359633826e-08 PASS
+hidden rational=1 upward=1 wrapper=2 max_error=9.1736657770181181e-08 PASS
+placed rational=0 parameterShift=0 scale=0.001000 max_error=5.7774163325329818e-08 PASS
+placed rational=0 parameterShift=0 scale=1.000000 max_error=9.0906570112023201e-08 PASS
+placed rational=0 parameterShift=0 scale=1000.000000 max_error=9.1228449986486217e-08 PASS
+placed rational=0 parameterShift=1 scale=0.001000 max_error=5.7215165967731942e-08 PASS
+placed rational=0 parameterShift=1 scale=1.000000 max_error=9.0906570112023201e-08 PASS
+placed rational=0 parameterShift=1 scale=1000.000000 max_error=9.1228449986486217e-08 PASS
+placed rational=1 parameterShift=0 scale=0.001000 max_error=5.4176468830357024e-08 PASS
+placed rational=1 parameterShift=0 scale=1.000000 max_error=9.1737095346498306e-08 PASS
+placed rational=1 parameterShift=0 scale=1000.000000 max_error=9.0024160292001186e-08 PASS
+placed rational=1 parameterShift=1 scale=0.001000 max_error=5.4169873232905378e-08 PASS
+placed rational=1 parameterShift=1 scale=1.000000 max_error=9.1738064584554369e-08 PASS
+placed rational=1 parameterShift=1 scale=1000.000000 max_error=9.0024160292001186e-08 PASS
+knot_corner max_error=5.0814708581899583e-12 PASS
+mixed_batch threads=1 max_error=9.0904691164021468e-08 max_error=9.1736642561139205e-08 max_error=1.3974952332929406e-11 max_error=1.2968052812721206e-11 PASS
+mixed_batch threads=4 max_error=9.0904691164021468e-08 max_error=9.1736642561139205e-08 max_error=1.3974952332929406e-11 max_error=1.2968052812721206e-11 PASS
+join_lifetime joined_error=9.0904691164021468e-08 PASS
+join_first_last joined_error=9.0904691164021468e-08 joined_error=9.0904691180535672e-08 PASS
+unsafe_join PASS
+unsafe_first_last PASS
+altered_certified_piece PASS
+invalid_inputs PASS
+RESULT passed=33 failed=0

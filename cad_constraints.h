@@ -73,6 +73,10 @@ struct SolveResult {
     int iterations = 0;
 };
 
+// Valida i numeri della definizione di schizzo (non le cache di visualizzazione).
+// Condiviso dal solver e dal codec; nessuna modifica allo schizzo.
+bool finiteSketchNumbers(const SketchObject &sketch);
+
 // Muove i punti dello schizzo finche' vincoli e bersagli sono soddisfatti.
 // Se non ci riesce (vincoli in conflitto) lo schizzo resta com'era.
 SolveResult solveSketch(SketchObject &sketch, const QVector<PointTarget> &targets = {});

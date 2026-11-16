@@ -1,0 +1,103 @@
+{
+  "input": "/tmp/mitre-review/audit/candidate-v2-direct-cuts.json",
+  "sha256": "c8e918a4e309fb1c880e8c9a688ec74d2583ae2662709b0d856ff0d717f253e6",
+  "method": "exact rational homogeneous Cox/de Boor composition and Bernstein hull, all intersected knot branches",
+  "records": [
+    {
+      "fin": null,
+      "edge": null,
+      "face": null,
+      "budget": 1e-07,
+      "pass": true,
+      "upper_mm": 6.15132632273897e-11,
+      "cells": 1,
+      "leaves": 1,
+      "branches": 1,
+      "max_depth": 0
+    },
+    {
+      "fin": null,
+      "edge": null,
+      "face": null,
+      "budget": 1e-07,
+      "pass": true,
+      "upper_mm": 6.15132632273897e-11,
+      "cells": 1,
+      "leaves": 1,
+      "branches": 1,
+      "max_depth": 0
+    },
+    {
+      "fin": null,
+      "edge": null,
+      "face": null,
+      "budget": 1e-07,
+      "pass": true,
+      "upper_mm": 9.419333538373795e-10,
+      "cells": 120,
+      "leaves": 120,
+      "branches": 120,
+      "max_depth": 0
+    },
+    {
+      "fin": null,
+      "edge": null,
+      "face": null,
+      "budget": 1e-07,
+      "pass": true,
+      "upper_mm": 9.419333538373795e-10,
+      "cells": 120,
+      "leaves": 120,
+      "branches": 120,
+      "max_depth": 0
+    },
+    {
+      "fin": null,
+      "edge": null,
+      "face": null,
+      "budget": 1e-07,
+      "pass": true,
+      "upper_mm": 9.422179106173454e-10,
+      "cells": 120,
+      "leaves": 120,
+      "branches": 120,
+      "max_depth": 0
+    },
+    {
+      "fin": null,
+      "edge": null,
+      "face": null,
+      "budget": 1e-07,
+      "pass": true,
+      "upper_mm": 9.422179106173454e-10,
+      "cells": 120,
+      "leaves": 120,
+      "branches": 120,
+      "max_depth": 0
+    },
+    {
+      "fin": null,
+      "edge": null,
+      "face": null,
+      "budget": 1e-07,
+      "pass": true,
+      "upper_mm": 5.289713229795414e-10,
+      "cells": 126,
+      "leaves": 126,
+      "branches": 126,
+      "max_depth": 0
+    },
+    {
+      "fin": null,
+      "edge": null,
+      "face": null,
+      "budget": 1e-07,
+      "pass": true,
+      "upper_mm": 5.289713229795414e-10,
+      "cells": 126,
+      "leaves": 126,
+      "branches": 126,
+      "max_depth": 0
+    }
+  ]
+}

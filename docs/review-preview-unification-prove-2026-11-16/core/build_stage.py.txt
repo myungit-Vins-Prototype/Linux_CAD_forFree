@@ -1,0 +1,12 @@
+from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor
+import json,shlex,subprocess
+root=Path('/home/myungit/Linux_CAD_forFree');stage=Path('/tmp/review-previews-refresh/stage');db=json.load(open(root/'forgecad-release/compile_commands.json'))
+names=['forgeCad2026_dialogs_common.cpp','forgeCad2026_dialogs_solids.cpp','forgeCad2026_dialogs_surfaces.cpp','forgeCad2026_dialogs_sketch.cpp','forgeCad2026_dialogs_analysis.cpp']
+def build(name):
+ e=next(x for x in db if x['file']==str(root/name));a=shlex.split(e['command']);a=a[:a.index('-o')];a=[x for x in a if x!='-O3']+['-O0','-I'+str(stage),'-I'+str(root),'-c',str(stage/name),'-o',str(stage/(name+'.o'))]
+ r=subprocess.run(a,cwd=e['directory'],text=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT);(stage/(name+'.build.log')).write_text(r.stdout);return name,r.returncode,r.stdout[-3000:]
+with ThreadPoolExecutor(max_workers=2) as pool:
+ results=list(pool.map(build,names))
+ for r in results:print(r,flush=True)
+raise SystemExit(any(r[1] for r in results))

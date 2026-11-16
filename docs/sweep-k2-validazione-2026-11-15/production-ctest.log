@@ -1,0 +1,21 @@
+Test project /home/myungit/Linux_CAD_forFree/forgecad-release
+    Start  49: forgecad_all_history_tests
+    Start  32: forgecad_function_panels_tests
+1/8 Test  #32: forgecad_function_panels_tests ........   Passed    1.21 sec
+    Start  60: forgecad_surface_tools_tests
+2/8 Test  #49: forgecad_all_history_tests ............   Passed    1.52 sec
+    Start  89: forgecad_sweep_reference_tests
+3/8 Test  #89: forgecad_sweep_reference_tests ........   Passed    0.09 sec
+    Start  29: forgecad_document_units_tests
+4/8 Test  #29: forgecad_document_units_tests .........   Passed    0.12 sec
+    Start  28: forgecad_document_read_tests
+5/8 Test  #28: forgecad_document_read_tests ..........   Passed    0.13 sec
+    Start  67: forgecad_history_preview_mesh_tests
+6/8 Test  #67: forgecad_history_preview_mesh_tests ...   Passed    0.03 sec
+    Start 154: forgecad_workspace_tests
+7/8 Test #154: forgecad_workspace_tests ..............   Passed    0.01 sec
+8/8 Test  #60: forgecad_surface_tools_tests ..........   Passed    0.76 sec
+
+100% tests passed out of 8
+
+Total Test time (real) =   1.98 sec

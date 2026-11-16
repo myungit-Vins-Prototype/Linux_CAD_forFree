@@ -1,0 +1,12 @@
+from verify_tensor_fraction import *
+import copy,json
+j=json.load(open('/tmp/mitre-review/audit/candidate-direct-cuts.json'));base=j['records'][0];out=[]
+for name in ['output_pole','surface_pole','pcurve_anchor']:
+ r=copy.deepcopy(base)
+ if name=='output_pole':r['curve']['poles'][1][2]=(1e-3).hex()
+ elif name=='surface_pole':r['surface']['poles'][1][2]=(1e-3).hex()
+ else:r['pcurve']['poles'][0][0]=(.4).hex()
+ try:verify(r);result={'name':name,'rejected':False}
+ except Exception as e:result={'name':name,'rejected':True,'reason':str(e)}
+ out.append(result)
+Path('/tmp/mitre-review/audit/negative-control-results.json').write_text(json.dumps(out,indent=2)+'\n');print(json.dumps(out,indent=2));assert all(x['rejected'] for x in out)

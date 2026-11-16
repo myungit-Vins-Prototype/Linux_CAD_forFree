@@ -1,0 +1,345 @@
+{
+    "actual": [
+        {
+            "construction": true,
+            "degree": 5,
+            "kind": "spline",
+            "knots": [
+                "0x0p+0",
+                "0x0p+0",
+                "0x0p+0",
+                "0x0p+0",
+                "0x0p+0",
+                "0x0p+0",
+                "0x1.197c987c952c4p-2",
+                "0x1.197c987c952c4p-2",
+                "0x1.197c987c952c4p-2",
+                "0x1.197c987c952c4p-1",
+                "0x1.197c987c952c4p-1",
+                "0x1.197c987c952c4p-1",
+                "0x1.a63ae4badfc26p-1",
+                "0x1.a63ae4badfc26p-1",
+                "0x1.a63ae4badfc26p-1",
+                "0x1.197c987c952c4p+0",
+                "0x1.197c987c952c4p+0",
+                "0x1.197c987c952c4p+0",
+                "0x1.5fdbbe9bba775p+0",
+                "0x1.5fdbbe9bba775p+0",
+                "0x1.5fdbbe9bba775p+0",
+                "0x1.a63ae4badfc26p+0",
+                "0x1.a63ae4badfc26p+0",
+                "0x1.a63ae4badfc26p+0",
+                "0x1.ec9a0ada050d7p+0",
+                "0x1.ec9a0ada050d7p+0",
+                "0x1.ec9a0ada050d7p+0",
+                "0x1.197c987c952c4p+1",
+                "0x1.197c987c952c4p+1",
+                "0x1.197c987c952c4p+1",
+                "0x1.197c987c952c4p+1",
+                "0x1.197c987c952c4p+1",
+                "0x1.197c987c952c4p+1"
+            ],
+            "poles": [
+                [
+                    "-0x1.ef379f08eb32fp-59",
+                    "0x0p+0"
+                ],
+                [
+                    "0x1.020c49ba5e353p-7",
+                    "0x1.197c987c952c5p-4"
+                ],
+                [
+                    "0x1.020c49ba5e354p-6",
+                    "0x1.197c987c952c5p-3"
+                ],
+                [
+                    "0x1.83126e978d504p-6",
+                    "0x1.a558016f4351cp-3"
+                ],
+                [
+                    "0x1.428f5c28f5c2ap-5",
+                    "0x1.5cc1a95f2becbp-2"
+                ],
+                [
+                    "0x1.c395810624dd2p-5",
+                    "0x1.e19719b5aa70cp-2"
+                ],
+                [
+                    "0x1.020c49ba5e354p-4",
+                    "0x1.112249947c42ap-1"
+                ],
+                [
+                    "0x1.428f5c28f5c28p-4",
+                    "0x1.4fa99a4ccc2ecp-1"
+                ],
+                [
+                    "0x1.83126e978d4fcp-4",
+                    "0x1.89232a9e89f05p-1"
+                ],
+                [
+                    "0x1.a353f7ced916cp-4",
+                    "0x1.a46c2456a634cp-1"
+                ],
+                [
+                    "0x1.e3d70a3d70a3ep-4",
+                    "0x1.d7bdf620660efp-1"
+                ],
+                [
+                    "0x1.122d0e5604188p-3",
+                    "0x1.01fac479fdc6dp+0"
+                ],
+                [
+                    "0x1.224dd2f1a9fcp-3",
+                    "0x1.0c12200648007p+0"
+                ],
+                [
+                    "0x1.428f5c28f5c2ap-3",
+                    "0x1.1e3307d54a164p+0"
+                ],
+                [
+                    "0x1.62d0e56041893p-3",
+                    "0x1.2c04d4e0b2c3dp+0"
+                ],
+                [
+                    "0x1.72f1a9fbe76cap-3",
+                    "0x1.31cd1370b3dfep+0"
+                ],
+                [
+                    "0x1.9333333333333p-3",
+                    "0x1.3b097e69c6f4dp+0"
+                ],
+                [
+                    "0x1.b374bc6a7ef9cp-3",
+                    "0x1.3f87a83a64b21p+0"
+                ],
+                [
+                    "0x1.c395810624dd3p-3",
+                    "0x1.4091a32ff395ep+0"
+                ],
+                [
+                    "0x1.e3d70a3d70a3cp-3",
+                    "0x1.4038064fc974dp+0"
+                ],
+                [
+                    "0x1.020c49ba5e353p-2",
+                    "0x1.3b0c2f66789c2p+0"
+                ],
+                [
+                    "0x1.0a1cac083126ep-2",
+                    "0x1.3743edd6980cap+0"
+                ],
+                [
+                    "0x1.1a3d70a3d70a3p-2",
+                    "0x1.2d5b03bbc8773p+0"
+                ],
+                [
+                    "0x1.2a5e353f7ced8p-2",
+                    "0x1.1ee89427ba5f6p+0"
+                ],
+                [
+                    "0x1.326e978d4fdf5p-2",
+                    "0x1.1696cac7cdf3ep+0"
+                ],
+                [
+                    "0x1.3a7ef9db22d0fp-2",
+                    "0x1.0d39ee906f15dp+0"
+                ],
+                [
+                    "0x1.428f5c28f5c29p-2",
+                    "0x1.02e2ac13ef8e9p+0"
+                ]
+            ],
+            "qt_control_points": [
+                [
+                    "-0x1.ef379f08eb32fp-59",
+                    "0x0p+0"
+                ],
+                [
+                    "0x1.020c49ba5e353p-7",
+                    "0x1.197c987c952c5p-4"
+                ],
+                [
+                    "0x1.020c49ba5e354p-6",
+                    "0x1.197c987c952c5p-3"
+                ],
+                [
+                    "0x1.83126e978d504p-6",
+                    "0x1.a558016f4351cp-3"
+                ],
+                [
+                    "0x1.428f5c28f5c2ap-5",
+                    "0x1.5cc1a95f2becbp-2"
+                ],
+                [
+                    "0x1.c395810624dd2p-5",
+                    "0x1.e19719b5aa70cp-2"
+                ],
+                [
+                    "0x1.020c49ba5e354p-4",
+                    "0x1.112249947c42ap-1"
+                ],
+                [
+                    "0x1.428f5c28f5c28p-4",
+                    "0x1.4fa99a4ccc2ecp-1"
+                ],
+                [
+                    "0x1.83126e978d4fcp-4",
+                    "0x1.89232a9e89f05p-1"
+                ],
+                [
+                    "0x1.a353f7ced916cp-4",
+                    "0x1.a46c2456a634cp-1"
+                ],
+                [
+                    "0x1.e3d70a3d70a3ep-4",
+                    "0x1.d7bdf620660efp-1"
+                ],
+                [
+                    "0x1.122d0e5604188p-3",
+                    "0x1.01fac479fdc6dp+0"
+                ],
+                [
+                    "0x1.224dd2f1a9fcp-3",
+                    "0x1.0c12200648007p+0"
+                ],
+                [
+                    "0x1.428f5c28f5c2ap-3",
+                    "0x1.1e3307d54a164p+0"
+                ],
+                [
+                    "0x1.62d0e56041893p-3",
+                    "0x1.2c04d4e0b2c3dp+0"
+                ],
+                [
+                    "0x1.72f1a9fbe76cap-3",
+                    "0x1.31cd1370b3dfep+0"
+                ],
+                [
+                    "0x1.9333333333333p-3",
+                    "0x1.3b097e69c6f4dp+0"
+                ],
+                [
+                    "0x1.b374bc6a7ef9cp-3",
+                    "0x1.3f87a83a64b21p+0"
+                ],
+                [
+                    "0x1.c395810624dd3p-3",
+                    "0x1.4091a32ff395ep+0"
+                ],
+                [
+                    "0x1.e3d70a3d70a3cp-3",
+                    "0x1.4038064fc974dp+0"
+                ],
+                [
+                    "0x1.020c49ba5e353p-2",
+                    "0x1.3b0c2f66789c2p+0"
+                ],
+                [
+                    "0x1.0a1cac083126ep-2",
+                    "0x1.3743edd6980cap+0"
+                ],
+                [
+                    "0x1.1a3d70a3d70a3p-2",
+                    "0x1.2d5b03bbc8773p+0"
+                ],
+                [
+                    "0x1.2a5e353f7ced8p-2",
+                    "0x1.1ee89427ba5f6p+0"
+                ],
+                [
+                    "0x1.326e978d4fdf5p-2",
+                    "0x1.1696cac7cdf3ep+0"
+                ],
+                [
+                    "0x1.3a7ef9db22d0fp-2",
+                    "0x1.0d39ee906f15dp+0"
+                ],
+                [
+                    "0x1.428f5c28f5c29p-2",
+                    "0x1.02e2ac13ef8e9p+0"
+                ]
+            ],
+            "range": [
+                "0x0p+0",
+                "0x1.197c987c952c4p+1"
+            ],
+            "valid": true,
+            "weights": [
+            ]
+        }
+    ],
+    "actual_segments": [
+    ],
+    "budget": "0x1.ad7f29abcaf48p-24",
+    "created_count": 1,
+    "error": "",
+    "expected_rejection": false,
+    "label": "naked-legacy-compatibility",
+    "migrated": false,
+    "projection": {
+        "origin": [
+            "0x0p+0",
+            "0x0p+0",
+            "0x0p+0"
+        ],
+        "x": [
+            "0x0p+0",
+            "0x0p+0",
+            "0x1p+0"
+        ],
+        "y": [
+            "0x0p+0",
+            "0x1p+0",
+            "-0x0p+0"
+        ],
+        "z": [
+            "-0x1p+0",
+            "0x0p+0",
+            "0x0p+0"
+        ]
+    },
+    "range": [
+        "0x0p+0",
+        "0x1.197c987c952c4p+1"
+    ],
+    "rejected": false,
+    "sample_witness": "0x1.910d8p-27",
+    "sample_witness_is_certificate": false,
+    "source": {
+        "coefficient_attribution": "replayed original constructor IEEE operations (baseline lacks getters)",
+        "frame": {
+            "origin": [
+                "0x0p+0",
+                "0x0p+0",
+                "0x0p+0"
+            ],
+            "x": [
+                "0x1p+0",
+                "0x0p+0",
+                "0x0p+0"
+            ],
+            "y": [
+                "0x0p+0",
+                "0x1p+0",
+                "0x0p+0"
+            ],
+            "z": [
+                "0x0p+0",
+                "0x0p+0",
+                "0x1p+0"
+            ]
+        },
+        "kind": "helix",
+        "leftHanded": false,
+        "pitch": "0x1.ccccccccccccdp-1",
+        "radius": "0x1.4p+0",
+        "sense": "0x1p+0",
+        "spiral": false,
+        "startAngle": "0x0p+0",
+        "stored_rise": "0x1.255ab960267a9p-3",
+        "stored_slope": "0x0p+0",
+        "taper": "0x0p+0",
+        "turns": "0x1.6666666666666p-2"
+    },
+    "state_unchanged": false
+}

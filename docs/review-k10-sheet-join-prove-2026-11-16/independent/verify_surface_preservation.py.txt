@@ -1,0 +1,50 @@
+from verify_tensor_fraction import *
+
+def tensor(a,b):return [[x*y for y in b] for x in a]
+def elevate2(A,m,n):
+ A=[elevate(row,n) for row in A]
+ return [list(row) for row in zip(*[elevate(list(col),m) for col in zip(*A)])]
+def add2(A,B,sign=1):
+ m=max(len(A),len(B))-1;n=max(len(A[0]),len(B[0]))-1;A=elevate2(A,m,n);B=elevate2(B,m,n)
+ return [[x+sign*y for x,y in zip(ar,br)] for ar,br in zip(A,B)]
+def scale2(A,s):return [[v*s for v in row] for row in A]
+def mul2(A,B):
+ m,n=len(A)-1,len(A[0])-1;p,q=len(B)-1,len(B[0])-1
+ out=[[F(0)]*(n+q+1) for _ in range(m+p+1)]
+ for i in range(m+1):
+  for j in range(n+1):
+   for k in range(p+1):
+    for l in range(q+1):
+     out[i+k][j+l]+=A[i][j]*B[k][l]*F(comb(m,i)*comb(p,k),comb(m+p,i+k))*F(comb(n,j)*comb(q,l),comb(n+q,j+l))
+ return out
+
+def surface_cell(s,a,b,c,d):
+ p,q,U,V,nu,nv,P,W=s;ku=next(k for k in range(p,nu) if U[k]<(a+b)/2<U[k+1]);kv=next(k for k in range(q,nv) if V[k]<(c+d)/2<V[k+1]);A=cox(U,p,nu,[a,b],[F(1)],ku);B=cox(V,q,nv,[c,d],[F(1)],kv);out=[[[F(0)]] for _ in range(4)]
+ for i in range(nu):
+  for j in range(nv):
+   if not any(A[i]) or not any(B[j]):continue
+   n=i*nv+j;t=scale2(tensor(A[i],B[j]),W[n])
+   for k in range(3):out[k]=add2(out[k],scale2(t,P[n][k]))
+   out[3]=add2(out[3],t)
+ return out
+
+def verify_support(source,target,budget):
+ A=surface_data(source);B=surface_data(target);_,_,U,V,nu,nv,_,_=A;p,q=A[:2];au,av=U[p],U[nu];bu,bv=V[q],V[nv];assert B[2][B[0]]<=au<av<=B[2][B[4]] and B[3][B[1]]<=bu<bv<=B[3][B[5]]
+ us=sorted({au,av}|{x for x in A[2]+B[2] if au<x<av});vs=sorted({bu,bv}|{x for x in A[3]+B[3] if bu<x<bv});worst=F(0);cells=0
+ for a,b in zip(us,us[1:]):
+  for c,d in zip(vs,vs[1:]):
+   H=surface_cell(A,a,b,c,d);J=surface_cell(B,a,b,c,d);W=mul2(H[3],J[3]);den=min(x for row in W for x in row);assert den>0
+   R=[add2(mul2(H[k],J[3]),mul2(J[k],H[3]),-1) for k in range(3)];err=sqrt_hi(sum(max(abs(x) for row in rr for x in row)**2 for rr in R))/den
+   assert err<=budget,('Original support not preserved within budget',float(err),float(budget));worst=max(worst,err);cells+=1
+ return {'pass':True,'cells':cells,'upper_mm':outward(worst),'original_domain':[str(x) for x in [au,av,bu,bv]],'budget':float(budget)}
+
+if __name__=='__main__':
+ folder=Path(sys.argv[1]);out=[]
+ for f in sorted(folder.glob('*.json')):
+  j=json.loads(f.read_text());src={r['face']:r['surface'] for r in j['source']};dst={r['face']:r for r in j['actual']};records=[]
+  for face,rec in dst.items():
+   ancestors={a['index'] for a in rec.get('faceOrigins',[]) if a['operand']==0 and a['kind']==2}
+   assert len(ancestors)==1,('Ambiguous or absent declared face genealogy',face,ancestors)
+   source=next(iter(ancestors));r=verify_support(src[source],rec['surface'],F.from_float(1e-7));records.append(dict(r,source_face=source,target_face=face))
+  out.append({'case':f.stem,'sha256':hashlib.sha256(f.read_bytes()).hexdigest(),'identity_basis':'actual declared genealogy, operand0 EntityKind::Face; unique ancestor required','records':records});print(f.stem,[(r['cells'],r['upper_mm']) for r in records],flush=True)
+ Path(sys.argv[2]).write_text(json.dumps(out,indent=2)+'\n')

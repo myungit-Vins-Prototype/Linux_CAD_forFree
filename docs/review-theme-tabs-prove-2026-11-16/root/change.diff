@@ -1,0 +1,777 @@
+--- before/CLAUDE.md
++++ after/CLAUDE.md
+@@ -108,6 +108,12 @@
+ 
+ ## Ultimi interventi — esiti consolidati
+ 
++**16/11 — UI8 tema nelle schede corretto con tre agenti Sol.**
++Palette/QSS nel controller unico; menu Tema2D conservato al cambio foglio.
++App completa,21CTest e Wayland misto1569/solo2D898 PASS; carta e colori utente
++invariati. APItema completa PASS; sanitizer mirati,senza leak detection.
++31rilievi corretti; sigillo152 e mappa PASS. K10 invariato. [Prove/limiti](docs/review-theme-tabs-2026-11-16.md).
++
+ **16/11 — K12 cavità corretto con tre agenti Sol.**
+ R0,5:quarto vincolo efit minimo verificati,continuazioneU sugli stessi
+ supporti/endpoint,budget invariati;looplimitati/cancellabili. App completa e
+@@ -116,17 +122,12 @@
+ 30rilievi corretti;K10resta19/24parziali+5aperti,fitimpliciticampionati.
+ [Rapporto/prove/limiti](docs/review-blend-cavity-2026-11-16.md).
+ 
+-**16/11 — K10 Helix e cinque orfane, verificati con tre agenti Sol.**
+-Helix trasformate: limite continuo trigonometrico/Hermite, poli Qt effettivi
+-ricontrollati; due alias reali oltre budget ora rifiutati atomicamente.
+-Percorso diretto quintico C2 conservato. Rimosse5private/locali,17API conservate.
+-App completa e avvio isolato Wayland PASS;13gruppi Qt/sanitizer mirati3TU,
+-37guardie e Fraction8varianti/624campate PASS;11export Release identici.
+-CTest20/21:cavita rinviata alla diagnosi sopra,nessun test indebolito.
+-Mappa772/11165/385,check/HTML/archi PASS.29rilievi corretti complessivi;
+-K10:19/24siti parziali+5nonmigrati,oltre ai fallback.
+-[Rapporto/prove/limiti](docs/review-k10-helix-orphans-2026-11-16.md);
+-[memoria precedente](docs/history/claude-prima-k10-helix-orphans-2026-11-16.md).
++**16/11 — K10 Helix e cinque orfane verificati con tre agenti Sol.**
++Helix trasformate: limite continuo e poli Qt ricontrollati; due alias rifiutati.
++Percorso quintico C2 conservato; rimosse5private,17API aperte. App/Wayland,
++13Qt/sanitizer3TU,37guardie,Fraction8varianti/624campate e11export PASS.
++CTest20/21 poi risolto da K12 sopra; mappa772/11165/385 PASS.
++[Rapporto e limiti](docs/review-k10-helix-orphans-2026-11-16.md).
+ 
+ **16/11 — K10 cucitura e PRE8 verificati con tre agenti Sol.**
+ Plane rimappato: parametro originale e fin effettive via genealogia,cap invariato;
+@@ -173,7 +174,7 @@
+ App/74testkernel(75esecuzioni)/34CTest,mappa724/10429/353TU PASS;fixture
+ confrontodouble baseline corretto,nessun nuovoGL. [Prove/limiti](docs/review-fix-next-2026-11-15.md).
+ 
+-**15/11 — Sweep K1/K3 corretti con due agenti GPT-6.1 Sol.**
++15/11 — Sweep K1/K3 corretti con due agenti GPT-6.1 Sol.
+ Frame ortonormale e cuciture UV: app/runner,42 test kernel e16CTest PASS; mappa724/10414 PASS.
+ K4 e K2 poi corretti; riferimenti sopra. [Rapporto e prove](docs/sweep-review-fix-2026-11-15.md).
+ 
+--- before/CMakeLists.txt
++++ after/CMakeLists.txt
+@@ -587,7 +587,7 @@
+     # Finestra, viewport, storyboard e dialoghi sono unita' separate anche nei test.
+     list(REMOVE_ITEM FORGECAD_VIEW_TEST_SOURCES forgeCad2026.cpp ${FORGE_CAD_CUDA_SOURCE} ${FORGECAD_HASH_HEADER})
+     list(REMOVE_ITEM FORGECAD_VIEW_TEST_SOURCES cad_macos_menu.h cad_macos_menu.mm)
+-    add_executable(forgecad_view_tests tests/test_viewport.cpp tests/test_declared_history_cache.h tests/test_boolean_history.h tests/test_blend_history.h tests/test_extrusion_history.h tests/test_revolution_history.h tests/test_all_history.h tests/test_native_revisions.h tests/test_workspace_revisions.h tests/test_linked_drawing.h tests/test_drawing_workflow.h tests/test_drawing_revisions.h tests/test_projected_drawing_file.h tests/test_drawing_multisheet.h tests/test_drawing_revision_restore.h tests/test_drawing_release.h tests/test_catalog_recovery_gui.h tests/test_surface_tools_gui.h tests/test_document_units.h tests/test_history_suppression.h tests/test_function_panels.h tests/test_preview_selection_state.h tests/test_chamfer_preview_editing.h tests/test_sketch_projection_fit_validation.h tests/test_advanced_fillets.h tests/test_fillet_refinements.h tests/test_drawing_mouse.h tests/test_drawing_section_model.h tests/test_drawing_performance.h cuda_support_cpu.cpp ${FORGECAD_VIEW_TEST_SOURCES})
++    add_executable(forgecad_view_tests tests/test_viewport.cpp tests/test_document_theme_tabs.h tests/test_declared_history_cache.h tests/test_boolean_history.h tests/test_blend_history.h tests/test_extrusion_history.h tests/test_revolution_history.h tests/test_all_history.h tests/test_native_revisions.h tests/test_workspace_revisions.h tests/test_linked_drawing.h tests/test_drawing_workflow.h tests/test_drawing_revisions.h tests/test_projected_drawing_file.h tests/test_drawing_multisheet.h tests/test_drawing_revision_restore.h tests/test_drawing_release.h tests/test_catalog_recovery_gui.h tests/test_surface_tools_gui.h tests/test_document_units.h tests/test_history_suppression.h tests/test_function_panels.h tests/test_preview_selection_state.h tests/test_chamfer_preview_editing.h tests/test_sketch_projection_fit_validation.h tests/test_advanced_fillets.h tests/test_fillet_refinements.h tests/test_drawing_mouse.h tests/test_drawing_section_model.h tests/test_drawing_performance.h cuda_support_cpu.cpp ${FORGECAD_VIEW_TEST_SOURCES})
+     add_dependencies(forgecad_view_tests forgecad) # genera l'impronta una sola volta, prima dei test
+     target_include_directories(forgecad_view_tests PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/generated)
+     target_link_libraries(forgecad_view_tests PRIVATE Qt6::Test forgecad_compute Qt6::Widgets Qt6::OpenGL Qt6::OpenGLWidgets OpenGL::GL forgekernel ZLIB::ZLIB ${FORGECAD_ZSTD_TARGET})
+@@ -602,6 +602,9 @@
+         set_tests_properties(${name} PROPERTIES
+             ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QPA_OFFSCREEN_NO_GLX=1;QT_QPA_PLATFORMTHEME=;QT_STYLE_OVERRIDE=Fusion;FORGECAD_EXAMPLE_DIR=${FORGECAD_EXAMPLE_DIR}")
+     endfunction()
++    forgecad_add_view_test(forgecad_document_theme_tabs_tests --theme-tabs)
++    forgecad_add_view_test(forgecad_document_theme_only2d_tests --theme-tabs-only-2d)
++    set_tests_properties(forgecad_document_theme_tabs_tests forgecad_document_theme_only2d_tests PROPERTIES TIMEOUT 90)
+     forgecad_add_view_test(forgecad_document_tabs_tests --document-tabs)
+     set_tests_properties(forgecad_document_tabs_tests PROPERTIES TIMEOUT 90)
+     forgecad_add_view_test(forgecad_gui_3d_review_tests --gui-3d-review)
+--- before/cad_drawing_window.cpp
++++ after/cad_drawing_window.cpp
+@@ -1,4 +1,5 @@
+ #include "cad_drawing_window.h"
++#include "forgeCad2026_application_theme.h"
+ #include "cad_document_tabs.h"
+ #include "cad_drawing_template.h"
+ #include "cad_drawing_template_editor.h"
+@@ -29,6 +30,7 @@
+ #include <QEvent>
+ #include <QTabBar>
+ #include <QScopedValueRollback>
++#include <QPointer>
+ #include <stdexcept>
+ 
+ namespace ForgeCad {
+@@ -46,6 +48,7 @@
+     file->addSeparator();addRevisionMenus(file);
+     editMenu_=addCadMenu(menuBar(),QStringLiteral("Modifica"));insertMenu_=addCadMenu(menuBar(),QStringLiteral("Inserisci"));
+     dimensionMenu_=addCadMenu(menuBar(),QStringLiteral("Quote"));viewMenu_=addCadMenu(menuBar(),QStringLiteral("Visualizza"));
++    setupApplicationThemeMenu(*addCadMenu(viewMenu_,QStringLiteral("Tema")));
+     auto *source=addToolBar(QStringLiteral("Documento e modello"));source->setObjectName("drawingDocumentBar");configureCommandBar(source);
+     saveAction->setObjectName("drawingSaveAction");saveAction->setIcon(commandIcon("save"));saveAs->setIcon(commandIcon("drawingSaveAs"));
+     source->addAction(saveAction);source->addAction(exportPdf);source->addSeparator();
+@@ -160,7 +163,10 @@
+     populate(dimensionMenu_,{"drawingDimensionNumberingAction","drawingChangeDimensionNumberAction","drawingToggleDimensionNumberAction","drawingSmartDimensionAction","drawingChainHorizontalAction","drawingChainVerticalAction","drawingOrdinateXAction","drawingOrdinateYAction","drawingRepairDimensionAction","drawingEditDimensionAction","drawingReverseDimensionArrowsAction","drawingEndpointDimensionAction","drawingHorizontalDimensionAction","drawingVerticalDimensionAction","drawingLengthDimensionAction"});
+     auto *references=addCadMenu(dimensionMenu_,QStringLiteral("Riferimenti del piano"));
+     for(auto name:{"drawingOriginReferenceAction","drawingAxisXReferenceAction","drawingAxisYReferenceAction"})references->addAction(next->findChild<QAction *>(name));
++    QPointer<QMenu> themeMenu=viewMenu_->findChild<QMenu *>(QStringLiteral("applicationThemeMenu"),Qt::FindDirectChildrenOnly);
+     populate(viewMenu_,{"drawingHiddenLinesAction","drawingShadedFacesAction","drawingCenterMarksAction","drawingCenterLinesAction","drawingClearCenterMarksAction","drawingCylinderAxesAction","drawingFitAction"});viewMenu_->addSeparator();viewMenu_->addAction(next->findChild<QDockWidget *>("drawingTreeDock")->toggleViewAction());
++    if(themeMenu)viewMenu_->addMenu(themeMenu.data());
++    else setupApplicationThemeMenu(*addCadMenu(viewMenu_,QStringLiteral("Tema")));
+     viewMenu_->addAction(revisionDock_->toggleViewAction());
+     viewMenu_->addAction(next->findChild<QToolBar *>("drawingCommandBar")->toggleViewAction());viewMenu_->addAction(findChild<QToolBar *>("drawingDocumentBar")->toggleViewAction());
+     auto *workspace=next->findChild<QMainWindow *>();
+--- before/docs/code-review-2026-11-15.md
++++ after/docs/code-review-2026-11-15.md
+@@ -1,6 +1,8 @@
+ # Review generale ForgeCAD — 15 novembre 2026
+ 
+-**Stato più recente, 16 novembre:** **30 rilievi confermati corretti complessivamente**. [K12, raccordo cavità](review-blend-cavity-2026-11-16.md): il raggio 0,5 mm riesce nei due ordini, con semi diversi, posa e scala. Il costruttore accettava una campata minima con errore noto oltre budget e ometteva il quarto vincolo; ora rifiuta quel tentativo e continua lungo U sugli stessi supporti, conservando estremi e tolleranze. App completa, avvio isolato Wayland, 34/34 CTest, otto varianti e sei regressioni PASS. Sanitizer mirati su quattro TU e audit di 734 fin / 426.917 campate PASS; la prova Fraction sul vecchio punto contro l'intero carrier conferma uno scarto oltre dieci volte il budget edge. Mappa 773/11195/386 verificata. **K10 resta aperto: 19/24 siti iniziali parzialmente trattati, cinque interamente da migrare**, oltre ai fallback; le intersezioni implicite qui restano campionate. [Helix e cinque orfane](review-k10-helix-orphans-2026-11-16.md) conservate; 17 API pubbliche ancora da valutare. Precedenti [cucitura/PRE8](review-k10-sew-preview-2026-11-16.md), [UV/PRE7](review-k10-uv-preview-2026-11-16.md), [K11 Supporto.prt](supporto-booleana-2026-11-16.md) e [PRE5/PRE6/UI2](review-preview-unification-2026-11-16.md) conservati. K2 in produzione ed [ellisse per estremi](ellisse-estremi-2026-11-16.md) completata; uniformazione globale UI ancora aperta. I conteggi storici successivi descrivono le rispettive consegne precedenti.
++**Stato più recente, 16 novembre:** **31 rilievi confermati corretti complessivamente**. [UI8, cambio tema nelle schede 3D/2D](review-theme-tabs-2026-11-16.md): palette e QSS aggiornati dallo stesso controller globale, senza dipendere dagli eventi delle singole finestre incorporate. Aggiunto il menu Tema alle tavole 2D, conservato una sola volta al cambio foglio e disponibile anche dopo la chiusura dell’ultimo modello 3D. App completa, 21/21 CTest e Wayland con 1.569 controlli misti e 898 con sole tavole PASS; carta, cartiglio e colori utente conservati. Sanitizer mirati PASS, con leak detection disabilitata. K10 resta 19/24 siti iniziali parzialmente trattati e cinque interamente da migrare; uniformazione dei colori letterali dell’interfaccia e 17 API pubbliche ancora aperte.
++
++**Stato precedente K12:** [K12, raccordo cavità](review-blend-cavity-2026-11-16.md): il raggio 0,5 mm riesce nei due ordini, con semi diversi, posa e scala. Il costruttore accettava una campata minima con errore noto oltre budget e ometteva il quarto vincolo; ora rifiuta quel tentativo e continua lungo U sugli stessi supporti, conservando estremi e tolleranze. App completa, avvio isolato Wayland, 34/34 CTest, otto varianti e sei regressioni PASS. Sanitizer mirati su quattro TU e audit di 734 fin / 426.917 campate PASS; la prova Fraction sul vecchio punto contro l'intero carrier conferma uno scarto oltre dieci volte il budget edge. Mappa 773/11195/386 verificata. **K10 resta aperto: 19/24 siti iniziali parzialmente trattati, cinque interamente da migrare**, oltre ai fallback; le intersezioni implicite qui restano campionate. [Helix e cinque orfane](review-k10-helix-orphans-2026-11-16.md) conservate; 17 API pubbliche ancora da valutare. Precedenti [cucitura/PRE8](review-k10-sew-preview-2026-11-16.md), [UV/PRE7](review-k10-uv-preview-2026-11-16.md), [K11 Supporto.prt](supporto-booleana-2026-11-16.md) e [PRE5/PRE6/UI2](review-preview-unification-2026-11-16.md) conservati. K2 in produzione ed [ellisse per estremi](ellisse-estremi-2026-11-16.md) completata; uniformazione globale UI ancora aperta. I conteggi storici successivi descrivono le rispettive consegne precedenti.
+ 
+ **Aggiornamento successivo:** i cinque rilievi della [seconda review](review-followup-2026-11-15.md) K7/K8/K9/PRE4/UI7 sono corretti: **24 difetti precedenti corretti complessivamente**. La [prosecuzione K10](curve-fit-k10-2026-11-15.md) corregge il fit degli offset NURBS di estrusioni/rivoluzioni con controllo continuo, input finiti e fallimenti atomici; build completa e regressioni PASS. **K10 resta aperto per i chiamanti generici ancora campionati**. Le 22 orfane restano candidati distinti. Stato storico della prima review sotto.
+ 
+--- before/forgeCad2026_application_theme.cpp
++++ after/forgeCad2026_application_theme.cpp
+@@ -15,6 +15,7 @@
+ #include <QJsonDocument>
+ #include <QJsonObject>
+ #include <QDateTime>
++#include <QScopedValueRollback>
+ 
+ namespace ForgeCad {
+ namespace {
+@@ -55,6 +56,41 @@
+     return palette;
+ }
+ 
++QString applicationStyleSheet(bool dark) {
++    return dark ? QStringLiteral("QMainWindow { background: #111820; color: #d8e4ea; }QMenuBar,QToolBar,QStatusBar { background: #1b2730; color: #d8e4ea; }QMenu { background: #202d36; color: #d8e4ea; }"
++        "QToolBar { spacing: 1px; padding: 2px 4px; border: none; }"
++        "QToolBar::separator { background: #34444f; width: 1px; margin: 5px 3px; }"
++        "QToolBar QToolButton { border: 1px solid transparent; border-radius: 4px; padding: 2px; }"
++        "QToolBar QToolButton:checked { background: #24495f; border-color: #4f9fd0; }"
++        "QToolButton:enabled:hover, QToolBar QToolButton:enabled:hover { background: #365d78; border-color: #80c8f0; color: #ffffff; }"
++        "QToolButton:enabled:pressed, QToolBar QToolButton:enabled:pressed { background: #1f4258; border-color: #80c8f0; }"
++        "QToolBar QToolButton[popupMode=\"1\"] { padding-right: 11px; }"
++        "QToolBar QToolButton::menu-button { border: none; width: 10px; }"
++        "QToolButton::menu-button:enabled:hover { background: #5089ad; }"
++        "QToolButton::menu-button:enabled:pressed { background: #1f4258; }"
++        "QPushButton:enabled:hover { background: #365d78; border-color: #80c8f0; color: #ffffff; }"
++        "QPushButton:enabled:pressed { background: #1f4258; border-color: #80c8f0; }"
++        "QMenuBar::item:selected:enabled { background: #365d78; border-color: #80c8f0; color: #ffffff; }"
++        "QMenuBar::item:pressed:enabled { background: #1f4258; border-color: #80c8f0; color: #ffffff; }"
++        "QMenu::item:selected:enabled { background: #365d78; border-color: #80c8f0; color: #ffffff; }"
++        "QMenu::item:disabled { color: #788995; }") : QStringLiteral(
++        "QMainWindow { background: palette(window); color: palette(window-text); }"
++        "QMenuBar,QToolBar,QStatusBar,QMenu { background: palette(window); color: palette(window-text); }"
++        "QToolBar { spacing: 1px; padding: 2px 4px; border: none; }"
++        "QToolBar::separator { background: #c3cbd2; width: 1px; margin: 5px 3px; }"
++        "QToolBar QToolButton { background: transparent; border: 1px solid transparent; border-radius: 4px; padding: 2px; }"
++        "QToolBar QToolButton:checked { background: #d6eafb; border-color: #659dca; }"
++        "QToolButton:enabled:hover, QToolBar QToolButton:enabled:hover { background: #e2eff9; border-color: #659dca; }"
++        "QToolButton:enabled:pressed, QToolBar QToolButton:enabled:pressed { background: #c1dcf1; border-color: #427fab; }"
++        "QToolBar QToolButton[popupMode=\"1\"] { padding-right: 11px; }"
++        "QToolBar QToolButton::menu-button { border: none; width: 10px; }"
++        "QToolButton::menu-button:enabled:hover { background: #c1dcf1; }"
++        "QToolButton::menu-button:enabled:pressed { background: #a9cee9; }"
++        "QMenuBar::item:selected:enabled,QMenu::item:selected:enabled { background: #d6eafb; color: palette(window-text); }"
++        "QMenuBar::item:pressed:enabled { background: #c1dcf1; }"
++        "QMenu::item:disabled { color: palette(disabled, window-text); }");
++}
++
+ class ApplicationTheme final : public QObject {
+     QApplication &application_;
+     ApplicationThemeMode mode_ = applicationThemeMode();
+@@ -76,7 +112,9 @@
+     }
+ 
+     void apply() {
+-        applying_ = true;
++        if (applying_) { schedule(); return; }
++        const QScopedValueRollback<bool> applying(applying_, true);
++        const bool isDark = dark();
+         // Alcuni temi di piattaforma sostituiscono QStyle durante il cambio OS.
+         // Seguendo la vita dello stile reale funzioniamo anche sotto QStyleSheetStyle.
+         if (!commonStyle_) {
+@@ -88,10 +126,11 @@
+             });
+             trace("install-fusion");
+         }
+-        const auto palette = applicationPalette(dark());
++        const auto palette = applicationPalette(isDark);
+         if (application_.palette() != palette) application_.setPalette(palette);
++        const auto sheet = applicationStyleSheet(isDark);
++        if (application_.styleSheet() != sheet) application_.setStyleSheet(sheet);
+         trace("apply-palette");
+-        applying_ = false;
+     }
+ 
+     void trace(const char *reason) const {
+--- before/forgeCad2026_gui.cpp
++++ after/forgeCad2026_gui.cpp
+@@ -3966,7 +3966,6 @@
+     });revisionTimer->start();
+     documentRevisionDock_->setVisible(QSettings().value("revisions/modelPanelVisible",true).toBool());
+     refreshDocumentEditAccess();updateWindowTitle();
+-    setTheme(QApplication::palette().color(QPalette::Window).lightness() < 128);
+     connect(recovery_,&ForgeCad::DocumentRecovery::checkpointFinished,this,[this](quint64,bool,const QString &error){
+         if(!error.isEmpty())statusBar()->showMessage(QStringLiteral("Backup automatico non riuscito: %1").arg(error),12000);
+     });
+@@ -4037,8 +4036,7 @@
+ bool PdfWindow::event(QEvent *event) {
+     const bool handled = QMainWindow::event(event);
+     if (event->type() == QEvent::WindowActivate&&viewport_&&documentRevisionStatus_) {refreshDocumentEditAccess();updateWindowTitle();}
+-    if (event->type() == QEvent::ApplicationPaletteChange) {
+-        setTheme(QApplication::palette().color(QPalette::Window).lightness() < 128);
++    if (event->type() == QEvent::PaletteChange || event->type() == QEvent::ApplicationPaletteChange) {
+         // Le icone vettoriali leggono la palette corrente al ridisegno.
+         for (auto *bar : findChildren<QToolBar *>()) bar->update();
+     }
+@@ -5338,41 +5336,3 @@
+ void PdfWindow::setDisplayMode(int mode) {
+     modeStatus_->setText(mode == 0 ? QStringLiteral("Solo linee esterne") : mode == 1 ? QStringLiteral("Mesh") : QStringLiteral("Mesh + linee esterne"));
+ }
+-
+-void PdfWindow::setTheme(bool dark) {
+-    auto *application = qobject_cast<QApplication *>(QCoreApplication::instance());
+-    if (!application) return;
+-    const QString sheet = dark ? QStringLiteral("QMainWindow { background: #111820; color: #d8e4ea; }QMenuBar,QToolBar,QStatusBar { background: #1b2730; color: #d8e4ea; }QMenu { background: #202d36; color: #d8e4ea; }"
+-        "QToolBar { spacing: 1px; padding: 2px 4px; border: none; }"
+-        "QToolBar::separator { background: #34444f; width: 1px; margin: 5px 3px; }"
+-        "QToolBar QToolButton { border: 1px solid transparent; border-radius: 4px; padding: 2px; }"
+-        "QToolBar QToolButton:checked { background: #24495f; border-color: #4f9fd0; }"
+-        "QToolButton:enabled:hover, QToolBar QToolButton:enabled:hover { background: #365d78; border-color: #80c8f0; color: #ffffff; }"
+-        "QToolButton:enabled:pressed, QToolBar QToolButton:enabled:pressed { background: #1f4258; border-color: #80c8f0; }"
+-        "QToolBar QToolButton[popupMode=\"1\"] { padding-right: 11px; }"
+-        "QToolBar QToolButton::menu-button { border: none; width: 10px; }"
+-        "QToolButton::menu-button:enabled:hover { background: #5089ad; }"
+-        "QToolButton::menu-button:enabled:pressed { background: #1f4258; }"
+-        "QPushButton:enabled:hover { background: #365d78; border-color: #80c8f0; color: #ffffff; }"
+-        "QPushButton:enabled:pressed { background: #1f4258; border-color: #80c8f0; }"
+-        "QMenuBar::item:selected:enabled { background: #365d78; border-color: #80c8f0; color: #ffffff; }"
+-        "QMenuBar::item:pressed:enabled { background: #1f4258; border-color: #80c8f0; color: #ffffff; }"
+-        "QMenu::item:selected:enabled { background: #365d78; border-color: #80c8f0; color: #ffffff; }"
+-        "QMenu::item:disabled { color: #788995; }") : QStringLiteral(
+-        "QMainWindow { background: palette(window); color: palette(window-text); }"
+-        "QMenuBar,QToolBar,QStatusBar,QMenu { background: palette(window); color: palette(window-text); }"
+-        "QToolBar { spacing: 1px; padding: 2px 4px; border: none; }"
+-        "QToolBar::separator { background: #c3cbd2; width: 1px; margin: 5px 3px; }"
+-        "QToolBar QToolButton { background: transparent; border: 1px solid transparent; border-radius: 4px; padding: 2px; }"
+-        "QToolBar QToolButton:checked { background: #d6eafb; border-color: #659dca; }"
+-        "QToolButton:enabled:hover, QToolBar QToolButton:enabled:hover { background: #e2eff9; border-color: #659dca; }"
+-        "QToolButton:enabled:pressed, QToolBar QToolButton:enabled:pressed { background: #c1dcf1; border-color: #427fab; }"
+-        "QToolBar QToolButton[popupMode=\"1\"] { padding-right: 11px; }"
+-        "QToolBar QToolButton::menu-button { border: none; width: 10px; }"
+-        "QToolButton::menu-button:enabled:hover { background: #c1dcf1; }"
+-        "QToolButton::menu-button:enabled:pressed { background: #a9cee9; }"
+-        "QMenuBar::item:selected:enabled,QMenu::item:selected:enabled { background: #d6eafb; color: palette(window-text); }"
+-        "QMenuBar::item:pressed:enabled { background: #c1dcf1; }"
+-        "QMenu::item:disabled { color: palette(disabled, window-text); }");
+-    if (application->styleSheet() != sheet) application->setStyleSheet(sheet);
+-}
+--- before/forgeCad2026_gui.h
++++ after/forgeCad2026_gui.h
+@@ -88,7 +88,6 @@
+     void endBackgroundProgress();
+ 
+     void setDisplayMode(int mode);
+-    void setTheme(bool dark);
+     void rebuildModelTree();
+     void renameTreeItem(QTreeWidgetItem *item);
+     void applyTreeBackground(const QColor &color);
+--- before/tests/test_application_theme.cpp
++++ after/tests/test_application_theme.cpp
+@@ -22,6 +22,13 @@
+ int nativeChanges = 0, simulatedChanges = 0;
+ void require(bool condition, const char *message) {
+     if (!condition) throw std::runtime_error(message);
++}
++
++bool fusionMetrics(QApplication &app) {
++    std::unique_ptr<QStyle> fusion(QStyleFactory::create(QStringLiteral("Fusion")));
++    for (auto metric : {QStyle::PM_MenuPanelWidth, QStyle::PM_DefaultFrameWidth, QStyle::PM_ButtonMargin})
++        if (app.style()->pixelMetric(metric) != fusion->pixelMetric(metric)) return false;
++    return true;
+ }
+ 
+ void settle() {
+@@ -85,7 +92,7 @@
+         ForgeCad::initializeApplicationTheme(app);
+         require(app.findChildren<QObject *>(QStringLiteral("forgecadApplicationTheme"), Qt::FindDirectChildrenOnly).size() == 1,
+                 "una sola gestione del tema per applicazione");
+-        require(app.style()->objectName().compare(QStringLiteral("fusion"), Qt::CaseInsensitive) == 0,
++        require(fusionMetrics(app),
+                 "stile Fusion senza argomenti da terminale");
+ 
+         QWidget window;
+@@ -154,7 +161,7 @@
+         for (const auto &styleName : QStyleFactory::keys()) {
+             if (styleName.compare(QStringLiteral("Windows"),Qt::CaseInsensitive)!=0 && styleName.compare(QStringLiteral("Breeze"),Qt::CaseInsensitive)!=0) continue;
+             QPointer<QStyle> replacement=QStyleFactory::create(styleName);app.setStyle(replacement.data());settle();
+-            require(app.style()->objectName().compare(QStringLiteral("fusion"),Qt::CaseInsensitive)==0,
++            require(fusionMetrics(app),
+                     "Fusion ripristinato dopo sostituzione esterna dello stile");
+             require(replacement.isNull(),"stile esterno rilasciato senza conservare filtri sui widget");
+             app.setStyleSheet(QStringLiteral("QToolButton { color: palette(button-text); }"));
+@@ -164,7 +171,7 @@
+                     "Fusion conservato anche sotto il wrapper del foglio di stile");
+             require(app.palette()==commonPalette,"palette comune conservata dopo sostituzione di stile");
+             app.setStyleSheet(QString());settle();
+-            require(app.style()->objectName().compare(QStringLiteral("fusion"),Qt::CaseInsensitive)==0,"rimozione stylesheet non cambia lo stile comune");
++            require(fusionMetrics(app),"rimozione stylesheet non cambia lo stile comune");
+         }
+ 
+ #if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
+--- before/tests/test_viewport.cpp
++++ after/tests/test_viewport.cpp
+@@ -109,6 +109,7 @@
+ #include <QGraphicsItem>
+ #include <QGraphicsView>
+ #include <QSurfaceFormat>
++#include <QStyleHints>
+ #include <QTemporaryDir>
+ #include "../cad_element_names.h"
+ #include <QProcess>
+@@ -171,6 +172,7 @@
+ #include "test_sketch_interaction.h"
+ #include "test_document_lifetime.h"
+ #include "test_document_tabs.h"
++#include "test_document_theme_tabs.h"
+     static void snapCacheRegressions() {
+         using namespace ForgeCad;
+         const auto check = [](bool ok, const char *text) { require(ok, text); };
+@@ -11407,6 +11409,12 @@
+     QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, settings.path());
+     ForgeCad::initializeApplicationTheme(app);
+     qputenv("FORGECAD_RECOVERY_DIR",settings.filePath(QStringLiteral("recovery")).toUtf8());
++    if (app.arguments().contains(QStringLiteral("--theme-tabs")) ||
++        app.arguments().contains(QStringLiteral("--theme-tabs-only-2d"))) {
++        try { ViewportInteractionTest::documentThemeTabsTests(); }
++        catch (const std::exception &error) { std::cerr << error.what() << std::endl; return 1; }
++        return 0;
++    }
+     if (app.arguments().contains(QStringLiteral("--document-tabs"))) {
+         try { ViewportInteractionTest::documentTabsTests(); }
+         catch (const std::exception &error) { std::cerr << error.what() << std::endl; return 1; }
+--- before/tools/generate_architecture.py
++++ after/tools/generate_architecture.py
+@@ -60,6 +60,7 @@
+ 
+  'cad_widget_context': ('startup', 'Risoluzione del contesto del documento incorporato: selezione del workspace proprietario per pannelli, blocco dei comandi e vetro dei menu; evita il primo viewport dell’intera applicazione.'),
+  'cad_document_tabs': ('startup', 'Contenitore unico dei documenti 3D e 2D: pagine QMainWindow indipendenti, schede spostabili in alto/basso persistenti, apertura canonica senza duplicati, scorciatoie della pagina attiva, attivazione/accesso e pannelli flottanti. Chiusura con preflight di tutti i salvataggi e arresto asincrono del recupero 3D.'),
++ 'tests/test_document_theme_tabs.h': ('tests', 'Tema globale su schede 3D/2D visibili e nascoste, finestre separate, nuove pagine, soli documenti 2D e cambio foglio; menu, pannelli, icone e pixel, colori utente e contenuto della carta invariati.'),
+  'tests/test_document_tabs.h': ('tests', 'Regressioni del contenitore 3D/2D: apertura, deduplicazione, stato/Undo/GL persistente al cambio scheda, preferenza di posizione, menu dopo cambio foglio, chiusura con annullamento e recupero asincrono.'),
+ 
+  'cad_sketch_section_selection': ('sketch', 'Selezione persistente dei rami di una sezione associativa: conserva gli indici sorgente prima della compattazione e valida i sottoinsiemi senza riagganci per vicinanza.'),
+@@ -114,7 +115,7 @@
+  'kernel/tests/test_blend_contact_breaks.cpp': ('tests', 'Eventi G1 nei due assi e versi, estremi e nodi del bordo a un ULP; rifiuto di creste reali, raggio R2 e offset interno 1 mm anche con perturbazioni entro risoluzione.'),
+  'kernel/tests/test_blend.cpp': ('tests', 'Regressioni geometriche dei raccordi: volumi analitici indipendenti e confronti OCCT, piastre con contorno misto e 18 fori rettangolari, tangenze, assenza di anelli residui su appoggi sferici singoli, cuciture, supporti consumati, coperchi piani anche ruotati/traslati e catene aperte su cuciture tangenti elicoidali anche con perturbazione della rotazione di 1e-14 rad, con controlli di raggio, topologia e persistenza.'),
+  'forgeCad2026.cpp': ('startup', 'Entry point Qt: avvio, opzioni e contenitore unico a schede 3D/2D, apertura dei documenti indicati da riga di comando.'),
+- 'forgeCad2026_application_theme': ('startup', 'Stile Fusion comune ripristinato dopo sostituzioni native; menu Tema con scelta persistente chiaro/scuro/desktop, palette aggiornate nelle finestre aperte e diagnostica dei cambi tema.'),
++ 'forgeCad2026_application_theme': ('startup', 'Controller unico di palette e QSS globale su finestre e schede incorporate 3D/2D; applicazione coerente protetta dal reingresso, stile Fusion ripristinato dopo sostituzioni native e menu Tema persistente chiaro/scuro/desktop.'),
+  'forgeCad2026_gui': ('startup', 'PdfWindow: sette fasi di inizializzazione di scena, menu, comandi, opzioni e toolbar, preferenze persistenti per normali al mouse e costruzione degli schizzi fuori modifica; workspace 3D incorporabile con apertura instradata alle schede e chiusura asincrona del recupero; modelli archiviati in sola lettura; storyboard con trascinamento dei creatori di corpi autonomi a uno stadio.'),
+  'forgeCad2026_gui_common': ('startup', 'Helper condivisi dalla finestra, dai dialoghi e dal viewport.'),
+  'forgeCad2026_viewport.cpp': ('viewport', 'Ciclo di vita e impostazioni pubbliche del coordinatore CadViewport; gabbia poli multipli, proiezione/picking del gizmo e delta vincolati agli assi 3D.'),
+@@ -480,7 +481,7 @@
+                             'Classifica la visibilità con indice spaziale XY degli occludenti analitici (sfere, cilindri, coni, tori), mesh per auto-occlusione e rifilature, tagli parametrici delle coniche anche NURBS certificate e consolidamento dei bordi proiettati rettilinei.'),
+  'cad_drawing_sheets_ui.cpp': ('drawing', 'Schede e gestore dei fogli, identita persistenti, storia globale con ripristino della sorgente quando cambia modello e preparazione su tutti i fogli.'),
+  'cad_drawing_window': ('drawing',
+-                        'Workspace della suite 2D incorporabile nelle schede: chiusura/salvataggi coordinati, ricostruzione menu dopo cambio foglio; nuova tavola dallo snapshot valutato del modello salvato, verificato con impronta del file e identita; preparazione cancellabile senza rigenerare la storia; documento multifoglio, salvataggio e PDF multipagina.'),
++                        'Workspace della suite 2D incorporabile nelle schede: chiusura/salvataggi coordinati, ricostruzione menu dopo cambio foglio con unico sottomenu Tema persistente; nuova tavola dallo snapshot valutato del modello salvato, verificato con impronta del file e identita; preparazione cancellabile senza rigenerare la storia; documento multifoglio, salvataggio e PDF multipagina.'),
+  'cad_element_names': ('features',
+                        'Registra genealogia delle feature e nomi topologici persistenti per risolvere i '
+                        'riferimenti; ricostruisce i nomi legacy delle tavole sul medesimo B-rep per la migrazione.'),
+@@ -572,7 +573,8 @@
+                           'fuori modifica; workspace 3D incorporabile con apertura instradata alle schede e '
+                           'chiusura asincrona del recupero; modelli archiviati in sola lettura; storyboard '
+                           'con trascinamento dei creatori di corpi autonomi a uno stadio. Aggiunge Ellisse '
+-                          'per estremi a menu e toolbar e ne espone azione e icona alla ribbon.'),
++                          'per estremi a menu e toolbar e ne espone azione e icona alla ribbon. Consuma il '
++                          'tema globale aggiornando le toolbar su entrambi gli eventi palette; nessun QSS globale locale.'),
+  'forgeCad2026_viewport_sketch.cpp': ('viewport',
+                                       'Comandi schizzo, quote, snap e inferenze associative; scarta alla '
+                                       'chiusura solo nuovi schizzi vuoti senza utilizzatori, conserva punti '
+--- /dev/null
++++ after/tests/test_document_theme_tabs.h
+@@ -0,0 +1,397 @@
++// Incluso dentro ViewportInteractionTest. Nessun include in questo frammento.
++static void documentThemeTabsTests() {
++    using namespace ForgeCad;
++    int checks = 0, failures = 0;
++    const QString output = qEnvironmentVariable("FORGECAD_THEME_TABS_OUTPUT");
++    if (!output.isEmpty())
++        QDir().mkpath(output);
++    const bool only2d = QApplication::arguments().contains("--theme-tabs-only-2d");
++    initializeApplicationTheme(*qApp);
++    const auto check = [&](bool value, const QString &name) {
++        ++checks;
++        if (!value) {
++            ++failures;
++            std::cout << "FAIL " << name.toStdString() << std::endl;
++        }
++    };
++    const auto ok = [](const QString &s) {
++        if (!s.isEmpty())
++            throw std::runtime_error(s.toStdString());
++    };
++    const auto settle = []() {
++        for (int i = 0; i < 8; ++i)
++            QApplication::processEvents(QEventLoop::AllEvents, 20);
++    };
++    const auto dominant = [](QWidget *w, QRect crop = QRect()) {
++        const auto image =
++            (crop.isNull() ? w->grab() : w->grab(crop)).toImage().convertToFormat(QImage::Format_RGB32);
++        QHash<QRgb, int> n;
++        QRgb best = 0;
++        int maximum = 0;
++        for (int y = 2; y < image.height() - 2; ++y)
++            for (int x = 2; x < image.width() - 2; ++x) {
++                const auto p = image.pixel(x, y);
++                const int count = ++n[p];
++                if (count > maximum) {
++                    maximum = count;
++                    best = p;
++                }
++            }
++        return QColor(best);
++    };
++    const auto isDark = [](QColor c) { return c.lightness() < 128; };
++    struct Page {
++        QMainWindow *window;
++        PdfWindow *model = nullptr;
++        DrawingWindow *drawing = nullptr;
++        FunctionDialogPanel *panel = nullptr;
++        QDoubleSpinBox *field = nullptr;
++        QCheckBox *box = nullptr;
++        QString name;
++    };
++
++    DocumentTabsWindow host;
++    host.resize(1320, 900);
++    host.show();
++    QTemporaryDir files;
++    if (!files.isValid())
++        throw std::runtime_error("temp failed");
++    QVector<Page> pages;
++    const auto addPanel = [&](Page &p) {
++        p.panel = new FunctionDialogPanel(p.window, false);
++        p.panel->setSizeIdentity("theme-tabs-probe-" + p.name);
++        p.panel->setPanelOpacity(100);
++        auto *form = p.panel->createScrollableForm();
++        p.field = new QDoubleSpinBox(p.panel);
++        p.field->setValue(12.5);
++        form->addRow("Valore", p.field);
++        p.box = new QCheckBox("Controllo", p.panel);
++        p.box->setFocusPolicy(Qt::NoFocus);
++        form->addRow(p.box);
++        p.panel->show();
++    };
++    QString source;
++    if (!only2d) {
++        for (int i = 0; i < 2; ++i) {
++            auto *m = host.newModel();
++            Page p{m, m, nullptr, nullptr, nullptr, nullptr, QString("model%1").arg(i)};
++            ok(m->viewport_->createPrimitive(PrimitiveParameters{}, "Test body"));
++            source = files.filePath(QString("model%1.prt").arg(i));
++            check(m->saveDocumentPath(source), "save isolated model");
++            addPanel(p);
++            pages.append(p);
++        }
++    } else {
++        DocumentState empty;
++        ExtrusionObject box;
++        box.feature = BodyFeature::Primitive;
++        empty.extrusions = {box};
++        CadViewport builder;
++        builder.loadDocument(empty);
++        source = files.filePath("empty.prt");
++        ok(saveDocumentFile(source, builder.currentDocument()));
++    }
++    for (int i = 0; i < 2; ++i) {
++        auto *d = new DrawingWindow(host.documentTabs());
++        ok(d->createFromModel(source));
++        host.addDocument(d, true);
++        Page p{d, nullptr, d, nullptr, nullptr, nullptr, QString("drawing%1").arg(i)};
++        addPanel(p);
++        pages.append(p);
++    }
++    // Preserve explicit user choices independently from the normal theme surfaces.
++    const QColor custom("#42662b");
++    PdfWindow *customOwner = nullptr;
++    BackgroundSettings customBackground;
++    for (auto &p : pages)
++        if (p.model) {
++            customOwner = p.model;
++            customOwner->applyTreeBackground(custom);
++            customBackground = customOwner->viewport_->background();
++            customBackground.startColor = QColor("#214365");
++            customBackground.endColor = QColor("#654321");
++            customOwner->viewport_->setBackground(customBackground);
++            break;
++        }
++    QMap<QString, QImage> icons;
++    const auto verify = [&](bool dark, const QString &phase) {
++        check(isDark(QApplication::palette().color(QPalette::Window)) == dark,
++              phase + " application palette");
++        for (auto &p : pages) {
++            // Palette check before reactivation exercises hidden pages as well.
++            check(isDark(p.window->palette().color(QPalette::Window)) == dark,
++                  phase + " " + p.name + " hidden/window palette");
++            if (host.documentTabs()->indexOf(p.window) >= 0)
++                host.activateDocument(p.window);
++            else
++                p.window->show();
++            p.panel->show();
++            settle();
++            const QString prefix = phase + " " + p.name;
++            auto bars = p.window->findChildren<QToolBar *>();
++            for (auto *bar : bars)
++                bar->show();
++            settle();
++            int barChecks = 0;
++            for (auto *bar : bars)
++                if (bar->isVisible() && bar->width() > 40 && bar->height() > 10) {
++                    const auto color = dominant(bar);
++                    check(isDark(color) == dark,
++                          prefix + " toolbar raster " + bar->objectName() + "=" + color.name());
++                    check(isDark(bar->palette().color(QPalette::Button)) == dark,
++                          prefix + " toolbar palette " + bar->objectName());
++                    ++barChecks;
++                }
++            check(barChecks > 0, prefix + " toolbar present");
++            check(isDark(p.field->palette().color(QPalette::Base)) == dark, prefix + " field palette");
++            const auto fieldColor = dominant(p.field);
++            check(isDark(fieldColor) == dark, prefix + " field raster=" + fieldColor.name());
++            check(isDark(p.panel->panelColor()) == dark, prefix + " panel color");
++            const auto panelColor = dominant(p.panel);
++            check(isDark(panelColor) == dark, prefix + " panel raster=" + panelColor.name());
++            p.box->setChecked(false);
++            const auto off = p.box->grab().toImage();
++            p.box->setChecked(true);
++            const auto on = p.box->grab().toImage();
++            int contrast = 0;
++            for (int y = 0; y < off.height(); ++y)
++                for (int x = 0; x < off.width(); ++x) {
++                    const auto a = off.pixelColor(x, y), b = on.pixelColor(x, y);
++                    if (qMax(qMax(qAbs(a.red() - b.red()), qAbs(a.green() - b.green())),
++                             qAbs(a.blue() - b.blue())) > 100)
++                        ++contrast;
++                }
++            check(contrast >= 6, prefix + " checkbox raster contrast");
++            if (p.model) {
++                auto *tree = p.model->modelTree_;
++                const auto color = dominant(tree->viewport());
++                if (p.model == customOwner) {
++                    check(tree->palette().color(QPalette::Base) == custom,
++                          prefix + " user tree palette retained");
++                    check(color == custom, prefix + " user tree raster retained");
++                    check(p.model->viewport_->background().startColor == customBackground.startColor &&
++                              p.model->viewport_->background().endColor == customBackground.endColor,
++                          prefix + " canvas background retained");
++                } else {
++                    check(isDark(tree->palette().color(QPalette::Base)) == dark,
++                          prefix + " storyboard palette");
++                    check(isDark(color) == dark, prefix + " storyboard raster=" + color.name());
++                }
++            }
++            if (p.drawing) {
++                QByteArray bytes;
++                ok(encodeDrawingSheet(p.drawing->editor()->sheet(), bytes));
++                const auto previous = p.window->property("themeProbeDefinition").toByteArray();
++                if (previous.isEmpty())
++                    p.window->setProperty("themeProbeDefinition", bytes);
++                else
++                    check(previous == bytes, prefix + " drawing definition retained");
++                p.drawing->editor()->fitSheet();
++                settle();
++                auto *canvas = p.drawing->editor()->canvas();
++                const auto point = canvas->mapFromScene(QPointF(20, 20));
++                const auto capture = canvas->viewport()->grab().toImage();
++                const auto sample = (QPointF(point) * capture.devicePixelRatio()).toPoint();
++                check(capture.rect().contains(sample) && capture.pixelColor(sample) == QColor(Qt::white),
++                      prefix + " paper raster stays white");
++                // Technical ink belongs to the drawing, independent from the interface theme.
++                const auto size = p.drawing->editor()->sheet().size;
++                QImage sceneImage(1000, 700, QImage::Format_RGB32);
++                sceneImage.fill(Qt::white);
++                QPainter scenePainter(&sceneImage);
++                canvas->scene()->render(&scenePainter, QRectF(0, 0, 1000, 700), QRectF(QPointF(0, 0), size),
++                                        Qt::IgnoreAspectRatio);
++                scenePainter.end();
++                int sceneInk = 0;
++                for (int y = 0; y < sceneImage.height(); ++y)
++                    for (int x = 0; x < sceneImage.width(); ++x)
++                        sceneInk += sceneImage.pixelColor(x, y).lightness() < 128;
++                check(sceneInk > 100, prefix + " technical border/title text raster present");
++                const auto imageBytes = QByteArray(reinterpret_cast<const char *>(sceneImage.constBits()),
++                                                   sceneImage.sizeInBytes());
++                const auto previousImage = p.window->property("themeProbePaperRaster").toByteArray();
++                if (previousImage.isEmpty())
++                    p.window->setProperty("themeProbePaperRaster", imageBytes);
++                else
++                    check(previousImage == imageBytes,
++                          prefix + " technical sheet raster identical across themes");
++                // A frame can be queued after Qt's palette propagation. Wait for that frame before sampling
++                // the visible canvas.
++                const auto canvasInk = [&] {
++                    const auto paperRect = canvas->mapFromScene(QRectF(QPointF(0, 0), size))
++                                               .boundingRect()
++                                               .intersected(canvas->viewport()->rect())
++                                               .adjusted(2, 2, -2, -2);
++                    const auto actual = canvas->viewport()->grab(paperRect).toImage();
++                    int ink = 0;
++                    for (int y = 0; y < actual.height(); ++y)
++                        for (int x = 0; x < actual.width(); ++x)
++                            ink += actual.pixelColor(x, y).lightness() < 128;
++                    return ink;
++                };
++                QElapsedTimer frame;
++                frame.start();
++                int actualInk = canvasInk();
++                while (actualInk < 100 && frame.elapsed() < 1000) {
++                    QApplication::processEvents(QEventLoop::AllEvents, 20);
++                    QThread::msleep(5);
++                    actualInk = canvasInk();
++                }
++                check(actualInk >= 100, prefix + " visible technical border/title text raster present");
++            }
++            auto *menu = p.window->findChild<QMenu *>("applicationThemeMenu");
++            check(menu && menu->actions().size() == 3, prefix + " theme menu present");
++            if (menu) {
++                menu->popup({50, 50});
++                settle();
++                const auto image = menu->grab().toImage();
++                const auto point =
++                    QPointF(menu->width() / 2.0, menu->actionGeometry(menu->actions().back()).bottom() + 3) *
++                    image.devicePixelRatio();
++                const auto color = image.pixelColor(point.toPoint());
++                check(color.alpha() > 200, prefix + " menu surface opaque interior");
++                check(isDark(color) == dark, prefix + " menu raster=" + color.name());
++                check(isDark(menu->palette().color(QPalette::WindowText)) != dark, prefix + " menu palette");
++                int selected = 0;
++                for (auto *a : menu->actions())
++                    selected += a->isChecked();
++                check(selected == 1, prefix + " menu single selection");
++                menu->hide();
++            }
++            // Render the actual action icon, whose engine predates the change.
++            QAction *iconAction =
++                p.window->findChild<QAction *>(p.model ? "documentSaveAction" : "drawingSaveAction");
++            check(iconAction && !iconAction->icon().isNull(), prefix + " actual icon present");
++            if (iconAction) {
++                QImage image(32, 32, QImage::Format_ARGB32);
++                image.fill(Qt::transparent);
++                QPainter painter(&image);
++                iconAction->icon().paint(&painter, QRect(0, 0, 32, 32));
++                painter.end();
++                int visible = 0;
++                for (int y = 0; y < 32; ++y)
++                    for (int x = 0; x < 32; ++x)
++                        if (image.pixelColor(x, y).alpha() > 128)
++                            ++visible;
++                check(visible > 30, prefix + " icon raster visible");
++                const QString key = p.name + QString(dark ? "-dark" : "-light");
++                if (icons.contains(key))
++                    check(image == icons[key], prefix + " icon raster stable after reactivation");
++                else
++                    icons[key] = image;
++                const QString other = p.name + QString(dark ? "-light" : "-dark");
++                if (icons.contains(other))
++                    check(image != icons[other], prefix + " icon raster follows theme");
++                if (!output.isEmpty())
++                    image.save(output + "/" + phase + "-" + p.name + "-icon.png");
++            }
++            if (!output.isEmpty())
++                p.window->grab().save(output + "/" + phase + "-" + p.name + ".png");
++            if (!output.isEmpty())
++                p.panel->grab().save(output + "/" + phase + "-" + p.name + "-panel.png");
++        }
++    };
++    // Drive the actual menus, alternating a 3D and 2D origin where possible.
++    const auto choose = [&](int index) {
++        auto *menu =
++            pages[index == 2 ? 0 : (only2d ? 0 : 2)].window->findChild<QMenu *>("applicationThemeMenu");
++        check(menu, "origin menu exists");
++        if (menu)
++            menu->actions()[index]->trigger();
++        else
++            setApplicationThemeMode(*qApp, index == 2   ? ApplicationThemeMode::Dark
++                                           : index == 1 ? ApplicationThemeMode::Light
++                                                        : ApplicationThemeMode::Desktop);
++        settle();
++    };
++    choose(1);
++    verify(false, "light0");
++    choose(2);
++    verify(true, "dark1");
++    choose(1);
++    verify(false, "light2");
++    choose(2);
++    verify(true, "dark3");
++    if (!only2d) {
++        auto *m = new PdfWindow;
++        Page p{m, m, nullptr, nullptr, nullptr, nullptr, "detached-model"};
++        m->show();
++        addPanel(p);
++        pages.append(p);
++    }
++    auto *d = new DrawingWindow;
++    ok(d->createFromModel(source));
++    d->resize(host.size());
++    d->show();
++    Page dp{d, nullptr, d, nullptr, nullptr, nullptr, "detached-drawing"};
++    addPanel(dp);
++    pages.append(dp);
++    // New documents must inherit the current global style without a palette event.
++    if (!only2d) {
++        auto *m = host.newModel();
++        Page p{m, m, nullptr, nullptr, nullptr, nullptr, "new-model-dark"};
++        addPanel(p);
++        pages.append(p);
++    }
++    {
++        auto *d = new DrawingWindow(host.documentTabs());
++        ok(d->createFromModel(source));
++        host.addDocument(d, true);
++        Page p{d, nullptr, d, nullptr, nullptr, nullptr, "new-drawing-dark"};
++        addPanel(p);
++        pages.append(p);
++    }
++    verify(true, "dark-new");
++    choose(0);
++#if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
++    for (bool dark : {false, true, false}) {
++        check(QMetaObject::invokeMethod(
++                  qApp->styleHints(), "colorSchemeChanged", Qt::DirectConnection,
++                  Q_ARG(Qt::ColorScheme, dark ? Qt::ColorScheme::Dark : Qt::ColorScheme::Light)),
++              "desktop scheme signal");
++        settle();
++        verify(dark, dark ? "desktop-dark" : "desktop-light");
++    }
++#endif
++    // Changing sheet rebuilds view menus; the same theme entry must survive exactly once.
++    for (auto &p : pages)
++        if (p.drawing) {
++            ok(p.drawing->addSheet("Secondo foglio", {420, 297}));
++            ok(p.drawing->setActiveSheet(0));
++            p.window->setProperty("themeProbeDefinition", QByteArray());
++            p.window->setProperty("themeProbePaperRaster", QByteArray());
++            check(p.window->findChildren<QMenu *>("applicationThemeMenu").size() == 1,
++                  "exactly one 2D theme menu after sheet rebuild");
++        }
++    choose(2);
++    verify(true, "sheets-dark");
++    // Close the final 3D page: the remaining 2D session still owns theme switching.
++    for (int i = pages.size() - 1; i >= 0; --i)
++        if (pages[i].model) {
++            auto p = pages.takeAt(i);
++            delete p.panel;
++            const int index = host.documentTabs()->indexOf(p.window);
++            if (index >= 0)
++                host.documentTabs()->removeTab(index);
++            delete p.window;
++        }
++    choose(1);
++    verify(false, "only2d-light");
++    choose(2);
++    verify(true, "only2d-dark");
++    for (auto &p : pages) {
++        p.panel->hide();
++        delete p.panel;
++        p.panel = nullptr;
++    }
++    // Clean destruction without saving or changing any original CAD.
++    for (auto &p : pages) {
++        const int index = host.documentTabs()->indexOf(p.window);
++        if (index >= 0)
++            host.documentTabs()->removeTab(index);
++        delete p.window;
++        p.window = nullptr;
++    }
++    require(failures == 0, "tema coerente in tutte le schede 3D/2D e nei pixel raster");
++    std::cout << "PASS document theme tabs: " << checks << " checks\n";
++}

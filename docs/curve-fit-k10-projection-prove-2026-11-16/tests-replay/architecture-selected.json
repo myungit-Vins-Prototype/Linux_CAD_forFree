@@ -1,0 +1,400 @@
+{
+  "nodes": [
+    {
+      "id": "cad_forge.cpp",
+      "group": "features",
+      "description": "Adatta sketch e parametri al kernel; booleane con genealogia ricondotta agli operandi e recupero dell\u2019unione commutativa nell\u2019ordine inverso dopo un errore geometrico; conversione mesh float con filtro comune dei triangoli degeneri per scena e anteprime, ID topologici coerenti. Il riepilogo delle curve proiettate usa lo scarto della catena finale dopo le giunte.",
+      "lines": 2419,
+      "symbols": [
+        "ForgeCad::appendDisplayTriangle",
+        "ForgeCad::declaredConstruction",
+        "ForgeCad::declaredExtrusionRoot",
+        "ForgeCad::declaredModification",
+        "ForgeCad::declaredRevolutionRoot",
+        "ForgeCad::declaredRoot",
+        "ForgeCad::declaredSheet",
+        "ForgeCad::forgeBlend",
+        "ForgeCad::forgeBlendHasEffect",
+        "ForgeCad::forgeBlendPreviewDisplay",
+        "ForgeCad::forgeBoolean",
+        "ForgeCad::forgeBooleanWithHistory",
+        "ForgeCad::forgeBoundarySurface",
+        "ForgeCad::forgeClosestSheetPiece",
+        "ForgeCad::forgeDeleteFaces",
+        "ForgeCad::forgeDeleteFacesSeparated",
+        "ForgeCad::forgeDraft",
+        "ForgeCad::forgeExtendSheet",
+        "ForgeCad::forgeExtrusion",
+        "ForgeCad::forgeExtrusionPreviewDisplay",
+        "ForgeCad::forgeFillContactFaces",
+        "ForgeCad::forgeFillSurface",
+        "ForgeCad::forgeHelixBase",
+        "ForgeCad::forgeImported",
+        "ForgeCad::forgeIntersectRay",
+        "ForgeCad::forgeLocalPreviewDisplay",
+        "ForgeCad::forgeLoft",
+        "ForgeCad::forgeOffsetFaces",
+        "ForgeCad::forgePickFace",
+        "ForgeCad::forgePlanarCurves",
+        "ForgeCad::forgePlanarSketch",
+        "ForgeCad::forgePrimitive",
+        "ForgeCad::forgeProjectedCurves",
+        "ForgeCad::forgeProjectedCut",
+        "ForgeCad::forgeProjectionDirection",
+        "ForgeCad::forgeReferencedLoft",
+        "ForgeCad::forgeRevolution",
+        "ForgeCad::forgeRuledSurface",
+        "ForgeCad::forgeScale",
+        "ForgeCad::forgeSew",
+        "ForgeCad::forgeSheetPieces",
+        "ForgeCad::forgeShell",
+        "ForgeCad::forgeSketchFrame",
+        "ForgeCad::forgeSketchSegments",
+        "ForgeCad::forgeSurfaceConstructionCurves",
+        "ForgeCad::forgeSweep",
+        "ForgeCad::forgeTessellate",
+        "ForgeCad::forgeThicken",
+        "ForgeCad::forgeThread",
+        "ForgeCad::forgeThreadFaceInfo",
+        "ForgeCad::forgeTrimBoth",
+        "ForgeCad::forgeTrimPlaneTool",
+        "ForgeCad::forgeTrimSheet",
+        "ForgeCad::forgeTrimSketchTool",
+        "ForgeCad::forgeWarmPickCaches",
+        "ForgeCad::lineSegment",
+        "ForgeCad::loftContacts",
+        "ForgeCad::loftEndConditions",
+        "ForgeCad::loftGuideSequence",
+        "ForgeCad::microFeatureHint",
+        "ForgeCad::setError",
+        "ForgeCad::sketchLineFromWorld",
+        "ForgeCad::sketchSegmentsWithSources",
+        "ForgeCad::surfaceConstructionCurvesSerial",
+        "ForgeCad::sweptHelicalTool",
+        "ForgeCad::toDisplay",
+        "ForgeCad::toVec",
+        "ForgeCad::trimTool",
+        "ForgeCad::trimToolReach"
+      ]
+    },
+    {
+      "id": "kernel/fk_curve_fit_bounds.cpp",
+      "group": "kernel",
+      "description": "Limiti continui Bernstein outward per posizione, offset NURBS e composizione isoparametrica NURBS e affine anche obliqua su estrusione con SP-curve originale; limiti delle derivate del supporto per il trasferimento UV, coefficienti originali, pesi, istanze, budget e cancellazione. Proiezione affine su Plane dagli originali IEEE, normale da assi del piano e direzione originale, con residuo omogeneo outward.",
+      "lines": 1389,
+      "symbols": [
+        "ForgeCad::Kernel::detail::I::I",
+        "ForgeCad::Kernel::detail::add",
+        "ForgeCad::Kernel::detail::affineBezier",
+        "ForgeCad::Kernel::detail::affineCoordinate",
+        "ForgeCad::Kernel::detail::affineInverseU",
+        "ForgeCad::Kernel::detail::check",
+        "ForgeCad::Kernel::detail::choose",
+        "ForgeCad::Kernel::detail::compositionFactory",
+        "ForgeCad::Kernel::detail::constantU",
+        "ForgeCad::Kernel::detail::cross",
+        "ForgeCad::Kernel::detail::curveParameterBound",
+        "ForgeCad::Kernel::detail::curvePositionErrorBound",
+        "ForgeCad::Kernel::detail::derivative",
+        "ForgeCad::Kernel::detail::dn",
+        "ForgeCad::Kernel::detail::dot",
+        "ForgeCad::Kernel::detail::elevated",
+        "ForgeCad::Kernel::detail::evaluatePolynomial",
+        "ForgeCad::Kernel::detail::exactSum",
+        "ForgeCad::Kernel::detail::extract",
+        "ForgeCad::Kernel::detail::extrusionAffineCompositionErrorBound",
+        "ForgeCad::Kernel::detail::extrusionAffineFactory",
+        "ForgeCad::Kernel::detail::extrusionOffsetErrorBound",
+        "ForgeCad::Kernel::detail::finite",
+        "ForgeCad::Kernel::detail::image",
+        "ForgeCad::Kernel::detail::make",
+        "ForgeCad::Kernel::detail::mul",
+        "ForgeCad::Kernel::detail::normInterval",
+        "ForgeCad::Kernel::detail::normLower",
+        "ForgeCad::Kernel::detail::normUpper",
+        "ForgeCad::Kernel::detail::operator*",
+        "ForgeCad::Kernel::detail::operator+",
+        "ForgeCad::Kernel::detail::operator-",
+        "ForgeCad::Kernel::detail::operator/",
+        "ForgeCad::Kernel::detail::parameterBounds",
+        "ForgeCad::Kernel::detail::planeProjectionErrorBound",
+        "ForgeCad::Kernel::detail::planeProjectionFactory",
+        "ForgeCad::Kernel::detail::positionFactory",
+        "ForgeCad::Kernel::detail::positionOnOriginal",
+        "ForgeCad::Kernel::detail::positionPointBound",
+        "ForgeCad::Kernel::detail::positionSourceSupported",
+        "ForgeCad::Kernel::detail::preimage",
+        "ForgeCad::Kernel::detail::prepareExtrusionIso",
+        "ForgeCad::Kernel::detail::prepareIso",
+        "ForgeCad::Kernel::detail::prepareSource",
+        "ForgeCad::Kernel::detail::product",
+        "ForgeCad::Kernel::detail::range",
+        "ForgeCad::Kernel::detail::restrictP",
+        "ForgeCad::Kernel::detail::revolutionOffsetErrorBound",
+        "ForgeCad::Kernel::detail::scaled",
+        "ForgeCad::Kernel::detail::sourcePointEnclosure",
+        "ForgeCad::Kernel::detail::split",
+        "ForgeCad::Kernel::detail::sum",
+        "ForgeCad::Kernel::detail::surfaceCompositionErrorBound",
+        "ForgeCad::Kernel::detail::surfaceParameterBounds",
+        "ForgeCad::Kernel::detail::up",
+        "ForgeCad::Kernel::detail::vec"
+      ]
+    },
+    {
+      "id": "kernel/fk_project.cpp",
+      "group": "kernel",
+      "description": "Proiezione direzionale su corpi: fit cubico con limite continuo dagli originali Line/NURBS su una sola Plane; certificati immutabili senza riferimenti ai chiamanti, verifica dei poli effettivi dopo giunti e fusione primo/ultimo e scarto finale propagato. Scelta delle facce e famiglie non supportate restano campionate.",
+      "lines": 773,
+      "symbols": [
+        "ForgeCad::Kernel::Projector::Projector",
+        "ForgeCad::Kernel::Projector::anchorCount",
+        "ForgeCad::Kernel::Projector::computeAnchor",
+        "ForgeCad::Kernel::Projector::computePair",
+        "ForgeCad::Kernel::Projector::faceAt",
+        "ForgeCad::Kernel::Projector::finish",
+        "ForgeCad::Kernel::Projector::follow",
+        "ForgeCad::Kernel::Projector::gapAt",
+        "ForgeCad::Kernel::Projector::hitAt",
+        "ForgeCad::Kernel::Projector::pairCount",
+        "ForgeCad::Kernel::Projector::pointOn",
+        "ForgeCad::Kernel::Projector::prepare",
+        "ForgeCad::Kernel::Projector::run",
+        "ForgeCad::Kernel::Projector::transition",
+        "ForgeCad::Kernel::concatenate",
+        "ForgeCad::Kernel::joinProjectedPieces",
+        "ForgeCad::Kernel::nearestFaceEdge",
+        "ForgeCad::Kernel::projectCurve",
+        "ForgeCad::Kernel::projectCurves",
+        "ForgeCad::Kernel::projectedFitCertificate",
+        "ForgeCad::Kernel::projectedProfileCut",
+        "ForgeCad::Kernel::rayOnSurface",
+        "ForgeCad::Kernel::solve3",
+        "ForgeCad::Kernel::validateProjectedFit"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "source": "cad_feature_build.cpp",
+      "target": "cad_forge.cpp",
+      "kind": "call",
+      "count": 38,
+      "sites": [
+        {
+          "line": 340,
+          "symbol": "ForgeCad::forgeProjectedCurves",
+          "owner": "ForgeCad::buildGeometryImpl"
+        },
+        {
+          "line": 421,
+          "symbol": "ForgeCad::forgeProjectedCut",
+          "owner": "ForgeCad::buildGeometryImpl"
+        }
+      ]
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "cad_forge.cpp",
+      "kind": "call",
+      "count": 271,
+      "sites": [
+        {
+          "line": 735,
+          "symbol": "ForgeCad::forgeSketchSegments",
+          "owner": "ForgeCad::forgeProjectedCut"
+        },
+        {
+          "line": 766,
+          "symbol": "ForgeCad::forgeSketchSegments",
+          "owner": "ForgeCad::forgeProjectedCurves"
+        },
+        {
+          "line": 1430,
+          "symbol": "ForgeCad::forgeSketchSegments",
+          "owner": "ForgeCad::forgeSweep"
+        },
+        {
+          "line": 1567,
+          "symbol": "ForgeCad::forgeSketchSegments",
+          "owner": "ForgeCad::forgeLoft"
+        },
+        {
+          "line": 1924,
+          "symbol": "ForgeCad::forgeSketchSegments",
+          "owner": "ForgeCad::forgePlanarSketch"
+        }
+      ]
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_project.cpp",
+      "kind": "call",
+      "count": 3,
+      "sites": [
+        {
+          "line": 742,
+          "symbol": "ForgeCad::Kernel::projectedProfileCut",
+          "owner": "ForgeCad::forgeProjectedCut"
+        },
+        {
+          "line": 783,
+          "symbol": "ForgeCad::Kernel::projectCurves",
+          "owner": "ForgeCad::forgeProjectedCurves"
+        },
+        {
+          "line": 789,
+          "symbol": "ForgeCad::Kernel::joinProjectedPieces",
+          "owner": "ForgeCad::forgeProjectedCurves"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_curve_fit_bounds.cpp",
+      "target": "kernel/fk_curve_fit_bounds.cpp",
+      "kind": "call",
+      "count": 674,
+      "sites": [
+        {
+          "line": 1380,
+          "symbol": "ForgeCad::Kernel::detail::planeProjectionFactory",
+          "owner": "ForgeCad::Kernel::detail::planeProjectionErrorBound"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_project.cpp",
+      "target": "kernel/fk_curve_fit_bounds.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 509,
+          "symbol": "ForgeCad::Kernel::detail::planeProjectionErrorBound",
+          "owner": "ForgeCad::Kernel::Projector::finish"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_project.cpp",
+      "target": "kernel/fk_project.cpp",
+      "kind": "call",
+      "count": 66,
+      "sites": [
+        {
+          "line": 349,
+          "symbol": "ForgeCad::Kernel::Projector::run::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_project.cpp:340:26)::operator()",
+          "owner": "ForgeCad::Kernel::Projector::run"
+        },
+        {
+          "line": 352,
+          "symbol": "ForgeCad::Kernel::Projector::run::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_project.cpp:340:26)::operator()",
+          "owner": "ForgeCad::Kernel::Projector::run"
+        },
+        {
+          "line": 467,
+          "symbol": "ForgeCad::Kernel::Projector::finish::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_project.cpp:454:28)::operator()",
+          "owner": "ForgeCad::Kernel::Projector::finish"
+        },
+        {
+          "line": 473,
+          "symbol": "ForgeCad::Kernel::Projector::finish::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_project.cpp:454:28)::operator()",
+          "owner": "ForgeCad::Kernel::Projector::finish"
+        },
+        {
+          "line": 512,
+          "symbol": "ForgeCad::Kernel::projectedFitCertificate",
+          "owner": "ForgeCad::Kernel::Projector::finish"
+        },
+        {
+          "line": 528,
+          "symbol": "ForgeCad::Kernel::Projector::finish::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_project.cpp:516:32)::operator()",
+          "owner": "ForgeCad::Kernel::Projector::finish"
+        },
+        {
+          "line": 529,
+          "symbol": "ForgeCad::Kernel::Projector::finish::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_project.cpp:516:32)::operator()",
+          "owner": "ForgeCad::Kernel::Projector::finish"
+        },
+        {
+          "line": 554,
+          "symbol": "ForgeCad::Kernel::ProjectedFitCertificate::Span::Span",
+          "owner": "ForgeCad::Kernel::concatenate"
+        },
+        {
+          "line": 588,
+          "symbol": "ForgeCad::Kernel::validateProjectedFit",
+          "owner": "ForgeCad::Kernel::concatenate"
+        },
+        {
+          "line": 628,
+          "symbol": "ForgeCad::Kernel::projectCurves::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_project.cpp:613:25)::operator()",
+          "owner": "ForgeCad::Kernel::projectCurves"
+        },
+        {
+          "line": 629,
+          "symbol": "ForgeCad::Kernel::projectCurves::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_project.cpp:613:25)::operator()",
+          "owner": "ForgeCad::Kernel::projectCurves"
+        },
+        {
+          "line": 631,
+          "symbol": "ForgeCad::Kernel::projectCurves::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_project.cpp:613:25)::operator()",
+          "owner": "ForgeCad::Kernel::projectCurves"
+        },
+        {
+          "line": 646,
+          "symbol": "ForgeCad::Kernel::validateProjectedFit",
+          "owner": "ForgeCad::Kernel::joinProjectedPieces"
+        },
+        {
+          "line": 664,
+          "symbol": "ForgeCad::Kernel::joinProjectedPieces::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_project.cpp:642:18)::operator()",
+          "owner": "ForgeCad::Kernel::joinProjectedPieces"
+        },
+        {
+          "line": 668,
+          "symbol": "ForgeCad::Kernel::joinProjectedPieces::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_project.cpp:642:18)::operator()",
+          "owner": "ForgeCad::Kernel::joinProjectedPieces"
+        },
+        {
+          "line": 706,
+          "symbol": "ForgeCad::Kernel::projectCurves",
+          "owner": "ForgeCad::Kernel::projectedProfileCut"
+        },
+        {
+          "line": 758,
+          "symbol": "ForgeCad::Kernel::projectedProfileCut::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_project.cpp:738:32)::operator()",
+          "owner": "ForgeCad::Kernel::projectedProfileCut"
+        }
+      ]
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_forge.cpp",
+      "kind": "call",
+      "count": 87,
+      "sites": [
+        {
+          "line": 3936,
+          "symbol": "ForgeCad::forgeSketchSegments",
+          "owner": "ViewportInteractionTest::sketchReferenceWorkflow"
+        },
+        {
+          "line": 4146,
+          "symbol": "ForgeCad::forgeSketchSegments",
+          "owner": "ViewportInteractionTest::profileProjection"
+        },
+        {
+          "line": 4157,
+          "symbol": "ForgeCad::forgeProjectedCut",
+          "owner": "ViewportInteractionTest::profileProjection"
+        },
+        {
+          "line": 4198,
+          "symbol": "ForgeCad::forgeProjectedCurves",
+          "owner": "ViewportInteractionTest::profileProjection"
+        }
+      ]
+    }
+  ]
+}

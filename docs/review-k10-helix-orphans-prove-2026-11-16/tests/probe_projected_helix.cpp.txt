@@ -1,0 +1,19 @@
+#include "cad_sketch_refs.h"
+#include "cad_curve_solver.h"
+#include "cad_kernel.h"
+#include "fk_helix.h"
+#include <QApplication>
+#include <iostream>
+#include <iomanip>
+using namespace ForgeCad;using namespace ForgeCad::Kernel;
+int main(int argc,char**argv){QApplication app(argc,argv);std::cout<<std::setprecision(17);for(int plane:{1,2})for(double radius:{1e-4,1e-3}){
+ HelixSpec spec;spec.radius=radius;spec.pitch=1e-6;spec.turns=1e6;
+ auto helix=std::make_shared<HelixCurve>(spec);CurvePtr<3>source=std::make_shared<TransformedCurve>(helix,Transform3::translation({}));
+ SketchObject sketch;sketch.plane=plane;QVector<SketchEntity>created;
+ auto error=appendProjectedCurve(sketch,source,source->domain(),false,true,&created);
+ std::cout<<"plane="<<plane<<" radius="<<radius<<" error="<<error.toStdString()<<" segments="<<sketch.segments.size()<<" curves="<<sketch.curves.size()<<" created="<<created.size();
+ double worst=0;
+ if(!sketch.curves.empty()){auto geometry=curveGeometry(sketch.curves.back());auto actual=geometry.at(0).curve;for(int i=0;i<=100;++i){double t=i*kPi/50.;auto q=sketchAxes(sketch).toLocal(source->point(t));auto p=actual->point(t);worst=std::max(worst,norm(Vec2(q.x(),q.y())-p));}std::cout<<" poles="<<sketch.curves.back().controlPoints.size()<<" degree="<<sketch.curves.back().degree;}
+ else if(!sketch.segments.empty()){auto seg=sketch.segments.back();auto a=Vec2(seg.first.x(),seg.first.y()),b=Vec2(seg.second.x(),seg.second.y());for(int i=0;i<=100;++i){double t=i*kPi/50.;auto q=sketchAxes(sketch).toLocal(source->point(t));auto v=Vec2(q.x(),q.y());double u=std::clamp(dot(v-a,b-a)/dot(b-a,b-a),0.,1.);worst=std::max(worst,norm(v-a-u*(b-a)));}}
+ std::cout<<" first_turn_error="<<worst<<" budget="<<linearResolution()<<'\n';
+ }return 0;}

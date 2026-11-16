@@ -1,0 +1,2 @@
+from verify_sew_fraction import *
+p=Path('/tmp/k10-sew-review/tests/stage_export/nonaffine_polynomial.json');j=json.loads(p.read_text());r=copy.deepcopy(next(x for x in j['actual'] if x['migrated']));u=float.fromhex(r['pcurve']['poles'][1][1]);r['pcurve']['poles'][1][1]=(u+1e-4).hex();result=verify_record(r,exact(r['fin_tolerance']));assert not result['pass_'];Path('/tmp/k10-next-review/root/fraction-altered-pole.json').write_text(json.dumps(result,indent=2)+'\n');print('Original final-control perturbation1e-4 rejected by independent Fraction certificate',flush=True)

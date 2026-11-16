@@ -1,0 +1,36 @@
+#include "fk_offset.h"
+#include "fk_revolve.h"
+#include "fk_body_check.h"
+#include <iostream>
+#include <iomanip>
+#include <cmath>
+using namespace ForgeCad::Kernel;
+int main() {
+    int checks=0, rejected=0, failures=0;
+    std::cout<<std::setprecision(15);
+    for(bool preserve : {false,true}) {
+        const auto input=makeTorus(Frame3(),5,1);
+        for(double d:{3.,4.,5.}) {
+            try {
+                const auto output=offsetFaces(input,input.faces(),d,linearResolution(),preserve);
+                const auto &s=*output.body.face(output.body.faces().front()).surface;
+                Vec3 jet[4];s.evaluate(0,kPi,1,jet);
+                const auto jac=cross(jet[Surface::derivativeIndex(1,0,1)],jet[Surface::derivativeIndex(0,1,1)]);
+                std::cout<<"torus preserveSeams="<<preserve<<" d="<<d<<" accepted=1 J="<<norm(jac)<<" issues="<<checkBody(output.body).size()<<'\n';
+                ++checks; if (d != 3. || !checkBody(output.body).empty()) ++failures;
+            }catch(const std::exception&e){std::cout<<"torus preserveSeams="<<preserve<<" d="<<d<<" rejected="<<e.what()<<'\n'; if(d == 3.) ++failures; else ++rejected;}
+        }
+    }
+    std::vector<double> knots(5,0);knots.insert(knots.end(),4,.1);knots.insert(knots.end(),4,.15);knots.insert(knots.end(),5,1);
+    std::vector<Vec3> poles;
+    for(int i=0;i<13;++i){double x=0;for(int j=1;j<=4;++j)x+=knots[i+j]/4; poles.emplace_back(x,0,i==6?.01:0);}
+    auto c=std::make_shared<BSplineCurve<3>>(4,knots,poles);
+    const ExtrusionSurface source(c,Vec3(0,1,0));
+    const double tol=1e-7,d=.001,u=.1125;
+    const auto out=offsetSurface(source,d,{0,1},{0,1},tol);
+    const auto actualError=distance(out->point(u,.5),source.point(u,.5)+d*source.normal(u,.5));
+    const double slope=.225,expectedError=d*std::sqrt(2-2/std::sqrt(1+slope*slope));
+    std::cout<<"bump measured_error="<<actualError<<" baseline_analytic_error="<<expectedError<<" tolerance="<<tol<<" ratio="<<actualError/tol<<" curvature_radius_lower_bound="<<1./48<<'\n';
+    if(actualError>tol || checks!=2 || rejected!=4 || failures!=0) return 1;
+    return 0;
+}

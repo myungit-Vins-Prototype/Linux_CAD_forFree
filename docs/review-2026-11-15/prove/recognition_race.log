@@ -1,0 +1,86 @@
+=================================================================
+==10==ERROR: AddressSanitizer: heap-use-after-free on address 0x7c02951fd9c0 at pc 0x55a9c6c480b4 bp 0x7bd2903f7f70 sp 0x7bd2903f7f60
+READ of size 8 at 0x7c02951fd9c0 thread T7
+    #0 0x55a9c6c480b3 in ForgeCad::Kernel::BSplineCurve<3>::weight(int) const kernel/fk_bspline.h:35
+    #1 0x55a9c6c480b3 in ForgeCad::drawingRecognizeCircle(ForgeCad::Kernel::BSplineCurve<3> const&, double) cad_drawing_curve_recognition.h:49
+    #2 0x55a9c6c40ed6 in operator() /tmp/forgecad-review-20261115/memory/recognition_race.cpp:12
+    #3 0x55a9c6c40ed6 in __invoke_impl<void, main()::<lambda()> > /usr/include/c++/16/bits/invoke.h:63
+    #4 0x55a9c6c40ed6 in __invoke<main()::<lambda()> > /usr/include/c++/16/bits/invoke.h:98
+    #5 0x55a9c6c40ed6 in _M_invoke<0> /usr/include/c++/16/bits/std_thread.h:303
+    #6 0x55a9c6c40ed6 in operator() /usr/include/c++/16/bits/std_thread.h:310
+    #7 0x55a9c6c40ed6 in _M_run /usr/include/c++/16/bits/std_thread.h:255
+    #8 0x7fd296505e25  (/usr/lib/libstdc++.so.6+0x105e25) (BuildId: f8d95d6acca0f89fa5c387ad48aefcfaf4cccc0c)
+    #9 0x7fd29686d7df  (/usr/lib/libasan.so.8+0x6d7df) (BuildId: 92e51235e832ccabaa24bc426fe5bd8daa88239e)
+    #10 0x7fd2960ac93e  (/usr/lib/libc.so.6+0xac93e) (BuildId: e363db7c8fcc7c06c6f0d2839b2a8ad875b75406)
+    #11 0x7fd29614eeeb  (/usr/lib/libc.so.6+0x14eeeb) (BuildId: e363db7c8fcc7c06c6f0d2839b2a8ad875b75406)
+
+0x7c02951fd9c0 is located 16 bytes inside of 24-byte region [0x7c02951fd9b0,0x7c02951fd9c8)
+freed by thread T1 here:
+    #0 0x7fd296962db1 in operator delete(void*, unsigned long) (/usr/lib/libasan.so.8+0x162db1) (BuildId: 92e51235e832ccabaa24bc426fe5bd8daa88239e)
+    #1 0x55a9c6c49b9e in std::__new_allocator<double>::deallocate(double*, unsigned long) /usr/include/c++/16/bits/new_allocator.h:183
+    #2 0x55a9c6c49b9e in std::allocator_traits<std::allocator<double> >::deallocate(std::allocator<double>&, double*, unsigned long) /usr/include/c++/16/bits/alloc_traits.h:689
+    #3 0x55a9c6c49b9e in std::_Vector_base<double, std::allocator<double> >::_M_deallocate(double*, unsigned long) /usr/include/c++/16/bits/stl_vector.h:398
+    #4 0x55a9c6c49b9e in std::_Vector_base<double, std::allocator<double> >::_M_deallocate(double*, unsigned long) /usr/include/c++/16/bits/stl_vector.h:394
+    #5 0x55a9c6c49b9e in std::_Vector_base<double, std::allocator<double> >::~_Vector_base() /usr/include/c++/16/bits/stl_vector.h:378
+    #6 0x55a9c6c49b9e in std::vector<double, std::allocator<double> >::~vector() /usr/include/c++/16/bits/stl_vector.h:795
+    #7 0x55a9c6c49b9e in ForgeCad::Kernel::BSplineCurve<3>::~BSplineCurve() /home/myungit/Linux_CAD_forFree/kernel/fk_bspline.h:16
+    #8 0x55a9c6c49b9e in void std::_Destroy<ForgeCad::Kernel::BSplineCurve<3> >(ForgeCad::Kernel::BSplineCurve<3>*) /usr/include/c++/16/bits/stl_construct.h:166
+    #9 0x55a9c6c49b9e in void std::_Destroy<ForgeCad::Kernel::BSplineCurve<3>*>(ForgeCad::Kernel::BSplineCurve<3>*, ForgeCad::Kernel::BSplineCurve<3>*) /usr/include/c++/16/bits/stl_construct.h:226
+    #10 0x55a9c6c49b9e in void std::_Destroy<ForgeCad::Kernel::BSplineCurve<3>*, ForgeCad::Kernel::BSplineCurve<3> >(ForgeCad::Kernel::BSplineCurve<3>*, ForgeCad::Kernel::BSplineCurve<3>*, std::allocator<ForgeCad::Kernel::BSplineCurve<3> >&) /usr/include/c++/16/bits/alloc_traits.h:1085
+    #11 0x55a9c6c49b9e in std::vector<ForgeCad::Kernel::BSplineCurve<3>, std::allocator<ForgeCad::Kernel::BSplineCurve<3> > >::~vector() /usr/include/c++/16/bits/stl_vector.h:792
+    #12 0x55a9c6c49b9e in void std::_Destroy<std::vector<ForgeCad::Kernel::BSplineCurve<3>, std::allocator<ForgeCad::Kernel::BSplineCurve<3> > > >(std::vector<ForgeCad::Kernel::BSplineCurve<3>, std::allocator<ForgeCad::Kernel::BSplineCurve<3> > >*) /usr/include/c++/16/bits/stl_construct.h:166
+    #13 0x55a9c6c49b9e in void std::allocator_traits<std::allocator<void> >::destroy<std::vector<ForgeCad::Kernel::BSplineCurve<3>, std::allocator<ForgeCad::Kernel::BSplineCurve<3> > > >(std::allocator<void>&, std::vector<ForgeCad::Kernel::BSplineCurve<3>, std::allocator<ForgeCad::Kernel::BSplineCurve<3> > >*) /usr/include/c++/16/bits/alloc_traits.h:859
+    #14 0x55a9c6c49b9e in std::_Sp_counted_ptr_inplace<std::vector<ForgeCad::Kernel::BSplineCurve<3>, std::allocator<ForgeCad::Kernel::BSplineCurve<3> > >, std::allocator<void>, (__gnu_cxx::_Lock_policy)2>::_M_dispose() /usr/include/c++/16/bits/shared_ptr_base.h:682
+    #15 0x55a9c6c49b9e in std::_Sp_counted_base<(__gnu_cxx::_Lock_policy)2>::_M_release() /usr/include/c++/16/bits/shared_ptr_base.h:423
+
+previously allocated by thread T7 here:
+    #0 0x7fd296961c31 in operator new(unsigned long) (/usr/lib/libasan.so.8+0x161c31) (BuildId: 92e51235e832ccabaa24bc426fe5bd8daa88239e)
+    #1 0x55a9c6c494d5 in std::__new_allocator<double>::allocate(unsigned long, void const*) /usr/include/c++/16/bits/new_allocator.h:162
+    #2 0x55a9c6c494d5 in std::allocator_traits<std::allocator<double> >::allocate(std::allocator<double>&, unsigned long) /usr/include/c++/16/bits/alloc_traits.h:638
+    #3 0x55a9c6c494d5 in std::_Vector_base<double, std::allocator<double> >::_M_allocate(unsigned long) /usr/include/c++/16/bits/stl_vector.h:389
+    #4 0x55a9c6c494d5 in double* std::vector<double, std::allocator<double> >::_M_allocate_and_copy<__gnu_cxx::__normal_iterator<double const*, std::vector<double, std::allocator<double> > > >(unsigned long, __gnu_cxx::__normal_iterator<double const*, std::vector<double, std::allocator<double> > >, __gnu_cxx::__normal_iterator<double const*, std::vector<double, std::allocator<double> > >) /usr/include/c++/16/bits/stl_vector.h:1900
+    #5 0x55a9c6c494d5 in void std::vector<double, std::allocator<double> >::_M_assign_aux<__gnu_cxx::__normal_iterator<double const*, std::vector<double, std::allocator<double> > > >(__gnu_cxx::__normal_iterator<double const*, std::vector<double, std::allocator<double> > >, __gnu_cxx::__normal_iterator<double const*, std::vector<double, std::allocator<double> > >, std::forward_iterator_tag) /usr/include/c++/16/bits/vector.tcc:335
+
+Thread T7 created by T0 here:
+    #0 0x7fd29695531c in pthread_create (/usr/lib/libasan.so.8+0x15531c) (BuildId: 92e51235e832ccabaa24bc426fe5bd8daa88239e)
+    #1 0x7fd296505f09 in std::thread::_M_start_thread(std::unique_ptr<std::thread::_State, std::default_delete<std::thread::_State> >, void (*)()) (/usr/lib/libstdc++.so.6+0x105f09) (BuildId: f8d95d6acca0f89fa5c387ad48aefcfaf4cccc0c)
+    #2 0x7fd296027d0d  (/usr/lib/libc.so.6+0x27d0d) (BuildId: e363db7c8fcc7c06c6f0d2839b2a8ad875b75406)
+
+Thread T1 created by T0 here:
+    #0 0x7fd29695531c in pthread_create (/usr/lib/libasan.so.8+0x15531c) (BuildId: 92e51235e832ccabaa24bc426fe5bd8daa88239e)
+    #1 0x7fd296505f09 in std::thread::_M_start_thread(std::unique_ptr<std::thread::_State, std::default_delete<std::thread::_State> >, void (*)()) (/usr/lib/libstdc++.so.6+0x105f09) (BuildId: f8d95d6acca0f89fa5c387ad48aefcfaf4cccc0c)
+    #2 0x7fd296027d0d  (/usr/lib/libc.so.6+0x27d0d) (BuildId: e363db7c8fcc7c06c6f0d2839b2a8ad875b75406)
+
+SUMMARY: AddressSanitizer: heap-use-after-free kernel/fk_bspline.h:35 in ForgeCad::Kernel::BSplineCurve<3>::weight(int) const
+Shadow bytes around the buggy address:
+  0x7c02951fd700: fa fa fd fd fd fd fa fa fd fd fd fd fa fa fd fd
+  0x7c02951fd780: fd fa fa fa fd fd fd fa fa fa fd fd fd fa fa fa
+  0x7c02951fd800: fd fd fd fd fa fa fd fd fd fd fa fa fd fd fd fd
+  0x7c02951fd880: fa fa fd fd fd fa fa fa fd fd fd fa fa fa fd fd
+  0x7c02951fd900: fd fa fa fa fd fd fd fd fa fa fd fd fd fd fa fa
+=>0x7c02951fd980: fd fd fd fd fa fa fd fd[fd]fa fa fa fd fd fd fa
+  0x7c02951fda00: fa fa fd fd fd fa fa fa fd fd fd fd fa fa fd fd
+  0x7c02951fda80: fd fd fa fa fd fd fd fd fa fa fd fd fd fa fa fa
+  0x7c02951fdb00: fd fd fd fa fa fa fd fd fd fa fa fa fd fd fd fd
+  0x7c02951fdb80: fa fa fd fd fd fd fa fa fd fd fd fd fa fa fd fd
+  0x7c02951fdc00: fd fa fa fa fd fd fd fa fa fa fd fd fd fa fa fa
+Shadow byte legend (one shadow byte represents 8 application bytes):
+  Addressable:           00
+  Partially addressable: 01 02 03 04 05 06 07 
+  Heap left redzone:       fa
+  Freed heap region:       fd
+  Stack left redzone:      f1
+  Stack mid redzone:       f2
+  Stack right redzone:     f3
+  Stack after return:      f5
+  Stack use after scope:   f8
+  Global redzone:          f9
+  Global init order:       f6
+  Poisoned by user:        f7
+  Container overflow:      fc
+  Array cookie:            ac
+  Intra object redzone:    bb
+  ASan internal:           fe
+  Left alloca redzone:     ca
+  Right alloca redzone:    cb
+==10==ABORTING

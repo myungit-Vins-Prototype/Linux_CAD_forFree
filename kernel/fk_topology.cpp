@@ -122,15 +122,21 @@ Vec3 Body::finPoint(FinId f, double s) const {
 
 void Body::reverseEdge(EdgeId e) {
     Edge &ed = edge(e);
+    Fin *forward = ed.forward.valid() ? &fin(ed.forward) : nullptr;
+    Fin *backward = ed.backward.valid() ? &fin(ed.backward) : nullptr;
+    if (!forward && !backward) throw std::logic_error("Body::reverseEdge: edge senza fin");
+    // Prepara tutte le curve prima di mutare la topologia: anche un errore
+    // durante la costruzione lascia l'edge e le sue fin invariati.
+    const CurvePtr<3> curve = ed.curve ? reversedCurve<3>(ed.curve) : nullptr;
+    const CurvePtr<2> forwardPCurve = forward && forward->pcurve ? reversedCurve<2>(forward->pcurve) : nullptr;
+    const CurvePtr<2> backwardPCurve = backward && backward->pcurve ? reversedCurve<2>(backward->pcurve) : nullptr;
     std::swap(ed.forward, ed.backward);
-    fin(ed.forward).sense = true;
-    fin(ed.backward).sense = false;
+    if (forward) { forward->sense = false; forward->pcurve = forwardPCurve; }
+    if (backward) { backward->sense = true; backward->pcurve = backwardPCurve; }
     if (ed.curve) {
-        ed.curve = reversedCurve<3>(ed.curve);
+        ed.curve = curve;
         ed.range = {-ed.range.hi, -ed.range.lo};
     }
-    for (FinId f : {ed.forward, ed.backward})
-        if (fin(f).pcurve) fin(f).pcurve = reversedCurve<2>(fin(f).pcurve);
 }
 
 // --- Creazione ed eliminazione elementare ---------------------------------

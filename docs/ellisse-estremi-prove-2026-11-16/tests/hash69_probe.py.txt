@@ -1,0 +1,22 @@
+#!/usr/bin/env python3
+# Probe compatibilita' impronte69. Richiede build runner preesistente; non la modifica.
+# Uso: python3 hash69_probe.py.txt /percorso/repository [/tmp/probe-dir]
+import json,pathlib,shlex,subprocess,sys
+root=pathlib.Path(sys.argv[1]).resolve()
+dest=pathlib.Path(sys.argv[2] if len(sys.argv)>2 else '/tmp/ellipse-hash69-private-probe');dest.mkdir(exist_ok=True)
+(dest/'hash69_probe.cpp').write_text(pathlib.Path(__file__).with_name('hash69_probe.cpp.txt').read_text())
+entries=json.loads((root/'forgecad-release/compile_commands.json').read_text())
+args=shlex.split(next(x for x in entries if x['file'].endswith('/tests/test_viewport.cpp'))['command'])
+i=args.index('-o');del args[i:i+2];args=args[:args.index('-c')]
+args=[x for x in args if x!='-O3']+['-O0','-ffunction-sections','-fdata-sections']
+for src in ['cad_document_io.cpp','cad_drawing_file.cpp','cad_ellipse.cpp',str(dest/'hash69_probe.cpp')]:
+    name=pathlib.Path(src).stem;print('compile',name,flush=True)
+    subprocess.run(args+['-c',str(root/src) if not src.startswith('/') else src,'-o',str(dest/(name+'.o'))],check=True)
+link=shlex.split((root/'forgecad-release/CMakeFiles/forgecad_view_tests.dir/link.txt').read_text())
+skip={'tests/test_viewport.cpp.o','cad_document_io.cpp.o','cad_drawing_file.cpp.o','cad_ellipse.cpp.o'}
+link=[x for x in link if not x.startswith('-Wl,--dependency-file=')]
+i=link.index('-o');link[i+1]=str(dest/'hash69_probe')
+link=[x for x in link if not any(x.endswith('/'+v) for v in skip)]
+link[1:1]=['-Wl,--gc-sections']+[str(dest/(v+'.o')) for v in ['hash69_probe','cad_document_io','cad_drawing_file','cad_ellipse']]
+subprocess.run(link,cwd=root/'forgecad-release',check=True)
+subprocess.run([str(dest/'hash69_probe')],check=True)

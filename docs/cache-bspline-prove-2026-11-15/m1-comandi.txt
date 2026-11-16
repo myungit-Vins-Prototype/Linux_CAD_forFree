@@ -1,0 +1,10 @@
+M1: proprietario shared_ptr locale conservato per l'intera iterazione in drawingRecognizeCircle e drawingRecognizeProjectedLineUncached.
+Originale cad_drawing_curve_recognition.h SHA256: a6e42c2665e514d3a984a64cff4f3fd440dcfe329287541c56d7fabee047ce1e
+Finale SHA256: 0733b2ccb159aebb313dda1842ff89c6e53edc3174077bdadf9ace96378c1cd3
+Nessuna copia vettore o modifica geometria; stesso shared_ptr acquisito prima del loop.
+Audit: tutte le chiamate produzione cachedBezierSegments/cachedBezierPatches/cachedPatchTree/cachedSharpKnotLines esaminate tramite rg. Nessun altro uso con dereferenziazione temporanea in produzione. Quattro punti analoghi confinati a kernel/tests/probe_trimmed_sphere.h:94,104, kernel/tests/test_offset.cpp:487, kernel/tests/test_offset_split_creases.cpp:59; nessuna concorrenza provata nei test. Non modificati per coordinamento ownership.
+Grafo consultato prima delle modifiche: descrizione nodo e connessioni entranti/uscente cad_drawing_curve_recognition.h, produttore fk_bspline, chiamanti cad_drawing.cpp/cad_drawing_dimension.cpp/cad_drawing_visibility.cpp. Nessuna responsabilita o dipendenza modificata.
+Verifica reale: g++ -std=c++17 -O1 -g -fsanitize=address -fno-omit-frame-pointer -I/tmp/forgecad-cache-fix-20261115/lifetime -I. -Ikernel /tmp/forgecad-cache-fix-20261115/lifetime/recognition_race.cpp forgecad-release/kernel/libforgekernel.a -pthread -o /tmp/forgecad-cache-fix-20261115/lifetime/recognition_race_fixed
+ASAN_OPTIONS=detect_leaks=0 /tmp/forgecad-cache-fix-20261115/lifetime/recognition_race_fixed
+Esito: 200 round, 8 thread, curva 500 tratti, exit 0, nessuna segnalazione ASan. Header/harness strumentati, libreria precompilata non strumentata. Prova isolata M1 contro produttore originale prima dell'integrazione M2. Nessuna attestazione leak, TSan, GUI o app ricompilata.
+Nessun file repository modificato. Integrazione, memoria CLAUDE e rapporto delegati al parent come concordato.

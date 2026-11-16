@@ -1,0 +1,96 @@
+--- forgeCad2026_dialogs_common.cpp
++++ stage/forgeCad2026_dialogs_common.cpp
+@@ -232,6 +232,29 @@
+ }
+ 
+ namespace {
++// Anche un'anteprima creata dopo show() resta nel footer fisso. Il controllo
++// della riga rende il passaggio idempotente a riaperture e refresh del layout.
++void movePreviewMessageToFooter(QDialog &dialog, QFormLayout *form) {
++    if (!form) return;
++    auto *preview = dynamic_cast<FunctionMessage *>(dialog.findChild<QPlainTextEdit *>(QStringLiteral("functionPreviewMessage")));
++    auto *root = dynamic_cast<QVBoxLayout *>(dialog.layout());
++    if (!preview || !root) return;
++    int row = -1;
++    QFormLayout::ItemRole role;
++    form->getWidgetPosition(preview, &row, &role);
++    if (row < 0) return;
++    const auto taken = form->takeRow(row);
++    auto *note = new QWidget(&dialog);
++    note->setObjectName(QStringLiteral("functionPreviewFooter"));
++    auto *line = new QHBoxLayout(note);
++    line->setContentsMargins(0, 10, 0, 0);
++    if (taken.labelItem && taken.labelItem->widget()) line->addWidget(taken.labelItem->widget());
++    line->addWidget(preview, 1);
++    delete taken.labelItem;
++    delete taken.fieldItem;
++    root->insertWidget(qMax(0, root->count() - 1), note);
++}
++
+ // Indicatore esplicito: alcuni temi non disegnano CE_SizeGrip nei pannelli figli.
+ class PanelResizeGrip final : public QSizeGrip {
+ public:
+@@ -588,20 +611,7 @@
+             static_cast<QVBoxLayout *>(layout())->addWidget(buttons);
+         }
+     }
+-    if (form_) if (auto *preview = dynamic_cast<FunctionMessage *>(findChild<QPlainTextEdit *>(QStringLiteral("functionPreviewMessage")))) {
+-        int row = -1; QFormLayout::ItemRole role;
+-        form_->getWidgetPosition(preview, &row, &role);
+-        if (row >= 0) {
+-            auto taken = form_->takeRow(row);
+-            auto *note = new QWidget(this); auto *line = new QHBoxLayout(note);
+-            line->setContentsMargins(0, 10, 0, 0);
+-            if (taken.labelItem) line->addWidget(taken.labelItem->widget());
+-            line->addWidget(preview, 1);
+-            delete taken.labelItem; delete taken.fieldItem;
+-            auto *root = static_cast<QVBoxLayout *>(layout());
+-            root->insertWidget(qMax(0, root->count() - 1), note);
+-        }
+-    }
++    movePreviewMessageToFooter(*this, form_);
+     dockSide_ = qBound(0, QSettings().value(QStringLiteral("view/functionPanelDockSide"), 0).toInt(), 2);
+     fullHeight_ = QSettings().value(QStringLiteral("view/functionPanelFullHeight"), false).toBool();
+     initializePanelSize();
+@@ -1253,6 +1263,8 @@
+     } else {
+         form->addRow(QStringLiteral("Anteprima:"), label);
+     }
++    if (!outside && dialog.isVisible() && dynamic_cast<FunctionDialogPanel *>(&dialog))
++        movePreviewMessageToFooter(dialog, form);
+     FunctionMessage *status = label;
+     viewport->setPreviewCallback([status](const QString &error) {
+         status->setText(error.isEmpty() ? QStringLiteral("pronta (in ambra nella vista)") : QStringLiteral("non riuscita: ") + error);
+@@ -1659,6 +1671,10 @@
+ }
+ 
+ bool runModeless(QMainWindow *window, CadViewport *viewport, QDialog &dialog) {
++    return runModeless(window, viewport, dialog, {});
++}
++
++bool runModeless(QMainWindow *window, CadViewport *viewport, QDialog &dialog, const std::function<void()> &onShown) {
+     // I chiamanti mantengono picker/anteprime e cleanup sul proprio stack.
+     // Un loop annidato in un altro documento ne ritarderebbe la distruzione:
+     // finche' i runner sono sincroni, un solo workspace puo' eseguirli.
+@@ -1684,11 +1700,18 @@
+     // anche quando il viewport riceve il focus per ruotare la vista.
+     if (dialog.isWindow()) dialog.setWindowFlag(Qt::Tool, true);
+     dialog.setModal(false);
++    QEventLoop loop;
++    bool finished = false;
++    // showEvent e l'inizializzazione possono confermare/annullare subito.
++    // Registrare finished prima di entrambi evita un'attesa senza eventi.
++    QObject::connect(&dialog, &QDialog::finished, &loop, [&] {
++        finished = true;
++        loop.quit();
++    });
+     const WindowLock lock(window, viewport, &dialog);
+     dialog.show();
+-    QEventLoop loop;
+-    QObject::connect(&dialog, &QDialog::finished, &loop, &QEventLoop::quit);
+-    loop.exec();
++    if (!finished && onShown) onShown();
++    if (!finished) loop.exec();
+     return dialog.result() == QDialog::Accepted;
+ }
+ 

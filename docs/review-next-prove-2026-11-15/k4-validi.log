@@ -1,0 +1,4 @@
+sweep: il raggio di curvatura del percorso e' minore della distanza del profilo (le sezioni si incrociano)
+sweep: positivita' locale della sezione non certificabile alla precisione numerica
+sweep: il raggio di curvatura del percorso e' minore della distanza del profilo (le sezioni si incrociano)
+Bernstein checks failures=0

@@ -1,0 +1,9 @@
+SHELL before=pronta (in ambra nella vista) after=pronta (in ambra nella vista) valid=0 pending=0 key_empty=1 geometry=0 value=0
+SHELL status=Lo spessore deve essere maggiore di zero.
+SHELL delayed_label=pronta (in ambra nella vista) valid=0 pending=0
+SHELL recovered_label=pronta (in ambra nella vista) valid=1 value=0.6
+SHELL recovered_status=Lo spessore deve essere maggiore di zero.
+THREAD label=in calcolo... valid=0 pending=0 key_empty=1 picking=0
+THREAD status=Seleziona una faccia cilindrica o conica.
+THREAD picking_label=in calcolo... pending=0 picking=1
+completion shell=1 thread=1 exit=0

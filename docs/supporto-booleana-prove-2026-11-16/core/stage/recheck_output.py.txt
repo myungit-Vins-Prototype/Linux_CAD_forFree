@@ -1,0 +1,48 @@
+from pathlib import Path
+p=Path('/tmp/supporto-review/stage/kernel/fk_boolean.cpp');s=p.read_text();s=s.replace('''    bool forward=true;
+};
+
+struct Arc''','''    bool forward=true;
+    CurvePtr<3> intersection;
+    Interval intersectionRange;
+};
+
+struct Arc''',1)
+s=s.replace('''                ta=tb;
+            }
+            if(certified)candidates''','''                chain[n].boundarySource.intersection=arc.curve;
+                chain[n].boundarySource.intersectionRange={ta,tb};
+                ta=tb;
+            }
+            if(certified)candidates''',1)
+s=s.replace('''        Interval originalRange;
+    };''','''        BoundarySource source;
+    };''',1)
+s=s.replace('''        if(built.curve.get()!=use.curve.get()||built.range.lo>use.source.range.lo||built.range.hi<use.source.range.hi)
+            throw std::domain_error("booleanOperation: geometria del bordo condiviso modificata durante l'assemblaggio");
+        boundaryOutputs.push_back({edge,faces.at(use.face).surface,use.curve,use.source.range});''','''        if(built.curve.get()!=use.curve.get())
+            throw std::domain_error("booleanOperation: geometria originale del bordo condiviso modificata durante l'assemblaggio");
+        boundaryOutputs.push_back({edge,faces.at(use.face).surface,use.curve,use.source});''',1)
+s=s.replace('''            if(edge.curve.get()!=output.original.get()||edge.curve->type()!=CurveType::Ellipse
+                ||edge.range.lo>output.originalRange.lo||edge.range.hi<output.originalRange.hi)
+                throw std::domain_error("booleanOperation: parametro originale del bordo condiviso non conservato");
+            const auto &ellipse=static_cast<const Ellipse<3>&>(*edge.curve);''','''            if(edge.curve.get()!=output.original.get()||edge.curve->type()!=CurveType::Ellipse)
+                throw std::domain_error("booleanOperation: curva originale del bordo condiviso non conservata");
+            const auto &source=output.source;
+            const auto &originalEdge=bodies_[source.body].edge(source.edge);
+            const auto &ellipse=static_cast<const Ellipse<3>&>(*edge.curve);
+            if(!originalEdge.range.contains(edge.range.lo)||!originalEdge.range.contains(edge.range.hi)
+                ||!source.intersection||source.intersection->type()!=CurveType::Line
+                ||!detail::certifyEllipseBoundarySegment(ellipse,edge.range,source.forward,static_cast<const Line<3>&>(*source.intersection),source.intersectionRange.lo,source.intersectionRange.hi,
+                    *output.surface,*bodies_[source.body].face(source.face).surface,std::min(tolerance_,linearResolution())))
+                throw std::domain_error("booleanOperation: intervallo finale del bordo condiviso non certificabile");''',1)
+s=s.replace('''        for(const auto &output:boundaryOutputs)for(int descendant:unified.descendants(EntityKind::Edge,0,output.edge)) {
+            auto next=output;next.edge=descendant;nextBoundaryOutputs.push_back(std::move(next));
+        }''','''        for(const auto &output:boundaryOutputs) {
+            const auto descendants=unified.descendants(EntityKind::Edge,0,output.edge);
+            if(descendants.empty())throw std::domain_error("booleanOperation: genealogia finale del bordo condiviso mancante");
+            for(int descendant:descendants) {
+                auto next=output;next.edge=descendant;nextBoundaryOutputs.push_back(std::move(next));
+            }
+        }''',1)
+p.write_text(s)

@@ -1,0 +1,27 @@
+Contesto e comandi realmente eseguiti — freeze privato V2
+
+Directory effettiva: /home/myungit/Linux_CAD_forFree
+Due oggetti espliciti sostituiscono i simboli del provider/offset prima della
+libreria kernel Release esistente nella riga di collegamento. Il main della
+suite pubblica è mantenuto dall'agente test e non duplicato qui.
+
+c++ -std=c++17 -O2 -g -Wall -Wextra -Wpedantic -fno-fast-math -ffp-contract=off -I/tmp/k10-uv-review/core -Ikernel -c /tmp/k10-uv-review/core/fk_curve_fit_bounds.cpp -o /tmp/k10-uv-review/core/fk_curve_fit_bounds.o
+c++ -std=c++17 -O2 -g -Wall -Wextra -Wpedantic -fno-fast-math -ffp-contract=off -I/tmp/k10-uv-review/core -Ikernel -c /tmp/k10-uv-review/core/fk_offset.cpp -o /tmp/k10-uv-review/core/fk_offset.o
+c++ -std=c++17 -O2 -g -fno-fast-math -ffp-contract=off -DHAVE_PLANE_PCURVE_PROVIDER -I/tmp/k10-uv-review/core -Ikernel /tmp/k10-uv-review/tests/test_uv_offset_validation.cpp /tmp/k10-uv-review/core/fk_offset.o /tmp/k10-uv-review/core/fk_curve_fit_bounds.o forgecad-release/kernel/libforgekernel.a -pthread -o /tmp/k10-uv-review/core/uv_validation
+/tmp/k10-uv-review/core/uv_validation > /tmp/k10-uv-review/core/validation-v2.log
+
+Il probe include la copia completa di offset nel medesimo TU per chiamare gli
+helper privati, senza API o macro nuove nel codice di produzione.
+
+c++ -std=c++17 -O2 -g -fno-fast-math -ffp-contract=off -I/tmp/k10-uv-review/core -Ikernel /tmp/k10-uv-review/core/probe_guard.cpp /tmp/k10-uv-review/core/fk_curve_fit_bounds.o forgecad-release/kernel/libforgekernel.a -pthread -o /tmp/k10-uv-review/core/probe_guard
+/tmp/k10-uv-review/core/probe_guard > /tmp/k10-uv-review/core/probe_guard-v2.log
+
+Diagnostica: nessun nuovo warning provider; solo due warning preesistenti
+checkCurvature inutilizzato in offsetBSplineC2/offsetBSpline. Suite10/10 e
+probe7/7 PASS. Hash esatti delle fonti/probe in freeze.json e manifest.json.
+Per riprodurre, copiare gli snapshot .txt nei nomi .cpp/.h corrispondenti sotto
+/tmp/k10-uv-review/core; ripristinare probe_guard.cpp.txt come probe_guard.cpp.
+Le fonti restano .txt nell'archivio per non creare false TU nella mappa.
+Queste prove private non certificano una nuova build completa dell'app.
+
+Compilatore: c++ (GCC) 16.2.1 20260810

@@ -1,0 +1,34 @@
+from pathlib import Path
+import hashlib,json,re,subprocess,difflib
+r=Path('/home/myungit/Linux_CAD_forFree');p=r/'docs/ellisse-estremi-prove-2026-11-16';root=p/'root'
+sha=lambda f:hashlib.sha256(f.read_bytes()).hexdigest()
+before=json.loads((root/'hashes-before.json').read_text());changed=[f for f,h in before.items() if not (r/f).is_file() or sha(r/f)!=h]
+allowed={'CLAUDE.md','CMakeLists.txt','cad_constraints.cpp','cad_curve_solver.cpp','cad_document_io.cpp','cad_document_io.h','cad_drawing_file.cpp','cad_icons.cpp','cad_sketch_edit.cpp','cad_types.h','forgeCad2026_gui.cpp','forgeCad2026_viewport_interaction.cpp','forgeCad2026_viewport_render.cpp','forgeCad2026_viewport_selection.cpp','forgeCad2026_viewport_sketch.cpp','tests/test_viewport.cpp','tools/generate_architecture.py','docs/sketch-tools.md'}
+assert set(changed)==allowed,changed
+names=subprocess.check_output(['git','ls-files','--cached','--others','--exclude-standard','-z'],cwd=r).decode().split('\0');new=sorted(f for f in set(names)-set(before) if f and (r/f).is_file() and not (r/f).is_symlink())
+expected={'cad_ellipse.cpp','cad_ellipse.h','tests/test_ellipse_extremes.h','docs/ellisse-estremi-2026-11-16.md','docs/history/claude-prima-ellisse-estremi-2026-11-16.md'}
+assert all(f in expected or f.startswith('docs/ellisse-estremi-prove-2026-11-16/') for f in new),new
+frozen=json.loads((root/'frozen-source-hashes.json').read_text())
+for f,h in frozen.items():assert sha(r/f)==h,f
+assert json.loads((root/'build-final-result.json').read_text())['exit']==0
+c=json.loads((root/'ctest-result.json').read_text());assert c['exit']==0 and c['actual_passed']==24
+assert (r/'CLAUDE.md').stat().st_size<=16384
+binaries=['forgecad-release/forgecad','forgecad-release/forgecad_view_tests','forgecad-release/forgecad_sketch_offset_validation_tests']
+assert json.loads((root/'build-test-fix-result.json').read_text())['exit']==0
+production=[f for f in frozen if (f.endswith(('.cpp','.h')) or f=='CMakeLists.txt') and not f.startswith('tests/')]
+for binary,inputs in [(binaries[0],production),(binaries[1],production+['tests/test_viewport.cpp','tests/test_ellipse_extremes.h']),(binaries[2],['CMakeLists.txt','cad_ellipse.cpp','cad_ellipse.h','cad_curve_solver.cpp','cad_types.h'])]:
+    assert (r/binary).stat().st_mtime>max((r/f).stat().st_mtime for f in inputs),binary
+link=(r/'forgecad-release/CMakeFiles/forgecad.dir/link.txt').read_text();assert 'libTK' not in link and 'opencascade' not in link.lower()
+g=json.loads((r/'docs/architecture/graph.json').read_text());assert g['analysis']['configurationDigest']==sha(r/'forgecad-release/compile_commands.json')
+for f,h in g['hashes'].items():assert sha(r/f)==h,f
+assert not g['analysis']['errors']
+subprocess.run(['git','diff','--check'],cwd=r,check=True)
+diff=[]
+for f in changed:
+    old=root/'before'/(f+'.txt')
+    if f=='docs/sketch-tools.md':old=root/'before/docs-sketch-tools.md.txt'
+    if not old.is_file() and f=='cad_drawing_file.cpp':old=p/'core/compat69/cad_drawing_file.cpp.before.txt'
+    if old.is_file():diff.extend(difflib.unified_diff(old.read_text().splitlines(True),(r/f).read_text().splitlines(True),fromfile='before/'+f,tofile='after/'+f))
+(root/'change.diff').write_text(''.join(diff))
+result=dict(initial_files=len(before),preserved_files=len(before)-len(changed),changed_existing=changed,new_files=new,source_hashes=frozen,binary_hashes={f:sha(r/f) for f in binaries},claude_bytes=(r/'CLAUDE.md').stat().st_size,app_link_command=link)
+(root/'final-audit.json').write_text(json.dumps(result,indent=2)+'\n');print('Conservazione',result['preserved_files'],'/',len(before),'PASS')

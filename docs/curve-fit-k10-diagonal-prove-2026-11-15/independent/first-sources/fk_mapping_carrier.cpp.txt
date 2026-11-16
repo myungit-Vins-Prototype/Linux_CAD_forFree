@@ -1,0 +1,455 @@
+#include "fk_mapping_carrier.h"
+#include "fk_curve_fit_bounds.h"
+#include "fk_bspline_surface.h"
+#include "fk_body_check.h"
+#include "fk_cancel.h"
+#include <algorithm>
+#include <cmath>
+#include <limits>
+#include <map>
+#include <stdexcept>
+namespace ForgeCad::Kernel::detail {
+namespace {
+constexpr double infinity = std::numeric_limits<double>::infinity();
+struct Bound {
+    double lo = 0, hi = 0;
+    Bound() = default;
+    Bound(double value) : lo(value), hi(value) {}
+    Bound(double lower, double upper) : lo(lower), hi(upper) {}
+};
+double lower(double value) { return std::nextafter(value, -infinity); }
+double upper(double value) { return std::nextafter(value, infinity); }
+bool finite(Bound value) {
+    return std::isfinite(value.lo) && std::isfinite(value.hi) && value.lo <= value.hi;
+}
+Bound checked(double lo, double hi) {
+    return std::isfinite(lo) && std::isfinite(hi) && lo <= hi ? Bound(lo, hi) : Bound(-infinity, infinity);
+}
+Bound operator+(Bound a, Bound b) {
+    if (a.lo == 0 && a.hi == 0) return b;
+    if (b.lo == 0 && b.hi == 0) return a;
+    if (a.lo == a.hi && b.lo == b.hi) {
+        const double sum = a.lo + b.lo, tail = sum - a.lo;
+        if (std::isfinite(sum) && (a.lo - (sum - tail)) + (b.lo - tail) == 0)
+            return Bound(sum);
+    }
+    return checked(lower(a.lo + b.lo), upper(a.hi + b.hi));
+}
+Bound operator-(Bound a, Bound b) {
+    return a + Bound(-b.hi, -b.lo);
+}
+Bound operator*(Bound a, Bound b) {
+    if (!finite(a) || !finite(b))
+        return {-infinity, infinity};
+    if ((a.lo == 0 && a.hi == 0) || (b.lo == 0 && b.hi == 0)) return Bound(0);
+    if (a.lo == 1 && a.hi == 1) return b;
+    if (b.lo == 1 && b.hi == 1) return a;
+    if (a.lo == -1 && a.hi == -1) return Bound(-b.hi, -b.lo);
+    if (b.lo == -1 && b.hi == -1) return Bound(-a.hi, -a.lo);
+    double values[]{a.lo * b.lo, a.lo * b.hi, a.hi * b.lo, a.hi * b.hi};
+    for (double value : values)
+        if (!std::isfinite(value))
+            return {-infinity, infinity};
+    return checked(lower(*std::min_element(values, values + 4)), upper(*std::max_element(values, values + 4)));
+}
+Bound operator/(Bound a, Bound b) {
+    if (b.lo == 1 && b.hi == 1) return a;
+    if (a.lo == a.hi && b.lo == b.hi && a.lo == b.lo && b.lo > 0) return Bound(1);
+    if (a.lo == 0 && a.hi == 0 && b.lo > 0 && finite(b)) return Bound(0);
+    return finite(b) && b.lo > 0 ? a * checked(lower(1 / b.hi), upper(1 / b.lo)) : Bound(-infinity, infinity);
+}
+double magnitude(Bound value) {
+    return finite(value) ? std::max(std::abs(value.lo), std::abs(value.hi)) : infinity;
+}
+using Point = std::array<Bound, 3>;
+Point exact(const Vec3 &point) { return {Bound(point.x()), Bound(point.y()), Bound(point.z())}; }
+Bound dotBounds(const Point &point, const Vec3 &direction) {
+    Bound result;
+    for (int i = 0; i < 3; ++i)
+        result = result + point[i] * Bound(direction[i]);
+    return result;
+}
+double distanceUpper(const Vec3 &a, const Vec3 &b) {
+    Bound squared;
+    for (int axis = 0; axis < 3; ++axis) {
+        const double component = magnitude(Bound(a[axis]) - Bound(b[axis]));
+        squared = squared + Bound(component) * Bound(component);
+    }
+    return finite(squared) ? upper(std::sqrt(squared.hi)) : infinity;
+}
+Point difference(Point point, const Vec3 &origin) {
+    for (int i = 0; i < 3; ++i)
+        point[i] = point[i] - Bound(origin[i]);
+    return point;
+}
+void require(bool condition, const char *message) {
+    if (!condition)
+        throw std::domain_error(message);
+}
+template<int N> const Curve<N> *basis(const CurvePtr<N> &curve) {
+    const Curve<N> *result = curve.get();
+    while (result && result->type() == CurveType::Trimmed) {
+        cancellationPoint();
+        result = static_cast<const TrimmedCurve<N> *>(result)->basis().get();
+    }
+    return result;
+}
+template<int N> bool affinePieces(const CurvePtr<N> &curve) {
+    const auto *source = basis(curve);
+    if (!source)
+        return false;
+    if (source->type() == CurveType::Line)
+        return true;
+    const auto *spline = dynamic_cast<const BSplineCurve<N> *>(source);
+    if (!spline || spline->degree() != 1)
+        return false;
+    require(spline->poleCount() <= 100000, "Mappatura carrier: budget poli sorgente esaurito.");
+    for (int i = 0; i < spline->poleCount(); ++i) {
+        cancellationPoint();
+        if (spline->weight(i) != spline->weight(0))
+            return false;
+    }
+    return true;
+}
+template<int N> std::array<Bound, N> affinePoint(const CurvePtr<N> &curve, double parameter) {
+    cancellationPoint();
+    const auto *source = basis(curve);
+    std::array<Bound, N> result;
+    if (source->type() == CurveType::Line) {
+        const auto &line = static_cast<const Line<N> &>(*source);
+        for (int i = 0; i < N; ++i)
+            result[i] = Bound(line.origin()[i]) + Bound(parameter) * Bound(line.direction()[i]);
+        return result;
+    }
+    const auto &spline = static_cast<const BSplineCurve<N> &>(*source);
+    const auto &knots = spline.knots();
+    require(parameter >= spline.domain().lo && parameter <= spline.domain().hi,
+            "Mappatura carrier: parametro sorgente fuori dominio.");
+    const auto after = std::upper_bound(knots.begin() + 1, knots.begin() + spline.poleCount() + 1, parameter);
+    const int span = std::clamp(int(after - knots.begin()) - 1, 1, spline.poleCount() - 1);
+    if (parameter == knots[span] || parameter == knots[span + 1]) {
+        const int pole = parameter == knots[span] ? span - 1 : span;
+        for (int i = 0; i < N; ++i)
+            result[i] = Bound(spline.poles()[pole][i]);
+        return result;
+    }
+    const Bound fraction = (Bound(parameter) - Bound(knots[span])) /
+                           (Bound(knots[span + 1]) - Bound(knots[span]));
+    for (int i = 0; i < N; ++i)
+        result[i] = Bound(spline.poles()[span - 1][i]) + fraction *
+                    (Bound(spline.poles()[span][i]) - Bound(spline.poles()[span - 1][i]));
+    return result;
+}
+struct EdgeImage {
+    CurvePtr<2> pcurve;
+    std::shared_ptr<BSplineCurve<3>> curve;
+    std::vector<Point> sourcePoints;
+    double bridge = 0, fitError = 0, error = 0;
+};
+BodyHistory historyFor(const Body &source, const Body &result) {
+    auto history = makeHistory({&source}, result);
+    const auto assign = [&](EntityKind kind, const auto &from, const auto &to) {
+        require(from.size() == to.size(), "Mappatura carrier: topologia non conservata.");
+        for (std::size_t i = 0; i < to.size(); ++i)
+            history.declareOrigins(kind, to[i].index, {{0, kind, from[i].index, HistoryRelation::Modified}});
+    };
+    assign(EntityKind::Face, source.faces(), result.faces());
+    assign(EntityKind::Edge, source.edges(), result.edges());
+    assign(EntityKind::Vertex, source.vertices(), result.vertices());
+    return history;
+}
+} // namespace
+std::optional<Body> wrapPlanarBodyOnCarrier(const Body &source, const Surface &target,
+                                          const SurfaceWrapOptions &options, double scaleU, double scaleV,
+                                          BodyHistory *history, double *deviation) {
+    cancellationPoint();
+    if (!source.isSheet() || options.rigid)
+        return {};
+    SurfacePtr carrier;
+    if (target.type() == SurfaceType::BSpline)
+        carrier = std::make_shared<BSplineSurface>(static_cast<const BSplineSurface &>(target));
+    else if (target.type() == SurfaceType::Extrusion)
+        carrier = std::make_shared<ExtrusionSurface>(static_cast<const ExtrusionSurface &>(target));
+    else
+        return {};
+    for (auto face : source.faces()) {
+        if (source.face(face).surface->type() != SurfaceType::Plane)
+            return {};
+        for (auto loop : source.face(face).loops)
+            for (auto fin : source.loopFins(loop))
+                if (!affinePieces(source.fin(fin).pcurve))
+                    return {};
+    }
+    for (auto id : source.edges())
+        if (!affinePieces(source.edge(id).curve))
+            return {};
+    const auto metric = surfaceParameterBounds(carrier);
+    if (!metric)
+        return {};
+    require(std::isfinite(scaleU) && scaleU > 0 && std::isfinite(scaleV) && scaleV > 0,
+            "Mappatura carrier: scala non valida.");
+    const double connectionBudget = std::min(options.tolerance, linearResolution());
+    const double fitBudget = .2 * connectionBudget;
+    const double cosine = std::cos(options.angle), sine = std::sin(options.angle);
+    const auto mapParameters = [&](const Point &point) {
+        const Point relative = difference(point, options.sourcePlane.origin());
+        const Bound x = dotBounds(relative, options.sourcePlane.xDir());
+        const Bound y = dotBounds(relative, options.sourcePlane.yDir());
+        return std::array<Bound, 2>{Bound(options.anchor.x()) +
+            (Bound(cosine) * x - Bound(sine) * y + Bound(options.shift.x())) / Bound(scaleU),
+            Bound(options.anchor.y()) +
+            (Bound(sine) * x + Bound(cosine) * y + Bound(options.shift.y())) / Bound(scaleV)};
+    };
+    const auto nominalParameters = [&](const Vec3 &point) {
+        const Vec3 local = options.sourcePlane.toLocal(point);
+        return Vec2(options.anchor.x() + (cosine * local.x() - sine * local.y() + options.shift.x()) / scaleU,
+                    options.anchor.y() + (sine * local.x() + cosine * local.y() + options.shift.y()) / scaleV);
+    };
+    // A planar patch's height is affine in its own UV. Bound the WHOLE
+    // trimmed region by the hull of its original affine boundary curves.
+    double heightBound = 0;
+    bool nominalZeroHeight = true;
+    std::map<int, bool> senses;
+    for (auto id : source.faces()) {
+        cancellationPoint();
+        const auto &face = source.face(id);
+        const auto &plane = static_cast<const Plane &>(*face.surface).frame();
+        const Vec3 normal = options.sourcePlane.zDir();
+        bool same = true, opposite = true;
+        for (int axis = 0; axis < 3; ++axis) {
+            same = same && plane.zDir()[axis] == normal[axis];
+            opposite = opposite && plane.zDir()[axis] == -normal[axis];
+        }
+        const bool parallel = same || opposite;
+        nominalZeroHeight = nominalZeroHeight && parallel &&
+            dot(plane.origin() - options.sourcePlane.origin(), normal) + options.normalOffset == 0;
+        Bound u(infinity, -infinity), v(infinity, -infinity);
+        for (auto loop : face.loops)
+            for (auto use : source.loopFins(loop)) {
+                const auto &fin = source.fin(use);
+                const auto &edge = source.edge(fin.edge);
+                for (double parameter : fin.pcurve->breakpoints(edge.range)) {
+                    const auto point = affinePoint(fin.pcurve, parameter);
+                    u.lo = std::min(u.lo, point[0].lo); u.hi = std::max(u.hi, point[0].hi);
+                    v.lo = std::min(v.lo, point[1].lo); v.hi = std::max(v.hi, point[1].hi);
+                }
+            }
+        require(finite(u) && finite(v), "Mappatura carrier: regione sorgente non finita.");
+        Bound height = dotBounds(difference(exact(plane.origin()), options.sourcePlane.origin()), options.sourcePlane.zDir()) +
+                       Bound(options.normalOffset);
+        height = height + dotBounds(exact(plane.xDir()), options.sourcePlane.zDir()) * u +
+                          dotBounds(exact(plane.yDir()), options.sourcePlane.zDir()) * v;
+        heightBound = std::max(heightBound, magnitude(height));
+        const Bound orientation = dotBounds(exact(plane.zDir()), options.sourcePlane.zDir());
+        if (!(orientation.lo > 0 || orientation.hi < 0))
+            return {};
+        senses[id.index] = orientation.lo > 0 ? face.sense : !face.sense;
+    }
+    // Nonzero-height wrapping needs a different offset carrier, outside this
+    // recognized zero-height approximation family; keep its legacy path.
+    if (!(heightBound < fitBudget * .25)) {
+        require(!nominalZeroHeight, "Mappatura carrier: quota zero riconosciuta ma bound non risolto.");
+        return {};
+    }
+    std::map<int, EdgeImage> images;
+    for (auto id : source.edges()) {
+        cancellationPoint();
+        const auto &edge = source.edge(id);
+        const auto breaks = edge.curve->breakpoints(edge.range);
+        require(breaks.size() >= 2 && breaks.size() <= 100000, "Mappatura carrier: budget nodi bordo esaurito.");
+        EdgeImage image;
+        std::vector<Vec2> uvPoles;
+        std::vector<std::array<Bound, 2>> originalUV;
+        double minimum[2]{infinity, infinity}, maximum[2]{-infinity, -infinity};
+        for (double parameter : breaks) {
+            const Point point = affinePoint(edge.curve, parameter);
+            image.sourcePoints.push_back(point);
+            const auto uv = mapParameters(point);
+            originalUV.push_back(uv);
+            uvPoles.push_back(nominalParameters(edge.curve->point(parameter)));
+            for (int axis = 0; axis < 2; ++axis) {
+                minimum[axis] = std::min(minimum[axis], uvPoles.back()[axis]);
+                maximum[axis] = std::max(maximum[axis], uvPoles.back()[axis]);
+            }
+        }
+        const bool generalAffine = target.type() == SurfaceType::Extrusion;
+        const int fixedAxis = maximum[0] - minimum[0] < maximum[1] - minimum[1] ? 0 : 1;
+        const double fixed = uvPoles.front()[fixedAxis];
+        bool nominalIso = maximum[fixedAxis] == minimum[fixedAxis];
+        bool possibleIso = true;
+        for (const auto &point : originalUV)
+            possibleIso = possibleIso && point[fixedAxis].lo <= fixed && point[fixedAxis].hi >= fixed;
+        nominalIso = nominalIso || possibleIso;
+        double mapError = heightBound;
+        for (std::size_t i = 0; i < uvPoles.size(); ++i) {
+            if (!generalAffine)
+                uvPoles[i][fixedAxis] = fixed;
+            const Bound du = originalUV[i][0] - Bound(uvPoles[i].x());
+            const Bound dv = originalUV[i][1] - Bound(uvPoles[i].y());
+            const Bound height = dotBounds(difference(image.sourcePoints[i], options.sourcePlane.origin()),
+                                           options.sourcePlane.zDir()) + Bound(options.normalOffset);
+            const Bound error = Bound(metric->u) * Bound(magnitude(du)) + Bound(metric->v) * Bound(magnitude(dv)) +
+                                Bound(std::max(heightBound, magnitude(height)));
+            mapError = std::max(mapError, error.hi);
+            // Full rectangular corridor, not just the nominal UV endpoints.
+            const Bound corridorU(std::min(originalUV[i][0].lo, uvPoles[i].x()),
+                                  std::max(originalUV[i][0].hi, uvPoles[i].x()));
+            const Bound corridorV(std::min(originalUV[i][1].lo, uvPoles[i].y()),
+                                  std::max(originalUV[i][1].hi, uvPoles[i].y()));
+            require(finite(corridorU) && finite(corridorV) && corridorU.lo >= carrier->uDomain().lo &&
+                        corridorU.hi <= carrier->uDomain().hi && corridorV.lo >= carrier->vDomain().lo &&
+                        corridorV.hi <= carrier->vDomain().hi,
+                    "Mappatura carrier: corridoio UV fuori dominio naturale o non risolto.");
+        }
+        // Diagonal images are deliberately unsupported. Small cross-axis
+        // components are accepted only after charging their complete bound.
+        if (!(mapError < fitBudget * .5)) {
+            require(!nominalIso && !generalAffine, "Mappatura carrier: UV affine riconosciuta ma bound non risolto.");
+            return {};
+        }
+        image.bridge = mapError;
+        std::vector<double> knots{breaks.front()};
+        knots.insert(knots.end(), breaks.begin(), breaks.end());
+        knots.push_back(breaks.back());
+        image.pcurve = std::make_shared<BSplineCurve<2>>(1, std::move(knots), std::move(uvPoles));
+        const auto composition = surfaceCompositionErrorBound(carrier, image.pcurve, edge.range);
+        if (!composition.bound)
+            return {};
+        double fitError = 0;
+        image.curve = fitCurveCertified([&](double parameter) {
+            const Vec2 uv = image.pcurve->point(parameter);
+            return carrier->point(uv.x(), uv.y());
+        }, edge.range, composition.breaks, fitBudget - mapError, composition.bound, &fitError);
+        // Recheck the actual final cubic coefficients, including the implicit
+        // first pole shared by consecutive output spans.
+        for (int span = 3; span < image.curve->poleCount(); ++span) {
+            cancellationPoint();
+            const auto &outputKnots = image.curve->knots();
+            if (!(outputKnots[span] < outputKnots[span + 1]))
+                continue;
+            require((span == 3 || outputKnots[span - 2] == outputKnots[span]) &&
+                        (span + 1 == image.curve->poleCount() || outputKnots[span + 1] == outputKnots[span + 3]),
+                    "Mappatura carrier: campata finale non Bezier cubica.");
+            const std::array<Vec3, 4> poles{image.curve->poles()[span - 3], image.curve->poles()[span - 2],
+                                          image.curve->poles()[span - 1], image.curve->poles()[span]};
+            const double error = composition.bound({outputKnots[span], outputKnots[span + 1]}, poles);
+            require(std::isfinite(error) && error <= fitBudget - mapError,
+                    "Mappatura carrier: bordo finale non certificato.");
+            fitError = std::max(fitError, error);
+        }
+        image.fitError = fitError;
+        image.error = upper(fitError + mapError);
+        require(image.error <= fitBudget, "Mappatura carrier: bordo oltre budget.");
+        images.emplace(id.index, std::move(image));
+    }
+    // Preserve the ORIGINAL trims too. An input fin may have a declared
+    // tolerance relative to its edge; replacing it from the edge alone must
+    // not silently erase a displacement of the mapped source region.
+    for (auto faceId : source.faces()) {
+        const auto &plane = static_cast<const Plane &>(*source.face(faceId).surface).frame();
+        for (auto loop : source.face(faceId).loops)
+            for (auto use : source.loopFins(loop)) {
+                cancellationPoint();
+                const auto &fin = source.fin(use);
+                const auto &edge = source.edge(fin.edge);
+                auto &image = images.at(fin.edge.index);
+                auto cuts = fin.pcurve->breakpoints(edge.range);
+                const auto more = image.pcurve->breakpoints(edge.range);
+                cuts.insert(cuts.end(), more.begin(), more.end());
+                std::sort(cuts.begin(), cuts.end());
+                cuts.erase(std::unique(cuts.begin(), cuts.end()), cuts.end());
+                double trimBridge = 0;
+                for (double parameter : cuts) {
+                    const auto local = affinePoint(fin.pcurve, parameter);
+                    Point point = exact(plane.origin());
+                    for (int axis = 0; axis < 3; ++axis)
+                        point[axis] = point[axis] + local[0] * Bound(plane.xDir()[axis]) +
+                                                   local[1] * Bound(plane.yDir()[axis]);
+                    const auto original = mapParameters(point);
+                    const auto actual = affinePoint(image.pcurve, parameter);
+                    const Bound height = dotBounds(difference(point, options.sourcePlane.origin()),
+                                                    options.sourcePlane.zDir()) + Bound(options.normalOffset);
+                    const Bound bridge = Bound(metric->u) * Bound(magnitude(original[0] - actual[0])) +
+                                         Bound(metric->v) * Bound(magnitude(original[1] - actual[1])) +
+                                         Bound(magnitude(height));
+                    require(finite(bridge), "Mappatura carrier: trasferimento trim non risolto.");
+                    trimBridge = std::max(trimBridge, bridge.hi);
+                    for (int axis = 0; axis < 2; ++axis) {
+                        const Interval domain = axis == 0 ? carrier->uDomain() : carrier->vDomain();
+                        require(original[axis].lo >= domain.lo && original[axis].hi <= domain.hi &&
+                                    actual[axis].lo >= domain.lo && actual[axis].hi <= domain.hi,
+                                "Mappatura carrier: corridoio trim fuori dominio naturale.");
+                    }
+                }
+                image.error = std::max(image.error, upper(image.fitError + trimBridge));
+                require(image.error <= fitBudget, "Mappatura carrier: trim originale oltre budget.");
+            }
+    }
+    std::vector<Vec3> vertices;
+    std::map<int, int> vertexIndex, edgeIndex;
+    for (auto id : source.vertices()) {
+        vertexIndex[id.index] = int(vertices.size());
+        vertices.push_back(Vec3());
+    }
+    std::map<int, bool> initialized;
+    std::vector<Body::BuildEdge> edges;
+    double worst = heightBound;
+    for (auto id : source.edges()) {
+        cancellationPoint();
+        const auto &edge = source.edge(id);
+        const auto &image = images.at(id.index);
+        for (const auto endpoint : {std::make_pair(source.edgeStart(id), edge.range.lo),
+                                   std::make_pair(source.edgeEnd(id), edge.range.hi)}) {
+            const Vec3 point = image.curve->point(endpoint.second);
+            const int index = vertexIndex.at(endpoint.first.index);
+            if (initialized[index])
+                require(distance(vertices[index], point) <= fitBudget,
+                        "Mappatura carrier: bordi non collegati al vertice.");
+            else {
+                vertices[index] = point;
+                initialized[index] = true;
+            }
+        }
+        edgeIndex[id.index] = int(edges.size());
+        edges.push_back({vertexIndex.at(source.edgeStart(id).index), vertexIndex.at(source.edgeEnd(id).index),
+                         image.curve, edge.range, 0});
+        worst = std::max(worst, image.error);
+    }
+    for (auto id : source.vertices()) {
+        const Vec3 point = source.vertex(id).point;
+        const Vec2 uv = nominalParameters(point);
+        const Vec3 local = options.sourcePlane.toLocal(point);
+        const Vec3 expected = target.point(uv.x(), uv.y()) +
+                              (local.z() + options.normalOffset) * target.normal(uv.x(), uv.y());
+        const double vertexError = distanceUpper(vertices[vertexIndex.at(id.index)], expected);
+        require(vertexError <= fitBudget, "Mappatura carrier: vertice sorgente non collegato ai bordi.");
+        worst = std::max(worst, vertexError);
+    }
+    std::vector<Body::BuildFace> faces;
+    for (auto id : source.faces()) {
+        Body::BuildFace face;
+        face.surface = carrier;
+        face.sense = senses.at(id.index);
+        for (auto loop : source.face(id).loops) {
+            std::vector<Body::BuildFin> fins;
+            for (auto use : source.loopFins(loop)) {
+                const auto &fin = source.fin(use);
+                const auto &image = images.at(fin.edge.index);
+                fins.push_back({edgeIndex.at(fin.edge.index), fin.sense, image.pcurve, image.error});
+            }
+            face.loops.push_back(std::move(fins));
+        }
+        faces.push_back(std::move(face));
+    }
+    cancellationPoint();
+    Body result = Body::buildSheet(vertices, edges, faces);
+    const auto issues = checkBody(result, {true, true});
+    require(issues.empty(), "Mappatura carrier: risultato B-rep non valido.");
+    cancellationPoint();
+    if (history)
+        *history = historyFor(source, result);
+    if (deviation)
+        *deviation = worst;
+    return result;
+}
+} // namespace ForgeCad::Kernel::detail

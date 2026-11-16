@@ -1,0 +1,16 @@
+rational=0 amp=1 reverse=0 accepted=0 reason=Offset non riuscito: l'offset interno collassa o conserva tratti piu' vicini della distanza richiesta.
+rational=0 amp=1 reverse=1 accepted=0 reason=Offset non riuscito: l'offset interno collassa o conserva tratti piu' vicini della distanza richiesta.
+rational=0 amp=0.10000000000000001 reverse=0 accepted=0 reason=Offset non riuscito: l'offset interno collassa o conserva tratti piu' vicini della distanza richiesta.
+rational=0 amp=0.10000000000000001 reverse=1 accepted=0 reason=Offset non riuscito: l'offset interno collassa o conserva tratti piu' vicini della distanza richiesta.
+rational=0 amp=0.01 reverse=0 accepted=1 reason= witness_projection_gap=5.742474252275892e-07 witness_t=0.87929999999999997
+rational=0 amp=0.01 reverse=1 accepted=1 reason= witness_projection_gap=5.7424760933899588e-07 witness_t=0.87929999999999997
+rational=0 amp=0.001 reverse=0 accepted=1 reason= witness_projection_gap=5.7424659673233069e-08 witness_t=0.87929999999999997
+rational=0 amp=0.001 reverse=1 accepted=1 reason= witness_projection_gap=5.7424843782905022e-08 witness_t=0.87929999999999997
+rational=1 amp=1 reverse=0 accepted=0 reason=Offset non riuscito: l'offset interno collassa o conserva tratti piu' vicini della distanza richiesta.
+rational=1 amp=1 reverse=1 accepted=0 reason=Offset non riuscito: l'offset interno collassa o conserva tratti piu' vicini della distanza richiesta.
+rational=1 amp=0.10000000000000001 reverse=0 accepted=0 reason=Offset non riuscito: l'offset interno collassa o conserva tratti piu' vicini della distanza richiesta.
+rational=1 amp=0.10000000000000001 reverse=1 accepted=0 reason=Offset non riuscito: l'offset interno collassa o conserva tratti piu' vicini della distanza richiesta.
+rational=1 amp=0.01 reverse=0 accepted=1 reason= witness_projection_gap=5.4162201140912913e-07 witness_t=0.1203
+rational=1 amp=0.01 reverse=1 accepted=1 reason= witness_projection_gap=5.4162182782854784e-07 witness_t=0.1203
+rational=1 amp=0.001 reverse=0 accepted=1 reason= witness_projection_gap=5.4162283753475537e-08 witness_t=0.1203
+rational=1 amp=0.001 reverse=1 accepted=1 reason= witness_projection_gap=5.4162100171159522e-08 witness_t=0.1203

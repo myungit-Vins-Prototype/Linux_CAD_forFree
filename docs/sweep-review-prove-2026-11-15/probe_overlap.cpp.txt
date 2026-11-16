@@ -1,0 +1,16 @@
+#include "fk_sweep.h"
+#include "fk_helix.h"
+#include "fk_mass.h"
+#include "fk_body_check.h"
+#include <iostream>
+#include <iomanip>
+using namespace ForgeCad::Kernel;
+int main(){
+ HelixSpec spec;spec.radius=1;spec.pitch=.1;spec.turns=4;
+ auto path=std::make_shared<HelixCurve>(spec);
+ const Frame3 frame(path->point(0),normalized(path->derivative(0)),Vec3(1,0,0));
+ ProfileRegion disk;disk.outer.segments={{std::make_shared<Circle<2>>(Vec2(),Vec2(1,0),Vec2(0,1),.5),{0,kTwoPi}}};
+ try{auto body=sweepRegions(frame,{disk},{{path,path->domain()}});const double maximumVolume=9*(spec.pitch*spec.turns+1);
+ std::cout<<std::setprecision(15)<<"checks="<<checkBody(body).size()<<" volume="<<massProperties(body).volume<<" upper_bound="<<maximumVolume<<" faces="<<body.faces().size()<<std::endl;
+ }catch(const std::exception&e){std::cout<<"error="<<e.what()<<std::endl;}
+}

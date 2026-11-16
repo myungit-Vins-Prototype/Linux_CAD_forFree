@@ -1,0 +1,10 @@
+from pathlib import Path
+import subprocess,hashlib,json
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/k10-next-review/root');P=R/'docs/review-k10-sew-preview-prove-2026-11-16'
+for command in [['python3',str(T/'final_docs.py')],['python3',str(T/'audit.py'),'preserve'],['python3',str(T/'audit.py'),'archive'],['python3','tools/generate_architecture.py','--check']]:
+ subprocess.run(command,cwd=R,check=True)
+lines=(P/'SHA256SUMS').read_text().splitlines()
+for line in lines:
+ h,f=line.split('  ',1);assert hashlib.sha256((P/f).read_bytes()).hexdigest()==h,f
+G=json.load(open(R/'docs/architecture/graph.json'));assert len(G['nodes'])==769 and not G['analysis']['errors'];assert not any(n['id'].startswith(str(P.relative_to(R))) for n in G['nodes'])
+print('FINAL PASS:',len(lines),'artefatti sigillati;769nodi attivi,nessuna copia documentale nel catalogo')

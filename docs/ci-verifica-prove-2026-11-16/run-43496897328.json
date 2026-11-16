@@ -1,0 +1,189 @@
+{
+  "conclusion": "failure",
+  "headSha": "8914fd1705044a4a0dd609f83d0bbb983d7cca95",
+  "jobs": [
+    {
+      "completedAt": "2026-11-13T20:22:00Z",
+      "conclusion": "failure",
+      "databaseId": 132132236927,
+      "name": "macOS CPU e Metal",
+      "startedAt": "2026-11-13T19:56:36Z",
+      "status": "completed",
+      "steps": [
+        {
+          "completedAt": "2026-11-13T19:56:38Z",
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "startedAt": "2026-11-13T19:56:37Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-11-13T19:56:47Z",
+          "conclusion": "success",
+          "name": "Scarica i sorgenti",
+          "number": 2,
+          "startedAt": "2026-11-13T19:56:38Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-11-13T19:56:47Z",
+          "conclusion": "skipped",
+          "name": "Installa le dipendenze",
+          "number": 3,
+          "startedAt": "2026-11-13T19:56:47Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-11-13T19:59:05Z",
+          "conclusion": "success",
+          "name": "Installa le dipendenze macOS",
+          "number": 4,
+          "startedAt": "2026-11-13T19:56:47Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-11-13T19:59:14Z",
+          "conclusion": "success",
+          "name": "Configura la build Release",
+          "number": 5,
+          "startedAt": "2026-11-13T19:59:05Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-11-13T20:09:28Z",
+          "conclusion": "success",
+          "name": "Compila l'applicazione e tutti i test configurati",
+          "number": 6,
+          "startedAt": "2026-11-13T19:59:14Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-11-13T20:21:53Z",
+          "conclusion": "failure",
+          "name": "Esegui i test",
+          "number": 7,
+          "startedAt": "2026-11-13T20:09:28Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-11-13T20:21:54Z",
+          "conclusion": "success",
+          "name": "Conserva i risultati e i log",
+          "number": 8,
+          "startedAt": "2026-11-13T20:21:53Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-11-13T20:21:55Z",
+          "conclusion": "success",
+          "name": "Post Scarica i sorgenti",
+          "number": 16,
+          "startedAt": "2026-11-13T20:21:54Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-11-13T20:21:59Z",
+          "conclusion": "success",
+          "name": "Complete job",
+          "number": 17,
+          "startedAt": "2026-11-13T20:21:55Z",
+          "status": "completed"
+        }
+      ],
+      "url": "https://github.com/myungit-Vins-Prototype/Linux_CAD_forFree/actions/runs/43496897328/job/132132236927"
+    },
+    {
+      "completedAt": "2026-11-13T20:27:39Z",
+      "conclusion": "failure",
+      "databaseId": 132132237376,
+      "name": "Linux CPU",
+      "startedAt": "2026-11-13T19:56:36Z",
+      "status": "completed",
+      "steps": [
+        {
+          "completedAt": "2026-11-13T19:56:38Z",
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "startedAt": "2026-11-13T19:56:37Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-11-13T19:56:43Z",
+          "conclusion": "success",
+          "name": "Scarica i sorgenti",
+          "number": 2,
+          "startedAt": "2026-11-13T19:56:38Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-11-13T19:58:09Z",
+          "conclusion": "success",
+          "name": "Installa le dipendenze",
+          "number": 3,
+          "startedAt": "2026-11-13T19:56:43Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-11-13T19:58:09Z",
+          "conclusion": "skipped",
+          "name": "Installa le dipendenze macOS",
+          "number": 4,
+          "startedAt": "2026-11-13T19:58:09Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-11-13T19:58:12Z",
+          "conclusion": "success",
+          "name": "Configura la build Release",
+          "number": 5,
+          "startedAt": "2026-11-13T19:58:09Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-11-13T20:14:34Z",
+          "conclusion": "success",
+          "name": "Compila l'applicazione e tutti i test configurati",
+          "number": 6,
+          "startedAt": "2026-11-13T19:58:12Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-11-13T20:27:37Z",
+          "conclusion": "failure",
+          "name": "Esegui i test",
+          "number": 7,
+          "startedAt": "2026-11-13T20:14:34Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-11-13T20:27:38Z",
+          "conclusion": "success",
+          "name": "Conserva i risultati e i log",
+          "number": 8,
+          "startedAt": "2026-11-13T20:27:37Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-11-13T20:27:38Z",
+          "conclusion": "success",
+          "name": "Post Scarica i sorgenti",
+          "number": 16,
+          "startedAt": "2026-11-13T20:27:38Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-11-13T20:27:38Z",
+          "conclusion": "success",
+          "name": "Complete job",
+          "number": 17,
+          "startedAt": "2026-11-13T20:27:38Z",
+          "status": "completed"
+        }
+      ],
+      "url": "https://github.com/myungit-Vins-Prototype/Linux_CAD_forFree/actions/runs/43496897328/job/132132237376"
+    }
+  ],
+  "url": "https://github.com/myungit-Vins-Prototype/Linux_CAD_forFree/actions/runs/43496897328"
+}

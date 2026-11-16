@@ -1,0 +1,5 @@
+from pathlib import Path
+import hashlib,json
+r=Path('/home/myungit/Linux_CAD_forFree');p=Path('/tmp/forgecad-k10-diagonal-20261115/root');log=(p/'build.log').read_text();assert 'Built target forgecad_view_tests' in log;assert 'Built target forgecad' in log;assert 'Built target forgekernel_mapping_diagonal_validation_tests' in log;assert 'error:' not in log
+warnings=[s for s in log.splitlines() if 'warning:' in s];changed=['fk_affine_surface_fit','test_mapping_diagonal_validation','fk_mapping_carrier','fk_surface_mapping','fk_curve_fit_bounds','test_mapping_carrier_validation'];assert not any(any(n in w for n in changed) for w in warnings)
+binaries=['forgecad','forgecad_view_tests','kernel/forgekernel_tests','kernel/forgekernel_mapping_diagonal_validation_tests'];result=dict(exit=0,build_complete=True,warnings=warnings,binaries={f:dict(sha256=hashlib.sha256((r/'forgecad-release'/f).read_bytes()).hexdigest(),mtime=(r/'forgecad-release'/f).stat().st_mtime) for f in binaries});(p/'build-result.json').write_text(json.dumps(result,indent=2));print('Full app, runners and new target built; warnings',len(warnings))

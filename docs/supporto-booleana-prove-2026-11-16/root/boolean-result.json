@@ -1,0 +1,10 @@
+{
+  "exit": 0,
+  "seconds": 43.43870581800002,
+  "command": [
+    "/home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_tests",
+    "Boolean"
+  ],
+  "passed": 38,
+  "failed": 0
+}

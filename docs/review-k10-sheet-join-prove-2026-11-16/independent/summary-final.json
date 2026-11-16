@@ -1,0 +1,58 @@
+{
+  "baseline_head": "ce03a6d5941840886416aafe055763fb98209e94",
+  "baseline_sheet_sha256": "fdf2810ae1777d376fd80719e9fa8210cdfda810e450c706f6e05963129f098c",
+  "candidate_sheet_sha256": "8e9bd9d6c1d61bf9e8a189e783d6803510c3c61f07ed28c8e5b82f2efa457e2f",
+  "final_export_count": 19,
+  "final_export_byte_identical_v2": true,
+  "test_scope": {
+    "current_independent": "Python Fraction certificates and negative controls only",
+    "reported_tests_read_not_executed_by_audit": "tests V3 Release 29/29; root owns app/CMake/sanitizers/UI"
+  },
+  "limitations": [
+    "Implicit transverse Newton fit and UV envelope remain sampled",
+    "Natural-domain coefficient-hull rejection for some existing/legacy pcurves; not a proven geometric violation",
+    "No global self-intersection, G1/G2 or topology certificate",
+    "Resource and representation restrictions can reject geometrically valid inputs"
+  ],
+  "k10_count_proposed": {
+    "partially_migrated": 22,
+    "original_sites": 24,
+    "entirely_open": 2,
+    "new_distinct_findings": 0
+  },
+  "new_seam_strict": {
+    "total": 30,
+    "certified": 30,
+    "uncertified": 0,
+    "cells": 36,
+    "upper_mm_max": 1.7944397059908764e-07,
+    "upper_to_budget_max": 0.721995584823076
+  },
+  "original_support": {
+    "total": 38,
+    "certified": 38,
+    "uncertified": 0,
+    "cells": 46,
+    "upper_mm_max": 2.278602662407681e-13,
+    "upper_to_budget_max": 2.2786026624076814e-06
+  },
+  "all_actual": {
+    "total": 247,
+    "certified": 214,
+    "uncertified": 33,
+    "cells": 226,
+    "upper_mm_max": 1.7944397059908764e-07,
+    "upper_to_budget_max": 0.9713315752371023
+  },
+  "all_source": {
+    "total": 152,
+    "certified": 125,
+    "uncertified": 27,
+    "cells": 125,
+    "upper_mm_max": 2.8187786859521084e-13,
+    "upper_to_budget_max": 2.8187786859521083e-06
+  },
+  "uncertified_reasons": {
+    "unresolved or unsupported": 60
+  }
+}

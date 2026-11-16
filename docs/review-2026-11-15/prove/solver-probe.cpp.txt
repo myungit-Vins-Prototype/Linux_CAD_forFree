@@ -1,0 +1,24 @@
+#include "cad_constraints.h"
+#include "cad_document_io.h"
+#include <QCoreApplication>
+#include <iostream>
+#include <limits>
+using namespace ForgeCad;
+int main(int argc,char **argv) {
+ QCoreApplication app(argc,argv);
+ const std::string mode=argc>1?argv[1]:"nan";
+ SketchObject sketch; sketch.segments={{{0,0},{10,0}},{{0,0},{0,10}}};
+ auto c=makeConstraint(sketch,mode=="nan"?ConstraintType::Distance:ConstraintType::Angle,
+   mode=="nan"?QVector<ConstraintRef>{{0,0,-1}}:QVector<ConstraintRef>{{0,0,-1},{0,1,-1}});
+ c.value=mode=="nan"?std::numeric_limits<double>::quiet_NaN():mode=="inf"?std::numeric_limits<double>::infinity():1e20;
+ sketch.geometricConstraints={c};
+ DocumentState source; source.sketches={sketch}; QByteArray bytes;
+ const auto e=encodeDocument(source,bytes,false); DocumentState restored;
+ const auto d=e.isEmpty()?decodeDocument(bytes,restored):e;
+ std::cout<<"encode='"<<e.toStdString()<<"' decode='"<<d.toStdString()<<"' bytes="<<bytes.size()<<std::endl;
+ if(!d.isEmpty())return 2;
+ auto &s=restored.sketches[0];
+ std::cout<<"loaded value="<<s.geometricConstraints[0].value<<"; solving"<<std::endl;
+ const auto result=solveSketch(s);
+ std::cout<<"ok="<<result.ok<<" residual="<<result.residual<<" iterations="<<result.iterations<<" constraintError="<<constraintError(s,s.geometricConstraints[0])<<std::endl;
+}

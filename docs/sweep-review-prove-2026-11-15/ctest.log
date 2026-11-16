@@ -1,0 +1,37 @@
+Test project /home/myungit/Linux_CAD_forFree/forgecad-release
+      Start 193: forgekernel_surface_tools_tests
+      Start 188: forgekernel_surface_instances_tests
+      Start  49: forgecad_all_history_tests
+      Start  75: forgecad_document_precision_tests
+ 1/16 Test  #75: forgecad_document_precision_tests ............   Passed    0.21 sec
+      Start  36: forgecad_pattern_result_tests
+ 2/16 Test  #49: forgecad_all_history_tests ...................   Passed    0.50 sec
+      Start  46: forgecad_boolean_history_tests
+ 3/16 Test  #46: forgecad_boolean_history_tests ...............   Passed    0.07 sec
+      Start  89: forgecad_sweep_reference_tests
+ 4/16 Test  #89: forgecad_sweep_reference_tests ...............   Passed    0.09 sec
+      Start  73: forgecad_revolution_history_tests
+ 5/16 Test #188: forgekernel_surface_instances_tests ..........   Passed    0.82 sec
+      Start  35: forgecad_pattern_placement_tests
+ 6/16 Test  #35: forgecad_pattern_placement_tests .............   Passed    0.13 sec
+      Start  60: forgecad_surface_tools_tests
+ 7/16 Test  #73: forgecad_revolution_history_tests ............   Passed    0.35 sec
+      Start  28: forgecad_document_read_tests
+ 8/16 Test  #28: forgecad_document_read_tests .................   Passed    0.14 sec
+      Start 195: forgekernel_face_normal_bounds_tests
+ 9/16 Test #195: forgekernel_face_normal_bounds_tests .........   Passed    0.00 sec
+      Start 211: forgekernel_bspline_isoline_tests
+10/16 Test #211: forgekernel_bspline_isoline_tests ............   Passed    0.01 sec
+      Start  74: forgecad_extrusion_history_tests
+11/16 Test  #36: forgecad_pattern_result_tests ................   Passed    0.98 sec
+      Start  67: forgecad_history_preview_mesh_tests
+12/16 Test  #67: forgecad_history_preview_mesh_tests ..........   Passed    0.03 sec
+      Start 198: forgekernel_surface_parameterization_tests
+13/16 Test #198: forgekernel_surface_parameterization_tests ...   Passed    0.00 sec
+14/16 Test  #74: forgecad_extrusion_history_tests .............   Passed    0.10 sec
+15/16 Test  #60: forgecad_surface_tools_tests .................   Passed    0.79 sec
+16/16 Test #193: forgekernel_surface_tools_tests ..............   Passed    4.97 sec
+
+100% tests passed out of 16
+
+Total Test time (real) =   4.97 sec

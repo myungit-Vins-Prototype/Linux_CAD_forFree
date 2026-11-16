@@ -1,0 +1,11 @@
+
+=================================================================
+==528866==ERROR: LeakSanitizer: detected memory leaks
+
+Direct leak of 19 byte(s) in 1 object(s) allocated from:
+    #0 0x7f4c45560181 in malloc (/usr/lib/libasan.so.8+0x160181) (BuildId: 92e51235e832ccabaa24bc426fe5bd8daa88239e)
+    #1 0x55d7e1f63166 in leaveLeak() /tmp/mitre-review/tests/lsan_calibration.cpp:3
+    #2 0x55d7e1f63171 in main /tmp/mitre-review/tests/lsan_calibration.cpp:6
+    #3 0x7f4c44c27d0d  (/usr/lib/libc.so.6+0x27d0d) (BuildId: e363db7c8fcc7c06c6f0d2839b2a8ad875b75406)
+
+SUMMARY: AddressSanitizer: 19 byte(s) leaked in 1 allocation(s).

@@ -1,0 +1,54 @@
+{
+  "library": "9eccfa56f36268d8d6680cf0b0db292cb827ec2f2ed1af08c111d394bcbc4554",
+  "fixture": "8d7d8d50e0bcbfb7e392cb86a17516547f874ee6a355954601f3a473164d39bc",
+  "overlays": {
+    "/tmp/blend-cavity-review/core/fk_blend_surface.o": "917db40ef854a86c33d173cfa47dc409f235230f4f549b15c947a032fd02c7e0"
+  },
+  "commands": [
+    [
+      "/usr/bin/c++",
+      "-O3",
+      "-DNDEBUG",
+      "-std=gnu++17",
+      "-Wall",
+      "-Wextra",
+      "-Wpedantic",
+      "-ffp-contract=off",
+      "-I/home/myungit/Linux_CAD_forFree/kernel",
+      "-I/home/myungit/Linux_CAD_forFree/kernel/tests",
+      "-DFORGECAD_SOURCE_DIR=\"/home/myungit/Linux_CAD_forFree\"",
+      "/tmp/blend-cavity-review/tests/probe_cavity_variants.cpp",
+      "/tmp/blend-cavity-review/core/fk_blend_surface.o",
+      "/tmp/blend-cavity-review/tests/baseline/libforgekernel.a",
+      "-o",
+      "/tmp/blend-cavity-review/tests/probe-stage-final"
+    ],
+    [
+      "/usr/bin/c++",
+      "-O3",
+      "-DNDEBUG",
+      "-std=gnu++17",
+      "-Wall",
+      "-Wextra",
+      "-Wpedantic",
+      "-ffp-contract=off",
+      "-I/home/myungit/Linux_CAD_forFree/kernel",
+      "-I/home/myungit/Linux_CAD_forFree/kernel/tests",
+      "-DFORGECAD_SOURCE_DIR=\"/home/myungit/Linux_CAD_forFree\"",
+      "/home/myungit/Linux_CAD_forFree/kernel/tests/fk_test_main.cpp",
+      "/tmp/blend-cavity-review/tests/test_blend_cavity_regressions.cpp",
+      "/tmp/blend-cavity-review/core/fk_blend_surface.o",
+      "/tmp/blend-cavity-review/tests/baseline/libforgekernel.a",
+      "-o",
+      "/tmp/blend-cavity-review/tests/regressions-stage-final"
+    ]
+  ],
+  "probe": {
+    "exit": 0,
+    "seconds": 29.50006897899948
+  },
+  "regressions": {
+    "exit": 0,
+    "seconds": 23.643503884000893
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "exit": 0,
+  "seconds": 20.794820160999734,
+  "tests": [
+    "forgecad_ribbon_preview_tests",
+    "forgecad_function_panels_tests",
+    "forgecad_storyboard_panel_selection_tests",
+    "forgecad_history_suppression_tests",
+    "forgecad_pattern_placement_tests",
+    "forgecad_pattern_result_tests",
+    "forgecad_pattern_variation_tests",
+    "forgecad_pattern_variation_panel_tests",
+    "forgecad_pattern_single_story_tests",
+    "forgecad_preview_performance_tests",
+    "forgecad_edit_preview_reuse_tests",
+    "forgecad_history_preview_mesh_tests",
+    "forgecad_document_lifetime_tests",
+    "forgecad_offset_face_pick_tests",
+    "forgecad_extension_panel_tests",
+    "forgecad_thread_edge_tests",
+    "forgecad_sketch_menu_cancel_tests",
+    "forgecad_blend_preview_reload_tests",
+    "forgecad_surface_pattern_tests",
+    "forgecad_extrude_surface_tests",
+    "forgecad_individual_fill_tests",
+    "forgecad_fill_surface_tests",
+    "forgecad_datum_story_tests",
+    "forgecad_ellipse_extremes_tests"
+  ],
+  "actual_passed": 24,
+  "command": [
+    "ctest",
+    "--test-dir",
+    "forgecad-release",
+    "--output-on-failure",
+    "--parallel",
+    "1",
+    "-R",
+    "^(forgecad_ribbon_preview_tests|forgecad_function_panels_tests|forgecad_storyboard_panel_selection_tests|forgecad_history_suppression_tests|forgecad_pattern_placement_tests|forgecad_pattern_result_tests|forgecad_pattern_variation_tests|forgecad_pattern_variation_panel_tests|forgecad_pattern_single_story_tests|forgecad_preview_performance_tests|forgecad_edit_preview_reuse_tests|forgecad_history_preview_mesh_tests|forgecad_document_lifetime_tests|forgecad_offset_face_pick_tests|forgecad_extension_panel_tests|forgecad_thread_edge_tests|forgecad_sketch_menu_cancel_tests|forgecad_blend_preview_reload_tests|forgecad_surface_pattern_tests|forgecad_extrude_surface_tests|forgecad_individual_fill_tests|forgecad_fill_surface_tests|forgecad_datum_story_tests|forgecad_ellipse_extremes_tests)$"
+  ]
+}

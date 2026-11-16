@@ -1,0 +1,10 @@
+calibration allocation 0x7b56c4de0040
+
+=================================================================
+==575802==ERROR: LeakSanitizer: detected memory leaks
+
+Direct leak of 19 byte(s) in 1 object(s) allocated from:
+    #0 0x7f26c6560181 in malloc (/usr/lib/libasan.so.8+0x160181) (BuildId: 92e51235e832ccabaa24bc426fe5bd8daa88239e)
+    #1 0x559cc2e2f1a6 in intentionalLeak() /tmp/boundary-review/tests/leak_calibration.cpp:4
+
+SUMMARY: AddressSanitizer: 19 byte(s) leaked in 1 allocation(s).

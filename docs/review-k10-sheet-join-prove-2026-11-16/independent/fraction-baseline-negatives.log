@@ -1,0 +1,6 @@
+BEGIN hidden-narrow-knots
+hidden-narrow-knots source 7 / 8
+hidden-narrow-knots actual 12 / 13
+BEGIN tangent-gap-budget
+tangent-gap-budget source 7 / 8
+tangent-gap-budget actual 12 / 13

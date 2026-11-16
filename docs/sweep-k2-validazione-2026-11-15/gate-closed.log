@@ -1,0 +1,11 @@
+START cells=32
+STATS cells=1408 visits=17148 depth=6
+START cells=32
+STATS cells=1408 visits=17130 depth=6
+START cells=512
+STATS cells=21200 visits=146011 depth=6
+START cells=576
+STATS cells=23164 visits=160678 depth=6
+[  OK  ] SweepGlobalCheckPreservesClosedSeamsAndRepresentations
+1/1 test superati
+ELAPSED 37.56

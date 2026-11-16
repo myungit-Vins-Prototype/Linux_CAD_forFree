@@ -1,0 +1,53 @@
+Test project /home/myungit/Linux_CAD_forFree/forgecad-release
+      Start   4: forgecad_ribbon_preview_tests
+ 1/24 Test   #4: forgecad_ribbon_preview_tests ...............   Passed    7.73 sec
+      Start  32: forgecad_function_panels_tests
+ 2/24 Test  #32: forgecad_function_panels_tests ..............   Passed    1.39 sec
+      Start  33: forgecad_storyboard_panel_selection_tests
+ 3/24 Test  #33: forgecad_storyboard_panel_selection_tests ...   Passed    0.08 sec
+      Start  34: forgecad_history_suppression_tests
+ 4/24 Test  #34: forgecad_history_suppression_tests ..........   Passed    0.03 sec
+      Start  35: forgecad_pattern_placement_tests
+ 5/24 Test  #35: forgecad_pattern_placement_tests ............   Passed    0.12 sec
+      Start  36: forgecad_pattern_result_tests
+ 6/24 Test  #36: forgecad_pattern_result_tests ...............   Passed    1.04 sec
+      Start  38: forgecad_pattern_variation_tests
+ 7/24 Test  #38: forgecad_pattern_variation_tests ............   Passed    0.08 sec
+      Start  39: forgecad_pattern_variation_panel_tests
+ 8/24 Test  #39: forgecad_pattern_variation_panel_tests ......   Passed    1.26 sec
+      Start  42: forgecad_pattern_single_story_tests
+ 9/24 Test  #42: forgecad_pattern_single_story_tests .........   Passed    0.17 sec
+      Start  65: forgecad_preview_performance_tests
+10/24 Test  #65: forgecad_preview_performance_tests ..........   Passed    1.79 sec
+      Start  66: forgecad_edit_preview_reuse_tests
+11/24 Test  #66: forgecad_edit_preview_reuse_tests ...........   Passed    0.40 sec
+      Start  67: forgecad_history_preview_mesh_tests
+12/24 Test  #67: forgecad_history_preview_mesh_tests .........   Passed    0.04 sec
+      Start  76: forgecad_document_lifetime_tests
+13/24 Test  #76: forgecad_document_lifetime_tests ............   Passed    0.05 sec
+      Start  78: forgecad_offset_face_pick_tests
+14/24 Test  #78: forgecad_offset_face_pick_tests .............   Passed    0.14 sec
+      Start  79: forgecad_extension_panel_tests
+15/24 Test  #79: forgecad_extension_panel_tests ..............   Passed    0.77 sec
+      Start  96: forgecad_thread_edge_tests
+16/24 Test  #96: forgecad_thread_edge_tests ..................   Passed    1.45 sec
+      Start 101: forgecad_sketch_menu_cancel_tests
+17/24 Test #101: forgecad_sketch_menu_cancel_tests ...........   Passed    0.06 sec
+      Start 104: forgecad_blend_preview_reload_tests
+18/24 Test #104: forgecad_blend_preview_reload_tests .........   Passed    0.06 sec
+      Start 108: forgecad_surface_pattern_tests
+19/24 Test #108: forgecad_surface_pattern_tests ..............   Passed    0.13 sec
+      Start 121: forgecad_extrude_surface_tests
+20/24 Test #121: forgecad_extrude_surface_tests ..............   Passed    0.04 sec
+      Start 122: forgecad_individual_fill_tests
+21/24 Test #122: forgecad_individual_fill_tests ..............   Passed    0.09 sec
+      Start 123: forgecad_fill_surface_tests
+22/24 Test #123: forgecad_fill_surface_tests .................   Passed    3.48 sec
+      Start 126: forgecad_ellipse_extremes_tests
+23/24 Test #126: forgecad_ellipse_extremes_tests .............   Passed    0.09 sec
+      Start 136: forgecad_datum_story_tests
+24/24 Test #136: forgecad_datum_story_tests ..................   Passed    0.24 sec
+
+100% tests passed out of 24
+
+Total Test time (real) =  20.79 sec

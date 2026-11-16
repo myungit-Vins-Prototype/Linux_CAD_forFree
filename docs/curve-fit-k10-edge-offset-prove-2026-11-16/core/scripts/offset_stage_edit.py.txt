@@ -1,0 +1,76 @@
+from pathlib import Path
+p=Path('/tmp/review-next-readonly/stage/kernel/fk_offset.cpp');s=p.read_text()
+needle='''CurvePtr<3> offsetCurve(const CurvePtr<3> &curve, const Interval &range, const std::function<Vec3(double)> &f,
+                        std::vector<double> breaks, double tolerance) {
+    const std::vector<double> own = curve->breakpoints(range);
+    breaks.insert(breaks.end(), own.begin(), own.end());
+    return fitCurve(f, range, breaks, tolerance);
+}'''
+repl='''void requireCertifiedOffsetCurve(const CurvePtr<3> &curve, const Interval &range,
+                                 const detail::SurfaceCurveFitData &certificate, double tolerance) {
+    if (!certificate.bound) return;
+    const auto *spline = dynamic_cast<const BSplineCurve<3> *>(curve.get());
+    if (!spline || spline->degree() != 3 || spline->isRational() || spline->poleCount() < 4
+        || (spline->poleCount() - 1) % 3 != 0 || spline->domain().lo != range.lo || spline->domain().hi != range.hi)
+        throw std::domain_error("offset: forma della curva certificata pubblicata non riconosciuta");
+    const auto &poles = spline->poles();
+    const auto &knots = spline->knots();
+    for (int k = 0; k + 3 < spline->poleCount(); k += 3) {
+        cancellationPoint();
+        const Interval span{knots[k + 3], knots[k + 4]};
+        const double error = certificate.bound(span, {poles[k], poles[k + 1], poles[k + 2], poles[k + 3]});
+        if (!std::isfinite(error) || error < 0 || error > tolerance)
+            throw std::domain_error("offset: curva pubblicata oltre il budget continuo originale");
+    }
+}
+CurvePtr<3> offsetCurve(const CurvePtr<3> &curve, const Interval &range, const std::function<Vec3(double)> &f,
+                        std::vector<double> breaks, double tolerance, const detail::SurfaceCurveFitData &certificate = {}) {
+    const std::vector<double> own = curve->breakpoints(range);
+    breaks.insert(breaks.end(), own.begin(), own.end());
+    if (!certificate.bound) return fitCurve(f, range, breaks, tolerance);
+    breaks.insert(breaks.end(), certificate.breaks.begin(), certificate.breaks.end());
+    const auto fitted = fitCurveCertified(f, range, breaks, tolerance, certificate.bound);
+    requireCertifiedOffsetCurve(fitted, range, certificate, tolerance);
+    return fitted;
+}'''
+assert needle in s;s=s.replace(needle,repl)
+needle='''        std::vector<double> breaks;
+        std::string failure;
+    };
+    std::vector<CurveJob> curveJobs;''';repl='''        std::vector<double> breaks;
+        std::string failure;
+        detail::SurfaceCurveFitData certificate;
+    };
+    std::vector<CurveJob> curveJobs;''';assert needle in s;s=s.replace(needle,repl,1)
+needle='''        if (!raw.curve) curveJobs.push_back({int(model.edges.size()) - 1, edge.curve, edge.range, f, breaks, {}});''';repl='''        if (!raw.curve) {
+            detail::SurfaceCurveFitData certificate;
+            if (!trimSeams && used.size() == 1) {
+                const auto &originalFace = body.face(body.finFace(used.front()));
+                if (originalFace.surface->type() == SurfaceType::Extrusion)
+                    certificate = detail::extrusionEdgeOffsetErrorBound(edge.curve, originalFace.surface,
+                        body.fin(used.front()).pcurve, edge.range, originalFace.sense ? distanceValue : -distanceValue);
+            }
+            curveJobs.push_back({int(model.edges.size()) - 1, edge.curve, edge.range, f, breaks, {}, std::move(certificate)});
+        }''';assert needle in s;s=s.replace(needle,repl,1)
+needle='''            model.edges[std::size_t(job.edge)].curve = offsetCurve(job.curve, job.range, job.offset, job.breaks, tolerance);''';repl='''            model.edges[std::size_t(job.edge)].curve = offsetCurve(job.curve, job.range, job.offset, job.breaks, tolerance, job.certificate);''';assert needle in s;s=s.replace(needle,repl,1)
+needle='''    {
+        const detail::PhaseTimer timer("offset: assemblaggio");
+        result.body = detail::assembleBody(model, false, &result.notes);
+    }
+    result.history = offsetFaceHistory(input, result.body, faceSources);''';repl='''    detail::AssemblyMap emitted;
+    const bool certified = std::any_of(curveJobs.begin(), curveJobs.end(), [](const CurveJob &job) { return bool(job.certificate.bound); });
+    {
+        const detail::PhaseTimer timer("offset: assemblaggio");
+        result.body = detail::assembleBody(model, false, &result.notes, certified ? &emitted : nullptr);
+    }
+    for (const auto &job : curveJobs) if (job.certificate.bound) {
+        cancellationPoint();
+        if (job.edge < 0 || std::size_t(job.edge) >= emitted.edges.size() || !emitted.edges[job.edge].valid())
+            throw std::domain_error("offset: provenienza del bordo certificato persa nell'assemblaggio");
+        const auto &actual = result.body.edge(emitted.edges[job.edge]);
+        if (actual.range.lo != job.range.lo || actual.range.hi != job.range.hi)
+            throw std::domain_error("offset: parametro del bordo certificato modificato nell'assemblaggio");
+        requireCertifiedOffsetCurve(actual.curve, actual.range, job.certificate, tolerance);
+    }
+    result.history = offsetFaceHistory(input, result.body, faceSources);''';assert needle in s;s=s.replace(needle,repl,1)
+p.write_text(s)

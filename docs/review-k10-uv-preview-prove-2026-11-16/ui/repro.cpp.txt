@@ -1,0 +1,21 @@
+#include "forgeCad2026_dialogs.h"
+#include "cad_topology_ref.h"
+#include "fk_topology.h"
+#include "fk_surface.h"
+#include <QApplication>
+#include <QTimer>
+#include <QPlainTextEdit>
+#include <QSettings>
+#include <QTemporaryDir>
+#include <iostream>
+class ViewportInteractionTest {
+public: static void probe(){
+ QMainWindow owner;CadViewport v;DocumentState doc;ExtrusionObject b;b.feature=BodyFeature::Primitive;b.name="Box";b.primitive.size[0]=10;b.primitive.size[1]=8;b.primitive.size[2]=6;doc.extrusions={b};v.loadDocument(doc);
+ auto shape=v.extrusions()[0].forgeBody;if(!shape)throw std::runtime_error("box missing");auto face=shape->faces().front();GeometryRef r;r.kind=5;r.index=0;r.point=ForgeCad::faceReference(*shape,face,shape->face(face).surface->point(0,0));
+ ExtrusionObject d;d.feature=BodyFeature::SurfaceTools;d.operation=-1;d.firstBody=0;d.surfaceTool.mode=3;d.surfaceTool.sources={r};d.surfaceTool.targets={r,GeometryRef{}};
+ QTimer poll,watch;poll.setInterval(10);watch.setSingleShot(true);bool done=false;std::string err;
+ QObject::connect(&watch,&QTimer::timeout,&owner,[&]{err="timeout: "+v.preview_.error.toStdString();for(auto *x:owner.findChildren<QDialog*>())x->reject();});
+ QObject::connect(&poll,&QTimer::timeout,&owner,[&]{if(!v.preview_.valid)return;poll.stop();auto *button=owner.findChild<QPushButton*>("mappingFacePick");auto *label=owner.findChild<QPlainTextEdit*>("functionPreviewMessage");auto *list=owner.findChild<QListWidget*>("mappingSourceFaces");if(!button||!label||!list)throw std::runtime_error("controls missing");auto key=v.preview_.key;auto generation=v.preview_.generation;button->click();auto callback=v.refPickFinished_;callback(true,r);std::cout<<"MAPPING removed_only_face list_count="<<list->count()<<" valid="<<v.preview_.valid<<" geometry="<<bool(v.preview_.geometry)<<" old_key="<<(key==v.preview_.key)<<" old_generation="<<(generation==v.preview_.generation)<<" picking="<<v.referencePicking()<<" label="<<label->toPlainText().toStdString()<<std::endl;done=list->count()==0&&v.preview_.valid&&v.preview_.key==key&&v.referencePicking();for(auto*x:owner.findChildren<QDialog*>())x->reject();});
+ watch.start(15000);poll.start();surfaceMappingDialog(&owner,&v,"Mapping audit",-1,d,[](const auto&){return QString();});watch.stop();poll.stop();if(!done)throw std::runtime_error(err.empty()?"not reproduced":err);
+ }};
+int main(int argc,char **argv){QApplication app(argc,argv);QTemporaryDir t;QSettings::setDefaultFormat(QSettings::IniFormat);QSettings::setPath(QSettings::IniFormat,QSettings::UserScope,t.path());try{ViewportInteractionTest::probe();return 0;}catch(const std::exception&e){std::cerr<<e.what()<<std::endl;return 1;}}

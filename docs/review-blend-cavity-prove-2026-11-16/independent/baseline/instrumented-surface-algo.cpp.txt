@@ -1,0 +1,1138 @@
+#include <iostream>
+#include <iomanip>
+#include "fk_surface_algo.h"
+
+#include <algorithm>
+#include <queue>
+
+#include "fk_bspline_surface.h"
+#include "fk_bernstein.h"
+#include "fk_curve_ops.h"
+#include "fk_curve_algo.h"
+#include "fk_intersect.h"
+#include "fk_precision.h"
+#include "fk_nurbs.h"
+
+namespace ForgeCad::Kernel {
+namespace {
+
+constexpr int kGridPerPatch = 8;
+int auditCalls=0;double auditLoss=0,auditSmallest=std::numeric_limits<double>::infinity();
+struct AuditFinal{~AuditFinal(){std::cerr<<std::setprecision(17)<<"REFINE_SUMMARY calls="<<auditCalls<<" maxDistanceLoss="<<auditLoss<<" smallestAccepted="<<auditSmallest<<"\n";}} auditFinal;
+
+SurfaceProjection projectionAt(const Surface &surface, const Vec3 &p, double u, double v) {
+    const Vec3 point = surface.point(u, v);
+    return {u, v, point, distance(point, p)};
+}
+
+class Candidates {
+public:
+    Candidates(const Surface &surface, const Vec3 &p, const Interval &uRange, const Interval &vRange)
+        : surface_(surface), p_(p), uRange_(uRange), vRange_(vRange) {}
+
+    void consider(const SurfaceProjection &candidate) {
+        if (!valid_ || candidate.distance < best_.distance) {
+            best_ = candidate;
+            valid_ = true;
+        }
+    }
+    void consider(double u, double v) { consider(projectionAt(surface_, p_, u, v)); }
+
+    // Punto stazionario in forma chiusa: conta solo se cade nella pezza
+    // (nelle direzioni periodiche lo si riporta nel periodo giusto).
+    void considerInterior(double u, double v) {
+        if (bringIntoRange(u, uRange_, surface_.isUPeriodic(), surface_.uPeriod(), u)
+            && bringIntoRange(v, vRange_, surface_.isVPeriodic(), surface_.vPeriod(), v))
+            consider(u, v);
+    }
+
+    const SurfaceProjection &best() const { return best_; }
+    double bestDistance() const { return valid_ ? best_.distance : std::numeric_limits<double>::infinity(); }
+
+private:
+    static bool bringIntoRange(double t, const Interval &range, bool periodic, double period, double &out) {
+        if (periodic && std::isfinite(range.lo)) {
+            double shifted = t - range.lo;
+            shifted -= period * std::floor(shifted / period);
+            out = range.lo + shifted;
+        } else {
+            out = t;
+        }
+        return range.contains(out);
+    }
+
+    const Surface &surface_;
+    const Vec3 &p_;
+    Interval uRange_, vRange_;
+    SurfaceProjection best_;
+    bool valid_ = false;
+};
+
+// Isoparametrica generica (senza forma esatta) letta dalla superficie.
+class IsoAdapter final : public Curve<3> {
+public:
+    IsoAdapter(const Surface &surface, bool fixedU, double value) : surface_(surface), fixedU_(fixedU), value_(value) {}
+
+    CurveType type() const override { return CurveType::Other; }
+    Interval domain() const override { return fixedU_ ? surface_.vDomain() : surface_.uDomain(); }
+    void evaluate(double t, int order, Vec3 *out) const override {
+        std::vector<Vec3> d((order + 1) * (order + 1));
+        if (fixedU_) surface_.evaluate(value_, t, order, d.data());
+        else surface_.evaluate(t, value_, order, d.data());
+        for (int k = 0; k <= order; ++k)
+            out[k] = fixedU_ ? d[Surface::derivativeIndex(0, k, order)] : d[Surface::derivativeIndex(k, 0, order)];
+    }
+    std::vector<double> breakpoints(const Interval &range) const override {
+        return fixedU_ ? surface_.vBreakpoints(range) : surface_.uBreakpoints(range);
+    }
+
+private:
+    const Surface &surface_;
+    bool fixedU_;
+    double value_;
+};
+
+// Bordi della pezza, e con `allPatchEdges` anche le isoparametriche dei
+// breakpoint interni: su uno spigolo interno (nodo C0) il minimo non e' un
+// punto stazionario di nessuna delle due pezze, ma e' il minimo della curva
+// isoparametrica, che si trova in modo esatto.
+// Proiezione esatta sull'isoparametrica u = value (fixedU) o v = value, nel tratto dato.
+void projectOnIso(const Surface &surface, const Vec3 &p, bool fixedU, double value, const Interval &range, Candidates &candidates) {
+    if (!std::isfinite(value)) return;
+    const CurvePtr<3> iso = fixedU ? surface.uIso(value) : surface.vIso(value);
+    CurveProjection<3> result;
+    if (iso) {
+        // Sulle isoparametriche NURBS il box dei poli e' conservativo:
+        // dopo un primo candidato vicino, un bordo lontano non puo'
+        // migliorare il minimo. I casi al limite restano al proiettore.
+        if (iso->type() == CurveType::BSpline && range.isFinite() &&
+            range.lo >= iso->domain().lo && range.hi <= iso->domain().hi && std::isfinite(candidates.bestDistance())) {
+            const Box box = curveBox(*iso, range);
+            Vec3 outside;
+            for (int axis = 0; axis < 3; ++axis) outside[axis] = std::max({box.lo[axis] - p[axis], 0.0, p[axis] - box.hi[axis]});
+            const double margin = 512.0 * kMachineEpsilon * std::max({1.0, norm(p), norm(box.lo), norm(box.hi), candidates.bestDistance()});
+            if (norm(outside) > candidates.bestDistance() + margin) return;
+        }
+        result = projectPoint(*iso, p, range);
+    } else {
+        const IsoAdapter adapter(surface, fixedU, value);
+        // Isoparametrica degenere (polo della sfera, vertice del cono): un punto solo.
+        const Vec3 first = adapter.point(range.lo);
+        if (range.isFinite() && distance(first, adapter.point(0.5 * (range.lo + range.hi))) <= linearResolution()
+            && distance(first, adapter.point(range.hi)) <= linearResolution()) {
+            result.parameter = range.lo;
+        } else {
+            result = projectPoint(adapter, p, range);
+        }
+    }
+    if (fixedU) candidates.consider(value, result.parameter);
+    else candidates.consider(result.parameter, value);
+}
+
+void projectOnBoundary(const Surface &surface, const Vec3 &p, const Interval &uRange, const Interval &vRange,
+                       Candidates &candidates, bool allPatchEdges = false) {
+    auto edge = [&](bool fixedU, double value, const Interval &range) { projectOnIso(surface, p, fixedU, value, range, candidates); };
+    if (allPatchEdges) {
+        for (double u : surface.uBreakpoints(uRange)) edge(true, u, vRange);
+        for (double v : surface.vBreakpoints(vRange)) edge(false, v, uRange);
+        return;
+    }
+    edge(true, uRange.lo, vRange);
+    edge(true, uRange.hi, vRange);
+    edge(false, vRange.lo, uRange);
+    edge(false, vRange.hi, uRange);
+}
+
+// Newton su grad(|S - p|^2 / 2) = (Su.d, Sv.d) = 0 con d = S - p. Hessiana
+// H = [Suu.d + Su.Su, Suv.d + Su.Sv; ..., Svv.d + Sv.Sv]; dove non e' definita
+// positiva si usa Gauss-Newton (J^T J). Passo dimezzato se la distanza non
+// scende, sempre dentro la pezza liscia `box`.
+void refineProjection(const Surface &surface, const Vec3 &p, double &u, double &v, const Interval &uBox,
+                      const Interval &vBox) {
+    auto evaluate = [&](double uu, double vv, Vec3 *d) { surface.evaluate(uu, vv, 2, d); };
+    auto at = [](const Vec3 *d, int k, int l) -> const Vec3 & { return d[Surface::derivativeIndex(k, l, 2)]; };
+    Vec3 d[9];
+    evaluate(u, v, d);
+    double current = squaredNorm(at(d, 0, 0) - p);
+    const double auditInitial=current; double auditBest=current,auditU=u,auditV=v;
+    for (int iteration = 0; iteration < 100; ++iteration) {
+        const Vec3 diff = at(d, 0, 0) - p;
+        const Vec3 &su = at(d, 1, 0), &sv = at(d, 0, 1);
+        const double fu = dot(su, diff), fv = dot(sv, diff);
+        const double guu = dot(su, su), guv = dot(su, sv), gvv = dot(sv, sv);
+        double a = dot(at(d, 2, 0), diff) + guu;
+        double b = dot(at(d, 1, 1), diff) + guv;
+        double c = dot(at(d, 0, 2), diff) + gvv;
+        double det = a * c - b * b;
+        if (!(a > 0.0 && det > 1.0e-14 * a * c)) {
+            a = guu, b = guv, c = gvv;
+            det = a * c - b * b;
+        }
+        double stepU, stepV;
+        if (det > 1.0e-14 * a * c && det > 0.0) {
+            stepU = -(c * fu - b * fv) / det;
+            stepV = -(a * fv - b * fu) / det;
+        } else if (guu + gvv > 0.0) {  // superficie degenere (polo): discesa del gradiente
+            stepU = -fu / (guu + gvv);
+            stepV = -fv / (guu + gvv);
+        } else {
+            break;
+        }
+        // Active set: una coordinata ferma sul bordo che il passo spingerebbe
+        // fuori resta bloccata, e si minimizza solo lungo l'altra.
+        const bool lockU = (u <= uBox.lo && stepU < 0.0) || (u >= uBox.hi && stepU > 0.0);
+        const bool lockV = (v <= vBox.lo && stepV < 0.0) || (v >= vBox.hi && stepV > 0.0);
+        if (lockU && lockV) break;
+        if (lockU) {
+            stepU = 0.0;
+            stepV = c > 0.0 ? -fv / c : 0.0;
+        } else if (lockV) {
+            stepV = 0.0;
+            stepU = a > 0.0 ? -fu / a : 0.0;
+        }
+        if (stepU == 0.0 && stepV == 0.0) break;
+
+        const double noise = 64.0 * kMachineEpsilon * (current + squaredNorm(at(d, 0, 0)) + squaredNorm(p));
+        double nextU = uBox.clamp(u + stepU), nextV = vBox.clamp(v + stepV);
+        Vec3 nd[9];
+        evaluate(nextU, nextV, nd);
+        double candidate = squaredNorm(at(nd, 0, 0) - p);
+        for (int halving = 0; halving < 40 && candidate > current + noise; ++halving) {
+            stepU *= 0.5;
+            stepV *= 0.5;
+            nextU = uBox.clamp(u + stepU);
+            nextV = vBox.clamp(v + stepV);
+            evaluate(nextU, nextV, nd);
+            candidate = squaredNorm(at(nd, 0, 0) - p);
+        }
+        if (candidate > current + noise) break;
+        const double changeU = std::fabs(nextU - u), changeV = std::fabs(nextV - v);
+        u = nextU;
+        v = nextV;
+        current = candidate;
+        if(current<auditBest){auditBest=current;auditU=u;auditV=v;}
+        std::copy(nd, nd + 9, d);
+        if (changeU <= 4.0 * kMachineEpsilon * std::max(1.0, std::fabs(u))
+            && changeV <= 4.0 * kMachineEpsilon * std::max(1.0, std::fabs(v)))
+            break;
+    }
+    ++auditCalls;auditLoss=std::max(auditLoss,std::sqrt(current)-std::sqrt(auditBest));auditSmallest=std::min(auditSmallest,std::sqrt(auditBest));
+    if(current>auditBest && std::sqrt(current)-std::sqrt(auditBest)>1e-10) std::cerr<<std::setprecision(17)<<"REFINE_LOSS initial="<<std::sqrt(auditInitial)<<" best="<<std::sqrt(auditBest)<<" end="<<std::sqrt(current)<<" bestUV="<<auditU<<","<<auditV<<" endUV="<<u<<","<<v<<"\n";
+}
+
+void projectGeneric(const Surface &surface, const Vec3 &p, const Interval &uRange, const Interval &vRange,
+                    Candidates &candidates) {
+    if (!uRange.isFinite() || !vRange.isFinite())
+        throw std::invalid_argument("projectPoint: questa superficie richiede intervalli finiti");
+    const std::vector<double> uBreaks = surface.uBreakpoints(uRange);
+    const std::vector<double> vBreaks = surface.vBreakpoints(vRange);
+    constexpr int n = kGridPerPatch;
+    double squared[n + 1][n + 1];
+    for (std::size_t iu = 0; iu + 1 < uBreaks.size(); ++iu) {
+        const Interval uBox{uBreaks[iu], uBreaks[iu + 1]};
+        if (!(uBox.hi > uBox.lo)) continue;
+        for (std::size_t iv = 0; iv + 1 < vBreaks.size(); ++iv) {
+            const Interval vBox{vBreaks[iv], vBreaks[iv + 1]};
+            if (!(vBox.hi > vBox.lo)) continue;
+            auto uAt = [&](int i) { return i == n ? uBox.hi : uBox.lo + uBox.length() * i / n; };
+            auto vAt = [&](int j) { return j == n ? vBox.hi : vBox.lo + vBox.length() * j / n; };
+            for (int i = 0; i <= n; ++i)
+                for (int j = 0; j <= n; ++j) squared[i][j] = squaredNorm(surface.point(uAt(i), vAt(j)) - p);
+            // Minimi locali della griglia (confronto con gli 8 vicini nella pezza).
+            for (int i = 0; i <= n; ++i) {
+                for (int j = 0; j <= n; ++j) {
+                    bool minimum = true;
+                    for (int di = -1; di <= 1 && minimum; ++di)
+                        for (int dj = -1; dj <= 1 && minimum; ++dj) {
+                            const int ni = i + di, nj = j + dj;
+                            if ((di || dj) && ni >= 0 && ni <= n && nj >= 0 && nj <= n && squared[ni][nj] < squared[i][j])
+                                minimum = false;
+                        }
+                    if (!minimum) continue;
+                    double u = uAt(i), v = vAt(j);
+                    refineProjection(surface, p, u, v, uBox, vBox);
+                    candidates.consider(u, v);
+                }
+            }
+        }
+    }
+    projectOnBoundary(surface, p, uRange, vRange, candidates, true);
+}
+
+// --- B-spline: branch and bound sulle pezze di Bezier -----------------------
+//
+// I poli (euclidei) di una pezza con pesi positivi ne racchiudono la
+// superficie, quindi la distanza di p dal loro box e' un limite inferiore
+// certo. Le pezze che non possono battere il miglior punto trovato si
+// scartano, le altre si dividono a meta' (de Casteljau in coordinate
+// omogenee) fino a una dimensione in cui Newton converge al minimo locale.
+
+struct BezierPatch {
+    int uDegree = 0, vDegree = 0;
+    Interval u, v;
+    std::vector<Vec3> homogeneous;  // w P, indice i * (vDegree + 1) + j
+    std::vector<double> weights;
+
+    Vec3 pole(int i, int j) const { return homogeneous[i * (vDegree + 1) + j] / weights[i * (vDegree + 1) + j]; }
+};
+
+BezierPatch toPatch(const BSplineSurface &surface) {
+    BezierPatch patch{surface.uDegree(), surface.vDegree(), surface.uDomain(), surface.vDomain(), {}, {}};
+    for (int i = 0; i <= patch.uDegree; ++i)
+        for (int j = 0; j <= patch.vDegree; ++j) {
+            patch.weights.push_back(surface.weight(i, j));
+            patch.homogeneous.push_back(surface.weight(i, j) * surface.pole(i, j));
+        }
+    return patch;
+}
+
+// Divide a meta' lungo u (alongU) o lungo v.
+void splitPatch(const BezierPatch &patch, bool alongU, BezierPatch &first, BezierPatch &second) {
+    first = second = patch;
+    const int count = alongU ? patch.uDegree + 1 : patch.vDegree + 1;
+    const int lines = alongU ? patch.vDegree + 1 : patch.uDegree + 1;
+    auto index = [&](int along, int line) { return alongU ? along * (patch.vDegree + 1) + line : line * (patch.vDegree + 1) + along; };
+    std::vector<Vec3> h(count);
+    std::vector<double> w(count);
+    for (int line = 0; line < lines; ++line) {
+        for (int k = 0; k < count; ++k) {
+            h[k] = patch.homogeneous[index(k, line)];
+            w[k] = patch.weights[index(k, line)];
+        }
+        first.homogeneous[index(0, line)] = h[0];
+        first.weights[index(0, line)] = w[0];
+        second.homogeneous[index(count - 1, line)] = h[count - 1];
+        second.weights[index(count - 1, line)] = w[count - 1];
+        for (int level = 1; level < count; ++level) {
+            for (int k = 0; k < count - level; ++k) {
+                h[k] = 0.5 * (h[k] + h[k + 1]);
+                w[k] = 0.5 * (w[k] + w[k + 1]);
+            }
+            first.homogeneous[index(level, line)] = h[0];
+            first.weights[index(level, line)] = w[0];
+            second.homogeneous[index(count - 1 - level, line)] = h[count - 1 - level];
+            second.weights[index(count - 1 - level, line)] = w[count - 1 - level];
+        }
+    }
+    Interval &a = alongU ? first.u : first.v;
+    Interval &b = alongU ? second.u : second.v;
+    const double middle = 0.5 * (a.lo + a.hi);
+    a.hi = middle;
+    b.lo = middle;
+}
+
+struct PatchBounds {
+    double lowerBound;  // limite inferiore della distanza di p dalla pezza
+    double diagonal;
+    bool splitAlongU;   // la rete di controllo e' piu' lunga in u
+};
+
+// Due limiti inferiori della distanza dall'inviluppo convesso dei poli: dal
+// loro box e, per una direzione unitaria n qualsiasi, min_i (p - q_i).n.
+// Con n dal centro della pezza verso p il secondo e' esatto al secondo
+// ordine: per un punto lontano da una lamiera quasi piana il box da solo
+// lascerebbe in gioco O(d / s) pezze di lato s a ogni livello.
+PatchBounds patchBounds(const BezierPatch &patch, const Vec3 &p, const Vec3 *center = nullptr) {
+    Vec3 lo = patch.pole(0, 0), hi = lo;
+    double uLength = 0.0, vLength = 0.0;
+    Vec3 direction;
+    const bool directional = center && norm(p - *center) > 0.0;
+    if (directional) direction = normalized(p - *center);
+    double directionalBound = std::numeric_limits<double>::infinity();
+    for (int i = 0; i <= patch.uDegree; ++i)
+        for (int j = 0; j <= patch.vDegree; ++j) {
+            const Vec3 q = patch.pole(i, j);
+            if (directional) directionalBound = std::min(directionalBound, dot(p - q, direction));
+            for (int c = 0; c < 3; ++c) {
+                lo[c] = std::min(lo[c], q[c]);
+                hi[c] = std::max(hi[c], q[c]);
+            }
+            if (i > 0) uLength = std::max(uLength, distance(q, patch.pole(i - 1, j)));
+            if (j > 0) vLength = std::max(vLength, distance(q, patch.pole(i, j - 1)));
+        }
+    Vec3 outside;
+    for (int c = 0; c < 3; ++c) outside[c] = std::max({lo[c] - p[c], 0.0, p[c] - hi[c]});
+    const double lowerBound = directional ? std::max(norm(outside), directionalBound) : norm(outside);
+    return {lowerBound, distance(lo, hi), uLength * patch.uDegree >= vLength * patch.vDegree};
+}
+
+void projectOnBSplineSurface(const BSplineSurface &surface, const Vec3 &p, const Interval &uRange,
+                             const Interval &vRange, Candidates &candidates) {
+    if (!uRange.isFinite() || !vRange.isFinite())
+        throw std::invalid_argument("projectPoint: questa superficie richiede intervalli finiti");
+    // Primo limite superiore: i bordi del dominio e gli angoli delle pezze (punti
+    // della superficie). Le isoparametriche dei nodi interni (dove il minimo
+    // puo' stare su uno spigolo C0) si proiettano solo per le pezze che il
+    // limite inferiore non scarta: una linea di nodo sta dentro la sua pezza,
+    // quindi non e' piu' vicina del limite della pezza. Proiettarle tutte a ogni
+    // chiamata costava centinaia di proiezioni di curve sulle superfici dei
+    // raccordi, fatte a tratti con molti nodi.
+    // Limiti superiori immediati, senza proiettare i lunghi bordi del
+    // carrier prima di avere visitato la zona piu' vicina.
+    for (double u : {uRange.lo, uRange.hi})
+        for (double v : {vRange.lo, vRange.hi}) candidates.consider(u, v);
+    candidates.consider(0.5 * (uRange.lo + uRange.hi), 0.5 * (vRange.lo + vRange.hi));
+
+    // Best-first: si esplora prima la pezza con il limite inferiore piu' basso,
+    // cosi' il minimo si trova presto e il resto viene scartato subito.
+    // tree >= 0: nodo della gerarchia dei box delle pezze non ancora aperto
+    // (patch vuota); altrimenti una pezza o un suo pezzo.
+    struct Node {
+        double lowerBound;
+        BezierPatch patch;
+        int depth;
+        int tree = -1;
+        bool operator<(const Node &other) const { return lowerBound > other.lowerBound; }
+    };
+    std::priority_queue<Node> queue;
+    double rootDiagonal = 0.0;
+    // Le pezze si calcolano una volta per superficie: la proiezione si ripete
+    // per ogni raggio della selezione a video e per ogni punto delle SP-curve.
+    const auto patches = surface.cachedBezierPatches();
+    const auto tree = surface.cachedPatchTree();
+    const auto overlaps = [&](const Interval &u, const Interval &v) {
+        return !(u.hi < uRange.lo || u.lo > uRange.hi || v.hi < vRange.lo || v.lo > vRange.hi);
+    };
+    // Una pezza intera entra nella coda; i suoi angoli sono poli d'angolo
+    // (punti della superficie): il piu' vicino migliora subito il limite superiore.
+    const auto pushPatch = [&](const BSplineSurface &piece) {
+        BezierPatch patch = toPatch(piece);
+        if (!overlaps(patch.u, patch.v)) return;
+        const PatchBounds bounds = patchBounds(patch, p);
+        const bool whole = patch.u.lo >= uRange.lo && patch.u.hi <= uRange.hi && patch.v.lo >= vRange.lo && patch.v.hi <= vRange.hi;
+        if (whole) {
+            double nearestCorner = std::numeric_limits<double>::infinity(), cornerU = 0.0, cornerV = 0.0;
+            for (int a = 0; a < 2; ++a)
+                for (int b = 0; b < 2; ++b) {
+                    const double d = distance(patch.pole(a * patch.uDegree, b * patch.vDegree), p);
+                    if (d < nearestCorner) nearestCorner = d, cornerU = a ? patch.u.hi : patch.u.lo, cornerV = b ? patch.v.hi : patch.v.lo;
+                }
+            if (nearestCorner < candidates.bestDistance()) candidates.consider(cornerU, cornerV);
+        }
+        queue.push({bounds.lowerBound, std::move(patch), 0});
+    };
+    const auto boxDistance = [&](const BSplineSurface::PatchTree::Node &node) {
+        Vec3 outside;
+        for (int c = 0; c < 3; ++c) outside[c] = std::max({node.lo[c] - p[c], 0.0, p[c] - node.hi[c]});
+        return norm(outside);
+    };
+    if (!tree->nodes.empty()) {
+        // La soglia delle foglie resta quella della pezza piu' grande, come
+        // quando le pezze si mettevano tutte in coda.
+        rootDiagonal = tree->largestPatchDiagonal;
+        if (overlaps(tree->nodes.front().u, tree->nodes.front().v)) queue.push({boxDistance(tree->nodes.front()), {}, 0, 0});
+    } else {
+        for (const BSplineSurface &piece : *patches) {
+            const BezierPatch patch = toPatch(piece);
+            if (overlaps(patch.u, patch.v)) rootDiagonal = std::max(rootDiagonal, patchBounds(patch, p).diagonal);
+        }
+        for (const BSplineSurface &piece : *patches) pushPatch(piece);
+    }
+    // Lati di una pezza intera che sono linee di nodo interne in cui la
+    // superficie non e' C1 (altrove il minimo e' stazionario e lo trova Newton).
+    const auto sharp = surface.cachedSharpKnotLines();
+    const auto patchEdges = [&](const BezierPatch &patch) {
+        const Interval uSpan{std::max(patch.u.lo, uRange.lo), std::min(patch.u.hi, uRange.hi)};
+        const Interval vSpan{std::max(patch.v.lo, vRange.lo), std::min(patch.v.hi, vRange.hi)};
+        for (double u : {patch.u.lo, patch.u.hi})
+            if (u > uRange.lo && u < uRange.hi && std::binary_search(sharp->u.begin(), sharp->u.end(), u))
+                projectOnIso(surface, p, true, u, vSpan, candidates);
+        for (double v : {patch.v.lo, patch.v.hi})
+            if (v > vRange.lo && v < vRange.hi && std::binary_search(sharp->v.begin(), sharp->v.end(), v))
+                projectOnIso(surface, p, false, v, uSpan, candidates);
+    };
+    const double leafDiagonal = std::max(1.0e-4 * rootDiagonal, linearResolution());
+    while (!queue.empty()) {
+        const Node node = queue.top();
+        queue.pop();
+        const double best = candidates.bestDistance();
+        const double margin = 1.0e-12 * std::max(1.0, best);
+        if (node.lowerBound >= best - margin) break;  // tutte le altre hanno un limite ancora piu' alto
+        if (node.tree >= 0) {
+            const auto &treeNode = tree->nodes[std::size_t(node.tree)];
+            if (treeNode.leaf >= 0) {
+                pushPatch((*patches)[std::size_t(treeNode.leaf)]);
+                continue;
+            }
+            for (int child : {treeNode.first, treeNode.second}) {
+                const auto &childNode = tree->nodes[std::size_t(child)];
+                if (overlaps(childNode.u, childNode.v)) queue.push({std::max(node.lowerBound, boxDistance(childNode)), {}, 0, child});
+            }
+            continue;
+        }
+        const Interval uBox{std::max(node.patch.u.lo, uRange.lo), std::min(node.patch.u.hi, uRange.hi)};
+        const Interval vBox{std::max(node.patch.v.lo, vRange.lo), std::min(node.patch.v.hi, vRange.hi)};
+        if (!(uBox.lo <= uBox.hi && vBox.lo <= vBox.hi)) continue;
+        if (node.depth == 0) patchEdges(node.patch);
+        double u = 0.5 * (node.patch.u.lo + node.patch.u.hi), v = 0.5 * (node.patch.v.lo + node.patch.v.hi);
+        const Vec3 center = surface.point(u, v);
+        const PatchBounds bounds = patchBounds(node.patch, p, &center);
+        if (bounds.lowerBound >= candidates.bestDistance() - margin) continue;
+        u = uBox.clamp(u);
+        v = vBox.clamp(v);
+        if (bounds.diagonal <= leafDiagonal || node.depth >= 60) {
+            std::cerr<<std::setprecision(17)<<"LEAF depth="<<node.depth<<" lower="<<bounds.lowerBound<<" diagonal="<<bounds.diagonal<<" u="<<uBox.lo<<","<<uBox.hi<<" v="<<vBox.lo<<","<<vBox.hi<<"\n";
+            refineProjection(surface, p, u, v, uBox, vBox);
+            candidates.consider(u, v);
+            continue;
+        }
+        candidates.consider(u, v);  // migliora il limite superiore
+        BezierPatch first, second;
+        splitPatch(node.patch, bounds.splitAlongU, first, second);
+        const double firstBound = patchBounds(first, p).lowerBound, secondBound = patchBounds(second, p).lowerBound;
+        queue.push({std::max(firstBound, bounds.lowerBound), std::move(first), node.depth + 1});
+        queue.push({std::max(secondBound, bounds.lowerBound), std::move(second), node.depth + 1});
+    }
+    // Anche un minimo sul bordo resta candidato; ora i suoi box possono
+    // scartare i lati sicuramente piu' lontani del minimo gia' trovato.
+    projectOnBoundary(surface, p, uRange, vRange, candidates);
+}
+
+// --- Estrusione: riduzione esatta a una curva --------------------------------
+//
+// |C(u) + v D - p|^2 = |P(C(u) - p)|^2 + ((C(u) - p).D + v)^2 con P proiezione
+// sul piano normale a D. Per u fisso il v migliore e' (p - C(u)).D; i punti
+// stazionari interni sono quindi i minimi della curva proiettata P C rispetto
+// a P p. Per una base B-spline la curva proiettata e' ancora una B-spline
+// (stessi nodi e pesi, poli proiettati) e i suoi minimi si trovano tutti.
+void projectOnExtrusion(const ExtrusionSurface &extrusion, const Vec3 &p, const Interval &uRange,
+                        const Interval &vRange, Candidates &candidates) {
+    const Transform3 projection = Transform3::projectionAlong(extrusion.direction());
+    CurvePtr<3> projected;
+    if (extrusion.curve()->type() == CurveType::BSpline) {
+        const auto &curve = static_cast<const BSplineCurve<3> &>(*extrusion.curve());
+        std::vector<Vec3> poles;
+        for (const Vec3 &pole : curve.poles()) poles.push_back(projection.applyToVector(pole));
+        projected = std::make_shared<BSplineCurve<3>>(curve.degree(), curve.knots(), std::move(poles), curve.weights());
+    } else {
+        projected = std::make_shared<TransformedCurve>(extrusion.curve(), projection);
+    }
+    for (const CurveProjection<3> &candidate : projectPointCandidates(*projected, projection.applyToVector(p), uRange)) {
+        const double u = candidate.parameter;
+        candidates.considerInterior(u, dot(p - extrusion.curve()->point(u), extrusion.direction()));
+    }
+    projectOnBoundary(extrusion, p, uRange, vRange, candidates);
+}
+
+// --- Rivoluzione con meridiano piano: riduzione esatta al meridiano ----------
+//
+// Se il meridiano giace in un piano che contiene l'asse, per v fisso il punto
+// piu' vicino del parallelo e' nel semipiano di p (u = angolo di p) o in
+// quello opposto (u + pi). La distanza diventa quella dal meridiano di p
+// ruotato nel piano del meridiano (p1) o del suo simmetrico rispetto
+// all'asse (p2): minimi di curve, come per il toro.
+
+// Punti che determinano il piano della curva (poli, estremi, assi del cerchio).
+bool definingPoints(const Curve<3> &curve, std::vector<Vec3> &points) {
+    switch (curve.type()) {
+    case CurveType::BSpline:
+        for (const Vec3 &pole : static_cast<const BSplineCurve<3> &>(curve).poles()) points.push_back(pole);
+        return true;
+    case CurveType::Line: {
+        const auto &line = static_cast<const Line<3> &>(curve);
+        points.push_back(line.origin());
+        points.push_back(line.origin() + line.direction());
+        return true;
+    }
+    case CurveType::Circle: {
+        const auto &circle = static_cast<const Circle<3> &>(curve);
+        for (const Vec3 &axis : {circle.xAxis(), circle.yAxis(), -circle.xAxis()})
+            points.push_back(circle.center() + circle.radius() * axis);
+        return true;
+    }
+    case CurveType::Ellipse: {
+        const auto &ellipse = static_cast<const Ellipse<3> &>(curve);
+        points.push_back(ellipse.center() + ellipse.xRadius() * ellipse.xAxis());
+        points.push_back(ellipse.center() + ellipse.yRadius() * ellipse.yAxis());
+        points.push_back(ellipse.center() - ellipse.xRadius() * ellipse.xAxis());
+        return true;
+    }
+    case CurveType::Trimmed:
+        return definingPoints(*static_cast<const TrimmedCurve<3> &>(curve).basis(), points);
+    default:
+        return false;
+    }
+}
+
+// Direzione radiale del piano del meridiano, se il meridiano e' piano e
+// contiene l'asse nel suo piano.
+bool meridianPlane(const RevolutionSurface &revolution, Vec3 &radial) {
+    std::vector<Vec3> points;
+    if (!definingPoints(*revolution.meridian(), points)) return false;
+    const Vec3 &a = revolution.axisDirection();
+    double largest = 0.0;
+    for (const Vec3 &point : points) {
+        const Vec3 w = point - revolution.axisPoint();
+        const Vec3 perpendicular = w - dot(w, a) * a;
+        if (norm(perpendicular) > largest) {
+            largest = norm(perpendicular);
+            radial = perpendicular;
+        }
+    }
+    if (largest <= linearResolution()) return false;
+    radial = radial / largest;
+    const Vec3 side = cross(a, radial);
+    for (const Vec3 &point : points)
+        if (std::fabs(dot(point - revolution.axisPoint(), side)) > linearResolution()) return false;
+    return true;
+}
+
+bool projectOnPlanarRevolution(const RevolutionSurface &revolution, const Vec3 &p, const Interval &uRange,
+                               const Interval &vRange, Candidates &candidates) {
+    Vec3 radial;
+    if (!vRange.isFinite() || !meridianPlane(revolution, radial)) return false;
+    const Vec3 &a = revolution.axisDirection();
+    const Vec3 side = cross(a, radial);
+    const Vec3 q = p - revolution.axisPoint();
+    const double height = dot(q, a);
+    const Vec3 perpendicular = q - height * a;
+    const double rho = norm(perpendicular);
+    const double angle = rho > 0.0 ? std::atan2(dot(perpendicular, side), dot(perpendicular, radial)) : uRange.lo;
+    const Vec3 onAxis = revolution.axisPoint() + height * a;
+    for (const CurveProjection<3> &c : projectPointCandidates(*revolution.meridian(), onAxis + rho * radial, vRange))
+        candidates.considerInterior(angle, c.parameter);
+    for (const CurveProjection<3> &c : projectPointCandidates(*revolution.meridian(), onAxis - rho * radial, vRange))
+        candidates.considerInterior(angle + kPi, c.parameter);
+    projectOnBoundary(revolution, p, uRange, vRange, candidates);
+    return true;
+}
+
+// Meridiano sghembo B-spline: la griglia UV puo' perdere valli strette.
+// La forma razionale esatta permette il branch-and-bound sui poli gia'
+// usato per le B-spline. Il parametro v resta invariato; u va riconvertito
+// dalla parametrizzazione razionale del cerchio all'angolo originale.
+bool projectOnSplineRevolution(const RevolutionSurface &surface, const Vec3 &p, const Interval &uRange,
+                               const Interval &vRange, Candidates &candidates) {
+    // Il ritaglio conserva il parametro v della B-spline: anche il
+    // meridiano limitato usa la ricerca esatta sulle pezze NURBS.
+    const Curve<3> *meridian = surface.meridian().get();
+    while (meridian->type() == CurveType::Trimmed) meridian = static_cast<const TrimmedCurve<3> *>(meridian)->basis().get();
+    if (meridian->type() != CurveType::BSpline || !uRange.isFinite() || !vRange.isFinite()
+        || !(uRange.length() > 0.0) || !(vRange.length() > 0.0)) return false;
+    const Interval angular{uRange.lo, std::min(uRange.hi, uRange.lo + kTwoPi)};
+    const BSplineSurface nurbs = toBSplineSurface(surface, angular, vRange);
+    const SurfaceProjection result = projectPoint(nurbs, p, nurbs.uDomain(), vRange);
+    // toBSplineSurface usa il dominio canonico quando copre un periodo.
+    const Interval circleRange = angular.length() >= kTwoPi * (1.0 - 1e-12) ? surface.uDomain() : angular;
+    const auto circle = conicArcToBSpline<2>(Vec2(), Vec2(1, 0), Vec2(0, 1), circleRange.lo, circleRange.hi);
+    const Vec2 xy = circle.point(result.u);
+    double u = std::atan2(xy.y(), xy.x());
+    u += kTwoPi * std::round((0.5 * (angular.lo + angular.hi) - u) / kTwoPi);
+    candidates.consider(angular.clamp(u), vRange.clamp(result.v));
+    projectOnBoundary(surface, p, uRange, vRange, candidates);
+    return true;
+}
+
+SurfaceProjection projectOnPlane(const Plane &plane, const Vec3 &p, const Interval &uRange, const Interval &vRange) {
+    // Parametrizzazione isometrica: il problema si separa in u e v.
+    const Vec3 local = plane.frame().toLocal(p);
+    return projectionAt(plane, p, uRange.clamp(local.x()), vRange.clamp(local.y()));
+}
+
+SurfaceProjection projectOnCylinder(const CylindricalSurface &cylinder, const Vec3 &p, const Interval &uRange,
+                                    const Interval &vRange) {
+    // |S - p|^2 = rho^2 + R^2 - 2 rho R cos(u - u0) + (z - v)^2: separabile.
+    const Vec3 local = cylinder.frame().toLocal(p);
+    const double v = vRange.clamp(local.z());
+    if (!(local.x() * local.x() + local.y() * local.y() > 0.0)) return projectionAt(cylinder, p, uRange.lo, v);
+    double shifted = std::atan2(local.y(), local.x()) - uRange.lo;
+    shifted -= kTwoPi * std::floor(shifted / kTwoPi);
+    if (uRange.lo + shifted <= uRange.hi) return projectionAt(cylinder, p, uRange.lo + shifted, v);
+    const SurfaceProjection first = projectionAt(cylinder, p, uRange.lo, v);
+    const SurfaceProjection last = projectionAt(cylinder, p, uRange.hi, v);
+    return first.distance <= last.distance ? first : last;
+}
+
+// Nel semipiano meridiano di p il cono e' una coppia di rette (u0 e u0 + pi):
+// la proiezione su ciascuna da' un punto stazionario.
+void coneCandidates(const ConicalSurface &cone, const Vec3 &p, Candidates &candidates, const Interval &uRange) {
+    const Vec3 local = cone.frame().toLocal(p);
+    const double rho = std::hypot(local.x(), local.y());
+    const double u0 = rho > 0.0 ? std::atan2(local.y(), local.x()) : uRange.lo;
+    const double sa = std::sin(cone.semiAngle()), ca = std::cos(cone.semiAngle());
+    const double r = cone.referenceRadius();
+    candidates.considerInterior(u0, (rho - r) * sa + local.z() * ca);
+    candidates.considerInterior(u0 + kPi, -(rho + r) * sa + local.z() * ca);
+    candidates.considerInterior(uRange.lo, -r / sa);  // vertice
+}
+
+void sphereCandidates(const SphericalSurface &sphere, const Vec3 &p, Candidates &candidates, const Interval &uRange,
+                      const Interval &vRange) {
+    const Vec3 local = sphere.frame().toLocal(p);
+    const double rho = std::hypot(local.x(), local.y());
+    if (!(rho > 0.0 || local.z() != 0.0)) {  // centro: tutti equidistanti
+        candidates.consider(uRange.lo, vRange.lo);
+        return;
+    }
+    candidates.considerInterior(rho > 0.0 ? std::atan2(local.y(), local.x()) : uRange.lo, std::atan2(local.z(), rho));
+}
+
+void torusCandidates(const ToroidalSurface &torus, const Vec3 &p, Candidates &candidates, const Interval &uRange,
+                     const Interval &vRange) {
+    const Vec3 local = torus.frame().toLocal(p);
+    const double rho = std::hypot(local.x(), local.y());
+    const double u0 = rho > 0.0 ? std::atan2(local.y(), local.x()) : uRange.lo;
+    const double dr = rho - torus.majorRadius();
+    const double v0 = (dr != 0.0 || local.z() != 0.0) ? std::atan2(local.z(), dr) : vRange.lo;
+    candidates.considerInterior(u0, v0);
+}
+
+}
+
+SurfaceProjection projectPoint(const Surface &surface, const Vec3 &p, const Interval &uRange, const Interval &vRange) {
+    if (!(uRange.lo <= uRange.hi) || !(vRange.lo <= vRange.hi))
+        throw std::invalid_argument("projectPoint: intervallo vuoto");
+    Candidates candidates(surface, p, uRange, vRange);
+    switch (surface.type()) {
+    case SurfaceType::Plane:
+        return projectOnPlane(static_cast<const Plane &>(surface), p, uRange, vRange);
+    case SurfaceType::Cylinder:
+        return projectOnCylinder(static_cast<const CylindricalSurface &>(surface), p, uRange, vRange);
+    case SurfaceType::Cone:
+        coneCandidates(static_cast<const ConicalSurface &>(surface), p, candidates, uRange);
+        projectOnBoundary(surface, p, uRange, vRange, candidates);
+        break;
+    case SurfaceType::Sphere:
+        sphereCandidates(static_cast<const SphericalSurface &>(surface), p, candidates, uRange, vRange);
+        projectOnBoundary(surface, p, uRange, vRange, candidates);
+        break;
+    case SurfaceType::Torus:
+        torusCandidates(static_cast<const ToroidalSurface &>(surface), p, candidates, uRange, vRange);
+        projectOnBoundary(surface, p, uRange, vRange, candidates);
+        break;
+    case SurfaceType::BSpline:
+        projectOnBSplineSurface(static_cast<const BSplineSurface &>(surface), p, uRange, vRange, candidates);
+        break;
+    case SurfaceType::Extrusion:
+        projectOnExtrusion(static_cast<const ExtrusionSurface &>(surface), p, uRange, vRange, candidates);
+        break;
+    case SurfaceType::Revolution:
+        if (!projectOnPlanarRevolution(static_cast<const RevolutionSurface &>(surface), p, uRange, vRange, candidates)
+            && !projectOnSplineRevolution(static_cast<const RevolutionSurface &>(surface), p, uRange, vRange, candidates))
+            projectGeneric(surface, p, uRange, vRange, candidates);
+        break;
+    default:
+        projectGeneric(surface, p, uRange, vRange, candidates);
+        break;
+    }
+    return candidates.best();
+}
+
+SurfaceProjection projectPoint(const Surface &surface, const Vec3 &p) {
+    return projectPoint(surface, p, surface.uDomain(), surface.vDomain());
+}
+
+namespace {
+
+void unwrapNear(const Surface &surface, Vec2 &uv, const Vec2 &guess) {
+    if (surface.isUPeriodic()) uv[0] += surface.uPeriod() * std::round((guess[0] - uv[0]) / surface.uPeriod());
+    if (surface.isVPeriodic()) uv[1] += surface.vPeriod() * std::round((guess[1] - uv[1]) / surface.vPeriod());
+}
+
+}
+
+bool invertPoint(const Surface &surface, const Vec3 &p, Vec2 &uv, double tolerance, double scale) {
+    const Vec2 guess = uv;
+    const Interval uDomain = surface.uDomain(), vDomain = surface.vDomain();
+    bool converged = false;
+    for (int iteration = 0; iteration < 30; ++iteration) {
+        Vec3 d[4];
+        surface.evaluate(uv[0], uv[1], 1, d);
+        const Vec3 &su = d[Surface::derivativeIndex(1, 0, 1)], &sv = d[Surface::derivativeIndex(0, 1, 1)];
+        const Vec3 r = p - d[0];
+        const double a = dot(su, su), b = dot(su, sv), c = dot(sv, sv), det = a * c - b * b;
+        if (!(det > 1e-24 * a * c) || !(a > 0.0)) break;
+        const double ru = dot(su, r), rv = dot(sv, r);
+        const double du = (c * ru - b * rv) / det, dv = (a * rv - b * ru) / det;
+        if (!std::isfinite(du) || !std::isfinite(dv)) break;
+        uv[0] += du;
+        uv[1] += dv;
+        if (!surface.isUPeriodic() && uDomain.isFinite()) uv[0] = uDomain.clamp(uv[0]);
+        if (!surface.isVPeriodic() && vDomain.isFinite()) uv[1] = vDomain.clamp(uv[1]);
+        if (norm(du * su + dv * sv) <= 1e-15 * (scale + norm(p))) {
+            converged = true;
+            break;
+        }
+    }
+    if (!converged || !(distance(p, surface.point(uv[0], uv[1])) <= tolerance)) {
+        const SurfaceProjection projection = projectPoint(surface, p);
+        uv = Vec2(projection.u, projection.v);
+        if (!(projection.distance <= tolerance)) {
+            unwrapNear(surface, uv, guess);
+            return false;
+        }
+    }
+    // Bordi coincidenti di una B-spline non periodica: a parita' di
+    // precisione mantieni il ramo della stima, evitando salti tra i due
+    // estremi del dominio durante la costruzione delle SP-curve.
+    if (surface.type() == SurfaceType::BSpline) {
+        for (int axis = 0; axis < 2; ++axis) {
+            const Interval domain = axis == 0 ? uDomain : vDomain;
+            if (std::fabs(uv[axis] - guess[axis]) <= 0.5 * domain.length()) continue;
+            Vec2 low = uv, high = uv;
+            low[axis] = domain.lo;
+            high[axis] = domain.hi;
+            const Vec3 a = surface.point(low[0], low[1]), b = surface.point(high[0], high[1]);
+            if (distance(a, b) > 1e-12 * std::max({1.0, norm(a), norm(b)})) continue;
+            Interval local = domain;
+            const double middle = 0.5 * (domain.lo + domain.hi);
+            if (guess[axis] < middle) local.hi = middle;
+            else local.lo = middle;
+            const SurfaceProjection nearby = axis == 0 ? projectPoint(surface, p, local, vDomain)
+                                                       : projectPoint(surface, p, uDomain, local);
+            if (nearby.distance <= tolerance) uv = Vec2(nearby.u, nearby.v);
+        }
+    }
+    unwrapNear(surface, uv, guess);
+    return true;
+}
+
+
+namespace {
+
+// Confronto di dati, non di vicinanza geometrica: conserva il significato
+// dei parametri e quindi delle SP-curve dell'edge sulla superficie.
+bool sameParameterScalar(double a, double b) { return std::isfinite(a) && a == b; }
+bool sameParameterVector(const Vec3 &a, const Vec3 &b) {
+    return sameParameterScalar(a.x(),b.x()) && sameParameterScalar(a.y(),b.y()) && sameParameterScalar(a.z(),b.z());
+}
+bool sameParameterValues(const std::vector<double> &a, const std::vector<double> &b) {
+    if (a.size() != b.size()) return false;
+    for (std::size_t i=0;i<a.size();++i) if (!sameParameterScalar(a[i],b[i])) return false;
+    return true;
+}
+bool sameParameterFrame(const Frame3 &a, const Frame3 &b) {
+    return sameParameterVector(a.origin(),b.origin()) && sameParameterVector(a.xDir(),b.xDir())
+        && sameParameterVector(a.yDir(),b.yDir()) && sameParameterVector(a.zDir(),b.zDir());
+}
+bool sameParameterCurve(const Curve<3> &a, const Curve<3> &b) {
+    cancellationPoint();
+    if (&a == &b) return true;
+    if (a.type() != b.type()) return false;
+    switch (a.type()) {
+    case CurveType::Line: {
+        const auto &x=static_cast<const Line<3> &>(a), &y=static_cast<const Line<3> &>(b);
+        return sameParameterVector(x.origin(),y.origin()) && sameParameterVector(x.direction(),y.direction());
+    }
+    case CurveType::Circle: {
+        const auto &x=static_cast<const Circle<3> &>(a), &y=static_cast<const Circle<3> &>(b);
+        return sameParameterVector(x.center(),y.center()) && sameParameterVector(x.xAxis(),y.xAxis())
+            && sameParameterVector(x.yAxis(),y.yAxis()) && sameParameterScalar(x.radius(),y.radius());
+    }
+    case CurveType::Ellipse: {
+        const auto &x=static_cast<const Ellipse<3> &>(a), &y=static_cast<const Ellipse<3> &>(b);
+        return sameParameterVector(x.center(),y.center()) && sameParameterVector(x.xAxis(),y.xAxis())
+            && sameParameterVector(x.yAxis(),y.yAxis()) && sameParameterScalar(x.xRadius(),y.xRadius())
+            && sameParameterScalar(x.yRadius(),y.yRadius());
+    }
+    case CurveType::BSpline: {
+        const auto &x=static_cast<const BSplineCurve<3> &>(a), &y=static_cast<const BSplineCurve<3> &>(b);
+        if (x.degree()!=y.degree() || x.poleCount()!=y.poleCount() || !sameParameterValues(x.knots(),y.knots())
+            || !sameParameterValues(x.weights(),y.weights())) return false;
+        for (int i=0;i<x.poleCount();++i) {
+            cancellationPoint();
+            if (!sameParameterVector(x.poles()[i],y.poles()[i])) return false;
+        }
+        return true;
+    }
+    case CurveType::Trimmed: {
+        const auto &x=static_cast<const TrimmedCurve<3> &>(a), &y=static_cast<const TrimmedCurve<3> &>(b);
+        return sameParameterScalar(x.domain().lo,y.domain().lo) && sameParameterScalar(x.domain().hi,y.domain().hi)
+            && sameParameterCurve(*x.basis(),*y.basis());
+    }
+    case CurveType::Transformed: {
+        const auto &x=static_cast<const TransformedCurve &>(a), &y=static_cast<const TransformedCurve &>(b);
+        const auto &tx=x.transform(), &ty=y.transform();
+        if (!sameParameterVector(tx.translationPart(),ty.translationPart())) return false;
+        for (int i=0;i<3;++i) for (int j=0;j<3;++j)
+            if (!sameParameterScalar(tx.matrix(i,j),ty.matrix(i,j))) return false;
+        return sameParameterCurve(*x.basis(),*y.basis());
+    }
+    default:return false;
+    }
+}
+
+bool parallelAxes(const Vec3 &a, const Vec3 &b) { return norm(cross(a, b)) <= 1e-12; }
+
+double distanceToAxis(const Vec3 &p, const Frame3 &frame) {
+    const Vec3 d = p - frame.origin();
+    return norm(d - dot(d, frame.zDir()) * frame.zDir());
+}
+
+// Certificato sul dominio intero: la differenza di due curve razionali e'
+// (A Wb - B Wa)/(Wa Wb). I coefficienti Bernstein delimitano numeratore e
+// denominatore, quindi nessuna oscillazione tra campioni puo' restare nascosta.
+// La proiezione ortogonale alla generatrice elimina le traslazioni lungo di essa.
+bool sameProjectedBezier(const BSplineCurve<3> &a, const BSplineCurve<3> &b,
+                         const Vec3 &direction, double tolerance) {
+    const Vec3 origin = a.poles().front();
+    const auto coordinate = [&](const BSplineCurve<3> &curve, int axis) {
+        std::vector<double> values;
+        for (int i = 0; i < curve.poleCount(); ++i) {
+            Vec3 p = curve.poles()[i] - origin;
+            p -= dot(p, direction) * direction;
+            values.push_back(curve.weight(i) * p[axis]);
+        }
+        return BernsteinPolynomial(std::move(values));
+    };
+    const auto weights = [](const BSplineCurve<3> &curve) {
+        std::vector<double> values;
+        for (int i = 0; i < curve.poleCount(); ++i) values.push_back(curve.weight(i));
+        return BernsteinPolynomial(std::move(values));
+    };
+    const auto wa = weights(a), wb = weights(b), denominator = wa * wb;
+    const double minimum = *std::min_element(denominator.coefficients().begin(), denominator.coefficients().end());
+    if (!(minimum > 0.0) || !std::isfinite(minimum)) return false;
+    double squared = 0.0;
+    for (int axis = 0; axis < 3; ++axis) {
+        const auto numerator = coordinate(a, axis) * wb - coordinate(b, axis) * wa;
+        double bound = 0.0;
+        for (double coefficient : numerator.coefficients()) {
+            if (!std::isfinite(coefficient)) return false;
+            bound = std::max(bound, std::fabs(coefficient));
+        }
+        squared += (bound / minimum) * (bound / minimum);
+    }
+    return std::isfinite(squared) && squared <= tolerance * tolerance;
+}
+
+bool sameExtrusionProfiles(const Curve<3> &a, const Curve<3> &b, const Vec3 &direction, double tolerance) {
+    const auto ad = a.domain(), bd = b.domain();
+    if (!ad.isFinite() || !bd.isFinite()) return false;
+    // Unione dei breakpoint in coordinate normalizzate: nodi inseriti o
+    // domini affini diversi non cambiano la geometria confrontata.
+    std::vector<double> cuts{0.0, 1.0};
+    for (const auto &piece : rationalBezierPieces(a, ad)) cuts.push_back((piece.domain().hi - ad.lo) / ad.length());
+    for (const auto &piece : rationalBezierPieces(b, bd)) cuts.push_back((piece.domain().hi - bd.lo) / bd.length());
+    std::sort(cuts.begin(), cuts.end());
+    cuts.erase(std::unique(cuts.begin(), cuts.end()), cuts.end());
+    for (std::size_t i = 1; i < cuts.size(); ++i) {
+        const Interval ar{ad.lo + cuts[i - 1] * ad.length(), ad.lo + cuts[i] * ad.length()};
+        const Interval br{bd.lo + cuts[i - 1] * bd.length(), bd.lo + cuts[i] * bd.length()};
+        if (!(ar.length() > 0.0 && br.length() > 0.0)) return false;
+        const auto ap = standardBezierPieces(a, ar), bp = standardBezierPieces(b, br);
+        if (ap.size() != 1 || bp.size() != 1 || !sameProjectedBezier(ap.front(), bp.front(), direction, tolerance)) return false;
+    }
+    return true;
+}
+
+bool sameExtrusions(const ExtrusionSurface &a, const ExtrusionSurface &b, double tolerance) {
+    if (!parallelAxes(a.direction(), b.direction())) return false;
+    if (a.curve() == b.curve()) return true;
+    try {
+        if (sameExtrusionProfiles(*a.curve(), *b.curve(), a.direction(), tolerance)) return true;
+        return sameExtrusionProfiles(*a.curve(), *reversedCurve(b.curve()), a.direction(), tolerance);
+    } catch (const std::domain_error &) {
+        // Nessuna rappresentazione esatta disponibile: non dichiarare coincidenza.
+        return false;
+    }
+}
+
+}
+
+bool sameSurfaceParameterization(const Surface &a, const Surface &b) {
+    cancellationPoint();
+    if (&a == &b) return true;
+    if (a.type() != b.type()) return false;
+    switch (a.type()) {
+    case SurfaceType::Plane:
+        return sameParameterFrame(static_cast<const Plane &>(a).frame(),static_cast<const Plane &>(b).frame());
+    case SurfaceType::Cylinder: {
+        const auto &x=static_cast<const CylindricalSurface &>(a), &y=static_cast<const CylindricalSurface &>(b);
+        return sameParameterFrame(x.frame(),y.frame()) && sameParameterScalar(x.radius(),y.radius());
+    }
+    case SurfaceType::Cone: {
+        const auto &x=static_cast<const ConicalSurface &>(a), &y=static_cast<const ConicalSurface &>(b);
+        return sameParameterFrame(x.frame(),y.frame()) && sameParameterScalar(x.semiAngle(),y.semiAngle())
+            && sameParameterScalar(x.referenceRadius(),y.referenceRadius());
+    }
+    case SurfaceType::Sphere: {
+        const auto &x=static_cast<const SphericalSurface &>(a), &y=static_cast<const SphericalSurface &>(b);
+        return sameParameterFrame(x.frame(),y.frame()) && sameParameterScalar(x.radius(),y.radius());
+    }
+    case SurfaceType::Torus: {
+        const auto &x=static_cast<const ToroidalSurface &>(a), &y=static_cast<const ToroidalSurface &>(b);
+        return sameParameterFrame(x.frame(),y.frame()) && sameParameterScalar(x.majorRadius(),y.majorRadius())
+            && sameParameterScalar(x.minorRadius(),y.minorRadius());
+    }
+    case SurfaceType::BSpline: {
+        const auto &x=static_cast<const BSplineSurface &>(a), &y=static_cast<const BSplineSurface &>(b);
+        if (x.uDegree()!=y.uDegree() || x.vDegree()!=y.vDegree() || x.uPoleCount()!=y.uPoleCount()
+            || x.vPoleCount()!=y.vPoleCount() || x.isRational()!=y.isRational()
+            || x.isUPeriodic()!=y.isUPeriodic() || x.isVPeriodic()!=y.isVPeriodic()
+            || !sameParameterValues(x.uKnots(),y.uKnots()) || !sameParameterValues(x.vKnots(),y.vKnots())) return false;
+        for (int i=0;i<x.uPoleCount();++i) for (int j=0;j<x.vPoleCount();++j) {
+            cancellationPoint();
+            if (!sameParameterVector(x.pole(i,j),y.pole(i,j)) || !sameParameterScalar(x.weight(i,j),y.weight(i,j))) return false;
+        }
+        return true;
+    }
+    case SurfaceType::Extrusion: {
+        const auto &x=static_cast<const ExtrusionSurface &>(a), &y=static_cast<const ExtrusionSurface &>(b);
+        return sameParameterVector(x.direction(),y.direction()) && sameParameterCurve(*x.curve(),*y.curve());
+    }
+    case SurfaceType::Revolution: {
+        const auto &x=static_cast<const RevolutionSurface &>(a), &y=static_cast<const RevolutionSurface &>(b);
+        return sameParameterVector(x.axisPoint(),y.axisPoint()) && sameParameterVector(x.axisDirection(),y.axisDirection())
+            && sameParameterCurve(*x.meridian(),*y.meridian());
+    }
+    }
+    return false;
+}
+
+bool sameSurface(const Surface &a, const Surface &b, double tolerance) {
+    if (&a == &b) return true;
+    if (a.type() != b.type()) return false;
+    switch (a.type()) {
+    case SurfaceType::Plane: {
+        const Frame3 &fa = static_cast<const Plane &>(a).frame(), &fb = static_cast<const Plane &>(b).frame();
+        return parallelAxes(fa.zDir(), fb.zDir()) && std::fabs(dot(fa.zDir(), fb.origin() - fa.origin())) <= tolerance;
+    }
+    case SurfaceType::Cylinder: {
+        const auto &ca = static_cast<const CylindricalSurface &>(a), &cb = static_cast<const CylindricalSurface &>(b);
+        return parallelAxes(ca.frame().zDir(), cb.frame().zDir()) && std::fabs(ca.radius() - cb.radius()) <= tolerance
+            && distanceToAxis(cb.frame().origin(), ca.frame()) <= tolerance;
+    }
+    case SurfaceType::Sphere: {
+        const auto &sa = static_cast<const SphericalSurface &>(a), &sb = static_cast<const SphericalSurface &>(b);
+        return distance(sa.frame().origin(), sb.frame().origin()) <= tolerance && std::fabs(sa.radius() - sb.radius()) <= tolerance;
+    }
+    case SurfaceType::Cone: {
+        // Il cono prosegue oltre il vertice: stesso vertice, asse parallelo o
+        // opposto e stesso semiangolo in valore assoluto.
+        const auto &ca = static_cast<const ConicalSurface &>(a), &cb = static_cast<const ConicalSurface &>(b);
+        return parallelAxes(ca.frame().zDir(), cb.frame().zDir()) && distance(ca.apex(), cb.apex()) <= tolerance
+            && std::fabs(std::fabs(ca.semiAngle()) - std::fabs(cb.semiAngle())) <= 1e-12;
+    }
+    case SurfaceType::Torus: {
+        const auto &ta = static_cast<const ToroidalSurface &>(a), &tb = static_cast<const ToroidalSurface &>(b);
+        return parallelAxes(ta.frame().zDir(), tb.frame().zDir()) && distance(ta.frame().origin(), tb.frame().origin()) <= tolerance
+            && std::fabs(ta.majorRadius() - tb.majorRadius()) <= tolerance && std::fabs(ta.minorRadius() - tb.minorRadius()) <= tolerance;
+    }
+    case SurfaceType::Extrusion: {
+        const auto &ea = static_cast<const ExtrusionSurface &>(a), &eb = static_cast<const ExtrusionSurface &>(b);
+        return sameExtrusions(ea, eb, tolerance);
+    }
+    case SurfaceType::BSpline: return sameSurfaceParameterization(a,b);
+    default:
+        return false;
+    }
+}
+
+}
+
+namespace ForgeCad::Kernel {
+
+std::vector<SurfacePole> surfacePoles(const Surface &surface) {
+    std::vector<SurfacePole> poles;
+    switch (surface.type()) {
+    case SurfaceType::Sphere: {
+        const auto &sphere = static_cast<const SphericalSurface &>(surface);
+        const Frame3 &f = sphere.frame();
+        poles.push_back({f.origin() - sphere.radius() * f.zDir(), -kHalfPi});
+        poles.push_back({f.origin() + sphere.radius() * f.zDir(), kHalfPi});
+        break;
+    }
+    case SurfaceType::Cone: {
+        const auto &cone = static_cast<const ConicalSurface &>(surface);
+        poles.push_back({cone.apex(), -cone.referenceRadius() / std::sin(cone.semiAngle())});
+        break;
+    }
+    case SurfaceType::Revolution: {
+        const auto &revolution = static_cast<const RevolutionSurface &>(surface);
+        const Interval v = revolution.vDomain();
+        if (!v.isFinite() || revolution.isVPeriodic()) break;
+        for (double t : {v.lo, v.hi}) {
+            const Vec3 p = revolution.meridian()->point(t), a = revolution.axisPoint(), d = revolution.axisDirection();
+            const Vec3 offset = p - a;
+            if (norm(offset - dot(offset, d) * d) <= 1e-9 * std::max(1.0, norm(offset))) poles.push_back({a + dot(offset, d) * d, t});
+        }
+        break;
+    }
+    default:
+        break;
+    }
+    return poles;
+}
+
+int poleIndex(const std::vector<SurfacePole> &poles, const Vec3 &p, double tolerance) {
+    for (std::size_t i = 0; i < poles.size(); ++i)
+        if (distance(poles[i].point, p) <= tolerance) return int(i);
+    return -1;
+}
+
+double poleWalk(double from, double to, double period, bool top, bool sense) {
+    // Col dominio a sinistra: sopra si cammina verso u minori, sotto verso u maggiori.
+    const bool decreasing = top == sense;
+    double delta = std::fmod(decreasing ? from - to : to - from, period);
+    if (delta < 0.0) delta += period;
+    if (delta > period * (1.0 - 1e-12)) delta = 0.0;
+    return decreasing ? from - delta : from + delta;
+}
+
+double poleWalk(double from, double to, double period, bool top, bool sense, double fromNear, double toNear) {
+    const double reference = poleWalk(fromNear, toNear, period, top, sense) - fromNear + from;
+    // Il valore congruo a `to` piu' vicino al riferimento.
+    return to + period * std::round((reference - to) / period);
+}
+
+Vec3 normalAt(const Surface &surface, double u, double v, int side) {
+    try {
+        return surface.normal(u, v);
+    } catch (const std::domain_error &) {
+    }
+    if (!surface.isUPeriodic() && surface.uDomain().isFinite() && surface.vDomain().isFinite()) {
+        // Lato degenere di una superficie non periodica (B-spline con una fila
+        // di poli in un punto, le pezze triangolari di CATIA): la media delle
+        // normali appena dentro il dominio, verso il centro.
+        const Interval ud = surface.uDomain(), vd = surface.vDomain();
+        const double du = 1e-6 * ud.length() * (u < 0.5 * (ud.lo + ud.hi) ? 1.0 : -1.0);
+        const double dv = 1e-6 * vd.length() * (v < 0.5 * (vd.lo + vd.hi) ? 1.0 : -1.0);
+        Vec3 sum;
+        for (const auto &[a, b] : {std::pair<double, double>{du, 0.0}, {0.0, dv}, {du, dv}}) {
+            try {
+                sum += surface.normal(u + a, v + b);
+            } catch (const std::domain_error &) {
+            }
+        }
+        if (norm(sum) > 0.0) return normalized(sum);
+    }
+    const Interval domain = surface.vDomain();
+    if (side == 0) side = domain.isFinite() && v > 0.5 * (domain.lo + domain.hi) ? -1 : 1;
+    const double step = 1e-6 * (domain.isFinite() ? std::min(1.0, domain.length()) : 1.0) * side;
+    Vec3 sum;
+    for (int k = 0; k < 8; ++k) sum += surface.normal(u + k * kTwoPi / 8.0, v + step);
+    return normalized(sum);
+}
+
+SurfacePtr planarEquivalent(const Surface &surface, double relativeTolerance) {
+    if (surface.type() != SurfaceType::BSpline) return nullptr;
+    const auto &spline = static_cast<const BSplineSurface &>(surface);
+    Vec3 lo(1e300, 1e300, 1e300), hi(-1e300, -1e300, -1e300), centroid;
+    const int count = spline.uPoleCount() * spline.vPoleCount();
+    for (int i = 0; i < spline.uPoleCount(); ++i)
+        for (int j = 0; j < spline.vPoleCount(); ++j) {
+            const Vec3 &p = spline.pole(i, j);
+            if (spline.weight(i, j) <= 0.0) return nullptr;
+            for (int k = 0; k < 3; ++k) lo[k] = std::min(lo[k], p[k]), hi[k] = std::max(hi[k], p[k]);
+            centroid += p / double(count);
+        }
+    const double tolerance = relativeTolerance * std::max(norm(hi - lo), 1e-300);
+    const Interval u = spline.uDomain(), v = spline.vDomain();
+    const double um = 0.5 * (u.lo + u.hi), vm = 0.5 * (v.lo + v.hi);
+    // Surface::evaluate usa l'indicizzazione quadrata (order + 1)^2 anche se
+    // per l'ordine uno sono significativi soltanto S, Su e Sv.
+    Vec3 d[4];
+    spline.evaluate(um, vm, 1, d);
+    const Vec3 m = cross(d[Surface::derivativeIndex(1, 0, 1)], d[Surface::derivativeIndex(0, 1, 1)]);
+    if (!(norm(m) > 0.0)) return nullptr;
+    const Vec3 n = normalized(m);
+    for (int i = 0; i < spline.uPoleCount(); ++i)
+        for (int j = 0; j < spline.vPoleCount(); ++j)
+            if (std::fabs(dot(spline.pole(i, j) - centroid, n)) > tolerance) return nullptr;
+    // Stessa normale in tutto il dominio: poli complanari bastano (combinazioni convesse).
+    const Vec3 x = d[Surface::derivativeIndex(1, 0, 1)];
+    return std::make_shared<Plane>(Frame3(d[0] - dot(d[0] - centroid, n) * n, n, norm(cross(x, n)) > 0.0 ? x : cross(n, std::fabs(n.x()) < 0.9 ? Vec3(1, 0, 0) : Vec3(0, 1, 0))));
+}
+
+}

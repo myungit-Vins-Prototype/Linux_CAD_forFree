@@ -1,0 +1,17 @@
+[
+  {
+    "path": "forgecad-release/forgecad",
+    "bytes": 122093240,
+    "sha256": "df2bffa3f364ba432c7de75fb92cc06eb9e12807fad3859454cb7d749158fc07"
+  },
+  {
+    "path": "forgecad-release/forgecad_view_tests",
+    "bytes": 126623256,
+    "sha256": "55a05cba3dda82a2d766cc670e8535e3c4925a0c6348d1cf076cda70bf34dd56"
+  },
+  {
+    "path": "forgecad-release/kernel/forgekernel_tests",
+    "bytes": 165924488,
+    "sha256": "30f316b8ed4dcfce83c2dc5226576b2c5aee848f0dae74fcad23d6b12094aa9f"
+  }
+]

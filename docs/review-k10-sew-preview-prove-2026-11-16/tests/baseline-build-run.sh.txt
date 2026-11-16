@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# Comandi storici prima della build produzione con la correzione sewing.
+# La libreria Release allora corrispondeva al congelato SHA a45c97...
+cd /home/myungit/Linux_CAD_forFree
+c++ -std=c++17 -O2 -ffp-contract=off -fno-fast-math -Wall -Wextra -Wpedantic -I kernel /tmp/k10-sew-review/tests/test_sew_pcurve_validation.cpp forgecad-release/kernel/libforgekernel.a -o /tmp/k10-sew-review/tests/test_sew_pcurve_baseline
+/tmp/k10-sew-review/tests/test_sew_pcurve_baseline /tmp/k10-sew-review/tests/baseline_export > /tmp/k10-sew-review/tests/baseline-validation-final.log 2>&1
+# Exit1 atteso:6 fallimenti geometrici,3PASS.

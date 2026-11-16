@@ -20,6 +20,7 @@
 #include "fk_curve_algo.h"
 #include "fk_curve_ops.h"
 #include "fk_helix.h"
+#include "fk_helix_projection.h"
 #include "fk_intersect.h"
 #include "fk_nurbs.h"
 #include "fk_precision.h"
@@ -120,12 +121,23 @@ bool onOneSide(const Body &body, const Vec3 &origin, const Vec3 &n, double toler
     return true;
 }
 
-// Toglie i livelli di TrimmedCurve (il tratto resta quello dato).
-bool needsProjectionFit(const Curve<3> &curve) {
-    if(curve.type()==CurveType::Trimmed) return needsProjectionFit(*static_cast<const TrimmedCurve<3>&>(curve).basis());
-    if(curve.type()==CurveType::Transformed) return needsProjectionFit(*static_cast<const TransformedCurve&>(curve).basis());
-    return curve.type()==CurveType::Other;
+// Bound traversal before any wrapper-delegated query or sampled fallback.
+const Curve<3> &projectionBasis(const Curve<3> &curve) {
+    const Curve<3> *basis = &curve;
+    std::size_t depth = 0;
+    while (basis->type() == CurveType::Trimmed || basis->type() == CurveType::Transformed) {
+        cancellationPoint();
+        if (++depth > 256)
+            throw std::domain_error("proiezione curva: budget wrapper esaurito");
+        if (basis->type() == CurveType::Trimmed)
+            basis = static_cast<const TrimmedCurve<3> *>(basis)->basis().get();
+        else
+            basis = static_cast<const TransformedCurve *>(basis)->basis().get();
+    }
+    return *basis;
 }
+
+bool needsProjectionFit(const Curve<3> &curve) { return projectionBasis(curve).type() == CurveType::Other; }
 
 const Curve<3> *basisOf(const Curve<3> *curve) {
     while (curve && curve->type() == CurveType::Trimmed) curve = static_cast<const TrimmedCurve<3> *>(curve)->basis().get();
@@ -162,8 +174,6 @@ bool nearestBodyEdge(const Body &body, const Vec3 &point, CurvePtr<3> &curve, In
 QString appendProjectedCurve(SketchObject &sketch, const CurvePtr<3> &curve, const Interval &range, bool construction, bool fixed,
                              QVector<SketchEntity> *created) {
     if (!curve || !(range.hi > range.lo)) return QStringLiteral("Curva non valida.");
-    if (isImplicitSketchProjection(*curve))
-        return QStringLiteral("La curva proiettata implicita non puo' essere convertita in schizzo senza un'approssimazione NURBS esplicita.");
     const Frame3 frame = sketchAxes(sketch);
     const auto local = [&](const Vec3 &p) {
         const Vec3 q = frame.toLocal(p);
@@ -171,6 +181,9 @@ QString appendProjectedCurve(SketchObject &sketch, const CurvePtr<3> &curve, con
     };
     const int segmentsBefore = sketch.segments.size(), curvesBefore = sketch.curves.size();
     try {
+        if (isImplicitSketchProjection(projectionBasis(*curve)))
+            return QStringLiteral(
+                "La curva proiettata implicita non puo' essere convertita in schizzo senza un'approssimazione NURBS esplicita.");
         const Curve<3> *basis = basisOf(curve.get());
         if (basis->type() == CurveType::Line) {
             const QPointF a = local(curve->point(range.lo)), b = local(curve->point(range.hi));
@@ -212,6 +225,29 @@ QString appendProjectedCurve(SketchObject &sketch, const CurvePtr<3> &curve, con
                     spline = joinBezierPieces(standardBezierPieces(full, range));
                 }
             } else if (needsProjectionFit(*curve)) {
+                // A wrapped Helix retains its original analytic provenance.
+                // Fit directly in sketch coordinates, then certify the actual
+                // Qt controls after recalculateCurve, before publishing them.
+                if (const auto projected = Kernel::detail::projectHelixCertified(curve, range, frame, linearResolution())) {
+                    CurveObject object;
+                    object.tool = DrawingTool::Converted;
+                    object.construction = construction;
+                    object.degree = projected->degree();
+                    for (const Vec2 &p : projected->poles())
+                        object.controlPoints.append(QPointF(p.x(), p.y()));
+                    for (double k : projected->knots())
+                        object.knots.append(k);
+                    recalculateCurve(object);
+                    const auto actual = curveGeometry(object);
+                    if (!object.numericallyValid || actual.size() != 1 || actual.front().range.lo != range.lo ||
+                        actual.front().range.hi != range.hi)
+                        throw std::domain_error("proiezione elica: curva finale non valida");
+                    Kernel::detail::requireHelixProjection(curve, range, frame, actual.front().curve, linearResolution());
+                    sketch.curves.append(object);
+                    // The sampled collinearity shortcut below is outside this
+                    // certificate. Keep the certified Converted representation.
+                    goto done;
+                }
                 // Le curve procedurali (ad esempio isoparametriche) non
                 // hanno necessariamente una forma razionale: le approssima
                 // il fitter adattivo, poi la proiezione affine dei poli.

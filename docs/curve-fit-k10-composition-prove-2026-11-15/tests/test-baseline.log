@@ -1,0 +1,21 @@
+    /tmp/forgecad-k10-composition-20261115/tests/test_surface_curve_fit_validation.cpp:134: composition_fixture::gap(result) = 9.9999999080303476e-06, atteso 0 (differenza 9.9999999080303476e-06 > 1.0000000000000001e-09)
+    /tmp/forgecad-k10-composition-20261115/tests/test_surface_curve_fit_validation.cpp:134: composition_fixture::gap(result) = 7.9999999796866334e-06, atteso 0 (differenza 7.9999999796866334e-06 > 1.0000000000000001e-09)
+    /tmp/forgecad-k10-composition-20261115/tests/test_surface_curve_fit_validation.cpp:134: composition_fixture::gap(result) = 9.9999999096601897e-06, atteso 0 (differenza 9.9999999096601897e-06 > 1.0000000000000001e-09)
+    /tmp/forgecad-k10-composition-20261115/tests/test_surface_curve_fit_validation.cpp:134: composition_fixture::gap(result) = 9.7607711606099563e-06, atteso 0 (differenza 9.7607711606099563e-06 > 1.0000000000000001e-09)
+    /tmp/forgecad-k10-composition-20261115/tests/test_surface_curve_fit_validation.cpp:134: composition_fixture::gap(result) = 7.8086169851740248e-06, atteso 0 (differenza 7.8086169851740248e-06 > 1.0000000000000001e-09)
+    /tmp/forgecad-k10-composition-20261115/tests/test_surface_curve_fit_validation.cpp:134: composition_fixture::gap(result) = 9.7607711576235976e-06, atteso 0 (differenza 9.7607711576235976e-06 > 1.0000000000000001e-09)
+    /tmp/forgecad-k10-composition-20261115/tests/test_surface_curve_fit_validation.cpp:134: composition_fixture::gap(result) = 0.00099999999790035534, atteso 0 (differenza 0.00099999999790035534 > 9.9999999999999995e-08)
+    /tmp/forgecad-k10-composition-20261115/tests/test_surface_curve_fit_validation.cpp:134: composition_fixture::gap(result) = 0.00080000000432311731, atteso 0 (differenza 0.00080000000432311731 > 9.9999999999999995e-08)
+    /tmp/forgecad-k10-composition-20261115/tests/test_surface_curve_fit_validation.cpp:134: composition_fixture::gap(result) = 0.00099999999849591887, atteso 0 (differenza 0.00099999999849591887 > 9.9999999999999995e-08)
+    /tmp/forgecad-k10-composition-20261115/tests/test_surface_curve_fit_validation.cpp:134: composition_fixture::gap(result) = 0.00097607712141435546, atteso 0 (differenza 0.00097607712141435546 > 9.9999999999999995e-08)
+    (altri fallimenti omessi)
+[ FAIL ] SurfaceCurveFitPolesHiddenSupportPoseScaleAndParameters (18 controlli falliti)
+    /tmp/forgecad-k10-composition-20261115/tests/test_surface_curve_fit_validation.cpp:146: nessuna eccezione da editBodyFacesPoles(source, {upper}, 1e-7)
+    /tmp/forgecad-k10-composition-20261115/tests/test_surface_curve_fit_validation.cpp:151: composition_fixture::gap(result) = 0.001, atteso 0 (differenza 0.001 > 9.9999999999999995e-08)
+    /tmp/forgecad-k10-composition-20261115/tests/test_surface_curve_fit_validation.cpp:146: nessuna eccezione da editBodyFacesPoles(source, {upper}, 1e-7)
+    /tmp/forgecad-k10-composition-20261115/tests/test_surface_curve_fit_validation.cpp:151: composition_fixture::gap(result) = 0.0009760771244941679, atteso 0 (differenza 0.0009760771244941679 > 9.9999999999999995e-08)
+[ FAIL ] SurfaceCurveFitSharedHiddenNeighborRejectedAndCoherentAccepted (4 controlli falliti)
+[  OK  ] SurfaceCurveFitDirectOracleKnotCrossingsAndUnsupportedUV
+[  OK  ] SurfaceCurveFitInstancedSurfaceAndMaterializedAffine
+[  OK  ] SurfaceCurveFitInvalidInputAndCancellation
+3/5 test superati

@@ -1,0 +1,36 @@
+from pathlib import Path
+import json,hashlib,shutil,re
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/mapping-uv-review');sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();memory=(R/'CLAUDE.md').read_text();initial=json.loads((T/'root/hashes-before.json').read_text())
+manifest=json.loads((T/'core/candidate-v3-sha256.json').read_text());files=[]
+for f,h in manifest.items():
+ if not f.startswith('kernel/'):continue
+ assert sha(R/f)==initial[f];assert sha(T/'core/candidate'/f)==h
+ shutil.copy2(T/'core/candidate'/f,R/f);files.append(f)
+src=T/'tests/test_mapping_pcurve_validation.cpp';assert sha(src)=='df459b846a422ebe6d2bd56ea5eb6c136d573a0700413c2fbc8397143119224a';assert 'FK_MAPPING_BASELINE' not in src.read_text();f='kernel/tests/test_mapping_pcurve_validation.cpp';shutil.copy2(src,R/f);files.append(f)
+p=R/'kernel/CMakeLists.txt';s=p.read_text();assert sha(p)==initial[str(p.relative_to(R))]
+needle='fk_mapping_carrier.cpp fk_affine_surface_fit.cpp';assert s.count(needle)==1;s=s.replace(needle,'fk_mapping_carrier.cpp fk_surface_mapping.cpp fk_affine_surface_fit.cpp')
+marker='# Certificazione del mapping affine obliquo sulle estrusioni originali.';assert marker in s
+new='''# Trasferimenti Plane: residuo continuo e offset indipendente dalle coordinate UV.
+add_executable(forgekernel_mapping_uv_validation_tests tests/test_mapping_pcurve_validation.cpp)
+target_link_libraries(forgekernel_mapping_uv_validation_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_mapping_uv_validation_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_mapping_uv_validation_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_mapping_uv_validation_tests COMMAND forgekernel_mapping_uv_validation_tests)
+set_tests_properties(forgekernel_mapping_uv_validation_tests PROPERTIES TIMEOUT 180)
+
+''';s=s.replace(marker,new+marker);p.write_text(s);files.append(str(p.relative_to(R)))
+p=R/'tools/generate_architecture.py';s=p.read_text();assert sha(p)==initial[str(p.relative_to(R))]
+s=s.replace(" 'kernel/tests/test_mapping_carrier_validation.cpp':", " 'kernel/tests/test_mapping_pcurve_validation.cpp': ('tests', 'Trasferimenti UV su Plane con coordinate grandi e offset: parametri originali, fin finali certificate al budget pubblicato, pesi e wrapper, pose e scale, codec e fallimenti atomici; certificato distinto dal fit 3D campionato.'),\n 'kernel/tests/test_mapping_carrier_validation.cpp':",1)
+s=s.replace('Sviluppo isometrico, posa rigida e mapping su superficie o appoggio multifaccia: delega la conservazione del carrier per lamine piane supportate, mantiene il fit campionato esplicito per i casi restanti; controlli locali di inversione, trim, genealogia e nessuna mesh di calcolo.', 'Sviluppo isometrico, posa rigida e mapping su superficie o appoggio multifaccia: conserva i carrier supportati; trasferimento SP-curve su Plane con limite continuo fisico e verifica delle fin dopo assemblaggio tramite genealogia, coefficienti e budget prefissati. Bordi 3D e famiglie restanti mantengono fit campionato; controlli locali di inversione/trim, nessuna mesh di calcolo.')
+s=s.replace('cache per piegatura e nodi espliciti del fit; nessuna proiezione per raggi o isometria generale promessa.', 'cache per piegatura e nodi espliciti del fit; offset Plane analitico senza fit di contorni UV superfluo, fin Plane delegate al controllo continuo. Nessuna proiezione per raggi o isometria generale promessa.')
+s=s.replace('immagine di faccia a carrier conservato e trasferimento UV esplicito.', 'immagine di faccia a carrier conservato e trasferimento UV esplicito, con ricostruzione Plane sul bordo effettivo e metrica fisica.')
+p.write_text(s);files.append(str(p.relative_to(R)))
+start=memory.index('**16/11 — K10 Mapping/Quilt UV');end=memory.index('**16/11 — UI8',start)
+entry='''**16/11 — K10 Mapping/Quilt UV, integrato con tre agenti Sol.**
+Plane: fin continue postassemblaggio e offset senza fitUV superfluo;
+due falsi rifiuti UV1e4 riprodotti. Build/app/prove finali pendenti;
+31rilievi corretti invariati. [Stato](docs/review-k10-mapping-uv-2026-11-16.md).
+
+''';memory=memory[:start]+entry+memory[end:];assert len(memory.encode())<=16384;(R/'CLAUDE.md').write_text(memory)
+p=R/'docs/review-k10-mapping-uv-2026-11-16.md';s=p.read_text();s+='\n## Integrazione\n\nIntegrati due sorgenti V3 strict, senza cambi di header/API, con target fisico `min(1e-10,.05*fitBudget)` e cap fin `.8*connectionBudget`. La variante V2 privata da 1e-9 non è stata integrata. Quattro successi V2 sono ridotti a due successi V3 a UV1e4; UV1e5/1e6 restano rifiuti conservativi. Test permanente sempre rigoroso, nessuna macro per saltare il certificato; diagnostica baseline separata. Aggiunti CTest e compilazione rigorosa Mapping nel CMake kernel; catalogo architetturale aggiornato. App, runner integrati e mappa finale ancora pendenti.\n';p.write_text(s)
+(T/'root/integrated-sources.json').write_text(json.dumps({f:sha(R/f) for f in files},indent=2)+'\n');print('Integrated',len(files),'source/config files; memory',len(memory.encode()),'bytes')

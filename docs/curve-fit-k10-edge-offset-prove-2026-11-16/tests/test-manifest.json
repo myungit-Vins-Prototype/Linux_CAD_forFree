@@ -1,0 +1,36 @@
+{
+  "production_stage": {
+    "kernel/fk_curve_fit_bounds.h": "ea301eda4078be8f7c8e7f17036c8e63f32e71c15cba2d758f968c3bb1c18dc5",
+    "kernel/fk_curve_fit_bounds.cpp": "2e530b7bcf6e5095bc5328896e3e4e7f61af599c018b19cbab415c0f4513e493",
+    "kernel/fk_offset.cpp": "a7b2bf30ba1e8e92bd565104075e43b5704f3928b3acb77cc9cab6a940e30e42",
+    "kernel/fk_affine_surface_fit.cpp": "4f00481ed10f996cc45d339f70283b5d2ecbcd41efc9f9d4dd2399c2bbb4cfea"
+  },
+  "test_sha256": "860113bae8f320b17d06216422c6ad15a0058ebac6c1f6b4c47be9db9158f8d1",
+  "baseline_offset_sha256": "7c8a22480b028b1c460e41ef5e9c1c6e49bad1bdba99d6417b3668c3d6560185",
+  "normal": {
+    "passed": 18,
+    "failed": 0
+  },
+  "baseline": {
+    "passed": 0,
+    "failed": 8,
+    "expected_failure": true
+  },
+  "instrumented_translation_units": [
+    "fk_curve_fit_bounds.cpp",
+    "fk_offset.cpp",
+    "fk_affine_surface_fit.cpp",
+    "test.cpp"
+  ],
+  "sanitizer_status": "PASS",
+  "remaining_kernel": "existing Release archive, uninstrumented",
+  "production_changes_by_test_agent": false,
+  "sanitizer": {
+    "passed": 18,
+    "failed": 0,
+    "exit": 0,
+    "diagnostics": 0,
+    "suppressions": false,
+    "execution": "outside ptrace sandbox"
+  }
+}

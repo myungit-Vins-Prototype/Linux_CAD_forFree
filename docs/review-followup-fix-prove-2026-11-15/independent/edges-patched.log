@@ -1,0 +1,49 @@
+cylinder_side_frame0 d=-0.1 pass=1 residual=0 checker=0 circle_fin_uses=2 line_fin_uses=0
+cylinder_caps_frame0 d=-0.1 pass=1 residual=0 checker=0 circle_fin_uses=2 line_fin_uses=0
+cylinder_all_frame0 d=-0.1 pass=1 residual=0 checker=0 circle_fin_uses=4 line_fin_uses=0
+trimmed_arc_frame0_reverse0 d=-0.1 pass=1 residual=2.77556e-17 checker=0 circle_fin_uses=2 line_fin_uses=2
+trimmed_arc_frame0_reverse1 d=-0.1 pass=1 residual=2.51215e-15 checker=0 circle_fin_uses=2 line_fin_uses=2
+cylinder_side_frame0 d=0.1 pass=1 residual=0 checker=0 circle_fin_uses=2 line_fin_uses=0
+cylinder_caps_frame0 d=0.1 pass=1 residual=0 checker=0 circle_fin_uses=2 line_fin_uses=0
+cylinder_all_frame0 d=0.1 pass=1 residual=0 checker=0 circle_fin_uses=4 line_fin_uses=0
+trimmed_arc_frame0_reverse0 d=0.1 pass=1 residual=1.11022e-16 checker=0 circle_fin_uses=2 line_fin_uses=2
+trimmed_arc_frame0_reverse1 d=0.1 pass=1 residual=2.22045e-15 checker=0 circle_fin_uses=2 line_fin_uses=2
+cylinder_side_frame1 d=-0.1 pass=1 residual=2.22045e-16 checker=0 circle_fin_uses=2 line_fin_uses=0
+cylinder_caps_frame1 d=-0.1 pass=1 residual=0 checker=0 circle_fin_uses=2 line_fin_uses=0
+cylinder_all_frame1 d=-0.1 pass=1 residual=2.22045e-16 checker=0 circle_fin_uses=4 line_fin_uses=0
+trimmed_arc_frame1_reverse0 d=-0.1 pass=1 residual=2.22045e-16 checker=0 circle_fin_uses=2 line_fin_uses=2
+trimmed_arc_frame1_reverse1 d=-0.1 pass=1 residual=1.98603e-15 checker=0 circle_fin_uses=2 line_fin_uses=2
+cylinder_side_frame1 d=0.1 pass=1 residual=2.22045e-16 checker=0 circle_fin_uses=2 line_fin_uses=0
+cylinder_caps_frame1 d=0.1 pass=1 residual=0 checker=0 circle_fin_uses=2 line_fin_uses=0
+cylinder_all_frame1 d=0.1 pass=1 residual=2.22045e-16 checker=0 circle_fin_uses=4 line_fin_uses=0
+trimmed_arc_frame1_reverse0 d=0.1 pass=1 residual=2.22045e-16 checker=0 circle_fin_uses=2 line_fin_uses=2
+trimmed_arc_frame1_reverse1 d=0.1 pass=1 residual=1.60119e-15 checker=0 circle_fin_uses=2 line_fin_uses=2
+cylinder_side_frame2 d=-0.1 pass=1 residual=9.93014e-16 checker=0 circle_fin_uses=2 line_fin_uses=0
+cylinder_caps_frame2 d=-0.1 pass=1 residual=1.01754e-15 checker=0 circle_fin_uses=2 line_fin_uses=0
+cylinder_all_frame2 d=-0.1 pass=1 residual=1.01754e-15 checker=0 circle_fin_uses=4 line_fin_uses=0
+trimmed_arc_frame2_reverse0 d=-0.1 pass=1 residual=1.33227e-15 checker=0 circle_fin_uses=2 line_fin_uses=2
+trimmed_arc_frame2_reverse1 d=-0.1 pass=1 residual=2.09476e-15 checker=0 circle_fin_uses=2 line_fin_uses=2
+cylinder_side_frame2 d=0.1 pass=1 residual=9.93014e-16 checker=0 circle_fin_uses=2 line_fin_uses=0
+cylinder_caps_frame2 d=0.1 pass=1 residual=9.93014e-16 checker=0 circle_fin_uses=2 line_fin_uses=0
+cylinder_all_frame2 d=0.1 pass=1 residual=9.93014e-16 checker=0 circle_fin_uses=4 line_fin_uses=0
+trimmed_arc_frame2_reverse0 d=0.1 pass=1 residual=1.26097e-15 checker=0 circle_fin_uses=2 line_fin_uses=2
+trimmed_arc_frame2_reverse1 d=0.1 pass=1 residual=1.93892e-15 checker=0 circle_fin_uses=2 line_fin_uses=2
+extrusion_frame0 angle=0 sign=-1 pass=1 error=3.14018e-16 curveType=1
+extrusion_frame0 angle=0 sign=1 pass=1 error=4.57757e-16 curveType=1
+extrusion_frame0 angle=1e-10 sign=-1 pass=1 error=9.80072e-12 curveType=1
+extrusion_frame0 angle=1e-10 sign=1 pass=1 error=9.80066e-12 curveType=1
+extrusion_frame0 angle=0.001 sign=-1 pass=1 error=9.47364e-08 curveType=3
+extrusion_frame0 angle=0.001 sign=1 pass=1 error=1.84149e-08 curveType=3
+extrusion_frame1 angle=0 sign=-1 pass=1 error=4.96507e-16 curveType=1
+extrusion_frame1 angle=0 sign=1 pass=1 error=4.96507e-16 curveType=1
+extrusion_frame1 angle=1e-10 sign=-1 pass=1 error=9.8006e-12 curveType=1
+extrusion_frame1 angle=1e-10 sign=1 pass=1 error=9.8006e-12 curveType=1
+extrusion_frame1 angle=0.001 sign=-1 pass=1 error=9.47361e-08 curveType=3
+extrusion_frame1 angle=0.001 sign=1 pass=1 error=1.84159e-08 curveType=3
+extrusion_frame2 angle=0 sign=-1 pass=1 error=9.93014e-16 curveType=1
+extrusion_frame2 angle=0 sign=1 pass=1 error=9.93014e-16 curveType=1
+extrusion_frame2 angle=1e-10 sign=-1 pass=1 error=9.80066e-12 curveType=1
+extrusion_frame2 angle=1e-10 sign=1 pass=1 error=9.80075e-12 curveType=1
+extrusion_frame2 angle=0.001 sign=-1 pass=1 error=9.47367e-08 curveType=3
+extrusion_frame2 angle=0.001 sign=1 pass=1 error=1.84154e-08 curveType=3
+TOTAL 48 failed=0

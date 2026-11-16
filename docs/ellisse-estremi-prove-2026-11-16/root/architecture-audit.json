@@ -1,0 +1,185 @@
+{
+  "files": 761,
+  "edges": 10998,
+  "units": 379,
+  "errors": {},
+  "html_matches": true,
+  "incident_edges": 603,
+  "required": [
+    [
+      "cad_curve_solver.cpp",
+      "cad_ellipse.cpp",
+      "call"
+    ],
+    [
+      "cad_constraints.cpp",
+      "cad_ellipse.cpp",
+      "call"
+    ],
+    [
+      "forgeCad2026_viewport_sketch.cpp",
+      "cad_ellipse.cpp",
+      "call"
+    ],
+    [
+      "tests/test_ellipse_extremes.h",
+      "cad_ellipse.cpp",
+      "call"
+    ],
+    [
+      "cad_drawing_file.cpp",
+      "cad_document_io.cpp",
+      "call"
+    ],
+    [
+      "cad_ellipse.cpp",
+      "cad_ellipse.h",
+      "include"
+    ]
+  ],
+  "files_audited": {
+    "cad_ellipse.cpp": {
+      "description": "Definizione analitica delle ellissi da centro o quattro estremi reali: coppie di assi ortogonali, centro derivato, costruzione da tre clic e normalizzazione del trascinamento senza sostituire i riferimenti dei vincoli.",
+      "incoming": {
+        "call": 6,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 3,
+        "include": 2,
+        "reference": 0
+      }
+    },
+    "cad_ellipse.h": {
+      "description": "Definizione analitica delle ellissi da centro o quattro estremi reali: coppie di assi ortogonali, centro derivato, costruzione da tre clic e normalizzazione del trascinamento senza sostituire i riferimenti dei vincoli.",
+      "incoming": {
+        "call": 0,
+        "include": 6,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 0,
+        "include": 1,
+        "reference": 0
+      }
+    },
+    "cad_types.h": {
+      "description": "Tipi applicativi condivisi: sketch, entit\u00e0, feature, display, riferimenti e stato del documento; EllipseExtremes aggiunto in coda ai valori persistenti, quattro estremi referenziabili.",
+      "incoming": {
+        "call": 153,
+        "include": 53,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 2,
+        "include": 1,
+        "reference": 0
+      }
+    },
+    "cad_curve_solver.cpp": {
+      "description": "Costruisce e ricalcola curve esatte dello sketch, comprese immagini affini associative di rami impliciti e derivate per il solver. Riusa le NURBS convertite immutabili per thread con invalidazione copy-on-write e cache limitata. Le ellissi dai quattro estremi conservano una curva analitica con centro derivato.",
+      "incoming": {
+        "call": 31,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 8,
+        "include": 5,
+        "reference": 0
+      }
+    },
+    "cad_constraints.cpp": {
+      "description": "Vincoli geometrici con Jacobiano sparso e rango per componenti; contatti tangenti riconosciuti tramite catene esplicite di coincidenze, senza riaggancio per vicinanza; cache associative costanti escluse dalle incognite libere senza vincoli Fix. Numeri della definizione validati con guardia condivisa dal codec, residui e passi non finiti rifiutati e commit atomico; riduzione angolare in gradi in tempo costante anche ai limiti double. Ellisse per estremi: tre equazioni intrinseche e centro derivato per concentricita, quattro punti reali senza vincolo implicito al centro.",
+      "incoming": {
+        "call": 25,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 12,
+        "include": 8,
+        "reference": 0
+      }
+    },
+    "cad_document_io.cpp": {
+      "description": "Budget interattivo di cache proporzionato alla RAM e alla preferenza utente; Codec nativo70 con ellissi definite da quattro estremi, identita dei contorni apparenti, nomi sorgenti associative e precisione persistenti; pool di lettura di superfici identiche fra snapshot. Zstandard/legacy, leggi di raggio con zero terminale; cache16 migra selettivamente la genealogia delle ripetizioni di funzione e i derivati delle vecchie copie di lavoro (15: loft guidati); pose e cuciture singolari, check-in immutabili, altre cache portabili, genealogia e definizioni associative preservati. Lettura e scrittura rifiutano atomicamente definizioni di schizzo con numeri non finiti tramite finiteSketchNumbers.",
+      "incoming": {
+        "call": 78,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 26,
+        "include": 15,
+        "reference": 0
+      }
+    },
+    "cad_document_io.h": {
+      "description": "Budget interattivo di cache proporzionato alla RAM e alla preferenza utente; Codec nativo70 con ellissi definite da quattro estremi, identita dei contorni apparenti, nomi sorgenti associative e precisione persistenti; pool di lettura di superfici identiche fra snapshot. Zstandard/legacy, leggi di raggio con zero terminale; cache16 migra selettivamente la genealogia delle ripetizioni di funzione e i derivati delle vecchie copie di lavoro (15: loft guidati); pose e cuciture singolari, check-in immutabili, altre cache portabili, genealogia e definizioni associative preservati. Lettura e scrittura rifiutano atomicamente definizioni di schizzo con numeri non finiti tramite finiteSketchNumbers.",
+      "incoming": {
+        "call": 5,
+        "include": 17,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 0,
+        "include": 1,
+        "reference": 0
+      }
+    },
+    "cad_drawing_file.cpp": {
+      "description": "Contenitore .drw mono/multifoglio, impronta geometrica indipendente dalla visibilita con compatibilita esatta delle vecchie firme, identita e riferimenti delle copie; preparazione da documento valutato senza costruire feature mancanti; genealogia coerente fra cache e rigenerazione, migrazione dei nomi legacy sullo snapshot verificato con identita di curva e punto; consumo dei derivati di aggregati legacy e compatibilita delle impronte53. Confronta le impronte complete dei formati70/69 anche con precisione personalizzata e visibilita canonica; esclude EllipseExtremes dai confronti con formati non rappresentabili senza riagganci geometrici.",
+      "incoming": {
+        "call": 26,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 25,
+        "include": 8,
+        "reference": 0
+      }
+    },
+    "cad_sketch_edit.cpp": {
+      "description": "Operazioni di modifica della geometria dello sketch. Taglio e divisione riconoscono anche le ellissi definite dai quattro estremi conservando il supporto analitico.",
+      "incoming": {
+        "call": 10,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 13,
+        "include": 9,
+        "reference": 0
+      }
+    },
+    "forgeCad2026_viewport_sketch.cpp": {
+      "description": "Comandi schizzo, quote, snap e inferenze associative; scarta alla chiusura solo nuovi schizzi vuoti senza utilizzatori, conserva punti e costruzione; selezione esterna transitoria senza falso Undo/dirty, pulizia conservativa delle cache non usate alla modifica/deselezione/uscita e rimappatura delle selezioni. Ellisse per estremi: preview e conferma da tre clic condividono la definizione, quattro punti effettivi per quote, snap e trascinamento con centro derivato.",
+      "incoming": {
+        "call": 29,
+        "include": 0,
+        "reference": 1
+      },
+      "outgoing": {
+        "call": 40,
+        "include": 4,
+        "reference": 0
+      }
+    },
+    "tests/test_ellipse_extremes.h": {
+      "description": "Ellisse per estremi: geometria esatta, quattro punti quotabili e vincolabili, centro derivato, gradi di liberta, anteprima e creazione, trascinamento, codec70, compatibilita e Undo/Redo.",
+      "incoming": {
+        "call": 2,
+        "include": 1,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 23,
+        "include": 0,
+        "reference": 0
+      }
+    }
+  }
+}

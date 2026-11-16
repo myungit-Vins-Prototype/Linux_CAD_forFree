@@ -1,0 +1,11 @@
+{
+  "/tmp/forgecad-k10-20261115/tests/test_curve_fit_validation.cpp": "30067d47f5d885f43b8d8e8160c719c9146b8967a91f337a70808ceaee1fad27",
+  "/tmp/forgecad-k10-20261115/tests/build-tests.py": "c2e65b34bb5e053ed3d6d0e76c45e4051b9d9c4dff7eea9c1130ae7ab10b8213",
+  "/tmp/forgecad-k10-20261115/tests/tests": "e3f614fc65ed7e250a53d79b06faff1c27c088a009d2f57a345ae47b4a305ac1",
+  "/tmp/forgecad-k10-20261115/tests/tests.log": "dc51aa66c28ece97d99ba454bd6a2afc7bb5dc7c9b4699365d1a4b1159922cdf",
+  "/tmp/forgecad-k10-20261115/kernel/fk_curve_fit_bounds.h": "7d6340ed638e07a45680dffe063180c1391eeebfb84def6e0e5b482398280dac",
+  "/tmp/forgecad-k10-20261115/kernel/fk_curve_fit_bounds.cpp": "eaaadbb944037473c08a0217b285f6a62e531c8058cccfbc95bc61258c97e284",
+  "/tmp/forgecad-k10-20261115/kernel/fk_curve_fit_bounds.o": "f1d30548f6416e9478fe1e111b0cab7cc9d4318b3c5f4a17eb6b3e125e163ee7",
+  "/tmp/forgecad-k10-20261115/kernel/fk_offset.cpp": "4563435968a70fdcb311ca0ecc041e8057462cd36ef107c412f2fe98cfe069b6",
+  "/tmp/forgecad-k10-20261115/kernel/fk_offset.o": "7c3bffec374b3d9a072aac69fc9744b01d296bf9dd5a8ff6e7d6ae26d5c591f9"
+}

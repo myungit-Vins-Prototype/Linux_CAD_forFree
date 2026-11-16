@@ -545,10 +545,3 @@ QTreeWidgetItem *StoryboardTree::normalizedTarget(QTreeWidgetItem *, QTreeWidget
     // Le dipendenze vengono validate sul documento, compresi gli schizzi.
     return target;
 }
-
-QTreeWidgetItem *StoryboardTree::firstFeature(QTreeWidgetItem *body) {
-    if (!body) return nullptr;
-    for (int row = 0; row < body->childCount(); ++row)
-        if (body->child(row)->data(0, Qt::UserRole).toInt() == kTreeExtrusion) return body->child(row);
-    return nullptr;
-}

@@ -1,0 +1,12 @@
+    /tmp/forgecad-k10-flatten-20261115/tests/test_planar_flatten_validation.cpp:123: FK_CHECK(checkBody(source, {true, true}).empty())
+    /tmp/forgecad-k10-flatten-20261115/tests/test_planar_flatten_validation.cpp:124: FK_CHECK(faceArea(source, source.faces().front()) > 0)
+    /home/myungit/Linux_CAD_forFree/kernel/tests/fk_test_main.cpp:36: eccezione: Appiattimento: faccia 0: loop orientati male (esterno antiorario, fori orari) scale=0.010000 rational=0 sense=0
+[ FAIL ] PlanarFlattenHiddenPolynomialRationalPoseScaleSense (3 controlli falliti)
+    /tmp/forgecad-k10-flatten-20261115/tests/test_planar_flatten_validation.cpp:123: FK_CHECK(checkBody(source, {true, true}).empty())
+    /tmp/forgecad-k10-flatten-20261115/tests/test_planar_flatten_validation.cpp:124: FK_CHECK(faceArea(source, source.faces().front()) > 0)
+    /home/myungit/Linux_CAD_forFree/kernel/tests/fk_test_main.cpp:36: eccezione: Appiattimento: faccia 0: loop orientati male (esterno antiorario, fori orari)
+[ FAIL ] PlanarFlattenNestedPartialTrimReverseHolesAndRoundtrip (3 controlli falliti)
+[  OK  ] PlanarFlattenInvalidAndCancellationPreserveStatsHistorySource
+1/3 test superati
+Command exited with non-zero status 1
+elapsed=0.11 maxrss_kb=6024

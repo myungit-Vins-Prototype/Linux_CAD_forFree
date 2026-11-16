@@ -1,0 +1,15 @@
+#include "fk_blend_mitre.h"
+#include "fk_bspline_surface.h"
+#include <iostream>
+using namespace ForgeCad::Kernel;
+int main() {
+    const BSplineSurface s(1, 2, {0,0,1,1}, {0,0,0,1,1,1}, 2, 3,
+        {{0,0,0},{0,.5,0},{0,1,0},{1,0,0},{1,.5,0},{1,1,0}});
+    const double endpoint[4]{1,1,1,1};
+    try {
+        const auto cut = detail::traceBlendMitre(s,s,0,0,endpoint,1,1e-9);
+        std::cout << "SUCCESS gap=" << cut.gap << " range=" << cut.range.lo << ',' << cut.range.hi << '\n';
+    } catch (const std::domain_error &e) {
+        std::cout << "REJECT " << e.what() << '\n';
+    }
+}

@@ -1,0 +1,26 @@
+--- a/tests/test_viewport.cpp
++++ b/tests/test_viewport.cpp
+@@ -1,3 +1,4 @@
++#include "test_sketch_projection_fit_validation.h"
+ #include <QtTest/QTest>
+@@
+     QApplication app(argc, argv);
++    if (app.arguments().contains(QStringLiteral("--sketch-projection-fit-validation"))) {
++        QString exportDirectory = qEnvironmentVariable("FORGECAD_HELIX_EXPORT");
++        for (const QString &argument : app.arguments())
++            if (argument.startsWith(QStringLiteral("--helix-export=")))
++                exportDirectory = argument.mid(QStringLiteral("--helix-export=").size());
++        return K10SketchProjectionTests::run(exportDirectory);
++    }
+--- a/kernel/CMakeLists.txt
++++ b/kernel/CMakeLists.txt
+@@
+     fk_helix.cpp
++    fk_helix_projection.cpp
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@
++add_test(NAME forgecad_sketch_projection_fit_validation_tests
++    COMMAND forgecad_view_tests --sketch-projection-fit-validation)
++set_tests_properties(forgecad_sketch_projection_fit_validation_tests PROPERTIES
++    TIMEOUT 30 ENVIRONMENT "QT_QPA_PLATFORM=offscreen")

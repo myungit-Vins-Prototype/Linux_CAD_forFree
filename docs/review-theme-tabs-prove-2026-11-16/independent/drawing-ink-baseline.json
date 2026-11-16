@@ -1,0 +1,200 @@
+[
+  {
+    "folder": "baseline-wayland-captures",
+    "file": "light0-drawing0.png",
+    "image_size": [
+      1320,
+      868
+    ],
+    "black_lt128": 298,
+    "ink_lt240": 8635,
+    "crop_sha256": "185ac1a74f359be1c51d5fe7bdbc44629483398962209e4bf5d27e04eaa77130"
+  },
+  {
+    "folder": "baseline-wayland-captures",
+    "file": "dark1-drawing0.png",
+    "image_size": [
+      1320,
+      868
+    ],
+    "black_lt128": 298,
+    "ink_lt240": 8635,
+    "crop_sha256": "185ac1a74f359be1c51d5fe7bdbc44629483398962209e4bf5d27e04eaa77130"
+  },
+  {
+    "folder": "baseline-wayland-captures",
+    "file": "light2-drawing0.png",
+    "image_size": [
+      1320,
+      868
+    ],
+    "black_lt128": 298,
+    "ink_lt240": 8635,
+    "crop_sha256": "185ac1a74f359be1c51d5fe7bdbc44629483398962209e4bf5d27e04eaa77130"
+  },
+  {
+    "folder": "baseline-wayland-captures",
+    "file": "dark3-drawing0.png",
+    "image_size": [
+      1320,
+      868
+    ],
+    "black_lt128": 298,
+    "ink_lt240": 8635,
+    "crop_sha256": "185ac1a74f359be1c51d5fe7bdbc44629483398962209e4bf5d27e04eaa77130"
+  },
+  {
+    "folder": "baseline-final-offscreen",
+    "file": "light0-drawing0.png",
+    "image_size": [
+      1320,
+      868
+    ],
+    "black_lt128": 298,
+    "ink_lt240": 9328,
+    "crop_sha256": "f4fc32cbf3984ad4cb258060e827fa18be7abd1d445f7116e935cb35ccd56040"
+  },
+  {
+    "folder": "baseline-final-offscreen",
+    "file": "dark1-drawing0.png",
+    "image_size": [
+      1320,
+      868
+    ],
+    "black_lt128": 298,
+    "ink_lt240": 9328,
+    "crop_sha256": "f4fc32cbf3984ad4cb258060e827fa18be7abd1d445f7116e935cb35ccd56040"
+  },
+  {
+    "folder": "baseline-final-offscreen",
+    "file": "light2-drawing0.png",
+    "image_size": [
+      1320,
+      868
+    ],
+    "black_lt128": 298,
+    "ink_lt240": 9328,
+    "crop_sha256": "f4fc32cbf3984ad4cb258060e827fa18be7abd1d445f7116e935cb35ccd56040"
+  },
+  {
+    "folder": "baseline-final-offscreen",
+    "file": "dark3-drawing0.png",
+    "image_size": [
+      1320,
+      868
+    ],
+    "black_lt128": 298,
+    "ink_lt240": 9328,
+    "crop_sha256": "f4fc32cbf3984ad4cb258060e827fa18be7abd1d445f7116e935cb35ccd56040"
+  },
+  {
+    "folder": "final-baseline-offscreen",
+    "file": "light0-drawing0.png",
+    "image_size": [
+      1320,
+      868
+    ],
+    "black_lt128": 298,
+    "ink_lt240": 9328,
+    "crop_sha256": "f4fc32cbf3984ad4cb258060e827fa18be7abd1d445f7116e935cb35ccd56040"
+  },
+  {
+    "folder": "final-baseline-offscreen",
+    "file": "dark1-drawing0.png",
+    "image_size": [
+      1320,
+      868
+    ],
+    "black_lt128": 298,
+    "ink_lt240": 9328,
+    "crop_sha256": "f4fc32cbf3984ad4cb258060e827fa18be7abd1d445f7116e935cb35ccd56040"
+  },
+  {
+    "folder": "final-baseline-offscreen",
+    "file": "light2-drawing0.png",
+    "image_size": [
+      1320,
+      868
+    ],
+    "black_lt128": 298,
+    "ink_lt240": 9328,
+    "crop_sha256": "f4fc32cbf3984ad4cb258060e827fa18be7abd1d445f7116e935cb35ccd56040"
+  },
+  {
+    "folder": "final-baseline-offscreen",
+    "file": "dark3-drawing0.png",
+    "image_size": [
+      1320,
+      868
+    ],
+    "black_lt128": 298,
+    "ink_lt240": 9328,
+    "crop_sha256": "f4fc32cbf3984ad4cb258060e827fa18be7abd1d445f7116e935cb35ccd56040"
+  },
+  {
+    "folder": "final-baseline-offscreen",
+    "file": "only2d-dark-drawing0.png",
+    "image_size": [
+      1320,
+      868
+    ],
+    "black_lt128": 295,
+    "ink_lt240": 9334,
+    "crop_sha256": "e0a5ee694128a8fabe973abdfa439cf4a0b44d4300039b66bf6f1a598a562cc8"
+  },
+  {
+    "folder": "final-candidate-wayland",
+    "file": "light0-drawing0.png",
+    "image_size": [
+      1320,
+      868
+    ],
+    "black_lt128": 298,
+    "ink_lt240": 8635,
+    "crop_sha256": "185ac1a74f359be1c51d5fe7bdbc44629483398962209e4bf5d27e04eaa77130"
+  },
+  {
+    "folder": "final-candidate-wayland",
+    "file": "dark1-drawing0.png",
+    "image_size": [
+      1320,
+      868
+    ],
+    "black_lt128": 298,
+    "ink_lt240": 8635,
+    "crop_sha256": "185ac1a74f359be1c51d5fe7bdbc44629483398962209e4bf5d27e04eaa77130"
+  },
+  {
+    "folder": "final-candidate-wayland",
+    "file": "light2-drawing0.png",
+    "image_size": [
+      1320,
+      868
+    ],
+    "black_lt128": 298,
+    "ink_lt240": 8635,
+    "crop_sha256": "185ac1a74f359be1c51d5fe7bdbc44629483398962209e4bf5d27e04eaa77130"
+  },
+  {
+    "folder": "final-candidate-wayland",
+    "file": "dark3-drawing0.png",
+    "image_size": [
+      1320,
+      868
+    ],
+    "black_lt128": 298,
+    "ink_lt240": 8635,
+    "crop_sha256": "185ac1a74f359be1c51d5fe7bdbc44629483398962209e4bf5d27e04eaa77130"
+  },
+  {
+    "folder": "final-candidate-wayland",
+    "file": "only2d-dark-drawing0.png",
+    "image_size": [
+      1320,
+      868
+    ],
+    "black_lt128": 295,
+    "ink_lt240": 8641,
+    "crop_sha256": "6050b2b53a19ec99e6254f38fbff3381eae3be871cd5c4c239d01caaa8e4236e"
+  }
+]

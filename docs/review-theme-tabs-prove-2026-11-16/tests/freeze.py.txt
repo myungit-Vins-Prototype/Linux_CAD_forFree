@@ -1,0 +1,19 @@
+from pathlib import Path
+import json,shlex,shutil,hashlib
+r=Path('/home/myungit/Linux_CAD_forFree'); out=Path('/tmp/theme-tabs-review/tests'); b=r/'forgecad-release'; frozen=out/'baseline'; frozen.mkdir(exist_ok=True)
+link=shlex.split((b/'CMakeFiles/forgecad_view_tests.dir/link.txt').read_text()); items=[]
+for arg in link:
+ p=b/arg
+ if (arg.endswith('.o') or arg.endswith('.a')) and p.exists():
+  dest=frozen/arg; dest.parent.mkdir(parents=True,exist_ok=True); shutil.copy2(p,dest); items.append((str(p),str(dest)))
+files=['AGENTS.md','CLAUDE.md','forgeCad2026_application_theme.cpp','forgeCad2026_application_theme.h','forgeCad2026_gui.cpp','forgeCad2026_gui.h','cad_document_tabs.cpp','cad_document_tabs.h','cad_drawing_window.cpp','forgeCad2026_ui_glass.cpp','forgeCad2026_storyboard.cpp','forgeCad2026_dialogs_common.cpp','cad_icons.cpp','tests/test_document_tabs.h','tests/test_function_panels.h','tests/test_application_theme.cpp','tests/test_drawing_ui_controls.cpp','tests/test_viewport.cpp','CMakeLists.txt','forgecad-release/CMakeFiles/forgecad_view_tests.dir/link.txt','forgecad-release/CMakeFiles/forgecad_view_tests.dir/flags.make','forgecad-release/compile_commands.json']
+for name in files:
+ p=r/name
+ if p.exists():
+  dest=frozen/'sources'/name;dest.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(p,dest);items.append((str(p),str(dest)))
+manifest=[{'origin':a,'frozen':z,'bytes':Path(z).stat().st_size,'sha256':hashlib.sha256(Path(z).read_bytes()).hexdigest()} for a,z in items]
+(out/'baseline-manifest.json').write_text(json.dumps(manifest,indent=2)+'\n')
+# Record relevant graph nodes and both directions of graph edges.
+g=json.loads((r/'docs/architecture/graph.json').read_text()); names=set(files)
+(out/'graph-consult.json').write_text(json.dumps({'nodes':[n for n in g['nodes'] if n['id'] in names], 'edges':[e for e in g['edges'] if e.get('source') in names and e.get('target') in names]},indent=2)+'\n')
+print('frozen',len(items),'files',sum(m['bytes'] for m in manifest),'bytes')

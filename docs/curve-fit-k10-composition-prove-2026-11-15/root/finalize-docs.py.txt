@@ -1,0 +1,35 @@
+from pathlib import Path
+import json
+r=Path('/home/myungit/Linux_CAD_forFree'); p=Path('/tmp/forgecad-k10-composition-20261115/root')
+t=json.loads((p/'test-summary.json').read_text());g=json.loads((p/'architecture-audit.json').read_text())
+f=r/'docs/curve-fit-k10-composition-2026-11-15.md';s=f.read_text().replace(' Le verifiche integrate sono in corso.',' Verifiche integrate completate.')
+s=s.replace('- Build app, regressioni integrate, sanitizer, audit indipendente e mappa: in corso.',f'''- **Build completa app e runner PASS**: `forgecad-release/forgecad` aggiornato. Warning in codice preesistente (`fk_offset.cpp` e test Qt preesistenti); nessun errore di compilazione né warning nei file modificati in questo blocco.
+- **{t['kernel_distinct']} casi kernel distinti / {t['kernel_executions']} esecuzioni PASS**, su Offset, Shell, Sheet, BoundarySheet, Fill, Projected, Sew, Thicken e sette gruppi Blend.
+- **{t['ctest_suites']}/{t['ctest_suites']} suite CTest PASS** sui binari finali, includendo le cinque nuove regressioni e i test Qt offscreen di modifica poli, pannelli, mapping, storia e anteprime. Una prima corsa avviata prima del termine del runner Qt è conservata come prova preliminare; il conteggio finale usa la riesecuzione dopo la build.
+- **5/5 regressioni ASan/UBSan/LSan PASS**: strumentati il test, `fk_surface_poles.cpp` e `fk_curve_fit_bounds.cpp`; main e resto dell'archivio Release non strumentati. Nessuna certificazione globale dell'app o dei leak al di fuori di questa copertura.
+- **Audit indipendente PASS**: 30 casi su tensore non clamped, pesi estremi, U/V, ritagli, direzioni e istanze; 24 query aggiuntive su nodi e parametri adiacenti rappresentabili. I confronti densi sono controlli del provider, non la fonte del certificato continuo.
+- **Mappa {g['files']} file / {g['edges']} relazioni / {g['units']} unità PASS**, diagnostica vuota, controllo aggiornamento, HTML/JSON identici e collegamenti in ingresso/uscita verificati distinguendo chiamate, include e riferimenti.
+- Hash delle fonti finali, conservazione del lavoro pregresso, flag floating point stretti e assenza di Qt/OCCT nel nuovo target verificati. [Prove ripetibili e manifest](curve-fit-k10-composition-prove-2026-11-15/README.md).''')
+s=s.replace('La variante di grado 27 viene invece rifiutata:', 'La regolarità è verificata anche tramite coefficienti Bernstein e frazioni esatte dei dati double originali: la derivata X resta maggiore di 0,99999999999997 in tutte le campate. La perdita del rilievo non dipende quindi da cuspidi o pieghe. La variante di grado 27 viene invece rifiutata:')
+s=s.replace('I confronti densi sono controlli del provider, non la fonte del certificato continuo.', 'Un ulteriore corpo indipendente di grado 6×1 viene modificato con successo: scarto massimo misurato 9,65e-8 mm a tolleranza 1e-6 mm, checker senza problemi e sorgente immutata. I confronti densi sono controlli del provider, non la fonte del certificato continuo.')
+f.write_text(s)
+f=r/'docs/code-review-2026-11-15.md';s=f.read_text();a=s.index('**Stato più recente:**');b=s.index('\n\n',a)
+s=s[:a]+'''**Stato più recente:** [K10 Modifica poli](curve-fit-k10-composition-2026-11-15.md) corregge bordi NURBS fuori tolleranza dopo la modifica dei poli e separazioni fra facce adiacenti, con limiti continui per SP-curve affini isoparametriche. Sette dei 24 siti iniziali hanno un percorso esatto/certificato per famiglie supportate; 17 ancora da migrare, oltre ai fallback. Build completa e regressioni PASS. Riprodotto un mapping che perde un rilievo del supporto: resta aperto. Il totale dei 24 rilievi precedenti corretti non aumenta: K10 resta aperto.'''+s[b:];f.write_text(s)
+f=r/'docs/curve-fit-k10-boundary-2026-11-15.md';s=f.read_text();s+='\n\n## Prosecuzione\n\nIl blocco successivo [composizione superficie/SP-curve](curve-fit-k10-composition-2026-11-15.md) aggiunge il percorso certificato in Modifica poli per UV affini isoparametriche NURBS, incluso il controllo delle facce adiacenti. Il conteggio aggiornato è 7/24 siti parzialmente trattati e 17 interamente da migrare, oltre ai fallback. Il rapporto conserva anche un difetto distinto del mapping ancora aperto; prove e numeri sopra si riferiscono alla consegna BoundarySheet.\n';f.write_text(s)
+# Rilettura della memoria immediatamente prima di aggiornare la sola voce tematica.
+f=r/'CLAUDE.md';s=f.read_text();a=s.index('**15/11 — K10, composizione');b=s.index('\n**15/11 — K2',a)
+s=s[:a]+f'''**15/11 — K10, composizione superficie/SP-curve con tre agenti GPT-6.1 Sol.**
+Modifica poli: corretto bordo fuori tolleranza10000× con limite continuo sui dati NURBS e UV
+affini isoparametriche originali; fit e controllo di ogni faccia adiacente, sorgente immutata.
+Build completa app/runner,{t['kernel_distinct']}casi kernel/{t['kernel_executions']}esecuzioni,{t['ctest_suites']}CTest,5regressioni normali e
+ASan/UBSan/LSan mirati PASS; baseline fallisce22controlli. Audit30casi+24query PASS.
+Mappa{g['files']}/{g['edges']}/{g['units']}TU,diagnostica vuota/check/HTML/archi PASS. K10 ancora aperto:
+7/24 siti parzialmente trattati,17 restanti più fallback;24 rilievi precedenti corretti e22orfane.
+Mapping riprodotto: perde rilievo0,001mm a tolleranza1e-6; da correggere. Nessuna certificazione
+globale di regolarità/autointersezioni o nuovo test renderer. Riaprire app per usare la build.
+[Prove e limiti](docs/curve-fit-k10-composition-2026-11-15.md),
+[Boundary precedente](docs/curve-fit-k10-boundary-2026-11-15.md),
+[memoria precedente](docs/history/claude-prima-k10-composition-2026-11-15.md).
+''' + s[b:]
+assert len(s.encode())<=16384;f.write_text(s)
+print('Documenti finali aggiornati; CLAUDE bytes',len(s.encode()))

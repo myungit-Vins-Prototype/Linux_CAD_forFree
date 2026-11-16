@@ -1,0 +1,4 @@
+step=0 root=#f0f0f0 hidden=#f0f0f0 menu=#202020
+step=1 root=#111820 hidden=#111820 menu=#d8e4ea
+step=2 root=#f0f0f0 hidden=#f0f0f0 menu=#202020
+PASS icons=210 mode_states=420 changed_in_dark=420 restored_exactly=420 menu_checks=6 Qt=6.12.0

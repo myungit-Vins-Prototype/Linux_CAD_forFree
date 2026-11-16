@@ -1,0 +1,257 @@
+{
+  "files": 772,
+  "edges": 11165,
+  "units": 385,
+  "errors": {},
+  "html_matches": true,
+  "incident_edges": 872,
+  "required_calls": [
+    [
+      "cad_sketch_refs.cpp",
+      "kernel/fk_helix_projection.cpp",
+      "projectHelixCertified"
+    ],
+    [
+      "cad_sketch_refs.cpp",
+      "kernel/fk_helix_projection.cpp",
+      "requireHelixProjection"
+    ],
+    [
+      "kernel/fk_helix_projection.cpp",
+      "kernel/fk_offset.cpp",
+      "fitCurveCertified"
+    ],
+    [
+      "kernel/fk_helix_projection.cpp",
+      "kernel/fk_helix.h",
+      "radialSlope"
+    ],
+    [
+      "kernel/fk_helix_projection.cpp",
+      "kernel/fk_helix.h",
+      "risePerRadian"
+    ],
+    [
+      "tests/test_sketch_projection_fit_validation.h",
+      "cad_sketch_refs.cpp",
+      "appendProjectedCurve"
+    ]
+  ],
+  "removed_symbols": {
+    "forgeCad2026_viewport_selection.cpp": "setSelectedPointPosition",
+    "forgeCad2026_storyboard.cpp": "firstFeature",
+    "kernel/fk_blend.cpp": "Corner::otherFace",
+    "kernel/fk_blend_loop.cpp": "ChainEdge::inPlane",
+    "kernel/fk_fill.cpp": "BandMatrix::band"
+  },
+  "focus": {
+    "CMakeLists.txt": {
+      "description": "Definisce eseguibile e suite; libreria interna condivisa dai runner delle tavole e impronta geometrica limitata alla chiusura delle dipendenze del calcolo.",
+      "incoming": {
+        "call": 0,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 0,
+        "include": 0,
+        "reference": 0
+      }
+    },
+    "cad_sketch_refs.cpp": {
+      "description": "Proiezioni, contatti e Pierce esatti associativi degli schizzi, inclusi contorni apparenti di facce analitiche proiettati lungo la normale anche su piani esterni al corpo: immagini affini delle curve implicite, sorgenti persistenti per chiavi genealogiche, cache automatiche proiettate direttamente dallo snapshot B-rep senza risolvere i nomi appena creati, refresh e conversioni esplicite visibili senza duplicati; identita leggibili persistenti e diagnostica di tutte le sorgenti rotte con i vincoli interessati. Helix con Transformed usa un fit diretto2D con controllo continuo dopo recalculateCurve e pubblicazione atomica. Helix nuda o solo rifilata conserva il percorso quinticoC2 legacy; altri Other restano fallback campionati. Traversal dei wrapper limitato e cancellabile.",
+      "incoming": {
+        "call": 18,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 37,
+        "include": 25,
+        "reference": 0
+      }
+    },
+    "forgeCad2026_storyboard.cpp": {
+      "description": "Albero della storia e cursore; selezione sorgenti delle ripetizioni, integrata con il ponte dei picker di pannello senza modifiche a storia o visibilita.",
+      "incoming": {
+        "call": 7,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 2,
+        "include": 1,
+        "reference": 0
+      }
+    },
+    "forgeCad2026_storyboard.h": {
+      "description": "Albero della storia e cursore; selezione sorgenti delle ripetizioni, integrata con il ponte dei picker di pannello senza modifiche a storia o visibilita.",
+      "incoming": {
+        "call": 2,
+        "include": 5,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 0,
+        "include": 0,
+        "reference": 0
+      }
+    },
+    "forgeCad2026_viewport.h": {
+      "description": "Contratto e stato privato del coordinatore GUI della vista 3D.",
+      "incoming": {
+        "call": 19,
+        "include": 17,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 3,
+        "include": 23,
+        "reference": 0
+      }
+    },
+    "forgeCad2026_viewport_selection.cpp": {
+      "description": "Selezione e riferimenti: policy comune della costruzione per picking, punti, bordi e selezione rettangolare; priorita alla geometria visibile sulle cache associative nascoste; in creazione e modifica mantiene visibili risultati precedenti e stadi esplicitamente selezionati, anche dopo anteprima fallita o Azzera; Esc ripristina la scena finale. Rende tutti i quattro estremi della nuova ellisse selezionabili e candidati snap.",
+      "incoming": {
+        "call": 46,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 39,
+        "include": 1,
+        "reference": 0
+      }
+    },
+    "kernel/CMakeLists.txt": {
+      "description": "Definisce libreria geometrica, test, rilevamento from_chars decimale e arrotondamento coerente senza contrazione FMA implicita nei chiamanti CPU C++/Objective-C++.",
+      "incoming": {
+        "call": 0,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 0,
+        "include": 0,
+        "reference": 0
+      }
+    },
+    "kernel/fk_blend.cpp": {
+      "description": "Raccordi e smussi analitici: priorita al rifilo locale dei contorni piani chiusi e tangenti, preparazione anticipata degli appoggi NURBS G1 certificati per le facce selezionate, riuso della composizione e genealogia esplicita, ripiego sulle carte originali senza ripetere i tentativi composti; sezioni, utensili su appoggi curvi, catene tangenti, contorni misti, pezze terminali e raggi zero agli estremi aperti.",
+      "incoming": {
+        "call": 26,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 34,
+        "include": 21,
+        "reference": 0
+      }
+    },
+    "kernel/fk_blend_loop.cpp": {
+      "description": "Raccordi e smussi dei bordi di forma libera (spline, NURBS, ellissi, e i segmenti e gli archi che li continuano) tra una faccia piana T e i suoi fianchi paralleli alla normale di T (i bordi superiori e inferiori dei solidi estrusi, anche i fori e le tasche).",
+      "incoming": {
+        "call": 4,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 23,
+        "include": 14,
+        "reference": 0
+      }
+    },
+    "kernel/fk_fill.cpp": {
+      "description": "Riempimenti con guide e contatti G0/G1/G2; bordi NURBS e rette proiettati esattamente nel piano dei parametri, fit campionato per tipi restanti; controlli di superficie e continuita.",
+      "incoming": {
+        "call": 5,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 20,
+        "include": 10,
+        "reference": 0
+      }
+    },
+    "kernel/fk_helix.h": {
+      "description": "Eliche (cilindriche e coniche) e spirali piane (di Archimede).",
+      "incoming": {
+        "call": 19,
+        "include": 22,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 1,
+        "include": 2,
+        "reference": 0
+      }
+    },
+    "kernel/fk_helix_projection.cpp": {
+      "description": "Proiezione di Helix nel parametro originale: snapshot di coefficienti IEEE, wrapper e frame; intervalli trigonometrici outward e resto Hermite continuo, fit cubico e ricontrollo dei poli2D effettivi, risorse finite e cancellazione. Nessuna certificazione del percorso quintico diretto legacy.",
+      "incoming": {
+        "call": 3,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 8,
+        "include": 2,
+        "reference": 0
+      }
+    },
+    "kernel/fk_helix_projection.h": {
+      "description": "Proiezione di Helix nel parametro originale: snapshot di coefficienti IEEE, wrapper e frame; intervalli trigonometrici outward e resto Hermite continuo, fit cubico e ricontrollo dei poli2D effettivi, risorse finite e cancellazione. Nessuna certificazione del percorso quintico diretto legacy.",
+      "incoming": {
+        "call": 0,
+        "include": 3,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 0,
+        "include": 2,
+        "reference": 0
+      }
+    },
+    "tests/test_sketch_projection_fit_validation.h": {
+      "description": "Tredici gruppi Qt sulla proiezione Helix: due alias negativi a un milione di giri, otto varianti con pose/trim/affini/spirale e budget invariati, compatibilita quintica diretta, atomicita di errori e cancellazione, contratto e poli finali; exporter originale/effettivo in floathex.",
+      "incoming": {
+        "call": 2,
+        "include": 1,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 14,
+        "include": 7,
+        "reference": 0
+      }
+    },
+    "tests/test_viewport.cpp": {
+      "description": "Verifica: Vista e interazione.",
+      "incoming": {
+        "call": 75,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 195,
+        "include": 150,
+        "reference": 0
+      }
+    },
+    "tools/generate_architecture.py": {
+      "description": "Implementazione: generate architecture.",
+      "incoming": {
+        "call": 0,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 0,
+        "include": 0,
+        "reference": 0
+      }
+    }
+  }
+}

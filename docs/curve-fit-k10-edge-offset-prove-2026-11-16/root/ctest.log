@@ -1,0 +1,53 @@
+Test project /home/myungit/Linux_CAD_forFree/forgecad-release
+      Start   3: forgecad_geometry_sources_tests
+ 1/24 Test   #3: forgecad_geometry_sources_tests ..................   Passed    0.04 sec
+      Start  32: forgecad_function_panels_tests
+ 2/24 Test  #32: forgecad_function_panels_tests ...................   Passed    1.53 sec
+      Start  66: forgecad_edit_preview_reuse_tests
+ 3/24 Test  #66: forgecad_edit_preview_reuse_tests ................   Passed    0.40 sec
+      Start 114: forgecad_surface_mapping_tests
+ 4/24 Test #114: forgecad_surface_mapping_tests ...................   Passed    1.45 sec
+      Start 126: forgecad_ellipse_extremes_tests
+ 5/24 Test #126: forgecad_ellipse_extremes_tests ..................   Passed    0.10 sec
+      Start 131: forgecad_thicken_tests
+ 6/24 Test #131: forgecad_thicken_tests ...........................   Passed    0.09 sec
+      Start 132: forgecad_projection_tests
+ 7/24 Test #132: forgecad_projection_tests ........................   Passed    0.14 sec
+      Start 186: forgecad_sketch_offset_validation_tests
+ 8/24 Test #186: forgecad_sketch_offset_validation_tests ..........   Passed    4.17 sec
+      Start 194: forgekernel_tolerance_tests
+ 9/24 Test #194: forgekernel_tolerance_tests ......................   Passed    0.36 sec
+      Start 207: forgekernel_offset_validation_tests
+10/24 Test #207: forgekernel_offset_validation_tests ..............   Passed    0.07 sec
+      Start 208: forgekernel_curve_fit_validation_tests
+11/24 Test #208: forgekernel_curve_fit_validation_tests ...........   Passed   18.41 sec
+      Start 209: forgekernel_offset_split_crease_tests
+12/24 Test #209: forgekernel_offset_split_crease_tests ............   Passed    1.82 sec
+      Start 220: forgekernel_surface_mapping_tests
+13/24 Test #220: forgekernel_surface_mapping_tests ................   Passed    0.25 sec
+      Start 226: forgekernel_sweep_validation_tests
+14/24 Test #226: forgekernel_sweep_validation_tests ...............   Passed  104.75 sec
+      Start 227: forgekernel_sheet_fit_validation_tests
+15/24 Test #227: forgekernel_sheet_fit_validation_tests ...........   Passed    1.41 sec
+      Start 228: forgekernel_curve_projection_tests
+16/24 Test #228: forgekernel_curve_projection_tests ...............   Passed    0.01 sec
+      Start 229: forgekernel_boundary_fit_validation_tests
+17/24 Test #229: forgekernel_boundary_fit_validation_tests ........   Passed    0.38 sec
+      Start 230: forgekernel_surface_curve_fit_validation_tests
+18/24 Test #230: forgekernel_surface_curve_fit_validation_tests ...   Passed    0.63 sec
+      Start 231: forgekernel_mapping_carrier_validation_tests
+19/24 Test #231: forgekernel_mapping_carrier_validation_tests .....   Passed    1.30 sec
+      Start 232: forgekernel_mapping_diagonal_validation_tests
+20/24 Test #232: forgekernel_mapping_diagonal_validation_tests ....   Passed    0.78 sec
+      Start 233: forgekernel_planar_flatten_validation_tests
+21/24 Test #233: forgekernel_planar_flatten_validation_tests ......   Passed    1.31 sec
+      Start 234: forgekernel_planar_thicken_validation_tests
+22/24 Test #234: forgekernel_planar_thicken_validation_tests ......   Passed    1.59 sec
+      Start 235: forgekernel_projection_fit_validation_tests
+23/24 Test #235: forgekernel_projection_fit_validation_tests ......   Passed    3.65 sec
+      Start 236: forgekernel_edge_offset_fit_validation_tests
+24/24 Test #236: forgekernel_edge_offset_fit_validation_tests .....   Passed   11.11 sec
+
+100% tests passed out of 24
+
+Total Test time (real) = 155.77 sec

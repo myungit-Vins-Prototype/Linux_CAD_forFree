@@ -1,0 +1,25 @@
+from pathlib import Path
+import subprocess,json,time,re,os,sys
+R=Path('/home/myungit/Linux_CAD_forFree');T=R/'docs/review-k10-uv-preview-prove-2026-11-16/root'
+def run(name,cmd,env=None):
+ start=time.monotonic()
+ with (T/(name+'.log')).open('w') as log:p=subprocess.run(cmd,cwd=R,stdout=log,stderr=subprocess.STDOUT,env=env)
+ result=dict(exit=p.returncode,seconds=time.monotonic()-start,command=cmd)
+ (T/(name+'-result.json')).write_text(json.dumps(result,indent=2)+'\n');print(name,result,flush=True)
+ if p.returncode:print((T/(name+'.log')).read_text()[-3500:],flush=True);raise SystemExit(p.returncode)
+ return result
+# Full build includes app, kernel and view runner.
+run('build',['cmake','--build','forgecad-release','--parallel','2'])
+previous=json.loads((R/'docs/supporto-booleana-prove-2026-11-16/root/ctest-result.json').read_text())['tests']
+wanted=sorted(set(previous)|{'forgekernel_offset_pcurve_tests','forgecad_preview_selection_state_tests','forgecad_function_panels_tests','forgekernel_offset_validation_tests','forgekernel_projection_fit_validation_tests','forgekernel_planar_thicken_validation_tests'})
+registered=json.loads(subprocess.check_output(['ctest','--test-dir','forgecad-release','--show-only=json-v1'],cwd=R))
+actual={t['name'] for t in registered['tests']};missing=set(wanted)-actual;assert not missing,missing
+regex='^('+'|'.join(map(re.escape,wanted))+')$'
+r=run('ctest',['ctest','--test-dir','forgecad-release','--output-on-failure','--parallel','1','-V','-R',regex])
+text=(T/'ctest.log').read_text();assert '100% tests passed' in text
+assert 'PRE7 RESULT passed=79 failed=0' in text,text[-3000:]
+assert re.search(r'10 passed 0 failed',text)
+r.update(actual_passed=len(wanted),tests=wanted,new_pcurve_groups=10,new_preview_assertions=79);(T/'ctest-result.json').write_text(json.dumps(r,indent=2)+'\n')
+run('offset',['forgecad-release/kernel/forgekernel_tests','Offset'])
+run('shell',['forgecad-release/kernel/forgekernel_tests','Shell'])
+print('ALL CHECKS PASS',flush=True)

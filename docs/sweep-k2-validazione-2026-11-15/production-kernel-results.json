@@ -1,0 +1,32 @@
+[
+  {
+    "filter": "Sweep",
+    "returncode": 0,
+    "seconds": 171.749
+  },
+  {
+    "filter": "BodyIORoundTrip",
+    "returncode": 0,
+    "seconds": 1.699
+  },
+  {
+    "filter": "BooleanParallelMatchesSequential",
+    "returncode": 0,
+    "seconds": 2.582
+  },
+  {
+    "filter": "OffsetFacesSpring",
+    "returncode": 0,
+    "seconds": 9.965
+  },
+  {
+    "filter": "BlendSweptTubeCap",
+    "returncode": 0,
+    "seconds": 0.539
+  },
+  {
+    "filter": "StepWriteReadByOcct",
+    "returncode": 0,
+    "seconds": 50.432
+  }
+]

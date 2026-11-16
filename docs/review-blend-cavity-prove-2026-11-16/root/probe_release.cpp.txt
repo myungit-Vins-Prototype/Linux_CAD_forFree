@@ -1,0 +1,32 @@
+#include "fk_blend.h"
+#include "fk_blend_contour.h"
+#include "fk_body_io.h"
+#include "fk_body_check.h"
+#include "fk_bspline.h"
+#include "fk_bspline_surface.h"
+#include <algorithm>
+#include "fk_history.h"
+#include "fk_tessellate.h"
+#include "fk_transform.h"
+#include <fstream>
+#include <iostream>
+#include <iomanip>
+#include <iterator>
+#include <set>
+using namespace ForgeCad::Kernel;
+struct Case {const char*label;double radius;int seed;bool reverse;double scale;bool pose;};
+static void require(bool b,const char*m){if(!b)throw std::runtime_error(m);}
+int main(int argc,char**argv){
+ std::ifstream f("/tmp/blend-cavity-review/tests/baseline/blend_cavity_loft.body",std::ios::binary);std::string bytes(std::istreambuf_iterator<char>(f),{});const auto original=readBodyBinary(bytes);
+ const Case cases[]={{"r05-reversed",.5,10,true,1,false},{"r05-forward",.5,10,false,1,false},{"r05-seed17",.5,17,false,1,false},{"r05-rigid-pose",.5,3,true,1,true},{"r05-scale25",1.25,19,true,2.5,false},{"r11-control",1.1,10,false,1,false},{"r1675-control",1.675,10,true,1,false},{"r21-consumed-guard",2.1,10,false,1,false}};
+ int fail=0;
+ for(const auto&c:cases){if(argc>1&&std::string(argv[1])!=c.label)continue;Body body=original;Transform3 transform=Transform3::scaling({},c.scale);if(c.pose)transform=Transform3::translation({7,-4,2})*Transform3::rotation({},Vec3(1,2,3),.42)*transform;if(c.scale!=1||c.pose)body=transformBody(original,transform);auto before=writeBodyBinary(body);auto contour=blendCavityContour(body,EdgeId(c.seed));if(c.reverse)std::reverse(contour.begin(),contour.end());
+ std::cerr<<"BEGIN "<<c.label<<std::endl;bool ok=false,expectedGuard=c.radius==2.1;std::string error;int faces=0,issues=-1,roundtrip=-1,generated=0,undeclared=0,missingPC=0,tessFailed=-1;double radiusError=0,edgeTolerance=0,finTolerance=0;bool immutable=false;
+ try{BodyHistory h;auto result=blendEdges(body,contour,c.radius,false,&h,c.radius>1.5);faces=result.faces().size();issues=checkBody(result,{true,true}).size();roundtrip=checkBody(readBodyBinary(writeBodyBinary(result)),{true,true}).size();for(auto edge:result.edges())edgeTolerance=std::max(edgeTolerance,result.edge(edge).tolerance);for(auto fin:result.fins()){missingPC+=!result.fin(fin).pcurve;finTolerance=std::max(finTolerance,result.fin(fin).pcurveTolerance);}for(auto face:result.faces()){undeclared+=!h.isDeclared(EntityKind::Face,face.index);bool blend=false;for(const auto&link:h.origins(EntityKind::Face,face.index))blend|=link.kind==EntityKind::Edge&&link.relation==HistoryRelation::Generated;if(!blend)continue;++generated;auto s=dynamic_cast<const BSplineSurface*>(result.face(face).surface.get());require(s&&s->vDegree()==2,"generated blend must be rational quadratic across radius");for(double fraction:{.2,.5,.8}){double u=s->uDomain().lo+fraction*s->uDomain().length();auto p=s->point(u,0),q=s->point(u,.5),r=s->point(u,1);auto a=q-p,b=r-p,n=cross(a,b);require(norm(n)>0,"collapsed radius section");auto center=p+(squaredNorm(a)*cross(b,n)+squaredNorm(b)*cross(n,a))/(2*squaredNorm(n));for(double v:{0.,.25,.5,.75,1.})radiusError=std::max(radiusError,std::abs(distance(center,s->point(u,v))-c.radius));}}
+ TessellationOptions options;options.deflection=.05*c.scale;options.threads=2;tessFailed=tessellate(result,options).failedFaces;
+ std::ofstream output(std::string("/tmp/blend-cavity-review/root/release-results/")+c.label+"-actual.body",std::ios::binary);output<<writeBodyBinary(result);require(faces==18&&issues==0&&roundtrip==0&&generated==10&&undeclared==0&&missingPC==0&&tessFailed==0,"actual topology/history/pcurves/tessellation contract");require(radiusError<=1e-7,"original radius tolerance exceeded");require(!expectedGuard,"consumed support was accepted");ok=true;
+ }catch(const std::exception&e){error=e.what();ok=expectedGuard&&error.find("raggio troppo grande: il raccordo consuma o inverte la faccia")!=std::string::npos;}
+ immutable=writeBodyBinary(body)==before&&writeBodyBinary(original)==bytes;if(!immutable)ok=false;if(!ok)++fail;
+ std::cout<<std::setprecision(17)<<"{\"label\":"<<std::quoted(c.label)<<",\"radius\":"<<c.radius<<",\"seed\":"<<c.seed<<",\"reverse\":"<<(c.reverse?"true":"false")<<",\"scale\":"<<c.scale<<",\"rigid_pose\":"<<(c.pose?"true":"false")<<",\"expected_consumed_rejection\":"<<(expectedGuard?"true":"false")<<",\"pass\":"<<(ok?"true":"false")<<",\"error\":"<<std::quoted(error)<<",\"faces\":"<<faces<<",\"issues\":"<<issues<<",\"roundtrip_issues\":"<<roundtrip<<",\"generated_faces\":"<<generated<<",\"undeclared_faces\":"<<undeclared<<",\"missing_pcurves\":"<<missingPC<<",\"tessellation_failed_faces\":"<<tessFailed<<",\"max_radius_error\":"<<radiusError<<",\"max_edge_tolerance\":"<<edgeTolerance<<",\"max_fin_tolerance\":"<<finTolerance<<",\"source_immutable\":"<<(immutable?"true":"false")<<",\"contour\":[";for(std::size_t i=0;i<contour.size();++i){if(i)std::cout<<',';std::cout<<contour[i].index;}std::cout<<"]}\n"<<std::flush;
+ }return fail?1:0;
+}

@@ -1,0 +1,12 @@
+rational=0 posed=0 bound=6.7532230144642644e-16 dense=0
+pc_shift rejected=Appiattimento affine: SP-curve oltre budget.
+rational=0 posed=1 bound=1.8887179755703745e-15 dense=1.6033500209773542e-15
+pc_shift rejected=Appiattimento affine: SP-curve oltre budget.
+rational=1 posed=0 bound=6.7532230144642644e-16 dense=0
+pc_shift rejected=Appiattimento affine: SP-curve oltre budget.
+rational=1 posed=1 bound=1.8887179755703745e-15 dense=1.4087150935148696e-15
+pc_shift rejected=Appiattimento affine: SP-curve oltre budget.
+null_roundtrip rejected=Appiattimento affine: bordo/SP-curve assente.
+infinite_vertex rejected=Appiattimento affine: intervallo non risolto.
+vertex bound=1.9000000000000015e-08
+checks=11 PASS

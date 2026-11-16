@@ -1,0 +1,2 @@
+RECOVERY 32MiB dati ripetuti: 14ms, UI timer 10, 1860 byte
+PASS recovery: debounce/max attesa, idle, thread UI, due slot/fallback, importati, reset in corsa, SIGKILL, lock, UI copia/Salva/rigenerazione

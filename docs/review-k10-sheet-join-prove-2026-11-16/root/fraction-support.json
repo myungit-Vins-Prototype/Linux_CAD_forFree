@@ -1,0 +1,667 @@
+[
+  {
+    "case": "canonical-reversal",
+    "sha256": "b6e3df2d0f9914826ab95b6b498e1032c567172dcd348b9ad0c6a34f7cdbd1a4",
+    "identity_basis": "actual declared genealogy, operand0 EntityKind::Face; unique ancestor required",
+    "records": [
+      {
+        "pass": true,
+        "cells": 1,
+        "upper_mm": 1.4666361406524722e-16,
+        "original_domain": [
+          "0",
+          "1",
+          "0",
+          "1"
+        ],
+        "budget": 1e-07,
+        "source_face": 0,
+        "target_face": 0
+      },
+      {
+        "pass": true,
+        "cells": 1,
+        "upper_mm": 4.9203241380552004e-17,
+        "original_domain": [
+          "0",
+          "1",
+          "0",
+          "1"
+        ],
+        "budget": 1e-07,
+        "source_face": 1,
+        "target_face": 1
+      }
+    ]
+  },
+  {
+    "case": "face-sense",
+    "sha256": "86d38ffef7ce9a708840559742d5c5e5ab44167c8317c485f3adc4b771e49649",
+    "identity_basis": "actual declared genealogy, operand0 EntityKind::Face; unique ancestor required",
+    "records": [
+      {
+        "pass": true,
+        "cells": 1,
+        "upper_mm": 1.4666361406524722e-16,
+        "original_domain": [
+          "0",
+          "1",
+          "0",
+          "1"
+        ],
+        "budget": 1e-07,
+        "source_face": 0,
+        "target_face": 0
+      },
+      {
+        "pass": true,
+        "cells": 1,
+        "upper_mm": 5.93775941048726e-17,
+        "original_domain": [
+          "0",
+          "1",
+          "0",
+          "1"
+        ],
+        "budget": 1e-07,
+        "source_face": 1,
+        "target_face": 1
+      }
+    ]
+  },
+  {
+    "case": "implicit-polynomial",
+    "sha256": "7c88fde28d67dae1e6b0f3561f80d7c043b6408f97bf5f2b7d4403f79738d04a",
+    "identity_basis": "actual declared genealogy, operand0 EntityKind::Face; unique ancestor required",
+    "records": [
+      {
+        "pass": true,
+        "cells": 1,
+        "upper_mm": 1.4666361406524722e-16,
+        "original_domain": [
+          "0",
+          "1",
+          "0",
+          "1"
+        ],
+        "budget": 1e-07,
+        "source_face": 0,
+        "target_face": 0
+      },
+      {
+        "pass": true,
+        "cells": 1,
+        "upper_mm": 5.93775941048726e-17,
+        "original_domain": [
+          "0",
+          "1",
+          "0",
+          "1"
+        ],
+        "budget": 1e-07,
+        "source_face": 1,
+        "target_face": 1
+      }
+    ]
+  },
+  {
+    "case": "large-scale",
+    "sha256": "f06e583a083fe64b28443cb8dbbe54a5b7266b3bce316da67c78251e1d6d143b",
+    "identity_basis": "actual declared genealogy, operand0 EntityKind::Face; unique ancestor required",
+    "records": [
+      {
+        "pass": true,
+        "cells": 1,
+        "upper_mm": 9.889478702186139e-14,
+        "original_domain": [
+          "0",
+          "1",
+          "0",
+          "1"
+        ],
+        "budget": 1e-07,
+        "source_face": 0,
+        "target_face": 0
+      },
+      {
+        "pass": true,
+        "cells": 1,
+        "upper_mm": 2.278602662407681e-13,
+        "original_domain": [
+          "0",
+          "1",
+          "0",
+          "1"
+        ],
+        "budget": 1e-07,
+        "source_face": 1,
+        "target_face": 1
+      }
+    ]
+  },
+  {
+    "case": "lower-boundary",
+    "sha256": "43d3694b5897f2477b072321c3da342534b18503f5257653df8426d7c2a0c059",
+    "identity_basis": "actual declared genealogy, operand0 EntityKind::Face; unique ancestor required",
+    "records": [
+      {
+        "pass": true,
+        "cells": 1,
+        "upper_mm": 2.0121902742388924e-17,
+        "original_domain": [
+          "0",
+          "1",
+          "0",
+          "1"
+        ],
+        "budget": 1e-07,
+        "source_face": 0,
+        "target_face": 0
+      },
+      {
+        "pass": true,
+        "cells": 1,
+        "upper_mm": 1.202341740415234e-16,
+        "original_domain": [
+          "0",
+          "1",
+          "0",
+          "1"
+        ],
+        "budget": 1e-07,
+        "source_face": 1,
+        "target_face": 1
+      }
+    ]
+  },
+  {
+    "case": "rational",
+    "sha256": "33e711161f1d8aadfe3ffd718446c99a33c2ed02473c6214438f7f1bba8d42d8",
+    "identity_basis": "actual declared genealogy, operand0 EntityKind::Face; unique ancestor required",
+    "records": [
+      {
+        "pass": true,
+        "cells": 1,
+        "upper_mm": 2.5978573821277735e-16,
+        "original_domain": [
+          "0",
+          "1",
+          "0",
+          "1"
+        ],
+        "budget": 1e-07,
+        "source_face": 0,
+        "target_face": 0
+      },
+      {
+        "pass": true,
+        "cells": 1,
+        "upper_mm": 3.3982560979427197e-16,
+        "original_domain": [
+          "0",
+          "1",
+          "0",
+          "1"
+        ],
+        "budget": 1e-07,
+        "source_face": 1,
+        "target_face": 1
+      }
+    ]
+  },
+  {
+    "case": "reverse-selection",
+    "sha256": "781dd05bd27ef2098dd6e5b27a8badfe750453c853d9a87be098eb00405760b3",
+    "identity_basis": "actual declared genealogy, operand0 EntityKind::Face; unique ancestor required",
+    "records": [
+      {
+        "pass": true,
+        "cells": 1,
+        "upper_mm": 1.4760954979789409e-16,
+        "original_domain": [
+          "0",
+          "1",
+          "0",
+          "1"
+        ],
+        "budget": 1e-07,
+        "source_face": 0,
+        "target_face": 0
+      },
+      {
+        "pass": true,
+        "cells": 1,
+        "upper_mm": 3.384918299322059e-16,
+        "original_domain": [
+          "0",
+          "1",
+          "0",
+          "1"
+        ],
+        "budget": 1e-07,
+        "source_face": 1,
+        "target_face": 1
+      }
+    ]
+  },
+  {
+    "case": "rigid-pose",
+    "sha256": "2ba80b4d7f269de3212bd2bc7726ce7aac80fa111269283026cdb6c2b3f84994",
+    "identity_basis": "actual declared genealogy, operand0 EntityKind::Face; unique ancestor required",
+    "records": [
+      {
+        "pass": true,
+        "cells": 1,
+        "upper_mm": 9.093174557204836e-16,
+        "original_domain": [
+          "0",
+          "1",
+          "0",
+          "1"
+        ],
+        "budget": 1e-07,
+        "source_face": 0,
+        "target_face": 0
+      },
+      {
+        "pass": true,
+        "cells": 1,
+        "upper_mm": 6.844840284245665e-16,
+        "original_domain": [
+          "0",
+          "1",
+          "0",
+          "1"
+        ],
+        "budget": 1e-07,
+        "source_face": 1,
+        "target_face": 1
+      }
+    ]
+  },
+  {
+    "case": "small-scale",
+    "sha256": "defc6f33c2cac3ade0a3dc2a8494b1cef72065ed042e5134daf9d7b2928bca90",
+    "identity_basis": "actual declared genealogy, operand0 EntityKind::Face; unique ancestor required",
+    "records": [
+      {
+        "pass": true,
+        "cells": 1,
+        "upper_mm": 8.365515433940215e-19,
+        "original_domain": [
+          "0",
+          "1",
+          "0",
+          "1"
+        ],
+        "budget": 1e-07,
+        "source_face": 0,
+        "target_face": 0
+      },
+      {
+        "pass": true,
+        "cells": 1,
+        "upper_mm": 1.8130946294172872e-18,
+        "original_domain": [
+          "0",
+          "1",
+          "0",
+          "1"
+        ],
+        "budget": 1e-07,
+        "source_face": 1,
+        "target_face": 1
+      }
+    ]
+  },
+  {
+    "case": "tangent-canonical-reversal",
+    "sha256": "f2c11ec3e207713c5179f308aa11b92a1c6dbf6f9049a9e89e5ac50a57ecc00f",
+    "identity_basis": "actual declared genealogy, operand0 EntityKind::Face; unique ancestor required",
+    "records": [
+      {
+        "pass": true,
+        "cells": 1,
+        "upper_mm": 1.4422337636787494e-16,
+        "original_domain": [
+          "0",
+          "1",
+          "0",
+          "1"
+        ],
+        "budget": 1e-07,
+        "source_face": 0,
+        "target_face": 0
+      },
+      {
+        "pass": true,
+        "cells": 1,
+        "upper_mm": 1.6819421060454953e-16,
+        "original_domain": [
+          "0",
+          "1",
+          "0",
+          "1"
+        ],
+        "budget": 1e-07,
+        "source_face": 1,
+        "target_face": 1
+      }
+    ]
+  },
+  {
+    "case": "tangent-face-sense",
+    "sha256": "5038b20daeafb872421f55e4f9886cf8f68235ae80484a9ccdf802faeb5f9449",
+    "identity_basis": "actual declared genealogy, operand0 EntityKind::Face; unique ancestor required",
+    "records": [
+      {
+        "pass": true,
+        "cells": 1,
+        "upper_mm": 1.4422337636787494e-16,
+        "original_domain": [
+          "0",
+          "1",
+          "0",
+          "1"
+        ],
+        "budget": 1e-07,
+        "source_face": 0,
+        "target_face": 0
+      },
+      {
+        "pass": true,
+        "cells": 1,
+        "upper_mm": 1.6819421060454953e-16,
+        "original_domain": [
+          "0",
+          "1",
+          "0",
+          "1"
+        ],
+        "budget": 1e-07,
+        "source_face": 1,
+        "target_face": 1
+      }
+    ]
+  },
+  {
+    "case": "tangent-large-scale",
+    "sha256": "1885a2059f4e779cc53de364c98ee1403de482d897f9f2950a31214b2c75b20d",
+    "identity_basis": "actual declared genealogy, operand0 EntityKind::Face; unique ancestor required",
+    "records": [
+      {
+        "pass": true,
+        "cells": 1,
+        "upper_mm": 9.695057746518632e-14,
+        "original_domain": [
+          "0",
+          "1",
+          "0",
+          "1"
+        ],
+        "budget": 1e-07,
+        "source_face": 0,
+        "target_face": 0
+      },
+      {
+        "pass": true,
+        "cells": 1,
+        "upper_mm": 9.050212620501209e-14,
+        "original_domain": [
+          "0",
+          "1",
+          "0",
+          "1"
+        ],
+        "budget": 1e-07,
+        "source_face": 1,
+        "target_face": 1
+      }
+    ]
+  },
+  {
+    "case": "tangent-lower-boundary",
+    "sha256": "6e710b920f5b6d270891163250214715acbadc1259d77498f36a3b061bc704e6",
+    "identity_basis": "actual declared genealogy, operand0 EntityKind::Face; unique ancestor required",
+    "records": [
+      {
+        "pass": true,
+        "cells": 1,
+        "upper_mm": 7.703257301488817e-18,
+        "original_domain": [
+          "0",
+          "1",
+          "0",
+          "1"
+        ],
+        "budget": 1e-07,
+        "source_face": 0,
+        "target_face": 0
+      },
+      {
+        "pass": true,
+        "cells": 1,
+        "upper_mm": 6.250730637177629e-17,
+        "original_domain": [
+          "0",
+          "1",
+          "0",
+          "1"
+        ],
+        "budget": 1e-07,
+        "source_face": 1,
+        "target_face": 1
+      }
+    ]
+  },
+  {
+    "case": "tangent-polynomial",
+    "sha256": "afd35dc603a79e9551c95160c8078db5bca16e193e710faf8a1d037c532f5d0e",
+    "identity_basis": "actual declared genealogy, operand0 EntityKind::Face; unique ancestor required",
+    "records": [
+      {
+        "pass": true,
+        "cells": 1,
+        "upper_mm": 1.4422337636787494e-16,
+        "original_domain": [
+          "0",
+          "1",
+          "0",
+          "1"
+        ],
+        "budget": 1e-07,
+        "source_face": 0,
+        "target_face": 0
+      },
+      {
+        "pass": true,
+        "cells": 1,
+        "upper_mm": 1.6819421060454953e-16,
+        "original_domain": [
+          "0",
+          "1",
+          "0",
+          "1"
+        ],
+        "budget": 1e-07,
+        "source_face": 1,
+        "target_face": 1
+      }
+    ]
+  },
+  {
+    "case": "tangent-rational",
+    "sha256": "14eaad3c6bc48dfb9e57b63a0c3391ebcccfe8fce1ee8853f7d20a717e31da29",
+    "identity_basis": "actual declared genealogy, operand0 EntityKind::Face; unique ancestor required",
+    "records": [
+      {
+        "pass": true,
+        "cells": 1,
+        "upper_mm": 2.560507561723659e-16,
+        "original_domain": [
+          "0",
+          "1",
+          "0",
+          "1"
+        ],
+        "budget": 1e-07,
+        "source_face": 0,
+        "target_face": 0
+      },
+      {
+        "pass": true,
+        "cells": 1,
+        "upper_mm": 3.453749017780107e-16,
+        "original_domain": [
+          "0",
+          "1",
+          "0",
+          "1"
+        ],
+        "budget": 1e-07,
+        "source_face": 1,
+        "target_face": 1
+      }
+    ]
+  },
+  {
+    "case": "tangent-reverse-selection",
+    "sha256": "d3da60097498f9ef8dffe63a928a1d0521b054c03579af5ae0f80f7d4563987b",
+    "identity_basis": "actual declared genealogy, operand0 EntityKind::Face; unique ancestor required",
+    "records": [
+      {
+        "pass": true,
+        "cells": 1,
+        "upper_mm": 1.4422337636787494e-16,
+        "original_domain": [
+          "0",
+          "1",
+          "0",
+          "1"
+        ],
+        "budget": 1e-07,
+        "source_face": 0,
+        "target_face": 0
+      },
+      {
+        "pass": true,
+        "cells": 1,
+        "upper_mm": 1.6819421060454953e-16,
+        "original_domain": [
+          "0",
+          "1",
+          "0",
+          "1"
+        ],
+        "budget": 1e-07,
+        "source_face": 1,
+        "target_face": 1
+      }
+    ]
+  },
+  {
+    "case": "tangent-rigid-pose",
+    "sha256": "17010fd7add45826790bf2f0167911adef9a0d6bb14754f69626fc9dd677dd13",
+    "identity_basis": "actual declared genealogy, operand0 EntityKind::Face; unique ancestor required",
+    "records": [
+      {
+        "pass": true,
+        "cells": 1,
+        "upper_mm": 5.145312990624744e-16,
+        "original_domain": [
+          "0",
+          "1",
+          "0",
+          "1"
+        ],
+        "budget": 1e-07,
+        "source_face": 0,
+        "target_face": 0
+      },
+      {
+        "pass": true,
+        "cells": 1,
+        "upper_mm": 6.267939563844509e-16,
+        "original_domain": [
+          "0",
+          "1",
+          "0",
+          "1"
+        ],
+        "budget": 1e-07,
+        "source_face": 1,
+        "target_face": 1
+      }
+    ]
+  },
+  {
+    "case": "tangent-small-scale",
+    "sha256": "b2506abc54aa7801c7322c244496472fee0acf4fdde5160203bf63db0a6c04f0",
+    "identity_basis": "actual declared genealogy, operand0 EntityKind::Face; unique ancestor required",
+    "records": [
+      {
+        "pass": true,
+        "cells": 1,
+        "upper_mm": 9.6719514666213e-20,
+        "original_domain": [
+          "0",
+          "1",
+          "0",
+          "1"
+        ],
+        "budget": 1e-07,
+        "source_face": 0,
+        "target_face": 0
+      },
+      {
+        "pass": true,
+        "cells": 1,
+        "upper_mm": 1.782257711451102e-18,
+        "original_domain": [
+          "0",
+          "1",
+          "0",
+          "1"
+        ],
+        "budget": 1e-07,
+        "source_face": 1,
+        "target_face": 1
+      }
+    ]
+  },
+  {
+    "case": "tangent-trimmed-support",
+    "sha256": "8cb1e2b57f2bb326daa99b10f881001049c3130eee14fbd7d86a60343a7379c2",
+    "identity_basis": "actual declared genealogy, operand0 EntityKind::Face; unique ancestor required",
+    "records": [
+      {
+        "pass": true,
+        "cells": 5,
+        "upper_mm": 0.0,
+        "original_domain": [
+          "0",
+          "1",
+          "0",
+          "2"
+        ],
+        "budget": 1e-07,
+        "source_face": 0,
+        "target_face": 0
+      },
+      {
+        "pass": true,
+        "cells": 5,
+        "upper_mm": 0.0,
+        "original_domain": [
+          "0",
+          "1",
+          "0",
+          "2"
+        ],
+        "budget": 1e-07,
+        "source_face": 1,
+        "target_face": 1
+      }
+    ]
+  }
+]

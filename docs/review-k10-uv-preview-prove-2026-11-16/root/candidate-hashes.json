@@ -1,0 +1,26 @@
+{
+  "kernel/fk_offset.cpp": {
+    "path": "/tmp/k10-uv-review/core/fk_offset.cpp",
+    "sha256": "acc3fbd56d2a7abfb3eb91004b9defe9dbe088537b0066f783537f0f7d0bdbcf"
+  },
+  "kernel/fk_curve_fit_bounds.cpp": {
+    "path": "/tmp/k10-uv-review/core/fk_curve_fit_bounds.cpp",
+    "sha256": "3faf91d68ee1511dd31c2c6a37a6c51dd1da8a49286c54873739b102b268052e"
+  },
+  "kernel/fk_curve_fit_bounds.h": {
+    "path": "/tmp/k10-uv-review/core/fk_curve_fit_bounds.h",
+    "sha256": "d170150fbf55dd68415d800baac04cd2f2a6182ec3ea6f6d53f0fabad49a5b41"
+  },
+  "forgeCad2026_dialogs_mapping.cpp": {
+    "path": "/tmp/preview-next-review/delivery/forgeCad2026_dialogs_mapping.cpp",
+    "sha256": "3075692e4f16b98eff7ee23831121aaeb9ea5381e6073aa78681d6189877c3e2"
+  },
+  "tests/test_preview_selection_state.h": {
+    "path": "/tmp/preview-next-review/delivery/test_preview_selection_state.h",
+    "sha256": "85e49ae639bb95350ff146ef265f87eeaab0d07dc7cb28a8471cc6e296d1b1c3"
+  },
+  "kernel/tests/test_offset_pcurve_validation.cpp": {
+    "path": "/tmp/k10-uv-review/tests/test_uv_offset_validation.cpp",
+    "sha256": "270088817756e68dc721103ce2862b5c60d1b125b9021282d69bafe78c3e5411"
+  }
+}

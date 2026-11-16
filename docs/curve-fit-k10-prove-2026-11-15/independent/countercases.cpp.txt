@@ -1,0 +1,25 @@
+#include "fk_offset.h"
+#include "fk_surface.h"
+#include "fk_transform.h"
+#include "fk_nurbs.h"
+#include <iomanip>
+#include <iostream>
+using namespace ForgeCad::Kernel;
+#include "fixtures.h"
+CurvePtr<3> polynomial(const std::vector<double>&z,double lo=0,double hi=1){int p=int(z.size())-1;std::vector<Vec3> controls;for(int i=0;i<=p;++i)controls.emplace_back(double(i)/p,0,z[i]);std::vector<double> knots(p+1,lo);knots.insert(knots.end(),p+1,hi);return std::make_shared<BSplineCurve<3>>(p,knots,controls);}
+CurvePtr<3> rational(double factor=1){int p=27;std::vector<Vec3> controls;std::vector<double> weights;for(int i=0;i<=p;++i){double w=1+.5*i/p;double ax=double(i)/p+.5*i*(i-1)/(p*(p-1));controls.emplace_back(ax/w,0,z27[i]/w);weights.push_back(factor*w);}std::vector<double> knots(p+1,0);knots.insert(knots.end(),p+1,1);return std::make_shared<BSplineCurve<3>>(p,knots,controls,weights);}
+CurvePtr<3> narrow(){const int p=15;std::vector<double> knots(p+1,0);knots.insert(knots.end(),p,.1);knots.insert(knots.end(),p,.15);knots.insert(knots.end(),p+1,1);std::vector<Vec3> controls;for(int i=0;i<3*p+1;++i){double x=0;for(int k=1;k<=p;++k)x+=knots[i+k]/p;double z=i>=p&&i<=2*p?z15[i-p]:0;controls.emplace_back(x,0,z);}return std::make_shared<BSplineCurve<3>>(p,knots,controls);}
+int main(){const double pi=std::acos(-1.);std::cout<<std::setprecision(16);struct Case{const char*name;CurvePtr<3>curve;Vec3 direction;Interval range;double d;};std::vector<Case> cases;
+ auto c=polynomial(z27);const Vec3 D(0,1,0);cases.push_back({"poly27",c,D,{0,1},.001});cases.push_back({"rational27",rational(),D,{0,1},.001});cases.push_back({"rational27_weight1e100",rational(1e100),D,{0,1},.001});cases.push_back({"rational27_weight1e-100",rational(1e-100),D,{0,1},.001});
+ const auto rigid=Transform3::translation(Vec3(3,-2,1))*Transform3::rotation(Vec3(),Vec3(.2,.3,1),.42);
+ cases.push_back({"transformed_rigid27",std::make_shared<TransformedCurve>(c,rigid),rigid.applyToVector(D),{0,1},.001});
+ const auto scale=rigid*Transform3::scaling(Vec3(),1000);cases.push_back({"transformed_scale1000_27",std::make_shared<TransformedCurve>(c,scale),scale.applyToVector(D),{0,1},1});
+ const double m[3][3]={{2,.2,0},{0,1,0},{.1,0,.5}};const auto affine=Transform3::fromParts(m,Vec3(.3,-.2,.1));cases.push_back({"transformed_affine27",std::make_shared<TransformedCurve>(c,affine),affine.applyToVector(D),{0,1},.001});
+ auto trim=std::make_shared<TrimmedCurve<3>>(std::make_shared<TrimmedCurve<3>>(polynomial(zpartial),.05,.95),.1,.9);cases.push_back({"nested_partial_trim27",trim,D,{.1,.9},.001});
+ cases.push_back({"narrow_multispan15",narrow(),D,{0,1},.0001});cases.push_back({"parameter_window1e-5_27",polynomial(z27,2,2.00001),D,{2,2.00001},.001});
+auto circle=Circle<3>(Vec3(),Vec3(1,0,0),Vec3(0,1,0),1);auto nurbscircle=std::make_shared<BSplineCurve<3>>(joinBezierPieces(rationalBezierPieces(circle,{0,2*pi}),{0,.5*pi,pi,1.5*pi,2*pi}));cases.push_back({"closed_nurbs_seam",nurbscircle,Vec3(0,0,1),{2*pi-.2,2*pi+.2},.001});
+std::vector<double> rk={-3,-2,-1,0,.1,.1,.1,.15,.9,1,2,3};std::vector<Vec3> rp;for(int i=0;i<8;++i){double a=rk[i+1],b=rk[i+2],c=rk[i+3];rp.emplace_back((a+b+c)/3,0,.1*(a*b+a*c+b*c)/3);}cases.push_back({"unclamped_repeated_trim_parabola",std::make_shared<BSplineCurve<3>>(3,rk,rp),D,{.03,.7},.001});
+ cases.push_back({"unclamped_rational_partial",std::make_shared<BSplineCurve<3>>(3,std::vector<double>{0,1,2,3,4,5,6,7,8},std::vector<Vec3>{{2,0,0},{2.1,0,.3},{2.4,0,.5},{2.5,0,.8},{2.8,0,1}},std::vector<double>{1,.7,1.2,.9,1}),D,{3.13,4.87},.001});
+ for(auto& c:cases){try{ExtrusionSurface source(c.curve,c.direction);auto result=offsetSurface(source,c.d,c.range,{0,1},1e-7);double error=0,minspeed=1e100;for(int i=0;i<=10000;++i){double t=c.range.lo+c.range.length()*i/10000.;error=std::max(error,distance(result->point(t,.5),source.point(t,.5)+c.d*source.normal(t,.5)));minspeed=std::min(minspeed,norm(c.curve->derivative(t)));}std::cout<<c.name<<" accepted=1 error="<<error<<" ratio="<<error/1e-7<<" sampled_minspeed="<<minspeed<<"\n";}catch(const std::exception&e){std::cout<<c.name<<" accepted=0 reason="<<e.what()<<"\n";}}
+return 0;
+}

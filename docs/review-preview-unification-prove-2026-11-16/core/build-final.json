@@ -1,0 +1,30 @@
+{
+  "sources": {
+    "forgeCad2026_dialogs_common.cpp": "bd1006cc5689982ed183b6499292ce3efe956daf8028cc73ca7258036ad9ba82",
+    "forgeCad2026_dialogs.h": "35a16e9e136ec7fb4efb80a2906e79e906f4ba70676a1cabe1135f8480a31ef8",
+    "forgeCad2026_dialogs_solids.cpp": "79e8b454b0aa8db8e20484c0472dacc4f8f9285056fecc504a66feb1ebfd2624",
+    "forgeCad2026_dialogs_surfaces.cpp": "3e1a52dbd703f3d875b28feac751966b95defebc10975a78fb6adeb8f56d32bc",
+    "forgeCad2026_dialogs_sketch.cpp": "2eeb38e9c17dd2605de2783ae72adf78e618bd48252d356d44ae044fb82229df",
+    "forgeCad2026_dialogs_analysis.cpp": "6d4cb332ce0618bdc2fd930667384ea6a6ee7ba943308804b97affc16fb6b0fd"
+  },
+  "objects": {
+    "forgeCad2026_dialogs_common.cpp": "dea32ece4e7a356d6988520dabb65a615ddb5928b337f01c1b5888500aae232c",
+    "forgeCad2026_dialogs_solids.cpp": "6529b7d1611231954e2dc65a52991a5ecd34070ef800b000ddd25b9713029e30",
+    "forgeCad2026_dialogs_surfaces.cpp": "c095a29e2486e4e35ac9fd12329b67178b2340f4921a650582ff9309d1d0ad2b",
+    "forgeCad2026_dialogs_sketch.cpp": "ac91848b0045a7b314178fbcd4c8301b05baa142e79b3d6dac21852cf2ae1600",
+    "forgeCad2026_dialogs_analysis.cpp": "ea9442b0f1b780814fe5d8240f66fd65e3665005091e88235baad01d5cc7b060"
+  },
+  "compiler_exit_codes": {
+    "forgeCad2026_dialogs_common.cpp": 0,
+    "forgeCad2026_dialogs_solids.cpp": 0,
+    "forgeCad2026_dialogs_surfaces.cpp": 0,
+    "forgeCad2026_dialogs_sketch.cpp": 0,
+    "forgeCad2026_dialogs_analysis.cpp": 0
+  },
+  "diagnostics": {
+    "forgeCad2026_dialogs_sketch.cpp": "Two unchanged misleading-indentation warnings in spatialSketchDialog/extractedCurveDialog",
+    "other_four_translation_units": "No diagnostics"
+  },
+  "local_probe": "PASS synchronous accept/reject, showEvent finish, guard before setup, cleanup, old API pointer",
+  "independent_suite_reported": "115 PASS, 0 FAIL; 11 dialogs, 36 footer assertions on 9 preview runners"
+}

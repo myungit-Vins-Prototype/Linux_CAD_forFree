@@ -1,0 +1,171 @@
+{
+  "nodes": 724,
+  "edges": 10429,
+  "units": 353,
+  "errors": {},
+  "html_embedded_graph_equal": true,
+  "bidirectional_calls": [
+    {
+      "source": "cad_document_io.cpp",
+      "target": "cad_constraints.cpp",
+      "symbol": "finiteSketchNumbers",
+      "sites": [
+        {
+          "line": 396,
+          "symbol": "ForgeCad::finiteSketchNumbers",
+          "owner": "ForgeCad::read"
+        },
+        {
+          "line": 1456,
+          "symbol": "ForgeCad::finiteSketchNumbers",
+          "owner": "ForgeCad::encodeDocumentVersion"
+        }
+      ]
+    },
+    {
+      "source": "forgeCad2026_dialogs_solids.cpp",
+      "target": "forgeCad2026_dialogs_common.cpp",
+      "symbol": "setFunctionMessageRole",
+      "sites": [
+        {
+          "line": 511,
+          "symbol": "setFunctionMessageRole",
+          "owner": "patternDialog"
+        },
+        {
+          "line": 868,
+          "symbol": "setFunctionMessageRole",
+          "owner": "extrusionDialog"
+        },
+        {
+          "line": 1119,
+          "symbol": "setFunctionMessageRole",
+          "owner": "transformDialog"
+        },
+        {
+          "line": 1340,
+          "symbol": "setFunctionMessageRole",
+          "owner": "threadDialog"
+        },
+        {
+          "line": 1508,
+          "symbol": "setFunctionMessageRole",
+          "owner": "booleanDialog"
+        },
+        {
+          "line": 1863,
+          "symbol": "setFunctionMessageRole",
+          "owner": "revolutionDialog"
+        }
+      ]
+    },
+    {
+      "source": "forgeCad2026_dialogs_surfaces.cpp",
+      "target": "forgeCad2026_dialogs_common.cpp",
+      "symbol": "setFunctionMessageRole",
+      "sites": [
+        {
+          "line": 140,
+          "symbol": "setFunctionMessageRole",
+          "owner": "sweepDialog"
+        },
+        {
+          "line": 143,
+          "symbol": "setFunctionMessageRole",
+          "owner": "sweepDialog"
+        },
+        {
+          "line": 1209,
+          "symbol": "setFunctionMessageRole",
+          "owner": "offsetDialog"
+        },
+        {
+          "line": 1431,
+          "symbol": "setFunctionMessageRole",
+          "owner": "ruledDialog"
+        },
+        {
+          "line": 1535,
+          "symbol": "setFunctionMessageRole",
+          "owner": "boundaryDialog"
+        },
+        {
+          "line": 1694,
+          "symbol": "setFunctionMessageRole",
+          "owner": "fillDialog"
+        },
+        {
+          "line": 1708,
+          "symbol": "setFunctionMessageRole",
+          "owner": "fillDialog"
+        },
+        {
+          "line": 1947,
+          "symbol": "setFunctionMessageRole",
+          "owner": "planarDialog"
+        }
+      ]
+    },
+    {
+      "source": "forgeCad2026_viewport_preview.cpp",
+      "target": "cad_feature_dependencies.cpp",
+      "symbol": "hiddenOperands",
+      "sites": [
+        {
+          "line": 147,
+          "symbol": "ForgeCad::hiddenOperands",
+          "owner": "CadViewport::requestPreview"
+        },
+        {
+          "line": 373,
+          "symbol": "ForgeCad::hiddenOperands",
+          "owner": "CadViewport::useExistingPreviewResults"
+        }
+      ]
+    },
+    {
+      "source": "forgeCad2026_dialogs_mapping.cpp",
+      "target": "forgeCad2026_dialogs_common.cpp",
+      "symbol": "runUntilAppliedModeless",
+      "sites": [
+        {
+          "line": 110,
+          "symbol": "runUntilAppliedModeless",
+          "owner": "fillPatternDialog"
+        },
+        {
+          "line": 467,
+          "symbol": "runUntilAppliedModeless",
+          "owner": "surfaceMappingDialog"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_sweep.cpp",
+      "target": "kernel/fk_sweep.cpp",
+      "symbol": "requirePositiveSection",
+      "sites": [
+        {
+          "line": 468,
+          "symbol": "ForgeCad::Kernel::requirePositiveSection",
+          "owner": "ForgeCad::Kernel::requirePositiveSection"
+        },
+        {
+          "line": 469,
+          "symbol": "ForgeCad::Kernel::requirePositiveSection",
+          "owner": "ForgeCad::Kernel::requirePositiveSection"
+        },
+        {
+          "line": 679,
+          "symbol": "ForgeCad::Kernel::requirePositiveSection",
+          "owner": "ForgeCad::Kernel::sweep"
+        },
+        {
+          "line": 775,
+          "symbol": "ForgeCad::Kernel::requirePositiveSection",
+          "owner": "ForgeCad::Kernel::sweep"
+        }
+      ]
+    }
+  ]
+}

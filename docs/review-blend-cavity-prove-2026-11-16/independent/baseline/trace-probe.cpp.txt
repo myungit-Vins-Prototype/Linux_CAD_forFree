@@ -1,0 +1,8 @@
+#include "fk_body_io.h"
+#include "fk_surface_algo.h"
+#include <fstream>
+#include <iostream>
+#include <iomanip>
+#include <iterator>
+using namespace ForgeCad::Kernel;
+int main(){std::ifstream f("/tmp/blend-cavity-review/core/failure.body",std::ios::binary);auto b=readBodyBinary(std::string(std::istreambuf_iterator<char>(f),{}));Vec3 p(-36.852303240670373,9.4929399335520088,48.003251586376884);auto q=projectPoint(*b.face(FaceId(0)).surface,p);std::cout<<std::setprecision(17)<<"RESULT "<<q.distance<<" uv="<<q.u<<","<<q.v<<"\n";}

@@ -1,0 +1,49 @@
+from pathlib import Path
+import hashlib,json,shutil,re
+R=Path('/home/myungit/Linux_CAD_forFree'); T=Path('/tmp/theme-tabs-review'); M=R/'CLAUDE.md'
+memory=M.read_text()
+def sha(p):return hashlib.sha256(p.read_bytes()).hexdigest()
+for name, hashes in json.loads((T/'core/candidate-manifest.json').read_text()).items():
+    assert sha(R/name)==hashes['baseline_sha256'],name
+    assert sha(T/'core'/name)==hashes['candidate_sha256'],name
+    shutil.copy2(T/'core'/name,R/name)
+for src,dest,expected in [('test_document_theme_tabs.h','tests/test_document_theme_tabs.h','5ee295338bd353e9333a6331c44f6a0b285ffbea3f550da743375f73eb2a4da6'),('test_application_theme.cpp','tests/test_application_theme.cpp','c0d73a0f6e9e8510a5e64ae0b692839b5a1bf781235965a212450d5801a39271')]:
+    assert sha(T/'tests'/src)==expected,src
+    shutil.copy2(T/'tests'/src,R/dest)
+p=R/'tests/test_viewport.cpp';s=p.read_text();assert '#include <QStyleHints>' not in s
+s=s.replace('#include <QSurfaceFormat>','#include <QSurfaceFormat>\n#include <QStyleHints>',1)
+s=s.replace('#include "test_document_tabs.h"','#include "test_document_tabs.h"\n#include "test_document_theme_tabs.h"',1)
+needle='    if (app.arguments().contains(QStringLiteral("--document-tabs"))) {'
+assert s.count(needle)==1
+s=s.replace(needle,'''    if (app.arguments().contains(QStringLiteral("--theme-tabs")) ||
+        app.arguments().contains(QStringLiteral("--theme-tabs-only-2d"))) {
+        try { ViewportInteractionTest::documentThemeTabsTests(); }
+        catch (const std::exception &error) { std::cerr << error.what() << std::endl; return 1; }
+        return 0;
+    }
+'''+needle)
+p.write_text(s)
+p=R/'CMakeLists.txt';s=p.read_text();s=s.replace('add_executable(forgecad_view_tests tests/test_viewport.cpp','add_executable(forgecad_view_tests tests/test_viewport.cpp tests/test_document_theme_tabs.h',1)
+s=s.replace('    forgecad_add_view_test(forgecad_document_tabs_tests --document-tabs)','''    forgecad_add_view_test(forgecad_document_theme_tabs_tests --theme-tabs)
+    forgecad_add_view_test(forgecad_document_theme_only2d_tests --theme-tabs-only-2d)
+    set_tests_properties(forgecad_document_theme_tabs_tests forgecad_document_theme_only2d_tests PROPERTIES TIMEOUT 90)
+    forgecad_add_view_test(forgecad_document_tabs_tests --document-tabs)''',1);p.write_text(s)
+p=R/'tools/generate_architecture.py';s=p.read_text()
+s=s.replace(" 'tests/test_document_tabs.h':", " 'tests/test_document_theme_tabs.h': ('tests', 'Tema globale su schede 3D/2D visibili e nascoste, finestre separate, nuove pagine, soli documenti 2D e cambio foglio; menu, pannelli, icone e pixel, colori utente e contenuto della carta invariati.'),\n 'tests/test_document_tabs.h':",1)
+s=s.replace('Stile Fusion comune ripristinato dopo sostituzioni native; menu Tema con scelta persistente chiaro/scuro/desktop, palette aggiornate nelle finestre aperte e diagnostica dei cambi tema.','Controller unico di palette e QSS globale su finestre e schede incorporate 3D/2D; applicazione coerente protetta dal reingresso, stile Fusion ripristinato dopo sostituzioni native e menu Tema persistente chiaro/scuro/desktop.')
+s=s.replace('ricostruzione menu dopo cambio foglio;','ricostruzione menu dopo cambio foglio con unico sottomenu Tema persistente;')
+s=s.replace("'per estremi a menu e toolbar e ne espone azione e icona alla ribbon.'", "'per estremi a menu e toolbar e ne espone azione e icona alla ribbon. Consuma il '\n                          'tema globale aggiornando le toolbar su entrambi gli eventi palette; nessun QSS globale locale.'")
+p.write_text(s)
+old='''Confermato:palette app cambia ma QSS resta precedente nei documenti embedded;
+ApplicationPaletteChange arriva solo ai top-level,il QSS bloccaanchePaletteChange.
+Prototipo/tmp:gestione QSS nel controllerglobale e menuTema2D;nessunresetcolori.
+Produzione invariata;testreali/build/mappa pendenti.'''
+new='''Integrati controller unico palette/QSS e menu Tema2D persistente al cambio foglio.
+Causa: ApplicationPaletteChange assente negli embedded; QSS rimaneva precedente.
+Test su schede reali aggiunti; colori utente/carta conservati. Build completa,
+CTest, Wayland e mappa finale pendenti.'''
+assert old in memory;memory=memory.replace(old,new);assert len(memory.encode())<=16384;M.write_text(memory)
+p=R/'docs/review-theme-tabs-2026-11-16.md';s=p.read_text();s+='\n## Integrazione\n\nIntegrati i quattro sorgenti V2 congelati, le regressioni reali su schede e soli documenti 2D, due registrazioni CTest e la verifica dello stile Fusion attraverso il wrapper QSS. Il catalogo architetturale descrive la nuova responsabilità del controller. Build completa e verifiche del binario integrato ancora pendenti.\n';p.write_text(s)
+files=list(json.loads((T/'core/candidate-manifest.json').read_text()))+['tests/test_viewport.cpp','tests/test_document_theme_tabs.h','tests/test_application_theme.cpp','CMakeLists.txt','tools/generate_architecture.py']
+(T/'root/integrated-sources.json').write_text(json.dumps({n:sha(R/n) for n in files},indent=2)+'\n')
+print('integrated',len(files),'source/config files; memory bytes',len(memory.encode()))

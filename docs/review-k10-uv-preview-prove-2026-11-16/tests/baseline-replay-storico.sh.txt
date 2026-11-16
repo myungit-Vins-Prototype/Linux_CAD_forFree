@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+set -eu
+cd /home/myungit/Linux_CAD_forFree
+c++ -std=c++17 -O2 -ffp-contract=off -fno-fast-math -I kernel /tmp/k10-uv-review/tests/test_uv_offset_validation.cpp forgecad-release/kernel/libforgekernel.a -o /tmp/k10-uv-review/tests/test_uv_offset_validation_baseline_final
+set +e
+/tmp/k10-uv-review/tests/test_uv_offset_validation_baseline_final > /tmp/k10-uv-review/tests/baseline-final-validation.log 2>&1
+baseline_exit=$?
+set -e
+printf 'exit=%s (expected 1: six geometric failures)\n' "$baseline_exit"
+test "$baseline_exit" -eq 1

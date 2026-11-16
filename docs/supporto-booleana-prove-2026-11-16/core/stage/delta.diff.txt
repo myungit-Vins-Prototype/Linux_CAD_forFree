@@ -1,0 +1,471 @@
+--- kernel/fk_boolean.cpp baseline
++++ kernel/fk_boolean.cpp private stage
+@@ -1,4 +1,5 @@
+ #include "fk_boolean.h"
++#include "fk_boolean_boundary.h"
+ #include "fk_solid_trim.h"
+ #include "fk_history.h"
+ 
+@@ -6,6 +7,7 @@
+ #include "fk_curve_surface.h"
+ 
+ #include <algorithm>
++#include <array>
+ #include <exception>
+ #include <cmath>
+ #include <functional>
+@@ -37,10 +39,29 @@
+ namespace {
+ 
+ // Tratto di un arco d'intersezione che sta in entrambe le facce (o sul loro bordo).
++struct BoundaryAnchor {
++    int body = -1;
++    FaceId face;
++    FinId fin;
++    EdgeId edge;
++    double edgeParameter = 0, arcParameter = 0;
++};
++struct BoundarySource {
++    int body = -1;
++    FaceId face;
++    FinId fin;
++    EdgeId edge;
++    Interval range;
++    bool forward = true;
++    CurvePtr<3> intersection = {};
++    Interval intersectionRange = {};
++};
++
+ struct Arc {
+     CurvePtr<3> curve;
+     Interval range;
+     FaceId face[2];
++    std::vector<BoundaryAnchor> anchors;
+     bool cut[2] = {false, false};  // divide l'interno della faccia del body 0 / 1
+     bool coplanar = false;         // viene da due facce sulla stessa superficie (complanari, cilindri coassiali, ...)
+     bool tangent = false;          // contatto senza attraversamento, solo per sezioni con provenienza
+@@ -62,6 +83,8 @@
+ 
+ // Tratto di curva percorso in un verso: pezzo di bordo o taglio.
+ struct Piece {
++    BoundarySource boundarySource; // foreign witness, never a local source/pcurve
++
+     FinId sourceFin;  // distingue i due usi di una cucitura nella stessa faccia
+     CurvePtr<2> sourcePCurve;  // parametro originale: i due lati possono avere UV diversi
+     EdgeId source;  // bordo originale, noto durante la suddivisione (invalido per i tagli nuovi)
+@@ -220,8 +243,10 @@
+ 
+ class BooleanBuilder {
+ public:
+-    BooleanBuilder(const Body &a, const Body &b, BooleanOperation operation, const BooleanOptions &options)
++    BooleanBuilder(const Body &a, const Body &b, BooleanOperation operation, const BooleanOptions &options,
++                   bool enableBoundary = false)
+         : operation_(operation), tolerance_(options.tolerance), unify_(options.unifySameDomain), threads_(options.threads) {
++        enableBoundary_ = enableBoundary;
+         bodies_[0] = a;
+         bodies_[1] = b;
+         Box all;
+@@ -254,6 +279,7 @@
+     }
+ 
+     Body run(BodyHistory *history);
++    bool usedBoundarySubstitution() const { return usedBoundary_; }
+     Body clipFace(bool positive, BodyHistory *history);
+     Body adjacentRun(BodyHistory *history) { adjacentOnly_ = true; return run(history); }
+     std::vector<BodySectionCurve> section(bool preserveFacePairs = false);
+@@ -270,6 +296,8 @@
+     // I contatti di area sono su carrier coincidenti: nessun attraversamento
+     // trasversale va ricercato sui supporti estesi fuori dalle facce.
+     bool adjacentOnly_ = false;
++    bool enableBoundary_ = false;
++    bool usedBoundary_ = false;
+     unsigned workers(std::size_t count) const {
+         // I piccoli lavori fra piani non ammortizzano il lancio dei thread.
+         // Le richieste esplicite e le superfici curve conservano il parallelismo.
+@@ -301,6 +329,7 @@
+     void computeCuts(std::map<int, std::vector<Piece>> (&cuts)[2]);
+     // Dagli archi di arcs_ ai tagli di ogni faccia (seconda parte di computeCuts).
+     void collectCuts(std::map<int, std::vector<Piece>> (&cuts)[2]);
++    bool boundaryChain(const Arc &, const Interval &, int, std::vector<Piece> &) const;
+     // Un punto interno del pezzo di faccia accettato da `accept`, vicino ai
+     // tratti piu' lunghi del bordo; falso se nessuno va bene.
+     bool interiorPoint(const SubFace &subFace, const std::function<bool(const Vec3 &)> &accept) const;
+@@ -466,14 +495,26 @@
+         const Interval &range = intersection.ranges[i];
+         std::vector<double> parameters;
+         std::vector<Snap> snaps;
++        std::multimap<double, BoundaryAnchor> boundaryAnchors;
++        bool anchorBudget = true;
+         // Attraversamenti del bordo della faccia piana (nel piano).
+         const CurvePtr<2> planar = exactPCurve(plane, curve, range, std::max(tolerance_, 1e-9 * scale_));
+         if (!planar) throw std::logic_error("booleanOperation: curva d'intersezione fuori dal piano");
+         for (LoopId l : bp.face(fp).loops)
+             for (FinId f : bp.loopFins(l)) {
+                 const Edge &edge = bp.edge(bp.fin(f).edge);
+-                for (const CurveCurvePoint &p : intersectCurves(*planar, range, *bp.fin(f).pcurve, edge.range, tolerance_).points)
++                for (const CurveCurvePoint &p :
++                     intersectCurves(*planar, range, *bp.fin(f).pcurve, edge.range, tolerance_).points) {
+                     parameters.push_back(p.s);
++                    if (enableBoundary_ && anchorBudget && curve->type() == CurveType::Line &&
++                        edge.curve->type() == CurveType::Ellipse) {
++                        if (boundaryAnchors.size() == 4096) {
++                            boundaryAnchors.clear();
++                            anchorBudget = false;
++                        } else
++                            boundaryAnchors.emplace(p.s, BoundaryAnchor{k, fp, f, bp.fin(f).edge, p.t, p.s});
++                    }
++                }
+             }
+         // Attraversamenti del bordo dell'altra faccia: i suoi edge sul piano.
+         for (LoopId l : bq.face(fq).loops)
+@@ -497,6 +538,12 @@
+             }
+         const std::size_t previous = out.arcs.size();
+         addArcs(curve, range, parameters, fa, fb, out, nullptr, snaps);
++        for (std::size_t j = previous; j < out.arcs.size(); ++j)
++            for (double endpoint : {out.arcs[j].range.lo, out.arcs[j].range.hi}) {
++                const auto events = boundaryAnchors.equal_range(endpoint);
++                for (auto event = events.first; event != events.second; ++event)
++                    out.arcs[j].anchors.push_back(event->second);
++            }
+         if (i >= crossingCount) for (std::size_t j = previous; j < out.arcs.size(); ++j) out.arcs[j].tangent = true;
+     }
+ }
+@@ -1970,6 +2017,127 @@
+     collectCuts(cuts);
+ }
+ 
++bool BooleanBuilder::boundaryChain(const Arc &arc, const Interval &range, int boundary,
++                                   std::vector<Piece> &result) const {
++    if (!arc.curve || arc.curve->type() != CurveType::Line || arc.loTolerance != 0 || arc.hiTolerance != 0 ||
++        range.lo != arc.range.lo || range.hi != arc.range.hi)
++        return false;
++    if (boundary < 0 || boundary > 1)
++        return false;
++    for (int k = 0; k < 2; ++k)
++        if (!bodies_[k].contains(arc.face[k]) || !bodies_[k].face(arc.face[k]).surface)
++            return false;
++    const auto &body = bodies_[boundary];
++    const auto faceId = arc.face[boundary];
++    if (body.face(faceId).surface->type() != SurfaceType::Plane)
++        return false;
++    const auto &line = static_cast<const Line<3> &>(*arc.curve);
++    const double budget = std::min(tolerance_, linearResolution());
++    std::vector<std::vector<Piece>> candidates;
++    std::size_t work = 0;
++    for (const auto &first : arc.anchors)
++        for (const auto &last : arc.anchors) {
++            cancellationPoint();
++            if (++work > 4096)
++                return false;
++            if (first.body != boundary || last.body != boundary || first.face != faceId || last.face != faceId ||
++                first.arcParameter != range.lo || last.arcParameter != range.hi)
++                continue;
++            if (!body.contains(first.fin) || !body.contains(last.fin) || body.fin(first.fin).edge != first.edge ||
++                body.fin(last.fin).edge != last.edge || body.fin(first.fin).loop != body.fin(last.fin).loop)
++                continue;
++            for (bool reverse : {false, true}) {
++                cancellationPoint();
++                std::vector<Piece> chain;
++                FinId current = first.fin;
++                double parameter = first.edgeParameter;
++                bool complete = false;
++                bool wrapped = false;
++                for (std::size_t steps = 0; steps < 4096; ++steps) {
++                    cancellationPoint();
++                    if (++work > 16384)
++                        return false;
++                    const auto &fin = body.fin(current);
++                    const auto &edge = body.edge(fin.edge);
++                    if (!edge.curve || edge.curve->type() != CurveType::Ellipse || !edge.range.contains(parameter))
++                        break;
++                    const bool forward = fin.sense != reverse;
++                    const double end = forward ? edge.range.hi : edge.range.lo;
++                    bool reaches = current == last.fin && edge.range.contains(last.edgeParameter) &&
++                                   (forward ? last.edgeParameter >= parameter : last.edgeParameter <= parameter);
++                    const double stop = reaches ? last.edgeParameter : end;
++                    if (stop != parameter) {
++                        if (!(forward ? stop > parameter : stop < parameter))
++                            break;
++                        Piece piece;
++                        piece.curve = edge.curve;
++                        piece.range = {std::min(parameter, stop), std::max(parameter, stop)};
++                        piece.forward = forward;
++                        piece.cut = true;
++                        piece.partner = faceId;
++                        piece.partnerCrosses = false;
++                        piece.tolerance = edge.tolerance;
++                        piece.boundarySource = {boundary, faceId, current, fin.edge, piece.range, forward};
++                        chain.push_back(std::move(piece));
++                    }
++                    if (reaches) {
++                        complete = true;
++                        break;
++                    }
++                    const FinId next = reverse ? fin.previous : fin.next;
++                    if (!next.valid())
++                        break;
++                    if (next == first.fin) {
++                        if (wrapped)
++                            break;
++                        wrapped = true;
++                    }
++                    // Both paths use original loop incidence, never a nearest edge.
++                    const VertexId at = reverse ? body.finStart(current) : body.finEnd(current);
++                    const VertexId other = reverse ? body.finEnd(next) : body.finStart(next);
++                    if (at != other)
++                        break;
++                    current = next;
++                    const auto &nextFin = body.fin(current);
++                    const auto &nextEdge = body.edge(nextFin.edge);
++                    parameter = (nextFin.sense != reverse) ? nextEdge.range.lo : nextEdge.range.hi;
++                }
++                if (!complete || chain.empty())
++                    continue;
++                double ta = range.lo;
++                bool certified = true;
++                for (std::size_t n = 0; n < chain.size(); ++n) {
++                    const auto &piece = chain[n];
++                    double tb = range.hi;
++                    if (n + 1 < chain.size()) {
++                        // The topological shared vertex supplies the intermediate
++                        // line parameter; the interval proof covers its rounding.
++                        const auto &w = piece.boundarySource;
++                        const auto &fin = body.fin(w.fin);
++                        const auto vertex = piece.forward ? body.edgeEnd(fin.edge) : body.edgeStart(fin.edge);
++                        tb = projectPoint(line, body.vertex(vertex).point, range).parameter;
++                    }
++                    if (!(ta < tb && tb <= range.hi) ||
++                        !detail::certifyEllipseBoundarySegment(
++                            static_cast<const Ellipse<3> &>(*piece.curve), piece.range, piece.forward, line, ta, tb,
++                            *bodies_[0].face(arc.face[0]).surface, *bodies_[1].face(arc.face[1]).surface, budget)) {
++                        certified = false;
++                        break;
++                    }
++                    chain[n].boundarySource.intersection = arc.curve;
++                    chain[n].boundarySource.intersectionRange = {ta, tb};
++                    ta = tb;
++                }
++                if (certified)
++                    candidates.push_back(std::move(chain));
++            }
++        }
++    if (candidates.size() != 1)
++        return false;
++    result = std::move(candidates.front());
++    return true;
++}
++
+ void BooleanBuilder::collectCuts(std::map<int, std::vector<Piece>> (&cuts)[2]) {
+     // Gli estremi sono immutabili finche' un doppione viene sostituito.
+     // Ricalcolarli per ogni confronto rivalutava milioni di volte le
+@@ -2021,6 +2189,24 @@
+             const auto in0=insideTrim(0,arc.face[0],arc.curve,parameter,middle);
+             if(in0==PointLocation::Outside)continue;
+             const PointLocation locations[2]={in0,in1};
++            bool substituted = false;
++            for (int boundary = 0; boundary < 2; ++boundary)
++                if (enableBoundary_ && locations[boundary] == PointLocation::Boundary &&
++                    locations[1 - boundary] == PointLocation::Inside) {
++                    std::vector<Piece> chain;
++                    if (boundaryChain(arc, range, boundary, chain)) {
++                        auto &list = cuts[1 - boundary][arc.face[1 - boundary].index];
++                        auto &ends = endPoints[1 - boundary][arc.face[1 - boundary].index];
++                        for (auto &piece : chain) {
++                            ends.emplace_back(piece.startNode(), piece.endNode());
++                            list.push_back(std::move(piece));
++                        }
++                        substituted = true;
++                        usedBoundary_ = true;
++                    }
++                }
++            if (substituted)
++                continue;
+             for (int k = 0; k < 2; ++k) {
+                 if(locations[k]!=PointLocation::Inside)continue;
+                 // Pezzi di un arco che esce appena dalla superficie (seme su un edge
+@@ -2519,6 +2705,25 @@
+         std::stable_sort(tolerant.begin(), tolerant.end(), [](const auto &a, const auto &b) { return a.first > b.first; });
+         for (const auto &[tolerance, point] : tolerant) vertexOf(point, tolerance);
+     }
++    struct AssemblyOrigin {
++        std::size_t face, loop, fin;
++        HistoryLink origin;
++        bool boundary = false;
++    };
++    struct BoundaryUse {
++        std::size_t face, loop, fin;
++        BoundarySource source;
++        CurvePtr<3> curve;
++    };
++    struct BoundaryOutput {
++        int edge;
++        SurfacePtr surface;
++        CurvePtr<3> original;
++        BoundarySource source;
++    };
++    std::vector<AssemblyOrigin> assemblyOrigins;
++    std::vector<BoundaryUse> boundaryUses;
++    std::vector<BoundaryOutput> boundaryOutputs;
+     std::vector<Body::BuildEdge> edges;
+     std::vector<Vec3> edgeMiddles;
+     std::vector<std::vector<const Surface *>> edgeSurfaces;
+@@ -2662,6 +2867,24 @@
+                         }
+                     }
+                 }
++                if (history && piece.source.valid())
++                    assemblyOrigins.push_back(
++                        {faces.size(),
++                         built.loops.size(),
++                         loop.size(),
++                         {subFace.body, EntityKind::Edge, piece.source.index, HistoryRelation::Modified},
++                         false});
++                if (piece.boundarySource.body >= 0) {
++                    boundaryUses.push_back(
++                        {faces.size(), built.loops.size(), loop.size(), piece.boundarySource, piece.curve});
++                    if (history)
++                        assemblyOrigins.push_back({faces.size(),
++                                                   built.loops.size(),
++                                                   loop.size(),
++                                                   {piece.boundarySource.body, EntityKind::Edge,
++                                                    piece.boundarySource.edge.index, HistoryRelation::Modified},
++                                                   true});
++                }
+                 loop.push_back(fin);
+             }
+             if (!loop.empty()) built.loops.push_back(std::move(loop));
+@@ -2676,11 +2899,82 @@
+     } catch (const std::invalid_argument &error) {
+         throw std::domain_error(std::string("booleanOperation: risultato non chiuso (") + error.what() + ")");
+     }
++    // Il mapping nasce dalla fin realmente montata. Body::build conserva
++    // l'indice BuildEdge; pairRadially puo' cambiarlo e viene quindi letto
++    // soltanto dopo pairing/splitVertices, senza cercare curve vicine.
++    for (const auto &use : boundaryUses) {
++        const int edge = faces.at(use.face).loops.at(use.loop).at(use.fin).edge;
++        const auto &built = edges.at(std::size_t(edge));
++        if (built.curve.get() != use.curve.get())
++            throw std::domain_error(
++                "booleanOperation: geometria originale del bordo condiviso modificata durante l'assemblaggio");
++        boundaryOutputs.push_back({edge, faces.at(use.face).surface, use.curve, use.source});
++    }
++    const auto installBoundaryPCurves = [&](Body &body) {
++        for (const auto &output : boundaryOutputs) {
++            cancellationPoint();
++            const EdgeId edgeId(output.edge);
++            if (!body.contains(edgeId))
++                throw std::domain_error("booleanOperation: bordo condiviso non conservato");
++            const auto &edge = body.edge(edgeId);
++            if (edge.curve.get() != output.original.get() || edge.curve->type() != CurveType::Ellipse)
++                throw std::domain_error("booleanOperation: curva originale del bordo condiviso non conservata");
++            const auto &source = output.source;
++            const auto &originalEdge = bodies_[source.body].edge(source.edge);
++            const auto &ellipse = static_cast<const Ellipse<3> &>(*edge.curve);
++            if (!originalEdge.range.contains(edge.range.lo) || !originalEdge.range.contains(edge.range.hi) ||
++                !source.intersection || source.intersection->type() != CurveType::Line ||
++                !detail::certifyEllipseBoundarySegment(
++                    ellipse, edge.range, source.forward, static_cast<const Line<3> &>(*source.intersection),
++                    source.intersectionRange.lo, source.intersectionRange.hi, *output.surface,
++                    *bodies_[source.body].face(source.face).surface, std::min(tolerance_, linearResolution())))
++                throw std::domain_error("booleanOperation: intervallo finale del bordo condiviso non certificabile");
++            bool found = false;
++            for (FinId finId : {edge.forward, edge.backward}) {
++                if (!finId.valid() || body.face(body.finFace(finId)).surface.get() != output.surface.get())
++                    continue;
++                const auto first = projectPoint(*output.surface, edge.curve->point(edge.range.lo));
++                const auto last = projectPoint(*output.surface, edge.curve->point(edge.range.hi));
++                Vec2 a(first.u, first.v), b(last.u, last.v);
++                if (output.surface->isUPeriodic()) {
++                    const double period = output.surface->uPeriod();
++                    b[0] += std::nearbyint((a[0] - b[0]) / period) * period;
++                }
++                auto pcurve = std::make_shared<BSplineCurve<2>>(
++                    1, std::vector<double>{edge.range.lo, edge.range.lo, edge.range.hi, edge.range.hi},
++                    std::vector<Vec2>{a, b});
++                const double bound = detail::ellipseAffinePCurveError(ellipse, edge.range, *output.surface, *pcurve);
++                if (!std::isfinite(bound) || bound < 0 || bound > std::min(tolerance_, linearResolution()))
++                    throw std::domain_error("booleanOperation: immagine UV del bordo condiviso non certificabile");
++                auto &fin = body.fin(finId);
++                fin.pcurve = std::move(pcurve);
++                fin.pcurveTolerance = std::max(bound, std::numeric_limits<double>::min());
++                found = true;
++            }
++            if (!found)
++                throw std::domain_error("booleanOperation: faccia del bordo condiviso non conservata");
++        }
++    };
+     BodyHistory declared;
+     if (history) {
+         std::vector<const Body *> operands{&bodies_[0]};
+         if (operandCount == 2) operands.push_back(&bodies_[1]);
+         declared = makeHistory(operands, result);
++        std::map<int, std::vector<HistoryLink>> mounted;
++        std::set<int> borrowed;
++        for (const auto &use : assemblyOrigins) {
++            const int edge = faces.at(use.face).loops.at(use.loop).at(use.fin).edge;
++            auto &origins = mounted[edge];
++            if (std::none_of(origins.begin(), origins.end(), [&](const auto &link) {
++                    return link.operand == use.origin.operand && link.kind == use.origin.kind &&
++                           link.index == use.origin.index;
++                }))
++                origins.push_back(use.origin);
++            if (use.boundary)
++                borrowed.insert(edge);
++        }
++        for (int edge : borrowed)
++            declared.declareOrigins(EntityKind::Edge, edge, mounted.at(edge));
+         const auto built = result.faces();
+         if (built.size() != kept.size()) throw std::logic_error("booleanOperation: mappa delle facce incoerente");
+         for (std::size_t i = 0; i < built.size(); ++i) {
+@@ -2730,12 +3024,26 @@
+         }
+     };
+     tolerantEnds(result);
++    installBoundaryPCurves(result);
+     computePCurves(result);
+     if (unify_) {
+         BodyHistory unified;
+-        result = unifySameDomain(result, tolerance_, history ? &unified : nullptr);
++        result = unifySameDomain(result, tolerance_, (history || !boundaryOutputs.empty()) ? &unified : nullptr);
++        std::vector<BoundaryOutput> nextBoundaryOutputs;
++        for (const auto &output : boundaryOutputs) {
++            const auto descendants = unified.descendants(EntityKind::Edge, 0, output.edge);
++            if (descendants.empty())
++                throw std::domain_error("booleanOperation: genealogia finale del bordo condiviso mancante");
++            for (int descendant : descendants) {
++                auto next = output;
++                next.edge = descendant;
++                nextBoundaryOutputs.push_back(std::move(next));
++            }
++        }
++        boundaryOutputs = std::move(nextBoundaryOutputs);
+         if (history) declared = BodyHistory::compose(declared, unified, 0);
+     }
++    installBoundaryPCurves(result);
+     tolerantEnds(result);
+     const std::vector<CheckIssue> issues = checkBody(result);
+     if (!issues.empty())
+@@ -2756,7 +3064,21 @@
+ 
+ Body booleanOperation(const Body &a, const Body &b, BooleanOperation operation, const BooleanOptions &options, BodyHistory *history) {
+     if (history) *history = BodyHistory();
+-    return BooleanBuilder(a, b, operation, options).run(history);
++    BooleanBuilder builder(a, b, operation, options, true);
++    try {
++        return builder.run(history);
++    } catch (const OperationCancelled &) {
++        throw;
++    } catch (const std::domain_error &) {
++        if (!builder.usedBoundarySubstitution())
++            throw;
++        // La sostituzione e' transazionale: se l'output reale non conserva il
++        // certificato, riprova il percorso precedente su nuove copie, con le
++        // medesime opzioni. Cancellazioni e logic_error non sono recuperati.
++        if (history)
++            *history = BodyHistory();
++        return BooleanBuilder(a, b, operation, options).run(history);
++    }
+ }
+ 
+ Body clipSolidByFace(const Body &solid,const Body &face,bool positive,const BooleanOptions &options,BodyHistory *history) {

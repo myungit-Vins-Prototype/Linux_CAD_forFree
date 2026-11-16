@@ -1,0 +1,29 @@
+from pathlib import Path
+p=Path('/tmp/supporto-review/stage');f=p/'kernel/fk_boolean.cpp';s=f.read_text();s=s.replace('std::vector<BoundaryAnchor> boundaryAnchors;','std::multimap<double,BoundaryAnchor> boundaryAnchors;').replace('boundaryAnchors.push_back({k,fp,f,bp.fin(f).edge,p.t,p.s});','boundaryAnchors.emplace(p.s,BoundaryAnchor{k,fp,f,bp.fin(f).edge,p.t,p.s});')
+s=s.replace('''        for(std::size_t j=previous;j<out.arcs.size();++j) for(const auto &anchor:boundaryAnchors)
+            if(anchor.arcParameter==out.arcs[j].range.lo||anchor.arcParameter==out.arcs[j].range.hi)
+                out.arcs[j].anchors.push_back(anchor);''','''        for(std::size_t j=previous;j<out.arcs.size();++j) for(double endpoint:{out.arcs[j].range.lo,out.arcs[j].range.hi}) {
+            const auto events=boundaryAnchors.equal_range(endpoint);
+            for(auto event=events.first;event!=events.second;++event)out.arcs[j].anchors.push_back(event->second);
+        }''')
+f.write_text(s)
+helper=(p/'certificate.inc.txt').read_text();idx=helper.rfind('\n}');helper=helper[:idx]+'\n'+Path('/tmp/supporto-review/affine-pcurve-certificate.inc.txt').read_text()+helper[idx:]
+module='''#include "fk_boolean_boundary.h"
+#include "fk_bspline.h"
+#include <algorithm>
+#include <array>
+#include <cmath>
+#include <limits>
+namespace ForgeCad::Kernel::detail {
+namespace {
+'''+helper+'''
+}
+bool certifyEllipseBoundarySegment(const Ellipse<3>&ellipse,Interval range,bool forward,const Line<3>&line,double first,double last,const Surface&sa,const Surface&sb,double budget) {
+    return boundaryCertificate::piece(ellipse,range,forward,line,first,last,sa,sb,budget);
+}
+double ellipseAffinePCurveError(const Ellipse<3>&ellipse,Interval range,const Surface&surface,const Curve<2>&pcurve) {
+    return boundaryCertificate::affinePCurveError(ellipse,range,surface,pcurve);
+}
+}
+'''
+(p/'kernel/fk_boolean_boundary.cpp').write_text(module)

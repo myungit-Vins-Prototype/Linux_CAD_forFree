@@ -1,0 +1,12 @@
+{
+  "exit": 0,
+  "seconds": 14.940441377999377,
+  "command": [
+    "python3",
+    "tools/generate_architecture.py",
+    "--build-dir",
+    "forgecad-release",
+    "--jobs",
+    "2"
+  ]
+}

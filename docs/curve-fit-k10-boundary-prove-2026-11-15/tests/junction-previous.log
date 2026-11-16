@@ -1,0 +1,10 @@
+    /tmp/forgecad-k10-boundary-20261115/tests/test_boundary_fit_validation.cpp:284: FK_CHECK(error >= gap)
+    /tmp/forgecad-k10-boundary-20261115/tests/test_boundary_fit_validation.cpp:284: FK_CHECK(error >= gap)
+    /tmp/forgecad-k10-boundary-20261115/tests/test_boundary_fit_validation.cpp:284: FK_CHECK(error >= gap)
+    /tmp/forgecad-k10-boundary-20261115/tests/test_boundary_fit_validation.cpp:284: FK_CHECK(error >= gap)
+    /tmp/forgecad-k10-boundary-20261115/tests/test_boundary_fit_validation.cpp:284: FK_CHECK(error >= gap)
+    /tmp/forgecad-k10-boundary-20261115/tests/test_boundary_fit_validation.cpp:284: FK_CHECK(error >= gap)
+    /tmp/forgecad-k10-boundary-20261115/tests/test_boundary_fit_validation.cpp:284: FK_CHECK(error >= gap)
+    /tmp/forgecad-k10-boundary-20261115/tests/test_boundary_fit_validation.cpp:284: FK_CHECK(error >= gap)
+[ FAIL ] BoundaryFitOracleClosedJunctionEndpoints (8 controlli falliti)
+0/1 test superati

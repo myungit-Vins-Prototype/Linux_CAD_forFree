@@ -1,0 +1,25 @@
+faces=1 degree=3 length=0.001 worst=1.5571147532326777e-08 budget=1.5620499351813312e-08 ratio=0.996840574
+faces=1 degree=3 length=0.001 worst=1.5571147532147799e-08 budget=1.5620499351813312e-08 ratio=0.996840573
+faces=1 degree=3 length=0.001 worst=1.5574279707075947e-08 budget=1.5620499351813312e-08 ratio=0.99704109
+faces=1 degree=3 length=0.001 worst=1.5574279579279782e-08 budget=1.5620499351813312e-08 ratio=0.997041082
+generalPlanar du=1.5 dv=0.36600000000000033 flat=1.0000000000000001e-09
+faces=2 degree=3 length=0.001 worst=5.1218020799444025e-08 budget=5.6915554001761016e-08 ratio=0.899894971
+generalPlanar du=1.5 dv=0.36600000000000033 flat=1.0000000000000001e-09
+faces=2 degree=3 length=0.001 worst=5.1218020799444025e-08 budget=5.6915554001761016e-08 ratio=0.899894971
+generalPlanar du=1.5 dv=0.23400000000000049 flat=2.2000000000000003e-09
+faces=2 degree=3 length=0.001 worst=5.1217057400624696e-08 budget=5.6915554001761016e-08 ratio=0.899878044
+generalPlanar du=1.5 dv=0.23400000000000049 flat=2.2000000000000003e-09
+faces=2 degree=3 length=0.001 worst=5.1217057400624696e-08 budget=5.6915554001761016e-08 ratio=0.899878044
+[  OK  ] SheetFitPlanarNurbsOrientationsAndPose
+faces=1 degree=27 length=0.001 worst=5.4163133791913471e-05 budget=1.6652514771349186e-06 ratio=32.5254981
+    /tmp/forgecad-k10-next-20261115/sheet/measurement.cpp:158: FK_CHECK(worst <= fitTolerance)
+faces=1 degree=27 length=1 worst=0.054163133723697916 budget=0.0016652514771349188 ratio=32.5254981
+    /tmp/forgecad-k10-next-20261115/sheet/measurement.cpp:158: FK_CHECK(worst <= fitTolerance)
+generalPlanar du=1.5 dv=0.29999999999999827 flat=1.0000000000000001e-09
+faces=2 degree=27 length=0.001 worst=5.4163133791913471e-05 budget=1.665701798672268e-06 ratio=32.5167049
+    /tmp/forgecad-k10-next-20261115/sheet/measurement.cpp:158: FK_CHECK(worst <= fitTolerance)
+generalPlanar du=1500 dv=299.99999999999972 flat=1.0000000000000001e-09
+faces=2 degree=27 length=1 worst=0.054163133723697916 budget=0.001665701798672268 ratio=32.5167048
+    /tmp/forgecad-k10-next-20261115/sheet/measurement.cpp:158: FK_CHECK(worst <= fitTolerance)
+[ FAIL ] SheetFitHiddenFeatureBothBranchesAndScale (4 controlli falliti)
+1/2 test superati

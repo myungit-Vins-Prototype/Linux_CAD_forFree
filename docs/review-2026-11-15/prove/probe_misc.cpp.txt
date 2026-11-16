@@ -1,0 +1,18 @@
+#include "fk_sheet.h"
+#include "fk_loft.h"
+#include "fk_primitives.h"
+#include "fk_boolean.h"
+#include "fk_body_check.h"
+#include "fk_mass.h"
+#include <iostream>
+using namespace ForgeCad::Kernel;
+int main(){
+ {Body b=makePlaneSheet(Frame3(),1);std::cout<<"reverse before="<<checkBody(b).size()<<std::endl;try{b.reverseEdge(b.edges().front());std::cout<<"reverse OK"<<std::endl;}catch(const std::exception&e){std::cout<<"reverse error="<<e.what()<<std::endl;}std::cout<<"reverse after="<<checkBody(b).size()<<std::endl;}
+ {Body b=makeBox(Frame3(),1,1,1),empty;for(auto op:{BooleanOperation::Unite,BooleanOperation::Intersect,BooleanOperation::Subtract})try{auto c=booleanOperation(b,empty,op);std::cout<<"empty op="<<int(op)<<" faces="<<c.faces().size()<<std::endl;}catch(const std::exception&e){std::cout<<"empty op="<<int(op)<<" error="<<e.what()<<std::endl;}}
+ for(double x:{0.,1e6})try{
+  std::vector<LoftSection> sections(2);
+  for(int i=0;i<2;++i){auto &s=sections[i];Vec3 a(x,0,i),b(x+.5,0,i);s.path={{std::make_shared<Line<3>>(a,b-a),{0,.5}}};}
+  auto corr=loftCorrespondenceDefaults(sections);std::cout<<"loft x="<<x<<" corr="<<corr[0].size()<<std::endl;
+  auto sheet=loftSheet(sections,true);double totalArea=0;for(auto f:sheet.faces())totalArea+=faceArea(sheet,f);std::cout<<"loft x="<<x<<" faces="<<sheet.faces().size()<<" checks="<<checkBody(sheet).size()<<" area="<<totalArea<<std::endl;
+ }catch(const std::exception&e){std::cout<<"loft x="<<x<<" error="<<e.what()<<std::endl;}
+}

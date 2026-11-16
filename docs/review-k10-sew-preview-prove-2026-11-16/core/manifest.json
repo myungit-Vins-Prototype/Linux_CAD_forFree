@@ -1,0 +1,50 @@
+{
+  "artifact_count_including_manifest": 10,
+  "files": [
+    {
+      "path": "README.md",
+      "bytes": 4968,
+      "sha256": "292e55fce8f5461025aa71de26b070d14fa00af3766ff04c3b4082a8a421c4bc"
+    },
+    {
+      "path": "commands-and-context.txt",
+      "bytes": 3057,
+      "sha256": "61ae809803730b9b93d1a97e6fbfc443e206456fdc84f57bba5b4497b985bd26"
+    },
+    {
+      "path": "fk_curve_fit_bounds.h.txt",
+      "bytes": 6594,
+      "sha256": "62dcaa3a96ad3a0aad4dc144ca138b3c03e78f44b98da18656b100d916b930a9"
+    },
+    {
+      "path": "fk_exchange.cpp.txt",
+      "bytes": 56873,
+      "sha256": "3bb3f3d3c5c3b7d34124355b5b10c282cc4dc63e79796b04513e0e30397a05e3"
+    },
+    {
+      "path": "fk_exchange.h.txt",
+      "bytes": 4134,
+      "sha256": "38d73c86d49e87a28d9508c9b5db55894e80427fe32da1c8e9bb492b954622a8"
+    },
+    {
+      "path": "fk_offset.cpp.txt",
+      "bytes": 149287,
+      "sha256": "239e84e8192e97bbada84b624753bd016cfff96720c14328465c1fc9f9e72fe5"
+    },
+    {
+      "path": "freeze.json",
+      "bytes": 1870,
+      "sha256": "4ebcc97bd98e3730ba1c93e598a394a0c7245fae9860a30405225287ab29f3eb"
+    },
+    {
+      "path": "probe_provenance.cpp.txt",
+      "bytes": 3215,
+      "sha256": "66c21b41beeb12f5c51f298c0071de1c417917918064b793509795569fd58fb3"
+    },
+    {
+      "path": "probe_provenance.log.txt",
+      "bytes": 228,
+      "sha256": "e86bd29fba7f15cb9c13dcf442916feaa0156a64cbe3a963e57836a4a7eaabed"
+    }
+  ]
+}

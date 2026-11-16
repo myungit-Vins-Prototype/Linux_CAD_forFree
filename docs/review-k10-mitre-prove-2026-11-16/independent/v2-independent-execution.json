@@ -1,0 +1,9 @@
+{
+  "command": "/tmp/mitre-review/tests/v2-tests",
+  "exit_code": 0,
+  "test_result": "13/13 PASS",
+  "files": {
+    "/tmp/mitre-review/tests/v2-tests": "6a734aab7e8679bd632d642a8c7b67ea03e28e93b42b9498b98d8bef02eee00d",
+    "/tmp/mitre-review/tests/test_blend_mitre_validation.cpp": "73811bf286bd01217092d662cbc34a98e614bdba453d6dff05ebac8d1e1235ba"
+  }
+}

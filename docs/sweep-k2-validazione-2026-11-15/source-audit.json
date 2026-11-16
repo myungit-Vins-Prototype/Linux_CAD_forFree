@@ -1,0 +1,40 @@
+{
+  "trackedCompared": 1037,
+  "trackedChanges": {
+    "CLAUDE.md": {
+      "before": "28a3546fa10d18405300e1113c7084e5e1e6d0871ed88f92a0b90708278421cc",
+      "after": "040df9315f7655a8867ff61847041be36935f2a1e76e39e1a5d1e73f17728bb2"
+    },
+    "kernel/CMakeLists.txt": {
+      "before": "c6116a450da0a64b1fd33f0597542ca0ff1a07a7ca9acf29a2949b908c9442a6",
+      "after": "66cd8ae9ca98dd48d5907f7ec09cb5c6a2a63992b7adceee3735d5bfc6212a27"
+    },
+    "kernel/fk_sweep.cpp": {
+      "before": "fe2b433f3cd3af959a8682435b997eda0e4771b28ea3db455fd50b6d940993bb",
+      "after": "823a5cef4ab4ab65ee87869fdc6e0d63e49f07e06b9ec7432d943a280a2f8339"
+    },
+    "kernel/fk_sweep.h": {
+      "before": "0090a12c8ab1b0d207ab701e08c364fdf0d4a416f019aac735b43cca72664735",
+      "after": "9f94d79f0798f6377c474f8ee9c130f9235d34ec0b3653a9ef894a46d9474676"
+    },
+    "tools/generate_architecture.py": {
+      "before": "c14f60a14a0ea1dc008edfeef9ef887704ac7a0f1661f71606b93e2029c3787e",
+      "after": "6393ccad958fe30f1ac7a4b4a8d4c5d0f6eb71657347798e11caa2a7017cae3b"
+    }
+  },
+  "newSoftwareFiles": {
+    "kernel/fk_sweep_surface_validation.cpp": "fecdd456de1bf99a732215de4f3efbb1a006505cff556a56b7ca920aa75cf001",
+    "kernel/fk_sweep_surface_validation.h": "564a1b326f654809100b405ccdf03d977f36b9ab3fc2a6fc30ce9eb228cd9e7d",
+    "kernel/fk_sweep_atlas.cpp": "419255766316ab12bdbde7dee1b90061ca2b8d8d88c5cdddcb743502eac03c2a",
+    "kernel/fk_sweep_atlas.h": "c68fff948249d008dab43df1b7842d683de1ed946e5ec08fd81c7c22a526e6ca",
+    "kernel/fk_sweep_caps.cpp": "39a18803bb4e386c7deb81c193f4b6de2753fbebcd7fc4cb527e98d2fe96ed65",
+    "kernel/fk_sweep_caps.h": "b03a1cdf9167399119ef3349adbe423c33f60c1959d71b220fdc330a55277a42",
+    "kernel/fk_sweep_analytic_bridge.h": "d08c3b55b0e55e7cedee05862097770e394e44709d6f4fa74ec3c1a60df3028b",
+    "kernel/fk_sweep_analytic_bridge.cpp": "f0d3b1b7ecbdfd173ef0406cb5e49357537271f2c9af9e4aa05003c4953305c3",
+    "kernel/tests/test_sweep_global.cpp": "56e973890df82a96622712ee085b6d43406da15adc404b9ede7a9eb51080b2a8",
+    "kernel/tests/test_sweep_validation.cpp": "025afd645ec678ee6bf569126f6a11e9a73cab15a3d8174e13f700d0da741b2b",
+    "kernel/tests/test_sweep_analytic_bridge.cpp": "5867a8c88eecf30bb8df5125457161b7c6a79dc655411533b885ee3d02e57608",
+    "kernel/tests/test_sweep_caps.cpp": "271319092d1c41b8be7be73807f3fa2970745570e4e00d80596424c124948e84"
+  },
+  "unexpectedChanges": []
+}

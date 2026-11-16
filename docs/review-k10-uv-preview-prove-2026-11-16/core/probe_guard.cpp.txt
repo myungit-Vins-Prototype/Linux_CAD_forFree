@@ -1,0 +1,62 @@
+#include "/tmp/k10-uv-review/core/fk_offset.cpp"
+#include "fk_primitives.h"
+#include <iostream>
+using namespace ForgeCad::Kernel;
+int main() {
+    int passed=0;
+    auto reject=[&](auto work,const char *name) {
+        try { work(); std::cerr<<name<<" incorrectly accepted\n"; return false; }
+        catch(const std::domain_error &) {++passed;std::cout<<name<<" PASS\n";return true;}
+    };
+    std::vector<Vec2> poles;
+    for(int i=0;i<7;++i)poles.emplace_back(i/6.,0);
+    auto smooth=std::make_shared<BSplineCurve<2>>(3,std::vector<double>{0,0,0,0,.25,.5,.75,1,1,1,1},poles);
+    int calls=0;
+    CurveFitErrorBound zero=[&](const Interval &,const std::array<Vec3,4>&){++calls;return 0.;};
+    if(!reject([&]{requirePlanePCurve(smooth,{0,1},zero,1e-7);},"smooth-seven-pole-schema"))return 1;
+    if(calls) return 2;
+    auto correct=std::make_shared<BSplineCurve<2>>(3,std::vector<double>{0,0,0,0,.5,.5,.5,1,1,1,1},poles);
+    requirePlanePCurve(correct,{0,1},zero,1e-7);
+    if(calls!=2)return 3;
+    ++passed;std::cout<<"proper-Bezier-schema PASS\n";
+    if(!reject([&]{requirePlanePCurve(correct,{0,1},zero,std::numeric_limits<double>::quiet_NaN());},"nonfinite-budget"))return 4;
+    auto metricPlane=std::make_shared<Plane>(Frame3::fromAxes({},Vec3(1e-12,0,0),Vec3(0,1,0),Vec3(0,0,1)));
+    auto quartic=std::make_shared<BSplineCurve<3>>(4,std::vector<double>{0,0,0,0,0,1,1,1,1,1},
+        std::vector<Vec3>{{0,0,0},{0,0,0},{0,0,0},{0,0,0},{1,0,0}});
+    auto metricData=detail::planePCurveErrorBound(quartic,metricPlane,{0,1});
+    const auto metricCallback=[](double t){return Vec3(1e12*t*t*t*t,0,0);};
+    auto metricCurve=fitPlanePCurveCertified(metricCallback,{0,1},{},1e-8,metricData.projection);
+    double maxUV=0,maxMetric=0;
+    for(const auto &span:metricCurve->bezierSegments()) {
+        std::array<Vec3,4>q;std::copy(span.poles().begin(),span.poles().end(),q.begin());
+        const double bound=metricData.projection(span.domain(),q);
+        if(!std::isfinite(bound)||bound>1e-8)return 7;
+        maxMetric=std::max(maxMetric,bound);
+        for(double fraction:{.25,.5,.75}) {
+            const double t=span.domain().lo+fraction*span.domain().length();
+            maxUV=std::max(maxUV,distance(span.point(t),metricCallback(t)));
+        }
+    }
+    if(!(maxUV>1. && maxMetric<=1e-8))return 8;
+    ++passed;std::cout<<"custom-metric-mm-not-UV PASS uvError="<<maxUV<<" metricBound="<<maxMetric<<"\n";
+    auto input=makeBox(Frame3(),1,1,1);
+    std::vector<FaceOffset>spec;for(auto f:input.faces())spec.push_back({f,0});
+    auto output=offsetJoinedFaces(input,spec,1e-7).body;
+    detail::RawModel model;detail::AssemblyMap map;
+    map.faces=output.faces();map.edges=output.edges();model.edges.resize(map.edges.size());
+    std::vector<PlanePCurveContract>contracts;
+    for(std::size_t e=0;e<map.edges.size();++e)model.edges[e].range=output.edge(map.edges[e]).range;
+    for(std::size_t f=0;f<map.faces.size();++f)for(auto loop:output.face(map.faces[f]).loops)for(auto id:output.loopFins(loop)){
+        auto &fin=output.fin(id);auto pos=std::find(map.edges.begin(),map.edges.end(),fin.edge);
+        contracts.push_back({int(f),int(pos-map.edges.begin()),fin.pcurveTolerance});
+    }
+    requireEmittedPlanePCurves(model,output,map,contracts,1e-7);
+    ++passed;std::cout<<"actual-output-topological-map PASS\n";
+    auto fid=output.fins().front();auto &fin=output.fin(fid);auto original=fin.pcurve;
+    auto originalSpline=std::dynamic_pointer_cast<const BSplineCurve<2>>(original);auto wrongPoles=originalSpline->poles();wrongPoles[1][0]+=.01;
+    fin.pcurve=std::make_shared<BSplineCurve<2>>(3,originalSpline->knots(),wrongPoles);
+    if(!reject([&]{requireEmittedPlanePCurves(model,output,map,contracts,1e-7);},"actual-output-pole-tamper"))return 5;
+    fin.pcurve=original;fin.pcurveTolerance*=2;
+    if(!reject([&]{requireEmittedPlanePCurves(model,output,map,contracts,1e-7);},"actual-output-budget-tamper"))return 6;
+    std::cout<<passed<<" guard cases passed\n";
+}

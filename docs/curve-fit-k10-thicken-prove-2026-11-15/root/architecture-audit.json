@@ -1,0 +1,71 @@
+{
+  "files": 756,
+  "edges": 10923,
+  "units": 376,
+  "errors": {},
+  "html_matches": true,
+  "incident_edges": 91,
+  "required": [
+    [
+      "kernel/fk_thicken.cpp",
+      "kernel/fk_transform.cpp",
+      "call"
+    ],
+    [
+      "kernel/fk_thicken.cpp",
+      "kernel/fk_thicken.h",
+      "include"
+    ],
+    [
+      "kernel/tests/test_planar_thicken_validation.cpp",
+      "kernel/fk_thicken.cpp",
+      "call"
+    ],
+    [
+      "cad_forge.cpp",
+      "kernel/fk_thicken.cpp",
+      "call"
+    ]
+  ],
+  "files_audited": {
+    "kernel/fk_thicken.cpp": {
+      "description": "Spessore lungo normale o direzione: su bordi di facce Plane le pareti conservano curve e parametri originali con traslazione ed estrusione; caps offset e genealogia conservati, superfici curve ancora con fit campionato e controlli locali.",
+      "incoming": {
+        "call": 6,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 26,
+        "include": 16,
+        "reference": 0
+      }
+    },
+    "kernel/fk_thicken.h": {
+      "description": "Contratto dello spessore di lamine: lato, normale o direzione, budget offset e conservazione dei bordi nelle pareti di facce Plane; limiti dei percorsi curvi.",
+      "incoming": {
+        "call": 5,
+        "include": 6,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 2,
+        "include": 2,
+        "reference": 0
+      }
+    },
+    "kernel/tests/test_planar_thicken_validation.cpp": {
+      "description": "Regressioni pareti di Spessore su Plane: dettagli NURBS nascosti, pesi e parametri originali, pose e lati, trim, fori, rappresentazioni finali, genealogia e codec.",
+      "incoming": {
+        "call": 1,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 22,
+        "include": 11,
+        "reference": 0
+      }
+    }
+  }
+}

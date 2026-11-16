@@ -1,0 +1,62 @@
+# Audit indipendente K10 — flattenSheet di una faccia Plane
+
+Esito finale: nessun bloccante nello scope congelato. **118 controlli indipendenti PASS**, più esecuzione completa PASS del precedente `test_surface_mapping.cpp`. Replay finale V3 con due oggetti privati ricompilati dai byte congelati; manifest confrontato con produzione e coincidente. Nessuna modifica a produzione, CMake, documentazione, build condivisa o CAD utente da questo audit.
+
+## Fonte e ripetizione
+
+Core verificati: `fk_planar_flatten.cpp` SHA fa746a9d…, intestazione2379037d…, `fk_quilt_mapping.cpp`9f2cc08b…. `manifest.json` contiene hash completi e percorsi relativi al repository, inclusi header pubblico, dipendenze finali ispezionate e test permanente letto. `final-sources/` conserva i byte. `build_final.py` ripete la compilazione privata e i probe, `finalize.py` valida log/hash. Sono stati riusati compile_commands e archivio kernel esistenti, con oggetti sostitutivi prima dell'archivio e flag strictFP `-fno-fast-math -ffp-contract=off`. Anche il CMake finale include entrambi i moduli fra le unità strictFP.
+
+I log definitivi sono `*-final.log`. `first-sources/`, `v2-sources/`, `*-first.log`, `*-v2.log` sono intermedi e non certificano il freeze finale. `baseline-before.log` e `before/seam-probe.log` appartengono alla baseline precedente; `initial-manifest.json` identifica i sorgenti allora presenti. Una prima fixture atomicità catturava solo std::exception, ma OperationCancelled non ne deriva: corretta la fixture, senza intervento prodotto. `atomic-fixture-catch-incomplete.log` conserva quel tentativo non valido; i tre casi definitivi sono in atomic-final.log.
+
+## Difetto e validità della fonte
+
+Sito K10 preesistente: `flattenSheet` fit campionato del bordo, prima linea411. Il profilo BSP27 a una sola campata ha piccole oscillazioni tra campioni; la mappa di una Plane deve conservarle. Polynomial: errore geometrico rispetto a TUTTI i4bordi output5.7424751730650314e-5, contro deviazione dichiarata2.4765581702771594e-10. Razionale con pesi positivi non costanti:5.4162191958084804e-5 contro2.8941041063890748e-10. Tolleranza pubblica1e-6, budget locale2e-8. Sorgente e risultato passavano checkBody, sorgente immutata.
+
+Il riproduttore indipendente `baseline.cpp` rafforza il controllo di distanza: anche la distanza del witness dall'unione dei box dei controlnet di TUTTI i4bordi output vale gli stessi5.74e-5/5.42e-5. Per la proprietà di hull convesso, il rilievo non si nasconde in un altro bordo corretto e non dipende soltanto dal parametro o dall'inversione numerica projectPoint. Le differenze sono ordini di grandezza superiori al roundoff dei confronti.
+
+`regularity.py/json` riproduce come razionali esatti i poli/pesi IEEE originali: Bernstein di Hx'W-HxW' e W positivo danno X'>=0.9999999999999999 nel caso polynomial e X'>=0.4444444444444445 nel caso rational (bound conservativo). Una partizione dyadica in64intervalli tramite deCasteljau esatto dà |Y|<=5.7486886933e-5/poly e5.4506085388e-5/rational. La monotonia X0→1 e |Y|<.001 escludono auto-intersezione e incroci con i lati X0/X1 e il lato superioreY1 salvo i corner voluti. La fonte è quindi un contorno semplice e regolare; la superficie Plane è regolare.
+
+Dopo il fix, entrambi i casi pubblici hanno errore indipendente same-parameter0, checkBody0, quattro bordi, historyFaces1, source immutata, deviazione dichiarata8.526979022893637e-14. Non si pretende che l'errore matematico sia identicamente zero: è coperto dal bound continuo.
+
+## Scope e semantica della mappa
+
+L'affinità non vale per il quilt generale: originAndScale dipende daV, chart.flat è una superficie rifittata e la meridiana usa lunghezza d'arco/inversione. La nuova branch è limitata a **una faccia Plane strutturale** e usa una mappa affine condivisa da flatten/fold/flattenSheet/stats. I fattori congelati sono norm(Su),norm(Sv) del frame originale, non1 ideale: gli assi double non sono esattamente ortonormali come numeri reali. Sense, anchor e frame destinazione entrano nella stessa formula.
+
+Inversioni e tagli bend usano gli stessi fattori; le guardie U/V finite rimangono anche con carrierOnly, con margine fisico linearResolution convertito nel parametro e clamp solo entro quel margine già previsto dal percorso precedente. Il test mapping completo precedente verifica anche carrier curvi, due facce, fold/bend, area, genealogia, STEP e B-rep. I controlli metrici/strech restano campionati interni al trim e non diventano bounds globali.
+
+## Certificato continuo e conservazione del parametro
+
+Per NURBS originale C(t)=sum N_i(t)w_i P_i / sum N_i(t)w_i, la mappa affine T può essere applicata ai poli. L'output conserva grado,nodi,pesi originali, con **gli stessi pesi fra fonte e output**; non richiede che siano tutti uguali. Quindi Q(t)-T(C(t)) è combinazione convessa dei residui Q_i-T(P_i), e max_i normUpper(residuo_i) è un bound continuo. Ogni residuo è calcolato outward dalle coordinate originali, dai fattori congelati e dal frame double; non da una curva riapprossimata o da una griglia di campioni. La prova vale anche su basi non-clamped.
+
+Trimmed conserva parametro e restrizione richiesta senza rinormalizzazioni; Line2 viene espressa come BSP1 con estremi su range finito, certificati rispetto origine/direzione originali, evitando di normalizzare la velocità. In output i poli3D sono espliciti, senza wrapper Transformed che il proiettore finale non riconosce.
+
+Assunzioni: coefficienti e pesi originali finiti, pesi strettamente positivi, arithmetic IEEE strictFP con arrotondamento outward delle operazioni. Gli operatori Bound costruiscono soltanto intervalli finiti/ordinati: NaN/overflow non possono essere ignorati da std::max. Squadratura/somma/sqrt del residuo sono arrotondate verso l'alto, con rifiuto se inconcludenti. Budget:100000poli e grado128, controllati prima delle copie numerose. Famiglie conosciute invalide/oltrebudget/fuoridominio lanciano, non ritornano legacy. Solo famiglia non supportata restituisce optional vuoto.
+
+## Stadi finali e limiti dei vertici
+
+computePCurves su Plane+BSP3 proietta i poli e mantiene nodi/pesi/parametro. Dopo questo stadio il codice verifica i coefficienti **della pcurve effettiva**, la compatibilità delle basi/pesi e il residuo continuo Plane(pcurve)-curva3D. Tale bridge viene sommato outward al bound del bordo già noto e il totale deve restare nel medesimo budget. Anche un eventuale riuso dell'edge nella singola faccia conosciuta confronta coefficienti e addebita il secondo uso originale; non si affida ai32campioni del fallback generale. Basi incompatibili falliscono in modo conservativo.
+
+Il gap topologico è fra vertici memorizzati e estremi numericamente valutati della curva. Viene sommato al bound della trasformazione e poi al bridge finale SPcurve. **Non è un enclosure outward della valutazione NURBS esatta all'estremo**: il certificato continuo riguarda il bordo rispetto alla SPcurve originale, mentre il gap topologico riguarda punti IEEE già valutati. Non si afferma un certificato matematico separato dei vertici rispetto a T(C(t_end)) esatto. La semantica sorgente conserva la SPcurve originale; eventuali tolleranze già dichiarate fra SPcurve e edge3D sorgente non diventano automaticamente una nuova prova di isometria.
+
+History viene preparata localmente; ultimo cancellationPoint prima di history/stats. Tre casi pubblici finali verificano output intatti con roundoff oltre budget su frame a1e16, cancellazione già richiesta e tolleranza invalida. I controlli non esauriscono ogni interleaving di cancellazione. La closure non esiste qui: i poli/weights/knots sono copiati, il corpo sorgente resta immutato come richiesto dal contratto SurfaceQuiltMap.
+
+## Prove finali eseguite
+
+| Gruppo | Controlli | Esito |
+|---|---:|---|
+| Immagine affine BSP27 |48| polynomial/rational ×3scale ×pose ×trim ×sense |
+| Contratti estremi |18| null/NaN/overflow/range/budget/100001poli/grado129/unsupported/cancel/trimLine |
+| Non-clamped e Line |12| rational non-clamped, finiteLine, partial BSP1 razionale, sense/pose |
+| Pcurve e vertice |11| roundtrip continuo>=errore indipendente, pcurve corrotta rifiutata, null/overflow/gap |
+| Atomicità pubblica |3| stats/history/source intatti su errore/cancel |
+| Downstream planare |24| metadata e rilievo conservati in computePCurves, scale .01/1/1000 e pose/trim/rational |
+| Riproduttori pubblici |2| errore0 dopo il fix, stessi contorni regolari |
+| Totale |118| PASS sul freeze finale |
+
+Inoltre: test_surface_mapping.cpp completo PASS sullo stesso freeze (un target legacy aggiuntivo, non conteggiato118). Il test permanente `test_planar_flatten_validation.cpp` è stato letto e copiato nel manifest; esecuzione e sanitizer permanenti, app, CTest e architettura sono responsabilità root/altri agenti e non sono rivendicati come verifiche eseguite da questo audit.
+
+I confronti densi e nearest-point sono evidenza indipendente di regressione, non il certificato continuo. Il certificato deriva dai coefficienti originali e dal hull con pesi positivi. Nessuna certificazione globale di Jacobiano/iniettività/isometria per quilt curvi, duefacce o altre famiglie.
+
+## Inventario e lavoro aperto
+
+Questo è un ulteriore caso del medesimo K10, senza nuovo ID. Il sito flattenSheet è coperto parzialmente per una Plane e SPcurve Line/NURBS; coniche angolari restano esplicito legacy, così come quilt curvi/duefacce. Il conteggio può diventare **9/24 siti parzialmente coperti,15 rimanenti**, non9siti integralmente certificati. I fallback generici fitCurve restano contrattualmente campionati e K10 rimane aperto.

@@ -1,0 +1,13 @@
+[  OK  ] IgesSewSpatialRepresentatives
+[  OK  ] SewSheetsIntoSolid
+[  OK  ] OffsetThenSewSolid
+[  OK  ] OffsetLoftSewnCaps
+[  OK  ] SewFillPreservesKnownBoundaryCurves
+[  OK  ] SewPreservesBoundaryWithDifferentParameters
+[  OK  ] SewClosedEdgesWithUnequalParameters
+[  OK  ] SewDoesNotMergeDifferentCurvesWithSameMidpoint
+[  OK  ] SewThinSolidRetainsOutwardOrientation
+[  OK  ] SewMappedSamplesRetainDistanceLimit
+[  OK  ] SewPreservesDensePCurveRegardlessOfOperandOrder
+[  OK  ] HistoryExtractAndSewFacesPreserveDeclaredSources
+12/12 test superati

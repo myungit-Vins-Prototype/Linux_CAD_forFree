@@ -1,0 +1,4 @@
+flat=0 source_issues=0 source_dense_gap=7.1088959579333461e-16 pcurve_break_count=2
+accepted=1 output_issues=0 output_dense_gap=0.001 source_unchanged=1 support_change_at_peak=0.00050000000000000001
+flat=1 source_issues=0 source_dense_gap=7.1088959579333461e-16 pcurve_break_count=2
+accepted=1 output_issues=0 output_dense_gap=0.00050000000000000001 source_unchanged=1 support_change_at_peak=0.00050000000000000001

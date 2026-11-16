@@ -1,0 +1,6 @@
+from pathlib import Path
+import json,shlex,subprocess,sys
+root=Path('/home/myungit/Linux_CAD_forFree');out=Path('/tmp/forgecad-k10-mapping-20261115/tests');impl=out.parent/'implementation';cs=json.loads((root/'forgecad-release/compile_commands.json').read_text());c=next(x for x in cs if x['file'].endswith('/kernel/tests/test_curve_fit_validation.cpp'));cmd=shlex.split(c['command']);cmd.insert(1,'-I'+str(impl));cmd[cmd.index('-o')+1]=str(out/'test_mapping_carrier_validation.o');cmd[cmd.index('-c')+1]=str(out/'test_mapping_carrier_validation.cpp');cmd+=['-I'+str(root/'kernel/tests')];subprocess.run(cmd,cwd=c['directory'],check=True)
+objects=[str(impl/'fk_mapping_carrier.o'),str(impl/'fk_curve_fit_bounds.o')]
+if '--baseline' not in sys.argv:objects.append(str(impl/'fk_surface_mapping.o'))
+subprocess.run(['/usr/bin/c++','-o',str(out/('tests-baseline' if '--baseline' in sys.argv else 'tests-fixed')),str(out/'test_mapping_carrier_validation.o')]+objects+[str(root/'forgecad-release/kernel/CMakeFiles/forgekernel_offset_validation_tests.dir/tests/fk_test_main.cpp.o'),str(root/'forgecad-release/kernel/libforgekernel.a'),'-lpthread'],check=True)

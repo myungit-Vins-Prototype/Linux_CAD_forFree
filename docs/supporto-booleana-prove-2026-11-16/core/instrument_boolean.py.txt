@@ -1,0 +1,69 @@
+from pathlib import Path
+p=Path('/tmp/supporto-review/kernel/fk_boolean.baseline.cpp.txt');s=p.read_text().replace('#include "fk_boolean.h"','#include "fk_boolean.h"\n#include <fstream>\n#include <iomanip>\n#include <cstdlib>\n#include <iostream>',1)
+needle='''        std::exception_ptr error;
+    };
+    std::vector<FaceResult> faceResults;'''
+repl='''        std::exception_ptr error;
+        std::string diagnostic;
+    };
+    std::vector<FaceResult> faceResults;''';assert needle in s;s=s.replace(needle,repl,1)
+needle='''                const Location location = classify(subFace, *classifiers[job.body], history ? &subFace.coincidentFaces : nullptr);
+                if (adjacentOnly_'''
+repl='''                const Location location = classify(subFace, *classifiers[job.body], history ? &subFace.coincidentFaces : nullptr);
+                if (std::getenv("SUPPORTO_BOOLEAN_TRACE")) {
+                    std::ostringstream log;
+                    log << "CLASSIFY body=" << job.body << " face=" << job.face.index << " location=" << int(location)
+                        << " kept=" << keep(job.body, location) << " whole=" << subFace.whole << " unchanged=" << subFace.unchanged
+                        << " cycles=" << subFace.cycles.size() << "\\n";
+                    for (const auto &cycle : subFace.cycles) for (const auto &piece : cycle.pieces)
+                        log << "  SUBPIECE source=" << piece.source.index << " fin=" << piece.sourceFin.index
+                            << " cut=" << piece.cut << " partner=" << piece.partner.index << " crossing=" << piece.partnerCrosses
+                            << " forward=" << piece.forward << " range=" << std::setprecision(17) << piece.range.lo << "," << piece.range.hi << "\\n";
+                    job.diagnostic += log.str();
+                }
+                if (adjacentOnly_''';assert needle in s;s=s.replace(needle,repl,1)
+needle='''        if (job.error) std::rethrow_exception(job.error);
+        kept.insert(kept.end(),''';repl='''        if (job.error) std::rethrow_exception(job.error);
+        if (const char *path = std::getenv("SUPPORTO_BOOLEAN_TRACE")) { std::ofstream out(path, std::ios::app); out << job.diagnostic; }
+        kept.insert(kept.end(),''';assert needle in s;s=s.replace(needle,repl,1)
+needle='''    std::vector<Vec3> vertices;
+    std::vector<double> vertexTolerances;''';repl='''    std::ofstream supportoTrace;
+    if (const char *path = std::getenv("SUPPORTO_BOOLEAN_TRACE")) supportoTrace.open(path, std::ios::app);
+    supportoTrace << std::setprecision(17) << "ASSEMBLE kept=" << kept.size() << " tolerance=" << tolerance_ << "\\n";
+    const auto tracePoint = [&](const Vec3 &p) { supportoTrace << "[" << p.x() << "," << p.y() << "," << p.z() << "]"; };
+    std::vector<Vec3> vertices;
+    std::vector<double> vertexTolerances;''';assert needle in s;s=s.replace(needle,repl,1)
+needle='''        const Face &face = bodies_[subFace.body].face(subFace.face);
+        Body::BuildFace built;''';repl='''        const Face &face = bodies_[subFace.body].face(subFace.face);
+        supportoTrace << "FACE output=" << faces.size() << " sourceBody=" << subFace.body << " sourceFace=" << subFace.face.index
+            << " type=" << int(face.surface->type()) << " flip=" << flip << " sense=" << face.sense << " cycles=" << subFace.cycles.size() << "\\n";
+        Body::BuildFace built;''';assert needle in s;s=s.replace(needle,repl,1)
+needle='''                loop.push_back(fin);
+            }
+            if (!loop.empty()) built.loops.push_back(std::move(loop));''';repl='''                supportoTrace << " FIN outputEdge=" << index << " sense=" << fin.sense << " sourceEdge=" << piece.source.index << " sourceFin=" << piece.sourceFin.index
+                    << " cut=" << piece.cut << " crossing=" << piece.partnerCrosses << " partner=" << piece.partner.index << " forward=" << piece.forward
+                    << " range=" << piece.range.lo << "," << piece.range.hi << " tolerance=" << piece.tolerance << " start=";
+                tracePoint(piece.start()); supportoTrace << " end="; tracePoint(piece.end()); supportoTrace << " middle="; tracePoint(piece.middle());
+                supportoTrace << " projectedParam=" << onPiece.parameter << " projectedGap=" << onPiece.distance << " tangentDot=" << dot(piece.tangentAt(onPiece.parameter), edgeTangent) << "\\n";
+                loop.push_back(fin);
+            }
+            if (!loop.empty()) built.loops.push_back(std::move(loop));''';assert needle in s;s=s.replace(needle,repl,1)
+needle='''    pairRadially(vertices, edges, edgeMiddles, faces);
+    splitVertices(vertices, edges, faces);
+    Body result;''';repl='''    const auto dumpAssembly = [&](const char *phase) {
+        supportoTrace << "STATE " << phase << " V=" << vertices.size() << " E=" << edges.size() << " F=" << faces.size() << "\\n";
+        for (std::size_t e=0;e<edges.size();++e) {
+            int forward=0,backward=0;
+            for (const auto &face : faces) for (const auto &loop : face.loops) for (const auto &fin : loop) if (fin.edge==int(e)) (fin.sense?forward:backward)++;
+            const auto &edge=edges[e];supportoTrace << " EDGE " << e << " uses=" << forward << "/" << backward << " vertices=" << edge.start << "," << edge.end
+                << " curveType=" << int(edge.curve->type()) << " range=" << edge.range.lo << "," << edge.range.hi << " tolerance=" << edge.tolerance << " start=";
+            tracePoint(edge.curve->point(edge.range.lo));supportoTrace << " end=";tracePoint(edge.curve->point(edge.range.hi));supportoTrace << "\\n";
+        }
+        supportoTrace.flush();
+    };
+    dumpAssembly("before pairing");
+    pairRadially(vertices, edges, edgeMiddles, faces);
+    splitVertices(vertices, edges, faces);
+    dumpAssembly("after pairing and split vertices");
+    Body result;''';assert needle in s;s=s.replace(needle,repl,1)
+Path('/tmp/supporto-review/kernel/fk_boolean.cpp').write_text(s)

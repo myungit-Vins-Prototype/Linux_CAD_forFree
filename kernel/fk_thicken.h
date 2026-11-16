@@ -20,7 +20,10 @@ struct ThickenOptions {
     double thickness = 1.0;  // > 0
     ThickenSide side = ThickenSide::Forward;
     // Lungo la normale (useDirection falso): superficie a distanza (fk_offset)
-    // e pareti rigate lungo la normale ai bordi. Le facce devono essere unite
+    // e pareti rigate lungo la normale ai bordi. Su una faccia Plane le
+    // pareti dei bordi supportati conservano curve e parametri originali
+    // mediante traslazione ed estrusione, con arrotondamenti ordinari.
+    // Le facce devono essere unite
     // da spigoli tangenti; lo spessore non puo' superare il raggio di
     // curvatura dalla parte in cui va.
     // Lungo una direzione (useDirection vero): copia traslata della superficie

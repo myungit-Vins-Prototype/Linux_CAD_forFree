@@ -1,0 +1,43 @@
+{
+  "exit": 0,
+  "seconds": 35.82570665499952,
+  "command": [
+    "ctest",
+    "--test-dir",
+    "forgecad-release",
+    "--output-on-failure",
+    "--parallel",
+    "1",
+    "-V",
+    "-R",
+    "^(forgekernel_boolean_boundary_tests|forgekernel_boolean_seam_tests|forgekernel_history_tests|forgekernel_tolerance_tests|forgekernel_loft_guide_constraint_tests|forgekernel_loft_shape_tests|forgekernel_curve_fit_validation_tests|forgekernel_surface_curve_fit_validation_tests|forgekernel_edge_offset_fit_validation_tests|forgekernel_loft_correspondence_tests|forgecad_boolean_history_tests|forgecad_boolean_box_tests|forgecad_topology_label_tests|forgecad_document_precision_tests|forgecad_body_owner_history_tests|forgecad_history_position_tests|forgecad_pattern_placement_tests|forgecad_pattern_result_tests|forgecad_all_history_tests|forgecad_edge_loft_tests|forgecad_loft_correspondence_tests|forgecad_document_lifetime_tests|forgecad_edit_preview_reuse_tests|forgecad_history_preview_mesh_tests)$"
+  ],
+  "actual_passed": 24,
+  "tests": [
+    "forgekernel_boolean_boundary_tests",
+    "forgekernel_boolean_seam_tests",
+    "forgekernel_history_tests",
+    "forgekernel_tolerance_tests",
+    "forgekernel_loft_guide_constraint_tests",
+    "forgekernel_loft_shape_tests",
+    "forgekernel_curve_fit_validation_tests",
+    "forgekernel_surface_curve_fit_validation_tests",
+    "forgekernel_edge_offset_fit_validation_tests",
+    "forgekernel_loft_correspondence_tests",
+    "forgecad_boolean_history_tests",
+    "forgecad_boolean_box_tests",
+    "forgecad_topology_label_tests",
+    "forgecad_document_precision_tests",
+    "forgecad_body_owner_history_tests",
+    "forgecad_history_position_tests",
+    "forgecad_pattern_placement_tests",
+    "forgecad_pattern_result_tests",
+    "forgecad_all_history_tests",
+    "forgecad_edge_loft_tests",
+    "forgecad_loft_correspondence_tests",
+    "forgecad_document_lifetime_tests",
+    "forgecad_edit_preview_reuse_tests",
+    "forgecad_history_preview_mesh_tests"
+  ],
+  "new_boundary_assertions": 51
+}

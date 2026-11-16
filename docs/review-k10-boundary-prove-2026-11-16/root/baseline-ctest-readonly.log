@@ -1,0 +1,8 @@
+UpdateCTestConfiguration  from :/home/myungit/Linux_CAD_forFree/forgecad-release/DartConfiguration.tcl
+Test project /home/myungit/Linux_CAD_forFree/forgecad-release
+CMake Error: Cannot open file for write: /home/myungit/Linux_CAD_forFree/forgecad-release/Testing/Temporary/LastTest.log.tmpc55ee
+CMake Error: : System Error: Read-only file system
+Problem opening file: /home/myungit/Linux_CAD_forFree/forgecad-release/Testing/Temporary/LastTest.log
+Cannot create log file: LastTest.log
+Constructing a list of tests
+Errors while running CTest

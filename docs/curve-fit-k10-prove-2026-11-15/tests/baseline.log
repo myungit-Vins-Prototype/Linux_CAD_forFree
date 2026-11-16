@@ -1,0 +1,36 @@
+spline27_s0.001000_fit accepted=1 measured=1.089484241385376e-13 actual=5.742475060175044e-08 tol=1e-10 poles=4 calls=12
+spline27_s0.001000_offset accepted=1 actual=5.74247506317317e-08 tol=1e-10
+spline27_s0.001000_rational_fit accepted=1 measured=9.603463381799629e-11 actual=9.611608196220039e-11 tol=1e-10 poles=181 calls=543
+spline27_s0.001000_rational_offset accepted=1 actual=9.46290907712859e-11 tol=1e-10
+spline27_s0.001000_pose_fit accepted=1 measured=5.975973975676326e-12 actual=5.742548577169885e-08 tol=1e-10 poles=4 calls=12
+spline27_s0.001000_pose_offset accepted=1 actual=5.742692229689113e-08 tol=1e-10
+spline27_s0.001000_pose_rational_fit accepted=1 measured=9.602775706412037e-11 actual=9.610907336477225e-11 tol=1e-10 poles=181 calls=543
+spline27_s0.001000_pose_rational_offset accepted=1 actual=9.463367807253453e-11 tol=1e-10
+spline27_s1.000000_fit accepted=1 measured=1.133391630628571e-10 actual=5.742475060175487e-05 tol=1e-07 poles=4 calls=12
+spline27_s1.000000_offset accepted=1 actual=5.74247506152284e-05 tol=1e-07
+spline27_s1.000000_rational_fit accepted=1 measured=9.603555127204644e-08 actual=9.611697309172041e-08 tol=1e-07 poles=181 calls=543
+spline27_s1.000000_rational_offset accepted=1 actual=9.463007620186895e-08 tol=1e-07
+spline27_s1.000000_pose_fit accepted=1 measured=6.218240216665612e-09 actual=5.742555522664644e-05 tol=1e-07 poles=4 calls=12
+spline27_s1.000000_pose_offset accepted=1 actual=5.742559077223456e-05 tol=1e-07
+spline27_s1.000000_pose_rational_fit accepted=1 measured=9.603837338442599e-08 actual=9.611978394143893e-08 tol=1e-07 poles=181 calls=543
+spline27_s1.000000_pose_rational_offset accepted=1 actual=9.463073808480695e-08 tol=1e-07
+spline27_s1000.000000_fit accepted=1 measured=1.00600379248419e-07 actual=0.05742475060175256 tol=9.999999999999999e-05 poles=4 calls=12
+spline27_s1000.000000_offset accepted=1 actual=0.05742475064448659 tol=9.999999999999999e-05
+spline27_s1000.000000_rational_fit accepted=1 measured=9.603470188666609e-05 actual=9.611614293609482e-05 tol=9.999999999999999e-05 poles=181 calls=543
+spline27_s1000.000000_rational_offset accepted=1 actual=9.462939410524245e-05 tol=9.999999999999999e-05
+spline27_s1000.000000_pose_fit accepted=1 measured=6.406181711759761e-06 actual=0.05742565694693733 tol=9.999999999999999e-05 poles=4 calls=12
+spline27_s1000.000000_pose_offset accepted=1 actual=0.05742555131070592 tol=9.999999999999999e-05
+spline27_s1000.000000_pose_rational_fit accepted=1 measured=9.603166767752659e-05 actual=9.61132954238826e-05 tol=9.999999999999999e-05 poles=181 calls=543
+spline27_s1000.000000_pose_rational_offset accepted=1 actual=9.462682280783354e-05 tol=9.999999999999999e-05
+adversarial accepted=1 measured=1.195034862935397e-11 actual=0.000445999063689424 tol=1e-07 poles=4 calls=12
+invalid_tolerance accepted=0 deviation=-123 calls=147486 reason=offset: curva a distanza non approssimabile entro il limite di raffinamento
+invalid_tolerance accepted=0 deviation=-123 calls=147507 reason=offset: curva a distanza non approssimabile entro il limite di raffinamento
+invalid_tolerance accepted=0 deviation=-123 calls=147507 reason=offset: curva a distanza non approssimabile entro il limite di raffinamento
+invalid_tolerance accepted=1 measured=1.185007647563907e-11 actual=1.248401382270004e-11 tol=inf poles=4 calls=12
+invalid_callback accepted=0 deviation=0 calls=12 reason=BSplineCurve: polo non finito
+invalid_callback accepted=0 deviation=0 calls=12 reason=BSplineCurve: polo non finito
+discontinuous accepted=0 deviation=-123 calls=372 reason=offset: curva a distanza non approssimabile (cuspidi?)
+narrow_breaks accepted=0 deviation=-123 calls=3931 reason=offset: curva a distanza non approssimabile (cuspidi?)
+cancel cancelled=1 deviation=-123 calls=0
+cancel cancelled=1 deviation=-123 calls=1
+cancel cancelled=1 deviation=-123 calls=12

@@ -104,11 +104,6 @@ public:
         s.derivative[2] = d[1] + size_ * tT1;
         return s;
     }
-    Vec3 inPlane(double t) const {
-        const Vec3 w = cross(normal_, curve_->derivative(t));
-        return sideT_ * normalized(w);
-    }
-
     RowFit fit() const { return fit(range_); }
     RowFit fit(const Interval &span) const {
         std::vector<double> breaks = curve_->breakpoints(span);

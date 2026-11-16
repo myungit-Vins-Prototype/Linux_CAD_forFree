@@ -1,0 +1,27 @@
+from pathlib import Path
+import subprocess,json,os,sys,time
+r=Path('/home/myungit/Linux_CAD_forFree');p=Path('/tmp/forgecad-k2-production-20261115/parent')
+mode=sys.argv[1]
+if mode=='kernel':
+ filters=['Sweep','BodyIORoundTrip','BooleanParallelMatchesSequential','OffsetFacesSpring','BlendSweptTubeCap','StepWriteReadByOcct']
+ rows=[]
+ for name in filters:
+  start=time.monotonic()
+  with (p/f'production-{name}.log').open('w') as f:
+   x=subprocess.run([str(r/'forgecad-release/kernel/forgekernel_tests'),name],cwd=r,stdout=f,stderr=subprocess.STDOUT)
+  row={'filter':name,'returncode':x.returncode,'seconds':round(time.monotonic()-start,3)};rows.append(row);print(row,flush=True)
+  (p/'production-kernel-results.json').write_text(json.dumps(rows,indent=2)+'\n')
+ sys.exit(any(row['returncode'] for row in rows))
+if mode=='ctest':
+ selected=['forgecad_function_panels_tests','forgecad_history_preview_mesh_tests','forgecad_sweep_reference_tests','forgecad_surface_tools_tests','forgecad_document_units_tests','forgecad_all_history_tests','forgecad_document_read_tests','forgecad_workspace_tests']
+ listing=subprocess.run(['ctest','--test-dir','forgecad-release','--show-only=json-v1'],cwd=r,capture_output=True,check=True,text=True)
+ (p/'production-ctest-list.json').write_text(listing.stdout)
+ known={t['name'] for t in json.loads(listing.stdout)['tests']};assert set(selected)<=known
+ (p/'production-selected-tests.json').write_text(json.dumps(selected,indent=2)+'\n')
+ env=os.environ.copy()
+ for key,folder in [('XDG_CONFIG_HOME','config'),('XDG_CACHE_HOME','cache'),('XDG_DATA_HOME','data')]:
+  dest=p/'test-environment'/folder;dest.mkdir(parents=True,exist_ok=True);env[key]=str(dest)
+ env.update(QT_QPA_PLATFORM='offscreen',QT_QPA_PLATFORMTHEME='generic',QT_STYLE_OVERRIDE='Fusion',QT_QPA_OFFSCREEN_NO_GLX='1')
+ command=['ctest','--test-dir','forgecad-release','--output-on-failure','--parallel','2','-R','^('+'|'.join(selected)+')$','--output-junit',str(p/'production-ctest.xml')]
+ with (p/'production-ctest.log').open('w') as f:result=subprocess.run(command,cwd=r,env=env,stdout=f,stderr=subprocess.STDOUT)
+ (p/'production-ctest-exit.txt').write_text(str(result.returncode)+'\n');sys.exit(result.returncode)

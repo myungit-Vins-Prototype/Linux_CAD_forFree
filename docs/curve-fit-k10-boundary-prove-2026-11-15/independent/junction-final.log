@@ -1,0 +1,10 @@
+rawLine=0 reversed=0 queryRight=0 bound=2.0000000000000071 junction_gap=2
+rawLine=0 reversed=0 queryRight=1 bound=2.0000000000000036 junction_gap=2
+rawLine=0 reversed=1 queryRight=0 bound=4.0000000000000204 junction_gap=4
+rawLine=0 reversed=1 queryRight=1 bound=4.0000000000000036 junction_gap=4
+rawLine=1 reversed=0 queryRight=0 bound=2.0000000000000053 junction_gap=2
+rawLine=1 reversed=0 queryRight=1 bound=2.0000000000000031 junction_gap=2
+rawLine=1 reversed=1 queryRight=0 bound=4.0000000000000133 junction_gap=4
+rawLine=1 reversed=1 queryRight=1 bound=4.0000000000000036 junction_gap=4
+internal_jump_rejected=BSplineCurve: molteplicita' interna > grado (discontinuita')
+checks=9 PASS

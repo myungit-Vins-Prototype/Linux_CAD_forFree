@@ -1,0 +1,130 @@
+{
+  "created_utc": "2026-11-16T05:54:41.835461+00:00",
+  "source_paths": "relative to repository root",
+  "sources_sha256": {
+    "cad_sketch_offset.cpp": "62bc7824975f38656f0bbba2279e9bc1f47ca57380c6b5468d1170eba18ad69f",
+    "cad_sketch_offset.h": "7847d8ebc8b00276bf3d071bf6c8cff6fe78c930df2d5f7877d9513e66024ab3",
+    "cad_curve_solver.cpp": "63175f77d133ba55fc3960df701e148e41cbec5c7e3281dd0eeed99ef81a9259",
+    "cad_curve_solver.h": "903275ba9a43c694b2573048694ee0da3702421ae878d80797f7253539972c88",
+    "cad_types.h": "265cfd3c097228fbb3c2128e78ee4b46bab5bdad84b29ccb495f1f3152f13e01",
+    "cad_sketch_edit.h": "55fa88358cae74e58c50470948e4a2095ae64393dbd7144aff5635ee4dcb1bd7",
+    "cad_kernel.h": "bd3c2f0b16ac7bc28de28d5b7225ab431db215a665f16732fc08e8a5e9edc2d9",
+    "kernel/fk_curve_fit_bounds.cpp": "e2f4d46b0650b4f8e17556cecfe2fb7d11a8d186cf7c04377ed9bbb1224956a0",
+    "kernel/fk_curve_fit_bounds.h": "313b1466bedd48372d85abe8356785cfa7c587e87042eadd4096b0d40e230494",
+    "kernel/fk_curve_ops.cpp": "b898e88ec871c0c08f9c2a27b5deed00512f0376f97a391cf7e5404a10b4cd63",
+    "kernel/fk_offset.cpp": "7c8a22480b028b1c460e41ef5e9c1c6e49bad1bdba99d6417b3668c3d6560185",
+    "kernel/fk_nurbs.cpp": "34be71dd69027a84c5a9d2a86e700dfa97cc99a79c8c1f92944cf73197847032",
+    "kernel/fk_bspline.cpp": "b0289efeaa87c143eaeecf4ab0e3af759695696d4b866cb3317777bf1664d1f2",
+    "kernel/fk_bspline.h": "8ab6654b6f1fda07d67fe2f1aae8e1b3f6e255a988354eea383765c5b98d165d",
+    "forgecad-release/kernel/libforgekernel.a": "822326d26dc83490d64470a5728c80e839ea6740ba7490295f094087aeabd66d"
+  },
+  "baseline_sources_sha256": {
+    "cad_sketch_offset.cpp": "122b6daac7ced186096e52ebdc88655aea1bde774fcc8cbcd4c845cbcb9a6331",
+    "cad_sketch_offset.h": "464a12e29f89336019e5700f4eba20443fcffa219ab3716dd7f108de95359b55"
+  },
+  "kernel_matches_frozen_baseline": true,
+  "compile_flags": [
+    "-std=c++17",
+    "-O2",
+    "-fPIC",
+    "-fno-fast-math",
+    "-ffp-contract=off",
+    "-ffunction-sections",
+    "-fdata-sections"
+  ],
+  "commands": [
+    "python3 <stage>/build.py before",
+    "<stage>/public-before <stage>",
+    "python3 <stage>/proof.py",
+    "python3 <stage>/build.py final",
+    "<stage>/public-final",
+    "python3 <stage>/build-direct.py final",
+    "<stage>/direct"
+  ],
+  "artifacts_sha256": {
+    "baseline.log": "4dfacec074e973bdd2ca30ad18a33f93cc2112b6daf7a9b09e863f63d3ff249e",
+    "before-cad_sketch_offset.cpp": "122b6daac7ced186096e52ebdc88655aea1bde774fcc8cbcd4c845cbcb9a6331",
+    "before-cad_sketch_offset.h": "464a12e29f89336019e5700f4eba20443fcffa219ab3716dd7f108de95359b55",
+    "build-direct.py": "d78ecc4b3ea845004e98e0add4c28db854d07a5556f5221d8d0eb5313931f859",
+    "build.py": "cc2c2d85d8fdc4f815d188348f53af0c382c07913f026f37d25eb7379769513c",
+    "candidate.log": "4ddbbb5a6abbdb603b9baa622a2762f91a10a00fc7a6db570b0fd8b9002ac1af",
+    "curve-pol-0.001000-left.txt": "5272b85eddd905dc7c6eb598fd4f2829e00e5dbe23abffde5c62fbd7f9095072",
+    "curve-pol-0.001000-reverse.txt": "a6e99eb4674c3297bcd3f05f3091cd707550eae49dba635340129a9a42fc6859",
+    "curve-pol-0.010000-left.txt": "a3211a780aba1a3f0449825c79b3bbe78a8066bc34d0bd59c35dc2cd60a56fca",
+    "curve-pol-0.010000-reverse.txt": "e114521249e32b222e8db509ff504f26c32fd4dd9b40e53b35eb9f249c56d894",
+    "curve-rat-0.001000-left.txt": "0317ace4403f903853ee63296c24eeec07a7e708d1d0ad5f608d5a98c3f594a7",
+    "curve-rat-0.001000-reverse.txt": "4e937cc84927817ddab1933ebc8fb612d96d85caa07fecb4256bf985f5dc9987",
+    "curve-rat-0.010000-left.txt": "20440d8bee975aa889375d0bd3cee9b44046f2e2b717cbee053415f5688ff802",
+    "curve-rat-0.010000-reverse.txt": "81d5d911623f350f452101825fa6ad57490fb3fbce541cd8642483ce6e1fd4c5",
+    "direct-candidate.log": "bb126b9ef510a3ef38754e7a3316aa32e8a2bf62afa726490138a2f75d5863f6",
+    "direct.cpp": "95c23bad7f2cf44c4cf8f36f751695770c6bc03891576c8a6678ff4f49f4ea33",
+    "final-cad_sketch_offset.cpp.txt": "62bc7824975f38656f0bbba2279e9bc1f47ca57380c6b5468d1170eba18ad69f",
+    "final-cad_sketch_offset.h.txt": "7847d8ebc8b00276bf3d071bf6c8cff6fe78c930df2d5f7877d9513e66024ab3",
+    "final-direct.log": "bb126b9ef510a3ef38754e7a3316aa32e8a2bf62afa726490138a2f75d5863f6",
+    "final-public.log": "4ddbbb5a6abbdb603b9baa622a2762f91a10a00fc7a6db570b0fd8b9002ac1af",
+    "fixtures.h": "670bbbba3c8235db590d9c3e6a99ae4cd048dc3ab5832c2a08831ea6829f3053",
+    "graph-consult.json": "f208266980d1f4955c883d96d21d7179754d237ec29c72c8f3b9052e87026f22",
+    "proof.json": "d83dbcbad8803b39853f0c212d3825469a01ad0854dfe721604959f6e70da3f0",
+    "proof.log": "6bd884677afbf4858a5ca62bd491d41b602ece9c6ab1c66b1d31916f49ab058f",
+    "proof.py": "45312f57d9b123069176a11ac3e8e2faa4f1a8cf4ca221b3cad261b820e709f7",
+    "public.cpp": "3bf7e614cc5f21d0831fe45748b67bc08c1b697f02a7a24fc188f5319fca6bf5",
+    "report.md": "581bf25c0504c84a1c218d6a823704a4aa0609472b3432c7671380307ad56f8c",
+    "results.json": "80906b062d0486ac86b5f7abdd2bb7b16e2f6c700c1ca9382221f8e2e46d032e",
+    "source-pol-0.001000.txt": "e51c3478a3decc7b37bf06c82e8fdbba0c33600095bff1a2a8dd1f529663f131",
+    "source-pol-0.010000.txt": "c85a2e4b9321ea303118e67ba73744267524d8ecaeea23e717c58191527bd115",
+    "source-pol-0.100000.txt": "5beb4457d122dbdcb7fca2e7d8a2f839c6d81dc835b7866061280bc8af1aca2d",
+    "source-pol-1.000000.txt": "c7e727712a1b1391910bc56909dc5e89da4108bd18da041a5243ca60224dd0ee",
+    "source-rat-0.001000.txt": "e6cdc5e1f66289328ced9834744e1b0bfbf91025b18017dc14324b462bf83d1e",
+    "source-rat-0.010000.txt": "92caad8c8d1fdbf169884008f7e07267f7b9a79e48d5edfb1b3f79b0bc4bbf26",
+    "source-rat-0.100000.txt": "8199eafc8c2c198017a8099bd27a3c7615d60518f15018893d849490d3e7fa00",
+    "source-rat-1.000000.txt": "910c206d40d6af756375cb6670e48fc2e2ddc21c21c3207a849f7a73b423bfef"
+  },
+  "results": {
+    "public_final_scenarios": 16,
+    "public_all_success_required": true,
+    "public_diagnostic_worst_gap": 3.013585770338971e-08,
+    "direct_final_checks": 12,
+    "exact_fraction_proofs": 8,
+    "baseline_violations": [
+      {
+        "rational": false,
+        "amplitude": 0.01,
+        "reverse": false,
+        "geometric_error_lower": 5.742472281607346e-07,
+        "regular_x_derivative_lower": 0.9999999999999999,
+        "offset_curvature_product_upper": 7.156817933139498e-06
+      },
+      {
+        "rational": false,
+        "amplitude": 0.01,
+        "reverse": true,
+        "geometric_error_lower": 5.742475172842813e-07,
+        "regular_x_derivative_lower": 0.9999999999999999,
+        "offset_curvature_product_upper": 7.156817933139498e-06
+      },
+      {
+        "rational": true,
+        "amplitude": 0.01,
+        "reverse": false,
+        "geometric_error_lower": 5.41621919622379e-07,
+        "regular_x_derivative_lower": 0.4444444444444445,
+        "offset_curvature_product_upper": 0.00014085975725738347
+      },
+      {
+        "rational": true,
+        "amplitude": 0.01,
+        "reverse": true,
+        "geometric_error_lower": 5.416216304976894e-07,
+        "regular_x_derivative_lower": 0.4444444444444445,
+        "offset_curvature_product_upper": 0.00014085975725738347
+      }
+    ],
+    "blocking_findings": [],
+    "limits": [
+      "unsupported source families remain legacy",
+      "retained source intervals only after loop removal",
+      "no global proof of loop classification or sampled collapse test",
+      "no new UI/renderer checks"
+    ]
+  }
+}

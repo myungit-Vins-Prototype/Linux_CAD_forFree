@@ -1,0 +1,11 @@
+from pathlib import Path
+import json,shlex,subprocess,hashlib
+r=Path('/home/myungit/Linux_CAD_forFree');o=Path('/tmp/forgecad-k10-20261115/independent');cs=json.loads((r/'forgecad-release/compile_commands.json').read_text());c=next(x for x in cs if x['file'].endswith('/kernel/fk_offset.cpp'))
+for name in ['fk_curve_fit_bounds','fk_offset']:
+ source=r/'kernel'/(name+'.cpp'); (o/(name+'.snapshot.cpp')).write_bytes(source.read_bytes());cmd=shlex.split(c['command']);cmd[cmd.index('-o')+1]=str(o/(name+'.o'));cmd[cmd.index('-c')+1]=str(o/(name+'.snapshot.cpp'));cmd+=['-I'+str(r/'kernel')];subprocess.run(cmd,cwd=c['directory'],check=True)
+(o/'source.sha256').write_text('\n'.join(hashlib.sha256((o/(n+'.snapshot.cpp')).read_bytes()).hexdigest()+' '+n+'.cpp' for n in ['fk_curve_fit_bounds','fk_offset'])+'\n')
+c=next(x for x in cs if x['file'].endswith('/kernel/tests/test_offset_validation.cpp'));cmd=shlex.split(c['command']);cmd[cmd.index('-o')+1]=str(o/'countercases.o');cmd[cmd.index('-c')+1]=str(o/'countercases.cpp');cmd+=['-I'+str(r/'kernel')];subprocess.run(cmd,cwd=c['directory'],check=True)
+l=r/'forgecad-release/kernel/occt_tests';cmd=shlex.split((l/'CMakeFiles/forgekernel_tests.dir/link.txt').read_text());tail=cmd[cmd.index('../libforgekernel.a'):];tail[0]=str(o/'libforgekernel.baseline.a')
+for mode in ['baseline','certified']:
+ args=[cmd[0],'-o',str(o/('countercases-'+mode)),str(o/'countercases.o')]+([] if mode=='baseline' else [str(o/'fk_offset.o'),str(o/'fk_curve_fit_bounds.o')])+tail;subprocess.run(args,cwd=l,check=True)
+ with (o/('countercases-'+mode+'.log')).open('w') as f:subprocess.run([str(o/('countercases-'+mode))],cwd=o,stdout=f,check=True)

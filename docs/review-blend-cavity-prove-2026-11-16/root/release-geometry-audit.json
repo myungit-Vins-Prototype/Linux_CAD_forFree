@@ -1,0 +1,164 @@
+{
+  "stage_comparison": {
+    "r1675-control-actual.body": {
+      "stage_sha256": "ee9f7682c05041e7f82e257b488aa111065018713a0db32e192454f961a80d51",
+      "release_sha256": "ee9f7682c05041e7f82e257b488aa111065018713a0db32e192454f961a80d51",
+      "byte_identical": true
+    },
+    "r11-control-actual.body": {
+      "stage_sha256": "2fc0a3f88e471ff813da18c5c288104cec673e82bb99b272f9491c0347971d51",
+      "release_sha256": "2fc0a3f88e471ff813da18c5c288104cec673e82bb99b272f9491c0347971d51",
+      "byte_identical": true
+    },
+    "r05-scale25-actual.body": {
+      "stage_sha256": "5c048f6a5c106416a63c9183bb0d4307862071b59a36fc502910e380157ba3fc",
+      "release_sha256": "5c048f6a5c106416a63c9183bb0d4307862071b59a36fc502910e380157ba3fc",
+      "byte_identical": true
+    },
+    "r05-rigid-pose-actual.body": {
+      "stage_sha256": "0362d640e1f7a4152e7bfcb5a1a078fdebdc15a28826c457042044c7895d68e0",
+      "release_sha256": "0362d640e1f7a4152e7bfcb5a1a078fdebdc15a28826c457042044c7895d68e0",
+      "byte_identical": true
+    },
+    "r05-seed17-actual.body": {
+      "stage_sha256": "414919c2ba924d6a8991a1587617184c61cf6e05cd06b709548f3b905bda0703",
+      "release_sha256": "414919c2ba924d6a8991a1587617184c61cf6e05cd06b709548f3b905bda0703",
+      "byte_identical": true
+    },
+    "r05-forward-actual.body": {
+      "stage_sha256": "414919c2ba924d6a8991a1587617184c61cf6e05cd06b709548f3b905bda0703",
+      "release_sha256": "414919c2ba924d6a8991a1587617184c61cf6e05cd06b709548f3b905bda0703",
+      "byte_identical": true
+    },
+    "r05-reversed-actual.body": {
+      "stage_sha256": "414919c2ba924d6a8991a1587617184c61cf6e05cd06b709548f3b905bda0703",
+      "release_sha256": "414919c2ba924d6a8991a1587617184c61cf6e05cd06b709548f3b905bda0703",
+      "byte_identical": true
+    }
+  },
+  "library_sha256": "e30b40c55b27f0702a2a1e95279b627643679b1823368e3c60ebc4d8c67f2a72",
+  "variants": 8,
+  "passed": 8,
+  "final_body_sha256": {
+    "r1675-control-actual.body": "ee9f7682c05041e7f82e257b488aa111065018713a0db32e192454f961a80d51",
+    "r11-control-actual.body": "2fc0a3f88e471ff813da18c5c288104cec673e82bb99b272f9491c0347971d51",
+    "r05-scale25-actual.body": "5c048f6a5c106416a63c9183bb0d4307862071b59a36fc502910e380157ba3fc",
+    "r05-rigid-pose-actual.body": "0362d640e1f7a4152e7bfcb5a1a078fdebdc15a28826c457042044c7895d68e0",
+    "r05-seed17-actual.body": "414919c2ba924d6a8991a1587617184c61cf6e05cd06b709548f3b905bda0703",
+    "r05-forward-actual.body": "414919c2ba924d6a8991a1587617184c61cf6e05cd06b709548f3b905bda0703",
+    "r05-reversed-actual.body": "414919c2ba924d6a8991a1587617184c61cf6e05cd06b709548f3b905bda0703"
+  },
+  "fin_audits": {
+    "r05-forward": {
+      "fins": 106,
+      "max_endpoint_gap": 0.003392948898272289,
+      "max_endpoint_ratio": 0.9900990099009902,
+      "bad_endpoints": 0,
+      "native_common_intervals": 59189,
+      "samples": 295945,
+      "missing": 0,
+      "over_original_check_budget": 0,
+      "max_gap": 0.00028727069311404213,
+      "max_ratio": 0.33333333333342835,
+      "worst_fin": 67,
+      "is_continuous_certificate": false
+    },
+    "r05-reversed": {
+      "fins": 106,
+      "max_endpoint_gap": 0.003392948898272289,
+      "max_endpoint_ratio": 0.9900990099009902,
+      "bad_endpoints": 0,
+      "native_common_intervals": 59189,
+      "samples": 295945,
+      "missing": 0,
+      "over_original_check_budget": 0,
+      "max_gap": 0.00028727069311404213,
+      "max_ratio": 0.33333333333342835,
+      "worst_fin": 67,
+      "is_continuous_certificate": false
+    },
+    "r05-rigid-pose": {
+      "fins": 106,
+      "max_endpoint_gap": 0.0033929489014940103,
+      "max_endpoint_ratio": 0.9900990100577404,
+      "bad_endpoints": 0,
+      "native_common_intervals": 64779,
+      "samples": 323895,
+      "missing": 0,
+      "over_original_check_budget": 0,
+      "max_gap": 0.000287270693360377,
+      "max_ratio": 0.3333333333339218,
+      "worst_fin": 67,
+      "is_continuous_certificate": false
+    },
+    "r05-scale25": {
+      "fins": 106,
+      "max_endpoint_gap": 0.008482372249085641,
+      "max_endpoint_ratio": 0.9900990226115233,
+      "bad_endpoints": 0,
+      "native_common_intervals": 68439,
+      "samples": 342195,
+      "missing": 0,
+      "over_original_check_budget": 0,
+      "max_gap": 0.0007181767329437735,
+      "max_ratio": 0.3333333333380717,
+      "worst_fin": 67,
+      "is_continuous_certificate": false
+    },
+    "r05-seed17": {
+      "fins": 106,
+      "max_endpoint_gap": 0.003392948898272289,
+      "max_endpoint_ratio": 0.9900990099009902,
+      "bad_endpoints": 0,
+      "native_common_intervals": 59189,
+      "samples": 295945,
+      "missing": 0,
+      "over_original_check_budget": 0,
+      "max_gap": 0.00028727069311404213,
+      "max_ratio": 0.33333333333342835,
+      "worst_fin": 67,
+      "is_continuous_certificate": false
+    },
+    "r11-control": {
+      "fins": 102,
+      "max_endpoint_gap": 0.006313432192511298,
+      "max_endpoint_ratio": 0.9900990099009902,
+      "bad_endpoints": 0,
+      "native_common_intervals": 57730,
+      "samples": 288650,
+      "missing": 0,
+      "over_original_check_budget": 0,
+      "max_gap": 0.0024340755322794167,
+      "max_ratio": 0.33333333333376963,
+      "worst_fin": 79,
+      "is_continuous_certificate": false
+    },
+    "r1675-control": {
+      "fins": 102,
+      "max_endpoint_gap": 0.008456679196478536,
+      "max_endpoint_ratio": 0.9900990099009902,
+      "bad_endpoints": 0,
+      "native_common_intervals": 58402,
+      "samples": 292010,
+      "missing": 0,
+      "over_original_check_budget": 0,
+      "max_gap": 0.0024268171558665622,
+      "max_ratio": 0.33333333333358617,
+      "worst_fin": 79,
+      "is_continuous_certificate": false
+    }
+  },
+  "control_comparison": {
+    "r11-control": {
+      "baseline_sha256": "2fc0a3f88e471ff813da18c5c288104cec673e82bb99b272f9491c0347971d51",
+      "release_sha256": "2fc0a3f88e471ff813da18c5c288104cec673e82bb99b272f9491c0347971d51",
+      "byte_identical": true
+    },
+    "r1675-control": {
+      "baseline_sha256": "325c5ec097ff9ad118906c072201ffa1ff49734644e6fc4d70121e5130ead430",
+      "release_sha256": "ee9f7682c05041e7f82e257b488aa111065018713a0db32e192454f961a80d51",
+      "byte_identical": false
+    }
+  },
+  "limit": "Native knot span samples and endpoint audit, not a continuous whole-curve certificate"
+}

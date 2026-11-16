@@ -1,0 +1,8 @@
+START representation=0 split=0
+PASS rep=0 split=0 issues=0 volume=12.4357 seconds=1.61909
+START representation=0 split=1
+PASS rep=0 split=1 issues=0 volume=12.4357 seconds=1.62286
+START representation=1 split=0
+PASS rep=1 split=0 issues=0 volume=12.4357 seconds=17.1159
+START representation=1 split=1
+FAIL rep=1 split=1 sweep: controllo globale delle superfici non risolto (budget validazione superfici sweep esaurito) seconds=56.5031

@@ -1,0 +1,7 @@
+INPUT epsilon=9.9999999999999994e-12 cap_radius=23.996666435163032 endpoint_radial_excess=1.000088900582341e-11 cylinder_issues=0 loft_issues=0 loft_volume=93606.866488237953 expected_loft_volume=93606.866488237967
+RESULT reverse=0 op=0 success=1 issues=0 faces=6 edges=8 shells=1 volume=277225.77317533654 area=29011.174149695449 history_operands=2
+RESULT reverse=0 op=1 success=1 issues=0 faces=4 edges=4 shells=1 volume=19051.486738495714 area=4147.9285743727178 history_operands=2
+RESULT reverse=0 op=2 success=1 issues=0 faces=6 edges=6 shells=1 volume=183618.93852987641 area=21793.487559804238 history_operands=2
+RESULT reverse=1 op=0 success=1 issues=0 faces=6 edges=8 shells=1 volume=277225.77317532763 area=29011.174149694481 history_operands=2
+RESULT reverse=1 op=1 success=1 issues=0 faces=4 edges=4 shells=1 volume=19051.486738495681 area=4147.9285743727096 history_operands=2
+RESULT reverse=1 op=2 success=1 issues=0 faces=4 edges=6 shells=1 volume=74555.344458757711 area=11365.61516426293 history_operands=2

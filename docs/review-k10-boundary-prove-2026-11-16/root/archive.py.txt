@@ -1,0 +1,34 @@
+from pathlib import Path
+import json,sys
+sys.path.insert(0,'/tmp/boundary-review/root');from verify import copy,sha,R,T,P
+assert (T/'final-audit.json').is_file()
+for p in T.rglob('*'):
+ if p.is_file():copy(p,P/'root'/p.relative_to(T))
+C=Path('/tmp/boundary-review/core')
+for f in ['HANDOFF.txt','manifest.json','commands.txt','boundary-core.patch']:
+ if(C/f).is_file():copy(C/f,P/'core'/f)
+for f in ['fk_blend_section_curve.cpp','fk_blend_section_curve.h','fk_blend_surface.cpp']:copy(C/'kernel'/f,P/'core/final'/f)
+A=Path('/tmp/boundary-review/audit')
+for line in(A/'SHA256SUMS').read_text().splitlines():h,f=line.split('  ',1);assert sha(A/f)==h,f
+for p in A.rglob('*'):
+ if p.is_file():copy(p,P/'independent'/p.relative_to(A))
+S=Path('/tmp/boundary-review/tests')
+for rec in json.loads((S/'frozen-manifest.json').read_text()):
+ p=Path(rec['path'])
+ if p.is_relative_to(R/'forgecad-release'):continue # Mutable build output: hash records provenance at test time.
+ assert sha(p)==rec['sha256'],rec['path']
+files=['TEST_REVIEW.txt','BUILD_COMMANDS.txt','final-results.json','frozen-manifest.json','graph-consult.json','test_boundary_validation.cpp','leak_calibration.cpp','shared_carrier_probe.cpp','candidate-section-instrumented.cpp','public-baseline-summary.json','public-candidate-link-command.txt','public-link-command.txt']
+files += [p.name for p in S.glob('*.log')]
+files += ['baseline/test_boundary_validation.cpp','baseline/fk_blend_surface.cpp','baseline/public-instrumented.cpp']
+for f in files:copy(S/f,P/'tests'/f)
+for folder in ['export-baseline','export-final']:
+ for p in(S/folder).glob('*.json'):copy(p,P/'tests'/folder/p.name)
+(P/'README.txt').write_text('''Prove K10 continuazioni dei bordi, 16 novembre 2026. Root: integrazione corev2/test15, build completa, 28 CTest, pubbliche3, Wayland, export finali/Fraction, architettura e conservazione. Core: sorgenti mirati e comandi. Tests: baseline e final15/15, ASan/UBSan/LSan su due TU piu driver, calibrazione19byte, diagnostiche pubbliche. Independent: Fraction su originali IEEE e lettura statica, v2 personale15/15. Nessun positivo pubblico ISO certificato osservato: le prove continue sono su helper di produzione e Body sintetici con fin effettive; unsupported e Newton restano campionati. Il vecchio alias multipolo resta fuori famiglia certificata. Globale preservazione carrier auditata solo sui casi esportati, non runtime generale. Fonte root final-source e core/final identiche ai sorgenti integrati; la cartella before preserva baseline. Script/sorgenti sono inerti con suffisso .txt: ripristinare estensioni e percorsi in una directory privata per riprodurre. Nessun ELF/oggetto/libreria/CAD. Solo SHA256SUMS alla radice descrive il pacchetto curato; manifest upstream documentano la provenienza. Rapporto: docs/review-k10-boundary-2026-11-16.md. Tentativi readonly/ptrace falliti mantenuti e distinti dagli esiti finali.
+''')
+for p in P.rglob('*'):
+ if p.is_file():
+  assert p.suffix not in ['.cpp','.h','.py','.sh','.inc','.o','.a','.prt','.body','.pyc'] and p.name!='CMakeLists.txt',str(p)
+  assert p.read_bytes()[:4]!=b'\x7fELF',str(p)
+files=sorted(p for p in P.rglob('*') if p.is_file() and p!=P/'SHA256SUMS');(P/'SHA256SUMS').write_text(''.join(sha(p)+'  '+str(p.relative_to(P))+'\n' for p in files))
+for line in(P/'SHA256SUMS').read_text().splitlines():h,f=line.split('  ',1);assert sha(P/f)==h,f
+print('Sealed',len(files),'text artifacts; SHA256SUMS',sha(P/'SHA256SUMS'))

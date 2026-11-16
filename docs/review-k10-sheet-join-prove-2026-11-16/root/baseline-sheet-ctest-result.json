@@ -1,0 +1,13 @@
+{
+  "exit": 0,
+  "seconds": 6.365596204999747,
+  "command": [
+    "ctest",
+    "--test-dir",
+    "forgecad-release",
+    "--output-on-failure",
+    "-V",
+    "-R",
+    "^forgekernel_(sheet_fit_validation|surface_tools)_tests$"
+  ]
+}

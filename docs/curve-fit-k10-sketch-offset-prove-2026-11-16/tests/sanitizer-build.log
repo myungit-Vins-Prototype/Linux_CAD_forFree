@@ -1,0 +1,14 @@
+BUILD test_sketch_offset_validation
+BUILD cad_sketch_offset
+BUILD cad_curve_solver
+BUILD fk_curve_fit_bounds
+BUILD fk_curve_ops
+BUILD fk_offset
+/tmp/forgecad-k10-sketch-offset-20261116/tests/sanitizer/fk_offset.cpp: In function ‘ForgeCad::Kernel::SurfacePtr ForgeCad::Kernel::{anonymous}::offsetBSplineC2(const ForgeCad::Kernel::Surface&, double, const ForgeCad::Kernel::Interval&, const ForgeCad::Kernel::Interval&, double, bool, bool)’:
+/tmp/forgecad-k10-sketch-offset-20261116/tests/sanitizer/fk_offset.cpp:294:151: warning: unused parameter ‘checkCurvature’ [-Wunused-parameter]
+  294 | SurfacePtr offsetBSplineC2(const Surface &surface, double d, const Interval &uw, const Interval &vw, double tolerance, bool preserveEndSections, bool checkCurvature = true) {
+      |                                                                                                                                                  ~~~~~^~~~~~~~~~~~~~~~~~~~~
+/tmp/forgecad-k10-sketch-offset-20261116/tests/sanitizer/fk_offset.cpp: In function ‘ForgeCad::Kernel::SurfacePtr ForgeCad::Kernel::{anonymous}::offsetBSpline(const ForgeCad::Kernel::Surface&, double, const ForgeCad::Kernel::Interval&, const ForgeCad::Kernel::Interval&, double, bool, bool)’:
+/tmp/forgecad-k10-sketch-offset-20261116/tests/sanitizer/fk_offset.cpp:521:149: warning: unused parameter ‘checkCurvature’ [-Wunused-parameter]
+  521 | SurfacePtr offsetBSpline(const Surface &surface, double d, const Interval &uw, const Interval &vw, double tolerance, bool preserveEndSections, bool checkCurvature = true) {
+      |                                                                                                                                                ~~~~~^~~~~~~~~~~~~~~~~~~~~

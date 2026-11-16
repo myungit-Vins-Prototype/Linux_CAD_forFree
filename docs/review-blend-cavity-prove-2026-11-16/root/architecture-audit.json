@@ -1,0 +1,123 @@
+{
+  "files": 773,
+  "edges": 11195,
+  "units": 386,
+  "errors": {},
+  "html_matches": true,
+  "incident_edges": 384,
+  "required_calls": [
+    [
+      "kernel/tests/test_blend_cavity_regressions.cpp",
+      "kernel/fk_blend.cpp",
+      "blendEdges"
+    ],
+    [
+      "kernel/fk_blend.cpp",
+      "kernel/fk_blend_surface.cpp",
+      "blendSurfaceChains"
+    ],
+    [
+      "kernel/fk_blend_surface.cpp",
+      "kernel/fk_blend_surface.cpp",
+      "traceAlongSurfaceU"
+    ],
+    [
+      "kernel/fk_blend_surface.cpp",
+      "kernel/fk_cancel.h",
+      "cancellationPoint"
+    ]
+  ],
+  "focus": {
+    "kernel/CMakeLists.txt": {
+      "description": "Definisce libreria geometrica, test, rilevamento from_chars decimale e arrotondamento coerente senza contrazione FMA implicita nei chiamanti CPU C++/Objective-C++.",
+      "incoming": {
+        "call": 0,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 0,
+        "include": 0,
+        "reference": 0
+      }
+    },
+    "kernel/fk_blend.cpp": {
+      "description": "Raccordi e smussi analitici: priorita al rifilo locale dei contorni piani chiusi e tangenti, preparazione anticipata degli appoggi NURBS G1 certificati per le facce selezionate, riuso della composizione e genealogia esplicita, ripiego sulle carte originali senza ripetere i tentativi composti; sezioni, utensili su appoggi curvi, catene tangenti, contorni misti, pezze terminali e raggi zero agli estremi aperti.",
+      "incoming": {
+        "call": 27,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 34,
+        "include": 21,
+        "reference": 0
+      }
+    },
+    "kernel/fk_blend_surface.cpp": {
+      "description": "Raccordi e smussi a palla rotolante: riordino delle transizioni tangenti su supporti opposti con consumo dei tratti corti e continuazione sulle guide adiacenti in entrambi i versi, raffinamento 3D del contatto sulle cuciture tangenti, copertura del fit e intersezioni locali smorzate entro il dominio delle pezze; consumo topologico di una frontiera terminale corta verso una quarta faccia e pezze d angolo, provenienza di bordi e vertici nuovi dichiarata per incidenza; sezioni normali e guida intrinseca per coperchi piani su fianchi B-spline tangenti, continuazione delle cuciture tangenti e raffinamento dei contatti accoppiati entro la risoluzione sorgente, chiusure terminali tangenti con Newton smorzato e continuazione unilaterale anche per bordi analitici, derivate unilaterali su tutti i nodi e scarto laterale misurato entro la risoluzione sorgente, tentativi atomici, limiti unilaterali a raggio zero con sezione collassata esatta anche a cuspidi di alta valenza, raffinamento presso le punte singolari, pezze intrinseche costanti tra collassi G1 dei ventagli polari e controllo dei contorni; curve terminali con quarto vincolo verificato, rifiuto dei tratti minimi fuori budget e continuazione alternativa lungo U sugli stessi supporti, estremi conservati e lavoro limitato cancellabile.",
+      "incoming": {
+        "call": 7,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 34,
+        "include": 19,
+        "reference": 0
+      }
+    },
+    "kernel/fk_cancel.h": {
+      "description": "Distinct from geometry errors: cancellation must bypass their recovery paths.",
+      "incoming": {
+        "call": 111,
+        "include": 81,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 0,
+        "include": 0,
+        "reference": 0
+      }
+    },
+    "kernel/tests/test_blend_cavity.cpp": {
+      "description": "Regressione del contorno a otto bordi su loft con piccole creste reali: selezione da ogni bordo, raggio costante, genealogia, persistenza, triangolazione e prolungamento esatto.",
+      "incoming": {
+        "call": 1,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 20,
+        "include": 10,
+        "reference": 0
+      }
+    },
+    "kernel/tests/test_blend_cavity_regressions.cpp": {
+      "description": "Raccordo della cavita a raggio piccolo nei due ordini, con semi diversi, posa rigida e scala: raggio analitico, genealogia, input immutato, persistenza, SP-curve e triangolazione; consumo specifico e cancellazione transazionale.",
+      "incoming": {
+        "call": 1,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 20,
+        "include": 10,
+        "reference": 0
+      }
+    },
+    "tools/generate_architecture.py": {
+      "description": "Implementazione: generate architecture.",
+      "incoming": {
+        "call": 0,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 0,
+        "include": 0,
+        "reference": 0
+      }
+    }
+  }
+}

@@ -1,0 +1,7 @@
+bump scale 1 worst 6.3085505954623434e-08
+bump scale 1000 worst 1.5518288971640179e-08
+[  OK  ] OffsetValidationHiddenSpanAndScale
+[  OK  ] OffsetValidationToroidalDomain
+[  OK  ] OffsetValidationCancellationAndReset
+[  OK  ] OffsetValidationAnalyticExtrusionAndRevolution
+4/4 test superati

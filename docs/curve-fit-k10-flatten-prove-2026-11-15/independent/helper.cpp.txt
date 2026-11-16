@@ -1,0 +1,9 @@
+#include "fk_planar_flatten.h"
+#include "fk_bspline.h"
+#include "fk_cancel.h"
+#include <iostream>
+#include <iomanip>
+#include <stdexcept>
+using namespace ForgeCad::Kernel;
+#include "fixtures.h"
+int main(){std::cout<<std::setprecision(17);int n=0;for(bool rational:{false,true})for(double scale:{.01,1.,1000.})for(bool posed:{false,true})for(bool trim:{false,true})for(int sense:{-1,1}){std::vector<Vec2>pol;std::vector<double>w;for(int i=0;i<28;++i){double x=i/27.,wi=rational?1+.5*x:1;double numerator=x+(rational?.5*i*(i-1.)/(27*26.):0);pol.push_back(scale*Vec2(numerator/wi,z27[i]/wi));if(rational)w.push_back(wi);}std::vector<double>knots(28,0);knots.insert(knots.end(),28,1);CurvePtr<2>src=std::make_shared<BSplineCurve<2>>(27,knots,pol,w);Interval range{0,1};if(trim){src=std::make_shared<TrimmedCurve<2>>(src,0,1);src=std::make_shared<TrimmedCurve<2>>(src,.05,.95);range={.1,.9};}Frame3 f=posed?Frame3(scale*Vec3(3,-2,.4),Vec3(.2,.3,1),Vec3(1,.2,-.1)):Frame3();const Vec2 anchor(.37*scale,.43*scale);auto im=detail::planarFlattenImage(src,range,anchor,.8,sense*1.2,f,2e-8);if(!im)throw std::runtime_error("unsupported");const Curve<3>*b=im->curve.get();while(b->type()==CurveType::Trimmed)b=static_cast<const TrimmedCurve<3>*>(b)->basis().get();auto spline=dynamic_cast<const BSplineCurve<3>*>(b);if(!spline||spline->degree()!=27||spline->knots()!=knots||spline->weights()!=w)throw std::runtime_error("metadata");double error=0;for(int i=0;i<=2000;++i){double t=range.lo+range.length()*i/2000.;auto uv=src->point(t);auto expected=f.toGlobal({.8*(uv.x()-anchor.x()),sense*1.2*(uv.y()-anchor.y()),0});error=std::max(error,distance(im->curve->point(t),expected));}if(!(error<=im->error&&im->error<=2e-8))throw std::runtime_error("bound");std::cout<<"rational="<<rational<<" scale="<<scale<<" posed="<<posed<<" trim="<<trim<<" sense="<<sense<<" bound="<<im->error<<" error="<<error<<"\n";++n;}std::cout<<"checks="<<n<<" PASS\n";}

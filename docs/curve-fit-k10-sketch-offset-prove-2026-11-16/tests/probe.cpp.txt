@@ -1,0 +1,23 @@
+#include "cad_sketch_offset.h"
+#include "cad_curve_solver.h"
+#include "fk_bspline.h"
+#include "fk_curve_algo.h"
+#include <iostream>
+#include <iomanip>
+#include "fixtures.h"
+using namespace ForgeCad;
+using namespace ForgeCad::Kernel;
+CurveObject fixture(bool rational=false){
+ CurveObject c;c.tool=DrawingTool::Converted;c.degree=27;
+ for(int i=0;i<28;++i){double w=rational?1.+.015*i:1.;c.controlPoints.append(QPointF(i/27.,0.01*z27[i]));if(rational)c.weights.append(w);}
+ for(int i=0;i<28;++i)c.knots.append(0.);for(int i=0;i<28;++i)c.knots.append(1.);return c;
+}
+int main(){
+ std::cout<<std::setprecision(17);
+ for(bool rat:{false,true})for(bool rev:{false,true})for(bool both:{false,true}){
+ SketchObject s;s.curves.append(fixture(rat));auto source=curveGeometry(s.curves[0])[0].curve;
+ SketchOffset o;o.distance=.001;o.reverse=rev;o.bothSides=both;QVector<SketchEntity> made={{9,123}};
+ auto r=offsetSketchEntities(s,{{1,0}},o,&made);std::cout<<"rational="<<rat<<" reverse="<<rev<<" both="<<both<<" error="<<r.error.toStdString()<<" created="<<made.size();
+ if(r.error.isEmpty())for(int j=0;j<made.size();++j){auto dest=curveGeometry(s.curves[made[j].index])[0].curve;double worst=0.,geometric=0.;double side=(rev?-1.:1.)*(j==1?-1.:1.);for(int i=0;i<=4096;++i){double t=double(i)/4096.;Vec2 d[2];source->evaluate(t,1,d);Vec2 exact=d[0]+side*o.distance*Vec2(-d[1].y(),d[1].x())/norm(d[1]);worst=std::max(worst,distance(dest->point(t),exact));if(i%8==0)geometric=std::max(geometric,projectPoint(*dest,exact,dest->domain()).distance);}std::cout<<" output"<<j<<" poles="<<s.curves[made[j].index].controlPoints.size()<<" max_same="<<worst<<" geometric="<<geometric;}
+ std::cout<<'\n';}
+}

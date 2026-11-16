@@ -1,0 +1,22 @@
+{
+  "exit": 0,
+  "exit_code": 0,
+  "checks": 65,
+  "failures": 0,
+  "source_path": "/tmp/supporto-review/tests/delivery/Supporto_unito.prt",
+  "output_path": "/home/myungit/Linux_CAD_forFree/output/Supporto_unito.prt",
+  "output_sha256": "95bdb2d2d27f4db6f8ef6461b39c2a59394024c7fc15238af706394c7e8bb3b6",
+  "byte_size": 549614,
+  "original_sha256": "79887e91d75feb748af19fcdb14cd469cc40e74abab03e3cbeaa12e2d3271f7f",
+  "original_document_id": "{077d8e3b-2483-4083-bfac-4db9c646e904}",
+  "output_document_id": "{3a1ae096-e6b7-454f-aa58-9acf9cf84323}",
+  "private_overlay_objects": [],
+  "shape_sha256": "3a3b73656aed9c1bc4de1a2f90c706f9c5369a7487b036913694c7239ba92be4",
+  "volume": 696887.8306567447,
+  "shells": 1,
+  "solid_regions": 1,
+  "final_boolean": "feature index6 id7; Union base0 tools2,5; name Unione 3 corpi",
+  "copy_method": "normal atomic native Save in isolated temporary directory, byte-identical no-overwrite copy to output",
+  "saved_reopened_rebuilt_undo_redo": "PASS; cache-free final BRep and definition byte-identical",
+  "initial_probe_corrections": "documentState(true) preserves ModelBody visibility preferences; assert actual scene with isBodyDrawn filtering isShapeBody (reference planes remain visible), plus independent resultBodiesBefore. Initial logs and sources preserved."
+}

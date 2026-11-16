@@ -1,0 +1,16 @@
+kernel/tests/test_sweep.cpp:230:    const Body band = sweepRegions(normalFrame(loop->point(0.0), startTangent(closed[0])), {circleRegion(0.3)}, closed);
+kernel/tests/test_sweep.cpp:232:    FK_CHECK_NEAR(checkedSolid(band).volume, kPi * 0.09 * L, 1e-8 * kPi * 0.09 * L);
+tests/test_drawing_local_section_depth.cpp:93:        near(drawingLocalSectionDepthAt(target,ref,trace.band[0]),16,"inizio fascia sullo zero");
+tests/test_drawing_local_section_depth.cpp:94:        near(drawingLocalSectionDepthAt(target,ref,trace.band[2]),9,"fine fascia sul taglio");
+kernel/tests/test_sweep_surfaces.cpp:210:    const Body band = sweepSheet(normalFrame(loop->point(0.0), startTangent(closed[0])), {squareLoop(0.3)}, closed);
+kernel/tests/test_sweep_surfaces.cpp:211:    checkedSheet(band);
+kernel/tests/test_sweep_surfaces.cpp:212:    FK_CHECK(laminarEdges(band) == 0);
+kernel/tests/test_sweep_surfaces.cpp:213:    const double area = totalArea(band);
+kernel/tests/test_surface_algo.cpp:229:        const Interval band{result.v - 200.0, result.v + 200.0};
+kernel/tests/test_surface_algo.cpp:230:        FK_CHECK(result.distance <= gridMinimum(extrusion, p, curve->domain(), band) + 1e-9);
+tests/test_next_body_union.h:109:    const auto band=box(-1,-1,-2,4,4,2+bandHeight,71011);
+tests/test_next_body_union.h:110:    double hi=-1;for(VertexId vertex:band.forgeBody->vertices())hi=std::max(hi,band.forgeBody->vertex(vertex).point.z());
+tests/test_next_body_union.h:112:    const QVector<ExtrusionObject> bandSources{above,band};const auto unmerged=build(profile,bandSources,{},false);
+tests/test_viewport.cpp:10275:            const ExtrusionObject &band = surfaces.extrusions_.back();
+tests/test_viewport.cpp:10276:            require(std::fabs(ForgeCad::Kernel::faceArea(*band.forgeBody, band.forgeBody->faces().front()) - 2.0 * M_PI * 0.75 * 3.0) < 1e-9,
+

@@ -1,0 +1,8 @@
+{
+  "exit": 0,
+  "seconds": 1.5162589009996736,
+  "command": [
+    "forgecad-release/forgecad_view_tests",
+    "--surface-mapping"
+  ]
+}

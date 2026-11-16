@@ -1,0 +1,9 @@
+from pathlib import Path
+import json,shlex,subprocess,sys
+root=Path('/home/myungit/Linux_CAD_forFree');out=Path(__file__).parent
+entries=json.loads((root/'forgecad-release/compile_commands.json').read_text());entry=next(e for e in entries if e['file'].endswith('/kernel/fk_thicken.cpp'))
+c=shlex.split(entry['command']);c[c.index('-c')+1]=str(out/'fk_thicken.cpp');c[c.index('-o')+1]=str(out/'fk_thicken.o');c+=['-fno-fast-math','-ffp-contract=off'];subprocess.run(c,cwd=entry['directory'],check=True)
+for name in ([] if '--core-only' in sys.argv else ['thicken','history']):
+ entry=next(e for e in entries if e['file'].endswith('/kernel/tests/test_'+name+'.cpp'))
+ c=shlex.split(entry['command']);c[c.index('-o')+1]=str(out/('test_'+name+'.o'));subprocess.run(c,cwd=entry['directory'],check=True)
+ subprocess.run(['/usr/bin/c++','-o',str(out/('legacy-'+name)),str(out/('test_'+name+'.o')),str(root/'forgecad-release/kernel/CMakeFiles/forgekernel_history_tests.dir/tests/fk_test_main.cpp.o'),str(out/'fk_thicken.o'),str(root/'forgecad-release/kernel/libforgekernel.a'),'-lpthread'],check=True)

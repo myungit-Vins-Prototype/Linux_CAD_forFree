@@ -23,6 +23,10 @@ public:
     // la continuazione del carrier per il fit fuori dal materiale sorgente.
     Vec3 fold(const Vec3 &flat, bool carrierOnly = false) const;
     // Appiattimento non isometrico, con bordo comune condiviso e genealogia.
+    // Su una sola Plane i contorni Line/NURBS conservano i coefficienti
+    // originali con limite continuo di arrotondamento; altre famiglie
+    // mantengono il fit campionato. Il gap dei vertici e' misurato sui
+    // punti valutati, non certifica la valutazione esatta degli estremi.
     // Gli estremi delle variazioni metriche sono misure campionate interne
     // al trim, non limiti globali certificati.
     Body flattenSheet(const Frame3 &plane, double tolerance, SurfaceFlattenStats *stats = nullptr,

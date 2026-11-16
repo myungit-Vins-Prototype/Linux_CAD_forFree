@@ -1,0 +1,22 @@
+{
+  "original": "/home/myungit/Documenti/Cad_Example/Supporto.prt",
+  "copy": "/tmp/supporto-review/Supporto.original.prt",
+  "sha256": "79887e91d75feb748af19fcdb14cd469cc40e74abab03e3cbeaa12e2d3271f7f",
+  "bytes": 177161,
+  "original_mtime": 1794818237.3044126,
+  "precision_mm": 1e-07,
+  "model_bodies": {
+    "Corpo 1": {
+      "feature_index": 0,
+      "name": "Estrusione 1"
+    },
+    "Corpo 2": {
+      "feature_index": 2,
+      "name": "Estrusione 3"
+    },
+    "Corpo 3": {
+      "feature_index": 5,
+      "name": "Loft 6"
+    }
+  }
+}

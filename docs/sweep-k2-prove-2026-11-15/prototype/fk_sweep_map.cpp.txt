@@ -1,0 +1,127 @@
+#include "fk_sweep_map.h"
+#include <algorithm>
+#include <cmath>
+#include <stdexcept>
+#include "fk_cancel.h"
+#include "fk_curve_ops.h"
+#include "fk_nurbs.h"
+#include "fk_precision.h"
+#include "fk_predicates.h"
+
+namespace ForgeCad::Kernel::detail {
+namespace {
+std::vector<Vec2> hull(std::vector<Vec2> points) {
+    std::sort(points.begin(), points.end(), [](const Vec2 &a, const Vec2 &b) {
+        return a.x() < b.x() || (a.x() == b.x() && a.y() < b.y());
+    });
+    points.erase(std::unique(points.begin(), points.end(), [](const Vec2 &a, const Vec2 &b) {
+        return a.x() == b.x() && a.y() == b.y();
+    }), points.end());
+    if (points.size() < 3) return points;
+    std::vector<Vec2> result;
+    for (const auto &p : points) {
+        while (result.size() >= 2 && orient2d(result[result.size()-2],result.back(),p) <= 0) result.pop_back();
+        result.push_back(p);
+    }
+    const std::size_t lower = result.size();
+    for (std::size_t j = points.size()-1; j-- > 0;) {
+        const auto &p = points[j];
+        while (result.size() > lower && orient2d(result[result.size()-2],result.back(),p) <= 0) result.pop_back();
+        result.push_back(p);
+    }
+    result.pop_back();
+    return result;
+}
+Vec3 rotatedControl(const Vec3 &p, const Vec3 &axis, const Vec2 &cs) {
+    const Vec3 axial = dot(p,axis)*axis;
+    return axial + cs.x()*(p-axial) + cs.y()*cross(axis,p);
+}
+}
+std::vector<Vec2> sweepProfileHull(const std::vector<ProfileSegment> &pieces) {
+    std::vector<Vec2> points;
+    for (const auto &piece : pieces) {
+        cancellationPoint();
+        // Le linee conservano la dimensione affine esatta del loro input.
+        if (piece.curve->type() == CurveType::Line) {
+            points.push_back(piece.start()); points.push_back(piece.end());
+            continue;
+        }
+        const auto curve = embedCurve(piece.curve,Frame3());
+        for (const auto &initial : rationalBezierPieces(*curve,piece.range)) {
+            std::vector<BSplineCurve<3>> refined{initial};
+            // Si raffinano i poli, non punti campionati della curva: un disco
+            // prossimo al raggio di curvatura non va sostituito dal box dei
+            // poli di quattro quadranti interi.
+            for (int level=0;level<3;++level) {
+                std::vector<BSplineCurve<3>> next;
+                for (const auto &p : refined) {
+                    const auto d=p.domain();
+                    auto halves=p.insertKnot(.5*d.lo+.5*d.hi,p.degree()).bezierSegments();
+                    next.insert(next.end(),halves.begin(),halves.end());
+                }
+                refined=std::move(next);
+            }
+            for (const auto &p : refined) for (const auto &q : p.poles()) points.emplace_back(q.x(),q.y());
+        }
+    }
+    return hull(std::move(points));
+}
+void appendSweepTranslation(std::vector<SweepValidationSlab> &map,
+    const Frame3 &profile,const Transform3 &start,const Vec3 &displacement) {
+    SweepValidationSlab s;
+    const Vec3 c=start.applyToPoint(profile.origin());
+    const Vec3 x=start.applyToVector(profile.xDir()),y=start.applyToVector(profile.yDir());
+    s.center={c,c+displacement}; s.xAxis={x,x}; s.yAxis={y,y};
+    s.duration=norm(displacement);
+    map.push_back(std::move(s));
+}
+void appendSweepRotation(std::vector<SweepValidationSlab> &map,
+    const Frame3 &profile,const Transform3 &start,const Vec3 &center,
+    const Vec3 &axis,double angle) {
+    const Vec3 c=start.applyToPoint(profile.origin())-center;
+    const Vec3 x=start.applyToVector(profile.xDir()),y=start.applyToVector(profile.yDir());
+    const auto circle=conicArcToBSpline<2>(Vec2(),Vec2(1,0),Vec2(0,1),0,angle);
+    for (const auto &part : circle.bezierSegments()) {
+        SweepValidationSlab s; s.duration=part.domain().length(); s.weights=part.weights();
+        for (const auto &cs : part.poles()) {
+            s.center.push_back(center+rotatedControl(c,axis,cs));
+            s.xAxis.push_back(rotatedControl(x,axis,cs));
+            s.yAxis.push_back(rotatedControl(y,axis,cs));
+        }
+        map.push_back(std::move(s));
+    }
+}
+void appendSweepQuintic(std::vector<SweepValidationSlab> &map,const RowSpline &fit,
+    int centerRow,int xRow,int yRow) {
+    const auto c=rowCurve(fit,centerRow).bezierSegments();
+    const auto x=rowCurve(fit,xRow).bezierSegments();
+    const auto y=rowCurve(fit,yRow).bezierSegments();
+    if(c.size()!=x.size() || c.size()!=y.size()) throw std::logic_error("sweep: nodi della mappa incoerenti");
+    for(std::size_t i=0;i<c.size();++i) {
+        SweepValidationSlab s;
+        s.center=c[i].poles(); s.xAxis=x[i].poles(); s.yAxis=y[i].poles();
+        s.duration=c[i].domain().length(); map.push_back(std::move(s));
+    }
+}
+void joinSweepMap(std::vector<SweepValidationSlab> &map,bool closed,
+    double positionBudget,double directionBudget) {
+    const auto join=[&](SweepValidationSlab &a,SweepValidationSlab &b) {
+        if(distance(a.center.back(),b.center.front())>positionBudget ||
+           distance(a.xAxis.back(),b.xAxis.front())>directionBudget ||
+           distance(a.yAxis.back(),b.yAxis.front())>directionBudget)
+            throw std::domain_error("sweep: mappa di riferimento discontinua ai giunti");
+        b.center.front()=a.center.back(); b.xAxis.front()=a.xAxis.back(); b.yAxis.front()=a.yAxis.back();
+    };
+    for(std::size_t i=1;i<map.size();++i) join(map[i-1],map[i]);
+    if(closed && !map.empty()) {
+        // Al seam l'identita' canonica e' la prima sezione, non una ricerca
+        // spaziale fra estremi che sembrano vicini.
+        auto &last=map.back(); const auto &first=map.front();
+        if(distance(last.center.back(),first.center.front())>positionBudget ||
+           distance(last.xAxis.back(),first.xAxis.front())>directionBudget ||
+           distance(last.yAxis.back(),first.yAxis.front())>directionBudget)
+            throw std::domain_error("sweep: mappa di riferimento discontinua alla cucitura");
+        last.center.back()=first.center.front(); last.xAxis.back()=first.xAxis.front(); last.yAxis.back()=first.yAxis.front();
+    }
+}
+}

@@ -1,0 +1,14 @@
+{
+  "fk_planar_flatten.h": {
+    "sha256": "2379037d4404c5cc778ae38ea264e5fc27cb7eb81238506e97037ec02bd0adac",
+    "before": null
+  },
+  "fk_planar_flatten.cpp": {
+    "sha256": "fa746a9dfbe1f722e0590a60899f2a651efffee2beb1bb5b912034d47ca6c30f",
+    "before": null
+  },
+  "fk_quilt_mapping.cpp": {
+    "sha256": "9f2cc08b051e92569dac5081aa558f61e431e332abc652f51a23096ff286b826",
+    "before": "a787eeff31c1c7552b54579c7db83d76b40c97f924e943dc808fbbac83748022"
+  }
+}

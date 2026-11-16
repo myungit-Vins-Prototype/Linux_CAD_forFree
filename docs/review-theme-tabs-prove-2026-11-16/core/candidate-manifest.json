@@ -1,0 +1,18 @@
+{
+  "forgeCad2026_application_theme.cpp": {
+    "baseline_sha256": "286ac4a4a2aa29fec625e8938f73bfc1c0e5408aa22dc44c8be44d77e1d58e7d",
+    "candidate_sha256": "618b68b483952fac10852632b20f735fedb8e41b7dae1dfd06f676cee59582cc"
+  },
+  "forgeCad2026_gui.cpp": {
+    "baseline_sha256": "d0a4c21575cee88890da855c56fd8d338c4ecaf0379b2813977f4fb137298b3b",
+    "candidate_sha256": "e481484361ea21e6ab59d9a6510cfc57fc57ac4736249d83899c5e733a628ee1"
+  },
+  "forgeCad2026_gui.h": {
+    "baseline_sha256": "a5369813df4a58099390f74c795412d5932226366aef84e76f5d48359237e5a8",
+    "candidate_sha256": "3176ac69ee884f6ee286157c95608284412bc2871d76414bf9a43d779a7b05fd"
+  },
+  "cad_drawing_window.cpp": {
+    "baseline_sha256": "ae45ebbd095999471c2b69c89c2f014107f58e2aefc5be3f2bbee1bb4467da6a",
+    "candidate_sha256": "e860794266cf804e6f6e90428998b74171b0e7166819f66d6523ee00f1067726"
+  }
+}

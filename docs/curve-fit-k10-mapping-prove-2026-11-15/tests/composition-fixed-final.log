@@ -1,0 +1,4 @@
+degree27 edge_composition_deviation=1.1333915278307987e-10 dense_error=5.7424750601786093e-05 edge_budget=2e-08
+degree27 wrap_accepted=1 reported=1.6634142883304682e-08 carrier_error=0 surface_pole_absZ=0 peak_targetZ=-4.4061673647776996e-05 issues=0
+narrow_degree6 edge_composition_deviation=1.9374946091943457e-11 dense_error=0.001 edge_budget=2e-08
+narrow_degree6 wrap_accepted=1 reported=1.6232661779043149e-08 carrier_error=0 surface_pole_absZ=0 peak_targetZ=0.001 issues=0

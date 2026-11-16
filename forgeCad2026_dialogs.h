@@ -96,7 +96,10 @@ bool loftDialog(QWidget *parent, CadViewport *viewport, const QString &title, in
 // Blocco dell'interfaccia durante una finestra "leggera" (non modale, per
 // lasciare la vista attiva alla scelta dei riferimenti): menu, barre, albero e
 // tutte le azioni (anche le scorciatoie) spenti; la vista senza menu contestuali.
+// L'overload con setup lo esegue solo dopo la guardia fra documenti, il blocco
+// della finestra e show(); quello a tre argomenti conserva API e simbolo esistenti.
 bool runModeless(QMainWindow *window, CadViewport *viewport, QDialog &dialog);
+bool runModeless(QMainWindow *window, CadViewport *viewport, QDialog &dialog, const std::function<void()> &onShown);
 
 // Piano di costruzione (nuovo, o al posto del corpo `replaced`): tipo,
 // riferimenti scelti nella vista (la finestra resta aperta e la vista attiva:

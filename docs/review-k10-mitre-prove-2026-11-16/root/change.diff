@@ -1,0 +1,704 @@
+--- before/CLAUDE.md
++++ after/CLAUDE.md
+@@ -108,19 +108,23 @@
+ 
+ ## Ultimi interventi — esiti consolidati
+ 
++**16/11 — K10 mitre ISO verificate con tre agenti Sol.**
++App/27CTest/13mirati/19sanitizer/Wayland/Fraction PASS; fin sintetiche reali.
++Pubbliche16/16 senzaISO; diagonali/Newton campionati. K10:23/24parziali+1aperto.
++[Prove/limiti](docs/review-k10-mitre-2026-11-16.md).
++
+ **16/11 — K10 giunti estensioni verificati con tre agenti Sol.**
+ Via tangente continua/cap fisso e postbuild/unify; Newton trasverso campionato.
+ App/22CTest/29sanitizer/41Sheet/Wayland/Fraction30fin e38supporti PASS.
+ K10:22/24parziali+2aperti,31rilievi invariati. [Prove/limiti](docs/review-k10-sheet-join-2026-11-16.md).
+ 
+-**16/11 — K10 Mapping/Quilt UV verificato con tre agenti Sol.**
+-Plane: fin continue postassemblaggio e offset senza fitUV; due rifiutiUV1e4 risolti.
+-App/26CTest/Wayland/21sanitizer/Fraction80fin PASS; altri carrier campionati.
+-K10:21/24parziali+3aperti,31rilievi invariati. [Prove/limiti](docs/review-k10-mapping-uv-2026-11-16.md).
+-
+-**16/11 — UI8 tema nelle schede corretto con tre agenti Sol.**
+-Controller palette/QSS e Tema2D;carta/colori invariati. App/21CTest/Wayland/
+-APItema PASS; sanitizer senza LSan,sigillo152. [Prove](docs/review-theme-tabs-2026-11-16.md).
++**16/11 — K10 Mapping/Quilt UV, tre agenti Sol.**
++Plane/offset:app/26CTest/Wayland/21sanitizer/Fraction80fin PASS; altri carrier campionati.
++[Prove/limiti](docs/review-k10-mapping-uv-2026-11-16.md).
++
++**16/11 — UI8 tema/schede, tre agenti Sol.**
++Palette/QSS e menuTema2D:app/21CTest/Wayland/API PASS; carta/colori invariati,
++LSan escluso. [Prove](docs/review-theme-tabs-2026-11-16.md).
+ 
+ **16/11 — K12 cavità corretto con tre agenti Sol.**
+ R0,5:quarto vincolo/fit minimo e continuazioneU; supporti e budget invariati.
+@@ -167,10 +171,8 @@
+ Codec70 compatibile,app/24CTest/sanitizer4TU/Wayland/GL/mappa PASS.
+ [Uso,prove/limiti](docs/ellisse-estremi-2026-11-16.md);dettagli in memoria precedente.
+ 
+-**15/11 — K2 completato in produzione con due agenti Sol.**
+-Atlante, nesting eSP-curve NURBS:app/54testkernel/8CTest/22sanitizer PASS.
+-Risorsefinite possono rifiutarecurvevalide.
+-[Prove e limiti](docs/sweep-k2-completamento-2026-11-15.md).
++K2 in produzione:app/54kernel/8CTest/22sanitizer PASS; risorsefinite possono rifiutarecurvevalide.
++[Prove/limiti](docs/sweep-k2-completamento-2026-11-15.md).
+ 
+ 15/11 — Altri14rilievi corretti con agenti Sol.
+ K4/K5/K6,S1/S2,UI1–6,PRE1–3: sweep/loft/lamine,input,picker eanteprime.
+--- before/docs/code-review-2026-11-15.md
++++ after/docs/code-review-2026-11-15.md
+@@ -1,6 +1,8 @@
+ # Review generale ForgeCAD — 15 novembre 2026
+ 
+-**Stato più recente, 16 novembre:** proseguito [K10, giunti delle estensioni](review-k10-sheet-join-2026-11-16.md) con tre agenti GPT-6.1 Sol. La via quasi tangente usa pcurve affini e residui continui su entrambi i supporti, cap fissati prima del fit, verifica delle fin dopo assemblaggio/unificazione e genealogia esplicita. Riprodotti picchi fra campioni e tolleranze ricavate dopo la misura; otto gruppi negativi ora rifiutati. App completa, 22/22 CTest, 29/29 regressioni e sanitizer mirati, 41/41 Sheet, Wayland/tema e audit Fraction30fin/38supporti PASS. **K10 passa a22/24 siti iniziali parzialmente trattati e due interamente aperti; il totale resta31rilievi corretti.** Newton trasversale resta campionato; giunti tangenti non affini possono essere rifiutati conservativamente. Restano17API pubbliche candidate orfane e uniformazione dei colori letterali UI.
++**Stato più recente, 16 novembre:** proseguito [K10, mitre ISO](review-k10-mitre-2026-11-16.md) con tre agenti GPT-6.1 Sol. Corretto un falso successo nell’API interna sintetica: residuoZ=1/2 mm esatto contro gap dichiarato≈4,26e-12 mm. ViaISO con fit e residui continui, cap prefissato, mappe originali, fin effettive verificate ed escluse dall’aumento delle tolleranze. App completa,27/27CTest,13/13 mirati,19/19sanitizer,Wayland/tema e Fraction10 mappe+2 fin PASS. Le16 regressioni pubbliche passano ma non esercitanoISO; nessun documento pubblico dichiarato risolto. Diagonali e Newton restano campionati: un testimone negativo diagonale è ancora aperto. **K10 passa a 23/24 siti iniziali parzialmente trattati e uno interamente aperto; totale31 rilievi invariato.** Restano17API pubbliche candidate orfane e colori letterali UI.
++
++**Stato precedente giunti estensioni:** proseguito [K10, giunti delle estensioni](review-k10-sheet-join-2026-11-16.md) con tre agenti GPT-6.1 Sol. La via quasi tangente usa pcurve affini e residui continui su entrambi i supporti, cap fissati prima del fit, verifica delle fin dopo assemblaggio/unificazione e genealogia esplicita. Riprodotti picchi fra campioni e tolleranze ricavate dopo la misura; otto gruppi negativi ora rifiutati. App completa, 22/22 CTest, 29/29 regressioni e sanitizer mirati, 41/41 Sheet, Wayland/tema e audit Fraction30fin/38supporti PASS. **K10 passa a22/24 siti iniziali parzialmente trattati e due interamente aperti; il totale resta31rilievi corretti.** Newton trasversale resta campionato; giunti tangenti non affini possono essere rifiutati conservativamente. Restano17API pubbliche candidate orfane e uniformazione dei colori letterali UI.
+ 
+ **Stato precedente Mapping/Quilt:** proseguito [K10, trasferimenti UV Mapping/Quilt](review-k10-mapping-uv-2026-11-16.md). Su Plane il trasferimento delle SP-curve usa un limite continuo fisico sul bordo effettivo, ricontrollato dopo assemblaggio; l’offset analitico evita un fit UV superfluo. Risolti due falsi rifiuti pubblici con coordinate UV≈10.000 e geometria vicina all’origine; nessun aumento di tolleranze. App completa, 26/26 CTest, 21/21 gruppi geometrici/sanitizer mirati, 20 corpi Release identici al candidato e Wayland PASS. Audit indipendente Fraction: 80 fin / 27.089 campate entro budget. **K10 passa a 21/24 siti iniziali parzialmente trattati e tre interamente da migrare; il totale resta 31 rilievi corretti.** Bordi 3D, Jacobiani e carrier non Plane restano campionati; UV≥100.000 può essere rifiutato conservativamente. Le 17 API pubbliche e l’uniformazione dei colori letterali restano aperte.
+ 
+--- before/kernel/CMakeLists.txt
++++ after/kernel/CMakeLists.txt
+@@ -219,7 +219,7 @@
+ # I validatori usano intervalli outward: niente riassociazioni o assunzioni
+ # di finitezza implicite, anche se una configurazione esterna abilita fast-math.
+ set_source_files_properties(fk_sweep_surface_validation.cpp fk_sweep_caps.cpp
+-    fk_sweep_analytic_bridge.cpp fk_curve_fit_bounds.cpp fk_helix_projection.cpp fk_project.cpp fk_mapping_carrier.cpp fk_surface_mapping.cpp fk_sheet.cpp fk_affine_surface_fit.cpp fk_planar_flatten.cpp fk_quilt_mapping.cpp fk_boolean_boundary.cpp PROPERTIES COMPILE_OPTIONS
++    fk_sweep_analytic_bridge.cpp fk_curve_fit_bounds.cpp fk_helix_projection.cpp fk_project.cpp fk_mapping_carrier.cpp fk_surface_mapping.cpp fk_sheet.cpp fk_blend_mitre.cpp fk_blend_surface.cpp fk_affine_surface_fit.cpp fk_planar_flatten.cpp fk_quilt_mapping.cpp fk_boolean_boundary.cpp PROPERTIES COMPILE_OPTIONS
+     "$<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang,AppleClang>:-fno-fast-math;-ffp-contract=off>")
+ set_target_properties(forgekernel PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+ 
+@@ -549,6 +549,15 @@
+ add_test(NAME forgekernel_blend_cavity_regression_tests COMMAND forgekernel_blend_cavity_regression_tests)
+ set_tests_properties(forgekernel_blend_cavity_regression_tests PROPERTIES TIMEOUT 90)
+ 
++# Mitre ISO: fit continuo, budget prefissati e fin effettive, senza Qt/OCCT.
++add_executable(forgekernel_blend_mitre_validation_tests tests/fk_test_main.cpp tests/test_blend_mitre_validation.cpp)
++target_link_libraries(forgekernel_blend_mitre_validation_tests PRIVATE forgekernel)
++target_compile_options(forgekernel_blend_mitre_validation_tests PRIVATE -Wall -Wextra -Wpedantic)
++set_target_properties(forgekernel_blend_mitre_validation_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
++add_test(NAME forgekernel_blend_mitre_validation_tests COMMAND forgekernel_blend_mitre_validation_tests)
++set_tests_properties(forgekernel_blend_mitre_validation_tests PROPERTIES TIMEOUT 180)
++
++
+ 
+ # Atlanti NURBS G1 e raccordi oltre le suddivisioni artificiali dei supporti.
+ add_executable(forgekernel_nurbs_support_tests tests/fk_test_main.cpp tests/test_nurbs_supports.cpp)
+--- before/kernel/fk_blend_mitre.cpp
++++ after/kernel/fk_blend_mitre.cpp
+@@ -1,6 +1,7 @@
+ #include "fk_blend_mitre.h"
+ #include "fk_bspline.h"
+ #include "fk_offset.h"
++#include "fk_curve_fit_bounds.h"
+ #include "fk_curve_algo.h"
+ #include "fk_precision.h"
+ #include "fk_surface_algo.h"
+@@ -11,7 +12,6 @@
+ #include <stdexcept>
+ namespace ForgeCad::Kernel::detail {
+ namespace {
+-double kFitTolerance() { return scaledAccuracy(1e-9); }
+ // Sistema lineare N x N con pivot parziale (falso se singolare).
+ template <int N> bool solveLinear(double (&a)[N][N], double (&b)[N]) {
+     for (int col = 0; col < N; ++col) {
+@@ -94,18 +94,119 @@
+         v = sum - v;
+     return std::make_shared<BSplineSurface>(s.uDegree(), s.vDegree(), s.uKnots(), knots, s.uPoleCount(), s.vPoleCount(), poles, weights);
+ }
+-// Curva comune ai raccordi S (t, v) e T (s, w) in un angolo a mitra, dal punto
+-// in A (v = w = 0: i parametri t0, s0) al punto X (tX, vX, sX, wX). Sui punti
+-// della curva v + w = g, da 0 a vX + wX: Newton 4 x 4 su (t, v, s, w) con la
+-// continuazione in g (predittore dalle derivate), poi cubiche di Hermite a
+-// tratti in g raffinate finche' si scostano meno di kFitTolerance() dai punti
+-// veri. Vicino al punto in A i raccordi sono tangenti tra loro (entrambi
+-// tangenti ad A) e il sistema degenera: l'ultimo tratto va fino al punto
+-// esatto e il suo scarto (misurato) diventa la tolleranza della curva.
++CurvePtr<2> originalBlendMitreUV(const CurvePtr<2> &uv, bool reversed, const Interval &vDomain) {
++    cancellationPoint();
++    const auto *map = dynamic_cast<const BSplineCurve<2> *>(uv.get());
++    if (!map || map->degree() != 1 || map->poleCount() != 2)
++        throw std::domain_error("blendEdges: mappa ISO della mitra non riconosciuta");
++    if (!reversed) return uv;
++    if (!vDomain.isFinite() || !(vDomain.lo < vDomain.hi) || !std::isfinite(vDomain.lo + vDomain.hi))
++        throw std::domain_error("blendEdges: riflessione UV della mitra non valida");
++    auto poles = map->poles();
++    const double sum = vDomain.lo + vDomain.hi;
++    for (Vec2 &pole : poles) pole[1] = sum - pole[1];
++    return std::make_shared<BSplineCurve<2>>(1, map->knots(), poles, map->weights());
++}
++
++void installBlendMitreCertificates(std::vector<Body::BuildFace> &faces,
++                                   const std::vector<BlendMitreUse> &plans) {
++    for (const auto &plan : plans) {
++        cancellationPoint();
++        int uses = 0;
++        for (auto &face : faces) {
++            if (face.surface != plan.surface) continue;
++            for (auto &loop : face.loops)
++                for (auto &fin : loop) if (fin.edge == plan.edge) {
++                    fin.pcurve = plan.pcurve;
++                    fin.pcurveTolerance = plan.budget;
++                    ++uses;
++                }
++        }
++        if (uses != 1)
++            throw std::domain_error("blendEdges: incidenza della mitra pianificata persa o ambigua");
++    }
++}
++
++void requireEmittedBlendMitres(const Body &body, const std::vector<BlendMitreUse> &plans) {
++    for (const auto &plan : plans) {
++        cancellationPoint();
++        int uses = 0;
++        for (FaceId face : body.faces())
++            for (LoopId loop : body.face(face).loops)
++                for (FinId finId : body.loopFins(loop)) {
++                    const Fin &fin = body.fin(finId);
++                    const Edge &edge = body.edge(fin.edge);
++                    if (edge.curve != plan.curve || body.face(face).surface != plan.surface) continue;
++                    if (fin.pcurve != plan.pcurve || fin.pcurveTolerance != plan.budget
++                        || edge.tolerance != plan.budget || edge.range.lo != plan.range.lo || edge.range.hi != plan.range.hi)
++                        throw std::domain_error("blendEdges: contratto della mitra emessa modificato");
++                    detail::requireBlendMitreCertificate(edge.curve, body.face(face).surface,
++                                                         fin.pcurve, edge.range, plan.budget);
++                    for (const auto &end : {std::make_pair(body.edgeStart(fin.edge), edge.range.lo),
++                                           std::make_pair(body.edgeEnd(fin.edge), edge.range.hi)}) {
++                        const Vertex &vertex = body.vertex(end.first);
++                        if (!isFinite(vertex.point) || !std::isfinite(vertex.tolerance)
++                            || vertex.tolerance < 0.0 || vertex.tolerance > plan.budget
++                            || distance(vertex.point, edge.curve->point(end.second)) > plan.budget)
++                            throw std::domain_error("blendEdges: estremo della mitra oltre il budget fissato");
++                    }
++                    ++uses;
++                }
++        if (uses != 1)
++            throw std::domain_error("blendEdges: genealogia della fin di mitra persa o ambigua");
++    }
++}
++
++// The affine ISO branch below has a continuous position certificate. The
++// transverse Newton/Hermite continuation remains a sampled approximation;
++// its residual estimates are not a proof on a whole interval.
++double requireBlendMitreCertificate(const CurvePtr<3> &curve, const SurfacePtr &surface,
++                                    const CurvePtr<2> &pcurve, const Interval &range, double budget) {
++    cancellationPoint();
++    if (!std::isfinite(budget) || !(budget > 0.0) || !range.isFinite() || !(range.lo < range.hi))
++        throw std::domain_error("blendEdges: contratto continuo della mitra non valido");
++    const auto *spline = dynamic_cast<const BSplineCurve<3> *>(curve.get());
++    if (!spline || spline->degree() != 3 || spline->isRational())
++        throw std::domain_error("blendEdges: rappresentazione della mitra certificata modificata");
++    const auto data = surfaceCompositionErrorBound(surface, pcurve, range);
++    if (!data.bound)
++        throw std::domain_error("blendEdges: supporto della mitra certificata non riconosciuto");
++    const auto &knots = spline->knots();
++    const auto &poles = spline->poles();
++    if (poles.size() < 4 || (poles.size() - 1) % 3 || knots.size() != poles.size() + 4)
++        throw std::domain_error("blendEdges: campate della mitra certificata non riconosciute");
++    double covered = range.lo, worst = 0.0;
++    for (std::size_t k = 0; k + 3 < poles.size(); k += 3) {
++        cancellationPoint();
++        const Interval span{knots[k + 3], knots[k + 4]};
++        for (int j = 0; j < 3; ++j)
++            if (knots[k + j + 1] != span.lo || knots[k + j + 4] != span.hi)
++                throw std::domain_error("blendEdges: nodi della mitra certificata non riconosciuti");
++        if (span.hi <= range.lo || span.lo >= range.hi) continue;
++        if (span.lo != covered || span.hi > range.hi || !(span.lo < span.hi))
++            throw std::domain_error("blendEdges: parametro della mitra certificata modificato");
++        const double error = data.bound(span, {poles[k], poles[k + 1], poles[k + 2], poles[k + 3]});
++        if (!std::isfinite(error) || !(error >= 0.0) || error > budget)
++            throw std::domain_error("blendEdges: mitra oltre il budget continuo");
++        worst = std::max(worst, error);
++        covered = span.hi;
++    }
++    if (covered != range.hi)
++        throw std::domain_error("blendEdges: copertura della mitra certificata incompleta");
++    return worst;
++}
+ BlendCut traceBlendMitre(const Surface &S, const Surface &T, double t0, double s0, const double X[4], double scale, double fitTolerance) {
+-    // Fra raccordi quasi tangenti il sistema d'intersezione e' mal
+-    // condizionato. Prima verifica una curva comune entro la risoluzione
+-    // geometrica, senza aumentare le tolleranze delle facce di appoggio.
++    cancellationPoint();
++    if (!std::isfinite(fitTolerance) || !(fitTolerance > 0.0))
++        throw std::domain_error("blendEdges: budget di fit della mitra non valido");
++    const double gX = X[1] + X[3];
++    if (!std::isfinite(t0) || !std::isfinite(s0) || !std::isfinite(scale) || !(scale > 0.0)
++        || !std::all_of(X, X + 4, [](double value) { return std::isfinite(value); })
++        || !std::isfinite(gX) || !(gX > 0.0))
++        throw std::domain_error("blendEdges: angolo a mitra degenere o dati non validi");
++    // These samples only SELECT the nearly tangent algorithm. They do not
++    // authorize acceptance: the supported ISO branch must prove both original
++    // carrier compositions, without a catch that recovers a failed proof.
+     const auto pointOn = [&](const Surface &surface, double start, double end, double v, double f) {
+         return surface.point(start + f * (end - start), f * v);
+     };
+@@ -125,9 +226,45 @@
+         }
+     }
+     if (coincident) {
++        const auto *s = dynamic_cast<const BSplineSurface *>(&S);
++        const auto *t = dynamic_cast<const BSplineSurface *>(&T);
++        const bool isoS = (t0 == X[0]) != (X[1] == 0.0);
++        const bool isoT = (s0 == X[2]) != (X[3] == 0.0);
++        if (s && t && isoS && isoT) {
++            const Interval range{0.0, 1.0};
++            const std::vector<double> knots{0.0, 0.0, 1.0, 1.0};
++            const auto uvS = std::make_shared<BSplineCurve<2>>(1, knots, std::vector<Vec2>{{t0, 0.0}, {X[0], X[1]}});
++            const auto uvT = std::make_shared<BSplineCurve<2>>(1, knots, std::vector<Vec2>{{s0, 0.0}, {X[2], X[3]}});
++            const SurfacePtr carrierS = std::make_shared<BSplineSurface>(*s);
++            const SurfacePtr carrierT = std::make_shared<BSplineSurface>(*t);
++            const auto data = surfaceCompositionErrorBound(carrierS, uvS, range);
++            if (!data.bound)
++                throw std::domain_error("blendEdges: composizione ISO della mitra non certificabile");
++            // The cap is fixed before construction; fitting consumes only a
++            // quarter of it on S. The remaining slack can cover S/T mismatch.
++            const double budget = linearResolution();
++            const auto curve = fitCurveCertified([&](double f) {
++                const Vec2 uv = uvS->point(f);
++                return S.point(uv.x(), uv.y());
++            }, range, data.breaks, std::min(fitTolerance, 0.25 * budget), data.bound);
++            const double gapS = requireBlendMitreCertificate(curve, carrierS, uvS, range, budget);
++            const double gapT = requireBlendMitreCertificate(curve, carrierT, uvT, range, budget);
++            BlendCut cut;
++            cut.curve = curve;
++            cut.range = range;
++            cut.forward = true;
++            cut.gap = std::max(gapS, gapT);
++            cut.pcurveS = uvS;
++            cut.pcurveT = uvT;
++            cut.certificateBudget = budget;
++            return cut;
++        }
++        // Legacy compatibility ONLY for unsupported affine compositions.
++        // This averaged fit and its 129-point residual remain sampled, with
++        // certificateBudget == 0. They do not certify the whole interval.
+         try {
+             const auto curve = fitCurve([&](double f) { return 0.5 * (pointOn(S, t0, X[0], X[1], f) + pointOn(T, s0, X[2], X[3], f)); },
+-                                        {0.0, 1.0}, {}, kFitTolerance());
++                                        {0.0, 1.0}, {}, scaledAccuracy(1e-9));
+             double gap = 0.0;
+             for (int i = 0; i <= 128; ++i) {
+                 const double f = i / 128.0;
+@@ -147,7 +284,7 @@
+                 return cut;
+             }
+         } catch (const std::domain_error &) {
+-            // La stima non e' approssimabile: usa la continuazione esatta.
++            // Unsupported sampled fit failed: try the sampled Newton continuation.
+         }
+     }
+     struct Node {
+@@ -156,6 +293,7 @@
+     };
+     const auto solve = [&](double g, Node &n) {
+         for (int iteration = 0; iteration < 50; ++iteration) {
++            cancellationPoint();
+             Vec3 a[4], b[4];
+             S.evaluate(n.x[0], n.x[1], 1, a);
+             T.evaluate(n.x[2], n.x[3], 1, b);
+@@ -192,14 +330,12 @@
+         n.dp = c0 * r[0] + c1 * r[1];
+         return true;
+     };
+-    const double gX = X[1] + X[3];
+-    if (!(gX > 0.0))
+-        throw std::domain_error("blendEdges: angolo a mitra degenere");
+     // Nodo in g da quello vicino (predittore lineare), a passi dimezzati se Newton non converge.
+     const auto nodeAt = [&](double g, const Node &from, Node &out) {
+         Node current = from;
+         double step = g - from.g;
+         while (true) {
++            cancellationPoint();
+             const bool last = std::fabs(g - current.g) <= std::fabs(step) * (1.0 + 1e-12);
+             const double target = last ? g : current.g + step;
+             Node trial = current;
+@@ -262,6 +398,7 @@
+     double approximationGap = 0.0;
+     int guard = 0;
+     while (!pending.empty()) {
++        cancellationPoint();
+         // La soglia minima 1e-4 consente fino a 2^14 foglie: il limite
+         // deve contenere anche tutti i nodi interni dell'albero di raffinamento.
+         if (++guard > 32767)
+--- before/kernel/fk_blend_mitre.h
++++ after/kernel/fk_blend_mitre.h
+@@ -1,5 +1,6 @@
+ #pragma once
+ #include "fk_bspline_surface.h"
++#include "fk_topology.h"
+ #include <functional>
+ namespace ForgeCad::Kernel::detail {
+ struct BlendCut {
+@@ -7,8 +8,29 @@
+     Interval range;
+     bool forward = true; // dal punto `from` a `to` il parametro cresce
+     double gap = 0.0;
++    // Nonzero only for the affine ISO branch proved on both carriers.
++    // These ORIGINAL UV maps use the emitted edge parameter, irrespective of fin sense.
++    CurvePtr<2> pcurveS, pcurveT;
++    double certificateBudget = 0.0;
+     Interval sV{0.0, 0.0}; // traceBetween: valori di v su S toccati dai nodi
+ };
++// Each affine ISO certificate belongs to a planned edge and one original
++// blend carrier. Pointer identity is construction provenance, never proximity.
++struct BlendMitreUse {
++    int edge;
++    CurvePtr<3> curve;
++    SurfacePtr surface;
++    CurvePtr<2> pcurve;
++    Interval range;
++    double budget;
++};
++// Uses the SAME original edge parameter on both fin senses. Reversing the
++// carrier changes only V through the original carrier domain reflection.
++CurvePtr<2> originalBlendMitreUV(const CurvePtr<2> &pcurve, bool reversed, const Interval &vDomain);
++// Installed by planned edge index + original carrier identity before assembly;
++// actual output is checked again by identity and ORIGINAL coefficient proofs.
++void installBlendMitreCertificates(std::vector<Body::BuildFace> &faces, const std::vector<BlendMitreUse> &plans);
++void requireEmittedBlendMitres(const Body &body, const std::vector<BlendMitreUse> &plans);
+ struct BlendContactJet {
+     Vec3 point, derivative;
+ };
+@@ -16,6 +38,10 @@
+ // Newton smorzato sui contatti: non cambia il residuo ammesso dal chiamante.
+ void meetBlendContacts(const BlendContactFunction &a, const BlendContactFunction &b, double size, double scale, double &ta, double &tb);
+ std::shared_ptr<const BSplineSurface> orientBlendMitre(const std::shared_ptr<const BSplineSurface> &surface, bool reverse);
++// Rebuilds the existing composition provider on actual controls/carrier/UV.
++// Throws on unsupported representation, incomplete coverage or failed bound.
++double requireBlendMitreCertificate(const CurvePtr<3> &curve, const SurfacePtr &surface,
++                                    const CurvePtr<2> &pcurve, const Interval &range, double budget);
+ BlendCut traceBlendMitre(const Surface &s, const Surface &t, double t0, double s0, const double endpoint[4], double scale,
+                          double fitTolerance);
+ } // namespace ForgeCad::Kernel::detail
+--- before/kernel/fk_blend_surface.cpp
++++ after/kernel/fk_blend_surface.cpp
+@@ -1965,6 +1965,8 @@
+         chains.push_back(std::move(chain));
+     }
+     Model model(body, history ? &input : nullptr, edgeSources);
++    std::vector<detail::BlendMitreUse> mitreCertificates;
++    std::set<const Curve<3> *> certifiedMitreCurves;
+     // Modifiche delle facce esistenti: edge tolti, fin nuove (con il verso) e
+     // edge nuovi senza verso; alla fine i loop si ricollegano per i vertici.
+     struct FaceEdit {
+@@ -3266,9 +3268,33 @@
+                 throw std::domain_error("blendEdges: raccordo non valido nell'angolo: scarto "
+                     + std::to_string(gamma.gap) + " mm oltre il limite "
+                     + std::to_string(admissibleMitreGap) + " mm; scegliere un raggio diverso");
+-            junction.gamma = model.addEdge(commonPoint, dividedPoint, gamma.curve, gamma.range, gamma.gap > 1e-7 ? 2.0 * gamma.gap : 0.0);
+-            if (gamma.gap > 1e-7)
+-                model.pointTolerance[std::size_t(commonPoint)] = std::max(model.pointTolerance[std::size_t(commonPoint)], 2.0 * gamma.gap);
++            if (gamma.certificateBudget > 0.0) {
++                const double budget = gamma.certificateBudget;
++                if (!std::isfinite(gamma.gap) || gamma.gap > budget)
++                    throw std::domain_error("blendEdges: estremi della mitra certificata oltre il budget fissato");
++                // Undo the explicit carrier orientation in ORIGINAL UV data;
++                // the final faces use a.surface/b.surface, not surfA/surfB.
++                const auto uvA = detail::originalBlendMitreUV(gamma.pcurveS, mitre->commonB, a.surface->vDomain());
++                const auto uvB = detail::originalBlendMitreUV(gamma.pcurveT, mitre->commonB, b.surface->vDomain());
++                detail::requireBlendMitreCertificate(gamma.curve, a.surface, uvA, gamma.range, budget);
++                detail::requireBlendMitreCertificate(gamma.curve, b.surface, uvB, gamma.range, budget);
++                for (int point : {commonPoint, dividedPoint}) {
++                    double &tolerance = model.pointTolerance[std::size_t(point)];
++                    if (!std::isfinite(tolerance) || tolerance > budget)
++                        throw std::domain_error("blendEdges: vertice della mitra oltre il budget fissato");
++                    tolerance = budget;
++                }
++                junction.gamma = model.addEdge(commonPoint, dividedPoint, gamma.curve, gamma.range, budget);
++                mitreCertificates.push_back({junction.gamma, gamma.curve, a.surface, uvA, gamma.range, budget});
++                mitreCertificates.push_back({junction.gamma, gamma.curve, b.surface, uvB, gamma.range, budget});
++                certifiedMitreCurves.insert(gamma.curve.get());
++            } else {
++                // The Newton continuation retains its legacy sampled budget;
++                // it is outside the continuous affine ISO certificate.
++                junction.gamma = model.addEdge(commonPoint, dividedPoint, gamma.curve, gamma.range, gamma.gap > 1e-7 ? 2.0 * gamma.gap : 0.0);
++                if (gamma.gap > 1e-7)
++                    model.pointTolerance[std::size_t(commonPoint)] = std::max(model.pointTolerance[std::size_t(commonPoint)], 2.0 * gamma.gap);
++            }
+             if (junction.deep >= 0 && junction.deepPoint != dividedPoint) {
+                 // Delta: il raccordo profondo con il fianco del basso, da X a c.
+                 const Piece &deepPiece = junction.deep == 1 ? b : a;
+@@ -3868,8 +3894,11 @@
+         relink(face, fixed, edit.free);
+     }
+     for (auto &[face, edit] : newFaces) relink(face, edit.fixed, edit.free);
++    // Preserve planned UV before automatic projection/refitting.
++    detail::installBlendMitreCertificates(model.faces, mitreCertificates);
+     BodyHistory declared;
+     Body result = model.build(history ? &declared : nullptr);
++    detail::requireEmittedBlendMitres(result, mitreCertificates);
+     if (history) {
+         // I contatti e le chiusure nuovi provengono dalle pezze che li
+         // usano. Dichiarali tramite l'incidenza, senza riassegnazioni per
+@@ -3899,6 +3928,7 @@
+     // limite relativo al raggio impedisce di nascondere costruzioni errate.
+     for (EdgeId edgeId : result.edges()) {
+         Edge &edge = result.edge(edgeId);
++        if (certifiedMitreCurves.count(edge.curve.get())) continue;
+         double gap = std::max(distance(result.vertex(result.edgeStart(edgeId)).point, edge.curve->point(edge.range.lo)),
+                               distance(result.vertex(result.edgeEnd(edgeId)).point, edge.curve->point(edge.range.hi)));
+         for (FinId fin : {edge.forward, edge.backward}) {
+@@ -3950,6 +3980,9 @@
+     checks.loopCrossings = true;  // un raccordo che invade un altro contorno della faccia
+     const std::vector<CheckIssue> issues = checkBody(result, checks);
+     if (!issues.empty()) throw std::domain_error("blendEdges: raccordo non valido (" + describe(issues.front().code) + ": " + issues.front().message + ")");
++    // computePCurves and all later checks must preserve actual controls,
++    // parameter, UV maps and fixed budgets. This path performs no unify.
++    detail::requireEmittedBlendMitres(result, mitreCertificates);
+     if (history) *history = std::move(declared);
+     return result;
+ }
+--- before/tools/generate_architecture.py
++++ after/tools/generate_architecture.py
+@@ -105,12 +105,13 @@
+  'fk_blend_contour': ('kernel', 'Selezione esplicita di contorni chiusi di cavita estruse tramite generatrici analitiche e adiacenze topologiche, con rifiuto dei percorsi ambigui e controllo integrale delle SP-curve contro gli appoggi consumati o invertiti.'),
+  'fk_nurbs_join': ('kernel', 'Concatenazione omogenea di carte NURBS G1: certificati sui coefficienti, propagazione del roundoff nei jet grado/campata e invarianza rispetto alla scala UV, scambio U/V e versi, elevazione esatta del grado e concatenazione dei trim polinomiali entro budget Bernstein.'),
+  'kernel/tests/test_nurbs_supports.cpp': ('tests', 'Carte NURBS G1 e trim certificati, raggi intermedi e passaggi tangenti con intersezioni entro il fit, pose/scala/rinumerazione, eliminazione degli angoli artificiali tramite atlante completo e pieghe preservate con scale UV estreme; B-rep, genealogia per incidenza, sezioni circolari, persistenza e mesh.'),
+- 'fk_blend_mitre': ('kernel', 'Intersezioni accoppiate dei raccordi a mitra: contatti con Newton smorzato, orientamento razionale dei due supporti e tracciamento del ramo vicino alla faccia comune.'),
++ 'fk_blend_mitre': ('kernel', 'Intersezioni dei raccordi a mitra: via quasi coincidente ISO con fit continuo sui due supporti originali, mappe UV esplicite e cap prefissato; installazione per identita delle fin pianificate e ricontrollo dei coefficienti realmente emessi. Newton e composizioni diagonali non supportate restano campionati; cancellazione e fallimenti del certificato terminali.'),
+  'fk_blend_section_curve': ('kernel', 'Curva di riferimento numerica delle sezioni: microcampate entro risoluzione e prolungamento polinomiale B-spline esatto sul dominio di ricerca; B-rep sorgente immutato.'),
+  'kernel/tests/test_blend_transitions.cpp': ('tests', 'Passaggi tangenti su supporti opposti: consumo dei tratti corti, tutti i semi e chiusura ciclica, specchio, scala e pose; raggio esatto, genealogia, codec e triangolazione. Contorni piani chiusi instradati al rifilo locale.'),
+  'kernel/tests/test_blend_cavity.cpp': ('tests', 'Regressione del contorno a otto bordi su loft con piccole creste reali: selezione da ogni bordo, raggio costante, genealogia, persistenza, triangolazione e prolungamento esatto.'),
+  'kernel/tests/test_blend_cavity_regressions.cpp': ('tests', 'Raccordo della cavita a raggio piccolo nei due ordini, con semi diversi, posa rigida e scala: raggio analitico, genealogia, input immutato, persistenza, SP-curve e triangolazione; consumo specifico e cancellazione transazionale.'),
+- 'fk_blend_surface': ('kernel', 'Raccordi e smussi a palla rotolante: riordino delle transizioni tangenti su supporti opposti con consumo dei tratti corti e continuazione sulle guide adiacenti in entrambi i versi, raffinamento 3D del contatto sulle cuciture tangenti, copertura del fit e intersezioni locali smorzate entro il dominio delle pezze; consumo topologico di una frontiera terminale corta verso una quarta faccia e pezze d angolo, provenienza di bordi e vertici nuovi dichiarata per incidenza; sezioni normali e guida intrinseca per coperchi piani su fianchi B-spline tangenti, continuazione delle cuciture tangenti e raffinamento dei contatti accoppiati entro la risoluzione sorgente, chiusure terminali tangenti con Newton smorzato e continuazione unilaterale anche per bordi analitici, derivate unilaterali su tutti i nodi e scarto laterale misurato entro la risoluzione sorgente, tentativi atomici, limiti unilaterali a raggio zero con sezione collassata esatta anche a cuspidi di alta valenza, raffinamento presso le punte singolari, pezze intrinseche costanti tra collassi G1 dei ventagli polari e controllo dei contorni; curve terminali con quarto vincolo verificato, rifiuto dei tratti minimi fuori budget e continuazione alternativa lungo U sugli stessi supporti, estremi conservati e lavoro limitato cancellabile.'),
++ 'kernel/tests/test_blend_mitre_validation.cpp': ('tests', 'Mitre ISO: picchi NURBS fra campioni, pose/pesi/versi e budget distinti; fin reali Body::buildSheet e mutazioni di carrier, UV, range, budget e incidenza. Diagonale coincidente valida conservata fuori certificazione; cancellazione.'),
++ 'fk_blend_surface': ('kernel', 'Raccordi e smussi a palla rotolante: riordino delle transizioni tangenti su supporti opposti con consumo dei tratti corti e continuazione sulle guide adiacenti in entrambi i versi, raffinamento 3D del contatto sulle cuciture tangenti, copertura del fit e intersezioni locali smorzate entro il dominio delle pezze; consumo topologico di una frontiera terminale corta verso una quarta faccia e pezze d angolo, provenienza di bordi e vertici nuovi dichiarata per incidenza; sezioni normali e guida intrinseca per coperchi piani su fianchi B-spline tangenti, continuazione delle cuciture tangenti e raffinamento dei contatti accoppiati entro la risoluzione sorgente, chiusure terminali tangenti con Newton smorzato e continuazione unilaterale anche per bordi analitici, derivate unilaterali su tutti i nodi e scarto laterale misurato entro la risoluzione sorgente, tentativi atomici, limiti unilaterali a raggio zero con sezione collassata esatta anche a cuspidi di alta valenza, raffinamento presso le punte singolari, pezze intrinseche costanti tra collassi G1 dei ventagli polari e controllo dei contorni; curve terminali con quarto vincolo verificato, rifiuto dei tratti minimi fuori budget e continuazione alternativa lungo U sugli stessi supporti, estremi conservati e lavoro limitato cancellabile. Mitre ISO: delega costruzione e controllo delle fin al modulo dedicato, preserva pcurve e cap prefissati escludendole dall aumento delle tolleranze; altri rami restano campionati.'),
+  'fk_blend': ('kernel', 'Raccordi e smussi analitici: priorita al rifilo locale dei contorni piani chiusi e tangenti, preparazione anticipata degli appoggi NURBS G1 certificati per le facce selezionate, riuso della composizione e genealogia esplicita, ripiego sulle carte originali senza ripetere i tentativi composti; sezioni, utensili su appoggi curvi, catene tangenti, contorni misti, pezze terminali e raggi zero agli estremi aperti.'),
+  'kernel/tests/test_blend_contact_breaks.cpp': ('tests', 'Eventi G1 nei due assi e versi, estremi e nodi del bordo a un ULP; rifiuto di creste reali, raggio R2 e offset interno 1 mm anche con perturbazioni entro risoluzione.'),
+  'kernel/tests/test_blend.cpp': ('tests', 'Regressioni geometriche dei raccordi: volumi analitici indipendenti e confronti OCCT, piastre con contorno misto e 18 fori rettangolari, tangenze, assenza di anelli residui su appoggi sferici singoli, cuciture, supporti consumati, coperchi piani anche ruotati/traslati e catene aperte su cuciture tangenti elicoidali anche con perturbazione della rotazione di 1e-14 rad, con controlli di raggio, topologia e persistenza.'),
+--- /dev/null
++++ after/kernel/tests/test_blend_mitre_validation.cpp
+@@ -0,0 +1,232 @@
++#include "fk_test.h"
++#include "fk_blend_mitre.h"
++#include "fk_bspline.h"
++#include "fk_cancel.h"
++#include "fk_precision.h"
++#include "fk_surface_algo.h"
++#include "fk_body_check.h"
++#include "fk_body_io.h"
++#include <algorithm>
++#include <limits>
++#include <memory>
++using namespace ForgeCad::Kernel;
++
++namespace {
++std::shared_ptr<BSplineSurface> hiddenIso(bool bump) {
++    const double a = 1.0 / 512.0, b = 3.0 / 512.0;
++    const std::vector<double> y{0, a / 2, a, (a + b) / 2, b, (b + 1) / 2, 1};
++    std::vector<Vec3> poles;
++    for (int i = 0; i < 2; ++i)
++        for (std::size_t j = 0; j < y.size(); ++j)
++            poles.push_back({double(i), y[j], bump && j == 3 ? 1.0 : 0.0});
++    return std::make_shared<BSplineSurface>(1, 2, std::vector<double>{0,0,1,1},
++        std::vector<double>{0,0,0,a,a,b,b,1,1,1}, 2, int(y.size()), poles);
++}
++void checkKnownIso(double scale, bool pose, bool rational, bool swap) {
++    std::vector<Vec3> poles;
++    std::vector<double> weights;
++    const Transform3 tr = pose ? Transform3::translation({7, -4, 2})
++        * Transform3::rotation({}, Vec3(1, 2, 3), .42) * Transform3::scaling({}, scale)
++        : Transform3::scaling({}, scale);
++    for (int i = 0; i < 2; ++i)
++        for (int j = 0; j < 3; ++j) {
++            poles.push_back(tr.applyToPoint({double(i), j / 2.0, 0}));
++            weights.push_back(rational ? (j == 1 ? .7 : 1.0) : 1.0);
++        }
++    const BSplineSurface s(1, 2, {0,0,1,1}, {0,0,0,1,1,1}, 2, 3, poles, weights);
++    const BSplineSurface t(s);
++    const double endpoint[4]{.3, 1, .3, 1};
++    const auto cut = detail::traceBlendMitre(swap ? t : s, swap ? s : t, .3, .3, endpoint, scale, 1e-9);
++    FK_CHECK(cut.curve && cut.forward);
++    FK_CHECK(cut.pcurveS && cut.pcurveT);
++    FK_CHECK(cut.certificateBudget == linearResolution());
++    FK_CHECK(cut.range.lo == 0 && cut.range.hi == 1);
++    FK_CHECK(std::isfinite(cut.gap) && cut.gap <= linearResolution());
++    for (int i = 0; i <= 1024; ++i) {
++        const double f = i / 1024.0;
++        FK_CHECK(distance(cut.curve->point(f), s.point(.3, f)) <= linearResolution());
++        FK_CHECK(distance(cut.curve->point(f), t.point(.3, f)) <= linearResolution());
++    }
++}
++}
++FK_TEST(BlendMitreIsoHiddenKnotDoesNotPublishOffSupportFit) {
++    const auto s = hiddenIso(false), t = hiddenIso(true);
++    const double endpoint[4]{0, 1, 0, 1};
++    bool rejected = false;
++    try {
++        const auto cut = detail::traceBlendMitre(*s, *t, 0, 0, endpoint, 1, 1e-9);
++        // The original affine UV composition may fail explicitly; a successful
++        // cut must retain its declared geometric budget.
++        const double at = 1.0 / 256.0;
++        const Vec3 p = cut.curve->point(at);
++        FK_CHECK(cut.gap <= linearResolution());
++        FK_CHECK(distance(p, t->point(0, at)) <= std::max(linearResolution(), cut.gap));
++    } catch (const std::domain_error &) {
++        rejected = true;
++    }
++    (void)rejected;
++}
++FK_TEST(BlendMitreIsoPolynomialPositive) { checkKnownIso(1, false, false, false); }
++FK_TEST(BlendMitreIsoRationalPositive) { checkKnownIso(1, false, true, false); }
++FK_TEST(BlendMitreIsoRigidPosePositive) { checkKnownIso(1, true, true, false); }
++FK_TEST(BlendMitreIsoScaleAndSupportOrderPositive) { checkKnownIso(2.5, true, true, true); }
++
++namespace {
++std::shared_ptr<BSplineSurface> planeAt(double z) {
++    return std::make_shared<BSplineSurface>(1, 2, std::vector<double>{0,0,1,1},
++        std::vector<double>{0,0,0,1,1,1}, 2, 3,
++        std::vector<Vec3>{{0,0,z},{0,.5,z},{0,1,z},{1,0,z},{1,.5,z},{1,1,z}});
++}
++}
++FK_TEST(BlendMitreDistinctFitAndCarrierBudgets) {
++    const auto s = planeAt(0), t = planeAt(.5 * linearResolution());
++    const double endpoint[4]{.3, 1, .3, 1};
++    const auto cut = detail::traceBlendMitre(*s, *t, .3, .3, endpoint, 1, 1e-9);
++    FK_CHECK(cut.curve);
++    FK_CHECK(cut.gap <= linearResolution());
++    for (int i = 0; i <= 128; ++i) {
++        const double f = i / 128.0;
++        FK_CHECK(distance(cut.curve->point(f), s->point(.3, f)) <= linearResolution());
++        FK_CHECK(distance(cut.curve->point(f), t->point(.3, f)) <= linearResolution());
++    }
++}
++FK_TEST(BlendMitreOverCarrierBudgetRejects) {
++    const auto s = planeAt(0), t = planeAt(2 * linearResolution());
++    const double endpoint[4]{.3, 1, .3, 1};
++    bool rejected = false;
++    try { (void)detail::traceBlendMitre(*s, *t, .3, .3, endpoint, 1, 1e-9); }
++    catch (const std::domain_error &) { rejected = true; }
++    FK_CHECK(rejected);
++}
++FK_TEST(BlendMitreInvalidFitToleranceRejectsBeforePublishing) {
++    const auto s = planeAt(0);
++    const double endpoint[4]{.3, 1, .3, 1};
++    for (double value : {-1., 0., std::numeric_limits<double>::infinity(), std::numeric_limits<double>::quiet_NaN()}) {
++        bool rejected = false;
++        try { (void)detail::traceBlendMitre(*s, *s, .3, .3, endpoint, 1, value); }
++        catch (const std::domain_error &) { rejected = true; }
++        FK_CHECK(rejected);
++    }
++}
++FK_TEST(BlendMitreCancellationDoesNotPublishCut) {
++    const auto s = planeAt(0);
++    const double endpoint[4]{.3, 1, .3, 1};
++    const auto previous = currentCancellation;
++    bool cancelled = false, published = false;
++    {
++        CancellationScope scope(std::make_shared<std::atomic<bool>>(true));
++        try { const auto cut = detail::traceBlendMitre(*s, *s, .3, .3, endpoint, 1, 1e-9); (void)cut; published = true; }
++        catch (const OperationCancelled &) { cancelled = true; }
++    }
++    FK_CHECK(cancelled && !published);
++    FK_CHECK(currentCancellation == previous);
++}
++
++FK_TEST(BlendMitreRevalidatesExactEmittedCoefficients) {
++    const auto s = std::make_shared<BSplineSurface>(1, 2, std::vector<double>{0,0,1,1},
++        std::vector<double>{0,0,0,1,1,1}, 2, 3,
++        std::vector<Vec3>{{0,0,0},{0,.5,0},{0,1,0},{1,0,0},{1,.5,0},{1,1,0}});
++    const double endpoint[4]{.3, 1, .3, 1};
++    const auto cut = detail::traceBlendMitre(*s, *s, .3, .3, endpoint, 1, 1e-9);
++    FK_CHECK(cut.certificateBudget == linearResolution());
++    FK_CHECK(cut.pcurveS && cut.pcurveT);
++    FK_CHECK(detail::requireBlendMitreCertificate(cut.curve, s, cut.pcurveS, cut.range, cut.certificateBudget) <= cut.certificateBudget);
++    const auto *curve = dynamic_cast<const BSplineCurve<3> *>(cut.curve.get());
++    FK_CHECK(curve);
++    auto poles = curve->poles();
++    poles[1][2] += .001;
++    const auto changedCurve = std::make_shared<BSplineCurve<3>>(curve->degree(), curve->knots(), poles);
++    FK_CHECK_THROWS(detail::requireBlendMitreCertificate(changedCurve, s, cut.pcurveS, cut.range, cut.certificateBudget));
++    const auto changedUV = std::make_shared<BSplineCurve<2>>(1, std::vector<double>{0,0,1,1}, std::vector<Vec2>{{.4,0},{.4,1}});
++    FK_CHECK_THROWS(detail::requireBlendMitreCertificate(cut.curve, s, changedUV, cut.range, cut.certificateBudget));
++    FK_CHECK_THROWS(detail::requireBlendMitreCertificate(cut.curve, s, cut.pcurveS, {0,.9}, cut.certificateBudget));
++}
++
++FK_TEST(BlendMitreCoincidentDiagonalRetainsUncertifiedCompatibility) {
++    const auto s = planeAt(0);
++    const double endpoint[4]{1, 1, 1, 1};
++    const auto cut = detail::traceBlendMitre(*s, *s, 0, 0, endpoint, 1, 1e-9);
++    FK_CHECK(cut.certificateBudget == 0);
++    FK_CHECK(!cut.pcurveS && !cut.pcurveT);
++    for (int i = 0; i <= 128; ++i) {
++        const double f = i / 128.0;
++        FK_CHECK(distance(cut.curve->point(f), s->point(f, f)) <= linearResolution());
++    }
++}
++namespace {
++CurvePtr<2> mitreUV(Vec2 a, Vec2 b, Interval range = {0, 1}) {
++    return std::make_shared<BSplineCurve<2>>(1,
++        std::vector<double>{range.lo, range.lo, range.hi, range.hi}, std::vector<Vec2>{a, b});
++}
++struct EmittedMitreFixture {
++    Body body;
++    std::vector<detail::BlendMitreUse> plans;
++};
++EmittedMitreFixture emittedMitre() {
++    const auto s = planeAt(0), t = planeAt(0);
++    const double endpoint[4]{.3, 1, .3, 1};
++    const auto cut = detail::traceBlendMitre(*s, *t, .3, .3, endpoint, 1, 1e-9);
++    const double budget = cut.certificateBudget;
++    const std::vector<Vec3> vertices{{.3,0,0},{.3,1,0},{0,1,0},{0,0,0},{1,0,0},{1,1,0}};
++    std::vector<Body::BuildEdge> edges{{0, 1, cut.curve, cut.range, budget}};
++    const std::vector<std::pair<int, int>> outer{{1,2},{2,3},{3,0},{0,4},{4,5},{5,1}};
++    std::vector<CurvePtr<2>> maps;
++    for (const auto &pair : outer) {
++        const Vec3 a = vertices[pair.first], b = vertices[pair.second];
++        const double length = distance(a, b);
++        edges.push_back({pair.first, pair.second, std::make_shared<Line<3>>(a, b - a), {0, length}, 0});
++        maps.push_back(mitreUV({a.x(), a.y()}, {b.x(), b.y()}, {0, length}));
++    }
++    Body::BuildFace a, b;
++    a.surface = s;
++    b.surface = t;
++    a.loops = {{{0,true,{},0},{1,true,maps[0],0},{2,true,maps[1],0},{3,true,maps[2],0}}};
++    b.loops = {{{0,false,{},0},{4,true,maps[3],0},{5,true,maps[4],0},{6,true,maps[5],0}}};
++    std::vector<Body::BuildFace> faces{a, b};
++    std::vector<detail::BlendMitreUse> plans{
++        {0, cut.curve, s, cut.pcurveS, cut.range, budget},
++        {0, cut.curve, t, cut.pcurveT, cut.range, budget}};
++    detail::installBlendMitreCertificates(faces, plans);
++    return {Body::buildSheet(vertices, edges, faces), plans};
++}
++}
++FK_TEST(BlendMitreEmittedFinKeepsOriginalUVInBothSenses) {
++    const auto fixture = emittedMitre();
++    detail::requireEmittedBlendMitres(fixture.body, fixture.plans);
++    FK_CHECK(checkBody(fixture.body, {true, true}).empty());
++    const auto &edge = fixture.body.edge(EdgeId(0));
++    FK_CHECK(edge.forward.valid() && edge.backward.valid());
++    for (FinId id : {edge.forward, edge.backward}) {
++        const auto &fin = fixture.body.fin(id);
++        const auto &surface = fixture.body.face(fixture.body.finFace(id)).surface;
++        FK_CHECK(fin.pcurve && fin.pcurveTolerance == linearResolution());
++        for (double f : {0., .2, .8, 1.}) {
++            const Vec2 uv = fin.pcurve->point(f);
++            FK_CHECK(distance(surface->point(uv.x(), uv.y()), edge.curve->point(f)) <= linearResolution());
++        }
++    }
++    const auto uv = mitreUV({.3, 0}, {.3, 1});
++    const auto reflected = detail::originalBlendMitreUV(uv, true, {0, 1});
++    for (double f : {0., .25, 1.}) {
++        FK_CHECK_NEAR(reflected->point(f).x(), .3, 0);
++        FK_CHECK_NEAR(reflected->point(f).y(), 1 - f, 0);
++    }
++}
++FK_TEST(BlendMitreEmissionRejectsChangedProvenanceAndBudgets) {
++    for (int mutation = 0; mutation < 7; ++mutation) {
++        auto fixture = emittedMitre();
++        Body &body = fixture.body;
++        const EdgeId edge(0);
++        const FinId fin = body.edge(edge).forward;
++        switch (mutation) {
++        case 0: body.fin(fin).pcurve = mitreUV({.4,0}, {.4,1}); break;
++        case 1: body.fin(fin).pcurveTolerance *= 2; break;
++        case 2: body.edge(edge).tolerance *= 2; break;
++        case 3: body.edge(edge).range.hi = .9; break;
++        case 4: body.face(body.finFace(fin)).surface = planeAt(.001); break;
++        case 5: body.vertex(body.edgeStart(edge)).point[2] += .001; break;
++        case 6: body.fin(fin).pcurve.reset(); break;
++        }
++        FK_CHECK_THROWS(detail::requireEmittedBlendMitres(body, fixture.plans));
++    }
++}

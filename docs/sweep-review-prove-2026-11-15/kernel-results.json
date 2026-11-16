@@ -1,0 +1,32 @@
+[
+  {
+    "filter": "Sweep",
+    "exit": 0,
+    "seconds": 2.8188495710001007
+  },
+  {
+    "filter": "Mass",
+    "exit": 0,
+    "seconds": 0.3144666239986691
+  },
+  {
+    "filter": "PCurve",
+    "exit": 0,
+    "seconds": 1.3661509490011667
+  },
+  {
+    "filter": "FaceAreas",
+    "exit": 0,
+    "seconds": 0.0317750710000837
+  },
+  {
+    "filter": "QuadratureStopsOnIntegrandNoise",
+    "exit": 0,
+    "seconds": 0.03174366699931852
+  },
+  {
+    "filter": "Revolve",
+    "exit": 0,
+    "seconds": 1.8171442299990304
+  }
+]

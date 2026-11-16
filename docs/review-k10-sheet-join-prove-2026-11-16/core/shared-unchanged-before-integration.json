@@ -1,0 +1,8 @@
+{
+  "kernel/fk_bspline_surface.cpp": true,
+  "kernel/fk_curve_fit_bounds.h": true,
+  "kernel/fk_curve_fit_bounds.cpp": true,
+  "kernel/fk_sheet.cpp": true,
+  "forgecad-release/kernel/libforgekernel.a": true,
+  "forgecad-release/kernel/CMakeFiles/forgekernel.dir/fk_sheet.cpp.o": true
+}

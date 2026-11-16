@@ -1,0 +1,42 @@
+[
+  {
+    "case": [
+      "raw",
+      2,
+      5
+    ],
+    "exit": 5,
+    "elapsed": 0.11203360557556152,
+    "output": "Loaded precision=9.9999999999999995e-08 sketches=6 features=6 modelBodies=3\nUNION raw 2=Estrusione 3 / 5=Loft 6\nFAILURE elapsed=0.080485354999999995 error=booleanOperation: risultato non chiuso (Body::build: l'edge 3 non ha due fin opposte)\n"
+  },
+  {
+    "case": [
+      "raw",
+      5,
+      2
+    ],
+    "exit": 5,
+    "elapsed": 0.11796212196350098,
+    "output": "Loaded precision=9.9999999999999995e-08 sketches=6 features=6 modelBodies=3\nUNION raw 5=Loft 6 / 2=Estrusione 3\nFAILURE elapsed=0.086014265000000006 error=booleanOperation: risultato non chiuso (Body::build: l'edge 2 non ha due fin opposte)\n"
+  },
+  {
+    "case": [
+      "app",
+      2,
+      5
+    ],
+    "exit": 5,
+    "elapsed": 0.20401525497436523,
+    "output": "Loaded precision=9.9999999999999995e-08 sketches=6 features=6 modelBodies=3\nUNION app 2=Estrusione 3 / 5=Loft 6\nFAILURE elapsed=0.16881149200000001 error=L'operazione booleana non e' riuscita: booleanOperation: risultato non chiuso (Body::build: l'edge 2 non ha due fin opposte)\n"
+  },
+  {
+    "case": [
+      "app",
+      5,
+      2
+    ],
+    "exit": 5,
+    "elapsed": 0.2037503719329834,
+    "output": "Loaded precision=9.9999999999999995e-08 sketches=6 features=6 modelBodies=3\nUNION app 5=Loft 6 / 2=Estrusione 3\nFAILURE elapsed=0.16901540300000001 error=L'operazione booleana non e' riuscita: booleanOperation: risultato non chiuso (Body::build: l'edge 3 non ha due fin opposte)\n"
+  }
+]

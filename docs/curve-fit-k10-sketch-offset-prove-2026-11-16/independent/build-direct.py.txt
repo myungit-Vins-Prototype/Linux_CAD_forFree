@@ -1,0 +1,8 @@
+from pathlib import Path
+import subprocess,shlex,sys,os
+p=Path(__file__).resolve().parent;r=Path(os.environ.get('FORGECAD_REPO',str(Path.cwd())))
+mode=sys.argv[1] if len(sys.argv)>1 else 'candidate'
+src=p.parent/'implementation/candidate/cad_sketch_offset.cpp' if mode=='candidate' else r/'cad_sketch_offset.cpp'
+flags=shlex.split(subprocess.check_output(['pkg-config','--cflags','Qt6Widgets'],text=True));libs=shlex.split(subprocess.check_output(['pkg-config','--libs','Qt6Widgets'],text=True))
+subprocess.run(['c++','-DSKETCH_OFFSET_SOURCE='+chr(34)+str(src)+chr(34),'-std=c++17','-O2','-fno-fast-math','-ffp-contract=off','-fPIC','-ffunction-sections','-fdata-sections','-I'+str(r),'-I'+str(r/'kernel'),*flags,'-c',str(p/'direct.cpp'),'-o',str(p/'direct.o')],check=True)
+subprocess.run(['c++','-Wl,--gc-sections',str(p/'direct.o'),str(p/'solver-before.o'),str(r/'forgecad-release/kernel/libforgekernel.a'),*libs,'-lpthread','-o',str(p/'direct')],check=True)

@@ -1,0 +1,14 @@
+from pathlib import Path
+from collections import Counter
+import json
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/boundary-review/root')
+a=json.loads((T/'compile-commands-before.json').read_text());b=json.loads((R/'forgecad-release/compile_commands.json').read_text());canon=lambda e:json.dumps(e,sort_keys=True)
+removed=[json.loads(e) for e,n in (Counter(map(canon,a))-Counter(map(canon,b))).items() for _ in range(n)];added=[json.loads(e) for e,n in (Counter(map(canon,b))-Counter(map(canon,a))).items() for _ in range(n)]
+assert len(removed)==1 and len(added)==3,(len(removed),len(added))
+assert removed[0]['file']==str(R/'kernel/fk_blend_section_curve.cpp')
+for e in added:
+ if e['file']==str(R/'kernel/fk_blend_section_curve.cpp'):assert '-fno-fast-math' in e['command'] and '-ffp-contract=off' in e['command']
+ else:assert e['file'] in [str(R/'kernel/tests/test_blend_boundary_validation.cpp'),str(R/'kernel/tests/fk_test_main.cpp')]
+result={'before_records':len(a),'after_records':len(b),'removed':removed,'added':added,'only_existing_command_change':'fk_blend_section_curve.cpp strict floating-point flags','kernel_sources':{e['file']:e['command'] for e in b if e['file'] in [str(R/'kernel/fk_blend_section_curve.cpp'),str(R/'kernel/fk_blend_surface.cpp')]}}
+for command in result['kernel_sources'].values():assert '-fno-fast-math' in command and '-ffp-contract=off' in command
+(T/'compile-command-diff.json').write_text(json.dumps(result,indent=2)+'\n');print('Compile DB',len(a),'->',len(b),'only section flags and two new test entries')

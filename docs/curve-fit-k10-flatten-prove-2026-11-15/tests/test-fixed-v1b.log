@@ -1,0 +1,5 @@
+[  OK  ] PlanarFlattenHiddenPolynomialRationalPoseScaleSense
+[  OK  ] PlanarFlattenNestedPartialTrimReverseHolesAndRoundtrip
+[  OK  ] PlanarFlattenInvalidAndCancellationPreserveStatsHistorySource
+3/3 test superati
+elapsed=1.20 maxrss_kb=5940

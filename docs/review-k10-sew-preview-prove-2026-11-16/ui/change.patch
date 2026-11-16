@@ -1,0 +1,11 @@
+--- forgeCad2026_dialogs_solids.cpp
++++ forgeCad2026_dialogs_solids.cpp
+@@ -199,6 +199,8 @@
+     secondBox->setKeyboardTracking(false);
+     sizeBox->onReturn = refresh;
+     secondBox->onReturn = refresh;
++    QObject::connect(sizeBox, &QDoubleSpinBox::editingFinished, &dialog, refresh);
++    QObject::connect(secondBox, &QDoubleSpinBox::editingFinished, &dialog, refresh);
+     QObject::connect(flipBox, &QCheckBox::toggled, &dialog, refresh);
+     QObject::connect(modeBox, &QComboBox::currentIndexChanged, &dialog, [&] {
+         describe();

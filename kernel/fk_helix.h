@@ -45,6 +45,10 @@ public:
 
     const HelixSpec &spec() const { return spec_; }
     double radiusAt(double t) const { return spec_.radius + slope_ * t; }
+    // Stored IEEE coefficients used by evaluate(), without recomputing the
+    // divisions or tangent from Spec when constructing a certificate.
+    double radialSlope() const { return slope_; }
+    double risePerRadian() const { return rise_; }
     // Lunghezza esatta (forma chiusa per l'elica cilindrica, quadratura negli altri casi).
     double length() const;
 

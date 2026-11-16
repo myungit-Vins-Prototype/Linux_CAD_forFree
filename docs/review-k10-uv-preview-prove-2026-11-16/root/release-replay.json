@@ -1,0 +1,23 @@
+{
+  "exit": 0,
+  "seconds": 0.6241566290000264,
+  "command": [
+    "/home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_offset_pcurve_tests",
+    "/tmp/k10-uv-review/release-export"
+  ],
+  "production_overlays": [],
+  "passed_groups": 10,
+  "identical_exports": 8,
+  "exports": {
+    "faces_trim_polynomial.json": "83fb536b352474fadb50ced89ac64a2037de7389e93cb472666618f7e1b3222c",
+    "faces_trim_rational.json": "b8907ab260617d19c8e7c6b7d07ec0a2e15e8b9c3d3f22e4d2df139f7d3d1695",
+    "joined_polynomial.json": "21b3882cff8f40cd9fd5f71a60a1c57f7058c2a3531056c4f3c5dc5c8f5c7ad3",
+    "joined_pose.json": "73fedab67b69e2a81f77e91657ef7637b6b0102ade124876c6805475f7b5c71f",
+    "joined_rational.json": "61aa80450175f5bd63cfc6769bf77b2ebefc70057d8414da959296bdaca888f6",
+    "joined_reverse.json": "591403db2bfa9aba091b75332b1e72bf0cfbf7ff58d53bd227f885b72e327405",
+    "joined_scale.json": "0948dde215a6dc387bdfe1f2dcd27bef7752319d3fe3bc9e5ecc35531fe041dc",
+    "joined_shift_trim.json": "a8ea68eba659144d1a0388c5f5486d45a5f4f3e868d8deb853d3f312572dad91"
+  },
+  "kernel_sha256": "a45c97a1faeaf0fdb735d429cb3f9cf40acee6c0e48f670bcc3ee7c330fb07e8",
+  "binary_sha256": "fdf3df5940661fb4efb4428320fd9b01c515ae5b160923bd0cf3a31603a05f59"
+}

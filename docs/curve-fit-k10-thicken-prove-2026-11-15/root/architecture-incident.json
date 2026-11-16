@@ -1,0 +1,3420 @@
+[
+  {
+    "source": "cad_forge.cpp",
+    "target": "kernel/fk_thicken.cpp",
+    "kind": "call",
+    "count": 1,
+    "sites": [
+      {
+        "line": 957,
+        "symbol": "ForgeCad::Kernel::thickenSheet",
+        "owner": "ForgeCad::forgeThicken"
+      }
+    ]
+  },
+  {
+    "source": "cad_forge.cpp",
+    "target": "kernel/fk_thicken.h",
+    "kind": "call",
+    "count": 1,
+    "sites": [
+      {
+        "line": 950,
+        "symbol": "ForgeCad::Kernel::ThickenOptions::ThickenOptions",
+        "owner": "ForgeCad::forgeThicken"
+      }
+    ]
+  },
+  {
+    "source": "cad_forge.cpp",
+    "target": "kernel/fk_thicken.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 51,
+        "symbol": "fk_thicken.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_thicken.cpp",
+    "target": "kernel/fk_bspline.h",
+    "kind": "call",
+    "count": 15,
+    "sites": [
+      {
+        "line": 47,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::knots",
+        "owner": "ForgeCad::Kernel::makeCompatible"
+      },
+      {
+        "line": 48,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::degree",
+        "owner": "ForgeCad::Kernel::makeCompatible"
+      },
+      {
+        "line": 48,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::poleCount",
+        "owner": "ForgeCad::Kernel::makeCompatible"
+      },
+      {
+        "line": 53,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::multiplicity",
+        "owner": "ForgeCad::Kernel::makeCompatible"
+      },
+      {
+        "line": 54,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::insertKnot",
+        "owner": "ForgeCad::Kernel::makeCompatible"
+      },
+      {
+        "line": 54,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::multiplicity",
+        "owner": "ForgeCad::Kernel::makeCompatible"
+      },
+      {
+        "line": 54,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::operator=",
+        "owner": "ForgeCad::Kernel::makeCompatible"
+      },
+      {
+        "line": 55,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::insertKnot",
+        "owner": "ForgeCad::Kernel::makeCompatible"
+      },
+      {
+        "line": 55,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::multiplicity",
+        "owner": "ForgeCad::Kernel::makeCompatible"
+      },
+      {
+        "line": 55,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::operator=",
+        "owner": "ForgeCad::Kernel::makeCompatible"
+      },
+      {
+        "line": 350,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::BSplineCurve",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 352,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::poleCount",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 355,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::poles",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 356,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::poles",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 358,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::knots",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_thicken.cpp",
+    "target": "kernel/fk_bspline.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 14,
+        "symbol": "fk_bspline.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_thicken.cpp",
+    "target": "kernel/fk_bspline_surface.cpp",
+    "kind": "call",
+    "count": 1,
+    "sites": [
+      {
+        "line": 149,
+        "symbol": "ForgeCad::Kernel::BSplineSurface::cachedSharpKnotLines",
+        "owner": "ForgeCad::Kernel::normalBreaks"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_thicken.cpp",
+    "target": "kernel/fk_bspline_surface.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 15,
+        "symbol": "fk_bspline_surface.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_thicken.cpp",
+    "target": "kernel/fk_cancel.h",
+    "kind": "call",
+    "count": 1,
+    "sites": [
+      {
+        "line": 291,
+        "symbol": "ForgeCad::Kernel::cancellationPoint",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_thicken.cpp",
+    "target": "kernel/fk_cancel.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 2,
+        "symbol": "fk_cancel.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_thicken.cpp",
+    "target": "kernel/fk_classify.cpp",
+    "kind": "call",
+    "count": 1,
+    "sites": [
+      {
+        "line": 126,
+        "symbol": "ForgeCad::Kernel::classifyPointOnFace",
+        "owner": "ForgeCad::Kernel::facePoints"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_thicken.cpp",
+    "target": "kernel/fk_classify.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 16,
+        "symbol": "fk_classify.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_thicken.cpp",
+    "target": "kernel/fk_curve.h",
+    "kind": "call",
+    "count": 23,
+    "sites": [
+      {
+        "line": 67,
+        "symbol": "ForgeCad::Kernel::Curve::point",
+        "owner": "ForgeCad::Kernel::edgeRanges"
+      },
+      {
+        "line": 78,
+        "symbol": "ForgeCad::Kernel::Curve::point",
+        "owner": "ForgeCad::Kernel::wall"
+      },
+      {
+        "line": 115,
+        "symbol": "ForgeCad::Kernel::Curve::point",
+        "owner": "ForgeCad::Kernel::facePoints"
+      },
+      {
+        "line": 118,
+        "symbol": "ForgeCad::Kernel::Curve::point",
+        "owner": "ForgeCad::Kernel::facePoints"
+      },
+      {
+        "line": 160,
+        "symbol": "ForgeCad::Kernel::Curve::point",
+        "owner": "ForgeCad::Kernel::normalBreaks"
+      },
+      {
+        "line": 178,
+        "symbol": "ForgeCad::Kernel::Curve::point",
+        "owner": "ForgeCad::Kernel::normalBreaks"
+      },
+      {
+        "line": 205,
+        "symbol": "ForgeCad::Kernel::Curve::point",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 273,
+        "symbol": "ForgeCad::Kernel::Curve::type",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 274,
+        "symbol": "ForgeCad::Kernel::Curve::point",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 279,
+        "symbol": "ForgeCad::Kernel::Curve::derivative",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 279,
+        "symbol": "ForgeCad::Kernel::Curve::point",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 290,
+        "symbol": "ForgeCad::Kernel::Curve::type",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 292,
+        "symbol": "ForgeCad::Kernel::Curve::type",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 293,
+        "symbol": "ForgeCad::Kernel::TrimmedCurve::basis",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 294,
+        "symbol": "ForgeCad::Kernel::TransformedCurve::basis",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 297,
+        "symbol": "ForgeCad::Kernel::Curve::type",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 304,
+        "symbol": "ForgeCad::Kernel::Curve::point",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 322,
+        "symbol": "ForgeCad::Kernel::Curve::point",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 327,
+        "symbol": "ForgeCad::Kernel::Curve::point",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 332,
+        "symbol": "ForgeCad::Kernel::Curve::breakpoints",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 406,
+        "symbol": "ForgeCad::Kernel::Curve::type",
+        "owner": "ForgeCad::Kernel::thickenAlongDirection"
+      },
+      {
+        "line": 407,
+        "symbol": "ForgeCad::Kernel::Curve::point",
+        "owner": "ForgeCad::Kernel::thickenAlongDirection"
+      },
+      {
+        "line": 409,
+        "symbol": "ForgeCad::Kernel::Curve::point",
+        "owner": "ForgeCad::Kernel::thickenAlongDirection"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_thicken.cpp",
+    "target": "kernel/fk_exchange.cpp",
+    "kind": "call",
+    "count": 1,
+    "sites": [
+      {
+        "line": 100,
+        "symbol": "ForgeCad::Kernel::detail::assembleBody",
+        "owner": "ForgeCad::Kernel::wall"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_thicken.cpp",
+    "target": "kernel/fk_exchange.h",
+    "kind": "call",
+    "count": 3,
+    "sites": [
+      {
+        "line": 77,
+        "symbol": "ForgeCad::Kernel::detail::RawModel::RawModel",
+        "owner": "ForgeCad::Kernel::wall"
+      },
+      {
+        "line": 80,
+        "symbol": "ForgeCad::Kernel::detail::RawEdge::RawEdge",
+        "owner": "ForgeCad::Kernel::wall"
+      },
+      {
+        "line": 95,
+        "symbol": "ForgeCad::Kernel::detail::RawFace::RawFace",
+        "owner": "ForgeCad::Kernel::wall"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_thicken.cpp",
+    "target": "kernel/fk_exchange.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 17,
+        "symbol": "fk_exchange.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_thicken.cpp",
+    "target": "kernel/fk_history.cpp",
+    "kind": "call",
+    "count": 2,
+    "sites": [
+      {
+        "line": 451,
+        "symbol": "ForgeCad::Kernel::BodyHistory::compose",
+        "owner": "ForgeCad::Kernel::thickenSheet"
+      },
+      {
+        "line": 455,
+        "symbol": "ForgeCad::Kernel::BodyHistory::compose",
+        "owner": "ForgeCad::Kernel::thickenSheet"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_thicken.cpp",
+    "target": "kernel/fk_history.h",
+    "kind": "call",
+    "count": 13,
+    "sites": [
+      {
+        "line": 134,
+        "symbol": "ForgeCad::Kernel::BodyHistory::BodyHistory",
+        "owner": "ForgeCad::Kernel::sewSolid"
+      },
+      {
+        "line": 138,
+        "symbol": "ForgeCad::Kernel::BodyHistory::operator=",
+        "owner": "ForgeCad::Kernel::sewSolid"
+      },
+      {
+        "line": 216,
+        "symbol": "ForgeCad::Kernel::BodyHistory::BodyHistory",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 218,
+        "symbol": "ForgeCad::Kernel::BodyHistory::operator=",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 221,
+        "symbol": "ForgeCad::Kernel::BodyHistory::operator=",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 392,
+        "symbol": "ForgeCad::Kernel::BodyHistory::BodyHistory",
+        "owner": "ForgeCad::Kernel::thickenAlongDirection"
+      },
+      {
+        "line": 393,
+        "symbol": "ForgeCad::Kernel::BodyHistory::operator=",
+        "owner": "ForgeCad::Kernel::thickenAlongDirection"
+      },
+      {
+        "line": 425,
+        "symbol": "ForgeCad::Kernel::BodyHistory::BodyHistory",
+        "owner": "ForgeCad::Kernel::thickenSheet"
+      },
+      {
+        "line": 425,
+        "symbol": "ForgeCad::Kernel::BodyHistory::operator=",
+        "owner": "ForgeCad::Kernel::thickenSheet"
+      },
+      {
+        "line": 432,
+        "symbol": "ForgeCad::Kernel::BodyHistory::BodyHistory",
+        "owner": "ForgeCad::Kernel::thickenSheet"
+      },
+      {
+        "line": 435,
+        "symbol": "ForgeCad::Kernel::BodyHistory::operator=",
+        "owner": "ForgeCad::Kernel::thickenSheet"
+      },
+      {
+        "line": 451,
+        "symbol": "ForgeCad::Kernel::BodyHistory::operator=",
+        "owner": "ForgeCad::Kernel::thickenSheet"
+      },
+      {
+        "line": 455,
+        "symbol": "ForgeCad::Kernel::BodyHistory::operator=",
+        "owner": "ForgeCad::Kernel::thickenSheet"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_thicken.cpp",
+    "target": "kernel/fk_history_tools.h",
+    "kind": "call",
+    "count": 6,
+    "sites": [
+      {
+        "line": 138,
+        "symbol": "ForgeCad::Kernel::detail::transportHistory",
+        "owner": "ForgeCad::Kernel::sewSolid"
+      },
+      {
+        "line": 218,
+        "symbol": "ForgeCad::Kernel::detail::indexHistory",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 244,
+        "symbol": "ForgeCad::Kernel::detail::generatedFaces",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 393,
+        "symbol": "ForgeCad::Kernel::detail::indexHistory",
+        "owner": "ForgeCad::Kernel::thickenAlongDirection"
+      },
+      {
+        "line": 397,
+        "symbol": "ForgeCad::Kernel::detail::generatedFaces",
+        "owner": "ForgeCad::Kernel::thickenAlongDirection"
+      },
+      {
+        "line": 435,
+        "symbol": "ForgeCad::Kernel::detail::indexHistory",
+        "owner": "ForgeCad::Kernel::thickenSheet"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_thicken.cpp",
+    "target": "kernel/fk_history_tools.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 3,
+        "symbol": "fk_history_tools.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_thicken.cpp",
+    "target": "kernel/fk_math.cpp",
+    "kind": "call",
+    "count": 5,
+    "sites": [
+      {
+        "line": 283,
+        "symbol": "ForgeCad::Kernel::Frame3::Frame3",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 307,
+        "symbol": "ForgeCad::Kernel::Transform3::translation",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 390,
+        "symbol": "ForgeCad::Kernel::Transform3::translation",
+        "owner": "ForgeCad::Kernel::thickenAlongDirection"
+      },
+      {
+        "line": 402,
+        "symbol": "ForgeCad::Kernel::Transform3::translation",
+        "owner": "ForgeCad::Kernel::thickenAlongDirection"
+      },
+      {
+        "line": 409,
+        "symbol": "ForgeCad::Kernel::Frame3::Frame3",
+        "owner": "ForgeCad::Kernel::thickenAlongDirection"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_thicken.cpp",
+    "target": "kernel/fk_math.h",
+    "kind": "call",
+    "count": 58,
+    "sites": [
+      {
+        "line": 35,
+        "symbol": "ForgeCad::Kernel::Frame3::zDir",
+        "owner": "ForgeCad::Kernel::faceNormalAt"
+      },
+      {
+        "line": 35,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "ForgeCad::Kernel::faceNormalAt"
+      },
+      {
+        "line": 36,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "ForgeCad::Kernel::faceNormalAt"
+      },
+      {
+        "line": 36,
+        "symbol": "ForgeCad::Kernel::operator-",
+        "owner": "ForgeCad::Kernel::faceNormalAt"
+      },
+      {
+        "line": 40,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "ForgeCad::Kernel::faceNormalAt"
+      },
+      {
+        "line": 40,
+        "symbol": "ForgeCad::Kernel::operator-",
+        "owner": "ForgeCad::Kernel::faceNormalAt"
+      },
+      {
+        "line": 67,
+        "symbol": "ForgeCad::Kernel::distance",
+        "owner": "ForgeCad::Kernel::edgeRanges"
+      },
+      {
+        "line": 85,
+        "symbol": "ForgeCad::Kernel::Interval::operator=",
+        "owner": "ForgeCad::Kernel::wall"
+      },
+      {
+        "line": 89,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "ForgeCad::Kernel::wall"
+      },
+      {
+        "line": 89,
+        "symbol": "ForgeCad::Kernel::operator-",
+        "owner": "ForgeCad::Kernel::wall"
+      },
+      {
+        "line": 92,
+        "symbol": "ForgeCad::Kernel::distance",
+        "owner": "ForgeCad::Kernel::wall"
+      },
+      {
+        "line": 94,
+        "symbol": "ForgeCad::Kernel::distance",
+        "owner": "ForgeCad::Kernel::wall"
+      },
+      {
+        "line": 115,
+        "symbol": "ForgeCad::Kernel::Interval::length",
+        "owner": "ForgeCad::Kernel::facePoints"
+      },
+      {
+        "line": 118,
+        "symbol": "ForgeCad::Kernel::Interval::length",
+        "owner": "ForgeCad::Kernel::facePoints"
+      },
+      {
+        "line": 119,
+        "symbol": "ForgeCad::Kernel::Vec::operator[]",
+        "owner": "ForgeCad::Kernel::facePoints"
+      },
+      {
+        "line": 160,
+        "symbol": "ForgeCad::Kernel::Interval::length",
+        "owner": "ForgeCad::Kernel::normalBreaks"
+      },
+      {
+        "line": 160,
+        "symbol": "ForgeCad::Kernel::Vec::operator=",
+        "owner": "ForgeCad::Kernel::normalBreaks"
+      },
+      {
+        "line": 166,
+        "symbol": "ForgeCad::Kernel::cross",
+        "owner": "ForgeCad::Kernel::normalBreaks"
+      },
+      {
+        "line": 166,
+        "symbol": "ForgeCad::Kernel::norm",
+        "owner": "ForgeCad::Kernel::normalBreaks"
+      },
+      {
+        "line": 174,
+        "symbol": "ForgeCad::Kernel::Interval::length",
+        "owner": "ForgeCad::Kernel::normalBreaks"
+      },
+      {
+        "line": 175,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "ForgeCad::Kernel::normalBreaks"
+      },
+      {
+        "line": 176,
+        "symbol": "ForgeCad::Kernel::Interval::length",
+        "owner": "ForgeCad::Kernel::normalBreaks"
+      },
+      {
+        "line": 179,
+        "symbol": "ForgeCad::Kernel::Vec::operator=",
+        "owner": "ForgeCad::Kernel::normalBreaks"
+      },
+      {
+        "line": 180,
+        "symbol": "ForgeCad::Kernel::Vec::operator=",
+        "owner": "ForgeCad::Kernel::normalBreaks"
+      },
+      {
+        "line": 205,
+        "symbol": "ForgeCad::Kernel::Interval::length",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 206,
+        "symbol": "ForgeCad::Kernel::cross",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 206,
+        "symbol": "ForgeCad::Kernel::norm",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 269,
+        "symbol": "ForgeCad::Kernel::Interval::length",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 276,
+        "symbol": "ForgeCad::Kernel::cross",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 276,
+        "symbol": "ForgeCad::Kernel::norm",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 279,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 279,
+        "symbol": "ForgeCad::Kernel::operator*",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 279,
+        "symbol": "ForgeCad::Kernel::operator+",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 281,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 281,
+        "symbol": "ForgeCad::Kernel::normalized",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 281,
+        "symbol": "ForgeCad::Kernel::operator-",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 283,
+        "symbol": "ForgeCad::Kernel::cross",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 283,
+        "symbol": "ForgeCad::Kernel::normalized",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 307,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 307,
+        "symbol": "ForgeCad::Kernel::operator*",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 328,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 329,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 329,
+        "symbol": "ForgeCad::Kernel::operator*",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 329,
+        "symbol": "ForgeCad::Kernel::operator+",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 355,
+        "symbol": "ForgeCad::Kernel::Vec::operator=",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 356,
+        "symbol": "ForgeCad::Kernel::Vec::operator=",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 384,
+        "symbol": "ForgeCad::Kernel::dot",
+        "owner": "ForgeCad::Kernel::thickenAlongDirection"
+      },
+      {
+        "line": 390,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "ForgeCad::Kernel::thickenAlongDirection"
+      },
+      {
+        "line": 390,
+        "symbol": "ForgeCad::Kernel::operator*",
+        "owner": "ForgeCad::Kernel::thickenAlongDirection"
+      },
+      {
+        "line": 402,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "ForgeCad::Kernel::thickenAlongDirection"
+      },
+      {
+        "line": 402,
+        "symbol": "ForgeCad::Kernel::operator*",
+        "owner": "ForgeCad::Kernel::thickenAlongDirection"
+      },
+      {
+        "line": 408,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "ForgeCad::Kernel::thickenAlongDirection"
+      },
+      {
+        "line": 408,
+        "symbol": "ForgeCad::Kernel::normalized",
+        "owner": "ForgeCad::Kernel::thickenAlongDirection"
+      },
+      {
+        "line": 408,
+        "symbol": "ForgeCad::Kernel::operator-",
+        "owner": "ForgeCad::Kernel::thickenAlongDirection"
+      },
+      {
+        "line": 409,
+        "symbol": "ForgeCad::Kernel::cross",
+        "owner": "ForgeCad::Kernel::thickenAlongDirection"
+      },
+      {
+        "line": 409,
+        "symbol": "ForgeCad::Kernel::normalized",
+        "owner": "ForgeCad::Kernel::thickenAlongDirection"
+      },
+      {
+        "line": 449,
+        "symbol": "ForgeCad::Kernel::norm",
+        "owner": "ForgeCad::Kernel::thickenSheet"
+      },
+      {
+        "line": 450,
+        "symbol": "ForgeCad::Kernel::normalized",
+        "owner": "ForgeCad::Kernel::thickenSheet"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_thicken.cpp",
+    "target": "kernel/fk_offset.cpp",
+    "kind": "call",
+    "count": 3,
+    "sites": [
+      {
+        "line": 220,
+        "symbol": "ForgeCad::Kernel::offsetFaces",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 340,
+        "symbol": "ForgeCad::Kernel::fitCurve",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 341,
+        "symbol": "ForgeCad::Kernel::fitCurve",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_thicken.cpp",
+    "target": "kernel/fk_offset.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 18,
+        "symbol": "fk_offset.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_thicken.cpp",
+    "target": "kernel/fk_open_offset.cpp",
+    "kind": "call",
+    "count": 2,
+    "sites": [
+      {
+        "line": 208,
+        "symbol": "ForgeCad::Kernel::detail::canOffsetOpenSheet",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 209,
+        "symbol": "ForgeCad::Kernel::detail::thickenOpenSheet",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_thicken.cpp",
+    "target": "kernel/fk_open_offset.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 19,
+        "symbol": "fk_open_offset.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_thicken.cpp",
+    "target": "kernel/fk_parallel.h",
+    "kind": "call",
+    "count": 2,
+    "sites": [
+      {
+        "line": 157,
+        "symbol": "ForgeCad::Kernel::threadCount",
+        "owner": "ForgeCad::Kernel::normalBreaks"
+      },
+      {
+        "line": 158,
+        "symbol": "ForgeCad::Kernel::parallelFor",
+        "owner": "ForgeCad::Kernel::normalBreaks"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_thicken.cpp",
+    "target": "kernel/fk_parallel.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 21,
+        "symbol": "fk_parallel.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_thicken.cpp",
+    "target": "kernel/fk_pcurve.cpp",
+    "kind": "call",
+    "count": 1,
+    "sites": [
+      {
+        "line": 436,
+        "symbol": "ForgeCad::Kernel::computePCurves",
+        "owner": "ForgeCad::Kernel::thickenSheet"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_thicken.cpp",
+    "target": "kernel/fk_pcurve.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 20,
+        "symbol": "fk_pcurve.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_thicken.cpp",
+    "target": "kernel/fk_precision.h",
+    "kind": "call",
+    "count": 1,
+    "sites": [
+      {
+        "line": 209,
+        "symbol": "ForgeCad::Kernel::linearResolution",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_thicken.cpp",
+    "target": "kernel/fk_sew.cpp",
+    "kind": "call",
+    "count": 2,
+    "sites": [
+      {
+        "line": 135,
+        "symbol": "ForgeCad::Kernel::sewSheets",
+        "owner": "ForgeCad::Kernel::sewSolid"
+      },
+      {
+        "line": 434,
+        "symbol": "ForgeCad::Kernel::facesAsSheet",
+        "owner": "ForgeCad::Kernel::thickenSheet"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_thicken.cpp",
+    "target": "kernel/fk_sew.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 22,
+        "symbol": "fk_sew.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_thicken.cpp",
+    "target": "kernel/fk_surface.cpp",
+    "kind": "call",
+    "count": 1,
+    "sites": [
+      {
+        "line": 125,
+        "symbol": "ForgeCad::Kernel::Surface::point",
+        "owner": "ForgeCad::Kernel::facePoints"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_thicken.cpp",
+    "target": "kernel/fk_surface.h",
+    "kind": "call",
+    "count": 6,
+    "sites": [
+      {
+        "line": 34,
+        "symbol": "ForgeCad::Kernel::Surface::type",
+        "owner": "ForgeCad::Kernel::faceNormalAt"
+      },
+      {
+        "line": 35,
+        "symbol": "ForgeCad::Kernel::Plane::frame",
+        "owner": "ForgeCad::Kernel::faceNormalAt"
+      },
+      {
+        "line": 147,
+        "symbol": "ForgeCad::Kernel::Surface::type",
+        "owner": "ForgeCad::Kernel::normalBreaks"
+      },
+      {
+        "line": 148,
+        "symbol": "ForgeCad::Kernel::Surface::type",
+        "owner": "ForgeCad::Kernel::normalBreaks"
+      },
+      {
+        "line": 157,
+        "symbol": "ForgeCad::Kernel::Surface::type",
+        "owner": "ForgeCad::Kernel::normalBreaks"
+      },
+      {
+        "line": 288,
+        "symbol": "ForgeCad::Kernel::Surface::type",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_thicken.cpp",
+    "target": "kernel/fk_surface.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 23,
+        "symbol": "fk_surface.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_thicken.cpp",
+    "target": "kernel/fk_surface_algo.cpp",
+    "kind": "call",
+    "count": 2,
+    "sites": [
+      {
+        "line": 38,
+        "symbol": "ForgeCad::Kernel::projectPoint",
+        "owner": "ForgeCad::Kernel::faceNormalAt"
+      },
+      {
+        "line": 39,
+        "symbol": "ForgeCad::Kernel::normalAt",
+        "owner": "ForgeCad::Kernel::faceNormalAt"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_thicken.cpp",
+    "target": "kernel/fk_surface_algo.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 24,
+        "symbol": "fk_surface_algo.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_thicken.cpp",
+    "target": "kernel/fk_thicken.cpp",
+    "kind": "call",
+    "count": 45,
+    "sites": [
+      {
+        "line": 91,
+        "symbol": "ForgeCad::Kernel::wall::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_thicken.cpp:79:22)::operator()",
+        "owner": "ForgeCad::Kernel::wall"
+      },
+      {
+        "line": 92,
+        "symbol": "ForgeCad::Kernel::wall::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_thicken.cpp:79:22)::operator()",
+        "owner": "ForgeCad::Kernel::wall"
+      },
+      {
+        "line": 92,
+        "symbol": "ForgeCad::Kernel::wall::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_thicken.cpp:88:26)::operator()",
+        "owner": "ForgeCad::Kernel::wall"
+      },
+      {
+        "line": 93,
+        "symbol": "ForgeCad::Kernel::wall::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_thicken.cpp:79:22)::operator()",
+        "owner": "ForgeCad::Kernel::wall"
+      },
+      {
+        "line": 94,
+        "symbol": "ForgeCad::Kernel::wall::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_thicken.cpp:79:22)::operator()",
+        "owner": "ForgeCad::Kernel::wall"
+      },
+      {
+        "line": 94,
+        "symbol": "ForgeCad::Kernel::wall::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_thicken.cpp:88:26)::operator()",
+        "owner": "ForgeCad::Kernel::wall"
+      },
+      {
+        "line": 160,
+        "symbol": "ForgeCad::Kernel::faceNormalAt",
+        "owner": "ForgeCad::Kernel::normalBreaks"
+      },
+      {
+        "line": 169,
+        "symbol": "ForgeCad::Kernel::normalBreaks::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_thicken.cpp:166:24)::operator()",
+        "owner": "ForgeCad::Kernel::normalBreaks"
+      },
+      {
+        "line": 170,
+        "symbol": "ForgeCad::Kernel::normalBreaks::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_thicken.cpp:166:24)::operator()",
+        "owner": "ForgeCad::Kernel::normalBreaks"
+      },
+      {
+        "line": 171,
+        "symbol": "ForgeCad::Kernel::normalBreaks::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_thicken.cpp:166:24)::operator()",
+        "owner": "ForgeCad::Kernel::normalBreaks"
+      },
+      {
+        "line": 178,
+        "symbol": "ForgeCad::Kernel::faceNormalAt",
+        "owner": "ForgeCad::Kernel::normalBreaks"
+      },
+      {
+        "line": 179,
+        "symbol": "ForgeCad::Kernel::normalBreaks::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_thicken.cpp:166:24)::operator()",
+        "owner": "ForgeCad::Kernel::normalBreaks"
+      },
+      {
+        "line": 183,
+        "symbol": "ForgeCad::Kernel::normalBreaks::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_thicken.cpp:166:24)::operator()",
+        "owner": "ForgeCad::Kernel::normalBreaks"
+      },
+      {
+        "line": 206,
+        "symbol": "ForgeCad::Kernel::faceNormalAt",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 233,
+        "symbol": "ForgeCad::Kernel::thickenAlongNormal::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_thicken.cpp:217:23)::operator()",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 234,
+        "symbol": "ForgeCad::Kernel::thickenAlongNormal::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_thicken.cpp:217:23)::operator()",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 257,
+        "symbol": "ForgeCad::Kernel::edgeRanges",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 259,
+        "symbol": "ForgeCad::Kernel::normalBreaks",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 271,
+        "symbol": "ForgeCad::Kernel::thickenAlongNormal::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_thicken.cpp:270:35)::operator()",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 275,
+        "symbol": "ForgeCad::Kernel::faceNormalAt",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 282,
+        "symbol": "ForgeCad::Kernel::thickenAlongNormal::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_thicken.cpp:243:24)::operator()",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 282,
+        "symbol": "ForgeCad::Kernel::thickenAlongNormal::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_thicken.cpp:277:42)::operator()",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 282,
+        "symbol": "ForgeCad::Kernel::wall",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 304,
+        "symbol": "ForgeCad::Kernel::faceNormalAt",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 309,
+        "symbol": "ForgeCad::Kernel::thickenAlongNormal::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_thicken.cpp:305:38)::operator()",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 310,
+        "symbol": "ForgeCad::Kernel::thickenAlongNormal::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_thicken.cpp:243:24)::operator()",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 310,
+        "symbol": "ForgeCad::Kernel::wall",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 322,
+        "symbol": "ForgeCad::Kernel::faceNormalAt",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 329,
+        "symbol": "ForgeCad::Kernel::thickenAlongNormal::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_thicken.cpp:318:39)::operator()",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 340,
+        "symbol": "ForgeCad::Kernel::thickenAlongNormal::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_thicken.cpp:325:29)::operator()",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 341,
+        "symbol": "ForgeCad::Kernel::thickenAlongNormal::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_thicken.cpp:325:29)::operator()",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 351,
+        "symbol": "ForgeCad::Kernel::makeCompatible",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 361,
+        "symbol": "ForgeCad::Kernel::thickenAlongNormal::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_thicken.cpp:243:24)::operator()",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 361,
+        "symbol": "ForgeCad::Kernel::wall",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 374,
+        "symbol": "ForgeCad::Kernel::sewSolid",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 383,
+        "symbol": "ForgeCad::Kernel::facePoints",
+        "owner": "ForgeCad::Kernel::thickenAlongDirection"
+      },
+      {
+        "line": 384,
+        "symbol": "ForgeCad::Kernel::faceNormalAt",
+        "owner": "ForgeCad::Kernel::thickenAlongDirection"
+      },
+      {
+        "line": 391,
+        "symbol": "ForgeCad::Kernel::thickenAlongDirection::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_thicken.cpp:390:24)::operator()",
+        "owner": "ForgeCad::Kernel::thickenAlongDirection"
+      },
+      {
+        "line": 403,
+        "symbol": "ForgeCad::Kernel::thickenAlongDirection::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_thicken.cpp:402:30)::operator()",
+        "owner": "ForgeCad::Kernel::thickenAlongDirection"
+      },
+      {
+        "line": 404,
+        "symbol": "ForgeCad::Kernel::edgeRanges",
+        "owner": "ForgeCad::Kernel::thickenAlongDirection"
+      },
+      {
+        "line": 413,
+        "symbol": "ForgeCad::Kernel::thickenAlongDirection::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_thicken.cpp:396:24)::operator()",
+        "owner": "ForgeCad::Kernel::thickenAlongDirection"
+      },
+      {
+        "line": 413,
+        "symbol": "ForgeCad::Kernel::wall",
+        "owner": "ForgeCad::Kernel::thickenAlongDirection"
+      },
+      {
+        "line": 419,
+        "symbol": "ForgeCad::Kernel::sewSolid",
+        "owner": "ForgeCad::Kernel::thickenAlongDirection"
+      },
+      {
+        "line": 450,
+        "symbol": "ForgeCad::Kernel::thickenAlongDirection",
+        "owner": "ForgeCad::Kernel::thickenSheet"
+      },
+      {
+        "line": 454,
+        "symbol": "ForgeCad::Kernel::thickenAlongNormal",
+        "owner": "ForgeCad::Kernel::thickenSheet"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_thicken.cpp",
+    "target": "kernel/fk_thicken.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 1,
+        "symbol": "fk_thicken.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_thicken.cpp",
+    "target": "kernel/fk_timing.h",
+    "kind": "call",
+    "count": 3,
+    "sites": [
+      {
+        "line": 133,
+        "symbol": "ForgeCad::Kernel::detail::PhaseTimer::PhaseTimer",
+        "owner": "ForgeCad::Kernel::sewSolid"
+      },
+      {
+        "line": 219,
+        "symbol": "ForgeCad::Kernel::detail::PhaseTimer::PhaseTimer",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 426,
+        "symbol": "ForgeCad::Kernel::detail::PhaseTimer::PhaseTimer",
+        "owner": "ForgeCad::Kernel::thickenSheet"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_thicken.cpp",
+    "target": "kernel/fk_timing.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 26,
+        "symbol": "fk_timing.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_thicken.cpp",
+    "target": "kernel/fk_topology.cpp",
+    "kind": "call",
+    "count": 22,
+    "sites": [
+      {
+        "line": 33,
+        "symbol": "ForgeCad::Kernel::Body::face",
+        "owner": "ForgeCad::Kernel::faceNormalAt"
+      },
+      {
+        "line": 108,
+        "symbol": "ForgeCad::Kernel::Body::face",
+        "owner": "ForgeCad::Kernel::facePoints"
+      },
+      {
+        "line": 111,
+        "symbol": "ForgeCad::Kernel::Body::loopFins",
+        "owner": "ForgeCad::Kernel::facePoints"
+      },
+      {
+        "line": 112,
+        "symbol": "ForgeCad::Kernel::Body::fin",
+        "owner": "ForgeCad::Kernel::facePoints"
+      },
+      {
+        "line": 113,
+        "symbol": "ForgeCad::Kernel::Body::edge",
+        "owner": "ForgeCad::Kernel::facePoints"
+      },
+      {
+        "line": 147,
+        "symbol": "ForgeCad::Kernel::Body::face",
+        "owner": "ForgeCad::Kernel::normalBreaks"
+      },
+      {
+        "line": 148,
+        "symbol": "ForgeCad::Kernel::Body::face",
+        "owner": "ForgeCad::Kernel::normalBreaks"
+      },
+      {
+        "line": 149,
+        "symbol": "ForgeCad::Kernel::Body::face",
+        "owner": "ForgeCad::Kernel::normalBreaks"
+      },
+      {
+        "line": 157,
+        "symbol": "ForgeCad::Kernel::Body::face",
+        "owner": "ForgeCad::Kernel::normalBreaks"
+      },
+      {
+        "line": 191,
+        "symbol": "ForgeCad::Kernel::Body::faces",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 199,
+        "symbol": "ForgeCad::Kernel::Body::edges",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 201,
+        "symbol": "ForgeCad::Kernel::Body::edge",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 224,
+        "symbol": "ForgeCad::Kernel::Body::Body",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 251,
+        "symbol": "ForgeCad::Kernel::Body::edge",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 288,
+        "symbol": "ForgeCad::Kernel::Body::face",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 383,
+        "symbol": "ForgeCad::Kernel::Body::faces",
+        "owner": "ForgeCad::Kernel::thickenAlongDirection"
+      },
+      {
+        "line": 401,
+        "symbol": "ForgeCad::Kernel::Body::edge",
+        "owner": "ForgeCad::Kernel::thickenAlongDirection"
+      },
+      {
+        "line": 428,
+        "symbol": "ForgeCad::Kernel::Body::faces",
+        "owner": "ForgeCad::Kernel::thickenSheet"
+      },
+      {
+        "line": 433,
+        "symbol": "ForgeCad::Kernel::Body::faces",
+        "owner": "ForgeCad::Kernel::thickenSheet"
+      },
+      {
+        "line": 433,
+        "symbol": "ForgeCad::Kernel::Body::isSheet",
+        "owner": "ForgeCad::Kernel::thickenSheet"
+      },
+      {
+        "line": 438,
+        "symbol": "ForgeCad::Kernel::Body::edges",
+        "owner": "ForgeCad::Kernel::thickenSheet"
+      },
+      {
+        "line": 440,
+        "symbol": "ForgeCad::Kernel::Body::edge",
+        "owner": "ForgeCad::Kernel::thickenSheet"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_thicken.cpp",
+    "target": "kernel/fk_topology.h",
+    "kind": "call",
+    "count": 49,
+    "sites": [
+      {
+        "line": 33,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::faceNormalAt"
+      },
+      {
+        "line": 107,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::facePoints"
+      },
+      {
+        "line": 108,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::facePoints"
+      },
+      {
+        "line": 110,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::facePoints"
+      },
+      {
+        "line": 111,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::facePoints"
+      },
+      {
+        "line": 112,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::facePoints"
+      },
+      {
+        "line": 113,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::facePoints"
+      },
+      {
+        "line": 126,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::facePoints"
+      },
+      {
+        "line": 139,
+        "symbol": "ForgeCad::Kernel::Body::Body",
+        "owner": "ForgeCad::Kernel::sewSolid"
+      },
+      {
+        "line": 147,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::normalBreaks"
+      },
+      {
+        "line": 148,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::normalBreaks"
+      },
+      {
+        "line": 149,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::normalBreaks"
+      },
+      {
+        "line": 157,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::normalBreaks"
+      },
+      {
+        "line": 160,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::normalBreaks"
+      },
+      {
+        "line": 178,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::normalBreaks"
+      },
+      {
+        "line": 199,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 200,
+        "symbol": "ForgeCad::Kernel::Body::isLaminar",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 200,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 201,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 202,
+        "symbol": "ForgeCad::Kernel::Body::finFace",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 202,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 206,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 218,
+        "symbol": "ForgeCad::Kernel::Body::Body",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 222,
+        "symbol": "ForgeCad::Kernel::Body::Body",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 233,
+        "symbol": "ForgeCad::Kernel::Body::operator=",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 234,
+        "symbol": "ForgeCad::Kernel::Body::operator=",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 251,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 259,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 275,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 283,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 288,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 304,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 311,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 322,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 361,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 384,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::thickenAlongDirection"
+      },
+      {
+        "line": 390,
+        "symbol": "ForgeCad::Kernel::Body::Body",
+        "owner": "ForgeCad::Kernel::thickenAlongDirection"
+      },
+      {
+        "line": 401,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::thickenAlongDirection"
+      },
+      {
+        "line": 413,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::thickenAlongDirection"
+      },
+      {
+        "line": 434,
+        "symbol": "ForgeCad::Kernel::Body::Body",
+        "owner": "ForgeCad::Kernel::thickenSheet"
+      },
+      {
+        "line": 438,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::thickenSheet"
+      },
+      {
+        "line": 439,
+        "symbol": "ForgeCad::Kernel::Body::isLaminar",
+        "owner": "ForgeCad::Kernel::thickenSheet"
+      },
+      {
+        "line": 439,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::thickenSheet"
+      },
+      {
+        "line": 440,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::thickenSheet"
+      },
+      {
+        "line": 441,
+        "symbol": "ForgeCad::Kernel::Body::finFace",
+        "owner": "ForgeCad::Kernel::thickenSheet"
+      },
+      {
+        "line": 441,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "ForgeCad::Kernel::thickenSheet"
+      },
+      {
+        "line": 441,
+        "symbol": "ForgeCad::Kernel::Id::valid",
+        "owner": "ForgeCad::Kernel::thickenSheet"
+      },
+      {
+        "line": 452,
+        "symbol": "ForgeCad::Kernel::Body::Body",
+        "owner": "ForgeCad::Kernel::thickenSheet"
+      },
+      {
+        "line": 456,
+        "symbol": "ForgeCad::Kernel::Body::Body",
+        "owner": "ForgeCad::Kernel::thickenSheet"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_thicken.cpp",
+    "target": "kernel/fk_transform.cpp",
+    "kind": "call",
+    "count": 3,
+    "sites": [
+      {
+        "line": 307,
+        "symbol": "ForgeCad::Kernel::transformCurve",
+        "owner": "ForgeCad::Kernel::thickenAlongNormal"
+      },
+      {
+        "line": 390,
+        "symbol": "ForgeCad::Kernel::transformBody",
+        "owner": "ForgeCad::Kernel::thickenAlongDirection"
+      },
+      {
+        "line": 402,
+        "symbol": "ForgeCad::Kernel::transformCurve",
+        "owner": "ForgeCad::Kernel::thickenAlongDirection"
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_thicken.cpp",
+    "target": "kernel/fk_transform.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 25,
+        "symbol": "fk_transform.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_thicken.h",
+    "target": "kernel/fk_math.h",
+    "kind": "call",
+    "count": 1,
+    "sites": [
+      {
+        "line": 44,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_thicken.h",
+    "target": "kernel/fk_precision.h",
+    "kind": "call",
+    "count": 2,
+    "sites": [
+      {
+        "line": 42,
+        "symbol": "ForgeCad::Kernel::linearResolution",
+        "owner": ""
+      },
+      {
+        "line": 45,
+        "symbol": "ForgeCad::Kernel::scaledAccuracy",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_thicken.h",
+    "target": "kernel/fk_precision.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 1,
+        "symbol": "fk_precision.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/fk_thicken.h",
+    "target": "kernel/fk_topology.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 7,
+        "symbol": "fk_topology.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_history.cpp",
+    "target": "kernel/fk_thicken.cpp",
+    "kind": "call",
+    "count": 2,
+    "sites": [
+      {
+        "line": 1017,
+        "symbol": "ForgeCad::Kernel::thickenSheet",
+        "owner": "HistoryTransformsDraftAndExtractedEdgesAreExplicit"
+      },
+      {
+        "line": 1021,
+        "symbol": "ForgeCad::Kernel::thickenSheet",
+        "owner": "HistoryTransformsDraftAndExtractedEdgesAreExplicit"
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_history.cpp",
+    "target": "kernel/fk_thicken.h",
+    "kind": "call",
+    "count": 1,
+    "sites": [
+      {
+        "line": 1014,
+        "symbol": "ForgeCad::Kernel::ThickenOptions::ThickenOptions",
+        "owner": "HistoryTransformsDraftAndExtractedEdgesAreExplicit"
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_history.cpp",
+    "target": "kernel/fk_thicken.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 17,
+        "symbol": "fk_thicken.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_open_offset.cpp",
+    "target": "kernel/fk_thicken.cpp",
+    "kind": "call",
+    "count": 6,
+    "sites": [
+      {
+        "line": 54,
+        "symbol": "ForgeCad::Kernel::thickenSheet",
+        "owner": "OpenOffsetGrooveExactCollapse"
+      },
+      {
+        "line": 61,
+        "symbol": "ForgeCad::Kernel::thickenSheet",
+        "owner": "OpenOffsetGrooveExactCollapse"
+      },
+      {
+        "line": 63,
+        "symbol": "ForgeCad::Kernel::thickenSheet",
+        "owner": "OpenOffsetGrooveExactCollapse"
+      },
+      {
+        "line": 66,
+        "symbol": "ForgeCad::Kernel::thickenSheet",
+        "owner": "OpenOffsetGrooveExactCollapse"
+      },
+      {
+        "line": 82,
+        "symbol": "ForgeCad::Kernel::thickenSheet",
+        "owner": "OpenOffsetShowerHeadTwoPointFive"
+      },
+      {
+        "line": 166,
+        "symbol": "ForgeCad::Kernel::thickenSheet",
+        "owner": "OpenOffsetShowerHeadInwardPreservesExterior"
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_open_offset.cpp",
+    "target": "kernel/fk_thicken.h",
+    "kind": "call",
+    "count": 3,
+    "sites": [
+      {
+        "line": 51,
+        "symbol": "ForgeCad::Kernel::ThickenOptions::ThickenOptions",
+        "owner": "OpenOffsetGrooveExactCollapse"
+      },
+      {
+        "line": 79,
+        "symbol": "ForgeCad::Kernel::ThickenOptions::ThickenOptions",
+        "owner": "OpenOffsetShowerHeadTwoPointFive"
+      },
+      {
+        "line": 162,
+        "symbol": "ForgeCad::Kernel::ThickenOptions::ThickenOptions",
+        "owner": "OpenOffsetShowerHeadInwardPreservesExterior"
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_open_offset.cpp",
+    "target": "kernel/fk_thicken.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 10,
+        "symbol": "fk_thicken.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_planar_thicken_validation.cpp",
+    "target": "kernel/fk_body_check.cpp",
+    "kind": "call",
+    "count": 2,
+    "sites": [
+      {
+        "line": 132,
+        "symbol": "ForgeCad::Kernel::checkBody",
+        "owner": "verify"
+      },
+      {
+        "line": 154,
+        "symbol": "ForgeCad::Kernel::checkBody",
+        "owner": "verify"
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_planar_thicken_validation.cpp",
+    "target": "kernel/fk_body_check.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 1,
+        "symbol": "fk_body_check.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_planar_thicken_validation.cpp",
+    "target": "kernel/fk_body_io.cpp",
+    "kind": "call",
+    "count": 6,
+    "sites": [
+      {
+        "line": 133,
+        "symbol": "ForgeCad::Kernel::writeBodyBinary",
+        "owner": "verify"
+      },
+      {
+        "line": 233,
+        "symbol": "ForgeCad::Kernel::readBodyBinary",
+        "owner": "verify"
+      },
+      {
+        "line": 233,
+        "symbol": "ForgeCad::Kernel::writeBodyBinary",
+        "owner": "verify"
+      },
+      {
+        "line": 234,
+        "symbol": "ForgeCad::Kernel::writeBodyBinary",
+        "owner": "verify"
+      },
+      {
+        "line": 294,
+        "symbol": "ForgeCad::Kernel::writeBodyBinary",
+        "owner": "PlanarThickenInvalidAndCancellationRetainLegacyHistoryReset"
+      },
+      {
+        "line": 312,
+        "symbol": "ForgeCad::Kernel::writeBodyBinary",
+        "owner": "PlanarThickenInvalidAndCancellationRetainLegacyHistoryReset"
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_planar_thicken_validation.cpp",
+    "target": "kernel/fk_body_io.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 2,
+        "symbol": "fk_body_io.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_planar_thicken_validation.cpp",
+    "target": "kernel/fk_bspline.h",
+    "kind": "call",
+    "count": 6,
+    "sites": [
+      {
+        "line": 185,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::degree",
+        "owner": "verify"
+      },
+      {
+        "line": 185,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::knots",
+        "owner": "verify"
+      },
+      {
+        "line": 186,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::poleCount",
+        "owner": "verify"
+      },
+      {
+        "line": 187,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::poleCount",
+        "owner": "verify"
+      },
+      {
+        "line": 188,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::poleCount",
+        "owner": "verify"
+      },
+      {
+        "line": 189,
+        "symbol": "ForgeCad::Kernel::BSplineCurve::weight",
+        "owner": "verify"
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_planar_thicken_validation.cpp",
+    "target": "kernel/fk_bspline.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 3,
+        "symbol": "fk_bspline.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_planar_thicken_validation.cpp",
+    "target": "kernel/fk_cancel.h",
+    "kind": "call",
+    "count": 1,
+    "sites": [
+      {
+        "line": 302,
+        "symbol": "ForgeCad::Kernel::CancellationScope::CancellationScope",
+        "owner": "PlanarThickenInvalidAndCancellationRetainLegacyHistoryReset"
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_planar_thicken_validation.cpp",
+    "target": "kernel/fk_cancel.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 4,
+        "symbol": "fk_cancel.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_planar_thicken_validation.cpp",
+    "target": "kernel/fk_curve.h",
+    "kind": "call",
+    "count": 11,
+    "sites": [
+      {
+        "line": 73,
+        "symbol": "ForgeCad::Kernel::Curve::point",
+        "owner": "fixture"
+      },
+      {
+        "line": 122,
+        "symbol": "ForgeCad::Kernel::Curve::type",
+        "owner": "basis3"
+      },
+      {
+        "line": 123,
+        "symbol": "ForgeCad::Kernel::TrimmedCurve::basis",
+        "owner": "basis3"
+      },
+      {
+        "line": 124,
+        "symbol": "ForgeCad::Kernel::Curve::type",
+        "owner": "basis3"
+      },
+      {
+        "line": 125,
+        "symbol": "ForgeCad::Kernel::TransformedCurve::basis",
+        "owner": "basis3"
+      },
+      {
+        "line": 179,
+        "symbol": "ForgeCad::Kernel::Curve::type",
+        "owner": "verify"
+      },
+      {
+        "line": 194,
+        "symbol": "ForgeCad::Kernel::Curve::point",
+        "owner": "verify"
+      },
+      {
+        "line": 206,
+        "symbol": "ForgeCad::Kernel::Curve::point",
+        "owner": "verify"
+      },
+      {
+        "line": 208,
+        "symbol": "ForgeCad::Kernel::Curve::point",
+        "owner": "verify"
+      },
+      {
+        "line": 217,
+        "symbol": "ForgeCad::Kernel::Curve::point",
+        "owner": "verify"
+      },
+      {
+        "line": 223,
+        "symbol": "ForgeCad::Kernel::Curve::point",
+        "owner": "verify"
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_planar_thicken_validation.cpp",
+    "target": "kernel/fk_curve_algo.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 5,
+        "symbol": "fk_curve_algo.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_planar_thicken_validation.cpp",
+    "target": "kernel/fk_curve_ops.cpp",
+    "kind": "call",
+    "count": 5,
+    "sites": [
+      {
+        "line": 87,
+        "symbol": "ForgeCad::Kernel::embedCurve",
+        "owner": "fixture"
+      },
+      {
+        "line": 91,
+        "symbol": "ForgeCad::Kernel::embedCurve",
+        "owner": "fixture"
+      },
+      {
+        "line": 106,
+        "symbol": "ForgeCad::Kernel::embedCurve",
+        "owner": "fixture"
+      },
+      {
+        "line": 278,
+        "symbol": "ForgeCad::Kernel::embedCurve",
+        "owner": "PlanarThickenNestedTrimReverseTransformedHolesAndRoundtrip"
+      },
+      {
+        "line": 333,
+        "symbol": "ForgeCad::Kernel::embedCurve",
+        "owner": "PlanarThickenClosedNativeNurbsAndAngularCircleCompatibility"
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_planar_thicken_validation.cpp",
+    "target": "kernel/fk_curve_ops.h",
+    "kind": "call",
+    "count": 1,
+    "sites": [
+      {
+        "line": 84,
+        "symbol": "ForgeCad::Kernel::reversedCurve",
+        "owner": "fixture"
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_planar_thicken_validation.cpp",
+    "target": "kernel/fk_curve_ops.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 6,
+        "symbol": "fk_curve_ops.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_planar_thicken_validation.cpp",
+    "target": "kernel/fk_history.cpp",
+    "kind": "call",
+    "count": 3,
+    "sites": [
+      {
+        "line": 161,
+        "symbol": "ForgeCad::Kernel::BodyHistory::isDeclared",
+        "owner": "verify"
+      },
+      {
+        "line": 162,
+        "symbol": "ForgeCad::Kernel::BodyHistory::origins",
+        "owner": "verify"
+      },
+      {
+        "line": 299,
+        "symbol": "ForgeCad::Kernel::BodyHistory::BodyHistory",
+        "owner": "PlanarThickenInvalidAndCancellationRetainLegacyHistoryReset"
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_planar_thicken_validation.cpp",
+    "target": "kernel/fk_history.h",
+    "kind": "call",
+    "count": 4,
+    "sites": [
+      {
+        "line": 148,
+        "symbol": "ForgeCad::Kernel::BodyHistory::BodyHistory",
+        "owner": "verify"
+      },
+      {
+        "line": 150,
+        "symbol": "ForgeCad::Kernel::BodyHistory::operandCount",
+        "owner": "verify"
+      },
+      {
+        "line": 162,
+        "symbol": "ForgeCad::Kernel::HistoryLink::HistoryLink",
+        "owner": "verify"
+      },
+      {
+        "line": 311,
+        "symbol": "ForgeCad::Kernel::BodyHistory::operandCount",
+        "owner": "PlanarThickenInvalidAndCancellationRetainLegacyHistoryReset"
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_planar_thicken_validation.cpp",
+    "target": "kernel/fk_history.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 7,
+        "symbol": "fk_history.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_planar_thicken_validation.cpp",
+    "target": "kernel/fk_mass.cpp",
+    "kind": "call",
+    "count": 2,
+    "sites": [
+      {
+        "line": 155,
+        "symbol": "ForgeCad::Kernel::massProperties",
+        "owner": "verify"
+      },
+      {
+        "line": 156,
+        "symbol": "ForgeCad::Kernel::faceArea",
+        "owner": "verify"
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_planar_thicken_validation.cpp",
+    "target": "kernel/fk_mass.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 8,
+        "symbol": "fk_mass.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_planar_thicken_validation.cpp",
+    "target": "kernel/fk_math.cpp",
+    "kind": "call",
+    "count": 12,
+    "sites": [
+      {
+        "line": 77,
+        "symbol": "ForgeCad::Kernel::Frame3::toGlobal",
+        "owner": "fixture"
+      },
+      {
+        "line": 102,
+        "symbol": "ForgeCad::Kernel::Frame3::toGlobal",
+        "owner": "fixture"
+      },
+      {
+        "line": 217,
+        "symbol": "ForgeCad::Kernel::Frame3::toLocal",
+        "owner": "verify"
+      },
+      {
+        "line": 249,
+        "symbol": "ForgeCad::Kernel::Frame3::Frame3",
+        "owner": "PlanarThickenHiddenPolynomialRationalAllSides"
+      },
+      {
+        "line": 256,
+        "symbol": "ForgeCad::Kernel::Frame3::Frame3",
+        "owner": "PlanarThickenPoseScaleSensePreservesWallGeometryAndPcurves"
+      },
+      {
+        "line": 270,
+        "symbol": "ForgeCad::Kernel::Frame3::Frame3",
+        "owner": "PlanarThickenNestedTrimReverseTransformedHolesAndRoundtrip"
+      },
+      {
+        "line": 278,
+        "symbol": "ForgeCad::Kernel::Frame3::Frame3",
+        "owner": "PlanarThickenNestedTrimReverseTransformedHolesAndRoundtrip"
+      },
+      {
+        "line": 278,
+        "symbol": "ForgeCad::Kernel::Transform3::fromFrame",
+        "owner": "PlanarThickenNestedTrimReverseTransformedHolesAndRoundtrip"
+      },
+      {
+        "line": 288,
+        "symbol": "ForgeCad::Kernel::Frame3::Frame3",
+        "owner": "PlanarThickenDirectionControlRetainsOriginalCurve"
+      },
+      {
+        "line": 293,
+        "symbol": "ForgeCad::Kernel::Frame3::Frame3",
+        "owner": "PlanarThickenInvalidAndCancellationRetainLegacyHistoryReset"
+      },
+      {
+        "line": 317,
+        "symbol": "ForgeCad::Kernel::Frame3::Frame3",
+        "owner": "PlanarThickenClosedNativeNurbsAndAngularCircleCompatibility"
+      },
+      {
+        "line": 329,
+        "symbol": "ForgeCad::Kernel::Frame3::toGlobal",
+        "owner": "PlanarThickenClosedNativeNurbsAndAngularCircleCompatibility"
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_planar_thicken_validation.cpp",
+    "target": "kernel/fk_math.h",
+    "kind": "call",
+    "count": 38,
+    "sites": [
+      {
+        "line": 67,
+        "symbol": "ForgeCad::Kernel::Interval::Interval",
+        "owner": "fixture"
+      },
+      {
+        "line": 71,
+        "symbol": "ForgeCad::Kernel::Interval::operator=",
+        "owner": "fixture"
+      },
+      {
+        "line": 74,
+        "symbol": "ForgeCad::Kernel::Vec::x",
+        "owner": "fixture"
+      },
+      {
+        "line": 76,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "fixture"
+      },
+      {
+        "line": 77,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "fixture"
+      },
+      {
+        "line": 77,
+        "symbol": "ForgeCad::Kernel::Vec::x",
+        "owner": "fixture"
+      },
+      {
+        "line": 77,
+        "symbol": "ForgeCad::Kernel::Vec::y",
+        "owner": "fixture"
+      },
+      {
+        "line": 85,
+        "symbol": "ForgeCad::Kernel::Interval::operator=",
+        "owner": "fixture"
+      },
+      {
+        "line": 90,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "fixture"
+      },
+      {
+        "line": 101,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "fixture"
+      },
+      {
+        "line": 102,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "fixture"
+      },
+      {
+        "line": 102,
+        "symbol": "ForgeCad::Kernel::Vec::x",
+        "owner": "fixture"
+      },
+      {
+        "line": 102,
+        "symbol": "ForgeCad::Kernel::Vec::y",
+        "owner": "fixture"
+      },
+      {
+        "line": 104,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "fixture"
+      },
+      {
+        "line": 136,
+        "symbol": "ForgeCad::Kernel::Frame3::zDir",
+        "owner": "verify"
+      },
+      {
+        "line": 136,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "verify"
+      },
+      {
+        "line": 136,
+        "symbol": "ForgeCad::Kernel::operator*",
+        "owner": "verify"
+      },
+      {
+        "line": 138,
+        "symbol": "ForgeCad::Kernel::Vec::operator=",
+        "owner": "verify"
+      },
+      {
+        "line": 193,
+        "symbol": "ForgeCad::Kernel::Interval::length",
+        "owner": "verify"
+      },
+      {
+        "line": 194,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "verify"
+      },
+      {
+        "line": 194,
+        "symbol": "ForgeCad::Kernel::operator*",
+        "owner": "verify"
+      },
+      {
+        "line": 194,
+        "symbol": "ForgeCad::Kernel::operator+",
+        "owner": "verify"
+      },
+      {
+        "line": 195,
+        "symbol": "ForgeCad::Kernel::distance",
+        "owner": "verify"
+      },
+      {
+        "line": 205,
+        "symbol": "ForgeCad::Kernel::Interval::length",
+        "owner": "verify"
+      },
+      {
+        "line": 208,
+        "symbol": "ForgeCad::Kernel::Vec::x",
+        "owner": "verify"
+      },
+      {
+        "line": 208,
+        "symbol": "ForgeCad::Kernel::Vec::y",
+        "owner": "verify"
+      },
+      {
+        "line": 208,
+        "symbol": "ForgeCad::Kernel::distance",
+        "owner": "verify"
+      },
+      {
+        "line": 216,
+        "symbol": "ForgeCad::Kernel::Interval::length",
+        "owner": "verify"
+      },
+      {
+        "line": 217,
+        "symbol": "ForgeCad::Kernel::Vec::y",
+        "owner": "verify"
+      },
+      {
+        "line": 223,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "verify"
+      },
+      {
+        "line": 223,
+        "symbol": "ForgeCad::Kernel::operator*",
+        "owner": "verify"
+      },
+      {
+        "line": 223,
+        "symbol": "ForgeCad::Kernel::operator+",
+        "owner": "verify"
+      },
+      {
+        "line": 256,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "PlanarThickenPoseScaleSensePreservesWallGeometryAndPcurves"
+      },
+      {
+        "line": 256,
+        "symbol": "ForgeCad::Kernel::operator*",
+        "owner": "PlanarThickenPoseScaleSensePreservesWallGeometryAndPcurves"
+      },
+      {
+        "line": 270,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "PlanarThickenNestedTrimReverseTransformedHolesAndRoundtrip"
+      },
+      {
+        "line": 317,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "PlanarThickenClosedNativeNurbsAndAngularCircleCompatibility"
+      },
+      {
+        "line": 319,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "PlanarThickenClosedNativeNurbsAndAngularCircleCompatibility"
+      },
+      {
+        "line": 329,
+        "symbol": "ForgeCad::Kernel::Vec::Vec",
+        "owner": "PlanarThickenClosedNativeNurbsAndAngularCircleCompatibility"
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_planar_thicken_validation.cpp",
+    "target": "kernel/fk_surface.cpp",
+    "kind": "call",
+    "count": 2,
+    "sites": [
+      {
+        "line": 195,
+        "symbol": "ForgeCad::Kernel::Surface::point",
+        "owner": "verify"
+      },
+      {
+        "line": 208,
+        "symbol": "ForgeCad::Kernel::Surface::point",
+        "owner": "verify"
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_planar_thicken_validation.cpp",
+    "target": "kernel/fk_surface.h",
+    "kind": "call",
+    "count": 2,
+    "sites": [
+      {
+        "line": 135,
+        "symbol": "ForgeCad::Kernel::Plane::frame",
+        "owner": "verify"
+      },
+      {
+        "line": 178,
+        "symbol": "ForgeCad::Kernel::ExtrusionSurface::curve",
+        "owner": "verify"
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_planar_thicken_validation.cpp",
+    "target": "kernel/fk_surface_algo.cpp",
+    "kind": "call",
+    "count": 1,
+    "sites": [
+      {
+        "line": 226,
+        "symbol": "ForgeCad::Kernel::projectPoint",
+        "owner": "verify"
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_planar_thicken_validation.cpp",
+    "target": "kernel/fk_surface_algo.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 9,
+        "symbol": "fk_surface_algo.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_planar_thicken_validation.cpp",
+    "target": "kernel/fk_thicken.cpp",
+    "kind": "call",
+    "count": 2,
+    "sites": [
+      {
+        "line": 149,
+        "symbol": "ForgeCad::Kernel::thickenSheet",
+        "owner": "verify"
+      },
+      {
+        "line": 305,
+        "symbol": "ForgeCad::Kernel::thickenSheet",
+        "owner": "PlanarThickenInvalidAndCancellationRetainLegacyHistoryReset"
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_planar_thicken_validation.cpp",
+    "target": "kernel/fk_thicken.h",
+    "kind": "call",
+    "count": 3,
+    "sites": [
+      {
+        "line": 237,
+        "symbol": "ForgeCad::Kernel::ThickenOptions::ThickenOptions",
+        "owner": "options"
+      },
+      {
+        "line": 242,
+        "symbol": "ForgeCad::Kernel::ThickenOptions::ThickenOptions",
+        "owner": "options"
+      },
+      {
+        "line": 288,
+        "symbol": "ForgeCad::Kernel::ThickenOptions::ThickenOptions",
+        "owner": "PlanarThickenDirectionControlRetainsOriginalCurve"
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_planar_thicken_validation.cpp",
+    "target": "kernel/fk_thicken.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 11,
+        "symbol": "fk_thicken.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_planar_thicken_validation.cpp",
+    "target": "kernel/fk_topology.cpp",
+    "kind": "call",
+    "count": 23,
+    "sites": [
+      {
+        "line": 117,
+        "symbol": "ForgeCad::Kernel::Body::buildSheet",
+        "owner": "fixture"
+      },
+      {
+        "line": 131,
+        "symbol": "ForgeCad::Kernel::Body::faces",
+        "owner": "verify"
+      },
+      {
+        "line": 131,
+        "symbol": "ForgeCad::Kernel::Body::isSheet",
+        "owner": "verify"
+      },
+      {
+        "line": 134,
+        "symbol": "ForgeCad::Kernel::Body::face",
+        "owner": "verify"
+      },
+      {
+        "line": 134,
+        "symbol": "ForgeCad::Kernel::Body::faces",
+        "owner": "verify"
+      },
+      {
+        "line": 151,
+        "symbol": "ForgeCad::Kernel::Body::edge",
+        "owner": "verify"
+      },
+      {
+        "line": 151,
+        "symbol": "ForgeCad::Kernel::Body::edges",
+        "owner": "verify"
+      },
+      {
+        "line": 154,
+        "symbol": "ForgeCad::Kernel::Body::isSheet",
+        "owner": "verify"
+      },
+      {
+        "line": 156,
+        "symbol": "ForgeCad::Kernel::Body::faces",
+        "owner": "verify"
+      },
+      {
+        "line": 160,
+        "symbol": "ForgeCad::Kernel::Body::faces",
+        "owner": "verify"
+      },
+      {
+        "line": 163,
+        "symbol": "ForgeCad::Kernel::Body::edges",
+        "owner": "verify"
+      },
+      {
+        "line": 173,
+        "symbol": "ForgeCad::Kernel::Body::face",
+        "owner": "verify"
+      },
+      {
+        "line": 198,
+        "symbol": "ForgeCad::Kernel::Body::loopFins",
+        "owner": "verify"
+      },
+      {
+        "line": 199,
+        "symbol": "ForgeCad::Kernel::Body::fin",
+        "owner": "verify"
+      },
+      {
+        "line": 200,
+        "symbol": "ForgeCad::Kernel::Body::edge",
+        "owner": "verify"
+      },
+      {
+        "line": 226,
+        "symbol": "ForgeCad::Kernel::Body::face",
+        "owner": "verify"
+      },
+      {
+        "line": 272,
+        "symbol": "ForgeCad::Kernel::Body::edges",
+        "owner": "PlanarThickenNestedTrimReverseTransformedHolesAndRoundtrip"
+      },
+      {
+        "line": 273,
+        "symbol": "ForgeCad::Kernel::Body::fins",
+        "owner": "PlanarThickenNestedTrimReverseTransformedHolesAndRoundtrip"
+      },
+      {
+        "line": 274,
+        "symbol": "ForgeCad::Kernel::Body::fins",
+        "owner": "PlanarThickenNestedTrimReverseTransformedHolesAndRoundtrip"
+      },
+      {
+        "line": 275,
+        "symbol": "ForgeCad::Kernel::Body::fin",
+        "owner": "PlanarThickenNestedTrimReverseTransformedHolesAndRoundtrip"
+      },
+      {
+        "line": 277,
+        "symbol": "ForgeCad::Kernel::Body::edge",
+        "owner": "PlanarThickenNestedTrimReverseTransformedHolesAndRoundtrip"
+      },
+      {
+        "line": 278,
+        "symbol": "ForgeCad::Kernel::Body::fin",
+        "owner": "PlanarThickenNestedTrimReverseTransformedHolesAndRoundtrip"
+      },
+      {
+        "line": 333,
+        "symbol": "ForgeCad::Kernel::Body::buildSheet",
+        "owner": "PlanarThickenClosedNativeNurbsAndAngularCircleCompatibility"
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_planar_thicken_validation.cpp",
+    "target": "kernel/fk_topology.h",
+    "kind": "call",
+    "count": 22,
+    "sites": [
+      {
+        "line": 79,
+        "symbol": "ForgeCad::Kernel::Body::BuildFace::BuildFace",
+        "owner": "fixture"
+      },
+      {
+        "line": 134,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "verify"
+      },
+      {
+        "line": 151,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "verify"
+      },
+      {
+        "line": 156,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "verify"
+      },
+      {
+        "line": 160,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "verify"
+      },
+      {
+        "line": 172,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "verify"
+      },
+      {
+        "line": 173,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "verify"
+      },
+      {
+        "line": 197,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "verify"
+      },
+      {
+        "line": 198,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "verify"
+      },
+      {
+        "line": 199,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "verify"
+      },
+      {
+        "line": 200,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "verify"
+      },
+      {
+        "line": 225,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "verify"
+      },
+      {
+        "line": 226,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "verify"
+      },
+      {
+        "line": 272,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "PlanarThickenNestedTrimReverseTransformedHolesAndRoundtrip"
+      },
+      {
+        "line": 273,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "PlanarThickenNestedTrimReverseTransformedHolesAndRoundtrip"
+      },
+      {
+        "line": 274,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "PlanarThickenNestedTrimReverseTransformedHolesAndRoundtrip"
+      },
+      {
+        "line": 275,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "PlanarThickenNestedTrimReverseTransformedHolesAndRoundtrip"
+      },
+      {
+        "line": 275,
+        "symbol": "ForgeCad::Kernel::operator==",
+        "owner": "PlanarThickenNestedTrimReverseTransformedHolesAndRoundtrip"
+      },
+      {
+        "line": 276,
+        "symbol": "ForgeCad::Kernel::Id::operator=",
+        "owner": "PlanarThickenNestedTrimReverseTransformedHolesAndRoundtrip"
+      },
+      {
+        "line": 277,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "PlanarThickenNestedTrimReverseTransformedHolesAndRoundtrip"
+      },
+      {
+        "line": 278,
+        "symbol": "ForgeCad::Kernel::Id::Id",
+        "owner": "PlanarThickenNestedTrimReverseTransformedHolesAndRoundtrip"
+      },
+      {
+        "line": 330,
+        "symbol": "ForgeCad::Kernel::Body::BuildFace::BuildFace",
+        "owner": "PlanarThickenClosedNativeNurbsAndAngularCircleCompatibility"
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_planar_thicken_validation.cpp",
+    "target": "kernel/tests/fk_test.h",
+    "kind": "call",
+    "count": 6,
+    "sites": [
+      {
+        "line": 246,
+        "symbol": "fktest::Registrar::Registrar",
+        "owner": ""
+      },
+      {
+        "line": 252,
+        "symbol": "fktest::Registrar::Registrar",
+        "owner": ""
+      },
+      {
+        "line": 267,
+        "symbol": "fktest::Registrar::Registrar",
+        "owner": ""
+      },
+      {
+        "line": 284,
+        "symbol": "fktest::Registrar::Registrar",
+        "owner": ""
+      },
+      {
+        "line": 292,
+        "symbol": "fktest::Registrar::Registrar",
+        "owner": ""
+      },
+      {
+        "line": 316,
+        "symbol": "fktest::Registrar::Registrar",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_planar_thicken_validation.cpp",
+    "target": "kernel/tests/fk_test.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 10,
+        "symbol": "fk_test.h",
+        "owner": ""
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_planar_thicken_validation.cpp",
+    "target": "kernel/tests/fk_test_main.cpp",
+    "kind": "call",
+    "count": 19,
+    "sites": [
+      {
+        "line": 131,
+        "symbol": "fktest::reportFailure",
+        "owner": "verify"
+      },
+      {
+        "line": 132,
+        "symbol": "fktest::reportFailure",
+        "owner": "verify"
+      },
+      {
+        "line": 150,
+        "symbol": "fktest::reportFailure",
+        "owner": "verify"
+      },
+      {
+        "line": 154,
+        "symbol": "fktest::reportFailure",
+        "owner": "verify"
+      },
+      {
+        "line": 157,
+        "symbol": "fktest::reportFailure",
+        "owner": "verify"
+      },
+      {
+        "line": 158,
+        "symbol": "fktest::reportFailure",
+        "owner": "verify"
+      },
+      {
+        "line": 161,
+        "symbol": "fktest::reportFailure",
+        "owner": "verify"
+      },
+      {
+        "line": 168,
+        "symbol": "fktest::reportFailure",
+        "owner": "verify"
+      },
+      {
+        "line": 175,
+        "symbol": "fktest::reportFailure",
+        "owner": "verify"
+      },
+      {
+        "line": 182,
+        "symbol": "fktest::reportFailure",
+        "owner": "verify"
+      },
+      {
+        "line": 185,
+        "symbol": "fktest::reportFailure",
+        "owner": "verify"
+      },
+      {
+        "line": 186,
+        "symbol": "fktest::reportFailure",
+        "owner": "verify"
+      },
+      {
+        "line": 189,
+        "symbol": "fktest::reportFailure",
+        "owner": "verify"
+      },
+      {
+        "line": 201,
+        "symbol": "fktest::reportFailure",
+        "owner": "verify"
+      },
+      {
+        "line": 212,
+        "symbol": "fktest::reportFailure",
+        "owner": "verify"
+      },
+      {
+        "line": 229,
+        "symbol": "fktest::reportFailure",
+        "owner": "verify"
+      },
+      {
+        "line": 234,
+        "symbol": "fktest::reportFailure",
+        "owner": "verify"
+      },
+      {
+        "line": 311,
+        "symbol": "fktest::reportFailure",
+        "owner": "PlanarThickenInvalidAndCancellationRetainLegacyHistoryReset"
+      },
+      {
+        "line": 312,
+        "symbol": "fktest::reportFailure",
+        "owner": "PlanarThickenInvalidAndCancellationRetainLegacyHistoryReset"
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_planar_thicken_validation.cpp",
+    "target": "kernel/tests/test_planar_thicken_validation.cpp",
+    "kind": "call",
+    "count": 23,
+    "sites": [
+      {
+        "line": 90,
+        "symbol": "straight",
+        "owner": "fixture"
+      },
+      {
+        "line": 104,
+        "symbol": "straight",
+        "owner": "fixture"
+      },
+      {
+        "line": 152,
+        "symbol": "basis3",
+        "owner": "verify"
+      },
+      {
+        "line": 178,
+        "symbol": "basis3",
+        "owner": "verify"
+      },
+      {
+        "line": 224,
+        "symbol": "__builtin_inff",
+        "owner": "verify"
+      },
+      {
+        "line": 231,
+        "symbol": "verify::(lambda at /home/myungit/Linux_CAD_forFree/kernel/tests/test_planar_thicken_validation.cpp:153:24)::operator()",
+        "owner": "verify"
+      },
+      {
+        "line": 233,
+        "symbol": "verify::(lambda at /home/myungit/Linux_CAD_forFree/kernel/tests/test_planar_thicken_validation.cpp:153:24)::operator()",
+        "owner": "verify"
+      },
+      {
+        "line": 249,
+        "symbol": "fixture",
+        "owner": "PlanarThickenHiddenPolynomialRationalAllSides"
+      },
+      {
+        "line": 249,
+        "symbol": "options",
+        "owner": "PlanarThickenHiddenPolynomialRationalAllSides"
+      },
+      {
+        "line": 249,
+        "symbol": "verify",
+        "owner": "PlanarThickenHiddenPolynomialRationalAllSides"
+      },
+      {
+        "line": 258,
+        "symbol": "fixture",
+        "owner": "PlanarThickenPoseScaleSensePreservesWallGeometryAndPcurves"
+      },
+      {
+        "line": 258,
+        "symbol": "options",
+        "owner": "PlanarThickenPoseScaleSensePreservesWallGeometryAndPcurves"
+      },
+      {
+        "line": 258,
+        "symbol": "verify",
+        "owner": "PlanarThickenPoseScaleSensePreservesWallGeometryAndPcurves"
+      },
+      {
+        "line": 271,
+        "symbol": "fixture",
+        "owner": "PlanarThickenNestedTrimReverseTransformedHolesAndRoundtrip"
+      },
+      {
+        "line": 280,
+        "symbol": "options",
+        "owner": "PlanarThickenNestedTrimReverseTransformedHolesAndRoundtrip"
+      },
+      {
+        "line": 280,
+        "symbol": "verify",
+        "owner": "PlanarThickenNestedTrimReverseTransformedHolesAndRoundtrip"
+      },
+      {
+        "line": 286,
+        "symbol": "options",
+        "owner": "PlanarThickenDirectionControlRetainsOriginalCurve"
+      },
+      {
+        "line": 288,
+        "symbol": "fixture",
+        "owner": "PlanarThickenDirectionControlRetainsOriginalCurve"
+      },
+      {
+        "line": 288,
+        "symbol": "verify",
+        "owner": "PlanarThickenDirectionControlRetainsOriginalCurve"
+      },
+      {
+        "line": 293,
+        "symbol": "fixture",
+        "owner": "PlanarThickenInvalidAndCancellationRetainLegacyHistoryReset"
+      },
+      {
+        "line": 297,
+        "symbol": "options",
+        "owner": "PlanarThickenInvalidAndCancellationRetainLegacyHistoryReset"
+      },
+      {
+        "line": 334,
+        "symbol": "options",
+        "owner": "PlanarThickenClosedNativeNurbsAndAngularCircleCompatibility"
+      },
+      {
+        "line": 334,
+        "symbol": "verify",
+        "owner": "PlanarThickenClosedNativeNurbsAndAngularCircleCompatibility"
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_thicken.cpp",
+    "target": "kernel/fk_thicken.cpp",
+    "kind": "call",
+    "count": 17,
+    "sites": [
+      {
+        "line": 58,
+        "symbol": "ForgeCad::Kernel::thickenSheet",
+        "owner": "ThickenPlanarFaceSides"
+      },
+      {
+        "line": 64,
+        "symbol": "ForgeCad::Kernel::thickenSheet",
+        "owner": "ThickenPlanarFaceSides"
+      },
+      {
+        "line": 69,
+        "symbol": "ForgeCad::Kernel::thickenSheet",
+        "owner": "ThickenPlanarFaceSides"
+      },
+      {
+        "line": 75,
+        "symbol": "ForgeCad::Kernel::thickenSheet",
+        "owner": "ThickenPlanarFaceSides"
+      },
+      {
+        "line": 78,
+        "symbol": "ForgeCad::Kernel::thickenSheet",
+        "owner": "ThickenPlanarFaceSides"
+      },
+      {
+        "line": 88,
+        "symbol": "ForgeCad::Kernel::thickenSheet",
+        "owner": "ThickenCylindricalSheetAlongNormal"
+      },
+      {
+        "line": 93,
+        "symbol": "ForgeCad::Kernel::thickenSheet",
+        "owner": "ThickenCylindricalSheetAlongNormal"
+      },
+      {
+        "line": 95,
+        "symbol": "ForgeCad::Kernel::thickenSheet",
+        "owner": "ThickenCylindricalSheetAlongNormal"
+      },
+      {
+        "line": 102,
+        "symbol": "ForgeCad::Kernel::thickenSheet",
+        "owner": "ThickenCylindricalSheetAlongNormal"
+      },
+      {
+        "line": 113,
+        "symbol": "ForgeCad::Kernel::thickenSheet",
+        "owner": "ThickenAlongDirection"
+      },
+      {
+        "line": 117,
+        "symbol": "ForgeCad::Kernel::thickenSheet",
+        "owner": "ThickenAlongDirection"
+      },
+      {
+        "line": 123,
+        "symbol": "ForgeCad::Kernel::thickenSheet",
+        "owner": "ThickenAlongDirection"
+      },
+      {
+        "line": 127,
+        "symbol": "ForgeCad::Kernel::thickenSheet",
+        "owner": "ThickenAlongDirection"
+      },
+      {
+        "line": 138,
+        "symbol": "ForgeCad::Kernel::thickenSheet",
+        "owner": "ThickenSharpCreaseAlongDirection"
+      },
+      {
+        "line": 141,
+        "symbol": "ForgeCad::Kernel::thickenSheet",
+        "owner": "ThickenSharpCreaseAlongDirection"
+      },
+      {
+        "line": 174,
+        "symbol": "ForgeCad::Kernel::thickenSheet",
+        "owner": "ThickenTrimmedFaceWithInternalCrease"
+      },
+      {
+        "line": 200,
+        "symbol": "ForgeCad::Kernel::thickenSheet",
+        "owner": "ThickenSmoothBSplineSheet"
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_thicken.cpp",
+    "target": "kernel/fk_thicken.h",
+    "kind": "call",
+    "count": 6,
+    "sites": [
+      {
+        "line": 56,
+        "symbol": "ForgeCad::Kernel::ThickenOptions::ThickenOptions",
+        "owner": "ThickenPlanarFaceSides"
+      },
+      {
+        "line": 85,
+        "symbol": "ForgeCad::Kernel::ThickenOptions::ThickenOptions",
+        "owner": "ThickenCylindricalSheetAlongNormal"
+      },
+      {
+        "line": 109,
+        "symbol": "ForgeCad::Kernel::ThickenOptions::ThickenOptions",
+        "owner": "ThickenAlongDirection"
+      },
+      {
+        "line": 136,
+        "symbol": "ForgeCad::Kernel::ThickenOptions::ThickenOptions",
+        "owner": "ThickenSharpCreaseAlongDirection"
+      },
+      {
+        "line": 171,
+        "symbol": "ForgeCad::Kernel::ThickenOptions::ThickenOptions",
+        "owner": "ThickenTrimmedFaceWithInternalCrease"
+      },
+      {
+        "line": 196,
+        "symbol": "ForgeCad::Kernel::ThickenOptions::ThickenOptions",
+        "owner": "ThickenSmoothBSplineSheet"
+      }
+    ]
+  },
+  {
+    "source": "kernel/tests/test_thicken.cpp",
+    "target": "kernel/fk_thicken.h",
+    "kind": "include",
+    "count": 1,
+    "sites": [
+      {
+        "line": 13,
+        "symbol": "fk_thicken.h",
+        "owner": ""
+      }
+    ]
+  }
+]

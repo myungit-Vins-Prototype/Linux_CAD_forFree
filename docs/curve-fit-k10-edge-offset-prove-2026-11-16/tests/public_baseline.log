@@ -1,0 +1,9 @@
+public polynomial forward U source_valid=1 output_valid=1 source_unchanged=1 measured_error=5.7424599890737201e-07 FAIL: public offset edge exceeds requested tolerance
+public polynomial reverse U source_valid=1 output_valid=1 source_unchanged=1 measured_error=5.7424607299330695e-07 FAIL: public offset edge exceeds requested tolerance
+public rational forward U source_valid=1 output_valid=1 source_unchanged=1 measured_error=5.4161955831741283e-07 FAIL: public offset edge exceeds requested tolerance
+public rational reverse U source_valid=1 output_valid=1 source_unchanged=1 measured_error=5.4161955940530044e-07 FAIL: public offset edge exceeds requested tolerance
+public baseline witness source_valid=1 output_valid=1 source_unchanged=1 measured_error=5.7424599688773376e-07 geometric_hull_lower=5.7424740886264161e-07 FAIL: exact offset lies outside GLOBAL output control hull by more than tolerance
+public reversed face sense source_valid=1 output_valid=1 source_unchanged=1 measured_error=5.7424598887905122e-07 FAIL: public offset edge exceeds requested tolerance
+public trim wrappers source_valid=1 output_valid=1 source_unchanged=1 measured_error=5.4162163662059908e-07 FAIL: public offset edge exceeds requested tolerance
+public transformed wrappers source_valid=1 output_valid=1 source_unchanged=1 measured_error=5.7424988511715138e-07 FAIL: public offset edge exceeds requested tolerance
+results passed=0 failed=8

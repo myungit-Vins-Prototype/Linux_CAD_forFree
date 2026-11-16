@@ -1,0 +1,1 @@
+Diagnosi CI12-14nov2026: metadati/logGitHub reali, build dei jobPASS e unico fallimentoWholeRim; confronto test/fixture e presenza dipendenze del core; Clang14TU e28CTest locali. Il nuovo stato remoto viene aggiunto dopo push. Nessun binario/CAD/cache inclusi; scriptinerti. SHA256SUMS descrive questo snapshot prima del push. Nessuna modifica workflow o disabilitazione prove.

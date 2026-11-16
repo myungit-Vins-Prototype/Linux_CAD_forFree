@@ -1,0 +1,34 @@
+FK_TEST(MappingCarrierRecognizedAffineFinBudgetFailsAtomically) {
+    auto source = planeSource(Frame3(), 1);
+    auto &fin = source.fin(source.fins().front());
+    const auto range = source.edge(fin.edge).range;
+    const Vec2 a = fin.pcurve->point(range.lo), b = fin.pcurve->point(range.hi);
+    constexpr int count = 100001;
+    std::vector<Vec2> poles;
+    std::vector<double> knots{range.lo, range.lo};
+    poles.reserve(count);
+    knots.reserve(count + 2);
+    for (int i = 0; i < count; ++i) {
+        const double t = double(i) / (count - 1);
+        poles.push_back(a + (b - a) * t);
+        if (i > 0 && i + 1 < count)
+            knots.push_back(range.lo + range.length() * t);
+    }
+    knots.push_back(range.hi);
+    knots.push_back(range.hi);
+    fin.pcurve = std::make_shared<BSplineCurve<2>>(1, std::move(knots), std::move(poles));
+    FK_CHECK(checkBody(source, {true, true}).empty());
+    const auto sourceBytes = writeBodyBinary(source);
+    const auto targetBody = targetFixture(1, false, false, Transform3());
+    const auto &target = *targetBody.face(targetBody.faces().front()).surface;
+    auto history = sentinelHistory();
+    const auto stamp = historyStamp(history);
+    double deviation = -123;
+    SurfaceWrapOptions options;
+    options.tolerance = 1e-6;
+    // Known affine geometry beyond the resource budget is unresolved, not an
+    // unsupported family eligible for the legacy sampled fallback.
+    FK_CHECK_THROWS(detail::wrapPlanarBodyOnCarrier(source, target, options, 1, 1, &history, &deviation));
+    FK_CHECK(historyStamp(history) == stamp && deviation == -123);
+    FK_CHECK(writeBodyBinary(source) == sourceBytes);
+}

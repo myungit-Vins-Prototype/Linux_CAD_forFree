@@ -1,0 +1,93 @@
+CUT_CLASSIFY face=2,0 location=1,1 range=0,79.643911143264688 middle=[-106.8441059586134,85.371522922172957,128.69091360571343] boundaryDistance=22.128477077827043,24.377852281061013
+CUT_CLASSIFY face=2,1 location=1,1 range=2.3669162855492099e-05,79.643925607615827 middle=[-106.84410716654088,64.62847680387766,128.69090917232646] boundaryDistance=22.12847680387766,24.377856484623045
+CUT_CLASSIFY face=2,3 location=1,2 range=32.499987150394233,32.500012849605767 middle=[-136.48645387209623,75,111.89316299955428] boundaryDistance=32.5,1.9799270463264593e-11
+CLASSIFY body=0 face=0 location=1 kept=1 whole=0 unchanged=0 cycles=1
+  SUBPIECE source=2 fin=4 cut=0 partner=-1 crossing=0 forward=1 range=0,6.2831853071795862
+CLASSIFY body=0 face=1 location=1 kept=1 whole=0 unchanged=0 cycles=1
+  SUBPIECE source=0 fin=1 cut=0 partner=-1 crossing=0 forward=0 range=0,6.2831853071795862
+CLASSIFY body=0 face=2 location=0 kept=0 whole=0 unchanged=0 cycles=1
+  SUBPIECE source=-1 fin=-1 cut=1 partner=0 crossing=1 forward=1 range=0,79.643911143264688
+  SUBPIECE source=-1 fin=-1 cut=1 partner=1 crossing=1 forward=1 range=2.3669162855492099e-05,79.643925607615827
+  SUBPIECE source=-1 fin=-1 cut=1 partner=3 crossing=0 forward=1 range=32.499987150394233,32.500012849605767
+CLASSIFY body=0 face=2 location=1 kept=1 whole=0 unchanged=0 cycles=3
+  SUBPIECE source=0 fin=0 cut=0 partner=-1 crossing=0 forward=1 range=0,6.2831853071795862
+  SUBPIECE source=2 fin=5 cut=0 partner=-1 crossing=0 forward=0 range=0,6.2831853071795862
+  SUBPIECE source=-1 fin=-1 cut=1 partner=0 crossing=1 forward=0 range=0,79.643911143264688
+  SUBPIECE source=-1 fin=-1 cut=1 partner=3 crossing=0 forward=0 range=32.499987150394233,32.500012849605767
+  SUBPIECE source=-1 fin=-1 cut=1 partner=1 crossing=1 forward=0 range=2.3669162855492099e-05,79.643925607615827
+CLASSIFY body=1 face=0 location=1 kept=1 whole=0 unchanged=0 cycles=1
+  SUBPIECE source=0 fin=0 cut=0 partner=-1 crossing=0 forward=1 range=0,3.1415926535897931
+  SUBPIECE source=1 fin=1 cut=0 partner=-1 crossing=0 forward=1 range=0,1
+  SUBPIECE source=2 fin=2 cut=0 partner=-1 crossing=0 forward=0 range=6.2831840222190092,6.2831853071795862
+  SUBPIECE source=-1 fin=-1 cut=1 partner=2 crossing=1 forward=1 range=0,79.643911143264688
+  SUBPIECE source=3 fin=3 cut=0 partner=-1 crossing=0 forward=0 range=0,0.99999996887146692
+CLASSIFY body=1 face=0 location=0 kept=0 whole=0 unchanged=0 cycles=1
+  SUBPIECE source=2 fin=2 cut=0 partner=-1 crossing=0 forward=0 range=3.1415926535897931,6.2831840222190092
+  SUBPIECE source=-1 fin=-1 cut=1 partner=2 crossing=1 forward=0 range=0,79.643911143264688
+CLASSIFY body=1 face=1 location=1 kept=1 whole=0 unchanged=0 cycles=1
+  SUBPIECE source=4 fin=4 cut=0 partner=-1 crossing=0 forward=1 range=3.1415926535897931,6.2831853071795862
+  SUBPIECE source=3 fin=5 cut=0 partner=-1 crossing=0 forward=1 range=0,0.99999996887146692
+  SUBPIECE source=-1 fin=-1 cut=1 partner=2 crossing=1 forward=1 range=2.3669162855492099e-05,79.643925607615827
+  SUBPIECE source=5 fin=6 cut=0 partner=-1 crossing=0 forward=0 range=0,1.2841783501532532e-06
+  SUBPIECE source=1 fin=7 cut=0 partner=-1 crossing=0 forward=0 range=0,1
+CLASSIFY body=1 face=1 location=0 kept=0 whole=0 unchanged=0 cycles=1
+  SUBPIECE source=5 fin=6 cut=0 partner=-1 crossing=0 forward=0 range=1.2841783501532532e-06,3.1415926535897931
+  SUBPIECE source=-1 fin=-1 cut=1 partner=2 crossing=1 forward=0 range=2.3669162855492099e-05,79.643925607615827
+CLASSIFY body=1 face=2 location=1 kept=1 whole=0 unchanged=0 cycles=1
+  SUBPIECE source=4 fin=8 cut=0 partner=-1 crossing=0 forward=0 range=3.1415926535897931,6.2831853071795862
+  SUBPIECE source=0 fin=9 cut=0 partner=-1 crossing=0 forward=0 range=0,3.1415926535897931
+CLASSIFY body=1 face=3 location=0 kept=0 whole=0 unchanged=0 cycles=1
+  SUBPIECE source=2 fin=10 cut=0 partner=-1 crossing=0 forward=1 range=3.1415926535897931,6.2831840222190092
+  SUBPIECE source=2 fin=10 cut=0 partner=-1 crossing=0 forward=1 range=6.2831840222190092,6.2831853071795862
+  SUBPIECE source=5 fin=11 cut=0 partner=-1 crossing=0 forward=1 range=0,1.2841783501532532e-06
+  SUBPIECE source=5 fin=11 cut=0 partner=-1 crossing=0 forward=1 range=1.2841783501532532e-06,3.1415926535897931
+ASSEMBLE kept=6 tolerance=9.9999999999999995e-07
+FACE output=0 sourceBody=0 sourceFace=0 type=0 flip=0 sense=1 cycles=1
+ FIN outputEdge=0 sense=1 sourceEdge=2 sourceFin=4 cut=0 crossing=0 partner=-1 forward=1 range=0,6.2831853071795862 tolerance=0 start=[-154,107.5,135] end=[-154,107.5,135] middle=[-106,107.5,135] projectedParam=3.1415926535897931 projectedGap=0 tangentDot=576.00000000000034
+FACE output=1 sourceBody=0 sourceFace=1 type=0 flip=0 sense=1 cycles=1
+ FIN outputEdge=1 sense=0 sourceEdge=0 sourceFin=1 cut=0 crossing=0 partner=-1 forward=0 range=0,6.2831853071795862 tolerance=0 start=[-154,42.5,135] end=[-154,42.5,135] middle=[-106,42.5,135] projectedParam=3.1415926535897931 projectedGap=0 tangentDot=-576.00000000000034
+FACE output=2 sourceBody=0 sourceFace=2 type=1 flip=0 sense=1 cycles=3
+ FIN outputEdge=1 sense=1 sourceEdge=0 sourceFin=0 cut=0 crossing=0 partner=-1 forward=1 range=0,6.2831853071795862 tolerance=0 start=[-154,42.5,135] end=[-154,42.5,135] middle=[-106,42.5,135] projectedParam=3.1415926535897931 projectedGap=0 tangentDot=576.00000000000034
+ FIN outputEdge=0 sense=0 sourceEdge=2 sourceFin=5 cut=0 crossing=0 partner=-1 forward=0 range=0,6.2831853071795862 tolerance=0 start=[-154,107.5,135] end=[-154,107.5,135] middle=[-106,107.5,135] projectedParam=3.1415926535897931 projectedGap=0 tangentDot=-576.00000000000034
+ FIN outputEdge=2 sense=0 sourceEdge=-1 sourceFin=-1 cut=1 crossing=1 partner=0 forward=0 range=0,79.643911143264688 tolerance=0 start=[-124.26554449610174,75.000000000002046,158.3048497114616] end=[-136.48645387209615,75.000013125529478,111.8931629995547] middle=[-106.8441059586134,85.371522922172957,128.69091360571343] projectedParam=39.821955571632337 projectedGap=0 tangentDot=-1.0000049204601931
+ FIN outputEdge=3 sense=0 sourceEdge=-1 sourceFin=-1 cut=1 crossing=0 partner=3 forward=0 range=32.499987150394233,32.500012849605767 tolerance=0 start=[-136.48645387209623,75.000012849605767,111.89316299955428] end=[-136.48645387209623,74.999987150394233,111.89316299955428] middle=[-136.48645387209623,75,111.89316299955428] projectedParam=32.5 projectedGap=0 tangentDot=-1
+ FIN outputEdge=4 sense=0 sourceEdge=-1 sourceFin=-1 cut=1 crossing=1 partner=1 forward=0 range=2.3669162855492099e-05,79.643925607615827 tolerance=0 start=[-136.48645387209615,74.999986875889945,111.8931629995547] end=[-124.26553613576357,74.999996741531817,158.30484765429216] middle=[-106.84410716654088,64.62847680387766,128.69090917232646] projectedParam=39.821974638389328 projectedGap=3.1776437161565096e-14 tangentDot=-1.0000049236413413
+FACE output=3 sourceBody=1 sourceFace=0 type=7 flip=0 sense=1 cycles=1
+ FIN outputEdge=5 sense=1 sourceEdge=0 sourceFin=0 cut=0 crossing=0 partner=-1 forward=1 range=0,3.1415926535897931 tolerance=0 start=[-20,75,25] end=[-100,75,25] middle=[-60,95,25] projectedParam=1.5707963267948966 projectedGap=0 tangentDot=1600
+ FIN outputEdge=6 sense=1 sourceEdge=1 sourceFin=1 cut=0 crossing=0 partner=-1 forward=1 range=0,1 tolerance=0 start=[-100.00000000000001,75,24.999999999999993] end=[-136.48645387210129,75,111.89316299953514] middle=[-101.69393313702543,74.999999999999972,76.658361615612392] projectedParam=0.49999999999999983 projectedGap=1.4210854715202004e-14 tangentDot=6123.0067635008036
+ FIN outputEdge=7 sense=0 sourceEdge=2 sourceFin=2 cut=0 crossing=0 partner=-1 forward=0 range=6.2831840222190092,6.2831853071795862 tolerance=0 start=[-136.48645387210129,75,111.89316299953514] end=[-136.48645387209626,75.000012849605767,111.89316299955429] middle=[-136.48645387210004,75.000006424802891,111.89316299953992] projectedParam=6.2831846646992977 projectedGap=0 tangentDot=-100.00000000019642
+ FIN outputEdge=2 sense=1 sourceEdge=-1 sourceFin=-1 cut=1 crossing=1 partner=2 forward=1 range=0,79.643911143264688 tolerance=0 start=[-136.48645387209615,75.000013125529478,111.8931629995547] end=[-124.26554449610174,75.000000000002046,158.3048497114616] middle=[-106.8441059586134,85.371522922172957,128.69091360571343] projectedParam=39.821955571632337 projectedGap=0 tangentDot=1.0000049204601931
+ FIN outputEdge=8 sense=0 sourceEdge=3 sourceFin=3 cut=0 crossing=0 partner=-1 forward=0 range=0,0.99999996887146692 tolerance=0 start=[-124.26555405393469,74.999999999999986,158.30485206328621] end=[-19.999999999999996,75,25] middle=[-49.089605334685338,75,109.67919233524864] projectedParam=0.49999998443573346 projectedGap=0 tangentDot=-51849.883685080931
+FACE output=4 sourceBody=1 sourceFace=1 type=7 flip=0 sense=1 cycles=1
+ FIN outputEdge=9 sense=1 sourceEdge=4 sourceFin=4 cut=0 crossing=0 partner=-1 forward=1 range=3.1415926535897931,6.2831853071795862 tolerance=0 start=[-100,75,25] end=[-20,75,25] middle=[-60.000000000000007,55,25] projectedParam=4.7123889803846897 projectedGap=0 tangentDot=1600
+ FIN outputEdge=8 sense=1 sourceEdge=3 sourceFin=5 cut=0 crossing=0 partner=-1 forward=1 range=0,0.99999996887146692 tolerance=0 start=[-19.999999999999996,75,25] end=[-124.26555405393469,74.999999999999986,158.30485206328621] middle=[-49.089605334685338,75,109.67919233524864] projectedParam=0.49999998443573346 projectedGap=0 tangentDot=51849.883685080931
+ FIN outputEdge=4 sense=1 sourceEdge=-1 sourceFin=-1 cut=1 crossing=1 partner=2 forward=1 range=2.3669162855492099e-05,79.643925607615827 tolerance=0 start=[-124.26553613576357,74.999996741531817,158.30484765429216] end=[-136.48645387209615,74.999986875889945,111.8931629995547] middle=[-106.84410716654088,64.62847680387766,128.69090917232646] projectedParam=39.821974638389328 projectedGap=3.1776437161565096e-14 tangentDot=1.0000049236413413
+ FIN outputEdge=10 sense=0 sourceEdge=5 sourceFin=6 cut=0 crossing=0 partner=-1 forward=0 range=0,1.2841783501532532e-06 tolerance=0 start=[-136.48645387209626,74.999987158216499,111.89316299955426] end=[-136.48645387210129,75,111.89316299953514] middle=[-136.48645387210004,74.999993579108249,111.89316299953992] projectedParam=6.420891750766266e-07 projectedGap=0 tangentDot=-100.00000000019617
+ FIN outputEdge=6 sense=0 sourceEdge=1 sourceFin=7 cut=0 crossing=0 partner=-1 forward=0 range=0,1 tolerance=0 start=[-136.48645387210129,75,111.89316299953514] end=[-100.00000000000001,75,24.999999999999993] middle=[-101.69393313702543,74.999999999999972,76.658361615612392] projectedParam=0.49999999999999983 projectedGap=1.4210854715202004e-14 tangentDot=-6123.0067635008036
+FACE output=5 sourceBody=1 sourceFace=2 type=0 flip=0 sense=0 cycles=1
+ FIN outputEdge=9 sense=0 sourceEdge=4 sourceFin=8 cut=0 crossing=0 partner=-1 forward=0 range=3.1415926535897931,6.2831853071795862 tolerance=0 start=[-20,75,25] end=[-100,75,25] middle=[-60.000000000000007,55,25] projectedParam=4.7123889803846897 projectedGap=0 tangentDot=-1600
+ FIN outputEdge=5 sense=0 sourceEdge=0 sourceFin=9 cut=0 crossing=0 partner=-1 forward=0 range=0,3.1415926535897931 tolerance=0 start=[-100,75,25] end=[-20,75,25] middle=[-60,95,25] projectedParam=1.5707963267948966 projectedGap=0 tangentDot=-1600
+STATE before pairing V=8 E=11 F=6
+ EDGE 0 uses=1/1 vertices=1,1 curveType=1 range=0,6.2831853071795862 tolerance=0 start=[-154,107.5,135] end=[-154,107.5,135]
+ EDGE 1 uses=1/1 vertices=2,2 curveType=1 range=0,6.2831853071795862 tolerance=0 start=[-154,42.5,135] end=[-154,42.5,135]
+ EDGE 2 uses=1/1 vertices=3,0 curveType=3 range=0,79.643911143264688 tolerance=0 start=[-136.48645387209615,75.000013125529478,111.8931629995547] end=[-124.26554449610174,75.000000000002046,158.3048497114616]
+ EDGE 3 uses=0/1 vertices=4,3 curveType=0 range=32.499987150394233,32.500012849605767 tolerance=0 start=[-136.48645387209623,74.999987150394233,111.89316299955428] end=[-136.48645387209623,75.000012849605767,111.89316299955428]
+ EDGE 4 uses=1/1 vertices=0,4 curveType=3 range=2.3669162855492099e-05,79.643925607615827 tolerance=0 start=[-124.26553613576357,74.999996741531817,158.30484765429216] end=[-136.48645387209615,74.999986875889945,111.8931629995547]
+ EDGE 5 uses=1/1 vertices=5,6 curveType=2 range=0,3.1415926535897931 tolerance=0 start=[-20,75,25] end=[-100,75,25]
+ EDGE 6 uses=1/1 vertices=6,7 curveType=3 range=0,1 tolerance=0 start=[-100.00000000000001,75,24.999999999999993] end=[-136.48645387210129,75,111.89316299953514]
+ EDGE 7 uses=0/1 vertices=3,7 curveType=2 range=6.2831840222190092,6.2831853071795862 tolerance=0 start=[-136.48645387209626,75.000012849605767,111.89316299955429] end=[-136.48645387210129,75,111.89316299953514]
+ EDGE 8 uses=1/1 vertices=5,0 curveType=3 range=0,0.99999996887146692 tolerance=0 start=[-19.999999999999996,75,25] end=[-124.26555405393469,74.999999999999986,158.30485206328621]
+ EDGE 9 uses=1/1 vertices=6,5 curveType=2 range=3.1415926535897931,6.2831853071795862 tolerance=0 start=[-100,75,25] end=[-20,75,25]
+ EDGE 10 uses=0/1 vertices=7,4 curveType=2 range=0,1.2841783501532532e-06 tolerance=0 start=[-136.48645387210129,75,111.89316299953514] end=[-136.48645387209626,74.999987158216499,111.89316299955426]
+STATE after pairing and split vertices V=8 E=11 F=6
+ EDGE 0 uses=1/1 vertices=1,1 curveType=1 range=0,6.2831853071795862 tolerance=0 start=[-154,107.5,135] end=[-154,107.5,135]
+ EDGE 1 uses=1/1 vertices=2,2 curveType=1 range=0,6.2831853071795862 tolerance=0 start=[-154,42.5,135] end=[-154,42.5,135]
+ EDGE 2 uses=1/1 vertices=3,0 curveType=3 range=0,79.643911143264688 tolerance=0 start=[-136.48645387209615,75.000013125529478,111.8931629995547] end=[-124.26554449610174,75.000000000002046,158.3048497114616]
+ EDGE 3 uses=0/1 vertices=4,3 curveType=0 range=32.499987150394233,32.500012849605767 tolerance=0 start=[-136.48645387209623,74.999987150394233,111.89316299955428] end=[-136.48645387209623,75.000012849605767,111.89316299955428]
+ EDGE 4 uses=1/1 vertices=0,4 curveType=3 range=2.3669162855492099e-05,79.643925607615827 tolerance=0 start=[-124.26553613576357,74.999996741531817,158.30484765429216] end=[-136.48645387209615,74.999986875889945,111.8931629995547]
+ EDGE 5 uses=1/1 vertices=5,6 curveType=2 range=0,3.1415926535897931 tolerance=0 start=[-20,75,25] end=[-100,75,25]
+ EDGE 6 uses=1/1 vertices=6,7 curveType=3 range=0,1 tolerance=0 start=[-100.00000000000001,75,24.999999999999993] end=[-136.48645387210129,75,111.89316299953514]
+ EDGE 7 uses=0/1 vertices=3,7 curveType=2 range=6.2831840222190092,6.2831853071795862 tolerance=0 start=[-136.48645387209626,75.000012849605767,111.89316299955429] end=[-136.48645387210129,75,111.89316299953514]
+ EDGE 8 uses=1/1 vertices=5,0 curveType=3 range=0,0.99999996887146692 tolerance=0 start=[-19.999999999999996,75,25] end=[-124.26555405393469,74.999999999999986,158.30485206328621]
+ EDGE 9 uses=1/1 vertices=6,5 curveType=2 range=3.1415926535897931,6.2831853071795862 tolerance=0 start=[-100,75,25] end=[-20,75,25]
+ EDGE 10 uses=0/1 vertices=7,4 curveType=2 range=0,1.2841783501532532e-06 tolerance=0 start=[-136.48645387210129,75,111.89316299953514] end=[-136.48645387209626,74.999987158216499,111.89316299955426]

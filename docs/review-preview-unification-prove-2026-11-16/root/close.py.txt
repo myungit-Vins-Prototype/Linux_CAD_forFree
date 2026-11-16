@@ -1,0 +1,97 @@
+from pathlib import Path
+import sys, json, hashlib, re, subprocess, difflib, shutil
+R=Path('/home/myungit/Linux_CAD_forFree')
+P=R/'docs/review-preview-unification-prove-2026-11-16'; T=P/'root'
+sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+def memory():
+    content=(R/'CLAUDE.md').read_text()
+    assert len(content.encode())<=16384
+    return content
+def architecture():
+    memory()
+    g=json.loads((R/'docs/architecture/graph.json').read_text())
+    html=(R/'docs/architecture/index.html').read_text()
+    assert json.loads(re.search(r'<script id="graph-data" type="application/json">(.*?)</script>',html,re.S).group(1))==g
+    assert not g['analysis']['errors']
+    assert g['analysis']['configurationDigest']==sha(R/'forgecad-release/compile_commands.json')
+    for f,h in g['hashes'].items():assert sha(R/f)==h,f
+    focus=set(json.loads((T/'frozen-source-hashes.json').read_text()))-{'tools/generate_architecture.py'}
+    nodes={n['id']:n for n in g['nodes']};assert focus<=nodes.keys()
+    edges=[e for e in g['edges'] if e['source'] in focus or e['target'] in focus]
+    required=[]
+    for name,count in [('solids',4),('surfaces',5),('sketch',1),('analysis',1)]:
+        f='forgeCad2026_dialogs_'+name+'.cpp';s=(R/f).read_text()
+        assert len(re.findall(r'runModeless\(window, viewport, dialog, \[&\]',s))==count,(name,count)
+        assert 'WindowLock' not in s and 'QEventLoop' not in s,f
+        assert any(e['source']==f and e['target']=='forgeCad2026_dialogs_common.cpp' and e['kind']=='call' and any(t['symbol']=='runModeless' for t in e['sites']) for e in edges),f
+        required.append((f,'runModeless',count))
+    common='forgeCad2026_dialogs_common.cpp'
+    helper=[t for e in edges if e['source']==common and e['target']==common and e['kind']=='call' for t in e['sites'] if t['symbol'].endswith('movePreviewMessageToFooter')]
+    assert len(helper)==2,helper
+    assert any('showEvent' in t['owner'] for t in helper) and any('PreviewScope' in t['owner'] for t in helper)
+    assert any(e['source']==common and e['target']=='forgeCad2026_dialogs.h' and e['kind']=='include' for e in edges)
+    result=dict(files=len(nodes),edges=len(g['edges']),units=len(g['analysis']['units']),errors=g['analysis']['errors'],html_matches=True,incident_edges=len(edges),migrated_calls=required,footer_calls=helper,focus={f:dict(description=nodes[f]['description'],incoming={k:sum(e['target']==f and e['kind']==k for e in edges) for k in ['call','include','reference']},outgoing={k:sum(e['source']==f and e['kind']==k for e in edges) for k in ['call','include','reference']}) for f in sorted(focus)})
+    (T/'architecture-audit.json').write_text(json.dumps(result,indent=2,ensure_ascii=False)+'\n')
+    (T/'architecture-incident.json').write_text(json.dumps(edges,indent=2)+'\n')
+    subprocess.run(['python3','tools/generate_architecture.py','--check'],cwd=R,check=True,stdout=(T/'architecture-check.log').open('w'))
+    print({k:v for k,v in result.items() if k!='focus'})
+def orphans():
+    memory()
+    subprocess.run(['python3','/tmp/review-orphans-refresh/refresh.py'],cwd=R,check=True,stdout=(T/'orphans-refresh.log').open('w'))
+    src=Path('/tmp/review-orphans-refresh');dst=P/'orphans';dst.mkdir(exist_ok=True)
+    for f in src.iterdir():
+        if f.is_file() and f.suffix not in ['.o'] and f.name not in ['probe']:
+            name=f.name+'.txt' if f.suffix in ['.py','.cpp','.h','.sh'] else f.name
+            shutil.copy2(f,dst/name)
+    (R/'docs/review-orphans-refresh-2026-11-16.md').write_text((src/'report.md').read_text()+'\nProve conservate nel repository: [inventario e riproduttore](review-preview-unification-prove-2026-11-16/orphans/README.md).\n')
+def audit():
+    memory()
+    before=json.loads((T/'hashes-before.json').read_text())
+    changed=sorted(f for f,h in before.items() if not (R/f).is_file() or sha(R/f)!=h)
+    allowed={'CLAUDE.md','forgeCad2026_dialogs.h','forgeCad2026_dialogs_common.cpp','forgeCad2026_dialogs_solids.cpp','forgeCad2026_dialogs_surfaces.cpp','forgeCad2026_dialogs_sketch.cpp','forgeCad2026_dialogs_analysis.cpp','tools/generate_architecture.py','docs/code-review-2026-11-15.md'}
+    assert set(changed)==allowed,changed
+    names=subprocess.check_output(['git','ls-files','--cached','--others','--exclude-standard','-z'],cwd=R).decode().split('\0')
+    new=sorted(f for f in set(names)-set(before) if f and (R/f).is_file() and not (R/f).is_symlink())
+    expected={'docs/review-preview-unification-2026-11-16.md','docs/review-orphans-refresh-2026-11-16.md','docs/history/claude-prima-preview-unification-2026-11-16.md'}
+    assert all(f in expected or f.startswith(str(P.relative_to(R))+'/') for f in new),new
+    frozen=json.loads((T/'frozen-source-hashes.json').read_text())
+    for f,h in frozen.items():assert sha(R/f)==h,f
+    assert json.loads((T/'build-result.json').read_text())['exit']==0
+    c=json.loads((T/'ctest-result.json').read_text());assert c['exit']==0 and c['actual_passed']==24
+    m=json.loads((P/'tests/regressions-manifest.json').read_text())
+    for f,h in m['stage_source_sha256'].items():assert sha(R/f)==h,f
+    assert m['final_115_assertion_suite']['staged_final']=={'pass':115,'fail':0,'exit':0}
+    replay=json.loads((T/'replay-final-result.json').read_text())
+    for platform in ['offscreen','wayland']:
+        entry=replay[platform];assert entry['exit']==0 and entry['assertions']==115 and entry['panels']==11,(platform,entry)
+    link=json.loads((T/'link-app-release-final.json').read_text());assert not link['private_overlay_objects']
+    kernel=R/'forgecad-release/kernel/libforgekernel.a'
+    assert sha(kernel)=='d9dba05b72a5d049ac40a5f650c023c652965986dd7147e109c2a53e7f38e0d3'
+    binaries=['forgecad-release/forgecad','forgecad-release/forgecad_view_tests']
+    latest=max((R/f).stat().st_mtime for f in frozen if f.endswith(('.cpp','.h')))
+    for f in binaries:assert (R/f).stat().st_mtime>latest,f
+    app_link=(R/'forgecad-release/CMakeFiles/forgecad.dir/link.txt').read_text();assert 'opencascade' not in app_link.lower() and 'libTK' not in app_link
+    g=json.loads((R/'docs/architecture/graph.json').read_text());assert not g['analysis']['errors']
+    for f,h in g['hashes'].items():assert sha(R/f)==h,f
+    subprocess.run(['git','diff','--check'],cwd=R,check=True)
+    delta=[]
+    for f in changed:
+        old=T/'before'/(f+'.txt');assert old.is_file(),f
+        delta.extend(difflib.unified_diff(old.read_text().splitlines(True),(R/f).read_text().splitlines(True),fromfile='before/'+f,tofile='after/'+f))
+        dest=T/'final-source'/(f+'.txt');dest.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(R/f,dest)
+    (T/'change.diff').write_text(''.join(delta))
+    for d in ['docs/ellisse-estremi-prove-2026-11-16','docs/curve-fit-k10-edge-offset-prove-2026-11-16']:
+        manifest=R/d/'SHA256SUMS';count=0
+        for line in manifest.read_text().splitlines():
+            h,f=line.split('  ',1);assert sha(R/d/f)==h,(d,f);count+=1
+        print('Manifest preservato',d,count)
+    result=dict(initial_files=len(before),preserved_files=len(before)-len(changed),changed_existing=changed,new_files=new,source_hashes=frozen,binary_hashes={f:sha(R/f) for f in binaries},kernel_sha256=sha(kernel),claude_bytes=(R/'CLAUDE.md').stat().st_size,app_link_command=app_link,replay=replay)
+    (T/'final-audit.json').write_text(json.dumps(result,indent=2)+'\n');print('Conservazione',result['preserved_files'],'/',len(before),'PASS')
+def seal():
+    memory()
+    files=sorted(f for f in P.rglob('*') if f.is_file() and f.name!='SHA256SUMS')
+    manifest=P/'SHA256SUMS';manifest.write_text(''.join(sha(f)+'  '+str(f.relative_to(P))+'\n' for f in files))
+    for line in manifest.read_text().splitlines():
+        h,f=line.split('  ',1);assert sha(P/f)==h,f
+    print('Manifest PASS',len(files),'artefatti')
+if __name__=='__main__':globals()[sys.argv[1]]()

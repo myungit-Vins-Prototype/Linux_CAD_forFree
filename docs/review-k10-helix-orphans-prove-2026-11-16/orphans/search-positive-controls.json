@@ -1,0 +1,14 @@
+{
+  "cpp-direct-includes": {
+    "exit": 0,
+    "output": "1:#include \"../kernel/fk_blend.cpp\"\n"
+  },
+  "test-private-five": {
+    "exit": 0,
+    "output": "1:view.setSelectedPointPosition(point, pos);\n"
+  },
+  "function-pointer-uses": {
+    "exit": 0,
+    "output": "1:auto fn = &ChainEdge::inPlane;\n"
+  }
+}

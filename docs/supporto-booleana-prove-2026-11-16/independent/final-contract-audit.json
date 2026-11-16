@@ -1,0 +1,16 @@
+{
+  "reviewed_source_hashes": {
+    "kernel/fk_boolean.cpp": "3b8e21c9133627c99cf51df712d8b638cc466f7d2d6442f2c43c1ba47f1feda2",
+    "kernel/fk_boolean_boundary.h": "2d268df2dd61d4d36aacc6e24853ec3148390c85d27b79f671b04eedc9387fec",
+    "kernel/fk_boolean_boundary.cpp": "9d0234bfdcd029cea584f0e47ecfe650e404a33aeb2981b027b3b0024e3bc2d4"
+  },
+  "scope": [
+    "transactional retry",
+    "entrypoint opt-in",
+    "single closed-loop wrap"
+  ],
+  "audit_file_sha256": "e09f6dbb6f145ebad4a94738f8aeba8d65ee3e05ecc328c9495f765ed6c636de",
+  "comparison_limit": "No bytewise copy of intermediate aacb revision retained; targeted final-source inspection, not literal delta.",
+  "new_runtime_tests_by_this_agent": false,
+  "production_edits_by_this_agent": false
+}

@@ -1,0 +1,95 @@
+Review successiva K2 — anteprime e pannelli — 15 novembre 2026.
+READ-ONLY sui sorgenti; nessuna modifica a CAD, preferenze o processi utente.
+AGENTS.md/CLAUDE.md, anteprime.md/interfaccia.md e descrizioni/grafo consultati.
+PRE1–3 e UI1–6 gia corretti esclusi dai nuovi rilievi.
+
+PRE4 — P2 — Il picker di una nuova funzione interroga una sorgente invisibile
+sostituita dall'anteprima pronta.
+
+Trigger riprodotto: nuovo Riempimento pattern, sorgente box a x=-50, contorno
+schizzo [0,20]x[0,12], spaziatura4. Attendere preview pronta; il risultato ha
+copie nel contorno e nasconde correttamente l'originale. Premere Sorgente →
+Dalla vista. Il picker parte con owner=-1 e conserva la preview valida.
+
+Posizioni: forgeCad2026_dialogs_mapping.cpp:74–78 conserva la preview mentre
+picker.active()/choosing; BodyPicker::start in dialogs_common.cpp:1420 passa
+replaced_ (-1 in creazione). viewport_scene.cpp:9 ripristina la scena sorgente
+soltanto se refPickOwner_>=0; alle righe19–20 la sorgente sostituita rimane
+esclusa. viewport_selection.cpp:1325–1330 la considera invece eleggibile con
+isBodyDrawn, e :1538–1540 esegue pickBodyFace su quella geometria. Il rendering
+usa isBodyVisibleInScene a viewport_render.cpp:1389.
+
+Ottenuto con dialogo/worker veri e picking CPU di produzione:
+FILL ready=1 before_source_visible=0 replaced=1
+FILL source_pick_active=1 owner=-1 source_visible=0 preview_still_valid=1
+     source_eligible=1 ray_picked_body=0
+Il raggio attraverso il centro del box originale, che il contratto della scena
+esclude dal disegno, seleziona davvero quel corpo. Non e soltanto una diversa
+opacita o la scelta di mantenere l'anteprima durante il picker: la geometria
+interrogata non corrisponde a quella visibile. La posizione della sorgente non
+e indicata dal corpo mostrato nel contorno. In modifica il ramo owner>=0 gia
+ripristina la scena, quindi il difetto dipende dal percorso nuova funzione.
+
+Atteso: durante la selezione mostrare gli input che il picker interroga, oppure
+sospendere la preview con un contesto sorgente coerente. Non e dimostrata
+corruzione del documento. Nessuna cattura OpenGL: accoppiamento predicato del
+render + vero pickReference CPU, senza affermare un click desktop automatizzato.
+
+UI7 — P2 — Passare al piano di una mappa collegata disabilita Termina selezione
+ma lascia la selezione target attiva e impedisce la conferma.
+
+Preparazione riprodotta: box reale, appiattimento associativo di una faccia
+prodotto tramite CadViewport::createBody (mode3/mappingQuilt=true), altro box
+sorgente. Nuovo Rivestimento (mode4). Premere Scegli superfici nella vista;
+senza finire, cambiare Piano da XY a Mappa di <appiattimento>.
+
+Posizioni: dialogs_mapping.cpp:444 attiva metodo quilt e refresh al cambio
+piano. Nel ramo linked :249–261 imposta targetFaces dalla mappa e disabilita
+target/removeTarget/targetList, senza azzerare choosing==2 ne fermare il picker.
+Callback :300–323 puo ancora elaborare facce per il ruolo precedente e riarmarlo.
+Il controllo prima di apply a :467 rifiuta finche choosing o picker.active.
+
+Ottenuto dal pannello reale:
+MAP flat_created=1 error=
+MAP before_link pick=1 target_enabled=1
+MAP after_link row=3 pick=1 target_enabled=0 target_text=Termina selezione
+MAP after_ok applied=0 panel_hidden=0
+error=Termina la scelta dei riferimenti. Correggi i valori e riprova, oppure Annulla.
+MAP after_escape pick=0
+Il bottone per terminare il ruolo vecchio e disabilitato, il pannello resta
+aperto e OK non raggiunge apply. Esc nella vista recupera: nessun blocco
+irreversibile. Anche cambiare nuovamente riferimento o annullare offre uscita.
+
+Atteso: entrando nel ramo linked fermare esplicitamente la scelta target prima
+di disabilitarne i controlli; selezione e anteprima devono seguire il ruolo
+nuovo. Analoga categoria a UI4 ma nuovo percorso indipendente, nel Mapping;
+UI4 riguardava SurfaceEndControls G0/G1 e non corregge questo codice.
+
+Prove e ripetibilita:
+- repro.cpp, build.py e repro.log in questa directory.
+- build.py riprende compile command tests/test_viewport.cpp e link command di
+  forgecad_view_tests, sostituisce soltanto il main con il probe; niente build
+  globale o scrittura nel repository. Nessun nuovo codice applicazione.
+- sources-objects.json conserva hash sorgenti e verifica oggetti collegati non
+  piu vecchi dei sorgenti; architecture-consulted.json conserva il contesto.
+- QSettings usa org/app dedicati e QTemporaryDir con IniFormat/UserScope.
+- Script run.sh imposta offscreen, generic, Fusion, no GLX e software GL.
+  L'esecuzione non crea un contesto OpenGL certificato; prova oggetti Qt,
+  worker, predicati scena e picking del prodotto.
+- Un tentativo di mouse press/release sintetico su widget non mostrato non ha
+  aggiornato la lista contorno: scartato come prova di click reale. Salvato in
+  discarded-mouse-attempt.cpp.txt, non usato per sostenere il rilievo PRE4.
+
+Copertura e piste scartate:
+Lettura request/cache/cancel/generation/publication/takePreviewResult e riuso
+sceneResult; lock cross-documenti, callback/cleanup mapping/proiezione,
+modalita/picker/confirm, builder previewKey e scope RAII. Reset/load invalida
+anteprime con clearPreview/generazione; callback vecchio worker viene scartata
+per generazione. Cache confronta snapshot Qt condivisi e qualita: nessuna
+collisione nuova dimostrata. Undo/Redo non sono stati forzati durante pannelli:
+actions/shortcut bloccati, nessun trigger utente raggiungibile confermato per
+una promozione stale. Non riportati come finding potenziali solo teorici.
+Proiezione ricostruisce le curve alla conferma e differenze di opacita/costo
+restano scelte note, non nuovi difetti. Esc Mapping verificato, cancel cleanup
+non regressa UI3. Non review integrale di tutte le famiglie, non nuova prova
+renderer/Wayland/XCB/macOS, non stress sistematico di tutte le gare asincrone.

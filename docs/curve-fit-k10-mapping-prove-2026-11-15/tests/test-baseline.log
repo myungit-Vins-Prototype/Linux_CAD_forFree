@@ -1,0 +1,27 @@
+    /tmp/forgecad-k10-mapping-20261115/tests/test_mapping_carrier_validation.cpp:166: targetError = 0.99049125624909851, atteso 0 (differenza 0.99049125624909851 > 1e-08)
+    /tmp/forgecad-k10-mapping-20261115/tests/test_mapping_carrier_validation.cpp:168: FK_CHECK(projectPoint(*carrier, peak).distance <= options.tolerance)
+    /tmp/forgecad-k10-mapping-20261115/tests/test_mapping_carrier_validation.cpp:179: edgeError = 8.8473600644293578e-06, atteso 0 (differenza 8.8473600644293578e-06 > 1e-08)
+    /tmp/forgecad-k10-mapping-20261115/tests/test_mapping_carrier_validation.cpp:166: targetError = 0.99051630820819581, atteso 0 (differenza 0.99051630820819581 > 1e-08)
+    /tmp/forgecad-k10-mapping-20261115/tests/test_mapping_carrier_validation.cpp:168: FK_CHECK(projectPoint(*carrier, peak).distance <= options.tolerance)
+    /tmp/forgecad-k10-mapping-20261115/tests/test_mapping_carrier_validation.cpp:179: edgeError = 8.8473600668034539e-06, atteso 0 (differenza 8.8473600668034539e-06 > 1e-08)
+    /tmp/forgecad-k10-mapping-20261115/tests/test_mapping_carrier_validation.cpp:166: targetError = 0.990514433390143, atteso 0 (differenza 0.990514433390143 > 1e-08)
+    /tmp/forgecad-k10-mapping-20261115/tests/test_mapping_carrier_validation.cpp:168: FK_CHECK(projectPoint(*carrier, peak).distance <= options.tolerance)
+    /tmp/forgecad-k10-mapping-20261115/tests/test_mapping_carrier_validation.cpp:179: edgeError = 8.4244525644966195e-06, atteso 0 (differenza 8.4244525644966195e-06 > 1e-08)
+    /tmp/forgecad-k10-mapping-20261115/tests/test_mapping_carrier_validation.cpp:166: targetError = 0.99049975416790514, atteso 0 (differenza 0.99049975416790514 > 1e-08)
+    (altri fallimenti omessi)
+[ FAIL ] MappingCarrierHiddenTargetsPolyRationalPoseScale (25 controlli falliti)
+    /tmp/forgecad-k10-mapping-20261115/tests/test_mapping_carrier_validation.cpp:166: targetError = 0.84852813752596112, atteso 0 (differenza 0.84852813752596112 > 9.9999999999999995e-07)
+    /tmp/forgecad-k10-mapping-20261115/tests/test_mapping_carrier_validation.cpp:166: targetError = 0.84852813752596112, atteso 0 (differenza 0.84852813752596112 > 9.9999999999999995e-07)
+    /tmp/forgecad-k10-mapping-20261115/tests/test_mapping_carrier_validation.cpp:166: targetError = 0.84852813752596112, atteso 0 (differenza 0.84852813752596112 > 9.9999999999999995e-07)
+    /tmp/forgecad-k10-mapping-20261115/tests/test_mapping_carrier_validation.cpp:166: targetError = 0.8485281374847633, atteso 0 (differenza 0.8485281374847633 > 9.9999999999999995e-07)
+    /tmp/forgecad-k10-mapping-20261115/tests/test_mapping_carrier_validation.cpp:166: targetError = 0.8485281374847633, atteso 0 (differenza 0.8485281374847633 > 9.9999999999999995e-07)
+[ FAIL ] MappingCarrierSourceFrameQuarterTurnShiftHolesAndRoundtrip (5 controlli falliti)
+[  OK  ] MappingCarrierDeclaredLegacyDiagonalPeriodicAndOffset
+[  OK  ] MappingCarrierFailureAndCallbackCancellationAreAtomic
+    /home/myungit/Linux_CAD_forFree/kernel/tests/fk_test_main.cpp:36: eccezione: Deformazione: SP-curve fuori tolleranza.
+[ FAIL ] MappingCarrierDegree27SingleSpanAndRoundtrip (1 controlli falliti)
+[  OK  ] MappingCarrierTolerantSourceDiscrepanciesAreRejectedAtomically
+[  OK  ] MappingCarrierUnresolvedNaturalBoundaryIsAtomic
+4/7 test superati
+Command exited with non-zero status 1
+elapsed=0.49 maxrss_kb=7040

@@ -1,0 +1,25 @@
+{
+  "scope": "baseline internal ISO cut versus original affine maps, NOT Body fins",
+  "input_sha256": "cc0914c719691e7a5ffa73a822b8e1f9d5883d06ea0b5ddd93f8a4857f3deae3",
+  "baseline_library_sha256": "963124d476b460e4c0afc226a563ee790a0cd1ff97264a46f23d828449ae7eab",
+  "reported_gap": 4.259925745486726e-12,
+  "cap": 1e-07,
+  "results": {
+    "s": {
+      "fin": null,
+      "edge": null,
+      "face": null,
+      "budget": 1e-07,
+      "pass": true,
+      "upper_mm": 5.7512476262881294e-12,
+      "cells": 1,
+      "leaves": 1,
+      "branches": 3,
+      "max_depth": 0
+    },
+    "t": {
+      "pass": false,
+      "reason": "Exact midpoint witness exceeds budget: t=1/256 squared=22835963083295358096932575511209388750900301593/91343852333181432387730302044767688728495783936"
+    }
+  }
+}

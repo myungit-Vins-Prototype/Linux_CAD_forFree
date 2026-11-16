@@ -1,0 +1,31 @@
+from pathlib import Path
+import json
+r=Path('/home/myungit/Linux_CAD_forFree');p=Path('/tmp/forgecad-k10-next-20261115/root')
+t=json.loads((p/'test-summary.json').read_text());g=json.loads((p/'architecture-audit.json').read_text())
+qt=json.loads((p/'ctest-final-qt-result.json').read_text());assert qt['exit']==0
+report=r/'docs/curve-fit-k10-estendi-fill-2026-11-15.md';s=report.read_text()
+s=s.replace('Implementazione integrata; build completa, regressioni congiunte e mappa in verifica.','Implementazione integrata; build completa, regressioni congiunte e mappa verificate.')
+s=s.replace('In corso: verranno registrati qui gli esiti della build e delle prove sui sorgenti finali.',f'''- **Build completa Release app e runner: PASS**, incluso rebuild finale dopo la correzione del ritaglio. Gli avvisi preesistenti nei test Qt non riguardano i nuovi moduli.
+- **{t['kernel_distinct']} casi kernel distinti / {t['kernel_executions']} esecuzioni: PASS**, filtri Offset, Shell, Sheet, BoundarySheet, Fill, Projected, Sew, Thicken e sette Blend. Fill ripetuto dopo l'ultimo rebuild; gli altri gruppi non sono interessati dal solo ritocco del helper di proiezione.
+- **{t['ctest_suites']}/{t['ctest_suites']} gruppi CTest PASS**, compresi i due nuovi runner (5+2 gruppi permanenti) e gli 11 casi del precedente fitter. I {len(qt['tests'])} gruppi Qt sono stati ripetuti dopo il link finale. Impostazioni isolate e offscreen; nessuna certificazione OpenGL.
+- **Audit indipendente: 4/4 proiezioni e 8/8 offset dei fori PASS**; i tre riproduttori Boundary restano intenzionalmente classificati come difetti aperti. Due prove sui coefficienti dimostrano la regolarità delle sorgenti di grado 6.
+- **ASan/UBSan/LSan mirati: 5/5 Fill e 2/2 Sheet PASS**, nessuna segnalazione. Fill strumenta helper, fill e TU dei test; Sheet strumenta sheet, TU e gli oggetti offset/bounds/framework del blocco precedente. Il resto dell'archivio non è strumentato; non è una prova completa del kernel/app.
+- **Mappa {g['files']} file / {g['edges']} relazioni / {g['units']} unità: PASS**, zero diagnostica; `--check`, HTML/JSON e archi in ingresso/uscita verificati, separando call/include/reference.
+- **Conservazione**: confronto degli hash con i 1521 file dello snapshot iniziale e `git diff --check` PASS. I soli file esistenti modificati appartengono al perimetro dichiarato; nuovi moduli/test, rapporti e prove sono enumerati nel manifest.
+
+L'eseguibile su disco è aggiornato; l'app eventualmente aperta deve essere riavviata per caricarlo.''')
+report.write_text(s)
+c=r/'CLAUDE.md';s=c.read_text();a=s.index('**15/11 — K10,');b=s.index('**15/11 — K2',a)
+s=s[:a]+f'''**15/11 — K10, Estendi/Fill con tre agenti GPT-6.1 Sol.**
+Due offset planari NURBS con limite continuo; proiezione esatta NURBS/rette e wrapper in Fill.
+Caso avverso Estendi:32,5tol→0,429tol; corretto trim di rette con range parziale.
+Build app completa, {t['kernel_distinct']} casi kernel/{t['kernel_executions']} esecuzioni, {t['ctest_suites']}/{t['ctest_suites']} CTest (7 nuovi gruppi) PASS.
+Audit4proiezioni/8fori e sanitizer mirati5+2 PASS; resto archivio non strumentato.
+Mappa{g['files']}/{g['edges']}/{g['units']}TU, check/HTML/archi PASS. K10 aperto:19 siti ancora da migrare più fallback;
+BoundarySheet accetta bordo fino a10000tol fuori superficie: riproduttore regolare conservato.
+24 rilievi precedenti corretti;22 orfane candidate; nessuna prova GL nuova. CAD/pregresso preservati.
+[Correzioni, prove e prossimi passi](docs/curve-fit-k10-estendi-fill-2026-11-15.md);
+[Memoria prima](docs/history/claude-prima-k10-estendi-fill-2026-11-15.md).
+
+'''+s[b:]
+assert len(s.encode())<=16384,len(s.encode());c.write_text(s);print('Finalized docs; CLAUDE',len(s.encode()),'bytes')

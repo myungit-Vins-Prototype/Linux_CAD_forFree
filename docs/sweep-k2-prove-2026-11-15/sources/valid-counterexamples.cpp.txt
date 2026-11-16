@@ -1,0 +1,12 @@
+#include "fk_sweep.h"
+#include "fk_helix.h"
+#include "fk_bspline.h"
+#include "fk_body_check.h"
+#include "fk_mass.h"
+#include <iostream>
+using namespace ForgeCad::Kernel;
+template<class F>void run(const char*label,F build){try{auto body=build();std::cout<<label<<" ACCEPT checks="<<checkBody(body).size()<<" faces="<<body.faces().size()<<std::endl;}catch(const std::exception&e){std::cout<<label<<" REJECT "<<e.what()<<std::endl;}}
+int main(){
+run("parabolic-planar-sheet",[]{ProfileLoop p;p.segments={{std::make_shared<BSplineCurve<2>>(2,std::vector<double>{0,0,0,1,1,1},std::vector<Vec2>{{-1,0},{0,.2},{1,0}}),{0,1}}};return sweepChains(Frame3(Vec3(),Vec3(0,1,0),Vec3(1,0,0)),{p},{{std::make_shared<Line<3>>(Vec3(),Vec3(0,0,1)),{0,2}}});});
+run("interleaved-disjoint-tubes",[]{HelixSpec s;s.radius=4;s.pitch=.5;s.turns=2;auto h=std::make_shared<HelixCurve>(s);auto disk=[](double y){ProfileRegion p;p.outer.segments={{std::make_shared<Circle<2>>(Vec2(0,y),Vec2(1,0),Vec2(0,1),.1),{0,kTwoPi}}};return p;};return sweepRegions(Frame3(h->point(0),h->derivative(0),Vec3(1,0,0)),{disk(-.375),disk(.375)},{{h,h->domain()}},SweepOrientation::Frenet);});
+}

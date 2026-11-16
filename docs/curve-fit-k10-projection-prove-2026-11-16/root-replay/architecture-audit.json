@@ -1,0 +1,110 @@
+{
+  "files": 758,
+  "edges": 10958,
+  "units": 378,
+  "errors": {},
+  "html_matches": true,
+  "incident_edges": 249,
+  "required": [
+    [
+      "kernel/fk_project.cpp",
+      "kernel/fk_curve_fit_bounds.cpp",
+      "call"
+    ],
+    [
+      "kernel/fk_project.cpp",
+      "kernel/fk_curve_fit_bounds.h",
+      "include"
+    ],
+    [
+      "kernel/tests/test_projection_fit_validation.cpp",
+      "kernel/fk_project.cpp",
+      "call"
+    ],
+    [
+      "cad_forge.cpp",
+      "kernel/fk_project.cpp",
+      "call"
+    ]
+  ],
+  "files_audited": {
+    "cad_forge.cpp": {
+      "description": "Adatta sketch e parametri al kernel; booleane con genealogia ricondotta agli operandi e recupero dell\u2019unione commutativa nell\u2019ordine inverso dopo un errore geometrico; conversione mesh float con filtro comune dei triangoli degeneri per scena e anteprime, ID topologici coerenti. Il riepilogo delle curve proiettate usa lo scarto della catena finale dopo le giunte.",
+      "incoming": {
+        "call": 39,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 72,
+        "include": 45,
+        "reference": 0
+      }
+    },
+    "kernel/fk_project.cpp": {
+      "description": "Proiezione direzionale su corpi: fit cubico con limite continuo dagli originali Line/NURBS su una sola Plane; certificati immutabili senza riferimenti ai chiamanti, verifica dei poli effettivi dopo giunti e fusione primo/ultimo e scarto finale propagato. Scelta delle facce e famiglie non supportate restano campionate.",
+      "incoming": {
+        "call": 5,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 22,
+        "include": 10,
+        "reference": 0
+      }
+    },
+    "kernel/fk_project.h": {
+      "description": "Contratti della proiezione e delle catene: distinzione tra limite continuo Plane e fit campionato, provenienza opaca opzionale e scarto dopo giunta; rifiuto quando i poli finali superano il budget originale, nessuna promessa globale C1 o topologica.",
+      "incoming": {
+        "call": 5,
+        "include": 6,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 1,
+        "include": 4,
+        "reference": 0
+      }
+    },
+    "kernel/fk_curve_fit_bounds.cpp": {
+      "description": "Limiti continui Bernstein outward per posizione, offset NURBS e composizione isoparametrica NURBS e affine anche obliqua su estrusione con SP-curve originale; limiti delle derivate del supporto per il trasferimento UV, coefficienti originali, pesi, istanze, budget e cancellazione. Proiezione affine su Plane dagli originali IEEE, normale da assi del piano e direzione originale, con residuo omogeneo outward.",
+      "incoming": {
+        "call": 12,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 11,
+        "include": 5,
+        "reference": 0
+      }
+    },
+    "kernel/fk_curve_fit_bounds.h": {
+      "description": "Contratti del fit continuo, provider di posizione/offset/composizione superficie-SP-curve e limiti delle derivate U/V del supporto; distingue famiglie supportate, intervalli affini espliciti e rifiuto quando il controllo non conclude. Include il provider della proiezione originale su Plane con dati copiati e durate indipendenti dai chiamanti.",
+      "incoming": {
+        "call": 1,
+        "include": 12,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 0,
+        "include": 2,
+        "reference": 0
+      }
+    },
+    "kernel/tests/test_projection_fit_validation.cpp": {
+      "description": "Proiezioni Plane polinomiali e razionali con dettagli nascosti: pose, versi, scale, parametri, trim/istanze, nodi, parallelismo, durata dei certificati, giunti finali e rifiuto delle modifiche fuori budget; runner senza Qt/OCCT.",
+      "incoming": {
+        "call": 1,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 8,
+        "include": 4,
+        "reference": 0
+      }
+    }
+  }
+}

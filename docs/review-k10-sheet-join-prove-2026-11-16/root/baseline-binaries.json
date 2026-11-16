@@ -1,0 +1,6 @@
+{
+  "forgecad-release/forgecad": "9f116005a3d5500fb2a90b2e5d531563620ff223fc35d46b281dba247740c10e",
+  "forgecad-release/forgecad_view_tests": "021ec6f0fe6214dab6ad52c9c326ae56c9e44dca38a73d84cdaf6878197e0738",
+  "forgecad-release/kernel/libforgekernel.a": "6df225c9536c2e6aed13c83313fea8a58ea766cf3de7246f945e50193f3807f1",
+  "forgecad-release/kernel/forgekernel_tests": "cdb687b356bb0aef691448da1bac5bd5c50bb183099c5d829bb658c606ee3a31"
+}

@@ -1,0 +1,8 @@
+{
+  "kernel/fk_surface_mapping.cpp": "4d77ca5f28ed84fddefe0ef41f7e5214ace5fb636b953da0a4fa4e807198730c",
+  "kernel/fk_mapping_fit.h": "21eca96b7e1895e572e6b7feb55874fd1e7316555e893a9eccc215d5849ba8ad",
+  "kernel/fk_mapping_fit.cpp": "f9187aa9903c07096fe029dad8f271cf850d12d6c6a273b9ed538c2afc5a8b27",
+  "kernel/fk_curve_fit_bounds.cpp": "f1aeae2d7492cb39607f09e6f93dcc364adbf60ca467aedfb7153957bdab8281",
+  "kernel/fk_curve_fit_bounds.h": "e1dd43b39101706d358e40fd99918bdaa5b0f907a23750cd3ed46fed84236d8a",
+  "kernel/fk_curve_projection.cpp": "3ac3894a7994099e54df297417dc7cf7d7c77e253f6dbee3f18817051a886dda"
+}

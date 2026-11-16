@@ -1,0 +1,6 @@
+poly27 deviation=7.6832711973924208e-08 dense_error=3.126142332710595e-08 bound_minus_dense=4.5571288646818258e-08
+rational27 deviation=8.9724657263705051e-08 dense_error=3.849314091833199e-08 bound_minus_dense=5.1231516345373062e-08
+narrow_multispan15 deviation=7.0504072599180602e-08 dense_error=3.9613973198650933e-08 bound_minus_dense=3.0890099400529669e-08
+affine_rational_revolution deviation=9.5058431509470881e-08 dense_error=4.1930926793263861e-08 bound_minus_dense=5.3127504716207019e-08
+affine_rational_revolution_surface dense_error=3.5634373065027239e-08
+checks=5 PASS

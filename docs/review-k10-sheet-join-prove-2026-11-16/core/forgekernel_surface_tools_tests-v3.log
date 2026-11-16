@@ -1,0 +1,45 @@
+[  OK  ] SurfaceNetworkCrossingFamilies
+[  OK  ] SurfaceExtendUntilPlaneAndCurvedFace
+[  OK  ] SurfaceExtendUntilFacetedTarget
+[  OK  ] SurfaceExtendUntilSplineExtrusion
+[  OK  ] SurfacePolesPreserveTrimsAndTopology
+[  OK  ] SurfacePolesRefitControlCounts
+[  OK  ] SurfacePolesMultipleConnectedFaces
+[  OK  ] SurfacePolesMultipleFacesOfSolid
+[  OK  ] SurfacePolesPreserveDeclaredVertexTolerance
+[  OK  ] SurfacePolesAutomaticConnectionAndTangency
+[  OK  ] SurfacePolesContinuitySwappedReversedRationalAndSharp
+[  OK  ] SurfacePolesContinuityRefitAndProtection
+[  OK  ] SurfacePolesTrimProtectionLeavesInteriorFree
+[  OK  ] SurfacePolesNeutralTolerantConnections
+[  OK  ] SurfacePolesSphereInternalG1AndG2
+[  OK  ] SurfacePolesG2AcrossFacesAndRigidPoses
+[  OK  ] SurfacePolesExactAnalyticConversion
+[  OK  ] SurfacePolesAnalyticEditsHolesAndClosure
+[  OK  ] SurfacePolesMixedAnalyticAndNurbsTangency
+[  OK  ] SurfacePolesCurvedAnalyticTrimmedHoles
+[  OK  ] SurfacePolesPeriodicHelicalTrims
+[  OK  ] SurfacePolesSphericalCapAtConstantLatitude
+[  OK  ] SurfacePolesSoftInfluenceLocalAndOverlap
+[  OK  ] SurfacePolesSoftInfluencePeriodAndBudget
+[  OK  ] FillPlanarSquare
+[  OK  ] FillSphericalCapThroughGuides
+[  OK  ] FillTangentToCylinder
+cono: celle 64, contorno 2.13e-07, guide 2.32e-07, tangenza 0.000912 gradi
+cono senza guide: celle 32, contorno 1.77e-07, tangenza 0.000319 gradi
+[  OK  ] FillConeWithConflictingGuides
+sfera G2: celle 32, contorno 1.98e-07, guide 1.81e-07, tangenza 0.00149 gradi, curvatura 0.003, dalla sfera 0.00668
+[  OK  ] FillCapContinuesSphereInCurvature
+[  OK  ] FillObliqueContactsPreserveInterior
+[  OK  ] FillInfluencePreservesProjectionAndTangency
+sfera G1 naturale: scarto curvatura 0.00897 1/mm
+[  OK  ] FillNaturalG1FollowsSupportCurvature
+[  OK  ] FillRejectsInvalidShapeParameters
+[  OK  ] FillIndependentContactInfluences
+[  OK  ] FillIgnoredGuidesPreserveLocalInfluence
+[  OK  ] FillDirectionalProfilePreservesContacts
+[  OK  ] FillDirectionalProfileRejectsInvalidSelection
+[  OK  ] FillUnequalCompoundBoundarySpans
+[  OK  ] FillReportsBoundaryContactConflictAtCorner
+[  OK  ] FillPerFaceContinuityOverrides
+40/40 test superati

@@ -1,4 +1,5 @@
 #include "cad_curve_solver.h"
+#include "cad_ellipse.h"
 #include "cad_kernel.h"
 
 #include <algorithm>
@@ -171,6 +172,15 @@ std::vector<ProfileSegment> curveGeometry(const CurveObject &curve) {
             double endAngle = std::atan2(end.y() - center.y(), end.x() - center.x());
             while (endAngle <= startAngle + 1.0e-12) endAngle += kTwoPi;
             result.push_back({std::make_shared<Circle<2>>(makeCircle(center, radius)), {startAngle, endAngle}});
+            break;
+        }
+        case DrawingTool::EllipseExtremes: {
+            QPointF center, axisA, axisB;
+            if (!ellipseAxes(curve, center, axisA, axisB)) break;
+            const double a = std::hypot(axisA.x(), axisA.y()), b = std::hypot(axisB.x(), axisB.y());
+            const Vec2 u = toVec(axisA) / a;
+            const Vec2 x = a >= b ? u : Vec2(-u.y(), u.x()), y(-x.y(), x.x());
+            result.push_back({std::make_shared<Ellipse<2>>(toVec(center), x, y, std::max(a, b), std::min(a, b)), {0.0, kTwoPi}});
             break;
         }
         case DrawingTool::Ellipse: {

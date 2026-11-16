@@ -91,8 +91,6 @@ private:
 
     QTreeWidgetItem *normalizedTarget(QTreeWidgetItem *body, QTreeWidgetItem *target) const;
 
-    static QTreeWidgetItem *firstFeature(QTreeWidgetItem *body);
-
     QWidget *historyRailViewport_ = nullptr;
     QSlider *historyRail_ = nullptr;
     CursorMode cursorMode_ = CursorMode::Horizontal;

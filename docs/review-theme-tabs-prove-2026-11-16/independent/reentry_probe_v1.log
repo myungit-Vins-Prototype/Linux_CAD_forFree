@@ -1,0 +1,3 @@
+trigger=100 injection=1 palette=#f0f0f0 visible=#f0f0f0 hidden=#f0f0f0 preference=1
+trigger=39 injection=2 palette=#f0f0f0 visible=#f0f0f0 hidden=#f0f0f0 preference=1
+PASS reentry style/palette; preference, visible/hidden, custom colors/QSS, finite stable events Qt=6.12.0

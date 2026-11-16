@@ -1,0 +1,4 @@
+{
+  "status": "invalid audit assumption",
+  "reason": "Audit richiesto -fno-fast-math esplicito anche a fk_offset; compilatore usa default rigoroso, nessun fast-math e fp-contract=off. Provider e nuovo test hanno il flag esplicito. Nessuna modifica a build o sorgenti."
+}

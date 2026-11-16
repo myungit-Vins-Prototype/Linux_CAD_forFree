@@ -1,0 +1,105 @@
+#include "fk_body_check.h"
+#include "fk_body_io.h"
+#include "fk_bspline.h"
+#include "fk_cancel.h"
+#include "fk_curve_algo.h"
+#include "fk_curve_ops.h"
+#include "fk_history.h"
+#include "fk_surface_algo.h"
+#include "fk_thicken.h"
+#include <iomanip>
+#include <iostream>
+using namespace ForgeCad::Kernel;
+#include "fixtures.h"
+CurvePtr<2> straight(Vec2 a, Vec2 b) {
+    return std::make_shared<BSplineCurve<2>>(1, std::vector<double>{0, 0, 1, 1}, std::vector<Vec2>{a, b});
+}
+Body fixture(bool rational) {
+    std::vector<Vec2> poles;
+    std::vector<double> weights;
+    for (int i = 0; i < 28; ++i) {
+        double x = i / 27., w = rational ? 1 + .5 * x : 1;
+        double numerator = x + (rational ? .5 * i * (i - 1.) / (27 * 26.) : 0);
+        poles.emplace_back(numerator / w, z27[i] / w);
+        if (rational)
+            weights.push_back(w);
+    }
+    std::vector<double> knots(28, 0);
+    knots.insert(knots.end(), 28, 1);
+    CurvePtr<2> uv = std::make_shared<BSplineCurve<2>>(27, knots, poles, weights);
+    std::vector<CurvePtr<2>> pcs{uv, straight({1, 0}, {1, 1}), straight({1, 1}, {0, 1}),
+                                 straight({0, 1}, {0, 0})};
+    std::vector<Vec3> vertices{{0, 0, 0}, {1, 0, 0}, {1, 1, 0}, {0, 1, 0}};
+    std::vector<Body::BuildEdge> edges;
+    Body::BuildFace face;
+    face.surface = std::make_shared<Plane>(Frame3());
+    std::vector<Body::BuildFin> fins;
+    for (int i = 0; i < 4; ++i) {
+        edges.push_back({i, (i + 1) % 4, embedCurve(pcs[i], Frame3()), {0, 1}, 1e-9});
+        fins.push_back({i, true, pcs[i], 1e-9});
+    }
+    face.loops = {fins};
+    return Body::buildSheet(vertices, edges, {face});
+}
+
+int main() {
+    std::cout << std::setprecision(17);
+    for (bool rational : {false, true})
+        for (bool direction : {false, true}) {
+            const auto source = fixture(rational);
+            const auto bytes = writeBodyBinary(source);
+            BodyHistory history(1, {1}, {4}, {4}, 2, 3, 4);
+            ThickenOptions options;
+            options.thickness = .1;
+            options.tolerance = 1e-6;
+            options.offsetTolerance = 1e-7;
+            options.useDirection = direction;
+            options.direction = {0, 0, 1};
+            std::cout << "rational=" << rational << " direction=" << direction
+                      << " source_issues=" << checkBody(source, {true, true}).size() << std::endl;
+            try {
+                const auto result = thickenSheet(source, {}, options, &history);
+                const auto &input = source.edge(source.edges().front());
+                double peak = 0;
+                double parameter = 0;
+                for (int i = 0; i <= 10000; ++i) {
+                    double t = i / 10000.;
+                    double y = std::abs(input.curve->point(t).y());
+                    if (y > peak) {
+                        peak = y;
+                        parameter = t;
+                    }
+                }
+                const auto witness = input.curve->point(parameter) + Vec3(0, 0, .05);
+                double geometry = INFINITY, same = 0;
+                int walls = 0;
+                for (auto id : result.faces()) {
+                    bool generated = false;
+                    for (auto origin : history.origins(EntityKind::Face, id.index))
+                        if (origin.kind == EntityKind::Edge && origin.index == 0)
+                            generated = true;
+                    if (!generated)
+                        continue;
+                    ++walls;
+                    const auto &surface = *result.face(id).surface;
+                    const auto projection = projectPoint(surface, witness, {0, 1}, {0, 1});
+                    geometry = std::min(geometry, projection.distance);
+                    for (int i = 0; i <= 10000; ++i) {
+                        double t = i / 10000.;
+                        const auto exact = input.curve->point(t) + Vec3(0, 0, .05);
+                        const auto actual = surface.point(t, direction ? .05 : .5);
+                        same = std::max(same, distance(actual, exact));
+                    }
+                }
+                std::cout << " accepted=1 result_issues=" << checkBody(result, {true, true}).size()
+                          << " solid=" << (!result.isSheet()) << " generated_walls=" << walls
+                          << " wall_same_param_error=" << same << " wall_geometric_error=" << geometry
+                          << " witness_t=" << parameter << " hidden_height=" << peak
+                          << " source_immutable=" << (bytes == writeBodyBinary(source)) << std::endl;
+            } catch (const std::exception &e) {
+                std::cout << " accepted=0 reason=" << e.what()
+                          << " history_faces_after_failure=" << history.resultSize(EntityKind::Face)
+                          << " source_immutable=" << (bytes == writeBodyBinary(source)) << std::endl;
+            }
+        }
+}

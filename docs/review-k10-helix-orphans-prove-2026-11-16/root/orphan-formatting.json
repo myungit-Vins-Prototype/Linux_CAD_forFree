@@ -1,0 +1,7 @@
+{
+  "file": "forgeCad2026_storyboard.cpp",
+  "stage_sha256": "11e30f41c69adffc192fa6bb822d2ad389c776c5700f9423c2c897705253f817",
+  "final_sha256": "ec17c2609f26b527e8161e87fd29c1b4d9368581dd9b5066254432dd2fca9787",
+  "difference": "One extra trailing blank line removed after deleting the final private function; non-whitespace bytes identical",
+  "removed_lines_total": 35
+}

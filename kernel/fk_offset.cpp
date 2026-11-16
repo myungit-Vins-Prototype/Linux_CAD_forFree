@@ -1,5 +1,6 @@
 #include "fk_curve_ops.h"
 #include "fk_offset.h"
+#include "fk_curve_fit_bounds.h"
 #include "fk_offset_support.h"
 #include "fk_open_offset.h"
 
@@ -617,58 +618,49 @@ SurfacePtr offsetBSpline(const Surface &surface, double d, const Interval &uw, c
     return std::make_shared<BSplineSurface>(3, 3, knots(us), knots(vs), uCount, vCount, std::move(poles));
 }
 
-// Retta, cerchio o curva traslata, se la curva a distanza lo e' (verificato
-// sui campioni entro l'arrotondamento); altrimenti nullptr.
-CurvePtr<3> exactOffsetCurve(const CurvePtr<3> &curve, const Interval &range, const std::function<Vec3(double)> &f, double scale) {
-    const double eps = 1e-11 * std::max(1.0, scale);
-    std::vector<double> ts;
-    for (int k = 0; k <= 8; ++k) ts.push_back(range.lo + range.length() * k / 8.0);
-    std::vector<Vec3> values;
-    for (double t : ts) values.push_back(f(t));
-    // Traslazione (curve di una faccia piana).
-    const Vec3 shift = values.front() - curve->point(ts.front());
-    bool translated = true;
-    for (std::size_t k = 0; k < ts.size() && translated; ++k) translated = distance(values[k], curve->point(ts[k]) + shift) <= eps;
-    if (translated) {
-        double parameterScale = 1.0;
-        CurvePtr<3> moved = transformCurve(curve, Transform3::translation(shift), &parameterScale);
-        if (std::fabs(parameterScale - 1.0) < 1e-15) return moved;
-    }
-    // Curva limitata: conta la curva di base (stesso parametro).
-    const Curve<3> *basis = curve.get();
-    while (basis->type() == CurveType::Trimmed) basis = static_cast<const TrimmedCurve<3> *>(basis)->basis().get();
+// Exact offsets require a geometric construction at the caller. A finite set
+// of callback values cannot establish that an arbitrary offset is analytic.
+// The following bounds apply to the complete circle, not selected values
+// of its parameter. Primitive frames are normalized on construction; the
+// padding covers those normalizations and the dot/cross/norm evaluations.
+double circleConstructionRoundoff(const Circle<3> &circle, const Vec3 &origin, double d) {
+    return 128.0 * std::numeric_limits<double>::epsilon()
+        * (1.0 + norm(circle.center()) + norm(origin) + circle.radius() + std::fabs(d));
+}
+
+double circleAxialError(const Circle<3> &circle, const Vec3 &axis) {
+    return std::fabs(dot(axis, circle.xAxis())) + std::fabs(dot(axis, circle.yAxis()))
+        + 128.0 * std::numeric_limits<double>::epsilon();
+}
+
+CurvePtr<3> exactExtrusionOffset(const ExtrusionSurface &surface, double d, double tolerance) {
+    const Curve<3> *basis = surface.curve().get();
+    while (basis->type() == CurveType::Trimmed)
+        basis = static_cast<const TrimmedCurve<3> *>(basis)->basis().get();
     if (basis->type() == CurveType::Line) {
         const auto &line = static_cast<const Line<3> &>(*basis);
-        const Vec3 origin = values.front() - ts.front() * line.direction();
-        bool straight = true;
-        for (std::size_t k = 0; k < ts.size() && straight; ++k) straight = distance(values[k], origin + ts[k] * line.direction()) <= eps;
-        if (straight) return std::make_shared<Line<3>>(origin, line.direction());
+        const Vec3 normal = normalized(cross(line.direction(), surface.direction()));
+        return transformCurve(surface.curve(), Transform3::translation(d * normal));
     }
     if (basis->type() == CurveType::Circle) {
         const auto &circle = static_cast<const Circle<3> &>(*basis);
-        // Cerchio per tre campioni, con l'asse dalla parte di quello di partenza.
-        const Vec3 &a = values[0], &b = values[4], &c = values[8];
-        const Vec3 ab = b - a, ac = c - a;
-        Vec3 n = cross(ab, ac);
-        const double nn = squaredNorm(n);
-        if (nn > 0.0) {
-            const Vec3 center = a + (squaredNorm(ac) * cross(n, ab) + squaredNorm(ab) * cross(ac, n)) / (2.0 * nn);
-            n = n / std::sqrt(nn);
-            if (dot(n, cross(circle.xAxis(), circle.yAxis())) < 0.0) n = -n;
-            const double r = distance(a, center);
-            if (r > eps) {
-                const Vec3 p = (a - center) / r, q = cross(n, p);
-                const double t0 = ts.front();
-                const Vec3 x = std::cos(t0) * p - std::sin(t0) * q;
-                const Vec3 y = cross(n, x);
-                bool round = true;
-                for (std::size_t k = 0; k < ts.size() && round; ++k)
-                    round = distance(values[k], center + r * (std::cos(ts[k]) * x + std::sin(ts[k]) * y)) <= eps;
-                if (round) return std::make_shared<Circle<3>>(center, x, y, r);
-            }
+        const Vec3 axis = cross(circle.xAxis(), circle.yAxis());
+        const double padding = 128.0 * std::numeric_limits<double>::epsilon();
+        const double axial = std::fabs(dot(axis, surface.direction())) - padding;
+        const double transverse = circleAxialError(circle, surface.direction());
+        // T(u) x D differs from its radial axial component by at most the
+        // in-plane component of D. Normalization costs <=2e/(a-e).
+        const double error = axial > transverse
+            ? std::fabs(d) * (2.0 * transverse / (axial - transverse) + padding)
+                + circleConstructionRoundoff(circle, circle.center(), d)
+            : std::numeric_limits<double>::infinity();
+        if (error <= 0.01 * tolerance) {
+            const double radius = circle.radius() + (dot(axis, surface.direction()) > 0.0 ? d : -d);
+            if (!(radius > linearResolution())) throw std::domain_error("offset: raggio della sezione non positivo");
+            return std::make_shared<Circle<3>>(circle.center(), circle.xAxis(), circle.yAxis(), radius);
         }
     }
-    return nullptr;
+    return {};
 }
 
 // Una curva chiusa con un angolo nel punto di chiusura (spline chiusa non
@@ -681,12 +673,94 @@ void requireClosed(const Curve<3> &curve, const Interval &domain, const std::fun
                                 "(spigolo vivo dentro la faccia)");
 }
 
+void requireCertifiedOffsetCurve(const CurvePtr<3> &curve, const Interval &range,
+                                 const detail::SurfaceCurveFitData &certificate, double tolerance) {
+    if (!certificate.bound) return;
+    const auto *spline = dynamic_cast<const BSplineCurve<3> *>(curve.get());
+    if (!spline || spline->degree() != 3 || spline->isRational() || spline->poleCount() < 4
+        || (spline->poleCount() - 1) % 3 != 0 || spline->domain().lo != range.lo || spline->domain().hi != range.hi)
+        throw std::domain_error("offset: forma della curva certificata pubblicata non riconosciuta");
+    const auto &poles = spline->poles();
+    const auto &knots = spline->knots();
+    for (int k = 0; k + 3 < spline->poleCount(); k += 3) {
+        cancellationPoint();
+        const Interval span{knots[k + 3], knots[k + 4]};
+        const double error = certificate.bound(span, {poles[k], poles[k + 1], poles[k + 2], poles[k + 3]});
+        if (!std::isfinite(error) || error < 0 || error > tolerance)
+            throw std::domain_error("offset: curva pubblicata oltre il budget continuo originale");
+    }
+}
+struct PlanePCurveContract {
+    int face = -1, edge = -1;
+    double budget = 0;
+};
+double requirePlanePCurve(const CurvePtr<2> &curve, const Interval &range,
+                       const CurveFitErrorBound &bound, double budget) {
+    cancellationPoint();
+    const auto *spline=dynamic_cast<const BSplineCurve<2> *>(curve.get());
+    if (!spline || spline->degree()!=3 || spline->isRational() || spline->poleCount()<4
+        || (spline->poleCount()-1)%3!=0 || spline->domain().lo!=range.lo || spline->domain().hi!=range.hi
+        || !std::isfinite(budget) || budget<0)
+        throw std::domain_error("offset: SP-curve piana certificata non riconosciuta");
+    const auto &p=spline->poles(); const auto &knots=spline->knots();
+    if (knots.size()!=std::size_t(spline->poleCount()+4))
+        throw std::domain_error("offset: nodi SP-curve piana non riconosciuti");
+    for (int j=0;j<4;++j)
+        if(knots[j]!=range.lo || knots[knots.size()-1-j]!=range.hi)
+            throw std::domain_error("offset: estremi SP-curve piana non bloccati");
+    double worst=0;
+    for(int k=0;k+3<spline->poleCount();k+=3) {
+        cancellationPoint();
+        const Interval span{knots[k+3],knots[k+4]};
+        if(!span.isFinite() || !(span.lo<span.hi) || knots[k+1]!=span.lo || knots[k+2]!=span.lo
+            || knots[k+5]!=span.hi || knots[k+6]!=span.hi)
+            throw std::domain_error("offset: campate SP-curve piana non Bezier");
+        const double error=bound(span,{Vec3(p[k].x(),p[k].y(),0),Vec3(p[k+1].x(),p[k+1].y(),0),
+                                       Vec3(p[k+2].x(),p[k+2].y(),0),Vec3(p[k+3].x(),p[k+3].y(),0)});
+        if (!std::isfinite(error) || error<0 || error>budget)
+            throw std::domain_error("offset: SP-curve piana oltre il budget continuo");
+        worst=std::max(worst,error);
+    }
+    return worst;
+}
+void requireEmittedPlanePCurves(const detail::RawModel &model, const Body &body,
+                                const detail::AssemblyMap &map, const std::vector<PlanePCurveContract> &contracts,
+                                double tolerance) {
+    std::map<std::pair<int,int>,std::vector<double>> groups;
+    for(const auto &c:contracts) groups[{c.face,c.edge}].push_back(c.budget);
+    for(auto &[key,budgets]:groups) {
+        cancellationPoint();
+        const auto [rf,re]=key;
+        if(rf<0 || re<0 || std::size_t(rf)>=map.faces.size() || std::size_t(re)>=map.edges.size()
+            || !map.faces[rf].valid() || !map.edges[re].valid())
+            throw std::domain_error("offset: provenienza SP-curve piana persa nell'assemblaggio");
+        const auto &face=body.face(map.faces[rf]); const auto &edge=body.edge(map.edges[re]);
+        if (edge.range.lo!=model.edges[re].range.lo || edge.range.hi!=model.edges[re].range.hi)
+            throw std::domain_error("offset: parametro SP-curve piana modificato nell'assemblaggio");
+        const auto data=detail::planePCurveErrorBound(edge.curve,face.surface,edge.range);
+        if(!data.projection || !data.residual)
+            throw std::domain_error("offset: famiglia SP-curve piana persa nell'assemblaggio");
+        std::vector<double> actualBudgets;
+        for(LoopId loop:face.loops) for(FinId id:body.loopFins(loop)) {
+            const auto &fin=body.fin(id); if(fin.edge!=map.edges[re])continue;
+            requirePlanePCurve(fin.pcurve,edge.range,data.projection,0.1*tolerance);
+            requirePlanePCurve(fin.pcurve,edge.range,data.residual,fin.pcurveTolerance);
+            actualBudgets.push_back(fin.pcurveTolerance);
+        }
+        std::sort(budgets.begin(),budgets.end()); std::sort(actualBudgets.begin(),actualBudgets.end());
+        if(actualBudgets!=budgets)
+            throw std::domain_error("offset: fin o budget SP-curve piane modificati nell'assemblaggio");
+    }
+}
 CurvePtr<3> offsetCurve(const CurvePtr<3> &curve, const Interval &range, const std::function<Vec3(double)> &f,
-                        std::vector<double> breaks, double scale, double tolerance) {
-    if (CurvePtr<3> exact = exactOffsetCurve(curve, range, f, scale)) return exact;
+                        std::vector<double> breaks, double tolerance, const detail::SurfaceCurveFitData &certificate = {}) {
     const std::vector<double> own = curve->breakpoints(range);
     breaks.insert(breaks.end(), own.begin(), own.end());
-    return fitCurve(f, range, breaks, tolerance);
+    if (!certificate.bound) return fitCurve(f, range, breaks, tolerance);
+    breaks.insert(breaks.end(), certificate.breaks.begin(), certificate.breaks.end());
+    const auto fitted = fitCurveCertified(f, range, breaks, tolerance, certificate.bound);
+    requireCertifiedOffsetCurve(fitted, range, certificate, tolerance);
+    return fitted;
 }
 
 // Sezione circolare analitica dei supporti sostitutivi. Conserva il parametro
@@ -1185,9 +1259,20 @@ bool splitTrimmedCreases(const Body &body, const std::vector<FaceId> &faces, dou
 
 }  // namespace
 
-std::shared_ptr<BSplineCurve<3>> fitCurve(const std::function<Vec3(double)> &f, const Interval &range, const std::vector<double> &breaks,
-                                          double tolerance, double *deviation) {
-    if (!range.isFinite() || !(range.lo < range.hi)) throw std::domain_error("fitCurve: intervallo non valido");
+static std::shared_ptr<BSplineCurve<3>> fitCurveImpl(const std::function<Vec3(double)> &f, const Interval &range, const std::vector<double> &breaks,
+                                          double tolerance, double *deviation, const CurveFitErrorBound *certificate,
+                                          bool certificateOwnsMetric = false) {
+    cancellationPoint();
+    if (!(tolerance > 0) || !std::isfinite(tolerance)) throw std::domain_error("fitCurve: tolleranza non valida");
+    const auto checked = [&](double t) {
+        cancellationPoint();
+        const Vec3 value = f(t);
+        cancellationPoint();
+        for (int k = 0; k < 3; ++k) if (!std::isfinite(value[k])) throw std::domain_error("fitCurve: callback non finito");
+        return value;
+    };
+    if (!range.isFinite() || !(range.lo < range.hi) || !std::isfinite(range.length())) throw std::domain_error("fitCurve: intervallo non valido");
+    for (double value : breaks) if (!std::isfinite(value)) throw std::domain_error("fitCurve: nodi di raffinamento non finiti");
     const double h = 1e-6 * range.length();
     // Il passo delle derivate non e' la risoluzione minima della curva:
     // una campata stretta o molto curva puo' richiedere suddivisioni piu' fini.
@@ -1196,17 +1281,39 @@ std::shared_ptr<BSplineCurve<3>> fitCurve(const std::function<Vec3(double)> &f, 
         double t;
         Vec3 p, d;
     };
-    std::vector<Vec3> poles{f(range.lo)};
+    std::vector<Vec3> poles{checked(range.lo)};
     std::vector<double> knots(4, range.lo);
     double worst = 0.0;
     std::size_t visited = 0;
     const std::function<void(const Node &, const Node &, int)> piece = [&](const Node &a, const Node &b, int depth) {
+        cancellationPoint();
         if (++visited > 32768) throw std::domain_error("offset: curva a distanza non approssimabile entro il limite di raffinamento");
         const double span = b.t - a.t;
         const Vec3 p1 = a.p + (span / 3.0) * a.d, p2 = b.p - (span / 3.0) * b.d;
         double error = 0.0;
-        for (double s : {0.25, 0.5, 0.75}) error = std::max(error, distance(bezier(a.p, p1, p2, b.p, s), f(a.t + s * span)));
-        if (error <= tolerance || depth >= 40 || span < 1e-12 * range.length()) {
+        for (double s : {0.25, 0.5, 0.75}) {
+            const Vec3 candidate = bezier(a.p, p1, p2, b.p, s);
+            for (int k = 0; k < 3; ++k) if (!std::isfinite(candidate[k]))
+                throw std::domain_error("fitCurve: valutazione cubica non finita");
+            const Vec3 exact = checked(a.t + s * span);
+            // Plane UV callbacks are parameter coordinates. Only their oracle
+            // measures the lifted residual in mm; no UV norm enters that budget.
+            if (!certificateOwnsMetric) {
+                const double sampleError = distance(candidate, exact);
+                if (!std::isfinite(sampleError)) throw std::domain_error("fitCurve: residuo non finito");
+                error = std::max(error, sampleError);
+            }
+        }
+        for (int k = 0; k < 3; ++k) if (!std::isfinite(p1[k]) || !std::isfinite(p2[k]))
+            throw std::domain_error("fitCurve: poli non finiti");
+        if (certificate) {
+            cancellationPoint();
+            const double bound = (*certificate)({a.t, b.t}, {a.p, p1, p2, b.p});
+            cancellationPoint();
+            error = std::isfinite(bound) && bound >= 0.0
+                ? (certificateOwnsMetric ? bound : std::max(error, bound)) : std::numeric_limits<double>::infinity();
+        }
+        if (error <= tolerance) {
             poles.push_back(p1);
             poles.push_back(p2);
             poles.push_back(b.p);
@@ -1214,21 +1321,77 @@ std::shared_ptr<BSplineCurve<3>> fitCurve(const std::function<Vec3(double)> &f, 
             worst = std::max(worst, error);
             return;
         }
-        const double mid = 0.5 * (a.t + b.t);
-        const Node m{mid, f(mid), derivative(f, mid, std::min(h, 0.01 * span), 0)};
+        const double mid = 0.5 * a.t + 0.5 * b.t;
+        if (depth >= 40 || span < 1e-12 * range.length() || !(a.t < mid && mid < b.t))
+            throw std::domain_error("fitCurve: impossibile rispettare la tolleranza entro il limite di raffinamento");
+        const Node m{mid, checked(mid), derivative(checked, mid, std::min(h, 0.01 * span), 0)};
         piece(a, m, depth + 1);
         piece(m, b, depth + 1);
     };
     for (std::size_t k = 0; k + 1 < cuts.size(); ++k) {
         const double a = cuts[k], b = cuts[k + 1];
         const double step = std::min(h, 0.01 * (b - a));
-        piece(Node{a, f(a), derivative(f, a, step, 1)}, Node{b, f(b), derivative(f, b, step, -1)}, 0);
+        piece(Node{a, checked(a), derivative(checked, a, step, 1)}, Node{b, checked(b), derivative(checked, b, step, -1)}, 0);
     }
     knots.push_back(range.hi);
-    if (worst > 100.0 * tolerance) throw std::domain_error("offset: curva a distanza non approssimabile (cuspidi?)");
+    cancellationPoint();
+    auto result = std::make_shared<BSplineCurve<3>>(3, std::move(knots), std::move(poles));
+    cancellationPoint();
     if (deviation) *deviation = worst;
-    return std::make_shared<BSplineCurve<3>>(3, std::move(knots), std::move(poles));
+    return result;
 }
+
+std::shared_ptr<BSplineCurve<3>> fitCurve(const std::function<Vec3(double)> &f, const Interval &range,
+    const std::vector<double> &breaks, double tolerance, double *deviation) {
+    return fitCurveImpl(f, range, breaks, tolerance, deviation, nullptr);
+}
+std::shared_ptr<BSplineCurve<3>> fitCurveCertified(const std::function<Vec3(double)> &f, const Interval &range,
+    const std::vector<double> &breaks, double tolerance, const CurveFitErrorBound &bound, double *deviation) {
+    if (!bound) throw std::domain_error("fitCurveCertified: certificatore assente");
+    return fitCurveImpl(f, range, breaks, tolerance, deviation, &bound);
+}
+
+// The Plane oracle owns the physical metric (mm), while f and the output
+// controls are UV. Keep the public Euclidean fitCurve contracts unchanged.
+static std::shared_ptr<BSplineCurve<3>> fitPlanePCurveCertified(const std::function<Vec3(double)> &f,
+    const Interval &range, const std::vector<double> &breaks, double tolerance, const CurveFitErrorBound &bound) {
+    if (!bound) throw std::domain_error("fit UV piano: certificatore assente");
+    return fitCurveImpl(f,range,breaks,tolerance,nullptr,&bound,true);
+}
+
+namespace detail {
+CurvePtr<2> fitPCurveOnPlane(const CurvePtr<3> &edge, const SurfacePtr &surface, const Interval &range,
+                            double fitTolerance, double residualBudget, double *deviation) {
+    cancellationPoint();
+    if (!(fitTolerance>0) || !std::isfinite(fitTolerance) || !(residualBudget>=0) || !std::isfinite(residualBudget))
+        throw std::domain_error("fit SP-curve piana: budget non valido");
+    const auto data=planePCurveErrorBound(edge,surface,range);
+    if(!data.projection || !data.residual)return {};
+    const auto frame=static_cast<const Plane &>(*surface).frame();
+    const auto x=frame.xDir(),y=frame.yDir(),origin=frame.origin();
+    const double aa=dot(x,x),ab=dot(x,y),bb=dot(y,y),det=aa*bb-ab*ab;
+    if(!(det>0) || !std::isfinite(det))throw std::domain_error("fit SP-curve piana: inversione non risolta");
+    const auto at=[&](double t) {
+        const Vec3 delta=edge->point(t)-origin;
+        const double ax=dot(x,delta),by=dot(y,delta);
+        return Vec3((bb*ax-ab*by)/det,(aa*by-ab*ax)/det,0);
+    };
+    auto fitted=fitPlanePCurveCertified(at,range,data.breaks,fitTolerance,data.projection);
+    std::vector<Vec2>poles;poles.reserve(fitted->poles().size());
+    for(const Vec3 &p:fitted->poles()) {cancellationPoint();poles.emplace_back(p.x(),p.y());}
+    auto pcurve=std::make_shared<BSplineCurve<2>>(3,fitted->knots(),std::move(poles));
+    const double error=requirePlanePCurve(pcurve,range,data.residual,residualBudget);
+    cancellationPoint();
+    if(deviation)*deviation=error;
+    return pcurve;
+}
+double requirePCurveOnPlane(const CurvePtr<3> &edge, const SurfacePtr &surface, const CurvePtr<2> &pcurve,
+                            const Interval &range, double residualBudget) {
+    const auto data=planePCurveErrorBound(edge,surface,range);
+    if(!data.residual)throw std::domain_error("SP-curve piana certificata: famiglia emessa non riconosciuta");
+    return requirePlanePCurve(pcurve,range,data.residual,residualBudget);
+}
+} // namespace detail
 
 static SurfacePtr offsetSurfaceImpl(const Surface &surface, double d, const Interval &uw, const Interval &vw, double tolerance, bool preserveEndSections, bool checkCurvature = true) {
     if (!(std::fabs(d) > 0.0)) throw std::domain_error("offset: distanza nulla");
@@ -1261,8 +1424,36 @@ static SurfacePtr offsetSurfaceImpl(const Surface &surface, double d, const Inte
     }
     case SurfaceType::Torus: {
         const auto &t = static_cast<const ToroidalSurface &>(surface);
-        if (!(t.minorRadius() + d > tolerance)) throw std::domain_error("offset: il raggio minore del toro diventa nullo o negativo");
-        result = std::make_shared<ToroidalSurface>(t.frame(), t.majorRadius(), t.minorRadius() + d);
+        double lowCos = -1.0, highCos = 1.0;
+        if (vw.isFinite() && vw.lo <= vw.hi && vw.length() < kTwoPi) {
+            // Reduction and transcendental evaluation uncertainty, measured in
+            // radians; cosine is 1-Lipschitz. Large phases fall back to a full
+            // period, rather than silently losing a critical point.
+            const double phaseError = 64.0 * std::numeric_limits<double>::epsilon()
+                * std::max({1.0, std::fabs(vw.lo), std::fabs(vw.hi)});
+            if (phaseError < 0.01) {
+                double lo = std::remainder(vw.lo, kTwoPi), hi = lo + vw.length();
+                lowCos = std::min(std::cos(lo), std::cos(hi)) - phaseError;
+                highCos = std::max(std::cos(lo), std::cos(hi)) + phaseError;
+                if (std::ceil((lo - phaseError) / kTwoPi) * kTwoPi <= hi + phaseError) highCos = 1.0;
+                if (std::ceil((lo - kPi - phaseError) / kTwoPi) * kTwoPi + kPi <= hi + phaseError) lowCos = -1.0;
+                lowCos = std::max(-1.0, lowCos);
+                highCos = std::min(1.0, highCos);
+            }
+        }
+        const auto radialSign = [&](double radius) {
+            const double roundoff = 32.0 * std::numeric_limits<double>::epsilon()
+                * (t.majorRadius() + std::fabs(radius));
+            if (t.majorRadius() + radius * lowCos > roundoff) return 1;
+            if (t.majorRadius() + radius * highCos < -roundoff) return -1;
+            return 0;
+        };
+        const int sign = radialSign(t.minorRadius());
+        if (!sign) throw std::domain_error("offset: il dominio del toro sorgente contiene una singolarita'");
+        const double radius = t.minorRadius() + sign * d;
+        if (!(radius > tolerance) || radialSign(radius) != sign)
+            throw std::domain_error("offset: il dominio del toro a distanza si ripiega o diventa singolare");
+        result = std::make_shared<ToroidalSurface>(t.frame(), t.majorRadius(), radius);
         break;
     }
     case SurfaceType::Extrusion: {
@@ -1276,12 +1467,26 @@ static SurfacePtr offsetSurfaceImpl(const Surface &surface, double d, const Inte
             if (surface.isUPeriodic()) domain = uw.length() < 0.98 * surface.uPeriod() ? uw : full;  // f riporta u nel periodo
             else domain = Interval{std::max(full.lo, uw.lo), std::min(full.hi, uw.hi)};
         }
+        // A seam-crossing window is certified on the natural full period.
+        // Keep the original parameter and wrapping; do not fit an extrapolated
+        // NURBS span or silently downgrade its error bound to samples.
+        if (surface.isUPeriodic() && (domain.lo < full.lo || domain.hi > full.hi)) {
+            const Curve<3> *basis = e.curve().get();
+            while (basis && (basis->type() == CurveType::Trimmed || basis->type() == CurveType::Transformed))
+                basis = basis->type() == CurveType::Trimmed ? static_cast<const TrimmedCurve<3> *>(basis)->basis().get()
+                    : static_cast<const TransformedCurve *>(basis)->basis().get();
+            if (basis && basis->type() == CurveType::BSpline) domain = full;
+        }
         const double v0 = vw.isFinite() ? 0.5 * (vw.lo + vw.hi) : 0.0;
         const auto f = [&](double u) { return surface.point(u, v0) + d * surface.normal(u, v0) - v0 * e.direction(); };
         requireClosed(*e.curve(), domain, f, tolerance);
         // Retta o cerchio a distanza: esatti (stesso parametro).
-        CurvePtr<3> base = exactOffsetCurve(e.curve(), domain, f, std::max(1.0, norm(surface.point(domain.lo, v0))));
-        if (!base) base = fitCurve(f, domain, e.curve()->breakpoints(domain), tolerance);
+        CurvePtr<3> base = exactExtrusionOffset(e, d, tolerance);
+        if (!base) {
+            const auto bound = detail::extrusionOffsetErrorBound(e.curve(), domain, d, e.direction());
+            base = bound ? fitCurveCertified(f, domain, e.curve()->breakpoints(domain), tolerance, bound)
+                         : fitCurve(f, domain, e.curve()->breakpoints(domain), tolerance);
+        }
         result = std::make_shared<ExtrusionSurface>(base, e.direction());
         break;
     }
@@ -1298,9 +1503,13 @@ static SurfacePtr offsetSurfaceImpl(const Surface &surface, double d, const Inte
         }
         const auto f = [&](double v) { return surface.point(0.0, v) + d * surface.normal(0.0, v); };
         requireClosed(*r.meridian(), domain, f, tolerance);
-        // Meridiano retta o cerchio (il toro scritto come rivoluzione nei file): esatto.
-        CurvePtr<3> meridian = exactOffsetCurve(r.meridian(), domain, f, std::max(1.0, norm(surface.point(0.0, domain.lo))));
-        if (!meridian) meridian = fitCurve(f, domain, r.meridian()->breakpoints(domain), tolerance);
+        // Un meridiano analitico non basta a rendere analitica la sua curva a distanza.
+        CurvePtr<3> meridian;
+        if (!meridian) {
+            const auto bound = detail::revolutionOffsetErrorBound(r.meridian(), domain, d, r.axisPoint(), r.axisDirection());
+            meridian = bound ? fitCurveCertified(f, domain, r.meridian()->breakpoints(domain), tolerance, bound)
+                             : fitCurve(f, domain, r.meridian()->breakpoints(domain), tolerance);
+        }
         result = std::make_shared<RevolutionSurface>(meridian, r.axisPoint(), r.axisDirection());
         break;
     }
@@ -1634,6 +1843,7 @@ OffsetResult offsetFaces(const Body &input, const std::vector<FaceId> &faces, do
         std::function<Vec3(double)> offset;
         std::vector<double> breaks;
         std::string failure;
+        detail::SurfaceCurveFitData certificate;
     };
     std::vector<CurveJob> curveJobs;
     const auto rawEdgeOf = [&](FinId finId) {
@@ -1697,9 +1907,62 @@ OffsetResult offsetFaces(const Body &input, const std::vector<FaceId> &faces, do
         }
         raw.hasRange = true;
         raw.range = edge.range;
+        // With plane supports the summed normal is constant on the whole
+        // edge. This geometric fact authorizes a translation, independently
+        // of the source curve's degree or its representation.
+        const Curve<3> *basis = edge.curve.get();
+        while (basis->type() == CurveType::Trimmed)
+            basis = static_cast<const TrimmedCurve<3> *>(basis)->basis().get();
+        const auto equalDirection = [](const Vec3 &a, const Vec3 &b) {
+            return (a.x() == b.x() && a.y() == b.y() && a.z() == b.z())
+                || (a.x() == -b.x() && a.y() == -b.y() && a.z() == -b.z());
+        };
+        const bool constantNormal = !trimSeams && std::all_of(used.begin(), used.end(), [&](FinId u) {
+            const auto &support = *body.face(body.finFace(u)).surface;
+            if (support.type() == SurfaceType::Plane) return true;
+            return support.type() == SurfaceType::Cylinder && body.fin(u).pcurveTolerance == 0.0
+                && basis->type() == CurveType::Line
+                && equalDirection(static_cast<const Line<3> &>(*basis).direction(),
+                                  static_cast<const CylindricalSurface &>(support).frame().zDir());
+        });
+        if (constantNormal) {
+            const Vec3 shift = f(edge.range.lo) - edge.curve->point(edge.range.lo);
+            raw.curve = transformCurve(edge.curve, Transform3::translation(shift));
+        } else if (!trimSeams && used.size() == 1 && basis->type() == CurveType::Circle) {
+            const Face &face = body.face(body.finFace(used.front()));
+            if (face.surface->type() == SurfaceType::Cylinder) {
+                const auto &cylinder = static_cast<const CylindricalSurface &>(*face.surface);
+                const auto &circle = static_cast<const Circle<3> &>(*basis);
+                const double padding = circleConstructionRoundoff(circle, cylinder.frame().origin(), distanceValue);
+                // P(C-O)+r*P(e) differs from r*e by <=delta for every
+                // angle. Normalized radial directions differ by at most
+                // 2*delta/(r-delta); this also proves a nonzero denominator.
+                // The fin contract bounds S(pcurve(t))-curve(t) in 3D;
+                // include that whole-domain error in the radial bound.
+                const double delta = norm(cross(circle.center() - cylinder.frame().origin(), cylinder.frame().zDir()))
+                    + circle.radius() * circleAxialError(circle, cylinder.frame().zDir()) + padding
+                    + body.fin(used.front()).pcurveTolerance;
+                const double error = delta < circle.radius()
+                    ? 2.0 * std::fabs(distanceValue) * delta / (circle.radius() - delta) + padding
+                    : std::numeric_limits<double>::infinity();
+                if (error <= 0.01 * tolerance) {
+                    const double radius = circle.radius() + (face.sense ? distanceValue : -distanceValue);
+                    raw.curve = std::make_shared<Circle<3>>(circle.center(), circle.xAxis(), circle.yAxis(), radius);
+                }
+            }
+        }
         model.edges.push_back(raw);
         // La curva si calcola dopo, in parallelo con le altre.
-        curveJobs.push_back({int(model.edges.size()) - 1, edge.curve, edge.range, f, breaks, {}});
+        if (!raw.curve) {
+            detail::SurfaceCurveFitData certificate;
+            if (!trimSeams && used.size() == 1) {
+                const auto &originalFace = body.face(body.finFace(used.front()));
+                if (originalFace.surface->type() == SurfaceType::Extrusion)
+                    certificate = detail::extrusionEdgeOffsetErrorBound(edge.curve, originalFace.surface,
+                        body.fin(used.front()).pcurve, edge.range, originalFace.sense ? distanceValue : -distanceValue);
+            }
+            curveJobs.push_back({int(model.edges.size()) - 1, edge.curve, edge.range, f, breaks, {}, std::move(certificate)});
+        }
         return rawEdge[key] = int(model.edges.size()) - 1;
     };
     std::vector<FaceId> faceSources;
@@ -1743,7 +2006,7 @@ OffsetResult offsetFaces(const Body &input, const std::vector<FaceId> &faces, do
     parallelFor(curveJobs.size(), threadCount(0), [&](std::size_t k) {
         CurveJob &job = curveJobs[k];
         try {
-            model.edges[std::size_t(job.edge)].curve = offsetCurve(job.curve, job.range, job.offset, job.breaks, scale, tolerance);
+            model.edges[std::size_t(job.edge)].curve = offsetCurve(job.curve, job.range, job.offset, job.breaks, tolerance, job.certificate);
         } catch (const std::exception &e) {
             job.failure = e.what();
         }
@@ -1752,6 +2015,7 @@ OffsetResult offsetFaces(const Body &input, const std::vector<FaceId> &faces, do
         if (!job.failure.empty())
             throw std::domain_error("bordo " + std::to_string(job.edge + 1) + ": " + job.failure
                 + (trimSeams ? "; ridurre la distanza o disattivare Mantieni la cucitura" : ""));
+    std::vector<PlanePCurveContract> planeContracts;
     if (trimSeams) {
         // Le nuove SP-curve seguono il ramo UV originale anche sulle spline
         // prolungate: la proiezione globale puo' scegliere un minimo sul bordo
@@ -1771,8 +2035,9 @@ OffsetResult offsetFaces(const Body &input, const std::vector<FaceId> &faces, do
                         const Vec2 uv = projectLocal(*raw.surface, edge.curve->point(t), fin.pcurve->point(t));
                         return Vec3(uv.x(), uv.y(), 0);
                     };
+                    const auto planeData=detail::planePCurveErrorBound(edge.curve,raw.surface,edge.range);
                     double rate = 1.0;
-                    for (int k = 0; k <= 16; ++k) {
+                    for (int k = 0; !planeData.projection && k <= 16; ++k) {
                         const double t = edge.range.lo + edge.range.length() * k / 16.0;
                         const Vec3 uv = uvAt(t);
                         Vec3 jet[4];
@@ -1781,11 +2046,19 @@ OffsetResult offsetFaces(const Body &input, const std::vector<FaceId> &faces, do
                         ur.lo = std::min(ur.lo, uv.x()), ur.hi = std::max(ur.hi, uv.x());
                         vr.lo = std::min(vr.lo, uv.y()), vr.hi = std::max(vr.hi, uv.y());
                     }
-                    const auto fitted = fitCurve(uvAt, edge.range, fin.pcurve->breakpoints(edge.range), 0.1 * tolerance / rate);
+                    auto breaks=fin.pcurve->breakpoints(edge.range);
+                    breaks.insert(breaks.end(),planeData.breaks.begin(),planeData.breaks.end());
+                    const auto fitted = planeData.projection
+                        ? fitPlanePCurveCertified(uvAt,edge.range,breaks,0.1*tolerance,planeData.projection)
+                        : fitCurve(uvAt, edge.range, breaks, 0.1 * tolerance / rate);
                     std::vector<Vec2> poles;
                     for (const Vec3 &p : fitted->poles()) poles.emplace_back(p.x(), p.y());
                     rawFin.pcurve = std::make_shared<BSplineCurve<2>>(fitted->degree(), fitted->knots(), poles);
                     rawFin.pcurveTolerance = fin.pcurveTolerance + 10.0 * tolerance;
+                    if(planeData.residual) {
+                        requirePlanePCurve(rawFin.pcurve,edge.range,planeData.residual,rawFin.pcurveTolerance);
+                        planeContracts.push_back({int(faceIndex-1),rawFin.edge,rawFin.pcurveTolerance});
+                    }
                     for (int k = 0; k <= 64; ++k) {
                         const double t = edge.range.lo + edge.range.length() * k / 64.0;
                         const Vec2 uv = rawFin.pcurve->point(t);
@@ -1802,10 +2075,22 @@ OffsetResult offsetFaces(const Body &input, const std::vector<FaceId> &faces, do
         result.sharpEdges = 0;
     }
     edgeTimer.reset();
+    detail::AssemblyMap emitted;
+    const bool certified = !planeContracts.empty() || std::any_of(curveJobs.begin(), curveJobs.end(), [](const CurveJob &job) { return bool(job.certificate.bound); });
     {
         const detail::PhaseTimer timer("offset: assemblaggio");
-        result.body = detail::assembleBody(model, false, &result.notes);
+        result.body = detail::assembleBody(model, false, &result.notes, certified ? &emitted : nullptr);
     }
+    for (const auto &job : curveJobs) if (job.certificate.bound) {
+        cancellationPoint();
+        if (job.edge < 0 || std::size_t(job.edge) >= emitted.edges.size() || !emitted.edges[job.edge].valid())
+            throw std::domain_error("offset: provenienza del bordo certificato persa nell'assemblaggio");
+        const auto &actual = result.body.edge(emitted.edges[job.edge]);
+        if (actual.range.lo != job.range.lo || actual.range.hi != job.range.hi)
+            throw std::domain_error("offset: parametro del bordo certificato modificato nell'assemblaggio");
+        requireCertifiedOffsetCurve(actual.curve, actual.range, job.certificate, tolerance);
+    }
+    requireEmittedPlanePCurves(model,result.body,emitted,planeContracts,tolerance);
     result.history = offsetFaceHistory(input, result.body, faceSources);
     for (ShellId s : result.body.shells()) {
         (void)s;
@@ -2206,7 +2491,7 @@ OffsetResult offsetJoinedFaces(const Body &input, const std::vector<FaceOffset> 
             // vertici: in quel caso resta il percorso generale parametrico.
             if (raw.curve && (distance(raw.curve->point(edge.range.lo), model.points[std::size_t(raw.start)]) > localTolerance
                 || distance(raw.curve->point(edge.range.hi), model.points[std::size_t(raw.end)]) > localTolerance)) raw.curve.reset();
-            if (!raw.curve) raw.curve = offsetCurve(edge.curve, edge.range, at, edge.curve->breakpoints(edge.range), scale, tolerance);
+            if (!raw.curve) raw.curve = offsetCurve(edge.curve, edge.range, at, edge.curve->breakpoints(edge.range), tolerance);
         }
         // Un bordo che inverte il proprio verso segnala una cavita' che ha
         // superato le pareti opposte: non accettare un volume ripiegato.
@@ -2222,6 +2507,7 @@ OffsetResult offsetJoinedFaces(const Body &input, const std::vector<FaceOffset> 
         model.edges.push_back(std::move(raw));
     }
     std::vector<FaceId> sources;
+    std::vector<PlanePCurveContract> planeContracts;
     for (const auto &[index, spec] : specs) {
         if (spec.collapse)
             continue;
@@ -2234,6 +2520,9 @@ OffsetResult offsetJoinedFaces(const Body &input, const std::vector<FaceOffset> 
         // i prolungamenti che la vecchia finestra campionata non comprendeva.
         const double signedDistance = face.sense ? spec.distance : -spec.distance;
         const auto targetSupport = support(FaceId{index});
+        const auto planeSupport=targetSupport->type()==SurfaceType::Plane
+            ? (spec.distance==0.0 ? targetSupport : offsetSurfaceImpl(*targetSupport,signedDistance,{}, {},tolerance,false,!continueSupports))
+            : SurfacePtr{};
         for (LoopId l : face.loops) {
             std::vector<detail::RawFin> loop;
             for (FinId finId : body.loopFins(l)) {
@@ -2267,19 +2556,27 @@ OffsetResult offsetJoinedFaces(const Body &input, const std::vector<FaceOffset> 
                     const Vec2 uv = projectLocal(*targetSupport,targetEdge.curve->point(t),seed,signedDistance);
                     return Vec3(uv.x(), uv.y(), 0);
                 };
+                const auto planeData=planeSupport ? detail::planePCurveErrorBound(targetEdge.curve,planeSupport,targetEdge.range)
+                                                   : detail::PlanePCurveFitData{};
                 double rate = 1.0;
-                for (int k = 0; k <= 16; ++k) {
+                for (int k = 0; !planeData.projection && k <= 16; ++k) {
                     const auto uv = uvAt(targetEdge.range.lo + targetEdge.range.length() * k / 16.0);
                     Vec3 jet[4];
                     seamJet(*targetSupport, signedDistance, uv.x(), uv.y(), jet);
                     rate = std::max({rate, norm(jet[Surface::derivativeIndex(1, 0, 1)]), norm(jet[Surface::derivativeIndex(0, 1, 1)])});
                 }
-                const auto curve = fitCurve(uvAt, targetEdge.range, {}, 0.1 * tolerance / rate);
+                const auto curve = planeData.projection
+                    ? fitPlanePCurveCertified(uvAt,targetEdge.range,planeData.breaks,0.1*tolerance,planeData.projection)
+                    : fitCurve(uvAt, targetEdge.range, {}, 0.1 * tolerance / rate);
                 std::vector<Vec2> poles;
                 for (const auto &p : curve->poles())
                     poles.emplace_back(p.x(), p.y());
                 auto pc = std::make_shared<BSplineCurve<2>>(curve->degree(), curve->knots(), poles);
                 const double budget = fin.pcurveTolerance + std::max(edgeBudgets.at(e), 10.0 * tolerance);
+                if(planeData.residual) {
+                    requirePlanePCurve(pc,targetEdge.range,planeData.residual,budget);
+                    planeContracts.push_back({int(model.faces.size()),rawEdgeOf.at(e),budget});
+                }
                 for (const Vec2 &uv : pc->poles()) {
                     ur.lo = std::min(ur.lo, uv.x()); ur.hi = std::max(ur.hi, uv.x());
                     vr.lo = std::min(vr.lo, uv.y()); vr.hi = std::max(vr.hi, uv.y());
@@ -2305,8 +2602,8 @@ OffsetResult offsetJoinedFaces(const Body &input, const std::vector<FaceOffset> 
             trim.surface = targetSupport;
             detail::requireRegularOffsetTrim(model, trim, signedDistance, ur, vr, tolerance);
         }
-        raw.surface = spec.distance == 0.0 ? targetSupport
-                                           : offsetSurfaceImpl(*targetSupport, signedDistance, ur, vr, tolerance, false, !continueSupports);
+        raw.surface = planeSupport ? planeSupport : (spec.distance == 0.0 ? targetSupport
+                                           : offsetSurfaceImpl(*targetSupport, signedDistance, ur, vr, tolerance, false, !continueSupports));
         if (spec.distance == 0.0 && raw.surface->type() == SurfaceType::BSpline)
             raw.surface = std::make_shared<BSplineSurface>(extendBSplineSurface(static_cast<const BSplineSurface &>(*raw.surface), ur, vr));
         for (const auto &loop : raw.loops) for (const auto &fin : loop) {
@@ -2322,7 +2619,9 @@ OffsetResult offsetJoinedFaces(const Body &input, const std::vector<FaceOffset> 
         sources.push_back(FaceId{index});
     }
     OffsetResult result;
-    result.body = detail::assembleBody(model, false, &result.notes);
+    detail::AssemblyMap emitted;
+    result.body = detail::assembleBody(model, false, &result.notes, planeContracts.empty()?nullptr:&emitted);
+    requireEmittedPlanePCurves(model,result.body,emitted,planeContracts,tolerance);
     result.history = offsetFaceHistory(input, result.body, sources);
     result.shells = int(result.body.shells().size());
     return result;

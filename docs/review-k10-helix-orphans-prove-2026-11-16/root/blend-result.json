@@ -1,0 +1,9 @@
+{
+  "exit": 0,
+  "seconds": 151.4170143020001,
+  "command": [
+    "forgecad-release/kernel/forgekernel_tests",
+    "Blend"
+  ],
+  "passed_cases": 62
+}

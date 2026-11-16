@@ -1,0 +1,34 @@
+{
+  "scope": "direct detail::traceBlendMitre output versus expected ORIGINAL branch affine UV, not emitted Body fin",
+  "records": [
+    {
+      "fin": null,
+      "edge": null,
+      "face": null,
+      "budget": 1e-07,
+      "pass": true,
+      "upper_mm": 1.5431413444937805e-11,
+      "cells": 1,
+      "leaves": 1,
+      "branches": 3,
+      "max_depth": 0,
+      "label": "s"
+    },
+    {
+      "pass": false,
+      "reason": "Exact midpoint witness exceeds budget: t=1/256 squared=149538149525803035701678294285889312315480601/11417981541647679048466287755595961091061972992",
+      "label": "t"
+    }
+  ],
+  "exact_original_coefficient_witness": {
+    "parameter": "19/4096",
+    "difference_fractions": [
+      "381650082805/618970019642690137449562112",
+      "379949824819/618970019642690137449562112",
+      "37228125/268435456"
+    ],
+    "absolute_z_lower_mm": 0.13868557289242744,
+    "squared_distance_fraction": "3684442661416583542651700712139999979835646072525393/191561942608236107294793378393788647952342390272950272",
+    "exceeds_budget": true
+  }
+}

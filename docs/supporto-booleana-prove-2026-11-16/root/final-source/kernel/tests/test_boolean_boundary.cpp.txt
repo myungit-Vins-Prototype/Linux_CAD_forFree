@@ -1,0 +1,159 @@
+#include "fk_boolean_boundary.h"
+#include "fk_bspline.h"
+#include "fk_precision.h"
+#include "fk_surface.h"
+#include <cmath>
+#include <iomanip>
+#include <iostream>
+#include <limits>
+#include <sstream>
+using namespace ForgeCad::Kernel;
+namespace D = ForgeCad::Kernel::detail;
+static int checks = 0, failed = 0;
+static void require(bool ok, const char *message) {
+    ++checks;
+    failed += !ok;
+    std::cout << (ok ? "PASS " : "FAIL ") << message << std::endl;
+}
+static std::shared_ptr<BSplineCurve<2>> affine(Interval r, Vec2 a, Vec2 b, std::vector<double> w = {}) {
+    return std::make_shared<BSplineCurve<2>>(1, std::vector<double>{r.lo, r.lo, r.hi, r.hi}, std::vector<Vec2>{a, b},
+                                             w);
+}
+static bool unresolved(double v) { return std::isinf(v) && v > 0; }
+static double observed(const Ellipse<3> &e, Interval r, const Surface &s, const Curve<2> &pc) {
+    double error = 0;
+    for (int i = 0; i <= 32; ++i) {
+        const double t = r.lo + (r.hi - r.lo) * i / 32.;
+        const auto uv = pc.point(t);
+        error = std::max(error, distance(e.point(t), s.point(uv.x(), uv.y())));
+    }
+    return error;
+}
+static std::string coefficients(const Ellipse<3> &e, const BSplineCurve<2> &pc) {
+    std::ostringstream s;
+    s << std::hexfloat;
+    for (int k = 0; k < 3; ++k)
+        s << e.center()[k] << e.xAxis()[k] << e.yAxis()[k];
+    s << e.xRadius() << e.yRadius() << pc.degree();
+    for (const auto &p : pc.poles())
+        s << p.x() << p.y();
+    for (auto x : pc.knots())
+        s << x;
+    for (auto x : pc.weights())
+        s << x;
+    return s.str();
+}
+int main() {
+    std::cout << std::setprecision(17) << std::unitbuf;
+    const double delta = 1e-6, sine = .5 * std::sin(delta), nan = std::numeric_limits<double>::quiet_NaN(),
+                 inf = std::numeric_limits<double>::infinity();
+    const Interval r{-delta, delta};
+    const Frame3 xy;
+    const Plane plane(xy);
+    const CylindricalSurface cylinder(Frame3(Vec3(), Vec3(0, 1, 0), Vec3(1, 0, 0)), 1);
+    const Ellipse<3> e(Vec3(), Vec3(1, 0, 0), Vec3(0, 1, 0), 1, .5);
+    const Line<3> line(Vec3(1, 0, 0), Vec3(0, 1, 0));
+    const auto certify = [&](double budget) {
+        return D::certifyEllipseBoundarySegment(e, r, true, line, -sine, sine, plane, cylinder, budget);
+    };
+    require(certify(1e-9), "short original ellipse and finite tangent chord certified at 1e-9");
+    require(certify(1e-7), "same supported geometry certified at document resolution");
+    const Line<3> reversed(Vec3(1, 0, 0), Vec3(0, -1, 0));
+    require(D::certifyEllipseBoundarySegment(e, r, false, reversed, -sine, sine, plane, cylinder, 1e-9),
+            "reversing both source traversal and line direction preserves a valid monotone match");
+    require(!D::certifyEllipseBoundarySegment(e, r, false, line, -sine, sine, plane, cylinder, 1e-7),
+            "wrong source traversal cannot authorize reversed correspondence");
+    require(!D::certifyEllipseBoundarySegment(e, r, true, Line<3>(Vec3(1 + 2e-7, 0, 0), Vec3(0, 1, 0)), -sine, sine,
+                                              plane, cylinder, 1e-7),
+            "chord shifted 2e-7 beyond the 1e-7 budget is rejected");
+    require(!D::certifyEllipseBoundarySegment(e, r, true, line, -sine + 1e-4, sine + 1e-4, plane, cylinder, 1e-7),
+            "wrong original line endpoint parameters rejected");
+    require(!D::certifyEllipseBoundarySegment(e, r, true, line, -sine, sine,
+                                              Plane(Frame3(Vec3(0, 0, 2e-7), Vec3(0, 0, 1), Vec3(1, 0, 0))), cylinder,
+                                              1e-7),
+            "second independent carrier must also lie within budget");
+    for (double budget : {0., -1., nan, inf})
+        require(!certify(budget), "invalid budget cannot authorize substitution");
+    for (Interval range : std::vector<Interval>{{0, 0}, {delta, -delta}, {nan, delta}, {-delta, inf}, {10, 10 + delta}})
+        require(!D::certifyEllipseBoundarySegment(e, range, true, line, -sine, sine, plane, cylinder, 1e-7),
+                "invalid or uncertifiable angular domain rejected");
+    for (auto ends : std::vector<std::pair<double, double>>{{sine, -sine}, {0, 0}, {nan, sine}, {-sine, inf}})
+        require(!D::certifyEllipseBoundarySegment(e, r, true, line, ends.first, ends.second, plane, cylinder, 1e-7),
+                "invalid finite segment parameter range rejected");
+    const Interval folded{-2, 2};
+    const double y = .5 * std::sin(2.);
+    require(!D::certifyEllipseBoundarySegment(e, folded, true, Line<3>(Vec3(std::cos(2.), 0, 0), Vec3(0, 1, 0)), -y, y,
+                                              plane, plane, 10),
+            "projected path with actual turning points rejected even with sufficient geometric error budget");
+    const SphericalSurface sphere(Frame3(), 1);
+    require(!D::certifyEllipseBoundarySegment(e, r, true, line, -sine, sine, plane, sphere, 1e-7),
+            "unsupported second carrier rejected");
+    require(!D::certifyEllipseBoundarySegment(e, r, true, line, -sine, sine, sphere, cylinder, 1e-7),
+            "unsupported first carrier rejected");
+    const Ellipse<3> huge(Vec3(1e308, 1e308, 1e308), Vec3(1, 0, 0), Vec3(0, 1, 0), 1e308, 1e308);
+    require(!D::certifyEllipseBoundarySegment(huge, r, true, line, -sine, sine, plane, cylinder, 1e-7),
+            "coefficient overflow never authorizes a segment");
+    auto pc = affine(r, Vec2(std::cos(delta), -sine), Vec2(std::cos(delta), sine));
+    const auto before = coefficients(e, *pc);
+    double bound = D::ellipseAffinePCurveError(e, r, plane, *pc);
+    const double witness = observed(e, r, plane, *pc);
+    std::cout << "BOUND plane=" << bound << " observed=" << witness << std::endl;
+    require(std::isfinite(bound) && bound <= 1e-9 && bound >= witness,
+            "plane pullback gives finite continuous bound above independent witness error");
+    auto cylpc = affine(r, Vec2(0, -sine), Vec2(0, sine));
+    bound = D::ellipseAffinePCurveError(e, r, cylinder, *cylpc);
+    require(std::isfinite(bound) && bound <= 1e-9 && bound >= observed(e, r, cylinder, *cylpc),
+            "cylinder pullback uses original ellipse parameters and endpoint UV");
+    auto wrong = affine(r, Vec2(std::cos(delta) + 2e-7, -sine), Vec2(std::cos(delta) + 2e-7, sine));
+    bound = D::ellipseAffinePCurveError(e, r, plane, *wrong);
+    require(!std::isfinite(bound) || bound > 1e-7,
+            "UV endpoint offset above budget cannot appear certified below budget");
+    auto backwards = affine(r, Vec2(std::cos(delta), sine), Vec2(std::cos(delta), -sine));
+    bound = D::ellipseAffinePCurveError(e, r, plane, *backwards);
+    require(!std::isfinite(bound) || bound > 1e-7, "reversed UV endpoint correspondence cannot preserve original t");
+    const Ellipse<3> circle(Vec3(), Vec3(1, 0, 0), Vec3(0, 1, 0), 1, 1);
+    const Line<2> pcLine(Vec2(1, 0), Vec2(0, 1));
+    bound = D::ellipseAffinePCurveError(circle, r, plane, pcLine);
+    require(std::isfinite(bound) && bound <= 1e-9 && bound >= observed(circle, r, plane, pcLine),
+            "native Line2 parameterization supported without arbitrary rescaling");
+    const Interval tiny{-1e-150, 1e-150};
+    auto tinyPc = affine(tiny, Vec2(1, -.5e-150), Vec2(1, .5e-150));
+    bound = D::ellipseAffinePCurveError(e, tiny, plane, *tinyPc);
+    require(std::isfinite(bound) && bound <= 1e-9,
+            "tiny original t span stays finite without division by its width squared");
+    require(unresolved(D::ellipseAffinePCurveError(e, {-2 * delta, delta}, plane, *pc)),
+            "affine pcurve outside its stored domain is rejected");
+    for (auto w : std::vector<std::vector<double>>{{1, 2}, {2, 2}}) {
+        auto rat = affine(r, Vec2(1, -sine), Vec2(1, sine), w);
+        require(unresolved(D::ellipseAffinePCurveError(e, r, plane, *rat)),
+                "non-unit rational weights are outside the affine family");
+    }
+    const Circle<2> uvCircle(Vec2(), Vec2(1, 0), Vec2(0, 1), 1);
+    require(unresolved(D::ellipseAffinePCurveError(e, r, plane, uvCircle)), "unsupported nonlinear pcurve rejected");
+    require(unresolved(D::ellipseAffinePCurveError(e, r, sphere, *pc)), "unsupported surface image rejected");
+    for (Interval bad : std::vector<Interval>{{0, 0}, {delta, -delta}, {nan, delta}, {-delta, inf}, {10, 10 + delta}})
+        require(unresolved(D::ellipseAffinePCurveError(e, bad, plane, *pc)),
+                "invalid image interval rejected without a finite bound");
+    require(unresolved(D::ellipseAffinePCurveError(huge, r, plane, *pc)),
+            "overflow in image coefficients yields an unresolved bound");
+    require(before == coefficients(e, *pc), "certification preserves original ellipse and pcurve coefficients");
+    for (double scale : {.1, 1., 10.}) {
+        const Frame3 pose(Vec3(3, -5, 7), Vec3(.2, .3, .9), Vec3(1, .1, 0));
+        const Plane posed(pose);
+        const Ellipse<3> pe(pose.origin(), pose.xDir(), pose.yDir(), scale, .5 * scale);
+        const Line<3> pl(pose.origin() + scale * pose.xDir(), pose.yDir());
+        const CylindricalSurface cy(Frame3(pose.origin(), pose.yDir(), pose.xDir()), scale);
+        require(D::certifyEllipseBoundarySegment(pe, r, true, pl, -sine * scale, sine * scale, posed, cy, 1e-7),
+                "posed and scaled originals retain certificate within unchanged budget");
+        auto uv = affine(r, Vec2(scale * std::cos(delta), -scale * sine), Vec2(scale * std::cos(delta), scale * sine));
+        bound = D::ellipseAffinePCurveError(pe, r, posed, *uv);
+        require(std::isfinite(bound) && bound <= 1e-7 && bound >= observed(pe, r, posed, *uv),
+                "posed plane image is certified with original geometry");
+        auto cuv = affine(r, Vec2(0, -scale * sine), Vec2(0, scale * sine));
+        bound = D::ellipseAffinePCurveError(pe, r, cy, *cuv);
+        require(std::isfinite(bound) && bound <= 1e-7 && bound >= observed(pe, r, cy, *cuv),
+                "posed cylinder image is certified with original geometry");
+    }
+    std::cout << "RESULT checks=" << checks << " failures=" << failed << std::endl;
+    return failed ? 1 : 0;
+}

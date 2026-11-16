@@ -1,0 +1,16 @@
+{
+  "exit": 0,
+  "checks": 424,
+  "failures": 0,
+  "unions": 24,
+  "worker_unions": 12,
+  "app_unions": 12,
+  "production_overlays": [],
+  "source_sha256": "88aff1de9f11976577778da75f73fe365fbd8fa4b8af7799ac13f6cbe0ffcdf5",
+  "kernel_sha256": "f30bb32fada9b3def11f858885f8ca70cf28f3f90fce3b605deb8ca1fcb8dfcb",
+  "application_sha256": "02b3e2aaea07737137f8355b04f4a345b2ece436177a2f60b28d7f7d20bd8c07",
+  "result_sha256": "a8f20ed1834ff1dabd3c2146808d73655b9830d6196c4887ae26f1f938434146",
+  "log_sha256": "b57a853359877abe8bc0150fc1b171c263853bb4e0399bf62363b991d00ea5b3",
+  "definition_equal_after_rebuild": true,
+  "input_breps_byte_identical": true
+}

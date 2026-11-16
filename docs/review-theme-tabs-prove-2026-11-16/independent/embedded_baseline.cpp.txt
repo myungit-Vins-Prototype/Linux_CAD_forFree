@@ -1,0 +1,44 @@
+#include "forgeCad2026_application_theme.h"
+#include <QtWidgets>
+#include <iostream>
+class LegacyEmbedded:public QMainWindow {public: int appEvents=0,paletteEvents=0;LegacyEmbedded(QWidget*p):QMainWindow(p){setTheme(QApplication::palette().color(QPalette::Window).lightness()<128);}void setTheme(bool dark);bool event(QEvent*e)override{auto r=QMainWindow::event(e);if(e->type()==QEvent::PaletteChange)++paletteEvents;if(e->type()==QEvent::ApplicationPaletteChange){++appEvents;setTheme(QApplication::palette().color(QPalette::Window).lightness()<128);}return r;}};
+void LegacyEmbedded::setTheme(bool dark) {
+    auto *application = qobject_cast<QApplication *>(QCoreApplication::instance());
+    if (!application) return;
+    const QString sheet = dark ? QStringLiteral("QMainWindow { background: #111820; color: #d8e4ea; }QMenuBar,QToolBar,QStatusBar { background: #1b2730; color: #d8e4ea; }QMenu { background: #202d36; color: #d8e4ea; }"
+        "QToolBar { spacing: 1px; padding: 2px 4px; border: none; }"
+        "QToolBar::separator { background: #34444f; width: 1px; margin: 5px 3px; }"
+        "QToolBar QToolButton { border: 1px solid transparent; border-radius: 4px; padding: 2px; }"
+        "QToolBar QToolButton:checked { background: #24495f; border-color: #4f9fd0; }"
+        "QToolButton:enabled:hover, QToolBar QToolButton:enabled:hover { background: #365d78; border-color: #80c8f0; color: #ffffff; }"
+        "QToolButton:enabled:pressed, QToolBar QToolButton:enabled:pressed { background: #1f4258; border-color: #80c8f0; }"
+        "QToolBar QToolButton[popupMode=\"1\"] { padding-right: 11px; }"
+        "QToolBar QToolButton::menu-button { border: none; width: 10px; }"
+        "QToolButton::menu-button:enabled:hover { background: #5089ad; }"
+        "QToolButton::menu-button:enabled:pressed { background: #1f4258; }"
+        "QPushButton:enabled:hover { background: #365d78; border-color: #80c8f0; color: #ffffff; }"
+        "QPushButton:enabled:pressed { background: #1f4258; border-color: #80c8f0; }"
+        "QMenuBar::item:selected:enabled { background: #365d78; border-color: #80c8f0; color: #ffffff; }"
+        "QMenuBar::item:pressed:enabled { background: #1f4258; border-color: #80c8f0; color: #ffffff; }"
+        "QMenu::item:selected:enabled { background: #365d78; border-color: #80c8f0; color: #ffffff; }"
+        "QMenu::item:disabled { color: #788995; }") : QStringLiteral(
+        "QMainWindow { background: palette(window); color: palette(window-text); }"
+        "QMenuBar,QToolBar,QStatusBar,QMenu { background: palette(window); color: palette(window-text); }"
+        "QToolBar { spacing: 1px; padding: 2px 4px; border: none; }"
+        "QToolBar::separator { background: #c3cbd2; width: 1px; margin: 5px 3px; }"
+        "QToolBar QToolButton { background: transparent; border: 1px solid transparent; border-radius: 4px; padding: 2px; }"
+        "QToolBar QToolButton:checked { background: #d6eafb; border-color: #659dca; }"
+        "QToolButton:enabled:hover, QToolBar QToolButton:enabled:hover { background: #e2eff9; border-color: #659dca; }"
+        "QToolButton:enabled:pressed, QToolBar QToolButton:enabled:pressed { background: #c1dcf1; border-color: #427fab; }"
+        "QToolBar QToolButton[popupMode=\"1\"] { padding-right: 11px; }"
+        "QToolBar QToolButton::menu-button { border: none; width: 10px; }"
+        "QToolButton::menu-button:enabled:hover { background: #c1dcf1; }"
+        "QToolButton::menu-button:enabled:pressed { background: #a9cee9; }"
+        "QMenuBar::item:selected:enabled,QMenu::item:selected:enabled { background: #d6eafb; color: palette(window-text); }"
+        "QMenuBar::item:pressed:enabled { background: #c1dcf1; }"
+        "QMenu::item:disabled { color: palette(disabled, window-text); }");
+    if (application->styleSheet() != sheet) application->setStyleSheet(sheet);
+}
+
+void settle(){for(int i=0;i<12;++i)QApplication::processEvents();}
+int main(int argc,char**argv){QApplication app(argc,argv);QTemporaryDir settings;QSettings::setDefaultFormat(QSettings::IniFormat);QSettings::setPath(QSettings::IniFormat,QSettings::UserScope,settings.path());using namespace ForgeCad;initializeApplicationTheme(app);setApplicationThemeMode(app,ApplicationThemeMode::Light);QMainWindow host;auto*tabs=new QTabWidget(&host);host.setCentralWidget(tabs);auto*a=new LegacyEmbedded(tabs);auto*b=new LegacyEmbedded(tabs);tabs->addTab(a,"3D");tabs->addTab(b,"2D");host.show();settle();a->appEvents=a->paletteEvents=b->appEvents=b->paletteEvents=0;QMenu menu(b);setupApplicationThemeMenu(menu);menu.actions()[2]->trigger();settle();std::cout<<"app="<<app.palette().color(QPalette::Window).name().toStdString()<<" visibleApp="<<a->appEvents<<" visiblePalette="<<a->paletteEvents<<" hiddenApp="<<b->appEvents<<" hiddenPalette="<<b->paletteEvents<<" sheetIsDark="<<app.styleSheet().contains("#111820")<<" visible="<<a->palette().color(QPalette::Window).name().toStdString()<<" hidden="<<b->palette().color(QPalette::Window).name().toStdString()<<" Qt="<<qVersion()<<'\n';return app.palette().color(QPalette::Window).lightness()<128&&!app.styleSheet().contains("#111820")?0:1;}

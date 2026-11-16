@@ -1,0 +1,16 @@
+{
+  "checks": 15,
+  "failures": 0,
+  "exit_code": 0,
+  "type": "private fault injection after actual original boundary substitution",
+  "production_modified": false,
+  "domain_error": "one legacy retry, same options, history reset; legacy rejects the known original pair as baseline",
+  "logic_error": "propagates without retry",
+  "OperationCancelled": "propagates without retry",
+  "unrelated_planar_boolean": "does not enter substitution/retry",
+  "source_preservation": "both original B-rep bytes unchanged",
+  "frozen_core_sha256": "3b8e21c9133627c99cf51df712d8b638cc466f7d2d6442f2c43c1ba47f1feda2",
+  "injected_source_sha256": "87585870c0641dae29a7d68bc1a6197a78a001941ddc44601549e869d081ce33",
+  "driver_sha256": "8caa6c78cc1976ba33b92be6e1405e60d51d83fa71ce96c701ab0c3f874c0b36",
+  "run_log_sha256": "655b6106cc9052c0a4badd8048dbf6ce4e6d909f56e5f98611c7009e93caea5d"
+}

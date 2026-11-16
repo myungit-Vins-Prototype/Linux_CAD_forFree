@@ -1,0 +1,18 @@
+[
+  {
+    "rational": false,
+    "x_derivative_lower_exact": "59672695062659067/59672695062659072",
+    "x_derivative_lower_float": 0.9999999999999999,
+    "abs_y_upper_exact": "336068717510870016320114958089756186010300845/5846006549323611672814739330865132078623730171904",
+    "abs_y_upper_float": 5.748688693305578e-05,
+    "proof": "Original IEEE poles and weights as exact rationals; positive Bernstein hull for (Hx_prime W-Hx W_prime)/W^2; 64 exact deCasteljau subdivisions for Y/W. Monotone X and |Y|<.001 exclude self-intersection and intersection with sides X=0,1 or topY=1 except intended corners."
+  },
+  {
+    "rational": true,
+    "x_derivative_lower_exact": "18028808536579263179073266284275/40564819207303340847894502572032",
+    "x_derivative_lower_float": 0.4444444444444445,
+    "abs_y_upper_exact": "24216303215243575889292577921387375777288329954195065866944121/444286230476725623718957214148893862379153757068132171276721766240",
+    "abs_y_upper_float": 5.450608538837481e-05,
+    "proof": "Original IEEE poles and weights as exact rationals; positive Bernstein hull for (Hx_prime W-Hx W_prime)/W^2; 64 exact deCasteljau subdivisions for Y/W. Monotone X and |Y|<.001 exclude self-intersection and intersection with sides X=0,1 or topY=1 except intended corners."
+  }
+]

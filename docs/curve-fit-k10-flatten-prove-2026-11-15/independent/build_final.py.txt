@@ -1,0 +1,16 @@
+from pathlib import Path
+import subprocess,shlex,json,hashlib
+p=Path(__file__).parent;r=Path('/home/myungit/Linux_CAD_forFree');s=p.parent/'implementation'/'final';f=p/'final-sources';f.mkdir(exist_ok=True)
+for name in ['fk_planar_flatten.cpp','fk_planar_flatten.h','fk_quilt_mapping.cpp']:(f/name).write_bytes((s/name).read_bytes())
+(p/'fk_planar_flatten.h').write_bytes((f/'fk_planar_flatten.h').read_bytes())
+cs=json.loads((r/'forgecad-release/compile_commands.json').read_text())
+def compile(n,src):
+ c=next((x for x in cs if x['file'].endswith('/kernel/'+n+'.cpp')),next(x for x in cs if x['file'].endswith('/kernel/fk_offset.cpp')));cmd=shlex.split(c['command']);cmd[cmd.index('-o')+1]=str(p/(n+'.final.o'));cmd[cmd.index('-c')+1]=str(src);cmd+=['-I'+str(f),'-I'+str(r/'kernel'),'-fno-fast-math','-ffp-contract=off'];subprocess.run(cmd,cwd=c['directory'],check=True)
+for name in ['fk_planar_flatten','fk_quilt_mapping']:compile(name,f/(name+'.cpp'))
+for name in ['helper','contracts','nonclamped','roundtrip','atomic','baseline','downstream','legacy_mapping']:
+ compile(name,p/(name+'.cpp'));objects=[str(p/(name+'.final.o')),str(p/'fk_planar_flatten.final.o')]
+ if name in ['baseline','atomic','legacy_mapping']:objects +=[str(p/'fk_quilt_mapping.final.o')]
+ subprocess.run(['/usr/bin/c++','-o',str(p/(name+'-final')),*objects,str(r/'forgecad-release/kernel/libforgekernel.a'),'-lpthread'],check=True)
+ with (p/(name+'-final.log')).open('w') as out:subprocess.run([str(p/(name+'-final'))],stdout=out,stderr=subprocess.STDOUT,check=True)
+ print(name+' PASS',flush=True)
+(p/'manifest.json').write_text(json.dumps({'kernel/'+x.name:hashlib.sha256(x.read_bytes()).hexdigest() for x in f.iterdir()},indent=2)+'\n')

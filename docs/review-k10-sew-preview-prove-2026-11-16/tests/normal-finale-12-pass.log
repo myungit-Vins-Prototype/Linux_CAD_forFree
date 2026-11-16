@@ -1,0 +1,13 @@
+nonaffine_polynomial source_original=0 residual=3.8395221104055299e-09 legacy_cap=9.9999999999999995e-08 fin_tolerance=4.2364439862352513e-09 edge_tolerance=0 witness_t=0.046875 PASS
+nonaffine_reverse_inputs source_original=0 residual=3.8395221104055299e-09 legacy_cap=9.9999999999999995e-08 fin_tolerance=4.2364439862352513e-09 edge_tolerance=0 witness_t=0.046875 PASS
+nonaffine_shift_trim source_original=0 residual=3.8393950553550216e-09 legacy_cap=9.9999999999999995e-08 fin_tolerance=4.2364413694726504e-09 edge_tolerance=0 witness_t=-2.625 PASS
+nonaffine_reverse_target source_original=0 residual=3.839473407610261e-09 legacy_cap=9.9999999999999995e-08 fin_tolerance=4.2364414810235015e-09 edge_tolerance=0 witness_t=0.953125 PASS
+nonaffine_scale source_original=0 residual=8.4684472767548868e-09 legacy_cap=0.0001 fin_tolerance=9.2592244982370258e-09 edge_tolerance=0 witness_t=0.1484375 PASS
+reuse_sampled_same_parameter source_original=0 residual=3.8400708168850883e-09 legacy_cap=9.9999999999999995e-08 fin_tolerance=4.2365245703918136e-09 edge_tolerance=0 witness_t=0.046875 PASS
+reuse_affine_range source_original=0 residual=3.8385393821838143e-09 legacy_cap=9.9999999999999995e-08 fin_tolerance=4.2361982975289197e-09 edge_tolerance=0 witness_t=-2.625 PASS
+rational_original_weights source_original=0 residual=2.8167877181130632e-09 legacy_cap=9.9999999999999995e-08 fin_tolerance=3.8750959678070412e-09 edge_tolerance=0 witness_t=0.015625 PASS
+public_cancellation_atomic PASS
+plane_fit_original_normal_and_atomic_budget PASS
+plane_actual_controls_invalid_budget_and_cancellation PASS
+plane_fit_physical_metric_original_wrappers physical=3.7140148734344411e-09 uv_coordinate_error=3714.0132751464844 PASS
+12 passed 0 failed

@@ -1,0 +1,6 @@
+BEGIN hidden-narrow-knots-strict-seam
+hidden-narrow-knots-strict-seam source 0 / 0
+hidden-narrow-knots-strict-seam actual 2 / 3
+BEGIN tangent-gap-budget-strict-seam
+tangent-gap-budget-strict-seam source 0 / 0
+tangent-gap-budget-strict-seam actual 2 / 3

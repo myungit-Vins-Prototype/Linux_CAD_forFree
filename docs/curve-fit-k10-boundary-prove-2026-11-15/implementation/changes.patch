@@ -1,0 +1,808 @@
+--- a/kernel/fk_curve_fit_bounds.cpp
++++ b/kernel/fk_curve_fit_bounds.cpp
+@@ -231,15 +231,12 @@
+     }
+     return out;
+ }
+-CurveFitErrorBound make(const CurvePtr<3> &source, const Interval &requested, double d, Vec3 origin, Vec3 direction,
+-                        bool revolution) {
++std::shared_ptr<Source> prepareSource(const CurvePtr<3> &source, const Interval &requested, bool allowLine) {
+     cancellationPoint();
+-    for (int j = 0; j < 3; ++j)
+-        if (!std::isfinite(origin[j]) || !std::isfinite(direction[j]))
+-            throw std::domain_error("fit certificato: assi non finiti");
+     const Curve<3> *basis = source.get();
+     std::vector<Transform3> transforms;
+     while (basis && (basis->type() == CurveType::Trimmed || basis->type() == CurveType::Transformed)) {
++        cancellationPoint();
+         if (basis->type() == CurveType::Trimmed)
+             basis = static_cast<const TrimmedCurve<3> *>(basis)->basis().get();
+         else {
+@@ -248,13 +245,40 @@
+             basis = t.basis().get();
+         }
+     }
+-    if (!basis || basis->type() != CurveType::BSpline)
++    if (!basis)
++        return {};
++    if (allowLine && basis->type() == CurveType::Line) {
++        if (!requested.isFinite() || !(requested.lo < requested.hi) || !std::isfinite(requested.length()))
++            throw std::domain_error("fit certificato: dominio posizione non valido");
++        const auto &line = static_cast<const Line<3> &>(*basis);
++        auto data = std::make_shared<Source>();
++        data->range = requested;
++        Span span;
++        span.domain = requested;
++        span.constantWeight = true;
++        span.w = {I(1)};
++        for (double t : {requested.lo, requested.hi}) {
++            V h = add(vec(line.origin()), mul(vec(line.direction()), I(t)));
++            for (auto transform = transforms.rbegin(); transform != transforms.rend(); ++transform) {
++                V result = vec(transform->translationPart());
++                for (int row = 0; row < 3; ++row)
++                    for (int col = 0; col < 3; ++col)
++                        result[row] = result[row] + h[col] * I(transform->matrix(row, col));
++                h = result;
++            }
++            for (int k = 0; k < 3; ++k)
++                span.h[k].push_back(h[k]);
++        }
++        data->spans.push_back(std::move(span));
++        return data;
++    }
++    if (basis->type() != CurveType::BSpline)
+         return {};
+     const auto &c = static_cast<const BSplineCurve<3> &>(*basis);
+     if (c.degree() < 1 || c.degree() > 128 || c.poleCount() > 100000)
+         throw std::domain_error("fit certificato: budget coefficienti sorgente esaurito");
+     if (!requested.isFinite() || !std::isfinite(requested.length()) || requested.lo < c.domain().lo ||
+-        requested.hi > c.domain().hi || !(requested.lo < requested.hi) || !std::isfinite(d) || d == 0)
++        requested.hi > c.domain().hi || !(requested.lo < requested.hi))
+         throw std::domain_error("fit certificato: dominio o distanza non validi");
+     bool equal = true;
+     double maxWeight = 0;
+@@ -277,13 +301,28 @@
+     if (spanCount > 2000000 / (16 * std::size_t(c.degree() + 1)))
+         throw std::domain_error("fit certificato: budget totale coefficienti esaurito");
+     auto data = std::make_shared<Source>();
+-    data->d = d;
+     data->range = requested;
+     for (int k = c.degree(); k < c.poleCount(); ++k) {
+         cancellationPoint();
+         if (c.knots()[k] >= c.knots()[k + 1] || c.knots()[k + 1] <= requested.lo || c.knots()[k] >= requested.hi)
+             continue;
+-        Span span = extract(c, k, transforms, equal, maxWeight);
++        data->spans.push_back(extract(c, k, transforms, equal, maxWeight));
++    }
++    return data;
++}
++CurveFitErrorBound make(const CurvePtr<3> &source, const Interval &requested, double d, Vec3 origin, Vec3 direction,
++                        bool revolution) {
++    cancellationPoint();
++    for (int j = 0; j < 3; ++j)
++        if (!std::isfinite(origin[j]) || !std::isfinite(direction[j]))
++            throw std::domain_error("fit certificato: assi non finiti");
++    if (!std::isfinite(d) || d == 0)
++        throw std::domain_error("fit certificato: distanza non valida");
++    auto data = prepareSource(source, requested, false);
++    if (!data)
++        return {};
++    data->d = d;
++    for (Span &span : data->spans) {
+         VP tangent;
+         for (int axis = 0; axis < 3; ++axis)
+             tangent[axis] = span.constantWeight ? derivative(span.h[axis])
+@@ -297,7 +336,6 @@
+             span.a = cross(cross(axis, radial), tangent);
+         } else
+             span.a = cross(tangent, axis);
+-        data->spans.push_back(std::move(span));
+     }
+     return [data](const Interval &query, const std::array<Vec3, 4> &q) {
+         cancellationPoint();
+@@ -349,7 +387,196 @@
+         return covered ? worst : inf;
+     };
+ }
++// Affine composition in polar form. Unlike splitting by lo/hi, this also
++// permits reversed and slightly extrapolated interval endpoints.
++P affineBezier(const P &coefficients, I first, I last) {
++    P result(coefficients.size());
++    const int degree = int(coefficients.size()) - 1;
++    for (int pole = 0; pole <= degree; ++pole) {
++        P work = coefficients;
++        for (int r = 1; r <= degree; ++r) {
++            const I t = r <= degree - pole ? first : last;
++            for (int j = 0; j <= degree - r; ++j)
++                work[j] = work[j] * (I(1) - t) + work[j + 1] * t;
++        }
++        result[pole] = work.front();
++    }
++    return result;
++}
++
++double positionOnOriginal(const Source &data, const Interval &query, const VP &candidate) {
++    double worst = 0;
++    bool covered = false;
++    auto first = std::lower_bound(data.spans.begin(), data.spans.end(), query.lo,
++                                  [](const Span &s, double t) { return s.domain.hi <= t; });
++    for (auto it = first; it != data.spans.end() && it->domain.lo < query.hi; ++it) {
++        cancellationPoint();
++        const Span &s = *it;
++        covered = true;
++        const double lo = std::max(query.lo, s.domain.lo), hi = std::min(query.hi, s.domain.hi);
++        const I a = (I(lo) - I(s.domain.lo)) / (I(s.domain.hi) - I(s.domain.lo));
++        const I b = (I(hi) - I(s.domain.lo)) / (I(s.domain.hi) - I(s.domain.lo));
++        const P weight = s.constantWeight ? P{I(1)} : restrictP(s.w, a, b);
++        const double lowerWeight = range(weight).lo;
++        if (!(lowerWeight > 0))
++            return inf;
++        VP residual;
++        for (int k = 0; k < 3; ++k) {
++            P q = affineBezier(candidate[k], (I(lo) - I(query.lo)) / (I(query.hi) - I(query.lo)),
++                               (I(hi) - I(query.lo)) / (I(query.hi) - I(query.lo)));
++            residual[k] = sum(restrictP(s.h[k], a, b), product(q, weight), true);
++        }
++        const I bound = I(normUpper(residual)) / I(lowerWeight);
++        if (!finite(bound))
++            return inf;
++        worst = std::max(worst, bound.hi);
++    }
++    return covered ? worst : inf;
++}
++// A closed query at a compound junction must enclose both neighboring
++// source values, even when their geometric endpoints differ within join.
++I evaluatePolynomial(P coefficients, I parameter) {
++    for (std::size_t remaining = coefficients.size(); remaining > 1; --remaining)
++        for (std::size_t i = 0; i + 1 < remaining; ++i)
++            coefficients[i] = coefficients[i] * (I(1) - parameter) + coefficients[i + 1] * parameter;
++    return coefficients.front();
++}
++double positionPointBound(const Source &source, double parameter, const Vec3 &candidate) {
++    double worst = 0;
++    bool covered = false;
++    for (const Span &span : source.spans) {
++        if (parameter < span.domain.lo || parameter > span.domain.hi)
++            continue;
++        cancellationPoint();
++        covered = true;
++        const I local = (I(parameter) - I(span.domain.lo)) / (I(span.domain.hi) - I(span.domain.lo));
++        const I weight = span.constantWeight ? I(1) : evaluatePolynomial(span.w, local);
++        if (!(weight.lo > 0))
++            return inf;
++        VP residual;
++        for (int k = 0; k < 3; ++k)
++            residual[k] = {evaluatePolynomial(span.h[k], local) / weight - I(candidate[k])};
++        const double error = normUpper(residual);
++        if (!std::isfinite(error))
++            return inf;
++        worst = std::max(worst, error);
++    }
++    return covered ? worst : inf;
++}
++struct MappedPosition {
++    CurveFitSourceSpan map;
++    std::shared_ptr<Source> source;
++};
++CurveFitErrorBound positionFactory(const std::vector<CurveFitSourceSpan> &input) {
++    cancellationPoint();
++    if (input.empty())
++        throw std::domain_error("fit posizione: nessun tratto sorgente");
++    if (input.size() > 100000)
++        throw std::domain_error("fit posizione: budget tratti esaurito");
++    auto spans = std::make_shared<std::vector<MappedPosition>>();
++    std::size_t coefficients = 0;
++    std::vector<CurveFitSourceSpan> sorted = input;
++    for (const auto &map : sorted) {
++        if (!map.source)
++            throw std::domain_error("fit posizione: sorgente nulla");
++        for (const Interval range : {map.fitRange, map.sourceRange})
++            if (!range.isFinite() || !(range.lo < range.hi) || !std::isfinite(range.length()))
++                throw std::domain_error("fit posizione: dominio non valido");
++    }
++    std::sort(sorted.begin(), sorted.end(), [](const auto &a, const auto &b) { return a.fitRange.lo < b.fitRange.lo; });
++    for (const auto &map : sorted) {
++        cancellationPoint();
++        if (!map.fitRange.isFinite() || !(map.fitRange.lo < map.fitRange.hi) || !std::isfinite(map.fitRange.length()))
++            throw std::domain_error("fit posizione: dominio mappa non valido");
++        if (!spans->empty() && spans->back().map.fitRange.hi != map.fitRange.lo)
++            throw std::domain_error("fit posizione: copertura mappa non contigua");
++        auto data = prepareSource(map.source, map.sourceRange, true);
++        if (!data)
++            return {};
++        for (const Span &s : data->spans)
++            coefficients += 3 * s.h[0].size() + s.w.size();
++        if (coefficients > 2000000)
++            throw std::domain_error("fit posizione: budget totale coefficienti esaurito");
++        spans->push_back({map, std::move(data)});
++    }
++    return [spans](const Interval &query, const std::array<Vec3, 4> &poles) {
++        cancellationPoint();
++        if (!query.isFinite() || !(query.lo < query.hi) || query.lo < spans->front().map.fitRange.lo ||
++            query.hi > spans->back().map.fitRange.hi)
++            return inf;
++        VP candidate;
++        for (const Vec3 &p : poles)
++            for (int k = 0; k < 3; ++k) {
++                if (!std::isfinite(p[k]))
++                    return inf;
++                candidate[k].push_back(I(p[k]));
++            }
++        double worst = 0;
++        bool covered = false;
++        auto first = std::lower_bound(spans->begin(), spans->end(), query.lo,
++                                      [](const MappedPosition &s, double t) { return s.map.fitRange.hi <= t; });
++        for (auto it = first; it != spans->end() && it->map.fitRange.lo < query.hi; ++it) {
++            cancellationPoint();
++            covered = true;
++            const auto &m = it->map;
++            const double a = std::max(query.lo, m.fitRange.lo), b = std::min(query.hi, m.fitRange.hi);
++            const I sourceWidth = I(m.sourceRange.hi) - I(m.sourceRange.lo),
++                    targetWidth = I(m.fitRange.hi) - I(m.fitRange.lo);
++            const auto toSource = [&](double sigma) {
++                if (sigma == m.fitRange.lo)
++                    return I(m.reversed ? m.sourceRange.hi : m.sourceRange.lo);
++                if (sigma == m.fitRange.hi)
++                    return I(m.reversed ? m.sourceRange.lo : m.sourceRange.hi);
++                I fraction = (I(sigma) - I(m.fitRange.lo)) / targetWidth;
++                return m.reversed ? I(m.sourceRange.hi) - fraction * sourceWidth
++                                  : I(m.sourceRange.lo) + fraction * sourceWidth;
++            };
++            const I ta = toSource(a), tb = toSource(b);
++            if (!finite(ta) || !finite(tb))
++                return inf;
++            // Cover every sliver caused by affine rounding before restricting
++            // the original source's spans, including source-knot crossings.
++            const Interval sourceQuery{std::max(m.sourceRange.lo, std::min(ta.lo, tb.lo)),
++                                       std::min(m.sourceRange.hi, std::max(ta.hi, tb.hi))};
++            if (!(sourceQuery.lo < sourceQuery.hi))
++                return inf;
++            const auto toCandidate = [&](double t) {
++                I fraction = m.reversed ? (I(m.sourceRange.hi) - I(t)) / sourceWidth
++                                        : (I(t) - I(m.sourceRange.lo)) / sourceWidth;
++                return (I(m.fitRange.lo) + fraction * targetWidth - I(query.lo)) / (I(query.hi) - I(query.lo));
++            };
++            VP pulledBack;
++            for (int k = 0; k < 3; ++k)
++                pulledBack[k] = affineBezier(candidate[k], toCandidate(sourceQuery.lo), toCandidate(sourceQuery.hi));
++            const double error = positionOnOriginal(*it->source, sourceQuery, pulledBack);
++            if (!std::isfinite(error))
++                return inf;
++            worst = std::max(worst, error);
++        }
++        for (const auto endpoint : {std::make_pair(query.lo, poles.front()), std::make_pair(query.hi, poles.back())}) {
++            auto neighbor =
++                std::lower_bound(spans->begin(), spans->end(), endpoint.first,
++                                 [](const MappedPosition &s, double sigma) { return s.map.fitRange.hi < sigma; });
++            for (; neighbor != spans->end() && neighbor->map.fitRange.lo <= endpoint.first; ++neighbor) {
++                const auto &map = neighbor->map;
++                if (endpoint.first != map.fitRange.lo && endpoint.first != map.fitRange.hi)
++                    continue;
++                const bool atStart = endpoint.first == map.fitRange.lo;
++                const double parameter = (atStart != map.reversed) ? map.sourceRange.lo : map.sourceRange.hi;
++                const double error = positionPointBound(*neighbor->source, parameter, endpoint.second);
++                if (!std::isfinite(error))
++                    return inf;
++                worst = std::max(worst, error);
++            }
++        }
++        return covered ? worst : inf;
++    };
++}
++
+ } // namespace
++CurveFitErrorBound curvePositionErrorBound(const std::vector<CurveFitSourceSpan> &spans) {
++    return positionFactory(spans);
++}
+ CurveFitErrorBound extrusionOffsetErrorBound(const CurvePtr<3> &c, const Interval &r, double d, const Vec3 &direction) {
+     return make(c, r, d, {}, direction, false);
+ }
+--- a/kernel/fk_curve_fit_bounds.h
++++ b/kernel/fk_curve_fit_bounds.h
+@@ -15,6 +15,20 @@
+                                                    const std::vector<double> &breaks, double tolerance,
+                                                    const CurveFitErrorBound &bound, double *deviation = nullptr);
+ namespace detail {
++// One explicit affine source map on fitRange. sourceRange is ordered;
++// reversed maps its upper endpoint to the lower fit endpoint.
++struct CurveFitSourceSpan {
++    CurvePtr<3> source;
++    Interval sourceRange;
++    Interval fitRange;
++    bool reversed = false;
++};
++// Whole-domain position residual for a contiguous partition of fit ranges.
++// Closed queries at a compound junction enclose both neighboring values.
++// Line/NURBS and their Trimmed/Transformed wrappers preserve their original
++// parameter. Empty if any source kind is unsupported; never a partial bound.
++CurveFitErrorBound curvePositionErrorBound(const std::vector<CurveFitSourceSpan> &spans);
++
+ // Empty only for unsupported source kinds. NURBS/Trimmed/Transformed inputs
+ // retain their original parameter; positive rational weights are required.
+ // Extraction and subsequent coefficient arithmetic enclose the original
+--- a/kernel/fk_boundary.cpp
++++ b/kernel/fk_boundary.cpp
+@@ -7,9 +7,12 @@
+ 
+ #include "fk_bspline.h"
+ #include "fk_bspline_surface.h"
++#include "fk_cancel.h"
+ #include "fk_curve_algo.h"
++#include "fk_curve_fit_bounds.h"
+ #include "fk_exchange.h"
+ #include "fk_offset.h"
++#include <limits>
+ 
+ namespace ForgeCad::Kernel {
+ namespace {
+@@ -21,10 +24,18 @@
+     bool forward = true;
+     double length = 0.0;
+ 
+-    double parameter(double s) const { return forward ? range.lo + s * range.length() : range.hi - s * range.length(); }
+-    Vec3 at(double s) const { return curve->point(parameter(s)); }
+-    Vec3 start() const { return at(0.0); }
+-    Vec3 end() const { return at(1.0); }
++    double parameter(double s) const {
++        return forward ? range.lo + s * range.length() : range.hi - s * range.length();
++    }
++    Vec3 at(double s) const {
++        return curve->point(parameter(s));
++    }
++    Vec3 start() const {
++        return at(0.0);
++    }
++    Vec3 end() const {
++        return at(1.0);
++    }
+     // Tangente nel verso del contorno.
+     Vec3 tangent(double s) const {
+         Vec3 d[2];
+@@ -33,8 +44,10 @@
+     }
+     // Lunghezza da s = 0 a s.
+     double lengthTo(double s) const {
+-        if (s <= 0.0) return 0.0;
+-        if (s >= 1.0) return length;
++        if (s <= 0.0)
++            return 0.0;
++        if (s >= 1.0)
++            return length;
+         const double t = parameter(s);
+         return arcLength(*curve, forward ? Interval{range.lo, t} : Interval{t, range.hi});
+     }
+@@ -55,12 +68,15 @@
+ std::vector<Piece> chainLoop(const std::vector<PathSegment> &input, double tolerance) {
+     std::vector<Piece> pieces;
+     for (const PathSegment &segment : input) {
+-        if (!segment.curve || !(segment.range.length() > 0.0)) throw std::domain_error("superficie tra curve: tratto non valido");
++        if (!segment.curve || !(segment.range.length() > 0.0))
++            throw std::domain_error("superficie tra curve: tratto non valido");
+         Piece piece{segment.curve, segment.range, true, arcLength(*segment.curve, segment.range)};
+-        if (!(piece.length > tolerance)) throw std::domain_error("superficie tra curve: tratto di lunghezza nulla");
++        if (!(piece.length > tolerance))
++            throw std::domain_error("superficie tra curve: tratto di lunghezza nulla");
+         pieces.push_back(piece);
+     }
+-    if (pieces.empty()) throw std::domain_error("superficie tra curve: nessuna curva");
++    if (pieces.empty())
++        throw std::domain_error("superficie tra curve: nessuna curva");
+     std::vector<bool> used(pieces.size(), false);
+     std::vector<Piece> loop{pieces.front()};
+     used[0] = true;
+@@ -69,14 +85,19 @@
+         int found = -1;
+         bool forward = true;
+         for (std::size_t j = 0; j < pieces.size(); ++j) {
+-            if (used[j]) continue;
+-            const bool head = distance(pieces[j].start(), end) <= tolerance, tail = distance(pieces[j].end(), end) <= tolerance;
+-            if (!head && !tail) continue;
+-            if (found >= 0) throw std::domain_error("superficie tra curve: piu' di due curve in un estremo");
++            if (used[j])
++                continue;
++            const bool head = distance(pieces[j].start(), end) <= tolerance,
++                       tail = distance(pieces[j].end(), end) <= tolerance;
++            if (!head && !tail)
++                continue;
++            if (found >= 0)
++                throw std::domain_error("superficie tra curve: piu' di due curve in un estremo");
+             found = int(j);
+             forward = head;
+         }
+-        if (found < 0) throw std::domain_error("superficie tra curve: le curve non formano un contorno chiuso");
++        if (found < 0)
++            throw std::domain_error("superficie tra curve: le curve non formano un contorno chiuso");
+         Piece next = pieces[std::size_t(found)];
+         next.forward = forward;
+         used[std::size_t(found)] = true;
+@@ -92,14 +113,18 @@
+     std::vector<double> values;
+     for (const BSplineCurve<3> *c : {&a, &b}) {
+         const std::vector<double> &k = c->knots();
+-        for (std::size_t i = std::size_t(c->degree()) + 1; i < std::size_t(c->poleCount()); ++i) values.push_back(k[i]);
++        for (std::size_t i = std::size_t(c->degree()) + 1; i < std::size_t(c->poleCount()); ++i)
++            values.push_back(k[i]);
+     }
+     std::sort(values.begin(), values.end());
+     values.erase(std::unique(values.begin(), values.end()), values.end());
+     for (double u : values) {
++        cancellationPoint();
+         const int target = std::max(a.multiplicity(u), b.multiplicity(u));
+-        if (a.multiplicity(u) < target) a = a.insertKnot(u, target - a.multiplicity(u));
+-        if (b.multiplicity(u) < target) b = b.insertKnot(u, target - b.multiplicity(u));
++        if (a.multiplicity(u) < target)
++            a = a.insertKnot(u, target - a.multiplicity(u));
++        if (b.multiplicity(u) < target)
++            b = b.insertKnot(u, target - b.multiplicity(u));
+     }
+ }
+ 
+@@ -109,27 +134,78 @@
+     std::vector<double> result(std::size_t(c.poleCount()));
+     for (int i = 0; i < c.poleCount(); ++i) {
+         double sum = 0.0;
+-        for (int j = 1; j <= p; ++j) sum += k[std::size_t(i + j)];
++        for (int j = 1; j <= p; ++j)
++            sum += k[std::size_t(i + j)];
+         result[std::size_t(i)] = sum / p;
+     }
+     return result;
+ }
+ 
+-}
++struct SideFit {
++    std::function<Vec3(double)> value;
++    CurveFitErrorBound bound;
++    std::vector<double> breaks;
++    std::vector<detail::CurveFitSourceSpan> maps;
++};
++
++// FitCurve creates cubic Bezier spans with internal multiplicity3; knot
++// compatibility only inserts knots to that same multiplicity. Certify the
++// actual final carrier coefficients, including all assembly roundoff.
++void certifyFinalRow(const BSplineCurve<3> &row, const CurveFitErrorBound &bound, double tolerance) {
++    if (!bound)
++        return;
++    const auto &knots = row.knots();
++    const auto &poles = row.poles();
++    for (std::size_t i = 4; i + 4 < knots.size(); i += 3)
++        if (i + 2 >= knots.size() - 4 || knots[i] != knots[i + 1] || knots[i] != knots[i + 2])
++            throw std::domain_error("superficie tra curve: nodi del bordo non certificabili");
++    for (int k = 3; k < row.poleCount(); ++k) {
++        if (knots[k] >= knots[k + 1])
++            continue;
++        cancellationPoint();
++        const double error = bound({knots[k], knots[k + 1]}, {poles[k - 3], poles[k - 2], poles[k - 1], poles[k]});
++        cancellationPoint();
++        if (!std::isfinite(error) || error > tolerance)
++            throw std::domain_error("superficie tra curve: il bordo finale non rispetta la tolleranza certificata");
++    }
++}
++Vec2 sideUV(int side, double sigma) {
++    switch (side) {
++    case 0:
++        return {sigma, 0};
++    case 1:
++        return {1, sigma};
++    case 2:
++        return {sigma, 1};
++    default:
++        return {0, sigma};
++    }
++}
++
++} // namespace
+ 
+ Body boundarySheet(const std::vector<PathSegment> &input, double tolerance, FaceAliases *labels) {
+-    if(labels)labels->clear();
++    if (labels)
++        labels->clear();
++    cancellationPoint();
++    if (!(tolerance > 0) || !std::isfinite(tolerance))
++        throw std::domain_error("superficie tra curve: tolleranza non valida");
+     // Scala del contorno per le tolleranze di collegamento.
+     double scale = 1.0;
+     for (const PathSegment &segment : input)
+-        if (segment.curve) scale = std::max({scale, norm(segment.curve->point(segment.range.lo)), norm(segment.curve->point(segment.range.hi))});
++        if (segment.curve)
++            scale = std::max(
++                {scale, norm(segment.curve->point(segment.range.lo)), norm(segment.curve->point(segment.range.hi))});
+     const double join = 1e-6 * scale;
+     const std::vector<Piece> loop = chainLoop(input, join);
+     const int n = int(loop.size());
+     std::vector<double> cumulative(std::size_t(n) + 1, 0.0);
+-    for (int k = 0; k < n; ++k) cumulative[std::size_t(k) + 1] = cumulative[std::size_t(k)] + loop[std::size_t(k)].length;
++    for (int k = 0; k < n; ++k)
++        cumulative[std::size_t(k) + 1] = cumulative[std::size_t(k)] + loop[std::size_t(k)].length;
+     const double total = cumulative.back();
+-    const auto position = [&](const Mark &m) { return cumulative[std::size_t(m.piece)] + loop[std::size_t(m.piece)].lengthTo(m.s); };
++    const auto position = [&](const Mark &m) {
++        return cumulative[std::size_t(m.piece)] + loop[std::size_t(m.piece)].lengthTo(m.s);
++    };
+ 
+     // Angoli vivi: dove la tangente non continua.
+     std::vector<Mark> marks;
+@@ -141,11 +217,14 @@
+             continue;
+         }
+         const double angle = std::atan2(norm(cross(a, b)), dot(a, b));
+-        if (angle > 1e-2) marks.push_back({k, 0.0});
++        if (angle > 1e-2)
++            marks.push_back({k, 0.0});
+     }
+     if (marks.size() > 4)
+-        throw std::domain_error("superficie tra curve: il contorno ha " + std::to_string(marks.size()) + " angoli vivi (al massimo 4 lati)");
+-    if (marks.empty()) marks.push_back({0, 0.0});
++        throw std::domain_error("superficie tra curve: il contorno ha " + std::to_string(marks.size()) +
++                                " angoli vivi (al massimo 4 lati)");
++    if (marks.empty())
++        marks.push_back({0, 0.0});
+     // Meno di tre angoli: si divide a meta' il lato piu' lungo fino a quattro lati.
+     while (marks.size() < 4) {
+         std::size_t longest = 0;
+@@ -153,13 +232,17 @@
+         for (std::size_t i = 0; i < marks.size(); ++i) {
+             const double from = position(marks[i]);
+             double to = position(marks[(i + 1) % marks.size()]);
+-            if (to <= from) to += total;
+-            if (to - from > best) best = to - from, longest = i;
++            if (to <= from)
++                to += total;
++            if (to - from > best)
++                best = to - from, longest = i;
+         }
+         double target = position(marks[longest]) + 0.5 * best;
+-        if (target >= total) target -= total;
++        if (target >= total)
++            target -= total;
+         int k = 0;
+-        while (k + 1 < n && cumulative[std::size_t(k) + 1] <= target) ++k;
++        while (k + 1 < n && cumulative[std::size_t(k) + 1] <= target)
++            ++k;
+         const Piece &piece = loop[std::size_t(k)];
+         const double local = target - cumulative[std::size_t(k)];
+         double lo = 0.0, hi = 1.0;
+@@ -168,7 +251,8 @@
+             (piece.lengthTo(mid) < local ? lo : hi) = mid;
+         }
+         marks.insert(marks.begin() + std::ptrdiff_t(longest) + 1, Mark{k, 0.5 * (lo + hi)});
+-        std::sort(marks.begin(), marks.end(), [](const Mark &x, const Mark &y) { return x.piece != y.piece ? x.piece < y.piece : x.s < y.s; });
++        std::sort(marks.begin(), marks.end(),
++                  [](const Mark &x, const Mark &y) { return x.piece != y.piece ? x.piece < y.piece : x.s < y.s; });
+     }
+ 
+     // Lati: dal segno i al segno i + 1 lungo il contorno.
+@@ -180,40 +264,75 @@
+         for (int guard = 0; guard <= n + 1; ++guard) {
+             const bool last = at.piece == to.piece && to.s > at.s;
+             const double end = last ? to.s : 1.0;
+-            if (end > at.s + 1e-12) sides[std::size_t(i)].push_back({at.piece, at.s, end});
+-            if (last) break;
++            if (end > at.s + 1e-12)
++                sides[std::size_t(i)].push_back({at.piece, at.s, end});
++            if (last)
++                break;
+             at = {(at.piece + 1) % n, 0.0};
+-            if (at.piece == to.piece && to.s <= 0.0) break;
+-        }
+-        if (sides[std::size_t(i)].empty()) throw std::domain_error("superficie tra curve: lato di lunghezza nulla");
+-    }
+-
+-    // Lato come funzione di s in [0, 1] (proporzionale alla lunghezza dei pezzi).
+-    const auto sideFunction = [&](const std::vector<SubPiece> &side, bool reversed, std::vector<double> &breaks) {
++            if (at.piece == to.piece && to.s <= 0.0)
++                break;
++        }
++        if (sides[std::size_t(i)].empty())
++            throw std::domain_error("superficie tra curve: lato di lunghezza nulla");
++    }
++
++    // Every callback and oracle uses the same explicit affine map in the
++    // final side direction. Source knots join the subpiece boundaries in the
++    // fit breaks; the oracle still covers their exact, unrounded locations.
++    std::vector<SideFit> sideFits(static_cast<std::size_t>(sideCount));
++    const auto sideFunction = [&](const std::vector<SubPiece> &side, bool reversed) {
++        SideFit result;
+         std::vector<double> bounds{0.0};
+         for (const SubPiece &sub : side) {
+             const Piece &piece = loop[std::size_t(sub.piece)];
+             bounds.push_back(bounds.back() + piece.lengthTo(sub.s1) - piece.lengthTo(sub.s0));
+         }
+         const double length = bounds.back();
+-        if (!(length > join)) throw std::domain_error("superficie tra curve: lato di lunghezza nulla");
+-        for (double &b : bounds) b /= length;
+-        breaks.clear();
+-        for (std::size_t m = 1; m + 1 < bounds.size(); ++m) breaks.push_back(reversed ? 1.0 - bounds[m] : bounds[m]);
+-        return std::function<Vec3(double)>([&loop, side, bounds, reversed](double sigma) {
+-            if (reversed) sigma = 1.0 - sigma;
+-            std::size_t m = 0;
+-            while (m + 2 < bounds.size() && sigma > bounds[m + 1]) ++m;
+-            const double width = bounds[m + 1] - bounds[m];
+-            const double f = width > 0.0 ? std::clamp((sigma - bounds[m]) / width, 0.0, 1.0) : 0.0;
+-            const SubPiece &sub = side[m];
+-            return loop[std::size_t(sub.piece)].at(sub.s0 + f * (sub.s1 - sub.s0));
+-        });
++        if (!(length > join) || !std::isfinite(length))
++            throw std::domain_error("superficie tra curve: lato di lunghezza nulla");
++        for (double &value : bounds)
++            value /= length;
++        for (std::size_t i = 0; i < side.size(); ++i) {
++            const SubPiece &sub = side[i];
++            const Piece &piece = loop[std::size_t(sub.piece)];
++            const double a = piece.parameter(reversed ? sub.s1 : sub.s0),
++                         b = piece.parameter(reversed ? sub.s0 : sub.s1);
++            const Interval sourceRange{std::min(a, b), std::max(a, b)};
++            const Interval fitRange =
++                reversed ? Interval{1 - bounds[i + 1], 1 - bounds[i]} : Interval{bounds[i], bounds[i + 1]};
++            if (!(fitRange.lo < fitRange.hi))
++                throw std::domain_error("superficie tra curve: tratto parametrico nullo");
++            result.maps.push_back({piece.curve, sourceRange, fitRange, a > b});
++            result.breaks.push_back(fitRange.lo);
++            result.breaks.push_back(fitRange.hi);
++            for (double t : piece.curve->breakpoints(sourceRange)) {
++                const double sigma = fitRange.lo + (a > b ? sourceRange.hi - t : t - sourceRange.lo) /
++                                                       sourceRange.length() * fitRange.length();
++                if (sigma > fitRange.lo && sigma < fitRange.hi)
++                    result.breaks.push_back(sigma);
++            }
++        }
++        auto ordered = result.maps;
++        std::sort(ordered.begin(), ordered.end(),
++                  [](const auto &a, const auto &b) { return a.fitRange.lo < b.fitRange.lo; });
++        result.value = [ordered](double sigma) {
++            std::size_t i = 0;
++            while (i + 1 < ordered.size() && sigma > ordered[i].fitRange.hi)
++                ++i;
++            const auto &map = ordered[i];
++            const double f = std::clamp((sigma - map.fitRange.lo) / map.fitRange.length(), 0., 1.);
++            const double t = map.reversed ? map.sourceRange.hi - f * map.sourceRange.length()
++                                          : map.sourceRange.lo + f * map.sourceRange.length();
++            return map.source->point(t);
++        };
++        result.bound = detail::curvePositionErrorBound(result.maps);
++        return result;
+     };
+     const auto fit = [&](int side, bool reversed) {
+-        std::vector<double> breaks;
+-        const auto f = sideFunction(sides[std::size_t(side)], reversed, breaks);
+-        return *fitCurve(f, {0.0, 1.0}, breaks, tolerance);
++        SideFit &data = sideFits[std::size_t(side)];
++        data = sideFunction(sides[std::size_t(side)], reversed);
++        return data.bound ? *fitCurveCertified(data.value, {0, 1}, data.breaks, .5 * tolerance, data.bound)
++                          : *fitCurve(data.value, {0, 1}, data.breaks, tolerance);
+     };
+     // C0: lato 0 (v = 0), D1: lato 1 (u = 1), C1: lato 2 al contrario (v = 1),
+     // D0: lato 3 al contrario (u = 0) o, con tre lati, il punto d'angolo.
+@@ -225,21 +344,41 @@
+         makeCompatible(left, d1);
+         d0 = std::make_shared<BSplineCurve<3>>(left);
+     } else {
+-        d0 = std::make_shared<BSplineCurve<3>>(3, d1.knots(), std::vector<Vec3>(std::size_t(d1.poleCount()), c0.poles().front()));
++        d0 = std::make_shared<BSplineCurve<3>>(3, d1.knots(),
++                                               std::vector<Vec3>(std::size_t(d1.poleCount()), c0.poles().front()));
+     }
+     const Vec3 p00 = c0.poles().front(), p10 = c0.poles().back(), p01 = c1.poles().front(), p11 = c1.poles().back();
+     const std::vector<double> xi = greville(c0), eta = greville(d1);
+     const int nu = c0.poleCount(), nv = d1.poleCount();
++    cancellationPoint();
++    if (nu <= 0 || nv <= 0 || std::size_t(nu) > 1000000 / std::size_t(nv))
++        throw std::domain_error("superficie tra curve: budget poli della pezza esaurito");
+     std::vector<Vec3> poles(std::size_t(nu) * std::size_t(nv));
+     for (int i = 0; i < nu; ++i) {
++        cancellationPoint();
+         const double u = xi[std::size_t(i)];
+         for (int j = 0; j < nv; ++j) {
+             const double v = eta[std::size_t(j)];
+             const Vec3 bilinear = (1 - u) * (1 - v) * p00 + u * (1 - v) * p10 + (1 - u) * v * p01 + u * v * p11;
+-            poles[std::size_t(i) * std::size_t(nv) + std::size_t(j)] = (1 - v) * c0.poles()[std::size_t(i)] + v * c1.poles()[std::size_t(i)]
+-                + (1 - u) * d0->poles()[std::size_t(j)] + u * d1.poles()[std::size_t(j)] - bilinear;
+-        }
+-    }
++            poles[std::size_t(i) * std::size_t(nv) + std::size_t(j)] =
++                (1 - v) * c0.poles()[std::size_t(i)] + v * c1.poles()[std::size_t(i)] +
++                (1 - u) * d0->poles()[std::size_t(j)] + u * d1.poles()[std::size_t(j)] - bilinear;
++        }
++    }
++    // Read the four actual rows after compatibility and Coons construction.
++    // This includes endpoint mismatch and floating-point knot insertion.
++    const auto row = [&](int side) {
++        std::vector<Vec3> points;
++        if (side == 0 || side == 2)
++            for (int i = 0; i < nu; ++i)
++                points.push_back(poles[std::size_t(i) * nv + (side == 0 ? 0 : nv - 1)]);
++        else
++            for (int j = 0; j < nv; ++j)
++                points.push_back(poles[std::size_t(side == 3 ? 0 : nu - 1) * nv + j]);
++        return BSplineCurve<3>(3, (side == 0 || side == 2) ? c0.knots() : d1.knots(), std::move(points));
++    };
++    for (int side = 0; side < sideCount; ++side)
++        certifyFinalRow(row(side), sideFits[std::size_t(side)].bound, tolerance);
+     const auto surface = std::make_shared<BSplineSurface>(3, 3, c0.knots(), d1.knots(), nu, nv, std::move(poles));
+ 
+     // Lamina: gli edge sono i pezzi delle curve date, nell'ordine del contorno.
+@@ -248,9 +387,15 @@
+     face.surface = surface;
+     face.sense = true;
+     std::vector<SubPiece> all;
+-    for (const auto &side : sides) all.insert(all.end(), side.begin(), side.end());
++    std::vector<std::pair<int, int>> origins;
++    for (std::size_t side = 0; side < sides.size(); ++side)
++        for (std::size_t piece = 0; piece < sides[side].size(); ++piece) {
++            all.push_back(sides[side][piece]);
++            origins.emplace_back(int(side), int(piece));
++        }
+     const int m = int(all.size());
+-    for (const SubPiece &sub : all) model.points.push_back(loop[std::size_t(sub.piece)].at(sub.s0));
++    for (const SubPiece &sub : all)
++        model.points.push_back(loop[std::size_t(sub.piece)].at(sub.s0));
+     std::vector<detail::RawFin> fins;
+     for (int k = 0; k < m; ++k) {
+         const SubPiece &sub = all[std::size_t(k)];
+@@ -263,14 +408,26 @@
+         edge.hasRange = true;
+         const double t0 = piece.parameter(sub.s0), t1 = piece.parameter(sub.s1);
+         edge.range = {std::min(t0, t1), std::max(t0, t1)};
+-        fins.push_back({int(model.edges.size()), piece.forward});
++        const auto origin = origins[std::size_t(k)];
++        const SideFit &data = sideFits[std::size_t(origin.first)];
++        if (data.bound) {
++            const auto &map = data.maps[std::size_t(origin.second)];
++            const Vec2 a = sideUV(origin.first, map.reversed ? map.fitRange.hi : map.fitRange.lo);
++            const Vec2 b = sideUV(origin.first, map.reversed ? map.fitRange.lo : map.fitRange.hi);
++            auto pcurve = std::make_shared<BSplineCurve<2>>(
++                1, std::vector<double>{edge.range.lo, edge.range.lo, edge.range.hi, edge.range.hi},
++                std::vector<Vec2>{a, b});
++            fins.push_back({int(model.edges.size()), piece.forward, pcurve, tolerance});
++        } else
++            fins.push_back({int(model.edges.size()), piece.forward});
+         model.edges.push_back(edge);
+     }
+     face.loops.push_back(fins);
+     model.faces.push_back(face);
+-    Body result=detail::assembleBody(model,false);
+-    if(labels)*labels={{"patch"}};
++    Body result = detail::assembleBody(model, false);
++    if (labels)
++        *labels = {{"patch"}};
+     return result;
+ }
+ 
+-}
++} // namespace ForgeCad::Kernel
+--- a/kernel/fk_boundary.h
++++ b/kernel/fk_boundary.h
+@@ -18,8 +18,13 @@
+ // a quattro lati (un cerchio: quattro quarti). Piu' di quattro angoli: errore.
+ //
+ // Ogni lato, nel parametro s in [0, 1] proporzionale alla lunghezza dei suoi
+-// tratti, si approssima con una cubica di Hermite C1 entro `tolerance` (fitCurve
+-// di fk_offset); la superficie
++// tratti, si approssima con cubiche di Hermite a tratti. Per lati composti solo
++// da rette o NURBS a pesi positivi (anche limitate/trasformate), il fit usa
++// un limite continuo del residuo Bernstein e meta' del budget `tolerance`;
++// i nodi interni della sorgente sono rimappati nel parametro del lato.
++// Per famiglie non supportate, incluse le coniche nel parametro angolare,
++// resta il fit campionato: `tolerance` e' un obiettivo non certificato sul continuo.
++// La superficie
+ //   S(u, v) = (1 - v) C0(u) + v C1(u) + (1 - u) D0(v) + u D1(v) - B(u, v)
+ // (B il bilineare degli angoli) e' una B-spline bicubica esatta di quelle
+ // curve: dopo aver reso compatibili i nodi delle coppie opposte, i poli sono
+@@ -29,9 +34,16 @@
+ // faccia ha un lato degenere (un polo nell'angolo).
+ //
+ // Gli edge della lamina sono le curve date (esatte); la superficie le
+-// interpola entro `tolerance` (edge tolleranti se serve, come negli STEP).
++// interpola entro `tolerance` sui lati certificati: le quattro righe reali
++// della Coons sono ricontrollate dopo compatibilita' dei nodi e assemblaggio,
++// includendo scarti degli angoli e arrotondamento. Una verifica non conclusiva
++// fallisce senza ripiego campionato. Su quei lati le SP-curve affini conservano
++// esplicitamente il parametro delle curve originali e il budget certificato.
++// Un lato misto con famiglie non supportate conserva il percorso campionato.
+ // std::domain_error: contorno aperto o ramificato, piu' di quattro angoli,
+-// lati di lunghezza nulla, risultato non valido.
++// lati di lunghezza nulla, tolleranza non positiva/finita, budget di calcolo
++// esaurito o bordo finale non certificabile. Il certificato dei bordi non
++// dimostra regolarita' o iniettivita' dell'interno della pezza.
+ namespace ForgeCad::Kernel {
+ 
+ Body boundarySheet(const std::vector<PathSegment> &pieces, double tolerance = scaledAccuracy(1e-9), FaceAliases *labels = nullptr);

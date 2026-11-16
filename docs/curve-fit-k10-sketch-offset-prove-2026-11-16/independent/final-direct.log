@@ -1,0 +1,11 @@
+C0 side upper=0 reverse=0 PASS
+C0 side upper=0 reverse=1 PASS
+C0 side upper=1 reverse=0 PASS
+C0 side upper=1 reverse=1 PASS
+original oracle positive=8.5258948338898922e-15 altered endpoint and opposite sign PASS
+narrow source span PASS
+Trimmed original domain PASS
+recognized invalid weights fail closed PASS
+loop provenance original [0,.5],[2.5,3],[3,4] and actual final poles PASS
+loop postjoin above unchanged1e-7 rejected PASS
+RESULT 12 checks PASS

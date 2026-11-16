@@ -1,0 +1,8 @@
+{
+  "kernel/fk_boolean.cpp": "3b8e21c9133627c99cf51df712d8b638cc466f7d2d6442f2c43c1ba47f1feda2",
+  "kernel/fk_boolean_boundary.h": "2d268df2dd61d4d36aacc6e24853ec3148390c85d27b79f671b04eedc9387fec",
+  "kernel/fk_boolean_boundary.cpp": "9d0234bfdcd029cea584f0e47ecfe650e404a33aeb2981b027b3b0024e3bc2d4",
+  "kernel/tests/test_boolean_boundary.cpp": "f053cc39a74c22b91721f53cb026f688058bf9e84b5401d8e63cc9bf0e11cbe8",
+  "kernel/CMakeLists.txt": "038c2e23f1551d1f290b1182c9f7d5e518efd93a68497bc4a3a46fde2042fa42",
+  "tools/generate_architecture.py": "25d4a79f658698ed2a19887c6cd97a734b2e915f9545ee7a7891336e69704adc"
+}

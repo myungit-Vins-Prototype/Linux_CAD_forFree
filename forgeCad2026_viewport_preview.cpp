@@ -142,7 +142,11 @@ void CadViewport::requestPreview(const ExtrusionObject &definition, int index ) 
                                           || definition.feature == BodyFeature::BoundarySurface
                                           || definition.feature == BodyFeature::FillSurface))
         preview_.replaced.clear();  // curve e bordi scelti restano visibili
-    else if(definition.operation<0&&definition.feature==BodyFeature::SurfaceTools)preview_.replaced=definition.surfaceTool.mode==1?QVector<int>{}:QVector<int>{definition.firstBody};
+    else if (definition.operation < 0 && definition.feature == BodyFeature::SurfaceTools) {
+        if (definition.surfaceTool.mode == 3 || definition.surfaceTool.mode == 4)
+            preview_.replaced = ForgeCad::hiddenOperands(definition);
+        else preview_.replaced = definition.surfaceTool.mode == 1 ? QVector<int>{} : QVector<int>{definition.firstBody};
+    }
     else if (definition.mergeProbe) preview_.replaced.clear();  // i corpi fusi si sanno a calcolo finito
     else preview_.replaced = ForgeCad::bodyOperands(definition);
     // Nell'unione la base resta opaca sotto la patch aggiunta. Nella

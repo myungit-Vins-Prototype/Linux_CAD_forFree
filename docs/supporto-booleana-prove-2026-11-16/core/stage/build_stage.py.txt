@@ -1,0 +1,7 @@
+from pathlib import Path
+import json,shlex,subprocess
+root=Path('/home/myungit/Linux_CAD_forFree');dest=Path('/tmp/supporto-review');stage=dest/'stage';db=json.loads((root/'forgecad-release/compile_commands.json').read_text());e=next(x for x in db if x['file'].endswith('/kernel/fk_boolean.cpp'));flags=shlex.split(e['command']);flags=flags[:flags.index('-o')];commands=[]
+for name in ['fk_boolean','fk_boolean_boundary']:
+ args=flags+(['-fno-fast-math','-ffp-contract=off'] if name=='fk_boolean_boundary' else [])+['-I'+str(stage/'kernel'),'-I'+str(root/'kernel'),'-c',str(stage/'kernel'/f'{name}.cpp'),'-o',str(stage/f'{name}.o')];commands.append(args);r=subprocess.run(args,cwd=e['directory'],stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True);(stage/f'{name}.build.log').write_text(r.stdout);print('compile',name,r.returncode,r.stdout[-1500:],flush=True)
+ if r.returncode:raise SystemExit(r.returncode)
+args=json.loads((dest/'build-commands.json').read_text());args=[x for x in args if not x.startswith('/tmp/supporto-review/probe') or not x.endswith('.o')];i=args.index('-o');args[i+1]=str(stage/'probe');args[i:i]=[str(stage/'fk_boolean.o'),str(stage/'fk_boolean_boundary.o'),str(dest/'probe.o')];commands.append(args);r=subprocess.run(args,cwd=root/'forgecad-release',stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True);(stage/'link.log').write_text(r.stdout);print('link',r.returncode,r.stdout[-1000:]);(stage/'commands.json').write_text(json.dumps(commands,indent=2)+'\n')

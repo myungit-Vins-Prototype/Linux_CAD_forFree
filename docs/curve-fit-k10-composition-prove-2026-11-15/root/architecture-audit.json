@@ -1,0 +1,79 @@
+{
+  "files": 746,
+  "edges": 10743,
+  "units": 369,
+  "errors": {},
+  "html_matches": true,
+  "incident_edges": 79,
+  "required": [
+    [
+      "kernel/fk_surface_poles.cpp",
+      "kernel/fk_curve_fit_bounds.cpp",
+      "call"
+    ],
+    [
+      "kernel/fk_surface_poles.cpp",
+      "kernel/fk_curve_fit_bounds.h",
+      "include"
+    ],
+    [
+      "kernel/tests/test_surface_curve_fit_validation.cpp",
+      "kernel/fk_surface_poles.cpp",
+      "call"
+    ]
+  ],
+  "files_audited": {
+    "kernel/fk_surface_poles.cpp": {
+      "description": "Modifica poli NURBS con topologia e trim conservati: fit continuo dei bordi isoparametrici affini supportati e verifica delle cubiche effettive su ogni faccia adiacente; fallback campionato esplicito per le altre composizioni.",
+      "incoming": {
+        "call": 7,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 17,
+        "include": 7,
+        "reference": 0
+      }
+    },
+    "kernel/fk_curve_fit_bounds.cpp": {
+      "description": "Limiti continui Bernstein outward per posizione, offset NURBS e composizione isoparametrica superficie/SP-curve affine: dati originali, pesi positivi, istanze e parametri inversi; nodi attraversati, budget finiti e cancellazione.",
+      "incoming": {
+        "call": 8,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 9,
+        "include": 4,
+        "reference": 0
+      }
+    },
+    "kernel/fk_curve_fit_bounds.h": {
+      "description": "Contratti del fit continuo e provider di posizione/offset/composizione superficie-SP-curve; distingue famiglie supportate, intervalli affini espliciti e rifiuto quando il controllo non conclude.",
+      "incoming": {
+        "call": 1,
+        "include": 8,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 0,
+        "include": 2,
+        "reference": 0
+      }
+    },
+    "kernel/tests/test_surface_curve_fit_validation.cpp": {
+      "description": "Regressioni della composizione superficie/SP-curve: variazioni NURBS nascoste dopo modifica poli, facce adiacenti coerenti/incoerenti, versi, trim, pesi, istanze e bound diretto; runner senza Qt/OCCT.",
+      "incoming": {
+        "call": 1,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 18,
+        "include": 7,
+        "reference": 0
+      }
+    }
+  }
+}

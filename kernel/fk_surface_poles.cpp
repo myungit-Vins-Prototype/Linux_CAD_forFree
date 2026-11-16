@@ -1,6 +1,7 @@
 #include "fk_body_check.h"
 #include "fk_cancel.h"
 #include "fk_offset.h"
+#include "fk_curve_fit_bounds.h"
 #include "fk_pcurve.h"
 #include "fk_surface_tools.h"
 #include "fk_surface_poles_conversion.h"
@@ -104,12 +105,14 @@ Body editBodyFacesPoles(const Body &source, const std::vector<SurfaceFacePoleCha
         const auto uv = result.fin(chosen).pcurve;
         demand(bool(uv), "poli: bordo senza rifilatura UV");
         const auto support = result.face(result.finFace(chosen)).surface;
-        boundary.curve = fitCurve(
-            [&](double t) {
-                const auto q = uv->point(t);
-                return support->point(q.x(), q.y());
-            },
-            boundary.range, uv->breakpoints(boundary.range), tolerance * .25);
+        const auto composition = detail::surfaceCompositionErrorBound(support, uv, boundary.range);
+        const auto evaluate = [&](double t) {
+            const auto q = uv->point(t);
+            return support->point(q.x(), q.y());
+        };
+        boundary.curve = composition.bound
+            ? fitCurveCertified(evaluate, boundary.range, composition.breaks, tolerance * .25, composition.bound)
+            : fitCurve(evaluate, boundary.range, uv->breakpoints(boundary.range), tolerance * .25);
         boundary.tolerance = std::max(boundary.tolerance, tolerance);
         // Conserva le connessioni: uno spostamento incompatibile con l'altra
         // faccia viene rifiutato, senza scollegare o allargare le tolleranze.
@@ -121,7 +124,33 @@ Body editBodyFacesPoles(const Body &source, const std::vector<SurfaceFacePoleCha
             const auto adjacent = result.face(result.finFace(fin)).surface;
             const double allowed =
                 std::max({tolerance, source.edge(edge).tolerance, uvSource.fin(fin).pcurveTolerance});
-            demand(pcurveDeviation(*adjacent, *boundary.curve, *use.pcurve, boundary.range, 64) <= allowed,
+            const auto adjacentComposition = detail::surfaceCompositionErrorBound(adjacent, use.pcurve, boundary.range);
+            bool compatible = true;
+            if (adjacentComposition.bound) {
+                // Validate the actual output coefficients on EVERY supported
+                // adjacent carrier, even if the chosen carrier used fallback.
+                const auto *curve = dynamic_cast<const BSplineCurve<3> *>(boundary.curve.get());
+                demand(curve && curve->degree() == 3, "poli: fit bordo non cubico");
+                for (int i = 3; i < curve->poleCount(); ++i) {
+                    cancellationPoint();
+                    const auto &knots = curve->knots();
+                    if (!(knots[i] < knots[i + 1]))
+                        continue;
+                    demand((i == 3 || knots[i - 2] == knots[i]) &&
+                               (i + 1 == curve->poleCount() || knots[i + 1] == knots[i + 3]),
+                           "poli: campata cubica non Bezier");
+                    const std::array<Vec3, 4> poles{curve->poles()[i - 3], curve->poles()[i - 2],
+                                                  curve->poles()[i - 1], curve->poles()[i]};
+                    const double error = adjacentComposition.bound({knots[i], knots[i + 1]}, poles);
+                    if (!std::isfinite(error) || error > allowed) {
+                        compatible = false;
+                        break;
+                    }
+                }
+            } else {
+                compatible = pcurveDeviation(*adjacent, *boundary.curve, *use.pcurve, boundary.range, 64) <= allowed;
+            }
+            demand(compatible,
                    "poli: le modifiche separano un bordo condiviso; spostare insieme i poli corrispondenti delle facce "
                    "adiacenti");
         }

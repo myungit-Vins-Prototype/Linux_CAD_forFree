@@ -1,0 +1,18 @@
+{
+  "CMakeLists.txt": "17c0fdea262bbd33231afd8fc73fac07e48c4a7d67f10abc00b4de4bf2fdc199",
+  "cad_sketch_refs.cpp": "d13ec3cedff473b9df99a47f2f2d30bf8e5df7aee08033aa7db4ba73c453139e",
+  "forgeCad2026_storyboard.cpp": "ec17c2609f26b527e8161e87fd29c1b4d9368581dd9b5066254432dd2fca9787",
+  "forgeCad2026_storyboard.h": "5153de3879f7048aed43d18e58a93cf4da1d04ebdc9ed638ce4c54171dde0436",
+  "forgeCad2026_viewport.h": "1b57e13662b8b9a41334eb132fc2d8c0080db248cf76ff6bb356cc04e716090b",
+  "forgeCad2026_viewport_selection.cpp": "9ef5c603294813cb10edb850ef2177ecf16833e52998fcae24381dfe3a86b02e",
+  "kernel/CMakeLists.txt": "ae9890356cda2086e6ebf35c22255d76b379a6ce91c01aa2cdf6af766e700e36",
+  "kernel/fk_blend.cpp": "7836d93a0ded90a0917733bad0acfa72d8d94955c68c28e28517cd5ee787c807",
+  "kernel/fk_blend_loop.cpp": "e7e2edd351b15307f971888a5bc67a75c27ea4e7f82e8424839b3589c34cd9d6",
+  "kernel/fk_fill.cpp": "0f60167d201c682292fd692344998a3125896a7ff61caacb92c7dee86b70f2a0",
+  "kernel/fk_helix.h": "a5d529885c067a671d09491c037f3e71ab1adb11095b7796ada3d28e9bb904ea",
+  "kernel/fk_helix_projection.cpp": "ffa39b649457abb46ed5641444ecb21772e165a0b45e1f5e87e5a7d89b453e30",
+  "kernel/fk_helix_projection.h": "159edd57dc4dce09592cc90f5369fb963f95436c8d6b3f1412fb42ade8e902d9",
+  "tests/test_sketch_projection_fit_validation.h": "ee479598579c2fb0a2951cc1564838fb7c4741f76c6c1c91132c4e8d4e1934f4",
+  "tests/test_viewport.cpp": "c61320f10aa74c943647810cb34bba470305c20148e0b0d685796035376fae1a",
+  "tools/generate_architecture.py": "0b6d0ea0dfecb2fd8162aecaff556f45a113d3a880e45c978a1c0af5438bc07d"
+}

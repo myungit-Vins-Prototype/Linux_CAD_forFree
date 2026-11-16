@@ -1,0 +1,82 @@
+#include "fk_test.h"
+#include "fk_sweep_validation.h"
+#include "fk_cancel.h"
+#include <limits>
+#include <cmath>
+using namespace ForgeCad::Kernel;
+// Include fk_sweep_validation.h a livello file; API detail concordata con frame_sol.
+FK_TEST(SweepMapCertificateHandlesAdjacencyAndBudget) {
+    using namespace ForgeCad::Kernel::detail;
+    SweepValidationSlab a;
+    a.center={{0,0,0},{0,0,2}};
+    a.xAxis={{1,0,0},{1,0,0}}; a.yAxis={{0,1,0},{0,1,0}};
+    a.duration=1;
+    auto b=a; b.center={{0,0,2},{0,0,4}};
+    const std::vector<Vec2> hull{{-.1,-.1},{.1,-.1},{.1,.1},{-.1,.1}};
+    const auto valid=validateSweepMap({a,b},hull,false);
+    FK_CHECK(valid.status==SweepValidationStatus::CertifiedInjective);
+    b.center={{0,0,2},{0,0,0}};
+    const auto repeated=validateSweepMap({a,b},hull,false);
+    FK_CHECK(repeated.status!=SweepValidationStatus::CertifiedInjective);
+    SweepValidationOptions exhausted; exhausted.maxVisits=0;
+    const auto unknown=validateSweepMap({a,b},hull,false,exhausted);
+    FK_CHECK(unknown.status==SweepValidationStatus::Unresolved);
+}
+
+FK_TEST(SweepMapCertificateHandlesRationalClosedSeam) {
+    using namespace ForgeCad::Kernel::detail;
+    const std::vector<std::vector<Vec3>> quarters{
+        {{3,0,0},{3,3,0},{0,3,0}},{{0,3,0},{-3,3,0},{-3,0,0}},
+        {{-3,0,0},{-3,-3,0},{0,-3,0}},{{0,-3,0},{3,-3,0},{3,0,0}}};
+    std::vector<SweepValidationSlab> ring;
+    for(const auto &p:quarters){SweepValidationSlab slab; slab.center=p;
+        for(const auto &q:p){slab.xAxis.push_back(q/3.0);slab.yAxis.push_back(Vec3(0,0,1));}
+        slab.weights={1,std::sqrt(.5),1};slab.duration=1;ring.push_back(slab);}
+    const std::vector<Vec2> hull{{-.2,-.2},{.2,-.2},{.2,.2},{-.2,.2}};
+    FK_CHECK(validateSweepMap(ring,hull,true).status==SweepValidationStatus::CertifiedInjective);
+}
+
+FK_TEST(SweepMapCertificateConservativeDegeneracyAndCancellation) {
+    using namespace ForgeCad::Kernel::detail;
+    SweepValidationSlab straight;
+    straight.center={{0,0,0},{0,0,1}};straight.xAxis={{1,0,0},{1,0,0}};straight.yAxis={{0,1,0},{0,1,0}};
+    const std::vector<Vec2> hull{{-.1,-.1},{.1,-.1},{.1,.1},{-.1,.1}};
+    auto rational=straight;rational.weights={1e-200,1e-200};rational.duration=1e200;
+    FK_CHECK(validateSweepMap({rational},hull,false).status==SweepValidationStatus::CertifiedInjective);
+    auto overflow=straight;overflow.center={{-1e308,0,0},{1e308,0,0}};
+    FK_CHECK(validateSweepMap({overflow},hull,false).status==SweepValidationStatus::Unresolved);
+    auto invalid=straight;invalid.center[0][0]=std::numeric_limits<double>::quiet_NaN();
+    FK_CHECK(validateSweepMap({invalid},hull,false).status==SweepValidationStatus::Unresolved);
+    auto token=std::make_shared<std::atomic<bool>>(true);CancellationScope scope(token);bool cancelled=false;
+    try{(void)validateSweepMap({straight},hull,false);}catch(const OperationCancelled&){cancelled=true;}
+    FK_CHECK(cancelled);
+}
+
+FK_TEST(SweepMapCertificateSmallRepeatedLoopNeverCertified) {
+    using namespace ForgeCad::Kernel::detail;
+    std::vector<SweepValidationSlab> circle;
+    const std::vector<std::vector<Vec3>> p{{{.001,0,0},{.001,.001,0},{0,.001,0}},
+        {{0,.001,0},{-.001,.001,0},{-.001,0,0}},{{-.001,0,0},{-.001,-.001,0},{0,-.001,0}},
+        {{0,-.001,0},{.001,-.001,0},{.001,0,0}}};
+    for(const auto &poles:p){SweepValidationSlab slab;slab.center=poles;slab.weights={1,std::sqrt(.5),1};
+        for(const auto &point:poles){slab.xAxis.push_back(point/.001);slab.yAxis.push_back(Vec3(0,0,1));}circle.push_back(slab);}
+    const std::vector<Vec2> hull{{-.0001,-.0001},{.0001,-.0001},{.0001,.0001},{-.0001,.0001}};
+    FK_CHECK(validateSweepMap(circle,hull,true).status==SweepValidationStatus::CertifiedInjective);
+    auto repeated=circle;repeated.insert(repeated.end(),circle.begin(),circle.end());
+    FK_CHECK(validateSweepMap(repeated,hull,true).status==SweepValidationStatus::Unresolved);
+}
+
+FK_TEST(SweepMapCertificateDoesNotCollapseTinyTriangles) {
+    using namespace ForgeCad::Kernel::detail;
+    SweepValidationSlab slab;
+    slab.center={{0,0,0},{0,0,1}};
+    slab.xAxis={{1,0,0},{1,0,0}};
+    slab.yAxis={{0,0,1},{0,0,1}}; // F(x,y,t)=(x,0,y+t): not injective on any triangle.
+    for (double scale : {1.,1e-200,1e-300}) {
+        const std::vector<Vec2> triangle{{0,0},{scale,0},{0,scale}};
+        FK_CHECK(validateSweepMap({slab},triangle,false).status!=SweepValidationStatus::CertifiedInjective);
+        // With only a segment along x, F is a valid rectangular sheet.
+        FK_CHECK(validateSweepMap({slab},{{0,0},{scale,0}},false).status==SweepValidationStatus::CertifiedInjective);
+    }
+    FK_CHECK(validateSweepMap({slab},{{0,0},{1e200,0},{0,1e-200}},false).status!=SweepValidationStatus::CertifiedInjective);
+}

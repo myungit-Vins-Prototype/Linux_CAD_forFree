@@ -1,0 +1,3 @@
+Command: rg --hidden -n -w appendFixedReferenceLine . --glob !docs/** --glob !archivi-locali/** --glob !.git/**
+./cad_sketch_refs.cpp:576:int appendFixedReferenceLine(SketchObject &sketch, const QPointF &point, const QPointF &direction, double halfLength) {
+./cad_sketch_refs.h:57:int appendFixedReferenceLine(SketchObject &sketch, const QPointF &point, const QPointF &direction, double halfLength);

@@ -1,0 +1,23 @@
+{
+  "exit": 0,
+  "seconds": 23.852669942999455,
+  "command": [
+    "/home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_sew_pcurve_tests",
+    "/tmp/k10-next-review/release-export"
+  ],
+  "production_overlays": [],
+  "passed_groups": 12,
+  "identical_exports": 8,
+  "exports": {
+    "nonaffine_polynomial.json": "cf59adfcf45b2d1f9dd937da11f7b0ca59d2408dd01bd8d60166aaba5b2fd5e2",
+    "nonaffine_reverse_inputs.json": "238569f113a14071af5b464d66defdbac753c360330222419a52e30555e21f34",
+    "nonaffine_reverse_target.json": "b4ed746c0eba3e4a35f043ef1004f2a20e47b4f8b8e9c97814382f2732299ee2",
+    "nonaffine_scale.json": "d1f0d7ee26ceaec76e32ff3e1945c23e521c98cfdb2ea2fed4f323dfb124d5f2",
+    "nonaffine_shift_trim.json": "795b6ce2fc45750aef882e8e5834b4c92cfa4f20946eb9ee07812749f8ebcaa1",
+    "rational_original_weights.json": "118b338c3d0c3e90b017900f4fdcf616d32bad26201015fcde0abab8af2c5c1a",
+    "reuse_affine_range.json": "6ab3d9ee3edddf38b783cd786f1a068594051229f71b6cc18903478e1263ebff",
+    "reuse_sampled_same_parameter.json": "cb334e28d3d9c7f5cfb7c5f366be5a00ae063fea135c29000c3ec98686d5265f"
+  },
+  "kernel_sha256": "7550466e240451022b647a192017f1b5f85bb07971407e7651de618542040b7f",
+  "binary_sha256": "330c2ba176a321dd5dccda668e5595e11f6d85370a01f1bc24b1a15415c5f283"
+}

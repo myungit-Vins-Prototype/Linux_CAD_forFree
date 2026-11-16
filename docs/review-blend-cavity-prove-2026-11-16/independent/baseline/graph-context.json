@@ -1,0 +1,3328 @@
+{
+  "nodes": [
+    {
+      "id": "kernel/fk_blend_surface.cpp",
+      "group": "kernel",
+      "description": "Raccordi e smussi a palla rotolante: riordino delle transizioni tangenti su supporti opposti con consumo dei tratti corti e continuazione sulle guide adiacenti in entrambi i versi, raffinamento 3D del contatto sulle cuciture tangenti, copertura del fit e intersezioni locali smorzate entro il dominio delle pezze; consumo topologico di una frontiera terminale corta verso una quarta faccia e pezze d angolo, provenienza di bordi e vertici nuovi dichiarata per incidenza; sezioni normali e guida intrinseca per coperchi piani su fianchi B-spline tangenti, continuazione delle cuciture tangenti e raffinamento dei contatti accoppiati entro la risoluzione sorgente, chiusure terminali tangenti con Newton smorzato e continuazione unilaterale anche per bordi analitici, derivate unilaterali su tutti i nodi e scarto laterale misurato entro la risoluzione sorgente, tentativi atomici, limiti unilaterali a raggio zero con sezione collassata esatta anche a cuspidi di alta valenza, raffinamento presso le punte singolari, pezze intrinseche costanti tra collassi G1 dei ventagli polari e controllo dei contorni.",
+      "lines": 3964,
+      "symbols": [
+        "ForgeCad::Kernel::EdgeBlend::EdgeBlend",
+        "ForgeCad::Kernel::EdgeBlend::fit",
+        "ForgeCad::Kernel::EdgeBlend::fitImpl",
+        "ForgeCad::Kernel::EdgeBlend::section",
+        "ForgeCad::Kernel::EdgeBlend::seed",
+        "ForgeCad::Kernel::EdgeBlend::surface",
+        "ForgeCad::Kernel::Piece::rangeOf",
+        "ForgeCad::Kernel::RadiusLaw::RadiusLaw",
+        "ForgeCad::Kernel::RadiusLaw::at",
+        "ForgeCad::Kernel::RadiusLaw::knots",
+        "ForgeCad::Kernel::RadiusLaw::range",
+        "ForgeCad::Kernel::RadiusLaw::zeroEndpoint",
+        "ForgeCad::Kernel::SectionSolver::SectionSolver",
+        "ForgeCad::Kernel::SectionSolver::chamfer",
+        "ForgeCad::Kernel::SectionSolver::coherent",
+        "ForgeCad::Kernel::SectionSolver::contactBreaks",
+        "ForgeCad::Kernel::SectionSolver::follow",
+        "ForgeCad::Kernel::SectionSolver::intrinsicGuide",
+        "ForgeCad::Kernel::SectionSolver::profileBreaks",
+        "ForgeCad::Kernel::SectionSolver::setProfile",
+        "ForgeCad::Kernel::SectionSolver::size",
+        "ForgeCad::Kernel::SectionSolver::solve",
+        "ForgeCad::Kernel::SectionSolver::solveChamfer",
+        "ForgeCad::Kernel::SectionSolver::solveFillet",
+        "ForgeCad::Kernel::SectionSolver::zeroEndpoint",
+        "ForgeCad::Kernel::blendSurfaceChains",
+        "ForgeCad::Kernel::blendSurfaceChainsAttempts",
+        "ForgeCad::Kernel::blendSurfaceChainsWithGuide",
+        "ForgeCad::Kernel::boundaryIsoGuide",
+        "ForgeCad::Kernel::chainAlong",
+        "ForgeCad::Kernel::chainFin",
+        "ForgeCad::Kernel::chainOf",
+        "ForgeCad::Kernel::checkGuidedCap",
+        "ForgeCad::Kernel::clampToDomain",
+        "ForgeCad::Kernel::classifyJoint",
+        "ForgeCad::Kernel::crossContinuation",
+        "ForgeCad::Kernel::detail::polarBlendPatch",
+        "ForgeCad::Kernel::edgesAtVertex",
+        "ForgeCad::Kernel::extendBoundaryWindow",
+        "ForgeCad::Kernel::extendSplineBoundary",
+        "ForgeCad::Kernel::faceNormal",
+        "ForgeCad::Kernel::facePoint",
+        "ForgeCad::Kernel::finTangent",
+        "ForgeCad::Kernel::kFitTolerance",
+        "ForgeCad::Kernel::operator*",
+        "ForgeCad::Kernel::operator+",
+        "ForgeCad::Kernel::operator-",
+        "ForgeCad::Kernel::seamChain",
+        "ForgeCad::Kernel::sectionPoint",
+        "ForgeCad::Kernel::solveLinear",
+        "ForgeCad::Kernel::splitAContinuation",
+        "ForgeCad::Kernel::surfaceBoundaryMeet",
+        "ForgeCad::Kernel::surfaceChainGroups",
+        "ForgeCad::Kernel::surfaceChainRuns",
+        "ForgeCad::Kernel::surfaceCurveMeet",
+        "ForgeCad::Kernel::surfaceMeet",
+        "ForgeCad::Kernel::surfaceUV",
+        "ForgeCad::Kernel::traceBetween"
+      ]
+    },
+    {
+      "id": "kernel/fk_pcurve.cpp",
+      "group": "kernel",
+      "description": "SP-curve (Parasolid) / pcurve (OCCT): la curva di un edge nello spazio dei parametri (u, v) di una faccia, con lo stesso parametro dell'edge: S(p(t)) = C(t) per t nel range dell'edge.",
+      "lines": 567,
+      "symbols": [
+        "ForgeCad::Kernel::Fitter::Fitter",
+        "ForgeCad::Kernel::Fitter::node",
+        "ForgeCad::Kernel::Fitter::refine",
+        "ForgeCad::Kernel::baseShift",
+        "ForgeCad::Kernel::computePCurves",
+        "ForgeCad::Kernel::dampedPCurveDerivative",
+        "ForgeCad::Kernel::degenerateEnd",
+        "ForgeCad::Kernel::degenerateSides",
+        "ForgeCad::Kernel::exactPCurve",
+        "ForgeCad::Kernel::fitHermitePCurve",
+        "ForgeCad::Kernel::fitLinearPCurve",
+        "ForgeCad::Kernel::fitPCurve",
+        "ForgeCad::Kernel::hermite",
+        "ForgeCad::Kernel::loopPoleWalks",
+        "ForgeCad::Kernel::modelScale",
+        "ForgeCad::Kernel::pcurveDerivative",
+        "ForgeCad::Kernel::pcurveDeviation",
+        "ForgeCad::Kernel::planarCurve",
+        "ForgeCad::Kernel::sampleParameters",
+        "ForgeCad::Kernel::sampleParametersOf",
+        "ForgeCad::Kernel::sideIndex"
+      ]
+    },
+    {
+      "id": "kernel/fk_surface.cpp",
+      "group": "kernel",
+      "description": "Superfici parametriche esatte S(u, v).",
+      "lines": 335,
+      "symbols": [
+        "ForgeCad::Kernel::ConicalSurface::ConicalSurface",
+        "ForgeCad::Kernel::ConicalSurface::apex",
+        "ForgeCad::Kernel::ConicalSurface::evaluate",
+        "ForgeCad::Kernel::ConicalSurface::uIso",
+        "ForgeCad::Kernel::ConicalSurface::vDomain",
+        "ForgeCad::Kernel::ConicalSurface::vIso",
+        "ForgeCad::Kernel::CylindricalSurface::CylindricalSurface",
+        "ForgeCad::Kernel::CylindricalSurface::evaluate",
+        "ForgeCad::Kernel::CylindricalSurface::uIso",
+        "ForgeCad::Kernel::CylindricalSurface::vDomain",
+        "ForgeCad::Kernel::CylindricalSurface::vIso",
+        "ForgeCad::Kernel::ExtrusionSurface::ExtrusionSurface",
+        "ForgeCad::Kernel::ExtrusionSurface::evaluate",
+        "ForgeCad::Kernel::ExtrusionSurface::uBreakpoints",
+        "ForgeCad::Kernel::ExtrusionSurface::uIso",
+        "ForgeCad::Kernel::ExtrusionSurface::vDomain",
+        "ForgeCad::Kernel::ExtrusionSurface::vIso",
+        "ForgeCad::Kernel::ExtrusionSurface::wrap",
+        "ForgeCad::Kernel::Plane::evaluate",
+        "ForgeCad::Kernel::Plane::uDomain",
+        "ForgeCad::Kernel::Plane::uIso",
+        "ForgeCad::Kernel::Plane::vDomain",
+        "ForgeCad::Kernel::Plane::vIso",
+        "ForgeCad::Kernel::RevolutionSurface::RevolutionSurface",
+        "ForgeCad::Kernel::RevolutionSurface::evaluate",
+        "ForgeCad::Kernel::RevolutionSurface::uIso",
+        "ForgeCad::Kernel::RevolutionSurface::vIso",
+        "ForgeCad::Kernel::SphericalSurface::SphericalSurface",
+        "ForgeCad::Kernel::SphericalSurface::evaluate",
+        "ForgeCad::Kernel::SphericalSurface::uIso",
+        "ForgeCad::Kernel::SphericalSurface::vIso",
+        "ForgeCad::Kernel::Surface::normal",
+        "ForgeCad::Kernel::Surface::point",
+        "ForgeCad::Kernel::ToroidalSurface::ToroidalSurface",
+        "ForgeCad::Kernel::ToroidalSurface::evaluate",
+        "ForgeCad::Kernel::ToroidalSurface::uIso",
+        "ForgeCad::Kernel::ToroidalSurface::vIso",
+        "ForgeCad::Kernel::cosDerivative",
+        "ForgeCad::Kernel::infiniteInterval",
+        "ForgeCad::Kernel::radial",
+        "ForgeCad::Kernel::requireRadius",
+        "ForgeCad::Kernel::signedCircle",
+        "ForgeCad::Kernel::sinDerivative"
+      ]
+    },
+    {
+      "id": "kernel/fk_surface_algo.cpp",
+      "group": "kernel",
+      "description": "Proiezioni globali NURBS: ricerca Bezier del minimo prima dei bordi del dominio; inviluppi conservativi delle isoparametriche escludono solo minimi impossibili. Bordi, nodi C0 e finestre limitate restano candidati.",
+      "lines": 1129,
+      "symbols": [
+        "ForgeCad::Kernel::BezierPatch::pole",
+        "ForgeCad::Kernel::Candidates::Candidates",
+        "ForgeCad::Kernel::Candidates::best",
+        "ForgeCad::Kernel::Candidates::bestDistance",
+        "ForgeCad::Kernel::Candidates::bringIntoRange",
+        "ForgeCad::Kernel::Candidates::consider",
+        "ForgeCad::Kernel::Candidates::considerInterior",
+        "ForgeCad::Kernel::IsoAdapter::IsoAdapter",
+        "ForgeCad::Kernel::IsoAdapter::breakpoints",
+        "ForgeCad::Kernel::IsoAdapter::domain",
+        "ForgeCad::Kernel::IsoAdapter::evaluate",
+        "ForgeCad::Kernel::IsoAdapter::type",
+        "ForgeCad::Kernel::coneCandidates",
+        "ForgeCad::Kernel::definingPoints",
+        "ForgeCad::Kernel::distanceToAxis",
+        "ForgeCad::Kernel::invertPoint",
+        "ForgeCad::Kernel::meridianPlane",
+        "ForgeCad::Kernel::normalAt",
+        "ForgeCad::Kernel::parallelAxes",
+        "ForgeCad::Kernel::patchBounds",
+        "ForgeCad::Kernel::planarEquivalent",
+        "ForgeCad::Kernel::poleIndex",
+        "ForgeCad::Kernel::poleWalk",
+        "ForgeCad::Kernel::projectGeneric",
+        "ForgeCad::Kernel::projectOnBSplineSurface",
+        "ForgeCad::Kernel::projectOnBSplineSurface::Node::operator<",
+        "ForgeCad::Kernel::projectOnBoundary",
+        "ForgeCad::Kernel::projectOnCylinder",
+        "ForgeCad::Kernel::projectOnExtrusion",
+        "ForgeCad::Kernel::projectOnIso",
+        "ForgeCad::Kernel::projectOnPlanarRevolution",
+        "ForgeCad::Kernel::projectOnPlane",
+        "ForgeCad::Kernel::projectOnSplineRevolution",
+        "ForgeCad::Kernel::projectPoint",
+        "ForgeCad::Kernel::projectionAt",
+        "ForgeCad::Kernel::refineProjection",
+        "ForgeCad::Kernel::sameExtrusionProfiles",
+        "ForgeCad::Kernel::sameExtrusions",
+        "ForgeCad::Kernel::sameParameterCurve",
+        "ForgeCad::Kernel::sameParameterFrame",
+        "ForgeCad::Kernel::sameParameterScalar",
+        "ForgeCad::Kernel::sameParameterValues",
+        "ForgeCad::Kernel::sameParameterVector",
+        "ForgeCad::Kernel::sameProjectedBezier",
+        "ForgeCad::Kernel::sameSurface",
+        "ForgeCad::Kernel::sameSurfaceParameterization",
+        "ForgeCad::Kernel::sphereCandidates",
+        "ForgeCad::Kernel::splitPatch",
+        "ForgeCad::Kernel::surfacePoles",
+        "ForgeCad::Kernel::toPatch",
+        "ForgeCad::Kernel::torusCandidates",
+        "ForgeCad::Kernel::unwrapNear"
+      ]
+    },
+    {
+      "id": "kernel/fk_surface_algo.h",
+      "group": "kernel",
+      "description": "Algoritmi sulle superfici: coincidenza delle estrusioni certificata e identita stretta della parametrizzazione UV da dati esatti, per riutilizzare SP-curve senza riproiezione.",
+      "lines": 101,
+      "symbols": []
+    }
+  ],
+  "edges": [
+    {
+      "source": "cad_drawing_dimension.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 256,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::drawingProfileRadius"
+        }
+      ]
+    },
+    {
+      "source": "cad_drawing_visibility.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 468,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::display"
+        }
+      ]
+    },
+    {
+      "source": "cad_feature_faces.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 4,
+      "sites": [
+        {
+          "line": 35,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::FaceOwnerSearch::owner"
+        },
+        {
+          "line": 55,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::FaceOwnerSearch::owner"
+        },
+        {
+          "line": 99,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::forgeFeatureFaces"
+        }
+      ]
+    },
+    {
+      "source": "cad_fillet_paths.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 2,
+      "sites": [
+        {
+          "line": 95,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::filletStations"
+        }
+      ]
+    },
+    {
+      "source": "cad_forge.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 4,
+      "sites": [
+        {
+          "line": 588,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::forgeBlend"
+        },
+        {
+          "line": 854,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::forgeClosestSheetPiece"
+        },
+        {
+          "line": 2080,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::surfaceConstructionCurvesSerial"
+        }
+      ]
+    },
+    {
+      "source": "cad_measure.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 3,
+      "sites": [
+        {
+          "line": 143,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::prepareFace"
+        },
+        {
+          "line": 229,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::closest"
+        }
+      ]
+    },
+    {
+      "source": "cad_shape_analysis.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 290,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::analyzeShape"
+        }
+      ]
+    },
+    {
+      "source": "cad_topology_ref.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 2,
+      "sites": [
+        {
+          "line": 357,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::resolveFaceReference"
+        },
+        {
+          "line": 361,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::resolveFaceReference"
+        }
+      ]
+    },
+    {
+      "source": "forgeCad2026_dialogs_mapping.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 2,
+      "sites": [
+        {
+          "line": 345,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "surfaceMappingDialog"
+        },
+        {
+          "line": 359,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "surfaceMappingDialog"
+        }
+      ]
+    },
+    {
+      "source": "forgeCad2026_viewport_selection.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 2,
+      "sites": [
+        {
+          "line": 2019,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "CadViewport::faceLabelPoint"
+        },
+        {
+          "line": 2024,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "CadViewport::faceLabelPoint"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_blend.cpp",
+      "target": "kernel/fk_pcurve.cpp",
+      "kind": "call",
+      "count": 2,
+      "sites": [
+        {
+          "line": 352,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::buildPiece"
+        },
+        {
+          "line": 624,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::sewBodies"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_blend.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 6,
+      "sites": [
+        {
+          "line": 276,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::outwardNormal"
+        },
+        {
+          "line": 1245,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::analyticBlend"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_blend_loop.cpp",
+      "target": "kernel/fk_pcurve.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 873,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::blendPlanarChains"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_blend_mitre.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 301,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::detail::traceBlendMitre"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_blend_model.h",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 2,
+      "sites": [
+        {
+          "line": 71,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::detail::chamferDistances"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_blend_polar.cpp",
+      "target": "kernel/fk_pcurve.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 347,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::detail::blendPolarEdges"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_blend_polar.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 3,
+      "sites": [
+        {
+          "line": 67,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::detail::makeCap"
+        },
+        {
+          "line": 73,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::detail::makeCap"
+        },
+        {
+          "line": 79,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::detail::makeCap"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_blend_surface.cpp",
+      "target": "kernel/fk_curve_algo.h",
+      "kind": "call",
+      "count": 22,
+      "sites": [
+        {
+          "line": 2051,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::blendSurfaceChainsWithGuide"
+        },
+        {
+          "line": 2056,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::blendSurfaceChainsWithGuide"
+        },
+        {
+          "line": 2182,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::blendSurfaceChainsWithGuide"
+        },
+        {
+          "line": 2267,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::blendSurfaceChainsWithGuide"
+        },
+        {
+          "line": 2288,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::blendSurfaceChainsWithGuide"
+        },
+        {
+          "line": 2290,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::blendSurfaceChainsWithGuide"
+        },
+        {
+          "line": 2454,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::blendSurfaceChainsWithGuide"
+        },
+        {
+          "line": 2774,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::blendSurfaceChainsWithGuide"
+        },
+        {
+          "line": 2807,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::blendSurfaceChainsWithGuide"
+        },
+        {
+          "line": 2929,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::blendSurfaceChainsWithGuide"
+        },
+        {
+          "line": 3230,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::blendSurfaceChainsWithGuide"
+        },
+        {
+          "line": 3231,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::blendSurfaceChainsWithGuide"
+        },
+        {
+          "line": 3236,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::blendSurfaceChainsWithGuide"
+        },
+        {
+          "line": 3240,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::blendSurfaceChainsWithGuide"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_blend_surface.cpp",
+      "target": "kernel/fk_pcurve.cpp",
+      "kind": "call",
+      "count": 3,
+      "sites": [
+        {
+          "line": 1866,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::blendSurfaceChainsWithGuide"
+        },
+        {
+          "line": 3785,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::blendSurfaceChainsWithGuide"
+        },
+        {
+          "line": 3810,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::blendSurfaceChainsWithGuide"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_blend_surface.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 16,
+      "sites": [
+        {
+          "line": 854,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::faceNormal"
+        },
+        {
+          "line": 1154,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::surfaceUV"
+        },
+        {
+          "line": 1342,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::traceBetween"
+        },
+        {
+          "line": 1420,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::traceBetween"
+        },
+        {
+          "line": 1422,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::traceBetween"
+        },
+        {
+          "line": 1609,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::extendSplineBoundary"
+        },
+        {
+          "line": 2901,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::blendSurfaceChainsWithGuide"
+        },
+        {
+          "line": 3438,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::blendSurfaceChainsWithGuide"
+        },
+        {
+          "line": 3439,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::blendSurfaceChainsWithGuide"
+        },
+        {
+          "line": 3461,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::blendSurfaceChainsWithGuide"
+        },
+        {
+          "line": 3531,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::blendSurfaceChainsWithGuide"
+        },
+        {
+          "line": 3799,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::blendSurfaceChainsWithGuide"
+        },
+        {
+          "line": 3822,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::blendSurfaceChainsWithGuide"
+        },
+        {
+          "line": 3870,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::detail::polarBlendPatch"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_body_check.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 239,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::checkEdge"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_boolean.cpp",
+      "target": "kernel/fk_pcurve.cpp",
+      "kind": "call",
+      "count": 7,
+      "sites": [
+        {
+          "line": 257,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::BooleanBuilder::BooleanBuilder"
+        },
+        {
+          "line": 907,
+          "symbol": "ForgeCad::Kernel::fitPCurve",
+          "owner": "ForgeCad::Kernel::BooleanBuilder::coincidentArcs"
+        },
+        {
+          "line": 915,
+          "symbol": "ForgeCad::Kernel::fitPCurve",
+          "owner": "ForgeCad::Kernel::BooleanBuilder::coincidentArcs"
+        },
+        {
+          "line": 3028,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::BooleanBuilder::assemble"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_boolean.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 26,
+      "sites": [
+        {
+          "line": 176,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::faceNormal"
+        },
+        {
+          "line": 182,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::faceNormal"
+        },
+        {
+          "line": 751,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::BooleanBuilder::surfaceArcs"
+        },
+        {
+          "line": 752,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::BooleanBuilder::surfaceArcs"
+        },
+        {
+          "line": 1054,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::BooleanBuilder::finishCycle"
+        },
+        {
+          "line": 1734,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::BooleanBuilder::interiorPoint"
+        },
+        {
+          "line": 2527,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::BooleanBuilder::clipFace"
+        },
+        {
+          "line": 2844,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::BooleanBuilder::assemble"
+        },
+        {
+          "line": 2936,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::BooleanBuilder::assemble"
+        },
+        {
+          "line": 2937,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::BooleanBuilder::assemble"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_classify.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 2,
+      "sites": [
+        {
+          "line": 125,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::classifyFacePoint"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_curve_surface.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 483,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::curveOnSurface"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_draft.cpp",
+      "target": "kernel/fk_pcurve.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 190,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::draftFaces"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_exchange.cpp",
+      "target": "kernel/fk_pcurve.cpp",
+      "kind": "call",
+      "count": 9,
+      "sites": [
+        {
+          "line": 526,
+          "symbol": "ForgeCad::Kernel::fitPCurve",
+          "owner": "ForgeCad::Kernel::detail::assembleBody"
+        },
+        {
+          "line": 627,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::detail::assembleBody"
+        },
+        {
+          "line": 664,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::detail::assembleBody"
+        },
+        {
+          "line": 678,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::detail::assembleBody"
+        },
+        {
+          "line": 681,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::detail::assembleBody"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_exchange.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 115,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::detail::dropsSeam"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_extrude.cpp",
+      "target": "kernel/fk_pcurve.cpp",
+      "kind": "call",
+      "count": 2,
+      "sites": [
+        {
+          "line": 231,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::makeExtrusion"
+        },
+        {
+          "line": 309,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::makeSheetExtrusion"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_fill.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 3,
+      "sites": [
+        {
+          "line": 191,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::ContactFace::at"
+        },
+        {
+          "line": 1019,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::fillSurface"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_history.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 595,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::resolveHistory"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_iges.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 297,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::writeIgesSurface"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_intersect.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 1189,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::intersectLineSurface"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_loft.cpp",
+      "target": "kernel/fk_pcurve.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 2028,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::loftCore"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_loft.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 5,
+      "sites": [
+        {
+          "line": 414,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::contactNormal"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_loft_guide_constraints.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 27,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::detail::contactNormal"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_marching.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 20,
+      "sites": [
+        {
+          "line": 176,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::ProjectionWorkspace::project"
+        },
+        {
+          "line": 186,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::ProjectionWorkspace::project"
+        },
+        {
+          "line": 716,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::Marcher::completeToContact"
+        },
+        {
+          "line": 1511,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::Marcher::registerApexes"
+        },
+        {
+          "line": 2160,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::splineCoincidence"
+        },
+        {
+          "line": 2295,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::inCoincidentZone"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_mass.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 10,
+      "sites": [
+        {
+          "line": 276,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::FaceIntegrator::FaceIntegrator"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_micro.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 2,
+      "sites": [
+        {
+          "line": 24,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::finNormal"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_offset.cpp",
+      "target": "kernel/fk_pcurve.cpp",
+      "kind": "call",
+      "count": 3,
+      "sites": [
+        {
+          "line": 1147,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::splitTrimmedCreases"
+        },
+        {
+          "line": 1556,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::offsetFaces"
+        },
+        {
+          "line": 2109,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::offsetJoinedFaces"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_offset.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 4,
+      "sites": [
+        {
+          "line": 2153,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::offsetJoinedFaces"
+        },
+        {
+          "line": 2234,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::offsetJoinedFaces"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_pcurve.cpp",
+      "target": "kernel/fk_curve.h",
+      "kind": "call",
+      "count": 34,
+      "sites": [
+        {
+          "line": 116,
+          "symbol": "ForgeCad::Kernel::Curve::point",
+          "owner": "ForgeCad::Kernel::sampleParameters"
+        },
+        {
+          "line": 121,
+          "symbol": "ForgeCad::Kernel::Curve::point",
+          "owner": "ForgeCad::Kernel::sampleParameters"
+        },
+        {
+          "line": 125,
+          "symbol": "ForgeCad::Kernel::Curve::point",
+          "owner": "ForgeCad::Kernel::sampleParameters"
+        },
+        {
+          "line": 130,
+          "symbol": "ForgeCad::Kernel::Curve::point",
+          "owner": "ForgeCad::Kernel::sampleParameters"
+        },
+        {
+          "line": 134,
+          "symbol": "ForgeCad::Kernel::Curve::point",
+          "owner": "ForgeCad::Kernel::sampleParameters"
+        },
+        {
+          "line": 143,
+          "symbol": "ForgeCad::Kernel::Curve::breakpoints",
+          "owner": "ForgeCad::Kernel::sampleParametersOf"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_pcurve.cpp",
+      "target": "kernel/fk_math.h",
+      "kind": "call",
+      "count": 124,
+      "sites": [
+        {
+          "line": 115,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::Kernel::sampleParameters"
+        },
+        {
+          "line": 118,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::Kernel::sampleParameters"
+        },
+        {
+          "line": 118,
+          "symbol": "ForgeCad::Kernel::Vec::operator=",
+          "owner": "ForgeCad::Kernel::sampleParameters"
+        },
+        {
+          "line": 120,
+          "symbol": "ForgeCad::Kernel::Vec::operator=",
+          "owner": "ForgeCad::Kernel::sampleParameters"
+        },
+        {
+          "line": 124,
+          "symbol": "ForgeCad::Kernel::Vec::operator=",
+          "owner": "ForgeCad::Kernel::sampleParameters"
+        },
+        {
+          "line": 131,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::Kernel::sampleParameters"
+        },
+        {
+          "line": 131,
+          "symbol": "ForgeCad::Kernel::Vec::operator=",
+          "owner": "ForgeCad::Kernel::sampleParameters"
+        },
+        {
+          "line": 131,
+          "symbol": "ForgeCad::Kernel::Vec::operator[]",
+          "owner": "ForgeCad::Kernel::sampleParameters"
+        },
+        {
+          "line": 132,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::Kernel::sampleParameters"
+        },
+        {
+          "line": 132,
+          "symbol": "ForgeCad::Kernel::Vec::operator=",
+          "owner": "ForgeCad::Kernel::sampleParameters"
+        },
+        {
+          "line": 132,
+          "symbol": "ForgeCad::Kernel::Vec::operator[]",
+          "owner": "ForgeCad::Kernel::sampleParameters"
+        },
+        {
+          "line": 135,
+          "symbol": "ForgeCad::Kernel::Vec::operator=",
+          "owner": "ForgeCad::Kernel::sampleParameters"
+        },
+        {
+          "line": 136,
+          "symbol": "ForgeCad::Kernel::Vec::operator=",
+          "owner": "ForgeCad::Kernel::sampleParameters"
+        },
+        {
+          "line": 480,
+          "symbol": "ForgeCad::Kernel::Interval::isFinite",
+          "owner": "ForgeCad::Kernel::fitPCurve"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_pcurve.cpp",
+      "target": "kernel/fk_parallel.h",
+      "kind": "call",
+      "count": 2,
+      "sites": [
+        {
+          "line": 525,
+          "symbol": "ForgeCad::Kernel::parallelFor",
+          "owner": "ForgeCad::Kernel::computePCurves"
+        },
+        {
+          "line": 525,
+          "symbol": "ForgeCad::Kernel::threadCount",
+          "owner": "ForgeCad::Kernel::computePCurves"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_pcurve.cpp",
+      "target": "kernel/fk_pcurve.cpp",
+      "kind": "call",
+      "count": 60,
+      "sites": [
+        {
+          "line": 133,
+          "symbol": "ForgeCad::Kernel::degenerateSides",
+          "owner": "ForgeCad::Kernel::sampleParameters"
+        },
+        {
+          "line": 134,
+          "symbol": "ForgeCad::Kernel::sideIndex",
+          "owner": "ForgeCad::Kernel::sampleParameters"
+        },
+        {
+          "line": 135,
+          "symbol": "ForgeCad::Kernel::degenerateEnd",
+          "owner": "ForgeCad::Kernel::sampleParameters"
+        },
+        {
+          "line": 136,
+          "symbol": "ForgeCad::Kernel::degenerateEnd",
+          "owner": "ForgeCad::Kernel::sampleParameters"
+        },
+        {
+          "line": 341,
+          "symbol": "ForgeCad::Kernel::sampleParametersOf",
+          "owner": "ForgeCad::Kernel::exactPCurve"
+        },
+        {
+          "line": 342,
+          "symbol": "ForgeCad::Kernel::sampleParameters",
+          "owner": "ForgeCad::Kernel::exactPCurve"
+        },
+        {
+          "line": 365,
+          "symbol": "ForgeCad::Kernel::sampleParametersOf",
+          "owner": "ForgeCad::Kernel::fitHermitePCurve"
+        },
+        {
+          "line": 367,
+          "symbol": "ForgeCad::Kernel::sampleParameters",
+          "owner": "ForgeCad::Kernel::fitHermitePCurve"
+        },
+        {
+          "line": 419,
+          "symbol": "ForgeCad::Kernel::sampleParametersOf",
+          "owner": "ForgeCad::Kernel::fitLinearPCurve"
+        },
+        {
+          "line": 421,
+          "symbol": "ForgeCad::Kernel::sampleParameters",
+          "owner": "ForgeCad::Kernel::fitLinearPCurve"
+        },
+        {
+          "line": 479,
+          "symbol": "ForgeCad::Kernel::fitHermitePCurve",
+          "owner": "ForgeCad::Kernel::fitPCurve"
+        },
+        {
+          "line": 481,
+          "symbol": "ForgeCad::Kernel::fitLinearPCurve",
+          "owner": "ForgeCad::Kernel::fitPCurve"
+        },
+        {
+          "line": 507,
+          "symbol": "ForgeCad::Kernel::exactPCurve",
+          "owner": "ForgeCad::Kernel::computePCurves"
+        },
+        {
+          "line": 513,
+          "symbol": "ForgeCad::Kernel::fitPCurve",
+          "owner": "ForgeCad::Kernel::computePCurves"
+        },
+        {
+          "line": 520,
+          "symbol": "ForgeCad::Kernel::computePCurves::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_pcurve.cpp:503:29)::operator()",
+          "owner": "ForgeCad::Kernel::computePCurves"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_pcurve.cpp",
+      "target": "kernel/fk_precision.h",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 506,
+          "symbol": "ForgeCad::Kernel::linearResolution",
+          "owner": "ForgeCad::Kernel::computePCurves"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_pcurve.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 16,
+      "sites": [
+        {
+          "line": 116,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::sampleParameters"
+        },
+        {
+          "line": 121,
+          "symbol": "ForgeCad::Kernel::invertPoint",
+          "owner": "ForgeCad::Kernel::sampleParameters"
+        },
+        {
+          "line": 125,
+          "symbol": "ForgeCad::Kernel::invertPoint",
+          "owner": "ForgeCad::Kernel::sampleParameters"
+        },
+        {
+          "line": 129,
+          "symbol": "ForgeCad::Kernel::surfacePoles",
+          "owner": "ForgeCad::Kernel::sampleParameters"
+        },
+        {
+          "line": 130,
+          "symbol": "ForgeCad::Kernel::poleIndex",
+          "owner": "ForgeCad::Kernel::sampleParameters"
+        },
+        {
+          "line": 249,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::Fitter::node"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_pcurve.cpp",
+      "target": "kernel/fk_topology.cpp",
+      "kind": "call",
+      "count": 12,
+      "sites": [
+        {
+          "line": 494,
+          "symbol": "ForgeCad::Kernel::Body::faces",
+          "owner": "ForgeCad::Kernel::computePCurves"
+        },
+        {
+          "line": 495,
+          "symbol": "ForgeCad::Kernel::Body::face",
+          "owner": "ForgeCad::Kernel::computePCurves"
+        },
+        {
+          "line": 497,
+          "symbol": "ForgeCad::Kernel::Body::face",
+          "owner": "ForgeCad::Kernel::computePCurves"
+        },
+        {
+          "line": 498,
+          "symbol": "ForgeCad::Kernel::Body::loopFins",
+          "owner": "ForgeCad::Kernel::computePCurves"
+        },
+        {
+          "line": 505,
+          "symbol": "ForgeCad::Kernel::Body::edge",
+          "owner": "ForgeCad::Kernel::computePCurves"
+        },
+        {
+          "line": 505,
+          "symbol": "ForgeCad::Kernel::Body::fin",
+          "owner": "ForgeCad::Kernel::computePCurves"
+        },
+        {
+          "line": 534,
+          "symbol": "ForgeCad::Kernel::Body::fin",
+          "owner": "ForgeCad::Kernel::computePCurves"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_pcurve.cpp",
+      "target": "kernel/fk_topology.h",
+      "kind": "call",
+      "count": 10,
+      "sites": [
+        {
+          "line": 494,
+          "symbol": "ForgeCad::Kernel::Id::Id",
+          "owner": "ForgeCad::Kernel::computePCurves"
+        },
+        {
+          "line": 495,
+          "symbol": "ForgeCad::Kernel::Id::Id",
+          "owner": "ForgeCad::Kernel::computePCurves"
+        },
+        {
+          "line": 497,
+          "symbol": "ForgeCad::Kernel::Id::Id",
+          "owner": "ForgeCad::Kernel::computePCurves"
+        },
+        {
+          "line": 498,
+          "symbol": "ForgeCad::Kernel::Id::Id",
+          "owner": "ForgeCad::Kernel::computePCurves"
+        },
+        {
+          "line": 505,
+          "symbol": "ForgeCad::Kernel::Id::Id",
+          "owner": "ForgeCad::Kernel::computePCurves"
+        },
+        {
+          "line": 534,
+          "symbol": "ForgeCad::Kernel::Id::Id",
+          "owner": "ForgeCad::Kernel::computePCurves"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_project.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 165,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::Projector::hitAt"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_quilt_mapping.cpp",
+      "target": "kernel/fk_pcurve.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 564,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_revolve.cpp",
+      "target": "kernel/fk_pcurve.cpp",
+      "kind": "call",
+      "count": 2,
+      "sites": [
+        {
+          "line": 232,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::makeFullRevolution"
+        },
+        {
+          "line": 246,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::makeSheetRevolution"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_revolve.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 130,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::revolveLoops"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_sew.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 2,
+      "sites": [
+        {
+          "line": 110,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::imprintReplacementFaces"
+        },
+        {
+          "line": 128,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::imprintReplacementFaces"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_sheet.cpp",
+      "target": "kernel/fk_pcurve.cpp",
+      "kind": "call",
+      "count": 3,
+      "sites": [
+        {
+          "line": 175,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::makePlaneSheet"
+        },
+        {
+          "line": 512,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "line": 725,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_sheet.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 38,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::distanceToSheet"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_solid_trim.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 2,
+      "sites": [
+        {
+          "line": 11,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::toward"
+        },
+        {
+          "line": 26,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::trimSolidBetweenFaces"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_step.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 1135,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::StepGeometry::makeSurface"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_surface_algo.cpp",
+      "target": "kernel/fk_curve_algo.h",
+      "kind": "call",
+      "count": 8,
+      "sites": [
+        {
+          "line": 112,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::projectOnIso"
+        },
+        {
+          "line": 121,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::projectOnIso"
+        },
+        {
+          "line": 501,
+          "symbol": "ForgeCad::Kernel::projectPointCandidates",
+          "owner": "ForgeCad::Kernel::projectOnExtrusion"
+        },
+        {
+          "line": 583,
+          "symbol": "ForgeCad::Kernel::projectPointCandidates",
+          "owner": "ForgeCad::Kernel::projectOnPlanarRevolution"
+        },
+        {
+          "line": 585,
+          "symbol": "ForgeCad::Kernel::projectPointCandidates",
+          "owner": "ForgeCad::Kernel::projectOnPlanarRevolution"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_surface_algo.cpp",
+      "target": "kernel/fk_math.h",
+      "kind": "call",
+      "count": 309,
+      "sites": [
+        {
+          "line": 150,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::Kernel::refineProjection"
+        },
+        {
+          "line": 152,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::Kernel::refineProjection"
+        },
+        {
+          "line": 152,
+          "symbol": "ForgeCad::Kernel::operator-",
+          "owner": "ForgeCad::Kernel::refineProjection"
+        },
+        {
+          "line": 152,
+          "symbol": "ForgeCad::Kernel::squaredNorm",
+          "owner": "ForgeCad::Kernel::refineProjection"
+        },
+        {
+          "line": 154,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::Kernel::refineProjection"
+        },
+        {
+          "line": 154,
+          "symbol": "ForgeCad::Kernel::operator-",
+          "owner": "ForgeCad::Kernel::refineProjection"
+        },
+        {
+          "line": 156,
+          "symbol": "ForgeCad::Kernel::dot",
+          "owner": "ForgeCad::Kernel::refineProjection"
+        },
+        {
+          "line": 157,
+          "symbol": "ForgeCad::Kernel::dot",
+          "owner": "ForgeCad::Kernel::refineProjection"
+        },
+        {
+          "line": 158,
+          "symbol": "ForgeCad::Kernel::dot",
+          "owner": "ForgeCad::Kernel::refineProjection"
+        },
+        {
+          "line": 159,
+          "symbol": "ForgeCad::Kernel::dot",
+          "owner": "ForgeCad::Kernel::refineProjection"
+        },
+        {
+          "line": 160,
+          "symbol": "ForgeCad::Kernel::dot",
+          "owner": "ForgeCad::Kernel::refineProjection"
+        },
+        {
+          "line": 190,
+          "symbol": "ForgeCad::Kernel::squaredNorm",
+          "owner": "ForgeCad::Kernel::refineProjection"
+        },
+        {
+          "line": 191,
+          "symbol": "ForgeCad::Kernel::Interval::clamp",
+          "owner": "ForgeCad::Kernel::refineProjection"
+        },
+        {
+          "line": 192,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::Kernel::refineProjection"
+        },
+        {
+          "line": 194,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::Kernel::refineProjection"
+        },
+        {
+          "line": 194,
+          "symbol": "ForgeCad::Kernel::operator-",
+          "owner": "ForgeCad::Kernel::refineProjection"
+        },
+        {
+          "line": 194,
+          "symbol": "ForgeCad::Kernel::squaredNorm",
+          "owner": "ForgeCad::Kernel::refineProjection"
+        },
+        {
+          "line": 198,
+          "symbol": "ForgeCad::Kernel::Interval::clamp",
+          "owner": "ForgeCad::Kernel::refineProjection"
+        },
+        {
+          "line": 199,
+          "symbol": "ForgeCad::Kernel::Interval::clamp",
+          "owner": "ForgeCad::Kernel::refineProjection"
+        },
+        {
+          "line": 201,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::Kernel::refineProjection"
+        },
+        {
+          "line": 201,
+          "symbol": "ForgeCad::Kernel::operator-",
+          "owner": "ForgeCad::Kernel::refineProjection"
+        },
+        {
+          "line": 201,
+          "symbol": "ForgeCad::Kernel::squaredNorm",
+          "owner": "ForgeCad::Kernel::refineProjection"
+        },
+        {
+          "line": 217,
+          "symbol": "ForgeCad::Kernel::Interval::isFinite",
+          "owner": "ForgeCad::Kernel::projectGeneric"
+        },
+        {
+          "line": 229,
+          "symbol": "ForgeCad::Kernel::Interval::length",
+          "owner": "ForgeCad::Kernel::projectGeneric"
+        },
+        {
+          "line": 230,
+          "symbol": "ForgeCad::Kernel::Interval::length",
+          "owner": "ForgeCad::Kernel::projectGeneric"
+        },
+        {
+          "line": 232,
+          "symbol": "ForgeCad::Kernel::operator-",
+          "owner": "ForgeCad::Kernel::projectGeneric"
+        },
+        {
+          "line": 232,
+          "symbol": "ForgeCad::Kernel::squaredNorm",
+          "owner": "ForgeCad::Kernel::projectGeneric"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_surface_algo.cpp",
+      "target": "kernel/fk_surface.cpp",
+      "kind": "call",
+      "count": 10,
+      "sites": [
+        {
+          "line": 232,
+          "symbol": "ForgeCad::Kernel::Surface::point",
+          "owner": "ForgeCad::Kernel::projectGeneric"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_surface_algo.cpp",
+      "target": "kernel/fk_surface.h",
+      "kind": "call",
+      "count": 115,
+      "sites": [
+        {
+          "line": 148,
+          "symbol": "ForgeCad::Kernel::Surface::evaluate",
+          "owner": "ForgeCad::Kernel::refineProjection"
+        },
+        {
+          "line": 149,
+          "symbol": "ForgeCad::Kernel::Surface::derivativeIndex",
+          "owner": "ForgeCad::Kernel::refineProjection"
+        },
+        {
+          "line": 219,
+          "symbol": "ForgeCad::Kernel::Surface::uBreakpoints",
+          "owner": "ForgeCad::Kernel::projectGeneric"
+        },
+        {
+          "line": 220,
+          "symbol": "ForgeCad::Kernel::Surface::vBreakpoints",
+          "owner": "ForgeCad::Kernel::projectGeneric"
+        },
+        {
+          "line": 677,
+          "symbol": "ForgeCad::Kernel::Surface::type",
+          "owner": "ForgeCad::Kernel::projectPoint"
+        },
+        {
+          "line": 713,
+          "symbol": "ForgeCad::Kernel::Surface::uDomain",
+          "owner": "ForgeCad::Kernel::projectPoint"
+        },
+        {
+          "line": 713,
+          "symbol": "ForgeCad::Kernel::Surface::vDomain",
+          "owner": "ForgeCad::Kernel::projectPoint"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_surface_algo.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 180,
+      "sites": [
+        {
+          "line": 151,
+          "symbol": "ForgeCad::Kernel::refineProjection::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_surface_algo.cpp:148:21)::operator()",
+          "owner": "ForgeCad::Kernel::refineProjection"
+        },
+        {
+          "line": 152,
+          "symbol": "ForgeCad::Kernel::refineProjection::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_surface_algo.cpp:149:15)::operator()",
+          "owner": "ForgeCad::Kernel::refineProjection"
+        },
+        {
+          "line": 154,
+          "symbol": "ForgeCad::Kernel::refineProjection::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_surface_algo.cpp:149:15)::operator()",
+          "owner": "ForgeCad::Kernel::refineProjection"
+        },
+        {
+          "line": 155,
+          "symbol": "ForgeCad::Kernel::refineProjection::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_surface_algo.cpp:149:15)::operator()",
+          "owner": "ForgeCad::Kernel::refineProjection"
+        },
+        {
+          "line": 158,
+          "symbol": "ForgeCad::Kernel::refineProjection::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_surface_algo.cpp:149:15)::operator()",
+          "owner": "ForgeCad::Kernel::refineProjection"
+        },
+        {
+          "line": 159,
+          "symbol": "ForgeCad::Kernel::refineProjection::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_surface_algo.cpp:149:15)::operator()",
+          "owner": "ForgeCad::Kernel::refineProjection"
+        },
+        {
+          "line": 160,
+          "symbol": "ForgeCad::Kernel::refineProjection::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_surface_algo.cpp:149:15)::operator()",
+          "owner": "ForgeCad::Kernel::refineProjection"
+        },
+        {
+          "line": 190,
+          "symbol": "ForgeCad::Kernel::refineProjection::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_surface_algo.cpp:149:15)::operator()",
+          "owner": "ForgeCad::Kernel::refineProjection"
+        },
+        {
+          "line": 193,
+          "symbol": "ForgeCad::Kernel::refineProjection::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_surface_algo.cpp:148:21)::operator()",
+          "owner": "ForgeCad::Kernel::refineProjection"
+        },
+        {
+          "line": 194,
+          "symbol": "ForgeCad::Kernel::refineProjection::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_surface_algo.cpp:149:15)::operator()",
+          "owner": "ForgeCad::Kernel::refineProjection"
+        },
+        {
+          "line": 200,
+          "symbol": "ForgeCad::Kernel::refineProjection::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_surface_algo.cpp:148:21)::operator()",
+          "owner": "ForgeCad::Kernel::refineProjection"
+        },
+        {
+          "line": 201,
+          "symbol": "ForgeCad::Kernel::refineProjection::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_surface_algo.cpp:149:15)::operator()",
+          "owner": "ForgeCad::Kernel::refineProjection"
+        },
+        {
+          "line": 232,
+          "symbol": "ForgeCad::Kernel::projectGeneric::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_surface_algo.cpp:229:24)::operator()",
+          "owner": "ForgeCad::Kernel::projectGeneric"
+        },
+        {
+          "line": 232,
+          "symbol": "ForgeCad::Kernel::projectGeneric::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_surface_algo.cpp:230:24)::operator()",
+          "owner": "ForgeCad::Kernel::projectGeneric"
+        },
+        {
+          "line": 244,
+          "symbol": "ForgeCad::Kernel::projectGeneric::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_surface_algo.cpp:229:24)::operator()",
+          "owner": "ForgeCad::Kernel::projectGeneric"
+        },
+        {
+          "line": 244,
+          "symbol": "ForgeCad::Kernel::projectGeneric::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_surface_algo.cpp:230:24)::operator()",
+          "owner": "ForgeCad::Kernel::projectGeneric"
+        },
+        {
+          "line": 245,
+          "symbol": "ForgeCad::Kernel::refineProjection",
+          "owner": "ForgeCad::Kernel::projectGeneric"
+        },
+        {
+          "line": 246,
+          "symbol": "ForgeCad::Kernel::Candidates::consider",
+          "owner": "ForgeCad::Kernel::projectGeneric"
+        },
+        {
+          "line": 251,
+          "symbol": "ForgeCad::Kernel::projectOnBoundary",
+          "owner": "ForgeCad::Kernel::projectGeneric"
+        },
+        {
+          "line": 466,
+          "symbol": "ForgeCad::Kernel::refineProjection",
+          "owner": "ForgeCad::Kernel::projectOnBSplineSurface"
+        },
+        {
+          "line": 605,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::projectOnSplineRevolution"
+        },
+        {
+          "line": 676,
+          "symbol": "ForgeCad::Kernel::Candidates::Candidates",
+          "owner": "ForgeCad::Kernel::projectPoint"
+        },
+        {
+          "line": 679,
+          "symbol": "ForgeCad::Kernel::projectOnPlane",
+          "owner": "ForgeCad::Kernel::projectPoint"
+        },
+        {
+          "line": 681,
+          "symbol": "ForgeCad::Kernel::projectOnCylinder",
+          "owner": "ForgeCad::Kernel::projectPoint"
+        },
+        {
+          "line": 683,
+          "symbol": "ForgeCad::Kernel::coneCandidates",
+          "owner": "ForgeCad::Kernel::projectPoint"
+        },
+        {
+          "line": 684,
+          "symbol": "ForgeCad::Kernel::projectOnBoundary",
+          "owner": "ForgeCad::Kernel::projectPoint"
+        },
+        {
+          "line": 687,
+          "symbol": "ForgeCad::Kernel::sphereCandidates",
+          "owner": "ForgeCad::Kernel::projectPoint"
+        },
+        {
+          "line": 688,
+          "symbol": "ForgeCad::Kernel::projectOnBoundary",
+          "owner": "ForgeCad::Kernel::projectPoint"
+        },
+        {
+          "line": 691,
+          "symbol": "ForgeCad::Kernel::torusCandidates",
+          "owner": "ForgeCad::Kernel::projectPoint"
+        },
+        {
+          "line": 692,
+          "symbol": "ForgeCad::Kernel::projectOnBoundary",
+          "owner": "ForgeCad::Kernel::projectPoint"
+        },
+        {
+          "line": 695,
+          "symbol": "ForgeCad::Kernel::projectOnBSplineSurface",
+          "owner": "ForgeCad::Kernel::projectPoint"
+        },
+        {
+          "line": 698,
+          "symbol": "ForgeCad::Kernel::projectOnExtrusion",
+          "owner": "ForgeCad::Kernel::projectPoint"
+        },
+        {
+          "line": 701,
+          "symbol": "ForgeCad::Kernel::projectOnPlanarRevolution",
+          "owner": "ForgeCad::Kernel::projectPoint"
+        },
+        {
+          "line": 702,
+          "symbol": "ForgeCad::Kernel::projectOnSplineRevolution",
+          "owner": "ForgeCad::Kernel::projectPoint"
+        },
+        {
+          "line": 703,
+          "symbol": "ForgeCad::Kernel::projectGeneric",
+          "owner": "ForgeCad::Kernel::projectPoint"
+        },
+        {
+          "line": 706,
+          "symbol": "ForgeCad::Kernel::projectGeneric",
+          "owner": "ForgeCad::Kernel::projectPoint"
+        },
+        {
+          "line": 709,
+          "symbol": "ForgeCad::Kernel::Candidates::best",
+          "owner": "ForgeCad::Kernel::projectPoint"
+        },
+        {
+          "line": 713,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::projectPoint"
+        },
+        {
+          "line": 749,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::invertPoint"
+        },
+        {
+          "line": 772,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::invertPoint"
+        },
+        {
+          "line": 773,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::invertPoint"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_surface_algo.cpp",
+      "target": "kernel/fk_surface_algo.h",
+      "kind": "call",
+      "count": 3,
+      "sites": [
+        {
+          "line": 709,
+          "symbol": "ForgeCad::Kernel::SurfaceProjection::SurfaceProjection",
+          "owner": "ForgeCad::Kernel::projectPoint"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_surface_distance.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 49,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::surfaceDeviationAboveTolerance"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_surface_mapping.cpp",
+      "target": "kernel/fk_pcurve.cpp",
+      "kind": "call",
+      "count": 2,
+      "sites": [
+        {
+          "line": 297,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::unrollFace"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_surface_mapping.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 2,
+      "sites": [
+        {
+          "line": 137,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::mapBody"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_surface_poles.cpp",
+      "target": "kernel/fk_pcurve.cpp",
+      "kind": "call",
+      "count": 2,
+      "sites": [
+        {
+          "line": 88,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::editBodyFacesPoles"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_surface_poles_constraints.cpp",
+      "target": "kernel/fk_pcurve.cpp",
+      "kind": "call",
+      "count": 2,
+      "sites": [
+        {
+          "line": 294,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::SurfacePoleConstraints::SurfacePoleConstraints"
+        },
+        {
+          "line": 612,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::checkSurfacePoleContinuity"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_surface_poles_conversion.cpp",
+      "target": "kernel/fk_pcurve.cpp",
+      "kind": "call",
+      "count": 5,
+      "sites": [
+        {
+          "line": 85,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::surfacePoleSupport"
+        },
+        {
+          "line": 99,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::prepareSurfacePoleBody"
+        },
+        {
+          "line": 120,
+          "symbol": "ForgeCad::Kernel::fitPCurve",
+          "owner": "ForgeCad::Kernel::prepareSurfacePoleBody"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_surface_poles_conversion.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 49,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::support"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_surface_tools.cpp",
+      "target": "kernel/fk_pcurve.cpp",
+      "kind": "call",
+      "count": 3,
+      "sites": [
+        {
+          "line": 119,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::extendSheetTo"
+        },
+        {
+          "line": 120,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::extendSheetTo"
+        },
+        {
+          "line": 129,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::extendSheetTo"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_surface_tools.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 2,
+      "sites": [
+        {
+          "line": 55,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::onBody"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_sweep.cpp",
+      "target": "kernel/fk_pcurve.cpp",
+      "kind": "call",
+      "count": 7,
+      "sites": [
+        {
+          "line": 419,
+          "symbol": "ForgeCad::Kernel::fitPCurve",
+          "owner": "ForgeCad::Kernel::sectionPCurve"
+        },
+        {
+          "line": 444,
+          "symbol": "ForgeCad::Kernel::fitPCurve",
+          "owner": "ForgeCad::Kernel::longitudinalPCurve"
+        },
+        {
+          "line": 954,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::sweep"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_sweep.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 884,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::sweep"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_tessellate.cpp",
+      "target": "kernel/fk_pcurve.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 1783,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::tessellate"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_thicken.cpp",
+      "target": "kernel/fk_pcurve.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 436,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::thickenSheet"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_thicken.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 2,
+      "sites": [
+        {
+          "line": 38,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::faceNormalAt"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_transform.cpp",
+      "target": "kernel/fk_pcurve.cpp",
+      "kind": "call",
+      "count": 2,
+      "sites": [
+        {
+          "line": 256,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::transformBody"
+        },
+        {
+          "line": 292,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::transformBody"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_transform.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 2,
+      "sites": [
+        {
+          "line": 149,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::faceNormalSample"
+        },
+        {
+          "line": 203,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::mirroredBody"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_unify.cpp",
+      "target": "kernel/fk_pcurve.cpp",
+      "kind": "call",
+      "count": 2,
+      "sites": [
+        {
+          "line": 365,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::unifyBody"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_unify.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 4,
+      "sites": [
+        {
+          "line": 27,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::sameDomain"
+        }
+      ]
+    },
+    {
+      "source": "kernel/occt/fk_occt_import.cpp",
+      "target": "kernel/fk_pcurve.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 486,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ForgeCad::Kernel::bodyFromOcct"
+        }
+      ]
+    },
+    {
+      "source": "kernel/occt/fk_occt_import.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 200,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::Kernel::oppositeNormal"
+        }
+      ]
+    },
+    {
+      "source": "kernel/tests/probe_blend_candidates.cpp",
+      "target": "kernel/fk_pcurve.cpp",
+      "kind": "call",
+      "count": 3,
+      "sites": [
+        {
+          "line": 193,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "main"
+        },
+        {
+          "line": 214,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "main"
+        },
+        {
+          "line": 229,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "main"
+        }
+      ]
+    },
+    {
+      "source": "kernel/tests/probe_blend_candidates.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 137,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "checkSphere"
+        }
+      ]
+    },
+    {
+      "source": "kernel/tests/test_blend.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 9,
+      "sites": [
+        {
+          "line": 723,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "surfaceBlended"
+        },
+        {
+          "line": 913,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "BlendSurfaceTeeIsExactRollingBall"
+        },
+        {
+          "line": 1583,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "BlendHelicalGrooveEnds"
+        },
+        {
+          "line": 1584,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "BlendHelicalGrooveEnds"
+        },
+        {
+          "line": 1682,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "BlendOffsetLoftTrimmedTopOneMillimeter"
+        },
+        {
+          "line": 1685,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "BlendOffsetLoftTrimmedTopOneMillimeter"
+        },
+        {
+          "line": 1739,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "BlendRegeneratedLoftOffsetCaps"
+        },
+        {
+          "line": 1740,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "BlendRegeneratedLoftOffsetCaps"
+        },
+        {
+          "line": 2193,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "BlendPlanarCapOnTangentSplineSupports"
+        }
+      ]
+    },
+    {
+      "source": "kernel/tests/test_blend_contact_breaks.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 123,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "BlendContactKnotKeepsRadiusAndAllowsOneMillimeterOffset"
+        }
+      ]
+    },
+    {
+      "source": "kernel/tests/test_boolean.cpp",
+      "target": "kernel/fk_pcurve.cpp",
+      "kind": "call",
+      "count": 2,
+      "sites": [
+        {
+          "line": 1164,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "slab"
+        },
+        {
+          "line": 1308,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "BooleanTolerantVertices"
+        }
+      ]
+    },
+    {
+      "source": "kernel/tests/test_cone_rays.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 32,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "main"
+        }
+      ]
+    },
+    {
+      "source": "kernel/tests/test_curve_surface.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 37,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "compare"
+        }
+      ]
+    },
+    {
+      "source": "kernel/tests/test_disjoint_union.cpp",
+      "target": "kernel/fk_pcurve.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 93,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "graphCell"
+        }
+      ]
+    },
+    {
+      "source": "kernel/tests/test_fill.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 3,
+      "sites": [
+        {
+          "line": 50,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "surfaceDistance"
+        },
+        {
+          "line": 68,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "FillPlanarSquare"
+        },
+        {
+          "line": 317,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "FillNaturalG1FollowsSupportCurvature"
+        }
+      ]
+    },
+    {
+      "source": "kernel/tests/test_history.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 4,
+      "sites": [
+        {
+          "line": 50,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "facesThrough"
+        },
+        {
+          "line": 63,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "faceAt"
+        },
+        {
+          "line": 748,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "checkExtrusionSources"
+        },
+        {
+          "line": 893,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "checkRevolutionSources"
+        }
+      ]
+    },
+    {
+      "source": "kernel/tests/test_intersect.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 2,
+      "sites": [
+        {
+          "line": 183,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "PlaneSurfaceIntersections"
+        },
+        {
+          "line": 201,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "PlaneTorusMeridianIntersections"
+        }
+      ]
+    },
+    {
+      "source": "kernel/tests/test_loft.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 13,
+      "sites": [
+        {
+          "line": 600,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "LoftIndependentGuideConditions"
+        },
+        {
+          "line": 645,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "LoftGuideNearSectionPreservesContactPlane"
+        }
+      ]
+    },
+    {
+      "source": "kernel/tests/test_loft_guide_constraints.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 2,
+      "sites": [
+        {
+          "line": 125,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "tangentFaces"
+        },
+        {
+          "line": 130,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "tangentFaces"
+        }
+      ]
+    },
+    {
+      "source": "kernel/tests/test_loft_knots.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 140,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "OffsetPreservesSeamsThroughNearlyTangentSections"
+        }
+      ]
+    },
+    {
+      "source": "kernel/tests/test_loft_projected_guides.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 33,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "validate"
+        }
+      ]
+    },
+    {
+      "source": "kernel/tests/test_loft_projected_sections.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 30,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "validate"
+        }
+      ]
+    },
+    {
+      "source": "kernel/tests/test_loft_shape.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 291,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "tolerantGuideAnchors"
+        }
+      ]
+    },
+    {
+      "source": "kernel/tests/test_mapping_carrier_validation.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 168,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "checkMapped"
+        }
+      ]
+    },
+    {
+      "source": "kernel/tests/test_mapping_diagonal_validation.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 186,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "checkMapped"
+        }
+      ]
+    },
+    {
+      "source": "kernel/tests/test_marching.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 9,
+      "sites": [
+        {
+          "line": 35,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "checkOnSurfaces"
+        },
+        {
+          "line": 123,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "MarchingCylindersAgainstOcct"
+        },
+        {
+          "line": 124,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "MarchingCylindersAgainstOcct"
+        },
+        {
+          "line": 138,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "MarchingCylindersAgainstOcct"
+        },
+        {
+          "line": 139,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "MarchingCylindersAgainstOcct"
+        },
+        {
+          "line": 214,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "MarchingParallelDirections"
+        },
+        {
+          "line": 215,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "MarchingParallelDirections"
+        },
+        {
+          "line": 257,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "MarchingCurveSurface"
+        },
+        {
+          "line": 367,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "compareWithOcct"
+        }
+      ]
+    },
+    {
+      "source": "kernel/tests/test_mass.cpp",
+      "target": "kernel/fk_pcurve.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 137,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "resetPCurves"
+        }
+      ]
+    },
+    {
+      "source": "kernel/tests/test_nurbs.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 2,
+      "sites": [
+        {
+          "line": 19,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "checkSurface"
+        },
+        {
+          "line": 26,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "checkSurface"
+        }
+      ]
+    },
+    {
+      "source": "kernel/tests/test_nurbs_supports.cpp",
+      "target": "kernel/fk_pcurve.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 49,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "adjacentCharts"
+        }
+      ]
+    },
+    {
+      "source": "kernel/tests/test_nurbs_supports.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 95,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "NurbsSupportJoinUsesCoefficientsAndHandlesChartOrientations"
+        }
+      ]
+    },
+    {
+      "source": "kernel/tests/test_offset.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 2,
+      "sites": [
+        {
+          "line": 61,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "distanceError"
+        },
+        {
+          "line": 290,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "checkOffsetDistance"
+        }
+      ]
+    },
+    {
+      "source": "kernel/tests/test_pcurve.cpp",
+      "target": "kernel/fk_pcurve.cpp",
+      "kind": "call",
+      "count": 11,
+      "sites": [
+        {
+          "line": 265,
+          "symbol": "ForgeCad::Kernel::fitPCurve",
+          "owner": "FittedPCurves"
+        },
+        {
+          "line": 315,
+          "symbol": "ForgeCad::Kernel::fitPCurve",
+          "owner": "FittedPCurvesFromDegenerateSide"
+        },
+        {
+          "line": 357,
+          "symbol": "ForgeCad::Kernel::fitPCurve",
+          "owner": "FittedPCurveNearCollapsedSplineSide"
+        },
+        {
+          "line": 415,
+          "symbol": "ForgeCad::Kernel::fitPCurve",
+          "owner": "PCurveExtendedPoleNeighbourhood"
+        }
+      ]
+    },
+    {
+      "source": "kernel/tests/test_planar_thicken_validation.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 226,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "verify"
+        }
+      ]
+    },
+    {
+      "source": "kernel/tests/test_polar_blend.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 52,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "validateBlend"
+        }
+      ]
+    },
+    {
+      "source": "kernel/tests/test_sew_pcurve_validation.cpp",
+      "target": "kernel/fk_pcurve.cpp",
+      "kind": "call",
+      "count": 2,
+      "sites": [
+        {
+          "line": 98,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "sourceSheet"
+        }
+      ]
+    },
+    {
+      "source": "kernel/tests/test_sheet_fit_validation.cpp",
+      "target": "kernel/fk_pcurve.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 102,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "fixture"
+        }
+      ]
+    },
+    {
+      "source": "kernel/tests/test_shell.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 2,
+      "sites": [
+        {
+          "line": 30,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "faceAt"
+        },
+        {
+          "line": 287,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ShellStitchedTolerantTangencies"
+        }
+      ]
+    },
+    {
+      "source": "kernel/tests/test_step.cpp",
+      "target": "kernel/fk_pcurve.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 781,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "closedSplineEndSheet"
+        }
+      ]
+    },
+    {
+      "source": "kernel/tests/test_surface_algo.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 21,
+      "sites": [
+        {
+          "line": 74,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "checkProjection"
+        },
+        {
+          "line": 100,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ProjectOnPlaneAndCylinder"
+        },
+        {
+          "line": 103,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ProjectOnPlaneAndCylinder"
+        },
+        {
+          "line": 108,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ProjectOnPlaneAndCylinder"
+        },
+        {
+          "line": 112,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ProjectOnPlaneAndCylinder"
+        },
+        {
+          "line": 227,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ProjectOnInfiniteExtrusion"
+        },
+        {
+          "line": 246,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ProjectOnSkewRevolutionWindows"
+        },
+        {
+          "line": 253,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ProjectOnSkewRevolutionWindows"
+        },
+        {
+          "line": 273,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "SameExtrusionSurfaceRequiresWholeCurveCertificate"
+        },
+        {
+          "line": 309,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "SurfaceDeviationCertificateAnalytic"
+        },
+        {
+          "line": 339,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "SurfaceDeviationCertificateCurvedAndHints"
+        }
+      ]
+    },
+    {
+      "source": "kernel/tests/test_surface_instances.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 2,
+      "sites": [
+        {
+          "line": 118,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "SurfaceInstanceSharesBezierPolesAndBounds"
+        },
+        {
+          "line": 387,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "SurfaceInstanceZeroRadiusAtHighValenceCusp"
+        }
+      ]
+    },
+    {
+      "source": "kernel/tests/test_surface_mapping.cpp",
+      "target": "kernel/fk_pcurve.cpp",
+      "kind": "call",
+      "count": 4,
+      "sites": [
+        {
+          "line": 35,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "main"
+        },
+        {
+          "line": 116,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "main"
+        },
+        {
+          "line": 127,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "main"
+        },
+        {
+          "line": 200,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "main"
+        }
+      ]
+    },
+    {
+      "source": "kernel/tests/test_surface_poles_conversion.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 33,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "SurfacePolesExactAnalyticConversion"
+        }
+      ]
+    },
+    {
+      "source": "kernel/tests/test_surface_tools.cpp",
+      "target": "kernel/fk_pcurve.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 267,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "SurfacePolesMultipleFacesOfSolid"
+        }
+      ]
+    },
+    {
+      "source": "kernel/tests/test_surface_tools.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 2,
+      "sites": [
+        {
+          "line": 46,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "SurfaceNetworkCrossingFamilies"
+        },
+        {
+          "line": 158,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "SurfaceExtendUntilSplineExtrusion"
+        }
+      ]
+    },
+    {
+      "source": "kernel/tests/test_sweep_surfaces.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 231,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "SweepSheetMixedChainKeepsChainSense"
+        }
+      ]
+    },
+    {
+      "source": "kernel/tests/test_tessellate.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 3,
+      "sites": [
+        {
+          "line": 53,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "measure"
+        }
+      ]
+    },
+    {
+      "source": "kernel/tests/test_topology.cpp",
+      "target": "kernel/fk_pcurve.cpp",
+      "kind": "call",
+      "count": 2,
+      "sites": [
+        {
+          "line": 189,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ReverseEdgePreservesSolidAndLaminarGeometry"
+        }
+      ]
+    },
+    {
+      "source": "kernel/tests/test_trimmed_face_bounds.cpp",
+      "target": "kernel/fk_pcurve.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 32,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "rectangle"
+        }
+      ]
+    },
+    {
+      "source": "kernel/tests/test_trimmed_face_bounds.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 104,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "main"
+        }
+      ]
+    },
+    {
+      "source": "tests/test_boolean_history.h",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 10,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "booleanHistoryTest"
+        }
+      ]
+    },
+    {
+      "source": "tests/test_drawing.cpp",
+      "target": "kernel/fk_pcurve.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 67,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "nurbsPatch"
+        }
+      ]
+    },
+    {
+      "source": "tests/test_drawing_dimension_controls.h",
+      "target": "kernel/fk_pcurve.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 10,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "drawingProfileRadiusControlTests"
+        }
+      ]
+    },
+    {
+      "source": "tests/test_drawing_dimensions.cpp",
+      "target": "kernel/fk_pcurve.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 127,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "main"
+        }
+      ]
+    },
+    {
+      "source": "tests/test_extrusion_history.h",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 99,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "extrusionHistoryTest"
+        }
+      ]
+    },
+    {
+      "source": "tests/test_extrusion_next_body.h",
+      "target": "kernel/fk_pcurve.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 102,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "ViewportInteractionTest::extrusionNextBodyTests"
+        }
+      ]
+    },
+    {
+      "source": "tests/test_feature_faces.h",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 19,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ViewportInteractionTest::featureFaceSearchRegressions"
+        }
+      ]
+    },
+    {
+      "source": "tests/test_loft_projected_sections.h",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 23,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ViewportInteractionTest::loftProjectedSections"
+        }
+      ]
+    },
+    {
+      "source": "tests/test_projected_drawing.cpp",
+      "target": "kernel/fk_pcurve.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 46,
+          "symbol": "ForgeCad::Kernel::computePCurves",
+          "owner": "patch"
+        }
+      ]
+    },
+    {
+      "source": "tests/test_sketch_apparent.h",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 21,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ViewportInteractionTest::sketchApparent"
+        }
+      ]
+    },
+    {
+      "source": "tests/test_sketch_support.h",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 16,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ViewportInteractionTest::sketchSupportRegressions"
+        }
+      ]
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "kernel/fk_surface_algo.cpp",
+      "kind": "call",
+      "count": 14,
+      "sites": [
+        {
+          "line": 2242,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ViewportInteractionTest::savedLoftSurface"
+        },
+        {
+          "line": 2310,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ViewportInteractionTest::openLoftTangency"
+        },
+        {
+          "line": 4213,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ViewportInteractionTest::profileProjection"
+        },
+        {
+          "line": 6148,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ViewportInteractionTest::genealogyReferences"
+        },
+        {
+          "line": 8832,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ViewportInteractionTest::run"
+        },
+        {
+          "line": 10730,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ViewportInteractionTest::run"
+        },
+        {
+          "line": 11076,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ViewportInteractionTest::run"
+        }
+      ]
+    }
+  ],
+  "source_sha256": {
+    "kernel/fk_surface_algo.cpp": "216592a617cbd8f49b5c61d0f08c19bfa80d605af1e3710a2c819f9a8e6eec0e",
+    "kernel/fk_pcurve.cpp": "ad5e5ce7082274aee5c279772f30caa56b21689b7b4b7331d27543444c58df79",
+    "kernel/fk_blend_surface.cpp": "13c601f3783ee769c128f35dcce8ea12bc28784235ea73134e6599902c06cf8a",
+    "kernel/fk_surface.cpp": "795306b2532f63501cfa5ce6e356bee31f37e396a2c5def2e0e829fe0acff51c",
+    "kernel/fk_surface_algo.h": "4330c9f9e04a034015ab392c77fb2d4e75cf5194c87a4c0a753685d1acd1d2b4"
+  }
+}

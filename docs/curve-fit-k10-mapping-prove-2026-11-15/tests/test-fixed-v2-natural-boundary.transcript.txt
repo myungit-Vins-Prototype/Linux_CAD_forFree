@@ -1,0 +1,11 @@
+Historical stdout captured from the v2 run before splitting interior success and boundary-unresolved cases (transcribed from tool output; original test-fixed.log was reused).
+
+    fk_test_main.cpp:36: eccezione: Mappatura carrier: corridoio UV fuori dominio naturale o non risolto. scale=0.010000 rational=0 bspline=0
+[ FAIL ] MappingCarrierHiddenTargetsPolyRationalPoseScale (1 controlli falliti)
+    fk_test_main.cpp:36: eccezione: Mappatura carrier: corridoio UV fuori dominio naturale o non risolto.
+[ FAIL ] MappingCarrierSourceFrameQuarterTurnShiftHolesAndRoundtrip (1 controlli falliti)
+[  OK  ] MappingCarrierDeclaredLegacyDiagonalPeriodicAndOffset
+[  OK  ] MappingCarrierFailureAndCallbackCancellationAreAtomic
+[  OK  ] MappingCarrierDegree27SingleSpanAndRoundtrip
+[  OK  ] MappingCarrierTolerantSourceDiscrepanciesAreRejectedAtomically
+4/6 test superati

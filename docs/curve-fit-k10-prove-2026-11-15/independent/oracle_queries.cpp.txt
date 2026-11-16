@@ -1,0 +1,7 @@
+#include "fk_curve_fit_bounds.h"
+#include "fk_curve.h"
+#include <iostream>
+#include <iomanip>
+#include <limits>
+using namespace ForgeCad::Kernel;
+int main(){std::cout<<std::setprecision(17);auto line=std::make_shared<BSplineCurve<3>>(1,std::vector<double>{0,0,1,1},std::vector<Vec3>{{0,0,0},{1,0,0}});int checks=0;for(double d:{.001,-.001}){auto oracle=detail::extrusionOffsetErrorBound(line,{0,1},d,Vec3(0,1,0));for(double lo:{0.,.13})for(double hi:{.87,1.}){std::array<Vec3,4> q;for(int i=0;i<4;++i)q[i]=Vec3(lo+(hi-lo)*i/3.,0,d);double good=oracle({lo,hi},q);if(!(good>=0&&good<1e-10))return 1;++checks;for(auto&v:q)v[2]=-d;double flip=oracle({lo,hi},q);if(std::isfinite(flip)&&flip<2*std::fabs(d))return 2;++checks;for(auto&v:q){v[0]+=.0001;v[2]=d;}double tangent=oracle({lo,hi},q);if(!(tangent>=.0001))return 3;++checks;std::cout<<"d="<<d<<" query="<<lo<<","<<hi<<" good="<<good<<" flip="<<flip<<" tangent="<<tangent<<"\n";}}std::cout<<"checks="<<checks<<" PASS\n";}

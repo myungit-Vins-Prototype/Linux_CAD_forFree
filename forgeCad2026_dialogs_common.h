@@ -53,6 +53,11 @@ struct WindowLock {
     ~WindowLock();
 };
 
+// Ruoli dei messaggi: i colori sono definiti dallo stile del pannello e
+// seguono la sua palette anche quando il tema cambia a pannello aperto.
+enum class FunctionMessageRole { Normal, Information, Success, Error, Hint };
+void setFunctionMessageRole(QWidget *widget, FunctionMessageRole role, bool emphasized = false);
+
 // Il messaggio ha un riquadro limitato: righe lunghe e molti dettagli non
 // aumentano le dimensioni del pannello della funzione.
 class FunctionMessage final : public QPlainTextEdit {

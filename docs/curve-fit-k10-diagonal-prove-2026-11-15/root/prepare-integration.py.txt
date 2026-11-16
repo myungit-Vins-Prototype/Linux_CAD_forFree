@@ -1,0 +1,21 @@
+from pathlib import Path
+r=Path('/home/myungit/Linux_CAD_forFree')
+f=r/'kernel/CMakeLists.txt';s=f.read_text();assert 'fk_affine_surface_fit.cpp' not in s
+s=s.replace('    fk_mapping_carrier.h','    fk_affine_surface_fit.h\n    fk_affine_surface_fit.cpp\n    fk_mapping_carrier.h',1)
+s=s.replace('fk_curve_fit_bounds.cpp fk_mapping_carrier.cpp PROPERTIES','fk_curve_fit_bounds.cpp fk_mapping_carrier.cpp fk_affine_surface_fit.cpp PROPERTIES',1)
+s+='''
+# Certificazione del mapping affine obliquo sulle estrusioni originali.
+add_executable(forgekernel_mapping_diagonal_validation_tests tests/fk_test_main.cpp tests/test_mapping_diagonal_validation.cpp)
+target_link_libraries(forgekernel_mapping_diagonal_validation_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_mapping_diagonal_validation_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_mapping_diagonal_validation_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_mapping_diagonal_validation_tests COMMAND forgekernel_mapping_diagonal_validation_tests)
+set_tests_properties(forgekernel_mapping_diagonal_validation_tests PROPERTIES TIMEOUT 180)
+''';f.write_text(s)
+f=r/'tools/generate_architecture.py';s=f.read_text();anchor=" 'kernel/fk_mapping_carrier.cpp':";assert anchor in s
+s=s.replace(anchor,""" 'kernel/fk_affine_surface_fit.cpp': ('kernel', 'Riconoscimento delle SP-curve affini originali per superfici estruse: segmenti UV anche obliqui, dominio, copertura, pesi, budget e cancellazione; inoltro al certificato continuo sul generatore originale.'),
+ 'kernel/fk_affine_surface_fit.h': ('kernel', 'Contratto della composizione affine UV su estrusioni: intervalli e coefficienti originali, famiglie supportate e controllo inconclusivo distinto dal caso non supportato.'),
+ 'kernel/tests/test_mapping_diagonal_validation.cpp': ('tests', 'Regressioni del mapping obliquo su estrusioni originali: rilievi nascosti, UV affini, direzioni, pesi, pose, scale, topologia, persistenza e pubblicazione atomica; query avverse sul certificato continuo.'),
+"""+anchor,1)
+s=s.replace('composizione isoparametrica NURBS/estrusione con SP-curve affine','composizione isoparametrica NURBS e affine anche obliqua su estrusione con SP-curve originale')
+f.write_text(s)

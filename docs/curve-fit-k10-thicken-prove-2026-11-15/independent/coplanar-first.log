@@ -1,0 +1,3 @@
+rational=0 source_faces=2 shared_edges=1 result_faces=10 volume=0.099999999999999978 gap=2.6394266702486811e-16 codec=1 history=1 immutable=1
+rational=1 source_faces=2 shared_edges=1 result_faces=10 volume=0.1000001004013578 gap=2.7757561605228079e-17 codec=1 history=1 immutable=1
+checks=2 PASS

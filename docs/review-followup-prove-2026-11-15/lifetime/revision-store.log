@@ -1,0 +1,8 @@
+PASS copie storiche, deduplicazione e ritentativi
+PASS prenotazione persistente, revoca e copie obsolete
+PASS errori atomici, contenuti preparati e ripristino
+PASS dipendenze della tavola fissate ai check-in esatti
+PASS identita' adottate e base controllata prima del check-out
+PASS esclusione tra processi
+PASS catalogo concorrente: 200 letture senza falsi danni
+PASS integrita', catene e archivio spostato

@@ -1,0 +1,6 @@
+import json,shlex,subprocess,pathlib
+root=pathlib.Path('/home/myungit/Linux_CAD_forFree');tmp=pathlib.Path('/tmp/forgecad-review-20261115/ui')
+cc=next(c for c in json.loads((root/'forgecad-release/compile_commands.json').read_text()) if c['file'].endswith('/tests/test_viewport.cpp'))
+cmd=shlex.split(cc['command']);cmd[cmd.index('-o')+1]=str(tmp/'repro.o');cmd[cmd.index('-c')+1]=str(tmp/'repro.cpp');cmd=[x for x in cmd if x!='-O3'];cmd.append('-O0');subprocess.run(cmd,cwd=cc['directory'],check=True)
+cmd=shlex.split((root/'forgecad-release/CMakeFiles/forgecad_view_tests.dir/link.txt').read_text());cmd=[x for x in cmd if not x.startswith('-Wl,--dependency-file')];cmd[cmd.index('-o')+1]=str(tmp/'repro')
+cmd=[str(tmp/'repro.o') if x.endswith('/tests/test_viewport.cpp.o') else x for x in cmd];subprocess.run(cmd,cwd=root/'forgecad-release',check=True)

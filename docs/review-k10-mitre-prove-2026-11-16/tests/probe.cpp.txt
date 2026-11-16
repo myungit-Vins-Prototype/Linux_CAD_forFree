@@ -1,0 +1,49 @@
+#include "fk_blend_mitre.h"
+#include "fk_bspline.h"
+#include "fk_cancel.h"
+#include "fk_surface_algo.h"
+#include <algorithm>
+#include <fstream>
+#include <iomanip>
+#include <iostream>
+using namespace ForgeCad::Kernel;
+int main() {
+    const double a = 1.0 / 512, b = 3.0 / 512;
+    std::vector<double> uk{0,0,0,0,a,a,a,b,b,b,1,1,1,1};
+    std::vector<double> x{0,a/3,2*a/3,a,a+(b-a)/3,a+2*(b-a)/3,b,b+(1-b)/3,b+2*(1-b)/3,1};
+    std::vector<Vec3> sp, tp;
+    for (std::size_t i = 0; i < x.size(); ++i) {
+        for (int j = 0; j < 3; ++j) {
+            sp.push_back({x[i], j/2.0, 0});
+            tp.push_back({x[i], j/2.0, (i == 4 || i == 5) && j == 2 ? 10000.0 : 0.0});
+        }
+    }
+    const BSplineSurface s(3,2,uk,{0,0,0,1,1,1},int(x.size()),3,sp);
+    const BSplineSurface t(3,2,uk,{0,0,0,1,1,1},int(x.size()),3,tp);
+    const double endpoint[4]{1,1,1,1};
+    const auto cut = detail::traceBlendMitre(s,t,0,0,endpoint,1,1e-9);
+    double witness = 0, at = 0;
+    for (int i = 0; i <= 4096; ++i) {
+        const double f = i/4096.0;
+        const double d = distance(cut.curve->point(f), t.point(f,f));
+        if (d > witness) { witness = d; at = f; }
+    }
+    std::cout << std::setprecision(17) << "gap=" << cut.gap << " range=" << cut.range.lo << ',' << cut.range.hi << " diagonal_witness=" << witness << " f=" << at << '\n';
+    const Vec3 p = cut.curve->point(at), q = t.point(at,at);
+    const auto projected = projectPoint(t,p);
+    std::cout << "projected_distance=" << projected.distance << "\n";
+    std::cout << "curve=" << p.x() << ',' << p.y() << ',' << p.z() << " support=" << q.x() << ',' << q.y() << ',' << q.z() << '\n';
+    std::ofstream out("/tmp/mitre-review/tests/baseline-alias-coefficients.json");
+    out << std::setprecision(17) << "{\"u_degree\":3,\"v_degree\":2,\"u_knots\":[";
+    for (std::size_t i = 0; i < uk.size(); ++i) out << (i ? "," : "") << uk[i];
+    out << "],\"v_knots\":[0,0,0,1,1,1],\"poles_s\":[";
+    for (std::size_t i = 0; i < sp.size(); ++i) out << (i ? "," : "") << '[' << sp[i].x() << ',' << sp[i].y() << ',' << sp[i].z() << ']';
+    out << "],\"poles_t\":[";
+    for (std::size_t i = 0; i < tp.size(); ++i) out << (i ? "," : "") << '[' << tp[i].x() << ',' << tp[i].y() << ',' << tp[i].z() << ']';
+    const auto *bc = dynamic_cast<const BSplineCurve<3> *>(cut.curve.get());
+    out << "],\"curve_knots\":[";
+    for (std::size_t i = 0; i < bc->knots().size(); ++i) out << (i ? "," : "") << bc->knots()[i];
+    out << "],\"curve_poles\":[";
+    for (int i = 0; i < bc->poleCount(); ++i) out << (i ? "," : "") << '[' << bc->poles()[i].x() << ',' << bc->poles()[i].y() << ',' << bc->poles()[i].z() << ']';
+    out << "],\"weights\":[],\"endpoint\":[1,1,1,1],\"scale\":1,\"fit_tolerance\":1e-9,\"reported_gap\":" << cut.gap << ",\"witness_f\":" << at << ",\"diagonal_witness\":" << witness << "}\n";
+}

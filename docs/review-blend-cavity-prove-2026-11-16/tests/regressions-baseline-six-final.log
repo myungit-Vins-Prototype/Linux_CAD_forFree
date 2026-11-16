@@ -1,0 +1,11 @@
+    /home/myungit/Linux_CAD_forFree/kernel/tests/fk_test_main.cpp:36: eccezione: blendEdges: il contatto esce dal dominio del fianco F0; il passaggio su un altro supporto non e' ancora gestito per questo raggio
+[ FAIL ] BlendCavitySmallRadiusKeepsForwardContour (1 controlli falliti)
+    /home/myungit/Linux_CAD_forFree/kernel/tests/fk_test_main.cpp:36: eccezione: blendEdges: il contatto esce dal dominio del fianco F0; il passaggio su un altro supporto non e' ancora gestito per questo raggio
+[ FAIL ] BlendCavitySmallRadiusKeepsDifferentSeed (1 controlli falliti)
+    /home/myungit/Linux_CAD_forFree/kernel/tests/fk_test_main.cpp:36: eccezione: blendEdges: il contatto esce dal dominio del fianco F0; il passaggio su un altro supporto non e' ancora gestito per questo raggio
+[ FAIL ] BlendCavitySmallRadiusKeepsRigidPose (1 controlli falliti)
+    /home/myungit/Linux_CAD_forFree/kernel/tests/fk_test_main.cpp:36: eccezione: blendEdges: il contatto esce dal dominio del fianco F0; il passaggio su un altro supporto non e' ancora gestito per questo raggio
+[ FAIL ] BlendCavitySmallRadiusKeepsScaledGeometry (1 controlli falliti)
+[  OK  ] BlendCavityCancellationPreservesBodyAndClearsOutputHistory
+[  OK  ] BlendCavityConsumedSideRejectsWithoutBodyOrPartialHistory
+2/6 test superati

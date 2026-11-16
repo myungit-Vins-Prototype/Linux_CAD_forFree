@@ -1,0 +1,41 @@
+{
+  "exit": 0,
+  "seconds": 155.78662927000005,
+  "tests": [
+    "forgekernel_edge_offset_fit_validation_tests",
+    "forgekernel_curve_fit_validation_tests",
+    "forgekernel_offset_validation_tests",
+    "forgekernel_offset_split_crease_tests",
+    "forgekernel_tolerance_tests",
+    "forgekernel_surface_curve_fit_validation_tests",
+    "forgekernel_boundary_fit_validation_tests",
+    "forgekernel_mapping_carrier_validation_tests",
+    "forgekernel_mapping_diagonal_validation_tests",
+    "forgekernel_planar_flatten_validation_tests",
+    "forgekernel_planar_thicken_validation_tests",
+    "forgekernel_projection_fit_validation_tests",
+    "forgekernel_sheet_fit_validation_tests",
+    "forgekernel_curve_projection_tests",
+    "forgekernel_sweep_validation_tests",
+    "forgekernel_surface_mapping_tests",
+    "forgecad_ellipse_extremes_tests",
+    "forgecad_sketch_offset_validation_tests",
+    "forgecad_geometry_sources_tests",
+    "forgecad_surface_mapping_tests",
+    "forgecad_thicken_tests",
+    "forgecad_projection_tests",
+    "forgecad_function_panels_tests",
+    "forgecad_edit_preview_reuse_tests"
+  ],
+  "actual_passed": 24,
+  "command": [
+    "ctest",
+    "--test-dir",
+    "forgecad-release",
+    "--output-on-failure",
+    "--parallel",
+    "1",
+    "-R",
+    "^(forgekernel_edge_offset_fit_validation_tests|forgekernel_curve_fit_validation_tests|forgekernel_offset_validation_tests|forgekernel_offset_split_crease_tests|forgekernel_tolerance_tests|forgekernel_surface_curve_fit_validation_tests|forgekernel_boundary_fit_validation_tests|forgekernel_mapping_carrier_validation_tests|forgekernel_mapping_diagonal_validation_tests|forgekernel_planar_flatten_validation_tests|forgekernel_planar_thicken_validation_tests|forgekernel_projection_fit_validation_tests|forgekernel_sheet_fit_validation_tests|forgekernel_curve_projection_tests|forgekernel_sweep_validation_tests|forgekernel_surface_mapping_tests|forgecad_ellipse_extremes_tests|forgecad_sketch_offset_validation_tests|forgecad_geometry_sources_tests|forgecad_surface_mapping_tests|forgecad_thicken_tests|forgecad_projection_tests|forgecad_function_panels_tests|forgecad_edit_preview_reuse_tests)$"
+  ]
+}

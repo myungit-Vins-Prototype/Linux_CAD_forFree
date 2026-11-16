@@ -1,6 +1,8 @@
 #include "forgeCad2026_viewport_internal.h"
 #include "cad_geometry_refs.h"
+#include "cad_ellipse.h"
 #include "cad_sketch_reference_usage.h"
+#include <QMap>
 
 
 void CadViewport::setSplineShapeOptions(const ForgeCad::SplineShapeOptions &options) { splineShapeOptions_ = options; update(); }
@@ -24,6 +26,7 @@ void CadViewport::setDrawingTool(DrawingTool tool) {
     sketchReferenceHoverLabels_.clear(); sketchReferenceHoverSource_ = {};
     if(tool==DrawingTool::Slot)showStatus(QStringLiteral("Asola: primo centro, secondo centro, poi larghezza"));
     if(tool==DrawingTool::ThreePointCircle)showStatus(QStringLiteral("Cerchio per tre punti: scegli tre punti distinti sulla circonferenza"));
+    if(tool==DrawingTool::EllipseExtremes)showStatus(QStringLiteral("Ellisse per estremi: scegli il primo estremo del primo asse"));
     if(tool==DrawingTool::Point)showStatus(QStringLiteral("Punto: clic per inserire un punto; Esc per terminare"));
     dimensionPreviewValid_ = false;
     dimensionHover_ = {};
@@ -2057,6 +2060,16 @@ bool CadViewport::previewCurve(CurveObject &curve) const {
         if (curve.controlPoints.size() != 1) return false;
         curve.controlPoints.append(rectangleCorner(curve.controlPoints.first(), cursor));
         break;
+    case DrawingTool::EllipseExtremes:
+        if (curve.controlPoints.size() == 1) {
+            curve.tool = DrawingTool::Line;
+            curve.controlPoints.append(cursor);
+            curve.samples = curve.controlPoints;
+            return pointDistance(curve.samples.at(0), cursor) > ForgeCad::sketchConnectionTolerance();
+        }
+        if (curve.controlPoints.size() != 2) return false;
+        curve = ForgeCad::ellipseFromExtremes(curve.controlPoints.at(0), curve.controlPoints.at(1), cursor);
+        break;
     case DrawingTool::Ellipse:
         // Dopo il centro il cerchio del primo semiasse, poi l'ellisse fino al cursore.
         if (curve.controlPoints.size() == 1) {
@@ -2100,6 +2113,12 @@ QStringList CadViewport::previewMeasures() const {
         const QPointF a = curve.tool == DrawingTool::Rectangle ? p.at(0) : 2.0 * p.at(0) - p.at(1);
         return {QStringLiteral("L = %1   H = %2").arg(number(std::abs(p.at(1).x() - a.x())), number(std::abs(p.at(1).y() - a.y()))),
                 QStringLiteral("Maiusc: quadrato")};
+    }
+    case DrawingTool::EllipseExtremes: {
+        QPointF center, first, second;
+        if (!ForgeCad::ellipseAxes(curve, center, first, second)) return {};
+        return {QStringLiteral("Primo asse = %1   Secondo asse = %2").arg(number(2.0 * pointLength(first)), number(2.0 * pointLength(second))),
+                QStringLiteral("Quattro estremi quotabili e vincolabili; centro derivato")};
     }
     case DrawingTool::Ellipse: {
         const double angle = std::atan2(p.at(1).y() - p.at(0).y(), p.at(1).x() - p.at(0).x()) * 180.0 / M_PI;
@@ -2193,6 +2212,13 @@ QString CadViewport::editCurveDimension(int index) {
     const SketchObject &before = sketches_.at(activeSketch_);
     if (index < 0 || index >= before.curves.size()) return QStringLiteral("Seleziona prima un cerchio, un arco o un poligono.");
     const CurveObject curve = before.curves.at(index);
+    if (curve.tool == DrawingTool::EllipseExtremes) {
+        sketchSelections_.clear();
+        selectedPoints_.clear();
+        beginDimensionTool();
+        return QStringLiteral("Ellisse per estremi: scegli uno dei quattro estremi e un riferimento, poi posiziona la quota. "
+                              "Per i vincoli: Selezione, Ctrl+clic sugli estremi, poi Vincoli.");
+    }
     if (curve.tool == DrawingTool::Ellipse) return editEllipseDimension(index);
     const bool circle = curve.tool == DrawingTool::Circle, arc = curve.tool == DrawingTool::Arc, polygon = curve.tool == DrawingTool::Polygon;
     if (!(circle || arc || polygon) || curve.controlPoints.size() < (arc ? 3 : 2))
@@ -2664,7 +2690,7 @@ void CadViewport::moveSketchPoints(SketchObject &sketch, int edited, const QVect
     QVector<Move> pending;for(const auto &from:origins)pending.append({from,delta});
     QVector<QPointF> done;
     QVector<QPair<QPointF *, QPointF>> updates;
-    QSet<int> movedCurves;
+    QMap<int, QVector<QPointF>> ellipseBefore;
     for (int guard = 0; guard < 1000 && !pending.isEmpty(); ++guard) {
         const Move move = pending.takeFirst();
         if (pointLength(move.delta) <= 1e-15) continue;
@@ -2691,6 +2717,8 @@ void CadViewport::moveSketchPoints(SketchObject &sketch, int edited, const QVect
                 // Le curve derivate sono rigide: chi vi e' collegato si adatta a loro.
                 if (sketch.curves.at(curve).tool == DrawingTool::Converted) break;
                 if(sketch.curves.at(curve).tool==DrawingTool::Circle&&control>0)continue;
+                if (sketch.curves.at(curve).tool == DrawingTool::EllipseExtremes && !ellipseBefore.contains(curve))
+                    ellipseBefore.insert(curve, sketch.curves.at(curve).controlPoints);
                 QPointF &point = sketch.curves[curve].controlPoints[control];
                 if (pointDistance(point, move.from) <= tolerance) {
                     updates.append({&point, point + move.delta});
@@ -2700,12 +2728,19 @@ void CadViewport::moveSketchPoints(SketchObject &sketch, int edited, const QVect
                         updates.append({&object.tangentHandles[control].first, object.tangentHandles.at(control).first + move.delta});
                         updates.append({&object.tangentHandles[control].second, object.tangentHandles.at(control).second + move.delta});
                     }
-                    movedCurves.insert(curve);
                 }
             }
     }
     for (const auto &[point, value] : updates) *point = value;
-    (void)movedCurves;
+    // Un estremo condiviso con un segmento usa lo stesso gesto del drag
+    // diretto. Con piu' estremi mossi e' il solver a ricostruire i due assi.
+    for (auto it = ellipseBefore.cbegin(); it != ellipseBefore.cend(); ++it) {
+        CurveObject &curve = sketch.curves[it.key()];
+        int moved = -1, count = 0;
+        for (int k = 0; k < curve.controlPoints.size(); ++k)
+            if (curve.controlPoints.at(k) != it.value().at(k)) { moved = k; ++count; }
+        if (count == 1) ForgeCad::normalizeEllipseExtremes(curve, moved, it.value().at(moved));
+    }
 }
 
 QVector<QPointF> CadViewport::curveEditMarkers(const CurveObject &curve,bool hover) {
@@ -3135,17 +3170,27 @@ void CadViewport::finalizePrimitive() {
     CurveObject primitive;
     primitive.tool = drawingTool_;
     primitive.controlPoints = curveControlPoints_;
+    if (drawingTool_ == DrawingTool::EllipseExtremes) {
+        if (curveControlPoints_.size() != 3) return;
+        primitive = ForgeCad::ellipseFromExtremes(curveControlPoints_.at(0), curveControlPoints_.at(1), curveControlPoints_.at(2));
+    }
     if (drawingTool_ == DrawingTool::Polygon) primitive.sides = polygonSides_;
     if (drawingTool_ == DrawingTool::Ellipse && primitive.controlPoints.size() >= 3)
         primitive.controlPoints[2] = ellipseMinorPoint(primitive.controlPoints.at(0), primitive.controlPoints.at(1), primitive.controlPoints.at(2));
     ForgeCad::recalculateCurve(primitive, tessellationQuality_);
+    if (drawingTool_ == DrawingTool::EllipseExtremes && !primitive.numericallyValid) {
+        curveControlPoints_.removeLast();
+        showStatus(QStringLiteral("Ellisse per estremi: scegli un estremo del secondo asse fuori dal primo asse"));
+        update();
+        return;
+    }
     if (primitive.numericallyValid) {
         recordUndo();
         SketchObject &sketch = sketches_[activeSketch_];
         sketch.curves.append(primitive);
         const int index = int(sketch.curves.size()) - 1;
         for (int k = 0; k < primitive.controlPoints.size(); ++k)
-            recordPointCoincidences(sketch, {1,index,k}, curveControlPoints_.at(k));
+            recordPointCoincidences(sketch, {1,index,k}, primitive.controlPoints.at(k));
         sketchEdited();
     }
     curveControlPoints_.clear();
@@ -3226,6 +3271,10 @@ QPointF CadViewport::ellipseMinorPoint(const QPointF &center, const QPointF &maj
 }
 
 void CadViewport::normalizeEllipse(CurveObject &curve, int moved, const QPointF &previous) {
+    if (curve.tool == DrawingTool::EllipseExtremes) {
+        ForgeCad::normalizeEllipseExtremes(curve, moved, previous);
+        return;
+    }
     if (curve.tool != DrawingTool::Ellipse || curve.controlPoints.size() < 3) return;
     QVector<QPointF> &p = curve.controlPoints;
     if (moved == 0) {

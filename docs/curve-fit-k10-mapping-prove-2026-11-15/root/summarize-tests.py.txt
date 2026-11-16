@@ -1,0 +1,10 @@
+from pathlib import Path
+import json,re
+p=Path('/tmp/forgecad-k10-mapping-20261115/root');results=json.loads((p/'kernel-results.json').read_text());seen={};executions=0
+for result in results:
+ txt=(p/('kernel-'+result['filter']+'.log')).read_text();names=re.findall(r'^\[  OK  \] (.+)$',txt,re.M);failed=re.findall(r'^\[ FAIL \] (.+)$',txt,re.M);assert result['exit']==0 and names and not failed,result
+ executions+=len(names)
+ for n in names:seen.setdefault(n,[]).append(result['filter'])
+c=json.loads((p/'ctest-result.json').read_text());assert c['exit']==0
+log=(p/'ctest.log').read_text();m=re.search(r'100% tests passed(?:, 0 tests failed)? out of (\d+)',log);assert m and int(m.group(1))==len(c['tests'])
+r=dict(kernel_distinct=len(seen),kernel_executions=executions,kernel_seconds=sum(x['seconds'] for x in results),kernel_cases=seen,ctest_suites=len(c['tests']),ctest_seconds=c['seconds']);(p/'test-summary.json').write_text(json.dumps(r,indent=2));print({k:v for k,v in r.items() if k!='kernel_cases'})

@@ -1,0 +1,3 @@
+CHAMFER ui=1.25 preview=0.5 valid=1 same_key=1 same_generation=1 editing_finished=1 label=pronta (in ambra nella vista)
+COMMIT error= count=2 size=1.25 geometry_same_old=0
+RESULT reproduced=1 error=

@@ -1,0 +1,17 @@
+    /tmp/forgecad-k10-thicken-20261115/tests/test_planar_thicken_validation.cpp:175: FK_CHECK(surface != nullptr)
+    /home/myungit/Linux_CAD_forFree/kernel/tests/fk_test_main.cpp:36: eccezione: known planar wall not original-generator extrusion
+[ FAIL ] PlanarThickenHiddenPolynomialRationalAllSides (2 controlli falliti)
+    /tmp/forgecad-k10-thicken-20261115/tests/test_planar_thicken_validation.cpp:175: FK_CHECK(surface != nullptr)
+    /home/myungit/Linux_CAD_forFree/kernel/tests/fk_test_main.cpp:36: eccezione: known planar wall not original-generator extrusion scale=0.010000 rational=0 sense=0
+[ FAIL ] PlanarThickenPoseScaleSensePreservesWallGeometryAndPcurves (2 controlli falliti)
+    /tmp/forgecad-k10-thicken-20261115/tests/test_planar_thicken_validation.cpp:175: FK_CHECK(surface != nullptr)
+    /home/myungit/Linux_CAD_forFree/kernel/tests/fk_test_main.cpp:36: eccezione: known planar wall not original-generator extrusion
+[ FAIL ] PlanarThickenNestedTrimReverseTransformedHolesAndRoundtrip (2 controlli falliti)
+[  OK  ] PlanarThickenDirectionControlRetainsOriginalCurve
+[  OK  ] PlanarThickenInvalidAndCancellationRetainLegacyHistoryReset
+    /tmp/forgecad-k10-thicken-20261115/tests/test_planar_thicken_validation.cpp:175: FK_CHECK(surface != nullptr)
+    /home/myungit/Linux_CAD_forFree/kernel/tests/fk_test_main.cpp:36: eccezione: known planar wall not original-generator extrusion
+[ FAIL ] PlanarThickenClosedNativeNurbsAndAngularCircleCompatibility (2 controlli falliti)
+2/6 test superati
+Command exited with non-zero status 1
+elapsed=0.37 maxrss_kb=7772

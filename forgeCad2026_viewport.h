@@ -1253,8 +1253,6 @@ private:
 
     QPointF selectedPointPosition(const SelectedPoint &point) const;
 
-    void setSelectedPointPosition(const SelectedPoint &point, const QPointF &position);
-
     void finalizeCurve();
 
     // Cerchio, arco e poligono sono memorizzati con i soli parametri esatti

@@ -1,0 +1,74 @@
+cad_drawing_local_section_depth.h:34:    QPolygonF band;
+cad_drawing_local_section_depth.cpp:68:    auto *band = new QGraphicsPolygonItem(trace.band, group);
+cad_drawing_local_section_depth.cpp:69:    band->setPen(Qt::NoPen);
+cad_drawing_local_section_depth.cpp:70:    band->setBrush(QColor(230, 134, 37, 25));
+cad_drawing_local_section_depth.cpp:71:    band->setAcceptedMouseButtons(Qt::NoButton);
+cad_drawing_local_section_depth.cpp:219:    trace.band = {point(front, regionLow), point(front, regionHigh),
+tests/test_drawing_local_section_depth.cpp:93:        near(drawingLocalSectionDepthAt(target,ref,trace.band[0]),16,"inizio fascia sullo zero");
+tests/test_drawing_local_section_depth.cpp:94:        near(drawingLocalSectionDepthAt(target,ref,trace.band[2]),9,"fine fascia sul taglio");
+kernel/tests/test_sweep.cpp:230:    const Body band = sweepRegions(normalFrame(loop->point(0.0), startTangent(closed[0])), {circleRegion(0.3)}, closed);
+kernel/tests/test_sweep.cpp:232:    FK_CHECK_NEAR(checkedSolid(band).volume, kPi * 0.09 * L, 1e-8 * kPi * 0.09 * L);
+kernel/fk_mass.cpp:140:    FaceValues band(double vEnd) const;          // \int_{periodo} G(u, vEnd) du
+kernel/fk_mass.cpp:391:FaceValues FaceIntegrator::band(double vEnd) const {
+kernel/fk_mass.cpp:602:            if (!enclosing) add(band(v0_ + vPeriod), 1.0);  // tutto il toro meno i fori
+kernel/fk_mass.cpp:609:            if (k != 0.0) add(band(v0_ + vPeriod), k);
+kernel/fk_mass.cpp:639:        add(band(top), 1.0);
+kernel/fk_mass.cpp:643:        add(band(bottom), -1.0);
+kernel/tests/test_surface_algo.cpp:229:        const Interval band{result.v - 200.0, result.v + 200.0};
+kernel/tests/test_surface_algo.cpp:230:        FK_CHECK(result.distance <= gridMinimum(extrusion, p, curve->domain(), band) + 1e-9);
+kernel/fk_fill.cpp:225:    BandMatrix(int n, int band) : n_(n), b_(band), a_(std::size_t(n) * std::size_t(band + 1), 0.0) {}
+kernel/fk_fill.cpp:240:    int band() const { return b_; }
+kernel/fk_fill.cpp:866:                    const double band = !hasShapeGuides ? requestedBand : std::min(requestedBand, jetLimit);
+kernel/fk_fill.cpp:867:                    const int count = std::clamp(int(std::ceil(band / h)), 2, 16);
+kernel/fk_fill.cpp:872:                        const double offset = fraction * band;
+kernel/fk_constraint_linear.h:156:                      const BandOrder &band, std::vector<double> &z) {
+kernel/fk_constraint_linear.h:157:    const std::size_t m = band.rows.size(), stride = band.width + 1;
+kernel/fk_constraint_linear.h:162:        const std::size_t first = i > band.width ? i - band.width : 0;
+kernel/fk_constraint_linear.h:164:            double sum = dot(rows[band.rows[i]], rows[band.rows[j]]) + (i == j ? mu : 0);
+kernel/fk_constraint_linear.h:173:        double sum = residuals[band.rows[i]];
+kernel/fk_constraint_linear.h:174:        const std::size_t first = i > band.width ? i - band.width : 0;
+kernel/fk_constraint_linear.h:202:        const auto band = mode == StepMode::Automatic && m >= 32
+kernel/fk_constraint_linear.h:207:        if (band.width + 1 <= m / 2) {
+kernel/fk_constraint_linear.h:209:            if (bandSolve(rows, residuals, mu, band, z)) {
+kernel/fk_constraint_linear.h:211:                if (band.rows != group) ++stats.reorderedComponents;
+kernel/fk_constraint_linear.h:212:                stats.matrixEntries += m * (band.width + 1);
+kernel/fk_constraint_linear.h:214:                    for (const Entry &entry : rows[band.rows[i]]) step[entry.column] -= entry.value * z[i];
+forgeCad2026_operation_illustration.cpp:222:  QPainterPath band;
+forgeCad2026_operation_illustration.cpp:223:  band.moveTo(cross(0, 0));
+forgeCad2026_operation_illustration.cpp:224:  band.lineTo(cross(8, 0));
+forgeCad2026_operation_illustration.cpp:226:    band.lineTo(cross(8, k / 32.));
+forgeCad2026_operation_illustration.cpp:227:  band.lineTo(cross(0, 1));
+forgeCad2026_operation_illustration.cpp:229:    band.lineTo(cross(0, k / 32.));
+forgeCad2026_operation_illustration.cpp:230:  band.closeSubpath();
+forgeCad2026_operation_illustration.cpp:235:  p.fillPath(band, glow);
+forgeCad2026_operation_illustration.cpp:238:  p.drawPath(band);
+tests/test_next_body_union.h:109:    const auto band=box(-1,-1,-2,4,4,2+bandHeight,71011);
+tests/test_next_body_union.h:110:    double hi=-1;for(VertexId vertex:band.forgeBody->vertices())hi=std::max(hi,band.forgeBody->vertex(vertex).point.z());
+tests/test_next_body_union.h:112:    const QVector<ExtrusionObject> bandSources{above,band};const auto unmerged=build(profile,bandSources,{},false);
+kernel/tests/test_sweep_surfaces.cpp:210:    const Body band = sweepSheet(normalFrame(loop->point(0.0), startTangent(closed[0])), {squareLoop(0.3)}, closed);
+kernel/tests/test_sweep_surfaces.cpp:211:    checkedSheet(band);
+kernel/tests/test_sweep_surfaces.cpp:212:    FK_CHECK(laminarEdges(band) == 0);
+kernel/tests/test_sweep_surfaces.cpp:213:    const double area = totalArea(band);
+cad_drawing.cpp:271:            for(std::size_t band=0;band<=steps.size();++band){
+cad_drawing.cpp:272:                const double left=band?steps[band-1].at:-std::numeric_limits<double>::infinity();
+cad_drawing.cpp:273:                const double right=band<steps.size()?steps[band].at:std::numeric_limits<double>::infinity();
+cad_drawing.cpp:274:                auto part=view;part.step.reset();const Vec3 shift=(band?steps[band-1].offset:0)*view.plane.zDir();
+cad_drawing_derived.cpp:162:        const int band=int(std::upper_bound(critical.begin(),critical.end(),y)-critical.begin());
+cad_drawing_derived.cpp:167:            const auto key=std::make_tuple(band,signature,int(i));const auto old=classified.find(key);if(old!=classified.end())return old->second;
+cad_drawing_derived.cpp:177:    const auto band=[&](double low,double high,const Spans &a,const Spans &b){for(std::size_t i=0;i<a.size();++i){QPainterPath path;path.moveTo(point(a[i].lo,low));path.lineTo(point(a[i].hi,low));path.lineTo(point(b[i].hi,high));path.lineTo(point(b[i].lo,high));path.closeSubpath();material.addPath(path);}};
+cad_drawing_derived.cpp:180:        if(high-low<=precision||depth==24){band(low,high,m,m);return;}
+cad_drawing_derived.cpp:183:        if(flat){band(low,high,a,b);return;}
+cad_drawing_derived.cpp:294:            for(std::size_t band=0;band<=steps.size();++band){
+cad_drawing_derived.cpp:295:                const double left=band?steps[band-1].at*view.scale:-std::numeric_limits<double>::infinity();
+cad_drawing_derived.cpp:296:                const double right=band<steps.size()?steps[band].at*view.scale:std::numeric_limits<double>::infinity();
+cad_drawing_derived.cpp:298:                if(view.bend){if(band)part=drawingSectionBentPlane(view);part.bend.reset();}
+cad_drawing_derived.cpp:299:                else part.plane=Frame3::fromAxes(view.plane.origin()+(band?steps[band-1].offset:0)*view.plane.zDir(),view.plane.xDir(),view.plane.yDir(),view.plane.zDir());
+kernel/fk_offset.cpp:230:    std::vector<std::array<double, 3>> band(m);  // coefficienti dei poli r+1, r+2, r+3 (colonne r-1, r, r+1)
+kernel/fk_offset.cpp:238:        band[r] = {0.0, 0.0, 0.0};
+kernel/fk_offset.cpp:251:            band[r][std::size_t(offset)] = b;
+kernel/fk_offset.cpp:256:        const double factor = band[r][0] / band[r - 1][1];
+kernel/fk_offset.cpp:257:        band[r][1] -= factor * band[r - 1][2];
+kernel/fk_offset.cpp:261:    unknown[m - 1] = rhs[m - 1] / band[m - 1][1];
+kernel/fk_offset.cpp:262:    for (std::size_t r = m - 1; r-- > 0;) unknown[r] = (rhs[r] - band[r][2] * unknown[r + 1]) / band[r][1];
+tests/test_viewport.cpp:10277:            const ExtrusionObject &band = surfaces.extrusions_.back();
+tests/test_viewport.cpp:10278:            require(std::fabs(ForgeCad::Kernel::faceArea(*band.forgeBody, band.forgeBody->faces().front()) - 2.0 * M_PI * 0.75 * 3.0) < 1e-9,

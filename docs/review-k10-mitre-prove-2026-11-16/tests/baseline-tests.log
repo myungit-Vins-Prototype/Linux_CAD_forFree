@@ -1,0 +1,7 @@
+    /tmp/mitre-review/tests/test_mitre_fit.cpp:56: FK_CHECK(projectPoint(*t, p).distance <= std::max(linearResolution(), cut.gap))
+[ FAIL ] BlendMitreIsoHiddenKnotDoesNotPublishOffSupportFit (1 controlli falliti)
+[  OK  ] BlendMitreIsoPolynomialPositive
+[  OK  ] BlendMitreIsoRationalPositive
+[  OK  ] BlendMitreIsoRigidPosePositive
+[  OK  ] BlendMitreIsoScaleAndSupportOrderPositive
+4/5 test superati

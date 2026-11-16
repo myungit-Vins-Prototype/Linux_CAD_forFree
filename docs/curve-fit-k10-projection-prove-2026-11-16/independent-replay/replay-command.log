@@ -1,0 +1,36 @@
+rat=0 up=0 posed=0 oblique=0 piece 44 9.763302771282208e-08 chain 9.763302771282208e-08
+rat=0 up=0 posed=0 oblique=1 piece 44 9.763302771318136e-08 chain 9.763302771318136e-08
+rat=0 up=0 posed=1 oblique=0 piece 44 9.763470453685995e-08 chain 9.763470453685995e-08
+rat=0 up=0 posed=1 oblique=1 piece 44 9.763497276648298e-08 chain 9.763497276648298e-08
+rat=0 up=1 posed=0 oblique=0 piece 44 9.763302771282208e-08 chain 9.763302771282208e-08
+rat=0 up=1 posed=0 oblique=1 piece 44 9.763302771318136e-08 chain 9.763302771318136e-08
+rat=0 up=1 posed=1 oblique=0 piece 44 9.763432936634989e-08 chain 9.763432936634989e-08
+rat=0 up=1 posed=1 oblique=1 piece 44 9.763540145472445e-08 chain 9.763540145472445e-08
+rat=1 up=0 posed=0 oblique=0 piece 42 9.908683721600391e-08 chain 9.908683721600391e-08
+rat=1 up=0 posed=0 oblique=1 piece 42 9.908683721600478e-08 chain 9.908683721600478e-08
+rat=1 up=0 posed=1 oblique=0 piece 42 9.908760290601345e-08 chain 9.908760290601345e-08
+rat=1 up=0 posed=1 oblique=1 piece 42 9.908736149319344e-08 chain 9.908736149319344e-08
+rat=1 up=1 posed=0 oblique=0 piece 42 9.908683721600391e-08 chain 9.908683721600391e-08
+rat=1 up=1 posed=0 oblique=1 piece 42 9.908683721600478e-08 chain 9.908683721600478e-08
+rat=1 up=1 posed=1 oblique=0 piece 42 9.908761801215598e-08 chain 9.908761801215598e-08
+rat=1 up=1 posed=1 oblique=1 piece 42 9.908758016964558e-08 chain 9.908758016964558e-08
+three [(132, 9.763302772613996e-08)]
+first_last [(88, 9.763302772082809e-08), (44, 9.763302786519937e-08)]
+SUMMARY {"method": "Exact IEEE Fractions; homogeneous residual Bernstein hull; positive W and abs(n.d); exact squared comparisons against published bounds and tolerance", "geometry_records": 16, "geometry_source_property_checks": 16, "geometry_piece_certificates": 16, "geometry_chain_certificates": 16, "multi_source_join_scenarios": 2, "piece_spans": 688, "geometry_chain_spans": 688, "multi_source_join_spans": 264, "upper_bound_maximum": 9.908761801215598e-08, "tolerance_hex": "0x1.ad7f29abcaf48p-24", "seconds": 27.389213537000046}
+rat=0 up=0 posed=0 oblique=0 5.742474706407474e-05
+rat=0 up=0 posed=0 oblique=1 5.742474706407474e-05
+rat=0 up=0 posed=1 oblique=0 5.742475172825207e-05
+rat=0 up=0 posed=1 oblique=1 5.7424751728072935e-05
+rat=0 up=1 posed=0 oblique=0 5.742474706407474e-05
+rat=0 up=1 posed=0 oblique=1 5.742474706407474e-05
+rat=0 up=1 posed=1 oblique=0 5.7424751727931135e-05
+rat=0 up=1 posed=1 oblique=1 5.7424751728229704e-05
+rat=1 up=0 posed=0 oblique=0 5.415640758484547e-05
+rat=1 up=0 posed=0 oblique=1 5.415640758484547e-05
+rat=1 up=0 posed=1 oblique=0 5.415641224892865e-05
+rat=1 up=0 posed=1 oblique=1 5.415641224874951e-05
+rat=1 up=1 posed=0 oblique=0 5.415640758484547e-05
+rat=1 up=1 posed=0 oblique=1 5.415640758484547e-05
+rat=1 up=1 posed=1 oblique=0 5.41564122486782e-05
+rat=1 up=1 posed=1 oblique=1 5.415641224897677e-05
+SUMMARY {"module_baseline_scope": "Git fk_project.cpp/h snapshot relinked before current Release kernel archive; not the historical whole-kernel archive", "geometry_witnesses": 16, "minimum_geometric_distance_lower": 5.415640758484547e-05}

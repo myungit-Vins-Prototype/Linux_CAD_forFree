@@ -1,0 +1,45 @@
+{
+  "exit": 8,
+  "seconds": 51.749417996001284,
+  "command": [
+    "ctest",
+    "--test-dir",
+    "forgecad-release",
+    "--output-on-failure",
+    "--parallel",
+    "1",
+    "-V",
+    "-R",
+    "^(forgecad_sketch_projection_fit_validation_tests|forgecad_sketch_projection_tests|forgecad_projected_curve_reference_tests|forgecad_sketch_construction_tests|forgecad_sketch_reference_usage_tests|forgecad_sketch_reference_workflow_tests|forgecad_sketch_tools_refs_tests|forgecad_helix_start_angle_tests|forgecad_storyboard_review_tests|forgecad_storyboard_panel_selection_tests|forgecad_blend_history_tests|forgecad_individual_fill_tests|forgecad_fill_surface_tests|forgecad_ellipse_extremes_tests|forgecad_sketch_editing_tests|forgekernel_curve_fit_validation_tests|forgekernel_curve_projection_tests|forgekernel_sketch_projection_tests|forgekernel_blend_profile_tests|forgekernel_blend_cavity_tests|forgekernel_history_tests)$"
+  ],
+  "actual_passed": 20,
+  "actual_failed": 1,
+  "tests": [
+    "forgecad_blend_history_tests",
+    "forgecad_ellipse_extremes_tests",
+    "forgecad_fill_surface_tests",
+    "forgecad_helix_start_angle_tests",
+    "forgecad_individual_fill_tests",
+    "forgecad_projected_curve_reference_tests",
+    "forgecad_sketch_construction_tests",
+    "forgecad_sketch_editing_tests",
+    "forgecad_sketch_projection_fit_validation_tests",
+    "forgecad_sketch_projection_tests",
+    "forgecad_sketch_reference_usage_tests",
+    "forgecad_sketch_reference_workflow_tests",
+    "forgecad_sketch_tools_refs_tests",
+    "forgecad_storyboard_panel_selection_tests",
+    "forgecad_storyboard_review_tests",
+    "forgekernel_blend_cavity_tests",
+    "forgekernel_blend_profile_tests",
+    "forgekernel_curve_fit_validation_tests",
+    "forgekernel_curve_projection_tests",
+    "forgekernel_history_tests",
+    "forgekernel_sketch_projection_tests"
+  ],
+  "failed_tests": [
+    "forgekernel_blend_cavity_tests"
+  ],
+  "baseline_failed_same_case": true,
+  "baseline_kernel_sha256": "7550466e240451022b647a192017f1b5f85bb07971407e7651de618542040b7f"
+}

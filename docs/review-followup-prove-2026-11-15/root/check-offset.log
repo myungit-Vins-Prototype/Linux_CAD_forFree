@@ -1,0 +1,7 @@
+torus preserveSeams=0 d=3 accepted=1 J=4 issues=0
+torus preserveSeams=0 d=4 accepted=1 J=0 issues=0
+torus preserveSeams=0 d=5 accepted=1 J=6 issues=0
+torus preserveSeams=1 d=3 accepted=1 J=4 issues=0
+torus preserveSeams=1 d=4 accepted=1 J=0 issues=0
+torus preserveSeams=1 d=5 accepted=1 J=6 issues=0
+bump measured_error=0.000220863052149693 analytic_error=0.000220863052149693 tolerance=1e-07 ratio=2208.63052149693 curvature_radius_lower_bound=0.0208333333333333

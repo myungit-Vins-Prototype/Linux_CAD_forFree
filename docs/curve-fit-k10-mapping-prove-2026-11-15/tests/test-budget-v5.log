@@ -1,0 +1,3 @@
+    /tmp/forgecad-k10-mapping-20261115/tests/test_mapping_carrier_validation.cpp:495: nessuna eccezione da detail::wrapPlanarBodyOnCarrier(source, target, options, 1, 1, &history, &deviation)
+[ FAIL ] MappingCarrierRecognizedAffineFinBudgetFailsAtomically (1 controlli falliti)
+0/1 test superati

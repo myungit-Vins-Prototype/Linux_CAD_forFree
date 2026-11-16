@@ -1,6 +1,7 @@
 #include "fk_blend_mitre.h"
 #include "fk_bspline.h"
 #include "fk_offset.h"
+#include "fk_curve_fit_bounds.h"
 #include "fk_curve_algo.h"
 #include "fk_precision.h"
 #include "fk_surface_algo.h"
@@ -11,7 +12,6 @@
 #include <stdexcept>
 namespace ForgeCad::Kernel::detail {
 namespace {
-double kFitTolerance() { return scaledAccuracy(1e-9); }
 // Sistema lineare N x N con pivot parziale (falso se singolare).
 template <int N> bool solveLinear(double (&a)[N][N], double (&b)[N]) {
     for (int col = 0; col < N; ++col) {
@@ -94,18 +94,119 @@ std::shared_ptr<const BSplineSurface> orientBlendMitre(const std::shared_ptr<con
         v = sum - v;
     return std::make_shared<BSplineSurface>(s.uDegree(), s.vDegree(), s.uKnots(), knots, s.uPoleCount(), s.vPoleCount(), poles, weights);
 }
-// Curva comune ai raccordi S (t, v) e T (s, w) in un angolo a mitra, dal punto
-// in A (v = w = 0: i parametri t0, s0) al punto X (tX, vX, sX, wX). Sui punti
-// della curva v + w = g, da 0 a vX + wX: Newton 4 x 4 su (t, v, s, w) con la
-// continuazione in g (predittore dalle derivate), poi cubiche di Hermite a
-// tratti in g raffinate finche' si scostano meno di kFitTolerance() dai punti
-// veri. Vicino al punto in A i raccordi sono tangenti tra loro (entrambi
-// tangenti ad A) e il sistema degenera: l'ultimo tratto va fino al punto
-// esatto e il suo scarto (misurato) diventa la tolleranza della curva.
+CurvePtr<2> originalBlendMitreUV(const CurvePtr<2> &uv, bool reversed, const Interval &vDomain) {
+    cancellationPoint();
+    const auto *map = dynamic_cast<const BSplineCurve<2> *>(uv.get());
+    if (!map || map->degree() != 1 || map->poleCount() != 2)
+        throw std::domain_error("blendEdges: mappa ISO della mitra non riconosciuta");
+    if (!reversed) return uv;
+    if (!vDomain.isFinite() || !(vDomain.lo < vDomain.hi) || !std::isfinite(vDomain.lo + vDomain.hi))
+        throw std::domain_error("blendEdges: riflessione UV della mitra non valida");
+    auto poles = map->poles();
+    const double sum = vDomain.lo + vDomain.hi;
+    for (Vec2 &pole : poles) pole[1] = sum - pole[1];
+    return std::make_shared<BSplineCurve<2>>(1, map->knots(), poles, map->weights());
+}
+
+void installBlendMitreCertificates(std::vector<Body::BuildFace> &faces,
+                                   const std::vector<BlendMitreUse> &plans) {
+    for (const auto &plan : plans) {
+        cancellationPoint();
+        int uses = 0;
+        for (auto &face : faces) {
+            if (face.surface != plan.surface) continue;
+            for (auto &loop : face.loops)
+                for (auto &fin : loop) if (fin.edge == plan.edge) {
+                    fin.pcurve = plan.pcurve;
+                    fin.pcurveTolerance = plan.budget;
+                    ++uses;
+                }
+        }
+        if (uses != 1)
+            throw std::domain_error("blendEdges: incidenza della mitra pianificata persa o ambigua");
+    }
+}
+
+void requireEmittedBlendMitres(const Body &body, const std::vector<BlendMitreUse> &plans) {
+    for (const auto &plan : plans) {
+        cancellationPoint();
+        int uses = 0;
+        for (FaceId face : body.faces())
+            for (LoopId loop : body.face(face).loops)
+                for (FinId finId : body.loopFins(loop)) {
+                    const Fin &fin = body.fin(finId);
+                    const Edge &edge = body.edge(fin.edge);
+                    if (edge.curve != plan.curve || body.face(face).surface != plan.surface) continue;
+                    if (fin.pcurve != plan.pcurve || fin.pcurveTolerance != plan.budget
+                        || edge.tolerance != plan.budget || edge.range.lo != plan.range.lo || edge.range.hi != plan.range.hi)
+                        throw std::domain_error("blendEdges: contratto della mitra emessa modificato");
+                    detail::requireBlendMitreCertificate(edge.curve, body.face(face).surface,
+                                                         fin.pcurve, edge.range, plan.budget);
+                    for (const auto &end : {std::make_pair(body.edgeStart(fin.edge), edge.range.lo),
+                                           std::make_pair(body.edgeEnd(fin.edge), edge.range.hi)}) {
+                        const Vertex &vertex = body.vertex(end.first);
+                        if (!isFinite(vertex.point) || !std::isfinite(vertex.tolerance)
+                            || vertex.tolerance < 0.0 || vertex.tolerance > plan.budget
+                            || distance(vertex.point, edge.curve->point(end.second)) > plan.budget)
+                            throw std::domain_error("blendEdges: estremo della mitra oltre il budget fissato");
+                    }
+                    ++uses;
+                }
+        if (uses != 1)
+            throw std::domain_error("blendEdges: genealogia della fin di mitra persa o ambigua");
+    }
+}
+
+// The affine ISO branch below has a continuous position certificate. The
+// transverse Newton/Hermite continuation remains a sampled approximation;
+// its residual estimates are not a proof on a whole interval.
+double requireBlendMitreCertificate(const CurvePtr<3> &curve, const SurfacePtr &surface,
+                                    const CurvePtr<2> &pcurve, const Interval &range, double budget) {
+    cancellationPoint();
+    if (!std::isfinite(budget) || !(budget > 0.0) || !range.isFinite() || !(range.lo < range.hi))
+        throw std::domain_error("blendEdges: contratto continuo della mitra non valido");
+    const auto *spline = dynamic_cast<const BSplineCurve<3> *>(curve.get());
+    if (!spline || spline->degree() != 3 || spline->isRational())
+        throw std::domain_error("blendEdges: rappresentazione della mitra certificata modificata");
+    const auto data = surfaceCompositionErrorBound(surface, pcurve, range);
+    if (!data.bound)
+        throw std::domain_error("blendEdges: supporto della mitra certificata non riconosciuto");
+    const auto &knots = spline->knots();
+    const auto &poles = spline->poles();
+    if (poles.size() < 4 || (poles.size() - 1) % 3 || knots.size() != poles.size() + 4)
+        throw std::domain_error("blendEdges: campate della mitra certificata non riconosciute");
+    double covered = range.lo, worst = 0.0;
+    for (std::size_t k = 0; k + 3 < poles.size(); k += 3) {
+        cancellationPoint();
+        const Interval span{knots[k + 3], knots[k + 4]};
+        for (int j = 0; j < 3; ++j)
+            if (knots[k + j + 1] != span.lo || knots[k + j + 4] != span.hi)
+                throw std::domain_error("blendEdges: nodi della mitra certificata non riconosciuti");
+        if (span.hi <= range.lo || span.lo >= range.hi) continue;
+        if (span.lo != covered || span.hi > range.hi || !(span.lo < span.hi))
+            throw std::domain_error("blendEdges: parametro della mitra certificata modificato");
+        const double error = data.bound(span, {poles[k], poles[k + 1], poles[k + 2], poles[k + 3]});
+        if (!std::isfinite(error) || !(error >= 0.0) || error > budget)
+            throw std::domain_error("blendEdges: mitra oltre il budget continuo");
+        worst = std::max(worst, error);
+        covered = span.hi;
+    }
+    if (covered != range.hi)
+        throw std::domain_error("blendEdges: copertura della mitra certificata incompleta");
+    return worst;
+}
 BlendCut traceBlendMitre(const Surface &S, const Surface &T, double t0, double s0, const double X[4], double scale, double fitTolerance) {
-    // Fra raccordi quasi tangenti il sistema d'intersezione e' mal
-    // condizionato. Prima verifica una curva comune entro la risoluzione
-    // geometrica, senza aumentare le tolleranze delle facce di appoggio.
+    cancellationPoint();
+    if (!std::isfinite(fitTolerance) || !(fitTolerance > 0.0))
+        throw std::domain_error("blendEdges: budget di fit della mitra non valido");
+    const double gX = X[1] + X[3];
+    if (!std::isfinite(t0) || !std::isfinite(s0) || !std::isfinite(scale) || !(scale > 0.0)
+        || !std::all_of(X, X + 4, [](double value) { return std::isfinite(value); })
+        || !std::isfinite(gX) || !(gX > 0.0))
+        throw std::domain_error("blendEdges: angolo a mitra degenere o dati non validi");
+    // These samples only SELECT the nearly tangent algorithm. They do not
+    // authorize acceptance: the supported ISO branch must prove both original
+    // carrier compositions, without a catch that recovers a failed proof.
     const auto pointOn = [&](const Surface &surface, double start, double end, double v, double f) {
         return surface.point(start + f * (end - start), f * v);
     };
@@ -125,9 +226,45 @@ BlendCut traceBlendMitre(const Surface &S, const Surface &T, double t0, double s
         }
     }
     if (coincident) {
+        const auto *s = dynamic_cast<const BSplineSurface *>(&S);
+        const auto *t = dynamic_cast<const BSplineSurface *>(&T);
+        const bool isoS = (t0 == X[0]) != (X[1] == 0.0);
+        const bool isoT = (s0 == X[2]) != (X[3] == 0.0);
+        if (s && t && isoS && isoT) {
+            const Interval range{0.0, 1.0};
+            const std::vector<double> knots{0.0, 0.0, 1.0, 1.0};
+            const auto uvS = std::make_shared<BSplineCurve<2>>(1, knots, std::vector<Vec2>{{t0, 0.0}, {X[0], X[1]}});
+            const auto uvT = std::make_shared<BSplineCurve<2>>(1, knots, std::vector<Vec2>{{s0, 0.0}, {X[2], X[3]}});
+            const SurfacePtr carrierS = std::make_shared<BSplineSurface>(*s);
+            const SurfacePtr carrierT = std::make_shared<BSplineSurface>(*t);
+            const auto data = surfaceCompositionErrorBound(carrierS, uvS, range);
+            if (!data.bound)
+                throw std::domain_error("blendEdges: composizione ISO della mitra non certificabile");
+            // The cap is fixed before construction; fitting consumes only a
+            // quarter of it on S. The remaining slack can cover S/T mismatch.
+            const double budget = linearResolution();
+            const auto curve = fitCurveCertified([&](double f) {
+                const Vec2 uv = uvS->point(f);
+                return S.point(uv.x(), uv.y());
+            }, range, data.breaks, std::min(fitTolerance, 0.25 * budget), data.bound);
+            const double gapS = requireBlendMitreCertificate(curve, carrierS, uvS, range, budget);
+            const double gapT = requireBlendMitreCertificate(curve, carrierT, uvT, range, budget);
+            BlendCut cut;
+            cut.curve = curve;
+            cut.range = range;
+            cut.forward = true;
+            cut.gap = std::max(gapS, gapT);
+            cut.pcurveS = uvS;
+            cut.pcurveT = uvT;
+            cut.certificateBudget = budget;
+            return cut;
+        }
+        // Legacy compatibility ONLY for unsupported affine compositions.
+        // This averaged fit and its 129-point residual remain sampled, with
+        // certificateBudget == 0. They do not certify the whole interval.
         try {
             const auto curve = fitCurve([&](double f) { return 0.5 * (pointOn(S, t0, X[0], X[1], f) + pointOn(T, s0, X[2], X[3], f)); },
-                                        {0.0, 1.0}, {}, kFitTolerance());
+                                        {0.0, 1.0}, {}, scaledAccuracy(1e-9));
             double gap = 0.0;
             for (int i = 0; i <= 128; ++i) {
                 const double f = i / 128.0;
@@ -147,7 +284,7 @@ BlendCut traceBlendMitre(const Surface &S, const Surface &T, double t0, double s
                 return cut;
             }
         } catch (const std::domain_error &) {
-            // La stima non e' approssimabile: usa la continuazione esatta.
+            // Unsupported sampled fit failed: try the sampled Newton continuation.
         }
     }
     struct Node {
@@ -156,6 +293,7 @@ BlendCut traceBlendMitre(const Surface &S, const Surface &T, double t0, double s
     };
     const auto solve = [&](double g, Node &n) {
         for (int iteration = 0; iteration < 50; ++iteration) {
+            cancellationPoint();
             Vec3 a[4], b[4];
             S.evaluate(n.x[0], n.x[1], 1, a);
             T.evaluate(n.x[2], n.x[3], 1, b);
@@ -192,14 +330,12 @@ BlendCut traceBlendMitre(const Surface &S, const Surface &T, double t0, double s
         n.dp = c0 * r[0] + c1 * r[1];
         return true;
     };
-    const double gX = X[1] + X[3];
-    if (!(gX > 0.0))
-        throw std::domain_error("blendEdges: angolo a mitra degenere");
     // Nodo in g da quello vicino (predittore lineare), a passi dimezzati se Newton non converge.
     const auto nodeAt = [&](double g, const Node &from, Node &out) {
         Node current = from;
         double step = g - from.g;
         while (true) {
+            cancellationPoint();
             const bool last = std::fabs(g - current.g) <= std::fabs(step) * (1.0 + 1e-12);
             const double target = last ? g : current.g + step;
             Node trial = current;
@@ -262,6 +398,7 @@ BlendCut traceBlendMitre(const Surface &S, const Surface &T, double t0, double s
     double approximationGap = 0.0;
     int guard = 0;
     while (!pending.empty()) {
+        cancellationPoint();
         // La soglia minima 1e-4 consente fino a 2^14 foglie: il limite
         // deve contenere anche tutti i nodi interni dell'albero di raffinamento.
         if (++guard > 32767)

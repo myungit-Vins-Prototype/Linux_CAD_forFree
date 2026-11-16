@@ -1,0 +1,20 @@
+from pathlib import Path
+r=Path('/home/myungit/Linux_CAD_forFree')
+f=r/'kernel/CMakeLists.txt';s=f.read_text();assert 'forgekernel_planar_thicken_validation_tests' not in s
+s+='''
+# Conservazione delle curve originali nelle pareti piane di Spessore.
+add_executable(forgekernel_planar_thicken_validation_tests tests/fk_test_main.cpp tests/test_planar_thicken_validation.cpp)
+target_link_libraries(forgekernel_planar_thicken_validation_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_planar_thicken_validation_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_planar_thicken_validation_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_planar_thicken_validation_tests COMMAND forgekernel_planar_thicken_validation_tests)
+set_tests_properties(forgekernel_planar_thicken_validation_tests PROPERTIES TIMEOUT 180)
+''';f.write_text(s)
+f=r/'kernel/fk_thicken.h';s=f.read_text();anchor='    // e pareti rigate lungo la normale ai bordi. Le facce devono essere unite\n';assert anchor in s
+s=s.replace(anchor,'    // e pareti rigate lungo la normale ai bordi. Su una faccia Plane le\n    // pareti dei bordi supportati conservano curve e parametri originali\n    // mediante traslazione ed estrusione, con arrotondamenti ordinari.\n    // Le facce devono essere unite\n');f.write_text(s)
+f=r/'tools/generate_architecture.py';s=f.read_text();anchor=" 'kernel/fk_planar_flatten.cpp':";assert anchor in s
+s=s.replace(anchor,""" 'kernel/fk_thicken.cpp': ('kernel', 'Spessore lungo normale o direzione: su bordi di facce Plane le pareti conservano curve e parametri originali con traslazione ed estrusione; caps offset e genealogia conservati, superfici curve ancora con fit campionato e controlli locali.'),
+ 'kernel/fk_thicken.h': ('kernel', 'Contratto dello spessore di lamine: lato, normale o direzione, budget offset e conservazione dei bordi nelle pareti di facce Plane; limiti dei percorsi curvi.'),
+ 'kernel/tests/test_planar_thicken_validation.cpp': ('tests', 'Regressioni pareti di Spessore su Plane: dettagli NURBS nascosti, pesi e parametri originali, pose e lati, trim, fori, rappresentazioni finali, genealogia e codec.'),
+"""+anchor,1);f.write_text(s)
+print('CMake, public comment and architecture catalog updated')

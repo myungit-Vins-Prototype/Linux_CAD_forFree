@@ -1,0 +1,32 @@
+from pathlib import Path
+import shutil,hashlib
+src=Path('/tmp/forgecad-k10-20261115');dest=Path('/home/myungit/Linux_CAD_forFree/docs/curve-fit-k10-prove-2026-11-15');dest.mkdir(exist_ok=True)
+def copy(source,target=None):
+ p=src/source
+ if not p.exists():return
+ name=target or source
+ if p.suffix in ['.cpp','.h','.py']:name+='.txt'
+ q=dest/name;q.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(p,q)
+for name in ['hashes-before.json','architecture-before.json']:copy(name)
+for folder,names in {
+ 'tests':['probe.cpp','build.py','baseline.log','callers-graph.json','report.md','test-report.md','test-manifest.json','build-tests.py','tests.log'],
+ 'independent':['audit.md','final-results.json','countercases.cpp','fixtures.h','generate_cases.py','run_cases.py','countercases-baseline.log','countercases-pre-seam.log','countercases-final.log','deviation.cpp','deviation-final.log','oracle_queries.cpp','oracle_queries.log','generic-callers.json','source.sha256','baseline-archive.sha256'],
+ 'kernel':['test_curve_fit_bounds.cpp','tests.log','build.py','build.log'],
+ 'kernel/sanitize':['README.md','build.py','build.log','build-guard.py','build-guard.log','bounds.log','validation.log','bounds-final.log','validation-final.log','status-final.log','guard-periodic.log','guard-status.log']}.items():
+ for n in names:copy(folder+'/'+n)
+for p in (src/'root').iterdir():
+ if p.suffix in ['.log','.json','.diff','.py'] or p.name=='ctest-names.txt':copy('root/'+p.name)
+(dest/'README.md').write_text('''# Prove K10 — 15 novembre 2026
+
+Rapporto: [correzione e limiti](../curve-fit-k10-2026-11-15.md).
+
+- `independent/audit.md`: verifica matematica/sorgente finale; `final-results.json` confronta 13 geometrie prima/dopo. I massimi densi sono controprove, non il certificato continuo.
+- `tests/report.md`: indagine iniziale e inventario dei 24 chiamanti; `test-report.md` e manifest descrivono le regressioni integrate.
+- `root/build-final.log`, `root/kernel-results.json`, `root/ctest-result.json`, `root/test-summary.json`: esiti della build completa e dei runner finali. La prima build è separata in `build.log`.
+- `kernel/sanitize/README.md`: strumentazione mirata e hash dei due passaggi; i primi log sandbox terminarono con errore LSan/ptrace e sono conservati, superati dai passaggi esterni con exit 0. Il resto dell’archivio non è strumentato.
+- `root/architecture-audit.json`: confronto HTML/JSON e relazioni entranti/uscenti, chiamate/include/riferimenti distinti. La seconda generazione rianalizza le due unità cambiate durante il primo passaggio.
+- `root/final-audit.json`: hash sorgenti/binari finali, conservazione dei file preesistenti, flag aritmetici e collegamento del nuovo runner senza Qt/OCCT.
+
+Sorgenti ausiliari salvati come `.cpp.txt`, `.h.txt`, `.py.txt` per non introdurli nell’inventario del software. Le ricette mantengono i percorsi dello staging originale; per rieseguire ricreare lo staging o adattare quei percorsi. Nessun binario o archivio statico incluso. `root/change.diff` è relativo all’inizio di questo intervento, non alla base Git che contiene anche le correzioni precedenti.
+''')
+files=sorted(p for p in dest.rglob('*') if p.is_file() and p.name!='SHA256SUMS');(dest/'SHA256SUMS').write_text(''.join(hashlib.sha256(p.read_bytes()).hexdigest()+'  '+p.relative_to(dest).as_posix()+'\n' for p in files));print('Prove:',len(files),'file')

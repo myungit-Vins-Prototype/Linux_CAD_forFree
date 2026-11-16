@@ -1,0 +1,40 @@
+from pathlib import Path
+import hashlib,json
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/boundary-review/root');C=Path('/tmp/boundary-review/core');sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+initial=json.loads((T/'hashes-before.json').read_text());expected=json.loads((C/'manifest.json').read_text())
+files=['kernel/fk_blend_section_curve.cpp','kernel/fk_blend_section_curve.h','kernel/fk_blend_surface.cpp']
+for f in files:assert sha(C/f)==expected[f];assert sha(R/f)==initial[f]
+for f in ['kernel/CMakeLists.txt','tools/generate_architecture.py']:assert sha(R/f)==initial[f]
+test=Path('/tmp/boundary-review/tests/test_boundary_validation.cpp');f='kernel/tests/test_blend_boundary_validation.cpp';assert not(R/f).exists();files.append(f)
+for f in files[:3]:(R/f).write_bytes((C/f).read_bytes())
+(R/files[-1]).write_bytes(test.read_bytes())
+p=R/'kernel/CMakeLists.txt';s=p.read_text();old='fk_sheet.cpp fk_blend_mitre.cpp fk_blend_surface.cpp';assert s.count(old)==1;s=s.replace(old,'fk_sheet.cpp fk_blend_mitre.cpp fk_blend_surface.cpp fk_blend_section_curve.cpp')
+anchor='set_tests_properties(forgekernel_blend_mitre_validation_tests PROPERTIES TIMEOUT 180)';assert s.count(anchor)==1
+s=s.replace(anchor,anchor+'''
+
+# Continuazioni dei bordi: parametro razionale, ISO e fin effettive, senza Qt/OCCT.
+add_executable(forgekernel_blend_boundary_validation_tests tests/fk_test_main.cpp tests/test_blend_boundary_validation.cpp)
+target_link_libraries(forgekernel_blend_boundary_validation_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_blend_boundary_validation_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_blend_boundary_validation_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_blend_boundary_validation_tests COMMAND forgekernel_blend_boundary_validation_tests)
+set_tests_properties(forgekernel_blend_boundary_validation_tests PROPERTIES TIMEOUT 180)
+''');p.write_text(s)
+p=R/'tools/generate_architecture.py';s=p.read_text();old=" 'fk_blend_section_curve': ('kernel', 'Curva di riferimento numerica delle sezioni: microcampate entro risoluzione e prolungamento polinomiale B-spline esatto sul dominio di ricerca; B-rep sorgente immutato.'),";assert old in s
+s=s.replace(old," 'fk_blend_section_curve': ('kernel', 'Curve di riferimento delle sezioni e continuazioni dei bordi spline: concatenazione omogenea con parametro originale preservato; ISO riconosciute dai coefficienti originali e verificate continuamente su entrambi i supporti con cap prefissato. Installazione delle mappe per identita e ricontrollo delle fin emesse; famiglie non supportate e Newton restano campionati. Preservazione globale dei carrier estesi non certificata a runtime.'),")
+a=s.index(" 'fk_blend_surface':");b=s.index('\n',a);line=s[a:b];assert line.endswith("'),");s=s[:a]+line[:-3]+" Continuazioni dei bordi delegate al modulo section_curve con ledger transazionale, mappe pianificate e verifica delle fin finali; budget delle ISO certificate esclusi dagli aumenti.'),"+s[b:]
+anchor=" 'kernel/tests/test_blend_mitre_validation.cpp':";a=s.index(anchor);b=s.index('\n',a);s=s[:b]+"\n 'kernel/tests/test_blend_boundary_validation.cpp': ('tests', 'Continuazioni dei bordi: parametro razionale originale, pose/scale/trim e mappe ISO affini; picco nascosto sul secondo supporto rifiutato atomicamente, cancellazione, budget invalidi, fin reali sul tratto aggiunto e mutazioni dei contratti. Famiglie non supportate esplicitamente campionate.'),"+s[b:];p.write_text(s)
+files+=['kernel/CMakeLists.txt','tools/generate_architecture.py'];(T/'integrated-sources.json').write_text(json.dumps({f:sha(R/f) for f in files},indent=2)+'\n')
+p=R/'CLAUDE.md';s=p.read_text();a=s.index('**16/11 — K10 continuazioni');b=s.index('\n\n',a);s=s[:a]+'''**16/11 — K10 continuazioni integrate con tre agenti Sol.**
+Parametro razionale preservato; ISO su due supporti e fin verificate, cap fisso.
+15 test/Fraction privati PASS; build/app pendenti. [Stato](docs/review-k10-boundary-2026-11-16.md).'''+s[b:];assert len(s.encode())<=16384;p.write_text(s)
+p=R/'docs/review-k10-boundary-2026-11-16.md';s=p.read_text();s+='''
+## Integrazione candidato v2
+
+Integrati tre sorgenti congelati core v2, test permanente con 15 casi, CMake rigoroso e catalogo architetturale. L'estensione e la concatenazione risiedono nel modulo mirato `fk_blend_section_curve`; il coordinatore conserva tentativi atomici e controllo finale. Via riconosciuta: mappe Line2 ISO o B-spline2 grado1 con due poli e pesi uguali, supporti B-spline; provider sui coefficienti originali e witness cubico ausiliario verificano il risultato senza sostituire la curva effettiva. Cap fisico `max(2*fitTolerance, edge.tolerance)` fissato prima della costruzione, tolleranza edge sorgente conservata. Concatenazione omogenea senza trasformazione di Moebius; preservazione del parametro verificata anche per il percorso storico. Le fin consumate esplicitamente non hanno obbligo in uscita; le altre sono installate per identità di modello e verificate dopo build e computePCurves sul range effettivo. Nessun unify in questo percorso.
+
+14/15 test privati e audit Fraction dei sei export sintetici PASS: sei preservazioni originali, dodici fin reali (60 campate) incluse due sul tratto esteso, dodici carrier sul dominio originale. Non equivalgono a una riproduzione pubblica di tutti i difetti. Build completa e controlli sull'integrazione ancora pendenti.
+
+Verifica provenienza runner: i vecchi oggetti sotto `kernel/CMakeFiles/forgekernel_tests.dir` sono residui di ottobre e non appartengono al target attuale. Cache OCCT=ON; il target corrente usa `kernel/occt_tests/CMakeFiles/...`, risultava relinkato nella build mitre. Il problema ABI è comparso soltanto tentando un link privato con gli oggetti residui; non invalida le prove integrate precedenti. Nuove prove pubbliche compilate dal sorgente e libreria corrente; OpenCASCADE rimane confinato ai test, senza confronto dichiarato dove il filtro non lo esegue.
+''';p.write_text(s)
+print('Integrated corev2 and 15 test cases; CLAUDE',len((R/'CLAUDE.md').read_bytes()))

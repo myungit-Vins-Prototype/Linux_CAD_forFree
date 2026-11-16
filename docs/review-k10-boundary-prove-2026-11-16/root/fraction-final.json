@@ -1,0 +1,479 @@
+{
+  "method": "Exact Fraction original IEEE coefficients; whole-interval homogeneous Cox/de Boor plus Bernstein hull; independent of production providers",
+  "records": [
+    {
+      "case": "actual-extended-fins",
+      "scope": "synthetic-production-helper",
+      "sha256": "decd31d7d2d63c322a15373a748c9272df815d26cfccd93dddaee88c79f213b6",
+      "budget": 3e-09,
+      "originalEdgeTolerance": 3e-09,
+      "edgeTolerance": 3e-09,
+      "original_same_parameter": {
+        "pass": true,
+        "upper_mm": 3.6866425104568984e-16,
+        "cells": 1,
+        "leaves": 1,
+        "max_depth": 0
+      },
+      "finUses": [
+        {
+          "sense": true,
+          "range": [
+            "-0x1.999999999999ap-5",
+            "0x1.0cccccccccccdp+0"
+          ],
+          "carrier_original_domain": {
+            "pass": true,
+            "cells": 1,
+            "upper_mm": 2.4145986894519057e-16,
+            "original_domain": [
+              "0",
+              "1",
+              "-1",
+              "0"
+            ],
+            "budget": 3e-09
+          },
+          "edge_vs_effective_carrier_and_pcurve": {
+            "fin": 0,
+            "edge": null,
+            "face": null,
+            "budget": 3e-09,
+            "pass": true,
+            "upper_mm": 1.1916127230620075e-10,
+            "cells": 25,
+            "leaves": 25,
+            "branches": 25,
+            "max_depth": 0
+          }
+        },
+        {
+          "sense": false,
+          "range": [
+            "-0x1.999999999999ap-5",
+            "0x1.0cccccccccccdp+0"
+          ],
+          "carrier_original_domain": {
+            "pass": true,
+            "cells": 1,
+            "upper_mm": 2.4145986894519057e-16,
+            "original_domain": [
+              "0",
+              "1",
+              "0",
+              "1"
+            ],
+            "budget": 3e-09
+          },
+          "edge_vs_effective_carrier_and_pcurve": {
+            "fin": 1,
+            "edge": null,
+            "face": null,
+            "budget": 3e-09,
+            "pass": true,
+            "upper_mm": 1.1916127230620075e-10,
+            "cells": 25,
+            "leaves": 25,
+            "branches": 25,
+            "max_depth": 0
+          }
+        }
+      ]
+    },
+    {
+      "case": "polynomial",
+      "scope": "synthetic-production-helper",
+      "sha256": "e2d85bb5ab4e38bd180924968df800c2f8f28ffaa73d9f2e99016a61ae1dde43",
+      "budget": 3e-09,
+      "originalEdgeTolerance": 3e-09,
+      "edgeTolerance": 3e-09,
+      "original_same_parameter": {
+        "pass": true,
+        "upper_mm": 5.661048867003676e-17,
+        "cells": 1,
+        "leaves": 1,
+        "max_depth": 0
+      },
+      "finUses": [
+        {
+          "sense": true,
+          "range": [
+            "0x0.0p+0",
+            "0x1.0000000000000p+0"
+          ],
+          "carrier_original_domain": {
+            "pass": true,
+            "cells": 1,
+            "upper_mm": 1.0173610093110238e-16,
+            "original_domain": [
+              "0",
+              "1",
+              "-1",
+              "0"
+            ],
+            "budget": 3e-09
+          },
+          "edge_vs_effective_carrier_and_pcurve": {
+            "fin": 0,
+            "edge": null,
+            "face": null,
+            "budget": 3e-09,
+            "pass": true,
+            "upper_mm": 4.809798798215058e-17,
+            "cells": 1,
+            "leaves": 1,
+            "branches": 1,
+            "max_depth": 0
+          }
+        },
+        {
+          "sense": false,
+          "range": [
+            "0x0.0p+0",
+            "0x1.0000000000000p+0"
+          ],
+          "carrier_original_domain": {
+            "pass": true,
+            "cells": 1,
+            "upper_mm": 1.0173610093110238e-16,
+            "original_domain": [
+              "0",
+              "1",
+              "0",
+              "1"
+            ],
+            "budget": 3e-09
+          },
+          "edge_vs_effective_carrier_and_pcurve": {
+            "fin": 1,
+            "edge": null,
+            "face": null,
+            "budget": 3e-09,
+            "pass": true,
+            "upper_mm": 4.809798798215058e-17,
+            "cells": 1,
+            "leaves": 1,
+            "branches": 1,
+            "max_depth": 0
+          }
+        }
+      ]
+    },
+    {
+      "case": "rational-negative-uv",
+      "scope": "synthetic-production-helper",
+      "sha256": "bf343acf4bb26611009d85585ad276357f95226c921c91538ae8fb7816d76f8e",
+      "budget": 3e-09,
+      "originalEdgeTolerance": 3e-09,
+      "edgeTolerance": 3e-09,
+      "original_same_parameter": {
+        "pass": true,
+        "upper_mm": 3.697998822800364e-16,
+        "cells": 1,
+        "leaves": 1,
+        "max_depth": 0
+      },
+      "finUses": [
+        {
+          "sense": true,
+          "range": [
+            "0x0.0p+0",
+            "0x1.0000000000000p+0"
+          ],
+          "carrier_original_domain": {
+            "pass": true,
+            "cells": 1,
+            "upper_mm": 2.9726378892448176e-16,
+            "original_domain": [
+              "0",
+              "1",
+              "-1",
+              "0"
+            ],
+            "budget": 3e-09
+          },
+          "edge_vs_effective_carrier_and_pcurve": {
+            "fin": 0,
+            "edge": null,
+            "face": null,
+            "budget": 3e-09,
+            "pass": true,
+            "upper_mm": 2.1789562897159085e-16,
+            "cells": 1,
+            "leaves": 1,
+            "branches": 1,
+            "max_depth": 0
+          }
+        },
+        {
+          "sense": false,
+          "range": [
+            "0x0.0p+0",
+            "0x1.0000000000000p+0"
+          ],
+          "carrier_original_domain": {
+            "pass": true,
+            "cells": 1,
+            "upper_mm": 2.9726378892448176e-16,
+            "original_domain": [
+              "0",
+              "1",
+              "0",
+              "1"
+            ],
+            "budget": 3e-09
+          },
+          "edge_vs_effective_carrier_and_pcurve": {
+            "fin": 1,
+            "edge": null,
+            "face": null,
+            "budget": 3e-09,
+            "pass": true,
+            "upper_mm": 2.1789562897159085e-16,
+            "cells": 1,
+            "leaves": 1,
+            "branches": 1,
+            "max_depth": 0
+          }
+        }
+      ]
+    },
+    {
+      "case": "rational-pose-scale",
+      "scope": "synthetic-production-helper",
+      "sha256": "a7f57df729833b0aba0616af9ca1f8b1ff0c6dd7cd81fa3e492a912d7a28139a",
+      "budget": 3e-09,
+      "originalEdgeTolerance": 3e-09,
+      "edgeTolerance": 3e-09,
+      "original_same_parameter": {
+        "pass": true,
+        "upper_mm": 9.561278618102041e-15,
+        "cells": 1,
+        "leaves": 1,
+        "max_depth": 0
+      },
+      "finUses": [
+        {
+          "sense": true,
+          "range": [
+            "0x0.0p+0",
+            "0x1.0000000000000p+0"
+          ],
+          "carrier_original_domain": {
+            "pass": true,
+            "cells": 1,
+            "upper_mm": 2.0442056072430988e-14,
+            "original_domain": [
+              "0",
+              "1",
+              "-1",
+              "0"
+            ],
+            "budget": 3e-09
+          },
+          "edge_vs_effective_carrier_and_pcurve": {
+            "fin": 0,
+            "edge": null,
+            "face": null,
+            "budget": 3e-09,
+            "pass": true,
+            "upper_mm": 1.5286083738642205e-14,
+            "cells": 1,
+            "leaves": 1,
+            "branches": 1,
+            "max_depth": 0
+          }
+        },
+        {
+          "sense": false,
+          "range": [
+            "0x0.0p+0",
+            "0x1.0000000000000p+0"
+          ],
+          "carrier_original_domain": {
+            "pass": true,
+            "cells": 1,
+            "upper_mm": 4.874831182328089e-14,
+            "original_domain": [
+              "0",
+              "1",
+              "0",
+              "1"
+            ],
+            "budget": 3e-09
+          },
+          "edge_vs_effective_carrier_and_pcurve": {
+            "fin": 1,
+            "edge": null,
+            "face": null,
+            "budget": 3e-09,
+            "pass": true,
+            "upper_mm": 1.5286083738642205e-14,
+            "cells": 1,
+            "leaves": 1,
+            "branches": 1,
+            "max_depth": 0
+          }
+        }
+      ]
+    },
+    {
+      "case": "rational-trim",
+      "scope": "synthetic-production-helper",
+      "sha256": "6cfd0334ccc86a7b6888e03c129504880f9268ea4fad03d06381464328de1e4c",
+      "budget": 3e-09,
+      "originalEdgeTolerance": 3e-09,
+      "edgeTolerance": 3e-09,
+      "original_same_parameter": {
+        "pass": true,
+        "upper_mm": 1.6561987770460884e-16,
+        "cells": 1,
+        "leaves": 1,
+        "max_depth": 0
+      },
+      "finUses": [
+        {
+          "sense": true,
+          "range": [
+            "0x1.999999999999ap-4",
+            "0x1.ccccccccccccdp-1"
+          ],
+          "carrier_original_domain": {
+            "pass": true,
+            "cells": 1,
+            "upper_mm": 0.0,
+            "original_domain": [
+              "0",
+              "1",
+              "-1",
+              "0"
+            ],
+            "budget": 3e-09
+          },
+          "edge_vs_effective_carrier_and_pcurve": {
+            "fin": 0,
+            "edge": null,
+            "face": null,
+            "budget": 3e-09,
+            "pass": true,
+            "upper_mm": 1.5238649868671623e-16,
+            "cells": 1,
+            "leaves": 1,
+            "branches": 1,
+            "max_depth": 0
+          }
+        },
+        {
+          "sense": false,
+          "range": [
+            "0x1.999999999999ap-4",
+            "0x1.ccccccccccccdp-1"
+          ],
+          "carrier_original_domain": {
+            "pass": true,
+            "cells": 1,
+            "upper_mm": 0.0,
+            "original_domain": [
+              "0",
+              "1",
+              "0",
+              "1"
+            ],
+            "budget": 3e-09
+          },
+          "edge_vs_effective_carrier_and_pcurve": {
+            "fin": 1,
+            "edge": null,
+            "face": null,
+            "budget": 3e-09,
+            "pass": true,
+            "upper_mm": 1.5238649868671623e-16,
+            "cells": 1,
+            "leaves": 1,
+            "branches": 1,
+            "max_depth": 0
+          }
+        }
+      ]
+    },
+    {
+      "case": "rational",
+      "scope": "synthetic-production-helper",
+      "sha256": "7fd11f3a612cb42d5598044eb3cfec1f0037a61e939b501bf6c55cd2e5458673",
+      "budget": 3e-09,
+      "originalEdgeTolerance": 3e-09,
+      "edgeTolerance": 3e-09,
+      "original_same_parameter": {
+        "pass": true,
+        "upper_mm": 3.6866425104568984e-16,
+        "cells": 1,
+        "leaves": 1,
+        "max_depth": 0
+      },
+      "finUses": [
+        {
+          "sense": true,
+          "range": [
+            "0x0.0p+0",
+            "0x1.0000000000000p+0"
+          ],
+          "carrier_original_domain": {
+            "pass": true,
+            "cells": 1,
+            "upper_mm": 2.4145986894519057e-16,
+            "original_domain": [
+              "0",
+              "1",
+              "-1",
+              "0"
+            ],
+            "budget": 3e-09
+          },
+          "edge_vs_effective_carrier_and_pcurve": {
+            "fin": 0,
+            "edge": null,
+            "face": null,
+            "budget": 3e-09,
+            "pass": true,
+            "upper_mm": 1.8469480746315294e-16,
+            "cells": 1,
+            "leaves": 1,
+            "branches": 1,
+            "max_depth": 0
+          }
+        },
+        {
+          "sense": false,
+          "range": [
+            "0x0.0p+0",
+            "0x1.0000000000000p+0"
+          ],
+          "carrier_original_domain": {
+            "pass": true,
+            "cells": 1,
+            "upper_mm": 2.4145986894519057e-16,
+            "original_domain": [
+              "0",
+              "1",
+              "0",
+              "1"
+            ],
+            "budget": 3e-09
+          },
+          "edge_vs_effective_carrier_and_pcurve": {
+            "fin": 1,
+            "edge": null,
+            "face": null,
+            "budget": 3e-09,
+            "pass": true,
+            "upper_mm": 1.8469480746315294e-16,
+            "cells": 1,
+            "leaves": 1,
+            "branches": 1,
+            "max_depth": 0
+          }
+        }
+      ]
+    }
+  ]
+}

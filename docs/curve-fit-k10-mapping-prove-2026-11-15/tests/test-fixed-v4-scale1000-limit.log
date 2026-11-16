@@ -1,0 +1,9 @@
+    /home/myungit/Linux_CAD_forFree/kernel/tests/fk_test_main.cpp:36: eccezione: fitCurve: impossibile rispettare la tolleranza entro il limite di raffinamento scale=1000.000000 rational=0 bspline=0
+[ FAIL ] MappingCarrierHiddenTargetsPolyRationalPoseScale (1 controlli falliti)
+[  OK  ] MappingCarrierSourceFrameQuarterTurnShiftHolesAndRoundtrip
+[  OK  ] MappingCarrierDeclaredLegacyDiagonalPeriodicAndOffset
+[  OK  ] MappingCarrierFailureAndCallbackCancellationAreAtomic
+[  OK  ] MappingCarrierDegree27SingleSpanAndRoundtrip
+[  OK  ] MappingCarrierTolerantSourceDiscrepanciesAreRejectedAtomically
+[  OK  ] MappingCarrierUnresolvedNaturalBoundaryIsAtomic
+6/7 test superati

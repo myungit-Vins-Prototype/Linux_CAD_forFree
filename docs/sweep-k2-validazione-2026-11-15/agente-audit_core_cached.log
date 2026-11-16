@@ -1,0 +1,7 @@
+PASS coincident different families visits=40
+PASS same family folded back coincident visits=40
+PASS same family shifted overlap and discontinuity visits=43
+PASS open carrier false periodic visits=0
+PASS underflow rank cannot certify visits=18
+PASS overflow rank cannot certify visits=18
+PASS cancel

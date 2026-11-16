@@ -1,0 +1,26 @@
+--- reviewed-v1-section
++++ reviewed-v2-section
+@@ -543,12 +543,21 @@
+ void requireEmittedBlendBoundaries(const Body &body, const std::vector<BlendBoundaryUse> &plans) {
+     for (const auto &plan : plans) {
+         cancellationPoint();
++        // BlendModel::build preserves face order (the same map used by its
++        // declared face history). Shared carrier pointers are therefore not
++        // ambiguous: this ordinal is construction provenance, never proximity.
++        const auto faces = body.faces();
++        if (plan.face < 0 || std::size_t(plan.face) >= faces.size())
++            throw std::domain_error("blendEdges: faccia della frontiera emessa non presente");
++        const FaceId face = faces[std::size_t(plan.face)];
++        if (body.face(face).surface != plan.surface)
++            throw std::domain_error("blendEdges: supporto della frontiera emessa modificato");
+         int uses = 0;
+-        for (FaceId face : body.faces()) for (LoopId loop : body.face(face).loops)
++        for (LoopId loop : body.face(face).loops)
+             for (FinId id : body.loopFins(loop)) {
+                 const Fin &fin = body.fin(id);
+                 const Edge &edge = body.edge(fin.edge);
+-                if (edge.curve != plan.curve || body.face(face).surface != plan.surface) continue;
++                if (edge.curve != plan.curve) continue;
+                 if (fin.pcurve != plan.pcurve || fin.pcurveTolerance != plan.budget || edge.tolerance != plan.edgeTolerance
+                     || !edge.range.isFinite() || !(edge.range.lo < edge.range.hi)
+                     || edge.range.lo < plan.window.lo || edge.range.hi > plan.window.hi)

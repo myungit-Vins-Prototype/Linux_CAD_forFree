@@ -1,0 +1,21 @@
+#!/bin/bash
+set -euo pipefail
+# Run from /home/myungit/Linux_CAD_forFree; this private audit never edits source/build.
+task_repo=$(pwd)
+task_evidence="$task_repo/docs/curve-fit-k10-projection-prove-2026-11-16/independent-replay"
+task_private=/tmp/projection-replay-audit-rerun
+mkdir -p "$task_private/baseline"
+cp "$task_evidence/dump.cpp.txt" "$task_private/dump.cpp"
+cp "$task_evidence/certify.py.txt" "$task_private/certify.py"
+cp "$task_evidence/baseline_witness.py.txt" "$task_private/baseline_witness.py"
+c++ -std=c++17 -O2 -I kernel "$task_private/dump.cpp" forgecad-release/kernel/libforgekernel.a -pthread -o "$task_private/dump"
+"$task_private/dump" > "$task_private/outputs.jsonl"
+cmp "$task_evidence/outputs.jsonl" "$task_private/outputs.jsonl"
+python3 "$task_private/certify.py" "$task_private/outputs.jsonl" "$task_private/certificates.json"
+cp "$task_evidence/../root-replay/baseline/fk_project.cpp.txt" "$task_private/baseline/fk_project.cpp"
+cp "$task_evidence/../root-replay/baseline/fk_project.h.txt" "$task_private/baseline/fk_project.h"
+c++ -std=c++17 -O2 -I kernel -c "$task_private/baseline/fk_project.cpp" -o "$task_private/baseline/fk_project.cpp.o"
+c++ -std=c++17 -O2 -I "$task_private/baseline" -I kernel "$task_private/dump.cpp" "$task_private/baseline/fk_project.cpp.o" forgecad-release/kernel/libforgekernel.a -pthread -o "$task_private/dump-baseline"
+"$task_private/dump-baseline" > "$task_private/baseline-outputs.jsonl"
+cmp "$task_evidence/baseline-outputs.jsonl" "$task_private/baseline-outputs.jsonl"
+python3 "$task_private/baseline_witness.py" "$task_private/baseline-outputs.jsonl" "$task_private/baseline-witnesses.json"

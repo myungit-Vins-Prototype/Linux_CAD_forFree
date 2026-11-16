@@ -1,0 +1,41 @@
+Revisione indipendente prova Fraction del root —16novembre2026
+
+Esito: ragionamento matematico corretto per il dataset frozen controllato.
+Exporter export_failure.cpp legge BSplineCurve3 edBSplineSurface originali del
+B-rep intermedio (edge3,face0), esporta double con hexfloat, poli(i,j),pesi,nodi,
+grado e parametro esatto IEEE. Nessun riadattamento o conversione NURBS proxy.
+Il punto del proiettore contribuisce SOLO a una direzione arbitraria del
+semispazio: non se ne presume ottimalita',normale o vicinanza geometrica.
+
+Inserzione V in coordinate omogenee usa la formula standard con Fraction
+finche' ogni nodo interno ha molteplicita'>=grado;U e'gia'C0 con molteplicita'12.
+Dati frozen controllati:U/V ordinati edestremi clamped,pesi tutti positivi,
+cardinalita' corrette. La slice locale di grado+1 poli per direzione e'quindi
+la pezza Bezier esatta sul corrispondente intervallo;nessuna cella positiva
+viene esclusa. I punti ai bordi sono contenuti nella chiusura delle celle.
+
+Per ogni pezza razionale,pesi positivi danno coordinate come combinazione
+convessa dei poli euclidei. Distance dal bbox e'lower bound. Per qualsiasi
+vettore n nonnullo,support=min_i n.(p-q_i)>0 implica distanza>=support/|n|;
+quadrato support^2/norm2 esatto e'valido. Il massimo dei due lowerbound resta
+valido. DeCasteljau omogeneo esatto a1/2 conserva pezza,pesi positivi,copertura.
+Float spread e'solo euristica di scelta della direzione,mai decisione di
+accettazione. Ogni regione finale viene accettata soltanto se lower2>threshold2.
+Il minimo delle foglie coprenti resta lower bound globale. isqrt sul rapporto
+intero scalato2^256 produce sqrt arrotondata verso il basso,asserita ancora
+strettamente oltre10*budget. Limiti lavoro portano eccezione,non certificato.
+
+ESEGUITO DA QUESTO AGENTE: check-fraction-input.py ricontrolla schema/positivita',
+clamping,ordinamento,raggiungibilita'estrazioneU e valuta deBoor omogeneo con
+Fraction allo stesso parametro. Il punto coincide ESATTAMENTE con curve_point
+razionale nel risultato root. InputSHA combacia. Max differenza componente fra
+ideale razionale epointEvaluatedIEEE=5.662137425588298e-15. Confermato lower
+esatto del risultato>10*budget. Non rieseguiti inserzione/subdivisione618visite:
+quelle sono prove eseguite dal root e revisionate qui staticamente.
+
+Limiti corretti:un punto della curva originaria contro tutto carrier frozen;
+nessuna prova di tutti i punti,ne'del raccordo corretto,ne'di tutte le radii.
+Il punto razionale e'quello ideale dei coefficienti originali,non il risultato
+arrotondato della callback:C++ differisce di~5.7e-15 per componente. Il margine
+globale4.03e-6 rispetto3.812e-7 rende questa differenza irrilevante numericamente,
+ma il certificato dichiarato resta riferito al punto razionale esplicito.

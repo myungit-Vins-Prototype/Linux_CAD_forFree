@@ -1,0 +1,3 @@
+Loaded precision=9.9999999999999995e-08 sketches=6 features=6 modelBodies=3
+UNION raw 5=Loft 6 / 2=Estrusione 3
+SUCCESS elapsed=0.15021615999999999 F=6 E=10 V=8 solid=1 shells=1 sheet=0 box=[-154.37285608401115,18.499999999999993,-15]-[-19.999727997524644,131.5,159.09585816367044] check=0

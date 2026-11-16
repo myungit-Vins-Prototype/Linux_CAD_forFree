@@ -46,6 +46,10 @@ struct RawFin {
     // parametri delle facce di partenza).
     CurvePtr<2> pcurve;
     double pcurveTolerance = 0.0;
+    // Transient proof obligation carried only through RawModel assembly.
+    // It is never persisted and does not establish validity of source pcurves.
+    bool certifiedPlanePCurve = false;
+    double certifiedPlaneBudget = 0.0;
 };
 
 struct RawFace {

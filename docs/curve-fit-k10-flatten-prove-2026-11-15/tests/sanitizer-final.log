@@ -1,0 +1,8 @@
+[  OK  ] PlanarFlattenHiddenPolynomialRationalPoseScaleSense
+[  OK  ] PlanarFlattenNestedPartialTrimReverseHolesAndRoundtrip
+[  OK  ] PlanarFlattenInvalidAndCancellationPreserveStatsHistorySource
+[  OK  ] PlanarFlattenLineUVFiniteNonunitRangePreservesParameter
+[  OK  ] PlanarFlattenAngularConicLegacyCompatibility
+[  OK  ] PlanarFlattenFoldPreservesFiniteCarrierWindowAndBoundaryRoundtrip
+6/6 test superati
+elapsed=3.36 maxrss_kb=474688

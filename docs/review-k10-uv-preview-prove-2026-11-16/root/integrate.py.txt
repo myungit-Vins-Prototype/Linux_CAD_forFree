@@ -1,0 +1,65 @@
+from pathlib import Path
+import shutil,hashlib,json,subprocess
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/k10-uv-review/root');P=R/'docs/review-k10-uv-preview-prove-2026-11-16/root'
+sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+memory=(R/'CLAUDE.md').read_text();before=json.loads((T/'hashes-before.json').read_text())
+sources={'kernel/fk_offset.cpp':('/tmp/k10-uv-review/core/fk_offset.cpp','acc3fbd56d2a7abfb3eb91004b9defe9dbe088537b0066f783537f0f7d0bdbcf'),'kernel/fk_curve_fit_bounds.cpp':('/tmp/k10-uv-review/core/fk_curve_fit_bounds.cpp','3faf91d68ee1511dd31c2c6a37a6c51dd1da8a49286c54873739b102b268052e'),'kernel/fk_curve_fit_bounds.h':('/tmp/k10-uv-review/core/fk_curve_fit_bounds.h','d170150fbf55dd68415d800baac04cd2f2a6182ec3ea6f6d53f0fabad49a5b41'),'forgeCad2026_dialogs_mapping.cpp':('/tmp/preview-next-review/delivery/forgeCad2026_dialogs_mapping.cpp','3075692e4f16b98eff7ee23831121aaeb9ea5381e6073aa78681d6189877c3e2'),'tests/test_preview_selection_state.h':('/tmp/preview-next-review/delivery/test_preview_selection_state.h','85e49ae639bb95350ff146ef265f87eeaab0d07dc7cb28a8471cc6e296d1b1c3'),'kernel/tests/test_offset_pcurve_validation.cpp':('/tmp/k10-uv-review/tests/test_uv_offset_validation.cpp','270088817756e68dc721103ce2862b5c60d1b125b9021282d69bafe78c3e5411')}
+for f,(path,h) in sources.items():
+ assert sha(Path(path))==h,path
+ if f in before:assert sha(R/f)==before[f],f
+ else:assert not (R/f).exists(),f
+for f in ['CMakeLists.txt','kernel/CMakeLists.txt','tests/test_viewport.cpp','tools/generate_architecture.py']:assert sha(R/f)==before[f],f
+for f,(path,_) in sources.items():shutil.copy2(path,R/f)
+p=R/'kernel/fk_curve_fit_bounds.h';s=p.read_text();old='// for unsupported source or support; recognized invalid/unresolved data throw.';assert old in s
+s=s.replace(old,'// for unsupported source or support. Invalid factory input throws; an unresolved\n// query returns +infinity and cannot authorize an accepted fit.',1);p.write_text(s)
+# Formatting only: preserve the candidate and compile the same active groups.
+subprocess.run(['clang-format','-i',str(R/'kernel/tests/test_offset_pcurve_validation.cpp')],check=True)
+p=R/'kernel/CMakeLists.txt';s=p.read_text();assert 'forgekernel_offset_pcurve_tests' not in s
+s+='''
+# Associazione piana S(PC(t))=E(t): residuo continuo e parametri originali.
+add_executable(forgekernel_offset_pcurve_tests tests/test_offset_pcurve_validation.cpp)
+target_link_libraries(forgekernel_offset_pcurve_tests PRIVATE forgekernel)
+target_compile_definitions(forgekernel_offset_pcurve_tests PRIVATE HAVE_PLANE_PCURVE_PROVIDER=1)
+target_compile_options(forgekernel_offset_pcurve_tests PRIVATE -Wall -Wextra -Wpedantic
+    "$<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang,AppleClang>:-fno-fast-math;-ffp-contract=off>")
+set_target_properties(forgekernel_offset_pcurve_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_offset_pcurve_tests COMMAND forgekernel_offset_pcurve_tests)
+set_tests_properties(forgekernel_offset_pcurve_tests PROPERTIES TIMEOUT 120)
+''';p.write_text(s)
+p=R/'CMakeLists.txt';s=p.read_text();old='    forgecad_add_view_test(forgecad_function_panels_tests --function-panels-review)';assert s.count(old)==1;s=s.replace(old,old+'\n    forgecad_add_view_test(forgecad_preview_selection_state_tests --preview-selection-state)\n    set_tests_properties(forgecad_preview_selection_state_tests PROPERTIES TIMEOUT 150)',1)
+old='tests/test_function_panels.h tests/test_advanced_fillets.h';assert old in s;s=s.replace(old,'tests/test_function_panels.h tests/test_preview_selection_state.h tests/test_advanced_fillets.h',1);p.write_text(s)
+p=R/'tests/test_viewport.cpp';s=p.read_text();old='#include "test_function_panels.h"';assert s.count(old)==1;s=s.replace(old,old+'\n#include "test_preview_selection_state.h"',1)
+old='    if (app.arguments().contains(QStringLiteral("--function-panels-review"))) {';assert s.count(old)==1
+new='''    if (app.arguments().contains(QStringLiteral("--preview-selection-state"))) {
+        QTemporaryDir isolatedSettings;
+        if (!isolatedSettings.isValid()) return 1;
+        QSettings::setDefaultFormat(QSettings::IniFormat);
+        QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, isolatedSettings.path());
+        try { ViewportInteractionTest::previewSelectionMutationReview(); }
+        catch (const std::exception &error) { std::cerr << error.what() << std::endl; return 1; }
+        return 0;
+    }
+'''
+s=s.replace(old,new+old,1);p.write_text(s)
+p=R/'tools/generate_architecture.py';lines=p.read_text().splitlines();extra={
+'kernel/fk_curve_fit_bounds.cpp':' Doppio certificato Plane/SP-curve: proiezione fisica per il fit e residuo completo della fin, coefficienti originali posseduti e metriche in mm.',
+'kernel/fk_curve_fit_bounds.h':' Contratto duale Plane/SP-curve e distinzione fra dati non supportati, factory invalida e query inconclusiva.',
+'kernel/fk_offset.cpp':' Ricostruzioni UV Plane con metrica certificata in mm, ricontrollo delle fin effettive da AssemblyMap e budget/conteggi invariati.',
+'forgeCad2026_dialogs_mapping.cpp':' Durante selezione continua invalida worker e anteprima solo al cambiamento dei valori; ripresa al termine e risultato obsoleto eliminato.'}
+for i,line in enumerate(lines):
+ for key,value in extra.items():
+  if line.startswith(" '"+key+"':"):
+   assert line.endswith("'),"),key;lines[i]=line[:-3]+value+"'),"
+s='\n'.join(lines)+'\n'
+newentries=" 'kernel/tests/test_offset_pcurve_validation.cpp': ('tests', 'Offset: sei regressioni negative della corrispondenza Plane/SP-curve, due compatibilita di rifilatura, atomicita e certificato duale con dati posseduti; exporter dei coefficienti finali.'),\n 'tests/test_preview_selection_state.h': ('tests', 'Sei scenari reali Mapping e Riempimento pattern: anteprima pronta e worker pendente, mutazione selezione, annullamento del token, generazione, pubblicazione tardiva, recupero e cleanup.'),\n"
+anchor=" 'kernel/tests/test_boolean_boundary.cpp':";assert s.count(anchor)==1;s=s.replace(anchor,newentries+anchor,1);p.write_text(s)
+# Source freeze includes complete CMake and test dispatch/catalog edits.
+files=list(sources)+['CMakeLists.txt','kernel/CMakeLists.txt','tests/test_viewport.cpp','tools/generate_architecture.py']
+(P/'frozen-source-hashes.json').write_text(json.dumps({f:sha(R/f) for f in files},indent=2)+'\n')
+(P/'candidate-hashes.json').write_text(json.dumps({f:dict(path=path,sha256=h) for f,(path,h) in sources.items()},indent=2)+'\n')
+for f in ['CMakeLists.txt','tests/test_viewport.cpp']:
+ d=P/'before'/(f+'.txt');d.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(T/'before'/(f+'.txt'),d)
+memory=(R/'CLAUDE.md').read_text();memory=memory.replace('provenienza AssemblyMap e fin emesse;10gruppi privati PASS, integrazione pendente.','provenienza AssemblyMap e fin emesse;10gruppi privati PASS, ora integrato.').replace('K10 resta15/24parziali+9nonmigrati finché integrato; precedente offset bordi,','K10 ora17/24parziali+7nonmigrati; build/verifiche finali in corso. Offset bordi,')
+assert len(memory.encode())<=16384,len(memory.encode());(R/'CLAUDE.md').write_text(memory)
+shutil.copy2(T/'integrate.py',P/'integrate.py.txt')
+print('Integrati4sorgenti,2regressioni permanenti,build/dispatch/catalogo; memoria',len(memory.encode()))

@@ -1,0 +1,7 @@
+{
+  "exit": 0,
+  "seconds": 0.11409255900071003,
+  "command": [
+    "forgecad-release/kernel/forgekernel_sheet_join_validation_tests"
+  ]
+}

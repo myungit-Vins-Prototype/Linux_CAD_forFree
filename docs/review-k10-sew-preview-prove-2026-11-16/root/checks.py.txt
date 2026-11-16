@@ -1,0 +1,22 @@
+from pathlib import Path
+import subprocess,json,time,re,sys
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/k10-next-review/root')
+def run(name,cmd,timeout=None,env=None):
+ start=time.monotonic()
+ with (T/(name+'.log')).open('w') as log:
+  try: p=subprocess.run(cmd,cwd=R,stdout=log,stderr=subprocess.STDOUT,timeout=timeout,env=env);code=p.returncode
+  except subprocess.TimeoutExpired:code=124
+ result=dict(exit=code,seconds=time.monotonic()-start,command=cmd)
+ (T/(name+'-result.json')).write_text(json.dumps(result,indent=2)+'\n');print(name,result,flush=True)
+ if code: print((T/(name+'.log')).read_text()[-4000:],flush=True);raise SystemExit(code)
+ return result
+if __name__=='__main__':
+ run('build',['cmake','--build','forgecad-release','--parallel','2'])
+ previous=json.loads((R/'docs/review-k10-uv-preview-prove-2026-11-16/root/ctest-result.json').read_text())['tests']
+ wanted=sorted(set(previous)|{'forgekernel_sew_pcurve_tests','forgecad_chamfer_preview_state_tests','forgekernel_exchange_robustness_tests','forgekernel_surface_instances_tests','forgekernel_history_tests','forgekernel_surface_tools_tests','forgecad_surface_tools_tests','forgecad_blend_preview_reload_tests','forgecad_edit_preview_reuse_tests'})
+ registered=json.loads(subprocess.check_output(['ctest','--test-dir','forgecad-release','--show-only=json-v1'],cwd=R));actual={t['name'] for t in registered['tests']};assert set(wanted)<=actual,set(wanted)-actual
+ r=run('ctest',['ctest','--test-dir','forgecad-release','--output-on-failure','--parallel','1','-V','-R','^('+'|'.join(map(re.escape,wanted))+')$'])
+ r.update(tests=wanted,actual_passed=len(wanted));(T/'ctest-result.json').write_text(json.dumps(r,indent=2)+'\n')
+ for filter in ['Iges','Exchange','StepRoundTrip','StepReadAssembly','Offset','Sheet']:
+  run(filter.lower(),['forgecad-release/kernel/forgekernel_tests',filter],timeout=240)
+ print('ALL CHECKS PASS',flush=True)

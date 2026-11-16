@@ -1,0 +1,1178 @@
+--- before/CLAUDE.md
++++ after/CLAUDE.md
+@@ -108,6 +108,19 @@
+ 
+ ## Ultimi interventi — esiti consolidati
+ 
++**16/11 — K10 Helix e cinque orfane, verificati con tre agenti Sol.**
++Helix trasformate: limite continuo trigonometrico/Hermite, poli Qt effettivi
++ricontrollati; due alias reali oltre budget ora rifiutati atomicamente.
++Percorso diretto quintico C2 conservato. Rimosse5private/locali,17API conservate.
++App completa e avvio isolato Wayland PASS;13gruppi Qt/sanitizer mirati3TU,
++37guardie e Fraction8varianti/624campate PASS;11export Release identici.
++CTest20/21: cavita raccordata fallisce anche sul kernel precedente congelato,
++raggio0,5mm;1,1/1,675riescono. Diagnosi aperta, nessun test indebolito.
++Mappa772/11165/385,check/HTML/archi PASS.29rilievi corretti complessivi;
++K10:19/24siti parziali+5nonmigrati,oltre ai fallback.
++[Rapporto/prove/limiti](docs/review-k10-helix-orphans-2026-11-16.md);
++[memoria precedente](docs/history/claude-prima-k10-helix-orphans-2026-11-16.md).
++
+ **16/11 — K10 cucitura e PRE8 verificati con tre agenti Sol.**
+ Plane rimappato: parametro originale, bound mm e fin emesse ricontrollate via
+ mappa+identitàPC; cap invariato. PRE8 Smusso: Tab aggiorna quote/anteprima.
+@@ -119,13 +132,9 @@
+ [Rapporto/prove/limiti](docs/review-k10-sew-preview-2026-11-16.md);
+ [memoria precedente](docs/history/claude-prima-k10-sew-preview-2026-11-16.md).
+ 
+-**16/11 — K10 UV e PRE7 verificati con tre agenti Sol.**
+-Due ricostruzioni UV Plane certificate in mm e fin emesse ricontrollate.
+-PRE7 Mapping/Riempimento pattern: selezione mutata invalida worker/risultato.
+-Totale28rilievi corretti; K10allora17/24parziali+7nonmigrati.
+-App/30CTest,27Offset/18Shell,10sanitizer,7guardie e79stati UI Wayland PASS;
+-192fin/248campate Fraction,8dump identici; mappa767/11085/383 PASS.
+-[Prove/limiti](docs/review-k10-uv-preview-2026-11-16.md);
++UV/PRE7: due ricostruzioni Plane e selezione Mapping/Pattern corrette;
++app/30CTest,10sanitizer e79stati UI Wayland,192fin Fraction/mappa PASS.
++[Prove/limiti](docs/review-k10-uv-preview-2026-11-16.md),
+ [memoria](docs/history/claude-prima-k10-uv-preview-2026-11-16.md).
+ 
+ **16/11 — Supporto.prt, K11 corretto con tre agenti Sol.**
+@@ -139,13 +148,10 @@
+ 27rilievi corretti. [Rapporto,prove e limiti](docs/supporto-booleana-2026-11-16.md);
+ [memoria conservata](docs/history/claude-prima-supporto-booleana-2026-11-16.md).
+ 
+-**16/11 — Anteprime e residuo UI2 completati con tre agenti Sol.**
+-PRE5/PRE6 corretti; 26 rilievi corretti. Undici runner comuni, setup differito,
+-footer fisso e chiusura sincrona; UI2 esteso senza ricontarlo. App/runner,
+-24 CTest e 115 asserzioni su oggetti app offscreen/Wayland PASS; fixture scroll
+-corretto, primo esito e diagnosi conservati. Mappa762/11023/380, check/HTML/archi,
+-2929/2938 file invariati; 172 artefatti sigillati. Orfane:5 private/locali,
+-17 API senza usi interni, nessuna rimozione. [Prove](docs/review-preview-unification-2026-11-16.md).
++**16/11 — PRE5/PRE6 e UI2 completati con tre agenti Sol.**
++Undici runner comuni,setup differito/footer/chiusura sincrona;26rilievi corretti.
++App/24CTest/115asserzioni offscreen/Wayland e mappa762/11023/380 PASS.
++Fixture scroll iniziale corretto;172artefatti. [Prove/limiti](docs/review-preview-unification-2026-11-16.md).
+ 
+ **16/11 — Ellisse per estremi completata con tre agenti GPT-6.1 Sol.**
+ Tre clic,4punti quotabili/vincolabili,centro derivato,5DOF;drag/snap/Taglia.
+@@ -162,22 +168,18 @@
+ [Prove e limiti](docs/sweep-k2-completamento-2026-11-15.md);
+ [memoria](docs/history/claude-prima-k10-composition-2026-11-15.md).
+ 
+-**15/11 — Altri14rilievi corretti con agenti GPT-6.1 Sol.**
+-K4/K5/K6,S1/S2,UI1–6,PRE1–3: sweep/loft/lamine, nonfiniti/angoli, picker,
+-selezioni,unità/colori e anteprime; un comando modeless fra workspace.
+-App/runner,74test kernel distinti/75esecuzioni e34/34CTest PASS. Primo33/34:
+-confronto double errato anche baseline, corretto nel test. Mappa724/10429/353TU,
+-check/HTML/archi PASS;18/19allora risolti,K2poi completato. Nessun nuovo GL.
+-[Prove e limiti](docs/review-fix-next-2026-11-15.md).
++**15/11 — Altri14rilievi corretti con agenti Sol.**
++K4/K5/K6,S1/S2,UI1–6,PRE1–3: sweep/loft/lamine,input,picker eanteprime.
++App/74testkernel(75esecuzioni)/34CTest,mappa724/10429/353TU PASS;fixture
++confrontodouble baseline corretto,nessun nuovoGL. [Prove/limiti](docs/review-fix-next-2026-11-15.md).
+ 
+ **15/11 — Sweep K1/K3 corretti con due agenti GPT-6.1 Sol.**
+ Frame ortonormale e cuciture UV: app/runner,42 test kernel e16CTest PASS; mappa724/10414 PASS.
+ K4 e K2 poi corretti; riferimenti sopra. [Rapporto e prove](docs/sweep-review-fix-2026-11-15.md).
+ 
+ **15/11 — Cache B-spline M1/M2 corrette con tre agenti Sol.**
+-Durata shared_ptr e copie/assegnazioni atomiche, snapshot/CAS; cinque regressioni
+-normale/ASan/TSan PASS, M1isolata200x8 eM2. App/47CTest e mappa724/10410/353TU PASS.
+-Runner325casi poi timeout300s, non completo; nessun GL.
++Snapshot/CAS,copie atomiche e durata shared_ptr:5regressioni ASan/TSan PASS.
++App/47CTest/mappa PASS;runner325casi poi timeout300s,nessun GL.
+ [Prove e limiti](docs/cache-bspline-2026-11-15.md).
+ 
+ **15/11 — Review iniziale con quattro agenti.** 19difetti e22candidate orfane;
+--- before/CMakeLists.txt
++++ after/CMakeLists.txt
+@@ -587,7 +587,7 @@
+     # Finestra, viewport, storyboard e dialoghi sono unita' separate anche nei test.
+     list(REMOVE_ITEM FORGECAD_VIEW_TEST_SOURCES forgeCad2026.cpp ${FORGE_CAD_CUDA_SOURCE} ${FORGECAD_HASH_HEADER})
+     list(REMOVE_ITEM FORGECAD_VIEW_TEST_SOURCES cad_macos_menu.h cad_macos_menu.mm)
+-    add_executable(forgecad_view_tests tests/test_viewport.cpp tests/test_declared_history_cache.h tests/test_boolean_history.h tests/test_blend_history.h tests/test_extrusion_history.h tests/test_revolution_history.h tests/test_all_history.h tests/test_native_revisions.h tests/test_workspace_revisions.h tests/test_linked_drawing.h tests/test_drawing_workflow.h tests/test_drawing_revisions.h tests/test_projected_drawing_file.h tests/test_drawing_multisheet.h tests/test_drawing_revision_restore.h tests/test_drawing_release.h tests/test_catalog_recovery_gui.h tests/test_surface_tools_gui.h tests/test_document_units.h tests/test_history_suppression.h tests/test_function_panels.h tests/test_preview_selection_state.h tests/test_chamfer_preview_editing.h tests/test_advanced_fillets.h tests/test_fillet_refinements.h tests/test_drawing_mouse.h tests/test_drawing_section_model.h tests/test_drawing_performance.h cuda_support_cpu.cpp ${FORGECAD_VIEW_TEST_SOURCES})
++    add_executable(forgecad_view_tests tests/test_viewport.cpp tests/test_declared_history_cache.h tests/test_boolean_history.h tests/test_blend_history.h tests/test_extrusion_history.h tests/test_revolution_history.h tests/test_all_history.h tests/test_native_revisions.h tests/test_workspace_revisions.h tests/test_linked_drawing.h tests/test_drawing_workflow.h tests/test_drawing_revisions.h tests/test_projected_drawing_file.h tests/test_drawing_multisheet.h tests/test_drawing_revision_restore.h tests/test_drawing_release.h tests/test_catalog_recovery_gui.h tests/test_surface_tools_gui.h tests/test_document_units.h tests/test_history_suppression.h tests/test_function_panels.h tests/test_preview_selection_state.h tests/test_chamfer_preview_editing.h tests/test_sketch_projection_fit_validation.h tests/test_advanced_fillets.h tests/test_fillet_refinements.h tests/test_drawing_mouse.h tests/test_drawing_section_model.h tests/test_drawing_performance.h cuda_support_cpu.cpp ${FORGECAD_VIEW_TEST_SOURCES})
+     add_dependencies(forgecad_view_tests forgecad) # genera l'impronta una sola volta, prima dei test
+     target_include_directories(forgecad_view_tests PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/generated)
+     target_link_libraries(forgecad_view_tests PRIVATE Qt6::Test forgecad_compute Qt6::Widgets Qt6::OpenGL Qt6::OpenGLWidgets OpenGL::GL forgekernel ZLIB::ZLIB ${FORGECAD_ZSTD_TARGET})
+@@ -610,6 +610,8 @@
+     forgecad_add_view_test(forgecad_revision_access_gui_tests --revision-access-gui)
+     forgecad_add_view_test(forgecad_extrusion_next_body_tests --extrusion-next-body)
+     forgecad_add_view_test(forgecad_sketch_projection_tests --sketch-projection)
++    forgecad_add_view_test(forgecad_sketch_projection_fit_validation_tests --sketch-projection-fit-validation)
++    set_tests_properties(forgecad_sketch_projection_fit_validation_tests PROPERTIES TIMEOUT 180)
+     forgecad_add_view_test(forgecad_projected_curve_reference_tests --projected-curve-references)
+     forgecad_add_view_test(forgecad_next_body_union_cache_tests --next-body-union-cache)
+     forgecad_add_view_test(forgecad_next_body_union_tests --next-body-union)
+--- before/cad_sketch_refs.cpp
++++ after/cad_sketch_refs.cpp
+@@ -20,6 +20,7 @@
+ #include "fk_curve_algo.h"
+ #include "fk_curve_ops.h"
+ #include "fk_helix.h"
++#include "fk_helix_projection.h"
+ #include "fk_intersect.h"
+ #include "fk_nurbs.h"
+ #include "fk_precision.h"
+@@ -120,12 +121,23 @@
+     return true;
+ }
+ 
+-// Toglie i livelli di TrimmedCurve (il tratto resta quello dato).
+-bool needsProjectionFit(const Curve<3> &curve) {
+-    if(curve.type()==CurveType::Trimmed) return needsProjectionFit(*static_cast<const TrimmedCurve<3>&>(curve).basis());
+-    if(curve.type()==CurveType::Transformed) return needsProjectionFit(*static_cast<const TransformedCurve&>(curve).basis());
+-    return curve.type()==CurveType::Other;
+-}
++// Bound traversal before any wrapper-delegated query or sampled fallback.
++const Curve<3> &projectionBasis(const Curve<3> &curve) {
++    const Curve<3> *basis = &curve;
++    std::size_t depth = 0;
++    while (basis->type() == CurveType::Trimmed || basis->type() == CurveType::Transformed) {
++        cancellationPoint();
++        if (++depth > 256)
++            throw std::domain_error("proiezione curva: budget wrapper esaurito");
++        if (basis->type() == CurveType::Trimmed)
++            basis = static_cast<const TrimmedCurve<3> *>(basis)->basis().get();
++        else
++            basis = static_cast<const TransformedCurve *>(basis)->basis().get();
++    }
++    return *basis;
++}
++
++bool needsProjectionFit(const Curve<3> &curve) { return projectionBasis(curve).type() == CurveType::Other; }
+ 
+ const Curve<3> *basisOf(const Curve<3> *curve) {
+     while (curve && curve->type() == CurveType::Trimmed) curve = static_cast<const TrimmedCurve<3> *>(curve)->basis().get();
+@@ -162,8 +174,6 @@
+ QString appendProjectedCurve(SketchObject &sketch, const CurvePtr<3> &curve, const Interval &range, bool construction, bool fixed,
+                              QVector<SketchEntity> *created) {
+     if (!curve || !(range.hi > range.lo)) return QStringLiteral("Curva non valida.");
+-    if (isImplicitSketchProjection(*curve))
+-        return QStringLiteral("La curva proiettata implicita non puo' essere convertita in schizzo senza un'approssimazione NURBS esplicita.");
+     const Frame3 frame = sketchAxes(sketch);
+     const auto local = [&](const Vec3 &p) {
+         const Vec3 q = frame.toLocal(p);
+@@ -171,6 +181,9 @@
+     };
+     const int segmentsBefore = sketch.segments.size(), curvesBefore = sketch.curves.size();
+     try {
++        if (isImplicitSketchProjection(projectionBasis(*curve)))
++            return QStringLiteral(
++                "La curva proiettata implicita non puo' essere convertita in schizzo senza un'approssimazione NURBS esplicita.");
+         const Curve<3> *basis = basisOf(curve.get());
+         if (basis->type() == CurveType::Line) {
+             const QPointF a = local(curve->point(range.lo)), b = local(curve->point(range.hi));
+@@ -212,6 +225,29 @@
+                     spline = joinBezierPieces(standardBezierPieces(full, range));
+                 }
+             } else if (needsProjectionFit(*curve)) {
++                // A wrapped Helix retains its original analytic provenance.
++                // Fit directly in sketch coordinates, then certify the actual
++                // Qt controls after recalculateCurve, before publishing them.
++                if (const auto projected = Kernel::detail::projectHelixCertified(curve, range, frame, linearResolution())) {
++                    CurveObject object;
++                    object.tool = DrawingTool::Converted;
++                    object.construction = construction;
++                    object.degree = projected->degree();
++                    for (const Vec2 &p : projected->poles())
++                        object.controlPoints.append(QPointF(p.x(), p.y()));
++                    for (double k : projected->knots())
++                        object.knots.append(k);
++                    recalculateCurve(object);
++                    const auto actual = curveGeometry(object);
++                    if (!object.numericallyValid || actual.size() != 1 || actual.front().range.lo != range.lo ||
++                        actual.front().range.hi != range.hi)
++                        throw std::domain_error("proiezione elica: curva finale non valida");
++                    Kernel::detail::requireHelixProjection(curve, range, frame, actual.front().curve, linearResolution());
++                    sketch.curves.append(object);
++                    // The sampled collinearity shortcut below is outside this
++                    // certificate. Keep the certified Converted representation.
++                    goto done;
++                }
+                 // Le curve procedurali (ad esempio isoparametriche) non
+                 // hanno necessariamente una forma razionale: le approssima
+                 // il fitter adattivo, poi la proiezione affine dei poli.
+--- before/docs/code-review-2026-11-15.md
++++ after/docs/code-review-2026-11-15.md
+@@ -1,6 +1,6 @@
+ # Review generale ForgeCAD — 15 novembre 2026
+ 
+-**Stato più recente, 16 novembre:** **29 rilievi confermati corretti complessivamente**. [Cucitura Plane e PRE8](review-k10-sew-preview-2026-11-16.md): trasferimento SP-curve certificato nel parametro originale, cap invariato e fin realmente emesse ricontrollate tramite genealogia esplicita; Smusso aggiorna l’anteprima dopo digitazione e Tab. App completa,37CTest pertinenti,12gruppi sanitizer mirati e90stati UI ancheWayland PASS;64fin/169campate verificate con Fraction,8dump Release identici. **K10 resta aperto:18/24siti iniziali parzialmente trattati,6interamente da migrare**, oltre ai fallback e ai limiti del matching/cap sorgente campionati. Precedenti [UV/PRE7](review-k10-uv-preview-2026-11-16.md), [K11 Supporto.prt](supporto-booleana-2026-11-16.md) e [PRE5/PRE6/UI2](review-preview-unification-2026-11-16.md) conservati; K2 in produzione ed [ellisse per estremi](ellisse-estremi-2026-11-16.md) completata. Uniformazione globale UI e [22candidate orfane](review-orphans-refresh-2026-11-16.md) ancora aperte. I conteggi storici successivi descrivono le rispettive consegne precedenti.
++**Stato più recente, 16 novembre:** **29 rilievi confermati corretti complessivamente**. [Helix nello schizzo e cinque orfane](review-k10-helix-orphans-2026-11-16.md): proiezione delle eliche trasformate con limite continuo e ricontrollo dei poli Qt; due alias reali ora rifiutati atomicamente. Eliminate cinque funzioni private/locali, **17 API pubbliche senza usi interni ancora da valutare**. App completa e avvio isolato Wayland PASS;13gruppi Qt e sanitizer mirati,37guardie indipendenti,8varianti/624campate Fraction e11export Release identici PASS. **CTest20/21: un fallimento del raccordo cavità a0,5mm è riprodotto anche sul kernel precedente ed è da diagnosticare**; test conservato. Mappa772/11165/385 verificata. **K10 resta aperto:19/24siti iniziali parzialmente trattati,5interamente da migrare**, oltre ai fallback. Precedenti [cucitura/PRE8](review-k10-sew-preview-2026-11-16.md), [UV/PRE7](review-k10-uv-preview-2026-11-16.md), [K11 Supporto.prt](supporto-booleana-2026-11-16.md), [PRE5/PRE6/UI2](review-preview-unification-2026-11-16.md) conservati; K2 in produzione ed [ellisse per estremi](ellisse-estremi-2026-11-16.md) completata. Uniformazione globale UI ancora aperta. I conteggi storici successivi descrivono le rispettive consegne precedenti.
+ 
+ **Aggiornamento successivo:** i cinque rilievi della [seconda review](review-followup-2026-11-15.md) K7/K8/K9/PRE4/UI7 sono corretti: **24 difetti precedenti corretti complessivamente**. La [prosecuzione K10](curve-fit-k10-2026-11-15.md) corregge il fit degli offset NURBS di estrusioni/rivoluzioni con controllo continuo, input finiti e fallimenti atomici; build completa e regressioni PASS. **K10 resta aperto per i chiamanti generici ancora campionati**. Le 22 orfane restano candidati distinti. Stato storico della prima review sotto.
+ 
+--- before/docs/review-orphans-refresh-2026-11-16.md
++++ after/docs/review-orphans-refresh-2026-11-16.md
+@@ -1,4 +1,8 @@
+ # Ricontrollo delle 22 candidate orfane — 16 novembre 2026
++
++**Aggiornamento successivo:** le cinque funzioni private/locali sono state eliminate dopo nuovo controllo di767file. Le17API pubbliche sono conservate. Build completa PASS;20/21CTest pertinenti,un fallimento preesistente riprodotto sul kernel precedente; mappa aggiornata. [Correzioni, prove e limiti](review-k10-helix-orphans-2026-11-16.md).
++
++## Snapshot storico prima della rimozione
+ 
+ Scan in sola lettura: 763 file di codice/configurazione attivi non ignorati; tutti i test presenti, anche fuori CMake, backend opzionali e confronti OCCT inclusi. Snapshot grafo: 762 nodi, 11023 archi.
+ 
+--- before/forgeCad2026_storyboard.cpp
++++ after/forgeCad2026_storyboard.cpp
+@@ -545,10 +545,3 @@
+     // Le dipendenze vengono validate sul documento, compresi gli schizzi.
+     return target;
+ }
+-
+-QTreeWidgetItem *StoryboardTree::firstFeature(QTreeWidgetItem *body) {
+-    if (!body) return nullptr;
+-    for (int row = 0; row < body->childCount(); ++row)
+-        if (body->child(row)->data(0, Qt::UserRole).toInt() == kTreeExtrusion) return body->child(row);
+-    return nullptr;
+-}
+--- before/forgeCad2026_storyboard.h
++++ after/forgeCad2026_storyboard.h
+@@ -91,8 +91,6 @@
+ 
+     QTreeWidgetItem *normalizedTarget(QTreeWidgetItem *body, QTreeWidgetItem *target) const;
+ 
+-    static QTreeWidgetItem *firstFeature(QTreeWidgetItem *body);
+-
+     QWidget *historyRailViewport_ = nullptr;
+     QSlider *historyRail_ = nullptr;
+     CursorMode cursorMode_ = CursorMode::Horizontal;
+--- before/forgeCad2026_viewport.h
++++ after/forgeCad2026_viewport.h
+@@ -1252,8 +1252,6 @@
+     static bool isPickableCurvePoint(const CurveObject &curve, int control);
+ 
+     QPointF selectedPointPosition(const SelectedPoint &point) const;
+-
+-    void setSelectedPointPosition(const SelectedPoint &point, const QPointF &position);
+ 
+     void finalizeCurve();
+ 
+--- before/forgeCad2026_viewport_selection.cpp
++++ after/forgeCad2026_viewport_selection.cpp
+@@ -741,22 +741,6 @@
+         return h % 2 == 0 ? curve.tangentHandles.at(h / 2).first : curve.tangentHandles.at(h / 2).second;
+     }
+     return curve.controlPoints.at(point.point);
+-}
+-
+-void CadViewport::setSelectedPointPosition(const SelectedPoint &point, const QPointF &position) {
+-    if (point.kind == 0) {
+-        auto &segment = sketches_[activeSketch_].segments[point.element];
+-        if (point.point == 0) segment.first = position;
+-        else segment.second = position;
+-    } else {
+-        CurveObject &curve = sketches_[activeSketch_].curves[point.element];
+-        const QPointF delta = position - curve.controlPoints.at(point.point);
+-        curve.controlPoints[point.point] = position;
+-        if (curve.tool == DrawingTool::Spline && curve.tangentHandles.size() == curve.controlPoints.size()) {
+-            curve.tangentHandles[point.point].first += delta;
+-            curve.tangentHandles[point.point].second += delta;
+-        }
+-    }
+ }
+ 
+ QVector<CadViewport::TopologyLabelItem> CadViewport::topologyLabelItems() const {
+--- before/kernel/CMakeLists.txt
++++ after/kernel/CMakeLists.txt
+@@ -170,6 +170,8 @@
+     fk_hermite.cpp
+     fk_helix.h
+     fk_helix.cpp
++    fk_helix_projection.h
++    fk_helix_projection.cpp
+     fk_sweep.h
+     fk_sweep.cpp
+     fk_sweep_atlas.h
+@@ -217,7 +219,7 @@
+ # I validatori usano intervalli outward: niente riassociazioni o assunzioni
+ # di finitezza implicite, anche se una configurazione esterna abilita fast-math.
+ set_source_files_properties(fk_sweep_surface_validation.cpp fk_sweep_caps.cpp
+-    fk_sweep_analytic_bridge.cpp fk_curve_fit_bounds.cpp fk_project.cpp fk_mapping_carrier.cpp fk_affine_surface_fit.cpp fk_planar_flatten.cpp fk_quilt_mapping.cpp fk_boolean_boundary.cpp PROPERTIES COMPILE_OPTIONS
++    fk_sweep_analytic_bridge.cpp fk_curve_fit_bounds.cpp fk_helix_projection.cpp fk_project.cpp fk_mapping_carrier.cpp fk_affine_surface_fit.cpp fk_planar_flatten.cpp fk_quilt_mapping.cpp fk_boolean_boundary.cpp PROPERTIES COMPILE_OPTIONS
+     "$<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang,AppleClang>:-fno-fast-math;-ffp-contract=off>")
+ set_target_properties(forgekernel PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+ 
+--- before/kernel/fk_blend.cpp
++++ after/kernel/fk_blend.cpp
+@@ -365,8 +365,6 @@
+     Vec3 vertex;
+     Vec3 n[3], d[3];
+     int edgeFaces[3][2];
+-    // Per ogni spigolo, la faccia che non lo contiene.
+-    int otherFace(int k) const { return 3 - edgeFaces[k][0] - edgeFaces[k][1]; }
+     // I due spigoli della faccia i.
+     void edgesOf(int i, int &k, int &l) const {
+         k = l = -1;
+--- before/kernel/fk_blend_loop.cpp
++++ after/kernel/fk_blend_loop.cpp
+@@ -104,11 +104,6 @@
+         s.derivative[2] = d[1] + size_ * tT1;
+         return s;
+     }
+-    Vec3 inPlane(double t) const {
+-        const Vec3 w = cross(normal_, curve_->derivative(t));
+-        return sideT_ * normalized(w);
+-    }
+-
+     RowFit fit() const { return fit(range_); }
+     RowFit fit(const Interval &span) const {
+         std::vector<double> breaks = curve_->breakpoints(span);
+--- before/kernel/fk_fill.cpp
++++ after/kernel/fk_fill.cpp
+@@ -237,7 +237,6 @@
+             }
+         return y;
+     }
+-    int band() const { return b_; }
+ 
+     // Cholesky in place; falso se la matrice non e' definita positiva.
+     bool factor() {
+--- before/kernel/fk_helix.h
++++ after/kernel/fk_helix.h
+@@ -45,6 +45,10 @@
+ 
+     const HelixSpec &spec() const { return spec_; }
+     double radiusAt(double t) const { return spec_.radius + slope_ * t; }
++    // Stored IEEE coefficients used by evaluate(), without recomputing the
++    // divisions or tangent from Spec when constructing a certificate.
++    double radialSlope() const { return slope_; }
++    double risePerRadian() const { return rise_; }
+     // Lunghezza esatta (forma chiusa per l'elica cilindrica, quadratura negli altri casi).
+     double length() const;
+ 
+--- before/tests/test_viewport.cpp
++++ after/tests/test_viewport.cpp
+@@ -1,3 +1,4 @@
++#include "test_sketch_projection_fit_validation.h"
+ #include <QtTest/QTest>
+ #include "../cad_document_tabs.h"
+ #include <QTabWidget>
+@@ -11451,6 +11452,9 @@
+         catch (const std::exception &error) { std::cerr << error.what() << std::endl; return 1; }
+         return 0;
+     }
++    if (app.arguments().contains(QStringLiteral("--sketch-projection-fit-validation"))) {
++        return K10SketchProjectionTests::run(QString::fromLocal8Bit(qgetenv("FORGECAD_HELIX_EXPORT_DIR")));
++    }
+     if (app.arguments().contains(QStringLiteral("--sketch-projection"))) {
+         try { ViewportInteractionTest::sketchProjection(); }
+         catch (const std::exception &error) { std::cerr << error.what() << std::endl; return 1; }
+--- before/tools/generate_architecture.py
++++ after/tools/generate_architecture.py
+@@ -40,6 +40,8 @@
+  ('build', 'Build e strumenti', 'Configurazione, generazione e confezionamento del software.')]
+ # Descrizioni curate: aggiornare queste voci quando cambia il confine di un modulo.
+ DESCRIPTIONS = {
++ 'fk_helix_projection': ('kernel', 'Proiezione di Helix nel parametro originale: snapshot di coefficienti IEEE, wrapper e frame; intervalli trigonometrici outward e resto Hermite continuo, fit cubico e ricontrollo dei poli2D effettivi, risorse finite e cancellazione. Nessuna certificazione del percorso quintico diretto legacy.'),
++ 'tests/test_sketch_projection_fit_validation.h': ('tests', 'Tredici gruppi Qt sulla proiezione Helix: due alias negativi a un milione di giri, otto varianti con pose/trim/affini/spirale e budget invariati, compatibilita quintica diretta, atomicita di errori e cancellazione, contratto e poli finali; exporter originale/effettivo in floathex.'),
+  'kernel/fk_boolean_boundary.cpp': ('kernel', 'Certificati continui outward dei contatti fra retta e bordo ellittico: originali IEEE, monotonia, scarto dai carrier Plane/Cylinder e frame double; pcurve affine nel parametro originale con bound di Peano, input non finiti e famiglie non risolte rifiutati.'),
+  'kernel/fk_boolean_boundary.h': ('kernel', 'Contratti interni dei certificati di contatto ellisse/retta finita e delle immagini UV affini; limite continuo o rifiuto, senza tolleranze aumentate e senza campionamento come autorizzazione.'),
+  'kernel/fk_exchange.h': ('kernel', 'B-rep grezzo STEP/IGES e cucitura, AssemblyMap esplicita e obblighi transitori per le sole SP-curve Plane rimappate; metadati non persistiti, cap e genealogia di fin.'),
+@@ -536,7 +538,7 @@
+  'cad_sketch_apparent': ('sketch', 'Identita del contorno apparente associativo: faccia persistente e ramo analitico, distinta dalla sezione col piano; semantica protetta dal formato69.'),
+  'fk_apparent_contour': ('kernel', 'Contorni apparenti esatti delle facce cilindriche/coniche/sferiche e meridiani toroidali laterali: normale ortogonale alla proiezione, ritaglio sui loop B-rep, rami indipendenti dal verso della normale; nessuna mesh.'),
+  'tests/test_sketch_apparent.h': ('tests', 'Contorni apparenti delle parti raggiate: geometria esatta e trim, trasformazioni, Polilinea/Quota, sorgente nominata, aggancio unico, piano esterno al corpo, raggio variato, PRT69/legacy, riferimento rotto e Undo/Redo; badge OpenGL opzionale.'),
+- 'cad_sketch_refs': ('sketch', 'Proiezioni, contatti e Pierce esatti associativi degli schizzi, inclusi contorni apparenti di facce analitiche proiettati lungo la normale anche su piani esterni al corpo: immagini affini delle curve implicite, sorgenti persistenti per chiavi genealogiche, cache automatiche proiettate direttamente dallo snapshot B-rep senza risolvere i nomi appena creati, refresh e conversioni esplicite visibili senza duplicati; identita leggibili persistenti e diagnostica di tutte le sorgenti rotte con i vincoli interessati.'),
++ 'cad_sketch_refs': ('sketch', 'Proiezioni, contatti e Pierce esatti associativi degli schizzi, inclusi contorni apparenti di facce analitiche proiettati lungo la normale anche su piani esterni al corpo: immagini affini delle curve implicite, sorgenti persistenti per chiavi genealogiche, cache automatiche proiettate direttamente dallo snapshot B-rep senza risolvere i nomi appena creati, refresh e conversioni esplicite visibili senza duplicati; identita leggibili persistenti e diagnostica di tutte le sorgenti rotte con i vincoli interessati. Helix con Transformed usa un fit diretto2D con controllo continuo dopo recalculateCurve e pubblicazione atomica. Helix nuda o solo rifilata conserva il percorso quinticoC2 legacy; altri Other restano fallback campionati. Traversal dei wrapper limitato e cancellabile.'),
+  'tests/test_sketch_intersections.h': ('tests', 'Intersezioni esatte locali/esterne, solver associativo, persistenza, pulizia e Undo/Redo; aggancio del viewport e trascinamento.'),
+  'cad_snap': ('sketch', 'Scelta univoca del riferimento di un punto condivisa fra badge e conferma, origine prioritaria, materializzazione della sola sorgente scelta; intersezioni esatte e conferma atomica delle due curve con PointOnCurve.'),
+  'tests/test_sketch_tools_refs.h': ('tests', 'Cerchio3 analitico, arco3 senza raggio, Polilinea, origine su faccia circolare, agganci sovrapposti univoci, nomi sorgenti e vincoli rotti dopo eliminazione, codec68 e Undo/Redo.'),
+--- /dev/null
++++ after/kernel/fk_helix_projection.h
+@@ -0,0 +1,25 @@
++#pragma once
++#include "fk_curve_fit_bounds.h"
++#include "fk_helix.h"
++namespace ForgeCad::Kernel::detail {
++// ORIGINAL Helix IEEE coefficients, wrapper matrices and target Frame axes.
++// Both callbacks own their data and survive destruction of source geometry.
++// Target: frame.toLocal(source(t)).XY in mm, in the ORIGINAL parameter.
++struct HelixProjectionFitData {
++    CurveFitErrorBound bound;
++    std::function<Vec3(double)> value;
++    double fourthDerivativeBound = 0;
++};
++// Empty only for a non-Helix basis. Recognized invalid domains, transforms,
++// nonfinite or numerically unresolved data throw; a query may return infinity.
++HelixProjectionFitData helixProjectionErrorBound(const CurvePtr<3> &source, const Interval &range, const Frame3 &frame);
++// Cubic nonrational C0 Bezier pcurve. Physical budget includes transforms and
++// projection. Conservative finite work preflight may reject valid curves.
++// No output/deviation is published on failure; unsupported source returns null.
++std::shared_ptr<BSplineCurve<2>> projectHelixCertified(const CurvePtr<3> &source, const Interval &range, const Frame3 &frame,
++                                                       double tolerance, double *deviation = nullptr);
++// Rebuilds the original-data oracle and validates all ACTUAL original 2D poles,
++// knots, domains and cubic C0 Bezier structure. Returns the whole-curve bound.
++double requireHelixProjection(const CurvePtr<3> &source, const Interval &range, const Frame3 &frame, const CurvePtr<2> &actual,
++                              double tolerance);
++} // namespace ForgeCad::Kernel::detail
+--- /dev/null
++++ after/kernel/fk_helix_projection.cpp
+@@ -0,0 +1,326 @@
++#include "fk_helix_projection.h"
++#include "fk_cancel.h"
++#include <algorithm>
++#include <array>
++#include <cmath>
++#include <cstdint>
++#include <limits>
++#include <stdexcept>
++#include <vector>
++namespace ForgeCad::Kernel::detail {
++namespace {
++constexpr double infinity = std::numeric_limits<double>::infinity();
++constexpr std::size_t maxWrappers = 256;
++constexpr double maxUniformSpans = 16384;
++struct I {
++    double lo = 0, hi = 0;
++    I() = default;
++    I(double x) : lo(x), hi(x) {}
++    I(double a, double b) : lo(a), hi(b) {}
++};
++bool finite(I a) { return std::isfinite(a.lo) && std::isfinite(a.hi) && a.lo <= a.hi; }
++double down(double x) { return std::nextafter(x, -infinity); }
++double up(double x) { return std::nextafter(x, infinity); }
++I checked(double lo, double hi) { return std::isfinite(lo) && std::isfinite(hi) && lo <= hi ? I(lo, hi) : I(-infinity, infinity); }
++I operator+(I a, I b) { return finite(a) && finite(b) ? checked(down(a.lo + b.lo), up(a.hi + b.hi)) : I(-infinity, infinity); }
++I operator-(I a, I b) { return finite(a) && finite(b) ? checked(down(a.lo - b.hi), up(a.hi - b.lo)) : I(-infinity, infinity); }
++I operator*(I a, I b) {
++    if (!finite(a) || !finite(b))
++        return {-infinity, infinity};
++    const double p[] = {a.lo * b.lo, a.lo * b.hi, a.hi * b.lo, a.hi * b.hi};
++    for (double x : p)
++        if (!std::isfinite(x))
++            return {-infinity, infinity};
++    return checked(down(*std::min_element(p, p + 4)), up(*std::max_element(p, p + 4)));
++}
++I operator/(I a, I b) {
++    if (!finite(b) || !(b.lo > 0))
++        return {-infinity, infinity};
++    return a * checked(down(1 / b.hi), up(1 / b.lo));
++}
++double absoluteUpper(I a) { return finite(a) ? std::max(std::abs(a.lo), std::abs(a.hi)) : infinity; }
++using V = std::array<I, 3>;
++V vector(const Vec3 &p) { return {I(p.x()), I(p.y()), I(p.z())}; }
++V add(V a, V b) {
++    for (int k = 0; k < 3; ++k)
++        a[k] = a[k] + b[k];
++    return a;
++}
++V subtract(V a, V b) {
++    for (int k = 0; k < 3; ++k)
++        a[k] = a[k] - b[k];
++    return a;
++}
++V scale(V a, I b) {
++    for (I &x : a)
++        x = x * b;
++    return a;
++}
++I dot(V a, V b) {
++    I result;
++    for (int k = 0; k < 3; ++k)
++        result = result + a[k] * b[k];
++    return result;
++}
++bool finite(V a) {
++    for (I x : a)
++        if (!finite(x))
++            return false;
++    return true;
++}
++double normUpper(V a) {
++    I squared;
++    for (I x : a) {
++        const I m(absoluteUpper(x));
++        squared = squared + m * m;
++    }
++    return finite(squared) ? up(std::sqrt(std::max(0., squared.hi))) : infinity;
++}
++V transformed(V a, const Transform3 &t, bool point) {
++    V result = point ? vector(t.translationPart()) : V{};
++    for (int row = 0; row < 3; ++row)
++        for (int col = 0; col < 3; ++col)
++            result[row] = result[row] + a[col] * I(t.matrix(row, col));
++    return result;
++}
++V projected(V a, const Frame3 &f, bool point) {
++    if (point)
++        a = subtract(a, vector(f.origin()));
++    return {dot(a, vector(f.xDir())), dot(a, vector(f.yDir())), I(0)};
++}
++std::pair<I, I> sineCosine(I angle) {
++    if (!finite(angle))
++        throw std::domain_error("proiezione elica: fase non finita");
++    const double center = 0.5 * angle.lo + 0.5 * angle.hi;
++    const double quarter = std::nearbyint(center / kHalfPi);
++    if (!std::isfinite(quarter) || std::abs(quarter) > 0x1p50)
++        throw std::domain_error("proiezione elica: riduzione della fase non risolta");
++    // Exact binary bounds for mathematical pi/2. Machin's identity gives
++    // 8*atan(1/5)-2*atan(1/239); alternating sums of 24 and 8 terms lie
++    // strictly between these endpoints (checked independently with Fraction).
++    const I halfPi(0x1.921fb54442d18p+0, 0x1.921fb54442d19p+0);
++    const I r = angle - I(quarter) * halfPi;
++    if (absoluteUpper(r) > 1)
++        throw std::domain_error("proiezione elica: fase troppo larga per il certificato");
++    const I minusSquare = I(0) - r * r;
++    I sine, cosine, sineTerm = r, cosineTerm(1);
++    for (int k = 0; k < 16; ++k) {
++        cancellationPoint();
++        sine = sine + sineTerm;
++        cosine = cosine + cosineTerm;
++        sineTerm = sineTerm * minusSquare / I(double((2 * k + 2) * (2 * k + 3)));
++        cosineTerm = cosineTerm * minusSquare / I(double((2 * k + 1) * (2 * k + 2)));
++    }
++    // Degree 31/30 Taylor remainders on |r|<=1 are bounded by 1/32!,
++    // strictly less than the exact binary padding 2^-100 used here.
++    const I tail(-0x1p-100, 0x1p-100);
++    sine = sine + tail;
++    cosine = cosine + tail;
++    const auto q = static_cast<std::int64_t>(quarter);
++    switch ((q % 4 + 4) % 4) {
++    case 0:
++        return {sine, cosine};
++    case 1:
++        return {cosine, I(0) - sine};
++    case 2:
++        return {I(0) - sine, I(0) - cosine};
++    default:
++        return {I(0) - cosine, sine};
++    }
++}
++struct Data {
++    Interval range;
++    HelixSpec spec;
++    double slope = 0, rise = 0, sense = 1;
++    std::vector<Transform3> transforms;
++    Frame3 frame;
++    V origin, x, y, z;
++    double radialNorm = 0;
++    double fourth(const Interval &span) const {
++        const I radius = I(spec.radius) + I(slope) * I(span.lo, span.hi);
++        const I result = (I(absoluteUpper(radius)) + I(4) * I(std::abs(slope))) * I(radialNorm);
++        return finite(result) ? result.hi : infinity;
++    }
++    std::pair<V, V> jet(double t) const {
++        const I parameter(t), radius = I(spec.radius) + I(slope) * parameter;
++        const auto [sine, cosine] = sineCosine(I(spec.startAngle) + I(sense) * parameter);
++        const V radial = add(scale(x, cosine), scale(y, sine));
++        const V derivative = scale(add(scale(x, I(0) - sine), scale(y, cosine)), I(sense));
++        const V point = add(add(origin, scale(radial, radius)), scale(z, I(rise) * parameter));
++        const V tangent = add(add(scale(radial, I(slope)), scale(derivative, radius)), scale(z, I(rise)));
++        return {point, tangent};
++    }
++    Vec3 value(double t) const {
++        cancellationPoint();
++        const auto &f = spec.frame;
++        const double angle = spec.startAngle + sense * t, radius = spec.radius + slope * t;
++        Vec3 p = f.origin() + radius * (std::cos(angle) * f.xDir() + std::sin(angle) * f.yDir()) + (rise * t) * f.zDir();
++        for (auto i = transforms.rbegin(); i != transforms.rend(); ++i)
++            p = i->applyToPoint(p);
++        p = frame.toLocal(p);
++        return {p.x(), p.y(), 0};
++    }
++};
++std::shared_ptr<Data> prepare(const CurvePtr<3> &source, const Interval &range, const Frame3 &frame) {
++    cancellationPoint();
++    if (!source || !range.isFinite() || !(range.lo < range.hi) || !std::isfinite(range.length()))
++        throw std::domain_error("proiezione elica: sorgente o intervallo non valido");
++    const Curve<3> *basis = source.get();
++    std::vector<Transform3> transforms;
++    std::size_t depth = 0;
++    while (basis->type() == CurveType::Trimmed || basis->type() == CurveType::Transformed) {
++        cancellationPoint();
++        if (++depth > maxWrappers)
++            throw std::domain_error("proiezione elica: budget wrapper esaurito");
++        if (basis->type() == CurveType::Trimmed) {
++            // Trimmed stores its range; Transformed::domain delegates recursively.
++            const auto &trimmed = static_cast<const TrimmedCurve<3> &>(*basis);
++            const auto domain = trimmed.domain();
++            if ((std::isfinite(domain.lo) && range.lo < domain.lo) || (std::isfinite(domain.hi) && range.hi > domain.hi))
++                throw std::domain_error("proiezione elica: intervallo fuori dominio wrapper");
++            basis = trimmed.basis().get();
++        } else {
++            const auto &moved = static_cast<const TransformedCurve &>(*basis);
++            transforms.push_back(moved.transform());
++            basis = moved.basis().get();
++        }
++    }
++    const auto *helix = dynamic_cast<const HelixCurve *>(basis);
++    if (!helix)
++        return {};
++    const auto domain = helix->domain();
++    if (!domain.isFinite() || range.lo < domain.lo || range.hi > domain.hi)
++        throw std::domain_error("proiezione elica: intervallo fuori dominio originale");
++    auto data = std::make_shared<Data>();
++    data->range = range;
++    data->spec = helix->spec();
++    data->slope = helix->radialSlope();
++    data->rise = helix->risePerRadian();
++    data->sense = data->spec.leftHanded ? -1. : 1.;
++    data->transforms = std::move(transforms);
++    data->frame = frame;
++    if (!std::isfinite(data->slope) || !std::isfinite(data->rise) || !std::isfinite(data->spec.radius) ||
++        !std::isfinite(data->spec.startAngle))
++        throw std::domain_error("proiezione elica: coefficienti originali non finiti");
++    const auto &f = data->spec.frame;
++    data->origin = vector(f.origin());
++    data->x = vector(f.xDir());
++    data->y = vector(f.yDir());
++    data->z = vector(f.zDir());
++    for (auto it = data->transforms.rbegin(); it != data->transforms.rend(); ++it) {
++        cancellationPoint();
++        data->origin = transformed(data->origin, *it, true);
++        data->x = transformed(data->x, *it, false);
++        data->y = transformed(data->y, *it, false);
++        data->z = transformed(data->z, *it, false);
++    }
++    data->origin = projected(data->origin, frame, true);
++    data->x = projected(data->x, frame, false);
++    data->y = projected(data->y, frame, false);
++    data->z = projected(data->z, frame, false);
++    if (!finite(data->origin) || !finite(data->x) || !finite(data->y) || !finite(data->z))
++        throw std::domain_error("proiezione elica: trasformazione o frame non finito");
++    const I radialNorm = I(normUpper(data->x)) + I(normUpper(data->y));
++    data->radialNorm = radialNorm.hi;
++    if (!finite(radialNorm) || !std::isfinite(data->fourth(range)))
++        throw std::domain_error("proiezione elica: derivate non risolte");
++    // Validate endpoint phase reduction now rather than repeatedly allocating
++    // candidate output for a recognized but numerically unresolved source.
++    data->jet(range.lo);
++    data->jet(range.hi);
++    return data;
++}
++CurveFitErrorBound oracle(const std::shared_ptr<Data> &data) {
++    return [data](const Interval &span, const std::array<Vec3, 4> &poles) {
++        cancellationPoint();
++        if (!span.isFinite() || !(span.lo < span.hi) || span.lo < data->range.lo || span.hi > data->range.hi)
++            return infinity;
++        const I h = I(span.hi) - I(span.lo), third = h / I(3);
++        const auto [first, firstDerivative] = data->jet(span.lo);
++        const auto [last, lastDerivative] = data->jet(span.hi);
++        const std::array<V, 4> hermite = {first, add(first, scale(firstDerivative, third)), subtract(last, scale(lastDerivative, third)),
++                                          last};
++        double controls = 0;
++        for (int k = 0; k < 4; ++k) {
++            if (!isFinite(poles[k]))
++                return infinity;
++            controls = std::max(controls, normUpper(subtract(vector(poles[k]), hermite[k])));
++        }
++        // Vector Hermite Peano kernel is nonnegative. Its integral is
++        // (t-a)^2(t-b)^2/4!, at most h^4/384, so the Euclidean remainder
++        // is bounded by sup ||F''''|| * h^4/384 over the whole interval.
++        const I remainder = I(data->fourth(span)) * h * h * h * h / I(384);
++        const I result = I(controls) + remainder;
++        return finite(result) ? result.hi : infinity;
++    };
++}
++double validate(const CurvePtr<2> &curve, const Interval &range, const CurveFitErrorBound &bound, double tolerance) {
++    const auto *spline = dynamic_cast<const BSplineCurve<2> *>(curve.get());
++    if (!spline || spline->degree() != 3 || spline->isRational() || spline->poleCount() < 4 || (spline->poleCount() - 1) % 3 != 0 ||
++        spline->domain().lo != range.lo || spline->domain().hi != range.hi || !(tolerance > 0) || !std::isfinite(tolerance))
++        throw std::domain_error("proiezione elica: rappresentazione finale non riconosciuta");
++    const auto &p = spline->poles();
++    const auto &knots = spline->knots();
++    if (knots.size() != std::size_t(spline->poleCount() + 4))
++        throw std::domain_error("proiezione elica: nodi finali non validi");
++    for (int i = 0; i < 4; ++i)
++        if (knots[i] != range.lo || knots[knots.size() - 1 - i] != range.hi)
++            throw std::domain_error("proiezione elica: estremi finali non bloccati");
++    double worst = 0;
++    for (int k = 0; k + 3 < spline->poleCount(); k += 3) {
++        cancellationPoint();
++        const Interval span{knots[k + 3], knots[k + 4]};
++        if (!span.isFinite() || !(span.lo < span.hi) || knots[k + 1] != span.lo || knots[k + 2] != span.lo || knots[k + 5] != span.hi ||
++            knots[k + 6] != span.hi)
++            throw std::domain_error("proiezione elica: schema Bezier finale non valido");
++        const double error = bound(span, {Vec3(p[k].x(), p[k].y(), 0), Vec3(p[k + 1].x(), p[k + 1].y(), 0),
++                                          Vec3(p[k + 2].x(), p[k + 2].y(), 0), Vec3(p[k + 3].x(), p[k + 3].y(), 0)});
++        if (!std::isfinite(error) || error < 0 || error > tolerance)
++            throw std::domain_error("proiezione elica: risultato oltre il budget continuo");
++        worst = std::max(worst, error);
++    }
++    return worst;
++}
++} // namespace
++HelixProjectionFitData helixProjectionErrorBound(const CurvePtr<3> &source, const Interval &range, const Frame3 &frame) {
++    const auto data = prepare(source, range, frame);
++    if (!data)
++        return {};
++    return {oracle(data), [data](double t) { return data->value(t); }, data->fourth(range)};
++}
++std::shared_ptr<BSplineCurve<2>> projectHelixCertified(const CurvePtr<3> &source, const Interval &range, const Frame3 &frame,
++                                                       double tolerance, double *deviation) {
++    cancellationPoint();
++    if (!(tolerance > 0) || !std::isfinite(tolerance))
++        throw std::domain_error("proiezione elica: tolleranza non valida");
++    const auto data = helixProjectionErrorBound(source, range, frame);
++    if (!data.bound)
++        return {};
++    // This is a conservative sufficient-work policy for a uniform Hermite
++    // partition, not a claim of mathematical impossibility for other fits.
++    // It rejects huge inputs before constructing millions of pending spans.
++    const double estimate = range.length() * std::pow(data.fourthDerivativeBound / (192 * tolerance), 0.25);
++    if (!std::isfinite(estimate) || estimate > maxUniformSpans)
++        throw std::domain_error("proiezione elica: budget conservativo di lavoro esaurito");
++    const auto fitted = fitCurveCertified(data.value, range, {}, tolerance, data.bound);
++    std::vector<Vec2> poles;
++    poles.reserve(fitted->poles().size());
++    for (const auto &p : fitted->poles()) {
++        cancellationPoint();
++        poles.emplace_back(p.x(), p.y());
++    }
++    auto result = std::make_shared<BSplineCurve<2>>(3, fitted->knots(), std::move(poles));
++    const double error = validate(result, range, data.bound, tolerance);
++    cancellationPoint();
++    if (deviation)
++        *deviation = error;
++    return result;
++}
++double requireHelixProjection(const CurvePtr<3> &source, const Interval &range, const Frame3 &frame, const CurvePtr<2> &actual,
++                              double tolerance) {
++    const auto data = helixProjectionErrorBound(source, range, frame);
++    if (!data.bound)
++        throw std::domain_error("proiezione elica: provenienza finale non riconosciuta");
++    return validate(actual, range, data.bound, tolerance);
++}
++} // namespace ForgeCad::Kernel::detail
+--- /dev/null
++++ after/tests/test_sketch_projection_fit_validation.h
+@@ -0,0 +1,437 @@
++#pragma once
++#include "cad_curve_solver.h"
++#include "cad_document_io.h"
++#include "cad_kernel.h"
++#include "cad_sketch_refs.h"
++#include "fk_cancel.h"
++#include "fk_helix.h"
++#include "fk_helix_projection.h"
++#include <QApplication>
++#include <QDir>
++#include <QFile>
++#include <QJsonArray>
++#include <QJsonDocument>
++#include <QJsonObject>
++#include <iostream>
++#include <sstream>
++#include <stdexcept>
++namespace K10SketchProjectionTests {
++using namespace ForgeCad;
++using namespace ForgeCad::Kernel;
++static void need(bool b, const char *m) {
++    if (!b)
++        throw std::runtime_error(m);
++}
++static QString hx(double x) {
++    std::ostringstream s;
++    s << std::hexfloat << x;
++    return QString::fromStdString(s.str());
++}
++static QJsonArray vec(const Vec3 &p) { return {hx(p[0]), hx(p[1]), hx(p[2])}; }
++static QJsonObject frame(const Frame3 &f) {
++    return {{"origin", vec(f.origin())}, {"x", vec(f.xDir())}, {"y", vec(f.yDir())}, {"z", vec(f.zDir())}};
++}
++static QJsonArray interval(Interval r) { return {hx(r.lo), hx(r.hi)}; }
++static QJsonObject sourceJson(const CurvePtr<3> &p) {
++    if (auto t = dynamic_cast<const TrimmedCurve<3> *>(p.get()))
++        return {{"kind", "trim"}, {"range", interval(t->domain())}, {"basis", sourceJson(t->basis())}};
++    if (auto t = dynamic_cast<const TransformedCurve *>(p.get())) {
++        QJsonArray m;
++        for (int i = 0; i < 3; ++i) {
++            QJsonArray row;
++            for (int j = 0; j < 3; ++j)
++                row.append(hx(t->transform().matrix(i, j)));
++            m.append(row);
++        }
++        return {{"kind", "transform"},
++                {"matrix", m},
++                {"translation", vec(t->transform().translationPart())},
++                {"basis", sourceJson(t->basis())}};
++    }
++    auto h = dynamic_cast<const HelixCurve *>(p.get());
++    need(h, "export requires original Helix");
++    const auto &s = h->spec();
++    double rise = h->risePerRadian(), slope = h->radialSlope();
++    QString attribution = "original stored IEEE getters";
++    return {{"kind", "helix"},
++            {"frame", frame(s.frame)},
++            {"radius", hx(s.radius)},
++            {"pitch", hx(s.pitch)},
++            {"turns", hx(s.turns)},
++            {"taper", hx(s.taper)},
++            {"startAngle", hx(s.startAngle)},
++            {"spiral", s.spiral},
++            {"leftHanded", s.leftHanded},
++            {"sense", hx(s.leftHanded ? -1. : 1.)},
++            {"stored_rise", hx(rise)},
++            {"stored_slope", hx(slope)},
++            {"coefficient_attribution", attribution}};
++}
++static QJsonObject splineJson(const CurveObject &o) {
++    auto pieces = curveGeometry(o);
++    need(pieces.size() == 1, "actual cache has one curve");
++    auto b = dynamic_cast<const BSplineCurve<2> *>(pieces[0].curve.get());
++    need(b, "actual cache is BSpline");
++    QJsonArray p, k, w, qt;
++    for (const auto &v : b->poles())
++        p.append(QJsonArray{hx(v[0]), hx(v[1])});
++    for (double v : b->knots())
++        k.append(hx(v));
++    for (double v : b->weights())
++        w.append(hx(v));
++    for (auto v : o.controlPoints)
++        qt.append(QJsonArray{hx(v.x()), hx(v.y())});
++    return {{"kind", "spline"},
++            {"degree", b->degree()},
++            {"poles", p},
++            {"knots", k},
++            {"weights", w},
++            {"range", interval(pieces[0].range)},
++            {"qt_control_points", qt},
++            {"valid", o.numericallyValid},
++            {"construction", o.construction}};
++}
++struct Case {
++    QString label;
++    CurvePtr<3> source;
++    Interval range;
++    SketchObject sketch;
++    double budget = 1e-7;
++    bool migrated = true, negative = false;
++};
++static SketchObject sketch(int plane, bool custom = false) {
++    SketchObject s;
++    s.plane = plane;
++    s.customFrame = custom;
++    if (custom) {
++        double o[3] = {.3, -.5, 1.2}, n[3] = {1, 2, 3}, x[3] = {2, -1, .5};
++        for (int i = 0; i < 3; ++i) {
++            s.frame.origin[i] = o[i];
++            s.frame.normal[i] = n[i];
++            s.frame.xAxis[i] = x[i];
++        }
++    }
++    return s;
++}
++static CurvePtr<3> wrapped(const HelixSpec &s, const Transform3 &t = Transform3()) {
++    return std::make_shared<TransformedCurve>(std::make_shared<HelixCurve>(s), t);
++}
++static std::vector<Case> cases() {
++    std::vector<Case> r;
++    HelixSpec s;
++    s.radius = 1.25;
++    s.pitch = .9;
++    s.turns = .35;
++    auto add = [&](QString name, CurvePtr<3> p, SketchObject k, double budget = 1e-7, bool migrated = true) {
++        r.push_back({name, p, p->domain(), k, budget, migrated, false});
++    };
++    add("wrapped-cylinder", wrapped(s), sketch(2));
++    s.radius = .8;
++    s.pitch = 1.2;
++    s.turns = 1.25;
++    auto pose = Transform3::translation({3, -4, 2}) * Transform3::rotation({}, Vec3(1, 2, 3), .7);
++    add("wrapped-rigid-pose", wrapped(s, pose), sketch(1));
++    s.radius = 1.3;
++    s.pitch = .6;
++    s.turns = 2.3;
++    s.taper = -.12;
++    s.leftHanded = true;
++    s.startAngle = .37;
++    s.frame = Frame3({.2, .4, -.3}, {1, 2, 4}, {2, -1, .2});
++    CurvePtr<3> p = std::make_shared<TrimmedCurve<3>>(std::make_shared<HelixCurve>(s), .25, 4.6);
++    p = std::make_shared<TransformedCurve>(p, pose);
++    p = std::make_shared<TrimmedCurve<3>>(p, .6, 3.7);
++    add("nested-trim-conical-left", p, sketch(2));
++    s = HelixSpec{};
++    s.spiral = true;
++    s.radius = .6;
++    s.pitch = .7;
++    s.turns = .9;
++    s.startAngle = -.8;
++    add("spiral-custom-frame", wrapped(s, pose), sketch(0, true));
++    double matrix[3][3] = {{1.4, .2, 0}, {-.3, .75, .1}, {.1, 0, .8}};
++    s = HelixSpec{};
++    s.radius = 1.1;
++    s.pitch = .5;
++    s.turns = .6;
++    s.taper = .15;
++    add("affine-shear", wrapped(s, Transform3::fromParts(matrix, {3, -4, 2})), sketch(0, true));
++    s = HelixSpec{};
++    s.radius = .9;
++    s.pitch = .3;
++    s.turns = 4;
++    s.leftHanded = true;
++    s.startAngle = .2;
++    p = std::make_shared<TrimmedCurve<3>>(std::make_shared<HelixCurve>(s), 7, 21);
++    p = std::make_shared<TransformedCurve>(p, pose);
++    p = std::make_shared<TrimmedCurve<3>>(p, 11.2, 14.3);
++    add("absolute-parameter-trim", p, sketch(2));
++    s = HelixSpec{};
++    s.radius = .7;
++    s.pitch = .5;
++    s.turns = 1.1;
++    add("small-affine-scale", wrapped(s, Transform3::scaling({}, .001)), sketch(2));
++    s.radius = 2.1;
++    s.pitch = .45;
++    s.turns = .55;
++    add("tight-accuracy", wrapped(s, Transform3::translation({15, -3, 2})), sketch(0, true), 1e-8);
++    s = HelixSpec{};
++    s.radius = 1.25;
++    s.pitch = .9;
++    s.turns = .35;
++    add("naked-legacy-compatibility", std::make_shared<HelixCurve>(s), sketch(2), 1e-7, false);
++    s = HelixSpec{};
++    s.radius = 1e-4;
++    s.pitch = 1e-6;
++    s.turns = 1e6;
++    p = wrapped(s);
++    add("alias-million-turns-YZ", p, sketch(2));
++    r.back().negative = true;
++    p = std::make_shared<TrimmedCurve<3>>(p, p->domain().lo, p->domain().hi);
++    add("alias-million-turns-XZ-trim", p, sketch(1));
++    r.back().negative = true;
++    return r;
++}
++static QByteArray snapshot(const DocumentState &d) {
++    QByteArray b;
++    need(encodeDocument(d, b, false).isEmpty(), "document encoding failed");
++    return b;
++}
++static bool same(const QVector<SketchEntity> &a, const QVector<SketchEntity> &b) {
++    if (a.size() != b.size())
++        return false;
++    for (int i = 0; i < a.size(); ++i)
++        if (a[i].kind != b[i].kind || a[i].index != b[i].index)
++            return false;
++    return true;
++}
++static double witness(const Case &c, const SketchObject &s) {
++    double error = 0;
++    auto f = sketchAxes(s);
++    for (int i = 0; i <= 512; ++i) {
++        double t = c.negative ? i * kTwoPi / 512 : c.range.lo + (c.range.hi - c.range.lo) * i / 512;
++        auto v = f.toLocal(c.source->point(t));
++        Vec2 q(v.x(), v.y());
++        if (!s.curves.empty()) {
++            auto a = curveGeometry(s.curves.back());
++            error = std::max(error, norm(a[0].curve->point(t) - q));
++        } else if (!s.segments.empty()) {
++            auto seg = s.segments.back();
++            Vec2 a(seg.first.x(), seg.first.y()), b(seg.second.x(), seg.second.y());
++            auto d = b - a;
++            double u = std::clamp(dot(q - a, d) / dot(d, d), 0., 1.);
++            error = std::max(error, norm(q - a - u * d));
++        }
++    }
++    return error;
++}
++static void runCase(Case c, const QString &directory) {
++    PrecisionScope precision(c.budget);
++    DocumentState doc;
++    doc.sketches.append(c.sketch);
++    auto before = snapshot(doc);
++    QVector<SketchEntity> created;
++    const auto sourceBefore = sourceJson(c.source);
++    auto error = appendProjectedCurve(doc.sketches[0], c.source, c.range, true, true, &created);
++    auto &s = doc.sketches[0];
++    double observed = error.isEmpty() ? witness(c, s) : 0;
++    QJsonArray actual, segments;
++    for (const auto &o : s.curves)
++        actual.append(splineJson(o));
++    for (const auto &v : s.segments)
++        segments.append(
++            QJsonArray{QJsonArray{hx(v.first.x()), hx(v.first.y())}, QJsonArray{hx(v.second.x()), hx(v.second.y())}});
++    QJsonObject json{{"label", c.label},
++                     {"source", sourceBefore},
++                     {"range", interval(c.range)},
++                     {"projection", frame(sketchAxes(s))},
++                     {"budget", hx(c.budget)},
++                     {"migrated", c.migrated},
++                     {"expected_rejection", c.negative},
++                     {"rejected", !error.isEmpty()},
++                     {"error", error},
++                     {"actual", actual},
++                     {"actual_segments", segments},
++                     {"created_count", created.size()},
++                     {"state_unchanged", snapshot(doc) == before},
++                     {"sample_witness", hx(observed)},
++                     {"sample_witness_is_certificate", false}};
++    if (!directory.isEmpty()) {
++        QFile f(directory + "/" + c.label + ".json");
++        need(f.open(QIODevice::WriteOnly), "open export");
++        f.write(QJsonDocument(json).toJson());
++    }
++    need(sourceBefore == sourceJson(c.source), "original source changed");
++    if (c.negative) {
++        need(!error.isEmpty(), "aliased curve accepted and published beyond budget");
++        need(snapshot(doc) == before && created.empty(), "rejected operation mutated sketch/created");
++        return;
++    }
++    need(error.isEmpty(), qPrintable(error));
++    need(s.curves.size() == 1 && s.segments.empty() && created.size() == 1 && created[0].kind == 1 &&
++             created[0].index == 0,
++         "actual publication/provenance");
++    need(s.curves[0].construction && !s.geometricConstraints.empty(), "construction/fixed flags lost");
++    auto a = curveGeometry(s.curves[0]);
++    need(a.size() == 1 && a[0].range.lo == c.range.lo && a[0].range.hi == c.range.hi,
++         "original parameter range changed");
++    need(observed <= c.budget, "actual Qt geometry exceeds original physical budget");
++    if (c.migrated)
++        need(detail::requireHelixProjection(c.source, c.range, sketchAxes(s), a[0].curve, c.budget) <= c.budget,
++             "actual final certificate");
++    std::cout << " witness=" << observed << " budget=" << c.budget << " poles=" << s.curves[0].controlPoints.size();
++}
++class CallbackCurve final : public Curve<3> {
++  public:
++    mutable int calls = 0;
++    bool cancel;
++    CallbackCurve(bool c) : cancel(c) {}
++    CurveType type() const override { return CurveType::Other; }
++    Interval domain() const override { return {0, 1}; }
++    void evaluate(double t, int order, Vec3 *out) const override {
++        if (++calls == 5) {
++            if (cancel)
++                currentCancellation->store(true);
++            else
++                throw std::domain_error("intentional callback failure");
++        }
++        out[0] = {t, t * t, .2 * t};
++        if (order > 0)
++            out[1] = {1, 2 * t, .2};
++        for (int i = 2; i <= order; ++i)
++            out[i] = i == 2 ? Vec3(0, 2, 0) : Vec3();
++    }
++};
++static void atomic() {
++    for (int mode = 0; mode < 5; ++mode) {
++        DocumentState d;
++        SketchObject s;
++        s.name = "seed";
++        s.segments.append({QPointF(2, 3), QPointF(5, 7)});
++        s.constructionSegments.append(0);
++        SketchConstraint fixed;
++        fixed.type = ConstraintType::Fix;
++        fixed.first.kind = 0;
++        fixed.first.element = 0;
++        fixed.positions = {QPointF(2, 3), QPointF(5, 7)};
++        s.geometricConstraints.append(fixed);
++        d.sketches.append(s);
++        auto before = snapshot(d);
++        QVector<SketchEntity> created{{0, 0}}, previous = created;
++        auto token = std::make_shared<std::atomic<bool>>(mode == 0);
++        CancellationScope scope(token);
++        CurvePtr<3> p = mode == 0   ? cases()[0].source
++                        : mode == 3 ? cases()[9].source
++                                    : std::make_shared<CallbackCurve>(mode == 1);
++        if (mode == 4) {
++            p = cases()[0].source;
++            for (int j = 1; j < 257; ++j)
++                p = std::make_shared<TransformedCurve>(p, Transform3());
++        }
++        bool cancelled = false;
++        QString error;
++        try {
++            error = appendProjectedCurve(d.sketches[0], p, p->domain(), false, true, &created);
++        } catch (const OperationCancelled &) {
++            cancelled = true;
++        }
++        need(mode < 2 ? cancelled : !error.isEmpty(), "failure/cancellation not propagated");
++        need(snapshot(d) == before && same(created, previous), "failure/cancellation published partial sketch");
++    }
++}
++static void contracts() {
++    auto c = cases()[4];
++    auto f = sketchAxes(c.sketch);
++    auto data = detail::helixProjectionErrorBound(c.source, c.range, f);
++    auto expected = data.value(.4);
++    auto source = c.source;
++    c.source.reset();
++    source.reset();
++    need(norm(data.value(.4) - expected) == 0, "snapshot lifetime");
++    c = cases()[4];
++    double deviation = -7;
++    auto p = detail::projectHelixCertified(c.source, c.range, f, c.budget, &deviation);
++    need(p && deviation >= 0 && deviation <= c.budget, "project/deviation contract");
++    auto poles = p->poles();
++    poles[poles.size() / 2][1] += .001;
++    auto wrong = std::make_shared<BSplineCurve<2>>(p->degree(), p->knots(), poles, p->weights());
++    bool rejected = false;
++    try {
++        detail::requireHelixProjection(c.source, c.range, f, wrong, c.budget);
++    } catch (const std::exception &) {
++        rejected = true;
++    }
++    need(rejected, "altered actual poles accepted");
++    for (double budget : {0., -1., std::numeric_limits<double>::quiet_NaN()}) {
++        deviation = -7;
++        rejected = false;
++        try {
++            detail::projectHelixCertified(c.source, c.range, f, budget, &deviation);
++        } catch (const std::exception &) {
++            rejected = true;
++        }
++        need(rejected && deviation == -7, "invalid budget publishes output");
++    }
++    for (auto range : {Interval{c.range.lo, c.range.lo}, Interval{-1, c.range.hi},
++                       Interval{c.range.lo, std::numeric_limits<double>::infinity()}}) {
++        rejected = false;
++        deviation = -7;
++        try {
++            detail::projectHelixCertified(c.source, range, f, c.budget, &deviation);
++        } catch (const std::exception &) {
++            rejected = true;
++        }
++        need(rejected && deviation == -7, "invalid range publishes output");
++    }
++    auto token = std::make_shared<std::atomic<bool>>(true);
++    {
++        CancellationScope scope(token);
++        bool cancelled = false;
++        deviation = -7;
++        try {
++            detail::projectHelixCertified(c.source, c.range, f, c.budget, &deviation);
++        } catch (const OperationCancelled &) {
++            cancelled = true;
++        }
++        need(cancelled && deviation == -7, "provider cancellation publishes deviation");
++    }
++    auto deep = cases()[0].source;
++    for (int i = 1; i < 257; ++i)
++        deep = std::make_shared<TransformedCurve>(deep, Transform3());
++    rejected = false;
++    try {
++        detail::helixProjectionErrorBound(deep, {0, 1}, f);
++    } catch (const std::exception &) {
++        rejected = true;
++    }
++    need(rejected, "wrapper depth cap not enforced");
++    auto unsupported = std::make_shared<Line<3>>(Vec3(), Vec3(1, 0, 0));
++    need(!detail::projectHelixCertified(unsupported, {0, 1}, f, 1e-7), "unsupported must be empty");
++}
++inline int run(const QString &directory = {}) {
++    if (!directory.isEmpty())
++        QDir().mkpath(directory);
++    int pass = 0, fail = 0;
++    auto run = [&](const QString &name, auto fn) {
++        std::cout << name.toStdString();
++        try {
++            fn();
++            ++pass;
++            std::cout << " PASS\n";
++        } catch (const std::exception &e) {
++            ++fail;
++            std::cout << " FAIL: " << e.what() << '\n';
++        } catch (const OperationCancelled &) {
++            ++fail;
++            std::cout << " FAIL: unexpected cancellation\n";
++        }
++    };
++    for (auto c : cases())
++        run(c.label, [&] { runCase(c, directory); });
++    run("public-failure-cancellation-atomicity", atomic);
++    run("original-provider-contracts", contracts);
++    std::cout << "groups=" << pass + fail << " pass=" << pass << " fail=" << fail << '\n';
++    return fail ? 1 : 0;
++}
++
++} // namespace K10SketchProjectionTests

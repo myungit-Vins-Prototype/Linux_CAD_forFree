@@ -1,0 +1,118 @@
+#include "cad_document_io.h"
+#include "forgeCad2026_viewport.h"
+#include "cad_feature_build.h"
+#include "cad_element_names.h"
+#include "cad_forge.h"
+#include "fk_body_check.h"
+#include "fk_body_io.h"
+#include "fk_mass.h"
+#include "fk_bspline.h"
+#include "fk_classify.h"
+#include "fk_surface_algo.h"
+#include "fk_curve_algo.h"
+#include "fk_precision.h"
+#include <QApplication>
+#include <QCryptographicHash>
+#include <QFile>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <iostream>
+#include <iomanip>
+#include <set>
+namespace F=ForgeCad;namespace K=ForgeCad::Kernel;
+static int failures=0,checks=0;
+static QJsonArray operations;
+static const QString base=QStringLiteral("/tmp/supporto-review/tests/");
+static void check(bool ok,const std::string&name){++checks;if(!ok)++failures;std::cout<<(ok?"PASS ":"FAIL ")<<name<<std::endl;}
+static QString hash(const QByteArray&b){return QString::fromLatin1(QCryptographicHash::hash(b,QCryptographicHash::Sha256).toHex());}
+static QString shapeHash(const K::Body&b){const auto s=K::writeBodyBinary(b);return hash(QByteArray(s.data(),int(s.size())));}
+static QString fileHash(const QString&p){QFile f(p);if(!f.open(QIODevice::ReadOnly))return {};return hash(f.readAll());}
+static QJsonArray point(const K::Vec3&p){return {p.x(),p.y(),p.z()};}
+static QString definitionHash(const DocumentState&doc){QByteArray b;QString error=F::encodeDocument(doc,b,false);check(error.isEmpty(),"encode parametric definition");return hash(b);}
+static QJsonObject shape(const F::ForgeBody&body,const std::string&name){
+ QJsonObject j;if(!body){j["geometry"]=false;return j;}j["geometry"]=true;
+ const auto&b=*body;const auto issues=K::checkBody(b,{true,true});QJsonArray errors;for(const auto&i:issues)errors.append(QString::fromStdString(K::describe(i.code)+": "+i.message));j["issues"]=errors;
+ check(issues.empty(),name+" strict checkBody including loop crossings");
+ const auto c=b.counts();j["faces"]=c.faces;j["edges"]=c.edges;j["vertices"]=c.vertices;j["fins"]=c.fins;j["loops"]=c.loops;j["shells"]=c.shells;j["regions"]=c.regions;
+ int solidRegions=0;for(auto r:b.regions())solidRegions+=b.region(r).solid; j["solid_regions"]=solidRegions;j["sheet"]=b.isSheet();
+ QJsonArray genera;for(auto s:b.shells())genera.append(K::shellGenus(b,s));j["shell_genera"]=genera;
+ double vt=0,et=0,pt=0;for(auto v:b.vertices())vt=std::max(vt,b.vertex(v).tolerance);for(auto e:b.edges())et=std::max(et,b.edge(e).tolerance);for(auto f:b.fins())pt=std::max(pt,b.fin(f).pcurveTolerance);j["max_vertex_tolerance"]=vt;j["max_edge_tolerance"]=et;j["max_pcurve_tolerance"]=pt;
+ K::Box box;for(auto e:b.edges())box.add(K::curveBox(*b.edge(e).curve,b.edge(e).range));j["bounds_lo"]=point(box.lo);j["bounds_hi"]=point(box.hi);
+ QJsonObject types;for(auto face:b.faces()){const QString type=QString::number(int(b.face(face).surface->type()));types[type]=types.value(type).toInt()+1;}j["surface_types"]=types;
+ QJsonArray restored;double maxRestoredTolerance=0;
+ for(auto id:b.fins()){const auto&fin=b.fin(id);const auto&edge=b.edge(fin.edge);const auto&face=b.face(b.finFace(id));if(edge.curve->type()!=K::CurveType::Ellipse||face.surface->type()!=K::SurfaceType::Cylinder)continue;
+  QJsonObject entry{{"fin",id.index},{"edge",fin.edge.index},{"face",b.finFace(id).index},{"first",edge.range.lo},{"last",edge.range.hi},{"pcurve_tolerance",fin.pcurveTolerance}};
+  bool ownAffine=fin.pcurve&&fin.pcurve->type()==K::CurveType::BSpline;
+  if(ownAffine){const auto&pc=static_cast<const K::BSplineCurve<2>&>(*fin.pcurve);ownAffine=pc.degree()==1&&pc.poleCount()==2&&(pc.weights().empty()||(pc.weights().size()==2&&pc.weights()[0]==1&&pc.weights()[1]==1));entry["degree"]=pc.degree();entry["poles"]=pc.poleCount();entry["pcurve_first"]=pc.domain().lo;entry["pcurve_last"]=pc.domain().hi;ownAffine=ownAffine&&pc.domain().lo==edge.range.lo&&pc.domain().hi==edge.range.hi;}
+  entry["affine_in_original_parameter"]=ownAffine;check(ownAffine,name+" restored ellipse/cylinder fin owns affine pcurve in original parameter");check(fin.pcurveTolerance>0&&fin.pcurveTolerance<=K::linearResolution(),name+" restored pcurve carries finite positive certified error within document budget");maxRestoredTolerance=std::max(maxRestoredTolerance,fin.pcurveTolerance);restored.append(entry);
+ }
+ j["restored_ellipse_cylinder_fins"]=restored;j["max_restored_pcurve_tolerance"]=maxRestoredTolerance;
+ const auto m=K::massProperties(b);j["volume"]=m.volume;j["area"]=m.area;j["centroid"]=point(m.centroid);check(std::isfinite(m.volume)&&m.volume>0,name+" finite positive exact-BRep volume");
+ j["sha256"]=shapeHash(b);std::cout<<"SHAPE "<<name<<" F="<<c.faces<<" E="<<c.edges<<" V="<<c.vertices<<" shells="<<c.shells<<" solid_regions="<<solidRegions<<" volume="<<m.volume<<" area="<<m.area<<" sha="<<j["sha256"].toString().toStdString()<<std::endl;return j;
+}
+static QJsonObject genealogy(const F::ForgeBody&result,const std::vector<F::ForgeBody>&sources,const std::string&name){
+ const auto h=F::featureHistoryOf(*result);const auto names=F::elementNamesOf(*result);const auto operands=F::genealogyOperandsOf(*result);QJsonObject j;j["operand_count"]=h?h->operandCount():-1;j["registered_operands"]=operands.size();
+ check(bool(h)&&bool(names),name+" registered history and persistent names");
+ bool valid=bool(h),named=bool(names),facesOrigin=true;int links=0,matchedCarriers=0;QJsonArray sourceIDs;
+ for(const auto&o:operands){sourceIDs.append(double(o.featureId));valid=valid&&bool(o.body.lock());}
+ j["operand_feature_ids"]=sourceIDs;
+ for(int kind=0;kind<3;++kind){std::vector<int> ids;if(kind==0)for(auto v:result->vertices())ids.push_back(v.index);if(kind==1)for(auto e:result->edges())ids.push_back(e.index);if(kind==2)for(auto f:result->faces())ids.push_back(f.index);
+  for(int index:ids){if(names)named=named&&!names->primary(K::EntityKind(kind),index).empty();if(!h)continue;const auto&origins=h->origins(K::EntityKind(kind),index);if(kind==2)facesOrigin=facesOrigin&&!origins.empty();for(const auto&o:origins){++links;valid=valid&&o.operand>=0&&o.operand<operands.size();if(o.operand<0||o.operand>=operands.size())continue;auto b=operands[o.operand].body.lock();valid=valid&&b&&o.index>=0&&o.index<h->operandSize(o.operand,o.kind);if(!b)continue;if(o.kind==K::EntityKind::Face)valid=valid&&b->contains(K::FaceId(o.index));if(o.kind==K::EntityKind::Edge)valid=valid&&b->contains(K::EdgeId(o.index));if(o.kind==K::EntityKind::Vertex)valid=valid&&b->contains(K::VertexId(o.index));}}
+ }
+ for(auto f:result->faces()){bool found=false;for(const auto&input:sources)for(auto old:input->faces())found=found||K::sameSurfaceParameterization(*result->face(f).surface,*input->face(old).surface)||K::sameSurface(*result->face(f).surface,*input->face(old).surface,K::linearResolution());matchedCarriers+=found;}
+ check(valid,name+" history links refer to live operand entities");check(named,name+" all live face/edge/vertex names nonempty");check(facesOrigin,name+" every resulting face has operand provenance");check(matchedCarriers==int(result->faces().size()),name+" every face preserves an original surface carrier");j["valid_links"]=valid;j["all_named"]=named;j["faces_with_origins"]=facesOrigin;j["links"]=links;j["original_surface_carriers"]=matchedCarriers;return j;
+}
+static std::vector<K::Vec3> witnesses(const K::Body&b){std::vector<K::Vec3> p;for(auto v:b.vertices())p.push_back(b.vertex(v).point);for(auto e:b.edges())for(double f:{.25,.5,.75})p.push_back(b.edge(e).curve->point(b.edge(e).range.lo+f*b.edge(e).range.length()));for(auto f:b.faces()){K::Vec3 q;if(K::faceInteriorPoint(b,f,q))p.push_back(q);}return p;}
+static QJsonObject geometricWitnesses(const F::ForgeBody&out,const std::vector<F::ForgeBody>&sources,const std::string&name){
+ K::SolidClassifier target(*out,K::linearResolution());int inputCount=0,lost=0,extra=0,outputCount=0;
+ for(const auto&s:sources)for(const auto&p:witnesses(*s)){++inputCount;if(target.classify(p)==K::PointLocation::Outside)++lost;}
+ std::vector<std::unique_ptr<K::SolidClassifier>> classifiers;for(const auto&s:sources)classifiers.push_back(std::make_unique<K::SolidClassifier>(*s,K::linearResolution()));
+ for(const auto&p:witnesses(*out)){++outputCount;bool found=false;for(const auto&c:classifiers)found=found||c->classify(p)!=K::PointLocation::Outside;if(!found)++extra;}
+ check(lost==0,name+" source boundary witnesses retained by union");check(extra==0,name+" output boundary witnesses belong to input union");std::cout<<"WITNESS "<<name<<" inputs="<<inputCount<<" lost="<<lost<<" outputs="<<outputCount<<" extra="<<extra<<std::endl;return {{"input_count",inputCount},{"lost",lost},{"output_count",outputCount},{"extra",extra},{"continuous_certificate",false}};
+}
+static QJsonObject operation(const DocumentState&doc,int a,int b,const QVector<int>&tools,const std::string&label){
+ const auto before=[&]{QStringList s;for(const auto&x:doc.extrusions)s<< (x.forgeBody?shapeHash(*x.forgeBody):QString());return s;}();
+ ExtrusionObject f;f.name=QString::fromStdString(label);f.featureId=7;f.modelBodyId=doc.extrusions[a].modelBodyId;f.operation=int(BooleanOperation::Union);f.firstBody=a;f.secondBody=b;f.booleanTools=tools;
+ QJsonObject j{{"label",QString::fromStdString(label)},{"first",a},{"second",b}};QJsonArray t;for(int x:tools)t.append(x);j["tools"]=t;
+ F::buildGeometry(f,doc.extrusions.size(),doc.sketches,doc.extrusions);j["success"]=bool(f.forgeBody);j["error"]=f.error;j["notice"]=f.notice;
+ bool unchanged=true;for(int i=0;i<doc.extrusions.size();++i)unchanged=unchanged&&before[i]==(doc.extrusions[i].forgeBody?shapeHash(*doc.extrusions[i].forgeBody):QString());check(unchanged,label+" input B-reps immutable");
+ std::cout<<"OPERATION "<<label<<" success="<<bool(f.forgeBody)<<" error="<<f.error.toStdString()<<std::endl;
+ if(f.forgeBody){std::vector<F::ForgeBody> inputs{doc.extrusions[a].forgeBody,doc.extrusions[b].forgeBody};for(int x:tools)inputs.push_back(doc.extrusions[x].forgeBody);j["shape"]=shape(f.forgeBody,label);j["genealogy"]=genealogy(f.forgeBody,inputs,label);j["witnesses"]=geometricWitnesses(f.forgeBody,inputs,label);
+  double total=0,largest=0;for(auto x:inputs){const double v=K::massProperties(*x).volume;total+=v;largest=std::max(largest,v);}const double volume=j["shape"].toObject()["volume"].toDouble();const double quadratureBudget=1e-10*std::max(1.,total);check(volume>=largest-quadratureBudget&&volume<=total+quadratureBudget,label+" union volume is between maximum operand and sum");j["volume_sum_inputs"]=total;j["volume_overlap_implied"]=total-volume;
+  if(tools.empty()&&((a==0&&b==2)||(a==2&&b==0))){check(std::abs(volume-total)<=quadratureBudget,label+" disjoint union conserves additive exact-BRep volume");check(f.forgeBody->shells().size()==2,label+" disconnected solids retain two shells");}
+ }
+ return j;
+}
+
+static QJsonObject viewportOperation(DocumentState doc,int a,int b,const QVector<int>&tools,const std::string&label) {
+ // La rigenerazione senza cache e' gia' verificata separatamente. Qui carica
+ // gli stessi B-rep immutabili per isolare il vero entrypoint applicativo.
+ for(auto&f:doc.extrusions)if(f.forgeBody)f.cachedGeometry=true;
+ CadViewport view;view.loadDocument(doc);const auto before=view.recoveryDocument();const auto beforeHash=definitionHash(before);
+ QVector<int> allTools{b};allTools+=tools;
+ const auto error=view.createBoolean(BooleanOperation::Union,a,allTools,QString::fromStdString(label));
+ auto after=view.recoveryDocument();const bool success=error.isEmpty();
+ QJsonObject j{{"label",QString::fromStdString(label)},{"first",a},{"second",b},{"success",success},{"error",error}};
+ QJsonArray t;for(int x:tools)t.append(x);j["tools"]=t;
+ std::cout<<"APP_OPERATION "<<label<<" success="<<success<<" features_before="<<before.extrusions.size()<<" features_after="<<after.extrusions.size()<<" error="<<error.toStdString()<<std::endl;
+ bool immutable=true;for(int i=0;i<before.extrusions.size();++i)if(before.extrusions[i].forgeBody)immutable=immutable&&after.extrusions[i].forgeBody&&shapeHash(*before.extrusions[i].forgeBody)==shapeHash(*after.extrusions[i].forgeBody);
+ check(immutable,label+" app preserves immutable operand geometry");
+ if(!success){check(after.extrusions.size()==before.extrusions.size()&&definitionHash(after)==beforeHash,label+" failed app operation is atomic for definition, visibility and history");return j;}
+ check(after.extrusions.size()==before.extrusions.size()+1,label+" app appends exactly one feature");
+ const auto&f=after.extrusions.back();check(f.operation==int(BooleanOperation::Union)&&f.firstBody==a&&f.secondBody==b&&f.booleanTools==tools&&f.featureId==7,label+" app result retains intended operands and new feature identity");
+ check(!after.extrusions[a].visible&&!after.extrusions[b].visible,label+" app hides the consumed operands");
+ std::vector<F::ForgeBody> inputs{after.extrusions[a].forgeBody,after.extrusions[b].forgeBody};for(int x:tools)inputs.push_back(after.extrusions[x].forgeBody);
+ j["shape"]=shape(f.forgeBody,label);j["genealogy"]=genealogy(f.forgeBody,inputs,label);j["witnesses"]=geometricWitnesses(f.forgeBody,inputs,label);
+ const auto resultingHash=shapeHash(*f.forgeBody);view.undo();check(view.extrusions().size()==before.extrusions.size(),label+" app Undo restores feature count");view.redo();check(view.extrusions().size()==before.extrusions.size()+1&&shapeHash(*view.extrusions().back().forgeBody)==resultingHash,label+" app Redo restores identical union geometry");return j;
+}
+int main(int argc,char**argv){QApplication app(argc,argv);std::cout<<std::setprecision(17)<<std::unitbuf;const QString original=QStringLiteral("/tmp/supporto-review/Supporto.original.prt");const auto fileBefore=fileHash(original);check(fileBefore==QStringLiteral("79887e91d75feb748af19fcdb14cd469cc40e74abab03e3cbeaa12e2d3271f7f"),"frozen original SHA256");DocumentState saved;QString error=F::loadDocumentFile(original,saved);if(!error.isEmpty()){std::cerr<<error.toStdString()<<std::endl;return 2;}K::PrecisionScope precision(saved.calculationAccuracy);
+ QJsonObject result{{"original_sha256",fileBefore},{"calculation_accuracy",saved.calculationAccuracy},{"linear_resolution",K::linearResolution()}};QJsonArray shapes;
+ for(int i:{0,2,5})shapes.append(QJsonObject{{"feature",i},{"snapshot",shape(saved.extrusions[i].forgeBody,"snapshot "+std::to_string(i))}});
+ CadViewport view;view.loadDocument(saved);const DocumentState loaded=view.recoveryDocument();const QString beforeDefinition=definitionHash(loaded);const int failed=view.rebuildAllFeatures();DocumentState rebuilt=view.recoveryDocument();check(failed==0,"full viewport rebuild without geometry cache succeeds");const auto afterDefinition=definitionHash(rebuilt);result["definition_equal_after_rebuild"]=beforeDefinition==afterDefinition;result["definition_hash_before"]=beforeDefinition;result["definition_hash_after"]=afterDefinition;
+ int k=0;for(int i:{0,2,5}){auto item=shapes[k].toObject();item["rebuilt"]=shape(rebuilt.extrusions[i].forgeBody,"rebuilt "+std::to_string(i));const bool identical=shapeHash(*saved.extrusions[i].forgeBody)==shapeHash(*rebuilt.extrusions[i].forgeBody);item["exact_binary_equal"]=identical;check(identical,"snapshot/rebuilt exact B-rep bytes equal for feature "+std::to_string(i));check(saved.extrusions[i].forgeBody!=rebuilt.extrusions[i].forgeBody&&!rebuilt.extrusions[i].cachedGeometry,"rebuilt feature owns newly constructed B-rep "+std::to_string(i));shapes[k++]=item;}
+ result["shapes"]=shapes;QFile out(base+"Supporto.regenerated.prt");QByteArray payload;error=F::encodeDocument(rebuilt,payload);check(error.isEmpty()&&out.open(QIODevice::WriteOnly),"encode regenerated copy in tests directory only");out.write(payload);out.close();
+ for(const auto&mode:std::vector<std::pair<const char*,DocumentState>>{{"snapshot",loaded},{"rebuilt",rebuilt}}){const auto&d=mode.second;for(auto pair:std::vector<std::pair<int,int>>{{0,2},{0,5},{2,5},{5,2}})operations.append(operation(d,pair.first,pair.second,{},std::string(mode.first)+" pair "+std::to_string(pair.first)+"-"+std::to_string(pair.second)));for(auto tools:std::vector<QVector<int>>{{2,5},{5,2}})operations.append(operation(d,0,tools[0],{tools[1]},std::string(mode.first)+" multi 0-"+std::to_string(tools[0])+"-"+std::to_string(tools[1])));}
+ QJsonArray appOperations;for(const auto&mode:std::vector<std::pair<const char*,DocumentState>>{{"snapshot",loaded},{"rebuilt",rebuilt}}){for(auto pair:std::vector<std::pair<int,int>>{{0,2},{0,5},{2,5},{5,2}})appOperations.append(viewportOperation(mode.second,pair.first,pair.second,{},std::string(mode.first)+" app pair "+std::to_string(pair.first)+"-"+std::to_string(pair.second)));for(auto tools:std::vector<QVector<int>>{{2,5},{5,2}})appOperations.append(viewportOperation(mode.second,0,tools[0],{tools[1]},std::string(mode.first)+" app multi 0-"+std::to_string(tools[0])+"-"+std::to_string(tools[1])));}result["app_operations"]=appOperations;
+ if(argc>2&&std::string(argv[2])=="--expect-all-success"){for(const auto&item:operations)check(item.toObject()["success"].toBool(),item.toObject()["label"].toString().toStdString()+" union must succeed");for(const auto&item:appOperations)check(item.toObject()["success"].toBool(),item.toObject()["label"].toString().toStdString()+" union must succeed");result["expected_all_success"]=true;}
+ result["operations"]=operations;result["checks"]=checks;result["failures"]=failures;check(fileHash(original)==fileBefore,"frozen original unchanged after all operations");result["checks"]=checks;result["failures"]=failures;QFile report(base+(argc>1?QString::fromLocal8Bit(argv[1]):QStringLiteral("result.json")));if(!report.open(QIODevice::WriteOnly))return 3;report.write(QJsonDocument(result).toJson(QJsonDocument::Indented));std::cout<<"RESULT checks="<<checks<<" failures="<<failures<<std::endl;return failures?1:0;}

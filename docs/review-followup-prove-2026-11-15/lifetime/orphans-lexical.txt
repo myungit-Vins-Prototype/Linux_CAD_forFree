@@ -1,0 +1,43 @@
+### CadViewport::setSelectedPointPosition
+
+### CadViewport::setEdgePickLinear
+
+### CadViewport::setExtendPickCallback
+
+### CadViewport::resumeExtendPick
+
+### CadViewport::constraintsVisible
+
+### CadViewport::sectionEnabled
+
+### CadViewport::geometrySnap
+
+### CadViewport::gridSnap
+
+### CadViewport::basisMatrix
+
+### CadViewport::normalizedViewAngle
+
+### CadViewport::extrusionNames
+
+### StoryboardTree::firstFeature
+
+### ForgeCad::DrawingSheetEditor::setModelProvider
+
+### ForgeCad::forgeIntersectRay
+
+### ForgeCad::modelBodyFeatures
+
+### ForgeCad::usesSketch
+
+### ForgeCad::commandIconNames
+
+### ForgeCad::nearestBodyEdge
+
+### ForgeCad::appendFixedReferenceLine
+
+### ForgeCad::Kernel::Corner::otherFace
+
+### ForgeCad::Kernel::ChainEdge::inPlane
+
+### ForgeCad::Kernel::BandMatrix::band

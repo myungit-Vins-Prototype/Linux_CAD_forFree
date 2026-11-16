@@ -1,0 +1,11 @@
+[
+  "/usr/bin/c++",
+  "-std=c++17",
+  "-O0",
+  "-I/home/myungit/Linux_CAD_forFree/kernel",
+  "/tmp/supporto-review/tests/synthetic.cpp",
+  "/home/myungit/Linux_CAD_forFree/forgecad-release/kernel/libforgekernel.a",
+  "-pthread",
+  "-o",
+  "/tmp/supporto-review/tests/synthetic"
+]

@@ -1,0 +1,110 @@
+from pathlib import Path
+import json,hashlib,shutil
+root=Path('/home/myungit/Linux_CAD_forFree');private=Path('/tmp/review-next-readonly');stage=private/'stage';dest=root/'docs/curve-fit-k10-edge-offset-prove-2026-11-16/core';dest.mkdir(parents=True,exist_ok=True)
+for folder in ['baseline','final','delta','logs','scripts']:(dest/folder).mkdir(exist_ok=True)
+for name in ['fk_curve_fit_bounds.h','fk_curve_fit_bounds.cpp','fk_offset.cpp']:
+ shutil.copyfile(stage/'baseline'/(name+'.txt'),dest/'baseline'/(name+'.txt'))
+ shutil.copyfile(stage/'kernel'/name,dest/'final'/(name+'.txt'))
+ shutil.copyfile(stage/(name+'.delta.txt'),dest/'delta'/(name+'.delta.txt'))
+for name in ['baseline-sha256.json','final-sha256.json','compile-commands.txt']:
+ shutil.copyfile(stage/name,dest/(name if name.endswith('.txt') else name+'.txt'))
+for name in ['fk_curve_fit_bounds.cpp.build.log','fk_offset.cpp.build.log','link.log','offsetprobe.log','previous-regressions.log']:
+ shutil.copyfile(stage/name,dest/'logs'/(name+'.txt'))
+shutil.copyfile(private/'offsetprobe.log',dest/'logs/offsetprobe-baseline.log.txt')
+shutil.copyfile(private/'offsetprobe.cpp',dest/'scripts/offsetprobe.cpp.txt')
+for name in ['stage_edit.py','offset_stage_edit.py','resource_edit.py','build_stage.py','archive_core.py']:
+ shutil.copyfile(private/name,dest/'scripts'/(name+'.txt'))
+shutil.copyfile(private/'new_provider.txt',dest/'scripts/provider-first-attempt.cpp.txt')
+report='''K10 — offset dei bordi di estrusione, preparazione privata 16 novembre 2026
+
+Stato: implementazione privata congelata. Nessun sorgente di produzione,
+CMake, catalogo architetturale o memoria modificato da questo agente.
+Il coordinatore applica i tre file solo dopo la propria review.
+
+Ambito e funzione originale
+Il sito iniziale è offsetCurve, kernel/fk_offset.cpp:680 nello snapshot.
+Il nuovo certificato è collegato soltanto al chiamante offsetFaces quando
+trimSeams=false, used.size()==1 e il supporto originale è Extrusion.
+I fallback di offsetJoinedFaces, normali medie e solve delle cuciture restano
+campionati; non sono conteggiati come ulteriori siti corretti.
+
+La funzione certificata è E(t) + d N(t), dove E è l'edge originale,
+N(t)=normalize(G'(U(t)) cross D), G è il generatore originale del supporto,
+D la direzione memorizzata e d include il verso della faccia.
+E e G sono dataset indipendenti. Non è assunta E(t)=G(U(t))+V(t)D,
+né è richiesto che la tolleranza originale della fin sia zero.
+Il verso della mappa U non cambia il verso di N: G' è rispetto a U.
+
+Famiglie e proprietà
+Edge e generatore Line o NURBS a pesi positivi, wrapper Trimmed/Transformed;
+UV Line o NURBS grado uno con pesi uguali per tratto e wrapper Trimmed.
+Sono conservati ancore UV, domini e coefficienti originali IEEE.
+Il provider possiede snapshot degli intervalli omogenei e delle ancore;
+non conserva riferimenti a Body, Face, edge, superficie o curve chiamanti.
+Dati riconosciuti non finiti, fuori dominio o oltre risorse falliscono;
+una famiglia non supportata restituisce il bound vuoto. Le query non
+risolte restituiscono infinito e non autorizzano il fallback campionato.
+La regolarità è limitata per mantenere la stessa branca Surface::normal,
+escludendo il ripiego singolare normalAt. I nodi sono suggerimenti di taglio:
+il bound considera gli originali su tutto l'intervallo, comprese le giunte.
+
+La formula residua usa H_E-Q W_E e il numeratore normale da G: pesi e
+parametri delle due sorgenti non vengono confusi. La partizione considera
+nodi dell'edge, delle UV e preimmagini dei nodi del generatore. Le query
+usano ricerche binarie, cancellazione e un limite di 200000 visite effettive.
+Il limite complessivo di 2000000 coefficienti considera entrambe le
+sorgenti, normali, tangenti e ancore prima degli array aggiuntivi.
+
+Ricondizionamento necessario
+Il primo tentativo privato riusava affineBezier nella forma delle differenze
+su qualsiasi parametro. Su [0.375,0.5] dava 1.48610e-6 contro 2.32323e-8 del
+provider precedente; restringendo la campata il nuovo limite restava vicino
+1e-7 mentre il precedente scendeva a circa 1e-13. Erano amplificate le
+larghezze intervallari vicino al parametro uno. Il nuovo pullback locale usa
+restrizioni de Casteljau convesse, inversione dei poli per mappe inverse e
+la forma rispetto all'estremo più vicino per un overshoot outward.
+Non applica clamp e non modifica affineBezier o i provider precedenti.
+Nessuna tolleranza o risorsa del fitter è stata aumentata.
+
+Pubblicazione
+I quattro poli effettivamente emessi vengono ricontrollati dopo il fit.
+Dopo assembleBody, AssemblyMap associa ogni raw edge al suo EdgeId reale:
+parametro/range devono essere immutati e tutte le cubiche del Body finale
+sono ricertificate. Curve non riconosciute, edge eliminati o cambi di
+parametro falliscono prima della storia e del ritorno del risultato.
+Non si riassociano bordi per vicinanza o ordine presunto.
+
+Prove realmente eseguite da questo agente
+- Compilazione privata dei due TU con i flag della build corrente; bounds
+  senza fast-math e con contrazione disabilitata. Zero avvisi nuovi; due
+  warning preesistenti checkCurvature in fk_offset sono nei log.
+- Riproduttore pubblico: source e output checkBody PASS. Prima, entrambi i
+  bordi longitudinali sbagliano circa 5.74247494e-7 mm con budget 1e-7.
+  Witness Z originale 0.0010005742475172829; massimo Z di tutti i poli del
+  risultato precedente 0.0010000000001084202. Il witness geometrico double
+  è 5.74247409e-7, non solo un confronto allo stesso parametro.
+- Dopo la correzione e dopo il cap finale: source e output checkBody PASS;
+  errore misurato ai due bordi 3.92694878e-8 mm. I campioni sono regressioni,
+  il limite continuo proviene dai coefficienti originali e dai poli emessi.
+- 23/23 regressioni kernel precedenti PASS con i due oggetti privati finali:
+  11 CurveFit, 5 SurfaceCurveFit e 7 MappingDiagonal. Il log è archiviato.
+- Il collega test ha riferito 18/18 prove nuove PASS prima del solo cap
+  finale; il suo replay finale e i sanitizer sono di sua responsabilità.
+- Il collega proof ha riferito un limite inferiore Fraction indipendente
+  della baseline 5.7424740886275009344e-7. La certificazione indipendente
+  degli output finali è ancora in preparazione e non è dichiarata conclusa.
+
+Limiti
+La prova riguarda la posizione nel parametro originale per questa famiglia.
+Non certifica topologia globale, iniettività, assenza di cuspidi dell'offset,
+né tutti i fallback del sito. Budget finiti possono rifiutare casi validi.
+App, CTest completo, mappa e integrazione sono compito del coordinatore.
+
+Manifest
+baseline-sha256.json.txt è stato confrontato con i tre sorgenti di produzione
+prima dell'archiviazione: ancora identici. final-sha256.json.txt identifica
+esattamente i tre file finali privati e i corrispondenti delta.
+Le prove qui archiviate sono soltanto testo: nessun binario o oggetto.
+'''
+(dest/'report.txt').write_text(report)
+print('Archived',sum(1 for x in dest.rglob('*') if x.is_file()),'text evidence files at',dest)

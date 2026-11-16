@@ -365,8 +365,6 @@ struct Corner {
     Vec3 vertex;
     Vec3 n[3], d[3];
     int edgeFaces[3][2];
-    // Per ogni spigolo, la faccia che non lo contiene.
-    int otherFace(int k) const { return 3 - edgeFaces[k][0] - edgeFaces[k][1]; }
     // I due spigoli della faccia i.
     void edgesOf(int i, int &k, int &l) const {
         k = l = -1;

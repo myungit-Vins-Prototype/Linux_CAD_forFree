@@ -1,0 +1,69 @@
+from pathlib import Path
+p=Path('/tmp/forgecad-k10-flatten-20261115/implementation/fk_quilt_mapping.cpp')
+s=p.read_text().replace('#include "fk_quilt_mapping.h"','#include "fk_quilt_mapping.h"\n#include "fk_planar_flatten.h"')
+s=s.replace('    SurfacePtr flat;','    SurfacePtr flat;\n    bool affinePlane = false;\n    double planeSpeedU = 0, planeSpeedV = 0;')
+s=s.replace('Chart(t,uw,vw,origin)', 'Chart(t,uw,vw,origin)')
+s=s.replace('Chart(SurfaceTargetFace t, Interval uw, Interval vw, double origin)', 'Chart(SurfaceTargetFace t, Interval uw, Interval vw, double origin, bool useAffinePlane = false)')
+needle='        const Surface &surface=*t.body->face(t.face).surface;'
+# actual spacing inspect handled below
+if needle not in s: needle='        const Surface &surface = *t.body->face(t.face).surface;'
+s=s.replace(needle,needle+'''
+        affinePlane = useAffinePlane && surface.type() == SurfaceType::Plane;
+        if (affinePlane) {
+            const auto &frame = static_cast<const Plane &>(surface).frame();
+            planeSpeedU = norm(frame.xDir());
+            planeSpeedV = norm(frame.yDir());
+            require(std::isfinite(planeSpeedU) && planeSpeedU > 0
+                    && std::isfinite(planeSpeedV) && planeSpeedV > 0,
+                "Appiattimento: metrica piana degenere.");
+            return;
+        }''')
+s=s.replace('    double xAt(double a, double b) const {','    double xAt(double a, double b) const {\n        if (affinePlane)\n            return sign * planeSpeedU * (a - u0);')
+s=s.replace('    double parameter(double x, double b) const {','    double parameter(double x, double b) const {\n        if (affinePlane) {\n            const double result = u0 + sign * x / planeSpeedU;\n            require(u.contains(result, linearResolution()), "Insieme di superfici: punto oltre lo sviluppo trasversale.");\n            return result;\n        }')
+s=s.replace('    double sense = 1, primarySide = 1;','    double sense = 1, primarySide = 1, planeAnchorY = 0;')
+s=s.replace('        return Vec2(c.xAt(uv.x(), uv.y()),','        if (c.affinePlane)\n            return Vec2(c.xAt(uv.x(), uv.y()), sense * c.planeSpeedV * (uv.y() - planeAnchorY));\n        return Vec2(c.xAt(uv.x(), uv.y()),')
+s=s.replace('        if (found != parameters->end())', '        if (found != parameters->end())')
+s=s.replace('        if (parameters && found != parameters->end())','        if (charts.front().affinePlane)\n            v = planeAnchorY + sense * flat.y() / charts.front().planeSpeedV;\n        else if (parameters && found != parameters->end())')
+s=s.replace('    data->charts.emplace_back(targets[0], wa.first, wa.second, originA);','    data->planeAnchorY = anchor.y();\n    data->charts.emplace_back(targets[0], wa.first, wa.second, originA, targets.size() == 1);')
+s=s.replace('                auto curve=fitCurve(mapped,edge.range,fin.pcurve->breakpoints(edge.range),budget,&deviation);','XXX')
+needle='                auto curve = fitCurve(mapped, edge.range, fin.pcurve->breakpoints(edge.range), budget, &deviation);'
+assert needle in s
+s=s.replace(needle,'''                CurvePtr<3> curve;
+                if (chart.affinePlane) {
+                    const auto image = detail::planarFlattenImage(fin.pcurve, edge.range,
+                        Vec2(chart.u0, data_->planeAnchorY), chart.sign * chart.planeSpeedU,
+                        data_->sense * chart.planeSpeedV, plane, budget);
+                    if (image) {
+                        curve = image->curve;
+                        deviation = image->error;
+                        // Topological vertices use the public chart evaluation;
+                        // include their endpoint discrepancy before publication.
+                        deviation = std::max(deviation, std::nextafter(
+                            std::max(distance(curve->point(edge.range.lo), points[start]),
+                                distance(curve->point(edge.range.hi), points[end])),
+                            std::numeric_limits<double>::infinity()));
+                    }
+                }
+                if (!curve)
+                    curve = fitCurve(mapped, edge.range, fin.pcurve->breakpoints(edge.range), budget, &deviation);''')
+needle='            chart.flat->evaluate(uv.x(), uv.y(), 2, h);\n            chart.flat->evaluate(chart.u0, uv.y(), 2, h0);'
+assert needle in s
+s=s.replace(needle,'''            if (chart.affinePlane) {
+                for (int i = 0; i < 9; ++i)
+                    h[i] = h0[i] = Vec3();
+                h[0] = Vec3(chart.planeSpeedU * (uv.x() - chart.u0), uv.y(), 0);
+                h0[0] = Vec3(0, uv.y(), 0);
+                h[3] = h0[3] = Vec3(chart.planeSpeedU, 0, 0);
+                h[1] = h0[1] = Vec3(0, 1, 0);
+            } else {
+                chart.flat->evaluate(uv.x(), uv.y(), 2, h);
+                chart.flat->evaluate(chart.u0, uv.y(), 2, h0);
+            }''')
+s=s.replace('            const double yv = data_->sense * norm(meridian[1]) / chart.vScale;', '            const double yv = chart.affinePlane ? data_->sense * chart.planeSpeedV\n                : data_->sense * norm(meridian[1]) / chart.vScale;')
+# Local history for atomic publication on cancellation, avoid mutating supplied output early.
+a=s.index('    if (history) {', s.index('Body SurfaceQuiltMap::flattenSheet'))
+b=s.index('    if (stats)',a)
+seg=s[a:b].replace('    if (history) {\n        *history = makeHistory({&source}, result);','    BodyHistory preparedHistory;\n    if (history) {\n        preparedHistory = makeHistory({&source}, result);').replace('history->declareOrigins','preparedHistory.declareOrigins')
+s=s[:a]+seg+'    cancellationPoint();\n    if (history)\n        *history = std::move(preparedHistory);\n'+s[b:]
+s=s.replace('#include <map>','#include <map>\n#include <limits>')
+p.write_text(s)

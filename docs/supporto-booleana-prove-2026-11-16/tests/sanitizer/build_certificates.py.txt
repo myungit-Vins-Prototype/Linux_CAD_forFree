@@ -1,0 +1,11 @@
+from pathlib import Path
+import subprocess,json,hashlib,sys
+root=Path('/home/myungit/Linux_CAD_forFree');stage=Path('/tmp/supporto-review/stage');dest=Path('/tmp/supporto-review/tests');asan='--sanitize' in sys.argv;extended='--extended' in sys.argv;mode=('extended-' if extended else '')+('sanitized' if asan else 'normal');flags=['-std=c++17','-O1' if asan else '-O0','-g','-fno-fast-math','-ffp-contract=off','-I'+str(stage/'kernel'),'-I'+str(root/'kernel')]
+if asan:flags+=['-fsanitize=address,undefined','-fno-omit-frame-pointer']
+objects=[stage/'fk_boolean.o',stage/'fk_boolean_boundary.o']
+if asan:
+ objects=[]
+ for name in ['fk_boolean','fk_boolean_boundary']:
+  obj=dest/(name+'.sanitized.o');cmd=['/usr/bin/c++']+flags+['-c',str(stage/'kernel'/(name+'.cpp')),'-o',str(obj)];subprocess.run(cmd,check=True);objects.append(obj)
+source=dest/('boundary_private.cpp' if extended else 'test_boolean_boundary.cpp')
+cmd=['/usr/bin/c++']+flags+[str(source)]+[str(x) for x in objects]+[str(root/'forgecad-release/kernel/libforgekernel.a'),'-pthread','-o',str(dest/('boundary-certificates-'+mode))];r=subprocess.run(cmd,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True);(dest/('certificates-build-'+mode+'.log')).write_text(r.stdout);(dest/('certificates-command-'+mode+'.json')).write_text(json.dumps({'command':cmd,'boundary_source_sha256':hashlib.sha256((stage/'kernel/fk_boolean_boundary.cpp').read_bytes()).hexdigest(),'header_sha256':hashlib.sha256((stage/'kernel/fk_boolean_boundary.h').read_bytes()).hexdigest(),'instrumented':['boundary_private.cpp including test_boolean_boundary.cpp' if extended else 'test_boolean_boundary.cpp','fk_boolean.cpp','fk_boolean_boundary.cpp'] if asan else []},indent=2)+'\n');print(r.returncode,r.stdout[-4000:]);raise SystemExit(r.returncode)

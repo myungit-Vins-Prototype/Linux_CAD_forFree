@@ -1,0 +1,5 @@
+from pathlib import Path
+import json,shlex,subprocess,hashlib
+r=Path('/home/myungit/Linux_CAD_forFree');o=Path('/tmp/forgecad-k10-composition-20261115/independent');c=next(x for x in json.loads((r/'forgecad-release/compile_commands.json').read_text()) if x['file'].endswith('/kernel/fk_offset.cpp'));cmd=shlex.split(c['command']);cmd[cmd.index('-o')+1]=str(o/'composition.o');cmd[cmd.index('-c')+1]=str(o/'composition.cpp');subprocess.run(cmd,cwd=c['directory'],check=True);subprocess.run(['/usr/bin/c++','-o',str(o/'composition'),str(o/'composition.o'),str(r/'forgecad-release/kernel/libforgekernel.a'),'-lpthread'],check=True)
+with (o/'composition.log').open('w') as f:subprocess.run([str(o/'composition')],stdout=f,check=True)
+(o/'manifest.json').write_text(json.dumps({n:hashlib.sha256((r/n).read_bytes()).hexdigest() for n in ['kernel/fk_surface_mapping.cpp','kernel/fk_quilt_mapping.cpp','kernel/fk_mapping_fit.cpp','kernel/fk_offset.cpp']},indent=2)+'\n')

@@ -1,0 +1,422 @@
+[
+  {
+    "source": "cad_forge.cpp",
+    "line": 1099,
+    "symbol": "ForgeCad::Kernel::offsetFaces",
+    "owner": "ForgeCad::forgeOffsetFaces"
+  },
+  {
+    "source": "cad_sketch_offset.cpp",
+    "line": 401,
+    "symbol": "ForgeCad::Kernel::fitCurve",
+    "owner": "ForgeCad::extended"
+  },
+  {
+    "source": "cad_sketch_offset.cpp",
+    "line": 602,
+    "symbol": "ForgeCad::Kernel::fitCurve",
+    "owner": "ForgeCad::offsetSketchEntities"
+  },
+  {
+    "source": "cad_sketch_refs.cpp",
+    "line": 218,
+    "symbol": "ForgeCad::Kernel::fitCurve",
+    "owner": "ForgeCad::appendProjectedCurve"
+  },
+  {
+    "source": "kernel/fk_blend_mitre.cpp",
+    "line": 129,
+    "symbol": "ForgeCad::Kernel::fitCurve",
+    "owner": "ForgeCad::Kernel::detail::traceBlendMitre"
+  },
+  {
+    "source": "kernel/fk_blend_surface.cpp",
+    "line": 1655,
+    "symbol": "ForgeCad::Kernel::fitCurve",
+    "owner": "ForgeCad::Kernel::extendSplineBoundary"
+  },
+  {
+    "source": "kernel/fk_boundary.cpp",
+    "line": 216,
+    "symbol": "ForgeCad::Kernel::fitCurve",
+    "owner": "ForgeCad::Kernel::boundarySheet"
+  },
+  {
+    "source": "kernel/fk_draft.cpp",
+    "line": 84,
+    "symbol": "ForgeCad::Kernel::offsetJoinedFaces",
+    "owner": "ForgeCad::Kernel::draftFaces"
+  },
+  {
+    "source": "kernel/fk_exchange.cpp",
+    "line": 740,
+    "symbol": "ForgeCad::Kernel::fitCurve",
+    "owner": "ForgeCad::Kernel::detail::sewnPCurve"
+  },
+  {
+    "source": "kernel/fk_fill.cpp",
+    "line": 1117,
+    "symbol": "ForgeCad::Kernel::fitCurve",
+    "owner": "ForgeCad::Kernel::fillSurface"
+  },
+  {
+    "source": "kernel/fk_open_offset.cpp",
+    "line": 266,
+    "symbol": "ForgeCad::Kernel::offsetJoinedFaces",
+    "owner": "ForgeCad::Kernel::detail::offsetLayer"
+  },
+  {
+    "source": "kernel/fk_project.cpp",
+    "line": 449,
+    "symbol": "ForgeCad::Kernel::fitCurve",
+    "owner": "ForgeCad::Kernel::Projector::finish"
+  },
+  {
+    "source": "kernel/fk_quilt_mapping.cpp",
+    "line": 411,
+    "symbol": "ForgeCad::Kernel::fitCurve",
+    "owner": "ForgeCad::Kernel::SurfaceQuiltMap::flattenSheet"
+  },
+  {
+    "source": "kernel/fk_quilt_mapping.cpp",
+    "line": 592,
+    "symbol": "ForgeCad::Kernel::fitCurve",
+    "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+  },
+  {
+    "source": "kernel/fk_quilt_mapping.cpp",
+    "line": 596,
+    "symbol": "ForgeCad::Kernel::offsetSurface",
+    "owner": "ForgeCad::Kernel::SurfaceQuiltMap::bend"
+  },
+  {
+    "source": "kernel/fk_sheet.cpp",
+    "line": 213,
+    "symbol": "ForgeCad::Kernel::fitCurve",
+    "owner": "ForgeCad::Kernel::extendPlanarFace"
+  },
+  {
+    "source": "kernel/fk_sheet.cpp",
+    "line": 402,
+    "symbol": "ForgeCad::Kernel::fitCurve",
+    "owner": "ForgeCad::Kernel::joinSplineExtensions"
+  },
+  {
+    "source": "kernel/fk_sheet.cpp",
+    "line": 590,
+    "symbol": "ForgeCad::Kernel::fitCurve",
+    "owner": "ForgeCad::Kernel::extendSheet"
+  },
+  {
+    "source": "kernel/fk_shell.cpp",
+    "line": 290,
+    "symbol": "ForgeCad::Kernel::offsetJoinedFaces",
+    "owner": "ForgeCad::Kernel::shellBody"
+  },
+  {
+    "source": "kernel/fk_surface_mapping.cpp",
+    "line": 152,
+    "symbol": "ForgeCad::Kernel::fitCurve",
+    "owner": "ForgeCad::Kernel::mapBody"
+  },
+  {
+    "source": "kernel/fk_surface_mapping.cpp",
+    "line": 182,
+    "symbol": "ForgeCad::Kernel::fitCurve",
+    "owner": "ForgeCad::Kernel::mapBody"
+  },
+  {
+    "source": "kernel/fk_surface_poles.cpp",
+    "line": 107,
+    "symbol": "ForgeCad::Kernel::fitCurve",
+    "owner": "ForgeCad::Kernel::editBodyFacesPoles"
+  },
+  {
+    "source": "kernel/fk_thicken.cpp",
+    "line": 219,
+    "symbol": "ForgeCad::Kernel::offsetFaces",
+    "owner": "ForgeCad::Kernel::thickenAlongNormal"
+  },
+  {
+    "source": "kernel/fk_thicken.cpp",
+    "line": 312,
+    "symbol": "ForgeCad::Kernel::fitCurve",
+    "owner": "ForgeCad::Kernel::thickenAlongNormal"
+  },
+  {
+    "source": "kernel/fk_thicken.cpp",
+    "line": 313,
+    "symbol": "ForgeCad::Kernel::fitCurve",
+    "owner": "ForgeCad::Kernel::thickenAlongNormal"
+  },
+  {
+    "source": "kernel/tests/test_blend_contact_breaks.cpp",
+    "line": 158,
+    "symbol": "ForgeCad::Kernel::offsetSurface",
+    "owner": "BlendContactKnotKeepsRadiusAndAllowsOneMillimeterOffset"
+  },
+  {
+    "source": "kernel/tests/test_history.cpp",
+    "line": 403,
+    "symbol": "ForgeCad::Kernel::offsetFaces",
+    "owner": "HistoryOffsetKeepsFaceNamesAcrossSurfaceChanges"
+  },
+  {
+    "source": "kernel/tests/test_history.cpp",
+    "line": 420,
+    "symbol": "ForgeCad::Kernel::offsetFaces",
+    "owner": "HistoryOffsetKeepsFaceNamesAcrossSurfaceChanges"
+  },
+  {
+    "source": "kernel/tests/test_history.cpp",
+    "line": 450,
+    "symbol": "ForgeCad::Kernel::offsetFaces",
+    "owner": "HistoryOffsetComposesRectangularAndTrimmedCreases"
+  },
+  {
+    "source": "kernel/tests/test_loft.cpp",
+    "line": 120,
+    "symbol": "ForgeCad::Kernel::offsetFaces",
+    "owner": "LoftEllipsePreservesSmoothOffsetFaces"
+  },
+  {
+    "source": "kernel/tests/test_loft_knots.cpp",
+    "line": 103,
+    "symbol": "ForgeCad::Kernel::offsetFaces",
+    "owner": "OffsetOfRefinedSmoothStripIsInvariant"
+  },
+  {
+    "source": "kernel/tests/test_loft_knots.cpp",
+    "line": 104,
+    "symbol": "ForgeCad::Kernel::offsetFaces",
+    "owner": "OffsetOfRefinedSmoothStripIsInvariant"
+  },
+  {
+    "source": "kernel/tests/test_loft_knots.cpp",
+    "line": 128,
+    "symbol": "ForgeCad::Kernel::offsetFaces",
+    "owner": "OffsetPreservesSeamsThroughNearlyTangentSections"
+  },
+  {
+    "source": "kernel/tests/test_offset.cpp",
+    "line": 94,
+    "symbol": "ForgeCad::Kernel::offsetSurface",
+    "owner": "OffsetAnalyticSurfaces"
+  },
+  {
+    "source": "kernel/tests/test_offset.cpp",
+    "line": 103,
+    "symbol": "ForgeCad::Kernel::offsetSurface",
+    "owner": "OffsetAnalyticSurfaces"
+  },
+  {
+    "source": "kernel/tests/test_offset.cpp",
+    "line": 131,
+    "symbol": "ForgeCad::Kernel::offsetSurface",
+    "owner": "OffsetFreeformSurfaces"
+  },
+  {
+    "source": "kernel/tests/test_offset.cpp",
+    "line": 152,
+    "symbol": "ForgeCad::Kernel::offsetFaces",
+    "owner": "OffsetFacesJoinsTangentFaces"
+  },
+  {
+    "source": "kernel/tests/test_offset.cpp",
+    "line": 159,
+    "symbol": "ForgeCad::Kernel::offsetFaces",
+    "owner": "OffsetFacesJoinsTangentFaces"
+  },
+  {
+    "source": "kernel/tests/test_offset.cpp",
+    "line": 164,
+    "symbol": "ForgeCad::Kernel::offsetFaces",
+    "owner": "OffsetFacesJoinsTangentFaces"
+  },
+  {
+    "source": "kernel/tests/test_offset.cpp",
+    "line": 175,
+    "symbol": "ForgeCad::Kernel::offsetFaces",
+    "owner": "OffsetFacesCurvedAndFreeform"
+  },
+  {
+    "source": "kernel/tests/test_offset.cpp",
+    "line": 185,
+    "symbol": "ForgeCad::Kernel::offsetFaces",
+    "owner": "OffsetFacesCurvedAndFreeform"
+  },
+  {
+    "source": "kernel/tests/test_offset.cpp",
+    "line": 192,
+    "symbol": "ForgeCad::Kernel::offsetFaces",
+    "owner": "OffsetFacesCurvedAndFreeform"
+  },
+  {
+    "source": "kernel/tests/test_offset.cpp",
+    "line": 207,
+    "symbol": "ForgeCad::Kernel::offsetFaces",
+    "owner": "OffsetFacesCurvedAndFreeform"
+  },
+  {
+    "source": "kernel/tests/test_offset.cpp",
+    "line": 227,
+    "symbol": "ForgeCad::Kernel::offsetFaces",
+    "owner": "OffsetFacesLoft"
+  },
+  {
+    "source": "kernel/tests/test_offset.cpp",
+    "line": 274,
+    "symbol": "ForgeCad::Kernel::offsetFaces",
+    "owner": "OffsetThenSewSolid"
+  },
+  {
+    "source": "kernel/tests/test_offset.cpp",
+    "line": 320,
+    "symbol": "ForgeCad::Kernel::offsetFaces",
+    "owner": "OffsetFacesSpring"
+  },
+  {
+    "source": "kernel/tests/test_offset.cpp",
+    "line": 345,
+    "symbol": "ForgeCad::Kernel::offsetFaces",
+    "owner": "OffsetFacesImportedParts"
+  },
+  {
+    "source": "kernel/tests/test_offset.cpp",
+    "line": 357,
+    "symbol": "ForgeCad::Kernel::offsetFaces",
+    "owner": "OffsetPreservesSharpSeams"
+  },
+  {
+    "source": "kernel/tests/test_offset.cpp",
+    "line": 365,
+    "symbol": "ForgeCad::Kernel::offsetFaces",
+    "owner": "OffsetPreservesSharpSeams"
+  },
+  {
+    "source": "kernel/tests/test_offset.cpp",
+    "line": 367,
+    "symbol": "ForgeCad::Kernel::offsetFaces",
+    "owner": "OffsetPreservesSharpSeams"
+  },
+  {
+    "source": "kernel/tests/test_offset.cpp",
+    "line": 371,
+    "symbol": "ForgeCad::Kernel::offsetFaces",
+    "owner": "OffsetPreservesSharpSeams"
+  },
+  {
+    "source": "kernel/tests/test_offset.cpp",
+    "line": 388,
+    "symbol": "ForgeCad::Kernel::offsetFaces",
+    "owner": "OffsetLoftExtension"
+  },
+  {
+    "source": "kernel/tests/test_offset.cpp",
+    "line": 411,
+    "symbol": "ForgeCad::Kernel::offsetFaces",
+    "owner": "OffsetLoftMixedSections"
+  },
+  {
+    "source": "kernel/tests/test_offset.cpp",
+    "line": 427,
+    "symbol": "ForgeCad::Kernel::offsetFaces",
+    "owner": "OffsetLoftSewnCaps"
+  },
+  {
+    "source": "kernel/tests/test_offset.cpp",
+    "line": 438,
+    "symbol": "ForgeCad::Kernel::fitCurve",
+    "owner": "OffsetFitCurveSmallSmoothFeature"
+  },
+  {
+    "source": "kernel/tests/test_offset.cpp",
+    "line": 455,
+    "symbol": "ForgeCad::Kernel::offsetSurface",
+    "owner": "OffsetReportsInternalNormalDiscontinuity"
+  },
+  {
+    "source": "kernel/tests/test_offset.cpp",
+    "line": 460,
+    "symbol": "ForgeCad::Kernel::offsetSurface",
+    "owner": "OffsetReportsInternalNormalDiscontinuity"
+  },
+  {
+    "source": "kernel/tests/test_offset.cpp",
+    "line": 478,
+    "symbol": "ForgeCad::Kernel::offsetFaces",
+    "owner": "OffsetLoftInternalCreasesOneMillimeter"
+  },
+  {
+    "source": "kernel/tests/test_offset.cpp",
+    "line": 515,
+    "symbol": "ForgeCad::Kernel::offsetFaces",
+    "owner": "OffsetLoftExtendedSeamsTrimBoth"
+  },
+  {
+    "source": "kernel/tests/test_offset.cpp",
+    "line": 552,
+    "symbol": "ForgeCad::Kernel::offsetSurface",
+    "owner": "OffsetDenseBSplineIsC2"
+  },
+  {
+    "source": "kernel/tests/test_offset.cpp",
+    "line": 580,
+    "symbol": "ForgeCad::Kernel::offsetFaces",
+    "owner": "OffsetInwardBeyondCurvatureIsExplained"
+  },
+  {
+    "source": "kernel/tests/test_offset.cpp",
+    "line": 585,
+    "symbol": "ForgeCad::Kernel::offsetFaces",
+    "owner": "OffsetInwardBeyondCurvatureIsExplained"
+  },
+  {
+    "source": "kernel/tests/test_offset.cpp",
+    "line": 605,
+    "symbol": "ForgeCad::Kernel::offsetFaces",
+    "owner": "OffsetLoftSeamExtensionFollowsTangentSeam"
+  },
+  {
+    "source": "kernel/tests/test_offset_split_creases.cpp",
+    "line": 49,
+    "symbol": "ForgeCad::Kernel::offsetFaces",
+    "owner": "main"
+  },
+  {
+    "source": "kernel/tests/test_offset_split_creases.cpp",
+    "line": 50,
+    "symbol": "ForgeCad::Kernel::offsetFaces",
+    "owner": "main"
+  },
+  {
+    "source": "kernel/tests/test_open_offset.cpp",
+    "line": 47,
+    "symbol": "ForgeCad::Kernel::offsetFaces",
+    "owner": "OpenOffsetGrooveExactCollapse"
+  },
+  {
+    "source": "kernel/tests/test_open_offset.cpp",
+    "line": 101,
+    "symbol": "ForgeCad::Kernel::offsetFaces",
+    "owner": "OpenOffsetShowerHeadTwoPointFive"
+  },
+  {
+    "source": "kernel/tests/test_open_offset.cpp",
+    "line": 192,
+    "symbol": "ForgeCad::Kernel::offsetFaces",
+    "owner": "OpenOffsetShowerHeadInwardPreservesExterior"
+  },
+  {
+    "source": "kernel/tests/test_thicken.cpp",
+    "line": 169,
+    "symbol": "ForgeCad::Kernel::offsetFaces",
+    "owner": "ThickenTrimmedFaceWithInternalCrease"
+  },
+  {
+    "source": "kernel/tests/test_tolerance.cpp",
+    "line": 146,
+    "symbol": "ForgeCad::Kernel::offsetSurface",
+    "owner": "ToleranceDocumentOffsetAccuracy"
+  }
+]

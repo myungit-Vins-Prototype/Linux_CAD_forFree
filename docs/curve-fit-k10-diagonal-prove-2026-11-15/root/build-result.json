@@ -1,0 +1,42 @@
+{
+  "exit": 0,
+  "build_complete": true,
+  "warnings": [
+    "/home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:294:151: warning: unused parameter \u2018checkCurvature\u2019 [-Wunused-parameter]",
+    "/home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:521:149: warning: unused parameter \u2018checkCurvature\u2019 [-Wunused-parameter]",
+    "/home/myungit/Linux_CAD_forFree/tests/test_drawing_multisheet.h:169:49: warning: missing initializer for member \u2018ForgeCad::DrawingDimensionNumbering::firstDimension\u2019 [-Wmissing-field-initializers]",
+    "/home/myungit/Linux_CAD_forFree/tests/test_drawing_multisheet.h:169:49: warning: missing initializer for member \u2018ForgeCad::DrawingDimensionNumbering::excludePatterns\u2019 [-Wmissing-field-initializers]",
+    "/home/myungit/Linux_CAD_forFree/tests/test_drawing_multisheet.h:169:49: warning: missing initializer for member \u2018ForgeCad::DrawingDimensionNumbering::assignments\u2019 [-Wmissing-field-initializers]",
+    "/home/myungit/Linux_CAD_forFree/tests/test_drawing_revision_restore.h:12:375: warning: missing initializer for member \u2018ForgeCad::DrawingDimensionNumbering::firstDimension\u2019 [-Wmissing-field-initializers]",
+    "/home/myungit/Linux_CAD_forFree/tests/test_drawing_revision_restore.h:12:375: warning: missing initializer for member \u2018ForgeCad::DrawingDimensionNumbering::excludePatterns\u2019 [-Wmissing-field-initializers]",
+    "/home/myungit/Linux_CAD_forFree/tests/test_drawing_revision_restore.h:12:375: warning: missing initializer for member \u2018ForgeCad::DrawingDimensionNumbering::assignments\u2019 [-Wmissing-field-initializers]",
+    "/home/myungit/Linux_CAD_forFree/tests/test_drawing_release.h:9:161: warning: missing initializer for member \u2018ForgeCad::DrawingDimensionNumbering::firstDimension\u2019 [-Wmissing-field-initializers]",
+    "/home/myungit/Linux_CAD_forFree/tests/test_drawing_release.h:9:161: warning: missing initializer for member \u2018ForgeCad::DrawingDimensionNumbering::excludePatterns\u2019 [-Wmissing-field-initializers]",
+    "/home/myungit/Linux_CAD_forFree/tests/test_drawing_release.h:9:161: warning: missing initializer for member \u2018ForgeCad::DrawingDimensionNumbering::assignments\u2019 [-Wmissing-field-initializers]",
+    "/home/myungit/Linux_CAD_forFree/tests/test_document_tabs.h:54:56: warning: \u2018static void QApplication::setActiveWindow(QWidget*)\u2019 is deprecated: Use QWidget::activateWindow() instead. [-Wdeprecated-declarations]",
+    "/home/myungit/Linux_CAD_forFree/tests/test_document_tabs.h:91:56: warning: \u2018static void QApplication::setActiveWindow(QWidget*)\u2019 is deprecated: Use QWidget::activateWindow() instead. [-Wdeprecated-declarations]",
+    "/home/myungit/Linux_CAD_forFree/tests/test_sketch_apparent.h:47:97: warning: missing initializer for member \u2018ForgeCad::Kernel::ExchangeBody::curve\u2019 [-Wmissing-field-initializers]",
+    "/home/myungit/Linux_CAD_forFree/tests/test_sketch_apparent.h:47:97: warning: missing initializer for member \u2018ForgeCad::Kernel::ExchangeBody::curveRange\u2019 [-Wmissing-field-initializers]",
+    "/home/myungit/Linux_CAD_forFree/tests/test_viewport.cpp:1918:109: warning: missing initializer for member \u2018ForgeCad::Kernel::LoftContact::plane\u2019 [-Wmissing-field-initializers]",
+    "/home/myungit/Linux_CAD_forFree/tests/test_viewport.cpp:2351:54: warning: missing initializer for member \u2018ForgeCad::Kernel::LoftContact::plane\u2019 [-Wmissing-field-initializers]",
+    "/home/myungit/Linux_CAD_forFree/tests/test_viewport.cpp:2351:106: warning: missing initializer for member \u2018ForgeCad::Kernel::LoftContact::plane\u2019 [-Wmissing-field-initializers]"
+  ],
+  "binaries": {
+    "forgecad": {
+      "sha256": "5c6d21a0e2b6560721435475c7f800b0373294065d21608158f4dafa2a88ddfd",
+      "mtime": 1794777021.6656523
+    },
+    "forgecad_view_tests": {
+      "sha256": "fcb18baf428fbc7ba0f7e4cbfce3f480a49a51291b77be1e6174eb1acd56fa91",
+      "mtime": 1794777165.5808742
+    },
+    "kernel/forgekernel_tests": {
+      "sha256": "5bbf50db8cb56f0e085c2462c51d68c1d6c69ab9d2793e64d23e0e80e86a04a6",
+      "mtime": 1794777000.4346194
+    },
+    "kernel/forgekernel_mapping_diagonal_validation_tests": {
+      "sha256": "97a39ab92402493ff0a79ad6bbbcba52e76ae5610e9df94bc733bbd4130293f3",
+      "mtime": 1794776999.581618
+    }
+  }
+}

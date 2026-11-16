@@ -1,0 +1,117 @@
+#include "cad_constraints.h"
+#include "cad_curve_solver.h"
+#include "cad_ellipse.h"
+#include "cad_sketch_edit.h"
+#include <iostream>
+#include <stdexcept>
+#include <cmath>
+static void require(bool ok,const char *message) {if(!ok)throw std::runtime_error(message);}
+static double pointLength(QPointF p){return std::hypot(p.x(),p.y());}
+static double pointDistance(QPointF a,QPointF b){return pointLength(a-b);}
+int main(){try{
+        using namespace ForgeCad;
+        const auto near=[](QPointF a,QPointF b,double tolerance=1e-7) { return pointDistance(a,b)<tolerance; };
+        const auto check=[&](const CurveObject &curve) {
+            require(curve.tool==DrawingTool::EllipseExtremes && curve.controlPoints.size()==4,"ellisse: quattro estremi reali");
+            const auto &p=curve.controlPoints;
+            const QPointF center=(p[0]+p[1])/2, a=(p[0]-p[1])/2, b=(p[2]-p[3])/2;
+            require(near(center,(p[2]+p[3])/2),"ellisse: centro comune derivato dalle coppie opposte");
+            require(pointLength(a)>1e-7 && pointLength(b)>1e-7
+                && std::abs(QPointF::dotProduct(a,b))<1e-7*pointLength(a)*pointLength(b),"ellisse: assi non nulli e perpendicolari");
+            const auto geometry=curveGeometry(curve);
+            require(geometry.size()==1 && geometry[0].curve->type()==Kernel::CurveType::Ellipse,"ellisse: una curva analitica esatta");
+            const auto *exact=dynamic_cast<const Kernel::Ellipse<2>*>(geometry[0].curve.get());
+            require(exact && near({exact->center().x(),exact->center().y()},center),"ellisse: centro esatto coerente");
+            for(const auto &endpoint:p) {
+                const QPointF d=endpoint-center;
+                const double x=(d.x()*exact->xAxis().x()+d.y()*exact->xAxis().y())/exact->xRadius();
+                const double y=(d.x()*exact->yAxis().x()+d.y()*exact->yAxis().y())/exact->yRadius();
+                const auto onCurve=exact->point(std::atan2(y,x));
+                require(near(endpoint,{onCurve.x(),onCurve.y()}),"ellisse: ciascuno dei quattro estremi appartiene alla curva");
+            }
+            for(int i=0;i<25;++i) {
+                const auto q=geometry[0].curve->point(2*M_PI*i/25);
+                const QPointF d=QPointF(q.x(),q.y())-center;
+                const double x=QPointF::dotProduct(d,a)/QPointF::dotProduct(a,a);
+                const double y=QPointF::dotProduct(d,b)/QPointF::dotProduct(b,b);
+                require(std::abs(x*x+y*y-1)<1e-9,"ellisse: equazione analitica indipendente dai campioni di display");
+            }
+        };
+        const QPointF center(14,11);
+        for(const QPointF axis:{QPointF(1,0),QPointF(0.6,0.8),QPointF(-0.8,0.6)}) {
+            const QPointF perpendicular(-axis.y(),axis.x());
+            for(double b:{2.0,9.0,-2.0,-9.0}) {
+                auto curve=ellipseFromExtremes(center-4*axis,center+4*axis,center+1.7*axis+b*perpendicular);
+                recalculateCurve(curve); require(curve.numericallyValid,"ellisse: creazione valida anche ruotata e con secondo asse maggiore");check(curve);
+                require(near(curve.controlPoints[0],center-4*axis) && near(curve.controlPoints[1],center+4*axis)
+                    && near(curve.controlPoints[2],center+b*perpendicular) && near(curve.controlPoints[3],center-b*perpendicular),"ellisse: terzo clic proiettato conservando il lato scelto");
+                SketchObject sketch;sketch.curves={curve};
+                require(analyzeSketch(sketch).degreesOfFreedom==5,"ellisse: otto coordinate meno tre equazioni implicite");
+                require(solveSketch(sketch).ok,"ellisse: risoluzione senza vincoli espliciti");check(sketch.curves[0]);
+                for(int k=0;k<4;++k) {
+                    auto moved=curve;const auto previous=moved.controlPoints[k];
+                    moved.controlPoints[k]+=QPointF(0.4,-0.7);
+                    const auto requested=moved.controlPoints[k];normalizeEllipseExtremes(moved,k,previous);
+                    require(near(moved.controlPoints[k],requested),"ellisse: normalizzazione conserva l'estremo trascinato");check(moved);
+                    auto targeted=sketch;const QPointF destination=curve.controlPoints[k]+QPointF(0.5,0.3);
+                    require(solveSketch(targeted,{{{1,0,k},destination}}).ok && near(targeted.curves[0].controlPoints[k],destination),"ellisse: solver muove ognuno dei quattro estremi");check(targeted.curves[0]);
+                }
+            }
+        }
+        const auto base=ellipseFromExtremes({10,11},{18,11},{14,14});
+        for(int k=0;k<4;++k) {
+            SketchObject sketch;sketch.curves={base};const ConstraintRef point{1,0,k},origin{2,0,-1};
+            QPointF value;require(refPoint(sketch,point,value) && near(value,base.controlPoints[k]),"ellisse: ogni estremo e un riferimento distinto");
+            const auto dimensions=applicableConstraints(sketch,{point,origin});
+            require(dimensions.contains(ConstraintType::HorizontalDistance) && dimensions.contains(ConstraintType::VerticalDistance)
+                && dimensions.contains(ConstraintType::Coincident),"ellisse: ogni estremo offre quote X/Y e coincidenza");
+            require(applicableConstraints(sketch,{point}).contains(ConstraintType::Fix),"ellisse: ogni estremo offre Fisso");
+            auto x=makeConstraint(sketch,ConstraintType::HorizontalDistance,{point,origin});
+            auto y=makeConstraint(sketch,ConstraintType::VerticalDistance,{point,origin});x.value+=0.6;y.value+=0.4;
+            sketch.geometricConstraints={x,y};require(solveSketch(sketch).ok,"ellisse: quote guidanti X/Y su ogni estremo");check(sketch.curves[0]);
+            require(std::abs(currentMeasure(sketch,x)-x.value)<1e-7 && std::abs(currentMeasure(sketch,y)-y.value)<1e-7,"ellisse: entrambe le quote aggiornano il punto");
+            auto fixed=sketch;fixed.geometricConstraints={makeConstraint(fixed,ConstraintType::Fix,{point})};
+            require(!solveSketch(fixed,{{point,value+QPointF(3,2)}}).ok,"ellisse: Fisso impedisce un bersaglio incompatibile");
+            sketch.curves={base};sketch.segments={{{base.controlPoints[k]+QPointF(1,2)},{35,25}}};
+            sketch.geometricConstraints={makeConstraint(sketch,ConstraintType::Coincident,{point,{0,0,0}})};
+            require(solveSketch(sketch).ok && near(sketch.curves[0].controlPoints[k],sketch.segments[0].first),"ellisse: coincidenza effettiva su ogni estremo");check(sketch.curves[0]);
+            CurveObject p;p.tool=DrawingTool::Point;p.controlPoints={base.controlPoints[k]};sketch.curves={base,p};sketch.geometricConstraints.clear();
+            require(applicableConstraints(sketch,{{1,1,0},{1,0,-1}}).contains(ConstraintType::PointOnCurve),"ellisse: disponibile Punto sulla curva");
+            const auto on=makeConstraint(sketch,ConstraintType::PointOnCurve,{{1,1,0},{1,0,-1}});
+            require(constraintError(sketch,on)<1e-7,"ellisse: ciascun estremo soddisfa Punto sulla curva");
+        }
+        SketchObject concentric;concentric.curves={base};CurveObject circle;circle.tool=DrawingTool::Circle;circle.controlPoints={center,center+QPointF(2,0)};concentric.curves.append(circle);
+        require(applicableConstraints(concentric,{{1,0,-1},{1,1,-1}}).contains(ConstraintType::Concentric),"ellisse: concentrico disponibile");
+        auto aligned=makeConstraint(concentric,ConstraintType::Concentric,{{1,0,-1},{1,1,-1}});
+        require(constraintError(concentric,aligned)<1e-9,"ellisse: concentrico usa il centro derivato, distinto dal primo estremo");
+        concentric.curves[1].controlPoints[0]+=QPointF(2,3);concentric.curves[1].controlPoints[1]+=QPointF(2,3);
+        concentric.geometricConstraints={aligned,makeConstraint(concentric,ConstraintType::Fix,{{1,1,-1}})};
+        require(solveSketch(concentric).ok,"ellisse: concentricita sposta il centro derivato");check(concentric.curves[0]);
+        require(near((concentric.curves[0].controlPoints[0]+concentric.curves[0].controlPoints[1])/2,center+QPointF(2,3)),"ellisse: centro derivato risolto correttamente");
+
+        {
+            // Il taglio conserva una meta esatta dell'ellisse ruotata, con il secondo asse maggiore.
+            const QPointF c(7,-3),a(0.6,0.8),b(-0.8,0.6);
+            auto ellipse=ellipseFromExtremes(c-2*a,c+2*a,c+5*b);ellipse.construction=true;
+            SketchObject cut;cut.curves={ellipse};const auto original=curveGeometry(ellipse).front();
+            const auto point=[&](double t) {const auto p=original.curve->point(t);return QPointF(p.x(),p.y());};
+            const QPointF diameter=2*(point(0)-c);cut.segments={{{c-diameter},{c+diameter}}};
+            require(trimPreview(cut,{1,0},point(M_PI/2)).size()>2,"ellisse: anteprima Taglia sul nuovo strumento");
+            const auto result=trimSketchEntity(cut,{1,0},point(M_PI/2));
+            require(result.error.isEmpty() && cut.curves.size()==1 && cut.curves[0].tool==DrawingTool::Nurbs
+                && cut.curves[0].construction && !cut.curves[0].weights.isEmpty(),"ellisse: Taglia produce un arco NURBS razionale di costruzione");
+            const auto kept=curveGeometry(cut.curves[0]);require(kept.size()==1,"ellisse: arco tagliato esatto valido");
+            require(Kernel::distance(kept[0].start(),original.curve->point(M_PI))<1e-7
+                && Kernel::distance(kept[0].end(),original.curve->point(2*M_PI))<1e-7,"ellisse: taglio conserva gli estremi corretti della meta opposta al clic");
+            for(int i=0;i<=20;++i) {
+                const auto p=kept[0].curve->point(kept[0].range.lo+kept[0].range.length()*i/20.0);
+                const QPointF d=QPointF(p.x(),p.y())-c;const double x=QPointF::dotProduct(d,a)/2,y=QPointF::dotProduct(d,b)/5;
+                require(std::abs(x*x+y*y-1)<1e-10,"ellisse: arco NURBS tagliato sulla conica originale");
+            }
+            Kernel::ProfileLoop half;half.segments=kept;
+            const auto start=kept[0].start(),end=kept[0].end();
+            half.segments.push_back({std::make_shared<Kernel::Line<2>>(end,start-end),{0,Kernel::distance(start,end)}});
+            require(std::abs(std::abs(Kernel::signedArea(half))-5*M_PI)<1e-8,"ellisse: area esatta della meta tagliata chiusa dal diametro");
+        }
+
+std::cout<<"PASS independent ellipse core and trim probe"<<std::endl;return 0;}catch(const std::exception &e){std::cerr<<e.what()<<std::endl;return 1;}}

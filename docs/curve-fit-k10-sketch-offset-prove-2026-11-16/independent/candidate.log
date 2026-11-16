@@ -1,0 +1,16 @@
+rational=0 amp=1 reverse=0 accepted=1 reason= witness_projection_gap=2.1610696518380041e-08 witness_t=0.1203
+rational=0 amp=1 reverse=1 accepted=1 reason= witness_projection_gap=2.1726287305389875e-08 witness_t=0.1203
+rational=0 amp=0.10000000000000001 reverse=0 accepted=1 reason= witness_projection_gap=2.1662757109065199e-09 witness_t=0.1203
+rational=0 amp=0.10000000000000001 reverse=1 accepted=1 reason= witness_projection_gap=2.167427752909975e-09 witness_t=0.1203
+rational=0 amp=0.01 reverse=0 accepted=1 reason= witness_projection_gap=2.2667002023052807e-08 witness_t=0.84999999999999998
+rational=0 amp=0.01 reverse=1 accepted=1 reason= witness_projection_gap=2.2667009827577107e-08 witness_t=0.14999999999999999
+rational=0 amp=0.001 reverse=0 accepted=1 reason= witness_projection_gap=3.0135857694716098e-08 witness_t=0.93999999999999995
+rational=0 amp=0.001 reverse=1 accepted=1 reason= witness_projection_gap=3.0135857703389709e-08 witness_t=0.059999999999999998
+rational=1 amp=1 reverse=0 accepted=1 reason= witness_projection_gap=2.0329723463795317e-08 witness_t=0.1203
+rational=1 amp=1 reverse=1 accepted=1 reason= witness_projection_gap=2.0432440859150387e-08 witness_t=0.1203
+rational=1 amp=0.10000000000000001 reverse=0 accepted=1 reason= witness_projection_gap=8.0537696026910682e-09 witness_t=0.87929999999999997
+rational=1 amp=0.10000000000000001 reverse=1 accepted=1 reason= witness_projection_gap=8.0515089492211149e-09 witness_t=0.87929999999999997
+rational=1 amp=0.01 reverse=0 accepted=1 reason= witness_projection_gap=2.2012313264832321e-08 witness_t=0.14999999999999999
+rational=1 amp=0.01 reverse=1 accepted=1 reason= witness_projection_gap=2.2012729695611054e-08 witness_t=0.14999999999999999
+rational=1 amp=0.001 reverse=0 accepted=1 reason= witness_projection_gap=2.871894061799068e-08 witness_t=0.059999999999999998
+rational=1 amp=0.001 reverse=1 accepted=1 reason= witness_projection_gap=2.871897620237335e-08 witness_t=0.059999999999999998

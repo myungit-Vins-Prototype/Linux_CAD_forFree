@@ -1,0 +1,41 @@
+{
+  "exit": 0,
+  "seconds": 33.67962521800007,
+  "command": [
+    "ctest",
+    "--test-dir",
+    "forgecad-release",
+    "--output-on-failure",
+    "--parallel",
+    "1",
+    "-R",
+    "^(forgecad_sketch_editing_tests|forgecad_sketch_reference_workflow_tests|forgecad_workflow_ui_tests|forgecad_sketch_tools_refs_tests|forgecad_function_panels_tests|forgecad_history_suppression_tests|forgecad_document_lifetime_tests|forgecad_async_lifetime_tests|forgecad_edit_preview_reuse_tests|forgecad_sketch_offset_validation_tests|forgekernel_projection_fit_validation_tests|forgekernel_curve_fit_validation_tests|forgekernel_curve_projection_tests|forgekernel_tolerance_tests|forgekernel_boundary_fit_validation_tests|forgekernel_surface_curve_fit_validation_tests|forgekernel_mapping_carrier_validation_tests|forgekernel_mapping_diagonal_validation_tests|forgecad_solver_partition_tests|forgekernel_projected_curve_reference_tests|forgekernel_sketch_projection_tests|forgecad_sketch_projection_tests|forgecad_projected_curve_reference_tests|forgecad_projection_tests)$"
+  ],
+  "actual_passed": 24,
+  "tests": [
+    "forgecad_sketch_editing_tests",
+    "forgecad_sketch_reference_workflow_tests",
+    "forgecad_workflow_ui_tests",
+    "forgecad_sketch_tools_refs_tests",
+    "forgecad_function_panels_tests",
+    "forgecad_history_suppression_tests",
+    "forgecad_document_lifetime_tests",
+    "forgecad_async_lifetime_tests",
+    "forgecad_edit_preview_reuse_tests",
+    "forgecad_sketch_offset_validation_tests",
+    "forgekernel_projection_fit_validation_tests",
+    "forgekernel_curve_fit_validation_tests",
+    "forgekernel_curve_projection_tests",
+    "forgekernel_tolerance_tests",
+    "forgekernel_boundary_fit_validation_tests",
+    "forgekernel_surface_curve_fit_validation_tests",
+    "forgekernel_mapping_carrier_validation_tests",
+    "forgekernel_mapping_diagonal_validation_tests",
+    "forgecad_solver_partition_tests",
+    "forgekernel_projected_curve_reference_tests",
+    "forgekernel_sketch_projection_tests",
+    "forgecad_sketch_projection_tests",
+    "forgecad_projected_curve_reference_tests",
+    "forgecad_projection_tests"
+  ]
+}

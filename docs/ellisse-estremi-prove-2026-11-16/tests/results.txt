@@ -1,0 +1,78 @@
+Prove dell'agente test, 16 novembre 2026, Linux/Qt6/GCC.
+
+- tests/test_viewport.cpp: -fsyntax-only con flag dalla build configurata, PASS.
+  Soltanto warning preesistenti su initializer e API Qt deprecata.
+- core_probe.cpp.txt: compilazione privata -O0 dei tre moduli correnti cad_ellipse,
+  cad_curve_solver e cad_constraints; link con dipendenze build preesistenti; PASS.
+- Core realmente eseguito: 12 geometrie (3 direzioni x 4 semiassi secondari, incluso
+  segno negativo e secondo semiasse maggiore), 48 normalizzazioni e 48 target solver;
+  curva analitica, quattro estremi sulla curva, 5 DOF, quote X/Y, Fix e Coincidente
+  su tutti i punti, PointOnCurve, centro derivato e Concentric.
+- Probe isolato: /tmp/ellipse-extremes-tests-sol/core_probe.
+
+Il probe non certifica UI/codec né ricompila l'eseguibile app.
+L'header integrato test_ellipse_extremes.h aggiunge mouse reale, snap/picking,
+Undo/Redo, anteprima/annullo, formato70/legacy69/rifiuto hash66 e comando QAction.
+Le esecuzioni complete vengono riportate nel rapporto principale dal coordinatore.
+
+Aggiornamento dopo audit del coordinatore:
+- Nuovo caso Taglia nell'header: ellisse ruotata con secondo asse maggiore,
+  intersezioni con diametro, anteprima, arco NURBS razionale/construction,
+  estremi del semiarco opposto al clic e 21 punti sull'equazione conica.
+  Area del semiarco chiuso dal diametro = 5*pi entro 1e-8, PASS.
+- Probe core+Taglia compilato privatamente sui quattro moduli attuali; PASS.
+- ASan/UBSan/LSan sui tre moduli geometrici/solver + probe core: PASS con
+  link minimo QtCore, kernel e cad_sketch_offset.o. Esecuzione fuori sandbox
+  perche LeakSanitizer rifiuta ptrace. Nessuna suppression.
+- Tentativo iniziale con tutte dipendenze GUI: test PASS ma LeakSanitizer
+  segnala 183 byte in libnvidia-glcore; risolto eliminando il driver dal link
+  del probe. Non costituisce certificazione dei leak dell'app grafica.
+- Il riproduttore archiviato ora include anche cad_sketch_edit e il caso Taglia.
+- Verifica finale ASan/UBSan/LSan su quattro TU (cad_ellipse, cad_curve_solver,
+  cad_constraints, cad_sketch_edit) + probe core/Taglia: PASS, exit0,
+  nessuna diagnostica; link minimo QtCore, kernel e offset preesistente.
+  Output: PASS independent ellipse core and trim probe.
+  Questo controlla i quattro TU strumentati; kernel/offset non strumentati.
+
+Compatibilita' tavole formato69 dopo bump70:
+- Header test aggiornato a 230 righe: SHA256
+  49a787fb3ce9cf040e54afae88fa02a6d6acf3354986b4480e8495c85995af0d.
+  Syntax-only del TU completo PASS dopo l'aggiunta dei casi hash69.
+- Fixture: Ellipse legacy, box, storia normalizzata, normalizzazione esplicita
+  identita'/orientamento/unita'/cache; precisione1e-7 e1e-8.
+- Casi: hash69 reale tramite encoder dedicato+SHA256; match invariato; visibilita'
+  schizzo/feature/corpo singola e simultanea contro hash canonico69;
+  mismatch dopo modifica semiasse o precisione; encoder69 rifiuta nuova ellisse
+  diretta o annidata in Pierce atomicamente; matcher ritorna false senza errore.
+- Prima della guard finale nel matcher: riprodotto errore alla nuova ellisse.
+- Dopo correzione cad_drawing_file.cpp hash
+  5d5134afd69de269e20251a5c398b3185fb819a7edb15ce23a49557d759bc06d:
+  probe privato PASS, exit0, output PASS hash69 compatibility and rejection.
+- Probe e script: hash69_probe.cpp.txt / hash69_probe.py.txt. Compilati
+  cad_document_io.cpp e cad_drawing_file.cpp correnti; cad_ellipse corrente gia'
+  compilato nel probe geometrico. Altre dipendenze dalla build preesistente.
+  Nessuna ricompilazione condivisa o certificazione app/renderer da questo probe.
+
+Correzione della fixture mouse dopo primo CTest23/24:
+- Il test confrontava gli estremi creati via mouse con coordinate world esatte.
+  mousePress converte invece la posizione a QPoint/pixel intero prima della
+  proiezione sul piano. Il prodotto ha creato l'ellisse sugli input ricevuti.
+- Diagnostica privata, link oggetti APP finali:
+  world(10,11) -> pixel(1352,-562) -> raw(9.9968002166748064,10.994133571624756)
+  world(18,11) -> pixel(2034,-562) -> raw(17.998933723449703,10.994133571624756)
+  world(16,8) -> pixel(1864,-307) -> raw(16.004267013549804,8.0021335067749018)
+  B0 reale(13.997866970062255,8.0021335067749018)
+  B1 reale(13.997866970062255,13.98613363647461).
+- Corretto solo il test: la lambda click restituisce screenToSketchPoint del
+  pixel intero; expected calcolato indipendentemente con midpoint e proiezione
+  perpendicolare dei tre input realmente inviati. Verificati anche A0/A1.
+  Tolleranza1e-5 invariata; nessuna modifica del prodotto.
+- Prima di modificare l'header repo, INTERO header corretto in copia privata:
+  PASS geometria/solver/quote/drag/snap/UndoRedo/codec70/hash69/legacy/menu.
+  Esecuzione offscreen, non certificazione renderer.
+- Riproduttori: ui_diagnostic.cpp.txt, full_ui_probe.cpp.txt, ui_probe.py.txt.
+  Compilano solo il wrapper privato e linkano gli oggetti APP finali correnti.
+- Conferma finale tramite script archiviato, leggendo header REPO237righe
+  SHA2567fb9e941a899713d205e5c56da3c5b0de33be1647847b6919e4677ec859a9e32:
+  PASS completo, exit0. Output: PASS ellipse extremes: exact geometry, 5 DOF,
+  all four references, constraints, mouse, snap, Undo/Redo, codec70/legacy and command.

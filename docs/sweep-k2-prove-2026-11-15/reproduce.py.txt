@@ -1,0 +1,62 @@
+#!/usr/bin/env python3
+"""Prove K2 isolate. Non modifica kernel, CMake, librerie o applicazione.
+I due fallimenti del runner sperimentale sono attesi e documentati.
+"""
+import argparse, difflib, hashlib, json, pathlib, shlex, shutil, subprocess, tempfile, time
+here=pathlib.Path(__file__).resolve().parent
+parser=argparse.ArgumentParser()
+parser.add_argument('--root',type=pathlib.Path,default=here.parents[1])
+parser.add_argument('--build',type=pathlib.Path)
+parser.add_argument('--out',type=pathlib.Path)
+a=parser.parse_args(); root=a.root.resolve(); build=(a.build or root/'forgecad-release').resolve()
+out=(a.out or pathlib.Path(tempfile.mkdtemp(prefix='forgecad-k2-reproduce-'))).resolve()
+out.mkdir(parents=True,exist_ok=True); k=out/'kernel';k.mkdir(exist_ok=True)
+lib=build/'kernel/libforgekernel.a'
+if not lib.is_file(): raise SystemExit('Serve una build kernel corrente: '+str(lib))
+results=[]
+def run(name,cmd,cwd=None,timeout=180,allowed=(0,)):
+    start=time.monotonic()
+    with (out/(name+'.log')).open('w') as log:
+        try: code=subprocess.run([str(x) for x in cmd],cwd=cwd,stdout=log,stderr=subprocess.STDOUT,timeout=timeout).returncode
+        except subprocess.TimeoutExpired: code=124
+    row={'name':name,'exit':code,'elapsed':time.monotonic()-start};results.append(row)
+    (out/'results.json').write_text(json.dumps(results,indent=2)+'\n')
+    print(json.dumps(row),flush=True)
+    if code not in allowed: raise SystemExit('Esito inatteso: '+str(out/(name+'.log')))
+def copy(src,dst): shutil.copyfile(here/src,dst)
+for name in ['fk_sweep_validation.h','fk_sweep_validation.cpp','fk_sweep_map.h','fk_sweep_map.cpp']:
+    copy('prototype/'+name+'.txt',k/name)
+shutil.copyfile(root/'kernel/fk_sweep.cpp',k/'fk_sweep.cpp')
+run('apply-prototype',['patch','--no-backup-if-mismatch','-p1','-i',here/'prototype/integration.patch'],cwd=out)
+common=['c++','-std=c++17','-O2','-ffp-contract=off','-pthread','-I'+str(k),'-I'+str(root/'kernel')]
+objects=[]
+for name in ['fk_sweep','fk_sweep_map','fk_sweep_validation']:
+    obj=k/(name+'.o');run('compile-'+name,common+['-c',k/(name+'.cpp'),'-o',obj]);objects.append(obj)
+for name in ['overlap','witness_probe','valid-counterexamples']:
+    src=out/(name+'.cpp');copy('sources/'+name+'.cpp.txt',src)
+    run('build-'+name,common+[src,lib,'-o',out/name]);run(name,[out/name])
+src=out/'test_map.cpp';copy('sources/test_map.cpp.txt',src)
+run('build-map',common+['-I'+str(root/'kernel/tests'),src,root/'kernel/tests/fk_test_main.cpp',objects[-1],lib,'-o',out/'map-tests'])
+run('map-tests',[out/'map-tests'])
+# L'integrazione sperimentale usa lo stesso corpo di test della build OCCT,
+# senza ricompilare o sostituire gli object nella build del repository.
+commands=json.loads((build/'compile_commands.json').read_text())
+c=next(x for x in commands if x['file'].endswith('/kernel/tests/test_sweep.cpp') and 'occt_tests' in x['directory'])
+src=out/'test_sweep.cpp';src.write_text((root/'kernel/tests/test_sweep.cpp').read_text()+(here/'sources/sweep_regressions.inc.txt').read_text())
+cmd=shlex.split(c['command']);cmd[cmd.index('-o')+1]=str(out/'test_sweep.o');cmd[cmd.index('-c')+1]=str(src);cmd+=['-I'+str(root/'kernel/tests')]
+run('compile-sweep-tests',cmd,cwd=c['directory'])
+linkdir=build/'kernel/occt_tests'
+cmd=shlex.split((linkdir/'CMakeFiles/forgekernel_tests.dir/link.txt').read_text())
+cmd=[str(out/'test_sweep.o') if x.endswith('/test_sweep.cpp.o') else x for x in cmd if not x.startswith('-Wl,--dependency-file=')]
+cmd[cmd.index('-o')+1]=str(out/'prototype-tests');i=cmd.index('../libforgekernel.a');cmd[i:i]=[str(x) for x in objects]
+run('link-sweep-tests',cmd,cwd=linkdir)
+run('baseline-sweep',[build/'kernel/forgekernel_tests','Sweep'])
+run('prototype-sweep',[out/'prototype-tests','Sweep'],allowed=(1,))
+log=(out/'prototype-sweep.log').read_text()
+expected={'SweepGlobalCheckPreservesSeparatedInterleavedRegions','SweepGlobalCheckPreservesRankTwoSheet'}
+actual={line.split('] ',1)[1].split(' ',1)[0] for line in log.splitlines() if line.startswith('[ FAIL ]')}
+if actual!=expected: raise SystemExit('Fallimenti diversi dal riferimento: '+repr(actual))
+manifest={str(p.relative_to(out)):hashlib.sha256(p.read_bytes()).hexdigest() for p in out.rglob('*') if p.is_file() and p.suffix in {'.cpp','.h','.patch','.log'}}
+manifest['production-library']=hashlib.sha256(lib.read_bytes()).hexdigest()
+(out/'hashes.json').write_text(json.dumps(manifest,indent=2)+'\n')
+print('Prove completate. I due rifiuti errati attesi impediscono la promozione. Output:',out)

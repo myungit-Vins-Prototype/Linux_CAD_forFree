@@ -1,0 +1,8 @@
+{
+  "exit": 0,
+  "seconds": 1.6667548540026473,
+  "command": [
+    "forgecad-release/kernel/forgekernel_tests",
+    "BlendConsumedTerminalReachesTangentSupport"
+  ]
+}

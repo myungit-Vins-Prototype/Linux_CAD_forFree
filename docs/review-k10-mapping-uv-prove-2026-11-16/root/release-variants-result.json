@@ -1,0 +1,8 @@
+{
+  "exit": 0,
+  "seconds": 3.9209101640008157,
+  "command": [
+    "forgecad-release/kernel/forgekernel_mapping_uv_validation_tests",
+    "/tmp/mapping-uv-review/root/release-export"
+  ]
+}

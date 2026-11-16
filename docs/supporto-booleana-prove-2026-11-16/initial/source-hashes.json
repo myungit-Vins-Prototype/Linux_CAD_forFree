@@ -1,0 +1,16 @@
+{
+  "/home/myungit/Linux_CAD_forFree/CLAUDE.md": "40c6e57a8b1b9e1a4f3c36922876e86fbfe66a83e9d33518494eaeaca7ba4f73",
+  "/home/myungit/Linux_CAD_forFree/docs/tolerance-policy.md": "2cf51f1ef37206a596ececffd3ed2365197ea9531e78e723d45e3426dd4b678c",
+  "/home/myungit/Linux_CAD_forFree/cad_forge.cpp": "c653afdef3979afc00ed9790b3cc35a5c270cb09235d6d63138df3bc03388fcd",
+  "/home/myungit/Linux_CAD_forFree/cad_pattern.cpp": "e2842d8611cee876526e568a5d7318bd2dd8f2b72e3781f1b68966801d9d19c3",
+  "/home/myungit/Linux_CAD_forFree/cad_document_io.cpp": "93981e91e658821e232f10ea8acbdd49670e22d31f6c897874e5144b86ec02d6",
+  "/home/myungit/Linux_CAD_forFree/forgeCad2026_viewport_document.cpp": "9023d6c295046e557eef26f7ef88421286371fcf4da923a61e1b9d9ce5f605ca",
+  "/home/myungit/Linux_CAD_forFree/kernel/fk_boolean.cpp": "c325db71e6b55547253b9e27ebc365185aeccdcb71f543840fd8463b9ac934b9",
+  "/home/myungit/Linux_CAD_forFree/kernel/fk_topology.cpp": "615fe071b4a4fb5e29e7d3d3c7d95193db286b30dac67e680eb1eb7bbe766c58",
+  "/home/myungit/Linux_CAD_forFree/kernel/fk_classify.cpp": "a31fc2cb97d2daff63dd4eac7cd637baeab50e28d60369698d25a0b0c6d54984",
+  "/home/myungit/Linux_CAD_forFree/kernel/fk_classify_uv.h": "5e2a403bd56b8ec65e92cc3397a4641fe3aac1831050bfd10a4c43d8d2c901dc",
+  "/home/myungit/Linux_CAD_forFree/kernel/fk_pcurve.cpp": "ad5e5ce7082274aee5c279772f30caa56b21689b7b4b7331d27543444c58df79",
+  "/home/myungit/Linux_CAD_forFree/kernel/fk_loft.cpp": "f1b85656b1e52dd0fcb9868f5e69733beece01d89621b43a7bbba7ebe2b99245",
+  "/home/myungit/Linux_CAD_forFree/kernel/fk_exchange.cpp": "b3dbe03a08cc34ce8958a2030109105e9bb594d3978aa0a145d8ed164759f288",
+  "/home/myungit/Linux_CAD_forFree/kernel/fk_body_check.cpp": "afd587fa9c3a7314aac4d85b58257a1864602f66fab6b03873378c2a6dd7747f"
+}

@@ -1,7 +1,9 @@
+#include "test_sketch_projection_fit_validation.h"
 #include <QtTest/QTest>
 #include "../cad_document_tabs.h"
 #include <QTabWidget>
 #include <QTabBar>
+#include <QStatusBar>
 #include "../forgeCad2026_application_theme.h"
 #include <QSemaphore>
 #include <thread>
@@ -25,6 +27,7 @@
 #include "../forgeCad2026_storyboard.h"
 #include "../forgeCad2026_dialogs.h"
 #include "../cad_expression.h"
+#include "../cad_ellipse.h"
 #include "../cad_features.h"
 #include "../cad_feature_build.h"
 #include "../cad_feature_dependencies.h"
@@ -106,6 +109,7 @@ using ForgeCad::Gui::wrappedNote;
 #include <QGraphicsItem>
 #include <QGraphicsView>
 #include <QSurfaceFormat>
+#include <QStyleHints>
 #include <QTemporaryDir>
 #include "../cad_element_names.h"
 #include <QProcess>
@@ -168,6 +172,7 @@ public:
 #include "test_sketch_interaction.h"
 #include "test_document_lifetime.h"
 #include "test_document_tabs.h"
+#include "test_document_theme_tabs.h"
     static void snapCacheRegressions() {
         using namespace ForgeCad;
         const auto check = [](bool ok, const char *text) { require(ok, text); };
@@ -311,6 +316,7 @@ public:
 #include "test_sketch_linked_refs.h"
 #include "test_sketch_construction.h"
 #include "test_sketch_slot_point.h"
+#include "test_ellipse_extremes.h"
 #include "test_sketch_tools_refs.h"
 #include "test_sketch_reference_hover.h"
 #include "test_sketch_apparent.h"
@@ -326,6 +332,8 @@ public:
 #include "test_surface_poles_soft.h"
 #include "test_document_units.h"
 #include "test_function_panels.h"
+#include "test_preview_selection_state.h"
+#include "test_chamfer_preview_editing.h"
 #include "test_storyboard_panel_selection.h"
 #include "test_loft_projected_sections.h"
 #include "test_loft_points.h"
@@ -2041,7 +2049,7 @@ static void solidTrims() {
                 guideList->setCurrentRow(1);
                 auto *mode=dialog->findChild<QComboBox *>("loftGuideContinuity");
                 auto *influence=dialog->findChild<QDoubleSpinBox *>("loftGuideInfluence");
-                require(mode && influence && mode->currentIndex()==1 && influence->value()==55,"selected guide restores its own controls");
+                require(mode && influence && mode->currentIndex()==1 && std::abs(influence->value()-55.0)<1e-12,"selected guide restores its own controls");
                 mode->setCurrentIndex(2); influence->setValue(25);
                 dialog->findChild<QPushButton *>("loftGuideUp")->click();
                 require(mode->currentIndex()==2 && influence->value()==25,"guide controls follow reordered item");
@@ -11401,6 +11409,12 @@ int main(int argc, char **argv) {
     QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, settings.path());
     ForgeCad::initializeApplicationTheme(app);
     qputenv("FORGECAD_RECOVERY_DIR",settings.filePath(QStringLiteral("recovery")).toUtf8());
+    if (app.arguments().contains(QStringLiteral("--theme-tabs")) ||
+        app.arguments().contains(QStringLiteral("--theme-tabs-only-2d"))) {
+        try { ViewportInteractionTest::documentThemeTabsTests(); }
+        catch (const std::exception &error) { std::cerr << error.what() << std::endl; return 1; }
+        return 0;
+    }
     if (app.arguments().contains(QStringLiteral("--document-tabs"))) {
         try { ViewportInteractionTest::documentTabsTests(); }
         catch (const std::exception &error) { std::cerr << error.what() << std::endl; return 1; }
@@ -11445,6 +11459,9 @@ int main(int argc, char **argv) {
         try { ViewportInteractionTest::historyGraphNextBodyRegressions(); }
         catch (const std::exception &error) { std::cerr << error.what() << std::endl; return 1; }
         return 0;
+    }
+    if (app.arguments().contains(QStringLiteral("--sketch-projection-fit-validation"))) {
+        return K10SketchProjectionTests::run(QString::fromLocal8Bit(qgetenv("FORGECAD_HELIX_EXPORT_DIR")));
     }
     if (app.arguments().contains(QStringLiteral("--sketch-projection"))) {
         try { ViewportInteractionTest::sketchProjection(); }
@@ -11811,8 +11828,31 @@ int main(int argc, char **argv) {
         catch (const std::exception &error) { std::cerr << error.what() << '\n'; return 1; }
         return 0;
     }
+    if (app.arguments().contains(QStringLiteral("--chamfer-preview-editing"))) {
+        QTemporaryDir isolatedSettings;
+        if (!isolatedSettings.isValid()) return 1;
+        QSettings::setDefaultFormat(QSettings::IniFormat);
+        QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, isolatedSettings.path());
+        try { ViewportInteractionTest::chamferPreviewEditingReview(); }
+        catch (const std::exception &error) { std::cerr << error.what() << std::endl; return 1; }
+        return 0;
+    }
+    if (app.arguments().contains(QStringLiteral("--preview-selection-state"))) {
+        QTemporaryDir isolatedSettings;
+        if (!isolatedSettings.isValid()) return 1;
+        QSettings::setDefaultFormat(QSettings::IniFormat);
+        QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, isolatedSettings.path());
+        try { ViewportInteractionTest::previewSelectionMutationReview(); }
+        catch (const std::exception &error) { std::cerr << error.what() << std::endl; return 1; }
+        return 0;
+    }
     if (app.arguments().contains(QStringLiteral("--function-panels-review"))) {
-        try { ViewportInteractionTest::functionPanelsReview(); ViewportInteractionTest::extrusionActionPreconditions(); }
+        try {
+            ViewportInteractionTest::functionPanelsReview();
+            ViewportInteractionTest::previewPickerContextReview();
+            ViewportInteractionTest::mappingLinkedPickerReview();
+            ViewportInteractionTest::extrusionActionPreconditions();
+        }
         catch (const std::exception &error) { std::cerr << error.what() << std::endl; return 1; }
         return 0;
     }
@@ -12101,6 +12141,11 @@ int main(int argc, char **argv) {
     if (app.arguments().contains(QStringLiteral("--sketch-tools-refs"))) {
         try { ViewportInteractionTest::sketchToolsReferences(app.arguments().contains(QStringLiteral("--gl"))); }
         catch(const std::exception &e){std::cerr<<e.what()<<std::endl;return 1;}
+        return 0;
+    }
+    if (app.arguments().contains(QStringLiteral("--ellipse-extremes"))) {
+        try { ViewportInteractionTest::ellipseExtremes(app.arguments().contains(QStringLiteral("--gl"))); }
+        catch(const std::exception &error){std::cerr<<error.what()<<std::endl;return 1;}
         return 0;
     }
     if (app.arguments().contains(QStringLiteral("--sketch-slot-point"))) {

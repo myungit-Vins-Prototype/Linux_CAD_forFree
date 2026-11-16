@@ -1,0 +1,3 @@
+Command: rg --hidden -n -w constraintsVisible . --glob !docs/** --glob !archivi-locali/** --glob !.git/**
+./forgeCad2026_viewport_sketch.cpp:1259:bool CadViewport::constraintsVisible() const { return constraintsVisible_; }
+./forgeCad2026_viewport.h:799:    bool constraintsVisible() const;

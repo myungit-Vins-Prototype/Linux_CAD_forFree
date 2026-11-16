@@ -1,0 +1,19 @@
+from pathlib import Path
+import subprocess,json,time,sys,os,re
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/mapping-uv-review/root')
+def run(name,cmd,timeout=None,env=None):
+ start=time.monotonic()
+ with(T/(name+'.log')).open('w') as log:
+  try:code=subprocess.run(cmd,cwd=R,stdout=log,stderr=subprocess.STDOUT,timeout=timeout,env=env).returncode
+  except subprocess.TimeoutExpired:code=124
+ result={'exit':code,'seconds':time.monotonic()-start,'command':cmd};(T/(name+'-result.json')).write_text(json.dumps(result,indent=2)+'\n');print(name,result,flush=True)
+ if code:print((T/(name+'.log')).read_text()[-4000:],flush=True);raise SystemExit(code)
+ return result
+if __name__=='__main__':
+ if sys.argv[1]=='baseline':
+  run('baseline-mapping-ctest',['ctest','--test-dir','forgecad-release','--output-on-failure','-V','-R','^forgekernel_(surface_mapping|mapping_carrier_validation|mapping_diagonal_validation|planar_flatten_validation)_tests$'])
+ elif sys.argv[1]=='build':run('build',['cmake','--build','forgecad-release','--parallel','2'])
+ elif sys.argv[1]=='tests':
+  wanted=['forgekernel_surface_mapping_tests','forgekernel_mapping_carrier_validation_tests','forgekernel_mapping_diagonal_validation_tests','forgekernel_planar_flatten_validation_tests','forgekernel_mapping_uv_validation_tests','forgekernel_surface_curve_fit_validation_tests','forgekernel_curve_fit_validation_tests','forgekernel_curve_projection_tests','forgekernel_sheet_fit_validation_tests','forgekernel_boundary_fit_validation_tests','forgekernel_tolerance_tests','forgekernel_blend_cavity_regression_tests','forgecad_surface_mapping_tests','forgecad_surface_pattern_tests','forgecad_preview_selection_state_tests','forgecad_chamfer_preview_state_tests','forgecad_function_panels_tests','forgecad_storyboard_review_tests','forgecad_storyboard_panel_selection_tests','forgecad_history_suppression_tests','forgecad_declared_history_cache_tests','forgecad_document_tabs_tests','forgecad_document_theme_tabs_tests','forgecad_document_theme_only2d_tests','forgecad_application_theme_tests','forgecad_ellipse_extremes_tests']
+  actual={t['name'] for t in json.loads(subprocess.check_output(['ctest','--test-dir','forgecad-release','--show-only=json-v1'],cwd=R))['tests']};assert set(wanted)<=actual,set(wanted)-actual
+  r=run('ctest',['ctest','--test-dir','forgecad-release','--output-on-failure','--parallel','1','-V','-R','^('+'|'.join(map(re.escape,wanted))+')$']);r.update(tests=wanted,actual_passed=len(wanted));(T/'ctest-result.json').write_text(json.dumps(r,indent=2)+'\n')

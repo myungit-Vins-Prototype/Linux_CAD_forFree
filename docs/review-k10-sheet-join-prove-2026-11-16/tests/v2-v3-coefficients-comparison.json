@@ -1,0 +1,24 @@
+{
+  "byte_identical": true,
+  "files": {
+    "canonical-reversal.json": true,
+    "face-sense.json": true,
+    "implicit-polynomial.json": true,
+    "large-scale.json": true,
+    "lower-boundary.json": true,
+    "rational.json": true,
+    "reverse-selection.json": true,
+    "rigid-pose.json": true,
+    "small-scale.json": true,
+    "tangent-canonical-reversal.json": true,
+    "tangent-face-sense.json": true,
+    "tangent-large-scale.json": true,
+    "tangent-lower-boundary.json": true,
+    "tangent-polynomial.json": true,
+    "tangent-rational.json": true,
+    "tangent-reverse-selection.json": true,
+    "tangent-rigid-pose.json": true,
+    "tangent-small-scale.json": true,
+    "tangent-trimmed-support.json": true
+  }
+}

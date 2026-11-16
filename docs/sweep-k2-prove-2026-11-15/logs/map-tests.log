@@ -1,0 +1,6 @@
+[  OK  ] SweepMapCertificateHandlesAdjacencyAndBudget
+[  OK  ] SweepMapCertificateHandlesRationalClosedSeam
+[  OK  ] SweepMapCertificateConservativeDegeneracyAndCancellation
+[  OK  ] SweepMapCertificateSmallRepeatedLoopNeverCertified
+[  OK  ] SweepMapCertificateDoesNotCollapseTinyTriangles
+5/5 test superati

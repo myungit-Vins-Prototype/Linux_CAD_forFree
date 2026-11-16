@@ -1,0 +1,34 @@
+from pathlib import Path
+import json
+r=Path('/home/myungit/Linux_CAD_forFree');p=Path('/tmp/forgecad-k10-diagonal-20261115/root')
+t=json.loads((p/'test-summary.json').read_text());g=json.loads((p/'architecture-audit.json').read_text())
+v=f'''## Verifiche finali
+
+- Build completa Release di app, runner e nuovo target: PASS. Eseguibile `forgecad-release/forgecad` aggiornato; riaprire l'app per usare il nuovo binario.
+- **7/7 nuovi gruppi, 25 scenari**: 21 successi obbligatori (15 operazioni e 6 controlli diretti), 2 fallimenti/cancellazione atomici, 2 famiglie esplicitamente non supportate. Scale 0,01/1/1000, pesi razionali, pose 3D, bordi inversi, trim annidati, fori, storia e codec. **9/9 gruppi precedenti** invariati: PASS.
+- Riproduttore iniziale corretto: errore bordo **1,0235892837e-8 mm**, deviazione dichiarata **1,6641748144e-8 mm**, supporto originale conservato, nessun errore di controllo del corpo. Prima: errore **0,001 mm** accettato. La baseline completa è congelata; il confronto della nuova suite con il vecchio adapter usa il provider nuovo per i test diretti, dichiaratamente.
+- Kernel: **{t['kernel_distinct']} casi distinti / {t['kernel_executions']} esecuzioni** pertinenti PASS; **{t['ctest_suites']}/{t['ctest_suites']} suite CTest** PASS, comprese verifiche Qt offscreen, ciclo di vita, storia, mapping, composizione, offset e pannelli.
+- ASan/UBSan/LSan: **7/7 gruppi PASS**, senza diagnostiche. Strumentati nuovo test e tre unità di produzione modificate (`fk_affine_surface_fit`, `fk_curve_fit_bounds`, `fk_mapping_carrier`); il mapping pubblico invariato e il resto dell'archivio sono Release. È una verifica mirata, non un controllo integrale dell'app.
+- Audit indipendente finale: **183/183 controlli PASS** (107 precedenti e 76 nuovi). Include coefficienti originali, query sui nodi nascosti, direzioni U piccolissime, intervalli invalidi, nodi condivisi chiusi, lifetime e famiglie escluse.
+- Mappa: **{g['files']} file / {g['edges']} archi / {g['units']} unità C++**, diagnostica vuota; `--check`, uguaglianza HTML/JSON e audit degli archi entranti/uscenti di chiamata, include e riferimento PASS.
+- Conservazione delle modifiche pregresse, hash dei sorgenti/binari, flag FP rigorosi, link kernel senza Qt/OCCT, `git diff --check`, memoria entro 16 KiB e manifest delle prove verificati nel rapporto di audit finale.
+'''
+(r/'docs/curve-fit-k10-diagonal-2026-11-15.md').write_text((p/'report-draft.md').read_text().replace('__VERIFICATION__',v))
+f=r/'docs/code-review-2026-11-15.md';s=f.read_text();a=s.index('**Stato più recente:**');b=s.index('\n\n',a)
+s=s[:a]+'''**Stato più recente:** [K10 Mapping obliquo](curve-fit-k10-diagonal-2026-11-15.md) conserva anche le estrusioni originali con UV affini diagonali, correggendo la perdita di un rilievo di 0,001 mm e riservando il budget completo di bordo/trim prima del fit. Build completa, nuove e precedenti regressioni, sanitizer mirati e audit PASS. **8/24 siti iniziali parzialmente trattati, 16 interamente da migrare**, oltre ai fallback; questo blocco amplia lo stesso sito già contato. K10 resta aperto per NURBS tensoriali diagonali, mapping generale, offset e altri chiamanti campionati. Il totale dei 24 rilievi precedenti corretti e delle 22 orfane candidate non cambia. Uniformazione completa anteprime/pannelli ancora proposta; K2 in produzione.'''+s[b:];f.write_text(s)
+f=r/'docs/curve-fit-k10-mapping-2026-11-15.md';s=f.read_text();s+='\n\n## Prosecuzione: mapping obliquo\n\nIl [blocco successivo](curve-fit-k10-diagonal-2026-11-15.md) estende il certificato alle UV affini diagonali sulle estrusioni originali e corregge la riserva del budget dei trim prima del fit. Il riproduttore `native_rotation_shift` ora conserva il rilievo. I mapping diagonali su NURBS tensoriali generali e gli offset restano esclusi. Il conteggio rimane 8/24 siti parziali, 16 interamente da migrare; numeri e prove sopra descrivono la consegna isoparametrica precedente.\n';f.write_text(s)
+f=r/'CLAUDE.md';s=f.read_text();a=s.index('**15/11 — K10, mapping');b=s.index('\n**15/11 — K2',a)
+s=s[:a]+f'''**15/11 — K10, mapping obliquo con tre agenti GPT-6.1 Sol.**
+Integrato certificato su Extrusion originale C(u)+vD con UV affini diagonali;
+rilievo perso0,001mm ora errore1,024e-8. Riserva completa bordo/trim prima del fit,
+iso precedente conservata con displacement certificato; tolleranze invariate.
+Build completa app/runner,{t['kernel_distinct']}casi kernel/{t['kernel_executions']}esecuzioni,{t['ctest_suites']}CTest,
+nuovi7gruppi/25scenari e precedenti9PASS;ASan/UBSan/LSan mirati7/7PASS.
+Mappa{g['files']}/{g['edges']}/{g['units']}TU,diagnostica vuota/check/HTML/archi PASS.
+K10 aperto:8/24 siti parziali,16restanti più fallback; tensor diagonali/offset esclusi.
+24rilievi precedenti corretti,22orfane candidate; uniformazione anteprime/pannelli proposta;
+K2 in produzione. Nessun nuovo test renderer. Riaprire app aggiornata.
+[Prove e limiti](docs/curve-fit-k10-diagonal-2026-11-15.md),
+[precedente](docs/curve-fit-k10-mapping-2026-11-15.md),
+[memoria conservata](docs/history/claude-prima-k10-diagonal-2026-11-15.md).
+'''+s[b:];assert len(s.encode())<=16384,len(s.encode());f.write_text(s);print('CLAUDE bytes',len(s.encode()))

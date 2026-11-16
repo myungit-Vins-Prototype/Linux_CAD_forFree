@@ -1,0 +1,3 @@
+    kernel/tests/fk_test_main.cpp:36: eccezione: blendEdges: contratto della frontiera emessa modificato
+[ FAIL ] BoundaryActualEmissionKeepsDistinctFacesOnSharedCarrier (1 controlli falliti)
+0/1 test superati

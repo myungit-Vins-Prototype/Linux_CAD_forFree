@@ -1,0 +1,12 @@
+#include "../../frame-optimized/fk_sweep_surface_validation.cpp"
+#include <iostream>
+#include <random>
+using namespace ForgeCad::Kernel;using namespace ForgeCad::Kernel::detail;
+int main(){std::mt19937 rng(917);std::uniform_real_distribution<double>r(-3,3),w(.5,3),t(0,1);int failure=0,checks=0;
+for(int pu=1;pu<=4;++pu)for(int pv=1;pv<=4;++pv)for(int mode=0;mode<3;++mode){Net n;n.nu=pu+1;n.nv=pv+1;n.independentU=n.independentV=mode==0;std::vector<Vec3>poles;std::vector<double>weights;
+for(int i=0;i<=pu;++i)for(int j=0;j<=pv;++j){Vec3 p(r(rng),r(rng),r(rng));if(mode==2)p+=Vec3(1e8,-2e8,3e8);double q=mode==0?1:w(rng);poles.push_back(p);weights.push_back(q);n.h.push_back(vec(p)*I(q));n.w.push_back(I(q));}
+std::vector<double>uk(pu+1,0),vk(pv+1,0);uk.insert(uk.end(),pu+1,1);vk.insert(vk.end(),pv+1,1);BSplineSurface surface(pu,pv,uk,vk,pu+1,pv+1,poles,weights);
+prepare(n);const double u0=.13,u1=.81,v0=.17,v1=.93;Net child=restrictNet(n,I(u0),I(u1),I(v0),I(v1));
+for(int sample=0;sample<11;++sample){Vec3 d[4];surface.evaluate(u0+t(rng)*(u1-u0),v0+t(rng)*(v1-v0),1,d);for(int axis=0;axis<3;++axis)for(int along=0;along<2;++along){const auto bound=along?child.dv[axis]:child.du[axis];const double exact=d[along?1:2][axis]*(along?v1-v0:u1-u0);const double margin=mode==2?1e-6:1e-11;++checks;if(!(exact>=bound.lo-margin&&exact<=bound.hi+margin)){++failure;std::cout<<"FAIL "<<pu<<','<<pv<<" mode"<<mode<<" axis"<<axis<<" along"<<along<<" exact"<<exact<<" bound"<<bound.lo<<','<<bound.hi<<'\n';}}
+}
+}std::cout<<"cache propagation "<<checks<<" samples, "<<failure<<" failures\n";return failure!=0;}

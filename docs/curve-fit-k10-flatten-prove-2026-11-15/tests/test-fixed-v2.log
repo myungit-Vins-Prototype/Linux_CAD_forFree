@@ -1,0 +1,10 @@
+[  OK  ] PlanarFlattenHiddenPolynomialRationalPoseScaleSense
+    /tmp/forgecad-k10-flatten-20261115/tests/test_planar_flatten_validation.cpp:176: FK_CHECK(outputCurve != nullptr)
+    /home/myungit/Linux_CAD_forFree/kernel/tests/fk_test_main.cpp:36: eccezione: known UV not emitted as explicit NURBS
+[ FAIL ] PlanarFlattenNestedPartialTrimReverseHolesAndRoundtrip (2 controlli falliti)
+[  OK  ] PlanarFlattenInvalidAndCancellationPreserveStatsHistorySource
+[  OK  ] PlanarFlattenLineUVFiniteNonunitRangePreservesParameter
+[  OK  ] PlanarFlattenAngularConicLegacyCompatibility
+4/5 test superati
+Command exited with non-zero status 1
+elapsed=1.03 maxrss_kb=6520

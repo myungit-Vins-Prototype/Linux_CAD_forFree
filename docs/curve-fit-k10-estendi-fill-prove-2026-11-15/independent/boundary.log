@@ -1,0 +1,3 @@
+polynomial_internal_knot accepted=1 dense_gap=0.001 gap_at_hidden_peak=0.001 surface_zmin=0 surface_zmax=0 peak_z=0.001 geometric_distance_lower=0.001 checkBody_issues=0
+rational_internal_knot accepted=1 dense_gap=0.000952154248988336 gap_at_hidden_peak=0.000952154248988336 surface_zmin=0 surface_zmax=0 peak_z=0.000952154248988336 geometric_distance_lower=0.000952154248988336 checkBody_issues=0
+poly27 accepted=1 dense_gap=5.7424750601786093e-05 gap_at_hidden_peak=4.4061672637091503e-05 surface_zmin=-4.66424150921272e-12 surface_zmax=4.664241508061472e-12 peak_z=-4.4061673647776996e-05 geometric_distance_lower=4.4061668983535489e-05 checkBody_issues=0

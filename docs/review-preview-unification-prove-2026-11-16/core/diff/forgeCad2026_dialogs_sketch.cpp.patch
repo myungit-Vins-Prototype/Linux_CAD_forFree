@@ -1,0 +1,53 @@
+--- forgeCad2026_dialogs_sketch.cpp
++++ stage/forgeCad2026_dialogs_sketch.cpp
+@@ -396,16 +396,18 @@
+         for (int k = 0; k < r.size(); ++k)
+             if (d.refs.at(k).kind >= 0 && !(ForgeCad::geometryRefRoles(d.refs.at(k), viewport->sketches()) & r.at(k))) d.refs[k] = GeometryRef();
+     };
+-    viewport->setReferencePickCallback([&](bool picked, GeometryRef ref) {
+-        if (picked && active >= 0 && active < d.refs.size()) {
+-            d.refs[active] = ref;
+-            active = -1;
+-            pickMissing();
+-        } else {
+-            active = -1;
+-            refresh();
+-        }
+-    });
++    const auto installPicker = [&] {
++        viewport->setReferencePickCallback([&](bool picked, GeometryRef ref) {
++            if (picked && active >= 0 && active < d.refs.size()) {
++                d.refs[active] = ref;
++                active = -1;
++                pickMissing();
++            } else {
++                active = -1;
++                refresh();
++            }
++        });
++    };
+     for (int k = 0; k < 3; ++k) {
+         QObject::connect(refButtons.at(k), &QPushButton::clicked, &dialog, [&, k] { pick(k); });
+         QObject::connect(clearButtons.at(k), &QToolButton::clicked, &dialog, [&, k] {
+@@ -435,17 +437,11 @@
+         if (error.isEmpty()) dialog.accept();
+         else setStatus(error, true);
+     });
+-    fitRefs();
+-    bool accepted = false;
+-    {
+-        const WindowLock lock(window, viewport, &dialog);
+-        dialog.show();
++    const bool accepted = runModeless(window, viewport, dialog, [&] {
++        installPicker();
++        fitRefs();
+         pickMissing();
+-        QEventLoop loop;
+-        QObject::connect(&dialog, &QDialog::finished, &loop, &QEventLoop::quit);
+-        loop.exec();
+-        accepted = dialog.result() == QDialog::Accepted;
+-    }
++    });
+     viewport->cancelReferencePick();
+     viewport->setReferencePickCallback(nullptr);
+     viewport->clearDatumPreview();

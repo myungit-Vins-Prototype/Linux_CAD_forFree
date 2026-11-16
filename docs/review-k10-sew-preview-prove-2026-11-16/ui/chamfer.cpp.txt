@@ -1,0 +1,22 @@
+#include "forgeCad2026_dialogs.h"
+#include "cad_topology_ref.h"
+#include "fk_topology.h"
+#include "fk_curve.h"
+#include <QApplication>
+#include <QTimer>
+#include <QPlainTextEdit>
+#include <QSettings>
+#include <QTemporaryDir>
+#include <iostream>
+class ViewportInteractionTest {
+public: static int probe(){
+ QMainWindow owner;CadViewport v;DocumentState doc;ExtrusionObject b;b.feature=BodyFeature::Primitive;b.name="Box";b.primitive.size[0]=10;b.primitive.size[1]=8;b.primitive.size[2]=6;doc.extrusions={b};v.loadDocument(doc);auto shape=v.extrusions()[0].forgeBody;auto edge=shape->edges().front();auto range=shape->edge(edge).range;auto point=shape->edge(edge).curve->point((range.lo+range.hi)*.5);auto ref=ForgeCad::edgeReference(*shape,edge,point);
+ QTimer poll,watch;poll.setInterval(10);watch.setSingleShot(true);bool reproduced=false;int completed=0;QString error;QDoubleSpinBox *spin=nullptr;QPlainTextEdit *label=nullptr;QString beforeKey;quint64 beforeGeneration=0;
+ auto close=[&]{for(auto*d:owner.findChildren<QDialog*>())d->reject();};
+ QObject::connect(&watch,&QTimer::timeout,&owner,[&]{error=v.preview_.error;auto *buttons=owner.findChild<QDialogButtonBox*>();buttons->button(QDialogButtonBox::Ok)->click();});
+ QObject::connect(&poll,&QTimer::timeout,&owner,[&]{if(!v.preview_.valid)return;poll.stop();auto boxes=owner.findChildren<QDoubleSpinBox*>();spin=boxes.value(0);label=owner.findChild<QPlainTextEdit*>("functionPreviewMessage");if(!spin||!label){close();return;}auto *edit=spin->findChild<QLineEdit*>();if(!edit){close();return;}QObject::connect(spin,&QDoubleSpinBox::editingFinished,&owner,[&]{completed++;});beforeKey=v.preview_.key;beforeGeneration=v.preview_.generation;spin->setFocus();QKeyEvent select(QEvent::KeyPress,Qt::Key_A,Qt::ControlModifier);QApplication::sendEvent(spin,&select);
+ for(QChar c:QStringLiteral("1.25")){QKeyEvent press(QEvent::KeyPress,c.unicode(),Qt::NoModifier,QString(c));QApplication::sendEvent(spin,&press);QKeyEvent release(QEvent::KeyRelease,c.unicode(),Qt::NoModifier,QString(c));QApplication::sendEvent(spin,&release);}QKeyEvent tab(QEvent::KeyPress,Qt::Key_Tab,Qt::NoModifier);QApplication::sendEvent(spin,&tab);
+ QTimer::singleShot(250,&owner,[&]{std::cout<<"CHAMFER ui="<<spin->value()<<" preview="<<v.preview_.definition.blendSize<<" valid="<<v.preview_.valid<<" same_key="<<(v.preview_.key==beforeKey)<<" same_generation="<<(v.preview_.generation==beforeGeneration)<<" editing_finished="<<completed<<" label="<<label->toPlainText().toStdString()<<std::endl;reproduced=spin->value()==1.25&&v.preview_.definition.blendSize==.5&&v.preview_.valid&&beforeKey==v.preview_.key&&completed>0;auto *buttons=owner.findChild<QDialogButtonBox*>();buttons->button(QDialogButtonBox::Ok)->click();});
+ });watch.start(12000);poll.start();blendDialog(&owner,&v,"Chamfer audit",0,-1,{ref},.5,true,false,{},[&](int base,const auto&edges,double size,bool chamfer,const auto&spec){auto previous=v.preview_.geometry;auto result=v.createBlend(base,edges,size,chamfer,"Committed",spec);std::cout<<"COMMIT error="<<result.toStdString()<<" count="<<v.extrusions().size()<<" size="<<v.extrusions().back().blendSize<<" geometry_same_old="<<(previous==v.extrusions().back().forgeBody)<<std::endl;return result;},false);watch.stop();poll.stop();std::cout<<"RESULT reproduced="<<reproduced<<" error="<<error.toStdString()<<std::endl;return reproduced?0:1;
+ }};
+int main(int argc,char**argv){QApplication app(argc,argv);QTemporaryDir t;QSettings::setDefaultFormat(QSettings::IniFormat);QSettings::setPath(QSettings::IniFormat,QSettings::UserScope,t.path());return ViewportInteractionTest::probe();}

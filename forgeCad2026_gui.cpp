@@ -316,6 +316,7 @@ struct PdfWindow::WindowSetup {
     QAction * rectangleTool{};
     QAction * centerRectangleTool{};
     QAction * ellipseTool{};
+    QAction * ellipseExtremesTool{};
     QAction * constructionTool{};
     QAction * polygonSidesAction{};
     QAction * trimTool{};
@@ -2812,6 +2813,7 @@ void PdfWindow::initializeSketchCommands(WindowSetup &setup) {
     auto &rectangleTool = setup.rectangleTool;
     auto &centerRectangleTool = setup.centerRectangleTool;
     auto &ellipseTool = setup.ellipseTool;
+    auto &ellipseExtremesTool = setup.ellipseExtremesTool;
     auto &constructionTool = setup.constructionTool;
     auto &polygonSidesAction = setup.polygonSidesAction;
     auto &trimTool = setup.trimTool;
@@ -2914,6 +2916,9 @@ void PdfWindow::initializeSketchCommands(WindowSetup &setup) {
     centerRectangleTool->setToolTip(QStringLiteral("Rettangolo: centro e un angolo (Maiusc: quadrato)"));
     ellipseTool = addTool(QStringLiteral("Ellisse"), DrawingTool::Ellipse, false);
     ellipseTool->setToolTip(QStringLiteral("Ellisse: centro, estremo del primo semiasse, punto per il secondo semiasse"));
+    ellipseExtremesTool = addTool(QStringLiteral("Ellisse per estremi"), DrawingTool::EllipseExtremes, false);
+    ellipseExtremesTool->setToolTip(QStringLiteral("Ellisse per estremi: due estremi opposti del primo asse, poi un estremo del secondo asse. "
+                                                  "Quattro estremi quotabili e vincolabili; centro derivato automaticamente"));
     constructionTool = addTool(QStringLiteral("Linea di costruzione"), DrawingTool::ConstructionLine, false);
     polygonSidesAction = toolMenu->addAction(QStringLiteral("Numero lati poligono..."));
     auto *editToolMenu = addCadMenu(sketchMenu, QStringLiteral("Modifica entita'"));
@@ -3407,6 +3412,7 @@ void PdfWindow::initializeToolbarsAndStatus(WindowSetup &setup) {
     auto &rectangleTool = setup.rectangleTool;
     auto &centerRectangleTool = setup.centerRectangleTool;
     auto &ellipseTool = setup.ellipseTool;
+    auto &ellipseExtremesTool = setup.ellipseExtremesTool;
     auto &constructionTool = setup.constructionTool;
     auto &polygonSidesAction = setup.polygonSidesAction;
     auto &trimTool = setup.trimTool;
@@ -3469,7 +3475,7 @@ void PdfWindow::initializeToolbarsAndStatus(WindowSetup &setup) {
         {constructionTool, QStringLiteral("constructionLine")}, {splineTool, QStringLiteral("spline")}, {nurbsTool, QStringLiteral("nurbs")},
         {circleTool, QStringLiteral("circle")}, {threePointCircleTool, QStringLiteral("circleThreePoint")}, {arcTool, QStringLiteral("arcCenter")}, {threePointArcTool, QStringLiteral("arcThreePoint")},
         {tangentArcTool, QStringLiteral("arcTangent")}, {polygonTool, QStringLiteral("polygon")}, {polygonSidesAction, QStringLiteral("polygonSides")},
-        {slotTool, QStringLiteral("slot")}, {pointTool, QStringLiteral("point")}, {rectangleTool, QStringLiteral("rectangle")}, {centerRectangleTool, QStringLiteral("centerRectangle")}, {ellipseTool, QStringLiteral("ellipse")},
+        {slotTool, QStringLiteral("slot")}, {pointTool, QStringLiteral("point")}, {rectangleTool, QStringLiteral("rectangle")}, {centerRectangleTool, QStringLiteral("centerRectangle")}, {ellipseTool, QStringLiteral("ellipse")}, {ellipseExtremesTool, QStringLiteral("ellipseExtremes")},
         {trimTool, QStringLiteral("trim")}, {extendTool, QStringLiteral("extend")}, {splitTool, QStringLiteral("split")},
         {sketchFilletTool, QStringLiteral("sketchFillet")}, {sketchChamferTool, QStringLiteral("sketchChamfer")},
         {toggleConstruction, QStringLiteral("toggleConstruction")}, {symmetryAxisAction, QStringLiteral("symmetryAxis")}, {constraintsAction, QStringLiteral("constraints")},
@@ -3718,6 +3724,7 @@ void PdfWindow::initializeToolbarsAndStatus(WindowSetup &setup) {
     flyout(drawingToolbar, {arcTool, threePointArcTool, tangentArcTool}, QStringLiteral("Archi: la freccia per gli altri"));
     flyout(drawingToolbar, {polygonTool, polygonSidesAction}, QStringLiteral("Poligono: la freccia per il numero di lati"));
     drawingToolbar->addAction(ellipseTool);
+    drawingToolbar->addAction(ellipseExtremesTool);
     flyout(drawingToolbar, {splineTool, nurbsTool}, QStringLiteral("Curve: la freccia per le altre"));
     drawingToolbar->addSeparator();
     flyout(drawingToolbar, {trimTool, extendTool, splitTool}, QStringLiteral("Taglia, estendi, spezza: la freccia per gli altri"));
@@ -3959,7 +3966,6 @@ void PdfWindow::initializeToolbarsAndStatus(WindowSetup &setup) {
     });revisionTimer->start();
     documentRevisionDock_->setVisible(QSettings().value("revisions/modelPanelVisible",true).toBool());
     refreshDocumentEditAccess();updateWindowTitle();
-    setTheme(QApplication::palette().color(QPalette::Window).lightness() < 128);
     connect(recovery_,&ForgeCad::DocumentRecovery::checkpointFinished,this,[this](quint64,bool,const QString &error){
         if(!error.isEmpty())statusBar()->showMessage(QStringLiteral("Backup automatico non riuscito: %1").arg(error),12000);
     });
@@ -4030,8 +4036,7 @@ void PdfWindow::initializeToolbarsAndStatus(WindowSetup &setup) {
 bool PdfWindow::event(QEvent *event) {
     const bool handled = QMainWindow::event(event);
     if (event->type() == QEvent::WindowActivate&&viewport_&&documentRevisionStatus_) {refreshDocumentEditAccess();updateWindowTitle();}
-    if (event->type() == QEvent::ApplicationPaletteChange) {
-        setTheme(QApplication::palette().color(QPalette::Window).lightness() < 128);
+    if (event->type() == QEvent::PaletteChange || event->type() == QEvent::ApplicationPaletteChange) {
         // Le icone vettoriali leggono la palette corrente al ridisegno.
         for (auto *bar : findChildren<QToolBar *>()) bar->update();
     }
@@ -5330,42 +5335,4 @@ void PdfWindow::editBackground() {
 
 void PdfWindow::setDisplayMode(int mode) {
     modeStatus_->setText(mode == 0 ? QStringLiteral("Solo linee esterne") : mode == 1 ? QStringLiteral("Mesh") : QStringLiteral("Mesh + linee esterne"));
-}
-
-void PdfWindow::setTheme(bool dark) {
-    auto *application = qobject_cast<QApplication *>(QCoreApplication::instance());
-    if (!application) return;
-    const QString sheet = dark ? QStringLiteral("QMainWindow { background: #111820; color: #d8e4ea; }QMenuBar,QToolBar,QStatusBar { background: #1b2730; color: #d8e4ea; }QMenu { background: #202d36; color: #d8e4ea; }"
-        "QToolBar { spacing: 1px; padding: 2px 4px; border: none; }"
-        "QToolBar::separator { background: #34444f; width: 1px; margin: 5px 3px; }"
-        "QToolBar QToolButton { border: 1px solid transparent; border-radius: 4px; padding: 2px; }"
-        "QToolBar QToolButton:checked { background: #24495f; border-color: #4f9fd0; }"
-        "QToolButton:enabled:hover, QToolBar QToolButton:enabled:hover { background: #365d78; border-color: #80c8f0; color: #ffffff; }"
-        "QToolButton:enabled:pressed, QToolBar QToolButton:enabled:pressed { background: #1f4258; border-color: #80c8f0; }"
-        "QToolBar QToolButton[popupMode=\"1\"] { padding-right: 11px; }"
-        "QToolBar QToolButton::menu-button { border: none; width: 10px; }"
-        "QToolButton::menu-button:enabled:hover { background: #5089ad; }"
-        "QToolButton::menu-button:enabled:pressed { background: #1f4258; }"
-        "QPushButton:enabled:hover { background: #365d78; border-color: #80c8f0; color: #ffffff; }"
-        "QPushButton:enabled:pressed { background: #1f4258; border-color: #80c8f0; }"
-        "QMenuBar::item:selected:enabled { background: #365d78; border-color: #80c8f0; color: #ffffff; }"
-        "QMenuBar::item:pressed:enabled { background: #1f4258; border-color: #80c8f0; color: #ffffff; }"
-        "QMenu::item:selected:enabled { background: #365d78; border-color: #80c8f0; color: #ffffff; }"
-        "QMenu::item:disabled { color: #788995; }") : QStringLiteral(
-        "QMainWindow { background: palette(window); color: palette(window-text); }"
-        "QMenuBar,QToolBar,QStatusBar,QMenu { background: palette(window); color: palette(window-text); }"
-        "QToolBar { spacing: 1px; padding: 2px 4px; border: none; }"
-        "QToolBar::separator { background: #c3cbd2; width: 1px; margin: 5px 3px; }"
-        "QToolBar QToolButton { background: transparent; border: 1px solid transparent; border-radius: 4px; padding: 2px; }"
-        "QToolBar QToolButton:checked { background: #d6eafb; border-color: #659dca; }"
-        "QToolButton:enabled:hover, QToolBar QToolButton:enabled:hover { background: #e2eff9; border-color: #659dca; }"
-        "QToolButton:enabled:pressed, QToolBar QToolButton:enabled:pressed { background: #c1dcf1; border-color: #427fab; }"
-        "QToolBar QToolButton[popupMode=\"1\"] { padding-right: 11px; }"
-        "QToolBar QToolButton::menu-button { border: none; width: 10px; }"
-        "QToolButton::menu-button:enabled:hover { background: #c1dcf1; }"
-        "QToolButton::menu-button:enabled:pressed { background: #a9cee9; }"
-        "QMenuBar::item:selected:enabled,QMenu::item:selected:enabled { background: #d6eafb; color: palette(window-text); }"
-        "QMenuBar::item:pressed:enabled { background: #c1dcf1; }"
-        "QMenu::item:disabled { color: palette(disabled, window-text); }");
-    if (application->styleSheet() != sheet) application->setStyleSheet(sheet);
 }

@@ -1,0 +1,12 @@
+{
+  "object": "fk_nurbs_join.cpp.o",
+  "source_unchanged": true,
+  "stripped_objects_byte_identical": true,
+  "stripped_sha256": "a71d687530317789abf94dd21db8f360d3e616a21a165e3c1b487e728c992474",
+  "reason": "Includes modified section_curve header; only debug information differs",
+  "commands": [
+    "ar p baseline/libforgekernel.a fk_nurbs_join.cpp.o",
+    "objcopy --strip-debug before.o before-stripped.o",
+    "objcopy --strip-debug after.o after-stripped.o"
+  ]
+}

@@ -1,0 +1,23 @@
+#ifndef FORGECAD_FK_SWEEP_MAP_H
+#define FORGECAD_FK_SWEEP_MAP_H
+#include "fk_hermite.h"
+#include "fk_profile.h"
+#include "fk_sweep_validation.h"
+namespace ForgeCad::Kernel::detail {
+// Adattatore della mappa di riferimento dello sweep. Non certifica il
+// trasferimento al BRep: fit indipendenti e connessioni tolleranti richiedono
+// un controllo delle perturbazioni C1 aggiuntivo.
+std::vector<Vec2> sweepProfileHull(const std::vector<ProfileSegment> &pieces);
+void appendSweepTranslation(std::vector<SweepValidationSlab> &map,
+    const Frame3 &profile, const Transform3 &start, const Vec3 &displacement);
+void appendSweepRotation(std::vector<SweepValidationSlab> &map,
+    const Frame3 &profile, const Transform3 &start, const Vec3 &center,
+    const Vec3 &axis, double angle);
+void appendSweepQuintic(std::vector<SweepValidationSlab> &map,
+    const RowSpline &fit, int centerRow, int xRow, int yRow);
+// Canonicalizza solo confini genealogicamente consecutivi. Il budget e'
+// fissato dal chiamante prima della costruzione, mai inferito dallo scarto.
+void joinSweepMap(std::vector<SweepValidationSlab> &map, bool closed,
+    double positionBudget, double directionBudget);
+}
+#endif

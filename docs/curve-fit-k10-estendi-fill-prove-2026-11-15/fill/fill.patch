@@ -1,0 +1,42 @@
+--- a/kernel/fk_fill.cpp
++++ b/kernel/fk_fill.cpp
+@@ -13,6 +13,7 @@
+ #include "fk_bspline_basis.h"
+ #include "fk_bspline_surface.h"
+ #include "fk_curve_algo.h"
++#include "fk_curve_projection.h"
+ #include "fk_exchange.h"
+ #include "fk_offset.h"
+ #include "fk_pcurve.h"
+@@ -1112,15 +1113,22 @@
+         // SP-curve: la proiezione della curva sul piano dei parametri, nello
+         // stesso parametro (i campioni sono stati presi cosi'). Proiettare i
+         // punti sulla superficie potrebbe trovare la parte prolungata oltre il bordo.
+-        std::vector<double> breaks = piece.curve->breakpoints(piece.range);
+-        breaks.erase(std::remove_if(breaks.begin(), breaks.end(), [&](double t) { return t <= piece.range.lo || t >= piece.range.hi; }), breaks.end());
+-        const auto planar = fitCurve([&](double t) {
+-            const Vec2 q = project(piece.curve->point(t));
+-            return Vec3(q.x(), q.y(), 0.0);
+-        }, piece.range, breaks, 1e-10 * scale);
+-        std::vector<Vec2> poles2;
+-        for (const Vec3 &pole : planar->poles()) poles2.emplace_back(pole.x(), pole.y());
+-        const auto pcurve = std::make_shared<BSplineCurve<2>>(planar->degree(), planar->knots(), std::move(poles2));
++        auto pcurve = projectCurveAffine(piece.curve, piece.range, frame);
++        if (!pcurve) {
++            // Angular conics and unknown procedural curves retain the legacy
++            // sampled fit; a conic-to-NURBS conversion changes the parameter.
++            std::vector<double> breaks = piece.curve->breakpoints(piece.range);
++            breaks.erase(std::remove_if(breaks.begin(), breaks.end(), [&](double t) {
++                return t <= piece.range.lo || t >= piece.range.hi;
++            }), breaks.end());
++            const auto planar = fitCurve([&](double t) {
++                const Vec2 q = project(piece.curve->point(t));
++                return Vec3(q.x(), q.y(), 0.0);
++            }, piece.range, breaks, 1e-10 * scale);
++            std::vector<Vec2> poles2;
++            for (const Vec3 &pole : planar->poles()) poles2.emplace_back(pole.x(), pole.y());
++            pcurve = std::make_shared<BSplineCurve<2>>(planar->degree(), planar->knots(), std::move(poles2));
++        }
+         const double gap = pcurveDeviation(*surface, *piece.curve, *pcurve, piece.range);
+         fins.push_back(detail::RawFin(int(model.edges.size()), piece.forward, pcurve, std::max(gap, 1e-12)));
+         model.edges.push_back(edge);

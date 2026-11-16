@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# Comandi effettivamente eseguiti sul freeze finale; percorsi storici.
+cd /home/myungit/Linux_CAD_forFree
+c++ -std=c++17 -O2 -ffp-contract=off -fno-fast-math -Wall -Wextra -Wpedantic -DHAVE_PLANE_SEW_PROVIDER -I /tmp/k10-sew-review/core -I kernel /tmp/k10-sew-review/tests/test_sew_pcurve_validation.cpp /tmp/k10-sew-review/core/fk_offset.o /tmp/k10-sew-review/core/fk_exchange.o /tmp/k10-sew-review/core/fk_sew.o /tmp/k10-sew-review/tests/baseline-libforgekernel.a -o /tmp/k10-sew-review/tests/test_sew_pcurve_stage_final
+/tmp/k10-sew-review/tests/test_sew_pcurve_stage_final /tmp/k10-sew-review/tests/stage-final-export > /tmp/k10-sew-review/tests/stage-final-validation.log 2>&1

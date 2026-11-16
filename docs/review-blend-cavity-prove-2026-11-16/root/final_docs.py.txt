@@ -1,0 +1,91 @@
+from pathlib import Path
+import json,hashlib,re
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/blend-cavity-review/root');P=R/'docs/review-blend-cavity-prove-2026-11-16'
+load=lambda f:json.loads((T/f).read_text());sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+build=load('build-result.json');ctest=load('ctest-result.json');arch=load('architecture-audit.json');geometry=load('release-geometry-audit.json');startup=load('app-startup-result.json');fraction=load('fraction-separation-result.json')
+assert build['exit']==ctest['exit']==0 and geometry['passed']==8 and startup['alive']
+tests=Path('/tmp/blend-cavity-review/tests/delivery');assert (tests/'README.txt').is_file() or (tests/'README.md').is_file()
+for label,count in [('blend',62),('helix',5),('fill',25)]:
+    assert load(label+'-result.json')['exit']==0
+    assert f'{count}/{count} test superati' in (T/(label+'.log')).read_text()
+san=json.loads(Path('/tmp/blend-cavity-review/tests/sanitizer-run-final.json').read_text())
+assert 'detect_leaks=1' in san['ASAN_OPTIONS'] and san['LSAN_OPTIONS'] is None
+assert len(san['runs'])==2 and all(v['exit']==0 for v in san['runs'].values())
+assert '6/6 test superati' in Path('/tmp/blend-cavity-review/tests/sanitizer-regressions-final.log').read_text()
+for label in ['probe','regressions']:
+    log=Path('/tmp/blend-cavity-review/tests/sanitizer-'+label+'-final.log').read_text()
+    assert not re.search(r'ERROR: (AddressSanitizer|LeakSanitizer)|runtime error:',log)
+assert all(v['byte_identical'] for v in geometry['stage_comparison'].values())
+fin=geometry['fin_audits'];intervals=sum(v['native_common_intervals'] for v in fin.values());samples=sum(v['samples'] for v in fin.values());fins=sum(v['fins'] for v in fin.values())
+assert len(fin)==7 and all(v['over_original_check_budget']==v['bad_endpoints']==v['missing']==0 for v in fin.values())
+mem=R/'CLAUDE.md';s=mem.read_text();start=s.index('**16/11 — K12 cavità raccordata');end=s.index('\n**16/11 — K10 Helix',start)
+s=s[:start]+f'''**16/11 — K12 cavità corretto con tre agenti Sol.**
+R0,5:quarto vincolo efit minimo verificati,continuazioneU sugli stessi
+supporti/endpoint,budget invariati;looplimitati/cancellabili. App completa e
+Wayland,{ctest['actual_passed']}CTest,8varianti/6regressioni,sanitizer4TU PASS.
+Fraction prova vecchiopunto>10edgeTol;audit{fins}fin/{intervals}campate campionato PASS.
+30rilievi corretti;K10resta19/24parziali+5aperti,fitimpliciticampionati.
+[Rapporto/prove/limiti](docs/review-blend-cavity-2026-11-16.md).
+''' +s[end:]
+assert len(s.encode())<=16384 and len(re.findall(r'^\*\*',s,re.M))<=10;mem.write_text(s)
+p=R/'docs/code-review-2026-11-15.md';s=p.read_text();start=s.index('**Stato più recente');end=s.index('\n\n**Aggiornamento successivo',start)
+s=s[:start]+f'''**Stato più recente, 16 novembre:** **30 rilievi confermati corretti complessivamente**. [K12, raccordo cavità](review-blend-cavity-2026-11-16.md): raggio0,5mm corretto nei due ordini,con semi diversi,posa e scala. Il costruttore accettava una campata minima con errore noto oltre budget e ometteva il quarto vincolo;ora rifiuta quel tentativo e continua lungoU sugli stessi supporti,con endpoint e tolleranze conservati. App completa,avvio isolatoWayland,{ctest['actual_passed']}/{ctest['actual_passed']}CTest,8varianti e6regressioni PASS;sanitizer mirati4TU e audit{fins}fin/{intervals}campate PASS. La prova Fraction sul vecchio punto contro l'intero carrier conferma uno scarto oltre10edgeTol. Mappa{arch['files']}/{arch['edges']}/{arch['units']} verificata. **K10 resta aperto:19/24siti iniziali parzialmente trattati,5interamente da migrare**,oltre ai fallback;le intersezioni implicite qui restano campionate. [Helix e cinque orfane](review-k10-helix-orphans-2026-11-16.md) conservate,17API pubbliche ancora da valutare. Precedenti [cucitura/PRE8](review-k10-sew-preview-2026-11-16.md),[UV/PRE7](review-k10-uv-preview-2026-11-16.md),[K11 Supporto.prt](supporto-booleana-2026-11-16.md),[PRE5/PRE6/UI2](review-preview-unification-2026-11-16.md) conservati;K2 in produzione ed [ellisse per estremi](ellisse-estremi-2026-11-16.md) completata. Uniformazione globale UI ancora aperta. I conteggi storici successivi descrivono le rispettive consegne precedenti.''' + s[end:];p.write_text(s)
+report=f'''# K12/P2 — raccordo della cavità corretto, 16 novembre 2026
+
+**Implementato e verificato con tre agenti GPT-6.1 Sol.** Il raccordo dell'intero bordo della cavità a raggio0,5mm ora riesce,anche cambiando ordine,seme,posa rigida e scala. Restano validi i raggi1,1/1,675mm e il rifiuto specifico del2,1mm che consuma o inverte la facciaF5. App completa ricompilata e avviata con profilo Wayland isolato. Totale30rilievi corretti;questa è una correzione distinta dalla migrazione generale K10,il cui conteggio resta19/24parziali+5interamenteaperti.
+
+## Causa e correzione
+
+Il precedente test `BlendCavityWholeRimKeepsRadiusHistoryAndClosedTrims` falliva sul kernel precedente e su quello della fase Helix:7/8test,nessun test indebolito. Cinque varianti equivalenti dello0,5mm fallivano;due controlli positivi e il consumo2,1mm passavano.
+
+`traceBetween` costruiva una curva di chiusura seguendo il parametroV della pezza. La curva reale torna indietro inV,quindi tale parametrizzazione non è valida sull'intera connessione. Il risolutore finale controllava la coincidenza sui due supporti ma ometteva il quarto vincolo,che definisce la sezione del tracciamento. Il raffinamento accettava inoltre un tratto parametrico sotto1e-9 anche con errore noto0,272740619754mm contro budget3,974664670e-9mm. Nell'ultimo span9,3e-10 erano compressi circa0,323mm di movimento geometrico. L'errore non entrava nello scarto pubblicato.
+
+Ora la coordinata fissata resta esatta nei passi Newton e il controllo finale richiede entrambi i residui,con soglie e unità originarie. Una campata minima fuori budget viene rifiutata. Il tentativo alternativo usaU originale sugli stessi supporti S/T,senza trasposizione,nuovo fit di carrier o riaggancio per prossimità. Gli estremi originali restano immutati:quattro misure diagnostiche con displacement0 e massimo scartoS/T1,017e-11mm,entro il budget di fit. I minimiV misurati sono0,997869001 e0,997694486,più bassi dei punti iniziali0,999768269/0,999748677;massimo1. Il filtro del dominio intrinseco[0,1] riusa quello della kappa. Il controllo `Cut.sV` riguarda i nodi,non certifica assenza di altri estremi fra essi.
+
+Controlli di finitezza precedono le aggregazioni dei residui. Limite cumulativo200000passi di continuazione,midpoint distinti e avanzamento verso il target impediscono iterazioni senza progresso;punti di cancellazione nei cicli Newton,continuazione e raffinamento. Il limite conta passi,non garantisce un tempo globale. `OperationCancelled` attraversa i fallback senza essere convertita in errore geometrico. Le curve sono assegnate al modello soltanto dopo la riuscita.
+
+File di produzione modificato:`kernel/fk_blend_surface.cpp`. Nuovo `kernel/tests/test_blend_cavity_regressions.cpp`,targetCTest separato da90s in `kernel/CMakeLists.txt`;catalogo aggiornato in `tools/generate_architecture.py`. Nessuna API pubblica,formato persistito o costante di precisione cambiata. Baseline iniziale3890file congelata;grafo consultato prima delle modifiche,1195archi incidenti esaminati.
+
+## Verifiche effettive
+
+| Verifica | Esito |
+| --- | --- |
+| Build completa app e runner | PASS,{build['seconds']:.2f}s;hash app `{startup['binary_sha256']}` |
+| CTest selezionati | {ctest['actual_passed']}/{ctest['actual_passed']}PASS,compresa la stessa batteria della fase precedente che esponeva il fallimento;{ctest['seconds']:.2f}s |
+| Test cavità esistenti | 8/8PASS sul candidato e nel runner integrato |
+| Nuove regressioni permanenti | 6/6PASS:ordine,seme,posa,scala,cancellazione e consumo specifico;baseline4geometricheFAIL+2controlliPASS |
+| Varianti pubbliche su kernel Release integrato | 8/8PASS,18facce e10facce raccordo generate,storia dichiarata,raggio1e-7,loop/checkBody,codec,SP-curve e triangolazione |
+| Curve e SP-curve effettive finali | 7corpi,{fins}fin,{intervals}intervalli comuni dei nodi,{samples}valutazioni;0scartiPC o endpoint oltre il budget originale |
+| Cancellazione privata dentro continuazione | 3/3PASS:token iniziale,armato alla quinta evaluate(order1),recupero;fonte finale inclusa nel probe |
+| ASan/UBSan/LSan | PASS con leak detection attiva,nessuna soppressione;4unità strumentate,resto kernel Release |
+| Runner kernel generale | Blend62/62,Helix5/5,Fill25/25PASS;alcuni scenari coincidono conCTest,non sommati come casi indipendenti |
+| App effettiva | Avvio Wayland isolato5secondi,percorso `/proc/.../exe` e launcher controllati;nessun CAD aperto o processo utente toccato |
+| Architettura | {arch['files']}file/{arch['edges']}relazioni/{arch['units']}TU;check,hash sorgenti/compileDB,HTML e archi nei due versi PASS |
+
+Il raggio analitico è controllato a1e-7mm:non è un'affermazione di precisione globale1e-7 delB-rep. La fixture e i raccordi più grandi portano già tolleranze locali più ampie;usiamo esattamente i budget `checkBody`,senza aumentarli per accettare il nuovo caso. Le verifiche native dei nodi aggiungono copertura ma restano campionate. Il controllo1,1mm è byte-identico alla baseline;il1,675mm conserva i contratti numerici,ma ha una serializzazione diversa e non viene dichiarato byte-identico. I7outputRelease sono byte-identici agli snapshot del candidato,con hash separati nei log.
+
+I due nuovi test negativi inizialmente presumevano che il parametro di OUTPUT `history` conservasse una sentinella dopo eccezione. Il wrapper lo svuota esplicitamente all'ingresso,da prima della correzione. L'assunzione del test è stata corretta:output vuoto,nessuna storia parziale,input immutato e cancellazione/consumo specifici. Nessuna modifica a `fk_blend.cpp`,nessun ulteriore bug conteggiato. Fonti e log iniziali distinti sono conservati.
+
+## Prova indipendente della causa
+
+Nel vecchio intermedio un punto di edge3,alla fin3/F0,ha residuo numerico2,019223322e-5mm contro edgeTol3,811894136e-7mm. Le ricerche del proiettore più profonde e il tracciamento degli iterati non mostrano un falso rifiuto.
+
+La verifica indipendente Python `Fraction` parte dai coefficienti IEEE originali letti dalla B-rep intermedia congelata:valuta il punto con deBoor razionale,esegue586inserzioni esatte dei nodiV ed esamina tutte602celle Bézier razionali del carrierF0. Pesi positivi permettono bounds convex-hull;box e piani di supporto con direzione razionale arbitraria forniscono lowerbound validi,senza assumere ottima la proiezione.618visite/610foglie/profondità8 provano su TUTTO il carrier uno scarto almeno{fraction['global_lower_bound_display_mm']:.12g}mm,oltre10volte il budgetedge. La sensibilità con un punto realmente sullo spigolo della superficie blocca correttamente la separazione. L'auditor ha controllato indipendentemente schema/positività/nodi e punto deBoor,oltre all'analisi matematica.
+
+È una prova su quel singolo punto contro il carrier intero congelato,non su ogni punto della curva corretta né sul produttore prima della serializzazione. Non sostituisce una certificazione continua delle intersezioni implicite.
+
+## Prove conservate e limiti
+
+[Archivio verificabile](review-blend-cavity-prove-2026-11-16/) con fonti `.txt`,patch,baseline,manifest,comandi,log,hash,mappa e verificatore Fraction;[memoria precedente completa](history/claude-prima-blend-cavity-2026-11-16.md). I programmi originaliCAD,binari e archivi oggetto non sono copiati nel pacchetto. I sette sigilli delle fasi precedenti sono verificati e conservati.
+
+K10 continua a richiedere migrazione dei cinque siti iniziali ancora aperti e dei fallback campionati. Restano inoltre `Superfici.prt` trasformato,17API pubbliche senza usi interni e uniformazione globale dei pannelli/anteprime. Nessuna certificazione globale di assenza di leak,auto-intersezioni o regressioni in tutte le configurazioni;sanitizer parziali. AvvioWayland non è una verifica dei pixelOpenGL;macOS/Windows non ricertificati. Riaprire l'app per usare il binario aggiornato.
+'''
+(R/'docs/review-blend-cavity-2026-11-16.md').write_text(report)
+(P/'README.md').write_text('''# Prove K12 — raccordo cavità
+
+Consegna verificata: [rapporto](../review-blend-cavity-2026-11-16.md). `SHA256SUMS` sigilla tutti gli artefatti di questo archivio. `root/` contiene baseline3890file,hash,mappa prima/dopo,patch,build/CTest,verifiche Release e Fraction;`core/` il modulo corretto congelato e i probe;`tests/` baseline/regressioni/sanitizer;`independent/` diagnosi del proiettore e audit critico del candidato.
+
+Le fonti di prova sono `.cpp.txt`/`.py.txt` e i CMake snapshot `.txt.txt`,fuori dai target. I manifest interni vengono adeguati ai nomi archivio;gli originali restano `SHA256SUMS.original.txt` quando occorre. CAD `.body`/`.prt`,oggetti e binari esclusi;hash e coefficienti IEEE per la prova matematica inclusi. Distinguere risultati eseguiti da ogni agente,verifiche root,analisi statica e limiti campionati:non è una certificazione globale del kernel o di assenza di leak.
+''')
+launchers={str(p):{'sha256':sha(p),'exec':[l for l in p.read_text().splitlines() if l.startswith('Exec=')]} for p in Path('/home/myungit/.local/share/applications').glob('forgecad*.desktop')};assert launchers and all(any(str(R/'forgecad-release/forgecad') in e for e in v['exec']) for v in launchers.values());(T/'app-launchers.json').write_text(json.dumps(launchers,indent=2)+'\n')
+print('Final report/memory/ledger updated; memory',len(mem.read_bytes()),flush=True)

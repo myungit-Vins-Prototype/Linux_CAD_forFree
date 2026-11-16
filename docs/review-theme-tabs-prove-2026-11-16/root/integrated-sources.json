@@ -1,0 +1,11 @@
+{
+  "forgeCad2026_application_theme.cpp": "618b68b483952fac10852632b20f735fedb8e41b7dae1dfd06f676cee59582cc",
+  "forgeCad2026_gui.cpp": "4b23e22c0811d6ed33ccc96aa6ca215620b115ad2a0cb9b882b5a267cfefaf76",
+  "forgeCad2026_gui.h": "3176ac69ee884f6ee286157c95608284412bc2871d76414bf9a43d779a7b05fd",
+  "cad_drawing_window.cpp": "e860794266cf804e6f6e90428998b74171b0e7166819f66d6523ee00f1067726",
+  "tests/test_viewport.cpp": "3398c62d95ead99c6498166f46fba7021193066b6ae66c88686895a81342a132",
+  "tests/test_document_theme_tabs.h": "5ee295338bd353e9333a6331c44f6a0b285ffbea3f550da743375f73eb2a4da6",
+  "tests/test_application_theme.cpp": "c0d73a0f6e9e8510a5e64ae0b692839b5a1bf781235965a212450d5801a39271",
+  "CMakeLists.txt": "2e70b6efa2f03ef2643493a70fd7d544eb25cb481b339289746daa9691c3abfe",
+  "tools/generate_architecture.py": "68ef602b6d5a4c57a127ef488ef385b7ed59cc97f274ebf270c7e5330978eb7f"
+}

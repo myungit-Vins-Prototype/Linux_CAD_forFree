@@ -1,0 +1,94 @@
+--- a/kernel/fk_offset.cpp
++++ b/kernel/fk_offset.cpp
+@@ -673,11 +673,32 @@
+                                 "(spigolo vivo dentro la faccia)");
+ }
+ 
++void requireCertifiedOffsetCurve(const CurvePtr<3> &curve, const Interval &range,
++                                 const detail::SurfaceCurveFitData &certificate, double tolerance) {
++    if (!certificate.bound) return;
++    const auto *spline = dynamic_cast<const BSplineCurve<3> *>(curve.get());
++    if (!spline || spline->degree() != 3 || spline->isRational() || spline->poleCount() < 4
++        || (spline->poleCount() - 1) % 3 != 0 || spline->domain().lo != range.lo || spline->domain().hi != range.hi)
++        throw std::domain_error("offset: forma della curva certificata pubblicata non riconosciuta");
++    const auto &poles = spline->poles();
++    const auto &knots = spline->knots();
++    for (int k = 0; k + 3 < spline->poleCount(); k += 3) {
++        cancellationPoint();
++        const Interval span{knots[k + 3], knots[k + 4]};
++        const double error = certificate.bound(span, {poles[k], poles[k + 1], poles[k + 2], poles[k + 3]});
++        if (!std::isfinite(error) || error < 0 || error > tolerance)
++            throw std::domain_error("offset: curva pubblicata oltre il budget continuo originale");
++    }
++}
+ CurvePtr<3> offsetCurve(const CurvePtr<3> &curve, const Interval &range, const std::function<Vec3(double)> &f,
+-                        std::vector<double> breaks, double tolerance) {
++                        std::vector<double> breaks, double tolerance, const detail::SurfaceCurveFitData &certificate = {}) {
+     const std::vector<double> own = curve->breakpoints(range);
+     breaks.insert(breaks.end(), own.begin(), own.end());
+-    return fitCurve(f, range, breaks, tolerance);
++    if (!certificate.bound) return fitCurve(f, range, breaks, tolerance);
++    breaks.insert(breaks.end(), certificate.breaks.begin(), certificate.breaks.end());
++    const auto fitted = fitCurveCertified(f, range, breaks, tolerance, certificate.bound);
++    requireCertifiedOffsetCurve(fitted, range, certificate, tolerance);
++    return fitted;
+ }
+ 
+ // Sezione circolare analitica dei supporti sostitutivi. Conserva il parametro
+@@ -1711,6 +1732,7 @@
+         std::function<Vec3(double)> offset;
+         std::vector<double> breaks;
+         std::string failure;
++        detail::SurfaceCurveFitData certificate;
+     };
+     std::vector<CurveJob> curveJobs;
+     const auto rawEdgeOf = [&](FinId finId) {
+@@ -1820,7 +1842,16 @@
+         }
+         model.edges.push_back(raw);
+         // La curva si calcola dopo, in parallelo con le altre.
+-        if (!raw.curve) curveJobs.push_back({int(model.edges.size()) - 1, edge.curve, edge.range, f, breaks, {}});
++        if (!raw.curve) {
++            detail::SurfaceCurveFitData certificate;
++            if (!trimSeams && used.size() == 1) {
++                const auto &originalFace = body.face(body.finFace(used.front()));
++                if (originalFace.surface->type() == SurfaceType::Extrusion)
++                    certificate = detail::extrusionEdgeOffsetErrorBound(edge.curve, originalFace.surface,
++                        body.fin(used.front()).pcurve, edge.range, originalFace.sense ? distanceValue : -distanceValue);
++            }
++            curveJobs.push_back({int(model.edges.size()) - 1, edge.curve, edge.range, f, breaks, {}, std::move(certificate)});
++        }
+         return rawEdge[key] = int(model.edges.size()) - 1;
+     };
+     std::vector<FaceId> faceSources;
+@@ -1864,7 +1895,7 @@
+     parallelFor(curveJobs.size(), threadCount(0), [&](std::size_t k) {
+         CurveJob &job = curveJobs[k];
+         try {
+-            model.edges[std::size_t(job.edge)].curve = offsetCurve(job.curve, job.range, job.offset, job.breaks, tolerance);
++            model.edges[std::size_t(job.edge)].curve = offsetCurve(job.curve, job.range, job.offset, job.breaks, tolerance, job.certificate);
+         } catch (const std::exception &e) {
+             job.failure = e.what();
+         }
+@@ -1923,9 +1954,20 @@
+         result.sharpEdges = 0;
+     }
+     edgeTimer.reset();
++    detail::AssemblyMap emitted;
++    const bool certified = std::any_of(curveJobs.begin(), curveJobs.end(), [](const CurveJob &job) { return bool(job.certificate.bound); });
+     {
+         const detail::PhaseTimer timer("offset: assemblaggio");
+-        result.body = detail::assembleBody(model, false, &result.notes);
++        result.body = detail::assembleBody(model, false, &result.notes, certified ? &emitted : nullptr);
++    }
++    for (const auto &job : curveJobs) if (job.certificate.bound) {
++        cancellationPoint();
++        if (job.edge < 0 || std::size_t(job.edge) >= emitted.edges.size() || !emitted.edges[job.edge].valid())
++            throw std::domain_error("offset: provenienza del bordo certificato persa nell'assemblaggio");
++        const auto &actual = result.body.edge(emitted.edges[job.edge]);
++        if (actual.range.lo != job.range.lo || actual.range.hi != job.range.hi)
++            throw std::domain_error("offset: parametro del bordo certificato modificato nell'assemblaggio");
++        requireCertifiedOffsetCurve(actual.curve, actual.range, job.certificate, tolerance);
+     }
+     result.history = offsetFaceHistory(input, result.body, faceSources);
+     for (ShellId s : result.body.shells()) {

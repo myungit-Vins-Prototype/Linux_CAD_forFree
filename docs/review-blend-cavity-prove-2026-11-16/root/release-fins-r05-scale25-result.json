@@ -1,0 +1,8 @@
+{
+  "exit": 0,
+  "seconds": 0.2144086549997155,
+  "command": [
+    "/tmp/blend-cavity-review/root/audit-fins-release",
+    "/tmp/blend-cavity-review/root/release-results/r05-scale25-actual.body"
+  ]
+}

@@ -1,0 +1,20 @@
+from pathlib import Path
+import re,json
+stage=Path('/tmp/review-previews-refresh/stage');rows=[]
+for path in stage.glob('forgeCad2026_dialogs_*.cpp'):
+ text=path.read_text()
+ # Blank comments and strings while preserving offsets/newlines, so braces count as code.
+ masked=re.sub(r'//[^\n]*|/\*[\s\S]*?\*/|"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'',lambda m:''.join('\n' if c=='\n' else ' ' for c in m.group()),text)
+ stack=[]
+ for m in re.finditer(r'\{|\}|\bscope\s*->',masked):
+  if m.group()=='{':stack.append(m.start())
+  elif m.group()=='}':stack.pop()
+  else:
+   # C++ lambdas have capture brackets before the body (possibly a trailing signature).
+   in_lambda=False
+   for brace in stack:
+    prefix=masked[max(0,brace-220):brace]
+    if re.search(r'\[[^\[\]]*\]\s*(?:\([^{};]*\))?\s*(?:mutable\s*)?(?:->[^{};]*)?$',prefix):in_lambda=True
+   rows.append({'file':path.name,'line':text.count('\n',0,m.start())+1,'inside_lambda':in_lambda})
+assert rows and all(r['inside_lambda'] for r in rows),[r for r in rows if not r['inside_lambda']]
+(stage/'scope-access-audit.json').write_text(json.dumps(rows,indent=2)+'\n');print('PASS all',len(rows),'delayed scope dereferences inside lambda bodies')

@@ -1,0 +1,12 @@
+{
+  "cases": 40,
+  "public_post_assembly_edges": 32,
+  "direct_independent_E_G_cases": 8,
+  "final_bezier_spans": 301,
+  "final_output_poles": 943,
+  "certified_cells": 301,
+  "maximum_bisection_depth": 0,
+  "independent_continuous_upper": 4.364583310131473e-08,
+  "worst_case": "direct-shifted",
+  "negative_final_pole_mutation": "REJECTED at depth18, independent bound ~1e-4 >1e-7"
+}

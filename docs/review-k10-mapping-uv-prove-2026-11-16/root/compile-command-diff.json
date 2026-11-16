@@ -1,0 +1,17 @@
+{
+  "old_entries": 804,
+  "new_entries": 805,
+  "changed": [
+    {
+      "file": "/home/myungit/Linux_CAD_forFree/kernel/fk_surface_mapping.cpp",
+      "old": "/usr/bin/c++  -I/home/myungit/Linux_CAD_forFree/kernel -O3 -DNDEBUG -std=gnu++17 -Wall -Wextra -Wpedantic -O2 -g -ffp-contract=off -o CMakeFiles/forgekernel.dir/fk_surface_mapping.cpp.o -c /home/myungit/Linux_CAD_forFree/kernel/fk_surface_mapping.cpp",
+      "new": "/usr/bin/c++  -I/home/myungit/Linux_CAD_forFree/kernel -O3 -DNDEBUG -std=gnu++17 -Wall -Wextra -Wpedantic -O2 -g -ffp-contract=off -fno-fast-math -ffp-contract=off -o CMakeFiles/forgekernel.dir/fk_surface_mapping.cpp.o -c /home/myungit/Linux_CAD_forFree/kernel/fk_surface_mapping.cpp"
+    }
+  ],
+  "added": [
+    {
+      "file": "/home/myungit/Linux_CAD_forFree/kernel/tests/test_mapping_pcurve_validation.cpp",
+      "command": "/usr/bin/c++  -I/home/myungit/Linux_CAD_forFree/kernel -O3 -DNDEBUG -std=gnu++17 -Wall -Wextra -Wpedantic -ffp-contract=off -o CMakeFiles/forgekernel_mapping_uv_validation_tests.dir/tests/test_mapping_pcurve_validation.cpp.o -c /home/myungit/Linux_CAD_forFree/kernel/tests/test_mapping_pcurve_validation.cpp"
+    }
+  ]
+}

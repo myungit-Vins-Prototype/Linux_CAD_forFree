@@ -1,0 +1,13 @@
+from pathlib import Path
+import subprocess, json, time
+root=Path('/home/myungit/Linux_CAD_forFree')
+work=Path('/tmp/forgecad-sweep-fix-20261115')
+results=[]
+for filt in ['Sweep','Mass','PCurve','FaceAreas','QuadratureStopsOnIntegrandNoise','Revolve']:
+    start=time.monotonic()
+    with (work/('kernel-'+filt+'.log')).open('w') as log:
+        p=subprocess.run([str(root/'forgecad-release/kernel/forgekernel_tests'),filt],cwd=work,stdout=log,stderr=subprocess.STDOUT,timeout=300)
+    results.append({'filter':filt,'exit':p.returncode,'seconds':time.monotonic()-start})
+    (work/'kernel-results.json').write_text(json.dumps(results,indent=2)+'\n')
+    print(results[-1],flush=True)
+raise SystemExit(any(r['exit'] for r in results))

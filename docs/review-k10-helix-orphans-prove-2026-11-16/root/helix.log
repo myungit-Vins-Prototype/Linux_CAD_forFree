@@ -1,0 +1,6 @@
+[  OK  ] HelixDerivativesAndOcctReference
+[  OK  ] HelixBSplineWithinTolerance
+[  OK  ] SweepAlongHelixIsSpring
+[  OK  ] SweepMinimalTwistHelixAvoidsUniformGridAliasing
+[  OK  ] SweepSheetRoundedRectangleAlongHelix
+5/5 test superati

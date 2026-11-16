@@ -1,0 +1,73 @@
+from pathlib import Path
+p=Path('/tmp/supporto-review/stage');s=(p/'fk_boolean.before.cpp.txt').read_text();s=s.replace('#include <algorithm>','#include <algorithm>\n#include <array>',1)
+anchor='''struct BoundaryAnchor {
+    int body=-1;
+    FaceId face;
+    FinId fin;
+    EdgeId edge;
+    double edgeParameter=0,arcParameter=0;
+};
+struct BoundarySource {
+    int body=-1;
+    FaceId face;
+    FinId fin;
+    EdgeId edge;
+    Interval range;
+    bool forward=true;
+};
+'''
+s=s.replace('struct Arc {',anchor+'\nstruct Arc {',1).replace('    bool cut[2] = {false, false};','    std::vector<BoundaryAnchor> anchors;\n    bool cut[2] = {false, false};',1)
+s=s.replace('struct Piece {','struct Piece {\n    BoundarySource boundarySource; // foreign witness, never a local source/pcurve\n',1)
+s=s.replace('#include \"fk_boolean.h\"','#include \"fk_boolean.h\"\n#include \"fk_boolean_boundary.h\"',1)
+s=s.replace('    void collectCuts(std::map<int, std::vector<Piece>> (&cuts)[2]);','    void collectCuts(std::map<int, std::vector<Piece>> (&cuts)[2]);\n    bool boundaryChain(const Arc&,const Interval&,int,std::vector<Piece>&) const;',1)
+s=s.replace('''        std::vector<double> parameters;
+        std::vector<Snap> snaps;
+        // Attraversamenti''','''        std::vector<double> parameters;
+        std::vector<Snap> snaps;
+        std::vector<BoundaryAnchor> boundaryAnchors;
+        // Attraversamenti''',1)
+s=s.replace('''                for (const CurveCurvePoint &p : intersectCurves(*planar, range, *bp.fin(f).pcurve, edge.range, tolerance_).points)
+                    parameters.push_back(p.s);''','''                for (const CurveCurvePoint &p : intersectCurves(*planar, range, *bp.fin(f).pcurve, edge.range, tolerance_).points) {
+                    parameters.push_back(p.s);
+                    boundaryAnchors.push_back({k,fp,f,bp.fin(f).edge,p.t,p.s});
+                }''',1)
+s=s.replace('''        addArcs(curve, range, parameters, fa, fb, out, nullptr, snaps);
+        if (i >= crossingCount)''','''        addArcs(curve, range, parameters, fa, fb, out, nullptr, snaps);
+        for(std::size_t j=previous;j<out.arcs.size();++j) for(const auto &anchor:boundaryAnchors)
+            if(anchor.arcParameter==out.arcs[j].range.lo||anchor.arcParameter==out.arcs[j].range.hi)
+                out.arcs[j].anchors.push_back(anchor);
+        if (i >= crossingCount)''',1)
+# Reuse the certified chain as the cut on the opposite side. Foreign source
+# is kept separate from Piece.source, so existing local pcurve hints stay valid.
+s=s.replace('''            const PointLocation locations[2]={in0,in1};
+            for (int k = 0; k < 2; ++k) {''','''            const PointLocation locations[2]={in0,in1};
+            bool substituted=false;
+            for(int boundary=0;boundary<2;++boundary) if(locations[boundary]==PointLocation::Boundary&&locations[1-boundary]==PointLocation::Inside) {
+                std::vector<Piece> chain;
+                if(boundaryChain(arc,range,boundary,chain)) {
+                    auto &list=cuts[1-boundary][arc.face[1-boundary].index];
+                    auto &ends=endPoints[1-boundary][arc.face[1-boundary].index];
+                    for(auto &piece:chain){ends.emplace_back(piece.startNode(),piece.endNode());list.push_back(std::move(piece));}
+                    substituted=true;
+                }
+            }
+            if(substituted)continue;
+            for (int k = 0; k < 2; ++k) {''',1)
+# Declare edge origins carried by the foreign source. Other edges retain the
+# original history behavior. Identity-based capture survives edge merging.
+s=s.replace('''        const auto built = result.faces();
+        if (built.size()''','''        for(auto edgeId:result.edges()) {
+            const auto &output=result.edge(edgeId);
+            std::vector<HistoryLink> explicitOrigins;
+            for(const auto &entry:kept)for(const auto &cycle:entry.first.cycles)for(const auto &piece:cycle.pieces) {
+                const auto &w=piece.boundarySource;
+                if(w.body<0||piece.curve.get()!=output.curve.get()||output.range.lo<w.range.lo||output.range.hi>w.range.hi)continue;
+                if(std::none_of(explicitOrigins.begin(),explicitOrigins.end(),[&](const auto&link){return link.operand==w.body&&link.index==w.edge.index;}))
+                    explicitOrigins.push_back({w.body,EntityKind::Edge,w.edge.index,HistoryRelation::Modified});
+            }
+            if(!explicitOrigins.empty())declared.declareOrigins(EntityKind::Edge,edgeId.index,std::move(explicitOrigins));
+        }
+        const auto built = result.faces();
+        if (built.size()''',1)
+method=(p/'chain.inc.txt').read_text();s=s.replace('void BooleanBuilder::collectCuts(',method+'\nvoid BooleanBuilder::collectCuts(',1)
+(p/'kernel/fk_boolean.cpp').write_text(s)

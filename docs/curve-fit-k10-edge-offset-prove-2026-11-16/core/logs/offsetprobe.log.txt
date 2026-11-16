@@ -1,0 +1,7 @@
+source valid 1
+out valid 1 edges 4
+original exact offset max witness z 0.0010005742475172829 all output poles max z 0.0010006257743242835 geometric lower witness -5.1526807000627436e-08
+edge 0 type 3 sameParamErr 3.9269487829981683e-08
+edge 1 type 3 sameParamErr 1
+edge 2 type 3 sameParamErr 3.9269487829981683e-08
+edge 3 type 3 sameParamErr 1

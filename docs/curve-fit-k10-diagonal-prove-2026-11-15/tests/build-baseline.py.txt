@@ -1,0 +1,15 @@
+from pathlib import Path
+import json, shlex, subprocess
+root=Path('/home/myungit/Linux_CAD_forFree')
+out=Path(__file__).parent
+commands=json.loads((root/'forgecad-release/compile_commands.json').read_text())
+objects=[]
+for name in ['fk_curve_fit_bounds','fk_mapping_carrier','fk_surface_mapping','baseline']:
+    reference='fk_surface_mapping' if name in ['fk_mapping_carrier','baseline'] else name
+    entry=next(x for x in commands if x['file'].endswith('/kernel/'+reference+'.cpp'))
+    command=shlex.split(entry['command']);command.insert(1,'-I'+str(out/'before'))
+    source=out/'before'/(name+'.cpp') if name!='baseline' else out/'baseline.cpp'
+    obj=out/(name+'-before.o');command[command.index('-o')+1]=str(obj);command[command.index('-c')+1]=str(source)
+    command+=['-fno-fast-math','-ffp-contract=off']
+    subprocess.run(command,cwd=entry['directory'],check=True);objects.append(str(obj))
+subprocess.run(['/usr/bin/c++','-o',str(out/'baseline-before'),*objects,str(root/'forgecad-release/kernel/libforgekernel.a'),'-lpthread'],check=True)

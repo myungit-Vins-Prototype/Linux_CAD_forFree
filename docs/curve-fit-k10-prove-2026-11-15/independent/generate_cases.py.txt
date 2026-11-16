@@ -1,0 +1,21 @@
+from pathlib import Path
+from fractions import Fraction as F
+from math import comb
+out=Path('/tmp/forgecad-k10-20261115/independent')
+def polynomial(roots):
+ p=[F(1)]
+ for r in roots:
+  for _ in range(3):
+   q=[F(0)]*(len(p)+1)
+   for i,a in enumerate(p):q[i]-=r*a;q[i+1]+=a
+   p=q
+ return p
+def bern(p,n=None):
+ n=len(p)-1 if n is None else n
+ return [sum(p[k]*F(comb(i,k),comb(n,k)) for k in range(min(i,len(p)-1)+1)) for i in range(n+1)]
+def txt(v):return ','.join(format(float(x),'.17g') for x in v)
+r27=[F(0),F(1),F(1,4),F(1,2),F(3,4),F(1,20),F(11,40),F(29,40),F(19,20)]
+p27=polynomial(r27);b27=[x*10**10 for x in bern(p27)]
+r15=[F(0),F(1),F(1,4),F(1,2),F(3,4)];b15=[x*10**3 for x in bern(polynomial(r15))]
+rpartial=[F(1,10)+F(4,5)*r for r in r27];bpartial=[x*10**10/F(4,5)**27 for x in bern(polynomial(rpartial))]
+(out/'fixtures.h').write_text('const std::vector<double> z27={'+txt(b27)+'};\nconst std::vector<double> z15={'+txt(b15)+'};\nconst std::vector<double> zpartial={'+txt(bpartial)+'};\n')

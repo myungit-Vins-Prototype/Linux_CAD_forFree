@@ -1,0 +1,7 @@
+{
+  "exit": 0,
+  "seconds": 0.11410665700168465,
+  "command": [
+    "forgecad-release/forgecad_application_theme_tests"
+  ]
+}

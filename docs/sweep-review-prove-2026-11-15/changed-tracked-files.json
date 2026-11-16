@@ -1,0 +1,7 @@
+{
+  "CLAUDE.md": "e4802aa4988f09910079fd28215fb8bbcad61157d86ef021208b2ac67676b8f5",
+  "kernel/fk_mass.cpp": "29d7223df812f3747d51fd07c5e966b798b6d488d3c77e4207fe32312f45621c",
+  "kernel/fk_sweep.cpp": "abecaba529de8fa7151d67e02fc765dddc196b7032d80099a223aa9a2a17fdaf",
+  "kernel/tests/test_sweep.cpp": "07546ee08f2bc750f6dca1ff9d96a06ac98481889db160269cdb17c352e8e97c",
+  "tools/generate_architecture.py": "04f0bb036f71e8c34e5ba5b507ea72c6687199d9d2c0a0600bae58b3a3dc46fb"
+}

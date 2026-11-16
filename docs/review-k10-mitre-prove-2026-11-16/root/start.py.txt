@@ -1,0 +1,19 @@
+from pathlib import Path
+import json,hashlib,subprocess,shutil
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/mitre-review/root');sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+names=subprocess.check_output(['git','ls-files','--cached','--others','--exclude-standard','-z'],cwd=R).decode().split('\0');initial={f:sha(R/f) for f in sorted(set(names)) if f and (R/f).is_file() and not (R/f).is_symlink()};assert not(T/'hashes-before.json').exists();(T/'hashes-before.json').write_text(json.dumps(initial,indent=2)+'\n')
+focus=['CLAUDE.md','CMakeLists.txt','kernel/CMakeLists.txt','tools/generate_architecture.py','docs/code-review-2026-11-15.md','kernel/fk_blend_mitre.cpp','kernel/fk_blend_mitre.h','kernel/fk_blend_surface.cpp','kernel/fk_blend_model.h','kernel/fk_curve_fit_bounds.cpp','kernel/fk_curve_fit_bounds.h','kernel/fk_sheet.cpp','kernel/fk_offset.cpp','kernel/fk_pcurve.cpp','kernel/fk_topology.cpp','kernel/fk_unify.cpp','kernel/fk_body_check.cpp','kernel/tests/test_blend.cpp','kernel/tests/test_blend_cavity_regressions.cpp','kernel/tests/test_blend_helpers.cpp','kernel/tests/test_surface_curve_fit_validation.cpp','tests/test_fillet_variable.h','tests/test_blend_faces.h']
+for f in focus:
+ if(R/f).is_file():q=T/'before'/f;q.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(R/f,q)
+g=json.loads((R/'docs/architecture/graph.json').read_text());keys=set(focus);snapshot={'nodes':[n for n in g['nodes'] if n['id'] in keys],'edges':[e for e in g['edges'] if e['source'] in keys or e['target'] in keys],'stats':{'files':len(g['nodes']),'edges':len(g['edges']),'units':len(g['analysis']['units']),'errors':g['analysis']['errors']}};(T/'architecture-before.json').write_text(json.dumps(snapshot,indent=2)+'\n')
+seals={}
+for d in ['ellisse-estremi','curve-fit-k10-edge-offset','review-preview-unification','supporto-booleana','review-k10-uv-preview','review-k10-sew-preview','review-k10-helix-orphans','review-blend-cavity','review-theme-tabs','review-k10-mapping-uv','review-k10-sheet-join']:
+ P=R/'docs'/(d+'-prove-2026-11-16');lines=(P/'SHA256SUMS').read_text().splitlines()
+ for line in lines:h,f=line.split('  ',1);assert sha(P/f)==h,(d,f)
+ seals[d]=len(lines)
+(T/'previous-seals.json').write_text(json.dumps(seals,indent=2)+'\n');(T/'baseline-binaries.json').write_text(json.dumps({f:sha(R/f) for f in ['forgecad-release/forgecad','forgecad-release/forgecad_view_tests','forgecad-release/kernel/libforgekernel.a','forgecad-release/kernel/forgekernel_tests']},indent=2)+'\n')
+print('Baseline',len(initial),'files; nine seals',seals,'PASS; architecture',snapshot['stats'],'incident',len(snapshot['edges']))
+for n in snapshot['nodes']:
+ print(n['id'],n['description'])
+for e in snapshot['edges']:
+ if 'kernel/fk_blend_mitre.cpp' in (e['source'],e['target']):print(e['kind'],e['source'],'->',e['target'],[(x['symbol'],x['line']) for x in e['sites']][:12])

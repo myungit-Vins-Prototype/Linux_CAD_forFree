@@ -1,0 +1,35 @@
+CTest exit 0 seconds 3.89
+Test project /home/myungit/Linux_CAD_forFree/forgecad-release
+      Start  20: forgecad_sketch_projection_tests
+ 1/14 Test  #20: forgecad_sketch_projection_tests .............   Passed    0.06 sec
+      Start  21: forgecad_projected_curve_reference_tests
+ 2/14 Test  #21: forgecad_projected_curve_reference_tests .....   Passed    0.03 sec
+      Start  32: forgecad_function_panels_tests
+ 3/14 Test  #32: forgecad_function_panels_tests ...............   Passed    1.35 sec
+      Start  34: forgecad_history_suppression_tests
+ 4/14 Test  #34: forgecad_history_suppression_tests ...........   Passed    0.03 sec
+      Start  76: forgecad_document_lifetime_tests
+ 5/14 Test  #76: forgecad_document_lifetime_tests .............   Passed    0.04 sec
+      Start  78: forgecad_offset_face_pick_tests
+ 6/14 Test  #78: forgecad_offset_face_pick_tests ..............   Passed    0.12 sec
+      Start  83: forgecad_linked_reference_visibility_tests
+ 7/14 Test  #83: forgecad_linked_reference_visibility_tests ...   Passed    0.04 sec
+      Start 104: forgecad_blend_preview_reload_tests
+ 8/14 Test #104: forgecad_blend_preview_reload_tests ..........   Passed    0.05 sec
+      Start 107: forgecad_reference_list_highlight_tests
+ 9/14 Test #107: forgecad_reference_list_highlight_tests ......   Passed    0.17 sec
+      Start 108: forgecad_surface_pattern_tests
+10/14 Test #108: forgecad_surface_pattern_tests ...............   Passed    0.09 sec
+      Start 114: forgecad_surface_mapping_tests
+11/14 Test #114: forgecad_surface_mapping_tests ...............   Passed    1.50 sec
+      Start 134: forgecad_body_owner_history_tests
+12/14 Test #134: forgecad_body_owner_history_tests ............   Passed    0.15 sec
+      Start 138: forgecad_history_position_tests
+13/14 Test #138: forgecad_history_position_tests ..............   Passed    0.21 sec
+      Start 139: forgecad_async_lifetime_tests
+14/14 Test #139: forgecad_async_lifetime_tests ................   Passed    0.03 sec
+
+100% tests passed out of 14
+
+Total Test time (real) =   3.89 sec
+

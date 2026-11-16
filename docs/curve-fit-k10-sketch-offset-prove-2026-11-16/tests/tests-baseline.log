@@ -1,0 +1,28 @@
+hidden rational=0 polesReverse=0 reverse=0 both=0 max_parameter=5.7424599688773376e-07 max_geometry=5.7419002033750298e-07 FAIL hidden offset exceeds parameter tolerance
+hidden rational=0 polesReverse=0 reverse=0 both=1 max_parameter=5.7424599688773376e-07 max_geometry=5.7419002033750298e-07 FAIL hidden offset exceeds parameter tolerance
+hidden rational=0 polesReverse=0 reverse=1 both=0 max_parameter=5.7424598501178053e-07 max_geometry=5.7419002033771982e-07 FAIL hidden offset exceeds parameter tolerance
+hidden rational=0 polesReverse=0 reverse=1 both=1 max_parameter=5.7424598501178053e-07 max_geometry=5.7419002033771982e-07 FAIL hidden offset exceeds parameter tolerance
+hidden rational=0 polesReverse=1 reverse=0 both=0 max_parameter=5.7424602530860516e-07 max_geometry=5.7419002033793666e-07 FAIL hidden offset exceeds parameter tolerance
+hidden rational=0 polesReverse=1 reverse=0 both=1 max_parameter=5.7424602530860516e-07 max_geometry=5.7419002033793666e-07 FAIL hidden offset exceeds parameter tolerance
+hidden rational=0 polesReverse=1 reverse=1 both=0 max_parameter=5.7424606912603679e-07 max_geometry=5.7419002033771982e-07 FAIL hidden offset exceeds parameter tolerance
+hidden rational=0 polesReverse=1 reverse=1 both=1 max_parameter=5.7424606912603679e-07 max_geometry=5.7419002033771982e-07 FAIL hidden offset exceeds parameter tolerance
+hidden rational=1 polesReverse=0 reverse=0 both=0 max_parameter=5.4161955830072564e-07 max_geometry=5.4140937181092544e-07 FAIL hidden offset exceeds parameter tolerance
+hidden rational=1 polesReverse=0 reverse=0 both=1 max_parameter=5.4161955830072564e-07 max_geometry=5.4140937181092544e-07 FAIL hidden offset exceeds parameter tolerance
+hidden rational=1 polesReverse=0 reverse=1 both=0 max_parameter=5.4161955928684193e-07 max_geometry=5.4140937154507907e-07 FAIL hidden offset exceeds parameter tolerance
+hidden rational=1 polesReverse=0 reverse=1 both=1 max_parameter=5.4161955928684193e-07 max_geometry=5.4140937154507907e-07 FAIL hidden offset exceeds parameter tolerance
+hidden rational=1 polesReverse=1 reverse=0 both=0 max_parameter=5.4161955822428674e-07 max_geometry=5.4140937154529591e-07 FAIL hidden offset exceeds parameter tolerance
+hidden rational=1 polesReverse=1 reverse=0 both=1 max_parameter=5.4161955822428674e-07 max_geometry=5.4140937154529591e-07 FAIL hidden offset exceeds parameter tolerance
+hidden rational=1 polesReverse=1 reverse=1 both=0 max_parameter=5.4161955937706131e-07 max_geometry=5.4140937181135912e-07 FAIL hidden offset exceeds parameter tolerance
+hidden rational=1 polesReverse=1 reverse=1 both=1 max_parameter=5.4161955937706131e-07 max_geometry=5.4140937181135912e-07 FAIL hidden offset exceeds parameter tolerance
+chain back=0 round=0 max_trimmed_parameter=5.9209284901793403e-07 FAIL chain fit exceeds tolerance
+chain back=0 round=1 max_trimmed_parameter=5.9209284901793403e-07 FAIL chain fit exceeds tolerance
+chain back=1 round=0 max_trimmed_parameter=5.7409527681436453e-07 FAIL chain fit exceeds tolerance
+chain back=1 round=1 max_trimmed_parameter=5.7409527681436453e-07 FAIL chain fit exceeds tolerance
+knot_corner reverse=0 max_one_sided=8.2443062585091376e-08 PASS
+knot_corner reverse=1 max_one_sided=8.258843287034523e-08 PASS
+zero_speed_failure PASS
+associative max_parameter=5.7424893540818433e-07 max_geometry=5.7419297166960703e-07 FAIL hidden offset exceeds parameter tolerance
+trimmed_loops trimmed_distance_error=5.5967333212336712e-08 trimmed_distance_error=6.156434140258682e-08 PASS
+atomic_failure PASS
+analytic_controls PASS
+RESULT passed=6 failed=21

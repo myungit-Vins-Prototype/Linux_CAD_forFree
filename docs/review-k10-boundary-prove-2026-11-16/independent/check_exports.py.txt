@@ -1,0 +1,39 @@
+#!/usr/bin/env python3
+"""Convert independent tester decimal exports once to exact original IEEE data."""
+import sys,types,json,hashlib
+from pathlib import Path
+root=Path(__file__).parent
+for name in ['fraction_common','verify_tensor_fraction','verify_curve_preservation','verify_surface_preservation']:
+ m=types.ModuleType(name);m.__file__=str(root/(name+'.py.txt'));sys.modules[name]=m
+ exec(compile(Path(m.__file__).read_text(),m.__file__,'exec'),m.__dict__)
+from verify_tensor_fraction import verify
+from verify_curve_preservation import verify_curve
+from verify_surface_preservation import verify_support
+from fractions import Fraction as F
+
+def hx(x):return float(x).hex()
+def ar(a):return [hx(x) for x in a]
+def cv(c):
+ d=dict(c);d['type']='bspline';d['knots']=ar(c['knots']);d['poles']=[ar(a) for a in c['poles']];d['weights']=ar(c['weights']);return d
+
+def sf(s):
+ d=dict(s);d['uPoleCount']=s['uCount'];d['vPoleCount']=s['vCount'];d['uKnots']=ar(s['uKnots']);d['vKnots']=ar(s['vKnots']);d['poles']=[ar(a) for a in s['poles']];d['weights']=ar(s['weights']);return d
+
+def attempt(fn,*a):
+ try:return fn(*a)
+ except Exception as e:return {'pass':False,'error':str(e),'exception':type(e).__name__}
+folder=Path(sys.argv[1]);out=[];converted=[]
+for p in sorted(folder.glob('*.json')):
+ j=json.loads(p.read_text());source=cv(j['edgeOriginal']);target=cv(j['edgeFinal']);old=ar(j['originalRange']);cap=hx(j.get('budget',1e-7));uses=[]
+ if 'budget' in j:
+  assert j['budget']>0 and j['edgeTolerance']==j['originalEdgeTolerance']
+  assert all(fin['pcurveTolerance']==j['budget'] for fin in j['finUses'])
+ oldproof=attempt(verify_curve,source,target,old,cap)
+ for n,fin in enumerate(j['finUses']):
+  original=sf(fin['surfaceOriginal']);final=sf(fin['surfaceFinal']);pc=cv(fin['pcurve']);ran=ar(j.get('finalRange',j['originalRange']))
+  record={'label':p.stem+'-fin'+str(n),'fin':n,'range':ran,'budget':cap,'curve':target,'surface':final,'pcurve':pc};converted.append(record)
+  uses.append({'sense':fin['sense'],'range':ran,'carrier_original_domain':attempt(verify_support,original,final,F.from_float(float.fromhex(cap))),
+               'edge_vs_effective_carrier_and_pcurve':attempt(verify,record)})
+ out.append({'case':p.stem,'scope':j.get('scope'),'sha256':hashlib.sha256(p.read_bytes()).hexdigest(),'budget':float.fromhex(cap),'originalEdgeTolerance':j.get('originalEdgeTolerance'),'edgeTolerance':j.get('edgeTolerance'),'original_same_parameter':oldproof,'finUses':uses});print(p.stem,oldproof,flush=True)
+Path(sys.argv[2]).write_text(json.dumps({'method':'Exact Fraction original IEEE coefficients; whole-interval homogeneous Cox/de Boor plus Bernstein hull; independent of production providers','records':out},indent=2)+'\n')
+Path(sys.argv[2]+'.converted.json').write_text(json.dumps({'records':converted},indent=2)+'\n')

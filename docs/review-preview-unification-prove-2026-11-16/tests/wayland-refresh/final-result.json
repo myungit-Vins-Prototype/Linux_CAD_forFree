@@ -1,0 +1,43 @@
+{
+  "binary_sha256": "abe0ed50e8aec81e0449870d34475c92af159cd64770f34d0276c506e2621ba8",
+  "source_sha256": "5b273897ba9bf229c73af586db0f133471768148cfca64c5e147b00854a7504c",
+  "private_overlay_objects": [],
+  "runs": [
+    {
+      "platform": "wayland",
+      "iteration": 1,
+      "exit": 0,
+      "seconds": 1.3302306349996798,
+      "result_line": "RESULT passed=115 failed=0",
+      "panels_line": "SMOKE TOTAL actual_visible=11 close_and_cleanup=11 expected=11",
+      "log": "/tmp/review-previews-wayland/final-wayland-1.log"
+    },
+    {
+      "platform": "offscreen",
+      "iteration": 1,
+      "exit": 0,
+      "seconds": 1.0954514909999489,
+      "result_line": "RESULT passed=115 failed=0",
+      "panels_line": "SMOKE TOTAL actual_visible=11 close_and_cleanup=11 expected=11",
+      "log": "/tmp/review-previews-wayland/final-offscreen-1.log"
+    },
+    {
+      "platform": "wayland",
+      "iteration": 2,
+      "exit": 0,
+      "seconds": 1.171573575000366,
+      "result_line": "RESULT passed=115 failed=0",
+      "panels_line": "SMOKE TOTAL actual_visible=11 close_and_cleanup=11 expected=11",
+      "log": "/tmp/review-previews-wayland/final-wayland-2.log"
+    },
+    {
+      "platform": "wayland",
+      "iteration": 3,
+      "exit": 0,
+      "seconds": 1.2098379250001017,
+      "result_line": "RESULT passed=115 failed=0",
+      "panels_line": "SMOKE TOTAL actual_visible=11 close_and_cleanup=11 expected=11",
+      "log": "/tmp/review-previews-wayland/final-wayland-3.log"
+    }
+  ]
+}

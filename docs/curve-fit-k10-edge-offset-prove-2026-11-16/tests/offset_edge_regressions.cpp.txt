@@ -1,0 +1,104 @@
+#include "fk_offset.h"
+#include "fk_curve_fit_bounds.h"
+#include "fk_bspline.h"
+#include "fk_surface.h"
+#include "fk_curve_ops.h"
+#include "fk_transform.h"
+#include "fk_body_check.h"
+#include "fk_body_io.h"
+#include "fk_cancel.h"
+#include <algorithm>
+#include <array>
+#include <cmath>
+#include <functional>
+#include <iomanip>
+#include <iostream>
+#include <limits>
+#include <stdexcept>
+#include <string>
+using namespace ForgeCad::Kernel;
+namespace {
+constexpr double tolerance=1e-7;
+const double hiddenZ[]={0,0,0,0.0023926594471666389,-0.03158506535957388,0.22274247758415186,-1.0588644597919092,3.7068614333740251,-10.150702528319338,22.626599248232061,-42.105538437516088,66.431608164324672,-89.673893632054558,104.07526656293437,-104.07526656293437,89.673893632054558,-66.431608164324672,42.105538437516088,-22.626599248232061,10.150702528319338,-3.7068614333740251,1.0588644597919092,-0.22274247758415186,0.03158506535957388,-0.0023926594471666389,0,0,0};
+int passed=0,failed=0;
+void require(bool ok,const std::string &message){if(!ok)throw std::runtime_error(message);}
+std::shared_ptr<BSplineCurve<3>> generator(bool rational=false){
+ std::vector<Vec3>p;std::vector<double>w,k(28,0);k.insert(k.end(),28,1);
+ for(int i=0;i<28;++i){const double weight=rational?1+.5*i/27.:1.;const double x=rational?i/27.+.5*i*(i-1)/(27.*26.):i/27.;p.emplace_back(x/weight,0,.01*hiddenZ[i]/weight);if(rational)w.push_back(weight);}
+ return std::make_shared<BSplineCurve<3>>(27,k,p,w);
+}
+CurvePtr<3> rail(const BSplineCurve<3>&g,bool reverse,double v0,double slope,Interval range={0,1},Vec3 delta={}){
+ auto p=g.poles();auto w=g.weights();if(reverse){std::reverse(p.begin(),p.end());std::reverse(w.begin(),w.end());}
+ for(auto &q:p){q[1]=v0+slope*(reverse?1-q.x():q.x());q+=delta;}
+ std::vector<double>k(28,range.lo);k.insert(k.end(),28,range.hi);return std::make_shared<BSplineCurve<3>>(27,k,p,w);
+}
+CurvePtr<2> uvAffine(Interval range,Vec2 start,Vec2 end){return std::make_shared<BSplineCurve<2>>(1,std::vector<double>{range.lo,range.lo,range.hi,range.hi},std::vector<Vec2>{start,end});}
+struct Fixture{Body body;CurvePtr<3> edge;SurfacePtr surface;CurvePtr<2> pcurve;Interval range;};
+Fixture sheet(bool rational=false,bool reverse=false,bool sense=true,bool slanted=false,int wrapper=0){
+ auto g=generator(rational);CurvePtr<3>source=g;
+ const double v0=slanted?.2:0.,slope=slanted?.35:0.;auto e0=rail(*g,reverse,v0,slope),e1=rail(*g,reverse,v0+1,slope);
+ Interval range{0,1};Vec3 dir(0,1,0);
+ if(wrapper==1){range={.05,.95};source=std::make_shared<TrimmedCurve<3>>(source,.02,.98);e0=std::make_shared<TrimmedCurve<3>>(e0,range.lo,range.hi);e1=std::make_shared<TrimmedCurve<3>>(e1,range.lo,range.hi);}
+ if(wrapper==2){const auto pose=Transform3::translation({3,-4,2})*Transform3::rotation({},normalized(Vec3(1,2,3)),.73);source=std::make_shared<TransformedCurve>(source,pose);e0=std::make_shared<TransformedCurve>(e0,pose);e1=std::make_shared<TransformedCurve>(e1,pose);dir=pose.applyToVector(dir);}
+ auto surf=std::make_shared<ExtrusionSurface>(source,dir);const auto uv=[&](double t,double height){return Vec2(reverse?1-t:t,v0+slope*t+height);};
+ std::vector<Vec3>vertices={e0->point(range.lo),e0->point(range.hi),e1->point(range.hi),e1->point(range.lo)};
+ std::vector<Body::BuildEdge>edges={{0,1,e0,range,0},{1,2,std::make_shared<Line<3>>(vertices[1],dir),{0,1},0},{3,2,e1,range,0},{0,3,std::make_shared<Line<3>>(vertices[0],dir),{0,1},0}};
+ const auto bottom=uvAffine(range,uv(range.lo,0),uv(range.hi,0)),top=uvAffine(range,uv(range.lo,1),uv(range.hi,1));
+ Body::BuildFace f;f.surface=surf;f.sense=sense;
+ const Body::BuildFin b{0,true,bottom,0},r{1,true,std::make_shared<Line<2>>(uv(range.hi,0),Vec2(0,1)),0},t{2,false,top,0},l{3,false,std::make_shared<Line<2>>(uv(range.lo,0),Vec2(0,1)),0};
+ f.loops={{b,r,t,l}};if(reverse)f.loops={{{3,true,l.pcurve,0},{2,true,top,0},{1,false,r.pcurve,0},{0,false,bottom,0}}};
+ return {Body::buildSheet(vertices,edges,{f}),e0,surf,bottom,range};
+}
+Vec3 expected(const Fixture&f,double t,double d,bool sense=true){const auto uv=f.pcurve->point(t);return f.edge->point(t)+(sense?d:-d)*f.surface->normal(uv.x(),uv.y());}
+void publicOffset(bool rational,bool reverse,bool sense,bool slanted,int wrapper){
+ auto f=sheet(rational,reverse,sense,slanted,wrapper);require(checkBody(f.body).empty(),"invalid source sheet");const auto before=writeBodyBinary(f.body);
+ const double d=.001;auto out=offsetFaces(f.body,f.body.faces(),d,tolerance,false);require(checkBody(out.body).empty(),"invalid offset body");require(before==writeBodyBinary(f.body),"offset mutated source body");
+ const Edge *matched=nullptr;for(auto id:out.body.edges()){const auto&e=out.body.edge(id);if(distance(e.curve->point(e.range.lo),expected(f,f.range.lo,d,sense))<=tolerance && distance(e.curve->point(e.range.hi),expected(f,f.range.hi,d,sense))<=tolerance){matched=&e;break;}}
+ require(matched,"offset omitted/reversed original rail endpoints");double worst=0.;for(int i=0;i<=4096;++i){const double t=f.range.lo+f.range.length()*i/4096.;worst=std::max(worst,distance(matched->curve->point(t),expected(f,t,d,sense)));}
+ std::cout<<" source_valid=1 output_valid=1 source_unchanged=1 measured_error="<<worst;
+ if(!rational&&!reverse&&sense&&!slanted&&wrapper==0){const auto*bs=dynamic_cast<const BSplineCurve<3>*>(matched->curve.get());require(bs,"expected cubic output");double maxPole=-1e300;for(auto p:bs->poles())maxPole=std::max(maxPole,p.z());double witness=-1e300;for(int i=0;i<=10000;++i)witness=std::max(witness,expected(f,i/10000.,d).z());const double lower=witness-maxPole;std::cout<<" geometric_hull_lower="<<lower;require(lower<=tolerance,"exact offset lies outside GLOBAL output control hull by more than tolerance");}
+ require(worst<=tolerance,"public offset edge exceeds requested tolerance");
+}
+#ifdef HAVE_EDGE_PROVIDER
+void directProvider(bool rational,bool reverse,int wrapper,bool shiftedRange,bool negative){
+ auto g=generator(rational);CurvePtr<3>gen=g;Interval range=shiftedRange?Interval{-3,5}:Interval{0,1};const Vec3 delta(.017,-.026,.031);auto e=rail(*g,reverse,.2,.35,range,delta);Vec3 dir(0,1,0);CurvePtr<2>pc=uvAffine(range,{reverse?1.:0.,.2},{reverse?0.:1.,.55});
+ if(wrapper==1){const double lo=range.lo+.05*range.length(),hi=range.hi-.05*range.length();e=std::make_shared<TrimmedCurve<3>>(e,lo,hi);pc=std::make_shared<TrimmedCurve<2>>(pc,lo,hi);range={lo,hi};gen=std::make_shared<TrimmedCurve<3>>(gen,.02,.98);}
+ if(wrapper==2){const auto pose=Transform3::translation({3,-4,2})*Transform3::rotation({},normalized(Vec3(1,2,3)),.73);e=std::make_shared<TransformedCurve>(e,pose);gen=std::make_shared<TransformedCurve>(gen,pose);dir=pose.applyToVector(dir);}
+ const auto surface=std::make_shared<ExtrusionSurface>(gen,dir);const double d=negative?-.001:.001;
+ const auto exact=[=](double t){const auto uv=pc->point(t);return e->point(t)+d*surface->normal(uv.x(),uv.y());};
+ auto provider=detail::extrusionEdgeOffsetErrorBound(e,surface,pc,range,d);require(bool(provider.bound),"supported extrusion edge provider absent");double deviation=123.;auto fitted=fitCurveCertified(exact,range,provider.breaks,tolerance,provider.bound,&deviation);require(std::isfinite(deviation)&&deviation<=tolerance,"invalid published fit bound");
+ double worst=0.;for(int i=0;i<=4096;++i){const double t=range.lo+range.length()*i/4096.;worst=std::max(worst,distance(fitted->point(t),exact(t)));}
+ require(worst<=deviation+1e-12&&worst<=tolerance,"provider underestimates actual edge residual");double largest=0.;int spans=0;
+ for(const auto &span:fitted->bezierSegments()){require(span.degree()==3&&span.poles().size()==4,"output span not cubic");std::array<Vec3,4>p;std::copy(span.poles().begin(),span.poles().end(),p.begin());const double bound=provider.bound(span.domain(),p);require(std::isfinite(bound)&&bound<=tolerance,"final cubic does not satisfy whole-span bound");largest=std::max(largest,bound);++spans;}
+ std::cout<<" spans="<<spans<<" measured_error="<<worst<<" reported="<<deviation<<" final_bound="<<largest;
+ // U reverse changes traversal only. Substituting the edge derivative would reverse N.
+ if(reverse){const double t=range.lo+.379*range.length();const auto uv=pc->point(t);require(dot(exact(t)-e->point(t),surface->normal(uv.x(),uv.y()))*d>0,"reverse U incorrectly inverted normal");}
+}
+void knotsAndLifetime(){
+ auto g=std::make_shared<BSplineCurve<3>>(3,std::vector<double>{0,0,0,0,.4,.4,.4,1,1,1,1},std::vector<Vec3>{{0,0,0},{.13,0,.02},{.27,0,-.0195},{.4,0,0},{.6,0,.03},{.8,0,-.03},{1,0,0}});
+ auto edge=std::make_shared<BSplineCurve<3>>(3,std::vector<double>{-2,-2,-2,-2,2,2,2,2},std::vector<Vec3>{{-.1,.2,0},{.2,.3,.02},{.8,.5,-.02},{1.1,.6,0}});
+ auto pc=std::make_shared<BSplineCurve<2>>(1,std::vector<double>{-2,-2,.7,2,2},std::vector<Vec2>{{0,.2},{.6,.4},{1,.6}});auto surf=std::make_shared<ExtrusionSurface>(g,Vec3(0,1,0));const auto provider=detail::extrusionEdgeOffsetErrorBound(edge,surf,pc,{-2,2},.001);
+ require(bool(provider.bound),"piecewise affine pcurve unsupported");const double generatorKnot=-2+2.7*.4/.6;require(std::any_of(provider.breaks.begin(),provider.breaks.end(),[&](double t){return std::abs(t-generatorKnot)<1e-12;}),"generator knot not mapped into edge parameter");require(std::any_of(provider.breaks.begin(),provider.breaks.end(),[](double t){return std::abs(t-.7)<1e-12;}),"pcurve junction missing from partitions");
+ std::function<Vec3(double)> exact=[=](double t){const auto uv=pc->point(t);return edge->point(t)+.001*surf->normal(uv.x(),uv.y());};double dev=123.;auto fit=fitCurveCertified(exact,{-2,2},provider.breaks,tolerance,provider.bound,&dev);for(int i=0;i<=4000;++i){const double t=-2+4*i/4000.;require(distance(fit->point(t),exact(t))<=tolerance,"piecewise mapping exceeds tolerance");}
+ std::weak_ptr<const Curve<3>> we=edge,wg=g;std::weak_ptr<const Surface>ws=surf;std::weak_ptr<const Curve<2>>wp=pc;
+ exact={};edge.reset();g.reset();surf.reset();pc.reset();require(we.expired()&&wg.expired()&&ws.expired()&&wp.expired(),"provider retained input geometry instead of owned coefficients");
+ auto span=fit->bezierSegments().front();std::array<Vec3,4>p;std::copy(span.poles().begin(),span.poles().end(),p.begin());require(std::isfinite(provider.bound(span.domain(),p)),"provider lost source data after input destruction");std::cout<<" mapped_breaks="<<provider.breaks.size()<<" reported="<<dev;
+}
+void rejectionAndCancellation(){
+ auto f=sheet();const auto data=detail::extrusionEdgeOffsetErrorBound(f.edge,f.surface,f.pcurve,f.range,.001);require(bool(data.bound),"provider absent");
+ for(auto pc:{uvAffine({0,1},{-.1,0},{.9,0}),uvAffine({0,1},{0,0},{1.1,0})}){bool rejected=false;try{auto invalid=detail::extrusionEdgeOffsetErrorBound(f.edge,f.surface,pc,{0,1},.001);(void)invalid;}catch(const std::exception&){rejected=true;}require(rejected,"recognized pcurve outside generator domain accepted");}
+ bool rejected=false;try{auto bad=detail::extrusionEdgeOffsetErrorBound(f.edge,f.surface,f.pcurve,f.range,std::numeric_limits<double>::quiet_NaN());(void)bad;}catch(const std::exception&){rejected=true;}require(rejected,"nonfinite distance accepted");
+ auto parallel=std::make_shared<ExtrusionSurface>(std::make_shared<Line<3>>(Vec3(),Vec3(0,1,0)),Vec3(0,1,0));double deviation=123.;rejected=false;bool emptyInvalid=false;try{auto invalid=detail::extrusionEdgeOffsetErrorBound(f.edge,parallel,f.pcurve,{0,1},.001);emptyInvalid=!invalid.bound;if(invalid.bound)fitCurveCertified([](double t){return Vec3(t,0,0);},{0,1},invalid.breaks,tolerance,invalid.bound,&deviation);}catch(const std::exception&){rejected=true;}require(rejected&&!emptyInvalid&&deviation==123.,"degenerate normal silently unsupported, published fit or modified deviation");
+ auto token=std::make_shared<std::atomic<bool>>(true);CancellationScope scope(token);int calls=0;bool cancelled=false;try{fitCurveCertified([&](double t){++calls;return expected(f,t,.001);},f.range,data.breaks,tolerance,data.bound,&deviation);}catch(const OperationCancelled&){cancelled=true;}require(cancelled&&calls==0&&deviation==123.,"cancellation failed atomically");token->store(false);
+}
+#endif
+void run(const std::string&name,const std::function<void()>&f){std::cout<<name<<std::flush;try{f();++passed;std::cout<<" PASS\n";}catch(const std::exception&e){++failed;std::cout<<" FAIL: "<<e.what()<<"\n";}catch(const OperationCancelled&){++failed;std::cout<<" FAIL unexpected cancellation\n";}}
+}
+int main(){std::cout<<std::setprecision(17);
+ for(bool rational:{false,true})for(bool reverse:{false,true})run(std::string("public ")+(rational?"rational":"polynomial")+(reverse?" reverse U":" forward U"),[=]{publicOffset(rational,reverse,true,true,0);});
+ run("public baseline witness",[]{publicOffset(false,false,true,false,0);});run("public reversed face sense",[]{publicOffset(false,false,false,true,0);});run("public trim wrappers",[]{publicOffset(true,false,true,true,1);});run("public transformed wrappers",[]{publicOffset(false,false,true,true,2);});
+#ifdef HAVE_EDGE_PROVIDER
+ for(bool rat:{false,true})for(bool rev:{false,true})run(std::string("provider ")+(rat?"rational":"polynomial")+(rev?" reverse U":" forward U"),[=]{directProvider(rat,rev,0,false,false);});
+ run("provider negative distance",[]{directProvider(false,true,0,false,true);});run("provider trim wrappers",[]{directProvider(true,true,1,false,false);});run("provider transformed wrappers",[]{directProvider(false,true,2,false,false);});run("provider shifted edge parameters",[]{directProvider(true,false,0,true,false);});run("provider knots and lifetime",knotsAndLifetime);run("provider reject and cancellation",rejectionAndCancellation);
+#endif
+ std::cout<<"results passed="<<passed<<" failed="<<failed<<std::endl;return failed?1:0;}

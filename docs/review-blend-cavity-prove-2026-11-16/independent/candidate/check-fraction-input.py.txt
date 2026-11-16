@@ -1,0 +1,22 @@
+from pathlib import Path
+from fractions import Fraction as F
+import json,hashlib
+r=Path('/tmp/blend-cavity-review/root');j=json.loads((r/'failure-data.json').read_text());result=json.loads((r/'fraction-separation-result.json').read_text())
+def q(s):return F.from_float(float.fromhex(s))
+s=j['surface'];u=list(map(q,s['uKnots']));v=list(map(q,s['vKnots']));nu=len(s['poles']);nv=len(s['poles'][0]);pu=s['uDegree'];pv=s['vDegree']
+assert len(u)==nu+pu+1 and len(v)==nv+pv+1
+assert all(a<=b for a,b in zip(u,u[1:])) and all(a<=b for a,b in zip(v,v[1:]))
+assert u.count(u[pu])==pu+1 and u.count(u[nu])==pu+1 and v.count(v[pv])==pv+1 and v.count(v[nv])==pv+1
+assert all(len(p)==nv for p in s['poles']) and all(len(w)==nv for w in s['weights'])
+assert all(q(w)>0 for row in s['weights'] for w in row)
+assert all(u.count(x)>=pu for x in set(u[pu+1:nu]))
+c=j['curve'];U=list(map(q,c['knots']));d=c['degree'];W=list(map(q,c['weights'])) or [F(1)]*len(c['poles']);t=q(j['parameter']);assert len(W)==len(c['poles'])
+a=[[q(x)*w for x in p]+[w] for p,w in zip(c['poles'],W)];k=next(k for k in range(d,len(a)) if U[k]<=t<U[k+1]);a=a[k-d:k+1]
+for order in range(1,d+1):
+ for m in range(d,order-1,-1):
+  i=k-d+m;alpha=(t-U[i])/(U[i+d-order+1]-U[i]);a[m]=[(1-alpha)*x+alpha*y for x,y in zip(a[m-1],a[m])]
+point=[x/a[d][-1] for x in a[d][:-1]];assert point==list(map(F,result['curve_point']))
+assert result['input_sha256']==hashlib.sha256((r/'failure-data.json').read_bytes()).hexdigest()
+assert F(result['global_lower_bound_exact'])>10*q(j['tolerance'])
+out={'pass':True,'exact_deboor_matches_parent':True,'schema_clamped_sorted_positive_checked':True,'input_sha256':result['input_sha256'],'source_script_sha256':hashlib.sha256((r/'fraction_separation.py').read_bytes()).hexdigest(),'exact_vs_IEEE_point_max_component':float(max(abs(a-q(b)) for a,b in zip(point,j['pointEvaluated']))),'scope':'independent input/schema/deBoor checks; subdivision proof reviewed statically, not rerun'}
+print(json.dumps(out,indent=2))

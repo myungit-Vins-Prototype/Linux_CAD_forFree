@@ -1,0 +1,87 @@
+from pathlib import Path
+import json,hashlib,re,subprocess,datetime
+ROOT=Path('/home/myungit/Linux_CAD_forFree');OUT=Path('/tmp/review-orphans-refresh');OUT.mkdir(exist_ok=True)
+def run(args):
+ r=subprocess.run(args,cwd=ROOT,text=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+ if r.returncode not in [0,1]:raise RuntimeError((args,r.returncode,r.stdout))
+ return r.stdout
+# The explicit path '.' is necessary: subprocess rg otherwise may read stdin.
+candidates=[
+('CadViewport::setSelectedPointPosition','forgeCad2026_viewport_selection.cpp','forgeCad2026_viewport.h','privata','Metodo normale, accessibile al friend ViewportInteractionTest ma assente da tutti i test, anche fuori CMake.'),
+('CadViewport::setEdgePickLinear','forgeCad2026_viewport_selection.cpp','forgeCad2026_viewport.h','pubblica','Setter di stato del picker; nessuna chiamata o presa di indirizzo. Non è uno slot Qt.'),
+('CadViewport::setExtendPickCallback','forgeCad2026_viewport_selection.cpp','forgeCad2026_viewport.h','pubblica','API per installare callback del picker; il campo callback è letto altrove, ma il setter non è chiamato.'),
+('CadViewport::resumeExtendPick','forgeCad2026_viewport_selection.cpp','forgeCad2026_viewport.h','pubblica','Ripresa del picker di estensione; normale metodo pubblico non invocabile via metaoggetto.'),
+('CadViewport::constraintsVisible','forgeCad2026_viewport_sketch.cpp','forgeCad2026_viewport.h','pubblica','Getter pubblico; setter e stato rimangono usati, il getter non ha chiamanti.'),
+('CadViewport::sectionEnabled','forgeCad2026_viewport.cpp','forgeCad2026_viewport.h','pubblica','Getter pubblico della sezione; nessun chiamante.'),
+('CadViewport::geometrySnap','forgeCad2026_viewport.cpp','forgeCad2026_viewport.h','pubblica','Tre occorrenze aggiuntive sono chiavi QSettings, non il getter; setter chiamato in produzione.'),
+('CadViewport::gridSnap','forgeCad2026_viewport.cpp','forgeCad2026_viewport.h','pubblica','Cinque occorrenze aggiuntive sono chiavi QSettings o nomi icone, non il getter; setter chiamato.'),
+('CadViewport::basisMatrix','forgeCad2026_viewport_scene.cpp','forgeCad2026_viewport.h','pubblica','Wrapper della camera non usato; ViewportCamera::basisMatrix ha chiamanti reali e va conservato.'),
+('CadViewport::normalizedViewAngle','forgeCad2026_viewport_scene.cpp','forgeCad2026_viewport.h','pubblica statica','Wrapper statico pubblico non usato; ViewportCamera::normalizedViewAngle ha chiamanti reali.'),
+('CadViewport::extrusionNames','forgeCad2026_viewport_document.cpp','forgeCad2026_viewport.h','pubblica','Accessor pubblico della lista nomi, senza chiamanti.'),
+('StoryboardTree::firstFeature','forgeCad2026_storyboard.cpp','forgeCad2026_storyboard.h','privata statica','Metodo statico privato non virtuale; nessuna occorrenza nei test o invocazione Qt.'),
+('ForgeCad::DrawingSheetEditor::setModelProvider','cad_drawing_editor.cpp','cad_drawing_editor.h','pubblica','API callback per Aggiorna dal modello; la callback è consumata, ma setter non installato da alcun chiamante corrente. Non rimuovere automaticamente la funzionalità.'),
+('ForgeCad::forgeIntersectRay','cad_forge.cpp','cad_forge.h','pubblica libera','Ponte Qt/kernel per ray picking; API dichiarata, nessun uso corrente. Le API kernel sottostanti sono distinte.'),
+('ForgeCad::modelBodyFeatures','cad_model_history.cpp','cad_model_history.h','pubblica libera','Utility lista feature di un corpo logico; dichiarazione e definizione soltanto.'),
+('ForgeCad::usesSketch','cad_feature_dependencies.cpp','cad_feature_dependencies.h','pubblica libera','Wrapper !sketchesOf(body).isEmpty(); sketchesOf è chiamata altrove, non eliminare la funzione sottostante.'),
+('ForgeCad::commandIconNames','cad_icons.cpp','cad_icons.h','pubblica libera','API di enumerazione del registro icone richiamata da un commento del contratto; nessun chiamante runtime/test.'),
+('ForgeCad::nearestBodyEdge','cad_sketch_refs.cpp','cad_sketch_refs.h','pubblica libera','Utility geometrica documentata in header; nessun chiamante. Non promuovere il nearest a riassociazione genealogica.'),
+('ForgeCad::appendFixedReferenceLine','cad_sketch_refs.cpp','cad_sketch_refs.h','pubblica libera','Utility documentata per retta di riferimento fissa; nessun uso corrente.'),
+('ForgeCad::Kernel::Corner::otherFace','kernel/fk_blend.cpp','kernel/fk_blend.cpp','locale TU','Membro non virtuale di struct locale al namespace anonimo. Gli omonimi sono variabili in fk_boolean, non chiamanti.'),
+('ForgeCad::Kernel::ChainEdge::inPlane','kernel/fk_blend_loop.cpp','kernel/fk_blend_loop.cpp','locale TU','Membro non virtuale di classe senza base nel namespace anonimo; omonimi fuori classe sono lambda/variabili.'),
+('ForgeCad::Kernel::BandMatrix::band','kernel/fk_fill.cpp','kernel/fk_fill.cpp','locale TU','Getter non virtuale di classe senza base nel namespace anonimo; gli altri band sono variabili/campi/parametri.')]
+graph_bytes=(ROOT/'docs/architecture/graph.json').read_bytes();(OUT/'graph-snapshot.json').write_bytes(graph_bytes);graph=json.loads(graph_bytes)
+rows=[];primary={'CMakeLists.txt','kernel/CMakeLists.txt','AGENTS.md','CLAUDE.md'}
+for symbol,definition,declaration,access,note in candidates:
+ leaf=symbol.split('::')[-1]
+ args=['rg','--hidden','-n','-w',leaf,'.','--glob','!docs/**','--glob','!archivi-locali/**','--glob','!.git/**']
+ hits=run(args).splitlines();(OUT/(leaf+'.rg.txt')).write_text('Command: '+' '.join(args)+'\n'+'\n'.join(hits)+'\n')
+ deflines=(ROOT/definition).read_text().splitlines();decllines=(ROOT/declaration).read_text().splitlines()
+ methodOwner=symbol.split('::')[-2]
+ if access=='locale TU':defpattern=r'\b'+re.escape(leaf)+r'\s*\('
+ elif methodOwner in ['CadViewport','StoryboardTree','DrawingSheetEditor']:defpattern=r'\b'+re.escape(methodOwner+'::'+leaf)+r'\s*\('
+ else:defpattern=r'\b'+re.escape(leaf)+r'\s*\('
+ defline=next(i+1 for i,l in enumerate(deflines) if re.search(defpattern,l))
+ decline=defline if declaration==definition else next(i+1 for i,l in enumerate(decllines) if re.search(r'\b'+re.escape(leaf)+r'\s*\(',l))
+ edges=[{'source':e['source'],'target':e['target'],'kind':e['kind'],**site} for e in graph['edges'] for site in e.get('sites',[]) if site.get('symbol')==symbol]
+ outgoing=[{'source':e['source'],'target':e['target'],'kind':e['kind'],**site} for e in graph['edges'] for site in e.get('sites',[]) if site.get('owner')==symbol]
+ assert not [e for e in edges if e['kind'] in ['call','reference','function_reference']],(symbol,edges)
+ assert any(symbol in n.get('symbols',[]) for n in graph['nodes']),(symbol,'not seen in graph')
+ category='Rimuovibile privata/locale' if access.startswith('privata') or access=='locale TU' else 'API pubblica non usata; nessuna rimozione automatica'
+ rows.append({'symbol':symbol,'definition':f'{definition}:{defline}','declaration':f'{declaration}:{decline}','access':access,'category':category,'note':note,'lexical_hits':hits,'graph_incoming':edges,'graph_outgoing':outgoing})
+ primary.update([definition,declaration])
+(OUT/'table.json').write_text(json.dumps(rows,indent=2,ensure_ascii=False)+'\n')
+files=run(['rg','--files','--hidden','--glob','!docs/**','--glob','!archivi-locali/**','--glob','!.git/**','.']).splitlines();extensions={'.cpp','.h','.c','.mm','.m','.cu','.py','.sh','.cmake','.in','.xml','.qrc'}
+scanned=sorted(set(f.removeprefix('./') for f in files if Path(f).suffix in extensions or Path(f).name=='CMakeLists.txt'))
+hashes={f:hashlib.sha256((ROOT/f).read_bytes()).hexdigest() for f in scanned};(OUT/'sourcehash-all-scanned.json').write_text(json.dumps(hashes,indent=2)+'\n')
+primaryhash={f:hashlib.sha256((ROOT/f).read_bytes()).hexdigest() for f in sorted(primary)}
+primaryhash['docs/architecture/graph.json at snapshot']=hashlib.sha256(graph_bytes).hexdigest();(OUT/'sourcehash-primary.json').write_text(json.dumps(primaryhash,indent=2)+'\n')
+(OUT/'source-files-scanned.txt').write_text('\n'.join(scanned)+'\n')
+# Preserve relevant module descriptions and both dependency directions. Calls,
+# includes and references are retained as distinct edge kinds.
+nodefiles={r['definition'].rsplit(':',1)[0] for r in rows}|{r['declaration'].rsplit(':',1)[0] for r in rows}
+(OUT/'graph-module-context.json').write_text(json.dumps({'nodes':[n for n in graph['nodes'] if n['id'] in nodefiles], 'edges':[e for e in graph['edges'] if (e['source'] in nodefiles or e['target'] in nodefiles) and e['source']!=e['target']]},indent=2,ensure_ascii=False)+'\n')
+friend=run(['rg','-n','friend|Q_OBJECT|Q_INVOKABLE|Q_PROPERTY|slots:|signals:','forgeCad2026_viewport.h','forgeCad2026_storyboard.h','cad_drawing_editor.h'])
+(OUT/'qt-friend-context.txt').write_text(friend+'\n')
+# Includes outside CMake, friend headers and optional comparison/backend tests.
+test=run(['rg','--hidden','-n',r'\b(setSelectedPointPosition|firstFeature|otherFace|inPlane|band)\b','tests','kernel/tests','kernel/occt_tests','tools','--glob','*.{cpp,h,py,sh,cmake}'])
+(OUT/'private-five-test-occurrences.txt').write_text(test+'\n')
+private=rows[0:1]+rows[11:12]+rows[19:22]
+lines=['# Ricontrollo delle 22 candidate orfane — 16 novembre 2026','',f'Scan in sola lettura: {len(scanned)} file di codice/configurazione attivi non ignorati; tutti i test presenti, anche fuori CMake, backend opzionali e confronti OCCT inclusi. Snapshot grafo: {len(graph["nodes"])} nodi, {len(graph["edges"])} archi.','',
+'Esito: **22/22 ancora senza chiamanti o riferimenti a funzione osservati nel repository corrente**. Di queste, **5 private/locali sono candidate concrete alla rimozione** e **17 sono API pubbliche applicative da trattare separatamente**. Nessuna è diventata test-only o un falso positivo chiamato in produzione. Non sono 22 difetti funzionali.','',
+'| Funzione | Definizione corrente | Dichiarazione corrente | Visibilità / categoria | Evidenza |','|---|---|---|---|---|']
+for r in rows:lines.append('| `'+r['symbol']+'` | `'+r['definition']+'` | `'+r['declaration']+'` | '+r['access']+' | '+r['note']+' |')
+lines += ['', '## Distinzione fra assenza di uso e API intenzionale','',
+'Le 17 API pubbliche hanno un contratto leggibile (getters, callback, helper geometrici o di ispezione), ma il controllo non dimostra che debbano restare per un consumatore futuro. Non sono API test-only: i nomi non compaiono come chiamate neppure nei test. Essere pubbliche in C++ non le rende automaticamente SDK: CMake installa l’eseguibile, non un SDK con questi header. Questo fatto non autorizza comunque una cancellazione automatica. La decisione di conservarle, documentarle o rimuoverle resta distinta dal finding di assenza di uso.','',
+'`CadViewport::normalizedViewAngle` è statica ma pubblica, quindi non è stata inclusa nelle cinque sicure. I wrapper `CadViewport::basisMatrix` e `normalizedViewAngle` non hanno chiamanti; gli omonimi di `ViewportCamera` sono invece usati in produzione e devono restare. Le occorrenze QSettings/icone di geometrySnap/gridSnap sono stringhe, non invocazioni dei getter.','',
+'## Cinque candidate concrete, senza modifica effettuata','',
+'La proposta successiva è eliminare soltanto le cinque dichiarazioni/definizioni sotto, conservando classi, dati e tutti i metodi chiamati. Interessa sette file; nessun CMake o formato persistente cambierebbe.']
+for r in private:lines.append('- `'+r['symbol']+'`: '+r['definition']+'; '+r['declaration']+'. '+r['note'])
+lines += ['',
+'`CadViewport` dichiara `friend class ViewportInteractionTest` a riga 82: il friend è stato considerato, non ignorato. Tutti gli header e TU di test presenti sotto tests, kernel/tests e kernel/occt_tests, anche non elencati nei target CMake, sono stati cercati. Nessuno chiama setSelectedPointPosition o firstFeature. Le altre tre funzioni sono membri ordinari di classi senza base nel namespace anonimo del proprio TU; non sono virtuali e non hanno un header esterno. Non si trovano include diretti dei tre .cpp in test o strumenti. Gli omonimi band/inPlane/otherFace nei test e negli altri moduli sono variabili, campi, lambda o nomi diversi.','',
+'Prima di un’eventuale rimozione: confronto del delta ristretto, build completa e runner pertinenti già esistenti; rigenerazione della mappa poiché spariscono simboli e archi uscenti. Non sono stati scritti test che ripetano questi getter inutilizzati e non è stata eseguita alcuna rimozione.','',
+'## Metodo, prove e limiti','',
+'- Per ciascun simbolo: ricerca lessicale completa con rg e percorso esplicito `.`, poi lettura di definizione, dichiarazione e visibilità. Le ricerche non dipendono dalla sola compile_commands della configurazione corrente.','- Grafo: simbolo presente nel modulo previsto e zero archi entranti call/reference per tutti i 22; contesto di chiamate, include e riferimenti conservato separatamente in graph-module-context.json.','- Nessuno dei tre header GUI coinvolti contiene Q_OBJECT, slot, signal, Q_INVOKABLE o Q_PROPERTY che renda questi normali metodi callback del metaoggetto. Le sole invokeMethod locali rilevate chiamano una lambda o quit, senza questi nomi.','- Ricerca di puntatori a funzione e macro: gli indirizzi espliciti conterrebbero il nome e non sono presenti; non risultano token pasting o include diretti dei .cpp che espongano i cinque helper a un test nascosto nel tree esaminato.','- Nessuna build nuova, prova linker/garbage collection, certificazione Qt runtime o scansione esaustiva di tutte le funzioni è dichiarata. Questa è analisi statica delle 22 candidate.','- Non sono esaminati archivi locali ignorati, build generate, repository esterni, chiamanti futuri o caricamenti dinamici arbitrari. Non si pretende assenza globale di consumatori fuori dal repository.','',
+'Prove: table.json, 22 file *.rg.txt, graph-snapshot.json, graph-module-context.json, manifest sourcehash-primary.json e sourcehash-all-scanned.json, elenco dei file cercati, qt-friend-context.txt e private-five-test-occurrences.txt. Lo script refresh.py rigenera i dati senza modificare il repository.']
+(OUT/'report.md').write_text('\n'.join(lines)+'\n')
+print('22 candidates verified; private/local=',len(private),'public=',len(rows)-len(private),'scanned source files=',len(scanned))
+for r in rows:print(r['symbol'],r['definition'],r['declaration'],r['access'])

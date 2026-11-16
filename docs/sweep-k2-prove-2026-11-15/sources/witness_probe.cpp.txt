@@ -1,0 +1,28 @@
+#include "fk_sweep.h"
+#include "fk_helix.h"
+#include "fk_bspline_surface.h"
+#include "fk_mass.h"
+#include <iostream>
+#include <iomanip>
+#include <cmath>
+using namespace ForgeCad::Kernel;
+bool solve(Vec3 a,Vec3 b,Vec3 c,Vec3 rhs,Vec3 &x){const double det=dot(a,cross(b,c));if(std::abs(det)<1e-22)return false;x={dot(rhs,cross(b,c))/det,dot(a,cross(rhs,c))/det,dot(a,cross(b,rhs))/det};return isFinite(x);}
+ProfileRegion disk(double r){ProfileRegion p;p.outer.segments={{std::make_shared<Circle<2>>(Vec2(),Vec2(1,0),Vec2(0,1),r),{0,kTwoPi}}};return p;}
+int main(){std::cout<<std::setprecision(17);HelixSpec spec;spec.radius=1;spec.pitch=.1;spec.turns=2;auto h=std::make_shared<HelixCurve>(spec);Frame3 start(h->point(0),h->derivative(0),Vec3(1,0,0));ProfileLoop line;line.segments={{std::make_shared<Line<2>>(Vec2(0,-.5),Vec2(0,1)),{0,1}}};auto ribbon=sweepChains(start,{line},{{h,h->domain()}},SweepOrientation::Frenet);const auto &s=*ribbon.face(ribbon.faces()[0]).surface;double v0=.5,u0=.45,u1=.55,v1=v0+kTwoPi-.0016;
+for(int it=0;it<30;++it){Vec3 a[4],b[4];s.evaluate(u0,v0,1,a);s.evaluate(u1,v1,1,b);Vec3 d;if(!solve(a[Surface::derivativeIndex(1,0,1)],-b[Surface::derivativeIndex(1,0,1)],-b[Surface::derivativeIndex(0,1,1)],b[0]-a[0],d))return 2;u0+=d.x();u1+=d.y();v1+=d.z();if(norm(d)<1e-12)break;}
+std::cout<<"ribbon actual-carrier witness u0="<<u0<<" v0="<<v0<<" u1="<<u1<<" v1="<<v1<<" distance="<<distance(s.point(u0,v0),s.point(u1,v1))<<std::endl;
+spec.turns=1.125;h=std::make_shared<HelixCurve>(spec);start=Frame3(h->point(0),h->derivative(0),Vec3(1,0,0));auto tube=sweepRegions(start,{disk(.5)},{{h,h->domain()}},SweepOrientation::Frenet);const auto &side=*tube.face(tube.faces()[1]).surface;const Vec3 cap=h->point(h->domain().hi),normal=normalized(h->derivative(h->domain().hi));const double u=.5*(side.uDomain().lo+side.uDomain().hi);double lo=kPi/4-.1,hi=kPi/4+.1;auto fn=[&](double v){return dot(side.point(u,v)-cap,normal);};double fl=fn(lo);if(fl*fn(hi)>=0)return 3;for(int i=0;i<80;++i){double mid=.5*(lo+hi);if(fl*fn(mid)>0){lo=mid;fl=fn(lo);}else hi=mid;}const double v=.5*(lo+hi);const Vec3 point=side.point(u,v);std::cout<<"cap-side actual-carrier witness sideface=1 u="<<u<<" v="<<v<<" capPlaneResidual="<<dot(point-cap,normal)<<" capRadius="<<distance(point,cap)<<" diskRadius=.5"<<std::endl;
+HelixSpec multiSpec;multiSpec.radius=4;multiSpec.pitch=.5;multiSpec.turns=2;
+auto mh=std::make_shared<HelixCurve>(multiSpec);Frame3 mf(mh->point(0),mh->derivative(0),Vec3(1,0,0));
+auto diskAt=[](double y){ProfileRegion p;p.outer.segments={{std::make_shared<Circle<2>>(Vec2(0,y),Vec2(1,0),Vec2(0,1),.1),{0,kTwoPi}}};return p;};
+auto multi=sweepRegions(mf,{diskAt(-.25),diskAt(.25)},{{mh,mh->domain()}},SweepOrientation::Frenet);
+bool found=false;
+for(int fa:{0,1})for(int fb:{2,3})for(double guess:{.001,.1,1.,1.9,1.999})for(bool flip:{false,true}){if(found)continue;
+const auto &sa=*multi.face(multi.faces()[fa]).surface,&sb=*multi.face(multi.faces()[fb]).surface;
+double x=guess,y=flip?2-guess:guess,z=.5+kTwoPi;bool good=true;
+for(int it=0;it<50;++it){Vec3 a[4],b[4];sa.evaluate(x,.5,1,a);sb.evaluate(y,z,1,b);Vec3 d;if(!solve(a[Surface::derivativeIndex(1,0,1)],-b[Surface::derivativeIndex(1,0,1)],-b[Surface::derivativeIndex(0,1,1)],b[0]-a[0],d)){good=false;break;} x+=d.x();y+=d.y();z+=d.z();if(!std::isfinite(x)||std::abs(x)>100||std::abs(y)>100){good=false;break;}if(norm(d)<1e-11)break;}
+const double gap=good?distance(sa.point(x,.5),sb.point(y,z)):1;
+if(good&&x>sa.uDomain().lo&&x<sa.uDomain().hi&&y>sb.uDomain().lo&&y<sb.uDomain().hi&&z>sb.vDomain().lo&&z<sb.vDomain().hi&&gap<1e-10){std::cout<<"multiregion actual-carrier witness fa="<<fa<<" fb="<<fb<<" u0="<<x<<" v0=.5 u1="<<y<<" v1="<<z<<" distance="<<gap<<std::endl;found=true;}}
+if(!found){std::cout<<"multiregion carrier witness NOT FOUND"<<std::endl;return 4;}
+
+}

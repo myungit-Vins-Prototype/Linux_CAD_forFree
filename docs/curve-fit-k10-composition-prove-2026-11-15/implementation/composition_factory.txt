@@ -1,0 +1,184 @@
+struct IsoMap {
+    Interval parameter;
+    bool line = false, fixedU = false;
+    double fixed = 0, first = 0, last = 0, origin = 0, direction = 0;
+    Interval anchor;
+    std::shared_ptr<Source> source;
+};
+I exactSum(double a, double b) {
+    const double sum = a + b;
+    if (!std::isfinite(sum))
+        return {-inf, inf};
+    const double tail = sum - a;
+    const double error = (a - (sum - tail)) + (b - tail);
+    return error == 0 ? I(sum) : I(dn(sum), up(sum));
+}
+I image(const IsoMap &map, double parameter) {
+    if (map.line) {
+        // An isoparametric unit Line2 has its varying direction exactly +/-1.
+        return exactSum(map.origin, map.direction * parameter);
+    }
+    if (parameter == map.anchor.lo)
+        return I(map.first);
+    if (parameter == map.anchor.hi)
+        return I(map.last);
+    return I(map.first) + (I(map.last) - I(map.first)) *
+           ((I(parameter) - I(map.anchor.lo)) / (I(map.anchor.hi) - I(map.anchor.lo)));
+}
+I preimage(const IsoMap &map, I coordinate) {
+    if (map.line)
+        return map.direction > 0 ? coordinate - I(map.origin) : I(map.origin) - coordinate;
+    const bool reversed = map.last < map.first;
+    const I fraction = reversed ? (I(map.first) - coordinate) / (I(map.first) - I(map.last))
+                                : (coordinate - I(map.first)) / (I(map.last) - I(map.first));
+    return I(map.anchor.lo) + fraction * (I(map.anchor.hi) - I(map.anchor.lo));
+}
+SurfaceCurveFitData compositionFactory(const SurfacePtr &surface, const CurvePtr<2> &pcurve,
+                                      const Interval &requested) {
+    cancellationPoint();
+    if (!surface || !pcurve || !requested.isFinite() || !(requested.lo < requested.hi) ||
+        !std::isfinite(requested.length()))
+        throw std::domain_error("fit composizione: sorgente o dominio non valido");
+    const auto *support = dynamic_cast<const BSplineSurface *>(surface.get());
+    if (!support)
+        return {};
+    const Curve<2> *basis = pcurve.get();
+    while (basis->type() == CurveType::Trimmed) {
+        cancellationPoint();
+        basis = static_cast<const TrimmedCurve<2> *>(basis)->basis().get();
+    }
+    auto maps = std::make_shared<std::vector<IsoMap>>();
+    if (basis->type() == CurveType::Line) {
+        const auto &line = static_cast<const Line<2> &>(*basis);
+        const auto d = line.direction(), o = line.origin();
+        if ((d.x() == 0) == (d.y() == 0))
+            return {};
+        IsoMap map;
+        map.line = true;
+        map.fixedU = d.x() == 0;
+        map.fixed = o[map.fixedU ? 0 : 1];
+        map.origin = o[map.fixedU ? 1 : 0];
+        map.direction = d[map.fixedU ? 1 : 0];
+        if (std::abs(map.direction) != 1)
+            return {};
+        map.parameter = requested;
+        maps->push_back(map);
+    } else if (basis->type() == CurveType::BSpline) {
+        const auto &curve = static_cast<const BSplineCurve<2> &>(*basis);
+        if (curve.degree() != 1)
+            return {};
+        if (curve.poleCount() > 100000 || requested.lo < curve.domain().lo || requested.hi > curve.domain().hi)
+            throw std::domain_error("fit composizione: dominio UV o budget non valido");
+        for (int i = 1; i < curve.poleCount(); ++i) {
+            cancellationPoint();
+            const Interval anchor{curve.knots()[i], curve.knots()[i + 1]};
+            if (!(anchor.lo < anchor.hi) || anchor.hi <= requested.lo || anchor.lo >= requested.hi)
+                continue;
+            const Vec2 a = curve.poles()[i - 1], b = curve.poles()[i];
+            // Equal weights make the original degree-one map affine in t.
+            if (curve.weight(i - 1) != curve.weight(i) || (a.x() == b.x()) == (a.y() == b.y()))
+                return {};
+            IsoMap map;
+            map.fixedU = a.x() == b.x();
+            map.fixed = a[map.fixedU ? 0 : 1];
+            map.first = a[map.fixedU ? 1 : 0];
+            map.last = b[map.fixedU ? 1 : 0];
+            map.anchor = anchor;
+            map.parameter = {std::max(requested.lo, anchor.lo), std::min(requested.hi, anchor.hi)};
+            maps->push_back(map);
+        }
+    } else {
+        return {};
+    }
+    SurfaceCurveFitData result;
+    result.breaks = {requested.lo, requested.hi};
+    std::size_t coefficientCount = 0;
+    for (IsoMap &map : *maps) {
+        cancellationPoint();
+        map.source = prepareIso(*support, map.fixedU, map.fixed);
+        for (const Span &span : map.source->spans)
+            coefficientCount += 3 * span.h[0].size() + span.w.size();
+        if (coefficientCount > 2000000)
+            throw std::domain_error("fit composizione: budget totale coefficienti esaurito");
+        const I a = image(map, map.parameter.lo), b = image(map, map.parameter.hi);
+        if (!finite(a) || !finite(b) || std::min(a.lo, b.lo) < map.source->range.lo ||
+            std::max(a.hi, b.hi) > map.source->range.hi)
+            throw std::domain_error("fit composizione: UV fuori dominio naturale o non risolto");
+        result.breaks.push_back(map.parameter.lo);
+        result.breaks.push_back(map.parameter.hi);
+        for (const Span &span : map.source->spans) {
+            const I t = preimage(map, I(span.domain.lo));
+            if (finite(t)) {
+                // Bracket the true preimage; these are refinement hints only.
+                for (double cut : {t.lo, t.hi})
+                    if (cut > map.parameter.lo && cut < map.parameter.hi)
+                        result.breaks.push_back(cut);
+            }
+        }
+    }
+    if (maps->empty())
+        throw std::domain_error("fit composizione: copertura UV vuota");
+    std::sort(result.breaks.begin(), result.breaks.end());
+    result.breaks.erase(std::unique(result.breaks.begin(), result.breaks.end()), result.breaks.end());
+    result.bound = [maps, requested](const Interval &query, const std::array<Vec3, 4> &poles) {
+        cancellationPoint();
+        if (!query.isFinite() || !(query.lo < query.hi) || query.lo < requested.lo || query.hi > requested.hi)
+            return inf;
+        VP candidate;
+        for (const Vec3 &point : poles)
+            for (int axis = 0; axis < 3; ++axis) {
+                if (!std::isfinite(point[axis]))
+                    return inf;
+                candidate[axis].push_back(I(point[axis]));
+            }
+        double worst = 0;
+        bool covered = false;
+        for (const IsoMap &map : *maps) {
+            const double lo = std::max(query.lo, map.parameter.lo), hi = std::min(query.hi, map.parameter.hi);
+            if (lo > hi)
+                continue;
+            cancellationPoint();
+            // Include BOTH closed endpoint values at piece junctions.
+            if (lo == hi) {
+                const I coordinate = image(map, lo);
+                const I fraction = (I(lo) - I(query.lo)) / (I(query.hi) - I(query.lo));
+                VP residual;
+                bool endpointCovered = false;
+                for (const Span &span : map.source->spans) {
+                    if (span.domain.hi < coordinate.lo || span.domain.lo > coordinate.hi)
+                        continue;
+                    endpointCovered = true;
+                    const I t = (coordinate - I(span.domain.lo)) / (I(span.domain.hi) - I(span.domain.lo));
+                    const I w = span.constantWeight ? I(1) : evaluatePolynomial(span.w, t);
+                    if (!(w.lo > 0))
+                        return inf;
+                    for (int axis = 0; axis < 3; ++axis)
+                        residual[axis] = {evaluatePolynomial(span.h[axis], t) / w -
+                                          evaluatePolynomial(candidate[axis], fraction)};
+                    worst = std::max(worst, normUpper(residual));
+                }
+                if (!endpointCovered)
+                    return inf;
+                covered = true;
+                continue;
+            }
+            const I a = image(map, lo), b = image(map, hi);
+            const Interval sourceQuery{std::max(map.source->range.lo, std::min(a.lo, b.lo)),
+                                       std::min(map.source->range.hi, std::max(a.hi, b.hi))};
+            if (!(sourceQuery.lo < sourceQuery.hi))
+                return inf;
+            VP pulledBack;
+            for (int axis = 0; axis < 3; ++axis)
+                pulledBack[axis] = affineBezier(candidate[axis],
+                    (preimage(map, I(sourceQuery.lo)) - I(query.lo)) / (I(query.hi) - I(query.lo)),
+                    (preimage(map, I(sourceQuery.hi)) - I(query.lo)) / (I(query.hi) - I(query.lo)));
+            const double error = positionOnOriginal(*map.source, sourceQuery, pulledBack);
+            if (!std::isfinite(error))
+                return inf;
+            worst = std::max(worst, error);
+            covered = true;
+        }
+        return covered ? worst : inf;
+    };
+    return result;
+}

@@ -1,0 +1,12 @@
+#include "fk_curve.h"
+#include "fk_surface.h"
+#include "fk_bspline.h"
+#include <array>
+#include <algorithm>
+#include <cmath>
+#include <limits>
+using namespace ForgeCad::Kernel;
+#include "/tmp/supporto-review/stage/certificate.inc.txt"
+namespace boundaryCertificate {
+#include "/tmp/supporto-review/affine-pcurve-certificate.inc.txt"
+}

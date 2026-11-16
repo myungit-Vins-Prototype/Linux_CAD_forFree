@@ -1,0 +1,11 @@
+from pathlib import Path
+import json,shlex,subprocess,shutil,hashlib
+root=Path('/home/myungit/Linux_CAD_forFree');stage=Path(__file__).parent;out=stage/'sanitizer';out.mkdir(exist_ok=True);cs=json.loads((stage/'baseline/forgecad-release/compile_commands.json').read_text());objects=[]
+inputs=[('test_sketch_offset_validation',stage/'test_sketch_offset_validation.cpp','/cad_sketch_offset.cpp'),('cad_sketch_offset',stage.parent/'implementation/candidate/cad_sketch_offset.cpp','/cad_sketch_offset.cpp'),('cad_curve_solver',stage/'baseline/cad_curve_solver.cpp','/cad_curve_solver.cpp')]
+inputs += [(name,root/'kernel'/(name+'.cpp'),'/kernel/'+name+'.cpp') for name in ['fk_curve_fit_bounds','fk_curve_ops','fk_offset']]
+manifest=[]
+for name,source,template in inputs:
+ frozen=out/(name+'.cpp');shutil.copy2(source,frozen);manifest.append({'source':str(source),'sha256':hashlib.sha256(frozen.read_bytes()).hexdigest()})
+ item=next(x for x in cs if x['file'].endswith(template));cmd=shlex.split(item['command']);cmd[cmd.index('-c')+1]=str(frozen);obj=out/(name+'.o');cmd[cmd.index('-o')+1]=str(obj);cmd+=['-I'+str(root/'kernel'),'-O1','-g','-fno-fast-math','-ffp-contract=off','-fno-omit-frame-pointer','-fsanitize=address,undefined'];print('BUILD',name,flush=True);subprocess.run(cmd,cwd=item['directory'],check=True);objects.append(str(obj))
+(out/'manifest.json').write_text(json.dumps(manifest,indent=2))
+subprocess.run(['/usr/bin/c++','-fsanitize=address,undefined',*objects,str(stage/'baseline/forgecad-release/kernel/libforgekernel.a'),'-lQt6Widgets','-lQt6Gui','-lQt6Core','-lpthread','-o',str(out/'tests')],check=True)

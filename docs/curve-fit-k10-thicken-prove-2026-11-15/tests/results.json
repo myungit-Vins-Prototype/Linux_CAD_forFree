@@ -1,0 +1,96 @@
+{
+  "scope": "local wall construction for structural Plane and known original curves; normal offset caps/sewing/history preserved; curved/Other walls legacy",
+  "groups": 6,
+  "top_level_scenarios": 31,
+  "scenario_partition": {
+    "hidden_polynomial_rational_all_sides": 6,
+    "pose_scale_sense": 12,
+    "nested_trim_reverse_transformed_holes_roundtrip": 4,
+    "direction_control": 2,
+    "invalid_thickness_and_cancellation": 5,
+    "closed_native_nurbs_and_angular_circle": 2
+  },
+  "normal": {
+    "passed": 6,
+    "total": 6,
+    "elapsed_seconds": 1.55,
+    "maxrss_kib": 6780,
+    "log": "test-fixed-final.log"
+  },
+  "baseline": {
+    "passed": 2,
+    "total": 6,
+    "elapsed_seconds": 0.37,
+    "log": "test-before-final.log",
+    "method": "frozen before/thicken,offset,sew,pcurve,open_offset object overrides before current archive",
+    "metadata_stops": 4,
+    "note": "Four groups stop at original-generator Extrusion representation requirement; NOT four geometric findings. Separate public API probe demonstrates geometric loss on two valid fixtures."
+  },
+  "sanitizer": {
+    "passed": 6,
+    "total": 6,
+    "elapsed_seconds": 4.7,
+    "maxrss_kib": 480608,
+    "exit_code": 0,
+    "diagnostics": 0,
+    "ASAN": true,
+    "UBSAN": true,
+    "LSAN": true,
+    "log": "sanitizer-final.log",
+    "instrumented_TUs": [
+      "fk_thicken.cpp",
+      "test_planar_thicken_validation.cpp"
+    ],
+    "uninstrumented": "remaining Release archive and test main",
+    "environment": {
+      "ASAN_OPTIONS": "detect_leaks=1:halt_on_error=1",
+      "UBSAN_OPTIONS": "halt_on_error=1"
+    },
+    "outside_sandbox_ptrace_limit": true
+  },
+  "repro": {
+    "geometric_failure_fixtures": 2,
+    "thickness": 0.1,
+    "operation_tolerance": 1e-06,
+    "offset_tolerance": 1e-07,
+    "initial_wall_fit_tolerance_in_source": 1e-09,
+    "source_issues": 0,
+    "result_issues": 0,
+    "solid": true,
+    "source_binary_immutable": true,
+    "polynomial": {
+      "baseline_normal_nearest_wall_error": 5.74247506017549e-05,
+      "baseline_normal_same_parameter_error": 5.742475060178609e-05,
+      "direction_control_nearest_wall_error": 2.3618943543665635e-16,
+      "fixed_normal_nearest_wall_error": 2.3618943543665635e-16,
+      "fixed_normal_same_parameter_error": 0
+    },
+    "rational_positive_variable_weights": {
+      "baseline_normal_nearest_wall_error": 5.416219077815233e-05,
+      "baseline_normal_same_parameter_error": 5.416219077815253e-05,
+      "direction_control_nearest_wall_error": 1.4816730699805633e-17,
+      "fixed_normal_nearest_wall_error": 1.4816730699805633e-17,
+      "fixed_normal_same_parameter_error": 0
+    }
+  },
+  "permanent_geometry_assertions": {
+    "wall_translation_error_max": 1e-09,
+    "actual_wall_pcurve_coherence_max": 1e-09,
+    "pcurve_coverage": "every fin of wall faces identified by history from the problematic first source edge, including both walls for closed profiles; not every edge of entire solid",
+    "source_and_result_checkBody": true,
+    "volume_area_thickness": true,
+    "generator_degree_knots_weights": true,
+    "codec_roundtrip": true
+  },
+  "legacy_history_contract": "reset at thickenSheet entry preserved on invalid input and cancellation; no new atomicity claim",
+  "final_sha256": {
+    "test": "f8864efc84c721d03f89cd5b58de146b1bddb971655ebff487aecfca5aa5ceb1",
+    "core": "d235fdfa46ecc301a1d88b659cc45df40f4de9368ca1133f5844f8d7c11e6ef0"
+  },
+  "not_claimed": [
+    "global injectivity proof",
+    "continuous certification of curved/Other wall legacy fits",
+    "whole-archive sanitizer coverage",
+    "app/renderer/globalCTest verification from private runner"
+  ]
+}

@@ -1,0 +1,10 @@
+native_identity accepted=1 deviation=1.6232661779043149e-08 edge_error=1.8026729685697266e-11 carrier_type=5 carrier_absZ=0 sense=1 issues=0 history_faces=1
+native_rational accepted=1 deviation=1.3523310111446419e-08 edge_error=2.3907021397262529e-09 carrier_type=5 carrier_absZ=0 sense=1 issues=0 history_faces=1
+native_metric accepted=1 deviation=1.6232661863298628e-08 edge_error=1.3975009228299491e-11 carrier_type=5 carrier_absZ=0 sense=1 issues=0 history_faces=1
+native_obliqueD accepted=1 deviation=1.623266177905513e-08 edge_error=4.8499119186008566e-11 carrier_type=5 carrier_absZ=0 sense=1 issues=0 history_faces=1
+native_sourcepose accepted=1 deviation=1.6705554825445599e-08 edge_error=3.0315941763693112e-11 carrier_type=5 carrier_absZ=0 sense=1 issues=0 history_faces=1
+native_opposite_frame accepted=1 deviation=1.6232661779043149e-08 edge_error=1.8026729685697266e-11 carrier_type=5 carrier_absZ=0 sense=0 issues=0 history_faces=1
+native_rotation_shift accepted=1 deviation=1.6641748144111367e-08 edge_error=1.0235892836792716e-08 carrier_type=5 carrier_absZ=0 sense=1 issues=0 history_faces=1
+native_height_cancel accepted=1 deviation=1.6232661779043149e-08 edge_error=1.8026729685697266e-11 carrier_type=5 carrier_absZ=0 sense=1 issues=0 history_faces=1
+tensor_identity accepted=1 deviation=1.6232661779034934e-08 edge_error=1.0063521879032323e-10 carrier_type=7 carrier_absZ=0.0032000000000000002 sense=1 issues=0 history_faces=1
+native_normaloffset accepted=1 deviation=2.8208799094229007e-11 edge_error=0.011718353468606611 carrier_type=7 carrier_absZ=0.01 sense=1 issues=0 history_faces=1

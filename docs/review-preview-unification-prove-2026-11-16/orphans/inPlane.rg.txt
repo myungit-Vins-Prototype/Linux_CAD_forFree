@@ -1,0 +1,7 @@
+Command: rg --hidden -n -w inPlane . --glob !docs/** --glob !archivi-locali/** --glob !.git/**
+./cad_sketch_refs.cpp:336:            const auto inPlane = [&](FaceId f) { return std::find(onPlane.begin(), onPlane.end(), f) != onPlane.end(); };
+./cad_sketch_refs.cpp:340:                if (!edge.curve || body.isLaminar(e) || inPlane(body.finFace(edge.forward)) == inPlane(body.finFace(edge.backward))) continue;
+./kernel/fk_blend_loop.cpp:107:    Vec3 inPlane(double t) const {
+./kernel/fk_blend_loop.cpp:404:            const auto [inPlane, onWall] = distances(fin);
+./kernel/fk_blend_loop.cpp:405:            fin.geometry = std::make_shared<ChainEdge>(edge, D, sideT, wall, inPlane, chamfer, onWall);
+./kernel/fk_blend_loop.cpp:406:            fin.sizes = {inPlane, onWall};

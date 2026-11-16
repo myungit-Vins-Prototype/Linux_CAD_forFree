@@ -1,0 +1,28 @@
+#define main original_validation_main
+#include "/home/myungit/Linux_CAD_forFree/kernel/tests/test_projection_fit_validation.cpp"
+#undef main
+#include <fstream>
+#include "fk_surface.h"
+void num(double v){std::cout<<'"'<<std::hexfloat<<v<<std::defaultfloat<<'"';}
+void vec(const Vec3&v){std::cout<<'[';for(int j=0;j<3;++j){if(j)std::cout<<',';num(v[j]);}std::cout<<']';}
+void curve(const BSplineCurve<3>&c){std::cout<<"{\"degree\":"<<c.degree()<<",\"knots\":[";bool comma=false;for(double x:c.knots()){if(comma)std::cout<<',';comma=true;num(x);}std::cout<<"],\"poles\":[";comma=false;for(const auto&p:c.poles()){if(comma)std::cout<<',';comma=true;vec(p);}std::cout<<"],\"weights\":[";comma=false;for(double w:c.weights()){if(comma)std::cout<<',';comma=true;num(w);}std::cout<<"]}";}
+template<class T> double chainDeviation(const T&c){if constexpr(HasDeviation<T>::value)return c.deviation;else return -1.;}
+void outRecord(const std::string&name,const BSplineCurve<3>&source,const Frame3&f,const Vec3&d,const std::vector<ProjectedPiece>&p,const std::vector<ProjectedChain>&chains){
+std::cout<<"{\"name\":\""<<name<<"\",\"source\":";curve(source);std::cout<<",\"origin\":";vec(f.origin());std::cout<<",\"x\":";vec(f.xDir());std::cout<<",\"y\":";vec(f.yDir());std::cout<<",\"d\":";vec(d);std::cout<<",\"pieces\":[";bool comma=false;for(const auto&q:p){if(comma)std::cout<<',';comma=true;std::cout<<"{\"range\":[";num(q.range.lo);std::cout<<',';num(q.range.hi);std::cout<<"],\"deviation\":";num(chainDeviation(q));std::cout<<",\"curve\":";curve(*q.curve);std::cout<<'}';}std::cout<<"],\"chains\":[";comma=false;for(const auto&q:chains){if(comma)std::cout<<',';comma=true;std::cout<<"{\"deviation\":";num(chainDeviation(q));std::cout<<",\"curve\":";curve(*q.curve);std::cout<<'}';}std::cout<<"]}\n";
+}
+int main(){try{
+ for(bool rat:{false,true})for(bool up:{false,true})for(bool posed:{false,true})for(bool oblique:{false,true}){
+  Frame3 f=posed?Frame3(Vec3(3,-4,2),normalized(Vec3(1,2,3)),Vec3(2,-1,0)):Frame3();
+  auto source=hidden(rat,0,1,1,f,up?-1.:1.);Vec3 d=(up?1.:-1.)*f.zDir()+(oblique?.2:0.)*f.xDir();
+  Body body=makePlaneSheet(f,100);const auto&plane=static_cast<const Plane&>(*body.face(body.faces().front()).surface);
+  const auto projected=projectCurves(body,{{source,{0,1}}},d,options(4));require(projected.size()==1,"batch size");auto chains=joinProjectedPieces(projected[0]);
+  outRecord("rat="+std::to_string(rat)+" up="+std::to_string(up)+" posed="+std::to_string(posed)+" oblique="+std::to_string(oblique),static_cast<const BSplineCurve<3>&>(*source),plane.frame(),d,projected[0],chains);
+ }
+ // Joins with endpoint averaging and nontrivial first/last reordering.
+ for(bool firstLast:{false,true}){
+   std::vector<double>offsets=firstLast?std::vector<double>{0.,4.,-1.+5e-9}:std::vector<double>{0.,1.+5e-9,2.};
+   std::vector<CurveSpan> inputs;for(double x:offsets)inputs.push_back({hidden(false,0,1,1,Frame3(),1.,x),{0,1}});
+   auto result=projectCurves(makePlaneSheet(Frame3(),100),inputs,Vec3(0,0,-1),options(4));std::vector<ProjectedPiece>all;for(const auto&p:result)append(all,p);auto joined=joinProjectedPieces(all);
+   std::cout<<"{\"join_name\":\""<<(firstLast?"first_last":"three")<<"\",\"offsets\":[";for(std::size_t i=0;i<offsets.size();++i){if(i)std::cout<<',';num(offsets[i]);}std::cout<<"],\"sources\":[";for(std::size_t i=0;i<inputs.size();++i){if(i)std::cout<<',';curve(static_cast<const BSplineCurve<3>&>(*inputs[i].curve));}std::cout<<"],\"chains\":[";for(std::size_t i=0;i<joined.size();++i){if(i)std::cout<<',';std::cout<<"{\"deviation\":";num(chainDeviation(joined[i]));std::cout<<",\"curve\":";curve(*joined[i].curve);std::cout<<",\"maps\":[";std::vector<int> order=firstLast?(i==0?std::vector<int>{2,0}:std::vector<int>{1}):std::vector<int>{0,1,2};bool mapComma=false;for(int sourceIndex:order){require(result[sourceIndex].size()==1,"join map expected one piece");const auto&original=*result[sourceIndex][0].curve;for(std::size_t j=0;j+3<original.poles().size();j+=3){if(mapComma)std::cout<<',';mapComma=true;std::cout<<"{\"source\":"<<sourceIndex<<",\"range\":[";num(original.knots()[j+3]);std::cout<<',';num(original.knots()[j+4]);std::cout<<"]}";}}std::cout<<']';std::cout<<'}';}std::cout<<"]}\n";
+ }
+}catch(const std::exception&e){std::cerr<<e.what()<<'\n';return 1;}}

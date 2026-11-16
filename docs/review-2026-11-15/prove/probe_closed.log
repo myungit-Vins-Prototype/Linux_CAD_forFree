@@ -1,0 +1,2 @@
+split=0 faces=2 checks=0 volume=0 expected=0.822445218850813 area=0 failedFaces=0 triangles=44572
+split=1 faces=4 checks=0 volume=0.822445219580419 expected=0.822445218850813 area=16.4489043843124 failedFaces=0 triangles=64050

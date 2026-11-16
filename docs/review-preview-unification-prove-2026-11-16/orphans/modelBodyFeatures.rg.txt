@@ -1,0 +1,3 @@
+Command: rg --hidden -n -w modelBodyFeatures . --glob !docs/** --glob !archivi-locali/** --glob !.git/**
+./cad_model_history.cpp:75:QVector<int> modelBodyFeatures(const DocumentState &state, quint64 bodyId) {
+./cad_model_history.h:42:QVector<int> modelBodyFeatures(const DocumentState &state, quint64 bodyId);

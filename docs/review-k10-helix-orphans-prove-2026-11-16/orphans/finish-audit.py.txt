@@ -1,0 +1,29 @@
+from pathlib import Path
+import json,re,subprocess,hashlib
+r=Path('/home/myungit/Linux_CAD_forFree');p=Path('/tmp/orphan-five-review');graph=json.loads((r/'docs/architecture/graph.json').read_text());report=(r/'docs/review-orphans-refresh-2026-11-16.md').read_text()
+public=[]
+for line in report.splitlines():
+ if not line.startswith('| `') or 'pubblica' not in line:continue
+ cols=[v.strip() for v in line.split('|')[1:-1]];name=cols[0].strip('`');hits=[]
+ for edge in graph['edges']:
+  if edge['kind'] not in ['call','reference']:continue
+  for site in edge.get('sites',[]):
+   s=site.get('symbol','')
+   if s==name or s.endswith('::'+name):hits.append(dict(source=edge['source'],target=edge['target'],kind=edge['kind'],**site))
+ q=subprocess.run(['rg','-n','-w',name.split('::')[-1],* (p/'scanned-files.txt').read_text().splitlines()],cwd=r,text=True,capture_output=True)
+ public.append(dict(symbol=name,definition=cols[1],declaration=cols[2],category=cols[3],status='preserved, no removal proposed',graph_incoming=hits,lexical_occurrences=q.stdout.splitlines()))
+assert len(public)==17,len(public)
+(p/'public-seventeen.json').write_text(json.dumps(public,indent=2)+'\n')
+codefiles=(p/'scanned-files.txt').read_text().splitlines();testfiles=[x for x in codefiles if x.startswith(('tests/','kernel/tests/','kernel/occt_tests/'))]
+commands={
+ 'qt-friend': ['rg','-n','Q_OBJECT|Q_INVOKABLE|Q_PROPERTY|slots:|signals:|friend','forgeCad2026_viewport.h','forgeCad2026_storyboard.h'],
+ 'cpp-direct-includes':['rg','-n',r'#[ \t]*include[ \t]*[<\"][^\">]*(fk_blend\.cpp|fk_blend_loop\.cpp|fk_fill\.cpp)',*codefiles],
+ 'test-private-five':['rg','-n',r'\b(setSelectedPointPosition|firstFeature|Corner::otherFace|ChainEdge::inPlane|BandMatrix::band)\b',*testfiles],
+ 'function-pointer-uses':['rg','-n',r'((Corner|ChainEdge|BandMatrix)[ \t]*::|&[ \t]*(CadViewport::setSelectedPointPosition|StoryboardTree::firstFeature|otherFace|inPlane|band)\b)',*codefiles],
+}
+results={}
+for name,args in commands.items():
+ q=subprocess.run(args,cwd=r,text=True,capture_output=True);assert q.returncode in [0,1];results[name]=dict(command=args[:6]+(['... explicit scanned files'] if len(args)>6 else []),exit=q.returncode,output=q.stdout,stderr=q.stderr)
+results['scope']=dict(active_files=len(codefiles),test_files=len(testfiles),test_roots={d:sum(f.startswith(d+'/') for f in testfiles) for d in ['tests','kernel/tests','kernel/occt_tests']},not_dependent_on_cmake=True)
+(p/'meta-test-audit.json').write_text(json.dumps(results,indent=2)+'\n')
+print('Public retained',len(public),[(x['symbol'],len(x['graph_incoming'])) for x in public]);print(results['scope'])

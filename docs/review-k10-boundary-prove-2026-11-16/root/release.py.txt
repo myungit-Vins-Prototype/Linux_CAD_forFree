@@ -1,0 +1,19 @@
+from pathlib import Path
+import sys,hashlib,json,os
+sys.path.insert(0,'/tmp/boundary-review/root')
+from checks import run
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/boundary-review/root');S=Path('/tmp/boundary-review/tests');out=T/'release-export';out.mkdir(exist_ok=True)
+env=os.environ.copy();env['BOUNDARY_EXPORT_DIR']=str(out)
+run('release-variants',['forgecad-release/kernel/forgekernel_blend_boundary_validation_tests'],timeout=180,env=env)
+run('release-general-blend',['forgecad-release/kernel/forgekernel_tests','BlendGeneralMatchesAnalytic'],timeout=180)
+for key in ['BlendOpenChainsAtTangentSplineSeams','BlendPlanarCapOnTangentSplineSupports','BlendConsumedTerminalReachesTangentSupport']:
+ run('release-public-'+key,['forgecad-release/kernel/forgekernel_tests',key],timeout=300)
+result={}
+for p in sorted(out.glob('*.json')):
+ q=S/'export-final'/p.name;assert p.read_bytes()==q.read_bytes(),p.name
+ j=json.loads(p.read_text());result[p.name]={'sha256':hashlib.sha256(p.read_bytes()).hexdigest(),'byte_identical_to_frozen_v2':True,'budget':j['budget'],'range':j['finalRange'],'finUses':len(j['finUses'])}
+assert len(result)==6,len(result)
+(T/'release-comparison.json').write_text(json.dumps(result,indent=2)+'\n');print('Final Release six exports match frozen v2 byte-for-byte',flush=True)
+env=os.environ.copy();env.update(QT_QPA_PLATFORM='wayland',QT_QPA_PLATFORMTHEME='',QT_STYLE_OVERRIDE='Fusion')
+for name,args in [('wayland-fillet',['--advanced-fillets']),('wayland-blend-preview',['--blend-preview-reload']),('wayland-theme',['--theme-tabs'])]:
+ run(name,['forgecad-release/forgecad_view_tests',*args],timeout=180,env=env)

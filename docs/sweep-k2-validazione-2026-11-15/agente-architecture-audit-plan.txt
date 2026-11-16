@@ -1,0 +1,82 @@
+Architecture audit plan: 20 focus nodes (read-only against regenerated graph).
+
+1 kernel/fk_sweep.cpp
+2 kernel/fk_sweep.h
+3 kernel/fk_sweep_surface_validation.cpp
+4 kernel/fk_sweep_surface_validation.h
+5 kernel/fk_sweep_caps.cpp
+6 kernel/fk_sweep_caps.h
+7 kernel/fk_sweep_atlas.cpp
+8 kernel/fk_sweep_atlas.h
+9 kernel/fk_sweep_analytic_bridge.cpp
+10 kernel/fk_sweep_analytic_bridge.h
+11 kernel/tests/test_sweep.cpp
+12 kernel/tests/test_sweep_global.cpp
+13 kernel/tests/test_sweep_validation.cpp
+14 kernel/tests/test_sweep_caps.cpp
+15 kernel/tests/test_sweep_analytic_bridge.cpp
+16 kernel/fk_bspline_surface.cpp
+17 kernel/fk_nurbs.cpp
+18 kernel/fk_pcurve.cpp
+19 kernel/fk_profile.cpp
+20 kernel/fk_body_check.cpp
+
+Descriptions required:
+- sweep: global actual-BRep gate, explicit longitudinal/cross-section branches,
+  atomic aliases, bounded analytic bridge and fail-closed fallback.
+- surface_validation: outward extraction, SPD local charts, BVH, periodic/C0
+  bounded contacts, cached rational derivative numerator propagation and
+  persistent SweepSurfaceQuery extraction. Certified is within declared seam
+  tolerance, not exact IEEE global injectivity across discontinuous carriers.
+- caps: orientation-independent nonzero winding, outer-minus-holes domain,
+  outward polynomial/rational and direct Taylor conic coefficients, cap/cap and
+  all-family cap/side traversal, explicit genealogy and shared work budgets.
+- atlas: actual-chart construction, analytic tensor charts, profile nesting,
+  cap incidence metadata and orchestration after side embedding validation.
+- analytic_bridge: common rational parametrization of ACTUAL analytic carriers,
+  interval Taylor remainder, absolute pole/weight errors, unsupported fallback.
+- tests: distinguish kernel-only validators/caps/bridge/global regressions from
+  existing OCCT comparisons; retain 15/16/17-turn and closed seam descriptions.
+
+Required call direction, then inspect reverse caller context from target:
+sweep.cpp -> atlas.cpp [translationChart, rotationChart, requireProfileNesting,
+                        requireDisjointSweepCaps]
+sweep.cpp -> surface_validation.cpp [validateSweepSurfaces]
+sweep.cpp -> analytic_bridge.cpp [boundSweepAnalyticBridge]
+sweep.cpp -> pcurve.cpp [exactPCurve, fitPCurve, pcurveDeviation, computePCurves]
+sweep.cpp -> body_check.cpp [checkBody]
+atlas.cpp -> caps.cpp [CapDomainIndex constructors, classifyPoint,
+                      capDomainsDisjoint, validateSweepSurfaceCap]
+caps.cpp -> surface_validation.cpp [SweepSurfaceQuery constructor,
+                                    projection, capContact]
+analytic_bridge.cpp -> surface/curve APIs [actual frame/radii, original data]
+test_validation.cpp -> surface_validation.cpp [validation/query wrappers]
+test_caps.cpp -> caps.cpp + sweep.cpp + surface_validation.cpp
+test_analytic_bridge.cpp -> analytic_bridge.cpp + atlas.cpp + sweep.cpp
+test_global.cpp -> sweep.cpp + body_check.cpp + mass.cpp
+
+Internal symbol visibility checks:
+SweepSurfaceQuery::Data, constructor/projection/capContact, geometryNet,
+splitNet, derivative, projectedDerivative, prepare, Validator::{extract,
+coverage,local,monotone,splitNode,projection,capContact}; CapDomainIndex methods,
+validateSweepSurfaceCap, capDomainsDisjoint; analytic bridge bound/reconstruction.
+AST may resolve inline getters to headers rather than .cpp: accept actual AST
+ownership and do not fabricate a reverse call edge. "Bidirectional" means
+checking both each caller's outgoing neighborhood and callee's incoming
+neighborhood, not inserting nonexistent target->source calls.
+
+Include checks:
+sweep.cpp includes atlas.h and analytic_bridge.h;
+atlas.h includes surface_validation.h and caps.h;
+caps.h includes surface_validation.h/profile.h/topology.h;
+analytic_bridge.h includes bspline_surface.h.
+All new implementation nodes include their own header. Test nodes include the
+relevant internal API headers and fk_test.h, without OCCT in four new files.
+
+Graph consistency:
+new IDs unique; source/hash/line metadata match integrated files; no stale
+"local control does not certify global intersections" sweep description;
+validate all source/target IDs and inspect generator diagnostics/missing refs.
+Preserve existing external caller neighborhoods of sweepRegions/sweepChains.
+Existing dependency neighbors (cancel.h, mass.cpp, topology.cpp, precision.h)
+can be checked beyond the twenty focus nodes without adding artificial nodes.

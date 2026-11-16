@@ -1,0 +1,44 @@
+[32;1mTotal number of loaded entities 54.
+[0m
+[32;1mTotal number of loaded entities 68.
+[0m
+[32;1mTotal number of loaded entities 27.
+[0m
+[32;1mTotal number of loaded entities 29.
+[0m
+[32;1mTotal number of loaded entities 15.
+[0m
+[32;1mTotal number of loaded entities 14.
+[0m
+[32;1mTotal number of loaded entities 18.
+[0m
+[32;1mTotal number of loaded entities 20.
+[0m
+[32;1mTotal number of loaded entities 27.
+[0m
+[32;1mTotal number of loaded entities 29.
+[0m
+[32;1mTotal number of loaded entities 65.
+[0m
+[32;1mTotal number of loaded entities 85.
+[0m
+[32;1mTotal number of loaded entities 105.
+[0m
+[32;1mTotal number of loaded entities 140.
+[0m
+[32;1mTotal number of loaded entities 48.
+[0m
+[32;1mTotal number of loaded entities 66.
+[0m
+[  OK  ] IgesWriteReadByOcct
+[  OK  ] IgesRoundTrip
+[  OK  ] IgesReadOcctFiles
+[32;1mTotal number of loaded entities 2.
+[0m
+[  OK  ] IgesCurveByOcct
+[  OK  ] IgesParallelComponents
+[  OK  ] IgesSewSpatialRepresentatives
+[  OK  ] IgesPreservesNonUniformSplineEdgeParameters
+[  OK  ] IgesRejectsInvalidSplineParameters
+[  OK  ] IgesRejectsCyclicCompositeCurves
+9/9 test superati

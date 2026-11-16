@@ -1,0 +1,162 @@
+{
+  "files": 775,
+  "edges": 11246,
+  "units": 387,
+  "errors": {},
+  "html_matches": true,
+  "incident_edges": 320,
+  "required_calls": [
+    [
+      "kernel/fk_surface_mapping.cpp",
+      "kernel/fk_offset.cpp",
+      "fitPCurveOnPlane"
+    ],
+    [
+      "kernel/fk_surface_mapping.cpp",
+      "kernel/fk_offset.cpp",
+      "requirePCurveOnPlane"
+    ],
+    [
+      "kernel/fk_quilt_mapping.cpp",
+      "kernel/fk_surface_mapping.cpp",
+      "mapBodyByFunction"
+    ],
+    [
+      "kernel/tests/test_mapping_pcurve_validation.cpp",
+      "kernel/fk_quilt_mapping.cpp",
+      "bend"
+    ]
+  ],
+  "focus": {
+    "cad_surface_mapping.cpp": {
+      "description": "Sviluppo esatto oppure appiattimento con deformazione misurata, mappa comune piano/superfici e posa rigida secondo normali locali, con sorgenti e destinazioni multiple associative: appoggio unico su facce rifilate, isole piane separate, collezioni solide/lamine, diagnostica per faccia e genealogia esplicita; inversa associativa dell appiattimento con ordine delle facce, piano, rotazione e traslazione originali.",
+      "incoming": {
+        "call": 5,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 26,
+        "include": 14,
+        "reference": 0
+      }
+    },
+    "kernel/CMakeLists.txt": {
+      "description": "Definisce libreria geometrica, test, rilevamento from_chars decimale e arrotondamento coerente senza contrazione FMA implicita nei chiamanti CPU C++/Objective-C++.",
+      "incoming": {
+        "call": 0,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 0,
+        "include": 0,
+        "reference": 0
+      }
+    },
+    "kernel/fk_curve_fit_bounds.cpp": {
+      "description": "Limiti continui Bernstein outward per posizione, offset NURBS e composizione isoparametrica NURBS e affine anche obliqua su estrusione con SP-curve originale; limiti delle derivate del supporto per il trasferimento UV, coefficienti originali, pesi, istanze, budget e cancellazione. Proiezione affine su Plane dagli originali IEEE, normale da assi del piano e direzione originale, con residuo omogeneo outward. Offset bordi: posizione edge e normale del generatore indipendenti, SP-curve affine originale e controllo continuo dei poli dopo assemblaggio. Doppio certificato Plane/SP-curve: proiezione fisica per il fit e residuo completo della fin, coefficienti originali posseduti e metriche in mm.",
+      "incoming": {
+        "call": 14,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 12,
+        "include": 6,
+        "reference": 0
+      }
+    },
+    "kernel/fk_mapping_fit.h": {
+      "description": "Contratti interni del fit parametrico e della trasformazione B-rep tramite corrispondenza analitica; immagine di faccia a carrier conservato e trasferimento UV esplicito, con ricostruzione Plane sul bordo effettivo e metrica fisica.",
+      "incoming": {
+        "call": 3,
+        "include": 6,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 0,
+        "include": 3,
+        "reference": 0
+      }
+    },
+    "kernel/fk_offset.cpp": {
+      "description": "Superfici e bordi a distanza; divisione esatta delle sole pieghe C0, nodi lisci conservati, solve uniforme regolarizzato sui bordi quasi tangenti, intersezioni stabilizzate per bordo con pesi distinti per precisione e arresto sul residuo 3D verificato, budget locali, domini derivati dalle SP-curve esatte senza celle terminali artificiali, sezioni circolari analitiche e vertici di cucitura conservati nei supporti sostitutivi dello sformo, rifilatura e provenienza. Costruzioni analitiche autorizzate dai supporti e da bounds geometrici uniformi, regolarita toroidale sul dominio periodico e raffinamento curve con cancellazione cooperativa e fallimenti atomici; offset di estrusioni/rivoluzioni NURBS con limite continuo, callback generiche ancora campionate. Offset di singola faccia estrusa e SP-curve affine certificato dagli originali separati; provenienza esplicita e ricontrollo delle cubiche realmente emesse. Ricostruzioni UV Plane con metrica certificata in mm, ricontrollo delle fin effettive da AssemblyMap e budget/conteggi invariati. Helper interni Plane per costruzione e verifica delle pcurve con metrica fisica, budget transazionali e ricontrollo dei coefficienti effettivi.",
+      "incoming": {
+        "call": 36,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 36,
+        "include": 20,
+        "reference": 0
+      }
+    },
+    "kernel/fk_quilt_mapping.cpp": {
+      "description": "Appiattimento B-rep con bordo topologico comune; una faccia Plane conserva i coefficienti dei contorni tramite mappa affine e limite di arrotondamento, altri casi usano fit;  Jacobiani e deformazione campionata; origine suggerita e genealogia esplicita. Mappa comune e reversibile piano/quilt tramite coordinate di lunghezza d arco sulle isocurve esatte; una faccia o due facce tangenti con giunzione U, trim e piegatura solida lungo le normali. Monotonia dai poli, origine/metrica esatte sulla giunzione, cache per piegatura e nodi espliciti del fit; offset Plane analitico senza fit di contorni UV superfluo, fin Plane delegate al controllo continuo. Nessuna proiezione per raggi o isometria generale promessa.",
+      "incoming": {
+        "call": 7,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 28,
+        "include": 12,
+        "reference": 0
+      }
+    },
+    "kernel/fk_surface_mapping.cpp": {
+      "description": "Sviluppo isometrico, posa rigida e mapping su superficie o appoggio multifaccia: conserva i carrier supportati; trasferimento SP-curve su Plane con limite continuo fisico e verifica delle fin dopo assemblaggio tramite genealogia, coefficienti e budget prefissati. Bordi 3D e famiglie restanti mantengono fit campionato; controlli locali di inversione/trim, nessuna mesh di calcolo.",
+      "incoming": {
+        "call": 8,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 28,
+        "include": 19,
+        "reference": 0
+      }
+    },
+    "kernel/tests/test_mapping_pcurve_validation.cpp": {
+      "description": "Trasferimenti UV su Plane con coordinate grandi e offset: parametri originali, fin finali certificate al budget pubblicato, pesi e wrapper, pose e scale, codec e fallimenti atomici; certificato distinto dal fit 3D campionato.",
+      "incoming": {
+        "call": 1,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 21,
+        "include": 9,
+        "reference": 0
+      }
+    },
+    "tests/test_surface_mapping.h": {
+      "description": "Riempimenti4pattern, fori e budget; storia/Undo/Redo/codec; sviluppo/appiattimento associativi, schema8 per inversa associativa, contorno multifaccia, anteprima con piano indiretto e downgrade atomico, rigenerazione e metodi GUI in italiano.",
+      "incoming": {
+        "call": 2,
+        "include": 1,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 26,
+        "include": 0,
+        "reference": 0
+      }
+    },
+    "tools/generate_architecture.py": {
+      "description": "Implementazione: generate architecture.",
+      "incoming": {
+        "call": 0,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 0,
+        "include": 0,
+        "reference": 0
+      }
+    }
+  }
+}

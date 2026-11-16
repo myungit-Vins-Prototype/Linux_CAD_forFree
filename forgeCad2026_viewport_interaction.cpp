@@ -549,6 +549,22 @@ void CadViewport::mousePressEvent(QMouseEvent *event) {
             update();
             return;
         }
+        if (drawingTool_ == DrawingTool::EllipseExtremes) {
+            const QPointF point = snapPoint(rawPoint);
+            if (curveControlPoints_.size() == 1
+                && pointDistance(point, curveControlPoints_.first()) <= ForgeCad::sketchConnectionTolerance()) {
+                showStatus(QStringLiteral("Ellisse per estremi: i due estremi del primo asse devono essere distinti"));
+                return;
+            }
+            curveControlPoints_.append(point);
+            hasPendingPoint_ = true;
+            if (curveControlPoints_.size() >= 3) finalizePrimitive();
+            if (curveControlPoints_.isEmpty()) showStatus(QStringLiteral("Ellisse per estremi: scegli il primo estremo del primo asse; Esc per terminare"));
+            else if (curveControlPoints_.size() == 1) showStatus(QStringLiteral("Ellisse per estremi: scegli l'estremo opposto del primo asse"));
+            else if (curveControlPoints_.size() == 2) showStatus(QStringLiteral("Ellisse per estremi: scegli un estremo del secondo asse fuori dal primo asse"));
+            update();
+            return;
+        }
         if (drawingTool_ == DrawingTool::Circle || drawingTool_ == DrawingTool::Arc
             || drawingTool_ == DrawingTool::Polygon || drawingTool_ == DrawingTool::Ellipse) {
             curveControlPoints_.append(snapPoint(rawPoint));
@@ -677,7 +693,7 @@ void CadViewport::mouseDoubleClickEvent(QMouseEvent *event) {
         }
         if (hit.kind == 1 && hit.index < sketches_.at(activeSketch_).curves.size()) {
             const DrawingTool tool = sketches_.at(activeSketch_).curves.at(hit.index).tool;
-            if (tool == DrawingTool::Circle || tool == DrawingTool::Arc || tool == DrawingTool::Polygon || tool == DrawingTool::Ellipse) {
+            if (tool == DrawingTool::Circle || tool == DrawingTool::Arc || tool == DrawingTool::Polygon || tool == DrawingTool::Ellipse || tool == DrawingTool::EllipseExtremes) {
                 hasPendingPoint_ = false;
                 curveControlPoints_.clear();
                 const QString error = editCurveDimension(hit.index);

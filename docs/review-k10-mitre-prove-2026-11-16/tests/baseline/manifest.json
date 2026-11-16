@@ -1,0 +1,11 @@
+{
+  "head": "ce03a6d5941840886416aafe055763fb98209e94",
+  "source_hashes": {
+    "kernel/fk_blend_mitre.cpp": "d8906658ec8aebff65c70a6f916c673b2e1341546ba3d4abcba5276efd5607a1",
+    "kernel/fk_blend_mitre.h": "0a6a7b706d4800aefe05b07802be8791985d6a0574c6d2e8fa3a4703ae0229e6",
+    "kernel/fk_blend_surface.cpp": "dfad2aa7ca0996210a2882a349d518e9746989ea19b132ed8a459dfe53909ca8",
+    "kernel/tests/test_blend_cavity_regressions.cpp": "626a8f4223d2428555f8d9a26a6d6ff9096bcaef0cc724cb59707cb4fdc89b97",
+    "kernel/tests/test_blend_features.cpp": "b560e1d0357b9d2c84358ab8ef7f71cafb4cd7cd6c59e79f911f15fe5f824086"
+  },
+  "library_sha256": "963124d476b460e4c0afc226a563ee790a0cd1ff97264a46f23d828449ae7eab"
+}

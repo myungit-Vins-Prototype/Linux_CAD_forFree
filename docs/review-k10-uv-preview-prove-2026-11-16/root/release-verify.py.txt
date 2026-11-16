@@ -1,0 +1,33 @@
+from pathlib import Path
+import json,hashlib,subprocess,os,time,sys,copy
+R=Path('/home/myungit/Linux_CAD_forFree');P=R/'docs/review-k10-uv-preview-prove-2026-11-16';T=P/'root';D=Path('/tmp/k10-uv-review/release-export')
+sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+frozen=json.loads((T/'frozen-source-hashes.json').read_text())
+for f,h in frozen.items():assert sha(R/f)==h,f
+assert not D.exists();D.mkdir()
+
+def call(name,cmd,env=None):
+ start=time.monotonic()
+ with (T/(name+'.log')).open('w') as log:p=subprocess.run(cmd,cwd=R,env=env,stdout=log,stderr=subprocess.STDOUT)
+ result=dict(exit=p.returncode,seconds=time.monotonic()-start,command=cmd,production_overlays=[])
+ if p.returncode:print((T/(name+'.log')).read_text()[-2500:]);raise RuntimeError(name+' failed '+str(p.returncode))
+ return result
+result=call('release-export',[str(R/'forgecad-release/kernel/forgekernel_offset_pcurve_tests'),str(D)])
+assert '10 passed 0 failed' in (T/'release-export.log').read_text()
+files=sorted(D.glob('*.json'));assert len(files)==8
+for f in files:assert f.read_bytes()==(P/'tests/v2-final'/f.name).read_bytes(),f
+result.update(passed_groups=10,identical_exports=8,exports={f.name:sha(f) for f in files},kernel_sha256=sha(R/'forgecad-release/kernel/libforgekernel.a'),binary_sha256=sha(R/'forgecad-release/kernel/forgekernel_offset_pcurve_tests'))
+(T/'release-replay.json').write_text(json.dumps(result,indent=2)+'\n');print('Release10PASS;8/8JSONidentici',flush=True)
+# Re-read actual Release export into the independent rational verifier.
+sys.path.insert(0,'/tmp/k10-uv-review/root');from verify_fraction import verify_directory,verify_record,exact
+from fraction_common import F
+proof=verify_directory(D);assert all(r['pass_'] for j in proof for key in ['source','actual','projection'] for r in j[key])
+(T/'fraction-release.json').write_text(json.dumps(proof,indent=2)+'\n')
+base=json.loads(Path('/tmp/k10-uv-review/root/fraction-baseline.json').read_text());neg=[j for j in base if not all(r['pass_'] for r in j['actual'])];assert len(neg)==6
+j=json.loads((D/'joined_polynomial.json').read_text());r=copy.deepcopy(j['actual'][0]);r['pcurve']['poles'][1][0]=(float.fromhex(r['pcurve']['poles'][1][0])+1e-4).hex();bad=verify_record(r,exact(r['budget']));assert not bad['pass_'];(T/'fraction-altered-pole.json').write_text(json.dumps(dict(record=r,proof=bad),indent=2)+'\n')
+summary=dict(cases=len(proof),actual_fins=sum(len(j['actual']) for j in proof),source_fins=sum(len(j['source']) for j in proof),actual_passed=sum(r['pass_'] for j in proof for r in j['actual']),projection_passed=sum(r['pass_'] for j in proof for r in j['projection']),negative_cases=len(neg),negative_actual_fins=sum(not r['pass_'] for j in base for r in j['actual']),altered_pole_rejected=True,source_budget_mm=1e-7,actual_max_upper_mm=max(r['upper_mm'] for j in proof for r in j['actual']),actual_cells=sum(r['cells'] for j in proof for r in j['actual']),actual_leaves=sum(r['leaves'] for j in proof for r in j['actual']),unscaled_max_upper_mm=max(r['upper_mm'] for j in proof if j['case']!='joined_scale' for r in j['actual']),method='Exact Fraction inputs, knot insertion/restriction, homogeneous Bernstein residual of original Plane/edge/UV, positive weights, rational outward sqrt, all spans covered; no production certificate calls')
+(T/'fraction-summary.json').write_text(json.dumps(summary,indent=2)+'\n');print(summary,flush=True)
+env=dict(os.environ,QT_QPA_PLATFORM='wayland',QT_QPA_PLATFORMTHEME='',QT_QPA_PLATFORMTHEME_QT6='',QT_STYLE_OVERRIDE='Fusion')
+r=call('wayland',[str(R/'forgecad-release/forgecad_view_tests'),'--preview-selection-state'],env)
+assert 'PRE7 RESULT passed=79 failed=0' in (T/'wayland.log').read_text();r.update(assertions=79,binary_sha256=sha(R/'forgecad-release/forgecad_view_tests'),source_sha256=sha(R/'tests/test_preview_selection_state.h'),platform='Wayland',gl_renderer_certified=False)
+(T/'wayland-result.json').write_text(json.dumps(r,indent=2)+'\n');print('ReleaseWayland79/79PASS',flush=True)

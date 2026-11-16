@@ -1,0 +1,89 @@
+from pathlib import Path
+import json,hashlib,re,subprocess,difflib,shutil,sys
+R=Path('/home/myungit/Linux_CAD_forFree');P=R/'docs/supporto-booleana-prove-2026-11-16';T=P/'root'
+sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+def memory():
+ text=(R/'CLAUDE.md').read_text();assert len(text.encode())<=16384
+ return text
+def architecture():
+ memory();g=json.loads((R/'docs/architecture/graph.json').read_text());nodes={n['id']:n for n in g['nodes']}
+ html=(R/'docs/architecture/index.html').read_text();assert json.loads(re.search(r'<script id="graph-data" type="application/json">(.*?)</script>',html,re.S).group(1))==g
+ assert not g['analysis']['errors'] and g['analysis']['configurationDigest']==sha(R/'forgecad-release/compile_commands.json')
+ for f,h in g['hashes'].items():assert sha(R/f)==h,f
+ focus={'kernel/fk_boolean.cpp','kernel/fk_boolean_boundary.h','kernel/fk_boolean_boundary.cpp','kernel/tests/test_boolean_boundary.cpp'};assert focus<=nodes.keys()
+ incident=[e for e in g['edges'] if e['source'] in focus or e['target'] in focus]
+ required=[('kernel/fk_boolean.cpp','kernel/fk_boolean_boundary.cpp','certifyEllipseBoundarySegment'),('kernel/fk_boolean.cpp','kernel/fk_boolean_boundary.cpp','ellipseAffinePCurveError'),('kernel/tests/test_boolean_boundary.cpp','kernel/fk_boolean_boundary.cpp','certifyEllipseBoundarySegment'),('kernel/tests/test_boolean_boundary.cpp','kernel/fk_boolean_boundary.cpp','ellipseAffinePCurveError'),('kernel/fk_boolean.cpp','kernel/fk_boolean.cpp','boundaryChain'),('kernel/fk_boolean.cpp','kernel/fk_topology.cpp','Body::build'),('kernel/fk_boolean.cpp','kernel/fk_unify.cpp','unifySameDomain')]
+ for a,b,s in required:assert any(e['source']==a and e['target']==b and e['kind']=='call' and any(s in t['symbol'] for t in e['sites']) for e in incident),(a,b,s)
+ for f in ['kernel/fk_boolean.cpp','kernel/fk_boolean_boundary.cpp','kernel/tests/test_boolean_boundary.cpp']:
+  assert any(e['source']==f and e['target']=='kernel/fk_boolean_boundary.h' and e['kind']=='include' for e in incident),f
+ result=dict(files=len(nodes),edges=len(g['edges']),units=len(g['analysis']['units']),errors=g['analysis']['errors'],html_matches=True,incident_edges=len(incident),required=required,focus={f:dict(description=nodes[f]['description'],incoming={k:sum(e['target']==f and e['kind']==k for e in incident) for k in ['call','include','reference']},outgoing={k:sum(e['source']==f and e['kind']==k for e in incident) for k in ['call','include','reference']}) for f in sorted(focus)})
+ (T/'architecture-audit.json').write_text(json.dumps(result,indent=2,ensure_ascii=False)+'\n');(T/'architecture-incident.json').write_text(json.dumps(incident,indent=2)+'\n')
+ with (T/'architecture-check.log').open('w') as log:subprocess.run(['python3','tools/generate_architecture.py','--check'],cwd=R,check=True,stdout=log)
+ print({k:v for k,v in result.items() if k!='focus'})
+def audit():
+ memory();before=json.loads((T/'hashes-before.json').read_text());changed=sorted(f for f,h in before.items() if not (R/f).is_file() or sha(R/f)!=h)
+ expected={'CLAUDE.md','docs/code-review-2026-11-15.md','kernel/CMakeLists.txt','kernel/fk_boolean.cpp','tools/generate_architecture.py'}
+ assert set(changed)==expected,changed
+ names=subprocess.check_output(['git','ls-files','--cached','--others','--exclude-standard','-z'],cwd=R).decode().split('\0')
+ new=sorted(f for f in set(names)-set(before) if f and (R/f).is_file() and not (R/f).is_symlink())
+ allowed={'kernel/fk_boolean_boundary.h','kernel/fk_boolean_boundary.cpp','kernel/tests/test_boolean_boundary.cpp','docs/supporto-booleana-2026-11-16.md','docs/history/claude-prima-supporto-booleana-2026-11-16.md'}
+ assert all(f in allowed or f.startswith(str(P.relative_to(R))+'/') for f in new),new
+ frozen=json.loads((T/'frozen-source-hashes.json').read_text())
+ for f,h in frozen.items():assert sha(R/f)==h,f
+ assert json.loads((T/'build-result.json').read_text())['exit']==0
+ c=json.loads((T/'ctest-result.json').read_text());assert c['exit']==0 and c['actual_passed']==24 and c['new_boundary_assertions']==51
+ b=json.loads((T/'boolean-result.json').read_text());assert b['exit']==0 and b['passed']==38 and b['failed']==0
+ replay=json.loads((T/'replay-release-result.json').read_text());assert replay['exit']==0 and replay['checks']>=424 and replay['failures']==0 and replay['unions']==24 and not replay['production_overlays']
+ sanitizer=json.loads((P/'tests/sanitizer-result.json').read_text());assert sanitizer['exit']==0 and sanitizer['checks']==78 and sanitizer['failures']==0 and sanitizer['diagnostics']==0
+ original=Path('/home/myungit/Documenti/Cad_Example/Supporto.prt')
+ observation=json.loads((T/'input-observation-after-resume.json').read_text())
+ assert sha(original)==observation['sha256'] and not observation['original_written_by_this_review']
+ analyzed=json.loads((T/'input-manifest.json').read_text())['sha256']
+ assert analyzed==observation['analyzed_sha256']=='79887e91d75feb748af19fcdb14cd469cc40e74abab03e3cbeaa12e2d3271f7f'
+ for f in ['release-final.json','delivery-copy-result.json']:
+  assert json.loads((P/'tests/release'/f).read_text())['original_sha256']==analyzed
+ artifact=json.loads((T/'output-manifest.json').read_text());assert artifact['verified'] and sha(Path(artifact['path']))==artifact['sha256'] and Path(artifact['path'])!=original
+ binaries=['forgecad-release/forgecad','forgecad-release/forgecad_view_tests','forgecad-release/kernel/forgekernel_tests','forgecad-release/kernel/forgekernel_boolean_boundary_tests']
+ latest=max((R/f).stat().st_mtime for f in frozen if f.endswith(('.h','.cpp')))
+ for f in binaries:assert (R/f).stat().st_mtime>latest,f
+ link=(R/'forgecad-release/CMakeFiles/forgecad.dir/link.txt').read_text();assert 'opencascade' not in link.lower() and 'libTK' not in link
+ testlink=(R/'forgecad-release/kernel/CMakeFiles/forgekernel_boolean_boundary_tests.dir/link.txt').read_text();assert 'libTK' not in testlink and 'Qt' not in testlink
+ db=json.loads((R/'forgecad-release/compile_commands.json').read_text());strict=[]
+ for f in ['kernel/fk_boolean_boundary.cpp','kernel/tests/test_boolean_boundary.cpp']:
+  matches=[x for x in db if Path(x['file'])==R/f];assert matches,f
+  for entry in matches:
+   flags=entry['command'];assert '-fno-fast-math' in flags and '-ffp-contract=off' in flags,flags;strict.append(entry)
+ g=json.loads((R/'docs/architecture/graph.json').read_text());assert not g['analysis']['errors'] and g['analysis']['configurationDigest']==sha(R/'forgecad-release/compile_commands.json')
+ for f,h in g['hashes'].items():assert sha(R/f)==h,f
+ subprocess.run(['git','diff','--check'],cwd=R,check=True)
+ diff=[]
+ for f in changed:
+  old=T/'before'/(f+'.txt');assert old.is_file(),f;diff.extend(difflib.unified_diff(old.read_text().splitlines(True),(R/f).read_text().splitlines(True),fromfile='before/'+f,tofile='after/'+f))
+ for f in ['kernel/fk_boolean_boundary.h','kernel/fk_boolean_boundary.cpp','kernel/tests/test_boolean_boundary.cpp']:diff.extend(difflib.unified_diff([],(R/f).read_text().splitlines(True),fromfile='/dev/null',tofile='after/'+f))
+ (T/'change.diff').write_text(''.join(diff))
+ for f in set(frozen)|expected:
+  dest=T/'final-source'/(f+'.txt');dest.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(R/f,dest)
+ manifests={}
+ for directory in ['docs/ellisse-estremi-prove-2026-11-16','docs/curve-fit-k10-edge-offset-prove-2026-11-16','docs/review-preview-unification-prove-2026-11-16']:
+  lines=(R/directory/'SHA256SUMS').read_text().splitlines()
+  for line in lines:
+   h,f=line.split('  ',1);assert sha(R/directory/f)==h,(directory,f)
+  manifests[directory]=len(lines)
+ subgroups={}
+ for directory in ['core','independent','tests']:
+  manifest=json.loads((P/directory/'manifest.json').read_text())['files']
+  entries=manifest.items() if isinstance(manifest,dict) else [(e.get('path',e.get('file')),e) for e in manifest]
+  count=0
+  for f,meta in entries:
+   item=P/directory/f;assert sha(item)==meta['sha256'] and item.stat().st_size==meta['bytes'],(directory,f);count+=1
+  subgroups[directory]=count
+ retry=json.loads((P/'tests/retry/result.json').read_text());assert retry['exit_code']==0 and retry['checks']==15 and retry['failures']==0 and not retry['production_modified']
+ result=dict(initial_files=len(before),preserved_files=len(before)-len(changed),changed_existing=changed,new_files=new,source_hashes=frozen,binary_hashes={f:sha(R/f) for f in binaries},kernel_sha256=sha(R/'forgecad-release/kernel/libforgekernel.a'),strict_fp_commands=strict,original_sha256=sha(original),analyzed_original_sha256=analyzed,original_observation_after_resume=observation,output=artifact,claude_bytes=(R/'CLAUDE.md').stat().st_size,preserved_manifests=manifests,verified_subgroups=subgroups,retry_result=retry)
+ (T/'final-audit.json').write_text(json.dumps(result,indent=2)+'\n');print('Conservazione',result['preserved_files'],'/',len(before),'manifest',manifests,'PASS')
+def seal():
+ memory();files=sorted(f for f in P.rglob('*') if f.is_file() and f.name!='SHA256SUMS')
+ (P/'SHA256SUMS').write_text(''.join(sha(f)+'  '+str(f.relative_to(P))+'\n' for f in files))
+ for line in (P/'SHA256SUMS').read_text().splitlines():
+  h,f=line.split('  ',1);assert sha(P/f)==h,f
+ print('Manifest',len(files),'artefatti PASS')
+if __name__=='__main__':globals()[sys.argv[1]]()

@@ -1,0 +1,1865 @@
+{
+  "pass": true,
+  "nodes": 736,
+  "edges": 10570,
+  "translationUnits": 361,
+  "focusCount": 20,
+  "checks": [
+    {
+      "pass": true,
+      "check": "HTML embedded graph structurally equals graph.json"
+    },
+    {
+      "pass": true,
+      "check": "Node IDs unique"
+    },
+    {
+      "pass": true,
+      "check": "AST diagnostics empty"
+    },
+    {
+      "pass": true,
+      "check": "Every edge endpoint exists"
+    },
+    {
+      "pass": true,
+      "check": "Focus node kernel/fk_sweep.cpp"
+    },
+    {
+      "pass": true,
+      "check": "Current hash kernel/fk_sweep.cpp"
+    },
+    {
+      "pass": true,
+      "check": "Current line count kernel/fk_sweep.cpp"
+    },
+    {
+      "pass": true,
+      "check": "Description kernel/fk_sweep.cpp"
+    },
+    {
+      "pass": true,
+      "check": "Focus node kernel/fk_sweep.h"
+    },
+    {
+      "pass": true,
+      "check": "Current hash kernel/fk_sweep.h"
+    },
+    {
+      "pass": true,
+      "check": "Current line count kernel/fk_sweep.h"
+    },
+    {
+      "pass": true,
+      "check": "Description kernel/fk_sweep.h"
+    },
+    {
+      "pass": true,
+      "check": "Focus node kernel/fk_sweep_surface_validation.cpp"
+    },
+    {
+      "pass": true,
+      "check": "Current hash kernel/fk_sweep_surface_validation.cpp"
+    },
+    {
+      "pass": true,
+      "check": "Current line count kernel/fk_sweep_surface_validation.cpp"
+    },
+    {
+      "pass": true,
+      "check": "Description kernel/fk_sweep_surface_validation.cpp"
+    },
+    {
+      "pass": true,
+      "check": "Focus node kernel/fk_sweep_surface_validation.h"
+    },
+    {
+      "pass": true,
+      "check": "Current hash kernel/fk_sweep_surface_validation.h"
+    },
+    {
+      "pass": true,
+      "check": "Current line count kernel/fk_sweep_surface_validation.h"
+    },
+    {
+      "pass": true,
+      "check": "Description kernel/fk_sweep_surface_validation.h"
+    },
+    {
+      "pass": true,
+      "check": "Focus node kernel/fk_sweep_caps.cpp"
+    },
+    {
+      "pass": true,
+      "check": "Current hash kernel/fk_sweep_caps.cpp"
+    },
+    {
+      "pass": true,
+      "check": "Current line count kernel/fk_sweep_caps.cpp"
+    },
+    {
+      "pass": true,
+      "check": "Description kernel/fk_sweep_caps.cpp"
+    },
+    {
+      "pass": true,
+      "check": "Focus node kernel/fk_sweep_caps.h"
+    },
+    {
+      "pass": true,
+      "check": "Current hash kernel/fk_sweep_caps.h"
+    },
+    {
+      "pass": true,
+      "check": "Current line count kernel/fk_sweep_caps.h"
+    },
+    {
+      "pass": true,
+      "check": "Description kernel/fk_sweep_caps.h"
+    },
+    {
+      "pass": true,
+      "check": "Focus node kernel/fk_sweep_atlas.cpp"
+    },
+    {
+      "pass": true,
+      "check": "Current hash kernel/fk_sweep_atlas.cpp"
+    },
+    {
+      "pass": true,
+      "check": "Current line count kernel/fk_sweep_atlas.cpp"
+    },
+    {
+      "pass": true,
+      "check": "Description kernel/fk_sweep_atlas.cpp"
+    },
+    {
+      "pass": true,
+      "check": "Focus node kernel/fk_sweep_atlas.h"
+    },
+    {
+      "pass": true,
+      "check": "Current hash kernel/fk_sweep_atlas.h"
+    },
+    {
+      "pass": true,
+      "check": "Current line count kernel/fk_sweep_atlas.h"
+    },
+    {
+      "pass": true,
+      "check": "Description kernel/fk_sweep_atlas.h"
+    },
+    {
+      "pass": true,
+      "check": "Focus node kernel/fk_sweep_analytic_bridge.cpp"
+    },
+    {
+      "pass": true,
+      "check": "Current hash kernel/fk_sweep_analytic_bridge.cpp"
+    },
+    {
+      "pass": true,
+      "check": "Current line count kernel/fk_sweep_analytic_bridge.cpp"
+    },
+    {
+      "pass": true,
+      "check": "Description kernel/fk_sweep_analytic_bridge.cpp"
+    },
+    {
+      "pass": true,
+      "check": "Focus node kernel/fk_sweep_analytic_bridge.h"
+    },
+    {
+      "pass": true,
+      "check": "Current hash kernel/fk_sweep_analytic_bridge.h"
+    },
+    {
+      "pass": true,
+      "check": "Current line count kernel/fk_sweep_analytic_bridge.h"
+    },
+    {
+      "pass": true,
+      "check": "Description kernel/fk_sweep_analytic_bridge.h"
+    },
+    {
+      "pass": true,
+      "check": "Focus node kernel/tests/test_sweep.cpp"
+    },
+    {
+      "pass": true,
+      "check": "Current hash kernel/tests/test_sweep.cpp"
+    },
+    {
+      "pass": true,
+      "check": "Current line count kernel/tests/test_sweep.cpp"
+    },
+    {
+      "pass": true,
+      "check": "Description kernel/tests/test_sweep.cpp"
+    },
+    {
+      "pass": true,
+      "check": "Focus node kernel/tests/test_sweep_global.cpp"
+    },
+    {
+      "pass": true,
+      "check": "Current hash kernel/tests/test_sweep_global.cpp"
+    },
+    {
+      "pass": true,
+      "check": "Current line count kernel/tests/test_sweep_global.cpp"
+    },
+    {
+      "pass": true,
+      "check": "Description kernel/tests/test_sweep_global.cpp"
+    },
+    {
+      "pass": true,
+      "check": "Focus node kernel/tests/test_sweep_validation.cpp"
+    },
+    {
+      "pass": true,
+      "check": "Current hash kernel/tests/test_sweep_validation.cpp"
+    },
+    {
+      "pass": true,
+      "check": "Current line count kernel/tests/test_sweep_validation.cpp"
+    },
+    {
+      "pass": true,
+      "check": "Description kernel/tests/test_sweep_validation.cpp"
+    },
+    {
+      "pass": true,
+      "check": "Focus node kernel/tests/test_sweep_caps.cpp"
+    },
+    {
+      "pass": true,
+      "check": "Current hash kernel/tests/test_sweep_caps.cpp"
+    },
+    {
+      "pass": true,
+      "check": "Current line count kernel/tests/test_sweep_caps.cpp"
+    },
+    {
+      "pass": true,
+      "check": "Description kernel/tests/test_sweep_caps.cpp"
+    },
+    {
+      "pass": true,
+      "check": "Focus node kernel/tests/test_sweep_analytic_bridge.cpp"
+    },
+    {
+      "pass": true,
+      "check": "Current hash kernel/tests/test_sweep_analytic_bridge.cpp"
+    },
+    {
+      "pass": true,
+      "check": "Current line count kernel/tests/test_sweep_analytic_bridge.cpp"
+    },
+    {
+      "pass": true,
+      "check": "Description kernel/tests/test_sweep_analytic_bridge.cpp"
+    },
+    {
+      "pass": true,
+      "check": "Focus node kernel/fk_bspline_surface.cpp"
+    },
+    {
+      "pass": true,
+      "check": "Current hash kernel/fk_bspline_surface.cpp"
+    },
+    {
+      "pass": true,
+      "check": "Current line count kernel/fk_bspline_surface.cpp"
+    },
+    {
+      "pass": true,
+      "check": "Description kernel/fk_bspline_surface.cpp"
+    },
+    {
+      "pass": true,
+      "check": "Focus node kernel/fk_nurbs.cpp"
+    },
+    {
+      "pass": true,
+      "check": "Current hash kernel/fk_nurbs.cpp"
+    },
+    {
+      "pass": true,
+      "check": "Current line count kernel/fk_nurbs.cpp"
+    },
+    {
+      "pass": true,
+      "check": "Description kernel/fk_nurbs.cpp"
+    },
+    {
+      "pass": true,
+      "check": "Focus node kernel/fk_pcurve.cpp"
+    },
+    {
+      "pass": true,
+      "check": "Current hash kernel/fk_pcurve.cpp"
+    },
+    {
+      "pass": true,
+      "check": "Current line count kernel/fk_pcurve.cpp"
+    },
+    {
+      "pass": true,
+      "check": "Description kernel/fk_pcurve.cpp"
+    },
+    {
+      "pass": true,
+      "check": "Focus node kernel/fk_profile.cpp"
+    },
+    {
+      "pass": true,
+      "check": "Current hash kernel/fk_profile.cpp"
+    },
+    {
+      "pass": true,
+      "check": "Current line count kernel/fk_profile.cpp"
+    },
+    {
+      "pass": true,
+      "check": "Description kernel/fk_profile.cpp"
+    },
+    {
+      "pass": true,
+      "check": "Focus node kernel/fk_body_check.cpp"
+    },
+    {
+      "pass": true,
+      "check": "Current hash kernel/fk_body_check.cpp"
+    },
+    {
+      "pass": true,
+      "check": "Current line count kernel/fk_body_check.cpp"
+    },
+    {
+      "pass": true,
+      "check": "Description kernel/fk_body_check.cpp"
+    },
+    {
+      "pass": true,
+      "check": "Call incoming/outgoing kernel/fk_sweep.cpp -> kernel/fk_sweep_atlas.cpp"
+    },
+    {
+      "pass": true,
+      "check": "Call incoming/outgoing kernel/fk_sweep.cpp -> kernel/fk_sweep_surface_validation.cpp"
+    },
+    {
+      "pass": true,
+      "check": "Call incoming/outgoing kernel/fk_sweep.cpp -> kernel/fk_sweep_analytic_bridge.cpp"
+    },
+    {
+      "pass": true,
+      "check": "Call incoming/outgoing kernel/fk_sweep.cpp -> kernel/fk_pcurve.cpp"
+    },
+    {
+      "pass": true,
+      "check": "Call incoming/outgoing kernel/fk_sweep.cpp -> kernel/fk_body_check.cpp"
+    },
+    {
+      "pass": true,
+      "check": "Call incoming/outgoing kernel/fk_sweep_atlas.cpp -> kernel/fk_sweep_caps.cpp"
+    },
+    {
+      "pass": true,
+      "check": "Call incoming/outgoing kernel/fk_sweep_caps.cpp -> kernel/fk_sweep_surface_validation.cpp"
+    },
+    {
+      "pass": true,
+      "check": "Call incoming/outgoing kernel/tests/test_sweep_validation.cpp -> kernel/fk_sweep_surface_validation.cpp"
+    },
+    {
+      "pass": true,
+      "check": "Call incoming/outgoing kernel/tests/test_sweep_caps.cpp -> kernel/fk_sweep_caps.cpp"
+    },
+    {
+      "pass": true,
+      "check": "Call incoming/outgoing kernel/tests/test_sweep_caps.cpp -> kernel/fk_sweep.cpp"
+    },
+    {
+      "pass": true,
+      "check": "Call incoming/outgoing kernel/tests/test_sweep_analytic_bridge.cpp -> kernel/fk_sweep_analytic_bridge.cpp"
+    },
+    {
+      "pass": true,
+      "check": "Call incoming/outgoing kernel/tests/test_sweep_analytic_bridge.cpp -> kernel/fk_sweep_atlas.cpp"
+    },
+    {
+      "pass": true,
+      "check": "Call incoming/outgoing kernel/tests/test_sweep_analytic_bridge.cpp -> kernel/fk_sweep.cpp"
+    },
+    {
+      "pass": true,
+      "check": "Call incoming/outgoing kernel/tests/test_sweep_global.cpp -> kernel/fk_sweep.cpp"
+    },
+    {
+      "pass": true,
+      "check": "Call incoming/outgoing kernel/tests/test_sweep_global.cpp -> kernel/fk_body_check.cpp"
+    },
+    {
+      "pass": true,
+      "check": "Call incoming/outgoing kernel/tests/test_sweep_global.cpp -> kernel/fk_mass.cpp"
+    },
+    {
+      "pass": true,
+      "check": "Include separate from call kernel/fk_sweep.cpp -> kernel/fk_sweep_atlas.h"
+    },
+    {
+      "pass": true,
+      "check": "Include separate from call kernel/fk_sweep.cpp -> kernel/fk_sweep_analytic_bridge.h"
+    },
+    {
+      "pass": true,
+      "check": "Include separate from call kernel/fk_sweep_atlas.h -> kernel/fk_sweep_surface_validation.h"
+    },
+    {
+      "pass": true,
+      "check": "Include separate from call kernel/fk_sweep_atlas.h -> kernel/fk_sweep_caps.h"
+    },
+    {
+      "pass": true,
+      "check": "Include separate from call kernel/fk_sweep_caps.h -> kernel/fk_sweep_surface_validation.h"
+    },
+    {
+      "pass": true,
+      "check": "Include separate from call kernel/fk_sweep_caps.h -> kernel/fk_profile.h"
+    },
+    {
+      "pass": true,
+      "check": "Include separate from call kernel/fk_sweep_caps.h -> kernel/fk_topology.h"
+    },
+    {
+      "pass": true,
+      "check": "Include separate from call kernel/fk_sweep_analytic_bridge.h -> kernel/fk_bspline_surface.h"
+    },
+    {
+      "pass": true,
+      "check": "Include separate from call kernel/fk_sweep_surface_validation.cpp -> kernel/fk_sweep_surface_validation.h"
+    },
+    {
+      "pass": true,
+      "check": "Include separate from call kernel/fk_sweep_caps.cpp -> kernel/fk_sweep_caps.h"
+    },
+    {
+      "pass": true,
+      "check": "Include separate from call kernel/fk_sweep_atlas.cpp -> kernel/fk_sweep_atlas.h"
+    },
+    {
+      "pass": true,
+      "check": "Include separate from call kernel/fk_sweep_analytic_bridge.cpp -> kernel/fk_sweep_analytic_bridge.h"
+    },
+    {
+      "pass": true,
+      "check": "Symbol kernel/fk_sweep.cpp: longitudinalPCurve"
+    },
+    {
+      "pass": true,
+      "check": "Symbol kernel/fk_sweep.cpp: sectionPCurve"
+    },
+    {
+      "pass": true,
+      "check": "Symbol kernel/fk_sweep_surface_validation.cpp: SweepSurfaceQuery::Data::Data"
+    },
+    {
+      "pass": true,
+      "check": "Symbol kernel/fk_sweep_surface_validation.cpp: SweepSurfaceQuery::SweepSurfaceQuery"
+    },
+    {
+      "pass": true,
+      "check": "Symbol kernel/fk_sweep_surface_validation.cpp: SweepSurfaceQuery::projection"
+    },
+    {
+      "pass": true,
+      "check": "Symbol kernel/fk_sweep_surface_validation.cpp: SweepSurfaceQuery::capContact"
+    },
+    {
+      "pass": true,
+      "check": "Symbol kernel/fk_sweep_surface_validation.cpp: geometryNet"
+    },
+    {
+      "pass": true,
+      "check": "Symbol kernel/fk_sweep_surface_validation.cpp: splitNet"
+    },
+    {
+      "pass": true,
+      "check": "Symbol kernel/fk_sweep_surface_validation.cpp: derivative"
+    },
+    {
+      "pass": true,
+      "check": "Symbol kernel/fk_sweep_surface_validation.cpp: projectedDerivative"
+    },
+    {
+      "pass": true,
+      "check": "Symbol kernel/fk_sweep_surface_validation.cpp: prepare"
+    },
+    {
+      "pass": true,
+      "check": "Symbol kernel/fk_sweep_surface_validation.cpp: Validator::local"
+    },
+    {
+      "pass": true,
+      "check": "Symbol kernel/fk_sweep_surface_validation.cpp: Validator::monotone"
+    },
+    {
+      "pass": true,
+      "check": "Symbol kernel/fk_sweep_surface_validation.cpp: Validator::coverage"
+    },
+    {
+      "pass": true,
+      "check": "Symbol kernel/fk_sweep_caps.cpp: CapDomainIndex::classifyBoxBudget"
+    },
+    {
+      "pass": true,
+      "check": "Symbol kernel/fk_sweep_caps.cpp: capDomainsDisjoint"
+    },
+    {
+      "pass": true,
+      "check": "Symbol kernel/fk_sweep_caps.cpp: validateSweepSurfaceCap"
+    },
+    {
+      "pass": true,
+      "check": "Symbol kernel/fk_sweep_analytic_bridge.cpp: boundSweepAnalyticBridge"
+    },
+    {
+      "pass": true,
+      "check": "Symbol kernel/fk_sweep_analytic_bridge.cpp: analyticProfile"
+    },
+    {
+      "pass": true,
+      "check": "Symbol kernel/fk_sweep_analytic_bridge.cpp: trig"
+    },
+    {
+      "pass": true,
+      "check": "No OCCT dependency kernel/tests/test_sweep_global.cpp"
+    },
+    {
+      "pass": true,
+      "check": "Global tests resolve local helper definitions"
+    },
+    {
+      "pass": true,
+      "check": "No OCCT dependency kernel/tests/test_sweep_validation.cpp"
+    },
+    {
+      "pass": true,
+      "check": "No OCCT dependency kernel/tests/test_sweep_caps.cpp"
+    },
+    {
+      "pass": true,
+      "check": "No OCCT dependency kernel/tests/test_sweep_analytic_bridge.cpp"
+    },
+    {
+      "pass": true,
+      "check": "Global helpers do not call OCCT sweep test TU"
+    },
+    {
+      "pass": true,
+      "check": "Old local-only sweep disclaimer removed"
+    },
+    {
+      "pass": true,
+      "check": "Cached Query projection/contact calls present"
+    }
+  ],
+  "failures": [],
+  "warnings": [],
+  "focusNodes": [
+    {
+      "id": "kernel/fk_sweep.cpp",
+      "description": "Sweep con frame Bishop, supporti analitici o tensoriali, cuciture UV esplicite e controllo locale Bernstein. Prima di pubblicare il risultato valida globalmente lati, teste e nesting tramite atlante razionale conservativo; errori o budget esauriti non pubblicano il risultato.",
+      "incoming": {
+        "call": [
+          "cad_forge.cpp",
+          "kernel/fk_sweep.cpp",
+          "kernel/tests/test_blend_features.cpp",
+          "kernel/tests/test_body_io.cpp",
+          "kernel/tests/test_boolean.cpp",
+          "kernel/tests/test_history.cpp",
+          "kernel/tests/test_offset.cpp",
+          "kernel/tests/test_step.cpp",
+          "kernel/tests/test_sweep.cpp",
+          "kernel/tests/test_sweep_analytic_bridge.cpp",
+          "kernel/tests/test_sweep_caps.cpp",
+          "kernel/tests/test_sweep_global.cpp",
+          "kernel/tests/test_sweep_surfaces.cpp"
+        ],
+        "include": []
+      },
+      "outgoing": {
+        "call": [
+          "kernel/fk_body_check.cpp",
+          "kernel/fk_bspline.h",
+          "kernel/fk_cancel.h",
+          "kernel/fk_curve.h",
+          "kernel/fk_curve_ops.cpp",
+          "kernel/fk_hermite.cpp",
+          "kernel/fk_intersect.cpp",
+          "kernel/fk_intersect.h",
+          "kernel/fk_math.cpp",
+          "kernel/fk_math.h",
+          "kernel/fk_nurbs.cpp",
+          "kernel/fk_pcurve.cpp",
+          "kernel/fk_precision.h",
+          "kernel/fk_profile.cpp",
+          "kernel/fk_profile.h",
+          "kernel/fk_surface.cpp",
+          "kernel/fk_surface.h",
+          "kernel/fk_surface_algo.cpp",
+          "kernel/fk_sweep.cpp",
+          "kernel/fk_sweep_analytic_bridge.cpp",
+          "kernel/fk_sweep_analytic_bridge.h",
+          "kernel/fk_sweep_atlas.cpp",
+          "kernel/fk_sweep_atlas.h",
+          "kernel/fk_sweep_surface_validation.cpp",
+          "kernel/fk_sweep_surface_validation.h",
+          "kernel/fk_topology.cpp",
+          "kernel/fk_topology.h",
+          "kernel/fk_transform.cpp"
+        ],
+        "include": [
+          "kernel/fk_body_check.h",
+          "kernel/fk_bspline_surface.h",
+          "kernel/fk_curve_ops.h",
+          "kernel/fk_hermite.h",
+          "kernel/fk_intersect.h",
+          "kernel/fk_nurbs.h",
+          "kernel/fk_pcurve.h",
+          "kernel/fk_precision.h",
+          "kernel/fk_surface_algo.h",
+          "kernel/fk_sweep.h",
+          "kernel/fk_sweep_analytic_bridge.h",
+          "kernel/fk_sweep_atlas.h",
+          "kernel/fk_transform.h"
+        ]
+      },
+      "symbols": [
+        "ForgeCad::Kernel::PathFrames::B0",
+        "ForgeCad::Kernel::PathFrames::N0",
+        "ForgeCad::Kernel::PathFrames::PathFrames",
+        "ForgeCad::Kernel::PathFrames::T0",
+        "ForgeCad::Kernel::PathFrames::checkContinuity",
+        "ForgeCad::Kernel::PathFrames::closed",
+        "ForgeCad::Kernel::PathFrames::count",
+        "ForgeCad::Kernel::PathFrames::endPoint",
+        "ForgeCad::Kernel::PathFrames::endTangent",
+        "ForgeCad::Kernel::PathFrames::evaluate",
+        "ForgeCad::Kernel::PathFrames::frenet",
+        "ForgeCad::Kernel::PathFrames::frenetFrom",
+        "ForgeCad::Kernel::PathFrames::jointTransform",
+        "ForgeCad::Kernel::PathFrames::motion",
+        "ForgeCad::Kernel::PathFrames::sameTangent",
+        "ForgeCad::Kernel::PathFrames::segment",
+        "ForgeCad::Kernel::PathFrames::size",
+        "ForgeCad::Kernel::PathFrames::startPoint",
+        "ForgeCad::Kernel::PathFrames::startTangent",
+        "ForgeCad::Kernel::PathFrames::transport",
+        "ForgeCad::Kernel::addLoop",
+        "ForgeCad::Kernel::affineSupport",
+        "ForgeCad::Kernel::anyPerpendicular",
+        "ForgeCad::Kernel::basisOf",
+        "ForgeCad::Kernel::constant",
+        "ForgeCad::Kernel::cosine",
+        "ForgeCad::Kernel::cross",
+        "ForgeCad::Kernel::dot",
+        "ForgeCad::Kernel::inverse",
+        "ForgeCad::Kernel::keyedLoop",
+        "ForgeCad::Kernel::longitudinalPCurve",
+        "ForgeCad::Kernel::operator*",
+        "ForgeCad::Kernel::operator+",
+        "ForgeCad::Kernel::profileNurbs",
+        "ForgeCad::Kernel::requirePositiveSection",
+        "ForgeCad::Kernel::sectionPCurve",
+        "ForgeCad::Kernel::sine",
+        "ForgeCad::Kernel::squareRoot",
+        "ForgeCad::Kernel::sweep",
+        "ForgeCad::Kernel::sweepChains",
+        "ForgeCad::Kernel::sweepRegions",
+        "ForgeCad::Kernel::sweepSheet",
+        "ForgeCad::Kernel::unit"
+      ]
+    },
+    {
+      "id": "kernel/fk_sweep.h",
+      "description": "Sweep: un profilo piano trascinato lungo un percorso (estrusione su un percorso, come BRepOffsetAPI_MakePipe di OCCT).",
+      "incoming": {
+        "call": [
+          "kernel/tests/test_fill.cpp",
+          "kernel/tests/test_loft.cpp",
+          "kernel/tests/test_loft_surfaces.cpp",
+          "kernel/tests/test_planar.cpp",
+          "kernel/tests/test_surface_tools.cpp"
+        ],
+        "include": [
+          "cad_datum.cpp",
+          "cad_datum.h",
+          "cad_features.h",
+          "cad_forge.cpp",
+          "cad_forge.h",
+          "cad_loft_diagnostics.h",
+          "cad_measure.h",
+          "kernel/fk_boundary.h",
+          "kernel/fk_fill.h",
+          "kernel/fk_loft.h",
+          "kernel/fk_planar.h",
+          "kernel/fk_sweep.cpp",
+          "kernel/tests/probe_code_review.cpp",
+          "kernel/tests/test_blend_features.cpp",
+          "kernel/tests/test_body_io.cpp",
+          "kernel/tests/test_boolean.cpp",
+          "kernel/tests/test_history.cpp",
+          "kernel/tests/test_offset.cpp",
+          "kernel/tests/test_step.cpp",
+          "kernel/tests/test_sweep.cpp",
+          "kernel/tests/test_sweep_analytic_bridge.cpp",
+          "kernel/tests/test_sweep_caps.cpp",
+          "kernel/tests/test_sweep_global.cpp",
+          "kernel/tests/test_sweep_surfaces.cpp"
+        ]
+      },
+      "outgoing": {
+        "call": [],
+        "include": [
+          "kernel/fk_history.h",
+          "kernel/fk_profile.h",
+          "kernel/fk_topology.h"
+        ]
+      },
+      "symbols": []
+    },
+    {
+      "id": "kernel/fk_sweep_surface_validation.cpp",
+      "description": "Validazione globale delle superfici sweep: estrazione Bernstein outward, BVH, separazione e iniettivita locale con cuciture entro risoluzione fisica; budget e cancellazione.",
+      "incoming": {
+        "call": [
+          "kernel/fk_sweep.cpp",
+          "kernel/fk_sweep_caps.cpp",
+          "kernel/fk_sweep_surface_validation.cpp",
+          "kernel/tests/test_sweep_validation.cpp"
+        ],
+        "include": []
+      },
+      "outgoing": {
+        "call": [
+          "kernel/fk_bspline_surface.cpp",
+          "kernel/fk_bspline_surface.h",
+          "kernel/fk_cancel.h",
+          "kernel/fk_math.h",
+          "kernel/fk_sweep_surface_validation.cpp",
+          "kernel/fk_sweep_surface_validation.h"
+        ],
+        "include": [
+          "kernel/fk_cancel.h",
+          "kernel/fk_sweep_surface_validation.h"
+        ]
+      },
+      "symbols": [
+        "ForgeCad::Kernel::detail::I::I",
+        "ForgeCad::Kernel::detail::Net::index",
+        "ForgeCad::Kernel::detail::Node::leaf",
+        "ForgeCad::Kernel::detail::SweepSurfaceQuery::Data::Data",
+        "ForgeCad::Kernel::detail::SweepSurfaceQuery::SweepSurfaceQuery",
+        "ForgeCad::Kernel::detail::SweepSurfaceQuery::capContact",
+        "ForgeCad::Kernel::detail::SweepSurfaceQuery::projection",
+        "ForgeCad::Kernel::detail::Validator::Validator",
+        "ForgeCad::Kernel::detail::Validator::build",
+        "ForgeCad::Kernel::detail::Validator::capContact",
+        "ForgeCad::Kernel::detail::Validator::coverage",
+        "ForgeCad::Kernel::detail::Validator::extract",
+        "ForgeCad::Kernel::detail::Validator::local",
+        "ForgeCad::Kernel::detail::Validator::monotone",
+        "ForgeCad::Kernel::detail::Validator::pairs",
+        "ForgeCad::Kernel::detail::Validator::prepareQuery",
+        "ForgeCad::Kernel::detail::Validator::projection",
+        "ForgeCad::Kernel::detail::Validator::run",
+        "ForgeCad::Kernel::detail::Validator::self",
+        "ForgeCad::Kernel::detail::Validator::separated",
+        "ForgeCad::Kernel::detail::Validator::splitNode",
+        "ForgeCad::Kernel::detail::Validator::visit",
+        "ForgeCad::Kernel::detail::apart",
+        "ForgeCad::Kernel::detail::boundSweepSurfaceCapContact",
+        "ForgeCad::Kernel::detail::boundSweepSurfaceProjection",
+        "ForgeCad::Kernel::detail::checked",
+        "ForgeCad::Kernel::detail::choose",
+        "ForgeCad::Kernel::detail::derivative",
+        "ForgeCad::Kernel::detail::down",
+        "ForgeCad::Kernel::detail::edgeGap",
+        "ForgeCad::Kernel::detail::entire",
+        "ForgeCad::Kernel::detail::finite",
+        "ForgeCad::Kernel::detail::geometryNet",
+        "ForgeCad::Kernel::detail::hull",
+        "ForgeCad::Kernel::detail::insertKnot",
+        "ForgeCad::Kernel::detail::merge",
+        "ForgeCad::Kernel::detail::mid",
+        "ForgeCad::Kernel::detail::midpoint",
+        "ForgeCad::Kernel::detail::netBounds",
+        "ForgeCad::Kernel::detail::netMiddle",
+        "ForgeCad::Kernel::detail::operator*",
+        "ForgeCad::Kernel::detail::operator+",
+        "ForgeCad::Kernel::detail::operator-",
+        "ForgeCad::Kernel::detail::operator/",
+        "ForgeCad::Kernel::detail::prepare",
+        "ForgeCad::Kernel::detail::project",
+        "ForgeCad::Kernel::detail::projectedDerivative",
+        "ForgeCad::Kernel::detail::ratio",
+        "ForgeCad::Kernel::detail::restrictNet",
+        "ForgeCad::Kernel::detail::same",
+        "ForgeCad::Kernel::detail::splitNet",
+        "ForgeCad::Kernel::detail::sqr",
+        "ForgeCad::Kernel::detail::up",
+        "ForgeCad::Kernel::detail::validateSweepSurfaces",
+        "ForgeCad::Kernel::detail::vec"
+      ]
+    },
+    {
+      "id": "kernel/fk_sweep_surface_validation.h",
+      "description": "Atlante dei carrier sweep, domini e periodi genealogici, errori dei coefficienti, limiti e risultati della validazione conservativa.",
+      "incoming": {
+        "call": [
+          "kernel/fk_sweep.cpp",
+          "kernel/fk_sweep_caps.cpp",
+          "kernel/fk_sweep_surface_validation.cpp",
+          "kernel/tests/test_sweep_caps.cpp",
+          "kernel/tests/test_sweep_validation.cpp"
+        ],
+        "include": [
+          "kernel/fk_sweep_atlas.h",
+          "kernel/fk_sweep_caps.h",
+          "kernel/fk_sweep_surface_validation.cpp",
+          "kernel/tests/test_sweep_validation.cpp"
+        ]
+      },
+      "outgoing": {
+        "call": [
+          "kernel/fk_precision.h"
+        ],
+        "include": [
+          "kernel/fk_bspline_surface.h",
+          "kernel/fk_precision.h"
+        ]
+      },
+      "symbols": []
+    },
+    {
+      "id": "kernel/fk_sweep_caps.cpp",
+      "description": "Domini piani delle teste con trim razionali e fori: winding conservativo, disgiunzione testa/testa e testa/lato, budget condivisi e cancellazione.",
+      "incoming": {
+        "call": [
+          "kernel/fk_sweep_atlas.cpp",
+          "kernel/fk_sweep_caps.cpp",
+          "kernel/tests/test_sweep_caps.cpp"
+        ],
+        "include": []
+      },
+      "outgoing": {
+        "call": [
+          "kernel/fk_bspline.h",
+          "kernel/fk_cancel.h",
+          "kernel/fk_curve.h",
+          "kernel/fk_math.h",
+          "kernel/fk_precision.h",
+          "kernel/fk_profile.cpp",
+          "kernel/fk_profile.h",
+          "kernel/fk_surface.h",
+          "kernel/fk_sweep_caps.cpp",
+          "kernel/fk_sweep_caps.h",
+          "kernel/fk_sweep_surface_validation.cpp",
+          "kernel/fk_sweep_surface_validation.h",
+          "kernel/fk_topology.cpp",
+          "kernel/fk_topology.h"
+        ],
+        "include": [
+          "kernel/fk_bspline.h",
+          "kernel/fk_cancel.h",
+          "kernel/fk_curve_ops.h",
+          "kernel/fk_nurbs.h",
+          "kernel/fk_precision.h",
+          "kernel/fk_sweep_caps.h"
+        ]
+      },
+      "symbols": [
+        "ForgeCad::Kernel::detail::CapDomainIndex::CapDomainIndex",
+        "ForgeCad::Kernel::detail::CapDomainIndex::bounds",
+        "ForgeCad::Kernel::detail::CapDomainIndex::classifyBox",
+        "ForgeCad::Kernel::detail::CapDomainIndex::classifyBoxBudget",
+        "ForgeCad::Kernel::detail::CapDomainIndex::classifyPoint",
+        "ForgeCad::Kernel::detail::CapDomainIndex::frame",
+        "ForgeCad::Kernel::detail::CapDomainIndex::loopCount",
+        "ForgeCad::Kernel::detail::I::I",
+        "ForgeCad::Kernel::detail::Query::collect",
+        "ForgeCad::Kernel::detail::Query::edge",
+        "ForgeCad::Kernel::detail::add",
+        "ForgeCad::Kernel::detail::apart",
+        "ForgeCad::Kernel::detail::capDomainsDisjoint",
+        "ForgeCad::Kernel::detail::checked",
+        "ForgeCad::Kernel::detail::curveSpans",
+        "ForgeCad::Kernel::detail::down",
+        "ForgeCad::Kernel::detail::entire",
+        "ForgeCad::Kernel::detail::hull",
+        "ForgeCad::Kernel::detail::insert",
+        "ForgeCad::Kernel::detail::mapBox",
+        "ForgeCad::Kernel::detail::mul",
+        "ForgeCad::Kernel::detail::operator*",
+        "ForgeCad::Kernel::detail::operator+",
+        "ForgeCad::Kernel::detail::operator-",
+        "ForgeCad::Kernel::detail::operator/",
+        "ForgeCad::Kernel::detail::orientation",
+        "ForgeCad::Kernel::detail::point",
+        "ForgeCad::Kernel::detail::spanBox",
+        "ForgeCad::Kernel::detail::splineSpans",
+        "ForgeCad::Kernel::detail::split",
+        "ForgeCad::Kernel::detail::trig",
+        "ForgeCad::Kernel::detail::up",
+        "ForgeCad::Kernel::detail::valid",
+        "ForgeCad::Kernel::detail::validateSweepSurfaceCap"
+      ]
+    },
+    {
+      "id": "kernel/fk_sweep_caps.h",
+      "description": "Indice immutabile dei trim delle teste e contratti per disgiunzione fra superfici laterali e facce piane.",
+      "incoming": {
+        "call": [
+          "kernel/fk_sweep_caps.cpp",
+          "kernel/tests/test_sweep_caps.cpp"
+        ],
+        "include": [
+          "kernel/fk_sweep_atlas.h",
+          "kernel/fk_sweep_caps.cpp",
+          "kernel/tests/test_sweep_caps.cpp"
+        ]
+      },
+      "outgoing": {
+        "call": [],
+        "include": [
+          "kernel/fk_profile.h",
+          "kernel/fk_sweep_surface_validation.h",
+          "kernel/fk_topology.h"
+        ]
+      },
+      "symbols": []
+    },
+    {
+      "id": "kernel/fk_sweep_atlas.cpp",
+      "description": "Adattatore sweep: parametrizzazioni razionali di traslazione/rotazione, nesting delle regioni e controllo delle teste con genealogia dei lati.",
+      "incoming": {
+        "call": [
+          "kernel/fk_sweep.cpp",
+          "kernel/tests/test_sweep_analytic_bridge.cpp"
+        ],
+        "include": []
+      },
+      "outgoing": {
+        "call": [
+          "kernel/fk_bspline.h",
+          "kernel/fk_math.h",
+          "kernel/fk_nurbs.cpp",
+          "kernel/fk_precision.h",
+          "kernel/fk_profile.h",
+          "kernel/fk_sweep_caps.cpp"
+        ],
+        "include": [
+          "kernel/fk_nurbs.h",
+          "kernel/fk_sweep_atlas.h"
+        ]
+      },
+      "symbols": [
+        "ForgeCad::Kernel::detail::requireDisjointSweepCaps",
+        "ForgeCad::Kernel::detail::requireProfileNesting",
+        "ForgeCad::Kernel::detail::rotationChart",
+        "ForgeCad::Kernel::detail::translationChart"
+      ]
+    },
+    {
+      "id": "kernel/fk_sweep_atlas.h",
+      "description": "Contratti interni per atlante dello sweep e associazione esplicita fra teste e famiglie laterali.",
+      "incoming": {
+        "call": [
+          "kernel/fk_sweep.cpp"
+        ],
+        "include": [
+          "kernel/fk_sweep.cpp",
+          "kernel/fk_sweep_atlas.cpp",
+          "kernel/tests/test_sweep_analytic_bridge.cpp"
+        ]
+      },
+      "outgoing": {
+        "call": [],
+        "include": [
+          "kernel/fk_sweep_caps.h",
+          "kernel/fk_sweep_surface_validation.h"
+        ]
+      },
+      "symbols": []
+    },
+    {
+      "id": "kernel/fk_sweep_analytic_bridge.cpp",
+      "description": "Bounds outward dei coefficienti che collegano i chart razionali ai carrier analitici scelti; seno/coseno Taylor con resto esplicito, fallback dichiarato per input non supportati.",
+      "incoming": {
+        "call": [
+          "kernel/fk_sweep.cpp",
+          "kernel/fk_sweep_analytic_bridge.cpp",
+          "kernel/tests/test_sweep_analytic_bridge.cpp"
+        ],
+        "include": []
+      },
+      "outgoing": {
+        "call": [
+          "kernel/fk_bspline_surface.h",
+          "kernel/fk_cancel.h",
+          "kernel/fk_curve.h",
+          "kernel/fk_math.h",
+          "kernel/fk_surface.h",
+          "kernel/fk_sweep_analytic_bridge.cpp",
+          "kernel/fk_sweep_analytic_bridge.h"
+        ],
+        "include": [
+          "kernel/fk_cancel.h",
+          "kernel/fk_sweep_analytic_bridge.h"
+        ]
+      },
+      "symbols": [
+        "ForgeCad::Kernel::detail::I::I",
+        "ForgeCad::Kernel::detail::all",
+        "ForgeCad::Kernel::detail::analyticProfile",
+        "ForgeCad::Kernel::detail::basis",
+        "ForgeCad::Kernel::detail::boundSweepAnalyticBridge",
+        "ForgeCad::Kernel::detail::checked",
+        "ForgeCad::Kernel::detail::conic",
+        "ForgeCad::Kernel::detail::crossI",
+        "ForgeCad::Kernel::detail::dn",
+        "ForgeCad::Kernel::detail::dotI",
+        "ForgeCad::Kernel::detail::finite",
+        "ForgeCad::Kernel::detail::linear",
+        "ForgeCad::Kernel::detail::operator*",
+        "ForgeCad::Kernel::detail::operator+",
+        "ForgeCad::Kernel::detail::operator-",
+        "ForgeCad::Kernel::detail::operator/",
+        "ForgeCad::Kernel::detail::sectionPoles",
+        "ForgeCad::Kernel::detail::trig",
+        "ForgeCad::Kernel::detail::up",
+        "ForgeCad::Kernel::detail::vec"
+      ]
+    },
+    {
+      "id": "kernel/fk_sweep_analytic_bridge.h",
+      "description": "Errore sui poli/pesi per una parametrizzazione razionale del carrier analitico effettivo dello sweep.",
+      "incoming": {
+        "call": [
+          "kernel/fk_sweep.cpp",
+          "kernel/fk_sweep_analytic_bridge.cpp"
+        ],
+        "include": [
+          "kernel/fk_sweep.cpp",
+          "kernel/fk_sweep_analytic_bridge.cpp",
+          "kernel/tests/test_sweep_analytic_bridge.cpp"
+        ]
+      },
+      "outgoing": {
+        "call": [
+          "kernel/fk_math.h"
+        ],
+        "include": [
+          "kernel/fk_bspline_surface.h"
+        ]
+      },
+      "symbols": []
+    },
+    {
+      "id": "kernel/tests/test_sweep.cpp",
+      "description": "Sweep analitici e spaziali: eliche 15/16/17 giri senza aliasing, area/volume, cuciture UV su spline chiusa intera o divisa e fallback massa da SP-curve approssimate.",
+      "incoming": {
+        "call": [
+          "kernel/tests/test_sweep.cpp"
+        ],
+        "include": []
+      },
+      "outgoing": {
+        "call": [
+          "kernel/fk_body_check.cpp",
+          "kernel/fk_bspline.h",
+          "kernel/fk_curve.h",
+          "kernel/fk_curve_algo.h",
+          "kernel/fk_curve_ops.cpp",
+          "kernel/fk_helix.cpp",
+          "kernel/fk_helix.h",
+          "kernel/fk_mass.cpp",
+          "kernel/fk_math.cpp",
+          "kernel/fk_math.h",
+          "kernel/fk_nurbs.cpp",
+          "kernel/fk_pcurve.cpp",
+          "kernel/fk_precision.h",
+          "kernel/fk_profile.cpp",
+          "kernel/fk_profile.h",
+          "kernel/fk_surface.h",
+          "kernel/fk_sweep.cpp",
+          "kernel/fk_tessellate.cpp",
+          "kernel/fk_tessellate.h",
+          "kernel/fk_topology.cpp",
+          "kernel/fk_topology.h",
+          "kernel/tests/fk_test.h",
+          "kernel/tests/fk_test_main.cpp",
+          "kernel/tests/fk_test_profiles.h",
+          "kernel/tests/test_sweep.cpp"
+        ],
+        "include": [
+          "kernel/fk_body_check.h",
+          "kernel/fk_curve_algo.h",
+          "kernel/fk_curve_ops.h",
+          "kernel/fk_helix.h",
+          "kernel/fk_mass.h",
+          "kernel/fk_nurbs.h",
+          "kernel/fk_pcurve.h",
+          "kernel/fk_sweep.h",
+          "kernel/fk_tessellate.h",
+          "kernel/tests/fk_test_profiles.h"
+        ]
+      },
+      "symbols": [
+        "SweepAlongHelixIsSpring",
+        "SweepClosedPathAndSheet",
+        "SweepClosedSpatialSplineExplicitSeamParameters",
+        "SweepLineAndArcAreExact",
+        "SweepLocalFoldUsesSectionGeometry",
+        "SweepMinimalTwistClosedSpatialSpline",
+        "SweepMinimalTwistHelixAvoidsUniformGridAliasing",
+        "SweepMinimalTwistJoinedSpatialPathWithStraightSpans",
+        "SweepMinimalTwistSpatialInflection",
+        "SweepObliqueProfileAlongArcUsesFiniteMeridians",
+        "SweepPlanarPathIsTube",
+        "checkedSolid",
+        "circleRegion",
+        "normalFrame",
+        "pathLength",
+        "planarPath",
+        "squareRegion",
+        "startTangent"
+      ]
+    },
+    {
+      "id": "kernel/tests/test_sweep_global.cpp",
+      "description": "Sweep globali senza OCCT: spire e regioni sovrapposte, intersezione sulla stessa faccia o con testa, cuciture, lamina curva, tubi intercalati, nesting e atomicita degli alias.",
+      "incoming": {
+        "call": [
+          "kernel/tests/test_sweep_global.cpp"
+        ],
+        "include": []
+      },
+      "outgoing": {
+        "call": [
+          "kernel/fk_body_check.cpp",
+          "kernel/fk_bspline.h",
+          "kernel/fk_curve.h",
+          "kernel/fk_helix.cpp",
+          "kernel/fk_helix.h",
+          "kernel/fk_mass.cpp",
+          "kernel/fk_math.cpp",
+          "kernel/fk_math.h",
+          "kernel/fk_profile.cpp",
+          "kernel/fk_profile.h",
+          "kernel/fk_sweep.cpp",
+          "kernel/fk_topology.cpp",
+          "kernel/fk_topology.h",
+          "kernel/tests/fk_test.h",
+          "kernel/tests/fk_test_main.cpp",
+          "kernel/tests/test_sweep_global.cpp"
+        ],
+        "include": [
+          "kernel/fk_body_check.h",
+          "kernel/fk_helix.h",
+          "kernel/fk_mass.h",
+          "kernel/fk_nurbs.h",
+          "kernel/fk_sweep.h",
+          "kernel/tests/fk_test.h"
+        ]
+      },
+      "symbols": [
+        "SweepChecksDifferentRegionsAcrossTurns",
+        "SweepGlobalCheckPreservesClosedSeamsAndRepresentations",
+        "SweepGlobalCheckPreservesRankTwoSheet",
+        "SweepGlobalCheckPreservesSeparatedInterleavedRegions",
+        "SweepGlobalCheckRejectsDuplicateMaterial",
+        "SweepGlobalFailureDoesNotPublishAliases",
+        "SweepRejectsGlobalTurnOverlap",
+        "SweepRejectsSingleFaceAndCapSideOverlap",
+        "arcSegment",
+        "circleRegion",
+        "k2Disk",
+        "lineSegment"
+      ]
+    },
+    {
+      "id": "kernel/tests/test_sweep_validation.cpp",
+      "description": "Atlante sweep: superfici regolari e piegate, periodicita reale, collisioni e duplicazioni, underflow/overflow, budget, cancellazione e coefficienti incerti.",
+      "incoming": {
+        "call": [
+          "kernel/tests/test_sweep_validation.cpp"
+        ],
+        "include": []
+      },
+      "outgoing": {
+        "call": [
+          "kernel/fk_cancel.h",
+          "kernel/fk_math.cpp",
+          "kernel/fk_math.h",
+          "kernel/fk_sweep_surface_validation.cpp",
+          "kernel/fk_sweep_surface_validation.h",
+          "kernel/tests/fk_test.h",
+          "kernel/tests/fk_test_main.cpp",
+          "kernel/tests/test_sweep_validation.cpp"
+        ],
+        "include": [
+          "kernel/fk_cancel.h",
+          "kernel/fk_sweep_surface_validation.h",
+          "kernel/tests/fk_test.h"
+        ]
+      },
+      "symbols": [
+        "SweepAtlasAcceptsRegularAndCreasedSurfaces",
+        "SweepAtlasChecksDeclaredPeriodicSeams",
+        "SweepAtlasDetectsFoldInsideOneCarrier",
+        "SweepAtlasInternalDiscontinuityIsRejected",
+        "SweepAtlasNumericalAndBudgetFailuresStayUnresolved",
+        "SweepAtlasPropagatesCancellation",
+        "SweepAtlasQueryOwnsCarrierAndRemainsCancellable",
+        "SweepAtlasRejectsCoincidentAndOverlappingSheets",
+        "certified",
+        "rectangle"
+      ]
+    },
+    {
+      "id": "kernel/tests/test_sweep_caps.cpp",
+      "description": "Teste sweep: fori e isole, trim razionali con nodi interni, pose, contatti fra teste e lati, genealogia, budget e cancellazione.",
+      "incoming": {
+        "call": [
+          "kernel/tests/test_sweep_caps.cpp"
+        ],
+        "include": []
+      },
+      "outgoing": {
+        "call": [
+          "kernel/fk_cancel.h",
+          "kernel/fk_math.cpp",
+          "kernel/fk_math.h",
+          "kernel/fk_profile.cpp",
+          "kernel/fk_profile.h",
+          "kernel/fk_surface.h",
+          "kernel/fk_sweep.cpp",
+          "kernel/fk_sweep_caps.cpp",
+          "kernel/fk_sweep_caps.h",
+          "kernel/fk_sweep_surface_validation.h",
+          "kernel/fk_topology.cpp",
+          "kernel/fk_topology.h",
+          "kernel/tests/fk_test.h",
+          "kernel/tests/fk_test_main.cpp",
+          "kernel/tests/test_sweep_caps.cpp"
+        ],
+        "include": [
+          "kernel/fk_bspline.h",
+          "kernel/fk_cancel.h",
+          "kernel/fk_curve_ops.h",
+          "kernel/fk_sweep.h",
+          "kernel/fk_sweep_caps.h",
+          "kernel/tests/fk_test.h"
+        ]
+      },
+      "symbols": [
+        "CapSideGenealogyAndOtherFamilies",
+        "CapSideHoleBudgetAndCancellation",
+        "CapTrimAnnulusHoleAndIsland",
+        "CapTrimBudgetAndCancel",
+        "CapTrimNearPlanesAndCrossing",
+        "CapTrimOutwardKnotInsertionAndSubrange",
+        "CapTrimPoseDifferentPlanesAndBody",
+        "CapTrimRationalSplineAndHoleOrientation",
+        "loop",
+        "sidePlane"
+      ]
+    },
+    {
+      "id": "kernel/tests/test_sweep_analytic_bridge.cpp",
+      "description": "Ponte dei carrier sweep: limiti dei coefficienti, cilindri/coni/tori, conservazione dei tipi analitici, massa e fallback espliciti.",
+      "incoming": {
+        "call": [
+          "kernel/tests/test_sweep_analytic_bridge.cpp"
+        ],
+        "include": []
+      },
+      "outgoing": {
+        "call": [
+          "kernel/fk_body_check.cpp",
+          "kernel/fk_bspline.h",
+          "kernel/fk_curve.h",
+          "kernel/fk_mass.cpp",
+          "kernel/fk_math.cpp",
+          "kernel/fk_math.h",
+          "kernel/fk_profile.h",
+          "kernel/fk_surface.cpp",
+          "kernel/fk_surface.h",
+          "kernel/fk_sweep.cpp",
+          "kernel/fk_sweep_analytic_bridge.cpp",
+          "kernel/fk_sweep_atlas.cpp",
+          "kernel/fk_topology.cpp",
+          "kernel/fk_topology.h",
+          "kernel/tests/fk_test.h",
+          "kernel/tests/fk_test_main.cpp",
+          "kernel/tests/test_sweep_analytic_bridge.cpp"
+        ],
+        "include": [
+          "kernel/fk_body_check.h",
+          "kernel/fk_mass.h",
+          "kernel/fk_sweep.h",
+          "kernel/fk_sweep_analytic_bridge.h",
+          "kernel/fk_sweep_atlas.h",
+          "kernel/tests/fk_test.h"
+        ]
+      },
+      "symbols": [
+        "SweepAnalyticBridgeBoundsRotationCarriers",
+        "SweepAnalyticBridgeBoundsTiltedCylinder",
+        "SweepAnalyticBridgeFallbackIsExplicit",
+        "SweepAnalyticBridgeFallbackPreservesLongitudinalParameters",
+        "SweepAnalyticBridgePreservesLegacyCylinder",
+        "SweepAnalyticBridgePreservesLegacyTorus",
+        "bridgeDisk"
+      ]
+    },
+    {
+      "id": "kernel/fk_bspline_surface.cpp",
+      "description": "Superfici NURBS con jet locali double e istanze immutabili: estensione periodica opzionale del dominio clamped, isoparametriche e breakpoints coerenti, estremi distinti per la chiusura; copie atomiche delle cache Bezier/proiezione/isoparametriche e pubblicazione unica del risultato concorrente.",
+      "incoming": {
+        "call": [
+          "cad_drawing_dimension.cpp",
+          "cad_forge.cpp",
+          "forgeCad2026_dialogs_surface_tools.cpp",
+          "kernel/fk_blend_contact_breaks.cpp",
+          "kernel/fk_blend_loop.cpp",
+          "kernel/fk_blend_mitre.cpp",
+          "kernel/fk_blend_surface.cpp",
+          "kernel/fk_bspline_isoline.cpp",
+          "kernel/fk_bspline_surface.cpp",
+          "kernel/fk_bspline_surface.h",
+          "kernel/fk_classify.cpp",
+          "kernel/fk_curve_surface.cpp",
+          "kernel/fk_face_normal_bounds.cpp",
+          "kernel/fk_fill.cpp",
+          "kernel/fk_loft_guide_constraints.cpp",
+          "kernel/fk_loft_merge.cpp",
+          "kernel/fk_marching.cpp",
+          "kernel/fk_nurbs.cpp",
+          "kernel/fk_nurbs_join.cpp",
+          "kernel/fk_offset.cpp",
+          "kernel/fk_offset_support.cpp",
+          "kernel/fk_pcurve.cpp",
+          "kernel/fk_sheet.cpp",
+          "kernel/fk_shell.cpp",
+          "kernel/fk_step.cpp",
+          "kernel/fk_stored_surface.h",
+          "kernel/fk_surface_algo.cpp",
+          "kernel/fk_surface_distance.cpp",
+          "kernel/fk_surface_poles.cpp",
+          "kernel/fk_surface_poles_constraints.cpp",
+          "kernel/fk_surface_poles_conversion.cpp",
+          "kernel/fk_surface_refit.cpp",
+          "kernel/fk_sweep_surface_validation.cpp",
+          "kernel/fk_thicken.cpp",
+          "kernel/tests/fk_test_util.h",
+          "kernel/tests/probe_trimmed_sphere.h",
+          "kernel/tests/test_blend_cavity.cpp",
+          "kernel/tests/test_blend_contact_breaks.cpp",
+          "kernel/tests/test_blend_transitions.cpp",
+          "kernel/tests/test_bspline_cache.cpp",
+          "kernel/tests/test_bspline_isoline.cpp",
+          "kernel/tests/test_bspline_plane_jets.cpp",
+          "kernel/tests/test_bspline_surface.cpp",
+          "kernel/tests/test_curve_surface.cpp",
+          "kernel/tests/test_history.cpp",
+          "kernel/tests/test_loft.cpp",
+          "kernel/tests/test_loft_complexity.cpp",
+          "kernel/tests/test_loft_guide_constraints.cpp",
+          "kernel/tests/test_loft_knots.cpp",
+          "kernel/tests/test_marching.cpp",
+          "kernel/tests/test_marching_seed_grid.cpp",
+          "kernel/tests/test_nurbs.cpp",
+          "kernel/tests/test_nurbs_supports.cpp",
+          "kernel/tests/test_offset.cpp",
+          "kernel/tests/test_offset_split_creases.cpp",
+          "kernel/tests/test_open_offset.cpp",
+          "kernel/tests/test_pcurve.cpp",
+          "kernel/tests/test_surface_algo.cpp",
+          "kernel/tests/test_surface_instances.cpp",
+          "kernel/tests/test_surface_mapping.cpp",
+          "kernel/tests/test_surface_parameterization.cpp",
+          "kernel/tests/test_surface_poles_constraints.cpp",
+          "kernel/tests/test_surface_poles_conversion.cpp",
+          "kernel/tests/test_surface_poles_influence.cpp",
+          "kernel/tests/test_surface_tools.cpp",
+          "kernel/tests/test_thicken.cpp",
+          "kernel/tests/test_tolerance.cpp",
+          "kernel/tests/test_transform.cpp",
+          "kernel/tests/test_trimmed_face_bounds.cpp",
+          "tests/test_cuda_tessellation.cpp",
+          "tests/test_drawing.cpp",
+          "tests/test_drawing_dimension_controls.h",
+          "tests/test_drawing_dimensions.cpp",
+          "tests/test_drawing_silhouette.cpp",
+          "tests/test_projected_drawing.cpp",
+          "tests/test_viewport.cpp"
+        ],
+        "include": []
+      },
+      "outgoing": {
+        "call": [
+          "kernel/fk_bspline.h",
+          "kernel/fk_bspline_basis.cpp",
+          "kernel/fk_bspline_basis.h",
+          "kernel/fk_bspline_surface.cpp",
+          "kernel/fk_bspline_surface.h",
+          "kernel/fk_math.cpp",
+          "kernel/fk_math.h",
+          "kernel/fk_surface.h"
+        ],
+        "include": [
+          "kernel/fk_bspline_basis.h",
+          "kernel/fk_bspline_surface.h"
+        ]
+      },
+      "symbols": [
+        "ForgeCad::Kernel::BSplineSurface::BSplineSurface",
+        "ForgeCad::Kernel::BSplineSurface::bezierPatches",
+        "ForgeCad::Kernel::BSplineSurface::cachedBezierPatches",
+        "ForgeCad::Kernel::BSplineSurface::cachedPatchTree",
+        "ForgeCad::Kernel::BSplineSurface::cachedSharpKnotLines",
+        "ForgeCad::Kernel::BSplineSurface::evaluate",
+        "ForgeCad::Kernel::BSplineSurface::knotIso",
+        "ForgeCad::Kernel::BSplineSurface::operator=",
+        "ForgeCad::Kernel::BSplineSurface::uBreakpoints",
+        "ForgeCad::Kernel::BSplineSurface::uDomain",
+        "ForgeCad::Kernel::BSplineSurface::uIso",
+        "ForgeCad::Kernel::BSplineSurface::uIsoCurve",
+        "ForgeCad::Kernel::BSplineSurface::vBreakpoints",
+        "ForgeCad::Kernel::BSplineSurface::vDomain",
+        "ForgeCad::Kernel::BSplineSurface::vIso",
+        "ForgeCad::Kernel::BSplineSurface::vIsoCurve",
+        "ForgeCad::Kernel::breaks",
+        "ForgeCad::Kernel::wrapped"
+      ]
+    },
+    {
+      "id": "kernel/fk_nurbs.cpp",
+      "description": "Forme NURBS esatte di curve e superfici qualsiasi del kernel, per gli algoritmi che lavorano sui poli (box che contengono la geometria, suddivisione di Bezier, composizione con le equazioni implicite).",
+      "incoming": {
+        "call": [
+          "cad_circular_pattern_fit.cpp",
+          "cad_curve_extract.cpp",
+          "cad_forge.cpp",
+          "cad_sketch_edit.cpp",
+          "cad_sketch_offset.cpp",
+          "cad_sketch_refs.cpp",
+          "kernel/fk_blend_surface.cpp",
+          "kernel/fk_classify.cpp",
+          "kernel/fk_curve_surface.cpp",
+          "kernel/fk_exchange.cpp",
+          "kernel/fk_face_normal_bounds.cpp",
+          "kernel/fk_iges.cpp",
+          "kernel/fk_intersect.cpp",
+          "kernel/fk_loft.cpp",
+          "kernel/fk_loft_merge.cpp",
+          "kernel/fk_loft_profiles.cpp",
+          "kernel/fk_marching.cpp",
+          "kernel/fk_nurbs.cpp",
+          "kernel/fk_nurbs_join.cpp",
+          "kernel/fk_planar.cpp",
+          "kernel/fk_shell.cpp",
+          "kernel/fk_sketch_projection.cpp",
+          "kernel/fk_step.cpp",
+          "kernel/fk_surface_algo.cpp",
+          "kernel/fk_surface_poles_constraints.cpp",
+          "kernel/fk_surface_poles_conversion.cpp",
+          "kernel/fk_sweep.cpp",
+          "kernel/fk_sweep_atlas.cpp",
+          "kernel/tests/test_loft.cpp",
+          "kernel/tests/test_loft_correspondence.cpp",
+          "kernel/tests/test_loft_shape.cpp",
+          "kernel/tests/test_nurbs.cpp",
+          "kernel/tests/test_offset.cpp",
+          "kernel/tests/test_pcurve.cpp",
+          "kernel/tests/test_step.cpp",
+          "kernel/tests/test_surface_algo.cpp",
+          "kernel/tests/test_sweep.cpp"
+        ],
+        "include": []
+      },
+      "outgoing": {
+        "call": [
+          "kernel/fk_bspline.h",
+          "kernel/fk_bspline_surface.cpp",
+          "kernel/fk_curve.h",
+          "kernel/fk_math.cpp",
+          "kernel/fk_math.h",
+          "kernel/fk_nurbs.cpp",
+          "kernel/fk_surface.cpp",
+          "kernel/fk_surface.h"
+        ],
+        "include": [
+          "kernel/fk_nurbs.h"
+        ]
+      },
+      "symbols": [
+        "ForgeCad::Kernel::joinBezierPieces",
+        "ForgeCad::Kernel::meridianIn",
+        "ForgeCad::Kernel::rationalBezierPieces",
+        "ForgeCad::Kernel::revolve",
+        "ForgeCad::Kernel::segment2",
+        "ForgeCad::Kernel::splinePieces",
+        "ForgeCad::Kernel::standardBezierPieces",
+        "ForgeCad::Kernel::toBSplineSurface",
+        "ForgeCad::Kernel::transformed",
+        "ForgeCad::Kernel::wholeSpline",
+        "ForgeCad::Kernel::window"
+      ]
+    },
+    {
+      "id": "kernel/fk_pcurve.cpp",
+      "description": "SP-curve (Parasolid) / pcurve (OCCT): la curva di un edge nello spazio dei parametri (u, v) di una faccia, con lo stesso parametro dell'edge: S(p(t)) = C(t) per t nel range dell'edge.",
+      "incoming": {
+        "call": [
+          "cad_fill_pattern.cpp",
+          "kernel/fk_blend.cpp",
+          "kernel/fk_blend_loop.cpp",
+          "kernel/fk_blend_polar.cpp",
+          "kernel/fk_blend_surface.cpp",
+          "kernel/fk_body_check.cpp",
+          "kernel/fk_boolean.cpp",
+          "kernel/fk_classify.cpp",
+          "kernel/fk_draft.cpp",
+          "kernel/fk_exchange.cpp",
+          "kernel/fk_extrude.cpp",
+          "kernel/fk_fill.cpp",
+          "kernel/fk_loft.cpp",
+          "kernel/fk_offset.cpp",
+          "kernel/fk_pcurve.cpp",
+          "kernel/fk_quilt_mapping.cpp",
+          "kernel/fk_revolve.cpp",
+          "kernel/fk_sheet.cpp",
+          "kernel/fk_surface_mapping.cpp",
+          "kernel/fk_surface_poles.cpp",
+          "kernel/fk_surface_poles_constraints.cpp",
+          "kernel/fk_surface_poles_conversion.cpp",
+          "kernel/fk_surface_tools.cpp",
+          "kernel/fk_sweep.cpp",
+          "kernel/fk_tessellate.cpp",
+          "kernel/fk_thicken.cpp",
+          "kernel/fk_transform.cpp",
+          "kernel/fk_unify.cpp",
+          "kernel/occt/fk_occt_import.cpp",
+          "kernel/tests/probe_blend_candidates.cpp",
+          "kernel/tests/test_boolean.cpp",
+          "kernel/tests/test_disjoint_union.cpp",
+          "kernel/tests/test_marching.cpp",
+          "kernel/tests/test_mass.cpp",
+          "kernel/tests/test_nurbs_supports.cpp",
+          "kernel/tests/test_offset.cpp",
+          "kernel/tests/test_pcurve.cpp",
+          "kernel/tests/test_step.cpp",
+          "kernel/tests/test_surface_mapping.cpp",
+          "kernel/tests/test_surface_poles_conversion.cpp",
+          "kernel/tests/test_surface_tools.cpp",
+          "kernel/tests/test_sweep.cpp",
+          "kernel/tests/test_topology.cpp",
+          "kernel/tests/test_transform.cpp",
+          "kernel/tests/test_trimmed_face_bounds.cpp",
+          "tests/test_drawing.cpp",
+          "tests/test_drawing_dimension_controls.h",
+          "tests/test_drawing_dimensions.cpp",
+          "tests/test_extrusion_next_body.h",
+          "tests/test_projected_drawing.cpp"
+        ],
+        "include": []
+      },
+      "outgoing": {
+        "call": [
+          "kernel/fk_bspline.h",
+          "kernel/fk_bspline_surface.cpp",
+          "kernel/fk_bspline_surface.h",
+          "kernel/fk_cancel.h",
+          "kernel/fk_curve.h",
+          "kernel/fk_math.cpp",
+          "kernel/fk_math.h",
+          "kernel/fk_parallel.h",
+          "kernel/fk_pcurve.cpp",
+          "kernel/fk_precision.h",
+          "kernel/fk_surface.cpp",
+          "kernel/fk_surface.h",
+          "kernel/fk_surface_algo.cpp",
+          "kernel/fk_topology.cpp",
+          "kernel/fk_topology.h"
+        ],
+        "include": [
+          "kernel/fk_bspline.h",
+          "kernel/fk_bspline_surface.h",
+          "kernel/fk_parallel.h",
+          "kernel/fk_pcurve.h",
+          "kernel/fk_surface_algo.h"
+        ]
+      },
+      "symbols": [
+        "ForgeCad::Kernel::Fitter::Fitter",
+        "ForgeCad::Kernel::Fitter::node",
+        "ForgeCad::Kernel::Fitter::refine",
+        "ForgeCad::Kernel::baseShift",
+        "ForgeCad::Kernel::computePCurves",
+        "ForgeCad::Kernel::dampedPCurveDerivative",
+        "ForgeCad::Kernel::degenerateEnd",
+        "ForgeCad::Kernel::degenerateSides",
+        "ForgeCad::Kernel::exactPCurve",
+        "ForgeCad::Kernel::fitHermitePCurve",
+        "ForgeCad::Kernel::fitLinearPCurve",
+        "ForgeCad::Kernel::fitPCurve",
+        "ForgeCad::Kernel::hermite",
+        "ForgeCad::Kernel::loopPoleWalks",
+        "ForgeCad::Kernel::modelScale",
+        "ForgeCad::Kernel::pcurveDerivative",
+        "ForgeCad::Kernel::pcurveDeviation",
+        "ForgeCad::Kernel::planarCurve",
+        "ForgeCad::Kernel::sampleParameters",
+        "ForgeCad::Kernel::sampleParametersOf",
+        "ForgeCad::Kernel::sideIndex"
+      ]
+    },
+    {
+      "id": "kernel/fk_profile.cpp",
+      "description": "Profili piani (gli schizzi): tratti di curva 2D concatenati in loop chiusi e raggruppati in regioni con fori, pronti per estrusione e simili.",
+      "incoming": {
+        "call": [
+          "cad_drawing_derived.cpp",
+          "cad_extrude.cpp",
+          "cad_features.cpp",
+          "cad_forge.cpp",
+          "cad_loft_correspondence.cpp",
+          "kernel/fk_blend.cpp",
+          "kernel/fk_blend_contour.cpp",
+          "kernel/fk_classify.cpp",
+          "kernel/fk_extrude.cpp",
+          "kernel/fk_loft.cpp",
+          "kernel/fk_planar.cpp",
+          "kernel/fk_primitives.cpp",
+          "kernel/fk_profile.cpp",
+          "kernel/fk_project.cpp",
+          "kernel/fk_revolve.cpp",
+          "kernel/fk_sweep.cpp",
+          "kernel/fk_sweep_caps.cpp",
+          "kernel/tests/test_blend.cpp",
+          "kernel/tests/test_blend_profiles.cpp",
+          "kernel/tests/test_body_io.cpp",
+          "kernel/tests/test_boolean.cpp",
+          "kernel/tests/test_cone_rays.cpp",
+          "kernel/tests/test_extrude.cpp",
+          "kernel/tests/test_history.cpp",
+          "kernel/tests/test_loft.cpp",
+          "kernel/tests/test_mass.cpp",
+          "kernel/tests/test_offset.cpp",
+          "kernel/tests/test_pcurve.cpp",
+          "kernel/tests/test_planar.cpp",
+          "kernel/tests/test_project.cpp",
+          "kernel/tests/test_revolve.cpp",
+          "kernel/tests/test_sheet.cpp",
+          "kernel/tests/test_shell.cpp",
+          "kernel/tests/test_step.cpp",
+          "kernel/tests/test_surface_tools.cpp",
+          "kernel/tests/test_sweep.cpp",
+          "kernel/tests/test_sweep_caps.cpp",
+          "kernel/tests/test_sweep_global.cpp",
+          "kernel/tests/test_sweep_surfaces.cpp",
+          "kernel/tests/test_tessellate.cpp",
+          "kernel/tests/test_transform.cpp",
+          "kernel/tests/test_unify.cpp",
+          "tests/test_drawing_complete_sections.cpp",
+          "tests/test_drawing_derived.cpp",
+          "tests/test_drawing_local_tools.cpp",
+          "tests/test_drawing_visibility.cpp",
+          "tests/test_surface_tools_gui.h",
+          "tests/test_viewport.cpp"
+        ],
+        "include": []
+      },
+      "outgoing": {
+        "call": [
+          "kernel/fk_curve.h",
+          "kernel/fk_curve_ops.h",
+          "kernel/fk_math.h",
+          "kernel/fk_profile.cpp",
+          "kernel/fk_profile.h",
+          "kernel/fk_quadrature.h"
+        ],
+        "include": [
+          "kernel/fk_curve_ops.h",
+          "kernel/fk_profile.h",
+          "kernel/fk_quadrature.h"
+        ]
+      },
+      "symbols": [
+        "ForgeCad::Kernel::area",
+        "ForgeCad::Kernel::buildProfile",
+        "ForgeCad::Kernel::integrateSegment",
+        "ForgeCad::Kernel::reversed",
+        "ForgeCad::Kernel::signedArea",
+        "ForgeCad::Kernel::windingNumber"
+      ]
+    },
+    {
+      "id": "kernel/fk_body_check.cpp",
+      "description": "Controllo di validita' di un body (come PK_BODY_check di Parasolid o BRepCheck_Analyzer di OCCT).",
+      "incoming": {
+        "call": [
+          "cad_surface_mapping.cpp",
+          "kernel/fk_blend.cpp",
+          "kernel/fk_blend_loop.cpp",
+          "kernel/fk_blend_polar.cpp",
+          "kernel/fk_blend_surface.cpp",
+          "kernel/fk_body_check.cpp",
+          "kernel/fk_boolean.cpp",
+          "kernel/fk_draft.cpp",
+          "kernel/fk_exchange.cpp",
+          "kernel/fk_loft.cpp",
+          "kernel/fk_quilt_mapping.cpp",
+          "kernel/fk_sheet.cpp",
+          "kernel/fk_shell.cpp",
+          "kernel/fk_surface_mapping.cpp",
+          "kernel/fk_surface_poles.cpp",
+          "kernel/fk_surface_poles_conversion.cpp",
+          "kernel/fk_surface_tools.cpp",
+          "kernel/fk_sweep.cpp",
+          "kernel/fk_transform.cpp",
+          "kernel/occt/fk_occt_import.cpp",
+          "kernel/tests/test_blend.cpp",
+          "kernel/tests/test_blend_cavity.cpp",
+          "kernel/tests/test_blend_contact_breaks.cpp",
+          "kernel/tests/test_blend_features.cpp",
+          "kernel/tests/test_blend_profiles.cpp",
+          "kernel/tests/test_blend_transitions.cpp",
+          "kernel/tests/test_body_io.cpp",
+          "kernel/tests/test_boolean.cpp",
+          "kernel/tests/test_boolean_seams.cpp",
+          "kernel/tests/test_boundary.cpp",
+          "kernel/tests/test_cone_rays.cpp",
+          "kernel/tests/test_disjoint_union.cpp",
+          "kernel/tests/test_draft.cpp",
+          "kernel/tests/test_extrude.cpp",
+          "kernel/tests/test_face_parameter_classify.cpp",
+          "kernel/tests/test_fill.cpp",
+          "kernel/tests/test_iges.cpp",
+          "kernel/tests/test_loft.cpp",
+          "kernel/tests/test_loft_complexity.cpp",
+          "kernel/tests/test_loft_correspondence.cpp",
+          "kernel/tests/test_loft_guide_constraints.cpp",
+          "kernel/tests/test_loft_knots.cpp",
+          "kernel/tests/test_loft_points.cpp",
+          "kernel/tests/test_loft_projected_guides.cpp",
+          "kernel/tests/test_loft_projected_sections.cpp",
+          "kernel/tests/test_loft_shape.cpp",
+          "kernel/tests/test_loft_surfaces.cpp",
+          "kernel/tests/test_mass.cpp",
+          "kernel/tests/test_nurbs_supports.cpp",
+          "kernel/tests/test_occt_import.cpp",
+          "kernel/tests/test_offset.cpp",
+          "kernel/tests/test_offset_split_creases.cpp",
+          "kernel/tests/test_open_offset.cpp",
+          "kernel/tests/test_pcurve.cpp",
+          "kernel/tests/test_planar.cpp",
+          "kernel/tests/test_polar_blend.cpp",
+          "kernel/tests/test_primitives.cpp",
+          "kernel/tests/test_project.cpp",
+          "kernel/tests/test_revolve.cpp",
+          "kernel/tests/test_sheet.cpp",
+          "kernel/tests/test_shell.cpp",
+          "kernel/tests/test_solid_trim.cpp",
+          "kernel/tests/test_step.cpp",
+          "kernel/tests/test_surface_instances.cpp",
+          "kernel/tests/test_surface_mapping.cpp",
+          "kernel/tests/test_surface_poles_constraints.cpp",
+          "kernel/tests/test_surface_poles_conversion.cpp",
+          "kernel/tests/test_surface_tools.cpp",
+          "kernel/tests/test_sweep.cpp",
+          "kernel/tests/test_sweep_analytic_bridge.cpp",
+          "kernel/tests/test_sweep_global.cpp",
+          "kernel/tests/test_sweep_surfaces.cpp",
+          "kernel/tests/test_tessellate.cpp",
+          "kernel/tests/test_thicken.cpp",
+          "kernel/tests/test_tolerance.cpp",
+          "kernel/tests/test_topology.cpp",
+          "kernel/tests/test_transform.cpp",
+          "kernel/tests/test_trimmed_face_bounds.cpp",
+          "kernel/tests/test_unify.cpp",
+          "tests/document_regression.h",
+          "tests/test_advanced_fillets.h",
+          "tests/test_drawing_complete_sections.cpp",
+          "tests/test_fillet_refinements.h",
+          "tests/test_gpu_broad_phase.cpp",
+          "tests/test_loft_correspondence.h",
+          "tests/test_loft_projected_sections.h",
+          "tests/test_next_body_union.h",
+          "tests/test_pattern_placements.h",
+          "tests/test_pattern_variation.h",
+          "tests/test_revolution_history.h",
+          "tests/test_sketch_construction.h",
+          "tests/test_surface_mapping.h",
+          "tests/test_surface_poles_analytic.h",
+          "tests/test_surface_poles_continuity.h",
+          "tests/test_surface_poles_multi.h",
+          "tests/test_surface_poles_soft.h",
+          "tests/test_surface_tools_gui.h",
+          "tests/test_viewport.cpp"
+        ],
+        "include": []
+      },
+      "outgoing": {
+        "call": [
+          "kernel/fk_body_check.cpp",
+          "kernel/fk_curve.h",
+          "kernel/fk_curve_ops.h",
+          "kernel/fk_intersect.cpp",
+          "kernel/fk_intersect.h",
+          "kernel/fk_math.cpp",
+          "kernel/fk_math.h",
+          "kernel/fk_parallel.h",
+          "kernel/fk_pcurve.cpp",
+          "kernel/fk_precision.h",
+          "kernel/fk_surface.cpp",
+          "kernel/fk_surface.h",
+          "kernel/fk_surface_algo.cpp",
+          "kernel/fk_topology.cpp",
+          "kernel/fk_topology.h"
+        ],
+        "include": [
+          "kernel/fk_body_check.h",
+          "kernel/fk_curve_ops.h",
+          "kernel/fk_intersect.h",
+          "kernel/fk_parallel.h",
+          "kernel/fk_pcurve.h",
+          "kernel/fk_precision.h",
+          "kernel/fk_surface_algo.h"
+        ]
+      },
+      "symbols": [
+        "ForgeCad::Kernel::Report::Report",
+        "ForgeCad::Kernel::Report::add",
+        "ForgeCad::Kernel::checkBody",
+        "ForgeCad::Kernel::checkEdge",
+        "ForgeCad::Kernel::checkEuler",
+        "ForgeCad::Kernel::checkGeometry",
+        "ForgeCad::Kernel::checkLoopCrossings",
+        "ForgeCad::Kernel::checkTolerances",
+        "ForgeCad::Kernel::checkTopology",
+        "ForgeCad::Kernel::describe",
+        "ForgeCad::Kernel::sampleLoop",
+        "ForgeCad::Kernel::shellGenus",
+        "ForgeCad::Kernel::vertexTolerance"
+      ]
+    }
+  ],
+  "graphSha256": "b68fc88e5f9fc37482fbe17eabc37db3c84a40e558fbaa2f4098d2b851e5798e"
+}

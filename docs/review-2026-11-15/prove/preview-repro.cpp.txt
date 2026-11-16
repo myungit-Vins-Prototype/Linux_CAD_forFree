@@ -1,0 +1,47 @@
+#include <QApplication>
+#include <QSettings>
+#include <QTemporaryDir>
+#include <QMainWindow>
+#include <QTimer>
+#include <QComboBox>
+#include <QPlainTextEdit>
+#include <QElapsedTimer>
+#include <iostream>
+#include "forgeCad2026_dialogs.h"
+#include "forgeCad2026_dialogs_common.h"
+#include "forgeCad2026_viewport.h"
+#include "cad_feature_dependencies.h"
+class ViewportInteractionTest {
+public:
+ static bool valid(CadViewport *v){return v->preview_.valid;}
+ static QString key(CadViewport *v){return v->preview_.key;}
+ static int extent(CadViewport *v){return v->preview_.definition.extent;}
+ static bool replaced(CadViewport *v,int i){return v->preview_.replaced.contains(i);}
+};
+int main(int argc,char **argv) {
+ QApplication app(argc,argv);QCoreApplication::setOrganizationName("ReviewTmp");QCoreApplication::setApplicationName("PreviewReview");
+ QTemporaryDir settings;QSettings::setDefaultFormat(QSettings::IniFormat);QSettings::setPath(QSettings::IniFormat,QSettings::UserScope,settings.path());
+ QMainWindow owner;auto *view=new CadViewport(&owner);owner.setCentralWidget(view);
+ DocumentState doc;SketchObject sketch;sketch.name="Profilo";sketch.segments={{{2,0},{4,0}},{{4,0},{4,2}},{{4,2},{2,2}},{{2,2},{2,0}}};doc.sketches={sketch};
+ ExtrusionObject box;box.feature=BodyFeature::Primitive;box.name="Box";doc.extrusions.append(box);view->loadDocument(doc);
+ ExtrusionObject ext;ext.feature=BodyFeature::Extrusion;ext.sketchIndex=0;ext.distance=5;ext.mergeOperation=0;
+ QElapsedTimer elapsed;elapsed.start();QTimer poll;poll.setInterval(20);bool extChecked=false;
+ QObject::connect(&poll,&QTimer::timeout,&owner,[&]{
+  auto *combo=owner.findChild<QComboBox*>("extrusionExtent");if(!combo)return;
+  QDialog *panel=nullptr;for(auto *d:owner.findChildren<QDialog*>())if(d->findChild<QComboBox*>("extrusionExtent")){panel=d;break;}
+  auto *label=panel->findChild<QPlainTextEdit*>("functionPreviewMessage");
+  if(!ViewportInteractionTest::valid(view)){if(elapsed.elapsed()>15000){std::cout<<"PRE1 TIMEOUT label="<<label->toPlainText().toStdString()<<std::endl;poll.stop();panel->reject();}return;}
+  const auto key=ViewportInteractionTest::key(view);combo->setCurrentIndex(3);
+  std::cout<<"PRE1 ui_extent="<<combo->currentIndex()<<" preview_extent="<<ViewportInteractionTest::extent(view)<<" preview_valid="<<ViewportInteractionTest::valid(view)<<" old_key_unchanged="<<(key==ViewportInteractionTest::key(view))<<" pending="<<view->previewPending()<<" label="<<label->toPlainText().toStdString()<<std::endl;
+  extChecked=true;poll.stop();panel->reject();
+ });poll.start();
+ extrusionDialog(&owner,view,"Review extrusion",-1,ext,[](const auto&){return QString();});
+ ExtrusionObject loft;loft.feature=BodyFeature::Loft;loft.loftSketches={0};
+ QTimer::singleShot(20,&owner,[&]{auto *panel=owner.findChild<QDialog*>("loftDialog");auto *label=panel->findChild<QPlainTextEdit*>("functionPreviewMessage");
+  std::cout<<"PRE2 one_section preview_valid="<<ViewportInteractionTest::valid(view)<<" pending="<<view->previewPending()<<" empty_key="<<ViewportInteractionTest::key(view).isEmpty()<<" label="<<label->toPlainText().toStdString()<<std::endl;panel->reject();});
+ loftDialog(&owner,view,"Review loft",-1,loft,[](const auto&){return QString();});
+ ExtrusionObject mapping;mapping.feature=BodyFeature::SurfaceTools;mapping.firstBody=0;mapping.surfaceTool.mode=3;mapping.surfaceTool.mappingCopy=true;
+ view->requestPreview(mapping,-1);
+ std::cout<<"PRE3 unroll mapping_copy="<<mapping.surfaceTool.mappingCopy<<" preview_replaces_source="<<ViewportInteractionTest::replaced(view,0)<<" final_hides_source="<<ForgeCad::hiddenOperands(mapping).contains(0)<<std::endl;
+ view->clearPreview();return extChecked?0:2;
+}

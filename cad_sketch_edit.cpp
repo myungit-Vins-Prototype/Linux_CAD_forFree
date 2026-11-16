@@ -109,10 +109,11 @@ Geometry geometryOf(const SketchObject &sketch, SketchEntity entity) {
             g.radius = r;
             return g;
         }
-        if (curve.tool == DrawingTool::Ellipse || curve.tool == DrawingTool::Nurbs || curve.tool == DrawingTool::Converted) {
+        const bool ellipse = curve.tool == DrawingTool::Ellipse || curve.tool == DrawingTool::EllipseExtremes;
+        if (ellipse || curve.tool == DrawingTool::Nurbs || curve.tool == DrawingTool::Converted) {
             const auto pieces = curveGeometry(curve);
             if (pieces.size() != 1) return g;
-            g.shape = curve.tool == DrawingTool::Ellipse ? Shape::Ellipse : Shape::Nurbs;
+            g.shape = ellipse ? Shape::Ellipse : Shape::Nurbs;
             g.basis = pieces.front().curve;
             g.first = pieces.front().range.lo;
             g.last = pieces.front().range.hi;
@@ -493,7 +494,8 @@ QString unsupported(const SketchObject &sketch, SketchEntity entity, const QStri
         return QStringLiteral("%1: NURBS non valida.").arg(operation);
     if (entity.kind == 1 && entity.index >= 0 && entity.index < sketch.curves.size() && sketch.curves.at(entity.index).tool == DrawingTool::Converted)
         return QStringLiteral("%1: curva derivata non valida.").arg(operation);
-    if (entity.kind == 1 && entity.index >= 0 && entity.index < sketch.curves.size() && sketch.curves.at(entity.index).tool == DrawingTool::Ellipse)
+    if (entity.kind == 1 && entity.index >= 0 && entity.index < sketch.curves.size()
+        && (sketch.curves.at(entity.index).tool == DrawingTool::Ellipse || sketch.curves.at(entity.index).tool == DrawingTool::EllipseExtremes))
         return QStringLiteral("%1: ellisse non valida.").arg(operation);
     return QStringLiteral("%1: entita' non valida.").arg(operation);
 }

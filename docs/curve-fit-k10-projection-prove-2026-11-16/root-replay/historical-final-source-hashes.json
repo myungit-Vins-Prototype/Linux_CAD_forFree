@@ -1,0 +1,7 @@
+{
+  "kernel/fk_project.cpp": "9f38b0098f98b3947bc00bd31179a29668df1d10a21119a2d1f75ee42f9b7223",
+  "kernel/fk_project.h": "adb573c37010035a59d3d9e814d57d5b8d7bf298d73969bbb22affc8a6b74e88",
+  "kernel/fk_curve_fit_bounds.cpp": "09e112784fd06d5da34b2676708fc8453e74adcbf9ca644cefea3522dd8d6a62",
+  "kernel/fk_curve_fit_bounds.h": "834e452343f6ad5e81ef97c2269c723477be873bc56cc23169b79101ad70d90e",
+  "kernel/tests/test_projection_fit_validation.cpp": "b33ccb834514a7f348782cf9a9e171c0e78bb0ce14e919b2936ddbae3721427b"
+}

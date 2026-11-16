@@ -1,0 +1,6 @@
+from pathlib import Path
+import json,shlex,subprocess
+root=Path('/home/myungit/Linux_CAD_forFree');out=Path(__file__).parent
+commands=json.loads((root/'forgecad-release/compile_commands.json').read_text());entry=next(x for x in commands if x['file'].endswith('/kernel/tests/test_mapping_carrier_validation.cpp'))
+command=shlex.split(entry['command']);command.insert(1,'-I'+str(out/'before'));command[command.index('-o')+1]=str(out/'thicken_probe.o');command[command.index('-c')+1]=str(out/'thicken_probe.cpp');command+=['-fno-fast-math','-ffp-contract=off'];subprocess.run(command,cwd=entry['directory'],check=True)
+subprocess.run(['/usr/bin/c++','-o',str(out/'thicken-before'),str(out/'thicken_probe.o'),*[str(out/'before'/(n+'.o')) for n in ['fk_thicken','fk_offset','fk_sew','fk_pcurve','fk_open_offset']],str(root/'forgecad-release/kernel/libforgekernel.a'),'-lpthread'],check=True)

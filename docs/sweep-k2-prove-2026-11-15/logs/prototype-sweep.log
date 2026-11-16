@@ -1,0 +1,28 @@
+[  OK  ] SweepMinimalTwistJoinedSpatialPathWithStraightSpans
+[  OK  ] SweepMinimalTwistSpatialInflection
+[  OK  ] SweepMinimalTwistClosedSpatialSpline
+[  OK  ] SweepLineAndArcAreExact
+[  OK  ] SweepObliqueProfileAlongArcUsesFiniteMeridians
+[  OK  ] SweepPlanarPathIsTube
+[  OK  ] SweepAlongHelixIsSpring
+[  OK  ] SweepClosedPathAndSheet
+[  OK  ] SweepMinimalTwistHelixAvoidsUniformGridAliasing
+[  OK  ] SweepClosedSpatialSplineExplicitSeamParameters
+[  OK  ] SweepLocalFoldUsesSectionGeometry
+[  OK  ] SweepRejectsGlobalTurnOverlap
+[  OK  ] SweepRejectsSingleFaceAndCapSideOverlap
+[  OK  ] SweepChecksDifferentRegionsAcrossTurns
+[  OK  ] SweepGlobalCheckPreservesClosedSeamsAndRepresentations
+    /home/myungit/Linux_CAD_forFree/kernel/tests/fk_test_main.cpp:36: eccezione: sweep: verifica globale della mappa non conclusa (profondita' del certificato globale sweep esaurita)
+[ FAIL ] SweepGlobalCheckPreservesSeparatedInterleavedRegions (1 controlli falliti)
+    /home/myungit/Linux_CAD_forFree/kernel/tests/fk_test_main.cpp:36: eccezione: sweep: verifica globale della mappa non conclusa (profondita' del certificato globale sweep esaurita)
+[ FAIL ] SweepGlobalCheckPreservesRankTwoSheet (1 controlli falliti)
+[  OK  ] BlendSweepAcrossPathJoint
+[  OK  ] SweepSheetCircleAlongLineAndArc
+[  OK  ] SweepSheetSquareAlongSplineMatchesSolid
+[  OK  ] SweepSheetRoundedRectangleAlongHelix
+[  OK  ] SweepSheetMixedProfileAndChains
+[  OK  ] SweepSheetClosedPathIsClosedShell
+[  OK  ] SweepSheetMixedChainKeepsChainSense
+[  OK  ] HistorySweepAndLoftKeepSectionSources
+23/25 test superati

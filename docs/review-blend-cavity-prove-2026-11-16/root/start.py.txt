@@ -1,0 +1,18 @@
+from pathlib import Path
+import subprocess,json,hashlib,shutil
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/blend-cavity-review/root');sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+raw=subprocess.check_output(['git','ls-files','--cached','--others','--exclude-standard','-z'],cwd=R).decode().split('\0');initial={f:sha(R/f) for f in sorted(set(raw)) if f and (R/f).is_file() and not (R/f).is_symlink()};(T/'hashes-before.json').write_text(json.dumps(initial,indent=2)+'\n')
+focus=['CLAUDE.md','CMakeLists.txt','kernel/CMakeLists.txt','tools/generate_architecture.py','docs/code-review-2026-11-15.md','kernel/fk_blend_surface.cpp','kernel/fk_blend_surface.h','kernel/fk_blend.cpp','kernel/fk_blend.h','kernel/fk_blend_model.h','kernel/fk_blend_loop.cpp','kernel/fk_blend_loop.h','kernel/fk_blend_mitre.cpp','kernel/fk_blend_mitre.h','kernel/fk_pcurve.cpp','kernel/fk_pcurve.h','kernel/fk_surface_algo.cpp','kernel/fk_surface_algo.h','kernel/fk_surface.cpp','kernel/fk_surface.h','kernel/fk_bspline_surface.cpp','kernel/fk_bspline_surface.h','kernel/tests/test_blend_cavity.cpp','kernel/tests/test_blend_transitions.cpp','kernel/tests/test_surface.cpp']
+for f in focus:
+ p=R/f
+ if p.is_file():q=T/'before'/f;q.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(p,q)
+g=json.loads((R/'docs/architecture/graph.json').read_text());keys=set(focus);snapshot={'nodes':[n for n in g['nodes'] if n['id'] in keys],'edges':[e for e in g['edges'] if e['source'] in keys or e['target'] in keys],'stats':{'files':len(g['nodes']),'edges':len(g['edges']),'units':len(g['analysis']['units']),'errors':g['analysis']['errors']}}
+(T/'architecture-before.json').write_text(json.dumps(snapshot,indent=2)+'\n')
+P=R/'docs/review-k10-helix-orphans-prove-2026-11-16';lines=(P/'SHA256SUMS').read_text().splitlines()
+for line in lines:h,f=line.split('  ',1);assert sha(P/f)==h,f
+(T/'baseline-binaries.json').write_text(json.dumps({f:sha(R/f) for f in ['forgecad-release/forgecad','forgecad-release/forgecad_view_tests','forgecad-release/kernel/libforgekernel.a','forgecad-release/kernel/forgekernel_blend_cavity_tests']},indent=2)+'\n')
+print('Baseline',len(initial),'files; previousseal',len(lines),'PASS; map',snapshot['stats'],'incident',len(snapshot['edges']))
+for n in snapshot['nodes']:
+ if n['id'] in ['kernel/fk_blend_surface.cpp','kernel/fk_pcurve.cpp','kernel/fk_surface_algo.cpp','kernel/tests/test_blend_cavity.cpp']:print(n['id'],n['description'])
+for e in snapshot['edges']:
+ if e['source']=='kernel/fk_blend_surface.cpp' and e['target'] in ['kernel/fk_pcurve.cpp','kernel/fk_surface_algo.cpp']:print(e['kind'],e['source'],e['target'],[(s['symbol'],s['line']) for s in e['sites']][-10:])

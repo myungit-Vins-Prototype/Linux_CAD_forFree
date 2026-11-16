@@ -1,0 +1,78 @@
+from fraction_common import *
+import copy
+
+def outward_float(q):
+ value=float(q)
+ return nextafter(value,inf) if F.from_float(value)<q else value
+
+def normalize(j):
+ d=copy.deepcopy(j); kind=d.pop('type');d['kind']={'bspline':'spline','trimmed':'trim','transformed':'transform'}.get(kind,kind)
+ if 'basis' in d:d['basis']=normalize(d['basis'])
+ if d['kind']=='spline' and not d['weights']:d['weights']=['0x1p+0']*len(d['poles'])
+ return d
+
+def evaluate(coeff,t=F(1,2)):
+ while len(coeff)>1:coeff=[(1-t)*a+t*b for a,b in zip(coeff,coeff[1:])]
+ return coeff[0]
+
+def residual(e,q,frame,projection):
+ o,x,y=[list(map(exact,frame[k])) for k in ['origin','x','y']]
+ sh=[add(add(scale(q['w'],o[k]),scale(q['h'][0],x[k])),scale(q['h'][1],y[k])) for k in range(3)]
+ eh=e['h']
+ if projection:
+  n=[x[1]*y[2]-x[2]*y[1],x[2]*y[0]-x[0]*y[2],x[0]*y[1]-x[1]*y[0]]
+  n2=sum(v*v for v in n);assert n2>0
+  distance=[F(0)]
+  for k in range(3):distance=add(distance,scale(add(eh[k],scale(e['w'],o[k]),-1),n[k]))
+  eh=[add(eh[k],scale(distance,n[k]/n2),-1) for k in range(3)]
+ return [add(mul(sh[k],e['w']),mul(eh[k],q['w']),-1) for k in range(3)],mul(e['w'],q['w'])
+
+def certify(r,w,budget):
+ stack=[(r,w,0)];maximum=F(0);leaves=depthmax=0
+ while stack:
+  r,w,depth=stack.pop();assert min(w)>0
+  bound=norm_upper(r)/min(w)
+  if bound<=budget:
+   maximum=max(maximum,bound);leaves+=1;depthmax=max(depthmax,depth);continue
+  denom=evaluate(w);witness2=sum(evaluate(v)**2 for v in r)/(denom*denom)
+  if witness2>budget*budget:
+   return dict(pass_=False,lower_squared=str(witness2),budget=str(budget),lower_mm=math_sqrt_lower(witness2))
+  if depth>=22:raise RuntimeError('Unresolved exact rational bound '+str(float(bound)))
+  halves=[split(c) for c in r+[w]]
+  for side in [0,1]:
+   h=[v[side] for v in halves];stack.append((h[:3],h[3],depth+1))
+ return dict(pass_=True,upper_mm=outward_float(maximum),upper_fraction=str(maximum),leaves=leaves,max_depth=depthmax)
+
+def math_sqrt_lower(q):
+ bits=100;den=1<<bits;n=isqrt((q.numerator<<(2*bits))//q.denominator);v=F(n,den);assert v*v<=q
+ value=float(v)
+ return nextafter(value,-inf) if F.from_float(value)>v else value
+
+def verify_record(record,budget,projection=False):
+ lo,hi=map(exact,record['range']);E=source_spans(normalize(record['curve']),(lo,hi));Q=source_spans(normalize(record['pcurve']),(lo,hi))
+ breaks=sorted({lo,hi}|{t for s in E+Q for t in [s['lo'],s['hi']] if lo<t<hi})
+ result=dict(fin=record['fin'],edge=record['edge'],face=record['face'],budget=float(budget),projection=projection,cells=0,upper_mm=0.,upper_fraction='0',leaves=0,max_depth=0)
+ for a,b in zip(breaks,breaks[1:]):
+  es=[s for s in E if s['lo']<=a and b<=s['hi']];qs=[s for s in Q if s['lo']<=a and b<=s['hi']];assert len(es)==len(qs)==1
+  e=subspan(es[0],a,b);q=subspan(qs[0],a,b);r,w=residual(e,q,record['plane'],projection)
+  proof=certify(r,w,budget);result['cells']+=1
+  if not proof['pass_']:return dict(result,pass_=False,witness=proof,interval=[str(a),str(b)])
+  result['upper_mm']=max(result['upper_mm'],proof['upper_mm']);result['upper_fraction']=str(max(F(result['upper_fraction']),F(proof['upper_fraction'])));result['leaves']+=proof['leaves'];result['max_depth']=max(result['max_depth'],proof['max_depth'])
+ return dict(result,pass_=True)
+
+def verify_directory(folder):
+ results=[]
+ for path in sorted(Path(folder).glob('*.json')):
+  j=json.loads(path.read_text());tol=exact(j['tolerance']);record=dict(case=j['case'],input_sha256=hashlib.sha256(path.read_bytes()).hexdigest(),source=[],actual=[],projection=[])
+  for r in j['source']:record['source'].append(verify_record(r,F.from_float(1e-7)))
+  for r in j['actual']:
+   record['actual'].append(verify_record(r,exact(r['budget'])))
+   record['projection'].append(verify_record(r,F.from_float(.1)*tol,True))
+  results.append(record)
+  print(path.name, 'source',sum(r['pass_'] for r in record['source']),'actual',sum(r['pass_'] for r in record['actual']),'projection',sum(r['pass_'] for r in record['projection']), 'worst',max(r['upper_mm'] for r in record['actual']),flush=True)
+ return results
+
+if __name__=='__main__':
+ data=verify_directory(sys.argv[1]);Path(sys.argv[2]).write_text(json.dumps(data,indent=2)+'\n')
+ successes=sum(all(r['pass_'] for r in j['actual']) for j in data);print('CASES',successes,'/',len(data))
+ if len(sys.argv)>3 and sys.argv[3]=='--expect-pass':assert all(r['pass_'] for j in data for family in ['source','actual','projection'] for r in j[family])

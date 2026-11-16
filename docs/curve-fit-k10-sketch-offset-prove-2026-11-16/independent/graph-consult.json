@@ -1,0 +1,2119 @@
+{
+  "nodes": [
+    {
+      "id": "cad_sketch_offset.cpp",
+      "group": "sketch",
+      "description": "Costruzione degli offset delle entit\u00e0 dello sketch.",
+      "lines": 718,
+      "symbols": [
+        "ForgeCad::OffsetPiece::endPoint",
+        "ForgeCad::OffsetPiece::startPoint",
+        "ForgeCad::Piece::at",
+        "ForgeCad::Piece::closed",
+        "ForgeCad::Piece::end",
+        "ForgeCad::Piece::isCircle",
+        "ForgeCad::Piece::isLine",
+        "ForgeCad::Piece::start",
+        "ForgeCad::Piece::tangent",
+        "ForgeCad::addCoincidence",
+        "ForgeCad::addPair",
+        "ForgeCad::chainsOf",
+        "ForgeCad::crossings",
+        "ForgeCad::degenerate",
+        "ForgeCad::extended",
+        "ForgeCad::leftOf",
+        "ForgeCad::moveEnd",
+        "ForgeCad::offsetOf",
+        "ForgeCad::offsetSketchEntities",
+        "ForgeCad::piecesOf",
+        "ForgeCad::point",
+        "ForgeCad::refreshSketchOffsets",
+        "ForgeCad::signedArea",
+        "ForgeCad::trimOffsetLoops",
+        "ForgeCad::validSketchOffset",
+        "ForgeCad::vec",
+        "ForgeCad::wrap"
+      ]
+    },
+    {
+      "id": "kernel/fk_curve_fit_bounds.cpp",
+      "group": "kernel",
+      "description": "Limiti continui Bernstein outward per posizione, offset NURBS e composizione isoparametrica NURBS e affine anche obliqua su estrusione con SP-curve originale; limiti delle derivate del supporto per il trasferimento UV, coefficienti originali, pesi, istanze, budget e cancellazione.",
+      "lines": 1310,
+      "symbols": [
+        "ForgeCad::Kernel::detail::I::I",
+        "ForgeCad::Kernel::detail::add",
+        "ForgeCad::Kernel::detail::affineBezier",
+        "ForgeCad::Kernel::detail::affineCoordinate",
+        "ForgeCad::Kernel::detail::affineInverseU",
+        "ForgeCad::Kernel::detail::check",
+        "ForgeCad::Kernel::detail::choose",
+        "ForgeCad::Kernel::detail::compositionFactory",
+        "ForgeCad::Kernel::detail::constantU",
+        "ForgeCad::Kernel::detail::cross",
+        "ForgeCad::Kernel::detail::curveParameterBound",
+        "ForgeCad::Kernel::detail::curvePositionErrorBound",
+        "ForgeCad::Kernel::detail::derivative",
+        "ForgeCad::Kernel::detail::dn",
+        "ForgeCad::Kernel::detail::dot",
+        "ForgeCad::Kernel::detail::elevated",
+        "ForgeCad::Kernel::detail::evaluatePolynomial",
+        "ForgeCad::Kernel::detail::exactSum",
+        "ForgeCad::Kernel::detail::extract",
+        "ForgeCad::Kernel::detail::extrusionAffineCompositionErrorBound",
+        "ForgeCad::Kernel::detail::extrusionAffineFactory",
+        "ForgeCad::Kernel::detail::extrusionOffsetErrorBound",
+        "ForgeCad::Kernel::detail::finite",
+        "ForgeCad::Kernel::detail::image",
+        "ForgeCad::Kernel::detail::make",
+        "ForgeCad::Kernel::detail::mul",
+        "ForgeCad::Kernel::detail::normInterval",
+        "ForgeCad::Kernel::detail::normLower",
+        "ForgeCad::Kernel::detail::normUpper",
+        "ForgeCad::Kernel::detail::operator*",
+        "ForgeCad::Kernel::detail::operator+",
+        "ForgeCad::Kernel::detail::operator-",
+        "ForgeCad::Kernel::detail::operator/",
+        "ForgeCad::Kernel::detail::parameterBounds",
+        "ForgeCad::Kernel::detail::positionFactory",
+        "ForgeCad::Kernel::detail::positionOnOriginal",
+        "ForgeCad::Kernel::detail::positionPointBound",
+        "ForgeCad::Kernel::detail::positionSourceSupported",
+        "ForgeCad::Kernel::detail::preimage",
+        "ForgeCad::Kernel::detail::prepareExtrusionIso",
+        "ForgeCad::Kernel::detail::prepareIso",
+        "ForgeCad::Kernel::detail::prepareSource",
+        "ForgeCad::Kernel::detail::product",
+        "ForgeCad::Kernel::detail::range",
+        "ForgeCad::Kernel::detail::restrictP",
+        "ForgeCad::Kernel::detail::revolutionOffsetErrorBound",
+        "ForgeCad::Kernel::detail::scaled",
+        "ForgeCad::Kernel::detail::sourcePointEnclosure",
+        "ForgeCad::Kernel::detail::split",
+        "ForgeCad::Kernel::detail::sum",
+        "ForgeCad::Kernel::detail::surfaceCompositionErrorBound",
+        "ForgeCad::Kernel::detail::surfaceParameterBounds",
+        "ForgeCad::Kernel::detail::up",
+        "ForgeCad::Kernel::detail::vec"
+      ]
+    },
+    {
+      "id": "kernel/fk_curve_ops.cpp",
+      "group": "kernel",
+      "description": "Operazioni esatte che producono nuove curve dello stesso tipo.",
+      "lines": 126,
+      "symbols": [
+        "ForgeCad::Kernel::embedCurve",
+        "ForgeCad::Kernel::reversedCurve",
+        "ForgeCad::Kernel::translatedCurve"
+      ]
+    },
+    {
+      "id": "kernel/fk_nurbs.cpp",
+      "group": "kernel",
+      "description": "Forme NURBS esatte di curve e superfici qualsiasi del kernel, per gli algoritmi che lavorano sui poli (box che contengono la geometria, suddivisione di Bezier, composizione con le equazioni implicite).",
+      "lines": 257,
+      "symbols": [
+        "ForgeCad::Kernel::joinBezierPieces",
+        "ForgeCad::Kernel::meridianIn",
+        "ForgeCad::Kernel::rationalBezierPieces",
+        "ForgeCad::Kernel::revolve",
+        "ForgeCad::Kernel::segment2",
+        "ForgeCad::Kernel::splinePieces",
+        "ForgeCad::Kernel::standardBezierPieces",
+        "ForgeCad::Kernel::toBSplineSurface",
+        "ForgeCad::Kernel::transformed",
+        "ForgeCad::Kernel::wholeSpline",
+        "ForgeCad::Kernel::window"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "source": "cad_constraints.cpp",
+      "target": "cad_sketch_offset.cpp",
+      "kind": "call",
+      "count": 6,
+      "sites": [
+        {
+          "line": 955,
+          "symbol": "ForgeCad::validSketchOffset",
+          "owner": "ForgeCad::wellFormed"
+        },
+        {
+          "line": 1461,
+          "symbol": "ForgeCad::refreshSketchOffsets",
+          "owner": "ForgeCad::constraintError"
+        },
+        {
+          "line": 1908,
+          "symbol": "ForgeCad::validSketchOffset",
+          "owner": "ForgeCad::dimensionPoints"
+        },
+        {
+          "line": 2007,
+          "symbol": "ForgeCad::validSketchOffset",
+          "owner": "ForgeCad::analyzeSketch"
+        },
+        {
+          "line": 2140,
+          "symbol": "ForgeCad::refreshSketchOffsets",
+          "owner": "ForgeCad::solveSketch"
+        },
+        {
+          "line": 2154,
+          "symbol": "ForgeCad::refreshSketchOffsets",
+          "owner": "ForgeCad::solveSketch"
+        }
+      ]
+    },
+    {
+      "source": "cad_sketch_offset.cpp",
+      "target": "cad_curve_solver.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 121,
+          "symbol": "ForgeCad::curveGeometry",
+          "owner": "ForgeCad::piecesOf"
+        }
+      ]
+    },
+    {
+      "source": "cad_sketch_offset.cpp",
+      "target": "cad_curve_solver.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 8,
+          "symbol": "cad_curve_solver.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "cad_sketch_offset.cpp",
+      "target": "cad_kernel.h",
+      "kind": "call",
+      "count": 7,
+      "sites": [
+        {
+          "line": 53,
+          "symbol": "ForgeCad::sketchConnectionTolerance",
+          "owner": "ForgeCad::Piece::closed"
+        },
+        {
+          "line": 101,
+          "symbol": "ForgeCad::sketchConnectionTolerance",
+          "owner": "ForgeCad::piecesOf"
+        },
+        {
+          "line": 147,
+          "symbol": "ForgeCad::sketchConnectionTolerance",
+          "owner": "ForgeCad::chainsOf"
+        },
+        {
+          "line": 168,
+          "symbol": "ForgeCad::sketchConnectionTolerance",
+          "owner": "ForgeCad::chainsOf"
+        },
+        {
+          "line": 169,
+          "symbol": "ForgeCad::sketchConnectionTolerance",
+          "owner": "ForgeCad::chainsOf"
+        },
+        {
+          "line": 181,
+          "symbol": "ForgeCad::sketchConnectionTolerance",
+          "owner": "ForgeCad::chainsOf"
+        },
+        {
+          "line": 222,
+          "symbol": "ForgeCad::sketchConnectionTolerance",
+          "owner": "ForgeCad::offsetOf"
+        }
+      ]
+    },
+    {
+      "source": "cad_sketch_offset.cpp",
+      "target": "cad_kernel.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 9,
+          "symbol": "cad_kernel.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "cad_sketch_offset.cpp",
+      "target": "cad_sketch_edit.h",
+      "kind": "call",
+      "count": 7,
+      "sites": [
+        {
+          "line": 205,
+          "symbol": "ForgeCad::SketchEntity::operator=",
+          "owner": "ForgeCad::offsetOf"
+        },
+        {
+          "line": 475,
+          "symbol": "ForgeCad::SketchEditResult::SketchEditResult",
+          "owner": "ForgeCad::offsetSketchEntities"
+        },
+        {
+          "line": 478,
+          "symbol": "ForgeCad::SketchEditResult::SketchEditResult",
+          "owner": "ForgeCad::offsetSketchEntities"
+        },
+        {
+          "line": 483,
+          "symbol": "ForgeCad::SketchEditResult::SketchEditResult",
+          "owner": "ForgeCad::offsetSketchEntities"
+        },
+        {
+          "line": 643,
+          "symbol": "ForgeCad::SketchEditResult::SketchEditResult",
+          "owner": "ForgeCad::offsetSketchEntities"
+        },
+        {
+          "line": 662,
+          "symbol": "ForgeCad::SketchEditResult::SketchEditResult",
+          "owner": "ForgeCad::offsetSketchEntities"
+        },
+        {
+          "line": 692,
+          "symbol": "ForgeCad::SketchEntity::SketchEntity",
+          "owner": "ForgeCad::refreshSketchOffsets"
+        }
+      ]
+    },
+    {
+      "source": "cad_sketch_offset.cpp",
+      "target": "cad_sketch_offset.cpp",
+      "kind": "call",
+      "count": 82,
+      "sites": [
+        {
+          "line": 53,
+          "symbol": "ForgeCad::Piece::at",
+          "owner": "ForgeCad::Piece::closed"
+        },
+        {
+          "line": 99,
+          "symbol": "ForgeCad::vec",
+          "owner": "ForgeCad::piecesOf"
+        },
+        {
+          "line": 142,
+          "symbol": "ForgeCad::Piece::at",
+          "owner": "ForgeCad::chainsOf"
+        },
+        {
+          "line": 143,
+          "symbol": "ForgeCad::Piece::at",
+          "owner": "ForgeCad::chainsOf"
+        },
+        {
+          "line": 155,
+          "symbol": "ForgeCad::Chain::Chain",
+          "owner": "ForgeCad::chainsOf"
+        },
+        {
+          "line": 157,
+          "symbol": "ForgeCad::Piece::closed",
+          "owner": "ForgeCad::chainsOf"
+        },
+        {
+          "line": 162,
+          "symbol": "ForgeCad::Piece::at",
+          "owner": "ForgeCad::chainsOf"
+        },
+        {
+          "line": 162,
+          "symbol": "ForgeCad::Piece::end",
+          "owner": "ForgeCad::chainsOf"
+        },
+        {
+          "line": 162,
+          "symbol": "ForgeCad::Piece::start",
+          "owner": "ForgeCad::chainsOf"
+        },
+        {
+          "line": 163,
+          "symbol": "ForgeCad::chainsOf::(lambda at /home/myungit/Linux_CAD_forFree/cad_sketch_offset.cpp:145:25)::operator()",
+          "owner": "ForgeCad::chainsOf"
+        },
+        {
+          "line": 168,
+          "symbol": "ForgeCad::Piece::at",
+          "owner": "ForgeCad::chainsOf"
+        },
+        {
+          "line": 169,
+          "symbol": "ForgeCad::Piece::at",
+          "owner": "ForgeCad::chainsOf"
+        },
+        {
+          "line": 173,
+          "symbol": "ForgeCad::Piece::Piece",
+          "owner": "ForgeCad::chainsOf"
+        },
+        {
+          "line": 181,
+          "symbol": "ForgeCad::Piece::at",
+          "owner": "ForgeCad::chainsOf"
+        },
+        {
+          "line": 181,
+          "symbol": "ForgeCad::Piece::end",
+          "owner": "ForgeCad::chainsOf"
+        },
+        {
+          "line": 181,
+          "symbol": "ForgeCad::Piece::start",
+          "owner": "ForgeCad::chainsOf"
+        },
+        {
+          "line": 193,
+          "symbol": "ForgeCad::Piece::at",
+          "owner": "ForgeCad::signedArea"
+        },
+        {
+          "line": 193,
+          "symbol": "ForgeCad::Piece::end",
+          "owner": "ForgeCad::signedArea"
+        },
+        {
+          "line": 193,
+          "symbol": "ForgeCad::Piece::start",
+          "owner": "ForgeCad::signedArea"
+        },
+        {
+          "line": 198,
+          "symbol": "ForgeCad::Piece::at",
+          "owner": "ForgeCad::signedArea"
+        },
+        {
+          "line": 198,
+          "symbol": "ForgeCad::Piece::start",
+          "owner": "ForgeCad::signedArea"
+        },
+        {
+          "line": 204,
+          "symbol": "ForgeCad::OffsetPiece::OffsetPiece",
+          "owner": "ForgeCad::offsetOf"
+        },
+        {
+          "line": 211,
+          "symbol": "ForgeCad::Piece::isLine",
+          "owner": "ForgeCad::offsetOf"
+        },
+        {
+          "line": 212,
+          "symbol": "ForgeCad::Piece::start",
+          "owner": "ForgeCad::offsetOf"
+        },
+        {
+          "line": 212,
+          "symbol": "ForgeCad::Piece::tangent",
+          "owner": "ForgeCad::offsetOf"
+        },
+        {
+          "line": 212,
+          "symbol": "ForgeCad::leftOf",
+          "owner": "ForgeCad::offsetOf"
+        },
+        {
+          "line": 214,
+          "symbol": "ForgeCad::Piece::at",
+          "owner": "ForgeCad::offsetOf"
+        },
+        {
+          "line": 214,
+          "symbol": "ForgeCad::Piece::start",
+          "owner": "ForgeCad::offsetOf"
+        },
+        {
+          "line": 215,
+          "symbol": "ForgeCad::Piece::at",
+          "owner": "ForgeCad::offsetOf"
+        },
+        {
+          "line": 215,
+          "symbol": "ForgeCad::Piece::end",
+          "owner": "ForgeCad::offsetOf"
+        },
+        {
+          "line": 216,
+          "symbol": "ForgeCad::OffsetPiece::OffsetPiece",
+          "owner": "ForgeCad::offsetOf"
+        },
+        {
+          "line": 218,
+          "symbol": "ForgeCad::Piece::isCircle",
+          "owner": "ForgeCad::offsetOf"
+        },
+        {
+          "line": 224,
+          "symbol": "ForgeCad::Piece::at",
+          "owner": "ForgeCad::offsetOf"
+        },
+        {
+          "line": 224,
+          "symbol": "ForgeCad::Piece::end",
+          "owner": "ForgeCad::offsetOf"
+        },
+        {
+          "line": 224,
+          "symbol": "ForgeCad::Piece::start",
+          "owner": "ForgeCad::offsetOf"
+        },
+        {
+          "line": 231,
+          "symbol": "ForgeCad::Piece::closed",
+          "owner": "ForgeCad::offsetOf"
+        },
+        {
+          "line": 232,
+          "symbol": "ForgeCad::OffsetPiece::OffsetPiece",
+          "owner": "ForgeCad::offsetOf"
+        },
+        {
+          "line": 247,
+          "symbol": "ForgeCad::leftOf",
+          "owner": "ForgeCad::offsetOf"
+        },
+        {
+          "line": 250,
+          "symbol": "ForgeCad::Piece::start",
+          "owner": "ForgeCad::offsetOf"
+        },
+        {
+          "line": 251,
+          "symbol": "ForgeCad::Piece::end",
+          "owner": "ForgeCad::offsetOf"
+        },
+        {
+          "line": 252,
+          "symbol": "ForgeCad::OffsetPiece::OffsetPiece",
+          "owner": "ForgeCad::offsetOf"
+        },
+        {
+          "line": 314,
+          "symbol": "ForgeCad::leftOf",
+          "owner": "ForgeCad::trimOffsetLoops"
+        },
+        {
+          "line": 419,
+          "symbol": "ForgeCad::wrap",
+          "owner": "ForgeCad::moveEnd"
+        },
+        {
+          "line": 447,
+          "symbol": "ForgeCad::extended",
+          "owner": "ForgeCad::crossings"
+        },
+        {
+          "line": 448,
+          "symbol": "ForgeCad::extended",
+          "owner": "ForgeCad::crossings"
+        },
+        {
+          "line": 480,
+          "symbol": "ForgeCad::piecesOf",
+          "owner": "ForgeCad::offsetSketchEntities"
+        },
+        {
+          "line": 488,
+          "symbol": "ForgeCad::chainsOf",
+          "owner": "ForgeCad::offsetSketchEntities"
+        },
+        {
+          "line": 491,
+          "symbol": "ForgeCad::signedArea",
+          "owner": "ForgeCad::offsetSketchEntities"
+        },
+        {
+          "line": 497,
+          "symbol": "ForgeCad::offsetOf",
+          "owner": "ForgeCad::offsetSketchEntities"
+        },
+        {
+          "line": 511,
+          "symbol": "ForgeCad::Piece::at",
+          "owner": "ForgeCad::offsetSketchEntities"
+        },
+        {
+          "line": 511,
+          "symbol": "ForgeCad::Piece::end",
+          "owner": "ForgeCad::offsetSketchEntities"
+        },
+        {
+          "line": 512,
+          "symbol": "ForgeCad::Piece::end",
+          "owner": "ForgeCad::offsetSketchEntities"
+        },
+        {
+          "line": 512,
+          "symbol": "ForgeCad::Piece::start",
+          "owner": "ForgeCad::offsetSketchEntities"
+        },
+        {
+          "line": 512,
+          "symbol": "ForgeCad::Piece::tangent",
+          "owner": "ForgeCad::offsetSketchEntities"
+        },
+        {
+          "line": 516,
+          "symbol": "ForgeCad::OffsetPiece::endPoint",
+          "owner": "ForgeCad::offsetSketchEntities"
+        },
+        {
+          "line": 516,
+          "symbol": "ForgeCad::OffsetPiece::startPoint",
+          "owner": "ForgeCad::offsetSketchEntities"
+        },
+        {
+          "line": 517,
+          "symbol": "ForgeCad::moveEnd",
+          "owner": "ForgeCad::offsetSketchEntities"
+        },
+        {
+          "line": 518,
+          "symbol": "ForgeCad::moveEnd",
+          "owner": "ForgeCad::offsetSketchEntities"
+        },
+        {
+          "line": 527,
+          "symbol": "ForgeCad::OffsetPiece::endPoint",
+          "owner": "ForgeCad::offsetSketchEntities"
+        },
+        {
+          "line": 528,
+          "symbol": "ForgeCad::OffsetPiece::startPoint",
+          "owner": "ForgeCad::offsetSketchEntities"
+        },
+        {
+          "line": 529,
+          "symbol": "ForgeCad::wrap",
+          "owner": "ForgeCad::offsetSketchEntities"
+        },
+        {
+          "line": 534,
+          "symbol": "ForgeCad::crossings",
+          "owner": "ForgeCad::offsetSketchEntities"
+        },
+        {
+          "line": 539,
+          "symbol": "ForgeCad::moveEnd",
+          "owner": "ForgeCad::offsetSketchEntities"
+        },
+        {
+          "line": 540,
+          "symbol": "ForgeCad::moveEnd",
+          "owner": "ForgeCad::offsetSketchEntities"
+        },
+        {
+          "line": 543,
+          "symbol": "ForgeCad::degenerate",
+          "owner": "ForgeCad::offsetSketchEntities"
+        },
+        {
+          "line": 556,
+          "symbol": "ForgeCad::point",
+          "owner": "ForgeCad::offsetSketchEntities"
+        },
+        {
+          "line": 567,
+          "symbol": "ForgeCad::point",
+          "owner": "ForgeCad::offsetSketchEntities"
+        },
+        {
+          "line": 574,
+          "symbol": "ForgeCad::addPair",
+          "owner": "ForgeCad::offsetSketchEntities"
+        },
+        {
+          "line": 578,
+          "symbol": "ForgeCad::OffsetPiece::endPoint",
+          "owner": "ForgeCad::offsetSketchEntities"
+        },
+        {
+          "line": 578,
+          "symbol": "ForgeCad::OffsetPiece::startPoint",
+          "owner": "ForgeCad::offsetSketchEntities"
+        },
+        {
+          "line": 578,
+          "symbol": "ForgeCad::offsetSketchEntities::(lambda at /home/myungit/Linux_CAD_forFree/cad_sketch_offset.cpp:552:37)::operator()",
+          "owner": "ForgeCad::offsetSketchEntities"
+        },
+        {
+          "line": 579,
+          "symbol": "ForgeCad::addPair",
+          "owner": "ForgeCad::offsetSketchEntities"
+        },
+        {
+          "line": 585,
+          "symbol": "ForgeCad::point",
+          "owner": "ForgeCad::offsetSketchEntities"
+        },
+        {
+          "line": 590,
+          "symbol": "ForgeCad::addPair",
+          "owner": "ForgeCad::offsetSketchEntities"
+        },
+        {
+          "line": 602,
+          "symbol": "ForgeCad::trimOffsetLoops",
+          "owner": "ForgeCad::offsetSketchEntities"
+        },
+        {
+          "line": 632,
+          "symbol": "ForgeCad::offsetSketchEntities::(lambda at /home/myungit/Linux_CAD_forFree/cad_sketch_offset.cpp:552:37)::operator()",
+          "owner": "ForgeCad::offsetSketchEntities"
+        },
+        {
+          "line": 636,
+          "symbol": "ForgeCad::addCoincidence",
+          "owner": "ForgeCad::offsetSketchEntities"
+        },
+        {
+          "line": 638,
+          "symbol": "ForgeCad::addCoincidence",
+          "owner": "ForgeCad::offsetSketchEntities"
+        },
+        {
+          "line": 672,
+          "symbol": "ForgeCad::validSketchOffset::(lambda at /home/myungit/Linux_CAD_forFree/cad_sketch_offset.cpp:668:22)::operator()",
+          "owner": "ForgeCad::validSketchOffset"
+        },
+        {
+          "line": 673,
+          "symbol": "ForgeCad::validSketchOffset::(lambda at /home/myungit/Linux_CAD_forFree/cad_sketch_offset.cpp:668:22)::operator()",
+          "owner": "ForgeCad::validSketchOffset"
+        },
+        {
+          "line": 682,
+          "symbol": "ForgeCad::validSketchOffset",
+          "owner": "ForgeCad::refreshSketchOffsets"
+        },
+        {
+          "line": 688,
+          "symbol": "ForgeCad::offsetSketchEntities",
+          "owner": "ForgeCad::refreshSketchOffsets"
+        }
+      ]
+    },
+    {
+      "source": "cad_sketch_offset.cpp",
+      "target": "cad_sketch_offset.h",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 683,
+          "symbol": "ForgeCad::SketchOffset::SketchOffset",
+          "owner": "ForgeCad::refreshSketchOffsets"
+        }
+      ]
+    },
+    {
+      "source": "cad_sketch_offset.cpp",
+      "target": "cad_sketch_offset.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 1,
+          "symbol": "cad_sketch_offset.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "cad_sketch_offset.cpp",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 20,
+      "sites": [
+        {
+          "line": 456,
+          "symbol": "SketchConstraint::SketchConstraint",
+          "owner": "ForgeCad::addCoincidence"
+        },
+        {
+          "line": 458,
+          "symbol": "ConstraintRef::operator=",
+          "owner": "ForgeCad::addCoincidence"
+        },
+        {
+          "line": 459,
+          "symbol": "ConstraintRef::operator=",
+          "owner": "ForgeCad::addCoincidence"
+        },
+        {
+          "line": 464,
+          "symbol": "SketchConstraint::SketchConstraint",
+          "owner": "ForgeCad::addPair"
+        },
+        {
+          "line": 466,
+          "symbol": "ConstraintRef::operator=",
+          "owner": "ForgeCad::addPair"
+        },
+        {
+          "line": 467,
+          "symbol": "ConstraintRef::operator=",
+          "owner": "ForgeCad::addPair"
+        },
+        {
+          "line": 485,
+          "symbol": "SketchObject::SketchObject",
+          "owner": "ForgeCad::offsetSketchEntities"
+        },
+        {
+          "line": 553,
+          "symbol": "CurveObject::CurveObject",
+          "owner": "ForgeCad::offsetSketchEntities"
+        },
+        {
+          "line": 583,
+          "symbol": "CurveObject::CurveObject",
+          "owner": "ForgeCad::offsetSketchEntities"
+        },
+        {
+          "line": 617,
+          "symbol": "CurveObject::CurveObject",
+          "owner": "ForgeCad::offsetSketchEntities"
+        },
+        {
+          "line": 653,
+          "symbol": "SketchConstraint::SketchConstraint",
+          "owner": "ForgeCad::offsetSketchEntities"
+        },
+        {
+          "line": 657,
+          "symbol": "ConstraintRef::operator=",
+          "owner": "ForgeCad::offsetSketchEntities"
+        },
+        {
+          "line": 660,
+          "symbol": "SketchObject::operator=",
+          "owner": "ForgeCad::offsetSketchEntities"
+        },
+        {
+          "line": 678,
+          "symbol": "SketchObject::SketchObject",
+          "owner": "ForgeCad::refreshSketchOffsets"
+        },
+        {
+          "line": 680,
+          "symbol": "SketchConstraint::SketchConstraint",
+          "owner": "ForgeCad::refreshSketchOffsets"
+        },
+        {
+          "line": 687,
+          "symbol": "SketchObject::SketchObject",
+          "owner": "ForgeCad::refreshSketchOffsets"
+        },
+        {
+          "line": 692,
+          "symbol": "ConstraintRef::ConstraintRef",
+          "owner": "ForgeCad::refreshSketchOffsets"
+        },
+        {
+          "line": 697,
+          "symbol": "CurveObject::CurveObject",
+          "owner": "ForgeCad::refreshSketchOffsets"
+        },
+        {
+          "line": 710,
+          "symbol": "CurveObject::operator=",
+          "owner": "ForgeCad::refreshSketchOffsets"
+        },
+        {
+          "line": 714,
+          "symbol": "SketchObject::operator=",
+          "owner": "ForgeCad::refreshSketchOffsets"
+        }
+      ]
+    },
+    {
+      "source": "cad_sketch_offset.cpp",
+      "target": "kernel/fk_bspline.h",
+      "kind": "call",
+      "count": 24,
+      "sites": [
+        {
+          "line": 266,
+          "symbol": "ForgeCad::Kernel::BSplineCurve::poleCount",
+          "owner": "ForgeCad::trimOffsetLoops"
+        },
+        {
+          "line": 267,
+          "symbol": "ForgeCad::Kernel::BSplineCurve::poles",
+          "owner": "ForgeCad::trimOffsetLoops"
+        },
+        {
+          "line": 272,
+          "symbol": "ForgeCad::Kernel::BSplineCurve::domain",
+          "owner": "ForgeCad::trimOffsetLoops"
+        },
+        {
+          "line": 280,
+          "symbol": "ForgeCad::Kernel::BSplineCurve::poles",
+          "owner": "ForgeCad::trimOffsetLoops"
+        },
+        {
+          "line": 281,
+          "symbol": "ForgeCad::Kernel::BSplineCurve::BSplineCurve",
+          "owner": "ForgeCad::trimOffsetLoops"
+        },
+        {
+          "line": 281,
+          "symbol": "ForgeCad::Kernel::BSplineCurve::degree",
+          "owner": "ForgeCad::trimOffsetLoops"
+        },
+        {
+          "line": 281,
+          "symbol": "ForgeCad::Kernel::BSplineCurve::knots",
+          "owner": "ForgeCad::trimOffsetLoops"
+        },
+        {
+          "line": 281,
+          "symbol": "ForgeCad::Kernel::BSplineCurve::weights",
+          "owner": "ForgeCad::trimOffsetLoops"
+        },
+        {
+          "line": 283,
+          "symbol": "ForgeCad::Kernel::BSplineCurve::bezierSegments",
+          "owner": "ForgeCad::trimOffsetLoops"
+        },
+        {
+          "line": 285,
+          "symbol": "ForgeCad::Kernel::BSplineCurve::domain",
+          "owner": "ForgeCad::trimOffsetLoops"
+        },
+        {
+          "line": 300,
+          "symbol": "ForgeCad::Kernel::BSplineCurve::poles",
+          "owner": "ForgeCad::trimOffsetLoops"
+        },
+        {
+          "line": 301,
+          "symbol": "ForgeCad::Kernel::BSplineCurve::poles",
+          "owner": "ForgeCad::trimOffsetLoops"
+        },
+        {
+          "line": 302,
+          "symbol": "ForgeCad::Kernel::BSplineCurve::poles",
+          "owner": "ForgeCad::trimOffsetLoops"
+        },
+        {
+          "line": 303,
+          "symbol": "ForgeCad::Kernel::BSplineCurve::poles",
+          "owner": "ForgeCad::trimOffsetLoops"
+        },
+        {
+          "line": 304,
+          "symbol": "ForgeCad::Kernel::BSplineCurve::poles",
+          "owner": "ForgeCad::trimOffsetLoops"
+        },
+        {
+          "line": 312,
+          "symbol": "ForgeCad::Kernel::BSplineCurve::poles",
+          "owner": "ForgeCad::trimOffsetLoops"
+        },
+        {
+          "line": 316,
+          "symbol": "ForgeCad::Kernel::BSplineCurve::poles",
+          "owner": "ForgeCad::trimOffsetLoops"
+        },
+        {
+          "line": 317,
+          "symbol": "ForgeCad::Kernel::BSplineCurve::poles",
+          "owner": "ForgeCad::trimOffsetLoops"
+        },
+        {
+          "line": 337,
+          "symbol": "ForgeCad::Kernel::BSplineCurve::evaluate",
+          "owner": "ForgeCad::trimOffsetLoops"
+        },
+        {
+          "line": 403,
+          "symbol": "ForgeCad::Kernel::BSplineCurve::poles",
+          "owner": "ForgeCad::extended"
+        },
+        {
+          "line": 404,
+          "symbol": "ForgeCad::Kernel::BSplineCurve::knots",
+          "owner": "ForgeCad::extended"
+        },
+        {
+          "line": 607,
+          "symbol": "ForgeCad::Kernel::BSplineCurve::domain",
+          "owner": "ForgeCad::offsetSketchEntities"
+        },
+        {
+          "line": 620,
+          "symbol": "ForgeCad::Kernel::BSplineCurve::poles",
+          "owner": "ForgeCad::offsetSketchEntities"
+        },
+        {
+          "line": 621,
+          "symbol": "ForgeCad::Kernel::BSplineCurve::knots",
+          "owner": "ForgeCad::offsetSketchEntities"
+        }
+      ]
+    },
+    {
+      "source": "cad_sketch_offset.cpp",
+      "target": "kernel/fk_bspline.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 10,
+          "symbol": "fk_bspline.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "cad_sketch_offset.cpp",
+      "target": "kernel/fk_bspline.h",
+      "kind": "reference",
+      "count": 1,
+      "sites": [
+        {
+          "line": 312,
+          "symbol": "ForgeCad::Kernel::BSplineCurve::poles",
+          "owner": "ForgeCad::trimOffsetLoops"
+        }
+      ]
+    },
+    {
+      "source": "cad_sketch_offset.cpp",
+      "target": "kernel/fk_curve.h",
+      "kind": "call",
+      "count": 18,
+      "sites": [
+        {
+          "line": 44,
+          "symbol": "ForgeCad::Kernel::Curve::point",
+          "owner": "ForgeCad::Piece::at"
+        },
+        {
+          "line": 47,
+          "symbol": "ForgeCad::Kernel::Curve::evaluate",
+          "owner": "ForgeCad::Piece::tangent"
+        },
+        {
+          "line": 47,
+          "symbol": "ForgeCad::Kernel::Curve::evaluateLeft",
+          "owner": "ForgeCad::Piece::tangent"
+        },
+        {
+          "line": 51,
+          "symbol": "ForgeCad::Kernel::Curve::type",
+          "owner": "ForgeCad::Piece::isLine"
+        },
+        {
+          "line": 52,
+          "symbol": "ForgeCad::Kernel::Curve::type",
+          "owner": "ForgeCad::Piece::isCircle"
+        },
+        {
+          "line": 123,
+          "symbol": "ForgeCad::Kernel::Curve::breakpoints",
+          "owner": "ForgeCad::piecesOf"
+        },
+        {
+          "line": 125,
+          "symbol": "ForgeCad::Kernel::Curve::evaluate",
+          "owner": "ForgeCad::piecesOf"
+        },
+        {
+          "line": 125,
+          "symbol": "ForgeCad::Kernel::Curve::evaluateLeft",
+          "owner": "ForgeCad::piecesOf"
+        },
+        {
+          "line": 221,
+          "symbol": "ForgeCad::Kernel::Circle::radius",
+          "owner": "ForgeCad::offsetOf"
+        },
+        {
+          "line": 224,
+          "symbol": "ForgeCad::Kernel::Circle::center",
+          "owner": "ForgeCad::offsetOf"
+        },
+        {
+          "line": 225,
+          "symbol": "ForgeCad::Kernel::Circle::center",
+          "owner": "ForgeCad::offsetOf"
+        },
+        {
+          "line": 243,
+          "symbol": "ForgeCad::Kernel::Curve::evaluate",
+          "owner": "ForgeCad::offsetOf"
+        },
+        {
+          "line": 243,
+          "symbol": "ForgeCad::Kernel::Curve::evaluateLeft",
+          "owner": "ForgeCad::offsetOf"
+        },
+        {
+          "line": 249,
+          "symbol": "ForgeCad::Kernel::Curve::breakpoints",
+          "owner": "ForgeCad::offsetOf"
+        },
+        {
+          "line": 345,
+          "symbol": "ForgeCad::Kernel::Curve::point",
+          "owner": "ForgeCad::trimOffsetLoops"
+        },
+        {
+          "line": 394,
+          "symbol": "ForgeCad::Kernel::makeCircle",
+          "owner": "ForgeCad::extended"
+        },
+        {
+          "line": 609,
+          "symbol": "ForgeCad::Kernel::Curve::point",
+          "owner": "ForgeCad::offsetSketchEntities"
+        },
+        {
+          "line": 610,
+          "symbol": "ForgeCad::Kernel::Curve::domain",
+          "owner": "ForgeCad::offsetSketchEntities"
+        }
+      ]
+    },
+    {
+      "source": "cad_sketch_offset.cpp",
+      "target": "kernel/fk_curve.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 11,
+          "symbol": "fk_curve.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "cad_sketch_offset.cpp",
+      "target": "kernel/fk_curve_algo.h",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 610,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::offsetSketchEntities"
+        }
+      ]
+    },
+    {
+      "source": "cad_sketch_offset.cpp",
+      "target": "kernel/fk_curve_algo.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 15,
+          "symbol": "fk_curve_algo.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "cad_sketch_offset.cpp",
+      "target": "kernel/fk_intersect.cpp",
+      "kind": "call",
+      "count": 9,
+      "sites": [
+        {
+          "line": 280,
+          "symbol": "ForgeCad::Kernel::Box::add",
+          "owner": "ForgeCad::trimOffsetLoops"
+        },
+        {
+          "line": 281,
+          "symbol": "ForgeCad::Kernel::Box::padded",
+          "owner": "ForgeCad::trimOffsetLoops"
+        },
+        {
+          "line": 289,
+          "symbol": "ForgeCad::Kernel::Box::add",
+          "owner": "ForgeCad::trimOffsetLoops"
+        },
+        {
+          "line": 296,
+          "symbol": "ForgeCad::Kernel::Box::overlaps",
+          "owner": "ForgeCad::trimOffsetLoops"
+        },
+        {
+          "line": 328,
+          "symbol": "ForgeCad::Kernel::Box::add",
+          "owner": "ForgeCad::trimOffsetLoops"
+        },
+        {
+          "line": 329,
+          "symbol": "ForgeCad::Kernel::Box::add",
+          "owner": "ForgeCad::trimOffsetLoops"
+        },
+        {
+          "line": 330,
+          "symbol": "ForgeCad::Kernel::Box::overlaps",
+          "owner": "ForgeCad::trimOffsetLoops"
+        },
+        {
+          "line": 330,
+          "symbol": "ForgeCad::Kernel::Box::padded",
+          "owner": "ForgeCad::trimOffsetLoops"
+        },
+        {
+          "line": 450,
+          "symbol": "ForgeCad::Kernel::intersectCurves",
+          "owner": "ForgeCad::crossings"
+        }
+      ]
+    },
+    {
+      "source": "cad_sketch_offset.cpp",
+      "target": "kernel/fk_intersect.h",
+      "kind": "call",
+      "count": 6,
+      "sites": [
+        {
+          "line": 279,
+          "symbol": "ForgeCad::Kernel::Box::Box",
+          "owner": "ForgeCad::trimOffsetLoops"
+        },
+        {
+          "line": 287,
+          "symbol": "ForgeCad::Kernel::Box::Box",
+          "owner": "ForgeCad::trimOffsetLoops"
+        },
+        {
+          "line": 322,
+          "symbol": "ForgeCad::Kernel::CurveCurveIntersection::CurveCurveIntersection",
+          "owner": "ForgeCad::trimOffsetLoops"
+        },
+        {
+          "line": 327,
+          "symbol": "ForgeCad::Kernel::Box::Box",
+          "owner": "ForgeCad::trimOffsetLoops"
+        },
+        {
+          "line": 333,
+          "symbol": "ForgeCad::Kernel::Box::diagonal",
+          "owner": "ForgeCad::trimOffsetLoops"
+        },
+        {
+          "line": 348,
+          "symbol": "ForgeCad::Kernel::Box::diagonal",
+          "owner": "ForgeCad::trimOffsetLoops"
+        }
+      ]
+    },
+    {
+      "source": "cad_sketch_offset.cpp",
+      "target": "kernel/fk_intersect.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 12,
+          "symbol": "fk_intersect.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "cad_sketch_offset.cpp",
+      "target": "kernel/fk_math.h",
+      "kind": "call",
+      "count": 134,
+      "sites": [
+        {
+          "line": 27,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::vec"
+        },
+        {
+          "line": 28,
+          "symbol": "ForgeCad::Kernel::Vec::x",
+          "owner": "ForgeCad::point"
+        },
+        {
+          "line": 28,
+          "symbol": "ForgeCad::Kernel::Vec::y",
+          "owner": "ForgeCad::point"
+        },
+        {
+          "line": 29,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::leftOf"
+        },
+        {
+          "line": 29,
+          "symbol": "ForgeCad::Kernel::Vec::x",
+          "owner": "ForgeCad::leftOf"
+        },
+        {
+          "line": 29,
+          "symbol": "ForgeCad::Kernel::Vec::y",
+          "owner": "ForgeCad::leftOf"
+        },
+        {
+          "line": 46,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::Piece::tangent"
+        },
+        {
+          "line": 48,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::Piece::tangent"
+        },
+        {
+          "line": 48,
+          "symbol": "ForgeCad::Kernel::norm",
+          "owner": "ForgeCad::Piece::tangent"
+        },
+        {
+          "line": 48,
+          "symbol": "ForgeCad::Kernel::operator/",
+          "owner": "ForgeCad::Piece::tangent"
+        },
+        {
+          "line": 49,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::Piece::tangent"
+        },
+        {
+          "line": 49,
+          "symbol": "ForgeCad::Kernel::operator-",
+          "owner": "ForgeCad::Piece::tangent"
+        },
+        {
+          "line": 53,
+          "symbol": "ForgeCad::Kernel::distance",
+          "owner": "ForgeCad::Piece::closed"
+        },
+        {
+          "line": 76,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::OffsetPiece::startPoint"
+        },
+        {
+          "line": 78,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::OffsetPiece::startPoint"
+        },
+        {
+          "line": 78,
+          "symbol": "ForgeCad::Kernel::operator*",
+          "owner": "ForgeCad::OffsetPiece::startPoint"
+        },
+        {
+          "line": 78,
+          "symbol": "ForgeCad::Kernel::operator+",
+          "owner": "ForgeCad::OffsetPiece::startPoint"
+        },
+        {
+          "line": 81,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::OffsetPiece::startPoint"
+        },
+        {
+          "line": 85,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::OffsetPiece::endPoint"
+        },
+        {
+          "line": 86,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::OffsetPiece::endPoint"
+        },
+        {
+          "line": 86,
+          "symbol": "ForgeCad::Kernel::operator*",
+          "owner": "ForgeCad::OffsetPiece::endPoint"
+        },
+        {
+          "line": 86,
+          "symbol": "ForgeCad::Kernel::operator+",
+          "owner": "ForgeCad::OffsetPiece::endPoint"
+        },
+        {
+          "line": 87,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::OffsetPiece::endPoint"
+        },
+        {
+          "line": 87,
+          "symbol": "ForgeCad::Kernel::operator*",
+          "owner": "ForgeCad::OffsetPiece::endPoint"
+        },
+        {
+          "line": 87,
+          "symbol": "ForgeCad::Kernel::operator+",
+          "owner": "ForgeCad::OffsetPiece::endPoint"
+        },
+        {
+          "line": 90,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::OffsetPiece::endPoint"
+        },
+        {
+          "line": 100,
+          "symbol": "ForgeCad::Kernel::distance",
+          "owner": "ForgeCad::piecesOf"
+        },
+        {
+          "line": 102,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::piecesOf"
+        },
+        {
+          "line": 102,
+          "symbol": "ForgeCad::Kernel::operator-",
+          "owner": "ForgeCad::piecesOf"
+        },
+        {
+          "line": 102,
+          "symbol": "ForgeCad::Kernel::operator/",
+          "owner": "ForgeCad::piecesOf"
+        },
+        {
+          "line": 125,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::piecesOf"
+        },
+        {
+          "line": 126,
+          "symbol": "ForgeCad::Kernel::norm",
+          "owner": "ForgeCad::piecesOf"
+        },
+        {
+          "line": 127,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::piecesOf"
+        },
+        {
+          "line": 127,
+          "symbol": "ForgeCad::Kernel::norm",
+          "owner": "ForgeCad::piecesOf"
+        },
+        {
+          "line": 127,
+          "symbol": "ForgeCad::Kernel::operator-",
+          "owner": "ForgeCad::piecesOf"
+        },
+        {
+          "line": 127,
+          "symbol": "ForgeCad::Kernel::operator/",
+          "owner": "ForgeCad::piecesOf"
+        },
+        {
+          "line": 147,
+          "symbol": "ForgeCad::Kernel::distance",
+          "owner": "ForgeCad::chainsOf"
+        },
+        {
+          "line": 168,
+          "symbol": "ForgeCad::Kernel::distance",
+          "owner": "ForgeCad::chainsOf"
+        },
+        {
+          "line": 169,
+          "symbol": "ForgeCad::Kernel::distance",
+          "owner": "ForgeCad::chainsOf"
+        },
+        {
+          "line": 181,
+          "symbol": "ForgeCad::Kernel::distance",
+          "owner": "ForgeCad::chainsOf"
+        },
+        {
+          "line": 189,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::signedArea"
+        },
+        {
+          "line": 194,
+          "symbol": "ForgeCad::Kernel::Vec::x",
+          "owner": "ForgeCad::signedArea"
+        },
+        {
+          "line": 194,
+          "symbol": "ForgeCad::Kernel::Vec::y",
+          "owner": "ForgeCad::signedArea"
+        },
+        {
+          "line": 195,
+          "symbol": "ForgeCad::Kernel::Vec::operator=",
+          "owner": "ForgeCad::signedArea"
+        },
+        {
+          "line": 199,
+          "symbol": "ForgeCad::Kernel::Vec::x",
+          "owner": "ForgeCad::signedArea"
+        },
+        {
+          "line": 199,
+          "symbol": "ForgeCad::Kernel::Vec::y",
+          "owner": "ForgeCad::signedArea"
+        },
+        {
+          "line": 214,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::offsetOf"
+        },
+        {
+          "line": 214,
+          "symbol": "ForgeCad::Kernel::Vec::operator=",
+          "owner": "ForgeCad::offsetOf"
+        },
+        {
+          "line": 214,
+          "symbol": "ForgeCad::Kernel::operator*",
+          "owner": "ForgeCad::offsetOf"
+        },
+        {
+          "line": 214,
+          "symbol": "ForgeCad::Kernel::operator+",
+          "owner": "ForgeCad::offsetOf"
+        },
+        {
+          "line": 215,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::offsetOf"
+        },
+        {
+          "line": 215,
+          "symbol": "ForgeCad::Kernel::Vec::operator=",
+          "owner": "ForgeCad::offsetOf"
+        },
+        {
+          "line": 215,
+          "symbol": "ForgeCad::Kernel::operator*",
+          "owner": "ForgeCad::offsetOf"
+        },
+        {
+          "line": 215,
+          "symbol": "ForgeCad::Kernel::operator+",
+          "owner": "ForgeCad::offsetOf"
+        },
+        {
+          "line": 224,
+          "symbol": "ForgeCad::Kernel::operator-",
+          "owner": "ForgeCad::offsetOf"
+        },
+        {
+          "line": 225,
+          "symbol": "ForgeCad::Kernel::Vec::operator=",
+          "owner": "ForgeCad::offsetOf"
+        },
+        {
+          "line": 227,
+          "symbol": "ForgeCad::Kernel::Vec::x",
+          "owner": "ForgeCad::offsetOf"
+        },
+        {
+          "line": 227,
+          "symbol": "ForgeCad::Kernel::Vec::y",
+          "owner": "ForgeCad::offsetOf"
+        },
+        {
+          "line": 242,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::offsetOf"
+        },
+        {
+          "line": 244,
+          "symbol": "ForgeCad::Kernel::norm",
+          "owner": "ForgeCad::offsetOf"
+        },
+        {
+          "line": 246,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::offsetOf"
+        },
+        {
+          "line": 246,
+          "symbol": "ForgeCad::Kernel::operator*",
+          "owner": "ForgeCad::offsetOf"
+        },
+        {
+          "line": 246,
+          "symbol": "ForgeCad::Kernel::operator/",
+          "owner": "ForgeCad::offsetOf"
+        },
+        {
+          "line": 247,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::offsetOf"
+        },
+        {
+          "line": 247,
+          "symbol": "ForgeCad::Kernel::operator*",
+          "owner": "ForgeCad::offsetOf"
+        },
+        {
+          "line": 247,
+          "symbol": "ForgeCad::Kernel::operator+",
+          "owner": "ForgeCad::offsetOf"
+        },
+        {
+          "line": 267,
+          "symbol": "ForgeCad::Kernel::Vec::operator[]",
+          "owner": "ForgeCad::trimOffsetLoops"
+        },
+        {
+          "line": 280,
+          "symbol": "ForgeCad::Kernel::Vec::x",
+          "owner": "ForgeCad::trimOffsetLoops"
+        },
+        {
+          "line": 280,
+          "symbol": "ForgeCad::Kernel::Vec::y",
+          "owner": "ForgeCad::trimOffsetLoops"
+        },
+        {
+          "line": 286,
+          "symbol": "ForgeCad::Kernel::Interval::length",
+          "owner": "ForgeCad::trimOffsetLoops"
+        },
+        {
+          "line": 290,
+          "symbol": "ForgeCad::Kernel::Vec::x",
+          "owner": "ForgeCad::trimOffsetLoops"
+        },
+        {
+          "line": 290,
+          "symbol": "ForgeCad::Kernel::Vec::y",
+          "owner": "ForgeCad::trimOffsetLoops"
+        },
+        {
+          "line": 293,
+          "symbol": "ForgeCad::Kernel::Vec::operator[]",
+          "owner": "ForgeCad::trimOffsetLoops"
+        },
+        {
+          "line": 300,
+          "symbol": "ForgeCad::Kernel::Vec::operator[]",
+          "owner": "ForgeCad::trimOffsetLoops"
+        },
+        {
+          "line": 301,
+          "symbol": "ForgeCad::Kernel::Vec::operator[]",
+          "owner": "ForgeCad::trimOffsetLoops"
+        },
+        {
+          "line": 302,
+          "symbol": "ForgeCad::Kernel::Vec::operator[]",
+          "owner": "ForgeCad::trimOffsetLoops"
+        },
+        {
+          "line": 303,
+          "symbol": "ForgeCad::Kernel::Vec::operator[]",
+          "owner": "ForgeCad::trimOffsetLoops"
+        },
+        {
+          "line": 304,
+          "symbol": "ForgeCad::Kernel::Vec::operator[]",
+          "owner": "ForgeCad::trimOffsetLoops"
+        },
+        {
+          "line": 314,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::trimOffsetLoops"
+        },
+        {
+          "line": 314,
+          "symbol": "ForgeCad::Kernel::operator-",
+          "owner": "ForgeCad::trimOffsetLoops"
+        },
+        {
+          "line": 316,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::trimOffsetLoops"
+        },
+        {
+          "line": 316,
+          "symbol": "ForgeCad::Kernel::dot",
+          "owner": "ForgeCad::trimOffsetLoops"
+        },
+        {
+          "line": 316,
+          "symbol": "ForgeCad::Kernel::operator-",
+          "owner": "ForgeCad::trimOffsetLoops"
+        },
+        {
+          "line": 317,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::trimOffsetLoops"
+        },
+        {
+          "line": 317,
+          "symbol": "ForgeCad::Kernel::dot",
+          "owner": "ForgeCad::trimOffsetLoops"
+        },
+        {
+          "line": 317,
+          "symbol": "ForgeCad::Kernel::operator-",
+          "owner": "ForgeCad::trimOffsetLoops"
+        },
+        {
+          "line": 318,
+          "symbol": "ForgeCad::Kernel::norm",
+          "owner": "ForgeCad::trimOffsetLoops"
+        },
+        {
+          "line": 337,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::trimOffsetLoops"
+        },
+        {
+          "line": 338,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::trimOffsetLoops"
+        },
+        {
+          "line": 338,
+          "symbol": "ForgeCad::Kernel::cross",
+          "owner": "ForgeCad::trimOffsetLoops"
+        },
+        {
+          "line": 338,
+          "symbol": "ForgeCad::Kernel::operator-",
+          "owner": "ForgeCad::trimOffsetLoops"
+        },
+        {
+          "line": 340,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::trimOffsetLoops"
+        },
+        {
+          "line": 340,
+          "symbol": "ForgeCad::Kernel::cross",
+          "owner": "ForgeCad::trimOffsetLoops"
+        },
+        {
+          "line": 340,
+          "symbol": "ForgeCad::Kernel::operator-",
+          "owner": "ForgeCad::trimOffsetLoops"
+        },
+        {
+          "line": 345,
+          "symbol": "ForgeCad::Kernel::distance",
+          "owner": "ForgeCad::trimOffsetLoops"
+        },
+        {
+          "line": 389,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::extended"
+        },
+        {
+          "line": 389,
+          "symbol": "ForgeCad::Kernel::norm",
+          "owner": "ForgeCad::extended"
+        },
+        {
+          "line": 389,
+          "symbol": "ForgeCad::Kernel::operator-",
+          "owner": "ForgeCad::extended"
+        },
+        {
+          "line": 389,
+          "symbol": "ForgeCad::Kernel::operator/",
+          "owner": "ForgeCad::extended"
+        },
+        {
+          "line": 399,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::extended"
+        },
+        {
+          "line": 399,
+          "symbol": "ForgeCad::Kernel::Vec::x",
+          "owner": "ForgeCad::extended"
+        },
+        {
+          "line": 399,
+          "symbol": "ForgeCad::Kernel::Vec::y",
+          "owner": "ForgeCad::extended"
+        },
+        {
+          "line": 403,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::extended"
+        },
+        {
+          "line": 403,
+          "symbol": "ForgeCad::Kernel::Vec::x",
+          "owner": "ForgeCad::extended"
+        },
+        {
+          "line": 403,
+          "symbol": "ForgeCad::Kernel::Vec::y",
+          "owner": "ForgeCad::extended"
+        },
+        {
+          "line": 414,
+          "symbol": "ForgeCad::Kernel::Vec::operator=",
+          "owner": "ForgeCad::moveEnd"
+        },
+        {
+          "line": 417,
+          "symbol": "ForgeCad::Kernel::Vec::x",
+          "owner": "ForgeCad::moveEnd"
+        },
+        {
+          "line": 417,
+          "symbol": "ForgeCad::Kernel::Vec::y",
+          "owner": "ForgeCad::moveEnd"
+        },
+        {
+          "line": 432,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::degenerate"
+        },
+        {
+          "line": 432,
+          "symbol": "ForgeCad::Kernel::dot",
+          "owner": "ForgeCad::degenerate"
+        },
+        {
+          "line": 432,
+          "symbol": "ForgeCad::Kernel::operator-",
+          "owner": "ForgeCad::degenerate"
+        },
+        {
+          "line": 513,
+          "symbol": "ForgeCad::Kernel::cross",
+          "owner": "ForgeCad::offsetSketchEntities"
+        },
+        {
+          "line": 514,
+          "symbol": "ForgeCad::Kernel::dot",
+          "owner": "ForgeCad::offsetSketchEntities"
+        },
+        {
+          "line": 516,
+          "symbol": "ForgeCad::Kernel::operator*",
+          "owner": "ForgeCad::offsetSketchEntities"
+        },
+        {
+          "line": 516,
+          "symbol": "ForgeCad::Kernel::operator+",
+          "owner": "ForgeCad::offsetSketchEntities"
+        },
+        {
+          "line": 526,
+          "symbol": "ForgeCad::Kernel::Vec::operator=",
+          "owner": "ForgeCad::offsetSketchEntities"
+        },
+        {
+          "line": 527,
+          "symbol": "ForgeCad::Kernel::Vec::operator=",
+          "owner": "ForgeCad::offsetSketchEntities"
+        },
+        {
+          "line": 528,
+          "symbol": "ForgeCad::Kernel::Vec::operator=",
+          "owner": "ForgeCad::offsetSketchEntities"
+        },
+        {
+          "line": 529,
+          "symbol": "ForgeCad::Kernel::Vec::x",
+          "owner": "ForgeCad::offsetSketchEntities"
+        },
+        {
+          "line": 529,
+          "symbol": "ForgeCad::Kernel::Vec::y",
+          "owner": "ForgeCad::offsetSketchEntities"
+        },
+        {
+          "line": 530,
+          "symbol": "ForgeCad::Kernel::Vec::x",
+          "owner": "ForgeCad::offsetSketchEntities"
+        },
+        {
+          "line": 530,
+          "symbol": "ForgeCad::Kernel::Vec::y",
+          "owner": "ForgeCad::offsetSketchEntities"
+        },
+        {
+          "line": 538,
+          "symbol": "ForgeCad::Kernel::distance",
+          "owner": "ForgeCad::offsetSketchEntities"
+        },
+        {
+          "line": 585,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::offsetSketchEntities"
+        },
+        {
+          "line": 585,
+          "symbol": "ForgeCad::Kernel::operator+",
+          "owner": "ForgeCad::offsetSketchEntities"
+        },
+        {
+          "line": 600,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::offsetSketchEntities"
+        },
+        {
+          "line": 600,
+          "symbol": "ForgeCad::Kernel::Vec::x",
+          "owner": "ForgeCad::offsetSketchEntities"
+        },
+        {
+          "line": 600,
+          "symbol": "ForgeCad::Kernel::Vec::y",
+          "owner": "ForgeCad::offsetSketchEntities"
+        },
+        {
+          "line": 609,
+          "symbol": "ForgeCad::Kernel::Interval::length",
+          "owner": "ForgeCad::offsetSketchEntities"
+        },
+        {
+          "line": 610,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::offsetSketchEntities"
+        },
+        {
+          "line": 610,
+          "symbol": "ForgeCad::Kernel::Vec::x",
+          "owner": "ForgeCad::offsetSketchEntities"
+        },
+        {
+          "line": 610,
+          "symbol": "ForgeCad::Kernel::Vec::y",
+          "owner": "ForgeCad::offsetSketchEntities"
+        },
+        {
+          "line": 620,
+          "symbol": "ForgeCad::Kernel::Vec::x",
+          "owner": "ForgeCad::offsetSketchEntities"
+        },
+        {
+          "line": 620,
+          "symbol": "ForgeCad::Kernel::Vec::y",
+          "owner": "ForgeCad::offsetSketchEntities"
+        }
+      ]
+    },
+    {
+      "source": "cad_sketch_offset.cpp",
+      "target": "kernel/fk_nurbs.cpp",
+      "kind": "call",
+      "count": 5,
+      "sites": [
+        {
+          "line": 275,
+          "symbol": "ForgeCad::Kernel::rationalBezierPieces",
+          "owner": "ForgeCad::trimOffsetLoops"
+        },
+        {
+          "line": 276,
+          "symbol": "ForgeCad::Kernel::rationalBezierPieces",
+          "owner": "ForgeCad::trimOffsetLoops"
+        },
+        {
+          "line": 371,
+          "symbol": "ForgeCad::Kernel::rationalBezierPieces",
+          "owner": "ForgeCad::trimOffsetLoops"
+        },
+        {
+          "line": 377,
+          "symbol": "ForgeCad::Kernel::rationalBezierPieces",
+          "owner": "ForgeCad::trimOffsetLoops"
+        },
+        {
+          "line": 381,
+          "symbol": "ForgeCad::Kernel::joinBezierPieces",
+          "owner": "ForgeCad::trimOffsetLoops"
+        }
+      ]
+    },
+    {
+      "source": "cad_sketch_offset.cpp",
+      "target": "kernel/fk_nurbs.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 14,
+          "symbol": "fk_nurbs.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "cad_sketch_offset.cpp",
+      "target": "kernel/fk_offset.cpp",
+      "kind": "call",
+      "count": 2,
+      "sites": [
+        {
+          "line": 401,
+          "symbol": "ForgeCad::Kernel::fitCurve",
+          "owner": "ForgeCad::extended"
+        },
+        {
+          "line": 602,
+          "symbol": "ForgeCad::Kernel::fitCurve",
+          "owner": "ForgeCad::offsetSketchEntities"
+        }
+      ]
+    },
+    {
+      "source": "cad_sketch_offset.cpp",
+      "target": "kernel/fk_offset.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 13,
+          "symbol": "fk_offset.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "forgeCad2026_viewport_sketch.cpp",
+      "target": "cad_sketch_offset.cpp",
+      "kind": "call",
+      "count": 2,
+      "sites": [
+        {
+          "line": 794,
+          "symbol": "ForgeCad::offsetSketchEntities",
+          "owner": "CadViewport::previewSketchOffset"
+        },
+        {
+          "line": 831,
+          "symbol": "ForgeCad::offsetSketchEntities",
+          "owner": "CadViewport::applySketchOffset"
+        }
+      ]
+    },
+    {
+      "source": "tests/test_viewport.cpp",
+      "target": "cad_sketch_offset.cpp",
+      "kind": "call",
+      "count": 19,
+      "sites": [
+        {
+          "line": 3916,
+          "symbol": "ForgeCad::offsetSketchEntities",
+          "owner": "ViewportInteractionTest::sketchReferenceWorkflow"
+        },
+        {
+          "line": 3923,
+          "symbol": "ForgeCad::offsetSketchEntities",
+          "owner": "ViewportInteractionTest::sketchReferenceWorkflow"
+        },
+        {
+          "line": 3957,
+          "symbol": "ForgeCad::offsetSketchEntities",
+          "owner": "ViewportInteractionTest::inwardOffsetAndProjection"
+        },
+        {
+          "line": 3977,
+          "symbol": "ForgeCad::offsetSketchEntities",
+          "owner": "ViewportInteractionTest::inwardOffsetAndProjection"
+        },
+        {
+          "line": 4031,
+          "symbol": "ForgeCad::offsetSketchEntities",
+          "owner": "ViewportInteractionTest::derivedCurveEntity"
+        },
+        {
+          "line": 4098,
+          "symbol": "ForgeCad::offsetSketchEntities",
+          "owner": "ViewportInteractionTest::associativeOffset"
+        },
+        {
+          "line": 4124,
+          "symbol": "ForgeCad::offsetSketchEntities",
+          "owner": "ViewportInteractionTest::associativeOffset"
+        },
+        {
+          "line": 4310,
+          "symbol": "ForgeCad::offsetSketchEntities",
+          "owner": "ViewportInteractionTest::profileMouseOffset"
+        },
+        {
+          "line": 4317,
+          "symbol": "ForgeCad::offsetSketchEntities",
+          "owner": "ViewportInteractionTest::profileMouseOffset"
+        },
+        {
+          "line": 4884,
+          "symbol": "ForgeCad::offsetSketchEntities",
+          "owner": "ViewportInteractionTest::splineSelectionClicks"
+        },
+        {
+          "line": 10121,
+          "symbol": "ForgeCad::offsetSketchEntities",
+          "owner": "ViewportInteractionTest::run"
+        },
+        {
+          "line": 10129,
+          "symbol": "ForgeCad::offsetSketchEntities",
+          "owner": "ViewportInteractionTest::run"
+        },
+        {
+          "line": 10135,
+          "symbol": "ForgeCad::offsetSketchEntities",
+          "owner": "ViewportInteractionTest::run"
+        },
+        {
+          "line": 10141,
+          "symbol": "ForgeCad::offsetSketchEntities",
+          "owner": "ViewportInteractionTest::run"
+        },
+        {
+          "line": 10149,
+          "symbol": "ForgeCad::offsetSketchEntities",
+          "owner": "ViewportInteractionTest::run"
+        },
+        {
+          "line": 10158,
+          "symbol": "ForgeCad::offsetSketchEntities",
+          "owner": "ViewportInteractionTest::run"
+        },
+        {
+          "line": 10167,
+          "symbol": "ForgeCad::offsetSketchEntities",
+          "owner": "ViewportInteractionTest::run"
+        },
+        {
+          "line": 10205,
+          "symbol": "ForgeCad::offsetSketchEntities",
+          "owner": "ViewportInteractionTest::run"
+        },
+        {
+          "line": 10220,
+          "symbol": "ForgeCad::offsetSketchEntities",
+          "owner": "ViewportInteractionTest::run"
+        }
+      ]
+    }
+  ]
+}

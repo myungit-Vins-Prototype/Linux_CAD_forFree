@@ -1,0 +1,9 @@
+from pathlib import Path
+import subprocess,time,json
+r=Path('/home/myungit/Linux_CAD_forFree');p=r/'docs/ellisse-estremi-prove-2026-11-16/root'
+start=time.monotonic();command=['cmake','--build','forgecad-release','--parallel','2']
+with (p/'build-test-fix.log').open('w') as log:ret=subprocess.run(command,cwd=r,stdout=log,stderr=subprocess.STDOUT).returncode
+(p/'build-test-fix-result.json').write_text(json.dumps(dict(exit=ret,seconds=time.monotonic()-start,command=command),indent=2)+'\n')
+assert ret==0
+subprocess.run(['python3',str(p/'ellipse-run-checks.py.txt')],cwd=r,check=True)
+subprocess.run(['python3',str(p/'ellipse-run-gl.py.txt')],cwd=r,check=True)

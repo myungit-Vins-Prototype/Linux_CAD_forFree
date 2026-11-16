@@ -1,0 +1,9 @@
+import json,pathlib,hashlib
+src=pathlib.Path('/tmp/mitre-review/tests/candidate-emitted-sheet-coefficients.json');j=json.loads(src.read_text());records=[]
+def h(a):return [h(x) for x in a] if isinstance(a,list) else float(a).hex()
+def curve(c):return dict(type='bspline',degree=c['degree'],**{k:h(c[k]) for k in ['knots','poles','weights']})
+def surface(s):return dict(uDegree=s['u_degree'],vDegree=s['v_degree'],uPoleCount=s['u_count'],vPoleCount=s['v_count'],**{n:h(s[k]) for n,k in [('uKnots','u_knots'),('vKnots','v_knots'),('poles','poles'),('weights','weights')]})
+for case in j:
+ for side in ['s','t']:
+  records.append({'variant':case.get('variant','synthetic-sheet'), 'fin':case['fin_forward' if side=='s' else 'fin_backward'],'side':side,'range':h(case['range']),'budget':h(case['budget']),'curve':curve(case['curve']),'pcurve':curve(case['pcurve_'+side]),'surface':surface(case['surface_'+side])})
+out={'scope':'synthetic Body actual fins after production install + buildSheet, NOT public blend API','upstream_sha256':hashlib.sha256(src.read_bytes()).hexdigest(),'records':records};pathlib.Path('/tmp/mitre-review/audit/candidate-v2-body-fins.json').write_text(json.dumps(out,indent=2)+'\n')

@@ -1,0 +1,63 @@
+K10 residuo: consultazione graph.json e sorgenti,16novembre2026.
+Grafico consultato:767 nodi,11085 archi, snapshot selezionato in architecture-consult.json.
+
+Raccomandazione concordata: sewnPCurve in fk_exchange.cpp.
+Il supporto Plane rende UV univoche e affini nello spazio3D. Il provider
+planePCurveErrorBound può limitare il residuo completo S(PC(t))-targetE(t)
+dagli ORIGINALI finali E/Plane, indipendentemente dall'inversione della
+curva sorgente e dalle sue parametrizzazioni. Copre Line/NURBS a pesi
+positivi e wrapper, nei limiti delle risorse. Non copre altri supporti,
+curveOther opache, scelta generale di rami o matching geometrico cucitura.
+Servono anche controllo delle uscite anticipate e postassembly con mappa
+esplicita. Il budget resta originalDeviation16+max(1e-7,10tol), non il bound
+nuovo se più largo. OriginalDeviation16 non diventa certificato sorgente.
+
+Negativo stabile pubblico: sewSheets su2 rettangoli piani adiacenti.
+Target q(t)=t²+c*B3,128(t), c4.940214000122462e-7; sourceLine. Pcurve
+originali coerenti e fonte/output validi al checker. Si conserva il
+rappresentante target perché la sua pcurve ha129poli. q=t² respinge le
+uscite anticipate e fa eseguire il fit non affine; questo restituisce
+4poli cubici, perde la lobo e passa i checker16/64. A t3/128 il residuo
+è1.120011104e-7 contro cap1e-7, edgeTol=finTol=0. Log con traceprivata
+prova il ramo. Varianti q=t+lobo mostrano anche riuso campionato e
+rimappatura affine anticipati errati. Sourcebinary immutati.
+
+Confronto degli altri6 siti rimasti:
+1) cad_sketch_refs.cpp appendProjectedCurve218: needsProjectionFit è true
+   solo suCurveType::Other, ricorsivamente nei wrapper. Curve note
+   Line/Circle/Ellipse/NURBS e wrapper passano per la conversione NURBS
+   esatta; HelixCurve diretto ha il proprio percorso helixBSpline;
+   SketchProjection implicite sono rifiutate prima del fit. I provider
+   attuali riconoscono Line/NURBS/wrapper, non Other opache. IsoAdapter è
+   privato a fk_surface_algo e non espone provenienza Surface/UV. Occorre
+   una rappresentazione con provenienza, o un nuovo provider analitico.
+   Transformed(Helix) è un Other concreto che raggiunge il genericfit.
+   Probe kernel con radius1e-4,pitch1e-6,turns1e6:4poli, reported9.97e-9,
+   erroreprimo giro2e-4; h=1e-6*range coincide con2π. Non è ancora prova
+   applicativa appendProjectedCurve: manca l'esecuzione Qt in questo blocco.
+2) fk_blend_mitre.cpp129: media di due composizioni affini di superfici.
+   Possibile famiglia limitata: entrambi i supporti con iso/affine UV già
+   riconosciuta dal provider surfaceCompositionErrorBound; occorre somma
+   degli intervalli, identità sorgenti e bound della separazione fra
+   supporti. Il fallback coincidente è oggi autorizzato da65 campioni;
+   non basta certificare solo la media per garantire il giunto.
+3) fk_blend_surface.cpp1655: continuazione di intersezioni tramite Newton
+   4x4 su due superfici e un piano mobile. Nessun originaleLine/NURBS
+   diretto per la callback generale; occorre un certificato della
+   soluzione implicita o una famiglia analitica. isoGuide già evita fit.
+4) fk_surface_mapping.cpp189: trasferimento UV tramite image.parameters
+   procedurale. Provider Plane può aiutare se il carrier è Plane e si
+   certifica il targetE effettivo. Per carrier liberi il nuovo UV non è
+   necessariamente affine; servono composizione generale e inversione
+   certificata. Il fit3D mapByFunction159 è un ulteriore fallback distinto.
+5) fk_quilt_mapping.cpp713: UV image.parameters usate per derivare il
+   dominio dell'offset di un carrier. Certificare solo la curva media o
+   campioni UV non certifica il contenimento globale del dominio. Plane
+   può fornire una famiglia limitata, ma conta anche il bound di dominio.
+6) fk_sheet.cpp407: giunzione di supporti estesi tramite sample(t).point,
+   Newton regolarizzato e fineintervallo trovata per bisezione; provider
+   posizionaleNURBS non vede un originale esplicito. Fallback isoA è già
+   riconoscibile come curva ma rimane da certificare distanza dal secondo
+   supporto e scelta del tratto/ramo. Portata maggiore della sola cucitura.
+
+Nessun cambiamento produzione/CLAUDE/CMake/catalogo da questo agente.

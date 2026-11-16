@@ -1,0 +1,28 @@
+from pathlib import Path
+import json
+r=Path('/home/myungit/Linux_CAD_forFree');p=Path('/tmp/forgecad-k10-mapping-20261115/root')
+t=json.loads((p/'test-summary.json').read_text());g=json.loads((p/'architecture-audit.json').read_text())
+verification=(p/'verification.md').read_text().format(**t,**g)
+(r/'docs/curve-fit-k10-mapping-2026-11-15.md').write_text((p/'report-draft.md').read_text().replace('__VERIFICATION__',verification))
+f=r/'docs/code-review-2026-11-15.md';s=f.read_text();a=s.index('**Stato più recente:**');b=s.index('\n\n',a)
+s=s[:a]+'''**Stato più recente:** [K10 Mapping](curve-fit-k10-mapping-2026-11-15.md) conserva il supporto originale per lamine piane e mappe riconosciute, correggendo la perdita di un rilievo accettata fuori tolleranza. Certifica bordi e trasferimento UV, controllando anche vertici e trim originali. **8/24 siti iniziali parzialmente trattati, 16 interamente da migrare**, oltre ai fallback. Build completa e regressioni PASS; K10 resta aperto per i casi generali, gli offset e gli altri chiamanti campionati. Il totale dei 24 rilievi precedenti corretti e delle 22 orfane candidate non cambia. Uniformazione completa anteprime/pannelli ancora proposta; K2 in produzione.'''+s[b:];f.write_text(s)
+f=r/'docs/curve-fit-k10-composition-2026-11-15.md';s=f.read_text();s+='\n\n## Prosecuzione\n\nIl blocco successivo [Mapping con conservazione del supporto](curve-fit-k10-mapping-2026-11-15.md) corregge il rilievo perso per le lamine piane e le mappe riconosciute. Conteggio aggiornato: 8/24 siti parzialmente trattati, 16 interamente da migrare, oltre ai fallback. Il mapping generale e gli offset normali restano aperti; numeri e prove sopra descrivono la consegna Modifica poli.\n';f.write_text(s)
+# Rileggere immediatamente prima di modificare la sola voce tematica condivisa.
+f=r/'CLAUDE.md';s=f.read_text();a=s.index('**15/11 — K10, mapping');b=s.index('\n**15/11 — K2',a)
+s=s[:a]+f'''**15/11 — K10, mapping con tre agenti GPT-6.1 Sol.**
+Integrata conservazione carrier originale per lamine piane/mappa affine isoparametrica;
+corretto rilievo perso0,001mm a tol1e-6. Bordi certificati, UV/quota/trim/vertici
+originali entro budget invariato, storia/cancellazione atomiche. Corretto e verificato
+limite intervallare troppo largo a scala1000; pose al bordo naturale possono ancora
+fallire conservativamente. Build completa app/runner,{t['kernel_distinct']}casi kernel/{t['kernel_executions']}esecuzioni,
+{t['ctest_suites']}CTest,9regressioni e ASan/UBSan/LSan mirati PASS; audit107 PASS.
+Mappa{g['files']}/{g['edges']}/{g['units']}TU,diagnostica vuota/check/HTML/archi PASS. K10 aperto:
+8/24 siti parziali,16restanti più fallback (mapping generale/offset compresi).
+24rilievi precedenti corretti,22orfane candidate; uniformazione anteprime/pannelli
+ancora proposta;K2 in produzione. Nessun nuovo test renderer. Riaprire app aggiornata.
+[Prove e limiti](docs/curve-fit-k10-mapping-2026-11-15.md),
+[blocco precedente](docs/curve-fit-k10-composition-2026-11-15.md),
+[memoria precedente](docs/history/claude-prima-k10-mapping-2026-11-15.md).
+'''+s[b:]
+assert len(s.encode())<=16384,len(s.encode());f.write_text(s)
+print('Documentazione aggiornata, CLAUDE bytes',len(s.encode()))

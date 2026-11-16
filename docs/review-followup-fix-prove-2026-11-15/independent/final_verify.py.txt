@@ -1,0 +1,25 @@
+from pathlib import Path
+import hashlib,json,re,subprocess
+root=Path('/home/myungit/Linux_CAD_forFree');out=Path('/tmp/forgecad-followup-fix-20261115/independent')
+sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+expected='08ac51e6fd3fd99d262fe8d0363c7437744b7714b34166dac7e74589bcf018e9'
+assert sha(root/'kernel/fk_offset.cpp')==sha(out/'fk_offset.staged.cpp')==expected
+runs=[]
+for binary,log in [('probe-patched','final-torus-cancel-k10.log'),('edge_probe','final-edges-extrusion.log')]:
+ p=subprocess.run([str(out/binary)],capture_output=True,text=True,timeout=120)
+ (out/log).write_text(p.stdout+p.stderr);assert p.returncode==0
+ runs.append({'binary':binary,'sha256':sha(out/binary),'exit':p.returncode,'log':log})
+log=(out/'final-torus-cancel-k10.log').read_text();rows=[]
+expectedcases={'ring_valid':True,'ring_horn_full':False,'ring_spindle_full':False,'ring_outer_trim':True,'ring_outer_shifted':True,'ring_inner_shifted':False,'spindle_outer':True,'spindle_inner':True,'horn_outer':True,'horn_full':False}
+for name,accept in expectedcases.items():
+ line=next(s for s in log.splitlines() if s.startswith(name+' '));ok=('accepted=1' in line)==accept
+ if accept:ok&=float(re.search(r'error=([^ ]+)',line).group(1))<1e-10 and float(re.search(r'min_normal_dot=([^ ]+)',line).group(1))>1-1e-12
+ rows.append({'case':name,'pass':ok,'log':line})
+for initial,calls in [(0,12),(1,0)]:
+ line=next(s for s in log.splitlines() if s.startswith('cancel initially='+str(initial)+' '));rows.append({'case':'cancel_initial_'+str(initial),'pass':'cancelled=1' in line and 'calls='+str(calls)+' ' in line and 'deviation=-123' in line,'log':line})
+assert all(x['pass'] for x in rows)
+edge=(out/'final-edges-extrusion.log').read_text();assert 'TOTAL 48 failed=0' in edge and 'pass=0' not in edge
+k10=next(s for s in log.splitlines() if s.startswith('real_spline_degree27 '));assert 'accepted=1' in k10 and float(re.search(r'actual_error=([^ ]+)',k10).group(1))>500e-7
+result={'production_source_sha256':expected,'staged_source_sha256':sha(out/'fk_offset.staged.cpp'),'production_test_sha256':sha(root/'kernel/tests/test_offset_validation.cpp'),'runs':runs,'torus_and_cancellation_checks':rows,'torus_and_cancellation_pass':12,'edges_extrusion_pass':48,'total_pass':60,'known_open_K10':k10,'source_bounds':'source-bounds.json','no_shared_build':True}
+(out/'final-results.json').write_text(json.dumps(result,indent=2)+'\n')
+print('Final source',expected);print('60/60 validation checks PASS');print('K10 remains reproduced:',k10)

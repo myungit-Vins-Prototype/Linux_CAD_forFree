@@ -1,0 +1,75 @@
+from pathlib import Path
+import json,hashlib,shutil,subprocess
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/k10-helix-review/root');D=Path('/tmp/orphan-five-review/delivery');sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();before=json.loads((T/'hashes-before.json').read_text());base=json.loads((D/'base-hashes.json').read_text());stage=json.loads((D/'stage-hashes.json').read_text());m=(R/'CLAUDE.md').read_text();arch=R/'docs/history/claude-prima-k10-helix-orphans-2026-11-16.md';assert not arch.exists()
+for f,h in base.items():assert sha(R/f)==h==before[f],f
+for f,h in stage.items():assert sha(D/'stage'/f)==h,f
+subprocess.run(['git','apply','--check',str(D/'change.patch')],cwd=R,check=True)
+start=m.index('**16/11 — K10 UV e PRE7');end=m.index('**16/11 — Supporto.prt',start)
+m=m[:start]+'''UV/PRE7: due ricostruzioni Plane e selezione Mapping/Pattern corrette;
+app/30CTest,10sanitizer e79stati UI Wayland,192fin Fraction/mappa PASS.
+[Prove/limiti](docs/review-k10-uv-preview-2026-11-16.md),
+[memoria](docs/history/claude-prima-k10-uv-preview-2026-11-16.md).
+
+'''+m[end:]
+start=m.index('**16/11 — Anteprime e residuo UI2');end=m.index('**16/11 — Ellisse per estremi',start)
+m=m[:start]+'''**16/11 — PRE5/PRE6 e UI2 completati con tre agenti Sol.**
+Undici runner comuni,setup differito/footer/chiusura sincrona;26rilievi corretti.
+App/24CTest/115asserzioni offscreen/Wayland e mappa762/11023/380 PASS.
+Fixture scroll iniziale corretto;172artefatti. [Prove/limiti](docs/review-preview-unification-2026-11-16.md).
+
+'''+m[end:]
+start=m.index('**15/11 — Altri14rilievi');end=m.index('**15/11 — Sweep K1/K3',start)
+m=m[:start]+'''**15/11 — Altri14rilievi corretti con agenti Sol.**
+K4/K5/K6,S1/S2,UI1–6,PRE1–3: sweep/loft/lamine,input,picker eanteprime.
+App/74testkernel(75esecuzioni)/34CTest,mappa724/10429/353TU PASS;fixture
+confrontodouble baseline corretto,nessun nuovoGL. [Prove/limiti](docs/review-fix-next-2026-11-15.md).
+
+'''+m[end:]
+entry='''**16/11 — K10 Helix e orfane, in corso con tre agenti Sol.**
+Negativo Qt reale: Transformed(Helix) in schizzo accettata conerrore1e-4mm
+contro1e-7; prototipo continuo in preparazione, percorso diretto C2 conservato.
+Cinque funzioni private/locali senza chiamanti rimosse in7file;17API pubbliche
+conservate. Build e regressioni finali pendenti;29rilievi funzionali giàcorretti,
+K10 ancora18/24parziali+6nonmigrati finché verificato il nuovo percorso.
+[Stato/prove](docs/review-k10-helix-orphans-2026-11-16.md);
+[memoria precedente](docs/history/claude-prima-k10-helix-orphans-2026-11-16.md).
+
+'''
+marker='## Ultimi interventi — esiti consolidati\n\n';m=m.replace(marker,marker+entry,1)
+assert len(m.encode())<=16384,len(m.encode());assert m.count('\n**16/')+m.count('\n**15/')<=10
+# All checks precede writes; the complete previous memory is archived unchanged.
+arch.write_bytes((R/'CLAUDE.md').read_bytes());subprocess.run(['git','apply',str(D/'change.patch')],cwd=R,check=True)
+for f,h in stage.items():assert sha(R/f)==h,f
+(R/'CLAUDE.md').write_text(m)
+P=R/'docs/review-k10-helix-orphans-prove-2026-11-16';P.mkdir(exist_ok=True)
+(R/'docs/review-k10-helix-orphans-2026-11-16.md').write_text('''# Review: proiezione Helix e funzioni private orfane — 16 novembre 2026
+
+**In corso.** Continuazione con tre agenti GPT-6.1 Sol. Baseline3676file congelata; descrizioni e900archi incidenti della mappa consultati prima delle modifiche. Il sigillo precedente152/152è stato verificato e preservato.
+
+## Proiezione nello schizzo
+
+Negativo effettivo nella API Qt `appendProjectedCurve`: `TransformedCurve(HelixCurve)` con raggio1e-4mm,pitch1e-6mm e1e6giri viene accettata senza errore. Sul pianoYZ l’output èConverted cubico a4poli con errore al primo giro1e-4mm contro budget1e-7mm; sul pianoXZ viene collassata a segmento con errore2e-4mm. È confermato il difetto della famiglia K10 già aperta, senza aggiungere un finding separato al conteggio.
+
+Il prototipo in preparazione userà coefficienti originali, riduzione trigonometrica e limiti continui, controllo dei poli2D effettivi dopo conversione e fallimento prima della pubblicazione se il budget/risorse non bastano. Il percorso diretto Helix/Trimmed senza trasformazione conserva la forma quinticaC2 esistente; i wrapper non sono corretti semplicemente inoltrandoli al vecchio fit campionato.
+
+## Cinque funzioni private/locali
+
+Ricontrollati767file attivi,inclusi test fuoriCMake,backend opzionali e callback/friend Qt; tutte e cinque restano senza chiamanti o riferimenti. Integrata la rimozione di `CadViewport::setSelectedPointPosition`, `StoryboardTree::firstFeature`, `Corner::otherFace`, `ChainEdge::inPlane`, `BandMatrix::band`:7file,34righe eliminate,nessuna API pubblica o dato/formato cambiato. Le17API pubbliche senza usi interni restano da valutare. Non sono cinque nuovi difetti funzionali e non sono stati scritti test che replichino getter inutilizzati.
+
+Build completa, regressioni e rigenerazione finale della mappa sono ancora pendenti. Stato:29rilievi corretti prima di questo blocco;K10:18/24parziali+6nonmigrati,oltre ai fallback,finché il nuovo percorso non è verificato. Nessun CAD originale modificato.
+
+[Prove](review-k10-helix-orphans-prove-2026-11-16/), [memoria precedente](history/claude-prima-k10-helix-orphans-2026-11-16.md).
+''')
+for f in T.rglob('*'):
+ if f.is_file():
+  q=P/'root'/f.relative_to(T)
+  if q.suffix in ['.py','.cpp','.h','.sh'] or q.name=='CMakeLists.txt':q=q.with_name(q.name+'.txt')
+  q.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(f,q)
+(P/'orphans').mkdir(exist_ok=True)
+for f in D.rglob('*'):
+ if f.is_file():
+  q=P/'orphans'/f.relative_to(D)
+  if q.suffix in ['.py','.cpp','.h','.sh']:q=q.with_name(q.name+'.txt')
+  q.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(f,q)
+(T/'orphan-stage-hashes.json').write_text(json.dumps({f:sha(R/f) for f in stage},indent=2)+'\n')
+print('Cinque orfane rimosse,7file/34righe,memoria',len(m.encode()),'byte')

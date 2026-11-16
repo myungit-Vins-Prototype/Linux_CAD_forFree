@@ -1,0 +1,8 @@
+from pathlib import Path
+import json,shlex,subprocess,sys
+root=Path('/home/myungit/Linux_CAD_forFree');out=Path(__file__).parent;impl=out.parent/'implementation'
+commands=json.loads((root/'forgecad-release/compile_commands.json').read_text());entry=next(x for x in commands if x['file'].endswith('/kernel/tests/test_mapping_carrier_validation.cpp'))
+command=shlex.split(entry['command']);command.insert(1,'-I'+str(impl));command[command.index('-o')+1]=str(out/'test_planar_flatten_validation.o');command[command.index('-c')+1]=str(out/'test_planar_flatten_validation.cpp');command+=['-I'+str(root/'kernel/tests'),'-fno-fast-math','-ffp-contract=off'];subprocess.run(command,cwd=entry['directory'],check=True)
+objects=[str(impl/(n+'.o')) for n in ['fk_planar_flatten','fk_quilt_mapping']]
+if '--before' in sys.argv: objects=[str(out/'before'/(n+'.o')) for n in ['fk_quilt_mapping','fk_mapping_fit','fk_offset']]
+subprocess.run(['/usr/bin/c++','-o',str(out/('tests-before' if '--before' in sys.argv else 'tests-fixed')),str(out/'test_planar_flatten_validation.o'),*objects,str(root/'forgecad-release/kernel/CMakeFiles/forgekernel_offset_validation_tests.dir/tests/fk_test_main.cpp.o'),str(root/'forgecad-release/kernel/libforgekernel.a'),'-lpthread'],check=True)

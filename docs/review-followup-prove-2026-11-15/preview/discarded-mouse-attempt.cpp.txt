@@ -1,0 +1,47 @@
+#include <QApplication>
+#include <QSettings>
+#include <QTemporaryDir>
+#include <QMainWindow>
+#include <QTimer>
+#include <QComboBox>
+#include <QPushButton>
+#include <QDialogButtonBox>
+#include <QElapsedTimer>
+#include <QKeyEvent>
+#include <QMouseEvent>
+#include <QListWidget>
+#include <QPlainTextEdit>
+#include <iostream>
+#include "forgeCad2026_dialogs.h"
+#include "forgeCad2026_dialogs_common.h"
+#include "forgeCad2026_viewport.h"
+#include "fk_surface_algo.h"
+#include "fk_classify.h"
+#include "fk_topology.h"
+#include "fk_history.h"
+class ViewportInteractionTest {
+public:
+ static bool valid(CadViewport*v){return v->preview_.valid;}
+ static int owner(CadViewport*v){return v->refPickOwner_;}
+ static bool visible(CadViewport*v,int i){return v->isBodyVisibleInScene(i);}
+ static bool replaced(CadViewport*v,int i){return v->preview_.replaced.contains(i);}
+ static bool eligible(CadViewport*v,int i){return v->referenceBodyEligible(i);}
+ static QPoint sourcePoint(CadViewport*v){return v->projectWorldPoint(QVector3D(-49.5,.5,.5)).toPoint();}
+ static int pickSource(CadViewport*v){ GeometryRef r;const auto xy=v->projectWorldPoint(QVector3D(-49.5,.5,.5));return v->pickReference(xy.toPoint(),r)?r.index:-1;}
+};
+int main(int argc,char**argv){QApplication app(argc,argv);QCoreApplication::setOrganizationName("ReviewFollowupTmp");QCoreApplication::setApplicationName("PreviewReview");QTemporaryDir settings;QSettings::setDefaultFormat(QSettings::IniFormat);QSettings::setPath(QSettings::IniFormat,QSettings::UserScope,settings.path());
+ QMainWindow owner;auto*view=new CadViewport(&owner);owner.setCentralWidget(view);
+ DocumentState state;SketchObject boundary;boundary.name="Area";boundary.segments={{{0,0},{20,0}},{{20,0},{20,12}},{{20,12},{0,12}},{{0,12},{0,0}}};state.sketches={boundary};ExtrusionObject seed;seed.feature=BodyFeature::Primitive;seed.name="Source";seed.primitive.origin[0]=-50;state.extrusions={seed};view->loadDocument(state);
+ GeometryRef contour;contour.kind=7;contour.index=0;ExtrusionObject fill;fill.feature=BodyFeature::Pattern;fill.firstBody=0;fill.pattern.kind=3;fill.pattern.refs={contour};fill.pattern.spacing=4;fill.pattern.spacing2=4;fill.pattern.angle=0;
+ QTimer poll;poll.setInterval(20);QElapsedTimer elapsed;elapsed.start();bool ready=false;
+ QObject::connect(&poll,&QTimer::timeout,&owner,[&]{auto*source=owner.findChild<QComboBox*>("fillPatternSource");if(!source)return;QDialog*panel=nullptr;for(auto*d:owner.findChildren<QDialog*>())if(d->findChild<QComboBox*>("fillPatternSource")){panel=d;break;}if(!ViewportInteractionTest::valid(view)){if(elapsed.elapsed()>15000){std::cout<<"FILL TIMEOUT "<<view->previewError().toStdString()<<std::endl;poll.stop();panel->reject();}return;}
+ QPushButton*pick=nullptr;for(auto*b:source->parentWidget()->findChildren<QPushButton*>())if(b->text()=="Dalla vista")pick=b;
+ std::cout<<"FILL ready="<<ViewportInteractionTest::valid(view)<<" before_source_visible="<<ViewportInteractionTest::visible(view,0)<<" replaced="<<ViewportInteractionTest::replaced(view,0)<<std::endl;
+ pick->click();std::cout<<"FILL source_pick_active="<<view->referencePicking()<<" owner="<<ViewportInteractionTest::owner(view)<<" source_visible="<<ViewportInteractionTest::visible(view,0)<<" preview_still_valid="<<ViewportInteractionTest::valid(view)<<" source_eligible="<<ViewportInteractionTest::eligible(view,0)<<" ray_picked_body="<<ViewportInteractionTest::pickSource(view)<<std::endl;auto*boundaryPick=panel->findChild<QPushButton*>("fillPatternBoundaryPick");boundaryPick->click();auto*list=panel->findChild<QListWidget*>("fillPatternBoundaries");const auto before=list->item(0)->text();const QPoint at=ViewportInteractionTest::sourcePoint(view);QMouseEvent click(QEvent::MouseButtonPress,QPointF(at),QPointF(at),Qt::LeftButton,Qt::LeftButton,Qt::NoModifier);QApplication::sendEvent(view,&click);QMouseEvent release(QEvent::MouseButtonRelease,QPointF(at),QPointF(at),Qt::LeftButton,Qt::NoButton,Qt::NoModifier);QApplication::sendEvent(view,&release);std::cout<<"FILL invisible_mouse_click before="<<before.toStdString()<<" after="<<list->item(0)->text().toStdString()<<" source_visible="<<ViewportInteractionTest::visible(view,0)<<std::endl;ready=true;poll.stop();panel->reject();});poll.start();fillPatternDialog(&owner,view,"Review Fill",-1,fill,[](const auto&){return QString();});
+ // Real flattened planar face, produced by the normal feature API.
+ DocumentState boxState;ExtrusionObject box;box.feature=BodyFeature::Primitive;box.name="Base";box.primitive.size[0]=4;box.primitive.size[1]=2;boxState.extrusions={box};view->loadDocument(boxState);
+ const auto body=view->extrusions()[0].forgeBody;const auto face=body->faces()[0];ForgeCad::Kernel::Vec3 point;ForgeCad::Kernel::Vec2 anchor;ForgeCad::Kernel::faceInteriorPoint(*body,face,point,&anchor);GeometryRef ref;ref.kind=5;ref.index=0;ref.point.subshape=face.index;ref.point.geometry=int(body->face(face).surface->type());ref.point.x=point.x();ref.point.y=point.y();ref.point.z=point.z();GeometryRef plane;plane.kind=1;plane.index=0;
+ ExtrusionObject flat;flat.feature=BodyFeature::SurfaceTools;flat.firstBody=0;flat.surfaceTool.mode=3;flat.surfaceTool.mappingQuilt=true;flat.surfaceTool.targets={ref,plane};flat.surfaceTool.sources={ref};flat.surfaceTool.mappingU=anchor.x();flat.surfaceTool.mappingV=anchor.y();const auto error=view->createBody(flat);std::cout<<"MAP flat_created="<<error.isEmpty()<<" error="<<error.toStdString()<<std::endl;
+ view->createBody(box);ExtrusionObject wrap;wrap.feature=BodyFeature::SurfaceTools;wrap.firstBody=2;wrap.surfaceTool.mode=4;wrap.surfaceTool.mappingQuilt=true;wrap.surfaceTool.targets={ref,plane};
+ int applied=0;QTimer::singleShot(30,&owner,[&]{auto*target=owner.findChild<QPushButton*>("mappingFacePick");auto*planeBox=owner.findChild<QComboBox*>("mappingPlane");QDialog*panel=nullptr;for(auto*d:owner.findChildren<QDialog*>())if(d->findChild<QComboBox*>("mappingPlane")){panel=d;break;}target->click();std::cout<<"MAP before_link pick="<<view->referencePicking()<<" target_enabled="<<target->isEnabled()<<std::endl;int linked=-1;for(int i=0;i<planeBox->count();++i)if(planeBox->itemText(i).startsWith("Mappa di"))linked=i;planeBox->setCurrentIndex(linked);std::cout<<"MAP after_link row="<<linked<<" pick="<<view->referencePicking()<<" target_enabled="<<target->isEnabled()<<" target_text="<<target->text().toStdString()<<std::endl;panel->findChild<QDialogButtonBox*>()->button(QDialogButtonBox::Ok)->click();std::cout<<"MAP after_ok applied="<<applied<<" panel_hidden="<<panel->isHidden()<<" error="<<panel->findChild<QPlainTextEdit*>("functionApplyError")->toPlainText().toStdString()<<std::endl;
+ QKeyEvent escape(QEvent::KeyPress,Qt::Key_Escape,Qt::NoModifier);QApplication::sendEvent(view,&escape);std::cout<<"MAP after_escape pick="<<view->referencePicking()<<std::endl;panel->reject();});surfaceMappingDialog(&owner,view,"Review Mapping",-1,wrap,[&](const auto&){++applied;return QString();});return ready?0:2;}

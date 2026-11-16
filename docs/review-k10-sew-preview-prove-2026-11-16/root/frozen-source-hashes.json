@@ -1,0 +1,13 @@
+{
+  "kernel/fk_exchange.cpp": "3bb3f3d3c5c3b7d34124355b5b10c282cc4dc63e79796b04513e0e30397a05e3",
+  "kernel/fk_exchange.h": "38d73c86d49e87a28d9508c9b5db55894e80427fe32da1c8e9bb492b954622a8",
+  "kernel/fk_offset.cpp": "239e84e8192e97bbada84b624753bd016cfff96720c14328465c1fc9f9e72fe5",
+  "kernel/fk_curve_fit_bounds.h": "62dcaa3a96ad3a0aad4dc144ca138b3c03e78f44b98da18656b100d916b930a9",
+  "kernel/tests/test_sew_pcurve_validation.cpp": "5ac3260c4f9c6aacaed5b4b3e25e03fbee731ea905cf8a976dd8008dcf517855",
+  "kernel/CMakeLists.txt": "4f487075ff535b26ca44a5aeecbcf7822f978b4501d447372564e60823802b4d",
+  "forgeCad2026_dialogs_solids.cpp": "11304bbf3f096b36b2ecefcd43b80c07cfb4dd457567b2983a3e86529de36b06",
+  "tests/test_chamfer_preview_editing.h": "e1d32b51f8467e89116109d6004edf0d8acd5446aa3a99553d9bb36bc5e4a2ec",
+  "tests/test_viewport.cpp": "c9c5d130fe1c837de53eb6924b912fcace3530095bf761781cef0d8543ac1111",
+  "CMakeLists.txt": "800c41808ec939873b590244d80e8a91689a77e35c44ed5a30c0e885e37551d4",
+  "tools/generate_architecture.py": "5ae4222673fb82e62a0345a7610dcb6b9c2b3b1f7cd411106df8e858618d34f5"
+}
