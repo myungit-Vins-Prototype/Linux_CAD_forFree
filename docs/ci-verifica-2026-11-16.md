@@ -29,3 +29,8 @@ Il run43917116955 è terminato con fallimento dei test su entrambe le piattaform
 ## Correzione e verifica remota conclusiva
 
 CI GitHub finale: [43928716177](https://github.com/myungit-Vins-Prototype/Linux_CAD_forFree/actions/runs/43928716177), commit `046685ef1d31fdf4b61571d9630ea0f245b4ffb7`: **build e test PASS su Linux e macOS**. Linux 108PASS,2SKIP; macOS 112PASS,1SKIP. [Log e metadati](ci-sheet-join-github-prove-2026-11-16/README.txt). Il commit successivo contiene soltanto questa registrazione documentale e usa `[skip ci]`; codice, test e workflow sono identici al commit verificato.
+
+
+## Prosecuzione UI9/UI10 e wrapper
+
+[43943310329](https://github.com/myungit-Vins-Prototype/Linux_CAD_forFree/actions/runs/43943310329), commit `958ed68ff8f3930d17c9d5c5f1e500c6fd20b8e5`: build e test PASS. Linux108PASS/2SKIP; macOS112PASS/1SKIP. [Log effettivi](review-ui-colori-api-github-prove-2026-11-16/README.txt). Nuovo test GUI74controlli verificato localmente: VIEW_TESTS restaOFF inCI. Codice UI/API compilato su entrambe le piattaforme;483kernel e regressioni precedenti PASS.

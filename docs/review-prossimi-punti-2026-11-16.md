@@ -26,7 +26,7 @@ Due catene richiedono una modifica coerente: callback Estendi e provider della t
 
 ## Prosecuzione implementata dopo la CI verde
 
-Questo inventario iniziale rimane una fotografia storica di046685e. Il blocco successivo corregge UI9 (Sezione e massa seguono la palette) e UI10 (messaggio Sezione senza tagli); rimuove quattro wrapper, conserva sei query e lascia sette ingressi legacy aperti. Totale33difetti confermati corretti, non37. App,12CTest,74controlli Wayland e mappa PASS; nuova CI da verificare dopo push. [Esiti e limiti](review-ui-colori-api-2026-11-16.md).
+Questo inventario iniziale rimane una fotografia storica di046685e. Il blocco successivo corregge UI9 (Sezione e massa seguono la palette) e UI10 (messaggio Sezione senza tagli); rimuove quattro wrapper, conserva sei query e lascia sette ingressi legacy aperti. Totale33difetti confermati corretti, non37. App,12CTest,74controlli Wayland e mappa PASS; CI nuova Linux/macOS PASS su `958ed68`. [Esiti e limiti](review-ui-colori-api-2026-11-16.md).
 
 
 Il separatore Raccordo, allora solo candidato, è poi confermato e corretto nel completamentoUI9 con9verifiche raster del componente e3CTest pertinenti PASS. Totale33rilievi, non un incremento per ciascuna wrapper. Pianificata soltanto in lettura la pulizia coerente delle sette legacy in tre blocchi (Estendi, provider tavola, utility): [piano](review-ui-raccordo-prove-2026-11-16/legacy/PLAN.md); nessuna loro deprecazione/rimozione implementata.

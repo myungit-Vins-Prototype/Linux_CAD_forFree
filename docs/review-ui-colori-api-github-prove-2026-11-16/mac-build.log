@@ -1,0 +1,947 @@
+[0/2] Re-checking globbed directories...
+[1/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_math.cpp.o
+[2/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_predicates.cpp.o
+[3/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_bernstein.cpp.o
+[4/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_curve.cpp.o
+[5/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_curve_ops.cpp.o
+[6/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_bspline_basis.cpp.o
+[7/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_surface.cpp.o
+[8/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_bspline.cpp.o
+[9/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_curve_algo.cpp.o
+[10/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_bspline_surface.cpp.o
+[11/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_face_normal_bounds.cpp.o
+[12/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_surface_algo.cpp.o
+[13/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_surface_distance.cpp.o
+[14/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_topology.cpp.o
+[15/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_sketch_projection.cpp.o
+[16/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_profile.cpp.o
+[17/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_body_check.cpp.o
+[18/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_extrude.cpp.o
+[19/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_primitives.cpp.o
+[20/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_micro.cpp.o
+[21/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_pcurve.cpp.o
+[22/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_bspline_isoline.cpp.o
+[23/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_mass.cpp.o
+[24/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_intersect.cpp.o
+[25/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_apparent_contour.cpp.o
+[26/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_marching.cpp.o
+[27/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_classify.cpp.o
+[28/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_body_io.cpp.o
+[29/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_boolean_boundary.cpp.o
+[30/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_solid_trim.cpp.o
+[31/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_unify.cpp.o
+[32/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_history.cpp.o
+[33/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_boolean.cpp.o
+[34/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_nurbs.cpp.o
+[35/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_tessellate.cpp.o
+[36/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_nurbs_join.cpp.o
+[37/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_curve_surface.cpp.o
+[38/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_blend_paths.cpp.o
+[39/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_revolve.cpp.o
+[40/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_blend_loop.cpp.o
+[41/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_blend.cpp.o
+[42/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_blend_polar.cpp.o
+[43/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_blend_contour.cpp.o
+[44/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_blend_mitre.cpp.o
+[45/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_blend_section_curve.cpp.o
+[46/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_blend_contact_breaks.cpp.o
+[47/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_surface_tools.cpp.o
+[48/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_surface_poles.cpp.o
+[49/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_surface_poles_influence.cpp.o
+[50/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_blend_surface.cpp.o
+[51/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_surface_poles_jets.cpp.o
+[52/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_surface_poles_conversion.cpp.o
+[53/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_surface_poles_constraints.cpp.o
+[54/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_surface_refit.cpp.o
+[55/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_body_collection.cpp.o
+[56/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_affine_surface_fit.cpp.o
+[57/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_mapping_carrier.cpp.o
+[58/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_mapping_fit.cpp.o
+[59/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_surface_mapping.cpp.o
+[60/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_planar_flatten.cpp.o
+[61/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_quilt_mapping.cpp.o
+[62/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_sheet.cpp.o
+[63/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_curve_fit_bounds.cpp.o
+[64/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_curve_projection.cpp.o
+[65/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_offset.cpp.o
+/Users/runner/work/Linux_CAD_forFree/Linux_CAD_forFree/kernel/fk_offset.cpp:294:151: warning: unused parameter 'checkCurvature' [-Wunused-parameter]
+  294 | SurfacePtr offsetBSplineC2(const Surface &surface, double d, const Interval &uw, const Interval &vw, double tolerance, bool preserveEndSections, bool checkCurvature = true) {
+      |                                                                                                                                                       ^
+/Users/runner/work/Linux_CAD_forFree/Linux_CAD_forFree/kernel/fk_offset.cpp:521:149: warning: unused parameter 'checkCurvature' [-Wunused-parameter]
+  521 | SurfacePtr offsetBSpline(const Surface &surface, double d, const Interval &uw, const Interval &vw, double tolerance, bool preserveEndSections, bool checkCurvature = true) {
+      |                                                                                                                                                     ^
+2 warnings generated.
+[66/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_open_offset.cpp.o
+[67/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_offset_support.cpp.o
+[68/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_planar.cpp.o
+[69/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_sew.cpp.o
+[70/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_boundary.cpp.o
+[71/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_fill.cpp.o
+[72/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_project.cpp.o
+[73/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_thicken.cpp.o
+[74/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_shell.cpp.o
+[75/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_transform.cpp.o
+[76/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_hermite.cpp.o
+[77/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_helix.cpp.o
+[78/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_draft.cpp.o
+[79/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_helix_projection.cpp.o
+[80/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_sweep_atlas.cpp.o
+[81/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_sweep.cpp.o
+[82/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_sweep_surface_validation.cpp.o
+[83/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_sweep_analytic_bridge.cpp.o
+[84/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_sweep_caps.cpp.o
+[85/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_loft_knots.cpp.o
+[86/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_loft_merge.cpp.o
+[87/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_loft_guide_constraints.cpp.o
+[88/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_loft_profiles.cpp.o
+[89/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_loft_sections.cpp.o
+[90/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_loft.cpp.o
+[91/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_exchange.cpp.o
+[92/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_step.cpp.o
+[93/717] Automatic MOC and UIC for target forgecad_drawing_menus
+[94/717] Building CXX object CMakeFiles/forgecad_drawing_menus.dir/forgecad_drawing_menus_autogen/mocs_compilation.cpp.o
+[95/717] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_iges.cpp.o
+[96/717] Building CXX object CMakeFiles/forgecad_drawing_menus.dir/forgeCad2026_menu.cpp.o
+[97/717] Linking CXX static library kernel/libforgekernel.a
+[98/717] Automatic MOC and UIC for target forgecad_compute
+[99/717] Building CXX object CMakeFiles/forgecad_compute.dir/forgecad_compute_autogen/mocs_compilation.cpp.o
+[100/717] Building CXX object CMakeFiles/forgecad_drawing_menus.dir/forgeCad2026_ui_glass.cpp.o
+[101/717] Building CXX object CMakeFiles/forgecad_compute.dir/cad_gpu_broad_phase.cpp.o
+[102/717] Linking CXX static library libforgecad_drawing_menus.a
+[103/717] Automatic MOC and UIC for target forgecad_drawing_test_support
+[104/717] Building CXX object CMakeFiles/forgecad_drawing_test_support.dir/forgecad_drawing_test_support_autogen/mocs_compilation.cpp.o
+[105/717] Building OBJCXX object CMakeFiles/forgecad_compute.dir/gpu_box_support.mm.o
+[106/717] Linking CXX static library libforgecad_compute.a
+[107/717] Building CXX object CMakeFiles/forgecad_drawing_test_support.dir/forgeCad2026_zoom.cpp.o
+[108/717] Building CXX object CMakeFiles/forgecad_drawing_test_support.dir/cad_icons.cpp.o
+[109/717] Building CXX object CMakeFiles/forgecad_drawing_test_support.dir/cad_drawing_preparation.cpp.o
+[110/717] Building CXX object CMakeFiles/forgecad_drawing_test_support.dir/cad_drawing_local_section_display.cpp.o
+[111/717] Building CXX object CMakeFiles/forgecad_drawing_test_support.dir/cad_drawing_local_section_tool.cpp.o
+[112/717] Building CXX object CMakeFiles/forgecad_drawing_test_support.dir/cad_drawing_local_section_depth.cpp.o
+[113/717] Building CXX object CMakeFiles/forgecad_drawing_test_support.dir/cad_drawing_editor.cpp.o
+/Users/runner/work/Linux_CAD_forFree/Linux_CAD_forFree/cad_drawing_editor.cpp:1619:139: warning: captured structured bindings are a C++20 extension [-Wc++20-extensions]
+ 1619 |                 const auto add=[&](DrawingPointRole role,Vec3 point){const auto paper=paperPoint(*definition,*layout,point);if(pointShown(id,i,paper,role==DrawingPointRole::Center))notable.push_back({id,i,role,std::numeric_limits<double>::quiet_NaN(),paper,0});};
+      |                                                                                                                                           ^
+/Users/runner/work/Linux_CAD_forFree/Linux_CAD_forFree/cad_drawing_editor.cpp:1617:26: note: 'id' declared here
+ 1617 |         for(const auto &[id,pieces]:curves){const auto *definition=viewFor(id);const auto *layout=layoutFor(id);if(!definition||!layout||(cut&&!cut->parent.isNull()&&id!=cut->parent))continue;
+      |                          ^
+/Users/runner/work/Linux_CAD_forFree/Linux_CAD_forFree/cad_drawing_editor.cpp:2218:116: warning: captured structured bindings are a C++20 extension [-Wc++20-extensions]
+ 2218 |             const auto name=std::find_if(model.choices.begin(),model.choices.end(),[&](const auto &c){return c.id==id;});
+      |                                                                                                                    ^
+/Users/runner/work/Linux_CAD_forFree/Linux_CAD_forFree/cad_drawing_editor.cpp:2217:26: note: 'id' declared here
+ 2217 |         for(const auto &[id,box]:boxes)if(visible.contains(id)){
+      |                          ^
+2 warnings generated.
+[114/717] Building CXX object CMakeFiles/forgecad_drawing_test_support.dir/cad_drawing_derived.cpp.o
+/Users/runner/work/Linux_CAD_forFree/Linux_CAD_forFree/cad_drawing_derived.cpp:344:146: warning: captured structured bindings are a C++20 extension [-Wc++20-extensions]
+  344 |             auto segments=original;const auto source=std::find_if(model.bodies.begin(),model.bodies.end(),[&](const auto &b){return b.featureId==key.first;});
+      |                                                                                                                                                  ^
+/Users/runner/work/Linux_CAD_forFree/Linux_CAD_forFree/cad_drawing_derived.cpp:342:26: note: 'key' declared here
+  342 |         for(const auto &[key,original]:groups){
+      |                          ^
+1 warning generated.
+[115/717] Building CXX object CMakeFiles/forgecad_drawing_test_support.dir/cad_drawing_sheet.cpp.o
+/Users/runner/work/Linux_CAD_forFree/Linux_CAD_forFree/cad_drawing_sheet.cpp:256:142: warning: missing field 'firstDimension' initializer [-Wmissing-field-initializers]
+  256 |             prepared.dimensionNumbering={n["enabled"].toBool(),n["firstNumber"].toInt(),n["diameter"].toDouble(),n["rowTolerance"].toDouble()};
+      |                                                                                                                                              ^
+/Users/runner/work/Linux_CAD_forFree/Linux_CAD_forFree/cad_drawing_sheet.cpp:287:169: warning: missing field 'items' initializer [-Wmissing-field-initializers]
+  287 |             prepared.titleBlock={block["visible"].toBool(),block["code"].toString(),block["organization"].toString(),block["author"].toString(),block["date"].toString()};}
+      |                                                                                                                                                                         ^
+2 warnings generated.
+[116/717] Building CXX object CMakeFiles/forgecad_drawing_test_support.dir/cad_drawing_dimension.cpp.o
+[117/717] Building CXX object CMakeFiles/forgecad_drawing_test_support.dir/cad_drawing.cpp.o
+[118/717] Building CXX object CMakeFiles/forgecad_drawing_test_support.dir/cad_drawing_silhouette.cpp.o
+[119/717] Building CXX object CMakeFiles/forgecad_drawing_test_support.dir/cad_drawing_frame.cpp.o
+[120/717] Building CXX object CMakeFiles/forgecad_drawing_test_support.dir/cad_drawing_visibility.cpp.o
+[121/717] Building CXX object CMakeFiles/forgecad_drawing_test_support.dir/cad_drawing_template.cpp.o
+[122/717] Building CXX object CMakeFiles/forgecad_drawing_test_support.dir/cad_drawing_page.cpp.o
+[123/717] Impronta dei sorgenti della geometria
+[124/717] Building CXX object CMakeFiles/forgecad_drawing_test_support.dir/cad_drawing_template_editor.cpp.o
+[125/717] Linking CXX static library libforgecad_drawing_test_support.a
+[126/717] Automatic MOC and UIC for target forgecad_gpu_broad_phase_tests
+[127/717] Automatic MOC and UIC for target forgecad
+[128/717] Automatic MOC and UIC for target forgecad_metal_box_pool_tests
+[129/717] Automatic MOC and UIC for target forgecad_tessellation_availability_tests
+[130/717] Automatic MOC and UIC for target forgecad_cuda_pool_tests
+[131/717] Automatic MOC and UIC for target forgecad_metal_tessellation_tests
+[132/717] Automatic MOC and UIC for target forgecad_constraint_linear_tests
+[133/717] Automatic MOC and UIC for target forgecad_display_cache_memory_tests
+[134/717] Automatic MOC and UIC for target forgecad_mesh_export_backend_tests
+[135/717] Automatic MOC and UIC for target forgecad_application_theme_tests
+[136/717] Automatic MOC and UIC for target forgecad_expression_tests
+[137/717] Automatic MOC and UIC for target forgecad_shape_analysis_tests
+[138/717] Automatic MOC and UIC for target forgecad_document_compression_tests
+[139/717] Automatic MOC and UIC for target forgecad_snapshot_chunks_tests
+[140/717] Automatic MOC and UIC for target forgecad_drawing_tests
+[141/717] Automatic MOC and UIC for target forgecad_revision_store_tests
+[142/717] Automatic MOC and UIC for target forgecad_revision_release_tests
+[143/717] Automatic MOC and UIC for target forgecad_catalog_recovery_tests
+[144/717] Automatic MOC and UIC for target forgecad_feature_dependencies_tests
+[145/717] Automatic MOC and UIC for target forgecad_geometry_refs_tests
+[146/717] Automatic MOC and UIC for target forgecad_workspace_tests
+[147/717] Automatic MOC and UIC for target forgecad_drawing_local_tools_tests
+[148/717] Automatic MOC and UIC for target forgecad_drawing_local_section_depth_tests
+[149/717] Automatic MOC and UIC for target forgecad_drawing_crop_tests
+[150/717] Automatic MOC and UIC for target forgecad_drawing_templates_tests
+[151/717] Automatic MOC and UIC for target forgecad_drawing_scale_tests
+[152/717] Automatic MOC and UIC for target forgecad_drawing_preparation_tests
+[153/717] Automatic MOC and UIC for target forgecad_drawing_editor_tests
+[154/717] Automatic MOC and UIC for target forgecad_projected_drawing_tests
+[155/717] Automatic MOC and UIC for target forgecad_drawing_view_edit_tests
+[156/717] Automatic MOC and UIC for target forgecad_drawing_layout_history_tests
+[157/717] Automatic MOC and UIC for target forgecad_drawing_dimensions_tests
+[158/717] Automatic MOC and UIC for target forgecad_drawing_dimensions_gui_tests
+[159/717] Automatic MOC and UIC for target forgecad_drawing_view_placement_tests
+[160/717] Automatic MOC and UIC for target forgecad_drawing_dimension_repair_tests
+[161/717] Automatic MOC and UIC for target forgecad_drawing_silhouette_tests
+[162/717] Automatic MOC and UIC for target forgecad_drawing_visibility_tests
+[163/717] Automatic MOC and UIC for target forgecad_drawing_hidden_lines_tests
+[164/717] Automatic MOC and UIC for target forgecad_drawing_page_tests
+[165/717] Automatic MOC and UIC for target forgecad_drawing_derived_tests
+[166/717] Automatic MOC and UIC for target forgecad_drawing_detail_tests
+[167/717] Automatic MOC and UIC for target forgecad_drawing_auxiliary_tests
+[168/717] Automatic MOC and UIC for target forgecad_drawing_break_tests
+[169/717] Automatic MOC and UIC for target forgecad_drawing_presentation_tests
+[170/717] Automatic MOC and UIC for target forgecad_revision_numbers_tests
+[171/717] Automatic MOC and UIC for target forgecad_drawing_centers_tests
+[172/717] Automatic MOC and UIC for target forgecad_drawing_complete_sections_tests
+[173/717] Automatic MOC and UIC for target forgecad_drawing_axes_tests
+[174/717] Automatic MOC and UIC for target forgecad_drawing_ui_controls_tests
+[175/717] Automatic MOC and UIC for target forgecad_overlay_uniform_tests
+[176/717] Automatic MOC and UIC for target forgecad_drawing_focus_tests
+[177/717] Automatic RCC for icons/forgecad.qrc
+[178/717] Building CXX object CMakeFiles/forgecad.dir/forgecad_autogen/mocs_compilation.cpp.o
+[179/717] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_occt.dir/__/occt/fk_occt_import.cpp.o
+[180/717] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026.cpp.o
+[181/717] Building CXX object CMakeFiles/forgecad.dir/cad_document_tabs.cpp.o
+[182/717] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_application_theme.cpp.o
+[183/717] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_ui_glass.cpp.o
+[184/717] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_menu.cpp.o
+[185/717] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_ribbon_preview.cpp.o
+[186/717] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_ribbon_editor.cpp.o
+[187/717] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_viewport.cpp.o
+[188/717] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_zoom.cpp.o
+[189/717] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_viewport_sketch.cpp.o
+[190/717] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_gui.cpp.o
+[191/717] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_viewport_sketch_reference.cpp.o
+[192/717] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_viewport_document_lifetime.cpp.o
+[193/717] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_viewport_document.cpp.o
+[194/717] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_viewport_pole_visibility.cpp.o
+[195/717] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_viewport_selection.cpp.o
+[196/717] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_viewport_body_box.cpp.o
+[197/717] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_viewport_storyboard.cpp.o
+[198/717] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_viewport_loft_diagnostics.cpp.o
+[199/717] Building CXX object CMakeFiles/forgecad.dir/cad_loft_diagnostics.cpp.o
+[200/717] Building CXX object CMakeFiles/forgecad.dir/cad_storyboard_selection.cpp.o
+[201/717] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_viewport_parameter_dimensions.cpp.o
+[202/717] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_viewport_render.cpp.o
+[203/717] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_viewport_scene.cpp.o
+[204/717] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_viewport_preview.cpp.o
+[205/717] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_feature_preview.cpp.o
+[206/717] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_viewport_interaction.cpp.o
+[207/717] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_sketch_curvature.cpp.o
+[208/717] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_camera.cpp.o
+[209/717] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_gpu_picker.cpp.o
+[210/717] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_glass_compositor.cpp.o
+[211/717] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_gui_common.cpp.o
+[212/717] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_scene_renderer.cpp.o
+[213/717] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_storyboard.cpp.o
+[214/717] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_operation_illustration.cpp.o
+[215/717] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_dialogs_common.cpp.o
+[216/717] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_fillet_handles.cpp.o
+[217/717] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_dialogs_fillet.cpp.o
+[218/717] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_dialogs_solids.cpp.o
+[219/717] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_dialogs_projection.cpp.o
+[220/717] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_dialogs_surfaces.cpp.o
+[221/717] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_dialogs_trim.cpp.o
+[222/717] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_dialogs_surface_tools.cpp.o
+[223/717] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_dialogs_mapping.cpp.o
+[224/717] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_dialogs_sketch.cpp.o
+[225/717] Building CXX object CMakeFiles/forgecad.dir/cad_shape_analysis.cpp.o
+[226/717] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_dialogs_analysis.cpp.o
+[227/717] Building CXX object CMakeFiles/forgecad.dir/cad_display_cache.cpp.o
+[228/717] Building CXX object CMakeFiles/forgecad.dir/cad_memory.cpp.o
+[229/717] Building CXX object CMakeFiles/forgecad.dir/cad_overlay_renderer.cpp.o
+[230/717] Building CXX object CMakeFiles/forgecad.dir/cad_curve_solver.cpp.o
+[231/717] Building CXX object CMakeFiles/forgecad.dir/cad_ellipse.cpp.o
+[232/717] Building CXX object CMakeFiles/forgecad.dir/cad_surface_poles_model.cpp.o
+[233/717] Building CXX object CMakeFiles/forgecad.dir/cad_surface_tools.cpp.o
+[234/717] Building CXX object CMakeFiles/forgecad.dir/cad_surface_poles_visibility.cpp.o
+[235/717] Building CXX object CMakeFiles/forgecad.dir/cad_surface_poles_interaction.cpp.o
+[236/717] Building CXX object CMakeFiles/forgecad.dir/cad_surface_poles_session.cpp.o
+[237/717] Building CXX object CMakeFiles/forgecad.dir/cad_solid_trim.cpp.o
+[238/717] Building CXX object CMakeFiles/forgecad.dir/cad_surface_mapping.cpp.o
+[239/717] Building CXX object CMakeFiles/forgecad.dir/cad_spatial_sketch.cpp.o
+[240/717] Building CXX object CMakeFiles/forgecad.dir/cad_curve_extract.cpp.o
+[241/717] Building CXX object CMakeFiles/forgecad.dir/cad_snap.cpp.o
+[242/717] Building CXX object CMakeFiles/forgecad.dir/cad_expression.cpp.o
+[243/717] Building CXX object CMakeFiles/forgecad.dir/cad_export.cpp.o
+[244/717] Building CXX object CMakeFiles/forgecad.dir/cad_document_precision.cpp.o
+[245/717] Building CXX object CMakeFiles/forgecad.dir/cad_document_recovery.cpp.o
+[246/717] Building CXX object CMakeFiles/forgecad.dir/cad_document_io.cpp.o
+[247/717] Building CXX object CMakeFiles/forgecad.dir/cad_document_read.cpp.o
+[248/717] Building CXX object CMakeFiles/forgecad.dir/cad_drawing_dimension.cpp.o
+[249/717] Building CXX object CMakeFiles/forgecad.dir/cad_drawing.cpp.o
+[250/717] Building CXX object CMakeFiles/forgecad.dir/cad_drawing_derived.cpp.o
+/Users/runner/work/Linux_CAD_forFree/Linux_CAD_forFree/cad_drawing_derived.cpp:344:146: warning: captured structured bindings are a C++20 extension [-Wc++20-extensions]
+  344 |             auto segments=original;const auto source=std::find_if(model.bodies.begin(),model.bodies.end(),[&](const auto &b){return b.featureId==key.first;});
+      |                                                                                                                                                  ^
+/Users/runner/work/Linux_CAD_forFree/Linux_CAD_forFree/cad_drawing_derived.cpp:342:26: note: 'key' declared here
+  342 |         for(const auto &[key,original]:groups){
+      |                          ^
+1 warning generated.
+[251/717] Building CXX object CMakeFiles/forgecad.dir/cad_drawing_sheet.cpp.o
+/Users/runner/work/Linux_CAD_forFree/Linux_CAD_forFree/cad_drawing_sheet.cpp:256:142: warning: missing field 'firstDimension' initializer [-Wmissing-field-initializers]
+  256 |             prepared.dimensionNumbering={n["enabled"].toBool(),n["firstNumber"].toInt(),n["diameter"].toDouble(),n["rowTolerance"].toDouble()};
+      |                                                                                                                                              ^
+/Users/runner/work/Linux_CAD_forFree/Linux_CAD_forFree/cad_drawing_sheet.cpp:287:169: warning: missing field 'items' initializer [-Wmissing-field-initializers]
+  287 |             prepared.titleBlock={block["visible"].toBool(),block["code"].toString(),block["organization"].toString(),block["author"].toString(),block["date"].toString()};}
+      |                                                                                                                                                                         ^
+2 warnings generated.
+[252/717] Building CXX object CMakeFiles/forgecad.dir/cad_drawing_preparation.cpp.o
+[253/717] Building CXX object CMakeFiles/forgecad.dir/cad_drawing_local_section_display.cpp.o
+[254/717] Building CXX object CMakeFiles/forgecad.dir/cad_drawing_local_section_tool.cpp.o
+[255/717] Building CXX object CMakeFiles/forgecad.dir/cad_drawing_local_section_depth.cpp.o
+[256/717] Building CXX object CMakeFiles/forgecad.dir/cad_drawing_silhouette.cpp.o
+[257/717] Building CXX object CMakeFiles/forgecad.dir/cad_drawing_visibility.cpp.o
+[258/717] Building CXX object CMakeFiles/forgecad.dir/cad_drawing_frame.cpp.o
+[259/717] Building CXX object CMakeFiles/forgecad.dir/cad_drawing_editor.cpp.o
+/Users/runner/work/Linux_CAD_forFree/Linux_CAD_forFree/cad_drawing_editor.cpp:1619:139: warning: captured structured bindings are a C++20 extension [-Wc++20-extensions]
+ 1619 |                 const auto add=[&](DrawingPointRole role,Vec3 point){const auto paper=paperPoint(*definition,*layout,point);if(pointShown(id,i,paper,role==DrawingPointRole::Center))notable.push_back({id,i,role,std::numeric_limits<double>::quiet_NaN(),paper,0});};
+      |                                                                                                                                           ^
+/Users/runner/work/Linux_CAD_forFree/Linux_CAD_forFree/cad_drawing_editor.cpp:1617:26: note: 'id' declared here
+ 1617 |         for(const auto &[id,pieces]:curves){const auto *definition=viewFor(id);const auto *layout=layoutFor(id);if(!definition||!layout||(cut&&!cut->parent.isNull()&&id!=cut->parent))continue;
+      |                          ^
+/Users/runner/work/Linux_CAD_forFree/Linux_CAD_forFree/cad_drawing_editor.cpp:2218:116: warning: captured structured bindings are a C++20 extension [-Wc++20-extensions]
+ 2218 |             const auto name=std::find_if(model.choices.begin(),model.choices.end(),[&](const auto &c){return c.id==id;});
+      |                                                                                                                    ^
+/Users/runner/work/Linux_CAD_forFree/Linux_CAD_forFree/cad_drawing_editor.cpp:2217:26: note: 'id' declared here
+ 2217 |         for(const auto &[id,box]:boxes)if(visible.contains(id)){
+      |                          ^
+2 warnings generated.
+[260/717] Building CXX object CMakeFiles/forgecad.dir/cad_drawing_template.cpp.o
+[261/717] Building CXX object CMakeFiles/forgecad.dir/cad_drawing_page.cpp.o
+[262/717] Building CXX object CMakeFiles/forgecad.dir/cad_drawing_template_editor.cpp.o
+[263/717] Building CXX object CMakeFiles/forgecad.dir/cad_drawing_file.cpp.o
+[264/717] Building CXX object CMakeFiles/forgecad.dir/cad_drawing_browser.cpp.o
+[265/717] Building CXX object CMakeFiles/forgecad.dir/cad_drawing_revisions.cpp.o
+[266/717] Building CXX object CMakeFiles/forgecad.dir/cad_drawing_revision_ui.cpp.o
+[267/717] Building CXX object CMakeFiles/forgecad.dir/cad_drawing_restore.cpp.o
+[268/717] Building CXX object CMakeFiles/forgecad.dir/cad_drawing_release.cpp.o
+[269/717] Building CXX object CMakeFiles/forgecad.dir/cad_drawing_release_ui.cpp.o
+[270/717] Building CXX object CMakeFiles/forgecad.dir/cad_drawing_window.cpp.o
+[271/717] Building CXX object CMakeFiles/forgecad.dir/cad_drawing_sheets_ui.cpp.o
+[272/717] Building CXX object CMakeFiles/forgecad.dir/cad_revision_recovery_ui.cpp.o
+[273/717] Building CXX object CMakeFiles/forgecad.dir/cad_revision_store.cpp.o
+[274/717] Building CXX object CMakeFiles/forgecad.dir/cad_native_revisions.cpp.o
+[275/717] Building CXX object CMakeFiles/forgecad.dir/cad_revision_client.cpp.o
+[276/717] Building CXX object CMakeFiles/forgecad.dir/cad_workspace.cpp.o
+[277/717] Building CXX object CMakeFiles/forgecad.dir/cad_snapshot_chunks.cpp.o
+[278/717] Building CXX object CMakeFiles/forgecad.dir/cad_sketch_edit.cpp.o
+[279/717] Building CXX object CMakeFiles/forgecad.dir/cad_constraints.cpp.o
+[280/717] Building CXX object CMakeFiles/forgecad.dir/cad_history.cpp.o
+[281/717] Building CXX object CMakeFiles/forgecad.dir/cad_history_graph.cpp.o
+[282/717] Building CXX object CMakeFiles/forgecad.dir/cad_feature_dependencies.cpp.o
+[283/717] Building CXX object CMakeFiles/forgecad.dir/cad_feature_build.cpp.o
+[284/717] Building CXX object CMakeFiles/forgecad.dir/cad_icons.cpp.o
+[285/717] Building CXX object CMakeFiles/forgecad.dir/cad_history_chain.cpp.o
+[286/717] Building CXX object CMakeFiles/forgecad.dir/cad_model_history.cpp.o
+[287/717] Building CXX object CMakeFiles/forgecad.dir/cad_topology_ref.cpp.o
+[288/717] Building CXX object CMakeFiles/forgecad.dir/cad_element_names.cpp.o
+[289/717] Building CXX object CMakeFiles/forgecad.dir/cad_kernel.cpp.o
+[290/717] Building CXX object CMakeFiles/forgecad.dir/cad_feature_faces.cpp.o
+[291/717] Building CXX object CMakeFiles/forgecad.dir/cad_features.cpp.o
+[292/717] Building CXX object CMakeFiles/forgecad.dir/cad_mass.cpp.o
+[293/717] Building CXX object CMakeFiles/forgecad.dir/cad_forge.cpp.o
+/Users/runner/work/Linux_CAD_forFree/Linux_CAD_forFree/cad_forge.cpp:1530:39: warning: missing field 'plane' initializer [-Wmissing-field-initializers]
+ 1530 |         contacts.push_back({body, face});
+      |                                       ^
+1 warning generated.
+[294/717] Building CXX object CMakeFiles/forgecad.dir/cad_measure.cpp.o
+[295/717] Building CXX object CMakeFiles/forgecad.dir/cad_fillet_paths.cpp.o
+[296/717] Building CXX object CMakeFiles/forgecad.dir/cad_datum.cpp.o
+[297/717] Building CXX object CMakeFiles/forgecad.dir/cad_import.cpp.o
+[298/717] Building CXX object CMakeFiles/forgecad.dir/cad_pattern.cpp.o
+[299/717] Building CXX object CMakeFiles/forgecad.dir/cad_circular_pattern_fit.cpp.o
+[300/717] Building CXX object CMakeFiles/forgecad.dir/cad_fill_pattern.cpp.o
+[301/717] Building CXX object CMakeFiles/forgecad.dir/cad_loft_correspondence.cpp.o
+[302/717] Building CXX object CMakeFiles/forgecad.dir/cad_loft_correspondence_editor.cpp.o
+[303/717] Building CXX object CMakeFiles/forgecad.dir/cad_pattern_variation.cpp.o
+[304/717] Building CXX object CMakeFiles/forgecad.dir/cad_pattern_variation_editor.cpp.o
+[305/717] Building CXX object CMakeFiles/forgecad.dir/cad_projected_curve.cpp.o
+[306/717] Building CXX object CMakeFiles/forgecad.dir/cad_extrude.cpp.o
+[307/717] Building CXX object CMakeFiles/forgecad.dir/cad_sketch_reference_usage.cpp.o
+[308/717] Building CXX object CMakeFiles/forgecad.dir/cad_cuda_tessellation.cpp.o
+[309/717] Building CXX object CMakeFiles/forgecad.dir/cad_sketch_refs.cpp.o
+[310/717] Building OBJCXX object CMakeFiles/forgecad.dir/cuda_support_metal.mm.o
+[311/717] Building OBJCXX object CMakeFiles/forgecad.dir/cad_macos_menu.mm.o
+[312/717] Building CXX object CMakeFiles/forgecad.dir/forgecad_autogen/2SEMU33LXP/qrc_forgecad.cpp.o
+[313/717] Building CXX object CMakeFiles/forgecad.dir/cad_sketch_offset.cpp.o
+[314/717] Building CXX object CMakeFiles/forgecad_sketch_offset_validation_tests.dir/tests/test_sketch_offset_validation.cpp.o
+[315/717] Building CXX object CMakeFiles/forgecad_sketch_offset_validation_tests.dir/cad_curve_solver.cpp.o
+[316/717] Building CXX object CMakeFiles/forgecad_sketch_offset_validation_tests.dir/cad_sketch_offset.cpp.o
+[317/717] Building CXX object CMakeFiles/forgecad_gpu_broad_phase_tests.dir/forgecad_gpu_broad_phase_tests_autogen/mocs_compilation.cpp.o
+[318/717] Building CXX object CMakeFiles/forgecad_sketch_offset_validation_tests.dir/cad_ellipse.cpp.o
+[319/717] Building CXX object CMakeFiles/forgecad_metal_box_pool_tests.dir/forgecad_metal_box_pool_tests_autogen/mocs_compilation.cpp.o
+[320/717] Building CXX object CMakeFiles/forgecad_gpu_broad_phase_tests.dir/tests/test_gpu_broad_phase.cpp.o
+[321/717] Building CXX object CMakeFiles/forgecad_tessellation_availability_tests.dir/forgecad_tessellation_availability_tests_autogen/mocs_compilation.cpp.o
+[322/717] Building CXX object CMakeFiles/forgecad_tessellation_availability_tests.dir/tests/test_tessellation_availability.cpp.o
+[323/717] Building CXX object CMakeFiles/forgecad_metal_box_pool_tests.dir/tests/test_metal_box_pool.cpp.o
+[324/717] Building CXX object CMakeFiles/forgecad_cuda_pool_tests.dir/forgecad_cuda_pool_tests_autogen/mocs_compilation.cpp.o
+[325/717] Building CXX object CMakeFiles/forgecad_tessellation_availability_tests.dir/cad_cuda_tessellation.cpp.o
+[326/717] Building CXX object CMakeFiles/forgecad_cuda_pool_tests.dir/cuda_support_cpu.cpp.o
+[327/717] Building CXX object CMakeFiles/forgecad_metal_tessellation_tests.dir/forgecad_metal_tessellation_tests_autogen/mocs_compilation.cpp.o
+[328/717] Building CXX object CMakeFiles/forgecad_cuda_pool_tests.dir/tests/test_cuda_pool.cpp.o
+[329/717] Building CXX object CMakeFiles/forgecad_metal_tessellation_tests.dir/cad_cuda_tessellation.cpp.o
+[330/717] Building CXX object CMakeFiles/forgecad_metal_tessellation_tests.dir/tests/test_metal_tessellation.cpp.o
+[331/717] Building CXX object CMakeFiles/forgecad_constraint_linear_tests.dir/forgecad_constraint_linear_tests_autogen/mocs_compilation.cpp.o
+[332/717] Building OBJCXX object CMakeFiles/forgecad_metal_tessellation_tests.dir/cuda_support_metal.mm.o
+[333/717] Building CXX object CMakeFiles/forgecad_display_cache_memory_tests.dir/forgecad_display_cache_memory_tests_autogen/mocs_compilation.cpp.o
+[334/717] Building CXX object CMakeFiles/forgecad_constraint_linear_tests.dir/tests/test_constraint_linear.cpp.o
+[335/717] Building CXX object CMakeFiles/forgecad_display_cache_memory_tests.dir/tests/test_display_cache_memory.cpp.o
+[336/717] Building CXX object CMakeFiles/forgecad_mesh_export_backend_tests.dir/forgecad_mesh_export_backend_tests_autogen/mocs_compilation.cpp.o
+[337/717] Building CXX object CMakeFiles/forgecad_display_cache_memory_tests.dir/cad_display_cache.cpp.o
+[338/717] Building CXX object CMakeFiles/forgecad_mesh_export_backend_tests.dir/tests/test_mesh_export_backends.cpp.o
+[339/717] Building CXX object CMakeFiles/forgecad_mesh_export_backend_tests.dir/cad_cuda_tessellation.cpp.o
+[340/717] Building CXX object CMakeFiles/forgecad_mesh_export_backend_tests.dir/cad_export.cpp.o
+[341/717] Building CXX object CMakeFiles/forgecad_application_theme_tests.dir/forgecad_application_theme_tests_autogen/mocs_compilation.cpp.o
+[342/717] Building OBJCXX object CMakeFiles/forgecad_mesh_export_backend_tests.dir/cuda_support_metal.mm.o
+[343/717] Building CXX object CMakeFiles/forgecad_application_theme_tests.dir/tests/test_application_theme.cpp.o
+[344/717] Building CXX object CMakeFiles/forgecad_expression_tests.dir/forgecad_expression_tests_autogen/mocs_compilation.cpp.o
+[345/717] Building CXX object CMakeFiles/forgecad_application_theme_tests.dir/forgeCad2026_application_theme.cpp.o
+[346/717] Building CXX object CMakeFiles/forgecad_expression_tests.dir/tests/test_expression.cpp.o
+[347/717] Building CXX object CMakeFiles/forgecad_shape_analysis_tests.dir/forgecad_shape_analysis_tests_autogen/mocs_compilation.cpp.o
+[348/717] Building CXX object CMakeFiles/forgecad_expression_tests.dir/cad_expression.cpp.o
+[349/717] Building CXX object CMakeFiles/forgecad_shape_analysis_tests.dir/tests/test_shape_analysis.cpp.o
+[350/717] Building CXX object CMakeFiles/forgecad_shape_analysis_tests.dir/cad_shape_analysis.cpp.o
+[351/717] Building CXX object CMakeFiles/forgecad_document_compression_tests.dir/forgecad_document_compression_tests_autogen/mocs_compilation.cpp.o
+[352/717] Building CXX object CMakeFiles/forgecad_document_compression_tests.dir/tests/test_document_compression.cpp.o
+[353/717] Building CXX object CMakeFiles/forgecad_snapshot_chunks_tests.dir/forgecad_snapshot_chunks_tests_autogen/mocs_compilation.cpp.o
+[354/717] Building CXX object CMakeFiles/forgecad_document_compression_tests.dir/cad_document_read.cpp.o
+[355/717] Building CXX object CMakeFiles/forgecad_snapshot_chunks_tests.dir/tests/test_snapshot_chunks.cpp.o
+[356/717] Building CXX object CMakeFiles/forgecad_drawing_tests.dir/forgecad_drawing_tests_autogen/mocs_compilation.cpp.o
+[357/717] Building CXX object CMakeFiles/forgecad_snapshot_chunks_tests.dir/cad_snapshot_chunks.cpp.o
+[358/717] Building CXX object CMakeFiles/forgecad_drawing_tests.dir/tests/test_drawing.cpp.o
+[359/717] Building CXX object CMakeFiles/forgecad_drawing_tests.dir/cad_drawing.cpp.o
+[360/717] Building CXX object CMakeFiles/forgecad_revision_store_tests.dir/forgecad_revision_store_tests_autogen/mocs_compilation.cpp.o
+[361/717] Building CXX object CMakeFiles/forgecad_drawing_tests.dir/cad_drawing_dimension.cpp.o
+[362/717] Building CXX object CMakeFiles/forgecad_revision_store_tests.dir/tests/test_revision_store.cpp.o
+[363/717] Building CXX object CMakeFiles/forgecad_revision_release_tests.dir/forgecad_revision_release_tests_autogen/mocs_compilation.cpp.o
+[364/717] Building CXX object CMakeFiles/forgecad_revision_release_tests.dir/tests/test_revision_releases.cpp.o
+[365/717] Building CXX object CMakeFiles/forgecad_revision_store_tests.dir/cad_revision_store.cpp.o
+[366/717] Building CXX object CMakeFiles/forgecad_catalog_recovery_tests.dir/forgecad_catalog_recovery_tests_autogen/mocs_compilation.cpp.o
+[367/717] Building CXX object CMakeFiles/forgecad_catalog_recovery_tests.dir/tests/test_catalog_recovery.cpp.o
+[368/717] Building CXX object CMakeFiles/forgecad_revision_release_tests.dir/cad_revision_store.cpp.o
+[369/717] Building CXX object CMakeFiles/forgecad_feature_dependencies_tests.dir/forgecad_feature_dependencies_tests_autogen/mocs_compilation.cpp.o
+[370/717] Building CXX object CMakeFiles/forgecad_feature_dependencies_tests.dir/tests/test_feature_dependencies.cpp.o
+[371/717] Building CXX object CMakeFiles/forgecad_catalog_recovery_tests.dir/cad_revision_store.cpp.o
+[372/717] Building CXX object CMakeFiles/forgecad_geometry_refs_tests.dir/forgecad_geometry_refs_tests_autogen/mocs_compilation.cpp.o
+[373/717] Building CXX object CMakeFiles/forgecad_feature_dependencies_tests.dir/cad_feature_dependencies.cpp.o
+[374/717] Building CXX object CMakeFiles/forgecad_geometry_refs_tests.dir/tests/test_geometry_refs.cpp.o
+[375/717] Building CXX object CMakeFiles/forgecad_geometry_refs_tests.dir/cad_model_history.cpp.o
+[376/717] Building CXX object CMakeFiles/forgecad_workspace_tests.dir/forgecad_workspace_tests_autogen/mocs_compilation.cpp.o
+[377/717] Building CXX object CMakeFiles/forgecad_geometry_refs_tests.dir/cad_feature_dependencies.cpp.o
+[378/717] Building CXX object CMakeFiles/forgecad_workspace_tests.dir/tests/test_workspace.cpp.o
+[379/717] Building CXX object CMakeFiles/forgecad_workspace_tests.dir/cad_workspace.cpp.o
+[380/717] Building CXX object CMakeFiles/forgecad_drawing_local_tools_tests.dir/forgecad_drawing_local_tools_tests_autogen/mocs_compilation.cpp.o
+[381/717] Building CXX object CMakeFiles/forgecad_workspace_tests.dir/cad_revision_store.cpp.o
+[382/717] Building CXX object CMakeFiles/forgecad_drawing_local_section_depth_tests.dir/forgecad_drawing_local_section_depth_tests_autogen/mocs_compilation.cpp.o
+[383/717] Building CXX object CMakeFiles/forgecad_drawing_local_tools_tests.dir/tests/test_drawing_local_tools.cpp.o
+[384/717] Building CXX object CMakeFiles/forgecad_drawing_crop_tests.dir/forgecad_drawing_crop_tests_autogen/mocs_compilation.cpp.o
+[385/717] Building CXX object CMakeFiles/forgecad_drawing_crop_tests.dir/tests/test_drawing_crop.cpp.o
+[386/717] Building CXX object CMakeFiles/forgecad_drawing_templates_tests.dir/forgecad_drawing_templates_tests_autogen/mocs_compilation.cpp.o
+[387/717] Building CXX object CMakeFiles/forgecad_drawing_local_section_depth_tests.dir/tests/test_drawing_local_section_depth.cpp.o
+[388/717] Building CXX object CMakeFiles/forgecad_drawing_preparation_tests.dir/forgecad_drawing_preparation_tests_autogen/mocs_compilation.cpp.o
+[389/717] Building CXX object CMakeFiles/forgecad_drawing_templates_tests.dir/tests/test_drawing_templates.cpp.o
+[390/717] Building CXX object CMakeFiles/forgecad_drawing_scale_tests.dir/forgecad_drawing_scale_tests_autogen/mocs_compilation.cpp.o
+[391/717] Building CXX object CMakeFiles/forgecad_drawing_preparation_tests.dir/tests/test_drawing_preparation.cpp.o
+[392/717] Building CXX object CMakeFiles/forgecad_drawing_editor_tests.dir/forgecad_drawing_editor_tests_autogen/mocs_compilation.cpp.o
+[393/717] Building CXX object CMakeFiles/forgecad_drawing_scale_tests.dir/tests/test_drawing_scale.cpp.o
+/Users/runner/work/Linux_CAD_forFree/Linux_CAD_forFree/tests/test_drawing_scale.cpp:47:101: warning: missing field 'legacySnapshotNames' initializer [-Wmissing-field-initializers]
+   47 |  DrawingEditorModel model{{{QUuid::createUuid(),{}},{{1,body,names}}},{{1,"Blocco 10 × 6 × 4"}},{}};
+      |                                                                                                   ^
+1 warning generated.
+[394/717] Building CXX object CMakeFiles/forgecad_projected_drawing_tests.dir/forgecad_projected_drawing_tests_autogen/mocs_compilation.cpp.o
+[395/717] Building CXX object CMakeFiles/forgecad_drawing_editor_tests.dir/tests/test_drawing_editor.cpp.o
+[396/717] Building CXX object CMakeFiles/forgecad_drawing_view_edit_tests.dir/forgecad_drawing_view_edit_tests_autogen/mocs_compilation.cpp.o
+[397/717] Building CXX object CMakeFiles/forgecad_projected_drawing_tests.dir/tests/test_projected_drawing.cpp.o
+/Users/runner/work/Linux_CAD_forFree/Linux_CAD_forFree/tests/test_projected_drawing.cpp:89:113: warning: missing field 'legacySnapshotNames' initializer [-Wmissing-field-initializers]
+   89 |         DrawingSheet page;page.drawing.model=model.version;DrawingEditorModel editorModel{model,{{1,"Corpo"}},{}};DrawingSheetEditor editor(page,editorModel);editor.resize(1450,850);editor.show();QApplication::processEvents();bool dialogSeen=false;
+      |                                                                                                                 ^
+1 warning generated.
+[398/717] Building CXX object CMakeFiles/forgecad_drawing_layout_history_tests.dir/forgecad_drawing_layout_history_tests_autogen/mocs_compilation.cpp.o
+[399/717] Building CXX object CMakeFiles/forgecad_drawing_view_edit_tests.dir/tests/test_drawing_view_edit.cpp.o
+In file included from /Users/runner/work/Linux_CAD_forFree/Linux_CAD_forFree/tests/test_drawing_view_edit.cpp:39:
+/Users/runner/work/Linux_CAD_forFree/Linux_CAD_forFree/tests/test_drawing_view_preview.h:18:246: warning: missing field 'legacySnapshotNames' initializer [-Wmissing-field-initializers]
+   18 |  auto shape=std::make_shared<Body>(makeBox(Frame3(),12,8,6));auto names=std::make_shared<ElementNames>(propagateNames(*shape,makeHistory({},*shape),{},"iso"));DrawingEditorModel model{{{QUuid::createUuid(),{}},{{1,shape,names}}},{{1,"Corpo"}},{}};
+      |                                                                                                                                                                                                                                                      ^
+/Users/runner/work/Linux_CAD_forFree/Linux_CAD_forFree/tests/test_drawing_view_preview.h:26:192: warning: missing field 'legacySnapshotNames' initializer [-Wmissing-field-initializers]
+   26 |  auto names=std::make_shared<ElementNames>(propagateNames(*shape,makeHistory({},*shape),{},"anteprima"));DrawingEditorModel model{{{QUuid::createUuid(),{}},{{1,shape,names}}},{{1,"Corpo"}},{}};
+      |                                                                                                                                                                                                ^
+In file included from /Users/runner/work/Linux_CAD_forFree/Linux_CAD_forFree/tests/test_drawing_view_edit.cpp:40:
+/Users/runner/work/Linux_CAD_forFree/Linux_CAD_forFree/tests/test_drawing_pan.h:15:242: warning: missing field 'legacySnapshotNames' initializer [-Wmissing-field-initializers]
+   15 |  auto body=std::make_shared<Body>(makeBox(Frame3(),12,8,6));auto names=std::make_shared<ElementNames>(propagateNames(*body,makeHistory({},*body),{},"pan"));DrawingEditorModel model{{{QUuid::createUuid(),{}},{{1,body,names}}},{{1,"Corpo"}},{}};DrawingSheet s;s.drawing.model=model.snapshot.version;DrawingSheetEditor e(s,model);e.resize(1200,800);e.show();QApplication::processEvents();e.fitSheet();DrawingView v;v.kind=DrawingViewKind::ProjectedEdges;v.scale=4;ok(e.insertView(v,{v.id,"Vista pan",{130,110},{1}}));QApplication::processEvents();e.markSaved();auto *canvas=e.canvas();canvas->scale(8,8);canvas->centerOn(148,105);canvas->setFocus();QApplication::processEvents();const auto before=encoded(e);const auto curve=e.curves(v.id)[0].curve.get();const auto transform=canvas->transform();const auto start=QPointF(canvas->viewport()->rect().center());
+      |                                                                                                                                                                                                                                                  ^
+/Users/runner/work/Linux_CAD_forFree/Linux_CAD_forFree/tests/test_drawing_view_edit.cpp:50:94: warning: missing field 'legacySnapshotNames' initializer [-Wmissing-field-initializers]
+   50 |         DrawingEditorModel model{{{QUuid::createUuid(),{}},{{1,body,names}}},{{1,"Corpo"}},{}};
+      |                                                                                              ^
+4 warnings generated.
+[400/717] Building CXX object CMakeFiles/forgecad_drawing_dimensions_tests.dir/forgecad_drawing_dimensions_tests_autogen/mocs_compilation.cpp.o
+[401/717] Building CXX object CMakeFiles/forgecad_drawing_layout_history_tests.dir/tests/test_drawing_layout_history.cpp.o
+/Users/runner/work/Linux_CAD_forFree/Linux_CAD_forFree/tests/test_drawing_layout_history.cpp:34:268: warning: missing field 'legacySnapshotNames' initializer [-Wmissing-field-initializers]
+   34 | DrawingEditorModel model(const QUuid &id,double width){auto body=std::make_shared<Body>(makeBox(Frame3(),width,6,4));auto names=std::make_shared<ElementNames>(propagateNames(*body,makeHistory({},*body),{},"layout"));return {{{id,{}},{{1,body,names}}},{{1,"Corpo"}},{}};}
+      |                                                                                                                                                                                                                                                                            ^
+1 warning generated.
+[402/717] Building CXX object CMakeFiles/forgecad_drawing_dimensions_tests.dir/tests/test_drawing_dimensions.cpp.o
+[403/717] Building CXX object CMakeFiles/forgecad_drawing_dimensions_tests.dir/cad_drawing.cpp.o
+[404/717] Building CXX object CMakeFiles/forgecad_drawing_dimensions_tests.dir/cad_drawing_dimension.cpp.o
+[405/717] Building CXX object CMakeFiles/forgecad_drawing_dimensions_tests.dir/cad_drawing_derived.cpp.o
+/Users/runner/work/Linux_CAD_forFree/Linux_CAD_forFree/cad_drawing_derived.cpp:344:146: warning: captured structured bindings are a C++20 extension [-Wc++20-extensions]
+  344 |             auto segments=original;const auto source=std::find_if(model.bodies.begin(),model.bodies.end(),[&](const auto &b){return b.featureId==key.first;});
+      |                                                                                                                                                  ^
+/Users/runner/work/Linux_CAD_forFree/Linux_CAD_forFree/cad_drawing_derived.cpp:342:26: note: 'key' declared here
+  342 |         for(const auto &[key,original]:groups){
+      |                          ^
+1 warning generated.
+[406/717] Building CXX object CMakeFiles/forgecad_drawing_dimensions_tests.dir/cad_drawing_frame.cpp.o
+[407/717] Building CXX object CMakeFiles/forgecad_drawing_dimensions_tests.dir/cad_drawing_sheet.cpp.o
+/Users/runner/work/Linux_CAD_forFree/Linux_CAD_forFree/cad_drawing_sheet.cpp:256:142: warning: missing field 'firstDimension' initializer [-Wmissing-field-initializers]
+  256 |             prepared.dimensionNumbering={n["enabled"].toBool(),n["firstNumber"].toInt(),n["diameter"].toDouble(),n["rowTolerance"].toDouble()};
+      |                                                                                                                                              ^
+/Users/runner/work/Linux_CAD_forFree/Linux_CAD_forFree/cad_drawing_sheet.cpp:287:169: warning: missing field 'items' initializer [-Wmissing-field-initializers]
+  287 |             prepared.titleBlock={block["visible"].toBool(),block["code"].toString(),block["organization"].toString(),block["author"].toString(),block["date"].toString()};}
+      |                                                                                                                                                                         ^
+2 warnings generated.
+[408/717] Building CXX object CMakeFiles/forgecad_drawing_dimensions_gui_tests.dir/forgecad_drawing_dimensions_gui_tests_autogen/mocs_compilation.cpp.o
+[409/717] Building CXX object CMakeFiles/forgecad_drawing_dimensions_tests.dir/cad_drawing_page.cpp.o
+[410/717] Building CXX object CMakeFiles/forgecad_drawing_dimension_repair_tests.dir/forgecad_drawing_dimension_repair_tests_autogen/mocs_compilation.cpp.o
+[411/717] Building CXX object CMakeFiles/forgecad_drawing_dimension_repair_tests.dir/tests/test_drawing_dimension_repair.cpp.o
+[412/717] Building CXX object CMakeFiles/forgecad_drawing_view_placement_tests.dir/forgecad_drawing_view_placement_tests_autogen/mocs_compilation.cpp.o
+[413/717] Building CXX object CMakeFiles/forgecad_drawing_view_placement_tests.dir/tests/test_drawing_view_placement.cpp.o
+/Users/runner/work/Linux_CAD_forFree/Linux_CAD_forFree/tests/test_drawing_view_placement.cpp:28:389: warning: missing field 'legacySnapshotNames' initializer [-Wmissing-field-initializers]
+   28 |  auto count=std::make_shared<int>(0);auto body=std::make_shared<Body>(makeBox(Frame3(),10,6,4));for(auto edge:body->edges())body->edge(edge).curve=std::make_shared<Counted>(body->edge(edge).curve,count);auto names=std::make_shared<ElementNames>(propagateNames(*body,makeHistory({},*body),{},"preview"));DrawingEditorModel model{{{QUuid::createUuid(),{}},{{1,body,names}}},{{1,"Corpo"}},{}};
+      |                                                                                                                                                                                                                                                                                                                                                                                                     ^
+1 warning generated.
+[414/717] Building CXX object CMakeFiles/forgecad_drawing_silhouette_tests.dir/forgecad_drawing_silhouette_tests_autogen/mocs_compilation.cpp.o
+[415/717] Building CXX object CMakeFiles/forgecad_drawing_silhouette_tests.dir/tests/test_drawing_silhouette.cpp.o
+[416/717] Building CXX object CMakeFiles/forgecad_drawing_silhouette_tests.dir/cad_drawing_silhouette.cpp.o
+[417/717] Building CXX object CMakeFiles/forgecad_drawing_visibility_tests.dir/forgecad_drawing_visibility_tests_autogen/mocs_compilation.cpp.o
+[418/717] Building CXX object CMakeFiles/forgecad_drawing_dimensions_gui_tests.dir/tests/test_drawing_dimensions_gui.cpp.o
+In file included from /Users/runner/work/Linux_CAD_forFree/Linux_CAD_forFree/tests/test_drawing_dimensions_gui.cpp:64:
+/Users/runner/work/Linux_CAD_forFree/Linux_CAD_forFree/tests/test_drawing_dimension_numbering.h:213:254: warning: missing field 'firstDimension' initializer [-Wmissing-field-initializers]
+  213 |  e.fitSheet();QApplication::processEvents();require(items(e,"dimensionBadge")==0,"fogli precedenti senza badge");e.markSaved();const auto legacy=encoded(e);const auto *curve=e.curves(v.id).front().curve.get();DrawingDimensionNumbering setting{true,1,6,3};ok(e.setDimensionNumbering(setting));QApplication::processEvents();const auto numbered=encoded(e);
+      |                                                                                                                                                                                                                                                              ^
+1 warning generated.
+[419/717] Building CXX object CMakeFiles/forgecad_drawing_visibility_tests.dir/tests/test_drawing_visibility.cpp.o
+[420/717] Building CXX object CMakeFiles/forgecad_drawing_visibility_tests.dir/cad_drawing_silhouette.cpp.o
+[421/717] Building CXX object CMakeFiles/forgecad_drawing_visibility_tests.dir/cad_drawing_visibility.cpp.o
+[422/717] Building CXX object CMakeFiles/forgecad_drawing_visibility_tests.dir/cad_drawing_dimension.cpp.o
+[423/717] Building CXX object CMakeFiles/forgecad_drawing_hidden_lines_tests.dir/forgecad_drawing_hidden_lines_tests_autogen/mocs_compilation.cpp.o
+[424/717] Building CXX object CMakeFiles/forgecad_drawing_visibility_tests.dir/cad_drawing.cpp.o
+[425/717] Building CXX object CMakeFiles/forgecad_drawing_page_tests.dir/forgecad_drawing_page_tests_autogen/mocs_compilation.cpp.o
+[426/717] Building CXX object CMakeFiles/forgecad_drawing_hidden_lines_tests.dir/tests/test_drawing_hidden_lines.cpp.o
+/Users/runner/work/Linux_CAD_forFree/Linux_CAD_forFree/tests/test_drawing_hidden_lines.cpp:31:247: warning: missing field 'legacySnapshotNames' initializer [-Wmissing-field-initializers]
+   31 |  auto count=std::make_shared<int>(0);DrawingEditorModel model{{{QUuid::createUuid(),{}},{source(1,makeBox(Frame3(),2,2,1),count),source(2,makeBox(Frame3(Vec3(-1,-1,3),Vec3(0,0,1),Vec3(1,0,0)),4,4,1),count)}},{{1,"Posteriore"},{2,"Anteriore"}}, {}};
+      |                                                                                                                                                                                                                                                       ^
+1 warning generated.
+[427/717] Building CXX object CMakeFiles/forgecad_drawing_derived_tests.dir/forgecad_drawing_derived_tests_autogen/mocs_compilation.cpp.o
+[428/717] Building CXX object CMakeFiles/forgecad_drawing_page_tests.dir/tests/test_drawing_page.cpp.o
+/Users/runner/work/Linux_CAD_forFree/Linux_CAD_forFree/tests/test_drawing_page.cpp:33:400: warning: missing field 'legacySnapshotNames' initializer [-Wmissing-field-initializers]
+   33 |  const auto count=std::make_shared<int>(0);auto body=std::make_shared<Body>(makeBox(Frame3(),10,6,4));for(auto edge:body->edges())body->edge(edge).curve=std::make_shared<Counted>(body->edge(edge).curve,count);auto names=std::make_shared<ElementNames>(propagateNames(*body,makeHistory({},*body),{},"page"));DrawingEditorModel model{{{QUuid::createUuid(),{}},{{1,body,names}}},{{1,"Modello prova"}},{}};
+      |                                                                                                                                                                                                                                                                                                                                                                                                                ^
+/Users/runner/work/Linux_CAD_forFree/Linux_CAD_forFree/tests/test_drawing_page.cpp:35:259: warning: missing field 'items' initializer [-Wmissing-field-initializers]
+   35 |  const auto untouched=bytes(editor);require(!QJsonDocument::fromJson(untouched).object().contains("titleBlock"),"tavole precedenti prive di campi aggiuntivi");editor.markSaved();DrawingTitleBlock block{true,"FC-001","Officina test","Mario Rossi","2026-10-16"};ok(editor.setPageSettings("Supporto prova",{297,210},block));require(editor.isModified(),"cartiglio sporca il foglio");QApplication::processEvents();ok(editor.undo());require(bytes(editor)==untouched&&!editor.isModified(),"Undo ripristina cartiglio legacy e checkpoint");ok(editor.redo());require(editor.sheet().titleBlock.visible&&editor.sheet().titleBlock.code=="FC-001","Redo cartiglio");
+      |                                                                                                                                                                                                                                                                   ^
+2 warnings generated.
+[429/717] Building CXX object CMakeFiles/forgecad_drawing_detail_tests.dir/forgecad_drawing_detail_tests_autogen/mocs_compilation.cpp.o
+[430/717] Building CXX object CMakeFiles/forgecad_drawing_detail_tests.dir/tests/test_drawing_detail.cpp.o
+[431/717] Building CXX object CMakeFiles/forgecad_drawing_auxiliary_tests.dir/forgecad_drawing_auxiliary_tests_autogen/mocs_compilation.cpp.o
+[432/717] Building CXX object CMakeFiles/forgecad_drawing_derived_tests.dir/tests/test_drawing_derived.cpp.o
+[433/717] Building CXX object CMakeFiles/forgecad_drawing_break_tests.dir/forgecad_drawing_break_tests_autogen/mocs_compilation.cpp.o
+[434/717] Building CXX object CMakeFiles/forgecad_drawing_auxiliary_tests.dir/tests/test_drawing_auxiliary.cpp.o
+[435/717] Building CXX object CMakeFiles/forgecad_revision_numbers_tests.dir/forgecad_revision_numbers_tests_autogen/mocs_compilation.cpp.o
+[436/717] Building CXX object CMakeFiles/forgecad_revision_numbers_tests.dir/tests/test_revision_numbers.cpp.o
+[437/717] Building CXX object CMakeFiles/forgecad_drawing_break_tests.dir/tests/test_drawing_break.cpp.o
+[438/717] Building CXX object CMakeFiles/forgecad_drawing_presentation_tests.dir/forgecad_drawing_presentation_tests_autogen/mocs_compilation.cpp.o
+[439/717] Building CXX object CMakeFiles/forgecad_drawing_presentation_tests.dir/tests/test_drawing_presentation.cpp.o
+[440/717] Building CXX object CMakeFiles/forgecad_drawing_complete_sections_tests.dir/forgecad_drawing_complete_sections_tests_autogen/mocs_compilation.cpp.o
+[441/717] Building CXX object CMakeFiles/forgecad_revision_numbers_tests.dir/cad_revision_store.cpp.o
+[442/717] Building CXX object CMakeFiles/forgecad_drawing_centers_tests.dir/forgecad_drawing_centers_tests_autogen/mocs_compilation.cpp.o
+[443/717] Building CXX object CMakeFiles/forgecad_drawing_complete_sections_tests.dir/tests/test_drawing_complete_sections.cpp.o
+/Users/runner/work/Linux_CAD_forFree/Linux_CAD_forFree/tests/test_drawing_complete_sections.cpp:88:49: warning: missing field 'legacySnapshotNames' initializer [-Wmissing-field-initializers]
+   88 |  DrawingEditorModel ui{centered,{{1,"Corpo"}},{}};DrawingSheet drawing;drawing.drawing.model=centered.version;drawing.title="Sezioni complete";DrawingSheetEditor editor(drawing,ui);editor.resize(1250,820);editor.show();QApplication::processEvents();editor.fitSheet();ok(editor.insertView(half,{half.id,"Mezza sezione",{100,95},{1}}));require(count(editor,"sectionAxis")==1&&count(editor,"sectionHatch")==1,"asse e tratteggio grafico della mezza sezione indipendente");auto dimension=dimensionOfCurve(half,*axisEdge,DrawingMeasure::SectionLength);dimension.references={drawingAttachment(half,*axisEdge,centered,DrawingPointRole::Curve)};dimension.section=dimension.references[0].curve;ok(editor.addDimension(dimension,{150,80}));close(editor.dimensionResult(dimension.id).value,10,"misura solo del bordo trattenuto");DrawingAttachment origin;origin.role=DrawingPointRole::Origin;auto fromAxis=drawingDimensionBetween(half,centered,h.curves,{axis,origin},DrawingMeasure::Distance,{20,20});ok(editor.addDimension(fromAxis,{150,105}));auto before=bytes(editor.sheet());DrawingSheet decoded;ok(decodeDrawingSheet(before,decoded));require(decoded.drawing.views[0].sectionStyle==DrawingSectionStyle::HalfRight&&QJsonDocument::fromJson(before).object()["schema"].toInt()==3,"schema 3 salva mezza sezione");require(decoded.drawing.dimensions.back().references[0].clipBoundary==2,"origine di taglio persistita nel codec");auto innerDocument=QJsonDocument::fromJson(before).object()["drawing"].toObject();require(innerDocument["schema"].toInt()==4,"schema geometrico 4");
+      |                                                 ^
+1 warning generated.
+[444/717] Building CXX object CMakeFiles/forgecad_drawing_axes_tests.dir/forgecad_drawing_axes_tests_autogen/mocs_compilation.cpp.o
+[445/717] Building CXX object CMakeFiles/forgecad_drawing_centers_tests.dir/tests/test_drawing_centers.cpp.o
+[446/717] Building CXX object CMakeFiles/forgecad_drawing_ui_controls_tests.dir/forgecad_drawing_ui_controls_tests_autogen/mocs_compilation.cpp.o
+[447/717] Building CXX object CMakeFiles/forgecad_drawing_ui_controls_tests.dir/tests/test_drawing_ui_controls.cpp.o
+[448/717] Building CXX object CMakeFiles/forgecad_drawing_focus_tests.dir/forgecad_drawing_focus_tests_autogen/mocs_compilation.cpp.o
+[449/717] Building CXX object CMakeFiles/forgecad_drawing_focus_tests.dir/tests/test_drawing_focus.cpp.o
+[450/717] Building CXX object CMakeFiles/forgecad_overlay_uniform_tests.dir/forgecad_overlay_uniform_tests_autogen/mocs_compilation.cpp.o
+[451/717] Building CXX object CMakeFiles/forgecad_drawing_axes_tests.dir/tests/test_drawing_axes.cpp.o
+[452/717] Building CXX object CMakeFiles/forgecad_overlay_uniform_tests.dir/tests/test_overlay_uniform.cpp.o
+[453/717] Building CXX object CMakeFiles/forgecad_overlay_uniform_tests.dir/cad_overlay_renderer.cpp.o
+[454/717] Building CXX object kernel/CMakeFiles/forgekernel_open_offset_tests.dir/tests/fk_test_main.cpp.o
+[455/717] Building CXX object kernel/CMakeFiles/forgekernel_loft_knots_tests.dir/tests/fk_test_main.cpp.o
+[456/717] Building CXX object kernel/CMakeFiles/forgekernel_open_offset_tests.dir/tests/test_open_offset.cpp.o
+[457/717] Building CXX object kernel/CMakeFiles/forgekernel_polar_blend_tests.dir/tests/fk_test_main.cpp.o
+[458/717] Building CXX object kernel/CMakeFiles/forgekernel_loft_knots_tests.dir/tests/test_loft_knots.cpp.o
+[459/717] Building CXX object kernel/CMakeFiles/forgekernel_surface_instances_tests.dir/tests/fk_test_main.cpp.o
+[460/717] Building CXX object kernel/CMakeFiles/forgekernel_polar_blend_tests.dir/tests/test_polar_blend.cpp.o
+[461/717] Building CXX object kernel/CMakeFiles/forgekernel_exchange_robustness_tests.dir/tests/fk_test_main.cpp.o
+[462/717] Building CXX object kernel/CMakeFiles/forgekernel_exchange_robustness_tests.dir/tests/test_exchange_robustness.cpp.o
+[463/717] Building CXX object kernel/CMakeFiles/forgekernel_surface_instances_tests.dir/tests/test_surface_instances.cpp.o
+/Users/runner/work/Linux_CAD_forFree/Linux_CAD_forFree/kernel/tests/test_surface_instances.cpp:319:14: warning: unused variable 'reverse' [-Wunused-variable]
+  319 |     for(bool reverse:{false,true}){
+      |              ^~~~~~~
+1 warning generated.
+[464/717] Building CXX object kernel/CMakeFiles/forgekernel_history_tests.dir/tests/fk_test_main.cpp.o
+[465/717] Building CXX object kernel/CMakeFiles/forgekernel_blend_probe.dir/tests/probe_blend_candidates.cpp.o
+[466/717] Building CXX object kernel/CMakeFiles/forgekernel_tolerance_tests.dir/tests/fk_test_main.cpp.o
+[467/717] Building CXX object kernel/CMakeFiles/forgekernel_tolerance_tests.dir/tests/test_tolerance.cpp.o
+[468/717] Building CXX object kernel/CMakeFiles/forgekernel_history_tests.dir/tests/test_history.cpp.o
+/Users/runner/work/Linux_CAD_forFree/Linux_CAD_forFree/kernel/tests/test_history.cpp:977:64: warning: missing field 'point' initializer [-Wmissing-field-initializers]
+  977 |     std::vector<LoftSection> sections{{Frame3(),region.outer,{}},{Frame3(Vec3(0,0,3),Vec3(0,0,1),Vec3(1,0,0)),reversed(round.outer),{}}};
+      |                                                                ^
+/Users/runner/work/Linux_CAD_forFree/Linux_CAD_forFree/kernel/tests/test_history.cpp:977:135: warning: missing field 'point' initializer [-Wmissing-field-initializers]
+  977 |     std::vector<LoftSection> sections{{Frame3(),region.outer,{}},{Frame3(Vec3(0,0,3),Vec3(0,0,1),Vec3(1,0,0)),reversed(round.outer),{}}};
+      |                                                                                                                                       ^
+2 warnings generated.
+[469/717] Building CXX object kernel/CMakeFiles/forgekernel_surface_tools_tests.dir/tests/fk_test_main.cpp.o
+[470/717] Building CXX object kernel/CMakeFiles/forgekernel_surface_tools_tests.dir/tests/test_surface_tools.cpp.o
+[471/717] Building CXX object kernel/CMakeFiles/forgekernel_surface_tools_tests.dir/tests/test_surface_poles_constraints.cpp.o
+[472/717] Building CXX object kernel/CMakeFiles/forgekernel_surface_tools_tests.dir/tests/test_surface_poles_influence.cpp.o
+[473/717] Building CXX object kernel/CMakeFiles/forgekernel_surface_tools_tests.dir/tests/test_surface_poles_conversion.cpp.o
+[474/717] Building CXX object kernel/CMakeFiles/forgekernel_blend_profile_tests.dir/tests/fk_test_main.cpp.o
+[475/717] Building CXX object kernel/CMakeFiles/forgekernel_surface_tools_tests.dir/tests/test_fill.cpp.o
+[476/717] Building CXX object kernel/CMakeFiles/forgekernel_blend_profile_tests.dir/tests/test_blend_profiles.cpp.o
+[477/717] Building CXX object kernel/CMakeFiles/forgekernel_face_normal_bounds_tests.dir/tests/fk_test_main.cpp.o
+[478/717] Building CXX object kernel/CMakeFiles/forgekernel_face_normal_bounds_tests.dir/tests/test_face_normal_bounds.cpp.o
+[479/717] Building CXX object kernel/CMakeFiles/forgekernel_sketch_projection_tests.dir/tests/test_sketch_projection.cpp.o
+[480/717] Building CXX object kernel/CMakeFiles/forgekernel_projected_curve_reference_tests.dir/tests/test_projected_curve_references.cpp.o
+[481/717] Building CXX object kernel/CMakeFiles/forgekernel_surface_parameterization_tests.dir/tests/fk_test_main.cpp.o
+[482/717] Building CXX object kernel/CMakeFiles/forgekernel_disjoint_union_tests.dir/tests/fk_test_main.cpp.o
+[483/717] Building CXX object kernel/CMakeFiles/forgekernel_surface_parameterization_tests.dir/tests/test_surface_parameterization.cpp.o
+[484/717] Building CXX object kernel/CMakeFiles/forgekernel_disjoint_union_tests.dir/tests/test_disjoint_union.cpp.o
+[485/717] Building CXX object kernel/CMakeFiles/forgekernel_loft_projected_guide_tests.dir/tests/test_loft_projected_guides.cpp.o
+[486/717] Building CXX object kernel/CMakeFiles/forgekernel_loft_projected_section_tests.dir/tests/test_loft_projected_sections.cpp.o
+[487/717] Building CXX object kernel/CMakeFiles/forgekernel_loft_shape_tests.dir/tests/test_loft_shape.cpp.o
+[488/717] Building CXX object kernel/CMakeFiles/forgekernel_loft_complexity_tests.dir/tests/fk_test_main.cpp.o
+[489/717] Building CXX object kernel/CMakeFiles/forgekernel_loft_complexity_tests.dir/tests/test_loft_complexity.cpp.o
+[490/717] Building CXX object kernel/CMakeFiles/forgekernel_offset_validation_tests.dir/tests/fk_test_main.cpp.o
+[491/717] Building CXX object kernel/CMakeFiles/forgekernel_loft_guide_constraint_tests.dir/tests/test_loft_guide_constraints.cpp.o
+/Users/runner/work/Linux_CAD_forFree/Linux_CAD_forFree/kernel/tests/test_loft_guide_constraints.cpp:92:106: warning: missing field 'plane' initializer [-Wmissing-field-initializers]
+   92 |     LoftGuideCondition condition;condition.crossMode=2;condition.faces={{support,support->faces().front()}};
+      |                                                                                                          ^
+/Users/runner/work/Linux_CAD_forFree/Linux_CAD_forFree/kernel/tests/test_loft_guide_constraints.cpp:120:100: warning: missing field 'plane' initializer [-Wmissing-field-initializers]
+  120 |     LoftGuideCondition control;control.crossMode=2;control.faces={{support,support->faces().front()}};options.guideConditions={control};
+      |                                                                                                    ^
+/Users/runner/work/Linux_CAD_forFree/Linux_CAD_forFree/kernel/tests/test_loft_guide_constraints.cpp:159:68: warning: missing field 'plane' initializer [-Wmissing-field-initializers]
+  159 |     options.guideConditions[0].faces={{wrong,wrong->faces().front()}};bool rejected=false;
+      |                                                                    ^
+3 warnings generated.
+[492/717] Building CXX object kernel/CMakeFiles/forgekernel_curve_fit_validation_tests.dir/tests/fk_test_main.cpp.o
+[493/717] Building CXX object kernel/CMakeFiles/forgekernel_offset_validation_tests.dir/tests/test_offset_validation.cpp.o
+[494/717] Building CXX object kernel/CMakeFiles/forgekernel_offset_split_crease_tests.dir/tests/test_offset_split_creases.cpp.o
+[495/717] Building CXX object kernel/CMakeFiles/forgekernel_curve_fit_validation_tests.dir/tests/test_curve_fit_validation.cpp.o
+[496/717] Building CXX object kernel/CMakeFiles/forgekernel_blend_contact_break_tests.dir/tests/fk_test_main.cpp.o
+[497/717] Building CXX object kernel/CMakeFiles/forgekernel_plane_jets_tests.dir/tests/test_bspline_plane_jets.cpp.o
+[498/717] Building CXX object kernel/CMakeFiles/forgekernel_bspline_derivative_tests.dir/tests/fk_test_main.cpp.o
+[499/717] Building CXX object kernel/CMakeFiles/forgekernel_blend_contact_break_tests.dir/tests/test_blend_contact_breaks.cpp.o
+[500/717] Building CXX object kernel/CMakeFiles/forgekernel_bspline_cache_tests.dir/tests/fk_test_main.cpp.o
+[501/717] Building CXX object kernel/CMakeFiles/forgekernel_bspline_derivative_tests.dir/tests/test_bspline_derivatives.cpp.o
+[502/717] Building CXX object kernel/CMakeFiles/forgekernel_face_parameter_tests.dir/tests/fk_test_main.cpp.o
+[503/717] Building CXX object kernel/CMakeFiles/forgekernel_bspline_cache_tests.dir/tests/test_bspline_cache.cpp.o
+/Users/runner/work/Linux_CAD_forFree/Linux_CAD_forFree/kernel/tests/test_bspline_cache.cpp:76:17: warning: explicitly assigning value of variable of type 'auto' to itself [-Wself-assign-overloaded]
+   76 |         assigned=assigned; FK_CHECK(same(source,assigned));
+      |         ~~~~~~~~^~~~~~~~~
+/Users/runner/work/Linux_CAD_forFree/Linux_CAD_forFree/kernel/tests/test_bspline_cache.cpp:99:17: warning: explicitly assigning value of variable of type 'BSplineSurface' to itself [-Wself-assign-overloaded]
+   99 |         assigned=assigned; FK_CHECK(same(source,assigned));
+      |         ~~~~~~~~^~~~~~~~~
+2 warnings generated.
+[504/717] Building CXX object kernel/CMakeFiles/forgekernel_bspline_isoline_tests.dir/tests/fk_test_main.cpp.o
+[505/717] Building CXX object kernel/CMakeFiles/forgekernel_face_parameter_tests.dir/tests/test_face_parameter_classify.cpp.o
+[506/717] Building CXX object kernel/CMakeFiles/forgekernel_loft_correspondence_tests.dir/tests/fk_test_main.cpp.o
+[507/717] Building CXX object kernel/CMakeFiles/forgekernel_bspline_isoline_tests.dir/tests/test_bspline_isoline.cpp.o
+[508/717] Building CXX object kernel/CMakeFiles/forgekernel_loft_point_tests.dir/tests/test_loft_points.cpp.o
+[509/717] Building CXX object kernel/CMakeFiles/forgekernel_loft_correspondence_tests.dir/tests/test_loft_correspondence.cpp.o
+/Users/runner/work/Linux_CAD_forFree/Linux_CAD_forFree/kernel/tests/test_loft_correspondence.cpp:282:76: warning: missing field 'plane' initializer [-Wmissing-field-initializers]
+  282 |     for(auto face:support->faces())options.endFaces.push_back({support,face});
+      |                                                                            ^
+1 warning generated.
+[510/717] Building CXX object kernel/CMakeFiles/forgekernel_marching_seed_grid_tests.dir/tests/test_marching_seed_grid.cpp.o
+[511/717] Building CXX object kernel/CMakeFiles/forgekernel_boolean_seam_tests.dir/tests/test_boolean_seams.cpp.o
+[512/717] Building CXX object kernel/CMakeFiles/forgekernel_surface_mapping_tests.dir/tests/test_surface_mapping.cpp.o
+[513/717] Building CXX object kernel/CMakeFiles/forgekernel_trimmed_face_bounds_tests.dir/tests/test_trimmed_face_bounds.cpp.o
+[514/717] Building CXX object kernel/CMakeFiles/forgekernel_solid_trim_tests.dir/tests/test_solid_trim.cpp.o
+[515/717] Building CXX object kernel/CMakeFiles/forgekernel_cone_rays_tests.dir/tests/test_cone_rays.cpp.o
+[516/717] Building CXX object kernel/CMakeFiles/forgekernel_blend_cavity_tests.dir/tests/fk_test_main.cpp.o
+[517/717] Building CXX object kernel/CMakeFiles/forgekernel_blend_cavity_tests.dir/tests/test_blend_cavity.cpp.o
+[518/717] Building CXX object kernel/CMakeFiles/forgekernel_blend_cavity_tests.dir/tests/test_blend_transitions.cpp.o
+[519/717] Building CXX object kernel/CMakeFiles/forgekernel_blend_cavity_regression_tests.dir/tests/fk_test_main.cpp.o
+[520/717] Building CXX object kernel/CMakeFiles/forgekernel_blend_mitre_validation_tests.dir/tests/fk_test_main.cpp.o
+[521/717] Building CXX object kernel/CMakeFiles/forgekernel_blend_cavity_regression_tests.dir/tests/test_blend_cavity_regressions.cpp.o
+[522/717] Building CXX object kernel/CMakeFiles/forgekernel_blend_boundary_validation_tests.dir/tests/fk_test_main.cpp.o
+[523/717] Building CXX object kernel/CMakeFiles/forgekernel_blend_mitre_validation_tests.dir/tests/test_blend_mitre_validation.cpp.o
+[524/717] Building CXX object kernel/CMakeFiles/forgekernel_nurbs_support_tests.dir/tests/fk_test_main.cpp.o
+[525/717] Building CXX object kernel/CMakeFiles/forgekernel_blend_boundary_validation_tests.dir/tests/test_blend_boundary_validation.cpp.o
+[526/717] Building CXX object kernel/CMakeFiles/forgekernel_sweep_validation_tests.dir/tests/fk_test_main.cpp.o
+[527/717] Building CXX object kernel/CMakeFiles/forgekernel_nurbs_support_tests.dir/tests/test_nurbs_supports.cpp.o
+[528/717] Building CXX object kernel/CMakeFiles/forgekernel_sweep_validation_tests.dir/tests/test_sweep_validation.cpp.o
+[529/717] Building CXX object kernel/CMakeFiles/forgekernel_sweep_validation_tests.dir/tests/test_sweep_caps.cpp.o
+[530/717] Building CXX object kernel/CMakeFiles/forgekernel_sweep_validation_tests.dir/tests/test_sweep_analytic_bridge.cpp.o
+[531/717] Building CXX object kernel/CMakeFiles/forgekernel_sheet_fit_validation_tests.dir/tests/fk_test_main.cpp.o
+[532/717] Building CXX object kernel/CMakeFiles/forgekernel_sweep_validation_tests.dir/tests/test_sweep_global.cpp.o
+[533/717] Building CXX object kernel/CMakeFiles/forgekernel_sheet_join_validation_tests.dir/tests/fk_test_main.cpp.o
+[534/717] Building CXX object kernel/CMakeFiles/forgekernel_sheet_fit_validation_tests.dir/tests/test_sheet_fit_validation.cpp.o
+[535/717] Building CXX object kernel/CMakeFiles/forgekernel_curve_projection_tests.dir/tests/fk_test_main.cpp.o
+[536/717] Building CXX object kernel/CMakeFiles/forgekernel_curve_projection_tests.dir/tests/test_curve_projection.cpp.o
+[537/717] Building CXX object kernel/CMakeFiles/forgekernel_sheet_join_validation_tests.dir/tests/test_sheet_join_validation.cpp.o
+[538/717] Building CXX object kernel/CMakeFiles/forgekernel_boundary_fit_validation_tests.dir/tests/fk_test_main.cpp.o
+[539/717] Building CXX object kernel/CMakeFiles/forgekernel_surface_curve_fit_validation_tests.dir/tests/fk_test_main.cpp.o
+[540/717] Building CXX object kernel/CMakeFiles/forgekernel_boundary_fit_validation_tests.dir/tests/test_boundary_fit_validation.cpp.o
+[541/717] Building CXX object kernel/CMakeFiles/forgekernel_mapping_carrier_validation_tests.dir/tests/fk_test_main.cpp.o
+[542/717] Building CXX object kernel/CMakeFiles/forgekernel_surface_curve_fit_validation_tests.dir/tests/test_surface_curve_fit_validation.cpp.o
+[543/717] Building CXX object kernel/CMakeFiles/forgekernel_mapping_carrier_validation_tests.dir/tests/test_mapping_carrier_validation.cpp.o
+[544/717] Building CXX object kernel/CMakeFiles/forgekernel_mapping_diagonal_validation_tests.dir/tests/fk_test_main.cpp.o
+[545/717] Building CXX object kernel/CMakeFiles/forgekernel_mapping_uv_validation_tests.dir/tests/test_mapping_pcurve_validation.cpp.o
+[546/717] Building CXX object kernel/CMakeFiles/forgekernel_planar_flatten_validation_tests.dir/tests/fk_test_main.cpp.o
+[547/717] Building CXX object kernel/CMakeFiles/forgekernel_mapping_diagonal_validation_tests.dir/tests/test_mapping_diagonal_validation.cpp.o
+[548/717] Building CXX object kernel/CMakeFiles/forgekernel_planar_flatten_validation_tests.dir/tests/test_planar_flatten_validation.cpp.o
+[549/717] Building CXX object kernel/CMakeFiles/forgekernel_planar_thicken_validation_tests.dir/tests/fk_test_main.cpp.o
+[550/717] Building CXX object kernel/CMakeFiles/forgekernel_planar_thicken_validation_tests.dir/tests/test_planar_thicken_validation.cpp.o
+[551/717] Building CXX object kernel/CMakeFiles/forgekernel_projection_fit_validation_tests.dir/tests/test_projection_fit_validation.cpp.o
+[552/717] Building CXX object kernel/CMakeFiles/forgekernel_boolean_boundary_tests.dir/tests/test_boolean_boundary.cpp.o
+[553/717] Building CXX object kernel/CMakeFiles/forgekernel_edge_offset_fit_validation_tests.dir/tests/test_edge_offset_fit_validation.cpp.o
+[554/717] Building CXX object kernel/CMakeFiles/forgekernel_offset_pcurve_tests.dir/tests/test_offset_pcurve_validation.cpp.o
+[555/717] Linking CXX static library kernel/occt_tests/libforgekernel_occt.a
+[556/717] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/fk_test_main.cpp.o
+[557/717] Building CXX object kernel/CMakeFiles/forgekernel_sew_pcurve_tests.dir/tests/test_sew_pcurve_validation.cpp.o
+[558/717] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_cancel.cpp.o
+[559/717] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_math.cpp.o
+[560/717] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_predicates.cpp.o
+[561/717] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_bernstein.cpp.o
+[562/717] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_curves.cpp.o
+[563/717] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_bspline.cpp.o
+[564/717] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_curve_algo.cpp.o
+[565/717] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_surfaces.cpp.o
+[566/717] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_bspline_surface.cpp.o
+[567/717] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_tolerance.cpp.o
+[568/717] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_surface_algo.cpp.o
+[569/717] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_topology.cpp.o
+[570/717] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_primitives.cpp.o
+[571/717] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_extrude.cpp.o
+[572/717] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_pcurve.cpp.o
+[573/717] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_intersect.cpp.o
+[574/717] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_mass.cpp.o
+[575/717] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_marching.cpp.o
+[576/717] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_unify.cpp.o
+[577/717] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_boolean.cpp.o
+[578/717] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_tessellate.cpp.o
+[579/717] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_nurbs.cpp.o
+[580/717] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_curve_surface.cpp.o
+[581/717] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_revolve.cpp.o
+[582/717] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_blend_contact_breaks.cpp.o
+[583/717] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_sheet.cpp.o
+[584/717] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_transform.cpp.o
+[585/717] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_blend.cpp.o
+[586/717] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_draft.cpp.o
+[587/717] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_helix.cpp.o
+[588/717] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_body_io.cpp.o
+[589/717] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_sweep.cpp.o
+[590/717] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_occt_import.cpp.o
+[591/717] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_loft.cpp.o
+/Users/runner/work/Linux_CAD_forFree/Linux_CAD_forFree/kernel/tests/test_loft.cpp:251:60: warning: missing field 'plane' initializer [-Wmissing-field-initializers]
+  251 |     options.startFaces={{adjacent,adjacent->faces().front()}};
+      |                                                            ^
+/Users/runner/work/Linux_CAD_forFree/Linux_CAD_forFree/kernel/tests/test_loft.cpp:252:48: warning: missing field 'plane' initializer [-Wmissing-field-initializers]
+  252 |     options.endFaces={{end,end->faces().front()}};
+      |                                                ^
+/Users/runner/work/Linux_CAD_forFree/Linux_CAD_forFree/kernel/tests/test_loft.cpp:311:66: warning: missing field 'plane' initializer [-Wmissing-field-initializers]
+  311 |         options.startFaces = {{adjacent,adjacent->faces().front()}};
+      |                                                                  ^
+/Users/runner/work/Linux_CAD_forFree/Linux_CAD_forFree/kernel/tests/test_loft.cpp:331:52: warning: missing field 'plane' initializer [-Wmissing-field-initializers]
+  331 |     options.startFaces={{wide,wide->faces().front()}};
+      |                                                    ^
+/Users/runner/work/Linux_CAD_forFree/Linux_CAD_forFree/kernel/tests/test_loft.cpp:433:95: warning: missing field 'plane' initializer [-Wmissing-field-initializers]
+  433 |         if(reverse) {options.endContinuity=1;options.endFaces={{source,source->faces().front()}};}
+      |                                                                                               ^
+/Users/runner/work/Linux_CAD_forFree/Linux_CAD_forFree/kernel/tests/test_loft.cpp:434:92: warning: missing field 'plane' initializer [-Wmissing-field-initializers]
+  434 |         else {options.startContinuity=1;options.startFaces={{source,source->faces().front()}};}
+      |                                                                                            ^
+/Users/runner/work/Linux_CAD_forFree/Linux_CAD_forFree/kernel/tests/test_loft.cpp:462:102: warning: missing field 'plane' initializer [-Wmissing-field-initializers]
+  462 |             if(reverse){options.endContinuity=1;options.endFaces={{neighbor,neighbor->faces().front()}};}
+      |                                                                                                      ^
+/Users/runner/work/Linux_CAD_forFree/Linux_CAD_forFree/kernel/tests/test_loft.cpp:463:100: warning: missing field 'plane' initializer [-Wmissing-field-initializers]
+  463 |             else {options.startContinuity=1;options.startFaces={{neighbor,neighbor->faces().front()}};}
+      |                                                                                                    ^
+/Users/runner/work/Linux_CAD_forFree/Linux_CAD_forFree/kernel/tests/test_loft.cpp:495:99: warning: missing field 'plane' initializer [-Wmissing-field-initializers]
+  495 |         if(reverse) {options.endContinuity=1;options.endFaces={{neighbor,neighbor->faces().front()}};}
+      |                                                                                                   ^
+/Users/runner/work/Linux_CAD_forFree/Linux_CAD_forFree/kernel/tests/test_loft.cpp:496:96: warning: missing field 'plane' initializer [-Wmissing-field-initializers]
+  496 |         else {options.startContinuity=1;options.startFaces={{neighbor,neighbor->faces().front()}};}
+      |                                                                                                ^
+/Users/runner/work/Linux_CAD_forFree/Linux_CAD_forFree/kernel/tests/test_loft.cpp:635:101: warning: missing field 'plane' initializer [-Wmissing-field-initializers]
+  635 |         if(reverse) {options.startContinuity=1;options.startFaces={{support,support->faces().front()}};}
+      |                                                                                                     ^
+/Users/runner/work/Linux_CAD_forFree/Linux_CAD_forFree/kernel/tests/test_loft.cpp:636:90: warning: missing field 'plane' initializer [-Wmissing-field-initializers]
+  636 |         else {options.endContinuity=1;options.endFaces={{support,support->faces().front()}};}
+      |                                                                                          ^
+/Users/runner/work/Linux_CAD_forFree/Linux_CAD_forFree/kernel/tests/test_loft.cpp:681:72: warning: missing field 'plane' initializer [-Wmissing-field-initializers]
+  681 |         if(reverse){options.endFaces={{support,support->faces().front()}};options.endContinuity=1;}
+      |                                                                        ^
+/Users/runner/work/Linux_CAD_forFree/Linux_CAD_forFree/kernel/tests/test_loft.cpp:682:68: warning: missing field 'plane' initializer [-Wmissing-field-initializers]
+  682 |         else {options.startFaces={{support,support->faces().front()}};options.startContinuity=1;}
+      |                                                                    ^
+/Users/runner/work/Linux_CAD_forFree/Linux_CAD_forFree/kernel/tests/test_loft.cpp:721:107: warning: missing field 'plane' initializer [-Wmissing-field-initializers]
+  721 |             if (reverse) { options.endContinuity = 1; options.endFaces = {{source, source->faces().front()}}; }
+      |                                                                                                           ^
+/Users/runner/work/Linux_CAD_forFree/Linux_CAD_forFree/kernel/tests/test_loft.cpp:722:103: warning: missing field 'plane' initializer [-Wmissing-field-initializers]
+  722 |             else { options.startContinuity = 1; options.startFaces = {{source, source->faces().front()}}; }
+      |                                                                                                       ^
+16 warnings generated.
+[592/717] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_blend_features.cpp.o
+[593/717] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_iges.cpp.o
+/Users/runner/work/Linux_CAD_forFree/Linux_CAD_forFree/kernel/tests/test_iges.cpp:420:63: warning: missing field 'curve' initializer [-Wmissing-field-initializers]
+  420 |     const std::string valid = writeIges({{"cilindro", cylinder}}, options);
+      |                                                               ^
+/Users/runner/work/Linux_CAD_forFree/Linux_CAD_forFree/kernel/tests/test_iges.cpp:438:63: warning: missing field 'curve' initializer [-Wmissing-field-initializers]
+  438 |     const std::string valid = writeIges({{"cilindro", cylinder}}, options);
+      |                                                               ^
+2 warnings generated.
+[594/717] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_step.cpp.o
+/Users/runner/work/Linux_CAD_forFree/Linux_CAD_forFree/kernel/tests/test_step.cpp:866:112: warning: missing field 'curve' initializer [-Wmissing-field-initializers]
+  866 |     return writeStep({{"cilindro", makeCylinder(Frame3(Vec3(0, 0, 0), Vec3(0, 0, 1), Vec3(1, 0, 0)), 5.0, 12.0)}});
+      |                                                                                                                ^
+1 warning generated.
+[595/717] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_planar.cpp.o
+[596/717] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_offset.cpp.o
+[597/717] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_boundary.cpp.o
+[598/717] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_fill.cpp.o
+[599/717] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_surface_tools.cpp.o
+[600/717] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_project.cpp.o
+[601/717] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_thicken.cpp.o
+[602/717] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_shell.cpp.o
+[603/717] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_loft_surfaces.cpp.o
+[604/717] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_sweep_surfaces.cpp.o
+[605/717] Linking CXX executable forgecad_gpu_broad_phase_tests
+[606/717] Linking CXX executable forgecad_metal_box_pool_tests
+[607/717] Linking CXX executable forgecad
+[608/717] Linking CXX executable forgecad_tessellation_availability_tests
+[609/717] Linking CXX executable forgecad_cuda_pool_tests
+[610/717] Linking CXX executable forgecad_metal_tessellation_tests
+[611/717] Linking CXX executable forgecad_constraint_linear_tests
+[612/717] Linking CXX executable forgecad_display_cache_memory_tests
+[613/717] Linking CXX executable forgecad_mesh_export_backend_tests
+[614/717] Linking CXX executable forgecad_application_theme_tests
+[615/717] Linking CXX executable forgecad_expression_tests
+[616/717] Linking CXX executable forgecad_shape_analysis_tests
+[617/717] Linking CXX executable forgecad_document_compression_tests
+[618/717] Linking CXX executable forgecad_snapshot_chunks_tests
+[619/717] Linking CXX executable forgecad_drawing_tests
+[620/717] Linking CXX executable forgecad_revision_store_tests
+[621/717] Linking CXX executable forgecad_revision_release_tests
+[622/717] Linking CXX executable forgecad_catalog_recovery_tests
+[623/717] Linking CXX executable forgecad_feature_dependencies_tests
+[624/717] Linking CXX executable forgecad_geometry_refs_tests
+[625/717] Linking CXX executable forgecad_workspace_tests
+[626/717] Linking CXX executable forgecad_drawing_local_tools_tests
+[627/717] Linking CXX executable forgecad_drawing_local_section_depth_tests
+[628/717] Linking CXX executable forgecad_drawing_crop_tests
+[629/717] Linking CXX executable forgecad_drawing_templates_tests
+[630/717] Linking CXX executable forgecad_drawing_preparation_tests
+[631/717] Linking CXX executable forgecad_drawing_scale_tests
+[632/717] Linking CXX executable forgecad_drawing_editor_tests
+[633/717] Building CXX object kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/__/tests/test_history.cpp.o
+/Users/runner/work/Linux_CAD_forFree/Linux_CAD_forFree/kernel/tests/test_history.cpp:977:64: warning: missing field 'point' initializer [-Wmissing-field-initializers]
+  977 |     std::vector<LoftSection> sections{{Frame3(),region.outer,{}},{Frame3(Vec3(0,0,3),Vec3(0,0,1),Vec3(1,0,0)),reversed(round.outer),{}}};
+      |                                                                ^
+/Users/runner/work/Linux_CAD_forFree/Linux_CAD_forFree/kernel/tests/test_history.cpp:977:135: warning: missing field 'point' initializer [-Wmissing-field-initializers]
+  977 |     std::vector<LoftSection> sections{{Frame3(),region.outer,{}},{Frame3(Vec3(0,0,3),Vec3(0,0,1),Vec3(1,0,0)),reversed(round.outer),{}}};
+      |                                                                                                                                       ^
+2 warnings generated.
+[634/717] Linking CXX executable forgecad_projected_drawing_tests
+[635/717] Linking CXX executable forgecad_drawing_view_edit_tests
+[636/717] Linking CXX executable forgecad_drawing_layout_history_tests
+[637/717] Linking CXX executable forgecad_drawing_dimensions_tests
+[638/717] Linking CXX executable forgecad_drawing_dimensions_gui_tests
+[639/717] Linking CXX executable forgecad_drawing_dimension_repair_tests
+[640/717] Linking CXX executable forgecad_drawing_silhouette_tests
+[641/717] Linking CXX executable forgecad_drawing_view_placement_tests
+[642/717] Linking CXX executable forgecad_drawing_visibility_tests
+[643/717] Linking CXX executable forgecad_drawing_hidden_lines_tests
+[644/717] Linking CXX executable forgecad_drawing_page_tests
+[645/717] Linking CXX executable forgecad_drawing_derived_tests
+[646/717] Linking CXX executable forgecad_drawing_detail_tests
+[647/717] Linking CXX executable forgecad_drawing_auxiliary_tests
+[648/717] Linking CXX executable forgecad_revision_numbers_tests
+[649/717] Linking CXX executable forgecad_drawing_break_tests
+[650/717] Linking CXX executable forgecad_drawing_presentation_tests
+[651/717] Linking CXX executable forgecad_drawing_complete_sections_tests
+[652/717] Linking CXX executable forgecad_drawing_centers_tests
+[653/717] Linking CXX executable forgecad_drawing_axes_tests
+[654/717] Linking CXX executable forgecad_drawing_ui_controls_tests
+[655/717] Linking CXX executable forgecad_drawing_focus_tests
+[656/717] Linking CXX executable forgecad_overlay_uniform_tests
+[657/717] Linking CXX executable kernel/forgekernel_open_offset_tests
+[658/717] Linking CXX executable forgecad_sketch_offset_validation_tests
+[659/717] Linking CXX executable kernel/forgekernel_polar_blend_tests
+[660/717] Linking CXX executable kernel/forgekernel_loft_knots_tests
+[661/717] Linking CXX executable kernel/forgekernel_exchange_robustness_tests
+[662/717] Linking CXX executable kernel/forgekernel_surface_instances_tests
+[663/717] Linking CXX executable kernel/forgekernel_history_tests
+[664/717] Linking CXX executable kernel/forgekernel_blend_probe
+[665/717] Linking CXX executable kernel/forgekernel_tolerance_tests
+[666/717] Linking CXX executable kernel/forgekernel_surface_tools_tests
+[667/717] Linking CXX executable kernel/forgekernel_blend_profile_tests
+[668/717] Linking CXX executable kernel/forgekernel_face_normal_bounds_tests
+[669/717] Linking CXX executable kernel/forgekernel_sketch_projection_tests
+[670/717] Linking CXX executable kernel/forgekernel_projected_curve_reference_tests
+[671/717] Linking CXX executable kernel/forgekernel_disjoint_union_tests
+[672/717] Linking CXX executable kernel/forgekernel_surface_parameterization_tests
+[673/717] Linking CXX executable kernel/forgekernel_loft_projected_guide_tests
+[674/717] Linking CXX executable kernel/forgekernel_loft_shape_tests
+[675/717] Linking CXX executable kernel/forgekernel_loft_projected_section_tests
+[676/717] Linking CXX executable kernel/forgekernel_loft_complexity_tests
+[677/717] Linking CXX executable kernel/forgekernel_loft_guide_constraint_tests
+[678/717] Linking CXX executable kernel/forgekernel_offset_validation_tests
+[679/717] Linking CXX executable kernel/forgekernel_curve_fit_validation_tests
+[680/717] Linking CXX executable kernel/forgekernel_offset_split_crease_tests
+[681/717] Linking CXX executable kernel/forgekernel_plane_jets_tests
+[682/717] Linking CXX executable kernel/forgekernel_blend_contact_break_tests
+[683/717] Linking CXX executable kernel/forgekernel_bspline_derivative_tests
+[684/717] Linking CXX executable kernel/forgekernel_bspline_cache_tests
+[685/717] Linking CXX executable kernel/forgekernel_face_parameter_tests
+[686/717] Linking CXX executable kernel/forgekernel_bspline_isoline_tests
+[687/717] Linking CXX executable kernel/forgekernel_loft_point_tests
+[688/717] Linking CXX executable kernel/forgekernel_loft_correspondence_tests
+[689/717] Linking CXX executable kernel/forgekernel_marching_seed_grid_tests
+[690/717] Linking CXX executable kernel/forgekernel_boolean_seam_tests
+[691/717] Linking CXX executable kernel/forgekernel_trimmed_face_bounds_tests
+[692/717] Linking CXX executable kernel/forgekernel_surface_mapping_tests
+[693/717] Linking CXX executable kernel/forgekernel_cone_rays_tests
+[694/717] Linking CXX executable kernel/forgekernel_solid_trim_tests
+[695/717] Linking CXX executable kernel/forgekernel_blend_cavity_tests
+[696/717] Linking CXX executable kernel/forgekernel_blend_cavity_regression_tests
+[697/717] Linking CXX executable kernel/forgekernel_blend_mitre_validation_tests
+[698/717] Linking CXX executable kernel/forgekernel_blend_boundary_validation_tests
+[699/717] Linking CXX executable kernel/forgekernel_sweep_validation_tests
+[700/717] Linking CXX executable kernel/forgekernel_nurbs_support_tests
+[701/717] Linking CXX executable kernel/forgekernel_sheet_fit_validation_tests
+[702/717] Linking CXX executable kernel/forgekernel_sheet_join_validation_tests
+[703/717] Linking CXX executable kernel/forgekernel_boundary_fit_validation_tests
+[704/717] Linking CXX executable kernel/forgekernel_curve_projection_tests
+[705/717] Linking CXX executable kernel/forgekernel_mapping_carrier_validation_tests
+[706/717] Linking CXX executable kernel/forgekernel_surface_curve_fit_validation_tests
+[707/717] Linking CXX executable kernel/forgekernel_mapping_uv_validation_tests
+[708/717] Linking CXX executable kernel/forgekernel_mapping_diagonal_validation_tests
+[709/717] Linking CXX executable kernel/forgekernel_planar_flatten_validation_tests
+[710/717] Linking CXX executable kernel/forgekernel_planar_thicken_validation_tests
+[711/717] Linking CXX executable kernel/forgekernel_edge_offset_fit_validation_tests
+[712/717] Linking CXX executable kernel/forgekernel_projection_fit_validation_tests
+[713/717] Linking CXX executable kernel/forgekernel_boolean_boundary_tests
+[714/717] Linking CXX executable kernel/forgekernel_offset_pcurve_tests
+[715/717] Linking CXX executable kernel/forgekernel_sew_pcurve_tests
+[716/717] Linking CXX executable kernel/forgekernel_tests
+ld: warning: ignoring duplicate libraries: 'kernel/libforgekernel.a'

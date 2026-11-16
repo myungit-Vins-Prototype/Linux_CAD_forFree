@@ -1,0 +1,43 @@
+{
+  "code_commit": "958ed68ff8f3930d17c9d5c5f1e500c6fd20b8e5",
+  "url": "https://github.com/myungit-Vins-Prototype/Linux_CAD_forFree/actions/runs/43943310329",
+  "platforms": {
+    "linux": {
+      "configured": 110,
+      "passed": 108,
+      "failed": 0,
+      "skipped": [
+        "forgecad_gpu_broad_phase_tests",
+        "forgecad_overlay_uniform_tests"
+      ],
+      "general_kernel_cases": 483,
+      "previous_regressions_passed": true
+    },
+    "mac": {
+      "configured": 113,
+      "passed": 112,
+      "failed": 0,
+      "skipped": [
+        "forgecad_overlay_uniform_tests"
+      ],
+      "general_kernel_cases": 483,
+      "previous_regressions_passed": true
+    }
+  },
+  "source_hashes": {
+    "forgeCad2026_gui.cpp": "12afcc0d8088eb99ea2475e1d9eb6ec0c6bf8a21de60c92e549a997fb1afba37",
+    "forgeCad2026_dialogs_analysis.cpp": "3e74eba725601726a5c2ec2c9fddb002bbb65c4733fb6ea3a0ac5bcec63468b4",
+    "forgeCad2026_viewport.h": "b9a801c6152f9723550a7e001209b8333ea2db4d4ab23709bc59c909b83e1d9d",
+    "forgeCad2026_viewport_scene.cpp": "6e847ee473e93d6fef0f66bd8e24eb17f0bbe4e52e6c5f901d55b842a4ed9785",
+    "forgeCad2026_viewport_document.cpp": "1544e88abc9cbeebef983da5d52f647c518f9353e9f6aeeb0c0ca0e49c41d767",
+    "cad_feature_dependencies.h": "56fcf37a8561d927dfb318b0dd6f1ce124bb18995f95dd804c691417ac709330",
+    "cad_feature_dependencies.cpp": "39c2ae3e68dcc2db4392f3aa3c7d3995627e49d224d0c0e7bf3d94ecf4d0281d",
+    "tests/test_document_theme_tabs.h": "57fc820e437b1c14ffd514298c84c2639880b5bf610f1092ac7256702ee2f9da",
+    "tests/test_viewport.cpp": "3d1010e64b28bf8100cfeb7e93485a6095e3d6148528126549b673d27b40b490",
+    "CMakeLists.txt": "803fc4d264bca4e9dabf22d6678703e3f593a82813623ef8fefb5d6efbefe122",
+    "tools/generate_architecture.py": "a22878c10976cb18253dc00d118fc20262e9c8f41f7cec84c796f0c90081c953",
+    "forgeCad2026_dialogs_fillet.cpp": "5de6912b585ade4b03b2e51092c92d782367ed376fb96eb6469f2b53afaeb670"
+  },
+  "workflow_sha256": "696fa320ee4e406ee12a49724509972edc73d3379629ec1b93d05cfeea866eaa",
+  "GUI_specific_74_checks": "local Wayland/offscreen only; CI config VIEW_TESTS=OFF"
+}

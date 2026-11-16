@@ -1,0 +1,232 @@
+Test project /home/runner/work/Linux_CAD_forFree/Linux_CAD_forFree/build-ci
+        Start   1: forgecad_gpu_broad_phase_tests
+        Start   2: forgecad_box_fallback_tests
+  1/110 Test   #1: forgecad_gpu_broad_phase_tests ...................***Skipped   0.00 sec
+        Start   3: forgecad_geometry_sources_tests
+  2/110 Test   #3: forgecad_geometry_sources_tests ..................   Passed    0.02 sec
+        Start   4: forgecad_tessellation_availability_tests
+  3/110 Test   #4: forgecad_tessellation_availability_tests .........   Passed    0.00 sec
+        Start   5: forgecad_cuda_pool_tests
+  4/110 Test   #5: forgecad_cuda_pool_tests .........................   Passed    0.00 sec
+        Start   6: forgecad_constraint_linear_tests
+  5/110 Test   #6: forgecad_constraint_linear_tests .................   Passed    0.01 sec
+        Start   7: forgecad_display_cache_memory_tests
+  6/110 Test   #7: forgecad_display_cache_memory_tests ..............   Passed    0.07 sec
+        Start   8: forgecad_mesh_export_cpu_tests
+  7/110 Test   #2: forgecad_box_fallback_tests ......................   Passed    0.32 sec
+        Start   9: forgecad_application_theme_tests
+  8/110 Test   #9: forgecad_application_theme_tests .................   Passed    0.07 sec
+        Start  10: forgecad_expression_tests
+  9/110 Test  #10: forgecad_expression_tests ........................   Passed    0.02 sec
+        Start  11: forgecad_shape_analysis_tests
+ 10/110 Test  #11: forgecad_shape_analysis_tests ....................   Passed    0.06 sec
+        Start  12: forgecad_document_compression_tests
+ 11/110 Test  #12: forgecad_document_compression_tests ..............   Passed    0.02 sec
+        Start  13: forgecad_snapshot_chunks_tests
+ 12/110 Test  #13: forgecad_snapshot_chunks_tests ...................   Passed    0.03 sec
+        Start  14: forgecad_drawing_tests
+ 13/110 Test  #14: forgecad_drawing_tests ...........................   Passed    0.04 sec
+        Start  15: forgecad_revision_store_tests
+ 14/110 Test   #8: forgecad_mesh_export_cpu_tests ...................   Passed    1.30 sec
+        Start  16: forgecad_revision_release_tests
+ 15/110 Test  #16: forgecad_revision_release_tests ..................   Passed    0.11 sec
+        Start  17: forgecad_catalog_recovery_tests
+ 16/110 Test  #17: forgecad_catalog_recovery_tests ..................   Passed    0.09 sec
+        Start  18: forgecad_feature_dependencies_tests
+ 17/110 Test  #18: forgecad_feature_dependencies_tests ..............   Passed    0.00 sec
+        Start  19: forgecad_geometry_refs_tests
+ 18/110 Test  #19: forgecad_geometry_refs_tests .....................   Passed    0.00 sec
+        Start  20: forgecad_workspace_tests
+ 19/110 Test  #20: forgecad_workspace_tests .........................   Passed    0.02 sec
+        Start  21: forgecad_drawing_local_tools_tests
+ 20/110 Test  #15: forgecad_revision_store_tests ....................   Passed    4.83 sec
+        Start  22: forgecad_drawing_local_section_depth_tests
+ 21/110 Test  #21: forgecad_drawing_local_tools_tests ...............   Passed    3.79 sec
+        Start  23: forgecad_drawing_crop_tests
+ 22/110 Test  #22: forgecad_drawing_local_section_depth_tests .......   Passed    0.30 sec
+        Start  24: forgecad_drawing_templates_tests
+ 23/110 Test  #24: forgecad_drawing_templates_tests .................   Passed    0.07 sec
+        Start  25: forgecad_drawing_preparation_tests
+ 24/110 Test  #23: forgecad_drawing_crop_tests ......................   Passed    0.79 sec
+        Start  26: forgecad_drawing_scale_tests
+ 25/110 Test  #26: forgecad_drawing_scale_tests .....................   Passed    1.44 sec
+        Start  27: forgecad_drawing_editor_tests
+ 26/110 Test  #27: forgecad_drawing_editor_tests ....................   Passed    0.13 sec
+        Start  28: forgecad_projected_drawing_tests
+ 27/110 Test  #28: forgecad_projected_drawing_tests .................   Passed    0.12 sec
+        Start  29: forgecad_drawing_view_edit_tests
+ 28/110 Test  #25: forgecad_drawing_preparation_tests ...............   Passed    2.97 sec
+        Start  30: forgecad_drawing_layout_history_tests
+ 29/110 Test  #30: forgecad_drawing_layout_history_tests ............   Passed    0.33 sec
+        Start  31: forgecad_drawing_dimensions_tests
+ 30/110 Test  #31: forgecad_drawing_dimensions_tests ................   Passed    0.01 sec
+        Start  32: forgecad_drawing_dimensions_gui_tests
+ 31/110 Test  #29: forgecad_drawing_view_edit_tests .................   Passed    2.96 sec
+        Start  33: forgecad_drawing_dimension_repair_tests
+ 32/110 Test  #33: forgecad_drawing_dimension_repair_tests ..........   Passed    1.19 sec
+        Start  34: forgecad_drawing_view_placement_tests
+ 33/110 Test  #34: forgecad_drawing_view_placement_tests ............   Passed    0.29 sec
+        Start  35: forgecad_drawing_silhouette_tests
+ 34/110 Test  #35: forgecad_drawing_silhouette_tests ................   Passed    0.17 sec
+        Start  36: forgecad_drawing_visibility_tests
+ 35/110 Test  #32: forgecad_drawing_dimensions_gui_tests ............   Passed   15.17 sec
+        Start  37: forgecad_drawing_hidden_lines_tests
+ 36/110 Test  #37: forgecad_drawing_hidden_lines_tests ..............   Passed    1.93 sec
+        Start  38: forgecad_drawing_page_tests
+ 37/110 Test  #38: forgecad_drawing_page_tests ......................   Passed    0.13 sec
+        Start  39: forgecad_drawing_derived_tests
+ 38/110 Test  #39: forgecad_drawing_derived_tests ...................   Passed    2.79 sec
+        Start  40: forgecad_drawing_detail_tests
+ 39/110 Test  #40: forgecad_drawing_detail_tests ....................   Passed    1.46 sec
+        Start  41: forgecad_drawing_auxiliary_tests
+ 40/110 Test  #41: forgecad_drawing_auxiliary_tests .................   Passed    0.48 sec
+        Start  42: forgecad_drawing_break_tests
+ 41/110 Test  #42: forgecad_drawing_break_tests .....................   Passed    0.70 sec
+        Start  43: forgecad_revision_numbers_tests
+ 42/110 Test  #43: forgecad_revision_numbers_tests ..................   Passed    0.05 sec
+        Start  44: forgecad_drawing_presentation_tests
+ 43/110 Test  #44: forgecad_drawing_presentation_tests ..............   Passed    0.26 sec
+        Start  45: forgecad_drawing_complete_sections_tests
+ 44/110 Test  #45: forgecad_drawing_complete_sections_tests .........   Passed    3.54 sec
+        Start  46: forgecad_drawing_centers_tests
+ 45/110 Test  #46: forgecad_drawing_centers_tests ...................   Passed    1.05 sec
+        Start  47: forgecad_drawing_axes_tests
+ 46/110 Test  #47: forgecad_drawing_axes_tests ......................   Passed    2.71 sec
+        Start  48: forgecad_drawing_ui_controls_tests
+ 47/110 Test  #48: forgecad_drawing_ui_controls_tests ...............   Passed    0.09 sec
+        Start  49: forgecad_drawing_focus_tests
+ 48/110 Test  #49: forgecad_drawing_focus_tests .....................   Passed    3.77 sec
+        Start  50: forgecad_overlay_uniform_tests
+ 49/110 Test  #50: forgecad_overlay_uniform_tests ...................***Skipped   0.01 sec
+        Start  51: forgecad_sketch_offset_validation_tests
+ 50/110 Test  #51: forgecad_sketch_offset_validation_tests ..........   Passed    3.26 sec
+        Start  52: forgekernel_open_offset_tests
+ 51/110 Test  #36: forgecad_drawing_visibility_tests ................   Passed   34.79 sec
+        Start  53: forgekernel_loft_knots_tests
+ 52/110 Test  #53: forgekernel_loft_knots_tests .....................   Passed    0.07 sec
+        Start  54: forgekernel_polar_blend_tests
+ 53/110 Test  #54: forgekernel_polar_blend_tests ....................   Passed   26.41 sec
+        Start  55: forgekernel_surface_instances_tests
+ 54/110 Test  #55: forgekernel_surface_instances_tests ..............   Passed    1.40 sec
+        Start  56: forgekernel_exchange_robustness_tests
+ 55/110 Test  #56: forgekernel_exchange_robustness_tests ............   Passed    0.11 sec
+        Start  57: forgekernel_history_tests
+ 56/110 Test  #57: forgekernel_history_tests ........................   Passed    1.39 sec
+        Start  58: forgekernel_blend_probe_self_test
+ 57/110 Test  #58: forgekernel_blend_probe_self_test ................   Passed    0.48 sec
+        Start  59: forgekernel_tolerance_tests
+ 58/110 Test  #59: forgekernel_tolerance_tests ......................   Passed    2.41 sec
+        Start  60: forgekernel_surface_tools_tests
+ 59/110 Test  #60: forgekernel_surface_tools_tests ..................   Passed    7.40 sec
+        Start  61: forgekernel_blend_profile_tests
+ 60/110 Test  #61: forgekernel_blend_profile_tests ..................   Passed    1.76 sec
+        Start  62: forgekernel_face_normal_bounds_tests
+ 61/110 Test  #62: forgekernel_face_normal_bounds_tests .............   Passed    0.01 sec
+        Start  63: forgekernel_sketch_projection_tests
+ 62/110 Test  #63: forgekernel_sketch_projection_tests ..............   Passed    0.12 sec
+        Start  64: forgekernel_projected_curve_reference_tests
+ 63/110 Test  #64: forgekernel_projected_curve_reference_tests ......   Passed    0.02 sec
+        Start  65: forgekernel_surface_parameterization_tests
+ 64/110 Test  #65: forgekernel_surface_parameterization_tests .......   Passed    0.00 sec
+        Start  66: forgekernel_disjoint_union_tests
+ 65/110 Test  #66: forgekernel_disjoint_union_tests .................   Passed    0.09 sec
+        Start  67: forgekernel_loft_projected_guide_tests
+ 66/110 Test  #67: forgekernel_loft_projected_guide_tests ...........   Passed    1.49 sec
+        Start  68: forgekernel_loft_shape_tests
+ 67/110 Test  #68: forgekernel_loft_shape_tests .....................   Passed    1.34 sec
+        Start  69: forgekernel_loft_projected_section_tests
+ 68/110 Test  #69: forgekernel_loft_projected_section_tests .........   Passed    2.33 sec
+        Start  70: forgekernel_loft_complexity_tests
+ 69/110 Test  #70: forgekernel_loft_complexity_tests ................   Passed    0.19 sec
+        Start  71: forgekernel_loft_guide_constraint_tests
+ 70/110 Test  #71: forgekernel_loft_guide_constraint_tests ..........   Passed    0.38 sec
+        Start  72: forgekernel_offset_validation_tests
+ 71/110 Test  #72: forgekernel_offset_validation_tests ..............   Passed    0.18 sec
+        Start  73: forgekernel_curve_fit_validation_tests
+ 72/110 Test  #73: forgekernel_curve_fit_validation_tests ...........   Passed   29.88 sec
+        Start  74: forgekernel_offset_split_crease_tests
+ 73/110 Test  #74: forgekernel_offset_split_crease_tests ............   Passed    4.10 sec
+        Start  75: forgekernel_blend_contact_break_tests
+ 74/110 Test  #75: forgekernel_blend_contact_break_tests ............   Passed    0.90 sec
+        Start  76: forgekernel_plane_jets_tests
+ 75/110 Test  #76: forgekernel_plane_jets_tests .....................   Passed    0.00 sec
+        Start  77: forgekernel_bspline_derivative_tests
+ 76/110 Test  #77: forgekernel_bspline_derivative_tests .............   Passed    0.00 sec
+        Start  78: forgekernel_bspline_cache_tests
+ 77/110 Test  #78: forgekernel_bspline_cache_tests ..................   Passed    0.04 sec
+        Start  79: forgekernel_face_parameter_tests
+ 78/110 Test  #79: forgekernel_face_parameter_tests .................   Passed    0.00 sec
+        Start  80: forgekernel_bspline_isoline_tests
+ 79/110 Test  #80: forgekernel_bspline_isoline_tests ................   Passed    0.03 sec
+        Start  81: forgekernel_loft_correspondence_tests
+ 80/110 Test  #81: forgekernel_loft_correspondence_tests ............   Passed    0.32 sec
+        Start  82: forgekernel_loft_point_tests
+ 81/110 Test  #82: forgekernel_loft_point_tests .....................   Passed    0.11 sec
+        Start  83: forgekernel_boolean_seam_tests
+ 82/110 Test  #83: forgekernel_boolean_seam_tests ...................   Passed    0.13 sec
+        Start  84: forgekernel_marching_seed_grid_tests
+ 83/110 Test  #84: forgekernel_marching_seed_grid_tests .............   Passed    0.70 sec
+        Start  85: forgekernel_surface_mapping_tests
+ 84/110 Test  #85: forgekernel_surface_mapping_tests ................   Passed    0.29 sec
+        Start  86: forgekernel_trimmed_face_bounds_tests
+ 85/110 Test  #86: forgekernel_trimmed_face_bounds_tests ............   Passed    0.41 sec
+        Start  87: forgekernel_solid_trim_tests
+ 86/110 Test  #87: forgekernel_solid_trim_tests .....................   Passed    0.02 sec
+        Start  88: forgekernel_cone_rays_tests
+ 87/110 Test  #88: forgekernel_cone_rays_tests ......................   Passed    0.02 sec
+        Start  89: forgekernel_blend_cavity_tests
+ 88/110 Test  #89: forgekernel_blend_cavity_tests ...................   Passed   48.51 sec
+        Start  90: forgekernel_blend_cavity_regression_tests
+ 89/110 Test  #90: forgekernel_blend_cavity_regression_tests ........   Passed   55.70 sec
+        Start  91: forgekernel_blend_mitre_validation_tests
+ 90/110 Test  #91: forgekernel_blend_mitre_validation_tests .........   Passed    0.07 sec
+        Start  92: forgekernel_blend_boundary_validation_tests
+ 91/110 Test  #92: forgekernel_blend_boundary_validation_tests ......   Passed    3.89 sec
+        Start  93: forgekernel_nurbs_support_tests
+ 92/110 Test  #52: forgekernel_open_offset_tests ....................   Passed  239.82 sec
+        Start  94: forgekernel_sweep_validation_tests
+ 93/110 Test  #93: forgekernel_nurbs_support_tests ..................   Passed  113.48 sec
+        Start  95: forgekernel_sheet_fit_validation_tests
+ 94/110 Test  #95: forgekernel_sheet_fit_validation_tests ...........   Passed    1.11 sec
+        Start  96: forgekernel_sheet_join_validation_tests
+ 95/110 Test  #96: forgekernel_sheet_join_validation_tests ..........   Passed   10.56 sec
+        Start  97: forgekernel_curve_projection_tests
+ 96/110 Test  #97: forgekernel_curve_projection_tests ...............   Passed    0.00 sec
+        Start  98: forgekernel_boundary_fit_validation_tests
+ 97/110 Test  #98: forgekernel_boundary_fit_validation_tests ........   Passed    0.30 sec
+        Start  99: forgekernel_surface_curve_fit_validation_tests
+ 98/110 Test  #99: forgekernel_surface_curve_fit_validation_tests ...   Passed    0.71 sec
+        Start 100: forgekernel_mapping_carrier_validation_tests
+ 99/110 Test #100: forgekernel_mapping_carrier_validation_tests .....   Passed    1.22 sec
+        Start 101: forgekernel_mapping_uv_validation_tests
+100/110 Test #101: forgekernel_mapping_uv_validation_tests ..........   Passed    3.79 sec
+        Start 102: forgekernel_mapping_diagonal_validation_tests
+101/110 Test #102: forgekernel_mapping_diagonal_validation_tests ....   Passed    0.85 sec
+        Start 103: forgekernel_planar_flatten_validation_tests
+102/110 Test #103: forgekernel_planar_flatten_validation_tests ......   Passed    1.51 sec
+        Start 104: forgekernel_planar_thicken_validation_tests
+103/110 Test #104: forgekernel_planar_thicken_validation_tests ......   Passed    1.84 sec
+        Start 105: forgekernel_projection_fit_validation_tests
+104/110 Test #105: forgekernel_projection_fit_validation_tests ......   Passed    2.93 sec
+        Start 106: forgekernel_edge_offset_fit_validation_tests
+105/110 Test  #94: forgekernel_sweep_validation_tests ...............   Passed  100.56 sec
+        Start 107: forgekernel_boolean_boundary_tests
+106/110 Test #107: forgekernel_boolean_boundary_tests ...............   Passed    0.01 sec
+        Start 108: forgekernel_offset_pcurve_tests
+107/110 Test #108: forgekernel_offset_pcurve_tests ..................   Passed    0.57 sec
+        Start 109: forgekernel_sew_pcurve_tests
+108/110 Test #106: forgekernel_edge_offset_fit_validation_tests .....   Passed   10.19 sec
+        Start 110: forgekernel_tests
+109/110 Test #109: forgekernel_sew_pcurve_tests .....................   Passed   14.30 sec
+110/110 Test #110: forgekernel_tests ................................   Passed  658.84 sec
+
+100% tests passed out of 110
+
+Label Time Summary:
+opengl    =   0.01 sec*proc (1 test)
+
+Total Test time (real) = 1047.44 sec
+
+The following tests did not run:
+	  1 - forgecad_gpu_broad_phase_tests (Skipped)
+	 50 - forgecad_overlay_uniform_tests (Skipped)
