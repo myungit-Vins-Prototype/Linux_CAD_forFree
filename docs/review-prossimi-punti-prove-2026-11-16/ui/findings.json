@@ -1,0 +1,125 @@
+{
+  "scope": "Audit statico mirato successivo a UI8; due siti dimostrati e un candidato separato",
+  "findings": [
+    {
+      "id": "UI-literal-1",
+      "status": "Colore UI fisso dimostrato staticamente; leggibilita effettiva da verificare",
+      "title": "Messaggio informativo del pannello Sezione",
+      "location": {
+        "path": "/home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp",
+        "line": 1809
+      },
+      "literal": "color: #9fc6e8;",
+      "route": "Visualizza > Parametri della sezione... > Piano: Scelto nella vista",
+      "routeEvidence": [
+        {
+          "path": "/home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp",
+          "line": 1348
+        },
+        {
+          "path": "/home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp",
+          "line": 1785
+        },
+        {
+          "path": "/home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp",
+          "line": 1793
+        },
+        {
+          "path": "/home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp",
+          "line": 1934
+        }
+      ],
+      "proof": "QLabel locale dentro QDialog standard; setStyleSheet imposta il foreground costante, senza ramo tema o ruolo semantico. Le lambda di aggiornamento cambiano solo il testo. In assenza del piano il testo e Scegli il piano nella vista.; con piano selezionato e una descrizione del riferimento. Palette e QSS globali variano, questo valore locale resta identico.",
+      "visibleTextEvidence": [
+        {
+          "path": "/home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp",
+          "line": 1849
+        },
+        {
+          "path": "/home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp",
+          "line": 1856
+        }
+      ],
+      "classification": "Messaggio di interfaccia; non colore del piano, del modello, della carta o preferenza utente.",
+      "limit": "Nessuna cattura pixel; non attribuito un difetto a ogni tema desktop."
+    },
+    {
+      "id": "UI-literal-2",
+      "status": "Foreground HTML UI fisso dimostrato staticamente; leggibilita effettiva da verificare",
+      "title": "Etichette e nota esplicativa delle Proprieta di massa",
+      "location": {
+        "path": "/home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_analysis.cpp",
+        "line": 565
+      },
+      "relatedLocations": [
+        {
+          "path": "/home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_analysis.cpp",
+          "line": 618
+        },
+        {
+          "path": "/home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_analysis.cpp",
+          "line": 569
+        }
+      ],
+      "literals": [
+        "#9fb3c8 per le etichette della tabella",
+        "#8aa0b4 per Calcolo/Unita e spiegazione del tensore",
+        "#ff7b72 per Calcolo non riuscito"
+      ],
+      "route": "Analisi > Proprieta di massa... (Ctrl+M), con almeno un corpo",
+      "routeEvidence": [
+        {
+          "path": "/home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp",
+          "line": 1509
+        },
+        {
+          "path": "/home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp",
+          "line": 1512
+        },
+        {
+          "path": "/home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp",
+          "line": 2276
+        },
+        {
+          "path": "/home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_analysis.cpp",
+          "line": 471
+        }
+      ],
+      "proof": "Il QTextBrowser a riga515 riceve HTML con color inline fissato nel generatore e setHtml a riga621. Le etichette Lunghezza/Volume/Massa e la nota sono UI generata, non colori importati dai corpi; il ramo errore usa a sua volta un rosso fisso. Il pannello comune aggiorna palette al cambio tema ma non riscrive i formati inline; anche un ricalcolo rigenera gli stessi letterali.",
+      "classification": "Testi di presentazione delle misure, separati da valori fisici e nome del corpo; nessun colore utente da preservare coinvolto.",
+      "limit": "Nessun rendering eseguito; non dichiarata una misura di contrasto sul vetro reale."
+    },
+    {
+      "id": "UI-literal-C1",
+      "status": "Candidato esplicito: resa del separatore non dimostrabile dal solo color",
+      "title": "Separatore del pannello Raccordo",
+      "location": {
+        "path": "/home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_fillet.cpp",
+        "line": 499
+      },
+      "literal": "color:#35485c;",
+      "route": "Comando Raccordo > filletDialog > separatore sotto le schede",
+      "routeEvidence": [
+        {
+          "path": "/home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_solids.cpp",
+          "line": 86
+        },
+        {
+          "path": "/home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_fillet.cpp",
+          "line": 213
+        },
+        {
+          "path": "/home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_fillet.cpp",
+          "line": 222
+        },
+        {
+          "path": "/home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_fillet.cpp",
+          "line": 498
+        }
+      ],
+      "proof": "QFrame con forma HLine ha foglio di stile locale costante. Il FunctionDialogPanel aggiorna palette/QSS ma il letterale sul frame resta invariato.",
+      "classification": "Separatore strutturale della UI; non tratto del disegno o bordo tecnico.",
+      "limit": "QFrame puo disegnare il rilievo con altri ruoli della palette. Senza controllare stile/paint effettivo non si afferma che la linea visibile resti di questo colore o sia illeggibile."
+    }
+  ]
+}

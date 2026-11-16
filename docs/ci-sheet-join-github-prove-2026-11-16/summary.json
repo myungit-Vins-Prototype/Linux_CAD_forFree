@@ -1,0 +1,36 @@
+{
+  "code_commit": "046685ef1d31fdf4b61571d9630ea0f245b4ffb7",
+  "url": "https://github.com/myungit-Vins-Prototype/Linux_CAD_forFree/actions/runs/43928716177",
+  "platforms": {
+    "linux": {
+      "suites_configured": 110,
+      "suites_passed": 108,
+      "tests_failed": 0,
+      "skipped": [
+        "forgecad_gpu_broad_phase_tests",
+        "forgecad_overlay_uniform_tests"
+      ],
+      "general_kernel_cases": 483,
+      "ci_regression_passed": true,
+      "K12_WholeRim_passed": true
+    },
+    "mac": {
+      "suites_configured": 113,
+      "suites_passed": 112,
+      "tests_failed": 0,
+      "skipped": [
+        "forgecad_overlay_uniform_tests"
+      ],
+      "general_kernel_cases": 483,
+      "ci_regression_passed": true,
+      "K12_WholeRim_passed": true
+    }
+  },
+  "workflow_sha256": "696fa320ee4e406ee12a49724509972edc73d3379629ec1b93d05cfeea866eaa",
+  "code_sources": {
+    "kernel/fk_sheet.cpp": "b99a70318f2cf7dcd6b24e646d8976bd287f6622ed9cf4accab968403380afbc",
+    "kernel/tests/test_sheet_join_validation.cpp": "451b30b1488b94f3e817449a27779bef85ad0d28abf2896cabd4e22e4b5ab763",
+    "kernel/CMakeLists.txt": "21dcb60fbdb0d83d1a5b9654e576f4c6c409c7c346461cbdb0191afb6326e4a2",
+    "tools/generate_architecture.py": "16441367416b5e4e53f6fba12799b2c779c903e975bbe1b9469d92f952a383fb"
+  }
+}

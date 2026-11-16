@@ -1,0 +1,13 @@
+# Audit in lettura eseguito il 16 novembre 2026. Nessuna build/test.
+# CWD /home/myungit/Linux_CAD_forFree, shell /bin/bash login=false.
+# 1. Letti AGENTS.md, CLAUDE.md, docs/tolerance-policy.md e i due rapporti indicati.
+# 2. Consultate descrizioni dei moduli e archi call/reference nei due versi del grafo.
+rg --files
+rg -n '\b(setEdgePickLinear|setExtendPickCallback|resumeExtendPick|constraintsVisible|sectionEnabled|geometrySnap|gridSnap|basisMatrix|normalizedViewAngle|extrusionNames|setModelProvider|forgeIntersectRay|modelBodyFeatures|usesSketch|commandIconNames|nearestBodyEdge|appendFixedReferenceLine)\b' --glob '!docs/**' --glob '!tools/generate_architecture.py'
+rg -n 'install\(|PUBLIC_HEADER|BUILD_SHARED_LIBS|ENABLE_EXPORTS|CXX_VISIBILITY|Q_PLUGIN_METADATA|dlsym|QLibrary|add_library|add_executable' CMakeLists.txt kernel/CMakeLists.txt
+# 3. Lettura selettiva header/definizioni/campi e flussi attivi, estratti in source-evidence.txt.
+# 4. Script inventario: solo lettura del repository; scrive inventory.json e README.md in /tmp.
+python3 /tmp/ci-sheet-fix/next-api/inventory.py
+# 5. Hash rilevanti confrontati con graph.json e controllo snapshot HEAD.
+git rev-parse HEAD
+git status --short

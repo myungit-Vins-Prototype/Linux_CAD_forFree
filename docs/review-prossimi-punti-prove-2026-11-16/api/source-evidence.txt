@@ -1,0 +1,606 @@
+
+FILE forgeCad2026_viewport.h SHA256 1b57e13662b8b9a41334eb132fc2d8c0080db248cf76ff6bb356cc04e716090b
+80: // Widget interno della vista 3D. Le implementazioni sono nel .cpp dedicato.
+81: class CadViewport final : public QOpenGLWidget, protected QOpenGLFunctions {
+82:     friend class ViewportInteractionTest;
+83:     template<class Callback>
+84:     static void deliverResult(QPointer<CadViewport> guard, Callback callback);
+85: public:
+86:     int shapeAnalysisBody_ = -1;
+87:     int shapeAnalysisMode_ = -1;
+88:     int shapeAnalysisFace_ = -1;
+89:     BodyDisplay shapeAnalysisFaceDisplay_;
+90:     bool shapeAnalysisThrough_ = true;
+91:     float zebraFrequency_ = 12, zebraAngle_ = 0;
+92:     ForgeCad::ShapeAnalysis shapeAnalysis_;
+93:     void calculateShapeAnalysis(const std::function<void()> &work);
+94:     void clearShapeAnalysis();
+95:     explicit CadViewport(QWidget *parent = nullptr);
+96:     ~CadViewport() override;
+100:     void setTopologyIdsVisible(bool visible);
+101:     void setLightingPreset(int preset);
+102:     // Aggancio dello schizzo: alla geometria (punti notevoli, segmenti, curve)
+103:     // e alla griglia, indipendenti.
+104:     void setGeometrySnap(bool enabled);
+105:     bool geometrySnap() const;
+106:     void setGridSnap(bool enabled);
+107:     bool gridSnap() const;
+108:     void setConstraintMode(int mode);
+109:     void setLineLength(double length);
+226:     bool wheelZoomEnabled() const;
+227:     bool referencePlanesVisible() const;
+228:     bool gridVisible() const;
+229:     const QVector<SketchObject> &sketches() const;
+230:     const QVector<ExtrusionObject> &extrusions() const;
+231:     const QVector<ModelBody> &modelBodies() const;
+232:     QVector<StoryStep> storyboard() const;
+314:     // `wholeBody`: si evidenzia tutto il corpo (scelta di un corpo), non le
+315:     // sole facce create dall'ultima feature.
+316:     void selectObject(SceneObjectKind kind, int index, bool wholeBody = false);
+317: 
+318:     QStringList extrusionNames() const;
+319: 
+320:     // Booleana esatta (B-rep) tra due corpi solidi, anche su piani diversi o
+449:     // faccia cilindrica o conica (source 2) di un corpo visibile; poi
+450:     // setHelixPickCallback riceve il corpo, il tipo e un punto dello spigolo o della faccia.
+451:     QString beginHelixPick();
+452:     void setHelixPickCallback(std::function<void(int, int, EdgePoint)> callback);
+453:     // Estensione: attiva la scelta dei bordi; deferPreview permette al pannello
+454:     // di apparire prima del calcolo e gestire selezione e anteprima insieme.
+455:     QString beginExtendPick(bool linear, bool deferPreview = false);
+456:     void setExtendPickCallback(std::function<void(int, QVector<EdgePoint>)> callback);
+457:     // Tipo dell'estensione per l'anteprima durante la scelta dei bordi.
+458:     void setEdgePickLinear(bool linear);
+459:     // Di nuovo alla scelta dei bordi da estendere, con quelli dati gia' scelti.
+460:     void resumeExtendPick(int body, const QVector<EdgePoint> &edges, bool linear);
+461:     // Modifica degli spigoli del raccordo (o smusso) `blend`: la scelta riparte
+462:     // sulla sua base con gli spigoli attuali; al posto del raccordo si vede
+745:     // Solo visualizzazione: i corpi si tagliano con un piano di clip di OpenGL
+746:     // (resta la parte dalla parte opposta alla normale) e le sezioni dei solidi
+747:     // si chiudono con lo stencil (riempimento tratteggiato). La selezione
+748:     // ignora quello che sta dalla parte tolta.
+749:     void setSection(bool enabled, const QVector3D &point = {}, const QVector3D &normal = QVector3D(0, 0, 1), bool caps = true, bool showPlane = true);
+750:     bool sectionEnabled() const;
+751:     // Trascinamento del piano di sezione nella vista: `callback(spostamento)`
+795:     // Chiamato quando il documento cambia (il piano della sezione puo' essersi spostato).
+796:     void setSectionRefreshCallback(std::function<void()> callback);
+797:     // Estensione della geometria visibile lungo `normal` dal punto `point` (per il cursore della posizione).
+798:     void sceneRangeAlong(const QVector3D &point, const QVector3D &normal, double &lo, double &hi) const;
+799:     bool constraintsVisible() const;
+800:     // La finestra dei vincoli si aggiorna (selezione, vincoli, schizzo attivo cambiati).
+821: 
+822:     // Rotazione dal modello allo spazio della vista standard: righe destra, alto, verso l'osservatore.
+823:     QMatrix4x4 basisMatrix() const;
+824: 
+825:     QMatrix4x4 sceneProjectionMatrix() const;
+826: 
+827:     QMatrix4x4 sceneModelViewMatrix() const;
+828: 
+829:     void setRenderMatrices(const QMatrix4x4 &projection, const QMatrix4x4 &modelView);
+841: 
+842:     // Sensibilita' della rotazione classica, indipendente dalla dimensione della vista.
+843:     static constexpr float kOrbitDegreesPerPixel = ForgeCad::Gui::ViewportCamera::kOrbitDegreesPerPixel;
+844:     static float normalizedViewAngle(float degrees);
+845: 
+1708:     bool dragRecorded_ = false;
+1709:     int edgePickBody_ = -1, hoverEdge_ = -1, hoverEdgeBody_ = -1;
+1710:     bool edgePicking_ = false;  // scelta degli spigoli in corso (edgePickBody_ < 0: corpo non ancora deciso)
+1711:     bool edgePickChamfer_ = false;
+1712:     bool edgePickExtend_ = false, edgePickLinear_ = false;
+1713:     bool edgePickHelix_ = false;  // scelta della base di un'elica (un clic su uno spigolo o una faccia)
+1714:     bool edgePickPreviewEnabled_ = true;  // falso finche' il pannello del raccordo non e' apparso
+1759:     std::function<void(int, int, EdgePoint)> helixPickFinished_;
+1760:     ChamferSpec edgePickSpec_;  // smusso: modo delle distanze per l'anteprima durante la scelta  // scelta dei bordi di una superficie da estendere
+1761:     std::function<void(int, QVector<EdgePoint>)> extendPickFinished_;
+1762:     QVector<int> pickedEdges_, hoverFaceEdges_;
+1763:     // Facce scelte per tutti i loro bordi (raccordi e smussi): finche' i bordi
+
+FILE forgeCad2026_viewport_selection.cpp SHA256 9ef5c603294813cb10edb850ef2177ecf16833e52998fcae24381dfe3a86b02e
+218:     edgePickEdit_ = -1;
+219:     return startEdgePick(false, false, true);
+220: }
+221: 
+222: void CadViewport::setHelixPickCallback(std::function<void(int, int, EdgePoint)> callback) { helixPickFinished_ = std::move(callback); }
+223: 
+224: QString CadViewport::beginExtendPick(bool linear, bool deferPreview) {
+225:     edgePickEdit_ = -1;
+226:     edgePickLinear_ = linear;
+227:     return startEdgePick(false, true, false, deferPreview);
+228: }
+229: 
+230: void CadViewport::setExtendPickCallback(std::function<void(int, QVector<EdgePoint>)> callback) { extendPickFinished_ = std::move(callback); }
+231: 
+232: void CadViewport::setEdgePickLinear(bool linear) {
+233:     edgePickLinear_ = linear;
+234:     if (edgePicking_ && edgePickExtend_) edgePicked();
+235: }
+236: 
+237: void CadViewport::resumeExtendPick(int body, const QVector<EdgePoint> &edges, bool linear) {
+238:     if (body < 0 || body >= extrusions_.size()) return;
+239:     selection_ = {SceneObjectKind::Extrusion, body, -1};
+240:     selectedFace_ = {};
+241:     if (!beginExtendPick(linear).isEmpty()) return;
+242:     pickReferences(body, edges);
+243:     edgePicked();
+244: }
+1654:         // la patch del raccordo attuale, dal body che c'e' gia'.
+1655:         const ExtrusionObject &existing = extrusions_.at(edgePickEdit_);
+1656:         if (unchangedFeature(existing, edgePickEdit_)) requestPreview(existing, edgePickEdit_);
+1657:         else clearBlendPreview();
+1658:     } else if (edgePickExtend_) requestExtendPreview(edgePickBody_, pickedEdgePoints(), edgePickSize_, edgePickLinear_, edgePickEdit_);
+1659:     else requestBlendPreview(edgePickBody_, pickedEdgePoints(), edgePickSize_, edgePickChamfer_, edgePickEdit_, edgePickSpec_);
+1660:     if (edgePickStatus_) edgePickStatus_(edgePickMessage());
+1688:     const bool chamfer = edgePickChamfer_, extend = edgePickExtend_;
+1689:     const int edited = edgePickEdit_;
+1690:     // L'anteprima resta per la finestra della misura (che la aggiorna e poi la toglie).
+1691:     cancelEdgePick(true);
+1692:     if (points.isEmpty()) {
+1693:         clearBlendPreview();
+1694:         return;
+1695:     }
+1696:     if (extend) {
+1697:         if (extendPickFinished_) extendPickFinished_(body, points);
+1698:     } else if (edited >= 0) {
+1699:         if (edgeEditFinished_) edgeEditFinished_(edited, points, edgePickSize_, chamfer);
+1700:     } else if (edgePickFinished_) {
+1701:         edgePickFinished_(body, points, chamfer);
+1702:     }
+
+FILE forgeCad2026_viewport.cpp SHA256 b121ff9f7a6dc9c9549ae77d1e80c5c56eafa1a7185eec3daa9a325fa810e407
+74: void CadViewport::setGeometrySnap(bool enabled) { geometrySnap_ = enabled; update(); }
+75: 
+76: bool CadViewport::geometrySnap() const { return geometrySnap_; }
+77: 
+78: void CadViewport::setGridSnap(bool enabled) { gridSnap_ = enabled; update(); }
+79: 
+80: bool CadViewport::gridSnap() const { return gridSnap_; }
+81: 
+454: }
+455: 
+456: bool CadViewport::sectionEnabled() const { return section_.enabled; }
+457: 
+
+FILE forgeCad2026_viewport_sketch.cpp SHA256 f8cda4c9d13bb541e4f5fe2a89ac05872e885c6005d70a5b194b31b00d822aa9
+1257: }
+1258: 
+1259: bool CadViewport::constraintsVisible() const { return constraintsVisible_; }
+1260: 
+1261: void CadViewport::setConstraintPanelCallback(std::function<void()> callback) { constraintPanelCallback_ = std::move(callback); }
+
+FILE forgeCad2026_viewport_scene.cpp SHA256 00db869bae00baa5e28880b411044598ed21238ddbae8b86d2dd9d1bbf9f4c49
+48: QMatrix4x4 CadViewport::basisMatrix() const {
+49:     return camera_.basisMatrix();
+50: }
+51: 
+52: QMatrix4x4 CadViewport::sceneProjectionMatrix() const {
+53:     return camera_.projectionMatrix(size(), sceneDepth());
+54: }
+55: 
+56: QMatrix4x4 CadViewport::sceneModelViewMatrix() const {
+57:     return camera_.modelViewMatrix();
+58: }
+59: 
+83: float CadViewport::normalizedViewAngle(float degrees) {
+84:     return ForgeCad::Gui::ViewportCamera::normalizedViewAngle(degrees);
+85: }
+
+FILE forgeCad2026_viewport_document.cpp SHA256 9023d6c295046e557eef26f7ef88421286371fcf4da923a61e1b9d9ce5f605ca
+914: QStringList CadViewport::extrusionNames() const {
+915:     QStringList names;
+916:     for (const ExtrusionObject &extrusion : extrusions_) names.append(extrusion.name);
+917:     return names;
+918: }
+
+FILE forgeCad2026_dialogs_surfaces.cpp SHA256 3e1a52dbd703f3d875b28feac751966b95defebc10975a78fb6adeb8f56d32bc
+2190:             viewport->clearPreview();
+2191:             previewLabel->setText(QStringLiteral("seleziona almeno un bordo nella vista"));
+2192:             return;
+2193:         }
+2194:         previewLabel->setText(QStringLiteral("in calcolo..."));
+2195:         viewport->requestExtendPreview(selectedBase, selected, distanceBox->value(), typeBox->currentIndex() == 1, hidden);
+2196:     };
+2197:     viewport->setPreviewCallback([previewLabel](const QString &error) {
+2198:         previewLabel->setText(error.isEmpty() ? QStringLiteral("pronta (in ambra nella vista)") : QStringLiteral("non riuscita: ") + error);
+2199:     });
+2200:     QObject::connect(distanceBox, &QDoubleSpinBox::valueChanged, &dialog, refresh);
+2201:     QObject::connect(typeBox, &QComboBox::currentIndexChanged, &dialog, refresh);
+2202:     QObject::connect(completeBox, &QCheckBox::toggled, &dialog, refresh);
+2203:     if (pickInView) {
+2204:         viewport->setEdgePickPanelKeyCallbacks(
+2205:             [buttons] { buttons->button(QDialogButtonBox::Ok)->click(); },
+2206:             [&dialog] { dialog.reject(); });
+2207:         viewport->setEdgePickChangedCallback([&](int body, QVector<EdgePoint> changed) {
+2208:             selectedBase = body;
+2209:             picked = std::move(changed);
+2210:             refresh();
+2211:         });
+2212:         QTimer::singleShot(0, &dialog, [&] {
+2213:             previewStarted = true;
+2214:             refresh();
+2215:         });
+2216:     }
+2217:     refresh();
+2226:     else result.applied = runUntilApplied(dialog, form, buttons, commit);
+2227:     result.edges = selectedEdges();
+2228:     if (pickInView) {
+2229:         viewport->setEdgePickPanelKeyCallbacks({}, {});
+2230:         viewport->setEdgePickChangedCallback({});
+2231:         viewport->endEdgePick(true);
+2232:     }
+2233:     viewport->setPreviewCallback({});
+2234:     viewport->clearPreview();
+2235:     result.distance = distanceBox->value();
+
+FILE forgeCad2026_gui.cpp SHA256 4b23e22c0811d6ed33ccc96aa6ca215620b115ad2a0cb9b882b5a267cfefaf76
+2327:     auto extendLinear = std::make_shared<bool>(false);
+2328:     connect(extendSurfaceAction, &QAction::triggered, this, [this, viewport, extendLinear] {
+2329:         if (viewport->sketchModeActive()) viewport->endSketchMode();
+2330:         viewport->setEdgePickSize(pickSizeBox_->value());
+2331:         const QString error = viewport->beginExtendPick(*extendLinear, true);
+2332:         if (!error.isEmpty()) {
+2333:             QMessageBox::information(this, QStringLiteral("Estendi superficie"), error);
+2334:             return;
+2335:         }
+2336:         const QString name = QStringLiteral("Estensione %1").arg(viewport->extrusions().size() + 1);
+2337:         const ExtendDialogResult result = extendDialog(this, viewport, QStringLiteral("Estendi superficie"), viewport->edgePickBody(), -1,
+2338:             viewport->edgePickPoints(), viewport->edgePickSize(), *extendLinear, true,
+2339:             [viewport, name](int body, const QVector<EdgePoint> &selected, double distance, bool linear) {
+2340:                 return viewport->createSheetExtend(body, selected, distance, linear, name);
+2341:             });
+2342:         *extendLinear = result.linear;
+2343:         viewport->setEdgePickSize(result.distance);
+2344:         if (pickSizeBox_) pickSizeBox_->setValue(result.distance);
+2345:     });
+2953:     });
+2954:     sketchAction->setCheckable(true); sketchAction->setChecked(true);
+2955:     snapAction = sketchMenu->addAction(QStringLiteral("Snap alla geometria"));
+2956:     snapAction->setCheckable(true); snapAction->setChecked(QSettings().value(QStringLiteral("sketch/geometrySnap"), true).toBool());
+2957:     viewport->setGeometrySnap(snapAction->isChecked());
+2958:     gridSnapAction = sketchMenu->addAction(QStringLiteral("Snap alla griglia"));
+2959:     gridSnapAction->setCheckable(true); gridSnapAction->setChecked(QSettings().value(QStringLiteral("sketch/gridSnap"), true).toBool());
+2960:     viewport->setGridSnap(gridSnapAction->isChecked());
+2961:     originSnapAction = sketchMenu->addAction(QStringLiteral("Snap all'origine"));
+3260:     });
+3261:     connect(snapAction, &QAction::toggled, this, [viewport](bool enabled) {
+3262:         viewport->setGeometrySnap(enabled);
+3263:         QSettings().setValue(QStringLiteral("sketch/geometrySnap"), enabled);
+3264:     });
+3265:     connect(gridSnapAction, &QAction::toggled, this, [viewport](bool enabled) {
+3266:         viewport->setGridSnap(enabled);
+3267:         QSettings().setValue(QStringLiteral("sketch/gridSnap"), enabled);
+3268:     });
+
+FILE forgeCad2026_camera.cpp SHA256 ad2197f900075935a0e93408844ec71a69e9ef0e847fe2a6c9d1fc6bebd2d372
+6: QMatrix4x4 ViewportCamera::basisMatrix() const {
+7:     const AxesOrientation &o = orientation_;
+8:     return QMatrix4x4(float(o.right[0]), float(o.right[1]), float(o.right[2]), 0.0f,
+9:                       float(o.up[0]), float(o.up[1]), float(o.up[2]), 0.0f,
+10:                       float(o.toward[0]), float(o.toward[1]), float(o.toward[2]), 0.0f,
+11:                       0.0f, 0.0f, 0.0f, 1.0f);
+12: }
+13: 
+14: QMatrix4x4 ViewportCamera::projectionMatrix(const QSize &viewportSize, double depth) const {
+15:     const float aspect = float(viewportSize.width()) / float(qMax(1, viewportSize.height()));
+16:     const float viewScale = zoom_ / 8.0f;
+17:     QMatrix4x4 projection;
+18:     projection.ortho(-4.0f * aspect * viewScale, 4.0f * aspect * viewScale,
+19:                      -4.0f * viewScale, 4.0f * viewScale,
+20:                      float(double(zoom_) - depth), float(double(zoom_) + depth));
+28:     modelView.rotate(pitch_, 1.0f, 0.0f, 0.0f);
+29:     modelView.rotate(yaw_, 0.0f, 1.0f, 0.0f);
+30:     modelView *= basisMatrix();
+31:     return modelView;
+63: float ViewportCamera::normalizedViewAngle(float degrees) {
+64:     return std::remainder(degrees, 360.0f);
+65: }
+66: 
+67: void ViewportCamera::orbitView(const QPoint &delta) {
+68:     if (delta.isNull()) return;
+69:     const QVector3D previousPivot = modelViewMatrix().map(orbitPivot_);
+70:     yaw_ = normalizedViewAngle(yaw_ + delta.x()*kOrbitDegreesPerPixel);
+71:     pitch_ = normalizedViewAngle(pitch_ + delta.y()*kOrbitDegreesPerPixel);
+72:     roll_ *= 0.9f;
+73:     // Compensa la traslazione: il punto scelto resta nello stesso pixel.
+
+FILE cad_drawing_editor.h SHA256 c3d1c08ff11ed6967343fdaa8505c99a573ea8c61e1fcedc6112d364a6f137d5
+98:     QString beginDimensionRepair(const QUuid &id,int reference=-1);
+99:     QString updateDimension(DrawingDimension dimension);
+100:     QString updateDimension(DrawingDimension dimension,DrawingDimensionPresentation presentation);
+101:     QString addSelectedDimension(DrawingMeasure measure);
+102:     QString updateModel(DrawingEditorModel model);
+103:     void setChangedCallback(std::function<void(const DrawingSheet &)> callback);
+104:     void setModelProvider(std::function<DrawingEditorModel()> provider);
+105:     void fitSheet();
+106:     void setReadOnly(bool readOnly);
+107:     bool isReadOnly() const;
+108: private:
+
+FILE cad_drawing_editor.cpp SHA256 01da076e44b8d1786b1505ac50aa36f484083d78653bc0138b890262195cf54c
+438:     }
+439:     QLabel *message=nullptr;
+440:     QAction *updateAction=nullptr;
+441:     QTreeWidget *tree=nullptr;
+493:         if(piece.kind==DrawingCurveKind::Section)sectionCurves[id].push_back(piece);}
+494:     std::function<void(const DrawingSheet &)> changed;
+495:     std::function<DrawingEditorModel()> provider;
+496:     bool rebuilding=false;
+497:     bool readOnly=false;
+2945:     action(QStringLiteral("Lunghezza curva"),"drawingLengthDimensionAction",[this]{impl_->report(addSelectedDimension(DrawingMeasure::SectionLength));});
+2946:     toolbar->addSeparator();action(QStringLiteral("Elimina selezione"),"drawingDeleteSelectionAction",[this]{impl_->removeSelection();});
+2947:     impl_->updateAction=action(QStringLiteral("Aggiorna dal modello"),"drawingUpdateModelAction",[this]{if(impl_->provider){try{impl_->report(updateModel(impl_->provider()));}catch(const std::exception &error){impl_->report(QString::fromUtf8(error.what()));}}});
+2948:     action(QStringLiteral("Impostazioni zoom…"),"drawingZoomPreferencesAction",[this]{ForgeCad::showZoomPreferences(this);});
+2949:     impl_->updateAction->setEnabled(false);action(QStringLiteral("Adatta foglio"),"drawingFitAction",[this]{fitSheet();});
+2950:     impl_->scene=new QGraphicsScene(this);impl_->view=new SheetCanvas(impl_->scene,this);impl_->view->setObjectName("drawingCanvas");impl_->view->configurePan();impl_->view->setRenderHint(QPainter::Antialiasing);impl_->view->setBackgroundRole(QPalette::Dark);impl_->view->setMouseTracking(true);impl_->view->viewport()->setMouseTracking(true);
+3647: 
+3648: void DrawingSheetEditor::setChangedCallback(std::function<void(const DrawingSheet &)> callback){impl_->changed=std::move(callback);}
+3649: void DrawingSheetEditor::setModelProvider(std::function<DrawingEditorModel()> provider){impl_->provider=std::move(provider);impl_->updateAction->setEnabled(bool(impl_->provider)&&!impl_->readOnly);}
+3650: bool DrawingSheetEditor::isReadOnly()const{return impl_->readOnly;}
+3656:     impl_->quoteType->setEnabled(!impl_->readOnly);
+3657:     for(const auto &name:{"drawingAddNoteAction","drawingAddLeaderAction","drawingAddDatumAction","drawingAddGeometricToleranceAction","drawingAddSurfaceTextureAction","drawingEditAnnotationAction","drawingAxisThroughPointsAction","drawingAxisBetweenLinesAction","drawingEditAxisAction","drawingDerivedViewAction","drawingAuxiliaryViewAction","drawingBreakViewAction","drawingDetailViewAction","drawingTechnicalSectionAction","drawingSteppedSectionAction","drawingAlignedSectionAction","drawingDetachViewAction","drawingReleaseAlignmentAction","drawingSectionHatchAction","drawingEditSectionLineAction","drawingAlignSectionOrientationAction","drawingReverseSectionAction","drawingDimensionNumberingAction","drawingChangeDimensionNumberAction","drawingToggleDimensionNumberAction","drawingOptionsAction","drawingResetViewTitleAction","drawingPageSettingsAction","drawingSmartDimensionAction","drawingChainHorizontalAction","drawingChainVerticalAction","drawingOrdinateXAction","drawingOrdinateYAction","drawingRepairDimensionAction","drawingRepairFirstReferenceAction","drawingRepairSecondReferenceAction","drawingEditDimensionAction","drawingReverseDimensionArrowsAction","drawingOriginReferenceAction","drawingAxisXReferenceAction","drawingAxisYReferenceAction","drawingAddProjectionAction","drawingAddViewAction","drawingEditViewAction","drawingAlignViewAction","drawingEndpointDimensionAction","drawingHorizontalDimensionAction","drawingVerticalDimensionAction","drawingLengthDimensionAction","drawingDeleteSelectionAction"})
+3658:         findChild<QAction *>(QString::fromLatin1(name))->setEnabled(!impl_->readOnly);
+3659:     impl_->refreshHiddenAction();impl_->refreshHistoryActions();impl_->updateAction->setEnabled(!impl_->readOnly&&bool(impl_->provider));
+3660:     for(auto *item:impl_->scene->items())if(dynamic_cast<MoveLabel *>(item)||dynamic_cast<MoveNote *>(item))item->setFlag(QGraphicsItem::ItemIsMovable,!impl_->readOnly&&item->data(kindRole).toString()!=QLatin1String("view"));
+
+FILE cad_drawing_window.cpp SHA256 e860794266cf804e6f6e90428998b74171b0e7166819f66d6523ee00f1067726
+54:     source->addAction(saveAction);source->addAction(exportPdf);source->addSeparator();
+55:     updateAction_=source->addAction(QStringLiteral("Aggiorna dal .prt salvato"));updateAction_->setObjectName("drawingReloadSourceAction");
+56:     connect(updateAction_,&QAction::triggered,this,[this]{report(updateFromSource());});
+57:     auto *locate=source->addAction(QStringLiteral("Individua modello..."));locate->setObjectName("drawingLocateSourceAction");
+58:     connect(locate,&QAction::triggered,this,[this]{
+59:         const auto path=QFileDialog::getOpenFileName(this,QStringLiteral("Individua il modello della tavola"),sourcePath_,QStringLiteral("Modello ForgeCAD (*.prt)"));
+60:         if(!path.isEmpty())report(updateFromSource(path));
+61:     });
+62:     updateAction_->setIcon(commandIcon("drawingModelUpdate"));updateAction_->setToolTip(QStringLiteral("Verifica nuovi check-in del modello e propone di aggiornare la tavola; altrimenti rilegge la sorgente selezionata."));locate->setIcon(commandIcon("drawingLocateModel"));
+63:     auto *modelMenu=findChild<QMenu *>("drawingModelMenu");modelMenu->addSeparator();modelMenu->addAction(updateAction_);modelMenu->addAction(locate);
+64:     sourceStatus_=new QLabel(this);sourceStatus_->setObjectName("drawingSourceStatus");sourceStatus_->setWordWrap(false);
+146:         next=new DrawingSheetEditor(drawingSheetAt(drawing_,activeSheet_),model_,container);
+147:     }
+148:     next->setReadOnly(true);
+149:     next->setChangedCallback([this](const DrawingSheet &sheet){sheetChanged(sheet);});
+150:     // Il comando del contenitore verifica percorso, identita' e impronta.
+151:     next->findChild<QAction *>("drawingUpdateModelAction")->setVisible(false);
+152:     modelUpdateNotice_=new QWidget(container);modelUpdateNotice_->setObjectName("drawingModelUpdateNotice");
+286: QString DrawingWindow::updateFromSource(const QString &overridePath){
+287:     const auto accessError=requireEditAccess();if(!accessError.isEmpty())return accessError;
+288:     if(busy_||(editor_&&editor_->isComputing()))return QStringLiteral("Attendere il calcolo in corso.");
+289:     if(!editor_||!drawing_.sheet.drawing.version.checkinId.isNull())return QStringLiteral("La tavola archiviata e' in sola lettura: creare prima una copia indipendente.");
+290:     refreshPageContext();
+291:     if(overridePath.isEmpty()&&!availableModelRevision_.version.checkinId.isNull()){
+292:         QMessageBox question(QMessageBox::Question,QStringLiteral("Nuova revisione del modello"),
+293:             modelUpdateText_->text()+QStringLiteral("\n\nCaricare questa revisione e ricalcolare viste, quote e colori?"),QMessageBox::Yes|QMessageBox::No,this);
+294:         question.setObjectName("drawingLatestModelQuestion");question.setDefaultButton(QMessageBox::Yes);
+295:         question.button(QMessageBox::Yes)->setText(QStringLiteral("Carica ultima revisione"));question.button(QMessageBox::No)->setText(QStringLiteral("Mantieni attuale"));
+296:         if(question.exec()==QMessageBox::Yes){if(path_.isEmpty()&&!save(false))return {};return pinModelRevision(availableModelRevision_.version);}
+297:         return {};
+298:     }
+299:     DocumentState source;QString resolved;bool changed=false;
+300:     // Per una tavola nuova il riferimento e' assoluto; per quella salvata e' relativo.
+301:     const auto context=path_.isEmpty()?sourcePath_:path_;
+302:     auto error=loadDrawingModel(context,drawing_,source,resolved,changed,overridePath);if(!error.isEmpty())return error;
+303:     QByteArray digest;error=drawingModelDefinitionHash(source,digest);if(!error.isEmpty())return error;
+304:     DrawingEditorModel geometry;error=prepareDrawingEditorModel(source,geometry);if(!error.isEmpty())return error;
+305:     auto prepared=drawing_;prepared.modelDefinitionHash=digest;
+306:     if(!changed)upgradeDrawingFileReferences(prepared,geometry);
+307:     error=updateSheetsModel(std::move(prepared),geometry);if(!error.isEmpty())return error;
+308:     modelBaseCheckinId_=source.baseCheckinId;model_=std::move(geometry);drawing_.modelDefinitionHash=digest;sourcePath_=resolved;
+309:     drawing_.modelPath=path_.isEmpty()?resolved:QDir(QFileInfo(path_).absolutePath()).relativeFilePath(resolved);
+
+FILE cad_forge.h SHA256 f725765a2b70fdf565ace78b16947c7b895cbdb1ef3ee85b0587ea6c5416d681
+220: 
+221: // Faccia del body colpita per prima dal raggio, con il suo piano (se e'
+222: // piana) e un punto interno di ogni suo spigolo.
+223: // `window`: vedi firstRayHit (la zona del punto colpito sulla tassellazione).
+224: bool forgePickFace(const Kernel::Body &body, const QVector3D &origin, const QVector3D &direction, FaceHit &hit, const Kernel::RayFaceIndex *index = nullptr,
+225:                    const Kernel::Interval *window = nullptr);
+226: 
+227: // Distanza lungo il raggio del primo punto del body colpito (geometria esatta).
+228: bool forgeIntersectRay(const Kernel::Body &body, const QVector3D &origin, const QVector3D &direction, double &distance, const Kernel::RayFaceIndex *index = nullptr);
+
+FILE cad_forge.cpp SHA256 c653afdef3979afc00ed9790b3cc35a5c270cb09235d6d63138df3bc03388fcd
+2374:     try {
+2375:         double t = 0.0;
+2376:         FaceId f;
+2377:         if (!firstRayHit(body, Vec3(origin.x(), origin.y(), origin.z()), Vec3(direction.x(), direction.y(), direction.z()), 1e-7, t, &f, index, window)
+2378:             || !f.valid())
+2379:             return false;
+2380:         hit = {};
+2381:         hit.distance = t;
+2407: bool forgeIntersectRay(const Body &body, const QVector3D &origin, const QVector3D &direction, double &distance, const Kernel::RayFaceIndex *index) {
+2408:     try {
+2409:         double t = 0.0;
+2410:         if (!firstRayHit(body, Vec3(origin.x(), origin.y(), origin.z()), Vec3(direction.x(), direction.y(), direction.z()), 1e-7, t, nullptr, index))
+2411:             return false;
+2412:         distance = t;
+2413:         return true;
+2414:     } catch (const std::exception &) {
+2415:         return false;
+2416:     }
+2417: }
+2418: 
+2419: }
+
+FILE cad_model_history.h SHA256 f2d69beba6ed09a305ec22857583d8dfc0e1efcba704f71bb5d461ffee3d3dc3
+40: // Indice dell'ultimo stadio valido e indici delle feature di un corpo, in ordine.
+41: int modelBodyTipIndex(const DocumentState &state, quint64 bodyId);
+42: QVector<int> modelBodyFeatures(const DocumentState &state, quint64 bodyId);
+43: 
+
+FILE cad_model_history.cpp SHA256 6d79e789b32254d2df3d0d8bb01a1f19945ad4d66d36d0a8e40520e2bc4a81e2
+75: QVector<int> modelBodyFeatures(const DocumentState &state, quint64 bodyId) {
+76:     QVector<int> result;
+77:     if (bodyId == 0) return result;
+78:     for (int index = 0; index < state.extrusions.size(); ++index)
+79:         if (state.extrusions.at(index).modelBodyId == bodyId) result.append(index);
+80:     return result;
+81: }
+82: 
+83: int modelBodyTipIndex(const DocumentState &state, quint64 bodyId) {
+84:     for (int index = state.extrusions.size() - 1; index >= 0; --index)
+85:         if (state.extrusions.at(index).modelBodyId == bodyId && isValidHistoryStage(state.extrusions.at(index))) return index;
+86:     return -1;
+87: }
+88: 
+
+FILE cad_feature_dependencies.h SHA256 9aa5349d2054551f8d74365ac29f9a08bf5dd9cd88ade7c9ed75cfe0e23ff188
+17: // Indici dei corpi/schizzi necessari a costruire la feature. I riferimenti
+18: // non validi restano nell'elenco: chi rigenera deve poterli segnalare.
+19: QVector<int> bodyOperands(const ExtrusionObject &body);
+20: QVector<int> sketchesOf(const ExtrusionObject &body);
+21: bool usesSketch(const ExtrusionObject &body);
+22: // Risultati precedenti attivi e non consumati; la visibilita' manuale non
+
+FILE cad_feature_dependencies.cpp SHA256 0da05c73b773173328f864501e7cfadcf139015bfc903e319fbd75a40a3f611f
+203:     }
+204: }
+205: bool usesSketch(const ExtrusionObject &body) { return !sketchesOf(body).isEmpty(); }
+206: 
+207: QVector<int> nextExtrusionCandidates(int index, const QVector<ExtrusionObject> &bodies) {
+
+FILE cad_icons.h SHA256 c122c035325ccd3339a14896a49522ad52bf04533d4c59de95563cca60cfeb7f
+7: 
+8: // Icone dei comandi, disegnate con QPainter (vettoriali: nitide a qualsiasi
+9: // dimensione e rapporto di pixel, niente file esterni). Colori adattati al tema
+10: // corrente dell'interfaccia; disattivate in grigio.
+11: namespace ForgeCad {
+12: 
+13: // Icona del comando `name` (vedi commandIconNames); vuota se il nome non esiste.
+14: QIcon commandIcon(const QString &name);
+15: QStringList commandIconNames();
+16: 
+17: }
+
+FILE cad_icons.cpp SHA256 066493060482d8cd90bfd4e1153471403b625c3acf7be85f250da2178a87cceb
+1634: QStringList commandIconNames() {
+1635:     QStringList names;
+1636:     for (const auto &entry : registry()) names.append(entry.first);
+1637:     return names;
+1638: }
+1639: 
+
+FILE cad_sketch_refs.h SHA256 1b7980daf35c5279b4e5219b8c66cd6ebc0f0b5f4edbf45c7a9176afe9372cfa
+48: QString appendProjectedSketchEntity(SketchObject &sketch, const SketchObject &source, SketchEntity entity,
+49:                                     bool construction, QVector<SketchEntity> *created = nullptr);
+50: 
+51: // Retta di riferimento nel piano dello schizzo: traccia di un piano oppure
+52: // proiezione di un asse. Coordinate esatte; i casi degeneri danno un errore.
+53: QString sketchPlaneReference(const SketchObject &sketch, const SketchFrame &plane, QPointF &point, QPointF &direction);
+54: QString sketchAxisReference(const SketchObject &sketch, const Kernel::Vec3 &origin, const Kernel::Vec3 &axis,
+55:                             QPointF &point, QPointF &direction);
+56: // Riusa una retta di costruzione gia' fissa e collineare, oppure ne crea una.
+57: int appendFixedReferenceLine(SketchObject &sketch, const QPointF &point, const QPointF &direction, double halfLength);
+58: 
+59: // Aggiunge allo schizzo la proiezione del tratto `range` di `curve`
+60: // (coordinate del modello); `construction` le fa di costruzione, `fixed` le
+61: // blocca con un vincolo fisso. Errore vuoto se riesce; `created` riceve le entita' nuove.
+62: QString appendProjectedCurve(SketchObject &sketch, const Kernel::CurvePtr<3> &curve, const Kernel::Interval &range, bool construction, bool fixed,
+63:                              QVector<SketchEntity> *created = nullptr);
+64: 
+65: // Spigolo del body piu' vicino a `point` (la sua curva e il suo tratto).
+66: bool nearestBodyEdge(const Kernel::Body &body, const Kernel::Vec3 &point, Kernel::CurvePtr<3> &curve, Kernel::Interval &range);
+67: 
+
+FILE cad_sketch_refs.cpp SHA256 d13ec3cedff473b9df99a47f2f2d30bf8e5df7aee08033aa7db4ba73c453139e
+163: bool nearestBodyEdge(const Body &body, const Vec3 &point, CurvePtr<3> &curve, Interval &range) {
+164:     double best = std::numeric_limits<double>::max();
+165:     for (EdgeId e : body.edges()) {
+166:         const Edge &edge = body.edge(e);
+167:         if (!edge.curve) continue;
+168:         const double d = projectPoint(*edge.curve, point, edge.range).distance;
+169:         if (d < best) best = d, curve = edge.curve, range = edge.range;
+170:     }
+171:     return best < std::numeric_limits<double>::max();
+172: }
+173: 
+612: int appendFixedReferenceLine(SketchObject &sketch, const QPointF &point, const QPointF &direction, double halfLength) {
+613:     const auto cross = [](const QPointF &a, const QPointF &b) { return a.x() * b.y() - a.y() * b.x(); };
+614:     for (int i : sketch.constructionSegments) {
+615:         if (i < 0 || i >= sketch.segments.size()) continue;
+616:         const auto &s = sketch.segments.at(i);
+617:         const QPointF d = s.second - s.first;
+618:         if (std::fabs(cross(d, direction)) > 1e-12 * std::max(1.0, std::hypot(d.x(), d.y()))
+619:             || std::fabs(cross(s.first - point, direction)) > 1e-12 * std::max({1.0, std::hypot(point.x(), point.y()), std::hypot(s.first.x(), s.first.y())})) continue;
+620:         for (const auto &c : sketch.geometricConstraints)
+621:             if (c.type == ConstraintType::Fix && c.first == ConstraintRef{0, i, -1}) return i;
+622:     }
+623:     const int index = int(sketch.segments.size());
+624:     appendSegment(sketch, point - halfLength * direction, point + halfLength * direction, true);
+625:     sketch.geometricConstraints.append(makeConstraint(sketch, ConstraintType::Fix, {{0, index, -1}}));
+626:     return index;
+627: }
+628: int sketchReferenceSourceIndex(const GeometryRef &ref, const QVector<SketchObject> &sketches,
+
+FILE CMakeLists.txt SHA256 2e70b6efa2f03ef2643493a70fd7d544eb25cb481b339289746daa9691c3abfe
+88:     set(FORGECAD_BOX_SOURCE gpu_box_support_cpu.cpp)
+89: endif()
+90: add_library(forgecad_compute STATIC cad_gpu_broad_phase.cpp cad_gpu_broad_phase.h gpu_box_support.h ${FORGECAD_BOX_SOURCE})
+91: target_include_directories(forgecad_compute PUBLIC ${PROJECT_SOURCE_DIR})
+92: target_link_libraries(forgecad_compute PUBLIC forgekernel)
+93: target_compile_options(forgecad_compute PRIVATE $<$<COMPILE_LANGUAGE:CXX,OBJCXX>:-Wall;-Wextra;-Wpedantic>)
+114: endif()
+115: 
+116: add_executable(forgecad
+117:     forgeCad2026.cpp
+118:     cad_document_tabs.cpp
+119:     cad_document_tabs.h
+467: # packaging/linux/install-desktop-integration.sh.
+468: include(GNUInstallDirs)
+469: install(TARGETS forgecad RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+470: set(FORGECAD_EXEC forgecad)
+471: configure_file(packaging/linux/forgecad.desktop.in ${CMAKE_CURRENT_BINARY_DIR}/forgecad.desktop @ONLY)
+472: install(FILES ${CMAKE_CURRENT_BINARY_DIR}/forgecad.desktop DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
+473: install(FILES packaging/linux/forgecad-mime.xml DESTINATION ${CMAKE_INSTALL_DATADIR}/mime/packages)
+474: foreach(size 16 24 32 48 64 128 256 512)
+475:     install(FILES icons/hicolor/${size}x${size}/apps/forgecad.png
+476:             DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/${size}x${size}/apps)
+477:     install(FILES icons/hicolor/${size}x${size}/mimetypes/application-x-forgecad-part.png
+478:             DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/${size}x${size}/mimetypes)
+479: endforeach()
+480: install(FILES icons/forgecad.svg DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/scalable/apps)
+481: install(FILES icons/forgecad-document.svg DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/scalable/mimetypes
+482:         RENAME application-x-forgecad-part.svg)
+483: 
+892: 
+893: # I runner delle tavole usano gli stessi popup dell'app, senza il viewport 3D.
+894: add_library(forgecad_drawing_menus STATIC forgeCad2026_menu.cpp forgeCad2026_ui_glass.cpp)
+895: target_link_libraries(forgecad_drawing_menus PUBLIC Qt6::Widgets)
+896: target_compile_definitions(forgecad_drawing_menus PRIVATE FORGECAD_MENU_STANDALONE=1)
+897: target_compile_options(forgecad_drawing_menus PRIVATE -Wall -Wextra -Wpedantic)
+898: 
+899: # Implementazioni identiche compilate una sola volta per i runner 2D.
+900: # App e runner viewport mantengono i propri target e le rispettive definizioni.
+901: add_library(forgecad_drawing_test_support STATIC
+902:     cad_icons.cpp
+903:     forgeCad2026_zoom.cpp
+904:     cad_drawing_editor.cpp
+
+FILE kernel/CMakeLists.txt SHA256 21dcb60fbdb0d83d1a5b9654e576f4c6c409c7c346461cbdb0191afb6326e4a2
+11: " FORGEKERNEL_HAS_FLOAT_FROM_CHARS)
+12: set_source_files_properties(fk_exchange.cpp PROPERTIES COMPILE_DEFINITIONS
+13:     FORGEKERNEL_HAS_FLOAT_FROM_CHARS=$<BOOL:${FORGEKERNEL_HAS_FLOAT_FROM_CHARS}>)
+14: 
+15: add_library(forgekernel STATIC
+16:     fk_precision.h
+17:     fk_math.h
+18:     fk_math.cpp
+
+FILE docs/code-review-2026-11-02.md SHA256 74d46a0033ccfa0b425b8af22f3a38740534410a804f1cbdd0bba201708f9d0c
+99: | `DrawingSheetEditor::setModelProvider` | `cad_drawing_editor.cpp:3399` | già nel report |
+100: | `ForgeCad::forgeIntersectRay` | `cad_forge.cpp:2398` | già nel report |
+101: | `ForgeCad::modelBodyFeatures` | `cad_model_history.cpp:72` | già nel report |
+102: | `ForgeCad::usesSketch` | `cad_feature_dependencies.cpp:196` | già nel report |
+103: | `ForgeCad::commandIconNames` | `cad_icons.cpp:1562` | già nel report |
+104: | `ForgeCad::nearestBodyEdge`, `appendFixedReferenceLine` | `cad_sketch_refs.cpp:133`, `530` | **nuove**: residui delle "copie con Fix", sostituite il 31/10 dai riferimenti associativi |
+105: | `ForgeCad::worldToSketch(const Vec3&, int plane)` | `cad_kernel.cpp:30` | **nuova**: si usa solo l'overload con `SketchObject` |
+
+FILE docs/review-followup-prove-2026-11-15/lifetime/report.md SHA256 b0e980825abb655dad74b8b423bfaa3d5f6637ae1b43918fcc19e1d707cfbc89
+7: ## Classificazione delle 22 candidate
+8: 
+9: - **3 metodi di classi locali al .cpp** eliminabili senza cambio di API: `Corner::otherFace` (`kernel/fk_blend.cpp:369`), `ChainEdge::inPlane` (`kernel/fk_blend_loop.cpp:107`), `BandMatrix::band` (`kernel/fk_fill.cpp:239`). Sono normali metodi non virtuali, senza usi neppure nei test o nel grafo; gli omonimi esterni sono distinti.
+10: - **12 metodi GUI interni** eliminabili insieme alle rispettive dichiarazioni, senza effetto osservabile nei percorsi del repository: 11 `CadViewport` e `StoryboardTree::firstFeature`. Elenco e righe in `orphans-current.json`. Non sono slot/Q_INVOKABLE/override, non esiste invocazione lessicale o riferimento di funzione. In particolare, i wrapper `basisMatrix` e `normalizedViewAngle` non autorizzano a cancellare gli omonimi di `ViewportCamera`, che sono usati.
+11: - **6 funzioni esposte da header di namespace**: `forgeIntersectRay`, `modelBodyFeatures`, `usesSketch`, `commandIconNames`, `nearestBodyEdge`, `appendFixedReferenceLine`. Zero chiamanti nel repository, incluse le suite: rimozione tecnicamente compatibile con i consumatori attuali, ma questa review non dimostra l'assenza di consumatori esterni né documenta un intento pubblico. Scegliere esplicitamente tra deprecazione/rimozione e conservazione come API; non inventare un intento storico.
+12: - **1 API con piccola catena obsoleta**: `DrawingSheetEditor::setModelProvider` (`cad_drawing_editor.cpp:3649`). Il membro `Impl::provider` (`:495`) non viene mai valorizzato nel repository. L'azione interna (`:2947`) è inizialmente disabilitata (`:2949`) e il contenitore la nasconde deliberatamente (`cad_drawing_window.cpp:148`); l'azione attiva del contenitore verifica percorso, identità e impronta. Non è quindi un comando utente accidentalmente rotto. Pulizia possibile di setter/membro/callback interno, tenendo conto dei riferimenti a `updateAction` nel setter read-only e della ricerca dell'azione per nome nel contenitore: cancellare solo il setter lascerebbe il resto morto; cancellare direttamente l'azione senza aggiornare il contenitore dereferenzierebbe un puntatore nullo.
+13: 
+14: ### Altra piccola catena morta accertata
+15: 
+16: `setExtendPickCallback` (`forgeCad2026_viewport_selection.cpp:230`) è l'unico writer di `extendPickFinished_` (`forgeCad2026_viewport.h:1763`), ed è orfano. Il ramo legacy di `finishEdgePick` (`forgeCad2026_viewport_selection.cpp:1711–1712`) non può dunque consegnare il callback nel repository attuale. Non è una regressione funzionale: il pannello Estendi attuale usa `setEdgePickChangedCallback` e `setEdgePickPanelKeyCallbacks`, e pulisce entrambi (`forgeCad2026_dialogs_surfaces.cpp:2231–2257`). Eliminare soltanto l'orphan lascerebbe membro/ramo logicamente morti; non eliminare `beginExtendPick`, `edgePickExtend_`, `edgePickLinear_` o `requestExtendPreview`, che restano attivi nel pannello.
+17: 

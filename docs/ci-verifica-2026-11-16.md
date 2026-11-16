@@ -24,3 +24,8 @@ Commit codice e correzioni `c44975e56931c559ea3da3c794eaea66a41a304e` creato e p
 ## Esito del primo push
 
 Il run43917116955 è terminato con fallimento dei test su entrambe le piattaforme, dopo compilazioni riuscite. **Il precedente WholeRim/K12 è ora superato.** Nuovo unico fallimento nella suite generale: `OffsetLoftExtendedSeamsTrimBoth`, eccezione `extendSheet: giunzione fuori dal budget continuo`. Linux109/110CTest e macOS112/113CTest superati; suite generale482/483casi. La regressione si riproduce anche localmente con GCC e Clang: non è specifica di GitHub o del compilatore. Si corregge prima di un ulteriore push; nessuna CI verde dichiarata per c44975e. [Indagine e correzione](ci-sheet-join-2026-11-16.md).
+
+
+## Correzione e verifica remota conclusiva
+
+CI GitHub finale: [43928716177](https://github.com/myungit-Vins-Prototype/Linux_CAD_forFree/actions/runs/43928716177), commit `046685ef1d31fdf4b61571d9630ea0f245b4ffb7`: **build e test PASS su Linux e macOS**. Linux 108PASS,2SKIP; macOS 112PASS,1SKIP. [Log e metadati](ci-sheet-join-github-prove-2026-11-16/README.txt). Il commit successivo contiene soltanto questa registrazione documentale e usa `[skip ci]`; codice, test e workflow sono identici al commit verificato.

@@ -1,0 +1,26 @@
+{
+  "HANDOFF.txt": {
+    "sha256": "be08d3aa6e24d78dc7c53bdfc5d864f6711131555c8e27422e3d53b06b0645c1",
+    "bytes": 1386
+  },
+  "commands.txt": {
+    "sha256": "4b6c864dacd7b64ebf0875c84f4111ddc79efe6d542b3e908afdc4d6be6ff10b",
+    "bytes": 1206
+  },
+  "source-evidence.txt": {
+    "sha256": "0a897fed6303c9c96e58ba8ffc8e6dbb8bcd0a6825f7f65f2730ef0791a883eb",
+    "bytes": 41088
+  },
+  "README.md": {
+    "sha256": "d38f6f7ca0aa02d24bbadccecea7ad276ab9f15072457bc89835d5f409b0d8ac",
+    "bytes": 9252
+  },
+  "inventory.json": {
+    "sha256": "ce3543a23a9dd85513452300864c94a2c3a33d843266b6a01c6d805417731875",
+    "bytes": 61988
+  },
+  "inventory.py": {
+    "sha256": "cb340c1bfc07568f63bd76ac08bb97c66c04f2f35e38b2b232861f84cc096771",
+    "bytes": 14226
+  }
+}

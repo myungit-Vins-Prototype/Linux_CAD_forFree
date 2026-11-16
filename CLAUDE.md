@@ -108,10 +108,10 @@ ctest --test-dir forgecad-release --output-on-failure
 
 ## Ultimi interventi — esiti consolidati
 
-**16/11 — CI: giunti corretti e verificati localmente.**
-c44975e: build Linux/macOS e K12 PASS; regressione OffsetLoft corretta con tre Sol.
-App/483kernel/28CTest/33mirati PASS; famiglia dalle pcurve originali, cap invariati.
-Nuovo push/CI da verificare. [Prove/limiti](docs/ci-sheet-join-2026-11-16.md).
+**16/11 — CI: giunti corretti e push verificato.**
+046685e: build/test GitHub Linux/macOS PASS; K12 e OffsetLoft PASS.
+Tre Sol; app/483kernel/28CTest/33mirati e sanitizer PASS, cap invariati.
+API/colori ricontrollati, aperti; segue solo documentazione. [Esiti/limiti](docs/ci-sheet-join-2026-11-16.md).
 
 **16/11 — K10 continuazioni verificate con tre agenti Sol.**
 Parametro razionale/ISO e fin: app/28CTest/15mirati/sanitizer/Wayland/Fraction PASS.

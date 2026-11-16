@@ -1,0 +1,201 @@
+{
+  "repositoryRealPath": "/home/myungit/Linux_CAD_forFree",
+  "head": "046685ef1d31fdf4b61571d9630ea0f245b4ffb7",
+  "auditDate": "2026-11-16",
+  "method": "Lettura rapporto UI8, memoria/regole, mappa aggiornata e sorgenti; ricerca testuale mirata. Nessun test, build, processo app, modifica repository o eliminazione.",
+  "graph": {
+    "nodes": 778,
+    "edges": 11369,
+    "focusNodes": [
+      {
+        "id": "forgeCad2026_application_theme.cpp",
+        "group": "startup",
+        "description": "Controller unico di palette e QSS globale su finestre e schede incorporate 3D/2D; applicazione coerente protetta dal reingresso, stile Fusion ripristinato dopo sostituzioni native e menu Tema persistente chiaro/scuro/desktop.",
+        "lines": 229
+      },
+      {
+        "id": "forgeCad2026_dialogs_analysis.cpp",
+        "group": "dialogs",
+        "description": "Dialoghi per analisi e opzioni di verifica geometrica. Misura usa il runner comune e installa il picker dopo la guardia fra documenti.",
+        "lines": 636
+      },
+      {
+        "id": "forgeCad2026_dialogs_common.cpp",
+        "group": "dialogs",
+        "description": "Pannelli nel viewport proprietario e blocco limitato al workspace, anche con piu documenti in schede; sotto il ribbon con aggancio/altezza piena e dimensioni preferite e larghezza iniziale per comando senza sovrascrivere il resize manuale; controlli G1/G2 con verso indipendente per profilo. Presentazione Raggio condivisa: titolo, schede con icone, illustrazioni volumetriche, form compatti e footer accessibile; intestazione compatta, aggancio laterale persistente e altezza piena, temi chiaro/scuro, checkbox nativi con palette distinta per testo/spunta ed elenchi con fondo dei campi, vetro e dimensioni persistenti. Conferma opzionale con pannello nascosto e attesa di finished anche nel runner modale; errori reali riaprono i controlli. Un comando modeless fra workspace per evitare cleanup sospesi; selezioni multiple e riga corrente conservate per identita, picker fermati al cambio ruolo G0/G1/piano. Ruoli semantici dei messaggi con contrasto nei temi chiaro e scuro. Tutti gli undici runner storici usano il gestore comune: setup differito dopo guardia fra documenti, overload a tre argomenti preservato, finished sincrono senza attesa irrisolvibile. Messaggio anteprima nel footer fisso anche se creato dopo show, senza duplicazioni.",
+        "lines": 2039
+      },
+      {
+        "id": "forgeCad2026_dialogs_fillet.cpp",
+        "group": "dialogs",
+        "description": "Raccordi 3D: quattro schede Costante/Conico/Variabile/Tra facce, illustrazioni originali, selezione nella vista e completamento esplicito del contorno degli incavi, percorsi tangenti con tabelle indipendenti, manipolatori dei raggi e zero agli estremi dei percorsi aperti, anteprima cancellabile, conferma anticipata con pannello nascosto durante il calcolo e parametri persistenti.",
+        "lines": 1023
+      },
+      {
+        "id": "forgeCad2026_dialogs_solids.cpp",
+        "group": "dialogs",
+        "description": "Dialoghi solidi: catalogo ISO metrico M1–M68 con passi fini; ripetizioni con un solo blocco della finestra, storyboard selezionabile nel pannello incorporato e tre passaggi visibili (sorgente, riferimento, parametri); funzioni storiche con bersaglio successivo e sformo a piano neutro. Estrusione priva del riferimento di limite cancella il worker e invalida subito anteprima e chiave. Ripetizioni, estrusione, trasformazioni e filettatura inizializzano preview e picker nel runner comune; Filettatura distingue selezione faccia e calcolo attivo. Smusso aggiorna chiave, worker e geometria anche al termine editing delle distanze e angoli con Tab/focusout.",
+        "lines": 2099
+      },
+      {
+        "id": "forgeCad2026_gui.cpp",
+        "group": "startup",
+        "description": "PdfWindow: sette fasi di inizializzazione di scena, menu, comandi, opzioni e toolbar, preferenze persistenti per normali al mouse e costruzione degli schizzi fuori modifica; workspace 3D incorporabile con apertura instradata alle schede e chiusura asincrona del recupero; modelli archiviati in sola lettura; storyboard con trascinamento dei creatori di corpi autonomi a uno stadio. Aggiunge Ellisse per estremi a menu e toolbar e ne espone azione e icona alla ribbon. Consuma il tema globale aggiornando le toolbar su entrambi gli eventi palette; nessun QSS globale locale.",
+        "lines": 5338
+      }
+    ],
+    "focusEdges": [
+      {
+        "source": "forgeCad2026_dialogs_analysis.cpp",
+        "target": "forgeCad2026_dialogs_common.cpp",
+        "kind": "call",
+        "sites": [
+          {
+            "line": 78,
+            "symbol": "FunctionDialogPanel::FunctionDialogPanel",
+            "owner": "measureDialog"
+          },
+          {
+            "line": 234,
+            "symbol": "FunctionDialogPanel::FunctionDialogPanel",
+            "owner": "shapeAnalysisDialog"
+          },
+          {
+            "line": 480,
+            "symbol": "FunctionDialogPanel::FunctionDialogPanel",
+            "owner": "massPropertiesDialog"
+          }
+        ]
+      },
+      {
+        "source": "forgeCad2026_dialogs_common.cpp",
+        "target": "forgeCad2026_dialogs_common.cpp",
+        "kind": "call",
+        "sites": [
+          {
+            "line": 1913,
+            "symbol": "FunctionDialogPanel::FunctionDialogPanel",
+            "owner": "FloatingPanel::FloatingPanel"
+          }
+        ]
+      },
+      {
+        "source": "forgeCad2026_dialogs_fillet.cpp",
+        "target": "forgeCad2026_dialogs_common.cpp",
+        "kind": "call",
+        "sites": [
+          {
+            "line": 222,
+            "symbol": "FunctionDialogPanel::FunctionDialogPanel",
+            "owner": "filletDialog"
+          }
+        ]
+      },
+      {
+        "source": "forgeCad2026_dialogs_solids.cpp",
+        "target": "forgeCad2026_dialogs_common.cpp",
+        "kind": "call",
+        "sites": [
+          {
+            "line": 91,
+            "symbol": "FunctionDialogPanel::FunctionDialogPanel",
+            "owner": "blendDialog"
+          },
+          {
+            "line": 261,
+            "symbol": "FunctionDialogPanel::FunctionDialogPanel",
+            "owner": "scaleDialog"
+          },
+          {
+            "line": 383,
+            "symbol": "FunctionDialogPanel::FunctionDialogPanel",
+            "owner": "patternDialog"
+          },
+          {
+            "line": 784,
+            "symbol": "FunctionDialogPanel::FunctionDialogPanel",
+            "owner": "extrusionDialog"
+          },
+          {
+            "line": 1073,
+            "symbol": "FunctionDialogPanel::FunctionDialogPanel",
+            "owner": "transformDialog"
+          },
+          {
+            "line": 1287,
+            "symbol": "FunctionDialogPanel::FunctionDialogPanel",
+            "owner": "threadDialog"
+          },
+          {
+            "line": 1460,
+            "symbol": "FunctionDialogPanel::FunctionDialogPanel",
+            "owner": "booleanDialog"
+          },
+          {
+            "line": 1684,
+            "symbol": "FunctionDialogPanel::FunctionDialogPanel",
+            "owner": "draftDialog"
+          },
+          {
+            "line": 1809,
+            "symbol": "FunctionDialogPanel::FunctionDialogPanel",
+            "owner": "revolutionDialog"
+          },
+          {
+            "line": 2041,
+            "symbol": "FunctionDialogPanel::FunctionDialogPanel",
+            "owner": "primitiveDialog"
+          }
+        ]
+      },
+      {
+        "source": "forgeCad2026_dialogs_solids.cpp",
+        "target": "forgeCad2026_dialogs_fillet.cpp",
+        "kind": "call",
+        "sites": [
+          {
+            "line": 86,
+            "symbol": "filletDialog",
+            "owner": "blendDialog"
+          }
+        ]
+      },
+      {
+        "source": "forgeCad2026_gui.cpp",
+        "target": "forgeCad2026_application_theme.cpp",
+        "kind": "call",
+        "sites": [
+          {
+            "line": 1349,
+            "symbol": "ForgeCad::setupApplicationThemeMenu",
+            "owner": "PdfWindow::initializeActionsAndView"
+          }
+        ]
+      },
+      {
+        "source": "forgeCad2026_gui.cpp",
+        "target": "forgeCad2026_dialogs_analysis.cpp",
+        "kind": "call",
+        "sites": [
+          {
+            "line": 2276,
+            "symbol": "massPropertiesDialog",
+            "owner": "PdfWindow::initializeFeatureCommands"
+          }
+        ]
+      }
+    ]
+  },
+  "sourceSHA256": {
+    "/home/myungit/Linux_CAD_forFree/AGENTS.md": "d98408c6092ae6f02ba2948f47128c138ebf4fbb138b2751bc17550d2d98caac",
+    "/home/myungit/Linux_CAD_forFree/CLAUDE.md": "f25943528a0e819edddbe66cc01dc6c6f91b83969eff1b7173ea1319073d58d8",
+    "/home/myungit/Linux_CAD_forFree/docs/review-theme-tabs-2026-11-16.md": "059d4572c9c307e6e416b2d950a46b452c42ef7dc0d9c21e356102a314889090",
+    "/home/myungit/Linux_CAD_forFree/docs/architecture/graph.json": "8eedbd842e02160267a6a81baa7ddd2ea0608462f5cf51f134079966d09923cc",
+    "/home/myungit/Linux_CAD_forFree/forgeCad2026_application_theme.cpp": "618b68b483952fac10852632b20f735fedb8e41b7dae1dfd06f676cee59582cc",
+    "/home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp": "4b23e22c0811d6ed33ccc96aa6ca215620b115ad2a0cb9b882b5a267cfefaf76",
+    "/home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_common.cpp": "bd1006cc5689982ed183b6499292ce3efe956daf8028cc73ca7258036ad9ba82",
+    "/home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_analysis.cpp": "6d4cb332ce0618bdc2fd930667384ea6a6ee7ba943308804b97affc16fb6b0fd",
+    "/home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_fillet.cpp": "a6778186393b786f20af8448c5f8f7aec3dc4abf16651a86a6c78b73b8bd0622",
+    "/home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_solids.cpp": "11304bbf3f096b36b2ecefcd43b80c07cfb4dd457567b2983a3e86529de36b06"
+  }
+}

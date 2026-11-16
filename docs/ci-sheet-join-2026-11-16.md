@@ -12,9 +12,9 @@ L'audit ha corretto anche l'enclosure di prodotti minuscoli: un residuo FMA può
 
 ## Verifiche locali sul codice finale
 
-- Build completa dell'applicazione e di tutti i target configurati: PASS; eseguibile aggiornato.
-- Suite generale del kernel: 483/483 PASS, incluso il test storico CI immutato e il positivo OffsetLoftSeamExtensionFollowsTangentSeam.
-- 28/28 CTest pertinenti PASS; il target giunzioni contiene 33/33 casi, i 29 precedenti e quattro varianti pubbliche del loft: originale, posa rigida, scala0,25 e scala2,5 con posa. Estensione dei due anelli, taglio reciproco, genealogia, codec, tessellazione e input immutabile.
+- Build completa dell'applicazione e di tutti i target configurati: PASS,164,01s; eseguibile aggiornato.
+- Suite generale del kernel: 483/483 PASS,469,72s, incluso il test storico CI immutato e il positivo OffsetLoftSeamExtensionFollowsTangentSeam.
+- 28/28 CTest pertinenti PASS,94,30s; il target giunzioni contiene 33/33 casi, i 29 precedenti e quattro varianti pubbliche del loft: originale, posa rigida, scala0,25 e scala2,5 con posa. Estensione dei due anelli, taglio reciproco, genealogia, codec, tessellazione e input immutabile.
 - GCC e Clang23:33/33PASS. ASan/UBSan/LSan:33/33PASS, fuori ptrace e detect_leaks=1; strumentati fk_sheet e driver/test, resto kernel/provider Release. Calibrazione separata: perdita intenzionale19byte rilevata,exit23. Nessuna dichiarazione generale di assenza di leak.
 - Fraction sulle due fin Newton effettive selezionate per provenienza: 120campate, limite massimo1,543930915e-8mm sotto budget1,15e-7mm. Questa verifica offline riguarda le fin esportate; non rende continuo il metodo Newton runtime.
 - Avvio dell'app finale per5secondi su Wayland con profilo isolato, senza CAD utente; terminato soltanto il processo di prova. Nessuna nuova certificazione pixel/GL.
@@ -23,7 +23,7 @@ Baseline5004file e16sigilli precedenti conservati; prima del codice consultati g
 
 K10 rimane parzialmente trattato nei24/24 siti iniziali; totale31rilievi invariato. Newton e famiglie non supportate restano campionati;17 API candidate orfane e colori UI letterali ancora aperti.
 
-Nuova CI GitHub da verificare dopo il push: non si attribuisce il verde al run precedente fallito.
+CI GitHub finale: [43928716177](https://github.com/myungit-Vins-Prototype/Linux_CAD_forFree/actions/runs/43928716177), commit `046685ef1d31fdf4b61571d9630ea0f245b4ffb7`: **build e test PASS su Linux e macOS**. Linux 108PASS,2SKIP; macOS 112PASS,1SKIP. [Log e metadati](ci-sheet-join-github-prove-2026-11-16/README.txt). Il commit successivo contiene soltanto questa registrazione documentale e usa `[skip ci]`; codice, test e workflow sono identici al commit verificato.
 
 [Prove e sigillo](ci-sheet-join-prove-2026-11-16/README.txt); [memoria precedente](history/claude-prima-ci-sheet-join-2026-11-16.md).
 

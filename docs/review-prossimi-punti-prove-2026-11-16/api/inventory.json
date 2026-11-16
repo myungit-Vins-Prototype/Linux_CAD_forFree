@@ -1,0 +1,1372 @@
+{
+  "head": "046685ef1d31fdf4b61571d9630ea0f245b4ffb7",
+  "repository": "/home/myungit/Linux_CAD_forFree",
+  "mode": "read-only; nessun test/build o modifica repo",
+  "active_code_config_files": 773,
+  "graph": {
+    "sha256": "8eedbd842e02160267a6a81baa7ddd2ea0608462f5cf51f134079966d09923cc",
+    "nodes": 778,
+    "edges": 11369,
+    "analysis_units": [
+      "cad_circular_pattern_fit.cpp",
+      "cad_constraints.cpp",
+      "cad_cuda_tessellation.cpp",
+      "cad_curve_extract.cpp",
+      "cad_curve_solver.cpp",
+      "cad_datum.cpp",
+      "cad_display_cache.cpp",
+      "cad_document_io.cpp",
+      "cad_document_precision.cpp",
+      "cad_document_read.cpp",
+      "cad_document_recovery.cpp",
+      "cad_document_tabs.cpp",
+      "cad_drawing.cpp",
+      "cad_drawing_browser.cpp",
+      "cad_drawing_derived.cpp",
+      "cad_drawing_dimension.cpp",
+      "cad_drawing_editor.cpp",
+      "cad_drawing_file.cpp",
+      "cad_drawing_frame.cpp",
+      "cad_drawing_local_section_depth.cpp",
+      "cad_drawing_local_section_display.cpp",
+      "cad_drawing_local_section_tool.cpp",
+      "cad_drawing_page.cpp",
+      "cad_drawing_preparation.cpp",
+      "cad_drawing_release.cpp",
+      "cad_drawing_release_ui.cpp",
+      "cad_drawing_restore.cpp",
+      "cad_drawing_revision_ui.cpp",
+      "cad_drawing_revisions.cpp",
+      "cad_drawing_sheet.cpp",
+      "cad_drawing_sheets_ui.cpp",
+      "cad_drawing_silhouette.cpp",
+      "cad_drawing_template.cpp",
+      "cad_drawing_template_editor.cpp",
+      "cad_drawing_visibility.cpp",
+      "cad_drawing_window.cpp",
+      "cad_element_names.cpp",
+      "cad_ellipse.cpp",
+      "cad_export.cpp",
+      "cad_expression.cpp",
+      "cad_extrude.cpp",
+      "cad_feature_build.cpp",
+      "cad_feature_dependencies.cpp",
+      "cad_feature_faces.cpp",
+      "cad_features.cpp",
+      "cad_fill_pattern.cpp",
+      "cad_fillet_paths.cpp",
+      "cad_forge.cpp",
+      "cad_gpu_broad_phase.cpp",
+      "cad_history.cpp",
+      "cad_history_chain.cpp",
+      "cad_history_graph.cpp",
+      "cad_icons.cpp",
+      "cad_import.cpp",
+      "cad_kernel.cpp",
+      "cad_loft_correspondence.cpp",
+      "cad_loft_correspondence_editor.cpp",
+      "cad_loft_diagnostics.cpp",
+      "cad_mass.cpp",
+      "cad_measure.cpp",
+      "cad_memory.cpp",
+      "cad_model_history.cpp",
+      "cad_native_revisions.cpp",
+      "cad_overlay_renderer.cpp",
+      "cad_pattern.cpp",
+      "cad_pattern_variation.cpp",
+      "cad_pattern_variation_editor.cpp",
+      "cad_projected_curve.cpp",
+      "cad_revision_client.cpp",
+      "cad_revision_recovery_ui.cpp",
+      "cad_revision_store.cpp",
+      "cad_shape_analysis.cpp",
+      "cad_sketch_edit.cpp",
+      "cad_sketch_offset.cpp",
+      "cad_sketch_reference_usage.cpp",
+      "cad_sketch_refs.cpp",
+      "cad_snap.cpp",
+      "cad_snapshot_chunks.cpp",
+      "cad_solid_trim.cpp",
+      "cad_spatial_sketch.cpp",
+      "cad_storyboard_selection.cpp",
+      "cad_surface_mapping.cpp",
+      "cad_surface_poles_interaction.cpp",
+      "cad_surface_poles_model.cpp",
+      "cad_surface_poles_session.cpp",
+      "cad_surface_poles_visibility.cpp",
+      "cad_surface_tools.cpp",
+      "cad_topology_ref.cpp",
+      "cad_workspace.cpp",
+      "cuda_support_cpu.cpp",
+      "forgeCad2026.cpp",
+      "forgeCad2026_application_theme.cpp",
+      "forgeCad2026_camera.cpp",
+      "forgeCad2026_dialogs_analysis.cpp",
+      "forgeCad2026_dialogs_common.cpp",
+      "forgeCad2026_dialogs_fillet.cpp",
+      "forgeCad2026_dialogs_mapping.cpp",
+      "forgeCad2026_dialogs_projection.cpp",
+      "forgeCad2026_dialogs_sketch.cpp",
+      "forgeCad2026_dialogs_solids.cpp",
+      "forgeCad2026_dialogs_surface_tools.cpp",
+      "forgeCad2026_dialogs_surfaces.cpp",
+      "forgeCad2026_dialogs_trim.cpp",
+      "forgeCad2026_feature_preview.cpp",
+      "forgeCad2026_fillet_handles.cpp",
+      "forgeCad2026_glass_compositor.cpp",
+      "forgeCad2026_gpu_picker.cpp",
+      "forgeCad2026_gui.cpp",
+      "forgeCad2026_gui_common.cpp",
+      "forgeCad2026_menu.cpp",
+      "forgeCad2026_operation_illustration.cpp",
+      "forgeCad2026_ribbon_editor.cpp",
+      "forgeCad2026_ribbon_preview.cpp",
+      "forgeCad2026_ribbon_preview_main.cpp",
+      "forgeCad2026_scene_renderer.cpp",
+      "forgeCad2026_sketch_curvature.cpp",
+      "forgeCad2026_storyboard.cpp",
+      "forgeCad2026_ui_glass.cpp",
+      "forgeCad2026_viewport.cpp",
+      "forgeCad2026_viewport_body_box.cpp",
+      "forgeCad2026_viewport_document.cpp",
+      "forgeCad2026_viewport_document_lifetime.cpp",
+      "forgeCad2026_viewport_interaction.cpp",
+      "forgeCad2026_viewport_loft_diagnostics.cpp",
+      "forgeCad2026_viewport_parameter_dimensions.cpp",
+      "forgeCad2026_viewport_pole_visibility.cpp",
+      "forgeCad2026_viewport_preview.cpp",
+      "forgeCad2026_viewport_render.cpp",
+      "forgeCad2026_viewport_scene.cpp",
+      "forgeCad2026_viewport_selection.cpp",
+      "forgeCad2026_viewport_sketch.cpp",
+      "forgeCad2026_viewport_sketch_reference.cpp",
+      "forgeCad2026_viewport_storyboard.cpp",
+      "forgeCad2026_zoom.cpp",
+      "kernel/fk_affine_surface_fit.cpp",
+      "kernel/fk_apparent_contour.cpp",
+      "kernel/fk_bernstein.cpp",
+      "kernel/fk_blend.cpp",
+      "kernel/fk_blend_contact_breaks.cpp",
+      "kernel/fk_blend_contour.cpp",
+      "kernel/fk_blend_loop.cpp",
+      "kernel/fk_blend_mitre.cpp",
+      "kernel/fk_blend_paths.cpp",
+      "kernel/fk_blend_polar.cpp",
+      "kernel/fk_blend_section_curve.cpp",
+      "kernel/fk_blend_surface.cpp",
+      "kernel/fk_body_check.cpp",
+      "kernel/fk_body_collection.cpp",
+      "kernel/fk_body_io.cpp",
+      "kernel/fk_boolean.cpp",
+      "kernel/fk_boolean_boundary.cpp",
+      "kernel/fk_boundary.cpp",
+      "kernel/fk_bspline.cpp",
+      "kernel/fk_bspline_basis.cpp",
+      "kernel/fk_bspline_isoline.cpp",
+      "kernel/fk_bspline_surface.cpp",
+      "kernel/fk_classify.cpp",
+      "kernel/fk_curve.cpp",
+      "kernel/fk_curve_algo.cpp",
+      "kernel/fk_curve_fit_bounds.cpp",
+      "kernel/fk_curve_ops.cpp",
+      "kernel/fk_curve_projection.cpp",
+      "kernel/fk_curve_surface.cpp",
+      "kernel/fk_draft.cpp",
+      "kernel/fk_exchange.cpp",
+      "kernel/fk_extrude.cpp",
+      "kernel/fk_face_normal_bounds.cpp",
+      "kernel/fk_fill.cpp",
+      "kernel/fk_helix.cpp",
+      "kernel/fk_helix_projection.cpp",
+      "kernel/fk_hermite.cpp",
+      "kernel/fk_history.cpp",
+      "kernel/fk_iges.cpp",
+      "kernel/fk_intersect.cpp",
+      "kernel/fk_loft.cpp",
+      "kernel/fk_loft_guide_constraints.cpp",
+      "kernel/fk_loft_knots.cpp",
+      "kernel/fk_loft_merge.cpp",
+      "kernel/fk_loft_profiles.cpp",
+      "kernel/fk_loft_sections.cpp",
+      "kernel/fk_mapping_carrier.cpp",
+      "kernel/fk_mapping_fit.cpp",
+      "kernel/fk_marching.cpp",
+      "kernel/fk_mass.cpp",
+      "kernel/fk_math.cpp",
+      "kernel/fk_micro.cpp",
+      "kernel/fk_nurbs.cpp",
+      "kernel/fk_nurbs_join.cpp",
+      "kernel/fk_offset.cpp",
+      "kernel/fk_offset_support.cpp",
+      "kernel/fk_open_offset.cpp",
+      "kernel/fk_pcurve.cpp",
+      "kernel/fk_planar.cpp",
+      "kernel/fk_planar_flatten.cpp",
+      "kernel/fk_predicates.cpp",
+      "kernel/fk_primitives.cpp",
+      "kernel/fk_profile.cpp",
+      "kernel/fk_project.cpp",
+      "kernel/fk_quilt_mapping.cpp",
+      "kernel/fk_revolve.cpp",
+      "kernel/fk_sew.cpp",
+      "kernel/fk_sheet.cpp",
+      "kernel/fk_shell.cpp",
+      "kernel/fk_sketch_projection.cpp",
+      "kernel/fk_solid_trim.cpp",
+      "kernel/fk_step.cpp",
+      "kernel/fk_surface.cpp",
+      "kernel/fk_surface_algo.cpp",
+      "kernel/fk_surface_distance.cpp",
+      "kernel/fk_surface_mapping.cpp",
+      "kernel/fk_surface_poles.cpp",
+      "kernel/fk_surface_poles_constraints.cpp",
+      "kernel/fk_surface_poles_conversion.cpp",
+      "kernel/fk_surface_poles_influence.cpp",
+      "kernel/fk_surface_poles_jets.cpp",
+      "kernel/fk_surface_refit.cpp",
+      "kernel/fk_surface_tools.cpp",
+      "kernel/fk_sweep.cpp",
+      "kernel/fk_sweep_analytic_bridge.cpp",
+      "kernel/fk_sweep_atlas.cpp",
+      "kernel/fk_sweep_caps.cpp",
+      "kernel/fk_sweep_surface_validation.cpp",
+      "kernel/fk_tessellate.cpp",
+      "kernel/fk_thicken.cpp",
+      "kernel/fk_topology.cpp",
+      "kernel/fk_transform.cpp",
+      "kernel/fk_unify.cpp",
+      "kernel/occt/fk_occt_import.cpp",
+      "kernel/tests/fk_test_main.cpp",
+      "kernel/tests/probe_blend_candidates.cpp",
+      "kernel/tests/test_bernstein.cpp",
+      "kernel/tests/test_blend.cpp",
+      "kernel/tests/test_blend_boundary_validation.cpp",
+      "kernel/tests/test_blend_cavity.cpp",
+      "kernel/tests/test_blend_cavity_regressions.cpp",
+      "kernel/tests/test_blend_contact_breaks.cpp",
+      "kernel/tests/test_blend_features.cpp",
+      "kernel/tests/test_blend_mitre_validation.cpp",
+      "kernel/tests/test_blend_profiles.cpp",
+      "kernel/tests/test_blend_transitions.cpp",
+      "kernel/tests/test_body_io.cpp",
+      "kernel/tests/test_boolean.cpp",
+      "kernel/tests/test_boolean_boundary.cpp",
+      "kernel/tests/test_boolean_seams.cpp",
+      "kernel/tests/test_boundary.cpp",
+      "kernel/tests/test_boundary_fit_validation.cpp",
+      "kernel/tests/test_bspline.cpp",
+      "kernel/tests/test_bspline_cache.cpp",
+      "kernel/tests/test_bspline_derivatives.cpp",
+      "kernel/tests/test_bspline_isoline.cpp",
+      "kernel/tests/test_bspline_plane_jets.cpp",
+      "kernel/tests/test_bspline_surface.cpp",
+      "kernel/tests/test_cancel.cpp",
+      "kernel/tests/test_cone_rays.cpp",
+      "kernel/tests/test_curve_algo.cpp",
+      "kernel/tests/test_curve_fit_validation.cpp",
+      "kernel/tests/test_curve_projection.cpp",
+      "kernel/tests/test_curve_surface.cpp",
+      "kernel/tests/test_curves.cpp",
+      "kernel/tests/test_disjoint_union.cpp",
+      "kernel/tests/test_draft.cpp",
+      "kernel/tests/test_edge_offset_fit_validation.cpp",
+      "kernel/tests/test_exchange_robustness.cpp",
+      "kernel/tests/test_extrude.cpp",
+      "kernel/tests/test_face_normal_bounds.cpp",
+      "kernel/tests/test_face_parameter_classify.cpp",
+      "kernel/tests/test_fill.cpp",
+      "kernel/tests/test_helix.cpp",
+      "kernel/tests/test_history.cpp",
+      "kernel/tests/test_iges.cpp",
+      "kernel/tests/test_intersect.cpp",
+      "kernel/tests/test_loft.cpp",
+      "kernel/tests/test_loft_complexity.cpp",
+      "kernel/tests/test_loft_correspondence.cpp",
+      "kernel/tests/test_loft_guide_constraints.cpp",
+      "kernel/tests/test_loft_knots.cpp",
+      "kernel/tests/test_loft_points.cpp",
+      "kernel/tests/test_loft_projected_guides.cpp",
+      "kernel/tests/test_loft_projected_sections.cpp",
+      "kernel/tests/test_loft_shape.cpp",
+      "kernel/tests/test_loft_surfaces.cpp",
+      "kernel/tests/test_mapping_carrier_validation.cpp",
+      "kernel/tests/test_mapping_diagonal_validation.cpp",
+      "kernel/tests/test_mapping_pcurve_validation.cpp",
+      "kernel/tests/test_marching.cpp",
+      "kernel/tests/test_marching_seed_grid.cpp",
+      "kernel/tests/test_mass.cpp",
+      "kernel/tests/test_math.cpp",
+      "kernel/tests/test_nurbs.cpp",
+      "kernel/tests/test_nurbs_supports.cpp",
+      "kernel/tests/test_occt_import.cpp",
+      "kernel/tests/test_offset.cpp",
+      "kernel/tests/test_offset_pcurve_validation.cpp",
+      "kernel/tests/test_offset_split_creases.cpp",
+      "kernel/tests/test_offset_validation.cpp",
+      "kernel/tests/test_open_offset.cpp",
+      "kernel/tests/test_pcurve.cpp",
+      "kernel/tests/test_planar.cpp",
+      "kernel/tests/test_planar_flatten_validation.cpp",
+      "kernel/tests/test_planar_thicken_validation.cpp",
+      "kernel/tests/test_polar_blend.cpp",
+      "kernel/tests/test_predicates.cpp",
+      "kernel/tests/test_primitives.cpp",
+      "kernel/tests/test_project.cpp",
+      "kernel/tests/test_projected_curve_references.cpp",
+      "kernel/tests/test_projection_fit_validation.cpp",
+      "kernel/tests/test_revolve.cpp",
+      "kernel/tests/test_sew_pcurve_validation.cpp",
+      "kernel/tests/test_sheet.cpp",
+      "kernel/tests/test_sheet_fit_validation.cpp",
+      "kernel/tests/test_sheet_join_validation.cpp",
+      "kernel/tests/test_shell.cpp",
+      "kernel/tests/test_sketch_projection.cpp",
+      "kernel/tests/test_solid_trim.cpp",
+      "kernel/tests/test_step.cpp",
+      "kernel/tests/test_surface_algo.cpp",
+      "kernel/tests/test_surface_curve_fit_validation.cpp",
+      "kernel/tests/test_surface_instances.cpp",
+      "kernel/tests/test_surface_mapping.cpp",
+      "kernel/tests/test_surface_parameterization.cpp",
+      "kernel/tests/test_surface_poles_constraints.cpp",
+      "kernel/tests/test_surface_poles_conversion.cpp",
+      "kernel/tests/test_surface_poles_influence.cpp",
+      "kernel/tests/test_surface_tools.cpp",
+      "kernel/tests/test_surfaces.cpp",
+      "kernel/tests/test_sweep.cpp",
+      "kernel/tests/test_sweep_analytic_bridge.cpp",
+      "kernel/tests/test_sweep_caps.cpp",
+      "kernel/tests/test_sweep_global.cpp",
+      "kernel/tests/test_sweep_surfaces.cpp",
+      "kernel/tests/test_sweep_validation.cpp",
+      "kernel/tests/test_tessellate.cpp",
+      "kernel/tests/test_thicken.cpp",
+      "kernel/tests/test_tolerance.cpp",
+      "kernel/tests/test_topology.cpp",
+      "kernel/tests/test_transform.cpp",
+      "kernel/tests/test_trimmed_face_bounds.cpp",
+      "kernel/tests/test_unify.cpp",
+      "tests/benchmark_selection.cpp",
+      "tests/test_application_theme.cpp",
+      "tests/test_catalog_recovery.cpp",
+      "tests/test_constraint_linear.cpp",
+      "tests/test_cuda_pool.cpp",
+      "tests/test_cuda_tessellation.cpp",
+      "tests/test_display_cache_memory.cpp",
+      "tests/test_document_compression.cpp",
+      "tests/test_drawing.cpp",
+      "tests/test_drawing_auxiliary.cpp",
+      "tests/test_drawing_axes.cpp",
+      "tests/test_drawing_break.cpp",
+      "tests/test_drawing_centers.cpp",
+      "tests/test_drawing_complete_sections.cpp",
+      "tests/test_drawing_crop.cpp",
+      "tests/test_drawing_derived.cpp",
+      "tests/test_drawing_detail.cpp",
+      "tests/test_drawing_dimension_repair.cpp",
+      "tests/test_drawing_dimensions.cpp",
+      "tests/test_drawing_dimensions_gui.cpp",
+      "tests/test_drawing_editor.cpp",
+      "tests/test_drawing_focus.cpp",
+      "tests/test_drawing_hidden_lines.cpp",
+      "tests/test_drawing_layout_history.cpp",
+      "tests/test_drawing_local_section_depth.cpp",
+      "tests/test_drawing_local_tools.cpp",
+      "tests/test_drawing_page.cpp",
+      "tests/test_drawing_preparation.cpp",
+      "tests/test_drawing_presentation.cpp",
+      "tests/test_drawing_scale.cpp",
+      "tests/test_drawing_silhouette.cpp",
+      "tests/test_drawing_templates.cpp",
+      "tests/test_drawing_ui_controls.cpp",
+      "tests/test_drawing_view_edit.cpp",
+      "tests/test_drawing_view_placement.cpp",
+      "tests/test_drawing_visibility.cpp",
+      "tests/test_expression.cpp",
+      "tests/test_feature_dependencies.cpp",
+      "tests/test_geometry_refs.cpp",
+      "tests/test_gpu_broad_phase.cpp",
+      "tests/test_mesh_export_backends.cpp",
+      "tests/test_overlay_uniform.cpp",
+      "tests/test_projected_drawing.cpp",
+      "tests/test_revision_numbers.cpp",
+      "tests/test_revision_releases.cpp",
+      "tests/test_revision_store.cpp",
+      "tests/test_shape_analysis.cpp",
+      "tests/test_sketch_offset_validation.cpp",
+      "tests/test_snapshot_chunks.cpp",
+      "tests/test_tessellation_availability.cpp",
+      "tests/test_viewport.cpp",
+      "tests/test_workspace.cpp"
+    ],
+    "analysis_errors": {},
+    "limits": "Chiamate statiche risolte e indirizzi di funzione nel codice C++ compilato. Definizioni alternative dello stesso simbolo in target diversi: preferita quella della TU; altrimenti collegamento alla dichiarazione API, senza attribuire un backend ambiguo. Include locali rilevati testualmente, anche nei rami condizionali. Dispatch virtuale, segnali/slot dinamici, std::function, plugin e rami esclusi dalla configurazione possono aggiungere chiamate a runtime. CUDA e shader Metal incorporati non analizzati via AST; relazioni include disponibili. Le frecce fra file della stessa classe possono rappresentare chiamate a metodi del medesimo oggetto.",
+    "relevant_hash_matches": {
+      "CMakeLists.txt": true,
+      "cad_drawing_editor.cpp": true,
+      "cad_drawing_editor.h": true,
+      "cad_drawing_window.cpp": true,
+      "cad_feature_dependencies.cpp": true,
+      "cad_feature_dependencies.h": true,
+      "cad_forge.cpp": true,
+      "cad_forge.h": true,
+      "cad_icons.cpp": true,
+      "cad_icons.h": true,
+      "cad_model_history.cpp": true,
+      "cad_model_history.h": true,
+      "cad_sketch_refs.cpp": true,
+      "cad_sketch_refs.h": true,
+      "forgeCad2026_camera.cpp": true,
+      "forgeCad2026_camera.h": true,
+      "forgeCad2026_dialogs_surfaces.cpp": true,
+      "forgeCad2026_gui.cpp": true,
+      "forgeCad2026_viewport.cpp": true,
+      "forgeCad2026_viewport.h": true,
+      "forgeCad2026_viewport_document.cpp": true,
+      "forgeCad2026_viewport_scene.cpp": true,
+      "forgeCad2026_viewport_selection.cpp": true,
+      "forgeCad2026_viewport_sketch.cpp": true,
+      "kernel/CMakeLists.txt": true
+    }
+  },
+  "input_sha256": {
+    "CMakeLists.txt": "2e70b6efa2f03ef2643493a70fd7d544eb25cb481b339289746daa9691c3abfe",
+    "cad_drawing_editor.cpp": "01da076e44b8d1786b1505ac50aa36f484083d78653bc0138b890262195cf54c",
+    "cad_drawing_editor.h": "c3d1c08ff11ed6967343fdaa8505c99a573ea8c61e1fcedc6112d364a6f137d5",
+    "cad_drawing_window.cpp": "e860794266cf804e6f6e90428998b74171b0e7166819f66d6523ee00f1067726",
+    "cad_feature_dependencies.cpp": "0da05c73b773173328f864501e7cfadcf139015bfc903e319fbd75a40a3f611f",
+    "cad_feature_dependencies.h": "9aa5349d2054551f8d74365ac29f9a08bf5dd9cd88ade7c9ed75cfe0e23ff188",
+    "cad_forge.cpp": "c653afdef3979afc00ed9790b3cc35a5c270cb09235d6d63138df3bc03388fcd",
+    "cad_forge.h": "f725765a2b70fdf565ace78b16947c7b895cbdb1ef3ee85b0587ea6c5416d681",
+    "cad_icons.cpp": "066493060482d8cd90bfd4e1153471403b625c3acf7be85f250da2178a87cceb",
+    "cad_icons.h": "c122c035325ccd3339a14896a49522ad52bf04533d4c59de95563cca60cfeb7f",
+    "cad_model_history.cpp": "6d79e789b32254d2df3d0d8bb01a1f19945ad4d66d36d0a8e40520e2bc4a81e2",
+    "cad_model_history.h": "f2d69beba6ed09a305ec22857583d8dfc0e1efcba704f71bb5d461ffee3d3dc3",
+    "cad_sketch_refs.cpp": "d13ec3cedff473b9df99a47f2f2d30bf8e5df7aee08033aa7db4ba73c453139e",
+    "cad_sketch_refs.h": "1b7980daf35c5279b4e5219b8c66cd6ebc0f0b5f4edbf45c7a9176afe9372cfa",
+    "docs/review-2026-11-15/orfane.md": "3bab25fb35b1c35a0139532be320b5a74262b0b66e314598a74fccd8c7f02bdc",
+    "docs/review-k10-helix-orphans-2026-11-16.md": "4c67d0d0f5bc667eb9eaf83ba62dda3e64223662d7bee0687dad3d974ccd5074",
+    "docs/review-orphans-refresh-2026-11-16.md": "fcd28805fc273519243ca027ba99e24d0f2402f2e1db8f6e00f5e235e4fafc52",
+    "forgeCad2026_camera.cpp": "ad2197f900075935a0e93408844ec71a69e9ef0e847fe2a6c9d1fc6bebd2d372",
+    "forgeCad2026_camera.h": "5c4aa732f42e3a1e78053e842ab3e78cc35cac411dab445e4336090f305fa0ca",
+    "forgeCad2026_dialogs_surfaces.cpp": "3e1a52dbd703f3d875b28feac751966b95defebc10975a78fb6adeb8f56d32bc",
+    "forgeCad2026_gui.cpp": "4b23e22c0811d6ed33ccc96aa6ca215620b115ad2a0cb9b882b5a267cfefaf76",
+    "forgeCad2026_viewport.cpp": "b121ff9f7a6dc9c9549ae77d1e80c5c56eafa1a7185eec3daa9a325fa810e407",
+    "forgeCad2026_viewport.h": "1b57e13662b8b9a41334eb132fc2d8c0080db248cf76ff6bb356cc04e716090b",
+    "forgeCad2026_viewport_document.cpp": "9023d6c295046e557eef26f7ef88421286371fcf4da923a61e1b9d9ce5f605ca",
+    "forgeCad2026_viewport_scene.cpp": "00db869bae00baa5e28880b411044598ed21238ddbae8b86d2dd9d1bbf9f4c49",
+    "forgeCad2026_viewport_selection.cpp": "9ef5c603294813cb10edb850ef2177ecf16833e52998fcae24381dfe3a86b02e",
+    "forgeCad2026_viewport_sketch.cpp": "f8cda4c9d13bb541e4f5fe2a89ac05872e885c6005d70a5b194b31b00d822aa9",
+    "kernel/CMakeLists.txt": "21dcb60fbdb0d83d1a5b9654e576f4c6c409c7c346461cbdb0191afb6326e4a2"
+  },
+  "recommendation_counts": {
+    "conservare": 6,
+    "deprecare": 7,
+    "rimuovere proposta": 4
+  },
+  "items": [
+    {
+      "symbol": "CadViewport::setEdgePickLinear",
+      "declaration": {
+        "file": "forgeCad2026_viewport.h",
+        "line": 458,
+        "text": "void setEdgePickLinear(bool linear);"
+      },
+      "definition": {
+        "file": "forgeCad2026_viewport_selection.cpp",
+        "line": 232,
+        "text": "void CadViewport::setEdgePickLinear(bool linear) {"
+      },
+      "recommendation": "deprecare",
+      "rationale": "Seleziona il tipo e aggiorna la preview del picker. Il pannello attuale passa il tipo direttamente a requestExtendPreview; il campo edgePickLinear_ resta attivo in beginExtendPick. Deprecazione proposta del solo ingresso, senza rimuovere lo stato.",
+      "related": [
+        "forgeCad2026_dialogs_surfaces.cpp:2194",
+        "forgeCad2026_viewport_selection.cpp:226"
+      ],
+      "graph_incoming": [],
+      "graph_outgoing": [
+        {
+          "source": "forgeCad2026_viewport_selection.cpp",
+          "target": "forgeCad2026_viewport_selection.cpp",
+          "kind": "call",
+          "line": 234,
+          "symbol": "CadViewport::edgePicked",
+          "owner": "CadViewport::setEdgePickLinear"
+        }
+      ],
+      "lexical_references": [
+        {
+          "file": "forgeCad2026_viewport.h",
+          "line": 458,
+          "text": "void setEdgePickLinear(bool linear);"
+        },
+        {
+          "file": "forgeCad2026_viewport_selection.cpp",
+          "line": 232,
+          "text": "void CadViewport::setEdgePickLinear(bool linear) {"
+        }
+      ],
+      "definition_graph_description": "Selezione e riferimenti: policy comune della costruzione per picking, punti, bordi e selezione rettangolare; priorita alla geometria visibile sulle cache associative nascoste; in creazione e modifica mantiene visibili risultati precedenti e stadi esplicitamente selezionati, anche dopo anteprima fallita o Azzera; Esc ripristina la scena finale. Rende tutti i quattro estremi della nuova ellisse selezionabili e candidati snap."
+    },
+    {
+      "symbol": "CadViewport::setExtendPickCallback",
+      "declaration": {
+        "file": "forgeCad2026_viewport.h",
+        "line": 456,
+        "text": "void setExtendPickCallback(std::function<void(int, QVector<EdgePoint>)> callback);"
+      },
+      "definition": {
+        "file": "forgeCad2026_viewport_selection.cpp",
+        "line": 230,
+        "text": "void CadViewport::setExtendPickCallback(std::function<void(int, QVector<EdgePoint>)> callback) { extendPickFinished_ = std::move(callback); }"
+      },
+      "recommendation": "deprecare",
+      "rationale": "Installa extendPickFinished_: unico writer, nessun chiamante. Flusso sostituito da changed/key callbacks del pannello. Eventuale pulizia futura deve comprendere membro e ramo finishEdgePick, conservando beginExtendPick e preview.",
+      "related": [
+        "forgeCad2026_viewport.h:1761",
+        "forgeCad2026_viewport_selection.cpp:1697",
+        "forgeCad2026_dialogs_surfaces.cpp:2204"
+      ],
+      "graph_incoming": [],
+      "graph_outgoing": [],
+      "lexical_references": [
+        {
+          "file": "forgeCad2026_viewport.h",
+          "line": 456,
+          "text": "void setExtendPickCallback(std::function<void(int, QVector<EdgePoint>)> callback);"
+        },
+        {
+          "file": "forgeCad2026_viewport_selection.cpp",
+          "line": 230,
+          "text": "void CadViewport::setExtendPickCallback(std::function<void(int, QVector<EdgePoint>)> callback) { extendPickFinished_ = std::move(callback); }"
+        }
+      ],
+      "definition_graph_description": "Selezione e riferimenti: policy comune della costruzione per picking, punti, bordi e selezione rettangolare; priorita alla geometria visibile sulle cache associative nascoste; in creazione e modifica mantiene visibili risultati precedenti e stadi esplicitamente selezionati, anche dopo anteprima fallita o Azzera; Esc ripristina la scena finale. Rende tutti i quattro estremi della nuova ellisse selezionabili e candidati snap."
+    },
+    {
+      "symbol": "CadViewport::resumeExtendPick",
+      "declaration": {
+        "file": "forgeCad2026_viewport.h",
+        "line": 460,
+        "text": "void resumeExtendPick(int body, const QVector<EdgePoint> &edges, bool linear);"
+      },
+      "definition": {
+        "file": "forgeCad2026_viewport_selection.cpp",
+        "line": 237,
+        "text": "void CadViewport::resumeExtendPick(int body, const QVector<EdgePoint> &edges, bool linear) {"
+      },
+      "recommendation": "deprecare",
+      "rationale": "Riapre il picker da body/edge e tipo. Il pannello attuale gestisce scelta e preview insieme; ingresso legacy non usato. Non confondere con resumeEdgePick, ancora attivo.",
+      "related": [
+        "forgeCad2026_gui.cpp:2331",
+        "forgeCad2026_dialogs_surfaces.cpp:2204"
+      ],
+      "graph_incoming": [],
+      "graph_outgoing": [
+        {
+          "source": "forgeCad2026_viewport_selection.cpp",
+          "target": "forgeCad2026_viewport.h",
+          "kind": "call",
+          "line": 239,
+          "symbol": "SceneSelection::operator=",
+          "owner": "CadViewport::resumeExtendPick"
+        },
+        {
+          "source": "forgeCad2026_viewport_selection.cpp",
+          "target": "forgeCad2026_viewport.h",
+          "kind": "call",
+          "line": 240,
+          "symbol": "CadViewport::SelectedFace::operator=",
+          "owner": "CadViewport::resumeExtendPick"
+        },
+        {
+          "source": "forgeCad2026_viewport_selection.cpp",
+          "target": "forgeCad2026_viewport_selection.cpp",
+          "kind": "call",
+          "line": 241,
+          "symbol": "CadViewport::beginExtendPick",
+          "owner": "CadViewport::resumeExtendPick"
+        },
+        {
+          "source": "forgeCad2026_viewport_selection.cpp",
+          "target": "forgeCad2026_viewport_selection.cpp",
+          "kind": "call",
+          "line": 242,
+          "symbol": "CadViewport::pickReferences",
+          "owner": "CadViewport::resumeExtendPick"
+        },
+        {
+          "source": "forgeCad2026_viewport_selection.cpp",
+          "target": "forgeCad2026_viewport_selection.cpp",
+          "kind": "call",
+          "line": 243,
+          "symbol": "CadViewport::edgePicked",
+          "owner": "CadViewport::resumeExtendPick"
+        }
+      ],
+      "lexical_references": [
+        {
+          "file": "forgeCad2026_viewport.h",
+          "line": 460,
+          "text": "void resumeExtendPick(int body, const QVector<EdgePoint> &edges, bool linear);"
+        },
+        {
+          "file": "forgeCad2026_viewport_selection.cpp",
+          "line": 237,
+          "text": "void CadViewport::resumeExtendPick(int body, const QVector<EdgePoint> &edges, bool linear) {"
+        }
+      ],
+      "definition_graph_description": "Selezione e riferimenti: policy comune della costruzione per picking, punti, bordi e selezione rettangolare; priorita alla geometria visibile sulle cache associative nascoste; in creazione e modifica mantiene visibili risultati precedenti e stadi esplicitamente selezionati, anche dopo anteprima fallita o Azzera; Esc ripristina la scena finale. Rende tutti i quattro estremi della nuova ellisse selezionabili e candidati snap."
+    },
+    {
+      "symbol": "CadViewport::constraintsVisible",
+      "declaration": {
+        "file": "forgeCad2026_viewport.h",
+        "line": 799,
+        "text": "bool constraintsVisible() const;"
+      },
+      "definition": {
+        "file": "forgeCad2026_viewport_sketch.cpp",
+        "line": 1259,
+        "text": "bool CadViewport::constraintsVisible() const { return constraintsVisible_; }"
+      },
+      "recommendation": "conservare",
+      "rationale": "Getter puro dello stato di visibilita; setter e stato usati. Conservazione intenzionale proposta come query simmetrica, senza inventare un consumatore attuale.",
+      "related": [
+        "forgeCad2026_viewport_sketch.cpp:1200",
+        "forgeCad2026_gui.cpp:3195"
+      ],
+      "graph_incoming": [],
+      "graph_outgoing": [],
+      "lexical_references": [
+        {
+          "file": "forgeCad2026_viewport.h",
+          "line": 799,
+          "text": "bool constraintsVisible() const;"
+        },
+        {
+          "file": "forgeCad2026_viewport_sketch.cpp",
+          "line": 1259,
+          "text": "bool CadViewport::constraintsVisible() const { return constraintsVisible_; }"
+        }
+      ],
+      "definition_graph_description": "Comandi schizzo, quote, snap e inferenze associative; scarta alla chiusura solo nuovi schizzi vuoti senza utilizzatori, conserva punti e costruzione; selezione esterna transitoria senza falso Undo/dirty, pulizia conservativa delle cache non usate alla modifica/deselezione/uscita e rimappatura delle selezioni. Ellisse per estremi: preview e conferma da tre clic condividono la definizione, quattro punti effettivi per quote, snap e trascinamento con centro derivato."
+    },
+    {
+      "symbol": "CadViewport::sectionEnabled",
+      "declaration": {
+        "file": "forgeCad2026_viewport.h",
+        "line": 750,
+        "text": "bool sectionEnabled() const;"
+      },
+      "definition": {
+        "file": "forgeCad2026_viewport.cpp",
+        "line": 456,
+        "text": "bool CadViewport::sectionEnabled() const { return section_.enabled; }"
+      },
+      "recommendation": "conservare",
+      "rationale": "Getter puro della sezione, complementare al setSection attivo. Non e la funzionalita di sezione a essere orfana; conservazione intenzionale proposta della query.",
+      "related": [
+        "forgeCad2026_gui.cpp:1855"
+      ],
+      "graph_incoming": [],
+      "graph_outgoing": [],
+      "lexical_references": [
+        {
+          "file": "forgeCad2026_viewport.h",
+          "line": 750,
+          "text": "bool sectionEnabled() const;"
+        },
+        {
+          "file": "forgeCad2026_viewport.cpp",
+          "line": 456,
+          "text": "bool CadViewport::sectionEnabled() const { return section_.enabled; }"
+        }
+      ],
+      "definition_graph_description": "Ciclo di vita e impostazioni pubbliche del coordinatore CadViewport; gabbia poli multipli, proiezione/picking del gizmo e delta vincolati agli assi 3D."
+    },
+    {
+      "symbol": "CadViewport::geometrySnap",
+      "declaration": {
+        "file": "forgeCad2026_viewport.h",
+        "line": 105,
+        "text": "bool geometrySnap() const;"
+      },
+      "definition": {
+        "file": "forgeCad2026_viewport.cpp",
+        "line": 76,
+        "text": "bool CadViewport::geometrySnap() const { return geometrySnap_; }"
+      },
+      "recommendation": "conservare",
+      "rationale": "Getter puro dello snap geometrico; setter attivo. Le altre occorrenze del nome sono chiavi QSettings, non chiamate. Conservazione intenzionale proposta della query.",
+      "related": [
+        "forgeCad2026_gui.cpp:2957",
+        "forgeCad2026_gui.cpp:3262"
+      ],
+      "graph_incoming": [],
+      "graph_outgoing": [],
+      "lexical_references": [
+        {
+          "file": "forgeCad2026_viewport.h",
+          "line": 105,
+          "text": "bool geometrySnap() const;"
+        },
+        {
+          "file": "forgeCad2026_gui.cpp",
+          "line": 2956,
+          "text": "snapAction->setCheckable(true); snapAction->setChecked(QSettings().value(QStringLiteral(\"sketch/geometrySnap\"), true).toBool());"
+        },
+        {
+          "file": "forgeCad2026_gui.cpp",
+          "line": 3263,
+          "text": "QSettings().setValue(QStringLiteral(\"sketch/geometrySnap\"), enabled);"
+        },
+        {
+          "file": "forgeCad2026_gui.cpp",
+          "line": 3841,
+          "text": "QStringLiteral(\"sketch/geometrySnap\"), QStringLiteral(\"sketch/gridSnap\"),"
+        },
+        {
+          "file": "forgeCad2026_viewport.cpp",
+          "line": 76,
+          "text": "bool CadViewport::geometrySnap() const { return geometrySnap_; }"
+        }
+      ],
+      "definition_graph_description": "Ciclo di vita e impostazioni pubbliche del coordinatore CadViewport; gabbia poli multipli, proiezione/picking del gizmo e delta vincolati agli assi 3D."
+    },
+    {
+      "symbol": "CadViewport::gridSnap",
+      "declaration": {
+        "file": "forgeCad2026_viewport.h",
+        "line": 107,
+        "text": "bool gridSnap() const;"
+      },
+      "definition": {
+        "file": "forgeCad2026_viewport.cpp",
+        "line": 80,
+        "text": "bool CadViewport::gridSnap() const { return gridSnap_; }"
+      },
+      "recommendation": "conservare",
+      "rationale": "Getter puro dello snap griglia; setter attivo. Stringhe QSettings e nome icona non sono usi del getter. Conservazione intenzionale proposta della query.",
+      "related": [
+        "forgeCad2026_gui.cpp:2960",
+        "forgeCad2026_gui.cpp:3266"
+      ],
+      "graph_incoming": [],
+      "graph_outgoing": [],
+      "lexical_references": [
+        {
+          "file": "forgeCad2026_viewport.h",
+          "line": 107,
+          "text": "bool gridSnap() const;"
+        },
+        {
+          "file": "forgeCad2026_gui.cpp",
+          "line": 2959,
+          "text": "gridSnapAction->setCheckable(true); gridSnapAction->setChecked(QSettings().value(QStringLiteral(\"sketch/gridSnap\"), true).toBool());"
+        },
+        {
+          "file": "forgeCad2026_gui.cpp",
+          "line": 3267,
+          "text": "QSettings().setValue(QStringLiteral(\"sketch/gridSnap\"), enabled);"
+        },
+        {
+          "file": "forgeCad2026_gui.cpp",
+          "line": 3488,
+          "text": "{angleConstraint, QStringLiteral(\"constraintAngle\")}, {snapAction, QStringLiteral(\"snap\")}, {gridSnapAction, QStringLiteral(\"gridSnap\")}, {originSnapAction, QStringLiteral(\"originSnap\")},"
+        },
+        {
+          "file": "forgeCad2026_gui.cpp",
+          "line": 3841,
+          "text": "QStringLiteral(\"sketch/geometrySnap\"), QStringLiteral(\"sketch/gridSnap\"),"
+        },
+        {
+          "file": "cad_icons.cpp",
+          "line": 413,
+          "text": "icons[\"gridSnap\"] = [](QPainter &p, const IconPalette &c) {"
+        },
+        {
+          "file": "forgeCad2026_viewport.cpp",
+          "line": 80,
+          "text": "bool CadViewport::gridSnap() const { return gridSnap_; }"
+        }
+      ],
+      "definition_graph_description": "Ciclo di vita e impostazioni pubbliche del coordinatore CadViewport; gabbia poli multipli, proiezione/picking del gizmo e delta vincolati agli assi 3D."
+    },
+    {
+      "symbol": "CadViewport::basisMatrix",
+      "declaration": {
+        "file": "forgeCad2026_viewport.h",
+        "line": 823,
+        "text": "QMatrix4x4 basisMatrix() const;"
+      },
+      "definition": {
+        "file": "forgeCad2026_viewport_scene.cpp",
+        "line": 48,
+        "text": "QMatrix4x4 CadViewport::basisMatrix() const {"
+      },
+      "recommendation": "rimuovere proposta",
+      "rationale": "Wrapper di sola delega alla camera, nessun contratto aggiuntivo osservato. Proposta di rimozione di dichiarazione/definizione del wrapper; ViewportCamera::basisMatrix e matrici scene restano attivi.",
+      "related": [
+        "forgeCad2026_viewport_scene.cpp:49",
+        "forgeCad2026_camera.cpp:30",
+        "tests/test_boolean_box.h:60"
+      ],
+      "graph_incoming": [],
+      "graph_outgoing": [
+        {
+          "source": "forgeCad2026_viewport_scene.cpp",
+          "target": "forgeCad2026_camera.cpp",
+          "kind": "call",
+          "line": 49,
+          "symbol": "ForgeCad::Gui::ViewportCamera::basisMatrix",
+          "owner": "CadViewport::basisMatrix"
+        }
+      ],
+      "lexical_references": [
+        {
+          "file": "forgeCad2026_viewport.h",
+          "line": 823,
+          "text": "QMatrix4x4 basisMatrix() const;"
+        },
+        {
+          "file": "forgeCad2026_viewport_scene.cpp",
+          "line": 48,
+          "text": "QMatrix4x4 CadViewport::basisMatrix() const {"
+        },
+        {
+          "file": "forgeCad2026_viewport_scene.cpp",
+          "line": 49,
+          "text": "return camera_.basisMatrix();"
+        },
+        {
+          "file": "forgeCad2026_camera.cpp",
+          "line": 6,
+          "text": "QMatrix4x4 ViewportCamera::basisMatrix() const {"
+        },
+        {
+          "file": "forgeCad2026_camera.cpp",
+          "line": 30,
+          "text": "modelView *= basisMatrix();"
+        },
+        {
+          "file": "forgeCad2026_camera.cpp",
+          "line": 51,
+          "text": "const QMatrix4x4 basis = basisMatrix();"
+        },
+        {
+          "file": "forgeCad2026_camera.cpp",
+          "line": 85,
+          "text": "rotation *= basisMatrix();"
+        },
+        {
+          "file": "forgeCad2026_camera.cpp",
+          "line": 110,
+          "text": "projectionMatrix_ *= basisMatrix();"
+        },
+        {
+          "file": "forgeCad2026_camera.cpp",
+          "line": 124,
+          "text": "rotation *= basisMatrix();"
+        },
+        {
+          "file": "forgeCad2026_camera.cpp",
+          "line": 138,
+          "text": "rotation *= basisMatrix();"
+        },
+        {
+          "file": "forgeCad2026_camera.h",
+          "line": 20,
+          "text": "QMatrix4x4 basisMatrix() const;"
+        },
+        {
+          "file": "tests/test_boolean_box.h",
+          "line": 60,
+          "text": "const auto camera = view->camera_.basisMatrix();"
+        },
+        {
+          "file": "tests/test_boolean_box.h",
+          "line": 90,
+          "text": "require(view->camera_.basisMatrix() == camera && view->selection() == sceneSelection"
+        }
+      ],
+      "definition_graph_description": "Coordinate scena/schermo, raggi e bounds: conserva la base interrogabile dal picker dei bordi mentre il renderer mostra solo il risultato completo; costruzione inclusa in modifica o tramite preferenza visiva, policy condivisa con rendering/picking; in scelta riferimenti storici esclude gli operandi futuri ripristinati dalla preview e mantiene visibili le basi selezionabili; zoom al cursore e piani di riferimento. Scena sorgente coerente con il reference picker anche in creazione, con storia futura esclusa, operandi espliciti e curve 3D visibili."
+    },
+    {
+      "symbol": "CadViewport::normalizedViewAngle",
+      "declaration": {
+        "file": "forgeCad2026_viewport.h",
+        "line": 844,
+        "text": "static float normalizedViewAngle(float degrees);"
+      },
+      "definition": {
+        "file": "forgeCad2026_viewport_scene.cpp",
+        "line": 83,
+        "text": "float CadViewport::normalizedViewAngle(float degrees) {"
+      },
+      "recommendation": "rimuovere proposta",
+      "rationale": "Wrapper statico di sola delega; algoritmo e chiamanti reali sono su ViewportCamera. Proposta di rimozione del solo wrapper pubblico applicativo.",
+      "related": [
+        "forgeCad2026_viewport_scene.cpp:84",
+        "forgeCad2026_camera.cpp:70"
+      ],
+      "graph_incoming": [],
+      "graph_outgoing": [
+        {
+          "source": "forgeCad2026_viewport_scene.cpp",
+          "target": "forgeCad2026_camera.cpp",
+          "kind": "call",
+          "line": 84,
+          "symbol": "ForgeCad::Gui::ViewportCamera::normalizedViewAngle",
+          "owner": "CadViewport::normalizedViewAngle"
+        }
+      ],
+      "lexical_references": [
+        {
+          "file": "forgeCad2026_viewport.h",
+          "line": 844,
+          "text": "static float normalizedViewAngle(float degrees);"
+        },
+        {
+          "file": "forgeCad2026_viewport_scene.cpp",
+          "line": 83,
+          "text": "float CadViewport::normalizedViewAngle(float degrees) {"
+        },
+        {
+          "file": "forgeCad2026_viewport_scene.cpp",
+          "line": 84,
+          "text": "return ForgeCad::Gui::ViewportCamera::normalizedViewAngle(degrees);"
+        },
+        {
+          "file": "forgeCad2026_camera.cpp",
+          "line": 63,
+          "text": "float ViewportCamera::normalizedViewAngle(float degrees) {"
+        },
+        {
+          "file": "forgeCad2026_camera.cpp",
+          "line": 70,
+          "text": "yaw_ = normalizedViewAngle(yaw_ + delta.x()*kOrbitDegreesPerPixel);"
+        },
+        {
+          "file": "forgeCad2026_camera.cpp",
+          "line": 71,
+          "text": "pitch_ = normalizedViewAngle(pitch_ + delta.y()*kOrbitDegreesPerPixel);"
+        },
+        {
+          "file": "forgeCad2026_camera.h",
+          "line": 26,
+          "text": "static float normalizedViewAngle(float degrees);"
+        }
+      ],
+      "definition_graph_description": "Coordinate scena/schermo, raggi e bounds: conserva la base interrogabile dal picker dei bordi mentre il renderer mostra solo il risultato completo; costruzione inclusa in modifica o tramite preferenza visiva, policy condivisa con rendering/picking; in scelta riferimenti storici esclude gli operandi futuri ripristinati dalla preview e mantiene visibili le basi selezionabili; zoom al cursore e piani di riferimento. Scena sorgente coerente con il reference picker anche in creazione, con storia futura esclusa, operandi espliciti e curve 3D visibili."
+    },
+    {
+      "symbol": "CadViewport::extrusionNames",
+      "declaration": {
+        "file": "forgeCad2026_viewport.h",
+        "line": 318,
+        "text": "QStringList extrusionNames() const;"
+      },
+      "definition": {
+        "file": "forgeCad2026_viewport_document.cpp",
+        "line": 914,
+        "text": "QStringList CadViewport::extrusionNames() const {"
+      },
+      "recommendation": "rimuovere proposta",
+      "rationale": "Lista copiata dei nomi delle extrusions; nessun uso. extrusions() const gia espone lo stato letto dai pannelli. Proposta di eliminazione del duplicato senza toccare nomi persistiti e accessore principale.",
+      "related": [
+        "forgeCad2026_viewport.h:230",
+        "forgeCad2026_viewport_document.cpp:916"
+      ],
+      "graph_incoming": [],
+      "graph_outgoing": [],
+      "lexical_references": [
+        {
+          "file": "forgeCad2026_viewport.h",
+          "line": 318,
+          "text": "QStringList extrusionNames() const;"
+        },
+        {
+          "file": "forgeCad2026_viewport_document.cpp",
+          "line": 914,
+          "text": "QStringList CadViewport::extrusionNames() const {"
+        }
+      ],
+      "definition_graph_description": "Apertura: ripara fusioni che scavalcano uno stadio e invalida le cache dipendenti; registra la genealogia completa della cache prima che le ripetizioni sostituiscano operandi runtime. Invalidazione incrementale per ID persistenti dopo eliminazione, soppressioni multiple e modifiche datum: semi prima della rimappatura e sola cascata delle dipendenze; sorgenti mancanti diagnosticate, geometrie indipendenti conservate. Soppressione: invalida il filtro dei corpi rilasciati; aggregati legacy conservati e risultati derivati gia salvati riuniti in un solo evento. Modifica: ricongiunge le fusioni dopo il cambio di corpo e conserva le preferenze di visibilita durante rollback e sincronizzazione. Documento e storia unificata: schizzi e piani autonomi, riordino, appoggi associativi e contesto storico; mesh richieste nei worker della geometria o nella coda differita, pubblicazione GUI, gruppi limitati nel cambio qualita e basi delle ripetizioni prima delle istanze.; permette il riordino dei creatori di corpi con un solo stadio, conservando ancoraggio delle catene e controlli delle dipendenze"
+    },
+    {
+      "symbol": "ForgeCad::DrawingSheetEditor::setModelProvider",
+      "declaration": {
+        "file": "cad_drawing_editor.h",
+        "line": 104,
+        "text": "void setModelProvider(std::function<DrawingEditorModel()> provider);"
+      },
+      "definition": {
+        "file": "cad_drawing_editor.cpp",
+        "line": 3649,
+        "text": "void DrawingSheetEditor::setModelProvider(std::function<DrawingEditorModel()> provider){impl_->provider=std::move(provider);impl_->updateAction->setEnabled(bool(impl_->provider)&&!impl_->readOnly);}"
+      },
+      "recommendation": "deprecare",
+      "rationale": "API callback del comando interno Aggiorna dal modello; provider mai installato. DrawingWindow nasconde intenzionalmente quel comando e aggiorna tramite sorgente salvata. Pulizia futura coordinata di setter/provider/action/readOnly e findChild obbligatoria: togliere soltanto action lascerebbe dereference nullo.",
+      "related": [
+        "cad_drawing_editor.cpp:495",
+        "cad_drawing_editor.cpp:2947",
+        "cad_drawing_editor.cpp:3659",
+        "cad_drawing_window.cpp:151",
+        "cad_drawing_window.cpp:286"
+      ],
+      "graph_incoming": [],
+      "graph_outgoing": [],
+      "lexical_references": [
+        {
+          "file": "cad_drawing_editor.cpp",
+          "line": 3649,
+          "text": "void DrawingSheetEditor::setModelProvider(std::function<DrawingEditorModel()> provider){impl_->provider=std::move(provider);impl_->updateAction->setEnabled(bool(impl_->provider)&&!impl_->readOnly);}"
+        },
+        {
+          "file": "cad_drawing_editor.h",
+          "line": 104,
+          "text": "void setModelProvider(std::function<DrawingEditorModel()> provider);"
+        }
+      ],
+      "definition_graph_description": "Editor della tavola: centri/assi su bordi selezionati e sezione locale con contorno/profondita, modificabile con quote e richiami associati senza bloccare le altre viste; raggio libero dal primo clic e leader corto per centro esterno; ricollegamento quote con snap, anteprima e conferma atomica; allineatori durante il primo posizionamento e il trascinamento, stato temporaneo riusato fra anteprime e conferma senza salto; snap fra punte coincidenti delle quote lineari/angolari con calcolo geometrico condiviso, priorità e indicatore lampeggiante; guide lampeggianti e aggancio direzionale dei testi di quota al vicino nel verso del movimento, annullamento e Undo al rilascio; quote trasparenti, frecce H/B, richiami obliqui e serie ordinate continue; scala comune del foglio e sorgente della scala per ogni vista, aggiornamento atomico di anteprime e dipendenze; selezione, posizionamento e comandi; inserimento atomico e anteprime di catene e ordinate, proprietà e anteprime dei datum/cartigli geometrici e delle rugosità Ra/Rz e dei badge persistenti con scelta della prima quota e frecce nella viewport, incluse anteprime delle viste interrotte e sezioni rimosse a gradini multipli e allineate a due piani angolari; disegno e ridefinizione del taglio con mouse, centro e rami o percorso ortogonale, snap geometrici e anteprima annullabile."
+    },
+    {
+      "symbol": "ForgeCad::forgeIntersectRay",
+      "declaration": {
+        "file": "cad_forge.h",
+        "line": 228,
+        "text": "bool forgeIntersectRay(const Kernel::Body &body, const QVector3D &origin, const QVector3D &direction, double &distance, const Kernel::RayFaceIndex *index = nullptr);"
+      },
+      "definition": {
+        "file": "cad_forge.cpp",
+        "line": 2407,
+        "text": "bool forgeIntersectRay(const Body &body, const QVector3D &origin, const QVector3D &direction, double &distance, const Kernel::RayFaceIndex *index) {"
+      },
+      "recommendation": "deprecare",
+      "rationale": "Ponte QVector3D verso firstRayHit, restituisce parametro raggio o false su eccezione. Nessun consumatore attuale; produzione usa forgePickFace. Deprecazione proposta del ponte, nessuna rimozione di firstRayHit o picking. Non e dimostrato che un parametro t equivalga a distanza senza direzione unitaria.",
+      "related": [
+        "cad_forge.h:227",
+        "cad_forge.cpp:2377",
+        "cad_forge.cpp:2410"
+      ],
+      "graph_incoming": [],
+      "graph_outgoing": [
+        {
+          "source": "cad_forge.cpp",
+          "target": "kernel/fk_classify.cpp",
+          "kind": "call",
+          "line": 2410,
+          "symbol": "ForgeCad::Kernel::firstRayHit",
+          "owner": "ForgeCad::forgeIntersectRay"
+        },
+        {
+          "source": "cad_forge.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 2410,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::forgeIntersectRay"
+        }
+      ],
+      "lexical_references": [
+        {
+          "file": "cad_forge.cpp",
+          "line": 2407,
+          "text": "bool forgeIntersectRay(const Body &body, const QVector3D &origin, const QVector3D &direction, double &distance, const Kernel::RayFaceIndex *index) {"
+        },
+        {
+          "file": "cad_forge.h",
+          "line": 228,
+          "text": "bool forgeIntersectRay(const Kernel::Body &body, const QVector3D &origin, const QVector3D &direction, double &distance, const Kernel::RayFaceIndex *index = nullptr);"
+        }
+      ],
+      "definition_graph_description": "Adatta sketch e parametri al kernel; booleane con genealogia ricondotta agli operandi e recupero dell’unione commutativa nell’ordine inverso dopo un errore geometrico; conversione mesh float con filtro comune dei triangoli degeneri per scena e anteprime, ID topologici coerenti. Il riepilogo delle curve proiettate usa lo scarto della catena finale dopo le giunte."
+    },
+    {
+      "symbol": "ForgeCad::modelBodyFeatures",
+      "declaration": {
+        "file": "cad_model_history.h",
+        "line": 42,
+        "text": "QVector<int> modelBodyFeatures(const DocumentState &state, quint64 bodyId);"
+      },
+      "definition": {
+        "file": "cad_model_history.cpp",
+        "line": 75,
+        "text": "QVector<int> modelBodyFeatures(const DocumentState &state, quint64 bodyId) {"
+      },
+      "recommendation": "conservare",
+      "rationale": "Query documentata degli indici delle feature appartenenti a un corpo logico, in ordine. Non coincide con modelBodyTipIndex (ultimo stadio valido): nessun sostituto equivalente osservato. Conservazione intenzionale proposta, nessun uso corrente rivendicato.",
+      "related": [
+        "cad_model_history.h:40",
+        "cad_model_history.cpp:83"
+      ],
+      "graph_incoming": [],
+      "graph_outgoing": [],
+      "lexical_references": [
+        {
+          "file": "cad_model_history.h",
+          "line": 42,
+          "text": "QVector<int> modelBodyFeatures(const DocumentState &state, quint64 bodyId);"
+        },
+        {
+          "file": "cad_model_history.cpp",
+          "line": 75,
+          "text": "QVector<int> modelBodyFeatures(const DocumentState &state, quint64 bodyId) {"
+        }
+      ],
+      "definition_graph_description": "Corpi logici e storia di schizzi/lavorazioni: identita distinte di copie e componenti, basi riallineate dopo modifiche/riordini, preferenza visibile conservata attraverso consumo e recupero del tip, rimappature e cursore."
+    },
+    {
+      "symbol": "ForgeCad::usesSketch",
+      "declaration": {
+        "file": "cad_feature_dependencies.h",
+        "line": 21,
+        "text": "bool usesSketch(const ExtrusionObject &body);"
+      },
+      "definition": {
+        "file": "cad_feature_dependencies.cpp",
+        "line": 205,
+        "text": "bool usesSketch(const ExtrusionObject &body) { return !sketchesOf(body).isEmpty(); }"
+      },
+      "recommendation": "rimuovere proposta",
+      "rationale": "Wrapper !sketchesOf(body).isEmpty() senza usi. Proposta di rimozione del wrapper mantenendo sketchesOf, usata per dipendenze e rigenerazione.",
+      "related": [
+        "cad_feature_dependencies.cpp:205",
+        "forgeCad2026_viewport_document.cpp:2087"
+      ],
+      "graph_incoming": [],
+      "graph_outgoing": [
+        {
+          "source": "cad_feature_dependencies.cpp",
+          "target": "cad_feature_dependencies.cpp",
+          "kind": "call",
+          "line": 205,
+          "symbol": "ForgeCad::sketchesOf",
+          "owner": "ForgeCad::usesSketch"
+        }
+      ],
+      "lexical_references": [
+        {
+          "file": "cad_feature_dependencies.h",
+          "line": 21,
+          "text": "bool usesSketch(const ExtrusionObject &body);"
+        },
+        {
+          "file": "cad_feature_dependencies.cpp",
+          "line": 205,
+          "text": "bool usesSketch(const ExtrusionObject &body) { return !sketchesOf(body).isEmpty(); }"
+        }
+      ],
+      "definition_graph_description": "Dipendenze e consumo dei risultati, compresi aggregati legacy; candidati dinamici dei limiti di estrusione distinti dagli strumenti di fusione e dalla visibilita manuale."
+    },
+    {
+      "symbol": "ForgeCad::commandIconNames",
+      "declaration": {
+        "file": "cad_icons.h",
+        "line": 15,
+        "text": "QStringList commandIconNames();"
+      },
+      "definition": {
+        "file": "cad_icons.cpp",
+        "line": 1634,
+        "text": "QStringList commandIconNames() {"
+      },
+      "recommendation": "conservare",
+      "rationale": "Enumerazione del registro documentata dal contratto di commandIcon nello stesso header. Conservazione intenzionale proposta della capacita di scoprire i nomi; nessun tool o test la usa oggi.",
+      "related": [
+        "cad_icons.h:13",
+        "cad_icons.cpp:1634"
+      ],
+      "graph_incoming": [],
+      "graph_outgoing": [
+        {
+          "source": "cad_icons.cpp",
+          "target": "cad_icons.cpp",
+          "kind": "call",
+          "line": 1636,
+          "symbol": "ForgeCad::registry",
+          "owner": "ForgeCad::commandIconNames"
+        }
+      ],
+      "lexical_references": [
+        {
+          "file": "cad_icons.cpp",
+          "line": 1634,
+          "text": "QStringList commandIconNames() {"
+        },
+        {
+          "file": "cad_icons.h",
+          "line": 13,
+          "text": "// Icona del comando `name` (vedi commandIconNames); vuota se il nome non esiste."
+        },
+        {
+          "file": "cad_icons.h",
+          "line": 15,
+          "text": "QStringList commandIconNames();"
+        }
+      ],
+      "definition_graph_description": "Icone vettoriali adattate al tema; sezioni normale/a gradini/allineata/locale, riparazione/numerazione quote e annotazioni tecniche distinte. Incluse estensione fino a riferimento, rete di curve e manipolazione dei poli NURBS distinte da loft/spline. Icona distinta per Ellisse per estremi."
+    },
+    {
+      "symbol": "ForgeCad::nearestBodyEdge",
+      "declaration": {
+        "file": "cad_sketch_refs.h",
+        "line": 66,
+        "text": "bool nearestBodyEdge(const Kernel::Body &body, const Kernel::Vec3 &point, Kernel::CurvePtr<3> &curve, Kernel::Interval &range);"
+      },
+      "definition": {
+        "file": "cad_sketch_refs.cpp",
+        "line": 163,
+        "text": "bool nearestBodyEdge(const Body &body, const Vec3 &point, CurvePtr<3> &curve, Interval &range) {"
+      },
+      "recommendation": "deprecare",
+      "rationale": "Query spaziale documentata restituisce curva/range del bordo piu vicino; nessuna identita genealogica. Le vecchie copie Fix risultano storicamente sostituite da riferimenti associativi. Deprecazione proposta, senza introdurre nearest come riassociazione.",
+      "related": [
+        "cad_sketch_refs.h:65",
+        "cad_sketch_refs.cpp:163",
+        "docs/code-review-2026-11-02.md:104"
+      ],
+      "graph_incoming": [],
+      "graph_outgoing": [
+        {
+          "source": "cad_sketch_refs.cpp",
+          "target": "kernel/fk_curve_algo.h",
+          "kind": "call",
+          "line": 168,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::nearestBodyEdge"
+        },
+        {
+          "source": "cad_sketch_refs.cpp",
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 169,
+          "symbol": "ForgeCad::Kernel::Interval::operator=",
+          "owner": "ForgeCad::nearestBodyEdge"
+        },
+        {
+          "source": "cad_sketch_refs.cpp",
+          "target": "kernel/fk_topology.cpp",
+          "kind": "call",
+          "line": 165,
+          "symbol": "ForgeCad::Kernel::Body::edges",
+          "owner": "ForgeCad::nearestBodyEdge"
+        },
+        {
+          "source": "cad_sketch_refs.cpp",
+          "target": "kernel/fk_topology.cpp",
+          "kind": "call",
+          "line": 166,
+          "symbol": "ForgeCad::Kernel::Body::edge",
+          "owner": "ForgeCad::nearestBodyEdge"
+        },
+        {
+          "source": "cad_sketch_refs.cpp",
+          "target": "kernel/fk_topology.h",
+          "kind": "call",
+          "line": 165,
+          "symbol": "ForgeCad::Kernel::Id::Id",
+          "owner": "ForgeCad::nearestBodyEdge"
+        },
+        {
+          "source": "cad_sketch_refs.cpp",
+          "target": "kernel/fk_topology.h",
+          "kind": "call",
+          "line": 166,
+          "symbol": "ForgeCad::Kernel::Id::Id",
+          "owner": "ForgeCad::nearestBodyEdge"
+        }
+      ],
+      "lexical_references": [
+        {
+          "file": "cad_sketch_refs.cpp",
+          "line": 163,
+          "text": "bool nearestBodyEdge(const Body &body, const Vec3 &point, CurvePtr<3> &curve, Interval &range) {"
+        },
+        {
+          "file": "cad_sketch_refs.h",
+          "line": 66,
+          "text": "bool nearestBodyEdge(const Kernel::Body &body, const Kernel::Vec3 &point, Kernel::CurvePtr<3> &curve, Kernel::Interval &range);"
+        }
+      ],
+      "definition_graph_description": "Proiezioni, contatti e Pierce esatti associativi degli schizzi, inclusi contorni apparenti di facce analitiche proiettati lungo la normale anche su piani esterni al corpo: immagini affini delle curve implicite, sorgenti persistenti per chiavi genealogiche, cache automatiche proiettate direttamente dallo snapshot B-rep senza risolvere i nomi appena creati, refresh e conversioni esplicite visibili senza duplicati; identita leggibili persistenti e diagnostica di tutte le sorgenti rotte con i vincoli interessati. Helix con Transformed usa un fit diretto2D con controllo continuo dopo recalculateCurve e pubblicazione atomica. Helix nuda o solo rifilata conserva il percorso quinticoC2 legacy; altri Other restano fallback campionati. Traversal dei wrapper limitato e cancellabile."
+    },
+    {
+      "symbol": "ForgeCad::appendFixedReferenceLine",
+      "declaration": {
+        "file": "cad_sketch_refs.h",
+        "line": 57,
+        "text": "int appendFixedReferenceLine(SketchObject &sketch, const QPointF &point, const QPointF &direction, double halfLength);"
+      },
+      "definition": {
+        "file": "cad_sketch_refs.cpp",
+        "line": 612,
+        "text": "int appendFixedReferenceLine(SketchObject &sketch, const QPointF &point, const QPointF &direction, double halfLength) {"
+      },
+      "recommendation": "deprecare",
+      "rationale": "Riusa o crea una retta di costruzione fissa, mutando schizzo e vincoli. Le copie Fix risultano storicamente sostituite dai riferimenti associativi. Deprecazione proposta di questa utility, senza cancellare appendLinkedSketchReference, proiezioni esplicite o Fix in generale.",
+      "related": [
+        "cad_sketch_refs.h:56",
+        "cad_sketch_refs.cpp:612",
+        "docs/code-review-2026-11-02.md:104"
+      ],
+      "graph_incoming": [],
+      "graph_outgoing": [
+        {
+          "source": "cad_sketch_refs.cpp",
+          "target": "cad_constraints.cpp",
+          "kind": "call",
+          "line": 625,
+          "symbol": "ForgeCad::makeConstraint",
+          "owner": "ForgeCad::appendFixedReferenceLine"
+        },
+        {
+          "source": "cad_sketch_refs.cpp",
+          "target": "cad_sketch_refs.cpp",
+          "kind": "call",
+          "line": 618,
+          "symbol": "ForgeCad::appendFixedReferenceLine::(lambda at /home/myungit/Linux_CAD_forFree/cad_sketch_refs.cpp:613:24)::operator()",
+          "owner": "ForgeCad::appendFixedReferenceLine"
+        },
+        {
+          "source": "cad_sketch_refs.cpp",
+          "target": "cad_sketch_refs.cpp",
+          "kind": "call",
+          "line": 619,
+          "symbol": "ForgeCad::appendFixedReferenceLine::(lambda at /home/myungit/Linux_CAD_forFree/cad_sketch_refs.cpp:613:24)::operator()",
+          "owner": "ForgeCad::appendFixedReferenceLine"
+        },
+        {
+          "source": "cad_sketch_refs.cpp",
+          "target": "cad_sketch_refs.cpp",
+          "kind": "call",
+          "line": 624,
+          "symbol": "ForgeCad::appendSegment",
+          "owner": "ForgeCad::appendFixedReferenceLine"
+        },
+        {
+          "source": "cad_sketch_refs.cpp",
+          "target": "cad_types.h",
+          "kind": "call",
+          "line": 621,
+          "symbol": "ConstraintRef::operator==",
+          "owner": "ForgeCad::appendFixedReferenceLine"
+        }
+      ],
+      "lexical_references": [
+        {
+          "file": "cad_sketch_refs.cpp",
+          "line": 612,
+          "text": "int appendFixedReferenceLine(SketchObject &sketch, const QPointF &point, const QPointF &direction, double halfLength) {"
+        },
+        {
+          "file": "cad_sketch_refs.h",
+          "line": 57,
+          "text": "int appendFixedReferenceLine(SketchObject &sketch, const QPointF &point, const QPointF &direction, double halfLength);"
+        }
+      ],
+      "definition_graph_description": "Proiezioni, contatti e Pierce esatti associativi degli schizzi, inclusi contorni apparenti di facce analitiche proiettati lungo la normale anche su piani esterni al corpo: immagini affini delle curve implicite, sorgenti persistenti per chiavi genealogiche, cache automatiche proiettate direttamente dallo snapshot B-rep senza risolvere i nomi appena creati, refresh e conversioni esplicite visibili senza duplicati; identita leggibili persistenti e diagnostica di tutte le sorgenti rotte con i vincoli interessati. Helix con Transformed usa un fit diretto2D con controllo continuo dopo recalculateCurve e pubblicazione atomica. Helix nuda o solo rifilata conserva il percorso quinticoC2 legacy; altri Other restano fallback campionati. Traversal dei wrapper limitato e cancellabile."
+    }
+  ]
+}

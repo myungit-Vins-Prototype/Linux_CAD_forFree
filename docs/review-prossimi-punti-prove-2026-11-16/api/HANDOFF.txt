@@ -1,0 +1,14 @@
+Audit SOLO in lettura per /root, 16 novembre 2026.
+HEAD 046685ef1d31fdf4b61571d9630ea0f245b4ffb7.
+773 file attivi code/config; grafo 778 nodi / 11369 archi / 390 TU, zero errori.
+17/17 simboli pubblici ordinari senza call/reference entranti e nessun uso nei test osservati.
+Proposta: conservare6, deprecare7, rimuovere4 wrapper/duplicati. NON implementato.
+Rimozioni proposte: CadViewport::basisMatrix, normalizedViewAngle, extrusionNames; ForgeCad::usesSketch.
+Contratto sorgente pubblico distinto da SDK: CMake installa app, non questi header; consumatori esterni non esclusi.
+Due catene da trattare insieme: provider tavola (findChild dereferenziato dal contenitore); callback legacy Estendi.
+Conservare omonimi camera, sketchesOf, firstRayHit, picker/pannelli attivi, stato/nomi persistiti e API Fix/associative.
+Nessuna build, nuovo test, modifica repository, rimozione o deprecazione eseguita.
+README.md e inventory.json sono il risultato leggibile e completo; source-evidence.txt gli estratti determinanti.
+Manifest con SHA; lo script inventory.py usa solo letture nel repository e scritture accanto a se stesso in /tmp.
+CLAUDE.md resta al coordinatore per vincolo esplicito di sola lettura: eventuale voce suggerita
+"Audit delle 17 API in sola lettura: 17/17 senza usi osservati; proposto di conservarne 6, deprecarne 7 e rimuoverne 4. Nessuna modifica software, test o build."
