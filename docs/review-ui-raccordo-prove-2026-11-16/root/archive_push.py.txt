@@ -1,0 +1,26 @@
+from pathlib import Path
+import hashlib,json,subprocess,shutil
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/ui-residual-fix');O=T/'root';P=R/'docs/review-ui-raccordo-prove-2026-11-16';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+assert not P.exists();P.mkdir()
+def cp(a,b):
+ data=a.read_bytes();assert not data.startswith(b'\x7fELF')
+ if a.suffix=='.png':assert data.startswith(b'\x89PNG\r\n\x1a\n')
+ else:assert b'\0' not in data;data.decode('utf-8')
+ if b.suffix in ['.cpp','.h','.py','.sh']:b=b.with_name(b.name+'.txt')
+ b.parent.mkdir(parents=True,exist_ok=True);b.write_bytes(data)
+for dest,src in [('audit',T/'fillet-separator-audit/final-proof'),('root',T/'separator-root'),('legacy',T/'legacy-next-plan')]:
+ for f in sorted(src.rglob('*')):
+  if f.is_file() and (f.suffix in ['.json','.txt','.md','.patch','.diff','.log','.png','.py'] or f.name=='SHA256SUMS'):cp(f,P/dest/f.relative_to(src))
+for n in ['commit.json','push.log','github-current.json','github-monitor-pinned.log']:cp(O/n,P/'previous-f46'/n)
+(P/'README.txt').write_text('UI9 completion: Raccordo separator, not a new functional bug count. Total33 unchanged. One local QFrame foreground override removed; actual FunctionDialogPanel + equivalent QFrame component raster tested9/9 baseline characterization and9/9 candidate checks. Full dialog visual/Wayland certification not claimed. Final app build15.788s and3additional CTest passed; previous12suite and74specificWayland proofs remain immutable on unchanged code/tests. General Wayland mixed-tabs timeout on locked session remains documented. No CAD, ELF, objects or libraries. Previous20proof seals unchanged. Legacy7API plan is read-only, no cleanup implementation. Final code commit supersedes f46Actions run via workflow concurrency; only final run can certify final source.\n')
+files=sorted(f for f in P.rglob('*') if f.is_file());assert sum(f.stat().st_size for f in files)<20_000_000;(P/'SHA256SUMS').write_text(''.join(sha(f)+'  '+str(f.relative_to(P))+'\n' for f in files));print('Archived',len(files),sha(P/'SHA256SUMS'),flush=True)
+assert subprocess.check_output(['git','rev-parse','HEAD'],cwd=R,text=True).strip()=='f46c036217b363c5d5941235913cc18534aaf0ab'
+paths=['forgeCad2026_dialogs_fillet.cpp','CLAUDE.md','docs/review-ui-colori-api-2026-11-16.md','docs/code-review-2026-11-15.md','docs/review-prossimi-punti-2026-11-16.md',str(P.relative_to(R))]
+subprocess.run(['git','diff','--check'],cwd=R,check=True);subprocess.run(['git','add','--',*paths],cwd=R,check=True)
+staged=subprocess.check_output(['git','diff','--cached','--name-only'],cwd=R,text=True).splitlines();assert all(f in paths or f.startswith(paths[-1]+'/') for f in staged)
+subprocess.run(['git','diff','--cached','--check','--',*paths[:-1]],cwd=R,check=True)
+for name in ['commit.json','commit.log','push.log']:shutil.copyfile(O/name,O/('ui9-ui10-'+name))
+with(O/'commit.log').open('w') as log:subprocess.run(['git','commit','-m','Completa i colori del tema nel separatore Raccordo e documenta i punti legacy'],cwd=R,stdout=log,stderr=subprocess.STDOUT,check=True)
+commit=subprocess.check_output(['git','rev-parse','HEAD'],cwd=R,text=True).strip();(O/'commit.json').write_text(json.dumps({'sha':commit},indent=2)+'\n');print('COMMIT',commit,flush=True)
+with(O/'push.log').open('w') as log:subprocess.run(['git','push','origin','main'],cwd=R,stdout=log,stderr=subprocess.STDOUT,check=True)
+assert not subprocess.check_output(['git','status','--porcelain'],cwd=R,text=True).strip();print('PUSH PASS',commit,flush=True)

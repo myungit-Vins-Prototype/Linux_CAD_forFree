@@ -1,0 +1,11 @@
+{
+  "argv": [
+    "/tmp/ui-residual-fix/fillet-separator-audit/candidate/probe",
+    "/tmp/ui-residual-fix/fillet-separator-audit/candidate"
+  ],
+  "envOverrides": {
+    "QT_QPA_PLATFORM": "offscreen",
+    "QT_OPENGL": "software"
+  },
+  "exitCode": 0
+}

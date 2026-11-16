@@ -1,0 +1,1 @@
+{"sha": "f46c036217b363c5d5941235913cc18534aaf0ab", "run": "43941514637", "status": "queued", "conclusion": "", "jobs": [{"name": "Linux CPU", "status": "in_progress", "conclusion": "", "step": "Compila l'applicazione e tutti i test configurati"}, {"name": "macOS CPU e Metal", "status": "queued", "conclusion": "", "step": null}]}

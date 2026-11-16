@@ -1,0 +1,67 @@
+diff --git a/CLAUDE.md b/CLAUDE.md
+index d2a7a1d..843513f 100644
+--- a/CLAUDE.md
++++ b/CLAUDE.md
+@@ -109,8 +109,8 @@ ctest --test-dir forgecad-release --output-on-failure
+ ## Ultimi interventi — esiti consolidati
+ 
+ **16/11 — UI9/UI10 verificate,33rilievi corretti.**
+-Palette Sezione/massa e altezza Sezione;4wrapper tolti,6query conservate,7legacy aperte.
+-App/12CTest/74Wayland/appunti/mappa PASS; kernel invariato. NuovaCI dopo push.
++Palette Sezione/massa/Raccordo e altezza Sezione;4wrapper tolti,6query conservate,7legacy aperte.
++App/12CTest+3mirati/74Wayland/appunti/mappa PASS; nuovaCI dopo push.
+ Wayland schede:timeout, sessione bloccata; offscreen PASS.
+ [Prove e limiti](docs/review-ui-colori-api-2026-11-16.md).
+ 
+diff --git a/docs/code-review-2026-11-15.md b/docs/code-review-2026-11-15.md
+index 0cc46d5..a06fec7 100644
+--- a/docs/code-review-2026-11-15.md
++++ b/docs/code-review-2026-11-15.md
+@@ -1,6 +1,6 @@
+ # Review generale ForgeCAD — 15 novembre 2026
+ 
+-**UI9/UI10 corretti e verificati:** foreground locali Sezione/Proprietà di massa (una causa, due contesti) e messaggio Sezione tagliato (difetto distinto). App completa,12/12CTest,74/74controlli dei pannelli Wayland e guardia appunti PASS; ripetizione Wayland generale schede in timeout su sessione bloccata; mappa778/11373/390TU verificata. **Totale33rilievi confermati corretti**; quattro wrapper rimossi sono manutenzione separata, sei query intenzionali e sette legacy ancora aperte. Nuova CI da verificare dopo push. [Correzioni, prove e limiti](review-ui-colori-api-2026-11-16.md).
++**UI9/UI10 corretti e verificati:** colori Sezione/massa, altezza Sezione e separatore Raccordo. **Totale33rilievi corretti**; quattro wrapper sono manutenzione, sei query intenzionali, sette legacy aperte. App completa/12CTest e74controlli specifici Wayland PASS; Il separatore aggiunge9raster e3CTest PASS. Wayland generale schede resta in timeout su sessione bloccata (offscreen PASS). Nuova CI da verificare dopo push. [Prove e limiti](review-ui-colori-api-2026-11-16.md).
+ 
+ **Preparazione precedente, sola lettura:** ricontrollate17API e localizzati i colori fissi Sezione/Proprietà di massa; separatore Raccordo solo candidato. Nessuna correzione o rimozione attribuita a quella fase storica. [Inventario e limiti](review-prossimi-punti-2026-11-16.md).
+ 
+diff --git a/docs/review-prossimi-punti-2026-11-16.md b/docs/review-prossimi-punti-2026-11-16.md
+index 4975265..4d6bf5d 100644
+--- a/docs/review-prossimi-punti-2026-11-16.md
++++ b/docs/review-prossimi-punti-2026-11-16.md
+@@ -27,3 +27,6 @@ Due catene richiedono una modifica coerente: callback Estendi e provider della t
+ ## Prosecuzione implementata dopo la CI verde
+ 
+ Questo inventario iniziale rimane una fotografia storica di046685e. Il blocco successivo corregge UI9 (Sezione e massa seguono la palette) e UI10 (messaggio Sezione senza tagli); rimuove quattro wrapper, conserva sei query e lascia sette ingressi legacy aperti. Totale33difetti confermati corretti, non37. App,12CTest,74controlli Wayland e mappa PASS; nuova CI da verificare dopo push. [Esiti e limiti](review-ui-colori-api-2026-11-16.md).
++
++
++Il separatore Raccordo, allora solo candidato, è poi confermato e corretto nel completamentoUI9 con9verifiche raster del componente e3CTest pertinenti PASS. Totale33rilievi, non un incremento per ciascuna wrapper. Pianificata soltanto in lettura la pulizia coerente delle sette legacy in tre blocchi (Estendi, provider tavola, utility): [piano](review-ui-raccordo-prove-2026-11-16/legacy/PLAN.md); nessuna loro deprecazione/rimozione implementata.
+diff --git a/docs/review-ui-colori-api-2026-11-16.md b/docs/review-ui-colori-api-2026-11-16.md
+index 2117076..c2a0f83 100644
+--- a/docs/review-ui-colori-api-2026-11-16.md
++++ b/docs/review-ui-colori-api-2026-11-16.md
+@@ -43,3 +43,12 @@ Root ha congelato 5.176 file e 19 sigilli precedenti. Mappa consultata prima del
+ 
+ 
+ Limite nuova ripetizione Wayland generale delle schede: timeout90s e120s (42PNG prima della fermata); sessione Active=yes,LockedHint=yes. Lo stato bloccato suggerisce un’attesa dei frame del compositor, ma nessuno stack la dimostra. Nessuna modifica a impostazioni/sessione utente e nessun PASS attribuito a questo tentativo. Il metodo delle schede preesistente è invariato ed è PASS offscreen nelle12CTest; i74controlli nuovi dei pannelli sono PASS anche Wayland.
++
++
++## Completamento UI9 — separatore Raccordo
++
++Il candidato è stato infine confermato con FunctionDialogPanel di produzione e lo stesso QFrame HLine/Plain: il letterale#35485c resta su360pixel in Chiaro/Scuro/Chiaro. Lo sfondo cambia e il contrasto scende da8,03 a1,61 nel tema scuro. Rimosso soltanto setStyleSheet locale: WindowText ereditato segue#202020/#d8e4ea. Nove verifiche raster del componente offscreen/Fusion PASS; non è una certificazione visiva dell'intero dialogo Raccordo o di tutti gli stili desktop. Nessun algoritmo/parametro/preview/forma del raccordo modificato.
++
++App completa aggiornata PASS15,788s; ulteriori3/3CTest pertinenti (selezione Raccordo, pannelli comuni, foreground) PASS2,418s e avvio isolato5s PASS. Le12suite e74Wayland della fasef46c036 restano prove su codice GUI/analisi/test byte-identico; dopo il separatore sono ricontrollati i3target interessati, senza ripetere il kernel immutato. Mappa778/11373/390TU,389cache+1TU: hash/HTML/archi bidirezionali PASS. Il separatore è un terzo contesto dello stesso UI9: totale33rilievi invariato, senza contarlo come ulteriore bug. Le quattro wrapper non incrementano il totale.
++
++Il pushf46c036 aveva già avviato la CI; il successivo push sostituisce quella esecuzione tramite concurrency del workflow e certifica il codice comprensivo del separatore. Nessun fallimento di codice è stato nascosto o marcatoPASS. [Prove separatore e piano legacy](review-ui-raccordo-prove-2026-11-16/README.txt).
+diff --git a/forgeCad2026_dialogs_fillet.cpp b/forgeCad2026_dialogs_fillet.cpp
+index 9c95761..ffefb91 100644
+--- a/forgeCad2026_dialogs_fillet.cpp
++++ b/forgeCad2026_dialogs_fillet.cpp
+@@ -496,7 +496,6 @@ BlendDialogResult filletDialog(
+   }
+   auto *divider = new QFrame(&dialog);
+   divider->setFrameShape(QFrame::HLine);
+-  divider->setStyleSheet("color:#35485c;");
+   root->addWidget(divider);
+   auto *propagate =
+       new QCheckBox(QStringLiteral("Propaga lungo i bordi tangenti"), &dialog);

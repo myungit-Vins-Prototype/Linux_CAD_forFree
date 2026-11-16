@@ -1,0 +1,291 @@
+{
+  "head": "f46c036217b363c5d5941235913cc18534aaf0ab",
+  "mode": "sola lettura; nessuna patch, build, esecuzione app/test o nuovo test",
+  "graph_sha256": "58561ec026f42fafa2b9afd525a88e1e1be28fdceb7665fd1277ebcf482b8e03",
+  "graph_counts": [
+    778,
+    11373,
+    390
+  ],
+  "graph_errors": {},
+  "source_sha256": {
+    "forgeCad2026_viewport.h": "b9a801c6152f9723550a7e001209b8333ea2db4d4ab23709bc59c909b83e1d9d",
+    "forgeCad2026_viewport_selection.cpp": "9ef5c603294813cb10edb850ef2177ecf16833e52998fcae24381dfe3a86b02e",
+    "cad_drawing_editor.h": "c3d1c08ff11ed6967343fdaa8505c99a573ea8c61e1fcedc6112d364a6f137d5",
+    "cad_drawing_editor.cpp": "01da076e44b8d1786b1505ac50aa36f484083d78653bc0138b890262195cf54c",
+    "cad_drawing_window.cpp": "e860794266cf804e6f6e90428998b74171b0e7166819f66d6523ee00f1067726",
+    "cad_forge.h": "f725765a2b70fdf565ace78b16947c7b895cbdb1ef3ee85b0587ea6c5416d681",
+    "cad_forge.cpp": "c653afdef3979afc00ed9790b3cc35a5c270cb09235d6d63138df3bc03388fcd",
+    "cad_sketch_refs.h": "1b7980daf35c5279b4e5219b8c66cd6ebc0f0b5f4edbf45c7a9176afe9372cfa",
+    "cad_sketch_refs.cpp": "d13ec3cedff473b9df99a47f2f2d30bf8e5df7aee08033aa7db4ba73c453139e",
+    "CMakeLists.txt": "803fc4d264bca4e9dabf22d6678703e3f593a82813623ef8fefb5d6efbefe122"
+  },
+  "graph_hash_matches": {
+    "forgeCad2026_viewport.h": true,
+    "forgeCad2026_viewport_selection.cpp": true,
+    "cad_drawing_editor.h": true,
+    "cad_drawing_editor.cpp": true,
+    "cad_drawing_window.cpp": true,
+    "cad_forge.h": true,
+    "cad_forge.cpp": true,
+    "cad_sketch_refs.h": true,
+    "cad_sketch_refs.cpp": true,
+    "CMakeLists.txt": true
+  },
+  "api": [
+    {
+      "symbol": "CadViewport::setEdgePickLinear",
+      "incoming": [],
+      "outgoing": [
+        {
+          "target": "forgeCad2026_viewport_selection.cpp",
+          "kind": "call",
+          "line": 234,
+          "symbol": "CadViewport::edgePicked",
+          "owner": "CadViewport::setEdgePickLinear"
+        }
+      ]
+    },
+    {
+      "symbol": "CadViewport::setExtendPickCallback",
+      "incoming": [],
+      "outgoing": []
+    },
+    {
+      "symbol": "CadViewport::resumeExtendPick",
+      "incoming": [],
+      "outgoing": [
+        {
+          "target": "forgeCad2026_viewport.h",
+          "kind": "call",
+          "line": 239,
+          "symbol": "SceneSelection::operator=",
+          "owner": "CadViewport::resumeExtendPick"
+        },
+        {
+          "target": "forgeCad2026_viewport.h",
+          "kind": "call",
+          "line": 240,
+          "symbol": "CadViewport::SelectedFace::operator=",
+          "owner": "CadViewport::resumeExtendPick"
+        },
+        {
+          "target": "forgeCad2026_viewport_selection.cpp",
+          "kind": "call",
+          "line": 241,
+          "symbol": "CadViewport::beginExtendPick",
+          "owner": "CadViewport::resumeExtendPick"
+        },
+        {
+          "target": "forgeCad2026_viewport_selection.cpp",
+          "kind": "call",
+          "line": 242,
+          "symbol": "CadViewport::pickReferences",
+          "owner": "CadViewport::resumeExtendPick"
+        },
+        {
+          "target": "forgeCad2026_viewport_selection.cpp",
+          "kind": "call",
+          "line": 243,
+          "symbol": "CadViewport::edgePicked",
+          "owner": "CadViewport::resumeExtendPick"
+        }
+      ]
+    },
+    {
+      "symbol": "ForgeCad::DrawingSheetEditor::setModelProvider",
+      "incoming": [],
+      "outgoing": []
+    },
+    {
+      "symbol": "ForgeCad::forgeIntersectRay",
+      "incoming": [],
+      "outgoing": [
+        {
+          "target": "kernel/fk_classify.cpp",
+          "kind": "call",
+          "line": 2410,
+          "symbol": "ForgeCad::Kernel::firstRayHit",
+          "owner": "ForgeCad::forgeIntersectRay"
+        },
+        {
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 2410,
+          "symbol": "ForgeCad::Kernel::Vec::Vec",
+          "owner": "ForgeCad::forgeIntersectRay"
+        }
+      ]
+    },
+    {
+      "symbol": "ForgeCad::nearestBodyEdge",
+      "incoming": [],
+      "outgoing": [
+        {
+          "target": "kernel/fk_curve_algo.h",
+          "kind": "call",
+          "line": 168,
+          "symbol": "ForgeCad::Kernel::projectPoint",
+          "owner": "ForgeCad::nearestBodyEdge"
+        },
+        {
+          "target": "kernel/fk_math.h",
+          "kind": "call",
+          "line": 169,
+          "symbol": "ForgeCad::Kernel::Interval::operator=",
+          "owner": "ForgeCad::nearestBodyEdge"
+        },
+        {
+          "target": "kernel/fk_topology.cpp",
+          "kind": "call",
+          "line": 165,
+          "symbol": "ForgeCad::Kernel::Body::edges",
+          "owner": "ForgeCad::nearestBodyEdge"
+        },
+        {
+          "target": "kernel/fk_topology.cpp",
+          "kind": "call",
+          "line": 166,
+          "symbol": "ForgeCad::Kernel::Body::edge",
+          "owner": "ForgeCad::nearestBodyEdge"
+        },
+        {
+          "target": "kernel/fk_topology.h",
+          "kind": "call",
+          "line": 165,
+          "symbol": "ForgeCad::Kernel::Id::Id",
+          "owner": "ForgeCad::nearestBodyEdge"
+        },
+        {
+          "target": "kernel/fk_topology.h",
+          "kind": "call",
+          "line": 166,
+          "symbol": "ForgeCad::Kernel::Id::Id",
+          "owner": "ForgeCad::nearestBodyEdge"
+        }
+      ]
+    },
+    {
+      "symbol": "ForgeCad::appendFixedReferenceLine",
+      "incoming": [],
+      "outgoing": [
+        {
+          "target": "cad_constraints.cpp",
+          "kind": "call",
+          "line": 625,
+          "symbol": "ForgeCad::makeConstraint",
+          "owner": "ForgeCad::appendFixedReferenceLine"
+        },
+        {
+          "target": "cad_sketch_refs.cpp",
+          "kind": "call",
+          "line": 618,
+          "symbol": "ForgeCad::appendFixedReferenceLine::(lambda at /home/myungit/Linux_CAD_forFree/cad_sketch_refs.cpp:613:24)::operator()",
+          "owner": "ForgeCad::appendFixedReferenceLine"
+        },
+        {
+          "target": "cad_sketch_refs.cpp",
+          "kind": "call",
+          "line": 619,
+          "symbol": "ForgeCad::appendFixedReferenceLine::(lambda at /home/myungit/Linux_CAD_forFree/cad_sketch_refs.cpp:613:24)::operator()",
+          "owner": "ForgeCad::appendFixedReferenceLine"
+        },
+        {
+          "target": "cad_sketch_refs.cpp",
+          "kind": "call",
+          "line": 624,
+          "symbol": "ForgeCad::appendSegment",
+          "owner": "ForgeCad::appendFixedReferenceLine"
+        },
+        {
+          "target": "cad_types.h",
+          "kind": "call",
+          "line": 621,
+          "symbol": "ConstraintRef::operator==",
+          "owner": "ForgeCad::appendFixedReferenceLine"
+        }
+      ]
+    }
+  ],
+  "rg_occurrences": [
+    "./forgeCad2026_viewport.h:455:    void setExtendPickCallback(std::function<void(int, QVector<EdgePoint>)> callback);",
+    "./forgeCad2026_viewport.h:457:    void setEdgePickLinear(bool linear);",
+    "./forgeCad2026_viewport.h:459:    void resumeExtendPick(int body, const QVector<EdgePoint> &edges, bool linear);",
+    "./forgeCad2026_viewport_selection.cpp:230:void CadViewport::setExtendPickCallback(std::function<void(int, QVector<EdgePoint>)> callback) { extendPickFinished_ = std::move(callback); }",
+    "./forgeCad2026_viewport_selection.cpp:232:void CadViewport::setEdgePickLinear(bool linear) {",
+    "./forgeCad2026_viewport_selection.cpp:237:void CadViewport::resumeExtendPick(int body, const QVector<EdgePoint> &edges, bool linear) {",
+    "./cad_drawing_editor.cpp:3649:void DrawingSheetEditor::setModelProvider(std::function<DrawingEditorModel()> provider){impl_->provider=std::move(provider);impl_->updateAction->setEnabled(bool(impl_->provider)&&!impl_->readOnly);}",
+    "./cad_drawing_editor.h:104:    void setModelProvider(std::function<DrawingEditorModel()> provider);",
+    "./cad_forge.h:228:bool forgeIntersectRay(const Kernel::Body &body, const QVector3D &origin, const QVector3D &direction, double &distance, const Kernel::RayFaceIndex *index = nullptr);",
+    "./cad_forge.cpp:2407:bool forgeIntersectRay(const Body &body, const QVector3D &origin, const QVector3D &direction, double &distance, const Kernel::RayFaceIndex *index) {",
+    "./cad_sketch_refs.h:57:int appendFixedReferenceLine(SketchObject &sketch, const QPointF &point, const QPointF &direction, double halfLength);",
+    "./cad_sketch_refs.h:66:bool nearestBodyEdge(const Kernel::Body &body, const Kernel::Vec3 &point, Kernel::CurvePtr<3> &curve, Kernel::Interval &range);",
+    "./cad_sketch_refs.cpp:163:bool nearestBodyEdge(const Body &body, const Vec3 &point, CurvePtr<3> &curve, Interval &range) {",
+    "./cad_sketch_refs.cpp:612:int appendFixedReferenceLine(SketchObject &sketch, const QPointF &point, const QPointF &direction, double halfLength) {"
+  ],
+  "descriptions": {
+    "CMakeLists.txt": "Definisce eseguibile e suite; libreria interna condivisa dai runner delle tavole e impronta geometrica limitata alla chiusura delle dipendenze del calcolo.",
+    "cad_drawing_editor.cpp": "Editor della tavola: centri/assi su bordi selezionati e sezione locale con contorno/profondita, modificabile con quote e richiami associati senza bloccare le altre viste; raggio libero dal primo clic e leader corto per centro esterno; ricollegamento quote con snap, anteprima e conferma atomica; allineatori durante il primo posizionamento e il trascinamento, stato temporaneo riusato fra anteprime e conferma senza salto; snap fra punte coincidenti delle quote lineari/angolari con calcolo geometrico condiviso, priorità e indicatore lampeggiante; guide lampeggianti e aggancio direzionale dei testi di quota al vicino nel verso del movimento, annullamento e Undo al rilascio; quote trasparenti, frecce H/B, richiami obliqui e serie ordinate continue; scala comune del foglio e sorgente della scala per ogni vista, aggiornamento atomico di anteprime e dipendenze; selezione, posizionamento e comandi; inserimento atomico e anteprime di catene e ordinate, proprietà e anteprime dei datum/cartigli geometrici e delle rugosità Ra/Rz e dei badge persistenti con scelta della prima quota e frecce nella viewport, incluse anteprime delle viste interrotte e sezioni rimosse a gradini multipli e allineate a due piani angolari; disegno e ridefinizione del taglio con mouse, centro e rami o percorso ortogonale, snap geometrici e anteprima annullabile.",
+    "cad_drawing_editor.h": "Editor della tavola: centri/assi su bordi selezionati e sezione locale con contorno/profondita, modificabile con quote e richiami associati senza bloccare le altre viste; raggio libero dal primo clic e leader corto per centro esterno; ricollegamento quote con snap, anteprima e conferma atomica; allineatori durante il primo posizionamento e il trascinamento, stato temporaneo riusato fra anteprime e conferma senza salto; snap fra punte coincidenti delle quote lineari/angolari con calcolo geometrico condiviso, priorità e indicatore lampeggiante; guide lampeggianti e aggancio direzionale dei testi di quota al vicino nel verso del movimento, annullamento e Undo al rilascio; quote trasparenti, frecce H/B, richiami obliqui e serie ordinate continue; scala comune del foglio e sorgente della scala per ogni vista, aggiornamento atomico di anteprime e dipendenze; selezione, posizionamento e comandi; inserimento atomico e anteprime di catene e ordinate, proprietà e anteprime dei datum/cartigli geometrici e delle rugosità Ra/Rz e dei badge persistenti con scelta della prima quota e frecce nella viewport, incluse anteprime delle viste interrotte e sezioni rimosse a gradini multipli e allineate a due piani angolari; disegno e ridefinizione del taglio con mouse, centro e rami o percorso ortogonale, snap geometrici e anteprima annullabile.",
+    "cad_drawing_window.cpp": "Workspace della suite 2D incorporabile nelle schede: chiusura/salvataggi coordinati, ricostruzione menu dopo cambio foglio con unico sottomenu Tema persistente; nuova tavola dallo snapshot valutato del modello salvato, verificato con impronta del file e identita; preparazione cancellabile senza rigenerare la storia; documento multifoglio, salvataggio e PDF multipagina.",
+    "cad_forge.cpp": "Adatta sketch e parametri al kernel; booleane con genealogia ricondotta agli operandi e recupero dell’unione commutativa nell’ordine inverso dopo un errore geometrico; conversione mesh float con filtro comune dei triangoli degeneri per scena e anteprime, ID topologici coerenti. Il riepilogo delle curve proiettate usa lo scarto della catena finale dopo le giunte.",
+    "cad_forge.h": "Adatta sketch e parametri al kernel; booleane con genealogia ricondotta agli operandi e recupero dell’unione commutativa nell’ordine inverso dopo un errore geometrico; conversione mesh float con filtro comune dei triangoli degeneri per scena e anteprime, ID topologici coerenti.",
+    "cad_sketch_refs.cpp": "Proiezioni, contatti e Pierce esatti associativi degli schizzi, inclusi contorni apparenti di facce analitiche proiettati lungo la normale anche su piani esterni al corpo: immagini affini delle curve implicite, sorgenti persistenti per chiavi genealogiche, cache automatiche proiettate direttamente dallo snapshot B-rep senza risolvere i nomi appena creati, refresh e conversioni esplicite visibili senza duplicati; identita leggibili persistenti e diagnostica di tutte le sorgenti rotte con i vincoli interessati. Helix con Transformed usa un fit diretto2D con controllo continuo dopo recalculateCurve e pubblicazione atomica. Helix nuda o solo rifilata conserva il percorso quinticoC2 legacy; altri Other restano fallback campionati. Traversal dei wrapper limitato e cancellabile.",
+    "cad_sketch_refs.h": "Proiezioni, contatti e Pierce esatti associativi degli schizzi, inclusi contorni apparenti di facce analitiche proiettati lungo la normale anche su piani esterni al corpo: immagini affini delle curve implicite, sorgenti persistenti per chiavi genealogiche, cache automatiche proiettate direttamente dallo snapshot B-rep senza risolvere i nomi appena creati, refresh e conversioni esplicite visibili senza duplicati; identita leggibili persistenti e diagnostica di tutte le sorgenti rotte con i vincoli interessati. Helix con Transformed usa un fit diretto2D con controllo continuo dopo recalculateCurve e pubblicazione atomica. Helix nuda o solo rifilata conserva il percorso quinticoC2 legacy; altri Other restano fallback campionati. Traversal dei wrapper limitato e cancellabile.",
+    "forgeCad2026_viewport.h": "Contratto e stato privato del coordinatore GUI della vista 3D.",
+    "forgeCad2026_viewport_selection.cpp": "Selezione e riferimenti: policy comune della costruzione per picking, punti, bordi e selezione rettangolare; priorita alla geometria visibile sulle cache associative nascoste; in creazione e modifica mantiene visibili risultati precedenti e stadi esplicitamente selezionati, anche dopo anteprima fallita o Azzera; Esc ripristina la scena finale. Rende tutti i quattro estremi della nuova ellisse selezionabili e candidati snap."
+  },
+  "constraints": [
+    {
+      "file": "forgeCad2026_viewport_selection.cpp",
+      "lines": [
+        1696,
+        1697,
+        1698
+      ],
+      "fact": "Il ramo extend attuale non cade mai in edgeEditFinished_/edgePickFinished_, anche con callback vuoto."
+    },
+    {
+      "file": "cad_drawing_editor.cpp",
+      "lines": [
+        3036,
+        3050
+      ],
+      "fact": "La tabella icons include drawingUpdateModelAction; il ciclo dereferenzia findChild<QAction*> senza guardia."
+    },
+    {
+      "file": "cad_drawing_window.cpp",
+      "lines": [
+        151
+      ],
+      "fact": "Il contenitore nasconde drawingUpdateModelAction tramite findChild dereferenziato."
+    }
+  ],
+  "constraint_exact_source": [
+    {
+      "file": "forgeCad2026_viewport_selection.cpp",
+      "line": 1696,
+      "text": "if (extend) {"
+    },
+    {
+      "file": "forgeCad2026_viewport_selection.cpp",
+      "line": 1697,
+      "text": "if (extendPickFinished_) extendPickFinished_(body, points);"
+    },
+    {
+      "file": "cad_drawing_editor.cpp",
+      "line": 3036,
+      "text": "{\"drawingUpdateModelAction\",\"drawingModelUpdate\"},"
+    },
+    {
+      "file": "cad_drawing_editor.cpp",
+      "line": 3050,
+      "text": "for(const auto &entry:icons){auto *a=findChild<QAction *>(entry.first);a->setIcon(commandIcon(entry.second));a->setIconVisibleInMenu(true);}"
+    },
+    {
+      "file": "cad_drawing_window.cpp",
+      "line": 151,
+      "text": "next->findChild<QAction *>(\"drawingUpdateModelAction\")->setVisible(false);"
+    }
+  ]
+}

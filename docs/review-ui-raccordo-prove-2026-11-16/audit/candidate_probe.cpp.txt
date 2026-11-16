@@ -1,0 +1,30 @@
+#include <QtWidgets>
+#include <QJsonDocument>
+#include <QJsonArray>
+#include <QJsonObject>
+#include <cmath>
+#include <iostream>
+#include "forgeCad2026_dialogs_common.h"
+#include "forgeCad2026_application_theme.h"
+static void settle(){for(int i=0;i<10;++i)QApplication::processEvents();}
+static QJsonObject rect(QRect r){return {{"x",r.x()},{"y",r.y()},{"width",r.width()},{"height",r.height()}};}
+static double lum(QColor c){auto f=[](double x){return x<=.04045?x/12.92:std::pow((x+.055)/1.055,2.4);};return .2126*f(c.redF())+.7152*f(c.greenF())+.0722*f(c.blueF());}
+static double contrast(QColor a,QColor b){double x=lum(a),y=lum(b);return (std::max(x,y)+.05)/(std::min(x,y)+.05);}
+static QJsonObject describe(QFrame *frame,const QImage &composition,QColor background){
+ QJsonObject colors;QMap<QString,int> counts;
+ for(int y=0;y<composition.height();++y)for(int x=0;x<composition.width();++x)++counts[composition.pixelColor(x,y).name(QColor::HexArgb)];
+ for(auto i=counts.begin();i!=counts.end();++i)colors.insert(i.key(),i.value());
+ auto palette=frame->palette();QJsonObject roles;
+ for(auto pair:{qMakePair("Window",QPalette::Window),qMakePair("WindowText",QPalette::WindowText),qMakePair("Text",QPalette::Text),qMakePair("Light",QPalette::Light),qMakePair("Dark",QPalette::Dark),qMakePair("Mid",QPalette::Mid),qMakePair("Base",QPalette::Base)})roles.insert(pair.first,palette.color(pair.second).name());
+ return {{"frameShape",int(frame->frameShape())},{"frameShadow",int(frame->frameShadow())},{"lineWidth",frame->lineWidth()},{"midLineWidth",frame->midLineWidth()},{"foregroundRole",int(frame->foregroundRole())},{"backgroundRole",int(frame->backgroundRole())},{"styleClass",frame->style()->metaObject()->className()},{"styleSheet",frame->styleSheet()},{"geometry",rect(frame->geometry())},{"imageSize",QJsonArray{composition.width(),composition.height()}},{"palette",roles},{"composedPixels",colors},{"literalPixelCount",counts.value("#ff35485c")},{"background",background.name()},{"paintedForegroundAgainstPanelContrast",contrast(palette.color(frame->foregroundRole()),background)},{"foregroundPixelCount",counts.value(palette.color(frame->foregroundRole()).name(QColor::HexArgb))}};
+}
+int main(int argc,char**argv){QApplication app(argc,argv);QTemporaryDir prefs;QCoreApplication::setOrganizationName("ForgeCADIndependentSeparatorAudit");QCoreApplication::setApplicationName("isolated");QSettings::setPath(QSettings::NativeFormat,QSettings::UserScope,prefs.path());ForgeCad::initializeApplicationTheme(app);QJsonArray stages;
+ FunctionDialogPanel panel(nullptr,false);panel.setSizeIdentity("separator-isolated-audit");panel.setPanelOpacity(100);auto *layout=new QVBoxLayout(&panel);layout->setContentsMargins(20,0,20,16);layout->setSpacing(13);layout->addStretch(1);
+ auto *literal=new QFrame(&panel);literal->setFrameShape(QFrame::HLine);layout->addWidget(literal);
+ auto *control=new QFrame(&panel);control->setFrameShape(QFrame::HLine);layout->addWidget(control);
+ panel.resize(360,220);panel.show();settle();int checks=0,failures=0;const auto check=[&](bool a,const char*n){++checks;if(!a){++failures;std::cerr<<"FAIL "<<n<<std::endl;}};
+ QString out=argc>1?argv[1]:"/tmp/ui-residual-fix/fillet-separator-audit";int iteration=0;
+ for(bool dark:{false,true,false}){ForgeCad::setApplicationThemeMode(app,dark?ForgeCad::ApplicationThemeMode::Dark:ForgeCad::ApplicationThemeMode::Light);settle();QImage composed=panel.grab().toImage().convertToFormat(QImage::Format_RGB32);QImage a=composed.copy(QRect(literal->mapTo(&panel,QPoint(0,0)),literal->size()));QImage b=composed.copy(QRect(control->mapTo(&panel,QPoint(0,0)),control->size()));auto ad=describe(literal,a,panel.panelColor()),bd=describe(control,b,panel.panelColor());
+ check(ad["literalPixelCount"].toInt()==0&&ad["foregroundPixelCount"].toInt()>literal->width()/2,"native foreground actually appears, old literal absent");check(bd["literalPixelCount"].toInt()==0,"literal absent from no-QSS control");check(literal->frameShape()==control->frameShape()&&literal->frameShadow()==control->frameShadow(),"frame kind and shadow same");
+ QString tag=QString::number(iteration++)+(dark?"-dark":"-light");stages.append(QJsonObject{{"stage",tag},{"panelColor",panel.panelColor().name()},{"panelPaletteWindow",panel.palette().color(QPalette::Window).name()},{"applicationStyleClass",app.style()->metaObject()->className()},{"literal",ad},{"controlWithoutLocalColor",bd}});composed.save(out+"/"+tag+"-panel.png");a.save(out+"/"+tag+"-literal.png");b.save(out+"/"+tag+"-control.png");}
+ QFile file(out+"/result.json");if(!file.open(QIODevice::WriteOnly))return 2;file.write(QJsonDocument(QJsonObject{{"checks",checks},{"failures",failures},{"QtVersion",qVersion()},{"stages",stages}}).toJson());std::cout<<"separator raster checks="<<checks<<" failures="<<failures<<std::endl;return failures?1:0;}

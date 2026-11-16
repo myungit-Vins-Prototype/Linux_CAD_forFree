@@ -1,0 +1,7 @@
+# Comandi di sola lettura; /bin/bash login=false.
+# Letti CLAUDE, politica tolleranze e descrizioni/archi grafo prima sorgenti.
+git rev-parse HEAD
+rg -n 'setEdgePickLinear|setExtendPickCallback|resumeExtendPick|setModelProvider|forgeIntersectRay|nearestBodyEdge|appendFixedReferenceLine' --glob '!docs/**' .
+rg -n 'extendPickFinished_|edgePickLinear_|drawingUpdateModelAction|impl_->provider|updateAction' forgeCad2026_viewport_selection.cpp forgeCad2026_viewport.h cad_drawing_editor.cpp cad_drawing_window.cpp
+# Letture mirate di finishEdgePick, creazione action, tabella icone, read-only,
+# contenitore tavola, CMake e test già presenti. Nessun comando ctest/build/app.

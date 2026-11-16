@@ -1,0 +1,2 @@
+PASS: 778 file, 11373 relazioni; contenuti e vista aggiornati.
+{'nodes': 778, 'edges': 11373, 'units': 390, 'errors': {}, 'html_matches': True, 'incident_edges': 1082, 'removed_symbols_absent': ['CadViewport::basisMatrix', 'CadViewport::extrusionNames', 'CadViewport::normalizedViewAngle', 'ForgeCad::usesSketch'], 'required_calls': [('tests/test_viewport.cpp', 'tests/test_document_theme_tabs.h', 'uiResidualThemeTests'), ('forgeCad2026_dialogs_analysis.cpp', 'forgeCad2026_dialogs_common.cpp', 'setFunctionMessageRole')]}

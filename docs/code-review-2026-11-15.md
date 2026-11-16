@@ -1,6 +1,6 @@
 # Review generale ForgeCAD — 15 novembre 2026
 
-**UI9/UI10 corretti e verificati:** foreground locali Sezione/Proprietà di massa (una causa, due contesti) e messaggio Sezione tagliato (difetto distinto). App completa,12/12CTest,74/74controlli dei pannelli Wayland e guardia appunti PASS; ripetizione Wayland generale schede in timeout su sessione bloccata; mappa778/11373/390TU verificata. **Totale33rilievi confermati corretti**; quattro wrapper rimossi sono manutenzione separata, sei query intenzionali e sette legacy ancora aperte. Nuova CI da verificare dopo push. [Correzioni, prove e limiti](review-ui-colori-api-2026-11-16.md).
+**UI9/UI10 corretti e verificati:** colori Sezione/massa, altezza Sezione e separatore Raccordo. **Totale33rilievi corretti**; quattro wrapper sono manutenzione, sei query intenzionali, sette legacy aperte. App completa/12CTest e74controlli specifici Wayland PASS; Il separatore aggiunge9raster e3CTest PASS. Wayland generale schede resta in timeout su sessione bloccata (offscreen PASS). Nuova CI da verificare dopo push. [Prove e limiti](review-ui-colori-api-2026-11-16.md).
 
 **Preparazione precedente, sola lettura:** ricontrollate17API e localizzati i colori fissi Sezione/Proprietà di massa; separatore Raccordo solo candidato. Nessuna correzione o rimozione attribuita a quella fase storica. [Inventario e limiti](review-prossimi-punti-2026-11-16.md).
 

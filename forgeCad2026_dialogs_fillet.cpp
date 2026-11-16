@@ -496,7 +496,6 @@ BlendDialogResult filletDialog(
   }
   auto *divider = new QFrame(&dialog);
   divider->setFrameShape(QFrame::HLine);
-  divider->setStyleSheet("color:#35485c;");
   root->addWidget(divider);
   auto *propagate =
       new QCheckBox(QStringLiteral("Propaga lungo i bordi tangenti"), &dialog);

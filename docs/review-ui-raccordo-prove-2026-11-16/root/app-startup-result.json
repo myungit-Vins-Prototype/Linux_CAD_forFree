@@ -1,0 +1,13 @@
+{
+  "startup_alive_after_seconds": 5,
+  "alive": true,
+  "expected_executable": "/home/myungit/Linux_CAD_forFree/forgecad-release/forgecad",
+  "actual_executable": "/home/myungit/Linux_CAD_forFree/forgecad-release/forgecad",
+  "binary_sha256": "b594952a02da82c682d6deb2a5fb86702b83bc20ad57905fe02b650cbde5a3a0",
+  "platform": "Wayland",
+  "profile": "isolated temporary configuration and recovery",
+  "documents_opened": 0,
+  "exit_after_own_test_termination": -15,
+  "user_processes_touched": false,
+  "pixel_rendering_certified": false
+}

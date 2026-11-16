@@ -1,0 +1,102 @@
+{
+  "conclusion": "",
+  "databaseId": 43941514637,
+  "headSha": "f46c036217b363c5d5941235913cc18534aaf0ab",
+  "jobs": [
+    {
+      "completedAt": "0001-01-01T00:00:00Z",
+      "conclusion": "",
+      "databaseId": 133559957940,
+      "name": "Linux CPU",
+      "startedAt": "2026-11-16T19:38:55Z",
+      "status": "in_progress",
+      "steps": [
+        {
+          "completedAt": "2026-11-16T19:38:56Z",
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "startedAt": "2026-11-16T19:38:56Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-11-16T19:39:01Z",
+          "conclusion": "success",
+          "name": "Scarica i sorgenti",
+          "number": 2,
+          "startedAt": "2026-11-16T19:38:56Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-11-16T19:41:24Z",
+          "conclusion": "success",
+          "name": "Installa le dipendenze",
+          "number": 3,
+          "startedAt": "2026-11-16T19:39:01Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-11-16T19:41:24Z",
+          "conclusion": "skipped",
+          "name": "Installa le dipendenze macOS",
+          "number": 4,
+          "startedAt": "2026-11-16T19:41:24Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-11-16T19:41:28Z",
+          "conclusion": "success",
+          "name": "Configura la build Release",
+          "number": 5,
+          "startedAt": "2026-11-16T19:41:24Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "0001-01-01T00:00:00Z",
+          "conclusion": "",
+          "name": "Compila l'applicazione e tutti i test configurati",
+          "number": 6,
+          "startedAt": "2026-11-16T19:41:28Z",
+          "status": "in_progress"
+        },
+        {
+          "completedAt": "0001-01-01T00:00:00Z",
+          "conclusion": "",
+          "name": "Esegui i test",
+          "number": 7,
+          "startedAt": "0001-01-01T00:00:00Z",
+          "status": "pending"
+        },
+        {
+          "completedAt": "0001-01-01T00:00:00Z",
+          "conclusion": "",
+          "name": "Conserva i risultati e i log",
+          "number": 8,
+          "startedAt": "0001-01-01T00:00:00Z",
+          "status": "pending"
+        },
+        {
+          "completedAt": "0001-01-01T00:00:00Z",
+          "conclusion": "",
+          "name": "Post Scarica i sorgenti",
+          "number": 16,
+          "startedAt": "0001-01-01T00:00:00Z",
+          "status": "pending"
+        }
+      ],
+      "url": "https://github.com/myungit-Vins-Prototype/Linux_CAD_forFree/actions/runs/43941514637/job/133559957940"
+    },
+    {
+      "completedAt": "0001-01-01T00:00:00Z",
+      "conclusion": "",
+      "databaseId": 133559958107,
+      "name": "macOS CPU e Metal",
+      "startedAt": "2026-11-16T19:38:53Z",
+      "status": "queued",
+      "steps": [],
+      "url": "https://github.com/myungit-Vins-Prototype/Linux_CAD_forFree/actions/runs/43941514637/job/133559958107"
+    }
+  ],
+  "status": "queued",
+  "url": "https://github.com/myungit-Vins-Prototype/Linux_CAD_forFree/actions/runs/43941514637"
+}

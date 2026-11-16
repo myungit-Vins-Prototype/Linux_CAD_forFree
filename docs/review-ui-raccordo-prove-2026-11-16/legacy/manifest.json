@@ -1,0 +1,14 @@
+{
+  "commands.txt": {
+    "sha256": "36533ea7d341aa4d53cb6444205ad41847df2f06f79d70c1d897a50ebc70bd7d",
+    "bytes": 674
+  },
+  "evidence.json": {
+    "sha256": "132bf6b35062711eb85d3c49fb540a280b27e1e4396d02126eace187d83b4910",
+    "bytes": 16681
+  },
+  "PLAN.md": {
+    "sha256": "8f3ba48b3da5078d73736d926f043849807516c1fd435c8c98fc6ffd9b87ea94",
+    "bytes": 3644
+  }
+}

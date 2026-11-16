@@ -1,0 +1,247 @@
+{
+    "QtVersion": "6.12.0",
+    "checks": 9,
+    "failures": 0,
+    "stages": [
+        {
+            "applicationStyleClass": "QStyleSheetStyle",
+            "controlWithoutLocalColor": {
+                "background": "#e6eef6",
+                "backgroundRole": 10,
+                "composedPixels": {
+                    "#ff202020": 360,
+                    "#ffe6eef6": 720
+                },
+                "foregroundPixelCount": 360,
+                "foregroundRole": 0,
+                "frameShadow": 16,
+                "frameShape": 4,
+                "geometry": {
+                    "height": 3,
+                    "width": 360,
+                    "x": 20,
+                    "y": 261
+                },
+                "imageSize": [
+                    360,
+                    3
+                ],
+                "lineWidth": 1,
+                "literalPixelCount": 0,
+                "midLineWidth": 0,
+                "paintedForegroundAgainstPanelContrast": 13.90759464872792,
+                "palette": {
+                    "Base": "#ffffff",
+                    "Dark": "#787878",
+                    "Light": "#ffffff",
+                    "Mid": "#a0a0a0",
+                    "Text": "#202020",
+                    "Window": "#f0f0f0",
+                    "WindowText": "#202020"
+                },
+                "styleClass": "QStyleSheetStyle",
+                "styleSheet": ""
+            },
+            "literal": {
+                "background": "#e6eef6",
+                "backgroundRole": 10,
+                "composedPixels": {
+                    "#ff35485c": 360,
+                    "#ffe6eef6": 720
+                },
+                "foregroundPixelCount": 360,
+                "foregroundRole": 0,
+                "frameShadow": 16,
+                "frameShape": 4,
+                "geometry": {
+                    "height": 3,
+                    "width": 360,
+                    "x": 20,
+                    "y": 245
+                },
+                "imageSize": [
+                    360,
+                    3
+                ],
+                "lineWidth": 1,
+                "literalPixelCount": 360,
+                "midLineWidth": 0,
+                "paintedForegroundAgainstPanelContrast": 8.027885299066037,
+                "palette": {
+                    "Base": "#ffffff",
+                    "Dark": "#787878",
+                    "Light": "#ffffff",
+                    "Mid": "#a0a0a0",
+                    "Text": "#35485c",
+                    "Window": "#f0f0f0",
+                    "WindowText": "#35485c"
+                },
+                "styleClass": "QStyleSheetStyle",
+                "styleSheet": "color:#35485c;"
+            },
+            "panelColor": "#e6eef6",
+            "panelPaletteWindow": "#e6eef6",
+            "stage": "0-light"
+        },
+        {
+            "applicationStyleClass": "QStyleSheetStyle",
+            "controlWithoutLocalColor": {
+                "background": "#1c2735",
+                "backgroundRole": 10,
+                "composedPixels": {
+                    "#ff1c2735": 720,
+                    "#ffd8e4ea": 360
+                },
+                "foregroundPixelCount": 360,
+                "foregroundRole": 0,
+                "frameShadow": 16,
+                "frameShape": 4,
+                "geometry": {
+                    "height": 3,
+                    "width": 360,
+                    "x": 20,
+                    "y": 261
+                },
+                "imageSize": [
+                    360,
+                    3
+                ],
+                "lineWidth": 1,
+                "literalPixelCount": 0,
+                "midLineWidth": 0,
+                "paintedForegroundAgainstPanelContrast": 11.650145550894928,
+                "palette": {
+                    "Base": "#202d36",
+                    "Dark": "#080c10",
+                    "Light": "#192430",
+                    "Mid": "#0b1015",
+                    "Text": "#d8e4ea",
+                    "Window": "#111820",
+                    "WindowText": "#d8e4ea"
+                },
+                "styleClass": "QStyleSheetStyle",
+                "styleSheet": ""
+            },
+            "literal": {
+                "background": "#1c2735",
+                "backgroundRole": 10,
+                "composedPixels": {
+                    "#ff1c2735": 720,
+                    "#ff35485c": 360
+                },
+                "foregroundPixelCount": 360,
+                "foregroundRole": 0,
+                "frameShadow": 16,
+                "frameShape": 4,
+                "geometry": {
+                    "height": 3,
+                    "width": 360,
+                    "x": 20,
+                    "y": 245
+                },
+                "imageSize": [
+                    360,
+                    3
+                ],
+                "lineWidth": 1,
+                "literalPixelCount": 360,
+                "midLineWidth": 0,
+                "paintedForegroundAgainstPanelContrast": 1.6052324321115465,
+                "palette": {
+                    "Base": "#202d36",
+                    "Dark": "#080c10",
+                    "Light": "#192430",
+                    "Mid": "#0b1015",
+                    "Text": "#35485c",
+                    "Window": "#111820",
+                    "WindowText": "#35485c"
+                },
+                "styleClass": "QStyleSheetStyle",
+                "styleSheet": "color:#35485c;"
+            },
+            "panelColor": "#1c2735",
+            "panelPaletteWindow": "#1c2735",
+            "stage": "1-dark"
+        },
+        {
+            "applicationStyleClass": "QStyleSheetStyle",
+            "controlWithoutLocalColor": {
+                "background": "#e6eef6",
+                "backgroundRole": 10,
+                "composedPixels": {
+                    "#ff202020": 360,
+                    "#ffe6eef6": 720
+                },
+                "foregroundPixelCount": 360,
+                "foregroundRole": 0,
+                "frameShadow": 16,
+                "frameShape": 4,
+                "geometry": {
+                    "height": 3,
+                    "width": 360,
+                    "x": 20,
+                    "y": 261
+                },
+                "imageSize": [
+                    360,
+                    3
+                ],
+                "lineWidth": 1,
+                "literalPixelCount": 0,
+                "midLineWidth": 0,
+                "paintedForegroundAgainstPanelContrast": 13.90759464872792,
+                "palette": {
+                    "Base": "#ffffff",
+                    "Dark": "#787878",
+                    "Light": "#ffffff",
+                    "Mid": "#a0a0a0",
+                    "Text": "#202020",
+                    "Window": "#f0f0f0",
+                    "WindowText": "#202020"
+                },
+                "styleClass": "QStyleSheetStyle",
+                "styleSheet": ""
+            },
+            "literal": {
+                "background": "#e6eef6",
+                "backgroundRole": 10,
+                "composedPixels": {
+                    "#ff35485c": 360,
+                    "#ffe6eef6": 720
+                },
+                "foregroundPixelCount": 360,
+                "foregroundRole": 0,
+                "frameShadow": 16,
+                "frameShape": 4,
+                "geometry": {
+                    "height": 3,
+                    "width": 360,
+                    "x": 20,
+                    "y": 245
+                },
+                "imageSize": [
+                    360,
+                    3
+                ],
+                "lineWidth": 1,
+                "literalPixelCount": 360,
+                "midLineWidth": 0,
+                "paintedForegroundAgainstPanelContrast": 8.027885299066037,
+                "palette": {
+                    "Base": "#ffffff",
+                    "Dark": "#787878",
+                    "Light": "#ffffff",
+                    "Mid": "#a0a0a0",
+                    "Text": "#35485c",
+                    "Window": "#f0f0f0",
+                    "WindowText": "#35485c"
+                },
+                "styleClass": "QStyleSheetStyle",
+                "styleSheet": "color:#35485c;"
+            },
+            "panelColor": "#e6eef6",
+            "panelPaletteWindow": "#e6eef6",
+            "stage": "2-light"
+        }
+    ]
+}

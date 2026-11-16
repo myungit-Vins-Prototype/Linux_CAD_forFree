@@ -43,3 +43,12 @@ Root ha congelato 5.176 file e 19 sigilli precedenti. Mappa consultata prima del
 
 
 Limite nuova ripetizione Wayland generale delle schede: timeout90s e120s (42PNG prima della fermata); sessione Active=yes,LockedHint=yes. Lo stato bloccato suggerisce un’attesa dei frame del compositor, ma nessuno stack la dimostra. Nessuna modifica a impostazioni/sessione utente e nessun PASS attribuito a questo tentativo. Il metodo delle schede preesistente è invariato ed è PASS offscreen nelle12CTest; i74controlli nuovi dei pannelli sono PASS anche Wayland.
+
+
+## Completamento UI9 — separatore Raccordo
+
+Il candidato è stato infine confermato con FunctionDialogPanel di produzione e lo stesso QFrame HLine/Plain: il letterale#35485c resta su360pixel in Chiaro/Scuro/Chiaro. Lo sfondo cambia e il contrasto scende da8,03 a1,61 nel tema scuro. Rimosso soltanto setStyleSheet locale: WindowText ereditato segue#202020/#d8e4ea. Nove verifiche raster del componente offscreen/Fusion PASS; non è una certificazione visiva dell'intero dialogo Raccordo o di tutti gli stili desktop. Nessun algoritmo/parametro/preview/forma del raccordo modificato.
+
+App completa aggiornata PASS15,788s; ulteriori3/3CTest pertinenti (selezione Raccordo, pannelli comuni, foreground) PASS2,418s e avvio isolato5s PASS. Le12suite e74Wayland della fasef46c036 restano prove su codice GUI/analisi/test byte-identico; dopo il separatore sono ricontrollati i3target interessati, senza ripetere il kernel immutato. Mappa778/11373/390TU,389cache+1TU: hash/HTML/archi bidirezionali PASS. Il separatore è un terzo contesto dello stesso UI9: totale33rilievi invariato, senza contarlo come ulteriore bug. Le quattro wrapper non incrementano il totale.
+
+Il pushf46c036 aveva già avviato la CI; il successivo push sostituisce quella esecuzione tramite concurrency del workflow e certifica il codice comprensivo del separatore. Nessun fallimento di codice è stato nascosto o marcatoPASS. [Prove separatore e piano legacy](review-ui-raccordo-prove-2026-11-16/README.txt).

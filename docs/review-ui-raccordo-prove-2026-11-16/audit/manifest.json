@@ -1,0 +1,120 @@
+{
+  "baselineCommit": "f46c036217b363c5d5941235913cc18534aaf0ab",
+  "baselineSourceSHA256": "a6778186393b786f20af8448c5f8f7aec3dc4abf16651a86a6c78b73b8bd0622",
+  "candidateSourceSHA256": "5de6912b585ade4b03b2e51092c92d782367ed376fb96eb6469f2b53afaeb670",
+  "patchSHA256": "ea5131963ca3afa8bc00a325cb9bd385fd4ca379830295fddb71e180eefa5fdc",
+  "productionWritesByAuditor": false,
+  "patch": "One local color call removed; no other production changes in staged candidate",
+  "conclusion": "Bug cromatico confermato: fixed literal is actually painted; removal follows the native palette",
+  "component": "Actual production FunctionDialogPanel and ApplicationTheme with real Qt QFrame HLine. Same frame instructions and VBox margins20,0,20,16 spacing13 as fillet. No CAD/viewport/full fillet dialog constructed. Opacity100 isolates panel background.",
+  "platform": "Qt6.12 Linux offscreen; application theme Fusion/QStyleSheetStyle; no Wayland/native compositor claim",
+  "frameDefaults": {
+    "shape": "HLine=4",
+    "shadow": "Plain=16",
+    "foregroundRole": "WindowText=0",
+    "lineWidth": 1,
+    "rasterFrame": [
+      360,
+      3
+    ]
+  },
+  "graph": {
+    "nodes": 778,
+    "edges": 11373,
+    "focus": [
+      {
+        "id": "forgeCad2026_application_theme.cpp",
+        "description": "Controller unico di palette e QSS globale su finestre e schede incorporate 3D/2D; applicazione coerente protetta dal reingresso, stile Fusion ripristinato dopo sostituzioni native e menu Tema persistente chiaro/scuro/desktop."
+      },
+      {
+        "id": "forgeCad2026_dialogs_common.cpp",
+        "description": "Pannelli nel viewport proprietario e blocco limitato al workspace, anche con piu documenti in schede; sotto il ribbon con aggancio/altezza piena e dimensioni preferite e larghezza iniziale per comando senza sovrascrivere il resize manuale; controlli G1/G2 con verso indipendente per profilo. Presentazione Raggio condivisa: titolo, schede con icone, illustrazioni volumetriche, form compatti e footer accessibile; intestazione compatta, aggancio laterale persistente e altezza piena, temi chiaro/scuro, checkbox nativi con palette distinta per testo/spunta ed elenchi con fondo dei campi, vetro e dimensioni persistenti. Conferma opzionale con pannello nascosto e attesa di finished anche nel runner modale; errori reali riaprono i controlli. Un comando modeless fra workspace per evitare cleanup sospesi; selezioni multiple e riga corrente conservate per identita, picker fermati al cambio ruolo G0/G1/piano. Ruoli semantici dei messaggi con contrasto nei temi chiaro e scuro. Tutti gli undici runner storici usano il gestore comune: setup differito dopo guardia fra documenti, overload a tre argomenti preservato, finished sincrono senza attesa irrisolvibile. Messaggio anteprima nel footer fisso anche se creato dopo show, senza duplicazioni."
+      },
+      {
+        "id": "forgeCad2026_dialogs_fillet.cpp",
+        "description": "Raccordi 3D: quattro schede Costante/Conico/Variabile/Tra facce, illustrazioni originali, selezione nella vista e completamento esplicito del contorno degli incavi, percorsi tangenti con tabelle indipendenti, manipolatori dei raggi e zero agli estremi dei percorsi aperti, anteprima cancellabile, conferma anticipata con pannello nascosto durante il calcolo e parametri persistenti."
+      }
+    ]
+  },
+  "sourceHashes": {
+    "/home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_common.cpp": "bd1006cc5689982ed183b6499292ce3efe956daf8028cc73ca7258036ad9ba82",
+    "/home/myungit/Linux_CAD_forFree/forgeCad2026_application_theme.cpp": "618b68b483952fac10852632b20f735fedb8e41b7dae1dfd06f676cee59582cc",
+    "/home/myungit/Linux_CAD_forFree/docs/architecture/graph.json": "5efd0872f307e6659c1fad13683c8f8cbb9d42d929c8e4df714e2874a3989798"
+  },
+  "binaryHashesNotRetained": {
+    "/tmp/ui-residual-fix/fillet-separator-audit/baseline/probe": "d0f2136445c7a1901b1c8a7f074b23f9dcbe85f0857f4de422daade405151846",
+    "/tmp/ui-residual-fix/fillet-separator-audit/baseline/probe.o": "5f1054628ad1a7dd24840555c8c6079e6d97e7a22282689653e8910cb81162c5",
+    "/tmp/ui-residual-fix/fillet-separator-audit/candidate/probe": "4608a1aa4665a37e5e6fc0848eb52a685e0fdb56b54d8b887f5a625d182146ed",
+    "/tmp/ui-residual-fix/fillet-separator-audit/candidate/probe.o": "b9d1517a505eb89982a2b88bcedcae126969cd41dd4f4a7f1b05e507e9934802",
+    "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/forgeCad2026_dialogs_common.cpp.o": "e190a7190523548f6bc5bda0fde369424c69ac1b0c8e95595d9728e29861373e"
+  },
+  "rasterSummary": [
+    {
+      "variant": "baseline",
+      "stage": "0-light",
+      "foreground": "#35485c",
+      "panel": "#e6eef6",
+      "pixelColors": {
+        "#ff35485c": 360,
+        "#ffe6eef6": 720
+      },
+      "contrast": 8.027885299066037
+    },
+    {
+      "variant": "baseline",
+      "stage": "1-dark",
+      "foreground": "#35485c",
+      "panel": "#1c2735",
+      "pixelColors": {
+        "#ff1c2735": 720,
+        "#ff35485c": 360
+      },
+      "contrast": 1.6052324321115465
+    },
+    {
+      "variant": "baseline",
+      "stage": "2-light",
+      "foreground": "#35485c",
+      "panel": "#e6eef6",
+      "pixelColors": {
+        "#ff35485c": 360,
+        "#ffe6eef6": 720
+      },
+      "contrast": 8.027885299066037
+    },
+    {
+      "variant": "candidate",
+      "stage": "0-light",
+      "foreground": "#202020",
+      "panel": "#e6eef6",
+      "pixelColors": {
+        "#ff202020": 360,
+        "#ffe6eef6": 720
+      },
+      "contrast": 13.90759464872792
+    },
+    {
+      "variant": "candidate",
+      "stage": "1-dark",
+      "foreground": "#d8e4ea",
+      "panel": "#1c2735",
+      "pixelColors": {
+        "#ff1c2735": 720,
+        "#ffd8e4ea": 360
+      },
+      "contrast": 11.650145550894928
+    },
+    {
+      "variant": "candidate",
+      "stage": "2-light",
+      "foreground": "#202020",
+      "panel": "#e6eef6",
+      "pixelColors": {
+        "#ff202020": 360,
+        "#ffe6eef6": 720
+      },
+      "contrast": 13.90759464872792
+    }
+  ],
+  "limits": "This proves visible fixed UI color under current Qt/Fusion and inherited color after removal; not full fillet interaction, geometry, all desktop themes or an accessibility threshold. Contrast numbers are descriptive."
+}

@@ -1,0 +1,861 @@
+{
+  "node": {
+    "id": "forgeCad2026_dialogs_fillet.cpp",
+    "group": "dialogs",
+    "description": "Raccordi 3D: quattro schede Costante/Conico/Variabile/Tra facce, illustrazioni originali, selezione nella vista e completamento esplicito del contorno degli incavi, percorsi tangenti con tabelle indipendenti, manipolatori dei raggi e zero agli estremi dei percorsi aperti, anteprima cancellabile, conferma anticipata con pannello nascosto durante il calcolo e parametri persistenti.",
+    "lines": 1023,
+    "symbols": [
+      "BlendDiagram::BlendDiagram",
+      "BlendDiagram::crossPoint",
+      "BlendDiagram::paintEvent",
+      "BlendDiagram::project",
+      "BlendDiagram::radius",
+      "filletDialog",
+      "modeIcon"
+    ]
+  },
+  "incident": [
+    {
+      "source": "forgeCad2026_dialogs_fillet.cpp",
+      "target": "cad_datum.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 1,
+          "symbol": "cad_datum.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "forgeCad2026_dialogs_fillet.cpp",
+      "target": "cad_expression.cpp",
+      "kind": "call",
+      "count": 3,
+      "sites": [
+        {
+          "line": 225,
+          "symbol": "ForgeCad::setDisplayLengthUnit",
+          "owner": "filletDialog"
+        },
+        {
+          "line": 282,
+          "symbol": "ForgeCad::ExpressionSpinBox::ExpressionSpinBox",
+          "owner": "filletDialog"
+        },
+        {
+          "line": 283,
+          "symbol": "ForgeCad::ExpressionSpinBox::setDecimals",
+          "owner": "filletDialog"
+        }
+      ]
+    },
+    {
+      "source": "forgeCad2026_dialogs_fillet.cpp",
+      "target": "cad_expression.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 2,
+          "symbol": "cad_expression.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "forgeCad2026_dialogs_fillet.cpp",
+      "target": "cad_fillet_paths.cpp",
+      "kind": "call",
+      "count": 3,
+      "sites": [
+        {
+          "line": 627,
+          "symbol": "ForgeCad::filletCavityContours",
+          "owner": "filletDialog"
+        },
+        {
+          "line": 763,
+          "symbol": "ForgeCad::filletPathGeometry",
+          "owner": "filletDialog"
+        },
+        {
+          "line": 851,
+          "symbol": "ForgeCad::filletStations",
+          "owner": "filletDialog"
+        }
+      ]
+    },
+    {
+      "source": "forgeCad2026_dialogs_fillet.cpp",
+      "target": "cad_fillet_paths.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 3,
+          "symbol": "cad_fillet_paths.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "forgeCad2026_dialogs_fillet.cpp",
+      "target": "cad_icons.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 366,
+          "symbol": "ForgeCad::commandIcon",
+          "owner": "filletDialog"
+        }
+      ]
+    },
+    {
+      "source": "forgeCad2026_dialogs_fillet.cpp",
+      "target": "cad_icons.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 4,
+          "symbol": "cad_icons.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "forgeCad2026_dialogs_fillet.cpp",
+      "target": "cad_types.h",
+      "kind": "call",
+      "count": 8,
+      "sites": [
+        {
+          "line": 237,
+          "symbol": "FilletSpec::FilletSpec",
+          "owner": "filletDialog"
+        },
+        {
+          "line": 245,
+          "symbol": "FilletPathSpec::FilletPathSpec",
+          "owner": "filletDialog"
+        },
+        {
+          "line": 323,
+          "symbol": "EdgePoint::operator=",
+          "owner": "filletDialog"
+        },
+        {
+          "line": 533,
+          "symbol": "ChamferSpec::ChamferSpec",
+          "owner": "filletDialog"
+        },
+        {
+          "line": 547,
+          "symbol": "ChamferSpec::ChamferSpec",
+          "owner": "filletDialog"
+        },
+        {
+          "line": 784,
+          "symbol": "FilletPathSpec::FilletPathSpec",
+          "owner": "filletDialog"
+        },
+        {
+          "line": 811,
+          "symbol": "FilletPathSpec::operator=",
+          "owner": "filletDialog"
+        },
+        {
+          "line": 1013,
+          "symbol": "ChamferSpec::operator=",
+          "owner": "filletDialog"
+        }
+      ]
+    },
+    {
+      "source": "forgeCad2026_dialogs_fillet.cpp",
+      "target": "forgeCad2026_dialogs.h",
+      "kind": "call",
+      "count": 3,
+      "sites": [
+        {
+          "line": 219,
+          "symbol": "BlendDialogResult::BlendDialogResult",
+          "owner": "filletDialog"
+        },
+        {
+          "line": 221,
+          "symbol": "BlendDialogResult::BlendDialogResult",
+          "owner": "filletDialog"
+        },
+        {
+          "line": 1022,
+          "symbol": "BlendDialogResult::BlendDialogResult",
+          "owner": "filletDialog"
+        }
+      ]
+    },
+    {
+      "source": "forgeCad2026_dialogs_fillet.cpp",
+      "target": "forgeCad2026_dialogs.h",
+      "kind": "include",
+      "count": 1,
+      "sites": [
+        {
+          "line": 5,
+          "symbol": "forgeCad2026_dialogs.h",
+          "owner": ""
+        }
+      ]
+    },
+    {
+      "source": "forgeCad2026_dialogs_fillet.cpp",
+      "target": "forgeCad2026_dialogs_common.cpp",
+      "kind": "call",
+      "count": 9,
+      "sites": [
+        {
+          "line": 222,
+          "symbol": "FunctionDialogPanel::FunctionDialogPanel",
+          "owner": "filletDialog"
+        },
+        {
+          "line": 223,
+          "symbol": "FunctionDialogPanel::setSizeIdentity",
+          "owner": "filletDialog"
+        },
+        {
+          "line": 314,
+          "symbol": "resultBodyForPick",
+          "owner": "filletDialog"
+        },
+        {
+          "line": 362,
+          "symbol": "GeometryReferenceList::GeometryReferenceList",
+          "owner": "filletDialog"
+        },
+        {
+          "line": 472,
+          "symbol": "GeometryReferenceList::GeometryReferenceList",
+          "owner": "filletDialog"
+        },
+        {
+          "line": 587,
+          "symbol": "GeometryReferenceList::setEdges",
+          "owner": "filletDialog"
+        },
+        {
+          "line": 589,
+          "symbol": "GeometryReferenceList::setEdges",
+          "owner": "filletDialog"
+        },
+        {
+          "line": 1006,
+          "symbol": "runUntilAppliedModeless",
+          "owner": "filletDialog"
+        },
+        {
+          "line": 1010,
+          "symbol": "ForgeCad::Gui::runUntilApplied",
+          "owner": "filletDialog"
+        }
+      ]
+    },
+    {
+      "source": "forgeCad2026_dialogs_fillet.cpp",
+      "target": "forgeCad2026_dialogs_fillet.cpp",
+      "kind": "call",
+      "count": 62,
+      "sites": [
+        {
+          "line": 72,
+          "symbol": "BlendDiagram::radius",
+          "owner": "BlendDiagram::crossPoint"
+        },
+        {
+          "line": 76,
+          "symbol": "BlendDiagram::project",
+          "owner": "BlendDiagram::crossPoint"
+        },
+        {
+          "line": 103,
+          "symbol": "BlendDiagram::project",
+          "owner": "BlendDiagram::paintEvent"
+        },
+        {
+          "line": 106,
+          "symbol": "BlendDiagram::project",
+          "owner": "BlendDiagram::paintEvent"
+        },
+        {
+          "line": 106,
+          "symbol": "BlendDiagram::radius",
+          "owner": "BlendDiagram::paintEvent"
+        },
+        {
+          "line": 108,
+          "symbol": "BlendDiagram::project",
+          "owner": "BlendDiagram::paintEvent"
+        },
+        {
+          "line": 111,
+          "symbol": "BlendDiagram::project",
+          "owner": "BlendDiagram::paintEvent"
+        },
+        {
+          "line": 111,
+          "symbol": "BlendDiagram::radius",
+          "owner": "BlendDiagram::paintEvent"
+        },
+        {
+          "line": 113,
+          "symbol": "BlendDiagram::paintEvent::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_fillet.cpp:97:23)::operator()",
+          "owner": "BlendDiagram::paintEvent"
+        },
+        {
+          "line": 114,
+          "symbol": "BlendDiagram::paintEvent::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_fillet.cpp:97:23)::operator()",
+          "owner": "BlendDiagram::paintEvent"
+        },
+        {
+          "line": 116,
+          "symbol": "BlendDiagram::crossPoint",
+          "owner": "BlendDiagram::paintEvent"
+        },
+        {
+          "line": 118,
+          "symbol": "BlendDiagram::crossPoint",
+          "owner": "BlendDiagram::paintEvent"
+        },
+        {
+          "line": 120,
+          "symbol": "BlendDiagram::crossPoint",
+          "owner": "BlendDiagram::paintEvent"
+        },
+        {
+          "line": 122,
+          "symbol": "BlendDiagram::crossPoint",
+          "owner": "BlendDiagram::paintEvent"
+        },
+        {
+          "line": 124,
+          "symbol": "BlendDiagram::crossPoint",
+          "owner": "BlendDiagram::paintEvent"
+        },
+        {
+          "line": 126,
+          "symbol": "BlendDiagram::crossPoint",
+          "owner": "BlendDiagram::paintEvent"
+        },
+        {
+          "line": 136,
+          "symbol": "BlendDiagram::crossPoint",
+          "owner": "BlendDiagram::paintEvent"
+        },
+        {
+          "line": 138,
+          "symbol": "BlendDiagram::crossPoint",
+          "owner": "BlendDiagram::paintEvent"
+        },
+        {
+          "line": 143,
+          "symbol": "BlendDiagram::crossPoint",
+          "owner": "BlendDiagram::paintEvent"
+        },
+        {
+          "line": 145,
+          "symbol": "BlendDiagram::crossPoint",
+          "owner": "BlendDiagram::paintEvent"
+        },
+        {
+          "line": 154,
+          "symbol": "BlendDiagram::crossPoint",
+          "owner": "BlendDiagram::paintEvent"
+        },
+        {
+          "line": 159,
+          "symbol": "BlendDiagram::paintEvent::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_fillet.cpp:148:23)::operator()",
+          "owner": "BlendDiagram::paintEvent"
+        },
+        {
+          "line": 162,
+          "symbol": "BlendDiagram::paintEvent::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_fillet.cpp:148:23)::operator()",
+          "owner": "BlendDiagram::paintEvent"
+        },
+        {
+          "line": 178,
+          "symbol": "BlendDiagram::crossPoint",
+          "owner": "BlendDiagram::paintEvent"
+        },
+        {
+          "line": 193,
+          "symbol": "BlendDiagram::paintEvent::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_fillet.cpp:148:23)::operator()",
+          "owner": "BlendDiagram::paintEvent"
+        },
+        {
+          "line": 194,
+          "symbol": "BlendDiagram::paintEvent::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_fillet.cpp:148:23)::operator()",
+          "owner": "BlendDiagram::paintEvent"
+        },
+        {
+          "line": 196,
+          "symbol": "BlendDiagram::crossPoint",
+          "owner": "BlendDiagram::paintEvent"
+        },
+        {
+          "line": 197,
+          "symbol": "BlendDiagram::paintEvent::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_fillet.cpp:148:23)::operator()",
+          "owner": "BlendDiagram::paintEvent"
+        },
+        {
+          "line": 347,
+          "symbol": "BlendDiagram::BlendDiagram",
+          "owner": "filletDialog"
+        },
+        {
+          "line": 389,
+          "symbol": "filletDialog::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_fillet.cpp:281:24)::operator()",
+          "owner": "filletDialog"
+        },
+        {
+          "line": 408,
+          "symbol": "filletDialog::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_fillet.cpp:281:24)::operator()",
+          "owner": "filletDialog"
+        },
+        {
+          "line": 419,
+          "symbol": "filletDialog::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_fillet.cpp:281:24)::operator()",
+          "owner": "filletDialog"
+        },
+        {
+          "line": 480,
+          "symbol": "filletDialog::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_fillet.cpp:302:25)::operator()",
+          "owner": "filletDialog"
+        },
+        {
+          "line": 483,
+          "symbol": "filletDialog::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_fillet.cpp:281:24)::operator()",
+          "owner": "filletDialog"
+        },
+        {
+          "line": 495,
+          "symbol": "modeIcon",
+          "owner": "filletDialog"
+        },
+        {
+          "line": 607,
+          "symbol": "filletDialog::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_fillet.cpp:567:31)::operator()",
+          "owner": "filletDialog"
+        },
+        {
+          "line": 620,
+          "symbol": "filletDialog::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_fillet.cpp:549:29)::operator()",
+          "owner": "filletDialog"
+        },
+        {
+          "line": 620,
+          "symbol": "filletDialog::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_fillet.cpp:554:30)::operator()",
+          "owner": "filletDialog"
+        },
+        {
+          "line": 621,
+          "symbol": "filletDialog::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_fillet.cpp:532:28)::operator()",
+          "owner": "filletDialog"
+        },
+        {
+          "line": 661,
+          "symbol": "filletDialog::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_fillet.cpp:251:33)::operator()",
+          "owner": "filletDialog"
+        },
+        {
+          "line": 691,
+          "symbol": "filletDialog::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_fillet.cpp:281:24)::operator()",
+          "owner": "filletDialog"
+        },
+        {
+          "line": 706,
+          "symbol": "filletDialog::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_fillet.cpp:635:29)::operator()",
+          "owner": "filletDialog"
+        },
+        {
+          "line": 746,
+          "symbol": "filletDialog::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_fillet.cpp:251:33)::operator()",
+          "owner": "filletDialog"
+        },
+        {
+          "line": 753,
+          "symbol": "filletDialog::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_fillet.cpp:660:25)::operator()",
+          "owner": "filletDialog"
+        },
+        {
+          "line": 792,
+          "symbol": "filletDialog::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_fillet.cpp:756:22)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_fillet.cpp:769:26)::operator()",
+          "owner": "filletDialog"
+        },
+        {
+          "line": 805,
+          "symbol": "filletDialog::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_fillet.cpp:756:22)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_fillet.cpp:769:26)::operator()",
+          "owner": "filletDialog"
+        },
+        {
+          "line": 863,
+          "symbol": "filletDialog::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_fillet.cpp:635:29)::operator()",
+          "owner": "filletDialog"
+        },
+        {
+          "line": 868,
+          "symbol": "filletDialog::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_fillet.cpp:660:25)::operator()",
+          "owner": "filletDialog"
+        },
+        {
+          "line": 894,
+          "symbol": "filletDialog::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_fillet.cpp:869:30)::operator()",
+          "owner": "filletDialog"
+        },
+        {
+          "line": 896,
+          "symbol": "filletDialog::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_fillet.cpp:869:30)::operator()",
+          "owner": "filletDialog"
+        },
+        {
+          "line": 898,
+          "symbol": "filletDialog::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_fillet.cpp:869:30)::operator()",
+          "owner": "filletDialog"
+        },
+        {
+          "line": 915,
+          "symbol": "filletDialog::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_fillet.cpp:251:33)::operator()",
+          "owner": "filletDialog"
+        },
+        {
+          "line": 919,
+          "symbol": "filletDialog::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_fillet.cpp:251:33)::operator()",
+          "owner": "filletDialog"
+        },
+        {
+          "line": 960,
+          "symbol": "filletDialog::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_fillet.cpp:290:27)::operator()",
+          "owner": "filletDialog"
+        },
+        {
+          "line": 976,
+          "symbol": "filletDialog::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_fillet.cpp:290:27)::operator()",
+          "owner": "filletDialog"
+        },
+        {
+          "line": 996,
+          "symbol": "filletDialog::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_fillet.cpp:290:27)::operator()",
+          "owner": "filletDialog"
+        },
+        {
+          "line": 1000,
+          "symbol": "filletDialog::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_fillet.cpp:567:31)::operator()",
+          "owner": "filletDialog"
+        },
+        {
+          "line": 1003,
+          "symbol": "filletDialog::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_fillet.cpp:532:28)::operator()",
+          "owner": "filletDialog"
+        },
+        {
+          "line": 1003,
+          "symbol": "filletDialog::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_fillet.cpp:549:29)::operator()",
+          "owner": "filletDialog"
+        },
+        {
+          "line": 1003,
+          "symbol": "filletDialog::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_fillet.cpp:554:30)::operator()",
+          "owner": "filletDialog"
+        },
+        {
+          "line": 1011,
+          "symbol": "filletDialog::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_fillet.cpp:554:30)::operator()",
+          "owner": "filletDialog"
+        },
+        {
+          "line": 1013,
+          "symbol": "filletDialog::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_fillet.cpp:532:28)::operator()",
+          "owner": "filletDialog"
+        }
+      ]
+    },
+    {
+      "source": "forgeCad2026_dialogs_fillet.cpp",
+      "target": "forgeCad2026_fillet_handles.cpp",
+      "kind": "call",
+      "count": 4,
+      "sites": [
+        {
+          "line": 837,
+          "symbol": "CadViewport::clearFilletRadiusHandles",
+          "owner": "filletDialog"
+        },
+        {
+          "line": 861,
+          "symbol": "CadViewport::setFilletRadiusHandles",
+          "owner": "filletDialog"
+        },
+        {
+          "line": 990,
+          "symbol": "CadViewport::clearFilletRadiusHandles",
+          "owner": "filletDialog"
+        },
+        {
+          "line": 1014,
+          "symbol": "CadViewport::clearFilletRadiusHandles",
+          "owner": "filletDialog"
+        }
+      ]
+    },
+    {
+      "source": "forgeCad2026_dialogs_fillet.cpp",
+      "target": "forgeCad2026_viewport_document.cpp",
+      "kind": "call",
+      "count": 8,
+      "sites": [
+        {
+          "line": 225,
+          "symbol": "CadViewport::lengthUnit",
+          "owner": "filletDialog"
+        },
+        {
+          "line": 313,
+          "symbol": "CadViewport::resultBodiesBefore",
+          "owner": "filletDialog"
+        },
+        {
+          "line": 625,
+          "symbol": "CadViewport::extrusions",
+          "owner": "filletDialog"
+        },
+        {
+          "line": 626,
+          "symbol": "CadViewport::extrusions",
+          "owner": "filletDialog"
+        },
+        {
+          "line": 762,
+          "symbol": "CadViewport::extrusions",
+          "owner": "filletDialog"
+        },
+        {
+          "line": 764,
+          "symbol": "CadViewport::extrusions",
+          "owner": "filletDialog"
+        },
+        {
+          "line": 836,
+          "symbol": "CadViewport::extrusions",
+          "owner": "filletDialog"
+        },
+        {
+          "line": 840,
+          "symbol": "CadViewport::extrusions",
+          "owner": "filletDialog"
+        }
+      ]
+    },
+    {
+      "source": "forgeCad2026_dialogs_fillet.cpp",
+      "target": "forgeCad2026_viewport_preview.cpp",
+      "kind": "call",
+      "count": 7,
+      "sites": [
+        {
+          "line": 609,
+          "symbol": "CadViewport::clearBlendPreview",
+          "owner": "filletDialog"
+        },
+        {
+          "line": 614,
+          "symbol": "CadViewport::clearBlendPreview",
+          "owner": "filletDialog"
+        },
+        {
+          "line": 620,
+          "symbol": "CadViewport::requestBlendPreview",
+          "owner": "filletDialog"
+        },
+        {
+          "line": 963,
+          "symbol": "CadViewport::setPreviewCallback",
+          "owner": "filletDialog"
+        },
+        {
+          "line": 989,
+          "symbol": "CadViewport::clearBlendPreview",
+          "owner": "filletDialog"
+        },
+        {
+          "line": 1015,
+          "symbol": "CadViewport::setPreviewCallback",
+          "owner": "filletDialog"
+        },
+        {
+          "line": 1021,
+          "symbol": "CadViewport::clearBlendPreview",
+          "owner": "filletDialog"
+        }
+      ]
+    },
+    {
+      "source": "forgeCad2026_dialogs_fillet.cpp",
+      "target": "forgeCad2026_viewport_selection.cpp",
+      "kind": "call",
+      "count": 17,
+      "sites": [
+        {
+          "line": 291,
+          "symbol": "CadViewport::cancelReferencePick",
+          "owner": "filletDialog"
+        },
+        {
+          "line": 292,
+          "symbol": "CadViewport::setReferencePickCallback",
+          "owner": "filletDialog"
+        },
+        {
+          "line": 295,
+          "symbol": "CadViewport::resumeEdgePick",
+          "owner": "filletDialog"
+        },
+        {
+          "line": 297,
+          "symbol": "CadViewport::beginEdgePick",
+          "owner": "filletDialog"
+        },
+        {
+          "line": 303,
+          "symbol": "CadViewport::endEdgePick",
+          "owner": "filletDialog"
+        },
+        {
+          "line": 305,
+          "symbol": "CadViewport::beginReferencePick",
+          "owner": "filletDialog"
+        },
+        {
+          "line": 308,
+          "symbol": "CadViewport::setReferencePickCallback",
+          "owner": "filletDialog"
+        },
+        {
+          "line": 310,
+          "symbol": "CadViewport::cancelReferencePick",
+          "owner": "filletDialog"
+        },
+        {
+          "line": 631,
+          "symbol": "CadViewport::resumeEdgePick",
+          "owner": "filletDialog"
+        },
+        {
+          "line": 957,
+          "symbol": "CadViewport::endEdgePick",
+          "owner": "filletDialog"
+        },
+        {
+          "line": 971,
+          "symbol": "CadViewport::setEdgePickChangedCallback",
+          "owner": "filletDialog"
+        },
+        {
+          "line": 985,
+          "symbol": "CadViewport::setEdgePickPanelKeyCallbacks",
+          "owner": "filletDialog"
+        },
+        {
+          "line": 1016,
+          "symbol": "CadViewport::setReferencePickCallback",
+          "owner": "filletDialog"
+        },
+        {
+          "line": 1017,
+          "symbol": "CadViewport::cancelReferencePick",
+          "owner": "filletDialog"
+        },
+        {
+          "line": 1018,
+          "symbol": "CadViewport::setEdgePickChangedCallback",
+          "owner": "filletDialog"
+        },
+        {
+          "line": 1019,
+          "symbol": "CadViewport::setEdgePickPanelKeyCallbacks",
+          "owner": "filletDialog"
+        },
+        {
+          "line": 1020,
+          "symbol": "CadViewport::endEdgePick",
+          "owner": "filletDialog"
+        }
+      ]
+    },
+    {
+      "source": "forgeCad2026_dialogs_solids.cpp",
+      "target": "forgeCad2026_dialogs_fillet.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 86,
+          "symbol": "filletDialog",
+          "owner": "blendDialog"
+        }
+      ]
+    },
+    {
+      "source": "tests/test_advanced_fillets.h",
+      "target": "forgeCad2026_dialogs_fillet.cpp",
+      "kind": "call",
+      "count": 2,
+      "sites": [
+        {
+          "line": 87,
+          "symbol": "filletDialog",
+          "owner": "ViewportInteractionTest::advancedFillets"
+        },
+        {
+          "line": 233,
+          "symbol": "filletDialog",
+          "owner": "ViewportInteractionTest::advancedFillets"
+        }
+      ]
+    },
+    {
+      "source": "tests/test_fillet_refinements.h",
+      "target": "forgeCad2026_dialogs_fillet.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 200,
+          "symbol": "filletDialog",
+          "owner": "ViewportInteractionTest::filletRefinements"
+        }
+      ]
+    },
+    {
+      "source": "tests/test_fillet_selection_review.h",
+      "target": "forgeCad2026_dialogs_fillet.cpp",
+      "kind": "call",
+      "count": 2,
+      "sites": [
+        {
+          "line": 126,
+          "symbol": "filletDialog",
+          "owner": "ViewportInteractionTest::filletSelectionReviewRegressions"
+        },
+        {
+          "line": 231,
+          "symbol": "filletDialog",
+          "owner": "ViewportInteractionTest::filletSelectionReviewRegressions"
+        }
+      ]
+    }
+  ],
+  "nodes": 778,
+  "edges": 11373
+}

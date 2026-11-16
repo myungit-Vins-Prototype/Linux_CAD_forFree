@@ -1,0 +1,15 @@
+{
+  "exit": 0,
+  "seconds": 2.4183740589942317,
+  "command": [
+    "ctest",
+    "--test-dir",
+    "forgecad-release",
+    "--output-on-failure",
+    "--parallel",
+    "1",
+    "-V",
+    "-R",
+    "^forgecad_(fillet_selection_review|function_panels|ui_foreground_theme)_tests$"
+  ]
+}

@@ -109,8 +109,8 @@ ctest --test-dir forgecad-release --output-on-failure
 ## Ultimi interventi — esiti consolidati
 
 **16/11 — UI9/UI10 verificate,33rilievi corretti.**
-Palette Sezione/massa e altezza Sezione;4wrapper tolti,6query conservate,7legacy aperte.
-App/12CTest/74Wayland/appunti/mappa PASS; kernel invariato. NuovaCI dopo push.
+Palette Sezione/massa/Raccordo e altezza Sezione;4wrapper tolti,6query conservate,7legacy aperte.
+App/12CTest+3mirati/74Wayland/appunti/mappa PASS; nuovaCI dopo push.
 Wayland schede:timeout, sessione bloccata; offscreen PASS.
 [Prove e limiti](docs/review-ui-colori-api-2026-11-16.md).
 
