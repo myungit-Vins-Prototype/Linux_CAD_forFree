@@ -1,0 +1,39 @@
+from pathlib import Path
+import subprocess,json,re,hashlib,sys,xml.etree.ElementTree as ET
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/ci-sheet-fix/root');P=R/'docs/ci-sheet-join-github-prove-2026-11-16';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+(R/'CLAUDE.md').read_text();j=json.loads((T/'github-final.json').read_text());assert j['status']=='completed' and j['conclusion']=='success';assert len(j['jobs'])==2
+commit=j['headSha'];assert subprocess.check_output(['git','rev-parse','HEAD'],cwd=R,text=True).strip()==commit
+for job in j['jobs']:
+ assert job['conclusion']=='success';steps={s['name']:s for s in job['steps']}
+ for name in ["Compila l'applicazione e tutti i test configurati",'Esegui i test']:assert steps[name]['conclusion']=='success'
+assert not P.exists();P.mkdir();(P/'run.json').write_text(json.dumps(j,indent=2)+'\n')
+results={}
+for key in ['linux','mac']:
+ artifacts=T/('github-'+key+'-artifacts');logs=list(artifacts.rglob('ctest.log'));assert len(logs)==1,logs
+ raw=logs[0].read_text();assert '100% tests passed, 0 tests failed out of' in raw
+ match=re.search(r'100% tests passed, 0 tests failed out of (\d+)',raw);assert match
+ results[key]={'suites_passed':int(match.group(1)),'tests_failed':0}
+ for name in ['ctest.log','ctest.xml','configure.log','build.log']:
+  files=list(artifacts.rglob(name));assert len(files)==1,(key,name,files);(P/(key+'-'+name)).write_bytes(files[0].read_bytes())
+ assert 'OffsetLoftExtendedSeamsTrimBoth' not in raw or '[FAILED]' not in raw
+(P/'summary.json').write_text(json.dumps({'code_commit':commit,'url':j['url'],'platforms':results,'workflow_sha256':sha(R/'.github/workflows/ci.yml'),'code_sources':json.loads((T/'integrated-sources.json').read_text())},indent=2)+'\n')
+(P/'README.txt').write_text('Actual GitHub CI result for code commit '+commit+'. Linux and macOS builds and all configured tests passed. Logs fetched from that exact Actions run; no local result substituted for remote verification. The later documentation-only commit records this evidence with [skip ci]; application/kernel/tests/workflow remain byte-identical to the verified code commit. No failure is suppressed and no code build is skipped.\n')
+files=sorted(p for p in P.iterdir() if p.is_file());(P/'SHA256SUMS').write_text(''.join(sha(f)+'  '+f.name+'\n' for f in files))
+line='CI GitHub finale: ['+str(j['databaseId'])+']('+j['url']+'), commit `'+commit+'`: **build e test PASS su Linux e macOS**. Linux '+str(results['linux']['suites_passed'])+'/'+str(results['linux']['suites_passed'])+'suite; macOS '+str(results['mac']['suites_passed'])+'/'+str(results['mac']['suites_passed'])+'suite. [Log e metadati](ci-sheet-join-github-prove-2026-11-16/README.txt). Il commit successivo contiene soltanto questa registrazione documentale e usa `[skip ci]`; codice, test e workflow sono identici al commit verificato.'
+p=R/'docs/ci-sheet-join-2026-11-16.md';s=p.read_text();s=s.replace('Nuova CI GitHub da verificare dopo il push: non si attribuisce il verde al run precedente fallito.',line);p.write_text(s)
+p=R/'docs/ci-verifica-2026-11-16.md';s=p.read_text();s+='\n\n## Correzione e verifica remota conclusiva\n\n'+line+'\n';p.write_text(s)
+p=R/'docs/code-review-2026-11-15.md';s=p.read_text();s=s.replace('nuova CI da verificare dopo push.','CI GitHub sul commit `'+commit[:7]+'` PASS su Linux e macOS (build e tutte le suite); [log](ci-sheet-join-github-prove-2026-11-16/README.txt).');p.write_text(s)
+p=R/'CLAUDE.md';s=p.read_text();a=s.index('**16/11 — CI:');b=s.index('\n\n',a);s=s[:a]+'''**16/11 — CI: giunti corretti e push verificato.**
+'''+commit[:7]+''': build/test GitHub Linux/macOS PASS; K12 e OffsetLoft PASS.
+Tre Sol; app/483kernel/28CTest/33mirati e sanitizer PASS, cap invariati.
+Commit successivo solo prove/documenti. [Esiti/limiti](docs/ci-sheet-join-2026-11-16.md).'''+s[b:];assert len(s.encode())<=16384;assert len(re.findall(r'^\*\*',s,re.M))<=10;p.write_text(s)
+subprocess.run(['git','diff','--check'],cwd=R,check=True)
+# Verify the evidence commit cannot contain executable code, tests, generators or workflows.
+changed=subprocess.check_output(['git','diff','--name-only'],cwd=R,text=True).splitlines();allowed={'CLAUDE.md','docs/ci-sheet-join-2026-11-16.md','docs/ci-verifica-2026-11-16.md','docs/code-review-2026-11-15.md'};assert set(changed)==allowed,changed
+for f,h in json.loads((T/'integrated-sources.json').read_text()).items():assert sha(R/f)==h
+subprocess.run(['git','add','--',*sorted(allowed),str(P.relative_to(R))],cwd=R,check=True)
+staged=subprocess.check_output(['git','diff','--cached','--name-only'],cwd=R,text=True).splitlines();assert all(f in allowed or f.startswith(str(P.relative_to(R))+'/') for f in staged)
+with(T/'github-record-commit.log').open('w') as log:subprocess.run(['git','commit','-m','Registra la CI Linux e macOS completata con successo [skip ci]'],cwd=R,stdout=log,stderr=subprocess.STDOUT,check=True)
+with(T/'github-record-push.log').open('w') as log:subprocess.run(['git','push','origin','main'],cwd=R,stdout=log,stderr=subprocess.STDOUT,check=True)
+assert not subprocess.check_output(['git','status','--porcelain'],cwd=R,text=True).strip();head=subprocess.check_output(['git','rev-parse','HEAD'],cwd=R,text=True).strip();assert subprocess.check_output(['git','rev-parse','origin/main'],cwd=R,text=True).strip()==head
+print(json.dumps({'code_commit':commit,'record_commit':head,'ci':j['url'],'platforms':results,'working_tree_clean':True},indent=2))

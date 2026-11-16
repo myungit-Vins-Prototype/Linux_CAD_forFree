@@ -1,0 +1,19 @@
+#!/usr/bin/env python3
+"""Independent exact Fraction check of the actual precommit failed join."""
+import sys,types,json,hashlib,re
+from pathlib import Path
+root=Path(__file__).parent
+for name in ['fraction_common','verify_tensor_fraction']:
+ m=types.ModuleType(name);m.__file__=str(root/(name+'.py.txt'));sys.modules[name]=m;exec(compile(Path(m.__file__).read_text(),m.__file__,'exec'),m.__dict__)
+from verify_tensor_fraction import *
+def h(x):return float(x).hex()
+def cv(c):return dict(c,type='bspline',knots=list(map(h,c['knots'])),poles=[[h(v) for v in p] for p in c['poles']],weights=list(map(h,c['weights'])))
+def sf(s):return dict(s,uPoleCount=s['uCount'],vPoleCount=s['vCount'],uKnots=list(map(h,s['uKnots'])),vKnots=list(map(h,s['vKnots'])),poles=[[h(v) for v in p] for p in s['poles']],weights=list(map(h,s['weights'])))
+p=Path(sys.argv[1]);j=json.loads(p.read_text());r={'range':list(map(h,j['span'])),'budget':h(j['budget']),'curve':cv(j['curve']),'pcurve':cv(j['pcurve']),'surface':sf(j['surface'])}
+try:
+ v=verify(r);raise AssertionError(('Expected a genuine over-cap witness',v))
+except RuntimeError as e:
+ assert 'Exact midpoint witness exceeds budget' in str(e),str(e)
+ squared=F(str(e).split('squared=')[1]);cap=exact(r['budget']);assert squared>cap**2
+ o={'input_sha256':hashlib.sha256(p.read_bytes()).hexdigest(),'method':'Original IEEE coefficients reconstructed as exact Fractions, homogeneous original tensor composition; no production extractor/provider.','scope':'Actual failing precommit E(t) against actual carrier B and emitted candidate affine UV map. No claim of certification of Newton or source trim membership.','pass':False,'correct_rejection':True,'exact_witness':str(e),'residual_upper_at_witness_mm':outward(sqrt_hi(squared)),'witness_exceeds_cap_squared':True,'budget_mm':float(cap),'declared_production_upper_mm':j['error']}
+Path(sys.argv[2]).write_text(json.dumps(o,indent=2)+'\n');Path(sys.argv[2]+'.converted.json').write_text(json.dumps({'records':[r]},indent=2)+'\n');print(o)

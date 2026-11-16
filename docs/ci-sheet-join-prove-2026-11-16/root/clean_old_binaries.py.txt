@@ -1,0 +1,10 @@
+from pathlib import Path
+import json
+folders=['/tmp/boundary-review/core','/tmp/mitre-review','/tmp/sheet-join-review'];removed=[]
+for folder in folders:
+ for p in Path(folder).rglob('*'):
+  if not p.is_file() or p.is_symlink():continue
+  with p.open('rb') as f:elf=f.read(4)==b'\x7fELF'
+  if p.suffix in ['.o','.a'] or elf:
+   size=p.stat().st_size;p.unlink();removed.append({'path':str(p),'bytes':size})
+Path('/tmp/ci-sheet-fix/root/temp-binary-cleanup.json').write_text(json.dumps({'scope':'Only disposable compiled binaries/objects/archives of three completed review phases; all source/log/JSON/seals preserved','removed_files':removed,'bytes_freed':sum(x['bytes'] for x in removed)},indent=2)+'\n');print('Removed',len(removed),'rebuildable old artifacts; freed',round(sum(x['bytes'] for x in removed)/2**30,2),'GiB')

@@ -1,0 +1,9 @@
+from pathlib import Path
+import sys,json,hashlib
+sys.path.insert(0,'/tmp/boundary-review/root');from verify import members
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/ci-sheet-fix/root');a=members(Path('/tmp/ci-sheet-fix/core/before/libforgekernel.a'));b=members(R/'forgecad-release/kernel/libforgekernel.a');assert a.keys()==b.keys();changed=[f for f in a if a[f]!=b[f]];assert changed==['fk_sheet.cpp.o'],changed
+before=json.loads((T/'compile-commands-before.json').read_text());after=json.loads((R/'forgecad-release/compile_commands.json').read_text());assert len(before)==len(after)==811
+key=lambda c:(c['directory'],c['file'],c.get('output',''))
+x={key(c):c for c in before};y={key(c):c for c in after};assert x.keys()==y.keys();delta=[{'before':x[k],'after':y[k]} for k in x if x[k]!=y[k]];assert len(delta)==2
+for d in delta:assert 'forgekernel_sheet_join_validation_tests.dir' in d['after']['command'] and 'FORGEKERNEL_TEST_DATA_DIR' in d['after']['command']
+result={'kernel_objects':len(a),'unchanged_objects':len(a)-1,'changed_objects':changed,'compile_commands_count':len(after),'compile_changes':delta};(T/'build-provenance.json').write_text(json.dumps(result,indent=2)+'\n');print('Kernel92/93objects unchanged; onlysheet changed. CompileDB811records, two testcommands macro only.')

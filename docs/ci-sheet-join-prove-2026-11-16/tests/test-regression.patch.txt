@@ -1,0 +1,92 @@
+--- kernel/tests/test_sheet_join_validation.cpp	2026-11-16 16:37:01.711564637 +0100
++++ /tmp/ci-sheet-fix/tests/test_sheet_join_validation.cpp	2026-11-16 19:02:24.987747928 +0100
+@@ -1,3 +1,7 @@
++#include "fk_boolean.h"
++#include "fk_offset.h"
++#include "fk_tessellate.h"
++#include "fk_transform.h"
+ #include "fk_body_check.h"
+ #include "fk_body_io.h"
+ #include "fk_cancel.h"
+@@ -576,3 +580,81 @@
+         FK_CHECK(writeBodyBinary(source) == original);
+     }
+ }
++
++namespace {
++void checkNonIsoOffsetLoftContinuation(double scale, bool pose) {
++    std::ifstream input(std::string(FORGEKERNEL_TEST_DATA_DIR) + "/offset_loft.body", std::ios::binary);
++    FK_CHECK(bool(input));
++    if (!input) return;
++    std::stringstream data;
++    data << input.rdbuf();
++    const Body fixture = readBodyBinary(data.str());
++    const Transform3 transform = (pose ? Transform3::translation({7, -4, 2})
++        * Transform3::rotation({}, Vec3(1, 2, 3), .42) : Transform3()) * Transform3::scaling({}, scale);
++    const Body source = transformBody(fixture, transform);
++    const std::string sourceBytes = writeBodyBinary(source);
++    std::vector<FaceId> sides;
++    for (FaceId face : source.faces())
++        if (source.face(face).surface->type() == SurfaceType::BSpline) sides.push_back(face);
++    Body sheet = offsetFaces(source, sides, scale, 1e-7, true).body;
++    // This real offset seam is not an affine ISO on its original carriers.
++    // Its cubic UV coefficients vary in both coordinates, despite near-parallel
++    // endpoint normals. The ISO-only proof must not be selected from normals.
++    bool foundNonIso = false;
++    for (EdgeId id : sheet.edges()) {
++        if (sheet.isLaminar(id)) continue;
++        for (FinId fin : {sheet.edge(id).forward, sheet.edge(id).backward}) {
++            const auto *pc = dynamic_cast<const BSplineCurve<2> *>(sheet.fin(fin).pcurve.get());
++            if (!pc || pc->poles().empty()) continue;
++            Vec2 minimum = pc->poles().front(), maximum = minimum;
++            for (const Vec2 &pole : pc->poles()) for (int axis = 0; axis < 2; ++axis) {
++                minimum[axis] = std::min(minimum[axis], pole[axis]);
++                maximum[axis] = std::max(maximum[axis], pole[axis]);
++            }
++            foundNonIso = foundNonIso || (maximum.x() - minimum.x() > 1e-4 && maximum.y() - minimum.y() > 1e-4);
++        }
++    }
++    FK_CHECK(foundNonIso);
++    const Transform3 inverse = transform.inverted();
++    for (bool upper : {true, false}) {
++        std::vector<EdgeId> ring;
++        for (EdgeId id : sheet.edges()) {
++            if (!sheet.isLaminar(id)) continue;
++            const Edge &edge = sheet.edge(id);
++            const Vec3 middle = inverse.applyToPoint(edge.curve->point(.5 * (edge.range.lo + edge.range.hi)));
++            if (upper ? middle.y() > 15 : middle.y() < 0) ring.push_back(id);
++        }
++        FK_CHECK(ring.size() == 6);
++        const Body before = sheet;
++        const std::string bytes = writeBodyBinary(before);
++        BodyHistory history;
++        sheet = extendSheet(before, ring, scale * (upper ? 3 : 2), false, &history);
++        FK_CHECK(writeBodyBinary(before) == bytes);
++        FK_CHECK(checkBody(sheet, {true, true}).empty());
++        FK_CHECK(history.operandCount() == 1);
++        for (FaceId id : before.faces()) FK_CHECK(!history.descendants(EntityKind::Face, 0, id.index).empty());
++        for (EntityKind kind : {EntityKind::Edge, EntityKind::Face, EntityKind::Vertex}) {
++            const int count = history.resultSize(kind);
++            FK_CHECK(count > 0);
++            for (int id = 0; id < count; ++id) for (const auto &origin : history.origins(kind, id)) {
++                FK_CHECK(origin.operand == 0);
++                FK_CHECK(origin.index >= 0 && origin.index < history.operandSize(0, origin.kind));
++            }
++        }
++        FK_CHECK(checkBody(readBodyBinary(writeBodyBinary(sheet)), {true, true}).empty());
++        FK_CHECK(tessellate(sheet, {}).failedFaces == 0);
++        exportCase("loft-noniso-" + std::to_string(scale) + (pose ? "-posed-" : "-base-")
++            + (upper ? "upper" : "lower"), before, sheet, &history);
++    }
++    FK_CHECK(writeBodyBinary(source) == sourceBytes);
++    const Body plane = transformBody(makePlaneSheet(Frame3({0, 21, 0}, {0, 1, 0}, {1, 0, 0}), 12), transform);
++    const auto planePieces = splitSheet(plane, sheet), sheetPieces = splitSheet(sheet, plane);
++    FK_CHECK(planePieces.size() == 2 && sheetPieces.size() == 2);
++    for (const auto &piece : planePieces) FK_CHECK(checkBody(piece, {true, true}).empty());
++    for (const auto &piece : sheetPieces) FK_CHECK(checkBody(piece, {true, true}).empty());
++}
++}
++FK_TEST(SheetJoinNonIsoOffsetLoftOriginal) { checkNonIsoOffsetLoftContinuation(1, false); }
++FK_TEST(SheetJoinNonIsoOffsetLoftRigidPose) { checkNonIsoOffsetLoftContinuation(1, true); }
++FK_TEST(SheetJoinNonIsoOffsetLoftSmallScale) { checkNonIsoOffsetLoftContinuation(.25, false); }
++FK_TEST(SheetJoinNonIsoOffsetLoftLargeScalePose) { checkNonIsoOffsetLoftContinuation(2.5, true); }

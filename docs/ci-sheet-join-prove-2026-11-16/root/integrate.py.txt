@@ -1,0 +1,22 @@
+from pathlib import Path
+import hashlib,json,re
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/ci-sheet-fix/root');C=Path('/tmp/ci-sheet-fix/core');S=Path('/tmp/ci-sheet-fix/tests');sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+memory=(R/'CLAUDE.md').read_text();baseline=json.loads((T/'hashes-before.json').read_text());manifest=json.loads((C/'manifest.json').read_text());print(manifest)
+source=C/'kernel/fk_sheet.cpp';test=S/'test_sheet_join_validation.cpp'
+assert sha(R/'kernel/fk_sheet.cpp')==baseline['kernel/fk_sheet.cpp'];assert sha(R/'kernel/tests/test_sheet_join_validation.cpp')==baseline['kernel/tests/test_sheet_join_validation.cpp'];assert sha(test)=='451b30b1488b94f3e817449a27779bef85ad0d28abf2896cabd4e22e4b5ab763'
+assert sha(source)==__import__('sys').argv[1]
+(R/'kernel/fk_sheet.cpp').write_bytes(source.read_bytes());(R/'kernel/tests/test_sheet_join_validation.cpp').write_bytes(test.read_bytes())
+p=R/'kernel/CMakeLists.txt';s=p.read_text();key='target_link_libraries(forgekernel_sheet_join_validation_tests PRIVATE forgekernel)';assert s.count(key)==1;s=s.replace(key,key+'\ntarget_compile_definitions(forgekernel_sheet_join_validation_tests PRIVATE\n    FORGEKERNEL_TEST_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/tests/data")');p.write_text(s)
+p=R/'tools/generate_architecture.py';s=p.read_text();lines=s.splitlines(True)
+for i,line in enumerate(lines):
+ if line.startswith(" 'kernel/fk_sheet.cpp':"):
+  lines[i]=" 'kernel/fk_sheet.cpp': ('kernel', 'Taglio, rifilo ed estensione di lamine; offset NURBS planari certificati. Famiglia ISO scelta dalle pcurve sorgenti originali con limite fisico continuo e ancore per incidenza; giunti ISO verificati sui due supporti a cap fisso e fin ricontrollate dopo build/unify. Sorgenti nonISO, anche quasi tangenti, usano Newton campionato; certificati ISO falliti restano terminali.'),\n"
+ if line.startswith(" 'kernel/tests/test_sheet_join_validation.cpp':"):
+  lines[i]=" 'kernel/tests/test_sheet_join_validation.cpp': ('tests', 'Giunti ISO NURBS: prove continue, cap fisso e negativi per picchi/gap; ancore e genealogia, codec e cancellazione. Offset loft con pcurve nonISO quasi tangenti: quattro varianti pubbliche, pose/scale, doppia estensione e taglio reciproco, sorgente immutabile.'),\n"
+p.write_text(''.join(lines))
+files=['kernel/fk_sheet.cpp','kernel/tests/test_sheet_join_validation.cpp','kernel/CMakeLists.txt','tools/generate_architecture.py'];(T/'integrated-sources.json').write_text(json.dumps({f:sha(R/f) for f in files},indent=2)+'\n')
+a=memory.index('**16/11 — CI:');b=memory.index('\n\n',a);memory=memory[:a]+'''**16/11 — CI: correzione giunti integrata, verifiche in corso.**
+c44975e: build Linux/macOS e K12 PASS; regressione OffsetLoft riprodotta.
+Tre agenti Sol: famiglia dalle pcurve originali e ancore per incidenza, cap invariati.
+Build completa/runner/nuova CI da concludere. [Stato/prove](docs/ci-sheet-join-2026-11-16.md).'''+memory[b:];assert len(memory.encode())<=16384;assert len(re.findall(r'^\*\*',memory,re.M))<=10;(R/'CLAUDE.md').write_text(memory)
+print('Integrated',json.loads((T/'integrated-sources.json').read_text()))

@@ -1,0 +1,54 @@
+[
+  {
+    "path": "/tmp/ci-sheet-fix/tests/test_sheet_join_validation.cpp",
+    "sha256": "451b30b1488b94f3e817449a27779bef85ad0d28abf2896cabd4e22e4b5ab763"
+  },
+  {
+    "path": "/tmp/ci-sheet-fix/tests/test_exact_regression.cpp",
+    "sha256": "af46e84651120d67b8d41f7b32a613895937e7844da057e84b701d58dd6cd8ab"
+  },
+  {
+    "path": "/tmp/ci-sheet-fix/tests/test_newton_fin_exports.cpp",
+    "sha256": "393da578911f069a25ad2ee7b384551fae97e71a664ffe8b61a0d9e6e553b90b"
+  },
+  {
+    "path": "/tmp/ci-sheet-fix/tests/fk_sheet.candidate-final.cpp",
+    "sha256": "b99a70318f2cf7dcd6b24e646d8976bd287f6622ed9cf4accab968403380afbc"
+  },
+  {
+    "path": "/tmp/ci-sheet-fix/tests/libforgekernel-baseline.a",
+    "sha256": "6bbbea1da27ee01943529ab2f1c2176728f71d414bb6521d141d38d6e90f25ad"
+  },
+  {
+    "path": "/tmp/ci-sheet-fix/core/before/fk_sheet.cpp",
+    "sha256": "8e9bd9d6c1d61bf9e8a189e783d6803510c3c61f07ed28c8e5b82f2efa457e2f"
+  },
+  {
+    "path": "/tmp/ci-sheet-fix/core/candidate-sheet.o",
+    "sha256": "7083b3a7dc5943f408d3f61eab42c1dd5ff99750fe2f320f493082f62f690190"
+  },
+  {
+    "path": "/tmp/ci-sheet-fix/tests/new-join-tests-final",
+    "sha256": "5880d8c6608ce7c3188af0defe92a9ed54c6c804d042b230e2ca9d8cde1b7d68"
+  },
+  {
+    "path": "/tmp/ci-sheet-fix/tests/new-join-tests-final-clang",
+    "sha256": "533b286b4e5b5549e19a5094f65df242fe0059faad88d9a196e5e690c9dbeb76"
+  },
+  {
+    "path": "/tmp/ci-sheet-fix/tests/new-join-tests-final-san",
+    "sha256": "38bea57c7261ad98033d39a20fff1806a8409a5e08b0683f24322eb83357446c"
+  },
+  {
+    "path": "/tmp/ci-sheet-fix/tests/actual-newton-fins.json",
+    "sha256": "d3f0b7ebb5a75624155d0a4b2b791fb91cacb1da81efb3ff6a303e334bba5417"
+  },
+  {
+    "path": "/tmp/ci-sheet-fix/tests/offset_loft.fixture.body",
+    "sha256": "37b2fb961d29f86e29913643e3259eb060e4ca1b4c3d9436269644125f5270d9"
+  },
+  {
+    "path": "/tmp/ci-sheet-fix/tests/test_offset.original.cpp",
+    "sha256": "95dee097ee9cf6a20c1e279040797c8becb51ef2c5806f43e334ebb35610eda4"
+  }
+]

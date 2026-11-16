@@ -1,0 +1,1640 @@
+{
+  "nodes": [
+    {
+      "id": "kernel/fk_offset.cpp",
+      "group": "kernel",
+      "description": "Superfici e bordi a distanza; divisione esatta delle sole pieghe C0, nodi lisci conservati, solve uniforme regolarizzato sui bordi quasi tangenti, intersezioni stabilizzate per bordo con pesi distinti per precisione e arresto sul residuo 3D verificato, budget locali, domini derivati dalle SP-curve esatte senza celle terminali artificiali, sezioni circolari analitiche e vertici di cucitura conservati nei supporti sostitutivi dello sformo, rifilatura e provenienza. Costruzioni analitiche autorizzate dai supporti e da bounds geometrici uniformi, regolarita toroidale sul dominio periodico e raffinamento curve con cancellazione cooperativa e fallimenti atomici; offset di estrusioni/rivoluzioni NURBS con limite continuo, callback generiche ancora campionate. Offset di singola faccia estrusa e SP-curve affine certificato dagli originali separati; provenienza esplicita e ricontrollo delle cubiche realmente emesse. Ricostruzioni UV Plane con metrica certificata in mm, ricontrollo delle fin effettive da AssemblyMap e budget/conteggi invariati. Helper interni Plane per costruzione e verifica delle pcurve con metrica fisica, budget transazionali e ricontrollo dei coefficienti effettivi.",
+      "lines": 2630,
+      "symbols": [
+        "ForgeCad::Kernel::bezier",
+        "ForgeCad::Kernel::circleAxialError",
+        "ForgeCad::Kernel::circleConstructionRoundoff",
+        "ForgeCad::Kernel::clampPeriodic",
+        "ForgeCad::Kernel::clampedCubic",
+        "ForgeCad::Kernel::clampedKnots",
+        "ForgeCad::Kernel::creasedKnotLines",
+        "ForgeCad::Kernel::derivative",
+        "ForgeCad::Kernel::detail::fitPCurveOnPlane",
+        "ForgeCad::Kernel::detail::requirePCurveOnPlane",
+        "ForgeCad::Kernel::exactExtrusionOffset",
+        "ForgeCad::Kernel::faceNormal",
+        "ForgeCad::Kernel::fitCurve",
+        "ForgeCad::Kernel::fitCurveCertified",
+        "ForgeCad::Kernel::fitCurveImpl",
+        "ForgeCad::Kernel::fitPlanePCurveCertified",
+        "ForgeCad::Kernel::fullSplineRectangle",
+        "ForgeCad::Kernel::offsetBSpline",
+        "ForgeCad::Kernel::offsetBSplineC2",
+        "ForgeCad::Kernel::offsetCurve",
+        "ForgeCad::Kernel::offsetFaceHistory",
+        "ForgeCad::Kernel::offsetFaces",
+        "ForgeCad::Kernel::offsetJet",
+        "ForgeCad::Kernel::offsetJoinedFaces",
+        "ForgeCad::Kernel::offsetParameterBreaks",
+        "ForgeCad::Kernel::offsetSurface",
+        "ForgeCad::Kernel::offsetSurfaceImpl",
+        "ForgeCad::Kernel::projectLocal",
+        "ForgeCad::Kernel::replacementSectionCircle",
+        "ForgeCad::Kernel::requireCertifiedOffsetCurve",
+        "ForgeCad::Kernel::requireClosed",
+        "ForgeCad::Kernel::requireContinuousNormals",
+        "ForgeCad::Kernel::requireEmittedPlanePCurves",
+        "ForgeCad::Kernel::requireOffsetBelowCurvature",
+        "ForgeCad::Kernel::requirePlanePCurve",
+        "ForgeCad::Kernel::seamJet",
+        "ForgeCad::Kernel::seamPoint",
+        "ForgeCad::Kernel::sortedBreaks",
+        "ForgeCad::Kernel::splitAtC0Knots",
+        "ForgeCad::Kernel::splitOffsetFaces",
+        "ForgeCad::Kernel::splitTrimmedCreases",
+        "ForgeCad::Kernel::tolerantSeamPoint"
+      ]
+    },
+    {
+      "id": "kernel/fk_sheet.cpp",
+      "group": "kernel",
+      "description": "Taglio, rifilo ed estensione di lamine; offset NURBS planari certificati. Giunti tangenti isoparametrici con fit continuo sui due supporti, dominio da poli UV originali e cap fisso; fin effettive ricontrollate dopo assemblaggio/unificazione tramite identita e genealogia. Continuazione Newton trasversa e altri fallback restano campionati.",
+      "lines": 901,
+      "symbols": [
+        "ForgeCad::Kernel::arcParameter",
+        "ForgeCad::Kernel::detail::closestSheetPiece",
+        "ForgeCad::Kernel::distanceToSheet",
+        "ForgeCad::Kernel::emittedSplineJoins",
+        "ForgeCad::Kernel::extendBSpline",
+        "ForgeCad::Kernel::extendBSplineSurface",
+        "ForgeCad::Kernel::extendPlanarFace",
+        "ForgeCad::Kernel::extendSheet",
+        "ForgeCad::Kernel::joinSplineExtensions",
+        "ForgeCad::Kernel::makePlaneSheet",
+        "ForgeCad::Kernel::mix",
+        "ForgeCad::Kernel::requireSplineJoin",
+        "ForgeCad::Kernel::requireUnifiedSplineJoins",
+        "ForgeCad::Kernel::trimSheet"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "source": "kernel/fk_offset.cpp",
+      "target": "kernel/fk_offset.cpp",
+      "kind": "call",
+      "count": 221,
+      "sites": [
+        {
+          "line": 75,
+          "symbol": "ForgeCad::Kernel::OffsetJet::OffsetJet",
+          "owner": "ForgeCad::Kernel::offsetJet"
+        },
+        {
+          "line": 82,
+          "symbol": "ForgeCad::Kernel::offsetJet::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:81:21)::operator()",
+          "owner": "ForgeCad::Kernel::offsetJet"
+        },
+        {
+          "line": 103,
+          "symbol": "ForgeCad::Kernel::OffsetJet::OffsetJet",
+          "owner": "ForgeCad::Kernel::offsetJet"
+        },
+        {
+          "line": 150,
+          "symbol": "ForgeCad::Kernel::creasedKnotLines::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:125:24)::operator()",
+          "owner": "ForgeCad::Kernel::creasedKnotLines"
+        },
+        {
+          "line": 152,
+          "symbol": "ForgeCad::Kernel::creasedKnotLines::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:125:24)::operator()",
+          "owner": "ForgeCad::Kernel::creasedKnotLines"
+        },
+        {
+          "line": 158,
+          "symbol": "ForgeCad::Kernel::creasedKnotLines",
+          "owner": "ForgeCad::Kernel::requireContinuousNormals"
+        },
+        {
+          "line": 160,
+          "symbol": "ForgeCad::Kernel::InternalNormalDiscontinuity::domain_error",
+          "owner": "ForgeCad::Kernel::requireContinuousNormals"
+        },
+        {
+          "line": 185,
+          "symbol": "ForgeCad::Kernel::requireOffsetBelowCurvature::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:184:29)::operator()",
+          "owner": "ForgeCad::Kernel::requireOffsetBelowCurvature"
+        },
+        {
+          "line": 190,
+          "symbol": "ForgeCad::Kernel::requireOffsetBelowCurvature::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:184:29)::operator()",
+          "owner": "ForgeCad::Kernel::requireOffsetBelowCurvature"
+        },
+        {
+          "line": 295,
+          "symbol": "ForgeCad::Kernel::requireContinuousNormals",
+          "owner": "ForgeCad::Kernel::offsetBSplineC2"
+        },
+        {
+          "line": 296,
+          "symbol": "ForgeCad::Kernel::offsetParameterBreaks",
+          "owner": "ForgeCad::Kernel::offsetBSplineC2"
+        },
+        {
+          "line": 296,
+          "symbol": "ForgeCad::Kernel::sortedBreaks",
+          "owner": "ForgeCad::Kernel::offsetBSplineC2"
+        },
+        {
+          "line": 297,
+          "symbol": "ForgeCad::Kernel::offsetParameterBreaks",
+          "owner": "ForgeCad::Kernel::offsetBSplineC2"
+        },
+        {
+          "line": 297,
+          "symbol": "ForgeCad::Kernel::sortedBreaks",
+          "owner": "ForgeCad::Kernel::offsetBSplineC2"
+        },
+        {
+          "line": 329,
+          "symbol": "ForgeCad::Kernel::offsetBSplineC2::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:307:25)::operator()",
+          "owner": "ForgeCad::Kernel::offsetBSplineC2"
+        },
+        {
+          "line": 348,
+          "symbol": "ForgeCad::Kernel::OffsetJet::operator=",
+          "owner": "ForgeCad::Kernel::offsetBSplineC2"
+        },
+        {
+          "line": 348,
+          "symbol": "ForgeCad::Kernel::offsetJet",
+          "owner": "ForgeCad::Kernel::offsetBSplineC2"
+        },
+        {
+          "line": 375,
+          "symbol": "ForgeCad::Kernel::clampedKnots",
+          "owner": "ForgeCad::Kernel::offsetBSplineC2"
+        },
+        {
+          "line": 380,
+          "symbol": "ForgeCad::Kernel::offsetBSplineC2::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:328:24)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:364:63)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:372:34)::operator()",
+          "owner": "ForgeCad::Kernel::offsetBSplineC2"
+        },
+        {
+          "line": 381,
+          "symbol": "ForgeCad::Kernel::clampedCubic",
+          "owner": "ForgeCad::Kernel::offsetBSplineC2"
+        },
+        {
+          "line": 381,
+          "symbol": "ForgeCad::Kernel::offsetBSplineC2::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:328:24)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:364:63)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:372:34)::operator()",
+          "owner": "ForgeCad::Kernel::offsetBSplineC2"
+        },
+        {
+          "line": 387,
+          "symbol": "ForgeCad::Kernel::offsetBSplineC2::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:328:24)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:364:63)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:372:34)::operator()",
+          "owner": "ForgeCad::Kernel::offsetBSplineC2"
+        },
+        {
+          "line": 388,
+          "symbol": "ForgeCad::Kernel::clampedCubic",
+          "owner": "ForgeCad::Kernel::offsetBSplineC2"
+        },
+        {
+          "line": 388,
+          "symbol": "ForgeCad::Kernel::offsetBSplineC2::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:328:24)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:364:63)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:372:34)::operator()",
+          "owner": "ForgeCad::Kernel::offsetBSplineC2"
+        },
+        {
+          "line": 393,
+          "symbol": "ForgeCad::Kernel::clampedCubic",
+          "owner": "ForgeCad::Kernel::offsetBSplineC2"
+        },
+        {
+          "line": 415,
+          "symbol": "ForgeCad::Kernel::offsetBSplineC2::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:328:24)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:406:28)::operator()",
+          "owner": "ForgeCad::Kernel::offsetBSplineC2"
+        },
+        {
+          "line": 434,
+          "symbol": "ForgeCad::Kernel::offsetBSplineC2::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:328:24)::operator()",
+          "owner": "ForgeCad::Kernel::offsetBSplineC2"
+        },
+        {
+          "line": 449,
+          "symbol": "ForgeCad::Kernel::offsetBSplineC2::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:424:30)::operator()",
+          "owner": "ForgeCad::Kernel::offsetBSplineC2"
+        },
+        {
+          "line": 450,
+          "symbol": "ForgeCad::Kernel::offsetBSplineC2::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:298:20)::operator()",
+          "owner": "ForgeCad::Kernel::offsetBSplineC2"
+        },
+        {
+          "line": 463,
+          "symbol": "ForgeCad::Kernel::offsetBSplineC2::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:424:30)::operator()",
+          "owner": "ForgeCad::Kernel::offsetBSplineC2"
+        },
+        {
+          "line": 467,
+          "symbol": "ForgeCad::Kernel::offsetBSplineC2::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:457:39)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:461:36)::operator()",
+          "owner": "ForgeCad::Kernel::offsetBSplineC2"
+        },
+        {
+          "line": 468,
+          "symbol": "ForgeCad::Kernel::offsetBSplineC2::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:457:39)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:461:36)::operator()",
+          "owner": "ForgeCad::Kernel::offsetBSplineC2"
+        },
+        {
+          "line": 469,
+          "symbol": "ForgeCad::Kernel::offsetBSplineC2::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:457:39)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:461:36)::operator()",
+          "owner": "ForgeCad::Kernel::offsetBSplineC2"
+        },
+        {
+          "line": 522,
+          "symbol": "ForgeCad::Kernel::requireContinuousNormals",
+          "owner": "ForgeCad::Kernel::offsetBSpline"
+        },
+        {
+          "line": 524,
+          "symbol": "ForgeCad::Kernel::offsetParameterBreaks",
+          "owner": "ForgeCad::Kernel::offsetBSpline"
+        },
+        {
+          "line": 524,
+          "symbol": "ForgeCad::Kernel::sortedBreaks",
+          "owner": "ForgeCad::Kernel::offsetBSpline"
+        },
+        {
+          "line": 525,
+          "symbol": "ForgeCad::Kernel::offsetParameterBreaks",
+          "owner": "ForgeCad::Kernel::offsetBSpline"
+        },
+        {
+          "line": 525,
+          "symbol": "ForgeCad::Kernel::sortedBreaks",
+          "owner": "ForgeCad::Kernel::offsetBSpline"
+        },
+        {
+          "line": 535,
+          "symbol": "ForgeCad::Kernel::offsetJet",
+          "owner": "ForgeCad::Kernel::offsetBSpline"
+        },
+        {
+          "line": 546,
+          "symbol": "ForgeCad::Kernel::bezier",
+          "owner": "ForgeCad::Kernel::offsetBSpline"
+        },
+        {
+          "line": 547,
+          "symbol": "ForgeCad::Kernel::bezier",
+          "owner": "ForgeCad::Kernel::offsetBSpline"
+        },
+        {
+          "line": 558,
+          "symbol": "ForgeCad::Kernel::offsetBSpline::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:527:28)::operator()",
+          "owner": "ForgeCad::Kernel::offsetBSpline"
+        },
+        {
+          "line": 560,
+          "symbol": "ForgeCad::Kernel::offsetBSpline::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:523:20)::operator()",
+          "owner": "ForgeCad::Kernel::offsetBSpline"
+        },
+        {
+          "line": 560,
+          "symbol": "ForgeCad::Kernel::offsetBSpline::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:544:31)::operator()",
+          "owner": "ForgeCad::Kernel::offsetBSpline"
+        },
+        {
+          "line": 564,
+          "symbol": "ForgeCad::Kernel::offsetBSpline::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:555:39)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:559:36)::operator()",
+          "owner": "ForgeCad::Kernel::offsetBSpline"
+        },
+        {
+          "line": 565,
+          "symbol": "ForgeCad::Kernel::offsetBSpline::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:555:39)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:559:36)::operator()",
+          "owner": "ForgeCad::Kernel::offsetBSpline"
+        },
+        {
+          "line": 566,
+          "symbol": "ForgeCad::Kernel::offsetBSpline::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:555:39)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:559:36)::operator()",
+          "owner": "ForgeCad::Kernel::offsetBSpline"
+        },
+        {
+          "line": 606,
+          "symbol": "ForgeCad::Kernel::offsetBSpline::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:527:28)::operator()",
+          "owner": "ForgeCad::Kernel::offsetBSpline"
+        },
+        {
+          "line": 618,
+          "symbol": "ForgeCad::Kernel::offsetBSpline::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:612:24)::operator()",
+          "owner": "ForgeCad::Kernel::offsetBSpline"
+        },
+        {
+          "line": 650,
+          "symbol": "ForgeCad::Kernel::circleAxialError",
+          "owner": "ForgeCad::Kernel::exactExtrusionOffset"
+        },
+        {
+          "line": 655,
+          "symbol": "ForgeCad::Kernel::circleConstructionRoundoff",
+          "owner": "ForgeCad::Kernel::exactExtrusionOffset"
+        },
+        {
+          "line": 746,
+          "symbol": "ForgeCad::Kernel::requirePlanePCurve",
+          "owner": "ForgeCad::Kernel::requireEmittedPlanePCurves"
+        },
+        {
+          "line": 747,
+          "symbol": "ForgeCad::Kernel::requirePlanePCurve",
+          "owner": "ForgeCad::Kernel::requireEmittedPlanePCurves"
+        },
+        {
+          "line": 759,
+          "symbol": "ForgeCad::Kernel::fitCurve",
+          "owner": "ForgeCad::Kernel::offsetCurve"
+        },
+        {
+          "line": 761,
+          "symbol": "ForgeCad::Kernel::fitCurveCertified",
+          "owner": "ForgeCad::Kernel::offsetCurve"
+        },
+        {
+          "line": 762,
+          "symbol": "ForgeCad::Kernel::requireCertifiedOffsetCurve",
+          "owner": "ForgeCad::Kernel::offsetCurve"
+        },
+        {
+          "line": 806,
+          "symbol": "ForgeCad::Kernel::clampPeriodic",
+          "owner": "ForgeCad::Kernel::faceNormal"
+        },
+        {
+          "line": 807,
+          "symbol": "ForgeCad::Kernel::clampPeriodic",
+          "owner": "ForgeCad::Kernel::faceNormal"
+        },
+        {
+          "line": 846,
+          "symbol": "ForgeCad::Kernel::seamJet",
+          "owner": "ForgeCad::Kernel::projectLocal"
+        },
+        {
+          "line": 849,
+          "symbol": "ForgeCad::Kernel::projectLocal::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:844:29)::operator()",
+          "owner": "ForgeCad::Kernel::projectLocal"
+        },
+        {
+          "line": 852,
+          "symbol": "ForgeCad::Kernel::seamJet",
+          "owner": "ForgeCad::Kernel::projectLocal"
+        },
+        {
+          "line": 861,
+          "symbol": "ForgeCad::Kernel::projectLocal::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:844:29)::operator()",
+          "owner": "ForgeCad::Kernel::projectLocal"
+        },
+        {
+          "line": 865,
+          "symbol": "ForgeCad::Kernel::projectLocal::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:844:29)::operator()",
+          "owner": "ForgeCad::Kernel::projectLocal"
+        },
+        {
+          "line": 892,
+          "symbol": "ForgeCad::Kernel::projectLocal",
+          "owner": "ForgeCad::Kernel::tolerantSeamPoint"
+        },
+        {
+          "line": 894,
+          "symbol": "ForgeCad::Kernel::seamJet",
+          "owner": "ForgeCad::Kernel::tolerantSeamPoint"
+        },
+        {
+          "line": 950,
+          "symbol": "ForgeCad::Kernel::projectLocal",
+          "owner": "ForgeCad::Kernel::seamPoint"
+        },
+        {
+          "line": 952,
+          "symbol": "ForgeCad::Kernel::seamJet",
+          "owner": "ForgeCad::Kernel::seamPoint"
+        },
+        {
+          "line": 1020,
+          "symbol": "ForgeCad::Kernel::fullSplineRectangle",
+          "owner": "ForgeCad::Kernel::splitOffsetFaces"
+        },
+        {
+          "line": 1021,
+          "symbol": "ForgeCad::Kernel::creasedKnotLines",
+          "owner": "ForgeCad::Kernel::splitOffsetFaces"
+        },
+        {
+          "line": 1046,
+          "symbol": "ForgeCad::Kernel::splitAtC0Knots",
+          "owner": "ForgeCad::Kernel::splitOffsetFaces"
+        },
+        {
+          "line": 1084,
+          "symbol": "ForgeCad::Kernel::offsetFaceHistory",
+          "owner": "ForgeCad::Kernel::splitOffsetFaces"
+        },
+        {
+          "line": 1152,
+          "symbol": "ForgeCad::Kernel::fullSplineRectangle",
+          "owner": "ForgeCad::Kernel::splitTrimmedCreases"
+        },
+        {
+          "line": 1167,
+          "symbol": "ForgeCad::Kernel::creasedKnotLines",
+          "owner": "ForgeCad::Kernel::splitTrimmedCreases"
+        },
+        {
+          "line": 1178,
+          "symbol": "ForgeCad::Kernel::splitTrimmedCreases::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:1173:33)::operator()",
+          "owner": "ForgeCad::Kernel::splitTrimmedCreases"
+        },
+        {
+          "line": 1193,
+          "symbol": "ForgeCad::Kernel::splitTrimmedCreases::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:1173:33)::operator()",
+          "owner": "ForgeCad::Kernel::splitTrimmedCreases"
+        },
+        {
+          "line": 1202,
+          "symbol": "ForgeCad::Kernel::splitTrimmedCreases::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:1201:36)::operator()",
+          "owner": "ForgeCad::Kernel::splitTrimmedCreases"
+        },
+        {
+          "line": 1203,
+          "symbol": "ForgeCad::Kernel::splitTrimmedCreases::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:1175:35)::operator()",
+          "owner": "ForgeCad::Kernel::splitTrimmedCreases"
+        },
+        {
+          "line": 1203,
+          "symbol": "ForgeCad::Kernel::splitTrimmedCreases::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:1201:36)::operator()",
+          "owner": "ForgeCad::Kernel::splitTrimmedCreases"
+        },
+        {
+          "line": 1204,
+          "symbol": "ForgeCad::Kernel::splitTrimmedCreases::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:1175:35)::operator()",
+          "owner": "ForgeCad::Kernel::splitTrimmedCreases"
+        },
+        {
+          "line": 1204,
+          "symbol": "ForgeCad::Kernel::splitTrimmedCreases::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:1201:36)::operator()",
+          "owner": "ForgeCad::Kernel::splitTrimmedCreases"
+        },
+        {
+          "line": 1221,
+          "symbol": "ForgeCad::Kernel::offsetFaceHistory",
+          "owner": "ForgeCad::Kernel::splitTrimmedCreases"
+        },
+        {
+          "line": 1230,
+          "symbol": "ForgeCad::Kernel::splitAtC0Knots",
+          "owner": "ForgeCad::Kernel::splitTrimmedCreases"
+        },
+        {
+          "line": 1231,
+          "symbol": "ForgeCad::Kernel::splitAtC0Knots",
+          "owner": "ForgeCad::Kernel::splitTrimmedCreases"
+        },
+        {
+          "line": 1279,
+          "symbol": "ForgeCad::Kernel::sortedBreaks",
+          "owner": "ForgeCad::Kernel::fitCurveImpl"
+        },
+        {
+          "line": 1284,
+          "symbol": "ForgeCad::Kernel::fitCurveImpl::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:1267:26)::operator()",
+          "owner": "ForgeCad::Kernel::fitCurveImpl"
+        },
+        {
+          "line": 1295,
+          "symbol": "ForgeCad::Kernel::bezier",
+          "owner": "ForgeCad::Kernel::fitCurveImpl"
+        },
+        {
+          "line": 1298,
+          "symbol": "ForgeCad::Kernel::fitCurveImpl::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:1267:26)::operator()",
+          "owner": "ForgeCad::Kernel::fitCurveImpl"
+        },
+        {
+          "line": 1327,
+          "symbol": "ForgeCad::Kernel::derivative",
+          "owner": "ForgeCad::Kernel::fitCurveImpl"
+        },
+        {
+          "line": 1327,
+          "symbol": "ForgeCad::Kernel::fitCurveImpl::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:1267:26)::operator()",
+          "owner": "ForgeCad::Kernel::fitCurveImpl"
+        },
+        {
+          "line": 1334,
+          "symbol": "ForgeCad::Kernel::derivative",
+          "owner": "ForgeCad::Kernel::fitCurveImpl"
+        },
+        {
+          "line": 1334,
+          "symbol": "ForgeCad::Kernel::fitCurveImpl::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:1267:26)::operator()",
+          "owner": "ForgeCad::Kernel::fitCurveImpl"
+        },
+        {
+          "line": 1346,
+          "symbol": "ForgeCad::Kernel::fitCurveImpl",
+          "owner": "ForgeCad::Kernel::fitCurve"
+        },
+        {
+          "line": 1351,
+          "symbol": "ForgeCad::Kernel::fitCurveImpl",
+          "owner": "ForgeCad::Kernel::fitCurveCertified"
+        },
+        {
+          "line": 1359,
+          "symbol": "ForgeCad::Kernel::fitCurveImpl",
+          "owner": "ForgeCad::Kernel::fitPlanePCurveCertified"
+        },
+        {
+          "line": 1379,
+          "symbol": "ForgeCad::Kernel::fitPlanePCurveCertified",
+          "owner": "ForgeCad::Kernel::detail::fitPCurveOnPlane"
+        },
+        {
+          "line": 1383,
+          "symbol": "ForgeCad::Kernel::requirePlanePCurve",
+          "owner": "ForgeCad::Kernel::detail::fitPCurveOnPlane"
+        },
+        {
+          "line": 1392,
+          "symbol": "ForgeCad::Kernel::requirePlanePCurve",
+          "owner": "ForgeCad::Kernel::detail::requirePCurveOnPlane"
+        },
+        {
+          "line": 1451,
+          "symbol": "ForgeCad::Kernel::offsetSurfaceImpl::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:1444:33)::operator()",
+          "owner": "ForgeCad::Kernel::offsetSurfaceImpl"
+        },
+        {
+          "line": 1454,
+          "symbol": "ForgeCad::Kernel::offsetSurfaceImpl::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:1444:33)::operator()",
+          "owner": "ForgeCad::Kernel::offsetSurfaceImpl"
+        },
+        {
+          "line": 1482,
+          "symbol": "ForgeCad::Kernel::requireClosed",
+          "owner": "ForgeCad::Kernel::offsetSurfaceImpl"
+        },
+        {
+          "line": 1484,
+          "symbol": "ForgeCad::Kernel::exactExtrusionOffset",
+          "owner": "ForgeCad::Kernel::offsetSurfaceImpl"
+        },
+        {
+          "line": 1487,
+          "symbol": "ForgeCad::Kernel::fitCurveCertified",
+          "owner": "ForgeCad::Kernel::offsetSurfaceImpl"
+        },
+        {
+          "line": 1488,
+          "symbol": "ForgeCad::Kernel::fitCurve",
+          "owner": "ForgeCad::Kernel::offsetSurfaceImpl"
+        },
+        {
+          "line": 1505,
+          "symbol": "ForgeCad::Kernel::requireClosed",
+          "owner": "ForgeCad::Kernel::offsetSurfaceImpl"
+        },
+        {
+          "line": 1510,
+          "symbol": "ForgeCad::Kernel::fitCurveCertified",
+          "owner": "ForgeCad::Kernel::offsetSurfaceImpl"
+        },
+        {
+          "line": 1511,
+          "symbol": "ForgeCad::Kernel::fitCurve",
+          "owner": "ForgeCad::Kernel::offsetSurfaceImpl"
+        },
+        {
+          "line": 1518,
+          "symbol": "ForgeCad::Kernel::requireOffsetBelowCurvature",
+          "owner": "ForgeCad::Kernel::offsetSurfaceImpl"
+        },
+        {
+          "line": 1519,
+          "symbol": "ForgeCad::Kernel::offsetBSplineC2",
+          "owner": "ForgeCad::Kernel::offsetSurfaceImpl"
+        },
+        {
+          "line": 1520,
+          "symbol": "ForgeCad::Kernel::offsetBSpline",
+          "owner": "ForgeCad::Kernel::offsetSurfaceImpl"
+        },
+        {
+          "line": 1546,
+          "symbol": "ForgeCad::Kernel::offsetSurfaceImpl",
+          "owner": "ForgeCad::Kernel::offsetSurface"
+        },
+        {
+          "line": 1569,
+          "symbol": "ForgeCad::Kernel::splitOffsetFaces",
+          "owner": "ForgeCad::Kernel::offsetFaces"
+        },
+        {
+          "line": 1573,
+          "symbol": "ForgeCad::Kernel::splitTrimmedCreases",
+          "owner": "ForgeCad::Kernel::offsetFaces"
+        },
+        {
+          "line": 1576,
+          "symbol": "ForgeCad::Kernel::offsetFaces",
+          "owner": "ForgeCad::Kernel::offsetFaces"
+        },
+        {
+          "line": 1582,
+          "symbol": "ForgeCad::Kernel::offsetFaces",
+          "owner": "ForgeCad::Kernel::offsetFaces"
+        },
+        {
+          "line": 1656,
+          "symbol": "ForgeCad::Kernel::offsetFaces::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:1629:29)::operator()",
+          "owner": "ForgeCad::Kernel::offsetFaces"
+        },
+        {
+          "line": 1657,
+          "symbol": "ForgeCad::Kernel::offsetFaces::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:1629:29)::operator()",
+          "owner": "ForgeCad::Kernel::offsetFaces"
+        },
+        {
+          "line": 1676,
+          "symbol": "ForgeCad::Kernel::faceNormal",
+          "owner": "ForgeCad::Kernel::offsetFaces"
+        },
+        {
+          "line": 1701,
+          "symbol": "ForgeCad::Kernel::offsetFaces::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:1689:28)::operator()",
+          "owner": "ForgeCad::Kernel::offsetFaces"
+        },
+        {
+          "line": 1702,
+          "symbol": "ForgeCad::Kernel::offsetFaces::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:1689:28)::operator()",
+          "owner": "ForgeCad::Kernel::offsetFaces"
+        },
+        {
+          "line": 1711,
+          "symbol": "ForgeCad::Kernel::offsetSurface",
+          "owner": "ForgeCad::Kernel::offsetFaces"
+        },
+        {
+          "line": 1756,
+          "symbol": "ForgeCad::Kernel::faceNormal",
+          "owner": "ForgeCad::Kernel::offsetFaces"
+        },
+        {
+          "line": 1757,
+          "symbol": "ForgeCad::Kernel::faceNormal",
+          "owner": "ForgeCad::Kernel::offsetFaces"
+        },
+        {
+          "line": 1791,
+          "symbol": "ForgeCad::Kernel::faceNormal",
+          "owner": "ForgeCad::Kernel::offsetFaces"
+        },
+        {
+          "line": 1809,
+          "symbol": "ForgeCad::Kernel::offsetFaces::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:1781:23)::operator()",
+          "owner": "ForgeCad::Kernel::offsetFaces"
+        },
+        {
+          "line": 1820,
+          "symbol": "ForgeCad::Kernel::offsetFaces::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:1781:23)::operator()",
+          "owner": "ForgeCad::Kernel::offsetFaces"
+        },
+        {
+          "line": 1825,
+          "symbol": "ForgeCad::Kernel::offsetFaces::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:1781:23)::operator()",
+          "owner": "ForgeCad::Kernel::offsetFaces"
+        },
+        {
+          "line": 1827,
+          "symbol": "ForgeCad::Kernel::offsetFaces::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:1781:23)::operator()",
+          "owner": "ForgeCad::Kernel::offsetFaces"
+        },
+        {
+          "line": 1831,
+          "symbol": "ForgeCad::Kernel::seamPoint",
+          "owner": "ForgeCad::Kernel::offsetFaces"
+        },
+        {
+          "line": 1862,
+          "symbol": "ForgeCad::Kernel::faceNormal",
+          "owner": "ForgeCad::Kernel::offsetFaces"
+        },
+        {
+          "line": 1872,
+          "symbol": "ForgeCad::Kernel::offsetFaces::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:1826:29)::operator()",
+          "owner": "ForgeCad::Kernel::offsetFaces"
+        },
+        {
+          "line": 1873,
+          "symbol": "ForgeCad::Kernel::offsetFaces::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:1826:29)::operator()",
+          "owner": "ForgeCad::Kernel::offsetFaces"
+        },
+        {
+          "line": 1881,
+          "symbol": "ForgeCad::Kernel::faceNormal",
+          "owner": "ForgeCad::Kernel::offsetFaces"
+        },
+        {
+          "line": 1882,
+          "symbol": "ForgeCad::Kernel::faceNormal",
+          "owner": "ForgeCad::Kernel::offsetFaces"
+        },
+        {
+          "line": 1903,
+          "symbol": "ForgeCad::Kernel::tolerantSeamPoint",
+          "owner": "ForgeCad::Kernel::offsetFaces"
+        },
+        {
+          "line": 1905,
+          "symbol": "ForgeCad::Kernel::seamPoint",
+          "owner": "ForgeCad::Kernel::offsetFaces"
+        },
+        {
+          "line": 1925,
+          "symbol": "ForgeCad::Kernel::offsetFaces::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:1849:28)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:1916:37)::operator()",
+          "owner": "ForgeCad::Kernel::offsetFaces"
+        },
+        {
+          "line": 1936,
+          "symbol": "ForgeCad::Kernel::circleConstructionRoundoff",
+          "owner": "ForgeCad::Kernel::offsetFaces"
+        },
+        {
+          "line": 1943,
+          "symbol": "ForgeCad::Kernel::circleAxialError",
+          "owner": "ForgeCad::Kernel::offsetFaces"
+        },
+        {
+          "line": 1998,
+          "symbol": "ForgeCad::Kernel::offsetFaces::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:1849:28)::operator()",
+          "owner": "ForgeCad::Kernel::offsetFaces"
+        },
+        {
+          "line": 1999,
+          "symbol": "ForgeCad::Kernel::offsetFaces::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:1849:28)::operator()",
+          "owner": "ForgeCad::Kernel::offsetFaces"
+        },
+        {
+          "line": 2009,
+          "symbol": "ForgeCad::Kernel::offsetCurve",
+          "owner": "ForgeCad::Kernel::offsetFaces"
+        },
+        {
+          "line": 2035,
+          "symbol": "ForgeCad::Kernel::projectLocal",
+          "owner": "ForgeCad::Kernel::offsetFaces"
+        },
+        {
+          "line": 2042,
+          "symbol": "ForgeCad::Kernel::offsetFaces::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:2034:39)::operator()",
+          "owner": "ForgeCad::Kernel::offsetFaces"
+        },
+        {
+          "line": 2052,
+          "symbol": "ForgeCad::Kernel::fitPlanePCurveCertified",
+          "owner": "ForgeCad::Kernel::offsetFaces"
+        },
+        {
+          "line": 2053,
+          "symbol": "ForgeCad::Kernel::fitCurve",
+          "owner": "ForgeCad::Kernel::offsetFaces"
+        },
+        {
+          "line": 2059,
+          "symbol": "ForgeCad::Kernel::requirePlanePCurve",
+          "owner": "ForgeCad::Kernel::offsetFaces"
+        },
+        {
+          "line": 2091,
+          "symbol": "ForgeCad::Kernel::requireCertifiedOffsetCurve",
+          "owner": "ForgeCad::Kernel::offsetFaces"
+        },
+        {
+          "line": 2093,
+          "symbol": "ForgeCad::Kernel::requireEmittedPlanePCurves",
+          "owner": "ForgeCad::Kernel::offsetFaces"
+        },
+        {
+          "line": 2094,
+          "symbol": "ForgeCad::Kernel::offsetFaceHistory",
+          "owner": "ForgeCad::Kernel::offsetFaces"
+        },
+        {
+          "line": 2139,
+          "symbol": "ForgeCad::Kernel::offsetJoinedFaces::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:2130:26)::operator()",
+          "owner": "ForgeCad::Kernel::offsetJoinedFaces"
+        },
+        {
+          "line": 2141,
+          "symbol": "ForgeCad::Kernel::offsetJoinedFaces::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:2138:32)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:2140:28)::operator()",
+          "owner": "ForgeCad::Kernel::offsetJoinedFaces"
+        },
+        {
+          "line": 2145,
+          "symbol": "ForgeCad::Kernel::offsetSurface",
+          "owner": "ForgeCad::Kernel::offsetJoinedFaces"
+        },
+        {
+          "line": 2147,
+          "symbol": "ForgeCad::Kernel::offsetJoinedFaces::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:2138:32)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:2143:30)::operator()",
+          "owner": "ForgeCad::Kernel::offsetJoinedFaces"
+        },
+        {
+          "line": 2147,
+          "symbol": "ForgeCad::Kernel::replacementSectionCircle",
+          "owner": "ForgeCad::Kernel::offsetJoinedFaces"
+        },
+        {
+          "line": 2152,
+          "symbol": "ForgeCad::Kernel::offsetJoinedFaces::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:2130:26)::operator()",
+          "owner": "ForgeCad::Kernel::offsetJoinedFaces"
+        },
+        {
+          "line": 2166,
+          "symbol": "ForgeCad::Kernel::splitOffsetFaces",
+          "owner": "ForgeCad::Kernel::offsetJoinedFaces"
+        },
+        {
+          "line": 2167,
+          "symbol": "ForgeCad::Kernel::splitTrimmedCreases",
+          "owner": "ForgeCad::Kernel::offsetJoinedFaces"
+        },
+        {
+          "line": 2177,
+          "symbol": "ForgeCad::Kernel::offsetJoinedFaces",
+          "owner": "ForgeCad::Kernel::offsetJoinedFaces"
+        },
+        {
+          "line": 2184,
+          "symbol": "ForgeCad::Kernel::offsetJoinedFaces::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:2130:26)::operator()",
+          "owner": "ForgeCad::Kernel::offsetJoinedFaces"
+        },
+        {
+          "line": 2213,
+          "symbol": "ForgeCad::Kernel::offsetJoinedFaces::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:2206:23)::operator()",
+          "owner": "ForgeCad::Kernel::offsetJoinedFaces"
+        },
+        {
+          "line": 2233,
+          "symbol": "ForgeCad::Kernel::offsetJoinedFaces::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:2203:27)::operator()",
+          "owner": "ForgeCad::Kernel::offsetJoinedFaces"
+        },
+        {
+          "line": 2246,
+          "symbol": "ForgeCad::Kernel::offsetJoinedFaces::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:2213:23)::operator()",
+          "owner": "ForgeCad::Kernel::offsetJoinedFaces"
+        },
+        {
+          "line": 2255,
+          "symbol": "ForgeCad::Kernel::offsetJoinedFaces::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:2213:23)::operator()",
+          "owner": "ForgeCad::Kernel::offsetJoinedFaces"
+        },
+        {
+          "line": 2256,
+          "symbol": "ForgeCad::Kernel::offsetJoinedFaces::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:2213:23)::operator()",
+          "owner": "ForgeCad::Kernel::offsetJoinedFaces"
+        },
+        {
+          "line": 2259,
+          "symbol": "ForgeCad::Kernel::offsetJoinedFaces::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:2216:27)::operator()",
+          "owner": "ForgeCad::Kernel::offsetJoinedFaces"
+        },
+        {
+          "line": 2278,
+          "symbol": "ForgeCad::Kernel::offsetJoinedFaces::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:2206:23)::operator()",
+          "owner": "ForgeCad::Kernel::offsetJoinedFaces"
+        },
+        {
+          "line": 2282,
+          "symbol": "ForgeCad::Kernel::offsetJoinedFaces::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:2130:26)::operator()",
+          "owner": "ForgeCad::Kernel::offsetJoinedFaces"
+        },
+        {
+          "line": 2282,
+          "symbol": "ForgeCad::Kernel::offsetJoinedFaces::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:2149:28)::operator()",
+          "owner": "ForgeCad::Kernel::offsetJoinedFaces"
+        },
+        {
+          "line": 2287,
+          "symbol": "ForgeCad::Kernel::faceNormal",
+          "owner": "ForgeCad::Kernel::offsetJoinedFaces"
+        },
+        {
+          "line": 2290,
+          "symbol": "ForgeCad::Kernel::offsetJoinedFaces::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:2216:27)::operator()",
+          "owner": "ForgeCad::Kernel::offsetJoinedFaces"
+        },
+        {
+          "line": 2303,
+          "symbol": "ForgeCad::Kernel::offsetJoinedFaces::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:2206:23)::operator()",
+          "owner": "ForgeCad::Kernel::offsetJoinedFaces"
+        },
+        {
+          "line": 2308,
+          "symbol": "ForgeCad::Kernel::offsetJoinedFaces::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:2138:32)::operator()",
+          "owner": "ForgeCad::Kernel::offsetJoinedFaces"
+        },
+        {
+          "line": 2328,
+          "symbol": "ForgeCad::Kernel::tolerantSeamPoint",
+          "owner": "ForgeCad::Kernel::offsetJoinedFaces"
+        },
+        {
+          "line": 2329,
+          "symbol": "ForgeCad::Kernel::seamPoint",
+          "owner": "ForgeCad::Kernel::offsetJoinedFaces"
+        },
+        {
+          "line": 2332,
+          "symbol": "ForgeCad::Kernel::projectLocal",
+          "owner": "ForgeCad::Kernel::offsetJoinedFaces"
+        },
+        {
+          "line": 2335,
+          "symbol": "ForgeCad::Kernel::offsetJoinedFaces::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:2330:32)::operator()",
+          "owner": "ForgeCad::Kernel::offsetJoinedFaces"
+        },
+        {
+          "line": 2336,
+          "symbol": "ForgeCad::Kernel::offsetJoinedFaces::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:2105:24)::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:2105:24)",
+          "owner": "ForgeCad::Kernel::offsetJoinedFaces"
+        },
+        {
+          "line": 2357,
+          "symbol": "ForgeCad::Kernel::seamJet",
+          "owner": "ForgeCad::Kernel::offsetJoinedFaces"
+        },
+        {
+          "line": 2364,
+          "symbol": "ForgeCad::Kernel::tolerantSeamPoint",
+          "owner": "ForgeCad::Kernel::offsetJoinedFaces"
+        },
+        {
+          "line": 2365,
+          "symbol": "ForgeCad::Kernel::offsetJoinedFaces::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:2330:32)::operator()",
+          "owner": "ForgeCad::Kernel::offsetJoinedFaces"
+        },
+        {
+          "line": 2366,
+          "symbol": "ForgeCad::Kernel::offsetJoinedFaces::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:2105:24)::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:2105:24)",
+          "owner": "ForgeCad::Kernel::offsetJoinedFaces"
+        },
+        {
+          "line": 2402,
+          "symbol": "ForgeCad::Kernel::offsetJoinedFaces::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:2206:23)::operator()",
+          "owner": "ForgeCad::Kernel::offsetJoinedFaces"
+        },
+        {
+          "line": 2403,
+          "symbol": "ForgeCad::Kernel::offsetJoinedFaces::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:2206:23)::operator()",
+          "owner": "ForgeCad::Kernel::offsetJoinedFaces"
+        },
+        {
+          "line": 2407,
+          "symbol": "ForgeCad::Kernel::offsetJoinedFaces::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:2149:28)::operator()",
+          "owner": "ForgeCad::Kernel::offsetJoinedFaces"
+        },
+        {
+          "line": 2408,
+          "symbol": "ForgeCad::Kernel::offsetJoinedFaces::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:2130:26)::operator()",
+          "owner": "ForgeCad::Kernel::offsetJoinedFaces"
+        },
+        {
+          "line": 2410,
+          "symbol": "ForgeCad::Kernel::offsetJoinedFaces::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:2206:23)::operator()",
+          "owner": "ForgeCad::Kernel::offsetJoinedFaces"
+        },
+        {
+          "line": 2415,
+          "symbol": "ForgeCad::Kernel::offsetJoinedFaces::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:2149:28)::operator()",
+          "owner": "ForgeCad::Kernel::offsetJoinedFaces"
+        },
+        {
+          "line": 2432,
+          "symbol": "ForgeCad::Kernel::offsetJoinedFaces::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:2130:26)::operator()",
+          "owner": "ForgeCad::Kernel::offsetJoinedFaces"
+        },
+        {
+          "line": 2432,
+          "symbol": "ForgeCad::Kernel::offsetJoinedFaces::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:2404:31)::operator()",
+          "owner": "ForgeCad::Kernel::offsetJoinedFaces"
+        },
+        {
+          "line": 2444,
+          "symbol": "ForgeCad::Kernel::faceNormal",
+          "owner": "ForgeCad::Kernel::offsetJoinedFaces"
+        },
+        {
+          "line": 2444,
+          "symbol": "ForgeCad::Kernel::offsetJoinedFaces::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:2404:31)::operator()",
+          "owner": "ForgeCad::Kernel::offsetJoinedFaces"
+        },
+        {
+          "line": 2450,
+          "symbol": "ForgeCad::Kernel::offsetJoinedFaces::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:2404:31)::operator()",
+          "owner": "ForgeCad::Kernel::offsetJoinedFaces"
+        },
+        {
+          "line": 2452,
+          "symbol": "ForgeCad::Kernel::offsetJoinedFaces::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:2130:26)::operator()",
+          "owner": "ForgeCad::Kernel::offsetJoinedFaces"
+        },
+        {
+          "line": 2452,
+          "symbol": "ForgeCad::Kernel::seamJet",
+          "owner": "ForgeCad::Kernel::offsetJoinedFaces"
+        },
+        {
+          "line": 2459,
+          "symbol": "ForgeCad::Kernel::offsetJoinedFaces::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:2439:30)::operator()",
+          "owner": "ForgeCad::Kernel::offsetJoinedFaces"
+        },
+        {
+          "line": 2460,
+          "symbol": "ForgeCad::Kernel::offsetJoinedFaces::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:2439:30)::operator()",
+          "owner": "ForgeCad::Kernel::offsetJoinedFaces"
+        },
+        {
+          "line": 2466,
+          "symbol": "ForgeCad::Kernel::offsetJoinedFaces::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:2427:31)::operator()",
+          "owner": "ForgeCad::Kernel::offsetJoinedFaces"
+        },
+        {
+          "line": 2466,
+          "symbol": "ForgeCad::Kernel::offsetJoinedFaces::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:2439:30)::operator()",
+          "owner": "ForgeCad::Kernel::offsetJoinedFaces"
+        },
+        {
+          "line": 2475,
+          "symbol": "ForgeCad::Kernel::offsetJoinedFaces::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:2439:30)::operator()",
+          "owner": "ForgeCad::Kernel::offsetJoinedFaces"
+        },
+        {
+          "line": 2477,
+          "symbol": "ForgeCad::Kernel::offsetJoinedFaces::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:2427:31)::operator()",
+          "owner": "ForgeCad::Kernel::offsetJoinedFaces"
+        },
+        {
+          "line": 2477,
+          "symbol": "ForgeCad::Kernel::tolerantSeamPoint",
+          "owner": "ForgeCad::Kernel::offsetJoinedFaces"
+        },
+        {
+          "line": 2478,
+          "symbol": "ForgeCad::Kernel::offsetJoinedFaces::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:2427:31)::operator()",
+          "owner": "ForgeCad::Kernel::offsetJoinedFaces"
+        },
+        {
+          "line": 2478,
+          "symbol": "ForgeCad::Kernel::seamPoint",
+          "owner": "ForgeCad::Kernel::offsetJoinedFaces"
+        },
+        {
+          "line": 2489,
+          "symbol": "ForgeCad::Kernel::offsetJoinedFaces::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:2138:32)::operator()",
+          "owner": "ForgeCad::Kernel::offsetJoinedFaces"
+        },
+        {
+          "line": 2494,
+          "symbol": "ForgeCad::Kernel::offsetCurve",
+          "owner": "ForgeCad::Kernel::offsetJoinedFaces"
+        },
+        {
+          "line": 2522,
+          "symbol": "ForgeCad::Kernel::offsetJoinedFaces::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:2130:26)::operator()",
+          "owner": "ForgeCad::Kernel::offsetJoinedFaces"
+        },
+        {
+          "line": 2524,
+          "symbol": "ForgeCad::Kernel::offsetSurfaceImpl",
+          "owner": "ForgeCad::Kernel::offsetJoinedFaces"
+        },
+        {
+          "line": 2532,
+          "symbol": "ForgeCad::Kernel::offsetJoinedFaces::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:2216:27)::operator()",
+          "owner": "ForgeCad::Kernel::offsetJoinedFaces"
+        },
+        {
+          "line": 2547,
+          "symbol": "ForgeCad::Kernel::offsetJoinedFaces::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:2149:28)::operator()",
+          "owner": "ForgeCad::Kernel::offsetJoinedFaces"
+        },
+        {
+          "line": 2549,
+          "symbol": "ForgeCad::Kernel::offsetJoinedFaces::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:2206:23)::operator()",
+          "owner": "ForgeCad::Kernel::offsetJoinedFaces"
+        },
+        {
+          "line": 2553,
+          "symbol": "ForgeCad::Kernel::offsetJoinedFaces::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:2149:28)::operator()",
+          "owner": "ForgeCad::Kernel::offsetJoinedFaces"
+        },
+        {
+          "line": 2556,
+          "symbol": "ForgeCad::Kernel::projectLocal",
+          "owner": "ForgeCad::Kernel::offsetJoinedFaces"
+        },
+        {
+          "line": 2563,
+          "symbol": "ForgeCad::Kernel::offsetJoinedFaces::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:2544:35)::operator()",
+          "owner": "ForgeCad::Kernel::offsetJoinedFaces"
+        },
+        {
+          "line": 2565,
+          "symbol": "ForgeCad::Kernel::seamJet",
+          "owner": "ForgeCad::Kernel::offsetJoinedFaces"
+        },
+        {
+          "line": 2569,
+          "symbol": "ForgeCad::Kernel::fitPlanePCurveCertified",
+          "owner": "ForgeCad::Kernel::offsetJoinedFaces"
+        },
+        {
+          "line": 2570,
+          "symbol": "ForgeCad::Kernel::fitCurve",
+          "owner": "ForgeCad::Kernel::offsetJoinedFaces"
+        },
+        {
+          "line": 2577,
+          "symbol": "ForgeCad::Kernel::requirePlanePCurve",
+          "owner": "ForgeCad::Kernel::offsetJoinedFaces"
+        },
+        {
+          "line": 2595,
+          "symbol": "ForgeCad::Kernel::offsetJoinedFaces::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_offset.cpp:2591:26)::operator()",
+          "owner": "ForgeCad::Kernel::offsetJoinedFaces"
+        },
+        {
+          "line": 2606,
+          "symbol": "ForgeCad::Kernel::offsetSurfaceImpl",
+          "owner": "ForgeCad::Kernel::offsetJoinedFaces"
+        },
+        {
+          "line": 2624,
+          "symbol": "ForgeCad::Kernel::requireEmittedPlanePCurves",
+          "owner": "ForgeCad::Kernel::offsetJoinedFaces"
+        },
+        {
+          "line": 2625,
+          "symbol": "ForgeCad::Kernel::offsetFaceHistory",
+          "owner": "ForgeCad::Kernel::offsetJoinedFaces"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_offset.cpp",
+      "target": "kernel/fk_sheet.cpp",
+      "kind": "call",
+      "count": 2,
+      "sites": [
+        {
+          "line": 2072,
+          "symbol": "ForgeCad::Kernel::extendBSplineSurface",
+          "owner": "ForgeCad::Kernel::offsetFaces"
+        },
+        {
+          "line": 2608,
+          "symbol": "ForgeCad::Kernel::extendBSplineSurface",
+          "owner": "ForgeCad::Kernel::offsetJoinedFaces"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_sheet.cpp",
+      "target": "kernel/fk_offset.cpp",
+      "kind": "call",
+      "count": 6,
+      "sites": [
+        {
+          "line": 219,
+          "symbol": "ForgeCad::Kernel::fitCurveCertified",
+          "owner": "ForgeCad::Kernel::extendPlanarFace"
+        },
+        {
+          "line": 220,
+          "symbol": "ForgeCad::Kernel::fitCurve",
+          "owner": "ForgeCad::Kernel::extendPlanarFace"
+        },
+        {
+          "line": 513,
+          "symbol": "ForgeCad::Kernel::fitCurve",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "line": 563,
+          "symbol": "ForgeCad::Kernel::fitCurveCertified",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "line": 762,
+          "symbol": "ForgeCad::Kernel::fitCurveCertified",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "line": 763,
+          "symbol": "ForgeCad::Kernel::fitCurve",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        }
+      ]
+    },
+    {
+      "source": "kernel/fk_sheet.cpp",
+      "target": "kernel/fk_sheet.cpp",
+      "kind": "call",
+      "count": 77,
+      "sites": [
+        {
+          "line": 89,
+          "symbol": "ForgeCad::Kernel::extendBSpline::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:67:24)::operator()",
+          "owner": "ForgeCad::Kernel::extendBSpline"
+        },
+        {
+          "line": 95,
+          "symbol": "ForgeCad::Kernel::HPoint::operator=",
+          "owner": "ForgeCad::Kernel::extendBSpline"
+        },
+        {
+          "line": 95,
+          "symbol": "ForgeCad::Kernel::mix",
+          "owner": "ForgeCad::Kernel::extendBSpline"
+        },
+        {
+          "line": 98,
+          "symbol": "ForgeCad::Kernel::HPoint::operator=",
+          "owner": "ForgeCad::Kernel::extendBSpline"
+        },
+        {
+          "line": 101,
+          "symbol": "ForgeCad::Kernel::extendBSpline::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:72:20)::operator()",
+          "owner": "ForgeCad::Kernel::extendBSpline"
+        },
+        {
+          "line": 110,
+          "symbol": "ForgeCad::Kernel::extendBSpline::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:67:24)::operator()",
+          "owner": "ForgeCad::Kernel::extendBSpline"
+        },
+        {
+          "line": 114,
+          "symbol": "ForgeCad::Kernel::HPoint::operator=",
+          "owner": "ForgeCad::Kernel::extendBSpline"
+        },
+        {
+          "line": 116,
+          "symbol": "ForgeCad::Kernel::HPoint::operator=",
+          "owner": "ForgeCad::Kernel::extendBSpline"
+        },
+        {
+          "line": 116,
+          "symbol": "ForgeCad::Kernel::mix",
+          "owner": "ForgeCad::Kernel::extendBSpline"
+        },
+        {
+          "line": 117,
+          "symbol": "ForgeCad::Kernel::HPoint::operator=",
+          "owner": "ForgeCad::Kernel::extendBSpline"
+        },
+        {
+          "line": 119,
+          "symbol": "ForgeCad::Kernel::HPoint::operator=",
+          "owner": "ForgeCad::Kernel::extendBSpline"
+        },
+        {
+          "line": 122,
+          "symbol": "ForgeCad::Kernel::extendBSpline::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:72:20)::operator()",
+          "owner": "ForgeCad::Kernel::extendBSpline"
+        },
+        {
+          "line": 144,
+          "symbol": "ForgeCad::Kernel::extendBSpline",
+          "owner": "ForgeCad::Kernel::extendBSplineSurface"
+        },
+        {
+          "line": 205,
+          "symbol": "ForgeCad::Kernel::extendPlanarFace::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:188:25)::operator()",
+          "owner": "ForgeCad::Kernel::extendPlanarFace"
+        },
+        {
+          "line": 281,
+          "symbol": "ForgeCad::Kernel::distanceToSheet",
+          "owner": "ForgeCad::Kernel::detail::closestSheetPiece"
+        },
+        {
+          "line": 295,
+          "symbol": "ForgeCad::Kernel::detail::closestSheetPiece",
+          "owner": "ForgeCad::Kernel::trimSheet"
+        },
+        {
+          "line": 377,
+          "symbol": "ForgeCad::Kernel::requireSplineJoin",
+          "owner": "ForgeCad::Kernel::emittedSplineJoins"
+        },
+        {
+          "line": 405,
+          "symbol": "ForgeCad::Kernel::requireSplineJoin",
+          "owner": "ForgeCad::Kernel::requireUnifiedSplineJoins"
+        },
+        {
+          "line": 458,
+          "symbol": "ForgeCad::Kernel::joinSplineExtensions::Sample::Sample",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "line": 489,
+          "symbol": "ForgeCad::Kernel::joinSplineExtensions::Sample::Sample",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "line": 501,
+          "symbol": "ForgeCad::Kernel::joinSplineExtensions::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:450:33)::operator()",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "line": 502,
+          "symbol": "ForgeCad::Kernel::joinSplineExtensions::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:499:31)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:501:38)::operator()",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "line": 508,
+          "symbol": "ForgeCad::Kernel::joinSplineExtensions::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:499:31)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:501:38)::operator()",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "line": 511,
+          "symbol": "ForgeCad::Kernel::joinSplineExtensions::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:450:33)::operator()",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "line": 513,
+          "symbol": "ForgeCad::Kernel::joinSplineExtensions::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:450:33)::operator()",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "line": 539,
+          "symbol": "ForgeCad::Kernel::joinSplineExtensions::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:516:37)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:527:38)::operator()",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "line": 540,
+          "symbol": "ForgeCad::Kernel::joinSplineExtensions::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:516:37)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:527:38)::operator()",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "line": 550,
+          "symbol": "ForgeCad::Kernel::extendBSplineSurface",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "line": 553,
+          "symbol": "ForgeCad::Kernel::joinSplineExtensions::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:516:37)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:541:46)::operator()",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "line": 554,
+          "symbol": "ForgeCad::Kernel::joinSplineExtensions::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:516:37)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:541:46)::operator()",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "line": 567,
+          "symbol": "ForgeCad::Kernel::requireSplineJoin",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "line": 568,
+          "symbol": "ForgeCad::Kernel::requireSplineJoin",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "line": 580,
+          "symbol": "ForgeCad::Kernel::joinSplineExtensions::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:516:37)::operator()",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "line": 584,
+          "symbol": "ForgeCad::Kernel::joinSplineExtensions::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:499:31)::operator()",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "line": 593,
+          "symbol": "ForgeCad::Kernel::joinSplineExtensions::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:450:33)::operator()",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "line": 601,
+          "symbol": "ForgeCad::Kernel::extendBSplineSurface",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "line": 603,
+          "symbol": "ForgeCad::Kernel::extendBSplineSurface",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "line": 618,
+          "symbol": "ForgeCad::Kernel::joinSplineExtensions::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:450:33)::operator()",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "line": 618,
+          "symbol": "ForgeCad::Kernel::joinSplineExtensions::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:608:33)::operator()",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "line": 619,
+          "symbol": "ForgeCad::Kernel::joinSplineExtensions::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:450:33)::operator()",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "line": 619,
+          "symbol": "ForgeCad::Kernel::joinSplineExtensions::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:608:33)::operator()",
+          "owner": "ForgeCad::Kernel::joinSplineExtensions"
+        },
+        {
+          "line": 683,
+          "symbol": "ForgeCad::Kernel::extendPlanarFace",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "line": 766,
+          "symbol": "ForgeCad::Kernel::extendSheet::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:693:20)::operator()",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "line": 767,
+          "symbol": "ForgeCad::Kernel::extendSheet::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:693:20)::operator()",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "line": 770,
+          "symbol": "ForgeCad::Kernel::extendSheet::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:702:24)::operator()",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "line": 771,
+          "symbol": "ForgeCad::Kernel::extendSheet::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:702:24)::operator()",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "line": 772,
+          "symbol": "ForgeCad::Kernel::extendSheet::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:702:24)::operator()",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "line": 782,
+          "symbol": "ForgeCad::Kernel::extendBSpline",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "line": 783,
+          "symbol": "ForgeCad::Kernel::arcParameter",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "line": 789,
+          "symbol": "ForgeCad::Kernel::extendBSplineSurface",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "line": 794,
+          "symbol": "ForgeCad::Kernel::extendSheet::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:693:20)::operator()",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "line": 795,
+          "symbol": "ForgeCad::Kernel::extendSheet::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:693:20)::operator()",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "line": 796,
+          "symbol": "ForgeCad::Kernel::extendSheet::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:702:24)::operator()",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "line": 797,
+          "symbol": "ForgeCad::Kernel::extendSheet::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:702:24)::operator()",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "line": 798,
+          "symbol": "ForgeCad::Kernel::extendSheet::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:702:24)::operator()",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "line": 812,
+          "symbol": "ForgeCad::Kernel::extendSheet::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:693:20)::operator()",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "line": 813,
+          "symbol": "ForgeCad::Kernel::extendSheet::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:693:20)::operator()",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "line": 815,
+          "symbol": "ForgeCad::Kernel::extendSheet::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:702:24)::operator()",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "line": 816,
+          "symbol": "ForgeCad::Kernel::extendSheet::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:702:24)::operator()",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "line": 817,
+          "symbol": "ForgeCad::Kernel::extendSheet::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:702:24)::operator()",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "line": 831,
+          "symbol": "ForgeCad::Kernel::extendSheet::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:693:20)::operator()",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "line": 832,
+          "symbol": "ForgeCad::Kernel::extendSheet::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:693:20)::operator()",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "line": 833,
+          "symbol": "ForgeCad::Kernel::extendSheet::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:702:24)::operator()",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "line": 834,
+          "symbol": "ForgeCad::Kernel::extendSheet::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:702:24)::operator()",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "line": 836,
+          "symbol": "ForgeCad::Kernel::extendSheet::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:702:24)::operator()",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "line": 854,
+          "symbol": "ForgeCad::Kernel::extendBSpline",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "line": 856,
+          "symbol": "ForgeCad::Kernel::arcParameter",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "line": 860,
+          "symbol": "ForgeCad::Kernel::extendBSpline",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "line": 869,
+          "symbol": "ForgeCad::Kernel::extendSheet::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:693:20)::operator()",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "line": 870,
+          "symbol": "ForgeCad::Kernel::extendSheet::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:693:20)::operator()",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "line": 872,
+          "symbol": "ForgeCad::Kernel::extendSheet::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:702:24)::operator()",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "line": 873,
+          "symbol": "ForgeCad::Kernel::extendSheet::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:702:24)::operator()",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "line": 874,
+          "symbol": "ForgeCad::Kernel::extendSheet::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:702:24)::operator()",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "line": 879,
+          "symbol": "ForgeCad::Kernel::extendSheet::(lambda at /home/myungit/Linux_CAD_forFree/kernel/fk_sheet.cpp:711:20)::operator()",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "line": 887,
+          "symbol": "ForgeCad::Kernel::joinSplineExtensions",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "line": 891,
+          "symbol": "ForgeCad::Kernel::emittedSplineJoins",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        },
+        {
+          "line": 893,
+          "symbol": "ForgeCad::Kernel::requireUnifiedSplineJoins",
+          "owner": "ForgeCad::Kernel::extendSheet"
+        }
+      ]
+    }
+  ]
+}

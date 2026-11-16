@@ -1,0 +1,50 @@
+[
+  {
+    "file": "loft-noniso-0.250000-base-lower.json",
+    "bytes": 88795347,
+    "sha256": "d8190731a5cda82d937abddedb01bc36943eb394d53ae57687f63bf6a19f03c6",
+    "unchanged_from_v3": true
+  },
+  {
+    "file": "loft-noniso-0.250000-base-upper.json",
+    "bytes": 56862174,
+    "sha256": "ef2646f86ae8777e359448e019bba7553506dc9121bd3929f3595c0730a2c17a",
+    "unchanged_from_v3": true
+  },
+  {
+    "file": "loft-noniso-1.000000-base-lower.json",
+    "bytes": 183549731,
+    "sha256": "e694e5fe098670e60fee91bf0166b84a3a846928e310f36913927ba7485966ae",
+    "unchanged_from_v3": true
+  },
+  {
+    "file": "loft-noniso-1.000000-base-upper.json",
+    "bytes": 117094337,
+    "sha256": "98597d7336e7be514e9677f51818b5afd3c873958a0b23fa083d21cfc2f72d0d",
+    "unchanged_from_v3": true
+  },
+  {
+    "file": "loft-noniso-1.000000-posed-lower.json",
+    "bytes": 185700470,
+    "sha256": "02483f58e8ae0851c6a9063575758fe69cf2d1cdd3b0fbbdc11131451d5e53ca",
+    "unchanged_from_v3": true
+  },
+  {
+    "file": "loft-noniso-1.000000-posed-upper.json",
+    "bytes": 117423724,
+    "sha256": "039bfae5f4c384c3df7afcfba0e1227a4a676d371ed8940c691a6b0be8227ae0",
+    "unchanged_from_v3": true
+  },
+  {
+    "file": "loft-noniso-2.500000-posed-lower.json",
+    "bytes": 288347532,
+    "sha256": "22694c049b0d3935c97fa31f56c3c4a59ea159b0c9e0b7b0d076c2ef6f35471c",
+    "unchanged_from_v3": true
+  },
+  {
+    "file": "loft-noniso-2.500000-posed-upper.json",
+    "bytes": 182312519,
+    "sha256": "8e9410d29573734fa632c8a429cd6ef3128d896f62f33d11ac55d5a2e25428f3",
+    "unchanged_from_v3": true
+  }
+]

@@ -1,0 +1,44 @@
+Execution shell /bin/bash, login=false; cwd=/home/myungit/Linux_CAD_forFree.
+Linux CI compiler: GNU15.2.0 (new-linux-artifacts/_temp/configure.log). Local compilers: GCC16.2.1 20260810; Clang23.1.5.
+Baseline source/library snapshots and SHA values are recorded in baseline-manifest.json. Original public test is extracted literally in test_exact_regression.cpp; test_offset.original.cpp contains its original full source.
+
+Baseline public reproduction:
+./forgecad-release/kernel/forgekernel_tests OffsetLoftExtendedSeamsTrimBoth
+c++ -std=c++17 -O2 -g -ffp-contract=off -DFORGECAD_SOURCE_DIR='"/home/myungit/Linux_CAD_forFree"' -I kernel -I kernel/tests /tmp/ci-sheet-fix/tests/test_exact_regression.cpp kernel/tests/fk_test_main.cpp /tmp/ci-sheet-fix/tests/libforgekernel-baseline.a -pthread -o /tmp/ci-sheet-fix/tests/exact-gcc
+/tmp/ci-sheet-fix/tests/exact-gcc
+clang++ -std=c++17 -O2 -g -ffp-contract=off -I kernel -c kernel/fk_sheet.cpp -o /tmp/ci-sheet-fix/tests/fk_sheet-clang.o
+clang++ -std=c++17 -O2 -g -ffp-contract=off -DFORGECAD_SOURCE_DIR='"/home/myungit/Linux_CAD_forFree"' -I kernel -I kernel/tests /tmp/ci-sheet-fix/tests/test_exact_regression.cpp kernel/tests/fk_test_main.cpp /tmp/ci-sheet-fix/tests/fk_sheet-clang.o /tmp/ci-sheet-fix/tests/libforgekernel-baseline.a -pthread -o /tmp/ci-sheet-fix/tests/exact-clang
+/tmp/ci-sheet-fix/tests/exact-clang
+All three reproduce the same exception. Clang compiles only sheet TU/driver, not the complete kernel.
+
+Final V4 production object was supplied by the implementation agent, candidate-sheet.o SHA7083b3a7dc5943f408d3f61eab42c1dd5ff99750fe2f320f493082f62f690190; source SHA b99a70318f2cf7dcd6b24e646d8976bd287f6622ed9cf4accab968403380afbc.
+c++ -std=c++17 -O2 -g -ffp-contract=off -DFORGEKERNEL_TEST_DATA_DIR='"/home/myungit/Linux_CAD_forFree/kernel/tests/data"' -I kernel -I kernel/tests /tmp/ci-sheet-fix/tests/test_sheet_join_validation.cpp kernel/tests/fk_test_main.cpp /tmp/ci-sheet-fix/core/candidate-sheet.o /tmp/ci-sheet-fix/tests/libforgekernel-baseline.a -pthread -o /tmp/ci-sheet-fix/tests/new-join-tests-final
+/tmp/ci-sheet-fix/tests/new-join-tests-final
+FK_SHEET_JOIN_EXPORT_DIR=/tmp/ci-sheet-fix/tests/final-exports /tmp/ci-sheet-fix/tests/new-join-tests-final SheetJoinNonIsoOffset
+Results33/33 and4/4 PASS, respectively. The export command writes8 large JSON files, intentionally excluded from the curated archive.
+
+Final public original tests use public-final-link.txt, derived from CURRENT forgecad-release/kernel/occt_tests/CMakeFiles/forgekernel_tests.dir/link.txt; one final sheet.o precedes the frozen kernel archive, preserving current test objects and OCCT test support.
+Filters: OffsetLoftExtendedSeamsTrimBoth; OffsetLoftSeamExtensionFollowsTangentSeam; OffsetDenseBSplineIsC2; Sheet.
+
+Final Clang:
+clang++ -std=c++17 -O2 -g -ffp-contract=off -I kernel -c /tmp/ci-sheet-fix/core/kernel/fk_sheet.cpp -o /tmp/ci-sheet-fix/tests/fk_sheet-final-clang.o
+clang++ -std=c++17 -O2 -g -ffp-contract=off -DFORGEKERNEL_TEST_DATA_DIR='"/home/myungit/Linux_CAD_forFree/kernel/tests/data"' -I kernel -I kernel/tests /tmp/ci-sheet-fix/tests/test_sheet_join_validation.cpp kernel/tests/fk_test_main.cpp /tmp/ci-sheet-fix/tests/fk_sheet-final-clang.o /tmp/ci-sheet-fix/tests/libforgekernel-baseline.a -pthread -o /tmp/ci-sheet-fix/tests/new-join-tests-final-clang
+/tmp/ci-sheet-fix/tests/new-join-tests-final-clang
+Result33/33 PASS. Remaining providers are frozen GCC Release.
+
+Final targeted ASan/UBSan:
+c++ -std=c++17 -O1 -g -ffp-contract=off -fno-omit-frame-pointer -fsanitize=address,undefined -I kernel -c /tmp/ci-sheet-fix/core/kernel/fk_sheet.cpp -o /tmp/ci-sheet-fix/tests/fk_sheet-final-san.o
+c++ -std=c++17 -O1 -g -ffp-contract=off -fno-omit-frame-pointer -fsanitize=address,undefined -DFORGEKERNEL_TEST_DATA_DIR='"/home/myungit/Linux_CAD_forFree/kernel/tests/data"' -I kernel -I kernel/tests /tmp/ci-sheet-fix/tests/test_sheet_join_validation.cpp kernel/tests/fk_test_main.cpp /tmp/ci-sheet-fix/tests/fk_sheet-final-san.o /tmp/ci-sheet-fix/tests/libforgekernel-baseline.a -pthread -o /tmp/ci-sheet-fix/tests/new-join-tests-final-san
+Execution explicitly launched with exec_command sandbox_permissions=require_escalated, outside ptrace:
+ASAN_OPTIONS=detect_leaks=1:halt_on_error=1:abort_on_error=1:strict_string_checks=1 UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1 LSAN_OPTIONS=exitcode=23 /tmp/ci-sheet-fix/tests/new-join-tests-final-san
+Result33/33 PASS exit0. Instrumented only changed sheet TU and test/main; remaining providers Release.
+
+Independent leak calibration, outside ptrace:
+c++ -O1 -g -fsanitize=address /tmp/ci-sheet-fix/tests/leak_calibration.cpp -o /tmp/ci-sheet-fix/tests/leak-calibration
+ASAN_OPTIONS=detect_leaks=1:halt_on_error=1 LSAN_OPTIONS=exitcode=23 /tmp/ci-sheet-fix/tests/leak-calibration
+Expected/actual direct19-byte leak detected, exit23. This is calibration, not a kernel leak.
+
+Actual emitted Newton fin pair:
+c++ -std=c++17 -O2 -g -ffp-contract=off -DFORGEKERNEL_TEST_DATA_DIR='"/home/myungit/Linux_CAD_forFree/kernel/tests/data"' -I kernel -I kernel/tests /tmp/ci-sheet-fix/tests/test_newton_fin_exports.cpp kernel/tests/fk_test_main.cpp /tmp/ci-sheet-fix/core/candidate-sheet.o /tmp/ci-sheet-fix/tests/libforgekernel-baseline.a -pthread -o /tmp/ci-sheet-fix/tests/newton-fin-exporter
+CI_NEWTON_FIN_EXPORT=/tmp/ci-sheet-fix/tests/actual-newton-fins.json /tmp/ci-sheet-fix/tests/newton-fin-exporter OffsetLoftActualNewtonFinExports
+Result1/1 PASS; the source includes only test source, never a production.cpp.

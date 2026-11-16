@@ -1,0 +1,18 @@
+{
+  "head": "c44975e56931c559ea3da3c794eaea66a41a304e",
+  "ci_reported_failure": "OffsetLoftExtendedSeamsTrimBoth",
+  "source_shared_edge": 1,
+  "source_fins": [
+    1,
+    7
+  ],
+  "first_failing_pair_faces": [
+    0,
+    1
+  ],
+  "first_failing_stage": "requireSplineJoin on B before commit",
+  "cap_mm": 1e-07,
+  "production_upper_mm": 0.034555064509541704,
+  "normal_sine_at_source_endpoint": 1.4925125812953588e-11,
+  "local_rate": 1.000000000001178
+}

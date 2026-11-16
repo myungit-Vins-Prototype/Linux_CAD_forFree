@@ -1,0 +1,186 @@
+--- baseline-c44975e-sheet
++++ final-v4-sheet
+@@ -4,6 +4,7 @@
+ #include <algorithm>
+ #include <cmath>
+ #include <map>
++#include <limits>
+ #include <stdexcept>
+ 
+ #include "fk_blend_model.h"
+@@ -308,6 +309,98 @@
+     double end;
+ };
+ 
++// Near-equal normals do not establish an ISO intersection. Inspect the
++// ORIGINAL shared fin map before choosing that family: a UV seam whose
++// non-ISO variation exceeds its physical source budget requires the implicit
++// continuation even at an almost tangent endpoint.
++// This selector grants no geometric acceptance; recognized ISO constructions
++// must still prove the actual emitted curve on both carriers below.
++struct SourceUVInterval { double lo, hi; };
++SourceUVInterval sourceUVSum(double a, double b) {
++    const double sum = a + b;
++    if (!std::isfinite(sum)) return {-INFINITY, INFINITY};
++    const double tail = sum - a;
++    const double error = (a - (sum - tail)) + (b - tail);
++    if (error == 0.0) return {sum, sum};
++    return {std::nextafter(sum, -INFINITY), std::nextafter(sum, INFINITY)};
++}
++SourceUVInterval sourceUVLine(double origin, double direction, double parameter) {
++    const double product = direction * parameter;
++    if (!std::isfinite(product)) return {-INFINITY, INFINITY};
++    const double error = std::fma(direction, parameter, -product);
++    // An FMA residual can itself underflow. Simple zero/unit products are
++    // exact; otherwise enclose tiny products even when their residual is zero.
++    const bool simple = direction == 0.0 || parameter == 0.0 || std::fabs(parameter) == 1.0;
++    // Two 53-bit significands can leave a product residual below half the
++    // smallest subnormal. Reserve the full 106-bit product range here.
++    const bool tiny = !simple && std::fabs(product) < std::ldexp(std::numeric_limits<double>::min(), 106);
++    const double lo = error < 0.0 || tiny ? std::nextafter(product, -INFINITY) : product;
++    const double hi = error > 0.0 || tiny ? std::nextafter(product, INFINITY) : product;
++    return {sourceUVSum(origin, lo).lo, sourceUVSum(origin, hi).hi};
++}
++// This source-family selector uses a physical, preallocated fin budget.
++// Positive NURBS controls bound the full original UV image; Line endpoints
++// are enclosed with outward arithmetic. The carrier metric converts only
++// the constant-coordinate variation to millimetres, over its natural box.
++// It does not certify the original edge or the generated continuation.
++bool originalIsoSeed(const CurvePtr<2> &input, const SurfacePtr &surface, const Interval &range,
++                     double endpoint, int varying, double budget, Vec2 &seed) {
++    const Curve<2> *curve = input.get();
++    while (curve) {
++        const Interval natural = curve->domain();
++        if (range.lo < natural.lo || range.hi > natural.hi) return false;
++        if (curve->type() != CurveType::Trimmed) break;
++        curve = static_cast<const TrimmedCurve<2> *>(curve)->basis().get();
++    }
++    if (!curve) return false;
++    const int constant = 1 - varying;
++    SourceUVInterval hull[2] = {{INFINITY, -INFINITY}, {INFINITY, -INFINITY}};
++    seed = input->point(endpoint);
++    if (curve->type() == CurveType::Line) {
++        const auto &line = static_cast<const Line<2> &>(*curve);
++        if (line.direction()[varying] == 0.0) return false;
++        for (int axis = 0; axis < 2; ++axis) for (double t : {range.lo, range.hi}) {
++            const auto value = sourceUVLine(line.origin()[axis], line.direction()[axis], t);
++            hull[axis].lo = std::min(hull[axis].lo, value.lo);
++            hull[axis].hi = std::max(hull[axis].hi, value.hi);
++        }
++        if (line.direction()[constant] == 0.0) seed[constant] = line.origin()[constant];
++    } else {
++        const auto *spline = dynamic_cast<const BSplineCurve<2> *>(curve);
++        if (!spline) return false;
++        const auto &poles = spline->poles();
++        for (const Vec2 &pole : poles) {
++            cancellationPoint();
++            for (int axis = 0; axis < 2; ++axis) {
++                hull[axis].lo = std::min(hull[axis].lo, pole[axis]);
++                hull[axis].hi = std::max(hull[axis].hi, pole[axis]);
++            }
++        }
++        if (hull[varying].lo == hull[varying].hi) return false;
++        if (spline->isClamped() && endpoint == spline->domain().lo) seed = poles.front();
++        if (spline->isClamped() && endpoint == spline->domain().hi) seed = poles.back();
++        if (hull[constant].lo == hull[constant].hi) seed[constant] = poles.front()[constant];
++    }
++    if (!isFinite(seed)) return false;
++    double spread = 0.0;
++    for (double value : {hull[constant].lo, hull[constant].hi}) {
++        const auto residual = sourceUVSum(value, -seed[constant]);
++        spread = std::max({spread, std::fabs(residual.lo), std::fabs(residual.hi)});
++    }
++    if (spread == 0.0) return true;
++    // The straight segment between source and canonical UV must remain in
++    // the rectangle for which the ORIGINAL-control derivative bound holds.
++    const Interval domains[2] = {surface->uDomain(), surface->vDomain()};
++    for (int axis = 0; axis < 2; ++axis)
++        if (hull[axis].lo < domains[axis].lo || hull[axis].hi > domains[axis].hi
++            || seed[axis] < domains[axis].lo || seed[axis] > domains[axis].hi) return false;
++    const auto metric = detail::surfaceParameterBounds(surface);
++    if (!metric) return false;
++    const double gain = constant == 0 ? metric->u : metric->v;
++    const double residual = spread == 0.0 || gain == 0.0 ? 0.0 : std::nextafter(spread * gain, INFINITY);
++    return std::isfinite(residual) && residual <= budget;
++}
++
+ // A planned seam keeps the original cubic coefficients and affine UV map.
+ // The same pointers identify its emitted fins; no geometric proximity lookup.
+ struct SplineJoinCertificate {
+@@ -417,21 +510,46 @@
+     for (std::size_t i = 0; i < sides.size(); ++i)
+         for (std::size_t j = i + 1; j < sides.size(); ++j) {
+             cancellationPoint();
+-            const auto &a = sides[i], &b = sides[j];
++            auto a = sides[i], b = sides[j];
+             if (a.vertex != b.vertex || a.face == b.face || a.edge == b.edge) continue;
+-            bool adjacent = false;
++            EdgeId shared;
++            bool ambiguous = false;
+             for (EdgeId e : body.edges()) {
+                 const auto &edge = body.edge(e);
+                 if (!edge.forward.valid() || !edge.backward.valid()) continue;
+                 const int f = model.faceIndex.at(body.finFace(edge.forward).index);
+                 const int g = model.faceIndex.at(body.finFace(edge.backward).index);
+                 if (!((f == a.face && g == b.face) || (f == b.face && g == a.face))) continue;
+-                adjacent = adjacent || model.vertexIndex.at(body.edgeStart(e).index) == a.vertex
+-                                    || model.vertexIndex.at(body.edgeEnd(e).index) == a.vertex;
+-            }
+-            if (!adjacent) continue;
++                if (model.vertexIndex.at(body.edgeStart(e).index) != a.vertex
++                    && model.vertexIndex.at(body.edgeEnd(e).index) != a.vertex) continue;
++                ambiguous = ambiguous || shared.valid();
++                shared = e;
++            }
++            if (!shared.valid()) continue;
+             const SurfacePtr sa = model.faces[a.face].surface, sb = model.faces[b.face].surface;
+             const int da = a.vIso ? 1 : 0, db = b.vIso ? 1 : 0;
++            bool sourceIso = !ambiguous;
++            const Edge &sourceEdge = body.edge(shared);
++            const double sourceEndpoint = model.vertexIndex.at(body.edgeStart(shared).index) == a.vertex
++                ? sourceEdge.range.lo : sourceEdge.range.hi;
++            Vec2 sourceA, sourceB;
++            for (FinId fin : {sourceEdge.forward, sourceEdge.backward}) {
++                const int face = model.faceIndex.at(body.finFace(fin).index);
++                const bool first = face == a.face;
++                const int varying = (first ? a.vIso : b.vIso) ? 1 : 0;
++                if (!std::isfinite(sourceEdge.tolerance) || sourceEdge.tolerance < 0.0
++                    || !std::isfinite(body.fin(fin).pcurveTolerance) || body.fin(fin).pcurveTolerance < 0.0)
++                    throw std::domain_error("extendSheet: budget della giunzione sorgente non valido");
++                const double sourceBudget = std::min(tolerance,
++                    std::max(linearResolution(), sourceEdge.tolerance) + body.fin(fin).pcurveTolerance);
++                const bool iso = originalIsoSeed(body.fin(fin).pcurve, first ? sa : sb, sourceEdge.range,
++                                                sourceEndpoint, varying, sourceBudget, first ? sourceA : sourceB);
++                sourceIso = sourceIso && iso;
++            }
++            if (sourceIso) {
++                a.start = sourceA;
++                b.start = sourceB;
++            }
+             const double sign = a.end > a.start[da] ? 1.0 : -1.0;
+             const double signB = b.end > b.start[db] ? 1.0 : -1.0;
+             const double endA = std::fabs(a.end - a.start[da]);
+@@ -573,14 +691,17 @@
+             const double sine = norm(cross(normalA, normalB));
+             if (!std::isfinite(sine))
+                 throw std::domain_error("extendSheet: normale della giunzione non valida");
+-            if (sine < 1e-3) {
+-                // The legacy near-tangent recovery followed the two affine
+-                // isoparametric seams. Recognized failures are terminal:
+-                // sampled Newton must never re-admit an unresolved seam.
++            if (sine < 1e-3 && sourceIso) {
++                // Only an ORIGINAL ISO image selects this affine continuation.
++                // The two-carrier proof verifies its affine correspondence; the
++                // old edge parameter need not itself be affine in UV.
++                // Recognized failures remain terminal: sampled Newton must
++                // never re-admit a failed continuous ISO construction.
+                 affineJoin();
+             } else {
+-                // Transverse implicit Newton continuation is retained as an
+-                // explicitly sampled fallback, outside this certificate.
++                // General source UV maps require the implicit continuation,
++                // including almost tangent endpoints. This existing Newton
++                // path remains explicitly sampled, outside the ISO certificate.
+                 join();
+             }
+             const double joinTolerance = tolerance;

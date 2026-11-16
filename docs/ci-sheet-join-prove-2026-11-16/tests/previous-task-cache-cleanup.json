@@ -1,0 +1,70 @@
+[
+  {
+    "path": "/tmp/boundary-review/tests/sanitizer-tests-v2",
+    "bytes": 85296232
+  },
+  {
+    "path": "/tmp/boundary-review/tests/leak-calibration",
+    "bytes": 23408
+  },
+  {
+    "path": "/tmp/boundary-review/tests/section-san-v2.o",
+    "bytes": 5648784
+  },
+  {
+    "path": "/tmp/boundary-review/tests/candidate-tests-v2",
+    "bytes": 53894296
+  },
+  {
+    "path": "/tmp/boundary-review/tests/shared-carrier-probe",
+    "bytes": 53894808
+  },
+  {
+    "path": "/tmp/boundary-review/tests/surface-san.o",
+    "bytes": 26567160
+  },
+  {
+    "path": "/tmp/boundary-review/tests/candidate-public",
+    "bytes": 80241536
+  },
+  {
+    "path": "/tmp/boundary-review/tests/sanitizer-tests",
+    "bytes": 62836696
+  },
+  {
+    "path": "/tmp/boundary-review/tests/baseline-public",
+    "bytes": 75263736
+  },
+  {
+    "path": "/tmp/boundary-review/tests/candidate-section-instrumented.o",
+    "bytes": 174664
+  },
+  {
+    "path": "/tmp/boundary-review/tests/fk_test_main.o",
+    "bytes": 10272
+  },
+  {
+    "path": "/tmp/boundary-review/tests/section-san.o",
+    "bytes": 5651416
+  },
+  {
+    "path": "/tmp/boundary-review/tests/candidate-tests",
+    "bytes": 53894424
+  },
+  {
+    "path": "/tmp/boundary-review/tests/baseline-tests",
+    "bytes": 54886888
+  },
+  {
+    "path": "/tmp/boundary-review/tests/baseline/test_blend.o",
+    "bytes": 844856
+  },
+  {
+    "path": "/tmp/boundary-review/tests/baseline/public-instrumented.o",
+    "bytes": 744296
+  },
+  {
+    "path": "/tmp/boundary-review/tests/baseline/libforgekernel.a",
+    "bytes": 177894760
+  }
+]

@@ -1,0 +1,23 @@
+from pathlib import Path
+import re
+R=Path('/home/myungit/Linux_CAD_forFree');p=R/'CLAUDE.md';s=p.read_text();(R/'docs/history/claude-prima-ci-sheet-join-2026-11-16.md').write_text(s)
+a=s.index('**16/11 — Verifica CI GitHub');b=s.index('\n\n',a);s=s[:a]+'''**16/11 — CI: regressione giunti in correzione.**
+c44975e pubblicato: build Linux/macOS PASS e K12 PASS; fallisceOffsetLoftExtendedSeamsTrimBoth.
+Sorgente nonISO scelta per tangenza locale; tre agenti Sol correggono selettore/ancore.
+[Stato/prove](docs/ci-sheet-join-2026-11-16.md).'''+s[b:];assert len(s.encode())<=16384,len(s.encode());p.write_text(s)
+p=R/'docs/ci-verifica-2026-11-16.md';s=p.read_text();s+='''
+## Esito del primo push
+
+Il run43917116955 è terminato con fallimento dei test su entrambe le piattaforme, dopo compilazioni riuscite. **Il precedente WholeRim/K12 è ora superato.** Nuovo unico fallimento nella suite generale: `OffsetLoftExtendedSeamsTrimBoth`, eccezione `extendSheet: giunzione fuori dal budget continuo`. Linux109/110CTest e macOS112/113CTest superati; suite generale482/483casi. La regressione si riproduce anche localmente con GCC e Clang: non è specifica di GitHub o del compilatore. Si corregge prima di un ulteriore push; nessuna CI verde dichiarata per c44975e. [Indagine e correzione](ci-sheet-join-2026-11-16.md).
+''';p.write_text(s)
+(R/'docs/ci-sheet-join-2026-11-16.md').write_text('''# CI — classificazione delle giunzioni estese, 16 novembre 2026
+
+Dopo il push richiesto del commit c44975e, controllate entrambe le CI complete: Linux e macOS compilano e K12/WholeRim passa; l'unico nuovo fallimento è OffsetLoftExtendedSeamsTrimBoth nella suite generale,482/483casi. Le altre109/110 e112/113suite passano. Artifact e metadati del run43917116955 conservati. La riproduzione locale immutata fallisce anche con GCC16 e Clang23; CI Linux usaGCC15.2. Non si tratta di un problema specifico del compilatore.
+
+Il ramo quasi tangente in fk_sheet sceglieva una giunzione ISO dal solo seno delle normali, circa1,49e-11. Le pcurve originali della cucitura sono invece B-splinegrado3 con262/409poli e coordinataU variabile. Il limite continuo rifiuta correttamente la mappa ISO sbagliata: residuo nello stessoUV circa0,03455mm contro cap1e-7. Questo non è un limite inferiore della distanza minima da tutta la superficie. Un testimone Fraction su coefficienti effettivi conferma il residuo della mappa al parametro scelto; nessun aumento di tolleranze giustificato.
+
+Correzione in studio con tre agenti GPT-6.1 Sol: scegliere la famiglia dalla provenienza e dai coefficienti delle due fin sorgenti prima di tentare qualsiasi certificato. Le sorgenti nonISO conservano la via Newton storica, esplicitamente campionata; un certificato ISO riconosciuto che fallisce rimane terminale. Le ancore devono derivare dagli endpoint delle pcurve originali tramite incidenza e genealogia, non da una nuova proiezione con errore di qualcheULP. La prima bozza troppo restrittiva regrediva positivi esistenti ed è esclusa dalla versione finale.
+
+Baseline5004file e16sigilli precedenti intatti; consultati prima del codice grafo778nodi/11361relazioni/390TU e538relazioni incidenti. Produzione ancora invariata rispetto a c44975e; lavoro privato in/tmp/ci-sheet-fix. Si conservano originali CAD, test_offset.cpp e fixture del caso esistente. Nuove regressioni e verifiche complete in preparazione.
+''')
+print('Recorded CI regression phase; CLAUDE',len((R/'CLAUDE.md').read_bytes()))

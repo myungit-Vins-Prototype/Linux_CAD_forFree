@@ -1,0 +1,90 @@
+{
+  "production_source_sha256": "b99a70318f2cf7dcd6b24e646d8976bd287f6622ed9cf4accab968403380afbc",
+  "test_source_sha256": "451b30b1488b94f3e817449a27779bef85ad0d28abf2896cabd4e22e4b5ab763",
+  "compiler": {
+    "ci": "GNU 15.2.0",
+    "local": "GCC 16.2.1 20260810",
+    "alternate": "Clang 23.1.5",
+    "alternate_scope": "sheet TU and driver only, remaining providers frozen GCC Release"
+  },
+  "baseline": {
+    "current_cmake_original_test": {
+      "pass": 0,
+      "total": 1,
+      "exit": 1
+    },
+    "standalone_gcc": {
+      "pass": 0,
+      "total": 1
+    },
+    "standalone_clang": {
+      "pass": 0,
+      "total": 1
+    },
+    "new_cases": {
+      "pass": 0,
+      "total": 4
+    }
+  },
+  "final_v4": {
+    "gcc": {
+      "pass": 33,
+      "total": 33,
+      "exit": 0
+    },
+    "clang": {
+      "pass": 33,
+      "total": 33,
+      "exit": 0
+    },
+    "public": {
+      "original": {
+        "pass": 1,
+        "total": 1
+      },
+      "old_tangent": {
+        "pass": 1,
+        "total": 1
+      },
+      "dense": {
+        "pass": 1,
+        "total": 1
+      },
+      "sheet": {
+        "pass": 41,
+        "total": 41
+      }
+    },
+    "exports_enabled": {
+      "pass": 4,
+      "total": 4,
+      "full_files": 8,
+      "byte_identical_to_v3": 8
+    }
+  },
+  "sanitizer": {
+    "pass": 33,
+    "total": 33,
+    "exit": 0,
+    "outside_ptrace": true,
+    "ASAN_OPTIONS": "detect_leaks=1:halt_on_error=1:abort_on_error=1:strict_string_checks=1",
+    "UBSAN_OPTIONS": "halt_on_error=1:print_stacktrace=1",
+    "LSAN_OPTIONS": "exitcode=23",
+    "instrumented": [
+      "fk_sheet.cpp",
+      "test_sheet_join_validation.cpp",
+      "fk_test_main.cpp"
+    ],
+    "remaining_providers": "frozen Release",
+    "calibration_leak_bytes": 19,
+    "calibration_exit": 23
+  },
+  "actual_newton_export": {
+    "path": "actual-newton-fins.json",
+    "sha256": "d3f0b7ebb5a75624155d0a4b2b791fb91cacb1da81efb3ff6a303e334bba5417",
+    "fin_uses": 2,
+    "byte_identical_to_v3": true,
+    "scope": "actual public output; unsupported Newton remains sampled; independent post-hoc Fraction proof supplied by auditor"
+  },
+  "old_test_offset_unchanged": true
+}

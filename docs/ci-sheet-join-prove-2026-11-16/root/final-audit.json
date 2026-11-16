@@ -1,0 +1,28 @@
+{
+  "initial_files": 5004,
+  "preserved_files": 4997,
+  "changed_existing": [
+    "CLAUDE.md",
+    "docs/ci-verifica-2026-11-16.md",
+    "docs/code-review-2026-11-15.md",
+    "kernel/CMakeLists.txt",
+    "kernel/fk_sheet.cpp",
+    "kernel/tests/test_sheet_join_validation.cpp",
+    "tools/generate_architecture.py"
+  ],
+  "source_hashes": {
+    "kernel/fk_sheet.cpp": "b99a70318f2cf7dcd6b24e646d8976bd287f6622ed9cf4accab968403380afbc",
+    "kernel/tests/test_sheet_join_validation.cpp": "451b30b1488b94f3e817449a27779bef85ad0d28abf2896cabd4e22e4b5ab763",
+    "kernel/CMakeLists.txt": "21dcb60fbdb0d83d1a5b9654e576f4c6c409c7c346461cbdb0191afb6326e4a2",
+    "tools/generate_architecture.py": "16441367416b5e4e53f6fba12799b2c779c903e975bbe1b9469d92f952a383fb"
+  },
+  "binary_hashes": {
+    "forgecad-release/forgecad": "3c251c23faf99bf16d47a90a8702ee466fcb63a7f35bc12ec6759e6aac448992",
+    "forgecad-release/forgecad_view_tests": "15ef703d3131309e2df826d116a3aac626d690cbb80542ab79f366bc61543c45",
+    "forgecad-release/kernel/libforgekernel.a": "24fe53617202e1b07328b1042940fbc37e0e0e10704161515cda8b68cf61dc69",
+    "forgecad-release/kernel/forgekernel_tests": "c2abd2bf90761b25956c0be50702cc0b5681a8f96fc4752bcf766a8e171a3805"
+  },
+  "previous_seals_validated": 16,
+  "claude_bytes": 16337,
+  "original_test_offset_unchanged": true
+}

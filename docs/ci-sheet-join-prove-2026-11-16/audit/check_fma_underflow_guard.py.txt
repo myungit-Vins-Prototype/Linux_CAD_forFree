@@ -1,0 +1,15 @@
+#!/usr/bin/env python3
+"""Exact binary64 witness for FMA residual underflow in the v3 guard."""
+from fractions import Fraction as F
+from pathlib import Path
+import math,json
+
+d=float.fromhex('0x1.946fff2d7d40fp-485');t=float.fromhex('0x1.8d839ae109aefp-486');p=d*t
+q=F.from_float(d)*F.from_float(t);e=q-F.from_float(p)
+assert e==F(1,2**1075) and float(e)==0
+threshold=math.ldexp(1.,-1022)/(2**-52)
+assert p>=threshold and abs(t)!=1 and t!=0 and d!=0
+conservative=math.ldexp(math.ldexp(1.,-1022),106)
+assert abs(p)<conservative
+out={'version':'sourceUVLine-v3','direction':d.hex(),'parameter':t.hex(),'rounded_product':p.hex(),'exact_product_minus_rounded':str(e),'exact_error_power_of_two':-1075,'rounded_fma_residual':float(e),'old_tiny_threshold':threshold.hex(),'old_tiny_guard':False,'old_returned_point_interval_misses_exact_product':True,'proposed_tiny_threshold':conservative.hex(),'proposed_guard_covers_witness':True,'scope':'Rigor witness for an interval selector helper; no practical over-cap geometry acceptance demonstrated.'}
+Path(__file__).with_name('fma-underflow-witness-rerun.json').write_text(json.dumps(out,indent=2)+'\n');print(out)

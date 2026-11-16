@@ -1,0 +1,2 @@
+{'fin': 2, 'edge': 2, 'face': 0, 'budget': 1.152655473666892e-07, 'pass': True, 'upper_mm': 1.526929851153793e-08, 'cells': 60, 'leaves': 60, 'branches': 62, 'max_depth': 0, 'elapsed_seconds': 3.3338313549975283}
+{'fin': 11, 'edge': 2, 'face': 1, 'budget': 1.1543642712308158e-07, 'pass': True, 'upper_mm': 1.5439309150134088e-08, 'cells': 60, 'leaves': 60, 'branches': 66, 'max_depth': 0, 'elapsed_seconds': 6.027116146997287}

@@ -1,0 +1,3 @@
+    /home/myungit/Linux_CAD_forFree/kernel/tests/fk_test_main.cpp:36: eccezione: extendSheet: giunzione fuori dal budget continuo
+[ FAIL ] OffsetLoftExtendedSeamsTrimBoth (1 controlli falliti)
+0/1 test superati

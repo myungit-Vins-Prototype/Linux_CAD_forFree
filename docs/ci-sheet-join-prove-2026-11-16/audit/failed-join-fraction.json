@@ -1,0 +1,12 @@
+{
+  "input_sha256": "ccf14d964e0566070f5579beddd2f0b30964155b4a7728c2a62860766722aa01",
+  "method": "Original IEEE coefficients reconstructed as exact Fractions, homogeneous original tensor composition; no production extractor/provider.",
+  "scope": "Actual failing precommit E(t) against actual carrier B and emitted candidate affine UV map. No claim of certification of Newton or source trim membership.",
+  "pass": false,
+  "correct_rejection": true,
+  "exact_witness": "Exact midpoint witness exceeds budget: t=4773460246298105/72057594037927936 squared=16078814696804520556533955405310122507487588272049237289385824985383632118838852737676331107325900682932546493692350006497/280773224417697235734318091098518575079129996621700675038535084564515630127640313805620539389525873986584849454537649481056256",
+  "residual_upper_at_witness_mm": 0.00756744320739688,
+  "witness_exceeds_cap_squared": true,
+  "budget_mm": 1e-07,
+  "declared_production_upper_mm": 0.034555064509541704
+}

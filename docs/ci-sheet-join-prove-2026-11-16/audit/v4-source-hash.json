@@ -1,0 +1,5 @@
+{
+  "path": "/tmp/ci-sheet-fix/core/kernel/fk_sheet.cpp",
+  "sha256": "b99a70318f2cf7dcd6b24e646d8976bd287f6622ed9cf4accab968403380afbc",
+  "probe": "Math helpers extracted byte for byte; independent runtime probe only, not a production TU test."
+}

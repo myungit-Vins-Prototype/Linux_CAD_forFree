@@ -1,0 +1,8 @@
+{
+  "baseline_old_test_count": 29,
+  "candidate_test_count": 33,
+  "old_source_excluding_includes_preserved_as_exact_prefix": true,
+  "baseline_source_sha256": "6f107960db76d10bb652cba60e591758b2789533056b5a5c38340754d859f5d6",
+  "candidate_source_sha256": "451b30b1488b94f3e817449a27779bef85ad0d28abf2896cabd4e22e4b5ab763",
+  "scope": "Existing 29 test implementation/helper text is byte-equivalent after removing include directives; four real-fixture variants appended."
+}

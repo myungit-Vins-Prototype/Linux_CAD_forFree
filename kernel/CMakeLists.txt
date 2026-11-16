@@ -598,6 +598,8 @@ set_tests_properties(forgekernel_sheet_fit_validation_tests PROPERTIES TIMEOUT 1
 # Giunzioni tangenti estese: certificato continuo sui due supporti e fin finali.
 add_executable(forgekernel_sheet_join_validation_tests tests/fk_test_main.cpp tests/test_sheet_join_validation.cpp)
 target_link_libraries(forgekernel_sheet_join_validation_tests PRIVATE forgekernel)
+target_compile_definitions(forgekernel_sheet_join_validation_tests PRIVATE
+    FORGEKERNEL_TEST_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/tests/data")
 target_compile_options(forgekernel_sheet_join_validation_tests PRIVATE -Wall -Wextra -Wpedantic)
 set_target_properties(forgekernel_sheet_join_validation_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
 add_test(NAME forgekernel_sheet_join_validation_tests COMMAND forgekernel_sheet_join_validation_tests)

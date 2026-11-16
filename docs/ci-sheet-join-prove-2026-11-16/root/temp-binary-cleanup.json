@@ -1,0 +1,394 @@
+{
+  "scope": "Only disposable compiled binaries/objects/archives of three completed review phases; all source/log/JSON/seals preserved",
+  "removed_files": [
+    {
+      "path": "/tmp/boundary-review/core/section.o",
+      "bytes": 2319496
+    },
+    {
+      "path": "/tmp/boundary-review/core/cavity-tests",
+      "bytes": 73368248
+    },
+    {
+      "path": "/tmp/boundary-review/core/libforgekernel-boundary.a",
+      "bytes": 179376930
+    },
+    {
+      "path": "/tmp/boundary-review/core/section-v2.o",
+      "bytes": 2317744
+    },
+    {
+      "path": "/tmp/boundary-review/core/surface.o",
+      "bytes": 8505000
+    },
+    {
+      "path": "/tmp/boundary-review/core/objects/fk_blend_surface.cpp.o",
+      "bytes": 8505000
+    },
+    {
+      "path": "/tmp/boundary-review/core/objects/fk_blend_section_curve.cpp.o",
+      "bytes": 2319496
+    },
+    {
+      "path": "/tmp/boundary-review/core/before/libforgekernel.a",
+      "bytes": 177894760
+    },
+    {
+      "path": "/tmp/mitre-review/core/fk_blend_mitre.cpp.o",
+      "bytes": 1284832
+    },
+    {
+      "path": "/tmp/mitre-review/core/fk_blend_surface.cpp.o",
+      "bytes": 8867856
+    },
+    {
+      "path": "/tmp/mitre-review/tests/lsan-calibration",
+      "bytes": 20248
+    },
+    {
+      "path": "/tmp/mitre-review/tests/v2-sanitizer",
+      "bytes": 95024600
+    },
+    {
+      "path": "/tmp/mitre-review/tests/export-emitted-sheet",
+      "bytes": 51301872
+    },
+    {
+      "path": "/tmp/mitre-review/tests/v2-public",
+      "bytes": 85630792
+    },
+    {
+      "path": "/tmp/mitre-review/tests/v2-export-positive",
+      "bytes": 51251880
+    },
+    {
+      "path": "/tmp/mitre-review/tests/v2-tests",
+      "bytes": 51300952
+    },
+    {
+      "path": "/tmp/mitre-review/tests/v1-diagonal",
+      "bytes": 51031768
+    },
+    {
+      "path": "/tmp/mitre-review/tests/baseline-diagonal",
+      "bytes": 50476792
+    },
+    {
+      "path": "/tmp/mitre-review/tests/v1-public-diagnostic",
+      "bytes": 84945864
+    },
+    {
+      "path": "/tmp/mitre-review/tests/v1-sanitizer",
+      "bytes": 94454296
+    },
+    {
+      "path": "/tmp/mitre-review/tests/v1-public",
+      "bytes": 85477384
+    },
+    {
+      "path": "/tmp/mitre-review/tests/v1-export-positive",
+      "bytes": 51041144
+    },
+    {
+      "path": "/tmp/mitre-review/tests/v1-tests",
+      "bytes": 51076592
+    },
+    {
+      "path": "/tmp/mitre-review/tests/export-positive",
+      "bytes": 50495504
+    },
+    {
+      "path": "/tmp/mitre-review/tests/candidate-tests",
+      "bytes": 50521904
+    },
+    {
+      "path": "/tmp/mitre-review/tests/baseline-budget",
+      "bytes": 50491760
+    },
+    {
+      "path": "/tmp/mitre-review/tests/public-baseline",
+      "bytes": 71512880
+    },
+    {
+      "path": "/tmp/mitre-review/tests/baseline-tests",
+      "bytes": 50498856
+    },
+    {
+      "path": "/tmp/mitre-review/tests/probe",
+      "bytes": 50489784
+    },
+    {
+      "path": "/tmp/mitre-review/tests/baseline/libforgekernel.a",
+      "bytes": 177260292
+    },
+    {
+      "path": "/tmp/mitre-review/root/baseline-iso/export",
+      "bytes": 50945232
+    },
+    {
+      "path": "/tmp/mitre-review/root/release-export/export_emitted_sheet",
+      "bytes": 51301744
+    },
+    {
+      "path": "/tmp/mitre-review/root/release-export/export_positive",
+      "bytes": 51251752
+    },
+    {
+      "path": "/tmp/mitre-review/core/v2/forgekernel_history_tests",
+      "bytes": 94669624
+    },
+    {
+      "path": "/tmp/mitre-review/core/v2/forgekernel_blend_contact_break_tests",
+      "bytes": 69663848
+    },
+    {
+      "path": "/tmp/mitre-review/core/v2/forgekernel_blend_cavity_tests",
+      "bytes": 72419384
+    },
+    {
+      "path": "/tmp/mitre-review/core/v2/forgekernel_tolerance_tests",
+      "bytes": 51831968
+    },
+    {
+      "path": "/tmp/mitre-review/core/v2/forgekernel_curve_fit_validation_tests",
+      "bytes": 50517088
+    },
+    {
+      "path": "/tmp/mitre-review/core/v2/libforgekernel.a",
+      "bytes": 177894776
+    },
+    {
+      "path": "/tmp/mitre-review/core/v2/fk_blend_surface.cpp.o",
+      "bytes": 8867856
+    },
+    {
+      "path": "/tmp/mitre-review/core/v2/fk_blend_mitre.cpp.o",
+      "bytes": 1284832
+    },
+    {
+      "path": "/tmp/mitre-review/core/v1/forgekernel_history_tests",
+      "bytes": 94524408
+    },
+    {
+      "path": "/tmp/mitre-review/core/v1/forgekernel_blend_contact_break_tests",
+      "bytes": 69518632
+    },
+    {
+      "path": "/tmp/mitre-review/core/v1/forgekernel_blend_cavity_tests",
+      "bytes": 72274176
+    },
+    {
+      "path": "/tmp/mitre-review/core/v1/forgekernel_tolerance_tests",
+      "bytes": 51831968
+    },
+    {
+      "path": "/tmp/mitre-review/core/v1/forgekernel_curve_fit_validation_tests",
+      "bytes": 50517088
+    },
+    {
+      "path": "/tmp/mitre-review/core/v1/libforgekernel.a",
+      "bytes": 177624990
+    },
+    {
+      "path": "/tmp/mitre-review/core/v1/fk_blend_surface.cpp.o",
+      "bytes": 8957312
+    },
+    {
+      "path": "/tmp/mitre-review/core/v1/fk_blend_mitre.cpp.o",
+      "bytes": 925504
+    },
+    {
+      "path": "/tmp/mitre-review/core/baseline/libforgekernel.a",
+      "bytes": 177260292
+    },
+    {
+      "path": "/tmp/sheet-join-review/tests/stage-v3-tests",
+      "bytes": 52737592
+    },
+    {
+      "path": "/tmp/sheet-join-review/tests/baseline-compat-tests",
+      "bytes": 52493296
+    },
+    {
+      "path": "/tmp/sheet-join-review/tests/baseline-final-tests",
+      "bytes": 52489184
+    },
+    {
+      "path": "/tmp/sheet-join-review/tests/stage-v2-tests",
+      "bytes": 52736992
+    },
+    {
+      "path": "/tmp/sheet-join-review/tests/stage-tests",
+      "bytes": 52733008
+    },
+    {
+      "path": "/tmp/sheet-join-review/tests/baseline-tests",
+      "bytes": 52476864
+    },
+    {
+      "path": "/tmp/sheet-join-review/tests/gap_probe",
+      "bytes": 50226576
+    },
+    {
+      "path": "/tmp/sheet-join-review/tests/alias_probe",
+      "bytes": 50226584
+    },
+    {
+      "path": "/tmp/sheet-join-review/tests/probe",
+      "bytes": 50213736
+    },
+    {
+      "path": "/tmp/sheet-join-review/core/forgekernel_sheet_existing_v3",
+      "bytes": 64102968
+    },
+    {
+      "path": "/tmp/sheet-join-review/core/forgekernel_surface_curve_fit_validation_tests-v3",
+      "bytes": 54162680
+    },
+    {
+      "path": "/tmp/sheet-join-review/core/forgekernel_tolerance_tests-v3",
+      "bytes": 51832128
+    },
+    {
+      "path": "/tmp/sheet-join-review/core/forgekernel_history_tests-v3",
+      "bytes": 94264784
+    },
+    {
+      "path": "/tmp/sheet-join-review/core/forgekernel_surface_tools_tests-v3",
+      "bytes": 66542704
+    },
+    {
+      "path": "/tmp/sheet-join-review/core/forgekernel_sheet_fit_validation_tests-v3",
+      "bytes": 50501352
+    },
+    {
+      "path": "/tmp/sheet-join-review/core/libforgekernel-v3.a",
+      "bytes": 177260316
+    },
+    {
+      "path": "/tmp/sheet-join-review/core/fk_sheet-v3.cpp.o",
+      "bytes": 4025160
+    },
+    {
+      "path": "/tmp/sheet-join-review/core/forgekernel_nurbs_support_tests-v2",
+      "bytes": 72003632
+    },
+    {
+      "path": "/tmp/sheet-join-review/core/forgekernel_surface_curve_fit_validation_tests-v2",
+      "bytes": 54162072
+    },
+    {
+      "path": "/tmp/sheet-join-review/core/forgekernel_tolerance_tests-v2",
+      "bytes": 51831528
+    },
+    {
+      "path": "/tmp/sheet-join-review/core/forgekernel_history_tests-v2",
+      "bytes": 94264184
+    },
+    {
+      "path": "/tmp/sheet-join-review/core/forgekernel_surface_tools_tests-v2",
+      "bytes": 66542104
+    },
+    {
+      "path": "/tmp/sheet-join-review/core/forgekernel_sheet_fit_validation_tests-v2",
+      "bytes": 50500744
+    },
+    {
+      "path": "/tmp/sheet-join-review/core/forgekernel_sheet_existing_v2",
+      "bytes": 64102360
+    },
+    {
+      "path": "/tmp/sheet-join-review/core/probe-v2",
+      "bytes": 50461536
+    },
+    {
+      "path": "/tmp/sheet-join-review/core/libforgekernel-v2.a",
+      "bytes": 177259116
+    },
+    {
+      "path": "/tmp/sheet-join-review/core/fk_sheet.cpp.o",
+      "bytes": 4023960
+    },
+    {
+      "path": "/tmp/sheet-join-review/core/forgekernel_nurbs_support_tests",
+      "bytes": 72004016
+    },
+    {
+      "path": "/tmp/sheet-join-review/core/forgekernel_surface_curve_fit_validation_tests",
+      "bytes": 54162464
+    },
+    {
+      "path": "/tmp/sheet-join-review/core/forgekernel_tolerance_tests",
+      "bytes": 51831912
+    },
+    {
+      "path": "/tmp/sheet-join-review/core/forgekernel_history_tests",
+      "bytes": 94264568
+    },
+    {
+      "path": "/tmp/sheet-join-review/core/forgekernel_surface_tools_tests",
+      "bytes": 66542488
+    },
+    {
+      "path": "/tmp/sheet-join-review/core/forgekernel_sheet_fit_validation_tests",
+      "bytes": 50501136
+    },
+    {
+      "path": "/tmp/sheet-join-review/core/gap_probe",
+      "bytes": 50470672
+    },
+    {
+      "path": "/tmp/sheet-join-review/core/alias_probe",
+      "bytes": 50470672
+    },
+    {
+      "path": "/tmp/sheet-join-review/core/probe",
+      "bytes": 50461928
+    },
+    {
+      "path": "/tmp/sheet-join-review/core/libforgekernel.a",
+      "bytes": 177254440
+    },
+    {
+      "path": "/tmp/sheet-join-review/core/v3/fk_sheet.cpp.o",
+      "bytes": 4025160
+    },
+    {
+      "path": "/tmp/sheet-join-review/core/baseline/forgecad-release/kernel/libforgekernel.a",
+      "bytes": 176865158
+    },
+    {
+      "path": "/tmp/sheet-join-review/core/baseline/forgecad-release/kernel/CMakeFiles/forgekernel.dir/fk_sheet.cpp.o",
+      "bytes": 3631272
+    },
+    {
+      "path": "/tmp/sheet-join-review/tests/sanitizer/sheet-join-v3-tests",
+      "bytes": 68681280
+    },
+    {
+      "path": "/tmp/sheet-join-review/tests/sanitizer/fk_sheet.cpp.o",
+      "bytes": 12220184
+    },
+    {
+      "path": "/tmp/sheet-join-review/tests/sanitizer/sheet-join-tests",
+      "bytes": 68669520
+    },
+    {
+      "path": "/tmp/sheet-join-review/tests/sanitizer/fk_curve_fit_bounds.cpp.o",
+      "bytes": 9006864
+    },
+    {
+      "path": "/tmp/sheet-join-review/tests/sanitizer/libforgekernel.a",
+      "bytes": 191445888
+    },
+    {
+      "path": "/tmp/sheet-join-review/tests/baseline/fk_sheet.cpp.o",
+      "bytes": 3631272
+    },
+    {
+      "path": "/tmp/sheet-join-review/tests/baseline/libforgekernel.a",
+      "bytes": 176865158
+    }
+  ],
+  "bytes_freed": 6300330212
+}

@@ -1,0 +1,39 @@
+#include <cmath>
+#include <limits>
+#include <iostream>
+struct SourceUVInterval { double lo, hi; };
+SourceUVInterval sourceUVSum(double a, double b) {
+    const double sum = a + b;
+    if (!std::isfinite(sum)) return {-INFINITY, INFINITY};
+    const double tail = sum - a;
+    const double error = (a - (sum - tail)) + (b - tail);
+    if (error == 0.0) return {sum, sum};
+    return {std::nextafter(sum, -INFINITY), std::nextafter(sum, INFINITY)};
+}
+SourceUVInterval sourceUVLine(double origin, double direction, double parameter) {
+    const double product = direction * parameter;
+    if (!std::isfinite(product)) return {-INFINITY, INFINITY};
+    const double error = std::fma(direction, parameter, -product);
+    // An FMA residual can itself underflow. Simple zero/unit products are
+    // exact; otherwise enclose tiny products even when their residual is zero.
+    const bool simple = direction == 0.0 || parameter == 0.0 || std::fabs(parameter) == 1.0;
+    // Two 53-bit significands can leave a product residual below half the
+    // smallest subnormal. Reserve the full 106-bit product range here.
+    const bool tiny = !simple && std::fabs(product) < std::ldexp(std::numeric_limits<double>::min(), 106);
+    const double lo = error < 0.0 || tiny ? std::nextafter(product, -INFINITY) : product;
+    const double hi = error > 0.0 || tiny ? std::nextafter(product, INFINITY) : product;
+    return {sourceUVSum(origin, lo).lo, sourceUVSum(origin, hi).hi};
+}
+
+int main() {
+ const double d=0x1.946fff2d7d40fp-485, t=0x1.8d839ae109aefp-486;
+ const double n=1.9018558200823954e-33;
+ const double cases[][3]={{0,d,t},{n,-n,1},{1,0,1},{0,0,0},{1e-36,1,1}};
+ std::cout<<"[";
+ for(int i=0;i<5;++i){
+  const auto q=sourceUVLine(cases[i][0],cases[i][1],cases[i][2]);
+  if(i)std::cout<<",";
+  std::cout<<"{\"origin\":\""<<std::hexfloat<<cases[i][0]<<"\",\"direction\":\""<<cases[i][1]<<"\",\"parameter\":\""<<cases[i][2]<<"\",\"lo\":\""<<q.lo<<"\",\"hi\":\""<<q.hi<<"\"}";
+ }
+ std::cout<<"]\n";
+}

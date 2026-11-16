@@ -1,0 +1,115 @@
+#!/usr/bin/env python3
+"""Exact Fraction certificate of actual E(t) versus original tensor S(Q(t)).
+This standalone verifier rebuilds homogeneous Cox/de Boor basis polynomials
+from IEEE input coefficients. It never calls a production bound/extractor.
+Subdivision encloses whole intervals, including every crossed surface knot
+by checking all intersecting piece polynomials. No sample is a certificate.
+"""
+from fraction_common import *
+import copy,math
+
+def normalize(j):
+ d=copy.deepcopy(j); kind=d.pop('type',d.get('kind'));d['kind']={'bspline':'spline','trimmed':'trim','transformed':'transform'}.get(kind,kind)
+ if 'basis' in d and d['basis'] is not None:d['basis']=normalize(d['basis'])
+ if d['kind']=='spline' and not d.get('weights'):d['weights']=['0x1p+0']*len(d['poles'])
+ return d
+
+def cox(U,p,n,q,w,k):
+ # B_i,p(q/w)=out[i]/w**p in one selected original knot interval.
+ z=[F(0)];B=[([F(1)] if i==k else z) for i in range(len(U)-1)]
+ for d in range(1,p+1):
+  C=[]
+  for i in range(len(U)-d-1):
+   a=z if U[i+d]==U[i] else scale(mul(add(q,scale(w,U[i]),-1),B[i]),1/(U[i+d]-U[i]))
+   b=z if U[i+d+1]==U[i+1] else scale(mul(add(scale(w,U[i+d+1]),q,-1),B[i+1]),1/(U[i+d+1]-U[i+1]))
+   C.append(add(a,b))
+  B=C
+ assert len(B)==n
+ return B
+
+def interval_div(q,w):
+ assert min(w)>0
+ # Rational Bezier convex hull property, including common elevated degree.
+ d=max(len(q),len(w))-1;q=elevate(q,d);w=elevate(w,d)
+ r=[a/b for a,b in zip(q,w)];return min(r),max(r)
+
+def surface_data(j):
+ if j.get('basis'):
+  p,q,U,V,nu,nv,P,W=surface_data(j['basis'])
+  M=[[exact(x) for x in row] for row in j['matrix']];T=list(map(exact,j['translation']))
+  return p,q,U,V,nu,nv,[[T[i]+sum(M[i][k]*a[k] for k in range(3)) for i in range(3)] for a in P],W
+ p=j.get('uDegree',j.get('udegree'));q=j.get('vDegree',j.get('vdegree'))
+ U=list(map(exact,j.get('uKnots',j.get('uknots'))));V=list(map(exact,j.get('vKnots',j.get('vknots'))))
+ nu=j.get('uPoleCount',j.get('nu'));nv=j.get('vPoleCount',j.get('nv'))
+ weights=list(map(exact,j.get('weights') or ['0x1p+0']*(nu*nv)));poles=[list(map(exact,a)) for a in j['poles']]
+ assert len(poles)==nu*nv==len(weights) and min(weights)>0
+ return p,q,U,V,nu,nv,poles,weights
+
+def compose(s,uv,ku,kv):
+ p,q,U,V,nu,nv,P,W=s;A=cox(U,p,nu,uv['h'][0],uv['w'],ku);B=cox(V,q,nv,uv['h'][1],uv['w'],kv)
+ h=[[F(0)] for _ in range(4)]
+ for i in range(nu):
+  for j in range(nv):
+   if not any(A[i]) or not any(B[j]):continue
+   idx=i*nv+j;c=scale(mul(A[i],B[j]),W[idx])
+   for d in range(3):h[d]=add(h[d],scale(c,P[idx][d]))
+   h[3]=add(h[3],c)
+ return h[:3],h[3]
+
+def candidates(U,p,n,q,w):
+ lo,hi=interval_div(q,w)
+ assert U[p]<=lo<=hi<=U[n],('Outside original tensor domain',float(lo),float(hi),float(U[p]),float(U[n]))
+ return [k for k in range(p,n) if U[k]<U[k+1] and U[k]<=hi and U[k+1]>=lo]
+
+def outward(q):
+ f=float(q);return nextafter(f,inf) if F.from_float(f)<q else f
+
+def certify_cell(s,e,uv,budget,maxdepth=24):
+ stack=[(e,uv,0)];worst=F(0);leaves=depthmax=0;branches=0
+ while stack:
+  e,uv,depth=stack.pop();p,q,U,V,nu,nv,_,_=s
+  try:
+   us=candidates(U,p,nu,uv['h'][0],uv['w']);vs=candidates(V,q,nv,uv['h'][1],uv['w']);assert us and vs
+  except AssertionError:
+   if depth>=maxdepth:raise
+   us=vs=[]
+  passed=bool(us and vs);local=F(0)
+  for ku in us:
+   for kv in vs:
+    sh,sw=compose(s,uv,ku,kv);w=mul(sw,e['w']);r=[add(mul(sh[d],e['w']),mul(e['h'][d],sw),-1) for d in range(3)]
+    branches+=1
+    if min(w)<=0:passed=False;continue
+    bound=norm_upper(r)/min(w);local=max(local,bound)
+    if bound>budget:
+     passed=False
+     def ev(c):
+      while len(c)>1:c=[(a+b)/2 for a,b in zip(c,c[1:])]
+      return c[0]
+     uq=ev(uv['h'][0])/ev(uv['w']);vq=ev(uv['h'][1])/ev(uv['w'])
+     if U[ku]<=uq<=U[ku+1] and V[kv]<=vq<=V[kv+1]:
+      witness=sum(ev(c)**2 for c in r)/(ev(w)**2)
+      if witness>budget*budget:raise RuntimeError('Exact midpoint witness exceeds budget: t='+str((e['lo']+e['hi'])/2)+' squared='+str(witness))
+  if passed:
+   worst=max(worst,local);leaves+=1;depthmax=max(depthmax,depth);continue
+  if depth>=maxdepth:raise RuntimeError('Unresolved continuous residual: '+str(float(local)))
+  mid=(e['lo']+e['hi'])/2
+  for a,b in [(e['lo'],mid),(mid,e['hi'])]:stack.append((subspan(e,a,b),subspan(uv,a,b),depth+1))
+ return {'pass':True,'upper_mm':outward(worst),'upper_fraction':str(worst),'leaves':leaves,'max_depth':depthmax,'branches':branches}
+
+def verify(record):
+ lo,hi=map(exact,record['range']);budget=exact(record['budget']);assert budget>=0
+ E=source_spans(normalize(record['curve']),(lo,hi));Q=source_spans(normalize(record['pcurve']),(lo,hi));s=surface_data(record['surface'])
+ cuts=sorted({lo,hi}|{v for a in E+Q for v in [a['lo'],a['hi']] if lo<v<hi});out=[];ei=qi=0
+ for a,b in zip(cuts,cuts[1:]):
+  while E[ei]['hi']<=a:ei+=1
+  while Q[qi]['hi']<=a:qi+=1
+  assert E[ei]['lo']<=a<b<=E[ei]['hi'] and Q[qi]['lo']<=a<b<=Q[qi]['hi']
+  out.append(certify_cell(s,subspan(E[ei],a,b),subspan(Q[qi],a,b),budget))
+ return {'fin':record.get('fin'),'edge':record.get('edge'),'face':record.get('face'),'budget':float(budget),'pass':all(x['pass'] for x in out),'upper_mm':max(x['upper_mm'] for x in out),'cells':len(out),'leaves':sum(x['leaves'] for x in out),'branches':sum(x['branches'] for x in out),'max_depth':max(x['max_depth'] for x in out)}
+
+if __name__=='__main__':
+ inp=Path(sys.argv[1]);j=json.loads(inp.read_text());records=j.get('actual',j.get('records',[]));r=[]
+ for rec in records:
+  v=verify(rec);r.append(v);print(v,flush=True)
+ output={'input':str(inp),'sha256':hashlib.sha256(inp.read_bytes()).hexdigest(),'method':'exact rational homogeneous Cox/de Boor composition and Bernstein hull, all intersected knot branches','records':r}
+ Path(sys.argv[2]).write_text(json.dumps(output,indent=2)+'\n')

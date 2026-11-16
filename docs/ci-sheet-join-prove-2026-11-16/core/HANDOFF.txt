@@ -1,0 +1,36 @@
+CI sheet fix core — final frozen candidate V4
+
+Repository commit baseline: c44975e. All agent edits are confined to /tmp/ci-sheet-fix/core. No repository/docs/CMake/CAD/user-process changes.
+
+Final file: kernel/fk_sheet.cpp SHA256 b99a70318f2cf7dcd6b24e646d8976bd287f6622ed9cf4accab968403380afbc.
+Patch: sheet-source-selector.patch SHA256 5efc162290c237cad92772b86aa6df9841f89589018a96e56b487fc44a533b66.
+Object: candidate-sheet.o SHA256 7083b3a7dc5943f408d3f61eab42c1dd5ff99750fe2f320f493082f62f690190.
+Baseline fk_sheet.cpp SHA256 8e9bd9d6c1d61bf9e8a189e783d6803510c3c61f07ed28c8e5b82f2efa457e2f.
+Frozen baseline libforgekernel.a SHA256 6bbbea1da27ee01943529ab2f1c2176728f71d414bb6521d141d38d6e90f25ad.
+manifest.json includes failing-certificate.json SHA and these files.
+
+Cause actually reproduced:
+- Public OffsetLoftExtendedSeamsTrimBoth fails locally before output, matching CI. This is not GCC15-specific.
+- First side pair 0,3 / original faces0,1. Endpoint normal sine1.4925125812953588e-11 selected affineJoin solely because sine<1e-3.
+- First B check, BEFORE commit: span[0,.13249013681432567], fullrange[0,.13600543438950252], cap1e-7mm. Continuous upper.034555064509541704mm and129-point measurement.034555064509540025mm: actual wrong ISO curve, not a pessimistic hull.
+- ORIGINAL commonedge1 has cubic pcurves262/409poles; U varies around.492..507. Its original intersection is not ISO despite the almost tangent endpoint. Independent Fraction midpoint witness confirms actual gap.0075674432mm >cap.
+
+Correction:
+- Identify the unique original common edge by face/vertex incidence, then inspect the ORIGINAL two fin maps over the ORIGINAL shared-edge range. No proximity matching and no samples for classification.
+- Exact constant component of any positive-weight NURBS (all degrees) is recognized from its original control hull; Line coefficients are inspected directly. Source edge parameter need not be affine for an ISO image.
+- Numerical source-map noise is tested in physical units before choosing the ISO algorithm: original UV constant-coordinate spread times an ORIGINAL-control carrier derivative bound must fit min(operation cap, max(linearResolution(),source edge tolerance)+source fin pcurveTolerance). Source and canonical UV image must remain in the metric carrier's natural rectangle. Unknown/unresolved/out-of-domain families use the existing explicit sampled implicit continuation.
+- Line endpoint enclosures use TwoSum and product FMA residuals; products below min-normal*2^106 conservatively widen even when the FMA residual underflows. Zero/unit products remain exact, preserving exact boundary cancellation. This is an arithmetic enclosure guard, not a geometric tolerance.
+- Seed at the original common-edge vertex parameter for BOTH fin senses, with exact original constant coefficient when available. This avoids substituting rounded projected corners (1 vs.99999999999999978).
+- Source metadata checked finite/nonnegative. Existing physical start-vertex check remains in place.
+- Only after this source-family selection does affineJoin run. Its existing continuous construction and actual-fin certificates, cap, budgets, and terminal-failure behavior are unchanged. No catch returns from a failed ISO proof to Newton.
+- Genuine non-ISO original maps, including the failing offset case, use existing Newton continuation. This branch remains explicitly sampled, without a new generic certificate.
+
+Core verification:
+- Final TU compiled with /usr/bin/c++ -std=c++17 -Wall -Wextra -Wpedantic -O2 -g -ffp-contract=off -fno-fast-math: no warnings/errors.
+- candidate-link.txt reproduces a minimal runner using current public test_offset object/main, candidate-sheet.o BEFORE the FROZEN baseline library and OCCT libraries. --strip-debug affects binary size only.
+- V4 OffsetLoftExtendedSeamsTrimBoth:1/1PASS.
+- V4 OffsetLoftSeamExtensionFollowsTangentSeam:1/1PASS, retained old positive.
+- The historical public test source/assertions and fixtures remain unchanged; tests agent adds four variants in the existing validation TU.
+- Dedicated33cases, Clang/ASan and independent Fraction witnesses are handled by tests/audit agents on this exact frozen V4; await their final results before integration.
+
+Prior exploratory candidates are diagnostic only. V1/V2 rejected legitimate ISO source maps due exact equality against projected anchors/coefficient noise; V3 passed geometry but its first FMA underflow guard was too narrow. The independent auditor supplied an exact IEEE half-subnormal residual witness; V4 corrects that guard. Do not attribute prior-version logs to V4 without rerunning.

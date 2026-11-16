@@ -1,0 +1,221 @@
+{
+  "scope": "Independent CI sheet regression audit, V4 b99a703 final; exact original coefficient proofs and personally executed fresh tests. Only UTF-8 text/JSON/inert scripts and source copies.",
+  "files": [
+    {
+      "path": "README.txt",
+      "bytes": 1646,
+      "sha256": "184069a225d63e7afd931f559450016dea22b86d81b90b85be8b408424c8cd2a"
+    },
+    {
+      "path": "actual-newton-fins.json",
+      "bytes": 2862711,
+      "sha256": "d3f0b7ebb5a75624155d0a4b2b791fb91cacb1da81efb3ff6a303e334bba5417"
+    },
+    {
+      "path": "actual-newton-fraction.json",
+      "bytes": 1125,
+      "sha256": "2fae2b4f73a04cc970fd072a2b4332dc9acf5b32325955afcf072b61a11f93af"
+    },
+    {
+      "path": "actual-newton-fraction.log",
+      "bytes": 428,
+      "sha256": "d69523829caa753f912ec39e6075cfaa4c3f26908e984b9a85ff3aa6a0b11137"
+    },
+    {
+      "path": "audit-report.md",
+      "bytes": 5407,
+      "sha256": "10e272182b50d15e0655ca403a0afe2d4e6d9b1269b6326f451d4d80b408d7fc"
+    },
+    {
+      "path": "baseline-ci-context.json",
+      "bytes": 457,
+      "sha256": "57426cb57df83f2fa659ea373ce6b6b97938698c0a129c3c159ab147b7b45a66"
+    },
+    {
+      "path": "baseline-execution.json",
+      "bytes": 930,
+      "sha256": "1dfc8df088ef4641ccc0713675c35217a583daf8d4ad1a9cd9adb26ff671f571"
+    },
+    {
+      "path": "baseline-fk_curve_fit_bounds.cpp.txt",
+      "bytes": 89160,
+      "sha256": "3faf91d68ee1511dd31c2c6a37a6c51dd1da8a49286c54873739b102b268052e"
+    },
+    {
+      "path": "baseline-fk_sheet.cpp.txt",
+      "bytes": 52283,
+      "sha256": "8e9bd9d6c1d61bf9e8a189e783d6803510c3c61f07ed28c8e5b82f2efa457e2f"
+    },
+    {
+      "path": "baseline-hashes.json",
+      "bytes": 302,
+      "sha256": "741c3684cc45c5225de2096def63e08af248d8b0c38ef58f55dbfda813093f42"
+    },
+    {
+      "path": "baseline-independent-clang.log",
+      "bytes": 179,
+      "sha256": "3b85f1b1549655f8526ec3ddf2538ff0633ef3c03daa4126dec4299ce06c424b"
+    },
+    {
+      "path": "baseline-independent-gcc.log",
+      "bytes": 179,
+      "sha256": "3b85f1b1549655f8526ec3ddf2538ff0633ef3c03daa4126dec4299ce06c424b"
+    },
+    {
+      "path": "baseline-test_offset.cpp.txt",
+      "bytes": 43778,
+      "sha256": "95dee097ee9cf6a20c1e279040797c8becb51ef2c5806f43e334ebb35610eda4"
+    },
+    {
+      "path": "baseline-to-final.diff.txt",
+      "bytes": 10585,
+      "sha256": "5e4e73a3deb5b10ff24e2febf18bb4f3bd97f1a9a0aca6452fc7b7ee5fdf95d2"
+    },
+    {
+      "path": "check_fma_underflow_guard.py.txt",
+      "bytes": 1154,
+      "sha256": "0ae6dbfea8b3cd8df807638dbda7ec8761530a9098e7d8d99ce219b82f68a6bc"
+    },
+    {
+      "path": "check_source_point_witnesses.py.txt",
+      "bytes": 2704,
+      "sha256": "6e3b3fd644738dbaa741603a1ed2286f925449a6e3563f10ffbb67263bd27c2a"
+    },
+    {
+      "path": "failed-join-fraction.json",
+      "bytes": 983,
+      "sha256": "6cd7ed822a20d14cc7589e99cb2d26d8e7fe0bdd5b6749cd3319bb38480baffb"
+    },
+    {
+      "path": "failed-join-fraction.json.converted.json",
+      "bytes": 608716,
+      "sha256": "d4f091e25e624f3fe41a3029b7670b876b06b9de432b492e0217c40556feea98"
+    },
+    {
+      "path": "failing-certificate.json",
+      "bytes": 230894,
+      "sha256": "ccf14d964e0566070f5579beddd2f0b30964155b4a7728c2a62860766722aa01"
+    },
+    {
+      "path": "final-independent-33-tests.log",
+      "bytes": 1238,
+      "sha256": "8a4a19a61aac0ffc51368b1e4ca81f1cd1f5844feea527115e650b1ec06efe24"
+    },
+    {
+      "path": "final-independent-execution-hashes.json",
+      "bytes": 475,
+      "sha256": "4ee53fa0a80b799136b7a5e0b73ab8e0ba1e35787b705dad8578be0f5a4e2585"
+    },
+    {
+      "path": "final-independent-public-exact.log",
+      "bytes": 59,
+      "sha256": "b8d35365f175f3f97a396b48feee69b5a7314d4a3d80147706583cc7fbf5b300"
+    },
+    {
+      "path": "final-independent-public-tangent.log",
+      "bytes": 69,
+      "sha256": "9e9b527939c3b0613ff4b745f1342d7bcbc2d547e2e85750b8731b3422008808"
+    },
+    {
+      "path": "fma-underflow-witness.json",
+      "bytes": 945,
+      "sha256": "71002119e54863552e13a384fe0977a34c11c4228ca2f224854a709f808eaa52"
+    },
+    {
+      "path": "fraction_common.py.txt",
+      "bytes": 4133,
+      "sha256": "6c201bca580c820cbedb5ba4e2b5b397af7958046266fe96528bb9de3aafe2cb"
+    },
+    {
+      "path": "graph-consult.json",
+      "bytes": 32620,
+      "sha256": "262103fb6731fd3be8ea01ebfb8d63f7663f6c77646145ddcdd2fb221ebaec98"
+    },
+    {
+      "path": "old-test-preservation.json",
+      "bytes": 475,
+      "sha256": "29a058dcfb0ee194eea1f648f96c3ff380de236ff4d17412430d8c7aedbf43a1"
+    },
+    {
+      "path": "probe-v4-fraction-verification.json",
+      "bytes": 2016,
+      "sha256": "ecff5d67e7c8f39ed696f881c3a04d6df99e9044d7bad9db962caaa73f8c582c"
+    },
+    {
+      "path": "probe-v4-runtime.json",
+      "bytes": 571,
+      "sha256": "b128c99e024037b2a2444238ad627b22174f1806b3f01712767e2989e66a2928"
+    },
+    {
+      "path": "probe_v4_intervals.cpp.txt",
+      "bytes": 1992,
+      "sha256": "2c3590fecdb93e3b15455a68ec5297aeacae0065e601cc98ca8d0d2a46611aca"
+    },
+    {
+      "path": "reviewed-final-test_sheet_join_validation.cpp.txt",
+      "bytes": 28440,
+      "sha256": "451b30b1488b94f3e817449a27779bef85ad0d28abf2896cabd4e22e4b5ab763"
+    },
+    {
+      "path": "reviewed-v4-fk_sheet.cpp.txt",
+      "bytes": 59416,
+      "sha256": "b99a70318f2cf7dcd6b24e646d8976bd287f6622ed9cf4accab968403380afbc"
+    },
+    {
+      "path": "source-point-witnesses.json",
+      "bytes": 4849,
+      "sha256": "a448c2bc39def461ab05d44080b23eb95f22e501ee120aec827984a9d4332ffc"
+    },
+    {
+      "path": "source-shared-edge1.json",
+      "bytes": 2183636,
+      "sha256": "d1c09e1c60b1ae07d8203a98196eae2f94f369205ccb4eeb7ef621c5132ae457"
+    },
+    {
+      "path": "summary.json",
+      "bytes": 1784,
+      "sha256": "77493d3bf408f3d4a332399cc08a89117bd73dbe4e1142fdf2df22afe90c9567"
+    },
+    {
+      "path": "test_exact_regression.cpp.txt",
+      "bytes": 2251,
+      "sha256": "af46e84651120d67b8d41f7b32a613895937e7844da057e84b701d58dd6cd8ab"
+    },
+    {
+      "path": "test_newton_fin_exports.cpp.txt",
+      "bytes": 3586,
+      "sha256": "393da578911f069a25ad2ee7b384551fae97e71a664ffe8b61a0d9e6e553b90b"
+    },
+    {
+      "path": "v3-v4-actual-fin-byte-comparison.json",
+      "bytes": 334,
+      "sha256": "8832876df80fd4f8668ff86cd64cbb6d50a44b1c599fda64dd7b8e8e3057d56b"
+    },
+    {
+      "path": "v4-integrated-byte-comparison.json",
+      "bytes": 211,
+      "sha256": "b526dfcff47207aee493678d4425cc119ab8ec12d856ecbdfde5ee6042ec215c"
+    },
+    {
+      "path": "v4-source-hash.json",
+      "bytes": 249,
+      "sha256": "4b53450ac67d30bcca70a5edc4c22a8b2e3d0579d40d755a95427cefd5fea496"
+    },
+    {
+      "path": "verify_actual_newton_fins.py.txt",
+      "bytes": 1334,
+      "sha256": "253d4e82872aa5ff2dbadcbe344b02e6712cea946e751188681914c7f8e91090"
+    },
+    {
+      "path": "verify_failed_join.py.txt",
+      "bytes": 2022,
+      "sha256": "fcb7104aca475726200a42ee56d552af242628ed04c20236f5c353d2125e142e"
+    },
+    {
+      "path": "verify_tensor_fraction.py.txt",
+      "bytes": 5760,
+      "sha256": "08fccbe94b071f2c478e0d268f6a8b3fb60ea663f0a7c456033d826e44b63cf3"
+    }
+  ],
+  "count_excluding_manifest_and_seal": 43
+}

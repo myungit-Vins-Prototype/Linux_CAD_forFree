@@ -1,0 +1,15 @@
+{
+  "version": "sourceUVLine-v3",
+  "direction": "0x1.946fff2d7d40fp-485",
+  "parameter": "0x1.8d839ae109aefp-486",
+  "rounded_product": "0x1.3a00cc5c0260ep-970",
+  "exact_product_minus_rounded": "1/404804506614621236704990693437834614099113299528284236713802716054860679135990693783920767402874248990374155728633623822779617474771586953734026799881477019843034848553132722728933815484186432682479535356945490137124014966849385397236206711298319112681620113024717539104666829230461005064372655017292012526615415482186989568",
+  "exact_error_power_of_two": -1075,
+  "rounded_fma_residual": 0.0,
+  "old_tiny_threshold": "0x1.0000000000000p-970",
+  "old_tiny_guard": false,
+  "old_returned_point_interval_misses_exact_product": true,
+  "proposed_tiny_threshold": "0x1.0000000000000p-916",
+  "proposed_guard_covers_witness": true,
+  "scope": "Rigor witness for an interval selector helper; no practical over-cap geometry acceptance demonstrated."
+}

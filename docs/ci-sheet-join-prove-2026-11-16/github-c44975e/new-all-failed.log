@@ -1,0 +1,1735 @@
+macOS CPU e Metal	Esegui i test	﻿2026-11-16T17:40:03.3212450Z ##[group]Run ctest --test-dir build-ci --output-on-failure --no-tests=error \
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:03.3213030Z ^[[36;1mctest --test-dir build-ci --output-on-failure --no-tests=error \^[[0m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:03.3213450Z ^[[36;1m  --parallel 2 --timeout 900 \^[[0m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:03.3213760Z ^[[36;1m  --output-junit "$RUNNER_TEMP/ctest.xml" \^[[0m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:03.3214140Z ^[[36;1m  2>&1 | tee "$RUNNER_TEMP/ctest.log"^[[0m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:03.4711720Z shell: /bin/bash --noprofile --norc -e -o pipefail {0}
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:03.4712040Z env:
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:03.4712320Z   QT_QPA_PLATFORM: offscreen
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:03.4712560Z   QT_QPA_OFFSCREEN_NO_GLX: 1
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:03.4712840Z   QT_QPA_PLATFORMTHEME: 
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:03.4713060Z   QT_STYLE_OVERRIDE: Fusion
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:03.4713320Z   LIBGL_ALWAYS_SOFTWARE: 1
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:03.4713620Z   HOMEBREW_NO_AUTO_UPDATE: 1
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:03.4713850Z ##[endgroup]
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:03.5808790Z Test project /Users/runner/work/Linux_CAD_forFree/Linux_CAD_forFree/build-ci
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:03.5865920Z         Start   1: forgecad_gpu_broad_phase_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:03.5875690Z         Start   2: forgecad_box_fallback_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:03.8386620Z   1/113 Test   #2: forgecad_box_fallback_tests ......................   Passed    0.25 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:03.8389780Z         Start   3: forgecad_metal_box_pool_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:05.1536320Z   2/113 Test   #1: forgecad_gpu_broad_phase_tests ...................   Passed    1.57 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:05.1669070Z         Start   4: forgecad_geometry_sources_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:05.2190770Z   3/113 Test   #3: forgecad_metal_box_pool_tests ....................   Passed    1.38 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:05.2308350Z         Start   5: forgecad_tessellation_availability_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:05.2348660Z   4/113 Test   #5: forgecad_tessellation_availability_tests .........   Passed    0.00 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:05.2435400Z         Start   6: forgecad_metal_tessellation_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:05.2554820Z   5/113 Test   #4: forgecad_geometry_sources_tests ..................   Passed    0.10 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:05.2556540Z         Start   7: forgecad_cuda_pool_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:05.2590310Z   6/113 Test   #7: forgecad_cuda_pool_tests .........................   Passed    0.00 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:05.2591800Z         Start   8: forgecad_constraint_linear_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:05.2703490Z   7/113 Test   #8: forgecad_constraint_linear_tests .................   Passed    0.01 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:05.2705610Z         Start   9: forgecad_display_cache_memory_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:05.5135610Z   8/113 Test   #9: forgecad_display_cache_memory_tests ..............   Passed    0.24 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:05.5138290Z         Start  10: forgecad_mesh_export_metal_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:05.7948650Z   9/113 Test   #6: forgecad_metal_tessellation_tests ................   Passed    0.55 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:05.8017890Z         Start  11: forgecad_mesh_export_cpu_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:06.8502910Z  10/113 Test  #11: forgecad_mesh_export_cpu_tests ...................   Passed    1.05 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:06.8509240Z         Start  12: forgecad_application_theme_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:07.4915770Z  11/113 Test  #12: forgecad_application_theme_tests .................   Passed    0.64 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:07.4919170Z         Start  13: forgecad_expression_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:07.7622440Z  12/113 Test  #13: forgecad_expression_tests ........................   Passed    0.27 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:07.7633290Z         Start  14: forgecad_shape_analysis_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:07.8245720Z  13/113 Test  #10: forgecad_mesh_export_metal_tests .................   Passed    2.31 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:07.8301940Z         Start  15: forgecad_document_compression_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:07.8573100Z  14/113 Test  #14: forgecad_shape_analysis_tests ....................   Passed    0.09 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:07.8574510Z         Start  16: forgecad_snapshot_chunks_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:07.8677980Z  15/113 Test  #15: forgecad_document_compression_tests ..............   Passed    0.04 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:07.8679810Z         Start  17: forgecad_drawing_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:07.9003570Z  16/113 Test  #16: forgecad_snapshot_chunks_tests ...................   Passed    0.04 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:07.9004890Z         Start  18: forgecad_revision_store_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:07.9177240Z  17/113 Test  #17: forgecad_drawing_tests ...........................   Passed    0.05 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:07.9178520Z         Start  19: forgecad_revision_release_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:08.1470070Z  18/113 Test  #19: forgecad_revision_release_tests ..................   Passed    0.23 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:08.1479260Z         Start  20: forgecad_catalog_recovery_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:08.3603200Z  19/113 Test  #20: forgecad_catalog_recovery_tests ..................   Passed    0.21 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:08.3644530Z         Start  21: forgecad_feature_dependencies_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:08.3953060Z  20/113 Test  #21: forgecad_feature_dependencies_tests ..............   Passed    0.04 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:08.3954410Z         Start  22: forgecad_geometry_refs_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:08.4215870Z  21/113 Test  #22: forgecad_geometry_refs_tests .....................   Passed    0.03 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:08.4220300Z         Start  23: forgecad_workspace_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:08.4876470Z  22/113 Test  #23: forgecad_workspace_tests .........................   Passed    0.07 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:08.4882240Z         Start  24: forgecad_drawing_local_tools_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:12.9644150Z  23/113 Test  #24: forgecad_drawing_local_tools_tests ...............   Passed    4.48 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:12.9656090Z         Start  25: forgecad_drawing_local_section_depth_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:13.0095240Z  24/113 Test  #18: forgecad_revision_store_tests ....................   Passed    5.11 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:13.0096660Z         Start  26: forgecad_drawing_crop_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:13.5878580Z  25/113 Test  #26: forgecad_drawing_crop_tests ......................   Passed    0.58 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:13.5879320Z         Start  27: forgecad_drawing_templates_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:13.8281340Z  26/113 Test  #25: forgecad_drawing_local_section_depth_tests .......   Passed    0.86 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:13.8289960Z         Start  28: forgecad_drawing_preparation_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:14.1035820Z  27/113 Test  #27: forgecad_drawing_templates_tests .................   Passed    0.52 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:14.1041580Z         Start  29: forgecad_drawing_scale_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:16.1891300Z  28/113 Test  #28: forgecad_drawing_preparation_tests ...............   Passed    2.35 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:16.1918210Z         Start  30: forgecad_drawing_editor_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:17.0487600Z  29/113 Test  #30: forgecad_drawing_editor_tests ....................   Passed    0.86 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:17.0500560Z         Start  31: forgecad_projected_drawing_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:17.6374870Z  30/113 Test  #31: forgecad_projected_drawing_tests .................   Passed    0.59 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:17.6476650Z         Start  32: forgecad_drawing_view_edit_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:18.8278740Z  31/113 Test  #29: forgecad_drawing_scale_tests .....................   Passed    4.72 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:18.8281280Z         Start  33: forgecad_drawing_layout_history_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:20.2303070Z  32/113 Test  #33: forgecad_drawing_layout_history_tests ............   Passed    1.40 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:20.2307440Z         Start  34: forgecad_drawing_dimensions_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:20.3129480Z  33/113 Test  #34: forgecad_drawing_dimensions_tests ................   Passed    0.08 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:20.3210860Z         Start  35: forgecad_drawing_dimensions_gui_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:21.6262280Z  34/113 Test  #32: forgecad_drawing_view_edit_tests .................   Passed    3.99 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:21.6415110Z         Start  36: forgecad_drawing_dimension_repair_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:23.5363290Z  35/113 Test  #36: forgecad_drawing_dimension_repair_tests ..........   Passed    1.89 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:23.5370440Z         Start  37: forgecad_drawing_view_placement_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:24.8665450Z  36/113 Test  #37: forgecad_drawing_view_placement_tests ............   Passed    1.33 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:24.8666960Z         Start  38: forgecad_drawing_silhouette_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:25.0130900Z  37/113 Test  #38: forgecad_drawing_silhouette_tests ................   Passed    0.15 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:25.0192050Z         Start  39: forgecad_drawing_visibility_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:43.4920770Z  38/113 Test  #35: forgecad_drawing_dimensions_gui_tests ............   Passed   23.18 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:43.4988310Z         Start  40: forgecad_drawing_hidden_lines_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:46.2765400Z  39/113 Test  #40: forgecad_drawing_hidden_lines_tests ..............   Passed    2.78 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:46.2767440Z         Start  41: forgecad_drawing_page_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:46.9854820Z  40/113 Test  #41: forgecad_drawing_page_tests ......................   Passed    0.71 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:46.9956100Z         Start  42: forgecad_drawing_derived_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:55.2107410Z  41/113 Test  #42: forgecad_drawing_derived_tests ...................   Passed    8.22 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:55.2108550Z         Start  43: forgecad_drawing_detail_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:56.3615830Z  42/113 Test  #39: forgecad_drawing_visibility_tests ................   Passed   31.34 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:56.3684000Z         Start  44: forgecad_drawing_auxiliary_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:58.5335270Z  43/113 Test  #44: forgecad_drawing_auxiliary_tests .................   Passed    2.17 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:58.5337090Z         Start  45: forgecad_drawing_break_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:59.7550790Z  44/113 Test  #43: forgecad_drawing_detail_tests ....................   Passed    4.54 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:59.7603420Z         Start  46: forgecad_revision_numbers_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:59.8306340Z  45/113 Test  #46: forgecad_revision_numbers_tests ..................   Passed    0.08 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:40:59.8307110Z         Start  47: forgecad_drawing_presentation_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:41:00.4792290Z  46/113 Test  #47: forgecad_drawing_presentation_tests ..............   Passed    0.65 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:41:00.4892570Z         Start  48: forgecad_drawing_complete_sections_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:41:00.5209450Z  47/113 Test  #45: forgecad_drawing_break_tests .....................   Passed    1.99 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:41:00.5312070Z         Start  49: forgecad_drawing_centers_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:41:01.8512240Z  48/113 Test  #49: forgecad_drawing_centers_tests ...................   Passed    1.33 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:41:01.8617730Z         Start  50: forgecad_drawing_axes_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:41:03.8548980Z  49/113 Test  #48: forgecad_drawing_complete_sections_tests .........   Passed    3.37 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:41:03.8550640Z         Start  51: forgecad_drawing_ui_controls_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:41:04.2365850Z  50/113 Test  #51: forgecad_drawing_ui_controls_tests ...............   Passed    0.38 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:41:04.2378020Z         Start  52: forgecad_drawing_focus_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:41:07.6591500Z  51/113 Test  #50: forgecad_drawing_axes_tests ......................   Passed    5.81 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:41:07.6592870Z         Start  53: forgecad_overlay_uniform_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:41:07.6864500Z  52/113 Test  #53: forgecad_overlay_uniform_tests ...................***Skipped   0.03 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:41:07.6865910Z         Start  54: forgecad_sketch_offset_validation_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:41:09.3858740Z  53/113 Test  #54: forgecad_sketch_offset_validation_tests ..........   Passed    1.70 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:41:09.3859870Z         Start  55: forgekernel_open_offset_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:41:17.4468240Z  54/113 Test  #52: forgecad_drawing_focus_tests .....................   Passed   13.21 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:41:17.4569450Z         Start  56: forgekernel_loft_knots_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:41:17.4970980Z  55/113 Test  #56: forgekernel_loft_knots_tests .....................   Passed    0.05 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:41:17.5071980Z         Start  57: forgekernel_polar_blend_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:41:36.9540560Z  56/113 Test  #57: forgekernel_polar_blend_tests ....................   Passed   19.45 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:41:36.9640840Z         Start  58: forgekernel_surface_instances_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:41:38.3012090Z  57/113 Test  #58: forgekernel_surface_instances_tests ..............   Passed    1.35 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:41:38.3113260Z         Start  59: forgekernel_exchange_robustness_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:41:38.6379650Z  58/113 Test  #59: forgekernel_exchange_robustness_tests ............   Passed    0.34 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:41:38.6480650Z         Start  60: forgekernel_history_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:41:39.0100020Z  59/113 Test  #60: forgekernel_history_tests ........................   Passed    0.37 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:41:39.0201470Z         Start  61: forgekernel_blend_probe_self_test
+macOS CPU e Metal	Esegui i test	2026-11-16T17:41:39.2511090Z  60/113 Test  #61: forgekernel_blend_probe_self_test ................   Passed    0.24 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:41:39.2613180Z         Start  62: forgekernel_tolerance_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:41:39.9620430Z  61/113 Test  #62: forgekernel_tolerance_tests ......................   Passed    0.71 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:41:39.9723030Z         Start  63: forgekernel_surface_tools_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:41:44.9360140Z  62/113 Test  #63: forgekernel_surface_tools_tests ..................   Passed    4.97 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:41:44.9371260Z         Start  64: forgekernel_blend_profile_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:41:45.5507710Z  63/113 Test  #64: forgekernel_blend_profile_tests ..................   Passed    0.62 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:41:45.5609570Z         Start  65: forgekernel_face_normal_bounds_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:41:45.5792610Z  64/113 Test  #65: forgekernel_face_normal_bounds_tests .............   Passed    0.02 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:41:45.5892860Z         Start  66: forgekernel_sketch_projection_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:41:45.6696960Z  65/113 Test  #66: forgekernel_sketch_projection_tests ..............   Passed    0.10 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:41:45.6710460Z         Start  67: forgekernel_projected_curve_reference_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:41:45.7124490Z  66/113 Test  #67: forgekernel_projected_curve_reference_tests ......   Passed    0.03 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:41:45.7137310Z         Start  68: forgekernel_surface_parameterization_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:41:45.7238510Z  67/113 Test  #68: forgekernel_surface_parameterization_tests .......   Passed    0.01 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:41:45.7338690Z         Start  69: forgekernel_disjoint_union_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:41:45.7627390Z  68/113 Test  #69: forgekernel_disjoint_union_tests .................   Passed    0.04 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:41:45.7728530Z         Start  70: forgekernel_loft_projected_guide_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:41:47.2533950Z  69/113 Test  #70: forgekernel_loft_projected_guide_tests ...........   Passed    1.49 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:41:47.2633860Z         Start  71: forgekernel_loft_shape_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:41:47.8358180Z  70/113 Test  #71: forgekernel_loft_shape_tests .....................   Passed    0.59 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:41:47.8460320Z         Start  72: forgekernel_loft_projected_section_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:41:49.4802020Z  71/113 Test  #72: forgekernel_loft_projected_section_tests .........   Passed    1.65 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:41:49.4903450Z         Start  73: forgekernel_loft_complexity_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:41:49.6086110Z  72/113 Test  #73: forgekernel_loft_complexity_tests ................   Passed    0.13 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:41:49.6187240Z         Start  74: forgekernel_loft_guide_constraint_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:41:49.8194530Z  73/113 Test  #74: forgekernel_loft_guide_constraint_tests ..........   Passed    0.21 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:41:49.8295770Z         Start  75: forgekernel_offset_validation_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:41:49.8595490Z  74/113 Test  #75: forgekernel_offset_validation_tests ..............   Passed    0.04 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:41:49.8697080Z         Start  76: forgekernel_curve_fit_validation_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:42:01.8666450Z  75/113 Test  #76: forgekernel_curve_fit_validation_tests ...........   Passed   12.01 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:42:01.8667990Z         Start  77: forgekernel_offset_split_crease_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:42:04.0769710Z  76/113 Test  #77: forgekernel_offset_split_crease_tests ............   Passed    2.21 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:42:04.0859320Z         Start  78: forgekernel_blend_contact_break_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:42:04.6318760Z  77/113 Test  #78: forgekernel_blend_contact_break_tests ............   Passed    0.55 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:42:04.6334920Z         Start  79: forgekernel_plane_jets_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:42:04.6436900Z  78/113 Test  #79: forgekernel_plane_jets_tests .....................   Passed    0.01 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:42:04.6536550Z         Start  80: forgekernel_bspline_derivative_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:42:04.6593640Z  79/113 Test  #80: forgekernel_bspline_derivative_tests .............   Passed    0.01 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:42:04.6600820Z         Start  81: forgekernel_bspline_cache_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:42:04.6880940Z  80/113 Test  #81: forgekernel_bspline_cache_tests ..................   Passed    0.04 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:42:04.6882100Z         Start  82: forgekernel_face_parameter_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:42:04.7004660Z  81/113 Test  #82: forgekernel_face_parameter_tests .................   Passed    0.01 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:42:04.7005570Z         Start  83: forgekernel_bspline_isoline_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:42:04.7270900Z  82/113 Test  #83: forgekernel_bspline_isoline_tests ................   Passed    0.03 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:42:04.7271850Z         Start  84: forgekernel_loft_correspondence_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:42:04.9954720Z  83/113 Test  #84: forgekernel_loft_correspondence_tests ............   Passed    0.27 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:42:04.9955730Z         Start  85: forgekernel_loft_point_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:42:05.1125950Z  84/113 Test  #85: forgekernel_loft_point_tests .....................   Passed    0.12 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:42:05.1227440Z         Start  86: forgekernel_boolean_seam_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:42:05.2158010Z  85/113 Test  #86: forgekernel_boolean_seam_tests ...................   Passed    0.10 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:42:05.2159060Z         Start  87: forgekernel_marching_seed_grid_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:42:05.9423890Z  86/113 Test  #87: forgekernel_marching_seed_grid_tests .............   Passed    0.72 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:42:05.9526110Z         Start  88: forgekernel_surface_mapping_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:42:06.2004860Z  87/113 Test  #88: forgekernel_surface_mapping_tests ................   Passed    0.26 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:42:06.2006020Z         Start  89: forgekernel_trimmed_face_bounds_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:42:06.6147040Z  88/113 Test  #89: forgekernel_trimmed_face_bounds_tests ............   Passed    0.41 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:42:06.6147980Z         Start  90: forgekernel_solid_trim_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:42:06.6416560Z  89/113 Test  #90: forgekernel_solid_trim_tests .....................   Passed    0.03 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:42:06.6417520Z         Start  91: forgekernel_cone_rays_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:42:06.6636920Z  90/113 Test  #91: forgekernel_cone_rays_tests ......................   Passed    0.02 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:42:06.6677020Z         Start  92: forgekernel_blend_cavity_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:42:37.1837630Z  91/113 Test  #92: forgekernel_blend_cavity_tests ...................   Passed   30.52 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:42:37.1940290Z         Start  93: forgekernel_blend_cavity_regression_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:43:15.0379570Z  92/113 Test  #93: forgekernel_blend_cavity_regression_tests ........   Passed   37.85 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:43:15.0481930Z         Start  94: forgekernel_blend_mitre_validation_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:43:15.1097170Z  93/113 Test  #94: forgekernel_blend_mitre_validation_tests .........   Passed    0.07 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:43:15.1215840Z         Start  95: forgekernel_blend_boundary_validation_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:43:16.8518600Z  94/113 Test  #95: forgekernel_blend_boundary_validation_tests ......   Passed    1.74 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:43:16.8525800Z         Start  96: forgekernel_nurbs_support_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:44:12.2733300Z  95/113 Test  #55: forgekernel_open_offset_tests ....................   Passed  182.88 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:44:12.2831700Z         Start  97: forgekernel_sweep_validation_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:44:56.4526640Z  96/113 Test  #96: forgekernel_nurbs_support_tests ..................   Passed   99.60 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:44:56.4529050Z         Start  98: forgekernel_sheet_fit_validation_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:44:56.9814010Z  97/113 Test  #98: forgekernel_sheet_fit_validation_tests ...........   Passed    0.53 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:44:56.9815360Z         Start  99: forgekernel_sheet_join_validation_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:44:57.0849140Z  98/113 Test  #99: forgekernel_sheet_join_validation_tests ..........   Passed    0.10 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:44:57.0850660Z         Start 100: forgekernel_curve_projection_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:44:57.0990120Z  99/113 Test #100: forgekernel_curve_projection_tests ...............   Passed    0.01 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:44:57.0991060Z         Start 101: forgekernel_boundary_fit_validation_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:44:57.2977760Z 100/113 Test #101: forgekernel_boundary_fit_validation_tests ........   Passed    0.20 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:44:57.2980070Z         Start 102: forgekernel_surface_curve_fit_validation_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:44:58.0277820Z 101/113 Test #102: forgekernel_surface_curve_fit_validation_tests ...   Passed    0.73 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:44:58.0279730Z         Start 103: forgekernel_mapping_carrier_validation_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:44:58.9198190Z 102/113 Test #103: forgekernel_mapping_carrier_validation_tests .....   Passed    0.89 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:44:58.9199980Z         Start 104: forgekernel_mapping_uv_validation_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:45:01.9574160Z 103/113 Test #104: forgekernel_mapping_uv_validation_tests ..........   Passed    3.04 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:45:01.9575340Z         Start 105: forgekernel_mapping_diagonal_validation_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:45:02.5197860Z 104/113 Test #105: forgekernel_mapping_diagonal_validation_tests ....   Passed    0.56 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:45:02.5198860Z         Start 106: forgekernel_planar_flatten_validation_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:45:03.6721000Z 105/113 Test  #97: forgekernel_sweep_validation_tests ...............   Passed   51.40 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:45:03.6722180Z         Start 107: forgekernel_planar_thicken_validation_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:45:04.0086430Z 106/113 Test #106: forgekernel_planar_flatten_validation_tests ......   Passed    1.49 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:45:04.0087530Z         Start 108: forgekernel_projection_fit_validation_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:45:05.4742390Z 107/113 Test #108: forgekernel_projection_fit_validation_tests ......   Passed    1.46 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:45:05.4745070Z         Start 109: forgekernel_edge_offset_fit_validation_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:45:05.5070220Z 108/113 Test #107: forgekernel_planar_thicken_validation_tests ......   Passed    1.83 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:45:05.5071530Z         Start 110: forgekernel_boolean_boundary_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:45:05.5107710Z 109/113 Test #110: forgekernel_boolean_boundary_tests ...............   Passed    0.00 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:45:05.5108610Z         Start 111: forgekernel_offset_pcurve_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:45:05.8340250Z 110/113 Test #111: forgekernel_offset_pcurve_tests ..................   Passed    0.32 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:45:05.8341200Z         Start 112: forgekernel_sew_pcurve_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:45:09.5307620Z 111/113 Test #109: forgekernel_edge_offset_fit_validation_tests .....   Passed    4.06 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:45:09.5310380Z         Start 113: forgekernel_tests
+macOS CPU e Metal	Esegui i test	2026-11-16T17:45:10.8078060Z 112/113 Test #112: forgekernel_sew_pcurve_tests .....................   Passed    4.97 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7400070Z 113/113 Test #113: forgekernel_tests ................................***Failed  507.21 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7405970Z [  OK  ] cancel_scope_and_evaluation
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7406350Z [  OK  ] cancel_running_parallel_workers
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7430180Z [  OK  ] VecBasics
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7430450Z [  OK  ] FrameMatchesGpAx3
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7430750Z [  OK  ] TransformMatchesGpTrsf
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7431070Z [  OK  ] ReflectionRejectsDegenerateNormal
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7431550Z [  OK  ] Orient2dBasic
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7431870Z [  OK  ] Orient2dNearDegenerate
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7432110Z [  OK  ] Orient3dBasic
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7432430Z [  OK  ] Orient3dNearDegenerate
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7432670Z [  OK  ] PredicatesPermutationConsistency
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7440040Z [  OK  ] BernsteinArithmetic
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7440460Z [  OK  ] BernsteinHighDegreeProduct
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7440760Z [  OK  ] BernsteinRoots
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7441010Z [  OK  ] BernsteinRootsDegenerate
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7441270Z [  OK  ] LineMatchesOcct
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7441630Z [  OK  ] CircleMatchesOcct
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7441870Z [  OK  ] Circle2dMatchesOcct
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7442130Z [  OK  ] EllipseMatchesOcct
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7442440Z [  OK  ] TrimmedCurveOnPeriodicBasis
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7442760Z [  OK  ] BSplineEvaluateMatchesOcct3d
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7443070Z [  OK  ] BSplineEvaluateMatchesOcct2d
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7443440Z [  OK  ] BSplineKnotInsertionMatchesOcct
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7443790Z [  OK  ] BSplineBezierSegments
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7444050Z [  OK  ] BSplineUnclampedAndLeftLimit
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7444370Z [  OK  ] ConicArcsAreExact
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7444570Z [  OK  ] BSplineValidation
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7444870Z [  OK  ] BSplineLowOrdersMatchOcctAndFullEvaluation
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7445310Z [  OK  ] BSplineBasisBernsteinAndBufferBounds
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7445760Z [  OK  ] BSplineBasisConcurrentAndCancelled
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7446190Z [  OK  ] BSplineRepeatedKnotOneSidedDerivatives
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7446680Z [  OK  ] ProjectOnLineAndCircle
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7446960Z [  OK  ] ProjectOnBSplineMatchesOcct
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7447230Z [  OK  ] ProjectOnEllipseMatchesOcct
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7447530Z [  OK  ] ArcLengthExact
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7447900Z [  OK  ] ArcLengthMatchesOcct
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7448200Z [  OK  ] ProjectOnTransformedCurve
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7448520Z [  OK  ] ProjectBoundedCandidatesRetainEveryBranch
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7448940Z [  OK  ] ProjectBoundedCandidatesTransformsAndLimits
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7449310Z [  OK  ] CurveLengthCachePreservesQuadratureAndIdentity
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7449780Z [  OK  ] ProjectBoundedCandidatesHighDegreeAndNarrowSpans
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7450240Z [  OK  ] ProjectMinimumRestrictedRangesMatchesExhaustive
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7450550Z [  OK  ] ProjectMinimumManySpansAnalytic
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7450920Z [  OK  ] ProjectBoundedRangeKnotEndpoints
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7451180Z [  OK  ] PlaneMatchesOcct
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7451490Z [  OK  ] CylinderMatchesOcct
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7451690Z [  OK  ] ConeMatchesOcct
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7451950Z [  OK  ] SphereMatchesOcct
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7452160Z [  OK  ] TorusMatchesOcct
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7452420Z [  OK  ] ExtrusionMatchesOcct
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7452640Z [  OK  ] RevolutionMatchesOcct
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7452870Z [  OK  ] BSplineSurfaceMatchesOcct
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7453160Z [  OK  ] BSplineSurfaceBezierPatches
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7453390Z [  OK  ] BSplineSurfaceValidation
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7453730Z [  OK  ] BSplineSurfaceLowOrdersBernstein
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7454120Z [  OK  ] BSplineSurfaceLowOrdersBoundsConcurrentAndCancelled
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7454520Z [  OK  ] InvertPointKeepsClosedBSplineBranch
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7454800Z [  OK  ] ProjectOnPlaneAndCylinder
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7455100Z [  OK  ] ProjectOnConeSphereTorus
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7455380Z [  OK  ] ProjectOnBSplineSurface
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7455690Z [  OK  ] PlanarEquivalentOfBSplineSurface
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7456060Z [  OK  ] ProjectOnExtrusionAndRevolution
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7456500Z [  OK  ] ProjectOnPlanarRevolution
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7456810Z [  OK  ] ProjectOnInfiniteExtrusion
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7457150Z [  OK  ] ProjectOnSkewRevolutionWindows
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7457470Z [  OK  ] SameExtrusionSurfaceRequiresWholeCurveCertificate
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7457850Z [  OK  ] SurfaceDeviationCertificateAnalytic
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7458140Z [  OK  ] SurfaceDeviationCertificateCurvedAndHints
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7458600Z [  OK  ] SurfaceDeviationCertificateDegenerateConcurrentAndCancelled
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7459070Z [  OK  ] SurfaceToleranceConservativeBounds
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7459360Z [  OK  ] ToleranceDefaults
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7459650Z [  OK  ] ToleranceInvalidMetadata
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7460050Z [  OK  ] ToleranceVertexBudget
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7460290Z [  OK  ] TolerancePCurveBudget
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7460550Z [  OK  ] ToleranceEdgeFaceBudget
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7460820Z [  OK  ] ToleranceDocumentScopesAndWorkers
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7461110Z [  OK  ] ToleranceDocumentOffsetAccuracy
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7461390Z [  OK  ] MvfsKvfs
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7461590Z [  OK  ] RandomEulerSequences
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7461830Z [  OK  ] FaceRingOperators
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7462080Z [  OK  ] SemvSplitsGeometry
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7462260Z [  OK  ] CheckerDetectsDamage
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7462470Z [  OK  ] ReverseEdgePreservesSolidAndLaminarGeometry
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7462740Z [  OK  ] BoxMatchesOcct
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7462950Z [  OK  ] PrismWithHolesMatchesOcct
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7463140Z [  OK  ] CylinderWithoutSeam
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7463390Z [  OK  ] ProfileAreaAndWinding
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7463600Z [  OK  ] ProfileChainingAndNesting
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7463870Z [  OK  ] ExtrusionMatchesOcct
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7464110Z [  OK  ] ExtrusionWithTolerantVertices
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7464380Z [  OK  ] SheetExtrusion
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7464670Z [  OK  ] PCurvesOfExtrusions
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7464920Z [  OK  ] PCurveTypes
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7465200Z [  OK  ] ExactPCurvesOnAnalyticSurfaces
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7465490Z [  OK  ] FittedPCurves
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7465820Z [  OK  ] FittedPCurvesFromDegenerateSide
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7466050Z [  OK  ] FittedPCurveNearCollapsedSplineSide
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7466400Z [  OK  ] PCurvesSurviveEdgeOperations
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7466660Z [  OK  ] MassWithAndWithoutPCurves
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7466950Z [  OK  ] PCurveExtendedPoleNeighbourhood
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7467190Z [  OK  ] MassOfBoxes
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7467430Z [  OK  ] MassOfCylinders
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7467720Z [  OK  ] MassOfPrismsMatchesOcct
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7467990Z [  OK  ] MassOfExtrusions
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7468250Z [  OK  ] MassOfConeFrustum
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7468450Z [  OK  ] MassWithPolesAndTori
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7468780Z [  OK  ] FaceAreas
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7469020Z [  OK  ] QuadratureStopsOnIntegrandNoise
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7469220Z [  OK  ] MassEdgeCases
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7469470Z [  OK  ] MassVerticalSplineSkipsNullFlux
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7469900Z [  OK  ] MassParallelPreservesResultsAndInput
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7470260Z [  OK  ] MassParallelPreservesFirstFailureAndCancellation
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7470650Z [  OK  ] PlanarImageTransformedCurves
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7470950Z [  OK  ] PlaneRootsOfCurves
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7471240Z [  OK  ] CurveCurveIntersectionsMatchOcct
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7471620Z [  OK  ] PlaneSurfaceIntersections
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7471940Z [  OK  ] PlaneTorusMeridianIntersections
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7472410Z [  OK  ] PlaneRootsHullKeepsContacts
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7472710Z [  OK  ] PlaneRootsManySpans
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7473030Z [  OK  ] CurveCurveManySpansAnalytic
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7473320Z [  OK  ] CurveCurveSmallEndpointContacts
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7473670Z [  OK  ] CurveCurveManySpansContactsAndConcurrency
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7473980Z [  OK  ] MarchingPerpendicularCylinders
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7474350Z [  OK  ] MarchingCylindersAgainstOcct
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7474720Z [  OK  ] MarchingExtrusionSurfaces
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7475010Z [  OK  ] MarchingParallelDirections
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7475410Z [  OK  ] MarchingCurveSurface
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7475730Z [  OK  ] MarchingSingularPoints
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7476040Z [  OK  ] MarchingGeneralSurfacesAgainstOcct
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7476460Z [  OK  ] MarchingHigherOrderContactBranches
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7476740Z [  OK  ] MarchingMixedTermSingularBranches
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7477050Z [  OK  ] MarchingProjectionCacheOverflow
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7477290Z [  OK  ] BooleanBoxesGeneralPosition
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7477630Z [  OK  ] BooleanCoplanarBoxes
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7477960Z [  OK  ] BooleanNestedAndDisjoint
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7478230Z [  OK  ] BooleanBoxAndCylinder
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7478560Z [  OK  ] BooleanExtrusionAndBox
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7478940Z [  OK  ] BooleanChained
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7479210Z [  OK  ] BooleanCylinderCylinder
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7479510Z [  OK  ] BooleanCurvedExtrusions
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7479740Z [  OK  ] BooleanRevolvedSolids
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7479990Z [  OK  ] BooleanCoincidentSurfaces
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7480350Z [  OK  ] BooleanStressGrid
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7480590Z [  OK  ] BooleanCylinderFourthOrderCapContact
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7480910Z [  OK  ] BooleanStressCylinderGrid
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7481190Z [  OK  ] BooleanTangentContacts
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7481410Z [  OK  ] BooleanStressCylinders
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7481680Z [  OK  ] BooleanStressGeneral
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7481910Z [  OK  ] BooleanTangentCurves
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7482150Z [  OK  ] BooleanThroughPoles
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7482360Z [  OK  ] BooleanSheets
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7482650Z [  OK  ] BooleanPartialCoincidence
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7482920Z [  OK  ] BooleanVillarceau
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7483280Z [  OK  ] BooleanHigherOrderContacts
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7483550Z [  OK  ] BooleanCoaxialRevolutions
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7483830Z [  OK  ] BooleanCoplanarClosedCircleWithTangentTorus
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7484180Z [  OK  ] BooleanPartialSplineCoincidence
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7484470Z [  OK  ] BooleanParallelMatchesSequential
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7484760Z [  OK  ] BooleanDisjointValidationAndUnification
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7485040Z [  OK  ] BooleanTolerantVertices
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7485260Z [  OK  ] BooleanShellSlabsThroughHoleVertex
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7485560Z [  OK  ] BooleanPartialClosedSplineRevolution
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7485820Z [  OK  ] BooleanThinSplineSlivers
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7486110Z [  OK  ] UnifyBoxes
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7486330Z [  OK  ] UnifyCylinders
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7486690Z [  OK  ] UnifyIdempotent
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7486920Z [  OK  ] TessellateTriangulatePolygon
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7487200Z [  OK  ] TessellatePrimitives
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7487460Z [  OK  ] TessellateSelectedFaces
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7487730Z [  OK  ] TessellateMaximumEdgeLength
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7487980Z [  OK  ] TessellatePolesAndTori
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7488270Z [  OK  ] TessellateBooleans
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7488570Z [  OK  ] TessellateRayHits
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7488800Z [  OK  ] TessellateCachedRayHits
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7489210Z [  OK  ] TessellateFaceThinnerThanDeflection
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7489580Z [  OK  ] TessellateThinBandAcrossPeriods
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7489940Z [  OK  ] TessellateThreadsAndBatchEvaluator
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7490250Z [  OK  ] PreparedFaceClassification
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7490520Z [  OK  ] NurbsFormsOfSurfaces
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7490780Z [  OK  ] NurbsPiecesOfCurves
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7491130Z [  OK  ] NurbsTrimmedSplineSurfaceWindows
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7491440Z [  OK  ] CurveSurfaceIntersectionsMatchOcct
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7491830Z [  OK  ] LineSurfaceIntersectionsOnNewSurfaces
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7492280Z [  OK  ] BezierPatchSubdivisionPreservesGeometry
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7492590Z [  OK  ] RevolutionArcCenterAcrossAxis
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7492910Z [  OK  ] RevolutionSolids
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7493130Z [  OK  ] RevolutionPartial
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7493450Z [  OK  ] RevolutionPartialClosedClampedSpline
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7493750Z [  OK  ] RevolutionPrimitives
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7494190Z [  OK  ] RevolutionSheets
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7494450Z [  OK  ] BlendBoxEdges
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7494770Z [  OK  ] BlendConcaveAndCurvedEdges
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7495220Z [  OK  ] BlendSphericalSupportLeavesNoDetachedRing
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7495550Z [  OK  ] BlendTangentChains
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7497620Z [  OK  ] BlendRoundedPlateWithPolygonalHoles
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7498070Z [  OK  ] BlendRadiusEqualsCornerRadius
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7498520Z [  OK  ] BlendOpenArcsAndObliqueEnds
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7498850Z [  OK  ] BlendFreeformClosedEdges
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7499310Z [  OK  ] BlendFreeformOpenEdges
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7499580Z [  OK  ] BlendChainsMatchBooleanPath
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7500010Z [  OK  ] BlendSurfaceMatchesExactPlanarCases
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7503990Z [  OK  ] BlendSurfaceMatchesCircularCases
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7504330Z [  OK  ] BlendSurfaceNonAnalyticEdges
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7504670Z [  OK  ] BlendSurfaceTeeIsExactRollingBall
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7505060Z [  OK  ] ChamferTwoDistances
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7505340Z [  OK  ] BlendSmallRadiusOnLargeRims
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7505780Z [  OK  ] BlendLoftCircularCapsSplitIntoPatches
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7506350Z [  OK  ] BlendEdgeEndingOnExistingFilletCornerPatch
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7506880Z [  OK  ] BlendPlanarChainConcaveCornersBetweenLongArcs
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7507390Z [  OK  ] BlendArcsIntoConcaveCornersAreExact
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7507660Z [  OK  ] BlendVanishingAtTangentMitreEnd
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7507940Z [  OK  ] BlendArcsMeetingSegments
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7508240Z [  OK  ] BlendShortFaceJoinsTangentNeighbour
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7508680Z [  OK  ] BlendShortFaceOnRevolution
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7509040Z [  OK  ] BlendConcaveCornerPocket
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7509490Z [  OK  ] BlendConcaveCornerPolygons
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7509740Z [  OK  ] BlendConcaveCornerLens
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7510050Z [  OK  ] BlendConcaveCornerRoundedPocket
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7510520Z [  OK  ] BlendSurfaceEndsOnConcaveCircularWall
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7511020Z [  OK  ] BlendHelicalGrooveEnds
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7511360Z [  OK  ] BlendSurfaceAcrossSplitSeam
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7511810Z [  OK  ] BlendOffsetLoftTrimmedTopOneMillimeter
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7512140Z [  OK  ] BlendRegeneratedLoftOffsetCaps
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7512510Z [  OK  ] MicroFeaturesOfLoftOffsetBodies
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7512840Z [  OK  ] BlendSplitSeamPreservesKnotCorner
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7513190Z [  OK  ] BlendTopContourWithCornerRadiusEqualToFillet
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7513670Z [  OK  ] BlendCapOverlappingPocketFillet
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7514080Z [  OK  ] BlendAlternatingTangentSupports
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7514400Z [  OK  ] BlendConsumedTerminalReachesTangentSupport
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7514740Z [  OK  ] BlendApplicatoreRevolutionEnds
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7515070Z [  OK  ] BlendMouseInternalNormalJump
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7515360Z [  OK  ] BlendPlanarCapOnTangentSplineSupports
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7515660Z [  OK  ] BlendOpenChainsAtTangentSplineSeams
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7515970Z [  OK  ] BlendContactKnotCrossingsUseContactParameters
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7516260Z [  OK  ] BlendContactKnotAtFitEndpoints
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7516600Z [  OK  ] BlendContactKnotAtExistingEdgeBreakUsesOneParameter
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7516960Z [  OK  ] BlendContactKnotOnProbeAndRealNormalJump
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7517410Z [  OK  ] BlendContactKnotKeepsRadiusAndAllowsOneMillimeterOffset
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7517860Z [  OK  ] SheetExtendBSplineKeepsCurve
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7518110Z [  OK  ] SheetSplitAndTrim
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7518270Z [  OK  ] SheetExtend
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7518520Z [  OK  ] SheetSectionKeepsExactSplineBoundary
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7518860Z [  OK  ] SheetRevolutionMeridianSection
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7519140Z [  OK  ] TransformScaleBodies
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7519400Z [  OK  ] TransformMirrorBodies
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7519700Z [  OK  ] TransformMirrorRetainsSplineBoundaryParameters
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7525800Z [  OK  ] TransformMirrorRecalculatesScaledLineParameters
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7526070Z [  OK  ] DraftBoxNeutralPlane
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7526410Z [  OK  ] DraftRotatedAndInvalid
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7526600Z [  OK  ] SheetDraftAndBlend
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7526790Z [  OK  ] DraftCurvedAndConcaveSolids
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7527010Z [  OK  ] DraftCircularSectionsStayAnalytic
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7527230Z [  OK  ] BodyIORoundTrip
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7527430Z [  OK  ] BodyIORejectsBadData
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7527650Z [  OK  ] HelixDerivativesAndOcctReference
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7527870Z [  OK  ] HelixBSplineWithinTolerance
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7528140Z [  OK  ] SweepMinimalTwistJoinedSpatialPathWithStraightSpans
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7528440Z [  OK  ] SweepMinimalTwistSpatialInflection
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7528680Z [  OK  ] SweepMinimalTwistClosedSpatialSpline
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7529150Z [  OK  ] SweepLineAndArcAreExact
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7529390Z [  OK  ] SweepObliqueProfileAlongArcUsesFiniteMeridians
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7529650Z [  OK  ] SweepPlanarPathIsTube
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7529840Z [  OK  ] SweepAlongHelixIsSpring
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7530040Z [  OK  ] SweepClosedPathAndSheet
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7530280Z [  OK  ] SweepMinimalTwistHelixAvoidsUniformGridAliasing
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7530590Z [  OK  ] SweepClosedSpatialSplineExplicitSeamParameters
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7530860Z [  OK  ] SweepLocalFoldUsesSectionGeometry
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7531080Z [  OK  ] LoftRuledFrustums
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7531250Z [  OK  ] LoftSmoothThroughCircles
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7531450Z [  OK  ] LoftEllipsePreservesSmoothOffsetFaces
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7531660Z [  OK  ] LoftCircleToSquare
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7531830Z [  OK  ] LoftGuideCrossesEverySection
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7532040Z [  OK  ] LoftGuideInfluenceAndEndContinuity
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7532300Z [  OK  ] LoftGuideG0DoesNotEnableDerivativeConstraints
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7532550Z [  OK  ] LoftTangencyAppliesToEveryGuide
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7532760Z [  OK  ] LoftOpenGuidesAndNeighborFaces
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7532970Z [  OK  ] LoftOpenGuideNearPlaneEndpoint
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7533180Z [  OK  ] LoftContactAtCoincidentEndpoint
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7533410Z [  OK  ] LoftNonparallelLongitudinalParameters
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7533610Z [  OK  ] LoftSheet
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7533770Z [  OK  ] LoftPreservesDistinctNearbyKnots
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7533990Z [  OK  ] LoftG1RoundoffTrimPiece
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7534460Z [  OK  ] LoftMultipleGuidesDoNotCreateRibbons
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7534750Z [  OK  ] LoftFollowsEntireCircularGuides
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7535010Z [  OK  ] LoftIndependentGuideConditions
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7535340Z [  OK  ] LoftGuideNearSectionPreservesContactPlane
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7535640Z [  OK  ] LoftUnequalGuideSpansPreserveGeometryAndContact
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7535960Z [  OK  ] LoftG1SingleUlpSpanKeepsDistinctCollocationPoints
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7536240Z [  OK  ] OcctImportPrimitives
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7536420Z [  OK  ] OcctImportModelled
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7536600Z [  OK  ] OcctImportSplineSurfaces
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7536790Z [  OK  ] OcctImportSheet
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7536970Z [  OK  ] OcctImportUnboundedBases
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7538810Z ^[[32;1m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7538980Z *******************************************************************
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7539370Z ******        Statistics on Transfer (Write)                 ******^[[0m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7539680Z ^[[32;1m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7539830Z *******************************************************************
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7540120Z ******        Transfer Mode = 0  I.E.  As Is       ******^[[0m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7540730Z ^[[32;1m******        Transferring Shape, ShapeType = 0                      ******^[[0m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7541090Z ^[[32;1m** WorkSession : Sending all data^[[0m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7541590Z ^[[32;1m Step File Name : /var/tmp//forgekernel_occt_import_test.step(410 ents)  Write  Done^[[0m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7541940Z [  OK  ] OcctImportStepRoundTrip
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7542130Z [  OK  ] BlendGeneralMatchesAnalytic
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7542330Z [  OK  ] BlendSequentialNearbyEdges
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7542520Z [  OK  ] BlendSweptTubeCap
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7542810Z [  OK  ] BlendRuledLoftCone
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7542990Z [  OK  ] BlendSweepAcrossPathJoint
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7543180Z [  OK  ] BlendLoftCircleToSquare
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7543370Z [  OK  ] BlendSmoothLoftPolygonCap
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7543560Z [  OK  ] BlendConcaveSmoothLoftEdge
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7543760Z [  OK  ] BlendSmoothLoftSplitSidePatches
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7543970Z [  OK  ] SheetBlendCurvedLoft
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7544150Z [  OK  ] StepWriteReadByOcct
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7544310Z [  OK  ] StepRoundTrip
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7544470Z ^[[32;1m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7544620Z *******************************************************************
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7545090Z ******        Statistics on Transfer (Write)                 ******^[[0m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7545350Z ^[[32;1m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7545500Z *******************************************************************
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7545780Z ******        Transfer Mode = 0  I.E.  As Is       ******^[[0m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7546140Z ^[[32;1m******        Transferring Shape, ShapeType = 0                      ******^[[0m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7546470Z ^[[32;1m** WorkSession : Sending all data^[[0m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7546830Z ^[[32;1m Step File Name : /var/tmp//forgekernel_step_occt.step(434 ents)  Write  Done^[[0m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7547130Z ^[[32;1m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7547290Z *******************************************************************
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7547590Z ******        Statistics on Transfer (Write)                 ******^[[0m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7547850Z ^[[32;1m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7548000Z *******************************************************************
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7548270Z ******        Transfer Mode = 0  I.E.  As Is       ******^[[0m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7548630Z ^[[32;1m******        Transferring Shape, ShapeType = 2                      ******^[[0m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7548960Z ^[[32;1m** WorkSession : Sending all data^[[0m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7549310Z ^[[32;1m Step File Name : /var/tmp//forgekernel_step_occt.step(32 ents)  Write  Done^[[0m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7549610Z ^[[32;1m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7549770Z *******************************************************************
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7550080Z ******        Statistics on Transfer (Write)                 ******^[[0m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7550330Z ^[[32;1m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7550480Z *******************************************************************
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7550770Z ******        Transfer Mode = 0  I.E.  As Is       ******^[[0m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7551120Z ^[[32;1m******        Transferring Shape, ShapeType = 2                      ******^[[0m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7551450Z ^[[32;1m** WorkSession : Sending all data^[[0m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7551820Z ^[[32;1m Step File Name : /var/tmp//forgekernel_step_occt.step(78 ents)  Write  Done^[[0m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7552130Z ^[[32;1m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7552290Z *******************************************************************
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7552600Z ******        Statistics on Transfer (Write)                 ******^[[0m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7552850Z ^[[32;1m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7553000Z *******************************************************************
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7553290Z ******        Transfer Mode = 0  I.E.  As Is       ******^[[0m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7553630Z ^[[32;1m******        Transferring Shape, ShapeType = 0                      ******^[[0m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7553970Z ^[[32;1m** WorkSession : Sending all data^[[0m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7554320Z ^[[32;1m Step File Name : /var/tmp//forgekernel_step_occt.step(770 ents)  Write  Done^[[0m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7554620Z ^[[32;1m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7554770Z *******************************************************************
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7555080Z ******        Statistics on Transfer (Write)                 ******^[[0m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7555330Z ^[[32;1m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7555490Z *******************************************************************
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7555770Z ******        Transfer Mode = 0  I.E.  As Is       ******^[[0m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7556190Z ^[[32;1m******        Transferring Shape, ShapeType = 2                      ******^[[0m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7556510Z ^[[32;1m** WorkSession : Sending all data^[[0m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7556860Z ^[[32;1m Step File Name : /var/tmp//forgekernel_step_occt.step(213 ents)  Write  Done^[[0m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7557170Z ^[[32;1m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7557320Z *******************************************************************
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7557630Z ******        Statistics on Transfer (Write)                 ******^[[0m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7557880Z ^[[32;1m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7558030Z *******************************************************************
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7558310Z ******        Transfer Mode = 0  I.E.  As Is       ******^[[0m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7558790Z ^[[32;1m******        Transferring Shape, ShapeType = 2                      ******^[[0m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7559140Z ^[[32;1m** WorkSession : Sending all data^[[0m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7559500Z ^[[32;1m Step File Name : /var/tmp//forgekernel_step_occt.step(372 ents)  Write  Done^[[0m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7559820Z ^[[32;1m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7559980Z *******************************************************************
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7560300Z ******        Statistics on Transfer (Write)                 ******^[[0m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7560550Z ^[[32;1m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7560700Z *******************************************************************
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7560990Z ******        Transfer Mode = 0  I.E.  As Is       ******^[[0m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7561340Z ^[[32;1m******        Transferring Shape, ShapeType = 2                      ******^[[0m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7561660Z ^[[32;1m** WorkSession : Sending all data^[[0m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7562020Z ^[[32;1m Step File Name : /var/tmp//forgekernel_step_occt.step(198 ents)  Write  Done^[[0m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7562330Z ^[[32;1m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7562490Z *******************************************************************
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7562810Z ******        Statistics on Transfer (Write)                 ******^[[0m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7563110Z ^[[32;1m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7563300Z *******************************************************************
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7563620Z ******        Transfer Mode = 0  I.E.  As Is       ******^[[0m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7564060Z ^[[32;1m******        Transferring Shape, ShapeType = 2                      ******^[[0m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7564400Z ^[[32;1m** WorkSession : Sending all data^[[0m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7564840Z ^[[32;1m Step File Name : /var/tmp//forgekernel_step_occt.step(353 ents)  Write  Done^[[0m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7565180Z [  OK  ] StepReadOcctFiles
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7565360Z ^[[32;1m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7565520Z *******************************************************************
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7565840Z ******        Statistics on Transfer (Write)                 ******^[[0m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7566100Z ^[[32;1m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7566260Z *******************************************************************
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7566550Z ******        Transfer Mode = 0  I.E.  As Is       ******^[[0m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7566910Z ^[[32;1m******        Transferring Shape, ShapeType = 0                      ******^[[0m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7567320Z ^[[32;1m** WorkSession : Sending all data^[[0m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7567790Z ^[[32;1m Step File Name : /var/tmp//forgekernel_step_assembly.step(512 ents)  Write  Done^[[0m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7568160Z [  OK  ] StepReadAssembly
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7568330Z [  OK  ] StepCurveByOcct
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7568500Z [  OK  ] StepNumbersIgnoreLocale
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7568720Z [  OK  ] StepNumbersRespectBufferAndRange
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7568940Z [  OK  ] StepReadSolidWorksFile
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7569160Z [  OK  ] ExchangeClosedSplineSeamClosesFaceDomain
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7569420Z [  OK  ] StepReadD250227SolidWorksFile
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7569640Z [  OK  ] StepReadD260320SolidWorksAssembly
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7569870Z [  OK  ] StepReadSignedMajorTorus
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7570080Z [  OK  ] StepReadAP0730SolidWorksFile
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7570350Z [  OK  ] StepReadSphereEdgeNearPole
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7570560Z [  OK  ] StepReadRepairsFaceSense
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7570770Z [  OK  ] StepReadL407SolidWorksFile
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7570990Z [  OK  ] StepParallelBodiesAndEntityOrder
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7571220Z [  OK  ] StepWritesRestrictedSplineEdges
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7571450Z [  OK  ] ExchangeClosedSplineKeepsEndSpan
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7571700Z [  OK  ] ExchangeSplineRestrictionPreservesGeometry
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7571950Z [  OK  ] StepRejectsCyclicOrientedEdges
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7572180Z [  OK  ] StepRejectsSelfReferencingGeometry
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7572420Z [  OK  ] StepWriteSplineInstancesPortableByOcct
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7572850Z [  OK  ] StepWriteDirectSplineReplicaByOcct
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7573120Z ^[[32;1mTotal number of loaded entities 54.
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7573320Z ^[[0m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7573490Z ^[[32;1mTotal number of loaded entities 68.
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7573690Z ^[[0m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7573850Z ^[[32;1mTotal number of loaded entities 27.
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7574050Z ^[[0m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7574220Z ^[[32;1mTotal number of loaded entities 29.
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7574400Z ^[[0m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7574570Z ^[[32;1mTotal number of loaded entities 15.
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7574770Z ^[[0m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7574940Z ^[[32;1mTotal number of loaded entities 14.
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7575180Z ^[[0m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7575350Z ^[[32;1mTotal number of loaded entities 18.
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7575550Z ^[[0m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7575710Z ^[[32;1mTotal number of loaded entities 20.
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7575910Z ^[[0m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7576080Z ^[[32;1mTotal number of loaded entities 27.
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7576270Z ^[[0m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7576440Z ^[[32;1mTotal number of loaded entities 29.
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7576640Z ^[[0m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7576800Z ^[[32;1mTotal number of loaded entities 65.
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7577000Z ^[[0m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7577160Z ^[[32;1mTotal number of loaded entities 85.
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7577360Z ^[[0m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7577530Z ^[[32;1mTotal number of loaded entities 105.
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7577740Z ^[[0m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7577920Z ^[[32;1mTotal number of loaded entities 140.
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7578160Z ^[[0m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7578330Z ^[[32;1mTotal number of loaded entities 48.
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7578530Z ^[[0m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7578770Z ^[[32;1mTotal number of loaded entities 66.
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7578970Z ^[[0m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7579110Z [  OK  ] IgesWriteReadByOcct
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7579280Z [  OK  ] IgesRoundTrip
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7579440Z [  OK  ] IgesReadOcctFiles
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7579650Z ^[[32;1mTotal number of loaded entities 2.
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7579850Z ^[[0m
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7579970Z [  OK  ] IgesCurveByOcct
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7580150Z [  OK  ] IgesParallelComponents
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7580350Z [  OK  ] IgesSewSpatialRepresentatives
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7580710Z [  OK  ] IgesPreservesNonUniformSplineEdgeParameters
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7580980Z [  OK  ] IgesRejectsInvalidSplineParameters
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7581230Z [  OK  ] IgesRejectsCyclicCompositeCurves
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7581450Z [  OK  ] OffsetAnalyticSurfaces
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7581640Z [  OK  ] OffsetFreeformSurfaces
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7581830Z [  OK  ] OffsetFacesJoinsTangentFaces
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7582040Z [  OK  ] OffsetFacesCurvedAndFreeform
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7582230Z [  OK  ] OffsetFacesLoft
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7582390Z [  OK  ] SewSheetsIntoSolid
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7582560Z [  OK  ] OffsetThenSewSolid
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7582730Z [  OK  ] OffsetFacesSpring
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7582910Z [  OK  ] OffsetFacesImportedParts
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7583100Z [  OK  ] OffsetPreservesSharpSeams
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7583290Z [  OK  ] OffsetLoftExtension
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7583460Z [  OK  ] OffsetLoftMixedSections
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7583650Z [  OK  ] OffsetLoftSewnCaps
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7583830Z [  OK  ] OffsetFitCurveSmallSmoothFeature
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7584070Z [  OK  ] OffsetReportsInternalNormalDiscontinuity
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7584480Z [  OK  ] OffsetLoftInternalCreasesOneMillimeter
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7585010Z     /Users/runner/work/Linux_CAD_forFree/Linux_CAD_forFree/kernel/tests/fk_test_main.cpp:36: eccezione: extendSheet: giunzione fuori dal budget continuo
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7585560Z [ FAIL ] OffsetLoftExtendedSeamsTrimBoth (1 controlli falliti)
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7585830Z [  OK  ] OffsetDenseBSplineIsC2
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7586050Z [  OK  ] OffsetInwardBeyondCurvatureIsExplained
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7586310Z [  OK  ] OffsetLoftSeamExtensionFollowsTangentSeam
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7586570Z [  OK  ] SewFillPreservesKnownBoundaryCurves
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7586840Z [  OK  ] SewPreservesBoundaryWithDifferentParameters
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7587290Z [  OK  ] SewClosedEdgesWithUnequalParameters
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7587600Z [  OK  ] SewDoesNotMergeDifferentCurvesWithSameMidpoint
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7587940Z [  OK  ] SewThinSolidRetainsOutwardOrientation
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7588240Z [  OK  ] SewMappedSamplesRetainDistanceLimit
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7588560Z [  OK  ] SewPreservesDensePCurveRegardlessOfOperandOrder
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7588900Z [  OK  ] PlanarSheetRectangleWithHole
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7589110Z [  OK  ] PlanarSheetTwoRegions
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7589360Z [  OK  ] PlanarSheetIslandInHole
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7595650Z [  OK  ] PlanarSheetFromCylinderEdge
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7595910Z [  OK  ] PlanarSheetClosedSpline
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7596110Z [  OK  ] PlanarSheetShuffledSegments
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7596330Z [  OK  ] PlanarSheetRejectsInvalidLoops
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7596590Z [  OK  ] PlanarSheetFromProfileMatchesExtrusionBase
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7596850Z [  OK  ] PlanarSheetHoleNearCurvedBoundary
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7597080Z [  OK  ] PlanarSheetRejectsTouchingLoops
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7597290Z [  OK  ] BoundarySheetSkewQuad
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7597480Z [  OK  ] BoundarySheetPlanarRegions
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7597690Z [  OK  ] BoundarySheetHalfCylinder
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7597890Z [  OK  ] BoundarySheetRejectsBadContours
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7598090Z [  OK  ] FillPlanarSquare
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7598270Z [  OK  ] FillSphericalCapThroughGuides
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7598480Z [  OK  ] FillTangentToCylinder
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7598770Z cono: celle 64, contorno 2.13e-07, guide 2.32e-07, tangenza 0.000912 gradi
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7599180Z cono senza guide: celle 32, contorno 1.77e-07, tangenza 0.000319 gradi
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7599470Z [  OK  ] FillConeWithConflictingGuides
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7599860Z sfera G2: celle 32, contorno 1.98e-07, guide 1.81e-07, tangenza 0.00149 gradi, curvatura 0.003, dalla sfera 0.00668
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7600280Z [  OK  ] FillCapContinuesSphereInCurvature
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7600530Z [  OK  ] FillObliqueContactsPreserveInterior
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7600800Z [  OK  ] FillInfluencePreservesProjectionAndTangency
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7601070Z sfera G1 naturale: scarto curvatura 0.00897 1/mm
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7601330Z [  OK  ] FillNaturalG1FollowsSupportCurvature
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7601570Z [  OK  ] FillRejectsInvalidShapeParameters
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7601810Z [  OK  ] FillIndependentContactInfluences
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7602050Z [  OK  ] FillIgnoredGuidesPreserveLocalInfluence
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7602310Z [  OK  ] FillDirectionalProfilePreservesContacts
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7602600Z [  OK  ] FillDirectionalProfileRejectsInvalidSelection
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7602850Z [  OK  ] FillUnequalCompoundBoundarySpans
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7603090Z [  OK  ] FillReportsBoundaryContactConflictAtCorner
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7603330Z [  OK  ] FillPerFaceContinuityOverrides
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7603540Z [  OK  ] SurfaceNetworkCrossingFamilies
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7603760Z [  OK  ] SurfaceExtendUntilPlaneAndCurvedFace
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7603990Z [  OK  ] SurfaceExtendUntilFacetedTarget
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7604210Z [  OK  ] SurfaceExtendUntilSplineExtrusion
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7604430Z [  OK  ] SurfacePolesPreserveTrimsAndTopology
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7604650Z [  OK  ] SurfacePolesRefitControlCounts
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7605020Z [  OK  ] SurfacePolesMultipleConnectedFaces
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7605240Z [  OK  ] SurfacePolesMultipleFacesOfSolid
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7605480Z [  OK  ] SurfacePolesPreserveDeclaredVertexTolerance
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7605710Z [  OK  ] ProjectedCutPlanarHole
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7605910Z [  OK  ] ProjectedCutBandAlongExistingEdges
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7606130Z [  OK  ] ProjectedCutChordOfCurvedEdge
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7606340Z [  OK  ] ProjectedCutOnCylinderFirstFaceOnly
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7606560Z [  OK  ] ProjectedCurveClosedOnCylinder
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7606760Z [  OK  ] ThickenPlanarFaceSides
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7606950Z [  OK  ] ThickenCylindricalSheetAlongNormal
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7607150Z [  OK  ] ThickenAlongDirection
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7607460Z [  OK  ] ThickenSharpCreaseAlongDirection
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7607680Z [  OK  ] ThickenTrimmedFaceWithInternalCrease
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7607900Z [  OK  ] ThickenSmoothBSplineSheet
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7608070Z [  OK  ] ShellOpenBox
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7608220Z [  OK  ] ShellCup
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7608350Z [  OK  ] ShellConcaveEdge
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7608510Z [  OK  ] ShellFilletedBox
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7608660Z [  OK  ] ShellRoundedPrism
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7608830Z [  OK  ] ShellNotchAndFilletedHole
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7609010Z [  OK  ] ShellRejectsBadInput
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7609190Z [  OK  ] ShellCollapsedConvexFillet
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7609390Z [  OK  ] ShellCollapsedRoundedPrism
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7609590Z [  OK  ] ShellCollapsedToroidalFillet
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7609790Z [  OK  ] ShellCollapsedSphericalCorner
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7609990Z [  OK  ] ShellCollapsedAllBoxFillets
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7610200Z [  OK  ] ShellRectangularCutKeepsSharpCorners
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7610440Z [  OK  ] ShellRejectsInvalidAndInvertedCavities
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7610680Z [  OK  ] ShellStitchedTolerantTangencies
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7610880Z [  OK  ] LoftSheetTubeOfCylinder
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7611060Z [  OK  ] LoftSheetTubeMatchesSolidSides
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7611270Z [  OK  ] LoftSheetMixedSectionsThrow
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7611460Z [  OK  ] RuledSurfaceFrustumOfCone
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7611650Z [  OK  ] RuledSurfaceHyperbolicParaboloid
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7611850Z [  OK  ] RuledSurfaceHelicoid
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7612030Z [  OK  ] RuledSurfaceSquareToCircle
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7612230Z [  OK  ] RuledSurfaceMixedChainsThrow
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7612430Z [  OK  ] RuledSurfaceClosedChainsKeepCorners
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7612660Z [  OK  ] LoftSectionClosureIgnoresPosition
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7612880Z [  OK  ] SweepSheetCircleAlongLineAndArc
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7613100Z [  OK  ] SweepSheetSquareAlongSplineMatchesSolid
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7613340Z [  OK  ] SweepSheetRoundedRectangleAlongHelix
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7613570Z [  OK  ] SweepSheetMixedProfileAndChains
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7613780Z [  OK  ] SweepSheetClosedPathIsClosedShell
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7614000Z [  OK  ] SweepSheetMixedChainKeepsChainSense
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7614220Z [  OK  ] HistoryInteriorPointOfFaces
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7614420Z [  OK  ] HistorySubtractCylinderThroughBox
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7614650Z [  OK  ] HistorySplitFaceKeepsAmbiguousName
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7614870Z [  OK  ] HistoryUniteMergesCoplanarFaces
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7615080Z [  OK  ] HistoryBlendFaceGeneratedFromEdge
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7615290Z [  OK  ] HistoryComposeAcrossOperations
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7615500Z [  OK  ] HistorySameIndexTransform
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7615700Z [  OK  ] HistoryLabelledFacesAndLongNames
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7615910Z [  OK  ] HistoryPreservesNamesAfterReload
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7616110Z [  OK  ] HistoryRootWithNullOperands
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7616330Z [  OK  ] HistoryDeclaredOriginsOverrideGeometry
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7616560Z [  OK  ] HistoryRejectsInvalidDeclarations
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7616780Z [  OK  ] HistoryDeclaredCompositionCoverage
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7617040Z [  OK  ] HistoryOffsetKeepsFaceNamesAcrossSurfaceChanges
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7617340Z [  OK  ] HistoryOffsetComposesRectangularAndTrimmedCreases
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7617680Z [  OK  ] HistoryBooleanDeclaresCutSplitAndUnchangedFaces
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7617960Z [  OK  ] HistoryBooleanAndUnifyComposeEveryMergedFace
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7618240Z [  OK  ] HistoryBooleanRetainsBothCoincidentOperands
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7618510Z [  OK  ] HistoryBooleanEmptyDisjointAndFailureOutputs
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7618780Z [  OK  ] HistoryImprintDeclaresBeforeAndAfterUnify
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7619050Z [  OK  ] HistoryBooleanDeclarationsAreThreadDeterministic
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7619350Z [  OK  ] HistoryBlendDeclaresTrimmedFacesAndGeneratedEdge
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7619630Z [  OK  ] HistoryBlendCornerComesFromOriginalVertex
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7619900Z [  OK  ] HistoryBlendClosedPlanarEdgeKeepsOriginalSource
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7620260Z [  OK  ] HistoryBlendGeneralChainsAndOpenSheet
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7620510Z [  OK  ] HistoryAsymmetricChamferAndRejectedOutputs
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7620870Z [  OK  ] HistoryExtrusionSourcesSurviveLoopOrderingAndReversal
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7621170Z [  OK  ] HistoryExtrusionClosedCurvesAndOpenChains
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7621450Z [  OK  ] HistoryDeclaredFaceAliasesOverrideGeometricLabels
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7621750Z [  OK  ] HistoryExtractAndSewFacesPreserveDeclaredSources
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7622020Z [  OK  ] HistoryRevolutionLoopSourcesAndAxis
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7622250Z [  OK  ] HistoryRevolutionSignedAngularCaps
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7622500Z [  OK  ] HistoryRevolutionCurvesSheetsAndRejectedOutputs
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7622770Z [  OK  ] HistorySweepAndLoftKeepSectionSources
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7623020Z [  OK  ] HistoryPrimitivesAndSurfaceRootsEmitLabels
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7623300Z [  OK  ] HistoryTransformsDraftAndExtractedEdgesAreExplicit
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7623610Z [  OK  ] HistoryTrimExtendShellAndProjectionComposeOrigins
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7623900Z [  OK  ] HistoryTransportDoesNotInventMissingBranches
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7624130Z 482/483 test superati
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7624220Z 
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7624230Z 
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7624300Z 99% tests passed, 1 tests failed out of 113
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7624450Z 
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7624500Z Label Time Summary:
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7624650Z opengl    =   0.03 sec*proc (1 test)
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7624770Z 
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7624840Z Total Test time (real) = 813.16 sec
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7624960Z 
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7625020Z The following tests did not run:
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7625220Z 	 53 - forgecad_overlay_uniform_tests (Skipped)
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7625370Z 
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7625430Z The following tests FAILED:
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7625590Z 	113 - forgekernel_tests (Failed)
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7625780Z Errors while running CTest
+macOS CPU e Metal	Esegui i test	2026-11-16T17:53:36.7649690Z ##[error]Process completed with exit code 8.
+Linux CPU	Esegui i test	﻿2026-11-16T17:36:34.2048200Z ##[group]Run ctest --test-dir build-ci --output-on-failure --no-tests=error \
+Linux CPU	Esegui i test	2026-11-16T17:36:34.2048666Z ^[[36;1mctest --test-dir build-ci --output-on-failure --no-tests=error \^[[0m
+Linux CPU	Esegui i test	2026-11-16T17:36:34.2048995Z ^[[36;1m  --parallel 2 --timeout 900 \^[[0m
+Linux CPU	Esegui i test	2026-11-16T17:36:34.2049261Z ^[[36;1m  --output-junit "$RUNNER_TEMP/ctest.xml" \^[[0m
+Linux CPU	Esegui i test	2026-11-16T17:36:34.2049521Z ^[[36;1m  2>&1 | tee "$RUNNER_TEMP/ctest.log"^[[0m
+Linux CPU	Esegui i test	2026-11-16T17:36:34.2099501Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+Linux CPU	Esegui i test	2026-11-16T17:36:34.2099815Z env:
+Linux CPU	Esegui i test	2026-11-16T17:36:34.2099996Z   QT_QPA_PLATFORM: offscreen
+Linux CPU	Esegui i test	2026-11-16T17:36:34.2100217Z   QT_QPA_OFFSCREEN_NO_GLX: 1
+Linux CPU	Esegui i test	2026-11-16T17:36:34.2100422Z   QT_QPA_PLATFORMTHEME: 
+Linux CPU	Esegui i test	2026-11-16T17:36:34.2100621Z   QT_STYLE_OVERRIDE: Fusion
+Linux CPU	Esegui i test	2026-11-16T17:36:34.2100818Z   LIBGL_ALWAYS_SOFTWARE: 1
+Linux CPU	Esegui i test	2026-11-16T17:36:34.2101180Z   HOMEBREW_NO_AUTO_UPDATE: 1
+Linux CPU	Esegui i test	2026-11-16T17:36:34.2101377Z ##[endgroup]
+Linux CPU	Esegui i test	2026-11-16T17:36:35.2747270Z Test project /home/runner/work/Linux_CAD_forFree/Linux_CAD_forFree/build-ci
+Linux CPU	Esegui i test	2026-11-16T17:36:35.3827171Z         Start   1: forgecad_gpu_broad_phase_tests
+Linux CPU	Esegui i test	2026-11-16T17:36:35.3835539Z         Start   2: forgecad_box_fallback_tests
+Linux CPU	Esegui i test	2026-11-16T17:36:35.3848393Z   1/110 Test   #1: forgecad_gpu_broad_phase_tests ...................***Skipped   0.00 sec
+Linux CPU	Esegui i test	2026-11-16T17:36:35.3848935Z         Start   3: forgecad_geometry_sources_tests
+Linux CPU	Esegui i test	2026-11-16T17:36:35.5271684Z   2/110 Test   #3: forgecad_geometry_sources_tests ..................   Passed    0.14 sec
+Linux CPU	Esegui i test	2026-11-16T17:36:35.5272341Z         Start   4: forgecad_tessellation_availability_tests
+Linux CPU	Esegui i test	2026-11-16T17:36:35.5291521Z   3/110 Test   #4: forgecad_tessellation_availability_tests .........   Passed    0.00 sec
+Linux CPU	Esegui i test	2026-11-16T17:36:35.5293973Z         Start   5: forgecad_cuda_pool_tests
+Linux CPU	Esegui i test	2026-11-16T17:36:35.5306631Z   4/110 Test   #5: forgecad_cuda_pool_tests .........................   Passed    0.00 sec
+Linux CPU	Esegui i test	2026-11-16T17:36:35.5307267Z         Start   6: forgecad_constraint_linear_tests
+Linux CPU	Esegui i test	2026-11-16T17:36:35.5382016Z   5/110 Test   #6: forgecad_constraint_linear_tests .................   Passed    0.01 sec
+Linux CPU	Esegui i test	2026-11-16T17:36:35.5383076Z         Start   7: forgecad_display_cache_memory_tests
+Linux CPU	Esegui i test	2026-11-16T17:36:35.5762327Z   6/110 Test   #2: forgecad_box_fallback_tests ......................   Passed    0.19 sec
+Linux CPU	Esegui i test	2026-11-16T17:36:35.5762956Z         Start   8: forgecad_mesh_export_cpu_tests
+Linux CPU	Esegui i test	2026-11-16T17:36:35.6087817Z   7/110 Test   #7: forgecad_display_cache_memory_tests ..............   Passed    0.07 sec
+Linux CPU	Esegui i test	2026-11-16T17:36:35.6090722Z         Start   9: forgecad_application_theme_tests
+Linux CPU	Esegui i test	2026-11-16T17:36:36.9786793Z   8/110 Test   #8: forgecad_mesh_export_cpu_tests ...................   Passed    1.40 sec
+Linux CPU	Esegui i test	2026-11-16T17:36:36.9787431Z         Start  10: forgecad_expression_tests
+Linux CPU	Esegui i test	2026-11-16T17:36:37.0692335Z   9/110 Test  #10: forgecad_expression_tests ........................   Passed    0.02 sec
+Linux CPU	Esegui i test	2026-11-16T17:36:37.0692987Z         Start  11: forgecad_shape_analysis_tests
+Linux CPU	Esegui i test	2026-11-16T17:36:37.0827190Z  10/110 Test   #9: forgecad_application_theme_tests .................   Passed    1.47 sec
+Linux CPU	Esegui i test	2026-11-16T17:36:37.0830869Z         Start  12: forgecad_document_compression_tests
+Linux CPU	Esegui i test	2026-11-16T17:36:37.1041166Z  11/110 Test  #12: forgecad_document_compression_tests ..............   Passed    0.02 sec
+Linux CPU	Esegui i test	2026-11-16T17:36:37.1041969Z         Start  13: forgecad_snapshot_chunks_tests
+Linux CPU	Esegui i test	2026-11-16T17:36:37.1228809Z  12/110 Test  #11: forgecad_shape_analysis_tests ....................   Passed    0.05 sec
+Linux CPU	Esegui i test	2026-11-16T17:36:37.1233156Z         Start  14: forgecad_drawing_tests
+Linux CPU	Esegui i test	2026-11-16T17:36:37.1294260Z  13/110 Test  #13: forgecad_snapshot_chunks_tests ...................   Passed    0.03 sec
+Linux CPU	Esegui i test	2026-11-16T17:36:37.1295032Z         Start  15: forgecad_revision_store_tests
+Linux CPU	Esegui i test	2026-11-16T17:36:37.1541696Z  14/110 Test  #14: forgecad_drawing_tests ...........................   Passed    0.03 sec
+Linux CPU	Esegui i test	2026-11-16T17:36:37.1542331Z         Start  16: forgecad_revision_release_tests
+Linux CPU	Esegui i test	2026-11-16T17:36:39.1728225Z  15/110 Test  #16: forgecad_revision_release_tests ..................   Passed    2.02 sec
+Linux CPU	Esegui i test	2026-11-16T17:36:39.1729130Z         Start  17: forgecad_catalog_recovery_tests
+Linux CPU	Esegui i test	2026-11-16T17:36:39.2604190Z  16/110 Test  #17: forgecad_catalog_recovery_tests ..................   Passed    0.09 sec
+Linux CPU	Esegui i test	2026-11-16T17:36:39.2607760Z         Start  18: forgecad_feature_dependencies_tests
+Linux CPU	Esegui i test	2026-11-16T17:36:39.2648445Z  17/110 Test  #18: forgecad_feature_dependencies_tests ..............   Passed    0.00 sec
+Linux CPU	Esegui i test	2026-11-16T17:36:39.2649026Z         Start  19: forgecad_geometry_refs_tests
+Linux CPU	Esegui i test	2026-11-16T17:36:39.2680646Z  18/110 Test  #19: forgecad_geometry_refs_tests .....................   Passed    0.00 sec
+Linux CPU	Esegui i test	2026-11-16T17:36:39.2681987Z         Start  20: forgecad_workspace_tests
+Linux CPU	Esegui i test	2026-11-16T17:36:39.2962462Z  19/110 Test  #20: forgecad_workspace_tests .........................   Passed    0.03 sec
+Linux CPU	Esegui i test	2026-11-16T17:36:39.2963202Z         Start  21: forgecad_drawing_local_tools_tests
+Linux CPU	Esegui i test	2026-11-16T17:36:41.7178940Z  20/110 Test  #21: forgecad_drawing_local_tools_tests ...............   Passed    2.42 sec
+Linux CPU	Esegui i test	2026-11-16T17:36:41.7179638Z         Start  22: forgecad_drawing_local_section_depth_tests
+Linux CPU	Esegui i test	2026-11-16T17:36:41.9600382Z  21/110 Test  #22: forgecad_drawing_local_section_depth_tests .......   Passed    0.24 sec
+Linux CPU	Esegui i test	2026-11-16T17:36:41.9603592Z         Start  23: forgecad_drawing_crop_tests
+Linux CPU	Esegui i test	2026-11-16T17:36:42.5377658Z  22/110 Test  #23: forgecad_drawing_crop_tests ......................   Passed    0.58 sec
+Linux CPU	Esegui i test	2026-11-16T17:36:42.5378321Z         Start  24: forgecad_drawing_templates_tests
+Linux CPU	Esegui i test	2026-11-16T17:36:42.5875720Z  23/110 Test  #24: forgecad_drawing_templates_tests .................   Passed    0.05 sec
+Linux CPU	Esegui i test	2026-11-16T17:36:42.5876212Z         Start  25: forgecad_drawing_preparation_tests
+Linux CPU	Esegui i test	2026-11-16T17:36:43.2315234Z  24/110 Test  #15: forgecad_revision_store_tests ....................   Passed    6.10 sec
+Linux CPU	Esegui i test	2026-11-16T17:36:43.2315987Z         Start  26: forgecad_drawing_scale_tests
+Linux CPU	Esegui i test	2026-11-16T17:36:44.6700223Z  25/110 Test  #26: forgecad_drawing_scale_tests .....................   Passed    1.44 sec
+Linux CPU	Esegui i test	2026-11-16T17:36:44.6701546Z         Start  27: forgecad_drawing_editor_tests
+Linux CPU	Esegui i test	2026-11-16T17:36:44.8014251Z  26/110 Test  #27: forgecad_drawing_editor_tests ....................   Passed    0.13 sec
+Linux CPU	Esegui i test	2026-11-16T17:36:44.8015353Z         Start  28: forgecad_projected_drawing_tests
+Linux CPU	Esegui i test	2026-11-16T17:36:44.9237483Z  27/110 Test  #28: forgecad_projected_drawing_tests .................   Passed    0.12 sec
+Linux CPU	Esegui i test	2026-11-16T17:36:44.9239345Z         Start  29: forgecad_drawing_view_edit_tests
+Linux CPU	Esegui i test	2026-11-16T17:36:44.9947341Z  28/110 Test  #25: forgecad_drawing_preparation_tests ...............   Passed    2.41 sec
+Linux CPU	Esegui i test	2026-11-16T17:36:44.9950611Z         Start  30: forgecad_drawing_layout_history_tests
+Linux CPU	Esegui i test	2026-11-16T17:36:45.2818250Z  29/110 Test  #30: forgecad_drawing_layout_history_tests ............   Passed    0.29 sec
+Linux CPU	Esegui i test	2026-11-16T17:36:45.2818746Z         Start  31: forgecad_drawing_dimensions_tests
+Linux CPU	Esegui i test	2026-11-16T17:36:45.2954054Z  30/110 Test  #31: forgecad_drawing_dimensions_tests ................   Passed    0.01 sec
+Linux CPU	Esegui i test	2026-11-16T17:36:45.2954690Z         Start  32: forgecad_drawing_dimensions_gui_tests
+Linux CPU	Esegui i test	2026-11-16T17:36:48.4145842Z  31/110 Test  #29: forgecad_drawing_view_edit_tests .................   Passed    3.49 sec
+Linux CPU	Esegui i test	2026-11-16T17:36:48.4146523Z         Start  33: forgecad_drawing_dimension_repair_tests
+Linux CPU	Esegui i test	2026-11-16T17:36:49.4108466Z  32/110 Test  #33: forgecad_drawing_dimension_repair_tests ..........   Passed    1.00 sec
+Linux CPU	Esegui i test	2026-11-16T17:36:49.4111927Z         Start  34: forgecad_drawing_view_placement_tests
+Linux CPU	Esegui i test	2026-11-16T17:36:49.6998777Z  33/110 Test  #34: forgecad_drawing_view_placement_tests ............   Passed    0.29 sec
+Linux CPU	Esegui i test	2026-11-16T17:36:49.7002091Z         Start  35: forgecad_drawing_silhouette_tests
+Linux CPU	Esegui i test	2026-11-16T17:36:49.8377342Z  34/110 Test  #35: forgecad_drawing_silhouette_tests ................   Passed    0.14 sec
+Linux CPU	Esegui i test	2026-11-16T17:36:49.8380429Z         Start  36: forgecad_drawing_visibility_tests
+Linux CPU	Esegui i test	2026-11-16T17:36:59.0055592Z  35/110 Test  #32: forgecad_drawing_dimensions_gui_tests ............   Passed   13.71 sec
+Linux CPU	Esegui i test	2026-11-16T17:36:59.0062171Z         Start  37: forgecad_drawing_hidden_lines_tests
+Linux CPU	Esegui i test	2026-11-16T17:37:00.9424665Z  36/110 Test  #37: forgecad_drawing_hidden_lines_tests ..............   Passed    1.94 sec
+Linux CPU	Esegui i test	2026-11-16T17:37:00.9425443Z         Start  38: forgecad_drawing_page_tests
+Linux CPU	Esegui i test	2026-11-16T17:37:01.0641593Z  37/110 Test  #38: forgecad_drawing_page_tests ......................   Passed    0.12 sec
+Linux CPU	Esegui i test	2026-11-16T17:37:01.0642725Z         Start  39: forgecad_drawing_derived_tests
+Linux CPU	Esegui i test	2026-11-16T17:37:03.6458876Z  38/110 Test  #39: forgecad_drawing_derived_tests ...................   Passed    2.58 sec
+Linux CPU	Esegui i test	2026-11-16T17:37:03.6459488Z         Start  40: forgecad_drawing_detail_tests
+Linux CPU	Esegui i test	2026-11-16T17:37:04.9895990Z  39/110 Test  #40: forgecad_drawing_detail_tests ....................   Passed    1.34 sec
+Linux CPU	Esegui i test	2026-11-16T17:37:04.9896777Z         Start  41: forgecad_drawing_auxiliary_tests
+Linux CPU	Esegui i test	2026-11-16T17:37:05.4533919Z  40/110 Test  #41: forgecad_drawing_auxiliary_tests .................   Passed    0.46 sec
+Linux CPU	Esegui i test	2026-11-16T17:37:05.4534586Z         Start  42: forgecad_drawing_break_tests
+Linux CPU	Esegui i test	2026-11-16T17:37:06.1831583Z  41/110 Test  #42: forgecad_drawing_break_tests .....................   Passed    0.73 sec
+Linux CPU	Esegui i test	2026-11-16T17:37:06.1835232Z         Start  43: forgecad_revision_numbers_tests
+Linux CPU	Esegui i test	2026-11-16T17:37:06.2868068Z  42/110 Test  #43: forgecad_revision_numbers_tests ..................   Passed    0.10 sec
+Linux CPU	Esegui i test	2026-11-16T17:37:06.2870604Z         Start  44: forgecad_drawing_presentation_tests
+Linux CPU	Esegui i test	2026-11-16T17:37:06.5451540Z  43/110 Test  #44: forgecad_drawing_presentation_tests ..............   Passed    0.26 sec
+Linux CPU	Esegui i test	2026-11-16T17:37:06.5455306Z         Start  45: forgecad_drawing_complete_sections_tests
+Linux CPU	Esegui i test	2026-11-16T17:37:09.5199439Z  44/110 Test  #45: forgecad_drawing_complete_sections_tests .........   Passed    2.97 sec
+Linux CPU	Esegui i test	2026-11-16T17:37:09.5201764Z         Start  46: forgecad_drawing_centers_tests
+Linux CPU	Esegui i test	2026-11-16T17:37:10.3875759Z  45/110 Test  #46: forgecad_drawing_centers_tests ...................   Passed    0.87 sec
+Linux CPU	Esegui i test	2026-11-16T17:37:10.3879193Z         Start  47: forgecad_drawing_axes_tests
+Linux CPU	Esegui i test	2026-11-16T17:37:12.6721877Z  46/110 Test  #47: forgecad_drawing_axes_tests ......................   Passed    2.28 sec
+Linux CPU	Esegui i test	2026-11-16T17:37:12.6722645Z         Start  48: forgecad_drawing_ui_controls_tests
+Linux CPU	Esegui i test	2026-11-16T17:37:12.7586320Z  47/110 Test  #48: forgecad_drawing_ui_controls_tests ...............   Passed    0.09 sec
+Linux CPU	Esegui i test	2026-11-16T17:37:12.7588997Z         Start  49: forgecad_drawing_focus_tests
+Linux CPU	Esegui i test	2026-11-16T17:37:16.5273185Z  48/110 Test  #49: forgecad_drawing_focus_tests .....................   Passed    3.77 sec
+Linux CPU	Esegui i test	2026-11-16T17:37:16.5276686Z         Start  50: forgecad_overlay_uniform_tests
+Linux CPU	Esegui i test	2026-11-16T17:37:16.5423447Z  49/110 Test  #50: forgecad_overlay_uniform_tests ...................***Skipped   0.01 sec
+Linux CPU	Esegui i test	2026-11-16T17:37:16.5426248Z         Start  51: forgecad_sketch_offset_validation_tests
+Linux CPU	Esegui i test	2026-11-16T17:37:17.8086160Z  50/110 Test  #36: forgecad_drawing_visibility_tests ................   Passed   27.97 sec
+Linux CPU	Esegui i test	2026-11-16T17:37:17.8086952Z         Start  52: forgekernel_open_offset_tests
+Linux CPU	Esegui i test	2026-11-16T17:37:19.3956837Z  51/110 Test  #51: forgecad_sketch_offset_validation_tests ..........   Passed    2.85 sec
+Linux CPU	Esegui i test	2026-11-16T17:37:19.3961467Z         Start  53: forgekernel_loft_knots_tests
+Linux CPU	Esegui i test	2026-11-16T17:37:19.4461891Z  52/110 Test  #53: forgekernel_loft_knots_tests .....................   Passed    0.05 sec
+Linux CPU	Esegui i test	2026-11-16T17:37:19.4465217Z         Start  54: forgekernel_polar_blend_tests
+Linux CPU	Esegui i test	2026-11-16T17:37:41.7198599Z  53/110 Test  #54: forgekernel_polar_blend_tests ....................   Passed   22.27 sec
+Linux CPU	Esegui i test	2026-11-16T17:37:41.7222812Z         Start  55: forgekernel_surface_instances_tests
+Linux CPU	Esegui i test	2026-11-16T17:37:43.4002199Z  54/110 Test  #55: forgekernel_surface_instances_tests ..............   Passed    1.68 sec
+Linux CPU	Esegui i test	2026-11-16T17:37:43.4031612Z         Start  56: forgekernel_exchange_robustness_tests
+Linux CPU	Esegui i test	2026-11-16T17:37:43.5172047Z  55/110 Test  #56: forgekernel_exchange_robustness_tests ............   Passed    0.12 sec
+Linux CPU	Esegui i test	2026-11-16T17:37:43.5201403Z         Start  57: forgekernel_history_tests
+Linux CPU	Esegui i test	2026-11-16T17:37:44.3800435Z  56/110 Test  #57: forgekernel_history_tests ........................   Passed    0.86 sec
+Linux CPU	Esegui i test	2026-11-16T17:37:44.3801738Z         Start  58: forgekernel_blend_probe_self_test
+Linux CPU	Esegui i test	2026-11-16T17:37:44.6069064Z  57/110 Test  #58: forgekernel_blend_probe_self_test ................   Passed    0.23 sec
+Linux CPU	Esegui i test	2026-11-16T17:37:44.6071929Z         Start  59: forgekernel_tolerance_tests
+Linux CPU	Esegui i test	2026-11-16T17:37:46.0141631Z  58/110 Test  #59: forgekernel_tolerance_tests ......................   Passed    1.40 sec
+Linux CPU	Esegui i test	2026-11-16T17:37:46.0142673Z         Start  60: forgekernel_surface_tools_tests
+Linux CPU	Esegui i test	2026-11-16T17:37:52.3692994Z  59/110 Test  #60: forgekernel_surface_tools_tests ..................   Passed    6.36 sec
+Linux CPU	Esegui i test	2026-11-16T17:37:52.3712917Z         Start  61: forgekernel_blend_profile_tests
+Linux CPU	Esegui i test	2026-11-16T17:37:53.5152025Z  60/110 Test  #61: forgekernel_blend_profile_tests ..................   Passed    1.14 sec
+Linux CPU	Esegui i test	2026-11-16T17:37:53.5211545Z         Start  62: forgekernel_face_normal_bounds_tests
+Linux CPU	Esegui i test	2026-11-16T17:37:53.5241439Z  61/110 Test  #62: forgekernel_face_normal_bounds_tests .............   Passed    0.01 sec
+Linux CPU	Esegui i test	2026-11-16T17:37:53.5271308Z         Start  63: forgekernel_sketch_projection_tests
+Linux CPU	Esegui i test	2026-11-16T17:37:53.6711991Z  62/110 Test  #63: forgekernel_sketch_projection_tests ..............   Passed    0.15 sec
+Linux CPU	Esegui i test	2026-11-16T17:37:53.6781394Z         Start  64: forgekernel_projected_curve_reference_tests
+Linux CPU	Esegui i test	2026-11-16T17:37:53.6951619Z  63/110 Test  #64: forgekernel_projected_curve_reference_tests ......   Passed    0.03 sec
+Linux CPU	Esegui i test	2026-11-16T17:37:53.6971513Z         Start  65: forgekernel_surface_parameterization_tests
+Linux CPU	Esegui i test	2026-11-16T17:37:53.7021645Z  64/110 Test  #65: forgekernel_surface_parameterization_tests .......   Passed    0.00 sec
+Linux CPU	Esegui i test	2026-11-16T17:37:53.7051378Z         Start  66: forgekernel_disjoint_union_tests
+Linux CPU	Esegui i test	2026-11-16T17:37:53.7892061Z  65/110 Test  #66: forgekernel_disjoint_union_tests .................   Passed    0.09 sec
+Linux CPU	Esegui i test	2026-11-16T17:37:53.7961485Z         Start  67: forgekernel_loft_projected_guide_tests
+Linux CPU	Esegui i test	2026-11-16T17:37:55.3742263Z  66/110 Test  #67: forgekernel_loft_projected_guide_tests ...........   Passed    1.59 sec
+Linux CPU	Esegui i test	2026-11-16T17:37:55.3761307Z         Start  68: forgekernel_loft_shape_tests
+Linux CPU	Esegui i test	2026-11-16T17:37:56.4422045Z  67/110 Test  #68: forgekernel_loft_shape_tests .....................   Passed    1.07 sec
+Linux CPU	Esegui i test	2026-11-16T17:37:56.4431336Z         Start  69: forgekernel_loft_projected_section_tests
+Linux CPU	Esegui i test	2026-11-16T17:37:58.0732023Z  68/110 Test  #69: forgekernel_loft_projected_section_tests .........   Passed    1.63 sec
+Linux CPU	Esegui i test	2026-11-16T17:37:58.0761320Z         Start  70: forgekernel_loft_complexity_tests
+Linux CPU	Esegui i test	2026-11-16T17:37:58.2282021Z  69/110 Test  #70: forgekernel_loft_complexity_tests ................   Passed    0.15 sec
+Linux CPU	Esegui i test	2026-11-16T17:37:58.2331433Z         Start  71: forgekernel_loft_guide_constraint_tests
+Linux CPU	Esegui i test	2026-11-16T17:37:58.5182032Z  70/110 Test  #71: forgekernel_loft_guide_constraint_tests ..........   Passed    0.29 sec
+Linux CPU	Esegui i test	2026-11-16T17:37:58.5182651Z         Start  72: forgekernel_offset_validation_tests
+Linux CPU	Esegui i test	2026-11-16T17:37:58.6441920Z  71/110 Test  #72: forgekernel_offset_validation_tests ..............   Passed    0.12 sec
+Linux CPU	Esegui i test	2026-11-16T17:37:58.6471294Z         Start  73: forgekernel_curve_fit_validation_tests
+Linux CPU	Esegui i test	2026-11-16T17:38:22.5054116Z  72/110 Test  #73: forgekernel_curve_fit_validation_tests ...........   Passed   23.86 sec
+Linux CPU	Esegui i test	2026-11-16T17:38:22.5054807Z         Start  74: forgekernel_offset_split_crease_tests
+Linux CPU	Esegui i test	2026-11-16T17:38:26.5095653Z  73/110 Test  #74: forgekernel_offset_split_crease_tests ............   Passed    4.00 sec
+Linux CPU	Esegui i test	2026-11-16T17:38:26.5100003Z         Start  75: forgekernel_blend_contact_break_tests
+Linux CPU	Esegui i test	2026-11-16T17:38:28.2552075Z  74/110 Test  #75: forgekernel_blend_contact_break_tests ............   Passed    1.74 sec
+Linux CPU	Esegui i test	2026-11-16T17:38:28.2581489Z         Start  76: forgekernel_plane_jets_tests
+Linux CPU	Esegui i test	2026-11-16T17:38:28.2641692Z  75/110 Test  #76: forgekernel_plane_jets_tests .....................   Passed    0.01 sec
+Linux CPU	Esegui i test	2026-11-16T17:38:28.2671323Z         Start  77: forgekernel_bspline_derivative_tests
+Linux CPU	Esegui i test	2026-11-16T17:38:28.2701860Z  76/110 Test  #77: forgekernel_bspline_derivative_tests .............   Passed    0.01 sec
+Linux CPU	Esegui i test	2026-11-16T17:38:28.2703082Z         Start  78: forgekernel_bspline_cache_tests
+Linux CPU	Esegui i test	2026-11-16T17:38:28.3723113Z  77/110 Test  #78: forgekernel_bspline_cache_tests ..................   Passed    0.11 sec
+Linux CPU	Esegui i test	2026-11-16T17:38:28.3726563Z         Start  79: forgekernel_face_parameter_tests
+Linux CPU	Esegui i test	2026-11-16T17:38:28.3753313Z  78/110 Test  #79: forgekernel_face_parameter_tests .................   Passed    0.00 sec
+Linux CPU	Esegui i test	2026-11-16T17:38:28.3772950Z         Start  80: forgekernel_bspline_isoline_tests
+Linux CPU	Esegui i test	2026-11-16T17:38:28.4130560Z  79/110 Test  #80: forgekernel_bspline_isoline_tests ................   Passed    0.04 sec
+Linux CPU	Esegui i test	2026-11-16T17:38:28.4153745Z         Start  81: forgekernel_loft_correspondence_tests
+Linux CPU	Esegui i test	2026-11-16T17:38:28.8011947Z  80/110 Test  #81: forgekernel_loft_correspondence_tests ............   Passed    0.39 sec
+Linux CPU	Esegui i test	2026-11-16T17:38:28.8031485Z         Start  82: forgekernel_loft_point_tests
+Linux CPU	Esegui i test	2026-11-16T17:38:28.9343721Z  81/110 Test  #82: forgekernel_loft_point_tests .....................   Passed    0.13 sec
+Linux CPU	Esegui i test	2026-11-16T17:38:28.9371817Z         Start  83: forgekernel_boolean_seam_tests
+Linux CPU	Esegui i test	2026-11-16T17:38:29.2132558Z  82/110 Test  #83: forgekernel_boolean_seam_tests ...................   Passed    0.28 sec
+Linux CPU	Esegui i test	2026-11-16T17:38:29.2133397Z         Start  84: forgekernel_marching_seed_grid_tests
+Linux CPU	Esegui i test	2026-11-16T17:38:30.3074439Z  83/110 Test  #84: forgekernel_marching_seed_grid_tests .............   Passed    1.10 sec
+Linux CPU	Esegui i test	2026-11-16T17:38:30.3122191Z         Start  85: forgekernel_surface_mapping_tests
+Linux CPU	Esegui i test	2026-11-16T17:38:30.8331700Z  84/110 Test  #85: forgekernel_surface_mapping_tests ................   Passed    0.53 sec
+Linux CPU	Esegui i test	2026-11-16T17:38:30.8335746Z         Start  86: forgekernel_trimmed_face_bounds_tests
+Linux CPU	Esegui i test	2026-11-16T17:38:31.2460237Z  85/110 Test  #86: forgekernel_trimmed_face_bounds_tests ............   Passed    0.41 sec
+Linux CPU	Esegui i test	2026-11-16T17:38:31.2461181Z         Start  87: forgekernel_solid_trim_tests
+Linux CPU	Esegui i test	2026-11-16T17:38:31.2595715Z  86/110 Test  #87: forgekernel_solid_trim_tests .....................   Passed    0.01 sec
+Linux CPU	Esegui i test	2026-11-16T17:38:31.2596379Z         Start  88: forgekernel_cone_rays_tests
+Linux CPU	Esegui i test	2026-11-16T17:38:31.2734024Z  87/110 Test  #88: forgekernel_cone_rays_tests ......................   Passed    0.01 sec
+Linux CPU	Esegui i test	2026-11-16T17:38:31.2735239Z         Start  89: forgekernel_blend_cavity_tests
+Linux CPU	Esegui i test	2026-11-16T17:39:10.6810532Z  88/110 Test  #89: forgekernel_blend_cavity_tests ...................   Passed   39.41 sec
+Linux CPU	Esegui i test	2026-11-16T17:39:10.6812300Z         Start  90: forgekernel_blend_cavity_regression_tests
+Linux CPU	Esegui i test	2026-11-16T17:39:53.3880173Z  89/110 Test  #90: forgekernel_blend_cavity_regression_tests ........   Passed   42.71 sec
+Linux CPU	Esegui i test	2026-11-16T17:39:53.3881495Z         Start  91: forgekernel_blend_mitre_validation_tests
+Linux CPU	Esegui i test	2026-11-16T17:39:53.4215358Z  90/110 Test  #91: forgekernel_blend_mitre_validation_tests .........   Passed    0.03 sec
+Linux CPU	Esegui i test	2026-11-16T17:39:53.4218335Z         Start  92: forgekernel_blend_boundary_validation_tests
+Linux CPU	Esegui i test	2026-11-16T17:39:55.5774930Z  91/110 Test  #92: forgekernel_blend_boundary_validation_tests ......   Passed    2.16 sec
+Linux CPU	Esegui i test	2026-11-16T17:39:55.5776970Z         Start  93: forgekernel_nurbs_support_tests
+Linux CPU	Esegui i test	2026-11-16T17:40:26.6243949Z  92/110 Test  #52: forgekernel_open_offset_tests ....................   Passed  188.82 sec
+Linux CPU	Esegui i test	2026-11-16T17:40:26.6245860Z         Start  94: forgekernel_sweep_validation_tests
+Linux CPU	Esegui i test	2026-11-16T17:41:25.1862421Z  93/110 Test  #93: forgekernel_nurbs_support_tests ..................   Passed   89.61 sec
+Linux CPU	Esegui i test	2026-11-16T17:41:25.1865887Z         Start  95: forgekernel_sheet_fit_validation_tests
+Linux CPU	Esegui i test	2026-11-16T17:41:26.0871882Z  94/110 Test  #95: forgekernel_sheet_fit_validation_tests ...........   Passed    0.90 sec
+Linux CPU	Esegui i test	2026-11-16T17:41:26.0873029Z         Start  96: forgekernel_sheet_join_validation_tests
+Linux CPU	Esegui i test	2026-11-16T17:41:26.1665748Z  95/110 Test  #96: forgekernel_sheet_join_validation_tests ..........   Passed    0.08 sec
+Linux CPU	Esegui i test	2026-11-16T17:41:26.1666763Z         Start  97: forgekernel_curve_projection_tests
+Linux CPU	Esegui i test	2026-11-16T17:41:26.1705358Z  96/110 Test  #97: forgekernel_curve_projection_tests ...............   Passed    0.00 sec
+Linux CPU	Esegui i test	2026-11-16T17:41:26.1708374Z         Start  98: forgekernel_boundary_fit_validation_tests
+Linux CPU	Esegui i test	2026-11-16T17:41:26.4645558Z  97/110 Test  #98: forgekernel_boundary_fit_validation_tests ........   Passed    0.29 sec
+Linux CPU	Esegui i test	2026-11-16T17:41:26.4646481Z         Start  99: forgekernel_surface_curve_fit_validation_tests
+Linux CPU	Esegui i test	2026-11-16T17:41:27.0295809Z  98/110 Test  #99: forgekernel_surface_curve_fit_validation_tests ...   Passed    0.56 sec
+Linux CPU	Esegui i test	2026-11-16T17:41:27.0296825Z         Start 100: forgekernel_mapping_carrier_validation_tests
+Linux CPU	Esegui i test	2026-11-16T17:41:28.0385754Z  99/110 Test #100: forgekernel_mapping_carrier_validation_tests .....   Passed    1.01 sec
+Linux CPU	Esegui i test	2026-11-16T17:41:28.0386719Z         Start 101: forgekernel_mapping_uv_validation_tests
+Linux CPU	Esegui i test	2026-11-16T17:41:30.8464203Z 100/110 Test #101: forgekernel_mapping_uv_validation_tests ..........   Passed    2.81 sec
+Linux CPU	Esegui i test	2026-11-16T17:41:30.8465558Z         Start 102: forgekernel_mapping_diagonal_validation_tests
+Linux CPU	Esegui i test	2026-11-16T17:41:31.4879281Z 101/110 Test #102: forgekernel_mapping_diagonal_validation_tests ....   Passed    0.64 sec
+Linux CPU	Esegui i test	2026-11-16T17:41:31.4880212Z         Start 103: forgekernel_planar_flatten_validation_tests
+Linux CPU	Esegui i test	2026-11-16T17:41:32.7660534Z 102/110 Test #103: forgekernel_planar_flatten_validation_tests ......   Passed    1.28 sec
+Linux CPU	Esegui i test	2026-11-16T17:41:32.7661680Z         Start 104: forgekernel_planar_thicken_validation_tests
+Linux CPU	Esegui i test	2026-11-16T17:41:34.3342930Z 103/110 Test #104: forgekernel_planar_thicken_validation_tests ......   Passed    1.57 sec
+Linux CPU	Esegui i test	2026-11-16T17:41:34.3345810Z         Start 105: forgekernel_projection_fit_validation_tests
+Linux CPU	Esegui i test	2026-11-16T17:41:36.7423857Z 104/110 Test #105: forgekernel_projection_fit_validation_tests ......   Passed    2.41 sec
+Linux CPU	Esegui i test	2026-11-16T17:41:36.7426738Z         Start 106: forgekernel_edge_offset_fit_validation_tests
+Linux CPU	Esegui i test	2026-11-16T17:41:42.5713961Z 105/110 Test  #94: forgekernel_sweep_validation_tests ...............   Passed   75.95 sec
+Linux CPU	Esegui i test	2026-11-16T17:41:42.5718181Z         Start 107: forgekernel_boolean_boundary_tests
+Linux CPU	Esegui i test	2026-11-16T17:41:42.5750117Z 106/110 Test #107: forgekernel_boolean_boundary_tests ...............   Passed    0.00 sec
+Linux CPU	Esegui i test	2026-11-16T17:41:42.5751561Z         Start 108: forgekernel_offset_pcurve_tests
+Linux CPU	Esegui i test	2026-11-16T17:41:42.9909432Z 107/110 Test #108: forgekernel_offset_pcurve_tests ..................   Passed    0.42 sec
+Linux CPU	Esegui i test	2026-11-16T17:41:42.9913551Z         Start 109: forgekernel_sew_pcurve_tests
+Linux CPU	Esegui i test	2026-11-16T17:41:44.4196306Z 108/110 Test #106: forgekernel_edge_offset_fit_validation_tests .....   Passed    7.68 sec
+Linux CPU	Esegui i test	2026-11-16T17:41:44.4197786Z         Start 110: forgekernel_tests
+Linux CPU	Esegui i test	2026-11-16T17:41:53.6374267Z 109/110 Test #109: forgekernel_sew_pcurve_tests .....................   Passed   10.65 sec
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5669964Z 110/110 Test #110: forgekernel_tests ................................***Failed  523.15 sec
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5670634Z [  OK  ] cancel_scope_and_evaluation
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5670897Z [  OK  ] cancel_running_parallel_workers
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5671351Z [  OK  ] VecBasics
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5671554Z [  OK  ] FrameMatchesGpAx3
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5671843Z [  OK  ] TransformMatchesGpTrsf
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5672109Z [  OK  ] ReflectionRejectsDegenerateNormal
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5672377Z [  OK  ] Orient2dBasic
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5672570Z [  OK  ] Orient2dNearDegenerate
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5672819Z [  OK  ] Orient3dBasic
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5673004Z [  OK  ] Orient3dNearDegenerate
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5673268Z [  OK  ] PredicatesPermutationConsistency
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5673542Z [  OK  ] BernsteinArithmetic
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5673755Z [  OK  ] BernsteinHighDegreeProduct
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5674004Z [  OK  ] BernsteinRoots
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5674199Z [  OK  ] BernsteinRootsDegenerate
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5674442Z [  OK  ] LineMatchesOcct
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5674641Z [  OK  ] CircleMatchesOcct
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5674867Z [  OK  ] Circle2dMatchesOcct
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5675067Z [  OK  ] EllipseMatchesOcct
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5675307Z [  OK  ] TrimmedCurveOnPeriodicBasis
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5675542Z [  OK  ] BSplineEvaluateMatchesOcct3d
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5676086Z [  OK  ] BSplineEvaluateMatchesOcct2d
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5676427Z [  OK  ] BSplineKnotInsertionMatchesOcct
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5676663Z [  OK  ] BSplineBezierSegments
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5676989Z [  OK  ] BSplineUnclampedAndLeftLimit
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5677318Z [  OK  ] ConicArcsAreExact
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5677509Z [  OK  ] BSplineValidation
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5677858Z [  OK  ] BSplineLowOrdersMatchOcctAndFullEvaluation
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5678177Z [  OK  ] BSplineBasisBernsteinAndBufferBounds
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5678468Z [  OK  ] BSplineBasisConcurrentAndCancelled
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5678791Z [  OK  ] BSplineRepeatedKnotOneSidedDerivatives
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5679070Z [  OK  ] ProjectOnLineAndCircle
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5679287Z [  OK  ] ProjectOnBSplineMatchesOcct
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5679552Z [  OK  ] ProjectOnEllipseMatchesOcct
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5679761Z [  OK  ] ArcLengthExact
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5679956Z [  OK  ] ArcLengthMatchesOcct
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5680201Z [  OK  ] ProjectOnTransformedCurve
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5680465Z [  OK  ] ProjectBoundedCandidatesRetainEveryBranch
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5680800Z [  OK  ] ProjectBoundedCandidatesTransformsAndLimits
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5681425Z [  OK  ] CurveLengthCachePreservesQuadratureAndIdentity
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5681956Z [  OK  ] ProjectBoundedCandidatesHighDegreeAndNarrowSpans
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5682457Z [  OK  ] ProjectMinimumRestrictedRangesMatchesExhaustive
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5682868Z [  OK  ] ProjectMinimumManySpansAnalytic
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5683224Z [  OK  ] ProjectBoundedRangeKnotEndpoints
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5683527Z [  OK  ] PlaneMatchesOcct
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5683715Z [  OK  ] CylinderMatchesOcct
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5683904Z [  OK  ] ConeMatchesOcct
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5684092Z [  OK  ] SphereMatchesOcct
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5684277Z [  OK  ] TorusMatchesOcct
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5684455Z [  OK  ] ExtrusionMatchesOcct
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5684652Z [  OK  ] RevolutionMatchesOcct
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5684854Z [  OK  ] BSplineSurfaceMatchesOcct
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5685090Z [  OK  ] BSplineSurfaceBezierPatches
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5685317Z [  OK  ] BSplineSurfaceValidation
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5685542Z [  OK  ] BSplineSurfaceLowOrdersBernstein
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5685823Z [  OK  ] BSplineSurfaceLowOrdersBoundsConcurrentAndCancelled
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5686114Z [  OK  ] InvertPointKeepsClosedBSplineBranch
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5686797Z [  OK  ] ProjectOnPlaneAndCylinder
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5687007Z [  OK  ] ProjectOnConeSphereTorus
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5687216Z [  OK  ] ProjectOnBSplineSurface
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5687432Z [  OK  ] PlanarEquivalentOfBSplineSurface
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5687665Z [  OK  ] ProjectOnExtrusionAndRevolution
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5687889Z [  OK  ] ProjectOnPlanarRevolution
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5688097Z [  OK  ] ProjectOnInfiniteExtrusion
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5688313Z [  OK  ] ProjectOnSkewRevolutionWindows
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5688587Z [  OK  ] SameExtrusionSurfaceRequiresWholeCurveCertificate
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5688875Z [  OK  ] SurfaceDeviationCertificateAnalytic
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5689143Z [  OK  ] SurfaceDeviationCertificateCurvedAndHints
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5689467Z [  OK  ] SurfaceDeviationCertificateDegenerateConcurrentAndCancelled
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5689778Z [  OK  ] SurfaceToleranceConservativeBounds
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5690002Z [  OK  ] ToleranceDefaults
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5690197Z [  OK  ] ToleranceInvalidMetadata
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5690400Z [  OK  ] ToleranceVertexBudget
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5690598Z [  OK  ] TolerancePCurveBudget
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5690787Z [  OK  ] ToleranceEdgeFaceBudget
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5691169Z [  OK  ] ToleranceDocumentScopesAndWorkers
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5691406Z [  OK  ] ToleranceDocumentOffsetAccuracy
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5691616Z [  OK  ] MvfsKvfs
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5691791Z [  OK  ] RandomEulerSequences
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5691982Z [  OK  ] FaceRingOperators
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5692170Z [  OK  ] SemvSplitsGeometry
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5692362Z [  OK  ] CheckerDetectsDamage
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5692716Z [  OK  ] ReverseEdgePreservesSolidAndLaminarGeometry
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5692955Z [  OK  ] BoxMatchesOcct
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5693145Z [  OK  ] PrismWithHolesMatchesOcct
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5693389Z [  OK  ] CylinderWithoutSeam
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5693713Z [  OK  ] ProfileAreaAndWinding
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5694015Z [  OK  ] ProfileChainingAndNesting
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5694329Z [  OK  ] ExtrusionMatchesOcct
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5694684Z [  OK  ] ExtrusionWithTolerantVertices
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5694937Z [  OK  ] SheetExtrusion
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5695137Z [  OK  ] PCurvesOfExtrusions
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5695327Z [  OK  ] PCurveTypes
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5695514Z [  OK  ] ExactPCurvesOnAnalyticSurfaces
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5695727Z [  OK  ] FittedPCurves
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5695915Z [  OK  ] FittedPCurvesFromDegenerateSide
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5696153Z [  OK  ] FittedPCurveNearCollapsedSplineSide
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5696395Z [  OK  ] PCurvesSurviveEdgeOperations
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5696616Z [  OK  ] MassWithAndWithoutPCurves
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5696846Z [  OK  ] PCurveExtendedPoleNeighbourhood
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5697055Z [  OK  ] MassOfBoxes
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5697226Z [  OK  ] MassOfCylinders
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5697412Z [  OK  ] MassOfPrismsMatchesOcct
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5697615Z [  OK  ] MassOfExtrusions
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5697802Z [  OK  ] MassOfConeFrustum
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5697992Z [  OK  ] MassWithPolesAndTori
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5698177Z [  OK  ] FaceAreas
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5698349Z [  OK  ] QuadratureStopsOnIntegrandNoise
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5698558Z [  OK  ] MassEdgeCases
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5698739Z [  OK  ] MassVerticalSplineSkipsNullFlux
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5698978Z [  OK  ] MassParallelPreservesResultsAndInput
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5699257Z [  OK  ] MassParallelPreservesFirstFailureAndCancellation
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5699527Z [  OK  ] PlanarImageTransformedCurves
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5699735Z [  OK  ] PlaneRootsOfCurves
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5699939Z [  OK  ] CurveCurveIntersectionsMatchOcct
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5700168Z [  OK  ] PlaneSurfaceIntersections
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5700381Z [  OK  ] PlaneTorusMeridianIntersections
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5700602Z [  OK  ] PlaneRootsHullKeepsContacts
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5700814Z [  OK  ] PlaneRootsManySpans
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5701158Z [  OK  ] CurveCurveManySpansAnalytic
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5701451Z [  OK  ] CurveCurveSmallEndpointContacts
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5701818Z [  OK  ] CurveCurveManySpansContactsAndConcurrency
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5702070Z [  OK  ] MarchingPerpendicularCylinders
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5702294Z [  OK  ] MarchingCylindersAgainstOcct
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5702511Z [  OK  ] MarchingExtrusionSurfaces
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5702724Z [  OK  ] MarchingParallelDirections
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5702933Z [  OK  ] MarchingCurveSurface
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5703131Z [  OK  ] MarchingSingularPoints
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5703344Z [  OK  ] MarchingGeneralSurfacesAgainstOcct
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5703588Z [  OK  ] MarchingHigherOrderContactBranches
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5703825Z [  OK  ] MarchingMixedTermSingularBranches
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5704061Z [  OK  ] MarchingProjectionCacheOverflow
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5704281Z [  OK  ] BooleanBoxesGeneralPosition
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5704486Z [  OK  ] BooleanCoplanarBoxes
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5704684Z [  OK  ] BooleanNestedAndDisjoint
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5704889Z [  OK  ] BooleanBoxAndCylinder
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5705092Z [  OK  ] BooleanExtrusionAndBox
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5705279Z [  OK  ] BooleanChained
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5705457Z [  OK  ] BooleanCylinderCylinder
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5705653Z [  OK  ] BooleanCurvedExtrusions
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5705852Z [  OK  ] BooleanRevolvedSolids
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5706047Z [  OK  ] BooleanCoincidentSurfaces
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5706258Z [  OK  ] BooleanStressGrid
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5706472Z [  OK  ] BooleanCylinderFourthOrderCapContact
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5706713Z [  OK  ] BooleanStressCylinderGrid
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5706918Z [  OK  ] BooleanTangentContacts
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5707110Z [  OK  ] BooleanStressCylinders
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5707410Z [  OK  ] BooleanStressGeneral
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5707597Z [  OK  ] BooleanTangentCurves
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5707786Z [  OK  ] BooleanThroughPoles
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5707975Z [  OK  ] BooleanSheets
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5708156Z [  OK  ] BooleanPartialCoincidence
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5708355Z [  OK  ] BooleanVillarceau
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5708558Z [  OK  ] BooleanHigherOrderContacts
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5708769Z [  OK  ] BooleanCoaxialRevolutions
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5709007Z [  OK  ] BooleanCoplanarClosedCircleWithTangentTorus
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5709269Z [  OK  ] BooleanPartialSplineCoincidence
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5709497Z [  OK  ] BooleanParallelMatchesSequential
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5709758Z [  OK  ] BooleanDisjointValidationAndUnification
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5710001Z [  OK  ] BooleanTolerantVertices
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5710221Z [  OK  ] BooleanShellSlabsThroughHoleVertex
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5710464Z [  OK  ] BooleanPartialClosedSplineRevolution
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5710699Z [  OK  ] BooleanThinSplineSlivers
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5710899Z [  OK  ] UnifyBoxes
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5711227Z [  OK  ] UnifyCylinders
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5711475Z [  OK  ] UnifyIdempotent
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5711672Z [  OK  ] TessellateTriangulatePolygon
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5711889Z [  OK  ] TessellatePrimitives
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5712087Z [  OK  ] TessellateSelectedFaces
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5712288Z [  OK  ] TessellateMaximumEdgeLength
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5712492Z [  OK  ] TessellatePolesAndTori
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5712685Z [  OK  ] TessellateBooleans
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5712875Z [  OK  ] TessellateRayHits
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5713119Z [  OK  ] TessellateCachedRayHits
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5713343Z [  OK  ] TessellateFaceThinnerThanDeflection
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5713579Z [  OK  ] TessellateThinBandAcrossPeriods
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5713808Z [  OK  ] TessellateThreadsAndBatchEvaluator
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5714037Z [  OK  ] PreparedFaceClassification
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5714244Z [  OK  ] NurbsFormsOfSurfaces
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5714439Z [  OK  ] NurbsPiecesOfCurves
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5714644Z [  OK  ] NurbsTrimmedSplineSurfaceWindows
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5714872Z [  OK  ] CurveSurfaceIntersectionsMatchOcct
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5715114Z [  OK  ] LineSurfaceIntersectionsOnNewSurfaces
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5715368Z [  OK  ] BezierPatchSubdivisionPreservesGeometry
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5715745Z [  OK  ] RevolutionArcCenterAcrossAxis
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5715968Z [  OK  ] RevolutionSolids
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5716151Z [  OK  ] RevolutionPartial
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5716357Z [  OK  ] RevolutionPartialClosedClampedSpline
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5716582Z [  OK  ] RevolutionPrimitives
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5716768Z [  OK  ] RevolutionSheets
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5716937Z [  OK  ] BlendBoxEdges
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5717115Z [  OK  ] BlendConcaveAndCurvedEdges
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5717352Z [  OK  ] BlendSphericalSupportLeavesNoDetachedRing
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5717588Z [  OK  ] BlendTangentChains
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5717793Z [  OK  ] BlendRoundedPlateWithPolygonalHoles
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5718034Z [  OK  ] BlendRadiusEqualsCornerRadius
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5718244Z [  OK  ] BlendOpenArcsAndObliqueEnds
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5718453Z [  OK  ] BlendFreeformClosedEdges
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5718658Z [  OK  ] BlendFreeformOpenEdges
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5718861Z [  OK  ] BlendChainsMatchBooleanPath
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5719086Z [  OK  ] BlendSurfaceMatchesExactPlanarCases
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5719321Z [  OK  ] BlendSurfaceMatchesCircularCases
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5719546Z [  OK  ] BlendSurfaceNonAnalyticEdges
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5719767Z [  OK  ] BlendSurfaceTeeIsExactRollingBall
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5719986Z [  OK  ] ChamferTwoDistances
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5720179Z [  OK  ] BlendSmallRadiusOnLargeRims
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5720408Z [  OK  ] BlendLoftCircularCapsSplitIntoPatches
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5720666Z [  OK  ] BlendEdgeEndingOnExistingFilletCornerPatch
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5720946Z [  OK  ] BlendPlanarChainConcaveCornersBetweenLongArcs
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5721529Z [  OK  ] BlendArcsIntoConcaveCornersAreExact
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5721764Z [  OK  ] BlendVanishingAtTangentMitreEnd
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5721980Z [  OK  ] BlendArcsMeetingSegments
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5722193Z [  OK  ] BlendShortFaceJoinsTangentNeighbour
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5722415Z [  OK  ] BlendShortFaceOnRevolution
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5722630Z [  OK  ] BlendConcaveCornerPocket
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5722830Z [  OK  ] BlendConcaveCornerPolygons
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5723040Z [  OK  ] BlendConcaveCornerLens
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5723244Z [  OK  ] BlendConcaveCornerRoundedPocket
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5723508Z [  OK  ] BlendSurfaceEndsOnConcaveCircularWall
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5723734Z [  OK  ] BlendHelicalGrooveEnds
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5723928Z [  OK  ] BlendSurfaceAcrossSplitSeam
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5724156Z [  OK  ] BlendOffsetLoftTrimmedTopOneMillimeter
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5724402Z [  OK  ] BlendRegeneratedLoftOffsetCaps
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5724629Z [  OK  ] MicroFeaturesOfLoftOffsetBodies
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5724861Z [  OK  ] BlendSplitSeamPreservesKnotCorner
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5725120Z [  OK  ] BlendTopContourWithCornerRadiusEqualToFillet
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5725391Z [  OK  ] BlendCapOverlappingPocketFillet
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5725622Z [  OK  ] BlendAlternatingTangentSupports
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5725878Z [  OK  ] BlendConsumedTerminalReachesTangentSupport
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5726130Z [  OK  ] BlendApplicatoreRevolutionEnds
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5726347Z [  OK  ] BlendMouseInternalNormalJump
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5726580Z [  OK  ] BlendPlanarCapOnTangentSplineSupports
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5726828Z [  OK  ] BlendOpenChainsAtTangentSplineSeams
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5727088Z [  OK  ] BlendContactKnotCrossingsUseContactParameters
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5727345Z [  OK  ] BlendContactKnotAtFitEndpoints
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5727614Z [  OK  ] BlendContactKnotAtExistingEdgeBreakUsesOneParameter
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5727919Z [  OK  ] BlendContactKnotOnProbeAndRealNormalJump
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5728227Z [  OK  ] BlendContactKnotKeepsRadiusAndAllowsOneMillimeterOffset
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5728525Z [  OK  ] SheetExtendBSplineKeepsCurve
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5728732Z [  OK  ] SheetSplitAndTrim
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5728911Z [  OK  ] SheetExtend
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5729104Z [  OK  ] SheetSectionKeepsExactSplineBoundary
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5729346Z [  OK  ] SheetRevolutionMeridianSection
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5729667Z [  OK  ] TransformScaleBodies
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5729861Z [  OK  ] TransformMirrorBodies
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5730098Z [  OK  ] TransformMirrorRetainsSplineBoundaryParameters
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5730400Z [  OK  ] TransformMirrorRecalculatesScaledLineParameters
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5730653Z [  OK  ] DraftBoxNeutralPlane
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5730840Z [  OK  ] DraftRotatedAndInvalid
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5731170Z [  OK  ] SheetDraftAndBlend
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5731367Z [  OK  ] DraftCurvedAndConcaveSolids
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5731591Z [  OK  ] DraftCircularSectionsStayAnalytic
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5731820Z [  OK  ] BodyIORoundTrip
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5732007Z [  OK  ] BodyIORejectsBadData
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5732213Z [  OK  ] HelixDerivativesAndOcctReference
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5732440Z [  OK  ] HelixBSplineWithinTolerance
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5732741Z [  OK  ] SweepMinimalTwistJoinedSpatialPathWithStraightSpans
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5733031Z [  OK  ] SweepMinimalTwistSpatialInflection
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5733281Z [  OK  ] SweepMinimalTwistClosedSpatialSpline
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5733511Z [  OK  ] SweepLineAndArcAreExact
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5733751Z [  OK  ] SweepObliqueProfileAlongArcUsesFiniteMeridians
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5733999Z [  OK  ] SweepPlanarPathIsTube
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5734204Z [  OK  ] SweepAlongHelixIsSpring
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5734400Z [  OK  ] SweepClosedPathAndSheet
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5734639Z [  OK  ] SweepMinimalTwistHelixAvoidsUniformGridAliasing
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5734931Z [  OK  ] SweepClosedSpatialSplineExplicitSeamParameters
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5735193Z [  OK  ] SweepLocalFoldUsesSectionGeometry
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5735518Z [  OK  ] LoftRuledFrustums
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5735711Z [  OK  ] LoftSmoothThroughCircles
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5735934Z [  OK  ] LoftEllipsePreservesSmoothOffsetFaces
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5736161Z [  OK  ] LoftCircleToSquare
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5736361Z [  OK  ] LoftGuideCrossesEverySection
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5736592Z [  OK  ] LoftGuideInfluenceAndEndContinuity
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5736851Z [  OK  ] LoftGuideG0DoesNotEnableDerivativeConstraints
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5737109Z [  OK  ] LoftTangencyAppliesToEveryGuide
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5737335Z [  OK  ] LoftOpenGuidesAndNeighborFaces
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5737563Z [  OK  ] LoftOpenGuideNearPlaneEndpoint
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5737783Z [  OK  ] LoftContactAtCoincidentEndpoint
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5738017Z [  OK  ] LoftNonparallelLongitudinalParameters
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5738234Z [  OK  ] LoftSheet
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5738418Z [  OK  ] LoftPreservesDistinctNearbyKnots
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5738639Z [  OK  ] LoftG1RoundoffTrimPiece
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5738857Z [  OK  ] LoftMultipleGuidesDoNotCreateRibbons
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5739099Z [  OK  ] LoftFollowsEntireCircularGuides
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5739315Z [  OK  ] LoftIndependentGuideConditions
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5739551Z [  OK  ] LoftGuideNearSectionPreservesContactPlane
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5739835Z [  OK  ] LoftUnequalGuideSpansPreserveGeometryAndContact
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5740139Z [  OK  ] LoftG1SingleUlpSpanKeepsDistinctCollocationPoints
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5740403Z [  OK  ] OcctImportPrimitives
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5740603Z [  OK  ] OcctImportModelled
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5740800Z [  OK  ] OcctImportSplineSurfaces
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5741138Z [  OK  ] OcctImportSheet
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5741379Z [  OK  ] OcctImportUnboundedBases
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5741786Z ^[[32;1m
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5741966Z *******************************************************************
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5742310Z ******        Statistics on Transfer (Write)                 ******^[[0m
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5742585Z ^[[32;1m
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5742764Z *******************************************************************
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5743058Z ******        Transfer Mode = 0  I.E.  As Is       ******^[[0m
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5743418Z ^[[32;1m******        Transferring Shape, ShapeType = 0                      ******^[[0m
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5743765Z ^[[32;1m** WorkSession : Sending all data^[[0m
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5744262Z ^[[32;1m Step File Name : /tmp/forgekernel_occt_import_test.step(410 ents)  Write  Done^[[0m
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5744604Z [  OK  ] OcctImportStepRoundTrip
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5744817Z [  OK  ] BlendGeneralMatchesAnalytic
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5745030Z [  OK  ] BlendSequentialNearbyEdges
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5745239Z [  OK  ] BlendSweptTubeCap
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5745431Z [  OK  ] BlendRuledLoftCone
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5745627Z [  OK  ] BlendSweepAcrossPathJoint
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5745836Z [  OK  ] BlendLoftCircleToSquare
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5746034Z [  OK  ] BlendSmoothLoftPolygonCap
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5746246Z [  OK  ] BlendConcaveSmoothLoftEdge
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5746472Z [  OK  ] BlendSmoothLoftSplitSidePatches
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5746692Z [  OK  ] SheetBlendCurvedLoft
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5746897Z [  OK  ] StepWriteReadByOcct
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5747081Z [  OK  ] StepRoundTrip
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5747260Z ^[[32;1m
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5747427Z *******************************************************************
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5747745Z ******        Statistics on Transfer (Write)                 ******^[[0m
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5748004Z ^[[32;1m
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5748172Z *******************************************************************
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5748454Z ******        Transfer Mode = 0  I.E.  As Is       ******^[[0m
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5748809Z ^[[32;1m******        Transferring Shape, ShapeType = 0                      ******^[[0m
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5749140Z ^[[32;1m** WorkSession : Sending all data^[[0m
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5749488Z ^[[32;1m Step File Name : /tmp/forgekernel_step_occt.step(434 ents)  Write  Done^[[0m
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5749947Z ^[[32;1m
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5750113Z *******************************************************************
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5750419Z ******        Statistics on Transfer (Write)                 ******^[[0m
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5750674Z ^[[32;1m
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5750842Z *******************************************************************
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5751570Z ******        Transfer Mode = 0  I.E.  As Is       ******^[[0m
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5751911Z ^[[32;1m******        Transferring Shape, ShapeType = 2                      ******^[[0m
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5752238Z ^[[32;1m** WorkSession : Sending all data^[[0m
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5752597Z ^[[32;1m Step File Name : /tmp/forgekernel_step_occt.step(32 ents)  Write  Done^[[0m
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5752894Z ^[[32;1m
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5753054Z *******************************************************************
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5753353Z ******        Statistics on Transfer (Write)                 ******^[[0m
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5753609Z ^[[32;1m
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5753770Z *******************************************************************
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5754048Z ******        Transfer Mode = 0  I.E.  As Is       ******^[[0m
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5754389Z ^[[32;1m******        Transferring Shape, ShapeType = 2                      ******^[[0m
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5754707Z ^[[32;1m** WorkSession : Sending all data^[[0m
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5755049Z ^[[32;1m Step File Name : /tmp/forgekernel_step_occt.step(78 ents)  Write  Done^[[0m
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5755342Z ^[[32;1m
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5755504Z *******************************************************************
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5755803Z ******        Statistics on Transfer (Write)                 ******^[[0m
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5756060Z ^[[32;1m
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5756218Z *******************************************************************
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5756488Z ******        Transfer Mode = 0  I.E.  As Is       ******^[[0m
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5756823Z ^[[32;1m******        Transferring Shape, ShapeType = 0                      ******^[[0m
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5757140Z ^[[32;1m** WorkSession : Sending all data^[[0m
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5757483Z ^[[32;1m Step File Name : /tmp/forgekernel_step_occt.step(770 ents)  Write  Done^[[0m
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5757775Z ^[[32;1m
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5757930Z *******************************************************************
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5758348Z ******        Statistics on Transfer (Write)                 ******^[[0m
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5758608Z ^[[32;1m
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5758767Z *******************************************************************
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5759043Z ******        Transfer Mode = 0  I.E.  As Is       ******^[[0m
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5759382Z ^[[32;1m******        Transferring Shape, ShapeType = 2                      ******^[[0m
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5759704Z ^[[32;1m** WorkSession : Sending all data^[[0m
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5760038Z ^[[32;1m Step File Name : /tmp/forgekernel_step_occt.step(213 ents)  Write  Done^[[0m
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5760342Z ^[[32;1m
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5760499Z *******************************************************************
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5760793Z ******        Statistics on Transfer (Write)                 ******^[[0m
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5761218Z ^[[32;1m
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5761377Z *******************************************************************
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5761662Z ******        Transfer Mode = 0  I.E.  As Is       ******^[[0m
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5762003Z ^[[32;1m******        Transferring Shape, ShapeType = 2                      ******^[[0m
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5762324Z ^[[32;1m** WorkSession : Sending all data^[[0m
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5762667Z ^[[32;1m Step File Name : /tmp/forgekernel_step_occt.step(372 ents)  Write  Done^[[0m
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5762963Z ^[[32;1m
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5763128Z *******************************************************************
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5763430Z ******        Statistics on Transfer (Write)                 ******^[[0m
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5763685Z ^[[32;1m
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5763962Z *******************************************************************
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5764246Z ******        Transfer Mode = 0  I.E.  As Is       ******^[[0m
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5764580Z ^[[32;1m******        Transferring Shape, ShapeType = 2                      ******^[[0m
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5764895Z ^[[32;1m** WorkSession : Sending all data^[[0m
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5765238Z ^[[32;1m Step File Name : /tmp/forgekernel_step_occt.step(198 ents)  Write  Done^[[0m
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5765541Z ^[[32;1m
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5765710Z *******************************************************************
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5766020Z ******        Statistics on Transfer (Write)                 ******^[[0m
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5766279Z ^[[32;1m
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5766442Z *******************************************************************
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5766726Z ******        Transfer Mode = 0  I.E.  As Is       ******^[[0m
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5767080Z ^[[32;1m******        Transferring Shape, ShapeType = 2                      ******^[[0m
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5767412Z ^[[32;1m** WorkSession : Sending all data^[[0m
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5767750Z ^[[32;1m Step File Name : /tmp/forgekernel_step_occt.step(353 ents)  Write  Done^[[0m
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5768055Z [  OK  ] StepReadOcctFiles
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5768301Z ^[[32;1m
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5768515Z *******************************************************************
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5768825Z ******        Statistics on Transfer (Write)                 ******^[[0m
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5769080Z ^[[32;1m
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5769245Z *******************************************************************
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5769522Z ******        Transfer Mode = 0  I.E.  As Is       ******^[[0m
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5769863Z ^[[32;1m******        Transferring Shape, ShapeType = 0                      ******^[[0m
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5770180Z ^[[32;1m** WorkSession : Sending all data^[[0m
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5770539Z ^[[32;1m Step File Name : /tmp/forgekernel_step_assembly.step(512 ents)  Write  Done^[[0m
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5770850Z [  OK  ] StepReadAssembly
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5771167Z [  OK  ] StepCurveByOcct
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5771367Z [  OK  ] StepNumbersIgnoreLocale
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5771586Z [  OK  ] StepNumbersRespectBufferAndRange
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5771816Z [  OK  ] StepReadSolidWorksFile
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5772047Z [  OK  ] ExchangeClosedSplineSeamClosesFaceDomain
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5772424Z [  OK  ] StepReadD250227SolidWorksFile
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5772653Z [  OK  ] StepReadD260320SolidWorksAssembly
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5772881Z [  OK  ] StepReadSignedMajorTorus
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5773105Z [  OK  ] StepReadAP0730SolidWorksFile
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5773322Z [  OK  ] StepReadSphereEdgeNearPole
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5773532Z [  OK  ] StepReadRepairsFaceSense
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5773737Z [  OK  ] StepReadL407SolidWorksFile
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5773952Z [  OK  ] StepParallelBodiesAndEntityOrder
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5774179Z [  OK  ] StepWritesRestrictedSplineEdges
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5774412Z [  OK  ] ExchangeClosedSplineKeepsEndSpan
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5774659Z [  OK  ] ExchangeSplineRestrictionPreservesGeometry
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5774915Z [  OK  ] StepRejectsCyclicOrientedEdges
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5775146Z [  OK  ] StepRejectsSelfReferencingGeometry
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5775418Z [  OK  ] StepWriteSplineInstancesPortableByOcct
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5775675Z [  OK  ] StepWriteDirectSplineReplicaByOcct
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5775948Z ^[[32;1mTotal number of loaded entities 54.
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5776165Z ^[[0m
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5776355Z ^[[32;1mTotal number of loaded entities 68.
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5776567Z ^[[0m
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5776750Z ^[[32;1mTotal number of loaded entities 27.
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5776962Z ^[[0m
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5777142Z ^[[32;1mTotal number of loaded entities 29.
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5777355Z ^[[0m
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5777542Z ^[[32;1mTotal number of loaded entities 15.
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5777757Z ^[[0m
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5777938Z ^[[32;1mTotal number of loaded entities 14.
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5778297Z ^[[0m
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5778477Z ^[[32;1mTotal number of loaded entities 18.
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5778687Z ^[[0m
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5778866Z ^[[32;1mTotal number of loaded entities 20.
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5779073Z ^[[0m
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5779251Z ^[[32;1mTotal number of loaded entities 27.
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5779455Z ^[[0m
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5779641Z ^[[32;1mTotal number of loaded entities 29.
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5779848Z ^[[0m
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5780026Z ^[[32;1mTotal number of loaded entities 65.
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5780241Z ^[[0m
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5780422Z ^[[32;1mTotal number of loaded entities 85.
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5780627Z ^[[0m
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5780815Z ^[[32;1mTotal number of loaded entities 105.
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5781169Z ^[[0m
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5781385Z ^[[32;1mTotal number of loaded entities 140.
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5781600Z ^[[0m
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5781779Z ^[[32;1mTotal number of loaded entities 48.
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5781988Z ^[[0m
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5782172Z ^[[32;1mTotal number of loaded entities 66.
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5782390Z ^[[0m
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5782543Z [  OK  ] IgesWriteReadByOcct
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5782743Z [  OK  ] IgesRoundTrip
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5782923Z [  OK  ] IgesReadOcctFiles
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5783148Z ^[[32;1mTotal number of loaded entities 2.
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5783360Z ^[[0m
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5783514Z [  OK  ] IgesCurveByOcct
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5783707Z [  OK  ] IgesParallelComponents
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5783919Z [  OK  ] IgesSewSpatialRepresentatives
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5784171Z [  OK  ] IgesPreservesNonUniformSplineEdgeParameters
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5784435Z [  OK  ] IgesRejectsInvalidSplineParameters
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5784665Z [  OK  ] IgesRejectsCyclicCompositeCurves
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5784883Z [  OK  ] OffsetAnalyticSurfaces
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5785080Z [  OK  ] OffsetFreeformSurfaces
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5785280Z [  OK  ] OffsetFacesJoinsTangentFaces
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5785497Z [  OK  ] OffsetFacesCurvedAndFreeform
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5785705Z [  OK  ] OffsetFacesLoft
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5785891Z [  OK  ] SewSheetsIntoSolid
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5786076Z [  OK  ] OffsetThenSewSolid
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5786257Z [  OK  ] OffsetFacesSpring
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5786445Z [  OK  ] OffsetFacesImportedParts
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5786660Z [  OK  ] OffsetPreservesSharpSeams
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5786868Z [  OK  ] OffsetLoftExtension
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5787186Z [  OK  ] OffsetLoftMixedSections
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5787384Z [  OK  ] OffsetLoftSewnCaps
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5787579Z [  OK  ] OffsetFitCurveSmallSmoothFeature
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5787830Z [  OK  ] OffsetReportsInternalNormalDiscontinuity
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5788094Z [  OK  ] OffsetLoftInternalCreasesOneMillimeter
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5788603Z     /home/runner/work/Linux_CAD_forFree/Linux_CAD_forFree/kernel/tests/fk_test_main.cpp:36: eccezione: extendSheet: giunzione fuori dal budget continuo
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5789140Z [ FAIL ] OffsetLoftExtendedSeamsTrimBoth (1 controlli falliti)
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5789424Z [  OK  ] OffsetDenseBSplineIsC2
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5789642Z [  OK  ] OffsetInwardBeyondCurvatureIsExplained
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5789908Z [  OK  ] OffsetLoftSeamExtensionFollowsTangentSeam
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5790173Z [  OK  ] SewFillPreservesKnownBoundaryCurves
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5790441Z [  OK  ] SewPreservesBoundaryWithDifferentParameters
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5790708Z [  OK  ] SewClosedEdgesWithUnequalParameters
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5791123Z [  OK  ] SewDoesNotMergeDifferentCurvesWithSameMidpoint
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5791450Z [  OK  ] SewThinSolidRetainsOutwardOrientation
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5791703Z [  OK  ] SewMappedSamplesRetainDistanceLimit
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5791977Z [  OK  ] SewPreservesDensePCurveRegardlessOfOperandOrder
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5792242Z [  OK  ] PlanarSheetRectangleWithHole
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5792457Z [  OK  ] PlanarSheetTwoRegions
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5792658Z [  OK  ] PlanarSheetIslandInHole
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5792868Z [  OK  ] PlanarSheetFromCylinderEdge
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5793191Z [  OK  ] PlanarSheetClosedSpline
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5793394Z [  OK  ] PlanarSheetShuffledSegments
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5793614Z [  OK  ] PlanarSheetRejectsInvalidLoops
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5793870Z [  OK  ] PlanarSheetFromProfileMatchesExtrusionBase
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5794133Z [  OK  ] PlanarSheetHoleNearCurvedBoundary
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5794372Z [  OK  ] PlanarSheetRejectsTouchingLoops
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5794595Z [  OK  ] BoundarySheetSkewQuad
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5794795Z [  OK  ] BoundarySheetPlanarRegions
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5795009Z [  OK  ] BoundarySheetHalfCylinder
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5795235Z [  OK  ] BoundarySheetRejectsBadContours
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5795448Z [  OK  ] FillPlanarSquare
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5795646Z [  OK  ] FillSphericalCapThroughGuides
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5795862Z [  OK  ] FillTangentToCylinder
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5796121Z cono: celle 64, contorno 2.13e-07, guide 2.32e-07, tangenza 0.000912 gradi
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5796465Z cono senza guide: celle 32, contorno 1.77e-07, tangenza 0.000319 gradi
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5796759Z [  OK  ] FillConeWithConflictingGuides
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5797123Z sfera G2: celle 32, contorno 1.98e-07, guide 1.81e-07, tangenza 0.00149 gradi, curvatura 0.003, dalla sfera 0.00668
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5797509Z [  OK  ] FillCapContinuesSphereInCurvature
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5797755Z [  OK  ] FillObliqueContactsPreserveInterior
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5798019Z [  OK  ] FillInfluencePreservesProjectionAndTangency
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5798285Z sfera G1 naturale: scarto curvatura 0.00897 1/mm
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5798534Z [  OK  ] FillNaturalG1FollowsSupportCurvature
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5798775Z [  OK  ] FillRejectsInvalidShapeParameters
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5799004Z [  OK  ] FillIndependentContactInfluences
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5799247Z [  OK  ] FillIgnoredGuidesPreserveLocalInfluence
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5799501Z [  OK  ] FillDirectionalProfilePreservesContacts
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5799773Z [  OK  ] FillDirectionalProfileRejectsInvalidSelection
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5800037Z [  OK  ] FillUnequalCompoundBoundarySpans
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5800292Z [  OK  ] FillReportsBoundaryContactConflictAtCorner
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5800546Z [  OK  ] FillPerFaceContinuityOverrides
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5800770Z [  OK  ] SurfaceNetworkCrossingFamilies
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5801116Z [  OK  ] SurfaceExtendUntilPlaneAndCurvedFace
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5801467Z [  OK  ] SurfaceExtendUntilFacetedTarget
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5801699Z [  OK  ] SurfaceExtendUntilSplineExtrusion
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5801934Z [  OK  ] SurfacePolesPreserveTrimsAndTopology
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5802167Z [  OK  ] SurfacePolesRefitControlCounts
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5802398Z [  OK  ] SurfacePolesMultipleConnectedFaces
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5802633Z [  OK  ] SurfacePolesMultipleFacesOfSolid
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5802889Z [  OK  ] SurfacePolesPreserveDeclaredVertexTolerance
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5803139Z [  OK  ] ProjectedCutPlanarHole
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5803353Z [  OK  ] ProjectedCutBandAlongExistingEdges
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5803588Z [  OK  ] ProjectedCutChordOfCurvedEdge
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5803818Z [  OK  ] ProjectedCutOnCylinderFirstFaceOnly
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5804053Z [  OK  ] ProjectedCurveClosedOnCylinder
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5804266Z [  OK  ] ThickenPlanarFaceSides
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5804470Z [  OK  ] ThickenCylindricalSheetAlongNormal
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5804688Z [  OK  ] ThickenAlongDirection
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5804897Z [  OK  ] ThickenSharpCreaseAlongDirection
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5805140Z [  OK  ] ThickenTrimmedFaceWithInternalCrease
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5805373Z [  OK  ] ThickenSmoothBSplineSheet
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5805573Z [  OK  ] ShellOpenBox
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5805746Z [  OK  ] ShellCup
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5805918Z [  OK  ] ShellConcaveEdge
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5806102Z [  OK  ] ShellFilletedBox
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5806280Z [  OK  ] ShellRoundedPrism
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5806467Z [  OK  ] ShellNotchAndFilletedHole
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5806667Z [  OK  ] ShellRejectsBadInput
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5806866Z [  OK  ] ShellCollapsedConvexFillet
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5807191Z [  OK  ] ShellCollapsedRoundedPrism
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5807422Z [  OK  ] ShellCollapsedToroidalFillet
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5807642Z [  OK  ] ShellCollapsedSphericalCorner
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5807857Z [  OK  ] ShellCollapsedAllBoxFillets
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5808085Z [  OK  ] ShellRectangularCutKeepsSharpCorners
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5808339Z [  OK  ] ShellRejectsInvalidAndInvertedCavities
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5808597Z [  OK  ] ShellStitchedTolerantTangencies
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5808818Z [  OK  ] LoftSheetTubeOfCylinder
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5809023Z [  OK  ] LoftSheetTubeMatchesSolidSides
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5809241Z [  OK  ] LoftSheetMixedSectionsThrow
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5809447Z [  OK  ] RuledSurfaceFrustumOfCone
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5809664Z [  OK  ] RuledSurfaceHyperbolicParaboloid
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5809879Z [  OK  ] RuledSurfaceHelicoid
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5810081Z [  OK  ] RuledSurfaceSquareToCircle
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5810295Z [  OK  ] RuledSurfaceMixedChainsThrow
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5810529Z [  OK  ] RuledSurfaceClosedChainsKeepCorners
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5810764Z [  OK  ] LoftSectionClosureIgnoresPosition
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5811084Z [  OK  ] SweepSheetCircleAlongLineAndArc
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5811327Z [  OK  ] SweepSheetSquareAlongSplineMatchesSolid
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5811583Z [  OK  ] SweepSheetRoundedRectangleAlongHelix
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5811819Z [  OK  ] SweepSheetMixedProfileAndChains
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5812133Z [  OK  ] SweepSheetClosedPathIsClosedShell
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5822030Z [  OK  ] SweepSheetMixedChainKeepsChainSense
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5822455Z [  OK  ] HistoryInteriorPointOfFaces
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5822735Z [  OK  ] HistorySubtractCylinderThroughBox
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5823006Z [  OK  ] HistorySplitFaceKeepsAmbiguousName
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5823266Z [  OK  ] HistoryUniteMergesCoplanarFaces
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5823544Z [  OK  ] HistoryBlendFaceGeneratedFromEdge
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5823786Z [  OK  ] HistoryComposeAcrossOperations
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5824026Z [  OK  ] HistorySameIndexTransform
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5824246Z [  OK  ] HistoryLabelledFacesAndLongNames
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5824489Z [  OK  ] HistoryPreservesNamesAfterReload
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5824712Z [  OK  ] HistoryRootWithNullOperands
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5824948Z [  OK  ] HistoryDeclaredOriginsOverrideGeometry
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5825199Z [  OK  ] HistoryRejectsInvalidDeclarations
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5825627Z [  OK  ] HistoryDeclaredCompositionCoverage
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5825905Z [  OK  ] HistoryOffsetKeepsFaceNamesAcrossSurfaceChanges
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5826221Z [  OK  ] HistoryOffsetComposesRectangularAndTrimmedCreases
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5826527Z [  OK  ] HistoryBooleanDeclaresCutSplitAndUnchangedFaces
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5826818Z [  OK  ] HistoryBooleanAndUnifyComposeEveryMergedFace
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5827105Z [  OK  ] HistoryBooleanRetainsBothCoincidentOperands
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5827397Z [  OK  ] HistoryBooleanEmptyDisjointAndFailureOutputs
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5827672Z [  OK  ] HistoryImprintDeclaresBeforeAndAfterUnify
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5827968Z [  OK  ] HistoryBooleanDeclarationsAreThreadDeterministic
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5828269Z [  OK  ] HistoryBlendDeclaresTrimmedFacesAndGeneratedEdge
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5828548Z [  OK  ] HistoryBlendCornerComesFromOriginalVertex
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5828833Z [  OK  ] HistoryBlendClosedPlanarEdgeKeepsOriginalSource
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5829116Z [  OK  ] HistoryBlendGeneralChainsAndOpenSheet
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5829385Z [  OK  ] HistoryAsymmetricChamferAndRejectedOutputs
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5829691Z [  OK  ] HistoryExtrusionSourcesSurviveLoopOrderingAndReversal
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5830004Z [  OK  ] HistoryExtrusionClosedCurvesAndOpenChains
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5830288Z [  OK  ] HistoryDeclaredFaceAliasesOverrideGeometricLabels
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5830592Z [  OK  ] HistoryExtractAndSewFacesPreserveDeclaredSources
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5830866Z [  OK  ] HistoryRevolutionLoopSourcesAndAxis
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5831302Z [  OK  ] HistoryRevolutionSignedAngularCaps
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5831680Z [  OK  ] HistoryRevolutionCurvesSheetsAndRejectedOutputs
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5831954Z [  OK  ] HistorySweepAndLoftKeepSectionSources
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5832220Z [  OK  ] HistoryPrimitivesAndSurfaceRootsEmitLabels
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5832516Z [  OK  ] HistoryTransformsDraftAndExtractedEdgesAreExplicit
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5832842Z [  OK  ] HistoryTrimExtendShellAndProjectionComposeOrigins
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5833132Z [  OK  ] HistoryTransportDoesNotInventMissingBranches
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5833370Z 482/483 test superati
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5833470Z 
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5833476Z 
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5833575Z 99% tests passed, 1 tests failed out of 110
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5833731Z 
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5833798Z Label Time Summary:
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5833973Z opengl    =   0.01 sec*proc (1 test)
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5834114Z 
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5834188Z Total Test time (real) = 832.29 sec
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5834324Z 
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5834398Z The following tests did not run:
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5834641Z 	  1 - forgecad_gpu_broad_phase_tests (Skipped)
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5834900Z 	 50 - forgecad_overlay_uniform_tests (Skipped)
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5835049Z 
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5835128Z The following tests FAILED:
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5835325Z 	110 - forgekernel_tests (Failed)
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5835527Z Errors while running CTest
+Linux CPU	Esegui i test	2026-11-16T17:50:27.5904216Z ##[error]Process completed with exit code 8.

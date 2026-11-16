@@ -1,0 +1,58 @@
+{
+  "HANDOFF.txt": {
+    "sha256": "2986b328a638d2ca9f1a52536db3a0cbcbe2747bd4525ceef543745fff39febf",
+    "bytes": 4627
+  },
+  "README.txt": {
+    "sha256": "0cabe59d5ec453246eb7aae3d90eb82516f583b5741ef5d85dd7a8056441882d",
+    "bytes": 562
+  },
+  "baseline-failing-certificate.json": {
+    "sha256": "ccf14d964e0566070f5579beddd2f0b30964155b4a7728c2a62860766722aa01",
+    "bytes": 230894
+  },
+  "baseline-public-failure.log": {
+    "sha256": "e8cac5372b57d3d983aa310d0934b82da49945d11c5d6d203d8c747835537c67",
+    "bytes": 211
+  },
+  "baseline-source-pcurves-diagnostic.log": {
+    "sha256": "01b114055558742e8387d1176c39d4302e68310af77782055b7b0a2f6b19f9ca",
+    "bytes": 29419
+  },
+  "build-input-manifest.json": {
+    "sha256": "16892c6cc35096bb80097d962cebfb3b72f02f9ab22ec11b88e49642c4061693",
+    "bytes": 576
+  },
+  "candidate-link-command.txt": {
+    "sha256": "f06d9559a88c3c8e3fc8d5e1e0a5552c3f5f80580a2875c7d549c8076aab4b28",
+    "bytes": 1341
+  },
+  "commands.txt": {
+    "sha256": "29206b5800ccc4df091b33abf4d9f69cdeac36d3f23f07a4909f8f517865f676",
+    "bytes": 448
+  },
+  "fk_sheet.baseline-c44975e.cpp.txt": {
+    "sha256": "8e9bd9d6c1d61bf9e8a189e783d6803510c3c61f07ed28c8e5b82f2efa457e2f",
+    "bytes": 52283
+  },
+  "fk_sheet.candidate-v4.cpp.txt": {
+    "sha256": "b99a70318f2cf7dcd6b24e646d8976bd287f6622ed9cf4accab968403380afbc",
+    "bytes": 59416
+  },
+  "sheet-source-selector.patch": {
+    "sha256": "5efc162290c237cad92772b86aa6df9841f89589018a96e56b487fc44a533b66",
+    "bytes": 10591
+  },
+  "v2-noise-classification-diagnostic.log": {
+    "sha256": "d0e00b1e02fb4e20b1b7ffef31e1c0ad5b2480e49202161921ebfbcbd9ec10f6",
+    "bytes": 522
+  },
+  "v4-old-tangent-public.log": {
+    "sha256": "9e9b527939c3b0613ff4b745f1342d7bcbc2d547e2e85750b8731b3422008808",
+    "bytes": 69
+  },
+  "v4-original-public.log": {
+    "sha256": "b8d35365f175f3f97a396b48feee69b5a7314d4a3d80147706583cc7fbf5b300",
+    "bytes": 59
+  }
+}

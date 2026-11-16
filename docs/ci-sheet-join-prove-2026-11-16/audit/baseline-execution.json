@@ -1,0 +1,21 @@
+{
+  "files": {
+    "/tmp/ci-sheet-fix/tests/exact-gcc": "c0dc766897456d3678e1c5a846587b652c9d51f84559b5d6bc015c7d1e9da991",
+    "/tmp/ci-sheet-fix/tests/exact-clang": "e3d26bb352352a728054a1a69941c68375a25f10025d937d8e48202e3f4ad1cd",
+    "/tmp/ci-sheet-fix/tests/test_exact_regression.cpp": "af46e84651120d67b8d41f7b32a613895937e7844da057e84b701d58dd6cd8ab",
+    "/tmp/ci-sheet-fix/tests/libforgekernel-baseline.a": "6bbbea1da27ee01943529ab2f1c2176728f71d414bb6521d141d38d6e90f25ad"
+  },
+  "executions": [
+    {
+      "binary": "exact-gcc",
+      "exit_code": 1,
+      "result": "0/1 FAIL extendSheet: giunzione fuori dal budget continuo"
+    },
+    {
+      "binary": "exact-clang",
+      "exit_code": 1,
+      "result": "0/1 FAIL extendSheet: giunzione fuori dal budget continuo"
+    }
+  ],
+  "scope": "Fresh private drivers reproducing the existing public OffsetLoftExtendedSeamsTrimBoth test; production source unmodified."
+}

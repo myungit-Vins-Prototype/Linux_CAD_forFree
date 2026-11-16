@@ -1,0 +1,4 @@
+/usr/bin/c++ -I/home/myungit/Linux_CAD_forFree/kernel -std=c++17 -Wall -Wextra -Wpedantic -O2 -g -ffp-contract=off -fno-fast-math -c /tmp/ci-sheet-fix/core/kernel/fk_sheet.cpp -o /tmp/ci-sheet-fix/core/candidate-sheet.o
+# Link exact argument vector from candidate-link.txt (generated via shlex).
+/tmp/ci-sheet-fix/core/candidate-tests OffsetLoftExtendedSeamsTrimBoth
+/tmp/ci-sheet-fix/core/candidate-tests OffsetLoftSeamExtensionFollowsTangentSeam

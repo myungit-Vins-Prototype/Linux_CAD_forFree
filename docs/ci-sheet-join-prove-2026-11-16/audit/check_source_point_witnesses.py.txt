@@ -1,0 +1,37 @@
+#!/usr/bin/env python3
+"""Exact IEEE point witnesses on ORIGINAL source fin; never a global certificate."""
+import sys,types,json,hashlib
+from pathlib import Path
+from fractions import Fraction as F
+root=Path(__file__).parent
+for name in ['fraction_common','verify_tensor_fraction']:
+ m=types.ModuleType(name);m.__file__=str(root/(name+'.py.txt'));sys.modules[name]=m;exec(compile(Path(m.__file__).read_text(),m.__file__,'exec'),m.__dict__)
+from verify_tensor_fraction import *
+def h(x):return float(x).hex()
+def cv(c):return dict(c,type='bspline',knots=list(map(h,c['knots'])),poles=[[h(v) for v in p] for p in c['poles']],weights=list(map(h,c['weights'])))
+def sf(s):return dict(s,uPoleCount=s['uCount'],vPoleCount=s['vCount'],uKnots=list(map(h,s['uKnots'])),vKnots=list(map(h,s['vKnots'])),poles=[[h(v) for v in p] for p in s['poles']],weights=list(map(h,s['weights'])))
+def evaluate(c,t):
+ spans=source_spans(normalize(cv(c)),(F(0),F(1)));s=next(s for s in spans if s['lo']<=t<=s['hi']);f=(t-s['lo'])/(s['hi']-s['lo'])
+ def ev(p):
+  while len(p)>1:p=[(1-f)*a+f*b for a,b in zip(p,p[1:])]
+  return p[0]
+ return [ev(p)/ev(s['w']) for p in s['h']]
+def surface_point(surface,uv):
+ p,q,U,V,nu,nv,P,W=surface_data(sf(surface));u,v=uv
+ ku=next(k for k in range(p,nu) if U[k]<U[k+1] and U[k]<=u<=U[k+1]);kv=next(k for k in range(q,nv) if V[k]<V[k+1] and V[k]<=v<=V[k+1]);A=cox(U,p,nu,[u],[F(1)],ku);B=cox(V,q,nv,[v],[F(1)],kv)
+ H=[F(0)]*4
+ for i in range(nu):
+  if not A[i][0]:continue
+  for j in range(nv):
+   if not B[j][0]:continue
+   n=i*nv+j;c=A[i][0]*B[j][0]*W[n]
+   for d in range(3):H[d]+=c*P[n][d]
+   H[3]+=c
+ return [x/H[3] for x in H[:3]]
+p=Path(sys.argv[1]);j=json.loads(p.read_text());out=[]
+for r in j['records']:
+ results=[]
+ for t in [F(1,4),F(1,2),F(3,4)]:
+  uv=evaluate(r['pcurve'],t);e=evaluate(r['curve'],t);s=surface_point(r['surface'],uv);d2=sum((a-b)**2 for a,b in zip(e,s));results.append({'t':str(t),'original_uv':[str(x) for x in uv],'uv_double':[float(x) for x in uv],'fixed_u_diff_from_half':str(uv[0]-F(1,2)),'residual_squared':str(d2),'residual_upper_mm':outward(sqrt_hi(d2)),'within_declared_point_budget':d2<=F.from_float(r['budget'])**2})
+ out.append({'fin':r['fin'],'source_pcurve_degree':r['pcurve']['degree'],'source_pcurve_poles':len(r['pcurve']['poles']),'point_witnesses':results})
+Path(sys.argv[2]).write_text(json.dumps({'input_sha256':hashlib.sha256(p.read_bytes()).hexdigest(),'scope':'Exact original fin point evaluations demonstrate non-ISO UV and source linkage; finite point checks are not whole-domain certificates.','records':out},indent=2)+'\n');print([(r['fin'],[(v['t'],v['uv_double'],v['residual_upper_mm']) for v in r['point_witnesses']]) for r in out])

@@ -1,0 +1,51 @@
+{
+  "verdict": "NO BLOCKER on V4 source",
+  "final_source_sha256": "b99a70318f2cf7dcd6b24e646d8976bd287f6622ed9cf4accab968403380afbc",
+  "final_test_sha256": "451b30b1488b94f3e817449a27779bef85ad0d28abf2896cabd4e22e4b5ab763",
+  "baseline_reproduced_personally": [
+    "GCC 0/1 FAIL",
+    "Clang 0/1 FAIL"
+  ],
+  "actual_wrong_ISO_curve": {
+    "correct_rejection": true,
+    "cap_mm": 1e-07,
+    "production_upper_mm": 0.034555064509541704,
+    "exact_witness_distance_approximately_mm": 0.00756744320739688,
+    "exact_witness_squared_above_cap_squared": true
+  },
+  "executed_final_personally": {
+    "permanent_join_tests": "33/33 PASS",
+    "public_original_CI_regression": "1/1 PASS",
+    "public_old_tangent_regression": "1/1 PASS",
+    "runtime_interval_probe": "5/5 exact Fraction inclusion PASS"
+  },
+  "old_tests_preserved": 29,
+  "new_variants_appended": 4,
+  "actual_final_Newton_fin_coefficients": {
+    "fins": 2,
+    "cells": 120,
+    "max_upper_mm": 1.5439309150134088e-08,
+    "budget_mm_per_fin": [
+      1.152655473666892e-07,
+      1.1543642712308158e-07
+    ],
+    "pass": true,
+    "v3_v4_input_byte_identical": true,
+    "scope": "Only the two actual emitted fin positional contracts, not a continuous certificate for Newton or all generated seams."
+  },
+  "unchanged_contracts": [
+    "Join cap",
+    "Dual-carrier output proof",
+    "Terminal recognized ISO proof failure",
+    "Original public regression assertions",
+    "First 29 permanent test implementations"
+  ],
+  "not_claimed": [
+    "Global Newton solver certificate",
+    "Global trim membership or topology",
+    "All final fins continuously certified",
+    "Whole old carrier rectangle preservation",
+    "UI or app build by this audit agent",
+    "Sanitizers executed by this audit agent"
+  ]
+}

@@ -1,0 +1,9 @@
+    kernel/tests/fk_test_main.cpp:36: eccezione: extendSheet: giunzione fuori dal budget continuo
+[ FAIL ] SheetJoinNonIsoOffsetLoftOriginal (1 controlli falliti)
+    kernel/tests/fk_test_main.cpp:36: eccezione: extendSheet: giunzione fuori dal budget continuo
+[ FAIL ] SheetJoinNonIsoOffsetLoftRigidPose (1 controlli falliti)
+    kernel/tests/fk_test_main.cpp:36: eccezione: extendSheet: giunzione fuori dal budget continuo
+[ FAIL ] SheetJoinNonIsoOffsetLoftSmallScale (1 controlli falliti)
+    kernel/tests/fk_test_main.cpp:36: eccezione: extendSheet: giunzione fuori dal budget continuo
+[ FAIL ] SheetJoinNonIsoOffsetLoftLargeScalePose (1 controlli falliti)
+0/4 test superati

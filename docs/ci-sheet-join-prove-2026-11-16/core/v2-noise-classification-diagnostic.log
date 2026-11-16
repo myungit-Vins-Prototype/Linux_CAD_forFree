@@ -1,0 +1,6 @@
+V2PAIR faces=0,1 sides=0,3 da=1 db=1 sourceIso=0 ambiguous=0 shared=1 sine=5.2816596961475898e-12 startsA=(1,1) B=(0,1)
+SOURCE_LINE face=0 origin=1,0 direction=0,1
+SOURCE_LINE face=1 origin=1.9018558200823954e-33,1.216081711331299e-36 direction=-1.9018558200823954e-33,1
+    /home/myungit/Linux_CAD_forFree/kernel/tests/fk_test_main.cpp:36: eccezione: fitCurve: impossibile rispettare la tolleranza entro il limite di raffinamento
+[ FAIL ] OffsetLoftSeamExtensionFollowsTangentSeam (1 controlli falliti)
+0/1 test superati

@@ -1,0 +1,17 @@
+from pathlib import Path
+import subprocess,json
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/ci-sheet-fix/root');(R/'CLAUDE.md').read_text()
+assert subprocess.check_output(['git','branch','--show-current'],cwd=R,text=True).strip()=='main'
+assert subprocess.check_output(['git','rev-parse','HEAD'],cwd=R,text=True).strip()=='c44975e56931c559ea3da3c794eaea66a41a304e'
+subprocess.run(['git','diff','--check'],cwd=R,check=True)
+paths=['kernel/fk_sheet.cpp','kernel/tests/test_sheet_join_validation.cpp','kernel/CMakeLists.txt','tools/generate_architecture.py','CLAUDE.md','docs/code-review-2026-11-15.md','docs/ci-verifica-2026-11-16.md','docs/ci-sheet-join-2026-11-16.md','docs/history/claude-prima-ci-sheet-join-2026-11-16.md','docs/ci-sheet-join-prove-2026-11-16']
+subprocess.run(['git','add','--',*paths],cwd=R,check=True)
+staged=subprocess.check_output(['git','diff','--cached','--name-only','-z'],cwd=R).decode().split('\0');assert all(not f or f in paths or f.startswith('docs/ci-sheet-join-prove-2026-11-16/') for f in staged),staged
+# The evidence contains immutable raw source/log whitespace; check production explicitly.
+subprocess.run(['git','diff','--cached','--check','--',*paths[:9]],cwd=R,check=True)
+with (T/'commit.log').open('w') as log:subprocess.run(['git','commit','-m','Corregge la selezione dei giunti nelle estensioni loft e la regressione CI'],cwd=R,stdout=log,stderr=subprocess.STDOUT,check=True)
+commit=subprocess.check_output(['git','rev-parse','HEAD'],cwd=R,text=True).strip();(T/'commit.json').write_text(json.dumps({'sha':commit},indent=2)+'\n');print('COMMIT',commit,flush=True)
+with(T/'push.log').open('w') as log:subprocess.run(['git','push','origin','main'],cwd=R,stdout=log,stderr=subprocess.STDOUT,check=True)
+assert subprocess.check_output(['git','rev-parse','origin/main'],cwd=R,text=True).strip()==commit
+assert not subprocess.check_output(['git','status','--porcelain'],cwd=R,text=True).strip()
+print('PUSH PASS',commit,flush=True)

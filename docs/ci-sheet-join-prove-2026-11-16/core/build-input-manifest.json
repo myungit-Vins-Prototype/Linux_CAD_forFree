@@ -1,0 +1,8 @@
+{
+  "before/fk_sheet.cpp": "8e9bd9d6c1d61bf9e8a189e783d6803510c3c61f07ed28c8e5b82f2efa457e2f",
+  "kernel/fk_sheet.cpp": "b99a70318f2cf7dcd6b24e646d8976bd287f6622ed9cf4accab968403380afbc",
+  "sheet-source-selector.patch": "5efc162290c237cad92772b86aa6df9841f89589018a96e56b487fc44a533b66",
+  "candidate-sheet.o": "7083b3a7dc5943f408d3f61eab42c1dd5ff99750fe2f320f493082f62f690190",
+  "before/libforgekernel.a": "6bbbea1da27ee01943529ab2f1c2176728f71d414bb6521d141d38d6e90f25ad",
+  "failing-certificate.json": "ccf14d964e0566070f5579beddd2f0b30964155b4a7728c2a62860766722aa01"
+}

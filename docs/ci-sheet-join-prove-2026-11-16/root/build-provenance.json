@@ -1,0 +1,38 @@
+{
+  "kernel_objects": 93,
+  "unchanged_objects": 92,
+  "changed_objects": [
+    "fk_sheet.cpp.o"
+  ],
+  "compile_commands_count": 811,
+  "compile_changes": [
+    {
+      "before": {
+        "directory": "/home/myungit/Linux_CAD_forFree/forgecad-release/kernel",
+        "command": "/usr/bin/c++  -I/home/myungit/Linux_CAD_forFree/kernel -O3 -DNDEBUG -std=gnu++17 -Wall -Wextra -Wpedantic -ffp-contract=off -o CMakeFiles/forgekernel_sheet_join_validation_tests.dir/tests/fk_test_main.cpp.o -c /home/myungit/Linux_CAD_forFree/kernel/tests/fk_test_main.cpp",
+        "file": "/home/myungit/Linux_CAD_forFree/kernel/tests/fk_test_main.cpp",
+        "output": "kernel/CMakeFiles/forgekernel_sheet_join_validation_tests.dir/tests/fk_test_main.cpp.o"
+      },
+      "after": {
+        "directory": "/home/myungit/Linux_CAD_forFree/forgecad-release/kernel",
+        "command": "/usr/bin/c++ -DFORGEKERNEL_TEST_DATA_DIR=\\\"/home/myungit/Linux_CAD_forFree/kernel/tests/data\\\" -I/home/myungit/Linux_CAD_forFree/kernel -O3 -DNDEBUG -std=gnu++17 -Wall -Wextra -Wpedantic -ffp-contract=off -o CMakeFiles/forgekernel_sheet_join_validation_tests.dir/tests/fk_test_main.cpp.o -c /home/myungit/Linux_CAD_forFree/kernel/tests/fk_test_main.cpp",
+        "file": "/home/myungit/Linux_CAD_forFree/kernel/tests/fk_test_main.cpp",
+        "output": "kernel/CMakeFiles/forgekernel_sheet_join_validation_tests.dir/tests/fk_test_main.cpp.o"
+      }
+    },
+    {
+      "before": {
+        "directory": "/home/myungit/Linux_CAD_forFree/forgecad-release/kernel",
+        "command": "/usr/bin/c++  -I/home/myungit/Linux_CAD_forFree/kernel -O3 -DNDEBUG -std=gnu++17 -Wall -Wextra -Wpedantic -ffp-contract=off -o CMakeFiles/forgekernel_sheet_join_validation_tests.dir/tests/test_sheet_join_validation.cpp.o -c /home/myungit/Linux_CAD_forFree/kernel/tests/test_sheet_join_validation.cpp",
+        "file": "/home/myungit/Linux_CAD_forFree/kernel/tests/test_sheet_join_validation.cpp",
+        "output": "kernel/CMakeFiles/forgekernel_sheet_join_validation_tests.dir/tests/test_sheet_join_validation.cpp.o"
+      },
+      "after": {
+        "directory": "/home/myungit/Linux_CAD_forFree/forgecad-release/kernel",
+        "command": "/usr/bin/c++ -DFORGEKERNEL_TEST_DATA_DIR=\\\"/home/myungit/Linux_CAD_forFree/kernel/tests/data\\\" -I/home/myungit/Linux_CAD_forFree/kernel -O3 -DNDEBUG -std=gnu++17 -Wall -Wextra -Wpedantic -ffp-contract=off -o CMakeFiles/forgekernel_sheet_join_validation_tests.dir/tests/test_sheet_join_validation.cpp.o -c /home/myungit/Linux_CAD_forFree/kernel/tests/test_sheet_join_validation.cpp",
+        "file": "/home/myungit/Linux_CAD_forFree/kernel/tests/test_sheet_join_validation.cpp",
+        "output": "kernel/CMakeFiles/forgekernel_sheet_join_validation_tests.dir/tests/test_sheet_join_validation.cpp.o"
+      }
+    }
+  ]
+}

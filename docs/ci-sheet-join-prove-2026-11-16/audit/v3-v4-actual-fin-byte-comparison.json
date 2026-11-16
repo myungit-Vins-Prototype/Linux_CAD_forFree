@@ -1,0 +1,6 @@
+{
+  "v3_verified_input_sha256": "d3f0b7ebb5a75624155d0a4b2b791fb91cacb1da81efb3ff6a303e334bba5417",
+  "v4_export_sha256": "d3f0b7ebb5a75624155d0a4b2b791fb91cacb1da81efb3ff6a303e334bba5417",
+  "identical": true,
+  "scope": "Verifier input byte equivalence across V3 -> V4 guard-only change; V4 driver separately executed by tester."
+}

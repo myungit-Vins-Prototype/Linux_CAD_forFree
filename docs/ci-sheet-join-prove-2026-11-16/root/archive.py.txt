@@ -1,0 +1,28 @@
+from pathlib import Path
+import hashlib,json,shutil
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/ci-sheet-fix');P=R/'docs/ci-sheet-join-prove-2026-11-16';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+(R/'CLAUDE.md').read_text();assert not P.exists();P.mkdir()
+def cp(a,b):
+ assert a.is_file()
+ data=a.read_bytes();assert not data.startswith(b'\x7fELF');assert b'\x00' not in data
+ if b.suffix in ['.cpp','.h','.py','.sh'] or b.name=='CMakeLists.txt':b=b.with_name(b.name+'.txt')
+ b.parent.mkdir(parents=True,exist_ok=True);b.write_bytes(data)
+for folder in ['core','tests','audit']:
+ src=T/folder/('curated' if folder=='tests' else 'final-proof');assert src.is_dir(),src
+ for f in src.rglob('*'):
+  if f.is_file():cp(f,P/folder/f.relative_to(src))
+for f in(T/'root').rglob('*'):
+ if not f.is_file() or '__pycache__' in f.parts or 'before' in f.parts:continue
+ if f.suffix not in ['.json','.txt','.log','.py','.diff']:continue
+ cp(f,P/'root'/f.relative_to(T/'root'))
+for name in ['kernel/fk_sheet.cpp','kernel/tests/test_sheet_join_validation.cpp','kernel/CMakeLists.txt','tools/generate_architecture.py']:
+ cp(R/name,P/'integrated'/name)
+# Preserve essential failed-CI evidence; raw build/test artifact bulk stays temporary.
+old=Path('/tmp/boundary-review/ci')
+for name in ['new-run-final.json','new-run-monitor.log','new-all-failed.log']:
+ if (old/name).is_file():cp(old/name,P/'github-c44975e'/name)
+for platform in ['linux','mac']:
+ for f in(old/('new-'+platform+'-artifacts')).rglob('ctest.xml'):cp(f,P/'github-c44975e'/(platform+'-ctest.xml'))
+(P/'README.txt').write_text('CI sheet-join regression fix, 2026-11-16. Final source V4 b99a70318f2cf7dcd6b24e646d8976bd287f6622ed9cf4accab968403380afbc. Three GPT-6.1 Sol agents: implementation, regression tests, independent audit. Production tests and fixed cap preserved. Newton remains sampled at runtime; offline Fraction concerns only actual exported fin coefficients. Historical/draft failures retain explicit labels. Curated package contains text/JSON/inert sources only; no CAD, ELF, objects or libraries. Previous sixteen sealed proof packages remain immutable. GitHub post-push result is recorded separately after completion.\n')
+files=sorted(p for p in P.rglob('*') if p.is_file());assert sum(p.stat().st_size for p in files)<50_000_000
+(P/'SHA256SUMS').write_text(''.join(sha(f)+'  '+str(f.relative_to(P))+'\n' for f in files));print('Archived',len(files),'files',sum(p.stat().st_size for p in files),'bytes; seal',sha(P/'SHA256SUMS'))

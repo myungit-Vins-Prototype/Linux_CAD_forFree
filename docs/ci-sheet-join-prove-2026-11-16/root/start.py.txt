@@ -1,0 +1,13 @@
+from pathlib import Path
+import json,hashlib,subprocess,shutil
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/ci-sheet-fix/root');sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+names=subprocess.check_output(['git','ls-files','--cached','--others','--exclude-standard','-z'],cwd=R).decode().split('\0');initial={f:sha(R/f) for f in sorted(set(names)) if f and(R/f).is_file() and not(R/f).is_symlink()};assert not(T/'hashes-before.json').exists();(T/'hashes-before.json').write_text(json.dumps(initial,indent=2)+'\n')
+focus=['CLAUDE.md','kernel/fk_sheet.cpp','kernel/fk_nurbs_join.cpp','kernel/fk_nurbs_join.h','kernel/fk_blend_model.h','kernel/fk_curve_fit_bounds.cpp','kernel/fk_curve_fit_bounds.h','kernel/fk_offset.cpp','kernel/fk_bspline.cpp','kernel/fk_bspline_surface.cpp','kernel/fk_pcurve.cpp','kernel/CMakeLists.txt','kernel/tests/test_offset.cpp','kernel/tests/test_sheet_join_validation.cpp','tools/generate_architecture.py','docs/ci.md','docs/ci-verifica-2026-11-16.md','docs/code-review-2026-11-15.md']
+for f in focus:
+ q=T/'before'/f;q.parent.mkdir(parents=True,exist_ok=True);q.write_bytes((R/f).read_bytes())
+g=json.loads((R/'docs/architecture/graph.json').read_text());(T/'architecture-before.json').write_text(json.dumps({'stats':{'nodes':len(g['nodes']),'edges':len(g['edges']),'units':len(g['analysis']['units']),'errors':g['analysis']['errors']},'nodes':[n for n in g['nodes'] if n['id'] in focus],'edges':[e for e in g['edges'] if e['source'] in focus or e['target'] in focus]},indent=2)+'\n')
+seals={}
+for p in(R/'docs').glob('*-prove-2026-11-16/SHA256SUMS'):
+ for line in p.read_text().splitlines():h,f=line.split('  ',1);assert sha(p.parent/f)==h,(p,f)
+ seals[str(p.relative_to(R))]=len(p.read_text().splitlines())
+(T/'previous-seals.json').write_text(json.dumps(seals,indent=2)+'\n');(T/'baseline-binaries.json').write_text(json.dumps({f:sha(R/f) for f in ['forgecad-release/forgecad','forgecad-release/forgecad_view_tests','forgecad-release/kernel/libforgekernel.a','forgecad-release/kernel/forgekernel_tests']},indent=2)+'\n');shutil.copy2(R/'forgecad-release/compile_commands.json',T/'compile-commands-before.json');print('Frozen',len(initial),'files;',len(seals),'previousseals PASS')

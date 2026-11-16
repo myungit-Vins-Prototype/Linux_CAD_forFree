@@ -16,3 +16,11 @@ Sulla build corrente finale: **8/8cavity PASS**, incluse WholeRim e transizioni;
 Il workflow Ubuntu26.04/macOS15, CUDAOFF, VIEWOFF/RIBBONOFF e confrontiOCCT invariato. I probe negativi `FORGEKERNEL_HAS_FLOAT_FROM_CHARS` su Apple selezionano il fallback previsto, non sono errori di compilazione del job. Tutti i nuovi moduli e test devono essere inclusi nel commit.
 
 Remoto main controllato prima del commit: ce03a6d, uguale aHEAD locale. Commit e push autorizzati sul main corrente; la conferma CI del nuovo codice sarà registrata dopo il push. Non si attribuisce alla sola build locale il successo remoto. [Prove](ci-verifica-prove-2026-11-16/README.txt).
+
+## Pubblicazione e verifica corrente
+
+Commit codice e correzioni `c44975e56931c559ea3da3c794eaea66a41a304e` creato e push su origin/main riuscito. Albero pulito subito dopo il push. Nuovo [run43917116955](https://github.com/myungit-Vins-Prototype/Linux_CAD_forFree/actions/runs/43917116955), sullo stesso SHA: in coda/in corso, esito ancora da verificare. I metadati del monitor sono conservati separatamente dalla diagnosi storica sigillata prima del push.
+
+## Esito del primo push
+
+Il run43917116955 è terminato con fallimento dei test su entrambe le piattaforme, dopo compilazioni riuscite. **Il precedente WholeRim/K12 è ora superato.** Nuovo unico fallimento nella suite generale: `OffsetLoftExtendedSeamsTrimBoth`, eccezione `extendSheet: giunzione fuori dal budget continuo`. Linux109/110CTest e macOS112/113CTest superati; suite generale482/483casi. La regressione si riproduce anche localmente con GCC e Clang: non è specifica di GitHub o del compilatore. Si corregge prima di un ulteriore push; nessuna CI verde dichiarata per c44975e. [Indagine e correzione](ci-sheet-join-2026-11-16.md).

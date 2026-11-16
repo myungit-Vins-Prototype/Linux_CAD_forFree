@@ -1,0 +1,17 @@
+#!/usr/bin/env python3
+"""Independent coefficient verification of exported actual Newton output fins.
+This certifies only these final positional fin contracts; not the implicit
+continuation solver, global trim membership or all public results.
+"""
+import sys,types,json,hashlib,time
+from pathlib import Path
+root=Path(__file__).parent
+for name in ['fraction_common','verify_tensor_fraction']:
+ m=types.ModuleType(name);m.__file__=str(root/(name+'.py.txt'));sys.modules[name]=m;exec(compile(Path(m.__file__).read_text(),m.__file__,'exec'),m.__dict__)
+from verify_tensor_fraction import *
+p=Path(sys.argv[1]);j=json.loads(p.read_text());out=[];start=time.monotonic()
+for r in j['records']:
+ try:v=verify(r)
+ except Exception as e:v={'pass':False,'error':str(e),'exception':type(e).__name__}
+ v['elapsed_seconds']=time.monotonic()-start;out.append(v);print(v,flush=True)
+Path(sys.argv[2]).write_text(json.dumps({'input_sha256':hashlib.sha256(p.read_bytes()).hexdigest(),'scope':j['scope'],'provenance':{k:j[k] for k in ['sourceEdge','sourceFaces','edge']},'method':'Exact Fraction original IEEE homogeneous tensor composition and complete common knot partition; no production provider or extractor.','not_claimed':['Newton algorithm continuous certification','Global trim membership','All generated fins'],'records':out},indent=2)+'\n')

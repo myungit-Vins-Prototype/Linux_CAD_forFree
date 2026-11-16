@@ -1,0 +1,66 @@
+{
+  "source_sha256": "b99a70318f2cf7dcd6b24e646d8976bd287f6622ed9cf4accab968403380afbc",
+  "pass": true,
+  "records": [
+    {
+      "pass": true,
+      "exact_product_sum": "49755780169695587760603286994945/404804506614621236704990693437834614099113299528284236713802716054860679135990693783920767402874248990374155728633623822779617474771586953734026799881477019843034848553132722728933815484186432682479535356945490137124014966849385397236206711298319112681620113024717539104666829230461005064372655017292012526615415482186989568",
+      "same_exact_interval": false,
+      "input": {
+        "origin": "0x0p+0",
+        "direction": "0x1.946fff2d7d40fp-485",
+        "parameter": "0x1.8d839ae109aefp-486",
+        "lo": "0x1.3a00cc5c0260dp-970",
+        "hi": "0x1.3a00cc5c0260fp-970"
+      }
+    },
+    {
+      "pass": true,
+      "exact_product_sum": "0",
+      "same_exact_interval": true,
+      "input": {
+        "origin": "0x1.3cp-109",
+        "direction": "-0x1.3cp-109",
+        "parameter": "0x1p+0",
+        "lo": "0x0p+0",
+        "hi": "0x0p+0"
+      }
+    },
+    {
+      "pass": true,
+      "exact_product_sum": "1",
+      "same_exact_interval": true,
+      "input": {
+        "origin": "0x1p+0",
+        "direction": "0x0p+0",
+        "parameter": "0x1p+0",
+        "lo": "0x1p+0",
+        "hi": "0x1p+0"
+      }
+    },
+    {
+      "pass": true,
+      "exact_product_sum": "0",
+      "same_exact_interval": true,
+      "input": {
+        "origin": "0x0p+0",
+        "direction": "0x0p+0",
+        "parameter": "0x0p+0",
+        "lo": "0x0p+0",
+        "hi": "0x0p+0"
+      }
+    },
+    {
+      "pass": true,
+      "exact_product_sum": "2993155353253689176481146537402947627248505201268537/2993155353253689176481146537402947624255349848014848",
+      "same_exact_interval": false,
+      "input": {
+        "origin": "0x1.54484932d2e72p-120",
+        "direction": "0x1p+0",
+        "parameter": "0x1p+0",
+        "lo": "0x1.fffffffffffffp-1",
+        "hi": "0x1.0000000000001p+0"
+      }
+    }
+  ]
+}
