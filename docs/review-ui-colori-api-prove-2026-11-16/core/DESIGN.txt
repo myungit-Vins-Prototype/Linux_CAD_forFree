@@ -1,0 +1,31 @@
+Correzione UI in staging, nessuna integrazione produzione.
+HEAD baseline: 046685ef1d31fdf4b61571d9630ea0f245b4ffb7.
+
+Difetto: testi di interfaccia Sezione e Proprieta di massa impongono colori
+locali costanti sopra palette variabile. Gli HTML inline non seguono il tema.
+
+Candidato minimo di due TU:
+- QLabel informativa di Sezione: sostituisce #9fc6e8 con foreground role Link.
+  Il QDialog e ordinario: il ruolo palette funziona senza QSS del pannello.
+- Tabella e nota del report massa: rimuove gli override color inline. Il
+  contenuto del documento eredita Text della palette effettiva del browser.
+- Errore massa: ruolo Error gia esistente in FunctionDialogPanel; il titolo e
+  il messaggio condividono il colore errore. Nessun valore numerico valido
+  viene cambiato. Ogni nuova presentazione ripristina prima il ruolo Normal.
+- Due objectName permettono identificazione deterministica dei widget.
+
+Nessun changeEvent/subclass/header/helper nuovo; al solo cambio tema non sono
+richiamati show(), reportFor(), massReport() o setHtml(). Qt aggiorna palette
+e QSS sul documento esistente: selezione e scroll non richiedono ripristino.
+Righe di calcolo, unita, metodi, masse, testo clipboard, cache e QSettings
+restano identiche. Etichette e nota ora usano lo stesso testo normale del
+report; non si rivendica una conservazione della vecchia tinta attenuata.
+
+Il separatore fillet499 e escluso: la sola proprieta color non dimostra il
+colore del tratto dipinto da QFrame/Fusion. Nessun altro letterale o stile,
+carta, contenuto dei disegni, sfondo o preferenza utente viene modificato.
+
+Validazione Qt effettiva affidata al tester e auditor dello stesso gruppo:
+foreground documento, colori ereditati, errore/Normal, passaggi tema live,
+scroll/selection e clipboard; nessuna conclusione basata solo sul diff.
+Nessuna build completa app o CI attribuita a questo staging.

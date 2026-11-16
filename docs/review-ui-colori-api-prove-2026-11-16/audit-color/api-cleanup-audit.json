@@ -1,0 +1,21 @@
+{
+  "scope": "Rimozione quattro wrapper candidati orfani; solo lettura; nessun consumer esterno certificato",
+  "patchSHA256": "d407c687229e7e857ca92d6dfbd71c80c97b845450b6e2606bee52491c658812",
+  "reviewedSymbols": [
+    "CadViewport::basisMatrix",
+    "CadViewport::normalizedViewAngle",
+    "CadViewport::extrusionNames",
+    "ForgeCad::usesSketch"
+  ],
+  "ASTIncomingCallOrReferenceMatches": [],
+  "rawNameSearch": "api-name-search.txt",
+  "result": "Nessun blocco statico nel repository",
+  "preserved": [
+    "ViewportCamera::basisMatrix e chiamanti",
+    "ViewportCamera::normalizedViewAngle e chiamanti",
+    "sketchesOf",
+    "enum e dati persistiti",
+    "sei query mantenute e sette API legacy fuori perimetro"
+  ],
+  "limit": "Compilazione e regressioni finali del coordinatore non ancora eseguite a questo punto. Analisi closed-world del sorgente e mappa, non garanzia ABI per plugin/binari esterni."
+}

@@ -1,0 +1,56 @@
+#include <QtWidgets>
+#include <QTextBlock>
+#include <QTextFragment>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonArray>
+#include <cmath>
+#include <iostream>
+#include "forgeCad2026_gui.h"
+#include "forgeCad2026_viewport.h"
+#include "forgeCad2026_application_theme.h"
+#include "forgeCad2026_dialogs.h"
+#include "forgeCad2026_dialogs_common.h"
+#include "kernel/fk_primitives.h"
+static QJsonArray records;
+static int checks=0;
+static void check(bool b,const char *s){++checks;if(!b)throw std::runtime_error(s);}
+static void pump(){for(int i=0;i<8;++i)QApplication::processEvents();}
+static double luminance(QColor c){auto f=[](double a){return a<=.04045?a/12.92:std::pow((a+.055)/1.055,2.4);};return .2126*f(c.redF())+.7152*f(c.greenF())+.0722*f(c.blueF());}
+static double contrast(QColor a,QColor b){double x=luminance(a),y=luminance(b);return (std::max(x,y)+.05)/(std::min(x,y)+.05);}
+static int pixels(QWidget *w,QColor c){QImage im(w->size(),QImage::Format_RGB32);im.fill(Qt::magenta);w->render(&im);int n=0;for(int y=0;y<im.height();++y)for(int x=0;x<im.width();++x)if(im.pixelColor(x,y).rgb()==c.rgb())++n;return n;}
+class ViewportInteractionTest {
+public: static void run(){
+ PdfWindow owner;owner.resize(1000,800);auto *v=owner.viewport_;
+ auto box=ForgeCad::Kernel::makeBox(ForgeCad::Kernel::Frame3(),2,3,4);
+ ExtrusionObject good;good.name=QStringLiteral("Audit <box> & unità");good.forgeBody=std::make_shared<const ForgeCad::Kernel::Body>(box);good.visible=true;
+ auto broken=box;broken.face(broken.faces().front()).surface.reset();ExtrusionObject bad=good;bad.name=QStringLiteral("Audit errore <superficie>");bad.forgeBody=std::make_shared<const ForgeCad::Kernel::Body>(broken);bad.visible=false;
+ v->extrusions_={good,bad};check(v->massReport(0).ok,"valid mass fixture");check(!v->massReport(1).ok,"natural kernel error fixture");
+ owner.show();pump();
+ QAction *section=nullptr;for(auto *a:owner.findChildren<QAction*>())if(a->text()==QStringLiteral("Parametri della sezione..."))section=a;
+ check(section,"section QAction real");section->trigger();pump();auto *label=owner.findChild<QLabel*>(QStringLiteral("sectionPlaneInfo"));if(!label)for(auto *x:owner.findChildren<QLabel*>())if(x->styleSheet().contains("#9fc6e8"))label=x;check(label,"section label actual");
+ QComboBox *planes=nullptr;for(auto *b:label->parentWidget()->findChildren<QComboBox*>())if(b->findText(QStringLiteral("Scelto nella vista"))>=0)planes=b;
+ check(planes,"section plane selector");planes->setCurrentIndex(planes->findText(QStringLiteral("Scelto nella vista")));pump();check(!label->text().isEmpty(),"section real message visible");const auto sectionText=label->text();
+ auto sectionCheck=[&](const char *tag){pump();auto fg=label->palette().color(label->foregroundRole());auto bg=label->palette().color(QPalette::Window);int ink=pixels(label,fg);check(label->foregroundRole()==QPalette::Link,"section Link role");check(label->text()==sectionText,"section content stable");check(contrast(fg,bg)>=4.5,"section contrast");check(ink>2,"section actual foreground raster");records.append(QJsonObject{{"kind","section"},{"stage",tag},{"foreground",fg.name()},{"background",bg.name()},{"contrast",contrast(fg,bg)},{"foregroundPixels",ink},{"text",label->text()}});};
+ for(bool dark:{true,false,true}){ForgeCad::setApplicationThemeMode(*qApp,dark?ForgeCad::ApplicationThemeMode::Dark:ForgeCad::ApplicationThemeMode::Light);sectionCheck(dark?"dark":"light");}
+ std::exception_ptr failure;
+ QTimer::singleShot(0,&owner,[&]{QDialog *dlg=nullptr;try{
+  auto *browser=owner.findChild<QTextBrowser*>(QStringLiteral("massPropertiesReport"));check(browser,"actual mass browser");for(QWidget *w=browser->parentWidget();w&&!dlg;w=w->parentWidget())dlg=qobject_cast<QDialog*>(w);check(dlg,"mass panel dialog");
+  QComboBox *body=nullptr;for(auto *b:dlg->findChildren<QComboBox*>())if(b->findText(good.name)>=0)body=b;check(body,"mass body selector");body->setCurrentIndex(body->findText(good.name));pump();
+  auto massCheck=[&](const char *stage,bool error){pump();auto fg=browser->palette().color(QPalette::Text),bg=browser->palette().color(QPalette::Base);int explicitColors=0,fragments=0;
+   for(auto b=browser->document()->begin();b.isValid();b=b.next())for(auto i=b.begin();!i.atEnd();++i){auto f=i.fragment();if(f.isValid()){++fragments;if(f.charFormat().hasProperty(QTextFormat::ForegroundBrush))++explicitColors;}}
+   check(explicitColors==0,"mass has no stale explicit foreground");check(contrast(fg,bg)>=4.5,"mass effective text contrast");check(browser->property("functionMessageRole").toString()==(error?"error":"normal"),"mass semantic state");int ink=pixels(browser,fg);check(ink>3,"mass actual foreground raster");
+   records.append(QJsonObject{{"kind","mass"},{"stage",stage},{"error",error},{"foreground",fg.name()},{"background",bg.name()},{"contrast",contrast(fg,bg)},{"foregroundPixels",ink},{"fragments",fragments},{"explicitForegroundFragments",explicitColors},{"htmlSHA256",QString(QCryptographicHash::hash(browser->document()->toHtml().toUtf8(),QCryptographicHash::Sha256).toHex())}});
+  };
+  auto live=[&](bool error){auto *doc=browser->document();const QString plain=doc->toPlainText(),html=doc->toHtml();const int revision=doc->revision();QTextCursor cursor(doc);cursor.setPosition(std::min(30,doc->characterCount()-1));cursor.setPosition(4,QTextCursor::KeepAnchor);browser->setTextCursor(cursor);browser->verticalScrollBar()->setValue(browser->verticalScrollBar()->maximum()/2);const int anchor=cursor.anchor(),pos=cursor.position(),y=browser->verticalScrollBar()->value(),x=browser->horizontalScrollBar()->value();
+   for(bool dark:{false,true,false}){ForgeCad::setApplicationThemeMode(*qApp,dark?ForgeCad::ApplicationThemeMode::Dark:ForgeCad::ApplicationThemeMode::Light);pump();massCheck(dark?"dark":"light",error);check(browser->document()==doc,"document identity");check(doc->toPlainText()==plain&&doc->toHtml()==html,"mass HTML and plain unchanged");check(doc->revision()==revision,"no report rebuild on theme");check(browser->textCursor().anchor()==anchor&&browser->textCursor().position()==pos,"selection direction preserved");check(browser->verticalScrollBar()->value()==y&&browser->horizontalScrollBar()->value()==x,"scroll preserved");}
+   for(auto type:{QEvent::PaletteChange,QEvent::StyleChange}){QEvent ev(type);QApplication::sendEvent(dlg,&ev);QApplication::sendEvent(browser,&ev);pump();massCheck(type==QEvent::PaletteChange?"PaletteChange":"StyleChange",error);check(doc->revision()==revision&&doc->toHtml()==html,"event does not rebuild document");}
+  };
+  check(browser->toPlainText().contains("Volume")&&browser->toPlainText().contains("Massa"),"real valid report");check(browser->toPlainText().contains(good.name),"escaped model name preserved");live(false);
+  QString copied;for(auto *b:dlg->findChildren<QPushButton*>())if(b->text()=="Copia"){b->click();copied=QApplication::clipboard()->text();}check(copied.contains(good.name)&&copied.contains("Volume"),"copy valid real report");
+  body->setCurrentIndex(body->findText(bad.name+QStringLiteral(" (nascosto)")));pump();check(browser->toPlainText().contains("Calcolo non riuscito:"),"actual mass failure branch");live(true);
+  body->setCurrentIndex(body->findText(good.name));pump();massCheck("error-to-normal",false);check(browser->toPlainText().contains("Volume"),"valid report restored");
+ }catch(...){failure=std::current_exception();}if(dlg)dlg->reject();else for(auto *w:QApplication::allWidgets())if(auto *d=qobject_cast<QDialog*>(w))if(d->windowTitle()==QStringLiteral("Proprieta' di massa"))d->reject();});
+ massPropertiesDialog(&owner,v);if(failure)std::rethrow_exception(failure);owner.hide();
+ }};
+int main(int argc,char **argv){QApplication app(argc,argv);QTemporaryDir pref;QCoreApplication::setOrganizationName("ForgeCADIndependentUIAudit");QCoreApplication::setApplicationName("isolated");QSettings::setPath(QSettings::NativeFormat,QSettings::UserScope,pref.path());QSettings().setValue("view/functionPanelOpacity",100);ForgeCad::initializeApplicationTheme(app);int rc=0;QString error;try{ViewportInteractionTest::run();}catch(const std::exception&e){rc=1;error=QString::fromUtf8(e.what());}QJsonObject result{{"exitCode",rc},{"checks",checks},{"error",error},{"measurements",records}};QFile file(argc>1?argv[1]:"/tmp/ui-residual-fix/audit/live-result.json");if(!file.open(QIODevice::WriteOnly))return 2;file.write(QJsonDocument(result).toJson());std::cout<<"independent UI audit checks="<<checks<<" exit="<<rc<<" "<<error.toStdString()<<std::endl;return rc;}

@@ -1,0 +1,175 @@
+{
+  "scope": "Diagnosi sola lettura; nessun nuovo test/app/processo grafico, nessun attach o modifica permessi",
+  "historicalMethod": {
+    "oldCommit": "046685ef1d31fdf4b61571d9630ea0f245b4ffb7",
+    "path": "/home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h",
+    "oldBytes": 18772,
+    "oldSHA256": "5ee295338bd353e9333a6331c44f6a0b285ffbea3f550da743375f73eb2a4da6",
+    "currentStartsWithEntireOldFile": true
+  },
+  "runs": {
+    "wayland-theme-result-initial-timeout.json": {
+      "exit": 124,
+      "seconds": 90.01378109699726,
+      "command": [
+        "/home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_view_tests",
+        "--theme-tabs"
+      ]
+    },
+    "wayland-theme-result.json": {
+      "exit": 124,
+      "seconds": 120.01140076100273,
+      "command": [
+        "/home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_view_tests",
+        "--theme-tabs"
+      ]
+    },
+    "wayland-ui-residuals-result.json": {
+      "exit": 0,
+      "seconds": 0.96528601499449,
+      "command": [
+        "/home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_view_tests",
+        "--theme-ui-residuals"
+      ]
+    },
+    "ctest-result.json": {
+      "exit": 0,
+      "seconds": 24.920954667999467,
+      "command": [
+        "ctest",
+        "--test-dir",
+        "forgecad-release",
+        "--output-on-failure",
+        "--parallel",
+        "1",
+        "-V",
+        "-R",
+        "^(forgecad_ui_foreground_theme_tests|forgecad_document_theme_tabs_tests|forgecad_document_theme_only2d_tests|forgecad_application_theme_tests|forgecad_document_tabs_tests|forgecad_function_panels_tests|forgecad_orbit_pivot_tests|forgecad_smooth_zoom_tests|forgecad_feature_dependencies_tests|forgecad_declared_history_cache_tests|forgecad_storyboard_review_tests|forgecad_drawing_editor_tests)$"
+      ],
+      "tests": [
+        "forgecad_ui_foreground_theme_tests",
+        "forgecad_document_theme_tabs_tests",
+        "forgecad_document_theme_only2d_tests",
+        "forgecad_application_theme_tests",
+        "forgecad_document_tabs_tests",
+        "forgecad_function_panels_tests",
+        "forgecad_orbit_pivot_tests",
+        "forgecad_smooth_zoom_tests",
+        "forgecad_feature_dependencies_tests",
+        "forgecad_declared_history_cache_tests",
+        "forgecad_storyboard_review_tests",
+        "forgecad_drawing_editor_tests"
+      ],
+      "actual_passed": 12
+    }
+  },
+  "progress": {
+    "PNGs": 42,
+    "byPhase": {
+      "dark1": 12,
+      "dark3": 6,
+      "light0": 12,
+      "light2": 12
+    },
+    "lastCompletedPage": "dark3-model1",
+    "nextPageWithoutSavedPNGs": "dark3-drawing0",
+    "pageOrder": [
+      "model0",
+      "model1",
+      "drawing0",
+      "drawing1"
+    ],
+    "scopeLimit": "No stack: missing drawing0 PNGs do not identify exact wait. Capture occurs near end of each page verification, after activation, events, other raster grabs and menu operations."
+  },
+  "observedSession": {
+    "command": "loginctl show-session 3 -p Active -p State -p LockedHint -p Type -p Remote",
+    "output": [
+      "Remote=no",
+      "Type=wayland",
+      "Active=yes",
+      "State=active",
+      "LockedHint=yes"
+    ],
+    "interpretation": "Locked screen is observed environmental condition, compatible with a graphical wait, not proof of causality."
+  },
+  "PID": {
+    "requested": 757192,
+    "observation": "No longer exists when examined in host /proc; no stack/wchan/syscall captured",
+    "attach": "Previous root log: ptrace denied by yama1; auditor did not attach or alter permissions"
+  },
+  "sourceAndLogHashes": {
+    "/tmp/ui-residual-fix/root/wayland-theme-result-initial-timeout.json": {
+      "bytes": 165,
+      "sha256": "e118808daa62a7f3759b71be2a9f7a8a009bfa635593edb0e34c3861fc0b87c4"
+    },
+    "/tmp/ui-residual-fix/root/wayland-theme-result.json": {
+      "bytes": 166,
+      "sha256": "01d73d62a1e39b1725317ce01299853166753c0084e2c02364ee73b31c6976db"
+    },
+    "/tmp/ui-residual-fix/root/wayland-ui-residuals-result.json": {
+      "bytes": 170,
+      "sha256": "4962036631d4ce5dc56e3ff1f33b6bd05f18cc33ca2fb5aa813b3225527ef16d"
+    },
+    "/tmp/ui-residual-fix/root/ctest-result.json": {
+      "bytes": 1114,
+      "sha256": "5ee66ba17e2d05343d6d276bc009d0992ab7d3ae041a7da3b6f3d1f68150c8af"
+    },
+    "/tmp/ui-residual-fix/root/wayland-theme.log": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "/tmp/ui-residual-fix/root/wayland-theme-initial-timeout.log": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "/tmp/ui-residual-fix/root/wayland-timeout-stack.log": {
+      "bytes": 138,
+      "sha256": "17f3a55a911c7d0e517bc4788147888366b0d445a77bde62966acf421d490550"
+    }
+  },
+  "imageHashes": {
+    "dark1-drawing0-icon.png": "7cce77f9ceadf8f731203fef958a254db73c2b076ca37b39b4f21fce3cd32d19",
+    "dark1-drawing0-panel.png": "12db97cf50941c8833410564626615ecbc03e8b2e34c4a6dc85fad767577d19b",
+    "dark1-drawing0.png": "c48fd09182f465b0b195d4aebb4020466ea95ea17570a4a5704c15a4a877c9d1",
+    "dark1-drawing1-icon.png": "7cce77f9ceadf8f731203fef958a254db73c2b076ca37b39b4f21fce3cd32d19",
+    "dark1-drawing1-panel.png": "12db97cf50941c8833410564626615ecbc03e8b2e34c4a6dc85fad767577d19b",
+    "dark1-drawing1.png": "c48fd09182f465b0b195d4aebb4020466ea95ea17570a4a5704c15a4a877c9d1",
+    "dark1-model0-icon.png": "7cce77f9ceadf8f731203fef958a254db73c2b076ca37b39b4f21fce3cd32d19",
+    "dark1-model0-panel.png": "573d1c67864282d23880275824904510f9c57ff9a73b766a84e84ff156bd2c5e",
+    "dark1-model0.png": "72eb925523f0bcc045211aab98e5bce3942084039b181aeb4e2690a7e1e337fe",
+    "dark1-model1-icon.png": "7cce77f9ceadf8f731203fef958a254db73c2b076ca37b39b4f21fce3cd32d19",
+    "dark1-model1-panel.png": "573d1c67864282d23880275824904510f9c57ff9a73b766a84e84ff156bd2c5e",
+    "dark1-model1.png": "2cb743faafc0d4bfcc417dccdf1ba2de1830e1367a27cdab21321274a859866f",
+    "dark3-model0-icon.png": "7cce77f9ceadf8f731203fef958a254db73c2b076ca37b39b4f21fce3cd32d19",
+    "dark3-model0-panel.png": "573d1c67864282d23880275824904510f9c57ff9a73b766a84e84ff156bd2c5e",
+    "dark3-model0.png": "a57a73ad418c42523f215630a548578316c7036d920c9939dbb3974caba7ad45",
+    "dark3-model1-icon.png": "7cce77f9ceadf8f731203fef958a254db73c2b076ca37b39b4f21fce3cd32d19",
+    "dark3-model1-panel.png": "573d1c67864282d23880275824904510f9c57ff9a73b766a84e84ff156bd2c5e",
+    "dark3-model1.png": "bf0c8cb2ec2db06d91b7dc4421a45266ece81d9328af2222ce7f8483150c8c5f",
+    "light0-drawing0-icon.png": "9516fbaddd4dcbfd333d633f51f17f9198f55338d6e3f5eac37b835360f00d25",
+    "light0-drawing0-panel.png": "8c07db335f2ec8d5487ff57a126afc4433bce639592c87c8926d373cae20e133",
+    "light0-drawing0.png": "3e2bb005eff590be7b5813a381c3609cb661c842be80e6fdc9e93b94b8f3fa56",
+    "light0-drawing1-icon.png": "9516fbaddd4dcbfd333d633f51f17f9198f55338d6e3f5eac37b835360f00d25",
+    "light0-drawing1-panel.png": "8c07db335f2ec8d5487ff57a126afc4433bce639592c87c8926d373cae20e133",
+    "light0-drawing1.png": "3e2bb005eff590be7b5813a381c3609cb661c842be80e6fdc9e93b94b8f3fa56",
+    "light0-model0-icon.png": "9516fbaddd4dcbfd333d633f51f17f9198f55338d6e3f5eac37b835360f00d25",
+    "light0-model0-panel.png": "f2ca9d942d9cefd0e18a5cd3e1a3d18053f03e4dd36507da2262cd914b83ed91",
+    "light0-model0.png": "d157432887242df71e878338820dc0f31c6fd43f976337a28b59c81e06971569",
+    "light0-model1-icon.png": "9516fbaddd4dcbfd333d633f51f17f9198f55338d6e3f5eac37b835360f00d25",
+    "light0-model1-panel.png": "f2ca9d942d9cefd0e18a5cd3e1a3d18053f03e4dd36507da2262cd914b83ed91",
+    "light0-model1.png": "6bdf009a59127029d687f6ed026c001ccbfc4c6984a4b1bb116b4250222d7f4d",
+    "light2-drawing0-icon.png": "9516fbaddd4dcbfd333d633f51f17f9198f55338d6e3f5eac37b835360f00d25",
+    "light2-drawing0-panel.png": "8c07db335f2ec8d5487ff57a126afc4433bce639592c87c8926d373cae20e133",
+    "light2-drawing0.png": "3e2bb005eff590be7b5813a381c3609cb661c842be80e6fdc9e93b94b8f3fa56",
+    "light2-drawing1-icon.png": "9516fbaddd4dcbfd333d633f51f17f9198f55338d6e3f5eac37b835360f00d25",
+    "light2-drawing1-panel.png": "8c07db335f2ec8d5487ff57a126afc4433bce639592c87c8926d373cae20e133",
+    "light2-drawing1.png": "3e2bb005eff590be7b5813a381c3609cb661c842be80e6fdc9e93b94b8f3fa56",
+    "light2-model0-icon.png": "9516fbaddd4dcbfd333d633f51f17f9198f55338d6e3f5eac37b835360f00d25",
+    "light2-model0-panel.png": "f2ca9d942d9cefd0e18a5cd3e1a3d18053f03e4dd36507da2262cd914b83ed91",
+    "light2-model0.png": "79743f39b71a7286de2b817dcf8dc35e8f0ef9dd42e3979e5e255aab40cba623",
+    "light2-model1-icon.png": "9516fbaddd4dcbfd333d633f51f17f9198f55338d6e3f5eac37b835360f00d25",
+    "light2-model1-panel.png": "f2ca9d942d9cefd0e18a5cd3e1a3d18053f03e4dd36507da2262cd914b83ed91",
+    "light2-model1.png": "2cd3fbe2f83d0a3b23ac3d4e27dcb436b13456d574d8475e3ff9796ae661a255"
+  },
+  "conclusion": "General mixed Wayland theme-tabs not PASS in this final run; two timeouts retained. Offscreen 12 suites PASS and specific Wayland74 checks PASS remain separate. No evidence assigning timeout to UI/layout/API patch; no causal exclusion without stack."
+}

@@ -1,0 +1,10 @@
+from pathlib import Path
+import json,os,tempfile,sys,shutil
+sys.path.insert(0,'/tmp/ui-residual-fix/root')
+from checks import run,R,T
+for n in ['wayland-theme.log','wayland-theme-result.json']:
+ p=T/n;shutil.copyfile(p,T/(p.stem+'-initial-timeout'+p.suffix))
+for name,arg in [('wayland-theme','--theme-tabs'),('wayland-theme-only2d','--theme-tabs-only-2d')]:
+ with tempfile.TemporaryDirectory(prefix='forgecad-ui-wayland-serial-') as d:
+  env=os.environ.copy();env.update(QT_QPA_PLATFORM='wayland',QT_QPA_PLATFORMTHEME='',QT_STYLE_OVERRIDE='Fusion',XDG_CONFIG_HOME=d,FORGECAD_THEME_TABS_OUTPUT=str(T/(name+'-evidence')))
+  run(name,[str(R/'forgecad-release/forgecad_view_tests'),arg],timeout=120,env=env)

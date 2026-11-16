@@ -1,0 +1,2686 @@
+{
+  "nodes": [
+    {
+      "id": "forgeCad2026_application_theme.cpp",
+      "group": "startup",
+      "description": "Controller unico di palette e QSS globale su finestre e schede incorporate 3D/2D; applicazione coerente protetta dal reingresso, stile Fusion ripristinato dopo sostituzioni native e menu Tema persistente chiaro/scuro/desktop.",
+      "lines": 229,
+      "symbols": [
+        "ForgeCad::ApplicationTheme::ApplicationTheme",
+        "ForgeCad::ApplicationTheme::apply",
+        "ForgeCad::ApplicationTheme::dark",
+        "ForgeCad::ApplicationTheme::eventFilter",
+        "ForgeCad::ApplicationTheme::schedule",
+        "ForgeCad::ApplicationTheme::setMode",
+        "ForgeCad::ApplicationTheme::trace",
+        "ForgeCad::applicationPalette",
+        "ForgeCad::applicationStyleSheet",
+        "ForgeCad::applicationThemeMode",
+        "ForgeCad::initializeApplicationTheme",
+        "ForgeCad::setApplicationThemeMode",
+        "ForgeCad::setupApplicationThemeMenu"
+      ]
+    },
+    {
+      "id": "forgeCad2026_dialogs_analysis.cpp",
+      "group": "dialogs",
+      "description": "Dialoghi per analisi e opzioni di verifica geometrica. Misura usa il runner comune e installa il picker dopo la guardia fra documenti.",
+      "lines": 636,
+      "symbols": [
+        "massPropertiesDialog",
+        "measureDialog",
+        "microFeatureMarks",
+        "microFeaturesDialog",
+        "shapeAnalysisDialog"
+      ]
+    },
+    {
+      "id": "forgeCad2026_gui.cpp",
+      "group": "startup",
+      "description": "PdfWindow: sette fasi di inizializzazione di scena, menu, comandi, opzioni e toolbar, preferenze persistenti per normali al mouse e costruzione degli schizzi fuori modifica; workspace 3D incorporabile con apertura instradata alle schede e chiusura asincrona del recupero; modelli archiviati in sola lettura; storyboard con trascinamento dei creatori di corpi autonomi a uno stadio. Aggiunge Ellisse per estremi a menu e toolbar e ne espone azione e icona alla ribbon. Consuma il tema globale aggiornando le toolbar su entrambi gli eventi palette; nessun QSS globale locale.",
+      "lines": 5338,
+      "symbols": [
+        "PdfWindow::PdfWindow",
+        "PdfWindow::acquireDocumentWriteAccess",
+        "PdfWindow::applyTreeBackground",
+        "PdfWindow::beginBackgroundProgress",
+        "PdfWindow::beginForegroundProgress",
+        "PdfWindow::clearDocumentRecovery",
+        "PdfWindow::closeEvent",
+        "PdfWindow::editBackground",
+        "PdfWindow::endBackgroundProgress",
+        "PdfWindow::endForegroundProgress",
+        "PdfWindow::event",
+        "PdfWindow::gpuStatusText",
+        "PdfWindow::initializeActionsAndView",
+        "PdfWindow::initializeFeatureCommands",
+        "PdfWindow::initializeFileMenu",
+        "PdfWindow::initializeOptions",
+        "PdfWindow::initializeSceneAndTree",
+        "PdfWindow::initializeSketchCommands",
+        "PdfWindow::initializeToolbarsAndStatus",
+        "PdfWindow::installDocumentRevisionPanel",
+        "PdfWindow::isEmptyDocument",
+        "PdfWindow::isHistoricalDocument",
+        "PdfWindow::maybeSaveChanges",
+        "PdfWindow::newDocument",
+        "PdfWindow::newDrawing",
+        "PdfWindow::openArchivedDocument",
+        "PdfWindow::openDocument",
+        "PdfWindow::openDocumentPath",
+        "PdfWindow::openDocumentPathInPlace",
+        "PdfWindow::openDrawing",
+        "PdfWindow::openSelectedDocumentRevision",
+        "PdfWindow::prepareToClose",
+        "PdfWindow::rebuildModelTree",
+        "PdfWindow::refreshDocumentEditAccess",
+        "PdfWindow::refreshDocumentRevisionPanel",
+        "PdfWindow::refreshRecentDocuments",
+        "PdfWindow::rememberRecentDocument",
+        "PdfWindow::renameTreeItem",
+        "PdfWindow::runDocumentRevisionAction",
+        "PdfWindow::saveDocument",
+        "PdfWindow::saveDocumentPath",
+        "PdfWindow::scheduleModelTreeRebuild",
+        "PdfWindow::setDisplayMode",
+        "PdfWindow::showDocumentRevisions",
+        "PdfWindow::showRecoveryDocuments",
+        "PdfWindow::updateForegroundProgress",
+        "PdfWindow::updateUndoActions",
+        "PdfWindow::updateWindowTitle",
+        "defaultAxesOrientation",
+        "defaultLengthUnit",
+        "saveDefaultAxesOrientation",
+        "showImportReport"
+      ]
+    },
+    {
+      "id": "tests/test_document_theme_tabs.h",
+      "group": "tests",
+      "description": "Tema globale su schede 3D/2D visibili e nascoste, finestre separate, nuove pagine, soli documenti 2D e cambio foglio; menu, pannelli, icone e pixel, colori utente e contenuto della carta invariati.",
+      "lines": 397,
+      "symbols": [
+        "ViewportInteractionTest::documentThemeTabsTests"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "source": "forgeCad2026_application_theme.cpp",
+      "target": "forgeCad2026_application_theme.cpp",
+      "kind": "call",
+      "count": 21,
+      "sites": [
+        {
+          "line": 96,
+          "symbol": "ForgeCad::applicationThemeMode",
+          "owner": ""
+        },
+        {
+          "line": 115,
+          "symbol": "ForgeCad::ApplicationTheme::schedule",
+          "owner": "ForgeCad::ApplicationTheme::apply"
+        },
+        {
+          "line": 117,
+          "symbol": "ForgeCad::ApplicationTheme::dark",
+          "owner": "ForgeCad::ApplicationTheme::apply"
+        },
+        {
+          "line": 124,
+          "symbol": "ForgeCad::ApplicationTheme::trace",
+          "owner": "ForgeCad::ApplicationTheme::apply"
+        },
+        {
+          "line": 125,
+          "symbol": "ForgeCad::ApplicationTheme::schedule",
+          "owner": "ForgeCad::ApplicationTheme::apply"
+        },
+        {
+          "line": 127,
+          "symbol": "ForgeCad::ApplicationTheme::trace",
+          "owner": "ForgeCad::ApplicationTheme::apply"
+        },
+        {
+          "line": 129,
+          "symbol": "ForgeCad::applicationPalette",
+          "owner": "ForgeCad::ApplicationTheme::apply"
+        },
+        {
+          "line": 131,
+          "symbol": "ForgeCad::applicationStyleSheet",
+          "owner": "ForgeCad::ApplicationTheme::apply"
+        },
+        {
+          "line": 133,
+          "symbol": "ForgeCad::ApplicationTheme::trace",
+          "owner": "ForgeCad::ApplicationTheme::apply"
+        },
+        {
+          "line": 145,
+          "symbol": "ForgeCad::ApplicationTheme::dark",
+          "owner": "ForgeCad::ApplicationTheme::trace"
+        },
+        {
+          "line": 154,
+          "symbol": "ForgeCad::ApplicationTheme::apply",
+          "owner": "ForgeCad::ApplicationTheme::schedule"
+        },
+        {
+          "line": 160,
+          "symbol": "ForgeCad::ApplicationTheme::schedule",
+          "owner": "ForgeCad::ApplicationTheme::eventFilter"
+        },
+        {
+          "line": 166,
+          "symbol": "ForgeCad::ApplicationTheme::apply",
+          "owner": "ForgeCad::ApplicationTheme::setMode"
+        },
+        {
+          "line": 179,
+          "symbol": "ForgeCad::ApplicationTheme::schedule",
+          "owner": "ForgeCad::ApplicationTheme::ApplicationTheme"
+        },
+        {
+          "line": 181,
+          "symbol": "ForgeCad::ApplicationTheme::apply",
+          "owner": "ForgeCad::ApplicationTheme::ApplicationTheme"
+        },
+        {
+          "line": 194,
+          "symbol": "ForgeCad::initializeApplicationTheme",
+          "owner": "ForgeCad::setApplicationThemeMode"
+        },
+        {
+          "line": 200,
+          "symbol": "ForgeCad::ApplicationTheme::setMode",
+          "owner": "ForgeCad::setApplicationThemeMode"
+        },
+        {
+          "line": 216,
+          "symbol": "ForgeCad::applicationThemeMode",
+          "owner": "ForgeCad::setupApplicationThemeMenu"
+        },
+        {
+          "line": 218,
+          "symbol": "ForgeCad::setApplicationThemeMode",
+          "owner": "ForgeCad::setupApplicationThemeMenu"
+        },
+        {
+          "line": 221,
+          "symbol": "ForgeCad::applicationThemeMode",
+          "owner": "ForgeCad::setupApplicationThemeMenu"
+        },
+        {
+          "line": 227,
+          "symbol": "ForgeCad::ApplicationTheme::ApplicationTheme",
+          "owner": "ForgeCad::initializeApplicationTheme"
+        }
+      ]
+    },
+    {
+      "source": "forgeCad2026_dialogs_analysis.cpp",
+      "target": "forgeCad2026_dialogs_analysis.cpp",
+      "kind": "call",
+      "count": 48,
+      "sites": [
+        {
+          "line": 153,
+          "symbol": "measureDialog::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_analysis.cpp:111:26)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_analysis.cpp:152:28)::operator()",
+          "owner": "measureDialog"
+        },
+        {
+          "line": 167,
+          "symbol": "measureDialog::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_analysis.cpp:105:23)::operator()",
+          "owner": "measureDialog"
+        },
+        {
+          "line": 174,
+          "symbol": "measureDialog::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_analysis.cpp:111:26)::operator()",
+          "owner": "measureDialog"
+        },
+        {
+          "line": 175,
+          "symbol": "measureDialog::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_analysis.cpp:156:23)::operator()",
+          "owner": "measureDialog"
+        },
+        {
+          "line": 180,
+          "symbol": "measureDialog::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_analysis.cpp:111:26)::operator()",
+          "owner": "measureDialog"
+        },
+        {
+          "line": 181,
+          "symbol": "measureDialog::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_analysis.cpp:156:23)::operator()",
+          "owner": "measureDialog"
+        },
+        {
+          "line": 190,
+          "symbol": "measureDialog::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_analysis.cpp:162:32)::operator()",
+          "owner": "measureDialog"
+        },
+        {
+          "line": 191,
+          "symbol": "measureDialog::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_analysis.cpp:111:26)::operator()",
+          "owner": "measureDialog"
+        },
+        {
+          "line": 192,
+          "symbol": "measureDialog::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_analysis.cpp:156:23)::operator()",
+          "owner": "measureDialog"
+        },
+        {
+          "line": 281,
+          "symbol": "shapeAnalysisDialog::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_analysis.cpp:273:22)::operator()",
+          "owner": "shapeAnalysisDialog"
+        },
+        {
+          "line": 291,
+          "symbol": "shapeAnalysisDialog::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_analysis.cpp:288:17)::operator()",
+          "owner": "shapeAnalysisDialog"
+        },
+        {
+          "line": 292,
+          "symbol": "shapeAnalysisDialog::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_analysis.cpp:288:17)::operator()",
+          "owner": "shapeAnalysisDialog"
+        },
+        {
+          "line": 295,
+          "symbol": "shapeAnalysisDialog::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_analysis.cpp:288:17)::operator()",
+          "owner": "shapeAnalysisDialog"
+        },
+        {
+          "line": 304,
+          "symbol": "shapeAnalysisDialog::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_analysis.cpp:288:17)::operator()",
+          "owner": "shapeAnalysisDialog"
+        },
+        {
+          "line": 401,
+          "symbol": "shapeAnalysisDialog::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_analysis.cpp:273:22)::operator()",
+          "owner": "shapeAnalysisDialog"
+        },
+        {
+          "line": 401,
+          "symbol": "shapeAnalysisDialog::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_analysis.cpp:329:20)::operator()",
+          "owner": "shapeAnalysisDialog"
+        },
+        {
+          "line": 419,
+          "symbol": "shapeAnalysisDialog::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_analysis.cpp:273:22)::operator()",
+          "owner": "shapeAnalysisDialog"
+        },
+        {
+          "line": 421,
+          "symbol": "shapeAnalysisDialog::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_analysis.cpp:329:20)::operator()",
+          "owner": "shapeAnalysisDialog"
+        },
+        {
+          "line": 424,
+          "symbol": "shapeAnalysisDialog::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_analysis.cpp:329:20)::operator()",
+          "owner": "shapeAnalysisDialog"
+        },
+        {
+          "line": 425,
+          "symbol": "shapeAnalysisDialog::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_analysis.cpp:329:20)::operator()",
+          "owner": "shapeAnalysisDialog"
+        },
+        {
+          "line": 426,
+          "symbol": "shapeAnalysisDialog::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_analysis.cpp:329:20)::operator()",
+          "owner": "shapeAnalysisDialog"
+        },
+        {
+          "line": 450,
+          "symbol": "microFeatureMarks",
+          "owner": "microFeaturesDialog"
+        },
+        {
+          "line": 544,
+          "symbol": "massPropertiesDialog::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_analysis.cpp:526:28)::operator()",
+          "owner": "massPropertiesDialog"
+        },
+        {
+          "line": 555,
+          "symbol": "massPropertiesDialog::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_analysis.cpp:526:28)::operator()",
+          "owner": "massPropertiesDialog"
+        },
+        {
+          "line": 575,
+          "symbol": "massPropertiesDialog::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_analysis.cpp:535:23)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_analysis.cpp:564:26)::operator()",
+          "owner": "massPropertiesDialog"
+        },
+        {
+          "line": 576,
+          "symbol": "massPropertiesDialog::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_analysis.cpp:535:23)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_analysis.cpp:564:26)::operator()",
+          "owner": "massPropertiesDialog"
+        },
+        {
+          "line": 579,
+          "symbol": "massPropertiesDialog::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_analysis.cpp:535:23)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_analysis.cpp:564:26)::operator()",
+          "owner": "massPropertiesDialog"
+        },
+        {
+          "line": 581,
+          "symbol": "massPropertiesDialog::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_analysis.cpp:535:23)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_analysis.cpp:564:26)::operator()",
+          "owner": "massPropertiesDialog"
+        },
+        {
+          "line": 585,
+          "symbol": "massPropertiesDialog::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_analysis.cpp:535:23)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_analysis.cpp:564:26)::operator()",
+          "owner": "massPropertiesDialog"
+        },
+        {
+          "line": 586,
+          "symbol": "massPropertiesDialog::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_analysis.cpp:535:23)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_analysis.cpp:564:26)::operator()",
+          "owner": "massPropertiesDialog"
+        },
+        {
+          "line": 587,
+          "symbol": "massPropertiesDialog::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_analysis.cpp:535:23)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_analysis.cpp:558:26)::operator()",
+          "owner": "massPropertiesDialog"
+        },
+        {
+          "line": 587,
+          "symbol": "massPropertiesDialog::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_analysis.cpp:535:23)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_analysis.cpp:564:26)::operator()",
+          "owner": "massPropertiesDialog"
+        },
+        {
+          "line": 588,
+          "symbol": "massPropertiesDialog::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_analysis.cpp:535:23)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_analysis.cpp:558:26)::operator()",
+          "owner": "massPropertiesDialog"
+        },
+        {
+          "line": 588,
+          "symbol": "massPropertiesDialog::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_analysis.cpp:535:23)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_analysis.cpp:564:26)::operator()",
+          "owner": "massPropertiesDialog"
+        },
+        {
+          "line": 590,
+          "symbol": "massPropertiesDialog::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_analysis.cpp:535:23)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_analysis.cpp:564:26)::operator()",
+          "owner": "massPropertiesDialog"
+        },
+        {
+          "line": 594,
+          "symbol": "massPropertiesDialog::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_analysis.cpp:535:23)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_analysis.cpp:564:26)::operator()",
+          "owner": "massPropertiesDialog"
+        },
+        {
+          "line": 596,
+          "symbol": "massPropertiesDialog::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_analysis.cpp:535:23)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_analysis.cpp:558:26)::operator()",
+          "owner": "massPropertiesDialog"
+        },
+        {
+          "line": 597,
+          "symbol": "massPropertiesDialog::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_analysis.cpp:535:23)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_analysis.cpp:558:26)::operator()",
+          "owner": "massPropertiesDialog"
+        },
+        {
+          "line": 598,
+          "symbol": "massPropertiesDialog::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_analysis.cpp:535:23)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_analysis.cpp:564:26)::operator()",
+          "owner": "massPropertiesDialog"
+        },
+        {
+          "line": 600,
+          "symbol": "massPropertiesDialog::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_analysis.cpp:535:23)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_analysis.cpp:558:26)::operator()",
+          "owner": "massPropertiesDialog"
+        },
+        {
+          "line": 601,
+          "symbol": "massPropertiesDialog::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_analysis.cpp:535:23)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_analysis.cpp:558:26)::operator()",
+          "owner": "massPropertiesDialog"
+        },
+        {
+          "line": 603,
+          "symbol": "massPropertiesDialog::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_analysis.cpp:535:23)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_analysis.cpp:593:41)::operator()",
+          "owner": "massPropertiesDialog"
+        },
+        {
+          "line": 607,
+          "symbol": "massPropertiesDialog::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_analysis.cpp:535:23)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_analysis.cpp:564:26)::operator()",
+          "owner": "massPropertiesDialog"
+        },
+        {
+          "line": 609,
+          "symbol": "massPropertiesDialog::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_analysis.cpp:535:23)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_analysis.cpp:558:26)::operator()",
+          "owner": "massPropertiesDialog"
+        },
+        {
+          "line": 610,
+          "symbol": "massPropertiesDialog::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_analysis.cpp:535:23)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_analysis.cpp:558:26)::operator()",
+          "owner": "massPropertiesDialog"
+        },
+        {
+          "line": 615,
+          "symbol": "massPropertiesDialog::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_analysis.cpp:535:23)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_analysis.cpp:593:41)::operator()",
+          "owner": "massPropertiesDialog"
+        },
+        {
+          "line": 631,
+          "symbol": "massPropertiesDialog::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_analysis.cpp:535:23)::operator()",
+          "owner": "massPropertiesDialog"
+        },
+        {
+          "line": 634,
+          "symbol": "massPropertiesDialog::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_analysis.cpp:535:23)::operator()",
+          "owner": "massPropertiesDialog"
+        }
+      ]
+    },
+    {
+      "source": "forgeCad2026_gui.cpp",
+      "target": "forgeCad2026_application_theme.cpp",
+      "kind": "call",
+      "count": 1,
+      "sites": [
+        {
+          "line": 1349,
+          "symbol": "ForgeCad::setupApplicationThemeMenu",
+          "owner": "PdfWindow::initializeActionsAndView"
+        }
+      ]
+    },
+    {
+      "source": "forgeCad2026_gui.cpp",
+      "target": "forgeCad2026_dialogs_analysis.cpp",
+      "kind": "call",
+      "count": 4,
+      "sites": [
+        {
+          "line": 1511,
+          "symbol": "shapeAnalysisDialog",
+          "owner": "PdfWindow::initializeActionsAndView"
+        },
+        {
+          "line": 1517,
+          "symbol": "microFeaturesDialog",
+          "owner": "PdfWindow::initializeActionsAndView"
+        },
+        {
+          "line": 2276,
+          "symbol": "massPropertiesDialog",
+          "owner": "PdfWindow::initializeFeatureCommands"
+        },
+        {
+          "line": 2279,
+          "symbol": "measureDialog",
+          "owner": "PdfWindow::initializeFeatureCommands"
+        }
+      ]
+    },
+    {
+      "source": "forgeCad2026_gui.cpp",
+      "target": "forgeCad2026_gui.cpp",
+      "kind": "call",
+      "count": 327,
+      "sites": [
+        {
+          "line": 354,
+          "symbol": "PdfWindow::WindowSetup::WindowSetup",
+          "owner": "PdfWindow::PdfWindow"
+        },
+        {
+          "line": 355,
+          "symbol": "PdfWindow::initializeSceneAndTree",
+          "owner": "PdfWindow::PdfWindow"
+        },
+        {
+          "line": 356,
+          "symbol": "PdfWindow::initializeFileMenu",
+          "owner": "PdfWindow::PdfWindow"
+        },
+        {
+          "line": 357,
+          "symbol": "PdfWindow::initializeActionsAndView",
+          "owner": "PdfWindow::PdfWindow"
+        },
+        {
+          "line": 358,
+          "symbol": "PdfWindow::initializeFeatureCommands",
+          "owner": "PdfWindow::PdfWindow"
+        },
+        {
+          "line": 359,
+          "symbol": "PdfWindow::initializeOptions",
+          "owner": "PdfWindow::PdfWindow"
+        },
+        {
+          "line": 360,
+          "symbol": "PdfWindow::initializeSketchCommands",
+          "owner": "PdfWindow::PdfWindow"
+        },
+        {
+          "line": 361,
+          "symbol": "PdfWindow::initializeToolbarsAndStatus",
+          "owner": "PdfWindow::PdfWindow"
+        },
+        {
+          "line": 374,
+          "symbol": "defaultAxesOrientation",
+          "owner": "PdfWindow::initializeSceneAndTree"
+        },
+        {
+          "line": 375,
+          "symbol": "defaultLengthUnit",
+          "owner": "PdfWindow::initializeSceneAndTree"
+        },
+        {
+          "line": 398,
+          "symbol": "PdfWindow::rebuildModelTree",
+          "owner": "PdfWindow::initializeSceneAndTree"
+        },
+        {
+          "line": 428,
+          "symbol": "PdfWindow::initializeSceneAndTree::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:406:9)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:411:58)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:420:45)::operator()",
+          "owner": "PdfWindow::initializeSceneAndTree"
+        },
+        {
+          "line": 460,
+          "symbol": "PdfWindow::initializeSceneAndTree::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:442:64)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:449:29)::operator()",
+          "owner": "PdfWindow::initializeSceneAndTree"
+        },
+        {
+          "line": 463,
+          "symbol": "PdfWindow::initializeSceneAndTree::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:442:64)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:449:29)::operator()",
+          "owner": "PdfWindow::initializeSceneAndTree"
+        },
+        {
+          "line": 466,
+          "symbol": "PdfWindow::initializeSceneAndTree::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:442:64)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:449:29)::operator()",
+          "owner": "PdfWindow::initializeSceneAndTree"
+        },
+        {
+          "line": 475,
+          "symbol": "PdfWindow::initializeSceneAndTree::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:442:64)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:449:29)::operator()",
+          "owner": "PdfWindow::initializeSceneAndTree"
+        },
+        {
+          "line": 475,
+          "symbol": "PdfWindow::initializeSceneAndTree::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:442:64)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:469:33)::operator()",
+          "owner": "PdfWindow::initializeSceneAndTree"
+        },
+        {
+          "line": 481,
+          "symbol": "PdfWindow::initializeSceneAndTree::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:442:64)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:449:29)::operator()",
+          "owner": "PdfWindow::initializeSceneAndTree"
+        },
+        {
+          "line": 483,
+          "symbol": "PdfWindow::initializeSceneAndTree::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:442:64)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:449:29)::operator()",
+          "owner": "PdfWindow::initializeSceneAndTree"
+        },
+        {
+          "line": 485,
+          "symbol": "PdfWindow::initializeSceneAndTree::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:442:64)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:449:29)::operator()",
+          "owner": "PdfWindow::initializeSceneAndTree"
+        },
+        {
+          "line": 492,
+          "symbol": "PdfWindow::initializeSceneAndTree::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:442:64)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:449:29)::operator()",
+          "owner": "PdfWindow::initializeSceneAndTree"
+        },
+        {
+          "line": 496,
+          "symbol": "PdfWindow::initializeSceneAndTree::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:442:64)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:449:29)::operator()",
+          "owner": "PdfWindow::initializeSceneAndTree"
+        },
+        {
+          "line": 499,
+          "symbol": "PdfWindow::initializeSceneAndTree::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:442:64)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:449:29)::operator()",
+          "owner": "PdfWindow::initializeSceneAndTree"
+        },
+        {
+          "line": 501,
+          "symbol": "PdfWindow::initializeSceneAndTree::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:442:64)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:449:29)::operator()",
+          "owner": "PdfWindow::initializeSceneAndTree"
+        },
+        {
+          "line": 503,
+          "symbol": "PdfWindow::initializeSceneAndTree::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:442:64)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:449:29)::operator()",
+          "owner": "PdfWindow::initializeSceneAndTree"
+        },
+        {
+          "line": 509,
+          "symbol": "PdfWindow::initializeSceneAndTree::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:442:64)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:449:29)::operator()",
+          "owner": "PdfWindow::initializeSceneAndTree"
+        },
+        {
+          "line": 512,
+          "symbol": "PdfWindow::initializeSceneAndTree::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:442:64)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:449:29)::operator()",
+          "owner": "PdfWindow::initializeSceneAndTree"
+        },
+        {
+          "line": 515,
+          "symbol": "PdfWindow::initializeSceneAndTree::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:442:64)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:449:29)::operator()",
+          "owner": "PdfWindow::initializeSceneAndTree"
+        },
+        {
+          "line": 517,
+          "symbol": "PdfWindow::initializeSceneAndTree::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:442:64)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:449:29)::operator()",
+          "owner": "PdfWindow::initializeSceneAndTree"
+        },
+        {
+          "line": 519,
+          "symbol": "PdfWindow::initializeSceneAndTree::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:442:64)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:449:29)::operator()",
+          "owner": "PdfWindow::initializeSceneAndTree"
+        },
+        {
+          "line": 521,
+          "symbol": "PdfWindow::initializeSceneAndTree::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:442:64)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:449:29)::operator()",
+          "owner": "PdfWindow::initializeSceneAndTree"
+        },
+        {
+          "line": 527,
+          "symbol": "PdfWindow::initializeSceneAndTree::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:442:64)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:449:29)::operator()",
+          "owner": "PdfWindow::initializeSceneAndTree"
+        },
+        {
+          "line": 530,
+          "symbol": "PdfWindow::initializeSceneAndTree::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:442:64)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:449:29)::operator()",
+          "owner": "PdfWindow::initializeSceneAndTree"
+        },
+        {
+          "line": 532,
+          "symbol": "PdfWindow::initializeSceneAndTree::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:442:64)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:449:29)::operator()",
+          "owner": "PdfWindow::initializeSceneAndTree"
+        },
+        {
+          "line": 534,
+          "symbol": "PdfWindow::initializeSceneAndTree::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:442:64)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:449:29)::operator()",
+          "owner": "PdfWindow::initializeSceneAndTree"
+        },
+        {
+          "line": 537,
+          "symbol": "PdfWindow::initializeSceneAndTree::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:442:64)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:449:29)::operator()",
+          "owner": "PdfWindow::initializeSceneAndTree"
+        },
+        {
+          "line": 539,
+          "symbol": "PdfWindow::initializeSceneAndTree::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:442:64)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:449:29)::operator()",
+          "owner": "PdfWindow::initializeSceneAndTree"
+        },
+        {
+          "line": 541,
+          "symbol": "PdfWindow::initializeSceneAndTree::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:442:64)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:449:29)::operator()",
+          "owner": "PdfWindow::initializeSceneAndTree"
+        },
+        {
+          "line": 543,
+          "symbol": "PdfWindow::initializeSceneAndTree::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:442:64)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:449:29)::operator()",
+          "owner": "PdfWindow::initializeSceneAndTree"
+        },
+        {
+          "line": 551,
+          "symbol": "PdfWindow::initializeSceneAndTree::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:442:64)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:449:29)::operator()",
+          "owner": "PdfWindow::initializeSceneAndTree"
+        },
+        {
+          "line": 595,
+          "symbol": "PdfWindow::updateWindowTitle",
+          "owner": "PdfWindow::initializeSceneAndTree"
+        },
+        {
+          "line": 597,
+          "symbol": "PdfWindow::scheduleModelTreeRebuild",
+          "owner": "PdfWindow::initializeSceneAndTree"
+        },
+        {
+          "line": 598,
+          "symbol": "PdfWindow::updateUndoActions",
+          "owner": "PdfWindow::initializeSceneAndTree"
+        },
+        {
+          "line": 612,
+          "symbol": "PdfWindow::scheduleModelTreeRebuild",
+          "owner": "PdfWindow::initializeSceneAndTree"
+        },
+        {
+          "line": 654,
+          "symbol": "PdfWindow::renameTreeItem",
+          "owner": "PdfWindow::initializeSceneAndTree"
+        },
+        {
+          "line": 737,
+          "symbol": "PdfWindow::renameTreeItem",
+          "owner": "PdfWindow::initializeSceneAndTree"
+        },
+        {
+          "line": 782,
+          "symbol": "PdfWindow::renameTreeItem",
+          "owner": "PdfWindow::initializeSceneAndTree"
+        },
+        {
+          "line": 863,
+          "symbol": "PdfWindow::saveDocument",
+          "owner": "PdfWindow::initializeFileMenu"
+        },
+        {
+          "line": 867,
+          "symbol": "PdfWindow::saveDocument",
+          "owner": "PdfWindow::initializeFileMenu"
+        },
+        {
+          "line": 872,
+          "symbol": "PdfWindow::showRecoveryDocuments",
+          "owner": "PdfWindow::initializeFileMenu"
+        },
+        {
+          "line": 895,
+          "symbol": "PdfWindow::saveDocument",
+          "owner": "PdfWindow::initializeFileMenu"
+        },
+        {
+          "line": 896,
+          "symbol": "PdfWindow::runDocumentRevisionAction",
+          "owner": "PdfWindow::initializeFileMenu"
+        },
+        {
+          "line": 898,
+          "symbol": "PdfWindow::initializeFileMenu::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:884:38)::operator()",
+          "owner": "PdfWindow::initializeFileMenu"
+        },
+        {
+          "line": 908,
+          "symbol": "PdfWindow::initializeFileMenu::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:884:38)::operator()",
+          "owner": "PdfWindow::initializeFileMenu"
+        },
+        {
+          "line": 922,
+          "symbol": "PdfWindow::saveDocument",
+          "owner": "PdfWindow::initializeFileMenu"
+        },
+        {
+          "line": 923,
+          "symbol": "PdfWindow::runDocumentRevisionAction",
+          "owner": "PdfWindow::initializeFileMenu"
+        },
+        {
+          "line": 924,
+          "symbol": "PdfWindow::initializeFileMenu::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:884:38)::operator()",
+          "owner": "PdfWindow::initializeFileMenu"
+        },
+        {
+          "line": 929,
+          "symbol": "PdfWindow::initializeFileMenu::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:884:38)::operator()",
+          "owner": "PdfWindow::initializeFileMenu"
+        },
+        {
+          "line": 929,
+          "symbol": "PdfWindow::runDocumentRevisionAction",
+          "owner": "PdfWindow::initializeFileMenu"
+        },
+        {
+          "line": 937,
+          "symbol": "PdfWindow::initializeFileMenu::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:884:38)::operator()",
+          "owner": "PdfWindow::initializeFileMenu"
+        },
+        {
+          "line": 937,
+          "symbol": "PdfWindow::runDocumentRevisionAction",
+          "owner": "PdfWindow::initializeFileMenu"
+        },
+        {
+          "line": 942,
+          "symbol": "PdfWindow::showDocumentRevisions",
+          "owner": "PdfWindow::initializeFileMenu"
+        },
+        {
+          "line": 944,
+          "symbol": "PdfWindow::refreshDocumentEditAccess",
+          "owner": "PdfWindow::initializeFileMenu"
+        },
+        {
+          "line": 944,
+          "symbol": "PdfWindow::refreshDocumentRevisionPanel",
+          "owner": "PdfWindow::initializeFileMenu"
+        },
+        {
+          "line": 944,
+          "symbol": "PdfWindow::updateWindowTitle",
+          "owner": "PdfWindow::initializeFileMenu"
+        },
+        {
+          "line": 948,
+          "symbol": "PdfWindow::refreshRecentDocuments",
+          "owner": "PdfWindow::initializeFileMenu"
+        },
+        {
+          "line": 963,
+          "symbol": "PdfWindow::beginForegroundProgress",
+          "owner": "PdfWindow::initializeFileMenu"
+        },
+        {
+          "line": 971,
+          "symbol": "PdfWindow::updateForegroundProgress",
+          "owner": "PdfWindow::initializeFileMenu"
+        },
+        {
+          "line": 976,
+          "symbol": "PdfWindow::endForegroundProgress",
+          "owner": "PdfWindow::initializeFileMenu"
+        },
+        {
+          "line": 978,
+          "symbol": "showImportReport",
+          "owner": "PdfWindow::initializeFileMenu"
+        },
+        {
+          "line": 989,
+          "symbol": "showImportReport",
+          "owner": "PdfWindow::initializeFileMenu"
+        },
+        {
+          "line": 1032,
+          "symbol": "PdfWindow::initializeFileMenu::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:994:29)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:1023:34)::operator()",
+          "owner": "PdfWindow::initializeFileMenu"
+        },
+        {
+          "line": 1033,
+          "symbol": "PdfWindow::initializeFileMenu::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:994:29)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:1023:34)::operator()",
+          "owner": "PdfWindow::initializeFileMenu"
+        },
+        {
+          "line": 1078,
+          "symbol": "PdfWindow::initializeFileMenu::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:994:29)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:1065:37)::operator()",
+          "owner": "PdfWindow::initializeFileMenu"
+        },
+        {
+          "line": 1116,
+          "symbol": "PdfWindow::initializeFileMenu::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:994:29)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:1065:37)::operator()",
+          "owner": "PdfWindow::initializeFileMenu"
+        },
+        {
+          "line": 1129,
+          "symbol": "PdfWindow::initializeFileMenu::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:994:29)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:1077:28)::operator()",
+          "owner": "PdfWindow::initializeFileMenu"
+        },
+        {
+          "line": 1146,
+          "symbol": "PdfWindow::initializeFileMenu::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:994:29)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:1130:33)::operator()",
+          "owner": "PdfWindow::initializeFileMenu"
+        },
+        {
+          "line": 1148,
+          "symbol": "PdfWindow::initializeFileMenu::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:994:29)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:1130:33)::operator()",
+          "owner": "PdfWindow::initializeFileMenu"
+        },
+        {
+          "line": 1149,
+          "symbol": "PdfWindow::initializeFileMenu::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:994:29)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:1130:33)::operator()",
+          "owner": "PdfWindow::initializeFileMenu"
+        },
+        {
+          "line": 1150,
+          "symbol": "PdfWindow::initializeFileMenu::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:994:29)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:1130:33)::operator()",
+          "owner": "PdfWindow::initializeFileMenu"
+        },
+        {
+          "line": 1161,
+          "symbol": "PdfWindow::initializeFileMenu::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:994:29)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:1065:37)::operator()",
+          "owner": "PdfWindow::initializeFileMenu"
+        },
+        {
+          "line": 1174,
+          "symbol": "PdfWindow::initializeFileMenu::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:994:29)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:1073:34)::operator()",
+          "owner": "PdfWindow::initializeFileMenu"
+        },
+        {
+          "line": 1175,
+          "symbol": "PdfWindow::beginForegroundProgress",
+          "owner": "PdfWindow::initializeFileMenu"
+        },
+        {
+          "line": 1181,
+          "symbol": "PdfWindow::endForegroundProgress",
+          "owner": "PdfWindow::initializeFileMenu"
+        },
+        {
+          "line": 1188,
+          "symbol": "PdfWindow::beginForegroundProgress",
+          "owner": "PdfWindow::initializeFileMenu"
+        },
+        {
+          "line": 1191,
+          "symbol": "PdfWindow::endForegroundProgress",
+          "owner": "PdfWindow::initializeFileMenu"
+        },
+        {
+          "line": 1202,
+          "symbol": "PdfWindow::initializeFileMenu::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:994:29)::operator()",
+          "owner": "PdfWindow::initializeFileMenu"
+        },
+        {
+          "line": 1204,
+          "symbol": "PdfWindow::initializeFileMenu::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:994:29)::operator()",
+          "owner": "PdfWindow::initializeFileMenu"
+        },
+        {
+          "line": 1231,
+          "symbol": "PdfWindow::beginForegroundProgress",
+          "owner": "PdfWindow::initializeFileMenu"
+        },
+        {
+          "line": 1233,
+          "symbol": "PdfWindow::endForegroundProgress",
+          "owner": "PdfWindow::initializeFileMenu"
+        },
+        {
+          "line": 1347,
+          "symbol": "PdfWindow::updateUndoActions",
+          "owner": "PdfWindow::initializeActionsAndView"
+        },
+        {
+          "line": 1363,
+          "symbol": "PdfWindow::rebuildModelTree",
+          "owner": "PdfWindow::initializeActionsAndView"
+        },
+        {
+          "line": 1396,
+          "symbol": "PdfWindow::initializeActionsAndView::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:1373:45)::operator()",
+          "owner": "PdfWindow::initializeActionsAndView"
+        },
+        {
+          "line": 1397,
+          "symbol": "PdfWindow::initializeActionsAndView::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:1382:40)::operator()",
+          "owner": "PdfWindow::initializeActionsAndView"
+        },
+        {
+          "line": 1408,
+          "symbol": "PdfWindow::initializeActionsAndView::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:1373:45)::operator()",
+          "owner": "PdfWindow::initializeActionsAndView"
+        },
+        {
+          "line": 1409,
+          "symbol": "PdfWindow::initializeActionsAndView::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:1382:40)::operator()",
+          "owner": "PdfWindow::initializeActionsAndView"
+        },
+        {
+          "line": 1420,
+          "symbol": "PdfWindow::initializeActionsAndView::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:1373:45)::operator()",
+          "owner": "PdfWindow::initializeActionsAndView"
+        },
+        {
+          "line": 1421,
+          "symbol": "PdfWindow::initializeActionsAndView::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:1382:40)::operator()",
+          "owner": "PdfWindow::initializeActionsAndView"
+        },
+        {
+          "line": 1423,
+          "symbol": "PdfWindow::initializeActionsAndView::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:1373:45)::operator()",
+          "owner": "PdfWindow::initializeActionsAndView"
+        },
+        {
+          "line": 1562,
+          "symbol": "PdfWindow::applyTreeBackground",
+          "owner": "PdfWindow::initializeActionsAndView"
+        },
+        {
+          "line": 1566,
+          "symbol": "PdfWindow::applyTreeBackground",
+          "owner": "PdfWindow::initializeActionsAndView"
+        },
+        {
+          "line": 1568,
+          "symbol": "PdfWindow::applyTreeBackground",
+          "owner": "PdfWindow::initializeActionsAndView"
+        },
+        {
+          "line": 1736,
+          "symbol": "PdfWindow::setDisplayMode",
+          "owner": "PdfWindow::initializeActionsAndView"
+        },
+        {
+          "line": 1738,
+          "symbol": "PdfWindow::initializeActionsAndView::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:1734:20)::operator()",
+          "owner": "PdfWindow::initializeActionsAndView"
+        },
+        {
+          "line": 1739,
+          "symbol": "PdfWindow::initializeActionsAndView::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:1734:20)::operator()",
+          "owner": "PdfWindow::initializeActionsAndView"
+        },
+        {
+          "line": 1740,
+          "symbol": "PdfWindow::initializeActionsAndView::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:1734:20)::operator()",
+          "owner": "PdfWindow::initializeActionsAndView"
+        },
+        {
+          "line": 1847,
+          "symbol": "PdfWindow::initializeActionsAndView::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:1829:32)::operator()",
+          "owner": "PdfWindow::initializeActionsAndView"
+        },
+        {
+          "line": 1863,
+          "symbol": "PdfWindow::initializeActionsAndView::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:1829:32)::operator()",
+          "owner": "PdfWindow::initializeActionsAndView"
+        },
+        {
+          "line": 1879,
+          "symbol": "PdfWindow::initializeActionsAndView::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:1845:28)::operator()",
+          "owner": "PdfWindow::initializeActionsAndView"
+        },
+        {
+          "line": 1886,
+          "symbol": "PdfWindow::initializeActionsAndView::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:1845:28)::operator()",
+          "owner": "PdfWindow::initializeActionsAndView"
+        },
+        {
+          "line": 1893,
+          "symbol": "PdfWindow::initializeActionsAndView::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:1845:28)::operator()",
+          "owner": "PdfWindow::initializeActionsAndView"
+        },
+        {
+          "line": 1909,
+          "symbol": "PdfWindow::initializeActionsAndView::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:1861:34)::operator()",
+          "owner": "PdfWindow::initializeActionsAndView"
+        },
+        {
+          "line": 1914,
+          "symbol": "PdfWindow::initializeActionsAndView::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:1895:27)::operator()",
+          "owner": "PdfWindow::initializeActionsAndView"
+        },
+        {
+          "line": 1915,
+          "symbol": "PdfWindow::initializeActionsAndView::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:1861:34)::operator()",
+          "owner": "PdfWindow::initializeActionsAndView"
+        },
+        {
+          "line": 1923,
+          "symbol": "PdfWindow::initializeActionsAndView::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:1861:34)::operator()",
+          "owner": "PdfWindow::initializeActionsAndView"
+        },
+        {
+          "line": 1999,
+          "symbol": "PdfWindow::initializeFeatureCommands::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:1993:55)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:1995:29)::operator()",
+          "owner": "PdfWindow::initializeFeatureCommands"
+        },
+        {
+          "line": 2005,
+          "symbol": "PdfWindow::initializeFeatureCommands::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:1993:55)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:1995:29)::operator()",
+          "owner": "PdfWindow::initializeFeatureCommands"
+        },
+        {
+          "line": 2010,
+          "symbol": "PdfWindow::initializeFeatureCommands::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:1993:55)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:1995:29)::operator()",
+          "owner": "PdfWindow::initializeFeatureCommands"
+        },
+        {
+          "line": 2014,
+          "symbol": "PdfWindow::initializeFeatureCommands::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:1993:55)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:1995:29)::operator()",
+          "owner": "PdfWindow::initializeFeatureCommands"
+        },
+        {
+          "line": 2093,
+          "symbol": "PdfWindow::initializeFeatureCommands::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:2069:31)::operator()",
+          "owner": "PdfWindow::initializeFeatureCommands"
+        },
+        {
+          "line": 2429,
+          "symbol": "PdfWindow::initializeFeatureCommands::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:2412:39)::operator()",
+          "owner": "PdfWindow::initializeFeatureCommands"
+        },
+        {
+          "line": 2430,
+          "symbol": "PdfWindow::initializeFeatureCommands::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:2412:39)::operator()",
+          "owner": "PdfWindow::initializeFeatureCommands"
+        },
+        {
+          "line": 2591,
+          "symbol": "PdfWindow::initializeFeatureCommands::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:2027:29)::operator()",
+          "owner": "PdfWindow::initializeFeatureCommands"
+        },
+        {
+          "line": 2592,
+          "symbol": "PdfWindow::initializeFeatureCommands::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:2027:29)::operator()",
+          "owner": "PdfWindow::initializeFeatureCommands"
+        },
+        {
+          "line": 2593,
+          "symbol": "PdfWindow::initializeFeatureCommands::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:2027:29)::operator()",
+          "owner": "PdfWindow::initializeFeatureCommands"
+        },
+        {
+          "line": 2667,
+          "symbol": "PdfWindow::initializeOptions::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:2635:59)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:2638:33)::operator()",
+          "owner": "PdfWindow::initializeOptions"
+        },
+        {
+          "line": 2668,
+          "symbol": "PdfWindow::initializeOptions::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:2635:59)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:2638:33)::operator()",
+          "owner": "PdfWindow::initializeOptions"
+        },
+        {
+          "line": 2675,
+          "symbol": "PdfWindow::initializeOptions::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:2635:59)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:2642:32)::operator()",
+          "owner": "PdfWindow::initializeOptions"
+        },
+        {
+          "line": 2675,
+          "symbol": "PdfWindow::initializeOptions::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:2635:59)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:2665:30)::operator()",
+          "owner": "PdfWindow::initializeOptions"
+        },
+        {
+          "line": 2677,
+          "symbol": "PdfWindow::initializeOptions::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:2635:59)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:2642:32)::operator()",
+          "owner": "PdfWindow::initializeOptions"
+        },
+        {
+          "line": 2678,
+          "symbol": "PdfWindow::initializeOptions::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:2635:59)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:2642:32)::operator()",
+          "owner": "PdfWindow::initializeOptions"
+        },
+        {
+          "line": 2678,
+          "symbol": "PdfWindow::initializeOptions::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:2635:59)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:2657:33)::operator()",
+          "owner": "PdfWindow::initializeOptions"
+        },
+        {
+          "line": 2679,
+          "symbol": "PdfWindow::initializeOptions::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:2635:59)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:2675:31)::operator()",
+          "owner": "PdfWindow::initializeOptions"
+        },
+        {
+          "line": 2682,
+          "symbol": "PdfWindow::initializeOptions::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:2635:59)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:2657:33)::operator()",
+          "owner": "PdfWindow::initializeOptions"
+        },
+        {
+          "line": 2683,
+          "symbol": "PdfWindow::initializeOptions::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:2635:59)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:2675:31)::operator()",
+          "owner": "PdfWindow::initializeOptions"
+        },
+        {
+          "line": 2686,
+          "symbol": "PdfWindow::initializeOptions::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:2635:59)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:2676:27)::operator()",
+          "owner": "PdfWindow::initializeOptions"
+        },
+        {
+          "line": 2698,
+          "symbol": "PdfWindow::initializeOptions::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:2635:59)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:2676:27)::operator()",
+          "owner": "PdfWindow::initializeOptions"
+        },
+        {
+          "line": 2699,
+          "symbol": "PdfWindow::initializeOptions::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:2635:59)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:2676:27)::operator()",
+          "owner": "PdfWindow::initializeOptions"
+        },
+        {
+          "line": 2715,
+          "symbol": "PdfWindow::initializeOptions::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:2635:59)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:2665:30)::operator()",
+          "owner": "PdfWindow::initializeOptions"
+        },
+        {
+          "line": 2718,
+          "symbol": "saveDefaultAxesOrientation",
+          "owner": "PdfWindow::initializeOptions"
+        },
+        {
+          "line": 2720,
+          "symbol": "PdfWindow::updateWindowTitle",
+          "owner": "PdfWindow::initializeOptions"
+        },
+        {
+          "line": 2755,
+          "symbol": "PdfWindow::gpuStatusText",
+          "owner": "PdfWindow::initializeOptions"
+        },
+        {
+          "line": 2766,
+          "symbol": "PdfWindow::initializeOptions::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:2759:29)::operator()",
+          "owner": "PdfWindow::initializeOptions"
+        },
+        {
+          "line": 2789,
+          "symbol": "PdfWindow::initializeOptions::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:2759:29)::operator()",
+          "owner": "PdfWindow::initializeOptions"
+        },
+        {
+          "line": 2874,
+          "symbol": "PdfWindow::initializeSketchCommands::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:2868:20)::operator()",
+          "owner": "PdfWindow::initializeSketchCommands"
+        },
+        {
+          "line": 2880,
+          "symbol": "PdfWindow::initializeSketchCommands::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:2868:20)::operator()",
+          "owner": "PdfWindow::initializeSketchCommands"
+        },
+        {
+          "line": 2882,
+          "symbol": "PdfWindow::initializeSketchCommands::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:2868:20)::operator()",
+          "owner": "PdfWindow::initializeSketchCommands"
+        },
+        {
+          "line": 2899,
+          "symbol": "PdfWindow::initializeSketchCommands::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:2868:20)::operator()",
+          "owner": "PdfWindow::initializeSketchCommands"
+        },
+        {
+          "line": 2900,
+          "symbol": "PdfWindow::initializeSketchCommands::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:2868:20)::operator()",
+          "owner": "PdfWindow::initializeSketchCommands"
+        },
+        {
+          "line": 2901,
+          "symbol": "PdfWindow::initializeSketchCommands::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:2868:20)::operator()",
+          "owner": "PdfWindow::initializeSketchCommands"
+        },
+        {
+          "line": 2903,
+          "symbol": "PdfWindow::initializeSketchCommands::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:2868:20)::operator()",
+          "owner": "PdfWindow::initializeSketchCommands"
+        },
+        {
+          "line": 2904,
+          "symbol": "PdfWindow::initializeSketchCommands::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:2868:20)::operator()",
+          "owner": "PdfWindow::initializeSketchCommands"
+        },
+        {
+          "line": 2906,
+          "symbol": "PdfWindow::initializeSketchCommands::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:2868:20)::operator()",
+          "owner": "PdfWindow::initializeSketchCommands"
+        },
+        {
+          "line": 2908,
+          "symbol": "PdfWindow::initializeSketchCommands::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:2868:20)::operator()",
+          "owner": "PdfWindow::initializeSketchCommands"
+        },
+        {
+          "line": 2909,
+          "symbol": "PdfWindow::initializeSketchCommands::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:2868:20)::operator()",
+          "owner": "PdfWindow::initializeSketchCommands"
+        },
+        {
+          "line": 2911,
+          "symbol": "PdfWindow::initializeSketchCommands::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:2868:20)::operator()",
+          "owner": "PdfWindow::initializeSketchCommands"
+        },
+        {
+          "line": 2913,
+          "symbol": "PdfWindow::initializeSketchCommands::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:2868:20)::operator()",
+          "owner": "PdfWindow::initializeSketchCommands"
+        },
+        {
+          "line": 2915,
+          "symbol": "PdfWindow::initializeSketchCommands::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:2868:20)::operator()",
+          "owner": "PdfWindow::initializeSketchCommands"
+        },
+        {
+          "line": 2917,
+          "symbol": "PdfWindow::initializeSketchCommands::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:2868:20)::operator()",
+          "owner": "PdfWindow::initializeSketchCommands"
+        },
+        {
+          "line": 2919,
+          "symbol": "PdfWindow::initializeSketchCommands::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:2868:20)::operator()",
+          "owner": "PdfWindow::initializeSketchCommands"
+        },
+        {
+          "line": 2922,
+          "symbol": "PdfWindow::initializeSketchCommands::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:2868:20)::operator()",
+          "owner": "PdfWindow::initializeSketchCommands"
+        },
+        {
+          "line": 2932,
+          "symbol": "PdfWindow::initializeSketchCommands::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:2925:24)::operator()",
+          "owner": "PdfWindow::initializeSketchCommands"
+        },
+        {
+          "line": 2933,
+          "symbol": "PdfWindow::initializeSketchCommands::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:2925:24)::operator()",
+          "owner": "PdfWindow::initializeSketchCommands"
+        },
+        {
+          "line": 2934,
+          "symbol": "PdfWindow::initializeSketchCommands::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:2925:24)::operator()",
+          "owner": "PdfWindow::initializeSketchCommands"
+        },
+        {
+          "line": 2935,
+          "symbol": "PdfWindow::initializeSketchCommands::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:2925:24)::operator()",
+          "owner": "PdfWindow::initializeSketchCommands"
+        },
+        {
+          "line": 2936,
+          "symbol": "PdfWindow::initializeSketchCommands::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:2925:24)::operator()",
+          "owner": "PdfWindow::initializeSketchCommands"
+        },
+        {
+          "line": 2948,
+          "symbol": "PdfWindow::initializeSketchCommands::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:2938:25)::operator()",
+          "owner": "PdfWindow::initializeSketchCommands"
+        },
+        {
+          "line": 2949,
+          "symbol": "PdfWindow::initializeSketchCommands::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:2938:25)::operator()",
+          "owner": "PdfWindow::initializeSketchCommands"
+        },
+        {
+          "line": 3182,
+          "symbol": "PdfWindow::initializeSketchCommands::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:3174:32)::operator()",
+          "owner": "PdfWindow::initializeSketchCommands"
+        },
+        {
+          "line": 3189,
+          "symbol": "PdfWindow::initializeSketchCommands::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:3174:32)::operator()",
+          "owner": "PdfWindow::initializeSketchCommands"
+        },
+        {
+          "line": 3192,
+          "symbol": "PdfWindow::initializeSketchCommands::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:3174:32)::operator()",
+          "owner": "PdfWindow::initializeSketchCommands"
+        },
+        {
+          "line": 3193,
+          "symbol": "PdfWindow::initializeSketchCommands::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:3174:32)::operator()",
+          "owner": "PdfWindow::initializeSketchCommands"
+        },
+        {
+          "line": 3490,
+          "symbol": "PdfWindow::initializeToolbarsAndStatus::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:3446:27)::operator()",
+          "owner": "PdfWindow::initializeToolbarsAndStatus"
+        },
+        {
+          "line": 3507,
+          "symbol": "PdfWindow::initializeToolbarsAndStatus::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:3446:27)::operator()",
+          "owner": "PdfWindow::initializeToolbarsAndStatus"
+        },
+        {
+          "line": 3521,
+          "symbol": "PdfWindow::initializeToolbarsAndStatus::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:3446:27)::operator()",
+          "owner": "PdfWindow::initializeToolbarsAndStatus"
+        },
+        {
+          "line": 3524,
+          "symbol": "PdfWindow::initializeToolbarsAndStatus::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:3446:27)::operator()",
+          "owner": "PdfWindow::initializeToolbarsAndStatus"
+        },
+        {
+          "line": 3539,
+          "symbol": "PdfWindow::initializeToolbarsAndStatus::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:3526:25)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:3535:27)::operator()",
+          "owner": "PdfWindow::initializeToolbarsAndStatus"
+        },
+        {
+          "line": 3541,
+          "symbol": "PdfWindow::initializeToolbarsAndStatus::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:3526:25)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:3535:27)::operator()",
+          "owner": "PdfWindow::initializeToolbarsAndStatus"
+        },
+        {
+          "line": 3542,
+          "symbol": "PdfWindow::initializeToolbarsAndStatus::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:3526:25)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:3535:27)::operator()",
+          "owner": "PdfWindow::initializeToolbarsAndStatus"
+        },
+        {
+          "line": 3556,
+          "symbol": "PdfWindow::initializeToolbarsAndStatus::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:3548:26)::operator()",
+          "owner": "PdfWindow::initializeToolbarsAndStatus"
+        },
+        {
+          "line": 3564,
+          "symbol": "PdfWindow::initializeToolbarsAndStatus::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:3526:25)::operator()",
+          "owner": "PdfWindow::initializeToolbarsAndStatus"
+        },
+        {
+          "line": 3568,
+          "symbol": "PdfWindow::initializeToolbarsAndStatus::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:3526:25)::operator()",
+          "owner": "PdfWindow::initializeToolbarsAndStatus"
+        },
+        {
+          "line": 3576,
+          "symbol": "PdfWindow::initializeToolbarsAndStatus::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:3526:25)::operator()",
+          "owner": "PdfWindow::initializeToolbarsAndStatus"
+        },
+        {
+          "line": 3577,
+          "symbol": "PdfWindow::initializeToolbarsAndStatus::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:3526:25)::operator()",
+          "owner": "PdfWindow::initializeToolbarsAndStatus"
+        },
+        {
+          "line": 3592,
+          "symbol": "PdfWindow::initializeToolbarsAndStatus::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:3548:26)::operator()",
+          "owner": "PdfWindow::initializeToolbarsAndStatus"
+        },
+        {
+          "line": 3604,
+          "symbol": "PdfWindow::initializeToolbarsAndStatus::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:3548:26)::operator()",
+          "owner": "PdfWindow::initializeToolbarsAndStatus"
+        },
+        {
+          "line": 3628,
+          "symbol": "PdfWindow::initializeToolbarsAndStatus::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:3606:31)::operator()",
+          "owner": "PdfWindow::initializeToolbarsAndStatus"
+        },
+        {
+          "line": 3634,
+          "symbol": "PdfWindow::initializeToolbarsAndStatus::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:3526:25)::operator()",
+          "owner": "PdfWindow::initializeToolbarsAndStatus"
+        },
+        {
+          "line": 3666,
+          "symbol": "PdfWindow::initializeToolbarsAndStatus::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:3606:31)::operator()",
+          "owner": "PdfWindow::initializeToolbarsAndStatus"
+        },
+        {
+          "line": 3693,
+          "symbol": "PdfWindow::initializeToolbarsAndStatus::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:3647:57)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:3686:27)::operator()",
+          "owner": "PdfWindow::initializeToolbarsAndStatus"
+        },
+        {
+          "line": 3694,
+          "symbol": "PdfWindow::initializeToolbarsAndStatus::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:3647:57)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:3686:27)::operator()",
+          "owner": "PdfWindow::initializeToolbarsAndStatus"
+        },
+        {
+          "line": 3711,
+          "symbol": "PdfWindow::initializeToolbarsAndStatus::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:3621:36)::operator()",
+          "owner": "PdfWindow::initializeToolbarsAndStatus"
+        },
+        {
+          "line": 3713,
+          "symbol": "PdfWindow::initializeToolbarsAndStatus::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:3548:26)::operator()",
+          "owner": "PdfWindow::initializeToolbarsAndStatus"
+        },
+        {
+          "line": 3719,
+          "symbol": "PdfWindow::initializeToolbarsAndStatus::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:3526:25)::operator()",
+          "owner": "PdfWindow::initializeToolbarsAndStatus"
+        },
+        {
+          "line": 3722,
+          "symbol": "PdfWindow::initializeToolbarsAndStatus::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:3526:25)::operator()",
+          "owner": "PdfWindow::initializeToolbarsAndStatus"
+        },
+        {
+          "line": 3723,
+          "symbol": "PdfWindow::initializeToolbarsAndStatus::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:3526:25)::operator()",
+          "owner": "PdfWindow::initializeToolbarsAndStatus"
+        },
+        {
+          "line": 3724,
+          "symbol": "PdfWindow::initializeToolbarsAndStatus::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:3526:25)::operator()",
+          "owner": "PdfWindow::initializeToolbarsAndStatus"
+        },
+        {
+          "line": 3725,
+          "symbol": "PdfWindow::initializeToolbarsAndStatus::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:3526:25)::operator()",
+          "owner": "PdfWindow::initializeToolbarsAndStatus"
+        },
+        {
+          "line": 3728,
+          "symbol": "PdfWindow::initializeToolbarsAndStatus::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:3526:25)::operator()",
+          "owner": "PdfWindow::initializeToolbarsAndStatus"
+        },
+        {
+          "line": 3730,
+          "symbol": "PdfWindow::initializeToolbarsAndStatus::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:3526:25)::operator()",
+          "owner": "PdfWindow::initializeToolbarsAndStatus"
+        },
+        {
+          "line": 3731,
+          "symbol": "PdfWindow::initializeToolbarsAndStatus::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:3526:25)::operator()",
+          "owner": "PdfWindow::initializeToolbarsAndStatus"
+        },
+        {
+          "line": 3735,
+          "symbol": "PdfWindow::initializeToolbarsAndStatus::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:3526:25)::operator()",
+          "owner": "PdfWindow::initializeToolbarsAndStatus"
+        },
+        {
+          "line": 3736,
+          "symbol": "PdfWindow::initializeToolbarsAndStatus::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:3526:25)::operator()",
+          "owner": "PdfWindow::initializeToolbarsAndStatus"
+        },
+        {
+          "line": 3739,
+          "symbol": "PdfWindow::initializeToolbarsAndStatus::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:3526:25)::operator()",
+          "owner": "PdfWindow::initializeToolbarsAndStatus"
+        },
+        {
+          "line": 3741,
+          "symbol": "PdfWindow::initializeToolbarsAndStatus::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:3526:25)::operator()",
+          "owner": "PdfWindow::initializeToolbarsAndStatus"
+        },
+        {
+          "line": 3771,
+          "symbol": "PdfWindow::beginBackgroundProgress",
+          "owner": "PdfWindow::initializeToolbarsAndStatus"
+        },
+        {
+          "line": 3772,
+          "symbol": "PdfWindow::endBackgroundProgress",
+          "owner": "PdfWindow::initializeToolbarsAndStatus"
+        },
+        {
+          "line": 3774,
+          "symbol": "PdfWindow::beginForegroundProgress",
+          "owner": "PdfWindow::initializeToolbarsAndStatus"
+        },
+        {
+          "line": 3775,
+          "symbol": "PdfWindow::endForegroundProgress",
+          "owner": "PdfWindow::initializeToolbarsAndStatus"
+        },
+        {
+          "line": 3778,
+          "symbol": "PdfWindow::gpuStatusText",
+          "owner": "PdfWindow::initializeToolbarsAndStatus"
+        },
+        {
+          "line": 3787,
+          "symbol": "PdfWindow::gpuStatusText",
+          "owner": "PdfWindow::initializeToolbarsAndStatus"
+        },
+        {
+          "line": 3789,
+          "symbol": "PdfWindow::installDocumentRevisionPanel",
+          "owner": "PdfWindow::initializeToolbarsAndStatus"
+        },
+        {
+          "line": 3854,
+          "symbol": "PdfWindow::initializeToolbarsAndStatus::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:3851:27)::operator()",
+          "owner": "PdfWindow::initializeToolbarsAndStatus"
+        },
+        {
+          "line": 3856,
+          "symbol": "PdfWindow::initializeToolbarsAndStatus::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:3851:27)::operator()",
+          "owner": "PdfWindow::initializeToolbarsAndStatus"
+        },
+        {
+          "line": 3857,
+          "symbol": "PdfWindow::initializeToolbarsAndStatus::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:3851:27)::operator()",
+          "owner": "PdfWindow::initializeToolbarsAndStatus"
+        },
+        {
+          "line": 3895,
+          "symbol": "PdfWindow::initializeToolbarsAndStatus::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:3885:35)::operator()",
+          "owner": "PdfWindow::initializeToolbarsAndStatus"
+        },
+        {
+          "line": 3898,
+          "symbol": "PdfWindow::initializeToolbarsAndStatus::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:3885:35)::operator()",
+          "owner": "PdfWindow::initializeToolbarsAndStatus"
+        },
+        {
+          "line": 3901,
+          "symbol": "PdfWindow::initializeToolbarsAndStatus::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:3621:36)::operator()",
+          "owner": "PdfWindow::initializeToolbarsAndStatus"
+        },
+        {
+          "line": 3902,
+          "symbol": "PdfWindow::initializeToolbarsAndStatus::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:3606:31)::operator()",
+          "owner": "PdfWindow::initializeToolbarsAndStatus"
+        },
+        {
+          "line": 3956,
+          "symbol": "PdfWindow::initializeToolbarsAndStatus::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:3955:29)::operator()",
+          "owner": "PdfWindow::initializeToolbarsAndStatus"
+        },
+        {
+          "line": 3958,
+          "symbol": "PdfWindow::initializeToolbarsAndStatus::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:3955:29)::operator()",
+          "owner": "PdfWindow::initializeToolbarsAndStatus"
+        },
+        {
+          "line": 3965,
+          "symbol": "PdfWindow::refreshDocumentEditAccess",
+          "owner": "PdfWindow::initializeToolbarsAndStatus"
+        },
+        {
+          "line": 3965,
+          "symbol": "PdfWindow::updateWindowTitle",
+          "owner": "PdfWindow::initializeToolbarsAndStatus"
+        },
+        {
+          "line": 3968,
+          "symbol": "PdfWindow::refreshDocumentEditAccess",
+          "owner": "PdfWindow::initializeToolbarsAndStatus"
+        },
+        {
+          "line": 3968,
+          "symbol": "PdfWindow::updateWindowTitle",
+          "owner": "PdfWindow::initializeToolbarsAndStatus"
+        },
+        {
+          "line": 3984,
+          "symbol": "PdfWindow::PdfWindow",
+          "owner": "PdfWindow::initializeToolbarsAndStatus"
+        },
+        {
+          "line": 3986,
+          "symbol": "PdfWindow::beginForegroundProgress",
+          "owner": "PdfWindow::initializeToolbarsAndStatus"
+        },
+        {
+          "line": 3988,
+          "symbol": "PdfWindow::endForegroundProgress",
+          "owner": "PdfWindow::initializeToolbarsAndStatus"
+        },
+        {
+          "line": 3990,
+          "symbol": "PdfWindow::refreshDocumentEditAccess",
+          "owner": "PdfWindow::initializeToolbarsAndStatus"
+        },
+        {
+          "line": 3990,
+          "symbol": "PdfWindow::updateWindowTitle",
+          "owner": "PdfWindow::initializeToolbarsAndStatus"
+        },
+        {
+          "line": 4032,
+          "symbol": "PdfWindow::showRecoveryDocuments",
+          "owner": "PdfWindow::initializeToolbarsAndStatus"
+        },
+        {
+          "line": 4038,
+          "symbol": "PdfWindow::refreshDocumentEditAccess",
+          "owner": "PdfWindow::event"
+        },
+        {
+          "line": 4038,
+          "symbol": "PdfWindow::updateWindowTitle",
+          "owner": "PdfWindow::event"
+        },
+        {
+          "line": 4067,
+          "symbol": "PdfWindow::updateUndoActions",
+          "owner": "PdfWindow::refreshDocumentEditAccess"
+        },
+        {
+          "line": 4068,
+          "symbol": "PdfWindow::refreshDocumentRevisionPanel",
+          "owner": "PdfWindow::refreshDocumentEditAccess"
+        },
+        {
+          "line": 4085,
+          "symbol": "PdfWindow::refreshRecentDocuments",
+          "owner": "PdfWindow::rememberRecentDocument"
+        },
+        {
+          "line": 4101,
+          "symbol": "PdfWindow::openDocumentPath",
+          "owner": "PdfWindow::refreshRecentDocuments"
+        },
+        {
+          "line": 4108,
+          "symbol": "PdfWindow::refreshRecentDocuments",
+          "owner": "PdfWindow::refreshRecentDocuments"
+        },
+        {
+          "line": 4119,
+          "symbol": "PdfWindow::saveDocument",
+          "owner": "PdfWindow::maybeSaveChanges"
+        },
+        {
+          "line": 4197,
+          "symbol": "PdfWindow::saveDocument",
+          "owner": "PdfWindow::newDrawing"
+        },
+        {
+          "line": 4218,
+          "symbol": "PdfWindow::maybeSaveChanges",
+          "owner": "PdfWindow::newDocument"
+        },
+        {
+          "line": 4219,
+          "symbol": "PdfWindow::clearDocumentRecovery",
+          "owner": "PdfWindow::newDocument"
+        },
+        {
+          "line": 4223,
+          "symbol": "defaultAxesOrientation",
+          "owner": "PdfWindow::newDocument"
+        },
+        {
+          "line": 4225,
+          "symbol": "defaultLengthUnit",
+          "owner": "PdfWindow::newDocument"
+        },
+        {
+          "line": 4233,
+          "symbol": "PdfWindow::refreshDocumentEditAccess",
+          "owner": "PdfWindow::newDocument"
+        },
+        {
+          "line": 4234,
+          "symbol": "PdfWindow::updateWindowTitle",
+          "owner": "PdfWindow::newDocument"
+        },
+        {
+          "line": 4255,
+          "symbol": "PdfWindow::openDocumentPath",
+          "owner": "PdfWindow::openDocument"
+        },
+        {
+          "line": 4276,
+          "symbol": "PdfWindow::openDocumentPathInPlace",
+          "owner": "PdfWindow::openDocumentPath"
+        },
+        {
+          "line": 4281,
+          "symbol": "PdfWindow::rememberRecentDocument",
+          "owner": "PdfWindow::openDocumentPathInPlace"
+        },
+        {
+          "line": 4284,
+          "symbol": "PdfWindow::maybeSaveChanges",
+          "owner": "PdfWindow::openDocumentPathInPlace"
+        },
+        {
+          "line": 4287,
+          "symbol": "PdfWindow::beginForegroundProgress",
+          "owner": "PdfWindow::openDocumentPathInPlace"
+        },
+        {
+          "line": 4288,
+          "symbol": "PdfWindow::updateForegroundProgress",
+          "owner": "PdfWindow::openDocumentPathInPlace"
+        },
+        {
+          "line": 4310,
+          "symbol": "PdfWindow::endForegroundProgress",
+          "owner": "PdfWindow::openDocumentPathInPlace"
+        },
+        {
+          "line": 4314,
+          "symbol": "PdfWindow::clearDocumentRecovery",
+          "owner": "PdfWindow::openDocumentPathInPlace"
+        },
+        {
+          "line": 4315,
+          "symbol": "PdfWindow::updateForegroundProgress",
+          "owner": "PdfWindow::openDocumentPathInPlace"
+        },
+        {
+          "line": 4318,
+          "symbol": "defaultAxesOrientation",
+          "owner": "PdfWindow::openDocumentPathInPlace"
+        },
+        {
+          "line": 4327,
+          "symbol": "PdfWindow::updateForegroundProgress",
+          "owner": "PdfWindow::openDocumentPathInPlace"
+        },
+        {
+          "line": 4330,
+          "symbol": "PdfWindow::updateForegroundProgress",
+          "owner": "PdfWindow::openDocumentPathInPlace"
+        },
+        {
+          "line": 4331,
+          "symbol": "PdfWindow::updateForegroundProgress",
+          "owner": "PdfWindow::openDocumentPathInPlace"
+        },
+        {
+          "line": 4332,
+          "symbol": "PdfWindow::endForegroundProgress",
+          "owner": "PdfWindow::openDocumentPathInPlace"
+        },
+        {
+          "line": 4337,
+          "symbol": "PdfWindow::refreshDocumentEditAccess",
+          "owner": "PdfWindow::openDocumentPathInPlace"
+        },
+        {
+          "line": 4338,
+          "symbol": "PdfWindow::rememberRecentDocument",
+          "owner": "PdfWindow::openDocumentPathInPlace"
+        },
+        {
+          "line": 4339,
+          "symbol": "PdfWindow::updateWindowTitle",
+          "owner": "PdfWindow::openDocumentPathInPlace"
+        },
+        {
+          "line": 4357,
+          "symbol": "PdfWindow::saveDocumentPath",
+          "owner": "PdfWindow::saveDocument"
+        },
+        {
+          "line": 4362,
+          "symbol": "PdfWindow::refreshDocumentEditAccess",
+          "owner": "PdfWindow::saveDocumentPath"
+        },
+        {
+          "line": 4384,
+          "symbol": "PdfWindow::beginForegroundProgress",
+          "owner": "PdfWindow::saveDocumentPath"
+        },
+        {
+          "line": 4390,
+          "symbol": "PdfWindow::endForegroundProgress",
+          "owner": "PdfWindow::saveDocumentPath"
+        },
+        {
+          "line": 4401,
+          "symbol": "PdfWindow::refreshDocumentEditAccess",
+          "owner": "PdfWindow::saveDocumentPath"
+        },
+        {
+          "line": 4402,
+          "symbol": "PdfWindow::rememberRecentDocument",
+          "owner": "PdfWindow::saveDocumentPath"
+        },
+        {
+          "line": 4403,
+          "symbol": "PdfWindow::updateWindowTitle",
+          "owner": "PdfWindow::saveDocumentPath"
+        },
+        {
+          "line": 4405,
+          "symbol": "PdfWindow::clearDocumentRecovery",
+          "owner": "PdfWindow::saveDocumentPath"
+        },
+        {
+          "line": 4424,
+          "symbol": "PdfWindow::beginForegroundProgress",
+          "owner": "PdfWindow::acquireDocumentWriteAccess"
+        },
+        {
+          "line": 4426,
+          "symbol": "PdfWindow::endForegroundProgress",
+          "owner": "PdfWindow::acquireDocumentWriteAccess"
+        },
+        {
+          "line": 4437,
+          "symbol": "PdfWindow::acquireDocumentWriteAccess",
+          "owner": "PdfWindow::runDocumentRevisionAction"
+        },
+        {
+          "line": 4438,
+          "symbol": "PdfWindow::refreshDocumentEditAccess",
+          "owner": "PdfWindow::runDocumentRevisionAction"
+        },
+        {
+          "line": 4444,
+          "symbol": "PdfWindow::beginForegroundProgress",
+          "owner": "PdfWindow::runDocumentRevisionAction"
+        },
+        {
+          "line": 4456,
+          "symbol": "PdfWindow::endForegroundProgress",
+          "owner": "PdfWindow::runDocumentRevisionAction"
+        },
+        {
+          "line": 4462,
+          "symbol": "PdfWindow::clearDocumentRecovery",
+          "owner": "PdfWindow::runDocumentRevisionAction"
+        },
+        {
+          "line": 4474,
+          "symbol": "PdfWindow::refreshDocumentEditAccess",
+          "owner": "PdfWindow::runDocumentRevisionAction"
+        },
+        {
+          "line": 4474,
+          "symbol": "PdfWindow::updateWindowTitle",
+          "owner": "PdfWindow::runDocumentRevisionAction"
+        },
+        {
+          "line": 4491,
+          "symbol": "PdfWindow::openSelectedDocumentRevision",
+          "owner": "PdfWindow::installDocumentRevisionPanel"
+        },
+        {
+          "line": 4493,
+          "symbol": "PdfWindow::refreshDocumentEditAccess",
+          "owner": "PdfWindow::installDocumentRevisionPanel"
+        },
+        {
+          "line": 4493,
+          "symbol": "PdfWindow::updateWindowTitle",
+          "owner": "PdfWindow::installDocumentRevisionPanel"
+        },
+        {
+          "line": 4537,
+          "symbol": "PdfWindow::rebuildModelTree",
+          "owner": "PdfWindow::openArchivedDocument"
+        },
+        {
+          "line": 4537,
+          "symbol": "PdfWindow::refreshDocumentEditAccess",
+          "owner": "PdfWindow::openArchivedDocument"
+        },
+        {
+          "line": 4537,
+          "symbol": "PdfWindow::updateWindowTitle",
+          "owner": "PdfWindow::openArchivedDocument"
+        },
+        {
+          "line": 4543,
+          "symbol": "PdfWindow::PdfWindow",
+          "owner": "PdfWindow::openSelectedDocumentRevision"
+        },
+        {
+          "line": 4543,
+          "symbol": "PdfWindow::openArchivedDocument",
+          "owner": "PdfWindow::openSelectedDocumentRevision"
+        },
+        {
+          "line": 4577,
+          "symbol": "PdfWindow::maybeSaveChanges",
+          "owner": "PdfWindow::prepareToClose"
+        },
+        {
+          "line": 4593,
+          "symbol": "PdfWindow::maybeSaveChanges",
+          "owner": "PdfWindow::closeEvent"
+        },
+        {
+          "line": 4601,
+          "symbol": "PdfWindow::clearDocumentRecovery",
+          "owner": "PdfWindow::closeEvent"
+        },
+        {
+          "line": 4624,
+          "symbol": "PdfWindow::rebuildModelTree",
+          "owner": "PdfWindow::scheduleModelTreeRebuild"
+        },
+        {
+          "line": 4691,
+          "symbol": "PdfWindow::rebuildModelTree::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:4679:28)::operator()",
+          "owner": "PdfWindow::rebuildModelTree"
+        },
+        {
+          "line": 4693,
+          "symbol": "PdfWindow::rebuildModelTree::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:4679:28)::operator()",
+          "owner": "PdfWindow::rebuildModelTree"
+        },
+        {
+          "line": 4721,
+          "symbol": "PdfWindow::rebuildModelTree::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:4679:28)::operator()",
+          "owner": "PdfWindow::rebuildModelTree"
+        },
+        {
+          "line": 4746,
+          "symbol": "PdfWindow::rebuildModelTree::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:4706:26)::operator()",
+          "owner": "PdfWindow::rebuildModelTree"
+        },
+        {
+          "line": 4758,
+          "symbol": "PdfWindow::rebuildModelTree::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:4706:26)::operator()",
+          "owner": "PdfWindow::rebuildModelTree"
+        },
+        {
+          "line": 4762,
+          "symbol": "PdfWindow::rebuildModelTree::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:4706:26)::operator()",
+          "owner": "PdfWindow::rebuildModelTree"
+        },
+        {
+          "line": 4776,
+          "symbol": "PdfWindow::rebuildModelTree::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:4679:28)::operator()",
+          "owner": "PdfWindow::rebuildModelTree"
+        },
+        {
+          "line": 4791,
+          "symbol": "PdfWindow::rebuildModelTree::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:4714:28)::operator()",
+          "owner": "PdfWindow::rebuildModelTree"
+        },
+        {
+          "line": 4806,
+          "symbol": "PdfWindow::rebuildModelTree::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:4679:28)::operator()",
+          "owner": "PdfWindow::rebuildModelTree"
+        },
+        {
+          "line": 4974,
+          "symbol": "PdfWindow::rebuildModelTree::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:4802:36)::operator()",
+          "owner": "PdfWindow::rebuildModelTree"
+        },
+        {
+          "line": 4982,
+          "symbol": "PdfWindow::rebuildModelTree::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:4706:26)::operator()",
+          "owner": "PdfWindow::rebuildModelTree"
+        },
+        {
+          "line": 4997,
+          "symbol": "PdfWindow::rebuildModelTree::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:4802:36)::operator()",
+          "owner": "PdfWindow::rebuildModelTree"
+        },
+        {
+          "line": 5000,
+          "symbol": "PdfWindow::rebuildModelTree::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:4802:36)::operator()",
+          "owner": "PdfWindow::rebuildModelTree"
+        },
+        {
+          "line": 5041,
+          "symbol": "PdfWindow::rebuildModelTree::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:4802:36)::operator()",
+          "owner": "PdfWindow::rebuildModelTree"
+        },
+        {
+          "line": 5045,
+          "symbol": "PdfWindow::rebuildModelTree::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:4802:36)::operator()",
+          "owner": "PdfWindow::rebuildModelTree"
+        },
+        {
+          "line": 5059,
+          "symbol": "PdfWindow::rebuildModelTree::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:4802:36)::operator()",
+          "owner": "PdfWindow::rebuildModelTree"
+        },
+        {
+          "line": 5069,
+          "symbol": "PdfWindow::rebuildModelTree::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:4802:36)::operator()",
+          "owner": "PdfWindow::rebuildModelTree"
+        },
+        {
+          "line": 5076,
+          "symbol": "PdfWindow::rebuildModelTree::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:4802:36)::operator()",
+          "owner": "PdfWindow::rebuildModelTree"
+        },
+        {
+          "line": 5083,
+          "symbol": "PdfWindow::rebuildModelTree::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:4802:36)::operator()",
+          "owner": "PdfWindow::rebuildModelTree"
+        },
+        {
+          "line": 5128,
+          "symbol": "PdfWindow::rebuildModelTree::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:4802:36)::operator()",
+          "owner": "PdfWindow::rebuildModelTree"
+        },
+        {
+          "line": 5147,
+          "symbol": "PdfWindow::rebuildModelTree::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:4706:26)::operator()",
+          "owner": "PdfWindow::rebuildModelTree"
+        },
+        {
+          "line": 5161,
+          "symbol": "PdfWindow::rebuildModelTree::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:4802:36)::operator()",
+          "owner": "PdfWindow::rebuildModelTree"
+        },
+        {
+          "line": 5170,
+          "symbol": "PdfWindow::rebuildModelTree::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:4706:26)::operator()",
+          "owner": "PdfWindow::rebuildModelTree"
+        },
+        {
+          "line": 5177,
+          "symbol": "PdfWindow::rebuildModelTree::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:4706:26)::operator()",
+          "owner": "PdfWindow::rebuildModelTree"
+        },
+        {
+          "line": 5179,
+          "symbol": "PdfWindow::rebuildModelTree::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:4714:28)::operator()",
+          "owner": "PdfWindow::rebuildModelTree"
+        },
+        {
+          "line": 5271,
+          "symbol": "PdfWindow::editBackground::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:5261:34)::operator()",
+          "owner": "PdfWindow::editBackground"
+        },
+        {
+          "line": 5272,
+          "symbol": "PdfWindow::editBackground::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:5261:34)::operator()",
+          "owner": "PdfWindow::editBackground"
+        },
+        {
+          "line": 5314,
+          "symbol": "PdfWindow::editBackground::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:5301:26)::operator()",
+          "owner": "PdfWindow::editBackground"
+        },
+        {
+          "line": 5315,
+          "symbol": "PdfWindow::editBackground::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:5301:26)::operator()",
+          "owner": "PdfWindow::editBackground"
+        },
+        {
+          "line": 5316,
+          "symbol": "PdfWindow::editBackground::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:5301:26)::operator()",
+          "owner": "PdfWindow::editBackground"
+        },
+        {
+          "line": 5318,
+          "symbol": "PdfWindow::editBackground::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:5301:26)::operator()",
+          "owner": "PdfWindow::editBackground"
+        },
+        {
+          "line": 5320,
+          "symbol": "PdfWindow::editBackground::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:5301:26)::operator()",
+          "owner": "PdfWindow::editBackground"
+        },
+        {
+          "line": 5322,
+          "symbol": "PdfWindow::editBackground::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:5301:26)::operator()",
+          "owner": "PdfWindow::editBackground"
+        },
+        {
+          "line": 5325,
+          "symbol": "PdfWindow::editBackground::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:5301:26)::operator()",
+          "owner": "PdfWindow::editBackground"
+        },
+        {
+          "line": 5329,
+          "symbol": "PdfWindow::editBackground::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:5301:26)::operator()",
+          "owner": "PdfWindow::editBackground"
+        }
+      ]
+    },
+    {
+      "source": "forgeCad2026_gui.cpp",
+      "target": "forgeCad2026_gui.cpp",
+      "kind": "reference",
+      "count": 7,
+      "sites": [
+        {
+          "line": 857,
+          "symbol": "PdfWindow::newDocument",
+          "owner": "PdfWindow::initializeFileMenu"
+        },
+        {
+          "line": 860,
+          "symbol": "PdfWindow::openDocument",
+          "owner": "PdfWindow::initializeFileMenu"
+        },
+        {
+          "line": 877,
+          "symbol": "PdfWindow::newDrawing",
+          "owner": "PdfWindow::initializeFileMenu"
+        },
+        {
+          "line": 881,
+          "symbol": "PdfWindow::openDrawing",
+          "owner": "PdfWindow::initializeFileMenu"
+        },
+        {
+          "line": 947,
+          "symbol": "PdfWindow::refreshRecentDocuments",
+          "owner": "PdfWindow::initializeFileMenu"
+        },
+        {
+          "line": 1532,
+          "symbol": "PdfWindow::editBackground",
+          "owner": "PdfWindow::initializeActionsAndView"
+        },
+        {
+          "line": 4490,
+          "symbol": "PdfWindow::openSelectedDocumentRevision",
+          "owner": "PdfWindow::installDocumentRevisionPanel"
+        }
+      ]
+    },
+    {
+      "source": "tests/test_document_theme_tabs.h",
+      "target": "forgeCad2026_application_theme.cpp",
+      "kind": "call",
+      "count": 2,
+      "sites": [
+        {
+          "line": 9,
+          "symbol": "ForgeCad::initializeApplicationTheme",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 302,
+          "symbol": "ForgeCad::setApplicationThemeMode",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        }
+      ]
+    },
+    {
+      "source": "tests/test_document_theme_tabs.h",
+      "target": "forgeCad2026_gui.cpp",
+      "kind": "call",
+      "count": 3,
+      "sites": [
+        {
+          "line": 80,
+          "symbol": "PdfWindow::saveDocumentPath",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 109,
+          "symbol": "PdfWindow::applyTreeBackground",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 316,
+          "symbol": "PdfWindow::PdfWindow",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        }
+      ]
+    },
+    {
+      "source": "tests/test_document_theme_tabs.h",
+      "target": "tests/test_document_theme_tabs.h",
+      "kind": "call",
+      "count": 88,
+      "sites": [
+        {
+          "line": 78,
+          "symbol": "ViewportInteractionTest::documentThemeTabsTests::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:17:21)::operator()",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 80,
+          "symbol": "ViewportInteractionTest::documentThemeTabsTests::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:10:24)::operator()",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 81,
+          "symbol": "ViewportInteractionTest::documentThemeTabsTests::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:60:27)::operator()",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 92,
+          "symbol": "ViewportInteractionTest::documentThemeTabsTests::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:17:21)::operator()",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 96,
+          "symbol": "ViewportInteractionTest::documentThemeTabsTests::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:17:21)::operator()",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 99,
+          "symbol": "ViewportInteractionTest::documentThemeTabsTests::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:60:27)::operator()",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 118,
+          "symbol": "ViewportInteractionTest::documentThemeTabsTests::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:10:24)::operator()",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 118,
+          "symbol": "ViewportInteractionTest::documentThemeTabsTests::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:42:25)::operator()",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 122,
+          "symbol": "ViewportInteractionTest::documentThemeTabsTests::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:10:24)::operator()",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 122,
+          "symbol": "ViewportInteractionTest::documentThemeTabsTests::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:42:25)::operator()",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 129,
+          "symbol": "ViewportInteractionTest::documentThemeTabsTests::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:21:25)::operator()",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 134,
+          "symbol": "ViewportInteractionTest::documentThemeTabsTests::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:21:25)::operator()",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 138,
+          "symbol": "ViewportInteractionTest::documentThemeTabsTests::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:25:27)::operator()",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 139,
+          "symbol": "ViewportInteractionTest::documentThemeTabsTests::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:10:24)::operator()",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 139,
+          "symbol": "ViewportInteractionTest::documentThemeTabsTests::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:42:25)::operator()",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 141,
+          "symbol": "ViewportInteractionTest::documentThemeTabsTests::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:10:24)::operator()",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 141,
+          "symbol": "ViewportInteractionTest::documentThemeTabsTests::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:42:25)::operator()",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 145,
+          "symbol": "ViewportInteractionTest::documentThemeTabsTests::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:10:24)::operator()",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 146,
+          "symbol": "ViewportInteractionTest::documentThemeTabsTests::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:10:24)::operator()",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 146,
+          "symbol": "ViewportInteractionTest::documentThemeTabsTests::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:42:25)::operator()",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 147,
+          "symbol": "ViewportInteractionTest::documentThemeTabsTests::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:25:27)::operator()",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 148,
+          "symbol": "ViewportInteractionTest::documentThemeTabsTests::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:10:24)::operator()",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 148,
+          "symbol": "ViewportInteractionTest::documentThemeTabsTests::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:42:25)::operator()",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 149,
+          "symbol": "ViewportInteractionTest::documentThemeTabsTests::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:10:24)::operator()",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 149,
+          "symbol": "ViewportInteractionTest::documentThemeTabsTests::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:42:25)::operator()",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 150,
+          "symbol": "ViewportInteractionTest::documentThemeTabsTests::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:25:27)::operator()",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 151,
+          "symbol": "ViewportInteractionTest::documentThemeTabsTests::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:10:24)::operator()",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 151,
+          "symbol": "ViewportInteractionTest::documentThemeTabsTests::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:42:25)::operator()",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 164,
+          "symbol": "ViewportInteractionTest::documentThemeTabsTests::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:10:24)::operator()",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 167,
+          "symbol": "ViewportInteractionTest::documentThemeTabsTests::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:25:27)::operator()",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 169,
+          "symbol": "ViewportInteractionTest::documentThemeTabsTests::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:10:24)::operator()",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 171,
+          "symbol": "ViewportInteractionTest::documentThemeTabsTests::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:10:24)::operator()",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 172,
+          "symbol": "ViewportInteractionTest::documentThemeTabsTests::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:10:24)::operator()",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 176,
+          "symbol": "ViewportInteractionTest::documentThemeTabsTests::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:10:24)::operator()",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 176,
+          "symbol": "ViewportInteractionTest::documentThemeTabsTests::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:42:25)::operator()",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 178,
+          "symbol": "ViewportInteractionTest::documentThemeTabsTests::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:10:24)::operator()",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 178,
+          "symbol": "ViewportInteractionTest::documentThemeTabsTests::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:42:25)::operator()",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 183,
+          "symbol": "ViewportInteractionTest::documentThemeTabsTests::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:17:21)::operator()",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 188,
+          "symbol": "ViewportInteractionTest::documentThemeTabsTests::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:10:24)::operator()",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 190,
+          "symbol": "ViewportInteractionTest::documentThemeTabsTests::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:21:25)::operator()",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 195,
+          "symbol": "ViewportInteractionTest::documentThemeTabsTests::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:10:24)::operator()",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 209,
+          "symbol": "ViewportInteractionTest::documentThemeTabsTests::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:10:24)::operator()",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 216,
+          "symbol": "ViewportInteractionTest::documentThemeTabsTests::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:10:24)::operator()",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 234,
+          "symbol": "ViewportInteractionTest::documentThemeTabsTests::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:117:25)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:220:40)::operator()",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 238,
+          "symbol": "ViewportInteractionTest::documentThemeTabsTests::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:117:25)::operator()::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:220:40)::operator()",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 240,
+          "symbol": "ViewportInteractionTest::documentThemeTabsTests::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:10:24)::operator()",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 243,
+          "symbol": "ViewportInteractionTest::documentThemeTabsTests::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:10:24)::operator()",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 246,
+          "symbol": "ViewportInteractionTest::documentThemeTabsTests::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:21:25)::operator()",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 252,
+          "symbol": "ViewportInteractionTest::documentThemeTabsTests::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:10:24)::operator()",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 253,
+          "symbol": "ViewportInteractionTest::documentThemeTabsTests::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:10:24)::operator()",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 253,
+          "symbol": "ViewportInteractionTest::documentThemeTabsTests::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:42:25)::operator()",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 254,
+          "symbol": "ViewportInteractionTest::documentThemeTabsTests::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:10:24)::operator()",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 254,
+          "symbol": "ViewportInteractionTest::documentThemeTabsTests::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:42:25)::operator()",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 258,
+          "symbol": "ViewportInteractionTest::documentThemeTabsTests::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:10:24)::operator()",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 264,
+          "symbol": "ViewportInteractionTest::documentThemeTabsTests::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:10:24)::operator()",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 276,
+          "symbol": "ViewportInteractionTest::documentThemeTabsTests::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:10:24)::operator()",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 279,
+          "symbol": "ViewportInteractionTest::documentThemeTabsTests::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:10:24)::operator()",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 284,
+          "symbol": "ViewportInteractionTest::documentThemeTabsTests::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:10:24)::operator()",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 298,
+          "symbol": "ViewportInteractionTest::documentThemeTabsTests::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:10:24)::operator()",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 305,
+          "symbol": "ViewportInteractionTest::documentThemeTabsTests::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:21:25)::operator()",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 307,
+          "symbol": "ViewportInteractionTest::documentThemeTabsTests::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:295:25)::operator()",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 308,
+          "symbol": "ViewportInteractionTest::documentThemeTabsTests::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:117:25)::operator()",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 309,
+          "symbol": "ViewportInteractionTest::documentThemeTabsTests::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:295:25)::operator()",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 310,
+          "symbol": "ViewportInteractionTest::documentThemeTabsTests::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:117:25)::operator()",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 311,
+          "symbol": "ViewportInteractionTest::documentThemeTabsTests::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:295:25)::operator()",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 312,
+          "symbol": "ViewportInteractionTest::documentThemeTabsTests::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:117:25)::operator()",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 313,
+          "symbol": "ViewportInteractionTest::documentThemeTabsTests::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:295:25)::operator()",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 314,
+          "symbol": "ViewportInteractionTest::documentThemeTabsTests::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:117:25)::operator()",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 319,
+          "symbol": "ViewportInteractionTest::documentThemeTabsTests::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:60:27)::operator()",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 323,
+          "symbol": "ViewportInteractionTest::documentThemeTabsTests::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:17:21)::operator()",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 327,
+          "symbol": "ViewportInteractionTest::documentThemeTabsTests::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:60:27)::operator()",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 333,
+          "symbol": "ViewportInteractionTest::documentThemeTabsTests::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:60:27)::operator()",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 338,
+          "symbol": "ViewportInteractionTest::documentThemeTabsTests::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:17:21)::operator()",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 341,
+          "symbol": "ViewportInteractionTest::documentThemeTabsTests::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:60:27)::operator()",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 344,
+          "symbol": "ViewportInteractionTest::documentThemeTabsTests::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:117:25)::operator()",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 345,
+          "symbol": "ViewportInteractionTest::documentThemeTabsTests::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:295:25)::operator()",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 348,
+          "symbol": "ViewportInteractionTest::documentThemeTabsTests::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:10:24)::operator()",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 352,
+          "symbol": "ViewportInteractionTest::documentThemeTabsTests::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:21:25)::operator()",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 353,
+          "symbol": "ViewportInteractionTest::documentThemeTabsTests::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:117:25)::operator()",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 359,
+          "symbol": "ViewportInteractionTest::documentThemeTabsTests::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:17:21)::operator()",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 360,
+          "symbol": "ViewportInteractionTest::documentThemeTabsTests::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:17:21)::operator()",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 363,
+          "symbol": "ViewportInteractionTest::documentThemeTabsTests::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:10:24)::operator()",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 366,
+          "symbol": "ViewportInteractionTest::documentThemeTabsTests::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:295:25)::operator()",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 367,
+          "symbol": "ViewportInteractionTest::documentThemeTabsTests::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:117:25)::operator()",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 378,
+          "symbol": "ViewportInteractionTest::documentThemeTabsTests::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:295:25)::operator()",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 379,
+          "symbol": "ViewportInteractionTest::documentThemeTabsTests::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:117:25)::operator()",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 380,
+          "symbol": "ViewportInteractionTest::documentThemeTabsTests::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:295:25)::operator()",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        },
+        {
+          "line": 381,
+          "symbol": "ViewportInteractionTest::documentThemeTabsTests::(lambda at /home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h:117:25)::operator()",
+          "owner": "ViewportInteractionTest::documentThemeTabsTests"
+        }
+      ]
+    }
+  ]
+}

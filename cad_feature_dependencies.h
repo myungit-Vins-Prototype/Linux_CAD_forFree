@@ -18,7 +18,6 @@ bool isSketchRef(const GeometryRef &ref);
 // non validi restano nell'elenco: chi rigenera deve poterli segnalare.
 QVector<int> bodyOperands(const ExtrusionObject &body);
 QVector<int> sketchesOf(const ExtrusionObject &body);
-bool usesSketch(const ExtrusionObject &body);
 // Risultati precedenti attivi e non consumati; la visibilita' manuale non
 // modifica i limiti automatici dell'estrusione. Chi rigenera pubblica prima
 // la geometria precedente, cosi' la scelta usa i risultati validi correnti.

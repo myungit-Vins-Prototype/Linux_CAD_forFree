@@ -1,0 +1,16 @@
+from pathlib import Path
+import subprocess,json,time,concurrent.futures
+T=Path('/tmp/ui-residual-fix/root');R=Path('/home/myungit/Linux_CAD_forFree')
+for _ in range(200):
+ if (T/'github-final.json').exists():break
+ time.sleep(15)
+else:raise SystemExit('No completed CI record')
+j=json.loads((T/'github-final.json').read_text());assert j['headSha']==json.loads((T/'commit.json').read_text())['sha'];assert j['status']=='completed';print('Completed CI',j['conclusion'],flush=True)
+def fetch(key,name):
+ target=T/('github-'+key+'-artifacts');target.mkdir(exist_ok=True)
+ with(T/('github-'+key+'-download.log')).open('w') as log:subprocess.run(['gh','run','download',str(j['databaseId']),'-n',name,'-D',str(target)],cwd=R,stdout=log,stderr=subprocess.STDOUT,check=True)
+ print('Downloaded',key,flush=True)
+with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
+ futures=[pool.submit(fetch,'linux','ci-ubuntu-26.04-logs'),pool.submit(fetch,'mac','ci-macos-15-logs')]
+ for f in futures:f.result()
+print('Artifacts ready',flush=True)

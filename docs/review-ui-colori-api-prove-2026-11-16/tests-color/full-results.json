@@ -1,0 +1,260 @@
+[
+  {
+    "runner": "baseline-full",
+    "platform": "offscreen",
+    "exitCode": 1,
+    "metrics": {
+      "checks": 64,
+      "failures": 13,
+      "samples": [
+        {
+          "base": "#f0f0f0",
+          "contrast": 1.5726935635179917,
+          "foreground": "#9fc6e8",
+          "label": "section-0"
+        },
+        {
+          "base": "#111820",
+          "contrast": 9.96904086113674,
+          "foreground": "#9fc6e8",
+          "label": "section-1"
+        },
+        {
+          "base": "#f0f0f0",
+          "contrast": 1.5726935635179917,
+          "foreground": "#9fc6e8",
+          "label": "section-2"
+        },
+        {
+          "base": "#ffffff",
+          "contrast": 2.152465892893584,
+          "explicitForeground": true,
+          "foreground": "#9fb3c8",
+          "label": "mass-0-label",
+          "needle": "Volume",
+          "paletteText": "#202020",
+          "role": ""
+        },
+        {
+          "base": "#ffffff",
+          "contrast": 2.703386351915414,
+          "explicitForeground": true,
+          "foreground": "#8aa0b4",
+          "label": "mass-0-hint",
+          "needle": "Calcolo:",
+          "paletteText": "#202020",
+          "role": ""
+        },
+        {
+          "base": "#202d36",
+          "contrast": 6.54765302272483,
+          "explicitForeground": true,
+          "foreground": "#9fb3c8",
+          "label": "mass-1-label",
+          "needle": "Volume",
+          "paletteText": "#d8e4ea",
+          "role": ""
+        },
+        {
+          "base": "#202d36",
+          "contrast": 5.213313221001919,
+          "explicitForeground": true,
+          "foreground": "#8aa0b4",
+          "label": "mass-1-hint",
+          "needle": "Calcolo:",
+          "paletteText": "#d8e4ea",
+          "role": ""
+        },
+        {
+          "base": "#ffffff",
+          "contrast": 2.152465892893584,
+          "explicitForeground": true,
+          "foreground": "#9fb3c8",
+          "label": "mass-2-label",
+          "needle": "Volume",
+          "paletteText": "#202020",
+          "role": ""
+        },
+        {
+          "base": "#ffffff",
+          "contrast": 2.703386351915414,
+          "explicitForeground": true,
+          "foreground": "#8aa0b4",
+          "label": "mass-2-hint",
+          "needle": "Calcolo:",
+          "paletteText": "#202020",
+          "role": ""
+        },
+        {
+          "base": "#ffffff",
+          "contrast": 2.5215640017358996,
+          "explicitForeground": true,
+          "foreground": "#ff7b72",
+          "label": "error-0",
+          "needle": "Calcolo non riuscito:",
+          "paletteText": "#202020",
+          "role": ""
+        },
+        {
+          "base": "#202d36",
+          "contrast": 5.589229462434599,
+          "explicitForeground": true,
+          "foreground": "#ff7b72",
+          "label": "error-1",
+          "needle": "Calcolo non riuscito:",
+          "paletteText": "#d8e4ea",
+          "role": ""
+        },
+        {
+          "base": "#ffffff",
+          "contrast": 2.5215640017358996,
+          "explicitForeground": true,
+          "foreground": "#ff7b72",
+          "label": "error-2",
+          "needle": "Calcolo non riuscito:",
+          "paletteText": "#202020",
+          "role": ""
+        },
+        {
+          "base": "#ffffff",
+          "contrast": 2.152465892893584,
+          "explicitForeground": true,
+          "foreground": "#9fb3c8",
+          "label": "error-to-normal",
+          "needle": "Volume",
+          "paletteText": "#202020",
+          "role": ""
+        }
+      ]
+    }
+  },
+  {
+    "runner": "candidate-full",
+    "platform": "offscreen",
+    "exitCode": 0,
+    "metrics": {
+      "checks": 64,
+      "failures": 0,
+      "samples": [
+        {
+          "base": "#f0f0f0",
+          "contrast": 5.394914400136992,
+          "foreground": "#1b65a0",
+          "label": "section-0"
+        },
+        {
+          "base": "#111820",
+          "contrast": 9.731447132575688,
+          "foreground": "#80c8f0",
+          "label": "section-1"
+        },
+        {
+          "base": "#f0f0f0",
+          "contrast": 5.394914400136992,
+          "foreground": "#1b65a0",
+          "label": "section-2"
+        },
+        {
+          "base": "#ffffff",
+          "contrast": 16.293254998215808,
+          "explicitForeground": false,
+          "foreground": "#202020",
+          "label": "mass-0-label",
+          "needle": "Volume",
+          "paletteText": "#202020",
+          "role": "normal"
+        },
+        {
+          "base": "#ffffff",
+          "contrast": 16.293254998215808,
+          "explicitForeground": false,
+          "foreground": "#202020",
+          "label": "mass-0-hint",
+          "needle": "Calcolo:",
+          "paletteText": "#202020",
+          "role": "normal"
+        },
+        {
+          "base": "#202d36",
+          "contrast": 10.875728867565092,
+          "explicitForeground": false,
+          "foreground": "#d8e4ea",
+          "label": "mass-1-label",
+          "needle": "Volume",
+          "paletteText": "#d8e4ea",
+          "role": "normal"
+        },
+        {
+          "base": "#202d36",
+          "contrast": 10.875728867565092,
+          "explicitForeground": false,
+          "foreground": "#d8e4ea",
+          "label": "mass-1-hint",
+          "needle": "Calcolo:",
+          "paletteText": "#d8e4ea",
+          "role": "normal"
+        },
+        {
+          "base": "#ffffff",
+          "contrast": 16.293254998215808,
+          "explicitForeground": false,
+          "foreground": "#202020",
+          "label": "mass-2-label",
+          "needle": "Volume",
+          "paletteText": "#202020",
+          "role": "normal"
+        },
+        {
+          "base": "#ffffff",
+          "contrast": 16.293254998215808,
+          "explicitForeground": false,
+          "foreground": "#202020",
+          "label": "mass-2-hint",
+          "needle": "Calcolo:",
+          "paletteText": "#202020",
+          "role": "normal"
+        },
+        {
+          "base": "#ffffff",
+          "contrast": 7.354464665075849,
+          "explicitForeground": false,
+          "foreground": "#a32620",
+          "label": "error-0",
+          "needle": "Calcolo non riuscito:",
+          "paletteText": "#a32620",
+          "role": "error"
+        },
+        {
+          "base": "#202d36",
+          "contrast": 6.1737313017275985,
+          "explicitForeground": false,
+          "foreground": "#ff8a80",
+          "label": "error-1",
+          "needle": "Calcolo non riuscito:",
+          "paletteText": "#ff8a80",
+          "role": "error"
+        },
+        {
+          "base": "#ffffff",
+          "contrast": 7.354464665075849,
+          "explicitForeground": false,
+          "foreground": "#a32620",
+          "label": "error-2",
+          "needle": "Calcolo non riuscito:",
+          "paletteText": "#a32620",
+          "role": "error"
+        },
+        {
+          "base": "#ffffff",
+          "contrast": 16.293254998215808,
+          "explicitForeground": false,
+          "foreground": "#202020",
+          "label": "error-to-normal",
+          "needle": "Volume",
+          "paletteText": "#202020",
+          "role": "normal"
+        }
+      ]
+    }
+  }
+]

@@ -1,0 +1,27 @@
+Staging V2 per /root, nessuna repoedit. Incremento layout separato dal colore.
+Baseline GUI a4ca3185da83aa638c038433de886c713a5d3e8ec4fbb35ace968d37e812395e.
+Candidate 12afcc0d8088eb99ea2475e1d9eb6ec0c6bf8a21de60c92e549a997fb1afba37.
+Patch 0633e1502f8ed6992a05506ef714756dc4bcb17a8322c325e13ac069e53ec4b9.
+
+Problema indipendente dal colore, osservato anche baseline: finestra Sezione
+naturale 257x271, scelta3 crea messaggio avvolto che necessita34px, ma label
+resta24px. La sizeHint cambia ma la finestra visibile non si allarga in altezza
+fino alla riapertura. Misure specifiche del tema/ambiente, non nuove costanti.
+
+Soluzione: setSectionInfo aggiorna tutti4percorsi (assenza piano, descrizione,
+istruzione picker, errore). Invalida QFormLayout, e quando visibile ne calcola
+la totalHeightForWidth alla larghezza corrente. Espande soltanto l'altezza se
+necessaria. Fallback totalSizeHint per layout privo di HFW. Non adjustSize,
+non width/pos nuova, non minheight, non margine/righe/offset costanti.
+Nascosto: Qt conserva il proprio autosizing iniziale; dopo entrambi i panel->show
+la lambda expandSectionInfo verifica la nuova altezza anche se la finestra era
+gia stata ridimensionata manualmente (WA_Resized). Nessuna dipendenza da quel flag.
+Messaggi accorciati non
+riducono una finestra gia ingrandita; dimensioni utente maggiori restano.
+Nessun changeEvent generico o resize globale; nessun codice massa/kernel.
+
+Apply --check PASS contro baseline attuale. Header/common invariati.
+Tester e auditor stanno verificando GUI reale, larghezza/posizione/altezza,
+percorsi picker/cancel/errore. Nessun risultato di build completa attribuito.
+Integrare SOLO dopo root build e graph gia in corso completati, come richiesto.
+Poi rebuild incrementale e aggiornamento mappa/CLAUDE a cura di /root.

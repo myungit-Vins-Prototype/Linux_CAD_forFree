@@ -1,0 +1,472 @@
+-- Configuring done (0.6s)
+-- Generating done (0.5s)
+-- Build files have been written to: /home/myungit/Linux_CAD_forFree/forgecad-release
+[  0%] Built target forgecad_cuda_pool_tests_autogen_timestamp_deps
+[  0%] Built target forgecad_constraint_linear_tests_autogen_timestamp_deps
+[  0%] Built target forgecad_display_cache_memory_tests_autogen_timestamp_deps
+[  0%] Built target forgecad_application_theme_tests_autogen_timestamp_deps
+[  0%] Built target forgecad_expression_tests_autogen_timestamp_deps
+[  0%] Built target forgecad_document_compression_tests_autogen_timestamp_deps
+[  0%] Built target forgecad_snapshot_chunks_tests_autogen_timestamp_deps
+[ 10%] Built target forgekernel
+[ 10%] Built target forgecad_revision_store_tests_autogen_timestamp_deps
+[ 10%] Built target forgecad_revision_release_tests_autogen_timestamp_deps
+[ 10%] Built target forgecad_catalog_recovery_tests_autogen_timestamp_deps
+[ 10%] Built target forgecad_feature_dependencies_tests_autogen_timestamp_deps
+[ 10%] Built target forgecad_geometry_refs_tests_autogen_timestamp_deps
+[ 10%] Built target forgecad_workspace_tests_autogen_timestamp_deps
+[ 10%] Built target forgecad_drawing_dimensions_tests_autogen_timestamp_deps
+[ 10%] Built target forgecad_drawing_menus_autogen_timestamp_deps
+[ 10%] Built target forgecad_drawing_visibility_tests_autogen_timestamp_deps
+[ 10%] Built target forgecad_drawing_silhouette_tests_autogen_timestamp_deps
+[ 10%] Built target forgecad_revision_numbers_tests_autogen_timestamp_deps
+[ 10%] Built target forgecad_drawing_focus_tests_autogen_timestamp_deps
+[ 10%] Built target forgecad_overlay_uniform_tests_autogen_timestamp_deps
+[ 10%] Built target forgecad_sketch_offset_validation_tests
+[ 11%] Built target forgekernel_open_offset_tests
+[ 11%] Built target forgekernel_loft_knots_tests
+[ 11%] Built target forgekernel_polar_blend_tests
+[ 11%] Built target forgekernel_surface_instances_tests
+[ 11%] Built target forgekernel_exchange_robustness_tests
+[ 11%] Built target forgekernel_history_tests
+[ 11%] Built target forgekernel_blend_probe
+[ 11%] Built target forgekernel_tolerance_tests
+[ 11%] Built target forgekernel_surface_tools_tests
+[ 11%] Built target forgekernel_blend_profile_tests
+[ 12%] Built target forgekernel_face_normal_bounds_tests
+[ 12%] Built target forgekernel_sketch_projection_tests
+[ 12%] Built target forgekernel_projected_curve_reference_tests
+[ 13%] Built target forgekernel_surface_parameterization_tests
+[ 13%] Built target forgekernel_disjoint_union_tests
+[ 13%] Built target forgekernel_loft_projected_guide_tests
+[ 13%] Built target forgekernel_loft_shape_tests
+[ 13%] Built target forgekernel_loft_projected_section_tests
+[ 15%] Built target forgekernel_loft_complexity_tests
+[ 15%] Built target forgekernel_loft_guide_constraint_tests
+[ 15%] Built target forgekernel_offset_validation_tests
+[ 15%] Built target forgekernel_curve_fit_validation_tests
+[ 15%] Built target forgekernel_offset_split_crease_tests
+[ 15%] Built target forgekernel_blend_contact_break_tests
+[ 16%] Built target forgekernel_plane_jets_tests
+[ 17%] Built target forgekernel_bspline_derivative_tests
+[ 17%] Built target forgekernel_bspline_cache_tests
+[ 17%] Built target forgekernel_face_parameter_tests
+[ 17%] Built target forgekernel_bspline_isoline_tests
+[ 17%] Built target forgekernel_loft_correspondence_tests
+[ 18%] Built target forgekernel_loft_point_tests
+[ 19%] Built target forgekernel_boolean_seam_tests
+[ 19%] Built target forgekernel_marching_seed_grid_tests
+[ 19%] Built target forgekernel_surface_mapping_tests
+[ 20%] Built target forgekernel_trimmed_face_bounds_tests
+[ 22%] Built target forgekernel_solid_trim_tests
+[ 22%] Built target forgekernel_cone_rays_tests
+[ 22%] Built target forgekernel_blend_cavity_tests
+[ 23%] Built target forgekernel_blend_cavity_regression_tests
+[ 24%] Built target forgekernel_blend_mitre_validation_tests
+[ 24%] Built target forgekernel_blend_boundary_validation_tests
+[ 25%] Built target forgekernel_nurbs_support_tests
+[ 26%] Built target forgekernel_sweep_validation_tests
+[ 26%] Built target forgekernel_sheet_fit_validation_tests
+[ 26%] Built target forgekernel_sheet_join_validation_tests
+[ 27%] Built target forgekernel_curve_projection_tests
+[ 27%] Built target forgekernel_boundary_fit_validation_tests
+[ 27%] Built target forgekernel_surface_curve_fit_validation_tests
+[ 29%] Built target forgekernel_mapping_carrier_validation_tests
+[ 29%] Built target forgekernel_mapping_uv_validation_tests
+[ 29%] Built target forgekernel_mapping_diagonal_validation_tests
+[ 29%] Built target forgekernel_planar_flatten_validation_tests
+[ 29%] Built target forgekernel_planar_thicken_validation_tests
+[ 29%] Built target forgekernel_projection_fit_validation_tests
+[ 29%] Built target forgekernel_edge_offset_fit_validation_tests
+[ 29%] Built target forgekernel_boolean_boundary_tests
+[ 29%] Built target forgekernel_offset_pcurve_tests
+[ 30%] Built target forgekernel_sew_pcurve_tests
+[ 30%] Built target forgekernel_occt
+[ 30%] Built target forgecad_compute_autogen_timestamp_deps
+[ 30%] Built target forgecad_cuda_tests_autogen_timestamp_deps
+[ 30%] Built target forgecad_tessellation_availability_tests_autogen_timestamp_deps
+[ 30%] Automatic MOC and UIC for target forgecad_cuda_pool_tests
+[ 30%] Automatic MOC and UIC for target forgecad_constraint_linear_tests
+[ 30%] Built target forgecad_cuda_pool_tests_autogen
+[ 30%] Built target forgecad_constraint_linear_tests_autogen
+[ 30%] Built target forgecad_mesh_export_backend_tests_autogen_timestamp_deps
+[ 30%] Built target forgecad_selection_benchmark_autogen_timestamp_deps
+[ 30%] Automatic MOC and UIC for target forgecad_display_cache_memory_tests
+[ 30%] Built target forgecad_display_cache_memory_tests_autogen
+[ 30%] Automatic MOC and UIC for target forgecad_application_theme_tests
+[ 30%] Built target forgecad_application_theme_tests_autogen
+[ 30%] Automatic MOC and UIC for target forgecad_expression_tests
+[ 30%] Built target forgecad_expression_tests_autogen
+[ 30%] Built target forgecad_shape_analysis_tests_autogen_timestamp_deps
+[ 30%] Automatic MOC and UIC for target forgecad_document_compression_tests
+[ 30%] Automatic MOC and UIC for target forgecad_snapshot_chunks_tests
+[ 30%] Built target forgecad_document_compression_tests_autogen
+[ 30%] Built target forgecad_snapshot_chunks_tests_autogen
+[ 30%] Built target forgecad_drawing_tests_autogen_timestamp_deps
+[ 30%] Automatic MOC and UIC for target forgecad_revision_store_tests
+[ 30%] Built target forgecad_revision_store_tests_autogen
+[ 30%] Automatic MOC and UIC for target forgecad_revision_release_tests
+[ 30%] Built target forgecad_revision_release_tests_autogen
+[ 30%] Automatic MOC and UIC for target forgecad_catalog_recovery_tests
+[ 30%] Built target forgecad_catalog_recovery_tests_autogen
+[ 30%] Automatic MOC and UIC for target forgecad_feature_dependencies_tests
+[ 30%] Built target forgecad_feature_dependencies_tests_autogen
+[ 30%] Automatic MOC and UIC for target forgecad_geometry_refs_tests
+[ 31%] Built target forgecad_geometry_refs_tests_autogen
+[ 31%] Automatic MOC and UIC for target forgecad_workspace_tests
+[ 31%] Built target forgecad_workspace_tests_autogen
+[ 31%] Automatic MOC and UIC for target forgecad_drawing_menus
+[ 32%] Built target forgecad_drawing_menus_autogen
+[ 32%] Automatic MOC and UIC for target forgecad_drawing_dimensions_tests
+[ 32%] Built target forgecad_drawing_dimensions_tests_autogen
+[ 33%] Automatic MOC and UIC for target forgecad_drawing_silhouette_tests
+[ 33%] Built target forgecad_drawing_silhouette_tests_autogen
+[ 33%] Automatic MOC and UIC for target forgecad_drawing_visibility_tests
+[ 33%] Built target forgecad_drawing_visibility_tests_autogen
+[ 33%] Automatic MOC and UIC for target forgecad_revision_numbers_tests
+[ 33%] Built target forgecad_revision_numbers_tests_autogen
+[ 33%] Automatic MOC and UIC for target forgecad_drawing_focus_tests
+[ 33%] Built target forgecad_drawing_focus_tests_autogen
+[ 33%] Automatic MOC and UIC for target forgecad_overlay_uniform_tests
+[ 33%] Built target forgecad_overlay_uniform_tests_autogen
+[ 33%] Automatic MOC and UIC for target forgecad_compute
+[ 33%] Built target forgecad_compute_autogen
+[ 39%] Built target forgekernel_tests
+[ 33%] Automatic MOC and UIC for target forgecad_cuda_tests
+[ 39%] Built target forgecad_cuda_tests_autogen
+[ 40%] Built target forgecad_cuda_pool_tests
+[ 39%] Automatic MOC and UIC for target forgecad_tessellation_availability_tests
+[ 40%] Built target forgecad_tessellation_availability_tests_autogen
+[ 40%] Built target forgecad_constraint_linear_tests
+[ 41%] Built target forgecad_display_cache_memory_tests
+[ 41%] Automatic MOC and UIC for target forgecad_mesh_export_backend_tests
+[ 41%] Built target forgecad_mesh_export_backend_tests_autogen
+[ 41%] Automatic MOC and UIC for target forgecad_selection_benchmark
+[ 41%] Built target forgecad_selection_benchmark_autogen
+[ 43%] Built target forgecad_application_theme_tests
+[ 43%] Built target forgecad_expression_tests
+[ 43%] Automatic MOC and UIC for target forgecad_shape_analysis_tests
+[ 43%] Built target forgecad_document_compression_tests
+[ 43%] Built target forgecad_shape_analysis_tests_autogen
+[ 44%] Built target forgecad_snapshot_chunks_tests
+[ 44%] Automatic MOC and UIC for target forgecad_drawing_tests
+[ 45%] Built target forgecad_revision_store_tests
+[ 45%] Built target forgecad_drawing_tests_autogen
+[ 45%] Built target forgecad_revision_release_tests
+[ 45%] Built target forgecad_catalog_recovery_tests
+[ 45%] Building CXX object CMakeFiles/forgecad_feature_dependencies_tests.dir/cad_feature_dependencies.cpp.o
+[ 45%] Building CXX object CMakeFiles/forgecad_geometry_refs_tests.dir/cad_feature_dependencies.cpp.o
+[ 45%] Building CXX object CMakeFiles/forgecad_feature_dependencies_tests.dir/tests/test_feature_dependencies.cpp.o
+[ 46%] Linking CXX executable forgecad_feature_dependencies_tests
+[ 46%] Built target forgecad_feature_dependencies_tests
+[ 46%] Built target forgecad_workspace_tests
+[ 46%] Built target forgecad_drawing_menus
+[ 46%] Built target forgecad_drawing_dimensions_tests
+[ 46%] Built target forgecad_drawing_silhouette_tests
+[ 47%] Built target forgecad_drawing_visibility_tests
+[ 48%] Built target forgecad_revision_numbers_tests
+[ 48%] Built target forgecad_drawing_focus_tests
+[ 50%] Built target forgecad_overlay_uniform_tests
+[ 51%] Built target forgecad_compute
+[ 51%] Built target forgecad_cuda_tests
+[ 51%] Built target forgecad_tessellation_availability_tests
+[ 51%] Built target forgecad_mesh_export_backend_tests
+[ 51%] Built target forgecad_selection_benchmark
+[ 52%] Built target forgecad_shape_analysis_tests
+[ 53%] Built target forgecad_drawing_tests
+[ 53%] Built target forgecad_drawing_test_support_autogen_timestamp_deps
+[ 53%] Built target forgecad_gpu_broad_phase_tests_autogen_timestamp_deps
+[ 53%] Impronta dei sorgenti della geometria
+[ 53%] Built target forgecad_autogen_timestamp_deps
+[ 53%] Automatic MOC and UIC for target forgecad_drawing_test_support
+[ 53%] Built target forgecad_drawing_test_support_autogen
+[ 53%] Automatic MOC and UIC for target forgecad_gpu_broad_phase_tests
+[ 53%] Built target forgecad_gpu_broad_phase_tests_autogen
+[ 53%] Automatic MOC and UIC for target forgecad
+[ 53%] Built target forgecad_autogen
+[ 55%] Built target forgecad_drawing_test_support
+[ 56%] Built target forgecad_gpu_broad_phase_tests
+[ 45%] Building CXX object CMakeFiles/forgecad_geometry_refs_tests.dir/cad_model_history.cpp.o
+[ 56%] Linking CXX executable forgecad_geometry_refs_tests
+[ 56%] Built target forgecad_geometry_refs_tests
+[ 56%] Built target forgecad_drawing_local_tools_tests_autogen_timestamp_deps
+[ 56%] Built target forgecad_drawing_local_section_depth_tests_autogen_timestamp_deps
+[ 56%] Built target forgecad_drawing_crop_tests_autogen_timestamp_deps
+[ 56%] Building CXX object CMakeFiles/forgecad.dir/cad_document_precision.cpp.o
+[ 56%] Building CXX object CMakeFiles/forgecad.dir/cad_drawing_file.cpp.o
+[ 56%] Building CXX object CMakeFiles/forgecad.dir/cad_document_io.cpp.o
+[ 56%] Building CXX object CMakeFiles/forgecad.dir/cad_element_names.cpp.o
+[ 56%] Building CXX object CMakeFiles/forgecad.dir/cad_extrude.cpp.o
+[ 56%] Building CXX object CMakeFiles/forgecad.dir/cad_feature_dependencies.cpp.o
+[ 56%] Building CXX object CMakeFiles/forgecad.dir/cad_feature_build.cpp.o
+[ 58%] Building CXX object CMakeFiles/forgecad.dir/cad_history_chain.cpp.o
+[ 58%] Building CXX object CMakeFiles/forgecad.dir/cad_loft_correspondence_editor.cpp.o
+[ 58%] Building CXX object CMakeFiles/forgecad.dir/cad_history_graph.cpp.o
+[ 58%] Building CXX object CMakeFiles/forgecad.dir/cad_native_revisions.cpp.o
+[ 58%] Building CXX object CMakeFiles/forgecad.dir/cad_model_history.cpp.o
+[ 58%] Building CXX object CMakeFiles/forgecad.dir/cad_pattern.cpp.o
+[ 58%] Building CXX object CMakeFiles/forgecad.dir/cad_pattern_variation.cpp.o
+[ 58%] Building CXX object CMakeFiles/forgecad.dir/cad_sketch_refs.cpp.o
+[ 58%] Building CXX object CMakeFiles/forgecad.dir/cad_surface_poles_interaction.cpp.o
+[ 58%] Building CXX object CMakeFiles/forgecad.dir/cad_storyboard_selection.cpp.o
+[ 58%] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_dialogs_analysis.cpp.o
+[ 58%] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_dialogs_common.cpp.o
+[ 59%] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_dialogs_fillet.cpp.o
+[ 59%] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_dialogs_mapping.cpp.o
+[ 59%] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_dialogs_projection.cpp.o
+[ 59%] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_dialogs_sketch.cpp.o
+/home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_sketch.cpp: In function ‘bool spatialSketchDialog(QMainWindow*, CadViewport*, const QString&, int, const ExtrusionObject&, const std::function<QString(const ExtrusionObject&)>&)’:
+/home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_sketch.cpp:896:5: warning: this ‘if’ clause does not guard... [-Wmisleading-indentation]
+  896 |     if (viewport) ForgeCad::setDisplayLengthUnit(viewport->lengthUnit(), &dialog);dialog.setObjectName(QStringLiteral("spatialSketchDialog"));dialog.setWindowTitle(title);
+      |     ^~
+/home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_sketch.cpp:896:83: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the ‘if’
+  896 |     if (viewport) ForgeCad::setDisplayLengthUnit(viewport->lengthUnit(), &dialog);dialog.setObjectName(QStringLiteral("spatialSketchDialog"));dialog.setWindowTitle(title);
+      |                                                                                   ^~~~~~
+/home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_sketch.cpp: In function ‘bool extractedCurveDialog(QMainWindow*, CadViewport*, const QString&, int, const ExtrusionObject&, const std::function<QString(const ExtrusionObject&)>&)’:
+/home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_sketch.cpp:1023:5: warning: this ‘if’ clause does not guard... [-Wmisleading-indentation]
+ 1023 |     if (viewport) ForgeCad::setDisplayLengthUnit(viewport->lengthUnit(), &dialog);dialog.setObjectName(QStringLiteral("extractedCurveDialog"));dialog.setWindowTitle(title);dialog.setModal(false);
+      |     ^~
+/home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_sketch.cpp:1023:83: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the ‘if’
+ 1023 |     if (viewport) ForgeCad::setDisplayLengthUnit(viewport->lengthUnit(), &dialog);dialog.setObjectName(QStringLiteral("extractedCurveDialog"));dialog.setWindowTitle(title);dialog.setModal(false);
+      |                                                                                   ^~~~~~
+[ 59%] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_dialogs_solids.cpp.o
+[ 59%] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_dialogs_surface_tools.cpp.o
+[ 59%] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_dialogs_surfaces.cpp.o
+[ 59%] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_dialogs_trim.cpp.o
+[ 59%] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_fillet_handles.cpp.o
+[ 59%] Built target forgecad_drawing_templates_tests_autogen_timestamp_deps
+[ 59%] Built target forgecad_drawing_preparation_tests_autogen_timestamp_deps
+[ 59%] Built target forgecad_drawing_scale_tests_autogen_timestamp_deps
+[ 59%] Built target forgecad_drawing_editor_tests_autogen_timestamp_deps
+[ 59%] Built target forgecad_projected_drawing_tests_autogen_timestamp_deps
+[ 59%] Built target forgecad_drawing_view_edit_tests_autogen_timestamp_deps
+[ 59%] Built target forgecad_drawing_layout_history_tests_autogen_timestamp_deps
+[ 59%] Built target forgecad_drawing_dimensions_gui_tests_autogen_timestamp_deps
+[ 59%] Built target forgecad_drawing_dimension_repair_tests_autogen_timestamp_deps
+[ 59%] Built target forgecad_drawing_view_placement_tests_autogen_timestamp_deps
+[ 59%] Built target forgecad_drawing_hidden_lines_tests_autogen_timestamp_deps
+[ 59%] Built target forgecad_drawing_page_tests_autogen_timestamp_deps
+[ 59%] Built target forgecad_drawing_derived_tests_autogen_timestamp_deps
+[ 59%] Built target forgecad_drawing_detail_tests_autogen_timestamp_deps
+[ 59%] Built target forgecad_drawing_auxiliary_tests_autogen_timestamp_deps
+[ 59%] Built target forgecad_drawing_break_tests_autogen_timestamp_deps
+[ 59%] Built target forgecad_drawing_presentation_tests_autogen_timestamp_deps
+[ 59%] Built target forgecad_drawing_complete_sections_tests_autogen_timestamp_deps
+[ 59%] Built target forgecad_drawing_centers_tests_autogen_timestamp_deps
+[ 59%] Built target forgecad_drawing_axes_tests_autogen_timestamp_deps
+[ 59%] Built target forgecad_drawing_ui_controls_tests_autogen_timestamp_deps
+[ 59%] Automatic MOC and UIC for target forgecad_drawing_local_tools_tests
+[ 59%] Built target forgecad_drawing_local_tools_tests_autogen
+[ 59%] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_feature_preview.cpp.o
+[ 60%] Automatic MOC and UIC for target forgecad_drawing_local_section_depth_tests
+[ 60%] Built target forgecad_drawing_local_section_depth_tests_autogen
+[ 60%] Automatic MOC and UIC for target forgecad_drawing_crop_tests
+[ 60%] Built target forgecad_drawing_crop_tests_autogen
+[ 60%] Automatic MOC and UIC for target forgecad_drawing_templates_tests
+[ 60%] Built target forgecad_drawing_templates_tests_autogen
+[ 60%] Automatic MOC and UIC for target forgecad_drawing_preparation_tests
+[ 60%] Built target forgecad_drawing_preparation_tests_autogen
+[ 60%] Automatic MOC and UIC for target forgecad_drawing_scale_tests
+[ 60%] Built target forgecad_drawing_scale_tests_autogen
+[ 60%] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_menu.cpp.o
+[ 60%] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_ribbon_preview.cpp.o
+[ 60%] Automatic MOC and UIC for target forgecad_drawing_editor_tests
+[ 60%] Built target forgecad_drawing_editor_tests_autogen
+[ 60%] Automatic MOC and UIC for target forgecad_projected_drawing_tests
+[ 60%] Built target forgecad_projected_drawing_tests_autogen
+[ 60%] Automatic MOC and UIC for target forgecad_drawing_view_edit_tests
+[ 60%] Built target forgecad_drawing_view_edit_tests_autogen
+[ 60%] Automatic MOC and UIC for target forgecad_drawing_layout_history_tests
+[ 60%] Built target forgecad_drawing_layout_history_tests_autogen
+[ 61%] Automatic MOC and UIC for target forgecad_drawing_dimensions_gui_tests
+[ 61%] Built target forgecad_drawing_dimensions_gui_tests_autogen
+[ 61%] Automatic MOC and UIC for target forgecad_drawing_dimension_repair_tests
+[ 61%] Built target forgecad_drawing_dimension_repair_tests_autogen
+[ 61%] Automatic MOC and UIC for target forgecad_drawing_view_placement_tests
+[ 61%] Built target forgecad_drawing_view_placement_tests_autogen
+[ 61%] Automatic MOC and UIC for target forgecad_drawing_hidden_lines_tests
+[ 61%] Built target forgecad_drawing_hidden_lines_tests_autogen
+[ 61%] Automatic MOC and UIC for target forgecad_drawing_page_tests
+[ 61%] Built target forgecad_drawing_page_tests_autogen
+[ 61%] Automatic MOC and UIC for target forgecad_drawing_derived_tests
+[ 61%] Built target forgecad_drawing_derived_tests_autogen
+[ 61%] Automatic MOC and UIC for target forgecad_drawing_detail_tests
+[ 61%] Built target forgecad_drawing_detail_tests_autogen
+[ 61%] Automatic MOC and UIC for target forgecad_drawing_auxiliary_tests
+[ 61%] Built target forgecad_drawing_auxiliary_tests_autogen
+[ 61%] Automatic MOC and UIC for target forgecad_drawing_break_tests
+[ 61%] Built target forgecad_drawing_break_tests_autogen
+[ 61%] Automatic MOC and UIC for target forgecad_drawing_presentation_tests
+[ 61%] Built target forgecad_drawing_presentation_tests_autogen
+[ 62%] Automatic MOC and UIC for target forgecad_drawing_complete_sections_tests
+[ 62%] Built target forgecad_drawing_complete_sections_tests_autogen
+[ 62%] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_viewport.cpp.o
+[ 62%] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_viewport_body_box.cpp.o
+[ 62%] Automatic MOC and UIC for target forgecad_drawing_centers_tests
+[ 62%] Built target forgecad_drawing_centers_tests_autogen
+[ 62%] Automatic MOC and UIC for target forgecad_drawing_axes_tests
+[ 62%] Built target forgecad_drawing_axes_tests_autogen
+[ 62%] Automatic MOC and UIC for target forgecad_drawing_ui_controls_tests
+[ 62%] Built target forgecad_drawing_ui_controls_tests_autogen
+[ 62%] Built target forgecad_drawing_local_tools_tests
+[ 62%] Built target forgecad_drawing_local_section_depth_tests
+[ 62%] Built target forgecad_drawing_crop_tests
+[ 62%] Built target forgecad_drawing_templates_tests
+[ 62%] Built target forgecad_drawing_preparation_tests
+[ 62%] Built target forgecad_drawing_scale_tests
+[ 62%] Built target forgecad_drawing_editor_tests
+[ 62%] Built target forgecad_projected_drawing_tests
+[ 62%] Built target forgecad_drawing_view_edit_tests
+[ 62%] Built target forgecad_drawing_layout_history_tests
+[ 62%] Built target forgecad_drawing_dimensions_gui_tests
+[ 62%] Built target forgecad_drawing_dimension_repair_tests
+[ 63%] Built target forgecad_drawing_view_placement_tests
+[ 65%] Built target forgecad_drawing_hidden_lines_tests
+[ 66%] Built target forgecad_drawing_page_tests
+[ 66%] Built target forgecad_drawing_derived_tests
+[ 67%] Built target forgecad_drawing_detail_tests
+[ 68%] Built target forgecad_drawing_auxiliary_tests
+[ 69%] Built target forgecad_drawing_break_tests
+[ 70%] Built target forgecad_drawing_presentation_tests
+[ 70%] Built target forgecad_drawing_complete_sections_tests
+[ 70%] Built target forgecad_drawing_centers_tests
+[ 70%] Built target forgecad_drawing_axes_tests
+[ 60%] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_gui.cpp.o
+[ 70%] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_viewport_document_lifetime.cpp.o
+[ 70%] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_viewport_document.cpp.o
+[ 70%] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_viewport_interaction.cpp.o
+[ 70%] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_viewport_loft_diagnostics.cpp.o
+[ 70%] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_viewport_parameter_dimensions.cpp.o
+[ 70%] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_viewport_pole_visibility.cpp.o
+[ 70%] Built target forgecad_drawing_ui_controls_tests
+[ 70%] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_viewport_preview.cpp.o
+[ 70%] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_viewport_render.cpp.o
+[ 70%] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_viewport_scene.cpp.o
+[ 70%] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_viewport_selection.cpp.o
+[ 70%] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_viewport_sketch.cpp.o
+[ 70%] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_viewport_sketch_reference.cpp.o
+[ 72%] Building CXX object CMakeFiles/forgecad.dir/forgeCad2026_viewport_storyboard.cpp.o
+[ 72%] Linking CXX executable forgecad
+[ 83%] Built target forgecad
+[ 83%] Built target forgecad_view_tests_autogen_timestamp_deps
+[ 83%] Automatic MOC and UIC for target forgecad_view_tests
+[ 83%] Built target forgecad_view_tests_autogen
+[ 83%] Building CXX object CMakeFiles/forgecad_view_tests.dir/cad_document_precision.cpp.o
+[ 83%] Building CXX object CMakeFiles/forgecad_view_tests.dir/cad_drawing_file.cpp.o
+[ 83%] Building CXX object CMakeFiles/forgecad_view_tests.dir/cad_document_io.cpp.o
+[ 83%] Building CXX object CMakeFiles/forgecad_view_tests.dir/cad_element_names.cpp.o
+[ 83%] Building CXX object CMakeFiles/forgecad_view_tests.dir/cad_extrude.cpp.o
+[ 83%] Building CXX object CMakeFiles/forgecad_view_tests.dir/cad_feature_build.cpp.o
+[ 83%] Building CXX object CMakeFiles/forgecad_view_tests.dir/cad_feature_dependencies.cpp.o
+[ 83%] Building CXX object CMakeFiles/forgecad_view_tests.dir/cad_history_chain.cpp.o
+[ 83%] Building CXX object CMakeFiles/forgecad_view_tests.dir/cad_loft_correspondence_editor.cpp.o
+[ 83%] Building CXX object CMakeFiles/forgecad_view_tests.dir/cad_history_graph.cpp.o
+[ 83%] Building CXX object CMakeFiles/forgecad_view_tests.dir/cad_native_revisions.cpp.o
+[ 83%] Building CXX object CMakeFiles/forgecad_view_tests.dir/cad_model_history.cpp.o
+[ 83%] Building CXX object CMakeFiles/forgecad_view_tests.dir/cad_pattern.cpp.o
+[ 83%] Building CXX object CMakeFiles/forgecad_view_tests.dir/cad_pattern_variation.cpp.o
+[ 83%] Building CXX object CMakeFiles/forgecad_view_tests.dir/cad_sketch_refs.cpp.o
+[ 83%] Building CXX object CMakeFiles/forgecad_view_tests.dir/cad_surface_poles_interaction.cpp.o
+[ 83%] Building CXX object CMakeFiles/forgecad_view_tests.dir/cad_storyboard_selection.cpp.o
+[ 83%] Building CXX object CMakeFiles/forgecad_view_tests.dir/forgeCad2026_dialogs_analysis.cpp.o
+[ 83%] Building CXX object CMakeFiles/forgecad_view_tests.dir/forgeCad2026_dialogs_common.cpp.o
+[ 83%] Building CXX object CMakeFiles/forgecad_view_tests.dir/forgeCad2026_dialogs_fillet.cpp.o
+[ 83%] Building CXX object CMakeFiles/forgecad_view_tests.dir/forgeCad2026_dialogs_mapping.cpp.o
+[ 84%] Building CXX object CMakeFiles/forgecad_view_tests.dir/forgeCad2026_dialogs_projection.cpp.o
+[ 84%] Building CXX object CMakeFiles/forgecad_view_tests.dir/forgeCad2026_dialogs_sketch.cpp.o
+/home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_sketch.cpp: In function ‘bool spatialSketchDialog(QMainWindow*, CadViewport*, const QString&, int, const ExtrusionObject&, const std::function<QString(const ExtrusionObject&)>&)’:
+/home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_sketch.cpp:896:5: warning: this ‘if’ clause does not guard... [-Wmisleading-indentation]
+  896 |     if (viewport) ForgeCad::setDisplayLengthUnit(viewport->lengthUnit(), &dialog);dialog.setObjectName(QStringLiteral("spatialSketchDialog"));dialog.setWindowTitle(title);
+      |     ^~
+/home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_sketch.cpp:896:83: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the ‘if’
+  896 |     if (viewport) ForgeCad::setDisplayLengthUnit(viewport->lengthUnit(), &dialog);dialog.setObjectName(QStringLiteral("spatialSketchDialog"));dialog.setWindowTitle(title);
+      |                                                                                   ^~~~~~
+/home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_sketch.cpp: In function ‘bool extractedCurveDialog(QMainWindow*, CadViewport*, const QString&, int, const ExtrusionObject&, const std::function<QString(const ExtrusionObject&)>&)’:
+/home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_sketch.cpp:1023:5: warning: this ‘if’ clause does not guard... [-Wmisleading-indentation]
+ 1023 |     if (viewport) ForgeCad::setDisplayLengthUnit(viewport->lengthUnit(), &dialog);dialog.setObjectName(QStringLiteral("extractedCurveDialog"));dialog.setWindowTitle(title);dialog.setModal(false);
+      |     ^~
+/home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_sketch.cpp:1023:83: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the ‘if’
+ 1023 |     if (viewport) ForgeCad::setDisplayLengthUnit(viewport->lengthUnit(), &dialog);dialog.setObjectName(QStringLiteral("extractedCurveDialog"));dialog.setWindowTitle(title);dialog.setModal(false);
+      |                                                                                   ^~~~~~
+[ 84%] Building CXX object CMakeFiles/forgecad_view_tests.dir/forgeCad2026_dialogs_solids.cpp.o
+[ 84%] Building CXX object CMakeFiles/forgecad_view_tests.dir/forgeCad2026_dialogs_surface_tools.cpp.o
+[ 84%] Building CXX object CMakeFiles/forgecad_view_tests.dir/forgeCad2026_dialogs_trim.cpp.o
+[ 84%] Building CXX object CMakeFiles/forgecad_view_tests.dir/forgeCad2026_dialogs_surfaces.cpp.o
+[ 84%] Building CXX object CMakeFiles/forgecad_view_tests.dir/forgeCad2026_fillet_handles.cpp.o
+[ 84%] Building CXX object CMakeFiles/forgecad_view_tests.dir/forgeCad2026_feature_preview.cpp.o
+[ 84%] Building CXX object CMakeFiles/forgecad_view_tests.dir/forgeCad2026_menu.cpp.o
+[ 84%] Building CXX object CMakeFiles/forgecad_view_tests.dir/forgeCad2026_ribbon_preview.cpp.o
+[ 84%] Building CXX object CMakeFiles/forgecad_view_tests.dir/forgeCad2026_viewport.cpp.o
+[ 84%] Building CXX object CMakeFiles/forgecad_view_tests.dir/forgeCad2026_viewport_body_box.cpp.o
+[ 84%] Building CXX object CMakeFiles/forgecad_view_tests.dir/forgeCad2026_gui.cpp.o
+[ 84%] Building CXX object CMakeFiles/forgecad_view_tests.dir/forgeCad2026_viewport_document_lifetime.cpp.o
+[ 84%] Building CXX object CMakeFiles/forgecad_view_tests.dir/forgeCad2026_viewport_document.cpp.o
+[ 84%] Building CXX object CMakeFiles/forgecad_view_tests.dir/forgeCad2026_viewport_interaction.cpp.o
+[ 84%] Building CXX object CMakeFiles/forgecad_view_tests.dir/forgeCad2026_viewport_loft_diagnostics.cpp.o
+[ 84%] Building CXX object CMakeFiles/forgecad_view_tests.dir/forgeCad2026_viewport_parameter_dimensions.cpp.o
+[ 84%] Building CXX object CMakeFiles/forgecad_view_tests.dir/forgeCad2026_viewport_pole_visibility.cpp.o
+[ 84%] Building CXX object CMakeFiles/forgecad_view_tests.dir/forgeCad2026_viewport_preview.cpp.o
+[ 84%] Building CXX object CMakeFiles/forgecad_view_tests.dir/forgeCad2026_viewport_render.cpp.o
+[ 84%] Building CXX object CMakeFiles/forgecad_view_tests.dir/forgeCad2026_viewport_scene.cpp.o
+[ 84%] Building CXX object CMakeFiles/forgecad_view_tests.dir/forgeCad2026_viewport_selection.cpp.o
+[ 86%] Building CXX object CMakeFiles/forgecad_view_tests.dir/forgeCad2026_viewport_sketch_reference.cpp.o
+[ 86%] Building CXX object CMakeFiles/forgecad_view_tests.dir/forgeCad2026_viewport_sketch.cpp.o
+[ 86%] Building CXX object CMakeFiles/forgecad_view_tests.dir/forgeCad2026_viewport_storyboard.cpp.o
+[ 86%] Building CXX object CMakeFiles/forgecad_view_tests.dir/tests/test_viewport.cpp.o
+In file included from /home/myungit/Linux_CAD_forFree/tests/test_viewport.cpp:162:
+/home/myungit/Linux_CAD_forFree/tests/test_drawing_multisheet.h: In function ‘void {anonymous}::multisheetTests()’:
+/home/myungit/Linux_CAD_forFree/tests/test_drawing_multisheet.h:169:49: warning: missing initializer for member ‘ForgeCad::DrawingDimensionNumbering::firstDimension’ [-Wmissing-field-initializers]
+  169 |  clientOk(window.editor()->setDimensionNumbering({true,7,6,3,true}));
+      |           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~
+/home/myungit/Linux_CAD_forFree/tests/test_drawing_multisheet.h:169:49: warning: missing initializer for member ‘ForgeCad::DrawingDimensionNumbering::excludePatterns’ [-Wmissing-field-initializers]
+/home/myungit/Linux_CAD_forFree/tests/test_drawing_multisheet.h:169:49: warning: missing initializer for member ‘ForgeCad::DrawingDimensionNumbering::assignments’ [-Wmissing-field-initializers]
+In file included from /home/myungit/Linux_CAD_forFree/tests/test_viewport.cpp:163:
+/home/myungit/Linux_CAD_forFree/tests/test_drawing_revision_restore.h: In function ‘void {anonymous}::drawingRevisionRestoreTests()’:
+/home/myungit/Linux_CAD_forFree/tests/test_drawing_revision_restore.h:12:375: warning: missing initializer for member ‘ForgeCad::DrawingDimensionNumbering::firstDimension’ [-Wmissing-field-initializers]
+   12 |  DrawingDimension dimension;bool have=false;for(const auto &c:window.editor()->curves(view.id))if(std::abs(arcLength(*c.curve,c.range)-10)<1e-7){dimension=dimensionOfCurve(view,c,DrawingMeasure::EndpointDistance);have=true;break;}require(have,"curva per ripristino");clientOk(window.editor()->addDimension(dimension,{85,140}));clientOk(window.editor()->setDimensionNumbering({true,7,6,3,true}));auto presentation=window.editor()->sheet().dimensions[0].presentation;presentation.numberingExcluded=true;presentation.prefix="(";presentation.suffix=")";clientOk(window.editor()->updateDimension(dimension,presentation));
+      |                                                                                                                                                                                                                                                                                                                                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~
+/home/myungit/Linux_CAD_forFree/tests/test_drawing_revision_restore.h:12:375: warning: missing initializer for member ‘ForgeCad::DrawingDimensionNumbering::excludePatterns’ [-Wmissing-field-initializers]
+/home/myungit/Linux_CAD_forFree/tests/test_drawing_revision_restore.h:12:375: warning: missing initializer for member ‘ForgeCad::DrawingDimensionNumbering::assignments’ [-Wmissing-field-initializers]
+In file included from /home/myungit/Linux_CAD_forFree/tests/test_viewport.cpp:164:
+/home/myungit/Linux_CAD_forFree/tests/test_drawing_release.h: In lambda function:
+/home/myungit/Linux_CAD_forFree/tests/test_drawing_release.h:9:161: warning: missing initializer for member ‘ForgeCad::DrawingDimensionNumbering::firstDimension’ [-Wmissing-field-initializers]
+    9 |  const auto archiveDrawing=[&](DrawingFile &file,const QString &path,const QString &title){file.sheet.title=title;file.sheet.dimensionNumbering={true,7,6,3,true};file.sheet.dimensions[0].presentation.numberingExcluded=true;file.sheet.dimensions[0].presentation.prefix="(";file.sheet.dimensions[0].presentation.suffix=")";file.sheet.dimensions[0].position={90,140};DrawingSheet copy;clientOk(cloneDrawingSheet(file.sheet,copy));copy.title="Secondo foglio";file.otherSheets={copy};file.sheetIds={QUuid::createUuid(),QUuid::createUuid()};clientOk(pinWorkspaceDrawingModel(path,file,ma.version));clientOk(checkoutWorkspaceDrawing(path,file,"qa"));RevisionRecord record;clientOk(checkinWorkspaceDrawing(path,file,{},"Tavola A",record));return record;};
+      |                                                                                                                                                                 ^
+/home/myungit/Linux_CAD_forFree/tests/test_drawing_release.h:9:161: warning: missing initializer for member ‘ForgeCad::DrawingDimensionNumbering::excludePatterns’ [-Wmissing-field-initializers]
+/home/myungit/Linux_CAD_forFree/tests/test_drawing_release.h:9:161: warning: missing initializer for member ‘ForgeCad::DrawingDimensionNumbering::assignments’ [-Wmissing-field-initializers]
+In file included from /home/myungit/Linux_CAD_forFree/tests/test_viewport.cpp:180:
+/home/myungit/Linux_CAD_forFree/tests/test_document_tabs.h: In static member function ‘static void ViewportInteractionTest::documentTabsTests()’:
+/home/myungit/Linux_CAD_forFree/tests/test_document_tabs.h:54:56: warning: ‘static void QApplication::setActiveWindow(QWidget*)’ is deprecated: Use QWidget::activateWindow() instead. [-Wdeprecated-declarations]
+   54 |     host.activateWindow();QApplication::setActiveWindow(&host);
+      |                           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~
+In file included from /usr/include/qt6/QtWidgets/QApplication:1,
+                 from /home/myungit/Linux_CAD_forFree/tests/test_sketch_projection_fit_validation.h:9,
+                 from /home/myungit/Linux_CAD_forFree/tests/test_viewport.cpp:7:
+/usr/include/qt6/QtWidgets/qapplication.h:85:17: note: declared here
+   85 |     static void setActiveWindow(QWidget* act);
+      |                 ^~~~~~~~~~~~~~~
+/home/myungit/Linux_CAD_forFree/tests/test_document_tabs.h:91:56: warning: ‘static void QApplication::setActiveWindow(QWidget*)’ is deprecated: Use QWidget::activateWindow() instead. [-Wdeprecated-declarations]
+   91 |     host.activateWindow();QApplication::setActiveWindow(&host);
+      |                           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~
+/usr/include/qt6/QtWidgets/qapplication.h:85:17: note: declared here
+   85 |     static void setActiveWindow(QWidget* act);
+      |                 ^~~~~~~~~~~~~~~
+In file included from /home/myungit/Linux_CAD_forFree/tests/test_viewport.cpp:328:
+/home/myungit/Linux_CAD_forFree/tests/test_sketch_apparent.h: In static member function ‘static void ViewportInteractionTest::sketchApparent(bool)’:
+/home/myungit/Linux_CAD_forFree/tests/test_sketch_apparent.h:47:97: warning: missing initializer for member ‘ForgeCad::Kernel::ExchangeBody::curve’ [-Wmissing-field-initializers]
+   47 |     source.importData=QByteArray::fromStdString(writeStep({ExchangeBody{"Parte raggiata",rounded}}));
+      |                                                                                                 ^
+/home/myungit/Linux_CAD_forFree/tests/test_sketch_apparent.h:47:97: warning: missing initializer for member ‘ForgeCad::Kernel::ExchangeBody::curveRange’ [-Wmissing-field-initializers]
+/home/myungit/Linux_CAD_forFree/tests/test_viewport.cpp: In static member function ‘static void ViewportInteractionTest::edgeLoftWorkflow()’:
+/home/myungit/Linux_CAD_forFree/tests/test_viewport.cpp:1931:109: warning: missing initializer for member ‘ForgeCad::Kernel::LoftContact::plane’ [-Wmissing-field-initializers]
+ 1931 |         LoftOptions tangent; tangent.startContinuity=1; tangent.startFaces={{source,source->faces().front()}};
+      |                                                                                                             ^
+/home/myungit/Linux_CAD_forFree/tests/test_viewport.cpp: In static member function ‘static void ViewportInteractionTest::openLoftTangency(const QString&)’:
+/home/myungit/Linux_CAD_forFree/tests/test_viewport.cpp:2364:54: warning: missing initializer for member ‘ForgeCad::Kernel::LoftContact::plane’ [-Wmissing-field-initializers]
+ 2364 |         tangentOptions.startFaces = {{adjacent, face}}; tangentOptions.endFaces = {{adjacentEnd, endFace}};
+      |                                                      ^
+/home/myungit/Linux_CAD_forFree/tests/test_viewport.cpp:2364:106: warning: missing initializer for member ‘ForgeCad::Kernel::LoftContact::plane’ [-Wmissing-field-initializers]
+ 2364 |         tangentOptions.startFaces = {{adjacent, face}}; tangentOptions.endFaces = {{adjacentEnd, endFace}};
+      |                                                                                                          ^
+[ 86%] Linking CXX executable forgecad_view_tests
+[100%] Built target forgecad_view_tests

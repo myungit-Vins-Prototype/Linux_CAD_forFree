@@ -1,0 +1,8 @@
+# Shell /bin/bash login=false; repository solo letture.
+# Letti AGENTS/CLAUDE/tolerance-policy e descrizioni+archi grafo prima codice.
+# Baseline sei sorgenti/header copiati e hashati in /tmp; nessun CAD/processo.
+# Applicabilita patch senza modifiche:
+git -C /home/myungit/Linux_CAD_forFree apply --check /tmp/ui-residual-fix/core/ui-foreground.patch
+# Per compilazione mirata riusare argv in *.command.json sostituendo solo
+# source/input/include-repo/output e directory /tmp secondo runner tester.
+# Nessun build/test risulta ancora eseguito da core al momento del freeze.

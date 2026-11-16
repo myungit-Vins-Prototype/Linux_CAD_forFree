@@ -1,0 +1,176 @@
+{
+  "origin": "Tester exported real QtWidgets; independently counted exact RGB pixels without rerunning app",
+  "images": [
+    {
+      "file": "/tmp/ui-residual-fix/tests/candidate-output/section-0.png",
+      "sha256": "c048fbc5dee1f1a9f92a9dde2f518a51c991dffa7de8c7f5c2e0c7cf82c8d59e",
+      "size": [
+        257,
+        271
+      ],
+      "foreground": "#1b65a0",
+      "background": "#f0f0f0",
+      "foregroundPixelCount": 21,
+      "backgroundPixelCount": 49492,
+      "backgroundFraction": 0.7106120866656137
+    },
+    {
+      "file": "/tmp/ui-residual-fix/tests/candidate-output/section-1.png",
+      "sha256": "067f01e814caf546dbbf0657eb9a38d849a362ea4b7d5d26c4996b8cd101c59d",
+      "size": [
+        257,
+        271
+      ],
+      "foreground": "#80c8f0",
+      "background": "#111820",
+      "foregroundPixelCount": 21,
+      "backgroundPixelCount": 48902,
+      "backgroundFraction": 0.7021407957270234
+    },
+    {
+      "file": "/tmp/ui-residual-fix/tests/candidate-output/section-2.png",
+      "sha256": "c048fbc5dee1f1a9f92a9dde2f518a51c991dffa7de8c7f5c2e0c7cf82c8d59e",
+      "size": [
+        257,
+        271
+      ],
+      "foreground": "#1b65a0",
+      "background": "#f0f0f0",
+      "foregroundPixelCount": 21,
+      "backgroundPixelCount": 49492,
+      "backgroundFraction": 0.7106120866656137
+    },
+    {
+      "file": "/tmp/ui-residual-fix/tests/candidate-output/mass-0-label.png",
+      "sha256": "4cfdd44b1fae5c889cc820ec69a080edf4424c6850862a76825d44ad00f3c061",
+      "size": [
+        580,
+        351
+      ],
+      "foreground": "#202020",
+      "background": "#ffffff",
+      "foregroundPixelCount": 612,
+      "backgroundPixelCount": 176288,
+      "backgroundFraction": 0.8659396797327832
+    },
+    {
+      "file": "/tmp/ui-residual-fix/tests/candidate-output/mass-0-hint.png",
+      "sha256": "4cfdd44b1fae5c889cc820ec69a080edf4424c6850862a76825d44ad00f3c061",
+      "size": [
+        580,
+        351
+      ],
+      "foreground": "#202020",
+      "background": "#ffffff",
+      "foregroundPixelCount": 612,
+      "backgroundPixelCount": 176288,
+      "backgroundFraction": 0.8659396797327832
+    },
+    {
+      "file": "/tmp/ui-residual-fix/tests/candidate-output/mass-1-label.png",
+      "sha256": "4297a62b66a7de227eb53f1f2bde85fa8b369537977ca08a882f2230d0f45481",
+      "size": [
+        580,
+        351
+      ],
+      "foreground": "#d8e4ea",
+      "background": "#202d36",
+      "foregroundPixelCount": 612,
+      "backgroundPixelCount": 176288,
+      "backgroundFraction": 0.8659396797327832
+    },
+    {
+      "file": "/tmp/ui-residual-fix/tests/candidate-output/mass-1-hint.png",
+      "sha256": "4297a62b66a7de227eb53f1f2bde85fa8b369537977ca08a882f2230d0f45481",
+      "size": [
+        580,
+        351
+      ],
+      "foreground": "#d8e4ea",
+      "background": "#202d36",
+      "foregroundPixelCount": 612,
+      "backgroundPixelCount": 176288,
+      "backgroundFraction": 0.8659396797327832
+    },
+    {
+      "file": "/tmp/ui-residual-fix/tests/candidate-output/mass-2-label.png",
+      "sha256": "4cfdd44b1fae5c889cc820ec69a080edf4424c6850862a76825d44ad00f3c061",
+      "size": [
+        580,
+        351
+      ],
+      "foreground": "#202020",
+      "background": "#ffffff",
+      "foregroundPixelCount": 612,
+      "backgroundPixelCount": 176288,
+      "backgroundFraction": 0.8659396797327832
+    },
+    {
+      "file": "/tmp/ui-residual-fix/tests/candidate-output/mass-2-hint.png",
+      "sha256": "4cfdd44b1fae5c889cc820ec69a080edf4424c6850862a76825d44ad00f3c061",
+      "size": [
+        580,
+        351
+      ],
+      "foreground": "#202020",
+      "background": "#ffffff",
+      "foregroundPixelCount": 612,
+      "backgroundPixelCount": 176288,
+      "backgroundFraction": 0.8659396797327832
+    },
+    {
+      "file": "/tmp/ui-residual-fix/tests/candidate-output/error-0.png",
+      "sha256": "8eed7c03616b45dc1a4826fc5a30a0eb9beaf009b5a4d0604779dfdb22b19890",
+      "size": [
+        580,
+        351
+      ],
+      "foreground": "#a32620",
+      "background": "#ffffff",
+      "foregroundPixelCount": 278,
+      "backgroundPixelCount": 199138,
+      "backgroundFraction": 0.9781805678357403
+    },
+    {
+      "file": "/tmp/ui-residual-fix/tests/candidate-output/error-1.png",
+      "sha256": "2b7665079597f5b9e9f327fea0ad1075000a7c7ff7178752d2717b04f685f5d2",
+      "size": [
+        580,
+        351
+      ],
+      "foreground": "#ff8a80",
+      "background": "#202d36",
+      "foregroundPixelCount": 278,
+      "backgroundPixelCount": 199138,
+      "backgroundFraction": 0.9781805678357403
+    },
+    {
+      "file": "/tmp/ui-residual-fix/tests/candidate-output/error-2.png",
+      "sha256": "8eed7c03616b45dc1a4826fc5a30a0eb9beaf009b5a4d0604779dfdb22b19890",
+      "size": [
+        580,
+        351
+      ],
+      "foreground": "#a32620",
+      "background": "#ffffff",
+      "foregroundPixelCount": 278,
+      "backgroundPixelCount": 199138,
+      "backgroundFraction": 0.9781805678357403
+    },
+    {
+      "file": "/tmp/ui-residual-fix/tests/candidate-output/error-to-normal.png",
+      "sha256": "2d444231c3c3ea1d537769dd54935775787c041f71d58387d3e96226c70be18a",
+      "size": [
+        580,
+        351
+      ],
+      "foreground": "#202020",
+      "background": "#ffffff",
+      "foregroundPixelCount": 612,
+      "backgroundPixelCount": 176810,
+      "backgroundFraction": 0.8685037822968857
+    }
+  ],
+  "result": "PASS: every captured widget contains declared opaque background",
+  "limit": "No certification of all compositor/desktop themes; images remain with tester, hashes bind this read"
+}

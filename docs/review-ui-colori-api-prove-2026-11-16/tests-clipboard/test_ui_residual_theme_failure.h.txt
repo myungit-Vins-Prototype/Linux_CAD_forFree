@@ -1,0 +1,381 @@
+// Included within ViewportInteractionTest; drives production dialogs.
+static void uiResidualThemeTests() {
+    // Keep both standard Qt values and every advertised byte format. Some
+    // platform MIME providers expose image/color values only through QVariant.
+    class ClipboardMimeData final : public QMimeData {
+        QStringList originalFormats;
+        QMap<QString, QByteArray> originalBytes;
+
+      public:
+        explicit ClipboardMimeData(const QMimeData &source) : originalFormats(source.formats()) {
+            for (const auto &format : originalFormats) {
+                const auto bytes = source.data(format);
+                originalBytes.insert(format, bytes);
+                setData(format, bytes);
+            }
+            if (source.hasText())
+                setText(source.text());
+            if (source.hasHtml())
+                setHtml(source.html());
+            if (source.hasImage())
+                setImageData(source.imageData());
+            if (source.hasUrls())
+                setUrls(source.urls());
+            if (source.hasColor())
+                setColorData(source.colorData());
+        }
+        QStringList formats() const override {
+            auto result = originalFormats;
+            for (const auto &format : QMimeData::formats())
+                if (!result.contains(format))
+                    result.append(format);
+            return result;
+        }
+        bool hasFormat(const QString &format) const override { return formats().contains(format); }
+
+      protected:
+        QVariant retrieveData(const QString &format, QMetaType preferredType) const override {
+            if (preferredType == QMetaType::fromType<QByteArray>() && originalBytes.contains(format))
+                return originalBytes.value(format);
+            return QMimeData::retrieveData(format, preferredType);
+        }
+    };
+    struct ClipboardGuard {
+        QClipboard *clipboard = QApplication::clipboard();
+        std::unique_ptr<QMimeData> savedClipboard;
+        std::unique_ptr<QMimeData> savedSelection;
+        bool selectionSupported = clipboard->supportsSelection();
+        static std::unique_ptr<QMimeData> clone(const QMimeData *source) {
+            return source ? std::make_unique<ClipboardMimeData>(*source) : nullptr;
+        }
+        ClipboardGuard() : savedClipboard(clone(clipboard->mimeData())) {
+            if (selectionSupported)
+                savedSelection = clone(clipboard->mimeData(QClipboard::Selection));
+        }
+        ~ClipboardGuard() {
+            clipboard->setMimeData(savedClipboard.release(), QClipboard::Clipboard);
+            if (selectionSupported)
+                clipboard->setMimeData(savedSelection.release(), QClipboard::Selection);
+            for (int i = 0; i < 8; ++i)
+                QApplication::processEvents(QEventLoop::AllEvents, 20);
+        }
+    };
+    using namespace ForgeCad;
+    int checks = 0, failures = 0;
+    QJsonArray samples;
+    QTemporaryDir temporaryOutput;
+    const QString requestedOutput = qEnvironmentVariable("FORGECAD_UI_RESIDUAL_OUTPUT");
+    const QString output = requestedOutput.isEmpty() ? temporaryOutput.path() : requestedOutput;
+    QDir().mkpath(output);
+    const auto check = [&](bool value, const QString &name) {
+        ++checks;
+        if (!value) {
+            ++failures;
+            std::cout << "FAIL " << name.toStdString() << std::endl;
+        }
+    };
+    const auto settle = [] {
+        for (int i = 0; i < 8; ++i)
+            QApplication::processEvents(QEventLoop::AllEvents, 20);
+    };
+    const auto luminance = [](QColor c) {
+        const auto channel = [](double x) {
+            return x <= 0.04045 ? x / 12.92 : std::pow((x + 0.055) / 1.055, 2.4);
+        };
+        return .2126 * channel(c.redF()) + .7152 * channel(c.greenF()) + .0722 * channel(c.blueF());
+    };
+    const auto contrast = [&](QColor a, QColor b) {
+        const double x = luminance(a), y = luminance(b);
+        return (std::max(x, y) + .05) / (std::min(x, y) + .05);
+    };
+    const auto snapshot = [&](QTextBrowser *browser, const QString &needle, const QString &label) {
+        QTextCursor cursor = browser->document()->find(needle);
+        check(!cursor.isNull(), label + " text exists");
+        const auto format = cursor.charFormat();
+        const bool explicitColor = format.hasProperty(QTextFormat::ForegroundBrush);
+        const QColor fg =
+            explicitColor ? format.foreground().color() : browser->palette().color(QPalette::Text);
+        const QColor base = browser->palette().color(QPalette::Base);
+        const double ratio = contrast(fg, base);
+        samples.append(QJsonObject{{"label", label},
+                                   {"needle", needle},
+                                   {"explicitForeground", explicitColor},
+                                   {"foreground", fg.name()},
+                                   {"paletteText", browser->palette().color(QPalette::Text).name()},
+                                   {"base", base.name()},
+                                   {"contrast", ratio},
+                                   {"role", browser->property("functionMessageRole").toString()}});
+        check(ratio >= 4.5, label + " readable foreground");
+        browser->grab().save(output + "/" + label + ".png");
+        return fg;
+    };
+    initializeApplicationTheme(*qApp);
+    setApplicationThemeMode(*qApp, ApplicationThemeMode::Light);
+    settle();
+    auto *window = new PdfWindow;
+    window->resize(1000, 760);
+    const QString primitiveError = window->viewport_->createPrimitive(PrimitiveParameters{}, "Synthetic box");
+    check(primitiveError.isEmpty(), "synthetic primitive created");
+    QAction *section = nullptr;
+    for (auto *action : window->findChildren<QAction *>())
+        if (action->text() == QStringLiteral("Vista in sezione")) {
+            section = action;
+            break;
+        }
+    check(section != nullptr, "section action exists");
+    if (section)
+        section->setChecked(true);
+    settle();
+    QDialog *sectionPanel = nullptr;
+    for (auto *dialog : window->findChildren<QDialog *>())
+        if (dialog->windowTitle() == QStringLiteral("Sezione"))
+            sectionPanel = dialog;
+    check(sectionPanel != nullptr, "section production dialog exists");
+    if (sectionPanel) {
+        auto *combo = sectionPanel->findChild<QComboBox *>();
+        QLabel *info = nullptr;
+        for (auto *label : sectionPanel->findChildren<QLabel *>())
+            if (label->wordWrap())
+                info = label;
+        const QRect naturalGeometry = sectionPanel->geometry();
+        const QPoint naturalPosition = sectionPanel->pos();
+        combo->setCurrentIndex(3);
+        settle();
+        if (info)
+            check(info->height() >= info->heightForWidth(info->width()),
+                  "section full picking instruction fits without reopening");
+        window->viewport_->cancelReferencePick();
+        settle();
+        check(info && !info->text().isEmpty(), "section real instruction exists");
+        if (info) {
+            samples.append(QJsonObject{{"label", "section-natural-layout"},
+                                       {"width", sectionPanel->width()},
+                                       {"height", sectionPanel->height()},
+                                       {"labelHeight", info->height()},
+                                       {"requiredLabelHeight", info->heightForWidth(info->width())}});
+            check(info->height() >= info->heightForWidth(info->width()),
+                  "section full instruction fits after cancel without reopening");
+            check(sectionPanel->width() == naturalGeometry.width(),
+                  "section instruction preserves natural width");
+            check(sectionPanel->pos() == naturalPosition,
+                  "section instruction preserves position");
+            sectionPanel->grab().save(output + "/section-natural-layout.png");
+            sectionPanel->resize(sectionPanel->size() + QSize(120, 100));
+            settle();
+            const QRect userGeometry = sectionPanel->geometry();
+            const QPoint userPosition = sectionPanel->pos();
+            combo->setCurrentIndex(0);
+            combo->setCurrentIndex(3);
+            window->viewport_->cancelReferencePick();
+            settle();
+            check(sectionPanel->width() == userGeometry.width() &&
+                      sectionPanel->height() >= userGeometry.height(),
+                  "section instruction preserves larger user size");
+            check(sectionPanel->pos() == userPosition,
+                  "section instruction preserves user position");
+            check(info->height() >= info->heightForWidth(info->width()),
+                  "section full instruction fits after user resize");
+            combo->setCurrentIndex(0);
+            settle();
+            sectionPanel->resize(naturalGeometry.size());
+            settle();
+            const QSize hiddenSize = sectionPanel->size();
+            const QPoint hiddenPosition = sectionPanel->pos();
+            sectionPanel->hide();
+            combo->setCurrentIndex(3);
+            window->viewport_->cancelReferencePick();
+            QAction *parameters = nullptr;
+            for (auto *action : window->findChildren<QAction *>())
+                if (action->text() == QStringLiteral("Parametri della sezione..."))
+                    parameters = action;
+            check(parameters != nullptr, "section parameters action exists");
+            if (parameters)
+                parameters->trigger();
+            settle();
+            check(info->height() >= info->heightForWidth(info->width()),
+                  "section hidden instruction fits immediately on reopening");
+            check(sectionPanel->width() == hiddenSize.width() && sectionPanel->pos() == hiddenPosition,
+                  "section reopening preserves user width and position");
+            samples.append(QJsonObject{{"label", "section-reopened-layout"},
+                                       {"width", sectionPanel->width()},
+                                       {"height", sectionPanel->height()},
+                                       {"labelHeight", info->height()},
+                                       {"requiredLabelHeight", info->heightForWidth(info->width())}});
+            sectionPanel->grab().save(output + "/section-reopened-layout.png");
+            const QString text = info->text();
+            QColor first;
+            int iteration = 0;
+            for (auto mode :
+                 {ApplicationThemeMode::Light, ApplicationThemeMode::Dark, ApplicationThemeMode::Light}) {
+                setApplicationThemeMode(*qApp, mode);
+                settle();
+                const auto fg = info->palette().color(info->foregroundRole());
+                const auto bg = info->palette().color(info->backgroundRole());
+                const QString label = QString("section-%1").arg(iteration++);
+                samples.append(QJsonObject{{"label", label},
+                                           {"foreground", fg.name()},
+                                           {"base", bg.name()},
+                                           {"contrast", contrast(fg, bg)}});
+                check(contrast(fg, bg) >= 4.5, label + " readable instruction");
+                check(info->text() == text, label + " instruction retained");
+                if (iteration == 1)
+                    first = fg;
+                if (iteration == 2)
+                    check(fg != first, "open section follows dark theme");
+                if (iteration == 3)
+                    check(fg == first, "open section restores light theme");
+                sectionPanel->grab().save(output + "/" + label + ".png");
+            }
+        }
+        sectionPanel->hide();
+    }
+    // A second, hidden viewport contains a real error fixture; no user document is touched.
+    CadViewport reports;
+    reports.extrusions_ = window->viewport_->extrusions_;
+    ExtrusionObject invalid = reports.extrusions_.first();
+    invalid.name = "Invalid synthetic body";
+    auto broken = std::make_shared<Kernel::Body>(*invalid.forgeBody);
+    broken->face(broken->faces().front()).surface.reset();
+    invalid.forgeBody = broken;
+    reports.extrusions_.append(invalid);
+    check(!reports.massReport(1).ok, "synthetic invalid body triggers real report error");
+    int computations = 0;
+    reports.setWorkCallback([&](bool start, const QString &, bool) {
+        if (start)
+            ++computations;
+    });
+    std::exception_ptr callbackError;
+    QTimer::singleShot(0, [&] {
+        QDialog *dialog = nullptr;
+        for (auto *d : window->findChildren<QDialog *>())
+            if (d->windowTitle() == QStringLiteral("Proprieta' di massa"))
+                dialog = d;
+        try {
+            if (!dialog)
+                throw std::runtime_error("mass dialog missing");
+            settle();
+            ClipboardGuard clipboardGuard;
+            auto *browser = dialog->findChild<QTextBrowser *>();
+            if (!browser)
+                throw std::runtime_error("mass browser missing");
+            QComboBox *body = nullptr;
+            for (auto *box : dialog->findChildren<QComboBox *>())
+                if (box->itemText(0) == QStringLiteral("Tutti i solidi visibili"))
+                    body = box;
+            if (!body)
+                throw std::runtime_error("mass body combo missing");
+            body->setCurrentIndex(1);
+            settle();
+            auto *copy = static_cast<QPushButton *>(nullptr);
+            for (auto *button : dialog->findChildren<QPushButton *>())
+                if (button->text() == "Copia")
+                    copy = button;
+            if (!copy)
+                throw std::runtime_error("copy button missing");
+            copy->click();
+            throw std::runtime_error("clipboard sentinel forced failure");
+            const QString plain = qApp->clipboard()->text();
+            check(plain.contains("Volume") && plain.contains("Synthetic box"),
+                  "copy contains computed report");
+            const QString html = browser->toHtml(), text = browser->toPlainText();
+            auto *document = browser->document();
+            QTextCursor selection = document->find("Volume");
+            browser->setTextCursor(selection);
+            browser->verticalScrollBar()->setValue(browser->verticalScrollBar()->maximum() / 2);
+            const int scroll = browser->verticalScrollBar()->value(), anchor = selection.anchor(),
+                      position = selection.position();
+            const int before = computations;
+            QColor lightLabel, lightHint;
+            int iteration = 0;
+            for (auto mode :
+                 {ApplicationThemeMode::Light, ApplicationThemeMode::Dark, ApplicationThemeMode::Light}) {
+                setApplicationThemeMode(*qApp, mode);
+                settle();
+                const QString label = QString("mass-%1").arg(iteration++);
+                const QColor fg = snapshot(browser, "Volume", label + "-label");
+                const QColor hint = snapshot(browser, "Calcolo:", label + "-hint");
+                if (iteration == 1) {
+                    lightLabel = fg;
+                    lightHint = hint;
+                }
+                if (iteration == 2) {
+                    check(fg != lightLabel, "open mass label follows dark theme");
+                    check(hint != lightHint, "open mass hint follows dark theme");
+                }
+                if (iteration == 3) {
+                    check(fg == lightLabel && hint == lightHint, "open mass restores light theme");
+                }
+                check(browser->document() == document && browser->toHtml() == html &&
+                          browser->toPlainText() == text,
+                      label + " document retained");
+                check(browser->textCursor().anchor() == anchor &&
+                          browser->textCursor().position() == position,
+                      label + " selection retained");
+                check(browser->verticalScrollBar()->value() == scroll, label + " scroll retained");
+                check(computations == before, label + " no mass recomputation");
+                copy->click();
+                check(qApp->clipboard()->text() == plain, label + " copy retained");
+            }
+            for (auto type : {QEvent::PaletteChange, QEvent::StyleChange}) {
+                QEvent event(type);
+                QApplication::sendEvent(dialog, &event);
+                settle();
+                check(browser->document() == document && browser->toHtml() == html,
+                      "explicit event preserves document");
+                check(browser->textCursor().anchor() == anchor &&
+                          browser->verticalScrollBar()->value() == scroll,
+                      "explicit event preserves view state");
+                check(computations == before, "explicit event no mass recomputation");
+            }
+            body->setCurrentIndex(2);
+            settle();
+            check(browser->toPlainText().contains("Calcolo non riuscito:"), "production error report shown");
+            QColor lightError;
+            iteration = 0;
+            for (auto mode :
+                 {ApplicationThemeMode::Light, ApplicationThemeMode::Dark, ApplicationThemeMode::Light}) {
+                setApplicationThemeMode(*qApp, mode);
+                settle();
+                const QColor error =
+                    snapshot(browser, "Calcolo non riuscito:", QString("error-%1").arg(iteration++));
+                if (iteration == 1)
+                    lightError = error;
+                if (iteration == 2)
+                    check(error != lightError, "open error follows dark theme");
+                if (iteration == 3)
+                    check(error == lightError, "open error restores light theme");
+            }
+            body->setCurrentIndex(1);
+            settle();
+            snapshot(browser, "Volume", "error-to-normal");
+            check(browser->toPlainText() == text, "error to normal restores report");
+            check(browser->palette().color(QPalette::Text) != lightError,
+                  "error to normal clears error foreground");
+            copy->click();
+            check(qApp->clipboard()->text() == plain, "error to normal restores copy");
+        } catch (...) {
+            callbackError = std::current_exception();
+        }
+        if (dialog) {
+            dialog->reject();
+        } else {
+            // A failed lookup must still leave the nested modal loop. Only this
+            // synthetic window owns these dialogs; never inspect other windows.
+            for (auto *owned : window->findChildren<QDialog *>())
+                if (owned->isVisible())
+                    owned->reject();
+        }
+    });
+    massPropertiesDialog(window, &reports);
+    delete window;
+    QFile result(output + "/metrics.json");
+    if (!result.open(QIODevice::WriteOnly))
+        throw std::runtime_error("metrics output failed");
+    result.write(QJsonDocument(QJsonObject{{"checks", checks}, {"failures", failures}, {"samples", samples}})
+                     .toJson());
+    std::cout << "UI residual checks " << checks << ", failures " << failures << std::endl;
+    if (callbackError)
+        std::rethrow_exception(callbackError);
+    if (failures)
+        throw std::runtime_error("UI residual theme regression");
+}

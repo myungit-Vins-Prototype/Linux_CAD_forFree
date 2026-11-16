@@ -1806,7 +1806,8 @@ void PdfWindow::initializeActionsAndView(WindowSetup &setup) {
         planeVisible->setChecked(true);
         auto *info = new QLabel(panel);
         info->setWordWrap(true);
-        info->setStyleSheet(QStringLiteral("color: #9fc6e8;"));
+        info->setObjectName(QStringLiteral("sectionPlaneInfo"));
+        info->setForegroundRole(QPalette::Link);
         form->addRow(QStringLiteral("Piano:"), planeBox);
         form->addRow(QString(), pickButton);
         form->addRow(QStringLiteral("Posizione:"), slider);
@@ -1818,6 +1819,17 @@ void PdfWindow::initializeActionsAndView(WindowSetup &setup) {
         auto *closeButtons = new QDialogButtonBox(QDialogButtonBox::Close, panel);
         QObject::connect(closeButtons, &QDialogButtonBox::rejected, panel, &QDialog::hide);
         form->addRow(closeButtons);
+        const auto expandSectionInfo = [panel, form] {
+            form->invalidate();
+            if (!panel->isVisible()) return;
+            const int requiredHeight = form->hasHeightForWidth()
+                ? form->totalHeightForWidth(panel->width()) : form->totalSizeHint().height();
+            if (requiredHeight > panel->height()) panel->resize(panel->width(), requiredHeight);
+        };
+        const auto setSectionInfo = [info, expandSectionInfo](const QString &message) {
+            info->setText(message);
+            expandSectionInfo();
+        };
         struct SectionPanelState {
             GeometryRef picked;
             double lo = -10.0, hi = 10.0;
@@ -1842,18 +1854,18 @@ void PdfWindow::initializeActionsAndView(WindowSetup &setup) {
             normal = QVector3D(float(resolved.direction.x()), float(resolved.direction.y()), float(resolved.direction.z()));
             return true;
         };
-        const auto apply = [viewport, basePlane, offsetBox, flipBox, capsBox, planeVisible, info, planeBox, state] {
+        const auto apply = [viewport, basePlane, offsetBox, flipBox, capsBox, planeVisible, setSectionInfo, planeBox, state] {
             QVector3D point, normal;
             if (!state->active || !basePlane(point, normal)) {
                 viewport->setSection(false);
-                info->setText(state->active && planeBox->currentIndex() == 3 ? QStringLiteral("Scegli il piano nella vista.") : QString());
+                setSectionInfo(state->active && planeBox->currentIndex() == 3 ? QStringLiteral("Scegli il piano nella vista.") : QString());
                 return;
             }
             normal.normalize();
             if (flipBox->isChecked()) normal = -normal;
             const QVector3D at = point + float(offsetBox->value()) * (flipBox->isChecked() ? -normal : normal);
             viewport->setSection(true, at, normal, capsBox->isChecked(), planeVisible->isChecked());
-            info->setText(planeBox->currentIndex() == 3 ? ForgeCad::geometryRefText(state->picked, viewport->sketches(), viewport->extrusions())
+            setSectionInfo(planeBox->currentIndex() == 3 ? ForgeCad::geometryRefText(state->picked, viewport->sketches(), viewport->extrusions())
                                                         : QString());
         };
         // L'intervallo del cursore: la geometria lungo la normale del piano. Per
@@ -1892,11 +1904,11 @@ void PdfWindow::initializeActionsAndView(WindowSetup &setup) {
             state->updating = false;
             apply();
         });
-        const auto pick = [viewport, state, planeBox, info, updateRange] {
-            info->setText(QStringLiteral("Clicca un piano o una faccia piana (Esc: annulla)."));
+        const auto pick = [viewport, state, planeBox, setSectionInfo, updateRange] {
+            setSectionInfo(QStringLiteral("Clicca un piano o una faccia piana (Esc: annulla)."));
             const QString error = viewport->beginReferencePick(ForgeCad::DatumRolePlane, -1);
             if (!error.isEmpty()) {
-                info->setText(error);
+                setSectionInfo(error);
                 return;
             }
             viewport->setReferencePickCallback([viewport, state, planeBox, updateRange](bool picked, GeometryRef ref) {
@@ -1915,7 +1927,7 @@ void PdfWindow::initializeActionsAndView(WindowSetup &setup) {
             else updateRange(true);
         });
         for (QCheckBox *box : {flipBox, capsBox, planeVisible}) QObject::connect(box, &QCheckBox::toggled, panel, apply);
-        QObject::connect(sectionAction, &QAction::toggled, panel, [panel, updateRange, offsetBox, state, viewport](bool on) {
+        QObject::connect(sectionAction, &QAction::toggled, panel, [panel, updateRange, offsetBox, state, viewport, expandSectionInfo](bool on) {
             state->active = on;
             if (on) {
                 // La prima volta la sezione passa per il centro della geometria e si aprono i parametri.
@@ -1924,6 +1936,7 @@ void PdfWindow::initializeActionsAndView(WindowSetup &setup) {
                 if (first) offsetBox->setValue(0.5 * (state->lo + state->hi));
                 first = false;
                 panel->show();
+                expandSectionInfo();
                 panel->raise();
             } else {
                 viewport->cancelReferencePick();
@@ -1931,9 +1944,10 @@ void PdfWindow::initializeActionsAndView(WindowSetup &setup) {
                 panel->hide();
             }
         });
-        QObject::connect(sectionParameters, &QAction::triggered, panel, [panel, sectionAction] {
+        QObject::connect(sectionParameters, &QAction::triggered, panel, [panel, sectionAction, expandSectionInfo] {
             if (!sectionAction->isChecked()) sectionAction->setChecked(true);
             panel->show();
+            expandSectionInfo();
             panel->raise();
         });
         auto *offButton = closeButtons->addButton(QStringLiteral("Spegni la sezione"), QDialogButtonBox::DestructiveRole);

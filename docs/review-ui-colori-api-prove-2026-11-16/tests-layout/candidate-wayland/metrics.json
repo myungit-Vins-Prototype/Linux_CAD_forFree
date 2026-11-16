@@ -1,0 +1,138 @@
+{
+    "checks": 74,
+    "failures": 0,
+    "samples": [
+        {
+            "height": 298,
+            "label": "section-natural-layout",
+            "labelHeight": 36,
+            "requiredLabelHeight": 36,
+            "width": 274
+        },
+        {
+            "height": 298,
+            "label": "section-reopened-layout",
+            "labelHeight": 36,
+            "requiredLabelHeight": 36,
+            "width": 274
+        },
+        {
+            "base": "#f0f0f0",
+            "contrast": 5.394914400136992,
+            "foreground": "#1b65a0",
+            "label": "section-0"
+        },
+        {
+            "base": "#111820",
+            "contrast": 9.731447132575688,
+            "foreground": "#80c8f0",
+            "label": "section-1"
+        },
+        {
+            "base": "#f0f0f0",
+            "contrast": 5.394914400136992,
+            "foreground": "#1b65a0",
+            "label": "section-2"
+        },
+        {
+            "base": "#ffffff",
+            "contrast": 16.293254998215808,
+            "explicitForeground": false,
+            "foreground": "#202020",
+            "label": "mass-0-label",
+            "needle": "Volume",
+            "paletteText": "#202020",
+            "role": "normal"
+        },
+        {
+            "base": "#ffffff",
+            "contrast": 16.293254998215808,
+            "explicitForeground": false,
+            "foreground": "#202020",
+            "label": "mass-0-hint",
+            "needle": "Calcolo:",
+            "paletteText": "#202020",
+            "role": "normal"
+        },
+        {
+            "base": "#202d36",
+            "contrast": 10.875728867565092,
+            "explicitForeground": false,
+            "foreground": "#d8e4ea",
+            "label": "mass-1-label",
+            "needle": "Volume",
+            "paletteText": "#d8e4ea",
+            "role": "normal"
+        },
+        {
+            "base": "#202d36",
+            "contrast": 10.875728867565092,
+            "explicitForeground": false,
+            "foreground": "#d8e4ea",
+            "label": "mass-1-hint",
+            "needle": "Calcolo:",
+            "paletteText": "#d8e4ea",
+            "role": "normal"
+        },
+        {
+            "base": "#ffffff",
+            "contrast": 16.293254998215808,
+            "explicitForeground": false,
+            "foreground": "#202020",
+            "label": "mass-2-label",
+            "needle": "Volume",
+            "paletteText": "#202020",
+            "role": "normal"
+        },
+        {
+            "base": "#ffffff",
+            "contrast": 16.293254998215808,
+            "explicitForeground": false,
+            "foreground": "#202020",
+            "label": "mass-2-hint",
+            "needle": "Calcolo:",
+            "paletteText": "#202020",
+            "role": "normal"
+        },
+        {
+            "base": "#ffffff",
+            "contrast": 7.354464665075849,
+            "explicitForeground": false,
+            "foreground": "#a32620",
+            "label": "error-0",
+            "needle": "Calcolo non riuscito:",
+            "paletteText": "#a32620",
+            "role": "error"
+        },
+        {
+            "base": "#202d36",
+            "contrast": 6.1737313017275985,
+            "explicitForeground": false,
+            "foreground": "#ff8a80",
+            "label": "error-1",
+            "needle": "Calcolo non riuscito:",
+            "paletteText": "#ff8a80",
+            "role": "error"
+        },
+        {
+            "base": "#ffffff",
+            "contrast": 7.354464665075849,
+            "explicitForeground": false,
+            "foreground": "#a32620",
+            "label": "error-2",
+            "needle": "Calcolo non riuscito:",
+            "paletteText": "#a32620",
+            "role": "error"
+        },
+        {
+            "base": "#ffffff",
+            "contrast": 16.293254998215808,
+            "explicitForeground": false,
+            "foreground": "#202020",
+            "label": "error-to-normal",
+            "needle": "Volume",
+            "paletteText": "#202020",
+            "role": "normal"
+        }
+    ]
+}

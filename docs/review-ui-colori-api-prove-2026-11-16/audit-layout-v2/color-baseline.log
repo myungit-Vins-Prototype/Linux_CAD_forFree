@@ -1,0 +1,4 @@
+layout audit exit=0 
+FAIL default label fits dynamic instruction
+FAIL long actual description fits
+FAIL hidden long description fits after reopen

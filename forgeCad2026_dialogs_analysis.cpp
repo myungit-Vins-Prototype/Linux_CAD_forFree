@@ -513,6 +513,7 @@ void massPropertiesDialog(QWidget *parent, CadViewport *viewport) {
     form->addRow(QStringLiteral("Materiale:"), materialBox);
     form->addRow(QStringLiteral("Densita':"), densityBox);
     auto *text = new QTextBrowser(&dialog);
+    text->setObjectName(QStringLiteral("massPropertiesReport"));
     text->setOpenLinks(false);
     text->setMinimumHeight(200);
     form->addRow(text);
@@ -533,6 +534,7 @@ void massPropertiesDialog(QWidget *parent, CadViewport *viewport) {
     };
     QString plain;
     const auto show = [&] {
+        setFunctionMessageRole(text, FunctionMessageRole::Normal);
         const double rho = densityBox->value() * 1e-3;  // g/mm^3
         ForgeCad::MassReport r;
         QString name;
@@ -562,11 +564,12 @@ void massPropertiesDialog(QWidget *parent, CadViewport *viewport) {
         QStringList lines;
         QString html = QStringLiteral("<h3>%1</h3>").arg(name.toHtmlEscaped());
         const auto row = [&](const QString &label, const QString &value) {
-            html += QStringLiteral("<tr><td style='padding-right:14px;color:#9fb3c8'>%1</td><td>%2</td></tr>").arg(label, value);
+            html += QStringLiteral("<tr><td style='padding-right:14px'>%1</td><td>%2</td></tr>").arg(label, value);
             lines.append(label + QStringLiteral("\t") + QString(value).remove(QRegularExpression(QStringLiteral("<[^>]*>"))));
         };
         if (!r.ok) {
-            text->setHtml(html + QStringLiteral("<p style='color:#ff7b72'>Calcolo non riuscito: %1</p>").arg(r.error.toHtmlEscaped()));
+            setFunctionMessageRole(text, FunctionMessageRole::Error);
+            text->setHtml(html + QStringLiteral("<p>Calcolo non riuscito: %1</p>").arg(r.error.toHtmlEscaped()));
             plain.clear();
             return;
         }
@@ -615,7 +618,7 @@ void massPropertiesDialog(QWidget *parent, CadViewport *viewport) {
                 tensorRows(about, QStringLiteral("all'origine"));
             }
         }
-        html += QStringLiteral("</table><p style='color:#8aa0b4'>Calcolo: %1.<br>Unita': %2, g. Prodotti d'inerzia con il segno positivo (Pxy = ∫ x y dm); "
+        html += QStringLiteral("</table><p>Calcolo: %1.<br>Unita': %2, g. Prodotti d'inerzia con il segno positivo (Pxy = ∫ x y dm); "
                                "il tensore d'inerzia ha fuori diagonale -Pxy.</p>")
                     .arg(r.method.toHtmlEscaped(), linearUnit);
         text->setHtml(html);

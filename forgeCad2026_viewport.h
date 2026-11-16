@@ -315,7 +315,6 @@ public:
     // sole facce create dall'ultima feature.
     void selectObject(SceneObjectKind kind, int index, bool wholeBody = false);
 
-    QStringList extrusionNames() const;
 
     // Booleana esatta (B-rep) tra due corpi solidi, anche su piani diversi o
     // risultati di booleane precedenti. Il risultato e' un nuovo corpo che
@@ -819,9 +818,6 @@ public:
 
     void endSketchMode();
 
-    // Rotazione dal modello allo spazio della vista standard: righe destra, alto, verso l'osservatore.
-    QMatrix4x4 basisMatrix() const;
-
     QMatrix4x4 sceneProjectionMatrix() const;
 
     QMatrix4x4 sceneModelViewMatrix() const;
@@ -841,7 +837,6 @@ public:
 
     // Sensibilita' della rotazione classica, indipendente dalla dimensione della vista.
     static constexpr float kOrbitDegreesPerPixel = ForgeCad::Gui::ViewportCamera::kOrbitDegreesPerPixel;
-    static float normalizedViewAngle(float degrees);
 
     // Il pivot viene scelto solo quando comincia realmente l'orbita.
     QVector3D orbitPointAt(const QPoint &position) const;

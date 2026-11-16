@@ -1,0 +1,15 @@
+FAIL section-0 readable instruction
+FAIL open section follows dark theme
+FAIL section-2 readable instruction
+FAIL mass-0-label readable foreground
+FAIL mass-0-hint readable foreground
+FAIL open mass label follows dark theme
+FAIL open mass hint follows dark theme
+FAIL mass-2-label readable foreground
+FAIL mass-2-hint readable foreground
+FAIL error-0 readable foreground
+FAIL open error follows dark theme
+FAIL error-2 readable foreground
+FAIL error-to-normal readable foreground
+UI residual checks 64, failures 13
+UI residual theme regression

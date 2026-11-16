@@ -1,0 +1,40 @@
+from pathlib import Path
+import json,hashlib,re
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/ui-residual-fix/root');C=Path('/tmp/ui-residual-fix/core/candidate');A=Path('/tmp/ui-residual-fix/api');S=Path('/tmp/ui-residual-fix/tests/permanent');sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+memory=(R/'CLAUDE.md').read_text();baseline=json.loads((T/'hashes-before.json').read_text())
+expected={'forgeCad2026_gui.cpp':'a4ca3185da83aa638c038433de886c713a5d3e8ec4fbb35ace968d37e812395e','forgeCad2026_dialogs_analysis.cpp':'3e74eba725601726a5c2ec2c9fddb002bbb65c4733fb6ea3a0ac5bcec63468b4'}
+for f,h in expected.items():assert sha(C/f)==h;assert sha(R/f)==baseline[f];(R/f).write_bytes((C/f).read_bytes())
+for f,pair in json.loads((A/'manifest.json').read_text()).items():assert sha(R/f)==pair['before']==baseline[f];assert sha(A/f)==pair['after'];(R/f).write_bytes((A/f).read_bytes())
+for f,h in {'test_document_theme_tabs.h':'1dadad2b685469a05ab3aeb4a139ddc59acc676cd276ec9fb2b2426a88076396','test_viewport.cpp':'fad1e2d7b8c9b4b7d93da7744310f0c44e508dd682e719e4f9ba4fdd8fefc8c2'}.items():assert sha(S/f)==h;assert sha(R/'tests'/f)==baseline['tests/'+f];(R/'tests'/f).write_bytes((S/f).read_bytes())
+p=R/'CMakeLists.txt';s=p.read_text();key='    forgecad_add_view_test(forgecad_document_theme_only2d_tests --theme-tabs-only-2d)';assert s.count(key)==1;s=s.replace(key,key+'\n    forgecad_add_view_test(forgecad_ui_foreground_theme_tests --theme-ui-residuals)\n    set_tests_properties(forgecad_ui_foreground_theme_tests PROPERTIES TIMEOUT 90)');p.write_text(s)
+p=R/'tools/generate_architecture.py';s=p.read_text();old=" 'tests/test_document_theme_tabs.h': ('tests', 'Tema globale su schede 3D/2D visibili e nascoste, finestre separate, nuove pagine, soli documenti 2D e cambio foglio; menu, pannelli, icone e pixel, colori utente e contenuto della carta invariati.'),";new=old[:-3]+" Sezione e report massa reali gia aperti: foreground/contrasto, errore e ritorno normale, documento/copia/selezione/scroll preservati senza ricalcolo al tema.'),";assert old in s;s=s.replace(old,new)
+old=" 'forgeCad2026_dialogs_analysis.cpp': ('dialogs', 'Dialoghi per analisi e opzioni di verifica geometrica. Misura usa il runner comune e installa il picker dopo la guardia fra documenti.'),";new=" 'forgeCad2026_dialogs_analysis.cpp': ('dialogs', 'Dialoghi per analisi e verifica geometrica. Misura usa il runner comune e installa il picker dopo la guardia fra documenti. Proprieta di massa: testo usa la palette e ruoli Normal/Error del pannello, senza formati HTML a colore fisso; il cambio tema conserva documento, selezione, scroll e cache dei calcoli.'),";assert old in s;s=s.replace(old,new)
+old="tema globale aggiornando le toolbar su entrambi gli eventi palette; nessun QSS globale locale.'),";new="tema globale aggiornando le toolbar su entrambi gli eventi palette; nessun QSS globale locale. Informazioni Sezione legate a QPalette::Link, anche nel dialogo gia aperto.'),";assert old in s;s=s.replace(old,new)
+compile(s,str(p),'exec');p.write_text(s)
+files=list(expected)+list(json.loads((A/'manifest.json').read_text()))+['tests/test_document_theme_tabs.h','tests/test_viewport.cpp','CMakeLists.txt','tools/generate_architecture.py'];(T/'integrated-sources.json').write_text(json.dumps({f:sha(R/f) for f in files},indent=2)+'\n')
+(R/'docs/history/claude-prima-ui-colori-api-2026-11-16.md').write_text(memory)
+a=memory.index('**16/11 — Supporto.prt');b=memory.index('\n\n',a);memory=memory[:a]+'''Supporto.prt/K11: Corpo2/3 e tre corpi uniti, app/24CTest/38Boolean/78sanitizer PASS;
+output con UUID nuovo. Input prove SHA79887e91; originale successivo70e4ec5c non ricertificato.
+[Dettagli e limiti](docs/supporto-booleana-2026-11-16.md).'''+memory[b:]
+a=memory.index('**16/11 — CI:');b=memory.index('\n\n',a);memory=memory[:a]+'''**16/11 — CI risolta, push verificato.**
+046685e: GitHub Linux108PASS/2SKIP, macOS112PASS/1SKIP; build e483kernel PASS.
+K12/OffsetLoft PASS; a99c411 registra solo prove. [Log](docs/ci-sheet-join-2026-11-16.md).'''+memory[b:]
+key='## Ultimi interventi — esiti consolidati\n\n';entry='''**16/11 — UI colori e quattro wrapper: integrati, verifiche in corso.**
+Sezione e massa usano palette/ruoli comuni, senza ricalcolo al tema.
+Tolti4wrapper senza usi;6query conservate,7legacy aperte. Tre Sol, baseline/audit Qt PASS;
+app/CTest/mappa e nuovo push da completare. [Stato](docs/review-ui-colori-api-2026-11-16.md).
+
+''';assert key in memory;memory=memory.replace(key,key+entry,1);assert len(memory.encode())<=16384,len(memory.encode());assert len(re.findall(r'^\*\*',memory,re.M))<=10;(R/'CLAUDE.md').write_text(memory)
+(R/'docs/review-ui-colori-api-2026-11-16.md').write_text('''# UI colori residui e quattro wrapper — 16 novembre 2026
+
+Richiesta: continuare i punti aperti dopo la correzione della CI. CI046685e conclusa verde su entrambe le piattaforme e registrata in a99c411; produzione modificata soltanto dopo questo esito.
+
+Integrati foreground Sezione su QPalette::Link e report massa su Text/Normal/Error del pannello comune. Rimossi i colori HTML inline; nessun handler nuovo o rigenerazione del documento al cambio tema, nessun calcolo massa richiesto dal tema. Titolo e messaggio del report fallito condividono il ruolo Error; i valori del report normale conservano struttura, unità e copia. Il separatore Raccordo resta candidato non dimostrato.
+
+Rimossi quattro wrapper applicativi senza consumatori osservati: CadViewport::basisMatrix, normalizedViewAngle, extrusionNames e ForgeCad::usesSketch. Algoritmi ViewportCamera, sketchesOf, dati/nomi/enum persistiti invariati. Sei query/cataloghi mantenuti intenzionalmente; sette ingressi legacy conservati per una pulizia coerente di callback/provider. Nessuna dichiarazione di compatibilità con consumatori binari esterni. Nessun nuovo test che replichi i wrapper cancellati.
+
+Tre agenti GPT-6.1 Sol: patch, test e audit indipendente. Prima dell'integrazione: baseline stesso driver Qt64controlli/13FAIL; candidato64/64PASS su offscreen e Wayland. Audit indipendente104controlli/14misure PASS. Test reale di dialoghi aperti, errore kernel naturale e ritorno normale, clipboard/documento/selezione/scroll/cache conservati; nessun CAD utente usato.
+
+Root baseline5176file e19sigilli precedenti congelati. Consultata prima del codice la mappa778/11369/390TU. App completa, CTest integrati e aggiornamento della mappa in corso: non ancora attribuiti alla produzione finale. Il totale31rilievi precedente non viene incrementato prima della verifica integrata.
+''')
+print('Integrated',len(files),'files; CLAUDE',len(memory.encode()),'bytes')

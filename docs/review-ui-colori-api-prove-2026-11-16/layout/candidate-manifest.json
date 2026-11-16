@@ -1,0 +1,6 @@
+{
+  "baseline_sha256": "a4ca3185da83aa638c038433de886c713a5d3e8ec4fbb35ace968d37e812395e",
+  "candidate_sha256": "12afcc0d8088eb99ea2475e1d9eb6ec0c6bf8a21de60c92e549a997fb1afba37",
+  "patch_sha256": "0633e1502f8ed6992a05506ef714756dc4bcb17a8322c325e13ac069e53ec4b9",
+  "scope": "incremento solo altezza Sezione, tutti messaggi + entrambe riaperture; produzione non modificata"
+}

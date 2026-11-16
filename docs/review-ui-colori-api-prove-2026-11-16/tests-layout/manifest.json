@@ -1,0 +1,50 @@
+{
+  "productionSource": "12afcc0d8088eb99ea2475e1d9eb6ec0c6bf8a21de60c92e549a997fb1afba37",
+  "baselineSource": "a4ca3185da83aa638c038433de886c713a5d3e8ec4fbb35ace968d37e812395e",
+  "header": "2e118679de721dd24241eb2145a1aac4e794e83ca0884eee0b8aa4161ae4c1ab",
+  "priorSealUnchanged": "d40a50ea16ba173a64957b2090d4bcab092962ebd33d9a4aeb5e78a8a60de743",
+  "inputs": [
+    {
+      "path": "/tmp/ui-residual-fix/layout/forgeCad2026_gui.cpp",
+      "bytes": 363882,
+      "sha256": "12afcc0d8088eb99ea2475e1d9eb6ec0c6bf8a21de60c92e549a997fb1afba37",
+      "archiveMember": null
+    },
+    {
+      "path": "/tmp/ui-residual-fix/layout/forgeCad2026_gui.baseline.cpp",
+      "bytes": 363183,
+      "sha256": "a4ca3185da83aa638c038433de886c713a5d3e8ec4fbb35ace968d37e812395e",
+      "archiveMember": null
+    },
+    {
+      "path": "/tmp/ui-residual-fix/tests/layout-supplement/gui-v2final.o",
+      "bytes": 2135128,
+      "sha256": "8b03da15074c3f31ffe4ce62da2984cb1897d6ff2022d73f8b770f64888a2193",
+      "archiveMember": null
+    },
+    {
+      "path": "/tmp/ui-residual-fix/tests/layout-supplement/driver.o",
+      "bytes": 172696,
+      "sha256": "749db820c04161b204e3e916f36c59e643085a79053d0c2e3dc7ed677aa259b8",
+      "archiveMember": null
+    },
+    {
+      "path": "/tmp/ui-residual-fix/tests/layout-supplement/baseline-final",
+      "bytes": 132081840,
+      "sha256": "4a2f0bc1951c68a6630bda705f85eb71f8ccf7b80be86e8e36b8808e5e1adef9",
+      "archiveMember": null
+    },
+    {
+      "path": "/tmp/ui-residual-fix/tests/layout-supplement/candidate-final",
+      "bytes": 132082064,
+      "sha256": "06508ec3cd7b8d429cf3d750cc85006aa5b805304ef727e817f9f313f9482f67",
+      "archiveMember": null
+    },
+    {
+      "path": "/tmp/ui-residual-fix/tests/layout-supplement/test_document_theme_tabs.h",
+      "bytes": 35339,
+      "sha256": "2e118679de721dd24241eb2145a1aac4e794e83ca0884eee0b8aa4161ae4c1ab",
+      "archiveMember": "test_document_theme_tabs.h.txt"
+    }
+  ]
+}

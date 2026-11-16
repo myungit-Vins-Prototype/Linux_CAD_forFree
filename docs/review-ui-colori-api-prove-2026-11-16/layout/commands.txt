@@ -1,0 +1,4 @@
+# /bin/bash login=false. Consultati CLAUDE/policy/grafo prima codice.
+# Baseline copiato dal candidato colore gia congelato e confrontato con repo.
+git -C /home/myungit/Linux_CAD_forFree apply --check /tmp/ui-residual-fix/layout/section-layout.patch
+# Test/compile mirati eseguiti dal tester; oggetto GUI condiviso con auditor.

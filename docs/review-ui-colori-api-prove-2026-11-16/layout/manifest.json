@@ -1,0 +1,30 @@
+{
+  "commands.txt": {
+    "sha256": "8cb514483fe8159c0101b39857687e91f357fec549ed3020e8c51b9fb4fb688b",
+    "bytes": 328
+  },
+  "HANDOFF.txt": {
+    "sha256": "2eb1faa8b9e52afdbf2af6ec0b21b3df2da680969ab16337ded6f2a9d54689e1",
+    "bytes": 1796
+  },
+  "graph-read.json": {
+    "sha256": "e08d5b94408360024b9ed967c93355b90df6327e58a7b926732f070189233c43",
+    "bytes": 10948
+  },
+  "candidate-manifest.json": {
+    "sha256": "5ffdb1910025f2d874743344d0cd860f54131e1b566945b5a63c2f7c0452c58c",
+    "bytes": 379
+  },
+  "section-layout.patch": {
+    "sha256": "0633e1502f8ed6992a05506ef714756dc4bcb17a8322c325e13ac069e53ec4b9",
+    "bytes": 5023
+  },
+  "forgeCad2026_gui.cpp": {
+    "sha256": "12afcc0d8088eb99ea2475e1d9eb6ec0c6bf8a21de60c92e549a997fb1afba37",
+    "bytes": 363882
+  },
+  "forgeCad2026_gui.baseline.cpp": {
+    "sha256": "a4ca3185da83aa638c038433de886c713a5d3e8ec4fbb35ace968d37e812395e",
+    "bytes": 363183
+  }
+}

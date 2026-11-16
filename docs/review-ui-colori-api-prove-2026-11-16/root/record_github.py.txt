@@ -1,0 +1,39 @@
+from pathlib import Path
+import json,hashlib,subprocess,re,xml.etree.ElementTree as ET
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/ui-residual-fix/root');P=R/'docs/review-ui-colori-api-github-prove-2026-11-16';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+(R/'CLAUDE.md').read_text();j=json.loads((T/'github-final.json').read_text());commit=json.loads((T/'commit.json').read_text())['sha'];assert j['headSha']==commit and j['status']=='completed' and j['conclusion']=='success' and len(j['jobs'])==2
+assert subprocess.check_output(['git','rev-parse','HEAD'],cwd=R,text=True).strip()==commit
+for job in j['jobs']:
+ assert job['conclusion']=='success'
+ steps={s['name']:s['conclusion'] for s in job['steps']}
+ for name in ["Compila l'applicazione e tutti i test configurati",'Esegui i test']:assert steps[name]=='success'
+results={};payload={}
+for key in ['linux','mac']:
+ artifacts=T/('github-'+key+'-artifacts')
+ for name in ['ctest.log','ctest.xml','configure.log','build.log','LastTest.log']:
+  files=list(artifacts.rglob(name));assert len(files)==1,(key,name,files);payload[key+'-'+name]=files[0].read_bytes()
+ raw=payload[key+'-ctest.log'].decode();m=re.search(r'100% tests passed(?:, 0 tests failed)? out of (\d+)',raw);assert m
+ xml=ET.fromstring(payload[key+'-ctest.xml']);cases=list(xml.iter('testcase'));assert len(cases)==int(m.group(1)) and xml.get('failures')=='0';assert all(c.find('failure') is None for c in cases)
+ skips=[c.get('name') for c in cases if c.find('skipped') is not None];last=payload[key+'-LastTest.log'].decode()
+ for required in ['483/483 test superati','[  OK  ] OffsetLoftExtendedSeamsTrimBoth','[  OK  ] BlendCavityWholeRimKeepsRadiusHistoryAndClosedTrims']:assert required in last,(key,required)
+ results[key]={'configured':len(cases),'passed':len(cases)-len(skips),'failed':0,'skipped':skips,'general_kernel_cases':483,'previous_regressions_passed':True}
+assert not P.exists();P.mkdir()
+for f,b in payload.items():(P/f).write_bytes(b)
+(P/'run.json').write_text(json.dumps(j,indent=2)+'\n');(P/'summary.json').write_text(json.dumps({'code_commit':commit,'url':j['url'],'platforms':results,'source_hashes':json.loads((T/'integrated-sources.json').read_text()),'workflow_sha256':sha(R/'.github/workflows/ci.yml'),'GUI_specific_74_checks':'local Wayland/offscreen only; CI config VIEW_TESTS=OFF'},indent=2)+'\n')
+(P/'README.txt').write_text('Actual Actions build/test evidence for '+commit+' at '+j['url']+'. Passed/skipped suites counted separately from JUnit. Previous K12 and offset-loft regressions and483general kernel tests verified on both platforms. CI does not configure viewer tests:74UI checks remain local evidence. A following docs-only [skip ci] commit records this result; app/kernel/tests/generator/workflow byte-identical to this verified code commit. No code CI skipped and no failures suppressed.\n')
+files=sorted(P.iterdir());(P/'SHA256SUMS').write_text(''.join(sha(f)+'  '+f.name+'\n' for f in files))
+remote='['+str(j['databaseId'])+']('+j['url']+'), commit `'+commit+'`: build e test PASS. Linux'+str(results['linux']['passed'])+'PASS/'+str(len(results['linux']['skipped']))+'SKIP; macOS'+str(results['mac']['passed'])+'PASS/'+str(len(results['mac']['skipped']))+'SKIP. [Log effettivi](review-ui-colori-api-github-prove-2026-11-16/README.txt).'
+p=R/'docs/review-ui-colori-api-2026-11-16.md';s=p.read_text().replace('**PENDING — nessun esito attribuito**','PASS,`'+commit+'` pubblicato su main').replace('**PENDING — la CI verde di 046685e non certifica questa versione**',remote);s+='\n\nRegistrazione finale soltanto documentale con `[skip ci]`: sorgenti, test, generatore e workflow identici al commit verificato sopra. Gli SKIP sono esclusioni della capacità del runner, non esecuzioni passate.\n';p.write_text(s)
+p=R/'docs/code-review-2026-11-15.md';s=p.read_text().replace('Nuova CI da verificare dopo push.','CI nuova Linux/macOS PASS su `'+commit[:7]+'`; [log](review-ui-colori-api-github-prove-2026-11-16/README.txt).');p.write_text(s)
+p=R/'docs/review-prossimi-punti-2026-11-16.md';s=p.read_text().replace('nuova CI da verificare dopo push.','CI nuova Linux/macOS PASS su `'+commit[:7]+'`.');p.write_text(s)
+p=R/'docs/ci-verifica-2026-11-16.md';s=p.read_text();s+='\n\n## Prosecuzione UI9/UI10 e wrapper\n\n'+remote+' Nuovo test GUI74controlli verificato localmente: VIEW_TESTS restaOFF inCI. Codice UI/API compilato su entrambe le piattaforme;483kernel e regressioni precedenti PASS.\n';p.write_text(s)
+p=R/'CLAUDE.md';s=p.read_text().replace('App/12CTest/74Wayland/appunti/mappa PASS; kernel invariato. NuovaCI dopo push.','App/12CTest/74Wayland/appunti/mappa PASS; '+commit[:7]+' push, CI Linux/macOS PASS.');assert len(s.encode())<=16384 and len(re.findall(r'^\*\*',s,re.M))<=10;p.write_text(s)
+allowed={'CLAUDE.md','docs/review-ui-colori-api-2026-11-16.md','docs/code-review-2026-11-15.md','docs/review-prossimi-punti-2026-11-16.md','docs/ci-verifica-2026-11-16.md'}
+changed=set(subprocess.check_output(['git','diff','--name-only'],cwd=R,text=True).splitlines());assert changed==allowed,changed
+for f,h in json.loads((T/'integrated-sources.json').read_text()).items():assert sha(R/f)==h
+subprocess.run(['git','diff','--check'],cwd=R,check=True);subprocess.run(['git','add','--',*sorted(allowed),str(P.relative_to(R))],cwd=R,check=True)
+staged=subprocess.check_output(['git','diff','--cached','--name-only'],cwd=R,text=True).splitlines();assert all(f in allowed or f.startswith(str(P.relative_to(R))+'/') for f in staged)
+with(T/'github-record-commit.log').open('w') as log:subprocess.run(['git','commit','-m','Registra la CI delle correzioni UI e API [skip ci]'],cwd=R,stdout=log,stderr=subprocess.STDOUT,check=True)
+with(T/'github-record-push.log').open('w') as log:subprocess.run(['git','push','origin','main'],cwd=R,stdout=log,stderr=subprocess.STDOUT,check=True)
+assert not subprocess.check_output(['git','status','--porcelain'],cwd=R,text=True).strip()
+print(json.dumps({'code_commit':commit,'record_commit':subprocess.check_output(['git','rev-parse','HEAD'],cwd=R,text=True).strip(),'ci':j['url'],'results':results},indent=2))

@@ -1,0 +1,40 @@
+#include "cad_mass.h"
+#include "fk_topology.h"
+#include "forgeCad2026_application_theme.h"
+#include "forgeCad2026_dialogs.h"
+#include "forgeCad2026_gui.h"
+#include "forgeCad2026_viewport.h"
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QSurfaceFormat>
+#include <QtWidgets>
+#include <cmath>
+#include <iostream>
+#include <stdexcept>
+class ViewportInteractionTest {
+  public:
+#include "test_ui_residual_theme.h"
+};
+int main(int argc, char **argv) {
+    QSurfaceFormat format;
+    format.setVersion(3, 3);
+    format.setProfile(QSurfaceFormat::CoreProfile);
+    format.setDepthBufferSize(24);
+    format.setStencilBufferSize(8);
+    QSurfaceFormat::setDefaultFormat(format);
+    QApplication app(argc, argv);
+    QTemporaryDir preferences;
+    QSettings::setDefaultFormat(QSettings::IniFormat);
+    QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, preferences.path());
+    QCoreApplication::setOrganizationName("ForgeCADUiResidualTests");
+    QCoreApplication::setApplicationName("isolated");
+    qputenv("FORGECAD_RECOVERY_DIR", (preferences.path() + "/recovery").toUtf8());
+    try {
+        ViewportInteractionTest::uiResidualThemeTests();
+        return 0;
+    } catch (const std::exception &e) {
+        std::cerr << e.what() << std::endl;
+        return 1;
+    }
+}

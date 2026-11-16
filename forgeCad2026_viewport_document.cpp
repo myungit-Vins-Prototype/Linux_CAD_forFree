@@ -911,12 +911,6 @@ void CadViewport::showAllObjects() {
     documentChanged();
 }
 
-QStringList CadViewport::extrusionNames() const {
-    QStringList names;
-    for (const ExtrusionObject &extrusion : extrusions_) names.append(extrusion.name);
-    return names;
-}
-
 QString CadViewport::createBoolean(BooleanOperation operation, int firstIndex, const QVector<int> &tools, const QString &name) {
     if(documentReadOnly_)return QStringLiteral("Documento in sola lettura: eseguire il check-out.");
     if (firstIndex < 0 || firstIndex >= extrusions_.size() || tools.isEmpty()) return QStringLiteral("Scegli il primo oggetto e almeno uno strumento.");

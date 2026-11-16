@@ -1,0 +1,911 @@
+{
+  "runs": {
+    "color-baseline": {
+      "argv": [
+        "/tmp/ui-residual-fix/audit/layout-v2-work/color-baseline",
+        "/tmp/ui-residual-fix/audit/layout-v2-work/color-baseline.json"
+      ],
+      "envOverrides": {
+        "QT_QPA_PLATFORM": "offscreen",
+        "QT_OPENGL": "software",
+        "UI_LAYOUT_IMAGE": "/tmp/ui-residual-fix/audit/layout-v2-work/color-baseline.png"
+      },
+      "processExitCode": 1,
+      "binarySHA256": "b61dac861673a66d4a91587f441663b3d21cc58b5fb8e735f6697ecbadd9f629",
+      "result": {
+        "checks": 14,
+        "error": "",
+        "exitCode": 1,
+        "failures": 3,
+        "rows": [
+          {
+            "alignment": 129,
+            "font": "Sans Serif,9,-1,5,400,0,0,0,0,0,0,0,0,0,0,1,,0,0",
+            "fontBoundingRect": [
+              0,
+              0,
+              0,
+              17
+            ],
+            "indent": -1,
+            "labelContentRect": [
+              0,
+              0,
+              235,
+              17
+            ],
+            "labelGeometry": [
+              11,
+              212,
+              235,
+              17
+            ],
+            "labelHeightForWidth": -1,
+            "labelMinimumSizeHint": [
+              7,
+              17
+            ],
+            "labelSizeHint": [
+              7,
+              17
+            ],
+            "margin": 0,
+            "panelPosition": [
+              372,
+              245
+            ],
+            "panelSize": [
+              257,
+              271
+            ],
+            "panelSizeHint": [
+              257,
+              271
+            ],
+            "panelVisible": true,
+            "stage": "default-before-index3",
+            "text": ""
+          },
+          {
+            "alignment": 129,
+            "font": "Sans Serif,9,-1,5,400,0,0,0,0,0,0,0,0,0,0,1,,0,0",
+            "fontBoundingRect": [
+              0,
+              0,
+              218,
+              34
+            ],
+            "indent": -1,
+            "labelContentRect": [
+              0,
+              0,
+              235,
+              24
+            ],
+            "labelGeometry": [
+              11,
+              206,
+              235,
+              24
+            ],
+            "labelHeightForWidth": 34,
+            "labelMinimumSizeHint": [
+              49,
+              17
+            ],
+            "labelSizeHint": [
+              120,
+              51
+            ],
+            "margin": 0,
+            "panelPosition": [
+              372,
+              245
+            ],
+            "panelSize": [
+              257,
+              271
+            ],
+            "panelSizeHint": [
+              257,
+              288
+            ],
+            "panelVisible": true,
+            "stage": "default-after-index3",
+            "text": "Clicca un piano o una faccia piana (Esc: annulla)."
+          },
+          {
+            "alignment": 129,
+            "font": "Sans Serif,9,-1,5,400,0,0,0,0,0,0,0,0,0,0,1,,0,0",
+            "fontBoundingRect": [
+              0,
+              0,
+              218,
+              34
+            ],
+            "indent": -1,
+            "labelContentRect": [
+              0,
+              0,
+              235,
+              34
+            ],
+            "labelGeometry": [
+              11,
+              212,
+              235,
+              34
+            ],
+            "labelHeightForWidth": 34,
+            "labelMinimumSizeHint": [
+              49,
+              17
+            ],
+            "labelSizeHint": [
+              120,
+              51
+            ],
+            "margin": 0,
+            "panelPosition": [
+              372,
+              236
+            ],
+            "panelSize": [
+              257,
+              288
+            ],
+            "panelSizeHint": [
+              257,
+              288
+            ],
+            "panelVisible": true,
+            "stage": "reopened-default-index3",
+            "text": "Clicca un piano o una faccia piana (Esc: annulla)."
+          },
+          {
+            "alignment": 129,
+            "font": "Sans Serif,9,-1,5,400,0,0,0,0,0,0,0,0,0,0,1,,0,0",
+            "fontBoundingRect": [
+              0,
+              0,
+              0,
+              17
+            ],
+            "indent": -1,
+            "labelContentRect": [
+              0,
+              0,
+              448,
+              17
+            ],
+            "labelGeometry": [
+              11,
+              212,
+              448,
+              17
+            ],
+            "labelHeightForWidth": 17,
+            "labelMinimumSizeHint": [
+              0,
+              17
+            ],
+            "labelSizeHint": [
+              0,
+              17
+            ],
+            "margin": 0,
+            "panelPosition": [
+              73,
+              91
+            ],
+            "panelSize": [
+              470,
+              620
+            ],
+            "panelSizeHint": [
+              257,
+              271
+            ],
+            "panelVisible": true,
+            "stage": "user-large-before",
+            "text": ""
+          },
+          {
+            "alignment": 129,
+            "font": "Sans Serif,9,-1,5,400,0,0,0,0,0,0,0,0,0,0,1,,0,0",
+            "fontBoundingRect": [
+              0,
+              0,
+              270,
+              17
+            ],
+            "indent": -1,
+            "labelContentRect": [
+              0,
+              0,
+              448,
+              17
+            ],
+            "labelGeometry": [
+              11,
+              212,
+              448,
+              17
+            ],
+            "labelHeightForWidth": 17,
+            "labelMinimumSizeHint": [
+              49,
+              17
+            ],
+            "labelSizeHint": [
+              120,
+              51
+            ],
+            "margin": 0,
+            "panelPosition": [
+              73,
+              91
+            ],
+            "panelSize": [
+              470,
+              620
+            ],
+            "panelSizeHint": [
+              257,
+              288
+            ],
+            "panelVisible": true,
+            "stage": "user-large-instruction",
+            "text": "Clicca un piano o una faccia piana (Esc: annulla)."
+          },
+          {
+            "alignment": 129,
+            "font": "Sans Serif,9,-1,5,400,0,0,0,0,0,0,0,0,0,0,1,,0,0",
+            "fontBoundingRect": [
+              0,
+              0,
+              280,
+              85
+            ],
+            "indent": -1,
+            "labelContentRect": [
+              0,
+              0,
+              298,
+              36
+            ],
+            "labelGeometry": [
+              11,
+              212,
+              298,
+              36
+            ],
+            "labelHeightForWidth": 85,
+            "labelMinimumSizeHint": [
+              66,
+              17
+            ],
+            "labelSizeHint": [
+              280,
+              85
+            ],
+            "margin": 0,
+            "panelPosition": [
+              81,
+              99
+            ],
+            "panelSize": [
+              320,
+              290
+            ],
+            "panelSizeHint": [
+              302,
+              339
+            ],
+            "panelVisible": true,
+            "stage": "long-real-body-description",
+            "text": "Faccia di Descrizione lunga del corpo con spazi Descrizione lunga del corpo con spazi Descrizione lunga del corpo con spazi Descrizione lunga del corpo con spazi Descrizione lunga del corpo con spazi Descrizione lunga del corpo con spazi "
+          },
+          {
+            "alignment": 129,
+            "font": "Sans Serif,9,-1,5,400,0,0,0,0,0,0,0,0,0,0,1,,0,0",
+            "fontBoundingRect": [
+              0,
+              0,
+              0,
+              17
+            ],
+            "indent": -1,
+            "labelContentRect": [
+              0,
+              0,
+              298,
+              17
+            ],
+            "labelGeometry": [
+              11,
+              212,
+              298,
+              17
+            ],
+            "labelHeightForWidth": 17,
+            "labelMinimumSizeHint": [
+              0,
+              17
+            ],
+            "labelSizeHint": [
+              0,
+              17
+            ],
+            "margin": 0,
+            "panelPosition": [
+              81,
+              99
+            ],
+            "panelSize": [
+              320,
+              290
+            ],
+            "panelSizeHint": [
+              257,
+              271
+            ],
+            "panelVisible": true,
+            "stage": "shorter-text-after-long",
+            "text": ""
+          },
+          {
+            "alignment": 129,
+            "font": "Sans Serif,9,-1,5,400,0,0,0,0,0,0,0,0,0,0,1,,0,0",
+            "fontBoundingRect": [
+              0,
+              0,
+              280,
+              85
+            ],
+            "indent": -1,
+            "labelContentRect": [
+              0,
+              0,
+              298,
+              17
+            ],
+            "labelGeometry": [
+              11,
+              212,
+              298,
+              17
+            ],
+            "labelHeightForWidth": 85,
+            "labelMinimumSizeHint": [
+              66,
+              17
+            ],
+            "labelSizeHint": [
+              280,
+              85
+            ],
+            "margin": 0,
+            "panelPosition": [
+              83,
+              101
+            ],
+            "panelSize": [
+              320,
+              290
+            ],
+            "panelSizeHint": [
+              302,
+              339
+            ],
+            "panelVisible": false,
+            "stage": "hidden-user-size-long-message",
+            "text": "Faccia di Descrizione lunga del corpo con spazi Descrizione lunga del corpo con spazi Descrizione lunga del corpo con spazi Descrizione lunga del corpo con spazi Descrizione lunga del corpo con spazi Descrizione lunga del corpo con spazi "
+          },
+          {
+            "alignment": 129,
+            "font": "Sans Serif,9,-1,5,400,0,0,0,0,0,0,0,0,0,0,1,,0,0",
+            "fontBoundingRect": [
+              0,
+              0,
+              280,
+              85
+            ],
+            "indent": -1,
+            "labelContentRect": [
+              0,
+              0,
+              298,
+              36
+            ],
+            "labelGeometry": [
+              11,
+              212,
+              298,
+              36
+            ],
+            "labelHeightForWidth": 85,
+            "labelMinimumSizeHint": [
+              66,
+              17
+            ],
+            "labelSizeHint": [
+              280,
+              85
+            ],
+            "margin": 0,
+            "panelPosition": [
+              83,
+              101
+            ],
+            "panelSize": [
+              320,
+              290
+            ],
+            "panelSizeHint": [
+              302,
+              339
+            ],
+            "panelVisible": true,
+            "stage": "hidden-user-size-long-message-reopened",
+            "text": "Faccia di Descrizione lunga del corpo con spazi Descrizione lunga del corpo con spazi Descrizione lunga del corpo con spazi Descrizione lunga del corpo con spazi Descrizione lunga del corpo con spazi Descrizione lunga del corpo con spazi "
+          }
+        ]
+      }
+    },
+    "layout-v2": {
+      "argv": [
+        "/tmp/ui-residual-fix/audit/layout-v2-work/layout-v2",
+        "/tmp/ui-residual-fix/audit/layout-v2-work/layout-v2.json"
+      ],
+      "envOverrides": {
+        "QT_QPA_PLATFORM": "offscreen",
+        "QT_OPENGL": "software",
+        "UI_LAYOUT_IMAGE": "/tmp/ui-residual-fix/audit/layout-v2-work/layout-v2.png"
+      },
+      "processExitCode": 0,
+      "binarySHA256": "319bd93c45417f0f86dc93e9dbb73e4a691948bf17d5fcb3f5ff8ee58d957342",
+      "result": {
+        "checks": 14,
+        "error": "",
+        "exitCode": 0,
+        "failures": 0,
+        "rows": [
+          {
+            "alignment": 129,
+            "font": "Sans Serif,9,-1,5,400,0,0,0,0,0,0,0,0,0,0,1,,0,0",
+            "fontBoundingRect": [
+              0,
+              0,
+              0,
+              17
+            ],
+            "indent": -1,
+            "labelContentRect": [
+              0,
+              0,
+              235,
+              17
+            ],
+            "labelGeometry": [
+              11,
+              212,
+              235,
+              17
+            ],
+            "labelHeightForWidth": -1,
+            "labelMinimumSizeHint": [
+              7,
+              17
+            ],
+            "labelSizeHint": [
+              7,
+              17
+            ],
+            "margin": 0,
+            "panelPosition": [
+              372,
+              245
+            ],
+            "panelSize": [
+              257,
+              271
+            ],
+            "panelSizeHint": [
+              257,
+              271
+            ],
+            "panelVisible": true,
+            "stage": "default-before-index3",
+            "text": ""
+          },
+          {
+            "alignment": 129,
+            "font": "Sans Serif,9,-1,5,400,0,0,0,0,0,0,0,0,0,0,1,,0,0",
+            "fontBoundingRect": [
+              0,
+              0,
+              218,
+              34
+            ],
+            "indent": -1,
+            "labelContentRect": [
+              0,
+              0,
+              235,
+              34
+            ],
+            "labelGeometry": [
+              11,
+              212,
+              235,
+              34
+            ],
+            "labelHeightForWidth": 34,
+            "labelMinimumSizeHint": [
+              49,
+              17
+            ],
+            "labelSizeHint": [
+              120,
+              51
+            ],
+            "margin": 0,
+            "panelPosition": [
+              372,
+              245
+            ],
+            "panelSize": [
+              257,
+              288
+            ],
+            "panelSizeHint": [
+              257,
+              288
+            ],
+            "panelVisible": true,
+            "stage": "default-after-index3",
+            "text": "Clicca un piano o una faccia piana (Esc: annulla)."
+          },
+          {
+            "alignment": 129,
+            "font": "Sans Serif,9,-1,5,400,0,0,0,0,0,0,0,0,0,0,1,,0,0",
+            "fontBoundingRect": [
+              0,
+              0,
+              218,
+              34
+            ],
+            "indent": -1,
+            "labelContentRect": [
+              0,
+              0,
+              235,
+              34
+            ],
+            "labelGeometry": [
+              11,
+              212,
+              235,
+              34
+            ],
+            "labelHeightForWidth": 34,
+            "labelMinimumSizeHint": [
+              49,
+              17
+            ],
+            "labelSizeHint": [
+              120,
+              51
+            ],
+            "margin": 0,
+            "panelPosition": [
+              372,
+              236
+            ],
+            "panelSize": [
+              257,
+              288
+            ],
+            "panelSizeHint": [
+              257,
+              288
+            ],
+            "panelVisible": true,
+            "stage": "reopened-default-index3",
+            "text": "Clicca un piano o una faccia piana (Esc: annulla)."
+          },
+          {
+            "alignment": 129,
+            "font": "Sans Serif,9,-1,5,400,0,0,0,0,0,0,0,0,0,0,1,,0,0",
+            "fontBoundingRect": [
+              0,
+              0,
+              0,
+              17
+            ],
+            "indent": -1,
+            "labelContentRect": [
+              0,
+              0,
+              448,
+              17
+            ],
+            "labelGeometry": [
+              11,
+              212,
+              448,
+              17
+            ],
+            "labelHeightForWidth": 17,
+            "labelMinimumSizeHint": [
+              0,
+              17
+            ],
+            "labelSizeHint": [
+              0,
+              17
+            ],
+            "margin": 0,
+            "panelPosition": [
+              73,
+              91
+            ],
+            "panelSize": [
+              470,
+              620
+            ],
+            "panelSizeHint": [
+              257,
+              271
+            ],
+            "panelVisible": true,
+            "stage": "user-large-before",
+            "text": ""
+          },
+          {
+            "alignment": 129,
+            "font": "Sans Serif,9,-1,5,400,0,0,0,0,0,0,0,0,0,0,1,,0,0",
+            "fontBoundingRect": [
+              0,
+              0,
+              270,
+              17
+            ],
+            "indent": -1,
+            "labelContentRect": [
+              0,
+              0,
+              448,
+              17
+            ],
+            "labelGeometry": [
+              11,
+              212,
+              448,
+              17
+            ],
+            "labelHeightForWidth": 17,
+            "labelMinimumSizeHint": [
+              49,
+              17
+            ],
+            "labelSizeHint": [
+              120,
+              51
+            ],
+            "margin": 0,
+            "panelPosition": [
+              73,
+              91
+            ],
+            "panelSize": [
+              470,
+              620
+            ],
+            "panelSizeHint": [
+              257,
+              288
+            ],
+            "panelVisible": true,
+            "stage": "user-large-instruction",
+            "text": "Clicca un piano o una faccia piana (Esc: annulla)."
+          },
+          {
+            "alignment": 129,
+            "font": "Sans Serif,9,-1,5,400,0,0,0,0,0,0,0,0,0,0,1,,0,0",
+            "fontBoundingRect": [
+              0,
+              0,
+              280,
+              85
+            ],
+            "indent": -1,
+            "labelContentRect": [
+              0,
+              0,
+              298,
+              85
+            ],
+            "labelGeometry": [
+              11,
+              212,
+              298,
+              85
+            ],
+            "labelHeightForWidth": 85,
+            "labelMinimumSizeHint": [
+              66,
+              17
+            ],
+            "labelSizeHint": [
+              280,
+              85
+            ],
+            "margin": 0,
+            "panelPosition": [
+              81,
+              99
+            ],
+            "panelSize": [
+              320,
+              339
+            ],
+            "panelSizeHint": [
+              302,
+              339
+            ],
+            "panelVisible": true,
+            "stage": "long-real-body-description",
+            "text": "Faccia di Descrizione lunga del corpo con spazi Descrizione lunga del corpo con spazi Descrizione lunga del corpo con spazi Descrizione lunga del corpo con spazi Descrizione lunga del corpo con spazi Descrizione lunga del corpo con spazi "
+          },
+          {
+            "alignment": 129,
+            "font": "Sans Serif,9,-1,5,400,0,0,0,0,0,0,0,0,0,0,1,,0,0",
+            "fontBoundingRect": [
+              0,
+              0,
+              0,
+              17
+            ],
+            "indent": -1,
+            "labelContentRect": [
+              0,
+              0,
+              298,
+              17
+            ],
+            "labelGeometry": [
+              11,
+              212,
+              298,
+              17
+            ],
+            "labelHeightForWidth": 17,
+            "labelMinimumSizeHint": [
+              0,
+              17
+            ],
+            "labelSizeHint": [
+              0,
+              17
+            ],
+            "margin": 0,
+            "panelPosition": [
+              81,
+              99
+            ],
+            "panelSize": [
+              320,
+              339
+            ],
+            "panelSizeHint": [
+              257,
+              271
+            ],
+            "panelVisible": true,
+            "stage": "shorter-text-after-long",
+            "text": ""
+          },
+          {
+            "alignment": 129,
+            "font": "Sans Serif,9,-1,5,400,0,0,0,0,0,0,0,0,0,0,1,,0,0",
+            "fontBoundingRect": [
+              0,
+              0,
+              280,
+              85
+            ],
+            "indent": -1,
+            "labelContentRect": [
+              0,
+              0,
+              298,
+              17
+            ],
+            "labelGeometry": [
+              11,
+              212,
+              298,
+              17
+            ],
+            "labelHeightForWidth": 85,
+            "labelMinimumSizeHint": [
+              66,
+              17
+            ],
+            "labelSizeHint": [
+              280,
+              85
+            ],
+            "margin": 0,
+            "panelPosition": [
+              83,
+              101
+            ],
+            "panelSize": [
+              320,
+              290
+            ],
+            "panelSizeHint": [
+              302,
+              339
+            ],
+            "panelVisible": false,
+            "stage": "hidden-user-size-long-message",
+            "text": "Faccia di Descrizione lunga del corpo con spazi Descrizione lunga del corpo con spazi Descrizione lunga del corpo con spazi Descrizione lunga del corpo con spazi Descrizione lunga del corpo con spazi Descrizione lunga del corpo con spazi "
+          },
+          {
+            "alignment": 129,
+            "font": "Sans Serif,9,-1,5,400,0,0,0,0,0,0,0,0,0,0,1,,0,0",
+            "fontBoundingRect": [
+              0,
+              0,
+              280,
+              85
+            ],
+            "indent": -1,
+            "labelContentRect": [
+              0,
+              0,
+              298,
+              85
+            ],
+            "labelGeometry": [
+              11,
+              212,
+              298,
+              85
+            ],
+            "labelHeightForWidth": 85,
+            "labelMinimumSizeHint": [
+              66,
+              17
+            ],
+            "labelSizeHint": [
+              280,
+              85
+            ],
+            "margin": 0,
+            "panelPosition": [
+              83,
+              101
+            ],
+            "panelSize": [
+              320,
+              339
+            ],
+            "panelSizeHint": [
+              302,
+              339
+            ],
+            "panelVisible": true,
+            "stage": "hidden-user-size-long-message-reopened",
+            "text": "Faccia di Descrizione lunga del corpo con spazi Descrizione lunga del corpo con spazi Descrizione lunga del corpo con spazi Descrizione lunga del corpo con spazi Descrizione lunga del corpo con spazi Descrizione lunga del corpo con spazi "
+          }
+        ]
+      }
+    }
+  },
+  "stdoutNote": "Driver stdout exit reports exception rc only; authoritative processExitCode is measured by subprocess here and result.exitCode includes check failures."
+}

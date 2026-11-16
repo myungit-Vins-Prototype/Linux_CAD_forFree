@@ -22,3 +22,8 @@ Valutazione proposta, non implementata: conservare6query/cataloghi utili; deprec
 Due catene richiedono una modifica coerente: callback Estendi e provider della tavola. Togliere da sola l'action legacy della tavola lascerebbe una dereferenziazione `findChild` nel contenitore. Non è un errore corrente riprodotto: è il rischio concreto di una pulizia incompleta. Getter senza consumatori non sono bug funzionali.
 
 [Inventario completo API](review-prossimi-punti-prove-2026-11-16/api/README.md), [rilievi UI](review-prossimi-punti-prove-2026-11-16/ui/README.txt), [provenienza e sigillo](review-prossimi-punti-prove-2026-11-16/README.txt).
+
+
+## Prosecuzione implementata dopo la CI verde
+
+Questo inventario iniziale rimane una fotografia storica di046685e. Il blocco successivo corregge UI9 (Sezione e massa seguono la palette) e UI10 (messaggio Sezione senza tagli); rimuove quattro wrapper, conserva sei query e lascia sette ingressi legacy aperti. Totale33difetti confermati corretti, non37. App,12CTest,74controlli Wayland e mappa PASS; nuova CI da verificare dopo push. [Esiti e limiti](review-ui-colori-api-2026-11-16.md).

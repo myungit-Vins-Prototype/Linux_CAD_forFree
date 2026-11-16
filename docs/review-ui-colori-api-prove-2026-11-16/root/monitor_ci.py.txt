@@ -1,0 +1,18 @@
+from pathlib import Path
+import json,subprocess,time,sys
+T=Path('/tmp/ui-residual-fix/root');R=Path('/home/myungit/Linux_CAD_forFree');commit=sys.argv[1];last=None
+for _ in range(120):
+ runs=json.loads(subprocess.check_output(['gh','run','list','--commit',commit,'--limit','5','--json','databaseId,headSha,status,conclusion,url,workflowName'],cwd=R))
+ matches=[r for r in runs if r['headSha']==commit and r['workflowName']=='CI Linux e macOS']
+ if not matches:time.sleep(20);continue
+ assert len(matches)==1,matches;run=matches[0];rid=str(run['databaseId'])
+ data=json.loads(subprocess.check_output(['gh','run','view',rid,'--json','databaseId,headSha,status,conclusion,url,jobs'],cwd=R));assert data['headSha']==commit
+ state=json.dumps(data,sort_keys=True)
+ (T/'github-current.json').write_text(json.dumps(data,indent=2)+'\n')
+ compact={'sha':commit,'run':rid,'status':data['status'],'conclusion':data['conclusion'],'jobs':[{'name':j['name'],'status':j['status'],'conclusion':j['conclusion'],'step':next((s['name'] for s in j['steps'] if s['status']=='in_progress'),None)} for j in data['jobs']]}
+ if compact!=last:
+  print(json.dumps(compact),flush=True);last=compact
+ if data['status']=='completed':
+  (T/'github-final.json').write_text(json.dumps(data,indent=2)+'\n');sys.exit(0 if data['conclusion']=='success' and all(j['conclusion']=='success' for j in data['jobs']) else 2)
+ time.sleep(30)
+raise SystemExit('CI did not complete within monitored interval')

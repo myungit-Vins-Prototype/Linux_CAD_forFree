@@ -1,0 +1,210 @@
+{
+  "nodes": 778,
+  "edges": 11373,
+  "units": 390,
+  "errors": {},
+  "html_matches": true,
+  "incident_edges": 1064,
+  "removed_symbols_absent": [
+    "CadViewport::basisMatrix",
+    "CadViewport::extrusionNames",
+    "CadViewport::normalizedViewAngle",
+    "ForgeCad::usesSketch"
+  ],
+  "required_calls": [
+    [
+      "tests/test_viewport.cpp",
+      "tests/test_document_theme_tabs.h",
+      "uiResidualThemeTests"
+    ],
+    [
+      "forgeCad2026_dialogs_analysis.cpp",
+      "forgeCad2026_dialogs_common.cpp",
+      "setFunctionMessageRole"
+    ]
+  ],
+  "focus": {
+    "CMakeLists.txt": {
+      "description": "Definisce eseguibile e suite; libreria interna condivisa dai runner delle tavole e impronta geometrica limitata alla chiusura delle dipendenze del calcolo.",
+      "incoming": {
+        "call": 0,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 0,
+        "include": 0,
+        "reference": 0
+      }
+    },
+    "cad_feature_dependencies.cpp": {
+      "description": "Dipendenze e consumo dei risultati, compresi aggregati legacy; candidati dinamici dei limiti di estrusione distinti dagli strumenti di fusione e dalla visibilita manuale.",
+      "incoming": {
+        "call": 37,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 2,
+        "include": 2,
+        "reference": 0
+      }
+    },
+    "cad_feature_dependencies.h": {
+      "description": "Dipendenze e consumo dei risultati, compresi aggregati legacy; candidati dinamici dei limiti di estrusione distinti dagli strumenti di fusione e dalla visibilita manuale.",
+      "incoming": {
+        "call": 0,
+        "include": 25,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 0,
+        "include": 1,
+        "reference": 0
+      }
+    },
+    "forgeCad2026_application_theme.cpp": {
+      "description": "Controller unico di palette e QSS globale su finestre e schede incorporate 3D/2D; applicazione coerente protetta dal reingresso, stile Fusion ripristinato dopo sostituzioni native e menu Tema persistente chiaro/scuro/desktop.",
+      "incoming": {
+        "call": 9,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 1,
+        "include": 1,
+        "reference": 0
+      }
+    },
+    "forgeCad2026_camera.cpp": {
+      "description": "Stato e trasformazioni della camera 3D.",
+      "incoming": {
+        "call": 6,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 2,
+        "include": 1,
+        "reference": 0
+      }
+    },
+    "forgeCad2026_dialogs_analysis.cpp": {
+      "description": "Dialoghi per analisi e verifica geometrica. Misura usa il runner comune e installa il picker dopo la guardia fra documenti. Proprieta di massa: testo usa la palette e ruoli Normal/Error del pannello, senza formati HTML a colore fisso; il cambio tema conserva documento, selezione, scroll e cache dei calcoli.",
+      "incoming": {
+        "call": 4,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 23,
+        "include": 49,
+        "reference": 0
+      }
+    },
+    "forgeCad2026_dialogs_common.cpp": {
+      "description": "Pannelli nel viewport proprietario e blocco limitato al workspace, anche con piu documenti in schede; sotto il ribbon con aggancio/altezza piena e dimensioni preferite e larghezza iniziale per comando senza sovrascrivere il resize manuale; controlli G1/G2 con verso indipendente per profilo. Presentazione Raggio condivisa: titolo, schede con icone, illustrazioni volumetriche, form compatti e footer accessibile; intestazione compatta, aggancio laterale persistente e altezza piena, temi chiaro/scuro, checkbox nativi con palette distinta per testo/spunta ed elenchi con fondo dei campi, vetro e dimensioni persistenti. Conferma opzionale con pannello nascosto e attesa di finished anche nel runner modale; errori reali riaprono i controlli. Un comando modeless fra workspace per evitare cleanup sospesi; selezioni multiple e riga corrente conservate per identita, picker fermati al cambio ruolo G0/G1/piano. Ruoli semantici dei messaggi con contrasto nei temi chiaro e scuro. Tutti gli undici runner storici usano il gestore comune: setup differito dopo guardia fra documenti, overload a tre argomenti preservato, finished sincrono senza attesa irrisolvibile. Messaggio anteprima nel footer fisso anche se creato dopo show, senza duplicazioni.",
+      "incoming": {
+        "call": 23,
+        "include": 0,
+        "reference": 1
+      },
+      "outgoing": {
+        "call": 17,
+        "include": 52,
+        "reference": 0
+      }
+    },
+    "forgeCad2026_gui.cpp": {
+      "description": "PdfWindow: sette fasi di inizializzazione di scena, menu, comandi, opzioni e toolbar, preferenze persistenti per normali al mouse e costruzione degli schizzi fuori modifica; workspace 3D incorporabile con apertura instradata alle schede e chiusura asincrona del recupero; modelli archiviati in sola lettura; storyboard con trascinamento dei creatori di corpi autonomi a uno stadio. Aggiunge Ellisse per estremi a menu e toolbar e ne espone azione e icona alla ribbon. Consuma il tema globale aggiornando le toolbar su entrambi gli eventi palette; nessun QSS globale locale. Informazioni Sezione legate a QPalette::Link; dialogo ampliato solo in altezza quando richiesto dal layout, anche dopo testo cambiato da nascosto e riapertura.",
+      "incoming": {
+        "call": 26,
+        "include": 0,
+        "reference": 1
+      },
+      "outgoing": {
+        "call": 68,
+        "include": 57,
+        "reference": 3
+      }
+    },
+    "forgeCad2026_viewport.h": {
+      "description": "Contratto e stato privato del coordinatore GUI della vista 3D.",
+      "incoming": {
+        "call": 19,
+        "include": 17,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 3,
+        "include": 23,
+        "reference": 0
+      }
+    },
+    "forgeCad2026_viewport_document.cpp": {
+      "description": "Apertura: ripara fusioni che scavalcano uno stadio e invalida le cache dipendenti; registra la genealogia completa della cache prima che le ripetizioni sostituiscano operandi runtime. Invalidazione incrementale per ID persistenti dopo eliminazione, soppressioni multiple e modifiche datum: semi prima della rimappatura e sola cascata delle dipendenze; sorgenti mancanti diagnosticate, geometrie indipendenti conservate. Soppressione: invalida il filtro dei corpi rilasciati; aggregati legacy conservati e risultati derivati gia salvati riuniti in un solo evento. Modifica: ricongiunge le fusioni dopo il cambio di corpo e conserva le preferenze di visibilita durante rollback e sincronizzazione. Documento e storia unificata: schizzi e piani autonomi, riordino, appoggi associativi e contesto storico; mesh richieste nei worker della geometria o nella coda differita, pubblicazione GUI, gruppi limitati nel cambio qualita e basi delle ripetizioni prima delle istanze.; permette il riordino dei creatori di corpi con un solo stadio, conservando ancoraggio delle catene e controlli delle dipendenze",
+      "incoming": {
+        "call": 94,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 43,
+        "include": 4,
+        "reference": 0
+      }
+    },
+    "forgeCad2026_viewport_scene.cpp": {
+      "description": "Coordinate scena/schermo, raggi e bounds: conserva la base interrogabile dal picker dei bordi mentre il renderer mostra solo il risultato completo; costruzione inclusa in modifica o tramite preferenza visiva, policy condivisa con rendering/picking; in scelta riferimenti storici esclude gli operandi futuri ripristinati dalla preview e mantiene visibili le basi selezionabili; zoom al cursore e piani di riferimento. Scena sorgente coerente con il reference picker anche in creazione, con storia futura esclusa, operandi espliciti e curve 3D visibili.",
+      "incoming": {
+        "call": 43,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 14,
+        "include": 1,
+        "reference": 0
+      }
+    },
+    "tests/test_document_theme_tabs.h": {
+      "description": "Tema globale su schede 3D/2D visibili e nascoste, finestre separate, nuove pagine, soli documenti 2D e cambio foglio; menu, pannelli, icone e pixel, colori utente e contenuto della carta invariati. Sezione e report massa reali gia aperti: istruzione senza tagli, altezza necessaria e resize utente preservato, foreground/contrasto, errore e ritorno normale, documento/copia/selezione/scroll preservati senza ricalcolo al tema.",
+      "incoming": {
+        "call": 2,
+        "include": 1,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 20,
+        "include": 0,
+        "reference": 0
+      }
+    },
+    "tests/test_viewport.cpp": {
+      "description": "Verifica: Vista e interazione.",
+      "incoming": {
+        "call": 76,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 196,
+        "include": 151,
+        "reference": 0
+      }
+    },
+    "tools/generate_architecture.py": {
+      "description": "Implementazione: generate architecture.",
+      "incoming": {
+        "call": 0,
+        "include": 0,
+        "reference": 0
+      },
+      "outgoing": {
+        "call": 0,
+        "include": 0,
+        "reference": 0
+      }
+    }
+  }
+}

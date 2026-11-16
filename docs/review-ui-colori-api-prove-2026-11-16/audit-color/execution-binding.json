@@ -1,0 +1,69 @@
+{
+  "privateSources": "Own friend test driver, real PdfWindow/CadViewport and massPropertiesDialog; no production hooks or mocks",
+  "objects": "Two candidate production objects compiled by tester from frozen sources; other linked objects from integrated runner",
+  "platform": "Linux Qt6.12 offscreen, QT_OPENGL=software; QtWidgets raster only, no 3D rendering claim",
+  "candidateCommand": [
+    "QT_QPA_PLATFORM=offscreen",
+    "QT_OPENGL=software",
+    "timeout",
+    "45s",
+    "/tmp/ui-residual-fix/audit/audit-candidate",
+    "/tmp/ui-residual-fix/audit/live-result.json"
+  ],
+  "baselineCommand": [
+    "QT_QPA_PLATFORM=offscreen",
+    "QT_OPENGL=software",
+    "timeout",
+    "45s",
+    "/tmp/ui-residual-fix/audit/audit-baseline",
+    "/tmp/ui-residual-fix/audit/baseline-result.json"
+  ],
+  "hashes": {
+    "/tmp/ui-residual-fix/audit/audit-baseline": {
+      "bytes": 132077616,
+      "sha256": "1211d110bf50a10c2c2694d94b11f4fa97a3ac6a587b21b100799d7d8c8cb0af",
+      "retainedInPacket": false
+    },
+    "/tmp/ui-residual-fix/audit/audit-candidate": {
+      "bytes": 132077776,
+      "sha256": "42b74635e6438f96d316070273c2d7cfc8b0792349d1861cc50f9e61ab54c5da",
+      "retainedInPacket": false
+    },
+    "/tmp/ui-residual-fix/audit/driver.o": {
+      "bytes": 135280,
+      "sha256": "cb8dc87b4efefdda683ee51a8d66f9d9719163cd6ad99c6034eb7b9ef6c5ad26",
+      "retainedInPacket": false
+    },
+    "/tmp/ui-residual-fix/tests/forgeCad2026_gui.cpp.o": {
+      "bytes": 2133528,
+      "sha256": "9ccff1f654abec76eed95e624e3c985c575240566536556cd6c7b6bb0a585591",
+      "retainedInPacket": false
+    },
+    "/tmp/ui-residual-fix/tests/forgeCad2026_dialogs_analysis.cpp.o": {
+      "bytes": 245160,
+      "sha256": "8fda2f1bbd5a5e1fcf220619d48534c8bb8f6f50027ab044b1bdedccf49011f9",
+      "retainedInPacket": false
+    },
+    "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/forgeCad2026_dialogs_common.cpp.o": {
+      "bytes": 503480,
+      "sha256": "e190a7190523548f6bc5bda0fde369424c69ac1b0c8e95595d9728e29861373e",
+      "retainedInPacket": false
+    },
+    "/home/myungit/Linux_CAD_forFree/forgecad-release/kernel/libforgekernel.a": {
+      "bytes": 179443358,
+      "sha256": "24fe53617202e1b07328b1042940fbc37e0e0e10704161515cda8b68cf61dc69",
+      "retainedInPacket": false
+    },
+    "/tmp/ui-residual-fix/core/candidate/forgeCad2026_gui.cpp": {
+      "bytes": 363183,
+      "sha256": "a4ca3185da83aa638c038433de886c713a5d3e8ec4fbb35ace968d37e812395e",
+      "retainedInPacket": true
+    },
+    "/tmp/ui-residual-fix/core/candidate/forgeCad2026_dialogs_analysis.cpp": {
+      "bytes": 37625,
+      "sha256": "3e74eba725601726a5c2ec2c9fddb002bbb65c4733fb6ea3a0ac5bcec63468b4",
+      "retainedInPacket": true
+    }
+  },
+  "harnessNote": "Intermediate driver searched immediate browser parent as QDialog; corrected to walk scroll-area ancestors before final execution. No candidate production change for this harness repair."
+}

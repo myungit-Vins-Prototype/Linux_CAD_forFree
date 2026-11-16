@@ -1,0 +1,49 @@
+[
+  {
+    "path": "/tmp/ui-residual-fix/tests/baseline",
+    "bytes": 132073816,
+    "sha256": "d96087253725924d9b3307a0d004257d8827585dbb075b47df9eabefce2afb18",
+    "archived": false,
+    "headerSourceAtCompile": "1dadad2b685469a05ab3aeb4a139ddc59acc676cd276ec9fb2b2426a88076396"
+  },
+  {
+    "path": "/tmp/ui-residual-fix/tests/candidate",
+    "bytes": 132074008,
+    "sha256": "1f7bf15ee939f43a4235cae2f877065c0d1196924c29bc079bd3607ac9eef78f",
+    "archived": false,
+    "headerSourceAtCompile": "1dadad2b685469a05ab3aeb4a139ddc59acc676cd276ec9fb2b2426a88076396"
+  },
+  {
+    "path": "/tmp/ui-residual-fix/tests/baseline-full",
+    "bytes": 138075560,
+    "sha256": "1d8fe05bdaf3d76d714cca67268188b440764ea5ffc069f2b38564993ac90afe",
+    "archived": false,
+    "headerSourceAtCompile": "09b24d565234950f2a577739df572438f006702c1dea26147dae23b2a97b4108"
+  },
+  {
+    "path": "/tmp/ui-residual-fix/tests/candidate-full",
+    "bytes": 138075720,
+    "sha256": "d796935b0ed6eac4f46f9579ce72af436b7b5748ad42f0cf25074bcdc7a02725",
+    "archived": false,
+    "headerSourceAtCompile": "09b24d565234950f2a577739df572438f006702c1dea26147dae23b2a97b4108"
+  },
+  {
+    "path": "/tmp/ui-residual-fix/tests/forgeCad2026_gui.cpp.o",
+    "bytes": 2133528,
+    "sha256": "9ccff1f654abec76eed95e624e3c985c575240566536556cd6c7b6bb0a585591",
+    "archived": false
+  },
+  {
+    "path": "/tmp/ui-residual-fix/tests/forgeCad2026_dialogs_analysis.cpp.o",
+    "bytes": 245160,
+    "sha256": "8fda2f1bbd5a5e1fcf220619d48534c8bb8f6f50027ab044b1bdedccf49011f9",
+    "archived": false
+  },
+  {
+    "path": "/tmp/ui-residual-fix/tests/test_viewport-full.o",
+    "bytes": 10164320,
+    "sha256": "1e2d7363daec0f20af0bb5712d28e9144a9e796b330c96a3525eda7a8af8588c",
+    "archived": false,
+    "headerSourceAtCompile": "09b24d565234950f2a577739df572438f006702c1dea26147dae23b2a97b4108"
+  }
+]

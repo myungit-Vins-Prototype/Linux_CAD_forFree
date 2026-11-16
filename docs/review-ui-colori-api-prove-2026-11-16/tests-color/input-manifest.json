@@ -1,0 +1,573 @@
+{
+  "gitHead": "046685ef1d31fdf4b61571d9630ea0f245b4ffb7",
+  "inputs": [
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/forgecad_view_tests_autogen/mocs_compilation.cpp.o",
+      "sha256": "1729a7d0c2a328eb95d44f1af4d485ebbf5e74e7c6a2eb05cd4873ad64a3319b"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/tests/test_viewport.cpp.o",
+      "sha256": "4b897740ac4891a4863d951ff43db9f4d72cca19771cc66ca53f0ee52bc38844"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/cuda_support_cpu.cpp.o",
+      "sha256": "ee2eab4ade744cc2736fe811882af185aa9487d8df1e85fd2d067f123991d997"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/cad_document_tabs.cpp.o",
+      "sha256": "2d1fc805a8b6c4c54bf98b6434170ee868edf7c96913311df111db038bda5b47"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/forgeCad2026_application_theme.cpp.o",
+      "sha256": "e23d6afdbe73e094d30a736e4df54642fa91fe6c300971bc010752e30569d25f"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/forgeCad2026_menu.cpp.o",
+      "sha256": "c552174f01a69919e04719f1a9e0a2810d1799f9db1c5d838eff05b50f3817f5"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/forgeCad2026_ui_glass.cpp.o",
+      "sha256": "58dbc07ee090bc40a71e5d4345f7c6e49de9edc0b7714629465ca776d48d7f4c"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/forgeCad2026_gui.cpp.o",
+      "sha256": "4e3c57543a9f3c75aecf85be9a78054e6b5fec03076f02a9d203f01b6643e633"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/forgeCad2026_ribbon_preview.cpp.o",
+      "sha256": "bdbec4c4b50b2af8d66bc96be97cfe78cd5b11fa58d5f5534dcf75f3b9a64d6e"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/forgeCad2026_ribbon_editor.cpp.o",
+      "sha256": "9d6e56a2239b7afef9ab88d50e0d2b8aa954bae9c7760c7758308a1bfa1adcd2"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/forgeCad2026_viewport.cpp.o",
+      "sha256": "39dee855566bb877255b8ebd74a642f09b101fc951731391e4c9a009031a87c6"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/forgeCad2026_zoom.cpp.o",
+      "sha256": "a8e75912f887172707b59656adee87b610f20fff88fe52a09bb15041d9c98648"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/forgeCad2026_viewport_sketch.cpp.o",
+      "sha256": "73de3204375082bfad32f0bf9100965541a99eeb183c5c8529463b89d426f82b"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/forgeCad2026_viewport_sketch_reference.cpp.o",
+      "sha256": "b08b80281928643d79f10318ddf3b46e9b31e113e9888ac107ebf53238aabf25"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/forgeCad2026_viewport_document.cpp.o",
+      "sha256": "8a0f39af8c6bef9b62ce9d0ca37ae2dfda8ccb92440542977a8db3c9498e467c"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/forgeCad2026_viewport_document_lifetime.cpp.o",
+      "sha256": "244e9d92507ac5925c4153dd267b057643d10465bf5b99b957b40e0241ffd919"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/forgeCad2026_viewport_selection.cpp.o",
+      "sha256": "0f62925903821c549218abc42c49399850c70de207b734f69a5f10a7ff2f0f07"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/forgeCad2026_viewport_pole_visibility.cpp.o",
+      "sha256": "767610b50153b5d84e894c33807ff3a8768467af5c63ef224c128531912c20e4"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/forgeCad2026_viewport_body_box.cpp.o",
+      "sha256": "5374c8438065159c347cca0b3ba0d9ee07af4974bff32341926982ac253cfd82"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/forgeCad2026_viewport_storyboard.cpp.o",
+      "sha256": "c73fdc80fb508738e85c63b6ac60789db1d4f1e6f59d41318d6644bdea870562"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/forgeCad2026_viewport_loft_diagnostics.cpp.o",
+      "sha256": "88c3d3192dafb81ee210e90cd35af62e1bc025e48d18debab0f58b53b6570129"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/cad_storyboard_selection.cpp.o",
+      "sha256": "df22bcdad98db71345f51af776f01b6eeccf00a5f9eefad7f15a0493ee0a9dc1"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/cad_loft_diagnostics.cpp.o",
+      "sha256": "2cd6d04b4d8c7e88cb3672301b0a1e17cc25a50531a9b3197c549a6c0558c384"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/forgeCad2026_viewport_render.cpp.o",
+      "sha256": "40950de395b7ef86c768eca218920aa99223ece2b07028bb250c13010e76686f"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/forgeCad2026_viewport_parameter_dimensions.cpp.o",
+      "sha256": "c44836da18094359d87baf57694ca48d303a2e86459d242de7ec5ae688a867d7"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/forgeCad2026_viewport_preview.cpp.o",
+      "sha256": "ae988567197160cc00601486047a7652f45d5ea6e560ea2e9559de7a604ab806"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/forgeCad2026_viewport_scene.cpp.o",
+      "sha256": "5970cd51b88759a546ae96270d5c20dc76da34fccc5626fc208fd58ad17c9a43"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/forgeCad2026_viewport_interaction.cpp.o",
+      "sha256": "4a1c866745b8c501f84e707dee735e0f115678844f5bee98d527d2749faef375"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/forgeCad2026_feature_preview.cpp.o",
+      "sha256": "a8ec0b167f1a94d76fd9499ce2d6c6b84de1e2b3016c826866a32c891acc3484"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/forgeCad2026_sketch_curvature.cpp.o",
+      "sha256": "cb8caaae641ed9428f82b7b5a5303c442319f83654229029cc1e4a9870bf0192"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/forgeCad2026_camera.cpp.o",
+      "sha256": "8170c117b6afdcaa29ff45234a06ccdb4db048879d007d44d2c5881b5779feaf"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/forgeCad2026_glass_compositor.cpp.o",
+      "sha256": "a6d39771e869c280fd5d4744b73eefc458f56455b853c6a2c80fd93e7b016ed5"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/forgeCad2026_gpu_picker.cpp.o",
+      "sha256": "a6a8ecaa799d5e53dd4e69abb30c89ae69deb6bec4d7f370a81bfd7ea939b620"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/forgeCad2026_scene_renderer.cpp.o",
+      "sha256": "3473172d1b321d8eddd90b897e4bba72ba61f2a556694fe20949b18cb71be7bc"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/forgeCad2026_gui_common.cpp.o",
+      "sha256": "ba69dedfd69e549db44848affdcd079bf3e5eec596586283fbc9de12703f0be2"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/forgeCad2026_storyboard.cpp.o",
+      "sha256": "fc61ee52993f5ead6507950bfcae4530838e8ccf303098a2c537b3f9f07490d8"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/forgeCad2026_dialogs_common.cpp.o",
+      "sha256": "e190a7190523548f6bc5bda0fde369424c69ac1b0c8e95595d9728e29861373e"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/forgeCad2026_operation_illustration.cpp.o",
+      "sha256": "7d66838723a606ea13b406d9830648cc8c012827ee142670ad6b94cc8e104e4c"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/forgeCad2026_fillet_handles.cpp.o",
+      "sha256": "0286c3d7759e5bd2bdf9ddad66b34ddda5f930d4da981c2b3096b75336e8b489"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/forgeCad2026_dialogs_fillet.cpp.o",
+      "sha256": "9dc3d651a79b8f321c68dcdccc4fcdb68b4e8f081584731c518da48010f928b0"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/forgeCad2026_dialogs_solids.cpp.o",
+      "sha256": "8219043f13a4fdece4d386ca00d40b376df7b26f8ebecf0d092cb6c49064ed43"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/forgeCad2026_dialogs_surfaces.cpp.o",
+      "sha256": "3dab8ab73544f02283d875dcf12d0fbc47d77396536f0408d52189b24a19f491"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/forgeCad2026_dialogs_projection.cpp.o",
+      "sha256": "c8aef6d3db20d93796070801c590441bb7f33a28835ef354adb91efd69c6e0b3"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/forgeCad2026_dialogs_surface_tools.cpp.o",
+      "sha256": "b4b35f5c15199a253f3fbf2bde238b87c1a8cadbd6e32e9c3514232717022415"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/forgeCad2026_dialogs_trim.cpp.o",
+      "sha256": "949421aac89389d98d759778eb8e60382581b1b5915b82c44cdaa847dbee5304"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/forgeCad2026_dialogs_mapping.cpp.o",
+      "sha256": "0dc7fd8e003c8519a06bf765243fd92ab2f481fd583bfadeb375419069bfed2c"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/forgeCad2026_dialogs_sketch.cpp.o",
+      "sha256": "512ccd9654c39c7e3012a0726c3da863d9496cbd6c124f92339ffd80b98ae521"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/forgeCad2026_dialogs_analysis.cpp.o",
+      "sha256": "0dba163575b5c5e33d5ea7329cad9118839b5e664268a68f1f7fb460667345a9"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/cad_shape_analysis.cpp.o",
+      "sha256": "d78369a0184cbee4361eedb45afce29c766700217530e0d788dd93f4724fecfa"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/cad_display_cache.cpp.o",
+      "sha256": "beb965e66eac2aa8314ab010c916d57cf0accba04a4394f3fbe4ea13705576c0"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/cad_memory.cpp.o",
+      "sha256": "a16d3175b5bb0660532b39d0ce09dc037110c01be872fe649e4e0bb17938630f"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/cad_overlay_renderer.cpp.o",
+      "sha256": "8c3e63497e922735d946121e17c35458dd8562defd018bf745cf3f0dfe310a5a"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/cad_curve_solver.cpp.o",
+      "sha256": "5e7f59aacf13ceb96532da7a798a807465608ec76a423556b4b050c4ad5f9395"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/cad_ellipse.cpp.o",
+      "sha256": "2726279098fea2bd8ca01aa762bb1404853f6783c11e5a560bc7ba9e28b90a0c"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/cad_surface_tools.cpp.o",
+      "sha256": "e0be7ffe00044c144fb6d0a1f9868743d44e3cd4bbbdac6cbf87a989afc0ba62"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/cad_surface_poles_model.cpp.o",
+      "sha256": "298dc44bc5e21c6629503245f088792102151e2d68f97c7521c983cf47630843"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/cad_surface_poles_visibility.cpp.o",
+      "sha256": "f492e07cc6aa4002dcc19a277170fdb63a1bb2a34d63cdfadfbdb3d33ddc162c"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/cad_surface_poles_session.cpp.o",
+      "sha256": "9a4fdec893324ce0d3e68bb46751716c0ad482dce9017ff38595bbc159274e60"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/cad_surface_poles_interaction.cpp.o",
+      "sha256": "703d480ce3b62d19ceab0ff2333b5c0353e9b729814af1cc6240dba377f294b6"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/cad_solid_trim.cpp.o",
+      "sha256": "ce00e3a367e3d1376ac390be8e5a921c9a313db19f0808fa6e3f481ddd148dfb"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/cad_surface_mapping.cpp.o",
+      "sha256": "166b0ef1a832f814700dc7e3809ce7840a563322bee6967e54700dca3b9c212b"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/cad_spatial_sketch.cpp.o",
+      "sha256": "11d989d8126ed884bf455d151a9e73ca5727f78458ad85cc8776227f82c8cdf1"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/cad_curve_extract.cpp.o",
+      "sha256": "6914261af889371e7e1cbf74d56747c7f16c7adb09a17d06b8f32ec25cba7a2b"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/cad_snap.cpp.o",
+      "sha256": "ad1ecdf28b411416a5f93fddd54bfee2cb2a65553932b8a3af0f023708254f29"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/cad_export.cpp.o",
+      "sha256": "66d5377e615ed637c90bb2bfb35a61cc7eccbf117e628d61d6f7cfdfcfab47cd"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/cad_expression.cpp.o",
+      "sha256": "05ccf18e4085d7d7cc5b0606a68c3b80bf4897988118ada80ac258066dc5a9f6"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/cad_document_io.cpp.o",
+      "sha256": "1db5d5e898a4be38ecaa5b55537066b379fe59e1efc90ba48241cadb4e5af8b0"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/cad_document_precision.cpp.o",
+      "sha256": "4ff10abd820ff8bfd3a1e53decdf7f71d623c5c16696e9240e18b3092b980b3f"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/cad_document_recovery.cpp.o",
+      "sha256": "3306ae3a8389c2c502dcc7f1045d4e664159af770bae9dab738ba368dc47021e"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/cad_document_read.cpp.o",
+      "sha256": "61268eb9f4327b4b38ef31cf731053f086a5969963e68bf519cdb17e554fd6f8"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/cad_drawing.cpp.o",
+      "sha256": "d686d7b883cf662d18567a2c36220a60bfb9947d2c57aa06aec7303208861ede"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/cad_drawing_dimension.cpp.o",
+      "sha256": "71ead0712726689bc679b3616915c5c92b0d9da17f3f088100906b21f3e6ec40"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/cad_drawing_sheet.cpp.o",
+      "sha256": "a3f2cad54317be42484ff8544db574712d8cf2685681644381cfd69161012534"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/cad_drawing_derived.cpp.o",
+      "sha256": "8ad1833fc15b5c124c351ec52c26d5b49add7746f523940933b84e0b553de110"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/cad_drawing_editor.cpp.o",
+      "sha256": "b374e4e8796bd84968cfce984f7c8581b032cbd01dba93ffac91e203beb494fb"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/cad_drawing_preparation.cpp.o",
+      "sha256": "f7a6f09aeffd17f7abd158c5109e94230c82ea75ad54ac56990f58bfdaed2e2a"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/cad_drawing_local_section_display.cpp.o",
+      "sha256": "cb04555dc3f51b713f682616165a49e2cb161acb24cbfa6bda948e31208a65ad"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/cad_drawing_local_section_tool.cpp.o",
+      "sha256": "5cdca309cd5d9d3756c7ca474e66064092c9ebdaf8407589f0098a6c0ef7e491"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/cad_drawing_local_section_depth.cpp.o",
+      "sha256": "b9de7f4b9f303cab506d2319b282ee6728480996c4abe173e5f4159338f9e380"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/cad_drawing_silhouette.cpp.o",
+      "sha256": "bb522e0b2c6fa18b75f308c55119b8358890b2a5688dc04ac5516148ecdfc624"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/cad_drawing_visibility.cpp.o",
+      "sha256": "722b6d0e9c02cdd71674643db106e0c3c528f9864cd1bb322b8d847e900e24e8"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/cad_drawing_frame.cpp.o",
+      "sha256": "9570a0b87cce9a71ea688873445125b954217249a3d7a404c240c5543d71d3aa"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/cad_drawing_template.cpp.o",
+      "sha256": "948ff915f5e23cb744e2d24586ebd0909e63d869b5a3d8e48c908a0c0b1db6ea"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/cad_drawing_template_editor.cpp.o",
+      "sha256": "a92e61c0d114dae114cd5c5e69ce91490ecf13127f434cd327b8d510a0ddca6c"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/cad_drawing_page.cpp.o",
+      "sha256": "bb7541a9caa607935c3f6a1444a6e3ab78cf16f8248a411684c47dc4a9541252"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/cad_drawing_file.cpp.o",
+      "sha256": "00e04713a2d03c0c13c393f1a56f4b7dab9d7ccedc22cb54a06a726b64d76fc4"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/cad_drawing_browser.cpp.o",
+      "sha256": "032176b7732cca03307f577cdcb7652d97fe0e3d4bdc75ce74d0ea2093093ed2"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/cad_drawing_revisions.cpp.o",
+      "sha256": "d63241beaf9543f08d79824c4fb4ab1b60221e3ef137922176f84c6f0a1955ad"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/cad_drawing_revision_ui.cpp.o",
+      "sha256": "95be3fbca351811ff68f9c3e79cfd05333cfad8c9d202df060635ec58545e4e7"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/cad_drawing_restore.cpp.o",
+      "sha256": "711f11291b222dbadc658c04e4756ba982788e5dc026188825fa434057801cf7"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/cad_drawing_release.cpp.o",
+      "sha256": "4fa434d236ee26e1998fd80021b08affe615db2eaed1d5c90580502733c06bf4"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/cad_drawing_release_ui.cpp.o",
+      "sha256": "3243f5337bab922548e8e6226ca640a26cb195dfc5a0b11aa5a5cc684cc5fc9c"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/cad_drawing_window.cpp.o",
+      "sha256": "66219388225a44cc9a1f711d681cf4e896c14ad39d2c5c1495905ca6acf8d523"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/cad_drawing_sheets_ui.cpp.o",
+      "sha256": "b78252cad1b6aa1a6bfe4d8a36d140abb519cef652f8351e47ebc45327834208"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/cad_revision_store.cpp.o",
+      "sha256": "2086f80564f853c303462e1e7ed20b3de9d169fd874c849170ea3af52c802bf7"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/cad_revision_recovery_ui.cpp.o",
+      "sha256": "11cb1689cd972b145bb7ce9145fd418ed053413bb8e216ac5fb2f1d9d237ecd2"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/cad_native_revisions.cpp.o",
+      "sha256": "1f152845d67fac1577795ea579a75dc62d389bdc25e3fbc90901cd812e54ee3b"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/cad_revision_client.cpp.o",
+      "sha256": "67946538bea418642e02f67c28cb5fb1bd71dc674c026c7025237dde76d17549"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/cad_workspace.cpp.o",
+      "sha256": "1a777deb6beddcd67f9d528a1d11b6acf70ddb2995b8862d8358f251791945d8"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/cad_snapshot_chunks.cpp.o",
+      "sha256": "4d159af9c84874ced51e9493e2b0f3bb2d4ad422986debd84a0fbf936e261bbb"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/cad_sketch_edit.cpp.o",
+      "sha256": "1e3e12f54b7135359431ee6d8c0dc6b7432a0d89f99eee6ca2dd612c2a61d666"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/cad_constraints.cpp.o",
+      "sha256": "0aa60e405435aed1bd63068a82b63a0d0a55dda8b9f738f563c143491e19307e"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/cad_icons.cpp.o",
+      "sha256": "bf538f247f2d10474b347ed56295db54f6049d9c531a982685176660b6733853"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/cad_history.cpp.o",
+      "sha256": "4efe34bff4fdce15f3427ec31b50ec6228703252f969bd167a8e2acb9462ce2e"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/cad_history_graph.cpp.o",
+      "sha256": "cf098d97a3cb606d273f611e6e38570e732304fe68385c6befe50c1b73f97652"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/cad_feature_dependencies.cpp.o",
+      "sha256": "bbfa0e0dace6e9eb35bfb57d8148eaebeab30e8c6cc19718a5c26032b12ade5b"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/cad_feature_build.cpp.o",
+      "sha256": "65c5a052a98197b17f85a9a42852263604987c9d199d93e6961ef11895f1a84e"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/cad_model_history.cpp.o",
+      "sha256": "456f09b0f899ecc5db638ec2d5b11ecae6d4741fee4e0246a2e5a1284da4de9a"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/cad_history_chain.cpp.o",
+      "sha256": "3a026fd070694062aaf54d942fae5c7c526e8d16bbd9ec9ed67992933ebfa7e6"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/cad_topology_ref.cpp.o",
+      "sha256": "510b3c882bec0a2e3807ac76710b9aaa8ae3f20e5c1e85de863a1da16a725eb0"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/cad_element_names.cpp.o",
+      "sha256": "2e3ff6db5cd238bf5ba5576ca390a6f74a12ec51e2f6cf4c6b8d9e396968c68c"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/cad_kernel.cpp.o",
+      "sha256": "dcec495c482590fe2f2bb09c0b8d559b35c3b6d603ff85d8acfc73cf0524dad4"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/cad_forge.cpp.o",
+      "sha256": "43aa7e283c59e843f4473d8593f9a535f707f6ba9ee201fa5996b1dfe688eb27"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/cad_feature_faces.cpp.o",
+      "sha256": "696137e0bf9b371db4df8cfbe42d12564b206708b06a48c506ee4c99dd8a393b"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/cad_features.cpp.o",
+      "sha256": "20cd753087c86854a7b9e2de105bfb2446cc5c30bfeb176d41b1a8695dc750fe"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/cad_mass.cpp.o",
+      "sha256": "910864166387caecf6d88c71f448c16148da89482694055c9e8aa72d37863661"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/cad_measure.cpp.o",
+      "sha256": "5b610c2375dc873825dd94ae0d7591aed0c820c17d1856a5332937bc89f3ac09"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/cad_fillet_paths.cpp.o",
+      "sha256": "96fecf2a0b364b73835bc0b73e0acf7a1b24e71ae6843cb26bd4a11e2a905e6c"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/cad_datum.cpp.o",
+      "sha256": "df192099b8b576487951c96c2bdf6a7a77540d7ef43e6bfe38d881442a738060"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/cad_import.cpp.o",
+      "sha256": "830db52f7097cbb5128ab182ccdab66934f359a14178dc252bdb35bf144d502d"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/cad_pattern.cpp.o",
+      "sha256": "cf483472cbfd6388a50ea3c9ca69d3c87356b96da60a5611f396bdd52d77f3a2"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/cad_circular_pattern_fit.cpp.o",
+      "sha256": "912925a9e74aef0456bf6364d18ede4f22f65ea1b86559cbbbec3f90e51ac283"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/cad_fill_pattern.cpp.o",
+      "sha256": "3988fd221da5b049f7d7381dbef0fb374c14c8778c3dab8f0178346e07c7e533"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/cad_loft_correspondence.cpp.o",
+      "sha256": "f1d62709f8d1d229bb16634a4aa585e9a8de043f175c6e391b6e51915420ae29"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/cad_loft_correspondence_editor.cpp.o",
+      "sha256": "5f3929a8fa89f1a86819c2bd50c2c116dfafc8232778a4f9fc1b96851db0ab90"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/cad_pattern_variation.cpp.o",
+      "sha256": "35cadace206284ebc928964f8116f8a0c93de208b5f6dbe3c6504fd6fcbfcac4"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/cad_pattern_variation_editor.cpp.o",
+      "sha256": "39c823564af5636435af17dbd0634d6ff93501c7e9c2ea957337a1b5309a490b"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/cad_extrude.cpp.o",
+      "sha256": "f2e2d900276a8fca7996cfd6f55fc34869948125f8be6c284dfaaf1bed931666"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/cad_projected_curve.cpp.o",
+      "sha256": "996d64447f86c8b0c7c01796b4d76820fd8d6ef62ae8de608d0e352082cd9a66"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/cad_sketch_refs.cpp.o",
+      "sha256": "189192adb214a6dead783bd7cf9c51220b373c8291020d878b60482a1542b51c"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/cad_sketch_reference_usage.cpp.o",
+      "sha256": "2422e1d0b0ecc2c2b8f986ecca79b632e66e5bfbeadd204fd77c50d7250f9e9a"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/cad_cuda_tessellation.cpp.o",
+      "sha256": "5e11cb1a1c0d2adeee34c5add6d72136a176d7b11b69fd5bdc527b0d2f6b6c5e"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/cad_sketch_offset.cpp.o",
+      "sha256": "b1a1ab9ea7ba7bfcf85007e2434ab1e19a8b1cf93f5ae8e14d911d1517c2f066"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/CMakeFiles/forgecad_view_tests.dir/forgecad_view_tests_autogen/2SEMU33LXP/qrc_forgecad.cpp.o",
+      "sha256": "1595c439d2471f0ede08749f2b691211e0cff82f1333165a4f95dd477c9058b7"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/libforgecad_compute.a",
+      "sha256": "c2e855a529bae275325d061aa84048e07bd41c476ededdf37238325a15dbe845"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-release/kernel/libforgekernel.a",
+      "sha256": "24fe53617202e1b07328b1042940fbc37e0e0e10704161515cda8b68cf61dc69"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp",
+      "sha256": "4b23e22c0811d6ed33ccc96aa6ca215620b115ad2a0cb9b882b5a267cfefaf76"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_analysis.cpp",
+      "sha256": "6d4cb332ce0618bdc2fd930667384ea6a6ee7ba943308804b97affc16fb6b0fd"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/tests/test_viewport.cpp",
+      "sha256": "3398c62d95ead99c6498166f46fba7021193066b6ae66c88686895a81342a132"
+    },
+    {
+      "path": "/home/myungit/Linux_CAD_forFree/tests/test_document_theme_tabs.h",
+      "sha256": "5ee295338bd353e9333a6331c44f6a0b285ffbea3f550da743375f73eb2a4da6"
+    },
+    {
+      "path": "/tmp/ui-residual-fix/core/candidate/forgeCad2026_gui.cpp",
+      "sha256": "a4ca3185da83aa638c038433de886c713a5d3e8ec4fbb35ace968d37e812395e"
+    },
+    {
+      "path": "/tmp/ui-residual-fix/core/candidate/forgeCad2026_dialogs_analysis.cpp",
+      "sha256": "3e74eba725601726a5c2ec2c9fddb002bbb65c4733fb6ea3a0ac5bcec63468b4"
+    }
+  ]
+}

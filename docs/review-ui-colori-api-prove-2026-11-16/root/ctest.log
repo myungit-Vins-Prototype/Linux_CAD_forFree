@@ -1,0 +1,188 @@
+UpdateCTestConfiguration  from :/home/myungit/Linux_CAD_forFree/forgecad-release/DartConfiguration.tcl
+Test project /home/myungit/Linux_CAD_forFree/forgecad-release
+Constructing a list of tests
+Done constructing a list of tests
+Updating test list for fixtures
+Added 0 tests to meet fixture requirements
+Checking test dependency graph...
+Checking test dependency graph end
+test 15
+      Start  15: forgecad_document_theme_tabs_tests
+
+15: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_view_tests "--theme-tabs"
+15: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release
+15: Environment variables: 
+15:  QT_QPA_PLATFORM=offscreen
+15:  QT_QPA_OFFSCREEN_NO_GLX=1
+15:  QT_QPA_PLATFORMTHEME=
+15:  QT_STYLE_OVERRIDE=Fusion
+15:  FORGECAD_EXAMPLE_DIR=/home/myungit/Documenti/File_Esempio
+15: Test timeout computed to be: 90
+15: PASS document theme tabs: 1569 checks
+ 1/12 Test  #15: forgecad_document_theme_tabs_tests ......   Passed    9.04 sec
+test 16
+      Start  16: forgecad_document_theme_only2d_tests
+
+16: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_view_tests "--theme-tabs-only-2d"
+16: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release
+16: Environment variables: 
+16:  QT_QPA_PLATFORM=offscreen
+16:  QT_QPA_OFFSCREEN_NO_GLX=1
+16:  QT_QPA_PLATFORMTHEME=
+16:  QT_STYLE_OVERRIDE=Fusion
+16:  FORGECAD_EXAMPLE_DIR=/home/myungit/Documenti/File_Esempio
+16: Test timeout computed to be: 90
+16: PASS document theme tabs: 898 checks
+ 2/12 Test  #16: forgecad_document_theme_only2d_tests ....   Passed    4.43 sec
+test 17
+      Start  17: forgecad_ui_foreground_theme_tests
+
+17: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_view_tests "--theme-ui-residuals"
+17: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release
+17: Environment variables: 
+17:  QT_QPA_PLATFORM=offscreen
+17:  QT_QPA_OFFSCREEN_NO_GLX=1
+17:  QT_QPA_PLATFORMTHEME=
+17:  QT_STYLE_OVERRIDE=Fusion
+17:  FORGECAD_EXAMPLE_DIR=/home/myungit/Documenti/File_Esempio
+17: Test timeout computed to be: 90
+17: UI residual checks 74, failures 0
+ 3/12 Test  #17: forgecad_ui_foreground_theme_tests ......   Passed    0.55 sec
+test 18
+      Start  18: forgecad_document_tabs_tests
+
+18: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_view_tests "--document-tabs"
+18: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release
+18: Environment variables: 
+18:  QT_QPA_PLATFORM=offscreen
+18:  QT_QPA_OFFSCREEN_NO_GLX=1
+18:  QT_QPA_PLATFORMTHEME=
+18:  QT_STYLE_OVERRIDE=Fusion
+18:  FORGECAD_EXAMPLE_DIR=/home/myungit/Documenti/File_Esempio
+18: Test timeout computed to be: 90
+18: PASS document tabs: 3D/2D, reuse, state/Undo, shortcuts, position, sheets, floating panels, cancel, asynchronous close
+ 4/12 Test  #18: forgecad_document_tabs_tests ............   Passed    0.85 sec
+test 20
+      Start  20: forgecad_storyboard_review_tests
+
+20: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_view_tests "--storyboard-review"
+20: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release
+20: Environment variables: 
+20:  QT_QPA_PLATFORM=offscreen
+20:  QT_QPA_OFFSCREEN_NO_GLX=1
+20:  QT_QPA_PLATFORMTHEME=
+20:  QT_STYLE_OVERRIDE=Fusion
+20:  FORGECAD_EXAMPLE_DIR=/home/myungit/Documenti/File_Esempio
+20: Test timeout computed to be: 120
+20: PASS storyboard review: rimappatura estrazioni, riferimenti a copie, Undo/Redo, persistenza e detach iniettato
+ 5/12 Test  #20: forgecad_storyboard_review_tests ........   Passed    0.43 sec
+test 36
+      Start  36: forgecad_function_panels_tests
+
+36: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_view_tests "--function-panels-review"
+36: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release
+36: Environment variables: 
+36:  QT_QPA_PLATFORM=offscreen
+36:  QT_QPA_OFFSCREEN_NO_GLX=1
+36:  QT_QPA_PLATFORMTHEME=
+36:  QT_STYLE_OVERRIDE=Fusion
+36:  FORGECAD_EXAMPLE_DIR=/home/myungit/Documenti/File_Esempio
+36: Test timeout computed to be: 60
+36: PASS extrusion action preconditions: warnings and valid active/selected profiles
+ 6/12 Test  #36: forgecad_function_panels_tests ..........   Passed    1.31 sec
+test 51
+      Start  51: forgecad_declared_history_cache_tests
+
+51: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_view_tests "--declared-history-cache"
+51: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release
+51: Environment variables: 
+51:  QT_QPA_PLATFORM=offscreen
+51:  QT_QPA_OFFSCREEN_NO_GLX=1
+51:  QT_QPA_PLATFORMTHEME=
+51:  QT_STYLE_OVERRIDE=Fusion
+51:  FORGECAD_EXAMPLE_DIR=/home/myungit/Documenti/File_Esempio
+51: Test timeout computed to be: 60
+51: PASS declared history cache
+ 7/12 Test  #51: forgecad_declared_history_cache_tests ...   Passed    0.05 sec
+test 148
+      Start 148: forgecad_orbit_pivot_tests
+
+148: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_view_tests "--orbit-pivot"
+148: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release
+148: Environment variables: 
+148:  QT_QPA_PLATFORM=offscreen
+148:  QT_QPA_OFFSCREEN_NO_GLX=1
+148:  QT_QPA_PLATFORMTHEME=
+148:  QT_STYLE_OVERRIDE=Fusion
+148:  FORGECAD_EXAMPLE_DIR=/home/myungit/Documenti/File_Esempio
+148: Test timeout computed to be: 10000000
+148: PASS Estendi: comando reale, pannello prima dei bordi, mouse, contorni, anteprima, Invio/Esc/chiusura e Undo/Redo
+148: Estensione: scelta del contorno completo OK
+148: Taglio: hover, clic e regioni parziali OK
+148: Rimozione durante scelta spigoli: OK
+148: PASS orbita classica: sensibilita, giri completi e pivot mouse
+ 8/12 Test #148: forgecad_orbit_pivot_tests ..............   Passed    7.49 sec
+test 149
+      Start 149: forgecad_smooth_zoom_tests
+
+149: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_view_tests "--smooth-zoom"
+149: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release
+149: Environment variables: 
+149:  QT_QPA_PLATFORM=offscreen
+149:  QT_QPA_OFFSCREEN_NO_GLX=1
+149:  QT_QPA_PLATFORMTHEME=
+149:  QT_STYLE_OVERRIDE=Fusion
+149:  FORGECAD_EXAMPLE_DIR=/home/myungit/Documenti/File_Esempio
+149: Test timeout computed to be: 10000000
+149: PASS zoom portabile: profili Qt, fallback X11, sequenze, override, pinch, preferenze e adattatori
+149: PASS zoom uniforme al cursore: 120 Qt = 20 punti, fattore 0.970446, 250ms senza easing; osservazione 450ms; 16 aggiornamenti Qt
+ 9/12 Test #149: forgecad_smooth_zoom_tests ..............   Passed    0.48 sec
+test 150
+      Start 150: forgecad_application_theme_tests
+
+150: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_application_theme_tests
+150: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release
+150: Environment variables: 
+150:  QT_QPA_PLATFORM=offscreen
+150: Test timeout computed to be: 15
+150: PASS Fusion, quattro transizioni chiaro/scuro, finestre aperte, campi, disabilitati, metriche e stabilità eventi (Qt 6.12.0); richieste native=0, segnali simulati=9; fallback palette, menu, preferenze e override manuale PASS
+10/12 Test #150: forgecad_application_theme_tests ........   Passed    0.08 sec
+test 159
+      Start 159: forgecad_feature_dependencies_tests
+
+159: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_feature_dependencies_tests
+159: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release
+159: Test timeout computed to be: 10000000
+159: Dipendenze delle feature senza GUI: OK
+11/12 Test #159: forgecad_feature_dependencies_tests .....   Passed    0.01 sec
+test 168
+      Start 168: forgecad_drawing_editor_tests
+
+168: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_drawing_editor_tests
+168: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release
+168: Environment variables: 
+168:  QT_QPA_PLATFORM=offscreen
+168:  QT_QPA_OFFSCREEN_NO_GLX=1
+168:  QT_QPA_PLATFORMTHEME=
+168:  QT_STYLE_OVERRIDE=Fusion
+168: Test timeout computed to be: 60
+168: PASS drawing sheet GUI, metadata bytes=957
+12/12 Test #168: forgecad_drawing_editor_tests ...........   Passed    0.15 sec
+
+The following tests passed:
+	forgecad_document_theme_tabs_tests
+	forgecad_document_theme_only2d_tests
+	forgecad_ui_foreground_theme_tests
+	forgecad_document_tabs_tests
+	forgecad_storyboard_review_tests
+	forgecad_function_panels_tests
+	forgecad_declared_history_cache_tests
+	forgecad_orbit_pivot_tests
+	forgecad_smooth_zoom_tests
+	forgecad_application_theme_tests
+	forgecad_feature_dependencies_tests
+	forgecad_drawing_editor_tests
+
+100% tests passed out of 12
+
+Total Test time (real) =  24.91 sec

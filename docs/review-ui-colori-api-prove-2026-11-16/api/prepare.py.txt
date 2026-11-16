@@ -1,0 +1,17 @@
+from pathlib import Path
+import json,hashlib,difflib
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/ui-residual-fix/api');sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+(R/'CLAUDE.md').read_text();g=json.loads((R/'docs/architecture/graph.json').read_text());files=['forgeCad2026_viewport.h','forgeCad2026_viewport_scene.cpp','forgeCad2026_viewport_document.cpp','cad_feature_dependencies.h','cad_feature_dependencies.cpp'];focus=set(files)|{'forgeCad2026_camera.cpp','cad_model_history.cpp'}
+(T/'graph-consult.json').write_text(json.dumps({'nodes':[n for n in g['nodes'] if n['id'] in focus],'relations':[e for e in g['edges'] if e['source'] in focus or e['target'] in focus],'stats':{'nodes':len(g['nodes']),'edges':len(g['edges']),'units':len(g['analysis']['units'])}},indent=2)+'\n')
+removals={
+'forgeCad2026_viewport.h':["    QStringList extrusionNames() const;\n", "    // Rotazione dal modello allo spazio della vista standard: righe destra, alto, verso l'osservatore.\n    QMatrix4x4 basisMatrix() const;\n\n", "    static float normalizedViewAngle(float degrees);\n"],
+'forgeCad2026_viewport_scene.cpp':["QMatrix4x4 CadViewport::basisMatrix() const {\n    return camera_.basisMatrix();\n}\n\n", "float CadViewport::normalizedViewAngle(float degrees) {\n    return ForgeCad::Gui::ViewportCamera::normalizedViewAngle(degrees);\n}\n\n"],
+'forgeCad2026_viewport_document.cpp':["QStringList CadViewport::extrusionNames() const {\n    QStringList names;\n    for (const ExtrusionObject &extrusion : extrusions_) names.append(extrusion.name);\n    return names;\n}\n\n"],
+'cad_feature_dependencies.h':["bool usesSketch(const ExtrusionObject &body);\n"],
+'cad_feature_dependencies.cpp':["bool usesSketch(const ExtrusionObject &body) { return !sketchesOf(body).isEmpty(); }\n"]}
+manifest={};patch=[]
+for f in files:
+ before=(R/f).read_text();after=before
+ for removal in removals[f]:assert after.count(removal)==1,(f,removal);after=after.replace(removal,'')
+ q=T/f;q.parent.mkdir(parents=True,exist_ok=True);q.write_text(after);manifest[f]={'before':sha(R/f),'after':sha(q)};patch.extend(difflib.unified_diff(before.splitlines(True),after.splitlines(True),fromfile='a/'+f,tofile='b/'+f))
+(T/'cleanup.patch').write_text(''.join(patch));(T/'manifest.json').write_text(json.dumps(manifest,indent=2)+'\n');(T/'README.txt').write_text('Four unused application wrappers removed in staging only: CadViewport::basisMatrix, normalizedViewAngle, extrusionNames; ForgeCad::usesSketch. Full read-only inventory on046685e confirmed no consumers, no SDK installation/export of these application interfaces. Active ViewportCamera algorithms, sketchesOf, persisted names/data/enums and getters remain. Six query/catalog APIs retained intentionally; seven legacy entries left unchanged pending coherent cleanup of callback/provider contracts. No synthetic tests for wrapper deletion; compile and existing viewport/history/drawing tests required after integration.\n');print('Prepared4wrapper removal in5files; production unchanged')

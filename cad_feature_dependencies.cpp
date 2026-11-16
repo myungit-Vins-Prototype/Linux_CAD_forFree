@@ -202,7 +202,6 @@ QVector<int> sketchesOf(const ExtrusionObject &body) {
     default: return {};
     }
 }
-bool usesSketch(const ExtrusionObject &body) { return !sketchesOf(body).isEmpty(); }
 
 QVector<int> nextExtrusionCandidates(int index, const QVector<ExtrusionObject> &bodies) {
     const int end = index < 0 ? int(bodies.size()) : std::min(index, int(bodies.size()));

@@ -45,10 +45,6 @@ SketchFrame CadViewport::curveTrimView() const {
     return frame;
 }
 
-QMatrix4x4 CadViewport::basisMatrix() const {
-    return camera_.basisMatrix();
-}
-
 QMatrix4x4 CadViewport::sceneProjectionMatrix() const {
     return camera_.projectionMatrix(size(), sceneDepth());
 }
@@ -78,10 +74,6 @@ void CadViewport::setViewNormal(int plane) {
     const SketchFrame frame = ForgeCad::referenceSketchFrame(plane, camera_.orientation_);
     setViewFrame(QVector3D(float(frame.xAxis[0]), float(frame.xAxis[1]), float(frame.xAxis[2])),
                  QVector3D(float(frame.normal[0]), float(frame.normal[1]), float(frame.normal[2])));
-}
-
-float CadViewport::normalizedViewAngle(float degrees) {
-    return ForgeCad::Gui::ViewportCamera::normalizedViewAngle(degrees);
 }
 
 QVector3D CadViewport::orbitPointAt(const QPoint &position) const {

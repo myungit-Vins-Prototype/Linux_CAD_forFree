@@ -1,0 +1,87 @@
+--- a/forgeCad2026_viewport.h
++++ b/forgeCad2026_viewport.h
+@@ -315,7 +315,6 @@
+     // sole facce create dall'ultima feature.
+     void selectObject(SceneObjectKind kind, int index, bool wholeBody = false);
+ 
+-    QStringList extrusionNames() const;
+ 
+     // Booleana esatta (B-rep) tra due corpi solidi, anche su piani diversi o
+     // risultati di booleane precedenti. Il risultato e' un nuovo corpo che
+@@ -819,9 +818,6 @@
+ 
+     void endSketchMode();
+ 
+-    // Rotazione dal modello allo spazio della vista standard: righe destra, alto, verso l'osservatore.
+-    QMatrix4x4 basisMatrix() const;
+-
+     QMatrix4x4 sceneProjectionMatrix() const;
+ 
+     QMatrix4x4 sceneModelViewMatrix() const;
+@@ -841,7 +837,6 @@
+ 
+     // Sensibilita' della rotazione classica, indipendente dalla dimensione della vista.
+     static constexpr float kOrbitDegreesPerPixel = ForgeCad::Gui::ViewportCamera::kOrbitDegreesPerPixel;
+-    static float normalizedViewAngle(float degrees);
+ 
+     // Il pivot viene scelto solo quando comincia realmente l'orbita.
+     QVector3D orbitPointAt(const QPoint &position) const;
+--- a/forgeCad2026_viewport_scene.cpp
++++ b/forgeCad2026_viewport_scene.cpp
+@@ -45,10 +45,6 @@
+     return frame;
+ }
+ 
+-QMatrix4x4 CadViewport::basisMatrix() const {
+-    return camera_.basisMatrix();
+-}
+-
+ QMatrix4x4 CadViewport::sceneProjectionMatrix() const {
+     return camera_.projectionMatrix(size(), sceneDepth());
+ }
+@@ -78,10 +74,6 @@
+     const SketchFrame frame = ForgeCad::referenceSketchFrame(plane, camera_.orientation_);
+     setViewFrame(QVector3D(float(frame.xAxis[0]), float(frame.xAxis[1]), float(frame.xAxis[2])),
+                  QVector3D(float(frame.normal[0]), float(frame.normal[1]), float(frame.normal[2])));
+-}
+-
+-float CadViewport::normalizedViewAngle(float degrees) {
+-    return ForgeCad::Gui::ViewportCamera::normalizedViewAngle(degrees);
+ }
+ 
+ QVector3D CadViewport::orbitPointAt(const QPoint &position) const {
+--- a/forgeCad2026_viewport_document.cpp
++++ b/forgeCad2026_viewport_document.cpp
+@@ -909,12 +909,6 @@
+     for (SketchObject &sketch : sketches_) sketch.visible = true;
+     for (ExtrusionObject &extrusion : extrusions_) extrusion.visible = true;
+     documentChanged();
+-}
+-
+-QStringList CadViewport::extrusionNames() const {
+-    QStringList names;
+-    for (const ExtrusionObject &extrusion : extrusions_) names.append(extrusion.name);
+-    return names;
+ }
+ 
+ QString CadViewport::createBoolean(BooleanOperation operation, int firstIndex, const QVector<int> &tools, const QString &name) {
+--- a/cad_feature_dependencies.h
++++ b/cad_feature_dependencies.h
+@@ -18,7 +18,6 @@
+ // non validi restano nell'elenco: chi rigenera deve poterli segnalare.
+ QVector<int> bodyOperands(const ExtrusionObject &body);
+ QVector<int> sketchesOf(const ExtrusionObject &body);
+-bool usesSketch(const ExtrusionObject &body);
+ // Risultati precedenti attivi e non consumati; la visibilita' manuale non
+ // modifica i limiti automatici dell'estrusione. Chi rigenera pubblica prima
+ // la geometria precedente, cosi' la scelta usa i risultati validi correnti.
+--- a/cad_feature_dependencies.cpp
++++ b/cad_feature_dependencies.cpp
+@@ -202,7 +202,6 @@
+     default: return {};
+     }
+ }
+-bool usesSketch(const ExtrusionObject &body) { return !sketchesOf(body).isEmpty(); }
+ 
+ QVector<int> nextExtrusionCandidates(int index, const QVector<ExtrusionObject> &bodies) {
+     const int end = index < 0 ? int(bodies.size()) : std::min(index, int(bodies.size()));

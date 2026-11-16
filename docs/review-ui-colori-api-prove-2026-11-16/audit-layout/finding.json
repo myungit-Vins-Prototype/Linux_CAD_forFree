@@ -1,0 +1,77 @@
+{
+  "status": "Difetto layout preesistente riprodotto su dialogo reale visibile; nessuna regressione UIcolori",
+  "path": "/home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp",
+  "lines": [
+    1896,
+    1897,
+    1914,
+    1919,
+    1935
+  ],
+  "trigger": "Visualizza > Vista in sezione, poi combo Piano > Scelto nella vista",
+  "artificialDialogResize": false,
+  "ownerOnlyResize": [
+    1000,
+    760
+  ],
+  "baselineCandidateGeometryIdentical": true,
+  "before": {
+    "panelSize": [
+      257,
+      271
+    ],
+    "labelHeight": 17,
+    "textEmpty": true
+  },
+  "afterIndex3": {
+    "panelSize": [
+      257,
+      271
+    ],
+    "panelSizeHint": [
+      257,
+      288
+    ],
+    "labelHeight": 24,
+    "labelHeightForWidth": 34,
+    "fontBoundingHeight": 34,
+    "heightDeficit": 10
+  },
+  "afterHideReopen": {
+    "panelSize": [
+      257,
+      288
+    ],
+    "labelHeight": 34,
+    "labelHeightForWidth": 34
+  },
+  "method": "Own separate driver, real PdfWindow/CadViewport and QAction, default visible QDialog. Qt6.12 offscreen. Measures actual geometry and font/HFW, captures widget. No source fix or proposal applied.",
+  "scope": "Only investigation requested. Font/platform affect dimensions; no cross-platform certification. Tester capture274x281 has different font/layout dimensions; no forced resize of the dialog is needed for this reproduction.",
+  "images": {
+    "/tmp/ui-residual-fix/audit/layout-baseline.png": {
+      "sha256": "5fb4ef201b8b6f5e9911b2d656b6746cf67cd40a4b1f2881a566579b556f258c",
+      "size": [
+        257,
+        271
+      ],
+      "retainedInSupplement": false
+    },
+    "/tmp/ui-residual-fix/audit/layout-candidate.png": {
+      "sha256": "c048fbc5dee1f1a9f92a9dde2f518a51c991dffa7de8c7f5c2e0c7cf82c8d59e",
+      "size": [
+        257,
+        271
+      ],
+      "retainedInSupplement": false
+    },
+    "/tmp/ui-residual-fix/tests/candidate-output/section-0.png": {
+      "sha256": "c048fbc5dee1f1a9f92a9dde2f518a51c991dffa7de8c7f5c2e0c7cf82c8d59e",
+      "size": [
+        257,
+        271
+      ],
+      "retainedInSupplement": false
+    }
+  },
+  "previousSealedPacket": "/tmp/ui-residual-fix/audit/final-proof remains byte-unchanged"
+}

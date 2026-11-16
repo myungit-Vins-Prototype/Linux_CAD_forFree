@@ -1,0 +1,70 @@
+{
+  "inputs": [
+    {
+      "path": "/tmp/ui-residual-fix/tests/clipboard-supplement/test_document_theme_tabs.h",
+      "sha256": "57fc820e437b1c14ffd514298c84c2639880b5bf610f1092ac7256702ee2f9da",
+      "bytes": 38157,
+      "archiveMember": "test_document_theme_tabs.h.txt"
+    },
+    {
+      "path": "/tmp/ui-residual-fix/tests/clipboard-supplement/test_viewport.cpp",
+      "sha256": "3d1010e64b28bf8100cfeb7e93485a6095e3d6148528126549b673d27b40b490",
+      "bytes": 865866,
+      "archiveMember": null
+    },
+    {
+      "path": "/tmp/ui-residual-fix/tests/clipboard-supplement/test_ui_residual_theme.h",
+      "sha256": "eaef80510a70d48791368f50cfd9ad98e3fbb80da1b8a221af3f087eccff0d2d",
+      "bytes": 19384,
+      "archiveMember": "test_ui_residual_theme.h.txt"
+    },
+    {
+      "path": "/tmp/ui-residual-fix/tests/clipboard-supplement/test_ui_residual_theme_failure.h",
+      "sha256": "021f98a5a422807637c26dbddb0884d63cbe823f36b5dd754adb59c2e0316066",
+      "bytes": 19459,
+      "archiveMember": "test_ui_residual_theme_failure.h.txt"
+    },
+    {
+      "path": "/tmp/ui-residual-fix/tests/clipboard-supplement/sentinel_driver.cpp",
+      "sha256": "6b3c9814cb09b8d3d8037f624d49cc110e3a686b910f2a9f06c097b4f8721759",
+      "bytes": 3964,
+      "archiveMember": "sentinel_driver.cpp.txt"
+    },
+    {
+      "path": "/tmp/ui-residual-fix/tests/clipboard-supplement/success-sentinel",
+      "sha256": "04bb35c5d40713bf735162de0b3f367b00d9b77696ae111881ce392a5cdfc4c6",
+      "bytes": 132113128,
+      "archiveMember": null
+    },
+    {
+      "path": "/tmp/ui-residual-fix/tests/clipboard-supplement/failure-sentinel",
+      "sha256": "9f1d9356e0a80ba9358f50fdad68087673ae72e8bafae610594982619fb0bcac",
+      "bytes": 132087512,
+      "archiveMember": null
+    },
+    {
+      "path": "/tmp/ui-residual-fix/tests/clipboard-supplement/success-driver.o",
+      "sha256": "59d1a851c19afea02cca9a69d9280657bdf07929173dc026803eccc356caf256",
+      "bytes": 229904,
+      "archiveMember": null
+    },
+    {
+      "path": "/tmp/ui-residual-fix/tests/clipboard-supplement/failure-driver.o",
+      "sha256": "7a9ddecbb1cba0e0620205946eccdb146f3e8ad59fc910bee130ffb6df6d9f54",
+      "bytes": 200264,
+      "archiveMember": null
+    }
+  ],
+  "priorSeals": [
+    {
+      "path": "/tmp/ui-residual-fix/tests/final-proof",
+      "seal": "d40a50ea16ba173a64957b2090d4bcab092962ebd33d9a4aeb5e78a8a60de743",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/ui-residual-fix/tests/layout-supplement/final-proof-supplement",
+      "seal": "7ee69c0681aa5d79e3a2867f334b08a4fa03bf1116af3144a1c875c8c66d05c5",
+      "unchanged": true
+    }
+  ]
+}

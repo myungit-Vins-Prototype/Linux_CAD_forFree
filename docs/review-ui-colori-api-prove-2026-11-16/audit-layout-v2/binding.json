@@ -1,0 +1,16 @@
+{
+  "sourceSHA256": "12afcc0d8088eb99ea2475e1d9eb6ec0c6bf8a21de60c92e549a997fb1afba37",
+  "patchSHA256": "0633e1502f8ed6992a05506ef714756dc4bcb17a8322c325e13ac069e53ec4b9",
+  "sourceBaselineSHA256": "a4ca3185da83aa638c038433de886c713a5d3e8ec4fbb35ace968d37e812395e",
+  "objects": {
+    "/tmp/ui-residual-fix/tests/forgeCad2026_gui.cpp.o": "9ccff1f654abec76eed95e624e3c985c575240566536556cd6c7b6bb0a585591",
+    "/tmp/ui-residual-fix/tests/layout-supplement/gui-v2final.o": "8b03da15074c3f31ffe4ce62da2984cb1897d6ff2022d73f8b770f64888a2193",
+    "/tmp/ui-residual-fix/audit/layout-v2-work/driver.o": "d07df809367a6c94916d61c2feca38747ef1592139f36442eefd300348428185"
+  },
+  "images": {
+    "/tmp/ui-residual-fix/audit/layout-v2-work/color-baseline.png": "c048fbc5dee1f1a9f92a9dde2f518a51c991dffa7de8c7f5c2e0c7cf82c8d59e",
+    "/tmp/ui-residual-fix/audit/layout-v2-work/layout-v2.png": "53475b61143d225ddde8089ec2ebb9c02f04508c60494a1ae8bf15f76093f1ec"
+  },
+  "filesNotIncluded": "ELF/object binaries and PNG retained only at working paths; this packet is inert UTF8 text",
+  "limits": "Qt6.12 Linux/offscreen; no new native cross-platform certification or GL claim; long reference uses real picker callback with valid topological GeometryRef, not a mouse-hit test."
+}

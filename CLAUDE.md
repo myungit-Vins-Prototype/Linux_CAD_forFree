@@ -108,10 +108,15 @@ ctest --test-dir forgecad-release --output-on-failure
 
 ## Ultimi interventi — esiti consolidati
 
-**16/11 — CI: giunti corretti e push verificato.**
-046685e: build/test GitHub Linux/macOS PASS; K12 e OffsetLoft PASS.
-Tre Sol; app/483kernel/28CTest/33mirati e sanitizer PASS, cap invariati.
-API/colori ricontrollati, aperti; segue solo documentazione. [Esiti/limiti](docs/ci-sheet-join-2026-11-16.md).
+**16/11 — UI9/UI10 verificate,33rilievi corretti.**
+Palette Sezione/massa e altezza Sezione;4wrapper tolti,6query conservate,7legacy aperte.
+App/12CTest/74Wayland/appunti/mappa PASS; kernel invariato. NuovaCI dopo push.
+Wayland schede:timeout, sessione bloccata; offscreen PASS.
+[Prove e limiti](docs/review-ui-colori-api-2026-11-16.md).
+
+**16/11 — CI risolta, push verificato.**
+046685e: GitHub Linux108PASS/2SKIP, macOS112PASS/1SKIP; build e483kernel PASS.
+K12/OffsetLoft PASS; a99c411 registra solo prove. [Log](docs/ci-sheet-join-2026-11-16.md).
 
 **16/11 — K10 continuazioni verificate con tre agenti Sol.**
 Parametro razionale/ISO e fin: app/28CTest/15mirati/sanitizer/Wayland/Fraction PASS.
@@ -159,13 +164,9 @@ app/30CTest,10sanitizer e79stati UI Wayland,192fin Fraction/mappa PASS.
 [Prove/limiti](docs/review-k10-uv-preview-2026-11-16.md),
 [memoria](docs/history/claude-prima-k10-uv-preview-2026-11-16.md).
 
-**16/11 — Supporto.prt, K11 corretto con tre agenti Sol.**
-Corpo2/Estrusione3–Corpo3/Loft6: clipping asimmetrico corretto con genealogia,
-bound continuo e retry atomico; coppia nei due ordini/tre corpi PASS.
-App/24CTest/38Boolean/424Release/78sanitizer/15retry/65storia PASS.
-output/Supporto_unito.prt con nuovo UUID; input prove SHA79887e91,
-originale successivo SHA70e4ec5c preservato, non ricertificato. Mappa PASS.
-[Prove/limiti](docs/supporto-booleana-2026-11-16.md);27rilievi alla consegna storica.
+Supporto.prt/K11: Corpo2/3 e tre corpi uniti, app/24CTest/38Boolean/78sanitizer PASS;
+output con UUID nuovo. Input prove SHA79887e91; originale successivo70e4ec5c non ricertificato.
+[Dettagli e limiti](docs/supporto-booleana-2026-11-16.md).
 
 PRE5/PRE6/UI2:11runner comuni,setup/footer/chiusura; app/24CTest/Wayland PASS.
 [Prove e limiti](docs/review-preview-unification-2026-11-16.md).

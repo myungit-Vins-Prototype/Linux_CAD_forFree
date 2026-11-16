@@ -1,3 +1,10 @@
+#include <QMimeData>
+#include <QTextBrowser>
+#include <QTextCursor>
+#include <QTextDocument>
+#include <QScrollBar>
+#include <QClipboard>
+#include <QTimer>
 #include "test_sketch_projection_fit_validation.h"
 #include <QtTest/QTest>
 #include "../cad_document_tabs.h"
@@ -11409,6 +11416,11 @@ int main(int argc, char **argv) {
     QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, settings.path());
     ForgeCad::initializeApplicationTheme(app);
     qputenv("FORGECAD_RECOVERY_DIR",settings.filePath(QStringLiteral("recovery")).toUtf8());
+    if (app.arguments().contains(QStringLiteral("--theme-ui-residuals"))) {
+        try { ViewportInteractionTest::uiResidualThemeTests(); }
+        catch (const std::exception &error) { std::cerr << error.what() << std::endl; return 1; }
+        return 0;
+    }
     if (app.arguments().contains(QStringLiteral("--theme-tabs")) ||
         app.arguments().contains(QStringLiteral("--theme-tabs-only-2d"))) {
         try { ViewportInteractionTest::documentThemeTabsTests(); }

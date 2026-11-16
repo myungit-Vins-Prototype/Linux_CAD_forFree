@@ -1,0 +1,138 @@
+{
+    "error": "",
+    "exitCode": 0,
+    "rows": [
+        {
+            "alignment": 129,
+            "font": "Sans Serif,9,-1,5,400,0,0,0,0,0,0,0,0,0,0,1,,0,0",
+            "fontBoundingRect": [
+                0,
+                0,
+                0,
+                17
+            ],
+            "indent": -1,
+            "labelContentRect": [
+                0,
+                0,
+                235,
+                17
+            ],
+            "labelGeometry": [
+                11,
+                212,
+                235,
+                17
+            ],
+            "labelHeightForWidth": -1,
+            "labelMinimumSizeHint": [
+                7,
+                17
+            ],
+            "labelSizeHint": [
+                7,
+                17
+            ],
+            "margin": 0,
+            "panelSize": [
+                257,
+                271
+            ],
+            "panelSizeHint": [
+                257,
+                271
+            ],
+            "panelVisible": true,
+            "stage": "default-before-index3",
+            "text": ""
+        },
+        {
+            "alignment": 129,
+            "font": "Sans Serif,9,-1,5,400,0,0,0,0,0,0,0,0,0,0,1,,0,0",
+            "fontBoundingRect": [
+                0,
+                0,
+                218,
+                34
+            ],
+            "indent": -1,
+            "labelContentRect": [
+                0,
+                0,
+                235,
+                24
+            ],
+            "labelGeometry": [
+                11,
+                206,
+                235,
+                24
+            ],
+            "labelHeightForWidth": 34,
+            "labelMinimumSizeHint": [
+                49,
+                17
+            ],
+            "labelSizeHint": [
+                120,
+                51
+            ],
+            "margin": 0,
+            "panelSize": [
+                257,
+                271
+            ],
+            "panelSizeHint": [
+                257,
+                288
+            ],
+            "panelVisible": true,
+            "stage": "default-after-index3",
+            "text": "Clicca un piano o una faccia piana (Esc: annulla)."
+        },
+        {
+            "alignment": 129,
+            "font": "Sans Serif,9,-1,5,400,0,0,0,0,0,0,0,0,0,0,1,,0,0",
+            "fontBoundingRect": [
+                0,
+                0,
+                218,
+                34
+            ],
+            "indent": -1,
+            "labelContentRect": [
+                0,
+                0,
+                235,
+                34
+            ],
+            "labelGeometry": [
+                11,
+                212,
+                235,
+                34
+            ],
+            "labelHeightForWidth": 34,
+            "labelMinimumSizeHint": [
+                49,
+                17
+            ],
+            "labelSizeHint": [
+                120,
+                51
+            ],
+            "margin": 0,
+            "panelSize": [
+                257,
+                288
+            ],
+            "panelSizeHint": [
+                257,
+                288
+            ],
+            "panelVisible": true,
+            "stage": "reopened-default-index3",
+            "text": "Clicca un piano o una faccia piana (Esc: annulla)."
+        }
+    ]
+}

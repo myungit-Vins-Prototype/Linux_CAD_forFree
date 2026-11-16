@@ -1,0 +1,91 @@
+#include "cad_mass.h"
+#include "fk_topology.h"
+#include "forgeCad2026_application_theme.h"
+#include "forgeCad2026_dialogs.h"
+#include "forgeCad2026_gui.h"
+#include "forgeCad2026_viewport.h"
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QSurfaceFormat>
+#include <QtWidgets>
+#include <cmath>
+#include <iostream>
+#include <stdexcept>
+class ViewportInteractionTest {
+  public:
+#if defined(FORGECAD_SENTINEL_FAILURE)
+#include "test_ui_residual_theme_failure.h"
+#else
+#include "test_ui_residual_theme.h"
+#endif
+};
+int main(int argc, char **argv) {
+    QSurfaceFormat format;
+    format.setVersion(3, 3);
+    format.setProfile(QSurfaceFormat::CoreProfile);
+    format.setDepthBufferSize(24);
+    format.setStencilBufferSize(8);
+    QSurfaceFormat::setDefaultFormat(format);
+    QApplication app(argc, argv);
+    QTemporaryDir preferences;
+    QSettings::setDefaultFormat(QSettings::IniFormat);
+    QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, preferences.path());
+    QCoreApplication::setOrganizationName("ForgeCADUiResidualTests");
+    QCoreApplication::setApplicationName("isolated");
+    qputenv("FORGECAD_RECOVERY_DIR", (preferences.path() + "/recovery").toUtf8());
+    if (QGuiApplication::platformName() != QStringLiteral("offscreen")) {
+        std::cerr << "Sentinel runner requires isolated offscreen backend" << std::endl;
+        return 2;
+    }
+    int sentinelChecks = 0;
+    const auto verify = [&](bool value) {
+        ++sentinelChecks;
+        if (!value) throw std::runtime_error("clipboard sentinel restoration failed");
+    };
+    try {
+        QImage image(3, 2, QImage::Format_ARGB32);
+        image.fill(QColor(18, 72, 133, 177));
+        const QString text = QStringLiteral("Isolated clipboard sentinel");
+        const QString html = QStringLiteral("<b>Isolated clipboard sentinel</b>");
+        const QList<QUrl> urls{QUrl(QStringLiteral("https://example.invalid/sentinel?x=1#anchor"))};
+        const QColor color(19, 93, 204, 171);
+        const auto seed = [&] {
+            auto *mime = new QMimeData;
+            mime->setText(text); mime->setHtml(html); mime->setImageData(image);
+            mime->setUrls(urls); mime->setColorData(color);
+            mime->setData("application/x-forgecad-test-sentinel", QByteArray::fromHex("00ff807f0a0d001122"));
+            qApp->clipboard()->setMimeData(mime);
+        };
+        seed();
+        QMap<QString, QByteArray> expectedBytes;
+        const QStringList expectedFormats = qApp->clipboard()->mimeData()->formats();
+        for (const auto &format : expectedFormats)
+            expectedBytes.insert(format, qApp->clipboard()->mimeData()->data(format));
+        const auto restored = [&] {
+            const auto *mime = qApp->clipboard()->mimeData();
+            verify(mime && mime->formats() == expectedFormats);
+            for (const auto &format : expectedFormats) verify(mime->data(format) == expectedBytes.value(format));
+            verify(mime->text() == text); verify(mime->html() == html);
+            verify(qvariant_cast<QImage>(mime->imageData()) == image);
+            verify(mime->urls() == urls); verify(qvariant_cast<QColor>(mime->colorData()) == color);
+        };
+#if defined(FORGECAD_SENTINEL_FAILURE)
+        bool expectedFailure = false;
+        try { ViewportInteractionTest::uiResidualThemeTests(); }
+        catch (const std::exception &error) {
+            expectedFailure = QString::fromUtf8(error.what()) == QStringLiteral("clipboard sentinel forced failure");
+        }
+        verify(expectedFailure);
+#else
+        ViewportInteractionTest::uiResidualThemeTests();
+#endif
+        restored();
+        std::cout << "Clipboard MIME sentinel checks " << sentinelChecks << ", failures 0; Selection supported "
+                  << qApp->clipboard()->supportsSelection() << std::endl;
+        return 0;
+    } catch (const std::exception &e) {
+        std::cerr << e.what() << std::endl;
+        return 1;
+    }
+}

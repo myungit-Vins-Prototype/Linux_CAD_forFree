@@ -1,0 +1,30 @@
+{
+  "exit": 0,
+  "seconds": 24.920954667999467,
+  "command": [
+    "ctest",
+    "--test-dir",
+    "forgecad-release",
+    "--output-on-failure",
+    "--parallel",
+    "1",
+    "-V",
+    "-R",
+    "^(forgecad_ui_foreground_theme_tests|forgecad_document_theme_tabs_tests|forgecad_document_theme_only2d_tests|forgecad_application_theme_tests|forgecad_document_tabs_tests|forgecad_function_panels_tests|forgecad_orbit_pivot_tests|forgecad_smooth_zoom_tests|forgecad_feature_dependencies_tests|forgecad_declared_history_cache_tests|forgecad_storyboard_review_tests|forgecad_drawing_editor_tests)$"
+  ],
+  "tests": [
+    "forgecad_ui_foreground_theme_tests",
+    "forgecad_document_theme_tabs_tests",
+    "forgecad_document_theme_only2d_tests",
+    "forgecad_application_theme_tests",
+    "forgecad_document_tabs_tests",
+    "forgecad_function_panels_tests",
+    "forgecad_orbit_pivot_tests",
+    "forgecad_smooth_zoom_tests",
+    "forgecad_feature_dependencies_tests",
+    "forgecad_declared_history_cache_tests",
+    "forgecad_storyboard_review_tests",
+    "forgecad_drawing_editor_tests"
+  ],
+  "actual_passed": 12
+}

@@ -1,0 +1,43 @@
+{
+  "initial_files": 5176,
+  "preserved_files": 5162,
+  "changed_existing": [
+    "CLAUDE.md",
+    "CMakeLists.txt",
+    "cad_feature_dependencies.cpp",
+    "cad_feature_dependencies.h",
+    "docs/code-review-2026-11-15.md",
+    "docs/review-prossimi-punti-2026-11-16.md",
+    "forgeCad2026_dialogs_analysis.cpp",
+    "forgeCad2026_gui.cpp",
+    "forgeCad2026_viewport.h",
+    "forgeCad2026_viewport_document.cpp",
+    "forgeCad2026_viewport_scene.cpp",
+    "tests/test_document_theme_tabs.h",
+    "tests/test_viewport.cpp",
+    "tools/generate_architecture.py"
+  ],
+  "source_hashes": {
+    "forgeCad2026_gui.cpp": "12afcc0d8088eb99ea2475e1d9eb6ec0c6bf8a21de60c92e549a997fb1afba37",
+    "forgeCad2026_dialogs_analysis.cpp": "3e74eba725601726a5c2ec2c9fddb002bbb65c4733fb6ea3a0ac5bcec63468b4",
+    "forgeCad2026_viewport.h": "b9a801c6152f9723550a7e001209b8333ea2db4d4ab23709bc59c909b83e1d9d",
+    "forgeCad2026_viewport_scene.cpp": "6e847ee473e93d6fef0f66bd8e24eb17f0bbe4e52e6c5f901d55b842a4ed9785",
+    "forgeCad2026_viewport_document.cpp": "1544e88abc9cbeebef983da5d52f647c518f9353e9f6aeeb0c0ca0e49c41d767",
+    "cad_feature_dependencies.h": "56fcf37a8561d927dfb318b0dd6f1ce124bb18995f95dd804c691417ac709330",
+    "cad_feature_dependencies.cpp": "39c2ae3e68dcc2db4392f3aa3c7d3995627e49d224d0c0e7bf3d94ecf4d0281d",
+    "tests/test_document_theme_tabs.h": "57fc820e437b1c14ffd514298c84c2639880b5bf610f1092ac7256702ee2f9da",
+    "tests/test_viewport.cpp": "3d1010e64b28bf8100cfeb7e93485a6095e3d6148528126549b673d27b40b490",
+    "CMakeLists.txt": "803fc4d264bca4e9dabf22d6678703e3f593a82813623ef8fefb5d6efbefe122",
+    "tools/generate_architecture.py": "a22878c10976cb18253dc00d118fc20262e9c8f41f7cec84c796f0c90081c953"
+  },
+  "binary_hashes": {
+    "forgecad-release/forgecad": "c863e9efa9ca137eb1a89d7477898f9484dfde75660634e37e5b5003cae45049",
+    "forgecad-release/forgecad_view_tests": "d1d8b4ea7ea768064c049fd900e32b23ec71211356962b2807ba5fc55587eeb1",
+    "forgecad-release/kernel/libforgekernel.a": "24fe53617202e1b07328b1042940fbc37e0e0e10704161515cda8b68cf61dc69",
+    "forgecad-release/kernel/forgekernel_tests": "c2abd2bf90761b25956c0be50702cc0b5681a8f96fc4752bcf766a8e171a3805"
+  },
+  "previous_seals_validated": 19,
+  "claude_bytes": 16316,
+  "kernel_library_and_runner_byte_identical": true,
+  "compile_database_byte_identical": true
+}

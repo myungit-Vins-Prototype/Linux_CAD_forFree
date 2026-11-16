@@ -1,0 +1,20 @@
+from pathlib import Path
+import subprocess,json,time,sys,os,re
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/ui-residual-fix/root')
+def run(name,cmd,timeout=None,env=None):
+ start=time.monotonic()
+ with(T/(name+'.log')).open('w') as log:
+  try:code=subprocess.run(cmd,cwd=R,stdout=log,stderr=subprocess.STDOUT,timeout=timeout,env=env).returncode
+  except subprocess.TimeoutExpired:code=124
+ result={'exit':code,'seconds':time.monotonic()-start,'command':cmd};(T/(name+'-result.json')).write_text(json.dumps(result,indent=2)+'\n');print(name,result,flush=True)
+ if code:print((T/(name+'.log')).read_text()[-4000:],flush=True);raise SystemExit(code)
+ return result
+if __name__=='__main__':
+ if sys.argv[1]=='baseline':
+  run('baseline-ctest',['ctest','--test-dir','forgecad-release','--output-on-failure','-V','-R','^forgekernel_(blend_profile|blend_contact_break|blend_cavity_regression|sheet_join_validation)_tests$'])
+ elif sys.argv[1]=='build':run('build',['cmake','--build','forgecad-release','--parallel','2'])
+ elif sys.argv[1]=='general':run('general-kernel',['forgecad-release/kernel/forgekernel_tests'],timeout=900)
+ elif sys.argv[1]=='tests':
+  wanted=['forgecad_ui_foreground_theme_tests', 'forgecad_document_theme_tabs_tests', 'forgecad_document_theme_only2d_tests', 'forgecad_application_theme_tests', 'forgecad_document_tabs_tests', 'forgecad_function_panels_tests', 'forgecad_orbit_pivot_tests', 'forgecad_smooth_zoom_tests', 'forgecad_feature_dependencies_tests', 'forgecad_declared_history_cache_tests', 'forgecad_storyboard_review_tests', 'forgecad_drawing_editor_tests']
+  actual={t['name'] for t in json.loads(subprocess.check_output(['ctest','--test-dir','forgecad-release','--show-only=json-v1'],cwd=R))['tests']};assert set(wanted)<=actual,set(wanted)-actual
+  r=run('ctest',['ctest','--test-dir','forgecad-release','--output-on-failure','--parallel','1','-V','-R','^('+'|'.join(map(re.escape,wanted))+')$']);r.update(tests=wanted,actual_passed=len(wanted));(T/'ctest-result.json').write_text(json.dumps(r,indent=2)+'\n')

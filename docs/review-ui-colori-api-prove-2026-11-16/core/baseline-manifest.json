@@ -1,0 +1,12 @@
+{
+  "head": "046685ef1d31fdf4b61571d9630ea0f245b4ffb7",
+  "repository": "/home/myungit/Linux_CAD_forFree",
+  "baseline": {
+    "forgeCad2026_gui.cpp": "4b23e22c0811d6ed33ccc96aa6ca215620b115ad2a0cb9b882b5a267cfefaf76",
+    "forgeCad2026_dialogs_analysis.cpp": "6d4cb332ce0618bdc2fd930667384ea6a6ee7ba943308804b97affc16fb6b0fd",
+    "forgeCad2026_dialogs_common.cpp": "bd1006cc5689982ed183b6499292ce3efe956daf8028cc73ca7258036ad9ba82",
+    "forgeCad2026_dialogs_common.h": "bd1c89f4d518766ac35a7a5a7cff36b01ed3a276b7d2777a64794830687dd5fd",
+    "forgeCad2026_application_theme.cpp": "618b68b483952fac10852632b20f735fedb8e41b7dae1dfd06f676cee59582cc",
+    "forgeCad2026_application_theme.h": "4d11c86afb43fa28262e2a9d4027a1071cea1b4356a1c967c941bee88d7713ba"
+  }
+}

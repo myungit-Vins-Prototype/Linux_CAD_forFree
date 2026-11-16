@@ -1,0 +1,18 @@
+from pathlib import Path
+import json,hashlib,subprocess,re
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/ui-residual-fix/root');sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+validated={}
+for manifest in(R/'docs').glob('*-prove-2026-11-16/SHA256SUMS'):
+ lines=manifest.read_text().splitlines()
+ for line in lines:
+  h,f=line.split('  ',1);assert sha(manifest.parent/f)==h,(manifest,f)
+ validated[str(manifest.relative_to(R))]=len(lines)
+assert len(validated)==21,len(validated)
+for f,h in json.loads((T/'integrated-sources.json').read_text()).items():assert sha(R/f)==h
+assert not subprocess.check_output(['git','status','--porcelain'],cwd=R,text=True).strip()
+head=subprocess.check_output(['git','rev-parse','HEAD'],cwd=R,text=True).strip();remote=subprocess.check_output(['git','ls-remote','origin','refs/heads/main'],cwd=R,text=True).split()[0];assert head==remote
+changed=subprocess.check_output(['git','diff-tree','--no-commit-id','--name-only','-r','HEAD'],cwd=R,text=True).splitlines();assert all(f=='CLAUDE.md' or f.startswith('docs/') for f in changed);assert not subprocess.check_output(['git','diff',json.loads((T/'commit.json').read_text())['sha'],'HEAD','--',*json.loads((T/'integrated-sources.json').read_text()),'.github/workflows/ci.yml'],cwd=R,text=True).strip()
+subprocess.run(['python3','tools/generate_architecture.py','--check'],cwd=R,check=True)
+memory=(R/'CLAUDE.md').read_text();assert len(memory.encode())<=16384;assert len(re.findall(r'^\*\*',memory,re.M))<=10
+j=json.loads((T/'github-final.json').read_text());assert j['conclusion']=='success' and j['headSha']==json.loads((T/'commit.json').read_text())['sha']
+print(json.dumps({'head':head,'remote_main':remote,'clean':True,'code_commit':j['headSha'],'github_run':j['url'],'proof_seals':validated,'memory_bytes':len(memory.encode()),'code_sources_unchanged_since_verified_commit':True,'last_commit_documents_only':True},indent=2))

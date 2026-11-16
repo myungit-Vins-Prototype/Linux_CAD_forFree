@@ -1,0 +1,9 @@
+Per /root: staging esclusivamente /tmp/ui-residual-fix/core.
+Non integrato: attendere chiusura della CI remota046685e come autorizzato.
+Patch ui-foreground.patch applicabile con git apply --check al baseline.
+Baseline e candidato congelati, hashes in baseline-/candidate-manifest.json.
+Solo forgeCad2026_gui.cpp e forgeCad2026_dialogs_analysis.cpp.
+Motivazione e limiti in DESIGN.txt; grafo letto prima codice, graph-context.json.
+Test e audit separati in /tmp/ui-residual-fix/tests e /tmp/ui-residual-fix/audit.
+Prima di integrazione usare gli esiti finali riferiti agli SHA congelati;
+aggiornare mappa e CLAUDE al coordinatore. Non ampliare scope a fillet/kernel.

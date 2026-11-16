@@ -1,0 +1,29 @@
+{
+  "repoRealPath": "/home/myungit/Linux_CAD_forFree",
+  "head": "046685ef1d31fdf4b61571d9630ea0f245b4ffb7",
+  "graphCounts": {
+    "nodes": 778,
+    "edges": 11369
+  },
+  "sourceSHA256": {
+    "/home/myungit/Linux_CAD_forFree/AGENTS.md": "d98408c6092ae6f02ba2948f47128c138ebf4fbb138b2751bc17550d2d98caac",
+    "/home/myungit/Linux_CAD_forFree/CLAUDE.md": "200ee3d0fad0813d14d06f7681d21424bf11f9e20520701cbe345902c6d22e51",
+    "/home/myungit/Linux_CAD_forFree/docs/architecture/graph.json": "8eedbd842e02160267a6a81baa7ddd2ea0608462f5cf51f134079966d09923cc",
+    "/home/myungit/Linux_CAD_forFree/docs/review-theme-tabs-2026-11-16.md": "059d4572c9c307e6e416b2d950a46b452c42ef7dc0d9c21e356102a314889090",
+    "/home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp": "4b23e22c0811d6ed33ccc96aa6ca215620b115ad2a0cb9b882b5a267cfefaf76",
+    "/home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_analysis.cpp": "6d4cb332ce0618bdc2fd930667384ea6a6ee7ba943308804b97affc16fb6b0fd",
+    "/home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_common.cpp": "bd1006cc5689982ed183b6499292ce3efe956daf8028cc73ca7258036ad9ba82",
+    "/home/myungit/Linux_CAD_forFree/forgeCad2026_dialogs_common.h": "bd1c89f4d518766ac35a7a5a7cff36b01ed3a276b7d2777a64794830687dd5fd",
+    "/home/myungit/Linux_CAD_forFree/forgeCad2026_application_theme.cpp": "618b68b483952fac10852632b20f735fedb8e41b7dae1dfd06f676cee59582cc",
+    "/home/myungit/Linux_CAD_forFree/forgeCad2026_ui_glass.cpp": "c1152273c2e285357a74a4e1bf05aed28bca8f4405ed374654c24c7d2600224f"
+  },
+  "scope": "Solo audit privato /tmp; niente modifica produzione, commit o push",
+  "independentChecksPlanned": [
+    "palette+QTextFragment foreground reale",
+    "pannello aperto su PaletteChange e StyleChange",
+    "contenuto HTML/formati e selezione/scroll preservati",
+    "errore massa reale e Sezione",
+    "colore carta/sfondo utente esclusi",
+    "HLine resta candidato senza prova della resa"
+  ]
+}

@@ -1,0 +1,21 @@
+# Inert audit script: run a copied .py file against the retained JSON measurements.
+import json, math, sys
+from pathlib import Path
+source=Path(sys.argv[1] if len(sys.argv)>1 else '/tmp/ui-residual-fix/audit/live-result.json')
+data=json.loads(source.read_text())
+def luminance(hex_rgb):
+    rgb=[int(hex_rgb[i:i+2],16)/255 for i in (1,3,5)]
+    linear=[v/12.92 if v<=0.04045 else ((v+0.055)/1.055)**2.4 for v in rgb]
+    return sum(a*b for a,b in zip((0.2126,0.7152,0.0722),linear))
+rows=[]
+for sample in data['measurements']:
+    fg=luminance(sample['foreground']);bg=luminance(sample['background'])
+    computed=(max(fg,bg)+0.05)/(min(fg,bg)+0.05)
+    # Qt redF() uses QColor's float channel path; JSON RGB is reconstructed as n/255.
+    assert abs(computed-sample['contrast'])<1e-6
+    assert computed>=4.5
+    assert sample['foregroundPixels']>2
+    if sample['kind']=='mass':assert sample['explicitForegroundFragments']==0
+    rows.append({'kind':sample['kind'],'stage':sample['stage'],'error':sample.get('error',False),'contrast':computed})
+assert data['exitCode']==0 and data['checks']==104
+print(json.dumps({'checks':data['checks'],'measurements':len(rows),'minimumContrast':min(x['contrast'] for x in rows),'result':'PASS','rows':rows},indent=2))

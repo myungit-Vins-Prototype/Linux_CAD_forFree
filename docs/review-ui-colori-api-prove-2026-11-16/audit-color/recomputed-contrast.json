@@ -1,0 +1,92 @@
+{
+  "checks": 104,
+  "measurements": 14,
+  "minimumContrast": 5.3949145177963,
+  "result": "PASS",
+  "rows": [
+    {
+      "kind": "section",
+      "stage": "dark",
+      "error": false,
+      "contrast": 9.731446827863913
+    },
+    {
+      "kind": "section",
+      "stage": "light",
+      "error": false,
+      "contrast": 5.3949145177963
+    },
+    {
+      "kind": "section",
+      "stage": "dark",
+      "error": false,
+      "contrast": 9.731446827863913
+    },
+    {
+      "kind": "mass",
+      "stage": "light",
+      "error": false,
+      "contrast": 16.29325535858735
+    },
+    {
+      "kind": "mass",
+      "stage": "dark",
+      "error": false,
+      "contrast": 10.875728868231299
+    },
+    {
+      "kind": "mass",
+      "stage": "light",
+      "error": false,
+      "contrast": 16.29325535858735
+    },
+    {
+      "kind": "mass",
+      "stage": "PaletteChange",
+      "error": false,
+      "contrast": 16.29325535858735
+    },
+    {
+      "kind": "mass",
+      "stage": "StyleChange",
+      "error": false,
+      "contrast": 16.29325535858735
+    },
+    {
+      "kind": "mass",
+      "stage": "light",
+      "error": true,
+      "contrast": 7.3544650191323555
+    },
+    {
+      "kind": "mass",
+      "stage": "dark",
+      "error": true,
+      "contrast": 6.173731106670877
+    },
+    {
+      "kind": "mass",
+      "stage": "light",
+      "error": true,
+      "contrast": 7.3544650191323555
+    },
+    {
+      "kind": "mass",
+      "stage": "PaletteChange",
+      "error": true,
+      "contrast": 7.3544650191323555
+    },
+    {
+      "kind": "mass",
+      "stage": "StyleChange",
+      "error": true,
+      "contrast": 7.3544650191323555
+    },
+    {
+      "kind": "mass",
+      "stage": "error-to-normal",
+      "error": false,
+      "contrast": 16.29325535858735
+    }
+  ]
+}

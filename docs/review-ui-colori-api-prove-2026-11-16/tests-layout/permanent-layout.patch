@@ -1,0 +1,81 @@
+--- a/tests/test_document_theme_tabs.h
++++ b/tests/test_document_theme_tabs.h
+@@ -471,15 +471,75 @@
+     check(sectionPanel != nullptr, "section production dialog exists");
+     if (sectionPanel) {
+         auto *combo = sectionPanel->findChild<QComboBox *>();
+-        combo->setCurrentIndex(3);
+-        window->viewport_->cancelReferencePick();
+-        settle();
+         QLabel *info = nullptr;
+         for (auto *label : sectionPanel->findChildren<QLabel *>())
+             if (label->wordWrap())
+                 info = label;
++        const QRect naturalGeometry = sectionPanel->geometry();
++        const QPoint naturalPosition = sectionPanel->pos();
++        combo->setCurrentIndex(3);
++        settle();
++        if (info)
++            check(info->height() >= info->heightForWidth(info->width()),
++                  "section full picking instruction fits without reopening");
++        window->viewport_->cancelReferencePick();
++        settle();
+         check(info && !info->text().isEmpty(), "section real instruction exists");
+         if (info) {
++            samples.append(QJsonObject{{"label", "section-natural-layout"},
++                                       {"width", sectionPanel->width()},
++                                       {"height", sectionPanel->height()},
++                                       {"labelHeight", info->height()},
++                                       {"requiredLabelHeight", info->heightForWidth(info->width())}});
++            check(info->height() >= info->heightForWidth(info->width()),
++                  "section full instruction fits after cancel without reopening");
++            check(sectionPanel->width() == naturalGeometry.width(),
++                  "section instruction preserves natural width");
++            check(sectionPanel->pos() == naturalPosition,
++                  "section instruction preserves position");
++            sectionPanel->grab().save(output + "/section-natural-layout.png");
++            sectionPanel->resize(sectionPanel->size() + QSize(120, 100));
++            settle();
++            const QRect userGeometry = sectionPanel->geometry();
++            const QPoint userPosition = sectionPanel->pos();
++            combo->setCurrentIndex(0);
++            combo->setCurrentIndex(3);
++            window->viewport_->cancelReferencePick();
++            settle();
++            check(sectionPanel->width() == userGeometry.width() &&
++                      sectionPanel->height() >= userGeometry.height(),
++                  "section instruction preserves larger user size");
++            check(sectionPanel->pos() == userPosition,
++                  "section instruction preserves user position");
++            check(info->height() >= info->heightForWidth(info->width()),
++                  "section full instruction fits after user resize");
++            combo->setCurrentIndex(0);
++            settle();
++            sectionPanel->resize(naturalGeometry.size());
++            settle();
++            const QSize hiddenSize = sectionPanel->size();
++            const QPoint hiddenPosition = sectionPanel->pos();
++            sectionPanel->hide();
++            combo->setCurrentIndex(3);
++            window->viewport_->cancelReferencePick();
++            QAction *parameters = nullptr;
++            for (auto *action : window->findChildren<QAction *>())
++                if (action->text() == QStringLiteral("Parametri della sezione..."))
++                    parameters = action;
++            check(parameters != nullptr, "section parameters action exists");
++            if (parameters)
++                parameters->trigger();
++            settle();
++            check(info->height() >= info->heightForWidth(info->width()),
++                  "section hidden instruction fits immediately on reopening");
++            check(sectionPanel->width() == hiddenSize.width() && sectionPanel->pos() == hiddenPosition,
++                  "section reopening preserves user width and position");
++            samples.append(QJsonObject{{"label", "section-reopened-layout"},
++                                       {"width", sectionPanel->width()},
++                                       {"height", sectionPanel->height()},
++                                       {"labelHeight", info->height()},
++                                       {"requiredLabelHeight", info->heightForWidth(info->width())}});
++            sectionPanel->grab().save(output + "/section-reopened-layout.png");
+             const QString text = info->text();
+             QColor first;
+             int iteration = 0;

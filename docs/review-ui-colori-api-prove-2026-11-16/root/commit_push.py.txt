@@ -1,0 +1,14 @@
+from pathlib import Path
+import json,subprocess
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/ui-residual-fix/root');(R/'CLAUDE.md').read_text()
+assert subprocess.check_output(['git','rev-parse','HEAD'],cwd=R,text=True).strip()=='a99c411e4578cad274a0f402006e8c956ca87731'
+assert subprocess.check_output(['git','branch','--show-current'],cwd=R,text=True).strip()=='main'
+paths=list(json.loads((T/'integrated-sources.json').read_text()))+['CLAUDE.md','docs/code-review-2026-11-15.md','docs/review-prossimi-punti-2026-11-16.md','docs/review-ui-colori-api-2026-11-16.md','docs/history/claude-prima-ui-colori-api-2026-11-16.md','docs/review-ui-colori-api-prove-2026-11-16']
+subprocess.run(['git','diff','--check'],cwd=R,check=True);subprocess.run(['git','add','--',*paths],cwd=R,check=True)
+staged=subprocess.check_output(['git','diff','--cached','--name-only'],cwd=R,text=True).splitlines();assert all(f in paths or f.startswith(paths[-1]+'/') for f in staged)
+subprocess.run(['git','diff','--cached','--check','--',*paths[:-1]],cwd=R,check=True)
+with(T/'commit.log').open('w') as log:subprocess.run(['git','commit','-m','Corregge colori dei pannelli e altezza Sezione; rimuove quattro wrapper inutilizzati'],cwd=R,stdout=log,stderr=subprocess.STDOUT,check=True)
+commit=subprocess.check_output(['git','rev-parse','HEAD'],cwd=R,text=True).strip();(T/'commit.json').write_text(json.dumps({'sha':commit},indent=2)+'\n');print('COMMIT',commit,flush=True)
+with(T/'push.log').open('w') as log:subprocess.run(['git','push','origin','main'],cwd=R,stdout=log,stderr=subprocess.STDOUT,check=True)
+assert subprocess.check_output(['git','rev-parse','origin/main'],cwd=R,text=True).strip()==commit
+assert not subprocess.check_output(['git','status','--porcelain'],cwd=R,text=True).strip();print('PUSH PASS',commit,flush=True)

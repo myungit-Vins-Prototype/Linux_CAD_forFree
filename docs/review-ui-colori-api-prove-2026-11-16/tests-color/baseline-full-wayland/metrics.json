@@ -1,0 +1,124 @@
+{
+    "checks": 64,
+    "failures": 13,
+    "samples": [
+        {
+            "base": "#f0f0f0",
+            "contrast": 1.5726935635179917,
+            "foreground": "#9fc6e8",
+            "label": "section-0"
+        },
+        {
+            "base": "#111820",
+            "contrast": 9.96904086113674,
+            "foreground": "#9fc6e8",
+            "label": "section-1"
+        },
+        {
+            "base": "#f0f0f0",
+            "contrast": 1.5726935635179917,
+            "foreground": "#9fc6e8",
+            "label": "section-2"
+        },
+        {
+            "base": "#ffffff",
+            "contrast": 2.152465892893584,
+            "explicitForeground": true,
+            "foreground": "#9fb3c8",
+            "label": "mass-0-label",
+            "needle": "Volume",
+            "paletteText": "#202020",
+            "role": ""
+        },
+        {
+            "base": "#ffffff",
+            "contrast": 2.703386351915414,
+            "explicitForeground": true,
+            "foreground": "#8aa0b4",
+            "label": "mass-0-hint",
+            "needle": "Calcolo:",
+            "paletteText": "#202020",
+            "role": ""
+        },
+        {
+            "base": "#202d36",
+            "contrast": 6.54765302272483,
+            "explicitForeground": true,
+            "foreground": "#9fb3c8",
+            "label": "mass-1-label",
+            "needle": "Volume",
+            "paletteText": "#d8e4ea",
+            "role": ""
+        },
+        {
+            "base": "#202d36",
+            "contrast": 5.213313221001919,
+            "explicitForeground": true,
+            "foreground": "#8aa0b4",
+            "label": "mass-1-hint",
+            "needle": "Calcolo:",
+            "paletteText": "#d8e4ea",
+            "role": ""
+        },
+        {
+            "base": "#ffffff",
+            "contrast": 2.152465892893584,
+            "explicitForeground": true,
+            "foreground": "#9fb3c8",
+            "label": "mass-2-label",
+            "needle": "Volume",
+            "paletteText": "#202020",
+            "role": ""
+        },
+        {
+            "base": "#ffffff",
+            "contrast": 2.703386351915414,
+            "explicitForeground": true,
+            "foreground": "#8aa0b4",
+            "label": "mass-2-hint",
+            "needle": "Calcolo:",
+            "paletteText": "#202020",
+            "role": ""
+        },
+        {
+            "base": "#ffffff",
+            "contrast": 2.5215640017358996,
+            "explicitForeground": true,
+            "foreground": "#ff7b72",
+            "label": "error-0",
+            "needle": "Calcolo non riuscito:",
+            "paletteText": "#202020",
+            "role": ""
+        },
+        {
+            "base": "#202d36",
+            "contrast": 5.589229462434599,
+            "explicitForeground": true,
+            "foreground": "#ff7b72",
+            "label": "error-1",
+            "needle": "Calcolo non riuscito:",
+            "paletteText": "#d8e4ea",
+            "role": ""
+        },
+        {
+            "base": "#ffffff",
+            "contrast": 2.5215640017358996,
+            "explicitForeground": true,
+            "foreground": "#ff7b72",
+            "label": "error-2",
+            "needle": "Calcolo non riuscito:",
+            "paletteText": "#202020",
+            "role": ""
+        },
+        {
+            "base": "#ffffff",
+            "contrast": 2.152465892893584,
+            "explicitForeground": true,
+            "foreground": "#9fb3c8",
+            "label": "error-to-normal",
+            "needle": "Volume",
+            "paletteText": "#202020",
+            "role": ""
+        }
+    ]
+}

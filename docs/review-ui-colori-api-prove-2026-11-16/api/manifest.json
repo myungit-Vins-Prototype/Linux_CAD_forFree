@@ -1,0 +1,22 @@
+{
+  "forgeCad2026_viewport.h": {
+    "before": "1b57e13662b8b9a41334eb132fc2d8c0080db248cf76ff6bb356cc04e716090b",
+    "after": "b9a801c6152f9723550a7e001209b8333ea2db4d4ab23709bc59c909b83e1d9d"
+  },
+  "forgeCad2026_viewport_scene.cpp": {
+    "before": "00db869bae00baa5e28880b411044598ed21238ddbae8b86d2dd9d1bbf9f4c49",
+    "after": "6e847ee473e93d6fef0f66bd8e24eb17f0bbe4e52e6c5f901d55b842a4ed9785"
+  },
+  "forgeCad2026_viewport_document.cpp": {
+    "before": "9023d6c295046e557eef26f7ef88421286371fcf4da923a61e1b9d9ce5f605ca",
+    "after": "1544e88abc9cbeebef983da5d52f647c518f9353e9f6aeeb0c0ca0e49c41d767"
+  },
+  "cad_feature_dependencies.h": {
+    "before": "9aa5349d2054551f8d74365ac29f9a08bf5dd9cd88ade7c9ed75cfe0e23ff188",
+    "after": "56fcf37a8561d927dfb318b0dd6f1ce124bb18995f95dd804c691417ac709330"
+  },
+  "cad_feature_dependencies.cpp": {
+    "before": "0da05c73b773173328f864501e7cfadcf139015bfc903e319fbd75a40a3f611f",
+    "after": "39c2ae3e68dcc2db4392f3aa3c7d3995627e49d224d0c0e7bf3d94ecf4d0281d"
+  }
+}

@@ -1,0 +1,10 @@
+from pathlib import Path
+import hashlib,json,shutil
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/ui-residual-fix/root');S=Path('/tmp/ui-residual-fix/tests/clipboard-supplement');sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+expected={'tests/test_document_theme_tabs.h':('2e118679de721dd24241eb2145a1aac4e794e83ca0884eee0b8aa4161ae4c1ab','57fc820e437b1c14ffd514298c84c2639880b5bf610f1092ac7256702ee2f9da'),'tests/test_viewport.cpp':('fad1e2d7b8c9b4b7d93da7744310f0c44e508dd682e719e4f9ba4fdd8fefc8c2','3d1010e64b28bf8100cfeb7e93485a6095e3d6148528126549b673d27b40b490')}
+for f,(a,b) in expected.items():assert sha(R/f)==a and sha(S/Path(f).name)==b
+for n in ['build.log','build-result.json','architecture-generation.log','architecture-audit.json','architecture-incident.json']:
+ p=T/n;q=T/(p.stem+'-v2'+p.suffix);assert p.exists() and not q.exists();shutil.copyfile(p,q)
+m=json.loads((T/'integrated-sources.json').read_text())
+for f,(a,b) in expected.items():(R/f).write_bytes((S/Path(f).name).read_bytes());m[f]=b
+(T/'integrated-sources.json').write_text(json.dumps(m,indent=2)+'\n');print('Clipboard guard integrated; production UI unchanged')

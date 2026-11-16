@@ -1,0 +1,375 @@
+{
+  "graph_sha256": "8eedbd842e02160267a6a81baa7ddd2ea0608462f5cf51f134079966d09923cc",
+  "description": "PdfWindow: sette fasi di inizializzazione di scena, menu, comandi, opzioni e toolbar, preferenze persistenti per normali al mouse e costruzione degli schizzi fuori modifica; workspace 3D incorporabile con apertura instradata alle schede e chiusura asincrona del recupero; modelli archiviati in sola lettura; storyboard con trascinamento dei creatori di corpi autonomi a uno stadio. Aggiunge Ellisse per estremi a menu e toolbar e ne espone azione e icona alla ribbon. Consuma il tema globale aggiornando le toolbar su entrambi gli eventi palette; nessun QSS globale locale.",
+  "section_calls": [
+    {
+      "kind": "call",
+      "target": "cad_datum.cpp",
+      "site": {
+        "line": 1838,
+        "symbol": "ForgeCad::resolveGeometryRef",
+        "owner": "PdfWindow::initializeActionsAndView"
+      }
+    },
+    {
+      "kind": "call",
+      "target": "cad_datum.cpp",
+      "site": {
+        "line": 1856,
+        "symbol": "ForgeCad::geometryRefText",
+        "owner": "PdfWindow::initializeActionsAndView"
+      }
+    },
+    {
+      "kind": "call",
+      "target": "cad_datum.cpp",
+      "site": {
+        "line": 1904,
+        "symbol": "ForgeCad::geometryRefRoles",
+        "owner": "PdfWindow::initializeActionsAndView"
+      }
+    },
+    {
+      "kind": "call",
+      "target": "cad_datum.h",
+      "site": {
+        "line": 1837,
+        "symbol": "ForgeCad::ResolvedRef::ResolvedRef",
+        "owner": "PdfWindow::initializeActionsAndView"
+      }
+    },
+    {
+      "kind": "call",
+      "target": "cad_expression.cpp",
+      "site": {
+        "line": 1798,
+        "symbol": "ForgeCad::ExpressionSpinBox::ExpressionSpinBox",
+        "owner": "PdfWindow::initializeActionsAndView"
+      }
+    },
+    {
+      "kind": "call",
+      "target": "cad_expression.cpp",
+      "site": {
+        "line": 1799,
+        "symbol": "ForgeCad::ExpressionSpinBox::setDecimals",
+        "owner": "PdfWindow::initializeActionsAndView"
+      }
+    },
+    {
+      "kind": "call",
+      "target": "cad_types.h",
+      "site": {
+        "line": 1905,
+        "symbol": "GeometryRef::operator=",
+        "owner": "PdfWindow::initializeActionsAndView"
+      }
+    },
+    {
+      "kind": "call",
+      "target": "forgeCad2026_gui.cpp",
+      "site": {
+        "line": 1847,
+        "symbol": "PdfWindow::initializeActionsAndView::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:1829:32)::operator()",
+        "owner": "PdfWindow::initializeActionsAndView"
+      }
+    },
+    {
+      "kind": "call",
+      "target": "forgeCad2026_gui.cpp",
+      "site": {
+        "line": 1863,
+        "symbol": "PdfWindow::initializeActionsAndView::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:1829:32)::operator()",
+        "owner": "PdfWindow::initializeActionsAndView"
+      }
+    },
+    {
+      "kind": "call",
+      "target": "forgeCad2026_gui.cpp",
+      "site": {
+        "line": 1879,
+        "symbol": "PdfWindow::initializeActionsAndView::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:1845:28)::operator()",
+        "owner": "PdfWindow::initializeActionsAndView"
+      }
+    },
+    {
+      "kind": "call",
+      "target": "forgeCad2026_gui.cpp",
+      "site": {
+        "line": 1886,
+        "symbol": "PdfWindow::initializeActionsAndView::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:1845:28)::operator()",
+        "owner": "PdfWindow::initializeActionsAndView"
+      }
+    },
+    {
+      "kind": "call",
+      "target": "forgeCad2026_gui.cpp",
+      "site": {
+        "line": 1893,
+        "symbol": "PdfWindow::initializeActionsAndView::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:1845:28)::operator()",
+        "owner": "PdfWindow::initializeActionsAndView"
+      }
+    },
+    {
+      "kind": "call",
+      "target": "forgeCad2026_gui.cpp",
+      "site": {
+        "line": 1909,
+        "symbol": "PdfWindow::initializeActionsAndView::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:1861:34)::operator()",
+        "owner": "PdfWindow::initializeActionsAndView"
+      }
+    },
+    {
+      "kind": "call",
+      "target": "forgeCad2026_gui.cpp",
+      "site": {
+        "line": 1914,
+        "symbol": "PdfWindow::initializeActionsAndView::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:1895:27)::operator()",
+        "owner": "PdfWindow::initializeActionsAndView"
+      }
+    },
+    {
+      "kind": "call",
+      "target": "forgeCad2026_gui.cpp",
+      "site": {
+        "line": 1915,
+        "symbol": "PdfWindow::initializeActionsAndView::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:1861:34)::operator()",
+        "owner": "PdfWindow::initializeActionsAndView"
+      }
+    },
+    {
+      "kind": "call",
+      "target": "forgeCad2026_gui.cpp",
+      "site": {
+        "line": 1923,
+        "symbol": "PdfWindow::initializeActionsAndView::(lambda at /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp:1861:34)::operator()",
+        "owner": "PdfWindow::initializeActionsAndView"
+      }
+    },
+    {
+      "kind": "call",
+      "target": "forgeCad2026_viewport.cpp",
+      "site": {
+        "line": 1848,
+        "symbol": "CadViewport::setSection",
+        "owner": "PdfWindow::initializeActionsAndView"
+      }
+    },
+    {
+      "kind": "call",
+      "target": "forgeCad2026_viewport.cpp",
+      "site": {
+        "line": 1855,
+        "symbol": "CadViewport::setSection",
+        "owner": "PdfWindow::initializeActionsAndView"
+      }
+    },
+    {
+      "kind": "call",
+      "target": "forgeCad2026_viewport.cpp",
+      "site": {
+        "line": 1868,
+        "symbol": "CadViewport::sceneRangeAlong",
+        "owner": "PdfWindow::initializeActionsAndView"
+      }
+    },
+    {
+      "kind": "call",
+      "target": "forgeCad2026_viewport.cpp",
+      "site": {
+        "line": 1930,
+        "symbol": "CadViewport::setSection",
+        "owner": "PdfWindow::initializeActionsAndView"
+      }
+    },
+    {
+      "kind": "call",
+      "target": "forgeCad2026_viewport.cpp",
+      "site": {
+        "line": 1941,
+        "symbol": "CadViewport::setSectionRefreshCallback",
+        "owner": "PdfWindow::initializeActionsAndView"
+      }
+    },
+    {
+      "kind": "call",
+      "target": "forgeCad2026_viewport.cpp",
+      "site": {
+        "line": 1943,
+        "symbol": "CadViewport::setSectionDragCallback",
+        "owner": "PdfWindow::initializeActionsAndView"
+      }
+    },
+    {
+      "kind": "call",
+      "target": "forgeCad2026_viewport.cpp",
+      "site": {
+        "line": 1947,
+        "symbol": "CadViewport::setTessellationQuality",
+        "owner": "PdfWindow::initializeActionsAndView"
+      }
+    },
+    {
+      "kind": "call",
+      "target": "forgeCad2026_viewport.cpp",
+      "site": {
+        "line": 1948,
+        "symbol": "CadViewport::setTessellationQuality",
+        "owner": "PdfWindow::initializeActionsAndView"
+      }
+    },
+    {
+      "kind": "call",
+      "target": "forgeCad2026_viewport.cpp",
+      "site": {
+        "line": 1949,
+        "symbol": "CadViewport::setTessellationQuality",
+        "owner": "PdfWindow::initializeActionsAndView"
+      }
+    },
+    {
+      "kind": "call",
+      "target": "forgeCad2026_viewport_document.cpp",
+      "site": {
+        "line": 1838,
+        "symbol": "CadViewport::extrusions",
+        "owner": "PdfWindow::initializeActionsAndView"
+      }
+    },
+    {
+      "kind": "call",
+      "target": "forgeCad2026_viewport_document.cpp",
+      "site": {
+        "line": 1838,
+        "symbol": "CadViewport::sketches",
+        "owner": "PdfWindow::initializeActionsAndView"
+      }
+    },
+    {
+      "kind": "call",
+      "target": "forgeCad2026_viewport_document.cpp",
+      "site": {
+        "line": 1856,
+        "symbol": "CadViewport::extrusions",
+        "owner": "PdfWindow::initializeActionsAndView"
+      }
+    },
+    {
+      "kind": "call",
+      "target": "forgeCad2026_viewport_document.cpp",
+      "site": {
+        "line": 1856,
+        "symbol": "CadViewport::sketches",
+        "owner": "PdfWindow::initializeActionsAndView"
+      }
+    },
+    {
+      "kind": "call",
+      "target": "forgeCad2026_viewport_document.cpp",
+      "site": {
+        "line": 1904,
+        "symbol": "CadViewport::sketches",
+        "owner": "PdfWindow::initializeActionsAndView"
+      }
+    },
+    {
+      "kind": "call",
+      "target": "forgeCad2026_viewport_scene.cpp",
+      "site": {
+        "line": 1866,
+        "symbol": "CadViewport::viewerDirection",
+        "owner": "PdfWindow::initializeActionsAndView"
+      }
+    },
+    {
+      "kind": "call",
+      "target": "forgeCad2026_viewport_selection.cpp",
+      "site": {
+        "line": 1897,
+        "symbol": "CadViewport::beginReferencePick",
+        "owner": "PdfWindow::initializeActionsAndView"
+      }
+    },
+    {
+      "kind": "call",
+      "target": "forgeCad2026_viewport_selection.cpp",
+      "site": {
+        "line": 1902,
+        "symbol": "CadViewport::setReferencePickCallback",
+        "owner": "PdfWindow::initializeActionsAndView"
+      }
+    },
+    {
+      "kind": "call",
+      "target": "forgeCad2026_viewport_selection.cpp",
+      "site": {
+        "line": 1903,
+        "symbol": "CadViewport::setReferencePickCallback",
+        "owner": "PdfWindow::initializeActionsAndView"
+      }
+    },
+    {
+      "kind": "call",
+      "target": "forgeCad2026_viewport_selection.cpp",
+      "site": {
+        "line": 1929,
+        "symbol": "CadViewport::cancelReferencePick",
+        "owner": "PdfWindow::initializeActionsAndView"
+      }
+    },
+    {
+      "kind": "call",
+      "target": "kernel/fk_math.h",
+      "site": {
+        "line": 1841,
+        "symbol": "ForgeCad::Kernel::Vec::x",
+        "owner": "PdfWindow::initializeActionsAndView"
+      }
+    },
+    {
+      "kind": "call",
+      "target": "kernel/fk_math.h",
+      "site": {
+        "line": 1841,
+        "symbol": "ForgeCad::Kernel::Vec::y",
+        "owner": "PdfWindow::initializeActionsAndView"
+      }
+    },
+    {
+      "kind": "call",
+      "target": "kernel/fk_math.h",
+      "site": {
+        "line": 1841,
+        "symbol": "ForgeCad::Kernel::Vec::z",
+        "owner": "PdfWindow::initializeActionsAndView"
+      }
+    },
+    {
+      "kind": "call",
+      "target": "kernel/fk_math.h",
+      "site": {
+        "line": 1842,
+        "symbol": "ForgeCad::Kernel::Vec::x",
+        "owner": "PdfWindow::initializeActionsAndView"
+      }
+    },
+    {
+      "kind": "call",
+      "target": "kernel/fk_math.h",
+      "site": {
+        "line": 1842,
+        "symbol": "ForgeCad::Kernel::Vec::y",
+        "owner": "PdfWindow::initializeActionsAndView"
+      }
+    },
+    {
+      "kind": "call",
+      "target": "kernel/fk_math.h",
+      "site": {
+        "line": 1842,
+        "symbol": "ForgeCad::Kernel::Vec::z",
+        "owner": "PdfWindow::initializeActionsAndView"
+      }
+    }
+  ]
+}

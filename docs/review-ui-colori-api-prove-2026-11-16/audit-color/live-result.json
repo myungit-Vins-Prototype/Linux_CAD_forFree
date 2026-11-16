@@ -1,0 +1,166 @@
+{
+    "checks": 104,
+    "error": "",
+    "exitCode": 0,
+    "measurements": [
+        {
+            "background": "#111820",
+            "contrast": 9.731447132575688,
+            "foreground": "#80c8f0",
+            "foregroundPixels": 21,
+            "kind": "section",
+            "stage": "dark",
+            "text": "Clicca un piano o una faccia piana (Esc: annulla)."
+        },
+        {
+            "background": "#f0f0f0",
+            "contrast": 5.394914400136992,
+            "foreground": "#1b65a0",
+            "foregroundPixels": 21,
+            "kind": "section",
+            "stage": "light",
+            "text": "Clicca un piano o una faccia piana (Esc: annulla)."
+        },
+        {
+            "background": "#111820",
+            "contrast": 9.731447132575688,
+            "foreground": "#80c8f0",
+            "foregroundPixels": 21,
+            "kind": "section",
+            "stage": "dark",
+            "text": "Clicca un piano o una faccia piana (Esc: annulla)."
+        },
+        {
+            "background": "#ffffff",
+            "contrast": 16.293254998215808,
+            "error": false,
+            "explicitForegroundFragments": 0,
+            "foreground": "#202020",
+            "foregroundPixels": 184,
+            "fragments": 27,
+            "htmlSHA256": "579561fee79a48eacf3b1a61cacf885ed4b2b907918b049527d6973cabd101d4",
+            "kind": "mass",
+            "stage": "light"
+        },
+        {
+            "background": "#202d36",
+            "contrast": 10.875728867565092,
+            "error": false,
+            "explicitForegroundFragments": 0,
+            "foreground": "#d8e4ea",
+            "foregroundPixels": 184,
+            "fragments": 27,
+            "htmlSHA256": "579561fee79a48eacf3b1a61cacf885ed4b2b907918b049527d6973cabd101d4",
+            "kind": "mass",
+            "stage": "dark"
+        },
+        {
+            "background": "#ffffff",
+            "contrast": 16.293254998215808,
+            "error": false,
+            "explicitForegroundFragments": 0,
+            "foreground": "#202020",
+            "foregroundPixels": 184,
+            "fragments": 27,
+            "htmlSHA256": "579561fee79a48eacf3b1a61cacf885ed4b2b907918b049527d6973cabd101d4",
+            "kind": "mass",
+            "stage": "light"
+        },
+        {
+            "background": "#ffffff",
+            "contrast": 16.293254998215808,
+            "error": false,
+            "explicitForegroundFragments": 0,
+            "foreground": "#202020",
+            "foregroundPixels": 184,
+            "fragments": 27,
+            "htmlSHA256": "579561fee79a48eacf3b1a61cacf885ed4b2b907918b049527d6973cabd101d4",
+            "kind": "mass",
+            "stage": "PaletteChange"
+        },
+        {
+            "background": "#ffffff",
+            "contrast": 16.293254998215808,
+            "error": false,
+            "explicitForegroundFragments": 0,
+            "foreground": "#202020",
+            "foregroundPixels": 184,
+            "fragments": 27,
+            "htmlSHA256": "579561fee79a48eacf3b1a61cacf885ed4b2b907918b049527d6973cabd101d4",
+            "kind": "mass",
+            "stage": "StyleChange"
+        },
+        {
+            "background": "#ffffff",
+            "contrast": 7.354464665075849,
+            "error": true,
+            "explicitForegroundFragments": 0,
+            "foreground": "#a32620",
+            "foregroundPixels": 81,
+            "fragments": 2,
+            "htmlSHA256": "b0c76f5d86a9e44315dc02f2cd12a5d7e0065458f920720e67d179f3ca84a782",
+            "kind": "mass",
+            "stage": "light"
+        },
+        {
+            "background": "#202d36",
+            "contrast": 6.1737313017275985,
+            "error": true,
+            "explicitForegroundFragments": 0,
+            "foreground": "#ff8a80",
+            "foregroundPixels": 81,
+            "fragments": 2,
+            "htmlSHA256": "b0c76f5d86a9e44315dc02f2cd12a5d7e0065458f920720e67d179f3ca84a782",
+            "kind": "mass",
+            "stage": "dark"
+        },
+        {
+            "background": "#ffffff",
+            "contrast": 7.354464665075849,
+            "error": true,
+            "explicitForegroundFragments": 0,
+            "foreground": "#a32620",
+            "foregroundPixels": 81,
+            "fragments": 2,
+            "htmlSHA256": "b0c76f5d86a9e44315dc02f2cd12a5d7e0065458f920720e67d179f3ca84a782",
+            "kind": "mass",
+            "stage": "light"
+        },
+        {
+            "background": "#ffffff",
+            "contrast": 7.354464665075849,
+            "error": true,
+            "explicitForegroundFragments": 0,
+            "foreground": "#a32620",
+            "foregroundPixels": 81,
+            "fragments": 2,
+            "htmlSHA256": "b0c76f5d86a9e44315dc02f2cd12a5d7e0065458f920720e67d179f3ca84a782",
+            "kind": "mass",
+            "stage": "PaletteChange"
+        },
+        {
+            "background": "#ffffff",
+            "contrast": 7.354464665075849,
+            "error": true,
+            "explicitForegroundFragments": 0,
+            "foreground": "#a32620",
+            "foregroundPixels": 81,
+            "fragments": 2,
+            "htmlSHA256": "b0c76f5d86a9e44315dc02f2cd12a5d7e0065458f920720e67d179f3ca84a782",
+            "kind": "mass",
+            "stage": "StyleChange"
+        },
+        {
+            "background": "#ffffff",
+            "contrast": 16.293254998215808,
+            "error": false,
+            "explicitForegroundFragments": 0,
+            "foreground": "#202020",
+            "foregroundPixels": 425,
+            "fragments": 27,
+            "htmlSHA256": "579561fee79a48eacf3b1a61cacf885ed4b2b907918b049527d6973cabd101d4",
+            "kind": "mass",
+            "stage": "error-to-normal"
+        }
+    ]
+}

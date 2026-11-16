@@ -1,0 +1,6 @@
+{
+  "directory": "/home/myungit/Linux_CAD_forFree/forgecad-release",
+  "command": "/usr/bin/c++ -DFORGECAD_HAS_CUDA=1 -DQT_CORE_LIB -DQT_GUI_LIB -DQT_NO_DEBUG -DQT_OPENGLWIDGETS_LIB -DQT_OPENGL_LIB -DQT_WIDGETS_LIB -I/home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_autogen/include -I/home/myungit/Linux_CAD_forFree/forgecad-release/generated -I/home/myungit/Linux_CAD_forFree -I/home/myungit/Linux_CAD_forFree/kernel -isystem /usr/include/qt6/QtWidgets -isystem /usr/include/qt6 -isystem /usr/include/qt6/QtCore -isystem /usr/lib/qt6/mkspecs/linux-g++ -isystem /usr/include/qt6/QtGui -isystem /usr/include/qt6/QtOpenGL -isystem /usr/include/qt6/QtOpenGLWidgets -O3 -DNDEBUG -std=gnu++17 -Wall -Wextra -Wpedantic -ffp-contract=off -mno-direct-extern-access -o CMakeFiles/forgecad.dir/forgeCad2026_gui.cpp.o -c /home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp",
+  "file": "/home/myungit/Linux_CAD_forFree/forgeCad2026_gui.cpp",
+  "output": "CMakeFiles/forgecad.dir/forgeCad2026_gui.cpp.o"
+}

@@ -1,0 +1,10 @@
+from pathlib import Path
+import os,tempfile,sys,json
+sys.path.insert(0,'/tmp/ui-residual-fix/root')
+from checks import run,R,T
+with tempfile.TemporaryDirectory(prefix='forgecad-ui-final-wayland-') as d:
+ env=os.environ.copy();env.update(QT_QPA_PLATFORM='wayland',QT_QPA_PLATFORMTHEME='',QT_STYLE_OVERRIDE='Fusion',XDG_CONFIG_HOME=d,FORGECAD_RECOVERY_DIR=d+'/recovery',FORGECAD_UI_RESIDUAL_OUTPUT=str(T/'wayland-ui-evidence'))
+ for name,arg in [('wayland-ui-residuals','--theme-ui-residuals'),('wayland-theme','--theme-tabs'),('wayland-theme-only2d','--theme-tabs-only-2d')]:
+  run(name,[str(R/'forgecad-release/forgecad_view_tests'),arg],timeout=90,env=env)
+ m=json.loads((T/'wayland-ui-evidence/metrics.json').read_text());assert m['checks']==74 and m['failures']==0
+ print('Wayland final 74 checks PASS')

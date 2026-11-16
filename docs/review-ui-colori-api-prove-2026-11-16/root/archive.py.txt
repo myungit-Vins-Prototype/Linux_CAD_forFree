@@ -1,0 +1,22 @@
+from pathlib import Path
+import hashlib,json
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/ui-residual-fix');P=R/'docs/review-ui-colori-api-prove-2026-11-16';sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+assert not P.exists();P.mkdir()
+def cp(a,b):
+ data=a.read_bytes();assert not data.startswith(b'\x7fELF')
+ if a.suffix=='.png':assert data.startswith(b'\x89PNG\r\n\x1a\n')
+ else:assert b'\x00' not in data,a;data.decode('utf-8')
+ if b.suffix in ['.cpp','.h','.py','.sh'] or b.name=='CMakeLists.txt':b=b.with_name(b.name+'.txt')
+ b.parent.mkdir(parents=True,exist_ok=True);b.write_bytes(data)
+sources={'core':T/'core','api':T/'api','layout':T/'layout','tests-color':T/'tests/final-proof','tests-layout':T/'tests/layout-supplement/final-proof-supplement','tests-clipboard':T/'tests/clipboard-supplement/final-proof-supplement','audit-color':T/'audit/final-proof','audit-layout':T/'audit/layout-supplement','audit-layout-v2':T/'audit/layout-v2-proof','audit-wayland-limit':T/'audit/wayland-timeout-note'}
+for dest,src in sources.items():
+ assert src.is_dir(),src
+ for f in sorted(src.rglob('*')):
+  if f.is_file() and f.suffix in ['.json','.txt','.md','.patch','.diff','.cpp','.h','.py','.png','.log'] or f.is_file() and f.name=='SHA256SUMS':cp(f,P/dest/f.relative_to(src))
+for f in sorted((T/'root').rglob('*')):
+ if not f.is_file() or 'before' in f.parts or '__pycache__' in f.parts:continue
+ if f.suffix in ['.json','.txt','.log','.py','.diff','.png']:cp(f,P/'root'/f.relative_to(T/'root'))
+for f in json.loads((T/'root/integrated-sources.json').read_text()):cp(R/f,P/'integrated'/f)
+(P/'README.txt').write_text('UI9 theme foregrounds + UI10 Section clipping, four orphan wrappers, 2026-11-16. Three GPT-6.1 Sol agents: implementation, shared-method tests, independent audit. Historical color-only and intermediate test/header versions are labeled by phase; final integrated source hashes and full build/CTest/specific74Wayland results are in root. General mixed-tabs Wayland rerun timed out90/120seconds on a locked session, not PASS; offscreen same unchanged method passed. Clipboard preservation tested through normal and exceptional unwinding offscreen; original clipboard values remain memory-only. Includes actual synthetic Qt PNG evidence. No CAD, ELF, objects or libraries. Nineteen prior proof seals unchanged. Remote CI for the new code commit is recorded separately after push. K10 remains partial and seven legacy APIs remain open.\n')
+files=sorted(f for f in P.rglob('*') if f.is_file());size=sum(f.stat().st_size for f in files);assert size<50_000_000
+(P/'SHA256SUMS').write_text(''.join(sha(f)+'  '+str(f.relative_to(P))+'\n' for f in files));print(len(files),size,'seal',sha(P/'SHA256SUMS'))

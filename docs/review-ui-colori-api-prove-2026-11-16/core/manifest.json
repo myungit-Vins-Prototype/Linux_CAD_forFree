@@ -1,0 +1,70 @@
+{
+  "commands.txt": {
+    "sha256": "b0b1b80e1e4939280dbeba42607fb6d7d9ff8ad31ff58f3d155dbcc44e024a33",
+    "bytes": 576
+  },
+  "HANDOFF.txt": {
+    "sha256": "efa0fbf3a2992b96ea00755d1702b44631aa1f21f7f754a1bd70b9ef46a716e4",
+    "bytes": 666
+  },
+  "DESIGN.txt": {
+    "sha256": "3d9da892b11ecf626f94dfe9a5c9006d1e311552f22b7f8de05c505310f5d7f4",
+    "bytes": 1873
+  },
+  "graph-context.json": {
+    "sha256": "c9b7e0f93d255be53dec1b60ace0efbcd0d3bff63a9a511229e048c54c82c00a",
+    "bytes": 134866
+  },
+  "forgeCad2026_dialogs_analysis.cpp.command.json": {
+    "sha256": "b4f0f28c2e1a76ef5ae5375cf69bb7830efc040841225328b0ff15e77fea4a47",
+    "bytes": 1055
+  },
+  "forgeCad2026_gui.cpp.command.json": {
+    "sha256": "efdaaf8b54e615963b5fc9ea5e7dd91c411dac6778969d990cdb201ec33dfd42",
+    "bytes": 1003
+  },
+  "candidate-manifest.json": {
+    "sha256": "4aa024d5d13e54e57f3600d857d6911c9e2356cef04c0d24b8c222059c897e5d",
+    "bytes": 297
+  },
+  "ui-foreground.patch": {
+    "sha256": "2a10264f9a0e5195159bb9f1059058f1234fee17e1b664e3e912869d6de69321",
+    "bytes": 2822
+  },
+  "baseline-manifest.json": {
+    "sha256": "4065743568f2d76629c2721c47d98a477246a86930717423a5dea9f8eb314e2a",
+    "bytes": 763
+  },
+  "candidate/forgeCad2026_dialogs_analysis.cpp": {
+    "sha256": "3e74eba725601726a5c2ec2c9fddb002bbb65c4733fb6ea3a0ac5bcec63468b4",
+    "bytes": 37625
+  },
+  "candidate/forgeCad2026_gui.cpp": {
+    "sha256": "a4ca3185da83aa638c038433de886c713a5d3e8ec4fbb35ace968d37e812395e",
+    "bytes": 363183
+  },
+  "before/forgeCad2026_application_theme.h": {
+    "sha256": "4d11c86afb43fa28262e2a9d4027a1071cea1b4356a1c967c941bee88d7713ba",
+    "bytes": 667
+  },
+  "before/forgeCad2026_application_theme.cpp": {
+    "sha256": "618b68b483952fac10852632b20f735fedb8e41b7dae1dfd06f676cee59582cc",
+    "bytes": 11913
+  },
+  "before/forgeCad2026_dialogs_common.h": {
+    "sha256": "bd1c89f4d518766ac35a7a5a7cff36b01ed3a276b7d2777a64794830687dd5fd",
+    "bytes": 15781
+  },
+  "before/forgeCad2026_dialogs_common.cpp": {
+    "sha256": "bd1006cc5689982ed183b6499292ce3efe956daf8028cc73ca7258036ad9ba82",
+    "bytes": 99304
+  },
+  "before/forgeCad2026_dialogs_analysis.cpp": {
+    "sha256": "6d4cb332ce0618bdc2fd930667384ea6a6ee7ba943308804b97affc16fb6b0fd",
+    "bytes": 37481
+  },
+  "before/forgeCad2026_gui.cpp": {
+    "sha256": "4b23e22c0811d6ed33ccc96aa6ca215620b115ad2a0cb9b882b5a267cfefaf76",
+    "bytes": 363133
+  }
+}

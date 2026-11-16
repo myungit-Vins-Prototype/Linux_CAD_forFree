@@ -1,0 +1,490 @@
+[
+  {
+    "run": "baseline-output",
+    "samples": [
+      {
+        "label": "section-0",
+        "foreground": "#9fc6e8",
+        "base": "#f0f0f0",
+        "foregroundExactPixels": 24,
+        "backgroundExactPixels": 49509,
+        "width": 257,
+        "height": 271
+      },
+      {
+        "label": "section-1",
+        "foreground": "#9fc6e8",
+        "base": "#111820",
+        "foregroundExactPixels": 21,
+        "backgroundExactPixels": 48902,
+        "width": 257,
+        "height": 271
+      },
+      {
+        "label": "section-2",
+        "foreground": "#9fc6e8",
+        "base": "#f0f0f0",
+        "foregroundExactPixels": 24,
+        "backgroundExactPixels": 49509,
+        "width": 257,
+        "height": 271
+      },
+      {
+        "label": "mass-0-label",
+        "foreground": "#9fb3c8",
+        "base": "#ffffff",
+        "foregroundExactPixels": 67,
+        "backgroundExactPixels": 176355,
+        "width": 580,
+        "height": 351
+      },
+      {
+        "label": "mass-0-hint",
+        "foreground": "#8aa0b4",
+        "base": "#ffffff",
+        "foregroundExactPixels": 0,
+        "backgroundExactPixels": 176355,
+        "width": 580,
+        "height": 351
+      },
+      {
+        "label": "mass-1-label",
+        "foreground": "#9fb3c8",
+        "base": "#202d36",
+        "foregroundExactPixels": 59,
+        "backgroundExactPixels": 176288,
+        "width": 580,
+        "height": 351
+      },
+      {
+        "label": "mass-1-hint",
+        "foreground": "#8aa0b4",
+        "base": "#202d36",
+        "foregroundExactPixels": 0,
+        "backgroundExactPixels": 176288,
+        "width": 580,
+        "height": 351
+      },
+      {
+        "label": "mass-2-label",
+        "foreground": "#9fb3c8",
+        "base": "#ffffff",
+        "foregroundExactPixels": 67,
+        "backgroundExactPixels": 176355,
+        "width": 580,
+        "height": 351
+      },
+      {
+        "label": "mass-2-hint",
+        "foreground": "#8aa0b4",
+        "base": "#ffffff",
+        "foregroundExactPixels": 0,
+        "backgroundExactPixels": 176355,
+        "width": 580,
+        "height": 351
+      },
+      {
+        "label": "error-0",
+        "foreground": "#ff7b72",
+        "base": "#ffffff",
+        "foregroundExactPixels": 20,
+        "backgroundExactPixels": 199138,
+        "width": 580,
+        "height": 351
+      },
+      {
+        "label": "error-1",
+        "foreground": "#ff7b72",
+        "base": "#202d36",
+        "foregroundExactPixels": 20,
+        "backgroundExactPixels": 199138,
+        "width": 580,
+        "height": 351
+      },
+      {
+        "label": "error-2",
+        "foreground": "#ff7b72",
+        "base": "#ffffff",
+        "foregroundExactPixels": 20,
+        "backgroundExactPixels": 199138,
+        "width": 580,
+        "height": 351
+      },
+      {
+        "label": "error-to-normal",
+        "foreground": "#9fb3c8",
+        "base": "#ffffff",
+        "foregroundExactPixels": 68,
+        "backgroundExactPixels": 176879,
+        "width": 580,
+        "height": 351
+      }
+    ]
+  },
+  {
+    "run": "candidate-output",
+    "samples": [
+      {
+        "label": "section-0",
+        "foreground": "#1b65a0",
+        "base": "#f0f0f0",
+        "foregroundExactPixels": 21,
+        "backgroundExactPixels": 49492,
+        "width": 257,
+        "height": 271
+      },
+      {
+        "label": "section-1",
+        "foreground": "#80c8f0",
+        "base": "#111820",
+        "foregroundExactPixels": 21,
+        "backgroundExactPixels": 48902,
+        "width": 257,
+        "height": 271
+      },
+      {
+        "label": "section-2",
+        "foreground": "#1b65a0",
+        "base": "#f0f0f0",
+        "foregroundExactPixels": 21,
+        "backgroundExactPixels": 49492,
+        "width": 257,
+        "height": 271
+      },
+      {
+        "label": "mass-0-label",
+        "foreground": "#202020",
+        "base": "#ffffff",
+        "foregroundExactPixels": 612,
+        "backgroundExactPixels": 176288,
+        "width": 580,
+        "height": 351
+      },
+      {
+        "label": "mass-0-hint",
+        "foreground": "#202020",
+        "base": "#ffffff",
+        "foregroundExactPixels": 612,
+        "backgroundExactPixels": 176288,
+        "width": 580,
+        "height": 351
+      },
+      {
+        "label": "mass-1-label",
+        "foreground": "#d8e4ea",
+        "base": "#202d36",
+        "foregroundExactPixels": 612,
+        "backgroundExactPixels": 176288,
+        "width": 580,
+        "height": 351
+      },
+      {
+        "label": "mass-1-hint",
+        "foreground": "#d8e4ea",
+        "base": "#202d36",
+        "foregroundExactPixels": 612,
+        "backgroundExactPixels": 176288,
+        "width": 580,
+        "height": 351
+      },
+      {
+        "label": "mass-2-label",
+        "foreground": "#202020",
+        "base": "#ffffff",
+        "foregroundExactPixels": 612,
+        "backgroundExactPixels": 176288,
+        "width": 580,
+        "height": 351
+      },
+      {
+        "label": "mass-2-hint",
+        "foreground": "#202020",
+        "base": "#ffffff",
+        "foregroundExactPixels": 612,
+        "backgroundExactPixels": 176288,
+        "width": 580,
+        "height": 351
+      },
+      {
+        "label": "error-0",
+        "foreground": "#a32620",
+        "base": "#ffffff",
+        "foregroundExactPixels": 278,
+        "backgroundExactPixels": 199138,
+        "width": 580,
+        "height": 351
+      },
+      {
+        "label": "error-1",
+        "foreground": "#ff8a80",
+        "base": "#202d36",
+        "foregroundExactPixels": 278,
+        "backgroundExactPixels": 199138,
+        "width": 580,
+        "height": 351
+      },
+      {
+        "label": "error-2",
+        "foreground": "#a32620",
+        "base": "#ffffff",
+        "foregroundExactPixels": 278,
+        "backgroundExactPixels": 199138,
+        "width": 580,
+        "height": 351
+      },
+      {
+        "label": "error-to-normal",
+        "foreground": "#202020",
+        "base": "#ffffff",
+        "foregroundExactPixels": 612,
+        "backgroundExactPixels": 176810,
+        "width": 580,
+        "height": 351
+      }
+    ]
+  },
+  {
+    "run": "baseline-wayland",
+    "samples": [
+      {
+        "label": "section-0",
+        "foreground": "#9fc6e8",
+        "base": "#f0f0f0",
+        "foregroundExactPixels": 25,
+        "backgroundExactPixels": 54398,
+        "width": 274,
+        "height": 280
+      },
+      {
+        "label": "section-1",
+        "foreground": "#9fc6e8",
+        "base": "#111820",
+        "foregroundExactPixels": 23,
+        "backgroundExactPixels": 53548,
+        "width": 274,
+        "height": 280
+      },
+      {
+        "label": "section-2",
+        "foreground": "#9fc6e8",
+        "base": "#f0f0f0",
+        "foregroundExactPixels": 25,
+        "backgroundExactPixels": 54398,
+        "width": 274,
+        "height": 280
+      },
+      {
+        "label": "mass-0-label",
+        "foreground": "#9fb3c8",
+        "base": "#ffffff",
+        "foregroundExactPixels": 180,
+        "backgroundExactPixels": 177269,
+        "width": 580,
+        "height": 351
+      },
+      {
+        "label": "mass-0-hint",
+        "foreground": "#8aa0b4",
+        "base": "#ffffff",
+        "foregroundExactPixels": 0,
+        "backgroundExactPixels": 177269,
+        "width": 580,
+        "height": 351
+      },
+      {
+        "label": "mass-1-label",
+        "foreground": "#9fb3c8",
+        "base": "#202d36",
+        "foregroundExactPixels": 161,
+        "backgroundExactPixels": 177167,
+        "width": 580,
+        "height": 351
+      },
+      {
+        "label": "mass-1-hint",
+        "foreground": "#8aa0b4",
+        "base": "#202d36",
+        "foregroundExactPixels": 0,
+        "backgroundExactPixels": 177167,
+        "width": 580,
+        "height": 351
+      },
+      {
+        "label": "mass-2-label",
+        "foreground": "#9fb3c8",
+        "base": "#ffffff",
+        "foregroundExactPixels": 180,
+        "backgroundExactPixels": 177269,
+        "width": 580,
+        "height": 351
+      },
+      {
+        "label": "mass-2-hint",
+        "foreground": "#8aa0b4",
+        "base": "#ffffff",
+        "foregroundExactPixels": 0,
+        "backgroundExactPixels": 177269,
+        "width": 580,
+        "height": 351
+      },
+      {
+        "label": "error-0",
+        "foreground": "#ff7b72",
+        "base": "#ffffff",
+        "foregroundExactPixels": 49,
+        "backgroundExactPixels": 198817,
+        "width": 580,
+        "height": 351
+      },
+      {
+        "label": "error-1",
+        "foreground": "#ff7b72",
+        "base": "#202d36",
+        "foregroundExactPixels": 49,
+        "backgroundExactPixels": 198817,
+        "width": 580,
+        "height": 351
+      },
+      {
+        "label": "error-2",
+        "foreground": "#ff7b72",
+        "base": "#ffffff",
+        "foregroundExactPixels": 49,
+        "backgroundExactPixels": 198817,
+        "width": 580,
+        "height": 351
+      },
+      {
+        "label": "error-to-normal",
+        "foreground": "#9fb3c8",
+        "base": "#ffffff",
+        "foregroundExactPixels": 186,
+        "backgroundExactPixels": 177900,
+        "width": 580,
+        "height": 351
+      }
+    ]
+  },
+  {
+    "run": "candidate-wayland",
+    "samples": [
+      {
+        "label": "section-0",
+        "foreground": "#1b65a0",
+        "base": "#f0f0f0",
+        "foregroundExactPixels": 23,
+        "backgroundExactPixels": 54382,
+        "width": 274,
+        "height": 280
+      },
+      {
+        "label": "section-1",
+        "foreground": "#80c8f0",
+        "base": "#111820",
+        "foregroundExactPixels": 23,
+        "backgroundExactPixels": 53548,
+        "width": 274,
+        "height": 280
+      },
+      {
+        "label": "section-2",
+        "foreground": "#1b65a0",
+        "base": "#f0f0f0",
+        "foregroundExactPixels": 23,
+        "backgroundExactPixels": 54382,
+        "width": 274,
+        "height": 280
+      },
+      {
+        "label": "mass-0-label",
+        "foreground": "#202020",
+        "base": "#ffffff",
+        "foregroundExactPixels": 969,
+        "backgroundExactPixels": 177167,
+        "width": 580,
+        "height": 351
+      },
+      {
+        "label": "mass-0-hint",
+        "foreground": "#202020",
+        "base": "#ffffff",
+        "foregroundExactPixels": 969,
+        "backgroundExactPixels": 177167,
+        "width": 580,
+        "height": 351
+      },
+      {
+        "label": "mass-1-label",
+        "foreground": "#d8e4ea",
+        "base": "#202d36",
+        "foregroundExactPixels": 969,
+        "backgroundExactPixels": 177167,
+        "width": 580,
+        "height": 351
+      },
+      {
+        "label": "mass-1-hint",
+        "foreground": "#d8e4ea",
+        "base": "#202d36",
+        "foregroundExactPixels": 969,
+        "backgroundExactPixels": 177167,
+        "width": 580,
+        "height": 351
+      },
+      {
+        "label": "mass-2-label",
+        "foreground": "#202020",
+        "base": "#ffffff",
+        "foregroundExactPixels": 969,
+        "backgroundExactPixels": 177167,
+        "width": 580,
+        "height": 351
+      },
+      {
+        "label": "mass-2-hint",
+        "foreground": "#202020",
+        "base": "#ffffff",
+        "foregroundExactPixels": 969,
+        "backgroundExactPixels": 177167,
+        "width": 580,
+        "height": 351
+      },
+      {
+        "label": "error-0",
+        "foreground": "#a32620",
+        "base": "#ffffff",
+        "foregroundExactPixels": 466,
+        "backgroundExactPixels": 198817,
+        "width": 580,
+        "height": 351
+      },
+      {
+        "label": "error-1",
+        "foreground": "#ff8a80",
+        "base": "#202d36",
+        "foregroundExactPixels": 466,
+        "backgroundExactPixels": 198817,
+        "width": 580,
+        "height": 351
+      },
+      {
+        "label": "error-2",
+        "foreground": "#a32620",
+        "base": "#ffffff",
+        "foregroundExactPixels": 466,
+        "backgroundExactPixels": 198817,
+        "width": 580,
+        "height": 351
+      },
+      {
+        "label": "error-to-normal",
+        "foreground": "#202020",
+        "base": "#ffffff",
+        "foregroundExactPixels": 969,
+        "backgroundExactPixels": 177794,
+        "width": 580,
+        "height": 351
+      }
+    ]
+  }
+]

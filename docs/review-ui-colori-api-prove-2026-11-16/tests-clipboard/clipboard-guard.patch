@@ -1,0 +1,85 @@
+--- a/tests/test_document_theme_tabs.h
++++ b/tests/test_document_theme_tabs.h
+@@ -398,6 +398,66 @@
+ 
+ // Included within ViewportInteractionTest; drives production dialogs.
+ static void uiResidualThemeTests() {
++    // Keep both standard Qt values and every advertised byte format. Some
++    // platform MIME providers expose image/color values only through QVariant.
++    class ClipboardMimeData final : public QMimeData {
++        QStringList originalFormats;
++        QMap<QString, QByteArray> originalBytes;
++
++      public:
++        explicit ClipboardMimeData(const QMimeData &source) : originalFormats(source.formats()) {
++            for (const auto &format : originalFormats) {
++                const auto bytes = source.data(format);
++                originalBytes.insert(format, bytes);
++                setData(format, bytes);
++            }
++            if (source.hasText())
++                setText(source.text());
++            if (source.hasHtml())
++                setHtml(source.html());
++            if (source.hasImage())
++                setImageData(source.imageData());
++            if (source.hasUrls())
++                setUrls(source.urls());
++            if (source.hasColor())
++                setColorData(source.colorData());
++        }
++        QStringList formats() const override {
++            auto result = originalFormats;
++            for (const auto &format : QMimeData::formats())
++                if (!result.contains(format))
++                    result.append(format);
++            return result;
++        }
++        bool hasFormat(const QString &format) const override { return formats().contains(format); }
++
++      protected:
++        QVariant retrieveData(const QString &format, QMetaType preferredType) const override {
++            if (preferredType == QMetaType::fromType<QByteArray>() && originalBytes.contains(format))
++                return originalBytes.value(format);
++            return QMimeData::retrieveData(format, preferredType);
++        }
++    };
++    struct ClipboardGuard {
++        QClipboard *clipboard = QApplication::clipboard();
++        std::unique_ptr<QMimeData> savedClipboard;
++        std::unique_ptr<QMimeData> savedSelection;
++        bool selectionSupported = clipboard->supportsSelection();
++        static std::unique_ptr<QMimeData> clone(const QMimeData *source) {
++            return source ? std::make_unique<ClipboardMimeData>(*source) : nullptr;
++        }
++        ClipboardGuard() : savedClipboard(clone(clipboard->mimeData())) {
++            if (selectionSupported)
++                savedSelection = clone(clipboard->mimeData(QClipboard::Selection));
++        }
++        ~ClipboardGuard() {
++            clipboard->setMimeData(savedClipboard.release(), QClipboard::Clipboard);
++            if (selectionSupported)
++                clipboard->setMimeData(savedSelection.release(), QClipboard::Selection);
++            for (int i = 0; i < 8; ++i)
++                QApplication::processEvents(QEventLoop::AllEvents, 20);
++        }
++    };
+     using namespace ForgeCad;
+     int checks = 0, failures = 0;
+     QJsonArray samples;
+@@ -591,6 +651,8 @@
+         try {
+             if (!dialog)
+                 throw std::runtime_error("mass dialog missing");
++            settle();
++            ClipboardGuard clipboardGuard;
+             auto *browser = dialog->findChild<QTextBrowser *>();
+             if (!browser)
+                 throw std::runtime_error("mass browser missing");
+--- a/tests/test_viewport.cpp
++++ b/tests/test_viewport.cpp
+@@ -1,3 +1,4 @@
++#include <QMimeData>
+ #include <QTextBrowser>
+ #include <QTextCursor>
+ #include <QTextDocument>

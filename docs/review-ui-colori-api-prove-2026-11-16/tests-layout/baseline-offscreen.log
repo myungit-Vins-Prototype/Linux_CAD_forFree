@@ -1,0 +1,5 @@
+FAIL section full picking instruction fits without reopening
+FAIL section full instruction fits after cancel without reopening
+FAIL section hidden instruction fits immediately on reopening
+UI residual checks 74, failures 3
+UI residual theme regression

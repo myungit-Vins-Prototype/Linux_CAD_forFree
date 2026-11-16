@@ -1,0 +1,751 @@
+--- before/CLAUDE.md
++++ after/CLAUDE.md
+@@ -108,10 +108,15 @@
+ 
+ ## Ultimi interventi — esiti consolidati
+ 
+-**16/11 — CI: giunti corretti e push verificato.**
+-046685e: build/test GitHub Linux/macOS PASS; K12 e OffsetLoft PASS.
+-Tre Sol; app/483kernel/28CTest/33mirati e sanitizer PASS, cap invariati.
+-API/colori ricontrollati, aperti; segue solo documentazione. [Esiti/limiti](docs/ci-sheet-join-2026-11-16.md).
++**16/11 — UI9/UI10 verificate,33rilievi corretti.**
++Palette Sezione/massa e altezza Sezione;4wrapper tolti,6query conservate,7legacy aperte.
++App/12CTest/74Wayland/appunti/mappa PASS; kernel invariato. NuovaCI dopo push.
++Wayland schede:timeout, sessione bloccata; offscreen PASS.
++[Prove e limiti](docs/review-ui-colori-api-2026-11-16.md).
++
++**16/11 — CI risolta, push verificato.**
++046685e: GitHub Linux108PASS/2SKIP, macOS112PASS/1SKIP; build e483kernel PASS.
++K12/OffsetLoft PASS; a99c411 registra solo prove. [Log](docs/ci-sheet-join-2026-11-16.md).
+ 
+ **16/11 — K10 continuazioni verificate con tre agenti Sol.**
+ Parametro razionale/ISO e fin: app/28CTest/15mirati/sanitizer/Wayland/Fraction PASS.
+@@ -159,13 +164,9 @@
+ [Prove/limiti](docs/review-k10-uv-preview-2026-11-16.md),
+ [memoria](docs/history/claude-prima-k10-uv-preview-2026-11-16.md).
+ 
+-**16/11 — Supporto.prt, K11 corretto con tre agenti Sol.**
+-Corpo2/Estrusione3–Corpo3/Loft6: clipping asimmetrico corretto con genealogia,
+-bound continuo e retry atomico; coppia nei due ordini/tre corpi PASS.
+-App/24CTest/38Boolean/424Release/78sanitizer/15retry/65storia PASS.
+-output/Supporto_unito.prt con nuovo UUID; input prove SHA79887e91,
+-originale successivo SHA70e4ec5c preservato, non ricertificato. Mappa PASS.
+-[Prove/limiti](docs/supporto-booleana-2026-11-16.md);27rilievi alla consegna storica.
++Supporto.prt/K11: Corpo2/3 e tre corpi uniti, app/24CTest/38Boolean/78sanitizer PASS;
++output con UUID nuovo. Input prove SHA79887e91; originale successivo70e4ec5c non ricertificato.
++[Dettagli e limiti](docs/supporto-booleana-2026-11-16.md).
+ 
+ PRE5/PRE6/UI2:11runner comuni,setup/footer/chiusura; app/24CTest/Wayland PASS.
+ [Prove e limiti](docs/review-preview-unification-2026-11-16.md).
+--- before/CMakeLists.txt
++++ after/CMakeLists.txt
+@@ -604,6 +604,8 @@
+     endfunction()
+     forgecad_add_view_test(forgecad_document_theme_tabs_tests --theme-tabs)
+     forgecad_add_view_test(forgecad_document_theme_only2d_tests --theme-tabs-only-2d)
++    forgecad_add_view_test(forgecad_ui_foreground_theme_tests --theme-ui-residuals)
++    set_tests_properties(forgecad_ui_foreground_theme_tests PROPERTIES TIMEOUT 90)
+     set_tests_properties(forgecad_document_theme_tabs_tests forgecad_document_theme_only2d_tests PROPERTIES TIMEOUT 90)
+     forgecad_add_view_test(forgecad_document_tabs_tests --document-tabs)
+     set_tests_properties(forgecad_document_tabs_tests PROPERTIES TIMEOUT 90)
+--- before/cad_feature_dependencies.cpp
++++ after/cad_feature_dependencies.cpp
+@@ -202,7 +202,6 @@
+     default: return {};
+     }
+ }
+-bool usesSketch(const ExtrusionObject &body) { return !sketchesOf(body).isEmpty(); }
+ 
+ QVector<int> nextExtrusionCandidates(int index, const QVector<ExtrusionObject> &bodies) {
+     const int end = index < 0 ? int(bodies.size()) : std::min(index, int(bodies.size()));
+--- before/cad_feature_dependencies.h
++++ after/cad_feature_dependencies.h
+@@ -18,7 +18,6 @@
+ // non validi restano nell'elenco: chi rigenera deve poterli segnalare.
+ QVector<int> bodyOperands(const ExtrusionObject &body);
+ QVector<int> sketchesOf(const ExtrusionObject &body);
+-bool usesSketch(const ExtrusionObject &body);
+ // Risultati precedenti attivi e non consumati; la visibilita' manuale non
+ // modifica i limiti automatici dell'estrusione. Chi rigenera pubblica prima
+ // la geometria precedente, cosi' la scelta usa i risultati validi correnti.
+--- before/docs/code-review-2026-11-15.md
++++ after/docs/code-review-2026-11-15.md
+@@ -1,8 +1,10 @@
+ # Review generale ForgeCAD — 15 novembre 2026
+ 
+-**Preparazione dei prossimi punti, sola lettura:** ricontrollate17API e localizzati i colori fissi Sezione/Proprietà di massa; separatore Raccordo solo candidato. Nessuna correzione o rimozione eseguita. [Inventario, decisioni proposte e limiti](review-prossimi-punti-2026-11-16.md).
++**UI9/UI10 corretti e verificati:** foreground locali Sezione/Proprietà di massa (una causa, due contesti) e messaggio Sezione tagliato (difetto distinto). App completa,12/12CTest,74/74controlli dei pannelli Wayland e guardia appunti PASS; ripetizione Wayland generale schede in timeout su sessione bloccata; mappa778/11373/390TU verificata. **Totale33rilievi confermati corretti**; quattro wrapper rimossi sono manutenzione separata, sei query intenzionali e sette legacy ancora aperte. Nuova CI da verificare dopo push. [Correzioni, prove e limiti](review-ui-colori-api-2026-11-16.md).
+ 
+-**Stato più recente, 16 novembre:** controllate le CI GitHub dopo il push c44975e: build Linux/macOS e K12 PASS; corretto il nuovo fallimento OffsetLoftExtendedSeamsTrimBoth. Il selettore dei giunti usa pcurve e ancore originali con budget fisico prefissato; nessun allargamento delle tolleranze, certificati ISO falliti terminali. App completa,483/483kernel,28/28CTest e33/33mirati PASS. [Rapporto/prove](ci-sheet-join-2026-11-16.md); CI GitHub sul commit `046685e` PASS su Linux e macOS (build e tutte le suite); [log](ci-sheet-join-github-prove-2026-11-16/README.txt). **K10:24/24siti parzialmente trattati,31rilievi invariati.** Newton e famiglie non supportate restano campionati;17API candidate orfane e colori letterali UI aperti. Le continuazioni dei bordi del passo precedente restano descritte nel [rapporto](review-k10-boundary-2026-11-16.md).
++**Preparazione precedente, sola lettura:** ricontrollate17API e localizzati i colori fissi Sezione/Proprietà di massa; separatore Raccordo solo candidato. Nessuna correzione o rimozione attribuita a quella fase storica. [Inventario e limiti](review-prossimi-punti-2026-11-16.md).
++
++**Stato precedente CI, 16 novembre:** controllate le CI GitHub dopo il push c44975e: build Linux/macOS e K12 PASS; corretto il nuovo fallimento OffsetLoftExtendedSeamsTrimBoth. Il selettore dei giunti usa pcurve e ancore originali con budget fisico prefissato; nessun allargamento delle tolleranze, certificati ISO falliti terminali. App completa,483/483kernel,28/28CTest e33/33mirati PASS. [Rapporto/prove](ci-sheet-join-2026-11-16.md); CI GitHub sul commit `046685e` PASS su Linux e macOS (build e tutte le suite); [log](ci-sheet-join-github-prove-2026-11-16/README.txt). **K10:24/24siti parzialmente trattati,31rilievi invariati.** Newton e famiglie non supportate restano campionati;17API candidate orfane e colori letterali UI aperti. Le continuazioni dei bordi del passo precedente restano descritte nel [rapporto](review-k10-boundary-2026-11-16.md).
+ 
+ **Stato precedente mitre ISO:** proseguito [K10, mitre ISO](review-k10-mitre-2026-11-16.md) con tre agenti GPT-6.1 Sol. Corretto un falso successo nell’API interna sintetica: residuoZ=1/2 mm esatto contro gap dichiarato≈4,26e-12 mm. ViaISO con fit e residui continui, cap prefissato, mappe originali, fin effettive verificate ed escluse dall’aumento delle tolleranze. App completa,27/27CTest,13/13 mirati,19/19sanitizer,Wayland/tema e Fraction10 mappe+2 fin PASS. Le16 regressioni pubbliche passano ma non esercitanoISO; nessun documento pubblico dichiarato risolto. Diagonali e Newton restano campionati: un testimone negativo diagonale è ancora aperto. **K10 passa a 23/24 siti iniziali parzialmente trattati e uno interamente aperto; totale31 rilievi invariato.** Restano17API pubbliche candidate orfane e colori letterali UI.
+ 
+@@ -73,6 +75,8 @@
+ 
+ ## Funzioni orfane e memoria
+ 
++**Aggiornamento manutentivo:** delle 22 candidate iniziali, cinque private/locali sono già state rimosse nella fase Helix e quattro wrapper pubblici nella fase UI9/UI10. Le sei query/cataloghi sono conservate intenzionalmente; i sette ingressi legacy rimangono da trattare. Nessuna delle nove rimozioni è conteggiata come nuovo bug funzionale. L'inventario sotto descrive la review iniziale.
++
+ **22 funzioni senza chiamanti nel repository esaminato** sono ricontrollate tramite ricerca testuale, grafo delle chiamate/riferimenti e dichiarazioni. Sono candidati manutentivi, non 22 bug funzionali. Fra queste: `setSelectedPointPosition`, `setEdgePickLinear`, `setExtendPickCallback`, `resumeExtendPick`, `firstFeature`, `forgeIntersectRay`, `nearestBodyEdge`, `appendFixedReferenceLine` e alcuni wrapper del viewport.
+ 
+ Le API usate soltanto dai test sono separate; override/callback Qt non sono classificati come orfani per la sola assenza di archi diretti. `ensureBodyDisplay` e `transformSurface`, segnalate nel vecchio inventario, sono ora usate in produzione e sono escluse. [Inventario delle 22 funzioni e prove](review-2026-11-15/orfane.md).
+--- before/docs/review-prossimi-punti-2026-11-16.md
++++ after/docs/review-prossimi-punti-2026-11-16.md
+@@ -22,3 +22,8 @@
+ Due catene richiedono una modifica coerente: callback Estendi e provider della tavola. Togliere da sola l'action legacy della tavola lascerebbe una dereferenziazione `findChild` nel contenitore. Non è un errore corrente riprodotto: è il rischio concreto di una pulizia incompleta. Getter senza consumatori non sono bug funzionali.
+ 
+ [Inventario completo API](review-prossimi-punti-prove-2026-11-16/api/README.md), [rilievi UI](review-prossimi-punti-prove-2026-11-16/ui/README.txt), [provenienza e sigillo](review-prossimi-punti-prove-2026-11-16/README.txt).
++
++
++## Prosecuzione implementata dopo la CI verde
++
++Questo inventario iniziale rimane una fotografia storica di046685e. Il blocco successivo corregge UI9 (Sezione e massa seguono la palette) e UI10 (messaggio Sezione senza tagli); rimuove quattro wrapper, conserva sei query e lascia sette ingressi legacy aperti. Totale33difetti confermati corretti, non37. App,12CTest,74controlli Wayland e mappa PASS; nuova CI da verificare dopo push. [Esiti e limiti](review-ui-colori-api-2026-11-16.md).
+--- before/forgeCad2026_dialogs_analysis.cpp
++++ after/forgeCad2026_dialogs_analysis.cpp
+@@ -513,6 +513,7 @@
+     form->addRow(QStringLiteral("Materiale:"), materialBox);
+     form->addRow(QStringLiteral("Densita':"), densityBox);
+     auto *text = new QTextBrowser(&dialog);
++    text->setObjectName(QStringLiteral("massPropertiesReport"));
+     text->setOpenLinks(false);
+     text->setMinimumHeight(200);
+     form->addRow(text);
+@@ -533,6 +534,7 @@
+     };
+     QString plain;
+     const auto show = [&] {
++        setFunctionMessageRole(text, FunctionMessageRole::Normal);
+         const double rho = densityBox->value() * 1e-3;  // g/mm^3
+         ForgeCad::MassReport r;
+         QString name;
+@@ -562,11 +564,12 @@
+         QStringList lines;
+         QString html = QStringLiteral("<h3>%1</h3>").arg(name.toHtmlEscaped());
+         const auto row = [&](const QString &label, const QString &value) {
+-            html += QStringLiteral("<tr><td style='padding-right:14px;color:#9fb3c8'>%1</td><td>%2</td></tr>").arg(label, value);
++            html += QStringLiteral("<tr><td style='padding-right:14px'>%1</td><td>%2</td></tr>").arg(label, value);
+             lines.append(label + QStringLiteral("\t") + QString(value).remove(QRegularExpression(QStringLiteral("<[^>]*>"))));
+         };
+         if (!r.ok) {
+-            text->setHtml(html + QStringLiteral("<p style='color:#ff7b72'>Calcolo non riuscito: %1</p>").arg(r.error.toHtmlEscaped()));
++            setFunctionMessageRole(text, FunctionMessageRole::Error);
++            text->setHtml(html + QStringLiteral("<p>Calcolo non riuscito: %1</p>").arg(r.error.toHtmlEscaped()));
+             plain.clear();
+             return;
+         }
+@@ -615,7 +618,7 @@
+                 tensorRows(about, QStringLiteral("all'origine"));
+             }
+         }
+-        html += QStringLiteral("</table><p style='color:#8aa0b4'>Calcolo: %1.<br>Unita': %2, g. Prodotti d'inerzia con il segno positivo (Pxy = ∫ x y dm); "
++        html += QStringLiteral("</table><p>Calcolo: %1.<br>Unita': %2, g. Prodotti d'inerzia con il segno positivo (Pxy = ∫ x y dm); "
+                                "il tensore d'inerzia ha fuori diagonale -Pxy.</p>")
+                     .arg(r.method.toHtmlEscaped(), linearUnit);
+         text->setHtml(html);
+--- before/forgeCad2026_gui.cpp
++++ after/forgeCad2026_gui.cpp
+@@ -1806,7 +1806,8 @@
+         planeVisible->setChecked(true);
+         auto *info = new QLabel(panel);
+         info->setWordWrap(true);
+-        info->setStyleSheet(QStringLiteral("color: #9fc6e8;"));
++        info->setObjectName(QStringLiteral("sectionPlaneInfo"));
++        info->setForegroundRole(QPalette::Link);
+         form->addRow(QStringLiteral("Piano:"), planeBox);
+         form->addRow(QString(), pickButton);
+         form->addRow(QStringLiteral("Posizione:"), slider);
+@@ -1818,6 +1819,17 @@
+         auto *closeButtons = new QDialogButtonBox(QDialogButtonBox::Close, panel);
+         QObject::connect(closeButtons, &QDialogButtonBox::rejected, panel, &QDialog::hide);
+         form->addRow(closeButtons);
++        const auto expandSectionInfo = [panel, form] {
++            form->invalidate();
++            if (!panel->isVisible()) return;
++            const int requiredHeight = form->hasHeightForWidth()
++                ? form->totalHeightForWidth(panel->width()) : form->totalSizeHint().height();
++            if (requiredHeight > panel->height()) panel->resize(panel->width(), requiredHeight);
++        };
++        const auto setSectionInfo = [info, expandSectionInfo](const QString &message) {
++            info->setText(message);
++            expandSectionInfo();
++        };
+         struct SectionPanelState {
+             GeometryRef picked;
+             double lo = -10.0, hi = 10.0;
+@@ -1842,18 +1854,18 @@
+             normal = QVector3D(float(resolved.direction.x()), float(resolved.direction.y()), float(resolved.direction.z()));
+             return true;
+         };
+-        const auto apply = [viewport, basePlane, offsetBox, flipBox, capsBox, planeVisible, info, planeBox, state] {
++        const auto apply = [viewport, basePlane, offsetBox, flipBox, capsBox, planeVisible, setSectionInfo, planeBox, state] {
+             QVector3D point, normal;
+             if (!state->active || !basePlane(point, normal)) {
+                 viewport->setSection(false);
+-                info->setText(state->active && planeBox->currentIndex() == 3 ? QStringLiteral("Scegli il piano nella vista.") : QString());
++                setSectionInfo(state->active && planeBox->currentIndex() == 3 ? QStringLiteral("Scegli il piano nella vista.") : QString());
+                 return;
+             }
+             normal.normalize();
+             if (flipBox->isChecked()) normal = -normal;
+             const QVector3D at = point + float(offsetBox->value()) * (flipBox->isChecked() ? -normal : normal);
+             viewport->setSection(true, at, normal, capsBox->isChecked(), planeVisible->isChecked());
+-            info->setText(planeBox->currentIndex() == 3 ? ForgeCad::geometryRefText(state->picked, viewport->sketches(), viewport->extrusions())
++            setSectionInfo(planeBox->currentIndex() == 3 ? ForgeCad::geometryRefText(state->picked, viewport->sketches(), viewport->extrusions())
+                                                         : QString());
+         };
+         // L'intervallo del cursore: la geometria lungo la normale del piano. Per
+@@ -1892,11 +1904,11 @@
+             state->updating = false;
+             apply();
+         });
+-        const auto pick = [viewport, state, planeBox, info, updateRange] {
+-            info->setText(QStringLiteral("Clicca un piano o una faccia piana (Esc: annulla)."));
++        const auto pick = [viewport, state, planeBox, setSectionInfo, updateRange] {
++            setSectionInfo(QStringLiteral("Clicca un piano o una faccia piana (Esc: annulla)."));
+             const QString error = viewport->beginReferencePick(ForgeCad::DatumRolePlane, -1);
+             if (!error.isEmpty()) {
+-                info->setText(error);
++                setSectionInfo(error);
+                 return;
+             }
+             viewport->setReferencePickCallback([viewport, state, planeBox, updateRange](bool picked, GeometryRef ref) {
+@@ -1915,7 +1927,7 @@
+             else updateRange(true);
+         });
+         for (QCheckBox *box : {flipBox, capsBox, planeVisible}) QObject::connect(box, &QCheckBox::toggled, panel, apply);
+-        QObject::connect(sectionAction, &QAction::toggled, panel, [panel, updateRange, offsetBox, state, viewport](bool on) {
++        QObject::connect(sectionAction, &QAction::toggled, panel, [panel, updateRange, offsetBox, state, viewport, expandSectionInfo](bool on) {
+             state->active = on;
+             if (on) {
+                 // La prima volta la sezione passa per il centro della geometria e si aprono i parametri.
+@@ -1924,6 +1936,7 @@
+                 if (first) offsetBox->setValue(0.5 * (state->lo + state->hi));
+                 first = false;
+                 panel->show();
++                expandSectionInfo();
+                 panel->raise();
+             } else {
+                 viewport->cancelReferencePick();
+@@ -1931,9 +1944,10 @@
+                 panel->hide();
+             }
+         });
+-        QObject::connect(sectionParameters, &QAction::triggered, panel, [panel, sectionAction] {
++        QObject::connect(sectionParameters, &QAction::triggered, panel, [panel, sectionAction, expandSectionInfo] {
+             if (!sectionAction->isChecked()) sectionAction->setChecked(true);
+             panel->show();
++            expandSectionInfo();
+             panel->raise();
+         });
+         auto *offButton = closeButtons->addButton(QStringLiteral("Spegni la sezione"), QDialogButtonBox::DestructiveRole);
+--- before/forgeCad2026_viewport.h
++++ after/forgeCad2026_viewport.h
+@@ -315,7 +315,6 @@
+     // sole facce create dall'ultima feature.
+     void selectObject(SceneObjectKind kind, int index, bool wholeBody = false);
+ 
+-    QStringList extrusionNames() const;
+ 
+     // Booleana esatta (B-rep) tra due corpi solidi, anche su piani diversi o
+     // risultati di booleane precedenti. Il risultato e' un nuovo corpo che
+@@ -819,9 +818,6 @@
+ 
+     void endSketchMode();
+ 
+-    // Rotazione dal modello allo spazio della vista standard: righe destra, alto, verso l'osservatore.
+-    QMatrix4x4 basisMatrix() const;
+-
+     QMatrix4x4 sceneProjectionMatrix() const;
+ 
+     QMatrix4x4 sceneModelViewMatrix() const;
+@@ -841,7 +837,6 @@
+ 
+     // Sensibilita' della rotazione classica, indipendente dalla dimensione della vista.
+     static constexpr float kOrbitDegreesPerPixel = ForgeCad::Gui::ViewportCamera::kOrbitDegreesPerPixel;
+-    static float normalizedViewAngle(float degrees);
+ 
+     // Il pivot viene scelto solo quando comincia realmente l'orbita.
+     QVector3D orbitPointAt(const QPoint &position) const;
+--- before/forgeCad2026_viewport_document.cpp
++++ after/forgeCad2026_viewport_document.cpp
+@@ -909,12 +909,6 @@
+     for (SketchObject &sketch : sketches_) sketch.visible = true;
+     for (ExtrusionObject &extrusion : extrusions_) extrusion.visible = true;
+     documentChanged();
+-}
+-
+-QStringList CadViewport::extrusionNames() const {
+-    QStringList names;
+-    for (const ExtrusionObject &extrusion : extrusions_) names.append(extrusion.name);
+-    return names;
+ }
+ 
+ QString CadViewport::createBoolean(BooleanOperation operation, int firstIndex, const QVector<int> &tools, const QString &name) {
+--- before/forgeCad2026_viewport_scene.cpp
++++ after/forgeCad2026_viewport_scene.cpp
+@@ -45,10 +45,6 @@
+     return frame;
+ }
+ 
+-QMatrix4x4 CadViewport::basisMatrix() const {
+-    return camera_.basisMatrix();
+-}
+-
+ QMatrix4x4 CadViewport::sceneProjectionMatrix() const {
+     return camera_.projectionMatrix(size(), sceneDepth());
+ }
+@@ -78,10 +74,6 @@
+     const SketchFrame frame = ForgeCad::referenceSketchFrame(plane, camera_.orientation_);
+     setViewFrame(QVector3D(float(frame.xAxis[0]), float(frame.xAxis[1]), float(frame.xAxis[2])),
+                  QVector3D(float(frame.normal[0]), float(frame.normal[1]), float(frame.normal[2])));
+-}
+-
+-float CadViewport::normalizedViewAngle(float degrees) {
+-    return ForgeCad::Gui::ViewportCamera::normalizedViewAngle(degrees);
+ }
+ 
+ QVector3D CadViewport::orbitPointAt(const QPoint &position) const {
+--- before/tests/test_document_theme_tabs.h
++++ after/tests/test_document_theme_tabs.h
+@@ -395,3 +395,384 @@
+     require(failures == 0, "tema coerente in tutte le schede 3D/2D e nei pixel raster");
+     std::cout << "PASS document theme tabs: " << checks << " checks\n";
+ }
++
++// Included within ViewportInteractionTest; drives production dialogs.
++static void uiResidualThemeTests() {
++    // Keep both standard Qt values and every advertised byte format. Some
++    // platform MIME providers expose image/color values only through QVariant.
++    class ClipboardMimeData final : public QMimeData {
++        QStringList originalFormats;
++        QMap<QString, QByteArray> originalBytes;
++
++      public:
++        explicit ClipboardMimeData(const QMimeData &source) : originalFormats(source.formats()) {
++            for (const auto &format : originalFormats) {
++                const auto bytes = source.data(format);
++                originalBytes.insert(format, bytes);
++                setData(format, bytes);
++            }
++            if (source.hasText())
++                setText(source.text());
++            if (source.hasHtml())
++                setHtml(source.html());
++            if (source.hasImage())
++                setImageData(source.imageData());
++            if (source.hasUrls())
++                setUrls(source.urls());
++            if (source.hasColor())
++                setColorData(source.colorData());
++        }
++        QStringList formats() const override {
++            auto result = originalFormats;
++            for (const auto &format : QMimeData::formats())
++                if (!result.contains(format))
++                    result.append(format);
++            return result;
++        }
++        bool hasFormat(const QString &format) const override { return formats().contains(format); }
++
++      protected:
++        QVariant retrieveData(const QString &format, QMetaType preferredType) const override {
++            if (preferredType == QMetaType::fromType<QByteArray>() && originalBytes.contains(format))
++                return originalBytes.value(format);
++            return QMimeData::retrieveData(format, preferredType);
++        }
++    };
++    struct ClipboardGuard {
++        QClipboard *clipboard = QApplication::clipboard();
++        std::unique_ptr<QMimeData> savedClipboard;
++        std::unique_ptr<QMimeData> savedSelection;
++        bool selectionSupported = clipboard->supportsSelection();
++        static std::unique_ptr<QMimeData> clone(const QMimeData *source) {
++            return source ? std::make_unique<ClipboardMimeData>(*source) : nullptr;
++        }
++        ClipboardGuard() : savedClipboard(clone(clipboard->mimeData())) {
++            if (selectionSupported)
++                savedSelection = clone(clipboard->mimeData(QClipboard::Selection));
++        }
++        ~ClipboardGuard() {
++            clipboard->setMimeData(savedClipboard.release(), QClipboard::Clipboard);
++            if (selectionSupported)
++                clipboard->setMimeData(savedSelection.release(), QClipboard::Selection);
++            for (int i = 0; i < 8; ++i)
++                QApplication::processEvents(QEventLoop::AllEvents, 20);
++        }
++    };
++    using namespace ForgeCad;
++    int checks = 0, failures = 0;
++    QJsonArray samples;
++    QTemporaryDir temporaryOutput;
++    const QString requestedOutput = qEnvironmentVariable("FORGECAD_UI_RESIDUAL_OUTPUT");
++    const QString output = requestedOutput.isEmpty() ? temporaryOutput.path() : requestedOutput;
++    QDir().mkpath(output);
++    const auto check = [&](bool value, const QString &name) {
++        ++checks;
++        if (!value) {
++            ++failures;
++            std::cout << "FAIL " << name.toStdString() << std::endl;
++        }
++    };
++    const auto settle = [] {
++        for (int i = 0; i < 8; ++i)
++            QApplication::processEvents(QEventLoop::AllEvents, 20);
++    };
++    const auto luminance = [](QColor c) {
++        const auto channel = [](double x) {
++            return x <= 0.04045 ? x / 12.92 : std::pow((x + 0.055) / 1.055, 2.4);
++        };
++        return .2126 * channel(c.redF()) + .7152 * channel(c.greenF()) + .0722 * channel(c.blueF());
++    };
++    const auto contrast = [&](QColor a, QColor b) {
++        const double x = luminance(a), y = luminance(b);
++        return (std::max(x, y) + .05) / (std::min(x, y) + .05);
++    };
++    const auto snapshot = [&](QTextBrowser *browser, const QString &needle, const QString &label) {
++        QTextCursor cursor = browser->document()->find(needle);
++        check(!cursor.isNull(), label + " text exists");
++        const auto format = cursor.charFormat();
++        const bool explicitColor = format.hasProperty(QTextFormat::ForegroundBrush);
++        const QColor fg =
++            explicitColor ? format.foreground().color() : browser->palette().color(QPalette::Text);
++        const QColor base = browser->palette().color(QPalette::Base);
++        const double ratio = contrast(fg, base);
++        samples.append(QJsonObject{{"label", label},
++                                   {"needle", needle},
++                                   {"explicitForeground", explicitColor},
++                                   {"foreground", fg.name()},
++                                   {"paletteText", browser->palette().color(QPalette::Text).name()},
++                                   {"base", base.name()},
++                                   {"contrast", ratio},
++                                   {"role", browser->property("functionMessageRole").toString()}});
++        check(ratio >= 4.5, label + " readable foreground");
++        browser->grab().save(output + "/" + label + ".png");
++        return fg;
++    };
++    initializeApplicationTheme(*qApp);
++    setApplicationThemeMode(*qApp, ApplicationThemeMode::Light);
++    settle();
++    auto *window = new PdfWindow;
++    window->resize(1000, 760);
++    const QString primitiveError = window->viewport_->createPrimitive(PrimitiveParameters{}, "Synthetic box");
++    check(primitiveError.isEmpty(), "synthetic primitive created");
++    QAction *section = nullptr;
++    for (auto *action : window->findChildren<QAction *>())
++        if (action->text() == QStringLiteral("Vista in sezione")) {
++            section = action;
++            break;
++        }
++    check(section != nullptr, "section action exists");
++    if (section)
++        section->setChecked(true);
++    settle();
++    QDialog *sectionPanel = nullptr;
++    for (auto *dialog : window->findChildren<QDialog *>())
++        if (dialog->windowTitle() == QStringLiteral("Sezione"))
++            sectionPanel = dialog;
++    check(sectionPanel != nullptr, "section production dialog exists");
++    if (sectionPanel) {
++        auto *combo = sectionPanel->findChild<QComboBox *>();
++        QLabel *info = nullptr;
++        for (auto *label : sectionPanel->findChildren<QLabel *>())
++            if (label->wordWrap())
++                info = label;
++        const QRect naturalGeometry = sectionPanel->geometry();
++        const QPoint naturalPosition = sectionPanel->pos();
++        combo->setCurrentIndex(3);
++        settle();
++        if (info)
++            check(info->height() >= info->heightForWidth(info->width()),
++                  "section full picking instruction fits without reopening");
++        window->viewport_->cancelReferencePick();
++        settle();
++        check(info && !info->text().isEmpty(), "section real instruction exists");
++        if (info) {
++            samples.append(QJsonObject{{"label", "section-natural-layout"},
++                                       {"width", sectionPanel->width()},
++                                       {"height", sectionPanel->height()},
++                                       {"labelHeight", info->height()},
++                                       {"requiredLabelHeight", info->heightForWidth(info->width())}});
++            check(info->height() >= info->heightForWidth(info->width()),
++                  "section full instruction fits after cancel without reopening");
++            check(sectionPanel->width() == naturalGeometry.width(),
++                  "section instruction preserves natural width");
++            check(sectionPanel->pos() == naturalPosition,
++                  "section instruction preserves position");
++            sectionPanel->grab().save(output + "/section-natural-layout.png");
++            sectionPanel->resize(sectionPanel->size() + QSize(120, 100));
++            settle();
++            const QRect userGeometry = sectionPanel->geometry();
++            const QPoint userPosition = sectionPanel->pos();
++            combo->setCurrentIndex(0);
++            combo->setCurrentIndex(3);
++            window->viewport_->cancelReferencePick();
++            settle();
++            check(sectionPanel->width() == userGeometry.width() &&
++                      sectionPanel->height() >= userGeometry.height(),
++                  "section instruction preserves larger user size");
++            check(sectionPanel->pos() == userPosition,
++                  "section instruction preserves user position");
++            check(info->height() >= info->heightForWidth(info->width()),
++                  "section full instruction fits after user resize");
++            combo->setCurrentIndex(0);
++            settle();
++            sectionPanel->resize(naturalGeometry.size());
++            settle();
++            const QSize hiddenSize = sectionPanel->size();
++            const QPoint hiddenPosition = sectionPanel->pos();
++            sectionPanel->hide();
++            combo->setCurrentIndex(3);
++            window->viewport_->cancelReferencePick();
++            QAction *parameters = nullptr;
++            for (auto *action : window->findChildren<QAction *>())
++                if (action->text() == QStringLiteral("Parametri della sezione..."))
++                    parameters = action;
++            check(parameters != nullptr, "section parameters action exists");
++            if (parameters)
++                parameters->trigger();
++            settle();
++            check(info->height() >= info->heightForWidth(info->width()),
++                  "section hidden instruction fits immediately on reopening");
++            check(sectionPanel->width() == hiddenSize.width() && sectionPanel->pos() == hiddenPosition,
++                  "section reopening preserves user width and position");
++            samples.append(QJsonObject{{"label", "section-reopened-layout"},
++                                       {"width", sectionPanel->width()},
++                                       {"height", sectionPanel->height()},
++                                       {"labelHeight", info->height()},
++                                       {"requiredLabelHeight", info->heightForWidth(info->width())}});
++            sectionPanel->grab().save(output + "/section-reopened-layout.png");
++            const QString text = info->text();
++            QColor first;
++            int iteration = 0;
++            for (auto mode :
++                 {ApplicationThemeMode::Light, ApplicationThemeMode::Dark, ApplicationThemeMode::Light}) {
++                setApplicationThemeMode(*qApp, mode);
++                settle();
++                const auto fg = info->palette().color(info->foregroundRole());
++                const auto bg = info->palette().color(info->backgroundRole());
++                const QString label = QString("section-%1").arg(iteration++);
++                samples.append(QJsonObject{{"label", label},
++                                           {"foreground", fg.name()},
++                                           {"base", bg.name()},
++                                           {"contrast", contrast(fg, bg)}});
++                check(contrast(fg, bg) >= 4.5, label + " readable instruction");
++                check(info->text() == text, label + " instruction retained");
++                if (iteration == 1)
++                    first = fg;
++                if (iteration == 2)
++                    check(fg != first, "open section follows dark theme");
++                if (iteration == 3)
++                    check(fg == first, "open section restores light theme");
++                sectionPanel->grab().save(output + "/" + label + ".png");
++            }
++        }
++        sectionPanel->hide();
++    }
++    // A second, hidden viewport contains a real error fixture; no user document is touched.
++    CadViewport reports;
++    reports.extrusions_ = window->viewport_->extrusions_;
++    ExtrusionObject invalid = reports.extrusions_.first();
++    invalid.name = "Invalid synthetic body";
++    auto broken = std::make_shared<Kernel::Body>(*invalid.forgeBody);
++    broken->face(broken->faces().front()).surface.reset();
++    invalid.forgeBody = broken;
++    reports.extrusions_.append(invalid);
++    check(!reports.massReport(1).ok, "synthetic invalid body triggers real report error");
++    int computations = 0;
++    reports.setWorkCallback([&](bool start, const QString &, bool) {
++        if (start)
++            ++computations;
++    });
++    std::exception_ptr callbackError;
++    QTimer::singleShot(0, [&] {
++        QDialog *dialog = nullptr;
++        for (auto *d : window->findChildren<QDialog *>())
++            if (d->windowTitle() == QStringLiteral("Proprieta' di massa"))
++                dialog = d;
++        try {
++            if (!dialog)
++                throw std::runtime_error("mass dialog missing");
++            settle();
++            ClipboardGuard clipboardGuard;
++            auto *browser = dialog->findChild<QTextBrowser *>();
++            if (!browser)
++                throw std::runtime_error("mass browser missing");
++            QComboBox *body = nullptr;
++            for (auto *box : dialog->findChildren<QComboBox *>())
++                if (box->itemText(0) == QStringLiteral("Tutti i solidi visibili"))
++                    body = box;
++            if (!body)
++                throw std::runtime_error("mass body combo missing");
++            body->setCurrentIndex(1);
++            settle();
++            auto *copy = static_cast<QPushButton *>(nullptr);
++            for (auto *button : dialog->findChildren<QPushButton *>())
++                if (button->text() == "Copia")
++                    copy = button;
++            if (!copy)
++                throw std::runtime_error("copy button missing");
++            copy->click();
++            const QString plain = qApp->clipboard()->text();
++            check(plain.contains("Volume") && plain.contains("Synthetic box"),
++                  "copy contains computed report");
++            const QString html = browser->toHtml(), text = browser->toPlainText();
++            auto *document = browser->document();
++            QTextCursor selection = document->find("Volume");
++            browser->setTextCursor(selection);
++            browser->verticalScrollBar()->setValue(browser->verticalScrollBar()->maximum() / 2);
++            const int scroll = browser->verticalScrollBar()->value(), anchor = selection.anchor(),
++                      position = selection.position();
++            const int before = computations;
++            QColor lightLabel, lightHint;
++            int iteration = 0;
++            for (auto mode :
++                 {ApplicationThemeMode::Light, ApplicationThemeMode::Dark, ApplicationThemeMode::Light}) {
++                setApplicationThemeMode(*qApp, mode);
++                settle();
++                const QString label = QString("mass-%1").arg(iteration++);
++                const QColor fg = snapshot(browser, "Volume", label + "-label");
++                const QColor hint = snapshot(browser, "Calcolo:", label + "-hint");
++                if (iteration == 1) {
++                    lightLabel = fg;
++                    lightHint = hint;
++                }
++                if (iteration == 2) {
++                    check(fg != lightLabel, "open mass label follows dark theme");
++                    check(hint != lightHint, "open mass hint follows dark theme");
++                }
++                if (iteration == 3) {
++                    check(fg == lightLabel && hint == lightHint, "open mass restores light theme");
++                }
++                check(browser->document() == document && browser->toHtml() == html &&
++                          browser->toPlainText() == text,
++                      label + " document retained");
++                check(browser->textCursor().anchor() == anchor &&
++                          browser->textCursor().position() == position,
++                      label + " selection retained");
++                check(browser->verticalScrollBar()->value() == scroll, label + " scroll retained");
++                check(computations == before, label + " no mass recomputation");
++                copy->click();
++                check(qApp->clipboard()->text() == plain, label + " copy retained");
++            }
++            for (auto type : {QEvent::PaletteChange, QEvent::StyleChange}) {
++                QEvent event(type);
++                QApplication::sendEvent(dialog, &event);
++                settle();
++                check(browser->document() == document && browser->toHtml() == html,
++                      "explicit event preserves document");
++                check(browser->textCursor().anchor() == anchor &&
++                          browser->verticalScrollBar()->value() == scroll,
++                      "explicit event preserves view state");
++                check(computations == before, "explicit event no mass recomputation");
++            }
++            body->setCurrentIndex(2);
++            settle();
++            check(browser->toPlainText().contains("Calcolo non riuscito:"), "production error report shown");
++            QColor lightError;
++            iteration = 0;
++            for (auto mode :
++                 {ApplicationThemeMode::Light, ApplicationThemeMode::Dark, ApplicationThemeMode::Light}) {
++                setApplicationThemeMode(*qApp, mode);
++                settle();
++                const QColor error =
++                    snapshot(browser, "Calcolo non riuscito:", QString("error-%1").arg(iteration++));
++                if (iteration == 1)
++                    lightError = error;
++                if (iteration == 2)
++                    check(error != lightError, "open error follows dark theme");
++                if (iteration == 3)
++                    check(error == lightError, "open error restores light theme");
++            }
++            body->setCurrentIndex(1);
++            settle();
++            snapshot(browser, "Volume", "error-to-normal");
++            check(browser->toPlainText() == text, "error to normal restores report");
++            check(browser->palette().color(QPalette::Text) != lightError,
++                  "error to normal clears error foreground");
++            copy->click();
++            check(qApp->clipboard()->text() == plain, "error to normal restores copy");
++        } catch (...) {
++            callbackError = std::current_exception();
++        }
++        if (dialog) {
++            dialog->reject();
++        } else {
++            // A failed lookup must still leave the nested modal loop. Only this
++            // synthetic window owns these dialogs; never inspect other windows.
++            for (auto *owned : window->findChildren<QDialog *>())
++                if (owned->isVisible())
++                    owned->reject();
++        }
++    });
++    massPropertiesDialog(window, &reports);
++    delete window;
++    QFile result(output + "/metrics.json");
++    if (!result.open(QIODevice::WriteOnly))
++        throw std::runtime_error("metrics output failed");
++    result.write(QJsonDocument(QJsonObject{{"checks", checks}, {"failures", failures}, {"samples", samples}})
++                     .toJson());
++    std::cout << "UI residual checks " << checks << ", failures " << failures << std::endl;
++    if (callbackError)
++        std::rethrow_exception(callbackError);
++    if (failures)
++        throw std::runtime_error("UI residual theme regression");
++}
+--- before/tests/test_viewport.cpp
++++ after/tests/test_viewport.cpp
+@@ -1,3 +1,10 @@
++#include <QMimeData>
++#include <QTextBrowser>
++#include <QTextCursor>
++#include <QTextDocument>
++#include <QScrollBar>
++#include <QClipboard>
++#include <QTimer>
+ #include "test_sketch_projection_fit_validation.h"
+ #include <QtTest/QTest>
+ #include "../cad_document_tabs.h"
+@@ -11409,6 +11416,11 @@
+     QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, settings.path());
+     ForgeCad::initializeApplicationTheme(app);
+     qputenv("FORGECAD_RECOVERY_DIR",settings.filePath(QStringLiteral("recovery")).toUtf8());
++    if (app.arguments().contains(QStringLiteral("--theme-ui-residuals"))) {
++        try { ViewportInteractionTest::uiResidualThemeTests(); }
++        catch (const std::exception &error) { std::cerr << error.what() << std::endl; return 1; }
++        return 0;
++    }
+     if (app.arguments().contains(QStringLiteral("--theme-tabs")) ||
+         app.arguments().contains(QStringLiteral("--theme-tabs-only-2d"))) {
+         try { ViewportInteractionTest::documentThemeTabsTests(); }
+--- before/tools/generate_architecture.py
++++ after/tools/generate_architecture.py
+@@ -60,7 +60,7 @@
+ 
+  'cad_widget_context': ('startup', 'Risoluzione del contesto del documento incorporato: selezione del workspace proprietario per pannelli, blocco dei comandi e vetro dei menu; evita il primo viewport dell’intera applicazione.'),
+  'cad_document_tabs': ('startup', 'Contenitore unico dei documenti 3D e 2D: pagine QMainWindow indipendenti, schede spostabili in alto/basso persistenti, apertura canonica senza duplicati, scorciatoie della pagina attiva, attivazione/accesso e pannelli flottanti. Chiusura con preflight di tutti i salvataggi e arresto asincrono del recupero 3D.'),
+- 'tests/test_document_theme_tabs.h': ('tests', 'Tema globale su schede 3D/2D visibili e nascoste, finestre separate, nuove pagine, soli documenti 2D e cambio foglio; menu, pannelli, icone e pixel, colori utente e contenuto della carta invariati.'),
++ 'tests/test_document_theme_tabs.h': ('tests', 'Tema globale su schede 3D/2D visibili e nascoste, finestre separate, nuove pagine, soli documenti 2D e cambio foglio; menu, pannelli, icone e pixel, colori utente e contenuto della carta invariati. Sezione e report massa reali gia aperti: istruzione senza tagli, altezza necessaria e resize utente preservato, foreground/contrasto, errore e ritorno normale, documento/copia/selezione/scroll preservati senza ricalcolo al tema.'),
+  'tests/test_document_tabs.h': ('tests', 'Regressioni del contenitore 3D/2D: apertura, deduplicazione, stato/Undo/GL persistente al cambio scheda, preferenza di posizione, menu dopo cambio foglio, chiusura con annullamento e recupero asincrono.'),
+ 
+  'cad_sketch_section_selection': ('sketch', 'Selezione persistente dei rami di una sezione associativa: conserva gli indici sorgente prima della compattazione e valida i sottoinsiemi senza riagganci per vicinanza.'),
+@@ -149,7 +149,7 @@
+  'forgeCad2026_dialogs_solids.cpp': ('dialogs', 'Dialoghi solidi: catalogo ISO metrico M1–M68 con passi fini; ripetizioni con un solo blocco della finestra, storyboard selezionabile nel pannello incorporato e tre passaggi visibili (sorgente, riferimento, parametri); funzioni storiche con bersaglio successivo e sformo a piano neutro. Estrusione priva del riferimento di limite cancella il worker e invalida subito anteprima e chiave. Ripetizioni, estrusione, trasformazioni e filettatura inizializzano preview e picker nel runner comune; Filettatura distingue selezione faccia e calcolo attivo. Smusso aggiorna chiave, worker e geometria anche al termine editing delle distanze e angoli con Tab/focusout.'),
+  'forgeCad2026_dialogs_surfaces.cpp': ('dialogs', 'Pannelli delle superfici: selezione punti nella vista/storyboard, G1 al piano per primo/ultimo profilo; loft a larghezza ridotta con etichette locali e frecce di riordino laterali; scelta appoggi G1 con indicazione del limite storico contro dipendenze circolari; Estendi si apre prima della selezione e aggiorna bordi, contorni completi e anteprima dalla vista; Cuci superfici offre selezione e deselezione completa sotto il picker della vista. Riempimento con coefficienti adimensionali in tutte le unita; loft incompleta invalida anteprima e mostra attesa delle sezioni. Offset/Shell, rigata, Boundary, Fill e planare condividono il runner protetto fra documenti; Shell invalida il messaggio a spessore zero ed elimina gli errori precedenti al recupero.'),
+  'forgeCad2026_dialogs_sketch.cpp': ('dialogs', 'Dialoghi di schizzi e piani: rimozione/riselezione indipendente dei riferimenti in modifica, anteprima e normale invertibile. Piano di costruzione con picker differito e runner comune protetto fra documenti.'),
+- 'forgeCad2026_dialogs_analysis.cpp': ('dialogs', 'Dialoghi per analisi e opzioni di verifica geometrica. Misura usa il runner comune e installa il picker dopo la guardia fra documenti.'),
++ 'forgeCad2026_dialogs_analysis.cpp': ('dialogs', 'Dialoghi per analisi e verifica geometrica. Misura usa il runner comune e installa il picker dopo la guardia fra documenti. Proprieta di massa: testo usa la palette e ruoli Normal/Error del pannello, senza formati HTML a colore fisso; il cambio tema conserva documento, selezione, scroll e cache dei calcoli.'),
+  'fk_blend_paths': ('kernel', 'Percorsi tangenti dei bordi selezionati, ordinamento e verso, lunghezza totale e stazioni equidistanti per leggi di raggio indipendenti.'),
+  'cad_fillet_paths': ('features', 'Associa riferimenti persistenti ai percorsi tangenti, completa esplicitamente i contorni delle cavita estruse e prepara i manipolatori del raggio variabile.'),
+  'forgeCad2026_fillet_handles': ('viewport', 'Marker dei raggi variabili nella vista: hit test, trascinamento lungo la direzione del raggio, quote e sincronizzazione col pannello, incluso lo zero agli estremi aperti.'),
+@@ -578,7 +578,7 @@
+                           'chiusura asincrona del recupero; modelli archiviati in sola lettura; storyboard '
+                           'con trascinamento dei creatori di corpi autonomi a uno stadio. Aggiunge Ellisse '
+                           'per estremi a menu e toolbar e ne espone azione e icona alla ribbon. Consuma il '
+-                          'tema globale aggiornando le toolbar su entrambi gli eventi palette; nessun QSS globale locale.'),
++                          'tema globale aggiornando le toolbar su entrambi gli eventi palette; nessun QSS globale locale. Informazioni Sezione legate a QPalette::Link; dialogo ampliato solo in altezza quando richiesto dal layout, anche dopo testo cambiato da nascosto e riapertura.'),
+  'forgeCad2026_viewport_sketch.cpp': ('viewport',
+                                       'Comandi schizzo, quote, snap e inferenze associative; scarta alla '
+                                       'chiusura solo nuovi schizzi vuoti senza utilizzatori, conserva punti '

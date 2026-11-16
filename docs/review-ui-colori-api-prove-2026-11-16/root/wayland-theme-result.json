@@ -1,0 +1,8 @@
+{
+  "exit": 124,
+  "seconds": 120.01140076100273,
+  "command": [
+    "/home/myungit/Linux_CAD_forFree/forgecad-release/forgecad_view_tests",
+    "--theme-tabs"
+  ]
+}

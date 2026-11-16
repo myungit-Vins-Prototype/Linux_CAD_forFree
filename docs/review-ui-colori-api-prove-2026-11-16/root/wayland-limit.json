@@ -1,0 +1,24 @@
+{
+  "mixed_tabs_attempts": [
+    {
+      "timeout_seconds": 90,
+      "exit": 124
+    },
+    {
+      "timeout_seconds": 120,
+      "exit": 124
+    }
+  ],
+  "screenshots_at_retry_timeout": 42,
+  "loginctl": {
+    "Active": "yes",
+    "State": "active",
+    "LockedHint": "yes"
+  },
+  "stack": "ptrace denied by OS yama1; no permissions changed",
+  "interpretation": "possible compositor frame wait on locked session; cause not demonstrated",
+  "mixed_tabs_wayland_passed": false,
+  "offscreen_same_unchanged_method": "PASS in12CTest",
+  "ui_residual_wayland_checks": 74,
+  "user_session_modified": false
+}
