@@ -1,1 +1,3 @@
 Riparazione CI del checkpoint18d0adc: log Linux/macOS, repro0/1→1/1 e5/5, tre pose indipendenti, build completa e7CTest locali, mappa. Worktree locale include anche numerica K10 successiva, non inclusa nel commit CI. Solo sorgenti inerti/log/checksum, nessun eseguibile o CAD. I percorsi /tmp degli script descrivono la sessione; non si promette un replay autonomo senza ricostruire ambiente e libreria.
+
+Riconfezionamento17/11: copie CMakeLists.txt rinominate CMakeLists.txt.txt per escluderle dal catalogo architetturale. Contenuti originali integralmente conservati: ORIGINAL-SHA256SUMS, ORIGINAL-MANIFEST, ORIGINAL-README e mapping in REPACK.json. Nessuna prova software ripetuta o modificata per questa correzione di archivio.

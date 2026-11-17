@@ -1,0 +1,232 @@
+[
+  {
+    "source": "/tmp/ci-review-repair-2026-11-17/architecture-before.json",
+    "archive": "architecture-before.json",
+    "sha256": "05189bc83e43f5519798ff1758993ac9cad652f5e81be87653de0dd9df3d07b0"
+  },
+  {
+    "source": "/tmp/ci-review-repair-2026-11-17/architecture-check.json",
+    "archive": "architecture-check.json",
+    "sha256": "cea283a4266fee9568a2017e7c8d968e1b07d3ac97ab857d1f09f1d3da4bc799"
+  },
+  {
+    "source": "/tmp/ci-review-repair-2026-11-17/architecture-check.log",
+    "archive": "architecture-check.log",
+    "sha256": "e79300a5a296fe1c7074baa944afaac1d37632a2c8120c43a05254b14e3944e9"
+  },
+  {
+    "source": "/tmp/ci-review-repair-2026-11-17/architecture-final.json",
+    "archive": "architecture-final.json",
+    "sha256": "1a25fdd9d5e9b222f06c3ed24bf7f6b5579d69f47455a6370e14c11db00055d2"
+  },
+  {
+    "source": "/tmp/ci-review-repair-2026-11-17/architecture.json",
+    "archive": "architecture.json",
+    "sha256": "526d115e195f5925b025f5c2a8fa28629b0d11c9ec0dd42d83a5b959ddde4a63"
+  },
+  {
+    "source": "/tmp/ci-review-repair-2026-11-17/architecture.log",
+    "archive": "architecture.log",
+    "sha256": "a6b1c36d83398e63b74c7fa83e87812550ac336b84df1a860786d5caff43095b"
+  },
+  {
+    "source": "/tmp/ci-review-repair-2026-11-17/archive.py",
+    "archive": "archive.py.txt",
+    "sha256": "f65902e74a62c59d62862462d9e55ae03439f020807695388888cabfb9abc6b0"
+  },
+  {
+    "source": "/tmp/ci-review-repair-2026-11-17/baseline-projection.json",
+    "archive": "baseline-projection.json",
+    "sha256": "f1504c24477bf4b4db9a2922c2941a17adcb7b86c6a0ebe0747475835cbeb4d6"
+  },
+  {
+    "source": "/tmp/ci-review-repair-2026-11-17/baseline-projection.log",
+    "archive": "baseline-projection.log",
+    "sha256": "25f28340b900aafd7a7ffde49891eab8ec562600435252a68fc2e79e64870d32"
+  },
+  {
+    "source": "/tmp/ci-review-repair-2026-11-17/before/kernel/CMakeLists.txt",
+    "archive": "before/kernel/CMakeLists.txt",
+    "sha256": "868812c8edd1fd4ddff86301343cae332d1cb232e5492d79858a5989cb0bbfc5"
+  },
+  {
+    "source": "/tmp/ci-review-repair-2026-11-17/before/kernel/fk_project.cpp",
+    "archive": "before/kernel/fk_project.cpp.txt",
+    "sha256": "9f38b0098f98b3947bc00bd31179a29668df1d10a21119a2d1f75ee42f9b7223"
+  },
+  {
+    "source": "/tmp/ci-review-repair-2026-11-17/binaries-final.json",
+    "archive": "binaries-final.json",
+    "sha256": "b7f76c868cb161ce8259373bf3b362415d55b534fff470b0ebd0508fd2e1d836"
+  },
+  {
+    "source": "/tmp/ci-review-repair-2026-11-17/build.json",
+    "archive": "build.json",
+    "sha256": "07bd41612b033cbcac6bbf01578ebdc1d01202b4a6aa73d5fc14597eea430b6f"
+  },
+  {
+    "source": "/tmp/ci-review-repair-2026-11-17/build.log",
+    "archive": "build.log",
+    "sha256": "1d904df515ea903de8caa5a9fad2a5ece2298e0cbd05872c1401b07297c38635"
+  },
+  {
+    "source": "/tmp/ci-review-repair-2026-11-17/candidate-band.json",
+    "archive": "candidate-band.json",
+    "sha256": "be8484bcfc46e61b1db8776641daaa3687bf6bef48d0bca7a36be68acad7abcd"
+  },
+  {
+    "source": "/tmp/ci-review-repair-2026-11-17/candidate-band.log",
+    "archive": "candidate-band.log",
+    "sha256": "18033def3c7f3b5e4e042910d95579074009d53ce22d5d7900a4afdfa2920a16"
+  },
+  {
+    "source": "/tmp/ci-review-repair-2026-11-17/candidate-compile.json",
+    "archive": "candidate-compile.json",
+    "sha256": "9347b94e5f0b5bd1f3a9820b542828ae1377585b94add6e84b4c8522af1cc456"
+  },
+  {
+    "source": "/tmp/ci-review-repair-2026-11-17/candidate-compile.log",
+    "archive": "candidate-compile.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "source": "/tmp/ci-review-repair-2026-11-17/candidate-projection-suite.json",
+    "archive": "candidate-projection-suite.json",
+    "sha256": "7d4be383220ad9eb15822e20f0243ce2d6c99419838f75b03d93c87158e80530"
+  },
+  {
+    "source": "/tmp/ci-review-repair-2026-11-17/candidate-projection-suite.log",
+    "archive": "candidate-projection-suite.log",
+    "sha256": "eca09c7899b1043129a06a1e0c4c8d7ff2de6bd84e00f6feb91b483b3ae0d9fd"
+  },
+  {
+    "source": "/tmp/ci-review-repair-2026-11-17/candidate-tests-compile.json",
+    "archive": "candidate-tests-compile.json",
+    "sha256": "0c931060d0bdfdb9dad65610d2cfdf249dc36c1e6fcaf3d00a6a482e870f9b7a"
+  },
+  {
+    "source": "/tmp/ci-review-repair-2026-11-17/candidate-tests-compile.log",
+    "archive": "candidate-tests-compile.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "source": "/tmp/ci-review-repair-2026-11-17/ci-checkpoint.json",
+    "archive": "ci-checkpoint.json",
+    "sha256": "b70460412704d3d13f8838aca4c1bff038fa33cae3dba6725853b4cf88dfd773"
+  },
+  {
+    "source": "/tmp/ci-review-repair-2026-11-17/ci-linux-job.log",
+    "archive": "ci-linux-job.log",
+    "sha256": "e26705effea15ea9e4fe1aa938d936010238d22ae2799a292307dfb2e01b167b"
+  },
+  {
+    "source": "/tmp/ci-review-repair-2026-11-17/ci-macos-job.log",
+    "archive": "ci-macos-job.log",
+    "sha256": "9c45c1616941cffd2b82543f9f5f638676b6a56beaf57821c09e8c1aa91ebb31"
+  },
+  {
+    "source": "/tmp/ci-review-repair-2026-11-17/cleanup.json",
+    "archive": "cleanup.json",
+    "sha256": "75fda97121165378d10dab36c6abe5923eb299e7c623ee8a6de795deae431f4d"
+  },
+  {
+    "source": "/tmp/ci-review-repair-2026-11-17/ctest.json",
+    "archive": "ctest.json",
+    "sha256": "3fa9b355abc7067fa103465cc1cb60b5be1eeed0428040a1d4b49f82095a8105"
+  },
+  {
+    "source": "/tmp/ci-review-repair-2026-11-17/ctest.log",
+    "archive": "ctest.log",
+    "sha256": "18aad433bea3a1b045d91a3b37e4d0e7a4b093bb145476f69565f8bee225e79d"
+  },
+  {
+    "source": "/tmp/ci-review-repair-2026-11-17/document.py",
+    "archive": "document.py.txt",
+    "sha256": "9901fbf2b7715b3ebb02fe204b15990671a8fb80cb9d7ad865171074dbcc57b1"
+  },
+  {
+    "source": "/tmp/ci-review-repair-2026-11-17/fk_project.cpp",
+    "archive": "fk_project.cpp.txt",
+    "sha256": "478aa85dbdf1982958d8dc85fa50edc9ec885e5a1d17b4cb2e21f183dadc0705"
+  },
+  {
+    "source": "/tmp/ci-review-repair-2026-11-17/fk_project_trace.cpp",
+    "archive": "fk_project_trace.cpp.txt",
+    "sha256": "6811735d80c601269621d084703494028a09e8ae960f6b5efdedd3611469d311"
+  },
+  {
+    "source": "/tmp/ci-review-repair-2026-11-17/integrate.py",
+    "archive": "integrate.py.txt",
+    "sha256": "d8dbf5cc0950a4bea3c5cb2e7c4bb4dbf155454311e3fd3a7d639be229edb74a"
+  },
+  {
+    "source": "/tmp/ci-review-repair-2026-11-17/integrated-sources.json",
+    "archive": "integrated-sources.json",
+    "sha256": "7ffa9fef2210c876f733c3324ed660d44d27815dc2552720ebe3bda274e9b182"
+  },
+  {
+    "source": "/tmp/ci-review-repair-2026-11-17/prepare.py",
+    "archive": "prepare.py.txt",
+    "sha256": "2d81ebe026bf98128720d413aec6cced241881ff6c2269037b18adf532f0d578"
+  },
+  {
+    "source": "/tmp/ci-review-repair-2026-11-17/projection-suite.json",
+    "archive": "projection-suite.json",
+    "sha256": "a83e9af39a11309a7b21fefe216ba008469189f9de8ad296120bc71bacb0e573"
+  },
+  {
+    "source": "/tmp/ci-review-repair-2026-11-17/projection-suite.log",
+    "archive": "projection-suite.log",
+    "sha256": "eca09c7899b1043129a06a1e0c4c8d7ff2de6bd84e00f6feb91b483b3ae0d9fd"
+  },
+  {
+    "source": "/tmp/ci-review-repair-2026-11-17/run.py",
+    "archive": "run.py.txt",
+    "sha256": "03b665d483418ff822e7700f3b77f0c89674f4fa830d5b31a4cf4ca1f497f79a"
+  },
+  {
+    "source": "/tmp/ci-review-repair-2026-11-17/trace-band.json",
+    "archive": "trace-band.json",
+    "sha256": "80e01bc4fc4b9575f404e2abb3c888c30f00a3d49d1786c3f58556efad6dabad"
+  },
+  {
+    "source": "/tmp/ci-review-repair-2026-11-17/trace-band.log",
+    "archive": "trace-band.log",
+    "sha256": "4d0468e9a7f5bc3028be66f232f4c23c69a2844099c6d70a313719880cc353be"
+  },
+  {
+    "source": "/tmp/ci-review-repair-2026-11-17/trace-compile.json",
+    "archive": "trace-compile.json",
+    "sha256": "35b9ff9ce3732746043c9863866c44df9acb035ad867754c3fbe52938e30e211"
+  },
+  {
+    "source": "/tmp/ci-review-repair-2026-11-17/trace-compile.log",
+    "archive": "trace-compile.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "source": "/tmp/ci-review-repair-2026-11-17/trace-tests-compile.json",
+    "archive": "trace-tests-compile.json",
+    "sha256": "7af3be68447d36d1c9fce8f8df5f40ada64561e3ae079a96b884cbe0115e707c"
+  },
+  {
+    "source": "/tmp/ci-review-repair-2026-11-17/trace-tests-compile.log",
+    "archive": "trace-tests-compile.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "source": "/home/myungit/Linux_CAD_forFree/kernel/fk_project.cpp",
+    "archive": "workspace/kernel/fk_project.cpp.txt",
+    "sha256": "478aa85dbdf1982958d8dc85fa50edc9ec885e5a1d17b4cb2e21f183dadc0705"
+  },
+  {
+    "source": "/home/myungit/Linux_CAD_forFree/kernel/CMakeLists.txt",
+    "archive": "workspace/kernel/CMakeLists.txt",
+    "sha256": "1cc796f703b7d96018b42a38fdbf3f781e16fa966033b44e41ddba10d88685cb"
+  },
+  {
+    "source": "/home/myungit/Linux_CAD_forFree/docs/review-ci-repair-2026-11-17.md",
+    "archive": "workspace/docs/review-ci-repair-2026-11-17.md",
+    "sha256": "2e2db3402633b6d7f7e36dc7f95853edd7e10a7c621b5bde80d2220f2d2bf04e"
+  }
+]

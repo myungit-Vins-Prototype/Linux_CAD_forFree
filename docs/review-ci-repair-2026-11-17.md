@@ -29,3 +29,7 @@ Build completa app e runner PASS,19,854s, seriale. **7/7 CTest PASS**,63,813s: t
 Il worktree locale contiene anche i nuovi controlli numerici K10 (13 gruppi), che hanno passato di nuovo la verifica nell’integrazione; **non verranno inclusi nel commit di riparazione CI**. Le prove numeriche restano nel registro locale della review e non devono essere attribuite al codice del checkpoint o alla sua CI.
 
 Riparazione pronta per commit/push di `fk_project.cpp`, registrazioni CMake, questo rapporto e prove inerti. Il nuovo esito remoto richiede una CI successiva; non si dichiara ancora verde. [Prove](review-ci-repair-prove-2026-11-17/SHA256SUMS).
+
+Aggiornamento locale dopo la pubblicazione: commit `78d7268`, push e SHA remoto verificati. [Nuova CI](https://github.com/myungit-Vins-Prototype/Linux_CAD_forFree/actions/runs/44142011489) avviata, esito ancora pendente. La copia nelle prove conserva il rapporto precedente al commit, senza alterare il sigillo.
+
+Controllo finale del catalogo: copie CMake archiviate rinominate come testo inerte, con contenuti e sigilli originali conservati e verificati tramite `REPACK.json`. Non cambiano software, log o risultati delle prove.

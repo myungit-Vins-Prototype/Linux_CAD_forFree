@@ -46,7 +46,7 @@
   },
   {
     "source": "/tmp/ci-review-repair-2026-11-17/before/kernel/CMakeLists.txt",
-    "archive": "before/kernel/CMakeLists.txt",
+    "archive": "before/kernel/CMakeLists.txt.txt",
     "sha256": "868812c8edd1fd4ddff86301343cae332d1cb232e5492d79858a5989cb0bbfc5"
   },
   {
@@ -221,7 +221,7 @@
   },
   {
     "source": "/home/myungit/Linux_CAD_forFree/kernel/CMakeLists.txt",
-    "archive": "workspace/kernel/CMakeLists.txt",
+    "archive": "workspace/kernel/CMakeLists.txt.txt",
     "sha256": "1cc796f703b7d96018b42a38fdbf3f781e16fa966033b44e41ddba10d88685cb"
   },
   {
