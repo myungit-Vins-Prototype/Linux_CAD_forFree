@@ -1,0 +1,20 @@
+{
+  "argv": [
+    "c++",
+    "-std=c++17",
+    "-O2",
+    "-ffp-contract=off",
+    "-I",
+    "/home/myungit/Linux_CAD_forFree/kernel",
+    "-I",
+    "/home/myungit/Linux_CAD_forFree/kernel/tests",
+    "/home/myungit/Linux_CAD_forFree/kernel/tests/fk_test_main.cpp",
+    "/home/myungit/Linux_CAD_forFree/kernel/tests/test_project.cpp",
+    "/tmp/ci-review-repair-2026-11-17/trace.o",
+    "/home/myungit/Linux_CAD_forFree/forgecad-release/kernel/libforgekernel.a",
+    "-o",
+    "/tmp/ci-review-repair-2026-11-17/trace-tests"
+  ],
+  "exit": 0,
+  "seconds": 1.6672613550035749
+}

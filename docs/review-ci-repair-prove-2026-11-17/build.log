@@ -1,0 +1,36 @@
+-- Configuring done (0.5s)
+-- Generating done (0.4s)
+-- Build files have been written to: /home/myungit/Linux_CAD_forFree/forgecad-release
+[  0%] Building CXX object kernel/CMakeFiles/forgekernel.dir/fk_project.cpp.o
+[  4%] Linking CXX static library libforgekernel.a
+[ 43%] Built target forgekernel
+[ 43%] Built target forgecad_compute_autogen_timestamp_deps
+[ 43%] Automatic MOC and UIC for target forgecad_compute
+[ 43%] Built target forgecad_compute_autogen
+[ 43%] Built target forgecad_compute
+[ 43%] Impronta dei sorgenti della geometria
+[ 43%] Built target forgecad_autogen_timestamp_deps
+[ 43%] Automatic MOC and UIC for target forgecad
+[ 43%] Built target forgecad_autogen
+[ 43%] Building CXX object CMakeFiles/forgecad.dir/cad_document_io.cpp.o
+[ 43%] Linking CXX executable forgecad
+[100%] Built target forgecad
+[ 66%] Built target forgekernel
+[ 66%] Built target forgekernel_occt
+[ 66%] Linking CXX executable ../forgekernel_tests
+[100%] Built target forgekernel_tests
+[ 90%] Built target forgekernel
+[100%] Linking CXX executable forgekernel_shell_pose_tests
+[100%] Built target forgekernel_shell_pose_tests
+[100%] Built target forgekernel
+[100%] Linking CXX executable forgekernel_quadrature_validation_tests
+[100%] Built target forgekernel_quadrature_validation_tests
+[100%] Built target forgekernel
+[100%] Linking CXX executable forgekernel_arc_length_validation_tests
+[100%] Built target forgekernel_arc_length_validation_tests
+[ 90%] Built target forgekernel
+[ 90%] Linking CXX executable forgekernel_sheet_arc_validation_tests
+[100%] Built target forgekernel_sheet_arc_validation_tests
+[100%] Built target forgekernel
+[100%] Linking CXX executable forgekernel_bspline_derivative_tests
+[100%] Built target forgekernel_bspline_derivative_tests

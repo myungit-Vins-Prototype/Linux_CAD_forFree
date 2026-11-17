@@ -740,6 +740,13 @@ Body projectedProfileCut(const Body &body, const Frame3 &frame, const std::vecto
         const Vec3 origin = z - (local.z() / dot(d, frame.zDir())) * d;  // sul piano del profilo, lungo d
         const Vec3 onPlane = frame.toLocal(origin);
         const Vec2 q(onPlane.x(), onPlane.y());
+        // A point interior to another face can project onto the profile
+        // boundary, where windingNumber is undefined. Exclude that face
+        // using the existing ray condition before classifying the profile.
+        double s = 0.0;
+        FaceId first;
+        if (!firstRayHit(body, origin, d, 1e-7, s, &first, &index)) return false;
+        if (first != face || !(std::fabs(s - dot(z - origin, d)) <= 1e-6 * scale)) return false;
         bool inside = false;
         for (const ProfileRegion &region : regions) {
             if (windingNumber(region.outer, q) == 0) continue;
@@ -747,11 +754,7 @@ Body projectedProfileCut(const Body &body, const Frame3 &frame, const std::vecto
             for (const ProfileLoop &hole : region.holes) inHole = inHole || windingNumber(hole, q) != 0;
             if (!inHole) inside = true;
         }
-        if (!inside) return false;
-        double s = 0.0;
-        FaceId first;
-        if (!firstRayHit(body, origin, d, 1e-7, s, &first, &index)) return false;
-        return first == face && std::fabs(s - dot(z - origin, d)) <= 1e-6 * scale;
+        return inside;
     };
     std::function<bool(FaceId, const Vec3 &)> remove;
     if (mode == ProjectedCutMode::RemoveInside) remove = insideProfile;

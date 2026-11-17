@@ -1,0 +1,23 @@
+from pathlib import Path
+import subprocess,json,time,sys,shlex
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/ci-review-repair-2026-11-17');mode=sys.argv[1]
+def run(n,cmd,expected=0,timeout=180):
+ t=time.monotonic()
+ with (T/(n+'.log')).open('w') as f:
+  try:r=subprocess.run(list(map(str,cmd)),cwd=R,stdout=f,stderr=subprocess.STDOUT,timeout=timeout);code=r.returncode
+  except subprocess.TimeoutExpired:code=124
+ (T/(n+'.json')).write_text(json.dumps({'argv':list(map(str,cmd)),'exit':code,'seconds':time.monotonic()-t},indent=2));print(n,code,round(time.monotonic()-t,3),flush=True);assert code==expected,(n,code)
+if mode=='candidate':
+ cc=json.loads((R/'forgecad-release/compile_commands.json').read_text());j=next(j for j in cc if j['file']==str(R/'kernel/fk_project.cpp'));base=shlex.split(j['command'])
+ for label,src in [('candidate',T/'fk_project.cpp'),('trace',T/'fk_project_trace.cpp')]:
+  cmd=list(base);cmd[cmd.index('-o')+1]=str(T/(label+'.o'));cmd[cmd.index(str(R/'kernel/fk_project.cpp'))]=str(src);run(label+'-compile',cmd)
+  run(label+'-tests-compile',['c++','-std=c++17','-O2','-ffp-contract=off','-I',R/'kernel','-I',R/'kernel/tests',R/'kernel/tests/fk_test_main.cpp',R/'kernel/tests/test_project.cpp',T/(label+'.o'),R/'forgecad-release/kernel/libforgekernel.a','-o',T/(label+'-tests')])
+  run(label+'-band',[T/(label+'-tests'),'ProjectedCutBandAlongExistingEdges'],timeout=10)
+ run('candidate-projection-suite',[T/'candidate-tests'],timeout=120)
+elif mode=='integrated':
+ run('build',['cmake','--build',R/'forgecad-release','--parallel','1','--target','forgecad','forgekernel_tests','forgekernel_shell_pose_tests','forgekernel_quadrature_validation_tests','forgekernel_arc_length_validation_tests','forgekernel_sheet_arc_validation_tests','forgekernel_bspline_derivative_tests'],timeout=900)
+ run('ctest',['ctest','--test-dir',R/'forgecad-release','--output-on-failure','-V','-R','^forgekernel_(shell_pose_(scaled|scaled_rotated|rotation)|quadrature_validation|arc_length_validation|sheet_arc_validation|bspline_derivative)_tests$'],timeout=600)
+ log=(T/'ctest.log').read_text();assert '100% tests passed' in log and 'out of 7' in log;assert log.count('1/1 test superati')==3
+ run('projection-suite',[R/'forgecad-release/kernel/forgekernel_tests','Projected'],timeout=120)
+ run('architecture',['python3',R/'tools/generate_architecture.py','--build-dir',R/'forgecad-release','--jobs','1'],timeout=1800)
+ run('architecture-check',['python3',R/'tools/generate_architecture.py','--check'],timeout=60)

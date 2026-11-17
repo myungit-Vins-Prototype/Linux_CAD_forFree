@@ -419,8 +419,13 @@ target_link_libraries(forgekernel_shell_pose_tests PRIVATE forgekernel)
 target_compile_options(forgekernel_shell_pose_tests PRIVATE -Wall -Wextra -Wpedantic)
 target_compile_definitions(forgekernel_shell_pose_tests PRIVATE FORGEKERNEL_TEST_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/tests/data")
 set_target_properties(forgekernel_shell_pose_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
-add_test(NAME forgekernel_shell_pose_tests COMMAND forgekernel_shell_pose_tests)
-set_tests_properties(forgekernel_shell_pose_tests PROPERTIES TIMEOUT 180)
+# Each pose is an independent geometric regression with the same 180 s cap.
+# A single shared budget made the third case time out on CI runners.
+add_test(NAME forgekernel_shell_pose_scaled_tests COMMAND forgekernel_shell_pose_tests ShellStitchedScaledSimilarity)
+add_test(NAME forgekernel_shell_pose_scaled_rotated_tests COMMAND forgekernel_shell_pose_tests ShellStitchedScaledAndRotatedSimilarity)
+add_test(NAME forgekernel_shell_pose_rotation_tests COMMAND forgekernel_shell_pose_tests ShellStitchedRotationControl)
+set_tests_properties(forgekernel_shell_pose_scaled_tests forgekernel_shell_pose_scaled_rotated_tests
+    forgekernel_shell_pose_rotation_tests PROPERTIES TIMEOUT 180)
 
 # Fit con limite continuo del residuo geometrico e fallimenti atomici, senza Qt/OCCT.
 add_executable(forgekernel_curve_fit_validation_tests tests/fk_test_main.cpp tests/test_curve_fit_validation.cpp)

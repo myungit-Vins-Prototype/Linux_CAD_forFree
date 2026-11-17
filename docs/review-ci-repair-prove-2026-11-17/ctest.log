@@ -1,0 +1,108 @@
+UpdateCTestConfiguration  from :/home/myungit/Linux_CAD_forFree/forgecad-release/DartConfiguration.tcl
+Test project /home/myungit/Linux_CAD_forFree/forgecad-release
+Constructing a list of tests
+Done constructing a list of tests
+Updating test list for fixtures
+Added 0 tests to meet fixture requirements
+Checking test dependency graph...
+Checking test dependency graph end
+test 214
+    Start 214: forgekernel_shell_pose_scaled_tests
+
+214: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_shell_pose_tests "ShellStitchedScaledSimilarity"
+214: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+214: Test timeout computed to be: 180
+214: [  OK  ] ShellStitchedScaledSimilarity
+214: 1/1 test superati
+1/7 Test #214: forgekernel_shell_pose_scaled_tests ...........   Passed   23.69 sec
+test 215
+    Start 215: forgekernel_shell_pose_scaled_rotated_tests
+
+215: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_shell_pose_tests "ShellStitchedScaledAndRotatedSimilarity"
+215: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+215: Test timeout computed to be: 180
+215: [  OK  ] ShellStitchedScaledAndRotatedSimilarity
+215: 1/1 test superati
+2/7 Test #215: forgekernel_shell_pose_scaled_rotated_tests ...   Passed   24.06 sec
+test 216
+    Start 216: forgekernel_shell_pose_rotation_tests
+
+216: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_shell_pose_tests "ShellStitchedRotationControl"
+216: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+216: Test timeout computed to be: 180
+216: [  OK  ] ShellStitchedRotationControl
+216: 1/1 test superati
+3/7 Test #216: forgekernel_shell_pose_rotation_tests .........   Passed   15.99 sec
+test 221
+    Start 221: forgekernel_bspline_derivative_tests
+
+221: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_bspline_derivative_tests
+221: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+221: Test timeout computed to be: 30
+221: [  OK  ] BSplinePolynomialDerivativesRemainAccurateAfterTranslation
+221: [  OK  ] BSplinePolynomialDerivativesPreserveOneSidedKnotLimits
+221: [  OK  ] BSplineDenseTranslatedLengthConvergesWithoutChangingTolerance
+221: 3/3 test superati
+4/7 Test #221: forgekernel_bspline_derivative_tests ..........   Passed    0.00 sec
+test 259
+    Start 259: forgekernel_sheet_arc_validation_tests
+
+259: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_sheet_arc_validation_tests
+259: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+259: Test timeout computed to be: 120
+259: [  OK  ] SheetArcZeroSpeedCannotPublishShortReach
+259: [  OK  ] SheetArcRegularCurveCannotPublishExhaustedNewtonReach
+259: [  OK  ] SheetArcNaturalPositiveDistancesUsePhysicalReach
+259: [  OK  ] SheetArcOppositeDirectionAndPoseScaleKeepPhysicalReach
+259: [  OK  ] SheetArcLinearAndCylinderControlsKeepTheirPhysicalContract
+259: [  OK  ] SheetArcCancellationDoesNotPublishOrMutateInput
+259: 6/6 test superati
+5/7 Test #259: forgekernel_sheet_arc_validation_tests ........   Passed    0.00 sec
+test 260
+    Start 260: forgekernel_arc_length_validation_tests
+
+260: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_arc_length_validation_tests
+260: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+260: Test timeout computed to be: 30
+260: [  OK  ] ArcLengthSafeControls
+260: [  OK  ] ArcLengthCancellationPreset
+260: [  OK  ] ArcLengthReparametrizedSpeedsKeepPhysicalLength
+260: [  OK  ] ArcLengthNonfiniteDerivativeIsRejected
+260: [  OK  ] ArcLengthInvalidRangesAreRejected
+260: [  OK  ] ArcLengthCachedFailuresDoNotPoisonFiniteEntries
+260: 6/6 test superati
+6/7 Test #260: forgekernel_arc_length_validation_tests .......   Passed    0.00 sec
+test 261
+    Start 261: forgekernel_quadrature_validation_tests
+
+261: Test command: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel/forgekernel_quadrature_validation_tests
+261: Working Directory: /home/myungit/Linux_CAD_forFree/forgecad-release/kernel
+261: Test timeout computed to be: 30
+261: [  OK  ] QuadratureSafeControls
+261: [  OK  ] QuadratureScalarExtremeFiniteIntegral
+261: [  OK  ] QuadratureVectorExtremeFiniteValuesAndMagnitudes
+261: [  OK  ] QuadratureNativeArcLengthAtTinyParameterSpan
+261: [  OK  ] QuadratureNonfiniteCallbacksAreRejected
+261: [  OK  ] QuadratureLargeMidpointsAndUnrepresentableIntegrals
+261: [  OK  ] QuadratureScalarWeightedUnderflow
+261: [  OK  ] QuadratureVectorWeightedUnderflow
+261: [  OK  ] QuadratureNativeArcLengthAtHugeParameterSpan
+261: [  OK  ] QuadratureUnrecoverableMixedScaleIsRejected
+261: [  OK  ] QuadratureScalarReportsDepthExhaustion
+261: [  OK  ] QuadratureVectorReportsDepthExhaustion
+261: [  OK  ] QuadratureNativeRationalArcReportsDepthExhaustion
+261: 13/13 test superati
+7/7 Test #261: forgekernel_quadrature_validation_tests .......   Passed    0.01 sec
+
+The following tests passed:
+	forgekernel_shell_pose_scaled_tests
+	forgekernel_shell_pose_scaled_rotated_tests
+	forgekernel_shell_pose_rotation_tests
+	forgekernel_bspline_derivative_tests
+	forgekernel_sheet_arc_validation_tests
+	forgekernel_arc_length_validation_tests
+	forgekernel_quadrature_validation_tests
+
+100% tests passed out of 7
+
+Total Test time (real) =  63.78 sec

@@ -1,0 +1,23 @@
+from pathlib import Path
+import json,subprocess,shlex
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/ci-review-repair-2026-11-17');G=json.loads((R/'docs/architecture/graph.json').read_text());focus={'kernel/fk_project.cpp','kernel/fk_profile.cpp','kernel/fk_profile.h','kernel/fk_imprint.cpp','kernel/tests/test_project.cpp','kernel/tests/test_shell_pose.cpp','kernel/CMakeLists.txt'};(T/'architecture-before.json').write_text(json.dumps({'nodes':[n for n in G['nodes'] if n['id'] in focus],'edges':[e for e in G['edges'] if e['source'] in focus or e['target'] in focus]},indent=2))
+for f in ['kernel/fk_project.cpp','kernel/CMakeLists.txt']:
+ data=(R/f).read_bytes();assert data==subprocess.check_output(['git','show','HEAD:'+f],cwd=R)
+ p=T/'before'/f;p.parent.mkdir(parents=True,exist_ok=True);p.write_bytes(data)
+s=(R/'kernel/fk_project.cpp').read_text();needle='''        const Vec2 q(onPlane.x(), onPlane.y());
+        bool inside = false;''';assert s.count(needle)==1;s=s.replace(needle,'''        const Vec2 q(onPlane.x(), onPlane.y());
+        // A point interior to another face can project onto the profile
+        // boundary, where windingNumber is undefined. Exclude that face
+        // using the existing ray condition before classifying the profile.
+        double s = 0.0;
+        FaceId first;
+        if (!firstRayHit(body, origin, d, 1e-7, s, &first, &index)) return false;
+        if (first != face || !(std::fabs(s - dot(z - origin, d)) <= 1e-6 * scale)) return false;
+        bool inside = false;''')
+needle='''        if (!inside) return false;
+        double s = 0.0;
+        FaceId first;
+        if (!firstRayHit(body, origin, d, 1e-7, s, &first, &index)) return false;
+        return first == face && std::fabs(s - dot(z - origin, d)) <= 1e-6 * scale;''';assert s.count(needle)==1;s=s.replace(needle,'        return inside;');(T/'fk_project.cpp').write_text(s)
+debug=s.replace('#include "fk_project.h"','#include "fk_project.h"\n#include <cstdio>');needle='        if (first != face || !(std::fabs(s - dot(z - origin, d)) <= 1e-6 * scale)) return false;';debug=debug.replace(needle,'        std::fprintf(stderr,"ray guard face=%d first=%d q=(%.17g,%.17g)\\n",face.index,first.index,q.x(),q.y());\n'+needle);(T/'fk_project_trace.cpp').write_text(debug)
+print('candidate and trace prepared')

@@ -1,0 +1,25 @@
+{
+  "files": [
+    {
+      "path": "trace-tests",
+      "bytes": 59062400,
+      "sha256": "b99d7f8efa8becb83b4182ca326d3cb7dc0bda2bb3cda2ddedeb132e91aeb966"
+    },
+    {
+      "path": "trace.o",
+      "bytes": 2526752,
+      "sha256": "051e1b0adf76fa52bdcdadef4c34fdd91509627f6a4593fc14b3f77f99233c65"
+    },
+    {
+      "path": "candidate-tests",
+      "bytes": 59061856,
+      "sha256": "58292f97f519f3e368bfbd141d4d7ff82affd9b1eefe0bc72e10ce800ce76b70"
+    },
+    {
+      "path": "candidate.o",
+      "bytes": 2525744,
+      "sha256": "987a8a75a5a8275fc69953f2fa3e80e20a5a6796a2a710dc2709c9a8c71b979f"
+    }
+  ],
+  "bytes": 123176752
+}

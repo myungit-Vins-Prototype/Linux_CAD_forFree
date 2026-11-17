@@ -1,0 +1,23 @@
+from pathlib import Path
+import json,hashlib
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/ci-review-repair-2026-11-17');sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+for n in ['candidate-band','candidate-projection-suite','trace-band']:assert json.loads((T/(n+'.json')).read_text())['exit']==0
+assert (R/'kernel/fk_project.cpp').read_bytes()==(T/'before/kernel/fk_project.cpp').read_bytes();(R/'kernel/fk_project.cpp').write_bytes((T/'fk_project.cpp').read_bytes())
+p=R/'kernel/CMakeLists.txt';s=p.read_text();needle='''add_test(NAME forgekernel_shell_pose_tests COMMAND forgekernel_shell_pose_tests)
+set_tests_properties(forgekernel_shell_pose_tests PROPERTIES TIMEOUT 180)''';assert s.count(needle)==1;s=s.replace(needle,'''# Each pose is an independent geometric regression with the same 180 s cap.
+# A single shared budget made the third case time out on CI runners.
+add_test(NAME forgekernel_shell_pose_scaled_tests COMMAND forgekernel_shell_pose_tests ShellStitchedScaledSimilarity)
+add_test(NAME forgekernel_shell_pose_scaled_rotated_tests COMMAND forgekernel_shell_pose_tests ShellStitchedScaledAndRotatedSimilarity)
+add_test(NAME forgekernel_shell_pose_rotation_tests COMMAND forgekernel_shell_pose_tests ShellStitchedRotationControl)
+set_tests_properties(forgekernel_shell_pose_scaled_tests forgekernel_shell_pose_scaled_rotated_tests
+    forgekernel_shell_pose_rotation_tests PROPERTIES TIMEOUT 180)''');p.write_text(s)
+p=R/'CLAUDE.md';s=p.read_text();archive=R/'docs/history/claude-prima-riparazione-ci-2026-11-17.md';assert not archive.exists();archive.write_text(s)
+a=s.index('17/11: checkpoint18d0adc');b=s.index('\n',a);s=s[:a]+'''17/11:18d0adc pubblicato; build CI Linux/macOS PASS, test FAIL su profilo/timeout pose.
+K10 locale13/13+SAN,app/4CTest/10storici/golden/mappa PASS. Riparazione CI in verifica.
+[Prove numeriche](docs/review-k10-underflow-2026-11-17.md), [CI](docs/review-ci-repair-2026-11-17.md).'''+s[b:]
+a=s.index('**17/11 — UI11');b=s.index('\nQ/E razionali',a);s=s[:a]+'''**17/11 — UI11 corretto; inventario review aggiornato.**
+Cache/ribbon addCadMenu:13/17FAIL→17/17PASS,app/testtema/mappa PASS;34rilievi,K10parziale.
+[Menu](docs/review-ui11-menu-cache-2026-11-17.md), [aperti](docs/review-punti-aperti-2026-11-17.md).
+Memoria estesa preservata in [archivio](docs/history/claude-prima-riparazione-ci-2026-11-17.md).
+'''+s[b:];assert len(s.encode())<=16384;p.write_text(s)
+(T/'integrated-sources.json').write_text(json.dumps({f:sha(R/f) for f in ['kernel/fk_project.cpp','kernel/CMakeLists.txt']},indent=2));print('CI fixes integrated; memory',len(s.encode()))

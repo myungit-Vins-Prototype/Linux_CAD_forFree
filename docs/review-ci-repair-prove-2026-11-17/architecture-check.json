@@ -1,0 +1,9 @@
+{
+  "argv": [
+    "python3",
+    "/home/myungit/Linux_CAD_forFree/tools/generate_architecture.py",
+    "--check"
+  ],
+  "exit": 0,
+  "seconds": 0.4149772749951808
+}

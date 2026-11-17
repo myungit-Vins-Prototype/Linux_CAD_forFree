@@ -1,0 +1,8 @@
+{
+  "argv": [
+    "/tmp/ci-review-repair-2026-11-17/candidate-tests",
+    "ProjectedCutBandAlongExistingEdges"
+  ],
+  "exit": 0,
+  "seconds": 0.007575740004540421
+}

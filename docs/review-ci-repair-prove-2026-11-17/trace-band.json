@@ -1,0 +1,8 @@
+{
+  "argv": [
+    "/tmp/ci-review-repair-2026-11-17/trace-tests",
+    "ProjectedCutBandAlongExistingEdges"
+  ],
+  "exit": 0,
+  "seconds": 0.0074553440063027665
+}

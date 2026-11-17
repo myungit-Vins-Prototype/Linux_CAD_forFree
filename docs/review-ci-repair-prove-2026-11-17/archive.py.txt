@@ -1,0 +1,24 @@
+from pathlib import Path
+import json,hashlib,shutil,re
+R=Path('/home/myungit/Linux_CAD_forFree');T=Path('/tmp/ci-review-repair-2026-11-17');P=R/'docs/review-ci-repair-prove-2026-11-17';N=Path('/tmp/k10-underflow-review-2026-11-17');sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();assert not P.exists()
+p=R/'docs/review-ci-repair-2026-11-17.md';s=p.read_text().replace('Le prove di quel lavoro sono [separate](review-k10-underflow-2026-11-17.md) e non devono essere attribuite al codice del checkpoint o alla sua CI.','Le prove numeriche restano nel registro locale della review e non devono essere attribuite al codice del checkpoint o alla sua CI.');p.write_text(s)
+for n in ['ci-linux-job.log','ci-macos-job.log','ci-checkpoint.json']:(T/n).write_bytes((N/n).read_bytes())
+removed=[]
+for p in T.rglob('*'):
+ if p.is_file():
+  with p.open('rb') as f:magic=f.read(8)
+  if magic[:4]==b'\x7fELF' or magic==b'!<arch>\n':removed.append({'path':str(p.relative_to(T)),'bytes':p.stat().st_size,'sha256':sha(p)})
+(T/'cleanup.json').write_text(json.dumps({'files':removed,'bytes':sum(x['bytes'] for x in removed)},indent=2))
+for x in removed:(T/x['path']).unlink()
+P.mkdir();manifest=[]
+def cp(src,relative):
+ data=src.read_bytes();out=P/relative
+ if out.suffix in ['.cpp','.h','.py']:out=out.with_name(out.name+'.txt')
+ data.decode('utf-8');assert data[:4]!=b'\x7fELF';out.parent.mkdir(parents=True,exist_ok=True);out.write_bytes(data);manifest.append({'source':str(src),'archive':str(out.relative_to(P)),'sha256':sha(src)})
+for p in sorted(T.rglob('*')):
+ if p.is_file() and '__pycache__' not in p.parts:cp(p,p.relative_to(T))
+for f in ['kernel/fk_project.cpp','kernel/CMakeLists.txt','docs/review-ci-repair-2026-11-17.md']:cp(R/f,Path('workspace')/f)
+(P/'MANIFEST.json').write_text(json.dumps(manifest,indent=2)+'\n');(P/'README.txt').write_text('Riparazione CI del checkpoint18d0adc: log Linux/macOS, repro0/1→1/1 e5/5, tre pose indipendenti, build completa e7CTest locali, mappa. Worktree locale include anche numerica K10 successiva, non inclusa nel commit CI. Solo sorgenti inerti/log/checksum, nessun eseguibile o CAD. I percorsi /tmp degli script descrivono la sessione; non si promette un replay autonomo senza ricostruire ambiente e libreria.\n')
+files=sorted(p for p in P.rglob('*') if p.is_file());seal=P/'SHA256SUMS';seal.write_text(''.join(sha(p)+'  '+str(p.relative_to(P))+'\n' for p in files))
+for line in seal.read_text().splitlines():h,f=line.split('  ',1);assert sha(P/f)==h
+print('CI proof',len(files),'files',sum(p.stat().st_size for p in files),'bytes; seal',sha(seal),'removed',sum(x['bytes'] for x in removed))
